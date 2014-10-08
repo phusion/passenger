@@ -60,7 +60,7 @@ onRequestBegin(Client *client, Request *req) {
 		req->bodyChannel.stop();
 
 		initializeFlags(client, req, analysis);
-		if (respondFromCache(client, req)) {
+		if (respondFromTurboCache(client, req)) {
 			return;
 		}
 		initializePoolOptions(client, req, analysis);
@@ -136,7 +136,7 @@ initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 }
 
 bool
-respondFromCache(Client *client, Request *req) {
+respondFromTurboCache(Client *client, Request *req) {
 	if (!turboCaching.isEnabled() || !turboCaching.responseCache.prepareRequest(req)) {
 		return false;
 	}
@@ -147,14 +147,14 @@ respondFromCache(Client *client, Request *req) {
 		ResponseCache<Request>::Entry entry(turboCaching.responseCache.fetch(req,
 			ev_now(getLoop())));
 		if (entry.valid()) {
-			SKC_TRACE(client, 2, "Turbocaching: cache hit");
+			SKC_TRACE(client, 2, "Turbocaching: cache hit (key " << req->cacheKey << ")");
 			turboCaching.writeResponse(this, client, req, entry);
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
 			return true;
 		} else {
-			SKC_TRACE(client, 2, "Turbocaching: cache miss");
+			SKC_TRACE(client, 2, "Turbocaching: cache miss (key " << req->cacheKey << ")");
 			return false;
 		}
 	} else {

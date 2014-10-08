@@ -121,14 +121,18 @@ void reinitializeAppResponse(Client *client, Request *req) {
 	resp->wantKeepAlive = false;
 	resp->oneHundredContinueSent = false;
 	resp->statusCode = 0;
-	resp->date = NULL;
-	resp->cacheControl = NULL;
-	resp->expiresHeader = NULL;
-	resp->lastModifiedHeader = NULL;
 	resp->parserState.headerParser = getHeaderParserStatePool().construct();
 	createAppResponseHeaderParser(getContext(), req).initialize();
 	resp->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 	resp->bodyAlreadyRead = 0;
+	resp->date = NULL;
+	resp->cacheControl = NULL;
+	resp->expiresHeader = NULL;
+	resp->lastModifiedHeader = NULL;
+
+	resp->headerCacheBuffers = NULL;
+	resp->nHeaderCacheBuffers = 0;
+	psg_lstr_init(&resp->bodyCacheBuffer);
 }
 
 void deinitializeAppResponse(Client *client, Request *req) {
@@ -157,6 +161,8 @@ void deinitializeAppResponse(Client *client, Request *req) {
 
 	resp->headers.clear();
 	resp->secureHeaders.clear();
+
+	psg_lstr_deinit(&resp->bodyCacheBuffer);
 }
 
 virtual Channel::Result
@@ -191,4 +197,10 @@ onBodyBufferData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) 
 
 	assert(req->requestBodyBuffering);
 	return self->whenSendingRequest_onRequestBody(client, req, buffer, errcode);
+}
+
+static void
+onEventLoopCheck(EV_P_ struct ev_check *w, int revents) {
+	RequestHandler *self = static_cast<RequestHandler *>(w->data);
+	self->turboCaching.updateState(ev_now(EV_A));
 }

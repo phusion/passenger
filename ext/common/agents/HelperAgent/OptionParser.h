@@ -91,6 +91,10 @@ serverUsage() {
 	printf("\n");
 	printf("      --multi-app           Enable multi-app mode\n");
 	printf("\n");
+	printf("      --force-turbocaching  Force turbocaching to be always on\n");
+	printf("      --disable-turbocaching\n");
+	printf("                            Completely disable turbocaching\n");
+	printf("\n");
 	printf("Process management options (optional):\n");
 	printf("      --max-pool-size N     Maximum number of application processes.\n");
 	printf("                            Default: %d\n", DEFAULT_MAX_POOL_SIZE);
@@ -209,6 +213,12 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--multi-app")) {
 		options.setBool("multi_app", true);
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--force-turbocaching")) {
+		options.set("turbocaching", "user_enabled");
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--disable-turbocaching")) {
+		options.set("turbocaching", "user_disabled");
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 		// We do not set log_level because, when this function is called from

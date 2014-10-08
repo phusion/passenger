@@ -28,6 +28,7 @@
 #include <Utils/sysqueue.h>
 #include <boost/cstdint.hpp>
 #include <boost/atomic.hpp>
+#include <sys/uio.h>
 #include <ServerKit/http_parser.h>
 #include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
@@ -91,11 +92,6 @@ public:
 
 	boost::uint16_t statusCode;
 
-	LString *date;
-	LString *cacheControl;
-	LString *expiresHeader;
-	LString *lastModifiedHeader;
-
 	union {
 		// If httpState == PARSING_HEADERS
 		ServerKit::HttpHeaderParserState *headerParser;
@@ -122,6 +118,24 @@ public:
 		int parseError;
 	} aux;
 	boost::uint64_t bodyAlreadyRead;
+
+	LString *date;
+	LString *cacheControl;
+	LString *expiresHeader;
+	LString *lastModifiedHeader;
+
+	/* If the response is eligible for turbocaching, then the buffers
+	 * that contain the part of the response that can be cached, will be
+	 * stored here.
+	 */
+	struct iovec *headerCacheBuffers;
+	unsigned int nHeaderCacheBuffers;
+
+	/* If the response is eligible for turbocaching, then all response mbufs
+	 * will be stored here, so that we can store it in the response cache
+	 * at the end of the response.
+	 */
+	LString bodyCacheBuffer;
 
 
 	AppResponse()

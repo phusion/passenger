@@ -76,6 +76,7 @@ using namespace oxt;
 
 #define SKC_ERROR(client, expr) SKC_ERROR_FROM_STATIC(this, client, expr)
 #define SKC_WARN(client, expr) SKC_WARN_FROM_STATIC(this, client, expr)
+#define SKC_NOTICE(client, expr) SKC_NOTICE_FROM_STATIC(this, client, expr)
 #define SKC_INFO(client, expr) SKC_INFO_FROM_STATIC(this, client, expr)
 #define SKC_DEBUG(client, expr) SKC_DEBUG_FROM_STATIC(this, client, expr)
 #define SKC_DEBUG_WITH_POS(client, file, line, expr) \
@@ -86,7 +87,7 @@ using namespace oxt;
 
 #define SKC_ERROR_FROM_STATIC(server, client, expr) \
 	do { \
-		if (Passenger::_logLevel >= LVL_ERROR) { \
+		if (Passenger::getLogLevel() >= LVL_ERROR) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_ERROR("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
@@ -94,15 +95,23 @@ using namespace oxt;
 	} while (0)
 #define SKC_WARN_FROM_STATIC(server, client, expr) \
 	do { \
-		if (Passenger::_logLevel >= LVL_WARN) { \
+		if (Passenger::getLogLevel() >= LVL_WARN) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_WARN("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
 		} \
 	} while (0)
+#define SKC_NOTICE_FROM_STATIC(server, client, expr) \
+	do { \
+		if (Passenger::getLogLevel() >= LVL_WARN) { \
+			char _clientName[16]; \
+			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+			P_NOTICE("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		} \
+	} while (0)
 #define SKC_INFO_FROM_STATIC(server, client, expr) \
 	do { \
-		if (Passenger::_logLevel >= LVL_WARN) { \
+		if (Passenger::getLogLevel() >= LVL_WARN) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_INFO("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
@@ -112,7 +121,7 @@ using namespace oxt;
 	SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, __FILE__, __LINE__, expr)
 #define SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, file, line, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::_logLevel >= LVL_DEBUG)) { \
+		if (OXT_UNLIKELY(Passenger::getLogLevel() >= LVL_DEBUG)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_DEBUG_WITH_POS(file, line, \
@@ -123,7 +132,7 @@ using namespace oxt;
 	SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, __FILE__, __LINE__, expr)
 #define SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, file, line, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::_logLevel >= level)) { \
+		if (OXT_UNLIKELY(Passenger::getLogLevel() >= level)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_TRACE_WITH_POS(level, file, line, \

@@ -103,6 +103,7 @@ private:
 		time_t now;
 		time_t age;
 		unsigned int ageValueSize;
+		unsigned int contentLengthStrSize;
 		bool showVersionInHeader;
 	};
 
@@ -121,6 +122,7 @@ private:
 		}
 
 		prep.ageValueSize = integerSizeInOtherBase<time_t, 10>(prep.age);
+		prep.contentLengthStrSize = uintSizeAsString(entry.body->httpBodySize);
 		prep.showVersionInHeader = server->showVersionInHeader;
 	}
 
@@ -149,6 +151,14 @@ private:
 			pos = appendData(pos, end, entry->body->httpHeaderData,
 				entry->body->httpHeaderSize);
 		}
+
+		PUSH_STATIC_STRING("Content-Length: ");
+		result += prep.contentLengthStrSize;
+		if (output != NULL) {
+			uintToString(entry->body->httpBodySize, pos, end - pos);
+			pos += prep.contentLengthStrSize;
+		}
+		PUSH_STATIC_STRING("\r\n");
 
 		PUSH_STATIC_STRING("Age: ");
 		result += prep.ageValueSize;
@@ -208,8 +218,8 @@ public:
 		return state == ENABLED || state == USER_ENABLED;
 	}
 
-	// Called when the event loop multiplexor returns.
-	void onEventLoopCheck(ev_tstamp now) {
+	// Call when the event loop multiplexer returns.
+	void updateState(ev_tstamp now) {
 		if (OXT_UNLIKELY(state == USER_DISABLED)) {
 			return;
 		}

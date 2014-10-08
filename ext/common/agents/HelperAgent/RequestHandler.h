@@ -159,13 +159,6 @@ using namespace oxt;
 using namespace ApplicationPool2;
 
 
-#define RH_LOG_EVENT(client, eventName) \
-	char _clientName[32]; \
-	getClientName(client, _clientName, sizeof(_clientName)); \
-	TRACE_POINT_WITH_DATA(_clientName); \
-	SKC_TRACE(client, 3, "Event: " eventName)
-
-
 class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
 public:
 	enum BenchmarkMode {
@@ -228,6 +221,7 @@ private:
 	StaticString serverLogName;
 
 	friend class TurboCaching<Request>;
+	struct ev_check checkWatcher;
 	TurboCaching<Request> turboCaching;
 
 public:
@@ -278,7 +272,8 @@ public:
 		  HTTP_STATUS("status"),
 		  HTTP_TRANSFER_ENCODING("transfer-encoding"),
 
-		  threadNumber(_threadNumber)
+		  threadNumber(_threadNumber),
+		  turboCaching(getTurboCachingInitialState(_agentsOptions))
 	{
 		defaultRuby = psg_pstrdup(stringPool,
 			agentsOptions->get("default_ruby"));
@@ -315,6 +310,11 @@ public:
 				agentsOptions->get("startup_file"));
 			poolOptionsCache.insert(options->getAppGroupName(), options);
 		}
+
+		ev_check_init(&checkWatcher, onEventLoopCheck);
+		ev_set_priority(&checkWatcher, EV_MAXPRI);
+		ev_check_start(getLoop(), &checkWatcher);
+		checkWatcher.data = this;
 	}
 
 	~RequestHandler() {

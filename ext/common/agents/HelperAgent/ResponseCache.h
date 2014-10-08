@@ -64,6 +64,7 @@ public:
 		time_t expiryDate;
 		char key[MAX_KEY_LENGTH];
 		char httpHeaderData[MAX_HEADER_SIZE];
+		// This data is dechunked.
 		char httpBodyData[MAX_BODY_SIZE];
 	};
 
@@ -98,14 +99,14 @@ private:
 	HashedStaticString EXPIRES;
 	HashedStaticString LAST_MODIFIED;
 
-	unsigned int fetches, hits;
+	unsigned int fetches, hits, stores, storeSuccesses;
 
 	Header headers[MAX_ENTRIES];
 	Body bodies[MAX_ENTRIES];
 
 	unsigned int calculateKeyLength(Request *req, const LString *host) {
 		unsigned int size =
-			2  // protocol flag
+			1  // protocol flag
 			+ ((host != NULL) ? host->size : 0)
 			+ 1  // ':'
 			+ req->path.size;
@@ -270,7 +271,9 @@ public:
 		  EXPIRES("expires"),
 		  LAST_MODIFIED("last-modified"),
 		  fetches(0),
-		  hits(0)
+		  hits(0),
+		  stores(0),
+		  storeSuccesses(0)
 		{ }
 
 	OXT_FORCE_INLINE
@@ -288,9 +291,32 @@ public:
 		return hits / (double) fetches;
 	}
 
+	OXT_FORCE_INLINE
+	unsigned int getStores() const {
+		return fetches;
+	}
+
+	OXT_FORCE_INLINE
+	unsigned int getStoreSuccesses() const {
+		return storeSuccesses;
+	}
+
+	OXT_FORCE_INLINE
+	double getStoreSuccessRatio() const {
+		return storeSuccesses / (double) stores;
+	}
+
+	// For decreasing the store success ratio without calling store().
+	OXT_FORCE_INLINE
+	void incStores() {
+		stores++;
+	}
+
 	void resetStatistics() {
 		fetches = 0;
 		hits = 0;
+		stores = 0;
+		storeSuccesses = 0;
 	}
 
 	void clear() {
@@ -428,21 +454,24 @@ public:
 
 	// @pre requestAllowsStoring()
 	// @pre prepareRequestForStoring()
-	bool store(Request *req, ev_tstamp now, const StaticString &headers, const StaticString &body) {
-		assert(headers.size() <= MAX_HEADER_SIZE);
-		assert(body.size() <= MAX_BODY_SIZE);
-		const HashedStaticString &cacheKey = req->cacheKey;
+	Entry store(Request *req, ev_tstamp now, unsigned int headerSize, unsigned int bodySize) {
+		stores++;
+
+		if (headerSize > MAX_HEADER_SIZE || bodySize > MAX_BODY_SIZE) {
+			return Entry();
+		}
 
 		time_t responseDate = parseDate(req->pool, req->appResponse.date, now);
 		if (responseDate == (time_t) -1) {
-			return false;
+			return Entry();
 		}
 
 		time_t expiryDate = determineExpiryDate(req, responseDate, now);
 		if (expiryDate == (time_t) -1) {
-			return false;
+			return Entry();
 		}
 
+		const HashedStaticString &cacheKey = req->cacheKey;
 		Entry entry(lookup(cacheKey));
 		if (!entry.valid()) {
 			entry = lookupInvalidOrOldest();
@@ -453,11 +482,9 @@ public:
 		}
 		entry.header->date     = responseDate;
 		entry.body->expiryDate = expiryDate;
-		entry.body->httpHeaderSize = headers.size();
-		entry.body->httpBodySize   = body.size();
-		memcpy(entry.body->httpHeaderData, headers.data(), headers.size());
-		memcpy(entry.body->httpBodyData, body.data(), body.size());
-		return true;
+		entry.body->httpHeaderSize = headerSize;
+		entry.body->httpBodySize   = bodySize;
+		return entry;
 	}
 
 
@@ -469,10 +496,23 @@ public:
 
 	// @pre requestAllowsInvalidating()
 	void invalidate(Request *req) {
+		// TODO: invalidate Location and Content-Location too
 		Entry entry(lookup(req->cacheKey));
 		if (entry.valid()) {
 			entry.header->valid = false;
 		}
+	}
+
+
+	string inspect() const {
+		stringstream stream;
+		for (unsigned int i = 0; i < MAX_ENTRIES; i++) {
+			stream << " #" << i << ": valid=" << headers[i].valid
+				<< ", hash=" << headers[i].hash << ", keySize="
+				<< headers[i].keySize << ", key="
+				<< StaticString(bodies[i].key, headers[i].keySize) << "\n";
+		}
+		return stream.str();
 	}
 };
 

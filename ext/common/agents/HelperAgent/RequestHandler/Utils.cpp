@@ -35,6 +35,18 @@
 
 private:
 
+static TurboCaching<Request>::State
+getTurboCachingInitialState(const VariantMap *agentsOptions) {
+	string value = agentsOptions->get("turbocaching", false);
+	if (value == "user_enabled") {
+		return TurboCaching<Request>::USER_ENABLED;
+	} else if (value == "user_disabled") {
+		return TurboCaching<Request>::USER_DISABLED;
+	} else {
+		return TurboCaching<Request>::DISABLED;
+	}
+}
+
 void
 generateServerLogName(unsigned int number) {
 	string name = "ServerThr." + toString(number);
