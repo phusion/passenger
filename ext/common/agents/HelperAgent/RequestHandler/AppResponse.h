@@ -196,6 +196,10 @@ public:
 		return bodyType & (RBT_CONTENT_LENGTH | RBT_CHUNKED | RBT_UNTIL_EOF);
 	}
 
+	bool upgraded() const {
+		return bodyType == RBT_UPGRADE;
+	}
+
 	bool canKeepAlive() const {
 		return wantKeepAlive && bodyFullyRead();
 	}

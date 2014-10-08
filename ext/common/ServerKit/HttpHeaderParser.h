@@ -350,6 +350,8 @@ private:
 
 		if (state->parser.upgrade) {
 			message->httpState = Message::UPGRADED;
+			message->bodyType  = Message::RBT_UPGRADE;
+			message->wantKeepAlive = false;
 		} else if (requestMethod == HTTP_HEAD
 		 || status / 100 == 1  // status 1xx
 		 || status == 204

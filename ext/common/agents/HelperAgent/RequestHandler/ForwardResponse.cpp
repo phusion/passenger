@@ -85,7 +85,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				return Channel::Result(ret, false);
 			case AppResponse::UPGRADED:
 				SKC_TRACE(client, 2, "Application upgraded connection");
-				req->wantKeepAlive = false;
+				assert(!req->wantKeepAlive);
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::ONEHUNDRED_CONTINUE:
@@ -296,7 +296,7 @@ onAppResponseBegin(Client *client, Request *req) {
 		}
 	}
 
-	if (!req->ended() && !resp->hasBody()) {
+	if (!req->ended() && !resp->hasBody() && !resp->upgraded()) {
 		keepAliveAppConnection(client, req);
 		endRequest(&client, &req);
 	}
