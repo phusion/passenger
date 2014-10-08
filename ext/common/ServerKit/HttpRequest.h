@@ -266,7 +266,7 @@ public:
 
 class HttpRequest: public BaseHttpRequest {
 public:
-	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(HttpRequest);
+	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::ServerKit::HttpRequest);
 };
 
 

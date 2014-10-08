@@ -133,7 +133,7 @@ public:
 		options.transaction->message(message);
 	}
 
-	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Request);
+	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Request);
 };
 
 
