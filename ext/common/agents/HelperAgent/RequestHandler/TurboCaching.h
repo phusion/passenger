@@ -52,6 +52,7 @@ public:
 	static const unsigned int EXTENDED_DISABLED_TIMEOUT = 10;
 
 	OXT_FORCE_INLINE static double MIN_HIT_RATIO() { return 0.5; }
+	OXT_FORCE_INLINE static double MIN_STORE_SUCCESS_RATIO() { return 0.5; }
 
 	/**
 	 * Minimum number of event loop iterations per second necessary to
@@ -243,12 +244,23 @@ public:
 			break;
 		case ENABLED:
 			if (responseCache.getFetches() > 1
-			 && responseCache.getHitRatio() < MIN_HIT_RATIO())
+				&& responseCache.getHitRatio() < MIN_HIT_RATIO())
 			{
 				P_INFO("Poor turbocaching hit ratio detected (" <<
 					responseCache.getHits() << " hits, " <<
 					responseCache.getFetches() << " fetches, " <<
 					(int) (responseCache.getHitRatio() * 100) <<
+					"%). Force disabling turbocaching "
+					"for " << EXTENDED_DISABLED_TIMEOUT << " seconds");
+				state = EXTENDED_DISABLED;
+				nextTimeout = now + EXTENDED_DISABLED_TIMEOUT;
+			} else if (responseCache.getStores() > 1
+				&& responseCache.getStoreSuccessRatio() < MIN_STORE_SUCCESS_RATIO())
+			{
+				P_INFO("Poor turbocaching store success ratio detected (" <<
+					responseCache.getStoreSuccesses() << " store successes, " <<
+					responseCache.getStores() << " stores, " <<
+					(int) (responseCache.getStoreSuccessRatio() * 100) <<
 					"%). Force disabling turbocaching "
 					"for " << EXTENDED_DISABLED_TIMEOUT << " seconds");
 				state = EXTENDED_DISABLED;
