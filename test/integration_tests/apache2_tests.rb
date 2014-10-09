@@ -35,6 +35,19 @@ describe "Apache 2 module" do
 			# Make sure that all Apache log output is prepended by the test description
 			# so that we know which messages are associated with which tests.
 			f.puts "\n#### #{Time.now}: #{example.full_description}"
+			@test_log_pos = f.pos
+		end
+	end
+
+	after :each do
+		if example.exception
+			puts "\t---------------- Begin logs -------------------"
+			File.open("test.log", "r") do |f|
+				f.seek(@test_log_pos)
+				puts f.read.split("\n").map{ |line| "\t#{line}" }.join("\n")
+			end
+			puts "\t---------------- End logs -------------------"
+			puts "\tThe following test failed. The web server logs are printed above."
 		end
 	end
 
