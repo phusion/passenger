@@ -363,8 +363,38 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
     case NGX_HTTP_DELETE:
         SET_NGX_STR(&state->method, "DELETE ");
         break;
+    case NGX_HTTP_MKCOL:
+        SET_NGX_STR(&state->method, "MKCOL ");
+        break;
+    case NGX_HTTP_COPY:
+        SET_NGX_STR(&state->method, "COPY ");
+        break;
+    case NGX_HTTP_MOVE:
+        SET_NGX_STR(&state->method, "MOVE ");
+        break;
+    case NGX_HTTP_OPTIONS:
+        SET_NGX_STR(&state->method, "OPTIONS ");
+        break;
+    case NGX_HTTP_PROPFIND:
+        SET_NGX_STR(&state->method, "PROPFIND ");
+        break;
+    case NGX_HTTP_PROPPATCH:
+        SET_NGX_STR(&state->method, "PROPPATCH ");
+        break;
+    case NGX_HTTP_LOCK:
+        SET_NGX_STR(&state->method, "LOCK ");
+        break;
+    case NGX_HTTP_UNLOCK:
+        SET_NGX_STR(&state->method, "UNLOCK ");
+        break;
     case NGX_HTTP_PATCH:
         SET_NGX_STR(&state->method, "PATCH ");
+        break;
+    case NGX_HTTP_TRACE:
+        SET_NGX_STR(&state->method, "TRACE ");
+        break;
+    default:
+        SET_NGX_STR(&state->method, "UNKNOWN ");
         break;
     }
 
