@@ -57,30 +57,37 @@ module PhusionPassenger
 	]
 
 	REQUIRED_LOCATIONS_INI_FIELDS = [
+		# User-invoked commands
 		:bin_dir,
-		:agents_dir,
+		# Support binaries
+		:support_binaries_dir,
+		# Library files like libboost_oxt.a and various .o files
 		:lib_dir,
+		# Scripts not directly invoked by users
 		:helper_scripts_dir,
+		# Various non-executable resources
 		:resources_dir,
+		# C header files, necessary for compiling Nginx
 		:include_dir,
+		# Documentation
 		:doc_dir,
+		# Ruby support libraries
 		:ruby_libdir,
+		# Node.js support libraries
 		:node_libdir,
+		# Path to the compiled Apache module
 		:apache2_module_path,
+		# Directory containing the source code of our Ruby extension
 		:ruby_extension_source_dir,
+		# Directory containing the source code of our Nginx module
 		:nginx_module_source_dir
 	].freeze
 	OPTIONAL_LOCATIONS_INI_FIELDS = [
-		# Directory in which downloaded Phusion Passenger binaries are stored.
-		# Only available when originally packaged.
-		:download_cache_dir,
 		# Directory which contains the main Phusion Passenger Rakefile. Only
 		# available when originally packaged,
 		:build_system_dir,
-		# Directory in which the build system's output is stored, e.g.
-		# the compiled agent executables. Only available when originally
-		# packaged.
-		:buildout_dir,
+		# Directory in which downloaded Phusion Passenger binaries are cached.
+		:download_cache_dir,
 		# Directory in which we can run 'rake apache2'. Used by
 		# passenger-install-apache2-module. Rake will save the Apache module
 		# to `apache2_module_path`.
@@ -90,8 +97,7 @@ module PhusionPassenger
 	# originally packaged.
 	ORIGINALLY_PACKAGED_LOCATIONS_INI_FIELDS = [
 		:download_cache_dir,
-		:build_system_dir,
-		:buildout_dir
+		:build_system_dir
 	].freeze
 
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
@@ -124,7 +130,7 @@ module PhusionPassenger
 			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
 			@natively_packaged     = false
 			@bin_dir               = "#{@source_root}/bin".freeze
-			@agents_dir            = "#{@source_root}/buildout/agents".freeze
+			@support_binaries_dir  = "#{@source_root}/buildout/support-binaries".freeze
 			@lib_dir               = "#{@source_root}/buildout".freeze
 			@helper_scripts_dir    = "#{@source_root}/helper-scripts".freeze
 			@resources_dir         = "#{@source_root}/resources".freeze
@@ -137,7 +143,6 @@ module PhusionPassenger
 			@nginx_module_source_dir   = "#{@source_root}/ext/nginx".freeze
 			@download_cache_dir        = "#{@source_root}/download_cache".freeze
 			@build_system_dir          = @source_root.dup.freeze
-			@buildout_dir              = "#{@source_root}/buildout".freeze
 			@apache2_module_source_dir = @source_root.dup.freeze
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				if instance_variable_get("@#{field}").nil?

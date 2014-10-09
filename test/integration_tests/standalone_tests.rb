@@ -77,12 +77,12 @@ describe "Passenger Standalone" do
 	end
 
 	def create_dummy_support_binaries
-		Dir.mkdir("agents") if !File.exist?("agents")
-		File.open("agents/#{AGENT_EXE}", "w") do |f|
+		Dir.mkdir("support-binaries") if !File.exist?("support-binaries")
+		File.open("support-binaries/#{AGENT_EXE}", "w") do |f|
 			f.puts "#!/bin/bash"
 			f.puts "echo PASS"
 		end
-		File.chmod(0755, "agents/#{AGENT_EXE}")
+		File.chmod(0755, "support-binaries/#{AGENT_EXE}")
 	end
 
 	def create_dummy_nginx_binary
@@ -155,7 +155,7 @@ describe "Passenger Standalone" do
 						create_dummy_nginx_binary
 					end
 					create_tarball("support-#{compat_id}.tar.gz") do
-						FileUtils.mkdir_p("agents")
+						FileUtils.mkdir_p("support-binaries")
 						FileUtils.mkdir_p("common/libpassenger_common/ApplicationPool2")
 						create_file("common/libboost_oxt.a")
 						create_file("common/libpassenger_common/ApplicationPool2/Implementation.o")

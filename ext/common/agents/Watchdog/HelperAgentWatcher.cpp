@@ -62,7 +62,7 @@ public:
 	HelperAgentWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
 	{
-		agentFilename = wo->resourceLocator->getAgentsDir() + "/" AGENT_EXE;
+		agentFilename = wo->resourceLocator->getSupportBinariesDir() + "/" + AGENT_EXE;
 	}
 
 	virtual void reportAgentsInformation(VariantMap &report) {

@@ -646,7 +646,7 @@ private
 	end
 
 	def touch_temp_dir_in_background
-		result = system("#{@runtime_locator.find_agents_dir}/#{AGENT_EXE}",
+		result = system("#{@runtime_locator.find_support_binaries_dir}/#{AGENT_EXE}",
 			"temp-dir-toucher",
 			@temp_dir,
 			"--cleanup",
@@ -654,7 +654,7 @@ private
 			"--pid-file", "#{@temp_dir}/temp_dir_toucher.pid",
 			"--log-file", @options[:log_file])
 		if !result
-			error "Cannot start #{@runtime_locator.find_agents_dir}/#{AGENT_EXE} temp-dir-toucher"
+			error "Cannot start #{@runtime_locator.find_support_binaries_dir}/#{AGENT_EXE} temp-dir-toucher"
 			exit 1
 		end
 	end

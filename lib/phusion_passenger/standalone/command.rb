@@ -219,7 +219,7 @@ private
 		locations_ini_fields =
 			PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS +
 			PhusionPassenger::OPTIONAL_LOCATIONS_INI_FIELDS -
-			[:agents_dir, :lib_dir]
+			[:support_binaries_dir, :lib_dir]
 
 		File.open(location_config_filename, 'w') do |f|
 			f.puts '[locations]'
@@ -228,7 +228,7 @@ private
 				f.puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
 			end
 			f.puts "lib_dir=#{@runtime_locator.find_lib_dir}"
-			f.puts "agents_dir=#{@runtime_locator.find_agents_dir}"
+			f.puts "support_binaries_dir=#{@runtime_locator.find_support_binaries_dir}"
 			locations_ini_fields.each do |field|
 				value = PhusionPassenger.send(field)
 				f.puts "#{field}=#{value}" if value

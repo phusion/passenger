@@ -2,7 +2,7 @@
 natively_packaged=true
 native_packaging_method=deb
 bin_dir=/usr/bin
-agents_dir=/usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/agents
+support_binaries_dir=/usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/support-binaries
 lib_dir=/usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>
 helper_scripts_dir=/usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/helper-scripts
 resources_dir=/usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>

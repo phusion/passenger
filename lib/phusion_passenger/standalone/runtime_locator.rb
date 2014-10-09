@@ -40,7 +40,7 @@ class RuntimeLocator
 	end
 
 	def self.looks_like_support_dir?(dir)
-		File.exist?("#{dir}/agents/#{AGENT_EXE}") &&
+		File.exist?("#{dir}/support-binaries/#{AGENT_EXE}") &&
 			File.exist?("#{dir}/common/libboost_oxt.a") &&
 			File.exist?("#{dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
 	end
@@ -56,7 +56,7 @@ class RuntimeLocator
 
 		if PhusionPassenger.originally_packaged?
 			if debugging?
-				@support_dir = PhusionPassenger.buildout_dir
+				@support_dir = "#{PhusionPassenger.build_system_dir}/buildout"
 			else
 				dir = "#{@runtime_dir}/#{version}/support-#{cxx_compat_id}"
 				if self.class.looks_like_support_dir?(dir)
@@ -98,8 +98,8 @@ class RuntimeLocator
 		return @nginx_binary
 	end
 
-	def find_agents_dir
-		return "#{find_support_dir}/agents"
+	def find_support_binaries_dir
+		return "#{find_support_dir}/support-binaries"
 	end
 
 	def find_lib_dir

@@ -262,7 +262,7 @@ private
 	def check_support_binaries
 		[AGENT_EXE].each do |exe|
 			puts "     Checking whether the downloaded #{exe.sub(/^Passenger/, '')} binary is usable"
-			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} test-binary`
+			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./support-binaries/#{exe} test-binary`
 			if !$? || $?.exitstatus != 0 || output != "PASS\n"
 				@stderr.puts "      --> Not usable, will compile from source"
 				return false
@@ -381,7 +381,7 @@ private
 				puts
 			end
 
-			system "rm -rf '#{@support_dir}'/agents/{*.o,*.dSYM}"
+			system "rm -rf '#{@support_dir}'/support-binaries/{*.o,*.dSYM}"
 			system "rm -rf '#{@support_dir}'/common/libboost_oxt"
 			system "rm -rf '#{@support_dir}'/*/{*.lo,*.h,*.log,Makefile,libtool,stamp-h1,config.status,.deps}"
 			system "rm -rf '#{@support_dir}'/{libeio,libev}/*.o"

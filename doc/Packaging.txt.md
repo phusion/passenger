@@ -24,8 +24,8 @@ to be compiled by the user. Phusion Passenger looks for binaries in, and (if
 the user initiates the compilation process) stores binaries in, the following
 directories:
 
- * Normally, binaries are to be located in the `agents` and `libout`
-   subdirectories under the source root.
+ * Normally, binaries are to be located in the `buildout` subdirectory under
+   the source root.
  * Phusion Passenger Standalone does things a little differently. Binaries are
    to be located in one of the following directories, whichever it finds first:
 
@@ -86,7 +86,7 @@ The location configuration file is an ini file that looks as follows:
     [locations]
     natively_packaged=true
     bin_dir=/usr/bin
-    agents_dir=/usr/lib/phusion-passenger/agents
+    support_binaries_dir=/usr/lib/phusion-passenger/support-binaries
     lib_dir=/usr/lib/phusion-passenger
     helper_scripts_dir=/usr/share/phusion-passenger/helper-scripts
     resources_dir=/usr/share/phusion-passenger
@@ -165,14 +165,14 @@ a list of all possible assets and asset directories.
 
    Value when originally packaged: `<SOURCE_ROOT>/bin`
 
- * `agents_dir`
+ * `support_binaries_dir`
 
    A directory that contains (platform-dependent) binaries that Phusion Passenger
    uses, but that should not be directly invoked from the command line. Things like
-   PassengerHelperAgent are located here.
+   PassengerAgent are located here.
 
    Value when originally packaged:
-   - Normally: `<SOURCE_ROOT>/buildout/agents`
+   - Normally: `<SOURCE_ROOT>/buildout/support-binaries`
    - Passenger Standalone: `~/.passenger/standalone/<VERSION>/support-<ARCH>`
 
  * `helper_scripts_dir`
@@ -245,6 +245,35 @@ a list of all possible assets and asset directories.
    with Phusion Passenger support.
 
    Value when originally packaged: `<SOURCE_ROOT>/ext/nginx`.
+
+Optional fields:
+
+ * `build_system_dir`
+
+   The directory that contains the Phusion Passenger main Rakefile, used for
+   compiling the Apache module and the agent executable. This field is only
+   present if Phusion Passenger is compilable. Native packages usually do not
+   have this field because they ship a precompiled Apache module and a
+   precompiled agent executable.
+
+   Value when originally packaged: `<SOURCE_ROOT>`
+
+ * `download_cache_dir`
+
+   The directory that contains cached downloaded agent executables. Its main
+   use case is to speed up agent executable downloading when Phusion Passenger
+   is installed from a Ruby gem. When the user installs the gem, a script is
+   invoked which downloads agent executables from the Phusion Passenger
+   websites. The downloaded files are stored in this directory. Then later,
+   when the user runs `passenger start` or any other command which requires
+   the agent executable, the executable will be copied from this cache
+   directory instead of downloaded.
+
+   Native packages ship precompiled executables, so they can omit this field.
+
+   Value when originally packaged: `<SOURCE_ROOT>/download_cache`
+
+
 
 
 # Vendoring of libraries

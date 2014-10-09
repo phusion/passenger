@@ -101,9 +101,9 @@ private
 	end
 
 	def load_from_buildout_dir
-		if PhusionPassenger.buildout_dir
+		if PhusionPassenger.build_system_dir
 			begin
-				return load_native_extension("#{PhusionPassenger.buildout_dir}/ruby/#{archdir}/#{library_name}")
+				return load_native_extension("#{PhusionPassenger.build_system_dir}/buildout/ruby/#{archdir}/#{library_name}")
 			rescue LoadError
 				return false
 			end
@@ -231,8 +231,8 @@ private
 		if (output_dir = ENV['PASSENGER_NATIVE_SUPPORT_OUTPUT_DIR']) && !output_dir.empty?
 			target_dirs << "#{output_dir}/#{VERSION_STRING}/#{archdir}"
 		end
-		if PhusionPassenger.buildout_dir
-			target_dirs << "#{PhusionPassenger.buildout_dir}/ruby/#{archdir}"
+		if PhusionPassenger.build_system_dir
+			target_dirs << "#{PhusionPassenger.build_system_dir}/buildout/ruby/#{archdir}"
 		end
 		target_dirs << "#{home}/#{USER_NAMESPACE_DIRNAME}/native_support/#{VERSION_STRING}/#{archdir}"
 		return target_dirs
@@ -362,7 +362,7 @@ private
 					log("-------------------------------", options)
 				end
 			rescue Errno::ENOTDIR
-				# This can occur when locations.ini set buildout_dir
+				# This can occur when locations.ini set build_system_dir
 				# to an invalid path. Just ignore this error.
 				if i == dirs.size - 1
 					log("Not a valid directory, " +

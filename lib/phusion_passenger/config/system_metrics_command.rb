@@ -29,7 +29,7 @@ module Config
 
 class SystemMetricsCommand < Command
 	def run
-		exec("#{PhusionPassenger.agents_dir}/#{AGENT_EXE}",
+		exec("#{PhusionPassenger.support_binaries_dir}/#{AGENT_EXE}",
 			"system-metrics", *@argv)
 	end
 end

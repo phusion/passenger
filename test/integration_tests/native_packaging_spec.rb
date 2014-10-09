@@ -69,7 +69,7 @@ when "deb"
 	DOCDIR = "/usr/share/doc/passenger"
 	HELPER_SCRIPTS_DIR = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts"
 	RUBY_EXTENSION_SOURCE_DIR = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
-	AGENTS_DIR = "/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
+	SUPPORT_BINARIES_DIR = "/usr/lib/#{GLOBAL_NAMESPACE_DIRNAME}/support-binaries"
 	APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
 	SUPPORTS_COMPILING_APACHE_MODULE = false
 
@@ -90,7 +90,7 @@ when "rpm"
 	DOCDIR = "/usr/share/doc/passenger"
 	HELPER_SCRIPTS_DIR = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/helper-scripts"
 	RUBY_EXTENSION_SOURCE_DIR = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
-	AGENTS_DIR = "/usr/lib64/#{GLOBAL_NAMESPACE_DIRNAME}/agents"
+	SUPPORT_BINARIES_DIR = "/usr/lib64/#{GLOBAL_NAMESPACE_DIRNAME}/support-binaries"
 	APACHE2_MODULE_PATH = "/usr/lib64/httpd/modules/mod_passenger.so"
 	SUPPORTS_COMPILING_APACHE_MODULE = false
 
@@ -111,7 +111,7 @@ when "homebrew"
 	DOCDIR = "#{root}/doc"
 	HELPER_SCRIPTS_DIR = "#{root}/helper-scripts"
 	RUBY_EXTENSION_SOURCE_DIR = "#{root}/ext/ruby"
-	AGENTS_DIR = "#{root}/buildout/agents"
+	SUPPORT_BINARIES_DIR = "#{root}/buildout/support-binaries"
 	APACHE2_MODULE_PATH = "#{root}/buildout/apache2/mod_passenger.so"
 	SUPPORTS_COMPILING_APACHE_MODULE = true
 
@@ -215,10 +215,10 @@ describe "A natively packaged Phusion Passenger" do
 		File.file?("#{RUBY_EXTENSION_SOURCE_DIR}/extconf.rb").should be_true
 	end
 
-	specify "the agents directory exists" do
-		File.directory?(AGENTS_DIR).should be_true
-		File.file?("#{AGENTS_DIR}/#{AGENT_EXE}").should be_true
-		File.executable?("#{AGENTS_DIR}/#{AGENT_EXE}").should be_true
+	specify "the support-binaries directory exists" do
+		File.directory?(SUPPORT_BINARIES_DIR).should be_true
+		File.file?("#{SUPPORT_BINARIES_DIR}/#{AGENT_EXE}").should be_true
+		File.executable?("#{SUPPORT_BINARIES_DIR}/#{AGENT_EXE}").should be_true
 	end
 
 	specify "the Apache 2 module exists" do

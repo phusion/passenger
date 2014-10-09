@@ -54,12 +54,12 @@ describe RuntimeInstaller do
 	end
 
 	def create_dummy_support_binaries
-		Dir.mkdir("agents")
-		File.open("agents/#{AGENT_EXE}", "w") do |f|
+		Dir.mkdir("support-binaries")
+		File.open("support-binaries/#{AGENT_EXE}", "w") do |f|
 			f.puts "#!/bin/bash"
 			f.puts "echo PASS"
 		end
-		File.chmod(0755, "agents/#{AGENT_EXE}")
+		File.chmod(0755, "support-binaries/#{AGENT_EXE}")
 	end
 
 	def create_dummy_nginx_binary
@@ -176,7 +176,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/agents/#{AGENT_EXE}").should be_true
+			File.exist?("#{@temp_dir}/support/support-binaries/#{AGENT_EXE}").should be_true
 		end
 
 		it "downloads the Nginx binary from the Internet if :nginx is specified as target" do
@@ -214,7 +214,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/agents/#{AGENT_EXE}").should be_true
+			File.exist?("#{@temp_dir}/support/support-binaries/#{AGENT_EXE}").should be_true
 			File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_true
 		end
 
@@ -230,8 +230,8 @@ describe RuntimeInstaller do
 			@installer.should_receive(:run_rake_task!).with(
 				"nginx_without_native_support CACHING=false OUTPUT_DIR='#{@temp_dir}/support'").
 				and_return do
-					FileUtils.mkdir_p("#{@temp_dir}/agents")
-					create_file("#{@temp_dir}/agents/#{AGENT_EXE}")
+					FileUtils.mkdir_p("#{@temp_dir}/support-binaries")
+					create_file("#{@temp_dir}/support-binaries/#{AGENT_EXE}")
 
 					nginx_libs.each do |object_filename|
 						dir = File.dirname(object_filename)

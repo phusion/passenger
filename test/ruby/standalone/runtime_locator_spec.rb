@@ -60,9 +60,9 @@ describe RuntimeLocator do
 					version = PhusionPassenger::VERSION_STRING
 					cxx_compat_id = PlatformInfo.cxx_binary_compatibility_id
 					@support_dir = "#{@temp_dir}/#{version}/support-#{cxx_compat_id}"
-					FileUtils.mkdir_p("#{@support_dir}/agents")
+					FileUtils.mkdir_p("#{@support_dir}/support-binaries")
 					FileUtils.mkdir_p("#{@support_dir}/common/libpassenger_common/ApplicationPool2")
-					create_file("#{@support_dir}/agents/#{AGENT_EXE}")
+					create_file("#{@support_dir}/support-binaries/#{AGENT_EXE}")
 					create_file("#{@support_dir}/common/libboost_oxt.a")
 					create_file("#{@support_dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
 				end
