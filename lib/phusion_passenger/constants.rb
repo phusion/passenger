@@ -93,6 +93,7 @@ module PhusionPassenger
 		STANDALONE_DOC_URL  = "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
 		SUPPORT_URL         = "https://www.phusionpassenger.com/documentation_and_support"
 		ENTERPRISE_URL      = "https://www.phusionpassenger.com/enterprise"
+		AGENT_EXE                 = "PassengerAgent"
 		DEB_MAIN_PACKAGE          = "passenger"
 		DEB_DEV_PACKAGE           = "passenger-dev"
 		DEB_APACHE_MODULE_PACKAGE = "libapache2-mod-passenger"

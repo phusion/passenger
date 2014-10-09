@@ -12,6 +12,7 @@ require 'resolv'
 require 'net/http'
 require 'uri'
 require 'support/multipart'
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'debug_logging'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
@@ -364,7 +365,7 @@ module TestHelper
 		socket_filename = "#{tmpdir}/logging.socket"
 		password_filename = "#{tmpdir}/password"
 		File.write(password_filename, password)
-		pid = spawn_process("#{PhusionPassenger.agents_dir}/PassengerAgent",
+		pid = spawn_process("#{PhusionPassenger.agents_dir}/#{AGENT_EXE}",
 			"logger",
 			"--passenger-root", PhusionPassenger.source_root,
 			"--log-level", PhusionPassenger::DebugLogging.log_level,

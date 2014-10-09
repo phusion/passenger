@@ -50,6 +50,7 @@
 #include <BackgroundEventLoop.h>
 #include <ResourceLocator.h>
 #include <MessageServer.h>
+#include <Constants.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
@@ -242,19 +243,19 @@ lowerPrivilege() {
 
 		if (initgroups(userName.c_str(), gid) != 0) {
 			int e = errno;
-			throw SystemException("Unable to lower PassengerAgent logger's privilege "
+			throw SystemException("Unable to lower " AGENT_EXE " logger's privilege "
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set supplementary groups", e);
 		}
 		if (setgid(gid) != 0) {
 			int e = errno;
-			throw SystemException("Unable to lower PassengerAgent logger's privilege "
+			throw SystemException("Unable to lower " AGENT_EXE " logger's privilege "
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set group ID to " + toString(gid), e);
 		}
 		if (setuid(pwUser->pw_uid) != 0) {
 			int e = errno;
-			throw SystemException("Unable to lower PassengerAgent logger's privilege "
+			throw SystemException("Unable to lower " AGENT_EXE " logger's privilege "
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set user ID to " + toString(pwUser->pw_uid), e);
 		}
@@ -309,7 +310,7 @@ static void
 reportInitializationInfo() {
 	TRACE_POINT();
 
-	P_NOTICE("PassengerAgent logger online, PID " << getpid());
+	P_NOTICE(AGENT_EXE " logger online, PID " << getpid());
 	if (feedbackFdAvailable()) {
 		writeArrayMessage(FEEDBACK_FD,
 			"initialized",
@@ -419,16 +420,16 @@ cleanup() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
 
-	P_DEBUG("Shutting down PassengerAgent logger...");
+	P_DEBUG("Shutting down " AGENT_EXE " logger...");
 	wo->bgloop->stop();
 	delete wo->adminServer;
-	P_NOTICE("PassengerAgent logger shutdown finished");
+	P_NOTICE(AGENT_EXE " logger shutdown finished");
 }
 
 static int
 runLoggingAgent() {
 	TRACE_POINT();
-	P_NOTICE("Starting PassengerAgent logger...");
+	P_NOTICE("Starting " AGENT_EXE " logger...");
 
 	try {
 		UPDATE_TRACE_POINT();
@@ -542,7 +543,7 @@ sanityCheckOptions() {
 int
 loggingAgentMain(int argc, char *argv[]) {
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent logger",
+	*agentsOptions = initializeAgent(argc, &argv, AGENT_EXE " logger",
 		parseOptions, preinitialize, 2);
 
 	CURLcode code = curl_global_init(CURL_GLOBAL_ALL);

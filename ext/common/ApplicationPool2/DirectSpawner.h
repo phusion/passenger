@@ -126,9 +126,10 @@ private:
 			command.push_back("exec \"$@\"");
 			command.push_back("SpawnPreparerShell");
 		} else {
-			command.push_back(agentsDir + "/SpawnPreparer");
+			command.push_back(agentsDir + "/" AGENT_EXE);
 		}
-		command.push_back(agentsDir + "/SpawnPreparer");
+		command.push_back(agentsDir + "/" AGENT_EXE);
+		command.push_back("spawn-preparer");
 		command.push_back(preparation.appRoot);
 		command.push_back(serializeEnvvarsFromPoolOptions(options));
 		command.push_back(startCommandArgs[0]);

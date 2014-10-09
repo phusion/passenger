@@ -29,6 +29,7 @@ require 'pathname'
 require 'fileutils'
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'packaging'
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'

@@ -29,7 +29,7 @@ protected:
 	string socketAddress;
 
 	virtual const char *name() const {
-		return "Phusion Passenger logging agent";
+		return PROGRAM_NAME " logging agent";
 	}
 
 	virtual string getExeFilename() const {
@@ -37,7 +37,7 @@ protected:
 	}
 
 	virtual void execProgram() const {
-		execl(agentFilename.c_str(), "PassengerAgent", "logger",
+		execl(agentFilename.c_str(), AGENT_EXE, "logger",
 			// Some extra space to allow the child process to change its process title.
 			"                                                ", (char *) 0);
 	}
@@ -57,7 +57,7 @@ public:
 	LoggingAgentWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
 	{
-		agentFilename = wo->resourceLocator->getAgentsDir() + "/PassengerAgent";
+		agentFilename = wo->resourceLocator->getAgentsDir() + "/" AGENT_EXE;
 	}
 
 	virtual void reportAgentsInformation(VariantMap &report) {

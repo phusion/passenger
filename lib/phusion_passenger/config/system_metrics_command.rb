@@ -21,6 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'config/command'
 
 module PhusionPassenger
@@ -28,7 +29,7 @@ module Config
 
 class SystemMetricsCommand < Command
 	def run
-		exec("#{PhusionPassenger.agents_dir}/PassengerAgent",
+		exec("#{PhusionPassenger.agents_dir}/#{AGENT_EXE}",
 			"system-metrics", *@argv)
 	end
 end

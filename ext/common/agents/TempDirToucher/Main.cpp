@@ -38,6 +38,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <string.h>
+#include <Constants.h>
 
 #define ERROR_PREFIX "*** TempDirToucher error"
 
@@ -67,7 +68,7 @@ static sig_atomic_t shouldIgnoreNextTermSignal = 0;
 
 static void
 usage() {
-	printf("Usage: PassengerAgent temp-dir-watcher <DIRECTORY> [OPTIONS...]\n");
+	printf("Usage: " AGENT_EXE " temp-dir-watcher <DIRECTORY> [OPTIONS...]\n");
 	printf("Touches everything in a directory every 30 minutes, to "
 		"prevent /tmp cleaners from removing the directory.\n");
 	printf("\n");

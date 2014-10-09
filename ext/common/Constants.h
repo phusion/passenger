@@ -36,6 +36,8 @@
 #define DEFAULT_BACKEND_ACCOUNT_RIGHTS Account::DETACH
 
 
+	#define AGENT_EXE "PassengerAgent"
+
 	#define APACHE2_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Apache.html"
 
 	#define DEB_APACHE_MODULE_PACKAGE "libapache2-mod-passenger"
@@ -66,7 +68,7 @@
 
 	#define DEFAULT_MAX_POOL_SIZE 6
 
-	#define DEFAULT_MBUF_CHUNK_SIZE 2048
+	#define DEFAULT_MBUF_CHUNK_SIZE 512
 
 	#define DEFAULT_NODEJS "node"
 

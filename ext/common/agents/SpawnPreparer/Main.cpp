@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2012-2013 Phusion
+ *  Copyright (c) 2012-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -174,18 +174,19 @@ dumpInformation() {
 	}
 }
 
-// Usage: SpawnPreparer <working directory> <envvars> <executable> <exec args...>
+// Usage: PassengerAgent spawn-preparer <working directory> <envvars> <executable> <exec args...>
 int
-main(int argc, char *argv[]) {
-	if (argc < 5) {
+spawnPreparerMain(int argc, char *argv[]) {
+	#define ARG_OFFSET 1
+	if (argc < ARG_OFFSET + 5) {
 		fprintf(stderr, "Too few arguments.\n");
 		exit(1);
 	}
 
-	const char *workingDir = argv[1];
-	const char *envvars = argv[2];
-	const char *executable = argv[3];
-	char **execArgs = &argv[4];
+	const char *workingDir = argv[ARG_OFFSET + 1];
+	const char *envvars = argv[ARG_OFFSET + 2];
+	const char *executable = argv[ARG_OFFSET + 3];
+	char **execArgs = &argv[ARG_OFFSET + 4];
 
 	changeWorkingDir(workingDir);
 	setGivenEnvVars(envvars);

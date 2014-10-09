@@ -92,6 +92,11 @@ shared_examples_for "an official package" do
 	it "is marked official" do
 		File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_true
 	end
+
+	context "if there are cached binaries" do
+		specify "the 'rake apache2' task extracts the binaries instead of compiling"
+		specify "the 'rake nginx' task extracts the binaries instead of compiling"
+	end
 end
 
 describe "A user-generated gem" do

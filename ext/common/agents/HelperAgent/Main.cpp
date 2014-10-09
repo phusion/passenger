@@ -218,7 +218,7 @@ initializeSingleAppMode() {
 	VariantMap &options = *agentsOptions;
 
 	if (options.getBool("multi_app")) {
-		P_NOTICE("PassengerAgent server running in multi-application mode.");
+		P_NOTICE(AGENT_EXE " server running in multi-application mode.");
 		return;
 	}
 
@@ -231,7 +231,7 @@ initializeSingleAppMode() {
 				"lives in %s. Please specify information about the app using "
 				"--app-type and --startup-file, or specify a correct location to "
 				"the application you want to serve.\n"
-				"Type 'PassengerAgent server --help' for more information.\n",
+				"Type '" AGENT_EXE " server --help' for more information.\n",
 				options.get("app_root").c_str());
 			exit(1);
 		}
@@ -240,7 +240,7 @@ initializeSingleAppMode() {
 		options.set("startup_file", getAppTypeStartupFile(appType));
 	}
 
-	P_NOTICE("PassengerAgent server running in single-application mode.");
+	P_NOTICE(AGENT_EXE " server running in single-application mode.");
 	P_NOTICE("Serving app     : " << options.get("app_root"));
 	P_NOTICE("App type        : " << options.get("app_type"));
 	P_NOTICE("App startup file: " << options.get("startup_file"));
@@ -609,7 +609,7 @@ static void
 reportInitializationInfo() {
 	TRACE_POINT();
 	if (feedbackFdAvailable()) {
-		P_NOTICE("PassengerAgent server online, PID " << getpid());
+		P_NOTICE(AGENT_EXE " server online, PID " << getpid());
 		writeArrayMessage(FEEDBACK_FD,
 			"initialized",
 			NULL);
@@ -618,7 +618,7 @@ reportInitializationInfo() {
 		vector<string> adminAddresses = agentsOptions->getStrSet("server_admin_addresses", false);
 		string address;
 
-		P_NOTICE("PassengerAgent server online, PID " << getpid() <<
+		P_NOTICE(AGENT_EXE " server online, PID " << getpid() <<
 			", listening on " << addresses.size() << " socket(s):");
 		foreach (address, addresses) {
 			if (startsWith(address, "tcp://")) {
@@ -782,7 +782,7 @@ cleanup() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
 
-	P_DEBUG("Shutting down PassengerAgent server...");
+	P_DEBUG("Shutting down " AGENT_EXE " server...");
 	wo->appPool->destroy();
 	installDiagnosticsDumper(NULL, NULL);
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
@@ -802,7 +802,7 @@ cleanup() {
 		delete wo->prestarterThread;
 	}
 	deletePidFile();
-	P_NOTICE("PassengerAgent server shutdown finished");
+	P_NOTICE(AGENT_EXE " server shutdown finished");
 }
 
 static void
@@ -817,7 +817,7 @@ deletePidFile() {
 static int
 runServer() {
 	TRACE_POINT();
-	P_NOTICE("Starting PassengerAgent server...");
+	P_NOTICE("Starting " AGENT_EXE " server...");
 
 	try {
 		UPDATE_TRACE_POINT();
@@ -972,7 +972,7 @@ sanityCheckOptions() {
 int
 serverMain(int argc, char *argv[]) {
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent server", parseOptions,
+	*agentsOptions = initializeAgent(argc, &argv, AGENT_EXE " server", parseOptions,
 		preinitialize, 2);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();

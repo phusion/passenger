@@ -1,4 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'standalone/runtime_locator'
 require 'tmpdir'
 require 'fileutils'
@@ -61,7 +62,7 @@ describe RuntimeLocator do
 					@support_dir = "#{@temp_dir}/#{version}/support-#{cxx_compat_id}"
 					FileUtils.mkdir_p("#{@support_dir}/agents")
 					FileUtils.mkdir_p("#{@support_dir}/common/libpassenger_common/ApplicationPool2")
-					create_file("#{@support_dir}/agents/PassengerAgent")
+					create_file("#{@support_dir}/agents/#{AGENT_EXE}")
 					create_file("#{@support_dir}/common/libboost_oxt.a")
 					create_file("#{@support_dir}/common/libpassenger_common/ApplicationPool2/Implementation.o")
 				end

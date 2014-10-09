@@ -40,7 +40,7 @@ using namespace std;
 
 inline void
 loggingAgentUsage() {
-	printf("Usage: PassengerAgent logger <OPTIONS...>\n");
+	printf("Usage: " AGENT_EXE " logger <OPTIONS...>\n");
 	printf("Runs the " PROGRAM_NAME " logging agent.\n");
 	printf("\n");
 	printf("Required options:\n");

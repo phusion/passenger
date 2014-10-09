@@ -76,7 +76,7 @@ private
 	end
 
 	def perform_reopen_logs_on(name, socket_name, password)
-		puts "Reopening logs for PassengerAgent #{name}"
+		puts "Reopening logs for #{AGENT_EXE} #{name}"
 		request = Net::HTTP::Post.new("/reopen_logs.json")
 		request.basic_auth("admin", password)
 		request.content_type = "application/json"
@@ -86,7 +86,7 @@ private
 				handle_error(name, response)
 			end
 		else
-			STDERR.puts "*** An error occured while communicating with the PassengerAgent #{name} (code #{response.code}):"
+			STDERR.puts "*** An error occured while communicating with the #{AGENT_EXE} #{name} (code #{response.code}):"
 			STDERR.puts response.body
 			abort
 		end
@@ -95,7 +95,7 @@ private
 	def handle_error(name, response)
 		json = PhusionPassenger::Utils::JSON.parse(response.body)
 		if !should_ignore_error?(json)
-			STDERR.puts "*** An error occured while communicating with the PassengerAgent #{name} (code #{response.code}):"
+			STDERR.puts "*** An error occured while communicating with the #{AGENT_EXE} #{name} (code #{response.code}):"
 			STDERR.puts json['message']
 			abort
 		end

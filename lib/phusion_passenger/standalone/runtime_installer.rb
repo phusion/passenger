@@ -260,7 +260,7 @@ private
 	end
 
 	def check_support_binaries
-		["PassengerAgent"].each do |exe|
+		[AGENT_EXE].each do |exe|
 			puts "     Checking whether the downloaded #{exe.sub(/^Passenger/, '')} binary is usable"
 			output = `env LD_BIND_NOW=1 DYLD_BIND_AT_LAUNCH=1 ./agents/#{exe} test-binary`
 			if !$? || $?.exitstatus != 0 || output != "PASS\n"

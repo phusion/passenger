@@ -44,6 +44,7 @@ source_root = File.expand_path("../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'config/validate_install_command'
 require 'tmpdir'
 require 'fileutils'
@@ -216,8 +217,8 @@ describe "A natively packaged Phusion Passenger" do
 
 	specify "the agents directory exists" do
 		File.directory?(AGENTS_DIR).should be_true
-		File.file?("#{AGENTS_DIR}/PassengerAgent").should be_true
-		File.executable?("#{AGENTS_DIR}/PassengerAgent").should be_true
+		File.file?("#{AGENTS_DIR}/#{AGENT_EXE}").should be_true
+		File.executable?("#{AGENTS_DIR}/#{AGENT_EXE}").should be_true
 	end
 
 	specify "the Apache 2 module exists" do

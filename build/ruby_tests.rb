@@ -23,7 +23,7 @@
 
 ### Ruby components tests ###
 
-dependencies = [NATIVE_SUPPORT_TARGET, AGENT_OUTPUT_DIR + 'PassengerAgent'].compact
+dependencies = [NATIVE_SUPPORT_TARGET, AGENT_OUTPUT_DIR + AGENT_EXE].compact
 desc "Run unit tests for the Ruby libraries"
 task 'test:ruby' => dependencies do
 	if maybe_grep = string_option('E')

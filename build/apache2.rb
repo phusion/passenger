@@ -89,8 +89,7 @@ auto_generated_sources = [
 desc "Build Apache 2 module"
 task :apache2 => [
 	APACHE2_MODULE,
-	AGENT_OUTPUT_DIR + 'PassengerAgent',
-	AGENT_OUTPUT_DIR + 'SpawnPreparer',
+	AGENT_OUTPUT_DIR + AGENT_EXE,
 	NATIVE_SUPPORT_TARGET
 ].compact
 

@@ -78,13 +78,11 @@ describe "Passenger Standalone" do
 
 	def create_dummy_support_binaries
 		Dir.mkdir("agents") if !File.exist?("agents")
-		["PassengerAgent"].each do |exe|
-			File.open("agents/#{exe}", "w") do |f|
-				f.puts "#!/bin/bash"
-				f.puts "echo PASS"
-			end
-			File.chmod(0755, "agents/#{exe}")
+		File.open("agents/#{AGENT_EXE}", "w") do |f|
+			f.puts "#!/bin/bash"
+			f.puts "echo PASS"
 		end
+		File.chmod(0755, "agents/#{AGENT_EXE}")
 	end
 
 	def create_dummy_nginx_binary

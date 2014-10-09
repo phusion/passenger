@@ -1,4 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'standalone/runtime_installer'
 require 'tmpdir'
 require 'fileutils'
@@ -54,13 +55,11 @@ describe RuntimeInstaller do
 
 	def create_dummy_support_binaries
 		Dir.mkdir("agents")
-		["PassengerAgent",].each do |exe|
-			File.open("agents/#{exe}", "w") do |f|
-				f.puts "#!/bin/bash"
-				f.puts "echo PASS"
-			end
-			File.chmod(0755, "agents/#{exe}")
+		File.open("agents/#{AGENT_EXE}", "w") do |f|
+			f.puts "#!/bin/bash"
+			f.puts "echo PASS"
 		end
+		File.chmod(0755, "agents/#{AGENT_EXE}")
 	end
 
 	def create_dummy_nginx_binary
@@ -177,7 +176,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/agents/PassengerAgent").should be_true
+			File.exist?("#{@temp_dir}/support/agents/#{AGENT_EXE}").should be_true
 		end
 
 		it "downloads the Nginx binary from the Internet if :nginx is specified as target" do
@@ -215,7 +214,7 @@ describe RuntimeInstaller do
 			@installer.should_not_receive(:compile_nginx)
 			@installer.run
 
-			File.exist?("#{@temp_dir}/support/agents/PassengerAgent").should be_true
+			File.exist?("#{@temp_dir}/support/agents/#{AGENT_EXE}").should be_true
 			File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_true
 		end
 
@@ -232,7 +231,7 @@ describe RuntimeInstaller do
 				"nginx_without_native_support CACHING=false OUTPUT_DIR='#{@temp_dir}/support'").
 				and_return do
 					FileUtils.mkdir_p("#{@temp_dir}/agents")
-					create_file("#{@temp_dir}/agents/PassengerAgent")
+					create_file("#{@temp_dir}/agents/#{AGENT_EXE}")
 
 					nginx_libs.each do |object_filename|
 						dir = File.dirname(object_filename)

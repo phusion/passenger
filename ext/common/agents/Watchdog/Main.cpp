@@ -502,7 +502,7 @@ runHookScriptAndThrowOnError(const char *name) {
 
 static void
 usage() {
-	printf("Usage: PassengerAgent watchdog <OPTIONS...>\n");
+	printf("Usage: " AGENT_EXE " watchdog <OPTIONS...>\n");
 	printf("Runs the " PROGRAM_NAME " watchdog.\n\n");
 	printf("The watchdog runs and supervises various " PROGRAM_NAME " agent processes,\n");
 	printf("namely the HTTP server and logging server. Arguments marked with \"[A]\", e.g.\n");
@@ -512,13 +512,13 @@ usage() {
 	printf("wrapping those arguments between --BS/--ES and --BL/--EL.\n");
 	printf("\n");
 	printf("  Example 1: pass some arguments to the HTTP server.\n\n");
-	printf("  PassengerAgent watchdog --passenger-root /opt/passenger \\\n");
+	printf("  " AGENT_EXE " watchdog --passenger-root /opt/passenger \\\n");
 	printf("    --BS --listen tcp://127.0.0.1:4000 /webapps/foo\n");
 	printf("\n");
 	printf("  Example 2: pass some arguments to the HTTP server, and some others to the\n");
 	printf("  logging server. The watchdog itself and the HTTP server will use logging\n");
 	printf("  level 3, while the logging server will use logging level 1.\n\n");
-	printf("  PassengerAgent watchdog --passenger-root /opt/passenger \\\n");
+	printf("  " AGENT_EXE " watchdog --passenger-root /opt/passenger \\\n");
 	printf("    --BS --listen tcp://127.0.0.1:4000 /webapps/foo --ES \\\n");
 	printf("    --BL --log-level 1 --EL \\\n");
 	printf("    --log-level 3\n");
@@ -706,7 +706,7 @@ initializeBareEssentials(int argc, char *argv[]) {
 	oldOomScore = setOomScoreNeverKill();
 
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, "PassengerAgent watchdog",
+	*agentsOptions = initializeAgent(argc, &argv, AGENT_EXE " watchdog",
 		parseOptions, NULL, 2);
 
 	// Start all sub-agents with this environment variable.
@@ -1051,7 +1051,7 @@ watchdogMain(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
-	P_NOTICE("Starting PassengerAgent watchdog...");
+	P_NOTICE("Starting " AGENT_EXE " watchdog...");
 	P_DEBUG("Watchdog options: " << agentsOptions->inspect());
 	WorkingObjectsPtr wo;
 	InstanceDirToucherPtr instanceDirToucher;

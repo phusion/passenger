@@ -41,7 +41,7 @@ using namespace std;
 
 inline void
 serverUsage() {
-	printf("Usage: PassengerAgent server <OPTIONS...> [APP DIRECTORY]\n");
+	printf("Usage: " AGENT_EXE " server <OPTIONS...> [APP DIRECTORY]\n");
 	printf("Runs the " PROGRAM_NAME " standalone HTTP server agent.\n");
 	printf("\n");
 	printf("The server starts in single-app mode, unless --multi-app is specified. When\n");
