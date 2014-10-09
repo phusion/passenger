@@ -26,6 +26,7 @@
 #define _PASSENGER_APPLICATION_POOL2_SMART_SPAWNER_H_
 
 #include <ApplicationPool2/Spawner.h>
+#include <Constants.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {

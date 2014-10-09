@@ -26,6 +26,7 @@
 #define _PASSENGER_APPLICATION_POOL2_DIRECT_SPAWNER_H_
 
 #include <ApplicationPool2/Spawner.h>
+#include <Constants.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
 
