@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2013 Phusion
+ *  Copyright (c) 2013-2014 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -54,20 +54,53 @@ static int shouldCleanup = 0;
 static int shouldDaemonize = 0;
 static const char *pidFile = NULL;
 static const char *logFile = NULL;
+static int sleepInterval = 1800;
 static int terminationPipe[2];
 static sig_atomic_t shouldIgnoreNextTermSignal = 0;
 
+#if 1
+	#define DEBUG(message) puts(message)
+#else
+	#define DEBUG(message) do { /* nothing */ } while (false)
+#endif
+
 
 static void
-parseArguments(int argc, char *argv[]) {
-	dir = argv[1];
+usage() {
+	printf("Usage: PassengerAgent temp-dir-watcher <DIRECTORY> [OPTIONS...]\n");
+	printf("Touches everything in a directory every 30 minutes, to "
+		"prevent /tmp cleaners from removing the directory.\n");
+	printf("\n");
+	printf("Options:\n");
+	printf("  --cleanup           Remove directory on exit\n");
+	printf("  --daemonize         Daemonize into background\n");
+	printf("  --interval SECONDS  Customize interval\n");
+	printf("  --pid-file PATH     Save PID into the given file\n");
+	printf("  --log-file PATH     Use the given log file\n");
+}
+
+static void
+parseArguments(int argc, char *argv[], int offset) {
+	dir = argv[offset];
 	int i;
 
-	for (i = 2; i < argc; i++) {
+	if (dir == NULL) {
+		usage();
+		exit(1);
+	}
+
+	for (i = offset + 1; i < argc; i++) {
 		if (strcmp(argv[i], "--cleanup") == 0) {
 			shouldCleanup = 1;
 		} else if (strcmp(argv[i], "--daemonize") == 0) {
 			shouldDaemonize = 1;
+		} else if (strcmp(argv[i], "--interval") == 0) {
+			if (i == argc - 1) {
+				fprintf(stderr, ERROR_PREFIX ": --interval requires an argument\n");
+				exit(1);
+			}
+			sleepInterval = atoi(argv[i + 1]);
+			i++;
 		} else if (strcmp(argv[i], "--pid-file") == 0) {
 			pidFile = argv[i + 1];
 			i++;
@@ -111,10 +144,10 @@ setNonBlocking(int fd) {
 }
 
 static void
-initialize(int argc, char *argv[]) {
+initialize(int argc, char *argv[], int offset) {
 	int e, fd;
 
-	parseArguments(argc, argv);
+	parseArguments(argc, argv, offset);
 
 	if (logFile != NULL) {
 		fd = open(logFile, O_WRONLY | O_APPEND | O_CREAT, 0644);
@@ -357,25 +390,28 @@ performCleanup(const char *dir) {
 }
 
 int
-main(int argc, char *argv[]) {
-	initialize(argc, argv);
+tempDirToucherMain(int argc, char *argv[]) {
+	initialize(argc, argv, 2);
 	installSignalHandlers();
 	maybeDaemonize();
 	maybeWritePidfile();
 
 	while (1) {
 		if (dirExists(dir)) {
+			DEBUG("Touching directory");
 			touchDir(dir);
-			if (!doSleep(1800)) {
+			if (!doSleep(sleepInterval)) {
 				break;
 			}
 		} else {
+			DEBUG("Directory no longer exists, exiting");
 			break;
 		}
 	}
 
 	maybeDeletePidFile();
 	if (shouldCleanup) {
+		DEBUG("Cleaning up directory");
 		performCleanup(dir);
 	}
 

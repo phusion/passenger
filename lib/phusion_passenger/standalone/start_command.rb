@@ -645,14 +645,15 @@ private
 	end
 
 	def touch_temp_dir_in_background
-		result = system("#{@runtime_locator.find_agents_dir}/TempDirToucher",
+		result = system("#{@runtime_locator.find_agents_dir}/PassengerAgent",
+			"temp-dir-toucher",
 			@temp_dir,
 			"--cleanup",
 			"--daemonize",
 			"--pid-file", "#{@temp_dir}/temp_dir_toucher.pid",
 			"--log-file", @options[:log_file])
 		if !result
-			error "Cannot start #{@runtime_locator.find_agents_dir}/TempDirToucher"
+			error "Cannot start #{@runtime_locator.find_agents_dir}/PassengerAgent temp-dir-toucher"
 			exit 1
 		end
 	end

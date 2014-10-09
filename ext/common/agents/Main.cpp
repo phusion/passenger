@@ -33,6 +33,7 @@ int watchdogMain(int argc, char *argv[]);
 int serverMain(int argc, char *argv[]);
 int loggingAgentMain(int argc, char *argv[]);
 int systemMetricsMain(int argc, char *argv[]);
+int tempDirToucherMain(int argc, char *argv[]);
 
 static bool
 isHelp(const char *arg) {
@@ -83,6 +84,8 @@ dispatchSubcommand(int argc, char *argv[]) {
 		exit(loggingAgentMain(argc, argv));
 	} else if (strcmp(argv[1], "system-metrics") == 0) {
 		exit(systemMetricsMain(argc, argv));
+	} else if (strcmp(argv[1], "temp-dir-toucher") == 0) {
+		exit(tempDirToucherMain(argc, argv));
 	} else if (strcmp(argv[1], "test-binary") == 0) {
 		printf("PASS\n");
 		exit(0);

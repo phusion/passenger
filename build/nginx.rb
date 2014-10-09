@@ -42,7 +42,6 @@ task :nginx_without_native_support => [
 	auto_generated_sources,
 	AGENT_OUTPUT_DIR + 'PassengerAgent',
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
-	AGENT_OUTPUT_DIR + 'TempDirToucher',
 	COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).link_objects
 ].flatten
 

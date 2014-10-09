@@ -91,7 +91,6 @@ task :apache2 => [
 	APACHE2_MODULE,
 	AGENT_OUTPUT_DIR + 'PassengerAgent',
 	AGENT_OUTPUT_DIR + 'SpawnPreparer',
-	AGENT_OUTPUT_DIR + 'TempDirToucher',
 	NATIVE_SUPPORT_TARGET
 ].compact
 

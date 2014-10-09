@@ -95,6 +95,9 @@ AGENT_OBJECTS = {
 	'SystemMetricsTool.o' => [
 		'ext/common/agents/HelperAgent/SystemMetricsTool.cpp',
 		'ext/common/Utils/SystemMetricsCollector.h'
+	],
+	'TempDirToucher.o' => [
+		'ext/common/agents/TempDirToucher/Main.cpp'
 	]
 }
 
@@ -168,18 +171,6 @@ file AGENT_OUTPUT_DIR + 'SpawnPreparer' => dependencies do
 		"#{LIBBOOST_OXT} " <<
 		"#{PlatformInfo.portability_cxx_ldflags} " <<
 		"#{EXTRA_CXX_LDFLAGS}")
-end
-
-file AGENT_OUTPUT_DIR + 'EnvPrinter' => 'ext/common/agents/EnvPrinter.c' do
-	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	create_c_executable(AGENT_OUTPUT_DIR + 'EnvPrinter',
-		'ext/common/agents/EnvPrinter.c')
-end
-
-file AGENT_OUTPUT_DIR + 'TempDirToucher' => 'ext/common/agents/TempDirToucher.c' do
-	sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-	create_c_executable(AGENT_OUTPUT_DIR + 'TempDirToucher',
-		'ext/common/agents/TempDirToucher.c')
 end
 
 task 'common:clean' do
