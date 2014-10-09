@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -22,37 +22,35 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
-module Config
 
-class Command
-	def self.description
-		return nil
+class ProgressBar
+	THROBBLER = ["-", "\\", "|", "/", "-"]
+
+	def initialize(output = STDOUT)
+		@output = output
+		@tty = output.tty?
+		@throbbler_index = 0
 	end
 
-	def initialize(argv)
-		@argv = argv.dup
-		@options = self.class.create_default_options
-	end
-
-private
-	def self.create_default_options
-		return {}
-	end
-
-	def parse_options
-		@parser = self.class.create_option_parser(@options)
-		begin
-			@parser.parse!(@argv)
-		rescue OptionParser::ParseError => e
-			STDERR.puts "*** ERROR: #{e}"
-			abort @parser.to_s
+	def set(percentage)
+		if @tty
+			width = (percentage * 50).to_i
+			bar   = "*" * width
+			space = " " * (50 - width)
+			text = sprintf("[%s%s] %s", bar, space, THROBBLER[@throbbler_index])
+			@throbbler_index = (@throbbler_index + 1) % THROBBLER.size
+			@output.write("#{text}\r")
+			@output.flush
+		else
+			@output.write(".")
+			@output.flush
 		end
-		if @options[:help]
-			puts @parser
-			exit
-		end
+	end
+
+	def finish
+		@output.write("\n")
+		@output.flush
 	end
 end
 
-end # module Config
 end # module PhusionPassenger

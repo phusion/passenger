@@ -103,13 +103,13 @@ module TestHelper
 	private
 		def copy_stub_contents
 			super
-			if PhusionPassenger.originally_packaged?
-				source_root = PhusionPassenger.source_root
+			if PhusionPassenger.build_system_dir?
+				build_system_dir = PhusionPassenger.build_system_dir
 				if !File.exist?("#{@full_app_root}/Gemfile")
-					FileUtils.cp("#{source_root}/Gemfile", @full_app_root)
-					FileUtils.cp("#{source_root}/Gemfile.lock", @full_app_root)
-					if File.exist?("#{source_root}/.bundle")
-						FileUtils.cp_r("#{source_root}/.bundle", @full_app_root)
+					FileUtils.cp("#{build_system_dir}/Gemfile", @full_app_root)
+					FileUtils.cp("#{build_system_dir}/Gemfile.lock", @full_app_root)
+					if File.exist?("#{build_system_dir}/.bundle")
+						FileUtils.cp_r("#{build_system_dir}/.bundle", @full_app_root)
 					end
 				end
 			end
@@ -367,7 +367,7 @@ module TestHelper
 		File.write(password_filename, password)
 		pid = spawn_process("#{PhusionPassenger.support_binaries_dir}/#{PhusionPassenger::AGENT_EXE}",
 			"logger",
-			"--passenger-root", PhusionPassenger.source_root,
+			"--passenger-root", PhusionPassenger.install_spec,
 			"--log-level", PhusionPassenger::DebugLogging.log_level,
 			"--dump-file", dump_file,
 			"--user",  CONFIG['normal_user_1'],

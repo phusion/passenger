@@ -1,9 +1,9 @@
 <red>The necessary source files for compiling Nginx are not installed.</red>
-<% if PhusionPassenger.native_packaging_method == "deb" %>
+<% if PhusionPassenger.packaging_method == "deb" %>
 Please install them with:
 
   <b>sudo apt-get install <%= DEB_DEV_PACKAGE %></b>
-<% elsif PhusionPassenger.native_packaging_method == "rpm" %>
+<% elsif PhusionPassenger.packaging_method == "rpm" %>
 Please install them with:
 
   <b>sudo yum install <%= RPM_DEV_PACKAGE %>-<%= VERSION_STRING %></b>

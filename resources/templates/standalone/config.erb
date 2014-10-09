@@ -42,7 +42,7 @@ http {
     log_format debug '[$time_local] $msec  "$request" $status conn=$connection sent=$bytes_sent body_sent=$body_bytes_sent';
     include '<%= PhusionPassenger.resources_dir %>/mime.types';
     passenger_ruby <%= PlatformInfo.ruby_command %>;
-    passenger_root '<%= location_config_filename %>';
+    passenger_root '<%= PhusionPassenger.install_spec %>';
     passenger_abort_on_startup_error on;
     passenger_ctl cleanup_pidfiles <%= serialize_strset("#{@temp_dir}/temp_dir_toucher.pid") %>;
     passenger_user_switching off;

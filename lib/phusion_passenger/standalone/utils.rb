@@ -32,15 +32,6 @@ private
 		end
 	end
 
-	def runtime_version_string(nginx_version)
-		if PhusionPassenger.originally_packaged? || nginx_version != PhusionPassenger::PREFERRED_NGINX_VERSION
-			require_platform_info_binary_compatibility
-			return "#{VERSION_STRING}-#{PlatformInfo.passenger_binary_compatibility_id}"
-		else
-			return VERSION_STRING
-		end
-	end
-
 	# Dir.pwd resolves symlinks. So in turn, File.expand_path/File.absolute_path
 	# do that too. We work around that by shelling out to the `pwd` tool.
 	if File.respond_to?(:absolute_path)

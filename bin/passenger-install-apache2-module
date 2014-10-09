@@ -108,7 +108,8 @@ class Installer < PhusionPassenger::AbstractInstaller
 	end
 	
 	def run_steps
-		if PhusionPassenger.natively_packaged? && PhusionPassenger.apache2_module_source_dir.nil?
+		if PhusionPassenger.build_system_dir.nil?
+			# Invariant: PhusionPassenger.custom_packaged?
 			if apache_module_available?
 				notify_apache_module_installed
 				show_deployment_example
@@ -118,7 +119,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 			exit
 		end
 		
-		Dir.chdir(PhusionPassenger.apache2_module_source_dir)
+		Dir.chdir(PhusionPassenger.build_system_dir)
 		show_welcome_screen
 		query_interested_languages
 		check_gem_install_permission_problems || exit(1)
@@ -268,10 +269,10 @@ private
 		if Process.uid == 0
 			render_template 'installer_common/cannot_access_files_as_root',
 				:type => "directory",
-				:files => [PhusionPassenger.apache2_module_source_dir]
+				:files => [PhusionPassenger.build_system_dir]
 		else
 			render_template 'installer_common/run_installer_as_root',
-				:dir  => PhusionPassenger.apache2_module_source_dir,
+				:dir  => PhusionPassenger.build_system_dir,
 				:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
 				:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
 				:ruby => PhusionPassenger::PlatformInfo.ruby_command,
@@ -342,14 +343,14 @@ private
 		line
 		puts '<banner>Compiling and installing Apache 2 module...</banner>'
 		if @compile
-			puts "cd #{PhusionPassenger.apache2_module_source_dir}"
+			puts "cd #{PhusionPassenger.build_system_dir}"
 			if ENV['TRACE']
 				rake = "#{PlatformInfo.rake_command} --trace RELEASE=yes"
 			else
 				rake = "#{PlatformInfo.rake_command} RELEASE=yes"
 			end
 			command = "env NOEXEC_DISABLE=1 #{rake} apache2:clean apache2"
-			if PhusionPassenger.native_packaging_method == "homebrew"
+			if PhusionPassenger.packaging_method == "homebrew"
 				# Running apache2:clean deletes some object files needed
 				# by passenger-install-nginx-module, so we ensure those
 				# object files are compiled.
@@ -368,7 +369,7 @@ private
 
 	def config_snippet
 		return "<IfModule mod_passenger.c>\n" +
-			"  PassengerRoot #{PhusionPassenger.source_root}\n" +
+			"  PassengerRoot #{PhusionPassenger.install_spec}\n" +
 			"  PassengerDefaultRuby #{PlatformInfo.ruby_command}\n" +
 			"</IfModule>"
 	end
@@ -787,7 +788,7 @@ private
 	end
 
 	def install_apache_module_from_native_package
-		case PhusionPassenger.native_packaging_method
+		case PhusionPassenger.packaging_method
 		when 'deb'
 			sh! "sudo apt-get update"
 			sh! "sudo apt-get install #{DEB_APACHE_MODULE_PACKAGE}"
@@ -797,7 +798,7 @@ private
 			return true
 		else
 			puts "<red>The #{PROGRAM_NAME} Apache module package is not installed.</red>"
-			puts "Please ask your operating system vendor how to install it."
+			puts "Please ask your packager or operating system vendor how to install it."
 			return false
 		end
 	end

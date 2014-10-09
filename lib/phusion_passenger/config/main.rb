@@ -32,8 +32,16 @@ module Config
 		["restart-app", "RestartAppCommand"],
 		["list-instances", "ListInstancesCommand"],
 		["reopen-logs", "ReopenLogsCommand"],
-		["build-native-support", "BuildNativeSupportCommand"],
 		["validate-install", "ValidateInstallCommand"],
+		["build-native-support", "BuildNativeSupportCommand"],
+
+		["install-agent", "InstallAgentCommand"],
+		["install-standalone-runtime", "InstallStandaloneRuntimeCommand"],
+		["download-agent", "DownloadAgentCommand"],
+		["download-nginx-engine", "DownloadNginxEngineCommand"],
+		["compile-agent", "CompileAgentCommand"],
+		["compile-nginx-engine", "CompileNginxEngineCommand"],
+
 		["system-metrics", "SystemMetricsCommand"],
 		["about", "AboutCommand"]
 	]
@@ -44,7 +52,7 @@ module Config
 		"nginx-addon-dir",
 		"nginx-libs",
 		"compiled",
-		"natively-packaged",
+		"custom-packaged",
 		"installed-from-release-package",
 		"make-locations-ini",
 		"detect-apache2",
@@ -71,26 +79,40 @@ module Config
 	end
 
 	def self.help(all = false)
-		puts "Usage: passenger-config <COMMAND> [options]"
-		puts "Tool for controlling or configurating a #{PROGRAM_NAME} instance or installation."
+		puts "Usage: passenger-config <COMMAND> [OPTIONS...]"
+		puts
+		puts "  Tool for managing, controlling and configuring a #{PROGRAM_NAME} instance"
+		puts "  or installation."
 		puts
 		puts "Management commands:"
-		puts "  detach-process        Detach an application process from the process pool"
-		puts "  restart-app           Restart an application"
-		puts "  reopen-logs           Instruct #{PROGRAM_NAME} agents to reopen their log"
-		puts "                        files"
+		puts "  detach-process         Detach an application process from the process pool"
+		puts "  restart-app            Restart an application"
+		puts "  reopen-logs            Instruct #{PROGRAM_NAME} agents to reopen their log"
+		puts "                         files"
 		puts
 		puts "Informational commands:"
-		puts "  validate-install      Validate this #{PROGRAM_NAME} installation"
-		puts "  list-instances        List running #{PROGRAM_NAME} instances"
-		puts "  about                 Show information about #{PROGRAM_NAME}"
+		puts "  list-instances         List running #{PROGRAM_NAME} instances"
+		puts "  about                  Show information about #{PROGRAM_NAME}"
+		puts
+		puts "#{PROGRAM_NAME} installation management:"
+		puts "  validate-install       Validate this #{PROGRAM_NAME} installation"
+		puts "  build-native-support   Ensure that the native_support library for the current"
+		puts "                         Ruby interpeter is built"
+		puts "  install-agent          Install the #{PROGRAM_NAME} agent binary"
+		puts "  install-standalone-runtime"
+		puts "                         Install the #{PROGRAM_NAME} Standalone"
+		puts "                         runtime"
+		if all
+			puts "  download-agent         Download the #{PROGRAM_NAME} agent binary"
+			puts "  download-nginx-engine  Download the Nginx engine for use with"
+			puts "                         #{PROGRAM_NAME} Standalone"
+			puts "  compile-agent          Compile the #{PROGRAM_NAME} agent binary"
+			puts "  compile-nginx-engine   Compile an Nginx engine for use with #{PROGRAM_NAME}"
+			puts "                         Standalone"
+		end
 		puts
 		puts "Miscellaneous commands:"
-		puts "  build-native-support  Ensure that the native_support library for the current"
-		puts "                        Ruby interpeter is built"
-		if all
-			puts "  system-metrics        Display system metrics"
-		end
+		puts "  system-metrics        Display system metrics"
 		puts
 		puts "Run 'passenger-config <COMMAND> --help' for more information about each"
 		puts "command."

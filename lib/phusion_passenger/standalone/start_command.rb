@@ -52,9 +52,6 @@ class StartCommand < Command
 	def run
 		parse_my_options
 
-		PhusionPassenger.require_passenger_lib 'standalone/runtime_locator'
-		@runtime_locator = RuntimeLocator.new(@options[:runtime_dir],
-			@options[:nginx_version])
 		ensure_runtime_installed
 		set_stdout_stderr_binmode
 		exit if @options[:runtime_check_only]
@@ -311,10 +308,6 @@ private
 				wrap_desc("Never download binaries")) do
 				@options[:download_binaries] = false
 			end
-			opts.on("--runtime-dir DIRECTORY", String,
-				wrap_desc("Directory to use for Phusion Passenger Standalone runtime files")) do |value|
-				@options[:runtime_dir] = absolute_path(value)
-			end
 			opts.on("--runtime-check-only",
 				wrap_desc("Quit after checking whether the Phusion Passenger Standalone runtime files are installed")) do
 				@options[:runtime_check_only] = true
@@ -489,38 +482,49 @@ private
 		end
 	end
 
-	def install_runtime(runtime_locator)
-		PhusionPassenger.require_passenger_lib 'standalone/runtime_installer'
-		installer = RuntimeInstaller.new(
-			:targets     => runtime_locator.install_targets,
-			:support_dir => runtime_locator.support_dir_install_destination,
-			:nginx_dir   => runtime_locator.nginx_binary_install_destination,
-			:lib_dir     => runtime_locator.find_lib_dir || runtime_locator.support_dir_install_destination,
-			:nginx_version     => @options[:nginx_version],
-			:nginx_tarball     => @options[:nginx_tarball],
-			:binaries_url_root => @options[:binaries_url_root],
-			:download_binaries => @options.fetch(:download_binaries, true),
-			:dont_compile_runtime => @options[:dont_compile_runtime],
-			:plugin      => @plugin)
-		return installer.run
-	end
-
 	def ensure_runtime_installed
-		if @runtime_locator.everything_installed?
-			if !File.exist?(@runtime_locator.find_nginx_binary)
-				error "The web helper binary '#{@runtime_locator.find_nginx_binary}' does not exist."
-				exit 1
+		@agent_exe = PhusionPassenger.find_support_binary(AGENT_EXE)
+		if @options[:nginx_bin]
+			@nginx_binary = @options[:nginx_bin]
+			if !@nginx_binary
+				abort "Error: Nginx binary #{@options[:nginx_bin]} does not exist"
+			end
+			if !@agent_exe
+				install_runtime
+				@agent_exe = PhusionPassenger.find_support_binary(AGENT_EXE)
 			end
 		else
-			if !@runtime_locator.find_support_dir && PhusionPassenger.natively_packaged?
-				error "Your Phusion Passenger Standalone installation is broken: the support " +
-					"files could not be found. Please reinstall Phusion Passenger Standalone. " +
-					"If this problem persists, please contact your packager."
-				exit 1
+			nginx_name = "nginx-#{@options[:nginx_version]}"
+			@nginx_binary = PhusionPassenger.find_support_binary(nginx_name)
+			if !@agent_exe || !@nginx_binary
+				install_runtime
+				@agent_exe = PhusionPassenger.find_support_binary(AGENT_EXE)
+				@nginx_binary = PhusionPassenger.find_support_binary(nginx_name)
 			end
-			install_runtime(@runtime_locator) || exit(1)
-			@runtime_locator.reload
 		end
+	end
+
+	def install_runtime
+		if @options[:dont_compile_runtime]
+			STDERR.puts "*** ERROR: Refusing to compile the #{PROGRAM_NAME} Standalone runtime " +
+				"because --no-compile-runtime is given."
+			abort
+		end
+
+		args = ["--brief", "--no-force-tip"]
+		if @options[:nginx_version]
+			args << "--nginx-version"
+			args << @options[:nginx_version]
+		end
+		if @options[:nginx_tarball]
+			args << "--nginx-tarball"
+			args << @options[:nginx_tarball]
+		end
+		PhusionPassenger.require_passenger_lib 'config/install_standalone_runtime_command'
+		PhusionPassenger::Config::InstallStandaloneRuntimeCommand.new(args).run
+		puts
+		puts "--------------------------"
+		puts
 	end
 
 	def set_stdout_stderr_binmode
@@ -646,7 +650,7 @@ private
 	end
 
 	def touch_temp_dir_in_background
-		result = system("#{@runtime_locator.find_support_binaries_dir}/#{AGENT_EXE}",
+		result = system(@agent_exe,
 			"temp-dir-toucher",
 			@temp_dir,
 			"--cleanup",
@@ -654,7 +658,7 @@ private
 			"--pid-file", "#{@temp_dir}/temp_dir_toucher.pid",
 			"--log-file", @options[:log_file])
 		if !result
-			error "Cannot start #{@runtime_locator.find_support_binaries_dir}/#{AGENT_EXE} temp-dir-toucher"
+			error "Cannot start #{@agent_exe} temp-dir-toucher"
 			exit 1
 		end
 	end

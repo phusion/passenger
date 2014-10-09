@@ -1,0 +1,15 @@
+This program must be able to create this directory:
+
+  <b><%= @dir %></b>
+
+However, it was unable to do that because of incorrect permissions on parent
+directories. The parent directories must allow the <b><%= @myself %></b>b> user
+(which this program is running as) to create the directory that we want. Please
+fix the permissions on all parent directories, then re-run this program.
+
+If you don't know how to fix permissions, please search the Internet and learn
+about how Unix permissions works. These are good tutorials:
+
+ * http://www.tutorialspoint.com/unix/unix-file-permission.htm
+ * http://www.perlfect.com/articles/chmod.shtml
+ * http://www.linux.com/learn/tutorials/309527-understanding-linux-file-permissions

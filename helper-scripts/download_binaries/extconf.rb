@@ -43,7 +43,7 @@ require 'phusion_passenger'
 PhusionPassenger.locate_directories
 require 'fileutils'
 
-if PhusionPassenger.natively_packaged?
+if PhusionPassenger.custom_packaged?
 	puts "Binary downloading is only available when originally packaged. Stopping."
 	exit 0
 end
@@ -95,7 +95,7 @@ def really_download(site, name, logger, options)
 	url = "#{site[:url]}/#{PhusionPassenger::VERSION_STRING}/#{name}"
 	puts "Attempting to download #{url} into #{Dir.pwd}"
 	File.unlink("#{name}.tmp") rescue nil
-	
+
 	options = {
 		:cacert => site[:cert],
 		:logger => logger

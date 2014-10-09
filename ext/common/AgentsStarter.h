@@ -312,7 +312,7 @@ public:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		ResourceLocator locator(passengerRoot);
-		string agentFilename = locator.getSupportBinariesDir() + "/" + AGENT_EXE;
+		string agentFilename = locator.findSupportBinary(AGENT_EXE);
 		SocketPair fds;
 		int e;
 		pid_t pid;

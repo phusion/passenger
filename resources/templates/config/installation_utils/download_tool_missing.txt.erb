@@ -1,0 +1,7 @@
+<yellow>No download tool found</yellow>
+
+This program requires a download tool, but none can be found on your system.
+Please install one as follows:
+<% @runner.missing_dependencies.each do |dep| %>
+    - <%= dep.install_instructions %>
+<% end -%>

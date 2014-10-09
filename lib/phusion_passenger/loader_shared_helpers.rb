@@ -168,7 +168,7 @@ module LoaderSharedHelpers
 			# because the one in the source root may not exist.
 			command = [
 				"env",
-				"PASSENGER_LOCATION_CONFIGURATION_FILE=#{PhusionPassenger.source_root}",
+				"PASSENGER_LOCATION_CONFIGURATION_FILE=#{PhusionPassenger.install_spec}",
 				"#{PhusionPassenger.bin_dir}/passenger-config",
 				"system-metrics"
 			]
@@ -458,10 +458,7 @@ private
 	end
 
 	def home_dir
-		@home_dir ||= begin
-			require 'etc' if !defined?(Etc)
-			Etc.getpwuid(Process.uid).dir
-		end
+		return PhusionPassenger.home_dir
 	end
 end
 

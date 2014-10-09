@@ -156,7 +156,7 @@ private
 	def gem_bindir
 		if defined?(Gem) &&
 		   PhusionPassenger.originally_packaged? &&
-		   PhusionPassenger.source_root =~ /^#{Regexp.escape Gem.dir}\// &&
+		   PhusionPassenger.build_system_dir =~ /^#{Regexp.escape Gem.dir}\// &&
 		   File.exist?("#{Gem.bindir}/passenger-config")
 			return Gem.bindir
 		else
@@ -166,7 +166,7 @@ private
 
 	# Returns the Homebrew bin dir, if Phusion Passenger is installed through Homebrew.
 	def homebrew_bindir
-		if PhusionPassenger.native_packaging_method == "homebrew"
+		if PhusionPassenger.packaging_method == "homebrew"
 			return "/usr/local/bin"
 		else
 			return nil

@@ -82,7 +82,7 @@ describe "Downloaded Phusion Passenger binaries" do
 		Dir.chdir("#{@temp_dir}/#{version}") do
 			tarballs = Dir["#{PhusionPassenger.download_cache_dir}/*.tar.gz"]
 			tarballs.should_not be_empty
-			
+
 			File.open("config.ru", "w") do |f|
 				f.write(%Q{
 					app = lambda do |env|
@@ -125,7 +125,7 @@ describe "Downloaded Phusion Passenger binaries" do
 		File.rename("download_cache", "download_cache.old")
 		begin
 			FileUtils.cp_r("download_cache.old", "server_root/#{VERSION_STRING}")
-			sh "cd #{PhusionPassenger.source_root} && " +
+			sh "cd #{PhusionPassenger.build_system_dir} && " +
 				"env BINARIES_URL_ROOT=#{url_root} " +
 				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
 			Dir["download_cache/*"].should_not be_empty
@@ -143,7 +143,7 @@ describe "Downloaded Phusion Passenger binaries" do
 		server, url_root = start_server("server_root")
 		File.rename("download_cache", "download_cache.old")
 		begin
-			result = system "cd #{PhusionPassenger.source_root} && " +
+			result = system "cd #{PhusionPassenger.build_system_dir} && " +
 				"env BINARIES_URL_ROOT=#{url_root} " +
 				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
 			result.should be_false

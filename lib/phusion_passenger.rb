@@ -43,17 +43,17 @@ module PhusionPassenger
 
 	###### Directories ######
 
-	GLOBAL_NAMESPACE_DIRNAME            = "passenger"
+	GLOBAL_NAMESPACE_DIRNAME_           = "passenger"
 	# Subdirectory under $HOME to use for storing stuff.
-	USER_NAMESPACE_DIRNAME              = ".passenger"
+	USER_NAMESPACE_DIRNAME_             = ".passenger"
 	# The name for the /etc/apache2/mods-available/*.{load,conf} file.
 	APACHE2_MODULE_CONF_NAME            = "passenger"
 
 	# Directories in which to look for plugins.
 	PLUGIN_DIRS = [
-		"/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/plugins",
-		"/usr/local/share/#{GLOBAL_NAMESPACE_DIRNAME}/plugins",
-		"~/#{USER_NAMESPACE_DIRNAME}/plugins"
+		"/usr/share/#{GLOBAL_NAMESPACE_DIRNAME_}/plugins",
+		"/usr/local/share/#{GLOBAL_NAMESPACE_DIRNAME_}/plugins",
+		"~/#{USER_NAMESPACE_DIRNAME_}/plugins"
 	]
 
 	REQUIRED_LOCATIONS_INI_FIELDS = [
@@ -87,29 +87,18 @@ module PhusionPassenger
 		# available when originally packaged,
 		:build_system_dir,
 		# Directory in which downloaded Phusion Passenger binaries are cached.
-		:download_cache_dir,
-		# Directory in which we can run 'rake apache2'. Used by
-		# passenger-install-apache2-module. Rake will save the Apache module
-		# to `apache2_module_path`.
-		:apache2_module_source_dir
-	].freeze
-	# The subset of the optional fields which are only available when
-	# originally packaged.
-	ORIGINALLY_PACKAGED_LOCATIONS_INI_FIELDS = [
-		:download_cache_dir,
-		:build_system_dir
+		:download_cache_dir
 	].freeze
 
 	# Follows the logic of ext/common/ResourceLocator.h, so don't forget to modify that too.
-	def self.locate_directories(source_root_or_location_configuration_file = nil)
-		source_root_or_location_configuration_file ||= find_location_configuration_file
-		root_or_file = @source_root = source_root_or_location_configuration_file
-
-		if root_or_file && File.file?(root_or_file)
-			filename = root_or_file
+	def self.locate_directories(install_spec = nil)
+		@install_spec = install_spec || infer_install_spec
+		if @install_spec && File.file?(@install_spec)
+			filename = @install_spec
 			options  = parse_ini_file(filename)
 
-			@natively_packaged = get_bool_option(filename, options, 'natively_packaged')
+			@custom_packaged = true
+			@packaging_method = get_option(filename, options, 'packaging_method')
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				value = get_option(filename, options, field.to_s)
 				value.freeze unless value.nil?
@@ -120,30 +109,24 @@ module PhusionPassenger
 				value.freeze unless value.nil?
 				instance_variable_set("@#{field}", value)
 			end
-			if natively_packaged?
-				@native_packaging_method = get_option(filename, options, 'native_packaging_method')
-				ORIGINALLY_PACKAGED_LOCATIONS_INI_FIELDS.each do |field|
-					instance_variable_set("@#{field}", nil)
-				end
-			end
 		else
-			@source_root           = File.dirname(File.dirname(FILE_LOCATION))
-			@natively_packaged     = false
-			@bin_dir               = "#{@source_root}/bin".freeze
-			@support_binaries_dir  = "#{@source_root}/buildout/support-binaries".freeze
-			@lib_dir               = "#{@source_root}/buildout".freeze
-			@helper_scripts_dir    = "#{@source_root}/helper-scripts".freeze
-			@resources_dir         = "#{@source_root}/resources".freeze
-			@include_dir           = "#{@source_root}/ext".freeze
-			@doc_dir               = "#{@source_root}/doc".freeze
+			source_root            = File.dirname(File.dirname(FILE_LOCATION))
+			@install_spec          = source_root
+			@custom_packaged       = false
+			@bin_dir               = "#{source_root}/bin".freeze
+			@support_binaries_dir  = "#{source_root}/buildout/support-binaries".freeze
+			@lib_dir               = "#{source_root}/buildout".freeze
+			@helper_scripts_dir    = "#{source_root}/helper-scripts".freeze
+			@resources_dir         = "#{source_root}/resources".freeze
+			@include_dir           = "#{source_root}/ext".freeze
+			@doc_dir               = "#{source_root}/doc".freeze
 			@ruby_libdir           = File.dirname(FILE_LOCATION).freeze
-			@node_libdir           = "#{@source_root}/node_lib".freeze
-			@apache2_module_path   = "#{@source_root}/buildout/apache2/mod_passenger.so".freeze
-			@ruby_extension_source_dir = "#{@source_root}/ext/ruby".freeze
-			@nginx_module_source_dir   = "#{@source_root}/ext/nginx".freeze
-			@download_cache_dir        = "#{@source_root}/download_cache".freeze
-			@build_system_dir          = @source_root.dup.freeze
-			@apache2_module_source_dir = @source_root.dup.freeze
+			@node_libdir           = "#{source_root}/node_lib".freeze
+			@apache2_module_path   = "#{source_root}/buildout/apache2/mod_passenger.so".freeze
+			@ruby_extension_source_dir = "#{source_root}/ext/ruby".freeze
+			@nginx_module_source_dir   = "#{source_root}/ext/nginx".freeze
+			@download_cache_dir        = "#{source_root}/download_cache".freeze
+			@build_system_dir          = source_root.dup.freeze
 			REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
 				if instance_variable_get("@#{field}").nil?
 					raise "BUG: @#{field} not set"
@@ -153,19 +136,20 @@ module PhusionPassenger
 	end
 
 	# Returns whether this Phusion Passenger installation is in the 'originally packaged'
-	# configuration (as opposed to the 'natively packaged' configuration.
+	# configuration (as opposed to the 'custom packaged' configuration.
 	def self.originally_packaged?
-		return !@natively_packaged
+		return !@custom_packaged
 	end
 
-	def self.natively_packaged?
-		return @natively_packaged
+	def self.custom_packaged?
+		return @custom_packaged
 	end
 
-	# If Phusion Passenger is natively packaged, returns which packaging
-	# method was used. Can be 'deb', 'rpm' or 'homebrew'.
-	def self.native_packaging_method
-		return @native_packaging_method
+	# If Phusion Passenger is custom packaged, returns which packaging
+	# method was used. Can be 'deb', 'rpm', 'homebrew', 'test'
+	# or 'unknown'.
+	def self.packaging_method
+		return @custom_packaging_method
 	end
 
 	# Whether the current Phusion Passenger installation is installed
@@ -176,10 +160,9 @@ module PhusionPassenger
 		File.exist?("#{resources_dir}/release.txt")
 	end
 
-	# When originally packaged, returns the source root.
-	# When natively packaged, returns the location of the location configuration file.
-	def self.source_root
-		return @source_root
+	# The installation specification string, as passed to #locate_directories.
+	def self.install_spec
+		return @install_spec
 	end
 
 	# Generate getters for the directory types in locations.ini.
@@ -192,6 +175,24 @@ module PhusionPassenger
 		}
 	end
 	eval(getters_code, binding, __FILE__, __LINE__)
+
+	def self.user_support_binaries_dir
+		return "#{home_dir}/#{USER_NAMESPACE_DIRNAME_}/support-binaries/#{VERSION_STRING}"
+	end
+
+	def self.find_support_binary(name)
+		all_support_binary_dirs = [
+			support_binaries_dir,
+			user_support_binaries_dir
+		]
+		all_support_binary_dirs.each do |dir|
+			result = "#{dir}/#{name}"
+			if File.exist?(result)
+				return result
+			end
+		end
+		return nil
+	end
 
 	def self.index_doc_path
 		return "#{doc_dir}/#{INDEX_DOC_NAME}"
@@ -212,16 +213,16 @@ module PhusionPassenger
 
 	###### Other resource locations ######
 
-	INDEX_DOC_NAME      = "Users guide.html"
-	APACHE2_DOC_NAME    = "Users guide Apache.html"
-	NGINX_DOC_NAME      = "Users guide Nginx.html"
-	STANDALONE_DOC_NAME = "Users guide Standalone.html"
+	INDEX_DOC_NAME      = "Users guide.html".freeze
+	APACHE2_DOC_NAME    = "Users guide Apache.html".freeze
+	NGINX_DOC_NAME      = "Users guide Nginx.html".freeze
+	STANDALONE_DOC_NAME = "Users guide Standalone.html".freeze
 
 	def self.binaries_sites
 		return [
-			{ :url => "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release",
-			  :cacert => "#{resources_dir}/oss-binaries.phusionpassenger.com.crt" },
-			{ :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release" }
+			{ :url => "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release".freeze,
+			  :cacert => "#{resources_dir}/oss-binaries.phusionpassenger.com.crt".freeze },
+			{ :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release".freeze }
 		]
 	end
 
@@ -244,7 +245,7 @@ module PhusionPassenger
 
 
 private
-	def self.find_location_configuration_file
+	def self.infer_install_spec
 		filename = ENV['PASSENGER_LOCATION_CONFIGURATION_FILE']
 		return filename if filename && !filename.empty?
 
@@ -259,11 +260,11 @@ private
 			home_dir = ENV['HOME']
 		end
 		if home_dir && !home_dir.empty?
-			filename = "#{home_dir}/#{USER_NAMESPACE_DIRNAME}/locations.ini"
+			filename = "#{home_dir}/#{USER_NAMESPACE_DIRNAME_}/locations.ini"
 			return filename if File.exist?(filename)
 		end
 
-		filename = "/etc/#{GLOBAL_NAMESPACE_DIRNAME}/locations.ini"
+		filename = "/etc/#{GLOBAL_NAMESPACE_DIRNAME_}/locations.ini"
 		return filename if File.exist?(filename)
 
 		return nil
@@ -302,5 +303,19 @@ private
 	def self.get_bool_option(filename, options, key)
 		value = get_option(filename, options, key)
 		return value == 'yes' || value == 'true' || value == 'on' || value == '1'
+	end
+
+	# The HOME environment variable is often unreliable, because for
+	# example `sudo` preserves it. That's why we don't respect it by
+	# default.
+	def self.home_dir(respect_home_env = false)
+		if respect_home_env
+			home = ENV['HOME'].to_s
+		end
+		if home.nil? || home.empty?
+			require 'etc' if !defined?(Etc)
+			home = Etc.getpwuid(Process.uid).dir
+		end
+		return home
 	end
 end if !defined?(PhusionPassenger::VERSION_STRING)

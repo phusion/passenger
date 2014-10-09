@@ -525,7 +525,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	fake_ruby_extension_source_dir = "#{fakeroot}#{psg_ruby_extension_source_dir}"
 	fake_nginx_module_source_dir   = "#{fakeroot}#{psg_nginx_module_source_dir}"
 
-	native_packaging_method = ENV['NATIVE_PACKAGING_METHOD'] || "deb"
+	packaging_method = ENV['NATIVE_PACKAGING_METHOD'] || ENV['PACKAGING_METHOD'] || "deb"
 
 	sh "rm -rf #{fakeroot}"
 	sh "mkdir -p #{fakeroot}"
@@ -629,8 +629,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 	puts "Creating #{fake_rubylibdir}/phusion_passenger/locations.ini"
 	File.open("#{fake_rubylibdir}/phusion_passenger/locations.ini", "w") do |f|
 		f.puts "[locations]"
-		f.puts "natively_packaged=true"
-		f.puts "native_packaging_method=#{native_packaging_method}"
+		f.puts "packaging_method=#{packaging_method}"
 		f.puts "bin_dir=#{psg_bindir}"
 		f.puts "support_binaries_dir=#{psg_support_binaries_dir}"
 		f.puts "lib_dir=#{psg_libdir}"

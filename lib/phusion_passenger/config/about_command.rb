@@ -30,7 +30,8 @@ module Config
 class AboutCommand < Command
 	def self.help
 		puts "Usage: passenger-config about <SUBCOMMAND>"
-		puts "Show information about #{PROGRAM_NAME}."
+		puts
+		puts "  Show information about #{PROGRAM_NAME}."
 		puts
 		puts "Available subcommands:"
 		puts "  root                     Show #{PROGRAM_NAME}'s root."
@@ -40,7 +41,7 @@ class AboutCommand < Command
 		puts "  nginx-libs               Show Nginx runtime library flags."
 		puts "  resourcesdir             Show #{PROGRAM_NAME}'s resources directory."
 		puts "  compiled                 Check whether runtime libraries are compiled."
-		puts "  natively-packaged        Check whether Phusion Passenger is natively"
+		puts "  custom-packaged          Check whether Phusion Passenger is custom"
 		puts "                           packaged."
 		puts "  installed-from-release-package  Check whether this installation came from"
 		puts "                                  an official release package."
@@ -65,7 +66,7 @@ class AboutCommand < Command
 
 		case subcommand
 		when "--root"
-			puts PhusionPassenger.source_root
+			puts PhusionPassenger.install_spec
 		when "--ruby-libdir"
 			puts PhusionPassenger.ruby_libdir
 		when "--includedir"
@@ -87,8 +88,8 @@ class AboutCommand < Command
 			else
 				exit 1
 			end
-		when "--natively-packaged"
-			if PhusionPassenger.natively_packaged?
+		when "--custom-packaged"
+			if PhusionPassenger.custom_packaged?
 				exit 0
 			else
 				exit 1
@@ -100,20 +101,20 @@ class AboutCommand < Command
 				exit 1
 			end
 		when "--make-locations-ini"
-			if @argv[1] =~ /^--for-native-packaging-method=(.*)/
-				native_packaging_method = $1
+			if @argv[1] =~ /^--for-(native-)?packaging-method=(.*)/
+				packaging_method = $2
 			else
-				native_packaging_method = nil
+				packaging_method = nil
 			end
-			
+
 			puts "[locations]"
-			if native_packaging_method
-				puts "natively_packaged=true"
-				puts "native_packaging_method=#{native_packaging_method}"
+			if packaging_method
+				puts "packaging_method=#{packaging_method}"
 			else
-				puts "natively_packaged=#{PhusionPassenger.natively_packaged?}"
-				if PhusionPassenger.natively_packaged?
-					puts "native_packaging_method=#{PhusionPassenger.native_packaging_method}"
+				if PhusionPassenger.custom_packaged?
+					puts "packaging_method=#{PhusionPassenger.packaging_method}"
+				else
+					puts "packaging_method=unknown"
 				end
 			end
 			PhusionPassenger::REQUIRED_LOCATIONS_INI_FIELDS.each do |field|
@@ -121,14 +122,7 @@ class AboutCommand < Command
 			end
 			PhusionPassenger::OPTIONAL_LOCATIONS_INI_FIELDS.each do |field|
 				value = PhusionPassenger.send(field)
-				should_print = value &&
-					(!ORIGINALLY_PACKAGED_LOCATIONS_INI_FIELDS.include?(field) || (
-						PhusionPassenger.originally_packaged? &&
-						!native_packaging_method
-					))
-				if should_print
-					puts "#{field}=#{value}"
-				end
+				puts "#{field}=#{value}" if value
 			end
 		when "--detect-apache2"
 			PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'

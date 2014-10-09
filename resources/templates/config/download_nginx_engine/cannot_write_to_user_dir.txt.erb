@@ -1,0 +1,14 @@
+<red>Cannot store the Nginx engine</red>
+
+This program must be able to write to this directory:
+
+  <b><%= @dir %></b>
+
+However, it was unable to do that because of incorrect permissions on that
+directory. That directory must be writable to the <b><%= @myself %></b>
+user (which this program is running as). Please fix it with the following command:
+
+  <b>sudo chown <%= @myself %> <%= @dir %>
+  sudo chmod u+rwx <%= @dir%></b>
+
+After fixing it, please re-run this program.

@@ -60,6 +60,37 @@ class Exception
 	end
 end
 
+class Dir
+	# Dir.pwd resolves symlinks. This version tries not to, by shelling
+	# out to the pwd tool.
+	def self.pwd_no_resolve
+		begin
+			result = `pwd`.strip
+		rescue Errno::ENOENT
+			result = `/bin/pwd`.strip
+		end
+		if result.empty?
+			return Dir.pwd
+		else
+			return result
+		end
+	end
+end
+
+class File
+	# Dir.pwd resolves symlinks. So in turn, File.expand_path/File.absolute_path
+	# do that too. This method fixes that by using Dir.pwd_no_resolve.
+	if File.respond_to?(:absolute_path)
+		def self.absolute_path_no_resolve(path)
+			return File.absolute_path(path, Dir.pwd_no_resolve)
+		end
+	else
+		def self.absolute_path_no_resolve(path)
+			return File.expand_path(path, Dir.pwd_no_resolve)
+		end
+	end
+end
+
 class IO
 	if defined?(PhusionPassenger::NativeSupport)
 		# Writes all of the strings in the +components+ array into the given file

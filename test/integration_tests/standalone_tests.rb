@@ -115,198 +115,259 @@ describe "Passenger Standalone" do
 	end
 
 	describe "start command" do
-		SUPPORT_BINARIES_DOWNLOAD_MESSAGE = "--> Downloading #{PROGRAM_NAME} support binaries for your platform"
-		NGINX_BINARY_DOWNLOAD_MESSAGE = "Downloading web helper for your platform"
-		NGINX_SOURCE_DOWNLOAD_MESSAGE = "Downloading web helper source code..."
-		COMPILING_MESSAGE = "Installing #{PROGRAM_NAME} Standalone..."
+		AGENT_BINARY_DOWNLOAD_MESSAGE = "--> Downloading a #{PROGRAM_NAME} agent binary for your platform"
+		AGENT_BINARY_COMPILE_MESSAGE  = "Compiling #{PROGRAM_NAME} agent"
+		NGINX_BINARY_INSTALL_MESSAGE  = "Installing Nginx"
 
 		def test_serving_application(passenger_command)
-			Dir.chdir(@runtime_dir) do
-				File.open("config.ru", "w") do |f|
-					f.write(%Q{
-						app = lambda do |env|
-							[200, { "Content-Type" => "text/plain" }, ["ok"]]
-						end
-						run app
-					})
-				end
-				Dir.mkdir("public")
-				Dir.mkdir("tmp")
-				sh("#{passenger_command} -p 4000 -d >/dev/null")
-				begin
-					open("http://127.0.0.1:4000/") do |f|
-						f.read.should == "ok"
+			Dir.mktmpdir do |tmpdir|
+				Dir.chdir(tmpdir) do
+					File.open("config.ru", "w") do |f|
+						f.write(%Q{
+							app = lambda do |env|
+								[200, { "Content-Type" => "text/plain" }, ["ok"]]
+							end
+							run app
+						})
 					end
-				ensure
-					sh("passenger stop -p 4000")
+					Dir.mkdir("public")
+					Dir.mkdir("tmp")
+					sh("#{passenger_command} -p 4000 -d >/dev/null")
+					begin
+						open("http://127.0.0.1:4000/") do |f|
+							f.read.should == "ok"
+						end
+					ensure
+						sh("passenger stop -p 4000")
+					end
 				end
 			end
 		end
 
 		context "if the runtime is not installed" do
 			before :each do
-				@runtime_dir = Dir.mktmpdir
-				@webroot = Dir.mktmpdir
-				@server, @base_url = start_server(@webroot)
-
-				Dir.mkdir("#{@webroot}/#{version}")
-				Dir.chdir("#{@webroot}/#{version}") do
-					create_tarball("webhelper-#{nginx_version}-#{compat_id}.tar.gz") do
-						create_dummy_nginx_binary
-					end
-					create_tarball("support-#{compat_id}.tar.gz") do
-						FileUtils.mkdir_p("support-binaries")
-						FileUtils.mkdir_p("common/libpassenger_common/ApplicationPool2")
-						create_file("common/libboost_oxt.a")
-						create_file("common/libpassenger_common/ApplicationPool2/Implementation.o")
-						create_dummy_support_binaries
-					end
+				@user_dir = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}")
+				if File.exist?("buildout.old")
+					raise "buildout.old exists. Please fix this first."
 				end
-
-				create_file("#{PhusionPassenger.resources_dir}/release.txt")
+				if File.exist?("#{@user_dir}.old")
+					raise "#{@user_dir} exists. Please fix this first."
+				end
+				FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
+					"#{PhusionPassenger.build_system_dir}/buildout.old")
+				FileUtils.mv(@user_dir, "#{@user_dir}.old")
 			end
 
 			after :each do
-				@server.stop
-				File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
-				FileUtils.remove_entry_secure(@webroot)
-				FileUtils.remove_entry_secure(@runtime_dir)
-			end
-
-			context "when originally packaged" do
-				it "downloads binaries from the Internet" do
-					@output = capture_output("passenger start " +
-						"--runtime-dir '#{@runtime_dir}' " +
-						"--runtime-check-only " +
-						"--binaries-url-root '#{@base_url}'")
-					@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
-					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
-					@output.should_not include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
-					@output.should_not include(COMPILING_MESSAGE)
-				end
-
-				it "builds the runtime if downloading fails" do
-					# Yes, we're testing the entire build system here.
-					command = "passenger start " +
-						"--runtime-dir '#{@runtime_dir}' " +
-						"--binaries-url-root '#{@base_url}/wrong'"
-					@output = capture_output("#{command} --runtime-check-only")
-					@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
-					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
-					@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
-					@output.should include(COMPILING_MESSAGE)
-
-					test_serving_application(command)
-				end
-
-				specify "if the downloaded support binaries work but the downloaded web helper binary doesn't, " +
-					"and web helper compilation doesn't succeed the first time, then web helper compilation " +
-					"succeeds the second time" do
-					Dir.chdir("#{@webroot}/#{version}") do
-						create_tarball("support-#{compat_id}.tar.gz") do
-							FileUtils.cp_r(Dir["#{PhusionPassenger.source_root}/buildout/*"],
-								".")
-						end
-						create_tarball("webhelper-#{nginx_version}-#{compat_id}.tar.gz") do
-							create_file("PassengerWebHelper",
-								"#!/bin/sh\n" +
-								"exit 1\n")
-						end
-					end
-
-					# Temporarily make Passenger Standalone think our runtime is
-					# not compiled.
-					File.rename("#{PhusionPassenger.source_root}/buildout",
-						"#{PhusionPassenger.source_root}/buildout.renamed")
-					begin
-						command = "passenger start " +
-							"--runtime-dir '#{@runtime_dir}' " +
-							"--binaries-url-root '#{@base_url}'"
-
-						@output = `#{command} --runtime-check-only --no-compile-runtime 2>&1`
-						$?.exitstatus.should_not == 0
-						@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
-						@output.should include("All good\n")
-						@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
-						@output.should include("Not usable, will compile from source")
-						@output.should include("Refusing to compile the Phusion Passenger Standalone runtime")
-
-						@output = capture_output("#{command} --runtime-check-only")
-						@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
-						@output.should include(COMPILING_MESSAGE)
-						File.exist?("#{PhusionPassenger.source_root}/buildout").should be_false
-
-						test_serving_application("#{command} --no-compile-runtime")
-						File.exist?("#{PhusionPassenger.source_root}/buildout").should be_false
-					ensure
-						FileUtils.rm_rf("#{PhusionPassenger.source_root}/buildout")
-						File.rename("#{PhusionPassenger.source_root}/buildout.renamed",
-							"#{PhusionPassenger.source_root}/buildout")
-					end
-				end
-
-				it "starts a server which serves the application" do
-					# The last test already tests this. This empty test here
-					# is merely to show the intent of the tests, and to
-					# speed up the test suite by preventing an unnecessary
-					# compilation.
-				end
+				FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
+				FileUtils.rm_rf(@user_dir)
+				FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
+					"#{PhusionPassenger.build_system_dir}/buildout")
+				FileUtils.mv("#{@user_dir}.old", @user_dir)
 			end
 
 			context "when natively packaged" do
+				it "tries to install the runtime" do
+					command = "passenger start --no-compile-runtime --runtime-check-only"
+					`#{command} 2>&1`.should include("Refusing to compile")
+				end
+
+				it "starts a server which serves the application" do
+					output = capture_output("passenger start --runtime-check-only")
+					output.should include(AGENT_BINARY_DOWNLOAD_MESSAGE)
+					output.should include(NGINX_BINARY_INSTALL_MESSAGE)
+					test_serving_application("passenger start")
+				end
+			end
+
+			context "when custom packaged" do
 				before :each do
-					sh "passenger-config --make-locations-ini --for-native-packaging-method=deb " +
-						"> '#{@runtime_dir}/locations.ini'"
-					ENV['PASSENGER_LOCATION_CONFIGURATION_FILE'] = "#{@runtime_dir}/locations.ini"
-					create_file("#{PhusionPassenger.lib_dir}/PassengerWebHelper")
+					@tmpdir = Dir.mktmpdir
+					sh "passenger-config --make-locations-ini --for-packaging-method=deb " +
+			 			"> '#{@tmpdir}/locations.ini'"
+			 		ENV['PASSENGER_LOCATION_CONFIGURATION_FILE'] = "#{@tmpdir}/locations.ini"
 				end
 
 				after :each do
 					ENV.delete('PASSENGER_LOCATION_CONFIGURATION_FILE')
-					File.unlink("#{PhusionPassenger.lib_dir}/PassengerWebHelper")
+					FileUtils.remove_entry_secure(@tmpdir)
 				end
 
-				it "downloads only the Nginx binary from the Internet" do
-					File.rename("#{@webroot}/#{version}/webhelper-#{nginx_version}-#{compat_id}.tar.gz",
-						"#{@webroot}/#{version}/webhelper-0.0.1-#{compat_id}.tar.gz")
-					@output = capture_output("passenger start " +
-						"--runtime-dir '#{@runtime_dir}' " +
-						"--runtime-check-only " +
-						"--binaries-url-root '#{@base_url}' " +
-						"--nginx-version 0.0.1")
-					@output.should_not include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
-					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
-					@output.should_not include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
-					@output.should_not include(COMPILING_MESSAGE)
-				end
-
-				it "only builds Nginx if downloading fails" do
-					# Yes, we're testing the build system here.
-					command = "passenger start " +
-						"--runtime-dir '#{@runtime_dir}' " +
-						"--binaries-url-root '#{@base_url}' " +
-						"--nginx-version 1.4.1"
-					@output = capture_output("#{command} --runtime-check-only")
-					@output.should_not include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
-					@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
-					@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
-					@output.should include(COMPILING_MESSAGE)
-
-					test_serving_application(command)
+				it "tries to install the runtime" do
+					command = "passenger start --no-compile-runtime --runtime-check-only"
+					`#{command} 2>&1`.should include("Refusing to compile")
 				end
 
 				it "starts a server which serves the application" do
-					# The last test already tests this. This empty test here
-					# is merely to show the intent of the tests, and to
-					# speed up the test suite by preventing an unnecessary
-					# compilation.
+					output = capture_output("passenger start --runtime-check-only")
+					output.should include(AGENT_BINARY_DOWNLOAD_MESSAGE)
+					output.should include(NGINX_BINARY_INSTALL_MESSAGE)
+					test_serving_application("passenger start")
 				end
 			end
+
+			# TODO: move these tests to config/install_standalone_runtime_command_spec.rb
+
+			# before :each do
+			# 	@runtime_dir = Dir.mktmpdir
+			# 	@webroot = Dir.mktmpdir
+			# 	@server, @base_url = start_server(@webroot)
+
+			# 	Dir.mkdir("#{@webroot}/#{version}")
+			# 	Dir.chdir("#{@webroot}/#{version}") do
+			# 		create_tarball("webhelper-#{nginx_version}-#{compat_id}.tar.gz") do
+			# 			create_dummy_nginx_binary
+			# 		end
+			# 		create_tarball("support-#{compat_id}.tar.gz") do
+			# 			FileUtils.mkdir_p("support-binaries")
+			# 			FileUtils.mkdir_p("common/libpassenger_common/ApplicationPool2")
+			# 			create_file("common/libboost_oxt.a")
+			# 			create_file("common/libpassenger_common/ApplicationPool2/Implementation.o")
+			# 			create_dummy_support_binaries
+			# 		end
+			# 	end
+
+			# 	create_file("#{PhusionPassenger.resources_dir}/release.txt")
+			# end
+
+			# after :each do
+			# 	@server.stop
+			# 	File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
+			# 	FileUtils.remove_entry_secure(@webroot)
+			# 	FileUtils.remove_entry_secure(@runtime_dir)
+			# end
+
+			# context "when originally packaged" do
+			# 	it "downloads binaries from the Internet" do
+			# 		@output = capture_output("passenger start " +
+			# 			"--runtime-dir '#{@runtime_dir}' " +
+			# 			"--runtime-check-only " +
+			# 			"--binaries-url-root '#{@base_url}'")
+			# 		@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+			# 		@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+			# 		@output.should_not include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+			# 		@output.should_not include(COMPILING_MESSAGE)
+			# 	end
+
+			# 	it "builds the runtime if downloading fails" do
+			# 		# Yes, we're testing the entire build system here.
+			# 		command = "passenger start " +
+			# 			"--runtime-dir '#{@runtime_dir}' " +
+			# 			"--binaries-url-root '#{@base_url}/wrong'"
+			# 		@output = capture_output("#{command} --runtime-check-only")
+			# 		@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+			# 		@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+			# 		@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+			# 		@output.should include(COMPILING_MESSAGE)
+
+			# 		test_serving_application(command)
+			# 	end
+
+			# 	specify "if the downloaded support binaries work but the downloaded web helper binary doesn't, " +
+			# 		"and web helper compilation doesn't succeed the first time, then web helper compilation " +
+			# 		"succeeds the second time" do
+			# 		Dir.chdir("#{@webroot}/#{version}") do
+			# 			create_tarball("support-#{compat_id}.tar.gz") do
+			# 				FileUtils.cp_r(Dir["#{PhusionPassenger.build_system_dir}/buildout/*"],
+			# 					".")
+			# 			end
+			# 			create_tarball("webhelper-#{nginx_version}-#{compat_id}.tar.gz") do
+			# 				create_file("PassengerWebHelper",
+			# 					"#!/bin/sh\n" +
+			# 					"exit 1\n")
+			# 			end
+			# 		end
+
+			# 		# Temporarily make Passenger Standalone think our runtime is
+			# 		# not compiled.
+			# 		File.rename("#{PhusionPassenger.build_system_dir}/buildout",
+			# 			"#{PhusionPassenger.build_system_dir}/buildout.renamed")
+			# 		begin
+			# 			command = "passenger start " +
+			# 				"--runtime-dir '#{@runtime_dir}' " +
+			# 				"--binaries-url-root '#{@base_url}'"
+
+			# 			@output = `#{command} --runtime-check-only --no-compile-runtime 2>&1`
+			# 			$?.exitstatus.should_not == 0
+			# 			@output.should include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+			# 			@output.should include("All good\n")
+			# 			@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+			# 			@output.should include("Not usable, will compile from source")
+			# 			@output.should include("Refusing to compile the Phusion Passenger Standalone runtime")
+
+			# 			@output = capture_output("#{command} --runtime-check-only")
+			# 			@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+			# 			@output.should include(COMPILING_MESSAGE)
+			# 			File.exist?("#{PhusionPassenger.build_system_dir}/buildout").should be_false
+
+			# 			test_serving_application("#{command} --no-compile-runtime")
+			# 			File.exist?("#{PhusionPassenger.build_system_dir}/buildout").should be_false
+			# 		ensure
+			# 			FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
+			# 			File.rename("#{PhusionPassenger.build_system_dir}/buildout.renamed",
+			# 				"#{PhusionPassenger.build_system_dir}/buildout")
+			# 		end
+			# 	end
+			# end
+
+			# context "when custom packaged" do
+			# 	before :each do
+			# 		sh "passenger-config --make-locations-ini --for-packaging-method=deb " +
+			# 			"> '#{@runtime_dir}/locations.ini'"
+			# 		ENV['PASSENGER_LOCATION_CONFIGURATION_FILE'] = "#{@runtime_dir}/locations.ini"
+			# 		create_file("#{PhusionPassenger.lib_dir}/PassengerWebHelper")
+			# 	end
+
+			# 	after :each do
+			# 		ENV.delete('PASSENGER_LOCATION_CONFIGURATION_FILE')
+			# 		File.unlink("#{PhusionPassenger.lib_dir}/PassengerWebHelper")
+			# 	end
+
+			# 	it "downloads only the Nginx binary from the Internet" do
+			# 		File.rename("#{@webroot}/#{version}/webhelper-#{nginx_version}-#{compat_id}.tar.gz",
+			# 			"#{@webroot}/#{version}/webhelper-0.0.1-#{compat_id}.tar.gz")
+			# 		@output = capture_output("passenger start " +
+			# 			"--runtime-dir '#{@runtime_dir}' " +
+			# 			"--runtime-check-only " +
+			# 			"--binaries-url-root '#{@base_url}' " +
+			# 			"--nginx-version 0.0.1")
+			# 		@output.should_not include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+			# 		@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+			# 		@output.should_not include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+			# 		@output.should_not include(COMPILING_MESSAGE)
+			# 	end
+
+			# 	it "only builds Nginx if downloading fails" do
+			# 		# Yes, we're testing the build system here.
+			# 		command = "passenger start " +
+			# 			"--runtime-dir '#{@runtime_dir}' " +
+			# 			"--binaries-url-root '#{@base_url}' " +
+			# 			"--nginx-version 1.4.1"
+			# 		@output = capture_output("#{command} --runtime-check-only")
+			# 		@output.should_not include(SUPPORT_BINARIES_DOWNLOAD_MESSAGE)
+			# 		@output.should include(NGINX_BINARY_DOWNLOAD_MESSAGE)
+			# 		@output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
+			# 		@output.should include(COMPILING_MESSAGE)
+
+			# 		test_serving_application(command)
+			# 	end
+			# end
 		end
 
 		context "if the runtime is installed" do
-			it "doesn't download the runtime from the Internet"
-			it "doesn't build the runtime"
+			it "doesn't download the runtime from the Internet" do
+				command = "passenger start --no-compile-runtime --runtime-check-only"
+				capture_output(command).should_not include(AGENT_BINARY_DOWNLOAD_MESSAGE)
+			end
+
+			it "doesn't build the runtime" do
+				command = "passenger start --no-compile-runtime --runtime-check-only"
+				capture_output(command).should_not include(AGENT_BINARY_COMPILE_MESSAGE)
+			end
+
+			it "starts a server which serves the application" do
+				test_serving_application("passenger start")
+			end
 		end
 
 		it "daemonizes if -d is given" do

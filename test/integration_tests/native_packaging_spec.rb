@@ -25,9 +25,9 @@
 LOCATIONS_INI = ENV['LOCATIONS_INI']
 abort "Please set the LOCATIONS_INI environment variable to the right locations.ini" if !LOCATIONS_INI
 
-NATIVE_PACKAGING_METHOD = ENV['NATIVE_PACKAGING_METHOD']
-if !["deb", "rpm", "homebrew"].include?(NATIVE_PACKAGING_METHOD)
-	abort "Please set NATIVE_PACKAGING_METHOD to either 'deb', 'rpm' or 'homebrew'"
+PACKAGING_METHOD = ENV['NATIVE_PACKAGING_METHOD'] || ENV['PACKAGING_METHOD']
+if !["deb", "rpm", "homebrew"].include?(PACKAGING_METHOD)
+	abort "Please set PACKAGING_METHOD to either 'deb', 'rpm' or 'homebrew'"
 end
 
 # Clean Bundler environment variables. We don't want to start Passenger Standalone
@@ -60,7 +60,7 @@ ENV['STDERR_TO_STDOUT'] = '1'
 
 module PhusionPassenger
 
-case NATIVE_PACKAGING_METHOD
+case PACKAGING_METHOD
 when "deb"
 	BINDIR = "/usr/bin"
 	SBINDIR = "/usr/sbin"
@@ -182,8 +182,8 @@ describe "A natively packaged Phusion Passenger" do
 		end
 	end
 
-	specify "locations.ini sets native_packaging_method to #{NATIVE_PACKAGING_METHOD}" do
-		File.read(LOCATIONS_INI).should =~ /^native_packaging_method=#{NATIVE_PACKAGING_METHOD}$/
+	specify "locations.ini sets packaging_method to #{PACKAGING_METHOD}" do
+		File.read(LOCATIONS_INI).should =~ /^packaging_method=#{PACKAGING_METHOD}$/
 	end
 
 	specify "passenger-status is in #{SBINDIR}" do
@@ -238,8 +238,8 @@ describe "A natively packaged Phusion Passenger" do
 			system("passenger-config --compiled").should be_true
 		end
 
-		it "recognizes the install as natively packaged" do
-			system("passenger-config --natively-packaged").should be_true
+		it "recognizes the install as custom packaged" do
+			system("passenger-config --custom-packaged").should be_true
 		end
 
 		it "recognizes the install as coming from an official package" do

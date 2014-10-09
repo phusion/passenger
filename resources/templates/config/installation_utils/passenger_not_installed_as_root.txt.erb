@@ -1,0 +1,12 @@
+<red>You should not run this program as root</red>
+
+You are currently running this program as the <b>root</b> user. However,
+<%= PROGRAM_NAME %> was not installed by the root user. Instead, it was installed
+by the <b><%= @owner %></b> user. For this reason, this program has stopped itself,
+because proceeding as root can mess up all kinds of file permissions.
+
+<b>Please re-run this program as the <%= @owner %> user, not as root.</b>
+
+But if you are sure that you want to run this program as the root user
+(which this program doesn't recommend), then re-run this program using the
+--force parameter.

@@ -93,6 +93,9 @@ module PhusionPassenger
 		STANDALONE_DOC_URL  = "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
 		SUPPORT_URL         = "https://www.phusionpassenger.com/documentation_and_support"
 		ENTERPRISE_URL      = "https://www.phusionpassenger.com/enterprise"
+		GLOBAL_NAMESPACE_DIRNAME            = PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME_
+		# Subdirectory under $HOME to use for storing stuff.
+		USER_NAMESPACE_DIRNAME              = PhusionPassenger::USER_NAMESPACE_DIRNAME_
 		AGENT_EXE                 = "PassengerAgent"
 		DEB_MAIN_PACKAGE          = "passenger"
 		DEB_DEV_PACKAGE           = "passenger-dev"

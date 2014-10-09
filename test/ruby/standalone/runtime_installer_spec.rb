@@ -8,6 +8,7 @@ require 'stringio'
 module PhusionPassenger
 module Standalone
 
+# TODO: move these tests to config/install_standalone_runtime_command_spec.rb
 describe RuntimeInstaller do
 	before :each do
 		@temp_dir = Dir.mktmpdir
@@ -393,7 +394,7 @@ describe RuntimeInstaller do
 		lambda { @installer.run }.should raise_error(SystemExit)
 		@logs.string.should =~ %r{command failed:.*./configure}
 	end
-end
+end if false
 
 end # module Standalone
 end # module PhusionPassenger

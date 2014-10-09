@@ -98,7 +98,7 @@ private
 	end
 
 	def write_start_request(options)
-		write_request_line "passenger_root: #{PhusionPassenger.source_root}"
+		write_request_line "passenger_root: #{PhusionPassenger.install_spec}"
 		write_request_line "ruby_libdir: #{PhusionPassenger.ruby_libdir}"
 		write_request_line "keepalive: false"
 		write_request_line "log_level: 6" if DEBUG
