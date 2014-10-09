@@ -365,7 +365,7 @@ module TestHelper
 		socket_filename = "#{tmpdir}/logging.socket"
 		password_filename = "#{tmpdir}/password"
 		File.write(password_filename, password)
-		pid = spawn_process("#{PhusionPassenger.agents_dir}/#{AGENT_EXE}",
+		pid = spawn_process("#{PhusionPassenger.agents_dir}/#{PhusionPassenger::AGENT_EXE}",
 			"logger",
 			"--passenger-root", PhusionPassenger.source_root,
 			"--log-level", PhusionPassenger::DebugLogging.log_level,
