@@ -227,6 +227,7 @@ shared_examples_for "an example web app" do
 
 		begin
 			5.times do |i|
+				log "Begin sending request #{i}"
 				socket = TCPSocket.new(uri.host, uri.port)
 				sockets << socket
 				socket.write("POST #{base_uri}/ HTTP/1.1\r\n")
@@ -239,12 +240,15 @@ shared_examples_for "an example web app" do
 				socket.write(upload_data[0 .. size_of_first_half - 1])
 				socket.flush
 			end
+			log "Reading front page"
 			Timeout.timeout(10) do
 				get('/').should == "front page"
 			end
 			sockets.each_with_index do |socket, i|
+				log "Resuming request #{i}"
 				socket.write(upload_data[size_of_first_half .. -1])
 				socket.flush
+				log "Completely sent request #{i}; reading response"
 				content = socket.read
 				if content !~ /front page/
 					raise "Connection #{i} did not send a correct response:\n#{content}"

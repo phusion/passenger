@@ -34,6 +34,7 @@ describe "Phusion Passenger for Nginx" do
 	end
 
 	after :each do
+		log "End of test"
 		if example.exception
 			puts "\t---------------- Begin logs -------------------"
 			File.open("test.log", "r") do |f|
@@ -52,6 +53,12 @@ describe "Phusion Passenger for Nginx" do
 				:www_user => CONFIG['normal_user_1'],
 				:www_group => Etc.getgrgid(Etc.getpwnam(CONFIG['normal_user_1']).gid).name
 			}.merge(options))
+		end
+	end
+
+	def log(message)
+		File.open("test.log", "a") do |f|
+			f.puts "[#{Time.now}] Spec: #{message}"
 		end
 	end
 
