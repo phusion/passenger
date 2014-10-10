@@ -484,6 +484,7 @@ public:
 		entry.body->expiryDate = expiryDate;
 		entry.body->httpHeaderSize = headerSize;
 		entry.body->httpBodySize   = bodySize;
+		storeSuccesses++;
 		return entry;
 	}
 
