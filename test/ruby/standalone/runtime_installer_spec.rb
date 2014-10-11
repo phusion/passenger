@@ -1,3 +1,5 @@
+# TODO: move these tests to config/install_standalone_runtime_command_spec.rb
+if false
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'standalone/runtime_installer'
@@ -8,7 +10,6 @@ require 'stringio'
 module PhusionPassenger
 module Standalone
 
-# TODO: move these tests to config/install_standalone_runtime_command_spec.rb
 describe RuntimeInstaller do
 	before :each do
 		@temp_dir = Dir.mktmpdir
@@ -394,7 +395,8 @@ describe RuntimeInstaller do
 		lambda { @installer.run }.should raise_error(SystemExit)
 		@logs.string.should =~ %r{command failed:.*./configure}
 	end
-end if false
+end
 
 end # module Standalone
 end # module PhusionPassenger
+end
