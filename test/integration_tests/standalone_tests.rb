@@ -145,7 +145,7 @@ describe "Passenger Standalone" do
 				if File.exist?("#{@user_dir}.old")
 					raise "#{@user_dir} exists. Please fix this first."
 				end
-				if PhusionPasseneger.build_system_dir
+				if PhusionPassenger.build_system_dir
 					FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
 						"#{PhusionPassenger.build_system_dir}/buildout.old")
 				end
@@ -157,7 +157,7 @@ describe "Passenger Standalone" do
 			after :each do
 				FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
 				FileUtils.rm_rf(@user_dir)
-				if PhusionPasseneger.build_system_dir
+				if PhusionPassenger.build_system_dir
 					FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
 						"#{PhusionPassenger.build_system_dir}/buildout")
 				end
@@ -355,15 +355,8 @@ describe "Passenger Standalone" do
 		end
 
 		context "if the runtime is installed" do
-			before :each do
-				if !PhusionPassenger.find_support_binary(AGENT_EXE)
-					STDERR.puts "#{AGENT_EXE} not found."
-					STDERR.puts "$ ls -lF #{PhusionPassenger.build_system_dir}"
-					system("ls -lF #{PhusionPassenger.build_system_dir}")
-					STDERR.puts "$ ls -lF ~/#{USER_NAMESPACE_DIRNAME_}"
-					system("ls -lF ~/#{USER_NAMESPACE_DIRNAME_}")
-					raise "#{AGENT_EXE not found}"
-				end
+			before :all do
+				capture_output("passenger-config compile-nginx-engine")
 			end
 
 			it "doesn't download the runtime from the Internet" do
