@@ -101,7 +101,7 @@ describe "Downloaded Phusion Passenger binaries" do
 					"-d " +
 					"--no-compile-runtime " +
 					"--binaries-url-root http://127.0.0.1:4001 " +
-					"--runtime-dir '#{@temp_dir}' >log/start.log")
+					">log/start.log")
 			rescue Exception
 				system("cat log/start.log")
 				raise
