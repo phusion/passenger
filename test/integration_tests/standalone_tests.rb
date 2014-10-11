@@ -155,7 +155,9 @@ describe "Passenger Standalone" do
 				end
 				FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
 					"#{PhusionPassenger.build_system_dir}/buildout.old")
-				FileUtils.mv(@user_dir, "#{@user_dir}.old")
+				if File.exist?(@user_dir)
+					FileUtils.mv(@user_dir, "#{@user_dir}.old")
+				end
 			end
 
 			after :each do
@@ -163,7 +165,9 @@ describe "Passenger Standalone" do
 				FileUtils.rm_rf(@user_dir)
 				FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
 					"#{PhusionPassenger.build_system_dir}/buildout")
-				FileUtils.mv("#{@user_dir}.old", @user_dir)
+				if File.exist?("#{@user_dir}.old")
+					FileUtils.mv("#{@user_dir}.old", @user_dir)
+				end
 			end
 
 			context "when natively packaged" do
