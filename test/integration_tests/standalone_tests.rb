@@ -20,17 +20,9 @@ ENV['PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY']  = '0'
 module PhusionPassenger
 
 describe "Passenger Standalone" do
-	after :each do
-		ENV.delete('PASSENGER_DEBUG')
-	end
-
 	let(:version) { PhusionPassenger::VERSION_STRING }
 	let(:nginx_version) { PhusionPassenger::PREFERRED_NGINX_VERSION }
 	let(:compat_id) { PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id }
-
-	def use_binaries_from_source_root!
-		ENV['PASSENGER_DEBUG'] = '1'
-	end
 
 	def sh(*command)
 		if !system(*command)
@@ -153,8 +145,10 @@ describe "Passenger Standalone" do
 				if File.exist?("#{@user_dir}.old")
 					raise "#{@user_dir} exists. Please fix this first."
 				end
-				FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
-					"#{PhusionPassenger.build_system_dir}/buildout.old")
+				if PhusionPasseneger.build_system_dir
+					FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
+						"#{PhusionPassenger.build_system_dir}/buildout.old")
+				end
 				if File.exist?(@user_dir)
 					FileUtils.mv(@user_dir, "#{@user_dir}.old")
 				end
@@ -163,8 +157,10 @@ describe "Passenger Standalone" do
 			after :each do
 				FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
 				FileUtils.rm_rf(@user_dir)
-				FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
-					"#{PhusionPassenger.build_system_dir}/buildout")
+				if PhusionPasseneger.build_system_dir
+					FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
+						"#{PhusionPassenger.build_system_dir}/buildout")
+				end
 				if File.exist?("#{@user_dir}.old")
 					FileUtils.mv("#{@user_dir}.old", @user_dir)
 				end
@@ -359,6 +355,17 @@ describe "Passenger Standalone" do
 		end
 
 		context "if the runtime is installed" do
+			before :each do
+				if !PhusionPassenger.find_support_binary(AGENT_EXE)
+					STDERR.puts "#{AGENT_EXE} not found."
+					STDERR.puts "$ ls -lF #{PhusionPassenger.build_system_dir}"
+					system("ls -lF #{PhusionPassenger.build_system_dir}")
+					STDERR.puts "$ ls -lF ~/#{USER_NAMESPACE_DIRNAME_}"
+					system("ls -lF ~/#{USER_NAMESPACE_DIRNAME_}")
+					raise "#{AGENT_EXE not found}"
+				end
+			end
+
 			it "doesn't download the runtime from the Internet" do
 				command = "passenger start --no-compile-runtime --runtime-check-only"
 				capture_output(command).should_not include(AGENT_BINARY_DOWNLOAD_MESSAGE)

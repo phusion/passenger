@@ -209,7 +209,7 @@ private
 
 	def check_nginx_module_sources_available
 		if PhusionPassenger.custom_packaged? &&
-		   (!nginx_module_source_dir || !File.exist?(PhusionPassenger.nginx_module_source_dir))
+		   (!PhusionPassenger.nginx_module_source_dir || !File.exist?(PhusionPassenger.nginx_module_source_dir))
 			new_screen
 			render_template 'nginx/nginx_module_sources_not_available'
 			return false
