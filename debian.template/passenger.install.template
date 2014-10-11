@@ -1,5 +1,5 @@
 usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/support-binaries/
-nginx-<%= PhusionPassenger::PREFERRED_NGINX_VERSION %>/objs/PassengerWebHelper usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/
+nginx-<%= PhusionPassenger::PREFERRED_NGINX_VERSION %>/objs/<%= PhusionPassenger::PREFERRED_NGINX_VERSION %> usr/lib/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/support-binaries/
 usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/helper-scripts/
 usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/templates/
 usr/share/<%= PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME %>/standalone_default_root/

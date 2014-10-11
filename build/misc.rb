@@ -147,24 +147,6 @@ task :contributors do
 	puts "Updated CONTRIBUTORS"
 end
 
-# Compile the WebHelper binary, used by Homebrew packaging.
-task :webhelper => :nginx do
-	require 'tmpdir'
-	require 'logger'
-	PhusionPassenger.require_passenger_lib 'utils/download'
-	Dir.mktmpdir do |path|
-		Utils::Download.download("http://nginx.org/download/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz",
-			"#{path}/nginx.tar.gz")
-		sh "cd '#{path}' && tar xzf nginx.tar.gz"
-		sh "cd '#{path}/nginx-#{PREFERRED_NGINX_VERSION}' && " +
-			"./configure --prefix=/tmp " +
-			"#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " +
-			"--add-module='#{Dir.pwd}/ext/nginx' && " +
-			"make"
-		sh "cp '#{path}/nginx-#{PREFERRED_NGINX_VERSION}/objs/nginx' '#{OUTPUT_DIR}PassengerWebHelper'"
-	end
-end
-
 dependencies = [
 	COMMON_LIBRARY.link_objects,
 	LIBBOOST_OXT,
