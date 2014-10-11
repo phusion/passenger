@@ -110,5 +110,5 @@ def really_download(site, name, logger, options)
 end
 
 download "rubyext-#{ruby_compat_id}.tar.gz", :total_timeout => 10
-download "webhelper-#{PhusionPassenger::PREFERRED_NGINX_VERSION}-#{cxx_compat_id}.tar.gz", :total_timeout => 120
-download "support-#{cxx_compat_id}.tar.gz", :total_timeout => 900
+download "nginx-#{PhusionPassenger::PREFERRED_NGINX_VERSION}-#{cxx_compat_id}.tar.gz", :total_timeout => 120
+download "agent-#{cxx_compat_id}.tar.gz", :total_timeout => 900
