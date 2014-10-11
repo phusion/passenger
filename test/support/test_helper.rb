@@ -103,7 +103,7 @@ module TestHelper
 	private
 		def copy_stub_contents
 			super
-			if PhusionPassenger.build_system_dir?
+			if PhusionPassenger.build_system_dir
 				build_system_dir = PhusionPassenger.build_system_dir
 				if !File.exist?("#{@full_app_root}/Gemfile")
 					FileUtils.cp("#{build_system_dir}/Gemfile", @full_app_root)
