@@ -187,7 +187,7 @@ private
 		exit if @options[:dry_run]
 
 		PhusionPassenger::Utils.mktmpdir("passenger-install.", PlatformInfo.tmpexedir) do |tmpdir|
-			basename = "support-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
+			basename = "agent-#{PlatformInfo.cxx_binary_compatibility_id}.tar.gz"
 			tarball  = "#{tmpdir}/#{basename}"
 			if !download_support_file(basename, tarball)
 				@logger.error "#{@colors.reset}------------------------------------------"
