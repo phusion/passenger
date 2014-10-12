@@ -214,7 +214,7 @@ private
 			end
 
 			@logger.info "Checking whether the downloaded engine is usable..."
-			if test_binary("#{tmpdir}/#{AGENT_EXE}")
+			if test_binary("#{tmpdir}/nginx-#{PREFERRED_NGINX_VERSION}")
 				@logger.info "The downloaded engine is usable."
 			else
 				if !@options[:suppress_binary_unusable_message]
