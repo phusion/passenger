@@ -168,8 +168,8 @@ describe "Passenger Standalone" do
 
 			context "when natively packaged" do
 				it "tries to install the runtime" do
-					command = "passenger start --no-compile-runtime --runtime-check-only"
-					`#{command} 2>&1`.should include("Refusing to compile")
+					command = "passenger start --no-install-runtime --runtime-check-only"
+					`#{command} 2>&1`.should include("Refusing to install")
 				end
 
 				it "starts a server which serves the application" do
@@ -194,8 +194,8 @@ describe "Passenger Standalone" do
 				end
 
 				it "tries to install the runtime" do
-					command = "passenger start --no-compile-runtime --runtime-check-only"
-					`#{command} 2>&1`.should include("Refusing to compile")
+					command = "passenger start --no-install-runtime --runtime-check-only"
+					`#{command} 2>&1`.should include("Refusing to install")
 				end
 
 				it "starts a server which serves the application" do
@@ -360,12 +360,12 @@ describe "Passenger Standalone" do
 			end
 
 			it "doesn't download the runtime from the Internet" do
-				command = "passenger start --no-compile-runtime --runtime-check-only"
+				command = "passenger start --no-install-runtime --runtime-check-only"
 				capture_output(command).should_not include(AGENT_BINARY_DOWNLOAD_MESSAGE)
 			end
 
 			it "doesn't build the runtime" do
-				command = "passenger start --no-compile-runtime --runtime-check-only"
+				command = "passenger start --no-install-runtime --runtime-check-only"
 				capture_output(command).should_not include(AGENT_BINARY_COMPILE_MESSAGE)
 			end
 

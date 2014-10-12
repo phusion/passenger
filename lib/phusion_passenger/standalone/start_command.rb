@@ -312,6 +312,10 @@ private
 				wrap_desc("Quit after checking whether the Phusion Passenger Standalone runtime files are installed")) do
 				@options[:runtime_check_only] = true
 			end
+			opts.on("--no-install-runtime",
+				wrap_desc("Abort if runtime must be installed")) do
+				@options[:dont_install_runtime] = true
+			end
 			opts.on("--no-compile-runtime",
 				wrap_desc("Abort if runtime must be compiled")) do
 				@options[:dont_compile_runtime] = true
@@ -505,9 +509,9 @@ private
 	end
 
 	def install_runtime
-		if @options[:dont_compile_runtime]
-			STDERR.puts "*** ERROR: Refusing to compile the #{PROGRAM_NAME} Standalone runtime " +
-				"because --no-compile-runtime is given."
+		if @options[:dont_install_runtime]
+			STDERR.puts "*** ERROR: Refusing to install the #{PROGRAM_NAME} Standalone runtime " +
+				"because --no-install-runtime is given."
 			abort
 		end
 
@@ -523,6 +527,9 @@ private
 		if @options[:nginx_tarball]
 			args << "--nginx-tarball"
 			args << @options[:nginx_tarball]
+		end
+		if @options[:no_compile_runtime]
+			args << "--no-compile"
 		end
 		PhusionPassenger.require_passenger_lib 'config/install_standalone_runtime_command'
 		PhusionPassenger::Config::InstallStandaloneRuntimeCommand.new(args).run

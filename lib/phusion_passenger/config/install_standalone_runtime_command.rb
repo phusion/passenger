@@ -42,6 +42,7 @@ class InstallStandaloneRuntimeCommand < Command
 			:colorize => :auto,
 			:force => false,
 			:force_tip => true,
+			:compile => true,
 			:install_agent => true,
 			:install_agent_args => [],
 			:download_args => [
@@ -116,6 +117,9 @@ private
 				options[:install_agent_args] << "--no-force-tip"
 				options[:download_args] << "--no-force-tip"
 				options[:compile_args] << "--no-force-tip"
+			end
+			opts.on("--no-compile", "Download, but do not compile") do
+				options[:compile] = false
 			end
 			opts.on("--skip-agent", "Do not install the agent") do
 				options[:install_agent] = false
@@ -205,12 +209,16 @@ private
 		puts
 		puts "---------------------------------------"
 		puts
-		puts "No precompiled Nginx engine could be downloaded. Compiling it from source instead."
-		puts
-		args = @options[:compile_args].dup
-		args << "--working-dir"
-		args << tmpdir
-		CompileNginxEngineCommand.new(args).run
+		if @options[:compile]
+			puts "No precompiled Nginx engine could be downloaded. Compiling it from source instead."
+			puts
+			args = @options[:compile_args].dup
+			args << "--working-dir"
+			args << tmpdir
+			CompileNginxEngineCommand.new(args).run
+		else
+			abort "No precompiled Nginx engine could be downloaded. Refusing to compile because --no-compile is given."
+		end
 	end
 end
 

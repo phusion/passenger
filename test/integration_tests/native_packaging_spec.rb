@@ -351,7 +351,7 @@ describe "A natively packaged Phusion Passenger" do
 					end
 					Dir.mkdir("public")
 					Dir.mkdir("tmp")
-					sh("passenger start --no-compile-runtime -p 4000 -d >/dev/null")
+					sh("passenger start --no-install-runtime -p 4000 -d >/dev/null")
 					begin
 						open("http://127.0.0.1:4000/") do |f|
 							f.read.should == "ok"
