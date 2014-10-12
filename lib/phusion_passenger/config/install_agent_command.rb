@@ -39,6 +39,7 @@ class InstallAgentCommand < Command
 			:colorize => :auto,
 			:force => false,
 			:force_tip => true,
+			:compile => true,
 			:download_args => [
 				"--no-error-colors",
 				"--no-compilation-tip"
@@ -92,6 +93,9 @@ private
 				options[:force_tip] = false
 				options[:download_args] << "--no-force-tip"
 				options[:compile_args] << "--no-force-tip"
+			end
+			opts.on("--no-compile", "Download, but do not compile") do
+				options[:compile] = false
 			end
 			opts.on("--skip-cache", "Do not copy the agent binary from cache") do
 				options[:download_args] << "--skip-cache"
@@ -156,9 +160,13 @@ private
 		puts
 		puts "---------------------------------------"
 		puts
-		puts "The #{PROGRAM_NAME} agent binary could not be downloaded. Compiling it from source instead."
-		puts
-		CompileAgentCommand.new(@options[:compile_args]).run
+		if @options[:compile]
+			puts "The #{PROGRAM_NAME} agent binary could not be downloaded. Compiling it from source instead."
+			puts
+			CompileAgentCommand.new(@options[:compile_args]).run
+		else
+			abort "No precompiled agent binary could be downloaded. Refusing to compile because --no-compile is given."
+		end
 	end
 end
 

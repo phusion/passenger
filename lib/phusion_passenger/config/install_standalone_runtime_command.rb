@@ -120,6 +120,7 @@ private
 			end
 			opts.on("--no-compile", "Download, but do not compile") do
 				options[:compile] = false
+				options[:install_agent_args] << "--no-compile"
 			end
 			opts.on("--skip-agent", "Do not install the agent") do
 				options[:install_agent] = false

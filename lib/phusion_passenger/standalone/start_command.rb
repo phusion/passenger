@@ -528,7 +528,7 @@ private
 			args << "--nginx-tarball"
 			args << @options[:nginx_tarball]
 		end
-		if @options[:no_compile_runtime]
+		if @options[:dont_compile_runtime]
 			args << "--no-compile"
 		end
 		PhusionPassenger.require_passenger_lib 'config/install_standalone_runtime_command'
