@@ -72,6 +72,7 @@ module App
 		PhusionPassenger.locate_directories(options["passenger_root"])
 		PhusionPassenger.require_passenger_lib 'native_support'
 		PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
+		PhusionPassenger.require_passenger_lib 'ruby_core_io_enhancements'
 		PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
 		PhusionPassenger.require_passenger_lib 'request_handler'
 		PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'

@@ -47,46 +47,29 @@ module InstallationUtils
 	end
 
 	def find_or_create_writable_support_binaries_dir!
-		result = directory_writable?(PhusionPassenger.support_binaries_dir)
-		if result == true  # return value can be a SystemCallError
-			return PhusionPassenger.support_binaries_dir
-		end
+		if File.exist?(PhusionPassenger.support_binaries_dir)
+			result = directory_writable?(PhusionPassenger.support_binaries_dir)
+			if result == true  # return value can be a SystemCallError
+				return PhusionPassenger.support_binaries_dir
+			end
 
-		if Process.euid == 0
-			if result == false
-				print_installation_error_header
-				render_template 'installation_utils/support_binaries_dir_not_writable_despite_running_as_root',
-					:dir => PhusionPassenger.support_binaries_dir,
-					:myself => myself
+			if Process.euid == 0
+				if result == false
+					print_installation_error_header
+					render_template 'installation_utils/support_binaries_dir_not_writable_despite_running_as_root',
+						:dir => PhusionPassenger.support_binaries_dir,
+						:myself => myself
+				else
+					render_template 'installation_utils/unexpected_filesystem_problem',
+						:dir => PhusionPassenger.support_binaries_dir,
+						:exception => result
+				end
 				abort
 			else
-				render_template 'installation_utils/unexpected_filesystem_problem',
-					:dir => PhusionPassenger.support_binaries_dir,
-					:exception => result
-				abort
+				return find_or_create_writable_user_support_binaries_dir!
 			end
 		else
-			# We don't care whether checking support_binaries_dir raised
-			# a SystemCallError.
-
-			if !File.exist?(PhusionPassenger.user_support_binaries_dir)
-				create_user_support_binaries_dir!
-			end
-			result = directory_writable?(PhusionPassenger.user_support_binaries_dir)
-			case result
-			when true
-				return PhusionPassenger.user_support_binaries_dir
-			when false
-				print_installation_error_header
-				render_template 'installation_utils/user_support_binaries_dir_not_writable'
-				abort
-			else
-				print_installation_error_header
-				render_template 'installation_utils/unexpected_filesystem_problem',
-					:dir => PhusionPassenger.support_binaries_dir,
-					:exception => result
-				abort
-			end
+			return find_or_create_writable_user_support_binaries_dir!
 		end
 	end
 
@@ -191,6 +174,27 @@ private
 			return e
 		ensure
 			File.unlink(filename) rescue nil
+		end
+	end
+
+	def find_or_create_writable_user_support_binaries_dir!
+		if !File.exist?(PhusionPassenger.user_support_binaries_dir)
+			create_user_support_binaries_dir!
+		end
+		result = directory_writable?(PhusionPassenger.user_support_binaries_dir)
+		case result
+		when true
+			return PhusionPassenger.user_support_binaries_dir
+		when false
+			print_installation_error_header
+			render_template 'installation_utils/user_support_binaries_dir_not_writable'
+			abort
+		else
+			print_installation_error_header
+			render_template 'installation_utils/unexpected_filesystem_problem',
+				:dir => PhusionPassenger.support_binaries_dir,
+				:exception => result
+			abort
 		end
 	end
 
