@@ -517,7 +517,7 @@ private
 
 		args = ["--brief", "--no-force-tip"]
 		if @options[:binaries_url_root]
-			args << "--binaries-url-root"
+			args << "--url-root"
 			args << @options[:binaries_url_root]
 		end
 		if @options[:nginx_version]
