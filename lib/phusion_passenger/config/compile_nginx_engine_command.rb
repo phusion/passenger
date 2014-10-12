@@ -38,7 +38,9 @@ class CompileNginxEngineCommand < Command
 		parse_options
 		initialize_objects
 		sanity_check
-		NginxEngineCompiler.new(@options).run
+		if !NginxEngineCompiler.new(@options).run
+			abort
+		end
 	end
 
 private

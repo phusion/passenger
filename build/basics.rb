@@ -145,10 +145,12 @@ LIBEXT   = PlatformInfo.library_extension
 USE_DMALLOC = boolean_option('USE_DMALLOC')
 USE_EFENCE  = boolean_option('USE_EFENCE')
 USE_ASAN    = boolean_option('USE_ASAN')
+OPTIMIZE    = boolean_option('OPTIMIZE')
 
 # Agent-specific compiler flags.
 AGENT_CFLAGS  = ""
 AGENT_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
+AGENT_CFLAGS << " -O" if OPTIMIZE
 AGENT_CFLAGS.strip!
 
 # Agent-specific linker flags.

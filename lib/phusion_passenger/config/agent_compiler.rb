@@ -36,8 +36,6 @@ module PhusionPassenger
 module Config
 
 class AgentCompiler < AbstractInstaller
-	include InstallationUtils
-
 protected
 	def dependencies
 		specs = [
@@ -71,13 +69,14 @@ protected
 		if !@force
 			check_whether_os_is_broken
 			check_whether_system_has_enough_ram
-			check_root_user_wont_mess_up_support_binaries_dir_permissions!
-			check_for_download_tool!
+			InstallationUtils.check_root_user_wont_mess_up_support_binaries_dir_permissions!
+			InstallationUtils.check_for_download_tool!
 		end
 		check_dependencies(false) || abort
 		puts
 
-		@destdir = find_or_create_writable_support_binaries_dir!
+		@destdir = InstallationUtils.find_or_create_writable_support_binaries_dir!
+		confirm_enable_optimizations
 		compile_agent
 	end
 
@@ -109,17 +108,37 @@ private
 		end
 	end
 
+	def confirm_enable_optimizations
+		if @auto
+			if @optimize
+				puts "Compiling with optimizations."
+			else
+				puts "Not compiling with optimizations."
+			end
+		else
+			if @optimize
+				puts "Compiling with optimizations."
+			else
+				new_screen
+				render_template 'config/agent_compiler/confirm_enable_optimizations'
+				@optimize = prompt_confirmation('Compile with optimizations?')
+				puts
+			end
+		end
+	end
+
 	def compile_agent
 		puts "<banner>Compiling #{PROGRAM_NAME} agent...</banner>"
 		progress_bar = ProgressBar.new
 		e_working_dir = Shellwords.escape(@working_dir)
 		args = "#{e_working_dir}/support-binaries/#{AGENT_EXE}" +
 			" CACHING=false" +
-			" OUTPUT_DIR=#{e_working_dir}"
+			" OUTPUT_DIR=#{e_working_dir} "
+			" OPTIMIZE=#{!!@optimize}"
 		begin
 			progress_bar.set(0)
 			Dir.chdir(PhusionPassenger.build_system_dir) do
-				run_rake_task!(args) do |progress, total|
+				InstallationUtils.run_rake_task!(args) do |progress, total|
 					progress_bar.set(0.05 + (progress / total.to_f) * 0.95)
 				end
 			end

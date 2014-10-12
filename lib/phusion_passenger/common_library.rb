@@ -100,6 +100,10 @@ class CommonLibraryBuilder
 		return link_objects.join(' ')
 	end
 
+	def enable_optimizations!
+		@default_optimization_level = "-O"
+	end
+
 	def define_tasks(extra_compiler_flags = nil)
 		flags =  "-Iext -Iext/common #{LIBEV_CFLAGS} #{extra_compiler_flags} "
 		cflags = (flags + EXTRA_CFLAGS).strip
@@ -134,7 +138,7 @@ private
 				when :very_heavy
 					optimize = "-O3"
 				when nil
-					optimize = nil
+					optimize = @default_optimization_level
 				else
 					raise "Unknown optimization level #{options[:optimize]}"
 				end

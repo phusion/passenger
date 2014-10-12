@@ -360,6 +360,31 @@ protected
 		raise Abort
 	end
 
+	def prompt_confirmation_with_default(message, default)
+		if default
+			default_str = "[Y/n]"
+		else
+			default_str = "[y/N]"
+		end
+		result = prompt("#{message} #{default_str}") do |value|
+			if value.downcase == 'y' || value.downcase == 'n'
+				true
+			elsif value.empty?
+				true
+			else
+				puts_error "Invalid input '#{value}'; please enter either 'y' or 'n'."
+				false
+			end
+		end
+		if result.empty?
+			return default
+		else
+			return result.downcase == 'y'
+		end
+	rescue Interrupt
+		raise Abort
+	end
+
 	def wait(timeout = nil)
 		if interactive?
 			if timeout
