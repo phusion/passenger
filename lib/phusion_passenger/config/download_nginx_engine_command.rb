@@ -224,7 +224,8 @@ private
 				exit(BINARY_NOT_USABLE_EXIT_CODE)
 			end
 
-			FileUtils.mv("#{tmpdir}/nginx-#{PREFERRED_NGINX_VERSION}", "#{destdir}/#{AGENT_EXE}")
+			FileUtils.mv("#{tmpdir}/nginx-#{PREFERRED_NGINX_VERSION}",
+				"#{destdir}/#{nginx}-#{PREFERRED_NGINX_VERSION}")
 			@logger.info "#{@colors.green}Nginx #{PREFERRED_NGINX_VERSION} engine successfully download and installed."
 		end
 	end
