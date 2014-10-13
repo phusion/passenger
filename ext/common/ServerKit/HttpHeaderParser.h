@@ -26,6 +26,7 @@
 #define _PASSENGER_SERVER_KIT_HTTP_HEADER_PARSER_H_
 
 #include <boost/cstdint.hpp>
+#include <oxt/backtrace.hpp>
 #include <cstddef>
 #include <cassert>
 #include <cstring>
@@ -289,6 +290,7 @@ private:
 	}
 
 	void processParseResult(const HttpParseRequest &tag) {
+		TRACE_POINT();
 		bool isChunked = state->parser.flags & F_CHUNKED;
 		boost::uint64_t contentLength;
 		int httpVersion;
@@ -343,6 +345,7 @@ private:
 	}
 
 	void processParseResult(const HttpParseResponse &tag) {
+		TRACE_POINT();
 		const unsigned int status = state->parser.status_code;
 		const boost::uint64_t contentLength = state->parser.content_length;
 
@@ -404,6 +407,7 @@ public:
 	}
 
 	size_t feed(const MemoryKit::mbuf &buffer) {
+		TRACE_POINT();
 		P_ASSERT_EQ(message->httpState, Message::PARSING_HEADERS);
 
 		http_parser_settings settings;
@@ -426,6 +430,7 @@ public:
 		currentBuffer = NULL;
 
 		if (!state->parser.upgrade && ret != buffer.size() && !paused) {
+			UPDATE_TRACE_POINT();
 			message->httpState = Message::ERROR;
 			switch (HTTP_PARSER_ERRNO(&state->parser)) {
 			case HPE_CB_header_field:
@@ -453,6 +458,7 @@ public:
 				break;
 			}
 		} else if (messageHttpStateIndicatesCompletion(MessageType())) {
+			UPDATE_TRACE_POINT();
 			ret++;
 			message->httpMajor = state->parser.http_major;
 			message->httpMinor = state->parser.http_minor;
