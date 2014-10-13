@@ -24,6 +24,7 @@
 #  THE SOFTWARE.
 
 require 'fileutils'
+require 'pathname'
 require 'etc'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
@@ -69,7 +70,12 @@ module InstallationUtils
 				return find_or_create_writable_user_support_binaries_dir!
 			end
 		else
-			return find_or_create_writable_user_support_binaries_dir!
+			if Process.euid == 0
+				mkdir_p_preserve_parent_owner(PhusionPassenger.support_binaries_dir)
+				return PhusionPassenger.support_binaries_dir
+			else
+				return find_or_create_writable_user_support_binaries_dir!
+			end
 		end
 	end
 
@@ -94,19 +100,6 @@ module InstallationUtils
 			puts
 			render_template 'installation_utils/download_tool_missing',
 				:runner => runner
-			abort
-		end
-	end
-
-	def check_root_user_wont_mess_up_support_binaries_dir_permissions!
-		return if Process.euid != 0
-		dir = PhusionPassenger.support_binaries_dir
-		return if !dir
-
-		owner_uid = File.stat(dir).uid
-		if owner_uid != 0
-			render_template 'installation_utils/passenger_not_installed_as_root',
-				:owner => Etc.getpwuid(owner_uid).name
 			abort
 		end
 	end
@@ -201,7 +194,7 @@ private
 	def create_user_support_binaries_dir!
 		dir = PhusionPassenger.user_support_binaries_dir
 		begin
-			FileUtils.mkdir_p(dir)
+			mkdir_p_preserve_parent_owner(dir)
 		rescue Errno::EACCES
 			print_installation_error_header
 			render_template 'installation_utils/cannot_create_user_support_binaries_dir',
@@ -214,6 +207,22 @@ private
 				:dir => dir,
 				:exception => result
 			abort
+		end
+	end
+
+	# When creating PhusionPassenger.support_binaries_dir, preserve the
+	# parent directory's UID and GID. This way, running `passenger-config compile-agent`
+	# with sudo privileged, even though Phusion Passenger isn't installed as root,
+	# won't mess up permissions.
+	def mkdir_p_preserve_parent_owner(path)
+		Pathname.new(path).descend do |subpath|
+			if !subpath.exist?
+				stat = subpath.parent.stat
+				Dir.mkdir(subpath.to_s)
+				if Process.euid == 0
+					File.chown(stat.uid, stat.gid, subpath.to_s)
+				end
+			end
 		end
 	end
 

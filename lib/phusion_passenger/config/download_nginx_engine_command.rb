@@ -180,7 +180,6 @@ private
 			abort
 		end
 
-		check_root_user_wont_mess_up_support_binaries_dir_permissions!
 		check_for_download_tool!
 	end
 
