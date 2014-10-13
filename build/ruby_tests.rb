@@ -30,6 +30,6 @@ task 'test:ruby' => dependencies do
 		require 'shellwords'
 		maybe_grep = "-e #{Shellwords.escape(maybe_grep)}"
 	end
-	command = "rspec -c -f s -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
+	command = "rspec -c -f s --tty -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
 	sh "cd test && exec bundle exec #{command}"
 end

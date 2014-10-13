@@ -38,7 +38,7 @@ end
 dependencies = integration_test_dependencies(:_apache2)
 desc "Run Apache 2 integration tests"
 task 'test:integration:apache2' => dependencies do
-	command = "bundle exec rspec -c -f s integration_tests/apache2_tests.rb"
+	command = "bundle exec rspec -c -f s --tty integration_tests/apache2_tests.rb"
 	if boolean_option('SUDO')
 		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 	end
@@ -52,7 +52,7 @@ end
 dependencies = integration_test_dependencies(:_nginx)
 desc "Run Nginx integration tests"
 task 'test:integration:nginx' => dependencies do
-	command = "bundle exec rspec -c -f s integration_tests/nginx_tests.rb"
+	command = "bundle exec rspec -c -f s --tty integration_tests/nginx_tests.rb"
 	if boolean_option('SUDO')
 		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 	end
@@ -70,7 +70,7 @@ end
 dependencies = integration_test_dependencies(:_nginx)
 desc "Run Passenger Standalone integration tests"
 task 'test:integration:standalone' => dependencies do
-	command = "bundle exec rspec -c -f s integration_tests/standalone_tests.rb"
+	command = "bundle exec rspec -c -f s --tty integration_tests/standalone_tests.rb"
 	if grep = string_option('E')
 		require 'shellwords'
 		command << " -e #{Shellwords.escape(grep)}"
@@ -80,7 +80,7 @@ end
 
 desc "Run native packaging tests"
 task 'test:integration:native_packaging' do
-	command = "bundle exec rspec -c -f s integration_tests/native_packaging_spec.rb"
+	command = "bundle exec rspec -c -f s --tty integration_tests/native_packaging_spec.rb"
 	if boolean_option('SUDO')
 		command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
 	end
@@ -126,7 +126,7 @@ task 'test:restart' => dependencies do
 	i = 1
 	while true do
 		puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
-		command = "bundle exec rspec -c -f s integration_tests/apache2_tests.rb"
+		command = "bundle exec rspec -c -f s --tty integration_tests/apache2_tests.rb"
 		if grep = string_option('E')
 			command << " -e #{Shellwords.escape(grep)}"
 		end
