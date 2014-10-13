@@ -120,7 +120,9 @@ private
 				puts "Compiling with optimizations."
 			else
 				new_screen
-				render_template 'config/agent_compiler/confirm_enable_optimizations'
+				render_template 'config/agent_compiler/confirm_enable_optimizations',
+					:total_ram => total_ram_gb
+				puts
 				@optimize = prompt_confirmation('Compile with optimizations?')
 				puts
 			end
@@ -150,6 +152,18 @@ private
 		FileUtils.cp("#{@working_dir}/support-binaries/#{AGENT_EXE}",
 			"#{@destdir}/#{AGENT_EXE}")
 		puts "<green>Compilation finished!</green>"
+	end
+
+	def total_ram_gb
+		begin
+			meminfo = File.read("/proc/meminfo")
+			if meminfo =~ /^MemTotal: *(\d+) kB$/
+				return spritnf("%.1f", $1.to_i / 1024 / 1024)
+			end
+		rescue Errno::ENOENT, Errno::EACCES
+			# Don't do anything on systems without memory information.
+			return nil
+		end
 	end
 end
 
