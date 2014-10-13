@@ -47,6 +47,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 	case AppResponse::PARSING_HEADERS:
 		if (buffer.size() > 0) {
 			// Data
+			UPDATE_TRACE_POINT();
 			size_t ret;
 			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
 				" bytes of application data: \"" << cEscapeString(StaticString(
@@ -61,6 +62,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			}
 
 			// Done parsing.
+			UPDATE_TRACE_POINT();
 			SKC_TRACE(client, 2, "Application response headers received");
 			getHeaderParserStatePool().destroy(resp->parserState.headerParser);
 			resp->parserState.headerParser = NULL;
@@ -103,11 +105,13 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			}
 		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// EOF
+			UPDATE_TRACE_POINT();
 			SKC_DEBUG(client, "Application sent EOF before finishing response headers");
 			endRequestWithAppSocketIncompleteResponse(&client, &req);
 			return Channel::Result(0, true);
 		} else {
 			// Error
+			UPDATE_TRACE_POINT();
 			SKC_DEBUG(client, "Application socket read error occurred before finishing response headers");
 			endRequestWithAppSocketReadError(&client, &req, errcode);
 			return Channel::Result(0, true);
@@ -116,6 +120,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 	case AppResponse::PARSING_BODY_WITH_LENGTH:
 		if (buffer.size() > 0) {
 			// Data
+			UPDATE_TRACE_POINT();
 			boost::uint64_t maxRemaining, remaining;
 
 			maxRemaining = resp->aux.bodyInfo.contentLength - resp->bodyAlreadyRead;
@@ -130,6 +135,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				resp->aux.bodyInfo.contentLength << " bytes already read");
 
 			if (remaining > 0) {
+				UPDATE_TRACE_POINT();
 				writeResponseAndMarkForTurboCaching(client, req,
 					MemoryKit::mbuf(buffer, 0, remaining));
 				if (!req->ended() && resp->bodyFullyRead()) {
@@ -138,6 +144,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					endRequest(&client, &req);
 				}
 			} else {
+				UPDATE_TRACE_POINT();
 				SKC_TRACE(client, 2, "End of application response body reached");
 				handleAppResponseBodyEnd(client, req);
 				endRequest(&client, &req);
@@ -145,6 +152,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			return Channel::Result(remaining, false);
 		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// EOF
+			UPDATE_TRACE_POINT();
 			if (resp->bodyFullyRead()) {
 				SKC_TRACE(client, 2, "Application sent EOF");
 				handleAppResponseBodyEnd(client, req);
@@ -158,6 +166,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			return Channel::Result(0, true);
 		} else {
 			// Error
+			UPDATE_TRACE_POINT();
 			endRequestWithAppSocketReadError(&client, &req, errcode);
 			return Channel::Result(0, true);
 		}
@@ -165,6 +174,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 	case AppResponse::PARSING_CHUNKED_BODY:
 		if (!buffer.empty()) {
 			// Data
+			UPDATE_TRACE_POINT();
 			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
 				" bytes of application data: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
@@ -173,6 +183,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			resp->bodyAlreadyRead += event.consumed;
 
 			if (req->dechunkResponse) {
+				UPDATE_TRACE_POINT();
 				switch (event.type) {
 				case ServerKit::HttpChunkedEvent::NONE:
 					assert(!event.end);
@@ -198,6 +209,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 					return Channel::Result(event.consumed, true);
 				}
 			} else {
+				UPDATE_TRACE_POINT();
 				switch (event.type) {
 				case ServerKit::HttpChunkedEvent::NONE:
 				case ServerKit::HttpChunkedEvent::DATA:
@@ -228,11 +240,13 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// Premature EOF. This cannot be an expected EOF because
 			// we end the request upon consuming the end of the chunked body.
+			UPDATE_TRACE_POINT();
 			disconnectWithError(&client, "error parsing app response chunked encoding: "
 				"unexpected end-of-stream");
 			return Channel::Result(0, false);
 		} else {
 			// Error
+			UPDATE_TRACE_POINT();
 			endRequestWithAppSocketReadError(&client, &req, errcode);
 			return Channel::Result(0, true);
 		}
@@ -241,6 +255,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 	case AppResponse::UPGRADED:
 		if (buffer.size() > 0) {
 			// Data
+			UPDATE_TRACE_POINT();
 			SKC_TRACE(client, 3, "Processing " << buffer.size() <<
 				" bytes of application data: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
@@ -249,12 +264,14 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 			return Channel::Result(buffer.size(), false);
 		} else if (errcode == 0 || errcode == ECONNRESET) {
 			// EOF
+			UPDATE_TRACE_POINT();
 			SKC_TRACE(client, 2, "Application sent EOF");
 			req->session->close(true, false);
 			endRequest(&client, &req);
 			return Channel::Result(0, false);
 		} else {
 			// Error
+			UPDATE_TRACE_POINT();
 			endRequestWithAppSocketReadError(&client, &req, errcode);
 			return Channel::Result(0, false);
 		}
@@ -267,6 +284,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 
 void
 onAppResponseBegin(Client *client, Request *req) {
+	TRACE_POINT();
 	AppResponse *resp = &req->appResponse;
 	ssize_t bytesWritten;
 	bool oobw;
@@ -295,7 +313,9 @@ onAppResponseBegin(Client *client, Request *req) {
 		}
 	}
 
+	UPDATE_TRACE_POINT();
 	if (!sendResponseHeaderWithWritev(client, req, bytesWritten)) {
+		UPDATE_TRACE_POINT();
 		if (bytesWritten >= 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
 			sendResponseHeaderWithBuffering(client, req, bytesWritten);
 		} else {
@@ -306,6 +326,7 @@ onAppResponseBegin(Client *client, Request *req) {
 	}
 
 	if (!req->ended() && !resp->hasBody() && !resp->upgraded()) {
+		UPDATE_TRACE_POINT();
 		handleAppResponseBodyEnd(client, req);
 		endRequest(&client, &req);
 	}
@@ -313,6 +334,7 @@ onAppResponseBegin(Client *client, Request *req) {
 
 void prepareAppResponseCaching(Client *client, Request *req) {
 	if (turboCaching.isEnabled() && !req->cacheKey.empty()) {
+		TRACE_POINT();
 		AppResponse *resp = &req->appResponse;
 		if (turboCaching.responseCache.requestAllowsStoring(req)
 		 && turboCaching.responseCache.prepareRequestForStoring(req))
@@ -336,7 +358,9 @@ void prepareAppResponseCaching(Client *client, Request *req) {
 
 void
 onAppResponse100Continue(Client *client, Request *req) {
+	TRACE_POINT();
 	if (!req->strip100ContinueHeader) {
+		UPDATE_TRACE_POINT();
 		const unsigned int BUFSIZE = 32;
 		char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
 		int size = snprintf(buf, BUFSIZE, "HTTP/%d.%d 100 Continue\r\n",
@@ -344,6 +368,7 @@ onAppResponse100Continue(Client *client, Request *req) {
 		writeResponse(client, buf, size);
 	}
 	if (!req->ended()) {
+		UPDATE_TRACE_POINT();
 		deinitializeAppResponse(client, req);
 		reinitializeAppResponse(client, req);
 		req->appResponse.oneHundredContinueSent = !req->strip100ContinueHeader;
@@ -604,6 +629,7 @@ constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
 
 bool
 sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten) {
+	TRACE_POINT();
 	unsigned int maxbuffers = std::min<unsigned int>(
 		8 + req->appResponse.headers.size() * 4 + 11, IOV_MAX);
 	struct iovec *buffers = (struct iovec *) psg_palloc(req->pool,
