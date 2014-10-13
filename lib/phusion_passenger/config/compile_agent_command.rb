@@ -34,7 +34,7 @@ class CompileAgentCommand < Command
 	include InstallationUtils
 
 	def run
-		@options = { :auto => !STDIN.tty?, :colorize => :auto, :force_tip => true }
+		@options = { :auto => !STDIN.tty? || !STDOUT.tty?, :colorize => :auto, :force_tip => true }
 		parse_options
 		initialize_objects
 		sanity_check
@@ -58,7 +58,8 @@ private
 				"directory, instead of creating one") do |val|
 				options[:working_dir] = val
 			end
-			opts.on("--auto", "Run in non-interactive mode. Default when stdin is not a TTY") do
+			opts.on("--auto", "Run in non-interactive mode. Default when#{nl}" +
+				"stdin or stdout is not a TTY") do
 				options[:auto] = true
 			end
 			opts.on("--optimize", "Compile agent with optimizations") do
