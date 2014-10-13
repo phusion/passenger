@@ -158,7 +158,7 @@ private
 		begin
 			meminfo = File.read("/proc/meminfo")
 			if meminfo =~ /^MemTotal: *(\d+) kB$/
-				return spritnf("%.1f", $1.to_i / 1024 / 1024)
+				return sprintf("%.1f", $1.to_i / 1024 / 1024)
 			end
 		rescue Errno::ENOENT, Errno::EACCES
 			# Don't do anything on systems without memory information.
