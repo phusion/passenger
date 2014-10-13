@@ -362,7 +362,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 	define_component 'Utils/StrIntUtilsNoStrictAliasing.o',
 		:source   => 'Utils/StrIntUtilsNoStrictAliasing.cpp',
 		:category => :base,
-		:optimize => :very_heavy,
+		# Compiling with -O3 causes segfaults on RHEL 6
+		:optimize => :heavy,
 		:strict_aliasing => false,
 		:deps     => %w(
 			Utils/StrIntUtils.h
