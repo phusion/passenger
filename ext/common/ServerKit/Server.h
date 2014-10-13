@@ -692,7 +692,8 @@ public:
 		int flag = 1;
 		setNonBlocking(fd);
 		if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) == -1
-		 && errno != ENOPROTOOPT)
+		 && errno != ENOPROTOOPT
+		 && errno != ENOTSUP)
 		{
 			int e = errno;
 			P_WARN("Cannot disable Nagle's algorithm on a TCP socket: " <<
