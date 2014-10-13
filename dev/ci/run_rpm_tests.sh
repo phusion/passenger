@@ -61,6 +61,9 @@ perl -pi -e 's:/etc/hosts:/cte/hosts:g' /lib64/libnss_files.so.2 /lib64/libc.so.
 sed -i 's|/etc/hosts|/cte/hosts|g' /usr/lib/ruby/1.8/resolv.rb
 chown -R app: /var/log/nginx /var/lib/nginx
 
+yum_install gdb
+gem install crash-watch --no-rdoc --no-ri
+
 
 cd /passenger
 retry_run 3 /system/internal/setuser app \
