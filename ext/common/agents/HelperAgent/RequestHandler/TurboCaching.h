@@ -219,6 +219,10 @@ public:
 		return state == ENABLED || state == USER_ENABLED;
 	}
 
+	double getLoadAverage(ev_tstamp now) const {
+		return iterations / (now - lastTimeout);
+	}
+
 	// Call when the event loop multiplexer returns.
 	void updateState(ev_tstamp now) {
 		if (OXT_UNLIKELY(state == USER_DISABLED)) {
@@ -232,7 +236,7 @@ public:
 
 		switch (state) {
 		case DISABLED:
-			if (iterations / (now - lastTimeout) >= (double) THRESHOLD) {
+			if (getLoadAverage(now) >= (double) THRESHOLD) {
 				P_INFO("Server is under heavy load. Turbocaching enabled");
 				state = ENABLED;
 				nextTimeout = now + ENABLED_TIMEOUT;
@@ -240,7 +244,7 @@ public:
 				P_DEBUG("Server is not under enough load. Not enabling turbocaching");
 				nextTimeout = now + DISABLED_TIMEOUT;
 			}
-			P_DEBUG("Activities per second: " << (iterations / (now - lastTimeout)));
+			P_DEBUG("Activities per second: " << getLoadAverage(now));
 			break;
 		case ENABLED:
 			if (responseCache.getFetches() > 1
@@ -266,7 +270,7 @@ public:
 				state = EXTENDED_DISABLED;
 				nextTimeout = now + EXTENDED_DISABLED_TIMEOUT;
 			} else {
-				if (iterations / (now - lastTimeout) >= (double) THRESHOLD) {
+				if (getLoadAverage(now) >= (double) THRESHOLD) {
 					P_INFO("Clearing turbocache");
 					nextTimeout = now + ENABLED_TIMEOUT;
 				} else {
@@ -274,7 +278,7 @@ public:
 					state = DISABLED;
 					nextTimeout = now + DISABLED_TIMEOUT;
 				}
-				P_INFO("Activities per second: " << (iterations / (now - lastTimeout)));
+				P_INFO("Activities per second: " << getLoadAverage(now));
 			}
 			responseCache.resetStatistics();
 			responseCache.clear();

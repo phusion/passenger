@@ -415,6 +415,22 @@ public:
 		}
 	}
 
+	virtual Json::Value inspectStateAsJson() const {
+		Json::Value doc = ParentClass::inspectStateAsJson();
+		Json::Value subdoc;
+		subdoc["load_average"] = turboCaching.getLoadAverage(ev_now(getLoop()));
+		if (turboCaching.isEnabled()) {
+			subdoc["fetches"] = turboCaching.responseCache.getFetches();
+			subdoc["hits"] = turboCaching.responseCache.getHits();
+			subdoc["hit_ratio"] = turboCaching.responseCache.getHitRatio();
+			subdoc["stores"] = turboCaching.responseCache.getStores();
+			subdoc["store_successes"] = turboCaching.responseCache.getStoreSuccesses();
+			subdoc["store_success_ratio"] = turboCaching.responseCache.getStoreSuccessRatio();
+		}
+		doc["turbocaching"] = subdoc;
+		return doc;
+	}
+
 	virtual Json::Value inspectClientStateAsJson(const Client *client) const {
 		Json::Value doc = ParentClass::inspectClientStateAsJson(client);
 		doc["connected_at"] = timeToJson(client->connectedAt * 1000000.0);
