@@ -264,7 +264,7 @@ if [[ "$TEST_RPM_PACKAGING" = 1 ]]; then
 	if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
 		run rm "$CACHE_DIR/passenger_rpm/output/el6-x86_64"/*.src.rpm
 	fi
-	run docker run --rm \
+	run docker run --rm --privileged \
 		-v "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm:/system:ro" \
 		-v "$PASSENGER_ROOT_ON_DOCKER_HOST:/passenger" \
 		-v "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output/el6-x86_64:/packages:ro" \
