@@ -422,10 +422,10 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 			if (agentProcessesDone == -1 || timer.elapsed() >= deadline) {
 				// An error occurred or we've waited long enough. Kill all the
 				// processes.
-				P_WARN("Some Phusion Passenger agent processes did not exit " <<
+				P_WARN("Some " PROGRAM_NAME " agent processes did not exit " <<
 					"in time, forcefully shutting down all.");
 			} else {
-				P_DEBUG("All Phusion Passenger agent processes have exited. Forcing all subprocesses to shut down.");
+				P_DEBUG("All " PROGRAM_NAME " agent processes have exited. Forcing all subprocesses to shut down.");
 			}
 			P_DEBUG("Sending SIGKILL to all agent processes");
 			for (it = watchers.begin(); it != watchers.end(); it++) {
@@ -1097,7 +1097,7 @@ watchdogMain(int argc, char *argv[]) {
 		beginWatchingAgents(wo, watchers);
 		reportAgentsInformation(wo, watchers);
 		finalizeInstanceDir(wo);
-		P_INFO("All Phusion Passenger agents started!");
+		P_INFO("All " PROGRAM_NAME " agents started!");
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("after_watchdog_initialization");
 

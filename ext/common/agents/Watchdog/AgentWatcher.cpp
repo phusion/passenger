@@ -417,8 +417,8 @@ public:
 					throw RuntimeException(string("Unable to start the ") + name() +
 						" because its executable (" + getExeFilename() + ") "
 						"doesn't exist. This probably means that your "
-						"Phusion Passenger installation is broken or "
-						"incomplete. Please reinstall Phusion Passenger");
+						PROGRAM_NAME " installation is broken or "
+						"incomplete. Please reinstall " PROGRAM_NAME);
 				} else {
 					throw SystemException(string("Unable to start the ") + name() +
 						" because exec(\"" + getExeFilename() + "\") failed",

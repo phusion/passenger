@@ -397,7 +397,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (prev->options_cache.data == NULL) {
         if (cache_loc_conf_options(cf, prev) != NGX_OK) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                               "cannot create Phusion Passenger configuration cache");
+                               "cannot create " PROGRAM_NAME " configuration cache");
             return NGX_CONF_ERROR;
         }
     }
@@ -654,7 +654,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (cache_loc_conf_options(cf, conf) != NGX_OK) {
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "cannot create Phusion Passenger configuration cache");
+                           "cannot create " PROGRAM_NAME " configuration cache");
         return NGX_CONF_ERROR;
     }
 

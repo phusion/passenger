@@ -1171,15 +1171,15 @@ process_header(ngx_http_request_t *r)
                 h->key.data = (u_char *) "Server";
                 if (!passenger_main_conf.show_version_in_header) {
                     if (clcf->server_tokens) {
-                        h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger");
+                        h->value.data = (u_char *) (NGINX_VER " + " PROGRAM_NAME);
                     } else {
-                        h->value.data = (u_char *) ("nginx + Phusion Passenger");
+                        h->value.data = (u_char *) ("nginx + " PROGRAM_NAME);
                     }
                 } else {
                     if (clcf->server_tokens) {
-                        h->value.data = (u_char *) (NGINX_VER " + Phusion Passenger " PASSENGER_VERSION);
+                        h->value.data = (u_char *) (NGINX_VER " + " PROGRAM_NAME " " PASSENGER_VERSION);
                     } else {
-                        h->value.data = (u_char *) ("nginx + Phusion Passenger " PASSENGER_VERSION);
+                        h->value.data = (u_char *) ("nginx + " PROGRAM_NAME " " PASSENGER_VERSION);
                     }
                 }
                 h->value.len = ngx_strlen(h->value.data);

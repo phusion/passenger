@@ -699,7 +699,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 
 	end = messageBuf;
 	end = appendText(end, state.messagePrefix);
-	end = appendText(end, " ] Phusion Passenger version: " PASSENGER_VERSION "\n");
+	end = appendText(end, " ] " PROGRAM_NAME " version: " PASSENGER_VERSION "\n");
 	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 
 	if (lastAssertionFailure.filename != NULL) {

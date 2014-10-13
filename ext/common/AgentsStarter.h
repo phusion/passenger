@@ -183,26 +183,26 @@ private:
 		if (ret == 0) {
 			/* Looks like the watchdog didn't crash and is still running. */
 			throw RuntimeException(
-				"Unable to start the Phusion Passenger watchdog: "
+				"Unable to start the " PROGRAM_NAME " watchdog: "
 				"it froze during startup and reported an unknown error");
 		} else if (ret != -1 && WIFSIGNALED(status)) {
 			/* Looks like a crash which caused a signal. */
 			pid = -1;
 			throw RuntimeException(
-				"Unable to start the Phusion Passenger watchdog: "
+				"Unable to start the " PROGRAM_NAME " watchdog: "
 				"it seems to have been killed with signal " +
 				getSignalName(WTERMSIG(status)) + " during startup");
 		} else if (ret == -1) {
 			/* Looks like it exited for a different reason and has no exit code. */
 			pid = -1;
 			throw RuntimeException(
-				"Unable to start the Phusion Passenger watchdog: "
+				"Unable to start the " PROGRAM_NAME " watchdog: "
 				"it seems to have crashed during startup for an unknown reason");
 		} else {
 			/* Looks like it exited for a different reason, but has an exit code. */
 			pid = -1;
 			throw RuntimeException(
-				"Unable to start the Phusion Passenger watchdog: "
+				"Unable to start the " PROGRAM_NAME " watchdog: "
 				"it seems to have crashed during startup for an unknown reason, "
 				"with exit code " + toString(WEXITSTATUS(status)));
 		}
@@ -478,15 +478,15 @@ public:
 					}
 					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog "
 						"because its executable (" + agentFilename + ") does "
-						"not exist. This probably means that your Phusion Passenger "
+						"not exist. This probably means that your " PROGRAM_NAME " "
 						"installation is broken or incomplete, or that your '" +
 						passengerRootConfig + "' directive is set to the wrong value. "
-						"Please reinstall Phusion Passenger or fix your '" +
+						"Please reinstall " PROGRAM_NAME " or fix your '" +
 						passengerRootConfig + "' directive, whichever is applicable. "
 						"To learn how to fix '" + passengerRootConfig + "', please read " +
 						docURL);
 				} else {
-					throw SystemException("Unable to start the Phusion Passenger watchdog (" +
+					throw SystemException("Unable to start the " PROGRAM_NAME " watchdog (" +
 						agentFilename + ")", e);
 				}
 			} else {
