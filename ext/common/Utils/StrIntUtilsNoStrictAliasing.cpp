@@ -28,6 +28,8 @@
 
 namespace Passenger {
 
+using namespace std;
+
 
 // This file implements StrIntUtils functions that violate strict aliasing
 // in order to gain more performance.
