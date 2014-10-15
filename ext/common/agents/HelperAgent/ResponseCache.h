@@ -227,9 +227,9 @@ private:
 		if (value != NULL) {
 			StaticString cacheControl(value->start->data, value->size);
 			string::size_type pos = cacheControl.find(P_STATIC_STRING("max-age"));
-			if (pos != string::npos) {
+			if (pos != string::npos && cacheControl.size() > pos + 1) {
 				unsigned int maxAge = stringToUint(cacheControl.substr(
-					pos + sizeof("max-age") - 1));
+					pos + (sizeof("max-age") - 1) + 1));
 				if (maxAge == 0) {
 					// Parse error or max-age=0
 					return (time_t) - 1;
