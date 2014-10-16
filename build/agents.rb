@@ -60,6 +60,7 @@ AGENT_OBJECTS = {
 		'ext/common/ServerKit/Server.h',
 		'ext/common/ServerKit/HttpServer.h',
 		'ext/common/ServerKit/HttpHeaderParser.h',
+		'ext/common/ServerKit/AcceptLoadBalancer.h',
 		'ext/common/ServerKit/FileBufferedChannel.h',
 		'ext/common/Constants.h',
 		'ext/common/StaticString.h',

@@ -281,6 +281,7 @@ private:
 				"Stop accepting clients for 3 seconds. " <<
 				"Current client count: " << activeClientCount);
 			serverState = TOO_MANY_FDS;
+			acceptResumptionWatcher.set(3, 0);
 			acceptResumptionWatcher.start();
 			for (uint8_t i = 0; i < nEndpoints; i++) {
 				ev_io_stop(ctx->libev->getLoop(), &endpoints[i]);
@@ -298,7 +299,6 @@ private:
 		for (uint8_t i = 0; i < nEndpoints; i++) {
 			ev_io_start(ctx->libev->getLoop(), &endpoints[i]);
 		}
-		acceptResumptionWatcher.stop();
 	}
 
 	int acceptNonBlockingSocket(int serverFd) {
@@ -662,7 +662,6 @@ public:
 		TAILQ_INIT(&activeClients);
 		TAILQ_INIT(&disconnectedClients);
 		acceptResumptionWatcher.set(context->libev->getLoop());
-		acceptResumptionWatcher.set(0, 3);
 		acceptResumptionWatcher.set<
 			BaseServer<DerivedServer, Client>,
 			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
@@ -750,6 +749,32 @@ public:
 
 		// When all active and disconnected clients are gone,
 		// finishShutdown() will be called to set state to FINISHED_SHUTDOWN.
+	}
+
+
+	void feedNewClients(const int *fds, unsigned int size) {
+		Client *client;
+		Client *acceptedClients[MAX_ACCEPT_BURST_COUNT];
+
+		assert(size > 0);
+		assert(size <= MAX_ACCEPT_BURST_COUNT);
+		P_ASSERT_EQ(serverState, ACTIVE);
+
+		activeClientCount += size;
+		totalClientsAccepted += size;
+
+		for (unsigned int i = 0; i < size; i++) {
+			client = checkoutClientObject();
+			TAILQ_INSERT_HEAD(&activeClients, client, nextClient.activeOrDisconnectedClient);
+			acceptedClients[i] = client;
+			client->number = getNextClientNumber();
+			reinitializeClient(client, fds[i]);
+		}
+
+		SKS_DEBUG(size << " new client(s) accepted; there are now " <<
+			activeClientCount << " active client(s)");
+
+		onClientsAccepted(acceptedClients, size);
 	}
 
 

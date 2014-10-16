@@ -59,6 +59,7 @@
 #include <agents/Base.h>
 #include <Constants.h>
 #include <ServerKit/Server.h>
+#include <ServerKit/AcceptLoadBalancer.h>
 #include <ApplicationPool2/Pool.h>
 #include <MessageServer.h>
 #include <MessageReadersWriters.h>
@@ -121,6 +122,7 @@ namespace ServerAgent {
 		SpawnerFactoryPtr spawnerFactory;
 		PoolPtr appPool;
 
+		ServerKit::AcceptLoadBalancer<RequestHandler> loadBalancer;
 		vector<ThreadWorkingObjects> threadWorkingObjects;
 		struct ev_signal sigintWatcher;
 		struct ev_signal sigtermWatcher;
@@ -578,12 +580,25 @@ initializeNonPrivilegedWorkingObjects() {
 	 * This is especially noticeable on systems that heavily swap.
 	 */
 	for (unsigned int i = 0; i < addresses.size(); i++) {
-		for (unsigned int j = 0; j < nthreads; j++) {
-			ThreadWorkingObjects *two = &wo->threadWorkingObjects[j];
+		if (nthreads == 1) {
+			ThreadWorkingObjects *two = &wo->threadWorkingObjects[0];
 			two->requestHandler->listen(wo->serverFds[i]);
-			two->requestHandler->createSpareClients();
+		} else {
+			wo->loadBalancer.listen(wo->serverFds[i]);
 		}
 	}
+	for (unsigned int i = 0; i < nthreads; i++) {
+		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
+		two->requestHandler->createSpareClients();
+	}
+	if (nthreads > 1) {
+		wo->loadBalancer.servers.reserve(nthreads);
+		for (unsigned int i = 0; i < nthreads; i++) {
+			ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
+			wo->loadBalancer.servers.push_back(two->requestHandler);
+		}
+	}
+	wo->threadWorkingObjects[0].requestHandler->backoff = false;
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
 		wo->adminWorkingObjects.adminServer->listen(wo->adminServerFds[i]);
 	}
@@ -653,6 +668,9 @@ mainLoop() {
 	}
 	if (workingObjects->adminWorkingObjects.adminServer != NULL) {
 		workingObjects->adminWorkingObjects.bgloop->start("Admin event loop", 0);
+	}
+	if (workingObjects->threadWorkingObjects.size() > 1) {
+		workingObjects->loadBalancer.start();
 	}
 	waitForExitEvent();
 }
@@ -757,6 +775,9 @@ waitForExitEvent() {
 		for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
 			ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 			two->bgloop->safe->runLater(boost::bind(shutdownRequestHandler, two));
+		}
+		if (wo->threadWorkingObjects.size() > 1) {
+			wo->loadBalancer.shutdown();
 		}
 		if (wo->adminWorkingObjects.adminServer != NULL) {
 			wo->adminWorkingObjects.bgloop->safe->runLater(shutdownAdminServer);
