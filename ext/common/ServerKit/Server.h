@@ -686,13 +686,20 @@ public:
 	}
 
 	void listen(int fd) {
+		#ifdef EOPNOTSUPP
+			#define EXTENSION_EOPNOTSUPP EOPNOTSUPP
+		#else
+			#define EXTENSION_EOPNOTSUPP ENOTSUP
+		#endif
+
 		TRACE_POINT();
 		assert(nEndpoints < SERVER_KIT_MAX_SERVER_ENDPOINTS);
 		int flag = 1;
 		setNonBlocking(fd);
 		if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) == -1
 		 && errno != ENOPROTOOPT
-		 && errno != ENOTSUP)
+		 && errno != ENOTSUP
+		 && errno != EXTENSION_EOPNOTSUPP)
 		{
 			int e = errno;
 			P_WARN("Cannot disable Nagle's algorithm on a TCP socket: " <<
@@ -702,6 +709,8 @@ public:
 		endpoints[nEndpoints].data = this;
 		ev_io_start(ctx->libev->getLoop(), &endpoints[nEndpoints]);
 		nEndpoints++;
+
+		#undef EXTENSION_EOPNOTSUPP
 	}
 
 	void shutdown(bool forceDisconnect = false) {
