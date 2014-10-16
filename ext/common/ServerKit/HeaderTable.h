@@ -283,6 +283,8 @@ public:
 		while (true) {
 			if (cellIsEmpty(neighbor)) {
 				// There's nobody to swap with. Go ahead and clear this cell, then return.
+				psg_lstr_deinit(&cell->header->key);
+				psg_lstr_deinit(&cell->header->val);
 				cell->header = NULL;
 				m_population--;
 				return;
