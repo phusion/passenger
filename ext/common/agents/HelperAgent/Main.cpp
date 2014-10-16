@@ -501,7 +501,7 @@ initializeNonPrivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	unsigned int nthreads = options.getInt("server_threads");
-	BackgroundEventLoop *firstLoop;
+	BackgroundEventLoop *firstLoop = NULL; // Avoid compiler warning
 	wo->threadWorkingObjects.reserve(nthreads);
 	for (unsigned int i = 0; i < nthreads; i++) {
 		UPDATE_TRACE_POINT();
@@ -598,7 +598,6 @@ initializeNonPrivilegedWorkingObjects() {
 			wo->loadBalancer.servers.push_back(two->requestHandler);
 		}
 	}
-	wo->threadWorkingObjects[0].requestHandler->backoff = false;
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
 		wo->adminWorkingObjects.adminServer->listen(wo->adminServerFds[i]);
 	}

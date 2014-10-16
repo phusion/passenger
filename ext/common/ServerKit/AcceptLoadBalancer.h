@@ -233,7 +233,13 @@ public:
 
 	void shutdown() {
 		if (thread != NULL) {
-			write(exitPipe[1], "x", 1);
+			if (write(exitPipe[1], "x", 1) == -1) {
+				if (errno != EAGAIN && errno != EWOULDBLOCK) {
+					int e = errno;
+					P_WARN("Cannot write to the load balancer's exit pipe: " <<
+						strerror(e) << " (errno=" << e << ")");
+				}
+			}
 			thread->join();
 			delete thread;
 			thread = NULL;
