@@ -141,9 +141,10 @@ module InstallationUtils
 			end
 		end
 		if $?.exitstatus != 0
-			@stderr.puts
-			@stderr.puts "*** ERROR: the following command failed:"
-			@stderr.puts(backlog)
+			stderr = @stderr || STDERR
+			stderr.puts
+			stderr.puts "*** ERROR: the following command failed:"
+			stderr.puts(backlog)
 			exit 1
 		end
 	end
