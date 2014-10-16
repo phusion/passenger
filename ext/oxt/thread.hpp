@@ -149,6 +149,11 @@ public:
 	static std::string all_backtraces() throw();
 
 	/**
+	 * Return the current thread's backtrace, in a nicely formatted string.
+	 */
+	static std::string current_backtrace() throw();
+
+	/**
 	 * Interrupt the thread. This method behaves just like
 	 * boost::thread::interrupt(), but if <em>interruptSyscalls</em> is true
 	 * then it will also respect the interruption points defined in

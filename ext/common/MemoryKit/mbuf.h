@@ -55,6 +55,9 @@
  * struct, which acts like a context structure.
  */
 
+//#define MBUF_ENABLE_DEBUGGING
+//#define MBUF_ENABLE_BACKTRACES
+
 namespace Passenger {
 namespace MemoryKit {
 
@@ -69,7 +72,13 @@ typedef void (*mbuf_block_copy_t)(struct mbuf_block *, void *);
 
 struct mbuf_block {
 	uint32_t           magic;     /* mbuf_block magic (const) */
-	STAILQ_ENTRY(struct mbuf_block) next;    /* next mbuf_block */
+	STAILQ_ENTRY(struct mbuf_block) next;         /* next free mbuf_block */
+	#ifdef MBUF_ENABLE_DEBUGGING
+		TAILQ_ENTRY(struct mbuf_block) active_q;  /* prev and next active mbuf_block */
+	#endif
+	#ifdef MBUF_ENABLE_BACKTRACES
+		char *backtrace;
+	#endif
 	char              *pos;       /* read marker */
 	char              *last;      /* write marker */
 	char              *start;     /* start of buffer (const) */
@@ -79,11 +88,17 @@ struct mbuf_block {
 };
 
 STAILQ_HEAD(mhdr, struct mbuf_block);
+#ifdef MBUF_ENABLE_DEBUGGING
+	TAILQ_HEAD(active_mbuf_block_list, struct mbuf_block);
+#endif
 
 struct mbuf_pool {
 	uint32_t nfree_mbuf_blockq;   /* # free mbuf_block */
 	uint32_t nactive_mbuf_blockq; /* # active (non-free) mbuf_block */
 	struct mhdr free_mbuf_blockq; /* free mbuf_block q */
+	#ifdef MBUF_ENABLE_DEBUGGING
+		struct active_mbuf_block_list active_mbuf_blockq; /* active mbuf_block q */
+	#endif
 
 	size_t mbuf_block_chunk_size; /* mbuf_block chunk size - header + data (const) */
 	size_t mbuf_block_offset;     /* mbuf_block offset in chunk (const) */

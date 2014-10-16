@@ -475,6 +475,21 @@ thread::all_backtraces() throw() {
 	#endif
 }
 
+string
+thread::current_backtrace() throw() {
+	#ifdef OXT_BACKTRACE_IS_ENABLED
+		thread_local_context *ctx = get_thread_local_context();
+		if (OXT_LIKELY(ctx != NULL)) {
+			spin_lock::scoped_lock l(ctx->backtrace_lock);
+			return format_backtrace(ctx->backtrace_list);
+		} else {
+			return "(OXT not initialized)";
+		}
+	#else
+		return "(backtrace support disabled during compile time)";
+	#endif
+}
+
 void
 thread::interrupt(bool interruptSyscalls) {
 	int ret;
