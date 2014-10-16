@@ -56,10 +56,9 @@ public:
 
 	/**
 	 * Minimum number of event loop iterations per second necessary to
-	 * trigger enabling turbocaching. 1000 implies that, on average, each
-	 * event loop iteration may spend at most 1 ms.
+	 * trigger enabling turbocaching.
 	 */
-	static const unsigned int THRESHOLD = 1000;
+	static const unsigned int THRESHOLD = 300;
 
 	enum State {
 		/**
@@ -238,13 +237,14 @@ public:
 		case DISABLED:
 			if (getLoadAverage(now) >= (double) THRESHOLD) {
 				P_INFO("Server is under heavy load. Turbocaching enabled");
+				P_INFO("Activities per second: " << getLoadAverage(now));
 				state = ENABLED;
 				nextTimeout = now + ENABLED_TIMEOUT;
 			} else {
 				P_DEBUG("Server is not under enough load. Not enabling turbocaching");
+				P_DEBUG("Activities per second: " << getLoadAverage(now));
 				nextTimeout = now + DISABLED_TIMEOUT;
 			}
-			P_DEBUG("Activities per second: " << getLoadAverage(now));
 			break;
 		case ENABLED:
 			if (responseCache.getFetches() > 1
