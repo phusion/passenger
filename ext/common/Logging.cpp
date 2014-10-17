@@ -130,6 +130,11 @@ _writeLogEntry(const std::string &str) {
 	_writeLogEntry(StaticString(str));
 }
 
+void
+_writeLogEntry(const char *str, unsigned int size) {
+	_writeLogEntry(StaticString(str, size));
+}
+
 const char *
 _strdupStringStream(const std::stringstream &stream) {
 	string str = stream.str();

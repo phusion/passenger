@@ -78,6 +78,7 @@ bool setLogFile(const char *path); // Sets errno on error
 string getLogFile();
 void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line);
 void _writeLogEntry(const std::string &str);
+void _writeLogEntry(const char *str, unsigned int size);
 const char *_strdupStringStream(const std::stringstream &stream);
 
 

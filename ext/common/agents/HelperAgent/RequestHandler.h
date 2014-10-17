@@ -109,6 +109,8 @@
 #ifndef _PASSENGER_REQUEST_HANDLER_H_
 #define _PASSENGER_REQUEST_HANDLER_H_
 
+//#define DEBUG_RH_EVENT_LOOP_BLOCKING
+
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/cstdint.hpp>
@@ -224,6 +226,11 @@ private:
 	struct ev_check checkWatcher;
 	TurboCaching<Request> turboCaching;
 
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		struct ev_prepare prepareWatcher;
+		ev_tstamp timeBeforeBlocking;
+	#endif
+
 public:
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
@@ -315,6 +322,14 @@ public:
 		ev_set_priority(&checkWatcher, EV_MAXPRI);
 		ev_check_start(getLoop(), &checkWatcher);
 		checkWatcher.data = this;
+
+		#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+			ev_prepare_init(&prepareWatcher, onEventLoopPrepare);
+			ev_prepare_start(getLoop(), &prepareWatcher);
+			prepareWatcher.data = this;
+
+			timeBeforeBlocking = 0;
+		#endif
 	}
 
 	~RequestHandler() {

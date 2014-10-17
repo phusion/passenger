@@ -91,6 +91,10 @@ public:
 	HashedStaticString cacheKey;
 	LString *cacheControl;
 
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		ev_tstamp timeBeforeAccessingApplicationPool;
+	#endif
+
 
 	const char *getStateString() const {
 		switch (state) {

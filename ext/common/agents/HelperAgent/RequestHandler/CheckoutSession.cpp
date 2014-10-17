@@ -48,7 +48,13 @@ checkoutSession(Client *client, Request *req) {
 	options.currentTime = (unsigned long long) (ev_now(getLoop()) * 1000000);
 
 	refRequest(req, __FILE__, __LINE__);
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		req->timeBeforeAccessingApplicationPool = ev_now(getLoop());
+	#endif
 	appPool->asyncGet(options, callback);
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		checkApplicationPoolAccessTime(client, req);
+	#endif
 }
 
 static void

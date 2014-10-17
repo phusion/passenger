@@ -87,6 +87,10 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->cacheKey = HashedStaticString();
 	req->cacheControl = NULL;
 
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		req->timeBeforeAccessingApplicationPool = 0;
+	#endif
+
 	/***************/
 }
 
@@ -199,8 +203,26 @@ onBodyBufferData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) 
 	return self->whenSendingRequest_onRequestBody(client, req, buffer, errcode);
 }
 
+#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	static void
+	onEventLoopPrepare(EV_P_ struct ev_prepare *w, int revents) {
+		RequestHandler *self = static_cast<RequestHandler *>(w->data);
+		ev_now_update(EV_A);
+		self->timeBeforeBlocking = ev_now(EV_A);
+	}
+#endif
+
 static void
 onEventLoopCheck(EV_P_ struct ev_check *w, int revents) {
 	RequestHandler *self = static_cast<RequestHandler *>(w->data);
 	self->turboCaching.updateState(ev_now(EV_A));
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		ev_tstamp blockTime = ev_now(EV_A) - self->timeBeforeBlocking;
+		if (self->timeBeforeBlocking != 0 && blockTime > 0.01) {
+			char buf[1024];
+			int size = snprintf(buf, sizeof(buf), "Event loop slept: %.1f msec\n",
+				blockTime * 1000);
+			P_NOTICE(StaticString(buf, size));
+		}
+	#endif
 }

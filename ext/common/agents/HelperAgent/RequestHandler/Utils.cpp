@@ -280,3 +280,20 @@ parseCookieHeader(psg_pool_t *pool, const LString *headerValue,
 		}
 	}
 }
+
+#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	void
+	checkApplicationPoolAccessTime(Client *client, Request *req) {
+		if (req->timeBeforeAccessingApplicationPool != 0) {
+			ev_now_update(getLoop());
+			ev_tstamp blockTime = ev_now(getLoop()) - req->timeBeforeAccessingApplicationPool;
+			if (blockTime > 0.01) {
+				char buf[1024];
+				int size = snprintf(buf, sizeof(buf), "asyncGet took: %.1f msec\n",
+					blockTime * 1000);
+				P_NOTICE(StaticString(buf, size));
+			}
+			req->timeBeforeAccessingApplicationPool = 0;
+		}
+	}
+#endif
