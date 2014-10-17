@@ -289,6 +289,14 @@ onAppResponseBegin(Client *client, Request *req) {
 	ssize_t bytesWritten;
 	bool oobw;
 
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		req->timeOnRequestHeaderSent = ev_now(getLoop());
+		reportLargeTimeDiff(client,
+			"Headers sent until response begun",
+			req->timeOnRequestHeaderSent,
+			ev_now(getLoop()));
+	#endif
+
 	// Localize hash table operations for better CPU caching.
 	oobw = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK) != NULL;
 	resp->date = resp->headers.lookup(HTTP_DATE);

@@ -134,7 +134,7 @@ endRequestAsBadGateway(Client **client, Request **req) {
 }
 
 void
-writeBenchmarkResponse(Client **client, Request **req) {
+writeBenchmarkResponse(Client **client, Request **req, bool end = true) {
 	if (canKeepAlive(*req)) {
 		writeResponse(*client, P_STATIC_STRING(
 			"HTTP/1.1 200 OK\r\n"
@@ -156,7 +156,7 @@ writeBenchmarkResponse(Client **client, Request **req) {
 			"\r\n"
 			"ok\n"));
 	}
-	if (!(*req)->ended()) {
+	if (end && !(*req)->ended()) {
 		endRequest(client, req);
 	}
 }
@@ -283,17 +283,21 @@ parseCookieHeader(psg_pool_t *pool, const LString *headerValue,
 
 #ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
 	void
-	checkApplicationPoolAccessTime(Client *client, Request *req) {
-		if (req->timeBeforeAccessingApplicationPool != 0) {
-			ev_now_update(getLoop());
-			ev_tstamp blockTime = ev_now(getLoop()) - req->timeBeforeAccessingApplicationPool;
+	reportLargeTimeDiff(Client *client, const char *name,
+		ev_tstamp fromTime, ev_tstamp toTime)
+	{
+		if (fromTime != 0 && toTime != 0) {
+			ev_tstamp blockTime = toTime - fromTime;
 			if (blockTime > 0.01) {
 				char buf[1024];
-				int size = snprintf(buf, sizeof(buf), "asyncGet took: %.1f msec\n",
-					blockTime * 1000);
-				P_NOTICE(StaticString(buf, size));
+				int size = snprintf(buf, sizeof(buf), "%s: %.1f msec",
+					name, blockTime * 1000);
+				if (client != NULL) {
+					SKC_NOTICE(client, StaticString(buf, size));
+				} else {
+					SKS_NOTICE(StaticString(buf, size));
+				}
 			}
-			req->timeBeforeAccessingApplicationPool = 0;
 		}
 	}
 #endif

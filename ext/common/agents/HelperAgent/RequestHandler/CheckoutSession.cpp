@@ -53,7 +53,12 @@ checkoutSession(Client *client, Request *req) {
 	#endif
 	appPool->asyncGet(options, callback);
 	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
-		checkApplicationPoolAccessTime(client, req);
+		if (!req->timedAppPoolGet) {
+			req->timedAppPoolGet = true;
+			ev_now_update(getLoop());
+			reportLargeTimeDiff(client, "ApplicationPool get until return",
+				req->timeBeforeAccessingApplicationPool, ev_now(getLoop()));
+		}
 	#endif
 }
 
@@ -94,6 +99,16 @@ sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 
 	TRACE_POINT();
 	RH_BENCHMARK_POINT(client, req, BM_AFTER_CHECKOUT);
+
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		if (!req->timedAppPoolGet) {
+			req->timedAppPoolGet = true;
+			ev_now_update(getLoop());
+			reportLargeTimeDiff(client, "ApplicationPool get until return",
+				req->timeBeforeAccessingApplicationPool, ev_now(getLoop()));
+		}
+	#endif
+
 	if (e == NULL) {
 		SKC_DEBUG(client, "Session checked out: pid=" << session->getPid() <<
 			", gupid=" << session->getGupid());

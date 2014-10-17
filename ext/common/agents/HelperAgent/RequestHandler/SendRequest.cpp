@@ -737,6 +737,13 @@ void
 sendBodyToApp(Client *client, Request *req) {
 	TRACE_POINT();
 	assert(req->appSink.acceptingInput());
+	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+		req->timeOnRequestHeaderSent = ev_now(getLoop());
+		reportLargeTimeDiff(client,
+			"ApplicationPool get until headers sent",
+			req->timeBeforeAccessingApplicationPool,
+			req->timeOnRequestHeaderSent);
+	#endif
 	if (req->hasBody() || req->upgraded()) {
 		// onRequestBody() will take care of forwarding
 		// the request body to the app.
