@@ -168,6 +168,7 @@ public:
 		BM_AFTER_ACCEPT,
 		BM_BEFORE_CHECKOUT,
 		BM_AFTER_CHECKOUT,
+		BM_RESPONSE_BEGIN,
 		BM_UNKNOWN
 	};
 
@@ -345,6 +346,8 @@ public:
 			return BM_BEFORE_CHECKOUT;
 		} else if (mode == "after_checkout") {
 			return BM_AFTER_CHECKOUT;
+		} else if (mode == "response_begin") {
+			return BM_RESPONSE_BEGIN;
 		} else {
 			return BM_UNKNOWN;
 		}

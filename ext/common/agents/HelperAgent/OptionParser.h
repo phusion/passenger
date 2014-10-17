@@ -118,7 +118,8 @@ serverUsage() {
 	printf("                            Directory to store data buffers in. Default:\n");
 	printf("                            %s\n", getSystemTempDir());
 	printf("      --benchmark MODE      Enable benchmark mode. Available modes:\n");
-	printf("                            after_accept,before_checkout,after_checkout\n");
+	printf("                            after_accept,before_checkout,after_checkout,\n");
+	printf("                            response_begin\n");
 	printf("      --disable-selfchecks  Disable various self-checks. This improves\n");
 	printf("                            performance, but might delay finding bugs in\n");
 	printf("                            " PROGRAM_NAME "\n");

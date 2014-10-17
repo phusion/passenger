@@ -638,6 +638,12 @@ constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
 bool
 sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten) {
 	TRACE_POINT();
+
+	if (OXT_UNLIKELY(benchmarkMode == BM_RESPONSE_BEGIN)) {
+		writeBenchmarkResponse(&client, &req, false);
+		return true;
+	}
+
 	unsigned int maxbuffers = std::min<unsigned int>(
 		8 + req->appResponse.headers.size() * 4 + 11, IOV_MAX);
 	struct iovec *buffers = (struct iovec *) psg_palloc(req->pool,
@@ -752,7 +758,9 @@ void prepareAppResponseChunkedBodyParsing(Client *client, Request *req) {
 
 void
 writeResponseAndMarkForTurboCaching(Client *client, Request *req, const MemoryKit::mbuf &buffer) {
-	writeResponse(client, buffer);
+	if (OXT_LIKELY(benchmarkMode != BM_RESPONSE_BEGIN)) {
+		writeResponse(client, buffer);
+	}
 	markResponsePartForTurboCaching(client, req, buffer);
 }
 
