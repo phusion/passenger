@@ -23,6 +23,15 @@
  *  THE SOFTWARE.
  */
 
+#ifndef _GNU_SOURCE
+	#define _GNU_SOURCE
+#endif
+#ifdef __linux__
+	#define SUPPORTS_PER_THREAD_CPU_AFFINITY
+	#include <sched.h>
+	#include <pthread.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -660,16 +669,40 @@ reportInitializationInfo() {
 static void
 mainLoop() {
 	TRACE_POINT();
+	WorkingObjects *wo = workingObjects;
+	#ifdef SUPPORTS_PER_THREAD_CPU_AFFINITY
+		unsigned int maxCpus = boost::thread::hardware_concurrency();
+		bool cpuAffine = agentsOptions->getBool("server_cpu_affine")
+			&& maxCpus <= CPU_SETSIZE;
+	#endif
+
 	installDiagnosticsDumper(dumpDiagnosticsOnCrash, NULL);
-	for (unsigned int i = 0; i < workingObjects->threadWorkingObjects.size(); i++) {
-		ThreadWorkingObjects *two = &workingObjects->threadWorkingObjects[i];
+	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
+		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		two->bgloop->start("Main event loop: thread " + toString(i + 1), 0);
+		#ifdef SUPPORTS_PER_THREAD_CPU_AFFINITY
+			if (cpuAffine) {
+				cpu_set_t cpus;
+				int result;
+
+				CPU_ZERO(&cpus);
+				CPU_SET(i % maxCpus, &cpus);
+				P_DEBUG("Setting CPU affinity of server thread " << (i + 1)
+					<< " to CPU " << (i % maxCpus + 1));
+				result = pthread_setaffinity_np(two->bgloop->getNativeHandle(),
+					maxCpus, &cpus);
+				if (result != 0) {
+					P_WARN("Cannot set CPU affinity on server thread " << (i + 1)
+						<< ": " << strerror(result) << " (errno=" << result << ")");
+				}
+			}
+		#endif
 	}
-	if (workingObjects->adminWorkingObjects.adminServer != NULL) {
-		workingObjects->adminWorkingObjects.bgloop->start("Admin event loop", 0);
+	if (wo->adminWorkingObjects.adminServer != NULL) {
+		wo->adminWorkingObjects.bgloop->start("Admin event loop", 0);
 	}
-	if (workingObjects->threadWorkingObjects.size() > 1) {
-		workingObjects->loadBalancer.start();
+	if (wo->threadWorkingObjects.size() > 1) {
+		wo->loadBalancer.start();
 	}
 	waitForExitEvent();
 }
@@ -917,6 +950,7 @@ setAgentsOptionsDefaults() {
 	options.setDefault("data_buffer_dir", getSystemTempDir());
 	options.setDefaultBool("selfchecks", false);
 	options.setDefaultInt("server_threads", boost::thread::hardware_concurrency());
+	options.setDefaultBool("server_cpu_affine", false);
 
 	string firstAddress = options.getStrSet("server_addresses")[0];
 	if (getSocketAddressType(firstAddress) == SAT_TCP) {

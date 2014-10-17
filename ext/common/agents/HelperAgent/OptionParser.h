@@ -125,6 +125,7 @@ serverUsage() {
 	printf("      --threads NUMBER      Number of threads to use for request handling.\n");
 	printf("                            Default: number of CPU cores (%d)\n",
 		boost::thread::hardware_concurrency());
+	printf("      --cpu-affine          Enable per-thread CPU affinity (Linux only)\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("Admin account privilege levels (ordered from most to least privileges):\n");
@@ -253,6 +254,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--threads")) {
 		options.setInt("server_threads", atoi(argv[i + 1]));
 		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--cpu-affine")) {
+		options.setBool("server_cpu_affine", true);
+		i++;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {
 			options.set("app_root", argv[i]);

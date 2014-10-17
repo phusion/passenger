@@ -27,6 +27,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <string>
+#include <pthread.h>
 
 extern "C" {
 	struct ev_loop;
@@ -55,6 +56,7 @@ namespace Passenger {
 		void start(const string &threadName = "", unsigned int stackSize = 1024 * 1024);
 		void stop();
 		bool isStarted() const;
+		pthread_t getNativeHandle() const;
 	};
 
 }
