@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <poll.h>
 
@@ -220,10 +221,28 @@ public:
 	}
 
 	void listen(int fd) {
+		#ifdef EOPNOTSUPP
+			#define EXTENSION_EOPNOTSUPP EOPNOTSUPP
+		#else
+			#define EXTENSION_EOPNOTSUPP ENOTSUP
+		#endif
+
 		assert(nEndpoints < SERVER_KIT_MAX_SERVER_ENDPOINTS);
 		setNonBlocking(fd);
+		int flag = 1;
+		if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) == -1
+		 && errno != ENOPROTOOPT
+		 && errno != ENOTSUP
+		 && errno != EXTENSION_EOPNOTSUPP)
+		{
+			int e = errno;
+			P_WARN("Cannot disable Nagle's algorithm on a TCP socket: " <<
+				strerror(e) << " (errno=" << e << ")");
+		}
 		endpoints[nEndpoints] = fd;
 		nEndpoints++;
+
+		#undef EXTENSION_EOPNOTSUPP
 	}
 
 	void start() {

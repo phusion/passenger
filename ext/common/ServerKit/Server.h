@@ -702,7 +702,7 @@ public:
 		 && errno != EXTENSION_EOPNOTSUPP)
 		{
 			int e = errno;
-			P_WARN("Cannot disable Nagle's algorithm on a TCP socket: " <<
+			SKS_WARN("Cannot disable Nagle's algorithm on a TCP socket: " <<
 				strerror(e) << " (errno=" << e << ")");
 		}
 		ev_io_init(&endpoints[nEndpoints], _onAcceptable, fd, EV_READ);
