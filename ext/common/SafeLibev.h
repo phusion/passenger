@@ -182,7 +182,7 @@ public:
 
 	template<typename Watcher>
 	void start(Watcher &watcher) {
-		if (pthread_equal(pthread_self(), loopThread)) {
+		if (onEventLoopThread()) {
 			watcher.set(loop);
 			watcher.start();
 		} else {
@@ -201,7 +201,7 @@ public:
 
 	template<typename Watcher>
 	void stop(Watcher &watcher) {
-		if (pthread_equal(pthread_self(), loopThread)) {
+		if (onEventLoopThread()) {
 			watcher.stop();
 		} else {
 			boost::unique_lock<boost::mutex> l(syncher);
@@ -219,7 +219,7 @@ public:
 
 	void run(const Callback &callback) {
 		assert(callback != NULL);
-		if (pthread_equal(pthread_self(), loopThread)) {
+		if (onEventLoopThread()) {
 			callback();
 		} else {
 			runSync(callback);
@@ -249,7 +249,7 @@ public:
 	/** Thread-safe version of runAfter(). */
 	void runAfterTS(unsigned int timeout, const Callback &callback) {
 		assert(callback != NULL);
-		if (pthread_equal(pthread_self(), loopThread)) {
+		if (onEventLoopThread()) {
 			runAfter(timeout, callback);
 		} else {
 			runLater(boost::bind(&SafeLibev::runAfter, this, timeout, callback));
