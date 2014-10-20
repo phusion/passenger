@@ -64,7 +64,7 @@ public:
 
 	FreeRequestList freeRequests;
 	unsigned int freeRequestCount, requestFreelistLimit;
-	unsigned long totalRequestsAccepted;
+	unsigned long totalRequestsBegun;
 
 private:
 	/***** Types and nested classes *****/
@@ -139,14 +139,14 @@ private:
 	void requestReachedZeroRefcount(Request *request) {
 		Client *client = static_cast<Client *>(request->client);
 		P_ASSERT_EQ(request->httpState, Request::WAITING_FOR_REFERENCES);
-		assert(client->endedRequestCount > 0);
+		assert(client->lingeringRequestCount > 0);
 		assert(client->currentRequest != request);
-		assert(!LIST_EMPTY(&client->endedRequests));
+		assert(!LIST_EMPTY(&client->lingeringRequests));
 
 		SKC_TRACE(client, 3, "Request object reached a reference count of 0");
-		LIST_REMOVE(request, nextRequest.endedRequest);
-		assert(client->endedRequestCount > 0);
-		client->endedRequestCount--;
+		LIST_REMOVE(request, nextRequest.lingeringRequest);
+		assert(client->lingeringRequestCount > 0);
+		client->lingeringRequestCount--;
 		request->client = NULL;
 
 		if (addRequestToFreelist(request)) {
@@ -197,9 +197,9 @@ private:
 			req->httpState = Request::WAITING_FOR_REFERENCES;
 			deinitializeRequest(client, req);
 			assert(req->ended());
-			LIST_INSERT_HEAD(&client->endedRequests, req,
-				nextRequest.endedRequest);
-			client->endedRequestCount++;
+			LIST_INSERT_HEAD(&client->lingeringRequests, req,
+				nextRequest.lingeringRequest);
+			client->lingeringRequestCount++;
 		}
 	}
 
@@ -264,7 +264,7 @@ private:
 			}
 
 			// Done parsing.
-			SKC_TRACE(client, 2, "New request received: #" << (totalRequestsAccepted + 1));
+			SKC_TRACE(client, 2, "New request received: #" << (totalRequestsBegun + 1));
 			headerParserStatePool.destroy(req->parserState.headerParser);
 			req->parserState.headerParser = NULL;
 
@@ -943,8 +943,8 @@ protected:
 	}
 
 	virtual void onRequestBegin(Client *client, Request *req) {
-		totalRequestsAccepted++;
-		client->requestsAccepted++;
+		totalRequestsBegun++;
+		client->requestsBegun++;
 	}
 
 	virtual Channel::Result onRequestBody(Client *client, Request *req,
@@ -1027,7 +1027,7 @@ public:
 		: ParentClass(context),
 		  freeRequestCount(0),
 		  requestFreelistLimit(1024),
-		  totalRequestsAccepted(0),
+		  totalRequestsBegun(0),
 		  headerParserStatePool(16, 256)
 	{
 		STAILQ_INIT(&freeRequests);
@@ -1049,7 +1049,7 @@ public:
 	virtual Json::Value inspectStateAsJson() const {
 		Json::Value doc = ParentClass::inspectStateAsJson();
 		doc["free_request_count"] = freeRequestCount;
-		doc["total_requests_accepted"] = (Json::UInt64) totalRequestsAccepted;
+		doc["total_requests_begun"] = (Json::UInt64) totalRequestsBegun;
 		return doc;
 	}
 
@@ -1058,8 +1058,8 @@ public:
 		if (client->currentRequest) {
 			doc["current_request"] = inspectRequestStateAsJson(client->currentRequest);
 		}
-		doc["requests_accepted"] = client->requestsAccepted;
-		doc["ended_request_count"] = client->endedRequestCount;
+		doc["requests_begun"] = client->requestsBegun;
+		doc["lingering_request_count"] = client->lingeringRequestCount;
 		return doc;
 	}
 

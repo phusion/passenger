@@ -46,33 +46,33 @@ public:
 	 *         currentRequest->httpState != HttpRequest::IN_FREELIST
 	 */
 	Request *currentRequest;
-	unsigned int requestsAccepted;
+	unsigned int requestsBegun;
 
 	BaseHttpClient(void *server)
 		: BaseClient(server),
 		  currentRequest(NULL),
-		  requestsAccepted(0)
+		  requestsBegun(0)
 		{ }
 };
 
 
 #define SERVER_KIT_BASE_HTTP_CLIENT_INIT() \
-	LIST_INIT(&endedRequests); \
-	endedRequestCount = 0
+	LIST_INIT(&lingeringRequests); \
+	lingeringRequestCount = 0
 
 #define DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER(ClientType, RequestType) \
 	DEFINE_SERVER_KIT_BASE_CLIENT_FOOTER(ClientType); \
 	/* Last field from BASE_CLIENT_FOOTER is an int, so we put an */ \
 	/* unsigned int here first to avoid an alignment hole on x86_64. */ \
-	unsigned int endedRequestCount; \
-	Passenger::ServerKit::BaseHttpClient<RequestType>::RequestList endedRequests
+	unsigned int lingeringRequestCount; \
+	Passenger::ServerKit::BaseHttpClient<RequestType>::RequestList lingeringRequests
 
 #define DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER_FOR_TEMPLATE_CLASS(ClientType, RequestType) \
 	DEFINE_SERVER_KIT_BASE_CLIENT_FOOTER(ClientType); \
 	/* Last field from BASE_CLIENT_FOOTER is an int, so we put an */ \
 	/* unsigned int here first to avoid an alignment hole on x86_64. */ \
-	unsigned int endedRequestCount; \
-	typename Passenger::ServerKit::BaseHttpClient<RequestType>::RequestList endedRequests
+	unsigned int lingeringRequestCount; \
+	typename Passenger::ServerKit::BaseHttpClient<RequestType>::RequestList lingeringRequests
 
 
 template<typename Request = HttpRequest>

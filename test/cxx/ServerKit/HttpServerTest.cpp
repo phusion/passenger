@@ -318,15 +318,15 @@ namespace tut {
 			*result = server->totalBytesConsumed;
 		}
 
-		unsigned long getTotalRequestsAccepted() {
+		unsigned long getTotalRequestsBegun() {
 			unsigned long result;
-			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getTotalRequestsAccepted,
+			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getTotalRequestsBegun,
 				this, &result));
 			return result;
 		}
 
-		void _getTotalRequestsAccepted(unsigned long *result) {
-			*result = server->totalRequestsAccepted;
+		void _getTotalRequestsBegun(unsigned long *result) {
+			*result = server->totalRequestsBegun;
 		}
 
 		unsigned int getActiveClientCount() {
@@ -1265,7 +1265,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
 		SHOULD_NEVER_HAPPEN(100,
-			result = getTotalRequestsAccepted() > 1;
+			result = getTotalRequestsBegun() > 1;
 		);
 
 		string data = readAll(fd);

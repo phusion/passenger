@@ -260,7 +260,7 @@ public:
 	public: \
 	union { \
 		STAILQ_ENTRY(RequestType) freeRequest; \
-		LIST_ENTRY(RequestType) endedRequest; \
+		LIST_ENTRY(RequestType) lingeringRequest; \
 	} nextRequest
 
 
