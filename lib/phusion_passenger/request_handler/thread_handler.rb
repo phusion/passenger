@@ -386,7 +386,7 @@ private
 			end
 		end
 
-		if !has_error && @keepalive_performed
+		if !has_error && @keepalive_performed && connection
 			trace(3, "Keep-aliving connection.")
 			@last_connection = connection
 		end

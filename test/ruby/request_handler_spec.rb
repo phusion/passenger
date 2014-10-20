@@ -390,7 +390,7 @@ describe RequestHandler do
 			send_binary_request(client,
 				"REQUEST_METHOD" => "GET",
 				"PATH_INFO" => "/",
-				"HTTP_TRANSFER_ENCODING" => "chunked")
+				"TRANSFER_ENCODING" => "chunked")
 			client.write(
 				"3\r\n" +
 				"abc\r\n" +
@@ -449,6 +449,38 @@ describe RequestHandler do
 			@options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
 				include Rack::ThreadHandlerExtension
 			end
+		end
+
+		it "doesn't allow reading from rack.input" do
+			lambda_called = false
+
+			@options["app"] = lambda do |env|
+				lambda_called = true
+				body = env['rack.input'].read.inspect
+				[200, { "Content-Type" => "text/plain" }, [body]]
+			end
+
+			@request_handler = RequestHandler.new(@owner_pipe[1], @options)
+			@request_handler.start_main_loop_thread
+			client = connect
+			begin
+				send_binary_request(client,
+					"REQUEST_METHOD" => "GET",
+					"PATH_INFO" => "/")
+				client.write("hi")
+				client.close_write
+				client.read.should ==
+					"HTTP/1.1 200 Whatever\r\n" +
+					"Content-Type: text/plain\r\n" +
+					"Connection: close\r\n" +
+					"Content-Length: 2\r\n" +
+					"\r\n" +
+					"\"\""
+			ensure
+				client.close
+			end
+
+			lambda_called.should be_true
 		end
 
 		it "allows reading from the client socket once the socket has been fully hijacked" do
