@@ -22,6 +22,7 @@
 #  THE SOFTWARE.
 require 'optparse'
 PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'standalone/utils'
 
@@ -185,19 +186,19 @@ private
 		end
 		if @args.empty?
 			if AppFinder.looks_like_app_directory?(".")
-				@options[:pid_file] ||= absolute_path("tmp/pids/#{pid_basename}")
-				@options[:log_file] ||= absolute_path("log/#{log_basename}")
+				@options[:pid_file] ||= File.absolute_path_no_resolve("tmp/pids/#{pid_basename}")
+				@options[:log_file] ||= File.absolute_path_no_resolve("log/#{log_basename}")
 				if create_subdirs
 					ensure_directory_exists(File.dirname(@options[:pid_file]))
 					ensure_directory_exists(File.dirname(@options[:log_file]))
 				end
 			else
-				@options[:pid_file] ||= absolute_path(pid_basename)
-				@options[:log_file] ||= absolute_path(log_basename)
+				@options[:pid_file] ||= File.absolute_path_no_resolve(pid_basename)
+				@options[:log_file] ||= File.absolute_path_no_resolve(log_basename)
 			end
 		else
-			@options[:pid_file] ||= absolute_path(File.join(@args[0], pid_basename))
-			@options[:log_file] ||= absolute_path(File.join(@args[0], log_basename))
+			@options[:pid_file] ||= File.absolute_path_no_resolve(File.join(@args[0], pid_basename))
+			@options[:log_file] ||= File.absolute_path_no_resolve(File.join(@args[0], log_basename))
 		end
 	end
 

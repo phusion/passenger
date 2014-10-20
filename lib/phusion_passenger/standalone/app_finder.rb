@@ -20,6 +20,7 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
+PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'standalone/utils'
 PhusionPassenger.require_passenger_lib 'utils/file_system_watcher'
 
@@ -133,9 +134,9 @@ private
 
 	def find_app_root
 		if @dirs.empty?
-			return absolute_path(".")
+			return absolute_path_no_resolve(".")
 		else
-			return absolute_path(@dirs[0])
+			return absolute_path_no_resolve(@dirs[0])
 		end
 	end
 

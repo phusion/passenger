@@ -31,18 +31,6 @@ private
 			PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 		end
 	end
-
-	# Dir.pwd resolves symlinks. So in turn, File.expand_path/File.absolute_path
-	# do that too. We work around that by shelling out to the `pwd` tool.
-	if File.respond_to?(:absolute_path)
-		def absolute_path(path)
-			return File.absolute_path(path, `pwd`.strip)
-		end
-	else
-		def absolute_path(path)
-			return File.expand_path(path, `pwd`.strip)
-		end
-	end
 end
 
 end
