@@ -40,11 +40,13 @@ module ThreadHandlerExtension
 	RACK_HIJACK_P      = "rack.hijack?"        # :nodoc:
 	RACK_HIJACK        = "rack.hijack"         # :nodoc:
 	SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
+	REQUEST_METHOD = "REQUEST_METHOD"          # :nodoc:
 	TRANSFER_ENCODING_HEADER  = "Transfer-Encoding"   # :nodoc:
 	CONTENT_LENGTH_HEADER     = "Content-Length"      # :nodoc:
 	CONTENT_LENGTH_HEADER_AND_SEPARATOR      = "Content-Length: " # :nodoc
 	TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF2 = "Transfer-Encoding: chunked\r\n\r\n" # :nodoc:
 	CONNECTION_CLOSE_CRLF     = "Connection: close\r\n"     # :nodoc:
+	HEAD           = "HEAD"   # :nodoc:
 	HTTPS          = "HTTPS"  # :nodoc:
 	HTTPS_DOWNCASE = "https"  # :nodoc:
 	HTTP           = "http"   # :nodoc:
@@ -123,7 +125,7 @@ private
 			# object instead of a real Array, even when #is_a? claims so.
 			# Call #to_a just to be sure.
 			body = body.to_a
-			output_body = should_output_body?(status)
+			output_body = should_output_body?(status, env)
 			headers_output = generate_headers_array(status, headers)
 			perform_keep_alive(env, headers_output)
 			if output_body && should_add_message_length_header?(status, headers)
@@ -141,7 +143,7 @@ private
 			end
 			return false
 		elsif body.is_a?(String)
-			output_body = should_output_body?(status)
+			output_body = should_output_body?(status, env)
 			headers_output = generate_headers_array(status, headers)
 			perform_keep_alive(env, headers_output)
 			if output_body && should_add_message_length_header?(status, headers)
@@ -156,7 +158,7 @@ private
 			connection.writev(headers_output)
 			return false
 		else
-			output_body = should_output_body?(status)
+			output_body = should_output_body?(status, env)
 			headers_output = generate_headers_array(status, headers)
 			perform_keep_alive(env, headers_output)
 			chunk = output_body && should_add_message_length_header?(status, headers)
@@ -221,8 +223,10 @@ private
 		end
 	end
 
-	def should_output_body?(status)
-		return status < 100 || (status >= 200 && status != 204 && status != 205 && status != 304)
+	def should_output_body?(status, env)
+		return (status < 100 ||
+			(status >= 200 && status != 204 && status != 205 && status != 304)) &&
+			env[REQUEST_METHOD] != HEAD
 	end
 
 	def should_add_message_length_header?(status, headers)
