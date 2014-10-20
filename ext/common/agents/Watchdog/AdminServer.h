@@ -302,6 +302,7 @@ private:
 	void respondWith422(Client *client, Request *req, const StaticString &body) {
 		HeaderTable headers;
 		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "content-type", "text/plain; charset=utf-8");
 		writeSimpleResponse(client, 422, &headers, body);
 		if (!req->ended()) {
 			endRequest(&client, &req);

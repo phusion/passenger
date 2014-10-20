@@ -32,6 +32,7 @@ module Config
 		["restart-app", "RestartAppCommand"],
 		["list-instances", "ListInstancesCommand"],
 		["reopen-logs", "ReopenLogsCommand"],
+		["admin-command", "AdminCommandCommand"],
 		["validate-install", "ValidateInstallCommand"],
 		["build-native-support", "BuildNativeSupportCommand"],
 
@@ -89,6 +90,9 @@ module Config
 		puts "  restart-app            Restart an application"
 		puts "  reopen-logs            Instruct #{PROGRAM_NAME} agents to reopen their log"
 		puts "                         files"
+		if all
+			puts "  admin-command          Invoke an internal #{PROGRAM_NAME} admin command."
+		end
 		puts
 		puts "Informational commands:"
 		puts "  list-instances         List running #{PROGRAM_NAME} instances"
