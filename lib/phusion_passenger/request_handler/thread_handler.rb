@@ -292,10 +292,16 @@ private
 #	end
 
 	def prepare_request(connection, headers)
+		transfer_encoding = headers[TRANSFER_ENCODING]
+		content_length = headers[CONTENT_LENGTH]
 		@can_keepalive = @keepalive_enabled &&
-			!headers.has_key?(TRANSFER_ENCODING) &&
-			!headers.has_key?(CONTENT_LENGTH)
+			!transfer_encoding &&
+			!content_length
 		@keepalive_performed = false
+
+		if !transfer_encoding && !content_length
+			connection.simulate_eof!
+		end
 
 		if @union_station_core && headers[PASSENGER_TXN_ID]
 			txn_id = headers[PASSENGER_TXN_ID]
@@ -332,6 +338,10 @@ private
 		transaction = headers[UNION_STATION_REQUEST_TRANSACTION]
 		Thread.current[UNION_STATION_CORE] = nil
 		Thread.current[UNION_STATION_REQUEST_TRANSACTION] = nil
+
+		if connection
+			connection.stop_simulating_eof!
+		end
 
 		if transaction && !transaction.closed?
 			exception_occurred = false
