@@ -37,7 +37,7 @@ namespace ApplicationPool2 {
  * - The Developer Guide, section "Executing the loader or preloader"
  */
 const AppTypeDefinition appTypeDefinitions[] = {
-	{ PAT_RACK, "rack", "config.ru", "Passenger RackApp" },
+	{ PAT_RACK, "rack", "config.ru", "Passenger RubyApp" },
 	{ PAT_WSGI, "wsgi", "passenger_wsgi.py", "Passenger WsgiApp" },
 	{ PAT_NODE, "node", "app.js", "Passenger NodeApp" },
 	{ PAT_METEOR, "meteor", ".meteor", "Passenger MeteorApp" },
