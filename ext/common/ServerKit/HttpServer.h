@@ -1033,6 +1033,23 @@ public:
 		STAILQ_INIT(&freeRequests);
 	}
 
+	virtual void compact(int logLevel = LVL_NOTICE) {
+		ParentClass::compact();
+		unsigned int count = freeRequestCount;
+
+		while (!STAILQ_EMPTY(&freeRequests)) {
+			Request *request = STAILQ_FIRST(&freeRequests);
+			P_ASSERT_EQ(request->httpState, Request::IN_FREELIST);
+			freeRequestCount--;
+			STAILQ_REMOVE_HEAD(&freeRequests, nextRequest.freeRequest);
+			delete request;
+		}
+		assert(freeRequestCount == 0);
+
+		SKS_LOG(logLevel, __FILE__, __LINE__,
+			"Freed " << count << " spare request objects");
+	}
+
 	virtual void configure(const Json::Value &doc) {
 		ParentClass::configure(doc);
 		if (doc.isMember("request_freelist_limit")) {

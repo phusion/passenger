@@ -69,6 +69,7 @@ using namespace oxt;
 
 
 // We use 'this' so that the macros work in derived template classes like HttpServer<>.
+#define SKS_LOG(level, file, line, expr)  P_LOG(level, file, line, "[" << this->getServerName() << "] " << expr)
 #define SKS_ERROR(expr)  P_ERROR("[" << this->getServerName() << "] " << expr)
 #define SKS_WARN(expr)   P_WARN("[" << this->getServerName() << "] " << expr)
 #define SKS_INFO(expr)   P_INFO("[" << this->getServerName() << "] " << expr)
@@ -786,6 +787,26 @@ public:
 			activeClientCount << " active client(s)");
 
 		onClientsAccepted(acceptedClients, size);
+	}
+
+
+	/***** Server management *****/
+
+	virtual void compact(int logLevel = LVL_NOTICE) {
+		unsigned int count = freeClientCount;
+
+		while (!STAILQ_EMPTY(&freeClients)) {
+			Client *client = STAILQ_FIRST(&freeClients);
+			P_ASSERT_EQ(client->getConnState(), Client::IN_FREELIST);
+			client->refcount.store(2, boost::memory_order_relaxed);
+			freeClientCount--;
+			STAILQ_REMOVE_HEAD(&freeClients, nextClient.freeClient);
+			delete client;
+		}
+		assert(freeClientCount == 0);
+
+		SKS_LOG(logLevel, __FILE__, __LINE__,
+			"Freed " << count << " spare client objects");
 	}
 
 

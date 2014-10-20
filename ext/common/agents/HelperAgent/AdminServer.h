@@ -361,6 +361,8 @@ private:
 
 		count = mbuf_pool_compact(&ctx->mbuf_pool);
 		SKS_NOTICE_FROM_STATIC(rh, "Freed " << count << " mbufs");
+
+		rh->compact(LVL_NOTICE);
 	}
 
 	void processGc(Client *client, Request *req) {
