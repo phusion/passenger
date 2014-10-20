@@ -225,7 +225,7 @@ public:
 	}
 
 	/** header must stay alive */
-	void insert(Header *header, bool overwrite = true) {
+	void insert(Header *header, psg_pool_t *pool) {
 		assert(header->key.size < MAX_KEY_LENGTH);
 
 		if (m_cells == NULL) {
@@ -247,11 +247,14 @@ public:
 					cell->header = header;
 					return;
 				} else if (psg_lstr_cmp(&cell->header->key, &header->key)) {
-					// Cell matches.
-					if (overwrite) {
-						psg_lstr_deinit(&cell->header->key);
-						psg_lstr_deinit(&cell->header->val);
-						cell->header = header;
+					// Cell matches, so merge value into header.
+					// TODO: we need to merge Set-Cookie headers differently
+					psg_lstr_append(&cell->header->val, pool, ",", 1);
+					LString::Part *part = header->val.start;
+					header->val.start = NULL;
+					while (part != NULL) {
+						psg_lstr_append_part(&cell->header->val, part);
+						part = part->next;
 					}
 					return;
 				} else {
@@ -262,7 +265,7 @@ public:
 	}
 
 	Header *insert(psg_pool_t *pool, const HashedStaticString &name,
-		const StaticString &value, bool overwrite = false)
+		const StaticString &value)
 	{
 		Header *header = (Header *) psg_palloc(pool, sizeof(Header));
 		psg_lstr_init(&header->key);
@@ -270,7 +273,7 @@ public:
 		psg_lstr_init(&header->val);
 		psg_lstr_append(&header->val, pool, value.data(), value.size());
 		header->hash = name.hash();
-		insert(header, overwrite);
+		insert(header, pool);
 		return header;
 	}
 

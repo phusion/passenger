@@ -106,9 +106,9 @@ private:
 
 	void insertCurrentHeader() {
 		if (!state->secureMode) {
-			message->headers.insert(state->currentHeader);
+			message->headers.insert(state->currentHeader, pool);
 		} else {
-			message->secureHeaders.insert(state->currentHeader);
+			message->secureHeaders.insert(state->currentHeader, pool);
 		}
 	}
 

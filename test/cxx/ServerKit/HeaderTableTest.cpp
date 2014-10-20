@@ -54,14 +54,14 @@ namespace tut {
 		Header *header = createHeader("Content-Length", "5");
 		Header *header2 = createHeader("Host", "foo.com");
 
-		table.insert(header);
+		table.insert(header, pool);
 		ensure_equals(table.size(), 1u);
 		ensure_equals<void *>("(1)", table.lookup("hello"), NULL);
 		ensure_equals<void *>("(2)", table.lookup("Host"), NULL);
 		ensure("(3)", table.lookup("Content-Length") != NULL);
 		ensure("(4)", psg_lstr_cmp(table.lookup("Content-Length"), "5"));
 
-		table.insert(header2);
+		table.insert(header2, pool);
 		ensure_equals(table.size(), 2u);
 		ensure_equals<void *>("(5)", table.lookup("hello"), NULL);
 		ensure("(6)", table.lookup("Host") != NULL);
@@ -73,16 +73,16 @@ namespace tut {
 	TEST_METHOD(5) {
 		set_test_name("Large amounts of insertions");
 
-		table.insert(createHeader("Host", "foo.com"));
-		table.insert(createHeader("Content-Length", "5"));
-		table.insert(createHeader("Accept", "text/html"));
-		table.insert(createHeader("Accept-Encoding", "gzip"));
-		table.insert(createHeader("Accept-Language", "nl"));
-		table.insert(createHeader("User-Agent", "Mozilla"));
-		table.insert(createHeader("Set-Cookie", "foo=bar"));
-		table.insert(createHeader("Connection", "keep-alive"));
-		table.insert(createHeader("Cache-Control", "no-cache"));
-		table.insert(createHeader("Pragma", "no-cache"));
+		table.insert(createHeader("Host", "foo.com"), pool);
+		table.insert(createHeader("Content-Length", "5"), pool);
+		table.insert(createHeader("Accept", "text/html"), pool);
+		table.insert(createHeader("Accept-Encoding", "gzip"), pool);
+		table.insert(createHeader("Accept-Language", "nl"), pool);
+		table.insert(createHeader("User-Agent", "Mozilla"), pool);
+		table.insert(createHeader("Set-Cookie", "foo=bar"), pool);
+		table.insert(createHeader("Connection", "keep-alive"), pool);
+		table.insert(createHeader("Cache-Control", "no-cache"), pool);
+		table.insert(createHeader("Pragma", "no-cache"), pool);
 
 		ensure_equals<void *>(table.lookup("MyHeader"), NULL);
 		ensure(psg_lstr_cmp(table.lookup("Host"), "foo.com"));
@@ -101,8 +101,8 @@ namespace tut {
 		set_test_name("Iterators work");
 		Header *header = createHeader("Content-Length", "5");
 		Header *header2 = createHeader("Host", "foo.com");
-		table.insert(header);
-		table.insert(header2);
+		table.insert(header, pool);
+		table.insert(header2, pool);
 
 		HeaderTable::Iterator it(table);
 		ensure(*it != NULL);
@@ -125,12 +125,12 @@ namespace tut {
 		ensure_equals(table.size(), 0u);
 		ensure_equals(table.arraySize(), 4u);
 
-		table.insert(createHeader("Host", "foo.com"));
-		table.insert(createHeader("Content-Length", "5"));
+		table.insert(createHeader("Host", "foo.com"), pool);
+		table.insert(createHeader("Content-Length", "5"), pool);
 		ensure_equals(table.size(), 2u);
 		ensure_equals(table.arraySize(), 4u);
 
-		table.insert(createHeader("Accept", "text/html"));
+		table.insert(createHeader("Accept", "text/html"), pool);
 		ensure_equals(table.size(), 3u);
 		ensure_equals(table.arraySize(), 8u);
 
@@ -143,9 +143,9 @@ namespace tut {
 	TEST_METHOD(8) {
 		set_test_name("Clearing");
 
-		table.insert(createHeader("Host", "foo.com"));
-		table.insert(createHeader("Content-Length", "5"));
-		table.insert(createHeader("Accept", "text/html"));
+		table.insert(createHeader("Host", "foo.com"), pool);
+		table.insert(createHeader("Content-Length", "5"), pool);
+		table.insert(createHeader("Accept", "text/html"), pool);
 
 		table.clear();
 		ensure_equals(table.size(), 0u);
@@ -154,5 +154,18 @@ namespace tut {
 		ensure_equals<void *>(table.lookup("Host"), NULL);
 		ensure_equals<void *>(table.lookup("Content-Length"), NULL);
 		ensure_equals<void *>(table.lookup("Accept"), NULL);
+	}
+
+	TEST_METHOD(9) {
+		set_test_name("Duplicate header merging");
+
+		table.insert(createHeader("X-Forwarded-For", "foo.com"), pool);
+		table.insert(createHeader("X-Forwarded-For", "bar.com"), pool);
+		table.insert(createHeader("Cache-Control", "must-invalidate"), pool);
+		table.insert(createHeader("Cache-Control", "private"), pool);
+
+		ensure_equals(table.size(), 2u);
+		ensure("(1)", psg_lstr_cmp(table.lookup("X-Forwarded-For"), "foo.com,bar.com"));
+		ensure("(2)", psg_lstr_cmp(table.lookup("Cache-Control"), "must-invalidate,private"));
 	}
 }

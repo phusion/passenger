@@ -77,7 +77,7 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 				sizeof("content-length") - 1).hash();
 
 			req->headers.erase(HTTP_TRANSFER_ENCODING);
-			req->headers.insert(header);
+			req->headers.insert(header, req->pool);
 		}
 		checkoutSession(client, req);
 		return Channel::Result(0, true);
