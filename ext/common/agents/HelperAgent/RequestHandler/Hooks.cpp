@@ -37,6 +37,10 @@ virtual unsigned int getClientName(const Client *client, char *buf, size_t size)
 	return pos - buf;
 }
 
+virtual StaticString getServerName() const {
+	return serverLogName;
+}
+
 protected:
 
 virtual void
@@ -185,10 +189,6 @@ onRequestBody(Client *client, Request *req, const MemoryKit::mbuf &buffer,
 		P_BUG("Unknown state " << req->state);
 		return Channel::Result(0, false);
 	}
-}
-
-virtual StaticString getServerName() const {
-	return serverLogName;
 }
 
 private:

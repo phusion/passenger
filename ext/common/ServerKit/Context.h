@@ -31,6 +31,8 @@
 #include <MemoryKit/mbuf.h>
 #include <SafeLibev.h>
 #include <Constants.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/json.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -59,6 +61,26 @@ private:
 		MemoryKit::mbuf_pool_init(&mbuf_pool);
 	}
 
+	string formatFloat(double val) const {
+		char buf[64];
+		int size = snprintf(buf, sizeof(buf), "%.1f", val);
+		return string(buf, size);
+	}
+
+	Json::Value
+	byteSizeToJson(size_t size) const {
+		Json::Value doc;
+		doc["bytes"] = (Json::UInt64) size;
+		if (size < 1024) {
+			doc["human_readable"] = toString(size) + " bytes";
+		} else if (size < 1024 * 1024) {
+			doc["human_readable"] = formatFloat(size / 1024.0) + " KB";
+		} else {
+			doc["human_readable"] = formatFloat(size / 1024.0 / 1024.0) + " MB";
+		}
+		return doc;
+	}
+
 public:
 	SafeLibevPtr libev;
 	struct MemoryKit::mbuf_pool mbuf_pool;
@@ -79,6 +101,24 @@ public:
 
 	~Context() {
 		MemoryKit::mbuf_pool_deinit(&mbuf_pool);
+	}
+
+	Json::Value inspectStateAsJson() const {
+		Json::Value doc;
+		Json::Value mbufDoc;
+
+		mbufDoc["free_blocks"] = (Json::UInt) mbuf_pool.nfree_mbuf_blockq;
+		mbufDoc["active_blocks"] = (Json::UInt) mbuf_pool.nactive_mbuf_blockq;
+		mbufDoc["chunk_size"] = (Json::UInt) mbuf_pool.mbuf_block_chunk_size;
+		mbufDoc["offset"] = (Json::UInt) mbuf_pool.mbuf_block_offset;
+		mbufDoc["spare_memory"] = byteSizeToJson(mbuf_pool.nfree_mbuf_blockq
+			* mbuf_pool.mbuf_block_chunk_size);
+		mbufDoc["active_memory"] = byteSizeToJson(mbuf_pool.nactive_mbuf_blockq
+			* mbuf_pool.mbuf_block_chunk_size);
+
+		doc["mbuf_pool"] = mbufDoc;
+
+		return doc;
 	}
 };
 

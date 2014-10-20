@@ -120,8 +120,8 @@ def show_status(instance, options)
 			exit 2
 		end
 
-	when 'requests', 'connections'
-		request = Net::HTTP::Get.new("/connections.json")
+	when 'requests', 'server'
+		request = Net::HTTP::Get.new("/server.json")
 		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
 		response = instance.http_request("agents.s/server_admin", request)
 		if response.code.to_i / 100 == 2
@@ -252,12 +252,12 @@ def create_option_parser(options)
 		opts.separator ""
 
 		opts.separator "Options:"
-		opts.on("--show=pool|connections|backtraces|xml|union_station", String,
+		opts.on("--show=pool|server|backtraces|xml|union_station", String,
 		        "Whether to show the pool's contents,#{nl}" <<
 		        "the currently running requests,#{nl}" <<
 		        "the backtraces of all threads or an XML#{nl}" <<
 		        "description of the pool.") do |what|
-			if what !~ /\A(pool|connections|requests|backtraces|xml|union_station)\Z/
+			if what !~ /\A(pool|server|requests|backtraces|xml|union_station)\Z/
 				STDERR.puts "Invalid argument for --show."
 				exit 1
 			else

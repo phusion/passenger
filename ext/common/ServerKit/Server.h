@@ -76,6 +76,8 @@ using namespace oxt;
 #define SKS_DEBUG(expr)  P_DEBUG("[" << this->getServerName() << "] " << expr)
 #define SKS_TRACE(level, expr) P_TRACE(level, "[" << this->getServerName() << "] " << expr)
 
+#define SKS_NOTICE_FROM_STATIC(server, expr) P_NOTICE("[" << server->getServerName() << "] " << expr)
+
 #define SKC_ERROR(client, expr) SKC_ERROR_FROM_STATIC(this, client, expr)
 #define SKC_WARN(client, expr) SKC_WARN_FROM_STATIC(this, client, expr)
 #define SKC_NOTICE(client, expr) SKC_NOTICE_FROM_STATIC(this, client, expr)
@@ -917,7 +919,7 @@ public:
 	}
 
 	virtual Json::Value inspectStateAsJson() const {
-		Json::Value doc;
+		Json::Value doc = ctx->inspectStateAsJson();
 		const Client *client;
 
 		doc["pid"] = (unsigned int) getpid();

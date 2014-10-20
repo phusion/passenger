@@ -293,13 +293,7 @@ mbuf_pool_init(struct mbuf_pool *pool)
 void
 mbuf_pool_deinit(struct mbuf_pool *pool)
 {
-	while (!STAILQ_EMPTY(&pool->free_mbuf_blockq)) {
-		struct mbuf_block *mbuf_block = STAILQ_FIRST(&pool->free_mbuf_blockq);
-		mbuf_block_remove(&pool->free_mbuf_blockq, mbuf_block);
-		mbuf_block_free(pool, mbuf_block);
-		pool->nfree_mbuf_blockq--;
-	}
-	assert(pool->nfree_mbuf_blockq == 0);
+	mbuf_pool_compact(pool);
 }
 
 /*
@@ -310,6 +304,22 @@ size_t
 mbuf_pool_data_size(struct mbuf_pool *pool)
 {
 	return pool->mbuf_block_offset;
+}
+
+unsigned int
+mbuf_pool_compact(struct mbuf_pool *pool)
+{
+	unsigned int count = pool->nfree_mbuf_blockq;
+
+	while (!STAILQ_EMPTY(&pool->free_mbuf_blockq)) {
+		struct mbuf_block *mbuf_block = STAILQ_FIRST(&pool->free_mbuf_blockq);
+		mbuf_block_remove(&pool->free_mbuf_blockq, mbuf_block);
+		mbuf_block_free(pool, mbuf_block);
+		pool->nfree_mbuf_blockq--;
+	}
+	assert(pool->nfree_mbuf_blockq == 0);
+
+	return count;
 }
 
 

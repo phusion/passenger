@@ -116,6 +116,7 @@ struct mbuf_pool {
 void mbuf_pool_init(struct mbuf_pool *pool);
 void mbuf_pool_deinit(struct mbuf_pool *pool);
 size_t mbuf_pool_data_size(struct mbuf_pool *pool);
+unsigned int mbuf_pool_compact(struct mbuf_pool *pool);
 
 struct mbuf_block *mbuf_block_get(struct mbuf_pool *pool);
 void mbuf_block_put(struct mbuf_block *mbuf_block);
