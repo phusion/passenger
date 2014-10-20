@@ -55,7 +55,6 @@
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/MessageIO.h>
-#include <Utils/Base64.h>
 #include <Utils/VariantMap.h>
 
 using namespace oxt;

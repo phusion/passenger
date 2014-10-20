@@ -56,7 +56,6 @@
 #include <ResourceLocator.h>
 #include <Exceptions.h>
 #include <Utils.h>
-#include <Utils/Base64.h>
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>

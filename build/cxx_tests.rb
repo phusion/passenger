@@ -138,10 +138,6 @@ TEST_CXX_OBJECTS = {
 	'test/cxx/StaticStringTest.o' => %w(
 		test/cxx/StaticStringTest.cpp
 		ext/common/StaticString.h),
-	'test/cxx/Base64Test.o' => %w(
-		test/cxx/Base64Test.cpp
-		ext/common/Utils/Base64.h
-		ext/common/Utils/Base64.cpp),
 	'test/cxx/DechunkerTest.o' => %w(
 		test/cxx/DechunkerTest.cpp
 		ext/common/Utils/Dechunker.h),

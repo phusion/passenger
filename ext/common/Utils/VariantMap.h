@@ -34,7 +34,7 @@
 #include <string>
 #include <Exceptions.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/Base64.h>
+#include <Utils/modp_b64.h>
 #include <Utils/MessageIO.h>
 
 namespace Passenger {
@@ -278,7 +278,7 @@ public:
 			}
 			result.append(*it);
 		}
-		set(name, Base64::encode(result));
+		set(name, modp::b64_encode(result));
 		return *this;
 	}
 
@@ -379,7 +379,7 @@ public:
 		const string *str;
 		if (lookup(name, required, &str)) {
 			result.clear();
-			split(Base64::decode(*str), '\0', result);
+			split(modp::b64_decode(*str), '\0', result);
 		}
 		return result;
 	}

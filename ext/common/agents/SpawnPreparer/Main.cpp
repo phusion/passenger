@@ -43,7 +43,7 @@
 #include <string>
 #include <sstream>
 #include <Utils/SystemMetricsCollector.h>
-#include <Utils/Base64.h>
+#include <Utils/modp_b64.h>
 
 using namespace std;
 using namespace Passenger;
@@ -70,7 +70,7 @@ changeWorkingDir(const char *dir) {
 
 static void
 setGivenEnvVars(const char *envvarsData) {
-	string envvars = Base64::decode(envvarsData);
+	string envvars = modp::b64_decode(envvarsData);
 	const char *key = envvars.data();
 	const char *end = envvars.data() + envvars.size();
 

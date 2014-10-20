@@ -44,7 +44,7 @@
 #include <Utils/BlockingQueue.h>
 #include <Utils/SystemTime.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/Base64.h>
+#include <Utils/modp_b64.h>
 #include <Utils/json.h>
 #include <Utils/Curl.h>
 
@@ -280,10 +280,10 @@ private:
 				CURLFORM_CONTENTSLENGTH, (long) item.category.size(),
 				CURLFORM_END);
 			if (item.compressed) {
-				base64_data = Base64::encode(item.data);
+				base64_data = modp::b64_encode(item.data);
 				curl_formadd(&post, &last,
 					CURLFORM_PTRNAME, "data",
-					CURLFORM_PTRCONTENTS, base64_data.c_str(),
+					CURLFORM_PTRCONTENTS, base64_data.data(),
 					CURLFORM_CONTENTSLENGTH, (long) base64_data.size(),
 					CURLFORM_END);
 				curl_formadd(&post, &last,
