@@ -142,6 +142,7 @@ respondFromTurboCache(Client *client, Request *req) {
 	}
 
 	SKC_TRACE(client, 2, "Turbocaching: trying to reply from cache");
+	SKC_TRACE(client, 2, "Turbocache entries:\n" << turboCaching.responseCache.inspect());
 
 	if (turboCaching.responseCache.requestAllowsFetching(req)) {
 		ResponseCache<Request>::Entry entry(turboCaching.responseCache.fetch(req,

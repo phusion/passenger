@@ -344,6 +344,7 @@ void prepareAppResponseCaching(Client *client, Request *req) {
 	if (turboCaching.isEnabled() && !req->cacheKey.empty()) {
 		TRACE_POINT();
 		AppResponse *resp = &req->appResponse;
+		SKC_TRACE(client, 2, "Preparing response caching");
 		if (turboCaching.responseCache.requestAllowsStoring(req)
 		 && turboCaching.responseCache.prepareRequestForStoring(req))
 		{
@@ -358,8 +359,10 @@ void prepareAppResponseCaching(Client *client, Request *req) {
 				req->cacheKey = HashedStaticString();
 			}
 		} else if (turboCaching.responseCache.requestAllowsInvalidating(req)) {
+			SKC_DEBUG(client, "Processing turbocache invalidation based on response");
 			turboCaching.responseCache.invalidate(req);
 			req->cacheKey = HashedStaticString();
+			SKC_TRACE(client, 2, "Turbocache entries:\n" << turboCaching.responseCache.inspect());
 		}
 	}
 }
@@ -808,6 +811,7 @@ storeAppResponseInTurboCache(Client *client, Request *req) {
 				headerSize, resp->bodyCacheBuffer.size));
 		if (entry.valid()) {
 			SKC_DEBUG(client, "Storing app response in turbocache");
+			SKC_TRACE(client, 2, "Turbocache entries:\n" << turboCaching.responseCache.inspect());
 
 			gatherBuffers(entry.body->httpHeaderData,
 				ResponseCache<Request>::MAX_HEADER_SIZE,
