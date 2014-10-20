@@ -304,8 +304,7 @@ public:
 	template<typename Server, typename Client>
 	void writeResponse(Server *server, Client *client, Request *req, ResponseCacheEntryType &entry) {
 		MemoryKit::mbuf_pool &mbuf_pool = server->getContext()->mbuf_pool;
-		const unsigned int MBUF_MAX_SIZE = mbuf_pool.mbuf_block_chunk_size -
-			mbuf_pool.mbuf_block_offset;
+		const unsigned int MBUF_MAX_SIZE = mbuf_pool_data_size(&mbuf_pool);
 		ResponsePreparation prep;
 		unsigned int headerSize;
 

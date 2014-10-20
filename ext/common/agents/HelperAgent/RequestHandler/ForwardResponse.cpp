@@ -688,8 +688,7 @@ sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offse
 	markHeaderBuffersForTurboCaching(client, req, buffers, nCacheableBuffers);
 
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
-	const unsigned int MBUF_MAX_SIZE = mbuf_pool.mbuf_block_chunk_size -
-		mbuf_pool.mbuf_block_offset;
+	const unsigned int MBUF_MAX_SIZE = mbuf_pool_data_size(&mbuf_pool);
 	if (dataSize <= MBUF_MAX_SIZE) {
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
 		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
