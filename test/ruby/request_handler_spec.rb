@@ -467,7 +467,10 @@ describe RequestHandler do
 				send_binary_request(client,
 					"REQUEST_METHOD" => "GET",
 					"PATH_INFO" => "/")
-				client.write("hi")
+				begin
+					client.write("hi")
+				rescue Errno::EPIPE
+				end
 				client.close_write
 				client.read.should ==
 					"HTTP/1.1 200 Whatever\r\n" +
