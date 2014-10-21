@@ -32,7 +32,7 @@ shared_examples "TeeInput#gets" do
 
 	context "if Transfer-Encoding is chunked" do
 		before :each do
-			init_input("hello\nworld\nlast line", "HTTP_TRANSFER_ENCODING" => "chunked")
+			init_input("hello\nworld\nlast line", "TRANSFER_ENCODING" => "chunked")
 		end
 
 		it "reads a line, including newline character" do
@@ -84,7 +84,7 @@ shared_examples "TeeInput#read" do
 
 		context "if Transfer-Encoding is chunked" do
 			before :each do
-				init_input("hello!", "HTTP_TRANSFER_ENCODING" => "chunked")
+				init_input("hello!", "TRANSFER_ENCODING" => "chunked")
 			end
 
 			it "slurps the entire socket" do
@@ -115,7 +115,7 @@ shared_examples "TeeInput#read" do
 		end
 
 		it "returns the empty string if len == 0" do
-			init_input("hello", "HTTP_TRANSFER_ENCODING" => "chunked")
+			init_input("hello", "TRANSFER_ENCODING" => "chunked")
 			@input.read(0).should == ""
 		end
 
@@ -142,7 +142,7 @@ shared_examples "TeeInput#read" do
 
 		context "if Transfer-Encoding is chunked" do
 			before :each do
-				init_input("hello", "HTTP_TRANSFER_ENCODING" => "chunked")
+				init_input("hello", "TRANSFER_ENCODING" => "chunked")
 			end
 
 			it "reads exactly len bytes if available" do
@@ -180,7 +180,7 @@ shared_examples "TeeInput#size" do
 
 	context "if Transfer-Encoding is chunked" do
 		it "returns the number of bytes that can be read from the socket until EOF" do
-			init_input("hello world", "HTTP_TRANSFER_ENCODING" => "chunked")
+			init_input("hello world", "TRANSFER_ENCODING" => "chunked")
 			@input.size.should == 11
 		end
 	end
