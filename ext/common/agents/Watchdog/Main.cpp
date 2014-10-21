@@ -480,10 +480,12 @@ static void
 forceAllAgentsShutdown(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	vector<AgentWatcherPtr>::iterator it;
 
+	P_DEBUG("Sending SIGTERM to all agent processes");
 	for (it = watchers.begin(); it != watchers.end(); it++) {
 		(*it)->signalShutdown();
 	}
 	usleep(1000000);
+	P_DEBUG("Sending SIGKILL to all agent processes");
 	for (it = watchers.begin(); it != watchers.end(); it++) {
 		(*it)->forceShutdown();
 	}
@@ -1245,8 +1247,8 @@ watchdogMain(int argc, char *argv[]) {
 		UPDATE_TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
-		bool exitGracefully = waitForStarterProcessOrWatchers(wo, watchers);
-		if (exitGracefully) {
+		bool shouldExitGracefully = waitForStarterProcessOrWatchers(wo, watchers);
+		if (shouldExitGracefully) {
 			/* Fork a child process which cleans up all the agent processes in
 			 * the background and exit this watchdog process so that we don't block
 			 * the web server.
@@ -1259,7 +1261,7 @@ watchdogMain(int argc, char *argv[]) {
 		runHookScriptAndThrowOnError("after_watchdog_shutdown");
 		UPDATE_TRACE_POINT();
 		AgentWatcher::stopWatching(watchers);
-		if (exitGracefully) {
+		if (shouldExitGracefully) {
 			UPDATE_TRACE_POINT();
 			cleanupAgentsInBackground(wo, watchers, argv);
 		} else {
@@ -1270,7 +1272,7 @@ watchdogMain(int argc, char *argv[]) {
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("after_watchdog_shutdown");
 
-		return exitGracefully ? 0 : 1;
+		return shouldExitGracefully ? 0 : 1;
 	} catch (const tracable_exception &e) {
 		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
 		cleanup(wo);

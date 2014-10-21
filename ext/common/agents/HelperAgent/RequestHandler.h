@@ -186,6 +186,7 @@ private:
 	BenchmarkMode benchmarkMode: 3;
 	bool singleAppMode: 1;
 	bool showVersionInHeader: 1;
+	bool gracefulExit: 1;
 
 	const VariantMap *agentsOptions;
 	psg_pool_t *stringPool;
@@ -255,6 +256,7 @@ public:
 		  benchmarkMode(parseBenchmarkMode(_agentsOptions->get("benchmark_mode", false))),
 		  singleAppMode(false),
 		  showVersionInHeader(_agentsOptions->getBool("show_version_in_header")),
+		  gracefulExit(_agentsOptions->getBool("server_graceful_exit")),
 
 		  agentsOptions(_agentsOptions),
 		  stringPool(psg_create_pool(1024 * 4)),
@@ -459,7 +461,9 @@ public:
 		Json::Value doc = ParentClass::inspectRequestStateAsJson(req);
 		Json::Value flags;
 
-		doc["started_at"] = timeToJson(req->startedAt * 1000000.0);
+		if (req->startedAt != 0) {
+			doc["started_at"] = timeToJson(req->startedAt * 1000000.0);
+		}
 		doc["state"] = req->getStateString();
 		if (req->stickySession) {
 			doc["sticky_session_id"] = req->options.stickySessionId;

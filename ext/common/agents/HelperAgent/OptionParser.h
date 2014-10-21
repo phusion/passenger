@@ -88,14 +88,27 @@ serverUsage() {
 	printf("                            the app root directory (single-app mode only)\n");
 	printf("      --spawn-method NAME   Spawn method to use. Can either be 'smart' or\n");
 	printf("                            'direct'. Default: %s\n", DEFAULT_SPAWN_METHOD);
+	printf("      --load-shell-envvars  Load shell startup files before loading application\n");
+	printf("      --concurrency-model   The concurrency model to use for the app, either\n");
+	printf("                            'process' or 'thread' (Enterprise only).\n");
+	printf("                            Default: " DEFAULT_CONCURRENCY_MODEL "\n");
+	printf("      --app-thread-count    The number of application threads to use when using\n");
+	printf("                            the 'thread' concurrency model (Enterprise only).\n");
+	printf("                            Default: %d\n", DEFAULT_APP_THREAD_COUNT);
 	printf("\n");
 	printf("      --multi-app           Enable multi-app mode\n");
 	printf("\n");
+	printf("      --force-friendly-error-pages\n");
+	printf("                            Force friendly error pages to be always on\n");
+	printf("      --disable-friendly-error-pages\n");
+	printf("                            Force friendly error pages to be always off\n");
 	printf("      --force-turbocaching  Force turbocaching to be always on\n");
 	printf("      --disable-turbocaching\n");
 	printf("                            Completely disable turbocaching\n");
 	printf("\n");
 	printf("      --ruby PATH           Default Ruby interpreter to use.\n");
+	printf("\n");
+	printf("      --rolling-restarts    Enable rolling restarts (Enterprise only)\n");
 	printf("\n");
 	printf("Process management options (optional):\n");
 	printf("      --max-pool-size N     Maximum number of application processes.\n");
@@ -117,6 +130,8 @@ serverUsage() {
 	printf("      --data-buffer-dir PATH\n");
 	printf("                            Directory to store data buffers in. Default:\n");
 	printf("                            %s\n", getSystemTempDir());
+	printf("      --no-graceful-exit    When exiting, exit immediately instead of waiting\n");
+	printf("                            for all connections to terminate\n");
 	printf("      --benchmark MODE      Enable benchmark mode. Available modes:\n");
 	printf("                            after_accept,before_checkout,after_checkout,\n");
 	printf("                            response_begin\n");
@@ -215,8 +230,23 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--spawn-method")) {
 		options.set("spawn_method", argv[i + 1]);
 		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--load-shell-envvars")) {
+		options.setBool("load_shell_envvars", true);
+		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--concurrency-model")) {
+		options.set("concurrency_model", argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-thread-count")) {
+		options.setInt("app_thread_count", atoi(argv[i + 1]));
+		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--multi-app")) {
 		options.setBool("multi_app", true);
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--force-friendly-error-pages")) {
+		options.set("friendly_error_pages", "true");
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--disable-friendly-error-pages")) {
+		options.set("friendly_error_pages", "false");
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--force-turbocaching")) {
 		options.set("turbocaching", "user_enabled");
@@ -227,6 +257,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ruby")) {
 		options.set("default_ruby", argv[i + 1]);
 		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--rolling_restarts")) {
+		options.setBool("rolling_restarts", false);
+		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 		// We do not set log_level because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log level.
@@ -246,6 +279,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--data-buffer-dir")) {
 		options.setInt("data_buffer_dir", atoi(argv[i + 1]));
 		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--no-graceful-exit")) {
+		options.setBool("server_graceful_exit", false);
+		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--benchmark")) {
 		options.set("benchmark_mode", argv[i + 1]);
 		i += 2;

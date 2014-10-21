@@ -191,6 +191,11 @@ onRequestBody(Client *client, Request *req, const MemoryKit::mbuf &buffer,
 	}
 }
 
+virtual bool
+shouldDisconnectClientOnShutdown(Client *client) {
+	return ParentClass::shouldDisconnectClientOnShutdown(client) || !gracefulExit;
+}
+
 private:
 
 static Channel::Result

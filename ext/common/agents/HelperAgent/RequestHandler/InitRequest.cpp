@@ -214,7 +214,10 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	}
 	options.minProcesses = agentsOptions->getInt("min_instances");
 	options.spawnMethod = agentsOptions->get("spawn_method");
+	options.loadShellEnvvars = agentsOptions->getBool("load_shell_envvars");
 	options.statThrottleRate = statThrottleRate;
+
+	/******************************/
 }
 
 static void

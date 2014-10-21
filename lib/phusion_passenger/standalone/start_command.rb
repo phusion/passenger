@@ -20,14 +20,14 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
-require 'socket'
+
+require 'optparse'
 require 'thread'
-require 'etc'
 PhusionPassenger.require_passenger_lib 'constants'
-PhusionPassenger.require_passenger_lib 'plugin'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'standalone/command'
-PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
+PhusionPassenger.require_passenger_lib 'standalone/config_utils'
+PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 # We lazy load as many libraries as possible not only to improve startup performance,
 # but also to ensure that we don't require libraries before we've passed the dependency
@@ -37,462 +37,341 @@ module PhusionPassenger
 module Standalone
 
 class StartCommand < Command
-	def self.description
-		return "Start Phusion Passenger Standalone."
-	end
-
-	def initialize(args)
-		super(args)
-		@console_mutex = Mutex.new
-		@termination_pipe = IO.pipe
-		@threads = []
-		@interruptable_threads = []
-		@plugin = PhusionPassenger::Plugin.new('standalone/start_command', self, @options)
+	def self.create_default_options
+		return {
+			:environment       => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['NODE_ENV'] ||
+				ENV['PASSENGER_APP_ENV'] || 'development',
+			:spawn_method      => Kernel.respond_to?(:fork) ? DEFAULT_SPAWN_METHOD : 'direct',
+			:engine            => "builtin",
+			:nginx_version     => PREFERRED_NGINX_VERSION,
+			:log_level         => DEFAULT_LOG_LEVEL
+		}
 	end
 
 	def run
-		parse_my_options
+		load_local_config_file
+		parse_options
+		sanity_check_options_and_set_defaults
 
-		ensure_runtime_installed
+		lookup_runtime_and_ensure_installed
 		set_stdout_stderr_binmode
 		exit if @options[:runtime_check_only]
-		require_app_finder
-		@app_finder = AppFinder.new(@args, @options)
-		@apps = @app_finder.scan
-		@options = @app_finder.global_options
-		sanity_check_server_options
-		determine_various_resource_locations
-		@plugin.call_hook(:found_apps, @apps)
 
-		extra_controller_options = {}
-		@plugin.call_hook(:before_creating_nginx_controller, extra_controller_options)
-		create_nginx_controller(extra_controller_options)
-
+		find_apps
+		find_pid_and_log_file(@app_finder, @apps, @options)
+		create_working_dir
 		begin
-			start_nginx
+			initialize_vars
+			start_engine
 			show_intro_message
-			if @options[:daemonize]
-				if PlatformInfo.ruby_supports_fork?
-					daemonize
-				else
-					daemonize_without_fork
-				end
-			end
-			Thread.abort_on_exception = true
-			@plugin.call_hook(:nginx_started, @nginx)
-			########################
-			########################
+			maybe_daemonize
 			touch_temp_dir_in_background
+			########################
+			########################
 			watch_log_files_in_background if should_watch_logs?
-			wait_until_nginx_has_exited if should_wait_until_nginx_has_exited?
+			wait_until_engine_has_exited if should_wait_until_engine_has_exited?
 		rescue Interrupt
-			begin_shutdown
-			stop_threads
-			stop_nginx
+			shutdown_and_cleanup
 			exit 2
 		rescue SignalException => signal
-			begin_shutdown
-			stop_threads
-			stop_nginx
+			shutdown_and_cleanup
 			if signal.message == 'SIGINT' || signal.message == 'SIGTERM'
 				exit 2
 			else
 				raise
 			end
-		rescue Exception => e
-			begin_shutdown
-			stop_threads
-			stop_nginx
-			raise
 		ensure
-			begin_shutdown
-			begin
-				stop_threads
-			ensure
-				finalize_shutdown
-			end
+			shutdown_and_cleanup
 		end
-	ensure
-		@plugin.call_hook(:cleanup)
 	end
 
 private
-	def require_file_utils
-		require 'fileutils' unless defined?(FileUtils)
-	end
+	################# Configuration loading, option parsing and initialization ###################
 
-	def parse_my_options
-		description = "Starts Phusion Passenger Standalone and serve one or more Ruby web applications."
-		parse_options!("start [directory]", description) do |opts|
+	def self.create_option_parser(options)
+		# If you add or change an option, make sure to update the following places too:
+		# lib/phusion_passenger/standalone/start_command/builtin_engine.rb, #build_daemon_controller_options
+		# resources/templates/config/standalone.erb
+		OptionParser.new do |opts|
+			nl = "\n" + ' ' * 37
+			opts.banner = "Usage: passenger start [DIRECTORY] [OPTIONS]\n"
+			opts.separator "Starts #{PROGRAM_NAME} Standalone and serve one or more web applications."
+			opts.separator ""
+
 			opts.separator "Server options:"
-			opts.on("-a", "--address HOST", String,
-				wrap_desc("Bind to HOST address (default: #{@options[:address]})")) do |value|
-				@options[:address] = value
-				@options[:tcp_explicitly_given] = true
+			opts.on("-a", "--address HOST", String, "Bind to the given address.#{nl}" +
+				"Default: 0.0.0.0") do |value|
+				options[:address] = value
 			end
 			opts.on("-p", "--port NUMBER", Integer,
-				wrap_desc("Use the given port number (default: #{@options[:port]})")) do |value|
-				@options[:port] = value
-				@options[:tcp_explicitly_given] = true
+				"Use the given port number. Default: 3000") do |value|
+				options[:port] = value
 			end
 			opts.on("-S", "--socket FILE", String,
-				wrap_desc("Bind to Unix domain socket instead of TCP socket")) do |value|
-				@options[:socket_file] = value
+				"Bind to Unix domain socket instead of TCP#{nl}" +
+				"socket") do |value|
+				options[:socket_file] = value
 			end
-			opts.on("--ssl",
-				wrap_desc("Enable SSL support")) do
-				@options[:ssl] = true
+			opts.on("--ssl", "Enable SSL support (Nginx#{nl}" +
+				"engine only)") do
+				options[:ssl] = true
 			end
 			opts.on("--ssl-certificate PATH", String,
-				wrap_desc("Specify the SSL certificate path")) do |val|
-				@options[:ssl_certificate] = File.absolute_path_no_resolve(val)
+				"Specify the SSL certificate path#{nl}" +
+				"(Nginx engine only)") do |value|
+				options[:ssl_certificate] = File.absolute_path_no_resolve(value)
 			end
 			opts.on("--ssl-certificate-key PATH", String,
-				wrap_desc("Specify the SSL key path")) do |val|
-				@options[:ssl_certificate_key] = File.absolute_path_no_resolve(val)
+				"Specify the SSL key path") do |value|
+				options[:ssl_certificate_key] = File.absolute_path_no_resolve(value)
 			end
 			opts.on("--ssl-port PORT", Integer,
-				wrap_desc("Listen for SSL on this port, while listening for HTTP on the normal port")) do |val|
-				@options[:ssl_port] = val
+				"Listen for SSL on this port, while#{nl}" +
+				"listening for HTTP on the normal port#{nl}" +
+				"(Nginx engine only)") do |value|
+				options[:ssl_port] = value
 			end
-			opts.on("-d", "--daemonize",
-				wrap_desc("Daemonize into the background")) do
-				@options[:daemonize] = true
+			opts.on("-d", "--daemonize", "Daemonize into the background") do
+				options[:daemonize] = true
 			end
-			opts.on("--user USERNAME", String,
-				wrap_desc("User to run as. Ignored unless running as root.")) do |value|
-				@options[:user] = value
+			opts.on("--user USERNAME", String, "User to run as. Ignored unless#{nl}" +
+				"running as root") do |value|
+				options[:user] = value
 			end
 			opts.on("--log-file FILENAME", String,
-				wrap_desc("Where to write log messages (default: console, or /dev/null when daemonized)")) do |value|
-				@options[:log_file] = value
+				"Where to write log messages. Default:#{nl}" +
+				"console, or /dev/null when daemonized") do |value|
+				options[:log_file] = value
 			end
-			opts.on("--pid-file FILENAME", String,
-				wrap_desc("Where to store the PID file")) do |value|
-				@options[:pid_file] = value
+			opts.on("--pid-file FILENAME", String, "Where to store the PID file") do |value|
+				options[:pid_file] = value
 			end
 			opts.on("--instance-registry-dir PATH", String,
-				wrap_desc("Use the given instance registry directory")) do |value|
-				@options[:instance_registry_dir] = value
+				"Use the given instance registry directory") do |value|
+				options[:instance_registry_dir] = value
 			end
 			opts.on("--data-buffer-dir PATH", String,
-				wrap_desc("Use the given data buffer directory")) do |value|
-				@options[:data_buffer_dir] = value
+				"Use the given data buffer directory") do |value|
+				options[:data_buffer_dir] = value
 			end
 
 			opts.separator ""
 			opts.separator "Application loading options:"
 			opts.on("-e", "--environment ENV", String,
-				wrap_desc("Framework environment (default: #{@options[:environment]})")) do |value|
-				@options[:environment] = value
+				"Framework environment.#{nl}" +
+				"Default: #{options[:environment]}") do |value|
+				options[:environment] = value
 			end
 			opts.on("-R", "--rackup FILE", String,
-				wrap_desc("Consider application a Ruby Rack app, and use the given rackup file")) do |value|
-				@options[:app_type] = "rack"
-				@options[:startup_file] = value
+				"Consider application a Ruby app, and use#{nl}" +
+				"the given rackup file") do |value|
+				options[:app_type] = "rack"
+				options[:startup_file] = value
 			end
 			opts.on("--app-type NAME", String,
-				wrap_desc("Force app to be detected as the given type")) do |value|
-				@options[:app_type] = value
+				"Force app to be detected as the given type") do |value|
+				options[:app_type] = value
 			end
 			opts.on("--startup-file FILENAME", String,
-				wrap_desc("Force given startup file to be used")) do |value|
-				@options[:startup_file] = value
+				"Force given startup file to be used") do |value|
+				options[:startup_file] = value
 			end
 			opts.on("--spawn-method NAME", String,
-				wrap_desc("The spawn method to use (default: #{@options[:spawn_method]})")) do |value|
-				@options[:spawn_method] = value
+				"The spawn method to use. Default: #{options[:spawn_method]}") do |value|
+				options[:spawn_method] = value
 			end
 			opts.on("--static-files-dir PATH", String,
-				wrap_desc("Specify the static files dir")) do |val|
-				@options[:static_files_dir] = File.absolute_path_no_resolve(val)
+				"Specify the static files dir (Nginx engine#{nl}" +
+				"only)") do |val|
+				options[:static_files_dir] = File.absolute_path_no_resolve(val)
 			end
-			opts.on("--restart-dir PATH", String,
-				wrap_desc("Specify the restart dir")) do |val|
-				@options[:restart_dir] = File.absolute_path_no_resolve(val)
+			opts.on("--restart-dir PATH", String, "Specify the restart dir") do |val|
+				options[:restart_dir] = File.absolute_path_no_resolve(val)
 			end
-			opts.on("--friendly-error-pages",
-				wrap_desc("Turn on friendly error pages")) do
-				@options[:friendly_error_pages] = true
+			opts.on("--friendly-error-pages", "Turn on friendly error pages") do
+				options[:friendly_error_pages] = true
 			end
-			opts.on("--no-friendly-error-pages",
-				wrap_desc("Turn off friendly error pages")) do
-				@options[:friendly_error_pages] = false
+			opts.on("--no-friendly-error-pages", "Turn off friendly error pages") do
+				options[:friendly_error_pages] = false
 			end
 			opts.on("--load-shell-envvars",
-				wrap_desc("Load shell startup files before loading application")) do
-				@options[:load_shell_envvars] = true
+				"Load shell startup files before loading#{nl}" +
+				"application") do
+				options[:load_shell_envvars] = true
 			end
 
 			opts.separator ""
 			opts.separator "Process management options:"
 			opts.on("--max-pool-size NUMBER", Integer,
-				wrap_desc("Maximum number of application processes (default: #{@options[:max_pool_size]})")) do |value|
-				@options[:max_pool_size] = value
+				"Maximum number of application processes.#{nl}" +
+				"Default: #{DEFAULT_MAX_POOL_SIZE}") do |value|
+				options[:max_pool_size] = value
 			end
 			opts.on("--min-instances NUMBER", Integer,
-				wrap_desc("Minimum number of processes per application (default: #{@options[:min_instances]})")) do |value|
-				@options[:min_instances] = value
+				"Minimum number of processes per#{nl}" +
+				"application. Default: 1") do |value|
+				options[:min_instances] = value
 			end
 			opts.on("--concurrency-model NAME", String,
-				wrap_desc("The concurrency model to use, either 'process' or 'thread' (default: #{@options[:concurrency_model]}) (Enterprise only)")) do |value|
-				@options[:concurrency_model] = value
+				"The concurrency model to use, either#{nl}" +
+				"'process' or 'thread' (Enterprise only).#{nl}" +
+				"Default: #{DEFAULT_CONCURRENCY_MODEL}") do |value|
+				options[:concurrency_model] = value
 			end
 			opts.on("--thread-count NAME", Integer,
-				wrap_desc("The number of threads to use when using the 'thread' concurrency model (default: #{@options[:thread_count]}) (Enterprise only)")) do |value|
-				@options[:thread_count] = value
+				"The number of threads to use when using#{nl}" +
+				"the 'thread' concurrency model (Enterprise#{nl}" +
+				"only). Default: #{DEFAULT_APP_THREAD_COUNT}") do |value|
+				options[:thread_count] = value
 			end
-			opts.on("--rolling-restarts",
-				wrap_desc("Enable rolling restarts (Enterprise only)")) do
-				@options[:rolling_restarts] = true
+			opts.on("--rolling-restarts", "Enable rolling restarts (Enterprise only)") do
+				options[:rolling_restarts] = true
 			end
-			opts.on("--resist-deployment-errors",
-				wrap_desc("Enable deployment error resistance (Enterprise only)")) do
-				@options[:resist_deployment_errors] = true
+			opts.on("--resist-deployment-errors", "Enable deployment error resistance#{nl}" +
+				"(Enterprise only)") do
+				options[:resist_deployment_errors] = true
 			end
 
 			opts.separator ""
 			opts.separator "Request handling options:"
-			opts.on("--sticky-sessions",
-				wrap_desc("Enable sticky sessions")) do
-				@options[:sticky_sessions] = true
+			opts.on("--sticky-sessions", "Enable sticky sessions") do
+				options[:sticky_sessions] = true
 			end
 			opts.on("--sticky-sessions-cookie-name", String,
-				wrap_desc("Cookie name to use for sticky sessions (default: #{DEFAULT_STICKY_SESSIONS_COOKIE_NAME})")) do |val|
-				@options[:sticky_sessions_cookie_name] = val
+				"Cookie name to use for sticky sessions.#{nl}" +
+				"Default: #{DEFAULT_STICKY_SESSIONS_COOKIE_NAME}") do |value|
+				options[:sticky_sessions_cookie_name] = value
 			end
 
 			opts.separator ""
 			opts.separator "Union Station options:"
 			opts.on("--union-station-gateway HOST:PORT", String,
-				wrap_desc("Specify Union Station Gateway host and port")) do |value|
+				"Specify Union Station Gateway host and port") do |value|
 				host, port = value.split(":", 2)
 				port = port.to_i
 				port = 443 if port == 0
-				@options[:union_station_gateway_address] = host
-				@options[:union_station_gateway_port] = port.to_i
+				options[:union_station_gateway_address] = host
+				options[:union_station_gateway_port] = port.to_i
 			end
-			opts.on("--union-station-key KEY", String,
-				wrap_desc("Specify Union Station key")) do |value|
-				@options[:union_station_key] = value
+			opts.on("--union-station-key KEY", String, "Specify Union Station key") do |value|
+				options[:union_station_key] = value
+			end
+
+			opts.separator ""
+			opts.separator "Nginx engine options:"
+			opts.on("--nginx-bin FILENAME", String, "Nginx binary to use as core") do |value|
+				options[:nginx_bin] = value
+			end
+			opts.on("--nginx-version VERSION", String,
+				"Nginx version to use as core.#{nl}" +
+				"Default: #{PREFERRED_NGINX_VERSION}") do |value|
+				options[:nginx_version] = value
+			end
+			opts.on("--nginx-tarball FILENAME", String,
+				"If Nginx needs to be installed, then the#{nl}" +
+				"given tarball will be used instead of#{nl}" +
+				"downloading from the Internet") do |value|
+				options[:nginx_tarball] = File.absolute_path_no_resolve(value)
+			end
+			opts.on("--nginx-config-template FILENAME", String,
+				"The template to use for generating the#{nl}" +
+				"Nginx config file") do |value|
+				options[:nginx_config_template] = File.absolute_path_no_resolve(value)
 			end
 
 			opts.separator ""
 			opts.separator "Advanced options:"
-			opts.on("--ping-port NUMBER", Integer,
-				wrap_desc("Use the given port number for checking whether Nginx is alive (default: same as the normal port)")) do |value|
-				@options[:ping_port] = value
+			opts.on("--engine NAME", String,
+				"Underlying HTTP engine to use. Available#{nl}" +
+				"options: builtin (default), nginx") do |value|
+				options[:engine] = value
 			end
-			opts.on("--nginx-bin FILENAME", String,
-				wrap_desc("Nginx binary to use as core")) do |value|
-				@options[:nginx_bin] = value
-			end
-			opts.on("--nginx-version VERSION", String,
-				wrap_desc("Nginx version to use as core (default: #{@options[:nginx_version]})")) do |value|
-				@options[:nginx_version] = value
-			end
-			opts.on("--nginx-tarball FILENAME", String,
-				wrap_desc("If Nginx needs to be installed, then the given tarball will " +
-				          "be used instead of downloading from the Internet")) do |value|
-				@options[:nginx_tarball] = File.absolute_path_no_resolve(value)
-			end
-			opts.on("--nginx-config-template FILENAME", String,
-				wrap_desc("The template to use for generating the Nginx config file")) do |value|
-				@options[:nginx_config_template] = File.absolute_path_no_resolve(value)
+			opts.on("--log-level NUMBER", Integer, "Log level to use. Default: #{DEFAULT_LOG_LEVEL}") do |value|
+				options[:log_level] = value
 			end
 			opts.on("--binaries-url-root URL", String,
-				wrap_desc("If Nginx needs to be installed, then the specified URL will be " +
-				          "checked for binaries prior to a local build.")) do |value|
-				@options[:binaries_url_root] = value
+				"If Nginx needs to be installed, then the#{nl}" +
+				"specified URL will be checked for binaries#{nl}" +
+				"prior to a local build") do |value|
+				options[:binaries_url_root] = value
 			end
-			opts.on("--no-download-binaries",
-				wrap_desc("Never download binaries")) do
-				@options[:download_binaries] = false
+			opts.on("--no-download-binaries", "Never download binaries") do
+				options[:download_binaries] = false
 			end
 			opts.on("--runtime-check-only",
-				wrap_desc("Quit after checking whether the Phusion Passenger Standalone runtime files are installed")) do
-				@options[:runtime_check_only] = true
+				"Quit after checking whether the#{nl}" +
+				"#{PROGRAM_NAME} Standalone runtime files#{nl}" +
+				"are installed") do
+				options[:runtime_check_only] = true
 			end
-			opts.on("--no-install-runtime",
-				wrap_desc("Abort if runtime must be installed")) do
-				@options[:dont_install_runtime] = true
+			opts.on("--no-install-runtime", "Abort if runtime must be installed") do
+				options[:dont_install_runtime] = true
 			end
-			opts.on("--no-compile-runtime",
-				wrap_desc("Abort if runtime must be compiled")) do
-				@options[:dont_compile_runtime] = true
+			opts.on("--no-compile-runtime", "Abort if runtime must be compiled") do
+				options[:dont_compile_runtime] = true
 			end
-
-			@plugin.call_hook(:parse_options, opts)
-			opts.separator ""
 		end
-		@plugin.call_hook(:done_parsing_options)
 	end
 
-	def sanity_check_server_options
-		if @options[:tcp_explicitly_given] && @options[:socket_file]
-			error "You cannot specify both --address/--port and --socket. Please choose either one."
-			exit 1
+	def load_local_config_file
+		if @argv.empty?
+			app_dir = File.absolute_path_no_resolve(".")
+		elsif @argv.size == 1
+			app_dir = @argv[0]
+		end
+		if app_dir
+			ConfigUtils.load_local_config_file!(app_dir, @options)
+		end
+	end
+
+	def sanity_check_options_and_set_defaults
+		if (@options[:address] || @options[:port]) && @options[:socket_file]
+			abort "You cannot specify both --address/--port and --socket. Please choose either one."
 		end
 		if @options[:ssl] && !@options[:ssl_certificate]
-			error "You specified --ssl. Please specify --ssl-certificate as well."
-			exit 1
+			abort "You specified --ssl. Please specify --ssl-certificate as well."
 		end
 		if @options[:ssl] && !@options[:ssl_certificate_key]
-			error "You specified --ssl. Please specify --ssl-certificate-key as well."
-			exit 1
+			abort "You specified --ssl. Please specify --ssl-certificate-key as well."
 		end
-		check_port_bind_permission_and_display_sudo_suggestion
-		check_port_availability
+		if @options[:engine] != "builtin" && @options[:engine] != "nginx"
+			abort "You've specified an invalid value for --engine. The only values allowed are: builtin, nginx."
+		end
+
+		if !@options[:socket_file]
+			@options[:address] ||= "0.0.0.0"
+			@options[:port] ||= 3000
+		end
+
+		if @options[:engine] == "builtin"
+			# We explicitly check for some options are set and warn the user about this,
+			# in case they forget to pass --engine=nginx. We don't warn about options
+			# that begin with --nginx- because that should be obvious.
+			check_nginx_option_used_with_builtin_engine(:ssl, "--ssl")
+			check_nginx_option_used_with_builtin_engine(:ssl_certificate, "--ssl-certificate")
+			check_nginx_option_used_with_builtin_engine(:ssl_certificate_key, "--ssl-certificate-key")
+			check_nginx_option_used_with_builtin_engine(:ssl_port, "--ssl-port")
+			check_nginx_option_used_with_builtin_engine(:static_files_dir, "--static-files-dir")
+		end
+
+		#############
 	end
 
-	# Most platforms don't allow non-root processes to bind to a port lower than 1024.
-	# Check whether this is the case for the current platform and if so, tell the user
-	# that it must re-run Phusion Passenger Standalone with sudo.
-	def check_port_bind_permission_and_display_sudo_suggestion
-		if !@options[:socket_file] && @options[:port] < 1024 && Process.euid != 0
-			begin
-				TCPServer.new('127.0.0.1', @options[:port]).close
-			rescue Errno::EACCES
-				PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-				myself = `whoami`.strip
-				error "Only the 'root' user can run this program on port #{@options[:port]}. " <<
-				      "You are currently running as '#{myself}'. Please re-run this program " <<
-				      "with root privileges with the following command:\n\n" <<
-
-				      "  #{PlatformInfo.ruby_sudo_command} passenger start #{@original_args.join(' ')} --user=#{myself}\n\n" <<
-
-				      "Don't forget the '--user' part! That will make Phusion Passenger Standalone " <<
-				      "drop root privileges and switch to '#{myself}' after it has obtained " <<
-				      "port #{@options[:port]}."
-				exit 1
-			end
-		end
-	end
-
-	if defined?(RUBY_ENGINE) && RUBY_ENGINE == "jruby"
-		require 'java'
-
-		def check_port(host_name, port)
-			channel = java.nio.channels.SocketChannel.open
-			begin
-				address = java.net.InetSocketAddress.new(host_name, port)
-				channel.configure_blocking(false)
-				if channel.connect(address)
-					return true
-				end
-
-				deadline = Time.now.to_f + 0.1
-				done = false
-				while true
-					begin
-						if channel.finish_connect
-							return true
-						end
-					rescue java.net.ConnectException => e
-						if e.message =~ /Connection refused/i
-							return false
-						else
-							throw e
-						end
-					end
-
-					# Not done connecting and no error.
-					sleep 0.01
-					if Time.now.to_f >= deadline
-						return false
-					end
-				end
-			ensure
-				channel.close
-			end
-		end
-	else
-		def check_port_with_protocol(address, port, protocol)
-			begin
-				socket = Socket.new(protocol, Socket::Constants::SOCK_STREAM, 0)
-				sockaddr = Socket.pack_sockaddr_in(port, address)
-				begin
-					socket.connect_nonblock(sockaddr)
-				rescue Errno::ENOENT, Errno::EINPROGRESS, Errno::EAGAIN, Errno::EWOULDBLOCK
-					if select(nil, [socket], nil, 0.1)
-						begin
-							socket.connect_nonblock(sockaddr)
-						rescue Errno::EISCONN
-						rescue Errno::EINVAL
-							if PlatformInfo.os_name =~ /freebsd/i
-								raise Errno::ECONNREFUSED
-							else
-								raise
-							end
-						end
-					else
-						raise Errno::ECONNREFUSED
-					end
-				end
-				return true
-			rescue Errno::ECONNREFUSED
-				return false
-			ensure
-				socket.close if socket && !socket.closed?
-			end
-		end
-
-		def check_port(address, port)
-			begin
-				check_port_with_protocol(address, port, Socket::Constants::AF_INET)
-			rescue Errno::EAFNOSUPPORT
-				check_port_with_protocol(address, port, Socket::Constants::AF_INET6)
-			end
+	def check_nginx_option_used_with_builtin_engine(option, argument)
+		if @options.has_key?(option)
+			STDERR.puts "*** Warning: the #{argument} option is only allowed if you use " +
+				"the 'nginx' engine. You are currently using the 'builtin' engine, so " +
+				"this option has been ignored. To switch to the Nginx engine, please " +
+				"pass --engine=nginx."
 		end
 	end
 
-	def check_port_availability
-		if !@options[:socket_file] && check_port(@options[:address], @options[:port])
-			error "The address #{@options[:address]}:#{@options[:port]} is already " <<
-			      "in use by another process, perhaps another Phusion Passenger " <<
-			      "Standalone instance.\n\n" <<
-			      "If you want to run this Phusion Passenger Standalone instance on " <<
-			      "another port, use the -p option, like this:\n\n" <<
-			      "  passenger start -p #{@options[:port] + 1}"
-			exit 1
-		end
-	end
-
-	def should_watch_logs?
-		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
-	end
-
-	def should_wait_until_nginx_has_exited?
-		return !@options[:daemonize] || @app_finder.multi_mode?
-	end
-
-	# Returns the URL that Nginx will be listening on.
-	def listen_url
-		if @options[:socket_file]
-			return @options[:socket_file]
-		else
-			if @options[:ssl] && !@options[:ssl_port]
-				scheme = "https"
-			else
-				scheme = "http"
-			end
-			result = "#{scheme}://"
-			if @options[:port] == 80
-				result << @options[:address]
-			else
-				result << compose_ip_and_port(@options[:address], @options[:port])
-			end
-			result << "/"
-			return result
-		end
-	end
-
-	def ensure_runtime_installed
+	def lookup_runtime_and_ensure_installed
 		@agent_exe = PhusionPassenger.find_support_binary(AGENT_EXE)
 		if @options[:nginx_bin]
 			@nginx_binary = @options[:nginx_bin]
 			if !@nginx_binary
-				abort "Error: Nginx binary #{@options[:nginx_bin]} does not exist"
+				abort "*** ERROR: Nginx binary #{@options[:nginx_bin]} does not exist"
 			end
 			if !@agent_exe
 				install_runtime
@@ -511,9 +390,8 @@ private
 
 	def install_runtime
 		if @options[:dont_install_runtime]
-			STDERR.puts "*** ERROR: Refusing to install the #{PROGRAM_NAME} Standalone runtime " +
+			abort "*** ERROR: Refusing to install the #{PROGRAM_NAME} Standalone runtime " +
 				"because --no-install-runtime is given."
-			abort
 		end
 
 		args = ["--brief", "--no-force-tip"]
@@ -547,24 +425,127 @@ private
 		STDERR.binmode
 	end
 
-	def start_nginx
-		begin
-			@nginx.start
-		rescue DaemonController::AlreadyStarted
-			begin
-				pid = @nginx.pid
-			rescue SystemCallError, IOError
-				pid = nil
-			end
-			if pid
-				error "Phusion Passenger Standalone is already running on PID #{pid}."
+
+	################## Core logic ##################
+
+	def find_apps
+		PhusionPassenger.require_passenger_lib 'standalone/app_finder'
+		@app_finder = AppFinder.new(@argv, @options)
+		@apps = @app_finder.scan
+		if @app_finder.multi_mode? && @options[:engine] != 'gninx'
+			puts "Mass deployment enabled, so forcing engine to 'nginx'."
+			@options[:engine] = 'nginx'
+		end
+	end
+
+	def find_pid_and_log_file(app_finder, apps, options)
+		if app_finder.single_mode?
+			app_root = apps[0][:root]
+			if options[:socket_file]
+				pid_basename = "passenger.pid"
+				log_basename = "passenger.log"
 			else
-				error "Phusion Passenger Standalone is already running."
+				pid_basename = "passenger.#{options[:port]}.pid"
+				log_basename = "passenger.#{options[:port]}.log"
 			end
-			exit 1
-		rescue DaemonController::StartError => e
-			error "Could not start Passenger Nginx core:\n#{e}"
-			exit 1
+			if File.directory?("#{app_root}/tmp/pids")
+				options[:pid_file] ||= "#{app_root}/tmp/pids/#{pid_basename}"
+			else
+				options[:pid_file] ||= "#{app_root}/#{pid_basename}"
+			end
+			if File.directory?("log")
+				options[:log_file] ||= "#{app_root}/log/#{log_basename}"
+			else
+				options[:log_file] ||= "#{app_root}/#{log_basename}"
+			end
+		else
+			raise "Not implemented"
+		end
+	end
+
+	def create_working_dir
+		# We don't remove the working dir in 'passenger start'. In daemon
+		# mode 'passenger start' just quits and lets background processes
+		# running. A specific background process, temp-dir-toucher, is
+		# responsible for cleaning up the working dir.
+		@working_dir = PhusionPassenger::Utils.mktmpdir("passenger-standalone.")
+		File.chmod(0755, @working_dir)
+		Dir.mkdir("#{@working_dir}/logs")
+		@can_remove_working_dir = true
+	end
+
+	def require_daemon_controller
+		return if defined?(DaemonController)
+		begin
+			require 'daemon_controller'
+			begin
+				require 'daemon_controller/version'
+				too_old = DaemonController::VERSION_STRING < '1.1.0'
+			rescue LoadError
+				too_old = true
+			end
+			if too_old
+				PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+				gem_command = PlatformInfo.gem_command(:sudo => true)
+				abort "Your version of daemon_controller is too old. " +
+					"You must install 1.1.0 or later. Please upgrade:\n\n" +
+					" #{gem_command} uninstall FooBarWidget-daemon_controller\n" +
+					" #{gem_command} install daemon_controller"
+			end
+		rescue LoadError
+			PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+			gem_command = PlatformInfo.gem_command(:sudo => true)
+			abort "Please install daemon_controller first:\n\n" +
+				" #{gem_command} install daemon_controller"
+		end
+	end
+
+	def initialize_vars
+		@console_mutex = Mutex.new
+		@termination_pipe = IO.pipe
+		@threads = []
+		@interruptable_threads = []
+	end
+
+	def start_engine
+		metaclass = class << self; self; end
+		if @options[:engine] == 'nginx'
+			PhusionPassenger.require_passenger_lib 'standalone/start_command/nginx_engine'
+			metaclass.send(:include, PhusionPassenger::Standalone::StartCommand::NginxEngine)
+		else
+			PhusionPassenger.require_passenger_lib 'standalone/start_command/builtin_engine'
+			metaclass.send(:include, PhusionPassenger::Standalone::StartCommand::BuiltinEngine)
+		end
+		start_engine_real
+	end
+
+	# Returns the URL that the server will be listening on.
+	def listen_url
+		if @options[:socket_file]
+			return @options[:socket_file]
+		else
+			if @options[:ssl] && !@options[:ssl_port]
+				scheme = "https"
+			else
+				scheme = "http"
+			end
+			result = "#{scheme}://"
+			if @options[:port] == 80
+				result << @options[:address]
+			else
+				result << compose_ip_and_port(@options[:address], @options[:port])
+			end
+			result << "/"
+			return result
+		end
+	end
+
+	def compose_ip_and_port(ip, port)
+		if ip =~ /:/
+			# IPv6
+			return "[#{ip}]:#{port}"
+		else
+			return "#{ip}:#{port}"
 		end
 	end
 
@@ -579,16 +560,22 @@ private
 		if @options[:daemonize]
 			puts "Serving in the background as a daemon."
 		else
-			puts "You can stop Phusion Passenger Standalone by pressing Ctrl-C."
+			puts "You can stop #{PROGRAM_NAME} Standalone by pressing Ctrl-C."
 		end
 		puts "Problems? Check #{STANDALONE_DOC_URL}#troubleshooting"
 		puts "==============================================================================="
 	end
 
-	def daemonize_without_fork
-		STDERR.puts "Unable to daemonize using the current Ruby interpreter " +
-			"(#{PlatformInfo.ruby_command}) because it does not support forking."
-		exit 1
+	def maybe_daemonize
+		if @options[:daemonize]
+			PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+			if PlatformInfo.ruby_supports_fork?
+				daemonize
+			else
+				abort "Unable to daemonize using the current Ruby interpreter " +
+					"(#{PlatformInfo.ruby_command}) because it does not support forking."
+			end
+		end
 	end
 
 	def daemonize
@@ -608,12 +595,18 @@ private
 		end
 	end
 
-	# Wait until the termination pipe becomes readable (a hint for threads
-	# to shut down), or until the timeout has been reached. Returns true if
-	# the termination pipe became readable, false if the timeout has been reached.
-	def wait_on_termination_pipe(timeout)
-		ios = select([@termination_pipe[0]], nil, nil, timeout)
-		return !ios.nil?
+	def touch_temp_dir_in_background
+		result = system(@agent_exe,
+			"temp-dir-toucher",
+			@working_dir,
+			"--cleanup",
+			"--daemonize",
+			"--pid-file", "#{@working_dir}/temp_dir_toucher.pid",
+			"--log-file", @options[:log_file])
+		if !result
+			abort "Cannot start #{@agent_exe} temp-dir-toucher"
+		end
+		@can_remove_working_dir = false
 	end
 
 	def watch_log_file(log_file)
@@ -649,76 +642,36 @@ private
 	def watch_log_files_in_background
 		@apps.each do |app|
 			thread = Thread.new do
+				Thread.current.abort_on_exception = true
 				watch_log_file("#{app[:root]}/log/#{@options[:environment]}.log")
 			end
 			@threads << thread
 			@interruptable_threads << thread
 		end
 		thread = Thread.new do
+			Thread.current.abort_on_exception = true
 			watch_log_file(@options[:log_file])
 		end
 		@threads << thread
 		@interruptable_threads << thread
 	end
 
-	def touch_temp_dir_in_background
-		result = system(@agent_exe,
-			"temp-dir-toucher",
-			@temp_dir,
-			"--cleanup",
-			"--daemonize",
-			"--pid-file", "#{@temp_dir}/temp_dir_toucher.pid",
-			"--log-file", @options[:log_file])
-		if !result
-			error "Cannot start #{@agent_exe} temp-dir-toucher"
-			exit 1
-		end
+	def should_watch_logs?
+		return !@options[:daemonize] && @options[:log_file] != "/dev/null"
 	end
 
-	def begin_shutdown
-		return if @shutting_down
-		@shutting_down = 1
-		trap("INT", &method(:signal_during_shutdown))
-		trap("TERM", &method(:signal_during_shutdown))
-	end
-
-	def finalize_shutdown
-		@shutting_down = nil
-		trap("INT", "DEFAULT")
-		trap("TERM", "DEFAULT")
-	end
-
-	def signal_during_shutdown(signal)
-		if @shutting_down == 1
-			@shutting_down += 1
-			puts "Ignoring signal #{signal} during shutdown. Send it again to force exit."
-		else
-			exit!(1)
-		end
-	end
-
-	def stop_touching_temp_dir_in_background
-		if @toucher
-			begin
-				Process.kill('TERM', @toucher.pid)
-			rescue Errno::ESRCH, Errno::ECHILD
-			end
-			@toucher.close
-		end
-	end
-
-	def wait_until_nginx_has_exited
-		# Since Nginx is not our child process (it daemonizes or we daemonize)
+	def wait_until_engine_has_exited
+		# Since the engine is not our child process (it daemonizes)
 		# we cannot use Process.waitpid to wait for it. A busy-sleep-loop with
 		# Process.kill(0, pid) isn't very efficient. Instead we do this:
 		#
-		# Connect to Nginx and wait until Nginx disconnects the socket because of
-		# timeout. Keep doing this until we can no longer connect.
+		# Connect to the engine's server and wait until it disconnects the socket
+		# because of timeout. Keep doing this until we can no longer connect.
 		while true
 			if @options[:socket_file]
 				socket = UNIXSocket.new(@options[:socket_file])
 			else
-				socket = TCPSocket.new(@options[:address], nginx_ping_port)
+				socket = TCPSocket.new(@options[:address], @options[:port])
 			end
 			begin
 				socket.read rescue nil
@@ -729,70 +682,47 @@ private
 	rescue Errno::ECONNREFUSED, Errno::ECONNRESET
 	end
 
-	def stop_nginx
-		@console_mutex.synchronize do
-			STDOUT.write("Stopping web server...")
-			STDOUT.flush
-			@nginx.stop
-			STDOUT.puts " done"
-			STDOUT.flush
-		end
+	def should_wait_until_engine_has_exited?
+		return !@options[:daemonize] || @app_finder.multi_mode?
 	end
 
-	def stop_threads
-		if !@termination_pipe[1].closed?
-			@termination_pipe[1].write("x")
-			@termination_pipe[1].close
-		end
-		@interruptable_threads.each do |thread|
-			thread.terminate
-		end
-		@interruptable_threads = []
-		@threads.each do |thread|
-			thread.join
-		end
-		@threads = []
-	end
 
-	#### Config file template helpers ####
+	################## Shut down and cleanup ##################
 
-	def nginx_listen_address(options = @options, for_ping_port = false)
-		if options[:socket_file]
-			return "unix:" + File.absolute_path_no_resolve(options[:socket_file])
-		else
-			if for_ping_port
-				port = options[:ping_port]
-			else
-				port = options[:port]
+	def shutdown_and_cleanup
+		# Stop engine
+		if @engine
+			@console_mutex.synchronize do
+				STDOUT.write("Stopping web server...")
+				STDOUT.flush
+				@engine.stop
+				STDOUT.puts " done"
+				STDOUT.flush
 			end
-			return compose_ip_and_port(options[:address], port)
+			@engine = nil
+		end
+
+		# Stop threads
+		if @threads
+			if !@termination_pipe[1].closed?
+				@termination_pipe[1].write("x")
+				@termination_pipe[1].close
+			end
+			@interruptable_threads.each do |thread|
+				thread.terminate
+			end
+			@interruptable_threads = []
+			@threads.each do |thread|
+				thread.join
+			end
+			@threads = nil
+		end
+
+		if @can_remove_working_dir
+			FileUtils.remove_entry_secure(@working_dir)
+			@can_remove_working_dir = false
 		end
 	end
-
-	def nginx_listen_address_with_ssl_port(options = @options)
-		if options[:socket_file]
-			return "unix:" + File.absolute_path_no_resolve(options[:socket_file])
-		else
-			return compose_ip_and_port(options[:address], options[:ssl_port])
-		end
-	end
-
-	def compose_ip_and_port(ip, port)
-		if ip =~ /:/
-			# IPv6
-			return "[#{ip}]:#{port}"
-		else
-			return "#{ip}:#{port}"
-		end
-	end
-
-	def default_group_for(username)
-		user = Etc.getpwnam(username)
-		group = Etc.getgrgid(user.gid)
-		return group.name
-	end
-
-	#################
 end
 
 end # module Standalone

@@ -20,6 +20,7 @@ Release 5.0.0 beta 1
  * passenger-status --show=requests has been deprecated in favor of passenger-status --show=connections.
  * SIGUSR1 on ruby apps is no longer supported. use passenger-config detach-process
  * passenger-config reopen-logs
+ * passenger-standalone.json renamed to Passengerfile.json and it no longer overrides command line options
 
 
 Release 4.0.53

@@ -854,6 +854,14 @@ cleanup() {
 		wo->prestarterThread->interrupt_and_join();
 		delete wo->prestarterThread;
 	}
+	for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
+		if (wo->serverFds[i] != -1) {
+			close(wo->serverFds[i]);
+		}
+		if (wo->adminServerFds[i] != -1) {
+			close(wo->adminServerFds[i]);
+		}
+	}
 	deletePidFile();
 	P_NOTICE(AGENT_EXE " server shutdown finished");
 }
@@ -941,6 +949,9 @@ setAgentsOptionsDefaults() {
 	options.setDefaultBool("multi_app", false);
 	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);
+	options.setDefaultBool("load_shell_envvars", false);
+	options.setDefault("concurrency_model", DEFAULT_CONCURRENCY_MODEL);
+	options.setDefaultInt("app_thread_count", DEFAULT_APP_THREAD_COUNT);
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
@@ -949,8 +960,11 @@ setAgentsOptionsDefaults() {
 	options.setDefaultBool("show_version_in_header", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
 	options.setDefaultBool("selfchecks", false);
+	options.setDefaultBool("server_graceful_exit", true);
 	options.setDefaultInt("server_threads", boost::thread::hardware_concurrency());
 	options.setDefaultBool("server_cpu_affine", false);
+	options.setDefault("friendly_error_pages", "auto");
+	options.setDefaultBool("rolling_restarts", false);
 
 	string firstAddress = options.getStrSet("server_addresses")[0];
 	if (getSocketAddressType(firstAddress) == SAT_TCP) {
@@ -1005,6 +1019,31 @@ sanityCheckOptions() {
 			fprintf(stderr, "ERROR: if you've passed --app-type, then you must also pass --startup-file.\n");
 			ok = false;
 		}
+	}
+	if (options.get("concurrency_model") != "process" && options.get("concurrency_model") != "thread") {
+		fprintf(stderr, "ERROR: '%s' is not a valid concurrency model. Supported concurrency "
+			"models are: process, thread.\n",
+			options.get("concurrency_model").c_str());
+		ok = false;
+	} else if (options.get("concurrency_model") != "process") {
+		#ifndef PASSENGER_IS_ENTERPRISE
+			fprintf(stderr, "ERROR: the '%s' concurrency model is only supported in "
+				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
+				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n",
+				options.get("concurrency_model").c_str());
+			ok = false;
+		#endif
+	}
+	if (options.getInt("app_thread_count") < 1) {
+		fprintf(stderr, "ERROR: the value passed to --app-thread-count must be at least 1.\n");
+		ok = false;
+	} else if (options.getInt("app_thread_count") > 1) {
+		#ifndef PASSENGER_IS_ENTERPRISE
+			fprintf(stderr, "ERROR: the --app-thread-count option is only supported in "
+				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
+				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n");
+			ok = false;
+		#endif
 	}
 	if (RequestHandler::parseBenchmarkMode(options.get("benchmark_mode", false))
 		== RequestHandler::BM_UNKNOWN)

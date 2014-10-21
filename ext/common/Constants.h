@@ -56,6 +56,8 @@
 
 	#define DEFAULT_APP_ENV "production"
 
+	#define DEFAULT_APP_THREAD_COUNT 1
+
 	#define DEFAULT_CONCURRENCY_MODEL "process"
 
 	#define DEFAULT_HTTP_SERVER_LISTEN_ADDRESS "tcp://127.0.0.1:3000"
@@ -85,8 +87,6 @@
 	#define DEFAULT_STAT_THROTTLE_RATE 10
 
 	#define DEFAULT_STICKY_SESSIONS_COOKIE_NAME "_passenger_route"
-
-	#define DEFAULT_THREAD_COUNT 1
 
 	#define DEFAULT_UNION_STATION_GATEWAY_ADDRESS "gateway.unionstationapp.com"
 

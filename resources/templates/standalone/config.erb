@@ -21,7 +21,7 @@
 master_process on;
 worker_processes 1;
 daemon on;
-error_log '<%= @options[:log_file] %>' <% if debugging? %>info<% end %>;
+error_log '<%= @options[:log_file] %>' <% if @options[:log_level] >= LVL_DEBUG %>info<% end %>;
 pid '<%= @options[:pid_file] %>';
 
 <% if Process.euid == 0 %>
@@ -44,10 +44,11 @@ http {
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_root '<%= PhusionPassenger.install_spec %>';
     passenger_abort_on_startup_error on;
-    passenger_ctl cleanup_pidfiles <%= serialize_strset("#{@temp_dir}/temp_dir_toucher.pid") %>;
+    passenger_ctl cleanup_pidfiles <%= serialize_strset("#{@working_dir}/temp_dir_toucher.pid") %>;
     passenger_user_switching off;
-    passenger_max_pool_size <%= @options[:max_pool_size] %>;
-    passenger_min_instances <%= @options[:min_instances] %>;
+    <%= nginx_option :passenger_log_level, :log_level %>
+    <%= nginx_option :passenger_max_pool_size, :max_pool_size %>
+    <%= nginx_option :passenger_min_instances, :min_instances %>
     <% if @options[:user] %>
         passenger_user <%= @options[:user] %>;
         passenger_default_user <%= @options[:user] %>;
@@ -57,7 +58,6 @@ http {
         passenger_default_user <%= current_user %>;
         passenger_analytics_log_user <%= current_user %>;
     <% end %>
-    <% if debugging? %>passenger_log_level 5;<% end %>
     <% if @options[:instance_registry_dir] %>passenger_instance_registry_dir '<%= @options[:instance_registry_dir] %>';<% end %>
     <% if @options[:data_buffer_dir] %>passenger_data_buffer_dir '<%= @options[:data_buffer_dir] %>';<% end %>
     <% if @options[:rolling_restarts] %>passenger_rolling_restarts on;<% end %>
@@ -107,13 +107,6 @@ http {
     }
     <% end %>
 
-    <% if @options[:ping_port] %>
-    server {
-        listen <%= nginx_listen_address(@options, true) %>;
-        root '<%= PhusionPassenger.resources_dir %>/standalone_default_root';
-    }
-    <% end %>
-    
     <% for app in @apps %>
     server {
         <% if app[:ssl] %>
@@ -138,8 +131,8 @@ http {
         passenger_spawn_method <%= app[:spawn_method] %>;
         <% if app[:app_type] %>passenger_app_type <%= app[:app_type] %>;<% end %>
         <% if app[:startup_file] %>passenger_startup_file <%= app[:startup_file] %>;<% end %>
-        <% if app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>passenger_concurrency_model <%= app[:concurrency_model] %>;<% end %>
-        <% if app[:thread_count] != DEFAULT_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
+        <% if app[:concurrency_model] && app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>passenger_concurrency_model <%= app[:concurrency_model] %>;<% end %>
+        <% if app[:thread_count] && app[:thread_count] != DEFAULT_APP_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
         <% if app[:restart_dir] %>passenger_restart_dir '<%= app[:restart_dir] %>';<% end %>
         <% if @options[:sticky_sessions] %>passenger_sticky_sessions on;<% end %>

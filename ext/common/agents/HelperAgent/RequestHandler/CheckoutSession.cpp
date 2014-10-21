@@ -332,8 +332,14 @@ endRequestWithErrorResponse(Client **c, Request **r, const StaticString &message
 
 bool
 friendlyErrorPagesEnabled(Request *req) {
-	bool defaultValue = req->options.environment != "staging"
-		&& req->options.environment != "production";
+	bool defaultValue;
+	string defaultStr = agentsOptions->get("friendly_error_pages");
+	if (defaultStr == "auto") {
+		defaultValue = req->options.environment != "staging"
+			&& req->options.environment != "production";
+	} else {
+		defaultValue = defaultStr == "true";
+	}
 	return getBoolOption(req, "!~PASSENGER_FRIENDLY_ERROR_PAGES", defaultValue);
 }
 

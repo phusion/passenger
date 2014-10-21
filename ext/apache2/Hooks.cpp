@@ -1223,6 +1223,7 @@ public:
 			.setPid ("web_server_pid", getpid())
 			.set    ("server_software", webServerDesc)
 			.setBool("multi_app", true)
+			.setBool("load_shell_envvars", true)
 			.set    ("debug_log_file", (serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile)
 			.set    ("data_buffer_dir", serverConfig.dataBufferDir)
 			.set    ("instance_registry_dir", serverConfig.instanceRegistryDir)
