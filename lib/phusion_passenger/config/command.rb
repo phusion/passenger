@@ -25,10 +25,6 @@ module PhusionPassenger
 module Config
 
 class Command
-	def self.description
-		return nil
-	end
-
 	def initialize(argv)
 		@argv = argv.dup
 		@options = self.class.create_default_options

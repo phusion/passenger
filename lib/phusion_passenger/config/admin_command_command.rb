@@ -36,8 +36,11 @@ module Config
 class AdminCommandCommand < Command
 	include PhusionPassenger::Config::Utils
 
+	def self.create_default_options
+		return { :socket => "server_admin" }
+	end
+
 	def run
-		@options = { :socket => "server_admin" }
 		parse_options
 		initialize_objects
 		select_passenger_instance
