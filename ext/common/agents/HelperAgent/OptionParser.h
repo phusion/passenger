@@ -67,7 +67,7 @@ serverUsage() {
 	printf("\n");
 	printf("Daemon options (optional):\n");
 	printf("      --pid-file PATH       Store the server's PID in the given file. The file\n");
-	printf("                            is deleted on exit.\n");
+	printf("                            is deleted on exit\n");
 	printf("\n");
 	printf("Security options (optional):\n");
 	printf("      --multi-app-password-file PATH\n");

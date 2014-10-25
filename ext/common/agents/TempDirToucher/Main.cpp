@@ -237,14 +237,14 @@ maybeDaemonize() {
 			if (chdir("/") == -1) {
 				e = errno;
 				fprintf(stderr, ERROR_PREFIX
-					": cannot change working directory to /: %s (errno %d)\n",
+					": cannot change working directory to /: %s (errno=%d)\n",
 					strerror(e), e);
 				_exit(1);
 			}
 			redirectStdinToNull();
 		} else if (pid == -1) {
 			e = errno;
-			fprintf(stderr, ERROR_PREFIX ": cannot fork: %s (errno %d)\n",
+			fprintf(stderr, ERROR_PREFIX ": cannot fork: %s (errno=%d)\n",
 				strerror(e), e);
 			exit(1);
 		} else {

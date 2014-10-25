@@ -91,7 +91,6 @@ enum OomFileType {
 
 class InstanceDirToucher;
 class AgentWatcher;
-static void setOomScore(const StaticString &score);
 
 
 /***** Working objects *****/
@@ -108,6 +107,8 @@ namespace WatchdogAgent {
 		InstanceDirectoryPtr instanceDir;
 		int lockFile;
 		vector<string> cleanupPidfiles;
+		bool pidsCleanedUp;
+		bool pidFileCleanedUp;
 
 		vector<AdminServer::Authorization> adminAuthorizations;
 		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
@@ -116,7 +117,9 @@ namespace WatchdogAgent {
 		AdminServer *adminServer;
 
 		WorkingObjects()
-			: bgloop(NULL),
+			: pidsCleanedUp(false),
+			  pidFileCleanedUp(false),
+			  bgloop(NULL),
 			  serverKitContext(NULL),
 			  adminServer(NULL)
 		{
@@ -135,6 +138,9 @@ using namespace Passenger::WatchdogAgent;
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
 static string oldOomScore;
+
+static void setOomScore(const StaticString &score);
+static void cleanup(const WorkingObjectsPtr &wo);
 
 #include "AgentWatcher.cpp"
 #include "InstanceDirToucher.cpp"
@@ -351,7 +357,19 @@ killCleanupPids(const vector<pid_t> &cleanupPids) {
 
 static void
 killCleanupPids(const WorkingObjectsPtr &wo) {
-	killCleanupPids(readCleanupPids(wo));
+	if (!wo->pidsCleanedUp) {
+		killCleanupPids(readCleanupPids(wo));
+		wo->pidsCleanedUp = true;
+	}
+}
+
+static void
+deletePidFile(const WorkingObjectsPtr &wo) {
+	string pidFile = agentsOptions->get("pid_file", false);
+	if (!pidFile.empty() && !wo->pidFileCleanedUp && agentsOptions->getBool("delete_pid_file")) {
+		syscalls::unlink(pidFile.c_str());
+		wo->pidFileCleanedUp = true;
+	}
 }
 
 static void
@@ -432,11 +450,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 				(*it)->forceShutdown();
 			}
 
-			// Now clean up the instance directory.
-			wo->instanceDir->destroy();
-
-			// Notify given PIDs about our shutdown.
-			killCleanupPids(cleanupPids);
+			cleanup(wo);
 
 			_exit(0);
 		} catch (const std::exception &e) {
@@ -471,7 +485,6 @@ forceAllAgentsShutdown(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &wat
 	for (it = watchers.begin(); it != watchers.end(); it++) {
 		(*it)->forceShutdown();
 	}
-	killCleanupPids(wo);
 }
 
 static string
@@ -561,6 +574,11 @@ usage() {
 	printf("                              switching is disabled. Default: the default\n");
 	printf("                              user's primary group\n");
 	printf("\n");
+	printf("      --daemonize             Daemonize into the background\n");
+	printf("      --user NAME             Lower privilege to the given user\n");
+	printf("      --pid-file PATH         Store the watchdog's PID in the given file. The\n");
+	printf("                              file is deleted on exit\n");
+	printf("      --no-delete-pid-file    Do not delete PID file on exit\n");
 	printf("      --log-file PATH         Log to the given file.\n");
 	printf("      --log-level LEVEL       Logging level. [A] Default: %d\n", DEFAULT_LOG_LEVEL);
 	printf("\n");
@@ -643,7 +661,7 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
 			vector<string> args;
 			vector<string> authorizations = options.getStrSet("watchdog_authorizations",
-					false);
+				false);
 
 			split(argv[i + 1], ':', args);
 			if (args.size() < 2 || args.size() > 3) {
@@ -667,6 +685,18 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-group")) {
 			options.set("default_group", argv[i + 1]);
 			i += 2;
+		} else if (p.isFlag(argv[i], '\0', "--daemonize")) {
+			options.setBool("daemonize", true);
+			i++;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--user")) {
+			options.set("user", argv[i + 1]);
+			i += 2;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--pid-file")) {
+			options.set("pid_file", argv[i + 1]);
+			i += 2;
+		} else if (p.isFlag(argv[i], '\0', "--no-delete-pid-file")) {
+			options.setBool("delete_pid_file", false);
+			i++;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 			options.setInt("log_level", atoi(argv[i + 1]));
 			i += 2;
@@ -727,6 +757,7 @@ setAgentsOptionsDefaults() {
 	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultStrSet("cleanup_pidfiles", vector<string>());
 	options.setDefault("data_buffer_dir", getSystemTempDir());
+	options.setDefaultBool("delete_pid_file", true);
 }
 
 static void
@@ -751,6 +782,101 @@ maybeSetsid() {
 	 */
 	if (agentsOptions->getBool("setsid", false)) {
 		setsid();
+	}
+}
+
+static void
+redirectStdinToNull() {
+	int fd = open("/dev/null", O_RDONLY);
+	if (fd != -1) {
+		dup2(fd, 1);
+		close(fd);
+	}
+}
+
+static void
+maybeDaemonize() {
+	pid_t pid;
+	int e;
+
+	if (agentsOptions->getBool("daemonize", false)) {
+		pid = fork();
+		if (pid == 0) {
+			setsid();
+			if (chdir("/") == -1) {
+				e = errno;
+				throw SystemException("Cannot change working directory to /", e);
+			}
+			redirectStdinToNull();
+		} else if (pid == -1) {
+			e = errno;
+			throw SystemException("Cannot fork", e);
+		} else {
+			_exit(0);
+		}
+	}
+}
+
+static void
+createPidFile() {
+	TRACE_POINT();
+	string pidFile = agentsOptions->get("pid_file", false);
+	if (!pidFile.empty()) {
+		char pidStr[32];
+
+		snprintf(pidStr, sizeof(pidStr), "%lld", (long long) getpid());
+
+		int fd = syscalls::open(pidFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		if (fd == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot create PID file " + pidFile, e, pidFile);
+		}
+
+		UPDATE_TRACE_POINT();
+		writeExact(fd, pidStr, strlen(pidStr));
+		syscalls::close(fd);
+	}
+}
+
+static void
+lowerPrivilege() {
+	TRACE_POINT();
+	const VariantMap &options = *agentsOptions;
+	string userName = options.get("user", false);
+
+	if (geteuid() == 0 && !userName.empty()) {
+		struct passwd *pwUser = getpwnam(userName.c_str());
+
+		if (pwUser == NULL) {
+			throw RuntimeException("Cannot lookup user information for user " +
+				userName);
+		}
+
+		gid_t gid = pwUser->pw_gid;
+		string groupName = getGroupName(pwUser->pw_gid);
+
+		if (initgroups(userName.c_str(), gid) != 0) {
+			int e = errno;
+			throw SystemException("Unable to lower " AGENT_EXE " watchdog's privilege "
+				"to that of user '" + userName + "' and group '" + groupName +
+				"': cannot set supplementary groups", e);
+		}
+		if (setgid(gid) != 0) {
+			int e = errno;
+			throw SystemException("Unable to lower " AGENT_EXE " watchdog's privilege "
+				"to that of user '" + userName + "' and group '" + groupName +
+				"': cannot set group ID to " + toString(gid), e);
+		}
+		if (setuid(pwUser->pw_uid) != 0) {
+			int e = errno;
+			throw SystemException("Unable to lower " AGENT_EXE " watchdog's privilege "
+				"to that of user '" + userName + "' and group '" + groupName +
+				"': cannot set user ID to " + toString(pwUser->pw_uid), e);
+		}
+
+		setenv("USER", pwUser->pw_name, 1);
+		setenv("HOME", pwUser->pw_dir, 1);
+		setenv("UID", toString(gid).c_str(), 1);
 	}
 }
 
@@ -992,7 +1118,7 @@ startAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 				}
 			}
 			forceAllAgentsShutdown(wo, watchers);
-			wo->instanceDir->destroy();
+			cleanup(wo);
 			exit(1);
 		}
 		// Allow other exceptions to propagate and crash the watchdog.
@@ -1010,7 +1136,7 @@ beginWatchingAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watche
 				e.what(),
 				NULL);
 			forceAllAgentsShutdown(wo, watchers);
-			wo->instanceDir->destroy();
+			cleanup(wo);
 			exit(1);
 		}
 		// Allow other exceptions to propagate and crash the watchdog.
@@ -1046,6 +1172,20 @@ finalizeInstanceDir(const WorkingObjectsPtr &wo) {
 	wo->instanceDir->finalizeCreation();
 }
 
+static void
+cleanup(const WorkingObjectsPtr &wo) {
+	TRACE_POINT();
+
+	// We need to call destroy() explicitly because of circular references.
+	if (wo->instanceDir != NULL && wo->instanceDir->isOwner()) {
+		wo->instanceDir->destroy();
+		wo->instanceDir.reset();
+	}
+
+	killCleanupPids(wo);
+	deletePidFile(wo);
+}
+
 int
 watchdogMain(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv);
@@ -1060,6 +1200,9 @@ watchdogMain(int argc, char *argv[]) {
 	try {
 		TRACE_POINT();
 		maybeSetsid();
+		maybeDaemonize();
+		createPidFile();
+		lowerPrivilege();
 		initializeWorkingObjects(wo, instanceDirToucher);
 		initializeAgentWatchers(wo, watchers);
 		initializeAdminServer(wo);
@@ -1081,11 +1224,7 @@ watchdogMain(int argc, char *argv[]) {
 			}
 		}
 		if (wo != NULL) {
-			// We need to call destroy() explicitly because of circular references.
-			if (wo->instanceDir->isOwner()) {
-				wo->instanceDir->destroy();
-			}
-			killCleanupPids(wo);
+			cleanup(wo);
 		}
 		return 1;
 	}
@@ -1125,21 +1264,14 @@ watchdogMain(int argc, char *argv[]) {
 			UPDATE_TRACE_POINT();
 			forceAllAgentsShutdown(wo, watchers);
 		}
+		cleanup(wo);
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("after_watchdog_shutdown");
-
-		// We need to call destroy() explicitly because of circular references.
-		if (wo->instanceDir->isOwner()) {
-			wo->instanceDir->destroy();
-		}
 
 		return exitGracefully ? 0 : 1;
 	} catch (const tracable_exception &e) {
 		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
-		// We need to call destroy() explicitly because of circular references.
-		if (wo->instanceDir->isOwner()) {
-			wo->instanceDir->destroy();
-		}
+		cleanup(wo);
 		return 1;
 	}
 }
