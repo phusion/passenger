@@ -120,8 +120,9 @@ private:
 		unsigned int i;
 
 		for (i = 0; i < newClientCount; i++) {
-			servers[nextServer]->getContext()->libev->runLater(boost::bind(
-				feedNewClient, servers[nextServer], newClients[i]));
+			ServerKit::Context *ctx = servers[nextServer]->getContext();
+			ctx->libev->runLater(boost::bind(feedNewClient, servers[nextServer],
+				newClients[i]));
 			nextServer = (nextServer + 1) % servers.size();
 		}
 
@@ -200,6 +201,7 @@ public:
 		  accept4Available(true),
 		  quit(false),
 		  newClientCount(0),
+		  nextServer(0),
 		  thread(NULL)
 	{
 		if (pipe(exitPipe) == -1) {
