@@ -968,7 +968,7 @@ merge_string_keyval_table(ngx_conf_t *cf, ngx_array_t **prev, ngx_array_t **conf
 static char *
 passenger_enterprise_only(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
     return ": this feature is only available in Phusion Passenger Enterprise. "
-        "You are currently running the open source Phusion Passenger Enterprise. "
+        "You are currently running the open source Phusion Passenger. "
         "Please learn more about and/or buy Phusion Passenger Enterprise at https://www.phusionpassenger.com/enterprise ;";
 }
 #endif
