@@ -134,9 +134,9 @@ private
 
 	def find_app_root
 		if @dirs.empty?
-			return absolute_path_no_resolve(".")
+			return File.absolute_path_no_resolve(".")
 		else
-			return absolute_path_no_resolve(@dirs[0])
+			return File.absolute_path_no_resolve(@dirs[0])
 		end
 	end
 
