@@ -656,6 +656,7 @@ sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten
 	if (constructHeaderBuffersForResponse(req, buffers,
 		maxbuffers, nbuffers, dataSize, nCacheableBuffers))
 	{
+		logResponseHeaders(client, req, buffers, nbuffers, dataSize);
 		markHeaderBuffersForTurboCaching(client, req, buffers, nCacheableBuffers);
 
 		ssize_t ret;
@@ -688,6 +689,7 @@ sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offse
 	assert(ok);
 	(void) ok; // Shut up compiler warning
 
+	logResponseHeaders(client, req, buffers, nbuffers, dataSize);
 	markHeaderBuffersForTurboCaching(client, req, buffers, nCacheableBuffers);
 
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
@@ -701,6 +703,18 @@ sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offse
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);
 		writeResponse(client, buffer + offset, dataSize - offset);
+	}
+}
+
+void
+logResponseHeaders(Client *client, Request *req, struct iovec *buffers,
+	unsigned int nbuffers, unsigned int dataSize)
+{
+	if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG3)) {
+		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
+		gatherBuffers(buffer, dataSize, buffers, nbuffers);
+		SKC_TRACE(client, 3, "Sending response headers: \"" <<
+			cEscapeString(StaticString(buffer, dataSize)) << "\"");
 	}
 }
 
