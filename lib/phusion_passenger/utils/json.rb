@@ -42,7 +42,7 @@ module Utils
 class JSON
   def self.parse(data) new(data).parse end
 
-  WSP = /\s+/
+  WSP = /(\s|\/\/.*?\n|\/\*.*?\*\/)+/m
   OBJ = /[{\[]/;    HEN = /\}/;  AEN = /\]/
   COL = /\s*:\s*/;  KEY = /\s*,\s*/
   NUM = /-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/
@@ -85,14 +85,24 @@ class JSON
   def hash
     obj = {}
     space
-    repeat_until(HEN) { k = string; scan(COL); obj[k] = value; endkey }
+    repeat_until(HEN) do
+      space
+      k = string
+      scan(COL)
+      obj[k] = value
+      endkey
+    end
     obj
   end
 
   def array
     ary = []
     space
-    repeat_until(AEN) { ary << value; endkey }
+    repeat_until(AEN) do
+      space
+      ary << value
+      endkey
+    end
     ary
   end
 
@@ -121,7 +131,7 @@ class JSON
   end
 
   def error
-    raise "parse error at: #{scan(/.{1,10}/m).inspect}"
+    raise "parse error at: #{scan(/.{1,20}/m).inspect}"
   end
 
   def repeat_until reg
@@ -235,6 +245,62 @@ else
       assert_raises(RuntimeError) { JSON.parse %([ "foo ]) }
       assert_raises(RuntimeError) { JSON.parse %([ "foo\\" ]) }
       assert_raises(RuntimeError) { JSON.parse %([ "foo\\uabGd" ]) }
+    end
+    def test_single_line_comments
+      source = %Q{
+        // comment before document
+        {
+          // comment
+          "foo": "1",
+          "bar": "2",
+          // another comment
+          "baz": "3",
+          "array": [
+            // comment inside array
+            1, 2, 3
+            // comment at end of array
+          ]
+          // comment at end of hash
+        }
+        // comment after document
+      }
+      doc = { "foo" => "1", "bar" => "2", "baz" => "3", "array" => [1, 2, 3] }
+      assert_equal(doc, JSON.parse(source))
+    end
+    def test_multi_line_comments
+      source = %Q{
+        /* comment before
+         * document */
+        {
+          /* comment */
+          "foo": "1",
+          "bar": "2",
+          /* another
+             comment
+           */
+          "baz": "3",
+          "array": [
+            /* comment inside array */
+            1, 2, 3,
+            4, /* comment inside an array */ 5,
+            /*
+               // "nested" comments
+               { "faux json": "inside comment" }
+             */
+            6, 7
+            /**
+             * comment at end of array
+             */
+          ]
+          /**************************
+           comment at end of hash
+           **************************/
+        }
+        /* comment after
+           document */
+      }
+      doc = { "foo" => "1", "bar" => "2", "baz" => "3", "array" => [1, 2, 3, 4, 5, 6, 7] }
+      assert_equal(doc, JSON.parse(source))
     end
   end
 
