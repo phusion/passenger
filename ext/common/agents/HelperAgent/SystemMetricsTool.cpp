@@ -34,24 +34,26 @@
 using namespace std;
 using namespace Passenger;
 
-struct Options {
-	bool xml;
-	SystemMetrics::XmlOptions xmlOptions;
-	SystemMetrics::DescriptionOptions descOptions;
-	int interval;
-	bool useStdin;
-	bool exitOnUnexpectedError;
-	bool help;
+namespace {
+	struct Options {
+		bool xml;
+		SystemMetrics::XmlOptions xmlOptions;
+		SystemMetrics::DescriptionOptions descOptions;
+		int interval;
+		bool useStdin;
+		bool exitOnUnexpectedError;
+		bool help;
 
-	Options() {
-		xml = false;
-		descOptions.colors = isatty(1);
-		interval = -1;
-		useStdin = false;
-		exitOnUnexpectedError = true;
-		help = false;
-	}
-};
+		Options() {
+			xml = false;
+			descOptions.colors = isatty(1);
+			interval = -1;
+			useStdin = false;
+			exitOnUnexpectedError = true;
+			help = false;
+		}
+	};
+}
 
 static bool
 isFlag(const char *arg, char shortFlagName, const char *longFlagName) {
