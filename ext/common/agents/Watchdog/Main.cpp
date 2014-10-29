@@ -47,6 +47,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <grp.h>
 #include <fcntl.h>
 #include <cstdio>
 #include <cstdlib>
@@ -236,7 +237,8 @@ setOomScoreNeverKill() {
 
 static void
 terminationHandler(int signo) {
-	write(workingObjects->exitEvent.writerFd(), "x", 1);
+	ssize_t ret = write(workingObjects->exitEvent.writerFd(), "x", 1);
+	(void) ret; // Don't care about the result.
 }
 
 /**
