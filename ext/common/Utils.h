@@ -210,10 +210,11 @@ string escapeForXml(const StaticString &input);
 
 /**
  * Returns the username of the user that the current process is running as.
- * If the user has no associated username, then "UID xxxx" is returned,
- * where xxxx is the current UID.
+ * If the user has no associated username, then the behavior depends on the
+ * `fallback` argument. When true, "UID xxxx" is returned, where xxxx is the
+ * current UID. When false, the empty string is returned.
  */
-string getProcessUsername();
+string getProcessUsername(bool fallback = true);
 
 /**
  * Returns either the group name for the given GID, or (if the group name

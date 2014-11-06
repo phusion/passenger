@@ -388,7 +388,7 @@ escapeForXml(const StaticString &input) {
 }
 
 string
-getProcessUsername() {
+getProcessUsername(bool fallback) {
 	struct passwd pwd, *result;
 	long bufSize;
 	shared_array<char> strings;
@@ -404,9 +404,13 @@ getProcessUsername() {
 	}
 
 	if (result == (struct passwd *) NULL || result->pw_name == NULL || result->pw_name[0] == '\0') {
-		snprintf(strings.get(), bufSize, "UID %lld", (long long) getuid());
-		strings.get()[bufSize - 1] = '\0';
-		return strings.get();
+		if (fallback) {
+			snprintf(strings.get(), bufSize, "UID %lld", (long long) getuid());
+			strings.get()[bufSize - 1] = '\0';
+			return strings.get();
+		} else {
+			return string();
+		}
 	} else {
 		return result->pw_name;
 	}
