@@ -181,8 +181,14 @@ if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
 	apt_get_update
 	run sudo apt-get install -y --no-install-recommends \
 		devscripts debhelper rake apache2-mpm-worker apache2-threaded-dev \
-		ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev rubygems libev-dev gdebi-core \
-		source-highlight
+		libev-dev gdebi-core source-highlight
+	if [[ `lsb_release -r -s` = 12.04 ]]; then
+		sudo apt-get install -y --no-install-recommends \
+			ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev rubygems
+	else
+		sudo apt-get install -y --no-install-recommends \
+			ruby1.9.1 ruby1.9.1-dev ruby2.0 ruby2.0-dev
+	fi
 	install_test_deps_with_doctools
 	install_node_and_modules
 	run rake debian:dev debian:dev:reinstall
