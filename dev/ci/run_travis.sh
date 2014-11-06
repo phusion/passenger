@@ -18,6 +18,7 @@ export VERBOSE=1
 export TRACE=1
 export DEVDEPS_DEFAULT=no
 export rvmsudo_secure_path=1
+export LC_CTYPE=C.UTF-8
 
 if [[ -e /etc/workaround-docker-2267/hosts ]]; then
 	HOSTS_FILE=/etc/workaround-docker-2267/hosts

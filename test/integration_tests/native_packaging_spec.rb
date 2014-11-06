@@ -62,7 +62,11 @@ when "deb"
 	APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
 	SUPPORTS_COMPILING_APACHE_MODULE = false
 
-	APXS2 = "/usr/bin/apxs2"
+	if `lsb_release -r -s`.strip <= '12.04'
+		APXS2 = "/usr/bin/apxs2"
+	else
+		APXS2 = "/usr/bin/apxs"
+	end
 	APACHE2 = "/usr/sbin/apache2"
 	APACHE2CTL = "/usr/sbin/apache2ctl"
 	APACHE_CONFIG_FILE = "/etc/apache2/apache2.conf"
