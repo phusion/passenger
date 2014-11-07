@@ -37,16 +37,17 @@ module Packaging
 	# Files that must be generated before packaging.
 	PREGENERATED_FILES = [
 		'ext/common/Constants.h',
-		'doc/Packaging.html'
+		'doc/Packaging.html',
+		'doc/CloudLicensingConfiguration.html'
 	] + ASCII_DOCS
-	
+
 	USER_EXECUTABLES = [
 		'passenger',
 		'passenger-install-apache2-module',
 		'passenger-install-nginx-module',
 		'passenger-config'
 	]
-	
+
 	SUPER_USER_EXECUTABLES = [
 		'passenger-status',
 		'passenger-memory-stats'
@@ -62,7 +63,7 @@ module Packaging
 		'passenger-install-apache2-module',
 		'passenger-install-nginx-module'
 	]
-	
+
 	# A list of globs which match all files that should be packaged
 	# in the Phusion Passenger gem or tarball.
 	GLOB = [
@@ -129,7 +130,7 @@ module Packaging
 		'test/stub/**/*',
 		'test/stub/**/.*'
 	]
-	
+
 	EXCLUDE_GLOB = [
 		'**/.DS_Store',
 		'packaging/*/.git',
