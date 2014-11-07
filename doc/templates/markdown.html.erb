@@ -22,10 +22,22 @@
         margin-bottom: 9px;
       }
 
+      img {
+        max-width: 100%;
+      }
+
       #container {
-        max-width: 767px;
+        max-width: 750px;
         margin-left: auto;
         margin-right: auto;
+      }
+
+      @media(max-width: 767px) {
+        #container {
+          max-width: auto;
+          margin-left: 1em;
+          margin-right: 1em;
+        }
       }
 
       #top-vertical-container-margin {
@@ -71,7 +83,7 @@
   </head>
   <body>
 
-    <div id="container">
+    <div id="container" class="container">
       <div id="top-vertical-container-margin"></div>
       <div id="logo">
         <a href="http://www.phusion.nl/"><img src="images/phusion_banner_small.png" alt="Phusion docs" width="350" height="59"></a>
