@@ -49,11 +49,7 @@ module ConfigUtils
 			config_file = File.join(app_dir, "passenger-standalone.json")
 		end
 		if File.exist?(config_file)
-			begin
-				local_options = load_config_file(config_file)
-			rescue ConfigLoadError => e
-				abort "*** ERROR: #{e.message}"
-			end
+			local_options = load_config_file(config_file)
 			options.merge!(local_options)
 		end
 	end

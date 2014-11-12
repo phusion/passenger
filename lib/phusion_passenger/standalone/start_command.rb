@@ -58,7 +58,7 @@ class StartCommand < Command
 		exit if @options[:runtime_check_only]
 
 		find_apps
-		find_pid_and_log_file(@app_finder, @apps, @options)
+		find_pid_and_log_file(@app_finder, @options)
 		create_working_dir
 		begin
 			initialize_vars
@@ -71,17 +71,20 @@ class StartCommand < Command
 			watch_log_files_in_background if should_watch_logs?
 			wait_until_engine_has_exited if should_wait_until_engine_has_exited?
 		rescue Interrupt
-			shutdown_and_cleanup
+			shutdown_and_cleanup(true)
 			exit 2
 		rescue SignalException => signal
-			shutdown_and_cleanup
+			shutdown_and_cleanup(true)
 			if signal.message == 'SIGINT' || signal.message == 'SIGTERM'
 				exit 2
 			else
 				raise
 			end
-		ensure
-			shutdown_and_cleanup
+		rescue Exception
+			shutdown_and_cleanup(true)
+			raise
+		else
+			shutdown_and_cleanup(false)
 		end
 	end
 
@@ -320,7 +323,11 @@ private
 			app_dir = @argv[0]
 		end
 		if app_dir
-			ConfigUtils.load_local_config_file!(app_dir, @options)
+			begin
+				ConfigUtils.load_local_config_file!(app_dir, @options)
+			rescue ConfigLoadError => e
+				abort "*** ERROR: #{e.message}"
+			end
 		end
 	end
 
@@ -432,34 +439,30 @@ private
 		PhusionPassenger.require_passenger_lib 'standalone/app_finder'
 		@app_finder = AppFinder.new(@argv, @options)
 		@apps = @app_finder.scan
-		if @app_finder.multi_mode? && @options[:engine] != 'gninx'
+		if @app_finder.multi_mode? && @options[:engine] != 'nginx'
 			puts "Mass deployment enabled, so forcing engine to 'nginx'."
 			@options[:engine] = 'nginx'
 		end
 	end
 
-	def find_pid_and_log_file(app_finder, apps, options)
-		if app_finder.single_mode?
-			app_root = apps[0][:root]
-			if options[:socket_file]
-				pid_basename = "passenger.pid"
-				log_basename = "passenger.log"
-			else
-				pid_basename = "passenger.#{options[:port]}.pid"
-				log_basename = "passenger.#{options[:port]}.log"
-			end
-			if File.directory?("#{app_root}/tmp/pids")
-				options[:pid_file] ||= "#{app_root}/tmp/pids/#{pid_basename}"
-			else
-				options[:pid_file] ||= "#{app_root}/#{pid_basename}"
-			end
-			if File.directory?("log")
-				options[:log_file] ||= "#{app_root}/log/#{log_basename}"
-			else
-				options[:log_file] ||= "#{app_root}/#{log_basename}"
-			end
+	def find_pid_and_log_file(app_finder, options)
+		exec_root = app_finder.execution_root
+		if options[:socket_file]
+			pid_basename = "passenger.pid"
+			log_basename = "passenger.log"
 		else
-			raise "Not implemented"
+			pid_basename = "passenger.#{options[:port]}.pid"
+			log_basename = "passenger.#{options[:port]}.log"
+		end
+		if File.directory?("#{exec_root}/tmp/pids")
+			options[:pid_file] ||= "#{exec_root}/tmp/pids/#{pid_basename}"
+		else
+			options[:pid_file] ||= "#{exec_root}/#{pid_basename}"
+		end
+		if File.directory?("log")
+			options[:log_file] ||= "#{exec_root}/log/#{log_basename}"
+		else
+			options[:log_file] ||= "#{exec_root}/#{log_basename}"
 		end
 	end
 
@@ -566,6 +569,7 @@ private
 			STDOUT.sync = true
 			STDERR.sync = true
 			Process.setsid
+			@threads = nil
 		end
 	end
 
@@ -663,9 +667,9 @@ private
 
 	################## Shut down and cleanup ##################
 
-	def shutdown_and_cleanup
+	def shutdown_and_cleanup(error_occurred)
 		# Stop engine
-		if @engine
+		if @engine && (error_occurred || should_wait_until_engine_has_exited?)
 			@console_mutex.synchronize do
 				STDOUT.write("Stopping web server...")
 				STDOUT.flush

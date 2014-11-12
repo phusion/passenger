@@ -164,16 +164,14 @@ private
 
 	def determine_mode_and_execution_root
 		@mode = :single
-		if @mode == :single
-			if @dirs.empty?
-				@execution_root = File.absolute_path_no_resolve(".")
-			else
-				@execution_root = File.absolute_path_no_resolve(@dirs[0])
-			end
+		if @dirs.empty?
+			@execution_root = File.absolute_path_no_resolve(".")
 		else
-			abort "Not implemented"
+			@execution_root = File.absolute_path_no_resolve(@dirs[0])
 		end
 	end
+
+	##################
 end
 
 end # module Standalone

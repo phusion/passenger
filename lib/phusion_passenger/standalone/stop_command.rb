@@ -69,6 +69,10 @@ private
 				"Standalone instance") do |value|
 				options[:pid_file] = value
 			end
+			opts.on("--ignore-pid-not-found", "-i",
+				"Don't abort with an error if PID file cannot be found") do
+				options[:ignore_pid_not_found] = true
+			end
 		end
 	end
 
@@ -83,8 +87,12 @@ private
 			end
 		end
 
-		Standalone::ControlUtils.warn_pid_file_not_found(@options)
-		exit 1
+		if @options[:ignore_pid_not_found]
+			exit
+		else
+			Standalone::ControlUtils.warn_pid_file_not_found(@options)
+			exit 1
+		end
 	end
 
 	def create_controller
