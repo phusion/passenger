@@ -378,11 +378,8 @@ static void
 cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers, char *argv[]) {
 	this_thread::disable_interruption di;
 	this_thread::disable_syscall_interruption dsi;
-	vector<pid_t> cleanupPids;
 	pid_t pid;
 	int e;
-
-	cleanupPids = readCleanupPids(wo);
 
 	pid = fork();
 	if (pid == 0) {
@@ -585,6 +582,8 @@ usage() {
 	printf("      --no-delete-pid-file    Do not delete PID file on exit\n");
 	printf("      --log-file PATH         Log to the given file.\n");
 	printf("      --log-level LEVEL       Logging level. [A] Default: %d\n", DEFAULT_LOG_LEVEL);
+	printf("      --cleanup-pidfile PATH  Upon shutdown, kill the process specified by\n");
+	printf("                              the given PID file\n");
 	printf("\n");
 	printf("  -h, --help                  Show this help\n");
 	printf("\n");
@@ -703,6 +702,11 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			i++;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 			options.setInt("log_level", atoi(argv[i + 1]));
+			i += 2;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--cleanup-pidfile")) {
+			vector<string> pidfiles = options.getStrSet("cleanup_pidfiles", false);
+			pidfiles.push_back(argv[i + 1]);
+			options.setStrSet("cleanup_pidfiles", pidfiles);
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
 			options.set("debug_log_file", argv[i + 1]);
@@ -1264,11 +1268,12 @@ watchdogMain(int argc, char *argv[]) {
 		if (shouldExitGracefully) {
 			UPDATE_TRACE_POINT();
 			cleanupAgentsInBackground(wo, watchers, argv);
+			// Child process will call cleanup()
 		} else {
 			UPDATE_TRACE_POINT();
 			forceAllAgentsShutdown(wo, watchers);
+			cleanup(wo);
 		}
-		cleanup(wo);
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("after_watchdog_shutdown");
 

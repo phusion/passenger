@@ -67,6 +67,7 @@ private
 		command << " --passenger-root #{Shellwords.escape PhusionPassenger.install_spec}"
 		command << " --daemonize"
 		command << " --no-delete-pid-file"
+		command << " --cleanup-pidfile #{Shellwords.escape @working_dir}/temp_dir_toucher.pid"
 		add_param(command, :user, "--user")
 		add_param(command, :log_file, "--log-file")
 		add_param(command, :pid_file, "--pid-file")

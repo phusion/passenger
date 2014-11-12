@@ -53,17 +53,19 @@ static char *dir;
  */
 static int shouldCleanup = 0;
 static int shouldDaemonize = 0;
+static bool verbose = false;
 static const char *pidFile = NULL;
 static const char *logFile = NULL;
 static int sleepInterval = 1800;
 static int terminationPipe[2];
 static sig_atomic_t shouldIgnoreNextTermSignal = 0;
 
-#if 1
-	#define DEBUG(message) puts(message)
-#else
-	#define DEBUG(message) do { /* nothing */ } while (false)
-#endif
+#define DEBUG(message) \
+	do { \
+		if (verbose) { \
+			puts(message); \
+		} \
+	} while (false)
 
 
 static void
@@ -78,6 +80,7 @@ usage() {
 	printf("  --interval SECONDS  Customize interval\n");
 	printf("  --pid-file PATH     Save PID into the given file\n");
 	printf("  --log-file PATH     Use the given log file\n");
+	printf("  --verbose           Print debugging messages\n");
 }
 
 static void
@@ -108,6 +111,8 @@ parseArguments(int argc, char *argv[], int offset) {
 		} else if (strcmp(argv[i], "--log-file") == 0) {
 			logFile = argv[i + 1];
 			i++;
+		} else if (strcmp(argv[i], "--verbose") == 0) {
+			verbose = true;
 		} else {
 			fprintf(stderr, ERROR_PREFIX ": unrecognized argument %s\n",
 				argv[i]);
@@ -170,7 +175,6 @@ initialize(int argc, char *argv[], int offset) {
 			fprintf(stderr, ERROR_PREFIX ": cannot dup2(%d, 2): %s (errno %d)\n",
 				fd, strerror(e), e);
 		}
-
 		close(fd);
 	}
 
@@ -182,6 +186,9 @@ initialize(int argc, char *argv[], int offset) {
 	}
 
 	setNonBlocking(terminationPipe[1]);
+
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
 }
 
 static void
@@ -220,7 +227,7 @@ static void
 redirectStdinToNull() {
 	int fd = open("/dev/null", O_RDONLY);
 	if (fd != -1) {
-		dup2(fd, 1);
+		dup2(fd, 0);
 		close(fd);
 	}
 }
@@ -396,6 +403,8 @@ tempDirToucherMain(int argc, char *argv[]) {
 	installSignalHandlers();
 	maybeDaemonize();
 	maybeWritePidfile();
+
+	DEBUG("TempDirToucher started");
 
 	while (1) {
 		if (dirExists(dir)) {
