@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2014 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -20,54 +20,83 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
+
+require 'optparse'
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'standalone/command'
+PhusionPassenger.require_passenger_lib 'standalone/config_utils'
+PhusionPassenger.require_passenger_lib 'standalone/control_utils'
+PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 
 module PhusionPassenger
 module Standalone
 
 class StopCommand < Command
-	def self.description
-		return "Stop a running Phusion Passenger Standalone instance."
-	end
-	
 	def run
-		parse_options!("stop") do |opts|
-			opts.separator "Options:"
-			opts.on("-p", "--port NUMBER", Integer,
-				wrap_desc("The port number of a Phusion Passenger Standalone instance (default: #{@options[:port]})")) do |value|
-				@options[:port] = value
-			end
-			opts.on("--pid-file FILE", String,
-				wrap_desc("PID file of a running Phusion Passenger Standalone instance.")) do |value|
-				@options[:pid_file] = value
-			end
-		end
-		
-		determine_various_resource_locations(false)
-		create_nginx_controller
+		@options = { :port => 3000 }
+		parse_options
+		find_pid_file
+		create_controller
 		begin
-			running = @nginx.running?
+			running = @controller.running?
 		rescue SystemCallError, IOError
 			running = false
 		end
 		if running
-			@nginx.stop
+			@controller.stop
 		else
-			STDERR.puts "According to the PID file '#{@options[:pid_file]}', " <<
-				"Phusion Passenger Standalone doesn't seem to be running."
-			STDERR.puts
-			STDERR.puts "If you know that Phusion Passenger Standalone *is* running then one of these"
-			STDERR.puts "might be the cause of this error:"
-			STDERR.puts
-			STDERR.puts " * The Phusion Passenger Standalone instance that you want to stop isn't running"
-			STDERR.puts "   on port #{@options[:port]}, but on another port. If this is the case then you"
-			STDERR.puts "   should specify the right port with --port."
-			STDERR.puts "   If the instance is listening on a Unix socket file instead of a TCP port,"
-			STDERR.puts "   then please specify the PID file's filename with --pid-file."
-			STDERR.puts " * The instance that you want to stop has stored its PID file in a non-standard"
-			STDERR.puts "   location. In this case please specify the right PID file with --pid-file."
+			Standalone::ControlUtils.warn_pid_file_not_found(@options)
 			exit 1
 		end
+	end
+
+private
+	def self.create_option_parser(options)
+		OptionParser.new do |opts|
+			nl = "\n" + ' ' * 37
+			opts.banner = "Usage: passenger stop [OPTIONS]\n"
+			opts.separator "Stops a running #{PROGRAM_NAME} Standalone instance."
+			opts.separator ""
+
+			opts.separator "Options:"
+			opts.on("-p", "--port NUMBER", Integer,
+				"The port number of the #{PROGRAM_NAME}#{nl}" +
+				"instance. Default: 3000") do |value|
+				options[:port] = value
+			end
+			opts.on("--pid-file FILE", String,
+				"PID file of the running #{PROGRAM_NAME}#{nl}" +
+				"Standalone instance") do |value|
+				options[:pid_file] = value
+			end
+		end
+	end
+
+	def find_pid_file
+		return if @options[:pid_file]
+
+		["tmp/pids", "."].each do |dir|
+			path = File.absolute_path_no_resolve("#{dir}/passenger.#{@options[:port]}.pid")
+			if File.exist?(path)
+				@options[:pid_file] = path
+				return
+			end
+		end
+
+		Standalone::ControlUtils.warn_pid_file_not_found(@options)
+		exit 1
+	end
+
+	def create_controller
+		Standalone::ControlUtils.require_daemon_controller
+		@controller = DaemonController.new(
+			:identifier    => "#{PROGRAM_NAME} Standalone engine",
+			:start_command => "true", # Doesn't matter
+			:ping_command  => "true", # Doesn't matter
+			:pid_file      => @options[:pid_file],
+			:log_file      => "/dev/null",
+			:timeout       => 25
+		)
 	end
 end
 

@@ -257,8 +257,8 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ruby")) {
 		options.set("default_ruby", argv[i + 1]);
 		i += 2;
-	} else if (p.isFlag(argv[i], '\0', "--rolling_restarts")) {
-		options.setBool("rolling_restarts", false);
+	} else if (p.isFlag(argv[i], '\0', "--rolling-restarts")) {
+		options.setBool("rolling_restarts", true);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 		// We do not set log_level because, when this function is called from

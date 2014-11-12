@@ -474,32 +474,6 @@ private
 		@can_remove_working_dir = true
 	end
 
-	def require_daemon_controller
-		return if defined?(DaemonController)
-		begin
-			require 'daemon_controller'
-			begin
-				require 'daemon_controller/version'
-				too_old = DaemonController::VERSION_STRING < '1.1.0'
-			rescue LoadError
-				too_old = true
-			end
-			if too_old
-				PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-				gem_command = PlatformInfo.gem_command(:sudo => true)
-				abort "Your version of daemon_controller is too old. " +
-					"You must install 1.1.0 or later. Please upgrade:\n\n" +
-					" #{gem_command} uninstall FooBarWidget-daemon_controller\n" +
-					" #{gem_command} install daemon_controller"
-			end
-		rescue LoadError
-			PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-			gem_command = PlatformInfo.gem_command(:sudo => true)
-			abort "Please install daemon_controller first:\n\n" +
-				" #{gem_command} install daemon_controller"
-		end
-	end
-
 	def initialize_vars
 		@console_mutex = Mutex.new
 		@termination_pipe = IO.pipe

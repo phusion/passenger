@@ -22,6 +22,7 @@
 #  THE SOFTWARE.
 
 PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'standalone/control_utils'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
 module PhusionPassenger
@@ -31,9 +32,12 @@ class StartCommand
 module BuiltinEngine
 private
 	def start_engine_real
-		require_daemon_controller
+		Standalone::ControlUtils.require_daemon_controller
 		@engine = DaemonController.new(build_daemon_controller_options)
+		start_engine_no_create
+	end
 
+	def start_engine_no_create
 		begin
 			@engine.start
 		rescue DaemonController::AlreadyStarted
@@ -90,7 +94,7 @@ private
 		add_param(command, :min_instances, "--min-instances")
 		add_enterprise_param(command, :concurrency_model, "--concurrency-model")
 		add_enterprise_param(command, :thread_count, "--thread-count")
-		add_enterprise_flag_param(command, :rolling_restarts, "--rolling-restart")
+		add_enterprise_flag_param(command, :rolling_restarts, "--rolling-restarts")
 		add_enterprise_flag_param(command, :resist_deployment_errors, "--resist-deployment-errors")
 		add_flag_param(command, :sticky_sessions, "--sticky-sessions")
 		add_param(command, :sticky_sessions_cookie_name, "--sticky-sessions-cookie-name")

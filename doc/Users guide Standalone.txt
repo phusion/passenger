@@ -75,7 +75,7 @@ See `--help` for all available options.
 :version: 4.0.24
 include::users_guide_snippets/since_version.txt[]
 
-It is possible to store some options in a configuration file `passenger-standalone.json` in the application directory. Configuration in this file overrides command line options. The configuration file format is JSON.
+It is possible to store some options in a configuration file `Passengerfile.json` in the application directory. Configuration in this file overrides command line options. The configuration file format is JSON.
 
 In case Passenger Standalone is in <<mass_deployment,mass deployment mode>>, such a configuration file allows customizing options on a per-application basis.
 
@@ -141,7 +141,7 @@ Every time you start Standalone, you must pass the `--nginx-config-template` par
 passenger start --nginx-config-template nginx.conf.erb
 ------------------------------------------
 
-Alternatively, if you don't want to pass this parameter every time, you can also set the `nginx_config_template` option in <<config_file,passenger-standalone.json>>.
+Alternatively, if you don't want to pass this parameter every time, you can also set the `nginx_config_template` option in <<config_file,Passengerfile.json>>.
 
 NOTE: The original configuration template file may change from time to time, e.g. because new features are introduced into Phusion Passenger. If your configuration template file does not contain the required changes, then these new features may not work properly. In the worst case, Standalone might even malfunction. Therefore, every time you upgrade Phusion Passenger, you should check whether the original configuration template file has changed, and merge back any changes into your own file.
 
@@ -403,7 +403,7 @@ Serving these applications on 0.0.0.0 port 3000:
 
 If you for example remove `/webapps/rubyapp.com`, Passenger Standalone will reconfigure itself without that web application. Or if you add a new web applications `/webapps/newapp.org`, Passenger Standalone will reconfigure itself with that web application.
 
-Any options that you pass to the `passenger` command will affect all deployed web applications. It is also possible to change options on a per-application basis through the use of <<config_file,a `passenger-standalone.json` file inside each application's directory>>.
+Any options that you pass to the `passenger` command will affect all deployed web applications. It is also possible to change options on a per-application basis through the use of <<config_file,a `Passengerfile.json` file inside each application's directory>>.
 
 
 [[troubleshooting]]

@@ -30,13 +30,21 @@ module Standalone
 	KNOWN_COMMANDS = [
 		["start", "StartCommand"],
 		["stop", "StopCommand"],
-		["status", "StatusCommand"]
+		["status", "StatusCommand"],
+		["version", "VersionCommand"]
 	]
 
 	def self.run!(argv)
+		if argv.empty?
+			help
+			exit
+		end
+
 		command_class, new_argv = lookup_command_class_by_argv(argv)
 		if help_requested?(argv)
 			help
+		elsif version_requested?(argv)
+			show_version
 		elsif command_class
 			command = command_class.new(new_argv)
 			command.run
@@ -61,6 +69,15 @@ module Standalone
 private
 	def self.help_requested?(argv)
 		return argv.size == 1 && (argv[0] == "--help" || argv[0] == "-h" || argv[0] == "help")
+	end
+
+	def self.version_requested?(argv)
+		return argv.size == 1 && (argv[0] == "--version" || argv[0] == "-v")
+	end
+
+	def self.show_version
+		command_class, new_argv = lookup_command_class_by_argv(["version"])
+		command_class.new(new_argv).run
 	end
 
 	def self.lookup_command_class_by_argv(argv)

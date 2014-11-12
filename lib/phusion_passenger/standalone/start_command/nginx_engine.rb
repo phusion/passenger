@@ -25,6 +25,7 @@ require 'erb'
 require 'etc'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'standalone/control_utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
@@ -35,7 +36,7 @@ class StartCommand
 module NginxEngine
 private
 	def start_engine_real
-		require_daemon_controller
+		Standalone::ControlUtils.require_daemon_controller
 		@engine = DaemonController.new(build_daemon_controller_options)
 		write_nginx_config_file(nginx_config_path)
 

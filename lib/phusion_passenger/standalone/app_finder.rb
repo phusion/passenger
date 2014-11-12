@@ -23,7 +23,6 @@
 
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'standalone/config_utils'
-PhusionPassenger.require_passenger_lib 'standalone/utils'
 PhusionPassenger.require_passenger_lib 'utils/file_system_watcher'
 
 module PhusionPassenger
@@ -40,10 +39,9 @@ class AppFinder
 		"config", "Passengerfile.json", "passenger-standalone.json"
 	]
 
-	include Standalone::Utils
-
 	attr_accessor :dirs
 	attr_reader :apps
+	attr_reader :execution_root
 
 	def self.looks_like_app_directory?(dir)
 		return STARTUP_FILES.any? do |file|
@@ -54,6 +52,7 @@ class AppFinder
 	def initialize(dirs, options = {})
 		@dirs = dirs
 		@options = options.dup
+		determine_mode_and_execution_root
 	end
 
 	def scan
@@ -122,7 +121,7 @@ class AppFinder
 	end
 
 	def single_mode?
-		return true
+		return @mode == :single
 	end
 
 	def multi_mode?
@@ -161,6 +160,19 @@ private
 	# timeout has been reached.
 	def wait_on_io(io, timeout)
 		return !!select([io], nil, nil, timeout)
+	end
+
+	def determine_mode_and_execution_root
+		@mode = :single
+		if @mode == :single
+			if @dirs.empty?
+				@execution_root = File.absolute_path_no_resolve(".")
+			else
+				@execution_root = File.absolute_path_no_resolve(@dirs[0])
+			end
+		else
+			abort "Not implemented"
+		end
 	end
 end
 
