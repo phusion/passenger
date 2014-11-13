@@ -124,7 +124,7 @@ describe "Passenger Standalone" do
 					end
 					Dir.mkdir("public")
 					Dir.mkdir("tmp")
-					sh("#{passenger_command} -p 4000 -d >/dev/null")
+					sh("#{passenger_command} -p 4000 -d --disable-turbocaching >/dev/null")
 					begin
 						open("http://127.0.0.1:4000/") do |f|
 							f.read.should == "ok"

@@ -66,6 +66,7 @@ PassengerDataBufferDir "<%= @passenger_temp_dir %>"
 RailsEnv production
 RackEnv production
 PassengerLogLevel 7
+PassengerTurbocaching off
 <% for line in @extra %>
 	<%= line %>
 <% end %>
