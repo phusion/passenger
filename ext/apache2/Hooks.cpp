@@ -1240,8 +1240,8 @@ public:
 			.setInt ("union_station_gateway_port", serverConfig.unionStationGatewayPort)
 			.set    ("union_station_gateway_cert", serverConfig.unionStationGatewayCert)
 			.set    ("union_station_proxy_address", serverConfig.unionStationProxyAddress)
+			.setBool("turbocaching", serverConfig.turbocaching)
 			.setStrSet("prestart_urls", serverConfig.prestartURLs);
-
 		serverConfig.ctl.addTo(params);
 
 		agentsStarter.start(serverConfig.root, params);

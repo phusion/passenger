@@ -93,6 +93,9 @@ private
 				command << " --disable-friendly-error-pages"
 			end
 		end
+		if @options[:turbocaching] == false
+			command << " --disable-turbocaching"
+		end
 		add_flag_param(command, :load_shell_envvars, "--load-shell-envvars")
 		add_param(command, :max_pool_size, "--max-pool-size")
 		add_param(command, :min_instances, "--min-instances")
@@ -109,7 +112,7 @@ private
 		command << " #{Shellwords.escape(@apps[0][:root])}"
 
 		return {
-			:identifier    => 'PassengerWatchdog',
+			:identifier    => "#{AGENT_EXE} watchdog",
 			:start_command => command,
 			:ping_command  => ping_spec,
 			:pid_file      => @options[:pid_file],

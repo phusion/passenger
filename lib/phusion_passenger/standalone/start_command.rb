@@ -246,6 +246,9 @@ private
 				"Default: #{DEFAULT_STICKY_SESSIONS_COOKIE_NAME}") do |value|
 				options[:sticky_sessions_cookie_name] = value
 			end
+			opts.on("--disable-turbocaching", "Disable turbocaching") do
+				options[:turbocaching] = false
+			end
 
 			opts.separator ""
 			opts.separator "Union Station options:"

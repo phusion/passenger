@@ -37,11 +37,9 @@ private:
 
 static TurboCaching<Request>::State
 getTurboCachingInitialState(const VariantMap *agentsOptions) {
-	string value = agentsOptions->get("turbocaching", false);
-	if (value == "user_enabled") {
-		return TurboCaching<Request>::USER_ENABLED;
-	} else if (value == "user_disabled") {
-		return TurboCaching<Request>::USER_DISABLED;
+	bool enabled = agentsOptions->getBool("turbocaching", false, true);
+	if (enabled) {
+		return TurboCaching<Request>::ENABLED;
 	} else {
 		return TurboCaching<Request>::DISABLED;
 	}

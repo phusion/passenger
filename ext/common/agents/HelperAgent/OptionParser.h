@@ -102,9 +102,8 @@ serverUsage() {
 	printf("                            Force friendly error pages to be always on\n");
 	printf("      --disable-friendly-error-pages\n");
 	printf("                            Force friendly error pages to be always off\n");
-	printf("      --force-turbocaching  Force turbocaching to be always on\n");
 	printf("      --disable-turbocaching\n");
-	printf("                            Completely disable turbocaching\n");
+	printf("                            Disable turbocaching\n");
 	printf("\n");
 	printf("      --ruby PATH           Default Ruby interpreter to use.\n");
 	printf("\n");
@@ -248,11 +247,8 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isFlag(argv[i], '\0', "--disable-friendly-error-pages")) {
 		options.set("friendly_error_pages", "false");
 		i++;
-	} else if (p.isFlag(argv[i], '\0', "--force-turbocaching")) {
-		options.set("turbocaching", "user_enabled");
-		i++;
 	} else if (p.isFlag(argv[i], '\0', "--disable-turbocaching")) {
-		options.set("turbocaching", "user_disabled");
+		options.setBool("turbocaching", false);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ruby")) {
 		options.set("default_ruby", argv[i + 1]);

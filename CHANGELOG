@@ -22,6 +22,7 @@ Release 5.0.0 beta 1
  * passenger-config reopen-logs
  * websockets are now properly disconnected on application restarts
  * passenger-standalone.json renamed to Passengerfile.json and it no longer overrides command line options
+ * turbocaching. disable with 'PassengerTurbocaching off', 'passenger_turbocaching off', '--disable-turbocaching'.
 
 
 Release 4.0.53

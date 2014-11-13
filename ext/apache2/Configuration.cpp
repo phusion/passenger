@@ -250,6 +250,7 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGate
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_address, unionStationProxyAddress)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
+DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_turbocaching, turbocaching)
 
 static const char *
 cmd_passenger_ctl(cmd_parms *cmd, void *dummy, const char *name, const char *value) {
@@ -479,6 +480,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Prestart the given web applications during startup."),
+	AP_INIT_FLAG("PassengerTurbocaching",
+		(FlagFunc) cmd_passenger_turbocaching,
+		NULL,
+		RSRC_CONF,
+		"Whether to enable turbocaching."),
 
 	#include "ConfigurationCommands.cpp"
 

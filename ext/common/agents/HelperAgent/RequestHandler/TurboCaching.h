@@ -44,48 +44,35 @@ using namespace std;
 template<typename Request>
 class TurboCaching {
 public:
-	/** The interval of the timer while we're in the DISABLED state. */
-	static const unsigned int DISABLED_TIMEOUT = 1;
 	/** The interval of the timer while we're in the ENABLED state. */
 	static const unsigned int ENABLED_TIMEOUT = 2;
-	/** The interval of the timer while we're in the EXTENDED_DISABLED state. */
-	static const unsigned int EXTENDED_DISABLED_TIMEOUT = 10;
+	/** The interval of the timer while we're in the TEMPORARILY_DISABLED state. */
+	static const unsigned int TEMPORARY_DISABLE_TIMEOUT = 10;
+	/** Only consider temporarily disabling turbocaching if the number of
+	 * fetches/stores in the current interval have reached these thresholds.
+	 */
+	static const unsigned int FETCH_THRESHOLD = 20;
+	static const unsigned int STORE_THRESHOLD = 20;
 
 	OXT_FORCE_INLINE static double MIN_HIT_RATIO() { return 0.5; }
 	OXT_FORCE_INLINE static double MIN_STORE_SUCCESS_RATIO() { return 0.5; }
 
-	/**
-	 * Minimum number of event loop iterations per second necessary to
-	 * trigger enabling turbocaching.
-	 */
-	static const unsigned int THRESHOLD = 300;
-
 	enum State {
 		/**
-		 * Turbocaching is not enabled. It will be enabled upon
-		 * detecting heavy load.
+		 * Turbocaching is permanently disabled.
 		 */
 		DISABLED,
 		/**
-		 * Turbocaching is enabled. It will be disabled when the
-		 * heavy load is over.
+		 * Turbocaching is enabled.
 		 */
 		ENABLED,
 		/**
 		 * In case turbocaching is enabled, and poor cache hit ratio
 		 * is detected, this state will be entered. It will stay
-		 * in this state for EXTENDED_DISABLED_TIMEOUT seconds before
-		 * transitioning to DISABLED.
+		 * in this state for TEMPORARY_DISABLE_TIMEOUT seconds before
+		 * transitioning back to ENABLED.
 		 */
-		EXTENDED_DISABLED,
-		/**
-		 * The user requested turbocaching to be always on.
-		 */
-		USER_ENABLED,
-		/**
-		 * The user requested turbocaching to be always off.
-		 */
-		USER_DISABLED
+		TEMPORARILY_DISABLED
 	};
 
 	typedef ResponseCache<Request> ResponseCacheType;
@@ -93,7 +80,6 @@ public:
 
 private:
 	State state;
-	unsigned long long iterations;
 	ev_tstamp lastTimeout, nextTimeout;
 
 	struct ResponsePreparation {
@@ -202,102 +188,72 @@ private:
 public:
 	ResponseCache<Request> responseCache;
 
-	TurboCaching(State initialState = DISABLED)
+	TurboCaching(State initialState = ENABLED)
 		: state(initialState),
-		  iterations(0),
 		  lastTimeout((ev_tstamp) time(NULL)),
-		  nextTimeout((ev_tstamp) time(NULL) + DISABLED_TIMEOUT)
+		  nextTimeout((ev_tstamp) time(NULL) + ENABLED_TIMEOUT)
 	{
-		if (initialState != DISABLED && initialState != USER_ENABLED && initialState != USER_DISABLED) {
+		if (initialState != ENABLED && initialState != DISABLED) {
 			throw RuntimeException("The initial turbocaching state may "
-				"only be DISABLED, USER_ENABLED and USER_DISABLED");
+				"only be ENABLED or DISABLED");
 		}
 	}
 
 	bool isEnabled() const {
-		return state == ENABLED || state == USER_ENABLED;
-	}
-
-	double getLoadAverage(ev_tstamp now) const {
-		return iterations / (now - lastTimeout);
+		return state == ENABLED;
 	}
 
 	// Call when the event loop multiplexer returns.
 	void updateState(ev_tstamp now) {
-		if (OXT_UNLIKELY(state == USER_DISABLED)) {
+		if (OXT_UNLIKELY(state == DISABLED)) {
 			return;
 		}
 
-		iterations++;
 		if (OXT_LIKELY(now < nextTimeout)) {
 			return;
 		}
 
 		switch (state) {
-		case DISABLED:
-			if (getLoadAverage(now) >= (double) THRESHOLD) {
-				P_INFO("Server is under heavy load. Turbocaching enabled");
-				P_INFO("Activities per second: " << getLoadAverage(now));
-				state = ENABLED;
-				nextTimeout = now + ENABLED_TIMEOUT;
-			} else {
-				P_DEBUG("Server is not under enough load. Not enabling turbocaching");
-				P_DEBUG("Activities per second: " << getLoadAverage(now));
-				nextTimeout = now + DISABLED_TIMEOUT;
-			}
-			break;
 		case ENABLED:
-			if (responseCache.getFetches() > 1
+			if (responseCache.getFetches() >= FETCH_THRESHOLD
 				&& responseCache.getHitRatio() < MIN_HIT_RATIO())
 			{
 				P_INFO("Poor turbocaching hit ratio detected (" <<
 					responseCache.getHits() << " hits, " <<
 					responseCache.getFetches() << " fetches, " <<
 					(int) (responseCache.getHitRatio() * 100) <<
-					"%). Force disabling turbocaching "
-					"for " << EXTENDED_DISABLED_TIMEOUT << " seconds");
-				state = EXTENDED_DISABLED;
-				nextTimeout = now + EXTENDED_DISABLED_TIMEOUT;
-			} else if (responseCache.getStores() > 1
+					"%). Temporarily disabling turbocaching "
+					"for " << TEMPORARY_DISABLE_TIMEOUT << " seconds");
+				state = TEMPORARILY_DISABLED;
+				nextTimeout = now + TEMPORARY_DISABLE_TIMEOUT;
+			} else if (responseCache.getStores() >= STORE_THRESHOLD
 				&& responseCache.getStoreSuccessRatio() < MIN_STORE_SUCCESS_RATIO())
 			{
 				P_INFO("Poor turbocaching store success ratio detected (" <<
 					responseCache.getStoreSuccesses() << " store successes, " <<
 					responseCache.getStores() << " stores, " <<
 					(int) (responseCache.getStoreSuccessRatio() * 100) <<
-					"%). Force disabling turbocaching "
-					"for " << EXTENDED_DISABLED_TIMEOUT << " seconds");
-				state = EXTENDED_DISABLED;
-				nextTimeout = now + EXTENDED_DISABLED_TIMEOUT;
+					"%). Temporarily disabling turbocaching "
+					"for " << TEMPORARY_DISABLE_TIMEOUT << " seconds");
+				state = TEMPORARILY_DISABLED;
+				nextTimeout = now + TEMPORARY_DISABLE_TIMEOUT;
 			} else {
-				if (getLoadAverage(now) >= (double) THRESHOLD) {
-					P_INFO("Clearing turbocache");
-					nextTimeout = now + ENABLED_TIMEOUT;
-				} else {
-					P_INFO("Server is no longer under heavy load. Disabling turbocaching");
-					state = DISABLED;
-					nextTimeout = now + DISABLED_TIMEOUT;
-				}
-				P_INFO("Activities per second: " << getLoadAverage(now));
+				P_DEBUG("Clearing turbocache");
+				nextTimeout = now + ENABLED_TIMEOUT;
 			}
 			responseCache.resetStatistics();
 			responseCache.clear();
 			break;
-		case EXTENDED_DISABLED:
-			P_INFO("Stopping force disabling turbocaching");
-			state = DISABLED;
-			nextTimeout = now + DISABLED;
-			break;
-		case USER_ENABLED:
-		case USER_DISABLED:
-			nextTimeout = now + 9999;
+		case TEMPORARILY_DISABLED:
+			P_INFO("Re-enabling turbocaching");
+			state = ENABLED;
+			nextTimeout = now + ENABLED_TIMEOUT;
 			break;
 		default:
 			P_BUG("Unknown state " << (int) state);
 			break;
 		}
 
-		iterations = 0;
 		lastTimeout = now;
 	}
 

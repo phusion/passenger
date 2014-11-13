@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2013 Phusion
+ * Copyright (C) 2010-2014 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,6 +63,7 @@ typedef struct {
     ngx_uint_t   max_pool_size;
     ngx_uint_t   pool_idle_time;
     ngx_uint_t   stat_throttle_rate;
+    ngx_flag_t   turbocaching;
     ngx_flag_t   show_version_in_header;
     ngx_flag_t   user_switching;
     ngx_str_t    default_user;

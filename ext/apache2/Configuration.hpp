@@ -209,6 +209,8 @@ struct ServerConfig {
 	string analyticsLogUser;
 	string analyticsLogGroup;
 
+	bool turbocaching;
+
 	set<string> prestartURLs;
 
 	ServerConfig() {
@@ -227,6 +229,7 @@ struct ServerConfig {
 		unionStationProxyAddress   = string();
 		analyticsLogUser   = DEFAULT_ANALYTICS_LOG_USER;
 		analyticsLogGroup  = DEFAULT_ANALYTICS_LOG_GROUP;
+		turbocaching       = true;
 	}
 
 	/** Called after the configuration files have been loaded, inside

@@ -96,6 +96,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->stat_throttle_rate = NGX_CONF_UNSET_UINT;
     conf->user_switching = NGX_CONF_UNSET;
     conf->show_version_in_header = NGX_CONF_UNSET;
+    conf->turbocaching = NGX_CONF_UNSET;
     conf->default_user.data = NULL;
     conf->default_user.len  = 0;
     conf->default_group.data = NULL;
@@ -174,6 +175,10 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
 
     if (conf->show_version_in_header == NGX_CONF_UNSET) {
         conf->show_version_in_header = 1;
+    }
+
+    if (conf->turbocaching == NGX_CONF_UNSET) {
+        conf->turbocaching = 1;
     }
 
     if (conf->default_user.len == 0) {
@@ -1207,6 +1212,13 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, pool_idle_time),
       NULL },
 
+    { ngx_string("passenger_stat_throttle_rate"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, stat_throttle_rate),
+      NULL },
+
     { ngx_string("passenger_show_version_in_header"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -1214,11 +1226,11 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, show_version_in_header),
       NULL },
 
-    { ngx_string("passenger_stat_throttle_rate"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_num_slot,
+    { ngx_string("passenger_turbocaching"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, stat_throttle_rate),
+      offsetof(passenger_main_conf_t, turbocaching),
       NULL },
 
     { ngx_string("passenger_user_switching"),
