@@ -585,6 +585,8 @@ usage() {
 	printf("      --cleanup-pidfile PATH  Upon shutdown, kill the process specified by\n");
 	printf("                              the given PID file\n");
 	printf("\n");
+	printf("      --ctl NAME=VALUE        Set custom internal option\n");
+	printf("\n");
 	printf("  -h, --help                  Show this help\n");
 	printf("\n");
 	printf("[A] = Automatically passed to supervised agents\n");
@@ -710,6 +712,22 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
 			options.set("debug_log_file", argv[i + 1]);
+			i += 2;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ctl")) {
+			const char *value = strchr(argv[i + 1], '=');
+			if (value == NULL) {
+				fprintf(stderr, "ERROR: '%s' is not a valid --ctl parameter. "
+					"It must be in the form of NAME=VALUE.\n", argv[i + 1]);
+				exit(1);
+			}
+			string name(argv[i + 1], value - argv[i + 1]);
+			value++;
+			if (*value == '\0') {
+				fprintf(stderr, "ERROR: '%s' is not a valid --ctl parameter. "
+					"The value must be non-empty.\n", argv[i + 1]);
+				exit(1);
+			}
+			options.set(name, value);
 			i += 2;
 		} else if (p.isFlag(argv[i], 'h', "--help")) {
 			usage();

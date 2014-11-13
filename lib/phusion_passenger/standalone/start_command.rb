@@ -44,7 +44,8 @@ class StartCommand < Command
 			:spawn_method      => Kernel.respond_to?(:fork) ? DEFAULT_SPAWN_METHOD : 'direct',
 			:engine            => "builtin",
 			:nginx_version     => PREFERRED_NGINX_VERSION,
-			:log_level         => DEFAULT_LOG_LEVEL
+			:log_level         => DEFAULT_LOG_LEVEL,
+			:ctls              => []
 		}
 	end
 
@@ -291,6 +292,12 @@ private
 			end
 			opts.on("--log-level NUMBER", Integer, "Log level to use. Default: #{DEFAULT_LOG_LEVEL}") do |value|
 				options[:log_level] = value
+			end
+			opts.on("--ctl NAME=VALUE", String) do |value|
+				if value !~ /=.+/
+					abort "*** ERROR: invalid --ctl format: #{value}"
+				end
+				options[:ctls] << value
 			end
 			opts.on("--binaries-url-root URL", String,
 				"If Nginx needs to be installed, then the#{nl}" +

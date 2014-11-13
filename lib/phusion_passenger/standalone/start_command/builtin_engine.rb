@@ -74,6 +74,9 @@ private
 		add_param(command, :instance_registry_dir, "--instance-registry-dir")
 		add_param(command, :data_buffer_dir, "--data-buffer-dir")
 		add_param(command, :log_level, "--log-level")
+		@options[:ctls].each do |ctl|
+			command << " --ctl #{Shellwords.escape ctl}"
+		end
 
 		command << " --BS"
 		command << " --listen #{listen_address}"

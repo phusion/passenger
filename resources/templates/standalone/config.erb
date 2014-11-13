@@ -74,6 +74,10 @@ http {
         union_station_gateway_cert -;
     <% end %>
     
+    <% @options[:ctls].each do |ctl| %>
+        passenger_ctl '<%= ctl.split("=", 2)[0] %>' '<%= ctl.split("=", 2)[1] %>';
+    <% end %>
+
     default_type application/octet-stream;
     types_hash_max_size 2048;
     server_names_hash_bucket_size 64;
