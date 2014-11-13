@@ -150,9 +150,10 @@ class RequestHandler
 
 			begin
 				socket.close if !socket.closed?
-			rescue IOError => e
-				# Ignore "stream closed" error, which occurs in unit tests.
-				if e.to_s !~ /stream closed/
+			rescue Exception => e
+				# Ignore "stream closed" error, which occurs in some unit tests.
+				# We catch Exception here instead of IOError because of a Ruby 1.8.7 bug.
+				if e.to_s !~ /stream closed/ && e.message.to_s !~ /stream closed/
 					raise e
 				end
 			end

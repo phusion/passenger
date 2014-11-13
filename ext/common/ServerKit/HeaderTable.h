@@ -285,19 +285,27 @@ public:
 		Cell *neighbor = PHT_CIRCULAR_NEXT(cell);
 		while (true) {
 			if (cellIsEmpty(neighbor)) {
-				// There's nobody to swap with. Go ahead and clear this cell, then return.
-				psg_lstr_deinit(&cell->header->key);
-				psg_lstr_deinit(&cell->header->val);
-				cell->header = NULL;
+				// There's no neighbor to move. Go ahead and clear this cell, then return.
+				if (cell->header != NULL) {
+					// A previous iteration in this loop
+					// could have made cell->header NULL.
+					psg_lstr_deinit(&cell->header->key);
+					psg_lstr_deinit(&cell->header->val);
+					cell->header = NULL;
+				}
 				m_population--;
 				return;
 			}
 
 			Cell *ideal = PHT_FIRST_CELL(neighbor->header->hash);
 			if (PHT_CIRCULAR_OFFSET(ideal, cell) < PHT_CIRCULAR_OFFSET(ideal, neighbor)) {
-				// Swap with neighbor, then make neighbor the new cell to remove.
+				// Erase current cell and move neighbor into this position,
+				// then make the now-empty neighbor the new cell to remove.
+				psg_lstr_deinit(&cell->header->key);
+				psg_lstr_deinit(&cell->header->val);
 				*cell = *neighbor;
 				cell = neighbor;
+				neighbor->header = NULL;
 			}
 			neighbor = PHT_CIRCULAR_NEXT(neighbor);
 		}
@@ -335,6 +343,27 @@ public:
 
 	unsigned int arraySize() const {
 		return m_arraySize;
+	}
+
+	void debug(psg_pool_t *pool) const {
+		for (unsigned int i = 0; i < m_arraySize; i++) {
+			int size = -1;
+			int ideal = -1;
+			unsigned int hash = 0;
+			const char *key = "";
+			if (!cellIsEmpty(&m_cells[i])) {
+				size = m_cells[i].header->key.size;
+				hash = m_cells[i].header->hash;
+				ideal = int(PHT_FIRST_CELL(m_cells[i].header->hash) - m_cells);
+				if (size > 0) {
+					const LString *str = psg_lstr_null_terminate(
+						&m_cells[i].header->key, pool);
+					key = str->start->data;
+				}
+			}
+			printf("%u: key=(%s), size=%d, hash=%u, ideal index=%u\n",
+				i, key, size, hash, ideal);
+		}
 	}
 
 
@@ -420,7 +449,8 @@ public:
 			}
 
 			// Finished
-			return m_cur = NULL;
+			m_cur = NULL;
+			return NULL;
 		}
 
 		OXT_FORCE_INLINE
