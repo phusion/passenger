@@ -159,6 +159,7 @@ describe RequestHandler do
 				client.write("x" * RequestHandler::ThreadHandler::MAX_HEADER_SIZE)
 				sleep 0.01 # Context switch
 				client.write("x" * RequestHandler::ThreadHandler::MAX_HEADER_SIZE)
+				sleep 0.01 # Context switch
 				client.write(" HTTP/1.1\r\n")
 			end
 			block.should raise_error(SystemCallError)
