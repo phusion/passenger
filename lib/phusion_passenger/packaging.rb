@@ -37,7 +37,8 @@ module Packaging
 	# Files that must be generated before packaging.
 	PREGENERATED_FILES = [
 		'ext/common/Constants.h',
-		'doc/Packaging.html'
+		'doc/Packaging.html',
+		'doc/CloudLicensingConfiguration.html'
 	] + ASCII_DOCS
 
 	USER_EXECUTABLES = [
