@@ -92,6 +92,7 @@ end
 
 create_markdown_compilation_task('doc/Packaging.html')
 create_markdown_compilation_task('doc/CloudLicensingConfiguration.html')
+create_markdown_compilation_task('doc/ServerOptimizationGuide.html')
 
 desc "Upload documentation to the Phusion web server"
 task 'doc:rsync' => :doc do

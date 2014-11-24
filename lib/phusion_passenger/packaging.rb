@@ -38,7 +38,8 @@ module Packaging
 	PREGENERATED_FILES = [
 		'ext/common/Constants.h',
 		'doc/Packaging.html',
-		'doc/CloudLicensingConfiguration.html'
+		'doc/CloudLicensingConfiguration.html',
+		'doc/ServerOptimizationGuide.html'
 	] + ASCII_DOCS
 
 	USER_EXECUTABLES = [
