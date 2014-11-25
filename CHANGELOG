@@ -1,7 +1,7 @@
 Release 5.0.0 beta 1
 --------------------
 
-Version 5.0.0 beta 1 contains major changes. It's mostly compatible, but there are a few minor breakages, which are described below. Major changes and notable breakages are:
+Version 5.0.0 beta 1 contains major changes. It's mostly compatible with version 4, but there are a few minor breakages, which are described below. Major changes and notable breakages are:
 
  * Performance has been much improved. This is thanks to months of optimization work. You can learn more at www.rubyraptor.org.
  * We've published a [server optimization guide](https://www.phusionpassenger.com/documentation/ServerOptimizationGuide.html) for those who are interested in tuning Phusion Passenger.
