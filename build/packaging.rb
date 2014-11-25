@@ -182,13 +182,15 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			puts "Initiating building of binaries"
 			Rake::Task['package:initiate_binaries_building'].invoke
 
-			puts "Initiating building of Debian packages"
-			Rake::Task['package:initiate_debian_building'].invoke
+			if !is_beta
+				puts "Initiating building of Debian packages"
+				Rake::Task['package:initiate_debian_building'].invoke
+			end
 
 			puts "Building OS X binaries..."
 			Rake::Task['package:build_osx_binaries'].invoke
 
-			if boolean_option('HOMEBREW_UPDATE', true)
+			if !is_beta && boolean_option('HOMEBREW_UPDATE', true)
 				if boolean_option('HOMEBREW_DRY_RUN', false)
 					puts "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
 				else
@@ -221,8 +223,10 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 			puts "Initiating building of binaries"
 			Rake::Task['package:initiate_binaries_building'].invoke
 
-			puts "Initiating building of Debian packages"
-			Rake::Task['package:initiate_debian_building'].invoke
+			if !is_beta
+				puts "Initiating building of Debian packages"
+				Rake::Task['package:initiate_debian_building'].invoke
+			end
 
 			puts "Building OS X binaries..."
 			Rake::Task['package:build_osx_binaries'].invoke
