@@ -1,28 +1,34 @@
 Release 5.0.0 beta 1
 --------------------
 
- * Improved performance.
- * For performance reasons, stat_throttle_rate now defaults to 10. Users are encouraged to use `passenger-config restart-app` to initiating restarts.
- * The X-Passenger-Request-OOB-Work header has now been renamed to !~Request-OOB-Work
- * Minimum required Nginx version is now 1.6.0
- * Full socket hijacking now requires the caller to output an HTTP status line
- * Lowered server instance dir toucher interval from 6 to 1 hour.
- * Log levels revamped
- * Rails 1.2-2.2 support removed. Rails 2.3 still supported
- * PassengerAppGroupName now includes PassengerAppEnv by default. Closes GH-664.
- * passenger_set_cgi_param has been removed and replaced by passenger_set_header and passenger_env_var.
- * passenger_show_version_in_header is now only valid in the http context
- * PassengerStatThrottleRate is now global.
- * passenger_stat_throttle_rate introduced.
- * passenger_temp_dir (and Apache equivalent) has been replaced by two config options, passenger_instance_registry_dir and passenger_data_buffer_dir.PassengerUploadBufferDir has been replaced by PassengerDataBufferDir.
- * command line tools no longer respect PASSENGER_TEMP_DIR. use PASSENGER_INSTANCE_REGISTRY_DIR instead.
- * the Passenger Standalone config template has changed. users are encouraged to update it
- * passenger-status --show=requests has been deprecated in favor of passenger-status --show=connections.
- * SIGUSR1 on ruby apps is no longer supported. use passenger-config detach-process
- * passenger-config reopen-logs
- * websockets are now properly disconnected on application restarts
- * passenger-standalone.json renamed to Passengerfile.json and it no longer overrides command line options
- * turbocaching. disable with 'PassengerTurbocaching off', 'passenger_turbocaching off', '--disable-turbocaching'.
+Version 5.0.0 beta 1 contains major changes. It's mostly compatible, but there are a few minor breakages, which are described below. Major changes and notable breakages are:
+
+ * Performance has been much improved. This is thanks to months of optimization work. You can learn more at www.rubyraptor.org.
+ * We've published a [server optimization guide](https://www.phusionpassenger.com/documentation/ServerOptimizationGuide.html) for those who are interested in tuning Phusion Passenger.
+ * Support for Rails 1.2 - 2.2 has been removed, for performance reasons. Rails 2.3 is still supported.
+ * Phusion Passenger now supports integrated HTTP caching, which we call turbocaching. If your app sets the right HTTP headers then Phusion Passenger can tremendously accelerate your app. It is enabled by default, but you can disable it with `--disable-turbocaching` (Standalone), `PassengerTurbocaching off` (Apache), or 'passenger_turbocaching off' (Nginx).
+ * Touching restart.txt will no longer restart your app immediately. This is because, for performance reasons, the stat throttle rate now defaults to 10. You can still get back the old behavior by setting `PassengerStatThrottleRate 0` (Apache) or `passenger_stat_throttle_rate 0` (Nginx), but this is not encouraged. Instead, we encourage you to use the `passenger-config restart-app` tool to initiate restarts, which has immediate effect.
+ * Websockets are now properly disconnected on application restarts.
+ * The Phusion Passneger log levels have been completely revamped. If you were setting a log level before (e.g. through `passenger_log_level`), please read the latest documentation to learn about the new log levels.
+ * If you use out-of-band garbage collection, beware that the `X-Passenger-Request-OOB-Work` header has now been renamed to `!~Request-OOB-Work`.
+ * When using Rack's full socket hijacking, you must now output an HTTP status line.
+ * [Nginx] The `passenger_set_cgi_param` option has been removed and replaced by `passenger_set_header` and `passenger_env_var`.
+ * [Nginx] `passenger_show_version_in_header` is now only valid in the `http` context.
+ * [Apache] The `PassengerStatThrottleRate` option is now global.
+
+Minor changes:
+
+ * The minimum required Nginx version is now 1.6.0.
+ * The instance directory is now touched every hour instead of every 6 hours. This should hopefully prevent more problems with /tmp cleaner daemons.
+ * Applications are not grouped not only on the application root path, but also on the environment. For example, this allows you to run the same app in both production and staging mode, with only a single directory, without further configuration. Closes GH-664.
+ * The `passenger_temp_dir` option (Nginx) and the `PassengerTempDir` option (Apache) have been replaced by two config options. On Nginx they are `passenger_instance_registry_dir` and `passenger_data_buffer_dir`. On Apache they are `PassengerInstanceRegistryDir` and `PassengerDataBufferDir`. On Apache, `PassengerUploadBufferDir` has been replaced by `PassengerDataBufferDir`.
+ * Command line tools no longer respect the `PASSENGER_TEMP_DIR` environment variable. Use `PASSENGER_INSTANCE_REGISTRY_DIR` instead.
+ * `passenger-status --show=requests` has been deprecated in favor of `passenger-status --show=connections`.
+ * Using the SIGUSR1 signal to restart a Ruby app without dropping connections, is no longer supported. Instead, use `passenger-config detach-process`.
+ * Introduced the `passenger-config reopen-logs` command, which instructs all Phusion Passenger agent processes to reopen their log files. You should call this after having rotated the web server logs.
+ * [Standalone] The Phusion Passenger Standalone config template has changed. Users are encouraged to update it.
+ * [Standalone] `passenger-standalone.json` has been renamed to `Passengerfile.json`.
+ * [Standalone] `passenger-standalone.json`/`Passengerfile.json` no longer overrides command line options. Instead, command line options now have the highest priority.
 
 
 Release 4.0.53
