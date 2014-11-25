@@ -8,11 +8,41 @@
     <!--[if lt IE 9]>
       <script src="https://html5shim.googlecode.com/svn/trunk/html5.js" type="text/javascript"></script>
     <![endif]-->
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,600,700,400italic,600italic,700italic" rel="stylesheet" type="text/css">
     <style type="text/css">
       <%= css %>
       
+      body {
+        font-family: "Source Sans Pro", sans-serif;
+        color: #444;
+      }
+
+      h1, h2, h3, h4, h5, h6, strong {
+        font-weight: 600;
+      }
+
       h1, h2, h3, h4, h5, h6 {
-        margin-bottom: 9px;
+        color: #333;
+      }
+
+      @media (min-width: 768px) {
+        body {
+          font-size: 18px;
+        }
+
+        pre {
+          font-size: 14px;
+        }
+
+        h1 { font-size: 40px; }
+        h2 { font-size: 34px; }
+        h3 { font-size: 28px; }
+        h4 { font-size: 22px; }
+        h5 { font-size: 20px; }
+
+        p {
+          line-height: 1.55;
+        }
       }
 
       ul ul,
@@ -27,12 +57,12 @@
       }
 
       #container {
-        max-width: 750px;
+        max-width: 800px;
         margin-left: auto;
         margin-right: auto;
       }
 
-      @media(max-width: 767px) {
+      @media(max-width: 830px) {
         #container {
           max-width: auto;
           margin-left: 1em;
@@ -54,8 +84,9 @@
       }
 
       #title {
+        color: black;
         text-align: center;
-        font-size: 400%;
+        font-size: 300%;
         line-height: 1em;
         padding-bottom: 30px;
         margin-bottom: 30px;

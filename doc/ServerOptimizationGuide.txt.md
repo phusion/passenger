@@ -317,10 +317,23 @@ Phusion Passenger supports out-of-band garbage collection for Ruby apps. With th
 
 ## Benchmarking recommendations
 
-When conducting benchmarks, beware of the following:
+### Tooling recommendations
 
- * Enable HTTP keep-alive, otherwise you will end up benchmarking how quickly the kernel can set up TCP connections, which is a non-trivial part of the request time.
+ * Use [wrk](https://github.com/wg/wrk) as benchmarking tool.
+   - We do not recommend `ab` because it's slow and buggy.
+   - We do not recommend `siege` and `httperf` because they cannot utilize multiple CPU cores.
+ * Enable HTTP keep-alive in both the server and in your benchmarking tool. Otherwise you will end up benchmarking how quickly the kernel can set up TCP connections, which is a non-trivial part of the request time.
+ * Warm up the server before benchmarking. That is, run a mini-benchmark before the actual benchmark, and discard the result of the mini-benchmark.
+
+### Operating system recommendations
+
  * Don't benchmark on OS X. OS X's TCP stack and process scheduler are horrible from a performance point of view. We recommend Linux.
  * When on Linux, be sure to [tune your kernel socket settings](http://www.joedog.org/articles-tuning/) so that they don't stall the benchmark.
- * Be sure to configure Phusion Passenger to [use a static number of processes](#minimizing_process_spawning).
+
+### Server and application recommendations
+
+ * If the purpose of your benchmark is to compare against Puma, Unicorn or other app servers, be sure to benchmark against Phusion Passenger Standalone, not Phusion Passenger for Nginx or Phusion Passenger for Apache.
+   - This is because Puma, Unicorn and other app servers are standalone servers, while Phusion Passenger for Nginx and Phusion Passenger for Apache introduce additional layers (namely Nginx and Apache), making the comparison unfair.
+   - Be sure to start Phusion Passenger Standalone with the `builtin` engine. This is the default.
+ * Configure Phusion Passenger to [use a static number of processes](#minimizing_process_spawning). The number of processes should be a multiple of the number of CPU cores.
  * Ensure that your app outputs HTTP caching headers, so that Phusion Passenger's [turbocaching](#turbocaching) can kick in.
