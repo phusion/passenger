@@ -34,14 +34,14 @@ module PlatformInfo
 	def self.os_name
 		if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
 			return "macosx"
-		elsif rb_config['target_os'] == "linux-"
+		elsif rb_config['target_os'] =~ /^linux-/
 			return "linux"
 		else
 			return rb_config['target_os']
 		end
 	end
 	memoize :os_name
-	
+
 	# The current platform's shared library extension ('so' on most Unices).
 	def self.library_extension
 		if os_name == "macosx"
@@ -50,7 +50,7 @@ module PlatformInfo
 			return "so"
 		end
 	end
-	
+
 	# Returns the `uname` command, or nil if `uname` cannot be found.
 	# In addition to looking for `uname` in `PATH`, this method also looks
 	# for `uname` in /bin and /usr/bin, just in case the user didn't
@@ -129,7 +129,7 @@ module PlatformInfo
 			elsif arch == "amd64"
 				arch = "x86_64"
 			end
-			
+
 			if arch == "x86"
 				# Most x86 operating systems nowadays are probably running on
 				# a CPU that supports both x86 and x86_64, but we're not gonna
@@ -146,7 +146,7 @@ module PlatformInfo
 		end
 	end
 	memoize :cpu_architectures, true
-	
+
 	# Returns whether the OS's main CPU architecture supports the
 	# x86/x86_64 sfence instruction.
 	def self.supports_sfence_instruction?
@@ -161,7 +161,7 @@ module PlatformInfo
 			}))
 	end
 	memoize :supports_sfence_instruction?, true
-	
+
 	# Returns whether the OS's main CPU architecture supports the
 	# x86/x86_64 lfence instruction.
 	def self.supports_lfence_instruction?
