@@ -592,6 +592,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 
 	if (resp->setCookie != NULL) {
 		PUSH_STATIC_BUFFER("Set-Cookie: ");
+		part = resp->setCookie->start;
 		while (part != NULL) {
 			if (part->size == 1 && part->data[0] == '\n') {
 				// HeaderTable joins multiple Set-Cookie headers together using \n.
