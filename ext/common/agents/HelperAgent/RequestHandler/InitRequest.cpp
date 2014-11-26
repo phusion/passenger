@@ -206,11 +206,12 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	options.loggingAgentAddress = loggingAgentAddress;
 	options.loggingAgentUsername = P_STATIC_STRING("logging");
 	options.loggingAgentPassword = loggingAgentPassword;
-	if (!this->defaultUser.empty()) {
-		options.defaultUser = defaultUser;
+	options.userSwitching = agentsOptions->getBool("user_switching");
+	if (agentsOptions->has("default_user")) {
+		options.defaultUser = agentsOptions->get("default_user");
 	}
-	if (!this->defaultGroup.empty()) {
-		options.defaultGroup = defaultGroup;
+	if (agentsOptions->has("default_group")) {
+		options.defaultGroup = agentsOptions->get("default_group");
 	}
 	options.minProcesses = agentsOptions->getInt("min_instances");
 	options.spawnMethod = agentsOptions->get("spawn_method");

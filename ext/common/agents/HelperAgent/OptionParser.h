@@ -78,6 +78,12 @@ serverUsage() {
 	printf("                            the given admin account. LEVEL indicates the\n");
 	printf("                            privilege level (see below). PASSWORDFILE must\n");
 	printf("                            point to a file containing the password\n");
+	printf("      --no-user-switching   Disables user switching support\n");
+	printf("      --default-user NAME   Default user to start apps as, when user\n");
+	printf("                            switching is enabled. Default: " DEFAULT_WEB_APP_USER "\n");
+	printf("      --default-group NAME  Default group to start apps as, when user\n");
+	printf("                            switching is disabled. Default: the default\n");
+	printf("                            user's primary group\n");
 	printf("\n");
 	printf("Application serving options (optional):\n");
 	printf("  -e, --environment NAME    Default framework environment name to use.\n");
@@ -207,6 +213,15 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 
 		authorizations.push_back(argv[i + 1]);
 		options.setStrSet("server_authorizations", authorizations);
+		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--no-user-switching")) {
+		options.setBool("user_switching", false);
+		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-user")) {
+		options.set("default_user", argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-group")) {
+		options.set("default_group", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
 		options.setInt("max_pool_size", atoi(argv[i + 1]));

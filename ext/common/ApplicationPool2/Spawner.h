@@ -924,7 +924,9 @@ protected:
 
 		UPDATE_TRACE_POINT();
 		userInfo = (struct passwd *) NULL;
-		if (!options.user.empty()) {
+		if (!options.userSwitching) {
+			// Keep userInfo at NULL so that it's set to defaultUser's UID.
+		} else if (!options.user.empty()) {
 			ret = getpwnam_r(options.user.c_str(), &pwd, pwdBuf.get(),
 				pwdBufSize, &userInfo);
 			if (ret != 0) {
@@ -953,7 +955,9 @@ protected:
 		}
 
 		UPDATE_TRACE_POINT();
-		if (!options.group.empty()) {
+		if (!options.userSwitching) {
+			// Keep groupId at -1 so that it's set to defaultGroup's GID.
+		} else if (!options.group.empty()) {
 			struct group *groupInfo = (struct group *) NULL;
 
 			if (options.group == "!STARTUP_FILE!") {

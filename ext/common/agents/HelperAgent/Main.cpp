@@ -939,12 +939,29 @@ preinitialize(VariantMap &options) {
 	}
 }
 
+static string
+inferDefaultGroup(const string &defaultUser) {
+	struct passwd *userEntry = getpwnam(defaultUser.c_str());
+	if (userEntry == NULL) {
+		throw ConfigurationException(
+			string("The user that PassengerDefaultUser refers to, '") +
+			defaultUser + "', does not exist.");
+	}
+	return getGroupName(userEntry->pw_gid);
+}
+
 static void
 setAgentsOptionsDefaults() {
 	VariantMap &options = *agentsOptions;
 	set<string> defaultAddress;
 	defaultAddress.insert(DEFAULT_HTTP_SERVER_LISTEN_ADDRESS);
 
+	options.setDefaultBool("user_switching", true);
+	options.setDefault("default_user", DEFAULT_WEB_APP_USER);
+	if (!options.has("default_group")) {
+		options.set("default_group",
+			inferDefaultGroup(options.get("default_user")));
+	}
 	options.setDefaultStrSet("server_addresses", defaultAddress);
 	options.setDefaultBool("multi_app", false);
 	options.setDefault("environment", DEFAULT_APP_ENV);

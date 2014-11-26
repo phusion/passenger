@@ -21,6 +21,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'etc'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'standalone/control_utils'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
@@ -66,6 +67,7 @@ private
 		command = "#{@agent_exe} watchdog";
 		command << " --passenger-root #{Shellwords.escape PhusionPassenger.install_spec}"
 		command << " --daemonize"
+		command << " --no-user-switching"
 		command << " --no-delete-pid-file"
 		command << " --cleanup-pidfile #{Shellwords.escape @working_dir}/temp_dir_toucher.pid"
 		add_param(command, :user, "--user")
@@ -76,6 +78,14 @@ private
 		add_param(command, :log_level, "--log-level")
 		@options[:ctls].each do |ctl|
 			command << " --ctl #{Shellwords.escape ctl}"
+		end
+		if @options[:user]
+			command << " --default-user #{Shellwords.ecape @options[:user]}"
+		else
+			user  = Etc.getpwuid(Process.uid).name
+			group = Etc.getgrgid(Process.gid).name
+			command << " --default-user #{Shellwords.escape user}"
+			command << " --default-group #{Shellwords.escape group}"
 		end
 
 		command << " --BS"
