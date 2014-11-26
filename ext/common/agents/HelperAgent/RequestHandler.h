@@ -161,6 +161,12 @@ using namespace oxt;
 using namespace ApplicationPool2;
 
 
+namespace ServerKit {
+	extern const HashedStaticString HTTP_COOKIE;
+	extern const HashedStaticString HTTP_SET_COOKIE;
+}
+
+
 class RequestHandler: public ServerKit::HttpServer<RequestHandler, Client> {
 public:
 	enum BenchmarkMode {

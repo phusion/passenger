@@ -137,6 +137,7 @@ void reinitializeAppResponse(Client *client, Request *req) {
 	resp->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 	resp->bodyAlreadyRead = 0;
 	resp->date = NULL;
+	resp->setCookie = NULL;
 	resp->cacheControl = NULL;
 	resp->expiresHeader = NULL;
 	resp->lastModifiedHeader = NULL;

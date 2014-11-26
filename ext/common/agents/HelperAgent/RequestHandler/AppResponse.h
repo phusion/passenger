@@ -120,6 +120,7 @@ public:
 	boost::uint64_t bodyAlreadyRead;
 
 	LString *date;
+	LString *setCookie;
 	LString *cacheControl;
 	LString *expiresHeader;
 	LString *lastModifiedHeader;

@@ -39,6 +39,9 @@ namespace ServerKit {
 using namespace std;
 
 
+extern const HashedStaticString HTTP_COOKIE;
+extern const HashedStaticString HTTP_SET_COOKIE;
+
 struct Header {
 	LString key;
 	LString val;
@@ -102,6 +105,18 @@ private:
 		v |= v >> 16;
 		v++;
 		return v;
+	}
+
+	OXT_FORCE_INLINE
+	static bool isCookieHeader(const Header *header) {
+		return header->hash == HTTP_COOKIE.hash()
+			&& psg_lstr_cmp(&header->key, HTTP_COOKIE);
+	}
+
+	OXT_FORCE_INLINE
+	static bool isSetCookieHeader(const Header *header) {
+		return header->hash == HTTP_SET_COOKIE.hash()
+			&& psg_lstr_cmp(&header->key, HTTP_SET_COOKIE);
 	}
 
 	void repopulate(unsigned int desiredSize) {
@@ -248,8 +263,13 @@ public:
 					return;
 				} else if (psg_lstr_cmp(&cell->header->key, &header->key)) {
 					// Cell matches, so merge value into header.
-					// TODO: we need to merge Set-Cookie headers differently
-					psg_lstr_append(&cell->header->val, pool, ",", 1);
+					if (isCookieHeader(header)) {
+						psg_lstr_append(&cell->header->val, pool, ";", 1);
+					} else if (isSetCookieHeader(header)) {
+						psg_lstr_append(&cell->header->val, pool, "\n", 1);
+					} else {
+						psg_lstr_append(&cell->header->val, pool, ",", 1);
+					}
 					LString::Part *part = header->val.start;
 					header->val.start = NULL;
 					while (part != NULL) {

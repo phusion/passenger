@@ -300,6 +300,22 @@ onAppResponseBegin(Client *client, Request *req) {
 	// Localize hash table operations for better CPU caching.
 	oobw = resp->secureHeaders.lookup(PASSENGER_REQUEST_OOB_WORK) != NULL;
 	resp->date = resp->headers.lookup(HTTP_DATE);
+	resp->setCookie = resp->headers.lookup(ServerKit::HTTP_SET_COOKIE);
+	if (resp->setCookie != NULL) {
+		// Remove Set-Cookie from resp->headers without deallocating it.
+		LString *copy;
+
+		copy = (LString *) psg_palloc(req->pool, sizeof(LString));
+		*copy = *resp->setCookie;
+
+		resp->setCookie->start = NULL;
+		resp->setCookie->end = NULL;
+		resp->setCookie->size = 0;
+		psg_lstr_append(resp->setCookie, req->pool, "x", 1);
+		resp->headers.erase(ServerKit::HTTP_SET_COOKIE);
+
+		resp->setCookie = copy;
+	}
 	resp->headers.erase(HTTP_CONNECTION);
 	resp->headers.erase(HTTP_STATUS);
 	if (resp->bodyType == AppResponse::RBT_CONTENT_LENGTH) {
@@ -571,6 +587,25 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		INC_BUFFER_ITER(i);
 		dataSize += size;
 
+		PUSH_STATIC_BUFFER("\r\n");
+	}
+
+	if (resp->setCookie != NULL) {
+		PUSH_STATIC_BUFFER("Set-Cookie: ");
+		while (part != NULL) {
+			if (part->size == 1 && part->data[0] == '\n') {
+				// HeaderTable joins multiple Set-Cookie headers together using \n.
+				PUSH_STATIC_BUFFER("\r\nSet-Cookie: ");
+			} else {
+				if (buffers != NULL) {
+					buffers[i].iov_base = (void *) part->data;
+					buffers[i].iov_len  = part->size;
+				}
+				INC_BUFFER_ITER(i);
+				dataSize += part->size;
+			}
+			part = part->next;
+		}
 		PUSH_STATIC_BUFFER("\r\n");
 	}
 

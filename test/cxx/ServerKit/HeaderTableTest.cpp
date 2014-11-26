@@ -163,9 +163,15 @@ namespace tut {
 		table.insert(createHeader("X-Forwarded-For", "bar.com"), pool);
 		table.insert(createHeader("Cache-Control", "must-invalidate"), pool);
 		table.insert(createHeader("Cache-Control", "private"), pool);
+		table.insert(createHeader("cookie", "a"), pool);
+		table.insert(createHeader("cookie", "b"), pool);
+		table.insert(createHeader("set-cookie", "c=123"), pool);
+		table.insert(createHeader("set-cookie", "d=456"), pool);
 
-		ensure_equals(table.size(), 2u);
+		ensure_equals(table.size(), 4u);
 		ensure("(1)", psg_lstr_cmp(table.lookup("X-Forwarded-For"), "foo.com,bar.com"));
 		ensure("(2)", psg_lstr_cmp(table.lookup("Cache-Control"), "must-invalidate,private"));
+		ensure("(3)", psg_lstr_cmp(table.lookup("cookie"), "a;b"));
+		ensure("(4)", psg_lstr_cmp(table.lookup("set-cookie"), "c=123\nd=456"));
 	}
 }

@@ -478,6 +478,7 @@ httpHeaderToScgiUpperCase(unsigned char *data, unsigned int size) {
 struct HttpHeaderConstructionCache {
 	StaticString methodStr;
 	const LString *remoteAddr;
+	const LString *setCookie;
 	bool cached;
 };
 
@@ -568,6 +569,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	if (!cache.cached) {
 		cache.methodStr  = http_method_str(req->method);
 		cache.remoteAddr = req->secureHeaders.lookup(REMOTE_ADDR);
+		cache.setCookie = req->headers.lookup(ServerKit::HTTP_SET_COOKIE);
 		cache.cached     = true;
 	}
 
@@ -593,9 +595,33 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		PUSH_STATIC_BUFFER(" HTTP/1.1\r\nConnection: close\r\n");
 	}
 
+	if (cache.setCookie != NULL) {
+		LString::Part *part;
+
+		PUSH_STATIC_BUFFER("Set-Cookie: ");
+		part = cache.setCookie->start;
+		while (part != NULL) {
+			if (part->size == 1 && part->data[0] == '\n') {
+				// HeaderTable joins multiple Set-Cookie headers together using \n.
+				PUSH_STATIC_BUFFER("\r\nSet-Cookie: ");
+			} else {
+				if (buffers != NULL) {
+					buffers[i].iov_base = (void *) part->data;
+					buffers[i].iov_len  = part->size;
+				}
+				INC_BUFFER_ITER(i);
+				dataSize += part->size;
+			}
+			part = part->next;
+		}
+		PUSH_STATIC_BUFFER("\r\n");
+	}
+
 	while (*it != NULL) {
-		if (it->header->hash == HTTP_CONNECTION.hash()
-		 && psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection")))
+		if ((it->header->hash == HTTP_CONNECTION.hash()
+		  || it->header->hash == ServerKit::HTTP_SET_COOKIE.hash())
+		 && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
+		  || psg_lstr_cmp(&it->header->key, ServerKit::HTTP_SET_COOKIE)))
 		{
 			it.next();
 			continue;
