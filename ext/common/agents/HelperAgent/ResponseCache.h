@@ -460,7 +460,7 @@ public:
 
 	// @pre prepareRequest() returned true
 	bool requestAllowsFetching(Request *req) const {
-		return req->method == HTTP_GET
+		return (req->method == HTTP_GET || req->method == HTTP_HEAD)
 			&& req->cacheControl == NULL
 			&& !req->hasPragmaHeader;
 	}
