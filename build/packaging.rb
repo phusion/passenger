@@ -142,7 +142,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 	end
 
 	if is_open_source?
-		if boolean_option('HOMEBREW_UPDATE', true)
+		if boolean_option('HOMEBREW_UPDATE', true) && !is_beta
 			puts "Updating Homebrew formula..."
 			Rake::Task['package:update_homebrew'].invoke
 		else
