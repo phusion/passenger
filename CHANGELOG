@@ -1,3 +1,9 @@
+Release 5.0.0 beta 2
+--------------------
+
+ * `passenger-config system-metrics` now works properly if the agent is installed in ~/.passenger. Closes GH-1304.
+
+
 Release 5.0.0 beta 1
 --------------------
 
