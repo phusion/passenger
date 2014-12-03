@@ -246,6 +246,11 @@ private
 				request_method = $1
 				request_uri    = $2
 				protocol       = $3
+				if request_method.nil?
+					warn("*** Passenger RequestHandler warning: " <<
+						"Invalid HTTP request.")
+					return
+				end
 				path_info, query_string    = request_uri.split("?", 2)
 				headers[REQUEST_METHOD]    = request_method
 				headers["REQUEST_URI"]     = request_uri
