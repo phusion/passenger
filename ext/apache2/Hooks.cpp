@@ -892,7 +892,7 @@ private:
 
 		#if HTTP_VERSION(AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER) >= 2004
 			addHeader(result, P_STATIC_STRING("!~REMOTE_ADDR"),
-				r->connection->useragent_ip);
+				r->useragent_ip);
 			addHeader(r, result, P_STATIC_STRING("!~REMOTE_PORT"),
 				r->connection->client_addr->port);
 		#else
