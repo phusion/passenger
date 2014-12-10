@@ -799,7 +799,7 @@ server {
 --------------------
 endif::nginx[]
 
-Then you need to install a Ruby 1.9-compatible Ruby interpeter with POSIX spawn support, alongside JRuby/MRI 1.8. Ruby interpreters which can be used for running the Flying Passenger daemon include:
+Then you need to install a Ruby 1.9-compatible Ruby interpreter with POSIX spawn support, alongside JRuby/MRI 1.8. Ruby interpreters which can be used for running the Flying Passenger daemon include:
 
  * MRI Ruby >= 1.9.
  * Rubinius.

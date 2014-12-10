@@ -101,7 +101,7 @@ module Config
 		puts "#{PROGRAM_NAME} installation management:"
 		puts "  validate-install       Validate this #{PROGRAM_NAME} installation"
 		puts "  build-native-support   Ensure that the native_support library for the current"
-		puts "                         Ruby interpeter is built"
+		puts "                         Ruby interpreter is built"
 		puts "  install-agent          Install the #{PROGRAM_NAME} agent binary"
 		puts "  install-standalone-runtime"
 		puts "                         Install the #{PROGRAM_NAME} Standalone"
