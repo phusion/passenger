@@ -3,6 +3,7 @@ Release 5.0.0 beta 2
 
  * Fixed handling of multiple Set-Cookie headers. Closes GH-1296.
  * `passenger-config system-metrics` now works properly if the agent is installed in ~/.passenger. Closes GH-1304.
+ * Fixed some crasher bugs.
  * [Standalone] User switching is now correctly disabled.
  * [Apache] IPs set by mod_remoteip are now respected. Closes GH-1284.
 

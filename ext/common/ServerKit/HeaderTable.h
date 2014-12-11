@@ -321,8 +321,12 @@ public:
 			if (PHT_CIRCULAR_OFFSET(ideal, cell) < PHT_CIRCULAR_OFFSET(ideal, neighbor)) {
 				// Erase current cell and move neighbor into this position,
 				// then make the now-empty neighbor the new cell to remove.
-				psg_lstr_deinit(&cell->header->key);
-				psg_lstr_deinit(&cell->header->val);
+				if (cell->header != NULL) {
+					// A previous iteration in this loop
+					// could have made cell->header NULL.
+					psg_lstr_deinit(&cell->header->key);
+					psg_lstr_deinit(&cell->header->val);
+				}
 				*cell = *neighbor;
 				cell = neighbor;
 				neighbor->header = NULL;
