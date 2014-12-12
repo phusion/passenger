@@ -96,7 +96,7 @@ static bool _feedbackFdAvailable = false;
 static const char digits[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 };
-static const char hex_chars[] = "01234567890abcdef";
+static const char hex_chars[] = "0123456789abcdef";
 
 static bool shouldDumpWithCrashWatch = true;
 static bool beepOnAbort = false;
