@@ -37,8 +37,10 @@ end
 have_header('alloca.h')
 have_header('ruby/version.h')
 have_header('ruby/io.h')
+have_header('ruby/thread.h')
 have_var('ruby_version')
 have_func('rb_thread_io_blocking_region')
+have_func('rb_thread_call_without_gvl')
 
 with_cflags($CFLAGS) do
 	create_makefile('passenger_native_support')

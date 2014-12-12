@@ -36,6 +36,9 @@
 #ifdef HAVE_RUBY_VERSION_H
 	#include "ruby/version.h"
 #endif
+#ifdef HAVE_RUBY_THREAD_H
+	#include "ruby/thread.h"
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -199,11 +202,19 @@ update_group_written_info(IOVectorGroup *group, ssize_t bytes_written) {
 		int iovcnt;
 	} WritevWrapperData;
 
-	static VALUE
-	writev_wrapper(void *ptr) {
-		WritevWrapperData *data = (WritevWrapperData *) ptr;
-		return (VALUE) writev(data->filedes, data->iov, data->iovcnt);
-	}
+	#if defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
+		static void *
+		writev_wrapper(void *ptr) {
+			WritevWrapperData *data = (WritevWrapperData *) ptr;
+			return (void *) writev(data->filedes, data->iov, data->iovcnt);
+		}
+	#else
+		static VALUE
+		writev_wrapper(void *ptr) {
+			WritevWrapperData *data = (WritevWrapperData *) ptr;
+			return (VALUE) writev(data->filedes, data->iov, data->iovcnt);
+		}
+	#endif
 #endif
 
 static VALUE
@@ -320,7 +331,10 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 				writev_wrapper_data.filedes = fd_num;
 				writev_wrapper_data.iov     = groups[i].io_vectors;
 				writev_wrapper_data.iovcnt  = groups[i].count;
-				#ifdef HAVE_RB_THREAD_IO_BLOCKING_REGION
+				#if defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
+					ret = (int) rb_thread_call_without_gvl(writev_wrapper,
+						&writev_wrapper_data, RUBY_UBF_IO, NULL);
+				#elif defined(HAVE_RB_THREAD_IO_BLOCKING_REGION)
 					ret = (int) rb_thread_io_blocking_region(writev_wrapper,
 						&writev_wrapper_data, fd_num);
 				#else
@@ -726,13 +740,23 @@ fs_watcher_wait_fd(VALUE _fd) {
 }
 
 #ifndef TRAP_BEG
-	static VALUE
-	fs_watcher_read_byte_from_fd_wrapper(void *_arg) {
-		FSWatcherReadByteData *data = (FSWatcherReadByteData *) _arg;
-		data->ret = read(data->fd, &data->byte, 1);
-		data->error = errno;
-		return Qnil;
-	}
+	#if defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
+		static void *
+		fs_watcher_read_byte_from_fd_wrapper(void *_arg) {
+			FSWatcherReadByteData *data = (FSWatcherReadByteData *) _arg;
+			data->ret = read(data->fd, &data->byte, 1);
+			data->error = errno;
+			return NULL;
+		}
+	#else
+		static VALUE
+		fs_watcher_read_byte_from_fd_wrapper(void *_arg) {
+			FSWatcherReadByteData *data = (FSWatcherReadByteData *) _arg;
+			data->ret = read(data->fd, &data->byte, 1);
+			data->error = errno;
+			return Qnil;
+		}
+	#endif
 #endif
 
 static VALUE
@@ -743,6 +767,9 @@ fs_watcher_read_byte_from_fd(VALUE _arg) {
 		data->ret = read(data->fd, &data->byte, 1);
 		TRAP_END;
 		data->error = errno;
+	#elif defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
+		rb_thread_call_without_gvl2(fs_watcher_read_byte_from_fd_wrapper,
+			data, RUBY_UBF_IO, NULL);
 	#elif defined(HAVE_RB_THREAD_IO_BLOCKING_REGION)
 		rb_thread_io_blocking_region(fs_watcher_read_byte_from_fd_wrapper,
 			data, data->fd);
