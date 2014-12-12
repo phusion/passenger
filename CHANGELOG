@@ -1,3 +1,16 @@
+Release 4.0.55
+--------------
+
+ * Supports Ruby 2.2. Closes GH-1314.
+ * Fixed Linux OS name detection.
+
+
+Release 4.0.54
+--------------
+
+ * Contains a licensing-related hot fix for Enterprise customers.
+
+
 Release 4.0.53
 --------------
 
