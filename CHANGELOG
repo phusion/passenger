@@ -42,6 +42,12 @@ Minor changes:
  * [Standalone] `passenger-standalone.json`/`Passengerfile.json` no longer overrides command line options. Instead, command line options now have the highest priority.
 
 
+Release 4.0.56
+--------------
+
+ * Fixed a file descriptor leak that manifests when an error page is shown. Contributed by Paul Bonaud, closes GH-1325.
+
+
 Release 4.0.55
 --------------
 
