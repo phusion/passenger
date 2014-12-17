@@ -81,11 +81,11 @@ private
 			opts.on("-i", "--stdin", "Read HTTP request body data from stdin") do
 				options[:data_source] = :stdin
 			end
-			opts.on("-f", "--data-file", String, "Read HTTP request body data from the given#{nl}" +
+			opts.on("-f", "--data-file PATH", String, "Read HTTP request body data from the given#{nl}" +
 				"file") do |value|
 				options[:data_source] = value
 			end
-			opts.on("-a", "--agent", String, "The name of the socket to send the command#{nl}" +
+			opts.on("-a", "--agent NAME", String, "The name of the socket to send the command#{nl}" +
 				"to. This specifies which agent the request#{nl}" +
 				"is sent to. Choices: watchdog,#{nl}" +
 				"server_admin, logging_admin.#{nl}" +
