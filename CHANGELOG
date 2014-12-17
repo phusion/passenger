@@ -6,6 +6,7 @@ Release 5.0.0 beta 2
  * Documentation enhancements by Igor Vuk. Closes GH-1318.
  * Fixed some crasher bugs.
  * [Standalone] User switching is now correctly disabled.
+ * [Standalone] Fixed the `--thread-count` parameter.
  * [Apache] IPs set by mod_remoteip are now respected. Closes GH-1284.
 
 

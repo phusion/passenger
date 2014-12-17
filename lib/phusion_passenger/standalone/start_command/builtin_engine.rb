@@ -110,7 +110,7 @@ private
 		add_param(command, :max_pool_size, "--max-pool-size")
 		add_param(command, :min_instances, "--min-instances")
 		add_enterprise_param(command, :concurrency_model, "--concurrency-model")
-		add_enterprise_param(command, :thread_count, "--thread-count")
+		add_enterprise_param(command, :thread_count, "--app-thread-count")
 		add_enterprise_flag_param(command, :rolling_restarts, "--rolling-restarts")
 		add_enterprise_flag_param(command, :resist_deployment_errors, "--resist-deployment-errors")
 		add_flag_param(command, :sticky_sessions, "--sticky-sessions")
