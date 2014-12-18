@@ -2,6 +2,7 @@ Release 4.0.56
 --------------
 
  * Fixed a file descriptor leak that manifests when an error page is shown. Contributed by Paul Bonaud, closes GH-1325.
+ * Improved Node.js request load balancing. Closes GH-1322. Thanks to Charles Vallières for the analysis.
 
 
 Release 4.0.55
