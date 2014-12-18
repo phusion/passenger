@@ -534,19 +534,17 @@ public:
 	int busyness() const {
 		/* Different processes within a Group may have different
 		 * 'concurrency' values. We want:
-		 * - Group.pqueue to sort the processes from least used to most used.
-		 * - to give processes with concurrency == 0 more priority over processes
-		 *   with concurrency > 0.
-		 * Therefore, we describe our busyness as a percentage of 'concurrency', with
-		 * the percentage value in [0..INT_MAX] instead of [0..1].
+		 * - the process with the smallest busyness to be be picked for routing.
+		 * - to give processes with concurrency == 0 more priority (in general)
+		 *   over processes with concurrency > 0.
+		 * Therefore, in case of processes with concurrency > 0, we describe our
+		 * busyness as a percentage of 'concurrency', with the percentage value
+		 * in [0..INT_MAX] instead of [0..1]. That way, the busyness value
+		 * of processes with concurrency > 0 is usually higher than that of processes
+		 * with concurrency == 0.
 		 */
 		if (concurrency == 0) {
-			// Allows Group.pqueue to give idle sockets more priority.
-			if (sessions == 0) {
-				return 0;
-			} else {
-				return 1;
-			}
+			return sessions;
 		} else {
 			return (int) (((long long) sessions * INT_MAX) / (double) concurrency);
 		}
