@@ -707,16 +707,6 @@ private:
 	}
 
 	/**
-	 * Checks case-insensitively whether the given header is "Transfer-Encoding".
-	 */
-	bool headerIsTransferEncoding(const char *headerName, size_t len) const {
-		return len == sizeof("transfer-encoding") - 1 &&
-			apr_tolower(headerName[0]) == (u_char) 't' &&
-			apr_tolower(headerName[sizeof("transfer-encoding") - 2]) == (u_char) 'g' &&
-			apr_strnatcasecmp(headerName + 1, "ransfer-encoding") == 0;
-	}
-
-	/**
 	 * Convert an HTTP header name to a CGI environment name.
 	 */
 	char *httpToEnv(apr_pool_t *p, const char *headerName, size_t len) {
@@ -979,10 +969,11 @@ private:
 
 		// Add flags.
 		// C = Strip 100 Continue header
+		// D = Dechunk
 		// B = Buffer request body
 		// S = SSL
 
-		result.append("!~FLAGS: C", sizeof("!~FLAGS: C") - 1);
+		result.append("!~FLAGS: CD", sizeof("!~FLAGS: CD") - 1);
 		if (config->bufferUpload != DirConfig::DISABLED) {
 			result.append("B", 1);
 		}
