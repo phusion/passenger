@@ -241,7 +241,7 @@ private
 			opts.on("--sticky-sessions", "Enable sticky sessions") do
 				options[:sticky_sessions] = true
 			end
-			opts.on("--sticky-sessions-cookie-name", String,
+			opts.on("--sticky-sessions-cookie-name NAME", String,
 				"Cookie name to use for sticky sessions.#{nl}" +
 				"Default: #{DEFAULT_STICKY_SESSIONS_COOKIE_NAME}") do |value|
 				options[:sticky_sessions_cookie_name] = value
