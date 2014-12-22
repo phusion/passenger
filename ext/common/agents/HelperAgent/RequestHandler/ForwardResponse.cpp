@@ -73,11 +73,12 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::PARSING_BODY_WITH_LENGTH:
+				SKC_TRACE(client, 2, "Expecting an app response body with fixed length");
+				onAppResponseBegin(client, req);
+				return Channel::Result(ret, false);
 			case AppResponse::PARSING_BODY_UNTIL_EOF:
-				SKC_TRACE(client, 2,
-					((resp->httpState == AppResponse::PARSING_BODY_WITH_LENGTH)
-					? "Expecting an app response body with fixed length"
-					: "Expecting app response body until end of stream"));
+				SKC_TRACE(client, 2, "Expecting app response body until end of stream");
+				req->wantKeepAlive = false;
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::PARSING_CHUNKED_BODY:
@@ -87,7 +88,7 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 				return Channel::Result(ret, false);
 			case AppResponse::UPGRADED:
 				SKC_TRACE(client, 2, "Application upgraded connection");
-				assert(!req->wantKeepAlive);
+				req->wantKeepAlive = false;
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::ONEHUNDRED_CONTINUE:
