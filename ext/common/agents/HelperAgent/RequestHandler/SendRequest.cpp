@@ -269,6 +269,11 @@ determineHeaderSizeForSessionProtocol(Request *req,
 		dataSize += req->options.transaction->getTxnId().size() + 1;
 	}
 
+	if (req->upgraded()) {
+		dataSize += sizeof("HTTP_CONNECTION");
+		dataSize += sizeof("upgrade");
+	}
+
 	ServerKit::HeaderTable::Iterator it(req->headers);
 	while (*it != NULL) {
 		dataSize += sizeof("HTTP_") - 1 + it->header->key.size + 1;
@@ -374,6 +379,11 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_TXN_ID"));
 		pos = appendData(pos, end, req->options.transaction->getTxnId());
 		pos = appendData(pos, end, "", 1);
+	}
+
+	if (req->upgraded()) {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("HTTP_CONNECTION"));
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("upgrade"));
 	}
 
 	ServerKit::HeaderTable::Iterator it(req->headers);
