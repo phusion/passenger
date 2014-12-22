@@ -83,9 +83,15 @@ private
 			command << " --default-user #{Shellwords.ecape @options[:user]}"
 		else
 			user  = Etc.getpwuid(Process.uid).name
-			group = Etc.getgrgid(Process.gid).name
+			begin
+				group = Etc.getgrgid(Process.gid)
+			rescue ArgumentError
+				# Do nothing. On Heroku, it's normal that the group
+				# database is broken.
+			else
+				command << " --default-group #{Shellwords.escape group.name}"
+			end
 			command << " --default-user #{Shellwords.escape user}"
-			command << " --default-group #{Shellwords.escape group}"
 		end
 
 		command << " --BS"
