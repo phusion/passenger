@@ -1,6 +1,7 @@
 Release 5.0.0 beta 3
 --------------------
 
+ * Fixed various more cookie handling issues. Closes GH-1310.
  * Fixed various WebSocket issues. Closes GH-1306.
 
 

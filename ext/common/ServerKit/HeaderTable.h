@@ -272,9 +272,11 @@ public:
 					}
 					LString::Part *part = header->val.start;
 					header->val.start = NULL;
+					header->val.size  = 0;
 					while (part != NULL) {
+						LString::Part *next = part->next;
 						psg_lstr_append_part(&cell->header->val, part);
-						part = part->next;
+						part = next;
 					}
 					return;
 				} else {
