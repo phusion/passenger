@@ -108,8 +108,6 @@ serverUsage() {
 	printf("                            Force friendly error pages to be always on\n");
 	printf("      --disable-friendly-error-pages\n");
 	printf("                            Force friendly error pages to be always off\n");
-	printf("      --disable-turbocaching\n");
-	printf("                            Disable turbocaching\n");
 	printf("\n");
 	printf("      --ruby PATH           Default Ruby interpreter to use.\n");
 	printf("\n");
@@ -122,6 +120,14 @@ serverUsage() {
 	printf("                            Maximum number of seconds an application process\n");
 	printf("                            may be idle. Default: %d\n", DEFAULT_POOL_IDLE_TIME);
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
+	printf("\n");
+	printf("Request handling options (optional):\n");
+	printf("      --sticky-sessions-cookie-name NAME\n");
+	printf("                            Cookie name to use for sticky sessions\n");
+	printf("      --vary-turbocache-by-cookie NAME\n");
+	printf("                            Vary the turbocache by the cookie of the given name\n");
+	printf("      --disable-turbocaching\n");
+	printf("                            Disable turbocaching\n");
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("      --log-file PATH       Log to the given file.\n");
@@ -262,6 +268,12 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isFlag(argv[i], '\0', "--disable-friendly-error-pages")) {
 		options.set("friendly_error_pages", "false");
 		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--sticky-sessions-cookie-name")) {
+		options.set("sticky_sessions_cookie_name", argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--vary-turbocache-by-cookie")) {
+		options.set("vary_turbocache_by_cookie", argv[i + 1]);
+		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--disable-turbocaching")) {
 		options.setBool("turbocaching", false);
 		i++;

@@ -246,6 +246,10 @@ private
 				"Default: #{DEFAULT_STICKY_SESSIONS_COOKIE_NAME}") do |value|
 				options[:sticky_sessions_cookie_name] = value
 			end
+			opts.on("--vary-turbocache-by-cookie NAME", String,
+				"Vary the turbocache by the cookie of the given name") do |value|
+				options[:vary_turbocache_by_cookie] = value
+			end
 			opts.on("--disable-turbocaching", "Disable turbocaching") do
 				options[:turbocaching] = false
 			end

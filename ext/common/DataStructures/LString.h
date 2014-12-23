@@ -118,6 +118,16 @@ psg_lstr_append_part(LString *str, LString::Part *part) {
 }
 
 inline void
+psg_lstr_append_part_from_another_lstr(LString *str, psg_pool_t *pool, const LString::Part *part) {
+	LString::Part *copy = (LString::Part *) psg_palloc(pool, sizeof(LString::Part));
+	*copy = *part;
+	if (part->mbuf_block != NULL) {
+		mbuf_block_ref(part->mbuf_block);
+	}
+	psg_lstr_append_part(str, copy);
+}
+
+inline void
 psg_lstr_append(LString *str, psg_pool_t *pool, const MemoryKit::mbuf &buffer,
 	const char *data, unsigned int size)
 {

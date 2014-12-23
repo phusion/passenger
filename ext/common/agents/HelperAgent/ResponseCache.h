@@ -31,6 +31,7 @@
 #include <cstring>
 #include <DataStructures/HashedStaticString.h>
 #include <ServerKit/http_parser.h>
+#include <ServerKit/CookieUtils.h>
 #include <StaticString.h>
 #include <Utils/DateParsing.h>
 #include <Utils/StrIntUtils.h>
@@ -101,18 +102,24 @@ private:
 	HashedStaticString LAST_MODIFIED;
 	HashedStaticString LOCATION;
 	HashedStaticString CONTENT_LOCATION;
+	HashedStaticString COOKIE;
+	HashedStaticString PASSENGER_VARY_TURBOCACHE_BY_COOKIE;
 
 	unsigned int fetches, hits, stores, storeSuccesses;
 
 	Header headers[MAX_ENTRIES];
 	Body bodies[MAX_ENTRIES];
 
-	unsigned int calculateKeyLength(const LString * restrict host, const StaticString &path) {
+	unsigned int calculateKeyLength(const LString * restrict host,
+		const LString * restrict varyCookie,
+		const StaticString &path)
+	{
 		unsigned int size =
 			1  // protocol flag
 			+ ((host != NULL) ? host->size : 0)
-			+ 1  // ':'
-			+ path.size();
+			+ 1  // '\n'
+			+ path.size()
+			+ ((varyCookie != NULL) ? (varyCookie->size + 1) : 0);
 		if (size > MAX_KEY_LENGTH) {
 			return 0;
 		} else {
@@ -121,7 +128,9 @@ private:
 	}
 
 	void generateKey(bool https, const StaticString &path,
-		const LString * restrict host, char * restrict output,
+		const LString * restrict host,
+		const LString * restrict varyCookie,
+		char * restrict output,
 		unsigned int size)
 	{
 		char *pos = output;
@@ -142,8 +151,17 @@ private:
 			}
 		}
 
-		pos = appendData(pos, end, ":", 1);
+		pos = appendData(pos, end, "\n", 1);
 		pos = appendData(pos, end, path);
+
+		if (varyCookie != NULL) {
+			pos = appendData(pos, end, "\n", 1);
+			part = varyCookie->start;
+			while (part != NULL) {
+				pos = appendData(pos, end, part->data, part->size);
+				part = part->next;
+			}
+		}
 	}
 
 	bool statusCodeIsCacheableByDefault(unsigned int code) const {
@@ -345,13 +363,13 @@ private:
 			https = req->https;
 		}
 
-		unsigned int keySize = calculateKeyLength(req->host, path);
+		unsigned int keySize = calculateKeyLength(req->host, req->varyCookie, path);
 		if (keySize == 0) {
 			return;
 		}
 
 		char *key = (char *) psg_pnalloc(req->pool, keySize);
-		generateKey(https, path, req->host, key, keySize);
+		generateKey(https, path, req->host, req->varyCookie, key, keySize);
 
 		Entry entry(lookup(StaticString(key, keySize)));
 		if (entry.valid()) {
@@ -368,6 +386,8 @@ public:
 		  LAST_MODIFIED("last-modified"),
 		  LOCATION("location"),
 		  CONTENT_LOCATION("content-location"),
+		  COOKIE("cookie"),
+		  PASSENGER_VARY_TURBOCACHE_BY_COOKIE("!~PASSENGER_VARY_TURBOCACHE_COOKIE"),
 		  fetches(0),
 		  hits(0),
 		  stores(0),
@@ -430,12 +450,29 @@ public:
 	 *
 	 * @post result == !req->cacheKey.empty()
 	 */
-	bool prepareRequest(Request *req) {
+	template<typename RequestHandler>
+	bool prepareRequest(RequestHandler *requestHandler, Request *req) {
 		if (req->upgraded() || req->host == NULL) {
 			return false;
 		}
 
+		LString *varyCookieName = req->secureHeaders.lookup(PASSENGER_VARY_TURBOCACHE_BY_COOKIE);
+		if (varyCookieName == NULL && !requestHandler->defaultVaryTurbocacheByCookie.empty()) {
+			varyCookieName = (LString *) psg_palloc(req->pool, sizeof(LString));
+			psg_lstr_init(varyCookieName);
+			psg_lstr_append(varyCookieName, req->pool,
+				requestHandler->defaultVaryTurbocacheByCookie.data(),
+				requestHandler->defaultVaryTurbocacheByCookie.size());
+		}
+		if (varyCookieName != NULL) {
+			LString *cookieHeader = req->headers.lookup(COOKIE);
+			if (cookieHeader != NULL) {
+				req->varyCookie = ServerKit::findCookie(req->pool, cookieHeader, varyCookieName);
+			}
+		}
+
 		unsigned int size = calculateKeyLength(req->host,
+			req->varyCookie,
 			StaticString(req->path.start->data, req->path.size));
 		if (size == 0) {
 			req->cacheKey = HashedStaticString();
@@ -452,7 +489,7 @@ public:
 
 		char *key = (char *) psg_pnalloc(req->pool, size);
 		generateKey(req->https, StaticString(req->path.start->data, req->path.size),
-			req->host, key, size);
+			req->host, req->varyCookie, key, size);
 		req->cacheKey = HashedStaticString(key, size);
 		return true;
 	}
@@ -611,8 +648,8 @@ public:
 		for (unsigned int i = 0; i < MAX_ENTRIES; i++) {
 			stream << " #" << i << ": valid=" << headers[i].valid
 				<< ", hash=" << headers[i].hash << ", keySize="
-				<< headers[i].keySize << ", key="
-				<< StaticString(bodies[i].key, headers[i].keySize) << "\n";
+				<< headers[i].keySize << ", key=\""
+				<< cEscapeString(StaticString(bodies[i].key, headers[i].keySize)) << "\"\n";
 		}
 		return stream.str();
 	}

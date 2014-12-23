@@ -90,6 +90,7 @@ public:
 
 	HashedStaticString cacheKey;
 	LString *cacheControl;
+	LString *varyCookie;
 
 	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
 		bool timedAppPoolGet;

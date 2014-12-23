@@ -109,3 +109,5 @@
 
 	ngx_str_t user;
 
+	ngx_str_t vary_turbocache_by_cookie;
+

@@ -141,6 +141,7 @@ http {
         <% if app[:restart_dir] %>passenger_restart_dir '<%= app[:restart_dir] %>';<% end %>
         <% if @options[:sticky_sessions] %>passenger_sticky_sessions on;<% end %>
         <% if @options[:sticky_sessions_cookie_name] %>passenger_sticky_sessions_cookie_name '<%= @options[:sticky_sessions_cookie_name] %>';<% end %>
+        <% if @options[:vary_turbocache_by_cookie] %>passenger_vary_turbocache_by_cookie '<%= @options[:vary_turbocache_by_cookie] %>';<% end %>
         <% if app[:union_station_key] %>
             union_station_support on;
             union_station_key <%= app[:union_station_key] %>;

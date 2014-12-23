@@ -137,25 +137,28 @@ initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 
 bool
 respondFromTurboCache(Client *client, Request *req) {
-	if (!turboCaching.isEnabled() || !turboCaching.responseCache.prepareRequest(req)) {
+	if (!turboCaching.isEnabled() || !turboCaching.responseCache.prepareRequest(this, req)) {
 		return false;
 	}
 
-	SKC_TRACE(client, 2, "Turbocaching: trying to reply from cache");
+	SKC_TRACE(client, 2, "Turbocaching: trying to reply from cache (key \"" <<
+		cEscapeString(req->cacheKey) << "\")");
 	SKC_TRACE(client, 2, "Turbocache entries:\n" << turboCaching.responseCache.inspect());
 
 	if (turboCaching.responseCache.requestAllowsFetching(req)) {
 		ResponseCache<Request>::Entry entry(turboCaching.responseCache.fetch(req,
 			ev_now(getLoop())));
 		if (entry.valid()) {
-			SKC_TRACE(client, 2, "Turbocaching: cache hit (key " << req->cacheKey << ")");
+			SKC_TRACE(client, 2, "Turbocaching: cache hit (key \"" <<
+				cEscapeString(req->cacheKey) << "\")");
 			turboCaching.writeResponse(this, client, req, entry);
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
 			return true;
 		} else {
-			SKC_TRACE(client, 2, "Turbocaching: cache miss (key " << req->cacheKey << ")");
+			SKC_TRACE(client, 2, "Turbocaching: cache miss (key \"" <<
+				cEscapeString(req->cacheKey) << "\")");
 			return false;
 		}
 	} else {
@@ -428,7 +431,7 @@ getStickySessionCookieName(Request *req) {
 	const LString *value = req->headers.lookup(PASSENGER_STICKY_SESSIONS_COOKIE_NAME);
 	if (value == NULL || value->size == 0) {
 		return psg_lstr_create(req->pool,
-			P_STATIC_STRING(DEFAULT_STICKY_SESSIONS_COOKIE_NAME));
+			defaultStickySessionsCookieName);
 	} else {
 		return value;
 	}

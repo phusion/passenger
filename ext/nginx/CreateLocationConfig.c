@@ -191,3 +191,8 @@
 		conf->sticky_sessions_cookie_name.len  = 0;
 	
 
+	
+		conf->vary_turbocache_by_cookie.data = NULL;
+		conf->vary_turbocache_by_cookie.len  = 0;
+	
+

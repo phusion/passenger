@@ -123,6 +123,10 @@ TEST_CXX_OBJECTS = {
 		ext/common/ServerKit/HttpRequest.h
 		ext/common/ServerKit/HttpHeaderParser.h
 		ext/common/ServerKit/HttpChunkedBodyParser.h),
+	'test/cxx/ServerKit/CookieUtilsTest.o' => %w(
+		test/cxx/ServerKit/CookieUtilsTest.cpp
+		ext/common/ServerKit/CookieUtils.h
+		ext/common/DataStructures/LString.h),
 	'test/cxx/DataStructures/LStringTest.o' => %w(
 		test/cxx/DataStructures/LStringTest.cpp
 		ext/common/DataStructures/LString.h),

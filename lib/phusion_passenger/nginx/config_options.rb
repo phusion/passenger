@@ -297,6 +297,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
 		:name   => 'passenger_sticky_sessions_cookie_name',
 		:type   => :string
 	},
+	{
+		:name   => 'passenger_vary_turbocache_by_cookie',
+		:type   => :string
+	},
 
 	###### Enterprise features ######
 	{

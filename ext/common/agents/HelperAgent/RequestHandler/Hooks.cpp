@@ -90,6 +90,7 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 	req->bodyBytesBuffered = 0;
 	req->cacheKey = HashedStaticString();
 	req->cacheControl = NULL;
+	req->varyCookie = NULL;
 
 	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
 		req->timedAppPoolGet = false;

@@ -975,6 +975,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
 	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
+	options.setDefault("sticky_sessions_cookie_name", DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
 	options.setDefaultBool("turbocaching", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
 	options.setDefaultBool("selfchecks", false);

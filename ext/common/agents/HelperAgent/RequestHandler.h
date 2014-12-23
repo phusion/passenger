@@ -206,6 +206,8 @@ private:
 	StaticString defaultServerName;
 	StaticString defaultServerPort;
 	StaticString serverSoftware;
+	StaticString defaultStickySessionsCookieName;
+	StaticString defaultVaryTurbocacheByCookie;
 
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
 	HashedStaticString PASSENGER_MAX_REQUESTS;
@@ -231,6 +233,7 @@ private:
 	StaticString serverLogName;
 
 	friend class TurboCaching<Request>;
+	friend class ResponseCache<Request>;
 	struct ev_check checkWatcher;
 	TurboCaching<Request> turboCaching;
 
@@ -307,6 +310,13 @@ public:
 			agentsOptions->get("default_server_port"));
 		serverSoftware = psg_pstrdup(stringPool,
 			agentsOptions->get("server_software"));
+		defaultStickySessionsCookieName = psg_pstrdup(stringPool,
+			agentsOptions->get("sticky_sessions_cookie_name"));
+
+		if (agentsOptions->has("vary_turbocache_by_cookie")) {
+			defaultVaryTurbocacheByCookie = psg_pstrdup(stringPool,
+				agentsOptions->get("vary_turbocache_by_cookie"));
+		}
 
 		generateServerLogName(_threadNumber);
 

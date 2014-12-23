@@ -284,6 +284,14 @@ u_char int_buf[32], *end, *buf, *pos;
 		}
 	
 
+	
+		if (conf->vary_turbocache_by_cookie.data != NULL) {
+			len += sizeof("!~PASSENGER_VARY_TURBOCACHE_BY_COOKIE: ") - 1;
+			len += conf->vary_turbocache_by_cookie.len;
+			len += sizeof("\r\n") - 1;
+		}
+	
+
 
 /* Create string */
 buf = pos = ngx_pnalloc(cf->pool, len);
@@ -619,6 +627,18 @@ if (buf == NULL) {
 			pos = ngx_copy(pos,
 				conf->sticky_sessions_cookie_name.data,
 				conf->sticky_sessions_cookie_name.len);
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+		}
+	
+
+	
+		if (conf->vary_turbocache_by_cookie.data != NULL) {
+			pos = ngx_copy(pos,
+				"!~PASSENGER_VARY_TURBOCACHE_BY_COOKIE: ",
+				sizeof("!~PASSENGER_VARY_TURBOCACHE_BY_COOKIE: ") - 1);
+			pos = ngx_copy(pos,
+				conf->vary_turbocache_by_cookie.data,
+				conf->vary_turbocache_by_cookie.len);
 			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
 		}
 	
