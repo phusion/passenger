@@ -80,7 +80,7 @@ private
 			command << " --ctl #{Shellwords.escape ctl}"
 		end
 		if @options[:user]
-			command << " --default-user #{Shellwords.ecape @options[:user]}"
+			command << " --default-user #{Shellwords.escape @options[:user]}"
 		else
 			user  = Etc.getpwuid(Process.uid).name
 			begin
