@@ -167,6 +167,7 @@ echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
 To make them permanent for future bash sessions **for all users**, add them to `/etc/bashrc`.
 
 NOTE: Depending on the system, the bashrc file may have a different filename. On Debian and Ubuntu, it's `/etc/bash.bashrc`.
+NOTE: Make sure your `~/.bashrc` is actually included by your `~/.profile`, which might not be the case if you created the user with `useradd` instead of `adduser` for example
 
 ==== Apache
 
