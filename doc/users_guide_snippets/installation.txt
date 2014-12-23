@@ -124,6 +124,18 @@ sudo chmod 600 /etc/apt/sources.list.d/passenger.list
 sudo apt-get update
 --------------------------------------------------------------
 
+5. (Optional) If using `unattended-upgrades`, add our APT repository to the list of `Allowed-Origins` for upgrades, `/etc/apt/apt.conf.d/50unattended-upgrades`:
++
+[source,sh]
+--------------------------------------------------------------
+// Automatically upgrade packages from these (origin:archive) pairs
+Unattended-Upgrade::Allowed-Origins {
+  // To check "Origin:" and "Suite:", you could use e.g.: 
+  // grep "Origin\|Suite" /var/lib/apt/lists/oss-binaries.phusionpassenger.com*
+  "Phusion:stable";
+};
+--------------------------------------------------------------
+
 ==== Installing packages
 
 ifdef::nginx[]
@@ -210,11 +222,13 @@ sudo apt-get install passenger-enterprise
 --------------------------------------------------------------
 endif::[]
 
+You can now proceed with a chapter for Deploying your (specific type of) application. 
+
 ifdef::nginx[]
 [[inserting_passenger_root_for_apt]]
 ==== Inserting `passenger_root` into nginx.conf
 
-During step 3 of the 'Installing packages' subsection, you were instructed to uncomment the <<PassengerRoot,passenger_root>> directive in `/etc/nginx/nginx.conf`. If there is no commented version in there, then you need to insert it yourself.
+If there is no <<PassengerRoot,passenger_root>> directive in `/etc/nginx/nginx.conf`, you can insert it yourself as follows:
 
 First, run the following command and take note of its output:
 
@@ -239,7 +253,6 @@ http {
 }
 -------------------------------------------------------------
 
-Once you're done editing nginx.conf, continue with step 4.
 endif::nginx[]
 
 
