@@ -124,6 +124,18 @@ sudo chmod 600 /etc/apt/sources.list.d/passenger.list
 sudo apt-get update
 --------------------------------------------------------------
 
+5. (Optional) If using `unattended-upgrades`, add our APT repository to the list of `Allowed-Origins` for upgrades, `/etc/apt/apt.conf.d/50unattended-upgrades`:
++
+[source,sh]
+--------------------------------------------------------------
+// Automatically upgrade packages from these (origin:archive) pairs
+Unattended-Upgrade::Allowed-Origins {
+        // See: "Origin:" and "Suite:" in
+        // "/var/lib/apt/lists/oss/oss-binaries.phusionpassenger.com_apt_passenger_dists_trusty_Release"
+        "Phusion:stable";
+};
+--------------------------------------------------------------
++
 ==== Installing packages
 
 ifdef::nginx[]
