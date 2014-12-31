@@ -52,6 +52,12 @@ Minor changes:
  * [Standalone] `passenger-standalone.json`/`Passengerfile.json` no longer overrides command line options. Instead, command line options now have the highest priority.
 
 
+Release 4.0.57
+--------------
+
+ * Fixed a native extension compatibility problem with Ruby 2.2. Closes [ruby-core:67152](https://bugs.ruby-lang.org/issues/10656).
+
+
 Release 4.0.56
 --------------
 
