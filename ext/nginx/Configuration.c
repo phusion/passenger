@@ -241,6 +241,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     #endif
     conf->upstream_config.buffering = NGX_CONF_UNSET;
     conf->upstream_config.ignore_client_abort = NGX_CONF_UNSET;
+    #if NGINX_VERSION_NUM >= 1007007
+        conf->upstream_config.force_ranges = NGX_CONF_UNSET;
+    #endif
 
     conf->upstream_config.local = NGX_CONF_UNSET_PTR;
 
@@ -253,6 +256,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream_config.send_lowat = NGX_CONF_UNSET_SIZE;
     conf->upstream_config.buffer_size = NGX_CONF_UNSET_SIZE;
+    #if NGINX_VERSION_NUM >= 1007007
+        conf->upstream_config.limit_rate = NGX_CONF_UNSET_SIZE;
+    #endif
 
     conf->upstream_config.busy_buffers_size_conf = NGX_CONF_UNSET_SIZE;
     conf->upstream_config.max_temp_file_size_conf = NGX_CONF_UNSET_SIZE;
@@ -400,6 +406,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->upstream_config.ignore_client_abort,
                          prev->upstream_config.ignore_client_abort, 0);
 
+    #if NGINX_VERSION_NUM >= 1007007
+        ngx_conf_merge_value(conf->upstream_config.force_ranges,
+                             prev->upstream_config.force_ranges, 0);
+    #endif
+
     ngx_conf_merge_ptr_value(conf->upstream_config.local,
                              prev->upstream_config.local, NULL);
 
@@ -423,6 +434,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_size_value(conf->upstream_config.buffer_size,
                               prev->upstream_config.buffer_size,
                               16 * 1024);
+
+    #if NGINX_VERSION_NUM >= 1007007
+        ngx_conf_merge_size_value(conf->upstream_config.limit_rate,
+                                  prev->upstream_config.limit_rate, 0);
+    #endif
 
 
     ngx_conf_merge_bufs_value(conf->upstream_config.bufs, prev->upstream_config.bufs,
