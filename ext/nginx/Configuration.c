@@ -297,10 +297,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.cache_bypass = NGX_CONF_UNSET_PTR;
     conf->upstream_config.no_cache = NGX_CONF_UNSET_PTR;
     conf->upstream_config.cache_valid = NGX_CONF_UNSET_PTR;
-    #if NGINX_VERSION_NUM >= 1002000
-        conf->upstream_config.cache_lock = NGX_CONF_UNSET;
-        conf->upstream_config.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
-    #endif
+    conf->upstream_config.cache_lock = NGX_CONF_UNSET;
+    conf->upstream_config.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
 #endif
 
     conf->upstream_config.intercept_errors = NGX_CONF_UNSET;
@@ -308,9 +306,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.cyclic_temp_file = 0;
     conf->upstream_config.change_buffering = 1;
 
-#if NGINX_VERSION_NUM >= 1000010
     ngx_str_set(&conf->upstream_config.module, "passenger");
-#endif
 
     conf->options_cache.data  = NULL;
     conf->options_cache.len   = 0;
@@ -613,13 +609,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->cache_key = prev->cache_key;
     }
 
-    #if NGINX_VERSION_NUM >= 1002000
     ngx_conf_merge_value(conf->upstream_config.cache_lock,
                          prev->upstream_config.cache_lock, 0);
 
     ngx_conf_merge_msec_value(conf->upstream_config.cache_lock_timeout,
                               prev->upstream_config.cache_lock_timeout, 5000);
-    #endif
 
 #endif
 
