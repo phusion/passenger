@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2013 Phusion
+ * Copyright (C) 2010-2015 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -269,9 +269,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
 #if (NGX_HTTP_CACHE)
     #if NGINX_VERSION_NUM >= 1007009
-        conf->upstream_config.cache = NGX_CONF_UNSET_PTR;
-    #else
         conf->upstream_config.cache = NGX_CONF_UNSET;
+    #else
+        conf->upstream_config.cache = NGX_CONF_UNSET_PTR;
     #endif
     conf->upstream_config.cache_min_uses = NGX_CONF_UNSET_UINT;
     conf->upstream_config.cache_bypass = NGX_CONF_UNSET_PTR;
