@@ -299,6 +299,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.cache_valid = NGX_CONF_UNSET_PTR;
     conf->upstream_config.cache_lock = NGX_CONF_UNSET;
     conf->upstream_config.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
+    conf->upstream_config.cache_revalidate = NGX_CONF_UNSET;
 #endif
 
     conf->upstream_config.intercept_errors = NGX_CONF_UNSET;
@@ -614,6 +615,9 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_msec_value(conf->upstream_config.cache_lock_timeout,
                               prev->upstream_config.cache_lock_timeout, 5000);
+
+    ngx_conf_merge_value(conf->upstream_config.cache_revalidate,
+                         prev->upstream_config.cache_revalidate, 0);
 
 #endif
 

@@ -1233,7 +1233,7 @@ process_header(ngx_http_request_t *r)
                 ngx_str_set(&u->headers_in.status_line, "200 OK");
             }
 
-            if (u->state) {
+            if (u->state && u->state->status == 0) {
                 u->state->status = u->headers_in.status_n;
             }
 
@@ -1299,11 +1299,6 @@ passenger_content_handler(ngx_http_request_t *r)
 
     if (passenger_main_conf.root_dir.len == 0) {
         return NGX_DECLINED;
-    } else if (r->subrequest_in_memory) {
-        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
-                      "ngx_http_passenger_module does not support "
-                      "subrequest in memory");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
