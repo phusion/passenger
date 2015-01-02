@@ -1,8 +1,9 @@
 Release 5.0.0 beta 3
 --------------------
 
- * Fixed various more cookie handling issues. Closes GH-1310.
+ * Fixed more cookie handling issues. Closes GH-1310.
  * Fixed various WebSocket issues. Closes GH-1306.
+ * Fixed issues with handling POST data. Closes GH-1331.
  * Fixed some issues on Heroku. Closes GH-1329.
 
 

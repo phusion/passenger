@@ -294,6 +294,7 @@ private
 	def prepare_request(connection, headers)
 		transfer_encoding = headers[TRANSFER_ENCODING]
 		content_length = headers[CONTENT_LENGTH]
+		content_length = nil if content_length && content_length.to_i == 0
 		@can_keepalive = @keepalive_enabled &&
 			!transfer_encoding &&
 			!content_length
