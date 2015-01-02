@@ -56,9 +56,6 @@ using namespace std;
 #define FBC_DEBUG_FROM_STATIC(expr) \
 	P_TRACE(3, "[FBC " << (void *) self << "] " << expr)
 
-#define FBC_TEMPORARILY_GRAB_CONTEXT_SYNCHER(context) \
-	boost::lock_guard<boost::mutex>(context->syncher)
-
 
 /**
  * Adds "unlimited" buffering capability to a Channel. A Channel has a buffer size
