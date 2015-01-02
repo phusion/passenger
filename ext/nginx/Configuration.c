@@ -272,17 +272,29 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream_config.store = NGX_CONF_UNSET;
     conf->upstream_config.store_access = NGX_CONF_UNSET_UINT;
+    #if NGINX_VERSION_NUM >= 1007005
+        conf->upstream_config.next_upstream_tries = NGX_CONF_UNSET_UINT;
+    #endif
     conf->upstream_config.buffering = NGX_CONF_UNSET;
     conf->upstream_config.ignore_client_abort = NGX_CONF_UNSET;
+    #if NGINX_VERSION_NUM >= 1007007
+        conf->upstream_config.force_ranges = NGX_CONF_UNSET;
+    #endif
 
     conf->upstream_config.local = NGX_CONF_UNSET_PTR;
 
     conf->upstream_config.connect_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.send_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.read_timeout = NGX_CONF_UNSET_MSEC;
+    #if NGINX_VERSION_NUM >= 1007005
+        conf->upstream_config.next_upstream_timeout = NGX_CONF_UNSET_MSEC;
+    #endif
 
     conf->upstream_config.send_lowat = NGX_CONF_UNSET_SIZE;
     conf->upstream_config.buffer_size = NGX_CONF_UNSET_SIZE;
+    #if NGINX_VERSION_NUM >= 1007007
+        conf->upstream_config.limit_rate = NGX_CONF_UNSET_SIZE;
+    #endif
 
     conf->upstream_config.busy_buffers_size_conf = NGX_CONF_UNSET_SIZE;
     conf->upstream_config.max_temp_file_size_conf = NGX_CONF_UNSET_SIZE;
@@ -292,13 +304,20 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.pass_request_body = NGX_CONF_UNSET;
 
 #if (NGX_HTTP_CACHE)
-    conf->upstream_config.cache = NGX_CONF_UNSET_PTR;
+    #if NGINX_VERSION_NUM >= 1007009
+        conf->upstream_config.cache = NGX_CONF_UNSET_PTR;
+    #else
+        conf->upstream_config.cache = NGX_CONF_UNSET;
+    #endif
     conf->upstream_config.cache_min_uses = NGX_CONF_UNSET_UINT;
     conf->upstream_config.cache_bypass = NGX_CONF_UNSET_PTR;
     conf->upstream_config.no_cache = NGX_CONF_UNSET_PTR;
     conf->upstream_config.cache_valid = NGX_CONF_UNSET_PTR;
     conf->upstream_config.cache_lock = NGX_CONF_UNSET;
     conf->upstream_config.cache_lock_timeout = NGX_CONF_UNSET_MSEC;
+    #if NGINX_VERSION_NUM >= 1007008
+        conf->upstream_config.cache_lock_age = NGX_CONF_UNSET_MSEC;
+    #endif
     conf->upstream_config.cache_revalidate = NGX_CONF_UNSET;
 #endif
 
@@ -407,24 +426,53 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     /******************************/
     /******************************/
 
-    if (conf->upstream_config.store != 0) {
-        ngx_conf_merge_value(conf->upstream_config.store,
-                                  prev->upstream_config.store, 0);
+    #if (NGX_HTTP_CACHE) && NGINX_VERSION_NUM >= 1007009
+        if (conf->upstream_config.store > 0) {
+            conf->upstream_config.cache = 0;
+        }
+        if (conf->upstream_config.cache > 0) {
+            conf->upstream_config.store = 0;
+        }
+    #endif
 
-        if (conf->upstream_config.store_lengths == NULL) {
+    #if NGINX_VERSION_NUM >= 1007009
+        if (conf->upstream_config.store == NGX_CONF_UNSET) {
+            ngx_conf_merge_value(conf->upstream_config.store,
+                                      prev->upstream_config.store, 0);
+
             conf->upstream_config.store_lengths = prev->upstream_config.store_lengths;
             conf->upstream_config.store_values = prev->upstream_config.store_values;
         }
-    }
+    #else
+        if (conf->upstream_config.store != 0) {
+            ngx_conf_merge_value(conf->upstream_config.store,
+                                      prev->upstream_config.store, 0);
+
+            if (conf->upstream_config.store_lengths == NULL) {
+                conf->upstream_config.store_lengths = prev->upstream_config.store_lengths;
+                conf->upstream_config.store_values = prev->upstream_config.store_values;
+            }
+        }
+    #endif
 
     ngx_conf_merge_uint_value(conf->upstream_config.store_access,
                               prev->upstream_config.store_access, 0600);
+
+    #if NGINX_VERSION_NUM >= 1007005
+        ngx_conf_merge_uint_value(conf->upstream_config.next_upstream_tries,
+                                  prev->upstream_config.next_upstream_tries, 0);
+    #endif
 
     ngx_conf_merge_value(conf->upstream_config.buffering,
                          prev->upstream_config.buffering, 0);
 
     ngx_conf_merge_value(conf->upstream_config.ignore_client_abort,
                          prev->upstream_config.ignore_client_abort, 0);
+
+    #if NGINX_VERSION_NUM >= 1007007
+        ngx_conf_merge_value(conf->upstream_config.force_ranges,
+                             prev->upstream_config.force_ranges, 0);
+    #endif
 
     ngx_conf_merge_ptr_value(conf->upstream_config.local,
                              prev->upstream_config.local, NULL);
@@ -438,12 +486,22 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->upstream_config.read_timeout,
                               prev->upstream_config.read_timeout, 12000000);
 
+    #if NGINX_VERSION_NUM >= 1007005
+        ngx_conf_merge_msec_value(conf->upstream_config.next_upstream_timeout,
+                                  prev->upstream_config.next_upstream_timeout, 0);
+    #endif
+
     ngx_conf_merge_size_value(conf->upstream_config.send_lowat,
                               prev->upstream_config.send_lowat, 0);
 
     ngx_conf_merge_size_value(conf->upstream_config.buffer_size,
                               prev->upstream_config.buffer_size,
                               16 * 1024);
+
+    #if NGINX_VERSION_NUM >= 1007007
+        ngx_conf_merge_size_value(conf->upstream_config.limit_rate,
+                                  prev->upstream_config.limit_rate, 0);
+    #endif
 
 
     ngx_conf_merge_bufs_value(conf->upstream_config.bufs, prev->upstream_config.bufs,
@@ -559,20 +617,42 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 #if (NGX_HTTP_CACHE)
 
-    ngx_conf_merge_ptr_value(conf->upstream_config.cache,
-                             prev->upstream_config.cache, NULL);
+    #if NGINX_VERSION_NUM >= 1007009
+        if (conf->upstream_config.cache == NGX_CONF_UNSET) {
+           ngx_conf_merge_value(conf->upstream_config.cache,
+                                prev->upstream_config.cache, 0);
 
-    if (conf->upstream_config.cache && conf->upstream_config.cache->data == NULL) {
-        ngx_shm_zone_t  *shm_zone;
+           conf->upstream_config.cache_zone = prev->upstream_config.cache_zone;
+           conf->upstream_config.cache_value = prev->upstream_config.cache_value;
+        }
 
-        shm_zone = conf->upstream_config.cache;
+        if (conf->upstream_config.cache_zone && conf->upstream_config.cache_zone->data == NULL) {
+            ngx_shm_zone_t  *shm_zone;
 
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                           "\"scgi_cache\" zone \"%V\" is unknown",
-                           &shm_zone->shm.name);
+            shm_zone = conf->upstream_config.cache_zone;
 
-        return NGX_CONF_ERROR;
-    }
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "\"scgi_cache\" zone \"%V\" is unknown",
+                               &shm_zone->shm.name);
+
+            return NGX_CONF_ERROR;
+        }
+    #else
+        ngx_conf_merge_ptr_value(conf->upstream_config.cache,
+                                 prev->upstream_config.cache, NULL);
+
+        if (conf->upstream_config.cache && conf->upstream_config.cache->data == NULL) {
+            ngx_shm_zone_t  *shm_zone;
+
+            shm_zone = conf->upstream_config.cache;
+
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                               "\"scgi_cache\" zone \"%V\" is unknown",
+                               &shm_zone->shm.name);
+
+            return NGX_CONF_ERROR;
+        }
+    #endif
 
     ngx_conf_merge_uint_value(conf->upstream_config.cache_min_uses,
                               prev->upstream_config.cache_min_uses, 1);
@@ -615,6 +695,14 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_msec_value(conf->upstream_config.cache_lock_timeout,
                               prev->upstream_config.cache_lock_timeout, 5000);
+
+    ngx_conf_merge_value(conf->upstream_config.cache_revalidate,
+                         prev->upstream_config.cache_revalidate, 0);
+
+    #if NGINX_VERSION_NUM >= 1007008
+        ngx_conf_merge_msec_value(conf->upstream_config.cache_lock_age,
+                                  prev->upstream_config.cache_lock_age, 5000);
+    #endif
 
     ngx_conf_merge_value(conf->upstream_config.cache_revalidate,
                          prev->upstream_config.cache_revalidate, 0);
