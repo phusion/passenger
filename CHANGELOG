@@ -3,6 +3,7 @@ Release 5.0.0 beta 3
 
  * Fixed more cookie handling issues. Closes GH-1310.
  * Fixed various WebSocket issues. Closes GH-1306.
+ * Fixed some crashes caused by race conditions. Closes GH-1326.
  * Fixed issues with handling POST data. Closes GH-1331.
  * Fixed some issues on Heroku. Closes GH-1329.
  * Nginx versions earlier than 1.6 are no longer supported.

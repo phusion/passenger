@@ -56,6 +56,9 @@ using namespace std;
 #define FBC_DEBUG_FROM_STATIC(expr) \
 	P_TRACE(3, "[FBC " << (void *) self << "] " << expr)
 
+#define FBC_TEMPORARILY_GRAB_CONTEXT_SYNCHER(context) \
+	boost::lock_guard<boost::mutex>(context->syncher)
+
 
 /**
  * Adds "unlimited" buffering capability to a Channel. A Channel has a buffer size
@@ -197,6 +200,13 @@ private:
 		SafeLibevPtr libev;
 		eio_req *req;
 		boost::atomic<bool> canceled;
+		/**
+		 * Synchronizes access to `req`. Because all I/O callbacks call
+		 * `eioFinished()`, this mutex blocks callbacks until the main
+		 * thread is done assigning `req`.
+		 * See https://github.com/phusion/passenger/issues/1326
+		 */
+		boost::mutex syncher;
 
 		eio_ssize_t result;
 		int errcode;
@@ -213,6 +223,7 @@ private:
 		virtual ~IOContext() { }
 
 		void cancel() {
+			boost::lock_guard<boost::mutex> l(syncher);
 			if (req != NULL) {
 				eio_cancel(req);
 			}
@@ -225,6 +236,7 @@ private:
 		}
 
 		void eioFinished() {
+			boost::lock_guard<boost::mutex> l(syncher);
 			result = req->result;
 			errcode = req->errorno;
 			req = NULL;
@@ -641,8 +653,10 @@ private:
 		readContext->inFileMode = inFileMode;
 		readerState = RS_READING_FROM_FILE;
 		inFileMode->readRequest = readContext;
+		boost::unique_lock<boost::mutex> l(readContext->syncher);
 		readContext->req = eio_read(inFileMode->fd, readContext->buffer.start,
 			size, inFileMode->readOffset, 0, _nextChunkDoneReading, readContext);
+		l.unlock();
 		verifyInvariants();
 	}
 
@@ -802,6 +816,7 @@ private:
 		inFileMode->writerState = WS_CREATING_FILE;
 		inFileMode->writerRequest = fcContext;
 
+		boost::lock_guard<boost::mutex> l(fcContext->syncher);
 		if (config->delayInFileModeSwitching == 0) {
 			FBC_DEBUG("Writer: creating file " << fcContext->path);
 			fcContext->req = eio_open(fcContext->path.c_str(),
@@ -845,6 +860,7 @@ private:
 	}
 
 	void bufferFileDoneDelaying(FileCreationContext *fcContext) {
+		boost::lock_guard<boost::mutex> l(fcContext->syncher);
 		FBC_DEBUG("Writer: done delaying in-file mode switching. "
 			"Creating file: " << fcContext->path);
 		fcContext->req = eio_open(fcContext->path.c_str(),
@@ -981,11 +997,13 @@ private:
 
 		inFileMode->writerState = WS_MOVING;
 		inFileMode->writerRequest = moveContext;
+		boost::unique_lock<boost::mutex> l(moveContext->syncher);
 		moveContext->req = eio_write(inFileMode->fd,
 			moveContext->buffer.start,
 			moveContext->buffer.size(),
 			inFileMode->readOffset + inFileMode->written,
 			0, _bufferWrittenToFile, moveContext);
+		l.unlock();
 		verifyInvariants();
 	}
 
@@ -1050,11 +1068,13 @@ private:
 			} else {
 				FBC_DEBUG("Writer: move incomplete, proceeding " <<
 					"with writing rest of buffer");
+				boost::unique_lock<boost::mutex> l(moveContext->syncher);
 				moveContext->req = eio_write(inFileMode->fd,
 					moveContext->buffer.start + moveContext->written,
 					moveContext->buffer.size() - moveContext->written,
 					inFileMode->readOffset + inFileMode->written,
 					0, _bufferWrittenToFile, moveContext);
+				l.unlock();
 				verifyInvariants();
 			}
 		} else {
