@@ -236,6 +236,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
     conf->upstream_config.store = NGX_CONF_UNSET;
     conf->upstream_config.store_access = NGX_CONF_UNSET_UINT;
+    #if NGINX_VERSION_NUM >= 1007005
+        conf->upstream_config.next_upstream_tries = NGX_CONF_UNSET_UINT;
+    #endif
     conf->upstream_config.buffering = NGX_CONF_UNSET;
     conf->upstream_config.ignore_client_abort = NGX_CONF_UNSET;
 
@@ -244,6 +247,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     conf->upstream_config.connect_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.send_timeout = NGX_CONF_UNSET_MSEC;
     conf->upstream_config.read_timeout = NGX_CONF_UNSET_MSEC;
+    #if NGINX_VERSION_NUM >= 1007005
+        conf->upstream_config.next_upstream_timeout = NGX_CONF_UNSET_MSEC;
+    #endif
 
     conf->upstream_config.send_lowat = NGX_CONF_UNSET_SIZE;
     conf->upstream_config.buffer_size = NGX_CONF_UNSET_SIZE;
@@ -383,6 +389,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_uint_value(conf->upstream_config.store_access,
                               prev->upstream_config.store_access, 0600);
 
+    #if NGINX_VERSION_NUM >= 1007005
+        ngx_conf_merge_uint_value(conf->upstream_config.next_upstream_tries,
+                                  prev->upstream_config.next_upstream_tries, 0);
+    #endif
+
     ngx_conf_merge_value(conf->upstream_config.buffering,
                          prev->upstream_config.buffering, 0);
 
@@ -400,6 +411,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_msec_value(conf->upstream_config.read_timeout,
                               prev->upstream_config.read_timeout, 12000000);
+
+    #if NGINX_VERSION_NUM >= 1007005
+        ngx_conf_merge_msec_value(conf->upstream_config.next_upstream_timeout,
+                                  prev->upstream_config.next_upstream_timeout, 0);
+    #endif
 
     ngx_conf_merge_size_value(conf->upstream_config.send_lowat,
                               prev->upstream_config.send_lowat, 0);
