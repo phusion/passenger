@@ -36,6 +36,7 @@
 #include <cstddef>
 #include <cstring>
 #include <algorithm>
+#include <limits>
 #include <utility>
 #include <string>
 #include <deque>
@@ -187,8 +188,9 @@ public:
 	typedef Channel::DataCallback DataCallback;
 	typedef void (*Callback)(FileBufferedChannel *channel);
 
-	// `buffered` is 25-bit. This is 2^25-1, or 32 MB.
-	static const unsigned int MAX_MEMORY_BUFFERING = 33554431;
+	static const unsigned int MAX_MEMORY_BUFFERING = numeric_limits<boost::uint32_t>::max();
+	// `nbuffers` is 27-bit. This is 2^27-1.
+	static const unsigned int MAX_BUFFERS = 134217727;
 
 
 private:
@@ -346,10 +348,10 @@ private:
 	};
 
 	FileBufferedChannelConfig *config;
-	Mode mode;
-	ReaderState readerState;
+	Mode mode: 2;
+	ReaderState readerState: 3;
 	/** Number of buffers in `firstBuffer` + `moreBuffers`. */
-	boost::uint16_t nbuffers;
+	unsigned int nbuffers: 27;
 
 	/**
 	 * If an error is encountered, its details are stored here.
@@ -399,6 +401,7 @@ private:
 
 	void pushBuffer(const MemoryKit::mbuf &buffer) {
 		assert(bytesBuffered + buffer.size() <= MAX_MEMORY_BUFFERING);
+		assert(nbuffers < MAX_BUFFERS);
 		if (nbuffers == 0) {
 			firstBuffer = buffer;
 		} else {
@@ -1004,11 +1007,27 @@ private:
 		verifyInvariants();
 	}
 
+	// Since a MoveContext contains an mbuf, we may only destroy it
+	// in the event loop thread.
+	static void destroyMoveContext(MoveContext *moveContext) {
+		if (moveContext->libev->onEventLoopThread()) {
+			destroyMoveContext_onEventLoopThread(moveContext);
+		} else {
+			moveContext->libev->runLater(boost::bind(
+				destroyMoveContext_onEventLoopThread,
+				moveContext));
+		}
+	}
+
+	static void destroyMoveContext_onEventLoopThread(MoveContext *moveContext) {
+		delete moveContext;
+	}
+
 	static int _bufferWrittenToFile(eio_req *req) {
 		MoveContext *moveContext = static_cast<MoveContext *>(req->data);
 		moveContext->eioFinished();
 		if (moveContext->isCanceled()) {
-			delete moveContext;
+			destroyMoveContext(moveContext);
 			return 0;
 		}
 
@@ -1024,7 +1043,7 @@ private:
 
 	static void _bufferWrittenToFile_onEventLoopThread(MoveContext *moveContext) {
 		if (moveContext->isCanceled()) {
-			delete moveContext;
+			destroyMoveContext(moveContext);
 			return;
 		}
 
@@ -1055,12 +1074,12 @@ private:
 				if (generation != this->generation || mode >= ERROR) {
 					// buffersFlushedCallback deinitialized this object, or callback
 					// called a method that encountered an error.
-					delete moveContext;
+					destroyMoveContext(moveContext);
 					return;
 				}
 
 				inFileMode->writerRequest = NULL;
-				delete moveContext;
+				destroyMoveContext(moveContext);
 				moveNextBufferToFile();
 			} else {
 				FBC_DEBUG("Writer: move incomplete, proceeding " <<
@@ -1077,7 +1096,7 @@ private:
 		} else {
 			FBC_DEBUG("Writer: file write failed");
 			int errcode = moveContext->errcode;
-			delete moveContext;
+			destroyMoveContext(moveContext);
 			inFileMode->writerRequest = NULL;
 			inFileMode->writerState = WS_TERMINATED;
 			setError(errcode, __FILE__, __LINE__);
