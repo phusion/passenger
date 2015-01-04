@@ -208,6 +208,16 @@ public:
 	}
 
 	OXT_FORCE_INLINE
+	State getState() const {
+		return Channel::getState();
+	}
+
+	OXT_FORCE_INLINE
+	bool isStarted() const {
+		return Channel::isStarted();
+	}
+
+	OXT_FORCE_INLINE
 	void setDataCallback(DataCallback callback) {
 		Channel::dataCallback = callback;
 	}

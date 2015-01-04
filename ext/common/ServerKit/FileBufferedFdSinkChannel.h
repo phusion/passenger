@@ -194,6 +194,11 @@ public:
 	}
 
 	OXT_FORCE_INLINE
+	unsigned int getBytesBuffered() const {
+		return FileBufferedChannel::getBytesBuffered();
+	}
+
+	OXT_FORCE_INLINE
 	bool ended() const {
 		return FileBufferedChannel::ended();
 	}
@@ -208,14 +213,22 @@ public:
 		return FileBufferedChannel::getHooks();
 	}
 
+	OXT_FORCE_INLINE
 	void setHooks(Hooks *hooks) {
 		FileBufferedChannel::setHooks(hooks);
 	}
 
+	OXT_FORCE_INLINE
+	Callback getBuffersFlushedCallback() {
+		return FileBufferedChannel::getBuffersFlushedCallback();
+	}
+
+	OXT_FORCE_INLINE
 	void setBuffersFlushedCallback(Callback callback) {
 		FileBufferedChannel::setBuffersFlushedCallback(callback);
 	}
 
+	OXT_FORCE_INLINE
 	void setDataFlushedCallback(Callback callback) {
 		FileBufferedChannel::setDataFlushedCallback(callback);
 	}

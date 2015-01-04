@@ -1406,14 +1406,22 @@ public:
 		return bytesBuffered >= config->threshold;
 	}
 
+	OXT_FORCE_INLINE
 	void setDataCallback(DataCallback callback) {
 		Channel::dataCallback = callback;
 	}
 
+	OXT_FORCE_INLINE
+	Callback getBuffersFlushedCallback() const {
+		return buffersFlushedCallback;
+	}
+
+	OXT_FORCE_INLINE
 	void setBuffersFlushedCallback(Callback callback) {
 		buffersFlushedCallback = callback;
 	}
 
+	OXT_FORCE_INLINE
 	void setDataFlushedCallback(Callback callback) {
 		dataFlushedCallback = callback;
 	}
@@ -1423,6 +1431,7 @@ public:
 		return Channel::hooks;
 	}
 
+	OXT_FORCE_INLINE
 	void setHooks(Hooks *hooks) {
 		Channel::hooks = hooks;
 	}
