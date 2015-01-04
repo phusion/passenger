@@ -618,7 +618,6 @@ private:
 	void channelHasBecomeIdle() {
 		FBC_DEBUG("Reader: underlying channel has become idle");
 		verifyInvariants();
-		//readerState = RS_INACTIVE;
 		readNext();
 	}
 
