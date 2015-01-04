@@ -982,6 +982,7 @@ public:
 		doc["name"] = clientName;
 		doc["number"] = client->number;
 		doc["refcount"] = client->refcount.load(boost::memory_order_relaxed);
+		doc["output_channel_state"] = client->output.inspectAsJson();
 
 		return doc;
 	}

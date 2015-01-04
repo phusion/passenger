@@ -232,6 +232,10 @@ public:
 	void setDataFlushedCallback(Callback callback) {
 		FileBufferedChannel::setDataFlushedCallback(callback);
 	}
+
+	Json::Value inspectAsJson() const {
+		return FileBufferedChannel::inspectAsJson();
+	}
 };
 
 

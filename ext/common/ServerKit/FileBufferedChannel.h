@@ -43,6 +43,8 @@
 #include <ServerKit/Context.h>
 #include <ServerKit/Errors.h>
 #include <ServerKit/Channel.h>
+#include <Utils/json.h>
+#include <Utils/JsonUtils.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -1192,6 +1194,42 @@ private:
 		inFileMode->writerState = WS_INACTIVE;
 	}
 
+	const char *getReaderStateString() const {
+		switch (readerState) {
+		case RS_INACTIVE:
+			return "RS_INACTIVE";
+		case RS_FEEDING:
+			return "RS_FEEDING";
+		case RS_FEEDING_EOF:
+			return "RS_FEEDING_EOF";
+		case RS_WAITING_FOR_CHANNEL_IDLE:
+			return "RS_WAITING_FOR_CHANNEL_IDLE";
+		case RS_READING_FROM_FILE:
+			return "RS_READING_FROM_FILE";
+		case RS_TERMINATED:
+			return "RS_TERMINATED";
+		default:
+			P_BUG("Unknown readerState");
+			return NULL;
+		}
+	}
+
+	const char *getWriterStateString() const {
+		switch (inFileMode->writerState) {
+		case WS_INACTIVE:
+			return "WS_INACTIVE";
+		case WS_CREATING_FILE:
+			return "WS_CREATING_FILE";
+		case WS_MOVING:
+			return "WS_MOVING";
+		case WS_TERMINATED:
+			return "WS_TERMINATED";
+		default:
+			P_BUG("Unknown writerState");
+			return NULL;
+		}
+	}
+
 	void verifyInvariants() const {
 		#ifndef NDEBUG
 			if (mode >= ERROR) {
@@ -1449,6 +1487,37 @@ public:
 	OXT_FORCE_INLINE
 	void setHooks(Hooks *hooks) {
 		Channel::hooks = hooks;
+	}
+
+	Json::Value inspectAsJson() const {
+		Json::Value doc;
+
+		switch (mode) {
+		case IN_MEMORY_MODE:
+			doc["mode"] = "IN_MEMORY_MODE";
+			break;
+		case IN_FILE_MODE:
+			doc["mode"] = "IN_FILE_MODE";
+			doc["writer_state"] = getWriterStateString();
+			doc["read_offset"] = byteSizeToJson(inFileMode->readOffset);
+			doc["written"] = signedByteSizeToJson(inFileMode->written);
+			break;
+		case ERROR:
+			doc["mode"] = "ERROR";
+			break;
+		case ERROR_WAITING:
+			doc["mode"] = "ERROR_WAITING";
+			break;
+		default:
+			break;
+		}
+
+		doc["reader_state"] = getReaderStateString();
+		doc["nbuffers"] = nbuffers;
+		doc["bytes_buffered"] = byteSizeToJson(getBytesBuffered());
+		doc["callback_in_progress"] = !acceptingInput();
+
+		return doc;
 	}
 };
 

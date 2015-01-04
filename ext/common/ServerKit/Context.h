@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -33,6 +33,7 @@
 #include <Constants.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/json.h>
+#include <Utils/JsonUtils.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -59,26 +60,6 @@ private:
 	void initialize() {
 		mbuf_pool.mbuf_block_chunk_size = DEFAULT_MBUF_CHUNK_SIZE;
 		MemoryKit::mbuf_pool_init(&mbuf_pool);
-	}
-
-	string formatFloat(double val) const {
-		char buf[64];
-		int size = snprintf(buf, sizeof(buf), "%.1f", val);
-		return string(buf, size);
-	}
-
-	Json::Value
-	byteSizeToJson(size_t size) const {
-		Json::Value doc;
-		doc["bytes"] = (Json::UInt64) size;
-		if (size < 1024) {
-			doc["human_readable"] = toString(size) + " bytes";
-		} else if (size < 1024 * 1024) {
-			doc["human_readable"] = formatFloat(size / 1024.0) + " KB";
-		} else {
-			doc["human_readable"] = formatFloat(size / 1024.0 / 1024.0) + " MB";
-		}
-		return doc;
 	}
 
 public:
