@@ -642,9 +642,9 @@ private:
 	};
 
 	void readNextChunkFromFile() {
+		assert(inFileMode->written > 0);
 		size_t size = std::min<size_t>(inFileMode->written,
-			ctx->mbuf_pool.mbuf_block_chunk_size -
-			ctx->mbuf_pool.mbuf_block_offset);
+			mbuf_pool_data_size(&ctx->mbuf_pool));
 		FBC_DEBUG("Reader: reading next chunk from file");
 		verifyInvariants();
 		ReadContext *readContext = new ReadContext(this);
