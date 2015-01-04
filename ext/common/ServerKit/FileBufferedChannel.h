@@ -659,11 +659,27 @@ private:
 		verifyInvariants();
 	}
 
+	// Since a ReadContext contains an mbuf, we may only destroy it
+	// in the event loop thread.
+	static void destroyReadContext(ReadContext *readContext) {
+		if (readContext->libev->onEventLoopThread()) {
+			destroyReadContext_onEventLoopThread(readContext);
+		} else {
+			readContext->libev->runLater(boost::bind(
+				destroyReadContext_onEventLoopThread,
+				readContext));
+		}
+	}
+
+	static void destroyReadContext_onEventLoopThread(ReadContext *readContext) {
+		delete readContext;
+	}
+
 	static int _nextChunkDoneReading(eio_req *req) {
 		ReadContext *readContext = (ReadContext *) req->data;
 		readContext->eioFinished();
 		if (readContext->isCanceled()) {
-			delete readContext;
+			destroyReadContext(readContext);
 			return 0;
 		}
 
@@ -679,7 +695,7 @@ private:
 
 	static void _nextChunkDoneReading_onEventLoopThread(ReadContext *readContext) {
 		if (readContext->isCanceled()) {
-			delete readContext;
+			destroyReadContext(readContext);
 			return;
 		}
 
@@ -696,7 +712,7 @@ private:
 		int fd = readContext->result;
 		int errcode = readContext->errcode;
 		MemoryKit::mbuf buffer(boost::move(readContext->buffer));
-		delete readContext;
+		destroyReadContext(readContext);
 		inFileMode->readRequest = NULL;
 
 		if (fd != -1) {
