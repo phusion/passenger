@@ -7,6 +7,7 @@ Release 5.0.0 beta 3
  * Fixed issues with handling POST data. Closes GH-1331.
  * Fixed some issues on Heroku. Closes GH-1329.
  * Nginx versions earlier than 1.6 are no longer supported.
+ * Improved state introspection.
 
 
 Release 5.0.0 beta 2
