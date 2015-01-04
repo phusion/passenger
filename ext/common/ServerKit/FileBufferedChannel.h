@@ -36,7 +36,6 @@
 #include <cstddef>
 #include <cstring>
 #include <algorithm>
-#include <limits>
 #include <utility>
 #include <string>
 #include <deque>
@@ -188,7 +187,8 @@ public:
 	typedef Channel::DataCallback DataCallback;
 	typedef void (*Callback)(FileBufferedChannel *channel);
 
-	static const unsigned int MAX_MEMORY_BUFFERING = numeric_limits<boost::uint32_t>::max();
+	// 2^32-1 bytes.
+	static const unsigned int MAX_MEMORY_BUFFERING = 4294967295u;
 	// `nbuffers` is 27-bit. This is 2^27-1.
 	static const unsigned int MAX_BUFFERS = 134217727;
 
