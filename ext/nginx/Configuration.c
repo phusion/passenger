@@ -310,9 +310,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
 
 #if (NGX_HTTP_CACHE)
     #if NGINX_VERSION_NUM >= 1007009
-        conf->upstream_config.cache = NGX_CONF_UNSET_PTR;
-    #else
         conf->upstream_config.cache = NGX_CONF_UNSET;
+    #else
+        conf->upstream_config.cache = NGX_CONF_UNSET_PTR;
     #endif
     conf->upstream_config.cache_min_uses = NGX_CONF_UNSET_UINT;
     conf->upstream_config.cache_bypass = NGX_CONF_UNSET_PTR;
@@ -781,7 +781,11 @@ merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf, passenger_loc_conf_t *
 
     if (conf->headers_set_hash.buckets
 #if (NGX_HTTP_CACHE)
-        && ((conf->upstream_config.cache == NULL) == (prev->upstream_config.cache == NULL))
+    #if NGINX_VERSION_NUM >= 1007009
+        && ((conf->upstream_config.cache == NGX_CONF_UNSET) == (prev->upstream_config.cache == NGX_CONF_UNSET))
+    #else
+        && ((conf->upstream_config.cache == NGX_CONF_UNSET_PTR) == (prev->upstream_config.cache == NGX_CONF_UNSET_PTR))
+    #endif
 #endif
        )
     {
