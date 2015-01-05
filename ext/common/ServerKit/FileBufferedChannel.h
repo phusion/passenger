@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -1442,8 +1442,30 @@ public:
 		return inFileMode->writerState;
 	}
 
+	/**
+	 * Returns the number of bytes buffered in memory.
+	 */
 	unsigned int getBytesBuffered() const {
 		return bytesBuffered;
+	}
+
+	/**
+	 * Returns the number of bytes that are buffered on disk
+	 * and have not yet been read.
+	 */
+	boost::uint64_t getBytesBufferedOnDisk() const {
+		if (mode == IN_FILE_MODE && inFileMode->written >= 0) {
+			return inFileMode->written;
+		} else {
+			return 0;
+		}
+	}
+
+	/**
+	 * Returns the total bytes buffered, both in-memory and on disk.
+	 */
+	boost::uint64_t getTotalBytesBuffered() const {
+		return bytesBuffered + getBytesBufferedOnDisk();
 	}
 
 	bool ended() const {
@@ -1472,6 +1494,11 @@ public:
 	OXT_FORCE_INLINE
 	void setBuffersFlushedCallback(Callback callback) {
 		buffersFlushedCallback = callback;
+	}
+
+	OXT_FORCE_INLINE
+	Callback getDataFlushedCallback() const {
+		return dataFlushedCallback;
 	}
 
 	OXT_FORCE_INLINE

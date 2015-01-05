@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -199,6 +199,16 @@ public:
 	}
 
 	OXT_FORCE_INLINE
+	boost::uint64_t getBytesBufferedOnDisk() const {
+		return FileBufferedChannel::getBytesBufferedOnDisk();
+	}
+
+	OXT_FORCE_INLINE
+	boost::uint64_t getTotalBytesBuffered() const {
+		return FileBufferedChannel::getTotalBytesBuffered();
+	}
+
+	OXT_FORCE_INLINE
 	bool ended() const {
 		return FileBufferedChannel::ended();
 	}
@@ -226,6 +236,11 @@ public:
 	OXT_FORCE_INLINE
 	void setBuffersFlushedCallback(Callback callback) {
 		FileBufferedChannel::setBuffersFlushedCallback(callback);
+	}
+
+	OXT_FORCE_INLINE
+	Callback getDataFlushedCallback() const {
+		return FileBufferedChannel::getDataFlushedCallback();
 	}
 
 	OXT_FORCE_INLINE
