@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -475,6 +475,7 @@ public:
 	virtual Json::Value inspectRequestStateAsJson(const Request *req) const {
 		Json::Value doc = ParentClass::inspectRequestStateAsJson(req);
 		Json::Value flags;
+		const AppResponse *resp = &req->appResponse;
 
 		if (req->startedAt != 0) {
 			doc["started_at"] = timeToJson(req->startedAt * 1000000.0);
@@ -498,7 +499,6 @@ public:
 		if (req->session != NULL) {
 			Json::Value &sessionDoc = doc["session"] = Json::Value(Json::objectValue);
 			const Session *session = req->session.get();
-			const AppResponse *resp = &req->appResponse;
 
 			if (req->session->isClosed()) {
 				sessionDoc["closed"] = true;
@@ -506,7 +506,9 @@ public:
 				sessionDoc["pid"] = session->getPid();
 				sessionDoc["gupid"] = session->getGupid().toString();
 			}
+		}
 
+		if (req->session != NULL || resp->httpState != AppResponse::PARSING_HEADERS) {
 			doc["app_response_http_state"] = resp->getHttpStateString();
 			doc["app_response_http_major"] = resp->httpMajor;
 			doc["app_response_http_minor"] = resp->httpMinor;
