@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2014 Phusion
+ * Copyright (C) 2010-2015 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -289,6 +289,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     pp_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
     pp_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
     pp_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
+    pp_variant_map_set_int    (params, "response_buffer_high_watermark", passenger_main_conf.response_buffer_high_watermark);
     pp_variant_map_set_int    (params, "stat_throttle_rate", passenger_main_conf.stat_throttle_rate);
     pp_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
     pp_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);

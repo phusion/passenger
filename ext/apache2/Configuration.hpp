@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -187,6 +187,8 @@ struct ServerConfig {
 	 * idle before it gets terminated. */
 	unsigned int poolIdleTime;
 
+	unsigned int responseBufferHighWatermark;
+
 	unsigned int statThrottleRate;
 
 	/** Whether user switching support is enabled. */
@@ -220,6 +222,7 @@ struct ServerConfig {
 		debugLogFile       = NULL;
 		maxPoolSize        = DEFAULT_MAX_POOL_SIZE;
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
+		responseBufferHighWatermark = DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK;
 		statThrottleRate   = DEFAULT_STAT_THROTTLE_RATE;
 		userSwitching      = true;
 		defaultUser        = DEFAULT_WEB_APP_USER;

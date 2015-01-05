@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -978,6 +978,7 @@ setAgentsOptionsDefaults() {
 	options.setDefault("sticky_sessions_cookie_name", DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
 	options.setDefaultBool("turbocaching", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
+	options.setDefaultInt("response_buffer_high_watermark", DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
 	options.setDefaultBool("selfchecks", false);
 	options.setDefaultBool("server_graceful_exit", true);
 	options.setDefaultInt("server_threads", boost::thread::hardware_concurrency());

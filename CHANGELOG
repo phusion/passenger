@@ -7,6 +7,7 @@ Release 5.0.0 beta 3
  * Fixed issues with handling POST data. Closes GH-1331.
  * Fixed some issues on Heroku. Closes GH-1329.
  * Nginx versions earlier than 1.6 are no longer supported.
+ * Introduced a new configuration option, `passenger_response_buffer_high_watermark` (Nginx) and `PassengerResponseBufferHighWatermark` (Apache), for configuring the behavior of the response buffering system. Closes GH-1300.
  * Improved state introspection.
 
 

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -77,6 +77,8 @@
 	#define DEFAULT_POOL_IDLE_TIME 300
 
 	#define DEFAULT_PYTHON "python"
+
+	#define DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK 134217728
 
 	#define DEFAULT_RUBY "ruby"
 

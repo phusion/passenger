@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -68,6 +68,7 @@ onRequestObjectCreated(Client *client, Request *req) {
 virtual void deinitializeClient(Client *client) {
 	ParentClass::deinitializeClient(client);
 	client->output.setBuffersFlushedCallback(NULL);
+	client->output.setDataFlushedCallback(getClientOutputDataFlushedCallback());
 }
 
 virtual void reinitializeRequest(Client *client, Request *req) {

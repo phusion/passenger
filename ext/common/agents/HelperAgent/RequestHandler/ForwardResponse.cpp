@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -847,7 +847,15 @@ void
 maybeThrottleAppSource(Client *client, Request *req) {
 	if (!req->ended()) {
 		assert(client->output.getBuffersFlushedCallback() == NULL);
-		if (client->output.getBytesBuffered() >= getContext()->defaultFileBufferedChannelConfig.threshold) {
+		assert(client->output.getDataFlushedCallback() == getClientOutputDataFlushedCallback());
+		if (responseBufferHighWatermark > 0
+		 && client->output.getTotalBytesBuffered() >= responseBufferHighWatermark)
+		{
+			SKC_TRACE(client, 2, "Application is sending response data quicker than the client "
+				"can keep up with. Throttling application socket");
+			client->output.setDataFlushedCallback(_outputDataFlushed);
+			req->appSource.stop();
+		} else if (client->output.passedThreshold()) {
 			SKC_TRACE(client, 2, "Application is sending response data quicker than the on-disk "
 				"buffer can keep up with (currently buffered " << client->output.getBytesBuffered() <<
 				" bytes). Throttling application socket");
@@ -875,6 +883,30 @@ outputBuffersFlushed(Client *client, Request *req) {
 		assert(!req->appSource.isStarted());
 		SKC_TRACE(client, 2, "Buffered response data has been written to disk. Resuming application socket");
 		client->output.setBuffersFlushedCallback(NULL);
+		req->appSource.start();
+	}
+}
+
+static void
+_outputDataFlushed(FileBufferedChannel *_channel) {
+	FileBufferedFdSinkChannel *channel = reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
+	Client *client = static_cast<Client *>(static_cast<
+		ServerKit::BaseClient *>(channel->getHooks()->userData));
+	Request *req = static_cast<Request *>(client->currentRequest);
+	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+
+	getClientOutputDataFlushedCallback()(_channel);
+	if (client->connected() && req != NULL) {
+		self->outputDataFlushed(client, req);
+	}
+}
+
+void
+outputDataFlushed(Client *client, Request *req) {
+	if (!req->ended()) {
+		assert(!req->appSource.isStarted());
+		SKC_TRACE(client, 2, "The client is ready to receive more data. Resuming application socket");
+		client->output.setDataFlushedCallback(getClientOutputDataFlushedCallback());
 		req->appSource.start();
 	}
 }

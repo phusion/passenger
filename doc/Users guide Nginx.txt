@@ -1891,6 +1891,7 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is '512'.
 
+[[passenger_buffer_response]]
 ==== passenger_buffer_response <on|off> ====
 When turned on, application-generated responses are buffered by Nginx. Buffering will
 happen in memory and also on disk if the response is larger than a certain threshold.
@@ -1898,7 +1899,7 @@ happen in memory and also on disk if the response is larger than a certain thres
 Before we proceed with explaining this configuration option, we want to state the following to avoid confusion. If you use Phusion Passenger for Nginx, there are in fact two response buffering systems active:
 
 1. The Nginx response buffering system. `passenger_buffer_response` turns this on or off.
-2. The Phusion Passenger response buffering system, a.k.a. 'real-time disk-backed response buffering'. This buffering system is always on, regardless of the value of `passenger_buffer_response`.
+2. The Phusion Passenger response buffering system, a.k.a. 'real-time disk-backed response buffering'. This buffering system is always on, regardless of the value of `passenger_buffer_response`, but its behavior can be tweaked with <<PassengerResponseBufferHighWatermark,passenger_response_buffer_high_watermark>>.
 
 Response buffering is useful because it protects against slow HTTP clients that do not read responses immediately or quickly enough. Buffering prevents such slow clients from blocking web applications that have limited concurrency. Because Phusion Passenger's response buffering is always turned on, you are always protected. Therefore, `passenger_buffer_response` is off by default, and you never should have to turn it on.
 
@@ -1961,10 +1962,29 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
+[[PassengerResponseBufferHighWatermark]]
+==== passenger_response_buffer_high_watermark <bytes>
+:version: 5.0.0
+include::users_guide_snippets/since_version.txt[]
+
+As explained in <<passenger_buffer_response,passenger_buffer_response>>, Phusion Passenger has two response buffering mechanisms. This option configures the maximum size of the real-time disk-backed response buffering system. If the buffer is full, the application will be blocked until the client has fully read the buffer.
+
+This buffering system has a default size of *128 MB* (134217728 bytes). This default value is large enough to prevent most applications from blocking on slow clients, but small enough to prevent broken applications from filling up the hard disk.
+
+You can't disable real-time disk-backed response buffering, but you can set the buffer size to a small value, which is effectively the same as disabling it.
+
+Most of the time, you won't need to tweak this value. But there is one good use case where you may want set this option to a low value: if you are streaming a large response, but want to detect client disconnections as soon as possible. If the buffer size is larger than your response size, then Phusion Passenger will read and buffer the response as fast as it can, offloading the application as soon as it can, thereby preventing the application from detecting client disconnects. But if the buffer size is sufficiently small (say, 64 KB), then your application will effectively output response data at the same speed as the client reads it, allowing you to detect client disconnects almost immediately. This is also a down side, because many slow clients blocking your application can result in a denial of service, so use this option with care.
+
+If your application outputs responses larger than 128 MB and you are not interested in detecting client disconnects as soon as possible, then you should raise this value, or set it to 0.
+
+A value of 0 means that the buffer size is unlimited.
+
+This option may only occur once, in the 'http' configuration block. The default value is '134217728' (128 MB).
+
 ==== passenger_buffer_size ====
 ==== passenger_buffers ====
 ==== passenger_busy_buffer_size ====
-These options have the same effect as proxy_module's similarly named options.
+These options have the same effect as ngx_http_proxy_module's similarly named options.
 They can be used to modify the maximum allowed HTTP header size.
 
 

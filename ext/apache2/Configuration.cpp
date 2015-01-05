@@ -238,6 +238,7 @@ DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int,
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_debug_log_file, debugLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_response_buffer_high_watermark, responseBufferHighWatermark, unsigned int, 0)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned int, 0)
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
@@ -410,6 +411,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The maximum number of seconds that an application may be idle before it gets terminated."),
+	AP_INIT_TAKE1("PassengerResponseBufferHighWatermark",
+		(Take1Func) cmd_passenger_response_buffer_high_watermark,
+		NULL,
+		RSRC_CONF,
+		"The maximum size of the response buffer."),
 	AP_INIT_FLAG("PassengerUserSwitching",
 		(FlagFunc) cmd_passenger_user_switching,
 		NULL,

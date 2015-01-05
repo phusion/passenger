@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -56,6 +56,7 @@ module PhusionPassenger
 		DEFAULT_CONCURRENCY_MODEL = "process"
 		DEFAULT_STICKY_SESSIONS_COOKIE_NAME = "_passenger_route"
 		DEFAULT_APP_THREAD_COUNT = 1
+		DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK = 1024 * 1024 * 128
 		DEFAULT_STAT_THROTTLE_RATE = 10
 		DEFAULT_ANALYTICS_LOG_USER = DEFAULT_WEB_APP_USER
 		DEFAULT_ANALYTICS_LOG_GROUP = ""

@@ -210,13 +210,15 @@
 
 7.7.2. PassengerBufferResponse <on|off>	=>	passengerbufferresponse-on-off--1y7ilka
 
-7.7.3. PassengerErrorOverride <on|off>	=>	passengererroroverride-on-off--1pq9nez
+7.7.3. PassengerResponseBufferHighWatermark <bytes>	=>	passengerresponsebufferhighwatermark-bytes--1kj32df
 
-7.7.4. PassengerMaxRequestQueueSize <number>	=>	passenger-max-request-queue-size-number--1f1uocd
+7.7.4. PassengerErrorOverride <on|off>	=>	passengererroroverride-on-off--1pq9nez
 
-7.7.5. PassengerStickySessions <on|off>	=>	passengerstickysessions-on-off--fx1jkt
+7.7.5. PassengerMaxRequestQueueSize <number>	=>	passenger-max-request-queue-size-number--1f1uocd
 
-7.7.6. PassengerStickySessionsCookieName	=>	passenger-sticky-sessions-cookie-name-stktkx
+7.7.6. PassengerStickySessions <on|off>	=>	passengerstickysessions-on-off--fx1jkt
+
+7.7.7. PassengerStickySessionsCookieName	=>	passenger-sticky-sessions-cookie-name-stktkx
 
 7.8. Compatibility options	=>	compatibility-options-8jve5a
 

@@ -189,6 +189,7 @@ private:
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 
 	unsigned int statThrottleRate;
+	unsigned int responseBufferHighWatermark;
 	BenchmarkMode benchmarkMode: 3;
 	bool singleAppMode: 1;
 	bool showVersionInHeader: 1;
@@ -262,6 +263,7 @@ public:
 		: ParentClass(context),
 
 		  statThrottleRate(_agentsOptions->getInt("stat_throttle_rate")),
+		  responseBufferHighWatermark(_agentsOptions->getInt("response_buffer_high_watermark")),
 		  benchmarkMode(parseBenchmarkMode(_agentsOptions->get("benchmark_mode", false))),
 		  singleAppMode(false),
 		  showVersionInHeader(_agentsOptions->getBool("show_version_in_header")),

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2014 Phusion
+ * Copyright (C) 2010-2015 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -93,6 +93,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->abort_on_startup_error = NGX_CONF_UNSET;
     conf->max_pool_size = NGX_CONF_UNSET_UINT;
     conf->pool_idle_time = NGX_CONF_UNSET_UINT;
+    conf->response_buffer_high_watermark = NGX_CONF_UNSET_UINT;
     conf->stat_throttle_rate = NGX_CONF_UNSET_UINT;
     conf->user_switching = NGX_CONF_UNSET;
     conf->show_version_in_header = NGX_CONF_UNSET;
@@ -163,6 +164,10 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
 
     if (conf->pool_idle_time == NGX_CONF_UNSET_UINT) {
         conf->pool_idle_time = DEFAULT_POOL_IDLE_TIME;
+    }
+
+    if (conf->response_buffer_high_watermark == NGX_CONF_UNSET_UINT) {
+        conf->response_buffer_high_watermark = DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK;
     }
 
     if (conf->stat_throttle_rate == NGX_CONF_UNSET_UINT) {
@@ -1296,6 +1301,13 @@ const ngx_command_t passenger_commands[] = {
       ngx_conf_set_num_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(passenger_main_conf_t, pool_idle_time),
+      NULL },
+
+    { ngx_string("passenger_response_buffer_high_watermark"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_num_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, response_buffer_high_watermark),
       NULL },
 
     { ngx_string("passenger_stat_throttle_rate"),

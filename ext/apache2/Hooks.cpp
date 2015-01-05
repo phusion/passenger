@@ -1224,6 +1224,7 @@ public:
 			.set    ("default_ruby", serverConfig.defaultRuby)
 			.setInt ("max_pool_size", serverConfig.maxPoolSize)
 			.setInt ("pool_idle_time", serverConfig.poolIdleTime)
+			.setInt ("response_buffer_high_watermark", serverConfig.responseBufferHighWatermark)
 			.setInt ("stat_throttle_rate", serverConfig.statThrottleRate)
 			.set    ("analytics_log_user", serverConfig.analyticsLogUser)
 			.set    ("analytics_log_group", serverConfig.analyticsLogGroup)
