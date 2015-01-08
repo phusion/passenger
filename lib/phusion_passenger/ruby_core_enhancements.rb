@@ -100,7 +100,6 @@ module Signal
 			result.delete("QUIT")
 			result.delete("ILL")
 			result.delete("FPE")
-			result.delete("KILL")
 			result.delete("SEGV")
 			result.delete("USR1")
 			result.delete("IOT")
