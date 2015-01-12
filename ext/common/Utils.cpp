@@ -812,7 +812,8 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 				it->c_str(),
 				(char *) 0);
 			e = errno;
-			fprintf(stderr, "Cannot execute '%s %s': %s (%d)\n",
+			fprintf(stderr, "Cannot execute '%s %s %s': %s (%d)\n",
+				ruby.c_str(),
 				prespawnScript.c_str(), it->c_str(),
 				strerror(e), e);
 			fflush(stderr);
