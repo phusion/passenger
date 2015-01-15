@@ -74,6 +74,10 @@ public:
 		unsigned int index;
 		Header *header;
 		Body *body;
+		enum {
+			NOT_FOUND,
+			NOT_FRESH
+		} cacheMissReason;
 
 		Entry()
 			: index(0),
@@ -90,6 +94,17 @@ public:
 		OXT_FORCE_INLINE
 		bool valid() const {
 			return header != NULL;
+		}
+
+		const char *getCacheMissReasonString() const {
+			switch (cacheMissReason) {
+			case NOT_FOUND:
+				return "NOT_FOUND";
+			case NOT_FRESH:
+				return "NOT_FRESH";
+			default:
+				return "UNKNOWN";
+			}
 		}
 	};
 
@@ -514,9 +529,12 @@ public:
 				return entry;
 			} else {
 				erase(entry.index);
-				return Entry();
+				Entry result;
+				result.cacheMissReason = Entry::NOT_FRESH;
+				return result;
 			}
 		} else {
+			entry.cacheMissReason = Entry::NOT_FOUND;
 			return entry;
 		}
 	}
@@ -642,9 +660,11 @@ public:
 	string inspect() const {
 		stringstream stream;
 		for (unsigned int i = 0; i < MAX_ENTRIES; i++) {
+			time_t expiryDate = bodies[i].expiryDate;
 			stream << " #" << i << ": valid=" << headers[i].valid
-				<< ", hash=" << headers[i].hash << ", keySize="
-				<< headers[i].keySize << ", key=\""
+				<< ", hash=" << headers[i].hash
+				<< ", expiryDate=" << expiryDate
+				<< ", keySize=" << headers[i].keySize << ", key=\""
 				<< cEscapeString(StaticString(bodies[i].key, headers[i].keySize)) << "\"\n";
 		}
 		return stream.str();

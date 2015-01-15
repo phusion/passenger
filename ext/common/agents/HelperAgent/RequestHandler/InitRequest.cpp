@@ -157,8 +157,9 @@ respondFromTurboCache(Client *client, Request *req) {
 			}
 			return true;
 		} else {
-			SKC_TRACE(client, 2, "Turbocaching: cache miss (key \"" <<
-				cEscapeString(req->cacheKey) << "\")");
+			SKC_TRACE(client, 2, "Turbocaching: cache miss: " <<
+				entry.getCacheMissReasonString() <<
+				" (key \"" << cEscapeString(req->cacheKey) << "\")");
 			return false;
 		}
 	} else {
