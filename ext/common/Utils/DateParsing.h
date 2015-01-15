@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -50,6 +50,7 @@ inline bool parseImfFixdate_zone(const char **pos, const char *end, int &zone);
 
 /**
  * Parses an IMF-fixdate, as defined by RFC 5322.
+ * Returns whether parsing succeeded.
  */
 inline bool
 parseImfFixdate(const char *date, const char *end, struct tm &tm, int &zone) {
@@ -57,7 +58,7 @@ parseImfFixdate(const char *date, const char *end, struct tm &tm, int &zone) {
 	// It's too complicated and nobody uses CFWS.
 
 	tm.tm_yday = -1;
-	tm.tm_yday = 0; // Pretend that DST is not in effect. Caller should use time zone information.
+	tm.tm_isdst = 0;
 
 	if (!parseImfFixdate_dayOfWeek(&date, end, tm)) {
 		return false;
@@ -70,6 +71,18 @@ parseImfFixdate(const char *date, const char *end, struct tm &tm, int &zone) {
 		return false;
 	}
 	return parseImfFixdate_time(&date, end, tm, zone);
+}
+
+/**
+ * Converts a parsed IMF-fixdate, as outputted by `parseImfFixdate()`,
+ * into a Unix timestamp.
+ */
+inline time_t
+parsedDateToTimestamp(struct tm &tm, int zone) {
+	time_t result = mktime(&tm);
+	result -= zone / 100 * 60 * 60 + zone % 100 * 60;
+	result += tm.tm_gmtoff;
+	return result;
 }
 
 inline void

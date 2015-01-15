@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -210,10 +210,6 @@ private:
 	OXT_FORCE_INLINE
 	void erase(unsigned int index) {
 		headers[index].valid = false;
-	}
-
-	time_t parsedDateToTimestamp(struct tm &tm, int zone) const {
-		return mktime(&tm) - zone / 100 * 60 * 60 - zone % 100 * 60;
 	}
 
 	time_t parseDate(psg_pool_t *pool, const LString *date, ev_tstamp now) const {
