@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -207,6 +207,8 @@ private
 				# We do not check for this key name in every loop
 				# iteration as an optimization.
 				next
+			else
+				values = values.to_s.split(NEWLINE)
 			end
 			values.each do |value|
 				result << key
