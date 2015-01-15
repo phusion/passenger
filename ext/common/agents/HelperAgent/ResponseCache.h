@@ -112,6 +112,7 @@ private:
 	HashedStaticString HOST;
 	HashedStaticString CACHE_CONTROL;
 	HashedStaticString PRAGMA_CONST;
+	HashedStaticString AUTHORIZATION;
 	HashedStaticString VARY;
 	HashedStaticString EXPIRES;
 	HashedStaticString LAST_MODIFIED;
@@ -392,6 +393,7 @@ public:
 	ResponseCache()
 		: CACHE_CONTROL("cache-control"),
 		  PRAGMA_CONST("pragma"),
+		  AUTHORIZATION("authorization"),
 		  VARY("vary"),
 		  EXPIRES("expires"),
 		  LAST_MODIFIED("last-modified"),
@@ -572,12 +574,16 @@ public:
 			StaticString cacheControl = StaticString(
 				req->appResponse.cacheControl->start->data,
 				req->appResponse.cacheControl->size);
-			if (cacheControl.find(P_STATIC_STRING("no-store")) != string::npos) {
+			if (cacheControl.find(P_STATIC_STRING("no-store")) != string::npos
+			 || cacheControl.find(P_STATIC_STRING("private")) != string::npos)
+			{
 				return false;
 			}
 		}
 
-		if (respHeaders.lookup(VARY) != NULL) {
+		if (req->headers.lookup(AUTHORIZATION) != NULL
+		 || respHeaders.lookup(VARY) != NULL)
+		{
 			return false;
 		}
 

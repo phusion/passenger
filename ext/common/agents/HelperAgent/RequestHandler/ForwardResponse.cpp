@@ -368,7 +368,7 @@ void prepareAppResponseCaching(Client *client, Request *req) {
 	if (turboCaching.isEnabled() && !req->cacheKey.empty()) {
 		TRACE_POINT();
 		AppResponse *resp = &req->appResponse;
-		SKC_TRACE(client, 2, "Preparing response caching");
+		SKC_TRACE(client, 2, "Turbocache: preparing response caching");
 		if (turboCaching.responseCache.requestAllowsStoring(req)
 		 && turboCaching.responseCache.prepareRequestForStoring(req))
 		{
@@ -387,6 +387,11 @@ void prepareAppResponseCaching(Client *client, Request *req) {
 			turboCaching.responseCache.invalidate(req);
 			req->cacheKey = HashedStaticString();
 			SKC_TRACE(client, 2, "Turbocache entries:\n" << turboCaching.responseCache.inspect());
+		} else {
+			SKC_TRACE(client, 2, "Turbocache: response not eligible for turbocaching");
+			// Decrease store success ratio.
+			turboCaching.responseCache.incStores();
+			req->cacheKey = HashedStaticString();
 		}
 	}
 }
