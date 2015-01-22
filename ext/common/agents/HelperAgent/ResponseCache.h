@@ -38,7 +38,11 @@
 
 namespace Passenger {
 
-
+/**
+ * Relevant RFCs:
+ * https://tools.ietf.org/html/rfc7234    HTTP 1.1 Caching
+ * https://tools.ietf.org/html/rfc2109    HTTP State Management Mechanism
+ */
 template<typename Request>
 class ResponseCache {
 public:
@@ -114,6 +118,7 @@ private:
 	HashedStaticString PRAGMA_CONST;
 	HashedStaticString AUTHORIZATION;
 	HashedStaticString VARY;
+	HashedStaticString WWW_AUTHENTICATE;
 	HashedStaticString EXPIRES;
 	HashedStaticString LAST_MODIFIED;
 	HashedStaticString LOCATION;
@@ -395,6 +400,7 @@ public:
 		  PRAGMA_CONST("pragma"),
 		  AUTHORIZATION("authorization"),
 		  VARY("vary"),
+		  WWW_AUTHENTICATE("www-authenticate"),
 		  EXPIRES("expires"),
 		  LAST_MODIFIED("last-modified"),
 		  LOCATION("location"),
@@ -493,7 +499,7 @@ public:
 		}
 
 		req->cacheControl = req->headers.lookup(CACHE_CONTROL);
-		if (req->cacheControl != NULL) {
+		if (req->cacheControl == NULL) {
 			// hasPragmaHeader is only used by requestAllowsFetching(),
 			// so if there is no Cache-Control header then it's not
 			// necessary to check for the Pragma header.
@@ -545,7 +551,7 @@ public:
 	// @pre prepareRequest() returned true
 	OXT_FORCE_INLINE
 	bool requestAllowsStoring(Request *req) const {
-		return requestAllowsFetching(req);
+		return req->method != HTTP_HEAD && requestAllowsFetching(req);
 	}
 
 	// @pre prepareRequest() returned true
@@ -555,16 +561,6 @@ public:
 		}
 
 		ServerKit::HeaderTable &respHeaders = req->appResponse.headers;
-
-		if (req->cacheControl != NULL) {
-			req->cacheControl = psg_lstr_make_contiguous(req->cacheControl,
-				req->pool);
-			StaticString cacheControl = StaticString(req->cacheControl->start->data,
-				req->cacheControl->size);
-			if (cacheControl.find(P_STATIC_STRING("no-store")) != string::npos) {
-				return false;
-			}
-		}
 
 		req->appResponse.cacheControl = respHeaders.lookup(CACHE_CONTROL);
 		if (req->appResponse.cacheControl != NULL) {
@@ -582,7 +578,8 @@ public:
 		}
 
 		if (req->headers.lookup(AUTHORIZATION) != NULL
-		 || respHeaders.lookup(VARY) != NULL)
+		 || respHeaders.lookup(VARY) != NULL
+		 || respHeaders.lookup(WWW_AUTHENTICATE) != NULL)
 		{
 			return false;
 		}

@@ -145,6 +145,12 @@ TEST_CXX_OBJECTS = {
 	'test/cxx/DechunkerTest.o' => %w(
 		test/cxx/DechunkerTest.cpp
 		ext/common/Utils/Dechunker.h),
+	'test/cxx/ResponseCacheTest.o' => %w(
+		test/cxx/ResponseCacheTest.cpp
+		ext/common/agents/HelperAgent/ResponseCache.h
+		ext/common/agents/HelperAgent/RequestHandler/Request.h
+		ext/common/agents/HelperAgent/RequestHandler/AppResponse.h
+		ext/common/ServerKit/HttpRequest.h),
 	'test/cxx/UnionStationTest.o' => %w(
 		test/cxx/UnionStationTest.cpp
 		ext/common/agents/LoggingAgent/LoggingServer.h
