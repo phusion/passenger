@@ -1,3 +1,10 @@
+Release 4.0.58
+--------------
+
+ * [Enterprise] Fixed a bug in the Debian packages which caused Flying Passenger to break when used with non-system Rubies.
+ * The Debian packages no longer require Ruby 1.9. Closes GH-1353.
+
+
 Release 4.0.57
 --------------
 
