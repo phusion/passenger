@@ -223,13 +223,23 @@ namespace tut {
 	}
 
 	TEST_METHOD(33) {
-		set_test_name("It succeeds if the request is default cacheable");
+		set_test_name("It fails if the request is not default cacheable");
+		req.appResponse.statusCode = 205;
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
-		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
 	TEST_METHOD(34) {
+		set_test_name("It fails if the request is default cacheable, but the response has "
+			"no Cache-Control and no Expires header that allow caching");
+		ensure_equals(req.appResponse.statusCode, 200);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+	TEST_METHOD(35) {
 		set_test_name("It succeeds if the response contains a Cache-Control header with public directive");
 		req.appResponse.headers.insert(createHeader(
 			"cache-control", "public"),
@@ -239,7 +249,7 @@ namespace tut {
 		ensure("(3)", responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(35) {
+	TEST_METHOD(36) {
 		set_test_name("It succeeds if the response contains a Cache-Control header with max-age directive");
 		req.appResponse.headers.insert(createHeader(
 			"cache-control", "max-age=999"),
@@ -249,7 +259,7 @@ namespace tut {
 		ensure("(3)", responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(36) {
+	TEST_METHOD(37) {
 		set_test_name("It succeeds if the response contains an Expires header");
 		req.appResponse.headers.insert(createHeader(
 			"expires", "Tue, 01 Jan 2030 00:00:00 GMT"),
@@ -259,7 +269,7 @@ namespace tut {
 		ensure("(3)", responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(37) {
+	TEST_METHOD(38) {
 		set_test_name("It fails if the response's Cache-Control header contains no-store");
 		req.appResponse.headers.insert(createHeader(
 			"cache-control", "no-store"),
@@ -269,7 +279,7 @@ namespace tut {
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(38) {
+	TEST_METHOD(45) {
 		set_test_name("It fails if the response's Cache-Control header contains private");
 		req.appResponse.headers.insert(createHeader(
 			"cache-control", "private"),
@@ -279,7 +289,7 @@ namespace tut {
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(39) {
+	TEST_METHOD(46) {
 		set_test_name("It fails if the request has a Authorization header");
 		req.headers.insert(createHeader(
 			"authorization", "foo"),
@@ -289,7 +299,7 @@ namespace tut {
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(40) {
+	TEST_METHOD(47) {
 		set_test_name("It fails if the response has a Vary header");
 		req.appResponse.headers.insert(createHeader(
 			"vary", "foo"),
@@ -299,7 +309,7 @@ namespace tut {
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(41) {
+	TEST_METHOD(48) {
 		set_test_name("It fails if the response has a WWW-Authenticate header");
 		req.appResponse.headers.insert(createHeader(
 			"www-authenticate", "foo"),

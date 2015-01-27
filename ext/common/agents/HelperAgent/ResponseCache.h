@@ -602,7 +602,8 @@ public:
 					req->pool);
 		}
 
-		return true;
+		return req->appResponse.cacheControl != NULL
+			|| req->appResponse.expiresHeader != NULL;
 	}
 
 	// @pre requestAllowsStoring()
