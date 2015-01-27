@@ -504,7 +504,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentsOptions);
 	wo->appPool->initialize();
 	wo->appPool->setMax(options.getInt("max_pool_size"));
-	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000);
+	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000ULL);
 	wo->appPool->enableSelfChecking(options.getBool("selfchecks"));
 	wo->appPool->abortLongRunningConnectionsCallback = abortLongRunningConnections;
 
