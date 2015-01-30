@@ -2,6 +2,7 @@ Release 5.0.0 beta 3
 --------------------
 
  * The turbocache has received major updates and fixes based on excellent feedback Chris Heald and the community. First, several bugs w.r.t. the handling of caching headers have been fixed. Second, the turbocache has become slightly more conservative for security reasons. In previous versions, default cacheable responses (as defined by RFC 7234) were cached unless caching headers tell us not to. Now, default cacheable responses are only cached if caching headers explicitly tell us to. This change was introduced because there are many applications that set incorrect caching headers on private responses. This new behavior is currently not configurable, but there are plans to make it configurable in 5.0.0 release candidate 1.
+ * Introduced a new configuration option, `passenger_response_buffer_high_watermark` (Nginx) and `PassengerResponseBufferHighWatermark` (Apache), for configuring the behavior of the response buffering system. Closes GH-1300.
  * Fixed more cookie handling issues. Closes GH-1310.
  * Fixed various WebSocket issues. Closes GH-1306.
  * Fixed some crashes caused by race conditions. Closes GH-1326.
@@ -9,7 +10,6 @@ Release 5.0.0 beta 3
  * Fixed some issues on Heroku. Closes GH-1329.
  * Fixed some integer overflows. Fix contributed by Go Maeda. Closes GH-1357.
  * Nginx versions earlier than 1.6 are no longer supported.
- * Introduced a new configuration option, `passenger_response_buffer_high_watermark` (Nginx) and `PassengerResponseBufferHighWatermark` (Apache), for configuring the behavior of the response buffering system. Closes GH-1300.
  * Improved state introspection.
 
 
