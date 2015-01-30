@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -96,17 +96,16 @@ module Signal
 		ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
 		case ruby_engine
 		when "jruby"
-			result = Signal.list
+			result = Signal.list.dup
 			result.delete("QUIT")
 			result.delete("ILL")
 			result.delete("FPE")
-			result.delete("KILL")
 			result.delete("SEGV")
 			result.delete("USR1")
 			result.delete("IOT")
 			result.delete("EXIT")
 		else
-			result = Signal.list
+			result = Signal.list.dup
 			result.delete("ALRM")
 			result.delete("VTALRM")
 		end

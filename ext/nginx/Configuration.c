@@ -323,7 +323,9 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     #if NGINX_VERSION_NUM >= 1007008
         conf->upstream_config.cache_lock_age = NGX_CONF_UNSET_MSEC;
     #endif
-    conf->upstream_config.cache_revalidate = NGX_CONF_UNSET;
+    #if NGINX_VERSION_NUM >= 1006000
+        conf->upstream_config.cache_revalidate = NGX_CONF_UNSET;
+    #endif
 #endif
 
     conf->upstream_config.intercept_errors = NGX_CONF_UNSET;
@@ -709,8 +711,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                                   prev->upstream_config.cache_lock_age, 5000);
     #endif
 
-    ngx_conf_merge_value(conf->upstream_config.cache_revalidate,
-                         prev->upstream_config.cache_revalidate, 0);
+    #if NGINX_VERSION_NUM >= 1006000
+        ngx_conf_merge_value(conf->upstream_config.cache_revalidate,
+                             prev->upstream_config.cache_revalidate, 0);
+    #endif
 
 #endif
 

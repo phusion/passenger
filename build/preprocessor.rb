@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -182,7 +182,9 @@ private
 		"quantal"  => "12.10",
 		"raring"   => "13.04",
 		"saucy"    => "13.10",
-		"trusty"   => "14.04"
+		"trusty"   => "14.04",
+		"utopic"   => "14.10",
+		"vivid"    => "15.05"
 	}
 	DEBIAN_DISTRIBUTIONS = {
 		"squeeze"  => "20110206",
