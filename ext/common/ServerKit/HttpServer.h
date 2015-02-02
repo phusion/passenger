@@ -858,6 +858,10 @@ protected:
 			// Call doneWithCurrentRequest() when data flushed
 			SKC_TRACE(c, 2, "Waiting until output is flushed");
 			req->httpState = Request::FLUSHING_OUTPUT;
+			// If the request body is not fully read at this time,
+			// then ensure that onClientDataReceived() discards any
+			// request body data that we receive from now on.
+			req->wantKeepAlive = canKeepAlive(req);
 		}
 
 		return true;
@@ -891,15 +895,31 @@ protected:
 
 		// Moved outside switch() so that the CPU branch predictor can do its work
 		if (req->httpState == Request::PARSING_HEADERS) {
+			assert(!req->ended());
 			return processClientDataWhenParsingHeaders(client, req, buffer, errcode);
 		} else {
-			switch (req->httpState) {
-			case Request::PARSING_BODY:
-				return processClientDataWhenParsingBody(client, req, buffer, errcode);
-			case Request::PARSING_CHUNKED_BODY:
-				return processClientDataWhenParsingChunkedBody(client, req, buffer, errcode);
-			case Request::UPGRADED:
-				return processClientDataWhenUpgraded(client, req, buffer, errcode);
+			switch (req->bodyType) {
+			case Request::RBT_CONTENT_LENGTH:
+				if (req->ended()) {
+					assert(!req->wantKeepAlive);
+					return Channel::Result(buffer.size(), true);
+				} else {
+					return processClientDataWhenParsingBody(client, req, buffer, errcode);
+				}
+			case Request::RBT_CHUNKED:
+				if (req->ended()) {
+					assert(!req->wantKeepAlive);
+					return Channel::Result(buffer.size(), true);
+				} else {
+					return processClientDataWhenParsingChunkedBody(client, req, buffer, errcode);
+				}
+			case Request::RBT_UPGRADE:
+				if (req->ended()) {
+					assert(!req->wantKeepAlive);
+					return Channel::Result(buffer.size(), true);
+				} else {
+					return processClientDataWhenUpgraded(client, req, buffer, errcode);
+				}
 			default:
 				P_BUG("Invalid request HTTP state " << (int) req->httpState);
 				// Never reached

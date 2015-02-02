@@ -329,6 +329,17 @@ namespace tut {
 			*result = server->totalRequestsBegun;
 		}
 
+		unsigned int getBodyBytesRead() {
+			unsigned int result;
+			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getBodyBytesRead,
+				this, &result));
+			return result;
+		}
+
+		void _getBodyBytesRead(unsigned int *result) {
+			*result = server->bodyBytesRead;
+		}
+
 		unsigned int getActiveClientCount() {
 			unsigned int result;
 			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::_getActiveClientCount,
@@ -1282,6 +1293,72 @@ namespace tut {
 		ensure(startsWith(data, "HTTP/1.1 200 OK\r\n"));
 		ensure_equals(body.size(), 1000000u + response2.size());
 		ensure_equals(body.substr(1000000), response2);
+	}
+
+	TEST_METHOD(64) {
+		set_test_name("If a request with body is ended but output is being flushed, "
+			"then any received request body data will be discard");
+
+		connectToServer();
+		sendRequest(
+			"GET /large_response HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n"
+			"Size: 1000000\r\n"
+			"Content-Length: 4\r\n\r\n");
+		EVENTUALLY(1,
+			result = getTotalRequestsBegun() == 1;
+		);
+
+		unsigned long long previouslyBytesConsumed;
+		previouslyBytesConsumed = getTotalBytesConsumed();
+
+		writeExact(fd, "abcd");
+		string response = readAll(fd);
+		string body = stripHeaders(response);
+		ensure(startsWith(response, "HTTP/1.1 200 OK\r\n"));
+		ensure_equals(body.size(), 1000000u);
+		EVENTUALLY(1,
+			result = getTotalBytesConsumed() > previouslyBytesConsumed;
+		);
+		ensure_equals(getBodyBytesRead(), 0u);
+	}
+
+	TEST_METHOD(65) {
+		set_test_name("If a request with body is ended but output is being flushed, "
+			"then it won't attempt to keep-alive the connection after the output is flushed");
+
+		connectToServer();
+		sendRequest(
+			"GET /large_response HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Host: foo\r\n"
+			"Size: 1000000\r\n"
+			"Content-Length: 4\r\n\r\n");
+		EVENTUALLY(1,
+			result = getTotalRequestsBegun() == 1;
+		);
+
+		unsigned long long previouslyBytesConsumed;
+		previouslyBytesConsumed = getTotalBytesConsumed();
+
+		writeExact(fd,
+			"abcd"
+			"GET /foo HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n\r\n");
+		string response = readAll(fd);
+		string body = stripHeaders(response);
+		ensure(startsWith(response, "HTTP/1.1 200 OK\r\n"));
+		ensure_equals(body.size(), 1000000u);
+		EVENTUALLY(1,
+			result = getTotalBytesConsumed() > previouslyBytesConsumed;
+		);
+		ensure_equals(getBodyBytesRead(), 0u);
+
+		SHOULD_NEVER_HAPPEN(100,
+			result = getTotalRequestsBegun() > 1;
+		);
 	}
 
 
