@@ -133,7 +133,7 @@ using namespace boost;
  *
  *             ...process buffer....
  *
- *             return Channel::Result(bytesProcessed, acceptFurtherData);
+ *             return Channel::Result(bytesProcessed, !acceptFurtherData);
  *         } else if (errcode == 0) {
  *             // EOF reached. Result doesn't matter in this case.
  *             return Channel::Result(0, false);
