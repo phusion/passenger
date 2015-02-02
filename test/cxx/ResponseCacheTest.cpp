@@ -73,7 +73,8 @@ namespace tut {
 		}
 
 		LString *createHostString() {
-			LString *str = (LString *) psg_pnalloc(req.pool, sizeof(LString));
+			LString *str = (LString *) psg_palloc(req.pool, sizeof(LString));
+			psg_lstr_init(str);
 			psg_lstr_append(str, req.pool, "foo.com");
 			return str;
 		}
