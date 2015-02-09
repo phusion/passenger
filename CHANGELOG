@@ -9,6 +9,7 @@ Release 5.0.0 beta 3
  * Fixed issues with handling POST data. Closes GH-1331.
  * Fixed some issues on Heroku. Closes GH-1329.
  * Fixed some integer overflows. Fix contributed by Go Maeda. Closes GH-1357.
+ * Fixed the `passenger-status --show=union_station` command. Closes GH-1336.
  * Nginx versions earlier than 1.6 are no longer supported.
  * Improved state introspection.
 

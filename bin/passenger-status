@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -116,7 +116,7 @@ def show_status(instance, options)
 			puts response.body
 		else
 			STDERR.puts "*** An error occured."
-			STDERR.puts response.body
+			STDERR.puts "#{response.code}: #{response.body}"
 			exit 2
 		end
 
@@ -128,7 +128,7 @@ def show_status(instance, options)
 			puts response.body
 		else
 			STDERR.puts "*** An error occured."
-			STDERR.puts response.body
+			STDERR.puts "#{response.code}: #{response.body}"
 			exit 2
 		end
 
@@ -145,7 +145,7 @@ def show_status(instance, options)
 			puts text
 		else
 			STDERR.puts "*** An error occured."
-			STDERR.puts response.body
+			STDERR.puts "#{response.code}: #{response.body}"
 			exit 2
 		end
 	
@@ -163,24 +163,22 @@ def show_status(instance, options)
 			end
 		else
 			STDERR.puts "*** An error occured."
-			STDERR.puts response.body
+			STDERR.puts "#{response.code}: #{response.body}"
 			exit 2
 		end
 
 	when 'union_station'
-		client = server_instance.connect(:role => :passenger_status, :socket_name => 'logging_admin')
-		begin
-			response = client.logging_agent_status
-		rescue SystemCallError => e
-			STDERR.puts "*** ERROR: Cannot query status for Phusion Passenger instance #{control_process.pid}:"
-			STDERR.puts e.to_s
+		request = Net::HTTP::Get.new("/status.txt")
+		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+		response = instance.http_request("agents.s/logging_admin", request)
+		if response.code.to_i / 100 == 2
+			puts response.body
+		else
+			STDERR.puts "*** An error occured."
+			STDERR.puts "#{response.code}: #{response.body}"
 			exit 2
 		end
-
-		puts response
 	end
-ensure
-	client.close if client
 end
 
 def print_header(io, instance)

@@ -250,6 +250,24 @@ private:
 		}
 	}
 
+	void processStatusTxt(Client *client, Request *req) {
+		if (req->method != HTTP_GET) {
+			respondWith405(client, req);
+		} else if (authorize(client, req, READONLY)) {
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "text/plain");
+
+			stringstream stream;
+			loggingServer->dump(stream);
+			writeSimpleResponse(client, 200, &headers, stream.str());
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith401(client, req);
+		}
+	}
+
 	void respondWith401(Client *client, Request *req) {
 		HeaderTable headers;
 		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
@@ -301,7 +319,9 @@ protected:
 		} else if (path == P_STATIC_STRING("/config.json")) {
 			processConfig(client, req);
 		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
-				processReopenLogs(client, req);
+			processReopenLogs(client, req);
+		} else if (path == P_STATIC_STRING("/status.txt")) {
+			processStatusTxt(client, req);
 		} else {
 			respondWith404(client, req);
 		}
