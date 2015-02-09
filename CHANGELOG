@@ -1,3 +1,9 @@
+Release 4.0.59
+--------------
+
+ * [Enterprise] Fixed support for free-style Node.js apps.
+
+
 Release 4.0.58
 --------------
 
