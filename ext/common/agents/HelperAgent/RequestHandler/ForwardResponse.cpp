@@ -683,7 +683,7 @@ constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
 
 	pos = appendData(pos, end, "Date: ");
 	gmtime_r(&the_time, &the_tm);
-	pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %z", &the_tm);
+	pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S GMT", &the_tm);
 	return pos - dateStr;
 }
 
