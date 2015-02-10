@@ -583,7 +583,7 @@ private
 			STDOUT.sync = true
 			STDERR.sync = true
 			Process.setsid
-			@threads = nil
+			@threads.clear
 		end
 	end
 
