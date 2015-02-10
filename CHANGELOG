@@ -60,6 +60,12 @@ Minor changes:
  * [Standalone] `passenger-standalone.json`/`Passengerfile.json` no longer overrides command line options. Instead, command line options now have the highest priority.
 
 
+Release 4.0.59
+--------------
+
+ * [Enterprise] Fixed support for free-style Node.js apps.
+
+
 Release 4.0.58
 --------------
 
