@@ -44,6 +44,8 @@ class AppFinder
 	attr_reader :execution_root
 
 	def self.looks_like_app_directory?(dir, options = {})
+		options = options.dup
+		ConfigUtils.load_local_config_file!(dir, options)
 		return options[:app_type] ||
 			STARTUP_FILES.any? do |file|
 				File.exist?("#{dir}/#{file}")

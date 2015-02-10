@@ -1,3 +1,10 @@
+Release 5.0.0 release candidate 1
+---------------------------------
+
+ * [Enterprise] Fixed a bug in mass deployment reloading.
+ * [Enterprise] The mass deployment mode now supports the `app_type` and `startup_file` configuration options in Passengerfile.json/passenger-standalone.json. Closes GH-1366.
+
+
 Release 5.0.0 beta 3
 --------------------
 
