@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -37,21 +37,20 @@ module PhusionPassenger
 module Standalone
 
 class StartCommand < Command
-	def self.create_default_options
-		return {
-			:environment       => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['NODE_ENV'] ||
-				ENV['PASSENGER_APP_ENV'] || 'development',
-			:spawn_method      => Kernel.respond_to?(:fork) ? DEFAULT_SPAWN_METHOD : 'direct',
-			:engine            => "builtin",
-			:nginx_version     => PREFERRED_NGINX_VERSION,
-			:log_level         => DEFAULT_LOG_LEVEL,
-			:ctls              => []
-		}
-	end
+	DEFAULT_OPTIONS = {
+		:environment       => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['NODE_ENV'] ||
+			ENV['PASSENGER_APP_ENV'] || 'development',
+		:spawn_method      => Kernel.respond_to?(:fork) ? DEFAULT_SPAWN_METHOD : 'direct',
+		:engine            => "builtin",
+		:nginx_version     => PREFERRED_NGINX_VERSION,
+		:log_level         => DEFAULT_LOG_LEVEL,
+		:ctls              => []
+	}.freeze
 
 	def run
-		load_local_config_file
 		parse_options
+		load_local_config_file
+		remerge_all_options
 		sanity_check_options_and_set_defaults
 
 		lookup_runtime_and_ensure_installed
@@ -163,7 +162,7 @@ private
 			opts.separator "Application loading options:"
 			opts.on("-e", "--environment ENV", String,
 				"Framework environment.#{nl}" +
-				"Default: #{options[:environment]}") do |value|
+				"Default: #{DEFAULT_OPTIONS[:environment]}") do |value|
 				options[:environment] = value
 			end
 			opts.on("-R", "--rackup FILE", String,
@@ -181,7 +180,7 @@ private
 				options[:startup_file] = value
 			end
 			opts.on("--spawn-method NAME", String,
-				"The spawn method to use. Default: #{options[:spawn_method]}") do |value|
+				"The spawn method to use. Default: #{DEFAULT_OPTIONS[:spawn_method]}") do |value|
 				options[:spawn_method] = value
 			end
 			opts.on("--static-files-dir PATH", String,
@@ -336,13 +335,31 @@ private
 		elsif @argv.size == 1
 			app_dir = @argv[0]
 		end
+		@local_options = {}
 		if app_dir
 			begin
-				ConfigUtils.load_local_config_file!(app_dir, @options)
+				ConfigUtils.load_local_config_file!(app_dir, @local_options)
 			rescue ConfigLoadError => e
 				abort "*** ERROR: #{e.message}"
 			end
 		end
+	end
+
+	# We want the command line options to override the options in the local config
+	# file, but the local config file could only be parsed when the command line
+	# options have been parsed. In this method we remerge all the config options
+	# from different sources so that options are overriden according to the following
+	# order:
+	#
+	# - DEFAULT_OPTIONS
+	# - global config file
+	# - local config file
+	# - command line options
+	def remerge_all_options
+		@options = DEFAULT_OPTIONS.
+			merge(@global_options).
+			merge(@local_options).
+			merge(@parsed_options)
 	end
 
 	def sanity_check_options_and_set_defaults

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -36,11 +36,13 @@ private
 	end
 
 	def parse_options
-		load_and_merge_default_options(@options)
-		@parser = self.class.create_option_parser(@options)
+		load_and_merge_global_options(@options)
+		@parsed_options = {}
+		@parser = self.class.create_option_parser(@parsed_options)
 		begin
 			@original_argv = @argv.dup
 			@parser.parse!(@argv)
+			@options.merge!(@parsed_options)
 		rescue OptionParser::ParseError => e
 			STDERR.puts "*** ERROR: #{e}"
 			abort @parser.to_s
@@ -51,16 +53,18 @@ private
 		end
 	end
 
-	def load_and_merge_default_options(options)
+	def load_and_merge_global_options(options)
 		path = ConfigUtils.global_config_file_path
 		if File.exist?(path)
 			begin
-				global_options = ConfigUtils.load_config_file(path)
+				@global_options = ConfigUtils.load_config_file(path)
 			rescue ConfigUtils::ConfigLoadError => e
 				STDERR.puts "*** Warning: #{e.message}"
 				return
 			end
-			@options.merge!(global_options)
+			@options.merge!(@global_options)
+		else
+			@global_options = {}
 		end
 	end
 end
