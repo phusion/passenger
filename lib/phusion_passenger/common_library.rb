@@ -471,13 +471,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:deps     => %w(
 			MemoryKit/palloc.h
 		)
-	define_component 'MemoryKit/palloc.o',
-		:source   => 'MemoryKit/palloc.cpp',
-		:category => :other,
-		:optimize => true,
-		:deps     => %w(
-			MemoryKit/palloc.h
-		)
 	define_component 'ServerKit/http_parser.o',
 		:source   => 'ServerKit/http_parser.cpp',
 		:category => :other,
@@ -489,6 +482,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 		:source   => 'ServerKit/Implementation.cpp',
 		:category => :other,
 		:optimize => true
+
 	define_component 'Utils/MD5.o',
 		:source   => 'Utils/MD5.cpp',
 		:category => :other,
