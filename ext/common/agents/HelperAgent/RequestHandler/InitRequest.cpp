@@ -359,7 +359,6 @@ createNewPoolOptions(Client *client, Request *req, const HashedStaticString &app
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
-	fillPoolOption(req, options.debugger, "!~PASSENGER_DEBUGGER");
 	fillPoolOption(req, options.environmentVariables, "!~PASSENGER_ENV_VARS");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	/******************/
