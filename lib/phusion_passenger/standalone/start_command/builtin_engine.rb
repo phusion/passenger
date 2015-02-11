@@ -119,7 +119,7 @@ private
 		add_enterprise_param(command, :thread_count, "--app-thread-count")
 		add_enterprise_flag_param(command, :rolling_restarts, "--rolling-restarts")
 		add_enterprise_flag_param(command, :resist_deployment_errors, "--resist-deployment-errors")
-		add_enterprise_param(command, :debugger, "--debugger")
+		add_enterprise_flag_param(command, :debugger, "--debugger")
 		add_flag_param(command, :sticky_sessions, "--sticky-sessions")
 		add_param(command, :vary_turbocache_by_cookie, "--vary-turbocache-by-cookie")
 		add_param(command, :sticky_sessions_cookie_name, "--sticky-sessions-cookie-name")
