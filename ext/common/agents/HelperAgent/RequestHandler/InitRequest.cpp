@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -49,7 +49,8 @@ onRequestBegin(Client *client, Request *req) {
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
 		analysis.unionStationSupport = unionStationCore != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
-		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS, false);
+		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
+			this->stickySessions);
 		req->host = req->headers.lookup(HTTP_HOST);
 
 		/***************/

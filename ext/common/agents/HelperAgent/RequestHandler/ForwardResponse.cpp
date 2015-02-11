@@ -661,6 +661,59 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		}
 	}
 
+	if (req->stickySession) {
+		StaticString baseURI = req->options.baseURI;
+		if (baseURI.empty()) {
+			baseURI = P_STATIC_STRING("/");
+		}
+
+		// Note that we do NOT set HttpOnly. If we set that flag then Chrome
+		// doesn't send cookies over WebSocket handshakes. Confirmed on Chrome 25.
+
+		const LString *cookieName = getStickySessionCookieName(req);
+		unsigned int stickySessionId;
+		unsigned int stickySessionIdSize;
+		char *stickySessionIdStr;
+
+		PUSH_STATIC_BUFFER("Set-Cookie: ");
+
+		part = cookieName->start;
+		while (part != NULL) {
+			if (buffers != NULL) {
+				buffers[i].iov_base = (void *) part->data;
+				buffers[i].iov_len  = part->size;
+			}
+			dataSize += part->size;
+			INC_BUFFER_ITER(i);
+			part = part->next;
+		}
+
+		stickySessionId = req->session->getStickySessionId();
+		stickySessionIdSize = uintSizeAsString(stickySessionId);
+		stickySessionIdStr = (char *) psg_pnalloc(req->pool, stickySessionIdSize + 1);
+		uintToString(stickySessionId, stickySessionIdStr, stickySessionIdSize + 1);
+
+		PUSH_STATIC_BUFFER("=");
+
+		if (buffers != NULL) {
+			buffers[i].iov_base = stickySessionIdStr;
+			buffers[i].iov_len  = stickySessionIdSize;
+		}
+		dataSize += stickySessionIdSize;
+		INC_BUFFER_ITER(i);
+
+		PUSH_STATIC_BUFFER("; Path=");
+
+		if (buffers != NULL) {
+			buffers[i].iov_base = (void *) baseURI.data();
+			buffers[i].iov_len  = baseURI.size();
+		}
+		dataSize += baseURI.size();
+		INC_BUFFER_ITER(i);
+
+		PUSH_STATIC_BUFFER("\r\n");
+	}
+
 	if (showVersionInHeader) {
 		PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME " " PASSENGER_VERSION "\r\n\r\n");
 	} else {

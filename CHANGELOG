@@ -3,6 +3,7 @@ Release 5.0.0 release candidate 1
 
  * Fixed Date headers not being formatted in the GMT timezone. Closes GH-1367.
  * Fixed Passengerfile.json/passenger-standalone.json not being properly loaded in Passenger Standalone.
+ * Fixed support for sticky sessions.
  * [Enterprise] Fixed a bug in mass deployment reloading.
  * [Enterprise] Fixed a bug in mass deployment daemonization.
  * [Enterprise] The mass deployment mode now supports the `app_type` and `startup_file` configuration options in Passengerfile.json/passenger-standalone.json. Closes GH-1366.

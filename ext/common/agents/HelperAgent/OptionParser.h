@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -122,8 +122,10 @@ serverUsage() {
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
 	printf("\n");
 	printf("Request handling options (optional):\n");
+	printf("      --sticky-sessions    Enable sticky sessions\n");
 	printf("      --sticky-sessions-cookie-name NAME\n");
-	printf("                            Cookie name to use for sticky sessions\n");
+	printf("                            Cookie name to use for sticky sessions.\n");
+	printf("                            Default: " DEFAULT_STICKY_SESSIONS_COOKIE_NAME "\n");
 	printf("      --vary-turbocache-by-cookie NAME\n");
 	printf("                            Vary the turbocache by the cookie of the given name\n");
 	printf("      --disable-turbocaching\n");
@@ -263,10 +265,13 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		options.setBool("multi_app", true);
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--force-friendly-error-pages")) {
-		options.set("friendly_error_pages", "true");
+		options.setBool("friendly_error_pages", true);
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--disable-friendly-error-pages")) {
-		options.set("friendly_error_pages", "false");
+		options.setBool("friendly_error_pages", false);
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--sticky-sessions")) {
+		options.setBool("sticky_sessions", true);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--sticky-sessions-cookie-name")) {
 		options.set("sticky_sessions_cookie_name", argv[i + 1]);

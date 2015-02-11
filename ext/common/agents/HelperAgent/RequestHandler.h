@@ -193,6 +193,7 @@ private:
 	BenchmarkMode benchmarkMode: 3;
 	bool singleAppMode: 1;
 	bool showVersionInHeader: 1;
+	bool stickySessions: 1;
 	bool gracefulExit: 1;
 
 	const VariantMap *agentsOptions;
@@ -267,6 +268,7 @@ public:
 		  benchmarkMode(parseBenchmarkMode(_agentsOptions->get("benchmark_mode", false))),
 		  singleAppMode(false),
 		  showVersionInHeader(_agentsOptions->getBool("show_version_in_header")),
+		  stickySessions(_agentsOptions->getBool("sticky_sessions")),
 		  gracefulExit(_agentsOptions->getBool("server_graceful_exit")),
 
 		  agentsOptions(_agentsOptions),
