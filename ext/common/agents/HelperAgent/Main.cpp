@@ -986,6 +986,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultBool("server_cpu_affine", false);
 	options.setDefault("friendly_error_pages", "auto");
 	options.setDefaultBool("rolling_restarts", false);
+	options.setDefaultBool("resist_deployment_errors", false);
 
 	string firstAddress = options.getStrSet("server_addresses")[0];
 	if (getSocketAddressType(firstAddress) == SAT_TCP) {

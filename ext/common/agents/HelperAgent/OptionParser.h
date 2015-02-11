@@ -112,6 +112,8 @@ serverUsage() {
 	printf("      --ruby PATH           Default Ruby interpreter to use.\n");
 	printf("\n");
 	printf("      --rolling-restarts    Enable rolling restarts (Enterprise only)\n");
+	printf("      --resist-deployment-errors\n");
+	printf("                            Enable deployment error resistance (Enterprise only)\n");
 	printf("\n");
 	printf("Process management options (optional):\n");
 	printf("      --max-pool-size N     Maximum number of application processes.\n");
@@ -287,6 +289,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--rolling-restarts")) {
 		options.setBool("rolling_restarts", true);
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--resist-deployment-errors")) {
+		options.setBool("resist_deployment_errors", true);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 		// We do not set log_level because, when this function is called from
