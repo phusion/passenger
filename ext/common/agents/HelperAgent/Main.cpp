@@ -1002,6 +1002,7 @@ setAgentsOptionsDefaults() {
 	}
 
 	options.setDefault("default_ruby", DEFAULT_RUBY);
+	options.setDefaultBool("debugger", false);
 	if (!options.getBool("multi_app") && !options.has("app_root")) {
 		char *pwd = getcwd(NULL, 0);
 		options.set("app_root", pwd);

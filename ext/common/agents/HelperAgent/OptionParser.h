@@ -110,6 +110,7 @@ serverUsage() {
 	printf("                            Force friendly error pages to be always off\n");
 	printf("\n");
 	printf("      --ruby PATH           Default Ruby interpreter to use.\n");
+	printf("      --debugger            Enable Ruby debugger support (Enterprise only)\n");
 	printf("\n");
 	printf("      --rolling-restarts    Enable rolling restarts (Enterprise only)\n");
 	printf("      --resist-deployment-errors\n");
@@ -287,6 +288,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ruby")) {
 		options.set("default_ruby", argv[i + 1]);
 		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--debugger")) {
+		options.setBool("debugger", true);
+		i++;
 	} else if (p.isFlag(argv[i], '\0', "--rolling-restarts")) {
 		options.setBool("rolling_restarts", true);
 		i++;
