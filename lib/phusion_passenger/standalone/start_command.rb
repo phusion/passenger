@@ -202,6 +202,9 @@ private
 				"application") do
 				options[:load_shell_envvars] = true
 			end
+			opts.on("--debugger", "Enable debugger support") do
+				options[:debugger] = true
+			end
 
 			opts.separator ""
 			opts.separator "Process management options:"
