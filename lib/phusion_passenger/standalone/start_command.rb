@@ -212,6 +212,9 @@ private
 			opts.on("--max-pool-size NUMBER", Integer,
 				"Maximum number of application processes.#{nl}" +
 				"Default: #{DEFAULT_MAX_POOL_SIZE}") do |value|
+				if value < 1
+					abort "*** ERROR: you may only specify for --max-pool-size a number greater than or equal to 1"
+				end
 				options[:max_pool_size] = value
 			end
 			opts.on("--min-instances NUMBER", Integer,

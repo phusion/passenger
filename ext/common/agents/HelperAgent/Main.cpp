@@ -1079,6 +1079,10 @@ sanityCheckOptions() {
 		fprintf(stderr, "ERROR: you may only specify for --threads a number greater than or equal to 1.\n");
 		ok = false;
 	}
+	if (options.getInt("max_pool_size") < 1) {
+		fprintf(stderr, "ERROR: you may only specify for --max-pool-size a number greater than or equal to 1.\n");
+		ok = false;
+	}
 
 	if (!ok) {
 		exit(1);
