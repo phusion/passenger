@@ -127,6 +127,7 @@ describe "Downloaded Phusion Passenger binaries" do
           "--binaries-url-root http://127.0.0.1:4001 " +
           ">log/start.log 2>&1")
       rescue Exception
+        puts " --> Log file contents:"
         system("cat log/start.log")
         raise
       end

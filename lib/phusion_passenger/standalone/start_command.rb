@@ -739,5 +739,7 @@ module PhusionPassenger
       end
     end
 
+    #################
+
   end # module Standalone
 end # module PhusionPassenger

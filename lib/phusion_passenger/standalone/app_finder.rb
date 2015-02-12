@@ -98,7 +98,7 @@ module PhusionPassenger
           watcher.close
           if changed
             old_apps = @apps
-            # The change could be caused by a write to some passenger.conf file.
+            # The change could be caused by a write to some Passengerfile.json file.
             # Wait for a short period so that the write has a chance to finish.
             if wait_on_io(termination_pipe, 0.25)
               return
