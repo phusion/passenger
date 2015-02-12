@@ -35,8 +35,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
 #else
      ruby-rack
 #endif
-Recommends: passenger-doc (= ${binary:Version}), passenger-dev (= ${binary:Version}),
- crash-watch
+Recommends: passenger-doc (= ${binary:Version}), passenger-dev (= ${binary:Version})
 Breaks: libapache2-mod-passenger (<< <%= DEBIAN_EPOCH %>:<%= PACKAGE_VERSION %>), passenger-common,
  passenger-common1.8, passenger-common1.9.1, ruby-passenger
 Replaces: libapache2-mod-passenger (<< <%= DEBIAN_EPOCH %>:<%= PACKAGE_VERSION %>), passenger-common,
