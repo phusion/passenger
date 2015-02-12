@@ -85,304 +85,304 @@
 
 
 LOCATION_CONFIGURATION_OPTIONS = [
-	{
-		:name     => 'passenger_enabled',
-		:context  => [:srv, :loc, :lif],
-		:type     => :flag,
-		:function => 'passenger_enabled',
-		:field    => 'enabled',
-		:header   => nil
-	},
-	{
-		:name    => 'passenger_ruby',
-		:context => [:srv, :loc, :lif],
-		:type    => :string
-	},
-	{
-		:name  => 'passenger_python',
-		:type  => :string
-	},
-	{
-		:name  => 'passenger_nodejs',
-		:type  => :string
-	},
-	{
-		:name  => 'passenger_app_env',
-		:type  => :string,
-		:field => 'environment'
-	},
-	{
-		:name  => 'passenger_friendly_error_pages',
-		:type  => :flag
-	},
-	{
-		:name   => 'passenger_min_instances',
-		:type   => :integer,
-		:header => 'PASSENGER_MIN_PROCESSES'
-	},
-	{
-		:name     => 'passenger_max_instances_per_app',
-		:context  => [:main],
-		:type     => :integer,
-		:header   => 'PASSENGER_MAX_PROCESSES'
-	},
-	{
-		:name  => 'passenger_max_requests',
-		:type  => :integer
-	},
-	{
-		:name  => 'passenger_start_timeout',
-		:type  => :integer
-	},
-	{
-		:name   => 'passenger_base_uri',
-		:type   => :string_array,
-		:field  => 'base_uris',
-		:header => nil
-	},
-	{
-		:name   => 'passenger_document_root',
-		:type   => :string,
-		:header => nil
-	},
-	{
-		:name  => 'passenger_user',
-		:type  => :string
-	},
-	{
-		:name  => 'passenger_group',
-		:type  => :string
-	},
-	{
-		:name  => 'passenger_app_group_name',
-		:type  => :string
-	},
-	{
-		:name  => 'passenger_app_root',
-		:type  => :string
-	},
-	{
-		:name => 'passenger_app_rights',
-		:type => :string
-	},
-	{
-		:name  => 'union_station_support',
-		:type  => :flag
-	},
-	{
-		:name     => 'union_station_filter',
-		:take     => 'NGX_CONF_TAKE1',
-		:type     => :string_array,
-		:function => 'union_station_filter',
-		:field    => 'union_station_filters',
-		:header   => nil
-	},
-	{
-		:name  => 'passenger_debugger',
-		:type  => :flag
-	},
-	{
-		:name  => 'passenger_max_preloader_idle_time',
-		:type  => :integer
-	},
-	{
-		:name     => 'passenger_ignore_headers',
-		:take     => 'NGX_CONF_1MORE',
-		:function => 'ngx_conf_set_bitmask_slot',
-		:field    => 'upstream_config.ignore_headers',
-		:post     => '&ngx_http_upstream_ignore_headers_masks'
-	},
-	{
-		:name   => 'passenger_env_var',
-		:type   => :string_keyval,
-		:field  => 'env_vars',
-		:header => nil
-	},
-	{
-		:name   => 'passenger_set_header',
-		:type   => :string_keyval,
-		:field  => 'headers_source',
-		:header => nil,
-		:auto_generate_nginx_create_code => false,
-		:auto_generate_nginx_merge_code  => false
-	},
-	{
-		:name  => 'passenger_pass_header',
-		:type  => :string_array,
-		:field => 'upstream_config.pass_headers'
-	},
-	{
-		:name    => 'passenger_headers_hash_max_size',
-		:type    => :uinteger,
-		:header  => nil,
-		:default => 512
-	},
-	{
-		:name    => 'passenger_headers_hash_bucket_size',
-		:type    => :uinteger,
-		:header  => nil,
-		:default => 64
-	},
-	{
-		:name  => 'passenger_ignore_client_abort',
-		:type  => :flag,
-		:field => 'upstream_config.ignore_client_abort'
-	},
-	{
-		:name  => 'passenger_buffer_response',
-		:type  => :flag,
-		:field => 'upstream_config.buffering'
-	},
-	{
-		:name     => 'passenger_buffer_size',
-		:take     => 'NGX_CONF_TAKE1',
-		:function => 'ngx_conf_set_size_slot',
-		:field    => 'upstream_config.buffer_size'
-	},
-	{
-		:name     => 'passenger_buffers',
-		:take     => 'NGX_CONF_TAKE2',
-		:function => 'ngx_conf_set_bufs_slot',
-		:field    => 'upstream_config.bufs'
-	},
-	{
-		:name     => 'passenger_busy_buffers_size',
-		:take     => 'NGX_CONF_TAKE1',
-		:function => 'ngx_conf_set_size_slot',
-		:field    => 'upstream_config.busy_buffers_size_conf'
-	},
-	{
-		:name     => 'passenger_intercept_errors',
-		:type     => :flag,
-		:field    => 'upstream_config.intercept_errors'
-	},
-	{
-		:name  => 'passenger_spawn_method',
-		:type  => :string
-	},
-	{
-		:name  => 'passenger_load_shell_envvars',
-		:type  => :flag
-	},
-	{
-		:name  => 'union_station_key',
-		:type  => :string
-	},
-	{
-		:name  => 'passenger_max_request_queue_size',
-		:type  => :integer
-	},
-	{
-		:name  => 'passenger_request_queue_overflow_status_code',
-		:type  => :integer
-	},
-	{
-		:name  => 'passenger_restart_dir',
-		:type  => :string
-	},
-	{
-		:name   => 'passenger_app_type',
-		:type   => :string,
-		:header => nil
-	},
-	{
-		:name   => 'passenger_startup_file',
-		:type   => :string
-	},
-	{
-		:name   => 'passenger_sticky_sessions',
-		:type   => :flag
-	},
-	{
-		:name   => 'passenger_sticky_sessions_cookie_name',
-		:type   => :string
-	},
-	{
-		:name   => 'passenger_vary_turbocache_by_cookie',
-		:type   => :string
-	},
+  {
+    :name     => 'passenger_enabled',
+    :context  => [:srv, :loc, :lif],
+    :type     => :flag,
+    :function => 'passenger_enabled',
+    :field    => 'enabled',
+    :header   => nil
+  },
+  {
+    :name    => 'passenger_ruby',
+    :context => [:srv, :loc, :lif],
+    :type    => :string
+  },
+  {
+    :name  => 'passenger_python',
+    :type  => :string
+  },
+  {
+    :name  => 'passenger_nodejs',
+    :type  => :string
+  },
+  {
+    :name  => 'passenger_app_env',
+    :type  => :string,
+    :field => 'environment'
+  },
+  {
+    :name  => 'passenger_friendly_error_pages',
+    :type  => :flag
+  },
+  {
+    :name   => 'passenger_min_instances',
+    :type   => :integer,
+    :header => 'PASSENGER_MIN_PROCESSES'
+  },
+  {
+    :name     => 'passenger_max_instances_per_app',
+    :context  => [:main],
+    :type     => :integer,
+    :header   => 'PASSENGER_MAX_PROCESSES'
+  },
+  {
+    :name  => 'passenger_max_requests',
+    :type  => :integer
+  },
+  {
+    :name  => 'passenger_start_timeout',
+    :type  => :integer
+  },
+  {
+    :name   => 'passenger_base_uri',
+    :type   => :string_array,
+    :field  => 'base_uris',
+    :header => nil
+  },
+  {
+    :name   => 'passenger_document_root',
+    :type   => :string,
+    :header => nil
+  },
+  {
+    :name  => 'passenger_user',
+    :type  => :string
+  },
+  {
+    :name  => 'passenger_group',
+    :type  => :string
+  },
+  {
+    :name  => 'passenger_app_group_name',
+    :type  => :string
+  },
+  {
+    :name  => 'passenger_app_root',
+    :type  => :string
+  },
+  {
+    :name => 'passenger_app_rights',
+    :type => :string
+  },
+  {
+    :name  => 'union_station_support',
+    :type  => :flag
+  },
+  {
+    :name     => 'union_station_filter',
+    :take     => 'NGX_CONF_TAKE1',
+    :type     => :string_array,
+    :function => 'union_station_filter',
+    :field    => 'union_station_filters',
+    :header   => nil
+  },
+  {
+    :name  => 'passenger_debugger',
+    :type  => :flag
+  },
+  {
+    :name  => 'passenger_max_preloader_idle_time',
+    :type  => :integer
+  },
+  {
+    :name     => 'passenger_ignore_headers',
+    :take     => 'NGX_CONF_1MORE',
+    :function => 'ngx_conf_set_bitmask_slot',
+    :field    => 'upstream_config.ignore_headers',
+    :post     => '&ngx_http_upstream_ignore_headers_masks'
+  },
+  {
+    :name   => 'passenger_env_var',
+    :type   => :string_keyval,
+    :field  => 'env_vars',
+    :header => nil
+  },
+  {
+    :name   => 'passenger_set_header',
+    :type   => :string_keyval,
+    :field  => 'headers_source',
+    :header => nil,
+    :auto_generate_nginx_create_code => false,
+    :auto_generate_nginx_merge_code  => false
+  },
+  {
+    :name  => 'passenger_pass_header',
+    :type  => :string_array,
+    :field => 'upstream_config.pass_headers'
+  },
+  {
+    :name    => 'passenger_headers_hash_max_size',
+    :type    => :uinteger,
+    :header  => nil,
+    :default => 512
+  },
+  {
+    :name    => 'passenger_headers_hash_bucket_size',
+    :type    => :uinteger,
+    :header  => nil,
+    :default => 64
+  },
+  {
+    :name  => 'passenger_ignore_client_abort',
+    :type  => :flag,
+    :field => 'upstream_config.ignore_client_abort'
+  },
+  {
+    :name  => 'passenger_buffer_response',
+    :type  => :flag,
+    :field => 'upstream_config.buffering'
+  },
+  {
+    :name     => 'passenger_buffer_size',
+    :take     => 'NGX_CONF_TAKE1',
+    :function => 'ngx_conf_set_size_slot',
+    :field    => 'upstream_config.buffer_size'
+  },
+  {
+    :name     => 'passenger_buffers',
+    :take     => 'NGX_CONF_TAKE2',
+    :function => 'ngx_conf_set_bufs_slot',
+    :field    => 'upstream_config.bufs'
+  },
+  {
+    :name     => 'passenger_busy_buffers_size',
+    :take     => 'NGX_CONF_TAKE1',
+    :function => 'ngx_conf_set_size_slot',
+    :field    => 'upstream_config.busy_buffers_size_conf'
+  },
+  {
+    :name     => 'passenger_intercept_errors',
+    :type     => :flag,
+    :field    => 'upstream_config.intercept_errors'
+  },
+  {
+    :name  => 'passenger_spawn_method',
+    :type  => :string
+  },
+  {
+    :name  => 'passenger_load_shell_envvars',
+    :type  => :flag
+  },
+  {
+    :name  => 'union_station_key',
+    :type  => :string
+  },
+  {
+    :name  => 'passenger_max_request_queue_size',
+    :type  => :integer
+  },
+  {
+    :name  => 'passenger_request_queue_overflow_status_code',
+    :type  => :integer
+  },
+  {
+    :name  => 'passenger_restart_dir',
+    :type  => :string
+  },
+  {
+    :name   => 'passenger_app_type',
+    :type   => :string,
+    :header => nil
+  },
+  {
+    :name   => 'passenger_startup_file',
+    :type   => :string
+  },
+  {
+    :name   => 'passenger_sticky_sessions',
+    :type   => :flag
+  },
+  {
+    :name   => 'passenger_sticky_sessions_cookie_name',
+    :type   => :string
+  },
+  {
+    :name   => 'passenger_vary_turbocache_by_cookie',
+    :type   => :string
+  },
 
-	###### Enterprise features ######
-	{
-		:context  => [:main],
-		:name     => 'passenger_fly_with',
-		:type     => :string,
-		:struct   => "NGX_HTTP_MAIN_CONF_OFFSET",
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_max_instances',
-		:type     => :integer,
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_max_request_time',
-		:type     => :integer,
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_memory_limit',
-		:type     => :integer,
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_concurrency_model',
-		:type     => :string,
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_thread_count',
-		:type     => :integer,
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_rolling_restarts',
-		:type     => :flag,
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_resist_deployment_errors',
-		:type     => :flag,
-		:function => 'passenger_enterprise_only',
-		:field    => nil
-	},
+  ###### Enterprise features ######
+  {
+    :context  => [:main],
+    :name     => 'passenger_fly_with',
+    :type     => :string,
+    :struct   => "NGX_HTTP_MAIN_CONF_OFFSET",
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_max_instances',
+    :type     => :integer,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_max_request_time',
+    :type     => :integer,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_memory_limit',
+    :type     => :integer,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_concurrency_model',
+    :type     => :string,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_thread_count',
+    :type     => :integer,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_rolling_restarts',
+    :type     => :flag,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_resist_deployment_errors',
+    :type     => :flag,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
 
-	###### Aliases for backwards compatibility ######
-	{
-		:name      => 'rails_spawn_method',
-		:alias_for => 'passenger_spawn_method'
-	},
-	{
-		:name      => 'rails_env',
-		:alias_for => 'passenger_app_env'
-	},
-	{
-		:name      => 'rack_env',
-		:alias_for => 'passenger_app_env'
-	},
-	{
-		:name      => 'rails_app_spawner_idle_time',
-		:alias_for => 'passenger_max_preloader_idle_time'
-	},
+  ###### Aliases for backwards compatibility ######
+  {
+    :name      => 'rails_spawn_method',
+    :alias_for => 'passenger_spawn_method'
+  },
+  {
+    :name      => 'rails_env',
+    :alias_for => 'passenger_app_env'
+  },
+  {
+    :name      => 'rack_env',
+    :alias_for => 'passenger_app_env'
+  },
+  {
+    :name      => 'rails_app_spawner_idle_time',
+    :alias_for => 'passenger_max_preloader_idle_time'
+  },
 
-	###### Obsolete options ######
-	{
-		:name     => 'rails_framework_spawner_idle_time',
-		:take     => 'NGX_CONF_TAKE1',
-		:function => 'rails_framework_spawner_idle_time',
-		:field    => nil
-	},
-	{
-		:name     => 'passenger_use_global_queue',
-		:take     => 'NGX_CONF_FLAG',
-		:function => 'passenger_use_global_queue',
-		:field    => nil
-	}
+  ###### Obsolete options ######
+  {
+    :name     => 'rails_framework_spawner_idle_time',
+    :take     => 'NGX_CONF_TAKE1',
+    :function => 'rails_framework_spawner_idle_time',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_use_global_queue',
+    :take     => 'NGX_CONF_FLAG',
+    :function => 'passenger_use_global_queue',
+    :field    => nil
+  }
 ]

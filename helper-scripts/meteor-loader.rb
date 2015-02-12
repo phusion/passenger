@@ -28,124 +28,124 @@ require 'thread'
 require 'logger'
 
 module PhusionPassenger
-module App
-	def self.options
-		return @@options
-	end
+  module App
+    def self.options
+      return @@options
+    end
 
-	def self.exit_code_for_exception(e)
-		if e.is_a?(SystemExit)
-			return e.status
-		else
-			return 1
-		end
-	end
+    def self.exit_code_for_exception(e)
+      if e.is_a?(SystemExit)
+        return e.status
+      else
+        return 1
+      end
+    end
 
-	def self.handshake_and_read_startup_request
-		STDOUT.sync = true
-		STDERR.sync = true
-		puts "!> I have control 1.0"
-		abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
+    def self.handshake_and_read_startup_request
+      STDOUT.sync = true
+      STDERR.sync = true
+      puts "!> I have control 1.0"
+      abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
 
-		@@options = {}
-		while (line = STDIN.readline) != "\n"
-			name, value = line.strip.split(/: */, 2)
-			@@options[name] = value
-		end
-	end
+      @@options = {}
+      while (line = STDIN.readline) != "\n"
+        name, value = line.strip.split(/: */, 2)
+        @@options[name] = value
+      end
+    end
 
-	def self.init_passenger
-		require "#{options["ruby_libdir"]}/phusion_passenger"
-		PhusionPassenger.locate_directories(options["passenger_root"])
-		PhusionPassenger.require_passenger_lib 'message_channel'
-		PhusionPassenger.require_passenger_lib 'utils/tmpio'
-	end
+    def self.init_passenger
+      require "#{options["ruby_libdir"]}/phusion_passenger"
+      PhusionPassenger.locate_directories(options["passenger_root"])
+      PhusionPassenger.require_passenger_lib 'message_channel'
+      PhusionPassenger.require_passenger_lib 'utils/tmpio'
+    end
 
-	def self.ping_port(port)
-		socket_domain = Socket::Constants::AF_INET
-		sockaddr = Socket.pack_sockaddr_in(port, '127.0.0.1')
-		begin
-			socket = Socket.new(socket_domain, Socket::Constants::SOCK_STREAM, 0)
-			begin
-				socket.connect_nonblock(sockaddr)
-			rescue Errno::ENOENT, Errno::EINPROGRESS, Errno::EAGAIN, Errno::EWOULDBLOCK
-				if select(nil, [socket], nil, 0.1)
-					begin
-						socket.connect_nonblock(sockaddr)
-					rescue Errno::EISCONN
-					end
-				else
-					raise Errno::ECONNREFUSED
-				end
-			end
-			return true
-		rescue Errno::ECONNREFUSED, Errno::ENOENT
-			return false
-		ensure
-			socket.close if socket
-		end
-	end
+    def self.ping_port(port)
+      socket_domain = Socket::Constants::AF_INET
+      sockaddr = Socket.pack_sockaddr_in(port, '127.0.0.1')
+      begin
+        socket = Socket.new(socket_domain, Socket::Constants::SOCK_STREAM, 0)
+        begin
+          socket.connect_nonblock(sockaddr)
+        rescue Errno::ENOENT, Errno::EINPROGRESS, Errno::EAGAIN, Errno::EWOULDBLOCK
+          if select(nil, [socket], nil, 0.1)
+            begin
+              socket.connect_nonblock(sockaddr)
+            rescue Errno::EISCONN
+            end
+          else
+            raise Errno::ECONNREFUSED
+          end
+        end
+        return true
+      rescue Errno::ECONNREFUSED, Errno::ENOENT
+        return false
+      ensure
+        socket.close if socket
+      end
+    end
 
-	def self.load_app
-		port = nil
-		tries = 0
-		while port.nil? && tries < 200
-			port = 1024 + rand(9999)
-			if ping_port(port) || ping_port(port + 1) || ping_port(port + 2)
-				port = nil
-				tries += 1
-			end
-		end
-		if port.nil?
-			abort "Cannot find a suitable port to start Meteor on"
-		end
+    def self.load_app
+      port = nil
+      tries = 0
+      while port.nil? && tries < 200
+        port = 1024 + rand(9999)
+        if ping_port(port) || ping_port(port + 1) || ping_port(port + 2)
+          port = nil
+          tries += 1
+        end
+      end
+      if port.nil?
+        abort "Cannot find a suitable port to start Meteor on"
+      end
 
-		production = options["environment"] == "production" ? "--production" : ""
-		pid = fork do
-			# Meteor is quite !@#$% here: if we kill its start script
-			# with *any* signal, it'll leave a ton of garbage processes
-			# around. Apparently it expects the user to press Ctrl-C in a
-			# terminal which happens to send a signal to all processes
-			# in the session. We emulate that behavior here by giving
-			# Meteor its own process group, and sending signals to the
-			# entire process group.
-			Process.setpgrp
-			exec("meteor run -p #{port} #{production}")
-		end
-		$0 = options["process_title"] if options["process_title"]
-		$0 = "#{$0} (#{pid})"
-		return [pid, port]
-	end
+      production = options["environment"] == "production" ? "--production" : ""
+      pid = fork do
+        # Meteor is quite !@#$% here: if we kill its start script
+        # with *any* signal, it'll leave a ton of garbage processes
+        # around. Apparently it expects the user to press Ctrl-C in a
+        # terminal which happens to send a signal to all processes
+        # in the session. We emulate that behavior here by giving
+        # Meteor its own process group, and sending signals to the
+        # entire process group.
+        Process.setpgrp
+        exec("meteor run -p #{port} #{production}")
+      end
+      $0 = options["process_title"] if options["process_title"]
+      $0 = "#{$0} (#{pid})"
+      return [pid, port]
+    end
 
-	def self.wait_for_exit_message
-		begin
-			STDIN.readline
-		rescue EOFError
-		end
-	end
-
-
-	################## Main code ##################
+    def self.wait_for_exit_message
+      begin
+        STDIN.readline
+      rescue EOFError
+      end
+    end
 
 
-	handshake_and_read_startup_request
-	init_passenger
-	begin
-		pid, port = load_app
-		while !ping_port(port)
-			sleep 0.01
-		end
-		puts "!> Ready"
-		puts "!> socket: main;tcp://127.0.0.1:#{port};http_session;0"
-		puts "!> "
-		wait_for_exit_message
-	ensure
-		if pid
-			Process.kill('INT', -pid) rescue nil
-			Process.waitpid(pid) rescue nil
-			Process.kill('INT', -pid) rescue nil
-		end
-	end
+    ################## Main code ##################
 
-end # module App
+
+    handshake_and_read_startup_request
+    init_passenger
+    begin
+      pid, port = load_app
+      while !ping_port(port)
+        sleep 0.01
+      end
+      puts "!> Ready"
+      puts "!> socket: main;tcp://127.0.0.1:#{port};http_session;0"
+      puts "!> "
+      wait_for_exit_message
+    ensure
+      if pid
+        Process.kill('INT', -pid) rescue nil
+        Process.waitpid(pid) rescue nil
+        Process.kill('INT', -pid) rescue nil
+      end
+    end
+
+  end # module App
 end # module PhusionPassenger

@@ -329,10 +329,7 @@ Less important directories:
 <a name="ruby_coding_style"></a>
 ### Ruby coding style
 
-The usual Ruby coding style applies, with some exceptions:
-
- * Use 4-space tabs for indentation.
- * Return values explicitly with `return`.
+The usual Ruby coding style applies. That is, 2 spaces for indenting.
 
 <a name="systems_programming_fundamentals"></a>
 ### Systems programming fundamentals

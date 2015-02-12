@@ -22,58 +22,58 @@ $LOAD_PATH.unshift("#{source_root}/lib")
 # Otherwise all Ruby commands will take slightly longer to start, which messes up
 # timing-sensitive tests like those in the C++ test suite.
 if defined?(Bundler)
-	clean_env = nil
-	Bundler.with_clean_env do
-		clean_env = ENV.to_hash
-	end
-	ENV.replace(clean_env)
-	ARGV.each do |arg|
-		if arg =~ /^(\w+)=(.*)$/m
-			ENV[$1] = $2
-		end
-	end
+  clean_env = nil
+  Bundler.with_clean_env do
+    clean_env = ENV.to_hash
+  end
+  ENV.replace(clean_env)
+  ARGV.each do |arg|
+    if arg =~ /^(\w+)=(.*)$/m
+      ENV[$1] = $2
+    end
+  end
 end
 
 require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
 require 'build/basics'
 if boolean_option('ONLY_RUBY')
-	require 'build/ruby_extension'
+  require 'build/ruby_extension'
 else
-	require 'build/ruby_extension'
-	require 'build/common_library'
-	require 'build/agents'
-	require 'build/apache2'
-	require 'build/nginx'
-	require 'build/documentation'
-	require 'build/packaging'
-	require 'build/test_basics'
-	require 'build/oxt_tests'
-	require 'build/cxx_tests'
-	require 'build/ruby_tests'
-	require 'build/node_tests'
-	require 'build/integration_tests'
-	require 'build/misc'
-	require 'build/debian'
+  require 'build/ruby_extension'
+  require 'build/common_library'
+  require 'build/agents'
+  require 'build/apache2'
+  require 'build/nginx'
+  require 'build/documentation'
+  require 'build/packaging'
+  require 'build/test_basics'
+  require 'build/oxt_tests'
+  require 'build/cxx_tests'
+  require 'build/ruby_tests'
+  require 'build/node_tests'
+  require 'build/integration_tests'
+  require 'build/misc'
+  require 'build/debian'
 end
 
 #### Default tasks
 
 task :default do
-	abort "Please type one of:\n" +
-		"  rake apache2\n" +
-		"  rake nginx"
+  abort "Please type one of:\n" +
+    "  rake apache2\n" +
+    "  rake nginx"
 end
 
 desc "Remove compiled files"
 task :clean => 'clean:cache' do
-	if OUTPUT_DIR == "buildout/"
-		sh "rm -rf buildout"
-	end
+  if OUTPUT_DIR == "buildout/"
+    sh "rm -rf buildout"
+  end
 end
 
 task 'common:clean' => 'clean:cache'
 task 'clean:cache' do
-	sh "rm -rf #{OUTPUT_DIR}cache"
+  sh "rm -rf #{OUTPUT_DIR}cache"
 end
 
 desc "Remove all generated files"

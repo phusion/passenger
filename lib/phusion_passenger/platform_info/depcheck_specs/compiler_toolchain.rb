@@ -5,7 +5,7 @@ define 'cc' do
     PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.cc, false)
   end
-  
+
   on :debian do
     apt_get_install "build-essential"
   end
@@ -30,7 +30,7 @@ define 'c++' do
     PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.cxx, false)
   end
-  
+
   on :debian do
     apt_get_install "build-essential"
   end
@@ -54,7 +54,7 @@ define 'make' do
     PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.make)
   end
-  
+
   on :debian do
     apt_get_install "build-essential"
   end
@@ -78,7 +78,7 @@ define 'gmake' do
     PhusionPassenger.require_passenger_lib 'platform_info/compiler'
     check_for_command(PlatformInfo.gnu_make)
   end
-  
+
   on :debian do
     apt_get_install "build-essential"
   end

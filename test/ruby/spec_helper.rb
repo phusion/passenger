@@ -1,5 +1,5 @@
 if GC.respond_to?(:copy_on_write_friendly?) && !GC.copy_on_write_friendly?
-	GC.copy_on_write_friendly = true
+  GC.copy_on_write_friendly = true
 end
 
 RUBY_VERSION_INT = RUBY_VERSION.split('.')[0..2].join.to_i
@@ -10,21 +10,21 @@ Dir.chdir("#{source_root}/test")
 require 'rubygems'
 require 'json'
 begin
-	CONFIG = JSON.load(File.read('config.json'))
+  CONFIG = JSON.load(File.read('config.json'))
 rescue Errno::ENOENT
-	STDERR.puts "*** You do not have the file test/config.json. " <<
-		"Please copy test/config.json.example to " <<
-		"test/config.json, and edit it."
-	exit 1
+  STDERR.puts "*** You do not have the file test/config.json. " <<
+    "Please copy test/config.json.example to " <<
+    "test/config.json, and edit it."
+  exit 1
 end
 
 def boolean_option(name, default_value = false)
-	value = ENV[name]
-	if value.nil? || value.empty?
-		return default_value
-	else
-		return value == "yes" || value == "on" || value == "true" || value == "1"
-	end
+  value = ENV[name]
+  if value.nil? || value.empty?
+    return default_value
+  else
+    return value == "yes" || value == "on" || value == "true" || value == "1"
+  end
 end
 
 DEBUG = boolean_option('DEBUG')
@@ -50,65 +50,65 @@ include TestHelper
 srand
 
 trap "QUIT" do
-	STDERR.puts PhusionPassenger::Utils.global_backtrace_report
+  STDERR.puts PhusionPassenger::Utils.global_backtrace_report
 end
 
 class DeadlineTimer
-	def initialize(main_thread, deadline)
-		@mutex = Mutex.new
-		@cond  = ConditionVariable.new
-		@iteration = 0
-		@pipe  = IO.pipe
+  def initialize(main_thread, deadline)
+    @mutex = Mutex.new
+    @cond  = ConditionVariable.new
+    @iteration = 0
+    @pipe  = IO.pipe
 
-		@thread = Thread.new do
-			Thread.current.abort_on_exception = true
-			expected_iteration = 1
-			ios = [@pipe[0]]
-			while true
-				@mutex.synchronize do
-					while @iteration != expected_iteration
-						@cond.wait(@mutex)
-					end
-				end
-				if !select(ios, nil, nil, deadline)
-					STDERR.puts "*** Test timed out (#{deadline} seconds)"
-					STDERR.puts PhusionPassenger::Utils.global_backtrace_report
-					main_thread.raise(Timeout::Error, "Test timed out")
-					expected_iteration += 1
-				elsif @pipe[0].read(1).nil?
-					break
-				else
-					expected_iteration += 1
-				end
-			end
-		end
-	end
+    @thread = Thread.new do
+      Thread.current.abort_on_exception = true
+      expected_iteration = 1
+      ios = [@pipe[0]]
+      while true
+        @mutex.synchronize do
+          while @iteration != expected_iteration
+            @cond.wait(@mutex)
+          end
+        end
+        if !select(ios, nil, nil, deadline)
+          STDERR.puts "*** Test timed out (#{deadline} seconds)"
+          STDERR.puts PhusionPassenger::Utils.global_backtrace_report
+          main_thread.raise(Timeout::Error, "Test timed out")
+          expected_iteration += 1
+        elsif @pipe[0].read(1).nil?
+          break
+        else
+          expected_iteration += 1
+        end
+      end
+    end
+  end
 
-	def start
-		@mutex.synchronize do
-			@iteration += 1
-			@cond.signal
-		end
-	end
+  def start
+    @mutex.synchronize do
+      @iteration += 1
+      @cond.signal
+    end
+  end
 
-	def stop
-		@pipe[1].write('x')
-	end
+  def stop
+    @pipe[1].write('x')
+  end
 end
 
 DEADLINE_TIMER = DeadlineTimer.new(Thread.current, 30)
 
 RSpec.configure do |config|
-	config.before(:each) do
-		# Suppress warning messages.
-		PhusionPassenger::DebugLogging.log_level = PhusionPassenger::LVL_CRIT
-		PhusionPassenger::DebugLogging.log_file = nil
-		PhusionPassenger::DebugLogging.stderr_evaluator = nil
+  config.before(:each) do
+    # Suppress warning messages.
+    PhusionPassenger::DebugLogging.log_level = PhusionPassenger::LVL_CRIT
+    PhusionPassenger::DebugLogging.log_file = nil
+    PhusionPassenger::DebugLogging.stderr_evaluator = nil
 
-		DEADLINE_TIMER.start
-	end
+    DEADLINE_TIMER.start
+  end
 
-	config.after(:each) do
-		DEADLINE_TIMER.stop
-	end
+  config.after(:each) do
+    DEADLINE_TIMER.stop
+  end
 end

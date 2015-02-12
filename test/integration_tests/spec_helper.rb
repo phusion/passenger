@@ -4,12 +4,12 @@ Dir.chdir("#{source_root}/test")
 require 'rubygems'
 require 'json'
 begin
-	CONFIG = JSON.load(File.read('config.json'))
+  CONFIG = JSON.load(File.read('config.json'))
 rescue Errno::ENOENT
-	STDERR.puts "*** You do not have the file test/config.json. " <<
-		"Please copy test/config.json.example to " <<
-		"test/config.json, and edit it."
-	exit 1
+  STDERR.puts "*** You do not have the file test/config.json. " <<
+    "Please copy test/config.json.example to " <<
+    "test/config.json, and edit it."
+  exit 1
 end
 
 $LOAD_PATH.unshift("#{source_root}/lib")

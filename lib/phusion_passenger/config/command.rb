@@ -22,33 +22,33 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
-module Config
+  module Config
 
-class Command
-	def initialize(argv)
-		@argv = argv.dup
-		@options = self.class.create_default_options
-	end
+    class Command
+      def initialize(argv)
+        @argv = argv.dup
+        @options = self.class.create_default_options
+      end
 
-private
-	def self.create_default_options
-		return {}
-	end
+    private
+      def self.create_default_options
+        return {}
+      end
 
-	def parse_options
-		@parser = self.class.create_option_parser(@options)
-		begin
-			@parser.parse!(@argv)
-		rescue OptionParser::ParseError => e
-			STDERR.puts "*** ERROR: #{e}"
-			abort @parser.to_s
-		end
-		if @options[:help]
-			puts @parser
-			exit
-		end
-	end
-end
+      def parse_options
+        @parser = self.class.create_option_parser(@options)
+        begin
+          @parser.parse!(@argv)
+        rescue OptionParser::ParseError => e
+          STDERR.puts "*** ERROR: #{e}"
+          abort @parser.to_s
+        end
+        if @options[:help]
+          puts @parser
+          exit
+        end
+      end
+    end
 
-end # module Config
+  end # module Config
 end # module PhusionPassenger

@@ -24,165 +24,165 @@
 
 desc "Run 'sloccount' to see how much code Passenger has"
 task :sloccount do
-	ENV['LC_ALL'] = 'C'
-	begin
-		# sloccount doesn't recognize the scripts in
-		# bin/ as Ruby, so we make symlinks with proper
-		# extensions.
-		tmpdir = ".sloccount"
-		system "rm -rf #{tmpdir}"
-		mkdir tmpdir
-		Dir['bin/*'].each do |file|
-			safe_ln file, "#{tmpdir}/#{File.basename(file)}.rb"
-		end
-		sh "sloccount", *Dir[
-			"#{tmpdir}/*",
-			"lib/phusion_passenger",
-			"ext/apache2",
-			"ext/nginx",
-			"ext/common",
-			"ext/oxt",
-			"ext/phusion_passenger/*.c",
-			"test/**/*.{cpp,rb,h}"
-		]
-	ensure
-		system "rm -rf #{tmpdir}"
-	end
+  ENV['LC_ALL'] = 'C'
+  begin
+    # sloccount doesn't recognize the scripts in
+    # bin/ as Ruby, so we make symlinks with proper
+    # extensions.
+    tmpdir = ".sloccount"
+    system "rm -rf #{tmpdir}"
+    mkdir tmpdir
+    Dir['bin/*'].each do |file|
+      safe_ln file, "#{tmpdir}/#{File.basename(file)}.rb"
+    end
+    sh "sloccount", *Dir[
+      "#{tmpdir}/*",
+      "lib/phusion_passenger",
+      "ext/apache2",
+      "ext/nginx",
+      "ext/common",
+      "ext/oxt",
+      "ext/phusion_passenger/*.c",
+      "test/**/*.{cpp,rb,h}"
+    ]
+  ensure
+    system "rm -rf #{tmpdir}"
+  end
 end
 
 def extract_latest_news_contents_and_items
-	# The text is in the following format:
-	#
-	#   Release x.x.x
-	#   -------------
-	#
-	#    * Text.
-	#    * More text.
-	#    * A header.
-	#      With yet more text.
-	#
-	#   Release y.y.y
-	#   -------------
-	#   .....
-	contents = File.read("CHANGELOG")
+  # The text is in the following format:
+  #
+  #   Release x.x.x
+  #   -------------
+  #
+  #    * Text.
+  #    * More text.
+  #    * A header.
+  #      With yet more text.
+  #
+  #   Release y.y.y
+  #   -------------
+  #   .....
+  contents = File.read("CHANGELOG")
 
-	# We're only interested in the latest release, so extract the text for that.
-	contents =~ /\A(Release.*?)^(Release|Older releases)/m
-	contents = $1
-	contents.sub!(/\A.*?\n-+\n+/m, '')
-	contents.sub!(/\n+\Z/, '')
+  # We're only interested in the latest release, so extract the text for that.
+  contents =~ /\A(Release.*?)^(Release|Older releases)/m
+  contents = $1
+  contents.sub!(/\A.*?\n-+\n+/m, '')
+  contents.sub!(/\n+\Z/, '')
 
-	# Now split the text into individual items.
-	items = contents.split(/^ \* /)
-	items.shift while items.first == ""
+  # Now split the text into individual items.
+  items = contents.split(/^ \* /)
+  items.shift while items.first == ""
 
-	return [contents, items]
+  return [contents, items]
 end
 
 desc "Convert the Changelog items for the latest release to HTML"
 task :changelog_as_html do
-	require 'cgi'
-	contents, items = extract_latest_news_contents_and_items
+  require 'cgi'
+  contents, items = extract_latest_news_contents_and_items
 
-	puts "<ul>"
-	items.each do |item|
-		def format_paragraph(text)
-			# Get rid of newlines: convert them into spaces.
-			text.gsub!("\n", ' ')
-			while text.index('  ')
-				text.gsub!('  ', ' ')
-			end
+  puts "<ul>"
+  items.each do |item|
+    def format_paragraph(text)
+      # Get rid of newlines: convert them into spaces.
+      text.gsub!("\n", ' ')
+      while text.index('  ')
+        text.gsub!('  ', ' ')
+      end
 
-			# Auto-link to issue tracker.
-			text.gsub!(/(bug #|issue #|GH-)(\d+)/i) do
-				url = "https://github.com/phusion/passenger/issues/#{$2}"
-				%Q(<{a href="#{url}"}>#{$1}#{$2}<{/a}>)
-			end
+      # Auto-link to issue tracker.
+      text.gsub!(/(bug #|issue #|GH-)(\d+)/i) do
+        url = "https://github.com/phusion/passenger/issues/#{$2}"
+        %Q(<{a href="#{url}"}>#{$1}#{$2}<{/a}>)
+      end
 
-			text.strip!
-			text = CGI.escapeHTML(text)
-			text.gsub!(%r(&lt;\{(.*?)\}&gt;(.*?)&lt;\{/(.*?)\}&gt;)) do
-				"<#{CGI.unescapeHTML $1}>#{$2}</#{CGI.unescapeHTML $3}>"
-			end
-			text
-		end
+      text.strip!
+      text = CGI.escapeHTML(text)
+      text.gsub!(%r(&lt;\{(.*?)\}&gt;(.*?)&lt;\{/(.*?)\}&gt;)) do
+        "<#{CGI.unescapeHTML $1}>#{$2}</#{CGI.unescapeHTML $3}>"
+      end
+      text
+    end
 
-		puts "<li>" + format_paragraph(item.strip) + "</li>"
-	end
-	puts "</ul>"
+    puts "<li>" + format_paragraph(item.strip) + "</li>"
+  end
+  puts "</ul>"
 end
 
 desc "Convert the Changelog items for the latest release to Markdown"
 task :changelog_as_markdown do
-	contents, items = extract_latest_news_contents_and_items
+  contents, items = extract_latest_news_contents_and_items
 
-	# Auto-link to issue tracker.
-	contents.gsub!(/(bug #|issue #|GH-)(\d+)/i) do
-		url = "https://github.com/phusion/passenger/issues/#{$2}"
-		%Q([#{$1}#{$2}](#{url}))
-	end
+  # Auto-link to issue tracker.
+  contents.gsub!(/(bug #|issue #|GH-)(\d+)/i) do
+    url = "https://github.com/phusion/passenger/issues/#{$2}"
+    %Q([#{$1}#{$2}](#{url}))
+  end
 
-	puts contents
+  puts contents
 end
 
 desc "Update CONTRIBUTORS file"
 task :contributors do
-	entries = `git log --format='%aN' | sort -u`.split("\n")
-	entries.delete "Hongli Lai"
-	entries.delete "Hongli Lai (Phusion"
-	entries.delete "Ninh Bui"
-	entries.push "Ninh Bui (Phusion)"
-	entries.delete "Phusion Dev"
-	entries.delete "Tinco Andringa"
-	entries.push "Tinco Andringa (Phusion)"
-	entries.delete "Goffert van Gool"
-	entries.push "Goffert van Gool (Phusion)"
-	entries.delete "Gokulnath"
-	entries.push "Gokulnath Manakkattil"
-	entries.push "Sean Wilkinson"
-	entries.push "Yichun Zhang"
-	File.open("CONTRIBUTORS", "w") do |f|
-		f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.join("\n"))
-	end
-	puts "Updated CONTRIBUTORS"
+  entries = `git log --format='%aN' | sort -u`.split("\n")
+  entries.delete "Hongli Lai"
+  entries.delete "Hongli Lai (Phusion"
+  entries.delete "Ninh Bui"
+  entries.push "Ninh Bui (Phusion)"
+  entries.delete "Phusion Dev"
+  entries.delete "Tinco Andringa"
+  entries.push "Tinco Andringa (Phusion)"
+  entries.delete "Goffert van Gool"
+  entries.push "Goffert van Gool (Phusion)"
+  entries.delete "Gokulnath"
+  entries.push "Gokulnath Manakkattil"
+  entries.push "Sean Wilkinson"
+  entries.push "Yichun Zhang"
+  File.open("CONTRIBUTORS", "w") do |f|
+    f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.join("\n"))
+  end
+  puts "Updated CONTRIBUTORS"
 end
 
 dependencies = [
-	COMMON_LIBRARY.link_objects,
-	LIBBOOST_OXT,
-	LIBEV_TARGET,
-	LIBEIO_TARGET
+  COMMON_LIBRARY.link_objects,
+  LIBBOOST_OXT,
+  LIBEV_TARGET,
+  LIBEIO_TARGET
 ].flatten.compact
 task :compile_app => dependencies do
-	source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
-	if !source
-		STDERR.puts "Please specify the source filename with SOURCE=(...)"
-		exit 1
-	end
-	if source =~ /\.h/
-		File.open('_source.cpp', 'w') do |f|
-			f.puts "#include \"#{source}\""
-		end
-		source = '_source.cpp'
-	end
-	object = source.sub(/\.cpp$/, '.o')
-	exe = source.sub(/\.cpp$/, '')
-	begin
-		compile_cxx(source,
-			"-DSTANDALONE -o #{object} " <<
-			"-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
-			"#{EXTRA_CXXFLAGS}")
-		create_executable(exe, object,
-			"-DSTANDALONE " <<
-			"-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
-			"#{EXTRA_CXXFLAGS} " <<
-			"#{COMMON_LIBRARY.link_objects_as_string} " <<
-			"#{LIBBOOST_OXT} " <<
-			"#{LIBEV_LIBS} " <<
-			"#{LIBEIO_LIBS} " <<
-			"#{PlatformInfo.portability_cxx_ldflags} " <<
-			"#{EXTRA_CXX_LDFLAGS}")
-	ensure
-		File.unlink('_source.cpp') rescue nil
-	end
+  source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
+  if !source
+    STDERR.puts "Please specify the source filename with SOURCE=(...)"
+    exit 1
+  end
+  if source =~ /\.h/
+    File.open('_source.cpp', 'w') do |f|
+      f.puts "#include \"#{source}\""
+    end
+    source = '_source.cpp'
+  end
+  object = source.sub(/\.cpp$/, '.o')
+  exe = source.sub(/\.cpp$/, '')
+  begin
+    compile_cxx(source,
+      "-DSTANDALONE -o #{object} " <<
+      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+      "#{EXTRA_CXXFLAGS}")
+    create_executable(exe, object,
+      "-DSTANDALONE " <<
+      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+      "#{EXTRA_CXXFLAGS} " <<
+      "#{COMMON_LIBRARY.link_objects_as_string} " <<
+      "#{LIBBOOST_OXT} " <<
+      "#{LIBEV_LIBS} " <<
+      "#{LIBEIO_LIBS} " <<
+      "#{PlatformInfo.portability_cxx_ldflags} " <<
+      "#{EXTRA_CXX_LDFLAGS}")
+  ensure
+    File.unlink('_source.cpp') rescue nil
+  end
 end

@@ -26,10 +26,10 @@
 dependencies = [NATIVE_SUPPORT_TARGET, AGENT_OUTPUT_DIR + AGENT_EXE].compact
 desc "Run unit tests for the Ruby libraries"
 task 'test:ruby' => dependencies do
-	if maybe_grep = string_option('E')
-		require 'shellwords'
-		maybe_grep = "-e #{Shellwords.escape(maybe_grep)}"
-	end
-	command = "rspec -c -f s --tty -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
-	sh "cd test && exec bundle exec #{command}"
+  if maybe_grep = string_option('E')
+    require 'shellwords'
+    maybe_grep = "-e #{Shellwords.escape(maybe_grep)}"
+  end
+  command = "rspec -c -f s --tty -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
+  sh "cd test && exec bundle exec #{command}"
 end

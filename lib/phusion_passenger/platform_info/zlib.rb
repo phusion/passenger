@@ -25,14 +25,14 @@ PhusionPassenger.require_passenger_lib 'platform_info'
 
 module PhusionPassenger
 
-module PlatformInfo
-	def self.zlib_flags
-		return nil
-	end
-	
-	def self.zlib_libs
-		return '-lz'
-	end
-end
+  module PlatformInfo
+    def self.zlib_flags
+      return nil
+    end
+
+    def self.zlib_libs
+      return '-lz'
+    end
+  end
 
 end # module PhusionPassenger

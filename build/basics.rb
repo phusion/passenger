@@ -22,7 +22,7 @@
 #  THE SOFTWARE.
 
 begin
-	require 'rubygems'
+  require 'rubygems'
 rescue LoadError
 end
 require 'pathname'
@@ -50,83 +50,83 @@ require 'build/cplusplus_support'
 #################################################
 
 class TemplateRenderer
-	def initialize(filename)
-		require 'erb' if !defined?(ERB)
-		@erb = ERB.new(File.read(filename), nil, "-")
-		@erb.filename = filename
-	end
+  def initialize(filename)
+    require 'erb' if !defined?(ERB)
+    @erb = ERB.new(File.read(filename), nil, "-")
+    @erb.filename = filename
+  end
 
-	def render
-		return @erb.result(binding)
-	end
+  def render
+    return @erb.result(binding)
+  end
 
-	def render_to(filename)
-		puts "Creating #{filename}"
-		text = render
-		# When packaging, some timestamps may be modified. The user may not
-		# have write access to the source root (for example, when Passenger
-		# Standalone is compiling its runtime), so we only write to the file
-		# when necessary.
-		if !File.exist?(filename) || File.writable?(filename) || File.read(filename) != text
-			File.open(filename, 'w') do |f|
-				f.write(text)
-			end
-		end
-	end
+  def render_to(filename)
+    puts "Creating #{filename}"
+    text = render
+    # When packaging, some timestamps may be modified. The user may not
+    # have write access to the source root (for example, when Passenger
+    # Standalone is compiling its runtime), so we only write to the file
+    # when necessary.
+    if !File.exist?(filename) || File.writable?(filename) || File.read(filename) != text
+      File.open(filename, 'w') do |f|
+        f.write(text)
+      end
+    end
+  end
 end
 
 def string_option(name, default_value = nil)
-	value = ENV[name]
-	if value.nil? || value.empty?
-		return default_value
-	else
-		return value
-	end
+  value = ENV[name]
+  if value.nil? || value.empty?
+    return default_value
+  else
+    return value
+  end
 end
 
 def compiler_flag_option(name)
-	return string_option(name, '').gsub("\n", " ")
+  return string_option(name, '').gsub("\n", " ")
 end
 
 def boolean_option(name, default_value = false)
-	value = ENV[name]
-	if value.nil? || value.empty?
-		return default_value
-	else
-		return value == "yes" || value == "on" || value == "true" || value == "1"
-	end
+  value = ENV[name]
+  if value.nil? || value.empty?
+    return default_value
+  else
+    return value == "yes" || value == "on" || value == "true" || value == "1"
+  end
 end
 
 def maybe_wrap_in_ccache(command)
-	if boolean_option('USE_CCACHE', false) && command !~ /^ccache /
-		return "ccache #{command}"
-	else
-		return command
-	end
+  if boolean_option('USE_CCACHE', false) && command !~ /^ccache /
+    return "ccache #{command}"
+  else
+    return command
+  end
 end
 
 #################################################
 
 if string_option('OUTPUT_DIR')
-	OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
+  OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
 else
-	OUTPUT_DIR = "buildout/"
+  OUTPUT_DIR = "buildout/"
 end
 
 verbose true if !boolean_option('REALLY_QUIET')
 if boolean_option('STDERR_TO_STDOUT')
-	# Just redirecting the file descriptor isn't enough because
-	# data written to STDERR might arrive in an unexpected order
-	# compared to STDOUT.
-	STDERR.reopen(STDOUT)
-	Object.send(:remove_const, :STDERR)
-	STDERR = STDOUT
-	$stderr = $stdout
+  # Just redirecting the file descriptor isn't enough because
+  # data written to STDERR might arrive in an unexpected order
+  # compared to STDOUT.
+  STDERR.reopen(STDOUT)
+  Object.send(:remove_const, :STDERR)
+  STDERR = STDOUT
+  $stderr = $stdout
 end
 
 if boolean_option('CACHING', true) && !boolean_option('RELEASE')
-	PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
-	FileUtils.mkdir_p(PlatformInfo.cache_dir)
+  PlatformInfo.cache_dir = OUTPUT_DIR + "cache"
+  FileUtils.mkdir_p(PlatformInfo.cache_dir)
 end
 
 # https://github.com/phusion/passenger/issues/672
@@ -174,21 +174,21 @@ EXTRA_CFLAGS << " " << compiler_flag_option('EXTRA_CFLAGS') if !compiler_flag_op
 EXTRA_CXXFLAGS = PlatformInfo.default_extra_cxxflags.dup
 EXTRA_CXXFLAGS << " " << compiler_flag_option('EXTRA_CXXFLAGS') if !compiler_flag_option('EXTRA_CXXFLAGS').empty?
 [EXTRA_CFLAGS, EXTRA_CXXFLAGS].each do |flags|
-	flags << " -fno-omit-frame-pointers" if USE_ASAN
-	flags << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
+  flags << " -fno-omit-frame-pointers" if USE_ASAN
+  flags << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
 end
 
 # Extra linker flags that should always be passed to the linker.
 # These should be included first in the command string.
 EXTRA_PRE_C_LDFLAGS   = compiler_flag_option('EXTRA_PRE_LDFLAGS') + " " +
-	compiler_flag_option('EXTRA_PRE_C_LDFLAGS')
+  compiler_flag_option('EXTRA_PRE_C_LDFLAGS')
 EXTRA_PRE_CXX_LDFLAGS = compiler_flag_option('EXTRA_PRE_LDFLAGS') + " " +
-	compiler_flag_option('EXTRA_PRE_CXX_LDFLAGS')
+  compiler_flag_option('EXTRA_PRE_CXX_LDFLAGS')
 # These should be included last in the command string, even after portability_*_ldflags.
 EXTRA_C_LDFLAGS   = compiler_flag_option('EXTRA_LDFLAGS') + " " +
-	compiler_flag_option('EXTRA_C_LDFLAGS')
+  compiler_flag_option('EXTRA_C_LDFLAGS')
 EXTRA_CXX_LDFLAGS = compiler_flag_option('EXTRA_LDFLAGS') + " " +
-	compiler_flag_option('EXTRA_CXX_LDFLAGS')
+  compiler_flag_option('EXTRA_CXX_LDFLAGS')
 
 
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "support-binaries") + "/"
@@ -198,7 +198,7 @@ LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libe
 LIBEIO_OUTPUT_DIR         = string_option('LIBEIO_OUTPUT_DIR', OUTPUT_DIR + "libeio") + "/"
 ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
-	OUTPUT_DIR + "ruby/" + ruby_extension_archdir) + "/"
+  OUTPUT_DIR + "ruby/" + ruby_extension_archdir) + "/"
 PKG_DIR                   = string_option('PKG_DIR', "pkg")
 
 

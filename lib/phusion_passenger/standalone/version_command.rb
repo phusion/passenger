@@ -23,15 +23,15 @@
 PhusionPassenger.require_passenger_lib 'standalone/command'
 
 module PhusionPassenger
-module Standalone
+  module Standalone
 
-class VersionCommand < Command
-	def run
-		puts "Phusion Passenger version #{VERSION_STRING}"
-		puts
-		puts '"Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.'
-	end
-end
+    class VersionCommand < Command
+      def run
+        puts "Phusion Passenger version #{VERSION_STRING}"
+        puts
+        puts '"Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.'
+      end
+    end
 
-end
+  end
 end

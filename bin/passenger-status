@@ -26,7 +26,7 @@
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 begin
-	require 'rubygems'
+  require 'rubygems'
 rescue LoadError
 end
 require 'phusion_passenger'
@@ -51,263 +51,263 @@ DEFAULT_OPTIONS = { :show => 'pool', :color => STDOUT.tty?, :header => true }.fr
 ##### Show status command #####
 
 def command_show_status(argv, options)
-	if argv.empty?
-		instance = find_sole_instance
-	else
-		instance = find_instance_by_name_prefix(argv[0])
-	end
-	show_status(instance, options)
+  if argv.empty?
+    instance = find_sole_instance
+  else
+    instance = find_instance_by_name_prefix(argv[0])
+  end
+  show_status(instance, options)
 end
 
 def find_sole_instance
-	instances = InstanceRegistry.new.list
-	if instances.empty?
-		abort "ERROR: #{PROGRAM_NAME} doesn't seem to be running. If you " +
-			"are sure that it is running, then the causes of this problem could be:\n\n" +
-			"1. You customized the instance registry directory using Apache's " +
-			"PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir " +
-			"option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command line " +
-			"argument. If so, please set the environment variable PASSENGER_INSTANCE_REGISTRY_DIR " +
-			"to that directory and run passenger-status again.\n" +
-			"2. The instance directory has been removed by an operating system background service. " +
-			"Please set a different instance registry directory using Apache's " +
-			"PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir " +
-			"option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command line " +
-			"argument."
-	elsif instances.size == 1
-		return instances.first
-	else
-		puts "It appears that multiple #{PROGRAM_NAME} instances are running. Please"
-		puts "select a specific one by running:"
-		puts
-		puts "  passenger-status <NAME>"
-		puts
-		puts "The following instances are running:"
-		puts
-		printf "%-25s  %s\n", "Name", "Description"
-		puts "------------------------------------------------------------------"
-		instances.each do |instance|
-			printf "%-25s  %s\n", instance.name, instance.server_software
-		end
-		exit 1
-	end
+  instances = InstanceRegistry.new.list
+  if instances.empty?
+    abort "ERROR: #{PROGRAM_NAME} doesn't seem to be running. If you " +
+      "are sure that it is running, then the causes of this problem could be:\n\n" +
+      "1. You customized the instance registry directory using Apache's " +
+      "PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir " +
+      "option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command line " +
+      "argument. If so, please set the environment variable PASSENGER_INSTANCE_REGISTRY_DIR " +
+      "to that directory and run passenger-status again.\n" +
+      "2. The instance directory has been removed by an operating system background service. " +
+      "Please set a different instance registry directory using Apache's " +
+      "PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir " +
+      "option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command line " +
+      "argument."
+  elsif instances.size == 1
+    return instances.first
+  else
+    puts "It appears that multiple #{PROGRAM_NAME} instances are running. Please"
+    puts "select a specific one by running:"
+    puts
+    puts "  passenger-status <NAME>"
+    puts
+    puts "The following instances are running:"
+    puts
+    printf "%-25s  %s\n", "Name", "Description"
+    puts "------------------------------------------------------------------"
+    instances.each do |instance|
+      printf "%-25s  %s\n", instance.name, instance.server_software
+    end
+    exit 1
+  end
 end
 
 def find_instance_by_name_prefix(name)
-	instance = InstanceRegistry.new.find_by_name_prefix(name)
-	if instance == :ambigious
-		abort "ERROR: there are multiple instances whose name start with '#{name}'. Please specify the full name."
-	elsif instance
-		return instance
-	else
-		abort "ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running with the name '#{name}'."
-	end
+  instance = InstanceRegistry.new.find_by_name_prefix(name)
+  if instance == :ambigious
+    abort "ERROR: there are multiple instances whose name start with '#{name}'. Please specify the full name."
+  elsif instance
+    return instance
+  else
+    abort "ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running with the name '#{name}'."
+  end
 end
 
 def show_status(instance, options)
-	print_header(STDOUT, instance) if options[:header]
+  print_header(STDOUT, instance) if options[:header]
 
-	case options[:show]
-	when 'pool'
-		request = Net::HTTP::Get.new("/pool.txt?colorize=#{options[:color]}&verbose=#{options[:verbose]}")
-		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
-		response = instance.http_request("agents.s/server_admin", request)
-		if response.code.to_i / 100 == 2
-			puts response.body
-		else
-			STDERR.puts "*** An error occured."
-			STDERR.puts "#{response.code}: #{response.body}"
-			exit 2
-		end
+  case options[:show]
+  when 'pool'
+    request = Net::HTTP::Get.new("/pool.txt?colorize=#{options[:color]}&verbose=#{options[:verbose]}")
+    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    response = instance.http_request("agents.s/server_admin", request)
+    if response.code.to_i / 100 == 2
+      puts response.body
+    else
+      STDERR.puts "*** An error occured."
+      STDERR.puts "#{response.code}: #{response.body}"
+      exit 2
+    end
 
-	when 'requests', 'server'
-		request = Net::HTTP::Get.new("/server.json")
-		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
-		response = instance.http_request("agents.s/server_admin", request)
-		if response.code.to_i / 100 == 2
-			puts response.body
-		else
-			STDERR.puts "*** An error occured."
-			STDERR.puts "#{response.code}: #{response.body}"
-			exit 2
-		end
+  when 'requests', 'server'
+    request = Net::HTTP::Get.new("/server.json")
+    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    response = instance.http_request("agents.s/server_admin", request)
+    if response.code.to_i / 100 == 2
+      puts response.body
+    else
+      STDERR.puts "*** An error occured."
+      STDERR.puts "#{response.code}: #{response.body}"
+      exit 2
+    end
 
-	when 'backtraces'
-		request = Net::HTTP::Get.new("/backtraces.txt")
-		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
-		response = instance.http_request("agents.s/server_admin", request)
-		if response.code.to_i / 100 == 2
-			text = response.body
-			# Colorize output
-			color = PhusionPassenger::Utils::AnsiColors.new
-			text.gsub!(/^(Thread .*:)$/, color.black_bg + color.yellow + '\1' + color.reset)
-			text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + color.bold + '\2' + color.reset + '(')
-			puts text
-		else
-			STDERR.puts "*** An error occured."
-			STDERR.puts "#{response.code}: #{response.body}"
-			exit 2
-		end
-	
-	when 'xml'
-		request = Net::HTTP::Get.new("/pool.xml")
-		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
-		response = instance.http_request("agents.s/server_admin", request)
-		if response.code.to_i / 100 == 2
-			indented = format_with_xmllint(response.body)
-			if indented
-				puts indented
-			else
-				puts response.body
-				STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
-			end
-		else
-			STDERR.puts "*** An error occured."
-			STDERR.puts "#{response.code}: #{response.body}"
-			exit 2
-		end
+  when 'backtraces'
+    request = Net::HTTP::Get.new("/backtraces.txt")
+    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    response = instance.http_request("agents.s/server_admin", request)
+    if response.code.to_i / 100 == 2
+      text = response.body
+      # Colorize output
+      color = PhusionPassenger::Utils::AnsiColors.new
+      text.gsub!(/^(Thread .*:)$/, color.black_bg + color.yellow + '\1' + color.reset)
+      text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + color.bold + '\2' + color.reset + '(')
+      puts text
+    else
+      STDERR.puts "*** An error occured."
+      STDERR.puts "#{response.code}: #{response.body}"
+      exit 2
+    end
 
-	when 'union_station'
-		request = Net::HTTP::Get.new("/status.txt")
-		request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
-		response = instance.http_request("agents.s/logging_admin", request)
-		if response.code.to_i / 100 == 2
-			puts response.body
-		else
-			STDERR.puts "*** An error occured."
-			STDERR.puts "#{response.code}: #{response.body}"
-			exit 2
-		end
-	end
+  when 'xml'
+    request = Net::HTTP::Get.new("/pool.xml")
+    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    response = instance.http_request("agents.s/server_admin", request)
+    if response.code.to_i / 100 == 2
+      indented = format_with_xmllint(response.body)
+      if indented
+        puts indented
+      else
+        puts response.body
+        STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
+      end
+    else
+      STDERR.puts "*** An error occured."
+      STDERR.puts "#{response.code}: #{response.body}"
+      exit 2
+    end
+
+  when 'union_station'
+    request = Net::HTTP::Get.new("/status.txt")
+    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    response = instance.http_request("agents.s/logging_admin", request)
+    if response.code.to_i / 100 == 2
+      puts response.body
+    else
+      STDERR.puts "*** An error occured."
+      STDERR.puts "#{response.code}: #{response.body}"
+      exit 2
+    end
+  end
 end
 
 def print_header(io, instance)
-	io.puts "Version : #{PhusionPassenger::VERSION_STRING}"
-	io.puts "Date    : #{Time.now}"
-	io.puts "Instance: #{instance.name} (#{instance.server_software})"
-	io.puts
+  io.puts "Version : #{PhusionPassenger::VERSION_STRING}"
+  io.puts "Date    : #{Time.now}"
+  io.puts "Instance: #{instance.name} (#{instance.server_software})"
+  io.puts
 end
 
 def obtain_read_only_admin_password(instance)
-	begin
-		password = instance.read_only_admin_password
-	rescue Errno::EACCES
-		print_permission_error_message
-		exit 2
-	end
+  begin
+    password = instance.read_only_admin_password
+  rescue Errno::EACCES
+    print_permission_error_message
+    exit 2
+  end
 end
 
 def print_permission_error_message
-	PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-	STDERR.puts "*** ERROR: You are not authorized to query the status for this " <<
-		"#{PROGRAM_NAME} instance. Please try again with '#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
+  PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+  STDERR.puts "*** ERROR: You are not authorized to query the status for this " <<
+    "#{PROGRAM_NAME} instance. Please try again with '#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
 end
 
 def format_with_xmllint(xml)
-	return nil if !PhusionPassenger::PlatformInfo.find_command('xmllint')
-	require 'open3'
-	require 'thread'
-	ENV['XMLLINT_INDENT'] = '   '
-	Open3.popen3("xmllint", "--format", "-") do |stdin, stdout, stderr|
-		stdout_text = nil
-		stderr_text = nil
-		thread1 = Thread.new do
-			stdin.write(xml)
-			stdin.close
-		end
-		thread2 = Thread.new do
-			stdout_text = stdout.read
-			stdout.close
-		end
-		thread3 = Thread.new do
-			stderr_text = stderr.read
-			stderr.close
-		end
-		thread1.join
-		thread2.join
-		thread3.join
-		
-		if stdout_text.nil? || stdout_text.empty?
-			if stderr_text !~ /No such file or directory/ && stderr_text !~ /command not found/
-				STDERR.puts stderr_text
-			end
-			return nil
-		else
-			return stdout_text
-		end
-	end
+  return nil if !PhusionPassenger::PlatformInfo.find_command('xmllint')
+  require 'open3'
+  require 'thread'
+  ENV['XMLLINT_INDENT'] = '   '
+  Open3.popen3("xmllint", "--format", "-") do |stdin, stdout, stderr|
+    stdout_text = nil
+    stderr_text = nil
+    thread1 = Thread.new do
+      stdin.write(xml)
+      stdin.close
+    end
+    thread2 = Thread.new do
+      stdout_text = stdout.read
+      stdout.close
+    end
+    thread3 = Thread.new do
+      stderr_text = stderr.read
+      stderr.close
+    end
+    thread1.join
+    thread2.join
+    thread3.join
+
+    if stdout_text.nil? || stdout_text.empty?
+      if stderr_text !~ /No such file or directory/ && stderr_text !~ /command not found/
+        STDERR.puts stderr_text
+      end
+      return nil
+    else
+      return stdout_text
+    end
+  end
 end
 
 
 ##### Main command dispatcher #####
 
 def create_option_parser(options)
-	return OptionParser.new do |opts|
-		nl = "\n" << " " * 37
-		opts.banner = "Usage: passenger-status [options] [instance name]"
-		opts.separator ""
-		opts.separator "Tool for inspecting Phusion Passenger's internal status."
-		opts.separator ""
+  return OptionParser.new do |opts|
+    nl = "\n" << " " * 37
+    opts.banner = "Usage: passenger-status [options] [instance name]"
+    opts.separator ""
+    opts.separator "Tool for inspecting Phusion Passenger's internal status."
+    opts.separator ""
 
-		opts.separator "Options:"
-		opts.on("--show=pool|server|backtraces|xml|union_station", String,
-		        "Whether to show the pool's contents,#{nl}" <<
-		        "the currently running requests,#{nl}" <<
-		        "the backtraces of all threads or an XML#{nl}" <<
-		        "description of the pool.") do |what|
-			if what !~ /\A(pool|server|requests|backtraces|xml|union_station)\Z/
-				STDERR.puts "Invalid argument for --show."
-				exit 1
-			else
-				options[:show] = what
-			end
-		end
-		opts.on("--no-header", "Do not display an informative header#{nl}" <<
-		        "containing the timestamp, version number,#{nl}" <<
-		        "etc.") do
-			options[:header] = false
-		end
-		opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
-			options[:color] = true
-		end
-		opts.on("--verbose", "-v", "Show verbose information.") do
-			options[:verbose] = true
-		end
-	end
+    opts.separator "Options:"
+    opts.on("--show=pool|server|backtraces|xml|union_station", String,
+            "Whether to show the pool's contents,#{nl}" <<
+            "the currently running requests,#{nl}" <<
+            "the backtraces of all threads or an XML#{nl}" <<
+            "description of the pool.") do |what|
+      if what !~ /\A(pool|server|requests|backtraces|xml|union_station)\Z/
+        STDERR.puts "Invalid argument for --show."
+        exit 1
+      else
+        options[:show] = what
+      end
+    end
+    opts.on("--no-header", "Do not display an informative header#{nl}" <<
+            "containing the timestamp, version number,#{nl}" <<
+            "etc.") do
+      options[:header] = false
+    end
+    opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
+      options[:color] = true
+    end
+    opts.on("--verbose", "-v", "Show verbose information.") do
+      options[:verbose] = true
+    end
+  end
 end
 
 def parse_argv
-	options = DEFAULT_OPTIONS.dup
-	parser = create_option_parser(options)
-	begin
-		parser.parse!
-	rescue OptionParser::ParseError => e
-		puts e
-		puts
-		puts "Please see '--help' for valid options."
-		exit 1
-	end
+  options = DEFAULT_OPTIONS.dup
+  parser = create_option_parser(options)
+  begin
+    parser.parse!
+  rescue OptionParser::ParseError => e
+    puts e
+    puts
+    puts "Please see '--help' for valid options."
+    exit 1
+  end
 
-	return options
+  return options
 end
 
 def infer_command
-	if !ARGV[0] || ARGV[0] !~ /^-/
-		return [:show_status, ARGV.dup]
-	else
-		command_name, *argv = ARGV
-		if respond_to?("command_#{command_name}")
-			return [command_name, argv]
-		else
-			abort "ERROR: unrecognized command '#{command_name}'"
-		end
-	end
+  if !ARGV[0] || ARGV[0] !~ /^-/
+    return [:show_status, ARGV.dup]
+  else
+    command_name, *argv = ARGV
+    if respond_to?("command_#{command_name}")
+      return [command_name, argv]
+    else
+      abort "ERROR: unrecognized command '#{command_name}'"
+    end
+  end
 end
 
 def start
-	options = parse_argv
-	command, argv = infer_command
-	send("command_#{command}", argv, options)
+  options = parse_argv
+  command, argv = infer_command
+  send("command_#{command}", argv, options)
 end
 
 start

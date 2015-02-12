@@ -23,7 +23,7 @@ define 'ruby-dev' do
       false
     end
   end
-  
+
   if ruby_command =~ %r(^/usr/bin/ruby) || ruby_command =~ %r(^/System/Library/Frameworks/Ruby.framework)
     # Only tell user to install the headers with the system's package manager
     # if Ruby itself was installed with the package manager.
@@ -83,20 +83,20 @@ define 'rubygems' do
       false
     end
   end
-  
+
   install_instructions "Please download it from <b>#{website}</b>. " +
     "Extract the tarball, and run <b>ruby setup.rb</b>"
   if ruby_command =~ %r(^/usr/bin/ruby)
     # Only tell user to install RubyGems with the system's package manager
     # if Ruby itself was installed with the package manager.
-    # 
+    #
     # Older versions of Debian have totally messed up RubyGems by patching it to install binaries
     # to /var/lib/gems/bin instead of /usr/bin or even /usr/local/bin. That
     # wouldn't be so much of a problem were it not for the fact that
     # /var/lib/gems/bin is not in $PATH by default, so on a regular basis people
     # ask various Ruby/Rails support forums why they get a 'foo: command not found'
     # after typing 'gem install foo'.
-    # 
+    #
     # Luckily newer Debian versions fixed this problem.
     on :debian do
       apt_get_install "rubygems"
@@ -120,7 +120,7 @@ define 'rake' do
       false
     end
   end
-  
+
   if ruby_command =~ %r(^/usr/bin/ruby)
     # Only tell user to install Rake with the system's package manager
     # if Ruby itself was installed with the package manager.

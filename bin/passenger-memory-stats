@@ -26,7 +26,7 @@
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 begin
-	require 'rubygems'
+  require 'rubygems'
 rescue LoadError
 end
 require 'phusion_passenger'
@@ -42,136 +42,136 @@ include PhusionPassenger
 
 # Container for tabular data.
 class Table
-	def initialize(column_names, colors)
-		@column_names = column_names
-		@rows = []
-		@colors = colors
-	end
-	
-	def add_row(values)
-		@rows << values.to_a
-	end
-	
-	def add_rows(list_of_rows)
-		list_of_rows.each do |row|
-			add_row(row)
-		end
-	end
-	
-	def remove_column(name)
-		i = @column_names.index(name)
-		@column_names.delete_at(i)
-		@rows.each do |row|
-			row.delete_at(i)
-		end
-	end
-	
-	def to_s(title = nil)
-		max_column_widths = [1] * @column_names.size
-		(@rows + [@column_names]).each do |row|
-			row.each_with_index do |value, i|
-				max_column_widths[i] = [value.to_s.size, max_column_widths[i]].max
-			end
-		end
-		
-		format_string = max_column_widths.map{ |i| "%#{-i}s" }.join("  ")
-		header = sprintf(format_string, *@column_names).rstrip << "\n"
-		if title
-			free_space = header.size - title.size - 2
-			if free_space <= 0
-				left_bar_size = 3
-				right_bar_size = 3
-			else
-				left_bar_size = free_space / 2
-				right_bar_size = free_space - left_bar_size
-			end
-			result = "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}\n"
-			result << "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
-			if !@rows.empty?
-				result << @colors.white
-				result << header
-			end
-		else
-			result = header.dup
-		end
-		if @rows.empty?
-			result << @colors.reset
-		else
-			result << ("-" * header.size) << "#{@colors.reset}\n"
-			@rows.each do |row|
-				result << sprintf(format_string, *row).rstrip << "\n"
-			end
-		end
-		result
-	end
+  def initialize(column_names, colors)
+    @column_names = column_names
+    @rows = []
+    @colors = colors
+  end
+
+  def add_row(values)
+    @rows << values.to_a
+  end
+
+  def add_rows(list_of_rows)
+    list_of_rows.each do |row|
+      add_row(row)
+    end
+  end
+
+  def remove_column(name)
+    i = @column_names.index(name)
+    @column_names.delete_at(i)
+    @rows.each do |row|
+      row.delete_at(i)
+    end
+  end
+
+  def to_s(title = nil)
+    max_column_widths = [1] * @column_names.size
+    (@rows + [@column_names]).each do |row|
+      row.each_with_index do |value, i|
+        max_column_widths[i] = [value.to_s.size, max_column_widths[i]].max
+      end
+    end
+
+    format_string = max_column_widths.map{ |i| "%#{-i}s" }.join("  ")
+    header = sprintf(format_string, *@column_names).rstrip << "\n"
+    if title
+      free_space = header.size - title.size - 2
+      if free_space <= 0
+        left_bar_size = 3
+        right_bar_size = 3
+      else
+        left_bar_size = free_space / 2
+        right_bar_size = free_space - left_bar_size
+      end
+      result = "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}\n"
+      result << "#{"-" * left_bar_size} #{title} #{"-" * right_bar_size}\n"
+      if !@rows.empty?
+        result << @colors.white
+        result << header
+      end
+    else
+      result = header.dup
+    end
+    if @rows.empty?
+      result << @colors.reset
+    else
+      result << ("-" * header.size) << "#{@colors.reset}\n"
+      @rows.each do |row|
+        result << sprintf(format_string, *row).rstrip << "\n"
+      end
+    end
+    result
+  end
 end
 
 class App
-	def initialize
-		@stats = AdminTools::MemoryStats.new
-		@colors = Utils::AnsiColors.new
-	end
-	
-	def start
-		puts "Version: #{PhusionPassenger::VERSION_STRING}"
-		puts "Date   : #{Time.now}"
-		if @stats.apache_processes
-			print_process_list("Apache processes", @stats.apache_processes)
-		else
-			puts "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}------------- Apache processes -------------#{@colors.reset}\n"
-			STDERR.puts "*** WARNING: The Apache executable cannot be found."
-			STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
-				"executable's filename, or set the HTTPD environment variable " <<
-				"to your 'httpd' or 'apache2' executable's filename."
-		end
-		
-		puts
-		print_process_list("Nginx processes", @stats.nginx_processes)
-		
-		puts
-		print_process_list("Passenger processes", @stats.passenger_processes, :show_ppid => false)
-		
-		if @stats.platform_provides_private_dirty_rss_information? &&
-		   Process.euid != 0 &&
-		   @stats.root_privileges_required_for_private_dirty_rss?
-			puts "*** WARNING: Please run this tool with #{@colors.bold}#{PlatformInfo.ruby_sudo_command}#{@colors.reset}. Otherwise the " <<
-				"private dirty RSS (a reliable metric for real memory usage) of processes cannot be determined."
-		end
-	end
-	
+  def initialize
+    @stats = AdminTools::MemoryStats.new
+    @colors = Utils::AnsiColors.new
+  end
+
+  def start
+    puts "Version: #{PhusionPassenger::VERSION_STRING}"
+    puts "Date   : #{Time.now}"
+    if @stats.apache_processes
+      print_process_list("Apache processes", @stats.apache_processes)
+    else
+      puts "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}------------- Apache processes -------------#{@colors.reset}\n"
+      STDERR.puts "*** WARNING: The Apache executable cannot be found."
+      STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
+        "executable's filename, or set the HTTPD environment variable " <<
+        "to your 'httpd' or 'apache2' executable's filename."
+    end
+
+    puts
+    print_process_list("Nginx processes", @stats.nginx_processes)
+
+    puts
+    print_process_list("Passenger processes", @stats.passenger_processes, :show_ppid => false)
+
+    if @stats.platform_provides_private_dirty_rss_information? &&
+       Process.euid != 0 &&
+       @stats.root_privileges_required_for_private_dirty_rss?
+      puts "*** WARNING: Please run this tool with #{@colors.bold}#{PlatformInfo.ruby_sudo_command}#{@colors.reset}. Otherwise the " <<
+        "private dirty RSS (a reliable metric for real memory usage) of processes cannot be determined."
+    end
+  end
+
 private
-	def print_process_list(title, processes, options = {})
-		table = Table.new(%w{PID PPID VMSize Private Resident Name}, @colors)
-		table.add_rows(processes)
-		if options.has_key?(:show_ppid) && !options[:show_ppid]
-			table.remove_column('PPID')
-		end
-		if @stats.platform_provides_private_dirty_rss_information?
-			table.remove_column('Resident')
-		else
-			table.remove_column('Private')
-		end
-		puts table.to_s(title)
-		
-		if @stats.platform_provides_private_dirty_rss_information?
-			total_private_dirty_rss = 0
-			some_private_dirty_rss_cannot_be_determined = false
-			processes.each do |p|
-				if p.private_dirty_rss.is_a?(Numeric)
-					total_private_dirty_rss += p.private_dirty_rss
-				else
-					some_private_dirty_rss_cannot_be_determined = true
-				end
-			end
-			puts   "### Processes: #{processes.size}"
-			printf "### Total private dirty RSS: %.2f MB", total_private_dirty_rss / 1024.0
-			if some_private_dirty_rss_cannot_be_determined
-				puts " (?)"
-			else
-				puts
-			end
-		end
-	end
+  def print_process_list(title, processes, options = {})
+    table = Table.new(%w{PID PPID VMSize Private Resident Name}, @colors)
+    table.add_rows(processes)
+    if options.has_key?(:show_ppid) && !options[:show_ppid]
+      table.remove_column('PPID')
+    end
+    if @stats.platform_provides_private_dirty_rss_information?
+      table.remove_column('Resident')
+    else
+      table.remove_column('Private')
+    end
+    puts table.to_s(title)
+
+    if @stats.platform_provides_private_dirty_rss_information?
+      total_private_dirty_rss = 0
+      some_private_dirty_rss_cannot_be_determined = false
+      processes.each do |p|
+        if p.private_dirty_rss.is_a?(Numeric)
+          total_private_dirty_rss += p.private_dirty_rss
+        else
+          some_private_dirty_rss_cannot_be_determined = true
+        end
+      end
+      puts   "### Processes: #{processes.size}"
+      printf "### Total private dirty RSS: %.2f MB", total_private_dirty_rss / 1024.0
+      if some_private_dirty_rss_cannot_be_determined
+        puts " (?)"
+      else
+        puts
+      end
+    end
+  end
 end
 
 App.new.start

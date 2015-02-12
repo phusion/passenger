@@ -26,7 +26,7 @@
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 begin
-	require 'rubygems'
+  require 'rubygems'
 rescue LoadError
 end
 require 'phusion_passenger'
@@ -43,613 +43,613 @@ PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 DOWNLOAD_OPTION = {
-	:connect_timeout => 30,
-	:idle_timeout    => 30
+  :connect_timeout => 30,
+  :idle_timeout    => 30
 }
 
 class Installer < PhusionPassenger::AbstractInstaller
-	include PhusionPassenger
-	TerminalChoiceMenu = PhusionPassenger::Utils::TerminalChoiceMenu
-	
-	def dependencies
-		specs = [
-			'depcheck_specs/compiler_toolchain',
-			'depcheck_specs/ruby',
-			'depcheck_specs/gems',
-			'depcheck_specs/libs',
-			'depcheck_specs/utilities'
-		]
-		ids = [
-			'cc',
-			'c++',
-			'download-tool',
-			'libcurl-dev',
-			'openssl-dev',
-			'zlib-dev',
-			'rake',
-			'ruby-openssl',
-			'rubygems'
-		]
-		if @languages.include?("ruby")
-			if PlatformInfo.passenger_needs_ruby_dev_header?
-				ids << 'ruby-dev'
-			end
-			ids << 'rack'
-		end
-		return [specs, ids]
-	end
-	
-	def users_guide_path
-		return PhusionPassenger.nginx_doc_path
-	end
+  include PhusionPassenger
+  TerminalChoiceMenu = PhusionPassenger::Utils::TerminalChoiceMenu
 
-	def users_guide_url
-		return NGINX_DOC_URL
-	end
-	
-	def run_steps
-		# Make sure the configure script finds the correct
-		# passenger-config command.
-		ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
+  def dependencies
+    specs = [
+      'depcheck_specs/compiler_toolchain',
+      'depcheck_specs/ruby',
+      'depcheck_specs/gems',
+      'depcheck_specs/libs',
+      'depcheck_specs/utilities'
+    ]
+    ids = [
+      'cc',
+      'c++',
+      'download-tool',
+      'libcurl-dev',
+      'openssl-dev',
+      'zlib-dev',
+      'rake',
+      'ruby-openssl',
+      'rubygems'
+    ]
+    if @languages.include?("ruby")
+      if PlatformInfo.passenger_needs_ruby_dev_header?
+        ids << 'ruby-dev'
+      end
+      ids << 'rack'
+    end
+    return [specs, ids]
+  end
 
-		show_welcome_screen
-		query_interested_languages
-		check_gem_install_permission_problems || exit(1)
-		check_directory_accessible_by_web_server
-		check_nginx_module_sources_available || exit(1)
-		check_dependencies || exit(1)
-		if needs_compiling_support_files?
-			check_whether_we_can_write_to(PhusionPassenger.build_system_dir) || exit(1)
-		end
-		check_whether_os_is_broken
-		check_whether_system_has_enough_ram
-		
-		download_and_install = should_we_download_and_install_nginx_automatically?
-		if pcre_is_installed?
-			@pcre_source_dir = nil
-		else
-			@pcre_source_dir = download_and_extract_pcre
-		end
-		if download_and_install
-			nginx_source_dir = download_and_extract_nginx
-			if nginx_source_dir.nil?
-				show_possible_solutions_for_download_and_extraction_problems
-				exit(1)
-			end
-			nginx_prefix = ask_for_nginx_install_prefix
-			check_whether_other_nginx_installations_exist(nginx_prefix)
-			if @extra_configure_flags == "none"
-				extra_nginx_configure_flags = nil
-			else
-				extra_nginx_configure_flags = @extra_configure_flags
-			end
-		else
-			nginx_source_dir = ask_for_nginx_source_dir
-			nginx_prefix = ask_for_nginx_install_prefix
-			check_whether_other_nginx_installations_exist(nginx_prefix)
-			extra_nginx_configure_flags = ask_for_extra_nginx_configure_flags(nginx_prefix)
-		end
-		check_whether_we_can_write_to(nginx_prefix) || exit(1)
-		nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
-		if needs_compiling_support_files?
-			if !compile_passenger_support_files
-				show_possible_solutions_for_compilation_and_installation_problems
-				exit(1)
-			end
-		end
-		if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
-			if nginx_config_already_exists_before_installing || !locate_nginx_config_file(nginx_prefix)
-				show_passenger_config_snippets(nginx_prefix)
-			else
-				insert_passenger_config_snippets(nginx_prefix)
-			end
-			show_deployment_example
-		else
-			show_possible_solutions_for_compilation_and_installation_problems
-			exit(1)
-		end
-	end
+  def users_guide_path
+    return PhusionPassenger.nginx_doc_path
+  end
 
-	def before_install
-		super
-		myself = `whoami`.strip
-		@working_dir = PhusionPassenger::Utils.mktmpdir("passenger.", PlatformInfo.tmpexedir)
-	end
-	
-	def after_install
-		super
-		FileUtils.remove_entry_secure(@working_dir) if @working_dir
-	end
+  def users_guide_url
+    return NGINX_DOC_URL
+  end
+
+  def run_steps
+    # Make sure the configure script finds the correct
+    # passenger-config command.
+    ENV['PATH'] = PhusionPassenger.bin_dir + ":" + ENV['PATH']
+
+    show_welcome_screen
+    query_interested_languages
+    check_gem_install_permission_problems || exit(1)
+    check_directory_accessible_by_web_server
+    check_nginx_module_sources_available || exit(1)
+    check_dependencies || exit(1)
+    if needs_compiling_support_files?
+      check_whether_we_can_write_to(PhusionPassenger.build_system_dir) || exit(1)
+    end
+    check_whether_os_is_broken
+    check_whether_system_has_enough_ram
+
+    download_and_install = should_we_download_and_install_nginx_automatically?
+    if pcre_is_installed?
+      @pcre_source_dir = nil
+    else
+      @pcre_source_dir = download_and_extract_pcre
+    end
+    if download_and_install
+      nginx_source_dir = download_and_extract_nginx
+      if nginx_source_dir.nil?
+        show_possible_solutions_for_download_and_extraction_problems
+        exit(1)
+      end
+      nginx_prefix = ask_for_nginx_install_prefix
+      check_whether_other_nginx_installations_exist(nginx_prefix)
+      if @extra_configure_flags == "none"
+        extra_nginx_configure_flags = nil
+      else
+        extra_nginx_configure_flags = @extra_configure_flags
+      end
+    else
+      nginx_source_dir = ask_for_nginx_source_dir
+      nginx_prefix = ask_for_nginx_install_prefix
+      check_whether_other_nginx_installations_exist(nginx_prefix)
+      extra_nginx_configure_flags = ask_for_extra_nginx_configure_flags(nginx_prefix)
+    end
+    check_whether_we_can_write_to(nginx_prefix) || exit(1)
+    nginx_config_already_exists_before_installing = nginx_config_exists?(nginx_prefix)
+    if needs_compiling_support_files?
+      if !compile_passenger_support_files
+        show_possible_solutions_for_compilation_and_installation_problems
+        exit(1)
+      end
+    end
+    if install_nginx(nginx_source_dir, nginx_prefix, extra_nginx_configure_flags)
+      if nginx_config_already_exists_before_installing || !locate_nginx_config_file(nginx_prefix)
+        show_passenger_config_snippets(nginx_prefix)
+      else
+        insert_passenger_config_snippets(nginx_prefix)
+      end
+      show_deployment_example
+    else
+      show_possible_solutions_for_compilation_and_installation_problems
+      exit(1)
+    end
+  end
+
+  def before_install
+    super
+    myself = `whoami`.strip
+    @working_dir = PhusionPassenger::Utils.mktmpdir("passenger.", PlatformInfo.tmpexedir)
+  end
+
+  def after_install
+    super
+    FileUtils.remove_entry_secure(@working_dir) if @working_dir
+  end
 
 private
-	def show_welcome_screen
-		render_template 'nginx/welcome', :version => VERSION_STRING
-		wait
-	end
+  def show_welcome_screen
+    render_template 'nginx/welcome', :version => VERSION_STRING
+    wait
+  end
 
-	def query_interested_languages
-		menu = TerminalChoiceMenu.new(["Ruby", "Python", "Node.js", "Meteor"])
-		menu["Ruby"].checked = interesting_language?('ruby')
-		menu["Python"].checked = interesting_language?('python')
-		menu["Node.js"].checked = interesting_language?('nodejs', 'node')
-		menu["Meteor"].checked = interesting_language?('meteor')
+  def query_interested_languages
+    menu = TerminalChoiceMenu.new(["Ruby", "Python", "Node.js", "Meteor"])
+    menu["Ruby"].checked = interesting_language?('ruby')
+    menu["Python"].checked = interesting_language?('python')
+    menu["Node.js"].checked = interesting_language?('nodejs', 'node')
+    menu["Meteor"].checked = interesting_language?('meteor')
 
-		new_screen
-		puts "<banner>Which languages are you interested in?</banner>"
-		puts
-		if interactive?
-			puts "Use <space> to select."
-			puts "<dgray>If the menu doesn't display correctly, press '!'</dgray>"
-		else
-			puts "Override selection with --languages."
-		end
-		puts
+    new_screen
+    puts "<banner>Which languages are you interested in?</banner>"
+    puts
+    if interactive?
+      puts "Use <space> to select."
+      puts "<dgray>If the menu doesn't display correctly, press '!'</dgray>"
+    else
+      puts "Override selection with --languages."
+    end
+    puts
 
-		if interactive?
-			begin
-				menu.query
-			rescue Interrupt
-				raise Abort
-			end
-		else
-			menu.display_choices
-			puts
-		end
+    if interactive?
+      begin
+        menu.query
+      rescue Interrupt
+        raise Abort
+      end
+    else
+      menu.display_choices
+      puts
+    end
 
-		@languages = menu.selected_choices.map{ |x| x.downcase.gsub(/\./, '') }
-	end
+    @languages = menu.selected_choices.map{ |x| x.downcase.gsub(/\./, '') }
+  end
 
-	def interesting_language?(name, command = nil)
-		if @languages
-			return @languages.include?(name)
-		else
-			return !!PlatformInfo.find_command(command || name)
-		end
-	end
+  def interesting_language?(name, command = nil)
+    if @languages
+      return @languages.include?(name)
+    else
+      return !!PlatformInfo.find_command(command || name)
+    end
+  end
 
-	def check_nginx_module_sources_available
-		if PhusionPassenger.custom_packaged? &&
-		   (!PhusionPassenger.nginx_module_source_dir || !File.exist?(PhusionPassenger.nginx_module_source_dir))
-			new_screen
-			render_template 'nginx/nginx_module_sources_not_available'
-			return false
-		else
-			return true
-		end
-	end
+  def check_nginx_module_sources_available
+    if PhusionPassenger.custom_packaged? &&
+       (!PhusionPassenger.nginx_module_source_dir || !File.exist?(PhusionPassenger.nginx_module_source_dir))
+      new_screen
+      render_template 'nginx/nginx_module_sources_not_available'
+      return false
+    else
+      return true
+    end
+  end
 
-	def needs_compiling_support_files?
-		return !PhusionPassenger.build_system_dir.nil?
-	end
-	
-	def compile_passenger_support_files
-		new_screen
-		puts "<banner>Compiling Passenger support files...</banner>"
-		Dir.chdir(PhusionPassenger.build_system_dir) do
-			return sh("env NOEXEC_DISABLE=1 #{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
-		end
-	end
-	
-	def should_we_download_and_install_nginx_automatically?
-		new_screen
-		render_template 'nginx/query_download_and_install',
-			:nginx_version => PREFERRED_NGINX_VERSION
-		puts
-		
-		if @auto_download
-			puts "<b>=> Proceeding with choice 1.</b>"
-			return true
-		elsif @nginx_source_dir
-			puts "<b>=> Proceeding with choice 2.</b>"
-			return false
-		elsif @auto
-			puts "<b>=> Proceeding with choice 1.</b>"
-			return true
-		else
-			choice = prompt("Enter your choice (1 or 2) or press Ctrl-C to abort") do |input|
-				if input == "1" || input == "2"
-					true
-				elsif input.empty?
-					puts "<red>No choice has been given.</red>"
-					false
-				else
-					puts "<red>'#{input}' is not a valid choice.</red>"
-					false
-				end
-			end
-			return choice == "1"
-		end
-	end
-	
-	def download_and_extract_pcre
-		new_screen
-		puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
-		
-		url = "http://downloads.sourceforge.net/project/pcre/pcre/#{PREFERRED_PCRE_VERSION}/pcre-#{PREFERRED_PCRE_VERSION}.tar.gz"
-		dirname = "pcre-#{PREFERRED_PCRE_VERSION}"
-		tarball = "#{@working_dir}/pcre.tar.gz"
-		
-		if download(url, tarball, DOWNLOAD_OPTION)
-			Dir.chdir(@working_dir) do
-				puts "<banner>Verifying PCRE checksum...</banner>"
-				if sha256_file(tarball) != PCRE_SHA256_CHECKSUM
-					new_screen
-					render_template "nginx/pcre_checksum_could_not_be_verified"
-					wait
-					return nil
-				end
+  def needs_compiling_support_files?
+    return !PhusionPassenger.build_system_dir.nil?
+  end
 
-				puts "<banner>Extracting PCRE source tarball...</banner>"
-				if sh("tar", "xzvf", tarball)
-					return "#{@working_dir}/#{dirname}"
-				else
-					new_screen
-					render_template "nginx/pcre_could_not_be_extracted"
-					wait
-					return nil
-				end
-			end
-		else
-			new_screen
-			render_template "nginx/pcre_could_not_be_downloaded"
-			wait
-			return nil
-		end
-	rescue Interrupt
-		exit 2
-	end
-	
-	def download_and_extract_nginx
-		new_screen
-		puts "<banner>Downloading Nginx...</banner>"
-		
-		url = "http://www.nginx.org/download/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
-		dirname = "nginx-#{PREFERRED_NGINX_VERSION}"
-		tarball = "#{@working_dir}/nginx.tar.gz"
-		
-		if download(url, tarball, DOWNLOAD_OPTION)
-			Dir.chdir(@working_dir) do
-				puts "<banner>Verifying Nginx checksum...</banner>"
-				if sha256_file(tarball) != NGINX_SHA256_CHECKSUM
-					return nil
-				end
+  def compile_passenger_support_files
+    new_screen
+    puts "<banner>Compiling Passenger support files...</banner>"
+    Dir.chdir(PhusionPassenger.build_system_dir) do
+      return sh("env NOEXEC_DISABLE=1 #{PlatformInfo.rake_command} nginx:clean nginx RELEASE=yes")
+    end
+  end
 
-				puts "<banner>Extracting Nginx source tarball...</banner>"
-				if sh("tar", "xzvf", tarball)
-					return "#{@working_dir}/#{dirname}"
-				else
-					return nil
-				end
-			end
-		else
-			return nil
-		end
-	rescue Interrupt
-		exit 2
-	end
-	
-	def show_possible_solutions_for_download_and_extraction_problems
-		new_screen
-		render_template "nginx/possible_solutions_for_download_and_extraction_problems"
-		puts
-	end
-	
-	def ask_for_nginx_install_prefix
-		new_screen
-		puts "<banner>Where do you want to install Nginx to?</banner>"
-		puts
-		if @prefix
-			puts "<b>=> #{@prefix}</b>"
-			return @prefix
-		elsif @auto
-			puts "<b>=> /opt/nginx</b>"
-			return "/opt/nginx"
-		else
-			prefix = prompt("Please specify a prefix directory [/opt/nginx]") do |input|
-				if input.empty? || input =~ %r(/)
-					true
-				else
-					puts "<red>Please specify an absolute path.</red>"
-					false
-				end
-			end
-			if prefix.empty?
-				prefix = "/opt/nginx"
-			end
-			return prefix
-		end
-	end
-	
-	def check_whether_other_nginx_installations_exist(nginx_prefix)
-		check_for = [
-			"/usr/bin/nginx",
-			"/usr/sbin/nginx"
-		]
-		existing_binary = nil
-		check_for.each do |filename|
-			if File.exist?(filename)
-				existing_binary = filename
-				break
-			end
-		end
-		if existing_binary
-			new_screen
-			render_template 'nginx/other_nginx_installations_exist',
-				:existing_binary => existing_binary,
-				:prefix => nginx_prefix
-			wait
-		end
-	end
+  def should_we_download_and_install_nginx_automatically?
+    new_screen
+    render_template 'nginx/query_download_and_install',
+      :nginx_version => PREFERRED_NGINX_VERSION
+    puts
 
-	def ask_for_nginx_source_dir
-		new_screen
-		puts "<banner>Where is your Nginx source code located?</banner>"
-		puts
-		if @nginx_source_dir
-			puts "<b>=> #{@nginx_source_dir}</b>"
-			return @nginx_source_dir
-		else
-			return prompt("Please specify the directory") do |input|
-				if input =~ %r(/)
-					if File.exist?("#{input}/src/core/nginx.c")
-						true
-					else
-						puts "<red>'#{input}' does not look like an Nginx source directory.</red>"
-						false
-					end
-				else
-					puts "<red>Please specify an absolute path.</red>"
-					false
-				end
-			end
-		end
-	end
-	
-	def ask_for_extra_nginx_configure_flags(prefix)
-		done = false
-		while !done
-			new_screen
-			render_template 'nginx/ask_for_extra_configure_flags',
-				:command => build_nginx_configure_command(prefix)
-			puts
-			if @extra_configure_flags
-				if @extra_configure_flags == "none"
-					extra_args = ""
-					puts "<b>=> No extra configure flags.</b>"
-				else
-					extra_args = @extra_configure_flags
-					puts "<b>=> #{extra_args}</b>"
-				end
-				return extra_args
-			elsif @auto
-				puts "<b>=> No extra configure flags.</b>"
-				return ""
-			else
-				extra_args = prompt "Extra arguments to pass to configure script"
-			
-				new_screen
-				render_template 'nginx/confirm_extra_configure_flags',
-					:command => build_nginx_configure_command(prefix, extra_args)
-				puts
-				answer = prompt("Is this what you want? (yes/no) [default=yes]") do |input|
-					if input.empty? || input == "yes" || input == "no"
-						true
-					else
-						puts "<red>Please enter 'yes' or 'no'.</red>"
-						false
-					end
-				end
-				done = answer.empty? || answer == "yes"
-			end
-		end
-		return extra_args
-	end
-	
-	def check_whether_we_can_write_to(dir)
-		FileUtils.mkdir_p(dir)
-		File.new("#{dir}/__test__.txt", "w").close
-		return true
-	rescue
-		new_screen
-		if Process.uid == 0
-			render_template 'nginx/cannot_write_to_dir', :dir => dir
-		else
-			render_template 'installer_common/run_installer_as_root',
-				:dir  => dir,
-				:sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
-				:sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
-				:ruby => PhusionPassenger::PlatformInfo.ruby_command,
-				:installer => "#{PhusionPassenger.bin_dir}/passenger-install-nginx-module #{ORIG_ARGV.join(' ')}"
-		end
-		return false
-	ensure
-		File.unlink("#{dir}/__test__.txt") rescue nil
-	end
-	
-	def nginx_config_exists?(prefix)
-		return !!locate_nginx_config_file(prefix)
-	end
-	
-	def install_nginx(source_dir, prefix, extra_configure_flags)
-		Dir.chdir(source_dir) do
-			new_screen
-			puts "<banner>Compiling and installing Nginx...</banner>"
-			if !sh(build_nginx_configure_command(prefix, extra_configure_flags)) ||
-			   !sh("make") ||
-			   !sh("make install")
-				return false
-			end
-		end
-		return true
-	rescue Interrupt
-		raise Aborted
-	end
-	
-	def show_passenger_config_snippets(prefix)
-		new_screen
-		render_template 'nginx/config_snippets',
-			:config_file => locate_nginx_config_file(prefix),
-			:passenger_root => PhusionPassenger.install_spec,
-			:ruby => PlatformInfo.ruby_command
-		wait
-	end
-	
-	def show_deployment_example
-		line
-		puts
-		render_template 'nginx/deployment_example',
-			:users_guide_path => users_guide_path,
-			:users_guide_url => users_guide_url,
-			:phusion_website => PHUSION_WEBSITE,
-			:passenger_website => PASSENGER_WEBSITE
-	end
-	
-	def show_possible_solutions_for_compilation_and_installation_problems
-		line
-		puts
-		render_template 'nginx/possible_solutions_for_compilation_and_installation_problems',
-			:users_guide_path => users_guide_path,
-			:users_guide_url => users_guide_url,
-			:support_url => SUPPORT_URL
-	end
-	
-	def locate_nginx_config_file(prefix)
-		["#{prefix}/conf/nginx.conf", "#{prefix}/etc/nginx.conf"].each do |filename|
-			if File.exist?(filename)
-				return filename
-			end
-		end
-		return nil
-	end
-	
-	def insert_passenger_config_snippets(prefix)
-		config_file = locate_nginx_config_file(prefix)
-		contents = File.read(config_file)
-		contents.sub!(/^http \{/,
-			"http {\n" <<
-			"    passenger_root #{PhusionPassenger.install_spec};\n" <<
-			"    passenger_ruby #{PlatformInfo.ruby_command};\n")
-		File.open(config_file, 'w') do |f|
-			f.write(contents)
-		end
-		
-		new_screen
-		render_template 'nginx/config_snippets_inserted',
-			:config_file => config_file,
-			:passenger_root => PhusionPassenger.install_spec,
-			:ruby => PlatformInfo.ruby_command
-		wait
-	end
-	
-	def build_nginx_configure_command(prefix, extra_configure_flags = nil)
-		command = "sh ./configure --prefix='#{prefix}' "
-		command << "--with-http_ssl_module "
-		command << "--with-http_gzip_static_module "
-		command << "--with-http_stub_status_module "
-		command << "--with-cc-opt='-Wno-error' "
-		if @pcre_source_dir
-			command << "--with-pcre='#{@pcre_source_dir}' "
-		elsif !pcre_is_installed?
-			command << "--without-http_rewrite_module "
-		end
-		command << "--add-module='#{PhusionPassenger.nginx_module_source_dir}' #{extra_configure_flags}"
-		command.strip!
-		return command
-	end
-	
-	def pcre_is_installed?
-		if @pcre_is_installed.nil?
-			@pcre_is_installed = begin
-				File.open('/tmp/passenger-check.c', 'w') do |f|
-					f.puts("#include <pcre.h>")
-				end
-				Dir.chdir('/tmp') do
-					# Nginx checks for PCRE in multiple places...
-					system("(gcc -I/usr/local/include -I/usr/include/pcre " <<
-						"-I/usr/pkg/include -I/opt/local/include " <<
-						"-c passenger-check.c) >/dev/null 2>/dev/null")
-				end
-			ensure
-				File.unlink('/tmp/passenger-check.c') rescue nil
-				File.unlink('/tmp/passenger-check.o') rescue nil
-			end
-		end
-		return @pcre_is_installed
-	end
+    if @auto_download
+      puts "<b>=> Proceeding with choice 1.</b>"
+      return true
+    elsif @nginx_source_dir
+      puts "<b>=> Proceeding with choice 2.</b>"
+      return false
+    elsif @auto
+      puts "<b>=> Proceeding with choice 1.</b>"
+      return true
+    else
+      choice = prompt("Enter your choice (1 or 2) or press Ctrl-C to abort") do |input|
+        if input == "1" || input == "2"
+          true
+        elsif input.empty?
+          puts "<red>No choice has been given.</red>"
+          false
+        else
+          puts "<red>'#{input}' is not a valid choice.</red>"
+          false
+        end
+      end
+      return choice == "1"
+    end
+  end
 
-	def sha256_file(path)
-		# We do this instead of using #file, for Ruby 1.8.5 support.
-		digest = Digest::SHA256.new
-		File.open(path, "rb") do |f|
-			buf = ''
-			buf.force_encoding('binary') if buf.respond_to?(:force_encoding)
-			while !f.eof?
-				f.read(1024 * 16, buf)
-				digest.update(buf)
-			end
-		end
-		return digest.hexdigest
-	end
+  def download_and_extract_pcre
+    new_screen
+    puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
+
+    url = "http://downloads.sourceforge.net/project/pcre/pcre/#{PREFERRED_PCRE_VERSION}/pcre-#{PREFERRED_PCRE_VERSION}.tar.gz"
+    dirname = "pcre-#{PREFERRED_PCRE_VERSION}"
+    tarball = "#{@working_dir}/pcre.tar.gz"
+
+    if download(url, tarball, DOWNLOAD_OPTION)
+      Dir.chdir(@working_dir) do
+        puts "<banner>Verifying PCRE checksum...</banner>"
+        if sha256_file(tarball) != PCRE_SHA256_CHECKSUM
+          new_screen
+          render_template "nginx/pcre_checksum_could_not_be_verified"
+          wait
+          return nil
+        end
+
+        puts "<banner>Extracting PCRE source tarball...</banner>"
+        if sh("tar", "xzvf", tarball)
+          return "#{@working_dir}/#{dirname}"
+        else
+          new_screen
+          render_template "nginx/pcre_could_not_be_extracted"
+          wait
+          return nil
+        end
+      end
+    else
+      new_screen
+      render_template "nginx/pcre_could_not_be_downloaded"
+      wait
+      return nil
+    end
+  rescue Interrupt
+    exit 2
+  end
+
+  def download_and_extract_nginx
+    new_screen
+    puts "<banner>Downloading Nginx...</banner>"
+
+    url = "http://www.nginx.org/download/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
+    dirname = "nginx-#{PREFERRED_NGINX_VERSION}"
+    tarball = "#{@working_dir}/nginx.tar.gz"
+
+    if download(url, tarball, DOWNLOAD_OPTION)
+      Dir.chdir(@working_dir) do
+        puts "<banner>Verifying Nginx checksum...</banner>"
+        if sha256_file(tarball) != NGINX_SHA256_CHECKSUM
+          return nil
+        end
+
+        puts "<banner>Extracting Nginx source tarball...</banner>"
+        if sh("tar", "xzvf", tarball)
+          return "#{@working_dir}/#{dirname}"
+        else
+          return nil
+        end
+      end
+    else
+      return nil
+    end
+  rescue Interrupt
+    exit 2
+  end
+
+  def show_possible_solutions_for_download_and_extraction_problems
+    new_screen
+    render_template "nginx/possible_solutions_for_download_and_extraction_problems"
+    puts
+  end
+
+  def ask_for_nginx_install_prefix
+    new_screen
+    puts "<banner>Where do you want to install Nginx to?</banner>"
+    puts
+    if @prefix
+      puts "<b>=> #{@prefix}</b>"
+      return @prefix
+    elsif @auto
+      puts "<b>=> /opt/nginx</b>"
+      return "/opt/nginx"
+    else
+      prefix = prompt("Please specify a prefix directory [/opt/nginx]") do |input|
+        if input.empty? || input =~ %r(/)
+          true
+        else
+          puts "<red>Please specify an absolute path.</red>"
+          false
+        end
+      end
+      if prefix.empty?
+        prefix = "/opt/nginx"
+      end
+      return prefix
+    end
+  end
+
+  def check_whether_other_nginx_installations_exist(nginx_prefix)
+    check_for = [
+      "/usr/bin/nginx",
+      "/usr/sbin/nginx"
+    ]
+    existing_binary = nil
+    check_for.each do |filename|
+      if File.exist?(filename)
+        existing_binary = filename
+        break
+      end
+    end
+    if existing_binary
+      new_screen
+      render_template 'nginx/other_nginx_installations_exist',
+        :existing_binary => existing_binary,
+        :prefix => nginx_prefix
+      wait
+    end
+  end
+
+  def ask_for_nginx_source_dir
+    new_screen
+    puts "<banner>Where is your Nginx source code located?</banner>"
+    puts
+    if @nginx_source_dir
+      puts "<b>=> #{@nginx_source_dir}</b>"
+      return @nginx_source_dir
+    else
+      return prompt("Please specify the directory") do |input|
+        if input =~ %r(/)
+          if File.exist?("#{input}/src/core/nginx.c")
+            true
+          else
+            puts "<red>'#{input}' does not look like an Nginx source directory.</red>"
+            false
+          end
+        else
+          puts "<red>Please specify an absolute path.</red>"
+          false
+        end
+      end
+    end
+  end
+
+  def ask_for_extra_nginx_configure_flags(prefix)
+    done = false
+    while !done
+      new_screen
+      render_template 'nginx/ask_for_extra_configure_flags',
+        :command => build_nginx_configure_command(prefix)
+      puts
+      if @extra_configure_flags
+        if @extra_configure_flags == "none"
+          extra_args = ""
+          puts "<b>=> No extra configure flags.</b>"
+        else
+          extra_args = @extra_configure_flags
+          puts "<b>=> #{extra_args}</b>"
+        end
+        return extra_args
+      elsif @auto
+        puts "<b>=> No extra configure flags.</b>"
+        return ""
+      else
+        extra_args = prompt "Extra arguments to pass to configure script"
+
+        new_screen
+        render_template 'nginx/confirm_extra_configure_flags',
+          :command => build_nginx_configure_command(prefix, extra_args)
+        puts
+        answer = prompt("Is this what you want? (yes/no) [default=yes]") do |input|
+          if input.empty? || input == "yes" || input == "no"
+            true
+          else
+            puts "<red>Please enter 'yes' or 'no'.</red>"
+            false
+          end
+        end
+        done = answer.empty? || answer == "yes"
+      end
+    end
+    return extra_args
+  end
+
+  def check_whether_we_can_write_to(dir)
+    FileUtils.mkdir_p(dir)
+    File.new("#{dir}/__test__.txt", "w").close
+    return true
+  rescue
+    new_screen
+    if Process.uid == 0
+      render_template 'nginx/cannot_write_to_dir', :dir => dir
+    else
+      render_template 'installer_common/run_installer_as_root',
+        :dir  => dir,
+        :sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
+        :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+        :ruby => PhusionPassenger::PlatformInfo.ruby_command,
+        :installer => "#{PhusionPassenger.bin_dir}/passenger-install-nginx-module #{ORIG_ARGV.join(' ')}"
+    end
+    return false
+  ensure
+    File.unlink("#{dir}/__test__.txt") rescue nil
+  end
+
+  def nginx_config_exists?(prefix)
+    return !!locate_nginx_config_file(prefix)
+  end
+
+  def install_nginx(source_dir, prefix, extra_configure_flags)
+    Dir.chdir(source_dir) do
+      new_screen
+      puts "<banner>Compiling and installing Nginx...</banner>"
+      if !sh(build_nginx_configure_command(prefix, extra_configure_flags)) ||
+         !sh("make") ||
+         !sh("make install")
+        return false
+      end
+    end
+    return true
+  rescue Interrupt
+    raise Aborted
+  end
+
+  def show_passenger_config_snippets(prefix)
+    new_screen
+    render_template 'nginx/config_snippets',
+      :config_file => locate_nginx_config_file(prefix),
+      :passenger_root => PhusionPassenger.install_spec,
+      :ruby => PlatformInfo.ruby_command
+    wait
+  end
+
+  def show_deployment_example
+    line
+    puts
+    render_template 'nginx/deployment_example',
+      :users_guide_path => users_guide_path,
+      :users_guide_url => users_guide_url,
+      :phusion_website => PHUSION_WEBSITE,
+      :passenger_website => PASSENGER_WEBSITE
+  end
+
+  def show_possible_solutions_for_compilation_and_installation_problems
+    line
+    puts
+    render_template 'nginx/possible_solutions_for_compilation_and_installation_problems',
+      :users_guide_path => users_guide_path,
+      :users_guide_url => users_guide_url,
+      :support_url => SUPPORT_URL
+  end
+
+  def locate_nginx_config_file(prefix)
+    ["#{prefix}/conf/nginx.conf", "#{prefix}/etc/nginx.conf"].each do |filename|
+      if File.exist?(filename)
+        return filename
+      end
+    end
+    return nil
+  end
+
+  def insert_passenger_config_snippets(prefix)
+    config_file = locate_nginx_config_file(prefix)
+    contents = File.read(config_file)
+    contents.sub!(/^http \{/,
+      "http {\n" <<
+      "    passenger_root #{PhusionPassenger.install_spec};\n" <<
+      "    passenger_ruby #{PlatformInfo.ruby_command};\n")
+    File.open(config_file, 'w') do |f|
+      f.write(contents)
+    end
+
+    new_screen
+    render_template 'nginx/config_snippets_inserted',
+      :config_file => config_file,
+      :passenger_root => PhusionPassenger.install_spec,
+      :ruby => PlatformInfo.ruby_command
+    wait
+  end
+
+  def build_nginx_configure_command(prefix, extra_configure_flags = nil)
+    command = "sh ./configure --prefix='#{prefix}' "
+    command << "--with-http_ssl_module "
+    command << "--with-http_gzip_static_module "
+    command << "--with-http_stub_status_module "
+    command << "--with-cc-opt='-Wno-error' "
+    if @pcre_source_dir
+      command << "--with-pcre='#{@pcre_source_dir}' "
+    elsif !pcre_is_installed?
+      command << "--without-http_rewrite_module "
+    end
+    command << "--add-module='#{PhusionPassenger.nginx_module_source_dir}' #{extra_configure_flags}"
+    command.strip!
+    return command
+  end
+
+  def pcre_is_installed?
+    if @pcre_is_installed.nil?
+      @pcre_is_installed = begin
+        File.open('/tmp/passenger-check.c', 'w') do |f|
+          f.puts("#include <pcre.h>")
+        end
+        Dir.chdir('/tmp') do
+          # Nginx checks for PCRE in multiple places...
+          system("(gcc -I/usr/local/include -I/usr/include/pcre " <<
+            "-I/usr/pkg/include -I/opt/local/include " <<
+            "-c passenger-check.c) >/dev/null 2>/dev/null")
+        end
+      ensure
+        File.unlink('/tmp/passenger-check.c') rescue nil
+        File.unlink('/tmp/passenger-check.o') rescue nil
+      end
+    end
+    return @pcre_is_installed
+  end
+
+  def sha256_file(path)
+    # We do this instead of using #file, for Ruby 1.8.5 support.
+    digest = Digest::SHA256.new
+    File.open(path, "rb") do |f|
+      buf = ''
+      buf.force_encoding('binary') if buf.respond_to?(:force_encoding)
+      while !f.eof?
+        f.read(1024 * 16, buf)
+        digest.update(buf)
+      end
+    end
+    return digest.hexdigest
+  end
 end
 
 ORIG_ARGV = ARGV.dup
 options = {}
 parser = OptionParser.new do |opts|
-	opts.banner = "Usage: passenger-install-nginx-module [options]"
-	opts.separator ""
-	
-	indent = ' ' * 37
-	opts.separator "Options:"
-	opts.on("--auto", "Automatically confirm 'Press ENTER to\n" <<
-	        "#{indent}continue' prompts.") do
-		options[:auto] = true
-	end
-	opts.on("--prefix=DIR", String, "Use the given Nginx install prefix instead\n" <<
-	        "#{indent}of asking for it interactively.") do |dir|
-		options[:prefix] = dir
-	end
-	opts.on("--auto-download", "Download and install Nginx automatically,\n" <<
-	        "#{indent}instead of asking interactively whether to\n" <<
-	        "#{indent}download+install or to use an existing\n" <<
-	        "#{indent}Nginx source directory.") do
-		options[:auto_download] = true
-	end
-	opts.on("--nginx-source-dir=DIR", String, "Compile and install Nginx using the given\n" <<
-	        "#{indent}Nginx source directory, instead of\n" <<
-	        "#{indent}interactively asking to download+install\n" <<
-	        "#{indent}or to use an existing Nginx source\n" <<
-	        "#{indent}directory. Conflicts with --auto-download.") do |dir|
-		options[:nginx_source_dir] = dir
-	end
-	opts.on("--extra-configure-flags=STRING", String, "Pass these extra flags to Nginx's\n" <<
-	        "#{indent}'configure' script, instead of asking for\n" <<
-	        "#{indent}it interactively. Specify 'none' if you\n" <<
-	        "#{indent}do not want to pass additional flags but do\n" <<
-	        "#{indent}not want this installer to ask\n" <<
-	        "#{indent}interactively either.") do |flags|
-		options[:extra_configure_flags] = flags
-	end
-	opts.on("--languages NAMES", "Comma-separated list of interested\n" <<
-			"#{indent}languages (e.g.\n" <<
-			"#{indent}'ruby,python,nodejs,meteor')") do |value|
-		options[:languages] = value.split(",")
-	end
-	opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
-		options[:colorize] = true
-	end
+  opts.banner = "Usage: passenger-install-nginx-module [options]"
+  opts.separator ""
+
+  indent = ' ' * 37
+  opts.separator "Options:"
+  opts.on("--auto", "Automatically confirm 'Press ENTER to\n" <<
+          "#{indent}continue' prompts.") do
+    options[:auto] = true
+  end
+  opts.on("--prefix=DIR", String, "Use the given Nginx install prefix instead\n" <<
+          "#{indent}of asking for it interactively.") do |dir|
+    options[:prefix] = dir
+  end
+  opts.on("--auto-download", "Download and install Nginx automatically,\n" <<
+          "#{indent}instead of asking interactively whether to\n" <<
+          "#{indent}download+install or to use an existing\n" <<
+          "#{indent}Nginx source directory.") do
+    options[:auto_download] = true
+  end
+  opts.on("--nginx-source-dir=DIR", String, "Compile and install Nginx using the given\n" <<
+          "#{indent}Nginx source directory, instead of\n" <<
+          "#{indent}interactively asking to download+install\n" <<
+          "#{indent}or to use an existing Nginx source\n" <<
+          "#{indent}directory. Conflicts with --auto-download.") do |dir|
+    options[:nginx_source_dir] = dir
+  end
+  opts.on("--extra-configure-flags=STRING", String, "Pass these extra flags to Nginx's\n" <<
+          "#{indent}'configure' script, instead of asking for\n" <<
+          "#{indent}it interactively. Specify 'none' if you\n" <<
+          "#{indent}do not want to pass additional flags but do\n" <<
+          "#{indent}not want this installer to ask\n" <<
+          "#{indent}interactively either.") do |flags|
+    options[:extra_configure_flags] = flags
+  end
+  opts.on("--languages NAMES", "Comma-separated list of interested\n" <<
+      "#{indent}languages (e.g.\n" <<
+      "#{indent}'ruby,python,nodejs,meteor')") do |value|
+    options[:languages] = value.split(",")
+  end
+  opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
+    options[:colorize] = true
+  end
 end
 begin
-	parser.parse!
+  parser.parse!
 rescue OptionParser::ParseError => e
-	puts e
-	puts
-	puts "Please see '--help' for valid options."
-	exit 1
+  puts e
+  puts
+  puts "Please see '--help' for valid options."
+  exit 1
 end
 
 if options[:auto_download] && options[:nginx_source_dir]
-	STDERR.puts "You cannot specify both --auto-download and --nginx-source-dir."
-	exit 1
+  STDERR.puts "You cannot specify both --auto-download and --nginx-source-dir."
+  exit 1
 end
 
 Installer.new(options).run

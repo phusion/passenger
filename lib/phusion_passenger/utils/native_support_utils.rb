@@ -24,42 +24,42 @@
 PhusionPassenger.require_passenger_lib 'native_support'
 
 module PhusionPassenger
-module Utils
+  module Utils
 
-# Utility functions that can potentially be accelerated by native_support functions.
-module NativeSupportUtils
-	extend self
+    # Utility functions that can potentially be accelerated by native_support functions.
+    module NativeSupportUtils
+      extend self
 
-	if defined?(PhusionPassenger::NativeSupport)
-		# Split the given string into an hash. Keys and values are obtained by splitting the
-		# string using the null character as the delimitor.
-		def split_by_null_into_hash(data)
-			return PhusionPassenger::NativeSupport.split_by_null_into_hash(data)
-		end
+      if defined?(PhusionPassenger::NativeSupport)
+        # Split the given string into an hash. Keys and values are obtained by splitting the
+        # string using the null character as the delimitor.
+        def split_by_null_into_hash(data)
+          return PhusionPassenger::NativeSupport.split_by_null_into_hash(data)
+        end
 
-		# Wrapper for getrusage().
-		def process_times
-			return PhusionPassenger::NativeSupport.process_times
-		end
-	else
-		NULL = "\0".freeze
+        # Wrapper for getrusage().
+        def process_times
+          return PhusionPassenger::NativeSupport.process_times
+        end
+      else
+        NULL = "\0".freeze
 
-		class ProcessTimes < Struct.new(:utime, :stime)
-		end
+        class ProcessTimes < Struct.new(:utime, :stime)
+        end
 
-		def split_by_null_into_hash(data)
-			args = data.split(NULL, -1)
-			args.pop
-			return Hash[*args]
-		end
+        def split_by_null_into_hash(data)
+          args = data.split(NULL, -1)
+          args.pop
+          return Hash[*args]
+        end
 
-		def process_times
-			times = Process.times
-			return ProcessTimes.new((times.utime * 1_000_000).to_i,
-				(times.stime * 1_000_000).to_i)
-		end
-	end
-end
+        def process_times
+          times = Process.times
+          return ProcessTimes.new((times.utime * 1_000_000).to_i,
+            (times.stime * 1_000_000).to_i)
+        end
+      end
+    end
 
-end # module Utils
+  end # module Utils
 end # module PhusionPassenger

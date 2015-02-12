@@ -23,62 +23,62 @@
 #  THE SOFTWARE.
 
 ESSENTIALS = [
-	"boost/detail/{limits,endian}.hpp",
-	"boost/config",
-	"boost/mpl",
-	"boost/preprocessor/stringize.hpp",
-	"boost/smart_ptr/detail/sp_counted_*",
-	"boost/smart_ptr/detail/atomic_count*",
-	"boost/smart_ptr/detail/spinlock*",
-	"boost/atomic",
-	"boost/pool",
-	"boost/unordered*",
-	"boost/thread",
-	"boost/intrusive",
-	"boost/heap",
-	"boost/container",
-	"libs/thread/src",
-	"libs/system/src",
-	"libs/regex/src",
-	"boost/preprocessor",
-	"boost/parameter",
-	"boost/date_time/gregorian/formatters_limited.hpp",
-	"boost/date_time/date_formatting_limited.hpp",
-	"boost/type_traits/make_signed.hpp",
-	"boost/type_traits/detail/*",
-	"boost/non_type.hpp",
-	"boost/detail/fenv.hpp",
-	"boost/foreach.hpp",
-	"boost/*regex*"
+  "boost/detail/{limits,endian}.hpp",
+  "boost/config",
+  "boost/mpl",
+  "boost/preprocessor/stringize.hpp",
+  "boost/smart_ptr/detail/sp_counted_*",
+  "boost/smart_ptr/detail/atomic_count*",
+  "boost/smart_ptr/detail/spinlock*",
+  "boost/atomic",
+  "boost/pool",
+  "boost/unordered*",
+  "boost/thread",
+  "boost/intrusive",
+  "boost/heap",
+  "boost/container",
+  "libs/thread/src",
+  "libs/system/src",
+  "libs/regex/src",
+  "boost/preprocessor",
+  "boost/parameter",
+  "boost/date_time/gregorian/formatters_limited.hpp",
+  "boost/date_time/date_formatting_limited.hpp",
+  "boost/type_traits/make_signed.hpp",
+  "boost/type_traits/detail/*",
+  "boost/non_type.hpp",
+  "boost/detail/fenv.hpp",
+  "boost/foreach.hpp",
+  "boost/*regex*"
 ]
 EXCLUDE = [
-	"libs/thread/src/win32/*",
-	"libs/regex/src/w32_regex_traits.cpp",
-	"libs/regex/src/fileiter.cpp",
-	"libs/regex/src/icu.cpp",
-	"libs/regex/src/usinstances.cpp",
-	"boost/atomic/detail/windows.hpp",
-	"boost/regex/icu.hpp"
+  "libs/thread/src/win32/*",
+  "libs/regex/src/w32_regex_traits.cpp",
+  "libs/regex/src/fileiter.cpp",
+  "libs/regex/src/icu.cpp",
+  "libs/regex/src/usinstances.cpp",
+  "boost/atomic/detail/windows.hpp",
+  "boost/regex/icu.hpp"
 ]
 PROGRAM_SOURCE = %q{
-	#include <boost/shared_ptr.hpp>
-	#include <boost/shared_array.hpp>
-	#include <boost/weak_ptr.hpp>
-	#include <boost/make_shared.hpp>
-	#include <boost/enable_shared_from_this.hpp>
-	#include <boost/intrusive_ptr.hpp>
-	#include <boost/thread.hpp>
-	#include <boost/noncopyable.hpp>
-	#include <boost/function.hpp>
-	#include <boost/bind.hpp>
-	#include <boost/container/vector.hpp>
-	#include <boost/heap/d_ary_heap.hpp>
-	#include <boost/date_time/posix_time/posix_time.hpp>
-	#include <boost/foreach.hpp>
-	#include <boost/unordered_map.hpp>
-	#include <boost/cregex.hpp>
-	#include <boost/regex.hpp>
-	#include <boost/pool/object_pool.hpp>
+  #include <boost/shared_ptr.hpp>
+  #include <boost/shared_array.hpp>
+  #include <boost/weak_ptr.hpp>
+  #include <boost/make_shared.hpp>
+  #include <boost/enable_shared_from_this.hpp>
+  #include <boost/intrusive_ptr.hpp>
+  #include <boost/thread.hpp>
+  #include <boost/noncopyable.hpp>
+  #include <boost/function.hpp>
+  #include <boost/bind.hpp>
+  #include <boost/container/vector.hpp>
+  #include <boost/heap/d_ary_heap.hpp>
+  #include <boost/date_time/posix_time/posix_time.hpp>
+  #include <boost/foreach.hpp>
+  #include <boost/unordered_map.hpp>
+  #include <boost/cregex.hpp>
+  #include <boost/regex.hpp>
+  #include <boost/pool/object_pool.hpp>
 }
 
 require 'fileutils'
@@ -87,110 +87,110 @@ Dir.chdir(File.dirname(__FILE__) + "/../ext")
 
 # Run the given command, and abort on error.
 def sh(*command)
-	puts command.join(" ")
-	if !system(*command)
-		puts "*** ERROR"
-		exit 1
-	end
+  puts command.join(" ")
+  if !system(*command)
+    puts "*** ERROR"
+    exit 1
+  end
 end
 
 def install(source_filename, target_filename)
-	dir = File.dirname(target_filename)
-	if !File.exist?(dir)
-		sh "mkdir", "-p", dir
-	end
-	command = ["install", "-m", "u+rw,g+r,o+r", source_filename, target_filename]
-	sh(*command)
+  dir = File.dirname(target_filename)
+  if !File.exist?(dir)
+    sh "mkdir", "-p", dir
+  end
+  command = ["install", "-m", "u+rw,g+r,o+r", source_filename, target_filename]
+  sh(*command)
 end
 
 def copy_boost_files(patterns, exclude = nil)
-	patterns.each do |pattern|
-		files = Dir["#{BOOST_DIR}/#{pattern}"]
-		files -= exclude if exclude
-		files.each do |source|
-			if File.directory?(source)
-				source.slice!(0 .. BOOST_DIR.size)
-				copy_boost_files(["#{source}/*"], exclude)
-			else
-				target = source.slice(BOOST_DIR.size + 1 .. source.size - 1)
-				if target =~ /^libs\//
-					target = "boost/#{target}"
-				end
-				if !File.exist?(target)
-					install(source, target)
-				end
-			end
-		end
-	end
+  patterns.each do |pattern|
+    files = Dir["#{BOOST_DIR}/#{pattern}"]
+    files -= exclude if exclude
+    files.each do |source|
+      if File.directory?(source)
+        source.slice!(0 .. BOOST_DIR.size)
+        copy_boost_files(["#{source}/*"], exclude)
+      else
+        target = source.slice(BOOST_DIR.size + 1 .. source.size - 1)
+        if target =~ /^libs\//
+          target = "boost/#{target}"
+        end
+        if !File.exist?(target)
+          install(source, target)
+        end
+      end
+    end
+  end
 end
 
 def copy_essential_files
-	exclude = []
-	EXCLUDE.each do |pattern|
-		exclude.concat(Dir["#{BOOST_DIR}/#{pattern}"])
-	end
-	copy_boost_files(ESSENTIALS, exclude)
+  exclude = []
+  EXCLUDE.each do |pattern|
+    exclude.concat(Dir["#{BOOST_DIR}/#{pattern}"])
+  end
+  copy_boost_files(ESSENTIALS, exclude)
 end
 
 def prepare
-	File.open("test.cpp", "w") do |f|
-		f.write(PROGRAM_SOURCE)
-	end
+  File.open("test.cpp", "w") do |f|
+    f.write(PROGRAM_SOURCE)
+  end
 end
 
 def cleanup
-	FileUtils.rm_rf("boost/thread/win32")
-	FileUtils.rm_rf("boost/src/win32")
-	FileUtils.rm_rf("boost/asio/win32")
-	FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
-	FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
-	FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
-	FileUtils.rm_rf("boost/config/platform/win32.hpp")
-	File.unlink("test.cpp") rescue nil
+  FileUtils.rm_rf("boost/thread/win32")
+  FileUtils.rm_rf("boost/src/win32")
+  FileUtils.rm_rf("boost/asio/win32")
+  FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
+  FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
+  FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
+  FileUtils.rm_rf("boost/config/platform/win32.hpp")
+  File.unlink("test.cpp") rescue nil
 end
 
 # Compile PROGRAM_SOURCE and copy whatever missing header files the compiler needs.
 def copy_dependencies
-	done = false
-	while !done
-		missing_headers = `c++ test.cpp -c -I. 2>&1`.
-		  split("\n").
-		  grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
-		  map do |line|
-		  	if line =~ /error: (.*): No such file/
-		  		file = $1
-		  	elsif line =~ /fatal error: '(.*)' file not found/
-		  		file = $1
-		  	else
-		  		abort "Bug"
-		  	end
-			if file =~ /^boost\//
-				file
-			else
-				line =~ /(.*?):/
-				source = $1
-				File.dirname(source) + "/" + file
-			end
-		end
-		missing_headers.each do |header|
-			install("#{BOOST_DIR}/#{header}", header)
-		end
-		done = missing_headers.empty?
-	end
+  done = false
+  while !done
+    missing_headers = `c++ test.cpp -c -I. 2>&1`.
+      split("\n").
+      grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
+      map do |line|
+        if line =~ /error: (.*): No such file/
+          file = $1
+        elsif line =~ /fatal error: '(.*)' file not found/
+          file = $1
+        else
+          abort "Bug"
+        end
+      if file =~ /^boost\//
+        file
+      else
+        line =~ /(.*?):/
+        source = $1
+        File.dirname(source) + "/" + file
+      end
+    end
+    missing_headers.each do |header|
+      install("#{BOOST_DIR}/#{header}", header)
+    end
+    done = missing_headers.empty?
+  end
 end
 
 def start
-	if BOOST_DIR.nil? || BOOST_DIR.empty?
-		puts "Usage: copy_boost_headers.rb <boost source directory>"
-		exit 1
-	end
-	begin
-		prepare
-		copy_essential_files
-		copy_dependencies
-	ensure
-		cleanup
-	end
+  if BOOST_DIR.nil? || BOOST_DIR.empty?
+    puts "Usage: copy_boost_headers.rb <boost source directory>"
+    exit 1
+  end
+  begin
+    prepare
+    copy_essential_files
+    copy_dependencies
+  ensure
+    cleanup
+  end
 end
 
 start

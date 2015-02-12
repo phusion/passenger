@@ -26,182 +26,182 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
-module AdminTools
+  module AdminTools
 
-class Instance
-	STALE_TIMEOUT = 60
+    class Instance
+      STALE_TIMEOUT = 60
 
-	attr_reader :path, :state, :name, :server_software, :properties
+      attr_reader :path, :state, :name, :server_software, :properties
 
-	def initialize(path)
-		@path = path
-		# Possible states:
-		#
-		# * :good - Everything is good. But the Watchdog process that created
-		#   it might have died. In that case, the directory should be cleaned up.
-		#   Use `locked?` to check.
-		#
-		# * :not_finalized - The instance directory hasn't been finalized yet,
-		#   so we can't read any information from it. It is possible that the
-		#   process that has created it has died, i.e. that it will never
-		#   become finalized. In that case, the directory should be cleaned up.
-		#   Use `stale?` to check.
-		#
-		# * :structure_version_unsupported - The properties file advertised a
-		#   structure version that we don't support. We can't read any
-		#   information from it.
-		#
-		# * :corrupted - The instance directory is corrupted in some way.
-		@state = nil
+      def initialize(path)
+        @path = path
+        # Possible states:
+        #
+        # * :good - Everything is good. But the Watchdog process that created
+        #   it might have died. In that case, the directory should be cleaned up.
+        #   Use `locked?` to check.
+        #
+        # * :not_finalized - The instance directory hasn't been finalized yet,
+        #   so we can't read any information from it. It is possible that the
+        #   process that has created it has died, i.e. that it will never
+        #   become finalized. In that case, the directory should be cleaned up.
+        #   Use `stale?` to check.
+        #
+        # * :structure_version_unsupported - The properties file advertised a
+        #   structure version that we don't support. We can't read any
+        #   information from it.
+        #
+        # * :corrupted - The instance directory is corrupted in some way.
+        @state = nil
 
-		reload_properties
-	end
+        reload_properties
+      end
 
-	def locked?
-		if defined?(File::LOCK_EX)
-			return !File.open("#{@path}/lock", "r") do |f|
-				f.flock(File::LOCK_EX | File::LOCK_NB)
-			end
-		else
-			# Solaris :-(
-			# Since using fcntl locks in Ruby is a huge pain,
-			# we'll fallback to checking the watchdog PID.
-			return watchdog_alive?
-		end
-	end
+      def locked?
+        if defined?(File::LOCK_EX)
+          return !File.open("#{@path}/lock", "r") do |f|
+            f.flock(File::LOCK_EX | File::LOCK_NB)
+          end
+        else
+          # Solaris :-(
+          # Since using fcntl locks in Ruby is a huge pain,
+          # we'll fallback to checking the watchdog PID.
+          return watchdog_alive?
+        end
+      end
 
-	def stale?
-		stat = File.stat(@path)
-		if stat.mtime < Time.now - STALE_TIMEOUT
-			return !locked?
-		else
-			return false
-		end
-	end
+      def stale?
+        stat = File.stat(@path)
+        if stat.mtime < Time.now - STALE_TIMEOUT
+          return !locked?
+        else
+          return false
+        end
+      end
 
-	def watchdog_alive?
-		return process_is_alive?(@watchdog_pid)
-	end
+      def watchdog_alive?
+        return process_is_alive?(@watchdog_pid)
+      end
 
-	def http_request(socket_path, request)
-		sock = Net::BufferedIO.new(UNIXSocket.new("#{@path}/#{socket_path}"))
-		begin
-			request.exec(sock, "1.1", request.path)
+      def http_request(socket_path, request)
+        sock = Net::BufferedIO.new(UNIXSocket.new("#{@path}/#{socket_path}"))
+        begin
+          request.exec(sock, "1.1", request.path)
 
-			done = false
-			while !done
-				response = Net::HTTPResponse.read_new(sock)
-				done = !response.kind_of?(Net::HTTPContinue)
-			end
+          done = false
+          while !done
+            response = Net::HTTPResponse.read_new(sock)
+            done = !response.kind_of?(Net::HTTPContinue)
+          end
 
-			response.reading_body(sock, request.response_body_permitted?) do
-				# Nothing
-			end
-		ensure
-			sock.close
-		end
+          response.reading_body(sock, request.response_body_permitted?) do
+            # Nothing
+          end
+        ensure
+          sock.close
+        end
 
-		return response
-	end
+        return response
+      end
 
-	def server_pid
-		@server_pid ||= File.read("#{@path}/server.pid").to_i
-	end
+      def server_pid
+        @server_pid ||= File.read("#{@path}/server.pid").to_i
+      end
 
-	def full_admin_password
-		@full_admin_password ||= File.read("#{@path}/full_admin_password.txt")
-	end
+      def full_admin_password
+        @full_admin_password ||= File.read("#{@path}/full_admin_password.txt")
+      end
 
-	def read_only_admin_password
-		@read_only_admin_password ||= File.read("#{@path}/read_only_admin_password.txt")
-	end
+      def read_only_admin_password
+        @read_only_admin_password ||= File.read("#{@path}/read_only_admin_password.txt")
+      end
 
-private
-	class CorruptedError < StandardError
-	end
+    private
+      class CorruptedError < StandardError
+      end
 
-	def reload_properties
-		@properties = nil
-		@state      = nil
-		begin
-			reload_properties_internal
-		rescue CorruptedError
-			@state = :corrupted
-		end
-	end
+      def reload_properties
+        @properties = nil
+        @state      = nil
+        begin
+          reload_properties_internal
+        rescue CorruptedError
+          @state = :corrupted
+        end
+      end
 
-	def reload_properties_internal
-		if !File.exist?("#{@path}/creation_finalized")
-			@state = :unfinalized
-			return
-		end
-		check(File.file?("#{@path}/creation_finalized"))
+      def reload_properties_internal
+        if !File.exist?("#{@path}/creation_finalized")
+          @state = :unfinalized
+          return
+        end
+        check(File.file?("#{@path}/creation_finalized"))
 
-		properties = nil
-		begin
-			File.open("#{@path}/properties.json", "r") do |f|
-				properties = Utils::JSON.parse(f.read)
-			end
-		rescue Errno::ENOENT
-			raise CorruptedError
-		rescue RuntimeError => e
-			if e.message =~ /parse error/
-				raise CorruptedError
-			else
-				raise
-			end
-		end
+        properties = nil
+        begin
+          File.open("#{@path}/properties.json", "r") do |f|
+            properties = Utils::JSON.parse(f.read)
+          end
+        rescue Errno::ENOENT
+          raise CorruptedError
+        rescue RuntimeError => e
+          if e.message =~ /parse error/
+            raise CorruptedError
+          else
+            raise
+          end
+        end
 
-		check(!properties.nil?)
-		props = properties["instance_dir"]
-		check(!props.nil?)
-		major_version = props["major_version"]
-		minor_version = props["minor_version"]
-		check(major_version.is_a?(Integer))
-		check(minor_version.is_a?(Integer))
-		name = properties["name"]
-		check(name.is_a?(String))
-		check(!name.empty?)
-		server_software = properties["server_software"]
-		check(server_software.is_a?(String))
-		check(!server_software.empty?)
-		watchdog_pid = properties["watchdog_pid"]
-		check(watchdog_pid.is_a?(Integer))
+        check(!properties.nil?)
+        props = properties["instance_dir"]
+        check(!props.nil?)
+        major_version = props["major_version"]
+        minor_version = props["minor_version"]
+        check(major_version.is_a?(Integer))
+        check(minor_version.is_a?(Integer))
+        name = properties["name"]
+        check(name.is_a?(String))
+        check(!name.empty?)
+        server_software = properties["server_software"]
+        check(server_software.is_a?(String))
+        check(!server_software.empty?)
+        watchdog_pid = properties["watchdog_pid"]
+        check(watchdog_pid.is_a?(Integer))
 
-		version_supported =
-			major_version == PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION &&
-			minor_version <= PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
-		if !version_supported
-			@state = :structure_version_unsupported
-			return
-		end
+        version_supported =
+          major_version == PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION &&
+          minor_version <= PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
+        if !version_supported
+          @state = :structure_version_unsupported
+          return
+        end
 
-		check(File.file?("#{@path}/lock"))
-		check(File.directory?("#{@path}/agents.s"))
-		check(File.directory?("#{@path}/apps.s"))
+        check(File.file?("#{@path}/lock"))
+        check(File.directory?("#{@path}/agents.s"))
+        check(File.directory?("#{@path}/apps.s"))
 
-		@properties = properties
-		@name = name
-		@server_software = server_software
-		@watchdog_pid = watchdog_pid
-		@state = :good
-	end
+        @properties = properties
+        @name = name
+        @server_software = server_software
+        @watchdog_pid = watchdog_pid
+        @state = :good
+      end
 
-	def check(val)
-		raise CorruptedError if !val
-	end
+      def check(val)
+        raise CorruptedError if !val
+      end
 
-	def process_is_alive?(pid)
-		begin
-			Process.kill(0, pid)
-			return true
-		rescue Errno::ESRCH
-			return false
-		rescue SystemCallError => e
-			return true
-		end
-	end
-end
+      def process_is_alive?(pid)
+        begin
+          Process.kill(0, pid)
+          return true
+        rescue Errno::ESRCH
+          return false
+        rescue SystemCallError => e
+          return true
+        end
+      end
+    end
 
-end # module AdminTools
+  end # module AdminTools
 end # module PhusionPassenger

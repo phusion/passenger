@@ -27,33 +27,33 @@ TEST_OXT_CFLAGS = "#{EXTRA_PRE_CXXFLAGS} -Iext -Itest/support #{TEST_COMMON_CFLA
 TEST_OXT_LDFLAGS = "#{TEST_BOOST_OXT_LIBRARY} #{PlatformInfo.portability_cxx_ldflags} #{EXTRA_CXX_LDFLAGS}"
 TEST_OXT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 TEST_OXT_OBJECTS = {
-	'oxt_test_main.o' => %w(oxt_test_main.cpp),
-	'backtrace_test.o' => %w(backtrace_test.cpp counter.hpp),
-	'spin_lock_test.o' => %w(spin_lock_test.cpp),
-	'dynamic_thread_group_test.o' => %w(dynamic_thread_group_test.cpp counter.hpp),
-	'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
+  'oxt_test_main.o' => %w(oxt_test_main.cpp),
+  'backtrace_test.o' => %w(backtrace_test.cpp counter.hpp),
+  'spin_lock_test.o' => %w(spin_lock_test.cpp),
+  'dynamic_thread_group_test.o' => %w(dynamic_thread_group_test.cpp counter.hpp),
+  'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
 }
 
 desc "Run unit tests for the OXT library"
 task 'test:oxt' => 'test/oxt/oxt_test_main' do
-	sh "cd test && ./oxt/oxt_test_main"
+  sh "cd test && ./oxt/oxt_test_main"
 end
 
 # Define task for test/oxt/oxt_test_main.
 oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|
-	"test/oxt/#{object}"
+  "test/oxt/#{object}"
 end
 oxt_test_main_dependencies << TEST_BOOST_OXT_LIBRARY
 file 'test/oxt/oxt_test_main' => oxt_test_main_dependencies do
-	objects = TEST_OXT_OBJECTS.keys.map{ |x| "test/oxt/#{x}" }.join(' ')
-	create_executable("test/oxt/oxt_test_main", objects, TEST_OXT_LDFLAGS)
+  objects = TEST_OXT_OBJECTS.keys.map{ |x| "test/oxt/#{x}" }.join(' ')
+  create_executable("test/oxt/oxt_test_main", objects, TEST_OXT_LDFLAGS)
 end
 
 # Define tasks for each OXT test source file.
 TEST_OXT_OBJECTS.each_pair do |target, sources|
-	file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
-		source = "test/oxt/#{sources[0]}"
-		object = source.sub(/\.cpp$/, '.o')
-		compile_cxx source, "#{TEST_OXT_CFLAGS} -o #{object}"
-	end
+  file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
+    source = "test/oxt/#{sources[0]}"
+    object = source.sub(/\.cpp$/, '.o')
+    compile_cxx source, "#{TEST_OXT_CFLAGS} -o #{object}"
+  end
 end

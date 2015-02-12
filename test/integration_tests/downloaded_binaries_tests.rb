@@ -45,140 +45,140 @@ ENV.delete('PASSENGER_DEBUG')
 module PhusionPassenger
 
 describe "Downloaded Phusion Passenger binaries" do
-	before :each do
-		@temp_dir = Dir.mktmpdir
-		File.open("#{PhusionPassenger.resources_dir}/release.txt", "w").close
-		@user_dir = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}")
-		if File.exist?("buildout.old")
-			raise "buildout.old exists. Please fix this first."
-		end
-		if File.exist?("#{@user_dir}.old")
-			raise "#{@user_dir} exists. Please fix this first."
-		end
-		if PhusionPassenger.build_system_dir && File.exist?("#{PhusionPassenger.build_system_dir}/buildout")
-			FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
-				"#{PhusionPassenger.build_system_dir}/buildout.old")
-		end
-		if File.exist?(@user_dir)
-			FileUtils.mv(@user_dir, "#{@user_dir}.old")
-		end
-	end
+  before :each do
+    @temp_dir = Dir.mktmpdir
+    File.open("#{PhusionPassenger.resources_dir}/release.txt", "w").close
+    @user_dir = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}")
+    if File.exist?("buildout.old")
+      raise "buildout.old exists. Please fix this first."
+    end
+    if File.exist?("#{@user_dir}.old")
+      raise "#{@user_dir} exists. Please fix this first."
+    end
+    if PhusionPassenger.build_system_dir && File.exist?("#{PhusionPassenger.build_system_dir}/buildout")
+      FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
+        "#{PhusionPassenger.build_system_dir}/buildout.old")
+    end
+    if File.exist?(@user_dir)
+      FileUtils.mv(@user_dir, "#{@user_dir}.old")
+    end
+  end
 
-	after :each do
-		FileUtils.remove_entry_secure(@temp_dir)
-		File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
-		FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
-		FileUtils.rm_rf(@user_dir)
-		if PhusionPassenger.build_system_dir && File.exist?("#{PhusionPassenger.build_system_dir}/buildout.old")
-			FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
-				"#{PhusionPassenger.build_system_dir}/buildout")
-		end
-		if File.exist?("#{@user_dir}.old")
-			FileUtils.mv("#{@user_dir}.old", @user_dir)
-		end
-	end
+  after :each do
+    FileUtils.remove_entry_secure(@temp_dir)
+    File.unlink("#{PhusionPassenger.resources_dir}/release.txt")
+    FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
+    FileUtils.rm_rf(@user_dir)
+    if PhusionPassenger.build_system_dir && File.exist?("#{PhusionPassenger.build_system_dir}/buildout.old")
+      FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
+        "#{PhusionPassenger.build_system_dir}/buildout")
+    end
+    if File.exist?("#{@user_dir}.old")
+      FileUtils.mv("#{@user_dir}.old", @user_dir)
+    end
+  end
 
-	let(:version) { VERSION_STRING }
-	let(:nginx_version) { PREFERRED_NGINX_VERSION }
-	let(:compat_id) { PlatformInfo.cxx_binary_compatibility_id }
+  let(:version) { VERSION_STRING }
+  let(:nginx_version) { PREFERRED_NGINX_VERSION }
+  let(:compat_id) { PlatformInfo.cxx_binary_compatibility_id }
 
-	def sh(*command)
-		if !system(*command)
-			abort "Command failed: #{command.join(' ')}"
-		end
-	end
+  def sh(*command)
+    if !system(*command)
+      abort "Command failed: #{command.join(' ')}"
+    end
+  end
 
-	def start_server(document_root)
-		server = WEBrick::HTTPServer.new(:BindAddress => '127.0.0.1',
-			:Port => 0,
-			:DocumentRoot => document_root,
-			:Logger => WEBrick::Log.new("/dev/null"),
-			:AccessLog => [])
-		Thread.new do
-			Thread.current.abort_on_exception = true
-			server.start
-		end
-		[server, "http://127.0.0.1:#{server.config[:Port]}"]
-	end
+  def start_server(document_root)
+    server = WEBrick::HTTPServer.new(:BindAddress => '127.0.0.1',
+      :Port => 0,
+      :DocumentRoot => document_root,
+      :Logger => WEBrick::Log.new("/dev/null"),
+      :AccessLog => [])
+    Thread.new do
+      Thread.current.abort_on_exception = true
+      server.start
+    end
+    [server, "http://127.0.0.1:#{server.config[:Port]}"]
+  end
 
-	specify "Passenger Standalone is able to use the binaries" do
-		Dir.mkdir("#{@temp_dir}/#{version}")
-		Dir.chdir("#{@temp_dir}/#{version}") do
-			#tarballs = Dir["#{PhusionPassenger.download_cache_dir}/*.tar.gz"]
-			#tarballs.should_not be_empty
+  specify "Passenger Standalone is able to use the binaries" do
+    Dir.mkdir("#{@temp_dir}/#{version}")
+    Dir.chdir("#{@temp_dir}/#{version}") do
+      #tarballs = Dir["#{PhusionPassenger.download_cache_dir}/*.tar.gz"]
+      #tarballs.should_not be_empty
 
-			File.open("config.ru", "w") do |f|
-				f.write(%Q{
-					app = lambda do |env|
-						[200, { "Content-Type" => "text/plain" }, ["ok"]]
-					end
-					run app
-				})
-			end
-			Dir.mkdir("public")
-			Dir.mkdir("tmp")
-			Dir.mkdir("log")
+      File.open("config.ru", "w") do |f|
+        f.write(%Q{
+          app = lambda do |env|
+            [200, { "Content-Type" => "text/plain" }, ["ok"]]
+          end
+          run app
+        })
+      end
+      Dir.mkdir("public")
+      Dir.mkdir("tmp")
+      Dir.mkdir("log")
 
-			begin
-				sh("passenger start " +
-					"-p 4000 " +
-					"-d " +
-					"--no-compile-runtime " +
-					"--binaries-url-root http://127.0.0.1:4001 " +
-					">log/start.log 2>&1")
-			rescue Exception
-				system("cat log/start.log")
-				raise
-			end
-			begin
-				open("http://127.0.0.1:4000/") do |f|
-					f.read.should == "ok"
-				end
-			rescue
-				system("cat log/passenger.4000.log")
-				raise
-			ensure
-				sh "passenger stop -p 4000"
-			end
-		end
-	end
+      begin
+        sh("passenger start " +
+          "-p 4000 " +
+          "-d " +
+          "--no-compile-runtime " +
+          "--binaries-url-root http://127.0.0.1:4001 " +
+          ">log/start.log 2>&1")
+      rescue Exception
+        system("cat log/start.log")
+        raise
+      end
+      begin
+        open("http://127.0.0.1:4000/") do |f|
+          f.read.should == "ok"
+        end
+      rescue
+        system("cat log/passenger.4000.log")
+        raise
+      ensure
+        sh "passenger stop -p 4000"
+      end
+    end
+  end
 
-	specify "helper-scripts/download_binaries/extconf.rb succeeds in downloading all necessary binaries" do
-		FileUtils.mkdir_p("server_root")
-		server, url_root = start_server("server_root")
-		File.rename("download_cache", "download_cache.old")
-		begin
-			FileUtils.cp_r("download_cache.old", "server_root/#{VERSION_STRING}")
-			sh "cd #{PhusionPassenger.build_system_dir} && " +
-				"env BINARIES_URL_ROOT=#{url_root} " +
-				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
-			Dir["download_cache/*"].should_not be_empty
-		ensure
-			File.unlink("Makefile") rescue nil
-			FileUtils.rm_rf("download_cache")
-			FileUtils.rm_rf("server_root")
-			File.rename("download_cache.old", "download_cache")
-			server.stop
-		end
-	end if PlatformInfo.os_name == "linux"
+  specify "helper-scripts/download_binaries/extconf.rb succeeds in downloading all necessary binaries" do
+    FileUtils.mkdir_p("server_root")
+    server, url_root = start_server("server_root")
+    File.rename("download_cache", "download_cache.old")
+    begin
+      FileUtils.cp_r("download_cache.old", "server_root/#{VERSION_STRING}")
+      sh "cd #{PhusionPassenger.build_system_dir} && " +
+        "env BINARIES_URL_ROOT=#{url_root} " +
+        "ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
+      Dir["download_cache/*"].should_not be_empty
+    ensure
+      File.unlink("Makefile") rescue nil
+      FileUtils.rm_rf("download_cache")
+      FileUtils.rm_rf("server_root")
+      File.rename("download_cache.old", "download_cache")
+      server.stop
+    end
+  end if PlatformInfo.os_name == "linux"
 
-	specify "helper-scripts/download_binaries/extconf.rb fails at downloading all necessary binaries if one of them does not exist" do
-		FileUtils.mkdir_p("server_root")
-		server, url_root = start_server("server_root")
-		File.rename("download_cache", "download_cache.old")
-		begin
-			result = system "cd #{PhusionPassenger.build_system_dir} && " +
-				"env BINARIES_URL_ROOT=#{url_root} " +
-				"ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
-			result.should be_false
-		ensure
-			File.unlink("Makefile") rescue nil
-			FileUtils.rm_rf("download_cache")
-			FileUtils.rm_rf("server_root")
-			File.rename("download_cache.old", "download_cache")
-			server.stop
-		end
-	end
+  specify "helper-scripts/download_binaries/extconf.rb fails at downloading all necessary binaries if one of them does not exist" do
+    FileUtils.mkdir_p("server_root")
+    server, url_root = start_server("server_root")
+    File.rename("download_cache", "download_cache.old")
+    begin
+      result = system "cd #{PhusionPassenger.build_system_dir} && " +
+        "env BINARIES_URL_ROOT=#{url_root} " +
+        "ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
+      result.should be_false
+    ensure
+      File.unlink("Makefile") rescue nil
+      FileUtils.rm_rf("download_cache")
+      FileUtils.rm_rf("server_root")
+      File.rename("download_cache.old", "download_cache")
+      server.stop
+    end
+  end
 end
 
 end # module PhusionPassenger

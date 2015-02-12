@@ -26,7 +26,7 @@
 source_root = File.expand_path("..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/lib")
 begin
-	require 'rubygems'
+  require 'rubygems'
 rescue LoadError
 end
 require 'phusion_passenger'

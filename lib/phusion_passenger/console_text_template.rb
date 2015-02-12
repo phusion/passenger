@@ -27,32 +27,32 @@ PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
 module PhusionPassenger
 
-class ConsoleTextTemplate
-	def initialize(input, options = {})
-		@buffer = ''
-		if input[:file]
-			filename = "#{PhusionPassenger.resources_dir}/templates/#{input[:file]}.txt.erb"
-			data = File.read(filename)
-		else
-			data = input[:text]
-		end
-		@colors = options[:colors] || AnsiColors.new
-		@template = ERB.new(@colors.ansi_colorize(data),
-			nil, '-', '@buffer')
-		@template.filename = filename if filename
-		options.each_pair do |name, value|
-			self[name] = value
-		end
-	end
+  class ConsoleTextTemplate
+    def initialize(input, options = {})
+      @buffer = ''
+      if input[:file]
+        filename = "#{PhusionPassenger.resources_dir}/templates/#{input[:file]}.txt.erb"
+        data = File.read(filename)
+      else
+        data = input[:text]
+      end
+      @colors = options[:colors] || AnsiColors.new
+      @template = ERB.new(@colors.ansi_colorize(data),
+        nil, '-', '@buffer')
+      @template.filename = filename if filename
+      options.each_pair do |name, value|
+        self[name] = value
+      end
+    end
 
-	def []=(name, value)
-		instance_variable_set("@#{name}".to_sym, value)
-		return self
-	end
+    def []=(name, value)
+      instance_variable_set("@#{name}".to_sym, value)
+      return self
+    end
 
-	def result
-		return @template.result(binding)
-	end
-end
+    def result
+      return @template.result(binding)
+    end
+  end
 
 end # module PhusionPassenger
