@@ -110,8 +110,12 @@ static unsigned int alternativeStackSize;
 static volatile unsigned int abortHandlerCalled = 0;
 static unsigned int randomSeed = 0;
 static char **origArgv = NULL;
+static const char *rubyLibDir = NULL;
+static const char *passengerRoot = NULL;
+static const char *defaultRuby = DEFAULT_RUBY;
 static const char *backtraceSanitizerCommand = NULL;
 static bool backtraceSanitizerPassProgramInfo = true;
+static const char *crashWatch = NULL;
 static DiagnosticsDumper customDiagnosticsDumper = NULL;
 static void *customDiagnosticsDumperUserData;
 
@@ -516,19 +520,15 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 	pid_t child = asyncFork();
 	if (child == 0) {
 		closeAllFileDescriptors(2, true);
-		execlp("crash-watch", "crash-watch", "--dump", pidStr, (char * const) 0);
-		if (errno == ENOENT) {
-			safePrintErr("Crash-watch is not installed. Please install it with 'gem install crash-watch' "
-				"or download it from https://github.com/FooBarWidget/crash-watch.\n");
-		} else {
-			int e = errno;
-			end = messageBuf;
-			end = appendText(end, "crash-watch is installed, but it could not be executed! ");
-			end = appendText(end, "(execlp() returned errno=");
-			end = appendULL(end, e);
-			end = appendText(end, ") Please check your file permissions or something.\n");
-			write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
-		}
+		execlp(defaultRuby, defaultRuby, crashWatch, rubyLibDir,
+			passengerRoot, "--dump", pidStr, (char * const) 0);
+		int e = errno;
+		end = messageBuf;
+		end = appendText(end, "crash-watch is could not be executed! ");
+		end = appendText(end, "(execlp() returned errno=");
+		end = appendULL(end, e);
+		end = appendText(end, ") Please check your file permissions or something.\n");
+		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 		_exit(1);
 
 	} else if (child == -1) {
@@ -1518,15 +1518,30 @@ initializeAgent(int argc, char **argv[], const char *processName,
 				argc - argStartIndex);
 		}
 
-		#ifdef __linux__
-			if (options.has("passenger_root")) {
-				ResourceLocator locator(options.get("passenger_root", true));
-				string ruby = options.get("default_ruby", false, DEFAULT_RUBY);
-				string path = ruby + " \"" + locator.getHelperScriptsDir() +
+		ResourceLocator locator;
+		string ruby;
+
+		if (options.has("passenger_root")) {
+			string path;
+			locator = ResourceLocator(options.get("passenger_root", true));
+			ruby = options.get("default_ruby", false, DEFAULT_RUBY);
+
+			rubyLibDir    = strdup(locator.getRubyLibDir().c_str());
+			passengerRoot = strdup(options.get("passenger_root", true).c_str());
+			defaultRuby   = strdup(ruby.c_str());
+
+			#ifdef __linux__
+				path = ruby + " \"" + locator.getHelperScriptsDir() +
 					"/backtrace-sanitizer.rb\"";
 				backtraceSanitizerCommand = strdup(path.c_str());
-			}
-		#endif
+			#endif
+
+			path = locator.getHelperScriptsDir() + "/crash-watch.rb";
+			crashWatch = strdup(path.c_str());
+		} else {
+			shouldDumpWithCrashWatch = false;
+		}
+
 		if (backtraceSanitizerCommand == NULL) {
 			backtraceSanitizerCommand = "c++filt -n";
 			backtraceSanitizerPassProgramInfo = false;
