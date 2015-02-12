@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -36,29 +36,8 @@ module ControlUtils
 	end
 
 	def require_daemon_controller
-		return if defined?(DaemonController)
-		begin
-			require 'daemon_controller'
-			begin
-				require 'daemon_controller/version'
-				too_old = DaemonController::VERSION_STRING < '1.1.0'
-			rescue LoadError
-				too_old = true
-			end
-			if too_old
-				PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-				gem_command = PlatformInfo.gem_command(:sudo => true)
-				abort "Your version of daemon_controller is too old. " +
-					"You must install 1.1.0 or later. Please upgrade:\n\n" +
-					" #{gem_command} uninstall FooBarWidget-daemon_controller\n" +
-					" #{gem_command} install daemon_controller"
-			end
-		rescue LoadError
-			PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-			gem_command = PlatformInfo.gem_command(:sudo => true)
-			abort "Please install daemon_controller first:\n\n" +
-				" #{gem_command} install daemon_controller"
-		end
+		return if defined?(PhusionPassenger::DaemonController)
+		PhusionPassenger.require_passenger_lib 'vendor/daemon_controller'
 	end
 
 	def warn_pid_file_not_found(options)

@@ -31,11 +31,10 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
  ruby2.4 | ruby2.3 | ruby2.2 | ruby2.1 | ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
  rubygems-integration (>= 1.8) | rubygems1.9.1 | rubygems1.9 | rubygems (>= 1.2),
 #if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
-     librack-ruby,
+     librack-ruby
 #else
-     ruby-rack,
+     ruby-rack
 #endif
- ruby-daemon-controller (>= 1.2.0)
 Recommends: passenger-doc (= ${binary:Version}), passenger-dev (= ${binary:Version}),
  crash-watch
 Breaks: libapache2-mod-passenger (<< <%= DEBIAN_EPOCH %>:<%= PACKAGE_VERSION %>), passenger-common,

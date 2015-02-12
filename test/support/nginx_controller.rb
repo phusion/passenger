@@ -1,14 +1,5 @@
 require 'erb'
-begin
-	require 'daemon_controller'
-rescue LoadError
-	STDERR.puts "*** ERROR: daemon_controller is not installed. Please install with: "
-	STDERR.puts
-	STDERR.puts "  gem install daemon_controller"
-	STDERR.puts
-	exit!(1)
-end
-
+PhusionPassenger.require_passenger_lib 'vendor/daemon_controller'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 class NginxController
@@ -24,7 +15,7 @@ class NginxController
 		@config_file = "#{root_dir}/nginx.conf"
 		@pid_file    = "#{root_dir}/nginx.pid"
 		@log_file    = "#{root_dir}/error.log"
-		@controller  = DaemonController.new(
+		@controller  = PhusionPassenger::DaemonController.new(
 			:identifier    => 'Nginx',
 			:start_command => "#{CONFIG['nginx']} -c '#{@config_file}'",
 			:ping_command  => [:tcp, '127.0.0.1', PORT],

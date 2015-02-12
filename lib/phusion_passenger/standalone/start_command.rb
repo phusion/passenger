@@ -42,7 +42,7 @@ class StartCommand < Command
 		:environment       => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['NODE_ENV'] ||
 			ENV['PASSENGER_APP_ENV'] || 'development',
 		:spawn_method      => Kernel.respond_to?(:fork) ? DEFAULT_SPAWN_METHOD : 'direct',
-		:engine            => "builtin",
+		:engine            => "nginx",
 		:nginx_version     => PREFERRED_NGINX_VERSION,
 		:log_level         => DEFAULT_LOG_LEVEL,
 		:ctls              => []

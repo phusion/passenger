@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
 	s.email = "software-signing@phusion.nl"
 	s.require_paths = ["lib"]
 	s.add_dependency 'rake', '>= 0.8.1'
-	s.add_dependency 'daemon_controller', '>= 1.2.0'
 	s.add_dependency 'rack'
 	s.files = Dir[*PhusionPassenger::Packaging::GLOB] -
 		Dir[*PhusionPassenger::Packaging::EXCLUDE_GLOB]
