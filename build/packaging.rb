@@ -207,7 +207,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
 
       sh "scp #{PKG_DIR}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
       sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
-      command = "curl -F file=@#{PKG_DIR}/#{basename}.gem --user admin:#{website_config['admin_password']} " +
+      command = "curl -F file=@#{PKG_DIR}/#{basename}.gem --user admin:'#{website_config['admin_password']}' " +
         "--output /dev/stderr --write-out '%{http_code}' --silent " +
         "https://www.phusionpassenger.com/enterprise_gems/upload"
       puts command
