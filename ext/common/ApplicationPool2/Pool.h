@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -827,8 +827,24 @@ public:
 		while (!this_thread::interruption_requested()) {
 			try {
 				UPDATE_TRACE_POINT();
-				unsigned long long sleepTime = self->realCollectAnalytics();
-				syscalls::usleep(sleepTime);
+				self->realCollectAnalytics();
+			} catch (const thread_interrupted &) {
+				break;
+			} catch (const tracable_exception &e) {
+				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
+			}
+
+			// Sleep for about 4 seconds, aligned to seconds boundary
+			// for saving power on laptops.
+			UPDATE_TRACE_POINT();
+			unsigned long long currentTime = SystemTime::getUsec();
+			unsigned long long deadline =
+				roundUp<unsigned long long>(currentTime, 1000000) + 4000000;
+			P_DEBUG("Analytics collection done; next analytics collection in " <<
+				std::fixed << std::setprecision(3) << ((deadline - currentTime) / 1000000.0) <<
+				" sec");
+			try {
+				syscalls::usleep(deadline - currentTime);
 			} catch (const thread_interrupted &) {
 				break;
 			} catch (const tracable_exception &e) {
@@ -902,7 +918,7 @@ public:
 		}
 	}
 
-	unsigned long long realCollectAnalytics() {
+	void realCollectAnalytics() {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -944,14 +960,14 @@ public:
 			processMetrics = ProcessMetricsCollector().collect(pids);
 		} catch (const ParseException &) {
 			P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
-			goto end;
+			return;
 		}
 		try {
 			UPDATE_TRACE_POINT();
 			systemMetricsCollector.collect(systemMetrics);
 		} catch (const RuntimeException &e) {
 			P_WARN("Unable to collect system metrics: " << e.what());
-			goto end;
+			return;
 		}
 
 		{
@@ -1008,17 +1024,6 @@ public:
 			// Run destructors with updated trace point.
 			actions.clear();
 		}
-
-		end:
-		// Sleep for about 4 seconds, aligned to seconds boundary
-		// for saving power on laptops.
-		unsigned long long currentTime = SystemTime::getUsec();
-		unsigned long long deadline =
-			roundUp<unsigned long long>(currentTime, 1000000) + 4000000;
-		P_DEBUG("Analytics collection done; next analytics collection in " <<
-			std::fixed << std::setprecision(3) << ((deadline - currentTime) / 1000000.0) <<
-			" sec");
-		return deadline - currentTime;
 	}
 
 	SuperGroupPtr createSuperGroup(const Options &options) {

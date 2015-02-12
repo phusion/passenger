@@ -4,6 +4,7 @@ Release 5.0.0 release candidate 1
  * Fixed Date headers not being formatted in the GMT timezone. Closes GH-1367.
  * Fixed Passengerfile.json/passenger-standalone.json not being properly loaded in Passenger Standalone.
  * Fixed support for sticky sessions.
+ * Fixed an infinite loop if the ApplicationPool garbage collector fails due to an exception. Closes GH-1360.
  * When a Ruby process crashes due to an uncaught exception, this fact is now properly logged.
  * [Enterprise] Fixed a bug in mass deployment reloading.
  * [Enterprise] Fixed a bug in mass deployment daemonization.
