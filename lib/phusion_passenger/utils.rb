@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -73,6 +73,11 @@ module Utils
 	#
 	# +current_location+ is a string which describes where the code is
 	# currently at. Usually the current class name will be enough.
+	# It may be nil.
+	#
+	# This method requires 'ruby_core_enhancements'. If 'debug_logging'
+	# is loaded and included in the current module, it will use that for
+	# logging.
 	def print_exception(current_location, exception, destination = nil)
 		if !exception.is_a?(SystemExit)
 			data = exception.backtrace_string(current_location)
@@ -82,6 +87,33 @@ module Utils
 				destination ||= STDERR
 				destination.puts(data)
 				destination.flush if destination.respond_to?(:flush)
+			end
+		end
+	end
+
+	# A wrapper around Thread.new that installs a default exception handler.
+	# If an uncaught exception is encountered, it will immediately log the
+	# exception and abort the entire program.
+	#
+	# Thread#abort_on_exception is also supposed to do that, but the problem
+	# is that it is implemented by forwarding the uncaught exception
+	# to the main thread, which may not expect that particular exception
+	# and may not handle it properly. The exception could be forwarded to
+	# the main thread during any point of the main thread's execution.
+	#
+	# This method requires 'thread' and 'ruby_core_enhancements'.
+	# If 'debug_logging' is loaded and included in the current module,
+	# it will use that for logging.
+	def create_thread_and_abort_on_exception(*args)
+		Thread.new do
+			Thread.current.abort_on_exception = true
+			begin
+				yield(*args)
+			rescue SystemExit
+				raise
+			rescue Exception => e
+				print_exception(nil, e)
+				exit(1)
 			end
 		end
 	end

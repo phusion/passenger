@@ -235,12 +235,8 @@ class RequestHandler
 	# Start the main loop in a new thread. This thread will be stopped by #cleanup.
 	def start_main_loop_thread
 		current_generation = @main_loop_generation
-		@main_loop_thread = Thread.new do
-			begin
-				main_loop
-			rescue Exception => e
-				print_exception(self.class, e)
-			end
+		@main_loop_thread = create_thread_and_abort_on_exception do
+			main_loop
 		end
 		@main_loop_thread_lock.synchronize do
 			while @main_loop_generation == current_generation
@@ -411,8 +407,7 @@ private
 
 		@threads_mutex.synchronize do
 			@concurrency.times do |i|
-				thread = Thread.new(i) do |number|
-					Thread.current.abort_on_exception = true
+				thread = create_thread_and_abort_on_exception(i) do |number|
 					begin
 						Thread.current[:name] = "Worker #{number + 1}"
 						handler = thread_handler.new(self, main_socket_options)
@@ -427,8 +422,7 @@ private
 				expected_nthreads += 1
 			end
 
-			thread = Thread.new do
-				Thread.current.abort_on_exception = true
+			thread = create_thread_and_abort_on_exception do
 				begin
 					Thread.current[:name] = "HTTP helper worker"
 					handler = thread_handler.new(self, http_socket_options)
@@ -463,8 +457,7 @@ private
 			# On JRuby, selecting on an input TTY always returns, so
 			# we use threads to do the job.
 			owner_pipe_watcher = IO.pipe
-			owner_pipe_watcher_thread = Thread.new do
-				Thread.current.abort_on_exception = true
+			owner_pipe_watcher_thread = create_thread_and_abort_on_exception do
 				Thread.current[:name] = "Owner pipe waiter"
 				begin
 					@owner_pipe.read(1)
@@ -510,8 +503,7 @@ private
 			end
 		else
 			@concurrency.times do
-				Thread.abort_on_exception = true
-				threads << Thread.new(@server_sockets[:main][:address]) do |address|
+				threads << create_thread_and_abort_on_exception(@server_sockets[:main][:address]) do |address|
 					begin
 						debug("Shutting down worker thread by connecting to #{address}")
 						connect_to_server(address).close
@@ -523,8 +515,7 @@ private
 				end
 			end
 		end
-		threads << Thread.new(@server_sockets[:http][:address]) do |address|
-			Thread.abort_on_exception = true
+		threads << create_thread_and_abort_on_exception(@server_sockets[:http][:address]) do |address|
 			begin
 				debug("Shutting down HTTP thread by connecting to #{address}")
 				connect_to_server(address).close

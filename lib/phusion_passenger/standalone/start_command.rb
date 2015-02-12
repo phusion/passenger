@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'standalone/command'
 PhusionPassenger.require_passenger_lib 'standalone/config_utils'
+PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 # We lazy load as many libraries as possible not only to improve startup performance,
@@ -653,15 +654,13 @@ private
 
 	def watch_log_files_in_background
 		@apps.each do |app|
-			thread = Thread.new do
-				Thread.current.abort_on_exception = true
+			thread = Utils.create_thread_and_abort_on_exception do
 				watch_log_file("#{app[:root]}/log/#{@options[:environment]}.log")
 			end
 			@threads << thread
 			@interruptable_threads << thread
 		end
-		thread = Thread.new do
-			Thread.current.abort_on_exception = true
+		thread = Utils.create_thread_and_abort_on_exception do
 			watch_log_file(@options[:log_file])
 		end
 		@threads << thread
