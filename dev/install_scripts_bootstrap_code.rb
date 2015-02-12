@@ -31,7 +31,7 @@ elsif type == "--nginx-module-config"
 else
   abort "Invalid type"
 end
-BOOTSTRAP_CODE.gsub!(/^\t\t/, '').strip
+BOOTSTRAP_CODE.gsub!(/^  (  )?/, '').strip
 
 ARGV.each do |filename|
   File.open(filename, "r+") do |f|
