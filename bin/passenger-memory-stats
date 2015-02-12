@@ -138,6 +138,15 @@ class App
 				"private dirty RSS (a reliable metric for real memory usage) of processes cannot be determined."
 		end
 	end
+
+    def machine_readable
+        data = Hash.new
+        ['apache_processes', 'nginx_processes', 'passenger_processes'].each do |p|
+            data[p] = @stats.send(p).map { |proc| { proc.pid => Hash[*proc.instance_variables.map { |iv| [ iv.to_s.delete("@"), proc.instance_variable_get(iv)] }.flatten] }}
+        end
+
+        return data
+    end
 	
 private
 	def print_process_list(title, processes, options = {})
@@ -174,4 +183,9 @@ private
 	end
 end
 
-App.new.start
+if ARGV.include? '-m'
+    require 'yaml'
+    puts App.new.machine_readable.to_yaml
+else
+    App.new.start
+end
