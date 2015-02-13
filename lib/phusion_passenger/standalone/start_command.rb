@@ -45,7 +45,8 @@ module PhusionPassenger
         :engine            => "nginx",
         :nginx_version     => PREFERRED_NGINX_VERSION,
         :log_level         => DEFAULT_LOG_LEVEL,
-        :ctls              => []
+        :ctls              => [],
+        :envvars           => {}
       }.freeze
 
       def run

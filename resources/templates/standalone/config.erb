@@ -73,7 +73,7 @@ http {
         union_station_gateway_port <%= @options[:union_station_gateway_port] %>;
         union_station_gateway_cert -;
     <% end %>
-    
+
     <% @options[:ctls].each do |ctl| %>
         passenger_ctl '<%= ctl.split("=", 2)[0] %>' '<%= ctl.split("=", 2)[1] %>';
     <% end %>
@@ -93,22 +93,22 @@ http {
         application/javascript application/x-javascript application/json \
         application/rss+xml application/vnd.ms-fontobject application/x-font-ttf \
         application/xml font/opentype image/svg+xml text/xml;
-    
+
     <% if @apps.size > 1 %>
-    # Default server entry.
-    server {
-        <% if @options[:ssl] %>
-            <% if @options[:ssl_port] %>
-                listen <%= nginx_listen_address %>;
-                listen <%= nginx_listen_address_with_ssl_port %> ssl;
+        # Default server entry for mass deployment mode.
+        server {
+            <% if @options[:ssl] %>
+                <% if @options[:ssl_port] %>
+                    listen <%= nginx_listen_address %>;
+                    listen <%= nginx_listen_address_with_ssl_port %> ssl;
+                <% else %>
+                    listen <%= nginx_listen_address %> ssl;
+                <% end %>
             <% else %>
-                listen <%= nginx_listen_address %> ssl;
+                listen <%= nginx_listen_address %>;
             <% end %>
-        <% else %>
-            listen <%= nginx_listen_address %>;
-        <% end %>
-        root '<%= PhusionPassenger.resources_dir %>/standalone_default_root';
-    }
+            root '<%= PhusionPassenger.resources_dir %>/standalone_default_root';
+        }
     <% end %>
 
     <% for app in @apps %>
@@ -149,6 +149,10 @@ http {
         <% if app[:ssl] %>
             ssl_certificate <%= app[:ssl_certificate] %>;
             ssl_certificate_key <%= app[:ssl_certificate_key] %>;
+        <% end %>
+
+        <% @options[:envvars].each_pair do |name, value| %>
+            passenger_env_var '<%= name %>' '<%= value %>';
         <% end %>
 
         # Rails asset pipeline support.

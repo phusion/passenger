@@ -104,6 +104,8 @@ When in <<mass_deployment,mass deployment mode>>, you will probably want to set 
 
 `server_names` (Enterprise only)::
 	Only relevant in <<mass_deployment,mass deployment mode>>. This option specifies which server names (host names) should be routed to this application. This option must be an array of names, e.g. `"server_names": ["foo.com", "bar.com"]`. By default, the name of the application directory is used as the server name. For example, for an application located in /webapps/foobar.com, "foobar.com" is used as the server name.
+`envvars` (since 5.0.0 RC 1)::
+	Environment variables to pass to the application. This option must be a key-value map, e.g. `"envvars": { "ADMIN_EMAIL": "root@phusion.nl", "SECRET_KEY": "12345" }`.
 `nginx_config_template`::
 	Equivalent to the `--nginx-config-template` command line option.
 

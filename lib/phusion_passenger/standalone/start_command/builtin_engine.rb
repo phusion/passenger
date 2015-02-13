@@ -64,7 +64,16 @@ module PhusionPassenger
             ping_spec = [:tcp, @options[:address], @options[:port]]
           end
 
-          command = "#{@agent_exe} watchdog";
+          command = ""
+
+          if !@options[:envvars].empty?
+            command = "env "
+            @options[:envvars].each_pair do |name, value|
+              command << "#{Shellwords.escape name}=#{Shellwords.escape value} "
+            end
+          end
+
+          command << "#{@agent_exe} watchdog";
           command << " --passenger-root #{Shellwords.escape PhusionPassenger.install_spec}"
           command << " --daemonize"
           command << " --no-user-switching"
