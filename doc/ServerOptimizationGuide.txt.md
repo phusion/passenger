@@ -307,9 +307,41 @@ If you cannot use the event MPM, consider putting Apache behind an Nginx reverse
 
 ### Turbocaching
 
-Phusion Passenger supports turbocaching since version 4. Turbocaching is an HTTP cache built inside Phusion Passenger. When used correctly, the cache can accelerate your app tremendously.
+Phusion Passenger supports turbocaching since version 4. Turbocaching is an HTTP cache built inside Phusion Passenger. When used correctly, the cache can accelerate your app tremendously. To utilize turbocaching, you only need to set HTTP caching headers.
 
-To utilize turbocaching, you only need to set HTTP caching headers. Please refer to [Google's HTTP caching tutorial](https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching). Phusion Passenger takes advantage of the HTTP headers automatically.
+#### Learning about HTTP caching headers
+
+The first thing you should do is to [learn how to use HTTP caching headers](https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching). It's pretty simple and straightforward. Since the turbocache is just a normal HTTP shared cache, it respects all the HTTP caching rules.
+
+#### Set an Expires or Cache-Control header
+
+To activate the turbocache, the response must contain either an "Expires" header or a "Cache-Control" header.
+
+The "Expires" header tells the turbocache how long to cache a response. Its value is an HTTP timestamp, e.g. "Thu, 01 Dec 1994 16:00:00 GMT".
+
+The Cache-Control header is a more advanced header that not only allows you to set the caching time, but also how the cache should behave. The easiest way to use it is to set the **max-age** flag, which has the same effect as setting "Expires". For example, this tells the turbocache that the response is cacheable for at most 60 seconds:
+
+    Cache-Control: max-age=60
+
+As you can see, a "Cache-Control" header is much easier to generate than an "Expires" header. Furthermore, "Expires" doesn't work if the visitor's computer's clock is wrongly configured, while "Cache-Control" does. This is why we recommend using "Cache-Control".
+
+Another flag to be aware of is the **private** flag. This flag tells any shared caches -- caches which are meant to store responses for many users -- not to cache the response. The turbocache is a shared cache. However, the browser's cache is not, so the browser can still cache the response. You should set the "private" flag on responses which are meant for a single user, as you will learn later in this article.
+
+And finally, there is the **no-store** flag, which tells *all* caches -- even the browser's -- not to cache the response.
+
+Here is an example of a response which is cacheable for 60 seconds by the browser's cache, but not by the turbocache:
+
+    Cache-Control: max-age=60,private
+
+The HTTP specification specifies a bunch of other flags, but they're not relevant for the turbocache. 
+
+#### Only GET requests are cacheable
+
+The turbocache currently only caches GET requests. POST, PUT, DELETE and other requests are never cached. If you want your response to be cacheable by the turbocache, be sure to use GET requests, but also be sure that your request is idempotent.
+
+#### Avoid using the "Vary" header
+
+The "Vary" header is used to tell caches that the response depends on one or more request headers. But the turbocache does not implement support for the "Vary" header, so if you output a "Vary" header then the turbocache will not cache your response at all. Avoid using the "Vary" header where possible.
 
 ### Out-of-band garbage collection
 
