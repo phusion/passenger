@@ -1,7 +1,7 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -194,8 +194,20 @@ module PhusionPassenger
           puts "Downloading Nginx #{@nginx_version} source code..."
           basename = "nginx-#{@nginx_version}.tar.gz"
           tarball  = "#{@working_dir}/#{basename}"
+
+          options = {
+            :show_progress => @stdout.tty?
+          }
+          if @connect_timeout && @connect_timeout != 0
+            options[:connect_timeout] = @connect_timeout
+          end
+          if @idle_timeout && @idle_timeout != 0
+            options[:idle_timeout] = @idle_timeout
+          end
+
           result = download("http://nginx.org/download/#{basename}",
-            tarball, :show_progress => @stdout.tty?)
+            tarball, options)
+
           if !result
             puts
             show_possible_solutions_for_download_and_extraction_problems

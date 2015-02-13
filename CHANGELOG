@@ -7,6 +7,7 @@ Release 5.0.0 release candidate 1
  * Fixed an infinite loop if the ApplicationPool garbage collector fails due to an exception. Closes GH-1360.
  * When a Ruby process crashes due to an uncaught exception, this fact is now properly logged.
  * Specifying 0 for the `max_pool_size` config option no longer results in a crash. Closes GH-1334.
+ * The timeouts when downloading Passenger Standalone binaries and source files are now customizable. Closes GH-1295.
  * [Enterprise] Fixed a bug in mass deployment reloading.
  * [Enterprise] Fixed a bug in mass deployment daemonization.
  * [Enterprise] The mass deployment mode now supports the `app_type` and `startup_file` configuration options in Passengerfile.json/passenger-standalone.json. Closes GH-1366.

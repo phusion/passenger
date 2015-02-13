@@ -439,7 +439,16 @@ module PhusionPassenger
             "because --no-install-runtime is given."
         end
 
-        args = ["--brief", "--no-force-tip"]
+        args = [
+          "--brief",
+          "--no-force-tip",
+          # Use default Utils::Download timeouts, which are short. We want short
+          # timeouts so that if the primary server is down and is not responding
+          # (as opposed to responding quickly with an error), then the system
+          # quickly switches to a mirror.
+          "--connect-timeout", "0",
+          "--idle-timeout", "0"
+        ]
         if @options[:binaries_url_root]
           args << "--url-root"
           args << @options[:binaries_url_root]

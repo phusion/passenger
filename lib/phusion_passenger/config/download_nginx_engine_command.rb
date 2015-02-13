@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -49,7 +49,9 @@ module PhusionPassenger
           :show_download_progress => STDOUT.tty?,
           :compilation_tip => true,
           :force_tip => true,
-          :use_cache => true
+          :use_cache => true,
+          :connect_timeout => 30,
+          :idle_timeout => 30
         }
         parse_options
         initialize_objects
@@ -112,19 +114,30 @@ module PhusionPassenger
             "alternative way to install the agent") do
             options[:compilation_tip] = false
           end
-          opts.on("--no-force-tip", "Do not print any tips regarding the --force parameter") do
+          opts.on("--no-force-tip", "Do not print any tips regarding the#{nl}" +
+            "--force parameter") do
             options[:force_tip] = false
           end
           opts.on("--skip-cache", "Do not copy the Nginx engine from cache") do
             options[:use_cache] = false
           end
           opts.on("--suppress-binary-unusable-message",
-            "Do not print anything if the downloaded binary turns out to be unusable") do
+            "Do not print anything if the downloaded#{nl}" +
+            "binary turns out to be unusable") do
             options[:suppress_binary_unusable_message] = true
           end
           opts.on("--dry-run", "Do everything except actually installing#{nl}" +
             "the engine") do
             options[:dry_run] = true
+          end
+          opts.on("--connect-timeout SECONDS", Integer,
+            "The maximum amount of time to spend on DNS#{nl}" +
+            "lookup and establishing the TCP connection.#{nl}" +
+            "Default: 30") do |val|
+            options[:connect_timeout] = val
+          end
+          opts.on("--idle-timeout SECONDS", Integer, "The maximum idle read time. Default: 30") do |val|
+            options[:idle_timeout] = val
           end
           opts.on("-h", "--help", "Show this help") do
             options[:help] = true
@@ -247,13 +260,21 @@ module PhusionPassenger
 
       def real_download_support_file(site, name, output)
         url = "#{site[:url]}/#{VERSION_STRING}/#{name}"
-        return PhusionPassenger::Utils::Download.download(url, output,
+        options = {
           :cacert => site[:cacert],
           :logger => @logger,
           :use_cache => @options[:use_cache],
-          :show_progress   => @options[:show_download_progress],
-          :connect_timeout => 30,
-          :idle_timeout    => 30)
+          :show_progress   => @options[:show_download_progress]
+        }
+        # connect_timeout and idle_timeout may be nil or 0, which means
+        # that the default Utils::Download timeouts should be used.
+        if @options[:connect_timeout] && @options[:connect_timeout] != 0
+          options[:connect_timeout] = @options[:connect_timeout]
+        end
+        if @options[:idle_timeout] && @options[:idle_timeout] != 0
+          options[:idle_timeout] = @options[:idle_timeout]
+        end
+        return PhusionPassenger::Utils::Download.download(url, output, options)
       end
 
       def test_binary(filename)

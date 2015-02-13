@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -34,7 +34,12 @@ module PhusionPassenger
       include InstallationUtils
 
       def run
-        @options = { :colorize => :auto, :force_tip => true }
+        @options = {
+          :colorize => :auto,
+          :force_tip => true,
+          :connect_timeout => 30,
+          :idle_timeout => 30
+        }
         parse_options
         initialize_objects
         sanity_check
@@ -69,8 +74,18 @@ module PhusionPassenger
           opts.on("-f", "--force", "Skip sanity checks") do
             options[:force] = true
           end
-          opts.on("--no-force-tip", "Do not print any tips regarding the --force parameter") do
+          opts.on("--no-force-tip", "Do not print any tips regarding the --force#{nl}" +
+            "parameter") do
             options[:force_tip] = false
+          end
+          opts.on("--connect-timeout SECONDS", Integer,
+            "The maximum amount of time to spend on DNS#{nl}" +
+            "lookup and establishing the TCP connection.#{nl}" +
+            "Default: 30") do |val|
+            options[:connect_timeout] = val
+          end
+          opts.on("--idle-timeout SECONDS", Integer, "The maximum idle read time. Default: 30") do |val|
+            options[:idle_timeout] = val
           end
           opts.on("-h", "--help", "Show this help") do
             options[:help] = true

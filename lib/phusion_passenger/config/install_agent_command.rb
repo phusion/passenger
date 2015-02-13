@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -89,7 +89,8 @@ module PhusionPassenger
             options[:download_args] << "--force"
             options[:compile_args] << "--force"
           end
-          opts.on("--no-force-tip", "Do not print any tips regarding the --force parameter") do
+          opts.on("--no-force-tip", "Do not print any tips regarding the#{nl}" +
+            "--force parameter") do
             options[:force_tip] = false
             options[:download_args] << "--no-force-tip"
             options[:compile_args] << "--no-force-tip"
@@ -99,6 +100,17 @@ module PhusionPassenger
           end
           opts.on("--skip-cache", "Do not copy the agent binary from cache") do
             options[:download_args] << "--skip-cache"
+          end
+          opts.on("--connect-timeout SECONDS", Integer,
+            "The maximum amount of time to spend on DNS#{nl}" +
+            "lookup and establishing the TCP connection.#{nl}" +
+            "Default: 30") do |val|
+            options[:download_args] << "--connect-timeout"
+            options[:download_args] << val.to_s
+          end
+          opts.on("--idle-timeout SECONDS", Integer, "The maximum idle read time. Default: 30") do |val|
+            options[:download_args] << "--idle-timeout"
+            options[:download_args] << val.to_s
           end
           opts.on("-h", "--help", "Show this help") do
             options[:help] = true
