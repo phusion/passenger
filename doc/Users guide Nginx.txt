@@ -430,32 +430,6 @@ Please see <<deploying_a_rack_app,Deploying a Rack-based Ruby application>>
 and <<deploying_a_wsgi_app,Deploying a WSGI (Python) application>>
 for examples.
 
-.This configuration option is NOT inherited across contexts
-[WARNING]
-===============================================
-In each new context (e.g. in each new 'location' block), you must re-specify `passenger_enabled`. Values set in parent contexts have no effect on subcontexts. For example:
-
-------------------------------
-server {
-    ...
-    passenger_enabled on;
-
-    location /users {
-        passenger_set_header X-Foo bar;
-        # !!!THIS IS WRONG!!! We did not re-specify 'passenger_enabled on'
-        # here, so Phusion Passenger will not handle requests that begin with
-        # /users.
-    }
-
-    location /apps {
-        passenger_enabled on;
-        passenger_set_header X-Foo bar;
-        # This is correct. Here we re-specify 'passenger_enabled'.
-    }
-}
-------------------------------
-===============================================
-
 [[PassengerBaseURI]]
 ==== passenger_base_uri <uri>
 Used to specify that the given URI is an distinct application that should

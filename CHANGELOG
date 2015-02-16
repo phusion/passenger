@@ -10,6 +10,7 @@ Release 5.0.0 release candidate 1
  * Specifying 0 for the `max_pool_size` config option no longer results in a crash. Closes GH-1334.
  * The timeouts when downloading Passenger Standalone binaries and source files are now customizable. Closes GH-1295.
  * The `envvars` option is now supported in Passengerfile.json, for passing environment variables to the application. Closes GH-1377.
+ * [Nginx] It is no longer necessary to re-specify `passenger_enabled` in `location` contexts. Closes GH-1338.
  * [Enterprise] Fixed a bug in mass deployment reloading.
  * [Enterprise] Fixed a bug in mass deployment daemonization.
  * [Enterprise] The mass deployment mode now supports the `app_type` and `startup_file` configuration options in Passengerfile.json/passenger-standalone.json. Closes GH-1366.

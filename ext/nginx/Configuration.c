@@ -417,9 +417,12 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     passenger_loc_conf_t         *prev = parent;
     passenger_loc_conf_t         *conf = child;
+    ngx_http_core_loc_conf_t     *clcf;
 
     size_t                        size;
     ngx_hash_init_t               hash;
+
+    clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
 
     #include "MergeLocationConfig.c"
     if (prev->options_cache.data == NULL) {
@@ -740,6 +743,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     if (conf->upstream_config.upstream == NULL) {
         conf->upstream_config.upstream = prev->upstream_config.upstream;
+    }
+
+    if (conf->enabled) {
+        clcf->handler = passenger_content_handler;
     }
 
     conf->headers_hash_bucket_size = ngx_align(conf->headers_hash_bucket_size,
