@@ -815,7 +815,7 @@ static void
 redirectStdinToNull() {
 	int fd = open("/dev/null", O_RDONLY);
 	if (fd != -1) {
-		dup2(fd, 1);
+		dup2(fd, 0);
 		close(fd);
 	}
 }
