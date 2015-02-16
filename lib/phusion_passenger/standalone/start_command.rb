@@ -301,7 +301,7 @@ module PhusionPassenger
           opts.separator "Advanced options:"
           opts.on("--engine NAME", String,
             "Underlying HTTP engine to use. Available#{nl}" +
-            "options: builtin (default), nginx") do |value|
+            "options: nginx (default), builtin") do |value|
             options[:engine] = value
           end
           opts.on("--log-level NUMBER", Integer, "Log level to use. Default: #{DEFAULT_LOG_LEVEL}") do |value|

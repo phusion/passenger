@@ -347,6 +347,27 @@ The "Vary" header is used to tell caches that the response depends on one or mor
 
 Phusion Passenger supports out-of-band garbage collection for Ruby apps. With this feature enabled, Phusion Passenger can run the garbage collector in between requests, so that the garbage collector doesn't delay the app as much. Please refer to the Users Guide for more information about this feature.
 
+### Using the builtin HTTP engine
+
+In certain situations, using the builtin HTTP engine in Passenger Standalone may yield some performance benefits because it skips a layer of processing.
+
+Passenger normally works by integrating into Nginx or Apache. As described in the [Design & Architecture](Design%20and%20architecture.html) document, requests are first handled by Nginx or Apache, and then forwarded to the Passenger core process (the HelperAgent) and the application process. This architecture provides various benefits, such as security benefits (Nginx and Apache's HTTP connection handling routines are thoroughly battle-tested and secure) and feature benefits (e.g. Gzip compression, superb static file handling).
+
+This is even true if you use the Standalone mode. Although it acts standalone, it is implemented under the hood by running Passenger in a builtin Nginx engine.
+
+However, the fact that all requests go through Nginx or Apache means that there is a slight overhead, which can be avoided. This overhead is small (much smaller than typical application and network overhead), and using Nginx or Apache is very useful, but in certain special situations it may be beneficial to skip this layer.
+
+ * In **microbenchmarks**, the overhead of Nginx and Apache are very noticeable. Removing Nginx and Apache from the setup, and benchmarking against the Passenger HelperAgent directly, will yield much better results.
+ * In some **multi-server setups**, Nginx and Apache may be redundant. Recall that in typical multi-server setups there is a load balancer which forwards requests to one of the many web servers. Each web server in this setup runs Passenger. But the load balancer is sometimes already responsible for many of the tasks that Nginx and Apache perform, e.g. the secure handling of HTTP connections, buffering, slow client protection or even static file serving. In these cases, removing Nginx and Apache from the web servers and load balancing to the Passenger HelperAgent directly may have a minor improvement on performance.
+
+Nginx and Apache can be removed by using Passenger's builtin HTTP engine. By using this engine, Passenger will listen directly on a socket for HTTP requests, without using Nginx or Apache.
+
+This builtin HTTP engine can be accessed by starting Passenger Standalone using the `--engine=builtin` parameter, like this:
+
+    passenger start --engine=builtin
+
+It should be noted that the builtin HTTP engine has fewer features than the Nginx engine, by design. For example the builtin HTTP engine does not support serving static files, nor does it support gzip compression. Thus, we recommend using the Nginx engine in most situations, unless you have special needs such as documented above.
+
 ## Benchmarking recommendations
 
 ### Tooling recommendations
