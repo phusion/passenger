@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -57,6 +57,35 @@ module PhusionPassenger
             abort "Could not start the Nginx engine:\n#{e}"
           end
         end
+
+        def wait_until_engine_has_exited
+          # Since the engine is not our child process (it daemonizes)
+          # we cannot use Process.waitpid to wait for it. A busy-sleep-loop with
+          # Process.kill(0, pid) isn't very efficient. Instead we do this:
+          #
+          # Connect to the engine's server and wait until it disconnects the socket
+          # because of timeout. Keep doing this until we can no longer connect.
+          while true
+            if @options[:socket_file]
+              socket = UNIXSocket.new(@options[:socket_file])
+            else
+              socket = TCPSocket.new(@options[:address], @options[:port])
+            end
+            begin
+              begin
+                socket.read
+              rescue SystemCallError, IOError, SocketError
+              end
+            ensure
+              begin
+                socket.close
+              rescue SystemCallError, IOError, SocketError
+              end
+            end
+          end
+        rescue Errno::ECONNREFUSED, Errno::ECONNRESET
+        end
+
 
         def build_daemon_controller_options
           if @options[:socket_file]

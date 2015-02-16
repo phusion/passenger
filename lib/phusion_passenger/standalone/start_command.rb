@@ -684,28 +684,6 @@ module PhusionPassenger
         return !@options[:daemonize] && @options[:log_file] != "/dev/null"
       end
 
-      def wait_until_engine_has_exited
-        # Since the engine is not our child process (it daemonizes)
-        # we cannot use Process.waitpid to wait for it. A busy-sleep-loop with
-        # Process.kill(0, pid) isn't very efficient. Instead we do this:
-        #
-        # Connect to the engine's server and wait until it disconnects the socket
-        # because of timeout. Keep doing this until we can no longer connect.
-        while true
-          if @options[:socket_file]
-            socket = UNIXSocket.new(@options[:socket_file])
-          else
-            socket = TCPSocket.new(@options[:address], @options[:port])
-          end
-          begin
-            socket.read rescue nil
-          ensure
-            socket.close rescue nil
-          end
-        end
-      rescue Errno::ECONNREFUSED, Errno::ECONNRESET
-      end
-
       def should_wait_until_engine_has_exited?
         return !@options[:daemonize] || @app_finder.multi_mode?
       end
