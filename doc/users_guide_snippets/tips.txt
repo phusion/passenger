@@ -488,7 +488,7 @@ Because hooks are inherently tied to the implementation of Phusion Passenger, th
 `after_watchdog_initialization`::
 	Like `before_watchdog_initialization`, but called after initialization of all Phusion Passenger agent processes. Errors in the hook script cause Phusion Passenger to abort.
 `before_watchdog_shutdown`::	
-	Called after an exit signal has been noticed (e.g. ), before the Watchdog starts terminating agents 
+	Called after an exit signal has been noticed (e.g. webserver exit), before the Watchdog starts terminating agents 
 `after_watchdog_shutdown`::
 	Called after the Watchdog is done and about to exit
 `attached_process`::
