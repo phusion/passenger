@@ -1280,7 +1280,7 @@ watchdogMain(int argc, char *argv[]) {
 			P_DEBUG("Web server did not exit gracefully, forcing shutdown of all agents...");
 		}
 		UPDATE_TRACE_POINT();
-		runHookScriptAndThrowOnError("after_watchdog_shutdown");
+		runHookScriptAndThrowOnError("before_watchdog_shutdown");
 		UPDATE_TRACE_POINT();
 		AgentWatcher::stopWatching(watchers);
 		if (shouldExitGracefully) {

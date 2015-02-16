@@ -487,6 +487,10 @@ Because hooks are inherently tied to the implementation of Phusion Passenger, th
 	Called at the very beginning of Phusion Passenger's life cycle, during the start of the Watchdog process. The first hook is called before initialization is performed (before the HelperAgent is started). Errors in the hook script cause Phusion Passenger to abort.
 `after_watchdog_initialization`::
 	Like `before_watchdog_initialization`, but called after initialization of all Phusion Passenger agent processes. Errors in the hook script cause Phusion Passenger to abort.
+`before_watchdog_shutdown`::	
+	Called after an exit signal has been noticed (e.g. ), before the Watchdog starts terminating agents 
+`after_watchdog_shutdown`::
+	Called after the Watchdog is done and about to exit
 `attached_process`::
 	Called when Phusion Passenger has successfully spawned an application processes and added it to the process pool. Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
 `detached_process`::
