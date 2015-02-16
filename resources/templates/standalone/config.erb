@@ -94,7 +94,7 @@ http {
         application/rss+xml application/vnd.ms-fontobject application/x-font-ttf \
         application/xml font/opentype image/svg+xml text/xml;
 
-    <% if @apps.size > 1 %>
+    <% if @app_finder.multi_mode? %>
         # Default server entry for mass deployment mode.
         server {
             <% if @options[:ssl] %>

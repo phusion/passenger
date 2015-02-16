@@ -725,9 +725,9 @@ module PhusionPassenger
           @can_remove_working_dir = false
         end
       end
-    end
 
-    #################
+      #################
+    end
 
   end # module Standalone
 end # module PhusionPassenger
