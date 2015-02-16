@@ -829,10 +829,6 @@ maybeDaemonize() {
 		pid = fork();
 		if (pid == 0) {
 			setsid();
-			if (chdir("/") == -1) {
-				e = errno;
-				throw SystemException("Cannot change working directory to /", e);
-			}
 			redirectStdinToNull();
 		} else if (pid == -1) {
 			e = errno;
