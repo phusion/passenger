@@ -71,6 +71,10 @@ def passthrough(input, output)
   end
 end
 
+def debug(message)
+  #puts message
+end
+
 input = STDIN
 output = STDERR
 output.sync = true
@@ -93,9 +97,12 @@ addr2lines = {}
 begin
   while !input.eof?
     line = input.readline.strip
+    debug " ---> Parse #{line.inspect}"
+
     # Example lines:
     # ./test() [0x400b64]
     # /lib/libc.so.6(__libc_start_main+0xfd) [0x7fcc0ad00c8d]
+    # PassengerAgent server[0x4d2697]
     if line =~ /(.*)\[(.*?)\]$/
       # Split line into:
       # subject: /lib/libc.so.6(__libc_start_main+0xfd)
@@ -103,18 +110,30 @@ begin
       subject = $1
       address = $2
       subject.strip!
-      subject =~ /(.*?)(\((.*?)\))?$/
-      # Split subject into:
-      # file: /lib/libc.so.6
-      # context: __libc_start_main+0xfd
-      file = $1
-      context = $3
-      file.strip!
-      context = nil if context && context.empty?
+
+      if subject =~ /(.*?)(\((.*?)\))?$/
+        # Split subject into:
+        # file: /lib/libc.so.6
+        # context: __libc_start_main+0xfd
+        file = $1
+        context = $3
+        file.strip!
+        context = nil if context && context.empty?
+      else
+        file = subject
+        context = nil
+      end
+
+      debug "      file = #{file.inspect}"
+      debug "      context = #{context.inspect}"
+      debug "      address = #{address.inspect}"
 
       if file =~ /\A\// && File.exist?(file)
         filename = file
-      elsif file == argv0 || file == exe_filename || file == exe_basename
+      elsif file == argv0 ||
+            file == exe_filename ||
+            file == exe_basename ||
+            file.sub(/ .*/, '') == exe_basename
         filename = exe_filename
       else
         filename = nil
