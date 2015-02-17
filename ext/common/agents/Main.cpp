@@ -47,7 +47,7 @@ static void
 usage(int argc, char *argv[]) {
 	printf("Usage: " AGENT_EXE " <SUBCOMMAND> [options...]\n");
 	printf(PROGRAM_NAME " version " PASSENGER_VERSION ".\n");
-	printf("Type '%s help <SUBCOMMAND>' for help on a specific subcommand.\n",
+	printf("Type '%s <SUBCOMMAND> --help' for help on a specific subcommand.\n",
 		argv[0]);
 	printf("\n");
 	printf("Daemon subcommands:\n");
