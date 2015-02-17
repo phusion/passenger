@@ -1,5 +1,6 @@
+# encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -159,7 +160,7 @@ module PhusionPassenger
     # If `:sudo => true` is given, then the gem command is prefixed by a
     # sudo command if filesystem permissions require this.
     def self.gem_command(options = {})
-      command = locate_ruby_tool('gem')
+      command = ruby_tool_command('gem')
       if options[:sudo] && gem_install_requires_sudo?
         command = "#{ruby_sudo_command} #{command}"
       end
@@ -183,7 +184,7 @@ module PhusionPassenger
     # doesn't exist.
     #
     # The return value may not be the actual correct invocation
-    # for Rake. Use rake_command for that.
+    # for Rake. Use `rake_command` for that.
     def self.rake
       return locate_ruby_tool('rake')
     end
@@ -193,18 +194,7 @@ module PhusionPassenger
     # that belongs to the current Ruby interpreter. Returns nil if Rake is
     # not found.
     def self.rake_command
-      filename = rake
-      # If the Rake executable is a Ruby program then we need to run
-      # it in the correct Ruby interpreter just in case Rake doesn't
-      # have the correct shebang line; we don't want a totally different
-      # Ruby than the current one to be invoked.
-      if filename && is_ruby_program?(filename)
-        return "#{ruby_command} #{filename}"
-      else
-        # If it's not a Ruby program then it's probably a wrapper
-        # script as is the case with e.g. RVM (~/.rvm/wrappers).
-        return filename
-      end
+      ruby_tool_command('rake')
     end
     memoize :rake_command
 
@@ -378,12 +368,17 @@ module PhusionPassenger
       end
     end
 
-    # Locates a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
+    # Locates a Ruby tool, e.g. 'gem', 'rake', 'bundle', etc. Instead of
     # naively looking in $PATH, this function uses a variety of search heuristics
-    # to find the command that's really associated with the current Ruby interpreter.
-    # It should never locate a command that's actually associated with a different
+    # to find the tool that's really associated with the current Ruby interpreter.
+    # It should never locate a tool that's actually associated with a different
     # Ruby interpreter.
     # Returns nil when nothing's found.
+    #
+    # This method only returns the path to the tool script. Running this script
+    # directly does not necessarily mean that it's run under the correct Ruby
+    # interpreter. You may have to prepend it with the Ruby command. Use
+    # `ruby_tool_command` if you want to get a command that you can execute.
     def self.locate_ruby_tool(name)
       result = locate_ruby_tool_by_basename(name)
       if !result
@@ -400,6 +395,31 @@ module PhusionPassenger
         end
       end
       return result
+    end
+
+    # Locates a Ruby tool command, e.g. 'gem', 'rake', 'bundle', etc. Instead of
+    # naively looking in $PATH, this function uses a variety of search heuristics
+    # to find the command that's really associated with the current Ruby interpreter.
+    # It should never locate a command that's actually associated with a different
+    # Ruby interpreter.
+    # Returns nil when nothing's found.
+    #
+    # Unlike `locate_ruby_tool`, which only returns the path to the tool script,
+    # this method returns a full command that you can execute. The returned command
+    # guarantees that the tool is run under the correct Ruby interpreter.
+    def self.ruby_tool_command(name)
+      path = locate_ruby_tool(name)
+      if path
+        if is_ruby_program?(path)
+          "#{ruby_command} #{path}"
+        else
+          # The found tool is a wrapper script, e.g. in RVM's ~/.rvm/wrappers.
+          # In this case, don't include the Ruby command in the result.
+          path
+        end
+      else
+        nil
+      end
     end
 
   private
