@@ -214,9 +214,9 @@ public:
 		unsigned int restartsInitiated);
 	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options,
 		unsigned int restartsInitiated);
-	void finalizeRestart(GroupPtr self, Options options, RestartMethod method,
-		SpawnerFactoryPtr spawnerFactory, unsigned int restartsInitiated,
-		vector<Callback> postLockActions);
+	void finalizeRestart(GroupPtr self, Options oldOptions, Options newOptions,
+		RestartMethod method, SpawnerFactoryPtr spawnerFactory,
+		unsigned int restartsInitiated, vector<Callback> postLockActions);
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
 	void wakeUpGarbageCollector();
@@ -322,14 +322,18 @@ public:
 	#endif
 
 	/**
-	 * Sets options for this Group. Called at creation time and at restart time.
+	 * Persists options into this Group. Called at creation time and at restart time.
+	 * Values will be persisted into `destination`. Or if it's NULL, into `this->options`.
 	 */
-	void resetOptions(const Options &newOptions) {
-		options = newOptions;
-		options.persist(newOptions);
-		options.clearPerRequestFields();
-		options.groupSecret = secret;
-		options.groupUuid   = uuid;
+	void resetOptions(const Options &newOptions, Options *destination = NULL) {
+		if (destination == NULL) {
+			destination = &this->options;
+		}
+		*destination = newOptions;
+		destination->persist(newOptions);
+		destination->clearPerRequestFields();
+		destination->groupSecret = secret;
+		destination->groupUuid   = uuid;
 	}
 
 	/**

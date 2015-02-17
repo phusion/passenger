@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -504,13 +504,14 @@ SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
 }
 
 
-Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const ComponentInfo &info)
+Group::Group(const SuperGroupPtr &_superGroup, const Options &_options, const ComponentInfo &info)
 	: superGroup(_superGroup),
 	  name(_superGroup->name + "#" + info.name),
 	  secret(generateSecret(_superGroup)),
 	  uuid(generateUuid(_superGroup)),
 	  componentInfo(info)
 {
+	resetOptions(_options);
 	enabledCount   = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
@@ -530,7 +531,6 @@ Group::Group(const SuperGroupPtr &_superGroup, const Options &options, const Com
 		restartFile = options.appRoot + "/" + options.restartDir + "/restart.txt";
 		alwaysRestartFile = options.appRoot + "/" + options.restartDir + "/always_restart.txt";
 	}
-	resetOptions(options);
 
 	detachedProcessesCheckerActive = false;
 }
@@ -1119,6 +1119,7 @@ Group::restart(const Options &options, RestartMethod method) {
 	detachAll(actions);
 	getPool()->interruptableThreads.create_thread(
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
+			this->options.copyAndPersist().clearPerRequestFields(),
 			options.copyAndPersist().clearPerRequestFields(),
 			method, getPool()->spawnerFactory, restartsInitiated, actions),
 		"Group restarter: " + name,
@@ -1128,8 +1129,11 @@ Group::restart(const Options &options, RestartMethod method) {
 
 // The 'self' parameter is for keeping the current Group object alive while this thread is running.
 void
-Group::finalizeRestart(GroupPtr self, Options options, RestartMethod method,
-	SpawnerFactoryPtr spawnerFactory, unsigned int restartsInitiated,
+Group::finalizeRestart(GroupPtr self,
+	Options oldOptions,
+	Options newOptions, RestartMethod method,
+	SpawnerFactoryPtr spawnerFactory,
+	unsigned int restartsInitiated,
 	vector<Callback> postLockActions)
 {
 	TRACE_POINT();
@@ -1141,7 +1145,9 @@ Group::finalizeRestart(GroupPtr self, Options options, RestartMethod method,
 	this_thread::disable_syscall_interruption dsi;
 
 	// Create a new spawner.
-	SpawnerPtr newSpawner = spawnerFactory->create(options);
+	Options spawnerOptions = oldOptions;
+	resetOptions(newOptions, &spawnerOptions);
+	SpawnerPtr newSpawner = spawnerFactory->create(spawnerOptions);
 	SpawnerPtr oldSpawner;
 
 	UPDATE_TRACE_POINT();
@@ -1177,7 +1183,7 @@ Group::finalizeRestart(GroupPtr self, Options options, RestartMethod method,
 	UPDATE_TRACE_POINT();
 
 	// Atomically swap the new spawner with the old one.
-	resetOptions(options);
+	resetOptions(newOptions);
 	oldSpawner = spawner;
 	spawner    = newSpawner;
 
