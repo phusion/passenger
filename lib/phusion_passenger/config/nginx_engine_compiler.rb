@@ -29,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'abstract_installer'
 PhusionPassenger.require_passenger_lib 'common_library'
 PhusionPassenger.require_passenger_lib 'config/installation_utils'
 PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/progress_bar'
@@ -220,6 +221,12 @@ module PhusionPassenger
         e_working_dir = Shellwords.escape(@working_dir)
         e_tarball = Shellwords.escape(tarball)
         system("cd #{e_working_dir} && tar xzf #{e_tarball}")
+      end
+
+      def show_possible_solutions_for_download_and_extraction_problems
+        new_screen
+        render_template "nginx_engine_compiler/possible_solutions_for_download_and_extraction_problems"
+        puts
       end
 
       def determine_support_libraries
