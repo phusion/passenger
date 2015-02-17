@@ -390,7 +390,7 @@ private:
 				"gupid: " + details.gupid + "\n"
 				"UNIX_PATH_MAX: " + toString(UNIX_PATH_MAX) + "\n";
 			if (!details.options->groupSecret.empty()) {
-				"connect_password: " + details.options->groupSecret + "\n";
+				data.append("connect_password: " + details.options->groupSecret + "\n");
 			}
 			if (!config->instanceDir.empty()) {
 				data.append("socket_dir: " + config->instanceDir + "/apps.s\n");
