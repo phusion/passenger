@@ -334,7 +334,10 @@ createNewPoolOptions(Client *client, Request *req, const HashedStaticString &app
 	if (appType == NULL || appType->size == 0) {
 		AppTypeDetector detector;
 		PassengerAppType type = detector.checkAppRoot(options.appRoot);
-		// TODO: check for errors
+		if (type == PAT_NONE || type == PAT_ERROR) {
+			disconnectWithError(&client, "client did not send a recognized !~PASSENGER_APP_TYPE header");
+			return;
+		}
 		options.appType = getAppTypeName(type);
 	} else {
 		fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");

@@ -400,7 +400,7 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
 
     state->app_type.data = (u_char *) pp_get_app_type_name(context->app_type);
     /* Include null terminator */
-    state->app_type.len  = strlen((const char *) state->app_type.data) + 1;
+    state->app_type.len  = strlen((const char *) state->app_type.data);
 
     /*
      * Nginx unescapes URI's before passing them to Phusion Passenger,
@@ -675,6 +675,14 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         }
         PUSH_STATIC_STR("\r\n");
     }
+
+    PUSH_STATIC_STR("!~PASSENGER_APP_TYPE: ");
+    if (b != NULL) {
+        b->last = ngx_copy(b->last, state->app_type.data,
+            state->app_type.len);
+    }
+    total_size += state->app_type.len;
+    PUSH_STATIC_STR("\r\n");
 
     if (slcf->union_station_filters != NGX_CONF_UNSET_PTR
      && slcf->union_station_filters->nelts > 0)
