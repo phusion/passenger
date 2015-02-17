@@ -1,0 +1,27 @@
+<red><b>Unable to download or extract Nginx source tarball</b></red>
+
+Possible reasons:
+
+ <b>* Your Internet connection is unstable.</b>
+   If this is the case, try re-running this installer with higher connection
+   timeouts:
+
+     passenger-config compile-nginx-engine --connect-timeout 60 --idle-timeout 60
+
+ <b>* You are not connected to the Internet.</b>
+   If this is the case, then please connect to the Internet and try again.
+
+ <b>* The URL that this installer tried to download from no longer exists.</b>
+   Please file a bug report if this is the case:
+   https://github.com/phusion/passenger/issues
+
+ <b>* The download was corrupted.</b>
+   Please try to re-run this installer:
+
+     passenger-config compile-nginx-engine
+
+ <b>* Phusion Passenger Standalone is not able to write to /tmp.</b>
+   Please fix the permissions for this directory, or run this installer with
+   root privileges:
+
+     <%= PlatformInfo.ruby_sudo_command %> passenger-config compile-nginx-engine
