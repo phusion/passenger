@@ -150,7 +150,7 @@ def show_status(instance, options)
     end
 
   when 'xml'
-    request = Net::HTTP::Get.new("/pool.xml")
+    request = Net::HTTP::Get.new("/pool.xml?secrets=#{options[:verbose]}")
     request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
     response = instance.http_request("agents.s/server_admin", request)
     if response.code.to_i / 100 == 2
