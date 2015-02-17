@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -221,6 +221,7 @@ public:
 	void callAbortLongRunningConnectionsCallback(const ProcessPtr &process);
 	psg_pool_t *getPallocPool() const;
 	const ResourceLocator &getResourceLocator() const;
+	bool prepareHookScriptOptions(HookScriptOptions &hsOptions, const char *name);
 	void runAttachHooks(const ProcessPtr process) const;
 	void runDetachHooks(const ProcessPtr process) const;
 	void setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &options) const;
@@ -446,6 +447,13 @@ public:
 			P_WARN("Request queue is full. Returning an error");
 			postLockActions.push_back(boost::bind(GetCallback::call,
 				callback, SessionPtr(), boost::make_shared<RequestQueueFullException>()));
+
+			HookScriptOptions hsOptions;
+			if (prepareHookScriptOptions(hsOptions, "queue_full_error")) {
+				// TODO <Feb 17, 2015] DK> should probably rate limit this, since we are already at heavy load
+				postLockActions.push_back(boost::bind(runHookScripts, hsOptions));
+			}
+
 			return false;
 		}
 	}

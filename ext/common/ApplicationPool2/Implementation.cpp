@@ -1470,6 +1470,25 @@ Group::getResourceLocator() const {
 	return *getPool()->getSpawnerConfig()->resourceLocator;
 }
 
+/* Given a hook name like "queue_full_error", we return HookScriptOptions filled in with this name and a spec
+ * (user settings that can be queried from agentsOptions using the external hook name that is prefixed with "hook_")
+
+ * @return false if the user parameters (agentsOptions) are not available (e.g. during ApplicationPool2_PoolTest)
+ */
+bool
+Group::prepareHookScriptOptions(HookScriptOptions &hsOptions, const char *name) {
+	SpawnerConfigPtr config = getPool()->getSpawnerConfig();
+	if (config->agentsOptions == NULL) {
+		return false;
+	}
+
+	hsOptions.name = name;
+	string hookName = string("hook_") + name;
+	hsOptions.spec = config->agentsOptions->get(hookName, false);
+
+	return true;
+}
+
 // 'process' is not a reference so that bind(runAttachHooks, ...) causes the shared
 // pointer reference to increment.
 void

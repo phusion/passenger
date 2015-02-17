@@ -512,6 +512,11 @@ Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Erro
 - The application taking too long to start, and hitting Phusion Passenger's timeout.
 
 +
+`queue_full_error` (since 5.0.0 RC 1)::
+	The server rejects new requests (default: HTTP 503) while the request queue is full (https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html#passenger_max_request_queue_size). 
+	This hook gets called for each rejection.
+	
++
 Extra environment variables:
 +
 - `PASSENGER_APP_ROOT`: the path to the application that failed to spawn.
