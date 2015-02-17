@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2013 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -336,6 +336,9 @@ private:
 				"ruby_libdir: " + config->resourceLocator.getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"generation_dir: " + generation->getPath() + "\n";
+			if (!details.options->groupSecret.empty()) {
+				data.append("connect_password: " + details.options->groupSecret + "\n");
+			}
 
 			vector<string> args;
 			vector<string>::const_iterator it, end;
