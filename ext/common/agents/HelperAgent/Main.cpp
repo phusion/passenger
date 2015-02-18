@@ -1027,7 +1027,7 @@ sanityCheckOptions() {
 	if (!options.getBool("multi_app") && options.has("app_type")) {
 		PassengerAppType appType = getAppType(options.get("app_type"));
 		if (appType == PAT_NONE || appType == PAT_ERROR) {
-			fprintf(stderr, "ERROR: '%s' is not a valid applicaion type. Supported app types are:",
+			fprintf(stderr, "ERROR: '%s' is not a valid application type. Supported app types are:",
 				options.get("app_type").c_str());
 			const AppTypeDefinition *definition = &appTypeDefinitions[0];
 			while (definition->type != PAT_NONE) {
