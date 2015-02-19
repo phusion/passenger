@@ -7,6 +7,7 @@ Release 5.0.0 release candidate 1
  * Fixed an infinite loop if the ApplicationPool garbage collector fails due to an exception. Closes GH-1360.
  * Fixed Passenger Standalone exiting prematurely when the HelperAgent crashes. Exiting prematurely is not supposed to happen because the watchdog will restart the HelperAgent. Closes GH-1339.
  * Fixed a crash that occurs when using a non-standard startup file value. Closes GH-1378.
+ * [Ruby] Fixed handling of "transfer-encoding chunked" response bodies. Zero-sized chunks weren't being handled correctly, and chunked response where the response body is a String or Array also weren't being handled correctly.
  * When a Ruby process crashes due to an uncaught exception, this fact is now properly logged.
  * Specifying 0 for the `max_pool_size` config option no longer results in a crash. Closes GH-1334.
  * The timeouts when downloading Passenger Standalone binaries and source files are now customizable. Closes GH-1295.
