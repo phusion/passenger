@@ -1472,7 +1472,7 @@ Group::getResourceLocator() const {
 
 /* Given a hook name like "queue_full_error", we return HookScriptOptions filled in with this name and a spec
  * (user settings that can be queried from agentsOptions using the external hook name that is prefixed with "hook_")
-
+ *
  * @return false if the user parameters (agentsOptions) are not available (e.g. during ApplicationPool2_PoolTest)
  */
 bool

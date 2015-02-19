@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -396,13 +396,22 @@ public:
  * the getWaitlist queue was full.
  */
 class RequestQueueFullException: public GetAbortedException {
+private:
+	string msg;
+
 public:
-	RequestQueueFullException()
+	RequestQueueFullException(unsigned int maxQueueSize)
 		: GetAbortedException(oxt::tracable_exception::no_backtrace())
-		{ }
+		{
+			stringstream str;
+			str << "Request queue full (configured max. size: " << maxQueueSize << ")";
+			msg = str.str();
+		}
+
+	virtual ~RequestQueueFullException() throw() {}
 
 	virtual const char *what() const throw() {
-		return "Request queue is full";
+		return msg.c_str();
 	}
 };
 

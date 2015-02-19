@@ -444,9 +444,8 @@ public:
 				callback));
 			return true;
 		} else {
-			P_WARN("Request queue is full. Returning an error");
 			postLockActions.push_back(boost::bind(GetCallback::call,
-				callback, SessionPtr(), boost::make_shared<RequestQueueFullException>()));
+				callback, SessionPtr(), boost::make_shared<RequestQueueFullException>(newOptions.maxRequestQueueSize)));
 
 			HookScriptOptions hsOptions;
 			if (prepareHookScriptOptions(hsOptions, "queue_full_error")) {

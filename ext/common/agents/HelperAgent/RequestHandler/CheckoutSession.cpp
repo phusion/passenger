@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -208,7 +208,7 @@ reportSessionCheckoutError(Client *client, Request *req, const ExceptionPtr &e) 
 		boost::shared_ptr<RequestQueueFullException> e2 =
 			dynamic_pointer_cast<RequestQueueFullException>(e);
 		if (e2 != NULL) {
-			writeRequestQueueFullExceptionErrorResponse(client, req);
+			writeRequestQueueFullExceptionErrorResponse(client, req, e2);
 			return;
 		}
 	}
@@ -223,7 +223,7 @@ reportSessionCheckoutError(Client *client, Request *req, const ExceptionPtr &e) 
 }
 
 void
-writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req) {
+writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req, const boost::shared_ptr<RequestQueueFullException> &e) {
 	TRACE_POINT();
 	const LString *value = req->secureHeaders.lookup("!~PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE");
 	int requestQueueOverflowStatusCode = 503;
@@ -232,6 +232,9 @@ writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req) {
 		requestQueueOverflowStatusCode = stringToInt(
 			StaticString(value->start->data, value->size));
 	}
+
+	SKC_WARN(client, "Returning HTTP " << requestQueueOverflowStatusCode << " due to: " << e->what());
+
 	endRequestWithSimpleResponse(&client, &req,
 		"<h1>This website is under heavy load</h1>"
 		"<p>We're sorry, too many people are accessing this website at the same "
