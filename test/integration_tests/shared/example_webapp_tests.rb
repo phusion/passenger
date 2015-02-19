@@ -129,7 +129,9 @@ shared_examples_for "an example web app" do
   end
 
   it "supports responses with the 'chunked' transfer encoding" do
-    get('/chunked').should ==
+    response = get_response('/chunked')
+    response["Transfer-Encoding"].should == "chunked"
+    response.body.should ==
       "chunk1\n" +
       "chunk2\n" +
       "chunk3\n"

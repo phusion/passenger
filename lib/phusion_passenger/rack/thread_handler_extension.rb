@@ -122,14 +122,13 @@ module PhusionPassenger
           connection.flush
           hijacked_socket = env[RACK_HIJACK].call
           hijack_callback.call(hijacked_socket)
-          return true
+          true
         elsif body.is_a?(Array)
           # The body may be an ActionController::StringCoercion::UglyBody
           # object instead of a real Array, even when #is_a? claims so.
           # Call #to_a just to be sure.
           body = body.to_a
           output_body = should_output_body?(status, env)
-          headers.delete(TRANSFER_ENCODING_HEADER)
           headers_output = generate_headers_array(status, headers)
           perform_keep_alive(env, headers_output)
           if output_body && should_add_message_length_header?(status, headers)
@@ -145,10 +144,9 @@ module PhusionPassenger
           else
             connection.writev(headers_output)
           end
-          return false
+          false
         elsif body.is_a?(String)
           output_body = should_output_body?(status, env)
-          headers.delete(TRANSFER_ENCODING_HEADER)
           headers_output = generate_headers_array(status, headers)
           perform_keep_alive(env, headers_output)
           if output_body && should_add_message_length_header?(status, headers)
@@ -161,14 +159,12 @@ module PhusionPassenger
             headers_output << body
           end
           connection.writev(headers_output)
-          return false
+          false
         else
           output_body = should_output_body?(status, env)
           headers_output = generate_headers_array(status, headers)
           perform_keep_alive(env, headers_output)
-          chunk = output_body &&
-            (should_add_message_length_header?(status, headers) ||
-              headers.has_key?(TRANSFER_ENCODING_HEADER))
+          chunk = output_body && should_add_message_length_header?(status, headers)
           if chunk
             headers_output << TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF2
           else
