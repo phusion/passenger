@@ -60,8 +60,8 @@ module PhusionPassenger
     end
 
     # To be called whenever the (pre)loader is about to abort with an error.
-    def about_to_abort(exception = nil)
-      dump_all_information
+    def about_to_abort(options, exception = nil)
+      dump_all_information(options)
       # https://code.google.com/p/phusion-passenger/issues/detail?id=1039
       puts
     end
@@ -90,10 +90,10 @@ module PhusionPassenger
       return options
     end
 
-    def dump_all_information
+    def dump_all_information(options)
       dump_ruby_environment
       dump_envvars
-      dump_system_metrics
+      dump_system_metrics(options)
     end
 
     def dump_ruby_environment
@@ -161,17 +161,24 @@ module PhusionPassenger
       # Don't care.
     end
 
-    def dump_system_metrics
+    def dump_system_metrics(options)
       if dir = ENV['PASSENGER_DEBUG_DIR']
         # When invoked through Passenger Standalone, we want passenger-config
         # to use the HelperAgent in the Passsenger Standalone buildout directory,
         # because the one in the source root may not exist.
+        passenger_config = "#{PhusionPassenger.bin_dir}/passenger-config"
+        if is_ruby_program?(passenger_config)
+          ruby = options["ruby"]
+        else
+          ruby = nil
+        end
         command = [
           "env",
           "PASSENGER_LOCATION_CONFIGURATION_FILE=#{PhusionPassenger.install_spec}",
-          "#{PhusionPassenger.bin_dir}/passenger-config",
+          ruby,
+          passenger_config,
           "system-metrics"
-        ]
+        ].compact
         contents = `#{Shellwords.join(command)}`
         if $? && $?.exitstatus == 0
           File.open("#{dir}/system_metrics", "wb") do |f|
@@ -181,6 +188,14 @@ module PhusionPassenger
       end
     rescue SystemCallError
       # Don't care.
+    end
+
+    def is_ruby_program?(path)
+      File.open(path, "rb") do |f|
+        f.readline =~ /ruby/
+      end
+    rescue EOFError
+      false
     end
 
     # Prepare an application process using rules for the given spawn options.

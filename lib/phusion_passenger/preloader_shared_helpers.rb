@@ -124,7 +124,7 @@ module PhusionPassenger
 
       # Update the dump information just before telling the preloader that we're
       # ready because the HelperAgent will read and memorize this information.
-      LoaderSharedHelpers.dump_all_information
+      LoaderSharedHelpers.dump_all_information(options)
 
       puts "!> Ready"
       puts "!> socket: unix:#{socket_filename}"
