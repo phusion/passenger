@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -127,6 +127,14 @@ void splitIncludeSep(const StaticString & restrict_ref str,
 void splitIncludeSep(const StaticString & restrict_ref str,
 	char sep,
 	vector<StaticString> & restrict_ref output);
+
+/**
+ * Each section in str ending with any of the tokens is truncated to a length of maxBetweenTokens.
+ * The result is streamed to sstream, including tokens.
+ *
+ * Example: ("hello/world\\path/Splitter.cpp", "\\/", 3, sstream) results in sstream << "hel/wor\\pat/Splitter.cpp"
+ */
+void truncateBeforeTokens(const char* str, const char *tokens, int maxBetweenTokens, std::stringstream& sstream);
 
 /**
  * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.

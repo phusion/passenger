@@ -249,6 +249,9 @@ TEST_CXX_OBJECTS = {
   'test/cxx/UtilsTest.o' => %w(
     test/cxx/UtilsTest.cpp
     ext/common/Utils.h),
+  'test/cxx/Utils/StrIntUtilsTest.o' => %w(
+    test/cxx/Utils/StrIntUtilsTest.cpp
+    ext/common/Utils/StrIntUtils.cpp),
   'test/cxx/IOUtilsTest.o' => %w(
     test/cxx/IOUtilsTest.cpp
     ext/common/Utils/IOUtils.h),
