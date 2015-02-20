@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -41,6 +41,8 @@ volatile sig_atomic_t _logLevel = DEFAULT_LOG_LEVEL;
 AssertionFailureInfo lastAssertionFailure;
 static bool printAppOutputAsDebuggingMessages = false;
 static char *logFile = NULL;
+
+#define TRUNCATE_LOGPATHS_TO_MAXCHARS 3 // set to 0 to disable truncation
 
 void
 setLogLevel(int value) {
@@ -87,16 +89,6 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 	char datetime_buf[60];
 	struct timeval tv;
 
-	if (startsWith(file, "ext/")) {
-		file += sizeof("ext/") - 1;
-		if (startsWith(file, "common/")) {
-			file += sizeof("common/") - 1;
-			if (startsWith(file, "ApplicationPool2/")) {
-				file += sizeof("Application") - 1;
-			}
-		}
-	}
-
 	the_time = time(NULL);
 	localtime_r(&the_time, &the_tm);
 	strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm);
@@ -106,7 +98,22 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 			(unsigned long) (tv.tv_usec / 100) <<
 		" " << std::dec << getpid() << "/" <<
 			std::hex << pthread_self() << std::dec <<
-		" " << file << ":" << line <<
+		" ";
+
+	if (startsWith(file, "ext/")) { // special reduncancy filter because most code resides in these paths
+		file += sizeof("ext/") - 1;
+		if (startsWith(file, "common/")) {
+			file += sizeof("common/") - 1;
+		}
+	}
+
+	if (TRUNCATE_LOGPATHS_TO_MAXCHARS > 0) {
+		truncateBeforeTokens(file, "/\\", TRUNCATE_LOGPATHS_TO_MAXCHARS, sstream);
+	} else {
+		sstream << file;
+	}
+
+	sstream << ":" << line <<
 		" ]: ";
 }
 
