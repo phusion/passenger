@@ -112,7 +112,7 @@
 
 	#define NGINX_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"
 
-	#define PASSENGER_VERSION "5.0.0.rc1"
+	#define PASSENGER_VERSION "5.0.0.rc2"
 
 	#define POOL_HELPER_THREAD_STACK_SIZE 262144
 
