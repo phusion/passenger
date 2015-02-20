@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -108,6 +108,38 @@ splitIncludeSep(const StaticString &str, char sep, vector<string> &output) {
 void
 splitIncludeSep(const StaticString &str, char sep, vector<StaticString> &output) {
 	_splitIncludeSep(str, sep, output);
+}
+
+void
+truncateBeforeTokens(const char* str, const char *tokens, int maxBetweenTokens, std::stringstream& sstream) {
+	std::string source(str);
+
+	if (source.empty()) {
+		return;
+	}
+
+	string::size_type copyStart, findStart, pos;
+	copyStart = 0; // for copying including the last found token
+	findStart = 0;
+	while ((pos = source.find_first_of(tokens, findStart)) != string::npos) {
+		// Determine & limit how many chars between two tokens (or start and first token)
+		int copyLen = pos - findStart;
+		if (copyLen > maxBetweenTokens) {
+			copyLen = maxBetweenTokens;
+		}
+		// Include token from the previous find (first iteration has no previous)
+		if (findStart > 0) {
+			copyLen++;
+		}
+		sstream << source.substr(copyStart, copyLen);
+		copyStart = pos;
+		findStart = pos + 1;
+	}
+
+	// Copy anything remaining (e.g. when no tokens at all)
+	if (copyStart < source.size()) {
+		sstream << source.substr(copyStart);
+	}
 }
 
 string
