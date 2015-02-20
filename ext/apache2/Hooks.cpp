@@ -1221,6 +1221,7 @@ public:
 			.setBool("user_switching", serverConfig.userSwitching)
 			.set    ("default_user", serverConfig.defaultUser)
 			.set    ("default_group", serverConfig.defaultGroup)
+			.setInt ("lve_min_uid", serverConfig.lveMinUid)
 			.set    ("default_ruby", serverConfig.defaultRuby)
 			.setInt ("max_pool_size", serverConfig.maxPoolSize)
 			.setInt ("pool_idle_time", serverConfig.poolIdleTime)

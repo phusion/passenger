@@ -86,6 +86,7 @@
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Utils.h>
+#include <Utils/adhoc_lve.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/Timer.h>
@@ -321,9 +322,19 @@ protected:
 		gid_t gid;
 		int ngroups;
 		shared_array<gid_t> gidset;
+		uid_t lveMinUid;
+
+		struct passwd userInfoPlaceholder, *userInfo;
+		shared_array<char> userInfoStringBuf;
 
 		// Other information
 		string codeRevision;
+
+		SpawnPreparationInfo() : lveMinUid(DEFAULT_LVE_MIN_UID)
+		{
+			memset(&userInfoPlaceholder, 0, sizeof(userInfoPlaceholder));
+			userInfo = NULL;
+		}
 	};
 
 	/**
@@ -365,6 +376,32 @@ protected:
 		}
 	};
 
+	class LveEnter : private ::adhoc_lve::LveEnter {
+		typedef ::adhoc_lve::LveEnter Impl;
+	public:
+		LveEnter(uint32_t uid, uint32_t cfgMinUid)
+			: Impl(global_lveInit, uid, cfgMinUid, lveExitCallback)
+		{
+			if (global_lveInit.isLveReady() && isError())
+				P_ERROR("LVE enter error: " << errorString());
+			else if (isEntered())
+				P_DEBUG("LVE enter success [uid = " << uid << ", cfgMinUid = " << cfgMinUid << "]");
+		}
+
+		void exit() { Impl::exit(); }
+	private:
+		static void lveExitCallback(bool entered, const std::string& exit_error)
+		{
+			if (!entered)
+				return;
+
+			bool is_error = !exit_error.empty();
+			if (is_error)
+				P_ERROR("LVE exit [pid " << ::getpid() << "] error: " << exit_error);
+			else
+				P_DEBUG("LVE exit [pid " << ::getpid() << "] success");
+		}
+	};
 
 private:
 	/**
@@ -845,10 +882,15 @@ protected:
 
 	void prepareUserSwitching(SpawnPreparationInfo &info, const Options &options) const {
 		TRACE_POINT();
+
+		// redefine into alias
+		struct passwd &pwd = info.userInfoPlaceholder;
+		struct passwd* &userInfo = info.userInfo;
+
 		if (geteuid() != 0) {
-			struct passwd pwd, *userInfo;
+
 			long bufSize;
-			shared_array<char> strings;
+			shared_array<char> &strings = info.userInfoStringBuf;
 
 			// _SC_GETPW_R_SIZE_MAX is not a maximum:
 			// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
@@ -878,11 +920,10 @@ protected:
 		UPDATE_TRACE_POINT();
 		string defaultGroup;
 		string startupFile = absolutizePath(options.getStartupFile(), info.appRoot);
-		struct passwd pwd, *userInfo;
 		struct group  grp;
 		gid_t  groupId = (gid_t) -1;
 		long pwdBufSize, grpBufSize;
-		shared_array<char> pwdBuf, grpBuf;
+		shared_array<char> &pwdBuf = info.userInfoStringBuf, grpBuf;
 		int ret;
 
 		// _SC_GETPW_R_SIZE_MAX/_SC_GETGR_R_SIZE_MAX are not maximums:
@@ -1036,6 +1077,7 @@ protected:
 				info.gidset[i] = groups[i];
 			}
 		#endif
+		info.lveMinUid = options.lveMinUid;
 	}
 
 	void prepareSwitchingWorkingDirectory(SpawnPreparationInfo &info, const Options &options) const {
@@ -1163,8 +1205,32 @@ protected:
 		}
 	}
 
+	void enterLveJail(struct passwd * pw, uint32_t uid, uint32_t cfgMinUid) {
+		if (!pw || !global_lveInit.isLveAvailable())
+			return;
+
+		bool is_enter_jail_allowed = (cfgMinUid <= uid);
+		if (!is_enter_jail_allowed)
+			return;
+
+		std::string errmsg;
+		int result = global_lveInit.jail(pw, errmsg);
+
+		if (result < 0)
+		{
+			printf("!> Error\n");
+			printf("!> \n");
+			printf("enterLve() failed: %s\n", errmsg.c_str());
+			fflush(stdout);
+			_exit(1);
+		}
+	}
+
 	void switchUser(const SpawnPreparationInfo &info) {
 		if (info.switchUser) {
+
+			enterLveJail(info.userInfo, info.uid, info.lveMinUid);
+
 			bool setgroupsCalled = false;
 			#ifdef HAVE_GETGROUPLIST
 				if (info.ngroups <= NGROUPS_MAX) {

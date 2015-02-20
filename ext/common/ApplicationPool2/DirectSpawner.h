@@ -30,7 +30,6 @@
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
 
-
 namespace Passenger {
 namespace ApplicationPool2 {
 
@@ -165,6 +164,8 @@ public:
 		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 
+		LveEnter lveEnter(preparation.uid, options.lveMinUid);
+
 		pid = syscalls::fork();
 		if (pid == 0) {
 			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
@@ -199,6 +200,8 @@ public:
 			throw SystemException("Cannot fork a new process", e);
 
 		} else {
+			lveEnter.exit();
+
 			UPDATE_TRACE_POINT();
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			P_DEBUG("Process forked for appRoot=" << options.appRoot << ": PID " << pid);

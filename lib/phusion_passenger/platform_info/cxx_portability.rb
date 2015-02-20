@@ -204,9 +204,9 @@ module PhusionPassenger
       result = ''
       result << cxx_11_flag if cc_or_cxx == :cxx && cxx_11_flag
       if os_name =~ /solaris/
-        result << ' -lxnet -lsocket -lnsl -lpthread'
+        result << ' -lxnet -lsocket -lnsl -lpthread -ldl'
       else
-        result << ' -lpthread'
+        result << ' -lpthread -ldl'
       end
       result << ' -lrt' if has_rt_library?
       result << ' -lmath' if has_math_library?

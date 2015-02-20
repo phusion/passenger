@@ -122,6 +122,7 @@ private:
 	StaticString loggingAgentPassword;
 	StaticString defaultUser;
 	StaticString defaultGroup;
+	unsigned int lveMinUid;
 	StaticString defaultServerName;
 	StaticString defaultServerPort;
 	StaticString serverSoftware;
@@ -225,6 +226,7 @@ public:
 			agentsOptions->get("default_user", false));
 		defaultGroup = psg_pstrdup(stringPool,
 			agentsOptions->get("default_group", false));
+		lveMinUid = agentsOptions->getInt("lve_min_uid", false, DEFAULT_LVE_MIN_UID);
 		defaultServerName = psg_pstrdup(stringPool,
 			agentsOptions->get("default_server_name"));
 		defaultServerPort = psg_pstrdup(stringPool,

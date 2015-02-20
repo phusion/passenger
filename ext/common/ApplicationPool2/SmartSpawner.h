@@ -217,6 +217,8 @@ private:
 		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 
+		LveEnter lveEnter(preparation.uid, options.lveMinUid);
+
 		pid = syscalls::fork();
 		if (pid == 0) {
 			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
@@ -251,6 +253,8 @@ private:
 			throw SystemException("Cannot fork a new process", e);
 
 		} else {
+			lveEnter.exit();
+
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			P_DEBUG("Preloader process forked for appRoot=" << options.appRoot << ": PID " << pid);
 			adminSocket.first.close();

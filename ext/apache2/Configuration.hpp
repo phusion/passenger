@@ -199,6 +199,9 @@ struct ServerConfig {
 	/** See PoolOptions for more info. */
 	string defaultGroup;
 
+	/** User with id below this value will not enter neither LVE nor CageFS */
+	unsigned int lveMinUid;
+
 	string dataBufferDir;
 	string instanceRegistryDir;
 
@@ -225,6 +228,7 @@ struct ServerConfig {
 		responseBufferHighWatermark = DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK;
 		statThrottleRate   = DEFAULT_STAT_THROTTLE_RATE;
 		userSwitching      = true;
+		lveMinUid          = DEFAULT_LVE_MIN_UID;
 		defaultUser        = DEFAULT_WEB_APP_USER;
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
 		unionStationGatewayPort    = DEFAULT_UNION_STATION_GATEWAY_PORT;
