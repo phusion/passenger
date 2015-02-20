@@ -1,3 +1,9 @@
+Release 5.0.0 release candidate 2
+---------------------------------
+
+* Fixes an installation problem with the Ruby gem due to incorrect Makefile generation. Closes GH-1382.
+
+
 Release 5.0.0 release candidate 1
 ---------------------------------
 
