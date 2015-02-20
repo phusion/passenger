@@ -31,7 +31,7 @@ virtual unsigned int getClientName(const Client *client, char *buf, size_t size)
 	char *pos = buf;
 	const char *end = buf + size - 1;
 	pos += uintToString(threadNumber, pos, end - pos);
-	pos = appendData(pos, end, ".", 1);
+	pos = appendData(pos, end, "-", 1);
 	pos += uintToString(client->number, pos, end - pos);
 	*pos = '\0';
 	return pos - buf;
