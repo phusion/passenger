@@ -80,10 +80,9 @@ public:
 public:
 	friend class SuperGroup;
 	friend class Group;
+	friend struct tut::ApplicationPool2_PoolTest;
 
 	SpawnerFactoryPtr spawnerFactory;
-	SystemMetricsCollector systemMetricsCollector;
-	SystemMetrics systemMetrics;
 
 	mutable boost::mutex syncher;
 	unsigned int max;
@@ -161,7 +160,8 @@ public:
 	#include <ApplicationPool2/Pool/Inspection.h>
 	#include <ApplicationPool2/Pool/Debug.h>
 
-private:
+// Actually private, but marked public so that unit tests can access the fields.
+public:
 
 	/** Process all waiters on the getWaitlist. Call when capacity has become free.
 	 * This function assigns sessions to them by calling get() on the corresponding

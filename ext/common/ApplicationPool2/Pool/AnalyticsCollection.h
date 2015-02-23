@@ -34,6 +34,9 @@ struct UnionStationLogEntry {
 	string data;
 };
 
+SystemMetricsCollector systemMetricsCollector;
+SystemMetrics systemMetrics;
+
 
 static void collectAnalytics(PoolPtr self) {
 	TRACE_POINT();
