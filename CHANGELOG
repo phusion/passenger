@@ -1,3 +1,9 @@
+Release 5.0.1
+-------------
+
+ * The `passenger-config restart-app` command is now more user friendly. When run in a terminal, it will show an interactive menu, allowing you to select the app to restart. Closes GH-1387.
+
+
 Release 5.0.0 release candidate 2
 ---------------------------------
 

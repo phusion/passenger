@@ -50,8 +50,9 @@ module PhusionPassenger
         end
       end
 
-      def initialize(choices)
+      def initialize(choices, mode = :multiple_choice)
         @choices = choices.map { |choice| Choice.create(choice) }
+        @mode    = mode
         @pointer = 0
         @index   = index_choices
       end
@@ -71,6 +72,11 @@ module PhusionPassenger
               done = process_input
               clear_screen if !done
             end
+            if @mode == :single_choice
+              [@pointer, @choices[@pointer].name]
+            else
+              nil
+            end
           ensure
             restore_mode
             show_cursor
@@ -79,6 +85,7 @@ module PhusionPassenger
         else
           display_choices
           puts
+          nil
         end
       end
 
@@ -105,17 +112,19 @@ module PhusionPassenger
         case getchar(STDIN)
         when "\x1b"
           process_cursor_move
-          return false
+          false
         when " "
-          process_toggle
-          return false
+          if @mode == :multiple_choice
+            process_toggle
+          end
+          false
         when "!"
           process_disable_utf8
-          return false
+          false
         when "\r"
-          return true
+          true
         else
-          return false
+          false
         end
       end
 
@@ -146,15 +155,23 @@ module PhusionPassenger
           str << " #{pointer} #{checkbox}  #{choice.name}\r\n"
         end
         str.chomp!
-        return str
+        str
       end
 
       def render_pointer(index)
-        return @pointer == index ? maybe_utf8("‣", ">") : " "
+        @pointer == index ? maybe_utf8("‣", ">") : " "
       end
 
       def render_checkbox(checked)
-        return checked ? maybe_utf8("⬢", "(*)") : maybe_utf8("⬡", "( )")
+        if @mode == :multiple_choice
+          if checked
+            maybe_utf8("⬢", "(*)")
+          else
+            maybe_utf8("⬡", "( )")
+          end
+        else
+          nil
+        end
       end
 
       def display(str)

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2014 Phusion
+#  Copyright (c) 2013-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,6 +30,8 @@ PhusionPassenger.require_passenger_lib 'admin_tools/instance_registry'
 PhusionPassenger.require_passenger_lib 'config/command'
 PhusionPassenger.require_passenger_lib 'config/utils'
 PhusionPassenger.require_passenger_lib 'utils/json'
+PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
+PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 
 module PhusionPassenger
   module Config
@@ -104,7 +106,7 @@ module PhusionPassenger
         super
         case @argv.size
         when 0
-          if !@options[:app_group_name]
+          if !@options[:app_group_name] && !STDIN.tty?
             abort "Please pass either an app path prefix or an app group name. " +
               "See --help for more information."
           end
@@ -124,6 +126,9 @@ module PhusionPassenger
         @groups = []
         if app_group_name = @options[:app_group_name]
           select_app_group_name_exact(app_group_name)
+        elsif @argv.empty?
+          # STDIN is guaranteed to be a TTY thanks to the check in #parse_options.
+          select_app_group_name_interactively
         else
           select_app_group_name_by_app_root_regex(@argv.first)
         end
@@ -138,6 +143,39 @@ module PhusionPassenger
         if @groups.empty?
           abort_app_not_found "There is no #{PROGRAM_NAME}-served application running " +
             "with the app group name '#{name}'."
+        end
+      end
+
+      def query_group_names
+        result = []
+        query_pool_xml.elements.each("info/supergroups/supergroup/group") do |group|
+          result << group.elements["name"].text
+        end
+        result << "Cancel"
+        result
+      end
+
+      def select_app_group_name_interactively
+        colors = PhusionPassenger::Utils::AnsiColors.new
+
+        puts "Please select the application to restart."
+        puts colors.ansi_colorize("<gray>Tip: re-run this command with --help to learn how to automate it.</gray>")
+        puts colors.ansi_colorize("<dgray>If the menu doesn't display correctly, press '!'</dgray>")
+        puts
+
+        choices = query_group_names
+        menu = PhusionPassenger::Utils::TerminalChoiceMenu.new(choices, :single_choice)
+        begin
+          index, name = menu.query
+        rescue Interrupt
+          abort
+        end
+
+        if index == choices.size - 1
+          abort
+        else
+          puts
+          select_app_group_name_exact(name)
         end
       end
 
