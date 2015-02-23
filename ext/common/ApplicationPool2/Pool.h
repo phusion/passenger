@@ -76,58 +76,10 @@ class Pool: public boost::enable_shared_from_this<Pool> {
 public:
 	typedef void (*AbortLongRunningConnectionsCallback)(const ProcessPtr &process);
 
-	struct InspectOptions {
-		bool colorize;
-		bool verbose;
-
-		InspectOptions()
-			: colorize(false),
-			  verbose(false)
-			{ }
-
-		InspectOptions(const VariantMap &options)
-			: colorize(options.getBool("colorize", false, false)),
-			  verbose(options.getBool("verbose", false, false))
-			{ }
-	};
-
 // Actually private, but marked public so that unit tests can access the fields.
 public:
 	friend class SuperGroup;
 	friend class Group;
-
-	struct DebugSupport {
-		/** Mailbox for the unit tests to receive messages on. */
-		MessageBoxPtr debugger;
-		/** Mailbox for the ApplicationPool code to receive messages on. */
-		MessageBoxPtr messages;
-
-		// Choose aspects to debug.
-		bool restarting;
-		bool spawning;
-		bool superGroup;
-		bool oobw;
-		bool testOverflowRequestQueue;
-		bool detachedProcessesChecker;
-
-		// The following fields may only be accessed by Pool.
-		boost::mutex syncher;
-		unsigned int spawnLoopIteration;
-
-		DebugSupport() {
-			debugger = boost::make_shared<MessageBox>();
-			messages = boost::make_shared<MessageBox>();
-			restarting = true;
-			spawning   = true;
-			superGroup = false;
-			oobw       = false;
-			detachedProcessesChecker = false;
-			testOverflowRequestQueue = false;
-			spawnLoopIteration = 0;
-		}
-	};
-
-	typedef boost::shared_ptr<DebugSupport> DebugSupportPtr;
 
 	SpawnerFactoryPtr spawnerFactory;
 	SystemMetricsCollector systemMetricsCollector;
@@ -137,8 +89,6 @@ public:
 	unsigned int max;
 	unsigned long long maxIdleTime;
 	bool selfchecking;
-
-	boost::condition_variable garbageCollectionCond;
 
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -203,168 +153,15 @@ public:
 	vector<GetWaiter> getWaitlist;
 
 	const VariantMap *agentsOptions;
-	DebugSupportPtr debugSupport;
 
-	static void runAllActions(const boost::container::vector<Callback> &actions) {
-		boost::container::vector<Callback>::const_iterator it, end = actions.end();
-		for (it = actions.begin(); it != end; it++) {
-			(*it)();
-		}
-	}
+	#include <ApplicationPool2/Pool/AnalyticsCollection.h>
+	#include <ApplicationPool2/Pool/GarbageCollection.h>
+	#include <ApplicationPool2/Pool/GeneralUtils.h>
+	#include <ApplicationPool2/Pool/ProcessUtils.h>
+	#include <ApplicationPool2/Pool/Inspection.h>
+	#include <ApplicationPool2/Pool/Debug.h>
 
-	static void runAllActionsWithCopy(boost::container::vector<Callback> actions) {
-		runAllActions(actions);
-	}
-
-	static const char *maybeColorize(const InspectOptions &options, const char *color) {
-		if (options.colorize) {
-			return color;
-		} else {
-			return "";
-		}
-	}
-
-	void verifyInvariants() const {
-		// !a || b: logical equivalent of a IMPLIES b.
-		#ifndef NDEBUG
-		if (!selfchecking) {
-			return;
-		}
-		assert(!( !getWaitlist.empty() ) || ( atFullCapacityUnlocked() ));
-		assert(!( !atFullCapacityUnlocked() ) || ( getWaitlist.empty() ));
-		#endif
-	}
-
-	void verifyExpensiveInvariants() const {
-		#ifndef NDEBUG
-		if (!selfchecking) {
-			return;
-		}
-		vector<GetWaiter>::const_iterator it, end = getWaitlist.end();
-		for (it = getWaitlist.begin(); it != end; it++) {
-			const GetWaiter &waiter = *it;
-			const SuperGroupPtr *superGroup;
-			assert(!superGroups.lookup(waiter.options.getAppGroupName(), &superGroup));
-		}
-		#endif
-	}
-
-	void fullVerifyInvariants() const {
-		TRACE_POINT();
-		verifyInvariants();
-		UPDATE_TRACE_POINT();
-		verifyExpensiveInvariants();
-		UPDATE_TRACE_POINT();
-
-		SuperGroupMap::ConstIterator sg_it(superGroups);
-		while (*sg_it != NULL) {
-			const SuperGroupPtr &superGroup = sg_it.getValue();
-			superGroup->verifyInvariants();
-			foreach (GroupPtr group, superGroup->groups) {
-				group->verifyInvariants();
-				group->verifyExpensiveInvariants();
-			}
-			sg_it.next();
-		}
-	}
-
-	bool runHookScripts(const char *name,
-		const boost::function<void (HookScriptOptions &)> &setup) const
-	{
-		if (agentsOptions != NULL) {
-			string hookName = string("hook_") + name;
-			string spec = agentsOptions->get(hookName, false);
-			if (!spec.empty()) {
-				HookScriptOptions options;
-				options.agentsOptions = agentsOptions;
-				options.name = name;
-				options.spec = spec;
-				setup(options);
-				return Passenger::runHookScripts(options);
-			} else {
-				return true;
-			}
-		} else {
-			return true;
-		}
-	}
-
-	static const char *maybePluralize(unsigned int count, const char *singular, const char *plural) {
-		if (count == 1) {
-			return singular;
-		} else {
-			return plural;
-		}
-	}
-
-	const SpawnerConfigPtr &getSpawnerConfig() const {
-		return spawnerFactory->getConfig();
-	}
-
-	const UnionStation::CorePtr &getUnionStationCore() const {
-		return getSpawnerConfig()->unionStationCore;
-	}
-
-	const RandomGeneratorPtr &getRandomGenerator() const {
-		return getSpawnerConfig()->randomGenerator;
-	}
-
-	ProcessPtr findOldestIdleProcess(const Group *exclude = NULL) const {
-		ProcessPtr oldestIdleProcess;
-
-		SuperGroupMap::ConstIterator sg_it(superGroups);
-		while (*sg_it != NULL) {
-			const SuperGroupPtr &superGroup = sg_it.getValue();
-			const SuperGroup::GroupList &groups = superGroup->groups;
-			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				const GroupPtr &group = *g_it;
-				if (group.get() == exclude) {
-					continue;
-				}
-				const ProcessList &processes = group->enabledProcesses;
-				ProcessList::const_iterator p_it, p_end = processes.end();
-				for (p_it = processes.begin(); p_it != p_end; p_it++) {
-					const ProcessPtr process = *p_it;
-					if (process->busyness() == 0
-					     && (oldestIdleProcess == NULL
-					         || process->lastUsed < oldestIdleProcess->lastUsed)
-					) {
-						oldestIdleProcess = process;
-					}
-				}
-			}
-			sg_it.next();
-		}
-
-		return oldestIdleProcess;
-	}
-
-	ProcessPtr findBestProcessToTrash() const {
-		ProcessPtr oldestProcess;
-
-		SuperGroupMap::ConstIterator sg_it(superGroups);
-		while (*sg_it != NULL) {
-			const SuperGroupPtr &superGroup = sg_it.getValue();
-			const SuperGroup::GroupList &groups = superGroup->groups;
-			SuperGroup::GroupList::const_iterator g_it, g_end = groups.end();
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				const GroupPtr &group = *g_it;
-				const ProcessList &processes = group->enabledProcesses;
-				ProcessList::const_iterator p_it, p_end = processes.end();
-				for (p_it = processes.begin(); p_it != p_end; p_it++) {
-					const ProcessPtr process = *p_it;
-					if (oldestProcess == NULL
-					 || process->lastUsed < oldestProcess->lastUsed) {
-						oldestProcess = process;
-					}
-				}
-			}
-			sg_it.next();
-		}
-
-		return oldestProcess;
-	}
+private:
 
 	/** Process all waiters on the getWaitlist. Call when capacity has become free.
 	 * This function assigns sessions to them by calling get() on the corresponding
@@ -554,47 +351,6 @@ public:
 		}
 	}
 
-	void inspectProcessList(const InspectOptions &options, stringstream &result,
-		const Group *group, const ProcessList &processes) const
-	{
-		ProcessList::const_iterator p_it;
-		for (p_it = processes.begin(); p_it != processes.end(); p_it++) {
-			const ProcessPtr &process = *p_it;
-			char buf[128];
-			char cpubuf[10];
-			char membuf[10];
-
-			snprintf(cpubuf, sizeof(cpubuf), "%d%%", (int) process->metrics.cpu);
-			snprintf(membuf, sizeof(membuf), "%ldM",
-				(unsigned long) (process->metrics.realMemory() / 1024));
-			snprintf(buf, sizeof(buf),
-					"  * PID: %-5lu   Sessions: %-2u      Processed: %-5u   Uptime: %s\n"
-					"    CPU: %-5s   Memory  : %-5s   Last used: %s ago",
-					(unsigned long) process->pid,
-					process->sessions,
-					process->processed,
-					process->uptime().c_str(),
-					cpubuf,
-					membuf,
-					distanceOfTimeInWords(process->lastUsed / 1000000).c_str());
-			result << buf << endl;
-
-			if (process->enabled == Process::DISABLING) {
-				result << "    Disabling..." << endl;
-			} else if (process->enabled == Process::DISABLED) {
-				result << "    DISABLED" << endl;
-			} else if (process->enabled == Process::DETACHED) {
-				result << "    Shutting down..." << endl;
-			}
-
-			const Socket *socket;
-			if (options.verbose && (socket = process->sockets.findSocketWithName("http")) != NULL) {
-				result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
-				result << "    Password: " << StaticString(group->secret, Group::SECRET_SIZE) << endl;
-			}
-		}
-	}
-
 	struct DetachSuperGroupWaitTicket {
 		boost::mutex syncher;
 		boost::condition_variable cond;
@@ -664,374 +420,12 @@ public:
 		}
 	}
 
-	struct GarbageCollectorState {
-		unsigned long long now;
-		unsigned long long nextGcRunTime;
-		boost::container::vector<Callback> actions;
-	};
-
-	static void garbageCollect(PoolPtr self) {
-		TRACE_POINT();
-		{
-			ScopedLock lock(self->syncher);
-			self->garbageCollectionCond.timed_wait(lock,
-				posix_time::seconds(5));
-		}
-		while (!this_thread::interruption_requested()) {
-			try {
-				UPDATE_TRACE_POINT();
-				unsigned long long sleepTime = self->realGarbageCollect();
-				UPDATE_TRACE_POINT();
-				ScopedLock lock(self->syncher);
-				self->garbageCollectionCond.timed_wait(lock,
-					posix_time::microseconds(sleepTime));
-			} catch (const thread_interrupted &) {
-				break;
-			} catch (const tracable_exception &e) {
-				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
-			}
-		}
-	}
-
-	void maybeUpdateNextGcRuntime(GarbageCollectorState &state, unsigned long candidate) {
-		if (state.nextGcRunTime == 0 || candidate < state.nextGcRunTime) {
-			state.nextGcRunTime = candidate;
-		}
-	}
-
-	void checkWhetherProcessCanBeGarbageCollected(GarbageCollectorState &state,
-		const GroupPtr &group, const ProcessPtr &process, ProcessList &output)
-	{
-		assert(maxIdleTime > 0);
-		unsigned long long processGcTime = process->lastUsed + maxIdleTime;
-		if (process->sessions == 0
-		 && state.now >= processGcTime
-		 && (unsigned long) group->getProcessCount() > group->options.minProcesses)
-		{
-			if (output.capacity() == 0) {
-				output.reserve(group->enabledCount);
-			}
-			output.push_back(process);
-		} else {
-			maybeUpdateNextGcRuntime(state, processGcTime);
-		}
-	}
-
-	void garbageCollectProcessesInGroup(GarbageCollectorState &state,
-		const GroupPtr &group)
-	{
-		ProcessList &processes = group->enabledProcesses;
-		ProcessList processesToGc;
-		ProcessList::iterator p_it, p_end = processes.end();
-
-		for (p_it = processes.begin(); p_it != p_end; p_it++) {
-			const ProcessPtr &process = *p_it;
-			checkWhetherProcessCanBeGarbageCollected(state, group, process,
-				processesToGc);
-		}
-
-		p_end = processesToGc.end();
-		for (p_it = processesToGc.begin(); p_it != p_end; p_it++) {
-			ProcessPtr process = *p_it;
-			P_DEBUG("Garbage collect idle process: " << process->inspect() <<
-				", group=" << group->name);
-			group->detach(process, state.actions);
-		}
-	}
-
-	void maybeCleanPreloader(GarbageCollectorState &state, const GroupPtr &group) {
-		if (group->spawner->cleanable() && group->options.getMaxPreloaderIdleTime() != 0) {
-			unsigned long long spawnerGcTime =
-				group->spawner->lastUsed() +
-				group->options.getMaxPreloaderIdleTime() * 1000000;
-			if (state.now >= spawnerGcTime) {
-				P_DEBUG("Garbage collect idle spawner: group=" << group->name);
-				group->cleanupSpawner(state.actions);
-			} else {
-				maybeUpdateNextGcRuntime(state, spawnerGcTime);
-			}
-		}
-	}
-
-	unsigned long long realGarbageCollect() {
-		TRACE_POINT();
-		ScopedLock lock(syncher);
-		SuperGroupMap::ConstIterator sg_it(superGroups);
-		GarbageCollectorState state;
-		state.now = SystemTime::getUsec();
-		state.nextGcRunTime = 0;
-
-		P_DEBUG("Garbage collection time...");
-		verifyInvariants();
-
-		// For all supergroups and groups...
-		while (*sg_it != NULL) {
-			const SuperGroupPtr superGroup = sg_it.getValue();
-			SuperGroup::GroupList &groups = superGroup->groups;
-			SuperGroup::GroupList::iterator g_it, g_end = groups.end();
-
-			superGroup->verifyInvariants();
-
-			for (g_it = groups.begin(); g_it != g_end; g_it++) {
-				GroupPtr group = *g_it;
-
-				if (maxIdleTime > 0) {
-					// ...detach processes that have been idle for more than maxIdleTime.
-					garbageCollectProcessesInGroup(state, group);
-				}
-
-				group->verifyInvariants();
-
-				// ...cleanup the spawner if it's been idle for more than preloaderIdleTime.
-				maybeCleanPreloader(state, group);
-			}
-
-			superGroup->verifyInvariants();
-			sg_it.next();
-		}
-
-		verifyInvariants();
-		lock.unlock();
-
-		// Schedule next garbage collection run.
-		unsigned long long sleepTime;
-		if (state.nextGcRunTime == 0 || state.nextGcRunTime <= state.now) {
-			if (maxIdleTime == 0) {
-				sleepTime = 10 * 60 * 1000000;
-			} else {
-				sleepTime = maxIdleTime;
-			}
-		} else {
-			sleepTime = state.nextGcRunTime - state.now;
-		}
-		P_DEBUG("Garbage collection done; next garbage collect in " <<
-			std::fixed << std::setprecision(3) << (sleepTime / 1000000.0) << " sec");
-
-		UPDATE_TRACE_POINT();
-		runAllActions(state.actions);
-		UPDATE_TRACE_POINT();
-		state.actions.clear();
-		return sleepTime;
-	}
-
-	struct UnionStationLogEntry {
-		string groupName;
-		const char *category;
-		string key;
-		string data;
-	};
-
-	static void collectAnalytics(PoolPtr self) {
-		TRACE_POINT();
-		syscalls::usleep(3000000);
-		while (!this_thread::interruption_requested()) {
-			try {
-				UPDATE_TRACE_POINT();
-				self->realCollectAnalytics();
-			} catch (const thread_interrupted &) {
-				break;
-			} catch (const tracable_exception &e) {
-				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
-			}
-
-			// Sleep for about 4 seconds, aligned to seconds boundary
-			// for saving power on laptops.
-			UPDATE_TRACE_POINT();
-			unsigned long long currentTime = SystemTime::getUsec();
-			unsigned long long deadline =
-				roundUp<unsigned long long>(currentTime, 1000000) + 4000000;
-			P_DEBUG("Analytics collection done; next analytics collection in " <<
-				std::fixed << std::setprecision(3) << ((deadline - currentTime) / 1000000.0) <<
-				" sec");
-			try {
-				syscalls::usleep(deadline - currentTime);
-			} catch (const thread_interrupted &) {
-				break;
-			} catch (const tracable_exception &e) {
-				P_WARN("ERROR: " << e.what() << "\n  Backtrace:\n" << e.backtrace());
-			}
-		}
-	}
-
-	static void collectPids(const ProcessList &processes, vector<pid_t> &pids) {
-		foreach (const ProcessPtr &process, processes) {
-			pids.push_back(process->pid);
-		}
-	}
-
-	static void updateProcessMetrics(const ProcessList &processes,
-		const ProcessMetricMap &allMetrics,
-		vector<ProcessPtr> &processesToDetach)
-	{
-		foreach (const ProcessPtr &process, processes) {
-			ProcessMetricMap::const_iterator metrics_it =
-				allMetrics.find(process->pid);
-			if (metrics_it != allMetrics.end()) {
-				process->metrics = metrics_it->second;
-			// If the process is missing from 'allMetrics' then either 'ps'
-			// failed or the process really is gone. We double check by sending
-			// it a signal.
-			} else if (!process->dummy && !process->osProcessExists()) {
-				P_WARN("Process " << process->inspect() << " no longer exists! "
-					"Detaching it from the pool.");
-				processesToDetach.push_back(process);
-			}
-		}
-	}
-
-	void prepareUnionStationProcessStateLogs(vector<UnionStationLogEntry> &logEntries,
-		const GroupPtr &group) const
-	{
-		const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
-		if (group->options.analytics && unionStationCore != NULL) {
-			logEntries.push_back(UnionStationLogEntry());
-			UnionStationLogEntry &entry = logEntries.back();
-			stringstream stream;
-
-			stream << "Group: <group>";
-			group->inspectXml(stream, false);
-			stream << "</group>";
-
-			entry.groupName = group->options.getAppGroupName();
-			entry.category  = "processes";
-			entry.key       = group->options.unionStationKey;
-			entry.data      = stream.str();
-		}
-	}
-
-	void prepareUnionStationSystemMetricsLogs(vector<UnionStationLogEntry> &logEntries,
-		const GroupPtr &group) const
-	{
-		const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
-		if (group->options.analytics && unionStationCore != NULL) {
-			logEntries.push_back(UnionStationLogEntry());
-			UnionStationLogEntry &entry = logEntries.back();
-			stringstream stream;
-
-			stream << "System metrics: ";
-			systemMetrics.toXml(stream);
-
-			entry.groupName = group->options.getAppGroupName();
-			entry.category  = "system_metrics";
-			entry.key       = group->options.unionStationKey;
-			entry.data      = stream.str();
-		}
-	}
-
-	void realCollectAnalytics() {
-		TRACE_POINT();
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
-		vector<pid_t> pids;
-		unsigned int max;
-
-		P_DEBUG("Analytics collection time...");
-		// Collect all the PIDs.
-		{
-			UPDATE_TRACE_POINT();
-			LockGuard l(syncher);
-			max = this->max;
-		}
-		pids.reserve(max);
-		{
-			UPDATE_TRACE_POINT();
-			LockGuard l(syncher);
-			SuperGroupMap::ConstIterator sg_it(superGroups);
-
-			while (*sg_it != NULL) {
-				const SuperGroupPtr &superGroup = sg_it.getValue();
-				SuperGroup::GroupList::const_iterator g_it, g_end = superGroup->groups.end();
-
-				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
-					const GroupPtr &group = *g_it;
-					collectPids(group->enabledProcesses, pids);
-					collectPids(group->disablingProcesses, pids);
-					collectPids(group->disabledProcesses, pids);
-				}
-				sg_it.next();
-			}
-		}
-
-		// Collect process metrics and system and store them in the
-		// data structures. Later, we log them to Union Station.
-		ProcessMetricMap processMetrics;
-		try {
-			UPDATE_TRACE_POINT();
-			processMetrics = ProcessMetricsCollector().collect(pids);
-		} catch (const ParseException &) {
-			P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
-			return;
-		}
-		try {
-			UPDATE_TRACE_POINT();
-			systemMetricsCollector.collect(systemMetrics);
-		} catch (const RuntimeException &e) {
-			P_WARN("Unable to collect system metrics: " << e.what());
-			return;
-		}
-
-		{
-			UPDATE_TRACE_POINT();
-			vector<UnionStationLogEntry> logEntries;
-			vector<ProcessPtr> processesToDetach;
-			boost::container::vector<Callback> actions;
-			ScopedLock l(syncher);
-			SuperGroupMap::ConstIterator sg_it(superGroups);
-
-			UPDATE_TRACE_POINT();
-			while (*sg_it != NULL) {
-				const SuperGroupPtr &superGroup = sg_it.getValue();
-				SuperGroup::GroupList::iterator g_it, g_end = superGroup->groups.end();
-
-				for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
-					const GroupPtr &group = *g_it;
-
-					updateProcessMetrics(group->enabledProcesses, processMetrics, processesToDetach);
-					updateProcessMetrics(group->disablingProcesses, processMetrics, processesToDetach);
-					updateProcessMetrics(group->disabledProcesses, processMetrics, processesToDetach);
-					prepareUnionStationProcessStateLogs(logEntries, group);
-					prepareUnionStationSystemMetricsLogs(logEntries, group);
-				}
-				sg_it.next();
-			}
-
-			UPDATE_TRACE_POINT();
-			foreach (const ProcessPtr process, processesToDetach) {
-				detachProcessUnlocked(process, actions);
-			}
-			UPDATE_TRACE_POINT();
-			processesToDetach.clear();
-
-			l.unlock();
-			UPDATE_TRACE_POINT();
-			if (!logEntries.empty()) {
-				const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
-				while (!logEntries.empty()) {
-					UnionStationLogEntry &entry = logEntries.back();
-					UnionStation::TransactionPtr transaction =
-						unionStationCore->newTransaction(
-							entry.groupName,
-							entry.category,
-							entry.key);
-					transaction->message(entry.data);
-					logEntries.pop_back();
-				}
-			}
-
-			UPDATE_TRACE_POINT();
-			runAllActions(actions);
-			UPDATE_TRACE_POINT();
-			// Run destructors with updated trace point.
-			actions.clear();
-		}
-	}
-
 	SuperGroupPtr createSuperGroup(const Options &options) {
 		SuperGroupPtr superGroup = boost::make_shared<SuperGroup>(this,
 			options);
 		superGroup->initialize();
 		superGroups.insert(options.getAppGroupName(), superGroup);
-		garbageCollectionCond.notify_all();
+		wakeupGarbageCollector();
 		return superGroup;
 	}
 
@@ -1093,16 +487,8 @@ public:
 	/** Must be called right after construction. */
 	void initialize() {
 		LockGuard l(syncher);
-		interruptableThreads.create_thread(
-			boost::bind(collectAnalytics, shared_from_this()),
-			"Pool analytics collector",
-			POOL_HELPER_THREAD_STACK_SIZE
-		);
-		interruptableThreads.create_thread(
-			boost::bind(garbageCollect, shared_from_this()),
-			"Pool garbage collector",
-			POOL_HELPER_THREAD_STACK_SIZE
-		);
+		initializeAnalyticsCollection();
+		initializeGarbageCollection();
 	}
 
 	void initDebugging() {
@@ -1225,7 +611,7 @@ public:
 				superGroup = boost::make_shared<SuperGroup>(this, options);
 				superGroup->initialize();
 				superGroups.insert(options.getAppGroupName(), superGroup);
-				garbageCollectionCond.notify_all();
+				wakeupGarbageCollector();
 				SessionPtr session = superGroup->get(options, callback,
 					actions);
 				/* The SuperGroup is still initializing so the callback
@@ -1333,7 +719,7 @@ public:
 	void setMaxIdleTime(unsigned long long value) {
 		LockGuard l(syncher);
 		maxIdleTime = value;
-		garbageCollectionCond.notify_all();
+		wakeupGarbageCollector();
 	}
 
 	void enableSelfChecking(bool enabled) {
@@ -1621,122 +1007,6 @@ public:
 			sg_it.next();
 		}
 		return false;
-	}
-
-	string inspect(const InspectOptions &options = InspectOptions(), bool lock = true) const {
-		DynamicScopedLock l(syncher, lock);
-		stringstream result;
-		const char *headerColor = maybeColorize(options, ANSI_COLOR_YELLOW ANSI_COLOR_BLUE_BG ANSI_COLOR_BOLD);
-		const char *resetColor  = maybeColorize(options, ANSI_COLOR_RESET);
-
-		result << headerColor << "----------- General information -----------" << resetColor << endl;
-		result << "Max pool size : " << max << endl;
-		result << "Processes     : " << getProcessCount(false) << endl;
-		result << "Requests in top-level queue : " << getWaitlist.size() << endl;
-		if (options.verbose) {
-			unsigned int i = 0;
-			foreach (const GetWaiter &waiter, getWaitlist) {
-				result << "  " << i << ": " << waiter.options.getAppGroupName() << endl;
-				i++;
-			}
-		}
-		result << endl;
-
-		result << headerColor << "----------- Application groups -----------" << resetColor << endl;
-		SuperGroupMap::ConstIterator sg_it(superGroups);
-		while (*sg_it != NULL) {
-			const SuperGroupPtr &superGroup = sg_it.getValue();
-			const Group *group = superGroup->defaultGroup;
-			ProcessList::const_iterator p_it;
-
-			if (group != NULL) {
-				result << group->name << ":" << endl;
-				result << "  App root: " << group->options.appRoot << endl;
-				if (group->restarting()) {
-					result << "  (restarting...)" << endl;
-				}
-				if (group->spawning()) {
-					if (group->processesBeingSpawned == 0) {
-						result << "  (spawning...)" << endl;
-					} else {
-						result << "  (spawning " << group->processesBeingSpawned << " new " <<
-							maybePluralize(group->processesBeingSpawned, "process", "processes") <<
-							"...)" << endl;
-					}
-				}
-				result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-				inspectProcessList(options, result, group, group->enabledProcesses);
-				inspectProcessList(options, result, group, group->disablingProcesses);
-				inspectProcessList(options, result, group, group->disabledProcesses);
-				inspectProcessList(options, result, group, group->detachedProcesses);
-				result << endl;
-			}
-			sg_it.next();
-		}
-		return result.str();
-	}
-
-	string toXml(bool includeSecrets = true, bool lock = true) const {
-		DynamicScopedLock l(syncher, lock);
-		stringstream result;
-		SuperGroupMap::ConstIterator sg_it(superGroups);
-		SuperGroup::GroupList::const_iterator g_it;
-		ProcessList::const_iterator p_it;
-
-		result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
-		result << "<info version=\"3\">";
-
-		result << "<passenger_version>" << PASSENGER_VERSION << "</passenger_version>";
-		result << "<process_count>" << getProcessCount(false) << "</process_count>";
-		result << "<max>" << max << "</max>";
-		result << "<capacity_used>" << capacityUsedUnlocked() << "</capacity_used>";
-		result << "<get_wait_list_size>" << getWaitlist.size() << "</get_wait_list_size>";
-
-		if (includeSecrets) {
-			vector<GetWaiter>::const_iterator w_it, w_end = getWaitlist.end();
-
-			result << "<get_wait_list>";
-			for (w_it = getWaitlist.begin(); w_it != w_end; w_it++) {
-				const GetWaiter &waiter = *w_it;
-				result << "<item>";
-				result << "<app_group_name>" << escapeForXml(waiter.options.getAppGroupName()) << "</app_group_name>";
-				result << "</item>";
-			}
-			result << "</get_wait_list>";
-		}
-
-		result << "<supergroups>";
-		while (*sg_it != NULL) {
-			const SuperGroupPtr &superGroup = sg_it.getValue();
-
-			result << "<supergroup>";
-			result << "<name>" << escapeForXml(superGroup->name) << "</name>";
-			result << "<state>" << superGroup->getStateName() << "</state>";
-			result << "<get_wait_list_size>" << superGroup->getWaitlist.size() << "</get_wait_list_size>";
-			result << "<capacity_used>" << superGroup->capacityUsed() << "</capacity_used>";
-			if (includeSecrets) {
-				result << "<secret>" << escapeForXml(superGroup->secret) << "</secret>";
-			}
-
-			for (g_it = superGroup->groups.begin(); g_it != superGroup->groups.end(); g_it++) {
-				const GroupPtr &group = *g_it;
-
-				if (group->componentInfo.isDefault) {
-					result << "<group default=\"true\">";
-				} else {
-					result << "<group>";
-				}
-				group->inspectXml(result, includeSecrets);
-				result << "</group>";
-			}
-			result << "</supergroup>";
-
-			sg_it.next();
-		}
-		result << "</supergroups>";
-
-		result << "</info>";
-		return result.str();
 	}
 };
 

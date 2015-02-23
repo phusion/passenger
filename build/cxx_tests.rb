@@ -77,6 +77,12 @@ TEST_CXX_OBJECTS = {
     ext/common/ApplicationPool2/SuperGroup.h
     ext/common/ApplicationPool2/Group.h
     ext/common/ApplicationPool2/Pool.h
+    ext/common/ApplicationPool2/Pool/AnalyticsCollection.h
+    ext/common/ApplicationPool2/Pool/GarbageCollection.h
+    ext/common/ApplicationPool2/Pool/GeneralUtils.h
+    ext/common/ApplicationPool2/Pool/ProcessUtils.h
+    ext/common/ApplicationPool2/Pool/Inspection.h
+    ext/common/ApplicationPool2/Pool/Debug.h
     ext/common/ApplicationPool2/Process.h
     ext/common/ApplicationPool2/Socket.h
     ext/common/ApplicationPool2/Options.h

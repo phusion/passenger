@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2012-2014 Phusion
+#  Copyright (c) 2012-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -412,6 +412,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
       ApplicationPool2/Spawner.h
       ApplicationPool2/Common.h
       ApplicationPool2/Pool.h
+      ApplicationPool2/Pool/AnalyticsCollection.h
+      ApplicationPool2/Pool/GarbageCollection.h
+      ApplicationPool2/Pool/GeneralUtils.h
+      ApplicationPool2/Pool/ProcessUtils.h
+      ApplicationPool2/Pool/Inspection.h
+      ApplicationPool2/Pool/Debug.h
       ApplicationPool2/SuperGroup.h
       ApplicationPool2/Group.h
       ApplicationPool2/Process.h
