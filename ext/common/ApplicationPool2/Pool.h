@@ -50,8 +50,8 @@
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/SuperGroup.h>
 #include <ApplicationPool2/Session.h>
-#include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Options.h>
+#include <SpawningKit/Factory.h>
 #include <MemoryKit/palloc.h>
 #include <Logging.h>
 #include <Exceptions.h>
@@ -83,7 +83,7 @@ public:
 	friend class Process;
 	friend struct tut::ApplicationPool2_PoolTest;
 
-	SpawnerFactoryPtr spawnerFactory;
+	SpawningKit::FactoryPtr spawningKitFactory;
 
 	mutable boost::mutex syncher;
 	unsigned int max;
@@ -450,12 +450,12 @@ public:
 public:
 	AbortLongRunningConnectionsCallback abortLongRunningConnectionsCallback;
 
-	Pool(const SpawnerFactoryPtr &spawnerFactory,
+	Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
 		const VariantMap *agentsOptions = NULL)
 		: sessionObjectPool(64, 1024),
 		  abortLongRunningConnectionsCallback(NULL)
 	{
-		this->spawnerFactory = spawnerFactory;
+		this->spawningKitFactory = spawningKitFactory;
 		this->agentsOptions = agentsOptions;
 
 		try {

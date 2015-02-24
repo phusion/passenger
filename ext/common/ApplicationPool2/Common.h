@@ -38,6 +38,7 @@
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
 #include <ApplicationPool2/Options.h>
+#include <SpawningKit/Config.h>
 #include <Utils/VariantMap.h>
 
 namespace tut {
@@ -202,48 +203,10 @@ struct Ticket {
 	ExceptionPtr exception;
 };
 
-struct SpawnerConfig {
-	// Used by error pages and hooks.
-	ResourceLocator *resourceLocator;
-	const VariantMap *agentsOptions;
-
-	// Used for Union Station logging.
-	UnionStation::CorePtr unionStationCore;
-
-	// Used by SmartSpawner and DirectSpawner.
-	RandomGeneratorPtr randomGenerator;
-	string instanceDir;
-
-	// Used by DummySpawner and SpawnerFactory.
-	unsigned int concurrency;
-	unsigned int spawnerCreationSleepTime;
-	unsigned int spawnTime;
-
-	SpawnerConfig()
-		: resourceLocator(NULL),
-		  agentsOptions(NULL),
-		  concurrency(1),
-		  spawnerCreationSleepTime(0),
-		  spawnTime(0)
-		{ }
-
-	void finalize() {
-		TRACE_POINT();
-		if (resourceLocator == NULL) {
-			throw RuntimeException("ResourceLocator not initialized");
-		}
-		if (randomGenerator == NULL) {
-			randomGenerator = boost::make_shared<RandomGenerator>();
-		}
-	}
-};
-
-typedef boost::shared_ptr<SpawnerConfig> SpawnerConfigPtr;
-
 ExceptionPtr copyException(const tracable_exception &e);
 void rethrowException(const ExceptionPtr &e);
 void processAndLogNewSpawnException(SpawnException &e, const Options &options,
-	const SpawnerConfigPtr &config);
+	const SpawningKit::ConfigPtr &config);
 void recreateString(psg_pool_t *pool, StaticString &str);
 
 } // namespace ApplicationPool2

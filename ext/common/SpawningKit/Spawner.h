@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL_SPAWNER_H_
-#define _PASSENGER_APPLICATION_POOL_SPAWNER_H_
+#ifndef _PASSENGER_SPAWNING_KIT_SPAWNER_H_
+#define _PASSENGER_SPAWNING_KIT_SPAWNER_H_
 
 /*
  * This file implements application spawning support. Several classes
@@ -77,11 +77,10 @@
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
-#include <ApplicationPool2/Common.h>
-#include <ApplicationPool2/Process.h>
-#include <ApplicationPool2/Options.h>
-#include <ApplicationPool2/SpawnObject.h>
-#include <ApplicationPool2/PipeWatcher.h>
+#include <SpawningKit/Config.h>
+#include <SpawningKit/Options.h>
+#include <SpawningKit/Result.h>
+#include <SpawningKit/BackgroundIOCapturer.h>
 #include <FileDescriptor.h>
 #include <Exceptions.h>
 #include <StaticString.h>
@@ -100,7 +99,7 @@ namespace tut {
 }
 
 namespace Passenger {
-namespace ApplicationPool2 {
+namespace SpawningKit {
 
 using namespace std;
 using namespace boost;
@@ -111,111 +110,6 @@ class Spawner {
 protected:
 	friend struct tut::ApplicationPool2_DirectSpawnerTest;
 	friend struct tut::ApplicationPool2_SmartSpawnerTest;
-
-	/**
-	 * Given a file descriptor, captures its output in a background thread
-	 * and also forwards it immediately to a target file descriptor.
-	 * Call stop() to stop the background thread and to obtain the captured
-	 * output so far.
-	 */
-	class BackgroundIOCapturer {
-	private:
-		FileDescriptor fd;
-		pid_t pid;
-		const char *channelName;
-		boost::mutex dataSyncher;
-		string data;
-		oxt::thread *thr;
-
-		void capture() {
-			TRACE_POINT();
-			while (!this_thread::interruption_requested()) {
-				char buf[1024 * 8];
-				ssize_t ret;
-
-				UPDATE_TRACE_POINT();
-				ret = syscalls::read(fd, buf, sizeof(buf));
-				int e = errno;
-				this_thread::disable_syscall_interruption dsi;
-				if (ret == 0) {
-					break;
-				} else if (ret == -1) {
-					if (e != EAGAIN && e != EWOULDBLOCK) {
-						P_WARN("Background I/O capturer error: " <<
-							strerror(e) << " (errno=" << e << ")");
-						break;
-					}
-				} else {
-					{
-						boost::lock_guard<boost::mutex> l(dataSyncher);
-						data.append(buf, ret);
-					}
-					UPDATE_TRACE_POINT();
-					if (ret == 1 && buf[0] == '\n') {
-						printAppOutput(pid, channelName, "", 0);
-					} else {
-						vector<StaticString> lines;
-						if (ret > 0 && buf[ret - 1] == '\n') {
-							ret--;
-						}
-						split(StaticString(buf, ret), '\n', lines);
-						foreach (const StaticString line, lines) {
-							printAppOutput(pid, channelName, line.data(), line.size());
-						}
-					}
-				}
-			}
-		}
-
-	public:
-		BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid, const char *_channelName)
-			: fd(_fd),
-			  pid(_pid),
-			  channelName(_channelName),
-			  thr(NULL)
-			{ }
-
-		~BackgroundIOCapturer() {
-			TRACE_POINT();
-			if (thr != NULL) {
-				this_thread::disable_interruption di;
-				this_thread::disable_syscall_interruption dsi;
-				thr->interrupt_and_join();
-				delete thr;
-				thr = NULL;
-			}
-		}
-
-		const FileDescriptor &getFd() const {
-			return fd;
-		}
-
-		void start() {
-			assert(thr == NULL);
-			thr = new oxt::thread(boost::bind(&BackgroundIOCapturer::capture, this),
-				"Background I/O capturer", 64 * 1024);
-		}
-
-		string stop() {
-			TRACE_POINT();
-			assert(thr != NULL);
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
-			thr->interrupt_and_join();
-			delete thr;
-			thr = NULL;
-			boost::lock_guard<boost::mutex> l(dataSyncher);
-			return data;
-		}
-
-		void appendToBuffer(const StaticString &dataToAdd) {
-			TRACE_POINT();
-			boost::lock_guard<boost::mutex> l(dataSyncher);
-			data.append(dataToAdd.data(), dataToAdd.size());
-		}
-	};
-
-	typedef boost::shared_ptr<BackgroundIOCapturer> BackgroundIOCapturerPtr;
 
 	/**
 	 * A temporary directory for spawned child processes to write
@@ -365,7 +259,6 @@ protected:
 		}
 	};
 
-
 private:
 	/**
 	 * Appends key + "\0" + value + "\0" to 'output'.
@@ -425,10 +318,10 @@ private:
 		}
 	}
 
-	SpawnObject handleSpawnResponse(NegotiationDetails &details) {
+	Result handleSpawnResponse(NegotiationDetails &details) {
 		TRACE_POINT();
-		SocketList sockets;
-		SpawnObject result;
+		vector<Result::Socket> sockets;
+		Result result;
 
 		while (true) {
 			string line;
@@ -491,12 +384,12 @@ private:
 							details);
 					}
 
-					StaticString name = psg_pstrdup(result.pool, args[0]);
-					StaticString address = psg_pstrdup(result.pool,
-						fixupSocketAddress(*details.options, args[1]));
-					StaticString protocol = psg_pstrdup(result.pool, args[2]);
-
-					sockets.add(name, address, protocol, atoi(args[3]));
+					Result::Socket socket;
+					socket.name = args[0];
+					socket.address = fixupSocketAddress(*details.options, args[1]);
+					socket.protocol = args[2];
+					socket.concurrency = atoi(args[3]);
+					sockets.push_back(socket);
 				} else {
 					throwAppSpawnException("An error occurred while starting the "
 						"web application. It reported a wrongly formatted 'socket'"
@@ -529,25 +422,35 @@ private:
 			}
 		}
 
-		if (!sockets.hasSessionSockets()) {
+		if (!hasSessionSockets(sockets)) {
 			throwAppSpawnException("An error occured while starting the web "
 				"application. It did not advertise any session sockets.",
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 				details);
 		}
 
-		result.process = boost::make_shared<Process>(
-			details.pid,
-			details.gupid,
-			details.adminSocket, details.errorPipe,
-			sockets, creationTime, details.spawnStartTime);
-		result.process->codeRevision = psg_pstrdup(result.pool,
-			details.preparation->codeRevision);
+		result.pid = details.pid;
+		result.setGupid(details.gupid);
+		result.adminSocket = details.adminSocket;
+		result.errorPipe = details.errorPipe;
+		result.sockets = sockets;
+		result.spawnerCreationTime = creationTime;
+		result.spawnStartTime = details.spawnStartTime;
+		result.codeRevision = details.preparation->codeRevision;
 		return boost::move(result);
 	}
 
+	bool hasSessionSockets(const vector<Result::Socket> &sockets) const {
+		foreach (Result::Socket socket, sockets) {
+			if (socket.protocol == "session" || socket.protocol == "http_session") {
+				return true;
+			}
+		}
+		return false;
+	}
+
 protected:
-	SpawnerConfigPtr config;
+	ConfigPtr config;
 
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
 		this_thread::disable_syscall_interruption dsi;
@@ -742,7 +645,9 @@ protected:
 	}
 
 	void throwSpawnException(SpawnException &e, const Options &options) {
-		processAndLogNewSpawnException(e, options, config);
+		if (config->errorHandler != NULL) {
+			config->errorHandler(config, e, options);
+		}
 		throw e;
 	}
 
@@ -1311,7 +1216,7 @@ protected:
 	/**
 	 * Execute the process spawning negotiation protocol.
 	 */
-	SpawnObject negotiateSpawn(NegotiationDetails &details) {
+	Result negotiateSpawn(NegotiationDetails &details) {
 		TRACE_POINT();
 		details.spawnStartTime = SystemTime::getUsec();
 		details.gupid = integerToHex(SystemTime::get() / 60) + "-" +
@@ -1369,7 +1274,7 @@ protected:
 				handleInvalidSpawnResponseType(result, details);
 			}
 		}
-		return SpawnObject(); // Never reached.
+		return Result(); // Never reached.
 	}
 
 	void handleSpawnErrorResponse(NegotiationDetails &details) {
@@ -1454,34 +1359,35 @@ public:
 	 */
 	const unsigned long long creationTime;
 
-	Spawner(const SpawnerConfigPtr &_config)
+	Spawner(const ConfigPtr &_config)
 		: config(_config),
 		  creationTime(SystemTime::getUsec())
 		{ }
 
 	virtual ~Spawner() { }
-	virtual SpawnObject spawn(const Options &options) = 0;
 
-	/** Does not depend on the event loop. */
+	virtual Result spawn(const Options &options) = 0;
+
 	virtual bool cleanable() const {
 		return false;
 	}
 
-	virtual void cleanup() { }
+	virtual void cleanup() {
+		// Do nothing.
+	}
 
-	/** Does not depend on the event loop. */
 	virtual unsigned long long lastUsed() const {
 		return 0;
 	}
 
-	SpawnerConfigPtr getConfig() const {
+	ConfigPtr getConfig() const {
 		return config;
 	}
 };
 typedef boost::shared_ptr<Spawner> SpawnerPtr;
 
 
-} // namespace ApplicationPool2
+} // namespace SpawningKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL2_SPAWNER_H_ */
+#endif /* _PASSENGER_SPAWNING_KIT_SPAWNER_H_ */

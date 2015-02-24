@@ -1,41 +1,39 @@
 #include <TestSupport.h>
-#include <ApplicationPool2/DirectSpawner.h>
+#include <SpawningKit/DirectSpawner.h>
+#include <FileDescriptor.h>
 #include <Utils/json.h>
+#include <Utils/IOUtils.h>
 #include <fcntl.h>
 
 using namespace Passenger;
-using namespace Passenger::ApplicationPool2;
+using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct ApplicationPool2_DirectSpawnerTest {
-		SpawnObject object;
-		PipeWatcher::DataCallback gatherOutput;
+	struct SpawningKit_DirectSpawnerTest {
+		ConfigPtr config;
+		OutputHandler gatherOutput;
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
+		Result result;
 
-		ApplicationPool2_DirectSpawnerTest() {
-			PipeWatcher::onData = PipeWatcher::DataCallback();
-			gatherOutput = boost::bind(&ApplicationPool2_DirectSpawnerTest::_gatherOutput, this, _1, _2);
-			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
+		SpawningKit_DirectSpawnerTest() {
+			config = boost::make_shared<Config>();
+			config->resourceLocator = resourceLocator;
+			config->finalize();
+
+			gatherOutput = boost::bind(&SpawningKit_DirectSpawnerTest::_gatherOutput, this, _1, _2);
+			setLogLevel(LVL_WARN);
 			setPrintAppOutputAsDebuggingMessages(true);
 		}
 
-		~ApplicationPool2_DirectSpawnerTest() {
+		~SpawningKit_DirectSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			setPrintAppOutputAsDebuggingMessages(false);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
-			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 
 		boost::shared_ptr<DirectSpawner> createSpawner(const Options &options) {
-			return boost::make_shared<DirectSpawner>(createSpawnerConfig());
-		}
-
-		SpawnerConfigPtr createSpawnerConfig() {
-			SpawnerConfigPtr config = boost::make_shared<SpawnerConfig>();
-			config->resourceLocator = resourceLocator;
-			config->finalize();
-			return config;
+			return boost::make_shared<DirectSpawner>(config);
 		}
 
 		Options createOptions() {
@@ -51,26 +49,25 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_DirectSpawnerTest, 90);
+	DEFINE_TEST_GROUP_WITH_LIMIT(SpawningKit_DirectSpawnerTest, 90);
 
 	#include "SpawnerTestCases.cpp"
 
 	TEST_METHOD(80) {
-		// If the application didn't start within the timeout
-		// then whatever was written to stderr is used as the
-		// SpawnException error page.
+		set_test_name("If the application didn't start within the timeout "
+			"then whatever was written to stderr is used as the "
+			"SpawnException error page");
 		Options options = createOptions();
 		options.appRoot      = "stub";
 		options.startCommand = "perl\t" "-e\t" "print STDERR \"hello world\\n\"; sleep(60)";
 		options.startupFile  = ".";
 		options.startTimeout = 300;
 
-		DirectSpawner spawner(createSpawnerConfig());
+		DirectSpawner spawner(config);
 		setLogLevel(LVL_CRIT);
 
 		try {
-			object = spawner.spawn(options);
-			object.process->requiresShutdown = false;
+			spawner.spawn(options);
 			fail("Timeout expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -80,20 +77,19 @@ namespace tut {
 	}
 
 	TEST_METHOD(81) {
-		// If the application crashed during startup without returning
-		// a proper error response, then its stderr output is used
-		// as error response instead.
+		set_test_name("If the application crashed during startup without returning "
+			"a proper error response, then its stderr output is used "
+			"as error response instead");
 		Options options = createOptions();
 		options.appRoot      = "stub";
 		options.startCommand = "perl\t" "-e\t" "print STDERR \"hello world\\n\"";
 		options.startupFile  = ".";
 
-		DirectSpawner spawner(createSpawnerConfig());
+		DirectSpawner spawner(config);
 		setLogLevel(LVL_CRIT);
 
 		try {
-			object = spawner.spawn(options);
-			object.process->requiresShutdown = false;
+			spawner.spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -103,22 +99,18 @@ namespace tut {
 	}
 
 	TEST_METHOD(82) {
-		SHOW_EXCEPTION_BACKTRACE(
-		// Test that everything works correctly if the app re-execs() itself.
+		set_test_name("Test that everything works correctly if the app re-execs() itself");
 		// https://code.google.com/p/phusion-passenger/issues/detail?id=842#c19
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb\t" "--execself";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
-		ensure_equals(object.process->sockets.size(), 1u);
+		result = spawner->spawn(options);
+		ensure_equals(result.sockets.size(), 1u);
 
-		Connection conn = object.process->sockets.front().checkoutConnection();
-		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
-		writeExact(conn.fd, "ping\n");
-		ensure_equals(readAll(conn.fd), "pong\n");
-		);
+		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		writeExact(fd, "ping\n");
+		ensure_equals(readAll(fd), "pong\n");
 	}
 }

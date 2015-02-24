@@ -70,7 +70,7 @@ AGENT_OBJECTS = {
     'ext/common/ApplicationPool2/Pool/Inspection.h',
     'ext/common/ApplicationPool2/Pool/Debug.h',
     'ext/common/ApplicationPool2/Group.h',
-    'ext/common/ApplicationPool2/Spawner.h',
+    'ext/common/SpawningKit/Spawner.h',
     'ext/common/Constants.h',
     'ext/common/StaticString.h',
     'ext/common/Account.h',

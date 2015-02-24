@@ -409,7 +409,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'ApplicationPool2/Implementation.cpp',
     :category => :other,
     :deps     => %w(
-      ApplicationPool2/Spawner.h
       ApplicationPool2/Common.h
       ApplicationPool2/Pool.h
       ApplicationPool2/Pool/AnalyticsCollection.h
@@ -424,13 +423,13 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
       ApplicationPool2/Socket.h
       ApplicationPool2/Session.h
       ApplicationPool2/Options.h
-      ApplicationPool2/PipeWatcher.h
       ApplicationPool2/AppTypes.h
-      ApplicationPool2/Spawner.h
-      ApplicationPool2/SpawnerFactory.h
-      ApplicationPool2/SmartSpawner.h
-      ApplicationPool2/DirectSpawner.h
-      ApplicationPool2/DummySpawner.h
+      SpawningKit/Spawner.h
+      SpawningKit/Factory.h
+      SpawningKit/SmartSpawner.h
+      SpawningKit/DirectSpawner.h
+      SpawningKit/DummySpawner.h
+      SpawningKit/PipeWatcher.h
     )
   define_component 'ApplicationPool2/AppTypes.o',
     :source   => 'ApplicationPool2/AppTypes.cpp',

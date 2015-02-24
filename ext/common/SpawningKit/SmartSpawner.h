@@ -22,14 +22,15 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL2_SMART_SPAWNER_H_
-#define _PASSENGER_APPLICATION_POOL2_SMART_SPAWNER_H_
+#ifndef _PASSENGER_SPAWNING_KIT_SMART_SPAWNER_H_
+#define _PASSENGER_SPAWNING_KIT_SMART_SPAWNER_H_
 
-#include <ApplicationPool2/Spawner.h>
+#include <SpawningKit/Spawner.h>
+#include <SpawningKit/PipeWatcher.h>
 #include <Constants.h>
 
 namespace Passenger {
-namespace ApplicationPool2 {
+namespace SpawningKit {
 
 using namespace std;
 using namespace boost;
@@ -58,12 +59,6 @@ private:
 			options = NULL;
 			timeout = 0;
 		}
-	};
-
-	struct SpawnResult {
-		pid_t pid;
-		FileDescriptor adminSocket;
-		BufferedIO io;
 	};
 
 	const vector<string> preloaderCommand;
@@ -284,13 +279,13 @@ private:
 
 			PipeWatcherPtr watcher;
 
-			watcher = boost::make_shared<PipeWatcher>(adminSocket.second,
-				"stdout", pid);
+			watcher = boost::make_shared<PipeWatcher>(config,
+				adminSocket.second, "stdout", pid);
 			watcher->initialize();
 			watcher->start();
 
-			watcher = boost::make_shared<PipeWatcher>(errorPipe.first,
-				"stderr", pid);
+			watcher = boost::make_shared<PipeWatcher>(config,
+				errorPipe.first, "stderr", pid);
 			watcher->initialize();
 			watcher->start();
 
@@ -606,9 +601,31 @@ private:
 		return "";
 	}
 
-	SpawnResult sendSpawnCommand(const Options &options) {
+	NegotiationDetails sendSpawnCommandAndGetNegotiationDetails(const Options &options) {
 		TRACE_POINT();
+		NegotiationDetails details;
+
+		details.preparation = &preparation;
+		details.options = &options;
+
+		try {
+			sendSpawnCommand(details);
+		} catch (const SystemException &e) {
+			sendSpawnCommandAgain(e, details);
+		} catch (const IOException &e) {
+			sendSpawnCommandAgain(e, details);
+		} catch (const SpawnException &e) {
+			sendSpawnCommandAgain(e, details);
+		}
+
+		return details;
+	}
+
+	void sendSpawnCommand(NegotiationDetails &details) {
+		TRACE_POINT();
+		const Options &options = *details.options;
 		FileDescriptor fd;
+
 		try {
 			fd = connectToServer(socketAddress);
 		} catch (const SystemException &e) {
@@ -670,39 +687,32 @@ private:
 					DebugDirPtr());
 			}
 
-			SpawnResult result;
-			result.pid = spawnedPid;
-			result.adminSocket = fd;
-			result.io = io;
-			return result;
+			details.pid = spawnedPid;
+			details.adminSocket = fd;
+			details.io = io;
 
 		} else if (result == "Error\n") {
 			UPDATE_TRACE_POINT();
-			NegotiationDetails details;
 			details.io = io;
 			details.timeout = timeout;
 			handleSpawnErrorResponse(details);
 
 		} else {
 			UPDATE_TRACE_POINT();
-			NegotiationDetails details;
 			handleInvalidSpawnResponseType(result, details);
 		}
-
-		return SpawnResult(); // Never reached.
 	}
 
 	template<typename Exception>
-	SpawnResult sendSpawnCommandAgain(const Exception &e, const Options &options) {
+	void sendSpawnCommandAgain(const Exception &e, NegotiationDetails &details) {
 		TRACE_POINT();
 		P_WARN("An error occurred while spawning a process: " << e.what());
 		P_WARN("The application preloader seems to have crashed, restarting it and trying again...");
 		stopPreloader();
 		startPreloader();
 		ScopeGuard guard(boost::bind(&SmartSpawner::stopPreloader, this));
-		SpawnResult result = sendSpawnCommand(options);
+		sendSpawnCommand(details);
 		guard.clear();
-		return result;
 	}
 
 protected:
@@ -714,7 +724,7 @@ protected:
 public:
 	SmartSpawner(const vector<string> &_preloaderCommand,
 		const Options &_options,
-		const SpawnerConfigPtr &_config)
+		const ConfigPtr &_config)
 		: Spawner(_config),
 		  preloaderCommand(_preloaderCommand)
 	{
@@ -732,7 +742,7 @@ public:
 		stopPreloader();
 	}
 
-	virtual SpawnObject spawn(const Options &options) {
+	virtual Result spawn(const Options &options) {
 		TRACE_POINT();
 		assert(options.appType == this->options.appType);
 		assert(options.appRoot == this->options.appRoot);
@@ -752,28 +762,11 @@ public:
 		}
 
 		UPDATE_TRACE_POINT();
-		SpawnResult result;
-		try {
-			result = sendSpawnCommand(options);
-		} catch (const SystemException &e) {
-			result = sendSpawnCommandAgain(e, options);
-		} catch (const IOException &e) {
-			result = sendSpawnCommandAgain(e, options);
-		} catch (const SpawnException &e) {
-			result = sendSpawnCommandAgain(e, options);
-		}
-
-		UPDATE_TRACE_POINT();
-		NegotiationDetails details;
-		details.preparation = &preparation;
-		details.pid = result.pid;
-		details.adminSocket = result.adminSocket;
-		details.io = result.io;
-		details.options = &options;
-		SpawnObject object = negotiateSpawn(details);
+		NegotiationDetails details = sendSpawnCommandAndGetNegotiationDetails(options);
+		Result result = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-			", pid=" << object.process->pid);
-		return boost::move(object);
+			", pid=" << result.pid);
+		return result;
 	}
 
 	virtual bool cleanable() const {
@@ -802,7 +795,7 @@ public:
 };
 
 
-} // namespace ApplicationPool2
+} // namespace SpawningKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL2_SMART_SPAWNER_H_ */
+#endif /* _PASSENGER_SPAWNING_KIT_SMART_SPAWNER_H_ */

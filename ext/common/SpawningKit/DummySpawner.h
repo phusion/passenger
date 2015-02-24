@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,13 +22,13 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL2_DUMMY_SPAWNER_H_
-#define _PASSENGER_APPLICATION_POOL2_DUMMY_SPAWNER_H_
+#ifndef _PASSENGER_SPAWNING_KIT_DUMMY_SPAWNER_H_
+#define _PASSENGER_SPAWNING_KIT_DUMMY_SPAWNER_H_
 
-#include <ApplicationPool2/Spawner.h>
+#include <SpawningKit/Spawner.h>
 
 namespace Passenger {
-namespace ApplicationPool2 {
+namespace SpawningKit {
 
 using namespace std;
 using namespace boost;
@@ -43,32 +43,38 @@ private:
 public:
 	unsigned int cleanCount;
 
-	DummySpawner(const SpawnerConfigPtr &_config)
+	DummySpawner(const ConfigPtr &_config)
 		: Spawner(_config)
 	{
 		count = 0;
 		cleanCount = 0;
 	}
 
-	virtual SpawnObject spawn(const Options &options) {
+	virtual Result spawn(const Options &options) {
 		TRACE_POINT();
 		possiblyRaiseInternalError(options);
 
 		SocketPair adminSocket = createUnixSocketPair();
-		SocketList sockets;
-		sockets.add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
+		Result::Socket socket;
+		socket.name = "main";
+		socket.address = "tcp://127.0.0.1:1234";
+		socket.protocol = "session";
+		socket.concurrency = config->concurrency;
+
 		syscalls::usleep(config->spawnTime);
 
 		boost::lock_guard<boost::mutex> l(lock);
+		Result result;
+
 		count++;
-		SpawnObject object;
-		string gupid = "gupid-" + toString(count);
-		object.process = boost::make_shared<Process>(
-			(pid_t) count, gupid,
-			adminSocket.second, FileDescriptor(), sockets,
-			SystemTime::getUsec(), SystemTime::getUsec());
-		object.process->dummy = true;
-		return boost::move(object);
+		result.type = Result::DUMMY_PROCESS;
+		result.pid = count;
+		result.setGupid("gupid-" + toString(count));
+		result.adminSocket = adminSocket.second;
+		result.sockets.push_back(socket);
+		result.spawnerCreationTime = SystemTime::getUsec();
+		result.spawnStartTime = SystemTime::getUsec();
+		return result;
 	}
 
 	virtual bool cleanable() const {
@@ -83,7 +89,7 @@ public:
 typedef boost::shared_ptr<DummySpawner> DummySpawnerPtr;
 
 
-} // namespace ApplicationPool2
+} // namespace SpawningKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL2_DUMMY_SPAWNER_H_ */
+#endif /* _PASSENGER_SPAWNING_KIT_DUMMY_SPAWNER_H_ */

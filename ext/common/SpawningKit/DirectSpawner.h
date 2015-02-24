@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,17 +22,17 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL2_DIRECT_SPAWNER_H_
-#define _PASSENGER_APPLICATION_POOL2_DIRECT_SPAWNER_H_
+#ifndef _PASSENGER_SPAWNING_KIT_DIRECT_SPAWNER_H_
+#define _PASSENGER_SPAWNING_KIT_DIRECT_SPAWNER_H_
 
-#include <ApplicationPool2/Spawner.h>
+#include <SpawningKit/Spawner.h>
 #include <Constants.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
 
 
 namespace Passenger {
-namespace ApplicationPool2 {
+namespace SpawningKit {
 
 using namespace std;
 using namespace boost;
@@ -146,11 +146,11 @@ private:
 	}
 
 public:
-	DirectSpawner(const SpawnerConfigPtr &_config)
+	DirectSpawner(const ConfigPtr &_config)
 		: Spawner(_config)
 		{ }
 
-	virtual SpawnObject spawn(const Options &options) {
+	virtual Result spawn(const Options &options) {
 		TRACE_POINT();
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
@@ -221,23 +221,23 @@ public:
 			details.options = &options;
 			details.debugDir = debugDir;
 
-			SpawnObject object;
+			Result result;
 			{
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
-				object = negotiateSpawn(details);
+				result = negotiateSpawn(details);
 			}
-			detachProcess(object.process->pid);
+			detachProcess(result.pid);
 			guard.clear();
 			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-				", pid=" << object.process->pid);
-			return boost::move(object);
+				", pid=" << result.pid);
+			return result;
 		}
 	}
 };
 
 
-} // namespace ApplicationPool2
+} // namespace SpawningKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL2_DIRECT_SPAWNER_H_ */
+#endif /* _PASSENGER_SPAWNING_KIT_DIRECT_SPAWNER_H_ */

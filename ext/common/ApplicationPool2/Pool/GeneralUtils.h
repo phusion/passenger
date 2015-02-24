@@ -114,14 +114,14 @@ static const char *maybePluralize(unsigned int count, const char *singular, cons
 
 public:
 
-const SpawnerConfigPtr &getSpawnerConfig() const {
-	return spawnerFactory->getConfig();
+const SpawningKit::ConfigPtr &getSpawningKitConfig() const {
+	return spawningKitFactory->getConfig();
 }
 
 const UnionStation::CorePtr &getUnionStationCore() const {
-	return getSpawnerConfig()->unionStationCore;
+	return getSpawningKitConfig()->unionStationCore;
 }
 
 const RandomGeneratorPtr &getRandomGenerator() const {
-	return getSpawnerConfig()->randomGenerator;
+	return getSpawningKitConfig()->randomGenerator;
 }

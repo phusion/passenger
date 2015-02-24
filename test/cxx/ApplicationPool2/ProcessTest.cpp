@@ -8,14 +8,23 @@ using namespace std;
 
 namespace tut {
 	struct ApplicationPool2_ProcessTest {
+		SpawningKit::ConfigPtr spawningKitConfig;
 		BackgroundEventLoop bg;
 		SocketList sockets;
 		SocketPair adminSocket;
 		Pipe errorPipe;
 		FileDescriptor server1, server2, server3;
+		SpawningKit::OutputHandler gatherOutput;
+		string gatheredOutput;
+		boost::mutex gatheredOutputSyncher;
 
 		ApplicationPool2_ProcessTest() {
+			setPrintAppOutputAsDebuggingMessages(true);
 			bg.start();
+
+			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
+			spawningKitConfig->resourceLocator = resourceLocator;
+			spawningKitConfig->finalize();
 
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
@@ -40,11 +49,23 @@ namespace tut {
 
 			adminSocket = createUnixSocketPair();
 			errorPipe = createPipe();
+
+			gatherOutput = boost::bind(&ApplicationPool2_ProcessTest::_gatherOutput, this, _1, _2);
+		}
+
+		~ApplicationPool2_ProcessTest() {
+			setLogLevel(DEFAULT_LOG_LEVEL);
+			setPrintAppOutputAsDebuggingMessages(false);
+		}
+
+		void _gatherOutput(const char *data, unsigned int size) {
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			gatheredOutput.append(data, size);
 		}
 
 		ProcessPtr createProcess() {
-			ProcessPtr process = boost::make_shared<Process>(123,
-				"123", adminSocket[0], errorPipe[0], sockets, 0, 0);
+			ProcessPtr process = boost::make_shared<Process>(spawningKitConfig,
+				123, "123", adminSocket[0], errorPipe[0], sockets, 0, 0);
 			process->dummy = true;
 			process->requiresShutdown = false;
 			return process;
@@ -54,14 +75,14 @@ namespace tut {
 	DEFINE_TEST_GROUP(ApplicationPool2_ProcessTest);
 
 	TEST_METHOD(1) {
-		// Test initial state.
+		set_test_name("Test initial state");
 		ProcessPtr process = createProcess();
 		ensure_equals(process->busyness(), 0);
 		ensure(!process->isTotallyBusy());
 	}
 
 	TEST_METHOD(2) {
-		// Test opening and closing sessions.
+		set_test_name("Test opening and closing sessions");
 		ProcessPtr process = createProcess();
 		SessionPtr session = process->newSession();
 		SessionPtr session2 = process->newSession();
@@ -73,8 +94,8 @@ namespace tut {
 	}
 
 	TEST_METHOD(3) {
-		// newSession() checks out the socket with the smallest busyness number
-		// and sessionClosed() restores the session busyness statistics.
+		set_test_name("newSession() checks out the socket with the smallest busyness number "
+			"and sessionClosed() restores the session busyness statistics");
 		ProcessPtr process = createProcess();
 
 		// The first 3 newSession() commands check out an idle socket.
@@ -115,7 +136,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(4) {
-		// If all sockets are at their full capacity then newSession() will fail.
+		set_test_name("If all sockets are at their full capacity then newSession() will fail");
 		ProcessPtr process = createProcess();
 		vector<SessionPtr> sessions;
 		for (int i = 0; i < 9; i++) {
@@ -126,5 +147,36 @@ namespace tut {
 		}
 		ensure(process->isTotallyBusy());
 		ensure(process->newSession() == NULL);
+	}
+
+	TEST_METHOD(5) {
+		set_test_name("It forwards all adminSocket and errorPipe output, even after the "
+			"Process object has been destroyed");
+		ProcessPtr process = createProcess();
+		setLogLevel(LVL_WARN);
+		spawningKitConfig->outputHandler = gatherOutput;
+
+		writeExact(adminSocket[1], "adminSocket 1\n");
+		writeExact(errorPipe[1], "errorPipe 1\n");
+
+		EVENTUALLY(2,
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			result = gatheredOutput.find("adminSocket 1\n") != string::npos
+				&& gatheredOutput.find("errorPipe 1\n") != string::npos;
+		);
+
+		{
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			gatheredOutput.clear();
+		}
+		process.reset();
+
+		writeExact(adminSocket[1], "adminSocket 2\n");
+		writeExact(errorPipe[1], "errorPipe 2\n");
+		EVENTUALLY(2,
+			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
+			result = gatheredOutput.find("adminSocket 2\n") != string::npos
+				&& gatheredOutput.find("errorPipe 2\n") != string::npos;
+		);
 	}
 }

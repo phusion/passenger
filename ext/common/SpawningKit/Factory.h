@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,26 +22,26 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_APPLICATION_POOL2_SPAWNER_FACTORY_H_
-#define _PASSENGER_APPLICATION_POOL2_SPAWNER_FACTORY_H_
+#ifndef _PASSENGER_SPAWNING_KIT_FACTORY_H_
+#define _PASSENGER_SPAWNING_KIT_FACTORY_H_
 
-#include <ApplicationPool2/Spawner.h>
-#include <ApplicationPool2/SmartSpawner.h>
-#include <ApplicationPool2/DirectSpawner.h>
-#include <ApplicationPool2/DummySpawner.h>
+#include <SpawningKit/Spawner.h>
+#include <SpawningKit/SmartSpawner.h>
+#include <SpawningKit/DirectSpawner.h>
+#include <SpawningKit/DummySpawner.h>
 
 namespace Passenger {
-namespace ApplicationPool2 {
+namespace SpawningKit {
 
 using namespace std;
 using namespace boost;
 using namespace oxt;
 
 
-class SpawnerFactory {
+class Factory {
 private:
 	boost::mutex syncher;
-	SpawnerConfigPtr config;
+	ConfigPtr config;
 	DummySpawnerPtr dummySpawner;
 
 	SpawnerPtr tryCreateSmartSpawner(const Options &options) {
@@ -58,11 +58,11 @@ private:
 	}
 
 public:
-	SpawnerFactory(const SpawnerConfigPtr &_config)
+	Factory(const ConfigPtr &_config)
 		: config(_config)
 		{ }
 
-	virtual ~SpawnerFactory() { }
+	virtual ~Factory() { }
 
 	virtual SpawnerPtr create(const Options &options) {
 		if (options.spawnMethod == "smart" || options.spawnMethod == "smart-lv2") {
@@ -97,17 +97,17 @@ public:
 	}
 
 	/**
-	 * All created Spawner objects share the same SpawnerConfig object.
+	 * All created Spawner objects share the same Config object.
 	 */
-	const SpawnerConfigPtr &getConfig() const {
+	const ConfigPtr &getConfig() const {
 		return config;
 	}
 };
 
-typedef boost::shared_ptr<SpawnerFactory> SpawnerFactoryPtr;
+typedef boost::shared_ptr<Factory> FactoryPtr;
 
 
-} // namespace ApplicationPool2
+} // namespace SpawningKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_APPLICATION_POOL2_SPAWNER_FACTORY_H_ */
+#endif /* _PASSENGER_SPAWNING_KIT_FACTORY_H_ */

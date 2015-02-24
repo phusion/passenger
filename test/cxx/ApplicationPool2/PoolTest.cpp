@@ -15,8 +15,8 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct ApplicationPool2_PoolTest {
-		SpawnerConfigPtr spawnerConfig;
-		SpawnerFactoryPtr spawnerFactory;
+		SpawningKit::ConfigPtr spawningKitConfig;
+		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr pool;
 		Pool::DebugSupportPtr debug;
 		Ticket ticket;
@@ -30,15 +30,15 @@ namespace tut {
 
 		ApplicationPool2_PoolTest() {
 			retainSessions = false;
-			spawnerConfig = boost::make_shared<SpawnerConfig>();
-			spawnerConfig->resourceLocator = resourceLocator;
-			spawnerConfig->finalize();
-			spawnerFactory = boost::make_shared<SpawnerFactory>(spawnerConfig);
-			pool = boost::make_shared<Pool>(spawnerFactory);
+			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
+			spawningKitConfig->resourceLocator = resourceLocator;
+			spawningKitConfig->finalize();
+			spawningKitFactory = boost::make_shared<SpawningKit::Factory>(spawningKitConfig);
+			pool = boost::make_shared<Pool>(spawningKitFactory);
 			pool->initialize();
 			callback.func = _callback;
 			callback.userData = this;
-			setLogLevel(LVL_ERROR); // TODO: change to LVL_WARN
+			setLogLevel(LVL_WARN);
 			setPrintAppOutputAsDebuggingMessages(true);
 		}
 
@@ -390,7 +390,7 @@ namespace tut {
 		options.minProcesses = 2;
 		pool->setMax(2);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawnerConfig->concurrency = 2;
+		spawningKitConfig->concurrency = 2;
 		{
 			LockGuard l(pool->syncher);
 			group->spawn();
@@ -444,7 +444,7 @@ namespace tut {
 		options.appGroupName = "test";
 		options.minProcesses = 2;
 		pool->setMax(2);
-		spawnerConfig->concurrency = 2;
+		spawningKitConfig->concurrency = 2;
 
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -493,7 +493,7 @@ namespace tut {
 		options.minProcesses = 2;
 		pool->setMax(3);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawnerConfig->concurrency = 2;
+		spawningKitConfig->concurrency = 2;
 
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -512,7 +512,7 @@ namespace tut {
 
 		// The next asyncGet() should spawn a new process and the action should be queued.
 		ScopedLock l(pool->syncher);
-		spawnerConfig->spawnTime = 5000000;
+		spawningKitConfig->spawnTime = 5000000;
 		pool->asyncGet(options, callback, false);
 		ensure(group->spawning());
 		ensure_equals(group->getWaitlist.size(), 1u);
@@ -535,7 +535,7 @@ namespace tut {
 		options.minProcesses = 2;
 		pool->setMax(3);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawnerConfig->concurrency = 2;
+		spawningKitConfig->concurrency = 2;
 
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -981,7 +981,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appGroupName = "test";
 		pool->setMax(1);
-		spawnerConfig->spawnTime = 1000000;
+		spawningKitConfig->spawnTime = 1000000;
 
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
@@ -1018,7 +1018,7 @@ namespace tut {
 		options.appGroupName = "test";
 		options.minProcesses = 0;
 		pool->setMax(1);
-		spawnerConfig->spawnTime = 30000;
+		spawningKitConfig->spawnTime = 30000;
 
 		// Begin spawning a process.
 		pool->asyncGet(options, callback);
@@ -1028,7 +1028,7 @@ namespace tut {
 		Options options2 = createOptions();
 		options2.appGroupName = "test2";
 		options2.minProcesses = 0;
-		spawnerConfig->spawnTime = 90000;
+		spawningKitConfig->spawnTime = 90000;
 		pool->asyncGet(options2, callback);
 		{
 			LockGuard l(pool->syncher);
@@ -1214,7 +1214,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 1u);
 		ensure(!pool->isSpawning());
 
-		spawnerConfig->spawnTime = 60000;
+		spawningKitConfig->spawnTime = 60000;
 		AtomicInt code = -1;
 		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
 			this, session->getProcess()->shared_from_this(), &code));
@@ -1240,6 +1240,7 @@ namespace tut {
 		vector<ProcessPtr> processes = pool->getProcesses();
 		ensure_equals("(1)", processes.size(), 1u);
 
+		setLogLevel(LVL_ERROR);
 		DisableResult result = pool->disableProcess(StaticString(
 			processes[0]->gupid, processes[0]->gupidSize));
 		ensure_equals("(2)", result, DR_ERROR);
@@ -1515,12 +1516,12 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 2u);
 
 		EVENTUALLY(2,
-			SpawnerPtr spawner = pool->getSuperGroup("test1")->defaultGroup->spawner;
-			result = static_pointer_cast<DummySpawner>(spawner)->cleanCount >= 1;
+			SpawningKit::SpawnerPtr spawner = pool->getSuperGroup("test1")->defaultGroup->spawner;
+			result = static_pointer_cast<SpawningKit::DummySpawner>(spawner)->cleanCount >= 1;
 		);
 		EVENTUALLY(2,
-			SpawnerPtr spawner = pool->getSuperGroup("test2")->defaultGroup->spawner;
-			result = static_pointer_cast<DummySpawner>(spawner)->cleanCount >= 1;
+			SpawningKit::SpawnerPtr spawner = pool->getSuperGroup("test2")->defaultGroup->spawner;
+			result = static_pointer_cast<SpawningKit::DummySpawner>(spawner)->cleanCount >= 1;
 		);
 	}
 
@@ -1776,7 +1777,7 @@ namespace tut {
 		);
 
 		// Trigger a restart. The creation of the new spawner should take a while.
-		spawnerConfig->spawnerCreationSleepTime = 20000;
+		spawningKitConfig->spawnerCreationSleepTime = 20000;
 		touchFile("tmp.wsgi/tmp/restart.txt");
 		pool->asyncGet(options, callback);
 		GroupPtr group = pool->findOrCreateGroup(options);
@@ -1931,7 +1932,7 @@ namespace tut {
 		options.appGroupName = "test1";
 		options.maxRequestQueueSize = 3;
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawnerConfig->concurrency = 3;
+		spawningKitConfig->concurrency = 3;
 		initPoolDebugging();
 		pool->setMax(1);
 

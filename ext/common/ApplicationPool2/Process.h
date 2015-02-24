@@ -42,7 +42,8 @@
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Socket.h>
 #include <ApplicationPool2/Session.h>
-#include <ApplicationPool2/PipeWatcher.h>
+#include <SpawningKit/PipeWatcher.h>
+#include <MemoryKit/palloc.h>
 #include <Constants.h>
 #include <FileDescriptor.h>
 #include <Logging.h>
@@ -305,7 +306,33 @@ public:
 	/** Collected by Pool::collectAnalytics(). */
 	ProcessMetrics metrics;
 
-	Process(pid_t _pid,
+	static ProcessPtr createFromSpawningKitResult(psg_pool_t *pool,
+		const SpawningKit::ConfigPtr &config,
+		const SpawningKit::Result &result)
+	{
+		SocketList sockets;
+		vector<SpawningKit::Result::Socket>::const_iterator it;
+
+		for (it = result.sockets.begin(); it != result.sockets.end(); it++) {
+			sockets.add(pool, *it);
+		}
+
+		ProcessPtr process = make_shared<Process>(
+			config,
+			result.pid,
+			psg_pstrdup(pool, StaticString(result.gupid, result.gupidSize)),
+			result.adminSocket,
+			result.errorPipe,
+			sockets,
+			result.spawnerCreationTime,
+			result.spawnStartTime
+		);
+		process->dummy = result.type == SpawningKit::Result::DUMMY_PROCESS;
+		return process;
+	}
+
+	Process(const SpawningKit::ConfigPtr &_config,
+		pid_t _pid,
 		const StaticString &_gupid,
 		const FileDescriptor &_adminSocket,
 		/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
@@ -340,14 +367,14 @@ public:
 		assert(_gupid.size() <= GUPID_MAX_SIZE);
 
 		if (_adminSocket != -1) {
-			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_adminSocket,
-				"stdout", pid);
+			SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
+				_config, _adminSocket, "stdout", pid);
 			watcher->initialize();
 			watcher->start();
 		}
 		if (_errorPipe != -1) {
-			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(_errorPipe,
-				"stderr", pid);
+			SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
+				_config, _errorPipe, "stderr", pid);
 			watcher->initialize();
 			watcher->start();
 		}
@@ -615,16 +642,6 @@ public:
 	}
 
 	string inspect() const;
-
-	void recreateStrings(psg_pool_t *pool) {
-		SocketList::iterator it;
-
-		recreateString(pool, codeRevision);
-
-		for (it = sockets.begin(); it != sockets.end(); it++) {
-			it->recreateStrings(pool);
-		}
-	}
 
 	template<typename Stream>
 	void inspectXml(Stream &stream, bool includeSockets = true) const {
