@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -33,6 +33,7 @@
 #include <Account.h>
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
+#include <DataStructures/HashedStaticString.h>
 #include <Constants.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
