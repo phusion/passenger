@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -43,7 +43,8 @@ bool feedbackFdAvailable();
 VariantMap initializeAgent(int argc, char **argv[], const char *processName,
 	OptionParserFunc optionParser = NULL, PreinitializationFunc preinit = NULL,
 	int argStartIndex = 1);
-void installAbortHandler();
+void initializeAgentOptions(VariantMap &options, PreinitializationFunc preinit = NULL);
+void installAgentAbortHandler();
 void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
 
 }

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -1082,7 +1082,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 #endif /* __APPLE__ */
 
 void
-installAbortHandler() {
+installAgentAbortHandler() {
 	alternativeStackSize = MINSIGSTKSZ + 128 * 1024;
 	alternativeStack = (char *) malloc(alternativeStackSize);
 	if (alternativeStack == NULL) {
@@ -1492,7 +1492,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT");
 		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe1));
 		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe2));
-		installAbortHandler();
+		installAgentAbortHandler();
 	}
 	oxt::initialize();
 	setup_syscall_interruption_support();
@@ -1518,43 +1518,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 				argc - argStartIndex);
 		}
 
-		ResourceLocator locator;
-		string ruby;
-
-		if (options.has("passenger_root")) {
-			string path;
-			locator = ResourceLocator(options.get("passenger_root", true));
-			ruby = options.get("default_ruby", false, DEFAULT_RUBY);
-
-			rubyLibDir    = strdup(locator.getRubyLibDir().c_str());
-			passengerRoot = strdup(options.get("passenger_root", true).c_str());
-			defaultRuby   = strdup(ruby.c_str());
-
-			#ifdef __linux__
-				path = ruby + " \"" + locator.getHelperScriptsDir() +
-					"/backtrace-sanitizer.rb\"";
-				backtraceSanitizerCommand = strdup(path.c_str());
-			#endif
-
-			path = locator.getHelperScriptsDir() + "/crash-watch.rb";
-			crashWatch = strdup(path.c_str());
-		} else {
-			shouldDumpWithCrashWatch = false;
-		}
-
-		if (backtraceSanitizerCommand == NULL) {
-			backtraceSanitizerCommand = "c++filt -n";
-			backtraceSanitizerPassProgramInfo = false;
-		}
-
-		if (preinit != NULL) {
-			preinit(options);
-		}
-		options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
-		setLogLevel(options.getInt("log_level"));
-		if (options.has("debug_log_file")) {
-			setLogFile(options.get("debug_log_file").c_str());
-		}
+		initializeAgentOptions(options, preinit);
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		exit(1);
@@ -1579,6 +1543,47 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	P_DEBUG("Random seed: " << randomSeed);
 
 	return options;
+}
+
+void
+initializeAgentOptions(VariantMap &options, PreinitializationFunc preinit) {
+	ResourceLocator locator;
+	string ruby;
+
+	if (options.has("passenger_root")) {
+		string path;
+		locator = ResourceLocator(options.get("passenger_root", true));
+		ruby = options.get("default_ruby", false, DEFAULT_RUBY);
+
+		rubyLibDir    = strdup(locator.getRubyLibDir().c_str());
+		passengerRoot = strdup(options.get("passenger_root", true).c_str());
+		defaultRuby   = strdup(ruby.c_str());
+
+		#ifdef __linux__
+			path = ruby + " \"" + locator.getHelperScriptsDir() +
+				"/backtrace-sanitizer.rb\"";
+			backtraceSanitizerCommand = strdup(path.c_str());
+		#endif
+
+		path = locator.getHelperScriptsDir() + "/crash-watch.rb";
+		crashWatch = strdup(path.c_str());
+	} else {
+		shouldDumpWithCrashWatch = false;
+	}
+
+	if (backtraceSanitizerCommand == NULL) {
+		backtraceSanitizerCommand = "c++filt -n";
+		backtraceSanitizerPassProgramInfo = false;
+	}
+
+	if (preinit != NULL) {
+		preinit(options);
+	}
+	options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
+	setLogLevel(options.getInt("log_level"));
+	if (options.has("debug_log_file")) {
+		setLogFile(options.get("debug_log_file").c_str());
+	}
 }
 
 } // namespace Passenger

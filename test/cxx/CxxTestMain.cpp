@@ -11,6 +11,7 @@
 #include <cstring>
 #include <unistd.h>
 
+#include <agents/Base.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
@@ -132,28 +133,13 @@ loadConfigFile() {
 }
 
 static void
-abortHandler(int signo, siginfo_t *info, void *ctx) {
-	// Stop itself so that we can attach it to gdb.
-	static const char message[] = "Crash handler called!\n";
-	write(STDERR_FILENO, message, sizeof(message) - 1);
-	raise(SIGSTOP);
-	// Run default signal handler.
-	raise(signo);
-}
-
-static void
 installAbortHandler() {
-	const char *stopOnAbort = getenv("STOP_ON_ABORT");
-	if (stopOnAbort != NULL && *stopOnAbort != '\0' && *stopOnAbort != '0') {
-		struct sigaction action;
-		action.sa_sigaction = abortHandler;
-		action.sa_flags = SA_RESETHAND | SA_SIGINFO;
-		sigemptyset(&action.sa_mask);
-		sigaction(SIGABRT, &action, NULL);
-		sigaction(SIGSEGV, &action, NULL);
-		sigaction(SIGBUS, &action, NULL);
-		sigaction(SIGFPE, &action, NULL);
-	}
+	VariantMap options;
+
+	options.set("passenger_root", resourceLocator->getRoot());
+
+	initializeAgentOptions(options);
+	installAgentAbortHandler();
 }
 
 int
