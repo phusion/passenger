@@ -2,6 +2,7 @@ Release 5.0.1
 -------------
 
  * The `passenger-config restart-app` command is now more user friendly. When run in a terminal, it will show an interactive menu, allowing you to select the app to restart. Closes GH-1387.
+ * Fixes a crash bug in the handling of sticky session cookies.
  * [Enterprise] The `sticky_sessions` and `envvars` options in Passengerfile.json is now also supported in mass deployment mode.
 
 

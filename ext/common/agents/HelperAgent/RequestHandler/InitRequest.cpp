@@ -415,16 +415,18 @@ setStickySessionId(Client *client, Request *req) {
 		// headers, although this is in practice extremely rare.
 		// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
 		const LString *cookieHeader = req->headers.lookup(HTTP_COOKIE);
-		const LString *cookieName = getStickySessionCookieName(req);
-		vector< pair<StaticString, StaticString> > cookies;
-		pair<StaticString, StaticString> cookie;
+		if (cookieHeader != NULL) {
+			const LString *cookieName = getStickySessionCookieName(req);
+			vector< pair<StaticString, StaticString> > cookies;
+			pair<StaticString, StaticString> cookie;
 
-		parseCookieHeader(req->pool, cookieHeader, cookies);
-		foreach (cookie, cookies) {
-			if (psg_lstr_cmp(cookieName, cookie.first)) {
-				// This cookie matches the one we're looking for.
-				req->options.stickySessionId = stringToUint(cookie.second);
-				return;
+			parseCookieHeader(req->pool, cookieHeader, cookies);
+			foreach (cookie, cookies) {
+				if (psg_lstr_cmp(cookieName, cookie.first)) {
+					// This cookie matches the one we're looking for.
+					req->options.stickySessionId = stringToUint(cookie.second);
+					return;
+				}
 			}
 		}
 	}
