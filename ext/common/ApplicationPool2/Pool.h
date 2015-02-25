@@ -80,6 +80,7 @@ public:
 public:
 	friend class SuperGroup;
 	friend class Group;
+	friend class Process;
 	friend struct tut::ApplicationPool2_PoolTest;
 
 	SpawnerFactoryPtr spawnerFactory;
