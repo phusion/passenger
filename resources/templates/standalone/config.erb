@@ -139,9 +139,9 @@ http {
         <% if app[:thread_count] && app[:thread_count] != DEFAULT_APP_THREAD_COUNT %>passenger_thread_count <%= app[:thread_count] %>;<% end %>
         <% if app[:min_instances] %>passenger_min_instances <%= app[:min_instances] %>;<% end %>
         <% if app[:restart_dir] %>passenger_restart_dir '<%= app[:restart_dir] %>';<% end %>
-        <% if @options[:sticky_sessions] %>passenger_sticky_sessions on;<% end %>
-        <% if @options[:sticky_sessions_cookie_name] %>passenger_sticky_sessions_cookie_name '<%= @options[:sticky_sessions_cookie_name] %>';<% end %>
-        <% if @options[:vary_turbocache_by_cookie] %>passenger_vary_turbocache_by_cookie '<%= @options[:vary_turbocache_by_cookie] %>';<% end %>
+        <% if app[:sticky_sessions] %>passenger_sticky_sessions on;<% end %>
+        <% if app[:sticky_sessions_cookie_name] %>passenger_sticky_sessions_cookie_name '<%= app[:sticky_sessions_cookie_name] %>';<% end %>
+        <% if app[:vary_turbocache_by_cookie] %>passenger_vary_turbocache_by_cookie '<%= app[:vary_turbocache_by_cookie] %>';<% end %>
         <% if app[:union_station_key] %>
             union_station_support on;
             union_station_key <%= app[:union_station_key] %>;
@@ -151,7 +151,7 @@ http {
             ssl_certificate_key <%= app[:ssl_certificate_key] %>;
         <% end %>
 
-        <% @options[:envvars].each_pair do |name, value| %>
+        <% app[:envvars].each_pair do |name, value| %>
             passenger_env_var '<%= name %>' '<%= value %>';
         <% end %>
 
