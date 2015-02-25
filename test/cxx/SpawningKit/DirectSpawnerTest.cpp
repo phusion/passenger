@@ -3,6 +3,7 @@
 #include <FileDescriptor.h>
 #include <Utils/json.h>
 #include <Utils/IOUtils.h>
+#include <algorithm>
 #include <fcntl.h>
 
 using namespace Passenger;
@@ -61,19 +62,27 @@ namespace tut {
 		options.appRoot      = "stub";
 		options.startCommand = "perl\t" "-e\t" "print STDERR \"hello world\\n\"; sleep(60)";
 		options.startupFile  = ".";
-		options.startTimeout = 300;
+		options.startTimeout = 100;
 
 		DirectSpawner spawner(config);
 		setLogLevel(LVL_CRIT);
 
-		try {
-			spawner.spawn(options);
-			fail("Timeout expected");
-		} catch (const SpawnException &e) {
-			ensure_equals(e.getErrorKind(),
-				SpawnException::APP_STARTUP_TIMEOUT);
-			ensure(e.getErrorPage().find("hello world\n") != string::npos);
-		}
+		EVENTUALLY(5,
+			try {
+				spawner.spawn(options);
+				fail("Timeout expected");
+			} catch (const SpawnException &e) {
+				ensure_equals(e.getErrorKind(),
+					SpawnException::APP_STARTUP_TIMEOUT);
+				result = e.getErrorPage().find("hello world\n") != string::npos;
+				if (!result) {
+					// It didn't work, maybe because the server is too busy.
+					// Try again with higher timeout.
+					options.startTimeout = std::min<unsigned int>(
+						options.startTimeout * 2, 1000);
+				}
+			}
+		);
 	}
 
 	TEST_METHOD(81) {

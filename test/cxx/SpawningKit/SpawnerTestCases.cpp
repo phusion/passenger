@@ -90,16 +90,24 @@
 		options.appRoot      = "stub";
 		options.startCommand = "sleep\t" "60";
 		options.startupFile  = ".";
-		options.startTimeout = 300;
-		SpawnerPtr spawner = createSpawner(options);
+		options.startTimeout = 100;
 		setLogLevel(LVL_CRIT);
-		try {
-			spawner->spawn(options);
-			fail("Timeout expected");
-		} catch (const SpawnException &e) {
-			ensure_equals(e.getErrorKind(),
-				SpawnException::APP_STARTUP_TIMEOUT);
-		}
+
+		EVENTUALLY(5,
+			SpawnerPtr spawner = createSpawner(options);
+			try {
+				spawner->spawn(options);
+				fail("Timeout expected");
+			} catch (const SpawnException &e) {
+				result = e.getErrorKind() == SpawnException::APP_STARTUP_TIMEOUT;
+				if (!result) {
+					// It didn't work, maybe because the server is too busy.
+					// Try again with higher timeout.
+					options.startTimeout = std::min<unsigned int>(
+						options.startTimeout * 2, 1000);
+				}
+			}
+		);
 	}
 
 	TEST_METHOD(3) {
@@ -146,16 +154,24 @@
 		options.appRoot      = "stub";
 		options.startCommand = "perl\t" "start_error.pl\t" "freeze";
 		options.startupFile  = "start_error.pl";
-		options.startTimeout = 300;
-		SpawnerPtr spawner = createSpawner(options);
+		options.startTimeout = 100;
 		setLogLevel(LVL_CRIT);
-		try {
-			spawner->spawn(options);
-			fail("Timeout expected");
-		} catch (const SpawnException &e) {
-			ensure_equals(e.getErrorKind(),
-				SpawnException::APP_STARTUP_TIMEOUT);
-		}
+
+		EVENTUALLY(5,
+			SpawnerPtr spawner = createSpawner(options);
+			try {
+				spawner->spawn(options);
+				fail("Timeout expected");
+			} catch (const SpawnException &e) {
+				result = e.getErrorKind() == SpawnException::APP_STARTUP_TIMEOUT;
+				if (!result) {
+					// It didn't work, maybe because the server is too busy.
+					// Try again with higher timeout.
+					options.startTimeout = std::min<unsigned int>(
+						options.startTimeout * 2, 1000);
+				}
+			}
+		);
 	}
 
 	TEST_METHOD(6) {
