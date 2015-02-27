@@ -162,7 +162,9 @@ main(int argc, char *argv[]) {
 	resourceLocator = new ResourceLocator(extractDirName(path));
 
 	loadConfigFile();
-	installAbortHandler();
+	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true) && !hasEnvOption("GDB", false)) {
+		installAbortHandler();
+	}
 
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
