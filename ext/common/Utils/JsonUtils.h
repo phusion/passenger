@@ -36,6 +36,24 @@ namespace Passenger {
 
 using namespace std;
 
+
+/**************************************************************
+ *
+ * Methods for generating JSON.
+ *
+ **************************************************************/
+
+/**
+ * Returns a JSON document as its string representation.
+ * This string is not prettified and does not contain a
+ * trailing newline.
+ *
+ *     Json::Value doc;
+ *     doc["foo"] = "bar";
+ *     cout << stringifyJson(doc) << endl;
+ *     // Prints:
+ *     // {"foo": "bar"}
+ */
 inline string
 stringifyJson(const Json::Value &value) {
 	Json::FastWriter writer;
@@ -44,12 +62,29 @@ stringifyJson(const Json::Value &value) {
 	return str;
 }
 
-/** `str` MUST be NULL-terminated! */
+/**
+ * Encodes the given string as a JSON string. `str` MUST be NULL-terminated!
+ *
+ *     cout << jsonString("hello \"user\"") << endl;
+ *     // Prints:
+ *     // "hello \"user\""
+ */
 inline string
 jsonString(const Passenger::StaticString &str) {
 	return stringifyJson(Json::Value(Json::StaticString(str.data())));
 }
 
+/**
+ * Encodes the given Unix timestamp into a JSON object that
+ * describes it.
+ *
+ *     timeToJson(time(NULL) - 10);
+ *     // {
+ *     //   "timestamp": 1424887842,
+ *     //   "local": "Wed Feb 25 19:10:34 CET 2015",
+ *     //   "relative": "10s ago"
+ *     // }
+ */
 inline Json::Value
 timeToJson(unsigned long long timestamp) {
 	Json::Value doc;
@@ -106,6 +141,7 @@ signedByteSizeToJson(long long size) {
 	}
 	return doc;
 }
+
 
 } // namespace Passenger
 
