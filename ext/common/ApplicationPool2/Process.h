@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -86,13 +86,11 @@ typedef boost::container::vector<ProcessPtr> ProcessList;
  * ## Life time
  *
  * A Process object lives until the containing Group calls `detach(process)`,
- * which indicates that it wants this Process to shut down. This causes
- * `signalDetached()` to be called, which may or may not send a message
- * to the process. After this, the Process object is stored in the
- * `detachedProcesses` collection in the Group and are no longer eligible for
- * receiving requests. Once all requests on this Process have finished,
+ * which indicates that it wants this Process to shut down. The Process object
+ * is stored in the `detachedProcesses` collection in the Group and is no longer
+ * eligible for receiving requests. Once all requests on this Process have finished,
  * `triggerShutdown()` will be called, which will send a message to the
- * process telling it to shut down. Once the process is gone, `cleanup()` is
+ * OS process telling it to shut down. Once the OS process is gone, `cleanup()` is
  * called, and the Process object is removed from the collection.
  *
  * This means that a Group outlives all its Processes, a Process outlives all
