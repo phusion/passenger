@@ -89,12 +89,10 @@ module PhusionPassenger
       def list_all_passenger_instances(instances)
         puts "The following #{PROGRAM_NAME} instances are running:"
         puts
+        printf "%-25s  %s\n", "Name", "Description"
+        puts "------------------------------------------------------------------"
         instances.each do |instance|
-          printf "%-25s  %s\n", "Name", "Description"
-          puts "------------------------------------------------------------------"
-          instances.each do |instance|
-            printf "%-25s  %s\n", instance.name, instance.server_software
-          end
+          printf "%-25s  %s\n", instance.name, instance.server_software
         end
       end
 
