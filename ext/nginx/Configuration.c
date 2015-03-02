@@ -745,7 +745,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->upstream_config.upstream = prev->upstream_config.upstream;
     }
 
-    if (conf->enabled) {
+    if (conf->enabled == 1 /* and not NGX_CONF_UNSET */
+     && passenger_main_conf.root_dir.len != 0
+     && clcf->handler == NULL /* no handler set by other modules */)
+    {
         clcf->handler = passenger_content_handler;
     }
 
