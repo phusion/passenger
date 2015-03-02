@@ -430,6 +430,18 @@ Please see <<deploying_a_rack_app,Deploying a Rack-based Ruby application>>
 and <<deploying_a_wsgi_app,Deploying a WSGI (Python) application>>
 for examples.
 
+------------------------------
+server {
+    listen 80;
+    server_name www.example.com;
+    root /webapps/example/public;
+
+    # You must explicitly set 'passenger_enabled on', otherwise
+    # Phusion Passenger won't serve this app.
+    passenger_enabled on;
+}
+------------------------------
+
 [[PassengerBaseURI]]
 ==== passenger_base_uri <uri>
 Used to specify that the given URI is an distinct application that should
