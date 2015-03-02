@@ -164,7 +164,7 @@ using namespace Passenger::ServerAgent;
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
 
-adhoc_lve::LveInit global_lveInit;
+static adhoc_lve::LveInit global_lveInit;
 
 /***** Server stuff *****/
 
@@ -494,6 +494,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
 	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawnerConfig->agentsOptions = agentsOptions;
+	wo->spawnerConfig->lvelib = &global_lveInit;
 	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
 	wo->spawnerConfig->instanceDir = options.get("instance_dir", false);
 	if (!wo->spawnerConfig->instanceDir.empty()) {

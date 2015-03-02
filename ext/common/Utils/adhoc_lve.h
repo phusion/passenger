@@ -251,6 +251,4 @@ private: //non-copiable
 
 } // adhoc_lve ns
 
-extern adhoc_lve::LveInit global_lveInit;
-
 #endif /* _ADHOC_LVE_H_ */

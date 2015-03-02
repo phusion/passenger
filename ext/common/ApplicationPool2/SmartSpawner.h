@@ -217,7 +217,7 @@ private:
 		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 
-		LveEnter lveEnter(preparation.uid, options.lveMinUid);
+		LveEnter lveEnter(*this, preparation.uid, options.lveMinUid);
 
 		pid = syscalls::fork();
 		if (pid == 0) {

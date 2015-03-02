@@ -376,20 +376,30 @@ protected:
 		}
 	};
 
-	class LveEnter : private ::adhoc_lve::LveEnter {
-		typedef ::adhoc_lve::LveEnter Impl;
+	class LveEnter {
 	public:
-		LveEnter(uint32_t uid, uint32_t cfgMinUid)
-			: Impl(global_lveInit, uid, cfgMinUid, lveExitCallback)
+		LveEnter(Spawner& context, uint32_t uid, uint32_t cfgMinUid)
 		{
-			if (global_lveInit.isLveReady() && isError())
-				P_ERROR("LVE enter error: " << errorString());
-			else if (isEntered())
+			adhoc_lve::LveInit *lvelib = context.config->lvelib;
+			if (!lvelib || !lvelib->isLveReady())
+				return;
+
+			impl.reset(new Impl(*lvelib, uid, cfgMinUid, lveExitCallback));
+
+			if (impl->isError())
+				P_ERROR("LVE enter error: " << impl->errorString());
+			else if (impl->isEntered())
 				P_DEBUG("LVE enter success [uid = " << uid << ", cfgMinUid = " << cfgMinUid << "]");
 		}
 
-		void exit() { Impl::exit(); }
+		void exit() {
+			if (impl)
+				impl->exit();
+		}
 	private:
+		typedef ::adhoc_lve::LveEnter Impl;
+		boost::scoped_ptr<Impl> impl;
+
 		static void lveExitCallback(bool entered, const std::string& exit_error)
 		{
 			if (!entered)
@@ -1206,7 +1216,8 @@ protected:
 	}
 
 	void enterLveJail(struct passwd * pw, uint32_t uid, uint32_t cfgMinUid) {
-		if (!pw || !global_lveInit.isLveAvailable())
+
+		if (!pw || !config->lvelib || !config->lvelib->isLveAvailable())
 			return;
 
 		bool is_enter_jail_allowed = (cfgMinUid <= uid);
@@ -1214,7 +1225,7 @@ protected:
 			return;
 
 		std::string errmsg;
-		int result = global_lveInit.jail(pw, errmsg);
+		int result = config->lvelib->jail(pw, errmsg);
 
 		if (result < 0)
 		{
