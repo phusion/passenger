@@ -1081,7 +1081,7 @@ runCommandAndCaptureOutput(const char **command) {
 				syscalls::kill(SIGKILL, pid);
 				syscalls::waitpid(pid, NULL, 0);
 				throw SystemException(string("Cannot read output from the '") +
-					command[1] + "' command", e);
+					command[0] + "' command", e);
 			}
 			done = ret == 0;
 			result.append(buf, ret);
