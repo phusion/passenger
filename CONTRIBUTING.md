@@ -17,6 +17,7 @@
    * [Ruby coding style](#ruby_coding_style)
    * [Systems programming fundamentals](#systems_programming_fundamentals)
    * [Further reading](#further_reading)
+ * [Git structure] (#git_structure)
 
 Thank you for your interest in Phusion Passenger. Phusion Passenger is open source so your contributions are very welcome. Although we also provide a [commercial version](https://www.phusionpassenger.com/enterprise) and [commercial support](https://www.phusionpassenger.com/commercial_support), the core remains open source and we remain committed to keep it that way. This guide gives you an overview of the ways with which you can contribute, as well as contribution guidelines.
 
@@ -348,3 +349,12 @@ A good and comprehensive, but rather large source for learning POSIX is the [POS
 ### Further reading
 
  * [Coding Tips and Pitfalls](https://github.com/phusion/passenger/blob/master/doc/CodingTipsAndPitfalls.md)
+
+<a name="git_structure"></a>
+### Git structure
+
+The **master** branch is the main development branch, containing the latest and greatest code that was tested and accepted for inclusion into passenger (usually merged in from loose development branches that are deleted afterwards). This branch may not be stable enough yet for production.
+
+Branches like **stable-4.0**, **stable-5.0** are production quality branches (split off from master) for major versions. Each production branch has tags for minor versions, whereby **tag x.0.1** represents the first production-ready version on a branch (there may be some release candidates before that). For example: branch stable-5.0, tagged 5.0.1 is the first release of the 5.0 line that is ready for production.
+
+In general we apply fixes to the respective stable branch and merge these into the master, so it is easiest if you submit pull requests to the stable branches (unless of course you are working with the unstable master). Conversely, new features always go to the master and are then cherrypicked from one or more branches.
