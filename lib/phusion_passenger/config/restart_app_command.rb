@@ -158,12 +158,16 @@ module PhusionPassenger
       def select_app_group_name_interactively
         colors = PhusionPassenger::Utils::AnsiColors.new
 
+        choices = query_group_names
+        if choices.size == 1
+          # No running apps
+          abort_app_not_found "#{PROGRAM_NAME} is currently not serving any applications."
+        end
+
         puts "Please select the application to restart."
         puts colors.ansi_colorize("<gray>Tip: re-run this command with --help to learn how to automate it.</gray>")
         puts colors.ansi_colorize("<dgray>If the menu doesn't display correctly, press '!'</dgray>")
         puts
-
-        choices = query_group_names
         menu = PhusionPassenger::Utils::TerminalChoiceMenu.new(choices, :single_choice)
         begin
           index, name = menu.query
@@ -205,7 +209,7 @@ module PhusionPassenger
             :method => restart_method)
           response = @instance.http_request("agents.s/server_admin", request)
           if response.code.to_i / 100 == 2
-            return REXML::Document.new(response.body)
+            response.body
           else
             STDERR.puts "*** An error occured while communicating with the #{PROGRAM_NAME} server:"
             STDERR.puts response.body
@@ -228,7 +232,7 @@ module PhusionPassenger
         request.basic_auth("ro_admin", obtain_read_only_admin_password(@instance))
         response = @instance.http_request("agents.s/server_admin", request)
         if response.code.to_i / 100 == 2
-          return REXML::Document.new(response.body)
+          REXML::Document.new(response.body)
         else
           STDERR.puts "*** An error occured while querying the #{PROGRAM_NAME} server:"
           STDERR.puts response.body
