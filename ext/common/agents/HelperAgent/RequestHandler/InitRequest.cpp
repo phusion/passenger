@@ -218,7 +218,7 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	if (agentsOptions->has("default_group")) {
 		options.defaultGroup = agentsOptions->get("default_group");
 	}
-	options.lveMinUid = agentsOptions->getInt("lve_min_uid");
+	options.lveMinUid = agentsOptions->getInt("lve_min_uid", false, DEFAULT_LVE_MIN_UID);
 	options.minProcesses = agentsOptions->getInt("min_instances");
 	options.spawnMethod = agentsOptions->get("spawn_method");
 	options.loadShellEnvvars = agentsOptions->getBool("load_shell_envvars");
