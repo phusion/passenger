@@ -42,9 +42,9 @@ namespace tut {
 		}
 
 		~ServerKit_FileBufferedChannelTest() {
+			bg.stop(); // Prevent any runLater callbacks from running.
 			channel.deinitialize(); // Cancel any event loop next tick callbacks.
 			setLogLevel(DEFAULT_LOG_LEVEL);
-			bg.stop();
 			shutdownLibeio();
 		}
 
@@ -550,6 +550,144 @@ namespace tut {
 	}
 
 	TEST_METHOD(33) {
+		set_test_name("Suppose that a data chunk from disk is being passed to the callback. "
+			"If the callback consumes the chunk immediately and is willing to accept "
+			"further data, then the FileBufferedChannel will repeat this process with the "
+			"next chunk from disk");
+
+		// Setup a FileBufferedChannel in the in-file mode.
+		toConsume = -1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
+		startLoop();
+		feedChannel("hello");
+		feedChannel("world!");
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::IN_FILE_MODE;
+		);
+		EVENTUALLY(5,
+			result = getChannelWriterState() == FileBufferedChannel::WS_INACTIVE;
+		);
+		ensure_equals(getChannelBytesBuffered(), 0u);
+
+		// Consume the initial "hello" so that the FileBufferedChannel starts
+		// reading "world" from disk. When "world" is read, we first consume
+		// "world" only, then "!" too.
+		context.defaultFileBufferedChannelConfig.maxDiskChunkReadSize = sizeof("world") - 1;
+		toConsume = CONSUME_FULLY;
+		channelConsumed(sizeof("hello") - 1, false);
+		EVENTUALLY(5,
+			LOCK();
+			result = log ==
+				"Data: hello\n"
+				"Data: world\n"
+				"Data: !\n";
+		);
+	}
+
+	TEST_METHOD(34) {
+		set_test_name("Suppose that a data chunk from disk is being passed to the callback. "
+			"If the callback consumes the chunk asynchronously, and is willing "
+			"to accept further data, then the FileBufferedChannel will repeat this process "
+			"with the next chunk from disk after the channel has become idle");
+
+		// Setup a FileBufferedChannel in the in-file mode.
+		toConsume = -1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
+		startLoop();
+		feedChannel("hello");
+		feedChannel("world!");
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::IN_FILE_MODE;
+		);
+		EVENTUALLY(5,
+			result = getChannelWriterState() == FileBufferedChannel::WS_INACTIVE;
+		);
+		ensure_equals(getChannelBytesBuffered(), 0u);
+
+		// Consume the initial "hello" so that the FileBufferedChannel starts
+		// reading "world" from disk.
+		context.defaultFileBufferedChannelConfig.maxDiskChunkReadSize = sizeof("world") - 1;
+		channelConsumed(sizeof("hello") - 1, false);
+		EVENTUALLY(5,
+			LOCK();
+			result = log ==
+				"Data: hello\n";
+		);
+		// We haven't consumed "world" yet, so the FileBufferedChannel should
+		// be waiting for it to become idle.
+		EVENTUALLY(5,
+			result = getChannelReaderState() == FileBufferedChannel::RS_WAITING_FOR_CHANNEL_IDLE;
+		);
+
+		// Now consume "world".
+		channelConsumed(sizeof("world") - 1, false);
+		EVENTUALLY(5,
+			LOCK();
+			result = log ==
+				"Data: hello\n"
+				"Data: world\n";
+		);
+		// We haven't consumed "!" yet, so the FileBufferedChannel should
+		// be waiting for it to become idle.
+		EVENTUALLY(5,
+			result = getChannelReaderState() == FileBufferedChannel::RS_WAITING_FOR_CHANNEL_IDLE;
+		);
+
+		// Now consume "!".
+		channelConsumed(sizeof("!") - 1, false);
+		EVENTUALLY(5,
+			LOCK();
+			result = log ==
+				"Data: hello\n"
+				"Data: world\n"
+				"Data: !\n";
+		);
+	}
+
+	TEST_METHOD(35) {
+		set_test_name("Suppose that a data chunk from disk is being passed to the callback. "
+			"If the callback consumes the chunk immediately, but is not willing "
+			"to accept further data, then the FileBufferedChannel will terminate");
+
+		// Setup a FileBufferedChannel in the in-file mode.
+		toConsume = -1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
+		startLoop();
+		feedChannel("hello");
+		feedChannel("world!");
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::IN_FILE_MODE;
+		);
+		EVENTUALLY(5,
+			result = getChannelWriterState() == FileBufferedChannel::WS_INACTIVE;
+		);
+		ensure_equals(getChannelBytesBuffered(), 0u);
+
+		// Consume the initial "hello" so that the FileBufferedChannel starts
+		// reading "world" from disk. When it is read, we will consume it fully
+		// while ending the channel.
+		context.defaultFileBufferedChannelConfig.maxDiskChunkReadSize = sizeof("world") - 1;
+		toConsume = CONSUME_FULLY;
+		endConsume = true;
+		channelConsumed(sizeof("hello") - 1, false);
+		EVENTUALLY(5,
+			LOCK();
+			result = log ==
+				"Data: hello\n"
+				"Data: world\n";
+		);
+		EVENTUALLY(5,
+			result = getChannelReaderState() == FileBufferedChannel::RS_TERMINATED;
+		);
+		SHOULD_NEVER_HAPPEN(100,
+			LOCK();
+			result = log !=
+				"Data: hello\n"
+				"Data: world\n";
+		);
+	}
+
+	TEST_METHOD(36) {
 		set_test_name("If there is no unread data on disk, it passes the next "
 			"in-memory buffer to the callback");
 
@@ -596,7 +734,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(34) {
+	TEST_METHOD(37) {
 		set_test_name("Upon feeding EOF, the EOF is passed to the callback after "
 			"all on-disk and in-memory data is passed");
 
@@ -658,7 +796,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(35) {
+	TEST_METHOD(38) {
 		set_test_name("Upon feeding an error, it switches to the error mode immediately "
 			"and it doesn't call the callback");
 
