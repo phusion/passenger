@@ -135,7 +135,7 @@ private
       file(object_file => dependencies_for(options)) do
         case options[:optimize]
         when :light
-          optimize = "-O1"
+          optimize = "-O"
         when true, :heavy
           optimize = "-O2"
         when :very_heavy
