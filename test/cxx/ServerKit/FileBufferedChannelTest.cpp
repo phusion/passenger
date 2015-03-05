@@ -24,6 +24,7 @@ namespace tut {
 		int toConsume;
 		bool endConsume;
 		unsigned int counter;
+		unsigned int buffersFlushed;
 		string log;
 
 		ServerKit_FileBufferedChannelTest()
@@ -32,10 +33,12 @@ namespace tut {
 			  channel(&context),
 			  toConsume(CONSUME_FULLY),
 			  endConsume(false),
-			  counter(0)
+			  counter(0),
+			  buffersFlushed(0)
 		{
 			initializeLibeio();
 			channel.setDataCallback(dataCallback);
+			channel.setBuffersFlushedCallback(buffersFlushedCallback);
 			channel.setHooks(this);
 			Hooks::impl = NULL;
 			Hooks::userData = NULL;
@@ -74,6 +77,13 @@ namespace tut {
 			} else {
 				return Channel::Result(self->toConsume, self->endConsume);
 			}
+		}
+
+		static void buffersFlushedCallback(FileBufferedChannel *channel) {
+			ServerKit_FileBufferedChannelTest *self = (ServerKit_FileBufferedChannelTest *)
+				channel->getHooks();
+			boost::lock_guard<boost::mutex> l(self->syncher);
+			self->buffersFlushed++;
 		}
 
 		void feedChannel(const string &data) {
@@ -872,6 +882,33 @@ namespace tut {
 				"Data: hello\n"
 				"Data: world!\n"
 				"Data: !\n";
+		);
+	}
+
+	TEST_METHOD(41) {
+		set_test_name("It calls the buffersFlushedCallback if the switching happens while "
+			"there are buffers in memory that haven't been written to disk yet");
+
+		toConsume = -1;
+		context.defaultFileBufferedChannelConfig.threshold = 1;
+		context.defaultFileBufferedChannelConfig.delayInFileModeSwitching = 1000;
+		startLoop();
+
+		feedChannel("hello");
+		feedChannel("world!");
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::IN_FILE_MODE;
+		);
+		ensure_equals(getChannelBytesBuffered(), 11u);
+
+		channelConsumed(sizeof("hello") - 1, false);
+		channelConsumed(sizeof("world!") - 1, false);
+		EVENTUALLY(5,
+			result = getChannelMode() == FileBufferedChannel::IN_MEMORY_MODE;
+		);
+		EVENTUALLY(5,
+			LOCK();
+			result = buffersFlushed == 1;
 		);
 	}
 
