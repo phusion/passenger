@@ -241,6 +241,7 @@ DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsi
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_response_buffer_high_watermark, responseBufferHighWatermark, unsigned int, 0)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_stat_throttle_rate, statThrottleRate, unsigned int, 0)
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_user_switching, userSwitching)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_lve_min_uid, lveMinUid, unsigned int, 0)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_data_buffer_dir, dataBufferDir)
@@ -421,6 +422,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Whether to enable user switching support."),
+	AP_INIT_TAKE1("PassengerLveMinUid",
+		(Take1Func) cmd_passenger_lve_min_uid,
+		NULL,
+		RSRC_CONF,
+		"User id starting from entering LVE and CageFS is allowed."),
 	AP_INIT_TAKE1("PassengerDefaultUser",
 		(Take1Func) cmd_passenger_default_user,
 		NULL,

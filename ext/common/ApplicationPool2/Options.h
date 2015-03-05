@@ -233,6 +233,8 @@ public:
 	/** See class overview. Defaults to the defaultUser's primary group. */
 	StaticString defaultGroup;
 
+	unsigned int lveMinUid;
+
 	/**
 	 * The directory which contains restart.txt and always_restart.txt.
 	 * An empty string means that the default directory should be used.
@@ -452,6 +454,7 @@ public:
 		  baseURI("/", 1),
 		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
 		  defaultUser("nobody", sizeof("nobody") - 1),
+		  lveMinUid(DEFAULT_LVE_MIN_UID),
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
 		  nodejs(DEFAULT_NODEJS, sizeof(DEFAULT_NODEJS) - 1),

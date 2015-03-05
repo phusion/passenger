@@ -44,6 +44,10 @@ namespace tut {
 	struct ApplicationPool2_PoolTest;
 }
 
+namespace adhoc_lve {
+	class LveInit;
+}
+
 namespace Passenger {
 namespace ApplicationPool2 {
 
@@ -206,6 +210,7 @@ struct SpawnerConfig {
 	// Used by error pages and hooks.
 	ResourceLocator *resourceLocator;
 	const VariantMap *agentsOptions;
+	adhoc_lve::LveInit *lvelib;
 
 	// Used for Union Station logging.
 	UnionStation::CorePtr unionStationCore;
@@ -222,6 +227,7 @@ struct SpawnerConfig {
 	SpawnerConfig()
 		: resourceLocator(NULL),
 		  agentsOptions(NULL),
+		  lvelib(NULL),
 		  concurrency(1),
 		  spawnerCreationSleepTime(0),
 		  spawnTime(0)

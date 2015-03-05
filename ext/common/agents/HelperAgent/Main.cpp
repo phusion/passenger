@@ -78,6 +78,7 @@
 #include <UnionStation/Core.h>
 #include <Exceptions.h>
 #include <Utils.h>
+#include <Utils/adhoc_lve.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
 #include <Utils/json.h>
@@ -163,6 +164,7 @@ using namespace Passenger::ServerAgent;
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
 
+static adhoc_lve::LveInit global_lveInit;
 
 /***** Server stuff *****/
 
@@ -492,6 +494,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
 	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawnerConfig->agentsOptions = agentsOptions;
+	wo->spawnerConfig->lvelib = &global_lveInit;
 	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
 	wo->spawnerConfig->instanceDir = options.get("instance_dir", false);
 	if (!wo->spawnerConfig->instanceDir.empty()) {
@@ -879,6 +882,13 @@ static int
 runServer() {
 	TRACE_POINT();
 	P_NOTICE("Starting " AGENT_EXE " server...");
+
+	if (!global_lveInit.isLveAvailable())
+		P_DEBUG("LVE lib is not available");
+	else if (global_lveInit.isError())
+		P_ERROR("LVE init error: " << global_lveInit.errorString());
+	else
+		P_DEBUG("LVE init success");
 
 	try {
 		UPDATE_TRACE_POINT();

@@ -12,6 +12,7 @@ Release 5.0.1
  * Log failed program in error message, not its command line (contributed by: paisleyrob). Closes GH-1397.
  * [Nginx] Fixes cases in which Passenger overrides the Nginx handler function even when it shouldn't, for example when Passenger is disabled. Closes GH-1393.
  * [Enterprise] The `sticky_sessions` and `envvars` options in Passengerfile.json is now also supported in mass deployment mode.
+ * [CloudLinux] Apply appropriate limits when LVE is available
 
 
 Release 5.0.0 release candidate 2
