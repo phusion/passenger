@@ -1519,7 +1519,7 @@ public:
 	}
 
 	Json::Value inspectAsJson() const {
-		Json::Value doc;
+		Json::Value doc = Channel::inspectAsJson();
 
 		switch (mode) {
 		case IN_MEMORY_MODE:
@@ -1544,7 +1544,6 @@ public:
 		doc["reader_state"] = getReaderStateString();
 		doc["nbuffers"] = nbuffers;
 		doc["bytes_buffered"] = byteSizeToJson(getBytesBuffered());
-		doc["callback_in_progress"] = !acceptingInput();
 
 		return doc;
 	}

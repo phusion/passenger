@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <ev.h>
 #include <ServerKit/Channel.h>
+#include <Utils/json.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -196,6 +197,13 @@ public:
 	OXT_FORCE_INLINE
 	void setHooks(Hooks *hooks) {
 		this->hooks = hooks;
+	}
+
+	Json::Value inspectAsJson() const {
+		Json::Value doc = Channel::inspectAsJson();
+		doc["initialized"] = watcher.fd != -1;
+		doc["io_watcher_active"] = (bool) watcher.active;
+		return doc;
 	}
 };
 

@@ -36,6 +36,7 @@
 #include <MemoryKit/mbuf.h>
 #include <Logging.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/json.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -739,6 +740,21 @@ public:
 	OXT_FORCE_INLINE
 	bool endAcked() const {
 		return state == EOF_REACHED;
+	}
+
+	Json::Value inspectAsJson() const {
+		Json::Value doc;
+
+		doc["callback_in_progress"] = !acceptingInput();
+		if (hasError()) {
+			doc["error"] = errcode;
+			doc["error_acked"] = endAcked();
+		} else if (ended()) {
+			doc["ended"] = true;
+			doc["end_acked"] = endAcked();
+		}
+
+		return doc;
 	}
 };
 
