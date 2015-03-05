@@ -146,15 +146,19 @@ USE_DMALLOC = boolean_option('USE_DMALLOC')
 USE_EFENCE  = boolean_option('USE_EFENCE')
 USE_ASAN    = boolean_option('USE_ASAN')
 OPTIMIZE    = boolean_option('OPTIMIZE')
+LTO         = OPTIMIZE && boolean_option('LTO')
 
 # Agent-specific compiler flags.
 AGENT_CFLAGS  = ""
-AGENT_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 AGENT_CFLAGS << " -O" if OPTIMIZE
+AGENT_CFLAGS << " -flto" if LTO
+AGENT_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 AGENT_CFLAGS.strip!
 
 # Agent-specific linker flags.
 AGENT_LDFLAGS = ""
+AGENT_LDFLAGS << " -O" if OPTIMIZE
+AGENT_LDFLAGS << " -flto" if LTO
 AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
 AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
 AGENT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN

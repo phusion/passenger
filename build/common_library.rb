@@ -36,65 +36,43 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   output_file = "#{output_dir}.a"
   flags = "-Iext #{extra_compiler_flags} #{EXTRA_CXXFLAGS}"
 
-  if false && boolean_option('RELEASE')
-    # Disable RELEASE support. Passenger Standalone wants to link to the
-    # common library but does not know whether it was compiled with RELEASE
-    # or not. See http://code.google.com/p/phusion-passenger/issues/detail?id=808
-    sources = Dir['ext/boost/libs/**/*.cpp'] + Dir['ext/oxt/*.cpp']
-    sources.sort!
-
-    aggregate_source = "#{output_dir}/aggregate.cpp"
-    aggregate_object = "#{output_dir}/aggregate.o"
-    object_files     = [aggregate_object]
-
-    file(aggregate_object => sources) do
-      sh "mkdir -p #{output_dir}" if !File.directory?(output_dir)
-      aggregate_content = %Q{
-        #ifndef _GNU_SOURCE
-          #define _GNU_SOURCE
-        #endif
-      }
-      sources.each do |source_file|
-        name = source_file.sub(/^ext\//, '')
-        aggregate_content << "#include \"#{name}\"\n"
-      end
-      File.open(aggregate_source, 'w') do |f|
-        f.write(aggregate_content)
-      end
-      compile_cxx(aggregate_source, "#{flags} -o #{aggregate_object}")
+  if OPTIMIZE
+    optimize = "-O2"
+    if LTO
+      optimize << " -flto"
     end
-  else
-    # Define compilation targets for .cpp files in ext/boost/src/pthread.
-    boost_object_files = []
-    Dir['ext/boost/libs/**/*.cpp'].each do |source_file|
-      object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-      boost_output_dir  = "#{output_dir}/boost"
-      object_file = "#{boost_output_dir}/#{object_name}"
-      boost_object_files << object_file
-
-      file object_file => source_file do
-        sh "mkdir -p #{boost_output_dir}" if !File.directory?(boost_output_dir)
-        compile_cxx(source_file, "#{flags} -o #{object_file}")
-      end
-    end
-
-    # Define compilation targets for .cpp files in ext/oxt.
-    oxt_object_files = []
-    oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
-    Dir['ext/oxt/*.cpp'].each do |source_file|
-      object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
-      oxt_output_dir  = "#{output_dir}/oxt"
-      object_file = "#{oxt_output_dir}/#{object_name}"
-      oxt_object_files << object_file
-
-      file object_file => [source_file, *oxt_dependency_files] do
-        sh "mkdir -p #{oxt_output_dir}" if !File.directory?(oxt_output_dir)
-        compile_cxx(source_file, "-O2 #{flags} -o #{object_file}".strip)
-      end
-    end
-
-    object_files = boost_object_files + oxt_object_files
   end
+
+  # Define compilation targets for .cpp files in ext/boost/src/pthread.
+  boost_object_files = []
+  Dir['ext/boost/libs/**/*.cpp'].each do |source_file|
+    object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
+    boost_output_dir  = "#{output_dir}/boost"
+    object_file = "#{boost_output_dir}/#{object_name}"
+    boost_object_files << object_file
+
+    file object_file => source_file do
+      sh "mkdir -p #{boost_output_dir}" if !File.directory?(boost_output_dir)
+      compile_cxx(source_file, "#{optimize} #{flags} -o #{object_file}")
+    end
+  end
+
+  # Define compilation targets for .cpp files in ext/oxt.
+  oxt_object_files = []
+  oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
+  Dir['ext/oxt/*.cpp'].each do |source_file|
+    object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
+    oxt_output_dir  = "#{output_dir}/oxt"
+    object_file = "#{oxt_output_dir}/#{object_name}"
+    oxt_object_files << object_file
+
+    file object_file => [source_file, *oxt_dependency_files] do
+      sh "mkdir -p #{oxt_output_dir}" if !File.directory?(oxt_output_dir)
+      compile_cxx(source_file, "#{optimize} #{flags} -o #{object_file}".strip)
+    end
+  end
+
+  object_files = boost_object_files + oxt_object_files
 
   file(output_file => object_files) do
     sh "mkdir -p #{output_dir}"
@@ -238,5 +216,5 @@ libboost_oxt_cflags = ""
 libboost_oxt_cflags << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 libboost_oxt_cflags.strip!
 LIBBOOST_OXT = define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt", libboost_oxt_cflags)
-COMMON_LIBRARY.enable_optimizations! if OPTIMIZE
+COMMON_LIBRARY.enable_optimizations!(LTO) if OPTIMIZE
 COMMON_LIBRARY.define_tasks(libboost_oxt_cflags)

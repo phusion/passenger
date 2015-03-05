@@ -100,8 +100,11 @@ class CommonLibraryBuilder
     return link_objects.join(' ')
   end
 
-  def enable_optimizations!
+  def enable_optimizations!(lto = false)
     @default_optimization_level = "-O"
+    if lto
+      @default_optimization_level << " -flto"
+    end
   end
 
   def define_tasks(extra_compiler_flags = nil)
@@ -142,14 +145,19 @@ private
         else
           raise "Unknown optimization level #{options[:optimize]}"
         end
-        if options[:strict_aliasing] == false
+        if options[:strict_aliasing] == false # and not nil
           optimize = "#{optimize} -fno-strict-aliasing"
+          # Disable link-time optimization so that we can no-strict-aliasing
+          # works: http://stackoverflow.com/a/25765338/20816
+          optimize.sub!(/-flto/, "")
         end
         ensure_directory_exists(File.dirname(object_file))
+        # We put 'optimize' at the end of the command string so that it overrides
+        # the default optimization level embedded in 'cflags'.
         if source_file =~ /\.c$/
-          compile_c(source_file, "#{optimize} #{cflags} -o #{object_file}".strip)
+          compile_c(source_file, "#{cflags} #{optimize} -o #{object_file}".strip)
         else
-          compile_cxx(source_file, "#{optimize} #{cxxflags} -o #{object_file}".strip)
+          compile_cxx(source_file, "#{cxxflags} #{optimize} -o #{object_file}".strip)
         end
       end
     end
