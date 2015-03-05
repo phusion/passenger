@@ -542,6 +542,8 @@ Extra environment variables: `PASSENGER_APP_ROOT`.
 Extra environment variables:
 +
 - `PASSENGER_APP_ID`: the PID of the process whose request took too long.
+- `PASSENGER_REQUEST_PATH`: the path of the request that took took long, e.g. "/photos/edit?id=123".
+- `PASSENGER_REQUEST_HOST`: the host name of the request that took too long, e.g. "www.example.com". This environment variable is not set if the request doesn't contain a Host header.
 
 [[flying_passenger]]
 === Flying Passenger
