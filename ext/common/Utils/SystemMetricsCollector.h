@@ -55,7 +55,6 @@
 #endif
 #ifdef __FreeBSD__
 	#include <sys/param.h>
-	#include <sys/pcpu.h>
 	#include <sys/sysctl.h>
 	#include <sys/resource.h>
 	#include <vm/vm_param.h>
