@@ -125,7 +125,9 @@ serverUsage() {
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
 	printf("\n");
 	printf("Request handling options (optional):\n");
-	printf("      --sticky-sessions    Enable sticky sessions\n");
+	printf("      --max-request-time    Abort requests that take too much time (Enterprise\n");
+	printf("                            only)\n");
+	printf("      --sticky-sessions     Enable sticky sessions\n");
 	printf("      --sticky-sessions-cookie-name NAME\n");
 	printf("                            Cookie name to use for sticky sessions.\n");
 	printf("                            Default: " DEFAULT_STICKY_SESSIONS_COOKIE_NAME "\n");
@@ -273,6 +275,9 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isFlag(argv[i], '\0', "--disable-friendly-error-pages")) {
 		options.setBool("friendly_error_pages", false);
 		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-time")) {
+		options.setInt("max_request_time", atoi(argv[i + 1]));
+		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--sticky-sessions")) {
 		options.setBool("sticky_sessions", true);
 		i++;

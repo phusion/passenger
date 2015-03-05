@@ -3,7 +3,9 @@ Release 5.0.2
 
  * When `passenger-config restart-app` is run interactively, if Passenger is not serving any applications, then the command now prints an error message instead of showing a menu with only a "Cancel" option.
  * Fixes a compilation problem on FreeBSD 10 (contributed by: clemensg). Closes GH-1401.
- * Fixes the `--ctl` parameter not working in Passenger Standalone.
+ * [Standalone] Fixes a crash that would occur if you use the `--ctl` parameter.
+ * [Enterprise] The `--max-request-time` option has been added to Passenger Standalone.
+ * [Enterprise] The `max_request_time_reached` hook has been introduced. This hook allows you to run diagnostics on a process that that took too long to respond to a request.
 
 
 Release 5.0.1

@@ -515,7 +515,6 @@ Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Erro
 `queue_full_error` (since 5.0.0 RC 1)::
 	The server rejects new requests (default: HTTP 503) while the request queue is full (https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html#passenger_max_request_queue_size). 
 	This hook gets called for each rejection.
-	
 +
 Extra environment variables:
 +
@@ -536,6 +535,13 @@ This hook does not block because it's always run in an extra background thread. 
 Note that the `after_initialize_supergroup` hook may be called while this hook is still being executed, so make sure that operations don't conflict with each other.
 +
 Extra environment variables: `PASSENGER_APP_ROOT`.
+
+`max_request_time_reached` (since 5.0.2, Enterprise-only)::
+	Called when a <<PassengerMaxRequestTime,max request time limit>> has been reached. Please note that as soon as this hook has finished executing, the application process will be killed with SIGKILL. So if you want to perform any diagnostics on the process in question (e.g. with strace, gdb, etc), please do not exit your hook script until you've obtained all the diagnostics you want.
++
+Extra environment variables:
++
+- `PASSENGER_APP_ID`: the PID of the process whose request took too long.
 
 [[flying_passenger]]
 === Flying Passenger

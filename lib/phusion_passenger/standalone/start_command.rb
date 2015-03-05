@@ -248,6 +248,10 @@ module PhusionPassenger
 
           opts.separator ""
           opts.separator "Request handling options:"
+          opts.on("--max-request-time SECONDS", "Abort requests that take too much time#{nl}" +
+            "(Enterprise only)") do |val|
+            options[:max_request_time] = val
+          end
           opts.on("--sticky-sessions", "Enable sticky sessions") do
             options[:sticky_sessions] = true
           end

@@ -1068,6 +1068,18 @@ sanityCheckOptions() {
 			ok = false;
 		#endif
 	}
+	if (options.has("max_request_time")) {
+		if (options.getInt("max_request_time", false, 0) < 1) {
+			fprintf(stderr, "ERROR: the value passed to --max-request-time must be at least 1.\n");
+			ok = false;
+		}
+		#ifndef PASSENGER_IS_ENTERPRISE
+			fprintf(stderr, "ERROR: the --max-request-time option is only supported in "
+				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
+				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n");
+			ok = false;
+		#endif
+	}
 	if (RequestHandler::parseBenchmarkMode(options.get("benchmark_mode", false))
 		== RequestHandler::BM_UNKNOWN)
 	{
