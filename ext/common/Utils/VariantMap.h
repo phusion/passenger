@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -207,6 +207,13 @@ public:
 		return *this;
 	}
 
+	VariantMap &setDefaultUint(const string &name, unsigned int value) {
+		if (store.find(name) == store.end()) {
+			store[name] = toString(value);
+		}
+		return *this;
+	}
+
 	VariantMap &setULL(const string &name, unsigned long long value) {
 		set(name, toString(value));
 		return *this;
@@ -321,6 +328,20 @@ public:
 		const string *str;
 		if (lookup(name, required, &str)) {
 			result = (int) stringToLL(*str);
+		}
+		return result;
+	}
+
+	unsigned int getUint(const string &name, bool required = true, unsigned int defaultValue = 0) const {
+		unsigned int result = defaultValue;
+		const string *str;
+		if (lookup(name, required, &str)) {
+			long long val = stringToLL(*str);
+			if (val < 0) {
+				result = 0;
+			} else {
+				result = (unsigned int) val;
+			}
 		}
 		return result;
 	}

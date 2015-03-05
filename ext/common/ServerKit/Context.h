@@ -49,7 +49,7 @@ struct FileBufferedChannelConfig {
 
 	FileBufferedChannelConfig()
 		: bufferDir("/tmp"),
-		  threshold(1024 * 128),
+		  threshold(DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD),
 		  delayInFileModeSwitching(0),
 		  maxDiskChunkReadSize(0),
 		  autoTruncateFile(true),

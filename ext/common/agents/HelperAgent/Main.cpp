@@ -527,6 +527,8 @@ initializeNonPrivilegedWorkingObjects() {
 		two.serverKitContext->secureModePassword = wo->password;
 		two.serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
 			options.get("data_buffer_dir");
+		two.serverKitContext->defaultFileBufferedChannelConfig.threshold =
+			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
 		two.requestHandler = new RequestHandler(two.serverKitContext, agentsOptions, i + 1);
@@ -979,6 +981,7 @@ setAgentsOptionsDefaults() {
 	options.setDefault("sticky_sessions_cookie_name", DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
 	options.setDefaultBool("turbocaching", true);
 	options.setDefault("data_buffer_dir", getSystemTempDir());
+	options.setDefaultUint("file_buffer_threshold", DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD);
 	options.setDefaultInt("response_buffer_high_watermark", DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
 	options.setDefaultBool("selfchecks", false);
 	options.setDefaultBool("server_graceful_exit", true);
