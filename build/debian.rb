@@ -102,8 +102,7 @@ task 'debian:dev' do
     sh "cd #{PKG_DIR}/#{distribution} && dpkg-checkbuilddeps"
   end
   distributions.each do |distribution|
-    sh "cd #{PKG_DIR}/#{distribution} && env DEBUILD_DPKG_BUILDPACKAGE_OPTS=-F " +
-      "debuild -e CCACHE_* -us -uc"
+    sh "cd #{PKG_DIR}/#{distribution} && debuild -e CCACHE_* -us -uc -F"
   end
 end
 
@@ -147,8 +146,7 @@ task 'debian:source_packages' => 'debian:orig_tarball' do
     create_debian_package_dir(distribution, pkg_dir)
   end
   ALL_DISTRIBUTIONS.each do |distribution|
-    sh "cd #{pkg_dir}/#{distribution} && env DEBUILD_DPKG_BUILDPACKAGE_OPTS=-S " +
-      "debuild -us -uc"
+    sh "cd #{pkg_dir}/#{distribution} && debuild -us -uc -S"
   end
 end
 

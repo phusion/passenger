@@ -29,10 +29,11 @@ override_dh_auto_build:
 #if is_distribution?("<= saucy") || is_distribution?("<= wheezy")
     	/usr/bin/ruby1.8 /usr/bin/rake fakeroot
     	mv pkg/fakeroot pkg/fakeroot1.8
-#endif
-	/usr/bin/ruby1.9.1 /usr/bin/rake fakeroot
-	mv pkg/fakeroot pkg/fakeroot1.9.1
-#if is_distribution?(">= trusty") || is_distribution?(">= jessie")
+    	/usr/bin/ruby1.9.1 /usr/bin/rake fakeroot
+    	mv pkg/fakeroot pkg/fakeroot1.9.1
+#else
+    	/usr/bin/ruby1.9.1 /usr/bin/rake fakeroot
+    	mv pkg/fakeroot pkg/fakeroot1.9.1
     	/usr/bin/ruby2.0 /usr/bin/rake fakeroot
     	mv pkg/fakeroot pkg/fakeroot2.0
 #endif
@@ -48,9 +49,9 @@ override_dh_auto_install:
 	# Merge Ruby 1.8, 1.9 and 2.0 files into a single directory.
 #if is_distribution?("<= saucy") || is_distribution?("<= wheezy")
     	cp -a pkg/fakeroot1.8/* debian/tmp/
-#endif
-	cp -a pkg/fakeroot1.9.1/* debian/tmp/
-#if is_distribution?(">= trusty") || is_distribution?(">= jessie")
+    	cp -a pkg/fakeroot1.9.1/* debian/tmp/
+#else
+    	cp -a pkg/fakeroot1.9.1/* debian/tmp/
     	cp -a pkg/fakeroot2.0/* debian/tmp/
 #endif
 	./dev/install_scripts_bootstrap_code.rb --ruby /usr/lib/ruby/vendor_ruby debian/tmp/usr/bin/* debian/tmp/usr/sbin/*
