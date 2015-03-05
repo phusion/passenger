@@ -37,7 +37,7 @@ module PhusionPassenger
 
       def parse_options
         load_and_merge_global_options(@options)
-        @parsed_options = {}
+        @parsed_options = self.class.create_default_options
         @parser = self.class.create_option_parser(@parsed_options)
         begin
           @original_argv = @argv.dup
