@@ -4,20 +4,20 @@ Priority: optional
 Maintainer: Phusion <info@phusion.nl>
 Uploaders: Phusion <info@phusion.nl>, Hongli Lai <hongli@phusion.nl>
 Build-Depends: debhelper (>= 7.0.50~), rake,
-#if is_distribution?("<= lucid")
-     ruby1.8, ruby1.8-dev, rubygems1.8,
-     ruby1.9.1, ruby1.9.1-dev, rubygems1.9,
-#elif is_distribution?("<= saucy") || is_distribution?("<= wheezy")
-     ruby1.8, ruby1.8-dev, rubygems1.8,
-     ruby1.9.1, ruby1.9.1-dev,
-#else
-     ruby1.9.1, ruby1.9.1-dev,
-     ruby2.0, ruby2.0-dev,
-#endif
+<% if is_distribution?("<= lucid") -%>
+ ruby1.8, ruby1.8-dev, rubygems1.8,
+ ruby1.9.1, ruby1.9.1-dev, rubygems1.9,
+<% elsif is_distribution?("<= saucy") || is_distribution?("<= wheezy") -%>
+ ruby1.8, ruby1.8-dev, rubygems1.8,
+ ruby1.9.1, ruby1.9.1-dev,
+<% else -%>
+ ruby1.9.1, ruby1.9.1-dev,
+ ruby2.0, ruby2.0-dev,
+<% end -%>
  apache2-mpm-worker | apache2-mpm, apache2-threaded-dev,
-#if is_distribution?('>= precise') || is_distribution?('>= wheezy')
-     libev-dev (>= 1:4.0.0),
-#endif
+<% if is_distribution?('>= precise') || is_distribution?('>= wheezy') -%>
+ libev-dev (>= 1:4.0.0),
+<% end -%>
  libapr1-dev, libcurl4-openssl-dev
 Standards-Version: 3.9.3
 Homepage: https://www.phusionpassenger.com/
@@ -30,11 +30,11 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  ruby2.4 | ruby2.3 | ruby2.2 | ruby2.1 | ruby2.0 | ruby1.9.1 | ruby1.8 | ruby-interpreter,
  rubygems-integration (>= 1.8) | rubygems1.9.1 | rubygems1.9 | rubygems (>= 1.2),
-#if is_distribution?('<= lucid') || is_distribution?('<= squeeze')
-     librack-ruby
-#else
-     ruby-rack
-#endif
+<% if is_distribution?('<= lucid') || is_distribution?('<= squeeze') -%>
+ librack-ruby
+<% else -%>
+ ruby-rack
+<% end -%>
 Recommends: passenger-doc (= ${binary:Version}), passenger-dev (= ${binary:Version})
 Breaks: libapache2-mod-passenger (<< <%= DEBIAN_EPOCH %>:<%= PACKAGE_VERSION %>), passenger-common,
  passenger-common1.8, passenger-common1.9.1, ruby-passenger
