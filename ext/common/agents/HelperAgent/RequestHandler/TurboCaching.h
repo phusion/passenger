@@ -162,12 +162,12 @@ private:
 
 		if (server->canKeepAlive(req)) {
 			if (httpVersion < 1010) {
-				// HTTP < 1.1 defaults to "Connection: close"
+				// HTTP < 1.1 defaults to "Connection: close", but we want keep-alive
 				PUSH_STATIC_STRING("Connection: keep-alive\r\n");
 			}
 		} else {
 			if (httpVersion >= 1010) {
-				// HTTP 1.1 defaults to "Connection: keep-alive"
+				// HTTP 1.1 defaults to "Connection: keep-alive", but we don't want it
 				PUSH_STATIC_STRING("Connection: close\r\n");
 			}
 		}
