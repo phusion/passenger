@@ -51,27 +51,13 @@ TEST_CXX_OBJECTS = {
   'test/cxx/ApplicationPool2/OptionsTest.o' => %w(
     test/cxx/ApplicationPool2/OptionsTest.cpp
     ext/common/ApplicationPool2/Options.h),
-  'test/cxx/ApplicationPool2/DirectSpawnerTest.o' => %w(
-    test/cxx/ApplicationPool2/DirectSpawnerTest.cpp
-    test/cxx/ApplicationPool2/SpawnerTestCases.cpp
-    ext/common/ApplicationPool2/Options.h
-    ext/common/ApplicationPool2/Process.h
-    ext/common/ApplicationPool2/Socket.h
-    ext/common/ApplicationPool2/Spawner.h
-    ext/common/ApplicationPool2/DirectSpawner.h),
-  'test/cxx/ApplicationPool2/SmartSpawnerTest.o' => %w(
-    test/cxx/ApplicationPool2/SmartSpawnerTest.cpp
-    test/cxx/ApplicationPool2/SpawnerTestCases.cpp
-    ext/common/ApplicationPool2/Options.h
-    ext/common/ApplicationPool2/Process.h
-    ext/common/ApplicationPool2/Socket.h
-    ext/common/ApplicationPool2/Spawner.h
-    ext/common/ApplicationPool2/SmartSpawner.h),
   'test/cxx/ApplicationPool2/ProcessTest.o' => %w(
     test/cxx/ApplicationPool2/ProcessTest.cpp
     ext/common/ApplicationPool2/Process.h
     ext/common/ApplicationPool2/Socket.h
-    ext/common/ApplicationPool2/Session.h),
+    ext/common/ApplicationPool2/Session.h
+    ext/common/SpawningKit/Spawner.h
+    ext/common/SpawningKit/DummySpawner.h),
   'test/cxx/ApplicationPool2/PoolTest.o' => %w(
     test/cxx/ApplicationPool2/PoolTest.cpp
     ext/common/ApplicationPool2/SuperGroup.h
@@ -86,11 +72,29 @@ TEST_CXX_OBJECTS = {
     ext/common/ApplicationPool2/Process.h
     ext/common/ApplicationPool2/Socket.h
     ext/common/ApplicationPool2/Options.h
-    ext/common/ApplicationPool2/Spawner.h
-    ext/common/ApplicationPool2/SpawnerFactory.h
-    ext/common/ApplicationPool2/SmartSpawner.h
-    ext/common/ApplicationPool2/DirectSpawner.h
-    ext/common/ApplicationPool2/DummySpawner.h),
+    ext/common/SpawningKit/Spawner.h
+    ext/common/SpawningKit/Factory.h
+    ext/common/SpawningKit/SmartSpawner.h
+    ext/common/SpawningKit/DirectSpawner.h
+    ext/common/SpawningKit/DummySpawner.h),
+  'test/cxx/SpawningKit/DirectSpawnerTest.o' => %w(
+    test/cxx/SpawningKit/DirectSpawnerTest.cpp
+    test/cxx/SpawningKit/SpawnerTestCases.cpp
+    ext/common/ApplicationPool2/Options.h
+    ext/common/SpawningKit/Config.h
+    ext/common/SpawningKit/Options.h
+    ext/common/SpawningKit/Result.h
+    ext/common/SpawningKit/Spawner.h
+    ext/common/SpawningKit/DirectSpawner.h),
+  'test/cxx/SpawningKit/SmartSpawnerTest.o' => %w(
+    test/cxx/SpawningKit/SmartSpawnerTest.cpp
+    test/cxx/SpawningKit/SpawnerTestCases.cpp
+    ext/common/ApplicationPool2/Options.h
+    ext/common/SpawningKit/Config.h
+    ext/common/SpawningKit/Options.h
+    ext/common/SpawningKit/Result.h
+    ext/common/SpawningKit/Spawner.h
+    ext/common/SpawningKit/SmartSpawner.h),
   'test/cxx/MemoryKit/MbufTest.o' => %w(
     test/cxx/MemoryKit/MbufTest.cpp
     ext/common/MemoryKit/mbuf.h),

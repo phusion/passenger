@@ -1,7 +1,9 @@
 #include <TestSupport.h>
-#include <ApplicationPool2/SmartSpawner.h>
+#include <SpawningKit/SmartSpawner.h>
 #include <Logging.h>
+#include <FileDescriptor.h>
 #include <Utils/json.h>
+#include <Utils/IOUtils.h>
 #include <unistd.h>
 #include <climits>
 #include <signal.h>
@@ -9,27 +11,30 @@
 
 using namespace std;
 using namespace Passenger;
-using namespace Passenger::ApplicationPool2;
+using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct ApplicationPool2_SmartSpawnerTest {
-		SpawnObject object;
-		PipeWatcher::DataCallback gatherOutput;
+	struct SpawningKit_SmartSpawnerTest {
+		ConfigPtr config;
+		OutputHandler gatherOutput;
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
+		SpawningKit::Result result;
 
-		ApplicationPool2_SmartSpawnerTest() {
-			PipeWatcher::onData = PipeWatcher::DataCallback();
-			gatherOutput = boost::bind(&ApplicationPool2_SmartSpawnerTest::_gatherOutput, this, _1, _2);
-			setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
+		SpawningKit_SmartSpawnerTest() {
+			config = boost::make_shared<Config>();
+			config->resourceLocator = resourceLocator;
+			config->finalize();
+
+			gatherOutput = boost::bind(&SpawningKit_SmartSpawnerTest::_gatherOutput, this, _1, _2);
+			setLogLevel(LVL_WARN);
 			setPrintAppOutputAsDebuggingMessages(true);
 		}
 
-		~ApplicationPool2_SmartSpawnerTest() {
+		~SpawningKit_SmartSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			setPrintAppOutputAsDebuggingMessages(false);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
-			PipeWatcher::onData = PipeWatcher::DataCallback();
 		}
 
 		boost::shared_ptr<SmartSpawner> createSpawner(const Options &options, bool exitImmediately = false) {
@@ -44,14 +49,7 @@ namespace tut {
 			}
 
 			return boost::make_shared<SmartSpawner>(command,
-				options, createSpawnerConfig());
-		}
-
-		SpawnerConfigPtr createSpawnerConfig() {
-			SpawnerConfigPtr config = boost::make_shared<SpawnerConfig>();
-			config->resourceLocator = resourceLocator;
-			config->finalize();
-			return config;
+				options, config);
 		}
 
 		Options createOptions() {
@@ -67,34 +65,32 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_SmartSpawnerTest, 90);
+	DEFINE_TEST_GROUP_WITH_LIMIT(SpawningKit_SmartSpawnerTest, 90);
 
 	#include "SpawnerTestCases.cpp"
 
 	TEST_METHOD(80) {
-		// If the preloader has crashed then SmartSpawner will
-		// restart it and try again.
+		set_test_name("If the preloader has crashed then SmartSpawner will "
+			"restart it and try again");
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
+		spawner->spawn(options);
 
 		kill(spawner->getPreloaderPid(), SIGTERM);
 		// Give it some time to exit.
 		usleep(300000);
 
 		// No exception at next spawn.
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
+		spawner->spawn(options);
 	}
 
 	TEST_METHOD(81) {
-		// If the preloader still crashes after the restart then
-		// SmartSpawner will throw an exception.
+		set_test_name("If the preloader still crashes after the restart then "
+			"SmartSpawner will throw an exception");
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
@@ -102,8 +98,7 @@ namespace tut {
 		setLogLevel(LVL_CRIT);
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
-			object = spawner->spawn(options);
-			object.process->requiresShutdown = false;
+			spawner->spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {
 			// Pass.
@@ -111,9 +106,9 @@ namespace tut {
 	}
 
 	TEST_METHOD(82) {
-		// If the preloader didn't start within the timeout
-		// then it's killed and an exception is thrown, with
-		// whatever stderr output as error page.
+		set_test_name("If the preloader didn't start within the timeout "
+			"then it's killed and an exception is thrown, with "
+			"whatever stderr output as error page");
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
@@ -124,12 +119,11 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2; sleep 60");
-		SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
+		SmartSpawner spawner(preloaderCommand, options, config);
 		setLogLevel(LVL_CRIT);
 
 		try {
-			object = spawner.spawn(options);
-			object.process->requiresShutdown = false;
+			spawner.spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -138,10 +132,9 @@ namespace tut {
 				// This might be caused by the machine being too slow.
 				// Try again with a higher timeout.
 				options.startTimeout = 1000;
-				SmartSpawner spawner2(preloaderCommand, options, createSpawnerConfig());
+				SmartSpawner spawner2(preloaderCommand, options, config);
 				try {
-					object = spawner2.spawn(options);
-					object.process->requiresShutdown = false;
+					spawner2.spawn(options);
 					fail("SpawnException expected");
 				} catch (const SpawnException &e2) {
 					ensure_equals(e2.getErrorKind(),
@@ -155,9 +148,9 @@ namespace tut {
 	}
 
 	TEST_METHOD(83) {
-		// If the preloader crashed during startup without returning
-		// a proper error response, then its stderr output is used
-		// as error response instead.
+		set_test_name("If the preloader crashed during startup without returning "
+			"a proper error response, then its stderr output is used "
+			"as error response instead");
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
@@ -167,12 +160,11 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
+		SmartSpawner spawner(preloaderCommand, options, config);
 		setLogLevel(LVL_CRIT);
 
 		try {
-			object = spawner.spawn(options);
-			object.process->requiresShutdown = false;
+			spawner.spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -182,8 +174,8 @@ namespace tut {
 	}
 
 	TEST_METHOD(84) {
-		// If the preloader encountered an error, then the resulting SpawnException
-		// takes note of the process's environment variables.
+		set_test_name("If the preloader encountered an error, then the resulting SpawnException "
+			"takes note of the process's environment variables");
 		string envvars = modp::b64_encode("PASSENGER_FOO\0foo\0",
 			sizeof("PASSENGER_FOO\0foo\0") - 1);
 		Options options = createOptions();
@@ -196,12 +188,11 @@ namespace tut {
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
+		SmartSpawner spawner(preloaderCommand, options, config);
 		setLogLevel(LVL_CRIT);
 
 		try {
-			object = spawner.spawn(options);
-			object.process->requiresShutdown = false;
+			spawner.spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
@@ -209,32 +200,30 @@ namespace tut {
 	}
 
 	TEST_METHOD(85) {
-		// Test that the spawned process can still write to its stderr
-		// after the SmartSpawner has been destroyed.
+		set_test_name("The spawned process can still write to its stderr "
+			"after the SmartSpawner has been destroyed");
 		DeleteFileEventually d("tmp.output");
-		PipeWatcher::onData = gatherOutput;
+		config->outputHandler = gatherOutput;
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
 
 		{
 			vector<string> preloaderCommand;
 			preloaderCommand.push_back("ruby");
-			preloaderCommand.push_back(resourceLocator->getHelperScriptsDir() + "/rack-preloader.rb");
-			SmartSpawner spawner(preloaderCommand, options, createSpawnerConfig());
-			object = spawner.spawn(options);
-			object.process->requiresShutdown = false;
+			preloaderCommand.push_back(resourceLocator->getHelperScriptsDir() +
+				"/rack-preloader.rb");
+			SmartSpawner spawner(preloaderCommand, options, config);
+			result = spawner.spawn(options);
 		}
-
-		SessionPtr session = object.process->newSession();
-		session->initiate();
 
 		const char header[] =
 			"REQUEST_METHOD\0GET\0"
 			"PATH_INFO\0/print_stderr\0";
 
-		writeScalarMessage(session->fd(), header, sizeof(header) - 1);
-		shutdown(session->fd(), SHUT_WR);
-		readAll(session->fd());
+		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		writeScalarMessage(fd, header, sizeof(header) - 1);
+		shutdown(fd, SHUT_WR);
+		readAll(fd);
 		EVENTUALLY(2,
 			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
 			result = gatheredOutput.find("hello world!\n") != string::npos;

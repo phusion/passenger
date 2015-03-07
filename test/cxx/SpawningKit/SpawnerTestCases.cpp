@@ -21,8 +21,7 @@
 		spawner = createSpawner(options)
 
 	#define RUN_USER_SWITCHING_TEST() \
-		object = spawner->spawn(options); \
-		object.process->requiresShutdown = false; \
+		result = spawner->spawn(options); \
 		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY))); \
 		uid_t uid = (uid_t) atol(io.readLine().c_str()); \
 		gid_t gid = (gid_t) atol(io.readLine().c_str()); \
@@ -49,10 +48,6 @@
 		symlink("passenger_wsgi.py.real", "tmp.wsgi/passenger_wsgi.py");
 	}
 
-	static void checkin(ProcessPtr process, Connection *conn) {
-		process->sockets.front().checkinConnection(*conn);
-	}
-
 	static string userNameForUid(uid_t uid) {
 		return getpwuid(uid)->pw_name;
 	}
@@ -75,44 +70,48 @@
 	}
 
 	TEST_METHOD(1) {
-		// Basic spawning test.
+		set_test_name("Basic spawning test");
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
-		ensure_equals(object.process->sockets.size(), 1u);
+		result = spawner->spawn(options);
+		ensure_equals(result.sockets.size(), 1u);
 
-		Connection conn = object.process->sockets.front().checkoutConnection();
-		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
-		writeExact(conn.fd, "ping\n");
-		ensure_equals(readAll(conn.fd), "pong\n");
+		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		writeExact(fd, "ping\n");
+		ensure_equals(readAll(fd), "pong\n");
 	}
 
 	TEST_METHOD(2) {
-		// It enforces the given start timeout.
+		set_test_name("It enforces the given start timeout");
 		Options options = createOptions();
 		options.appRoot      = "stub";
 		options.startCommand = "sleep\t" "60";
 		options.startupFile  = ".";
-		options.startTimeout = 300;
-		SpawnerPtr spawner = createSpawner(options);
+		options.startTimeout = 100;
 		setLogLevel(LVL_CRIT);
-		try {
-			object = spawner->spawn(options);
-			object.process->requiresShutdown = false;
-			fail("Timeout expected");
-		} catch (const SpawnException &e) {
-			ensure_equals(e.getErrorKind(),
-				SpawnException::APP_STARTUP_TIMEOUT);
-		}
+
+		EVENTUALLY(5,
+			SpawnerPtr spawner = createSpawner(options);
+			try {
+				spawner->spawn(options);
+				fail("Timeout expected");
+			} catch (const SpawnException &e) {
+				result = e.getErrorKind() == SpawnException::APP_STARTUP_TIMEOUT;
+				if (!result) {
+					// It didn't work, maybe because the server is too busy.
+					// Try again with higher timeout.
+					options.startTimeout = std::min<unsigned int>(
+						options.startTimeout * 2, 1000);
+				}
+			}
+		);
 	}
 
 	TEST_METHOD(3) {
-		// Any protocol errors during startup are caught and result
-		// in exceptions.
+		set_test_name("Any protocol errors during startup are caught and result in exceptions");
 		Options options = createOptions();
 		options.appRoot      = "stub";
 		options.startCommand = "echo\t" "!> hello world";
@@ -120,8 +119,7 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			object = spawner->spawn(options);
-			object.process->requiresShutdown = false;
+			spawner->spawn(options);
 			fail("Exception expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -130,8 +128,8 @@
 	}
 
 	TEST_METHOD(4) {
-		// The application may respond with a special Error response,
-		// which will result in a SpawnException with the content.
+		set_test_name("The application may respond with a special Error response, "
+			"which will result in a SpawnException with the content");
 		Options options = createOptions();
 		options.appRoot      = "stub";
 		options.startCommand = "perl\t" "start_error.pl";
@@ -139,8 +137,7 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			object = spawner->spawn(options);
-			object.process->requiresShutdown = false;
+			spawner->spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
@@ -152,44 +149,48 @@
 	}
 
 	TEST_METHOD(5) {
-		// The start timeout is enforced even while reading the error
-		// response.
+		set_test_name("The start timeout is enforced even while reading the error response");
 		Options options = createOptions();
 		options.appRoot      = "stub";
 		options.startCommand = "perl\t" "start_error.pl\t" "freeze";
 		options.startupFile  = "start_error.pl";
-		options.startTimeout = 300;
-		SpawnerPtr spawner = createSpawner(options);
+		options.startTimeout = 100;
 		setLogLevel(LVL_CRIT);
-		try {
-			object = spawner->spawn(options);
-			object.process->requiresShutdown = false;
-			fail("Timeout expected");
-		} catch (const SpawnException &e) {
-			ensure_equals(e.getErrorKind(),
-				SpawnException::APP_STARTUP_TIMEOUT);
-		}
+
+		EVENTUALLY(5,
+			SpawnerPtr spawner = createSpawner(options);
+			try {
+				spawner->spawn(options);
+				fail("Timeout expected");
+			} catch (const SpawnException &e) {
+				result = e.getErrorKind() == SpawnException::APP_STARTUP_TIMEOUT;
+				if (!result) {
+					// It didn't work, maybe because the server is too busy.
+					// Try again with higher timeout.
+					options.startTimeout = std::min<unsigned int>(
+						options.startTimeout * 2, 1000);
+				}
+			}
+		);
 	}
 
 	TEST_METHOD(6) {
-		// The reported PID is correct.
+		set_test_name("The reported PID is correct");
 		Options options = createOptions();
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
-		ensure_equals(object.process->sockets.size(), 1u);
+		result = spawner->spawn(options);
+		ensure_equals(result.sockets.size(), 1u);
 
-		Connection conn = object.process->sockets.front().checkoutConnection();
-		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
-		writeExact(conn.fd, "pid\n");
-		ensure_equals(readAll(conn.fd), toString(object.process->pid) + "\n");
+		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		writeExact(fd, "pid\n");
+		ensure_equals(readAll(fd), toString(result.pid) + "\n");
 	}
 
 	TEST_METHOD(7) {
-		// Custom environment variables can be passed.
+		set_test_name("Custom environment variables can be passed");
 		string envvars = modp::b64_encode("PASSENGER_FOO\0foo\0PASSENGER_BAR\0bar\0",
 			sizeof("PASSENGER_FOO\0foo\0PASSENGER_BAR\0bar\0") - 1);
 		Options options = createOptions();
@@ -198,20 +199,18 @@
 		options.startupFile  = "start.rb";
 		options.environmentVariables = envvars;
 		SpawnerPtr spawner = createSpawner(options);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
-		ensure_equals(object.process->sockets.size(), 1u);
+		result = spawner->spawn(options);
+		ensure_equals(result.sockets.size(), 1u);
 
-		Connection conn = object.process->sockets.front().checkoutConnection();
-		ScopeGuard guard(boost::bind(checkin, object.process, &conn));
-		writeExact(conn.fd, "envvars\n");
-		envvars = readAll(conn.fd);
+		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		writeExact(fd, "envvars\n");
+		envvars = readAll(fd);
 		ensure("(1)", envvars.find("PASSENGER_FOO = foo\n") != string::npos);
 		ensure("(2)", envvars.find("PASSENGER_BAR = bar\n") != string::npos);
 	}
 
 	TEST_METHOD(8) {
-		// Any raised SpawnExceptions take note of the process's environment variables.
+		set_test_name("Any raised SpawnExceptions take note of the process's environment variables");
 		string envvars = modp::b64_encode("PASSENGER_FOO\0foo\0",
 			sizeof("PASSENGER_FOO\0foo\0") - 1);
 		Options options = createOptions();
@@ -222,8 +221,7 @@
 		SpawnerPtr spawner = createSpawner(options);
 		setLogLevel(LVL_CRIT);
 		try {
-			object = spawner->spawn(options);
-			object.process->requiresShutdown = false;
+			spawner->spawn(options);
 			fail("Exception expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
@@ -231,8 +229,8 @@
 	}
 
 	TEST_METHOD(9) {
-		// It raises an exception if the user does not have a access to one
-		// of the app root's parent directories, or the app root itself.
+		set_test_name("It raises an exception if the user does not have a access to one "
+			"of the app root's parent directories, or the app root itself");
 		runShellCommand("mkdir -p tmp.check/a/b/c");
 		TempDirCopy dir("stub/rack", "tmp.check/a/b/c/d");
 		TempDir dir2("tmp.check");
@@ -253,8 +251,7 @@
 			runShellCommand("chmod 600 tmp.check/a");
 
 			try {
-				object = spawner->spawn(options);
-				object.process->requiresShutdown = false;
+				spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(1)", containsSubstring(e.getErrorPage(),
@@ -263,8 +260,7 @@
 
 			runShellCommand("chmod 700 tmp.check/a");
 			try {
-				object = spawner->spawn(options);
-				object.process->requiresShutdown = false;
+				spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(2)", containsSubstring(e.getErrorPage(),
@@ -273,8 +269,7 @@
 
 			runShellCommand("chmod 700 tmp.check/a/b/c");
 			try {
-				object = spawner->spawn(options);
-				object.process->requiresShutdown = false;
+				spawner->spawn(options);
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure("(3)", containsSubstring(e.getErrorPage(),
@@ -282,48 +277,12 @@
 			}
 
 			runShellCommand("chmod 700 tmp.check/a/b/c/d");
-			object = spawner->spawn(options); // Should not throw.
-			object.process->requiresShutdown = false;
+			spawner->spawn(options); // Should not throw.
 		}
 	}
 
-	TEST_METHOD(10) {
-		// It forwards all stdout and stderr output, even after the corresponding
-		// Process object has been destroyed.
-		DeleteFileEventually d("tmp.output");
-		PipeWatcher::onData = gatherOutput;
-
-		Options options = createOptions();
-		options.appRoot = "stub/rack";
-		options.appType = "rack";
-		SpawnerPtr spawner = createSpawner(options);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
-
-		SessionPtr session = object.process->newSession();
-		session->initiate();
-
-		setLogLevel(LVL_ERROR); // TODO: should be LVL_WARN
-		const char header[] =
-			"REQUEST_METHOD\0GET\0"
-			"PATH_INFO\0/print_stdout_and_stderr\0";
-
-		writeScalarMessage(session->fd(), StaticString(header, sizeof(header) - 1));
-		shutdown(session->fd(), SHUT_WR);
-		readAll(session->fd());
-		session->close(true);
-		session.reset();
-		object.process.reset();
-
-		EVENTUALLY(2,
-			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
-			result = gatheredOutput.find("hello stdout!\n") != string::npos
-				&& gatheredOutput.find("hello stderr!\n") != string::npos;
-		);
-	}
-
 	TEST_METHOD(11) {
-		// It infers the code revision from the REVISION file.
+		set_test_name("It infers the code revision from the REVISION file");
 		TempDirCopy dir("stub/rack", "tmp.rack");
 		createFile("tmp.rack/REVISION", "hello\n");
 
@@ -332,15 +291,14 @@
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
+		result = spawner->spawn(options);
 
-		ensure_equals(object.process->codeRevision, "hello");
+		ensure_equals(result.codeRevision, "hello");
 	}
 
 	TEST_METHOD(12) {
-		// It infers the code revision from the app root symlink,
-		// if the app root is called "current".
+		set_test_name("It infers the code revision from the app root symlink, "
+			"if the app root is called 'current'");
 		TempDir dir1("tmp.rack");
 		TempDirCopy dir2("stub/rack", "tmp.rack/today");
 		symlink("today", "tmp.rack/current");
@@ -350,13 +308,10 @@
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
-		object = spawner->spawn(options);
-		object.process->requiresShutdown = false;
+		result = spawner->spawn(options);
 
-		ensure_equals(object.process->codeRevision, "today");
+		ensure_equals(result.codeRevision, "today");
 	}
-
-	// It raises an exception if getStartupCommand() is empty.
 
 	/******* User switching tests *******/
 

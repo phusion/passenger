@@ -44,9 +44,9 @@
 #include <cassert>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/ComponentInfo.h>
-#include <ApplicationPool2/SpawnerFactory.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
+#include <SpawningKit/Factory.h>
 #include <MemoryKit/palloc.h>
 #include <Hooks.h>
 #include <Utils.h>
@@ -202,12 +202,12 @@ public:
 	void spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process);
 	void initiateNextOobwRequest();
 
-	void spawnThreadMain(GroupPtr self, SpawnerPtr spawner, Options options,
+	void spawnThreadMain(GroupPtr self, SpawningKit::SpawnerPtr spawner, Options options,
 		unsigned int restartsInitiated);
-	void spawnThreadRealMain(const SpawnerPtr &spawner, const Options &options,
+	void spawnThreadRealMain(const SpawningKit::SpawnerPtr &spawner, const Options &options,
 		unsigned int restartsInitiated);
 	void finalizeRestart(GroupPtr self, Options oldOptions, Options newOptions,
-		RestartMethod method, SpawnerFactoryPtr spawnerFactory,
+		RestartMethod method, SpawningKit::FactoryPtr spawningKitFactory,
 		unsigned int restartsInitiated, boost::container::vector<Callback> postLockActions);
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
@@ -360,7 +360,7 @@ public:
 		}
 	}
 
-	static void doCleanupSpawner(SpawnerPtr spawner) {
+	static void doCleanupSpawner(SpawningKit::SpawnerPtr spawner) {
 		spawner->cleanup();
 	}
 
@@ -876,7 +876,7 @@ public:
 	 * Invariant:
 	 *    (lifeStatus == ALIVE) == (spawner != NULL)
 	 */
-	SpawnerPtr spawner;
+	SpawningKit::SpawnerPtr spawner;
 
 
 	/********************************************
@@ -1049,11 +1049,10 @@ public:
 	 * function doesn't touch `getWaitlist` so be sure to fix its invariants
 	 * afterwards if necessary, e.g. by calling `assignSessionsToGetWaiters()`.
 	 */
-	AttachResult attach(const SpawnObject &spawnObject,
+	AttachResult attach(const ProcessPtr &process,
 		boost::container::vector<Callback> &postLockActions)
 	{
 		TRACE_POINT();
-		const ProcessPtr &process = spawnObject.process;
 		assert(process->getGroup() == NULL || process->getGroup() == this);
 		assert(process->isAlive());
 		assert(isAlive());
@@ -1070,10 +1069,6 @@ public:
 		process->stickySessionId = generateStickySessionId();
 		P_DEBUG("Attaching process " << process->inspect());
 		addProcessToList(process, enabledProcesses);
-
-		if (spawnObject.pool != getPallocPool()) {
-			process->recreateStrings(getPallocPool());
-		}
 
 		/* Now that there are enough resources, relevant processes in
 		 * 'disableWaitlist' can be disabled.

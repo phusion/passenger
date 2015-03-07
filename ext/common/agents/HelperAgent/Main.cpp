@@ -127,8 +127,8 @@ namespace ServerAgent {
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
 		UnionStation::CorePtr unionStationCore;
-		SpawnerConfigPtr spawnerConfig;
-		SpawnerFactoryPtr spawnerFactory;
+		SpawningKit::ConfigPtr spawningKitConfig;
+		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr appPool;
 
 		ServerKit::AcceptLoadBalancer<RequestHandler> loadBalancer;
@@ -453,6 +453,11 @@ onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents) {
 }
 
 static void
+spawningKitErrorHandler(const SpawningKit::ConfigPtr &config, SpawnException &e, const Options &options) {
+	ApplicationPool2::processAndLogNewSpawnException(e, options, config);
+}
+
+static void
 initializeNonPrivilegedWorkingObjects() {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
@@ -489,19 +494,21 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
-	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
-	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
-	wo->spawnerConfig->agentsOptions = agentsOptions;
-	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
-	wo->spawnerConfig->instanceDir = options.get("instance_dir", false);
-	if (!wo->spawnerConfig->instanceDir.empty()) {
-		wo->spawnerConfig->instanceDir = absolutizePath(wo->spawnerConfig->instanceDir);
+	wo->spawningKitConfig = boost::make_shared<SpawningKit::Config>();
+	wo->spawningKitConfig->resourceLocator = &wo->resourceLocator;
+	wo->spawningKitConfig->agentsOptions = agentsOptions;
+	wo->spawningKitConfig->errorHandler = spawningKitErrorHandler;
+	wo->spawningKitConfig->randomGenerator = wo->randomGenerator;
+	wo->spawningKitConfig->instanceDir = options.get("instance_dir", false);
+	if (!wo->spawningKitConfig->instanceDir.empty()) {
+		wo->spawningKitConfig->instanceDir = absolutizePath(
+			wo->spawningKitConfig->instanceDir);
 	}
-	wo->spawnerConfig->finalize();
+	wo->spawningKitConfig->finalize();
 
 	UPDATE_TRACE_POINT();
-	wo->spawnerFactory = boost::make_shared<SpawnerFactory>(wo->spawnerConfig);
-	wo->appPool = boost::make_shared<Pool>(wo->spawnerFactory, agentsOptions);
+	wo->spawningKitFactory = boost::make_shared<SpawningKit::Factory>(wo->spawningKitConfig);
+	wo->appPool = boost::make_shared<Pool>(wo->spawningKitFactory, agentsOptions);
 	wo->appPool->initialize();
 	wo->appPool->setMax(options.getInt("max_pool_size"));
 	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000ULL);
