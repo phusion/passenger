@@ -1,7 +1,8 @@
 Release 5.0.2
 -------------
 
- * Fixes a freeze that could occur when processing large responses. Closes GH-1404.
+ * Fixes a connection freeze that could occur when processing large responses. This would manifest itself under the error message "This website is under heavy load" or "Request queue is full, returning an error". Closes GH-1404.
+ * Debian and Ubuntu packages have been reintroduces.
  * When `passenger-config restart-app` is run interactively, if Passenger is not serving any applications, then the command now prints an error message instead of showing a menu with only a "Cancel" option.
  * Fixes a compilation problem on FreeBSD 10 (contributed by: clemensg). Closes GH-1401.
  * [Standalone] Fixes a crash that would occur if you use the `--ctl` parameter.
