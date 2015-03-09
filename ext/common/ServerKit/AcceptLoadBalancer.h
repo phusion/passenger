@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -26,9 +26,12 @@
 #define _PASSENGER_SERVER_KIT_ACCEPT_LOAD_BALANCER_H_
 
 #include <boost/bind.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/config.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/macros.hpp>
 #include <vector>
+#include <limits>
 #include <cassert>
 #include <cerrno>
 
@@ -53,20 +56,29 @@ using namespace boost;
 template<typename Server>
 class AcceptLoadBalancer {
 private:
-	static const unsigned int ACCEPT_BURST_COUNT = 15; // must be < 16 to not overflow newClientCount
+	static const unsigned int ACCEPT_BURST_COUNT = 16;
 
 	int endpoints[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 	struct pollfd pollers[1 + SERVER_KIT_MAX_SERVER_ENDPOINTS];
 	int newClients[ACCEPT_BURST_COUNT];
 
-	unsigned int nEndpoints: 2;
-	bool accept4Available: 1;
-	bool quit: 1;
-	unsigned int newClientCount: 4;
+	unsigned int nEndpoints;
+	boost::uint8_t newClientCount;
+	boost::uint8_t nextServer;
+	bool accept4Available;
+	bool quit;
 
-	unsigned int nextServer;
 	int exitPipe[2];
 	oxt::thread *thread;
+
+	#if __cplusplus >= 199711L && !defined(BOOST_NO_STATIC_ASSERT)
+		static_assert(std::numeric_limits<typeof(nEndpoints)>::max()
+			>= SERVER_KIT_MAX_SERVER_ENDPOINTS,
+			"nEndpoints's type is too small to accomodate for SERVER_KIT_MAX_SERVER_ENDPOINTS");
+		static_assert(std::numeric_limits<typeof(newClientCount)>::max()
+			>= ACCEPT_BURST_COUNT,
+			"newClientCount's type is too small to accomodate for ACCEPT_BURST_COUNT");
+	#endif
 
 	void pollAllEndpoints() {
 		pollers[0].fd = exitPipe[0];
@@ -82,11 +94,10 @@ private:
 	}
 
 	bool acceptNewClients(int endpoint) {
-		unsigned int i;
 		bool error = false;
 		int fd, errcode = 0;
 
-		for (i = 0; i < ACCEPT_BURST_COUNT; i++) {
+		while (newClientCount < ACCEPT_BURST_COUNT) {
 			fd = acceptNonBlockingSocket(endpoint);
 			if (fd == -1) {
 				error = true;
@@ -94,10 +105,10 @@ private:
 				break;
 			}
 
-			newClients[i] = fd;
+			P_TRACE(2, "Accepted client file descriptor: " << fd);
+			newClients[newClientCount] = fd;
+			newClientCount++;
 		}
-
-		newClientCount = i;
 
 		if (error && errcode != EAGAIN && errcode != EWOULDBLOCK) {
 			P_ERROR("Cannot accept client: " << getErrorDesc(errcode) <<
@@ -121,6 +132,8 @@ private:
 
 		for (i = 0; i < newClientCount; i++) {
 			ServerKit::Context *ctx = servers[nextServer]->getContext();
+			P_TRACE(2, "Feeding client to server thread " << nextServer <<
+				": file descriptor " << newClients[i]);
 			ctx->libev->runLater(boost::bind(feedNewClient, servers[nextServer],
 				newClients[i]));
 			nextServer = (nextServer + 1) % servers.size();
@@ -182,13 +195,19 @@ private:
 				quit = true;
 				break;
 			}
-			for (unsigned i = 0; i < nEndpoints; i++) {
+
+			unsigned int i = 0;
+			newClientCount = 0;
+
+			while (newClientCount < ACCEPT_BURST_COUNT && i < nEndpoints) {
 				if (pollers[i + 1].revents & POLLIN) {
 					if (!acceptNewClients(endpoints[i])) {
 						break;
 					}
 				}
+				i++;
 			}
+
 			distributeNewClients();
 		}
 	}
@@ -198,10 +217,10 @@ public:
 
 	AcceptLoadBalancer()
 		: nEndpoints(0),
-		  accept4Available(true),
-		  quit(false),
 		  newClientCount(0),
 		  nextServer(0),
+		  accept4Available(true),
+		  quit(false),
 		  thread(NULL)
 	{
 		if (pipe(exitPipe) == -1) {
