@@ -68,10 +68,9 @@ module PhusionPassenger
         end
 
         def build_daemon_controller_options
-          if @options[:socket_file]
-            ping_spec = [:unix, @options[:socket_file]]
-          else
-            ping_spec = [:tcp, @options[:address], @options[:port]]
+          ping_spec = lambda do
+            File.exist?(report_file_path) &&
+              File.stat(report_file_path).size > 0
           end
 
           command = ""

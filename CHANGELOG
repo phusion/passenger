@@ -1,3 +1,9 @@
+Release 5.0.3
+-------------
+
+ * [Standalone] When using the builtin engine, `passenger start` may crash during startup due to an initialization race condition. This has been fixed.
+
+
 Release 5.0.2
 -------------
 
