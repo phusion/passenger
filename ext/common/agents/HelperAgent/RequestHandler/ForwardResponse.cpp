@@ -715,9 +715,17 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	}
 
 	if (showVersionInHeader) {
-		PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME " " PASSENGER_VERSION "\r\n\r\n");
+		#ifdef PASSENGER_IS_ENTERPRISE
+			PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME " Enterprise " PASSENGER_VERSION "\r\n\r\n");
+		#else
+			PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME " " PASSENGER_VERSION "\r\n\r\n");
+		#endif
 	} else {
-		PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME "\r\n\r\n");
+		#ifdef PASSENGER_IS_ENTERPRISE
+			PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME " Enterprise\r\n\r\n");
+		#else
+			PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME "\r\n\r\n");
+		#endif
 	}
 
 	nbuffers = i;
