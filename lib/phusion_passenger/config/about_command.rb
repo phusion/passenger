@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -175,7 +175,12 @@ module PhusionPassenger
           PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
           puts PhusionPassenger::PlatformInfo.cxx_binary_compatibility_id
         when "--version"
-          puts PhusionPassenger::VERSION_STRING
+          if defined?(PhusionPassenger::PASSENGER_IS_ENTERPRISE)
+            name = "#{PhusionPassenger::PROGRAM_NAME} Enterprise"
+          else
+            name = PhusionPassenger::PROGRAM_NAME
+          end
+          puts "#{name} #{PhusionPassenger::VERSION_STRING}"
         when "--help"
           self.class.help
         else
