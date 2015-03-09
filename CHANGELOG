@@ -1,3 +1,8 @@
+Release 5.0.3
+-------------
+ * Fixes an overflow that resulted in a filedescriptor leak and stalled client connections. Closes GH-1412.
+
+
 Release 5.0.2
 -------------
 
