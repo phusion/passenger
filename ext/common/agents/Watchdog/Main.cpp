@@ -1215,6 +1215,8 @@ reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPt
 		str = doc.toStyledString();
 
 		writeExact(wo->reportFile, str.data(), str.size());
+		close(wo->reportFile);
+		wo->reportFile = -1;
 	}
 }
 
