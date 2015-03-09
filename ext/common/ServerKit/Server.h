@@ -632,6 +632,7 @@ protected:
 
 	virtual void reinitializeClient(Client *client, int fd) {
 		client->setConnState(Client::ACTIVE);
+		SKC_TRACE(client, 2, "Client associated with file descriptor: " << fd);
 		client->input.reinitialize(fd);
 		client->output.reinitialize(fd);
 	}
@@ -870,9 +871,10 @@ public:
 		disconnectedClientCount++;
 
 		deinitializeClient(c);
+		SKC_TRACE(c, 2, "Closing client file descriptor: " << fdnum);
 		try {
 			safelyClose(fdnum);
-		} catch (SystemException &e) {
+		} catch (const SystemException &e) {
 			SKC_WARN(c, "An error occurred while closing the client file descriptor: " <<
 				e.what() << " (errno=" << e.code() << ")");
 		}
