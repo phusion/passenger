@@ -8,6 +8,7 @@ Release 5.0.3
  * It is now possible to set Meteor settings using the `METEOR_SETTINGS` environment variable, even when the Meteor app is not bundled. Closes GH-1403.
  * Fixes invalid JSON output for non-finite double values (e.g. from the HTTP JSON API). Closes GH-1408.
  * All hooks now set the `PASSENGER_HOOK_NAME` environment variable. This variable is set to the name of the hook that is being called.
+ * The Ruby handler no longer tries to call #force_encoding on response body strings, which fixes an incompatibility with apps/libraries that return frozen body strings. Closes GH-1414.
 
 
 Release 5.0.2

@@ -175,7 +175,6 @@ module PhusionPassenger
             begin
               if chunk
                 body.each do |part|
-                  part = force_binary(part)
                   size = bytesize(part)
                   if size != 0
                     connection.writev(chunk_data(part, size))
@@ -254,18 +253,6 @@ module PhusionPassenger
       else
         def bytesize(str)
           str.size
-        end
-      end
-
-      if "".respond_to?(:force_encoding)
-        BINARY = "binary".freeze
-
-        def force_binary(str)
-          str.force_encoding(BINARY)
-        end
-      else
-        def force_binary(str)
-          str
         end
       end
     end
