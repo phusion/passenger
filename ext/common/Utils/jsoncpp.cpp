@@ -206,8 +206,6 @@ uintToString( LargestUInt value,
 #include <string.h>
 #include <boost/math/special_functions/fpclassify.hpp>
 
-using boost::math::isfinite;
-
 #if _MSC_VER >= 1400 // VC++ 8.0
 #pragma warning( disable : 4996 )   // disable warning about strdup being deprecated.
 #endif
@@ -3462,7 +3460,7 @@ std::string valueToString( UInt value )
 
 std::string valueToString( double value )
 {
-   if (!isfinite(value)) {
+   if (!boost::math::isfinite(value)) {
 	   return "null";
    }
 
