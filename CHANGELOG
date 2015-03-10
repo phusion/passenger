@@ -1,6 +1,9 @@
 Release 5.0.3
 -------------
- * Truncate paths in logging strings (to 3 chars) to reduce redundant info. Closes GH-1383.
+
+ * [Standalone] When using the builtin engine, `passenger start` may crash during startup due to an initialization race condition. This has been fixed.
+ * Fixes an overflow that resulted in a filedescriptor leak and stalled client connections. Closes GH-1412.
+ * Truncates Passenger source code paths in logs (to 3 chars) to reduce redundant info. Closes GH-1383.
 
 
 Release 5.0.2
