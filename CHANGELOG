@@ -6,6 +6,7 @@ Release 5.0.3
  * Fixes an integer overflow that resulted in a file descriptor leak and stalled client connections. Closes GH-1412.
  * Truncates Passenger source code paths in logs (to 3 chars) to reduce redundant info. Closes GH-1383.
  * It is now possible to set Meteor settings using the `METEOR_SETTINGS` environment variable, even when the Meteor app is not bundled. Closes GH-1403.
+ * All hooks now set the `PASSENGER_HOOK_NAME` environment variable. This variable is set to the name of the hook that is being called.
 
 
 Release 5.0.2
