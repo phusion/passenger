@@ -84,6 +84,7 @@ module PhusionPassenger
           begin
             status, headers, body = @app.call(env)
           rescue => e
+            disable_keep_alive
             if should_reraise_app_error?(e, socket_wrapper)
               raise e
             elsif !should_swallow_app_error?(e, socket_wrapper)
@@ -101,6 +102,9 @@ module PhusionPassenger
 
           begin
             process_body(env, connection, socket_wrapper, status.to_i, headers, body)
+          rescue Exception => e
+            disable_keep_alive
+            raise
           ensure
             body.close if body && body.respond_to?(:close)
           end
@@ -187,6 +191,7 @@ module PhusionPassenger
                 end
               end
             rescue => e
+              disable_keep_alive
               if should_reraise_app_error?(e, socket_wrapper)
                 raise e
               elsif !should_swallow_app_error?(e, socket_wrapper)
@@ -229,6 +234,10 @@ module PhusionPassenger
         else
           headers << CONNECTION_CLOSE_CRLF
         end
+      end
+
+      def disable_keep_alive
+        @keepalive_performed = false
       end
 
       def should_output_body?(status, env)

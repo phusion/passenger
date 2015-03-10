@@ -9,6 +9,7 @@ Release 5.0.3
  * Fixes invalid JSON output for non-finite double values (e.g. from the HTTP JSON API). Closes GH-1408.
  * All hooks now set the `PASSENGER_HOOK_NAME` environment variable. This variable is set to the name of the hook that is being called.
  * The Ruby handler no longer tries to call #force_encoding on response body strings, which fixes an incompatibility with apps/libraries that return frozen body strings. Closes GH-1414.
+ * If the Ruby handler crashes while processing a Rack response body, it will now no longer stall the connection.
 
 
 Release 5.0.2
