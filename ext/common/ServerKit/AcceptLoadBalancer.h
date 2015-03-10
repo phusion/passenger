@@ -53,6 +53,32 @@ using namespace std;
 using namespace boost;
 
 
+/**
+ * Listens for client connections and load balances them to multiple
+ * Server objects in a round-robin manner.
+ *
+ * Normally, the Server class listens for client connections directly.
+ * But this is inefficient in multithreaded situations where you are
+ * running one Server and event loop per CPU core, that all happen to
+ * listen on the same server socket. This is because every time a client
+ * connects, all threads wake up, but only one thread will succeed in
+ * accept()ing the client.
+ *
+ * Furthermore, it can also be very easy for threads to become
+ * unbalanced. If a burst of clients connect to the server socket,
+ * then it is very likely that a single Server accepts all of
+ * those clients. This can result in situations where, for example,
+ * thread 1 has 40 clients and thread 2 has only 3.
+ *
+ * The AcceptLoadBalancer solves this problem by being the sole entity
+ * that listens on the server socket. All client sockets that it
+ * accepts are distributed to all registered Server objects, in a
+ * round-robin manner.
+ *
+ * Inside the "PassengerAgent server", we activate AcceptLoadBalancer
+ * only if `server_threads > 1`, which is often the case because
+ * `server_threads` defaults to the number of CPU cores.
+ */
 template<typename Server>
 class AcceptLoadBalancer {
 private:
