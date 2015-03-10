@@ -53,7 +53,7 @@ using namespace boost;
 template<typename Server>
 class AcceptLoadBalancer {
 private:
-	static const unsigned int ACCEPT_BURST_COUNT = 16;
+	static const unsigned int ACCEPT_BURST_COUNT = 15; // must be < 16 to not overflow newClientCount
 
 	int endpoints[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 	struct pollfd pollers[1 + SERVER_KIT_MAX_SERVER_ENDPOINTS];
