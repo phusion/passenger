@@ -455,8 +455,8 @@ Here are some of the environment variables which are passed to all hooks, unless
 
  * `PASSENGER_VERSION`
  * `PASSENGER_PASSENGER_ROOT`
- * `PASSENGER_SERVER_INSTANCE_DIR`
- * `PASSENGER_GENERATION_PATH`
+ * `PASSENGER_INSTANCE_DIR`
+ * `PASSENGER_INSTANCE_REGISTRY_DIR`
 
 ==== Blocking and concurrency
 
