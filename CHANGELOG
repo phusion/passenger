@@ -10,6 +10,7 @@ Release 5.0.3
  * All hooks now set the `PASSENGER_HOOK_NAME` environment variable. This variable is set to the name of the hook that is being called.
  * The Ruby handler no longer tries to call #force_encoding on response body strings, which fixes an incompatibility with apps/libraries that return frozen body strings. Closes GH-1414.
  * If the Ruby handler crashes while processing a Rack response body, it will now no longer stall the connection.
+ * We now handle errors in the `poll()` system call better. This might fix some crashes during shutdown which manifest on FreeBSD.
 
 
 Release 5.0.2
