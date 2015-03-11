@@ -27,11 +27,9 @@
 
 #include <boost/bind.hpp>
 #include <boost/cstdint.hpp>
-#include <boost/config.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/macros.hpp>
 #include <vector>
-#include <limits>
 #include <cassert>
 #include <cerrno>
 
@@ -97,15 +95,6 @@ private:
 
 	int exitPipe[2];
 	oxt::thread *thread;
-
-	#if __cplusplus >= 199711L && !defined(BOOST_NO_STATIC_ASSERT)
-		static_assert(std::numeric_limits<typeof(nEndpoints)>::max()
-			>= SERVER_KIT_MAX_SERVER_ENDPOINTS,
-			"nEndpoints's type is too small to accomodate for SERVER_KIT_MAX_SERVER_ENDPOINTS");
-		static_assert(std::numeric_limits<typeof(newClientCount)>::max()
-			>= ACCEPT_BURST_COUNT,
-			"newClientCount's type is too small to accomodate for ACCEPT_BURST_COUNT");
-	#endif
 
 	void pollAllEndpoints() {
 		pollers[0].fd = exitPipe[0];
