@@ -61,18 +61,6 @@ module PhusionPassenger
       PhusionPassenger.require_passenger_lib 'utils/tmpio'
     end
 
-    def self.create_settings_file
-      if ENV["METEOR_SETTINGS"]
-        require 'tempfile'
-        settings_file = Tempfile.new(["meteor-settings", ".json"])
-        settings_file.write(ENV["METEOR_SETTINGS"])
-        settings_file.flush
-        settings_file
-      else
-        nil
-      end
-    end
-
     def self.ping_port(port)
       socket_domain = Socket::Constants::AF_INET
       sockaddr = Socket.pack_sockaddr_in(port, '127.0.0.1')
@@ -98,7 +86,7 @@ module PhusionPassenger
       end
     end
 
-    def self.load_app(settings_file)
+    def self.load_app
       port = nil
       tries = 0
       while port.nil? && tries < 200
@@ -122,13 +110,7 @@ module PhusionPassenger
         # Meteor its own process group, and sending signals to the
         # entire process group.
         Process.setpgrp
-        if settings_file
-          PhusionPassenger.require_passenger_lib 'utils/shellwords'
-          puts("meteor run -p #{port} --settings #{Shellwords.escape settings_file.path} #{production}")
-          exec("meteor run -p #{port} --settings #{Shellwords.escape settings_file.path} #{production}")
-        else
-          exec("meteor run -p #{port} #{production}")
-        end
+        exec("meteor run -p #{port} #{production}")
       end
       $0 = options["process_title"] if options["process_title"]
       $0 = "#{$0} (#{pid})"
@@ -148,9 +130,8 @@ module PhusionPassenger
 
     handshake_and_read_startup_request
     init_passenger
-    settings_file = create_settings_file
     begin
-      pid, port = load_app(settings_file)
+      pid, port = load_app
       while !ping_port(port)
         sleep 0.01
       end
@@ -159,9 +140,6 @@ module PhusionPassenger
       puts "!> "
       wait_for_exit_message
     ensure
-      if settings_file
-        settings_file.close!
-      end
       if pid
         Process.kill('INT', -pid) rescue nil
         Process.waitpid(pid) rescue nil
