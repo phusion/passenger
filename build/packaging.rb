@@ -318,10 +318,10 @@ task 'package:sign' do
 end
 
 task 'package:update_homebrew' do
-  require 'digest/sha1'
+  require 'digest/sha2'
   version = VERSION_STRING
-  sha1 = File.open("#{PKG_DIR}/passenger-#{version}.tar.gz", "rb") do |f|
-    Digest::SHA1.hexdigest(f.read)
+  sha256 = File.open("#{PKG_DIR}/passenger-#{version}.tar.gz", "rb") do |f|
+    Digest::SHA256.hexdigest(f.read)
   end
   sh "rm -rf #{homebrew_dir}"
   sh "git clone git@github.com:phusion/homebrew.git #{homebrew_dir}"
@@ -331,8 +331,8 @@ task 'package:update_homebrew' do
   formula = File.read("/tmp/homebrew/Library/Formula/passenger.rb")
   formula.gsub!(/passenger-.+?\.tar\.gz/, "passenger-#{version}.tar.gz") ||
     abort("Unable to substitute Homebrew formula tarball filename")
-  formula.gsub!(/^  sha1 .*/, "  sha1 '#{sha1}'") ||
-    abort("Unable to substitute Homebrew formula SHA-1")
+  formula.gsub!(/^  sha256 .*/, "  sha256 '#{sha256}'") ||
+    abort("Unable to substitute Homebrew formula SHA-256")
   necessary_dirs = ORIG_TARBALL_FILES.call.map{ |filename| filename.split("/").first }.uniq
   necessary_dirs -= Packaging::HOMEBREW_EXCLUDE
   necessary_dirs += ["buildout"]
