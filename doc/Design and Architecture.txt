@@ -219,11 +219,6 @@ The main interface into the subsystem is the Pool class, with its `asyncGet()` m
 
 The Pool class is the core of the subsystem. It contains high-level process management logic but not low-level details, such as the details of spawning processes. The code is further divided into the following classes, each of which contain the core code managing its respective domain:
 
-**SuperGroup**::
-	A logical collection of different applications. It's designed to be able to contain one or more Groups, but currently it always contains exactly 1 Group.
-+
-SuperGroup was originally introduced as a building block for a future feature: polyglot, multi-language applications. The idea was that, as more and more programming languages are introduced and become popular, there would be more and more demand to write applications in multiple languages. This would be done by splitting applications into multiple parts, with each part implemented in a different language. We wanted to introduce a feature that makes it super-easy to make such polyglot applications as a single whole. However, as time went on, we realized that we were mistaken and that most developers actually don't want to bother with multiple programming languages: they'd rather stick with a single one. So nowadays, SuperGroup is actually obsolete, but it's still kept in the codebase because it's not harmful, and removing it is too much work.
-
 **Group**::
 	Represents an application. It can contain multiple processes, all belonging to the same application.
 
@@ -239,7 +234,7 @@ SuperGroup was originally introduced as a building block for a future feature: p
 **Options (not shown in diagram)**::
 	A configuration object for the `Pool::asyncGet()` method.
 
-If you look at the diagram, then you see that SuperGroup, Group and Process all have 0..1 associations with their containing classes. An object that has a NULL association with its containing object, is considered invalid and should not be used. The fact that the association can be NULL is a detail of the memory management scheme that we employ.
+If you look at the diagram, then you see that Group and Process all have 0..1 associations with their containing classes. An object that has a NULL association with its containing object, is considered invalid and should not be used. The fact that the association can be NULL is a detail of the memory management scheme that we employ.
 
 [[spawner_subsystem]]
 === The Spawner subsystem

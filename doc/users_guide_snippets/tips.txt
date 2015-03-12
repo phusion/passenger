@@ -528,15 +528,6 @@ Extra environment variables:
 +
 This hook does not block because it's always run in an extra background thread. Errors in the hook script are ignored.
 
-`after_initialize_supergroup`::
-	Called right after Phusion Passenger has allocated data structures for an application, and is about to spawn a process for the first time for this application. Errors in the hook script are ignored. Extra environment variables: `PASSENGER_APP_ROOT`.
-`before_destroy_supergroup`::
-	Called right before Phusion Passenger decallocates data structures for an application. Errors in the hook script are ignored.
-+
-Note that the `after_initialize_supergroup` hook may be called while this hook is still being executed, so make sure that operations don't conflict with each other.
-+
-Extra environment variables: `PASSENGER_APP_ROOT`.
-
 `max_request_time_reached` (since 5.0.2, Enterprise-only)::
 	Called when a <<PassengerMaxRequestTime,max request time limit>> has been reached. Please note that as soon as this hook has finished executing, the application process will be killed with SIGKILL. So if you want to perform any diagnostics on the process in question (e.g. with strace, gdb, etc), please do not exit your hook script until you've obtained all the diagnostics you want.
 +
