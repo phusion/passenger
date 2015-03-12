@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -53,7 +53,6 @@ using namespace boost;
 using namespace oxt;
 
 class Pool;
-class SuperGroup;
 class Group;
 class Process;
 class Socket;
@@ -162,12 +161,11 @@ enum RestartMethod {
 };
 
 typedef boost::shared_ptr<Pool> PoolPtr;
-typedef boost::shared_ptr<SuperGroup> SuperGroupPtr;
 typedef boost::shared_ptr<Group> GroupPtr;
 typedef boost::shared_ptr<Process> ProcessPtr;
 typedef boost::intrusive_ptr<Session> SessionPtr;
 typedef boost::shared_ptr<tracable_exception> ExceptionPtr;
-typedef StringKeyTable<SuperGroupPtr> SuperGroupMap;
+typedef StringKeyTable<GroupPtr> GroupMap;
 typedef boost::function<void (const ProcessPtr &process, DisableResult result)> DisableCallback;
 typedef boost::function<void ()> Callback;
 

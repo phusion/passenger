@@ -425,7 +425,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
       ApplicationPool2/Pool/ProcessUtils.h
       ApplicationPool2/Pool/Inspection.h
       ApplicationPool2/Pool/Debug.h
-      ApplicationPool2/SuperGroup.h
       ApplicationPool2/Group.h
       ApplicationPool2/Process.h
       ApplicationPool2/Socket.h

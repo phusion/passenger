@@ -35,7 +35,6 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Pool.h>
-#include <ApplicationPool2/SuperGroup.h>
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/ErrorRenderer.h>
 #include <Exceptions.h>
@@ -306,238 +305,29 @@ recreateString(psg_pool_t *pool, StaticString &str) {
 }
 
 
-const SuperGroupPtr
-Pool::getSuperGroup(const char *name) {
-	SuperGroupPtr *superGroup;
-	if (superGroups.lookup(name, &superGroup)) {
-		return *superGroup;
+const GroupPtr
+Pool::getGroup(const char *name) {
+	GroupPtr *group;
+	if (groups.lookup(name, &group)) {
+		return *group;
 	} else {
-		return SuperGroupPtr();
+		return GroupPtr();
 	}
 }
 
 
-boost::mutex &
-SuperGroup::getPoolSyncher(Pool *pool) {
-	return pool->syncher;
-}
-
-void
-SuperGroup::runAllActions(const boost::container::vector<Callback> &actions) {
-	Pool::runAllActions(actions);
-}
-
-const PoolPtr
-SuperGroup::getPoolPtr() {
-	return getPool()->shared_from_this();
-}
-
-string
-SuperGroup::generateSecret() const {
-	return getPool()->getRandomGenerator()->generateAsciiString(43);
-}
-
-bool
-SuperGroup::selfCheckingEnabled() const {
-	return getPool()->selfchecking;
-}
-
-void
-SuperGroup::runInitializationHooks() const {
-	getPool()->runHookScripts("after_initialize_supergroup",
-		boost::bind(&SuperGroup::setupInitializationOrDestructionHook, this, _1));
-}
-
-void
-SuperGroup::runDestructionHooks() const {
-	getPool()->runHookScripts("before_destroy_supergroup",
-		boost::bind(&SuperGroup::setupInitializationOrDestructionHook, this, _1));
-}
-
-void
-SuperGroup::setupInitializationOrDestructionHook(HookScriptOptions &options) const {
-	options.environment.push_back(make_pair("PASSENGER_APP_ROOT", this->options.appRoot));
-}
-
-void
-SuperGroup::createInterruptableThread(const boost::function<void ()> &func, const string &name,
-	unsigned int stackSize)
+Group::Group(Pool *_pool, const Options &_options)
+	: pool(_pool),
+	  name(_options.getAppGroupName()),
+	  uuid(generateUuid(_pool))
 {
-	getPool()->interruptableThreads.create_thread(func, name, stackSize);
-}
-
-void
-SuperGroup::realDoInitialize(const Options &options, unsigned int generation) {
-	vector<ComponentInfo> componentInfos;
-	vector<ComponentInfo>::const_iterator it;
-	ExceptionPtr exception;
-
-	Pool *pool = getPool();
-
-	P_TRACE(2, "Initializing SuperGroup " << inspect() << " in the background...");
-	try {
-		componentInfos = loadComponentInfos(options);
-	} catch (const tracable_exception &e) {
-		exception = copyException(e);
-	}
-	if (componentInfos.empty() && exception == NULL) {
-		string message = "The directory " +
-			options.appRoot +
-			" does not seem to contain a web application.";
-		boost::shared_ptr<SpawnException> spawnException =
-			boost::make_shared<SpawnException>(
-				message, message, false);
-		exception = spawnException;
-		processAndLogNewSpawnException(*spawnException, options,
-			pool->getSpawningKitConfig());
-	}
-
-	Pool::DebugSupportPtr debug = pool->debugSupport;
-	boost::container::vector<Callback> actions;
-	{
-		if (debug != NULL && debug->superGroup) {
-			debug->debugger->send("About to finish SuperGroup initialization");
-			debug->messages->recv("Proceed with initializing SuperGroup");
-		}
-
-		boost::unique_lock<boost::mutex> lock(getPoolSyncher(pool));
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
-		NOT_EXPECTING_EXCEPTIONS();
-		if (OXT_UNLIKELY(getPool() == NULL || generation != this->generation)) {
-			return;
-		}
-		P_TRACE(2, "Initialization of SuperGroup " << inspect() << " almost done; grabbed lock");
-		assert(state == INITIALIZING);
-		verifyInvariants();
-
-		if (componentInfos.empty()) {
-			/* Somehow initialization failed. Maybe something has deleted
-			 * the supergroup files while we're working.
-			 */
-			assert(exception != NULL);
-			setState(DESTROYED);
-
-			actions.reserve(getWaitlist.size());
-			while (!getWaitlist.empty()) {
-				const GetWaiter &waiter = getWaitlist.front();
-				actions.push_back(boost::bind(GetCallback::call,
-					waiter.callback, SessionPtr(), exception));
-				getWaitlist.pop_front();
-			}
-		} else {
-			for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
-				const ComponentInfo &info = *it;
-				GroupPtr group = boost::make_shared<Group>(this,
-					options, info);
-				group->initialize();
-				groups.push_back(group);
-				if (info.isDefault) {
-					defaultGroup = group.get();
-				}
-			}
-
-			setState(READY);
-			assignGetWaitlistToGroups(actions);
-		}
-
-		verifyInvariants();
-		P_TRACE(2, "Done initializing SuperGroup " << inspect());
-	}
-
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
-	runAllActions(actions);
-	runInitializationHooks();
-}
-
-void
-SuperGroup::realDoRestart(const Options &options, unsigned int generation) {
-	TRACE_POINT();
-	vector<ComponentInfo> componentInfos = loadComponentInfos(options);
-	vector<ComponentInfo>::const_iterator it;
-
-	Pool *pool = getPool();
-	Pool::DebugSupportPtr debug = pool->debugSupport;
-	if (debug != NULL && debug->superGroup) {
-		debug->debugger->send("About to finish SuperGroup restart");
-		debug->messages->recv("Proceed with restarting SuperGroup");
-	}
-
-	boost::unique_lock<boost::mutex> lock(getPoolSyncher(pool));
-	if (OXT_UNLIKELY(this->generation != generation)) {
-		return;
-	}
-
-	assert(state == RESTARTING);
-	verifyInvariants();
-
-	SuperGroup::GroupList allGroups;
-	SuperGroup::GroupList updatedGroups;
-	SuperGroup::GroupList newGroups;
-	SuperGroup::GroupList::const_iterator g_it;
-	boost::container::vector<Callback> actions;
-	this->options = options;
-
-	// Update the component information for existing groups.
-	UPDATE_TRACE_POINT();
-	for (it = componentInfos.begin(); it != componentInfos.end(); it++) {
-		const ComponentInfo &info = *it;
-		pair<GroupPtr, unsigned int> result =
-			findGroupCorrespondingToComponent(groups, info);
-		GroupPtr group = result.first;
-		if (group != NULL) {
-			unsigned int index = result.second;
-			group->componentInfo = info;
-			updatedGroups.push_back(group);
-			groups[index].reset();
-		} else {
-			// This is not an existing group but a new one,
-			// so create it.
-			group = boost::make_shared<Group>(this,
-				options, info);
-			group->initialize();
-			newGroups.push_back(group);
-		}
-		// allGroups must be in the same order as componentInfos.
-		allGroups.push_back(group);
-	}
-
-	// Some components might have been deleted, so delete the
-	// corresponding groups.
-	detachAllGroups(groups, actions);
-
-	// Tell all previous existing groups to restart.
-	for (g_it = updatedGroups.begin(); g_it != updatedGroups.end(); g_it++) {
-		GroupPtr group = *g_it;
-		group->restart(options);
-	}
-
-	groups = allGroups;
-	defaultGroup = findDefaultGroup(allGroups);
-	setState(READY);
-	assignGetWaitlistToGroups(actions);
-
-	UPDATE_TRACE_POINT();
-	verifyInvariants();
-	lock.unlock();
-	runAllActions(actions);
-}
-
-
-Group::Group(SuperGroup *_superGroup, const Options &_options, const ComponentInfo &info)
-	: superGroup(_superGroup),
-	  name(_superGroup->name + "#" + info.name),
-	  uuid(generateUuid(_superGroup)),
-	  componentInfo(info)
-{
-	generateSecret(_superGroup, secret);
+	generateSecret(_pool, secret);
 	resetOptions(_options);
 	enabledCount   = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
 	nEnabledProcessesTotallyBusy = 0;
-	spawner        = getPool()->spawningKitFactory->create(options);
+	spawner        = pool->spawningKitFactory->create(options);
 	restartsInitiated = 0;
 	processesBeingSpawned = 0;
 	m_spawning     = false;
@@ -570,7 +360,7 @@ Group::~Group() {
 	assert(getWaitlist.empty());
 }
 
-void
+bool
 Group::initialize() {
 	nullProcess = boost::make_shared<Process>(
 		getPool()->getSpawningKitConfig(),
@@ -580,11 +370,12 @@ Group::initialize() {
 	nullProcess->dummy = true;
 	nullProcess->requiresShutdown = false;
 	nullProcess->setGroup(this);
+	return true;
 }
 
 OXT_FORCE_INLINE Pool *
 Group::getPool() const {
-	return getSuperGroup()->getPool();
+	return pool;
 }
 
 void
@@ -1181,7 +972,7 @@ Group::restart(const Options &options, RestartMethod method) {
 	processesBeingSpawned = 0;
 	m_spawning   = false;
 	m_restarting = true;
-	uuid         = generateUuid(getSuperGroup());
+	uuid         = generateUuid(pool);
 	detachAll(actions);
 	getPool()->interruptableThreads.create_thread(
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
@@ -1416,22 +1207,17 @@ Group::anotherGroupIsWaitingForCapacity() const {
 Group *
 Group::findOtherGroupWaitingForCapacity() const {
 	Pool *pool = getPool();
-	// TODO: this only works if SuperGroup can only have one Group.
-	// If we ever extend SuperGroup then this needs to be changed.
-	if (pool->superGroups.size() == 1) {
+	if (pool->groups.size() == 1) {
 		return NULL;
 	}
 
-	SuperGroupMap::ConstIterator sg_it(pool->superGroups);
-	while (*sg_it != NULL) {
-		const SuperGroupPtr &superGroup = sg_it.getValue();
-		SuperGroup::GroupList::const_iterator g_it, g_end = superGroup->groups.end();
-		for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
-			if (g_it->get() != this && (*g_it)->isWaitingForCapacity()) {
-				return g_it->get();
-			}
+	GroupMap::ConstIterator g_it(pool->groups);
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
+		if (group.get() != this && group->isWaitingForCapacity()) {
+			return group.get();
 		}
-		sg_it.next();
+		g_it.next();
 	}
 	return NULL;
 }
@@ -1514,26 +1300,20 @@ Group::setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &opti
 }
 
 void
-Group::generateSecret(const SuperGroup *superGroup, char *secret) {
-	superGroup->getPool()->getRandomGenerator()->generateAsciiString(secret, SECRET_SIZE);
+Group::generateSecret(const Pool *pool, char *secret) {
+	pool->getRandomGenerator()->generateAsciiString(secret, SECRET_SIZE);
 }
 
 string
-Group::generateUuid(const SuperGroup *superGroup) {
-	return superGroup->getPool()->getRandomGenerator()->generateAsciiString(20);
+Group::generateUuid(const Pool *pool) {
+	return pool->getRandomGenerator()->generateAsciiString(20);
 }
 
 
 Pool *
 Process::getPool() const {
 	assert(getLifeStatus() != DEAD);
-	return getGroup()->getPool();
-}
-
-SuperGroup *
-Process::getSuperGroup() const {
-	assert(getLifeStatus() != DEAD);
-	return getGroup()->getSuperGroup();
+	return group->pool;
 }
 
 StaticString
@@ -1548,10 +1328,7 @@ Process::createSessionObject(Socket *socket) {
 	if (group != NULL) {
 		// Backpointers are normally never NULL, but they can be
 		// NULL in unit tests
-		SuperGroup *superGroup = group->getSuperGroup();
-		if (superGroup != NULL) {
-			pool = superGroup->getPool();
-		}
+		pool = group->getPool();
 	}
 
 	Session *session;

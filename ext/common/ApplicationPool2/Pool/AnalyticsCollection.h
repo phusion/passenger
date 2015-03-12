@@ -153,19 +153,14 @@ void realCollectAnalytics() {
 	{
 		UPDATE_TRACE_POINT();
 		LockGuard l(syncher);
-		SuperGroupMap::ConstIterator sg_it(superGroups);
+		GroupMap::ConstIterator g_it(groups);
 
-		while (*sg_it != NULL) {
-			const SuperGroupPtr &superGroup = sg_it.getValue();
-			SuperGroup::GroupList::const_iterator g_it, g_end = superGroup->groups.end();
-
-			for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
-				const GroupPtr &group = *g_it;
-				collectPids(group->enabledProcesses, pids);
-				collectPids(group->disablingProcesses, pids);
-				collectPids(group->disabledProcesses, pids);
-			}
-			sg_it.next();
+		while (*g_it != NULL) {
+			const GroupPtr &group = g_it.getValue();
+			collectPids(group->enabledProcesses, pids);
+			collectPids(group->disablingProcesses, pids);
+			collectPids(group->disabledProcesses, pids);
+			g_it.next();
 		}
 	}
 
@@ -193,23 +188,17 @@ void realCollectAnalytics() {
 		vector<ProcessPtr> processesToDetach;
 		boost::container::vector<Callback> actions;
 		ScopedLock l(syncher);
-		SuperGroupMap::ConstIterator sg_it(superGroups);
+		GroupMap::ConstIterator g_it(groups);
 
 		UPDATE_TRACE_POINT();
-		while (*sg_it != NULL) {
-			const SuperGroupPtr &superGroup = sg_it.getValue();
-			SuperGroup::GroupList::iterator g_it, g_end = superGroup->groups.end();
-
-			for (g_it = superGroup->groups.begin(); g_it != g_end; g_it++) {
-				const GroupPtr &group = *g_it;
-
-				updateProcessMetrics(group->enabledProcesses, processMetrics, processesToDetach);
-				updateProcessMetrics(group->disablingProcesses, processMetrics, processesToDetach);
-				updateProcessMetrics(group->disabledProcesses, processMetrics, processesToDetach);
-				prepareUnionStationProcessStateLogs(logEntries, group);
-				prepareUnionStationSystemMetricsLogs(logEntries, group);
-			}
-			sg_it.next();
+		while (*g_it != NULL) {
+			const GroupPtr &group = g_it.getValue();
+			updateProcessMetrics(group->enabledProcesses, processMetrics, processesToDetach);
+			updateProcessMetrics(group->disablingProcesses, processMetrics, processesToDetach);
+			updateProcessMetrics(group->disabledProcesses, processMetrics, processesToDetach);
+			prepareUnionStationProcessStateLogs(logEntries, group);
+			prepareUnionStationSystemMetricsLogs(logEntries, group);
+			g_it.next();
 		}
 
 		UPDATE_TRACE_POINT();

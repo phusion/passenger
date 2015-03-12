@@ -36,7 +36,6 @@ struct DebugSupport {
 	// Choose aspects to debug.
 	bool restarting;
 	bool spawning;
-	bool superGroup;
 	bool oobw;
 	bool testOverflowRequestQueue;
 	bool detachedProcessesChecker;
@@ -50,7 +49,6 @@ struct DebugSupport {
 		messages = boost::make_shared<MessageBox>();
 		restarting = true;
 		spawning   = true;
-		superGroup = false;
 		oobw       = false;
 		detachedProcessesChecker = false;
 		testOverflowRequestQueue = false;

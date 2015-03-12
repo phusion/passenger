@@ -43,7 +43,6 @@
 #include <cstdlib>
 #include <cassert>
 #include <ApplicationPool2/Common.h>
-#include <ApplicationPool2/ComponentInfo.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
 #include <SpawningKit/Factory.h>
@@ -68,7 +67,6 @@ class Group: public boost::enable_shared_from_this<Group> {
 // Actually private, but marked public so that unit tests can access the fields.
 public:
 	friend class Pool;
-	friend class SuperGroup;
 
 	struct GetAction {
 		GetCallback callback;
@@ -98,7 +96,7 @@ public:
 	enum LifeStatus {
 		/** Up and operational. */
 		ALIVE,
-		/** Being shut down. The containing SuperGroup has issued the shutdown()
+		/** Being shut down. The containing Pool has issued the shutdown()
 		 * command, and this Group is now waiting for all detached processes to
 		 * exit. You cannot call `get()`, `restart()` and other mutating methods
 		 * anymore, and all threads created by this Group will exit as soon
@@ -113,12 +111,12 @@ public:
 	};
 
 	/**
-	 * A back reference to the containing SuperGroup. Should never
-	 * be NULL because a SuperGroup should outlive all its containing
+	 * A back reference to the containing Pool. Should never
+	 * be NULL because a Pool should outlive all its containing
 	 * Groups.
 	 * Read-only; only set during initialization.
 	 */
-	SuperGroup *superGroup;
+	Pool *pool;
 	time_t lastRestartFileMtime;
 	time_t lastRestartFileCheckTime;
 
@@ -185,8 +183,8 @@ public:
 	GroupPtr selfPointer;
 
 
-	static void generateSecret(const SuperGroup *superGroup, char *secret);
-	static string generateUuid(const SuperGroup *superGroup);
+	static void generateSecret(const Pool *pool, char *secret);
+	static string generateUuid(const Pool *pool);
 	static void _onSessionInitiateFailure(Session *session);
 	static void _onSessionClose(Session *session);
 	OXT_FORCE_INLINE void onSessionInitiateFailure(Process *process, Session *session);
@@ -753,7 +751,6 @@ public:
 	 * restarts. This information is public.
 	 */
 	string uuid;
-	ComponentInfo componentInfo;
 
 	/**
 	 * Processes are categorized as enabled, disabling or disabled.
@@ -883,9 +880,9 @@ public:
 	 * Constructors and destructors
 	 ********************************************/
 
-	Group(SuperGroup *superGroup, const Options &options, const ComponentInfo &info);
+	Group(Pool *pool, const Options &options);
 	~Group();
-	void initialize();
+	bool initialize();
 
 	/**
 	 * Must be called before destroying a Group. You can optionally provide a
@@ -900,6 +897,7 @@ public:
 		boost::container::vector<Callback> &postLockActions)
 	{
 		assert(isAlive());
+		assert(getWaitlist.empty());
 
 		P_DEBUG("Begin shutting down group " << name);
 		shutdownCallback = callback;
@@ -917,20 +915,6 @@ public:
 	/********************************************
 	 * Life time and back-reference methods
 	 ********************************************/
-
-	/**
-	 * Thread-safe.
-	 * @pre getLifeState() != SHUT_DOWN
-	 * @post result != NULL
-	 */
-	SuperGroup *getSuperGroup() const {
-		return superGroup;
-	}
-
-	void setSuperGroup(SuperGroup *superGroup) {
-		assert(this->superGroup == NULL);
-		this->superGroup = superGroup;
-	}
 
 	/**
 	 * Thread-safe.
@@ -1469,7 +1453,7 @@ public:
 		ProcessList::const_iterator it;
 
 		stream << "<name>" << escapeForXml(name) << "</name>";
-		stream << "<component_name>" << escapeForXml(componentInfo.name) << "</component_name>";
+		stream << "<component_name>" << escapeForXml(name) << "</component_name>";
 		stream << "<app_root>" << escapeForXml(options.appRoot) << "</app_root>";
 		stream << "<app_type>" << escapeForXml(options.appType) << "</app_type>";
 		stream << "<environment>" << escapeForXml(options.environment) << "</environment>";

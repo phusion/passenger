@@ -123,7 +123,7 @@ unsigned long long
 realGarbageCollect() {
 	TRACE_POINT();
 	ScopedLock lock(syncher);
-	SuperGroupMap::ConstIterator sg_it(superGroups);
+	GroupMap::ConstIterator g_it(groups);
 	GarbageCollectorState state;
 	state.now = SystemTime::getUsec();
 	state.nextGcRunTime = 0;
@@ -131,30 +131,21 @@ realGarbageCollect() {
 	P_DEBUG("Garbage collection time...");
 	verifyInvariants();
 
-	// For all supergroups and groups...
-	while (*sg_it != NULL) {
-		const SuperGroupPtr superGroup = sg_it.getValue();
-		SuperGroup::GroupList &groups = superGroup->groups;
-		SuperGroup::GroupList::iterator g_it, g_end = groups.end();
+	// For all groups...
+	while (*g_it != NULL) {
+		const GroupPtr group = g_it.getValue();
 
-		superGroup->verifyInvariants();
-
-		for (g_it = groups.begin(); g_it != g_end; g_it++) {
-			GroupPtr group = *g_it;
-
-			if (maxIdleTime > 0) {
-				// ...detach processes that have been idle for more than maxIdleTime.
-				garbageCollectProcessesInGroup(state, group);
-			}
-
-			group->verifyInvariants();
-
-			// ...cleanup the spawner if it's been idle for more than preloaderIdleTime.
-			maybeCleanPreloader(state, group);
+		if (maxIdleTime > 0) {
+			// ...detach processes that have been idle for more than maxIdleTime.
+			garbageCollectProcessesInGroup(state, group);
 		}
 
-		superGroup->verifyInvariants();
-		sg_it.next();
+		group->verifyInvariants();
+
+		// ...cleanup the spawner if it's been idle for more than preloaderIdleTime.
+		maybeCleanPreloader(state, group);
+
+		g_it.next();
 	}
 
 	verifyInvariants();

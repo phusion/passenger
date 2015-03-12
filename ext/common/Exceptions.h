@@ -369,7 +369,7 @@ public:
  * Indicates that a Pool::get() or Pool::asyncGet() request was denied.
  * The request never reached a process. This could be because, before the
  * request could reach a process, the administrator detached the containing
- * SuperGroup. Or maybe the request sat in the queue for too long.
+ * group. Or maybe the request sat in the queue for too long.
  */
 class GetAbortedException: public oxt::tracable_exception {
 private:

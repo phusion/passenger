@@ -426,13 +426,6 @@ public:
 	 */
 	Pool *getPool() const;
 
-	/**
-	 * Thread-safe.
-	 * @pre getLifeState() != DEAD
-	 * @post result != NULL
-	 */
-	SuperGroup *getSuperGroup() const;
-
 	// Thread-safe.
 	bool isAlive() const {
 		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);

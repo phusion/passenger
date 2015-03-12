@@ -567,7 +567,7 @@ describe "Apache 2 module" do
       groups = doc.get_elements("info/supergroups/supergroup/group")
       groups.should have(1).item
       groups.each do |group|
-        group.elements["name"].text.should == "#{@stub.full_app_root} (production)#default"
+        group.elements["name"].text.should == "#{@stub.full_app_root} (production)"
         processes = group.get_elements("processes/process")
         processes.should have(1).item
         processes[0].elements["processed"].text.should == "1"

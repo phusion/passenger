@@ -117,35 +117,33 @@ string inspect(const InspectOptions &options = InspectOptions(), bool lock = tru
 	result << endl;
 
 	result << headerColor << "----------- Application groups -----------" << resetColor << endl;
-	SuperGroupMap::ConstIterator sg_it(superGroups);
-	while (*sg_it != NULL) {
-		const SuperGroupPtr &superGroup = sg_it.getValue();
-		const Group *group = superGroup->defaultGroup;
+	GroupMap::ConstIterator g_it(groups);
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
 		ProcessList::const_iterator p_it;
 
-		if (group != NULL) {
-			result << group->name << ":" << endl;
-			result << "  App root: " << group->options.appRoot << endl;
-			if (group->restarting()) {
-				result << "  (restarting...)" << endl;
-			}
-			if (group->spawning()) {
-				if (group->processesBeingSpawned == 0) {
-					result << "  (spawning...)" << endl;
-				} else {
-					result << "  (spawning " << group->processesBeingSpawned << " new " <<
-						maybePluralize(group->processesBeingSpawned, "process", "processes") <<
-						"...)" << endl;
-				}
-			}
-			result << "  Requests in queue: " << group->getWaitlist.size() << endl;
-			inspectProcessList(options, result, group, group->enabledProcesses);
-			inspectProcessList(options, result, group, group->disablingProcesses);
-			inspectProcessList(options, result, group, group->disabledProcesses);
-			inspectProcessList(options, result, group, group->detachedProcesses);
-			result << endl;
+		result << group->name << ":" << endl;
+		result << "  App root: " << group->options.appRoot << endl;
+		if (group->restarting()) {
+			result << "  (restarting...)" << endl;
 		}
-		sg_it.next();
+		if (group->spawning()) {
+			if (group->processesBeingSpawned == 0) {
+				result << "  (spawning...)" << endl;
+			} else {
+				result << "  (spawning " << group->processesBeingSpawned << " new " <<
+					maybePluralize(group->processesBeingSpawned, "process", "processes") <<
+					"...)" << endl;
+			}
+		}
+		result << "  Requests in queue: " << group->getWaitlist.size() << endl;
+		inspectProcessList(options, result, group.get(), group->enabledProcesses);
+		inspectProcessList(options, result, group.get(), group->disablingProcesses);
+		inspectProcessList(options, result, group.get(), group->disabledProcesses);
+		inspectProcessList(options, result, group.get(), group->detachedProcesses);
+		result << endl;
+
+		g_it.next();
 	}
 	return result.str();
 }
@@ -153,8 +151,7 @@ string inspect(const InspectOptions &options = InspectOptions(), bool lock = tru
 string toXml(bool includeSecrets = true, bool lock = true) const {
 	DynamicScopedLock l(syncher, lock);
 	stringstream result;
-	SuperGroupMap::ConstIterator sg_it(superGroups);
-	SuperGroup::GroupList::const_iterator g_it;
+	GroupMap::ConstIterator g_it(groups);
 	ProcessList::const_iterator p_it;
 
 	result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
@@ -180,32 +177,25 @@ string toXml(bool includeSecrets = true, bool lock = true) const {
 	}
 
 	result << "<supergroups>";
-	while (*sg_it != NULL) {
-		const SuperGroupPtr &superGroup = sg_it.getValue();
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
 
 		result << "<supergroup>";
-		result << "<name>" << escapeForXml(superGroup->name) << "</name>";
-		result << "<state>" << superGroup->getStateName() << "</state>";
-		result << "<get_wait_list_size>" << superGroup->getWaitlist.size() << "</get_wait_list_size>";
-		result << "<capacity_used>" << superGroup->capacityUsed() << "</capacity_used>";
+		result << "<name>" << escapeForXml(group->name) << "</name>";
+		result << "<state>READY</state>";
+		result << "<get_wait_list_size>0</get_wait_list_size>";
+		result << "<capacity_used>" << group->capacityUsed() << "</capacity_used>";
 		if (includeSecrets) {
-			result << "<secret>" << escapeForXml(superGroup->secret) << "</secret>";
+			result << "<secret>" << escapeForXml(group->secret) << "</secret>";
 		}
 
-		for (g_it = superGroup->groups.begin(); g_it != superGroup->groups.end(); g_it++) {
-			const GroupPtr &group = *g_it;
+		result << "<group default=\"true\">";
+		group->inspectXml(result, includeSecrets);
+		result << "</group>";
 
-			if (group->componentInfo.isDefault) {
-				result << "<group default=\"true\">";
-			} else {
-				result << "<group>";
-			}
-			group->inspectXml(result, includeSecrets);
-			result << "</group>";
-		}
 		result << "</supergroup>";
 
-		sg_it.next();
+		g_it.next();
 	}
 	result << "</supergroups>";
 
