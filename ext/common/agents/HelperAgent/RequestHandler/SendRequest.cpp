@@ -212,7 +212,11 @@ determineHeaderSizeForSessionProtocol(Request *req,
 				host->start->data + host->size - sep - 1);
 		} else {
 			state.serverName = StaticString(host->start->data, host->size);
-			state.serverPort = P_STATIC_STRING("80");
+			if (req->https) {
+				state.serverPort = P_STATIC_STRING("443");
+			} else {
+				state.serverPort = P_STATIC_STRING("80");
+			}
 		}
 	} else {
 		state.serverName = defaultServerName;

@@ -204,6 +204,7 @@ uintToString( LargestUInt value,
 #include <iostream>
 #include <stdexcept>
 #include <string.h>
+#include <boost/math/special_functions/fpclassify.hpp>
 
 #if _MSC_VER >= 1400 // VC++ 8.0
 #pragma warning( disable : 4996 )   // disable warning about strdup being deprecated.
@@ -3459,6 +3460,10 @@ std::string valueToString( UInt value )
 
 std::string valueToString( double value )
 {
+   if (!boost::math::isfinite(value)) {
+	   return "null";
+   }
+
    char buffer[32];
 #if defined(_MSC_VER) && defined(__STDC_SECURE_LIB__) // Use secure version with visual studio 2005 to avoid warning. 
    sprintf_s(buffer, sizeof(buffer), "%#.16g", value); 

@@ -1,9 +1,22 @@
+Release 5.0.4
+-------------
+
+ * Fixes a compilation problem introduced in 5.0.3.
+
+
 Release 5.0.3
 -------------
 
  * [Standalone] When using the builtin engine, `passenger start` may crash during startup due to an initialization race condition. This has been fixed.
- * Fixes an overflow that resulted in a filedescriptor leak and stalled client connections. Closes GH-1412.
+ * [Enterprise] Fixes a bug in passenger-irb. Running passenger-irb without a PID parameter worked, but running it with a PID parameter didn't.
+ * Fixes an integer overflow that resulted in a file descriptor leak and stalled client connections. Closes GH-1412.
  * Truncates Passenger source code paths in logs (to 3 chars) to reduce redundant info. Closes GH-1383.
+ * Fixes invalid JSON output for non-finite double values (e.g. from the HTTP JSON API). Closes GH-1408.
+ * All hooks now set the `PASSENGER_HOOK_NAME` environment variable. This variable is set to the name of the hook that is being called.
+ * The Ruby handler no longer tries to call #force_encoding on response body strings, which fixes an incompatibility with apps/libraries that return frozen body strings. Closes GH-1414.
+ * If the Ruby handler crashes while processing a Rack response body, it will now no longer stall the connection.
+ * Fixes env.SERVER_PORT containing 80 instead of 443 when using https on default port. Closes GH-1421.
+ * We now handle errors in the `poll()` system call better. This might fix some crashes during shutdown which manifest on FreeBSD.
 
 
 Release 5.0.2
