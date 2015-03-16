@@ -1,3 +1,9 @@
+Release 5.0.5
+-------------
+
+ * Workaround for Solaris compilation problem (tm_gmtoff not supported). Closes GH-1435.
+
+
 Release 5.0.4
 -------------
 
