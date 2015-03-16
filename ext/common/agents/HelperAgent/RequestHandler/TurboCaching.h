@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -28,6 +28,7 @@
 #include <oxt/backtrace.hpp>
 #include <ev++.h>
 #include <ctime>
+#include <cstddef>
 #include <cassert>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
@@ -176,8 +177,8 @@ private:
 
 		#ifndef NDEBUG
 			if (output != NULL) {
-				assert(pos - output == result);
-				assert(pos - output <= outputSize);
+				assert(size_t(pos - output) == size_t(result));
+				assert(size_t(pos - output) <= size_t(outputSize));
 			}
 		#endif
 		return result;
