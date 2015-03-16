@@ -1,3 +1,9 @@
+Release 5.0.5
+-------------
+
+ * Fixed a connection stall in the Apache module. Closes GH-1425.
+
+
 Release 5.0.4
 -------------
 
