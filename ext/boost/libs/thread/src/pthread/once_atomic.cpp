@@ -4,6 +4,10 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+// Our build system will compile once_atomic.o, but the symbols in this file are already included in once.o.
+// This guard here prevents once_atomic.o from containing a duplicate of those symbols.
+#ifdef IN_ONCE_CPP
+
 //#define __STDC_CONSTANT_MACROS
 #include <boost/thread/detail/config.hpp>
 #include <boost/thread/once.hpp>
@@ -88,3 +92,5 @@ namespace boost
   } // namespace thread_detail
 
 } // namespace boost
+
+#endif /* IN_ONCE_CPP */

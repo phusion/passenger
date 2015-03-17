@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -83,7 +83,13 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
     sh "rm -rf #{output_file} #{output_dir}"
   end
 
-  return output_file
+  if OPTIMIZE && LTO
+    # Clang -flto does not support static libraries containing
+    # .o files that are compiled with -flto themselves.
+    [output_file, Dir["#{output_dir}/**/*.o"].join(" ")]
+  else
+    [output_file, output_file]
+  end
 end
 
 
@@ -105,6 +111,10 @@ if USE_VENDORED_LIBEV
   file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
     cc = PlatformInfo.cc
     cxx = PlatformInfo.cxx
+    if OPTIMIZE && LTO
+      cc = "#{cc} -flto"
+      cxx = "#{cxx} -flto"
+    end
     # Disable all warnings: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
     cflags = "#{EXTRA_CFLAGS} -w"
     sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
@@ -159,6 +169,10 @@ if USE_VENDORED_LIBEIO
   file LIBEIO_OUTPUT_DIR + "Makefile" => dependencies do
     cc = PlatformInfo.cc
     cxx = PlatformInfo.cxx
+    if OPTIMIZE && LTO
+      cc = "#{cc} -flto"
+      cxx = "#{cxx} -flto"
+    end
     # Disable all warnings. The author has a clear standpoint on that:
     # http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
     cflags = "#{EXTRA_CFLAGS} -w"
@@ -215,6 +229,7 @@ end
 libboost_oxt_cflags = ""
 libboost_oxt_cflags << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 libboost_oxt_cflags.strip!
-LIBBOOST_OXT = define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt", libboost_oxt_cflags)
+LIBBOOST_OXT, LIBBOOST_OXT_LINKARG =
+  define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt", libboost_oxt_cflags)
 COMMON_LIBRARY.enable_optimizations!(LTO) if OPTIMIZE
 COMMON_LIBRARY.define_tasks(libboost_oxt_cflags)

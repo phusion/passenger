@@ -3,6 +3,8 @@
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define IN_ONCE_CPP
+
 #include <boost/thread/detail/config.hpp>
 #ifdef BOOST_THREAD_ONCE_ATOMIC
 #include "./once_atomic.cpp"

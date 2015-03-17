@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -155,7 +155,7 @@ file AGENT_OUTPUT_DIR + AGENT_EXE => dependencies do
     "#{AGENT_OUTPUT_DIR}#{AGENT_EXE}.o",
     "#{agent_libs.link_objects_as_string} " <<
     "#{agent_objects_as_string} " <<
-    "#{LIBBOOST_OXT} " <<
+    "#{LIBBOOST_OXT_LINKARG} " <<
     "#{EXTRA_PRE_CXX_LDFLAGS} " <<
     "#{LIBEV_LIBS} " <<
     "#{LIBEIO_LIBS} " <<
