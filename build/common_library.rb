@@ -86,7 +86,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   if OPTIMIZE && LTO
     # Clang -flto does not support static libraries containing
     # .o files that are compiled with -flto themselves.
-    [output_file, Dir["#{output_dir}/**/*.o"].join(" ")]
+    [output_file, Dir["#{output_dir}/*/*.o"].join(" ")]
   else
     [output_file, output_file]
   end
