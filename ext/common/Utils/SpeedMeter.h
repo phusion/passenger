@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -59,7 +59,7 @@ namespace Passenger {
  * ### `maxSamples`
  *
  * `maxSamples` dictates the sample buffer size: the maximum number of samples
- * to hold in memory. Defaults to 6.
+ * to hold in memory. Defaults to 8.
  *
  * The more samples you have, the more historical data influences the results.
  * If you have few samples then recent data have the most impact on the results.
