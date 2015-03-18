@@ -843,9 +843,35 @@ public:
 		return NULL;
 	}
 
+	Client *lookupClient(const StaticString &clientName) {
+		Client *client;
+
+		TAILQ_FOREACH (client, &activeClients, nextClient.activeOrDisconnectedClient) {
+			P_ASSERT_EQ(client->getConnState(), Client::ACTIVE);
+			char buf[512];
+			unsigned int size;
+
+			size = getClientName(client, buf, size);
+			if (StaticString(buf, size) == clientName) {
+				return client;
+			}
+		}
+		return NULL;
+	}
+
 	bool disconnect(int fd) {
 		assert(serverState != FINISHED_SHUTDOWN);
 		Client *client = lookupClient(fd);
+		if (client != NULL) {
+			return disconnect(&client);
+		} else {
+			return false;
+		}
+	}
+
+	bool disconnect(const StaticString &clientName) {
+		assert(serverState != FINISHED_SHUTDOWN);
+		Client *client = lookupClient(clientName);
 		if (client != NULL) {
 			return disconnect(&client);
 		} else {
