@@ -111,8 +111,12 @@ static const char *maybePluralize(unsigned int count, const char *singular, cons
 
 public:
 
+Context *getContext() {
+	return &context;
+}
+
 const SpawningKit::ConfigPtr &getSpawningKitConfig() const {
-	return spawningKitFactory->getConfig();
+	return context.getSpawningKitConfig();
 }
 
 const UnionStation::CorePtr &getUnionStationCore() const {

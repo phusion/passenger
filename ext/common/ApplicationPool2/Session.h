@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -31,10 +31,12 @@
 #include <oxt/macros.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
-#include <ApplicationPool2/Common.h>
+#include <ApplicationPool2/Context.h>
+#include <ApplicationPool2/BasicProcessInfo.h>
+#include <ApplicationPool2/BasicGroupInfo.h>
 #include <ApplicationPool2/Socket.h>
-#include <FileDescriptor.h>
 #include <Utils/ScopeGuard.h>
+#include <Utils/Lock.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -47,11 +49,16 @@ using namespace oxt;
  * within Phusion Passenger is usually a single request + response but the API
  * allows arbitrary I/O. See Process's class overview for normal usage of Session.
  *
- * This class can be used outside the ApplicationPool lock, but is not thread-safe,
- * and so should only be access through 1 thread.
+ * A Session object is created from a Process object.
  *
- * You MUST destroy all Session objects before destroying the Pool, because Session
- * objects are stored inside a memory pool inside Pool.
+ * This class can be used outside the ApplicationPool lock, because the methods in this
+ * class only return immutable data and only modify data inside the Session object.
+ * However, it is not thread-safe, and so should only be accessed through 1 thread.
+ *
+ * You MUST destroy all Session objects before destroying the Context that
+ * it was allocated from. Outside unit tests, Context lives in Pool, so
+ * so in that case you must not destroy Pool before destroying all Session
+ * objects.
  */
 class Session {
 public:
@@ -59,13 +66,20 @@ public:
 
 private:
 	/**
-	 * Backpointers to the Pool, Process and Socket that this Session was made
-	 * from. `pool` is always non-NULL, but `process` and `socket` are only
-	 * non-NULL as long as the Session hasn't been closed. This is because Group
-	 * waits until all sessions are closed before destroying a Process.
+	 * Pointer to the Context that this Session was allocated from. Always
+	 * non-NULL. Allows the Session to free itself from the memory pool
+	 * inside the Context.
 	 */
-	Pool * const pool;
-	Process *process;
+	Context * const context;
+	/**
+	 * Backpointers to Socket that this Session was made from, as well as the immutable info
+	 * of the Group and Process that this Session belongs to.
+	 *
+	 * These are non-NULL if and only if the Session hasn't been closed.
+	 * This works because Group waits until all sessions are closed
+	 * before destroying a Process.
+	 */
+	const BasicProcessInfo *processInfo;
 	Socket *socket;
 
 	Connection connection;
@@ -92,13 +106,19 @@ private:
 		closed = true;
 	}
 
+	void destroySelf() const {
+		this->~Session();
+		LockGuard l(context->getMmSyncher());
+		context->getSessionObjectPool().free(const_cast<Session *>(this));
+	}
+
 public:
 	Callback onInitiateFailure;
 	Callback onClose;
 
-	Session(Pool *_pool, Process *_process, Socket *_socket)
-		: pool(_pool),
-		  process(_process),
+	Session(Context *_context, const BasicProcessInfo *_processInfo, Socket *_socket)
+		: context(_context),
+		  processInfo(_processInfo),
 		  socket(_socket),
 		  refcount(1),
 		  closed(false),
@@ -117,22 +137,36 @@ public:
 		}
 	}
 
-	StaticString getGroupSecret() const;
-	pid_t getPid() const;
-	StaticString getGupid() const;
-	unsigned int getStickySessionId() const;
-	Group *getGroup() const;
-	void requestOOBW();
-	int kill(int signo);
-	void destroySelf() const;
 
-	bool isClosed() const {
-		return closed;
+	Group *getGroup() const {
+		assert(!closed);
+		return processInfo->groupInfo->group;
 	}
 
 	Process *getProcess() const {
 		assert(!closed);
-		return process;
+		return processInfo->process;
+	}
+
+
+	StaticString getGroupSecret() const {
+		assert(!closed);
+		return StaticString(processInfo->groupInfo->secret, BasicGroupInfo::SECRET_SIZE);
+	}
+
+	pid_t getPid() const {
+		assert(!closed);
+		return processInfo->pid;
+	}
+
+	StaticString getGupid() const {
+		assert(!closed);
+		return StaticString(processInfo->gupid, processInfo->gupidSize);
+	}
+
+	unsigned int getStickySessionId() const {
+		assert(!closed);
+		return processInfo->stickySessionId;
 	}
 
 	Socket *getSocket() const {
@@ -143,6 +177,7 @@ public:
 	StaticString getProtocol() const {
 		return getSocket()->protocol;
 	}
+
 
 	void initiate(bool blocking = true) {
 		assert(!closed);
@@ -179,9 +214,16 @@ public:
 		if (OXT_LIKELY(!closed)) {
 			callOnClose();
 		}
-		process = NULL;
-		socket  = NULL;
+		processInfo = NULL;
+		socket = NULL;
 	}
+
+	bool isClosed() const {
+		return closed;
+	}
+
+	void requestOOBW();
+
 
 	void ref() const {
 		refcount.fetch_add(1, boost::memory_order_relaxed);

@@ -72,7 +72,7 @@ static void collectAnalytics(PoolPtr self) {
 
 static void collectPids(const ProcessList &processes, vector<pid_t> &pids) {
 	foreach (const ProcessPtr &process, processes) {
-		pids.push_back(process->pid);
+		pids.push_back(process->getPid());
 	}
 }
 
@@ -82,13 +82,13 @@ static void updateProcessMetrics(const ProcessList &processes,
 {
 	foreach (const ProcessPtr &process, processes) {
 		ProcessMetricMap::const_iterator metrics_it =
-			allMetrics.find(process->pid);
+			allMetrics.find(process->getPid());
 		if (metrics_it != allMetrics.end()) {
 			process->metrics = metrics_it->second;
 		// If the process is missing from 'allMetrics' then either 'ps'
 		// failed or the process really is gone. We double check by sending
 		// it a signal.
-		} else if (!process->dummy && !process->osProcessExists()) {
+		} else if (!process->isDummy() && !process->osProcessExists()) {
 			P_WARN("Process " << process->inspect() << " no longer exists! "
 				"Detaching it from the pool.");
 			processesToDetach.push_back(process);

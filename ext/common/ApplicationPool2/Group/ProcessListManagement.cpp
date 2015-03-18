@@ -32,7 +32,7 @@ findProcessWithStickySessionId(unsigned int id) const {
 	ProcessList::const_iterator it, end = enabledProcesses.end();
 	for (it = enabledProcesses.begin(); it != end; it++) {
 		Process *process = it->get();
-		if (process->stickySessionId == id) {
+		if (process->getStickySessionId() == id) {
 			return process;
 		}
 	}
@@ -48,7 +48,7 @@ findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
 
 	for (i = 0; i < size; i++) {
 		Process *process = enabledProcesses[i].get();
-		if (process->stickySessionId == id) {
+		if (process->getStickySessionId() == id) {
 			return process;
 		} else if (leastBusyProcessIndex == -1 || enabledProcessBusynessLevels[i] < lowestBusyness) {
 			leastBusyProcessIndex = i;
@@ -91,8 +91,8 @@ void
 removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
 	ProcessPtr p = process; // Keep an extra reference count just in case.
 
-	source.erase(source.begin() + process->index);
-	process->index = -1;
+	source.erase(source.begin() + process->getIndex());
+	process->setIndex(-1);
 
 	switch (process->enabled) {
 	case Process::ENABLED:
@@ -122,7 +122,7 @@ removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
 	unsigned int i = 0;
 	for (it = source.begin(); it != end; it++, i++) {
 		const ProcessPtr &process = *it;
-		process->index = i;
+		process->setIndex(i);
 	}
 
 	// Rebuild enabledProcessBusynessLevels
@@ -145,7 +145,7 @@ removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
 void
 addProcessToList(const ProcessPtr &process, ProcessList &destination) {
 	destination.push_back(process);
-	process->index = destination.size() - 1;
+	process->setIndex(destination.size() - 1);
 	if (&destination == &enabledProcesses) {
 		process->enabled = Process::ENABLED;
 		enabledCount++;
@@ -250,8 +250,7 @@ attach(const ProcessPtr &process,
 		return AR_ANOTHER_GROUP_IS_WAITING_FOR_CAPACITY;
 	}
 
-	process->setGroup(this);
-	process->stickySessionId = generateStickySessionId();
+	process->initializeStickySessionId(generateStickySessionId());
 	P_DEBUG("Attaching process " << process->inspect());
 	addProcessToList(process, enabledProcesses);
 
@@ -339,7 +338,7 @@ detach(const ProcessPtr &process, boost::container::vector<Callback> &postLockAc
 void
 detachAll(boost::container::vector<Callback> &postLockActions) {
 	assert(isAlive());
-	P_DEBUG("Detaching all processes in group " << name);
+	P_DEBUG("Detaching all processes in group " << info.name);
 
 	foreach (ProcessPtr process, enabledProcesses) {
 		addProcessToList(process, detachedProcesses);
@@ -403,7 +402,7 @@ disable(const ProcessPtr &process, const DisableCallback &callback) {
 			"; enabledCount=" << enabledCount << ", process.sessions=" << process->sessions);
 		assert(enabledCount >= 0);
 		if (enabledCount == 1 && !allowSpawn()) {
-			P_WARN("Cannot disable sole enabled process in group " << name <<
+			P_WARN("Cannot disable sole enabled process in group " << info.name <<
 				" because spawning is not allowed according to the current" <<
 				" configuration options");
 			return DR_ERROR;
@@ -433,12 +432,12 @@ disable(const ProcessPtr &process, const DisableCallback &callback) {
 		assert(disablingCount > 0);
 		disableWaitlist.push_back(DisableWaiter(process, callback));
 		P_DEBUG("Disabling DISABLING process " << process->inspect() <<
-			name << "; command queued, deferring disable command completion");
+			info.name << "; command queued, deferring disable command completion");
 		return DR_DEFERRED;
 	} else {
 		assert(disabledCount > 0);
 		P_DEBUG("Disabling DISABLED process " << process->inspect() <<
-			name << "; disable command succeeded immediately");
+			info.name << "; disable command succeeded immediately");
 		return DR_NOOP;
 	}
 }

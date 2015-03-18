@@ -116,9 +116,9 @@ namespace tut {
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
-		ensure_equals(result.sockets.size(), 1u);
+		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
 		writeExact(fd, "ping\n");
 		ensure_equals(readAll(fd), "pong\n");
 	}

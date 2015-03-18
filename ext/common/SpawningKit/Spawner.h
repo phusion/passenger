@@ -320,7 +320,7 @@ private:
 
 	Result handleSpawnResponse(NegotiationDetails &details) {
 		TRACE_POINT();
-		vector<Result::Socket> sockets;
+		Json::Value sockets;
 		Result result;
 
 		while (true) {
@@ -384,12 +384,12 @@ private:
 							details);
 					}
 
-					Result::Socket socket;
-					socket.name = args[0];
-					socket.address = fixupSocketAddress(*details.options, args[1]);
-					socket.protocol = args[2];
-					socket.concurrency = atoi(args[3]);
-					sockets.push_back(socket);
+					Json::Value socket;
+					socket["name"] = args[0];
+					socket["address"] = fixupSocketAddress(*details.options, args[1]);
+					socket["protocol"] = args[2];
+					socket["concurrency"] = atoi(args[3]);
+					sockets.append(socket);
 				} else {
 					throwAppSpawnException("An error occurred while starting the "
 						"web application. It reported a wrongly formatted 'socket'"
@@ -429,20 +429,24 @@ private:
 				details);
 		}
 
-		result.pid = details.pid;
-		result.setGupid(details.gupid);
+		result["type"] = "os_process";
+		result["pid"] = (int) details.pid;
+		result["gupid"] = details.gupid;
+		result["sockets"] = sockets;
+		result["code_revision"] = details.preparation->codeRevision;
+		result["spawner_creation_time"] = (Json::UInt64) creationTime;
+		result["spawn_start_time"] = (Json::UInt64) details.spawnStartTime;
 		result.adminSocket = details.adminSocket;
 		result.errorPipe = details.errorPipe;
-		result.sockets = sockets;
-		result.spawnerCreationTime = creationTime;
-		result.spawnStartTime = details.spawnStartTime;
-		result.codeRevision = details.preparation->codeRevision;
-		return boost::move(result);
+		return result;
 	}
 
-	bool hasSessionSockets(const vector<Result::Socket> &sockets) const {
-		foreach (Result::Socket socket, sockets) {
-			if (socket.protocol == "session" || socket.protocol == "http_session") {
+	bool hasSessionSockets(const Json::Value &sockets) const {
+		Json::Value::const_iterator it, end = sockets.end();
+
+		for (it = sockets.begin(); it != end; it++) {
+			const Json::Value &socket = *it;
+			if (socket["protocol"] == "session" || socket["protocol"] == "http_session") {
 				return true;
 			}
 		}

@@ -28,13 +28,126 @@
 #include <string>
 #include <cstdio>
 #include <cstddef>
+#include <boost/cstdint.hpp>
 #include <StaticString.h>
 #include <Utils/json.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/VariantMap.h>
 
 namespace Passenger {
 
 using namespace std;
+
+
+/**************************************************************
+ *
+ * Methods for querying fields from a JSON document.
+ * If the field is missing, thhese methods can either return
+ * a default value, or throw an exception.
+ *
+ **************************************************************/
+
+inline const Json::Value &
+getJsonField(const Json::Value &json, const char *key) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey];
+	} else {
+		throw VariantMap::MissingKeyException(key);
+	}
+}
+
+inline Json::Value &
+getJsonField(Json::Value &json, const char *key) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey];
+	} else {
+		throw VariantMap::MissingKeyException(key);
+	}
+}
+
+inline int
+getJsonIntField(const Json::Value &json, const char *key) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asInt();
+	} else {
+		throw VariantMap::MissingKeyException(key);
+	}
+}
+
+inline int
+getJsonIntField(const Json::Value &json, const char *key, int defaultValue) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asInt();
+	} else {
+		return defaultValue;
+	}
+}
+
+inline unsigned int
+getJsonUintField(const Json::Value &json, const char *key) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asUInt();
+	} else {
+		throw VariantMap::MissingKeyException(key);
+	}
+}
+
+inline unsigned int
+getJsonUintField(const Json::Value &json, const char *key, unsigned int defaultValue) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asUInt();
+	} else {
+		return defaultValue;
+	}
+}
+
+inline boost::uint64_t
+getJsonUint64Field(const Json::Value &json, const char *key) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asUInt64();
+	} else {
+		throw VariantMap::MissingKeyException(key);
+	}
+}
+
+inline boost::uint64_t
+getJsonUint64Field(const Json::Value &json, const char *key, unsigned int defaultValue) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asUInt64();
+	} else {
+		return defaultValue;
+	}
+}
+
+inline StaticString
+getJsonStaticStringField(const Json::Value &json, const char *key) {
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asCString();
+	} else {
+		throw VariantMap::MissingKeyException(key);
+	}
+}
+
+inline StaticString
+getJsonStaticStringField(const Json::Value &json, const char *key,
+	const StaticString &defaultValue)
+{
+	Json::StaticString theKey(key);
+	if (json.isMember(theKey)) {
+		return json[theKey].asCString();
+	} else {
+		return defaultValue;
+	}
+}
 
 
 /**************************************************************

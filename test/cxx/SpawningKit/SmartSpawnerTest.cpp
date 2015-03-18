@@ -220,7 +220,7 @@ namespace tut {
 			"REQUEST_METHOD\0GET\0"
 			"PATH_INFO\0/print_stderr\0";
 
-		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
 		writeScalarMessage(fd, header, sizeof(header) - 1);
 		shutdown(fd, SHUT_WR);
 		readAll(fd);

@@ -33,6 +33,7 @@
 #include <cstdlib>
 #include <cstddef>
 #include <ctime>
+#include <boost/move/utility.hpp>
 #include <oxt/macros.hpp>
 #include <StaticString.h>
 
@@ -46,10 +47,19 @@ using namespace std;
  * Upon destruction of a DynamicBuffer, the memory buffer is freed.
  */
 struct DynamicBuffer {
+private:
+	BOOST_MOVABLE_BUT_NOT_COPYABLE(DynamicBuffer)
+
+public:
 	typedef string::size_type size_type;
 
 	char *data;
 	size_type size;
+
+	DynamicBuffer()
+		: data(NULL),
+		  size(0)
+		{ }
 
 	/**
 	 * @throws std::bad_alloc The buffer cannot be allocated.
@@ -63,8 +73,27 @@ struct DynamicBuffer {
 		}
 	}
 
+	DynamicBuffer(BOOST_RV_REF(DynamicBuffer) other)
+		: data(other.data),
+		  size(other.size)
+	{
+		other.data = NULL;
+		other.size = 0;
+	}
+
 	~DynamicBuffer() throw() {
 		free(data);
+	}
+
+	DynamicBuffer &operator=(BOOST_RV_REF(DynamicBuffer) other) {
+		if (this != &other) {
+			free(data);
+			data = other.data;
+			size = other.size;
+			other.data = NULL;
+			other.size = 0;
+		}
+		return *this;
 	}
 };
 

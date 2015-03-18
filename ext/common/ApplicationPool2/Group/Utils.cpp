@@ -46,7 +46,7 @@ generateStickySessionId() {
 
 	while (true) {
 		result = (unsigned int) rand();
-		if (findProcessWithStickySessionId(result) == NULL) {
+		if (result != 0 && findProcessWithStickySessionId(result) == NULL) {
 			return result;
 		}
 	}
@@ -66,7 +66,7 @@ resetOptions(const Options &newOptions, Options *destination = NULL) {
 	*destination = newOptions;
 	destination->persist(newOptions);
 	destination->clearPerRequestFields();
-	destination->groupSecret = StaticString(secret, SECRET_SIZE);
+	destination->groupSecret = getSecret();
 	destination->groupUuid   = uuid;
 }
 

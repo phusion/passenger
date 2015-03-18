@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion
+ *  Copyright (c) 2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -22,28 +22,35 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_SPAWNING_KIT_RESULT_H_
-#define _PASSENGER_SPAWNING_KIT_RESULT_H_
+#ifndef _PASSENGER_CLASS_UTILS_H_
+#define _PASSENGER_CLASS_UTILS_H_
 
-#include <FileDescriptor.h>
-#include <Utils/json.h>
+#define P_DEFINE_GETTER_CONST_REF(type, name) \
+	const type &get ## name() const { \
+		return m ## name; \
+	}
 
-namespace Passenger {
-namespace SpawningKit {
+#define P_DEFINE_GETTER_REF(type, name) \
+	type &get ## name() { \
+		return m ## name; \
+	}
 
+#define P_DEFINE_SETTER(type, name) \
+	void set ## name(const type &value) { \
+		m ## name = value; \
+	}
 
-/**
- * Represents the result of a spawning operation. It is a JSON document
- * containing information about the spawned process, such as its PID,
- * GUPID, etc. In addition, it contains two file descriptors.
- */
-struct Result: public Json::Value {
-	FileDescriptor adminSocket;
-	FileDescriptor errorPipe;
-};
+#define P_PROPERTY_CONST_REF(visibility, type, name) \
+	public: \
+		P_DEFINE_GETTER_CONST_REF(type, name) \
+		P_DEFINE_SETTER(type, name) \
+	visibility: \
+		type m ## name
 
+#define P_RO_PROPERTY_REF(visibility, type, name) \
+	public: \
+		P_DEFINE_GETTER_REF(type, name) \
+	visibility: \
+		type m ## name
 
-} // namespace SpawningKit
-} // namespace Passenger
-
-#endif /* _PASSENGER_SPAWNING_KIT_RESULT_H_ */
+#endif /* _PASSENGER_CLASS_UTILS_H_ */

@@ -765,7 +765,7 @@ public:
 		NegotiationDetails details = sendSpawnCommandAndGetNegotiationDetails(options);
 		Result result = negotiateSpawn(details);
 		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-			", pid=" << result.pid);
+			", pid=" << result["pid"].asCString());
 		return result;
 	}
 

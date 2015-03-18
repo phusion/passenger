@@ -162,7 +162,7 @@ enum RestartMethod {
 
 typedef boost::shared_ptr<Pool> PoolPtr;
 typedef boost::shared_ptr<Group> GroupPtr;
-typedef boost::shared_ptr<Process> ProcessPtr;
+typedef boost::intrusive_ptr<Process> ProcessPtr;
 typedef boost::intrusive_ptr<Session> SessionPtr;
 typedef boost::shared_ptr<tracable_exception> ExceptionPtr;
 typedef StringKeyTable<GroupPtr> GroupMap;

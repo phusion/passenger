@@ -46,6 +46,7 @@
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/backtrace.hpp>
 #include <ApplicationPool2/Common.h>
+#include <ApplicationPool2/Context.h>
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/Session.h>
@@ -81,12 +82,12 @@ public:
 	friend class Process;
 	friend struct tut::ApplicationPool2_PoolTest;
 
-	SpawningKit::FactoryPtr spawningKitFactory;
-
 	mutable boost::mutex syncher;
 	unsigned int max;
 	unsigned long long maxIdleTime;
 	bool selfchecking;
+
+	Context context;
 
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -108,8 +109,6 @@ public:
 	} lifeStatus;
 
 	mutable GroupMap groups;
-	boost::mutex sessionObjectPoolSyncher;
-	object_pool<Session> sessionObjectPool;
 	psg_pool_t *palloc;
 
 	/**
@@ -220,7 +219,7 @@ public:
 		while (*g_it != NULL) {
 			const GroupPtr &group = g_it.getValue();
 			if (group->isWaitingForCapacity()) {
-				P_DEBUG("Group " << group->name << " is waiting for capacity");
+				P_DEBUG("Group " << group->getName() << " is waiting for capacity");
 				group->spawn();
 				if (atFullCapacityUnlocked()) {
 					return;
@@ -235,7 +234,7 @@ public:
 		while (*g_it != NULL) {
 			const GroupPtr &group = g_it.getValue();
 			if (group->shouldSpawn()) {
-				P_DEBUG("Group " << group->name << " requests more processes to be spawned");
+				P_DEBUG("Group " << group->getName() << " requests more processes to be spawned");
 				group->spawn();
 				if (atFullCapacityUnlocked()) {
 					return;
@@ -301,7 +300,7 @@ public:
 	{
 		assert(group->getWaitlist.empty());
 		const GroupPtr p = group; // Prevent premature destruction.
-		bool removed = groups.erase(group->name);
+		bool removed = groups.erase(group->getName());
 		assert(removed);
 		(void) removed; // Shut up compiler warning.
 		group->shutdown(callback, postLockActions);
@@ -428,10 +427,11 @@ public:
 
 	Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
 		const VariantMap *agentsOptions = NULL)
-		: sessionObjectPool(64, 1024),
-		  abortLongRunningConnectionsCallback(NULL)
+		: abortLongRunningConnectionsCallback(NULL)
 	{
-		this->spawningKitFactory = spawningKitFactory;
+		context.setSpawningKitFactory(spawningKitFactory);
+		context.finalize();
+
 		this->agentsOptions = agentsOptions;
 
 		try {
@@ -504,7 +504,7 @@ public:
 		while (!groups.empty()) {
 			GroupPtr *group;
 			groups.lookupRandom(NULL, &group);
-			string name = group->get()->name;
+			string name = group->get()->getName().toString();
 			lock.unlock();
 			detachGroupByName(name);
 			lock.lock();
@@ -763,7 +763,7 @@ public:
 		GroupMap::ConstIterator g_it(groups);
 		while (*g_it != NULL) {
 			const GroupPtr &group = g_it.getValue();
-			if (StaticString(group->secret, Group::SECRET_SIZE) == secret) {
+			if (group->getSecret() == secret) {
 				return group;
 			}
 			g_it.next();
@@ -776,7 +776,7 @@ public:
 		vector<ProcessPtr>::const_iterator it, end = processes.end();
 		for (it = processes.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
-			if (StaticString(process->gupid, process->gupidSize) == gupid) {
+			if (process->getGupid() == gupid) {
 				return process;
 			}
 		}
@@ -788,7 +788,7 @@ public:
 		vector<ProcessPtr>::const_iterator it, end = processes.end();
 		for (it = processes.begin(); it != end; it++) {
 			const ProcessPtr &process = *it;
-			if (process->pid == pid) {
+			if (process->getPid() == pid) {
 				return process;
 			}
 		}
@@ -801,7 +801,7 @@ public:
 		GroupPtr group = groups.lookupCopy(name);
 
 		if (OXT_LIKELY(group != NULL)) {
-			P_ASSERT_EQ(group->name, name);
+			P_ASSERT_EQ(group->getName(), name);
 			UPDATE_TRACE_POINT();
 			verifyInvariants();
 			verifyExpensiveInvariants();
@@ -842,7 +842,7 @@ public:
 		ScopedLock l(syncher);
 		GroupPtr group = findGroupBySecret(groupSecret, false);
 		if (group != NULL) {
-			string name = group->name;
+			string name = group->getName();
 			group.reset();
 			l.unlock();
 			return detachGroupByName(name);
@@ -922,7 +922,7 @@ public:
 		GroupMap::ConstIterator g_it(groups);
 		while (*g_it != NULL) {
 			const GroupPtr &group = g_it.getValue();
-			if (name == group->name) {
+			if (name == group->getName()) {
 				if (!group->restarting()) {
 					group->restart(group->options, method);
 				}

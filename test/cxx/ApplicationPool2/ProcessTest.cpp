@@ -8,9 +8,9 @@ using namespace std;
 
 namespace tut {
 	struct ApplicationPool2_ProcessTest {
-		SpawningKit::ConfigPtr spawningKitConfig;
-		BackgroundEventLoop bg;
-		SocketList sockets;
+		Context context;
+		BasicGroupInfo groupInfo;
+		Json::Value sockets;
 		SocketPair adminSocket;
 		Pipe errorPipe;
 		FileDescriptor server1, server2, server3;
@@ -20,32 +20,47 @@ namespace tut {
 
 		ApplicationPool2_ProcessTest() {
 			setPrintAppOutputAsDebuggingMessages(true);
-			bg.start();
 
-			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
+			SpawningKit::ConfigPtr spawningKitConfig = boost::make_shared<SpawningKit::Config>();
 			spawningKitConfig->resourceLocator = resourceLocator;
 			spawningKitConfig->finalize();
 
+			context.setSpawningKitFactory(boost::make_shared<SpawningKit::Factory>(spawningKitConfig));
+			context.finalize();
+
+			groupInfo.context = &context;
+			groupInfo.group = NULL;
+			groupInfo.name = "test";
+
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
+			Json::Value socket;
 
 			server1 = createTcpServer("127.0.0.1", 0);
 			getsockname(server1, (struct sockaddr *) &addr, &len);
-			sockets.add("main1",
-				"tcp://127.0.0.1:" + toString(addr.sin_port),
-				"session", 3);
+			socket["name"] = "main1";
+			socket["address"] = "tcp://127.0.0.1:" + toString(addr.sin_port);
+			socket["protocol"] = "session";
+			socket["concurrency"] = 3;
+			sockets.append(socket);
 
 			server2 = createTcpServer("127.0.0.1", 0);
 			getsockname(server2, (struct sockaddr *) &addr, &len);
-			sockets.add("main2",
-				"tcp://127.0.0.1:" + toString(addr.sin_port),
-				"session", 3);
+			socket = Json::Value();
+			socket["name"] = "main2";
+			socket["address"] = "tcp://127.0.0.1:" + toString(addr.sin_port);
+			socket["protocol"] = "session";
+			socket["concurrency"] = 3;
+			sockets.append(socket);
 
 			server3 = createTcpServer("127.0.0.1", 0);
 			getsockname(server3, (struct sockaddr *) &addr, &len);
-			sockets.add("main3",
-				"tcp://127.0.0.1:" + toString(addr.sin_port),
-				"session", 3);
+			socket = Json::Value();
+			socket["name"] = "main3";
+			socket["address"] = "tcp://127.0.0.1:" + toString(addr.sin_port);
+			socket["protocol"] = "session";
+			socket["concurrency"] = 3;
+			sockets.append(socket);
 
 			adminSocket = createUnixSocketPair();
 			errorPipe = createPipe();
@@ -64,10 +79,20 @@ namespace tut {
 		}
 
 		ProcessPtr createProcess() {
-			ProcessPtr process = boost::make_shared<Process>(spawningKitConfig,
-				123, "123", adminSocket[0], errorPipe[0], sockets, 0, 0);
-			process->dummy = true;
-			process->requiresShutdown = false;
+			SpawningKit::Result result;
+
+			result["type"] = "dummy";
+			result["pid"] = 123;
+			result["gupid"] = "123";
+			result["sockets"] = sockets;
+			result["spawner_creation_time"] = 0;
+			result["spawn_start_time"] = 0;
+			result.adminSocket = adminSocket[0];
+			result.errorPipe = errorPipe[0];
+
+			ProcessPtr process(context.getProcessObjectPool().construct(
+				&groupInfo, result), false);
+			process->shutdownNotRequired();
 			return process;
 		}
 	};
@@ -115,7 +140,7 @@ namespace tut {
 		// and 2 processes with 2 sessions.
 		map<int, int> sessionCount;
 		SocketList::const_iterator it;
-		for (it = process->sockets.begin(); it != process->sockets.end(); it++) {
+		for (it = process->getSockets().begin(); it != process->getSockets().end(); it++) {
 			sessionCount[it->sessions]++;
 		}
 		ensure_equals(sessionCount.size(), 2u);
@@ -128,7 +153,7 @@ namespace tut {
 		process->sessionClosed(session2.get());
 		process->sessionClosed(session3.get());
 		sessionCount.clear();
-		for (it = process->sockets.begin(); it != process->sockets.end(); it++) {
+		for (it = process->getSockets().begin(); it != process->getSockets().end(); it++) {
 			sessionCount[it->sessions]++;
 		}
 		ensure_equals(sessionCount[0], 1);
@@ -154,7 +179,7 @@ namespace tut {
 			"Process object has been destroyed");
 		ProcessPtr process = createProcess();
 		setLogLevel(LVL_WARN);
-		spawningKitConfig->outputHandler = gatherOutput;
+		context.getSpawningKitConfig()->outputHandler = gatherOutput;
 
 		writeExact(adminSocket[1], "adminSocket 1\n");
 		writeExact(errorPipe[1], "errorPipe 1\n");

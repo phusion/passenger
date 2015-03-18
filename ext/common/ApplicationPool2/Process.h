@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
+#include <boost/intrusive_ptr.hpp>
+#include <boost/move/core.hpp>
 #include <boost/container/vector.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/spin_lock.hpp>
@@ -43,12 +43,13 @@
 #include <ApplicationPool2/Socket.h>
 #include <ApplicationPool2/Session.h>
 #include <SpawningKit/PipeWatcher.h>
-#include <MemoryKit/palloc.h>
+#include <SpawningKit/Result.h>
 #include <Constants.h>
 #include <FileDescriptor.h>
 #include <Logging.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/Lock.h>
 #include <Utils/ProcessMetricsCollector.h>
 
 namespace Passenger {
@@ -61,9 +62,9 @@ using namespace boost;
 typedef boost::container::vector<ProcessPtr> ProcessList;
 
 /**
- * Represents an application process, as spawned by a Spawner. Every Process has
- * a PID, an admin socket and a list of sockets on which it listens for
- * connections. A Process is usually contained inside a Group.
+ * Represents an application process, as spawned by a SpawningKit::Spawner. Every
+ * Process has a PID, an admin socket and a list of sockets on which it listens for
+ * connections. A Process object is contained inside a Group.
  *
  * The admin socket, an anonymous Unix domain socket, is mapped to the process's
  * STDIN and STDOUT and has two functions.
@@ -97,14 +98,86 @@ typedef boost::container::vector<ProcessPtr> ProcessList;
  * This means that a Group outlives all its Processes, a Process outlives all
  * its Sessions, and a Process also outlives the OS process.
  */
-class Process: public boost::enable_shared_from_this<Process> {
+class Process {
 public:
 	static const unsigned int MAX_SESSION_SOCKETS = 3;
-	static const unsigned int GUPID_MAX_SIZE = 20;
 
-// Actually private, but marked public so that unit tests can access the fields.
-public:
-	friend class Group;
+private:
+	/*************************************************************
+	 * Read-only fields, set once during initialization and never
+	 * written to again. Reading is thread-safe.
+	 *************************************************************/
+
+	BasicProcessInfo info;
+	DynamicBuffer stringBuffer;
+	SocketList sockets;
+
+	/**
+	 * The maximum amount of concurrent sessions this process can handle.
+	 * 0 means unlimited. Automatically inferred from the sockets.
+	 */
+	int concurrency;
+
+	/**
+	 * A subset of 'sockets': all sockets that speak the
+	 * "session" or "http_session" protocol.
+	 */
+	unsigned int sessionSocketCount;
+	Socket *sessionSockets[MAX_SESSION_SOCKETS];
+
+	/** Admin socket. See Process class description. */
+	FileDescriptor adminSocket;
+
+	/**
+	 * Pipe on which this process outputs errors. Mapped to the process's STDERR.
+	 * Only Processes spawned by DirectSpawner have this set.
+	 * SmartSpawner-spawned Processes use the same STDERR as their parent preloader processes.
+	 */
+	FileDescriptor errorPipe;
+
+	/**
+	 * The code revision of the application, inferred through various means.
+	 * See Spawner::prepareSpawn() to learn how this is determined.
+	 * May be an empty string if no code revision has been inferred.
+	 */
+	StaticString codeRevision;
+
+	/**
+	 * Time at which the Spawner that created this process was created.
+	 * Microseconds resolution.
+	 */
+	unsigned long long spawnerCreationTime;
+
+	/** Time at which we started spawning this process. Microseconds resolution. */
+	unsigned long long spawnStartTime;
+
+	/**
+	 * Time at which we finished spawning this process, i.e. when this
+	 * process was finished initializing. Microseconds resolution.
+	 */
+	unsigned long long spawnEndTime;
+
+	/**
+	 * If true, then indicates that this Process does not refer to a real OS
+	 * process. The sockets in the socket list are fake and need not be deleted,
+	 * the admin socket need not be closed, etc.
+	 */
+	bool dummy;
+
+	/**
+	 * Whether it is required that triggerShutdown() and cleanup() must be called
+	 * before destroying this Process. Normally true, except for dummy Process
+	 * objects created by Pool::asyncGet() with options.noop == true, because those
+	 * processes are never added to Group.enabledProcesses.
+	 */
+	bool requiresShutdown;
+
+
+	/*************************************************************
+	 * Read-write fields.
+	 *************************************************************/
+
+	mutable boost::atomic<int> refcount;
 
 	/** A mutex to protect access to `lifeStatus`. */
 	mutable oxt::spin_lock lifetimeSyncher;
@@ -112,42 +185,99 @@ public:
 	/** The index inside the associated Group's process list. */
 	unsigned int index;
 
-	/** Group inside the Pool that this Process belongs to.
-	 * Should never be NULL because a Group should outlive all of its Processes.
-	 * Read-only; only set once during initialization.
-	 */
-	Group *group;
 
-	/** A subset of 'sockets': all sockets that speak the
-	 * "session" or "http_session" protocol. */
-	Socket *sessionSockets[MAX_SESSION_SOCKETS];
+	/*************************************************************
+	 * Methods
+	 *************************************************************/
 
-	static bool
-	isZombie(pid_t pid) {
-		string filename = "/proc/" + toString(pid) + "/status";
-		FILE *f = fopen(filename.c_str(), "r");
-		if (f == NULL) {
-			// Don't know.
-			return false;
+	/****** Initialization and destruction ******/
+
+	struct InitializationLog {
+		struct String {
+			unsigned int offset;
+			unsigned int size;
+		};
+
+		struct SocketStringOffsets {
+			String name;
+			String address;
+			String protocol;
+		};
+
+		vector<SocketStringOffsets> socketStringOffsets;
+		String codeRevision;
+	};
+
+	void appendJsonFieldToBuffer(std::string &buffer, const Json::Value &json,
+		const char *key, InitializationLog::String &str) const
+	{
+		StaticString value = getJsonStaticStringField(json, key);
+		str.offset = buffer.size();
+		str.size   = value.size();
+		buffer.append(value.data(), value.size());
+		buffer.append(1, '\0');
+	}
+
+	void initializeSocketsAndStringFields(const Json::Value &json) {
+		InitializationLog log;
+		string buffer;
+
+
+		// Step 1: append strings to temporary buffer and take note of their
+		// offsets within the temporary buffer.
+
+		Json::Value sockets = getJsonField(json, "sockets");
+		// The const_cast here works around a jsoncpp bug.
+		Json::Value::const_iterator it = const_cast<const Json::Value &>(sockets).begin();
+		Json::Value::const_iterator end = const_cast<const Json::Value &>(sockets).end();
+		buffer.reserve(1024);
+
+		for (it = sockets.begin(); it != end; it++) {
+			const Json::Value &socket = *it;
+			InitializationLog::SocketStringOffsets offsets;
+
+			appendJsonFieldToBuffer(buffer, socket, "name", offsets.name);
+			appendJsonFieldToBuffer(buffer, socket, "address", offsets.address);
+			appendJsonFieldToBuffer(buffer, socket, "protocol", offsets.protocol);
+
+			log.socketStringOffsets.push_back(offsets);
 		}
 
-		bool result = false;
-		while (!feof(f)) {
-			char buf[512];
-			const char *line;
-
-			line = fgets(buf, sizeof(buf), f);
-			if (line == NULL) {
-				break;
-			}
-			if (strcmp(line, "State:	Z (zombie)\n") == 0) {
-				// Is a zombie.
-				result = true;
-				break;
-			}
+		if (json.isMember("code_revision")) {
+			appendJsonFieldToBuffer(buffer, json, "code_revision", log.codeRevision);
 		}
-		fclose(f);
-		return result;
+
+
+		// Step 2: allocate the real buffer.
+
+		this->stringBuffer = DynamicBuffer(buffer.size());
+		memcpy(this->stringBuffer.data, buffer.data(), buffer.size());
+
+
+		// Step 3: initialize the string fields and point them to
+		// addresses within the real buffer.
+
+		unsigned int i;
+		const char *base = this->stringBuffer.data;
+
+		it = const_cast<const Json::Value &>(sockets).begin();
+		for (i = 0; it != end; it++, i++) {
+			const Json::Value &socket = *it;
+			this->sockets.add(
+				StaticString(base + log.socketStringOffsets[i].name.offset,
+					log.socketStringOffsets[i].name.size),
+				StaticString(base + log.socketStringOffsets[i].address.offset,
+					log.socketStringOffsets[i].address.size),
+				StaticString(base + log.socketStringOffsets[i].protocol.offset,
+					log.socketStringOffsets[i].protocol.size),
+				getJsonIntField(socket, "concurrency")
+			);
+		}
+
+		if (json.isMember("code_revision")) {
+			codeRevision = StaticString(base + log.codeRevision.offset,
+				log.codeRevision.size);
+		}
 	}
 
 	void indexSessionSockets() {
@@ -184,60 +314,49 @@ public:
 		}
 	}
 
+	void destroySelf() const {
+		this->~Process();
+		LockGuard l(getContext()->getMmSyncher());
+		getContext()->getProcessObjectPool().free(const_cast<Process *>(this));
+	}
+
+
+	/****** Miscellaneous ******/
+
+	static bool isZombie(pid_t pid) {
+		string filename = "/proc/" + toString(pid) + "/status";
+		FILE *f = fopen(filename.c_str(), "r");
+		if (f == NULL) {
+			// Don't know.
+			return false;
+		}
+
+		bool result = false;
+		while (!feof(f)) {
+			char buf[512];
+			const char *line;
+
+			line = fgets(buf, sizeof(buf), f);
+			if (line == NULL) {
+				break;
+			}
+			if (strcmp(line, "State:	Z (zombie)\n") == 0) {
+				// Is a zombie.
+				result = true;
+				break;
+			}
+		}
+		fclose(f);
+		return result;
+	}
+
 public:
-	/*************************************************************
-	 * Read-only fields, set once during initialization and never
-	 * written to again. Reading is thread-safe.
-	 *************************************************************/
-
-	/** Process PID. */
-	pid_t pid;
-	/** An ID that uniquely identifies this Process in the Group, for
-	 * use in implementing sticky sessions. Set by Group::attach(). */
-	unsigned int stickySessionId;
-	/** UUID for this process, randomly generated and extremely unlikely to ever
-	 * appear again in this universe. */
-	char gupid[GUPID_MAX_SIZE];
-	unsigned int gupidSize;
-	/** Admin socket, see class description. */
-	FileDescriptor adminSocket;
-	/** The sockets that this Process listens on for connections. */
-	SocketList sockets;
-	/** The code revision of the application, inferred through various means.
-	 * See Spawner::prepareSpawn() to learn how this is determined.
-	 * May be an empty string.
-	 */
-	StaticString codeRevision;
-	/** Time at which the Spawner that created this process was created.
-	 * Microseconds resolution. */
-	unsigned long long spawnerCreationTime;
-	/** Time at which we started spawning this process. Microseconds resolution. */
-	unsigned long long spawnStartTime;
-	/** The maximum amount of concurrent sessions this process can handle.
-	 * 0 means unlimited. */
-	int concurrency;
-	/** If true, then indicates that this Process does not refer to a real OS
-	 * process. The sockets in the socket list are fake and need not be deleted,
-	 * the admin socket need not be closed, etc.
-	 */
-	bool dummy;
-	/** Whether it is required that triggerShutdown() and cleanup() must be called
-	 * before destroying this Process. Normally true, except for dummy Process
-	 * objects created by Pool::asyncGet() with options.noop == true, because those
-	 * processes are never added to Group.enabledProcesses.
-	 */
-	bool requiresShutdown;
-
 	/*************************************************************
 	 * Information used by Pool. Do not write to these from
 	 * outside the Pool. If you read these make sure the Pool
 	 * isn't concurrently modifying.
 	 *************************************************************/
 
-	/** Time at which we finished spawning this process, i.e. when this
-	 * process was finished initializing. Microseconds resolution.
-	 */
-	unsigned long long spawnEndTime;
 	/** Last time when a session was opened for this Process. */
 	unsigned long long lastUsed;
 	/** Number of sessions currently open.
@@ -261,7 +380,7 @@ public:
 		 * this object is no longer usable.
 		 */
 		DEAD
-	} lifeStatus: 2;
+	} lifeStatus;
 	enum EnabledStatus {
 		/** Up and operational. */
 		ENABLED,
@@ -282,7 +401,7 @@ public:
 		 * eligible for new requests.
 		 */
 		DETACHED
-	} enabled: 2;
+	} enabled;
 	enum OobwStatus {
 		/** Process is not using out-of-band work. */
 		OOBW_NOT_ACTIVE,
@@ -293,67 +412,27 @@ public:
 		 * sessions have ended and the process has been disabled before the
 		 * out-of-band work can be performed. */
 		OOBW_IN_PROGRESS,
-	} oobwStatus: 2;
+	} oobwStatus;
 	/** Caches whether or not the OS process still exists. */
 	mutable bool m_osProcessExists: 1;
 	bool longRunningConnectionsAborted: 1;
-	/** Number of items in `sessionSockets`. Private field, but put here
-	 * for alignment optimization.
-	 */
-	unsigned int sessionSocketCount: 8;
 	/** Time at which shutdown began. */
 	time_t shutdownStartTime;
 	/** Collected by Pool::collectAnalytics(). */
 	ProcessMetrics metrics;
 
-	static ProcessPtr createFromSpawningKitResult(psg_pool_t *pool,
-		const SpawningKit::ConfigPtr &config,
-		const SpawningKit::Result &result)
-	{
-		SocketList sockets;
-		vector<SpawningKit::Result::Socket>::const_iterator it;
 
-		for (it = result.sockets.begin(); it != result.sockets.end(); it++) {
-			sockets.add(pool, *it);
-		}
-
-		ProcessPtr process = make_shared<Process>(
-			config,
-			result.pid,
-			psg_pstrdup(pool, StaticString(result.gupid, result.gupidSize)),
-			result.adminSocket,
-			result.errorPipe,
-			sockets,
-			result.spawnerCreationTime,
-			result.spawnStartTime
-		);
-		process->dummy = result.type == SpawningKit::Result::DUMMY_PROCESS;
-		return process;
-	}
-
-	Process(const SpawningKit::ConfigPtr &_config,
-		pid_t _pid,
-		const StaticString &_gupid,
-		const FileDescriptor &_adminSocket,
-		/** Pipe on which this process outputs errors. Mapped to the process's STDERR.
-		 * Only Processes spawned by DirectSpawner have this set.
-		 * SmartSpawner-spawned Processes use the same STDERR as their parent preloader processes.
-		 */
-		const FileDescriptor &_errorPipe,
-		const SocketList &_sockets,
-		unsigned long long _spawnerCreationTime,
-		unsigned long long _spawnStartTime)
-		: index(-1),
-		  group(NULL),
-		  pid(_pid),
-		  stickySessionId(0),
-		  adminSocket(_adminSocket),
-		  sockets(_sockets),
-		  spawnerCreationTime(_spawnerCreationTime),
-		  spawnStartTime(_spawnStartTime),
-		  concurrency(0),
-		  dummy(false),
-		  requiresShutdown(true),
+	Process(const BasicGroupInfo *groupInfo, const Json::Value &json)
+		: info(this, groupInfo, json),
+		  sessionSocketCount(0),
+		  spawnerCreationTime(getJsonUint64Field(json, "spawner_creation_time")),
+		  spawnStartTime(getJsonUint64Field(json, "spawn_start_time")),
+		  spawnEndTime(SystemTime::getUsec()),
+		  dummy(json["type"] == "dummy"),
+		  requiresShutdown(false),
+		  refcount(1),
+		  index(-1),
+		  lastUsed(spawnEndTime),
 		  sessions(0),
 		  processed(0),
 		  lifeStatus(ALIVE),
@@ -361,37 +440,63 @@ public:
 		  oobwStatus(OOBW_NOT_ACTIVE),
 		  m_osProcessExists(true),
 		  longRunningConnectionsAborted(false),
-		  sessionSocketCount(0),
 		  shutdownStartTime(0)
 	{
-		assert(_gupid.size() <= GUPID_MAX_SIZE);
-
-		if (_adminSocket != -1) {
-			SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-				_config, _adminSocket, "stdout", pid);
-			watcher->initialize();
-			watcher->start();
-		}
-		if (_errorPipe != -1) {
-			SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-				_config, _errorPipe, "stderr", pid);
-			watcher->initialize();
-			watcher->start();
-		}
-
+		initializeSocketsAndStringFields(json);
 		indexSessionSockets();
 
-		lastUsed      = SystemTime::getUsec();
-		spawnEndTime  = lastUsed;
-		gupidSize     = _gupid.size();
-		memcpy(gupid, _gupid.data(), _gupid.size());
+		const SpawningKit::Result *skResult = dynamic_cast<const SpawningKit::Result *>(&json);
+		if (skResult != NULL) {
+			adminSocket = skResult->adminSocket;
+			errorPipe = skResult->errorPipe;
+
+			if (adminSocket != -1) {
+				SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
+					getContext()->getSpawningKitConfig(), adminSocket, "stdout", info.pid);
+				watcher->initialize();
+				watcher->start();
+			}
+
+			if (errorPipe != -1) {
+				SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
+					getContext()->getSpawningKitConfig(), errorPipe, "stderr", info.pid);
+				watcher->initialize();
+				watcher->start();
+			}
+		}
 	}
 
 	~Process() {
-		if (OXT_UNLIKELY(!isDead() && requiresShutdown)) {
+		if (OXT_UNLIKELY(requiresShutdown && !isDead())) {
 			P_BUG("You must call Process::triggerShutdown() and Process::cleanup() before actually "
 				"destroying the Process object.");
 		}
+	}
+
+	void initializeStickySessionId(unsigned int value) {
+		info.stickySessionId = value;
+	}
+
+	void shutdownNotRequired() {
+		requiresShutdown = false;
+	}
+
+
+	/****** Memory and life time management ******/
+
+	void ref() const {
+		refcount.fetch_add(1, boost::memory_order_relaxed);
+	}
+
+	void unref() const {
+		if (refcount.fetch_sub(1, boost::memory_order_release) == 1) {
+			boost::atomic_thread_fence(boost::memory_order_acquire);
+			destroySelf();
+		}
+	}
+
+	ProcessPtr shared_from_this() {
+		return ProcessPtr(this);
 	}
 
 	static void forceTriggerShutdownAndCleanup(ProcessPtr process) {
@@ -403,28 +508,6 @@ public:
 			process->cleanup();
 		}
 	}
-
-	/**
-	 * Thread-safe.
-	 * @pre getLifeState() != SHUT_DOWN
-	 * @post result != NULL
-	 */
-	Group *getGroup() const {
-		assert(!isDead());
-		return group;
-	}
-
-	void setGroup(Group *group) {
-		assert(this->group == NULL || this->group == group);
-		this->group = group;
-	}
-
-	/**
-	 * Thread-safe.
-	 * @pre getLifeState() != DEAD
-	 * @post result != NULL
-	 */
-	Pool *getPool() const;
 
 	// Thread-safe.
 	bool isAlive() const {
@@ -448,29 +531,6 @@ public:
 	LifeStatus getLifeStatus() const {
 		oxt::spin_lock::scoped_lock lock(lifetimeSyncher);
 		return lifeStatus;
-	}
-
-	// Thread-safe.
-	StaticString getGroupSecret() const;
-
-	Socket *findSessionSocketWithLowestBusyness() const {
-		if (OXT_UNLIKELY(sessionSocketCount == 0)) {
-			return NULL;
-		} else if (sessionSocketCount == 1) {
-			return sessionSockets[0];
-		} else {
-			int leastBusySessionSocketIndex = 0;
-			int lowestBusyness = sessionSockets[0]->busyness();
-
-			for (unsigned i = 1; i < sessionSocketCount; i++) {
-				if (sessionSockets[i]->busyness() < lowestBusyness) {
-					leastBusySessionSocketIndex = i;
-					lowestBusyness = sessionSockets[i]->busyness();
-				}
-			}
-
-			return sessionSockets[leastBusySessionSocketIndex];
-		}
 	}
 
 	bool canTriggerShutdown() const {
@@ -517,6 +577,81 @@ public:
 		lifeStatus = DEAD;
 	}
 
+
+	/****** Basic information queries ******/
+
+	OXT_FORCE_INLINE
+	Context *getContext() const {
+		return info.groupInfo->context;
+	}
+
+	Group *getGroup() const {
+		return info.groupInfo->group;
+	}
+
+	StaticString getGroupName() const {
+		return info.groupInfo->name;
+	}
+
+	StaticString getGroupSecret() const {
+		return StaticString(info.groupInfo->secret, BasicGroupInfo::SECRET_SIZE);
+	}
+
+	const BasicProcessInfo &getInfo() const {
+		return info;
+	}
+
+	pid_t getPid() const {
+		return info.pid;
+	}
+
+	StaticString getGupid() const {
+		return StaticString(info.gupid, info.gupidSize);
+	}
+
+	unsigned int getStickySessionId() const {
+		return info.stickySessionId;
+	}
+
+	bool isDummy() const {
+		return dummy;
+	}
+
+
+	/****** Miscellaneous ******/
+
+	unsigned int getIndex() const {
+		return index;
+	}
+
+	void setIndex(unsigned int i) {
+		index = i;
+	}
+
+	const SocketList &getSockets() const {
+		return sockets;
+	}
+
+	Socket *findSessionSocketWithLowestBusyness() const {
+		if (OXT_UNLIKELY(sessionSocketCount == 0)) {
+			return NULL;
+		} else if (sessionSocketCount == 1) {
+			return sessionSockets[0];
+		} else {
+			int leastBusySessionSocketIndex = 0;
+			int lowestBusyness = sessionSockets[0]->busyness();
+
+			for (unsigned i = 1; i < sessionSocketCount; i++) {
+				if (sessionSockets[i]->busyness() < lowestBusyness) {
+					leastBusySessionSocketIndex = i;
+					lowestBusyness = sessionSockets[i]->busyness();
+				}
+			}
+
+			return sessionSockets[leastBusySessionSocketIndex];
+		}
+	}
+
 	/** Checks whether the OS process exists.
 	 * Once it has been detected that it doesn't, that event is remembered
 	 * so that we don't accidentally ping any new processes that have the
@@ -524,13 +659,13 @@ public:
 	 */
 	bool osProcessExists() const {
 		if (!dummy && m_osProcessExists) {
-			if (syscalls::kill(pid, 0) == 0) {
+			if (syscalls::kill(getPid(), 0) == 0) {
 				/* On some environments, e.g. Heroku, the init process does
 				 * not properly reap adopted zombie processes, which can interfere
 				 * with our process existance check. To work around this, we
 				 * explicitly check whether or not the process has become a zombie.
 				 */
-				m_osProcessExists = !isZombie(pid);
+				m_osProcessExists = !isZombie(getPid());
 			} else {
 				m_osProcessExists = errno != ESRCH;
 			}
@@ -543,7 +678,7 @@ public:
 	/** Kill the OS process with the given signal. */
 	int kill(int signo) {
 		if (osProcessExists()) {
-			return syscalls::kill(pid, signo);
+			return syscalls::kill(getPid(), signo);
 		} else {
 			return 0;
 		}
@@ -613,7 +748,35 @@ public:
 		}
 	}
 
-	SessionPtr createSessionObject(Socket *socket);
+	SessionPtr createSessionObject(Socket *socket) {
+		struct Guard {
+			Context *context;
+			Session *session;
+
+			Guard(Context *c, Session *s)
+				: context(c),
+				  session(s)
+				{ }
+
+			~Guard() {
+				if (session != NULL) {
+					context->getSessionObjectPool().free(session);
+				}
+			}
+
+			void clear() {
+				session = NULL;
+			}
+		};
+
+		Context *context = getContext();
+		LockGuard l(context->getMmSyncher());
+		Session *session = context->getSessionObjectPool().malloc();
+		Guard guard(context, session);
+		session = new (session) Session(context, &info, socket);
+		guard.clear();
+		return SessionPtr(session, false);
+	}
 
 	void sessionClosed(Session *session) {
 		Socket *socket = session->getSocket();
@@ -634,13 +797,18 @@ public:
 		return distanceOfTimeInWords(spawnEndTime / 1000000);
 	}
 
-	string inspect() const;
+	string inspect() const {
+		assert(getLifeStatus() != DEAD);
+		stringstream result;
+		result << "(pid=" << getPid() << ", group=" << getGroupName() << ")";
+		return result.str();
+	}
 
 	template<typename Stream>
 	void inspectXml(Stream &stream, bool includeSockets = true) const {
-		stream << "<pid>" << pid << "</pid>";
-		stream << "<sticky_session_id>" << stickySessionId << "</sticky_session_id>";
-		stream << "<gupid>" << StaticString(gupid, gupidSize) << "</gupid>";
+		stream << "<pid>" << getPid() << "</pid>";
+		stream << "<sticky_session_id>" << getStickySessionId() << "</sticky_session_id>";
+		stream << "<gupid>" << getGupid() << "</gupid>";
 		stream << "<concurrency>" << concurrency << "</concurrency>";
 		stream << "<sessions>" << sessions << "</sessions>";
 		stream << "<busyness>" << busyness() << "</busyness>";
@@ -713,6 +881,17 @@ public:
 		}
 	}
 };
+
+
+inline void
+intrusive_ptr_add_ref(const Process *process) {
+	process->ref();
+}
+
+inline void
+intrusive_ptr_release(const Process *process) {
+	process->unref();
+}
 
 
 } // namespace ApplicationPool2

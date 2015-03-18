@@ -72,6 +72,9 @@ TEST_CXX_OBJECTS = {
     ext/common/ApplicationPool2/Pool/ProcessUtils.cpp
     ext/common/ApplicationPool2/Pool/Inspection.cpp
     ext/common/ApplicationPool2/Pool/Debug.cpp
+    ext/common/ApplicationPool2/BasicGroupInfo.h
+    ext/common/ApplicationPool2/BasicProcessInfo.h
+    ext/common/ApplicationPool2/Context.h
     ext/common/ApplicationPool2/Process.h
     ext/common/ApplicationPool2/Socket.h
     ext/common/ApplicationPool2/Options.h

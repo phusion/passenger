@@ -61,7 +61,7 @@ void inspectProcessList(const InspectOptions &options, stringstream &result,
 		snprintf(buf, sizeof(buf),
 				"  * PID: %-5lu   Sessions: %-2u      Processed: %-5u   Uptime: %s\n"
 				"    CPU: %-5s   Memory  : %-5s   Last used: %s ago",
-				(unsigned long) process->pid,
+				(unsigned long) process->getPid(),
 				process->sessions,
 				process->processed,
 				process->uptime().c_str(),
@@ -79,9 +79,9 @@ void inspectProcessList(const InspectOptions &options, stringstream &result,
 		}
 
 		const Socket *socket;
-		if (options.verbose && (socket = process->sockets.findSocketWithName("http")) != NULL) {
+		if (options.verbose && (socket = process->getSockets().findSocketWithName("http")) != NULL) {
 			result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
-			result << "    Password: " << StaticString(group->secret, Group::SECRET_SIZE) << endl;
+			result << "    Password: " << group->getSecret() << endl;
 		}
 	}
 }
@@ -122,7 +122,7 @@ string inspect(const InspectOptions &options = InspectOptions(), bool lock = tru
 		const GroupPtr &group = g_it.getValue();
 		ProcessList::const_iterator p_it;
 
-		result << group->name << ":" << endl;
+		result << group->getName() << ":" << endl;
 		result << "  App root: " << group->options.appRoot << endl;
 		if (group->restarting()) {
 			result << "  (restarting...)" << endl;
@@ -181,12 +181,12 @@ string toXml(bool includeSecrets = true, bool lock = true) const {
 		const GroupPtr &group = g_it.getValue();
 
 		result << "<supergroup>";
-		result << "<name>" << escapeForXml(group->name) << "</name>";
+		result << "<name>" << escapeForXml(group->getName()) << "</name>";
 		result << "<state>READY</state>";
 		result << "<get_wait_list_size>0</get_wait_list_size>";
 		result << "<capacity_used>" << group->capacityUsed() << "</capacity_used>";
 		if (includeSecrets) {
-			result << "<secret>" << escapeForXml(group->secret) << "</secret>";
+			result << "<secret>" << escapeForXml(group->getSecret()) << "</secret>";
 		}
 
 		result << "<group default=\"true\">";

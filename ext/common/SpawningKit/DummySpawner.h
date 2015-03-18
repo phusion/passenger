@@ -26,6 +26,7 @@
 #define _PASSENGER_SPAWNING_KIT_DUMMY_SPAWNER_H_
 
 #include <SpawningKit/Spawner.h>
+#include <boost/atomic.hpp>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -37,43 +38,41 @@ using namespace oxt;
 
 class DummySpawner: public Spawner {
 private:
-	boost::mutex lock;
-	unsigned int count;
+	boost::atomic<unsigned int> count;
 
 public:
 	unsigned int cleanCount;
 
 	DummySpawner(const ConfigPtr &_config)
-		: Spawner(_config)
-	{
-		count = 0;
-		cleanCount = 0;
-	}
+		: Spawner(_config),
+		  count(1),
+		  cleanCount(0)
+		{ }
 
 	virtual Result spawn(const Options &options) {
 		TRACE_POINT();
 		possiblyRaiseInternalError(options);
 
-		SocketPair adminSocket = createUnixSocketPair();
-		Result::Socket socket;
-		socket.name = "main";
-		socket.address = "tcp://127.0.0.1:1234";
-		socket.protocol = "session";
-		socket.concurrency = config->concurrency;
-
 		syscalls::usleep(config->spawnTime);
 
-		boost::lock_guard<boost::mutex> l(lock);
+		SocketPair adminSocket = createUnixSocketPair();
+		unsigned int number = count.fetch_add(1, boost::memory_order_relaxed);
 		Result result;
+		Json::Value socket;
 
-		count++;
-		result.type = Result::DUMMY_PROCESS;
-		result.pid = count;
-		result.setGupid("gupid-" + toString(count));
+		socket["name"] = "main";
+		socket["address"] = "tcp://127.0.0.1:1234";
+		socket["protocol"] = "session";
+		socket["concurrency"] = config->concurrency;
+
+		result["type"] = "dummy";
+		result["pid"] = number;
+		result["gupid"] = "gupid-" + toString(number);
+		result["spawner_creation_time"] = (Json::UInt64) SystemTime::getUsec();
+		result["spawn_start_time"] = (Json::UInt64) SystemTime::getUsec();
+		result["sockets"].append(socket);
 		result.adminSocket = adminSocket.second;
-		result.sockets.push_back(socket);
-		result.spawnerCreationTime = SystemTime::getUsec();
-		result.spawnStartTime = SystemTime::getUsec();
+
 		return result;
 	}
 

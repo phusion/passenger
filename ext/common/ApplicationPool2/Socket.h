@@ -35,7 +35,6 @@
 #include <Logging.h>
 #include <StaticString.h>
 #include <ApplicationPool2/Common.h>
-#include <SpawningKit/Result.h>
 #include <MemoryKit/palloc.h>
 #include <Utils/SmallVector.h>
 #include <Utils/IOUtils.h>
@@ -116,15 +115,6 @@ public:
 		  address(_address),
 		  protocol(_protocol),
 		  concurrency(_concurrency),
-		  totalActiveConnections(0),
-		  sessions(0)
-		{ }
-
-	Socket(psg_pool_t *pool, const SpawningKit::Result::Socket &socket)
-		: name(psg_pstrdup(pool, socket.name)),
-		  address(psg_pstrdup(pool, socket.address)),
-		  protocol(psg_pstrdup(pool, socket.protocol)),
-		  concurrency(socket.concurrency),
 		  totalActiveConnections(0),
 		  sessions(0)
 		{ }
@@ -239,10 +229,6 @@ class SocketList: public SmallVector<Socket, 1> {
 public:
 	void add(const StaticString &name, const StaticString &address, const StaticString &protocol, int concurrency) {
 		push_back(Socket(name, address, protocol, concurrency));
-	}
-
-	void add(psg_pool_t *pool, const SpawningKit::Result::Socket &socket) {
-		push_back(Socket(pool, socket));
 	}
 
 	const Socket *findSocketWithName(const StaticString &name) const {

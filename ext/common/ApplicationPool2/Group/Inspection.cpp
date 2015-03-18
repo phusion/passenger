@@ -32,8 +32,8 @@ void
 inspectXml(Stream &stream, bool includeSecrets = true) const {
 	ProcessList::const_iterator it;
 
-	stream << "<name>" << escapeForXml(name) << "</name>";
-	stream << "<component_name>" << escapeForXml(name) << "</component_name>";
+	stream << "<name>" << escapeForXml(info.name) << "</name>";
+	stream << "<component_name>" << escapeForXml(info.name) << "</component_name>";
 	stream << "<app_root>" << escapeForXml(options.appRoot) << "</app_root>";
 	stream << "<app_type>" << escapeForXml(options.appType) << "</app_type>";
 	stream << "<environment>" << escapeForXml(options.environment) << "</environment>";
@@ -52,7 +52,7 @@ inspectXml(Stream &stream, bool includeSecrets = true) const {
 		stream << "<restarting/>";
 	}
 	if (includeSecrets) {
-		stream << "<secret>" << escapeForXml(StaticString(secret, SECRET_SIZE)) << "</secret>";
+		stream << "<secret>" << escapeForXml(getSecret()) << "</secret>";
 	}
 	LifeStatus lifeStatus = (LifeStatus) this->lifeStatus.load(boost::memory_order_relaxed);
 	switch (lifeStatus) {

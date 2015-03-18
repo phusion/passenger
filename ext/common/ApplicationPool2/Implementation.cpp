@@ -318,16 +318,18 @@ Pool::getGroup(const char *name) {
 
 Group::Group(Pool *_pool, const Options &_options)
 	: pool(_pool),
-	  name(_options.getAppGroupName()),
 	  uuid(generateUuid(_pool))
 {
-	generateSecret(_pool, secret);
+	info.context = _pool->getContext();
+	info.group = this;
+	info.name = _options.getAppGroupName().toString();
+	generateSecret(_pool, info.secret);
 	resetOptions(_options);
 	enabledCount   = 0;
 	disablingCount = 0;
 	disabledCount  = 0;
 	nEnabledProcessesTotallyBusy = 0;
-	spawner        = pool->spawningKitFactory->create(options);
+	spawner        = getContext()->getSpawningKitFactory()->create(options);
 	restartsInitiated = 0;
 	processesBeingSpawned = 0;
 	m_spawning     = false;
@@ -362,14 +364,17 @@ Group::~Group() {
 
 bool
 Group::initialize() {
-	nullProcess = boost::make_shared<Process>(
-		getPool()->getSpawningKitConfig(),
-		0, StaticString(),
-		FileDescriptor(), FileDescriptor(),
-		SocketList(), 0, 0);
-	nullProcess->dummy = true;
-	nullProcess->requiresShutdown = false;
-	nullProcess->setGroup(this);
+	Json::Value json;
+
+	json["type"] = "dummy";
+	json["pid"] = 0;
+	json["gupid"] = "0";
+	json["spawner_creation_time"] = 0;
+	json["spawn_start_time"] = 0;
+	json["sockets"] = Json::Value(Json::arrayValue);
+
+	nullProcess = createProcessObject(json);
+	nullProcess->shutdownNotRequired();
 	return true;
 }
 
@@ -435,7 +440,7 @@ Group::onSessionClose(Process *process, Session *session) {
 		|| process->enabled == Process::DISABLING
 		|| process->enabled == Process::DETACHED);
 	if (process->enabled == Process::ENABLED) {
-		enabledProcessBusynessLevels[process->index] = process->busyness();
+		enabledProcessBusynessLevels[process->getIndex()] = process->busyness();
 		if (wasTotallyBusy) {
 			assert(nEnabledProcessesTotallyBusy >= 1);
 			nEnabledProcessesTotallyBusy--;
@@ -717,7 +722,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		data.push_back(P_STATIC_STRING_WITH_NULL("OOBW"));
 
 		data.push_back(P_STATIC_STRING_WITH_NULL("PASSENGER_CONNECT_PASSWORD"));
-		data.push_back(StaticString(secret, SECRET_SIZE));
+		data.push_back(getSecret());
 		data.push_back(StaticString("", 1));
 
 		boost::uint32_t dataSize = 0;
@@ -837,10 +842,7 @@ Group::spawnThreadRealMain(const SpawningKit::SpawnerPtr &spawner,
 				processAndLogNewSpawnException(e, options, pool->getSpawningKitConfig());
 				throw e;
 			} else {
-				process = Process::createFromSpawningKitResult(
-					getPallocPool(), pool->getSpawningKitConfig(),
-					spawner->spawn(options));
-				process->setGroup(this);
+				process = createProcessObject(spawner->spawn(options));
 			}
 		} catch (const thread_interrupted &) {
 			break;
@@ -963,7 +965,7 @@ Group::restart(const Options &options, RestartMethod method) {
 	boost::container::vector<Callback> actions;
 
 	assert(isAlive());
-	P_DEBUG("Restarting group " << name);
+	P_DEBUG("Restarting group " << getName());
 
 	// If there is currently a restarter thread or a spawner thread active,
 	// the following tells them to abort their current work as soon as possible.
@@ -978,8 +980,9 @@ Group::restart(const Options &options, RestartMethod method) {
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
 			this->options.copyAndPersist().clearPerRequestFields(),
 			options.copyAndPersist().clearPerRequestFields(),
-			method, getPool()->spawningKitFactory, restartsInitiated, actions),
-		"Group restarter: " + name,
+			method, getContext()->getSpawningKitFactory(),
+			restartsInitiated, actions),
+		"Group restarter: " + getName(),
 		POOL_HELPER_THREAD_STACK_SIZE
 	);
 }
@@ -1021,13 +1024,13 @@ Group::finalizeRestart(GroupPtr self,
 
 	ScopedLock l(pool->syncher);
 	if (!isAlive()) {
-		P_DEBUG("Group " << name << " is shutting down, so aborting restart");
+		P_DEBUG("Group " << getName() << " is shutting down, so aborting restart");
 		return;
 	}
 	if (restartsInitiated != this->restartsInitiated) {
 		// Before this restart could be finalized, another restart command was given.
 		// The spawner we just created might be out of date now so we abort.
-		P_DEBUG("Restart of group " << name << " aborted because a new restart was initiated concurrently");
+		P_DEBUG("Restart of group " << getName() << " aborted because a new restart was initiated concurrently");
 		if (debug != NULL && debug->restarting) {
 			debug->debugger->send("Restarting aborted");
 		}
@@ -1048,7 +1051,7 @@ Group::finalizeRestart(GroupPtr self,
 	if (shouldSpawn()) {
 		spawn();
 	} else if (isWaitingForCapacity()) {
-		P_INFO("Group " << name << " is waiting for capacity to become available. "
+		P_INFO("Group " << getName() << " is waiting for capacity to become available. "
 			"Trying to shutdown another idle process to free capacity...");
 		if (pool->forceFreeCapacity(this, postLockActions) != NULL) {
 			spawn();
@@ -1062,7 +1065,7 @@ Group::finalizeRestart(GroupPtr self,
 	l.unlock();
 	oldSpawner.reset();
 	Pool::runAllActions(postLockActions);
-	P_DEBUG("Restart of group " << name << " done");
+	P_DEBUG("Restart of group " << getName() << " done");
 	if (debug != NULL && debug->restarting) {
 		debug->debugger->send("Restarting done");
 	}
@@ -1079,7 +1082,7 @@ Group::startCheckingDetachedProcesses(bool immediately) {
 		P_DEBUG("Starting detached processes checker");
 		getPool()->nonInterruptableThreads.create_thread(
 			boost::bind(&Group::detachedProcessesCheckerMain, this, shared_from_this()),
-			"Detached processes checker: " + name,
+			"Detached processes checker: " + getName(),
 			POOL_HELPER_THREAD_STACK_SIZE
 		);
 		detachedProcessesCheckerActive = true;
@@ -1138,7 +1141,7 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 						P_WARN("Detached process " << process->inspect() <<
 							" didn't shut down within " PROCESS_SHUTDOWN_TIMEOUT_DISPLAY
 							". Forcefully killing it with SIGKILL.");
-						kill(process->pid, SIGKILL);
+						kill(process->getPid(), SIGKILL);
 					}
 					break;
 				default:
@@ -1295,13 +1298,13 @@ Group::runDetachHooks(const ProcessPtr process) const {
 
 void
 Group::setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &options) const {
-	options.environment.push_back(make_pair("PASSENGER_PROCESS_PID", toString(process->pid)));
+	options.environment.push_back(make_pair("PASSENGER_PROCESS_PID", toString(process->getPid())));
 	options.environment.push_back(make_pair("PASSENGER_APP_ROOT", this->options.appRoot));
 }
 
 void
 Group::generateSecret(const Pool *pool, char *secret) {
-	pool->getRandomGenerator()->generateAsciiString(secret, SECRET_SIZE);
+	pool->getRandomGenerator()->generateAsciiString(secret, BasicGroupInfo::SECRET_SIZE);
 }
 
 string
@@ -1310,105 +1313,11 @@ Group::generateUuid(const Pool *pool) {
 }
 
 
-Pool *
-Process::getPool() const {
-	assert(getLifeStatus() != DEAD);
-	return group->pool;
-}
-
-StaticString
-Process::getGroupSecret() const {
-	return StaticString(getGroup()->secret, Group::SECRET_SIZE);
-}
-
-SessionPtr
-Process::createSessionObject(Socket *socket) {
-	Pool *pool = NULL;
-	Group *group = getGroup();
-	if (group != NULL) {
-		// Backpointers are normally never NULL, but they can be
-		// NULL in unit tests
-		pool = group->getPool();
-	}
-
-	Session *session;
-	if (OXT_LIKELY(pool != NULL)) {
-		{
-			LockGuard l(pool->sessionObjectPoolSyncher);
-			session = pool->sessionObjectPool.malloc();
-		}
-		session = new (session) Session(pool, this, socket);
-	} else {
-		session = new Session(NULL, this, socket);
-	}
-	return SessionPtr(session, false);
-}
-
-string
-Process::inspect() const {
-	assert(getLifeStatus() != DEAD);
-	stringstream result;
-	result << "(pid=" << pid;
-	Group *group = getGroup();
-	if (group != NULL) {
-		// This Process hasn't been attached to a Group yet.
-		result << ", group=" << group->name;
-	}
-	result << ")";
-	return result.str();
-}
-
-
-StaticString
-Session::getGroupSecret() const {
-	return StaticString(getGroup()->secret, Group::SECRET_SIZE);
-}
-
-pid_t
-Session::getPid() const {
-	return getProcess()->pid;
-}
-
-StaticString
-Session::getGupid() const {
-	const Process *process = getProcess();
-	return StaticString(process->gupid, process->gupidSize);
-}
-
-unsigned int
-Session::getStickySessionId() const {
-	return getProcess()->stickySessionId;
-}
-
-Group *
-Session::getGroup() const {
-	return getProcess()->getGroup();
-}
-
 void
 Session::requestOOBW() {
 	ProcessPtr process = getProcess()->shared_from_this();
 	assert(process->isAlive());
 	process->getGroup()->requestOOBW(process);
-}
-
-int
-Session::kill(int signo) {
-	return getProcess()->kill(signo);
-}
-
-void
-Session::destroySelf() const {
-	Pool *pool = this->pool;
-	// Backpointers are normally never NULL, but they can be
-	// NULL in unit tests
-	if (pool != NULL) {
-		this->~Session();
-		LockGuard l(pool->sessionObjectPoolSyncher);
-		pool->sessionObjectPool.free(const_cast<Session *>(this));
-	} else {
-		delete this;
-	}
 }
 
 

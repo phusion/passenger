@@ -553,7 +553,7 @@ namespace Json {
 # endif
       Value( bool value );
       Value( const Value &other );
-      ~Value();
+      virtual ~Value();
 
       Value &operator=( const Value &other );
       /// Swap values.

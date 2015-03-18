@@ -227,10 +227,10 @@ public:
 				this_thread::restore_syscall_interruption rsi(dsi);
 				result = negotiateSpawn(details);
 			}
-			detachProcess(result.pid);
+			detachProcess(result["pid"].asInt());
 			guard.clear();
 			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-				", pid=" << result.pid);
+				", pid=" << result["pid"].asInt());
 			return result;
 		}
 	}

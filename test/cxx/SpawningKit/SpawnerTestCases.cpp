@@ -77,9 +77,9 @@
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
-		ensure_equals(result.sockets.size(), 1u);
+		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
 		writeExact(fd, "ping\n");
 		ensure_equals(readAll(fd), "pong\n");
 	}
@@ -182,11 +182,11 @@
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
-		ensure_equals(result.sockets.size(), 1u);
+		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
 		writeExact(fd, "pid\n");
-		ensure_equals(readAll(fd), toString(result.pid) + "\n");
+		ensure_equals(readAll(fd), toString(result["pid"].asCString()) + "\n");
 	}
 
 	TEST_METHOD(7) {
@@ -200,9 +200,9 @@
 		options.environmentVariables = envvars;
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
-		ensure_equals(result.sockets.size(), 1u);
+		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result.sockets[0].address));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
 		writeExact(fd, "envvars\n");
 		envvars = readAll(fd);
 		ensure("(1)", envvars.find("PASSENGER_FOO = foo\n") != string::npos);
@@ -293,7 +293,7 @@
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
 
-		ensure_equals(result.codeRevision, "hello");
+		ensure_equals(result["code_revision"].asString(), "hello");
 	}
 
 	TEST_METHOD(12) {
@@ -310,7 +310,7 @@
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
 
-		ensure_equals(result.codeRevision, "today");
+		ensure_equals(result["code_revision"].asString(), "today");
 	}
 
 	/******* User switching tests *******/

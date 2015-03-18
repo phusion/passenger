@@ -100,7 +100,7 @@ void garbageCollectProcessesInGroup(GarbageCollectorState &state,
 	for (p_it = processesToGc.begin(); p_it != p_end; p_it++) {
 		ProcessPtr process = *p_it;
 		P_DEBUG("Garbage collect idle process: " << process->inspect() <<
-			", group=" << group->name);
+			", group=" << group->getName());
 		group->detach(process, state.actions);
 	}
 }
@@ -111,7 +111,7 @@ void maybeCleanPreloader(GarbageCollectorState &state, const GroupPtr &group) {
 			group->spawner->lastUsed() +
 			group->options.getMaxPreloaderIdleTime() * 1000000;
 		if (state.now >= spawnerGcTime) {
-			P_DEBUG("Garbage collect idle spawner: group=" << group->name);
+			P_DEBUG("Garbage collect idle spawner: group=" << group->getName());
 			group->cleanupSpawner(state.actions);
 		} else {
 			maybeUpdateNextGcRuntime(state, spawnerGcTime);
