@@ -3,6 +3,7 @@ Release 5.0.5
 
  * Fixes a crash due to improper initialization of some request data structures. Closes GH-1431.
  * Fixed a connection stall in the Apache module. Closes GH-1425.
+ * There is now an API endpoint for force disconnecting a client: `passenger-config admin-command DELETE /server/<client name>.json`. Closes GH-1246.
 
 
 Release 5.0.4

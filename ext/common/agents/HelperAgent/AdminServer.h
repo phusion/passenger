@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2013-2014 Phusion
+ *  Copyright (c) 2013-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -25,6 +25,7 @@
 #ifndef _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
 #define _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
 
+#include <boost/regex.hpp>
 #include <oxt/thread.hpp>
 #include <sstream>
 #include <string>
@@ -74,6 +75,12 @@ private:
 	typedef ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
+
+	boost::regex serverConnectionPath;
+
+	bool regex_match(const StaticString &str, const boost::regex &e) const {
+		return boost::regex_match(str.data(), str.data() + str.size(), e);
+	}
 
 	bool parseAuthorizationHeader(Request *req, string &username,
 		string &password) const
@@ -126,6 +133,19 @@ private:
 			&& constantTimeCompare(password, auth->password);
 	}
 
+	int extractThreadNumberFromClientName(const string &clientName) const {
+		boost::smatch results;
+		boost::regex re("^([0-9]+)-.*");
+
+		if (!boost::regex_match(clientName, results, re)) {
+			return -1;
+		}
+		if (results.size() != 2) {
+			return -1;
+		}
+		return stringToUint(results.str(1));
+	}
+
 	static VariantMap parseQueryString(const StaticString &query) {
 		VariantMap params;
 		const char *pos = query.data();
@@ -153,6 +173,52 @@ private:
 		}
 
 		return params;
+	}
+
+	static void disconnectClient(RequestHandler *rh, string clientName) {
+		rh->disconnect(clientName);
+	}
+
+	void processServerConnectionOperation(Client *client, Request *req) {
+		if (!authorize(client, req, FULL)) {
+			respondWith401(client, req);
+		} else if (req->method == HTTP_DELETE) {
+			StaticString path = req->getPathWithoutQueryString();
+			boost::smatch results;
+
+			boost::regex_match(path.toString(), results, serverConnectionPath);
+			if (results.size() != 2) {
+				endAsBadRequest(&client, &req, "Invalid URI");
+				return;
+			}
+
+			int threadNumber = extractThreadNumberFromClientName(results.str(1));
+			P_WARN(results.str(1));
+			P_WARN(threadNumber);
+			if (threadNumber < 1 || threadNumber > requestHandlers.size()) {
+				HeaderTable headers;
+				headers.insert(req->pool, "content-type", "application/json");
+				writeSimpleResponse(client, 400, &headers,
+					"{ \"status\": \"error\", \"reason\": \"Invalid thread number\" }");
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+
+			requestHandlers[threadNumber - 1]->getContext()->libev->runLater(boost::bind(
+				disconnectClient, requestHandlers[threadNumber - 1], results.str(1)));
+
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "application/json");
+			writeSimpleResponse(client, 200, &headers,
+				"{ \"status\": \"ok\" }");
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith405(client, req);
+		}
 	}
 
 	static void inspectRequestHandlerState(RequestHandler *rh, Json::Value *json) {
@@ -568,6 +634,8 @@ protected:
 		try {
 			if (path == P_STATIC_STRING("/server.json")) {
 				processServerStatus(client, req);
+			} else if (regex_match(path, serverConnectionPath)) {
+				processServerConnectionOperation(client, req);
 			} else if (path == P_STATIC_STRING("/pool.xml")) {
 				processPoolStatusXml(client, req);
 			} else if (path == P_STATIC_STRING("/pool.txt")) {
@@ -665,6 +733,7 @@ public:
 
 	AdminServer(ServerKit::Context *context)
 		: ParentClass(context),
+		  serverConnectionPath("^/server/(.+)\\.json$"),
 		  exitEvent(NULL)
 		{ }
 
