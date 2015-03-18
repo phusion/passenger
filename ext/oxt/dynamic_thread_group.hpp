@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010-2013 Phusion
+ * Copyright (c) 2010-2015 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -84,6 +84,27 @@ private:
 	/** The number of threads in this thread group. */
 	unsigned int nthreads;
 
+	struct thread_func_data {
+		boost::function<void ()> entry_point;
+		thread_handle *handle;
+	};
+
+	struct thread_func_data_guard {
+		thread_func_data *data;
+
+		thread_func_data_guard(thread_func_data *_data)
+			: data(_data)
+			{ }
+
+		~thread_func_data_guard() {
+			delete data;
+		}
+
+		void clear() {
+			data = NULL;
+		}
+	};
+
 	struct thread_cleanup {
 		dynamic_thread_group *thread_group;
 		thread_handle *handle;
@@ -104,9 +125,16 @@ private:
 		}
 	};
 
-	void thread_main(boost::function<void ()> &func, thread_handle *handle) {
-		thread_cleanup c(this, handle);
-		func();
+	void thread_main(thread_func_data *data) {
+		thread_func_data_guard guard(data);
+		thread_cleanup c(this, data->handle);
+		data->entry_point();
+		// Clear the entry point object now because it may contain bound objects.
+		// We want to run the destructor for these objects now, before this thread
+		// is removed from the thread group list, so that if anybody calls
+		// dynamic_thread_group::join_all() the caller can be sure that the
+		// threads are really done.
+		data->entry_point = boost::function<void ()>();
 	}
 
 public:
@@ -136,11 +164,16 @@ public:
 		handle->iterator = thread_handles.end();
 		handle->iterator--;
 		try {
+			thread_func_data *data = new thread_func_data();
+			thread_func_data_guard guard(data);
+			data->entry_point = func;
+			data->handle = handle.get();
 			handle->thr = new thread(
-				boost::bind(&dynamic_thread_group::thread_main, this, func, handle.get()),
+				boost::bind(&dynamic_thread_group::thread_main, this, data),
 				name,
 				stack_size
 			);
+			guard.clear();
 			nthreads++;
 		} catch (...) {
 			thread_handles.erase(handle->iterator);
