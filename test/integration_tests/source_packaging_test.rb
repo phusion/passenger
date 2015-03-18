@@ -48,12 +48,8 @@ end
 
 shared_examples_for "a proper package" do
   it "includes all files in the git repository" do
-    git_files = `git ls-files`.split("\n")
-    git_files.reject! { |filename| filename =~ /^Passenger.xcodeproj\// }
-    git_files.delete(".gitmodules")
-    git_files.delete("packaging/rpm")
-    git_files.delete("ext/libeio/eio.3")
-    git_files.delete("ext/libeio/eio.pod")
+    expected_files = `git ls-files`.split("\n")
+    expected_files -= Dir.glob(PhusionPassenger::Packaging::EXCLUDE_GLOB, File::FNM_DOTMATCH)
 
     package_files = {}
     Dir.chdir(@pkg_contents_dir) do
@@ -66,7 +62,7 @@ shared_examples_for "a proper package" do
     end
 
     error = false
-    git_files.each do |filename|
+    expected_files.each do |filename|
       if !package_files[filename]
         error = true
         puts "File \"#{filename}\" is not in the package"
