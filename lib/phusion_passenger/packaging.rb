@@ -89,6 +89,7 @@ module PhusionPassenger
       'bin/*',
       'doc/**/*',
       'man/*',
+      'dev/**/*',
       'helper-scripts/**/*',
       'ext/common/**/*.{cpp,c,h,hpp,md,erb}',
       'ext/apache2/*.{cpp,h,hpp,c,erb}',
@@ -126,7 +127,6 @@ module PhusionPassenger
       'Vagrantfile',
       'Passenger.sublime-project',
       'Passenger.xcodeproj/**/*',
-      'dev/**/*',
       'debian.template/**/*',
       'packaging/**/*',
       'test/**/*'
