@@ -851,7 +851,7 @@ public:
 			char buf[512];
 			unsigned int size;
 
-			size = getClientName(client, buf, size);
+			size = getClientName(client, buf, sizeof(buf));
 			if (StaticString(buf, size) == clientName) {
 				return client;
 			}
