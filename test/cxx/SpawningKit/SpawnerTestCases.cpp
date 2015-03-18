@@ -186,7 +186,7 @@
 
 		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
 		writeExact(fd, "pid\n");
-		ensure_equals(readAll(fd), toString(result["pid"].asCString()) + "\n");
+		ensure_equals(readAll(fd), toString(result["pid"].asInt()) + "\n");
 	}
 
 	TEST_METHOD(7) {

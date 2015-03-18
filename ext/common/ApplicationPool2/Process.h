@@ -613,6 +613,10 @@ public:
 		return info.stickySessionId;
 	}
 
+	unsigned long long getSpawnerCreationTime() const {
+		return spawnerCreationTime;
+	}
+
 	bool isDummy() const {
 		return dummy;
 	}
