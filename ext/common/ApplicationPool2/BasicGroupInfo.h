@@ -75,9 +75,10 @@ public:
 
 	BasicGroupInfo()
 		: context(NULL),
-		  group(NULL),
-		  secret("")
-		{ }
+		  group(NULL)
+	{
+		secret[0] = '\0';
+	}
 
 	StaticString getSecret() const {
 		return StaticString(secret, SECRET_SIZE);
