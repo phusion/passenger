@@ -430,6 +430,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
       ApplicationPool2/Pool/Inspection.cpp
       ApplicationPool2/Pool/Debug.cpp
       ApplicationPool2/Group.h
+      ApplicationPool2/Group/ProcessListManagement.cpp
+      ApplicationPool2/Group/Utils.cpp
+      ApplicationPool2/Group/Verification.cpp
       ApplicationPool2/Process.h
       ApplicationPool2/Socket.h
       ApplicationPool2/Session.h
