@@ -1,3 +1,9 @@
+Release 5.0.5
+-------------
+
+ * Fixes a crash due to improper initialization of some request data structures. Closes GH-1431.
+
+
 Release 5.0.4
 -------------
 

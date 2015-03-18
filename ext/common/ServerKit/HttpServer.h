@@ -980,6 +980,12 @@ protected:
 		return false;
 	}
 
+	virtual void reinitializeClient(Client *client, int fd) {
+		ParentClass::reinitializeClient(client, fd);
+		client->requestsBegun = 0;
+		client->currentRequest = NULL;
+	}
+
 	virtual void reinitializeRequest(Client *client, Request *req) {
 		req->httpMajor = 1;
 		req->httpMinor = 0;

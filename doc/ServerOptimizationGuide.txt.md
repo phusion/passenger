@@ -343,6 +343,14 @@ The turbocache currently only caches GET requests. POST, PUT, DELETE and other r
 
 The "Vary" header is used to tell caches that the response depends on one or more request headers. But the turbocache does not implement support for the "Vary" header, so if you output a "Vary" header then the turbocache will not cache your response at all. Avoid using the "Vary" header where possible.
 
+#### Maximum response size
+
+The turbocache caches only responses that are at most 32 KB, including HTTP headers. This maximum size is currently not configurable, but [we are working on it](https://github.com/phusion/passenger/issues/1430).
+
+#### Maximum caching time
+
+The turbocache caches a response for a maximum duration of 2 seconds, or whatever is specified as the expiry time according to the HTTP headers, whichever is earliest. The cap of 2 seconds is currently not configurable, but [we are working on it](https://github.com/phusion/passenger/issues/1430).
+
 ### Out-of-band garbage collection
 
 Phusion Passenger supports out-of-band garbage collection for Ruby apps. With this feature enabled, Phusion Passenger can run the garbage collector in between requests, so that the garbage collector doesn't delay the app as much. Please refer to the Users Guide for more information about this feature.

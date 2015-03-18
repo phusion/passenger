@@ -198,7 +198,7 @@ task :compile_app => dependencies do
       "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
       "#{EXTRA_CXXFLAGS} " <<
       "#{COMMON_LIBRARY.link_objects_as_string} " <<
-      "#{LIBBOOST_OXT} " <<
+      "#{LIBBOOST_OXT_LINKARG} " <<
       "#{LIBEV_LIBS} " <<
       "#{LIBEIO_LIBS} " <<
       "#{PlatformInfo.portability_cxx_ldflags} " <<
