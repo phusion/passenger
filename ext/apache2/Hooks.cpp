@@ -52,15 +52,16 @@
 #include "Hooks.h"
 #include "Bucket.h"
 #include "Configuration.hpp"
-#include "Utils.h"
-#include "Utils/IOUtils.h"
-#include "Utils/Timer.h"
-#include "Utils/HttpConstants.h"
-#include "Utils/modp_b64.h"
-#include "Logging.h"
-#include "AgentsStarter.h"
 #include "DirectoryMapper.h"
-#include "Constants.h"
+#include <Utils.h>
+#include <Utils/IOUtils.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/Timer.h>
+#include <Utils/HttpConstants.h>
+#include <Utils/modp_b64.h>
+#include <Logging.h>
+#include <AgentsStarter.h>
+#include <Constants.h>
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
  * compilation will fail on OpenBSD.
@@ -741,6 +742,27 @@ private:
 		return lookupInTable(r->subprocess_env, name);
 	}
 
+	bool connectionUpgradeFlagSet(const char *header) const {
+		size_t headerSize = strlen(header);
+		if (headerSize < 1024) {
+			char buffer[headerSize + 1];
+			return connectionUpgradeFlagSet(header, headerSize, buffer, headerSize + 1);
+		} else {
+			DynamicBuffer buffer(headerSize + 1);
+			return connectionUpgradeFlagSet(header, headerSize, buffer.data, headerSize + 1);
+		}
+	}
+
+	bool connectionUpgradeFlagSet(const char *header, size_t headerSize,
+		char *buffer, size_t bufsize) const
+	{
+		assert(bufsize > headerSize);
+		memcpy(buffer, header, headerSize);
+		convertLowerCase((unsigned char *) buffer, headerSize);
+		buffer[headerSize] = '\0';
+		return strstr(buffer, "upgrade");
+	}
+
 	void addHeader(string &headers, const StaticString &name, const char *value) {
 		if (value != NULL) {
 			headers.append(name.data(), name.size());
@@ -851,12 +873,10 @@ private:
 			}
 		}
 
-		if (connectionHeader == NULL || strcasecmp(connectionHeader->val, "keep-alive") == 0) {
-			result.append("Connection: close\r\n", sizeof("Connection: close\r\n") - 1);
+		if (connectionHeader != NULL && connectionUpgradeFlagSet(connectionHeader->val)) {
+			result.append("Connection: upgrade\r\n", sizeof("Connection: upgrade\r\n") - 1);
 		} else {
-			result.append("Connection: ", sizeof("Connection: ") - 1);
-			result.append(connectionHeader->val);
-			result.append("\r\n", 2);
+			result.append("Connection: close\r\n", sizeof("Connection: close\r\n") - 1);
 		}
 
 		if (transferEncodingHeader != NULL) {

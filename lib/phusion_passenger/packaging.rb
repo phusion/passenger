@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -68,14 +68,9 @@ module PhusionPassenger
     # A list of globs which match all files that should be packaged
     # in the Phusion Passenger gem or tarball.
     GLOB = [
-      '.gitignore',
-      '.travis.yml',
       '.editorconfig',
       'configure',
       'Rakefile',
-      'Gemfile',
-      'Gemfile.lock',
-      'Vagrantfile',
       'README.md',
       'CONTRIBUTORS',
       'CONTRIBUTING.md',
@@ -94,8 +89,7 @@ module PhusionPassenger
       'bin/*',
       'doc/**/*',
       'man/*',
-      'debian.template/**/*',
-      'packaging/**/*',
+      'dev/**/*',
       'helper-scripts/**/*',
       'ext/common/**/*.{cpp,c,h,hpp,md,erb}',
       'ext/apache2/*.{cpp,h,hpp,c,erb}',
@@ -115,53 +109,45 @@ module PhusionPassenger
       'ext/oxt/*.txt',
       'ext/oxt/detail/*.hpp',
       'ext/ruby/*.{c,rb}',
-      'dev/**/*',
-      'resources/**/*',
-      'test/.rspec',
-      'test/*.example',
-      'test/*.travis',
-      'test/*.rpm-automation',
-      'test/*.vagrant',
-      'test/*.supp',
-      'test/support/*.{c,cpp,h,rb}',
-      'test/tut/*',
-      'test/cxx/**/*.{cpp,h}',
-      'test/oxt/*.{cpp,hpp}',
-      'test/ruby/**/*',
-      'test/node/**/*',
-      'test/integration_tests/**/*',
-      'test/stub/**/*',
-      'test/stub/**/.*'
+      'resources/**/*'
     ]
 
+    # Files that should be excluded from the gem or tarball. Overrides GLOB.
     EXCLUDE_GLOB = [
       '**/.DS_Store',
-      'packaging/*/.git',
-      'test/stub/rails_apps/3.0/empty/help/**/*',
-      'test/stub/*.dSYM'
+      '.gitignore',
+      '.gitmodules',
+      '.travis.yml',
+      '.settings/*',
+      '.externalToolBuilders/*',
+      '.cproject',
+      '.project',
+      'Gemfile',
+      'Gemfile.lock',
+      'Vagrantfile',
+      'Passenger.sublime-project',
+      'Passenger.xcodeproj/**/*',
+      'debian.template/**/*',
+      'packaging/**/*',
+      'test/**/*'
     ]
 
     # Files that should be excluded from the Debian tarball.
-    DEBIAN_EXCLUDE_GLOB = [
-      "debian.template/**/*",
-      "packaging/**/*",
-    ]
+    DEBIAN_EXCLUDE_GLOB = []
 
     # Files and directories that should be excluded from the Homebrew installation.
     HOMEBREW_EXCLUDE = [
-      ".gitignore", ".gitmodules", ".travis.yml", "package.json", "Vagrantfile",
-      "npm-shrinkwrap.json", "Gemfile", "Gemfile.lock", "debian.template",
-      "packaging", "dev", "test"
+      "package.json", "npm-shrinkwrap.json"
     ]
 
     def self.files
       result = Dir[*GLOB] - Dir[*EXCLUDE_GLOB]
       result.reject! { |path| path =~ %r{/\.\.?$} }
-      return result
+      result
     end
 
     def self.debian_orig_tarball_files
-      return files - Dir[*DEBIAN_EXCLUDE_GLOB]
+      files - Dir[*DEBIAN_EXCLUDE_GLOB]
     end
   end
 

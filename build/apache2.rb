@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -65,9 +65,10 @@ APACHE2_MODULE_CXXFLAGS =
   "-Iext -Iext/common #{PlatformInfo.apache2_module_cxxflags} " <<
   "#{EXTRA_CXXFLAGS}"
 
-APACHE2_MODULE_BOOST_OXT_LIBRARY = define_libboost_oxt_task("apache2",
-  APACHE2_OUTPUT_DIR + "module_libboost_oxt",
-  PlatformInfo.apache2_module_cflags)
+APACHE2_MODULE_BOOST_OXT_LIBRARY, APACHE2_MODULE_BOOST_OXT_LINKARG =
+  define_libboost_oxt_task("apache2",
+    APACHE2_OUTPUT_DIR + "module_libboost_oxt",
+    PlatformInfo.apache2_module_cflags)
 APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
   only(:base, 'ApplicationPool2/AppTypes.o',
     'Utils/MD5.o', 'Utils/modp_b64.o').
@@ -126,7 +127,7 @@ file APACHE2_MODULE => dependencies do
   linkflags =
     "#{EXTRA_PRE_CXX_LDFLAGS} " <<
     "#{APACHE2_MODULE_COMMON_LIBRARIES.join(' ')} " <<
-    "#{APACHE2_MODULE_BOOST_OXT_LIBRARY} " <<
+    "#{APACHE2_MODULE_BOOST_OXT_LINKARG} " <<
     "#{PlatformInfo.apache2_module_cxx_ldflags} " <<
     "#{PlatformInfo.portability_cxx_ldflags} " <<
     "#{EXTRA_CXX_LDFLAGS} "

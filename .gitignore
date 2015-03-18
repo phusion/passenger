@@ -20,6 +20,7 @@ autom4te.cache
 *.perspectivev3
 *.mode1v3
 *.mode2v3
+/Passenger.sublime-workspace
 xcuserdata
 /config.rb
 /buildout
