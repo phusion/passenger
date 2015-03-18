@@ -195,7 +195,7 @@ private:
 			int threadNumber = extractThreadNumberFromClientName(results.str(1));
 			P_WARN(results.str(1));
 			P_WARN(threadNumber);
-			if (threadNumber < 1 || threadNumber > requestHandlers.size()) {
+			if (threadNumber < 1 || (unsigned int) threadNumber > requestHandlers.size()) {
 				HeaderTable headers;
 				headers.insert(req->pool, "content-type", "application/json");
 				writeSimpleResponse(client, 400, &headers,
