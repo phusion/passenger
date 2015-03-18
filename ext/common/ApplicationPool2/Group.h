@@ -260,7 +260,7 @@ public:
 		Guard guard(context, process);
 		process = new (process) Process(&info, json);
 		guard.clear();
-		return ProcessPtr(process, false);
+		return boost::move(ProcessPtr(process, false));
 	}
 
 	/* Determines which process to route a get() action to. The returned process

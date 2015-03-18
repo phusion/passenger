@@ -250,7 +250,7 @@ private:
 
 		// Step 2: allocate the real buffer.
 
-		this->stringBuffer = DynamicBuffer(buffer.size());
+		this->stringBuffer = boost::move(DynamicBuffer(buffer.size()));
 		memcpy(this->stringBuffer.data, buffer.data(), buffer.size());
 
 
