@@ -62,12 +62,12 @@ TEST_CXX_OBJECTS = {
     test/cxx/ApplicationPool2/PoolTest.cpp
     ext/common/ApplicationPool2/Group.h
     ext/common/ApplicationPool2/Pool.h
-    ext/common/ApplicationPool2/Pool/AnalyticsCollection.h
-    ext/common/ApplicationPool2/Pool/GarbageCollection.h
-    ext/common/ApplicationPool2/Pool/GeneralUtils.h
-    ext/common/ApplicationPool2/Pool/ProcessUtils.h
-    ext/common/ApplicationPool2/Pool/Inspection.h
-    ext/common/ApplicationPool2/Pool/Debug.h
+    ext/common/ApplicationPool2/Pool/AnalyticsCollection.cpp
+    ext/common/ApplicationPool2/Pool/GarbageCollection.cpp
+    ext/common/ApplicationPool2/Pool/GeneralUtils.cpp
+    ext/common/ApplicationPool2/Pool/ProcessUtils.cpp
+    ext/common/ApplicationPool2/Pool/Inspection.cpp
+    ext/common/ApplicationPool2/Pool/Debug.cpp
     ext/common/ApplicationPool2/Process.h
     ext/common/ApplicationPool2/Socket.h
     ext/common/ApplicationPool2/Options.h

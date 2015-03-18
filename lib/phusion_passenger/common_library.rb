@@ -423,12 +423,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :deps     => %w(
       ApplicationPool2/Common.h
       ApplicationPool2/Pool.h
-      ApplicationPool2/Pool/AnalyticsCollection.h
-      ApplicationPool2/Pool/GarbageCollection.h
-      ApplicationPool2/Pool/GeneralUtils.h
-      ApplicationPool2/Pool/ProcessUtils.h
-      ApplicationPool2/Pool/Inspection.h
-      ApplicationPool2/Pool/Debug.h
+      ApplicationPool2/Pool/AnalyticsCollection.cpp
+      ApplicationPool2/Pool/GarbageCollection.cpp
+      ApplicationPool2/Pool/GeneralUtils.cpp
+      ApplicationPool2/Pool/ProcessUtils.cpp
+      ApplicationPool2/Pool/Inspection.cpp
+      ApplicationPool2/Pool/Debug.cpp
       ApplicationPool2/Group.h
       ApplicationPool2/Process.h
       ApplicationPool2/Socket.h

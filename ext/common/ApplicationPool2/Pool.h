@@ -152,12 +152,12 @@ public:
 
 	const VariantMap *agentsOptions;
 
-	#include <ApplicationPool2/Pool/AnalyticsCollection.h>
-	#include <ApplicationPool2/Pool/GarbageCollection.h>
-	#include <ApplicationPool2/Pool/GeneralUtils.h>
-	#include <ApplicationPool2/Pool/ProcessUtils.h>
-	#include <ApplicationPool2/Pool/Inspection.h>
-	#include <ApplicationPool2/Pool/Debug.h>
+	#include <ApplicationPool2/Pool/AnalyticsCollection.cpp>
+	#include <ApplicationPool2/Pool/GarbageCollection.cpp>
+	#include <ApplicationPool2/Pool/GeneralUtils.cpp>
+	#include <ApplicationPool2/Pool/ProcessUtils.cpp>
+	#include <ApplicationPool2/Pool/Inspection.cpp>
+	#include <ApplicationPool2/Pool/Debug.cpp>
 
 // Actually private, but marked public so that unit tests can access the fields.
 public:
