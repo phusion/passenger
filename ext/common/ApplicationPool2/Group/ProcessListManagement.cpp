@@ -1,3 +1,32 @@
+/*
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2011-2015 Phusion
+ *
+ *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+
+// This file is included inside the Group class.
+
+private:
+
 Process *
 findProcessWithStickySessionId(unsigned int id) const {
 	ProcessList::const_iterator it, end = enabledProcesses.end();
@@ -137,5 +166,279 @@ addProcessToList(const ProcessPtr &process, ProcessList &destination) {
 		callAbortLongRunningConnectionsCallback(process);
 	} else {
 		P_BUG("Unknown destination list");
+	}
+}
+
+void
+enableAllDisablingProcesses(boost::container::vector<Callback> &postLockActions) {
+	P_DEBUG("Enabling all DISABLING processes with result DR_ERROR");
+	deque<DisableWaiter>::iterator it, end = disableWaitlist.end();
+	for (it = disableWaitlist.begin(); it != end; it++) {
+		const DisableWaiter &waiter = *it;
+		const ProcessPtr process = waiter.process;
+		// A process can appear multiple times in disableWaitlist.
+		assert(process->enabled == Process::DISABLING
+			|| process->enabled == Process::ENABLED);
+		if (process->enabled == Process::DISABLING) {
+			removeProcessFromList(process, disablingProcesses);
+			addProcessToList(process, enabledProcesses);
+			P_DEBUG("Enabled process " << process->inspect());
+		}
+	}
+	clearDisableWaitlist(DR_ERROR, postLockActions);
+}
+
+void
+removeFromDisableWaitlist(const ProcessPtr &p, DisableResult result,
+	boost::container::vector<Callback> &postLockActions)
+{
+	deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
+	deque<DisableWaiter> newList;
+	for (it = disableWaitlist.begin(); it != end; it++) {
+		const DisableWaiter &waiter = *it;
+		const ProcessPtr process = waiter.process;
+		if (process == p) {
+			postLockActions.push_back(boost::bind(waiter.callback, p, result));
+		} else {
+			newList.push_back(waiter);
+		}
+	}
+	disableWaitlist = newList;
+}
+
+void
+clearDisableWaitlist(DisableResult result,
+	boost::container::vector<Callback> &postLockActions)
+{
+	// This function may be called after processes in the disableWaitlist
+	// have been disabled or enabled, so do not assume any value for
+	// waiter.process->enabled in this function.
+	postLockActions.reserve(postLockActions.size() + disableWaitlist.size());
+	while (!disableWaitlist.empty()) {
+		const DisableWaiter &waiter = disableWaitlist.front();
+		postLockActions.push_back(boost::bind(waiter.callback, waiter.process, result));
+		disableWaitlist.pop_front();
+	}
+}
+
+
+/********************************************
+ * Public methods
+ ********************************************/
+
+public:
+
+/**
+ * Attaches the given process to this Group and mark it as enabled. This
+ * function doesn't touch `getWaitlist` so be sure to fix its invariants
+ * afterwards if necessary, e.g. by calling `assignSessionsToGetWaiters()`.
+ */
+AttachResult
+attach(const ProcessPtr &process,
+	boost::container::vector<Callback> &postLockActions)
+{
+	TRACE_POINT();
+	assert(process->getGroup() == NULL || process->getGroup() == this);
+	assert(process->isAlive());
+	assert(isAlive());
+
+	if (processUpperLimitsReached()) {
+		return AR_GROUP_UPPER_LIMITS_REACHED;
+	} else if (poolAtFullCapacity()) {
+		return AR_POOL_AT_FULL_CAPACITY;
+	} else if (!isWaitingForCapacity() && anotherGroupIsWaitingForCapacity()) {
+		return AR_ANOTHER_GROUP_IS_WAITING_FOR_CAPACITY;
+	}
+
+	process->setGroup(this);
+	process->stickySessionId = generateStickySessionId();
+	P_DEBUG("Attaching process " << process->inspect());
+	addProcessToList(process, enabledProcesses);
+
+	/* Now that there are enough resources, relevant processes in
+	 * 'disableWaitlist' can be disabled.
+	 */
+	deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
+	deque<DisableWaiter> newDisableWaitlist;
+	for (it = disableWaitlist.begin(); it != end; it++) {
+		const DisableWaiter &waiter = *it;
+		const ProcessPtr process2 = waiter.process;
+		// The same process can appear multiple times in disableWaitlist.
+		assert(process2->enabled == Process::DISABLING
+			|| process2->enabled == Process::DISABLED);
+		if (process2->sessions == 0) {
+			if (process2->enabled == Process::DISABLING) {
+				P_DEBUG("Disabling DISABLING process " << process2->inspect() <<
+					"; disable command succeeded immediately");
+				removeProcessFromList(process2, disablingProcesses);
+				addProcessToList(process2, disabledProcesses);
+			} else {
+				P_DEBUG("Disabling (already disabled) DISABLING process " <<
+					process2->inspect() << "; disable command succeeded immediately");
+			}
+			postLockActions.push_back(boost::bind(waiter.callback, process2, DR_SUCCESS));
+		} else {
+			newDisableWaitlist.push_back(waiter);
+		}
+	}
+	disableWaitlist = newDisableWaitlist;
+
+	// Update GC sleep timer.
+	wakeUpGarbageCollector();
+
+	postLockActions.push_back(boost::bind(&Group::runAttachHooks, this, process));
+
+	return AR_OK;
+}
+
+/**
+ * Detaches the given process from this Group. This function doesn't touch
+ * getWaitlist so be sure to fix its invariants afterwards if necessary.
+ * `pool->detachProcessUnlocked()` does that so you should usually use
+ * that method over this one.
+ */
+void
+detach(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
+	TRACE_POINT();
+	assert(process->getGroup() == this);
+	assert(process->isAlive());
+	assert(isAlive());
+
+	if (process->enabled == Process::DETACHED) {
+		P_DEBUG("Detaching process " << process->inspect() << ", which was already being detached");
+		return;
+	}
+
+	const ProcessPtr p = process; // Keep an extra reference just in case.
+	P_DEBUG("Detaching process " << process->inspect());
+
+	if (process->enabled == Process::ENABLED || process->enabled == Process::DISABLING) {
+		assert(enabledCount > 0 || disablingCount > 0);
+		if (process->enabled == Process::ENABLED) {
+			removeProcessFromList(process, enabledProcesses);
+		} else {
+			removeProcessFromList(process, disablingProcesses);
+			removeFromDisableWaitlist(process, DR_NOOP, postLockActions);
+		}
+	} else {
+		assert(process->enabled == Process::DISABLED);
+		assert(!disabledProcesses.empty());
+		removeProcessFromList(process, disabledProcesses);
+	}
+
+	addProcessToList(process, detachedProcesses);
+	startCheckingDetachedProcesses(false);
+
+	postLockActions.push_back(boost::bind(&Group::runDetachHooks, this, process));
+}
+
+/**
+ * Detaches all processes from this Group. This function doesn't touch
+ * getWaitlist so be sure to fix its invariants afterwards if necessary.
+ */
+void
+detachAll(boost::container::vector<Callback> &postLockActions) {
+	assert(isAlive());
+	P_DEBUG("Detaching all processes in group " << name);
+
+	foreach (ProcessPtr process, enabledProcesses) {
+		addProcessToList(process, detachedProcesses);
+	}
+	foreach (ProcessPtr process, disablingProcesses) {
+		addProcessToList(process, detachedProcesses);
+	}
+	foreach (ProcessPtr process, disabledProcesses) {
+		addProcessToList(process, detachedProcesses);
+	}
+
+	enabledProcesses.clear();
+	disablingProcesses.clear();
+	disabledProcesses.clear();
+	enabledProcessBusynessLevels.clear();
+	enabledCount = 0;
+	disablingCount = 0;
+	disabledCount = 0;
+	nEnabledProcessesTotallyBusy = 0;
+	clearDisableWaitlist(DR_NOOP, postLockActions);
+	startCheckingDetachedProcesses(false);
+}
+
+/**
+ * Marks the given process as enabled. This function doesn't touch getWaitlist
+ * so be sure to fix its invariants afterwards if necessary.
+ */
+void
+enable(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
+	assert(process->getGroup() == this);
+	assert(process->isAlive());
+	assert(isAlive());
+
+	if (process->enabled == Process::DISABLING) {
+		P_DEBUG("Enabling DISABLING process " << process->inspect());
+		removeProcessFromList(process, disablingProcesses);
+		addProcessToList(process, enabledProcesses);
+		removeFromDisableWaitlist(process, DR_CANCELED, postLockActions);
+	} else if (process->enabled == Process::DISABLED) {
+		P_DEBUG("Enabling DISABLED process " << process->inspect());
+		removeProcessFromList(process, disabledProcesses);
+		addProcessToList(process, enabledProcesses);
+	} else {
+		P_DEBUG("Enabling ENABLED process " << process->inspect());
+	}
+}
+
+/**
+ * Marks the given process as disabled. Returns DR_SUCCESS, DR_DEFERRED
+ * or DR_NOOP. If the result is DR_DEFERRED, then the callback will be
+ * called later with the result of this action.
+ */
+DisableResult
+disable(const ProcessPtr &process, const DisableCallback &callback) {
+	assert(process->getGroup() == this);
+	assert(process->isAlive());
+	assert(isAlive());
+
+	if (process->enabled == Process::ENABLED) {
+		P_DEBUG("Disabling ENABLED process " << process->inspect() <<
+			"; enabledCount=" << enabledCount << ", process.sessions=" << process->sessions);
+		assert(enabledCount >= 0);
+		if (enabledCount == 1 && !allowSpawn()) {
+			P_WARN("Cannot disable sole enabled process in group " << name <<
+				" because spawning is not allowed according to the current" <<
+				" configuration options");
+			return DR_ERROR;
+		} else if (enabledCount <= 1 || process->sessions > 0) {
+			removeProcessFromList(process, enabledProcesses);
+			addProcessToList(process, disablingProcesses);
+			disableWaitlist.push_back(DisableWaiter(process, callback));
+			if (enabledCount == 0) {
+				/* All processes are going to be disabled, so in order
+				 * to avoid blocking requests we first spawn a new process
+				 * and disable this process after the other one is done
+				 * spawning. We do this irregardless of resource limits
+				 * because this is an exceptional situation.
+				 */
+				P_DEBUG("Spawning a new process to avoid the disable action from blocking requests");
+				spawn();
+			}
+			P_DEBUG("Deferring disable command completion");
+			return DR_DEFERRED;
+		} else {
+			removeProcessFromList(process, enabledProcesses);
+			addProcessToList(process, disabledProcesses);
+			P_DEBUG("Disable command succeeded immediately");
+			return DR_SUCCESS;
+		}
+	} else if (process->enabled == Process::DISABLING) {
+		assert(disablingCount > 0);
+		disableWaitlist.push_back(DisableWaiter(process, callback));
+		P_DEBUG("Disabling DISABLING process " << process->inspect() <<
+			name << "; command queued, deferring disable command completion");
+		return DR_DEFERRED;
+	} else {
+		assert(disabledCount > 0);
+		P_DEBUG("Disabling DISABLED process " << process->inspect() <<
+			name << "; disable command succeeded immediately");
+		return DR_NOOP;
 	}
 }

@@ -72,6 +72,7 @@ AGENT_OBJECTS = {
     'ext/common/ApplicationPool2/Group.h',
     'ext/common/ApplicationPool2/Group/ProcessListManagement.cpp',
     'ext/common/ApplicationPool2/Group/Utils.cpp',
+    'ext/common/ApplicationPool2/Group/Inspection.cpp',
     'ext/common/ApplicationPool2/Group/Verification.cpp',
     'ext/common/SpawningKit/Spawner.h',
     'ext/common/Constants.h',

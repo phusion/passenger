@@ -53,3 +53,30 @@ generateStickySessionId() {
 	// Never reached; shut up compiler warning.
 	return 0;
 }
+
+/**
+ * Persists options into this Group. Called at creation time and at restart time.
+ * Values will be persisted into `destination`. Or if it's NULL, into `this->options`.
+ */
+void
+resetOptions(const Options &newOptions, Options *destination = NULL) {
+	if (destination == NULL) {
+		destination = &this->options;
+	}
+	*destination = newOptions;
+	destination->persist(newOptions);
+	destination->clearPerRequestFields();
+	destination->groupSecret = StaticString(secret, SECRET_SIZE);
+	destination->groupUuid   = uuid;
+}
+
+/**
+ * Merges some of the new options from the latest get() request into this Group.
+ */
+void
+mergeOptions(const Options &other) {
+	options.maxRequests      = other.maxRequests;
+	options.minProcesses     = other.minProcesses;
+	options.statThrottleRate = other.statThrottleRate;
+	options.maxPreloaderIdleTime = other.maxPreloaderIdleTime;
+}
