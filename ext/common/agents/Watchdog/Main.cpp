@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -1055,8 +1055,8 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 static void
 initializeAgentWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
-	watchers.push_back(make_shared<HelperAgentWatcher>(wo));
-	watchers.push_back(make_shared<LoggingAgentWatcher>(wo));
+	watchers.push_back(boost::make_shared<HelperAgentWatcher>(wo));
+	watchers.push_back(boost::make_shared<LoggingAgentWatcher>(wo));
 }
 
 static void

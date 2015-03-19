@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2012 Phusion
+ *  Copyright (c) 2012-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -112,7 +112,7 @@ struct Message {
 	}
 
 	void sendReply(const string &name) {
-		sendReply(make_shared<Message>(name));
+		sendReply(boost::make_shared<Message>(name));
 	}
 };
 
@@ -205,7 +205,7 @@ public:
 	}
 
 	void send(const string &name) {
-		send(make_shared<Message>(name));
+		send(boost::make_shared<Message>(name));
 	}
 
 	const MessagePtr peek(const string &name) const {
