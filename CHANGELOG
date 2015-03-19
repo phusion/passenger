@@ -5,6 +5,7 @@ Release 5.0.5
  * Fixes a connection stall in the Apache module. Closes GH-1425.
  * Fixes a potential read-past-buffer bug in string-to-integer conversion routines. Thanks to dcb314 for spotting this. Closes GH-1441.
  * There is now an API endpoint for force disconnecting a client: `passenger-config admin-command DELETE /server/<client name>.json`. Closes GH-1246.
+ * [Enterprise] Fixes a bug in Flying Passenger's `--instance-registry-dir` command line parameter. This command line parameter didn't do anything.
 
 
 Release 5.0.4
