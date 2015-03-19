@@ -44,13 +44,13 @@ namespace tut {
 			setLogLevel(LVL_ERROR);
 
 			startLoggingServer();
-			core = make_shared<Core>(socketAddress, "test", "1234",
+			core = boost::make_shared<Core>(socketAddress, "test", "1234",
 				"localhost");
-			core2 = make_shared<Core>(socketAddress, "test", "1234",
+			core2 = boost::make_shared<Core>(socketAddress, "test", "1234",
 				"localhost");
-			core3 = make_shared<Core>(socketAddress, "test", "1234",
+			core3 = boost::make_shared<Core>(socketAddress, "test", "1234",
 				"localhost");
-			core4 = make_shared<Core>(socketAddress, "test", "1234",
+			core4 = boost::make_shared<Core>(socketAddress, "test", "1234",
 				"localhost");
 		}
 
