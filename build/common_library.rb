@@ -207,6 +207,63 @@ else
 end
 
 
+########## libuv ##########
+
+if USE_VENDORED_LIBUV
+  LIBUV_SOURCE_DIR = File.expand_path("../ext/libuv", File.dirname(__FILE__)) + "/"
+  LIBUV_CFLAGS = "-Iext/libuv"
+  LIBUV_LIBS = LIBUV_OUTPUT_DIR + ".libs/libuv.a"
+  LIBUV_TARGET = LIBUV_LIBS
+
+  task :libuv => LIBUV_TARGET
+
+  dependencies = [
+    "ext/libuv/configure",
+    "ext/libuv/Makefile.am"
+  ]
+  file LIBUV_OUTPUT_DIR + "Makefile" => dependencies do
+    cc = CC
+    cxx = CXX
+    if OPTIMIZE && LTO
+      cc = "#{cc} -flto"
+      cxx = "#{cxx} -flto"
+    end
+    # Disable all warnings. The author has a clear standpoint on that:
+    # http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
+    cflags = "#{EXTRA_CFLAGS} -w"
+    sh "mkdir -p #{LIBUV_OUTPUT_DIR}" if !File.directory?(LIBUV_OUTPUT_DIR)
+    # Prevent 'make' from regenerating autotools files
+    sh "cd #{LIBUV_SOURCE_DIR} && (touch aclocal.m4 configure Makefile.in || true)"
+    sh "cd #{LIBUV_OUTPUT_DIR} && sh #{LIBUV_SOURCE_DIR}configure " +
+      "--disable-shared --enable-static " +
+      # libuv's configure script may select a different default compiler than we
+      # do, so we force our compiler choice.
+      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}'"
+  end
+
+  libuv_sources = Dir["ext/libuv/**/{*.c,*.h}"]
+  file LIBUV_OUTPUT_DIR + ".libs/libuv.a" => [LIBUV_OUTPUT_DIR + "Makefile"] + libuv_sources do
+    sh "rm -f #{LIBUV_OUTPUT_DIR}/libuv.la"
+    sh "cd #{LIBUV_OUTPUT_DIR} && make -j2 libuv.la"
+  end
+
+  task 'libuv:clean' do
+    patterns = %w(Makefile config.h config.log config.status libtool
+      stamp-h1 src test *.o *.lo *.la *.pc .libs .deps)
+    patterns.each do |pattern|
+      sh "rm -rf #{LIBUV_OUTPUT_DIR}#{pattern}"
+    end
+  end
+
+  task :clean => 'libuv:clean'
+else
+  LIBUV_CFLAGS = string_option('LIBUV_CFLAGS', '-I/usr/include/libuv')
+  LIBUV_LIBS   = string_option('LIBUV_LIBS', '-luv')
+  LIBUV_TARGET = nil
+  task :libuv  # do nothing
+end
+
+
 ########## Shared definitions ##########
 # Shared definition files should be in source control so that they don't
 # have to be built by users. Users may not have write access to the source
