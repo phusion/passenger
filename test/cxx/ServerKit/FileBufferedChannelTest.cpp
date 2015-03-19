@@ -29,14 +29,13 @@ namespace tut {
 
 		ServerKit_FileBufferedChannelTest()
 			: bg(false, true),
-			  context(bg.safe),
+			  context(bg.safe, bg.libuv_loop),
 			  channel(&context),
 			  toConsume(CONSUME_FULLY),
 			  endConsume(false),
 			  counter(0),
 			  buffersFlushed(0)
 		{
-			initializeLibeio();
 			channel.setDataCallback(dataCallback);
 			channel.setBuffersFlushedCallback(buffersFlushedCallback);
 			channel.setHooks(this);
@@ -48,7 +47,6 @@ namespace tut {
 			bg.stop(); // Prevent any runLater callbacks from running.
 			channel.deinitialize(); // Cancel any event loop next tick callbacks.
 			setLogLevel(DEFAULT_LOG_LEVEL);
-			shutdownLibeio();
 		}
 
 		void startLoop() {

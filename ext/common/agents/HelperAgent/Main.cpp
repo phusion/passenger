@@ -519,11 +519,12 @@ initializeNonPrivilegedWorkingObjects() {
 		if (i == 0) {
 			two.bgloop = firstLoop = new BackgroundEventLoop(true, true);
 		} else {
-			two.bgloop = new BackgroundEventLoop(true, false);
+			two.bgloop = new BackgroundEventLoop(true, true);
 		}
 
 		UPDATE_TRACE_POINT();
-		two.serverKitContext = new ServerKit::Context(two.bgloop->safe);
+		two.serverKitContext = new ServerKit::Context(two.bgloop->safe,
+			two.bgloop->libuv_loop);
 		two.serverKitContext->secureModePassword = wo->password;
 		two.serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
 			options.get("data_buffer_dir");
@@ -546,26 +547,25 @@ initializeNonPrivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	ev_signal_init(&wo->sigquitWatcher, printInfo, SIGQUIT);
-	ev_signal_start(firstLoop->loop, &wo->sigquitWatcher);
+	ev_signal_start(firstLoop->libev_loop, &wo->sigquitWatcher);
 	ev_signal_init(&wo->sigintWatcher, onTerminationSignal, SIGINT);
-	ev_signal_start(firstLoop->loop, &wo->sigintWatcher);
+	ev_signal_start(firstLoop->libev_loop, &wo->sigintWatcher);
 	ev_signal_init(&wo->sigtermWatcher, onTerminationSignal, SIGTERM);
-	ev_signal_start(firstLoop->loop, &wo->sigtermWatcher);
+	ev_signal_start(firstLoop->libev_loop, &wo->sigtermWatcher);
 
 	UPDATE_TRACE_POINT();
 	if (!adminAddresses.empty()) {
 		UPDATE_TRACE_POINT();
 		AdminWorkingObjects *awo = &wo->adminWorkingObjects;
 
-		awo->bgloop = new BackgroundEventLoop(true, false);
-		awo->serverKitContext = new ServerKit::Context(awo->bgloop->safe);
+		awo->bgloop = new BackgroundEventLoop(true, true);
+		awo->serverKitContext = new ServerKit::Context(awo->bgloop->safe,
+			awo->bgloop->libuv_loop);
 		awo->serverKitContext->secureModePassword = wo->password;
-		// Configure a large threshold so that it uses libeio as little as possible.
-		// libeio runs on the RequestHandler's first thread, and if there's a
-		// problem there we don't want it to affect the admin server.
-		awo->serverKitContext->defaultFileBufferedChannelConfig.threshold = 1024 * 1024;
 		awo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
 			options.get("data_buffer_dir");
+		awo->serverKitContext->defaultFileBufferedChannelConfig.threshold =
+			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
 		awo->adminServer = new ServerAgent::AdminServer(awo->serverKitContext);

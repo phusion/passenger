@@ -1128,7 +1128,8 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 
 	UPDATE_TRACE_POINT();
 	wo->bgloop = new BackgroundEventLoop(true, true);
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
+		wo->bgloop->libuv_loop);
 	wo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
 		absolutizePath(options.get("data_buffer_dir"));
 

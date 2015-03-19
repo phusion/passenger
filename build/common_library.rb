@@ -211,7 +211,7 @@ end
 
 if USE_VENDORED_LIBUV
   LIBUV_SOURCE_DIR = File.expand_path("../ext/libuv", File.dirname(__FILE__)) + "/"
-  LIBUV_CFLAGS = "-Iext/libuv"
+  LIBUV_CFLAGS = "-Iext/libuv/include"
   LIBUV_LIBS = LIBUV_OUTPUT_DIR + ".libs/libuv.a"
   LIBUV_TARGET = LIBUV_LIBS
 
