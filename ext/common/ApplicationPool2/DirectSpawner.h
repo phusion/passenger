@@ -208,7 +208,7 @@ public:
 			NegotiationDetails details;
 			details.preparation = &preparation;
 			details.stderrCapturer =
-				make_shared<BackgroundIOCapturer>(
+				boost::make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
 					pid,
 					// The cast works around a compilation problem in Clang.

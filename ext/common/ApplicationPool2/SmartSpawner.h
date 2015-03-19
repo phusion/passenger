@@ -261,7 +261,7 @@ private:
 			details.adminSocket = adminSocket.second;
 			details.io = BufferedIO(adminSocket.second);
 			details.stderrCapturer =
-				make_shared<BackgroundIOCapturer>(
+				boost::make_shared<BackgroundIOCapturer>(
 					errorPipe.first,
 					pid,
 					// The cast works around a compilation problem in Clang.
