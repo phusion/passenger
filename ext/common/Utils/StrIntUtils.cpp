@@ -233,10 +233,10 @@ stringToUnsignedNumeric(const StaticString &str) {
 	string::size_type i = 0;
 	const char *data = str.data();
 
-	while (data[i] == ' ' && i < str.size()) {
+	while (i < str.size() && data[i] == ' ') {
 		i++;
 	}
-	while (data[i] >= '0' && data[i] <= '9' && i < str.size()) {
+	while (i < str.size() && data[i] >= '0' && data[i] <= '9') {
 		result *= 10;
 		result += data[i] - '0';
 		i++;
@@ -262,14 +262,14 @@ stringToSignedNumeric(const StaticString &str) {
 	const char *data = str.data();
 	bool minus = false;
 
-	while (data[i] == ' ' && i < str.size()) {
+	while (i < str.size() && data[i] == ' ') {
 		i++;
 	}
 	if (data[i] == '-') {
 		minus = true;
 		i++;
 	}
-	while (data[i] >= '0' && data[i] <= '9' && i < str.size()) {
+	while (i < str.size() && data[i] >= '0' && data[i] <= '9') {
 		result *= 10;
 		result += data[i] - '0';
 		i++;
