@@ -151,62 +151,6 @@ end
 LIBEV_CFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
 
 
-########## libeio ##########
-
-if USE_VENDORED_LIBEIO
-  LIBEIO_SOURCE_DIR = File.expand_path("../ext/libeio", File.dirname(__FILE__)) + "/"
-  LIBEIO_CFLAGS = "-Iext/libeio"
-  LIBEIO_LIBS = LIBEIO_OUTPUT_DIR + ".libs/libeio.a"
-  LIBEIO_TARGET = LIBEIO_LIBS
-
-  task :libeio => LIBEIO_TARGET
-
-  dependencies = [
-    "ext/libeio/configure",
-    "ext/libeio/config.h.in",
-    "ext/libeio/Makefile.am"
-  ]
-  file LIBEIO_OUTPUT_DIR + "Makefile" => dependencies do
-    cc = CC
-    cxx = CXX
-    if OPTIMIZE && LTO
-      cc = "#{cc} -flto"
-      cxx = "#{cxx} -flto"
-    end
-    # Disable all warnings. The author has a clear standpoint on that:
-    # http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
-    cflags = "#{EXTRA_CFLAGS} -w"
-    sh "mkdir -p #{LIBEIO_OUTPUT_DIR}" if !File.directory?(LIBEIO_OUTPUT_DIR)
-    sh "cd #{LIBEIO_OUTPUT_DIR} && sh #{LIBEIO_SOURCE_DIR}configure " +
-      "--disable-shared --enable-static " +
-      # libeio's configure script may select a different default compiler than we
-      # do, so we force our compiler choice.
-      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}'"
-  end
-
-  libeio_sources = Dir["ext/libeio/{*.c,*.h}"]
-  file LIBEIO_OUTPUT_DIR + ".libs/libeio.a" => [LIBEIO_OUTPUT_DIR + "Makefile"] + libeio_sources do
-    sh "rm -f #{LIBEIO_OUTPUT_DIR}/libeio.la"
-    sh "cd #{LIBEIO_OUTPUT_DIR} && make libeio.la"
-  end
-
-  task 'libeio:clean' do
-    patterns = %w(Makefile config.h config.log config.status libtool
-      stamp-h1 *.o *.lo *.la .libs .deps)
-    patterns.each do |pattern|
-      sh "rm -rf #{LIBEIO_OUTPUT_DIR}#{pattern}"
-    end
-  end
-
-  task :clean => 'libeio:clean'
-else
-  LIBEIO_CFLAGS = string_option('LIBEIO_CFLAGS', '-I/usr/include/libeio')
-  LIBEIO_LIBS   = string_option('LIBEIO_LIBS', '-leio')
-  LIBEIO_TARGET = nil
-  task :libeio  # do nothing
-end
-
-
 ########## libuv ##########
 
 if USE_VENDORED_LIBUV
