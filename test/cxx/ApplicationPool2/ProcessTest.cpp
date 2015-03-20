@@ -8,15 +8,12 @@ using namespace std;
 
 namespace tut {
 	struct ApplicationPool2_ProcessTest {
-		BackgroundEventLoop bg;
 		SocketList sockets;
 		SocketPair adminSocket;
 		Pipe errorPipe;
 		FileDescriptor server1, server2, server3;
 
 		ApplicationPool2_ProcessTest() {
-			bg.start();
-
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
 
