@@ -54,15 +54,32 @@
 	#endif
 #endif
 
-#ifdef HAVE_KQUEUE
+#ifndef HAVE_POLLSET
+	#ifdef __AIX
+		#define HAVE_POLLSET 1
+	#endif
+#endif
+
+#ifndef HAVE_EVENT_PORTS
+	#if defined(sun) || defined(__sun)
+		#define HAVE_EVENT_PORTS
+	#endif
+#endif
+
+#if defined(HAVE_KQUEUE)
 	#include <sys/types.h>
 	#include <sys/event.h>
 	#include <sys/time.h>
+#elif defined(HAVE_EPOLL)
+	#include <sys/epoll.h>
+#elif defined(HAVE_POLLSET)
+	#include <sys/poll.h>
+	#include <sys/pollset.h>
+	#include <sys/fcntl.h>
+#elif defined(HAVE_EVENT_PORTS)
+	#include <port.h>
 #endif
 
-#ifdef HAVE_EPOLL
-	#include <sys/epoll.h>
-#endif
 
 namespace Passenger {
 
@@ -164,6 +181,17 @@ pollLibuv(BackgroundEventLoop *bg) {
 			#elif defined(HAVE_EPOLL)
 				struct epoll_event ev;
 				ret = epoll_wait(fd, &ev, 1, timeout);
+			#elif defined(HAVE_POLLSET)
+				struct pollfd event;
+				ret = pollset_poll(fd, &event, 1, timeout);
+			#elif defined(HAVE_EVENT_PORTS)
+				struct timespec ts;
+				struct port_event event;
+
+				ts.tv_sec = timeout / 1000;
+				ts.tv_nsec = (timeout % 1000) * 1000000;
+
+				ret = port_get(fd, &event, (timeout == -1) ? NULL : &ts);
 			#else
 				#error "This platform is not supported. Please add corresponding I/O polling code."
 			#endif
