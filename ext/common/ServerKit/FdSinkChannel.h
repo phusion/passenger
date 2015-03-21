@@ -86,6 +86,7 @@ private:
 
 	void initialize() {
 		dataCallback = _onData;
+		watcher.active = false;
 		watcher.fd = -1;
 		watcher.data = this;
 	}
@@ -102,7 +103,7 @@ public:
 	}
 
 	~FdSinkChannel() {
-		if (ctx != NULL) {
+		if (ctx != NULL && ev_is_active(&watcher)) {
 			ev_io_stop(ctx->libev->getLoop(), &watcher);
 		}
 	}
@@ -119,7 +120,9 @@ public:
 	}
 
 	void deinitialize() {
-		ev_io_stop(ctx->libev->getLoop(), &watcher);
+		if (ev_is_active(&watcher)) {
+			ev_io_stop(ctx->libev->getLoop(), &watcher);
+		}
 		watcher.fd = -1;
 		Channel::deinitialize();
 	}
