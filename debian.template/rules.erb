@@ -1,10 +1,6 @@
 #!/usr/bin/make -f
 # export DH_VERBOSE=1
 
-<% if is_distribution?('>= precise') || is_distribution?('>= wheezy') -%>
-export USE_VENDORED_LIBEV=false
-<% end %>
-
 <% if ['1', 'true', 'on', 'yes'].include?(ENV['USE_CCACHE']) -%>
 export USE_CCACHE=1
 NGINX_CONFIGURE_OPTIONS = CC=/usr/lib/ccache/cc CXX=/usr/lib/ccache/c++

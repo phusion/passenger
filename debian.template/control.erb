@@ -15,9 +15,6 @@ Build-Depends: debhelper (>= 7.0.50~), rake,
  ruby2.0, ruby2.0-dev,
 <% end -%>
  apache2-mpm-worker | apache2-mpm, apache2-threaded-dev,
-<% if is_distribution?('>= precise') || is_distribution?('>= wheezy') -%>
- libev-dev (>= 1:4.0.0),
-<% end -%>
  libapr1-dev, libcurl4-openssl-dev
 Standards-Version: 3.9.3
 Homepage: https://www.phusionpassenger.com/

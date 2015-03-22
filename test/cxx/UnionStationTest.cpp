@@ -4,6 +4,7 @@
 #include <MessageClient.h>
 #include <agents/LoggingAgent/LoggingServer.h>
 #include <Utils/MessageIO.h>
+#include <Utils/ScopeGuard.h>
 
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -63,7 +64,7 @@ namespace tut {
 		void startLoggingServer(const boost::function<void ()> &initFunc = boost::function<void ()>()) {
 			VariantMap options;
 			options.set("analytics_dump_file", dumpFile);
-			serverFd = createUnixServer(socketFilename.c_str());
+			serverFd.assign(createUnixServer(socketFilename.c_str(), 0, true, __FILE__, __LINE__), NULL, 0);
 			server = ptr(new LoggingServer(eventLoop,
 				serverFd, accountsDatabase, options));
 			if (initFunc) {
@@ -603,7 +604,7 @@ namespace tut {
 		SystemTime::forceAll(YESTERDAY + 1000000);
 		SHOULD_NEVER_HAPPEN(250,
 			try {
-				close(connectToUnixServer(socketFilename));
+				FdGuard(connectToUnixServer(socketFilename, __FILE__, __LINE__), NULL, 0);
 				result = false;
 			} catch (const SystemException &) {
 				result = true;
@@ -616,7 +617,7 @@ namespace tut {
 		SystemTime::forceAll(YESTERDAY + 1000000 + 5000000);
 		usleep(100000); // Give server some time to run the timer.
 		try {
-			close(connectToUnixServer(socketFilename));
+			FdGuard(connectToUnixServer(socketFilename, __FILE__, __LINE__), NULL, 0);
 			fail("(4)");
 		} catch (const SystemException &) {
 			// Success
@@ -650,7 +651,7 @@ namespace tut {
 		SystemTime::forceAll(YESTERDAY + 1000000 + 5000000);
 		usleep(100000); // Give server some time to run the timer.
 		try {
-			close(connectToUnixServer(socketFilename));
+			FdGuard(connectToUnixServer(socketFilename, __FILE__, __LINE__), NULL, 0);
 			fail("(2)");
 		} catch (const SystemException &) {
 			// Success

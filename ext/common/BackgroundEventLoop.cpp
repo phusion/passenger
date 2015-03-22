@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -29,6 +29,7 @@
 #include <ev++.h>
 #include <eio.h>
 #include <BackgroundEventLoop.h>
+#include <Logging.h>
 #include <Exceptions.h>
 #include <SafeLibev.h>
 
@@ -107,10 +108,14 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable, bool useLibeio) {
 		throw RuntimeException("Cannot create an event loop");
 	}
 
+	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_backend_fd(loop), "libev event loop: backend FD");
+
 	async = (ev_async *) malloc(sizeof(ev_async));
 	async->data = this;
 	ev_async_init(async, signalBackgroundEventLoopExit);
 	ev_async_start(loop, async);
+	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_loop_get_pipe(loop, 0), "libev event loop: async pipe 0");
+	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_loop_get_pipe(loop, 1), "libev event loop: async pipe 1");
 	safe = boost::make_shared<SafeLibev>(loop);
 	priv = new BackgroundEventLoopPrivate();
 	priv->thr = NULL;

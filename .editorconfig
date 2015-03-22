@@ -76,6 +76,16 @@ indent_size = 4
 indent_style = space
 indent_size = 4
 
+[ext/libev/*.c]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+[ext/libev/*.h]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
 [ext/libeio/*.c]
 indent_style = space
 indent_size = 2

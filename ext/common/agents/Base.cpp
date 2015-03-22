@@ -1518,7 +1518,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 				argc - argStartIndex);
 		}
 
-		initializeAgentOptions(options, preinit);
+		initializeAgentOptions(processName, options, preinit);
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		exit(1);
@@ -1546,7 +1546,9 @@ initializeAgent(int argc, char **argv[], const char *processName,
 }
 
 void
-initializeAgentOptions(VariantMap &options, PreinitializationFunc preinit) {
+initializeAgentOptions(const char *processName, VariantMap &options,
+	PreinitializationFunc preinit)
+{
 	ResourceLocator locator;
 	string ruby;
 
@@ -1581,8 +1583,39 @@ initializeAgentOptions(VariantMap &options, PreinitializationFunc preinit) {
 	}
 	options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
 	setLogLevel(options.getInt("log_level"));
-	if (options.has("debug_log_file")) {
-		setLogFile(options.get("debug_log_file").c_str());
+	if (options.has("log_file")) {
+		setLogFile(options.get("log_file"));
+	} else if (options.has("debug_log_file")) {
+		setLogFile(options.get("debug_log_file"));
+	}
+	if (options.has("file_descriptor_log_file")) {
+		setFileDescriptorLogFile(options.get("file_descriptor_log_file").c_str());
+
+		// This information helps dev/parse_file_descriptor_log.
+		FastStringStream<> stream;
+		_prepareLogEntry(stream, __FILE__, __LINE__);
+		stream << "Starting agent: " << processName << "\n";
+		_writeFileDescriptorLogEntry(stream.data(), stream.size());
+
+		P_LOG_FILE_DESCRIPTOR_OPEN4(getFileDescriptorLogFileFd(), __FILE__, __LINE__,
+			"file descriptor log file " << options.get("file_descriptor_log_file"));
+	} else {
+		// This information helps dev/parse_file_descriptor_log.
+		P_DEBUG("Starting agent: " << processName);
+	}
+
+	if (hasEnvOption("PASSENGER_USE_FEEDBACK_FD")) {
+		P_LOG_FILE_DESCRIPTOR_OPEN2(FEEDBACK_FD, "feedback FD");
+	}
+	if (emergencyPipe1[0] != -1) {
+		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe1[0], __FILE__, __LINE__,
+			"Emergency pipe 1-0");
+		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe1[1], __FILE__, __LINE__,
+			"Emergency pipe 1-1");
+		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe2[0], __FILE__, __LINE__,
+			"Emergency pipe 2-0");
+		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe2[1], __FILE__, __LINE__,
+			"Emergency pipe 2-1");
 	}
 }
 

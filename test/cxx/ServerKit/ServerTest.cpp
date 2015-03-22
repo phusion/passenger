@@ -57,11 +57,11 @@ namespace tut {
 		}
 
 		FileDescriptor connectToServer1() {
-			return FileDescriptor(connectToUnixServer("tmp.server1"));
+			return FileDescriptor(connectToUnixServer("tmp.server1", __FILE__, __LINE__), NULL, 0);
 		}
 
 		FileDescriptor connectToServer2() {
-			return FileDescriptor(connectToUnixServer("tmp.server2"));
+			return FileDescriptor(connectToUnixServer("tmp.server2", __FILE__, __LINE__), NULL, 0);
 		}
 
 		unsigned int getActiveClientCount() {
@@ -144,7 +144,7 @@ namespace tut {
 		set_test_name("Accepting a new client works");
 
 		startServer();
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -162,7 +162,7 @@ namespace tut {
 		ensure_equals(getDisconnectedClientCount(), 0u);
 		ensure_equals(getFreeClientCount(), 1u);
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -175,7 +175,7 @@ namespace tut {
 			"the object is allocated");
 
 		startServer();
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -190,7 +190,7 @@ namespace tut {
 		server->clientFreelistLimit = 10;
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -209,7 +209,7 @@ namespace tut {
 		server->clientFreelistLimit = 0;
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -230,7 +230,7 @@ namespace tut {
 		server->clientFreelistLimit = 10;
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -260,7 +260,7 @@ namespace tut {
 		server->clientFreelistLimit = 0;
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -329,7 +329,7 @@ namespace tut {
 		USE_CUSTOM_SERVER_CLASS(Test25Server);
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		writeExact(fd, "hello", 5);
 
 		EVENTUALLY(5,
@@ -364,7 +364,7 @@ namespace tut {
 		USE_CUSTOM_SERVER_CLASS(Test26Server);
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		writeExact(fd, "hello", 5);
 		syscalls::shutdown(fd, SHUT_WR);
 		ensure_equals(readAll(fd), "hello");
@@ -375,7 +375,7 @@ namespace tut {
 
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);
@@ -393,7 +393,7 @@ namespace tut {
 
 		startServer();
 
-		FileDescriptor fd = connectToServer1();
+		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
 			result = getActiveClientCount() == 1u;
 		);

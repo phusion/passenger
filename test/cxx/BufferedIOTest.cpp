@@ -19,7 +19,7 @@ namespace tut {
 		BufferedIO::AcceptFunction a_twoBytesRead;
 
 		BufferedIOTest() {
-			Pipe p = createPipe();
+			Pipe p = createPipe(__FILE__, __LINE__);
 			reader = p.first;
 			writer = p.second;
 			io = BufferedIO(reader);

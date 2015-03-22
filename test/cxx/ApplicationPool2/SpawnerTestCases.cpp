@@ -23,7 +23,7 @@
 	#define RUN_USER_SWITCHING_TEST() \
 		object = spawner->spawn(options); \
 		object.process->requiresShutdown = false; \
-		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY))); \
+		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY), __FILE__, __LINE__)); \
 		uid_t uid = (uid_t) atol(io.readLine().c_str()); \
 		gid_t gid = (gid_t) atol(io.readLine().c_str()); \
 		string groups = strip(io.readLine()); \

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -578,7 +578,8 @@ public:
 			FileDescriptor fd;
 
 			UPDATE_TRACE_POINT();
-			fd = syscalls::accept(serverFd, (struct sockaddr *) &addr, &len);
+			fd.assign(syscalls::accept(serverFd, (struct sockaddr *) &addr, &len),
+				__FILE__, __LINE__);
 			if (fd == -1) {
 				throw SystemException("Unable to accept a new client", errno);
 			}

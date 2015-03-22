@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <boost/thread.hpp>
 #include <boost/atomic.hpp>
 #include <Logging.h>
 #include <Constants.h>
@@ -40,9 +41,15 @@ namespace Passenger {
 volatile sig_atomic_t _logLevel = DEFAULT_LOG_LEVEL;
 AssertionFailureInfo lastAssertionFailure;
 static bool printAppOutputAsDebuggingMessages = false;
-static char *logFile = NULL;
+
+static boost::mutex logFileMutex;
+static string logFile;
+
+static int fileDescriptorLog = -1;
+static string fileDescriptorLogFile;
 
 #define TRUNCATE_LOGPATHS_TO_MAXCHARS 3 // set to 0 to disable truncation
+
 
 void
 setLogLevel(int value) {
@@ -50,35 +57,61 @@ setLogLevel(int value) {
 	boost::atomic_signal_fence(boost::memory_order_seq_cst);
 }
 
-bool
-setLogFile(const char *path) {
-	int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
-	if (fd != -1) {
-		char *newLogFile = strdup(path);
-		if (newLogFile == NULL) {
-			P_CRITICAL("Cannot allocate memory");
-			abort();
-		}
+string getLogFile() {
+	boost::lock_guard<boost::mutex> l(logFileMutex);
+	return logFile;
+}
 
+bool
+setLogFile(const string &path, int *errcode) {
+	int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd != -1) {
+		boost::lock_guard<boost::mutex> l(logFileMutex);
 		dup2(fd, STDOUT_FILENO);
 		dup2(fd, STDERR_FILENO);
 		close(fd);
-
-		if (logFile != NULL) {
-			free(logFile);
-		}
-		logFile = newLogFile;
+		logFile = path;
 		return true;
 	} else {
+		if (errcode != NULL) {
+			*errcode = errno;
+		}
 		return false;
 	}
 }
 
-string getLogFile() {
-	if (logFile == NULL) {
-		return string();
+bool
+hasFileDescriptorLogFile() {
+	return fileDescriptorLog != -1;
+}
+
+string
+getFileDescriptorLogFile() {
+	return fileDescriptorLogFile;
+}
+
+int
+getFileDescriptorLogFileFd() {
+	return fileDescriptorLog;
+}
+
+bool
+setFileDescriptorLogFile(const string &path, int *errcode) {
+	int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd != -1) {
+		if (fileDescriptorLog == -1) {
+			fileDescriptorLog = fd;
+		} else {
+			dup2(fd, fileDescriptorLog);
+			close(fd);
+		}
+		fileDescriptorLogFile = path;
+		return true;
 	} else {
-		return string(logFile);
+		if (errcode != NULL) {
+			*errcode = errno;
+		}
+		return false;
 	}
 }
 
@@ -118,8 +151,8 @@ _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int lin
 	sstream << ":" << line << " ]: ";
 }
 
-void
-_writeLogEntry(const char *str, unsigned int size) {
+static void
+writeExactWithoutOXT(int fd, const char *str, unsigned int size) {
 	/* We do not use writeExact() here because writeExact()
 	 * uses oxt::syscalls::write(), which is an interruption point and
 	 * which is slightly more expensive than a plain write().
@@ -133,7 +166,7 @@ _writeLogEntry(const char *str, unsigned int size) {
 	unsigned int written = 0;
 	while (written < size) {
 		do {
-			ret = write(STDERR_FILENO, str + written, size - written);
+			ret = write(fd, str + written, size - written);
 		} while (ret == -1 && errno == EINTR);
 		if (ret == -1) {
 			/* The most likely reason why this fails is when the user has setup
@@ -148,6 +181,16 @@ _writeLogEntry(const char *str, unsigned int size) {
 			written += ret;
 		}
 	}
+}
+
+void
+_writeLogEntry(const char *str, unsigned int size) {
+	writeExactWithoutOXT(STDERR_FILENO, str, size);
+}
+
+void
+_writeFileDescriptorLogEntry(const char *str, unsigned int size) {
+	writeExactWithoutOXT(fileDescriptorLog, str, size);
 }
 
 const char *

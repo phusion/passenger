@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -496,7 +496,7 @@ private:
 						fixupSocketAddress(*details.options, args[1]));
 					StaticString protocol = psg_pstrdup(result.pool, args[2]);
 
-					sockets.add(name, address, protocol, atoi(args[3]));
+					sockets.add(details.pid, name, address, protocol, atoi(args[3]));
 				} else {
 					throwAppSpawnException("An error occurred while starting the "
 						"web application. It reported a wrongly formatted 'socket'"

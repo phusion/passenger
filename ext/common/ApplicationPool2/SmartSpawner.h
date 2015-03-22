@@ -212,8 +212,8 @@ private:
 		shared_array<const char *> args;
 		preparation = prepareSpawn(options);
 		vector<string> command = createRealPreloaderCommand(options, args);
-		SocketPair adminSocket = createUnixSocketPair();
-		Pipe errorPipe = createPipe();
+		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
+		Pipe errorPipe = createPipe(__FILE__, __LINE__);
 		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 
@@ -251,6 +251,17 @@ private:
 			throw SystemException("Cannot fork a new process", e);
 
 		} else {
+			UPDATE_TRACE_POINT();
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.first,
+				"Preloader " << pid << " (" << options.appRoot << ") adminSocket[0]");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.second,
+				"Preloader " << pid << " (" << options.appRoot << ") adminSocket[1]");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.first,
+				"Preloader " << pid << " (" << options.appRoot << ") errorPipe[0]");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.second,
+				"Preloader " << pid << " (" << options.appRoot << ") errorPipe[1]");
+
+			UPDATE_TRACE_POINT();
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			P_DEBUG("Preloader process forked for appRoot=" << options.appRoot << ": PID " << pid);
 			adminSocket.first.close();
@@ -610,7 +621,7 @@ private:
 		TRACE_POINT();
 		FileDescriptor fd;
 		try {
-			fd = connectToServer(socketAddress);
+			fd.assign(connectToServer(socketAddress, __FILE__, __LINE__), NULL, 0);
 		} catch (const SystemException &e) {
 			BackgroundIOCapturerPtr stderrCapturer;
 			throwPreloaderSpawnException("An error occurred while starting "
@@ -621,6 +632,8 @@ private:
 				options,
 				DebugDirPtr());
 		}
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "Preloader " << pid
+			<< " (" << options.appRoot << ") connection");
 
 		UPDATE_TRACE_POINT();
 		BufferedIO io(fd);
@@ -671,6 +684,8 @@ private:
 			}
 
 			SpawnResult result;
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "App " << spawnedPid
+				<< " (" << options.appRoot << ") adminSocket[1]");
 			result.pid = spawnedPid;
 			result.adminSocket = fd;
 			result.io = io;

@@ -344,6 +344,7 @@ private:
 			P_ASSERT_EQ(readRequest, 0);
 			P_ASSERT_EQ(writerRequest, 0);
 			if (fd != -1) {
+				P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
 				eio_close(fd, 0, NULL, NULL);
 			}
 		}
@@ -951,6 +952,7 @@ private:
 
 		if (fd != -1) {
 			FBC_DEBUG("Writer: file created. Deleting file in the background");
+			P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, "FileBufferedChannel buffer file");
 			eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
 			inFileMode->fd = fd;
 			moveNextBufferToFile();

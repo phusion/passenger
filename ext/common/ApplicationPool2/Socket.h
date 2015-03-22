@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -64,6 +64,7 @@ struct Connection {
 			fd = -1;
 			persistent = false;
 			safelyClose(fd2);
+			P_LOG_FILE_DESCRIPTOR_CLOSE(fd2);
 		}
 	}
 };
@@ -85,10 +86,11 @@ private:
 	Connection connect() const {
 		Connection connection;
 		P_TRACE(3, "Connecting to " << address);
-		connection.fd = connectToServer(address);
+		connection.fd = connectToServer(address, __FILE__, __LINE__);
 		connection.fail = true;
 		connection.persistent = false;
 		connection.blocking = true;
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(connection.fd, "App " << pid << " connection");
 		return connection;
 	}
 
@@ -97,6 +99,7 @@ public:
 	StaticString name;
 	StaticString address;
 	StaticString protocol;
+	pid_t pid;
 	int concurrency;
 
 	// Private. In public section as alignment optimization.
@@ -106,13 +109,16 @@ public:
 	int sessions;
 
 	Socket()
-		: concurrency(0)
+		: pid(-1),
+		  concurrency(0)
 		{ }
 
-	Socket(const StaticString &_name, const StaticString &_address, const StaticString &_protocol, int _concurrency)
+	Socket(pid_t _pid, const StaticString &_name, const StaticString &_address,
+		const StaticString &_protocol, int _concurrency)
 		: name(_name),
 		  address(_address),
 		  protocol(_protocol),
+		  pid(_pid),
 		  concurrency(_concurrency),
 		  totalActiveConnections(0),
 		  sessions(0)
@@ -123,6 +129,7 @@ public:
 		  name(other.name),
 		  address(other.address),
 		  protocol(other.protocol),
+		  pid(other.pid),
 		  concurrency(other.concurrency),
 		  totalActiveConnections(other.totalActiveConnections),
 		  sessions(other.sessions)
@@ -134,6 +141,7 @@ public:
 		name = other.name;
 		address = other.address;
 		protocol = other.protocol;
+		pid = other.pid;
 		concurrency = other.concurrency;
 		sessions = other.sessions;
 		return *this;
@@ -226,8 +234,10 @@ public:
 
 class SocketList: public SmallVector<Socket, 1> {
 public:
-	void add(const StaticString &name, const StaticString &address, const StaticString &protocol, int concurrency) {
-		push_back(Socket(name, address, protocol, concurrency));
+	void add(pid_t pid, const StaticString &name, const StaticString &address,
+		const StaticString &protocol, int concurrency)
+	{
+		push_back(Socket(pid, name, address, protocol, concurrency));
 	}
 
 	const Socket *findSocketWithName(const StaticString &name) const {

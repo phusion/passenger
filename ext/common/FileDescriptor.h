@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <cerrno>
 
+#include <Logging.h>
 #include <Exceptions.h>
 
 namespace Passenger {
@@ -79,6 +80,7 @@ private:
 			if (fd >= 0 && autoClose) {
 				this_thread::disable_syscall_interruption dsi;
 				syscalls::close(fd);
+				P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
 			}
 		}
 
@@ -88,6 +90,7 @@ private:
 				int theFd = fd;
 				fd = -1;
 				safelyClose(theFd, !checkErrors);
+				P_LOG_FILE_DESCRIPTOR_CLOSE(theFd);
 			}
 		}
 
@@ -98,6 +101,15 @@ private:
 
 	/** Shared pointer for reference counting on this file descriptor */
 	boost::shared_ptr<SharedData> data;
+
+	/**
+	 * Calling FileDescriptor(otherFileDescriptorObject, __FILE__, __LINE__)
+	 * is always a mistake, so we declare the corresponding constructor as
+	 * private in order to enforce a compiler error.
+	 */
+	FileDescriptor(const FileDescriptor &other, const char *file, unsigned int line, bool autoClose = true) {
+		throw "never reached";
+	}
 
 public:
 	/**
@@ -113,7 +125,7 @@ public:
 	 *
 	 * @post *this == fd
 	 */
-	explicit FileDescriptor(int fd, bool autoClose = true) {
+	explicit FileDescriptor(int fd, const char *file, unsigned int line, bool autoClose = true) {
 		if (fd >= 0) {
 			/* Make sure that the 'new' operator doesn't overwrite
 			 * errno so that we can write code like this:
@@ -126,6 +138,7 @@ public:
 			int e = errno;
 			data = boost::make_shared<SharedData>(fd, autoClose);
 			errno = e;
+			P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line);
 		}
 	}
 
@@ -182,12 +195,12 @@ public:
 		}
 	}
 
-	FileDescriptor &operator=(int fd) {
+	void assign(int fd, const char *file, unsigned int line) {
 		/* Make sure that the 'new' and 'delete' operators don't
 		 * overwrite errno so that we can write code like this:
 		 *
 		 *    FileDescriptor fd;
-		 *    fd = open(...);
+		 *    fd.assign(open(...));
 		 *    if (fd == -1) {
 		 *       print_error(errno);
 		 *    }
@@ -195,11 +208,13 @@ public:
 		int e = errno;
 		if (fd >= 0) {
 			data = boost::make_shared<SharedData>(fd, true);
+			if (file != NULL) {
+				P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line);
+			}
 		} else {
 			data.reset();
 		}
 		errno = e;
-		return *this;
 	}
 
 	FileDescriptor &operator=(const FileDescriptor &other) {
@@ -260,7 +275,7 @@ private:
 	int writer;
 
 public:
-	EventFd() {
+	EventFd(const char *file, unsigned int line, const char *purpose) {
 		int fds[2];
 
 		if (syscalls::pipe(fds) == -1) {
@@ -269,12 +284,16 @@ public:
 		}
 		reader = fds[0];
 		writer = fds[1];
+		P_LOG_FILE_DESCRIPTOR_OPEN4(fds[0], file, line, purpose);
+		P_LOG_FILE_DESCRIPTOR_OPEN4(fds[1], file, line, purpose);
 	}
 
 	~EventFd() {
 		this_thread::disable_syscall_interruption dsi;
 		syscalls::close(reader);
 		syscalls::close(writer);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(reader);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(writer);
 	}
 
 	void notify() {

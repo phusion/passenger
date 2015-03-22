@@ -462,6 +462,7 @@ private:
 
 			HeaderTable headers;
 			string logFile = getLogFile();
+			string fileDescriptorLogFile = getFileDescriptorLogFile();
 
 			headers.insert(req->pool, "content-type", "application/json");
 			Json::Value doc;
@@ -470,6 +471,9 @@ private:
 			doc["log_level"] = getLogLevel();
 			if (!logFile.empty()) {
 				doc["log_file"] = logFile;
+			}
+			if (!fileDescriptorLogFile.empty()) {
+				doc["file_descriptor_log_file"] = fileDescriptorLogFile;
 			}
 
 			writeSimpleResponse(client, 200, &headers,
@@ -504,8 +508,8 @@ private:
 			setLogLevel(json["log_level"].asInt());
 		}
 		if (json.isMember("log_file")) {
-			if (!setLogFile(json["log_file"].asCString())) {
-				int e = errno;
+			int e;
+			if (!setLogFile(json["log_file"].asString(), &e)) {
 				unsigned int bufsize = 1024;
 				char *message = (char *) psg_pnalloc(req->pool, bufsize);
 				snprintf(message, bufsize, "{ \"status\": \"error\", "
@@ -543,8 +547,8 @@ private:
 					"\"code\": \"NO_LOG_FILE\", "
 					"\"message\": \"" PROGRAM_NAME " was not configured with a log file.\" }\n");
 			} else {
-				if (!setLogFile(logFile.c_str())) {
-					int e = errno;
+				int e;
+				if (!setLogFile(logFile, &e)) {
 					unsigned int bufsize = 1024;
 					char *message = (char *) psg_pnalloc(req->pool, bufsize);
 					snprintf(message, bufsize, "{ \"status\": \"error\", "

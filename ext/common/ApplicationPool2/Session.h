@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -150,7 +150,7 @@ public:
 		Connection connection = socket->checkoutConnection();
 		connection.fail = true;
 		if (connection.blocking && !blocking) {
-			FdGuard g2(connection.fd);
+			FdGuard g2(connection.fd, NULL, 0);
 			setNonBlocking(connection.fd);
 			g2.clear();
 			connection.blocking = false;

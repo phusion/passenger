@@ -273,7 +273,7 @@ namespace tut {
 
 		FileDescriptor &connectToServer() {
 			startLoop();
-			fd = FileDescriptor(connectToUnixServer("tmp.server"));
+			fd = FileDescriptor(connectToUnixServer("tmp.server", __FILE__, __LINE__), NULL, 0);
 			io = BufferedIO(fd);
 			return fd;
 		}

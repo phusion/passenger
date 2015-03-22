@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -326,7 +326,7 @@ public:
 			.setInt ("log_level",       getLogLevel());
 		extraParams.addTo(params);
 
-		fds = createUnixSocketPair();
+		fds = createUnixSocketPair(__FILE__, __LINE__);
 		pid = syscalls::fork();
 		if (pid == 0) {
 			// Child
@@ -388,6 +388,7 @@ public:
 
 			ScopeGuard guard(boost::bind(&AgentsStarter::killProcessGroupAndWait, &pid, 0));
 			fds[1].close();
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(feedbackFd, "AgentsStarter: feedback FD");
 
 
 			/****** Send arguments to watchdog through the feedback channel ******/

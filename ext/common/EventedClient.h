@@ -689,7 +689,7 @@ public:
 			state = EC_DISCONNECTED;
 			watchReadEvents(false);
 			watchWriteEvents(false);
-			fd = -1;
+			fd.assign(-1, __FILE__, __LINE__);
 			emitEvent(onDetach);
 			return oldFd;
 		}

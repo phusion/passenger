@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -56,8 +56,6 @@ using namespace boost;
 using namespace oxt;
 
 
-/********** Debug logging facilities **********/
-
 struct AssertionFailureInfo {
 	const char *filename;
 	const char *function; // May be NULL.
@@ -69,16 +67,76 @@ extern volatile sig_atomic_t _logLevel;
 // If assert() or similar fails, we attempt to store its information here.
 extern AssertionFailureInfo lastAssertionFailure;
 
+/**
+ * Returns the current log level. This method is thread-safe.
+ */
 inline OXT_FORCE_INLINE int
 getLogLevel() {
 	return (int) _logLevel;
 }
 
+/**
+ * Sets the log level. This method is thread-safe.
+ */
 void setLogLevel(int value);
-bool setLogFile(const char *path); // Sets errno on error
+
+/**
+ * Returns the general log file that we're using, or the empty string
+ * if we're not using a log file.
+ *
+ * This method is NOT thread-safe.
+ */
 string getLogFile();
+
+/**
+ * Sets the general log file. This method is thread-safe.
+ * Returns whether the new log file can be opened. If not,
+ * errcode (if non-NULL) is set to the relevant filesystem
+ * error code.
+ */
+bool setLogFile(const string &path, int *errcode = NULL);
+
+/**
+ * Returns whether we're using a separate log file for logging file
+ * descriptor opening and closing.
+ *
+ * This method is NOT thread-safe.
+ */
+bool hasFileDescriptorLogFile();
+
+/**
+ * Returns the file that we're using for logging file descriptor
+ * opening and closing, or the empty string if we're not using a
+ * separate log file.
+ *
+ * This method is NOT thread-safe.
+ */
+string getFileDescriptorLogFile();
+
+/**
+ * Returns the file descriptor of the log file that we're using for
+ * logging file descriptor opening and closing, or -1 if we're not using a
+ * separate log file.
+ *
+ * This method is NOT thread-safe.
+ */
+int getFileDescriptorLogFileFd();
+
+/**
+ * Sets the log file to use specifically for logging file descriptor
+ * opening and closing.
+ *
+ * This method is NOT thread-safe.
+ *
+ * Returns whether the new log file can be opened. If not,
+ * errcode (if non-NULL) is set to the relevant filesystem
+ * error code.
+ */
+bool setFileDescriptorLogFile(const string &path, int *errcode = NULL);
+
 void _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int line);
 void _writeLogEntry(const char *str, unsigned int size);
+void _writeFileDescriptorLogEntry(const char *str, unsigned int size);
 const char *_strdupFastStringStream(const FastStringStream<> &stream);
 
 
@@ -165,6 +223,69 @@ enum PassengerLogLevel {
 	#define P_TRACE(level, expr) do { /* nothing */ } while (false)
 	#define P_TRACE_WITH_POS(level, file, line, expr) do { /* nothing */ } while (false)
 #endif
+
+
+/**
+ * Log the fact that a file descriptor has been opened.
+ */
+#define P_LOG_FILE_DESCRIPTOR_OPEN(fd) \
+	P_LOG_FILE_DESCRIPTOR_OPEN3(fd, __FILE__, __LINE__)
+#define P_LOG_FILE_DESCRIPTOR_OPEN2(fd, expr) \
+	P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, expr)
+#define P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line) \
+	do { \
+		if (Passenger::hasFileDescriptorLogFile() || Passenger::getLogLevel() >= Passenger::LVL_DEBUG) { \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, file, line); \
+			_ostream << "File descriptor opened: " << fd << "\n"; \
+			if (hasFileDescriptorLogFile()) { \
+				Passenger::_writeFileDescriptorLogEntry(_ostream.data(), _ostream.size()); \
+			} else { \
+				Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
+			} \
+		} \
+	} while (false)
+#define P_LOG_FILE_DESCRIPTOR_OPEN4(fd, file, line, expr) \
+	do { \
+		P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line); \
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, expr); \
+	} while (false)
+
+/**
+ * Log the purpose of a file descriptor that was recently logged with
+ * P_LOG_FILE_DESCRIPTOR_OPEN(). You should include information that
+ * allows a reader to find out what a file descriptor is for.
+ */
+#define P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, expr) \
+	do { \
+		if (Passenger::hasFileDescriptorLogFile() || Passenger::getLogLevel() >= Passenger::LVL_DEBUG) { \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, __FILE__, __LINE__); \
+			_ostream << "File descriptor purpose: " << fd << ": " << expr << "\n"; \
+			if (hasFileDescriptorLogFile()) { \
+				Passenger::_writeFileDescriptorLogEntry(_ostream.data(), _ostream.size()); \
+			} else { \
+				Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
+			} \
+		} \
+	} while (false)
+
+/**
+ * Log the fact that a file descriptor has been closed.
+ */
+#define P_LOG_FILE_DESCRIPTOR_CLOSE(fd) \
+	do { \
+		if (Passenger::hasFileDescriptorLogFile() || Passenger::getLogLevel() >= Passenger::LVL_DEBUG) { \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, __FILE__, __LINE__); \
+			_ostream << "File descriptor closed: " << fd << "\n"; \
+			if (hasFileDescriptorLogFile()) { \
+				Passenger::_writeFileDescriptorLogEntry(_ostream.data(), _ostream.size()); \
+			} else { \
+				Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
+			} \
+		} \
+	} while (false)
 
 /**
  * Print a message that was received from an application's stdout/stderr.
