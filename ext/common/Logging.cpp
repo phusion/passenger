@@ -84,18 +84,20 @@ string getLogFile() {
 
 void
 _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int line) {
-	time_t the_time;
 	struct tm the_tm;
-	char datetime_buf[60];
+	char datetime_buf[32];
+	int datetime_size;
 	struct timeval tv;
 
-	the_time = time(NULL);
-	localtime_r(&the_time, &the_tm);
-	strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm);
 	gettimeofday(&tv, NULL);
+	localtime_r(&tv.tv_sec, &the_tm);
+	datetime_size = snprintf(datetime_buf, sizeof(datetime_buf),
+		"%d-%02d-%02d %02d:%02d:%02d.%04u",
+		the_tm.tm_year + 1900, the_tm.tm_mon + 1, the_tm.tm_mday,
+		the_tm.tm_hour, the_tm.tm_min, the_tm.tm_sec,
+		tv.tv_usec / 100);
 	sstream <<
-		"[ " << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
-			(unsigned long) (tv.tv_usec / 100) <<
+		"[ " << StaticString(datetime_buf, datetime_size) <<
 		" " << std::dec << getpid() << "/" <<
 			std::hex << pthread_self() << std::dec <<
 		" ";
