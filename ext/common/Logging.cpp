@@ -100,9 +100,9 @@ _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int lin
 			std::hex << pthread_self() << std::dec <<
 		" ";
 
-	if (startsWith(file, "ext/")) { // special reduncancy filter because most code resides in these paths
+	if (startsWith(file, P_STATIC_STRING("ext/"))) { // special reduncancy filter because most code resides in these paths
 		file += sizeof("ext/") - 1;
-		if (startsWith(file, "common/")) {
+		if (startsWith(file, P_STATIC_STRING("common/"))) {
 			file += sizeof("common/") - 1;
 		}
 	}
