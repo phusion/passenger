@@ -108,7 +108,7 @@ _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int lin
 	}
 
 	if (TRUNCATE_LOGPATHS_TO_MAXCHARS > 0) {
-		truncateBeforeTokens(file, "/\\", TRUNCATE_LOGPATHS_TO_MAXCHARS, sstream);
+		truncateBeforeTokens(file, P_STATIC_STRING("/\\"), TRUNCATE_LOGPATHS_TO_MAXCHARS, sstream);
 	} else {
 		sstream << file;
 	}

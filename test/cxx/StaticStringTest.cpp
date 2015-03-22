@@ -7,7 +7,7 @@ using namespace std;
 namespace tut {
 	struct StaticStringTest {
 	};
-	
+
 	DEFINE_TEST_GROUP(StaticStringTest);
 
 	TEST_METHOD(1) {
@@ -17,20 +17,20 @@ namespace tut {
 		ensure(!(StaticString("foo") == "bar"));
 		ensure(!(StaticString("barr") == "bar"));
 		ensure(!(StaticString("bar") == "barr"));
-		
+
 		ensure(StaticString("") == StaticString(""));
 		ensure(StaticString("foo") == StaticString("foo"));
 		ensure(!(StaticString("foo") == StaticString("bar")));
 		ensure(!(StaticString("barr") == StaticString("bar")));
 		ensure(!(StaticString("bar") == StaticString("barr")));
-		
+
 		ensure(StaticString("") == string(""));
 		ensure(StaticString("foo") == string("foo"));
 		ensure(!(StaticString("foo") == string("bar")));
 		ensure(!(StaticString("barr") == string("bar")));
 		ensure(!(StaticString("bar") == string("barr")));
 	}
-	
+
 	TEST_METHOD(2) {
 		// Test != operator
 		ensure(!(StaticString("") != ""));
@@ -38,20 +38,20 @@ namespace tut {
 		ensure(StaticString("foo") != "bar");
 		ensure(StaticString("barr") != "bar");
 		ensure(StaticString("bar") != "barr");
-		
+
 		ensure(!(StaticString("") != StaticString("")));
 		ensure(!(StaticString("foo") != StaticString("foo")));
 		ensure(StaticString("foo") != StaticString("bar"));
 		ensure(StaticString("barr") != StaticString("bar"));
 		ensure(StaticString("bar") != StaticString("barr"));
-		
+
 		ensure(!(StaticString("") != string("")));
 		ensure(!(StaticString("foo") != string("foo")));
 		ensure(StaticString("foo") != string("bar"));
 		ensure(StaticString("barr") != string("bar"));
 		ensure(StaticString("bar") != string("barr"));
 	}
-	
+
 	TEST_METHOD(3) {
 		// Test < operator.
 		ensure_equals("Assertion 1",
@@ -83,7 +83,7 @@ namespace tut {
 			string("hello world") < string("hello")
 		);
 	}
-	
+
 	TEST_METHOD(4) {
 		// Test find(char)
 		ensure_equals("Assertion 1",
@@ -102,7 +102,7 @@ namespace tut {
 			StaticString("hello world").find('o'),
 			(string::size_type) 4
 		);
-		
+
 		ensure_equals("Assertion 5",
 			StaticString("hello world").find('h', 1),
 			string::npos
@@ -115,7 +115,7 @@ namespace tut {
 			StaticString("hello world").find('o', 5),
 			(string::size_type) 7
 		);
-		
+
 		ensure_equals("Assertion 8",
 			StaticString("hello world").find('h', 12),
 			string::npos
@@ -125,7 +125,7 @@ namespace tut {
 			string::npos
 		);
 	}
-	
+
 	TEST_METHOD(5) {
 		// Test find(str)
 		ensure_equals("Assertion 1",
@@ -164,7 +164,7 @@ namespace tut {
 			StaticString("hello world").find(""),
 			(string::size_type) 0
 		);
-		
+
 		ensure_equals("Assertion 10",
 			StaticString("hello world").find("h", 1),
 			string::npos
@@ -177,7 +177,7 @@ namespace tut {
 			StaticString("hello hello").find("ll", 3),
 			(string::size_type) 8
 		);
-		
+
 		ensure_equals("Assertion 13",
 			StaticString("hello world").find("he", 12),
 			string::npos
@@ -187,7 +187,7 @@ namespace tut {
 			string::npos
 		);
 	}
-	
+
 	TEST_METHOD(6) {
 		// Test substr()
 		ensure_equals("Assertion 1",
@@ -202,19 +202,58 @@ namespace tut {
 		ensure_equals("Assertion 4",
 			StaticString("hello world").substr(11),
 			"");
-		
+
 		try {
 			StaticString("hello world").substr(12);
 			fail("out_of_range expected");
 		} catch (out_of_range &) {
 			// Success.
 		}
-		
+
 		ensure_equals("Assertion 5",
 			StaticString("hello world").substr(2, 3),
 			"llo");
 		ensure_equals("Assertion 6",
 			StaticString("hello world").substr(6, 10),
 			"world");
+	}
+
+	TEST_METHOD(7) {
+		// Test find_first_of()
+		ensure_equals("Assertion 1",
+			StaticString("hello world").find_first_of("h"),
+			0u);
+		ensure_equals("Assertion 2",
+			StaticString("hello world").find_first_of("e"),
+			1u);
+		ensure_equals("Assertion 3",
+			StaticString("hello world").find_first_of("o"),
+			4u);
+		ensure_equals("Assertion 4",
+			StaticString("hello world").find_first_of("o", 4),
+			4u);
+		ensure_equals("Assertion 5",
+			StaticString("hello world").find_first_of("o", 5),
+			7u);
+
+		ensure_equals("Assertion 6",
+			StaticString("hello world").find_first_of("wo"),
+			4u);
+		ensure_equals("Assertion 7",
+			StaticString("hello world").find_first_of("ow", 5),
+			6u);
+
+		ensure_equals("Assertion 8",
+			StaticString("hello world").find_first_of("x"),
+			string::npos);
+		ensure_equals("Assertion 9",
+			StaticString("hello world").find_first_of("xyz"),
+			string::npos);
+		ensure_equals("Assertion 10",
+			StaticString("").find_first_of("a"),
+			string::npos);
+		ensure_equals("Assertion 11",
+			StaticString("").find_first_of("a", 5),
+			string::npos);
 	}
 }
