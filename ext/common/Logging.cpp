@@ -83,7 +83,7 @@ string getLogFile() {
 }
 
 void
-_prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line) {
+_prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int line) {
 	time_t the_time;
 	struct tm the_tm;
 	char datetime_buf[60];
@@ -113,14 +113,13 @@ _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line
 		sstream << file;
 	}
 
-	sstream << ":" << line <<
-		" ]: ";
+	sstream << ":" << line << " ]: ";
 }
 
-static void
-_writeLogEntry(const StaticString &str) {
+void
+_writeLogEntry(const char *str, unsigned int size) {
 	try {
-		writeExact(STDERR_FILENO, str.data(), str.size());
+		writeExact(STDERR_FILENO, str, size);
 	} catch (const SystemException &) {
 		/* The most likely reason why this fails is when the user has setup
 		 * Apache to log to a pipe (e.g. to a log rotation script). Upon
@@ -132,22 +131,11 @@ _writeLogEntry(const StaticString &str) {
 	}
 }
 
-void
-_writeLogEntry(const std::string &str) {
-	_writeLogEntry(StaticString(str));
-}
-
-void
-_writeLogEntry(const char *str, unsigned int size) {
-	_writeLogEntry(StaticString(str, size));
-}
-
 const char *
-_strdupStringStream(const std::stringstream &stream) {
-	string str = stream.str();
-	char *buf = (char *) malloc(str.size() + 1);
-	memcpy(buf, str.data(), str.size());
-	buf[str.size()] = '\0';
+_strdupFastStringStream(const FastStringStream<> &stream) {
+	char *buf = (char *) malloc(stream.size() + 1);
+	memcpy(buf, stream.data(), stream.size());
+	buf[stream.size()] = '\0';
 	return buf;
 }
 
@@ -167,7 +155,7 @@ realPrintAppOutput(char *buf, unsigned int bufSize,
 	pos = appendData(pos, end, ": ");
 	pos = appendData(pos, end, message, messageLen);
 	pos = appendData(pos, end, "\n");
-	_writeLogEntry(StaticString(buf, pos - buf));
+	_writeLogEntry(buf, pos - buf);
 }
 
 void

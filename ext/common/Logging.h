@@ -46,6 +46,7 @@
 #include <ctime>
 #include <cerrno>
 #include <csignal>
+#include <Utils/FastStringStream.h>
 
 
 namespace Passenger {
@@ -76,10 +77,9 @@ getLogLevel() {
 void setLogLevel(int value);
 bool setLogFile(const char *path); // Sets errno on error
 string getLogFile();
-void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line);
-void _writeLogEntry(const std::string &str);
+void _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int line);
 void _writeLogEntry(const char *str, unsigned int size);
-const char *_strdupStringStream(const std::stringstream &stream);
+const char *_strdupFastStringStream(const FastStringStream<> &stream);
 
 
 enum PassengerLogLevel {
@@ -99,20 +99,20 @@ enum PassengerLogLevel {
 #define P_LOG(level, file, line, expr) \
 	do { \
 		if (Passenger::getLogLevel() >= (level)) { \
-			std::stringstream sstream; \
-			Passenger::_prepareLogEntry(sstream, file, line); \
-			sstream << expr << "\n"; \
-			Passenger::_writeLogEntry(sstream.str()); \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, file, line); \
+			_ostream << expr << "\n"; \
+			Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
 		} \
 	} while (false)
 
 #define P_LOG_UNLIKELY(level, file, line, expr) \
 	do { \
 		if (OXT_UNLIKELY(Passenger::getLogLevel() >= (level))) { \
-			std::stringstream sstream; \
-			Passenger::_prepareLogEntry(sstream, file, line); \
-			sstream << expr << "\n"; \
-			Passenger::_writeLogEntry(sstream.str()); \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, file, line); \
+			_ostream << expr << "\n"; \
+			Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
 		} \
 	} while (false)
 
@@ -192,9 +192,9 @@ void setPrintAppOutputAsDebuggingMessages(bool enabled);
 	do { \
 		TRACE_POINT(); \
 		const char *_exprStr; \
-		std::stringstream sstream; \
+		Passenger::FastStringStream<> sstream; \
 		sstream << expr; \
-		_exprStr = Passenger::_strdupStringStream(sstream); \
+		_exprStr = Passenger::_strdupFastStringStream(sstream); \
 		Passenger::lastAssertionFailure.filename = __FILE__; \
 		Passenger::lastAssertionFailure.line = __LINE__; \
 		Passenger::lastAssertionFailure.function = __PRETTY_FUNCTION__; \
@@ -207,9 +207,9 @@ void setPrintAppOutputAsDebuggingMessages(bool enabled);
 	do { \
 		UPDATE_TRACE_POINT(); \
 		const char *_exprStr; \
-		std::stringstream sstream; \
+		Passenger::FastStringStream<> sstream; \
 		sstream << expr; \
-		_exprStr = Passenger::_strdupStringStream(sstream); \
+		_exprStr = Passenger::_strdupFastStringStream(sstream); \
 		Passenger::lastAssertionFailure.filename = __FILE__; \
 		Passenger::lastAssertionFailure.line = __LINE__; \
 		Passenger::lastAssertionFailure.function = __PRETTY_FUNCTION__; \
