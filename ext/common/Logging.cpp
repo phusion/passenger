@@ -120,16 +120,33 @@ _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int lin
 
 void
 _writeLogEntry(const char *str, unsigned int size) {
-	try {
-		writeExact(STDERR_FILENO, str, size);
-	} catch (const SystemException &) {
-		/* The most likely reason why this fails is when the user has setup
-		 * Apache to log to a pipe (e.g. to a log rotation script). Upon
-		 * restarting the web server, the process that reads from the pipe
-		 * shuts down, so we can't write to it anymore. That's why we
-		 * just ignore write errors. It doesn't make sense to abort for
-		 * something like this.
-		 */
+	/* We do not use writeExact() here because writeExact()
+	 * uses oxt::syscalls::write(), which is an interruption point and
+	 * which is slightly more expensive than a plain write().
+	 * Logging may block, but in most cases not indefinitely,
+	 * so we don't care if the write() here is not an interruption
+	 * point. If the write does block indefinitely then it's
+	 * probably a FIFO that is not opened on the other side.
+	 * In that case we can blame the user.
+	 */
+	ssize_t ret;
+	unsigned int written = 0;
+	while (written < size) {
+		do {
+			ret = write(STDERR_FILENO, str + written, size - written);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			/* The most likely reason why this fails is when the user has setup
+			 * Apache to log to a pipe (e.g. to a log rotation script). Upon
+			 * restarting the web server, the process that reads from the pipe
+			 * shuts down, so we can't write to it anymore. That's why we
+			 * just ignore write errors. It doesn't make sense to abort for
+			 * something like this.
+			 */
+			break;
+		} else {
+			written += ret;
+		}
 	}
 }
 
