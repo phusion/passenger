@@ -952,7 +952,10 @@ preinitialize(VariantMap &options) {
 		options.setInt("log_level", options.getInt("server_log_level"));
 	}
 	if (options.has("server_log_file")) {
-		options.set("debug_log_file", options.get("server_log_file"));
+		options.set("log_file", options.get("server_log_file"));
+	}
+	if (options.has("server_file_descriptor_log_file")) {
+		options.set("file_descriptor_log_file", options.get("server_file_descriptor_log_file"));
 	}
 }
 
