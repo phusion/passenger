@@ -508,8 +508,24 @@ private:
 			setLogLevel(json["log_level"].asInt());
 		}
 		if (json.isMember("log_file")) {
+			string logFile = json["log_file"].asString();
+			try {
+				logFile = absolutizePath(logFile);
+			} catch (const SystemException &e) {
+				unsigned int bufsize = 1024;
+				char *message = (char *) psg_pnalloc(req->pool, bufsize);
+				snprintf(message, bufsize, "{ \"status\": \"error\", "
+					"\"message\": \"Cannot absolutize log file filename: %s\" }",
+					e.what());
+				writeSimpleResponse(client, 500, &headers, message);
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+
 			int e;
-			if (!setLogFile(json["log_file"].asString(), &e)) {
+			if (!setLogFile(logFile, &e)) {
 				unsigned int bufsize = 1024;
 				char *message = (char *) psg_pnalloc(req->pool, bufsize);
 				snprintf(message, bufsize, "{ \"status\": \"error\", "

@@ -1581,15 +1581,34 @@ initializeAgentOptions(const char *processName, VariantMap &options,
 	if (preinit != NULL) {
 		preinit(options);
 	}
+
 	options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
 	setLogLevel(options.getInt("log_level"));
+	string logFile;
 	if (options.has("log_file")) {
-		setLogFile(options.get("log_file"));
+		logFile = options.get("log_file");
 	} else if (options.has("debug_log_file")) {
-		setLogFile(options.get("debug_log_file"));
+		logFile = options.get("debug_log_file");
 	}
+	if (!logFile.empty()) {
+		try {
+			logFile = absolutizePath(logFile);
+		} catch (const SystemException &e) {
+			P_WARN("Cannot absolutize filename '" << logFile
+				<< "': " << e.what());
+		}
+		setLogFile(logFile);
+	}
+
 	if (options.has("file_descriptor_log_file")) {
-		setFileDescriptorLogFile(options.get("file_descriptor_log_file").c_str());
+		logFile = options.get("file_descriptor_log_file");
+		try {
+			logFile = absolutizePath(logFile);
+		} catch (const SystemException &e) {
+			P_WARN("Cannot absolutize filename '" << logFile
+				<< "': " << e.what());
+		}
+		setFileDescriptorLogFile(logFile);
 
 		// This information helps dev/parse_file_descriptor_log.
 		FastStringStream<> stream;
