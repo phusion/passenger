@@ -2477,6 +2477,18 @@ ev_backend (EV_P) EV_THROW
   return backend;
 }
 
+int
+ev_backend_fd (EV_P) EV_THROW
+{
+  return backend_fd;
+}
+
+int
+ev_loop_get_pipe (EV_P_ unsigned int index) EV_THROW
+{
+  return evpipe[index];
+}
+
 #if EV_FEATURE_API
 unsigned int
 ev_iteration (EV_P) EV_THROW

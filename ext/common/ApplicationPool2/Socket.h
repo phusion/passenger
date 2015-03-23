@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -47,13 +47,13 @@ using namespace boost;
 
 struct Connection {
 	int fd;
-	bool persistent: 1;
+	bool wantKeepAlive: 1;
 	bool fail: 1;
 	bool blocking: 1;
 
 	Connection()
 		: fd(-1),
-		  persistent(false),
+		  wantKeepAlive(false),
 		  fail(false),
 		  blocking(true)
 		{ }
@@ -62,8 +62,9 @@ struct Connection {
 		if (fd != -1) {
 			int fd2 = fd;
 			fd = -1;
-			persistent = false;
+			wantKeepAlive = false;
 			safelyClose(fd2);
+			P_LOG_FILE_DESCRIPTOR_CLOSE(fd2);
 		}
 	}
 };
@@ -85,10 +86,11 @@ private:
 	Connection connect() const {
 		Connection connection;
 		P_TRACE(3, "Connecting to " << address);
-		connection.fd = connectToServer(address);
+		connection.fd = connectToServer(address, __FILE__, __LINE__);
 		connection.fail = true;
-		connection.persistent = false;
+		connection.wantKeepAlive = false;
 		connection.blocking = true;
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(connection.fd, "App " << pid << " connection");
 		return connection;
 	}
 
@@ -97,24 +99,30 @@ public:
 	StaticString name;
 	StaticString address;
 	StaticString protocol;
+	pid_t pid;
 	int concurrency;
 
 	// Private. In public section as alignment optimization.
-	int totalActiveConnections;
+	int totalConnections;
+	int totalIdleConnections;
 
 	/** Invariant: sessions >= 0 */
 	int sessions;
 
 	Socket()
-		: concurrency(0)
+		: pid(-1),
+		  concurrency(0)
 		{ }
 
-	Socket(const StaticString &_name, const StaticString &_address, const StaticString &_protocol, int _concurrency)
+	Socket(pid_t _pid, const StaticString &_name, const StaticString &_address,
+		const StaticString &_protocol, int _concurrency)
 		: name(_name),
 		  address(_address),
 		  protocol(_protocol),
+		  pid(_pid),
 		  concurrency(_concurrency),
-		  totalActiveConnections(0),
+		  totalConnections(0),
+		  totalIdleConnections(0),
 		  sessions(0)
 		{ }
 
@@ -123,17 +131,21 @@ public:
 		  name(other.name),
 		  address(other.address),
 		  protocol(other.protocol),
+		  pid(other.pid),
 		  concurrency(other.concurrency),
-		  totalActiveConnections(other.totalActiveConnections),
+		  totalConnections(other.totalConnections),
+		  totalIdleConnections(other.totalIdleConnections),
 		  sessions(other.sessions)
 		{ }
 
 	Socket &operator=(const Socket &other) {
-		totalActiveConnections = other.totalActiveConnections;
+		totalConnections = other.totalConnections;
+		totalIdleConnections = other.totalIdleConnections;
 		idleConnections = other.idleConnections;
 		name = other.name;
 		address = other.address;
 		protocol = other.protocol;
+		pid = other.pid;
 		concurrency = other.concurrency;
 		sessions = other.sessions;
 		return *this;
@@ -151,39 +163,57 @@ public:
 		if (!idleConnections.empty()) {
 			P_TRACE(3, "Socket " << address << ": checking out connection from connection pool (" <<
 				idleConnections.size() << " -> " << (idleConnections.size() - 1) <<
-				" items). Current active connections: " << totalActiveConnections);
+				" items). Current total number of connections: " << totalConnections);
 			Connection connection = idleConnections.back();
 			idleConnections.pop_back();
-			return connection;
-		} else if (totalActiveConnections < connectionPoolLimit()) {
-			Connection connection = connect();
-			totalActiveConnections++;
-			P_TRACE(3, "Socket " << address << ": there are now " <<
-				totalActiveConnections << " active connections");
-			l.unlock();
+			totalIdleConnections--;
 			return connection;
 		} else {
+			Connection connection = connect();
+			totalConnections++;
+			P_TRACE(3, "Socket " << address << ": there are now " <<
+				totalConnections << " total connections");
 			l.unlock();
-			return connect();
+			return connection;
 		}
 	}
 
 	void checkinConnection(Connection &connection) {
 		boost::unique_lock<boost::mutex> l(connectionPoolLock);
 
-		if (connection.fail || !connection.persistent) {
-			totalActiveConnections--;
+		if (connection.fail || !connection.wantKeepAlive || totalIdleConnections >= connectionPoolLimit()) {
+			totalConnections--;
+			assert(totalConnections >= 0);
 			P_TRACE(3, "Socket " << address << ": connection not checked back into "
-				"connection pool. There are now " << totalActiveConnections <<
-				" active connections");
+				"connection pool. There are now " << totalConnections <<
+				" connections in total");
 			l.unlock();
 			connection.close();
 		} else {
 			P_TRACE(3, "Socket " << address << ": checking in connection into connection pool (" <<
-				idleConnections.size() << " -> " << (idleConnections.size() + 1) <<
-				" items). Current active connections: " << totalActiveConnections);
+				totalIdleConnections << " -> " << (totalIdleConnections + 1) <<
+				" items). Current total number of connections: " << totalConnections);
+			totalIdleConnections++;
 			idleConnections.push_back(connection);
 		}
+	}
+
+	void closeAllConnections() {
+		boost::unique_lock<boost::mutex> l(connectionPoolLock);
+		assert(sessions == 0);
+		assert(totalConnections == totalIdleConnections);
+		vector<Connection>::iterator it, end = idleConnections.end();
+
+		for (it = idleConnections.begin(); it != end; it++) {
+			try {
+				it->close();
+			} catch (const SystemException &e) {
+				P_ERROR("Cannot close a connection with socket " << address << ": " << e.what());
+			}
+		}
+		idleConnections.clear();
+		totalConnections = 0;
+		totalIdleConnections = 0;
 	}
 
 
@@ -226,8 +256,10 @@ public:
 
 class SocketList: public SmallVector<Socket, 1> {
 public:
-	void add(const StaticString &name, const StaticString &address, const StaticString &protocol, int concurrency) {
-		push_back(Socket(name, address, protocol, concurrency));
+	void add(pid_t pid, const StaticString &name, const StaticString &address,
+		const StaticString &protocol, int concurrency)
+	{
+		push_back(Socket(pid, name, address, protocol, concurrency));
 	}
 
 	const Socket *findSocketWithName(const StaticString &name) const {

@@ -91,6 +91,8 @@ namespace LoggingAgent {
 			  bgloop(NULL),
 			  serverKitContext(NULL),
 			  loggingServer(NULL),
+			  exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
+			  allClientsDisconnectedEvent(__FILE__, __LINE__, "WorkingObjects: allClientsDisconnectedEvent"),
 			  terminationCount(0)
 			{ }
 	};
@@ -201,7 +203,10 @@ startListening() {
 	vector<string> adminAddresses;
 
 	address = options.get("logging_agent_address");
-	wo->serverSocketFd = createServer(address.c_str());
+	wo->serverSocketFd.assign(createServer(address, 0, true,
+		__FILE__, __LINE__), NULL, 0);
+	P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->serverSocketFd,
+		"Server address: " << wo->serverSocketFd);
 	if (getSocketAddressType(address) == SAT_UNIX) {
 		makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 	}
@@ -210,7 +215,10 @@ startListening() {
 	adminAddresses = options.getStrSet("logging_agent_admin_addresses",
 		false);
 	foreach (address, adminAddresses) {
-		wo->adminSockets.push_back(createServer(address));
+		wo->adminSockets.push_back(createServer(address, 0, true,
+			__FILE__, __LINE__));
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->adminSockets.back(),
+			"Server address: " << wo->adminSockets.back());
 		if (getSocketAddressType(address) == SAT_UNIX) {
 			makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 		}

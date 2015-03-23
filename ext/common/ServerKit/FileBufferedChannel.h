@@ -409,6 +409,7 @@ private:
 		}
 
 		static void fileClosed(uv_fs_t *req) {
+			P_LOG_FILE_DESCRIPTOR_CLOSE(req->file);
 			uv_fs_req_cleanup(req);
 			free(req);
 		}
@@ -949,6 +950,8 @@ private:
 
 		if (fcContext->req.result >= 0) {
 			FBC_DEBUG("Writer: file created. Deleting file in the background");
+			P_LOG_FILE_DESCRIPTOR_OPEN4(fcContext->req.result, __FILE__, __LINE__,
+				"FileBufferedChannel buffer file");
 			inFileMode->fd = fcContext->req.result;
 			// Will take care of deleting fcContext
 			unlinkBufferFileInBackground(fcContext);

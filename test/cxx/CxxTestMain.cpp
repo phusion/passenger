@@ -140,7 +140,7 @@ installAbortHandler() {
 
 	options.set("passenger_root", resourceLocator->getRoot());
 
-	initializeAgentOptions(options);
+	initializeAgentOptions("CxxTestMain", options);
 	installAgentAbortHandler();
 }
 

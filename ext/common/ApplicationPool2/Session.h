@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -72,9 +72,9 @@ private:
 	mutable boost::atomic<int> refcount;
 	bool closed;
 
-	void deinitiate(bool success, bool persistent) {
+	void deinitiate(bool success, bool wantKeepAlive) {
 		connection.fail = !success;
-		connection.persistent = persistent;
+		connection.wantKeepAlive = wantKeepAlive;
 		socket->checkinConnection(connection);
 		connection.fd = -1;
 	}
@@ -150,7 +150,7 @@ public:
 		Connection connection = socket->checkoutConnection();
 		connection.fail = true;
 		if (connection.blocking && !blocking) {
-			FdGuard g2(connection.fd);
+			FdGuard g2(connection.fd, NULL, 0);
 			setNonBlocking(connection.fd);
 			g2.clear();
 			connection.blocking = false;
@@ -172,9 +172,9 @@ public:
 	/**
 	 * This Session object becomes fully unsable after closing.
 	 */
-	void close(bool success, bool persistent = false) {
+	void close(bool success, bool wantKeepAlive = false) {
 		if (OXT_LIKELY(initiated())) {
-			deinitiate(success, persistent);
+			deinitiate(success, wantKeepAlive);
 		}
 		if (OXT_LIKELY(!closed)) {
 			callOnClose();

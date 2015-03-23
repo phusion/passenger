@@ -17,26 +17,26 @@ namespace tut {
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
 
-			server1 = createTcpServer("127.0.0.1", 0);
+			server1.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server1, (struct sockaddr *) &addr, &len);
-			sockets.add("main1",
+			sockets.add(1, "main1",
 				"tcp://127.0.0.1:" + toString(addr.sin_port),
 				"session", 3);
 
-			server2 = createTcpServer("127.0.0.1", 0);
+			server2.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server2, (struct sockaddr *) &addr, &len);
-			sockets.add("main2",
+			sockets.add(2, "main2",
 				"tcp://127.0.0.1:" + toString(addr.sin_port),
 				"session", 3);
 
-			server3 = createTcpServer("127.0.0.1", 0);
+			server3.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server3, (struct sockaddr *) &addr, &len);
-			sockets.add("main3",
+			sockets.add(3, "main3",
 				"tcp://127.0.0.1:" + toString(addr.sin_port),
 				"session", 3);
 
-			adminSocket = createUnixSocketPair();
-			errorPipe = createPipe();
+			adminSocket = createUnixSocketPair(__FILE__, __LINE__);
+			errorPipe = createPipe(__FILE__, __LINE__);
 		}
 
 		ProcessPtr createProcess() {

@@ -146,7 +146,9 @@ namespace ServerAgent {
 		oxt::thread *prestarterThread;
 
 		WorkingObjects()
-			: terminationCount(0),
+			: exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
+			  allClientsDisconnectedEvent(__FILE__, __LINE__, "WorkingObjects: allClientsDisconnectedEvent"),
+			  terminationCount(0),
 			  shutdownCounter(0)
 		{
 			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
@@ -274,13 +276,19 @@ startListening() {
 	vector<string> adminAddresses = agentsOptions->getStrSet("server_admin_addresses", false);
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
-		wo->serverFds[i] = createServer(addresses[i]);
+		wo->serverFds[i] = createServer(addresses[i], 0, true,
+			__FILE__, __LINE__);
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->serverFds[i],
+			"Server address: " << addresses[i]);
 		if (getSocketAddressType(addresses[i]) == SAT_UNIX) {
 			makeFileWorldReadableAndWritable(parseUnixSocketAddress(addresses[i]));
 		}
 	}
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
-		wo->adminServerFds[i] = createServer(adminAddresses[i]);
+		wo->adminServerFds[i] = createServer(adminAddresses[i], 0, true,
+			__FILE__, __LINE__);
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->adminServerFds[i],
+			"AdminServer address: " << adminAddresses[i]);
 		if (getSocketAddressType(adminAddresses[i]) == SAT_UNIX) {
 			makeFileWorldReadableAndWritable(parseUnixSocketAddress(adminAddresses[i]));
 		}
@@ -303,8 +311,8 @@ createPidFile() {
 		}
 
 		UPDATE_TRACE_POINT();
+		FdGuard guard(fd, __FILE__, __LINE__);
 		writeExact(fd, pidStr, strlen(pidStr));
-		syscalls::close(fd);
 	}
 }
 

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -46,6 +46,7 @@
 #include <ctime>
 #include <cerrno>
 #include <csignal>
+#include <Utils/FastStringStream.h>
 
 
 namespace Passenger {
@@ -54,8 +55,6 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
-
-/********** Debug logging facilities **********/
 
 struct AssertionFailureInfo {
 	const char *filename;
@@ -68,18 +67,83 @@ extern volatile sig_atomic_t _logLevel;
 // If assert() or similar fails, we attempt to store its information here.
 extern AssertionFailureInfo lastAssertionFailure;
 
+/**
+ * Returns the current log level. This method is thread-safe.
+ */
 inline OXT_FORCE_INLINE int
 getLogLevel() {
 	return (int) _logLevel;
 }
 
+/**
+ * Sets the log level. This method is thread-safe.
+ */
 void setLogLevel(int value);
-bool setLogFile(const char *path); // Sets errno on error
+
+/**
+ * Returns the general log file that we're using, or the empty string
+ * if we're not using a log file.
+ *
+ * This method is NOT thread-safe.
+ */
 string getLogFile();
-void _prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line);
-void _writeLogEntry(const std::string &str);
+
+/**
+ * Sets the general log file. This method is thread-safe.
+ * Returns whether the new log file can be opened. If not,
+ * errcode (if non-NULL) is set to the relevant filesystem
+ * error code.
+ */
+bool setLogFile(const string &path, int *errcode = NULL);
+
+/**
+ * Returns whether we're using a separate log file for logging file
+ * descriptor opening and closing.
+ *
+ * See `getFileDescriptorLogFile()` for thread-safety notes.
+ */
+bool hasFileDescriptorLogFile();
+
+/**
+ * Returns the file that we're using for logging file descriptor
+ * opening and closing, or the empty string if we're not using a
+ * separate log file.
+ *
+ * This method is only thread-safe if `setFileDescriptorLogFile()`
+ * was called before any threads were made, and at the same time
+ * `setFileDescriptorLogFile()` is never called again with a different
+ * argument. In other words, only reopening the same log file is
+ * thread-safe.
+ */
+string getFileDescriptorLogFile();
+
+/**
+ * Returns the file descriptor of the log file that we're using for
+ * logging file descriptor opening and closing, or -1 if we're not using a
+ * separate log file.
+ *
+ * See `getFileDescriptorLogFile()` for thread-safety notes.
+ */
+int getFileDescriptorLogFileFd();
+
+/**
+ * Sets the log file to use specifically for logging file descriptor
+ * opening and closing.
+ *
+ * This method is only thread-safe if you `path` equals what
+ * `getFileDescriptorLogFile()` returns. In other words, when
+ * you're reopening the log file.
+ *
+ * Returns whether the new log file can be opened. If not,
+ * errcode (if non-NULL) is set to the relevant filesystem
+ * error code.
+ */
+bool setFileDescriptorLogFile(const string &path, int *errcode = NULL);
+
+void _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int line);
 void _writeLogEntry(const char *str, unsigned int size);
-const char *_strdupStringStream(const std::stringstream &stream);
+void _writeFileDescriptorLogEntry(const char *str, unsigned int size);
+const char *_strdupFastStringStream(const FastStringStream<> &stream);
 
 
 enum PassengerLogLevel {
@@ -99,20 +163,20 @@ enum PassengerLogLevel {
 #define P_LOG(level, file, line, expr) \
 	do { \
 		if (Passenger::getLogLevel() >= (level)) { \
-			std::stringstream sstream; \
-			Passenger::_prepareLogEntry(sstream, file, line); \
-			sstream << expr << "\n"; \
-			Passenger::_writeLogEntry(sstream.str()); \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, file, line); \
+			_ostream << expr << "\n"; \
+			Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
 		} \
 	} while (false)
 
 #define P_LOG_UNLIKELY(level, file, line, expr) \
 	do { \
 		if (OXT_UNLIKELY(Passenger::getLogLevel() >= (level))) { \
-			std::stringstream sstream; \
-			Passenger::_prepareLogEntry(sstream, file, line); \
-			sstream << expr << "\n"; \
-			Passenger::_writeLogEntry(sstream.str()); \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, file, line); \
+			_ostream << expr << "\n"; \
+			Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
 		} \
 	} while (false)
 
@@ -166,6 +230,69 @@ enum PassengerLogLevel {
 	#define P_TRACE_WITH_POS(level, file, line, expr) do { /* nothing */ } while (false)
 #endif
 
+
+/**
+ * Log the fact that a file descriptor has been opened.
+ */
+#define P_LOG_FILE_DESCRIPTOR_OPEN(fd) \
+	P_LOG_FILE_DESCRIPTOR_OPEN3(fd, __FILE__, __LINE__)
+#define P_LOG_FILE_DESCRIPTOR_OPEN2(fd, expr) \
+	P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, expr)
+#define P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line) \
+	do { \
+		if (Passenger::hasFileDescriptorLogFile() || Passenger::getLogLevel() >= Passenger::LVL_DEBUG) { \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, file, line); \
+			_ostream << "File descriptor opened: " << fd << "\n"; \
+			if (hasFileDescriptorLogFile()) { \
+				Passenger::_writeFileDescriptorLogEntry(_ostream.data(), _ostream.size()); \
+			} else { \
+				Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
+			} \
+		} \
+	} while (false)
+#define P_LOG_FILE_DESCRIPTOR_OPEN4(fd, file, line, expr) \
+	do { \
+		P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line); \
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, expr); \
+	} while (false)
+
+/**
+ * Log the purpose of a file descriptor that was recently logged with
+ * P_LOG_FILE_DESCRIPTOR_OPEN(). You should include information that
+ * allows a reader to find out what a file descriptor is for.
+ */
+#define P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, expr) \
+	do { \
+		if (Passenger::hasFileDescriptorLogFile() || Passenger::getLogLevel() >= Passenger::LVL_DEBUG) { \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, __FILE__, __LINE__); \
+			_ostream << "File descriptor purpose: " << fd << ": " << expr << "\n"; \
+			if (hasFileDescriptorLogFile()) { \
+				Passenger::_writeFileDescriptorLogEntry(_ostream.data(), _ostream.size()); \
+			} else { \
+				Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
+			} \
+		} \
+	} while (false)
+
+/**
+ * Log the fact that a file descriptor has been closed.
+ */
+#define P_LOG_FILE_DESCRIPTOR_CLOSE(fd) \
+	do { \
+		if (Passenger::hasFileDescriptorLogFile() || Passenger::getLogLevel() >= Passenger::LVL_DEBUG) { \
+			Passenger::FastStringStream<> _ostream; \
+			Passenger::_prepareLogEntry(_ostream, __FILE__, __LINE__); \
+			_ostream << "File descriptor closed: " << fd << "\n"; \
+			if (hasFileDescriptorLogFile()) { \
+				Passenger::_writeFileDescriptorLogEntry(_ostream.data(), _ostream.size()); \
+			} else { \
+				Passenger::_writeLogEntry(_ostream.data(), _ostream.size()); \
+			} \
+		} \
+	} while (false)
+
 /**
  * Print a message that was received from an application's stdout/stderr.
  *
@@ -192,9 +319,9 @@ void setPrintAppOutputAsDebuggingMessages(bool enabled);
 	do { \
 		TRACE_POINT(); \
 		const char *_exprStr; \
-		std::stringstream sstream; \
+		Passenger::FastStringStream<> sstream; \
 		sstream << expr; \
-		_exprStr = Passenger::_strdupStringStream(sstream); \
+		_exprStr = Passenger::_strdupFastStringStream(sstream); \
 		Passenger::lastAssertionFailure.filename = __FILE__; \
 		Passenger::lastAssertionFailure.line = __LINE__; \
 		Passenger::lastAssertionFailure.function = __PRETTY_FUNCTION__; \
@@ -207,9 +334,9 @@ void setPrintAppOutputAsDebuggingMessages(bool enabled);
 	do { \
 		UPDATE_TRACE_POINT(); \
 		const char *_exprStr; \
-		std::stringstream sstream; \
+		Passenger::FastStringStream<> sstream; \
 		sstream << expr; \
-		_exprStr = Passenger::_strdupStringStream(sstream); \
+		_exprStr = Passenger::_strdupFastStringStream(sstream); \
 		Passenger::lastAssertionFailure.filename = __FILE__; \
 		Passenger::lastAssertionFailure.line = __LINE__; \
 		Passenger::lastAssertionFailure.function = __PRETTY_FUNCTION__; \

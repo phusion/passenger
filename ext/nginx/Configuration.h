@@ -56,7 +56,8 @@ typedef struct {
     ngx_array_t *ctl;
     ngx_str_t    default_ruby;
     ngx_int_t    log_level;
-    ngx_str_t    debug_log_file;
+    ngx_str_t    log_file;
+    ngx_str_t    file_descriptor_log_file;
     ngx_str_t    data_buffer_dir;
     ngx_str_t    instance_registry_dir;
     ngx_flag_t   abort_on_startup_error;

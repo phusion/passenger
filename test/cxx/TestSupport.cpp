@@ -89,7 +89,7 @@ replaceStringInFile(const char *filename, const string &toFind, const string &re
 		message.append("' for writing");
 		throw FileSystemException(message, e, filename);
 	} else {
-		StdioGuard guard(f);
+		StdioGuard guard(f, __FILE__, __LINE__);
 		content = replaceString(content, toFind, replaceWith);
 		fwrite(content.data(), 1, content.size(), f);
 	}
@@ -110,7 +110,7 @@ writeFile(const string &filename, const string &contents) {
 		message.append("' for writing");
 		throw FileSystemException(message, e, filename);
 	} else {
-		StdioGuard guard(f);
+		StdioGuard guard(f, __FILE__, __LINE__);
 		fwrite(contents.data(), 1, contents.size(), f);
 	}
 }

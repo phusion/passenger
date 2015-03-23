@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -135,6 +135,9 @@ vector<string> resolveHostname(const string &hostname,
  * @param autoDelete If <tt>address</tt> is a Unix socket that already exists,
  *                   whether that should be deleted. Otherwise this argument
  *                   is ignored.
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @return The file descriptor of the newly created server socket.
  * @throws ArgumentException The given address cannot be parsed.
  * @throws RuntimeException Something went wrong.
@@ -144,7 +147,9 @@ vector<string> resolveHostname(const string &hostname,
  */
 int createServer(const StaticString &address,
 	unsigned int backlogSize = 0,
-	bool autoDelete = true);
+	bool autoDelete = true,
+	const char *file = __FILE__,
+	unsigned int line = __LINE__);
 
 /**
  * Create a new Unix server socket which is bounded to <tt>filename</tt>.
@@ -153,6 +158,9 @@ int createServer(const StaticString &address,
  * @param backlogSize The size of the socket's backlog. Specify 0 to use the
  *                    platform's maximum allowed backlog size.
  * @param autoDelete Whether <tt>filename</tt> should be deleted, if it already exists.
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @return The file descriptor of the newly created Unix server socket.
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong while creating the Unix server socket.
@@ -161,7 +169,9 @@ int createServer(const StaticString &address,
  */
 int createUnixServer(const StaticString &filename,
 	unsigned int backlogSize = 0,
-	bool autoDelete = true);
+	bool autoDelete = true,
+	const char *file = __FILE__,
+	unsigned int line = __LINE__);
 
 /**
  * Create a new TCP server socket which is bounded to the given address and port.
@@ -172,6 +182,9 @@ int createUnixServer(const StaticString &filename,
  *             select a free port.
  * @param backlogSize The size of the socket's backlog. Specify 0 to use the
  *                    platform's maximum allowed backlog size.
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @return The file descriptor of the newly created server socket.
  * @throws SystemException Something went wrong while creating the server socket.
  * @throws ArgumentException The given address cannot be parsed.
@@ -180,12 +193,17 @@ int createUnixServer(const StaticString &filename,
  */
 int createTcpServer(const char *address = "0.0.0.0",
 	unsigned short port = 0,
-	unsigned int backlogSize = 0);
+	unsigned int backlogSize = 0,
+	const char *file = __FILE__,
+	unsigned int line = __LINE__);
 
 /**
  * Connect to a server at the given address in a blocking manner.
  *
  * @param address An address as accepted by getSocketAddressType().
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @return The file descriptor of the connected client socket.
  * @throws ArgumentException Unknown address type.
  * @throws RuntimeException Something went wrong.
@@ -194,32 +212,41 @@ int createTcpServer(const char *address = "0.0.0.0",
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int connectToServer(const StaticString &address);
+int connectToServer(const StaticString &address, const char *file,
+	unsigned int line);
 
 /**
  * Connect to a Unix server socket at <tt>filename</tt> in a blocking manner.
  *
  * @param filename The filename of the socket to connect to.
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @return The file descriptor of the connected client socket.
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong while connecting to the Unix server.
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int connectToUnixServer(const StaticString &filename);
+int connectToUnixServer(const StaticString &filename, const char *file,
+	unsigned int line);
 
 /**
  * Connect to a TCP server socket at the given host name and port in a blocking manner.
  *
  * @param hostname The host name of the TCP server.
  * @param port The port number of the TCP server.
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @return The file descriptor of the connected client socket.
  * @throws IOException Something went wrong while connecting to the Unix server.
  * @throws SystemException Something went wrong while connecting to the server.
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
-int connectToTcpServer(const StaticString &hostname, unsigned int port);
+int connectToTcpServer(const StaticString &hostname, unsigned int port,
+	const char *file, unsigned int line);
 
 /** State structure for non-blocking connectToUnixServer(). */
 struct NUnix_State {
@@ -233,12 +260,16 @@ struct NUnix_State {
  *
  * @param state A state structure.
  * @param filename The filename of the socket to connect to.
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @throws SystemException Something went wrong.
  * @throws boost::thread_interrupted A system call has been interrupted.
  * @ingroup Support
  */
 void setupNonBlockingUnixSocket(NUnix_State & restrict_ref state,
-	const StaticString & restrict_ref filename);
+	const StaticString & restrict_ref filename, const char *file,
+	unsigned int line);
 
 /**
  * Connect a Unix domain socket in non-blocking mode.
@@ -280,6 +311,9 @@ struct NTCP_State {
  * @param state A state structure.
  * @param hostname The host name of the TCP server.
  * @param port The port number of the TCP server.
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @throws IOException Something went wrong.
  * @throws SystemException Something went wrong.
  * @throws boost::thread_interrupted A system call has been interrupted.
@@ -287,7 +321,7 @@ struct NTCP_State {
  */
 void setupNonBlockingTcpSocket(NTCP_State & restrict_ref state,
 	const StaticString & restrict_ref hostname,
-	int port);
+	int port, const char *file, unsigned int line);
 
 /**
  * Connect a TCP socket in non-blocking mode.
@@ -312,6 +346,9 @@ struct NConnect_State {
  *
  * @param A state structure.
  * @param address An address as accepted by getSocketAddressType().
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @throws ArgumentException Unknown address type.
  * @throws RuntimeException Something went wrong.
  * @throws SystemException Something went wrong.
@@ -320,7 +357,8 @@ struct NConnect_State {
  * @ingroup Support
  */
 void setupNonBlockingSocket(NConnect_State & restrict_ref state,
-	const StaticString & restrict_ref address);
+	const StaticString & restrict_ref address, const char *file,
+	unsigned int line);
 
 /**
  * Connect a socket in non-blocking mode.
@@ -338,18 +376,24 @@ bool connectToServer(NConnect_State &state);
 /**
  * Creates a Unix domain socket pair.
  *
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @throws SystemException
  * @throws boost::thread_interrupted
  */
-SocketPair createUnixSocketPair();
+SocketPair createUnixSocketPair(const char *file, unsigned int line);
 
 /**
  * Creates a pipe.
  *
+ * @param file The name of the source file that called this function,
+ *             for file descriptor logging purposes.
+ * @param line The line in the source file that called this function.
  * @throws SystemException
  * @throws boost::thread_interrupted
  */
-Pipe createPipe();
+Pipe createPipe(const char *file, unsigned int line);
 
 /**
  * Waits at most <tt>*timeout</tt> microseconds for the file descriptor to become readable.

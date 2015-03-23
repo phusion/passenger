@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -54,17 +54,22 @@ public:
 		TRACE_POINT();
 		possiblyRaiseInternalError(options);
 
-		SocketPair adminSocket = createUnixSocketPair();
+		pid_t pid;
+		{
+			boost::lock_guard<boost::mutex> l(lock);
+			count++;
+			pid = count;
+		}
+
+		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
 		SocketList sockets;
-		sockets.add("main", "tcp://127.0.0.1:1234", "session", config->concurrency);
+		sockets.add(pid, "main", "tcp://127.0.0.1:1234", "session", config->concurrency);
 		syscalls::usleep(config->spawnTime);
 
-		boost::lock_guard<boost::mutex> l(lock);
-		count++;
 		SpawnObject object;
-		string gupid = "gupid-" + toString(count);
+		string gupid = "gupid-" + toString(pid);
 		object.process = boost::make_shared<Process>(
-			(pid_t) count, gupid,
+			pid, gupid,
 			adminSocket.second, FileDescriptor(), sockets,
 			SystemTime::getUsec(), SystemTime::getUsec());
 		object.process->dummy = true;

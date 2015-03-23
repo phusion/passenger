@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -135,7 +135,7 @@ public:
 		TRACE_POINT();
 		ScopeGuard g(boost::bind(&MessageClient::autoDisconnect, this));
 
-		fd = connectToServer(serverAddress.c_str());
+		fd.assign(connectToServer(serverAddress.c_str(), __FILE__, __LINE__), NULL, 0);
 
 		vector<string> args;
 		if (!readArrayMessage(fd, args)) {

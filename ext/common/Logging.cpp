@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <boost/thread.hpp>
 #include <boost/atomic.hpp>
 #include <Logging.h>
 #include <Constants.h>
@@ -40,9 +41,15 @@ namespace Passenger {
 volatile sig_atomic_t _logLevel = DEFAULT_LOG_LEVEL;
 AssertionFailureInfo lastAssertionFailure;
 static bool printAppOutputAsDebuggingMessages = false;
-static char *logFile = NULL;
+
+static boost::mutex logFileMutex;
+static string logFile;
+
+static int fileDescriptorLog = -1;
+static string fileDescriptorLogFile;
 
 #define TRUNCATE_LOGPATHS_TO_MAXCHARS 3 // set to 0 to disable truncation
+
 
 void
 setLogLevel(int value) {
@@ -50,104 +57,152 @@ setLogLevel(int value) {
 	boost::atomic_signal_fence(boost::memory_order_seq_cst);
 }
 
-bool
-setLogFile(const char *path) {
-	int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
-	if (fd != -1) {
-		char *newLogFile = strdup(path);
-		if (newLogFile == NULL) {
-			P_CRITICAL("Cannot allocate memory");
-			abort();
-		}
+string getLogFile() {
+	boost::lock_guard<boost::mutex> l(logFileMutex);
+	return logFile;
+}
 
+bool
+setLogFile(const string &path, int *errcode) {
+	int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd != -1) {
+		boost::lock_guard<boost::mutex> l(logFileMutex);
 		dup2(fd, STDOUT_FILENO);
 		dup2(fd, STDERR_FILENO);
 		close(fd);
-
-		if (logFile != NULL) {
-			free(logFile);
-		}
-		logFile = newLogFile;
+		logFile = path;
 		return true;
 	} else {
+		if (errcode != NULL) {
+			*errcode = errno;
+		}
 		return false;
 	}
 }
 
-string getLogFile() {
-	if (logFile == NULL) {
-		return string();
+bool
+hasFileDescriptorLogFile() {
+	return fileDescriptorLog != -1;
+}
+
+string
+getFileDescriptorLogFile() {
+	return fileDescriptorLogFile;
+}
+
+int
+getFileDescriptorLogFileFd() {
+	return fileDescriptorLog;
+}
+
+bool
+setFileDescriptorLogFile(const string &path, int *errcode) {
+	int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd != -1) {
+		if (fileDescriptorLog == -1) {
+			fileDescriptorLog = fd;
+		} else {
+			dup2(fd, fileDescriptorLog);
+			close(fd);
+		}
+		if (fileDescriptorLogFile != path) {
+			// Do not mutate `fileDescriptorLogFile` if the path
+			// hasn't changed. This allows `setFileDescriptorLogFile()`
+			// to be thread-safe within the documented constraints.
+			fileDescriptorLogFile = path;
+		}
+		return true;
 	} else {
-		return string(logFile);
+		if (errcode != NULL) {
+			*errcode = errno;
+		}
+		return false;
 	}
 }
 
 void
-_prepareLogEntry(std::stringstream &sstream, const char *file, unsigned int line) {
-	time_t the_time;
+_prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int line) {
 	struct tm the_tm;
-	char datetime_buf[60];
+	char datetime_buf[32];
+	int datetime_size;
 	struct timeval tv;
 
-	the_time = time(NULL);
-	localtime_r(&the_time, &the_tm);
-	strftime(datetime_buf, sizeof(datetime_buf) - 1, "%F %H:%M:%S", &the_tm);
 	gettimeofday(&tv, NULL);
+	localtime_r(&tv.tv_sec, &the_tm);
+	datetime_size = snprintf(datetime_buf, sizeof(datetime_buf),
+		"%d-%02d-%02d %02d:%02d:%02d.%04u",
+		the_tm.tm_year + 1900, the_tm.tm_mon + 1, the_tm.tm_mday,
+		the_tm.tm_hour, the_tm.tm_min, the_tm.tm_sec,
+		tv.tv_usec / 100);
 	sstream <<
-		"[ " << datetime_buf << "." << std::setfill('0') << std::setw(4) <<
-			(unsigned long) (tv.tv_usec / 100) <<
+		"[ " << StaticString(datetime_buf, datetime_size) <<
 		" " << std::dec << getpid() << "/" <<
 			std::hex << pthread_self() << std::dec <<
 		" ";
 
-	if (startsWith(file, "ext/")) { // special reduncancy filter because most code resides in these paths
+	if (startsWith(file, P_STATIC_STRING("ext/"))) { // special reduncancy filter because most code resides in these paths
 		file += sizeof("ext/") - 1;
-		if (startsWith(file, "common/")) {
+		if (startsWith(file, P_STATIC_STRING("common/"))) {
 			file += sizeof("common/") - 1;
 		}
 	}
 
 	if (TRUNCATE_LOGPATHS_TO_MAXCHARS > 0) {
-		truncateBeforeTokens(file, "/\\", TRUNCATE_LOGPATHS_TO_MAXCHARS, sstream);
+		truncateBeforeTokens(file, P_STATIC_STRING("/\\"), TRUNCATE_LOGPATHS_TO_MAXCHARS, sstream);
 	} else {
 		sstream << file;
 	}
 
-	sstream << ":" << line <<
-		" ]: ";
+	sstream << ":" << line << " ]: ";
 }
 
 static void
-_writeLogEntry(const StaticString &str) {
-	try {
-		writeExact(STDERR_FILENO, str.data(), str.size());
-	} catch (const SystemException &) {
-		/* The most likely reason why this fails is when the user has setup
-		 * Apache to log to a pipe (e.g. to a log rotation script). Upon
-		 * restarting the web server, the process that reads from the pipe
-		 * shuts down, so we can't write to it anymore. That's why we
-		 * just ignore write errors. It doesn't make sense to abort for
-		 * something like this.
-		 */
+writeExactWithoutOXT(int fd, const char *str, unsigned int size) {
+	/* We do not use writeExact() here because writeExact()
+	 * uses oxt::syscalls::write(), which is an interruption point and
+	 * which is slightly more expensive than a plain write().
+	 * Logging may block, but in most cases not indefinitely,
+	 * so we don't care if the write() here is not an interruption
+	 * point. If the write does block indefinitely then it's
+	 * probably a FIFO that is not opened on the other side.
+	 * In that case we can blame the user.
+	 */
+	ssize_t ret;
+	unsigned int written = 0;
+	while (written < size) {
+		do {
+			ret = write(fd, str + written, size - written);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			/* The most likely reason why this fails is when the user has setup
+			 * Apache to log to a pipe (e.g. to a log rotation script). Upon
+			 * restarting the web server, the process that reads from the pipe
+			 * shuts down, so we can't write to it anymore. That's why we
+			 * just ignore write errors. It doesn't make sense to abort for
+			 * something like this.
+			 */
+			break;
+		} else {
+			written += ret;
+		}
 	}
 }
 
 void
-_writeLogEntry(const std::string &str) {
-	_writeLogEntry(StaticString(str));
+_writeLogEntry(const char *str, unsigned int size) {
+	writeExactWithoutOXT(STDERR_FILENO, str, size);
 }
 
 void
-_writeLogEntry(const char *str, unsigned int size) {
-	_writeLogEntry(StaticString(str, size));
+_writeFileDescriptorLogEntry(const char *str, unsigned int size) {
+	writeExactWithoutOXT(fileDescriptorLog, str, size);
 }
 
 const char *
-_strdupStringStream(const std::stringstream &stream) {
-	string str = stream.str();
-	char *buf = (char *) malloc(str.size() + 1);
-	memcpy(buf, str.data(), str.size());
-	buf[str.size()] = '\0';
+_strdupFastStringStream(const FastStringStream<> &stream) {
+	char *buf = (char *) malloc(stream.size() + 1);
+	memcpy(buf, stream.data(), stream.size());
+	buf[stream.size()] = '\0';
 	return buf;
 }
 
@@ -167,7 +222,7 @@ realPrintAppOutput(char *buf, unsigned int bufSize,
 	pos = appendData(pos, end, ": ");
 	pos = appendData(pos, end, message, messageLen);
 	pos = appendData(pos, end, "\n");
-	_writeLogEntry(StaticString(buf, pos - buf));
+	_writeLogEntry(buf, pos - buf);
 }
 
 void

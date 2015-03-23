@@ -35,6 +35,7 @@
 #include <ev.h>
 #include <uv.h>
 #include <BackgroundEventLoop.h>
+#include <Logging.h>
 #include <Exceptions.h>
 #include <SafeLibev.h>
 
@@ -266,8 +267,12 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable, bool usesLibuv)
 		throw RuntimeException("Cannot create a libev event loop");
 	}
 
+	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_backend_fd(libev_loop), "libev event loop: backend FD");
+
 	ev_async_init(&priv->exitSignaller, signalLibevExit);
 	ev_async_start(libev_loop, &priv->exitSignaller);
+	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_loop_get_pipe(libev_loop, 0), "libev event loop: async pipe 0");
+	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_loop_get_pipe(libev_loop, 1), "libev event loop: async pipe 1");
 	priv->exitSignaller.data = this;
 	safe = boost::make_shared<SafeLibev>(libev_loop);
 

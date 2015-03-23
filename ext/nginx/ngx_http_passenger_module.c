@@ -279,6 +279,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     pp_variant_map_set_bool   (params, "multi_app", 1);
     pp_variant_map_set_bool   (params, "load_shell_envvars", 1);
     pp_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
+    pp_variant_map_set_ngx_str(params, "file_descriptor_log_file", &passenger_main_conf.file_descriptor_log_file);
     pp_variant_map_set_ngx_str(params, "data_buffer_dir", &passenger_main_conf.data_buffer_dir);
     pp_variant_map_set_ngx_str(params, "instance_registry_dir", &passenger_main_conf.instance_registry_dir);
     pp_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
@@ -299,12 +300,12 @@ start_watchdog(ngx_cycle_t *cycle) {
     pp_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
     pp_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
 
-    if (passenger_main_conf.debug_log_file.len > 0) {
-        pp_variant_map_set_ngx_str(params, "debug_log_file", &passenger_main_conf.debug_log_file);
+    if (passenger_main_conf.log_file.len > 0) {
+        pp_variant_map_set_ngx_str(params, "log_file", &passenger_main_conf.log_file);
     } else if (cycle->new_log.file->name.len > 0) {
-        pp_variant_map_set_ngx_str(params, "debug_log_file", &cycle->new_log.file->name);
+        pp_variant_map_set_ngx_str(params, "log_file", &cycle->new_log.file->name);
     } else if (cycle->log->file->name.len > 0) {
-        pp_variant_map_set_ngx_str(params, "debug_log_file", &cycle->log->file->name);
+        pp_variant_map_set_ngx_str(params, "log_file", &cycle->log->file->name);
     }
 
     ctl = (ngx_keyval_t *) passenger_main_conf.ctl->elts;

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -233,18 +233,20 @@ resolveHostname(const string &hostname, unsigned int port, bool shuffle) {
 }
 
 int
-createServer(const StaticString &address, unsigned int backlogSize, bool autoDelete) {
+createServer(const StaticString &address, unsigned int backlogSize, bool autoDelete,
+	const char *file, unsigned int line)
+{
 	TRACE_POINT();
 	switch (getSocketAddressType(address)) {
 	case SAT_UNIX:
 		return createUnixServer(parseUnixSocketAddress(address),
-			backlogSize, autoDelete);
+			backlogSize, autoDelete, file, line);
 	case SAT_TCP: {
 		string host;
 		unsigned short port;
 
 		parseTcpSocketAddress(address, host, port);
-		return createTcpServer(host.c_str(), port, backlogSize);
+		return createTcpServer(host.c_str(), port, backlogSize, file, line);
 	}
 	default:
 		throw ArgumentException(string("Unknown address type for '") + address + "'");
@@ -252,7 +254,9 @@ createServer(const StaticString &address, unsigned int backlogSize, bool autoDel
 }
 
 int
-createUnixServer(const StaticString &filename, unsigned int backlogSize, bool autoDelete) {
+createUnixServer(const StaticString &filename, unsigned int backlogSize, bool autoDelete,
+	const char *file, unsigned int line)
+{
 	struct sockaddr_un addr;
 	int fd, ret;
 
@@ -269,7 +273,7 @@ createUnixServer(const StaticString &filename, unsigned int backlogSize, bool au
 		throw SystemException("Cannot create a Unix socket file descriptor", e);
 	}
 
-	FdGuard guard(fd, true);
+	FdGuard guard(fd, file, line, true);
 	addr.sun_family = AF_LOCAL;
 	strncpy(addr.sun_path, filename.c_str(), filename.size());
 	addr.sun_path[filename.size()] = '\0';
@@ -307,7 +311,9 @@ createUnixServer(const StaticString &filename, unsigned int backlogSize, bool au
 }
 
 int
-createTcpServer(const char *address, unsigned short port, unsigned int backlogSize) {
+createTcpServer(const char *address, unsigned short port, unsigned int backlogSize,
+	const char *file, unsigned int line)
+{
 	struct sockaddr_in addr;
 	int fd, ret, optval;
 
@@ -334,7 +340,7 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 		throw SystemException("Cannot create a TCP socket file descriptor", e);
 	}
 
-	FdGuard guard(fd, true);
+	FdGuard guard(fd, file, line, true);
 	ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
 	if (ret == -1) {
 		int e = errno;
@@ -372,17 +378,17 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 }
 
 int
-connectToServer(const StaticString &address) {
+connectToServer(const StaticString &address, const char *file, unsigned int line) {
 	TRACE_POINT();
 	switch (getSocketAddressType(address)) {
 	case SAT_UNIX:
-		return connectToUnixServer(parseUnixSocketAddress(address));
+		return connectToUnixServer(parseUnixSocketAddress(address), file, line);
 	case SAT_TCP: {
 		string host;
 		unsigned short port;
 
 		parseTcpSocketAddress(address, host, port);
-		return connectToTcpServer(host, port);
+		return connectToTcpServer(host, port, file, line);
 	}
 	default:
 		throw ArgumentException(string("Unknown address type for '") + address + "'");
@@ -390,14 +396,16 @@ connectToServer(const StaticString &address) {
 }
 
 int
-connectToUnixServer(const StaticString &filename) {
+connectToUnixServer(const StaticString &filename, const char *file,
+	unsigned int line)
+{
 	int fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
 		int e = errno;
 		throw SystemException("Cannot create a Unix socket file descriptor", e);
 	}
 
-	FdGuard guard(fd, true);
+	FdGuard guard(fd, file, line, true);
 	int ret;
 	struct sockaddr_un addr;
 
@@ -449,8 +457,10 @@ connectToUnixServer(const StaticString &filename) {
 }
 
 void
-setupNonBlockingUnixSocket(NUnix_State &state, const StaticString &filename) {
-	state.fd = syscalls::socket(PF_UNIX, SOCK_STREAM, 0);
+setupNonBlockingUnixSocket(NUnix_State &state, const StaticString &filename,
+	const char *file, unsigned int line)
+{
+	state.fd.assign(syscalls::socket(PF_UNIX, SOCK_STREAM, 0), file, line);
 	if (state.fd == -1) {
 		int e = errno;
 		throw SystemException("Cannot create a Unix socket file descriptor", e);
@@ -494,7 +504,9 @@ connectToUnixServer(NUnix_State &state) {
 }
 
 int
-connectToTcpServer(const StaticString &hostname, unsigned int port) {
+connectToTcpServer(const StaticString &hostname, unsigned int port,
+	const char *file, unsigned int line)
+{
 	struct addrinfo hints, *res;
 	int ret, e, fd;
 
@@ -543,11 +555,15 @@ connectToTcpServer(const StaticString &hostname, unsigned int port) {
 		throw SystemException(message, e);
 	}
 
+	P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line);
+
 	return fd;
 }
 
 void
-setupNonBlockingTcpSocket(NTCP_State &state, const StaticString &hostname, int port) {
+setupNonBlockingTcpSocket(NTCP_State &state, const StaticString &hostname, int port,
+	const char *file, unsigned int line)
+{
 	int ret;
 
 	memset(&state.hints, 0, sizeof(state.hints));
@@ -565,7 +581,7 @@ setupNonBlockingTcpSocket(NTCP_State &state, const StaticString &hostname, int p
 		throw IOException(message);
 	}
 
-	state.fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	state.fd.assign(syscalls::socket(PF_INET, SOCK_STREAM, 0), file, line);
 	if (state.fd == -1) {
 		int e = errno;
 		throw SystemException("Cannot create a TCP socket file descriptor", e);
@@ -605,19 +621,22 @@ connectToTcpServer(NTCP_State &state) {
 }
 
 void
-setupNonBlockingSocket(NConnect_State &state, const StaticString &address) {
+setupNonBlockingSocket(NConnect_State &state, const StaticString &address,
+	const char *file, unsigned int line)
+{
 	TRACE_POINT();
 	state.type = getSocketAddressType(address);
 	switch (state.type) {
 	case SAT_UNIX:
-		setupNonBlockingUnixSocket(state.s_unix, parseUnixSocketAddress(address));
+		setupNonBlockingUnixSocket(state.s_unix, parseUnixSocketAddress(address),
+			file, line);
 		break;
 	case SAT_TCP: {
 		string host;
 		unsigned short port;
 
 		parseTcpSocketAddress(address, host, port);
-		setupNonBlockingTcpSocket(state.s_tcp, host, port);
+		setupNonBlockingTcpSocket(state.s_tcp, host, port, file, line);
 		break;
 	}
 	default:
@@ -638,7 +657,7 @@ connectToServer(NConnect_State &state) {
 }
 
 SocketPair
-createUnixSocketPair() {
+createUnixSocketPair(const char *file, unsigned int line) {
 	int fds[2];
 	FileDescriptor sockets[2];
 
@@ -646,14 +665,14 @@ createUnixSocketPair() {
 		int e = errno;
 		throw SystemException("Cannot create a Unix socket pair", e);
 	} else {
-		sockets[0] = fds[0];
-		sockets[1] = fds[1];
+		sockets[0].assign(fds[0], file, line);
+		sockets[1].assign(fds[1], file, line);
 		return SocketPair(sockets[0], sockets[1]);
 	}
 }
 
 Pipe
-createPipe() {
+createPipe(const char *file, unsigned int line) {
 	int fds[2];
 	FileDescriptor p[2];
 
@@ -661,8 +680,8 @@ createPipe() {
 		int e = errno;
 		throw SystemException("Cannot create a pipe", e);
 	} else {
-		p[0] = fds[0];
-		p[1] = fds[1];
+		p[0].assign(fds[0], file, line);
+		p[1].assign(fds[1], file, line);
 		return Pipe(p[0], p[1]);
 	}
 }
@@ -1151,7 +1170,7 @@ string
 readAll(const string &filename) {
 	FILE *f = fopen(filename.c_str(), "rb");
 	if (f != NULL) {
-		StdioGuard guard(f);
+		StdioGuard guard(f, NULL, 0);
 		return readAll(fileno(f));
 	} else {
 		int e = errno;

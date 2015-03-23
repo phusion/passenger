@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010, 2011, 2012 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -30,6 +30,7 @@
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
 #include <cstdio>
+#include <Logging.h>
 
 namespace Passenger {
 
@@ -99,12 +100,17 @@ public:
 		: f(0)
 		{ }
 
-	StdioGuard(FILE *_f)
+	StdioGuard(FILE *_f, const char *file, unsigned int line)
 		: f(_f)
-		{ }
+	{
+		if (_f != NULL && file != NULL) {
+			P_LOG_FILE_DESCRIPTOR_OPEN3(fileno(_f), file, line);
+		}
+	}
 
 	~StdioGuard() {
 		if (f != NULL) {
+			P_LOG_FILE_DESCRIPTOR_CLOSE(fileno(f));
 			fclose(f);
 		}
 	}
@@ -116,14 +122,19 @@ private:
 	bool ignoreErrors;
 
 public:
-	FdGuard(int _fd, bool _ignoreErrors = false)
+	FdGuard(int _fd, const char *file, unsigned int line, bool _ignoreErrors = false)
 		: fd(_fd),
 		  ignoreErrors(_ignoreErrors)
-		{ }
+	{
+		if (_fd != -1 && file != NULL) {
+			P_LOG_FILE_DESCRIPTOR_OPEN3(_fd, file, line);
+		}
+	}
 
 	~FdGuard() {
 		if (fd != -1) {
 			safelyClose(fd, ignoreErrors);
+			P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
 		}
 	}
 

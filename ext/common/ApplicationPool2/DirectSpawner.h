@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -160,8 +160,8 @@ public:
 		shared_array<const char *> args;
 		SpawnPreparationInfo preparation = prepareSpawn(options);
 		vector<string> command = createCommand(options, preparation, args);
-		SocketPair adminSocket = createUnixSocketPair();
-		Pipe errorPipe = createPipe();
+		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
+		Pipe errorPipe = createPipe(__FILE__, __LINE__);
 		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
 		pid_t pid;
 
@@ -199,6 +199,16 @@ public:
 			throw SystemException("Cannot fork a new process", e);
 
 		} else {
+			UPDATE_TRACE_POINT();
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.first,
+				"App " << pid << " (" << options.appRoot << ") adminSocket[0]");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.second,
+				"App " << pid << " (" << options.appRoot << ") adminSocket[1]");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.first,
+				"App " << pid << " (" << options.appRoot << ") errorPipe[0]");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.second,
+				"App " << pid << " (" << options.appRoot << ") errorPipe[1]");
+
 			UPDATE_TRACE_POINT();
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
 			P_DEBUG("Process forked for appRoot=" << options.appRoot << ": PID " << pid);
