@@ -216,6 +216,26 @@ public:
 		return find(StaticString(s, n), pos);
 	}
 
+	string::size_type find_first_of(const StaticString &str, size_t pos = 0) const {
+		const char *current = content + pos;
+		const char *end = content + len;
+		const char *tokens = str.data();
+		const char *tokensEnd = str.data() + str.size();
+
+		while (current < end) {
+			const char *currentToken = tokens;
+			while (currentToken < tokensEnd) {
+				if (*current == *currentToken) {
+					return current - content;
+				}
+				currentToken++;
+			}
+			current++;
+		}
+
+		return string::npos;
+	}
+
 	StaticString substr(string::size_type pos = 0, string::size_type n = string::npos) const {
 		if (pos > len) {
 			throw out_of_range("Argument 'pos' out of range");

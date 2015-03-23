@@ -190,13 +190,14 @@ private:
 				accept4Available = false;
 				return acceptNonBlockingSocket(serverFd);
 			} else {
+				P_LOG_FILE_DESCRIPTOR_OPEN(fd);
 				return fd;
 			}
 		} else {
 			int fd = syscalls::accept(serverFd,
 				(struct sockaddr *) &u,
 				&addrlen);
-			FdGuard guard(fd);
+			FdGuard guard(fd, __FILE__, __LINE__);
 			if (fd == -1) {
 				return -1;
 			} else {
@@ -254,8 +255,10 @@ public:
 			int e = errno;
 			throw SystemException("Cannot create pipe", e);
 		}
-		FdGuard guard1(exitPipe[0]);
-		FdGuard guard2(exitPipe[1]);
+		FdGuard guard1(exitPipe[0], __FILE__, __LINE__);
+		FdGuard guard2(exitPipe[1], __FILE__, __LINE__);
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(exitPipe[0], "AcceptLoadBalancer: exitPipe[0]");
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(exitPipe[1], "AcceptLoadBalancer: exitPipe[1]");
 		setNonBlocking(exitPipe[0]);
 		setNonBlocking(exitPipe[1]);
 		guard1.clear();
@@ -266,6 +269,8 @@ public:
 		shutdown();
 		close(exitPipe[0]);
 		close(exitPipe[1]);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(exitPipe[0]);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(exitPipe[1]);
 	}
 
 	void listen(int fd) {

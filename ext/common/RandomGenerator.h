@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -31,14 +31,12 @@
 #include <boost/shared_ptr.hpp>
 #include <oxt/system_calls.hpp>
 
-#include "StaticString.h"
-#include "Exceptions.h"
-#include "Utils/StrIntUtils.h"
+#include <Logging.h>
+#include <StaticString.h>
+#include <Exceptions.h>
+#include <Utils/StrIntUtils.h>
 
 
-/**
- * A random
- */
 namespace Passenger {
 
 using namespace std;
@@ -81,10 +79,13 @@ public:
 			throw FileSystemException("Cannot open /dev/urandom",
 				errno, "/dev/urandom");
 		}
+		P_LOG_FILE_DESCRIPTOR_OPEN4(fileno(handle), __FILE__, __LINE__,
+			"RandomGenerator");
 	}
 
 	void close() {
 		if (handle != NULL) {
+			P_LOG_FILE_DESCRIPTOR_CLOSE(fileno(handle));
 			syscalls::fclose(handle);
 			handle = NULL;
 		}

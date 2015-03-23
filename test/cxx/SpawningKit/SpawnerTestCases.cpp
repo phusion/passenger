@@ -22,7 +22,7 @@
 
 	#define RUN_USER_SWITCHING_TEST() \
 		result = spawner->spawn(options); \
-		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY))); \
+		BufferedIO io(FileDescriptor(open("/tmp/info.txt", O_RDONLY), __FILE__, __LINE__)); \
 		uid_t uid = (uid_t) atol(io.readLine().c_str()); \
 		gid_t gid = (gid_t) atol(io.readLine().c_str()); \
 		string groups = strip(io.readLine()); \
@@ -79,7 +79,8 @@
 		result = spawner->spawn(options);
 		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString(),
+			__FILE__, __LINE__), NULL, 0);
 		writeExact(fd, "ping\n");
 		ensure_equals(readAll(fd), "pong\n");
 	}
@@ -184,7 +185,8 @@
 		result = spawner->spawn(options);
 		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString(),
+			__FILE__, __LINE__), NULL, 0);
 		writeExact(fd, "pid\n");
 		ensure_equals(readAll(fd), toString(result["pid"].asInt()) + "\n");
 	}
@@ -202,7 +204,8 @@
 		result = spawner->spawn(options);
 		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString(),
+			__FILE__, __LINE__), NULL, 0);
 		writeExact(fd, "envvars\n");
 		envvars = readAll(fd);
 		ensure("(1)", envvars.find("PASSENGER_FOO = foo\n") != string::npos);

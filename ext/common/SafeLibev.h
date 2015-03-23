@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -34,6 +34,7 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <oxt/thread.hpp>
+#include <Logging.h>
 
 namespace Passenger {
 
@@ -144,6 +145,9 @@ public:
 
 	~SafeLibev() {
 		destroy();
+		P_LOG_FILE_DESCRIPTOR_CLOSE(ev_loop_get_pipe(loop, 0));
+		P_LOG_FILE_DESCRIPTOR_CLOSE(ev_loop_get_pipe(loop, 1));
+		P_LOG_FILE_DESCRIPTOR_CLOSE(ev_backend_fd(loop));
 		ev_loop_destroy(loop);
 	}
 

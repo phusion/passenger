@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -157,9 +157,9 @@ private:
 			} else {
 				this->filename = filename;
 			}
-			fd = syscalls::open(filename.c_str(),
+			fd.assign(syscalls::open(filename.c_str(),
 				O_CREAT | O_WRONLY | O_APPEND,
-				0600);
+				0600), __FILE__, __LINE__);
 			if (fd == -1) {
 				int e = errno;
 				throw FileSystemException("Cannnot open file", e, filename);

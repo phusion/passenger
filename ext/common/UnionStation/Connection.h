@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -36,6 +36,7 @@
 
 #include <errno.h>
 
+#include <Logging.h>
 #include <Exceptions.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
@@ -164,6 +165,7 @@ struct Connection: public boost::noncopyable {
 			this_thread::disable_interruption di;
 			this_thread::disable_syscall_interruption dsi;
 			safelyClose(fd);
+			P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
 			fd = -1;
 		}
 	}

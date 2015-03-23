@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -142,9 +142,11 @@ private:
 		unsigned long long timeout = 15000000;
 
 		// Create socket.
-		fd = connectToServer(serverAddress);
-		FdGuard guard(fd, true);
-		
+		fd = connectToServer(serverAddress, __FILE__, __LINE__);
+		FdGuard guard(fd, NULL, 0, true);
+
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "Connection to " AGENT_EXE " logger");
+
 		// Handshake: process protocol version number.
 		if (!readArrayMessage(fd, args, &timeout)) {
 			throw IOException("The logging agent closed the connection before sending a version identifier.");

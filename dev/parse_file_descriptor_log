@@ -1,0 +1,119 @@
+#!/usr/bin/env ruby
+# Parses a file descriptor log as produced by Passenger,
+# and display the file descriptors that are still open
+# according to the log.
+
+class ParserApp
+  Agent = Struct.new(:name, :fds)
+  Entry = Struct.new(:source, :purpose)
+
+  def initialize(path)
+    @io = File.open(path, "r")
+    @agents = {}
+  end
+
+  def close
+    @io.close
+  end
+
+  def analyze
+    @lineno = 1
+    while !@io.eof?
+      line = @io.readline.strip
+      pid, source, message = parse_line(line)
+
+      case message
+      when /^Starting agent: (.+)$/
+        agent_name = $1
+        if (old_pid = find_agent(agent_name))
+          warn "#{agent_name} restarted"
+          @agents.delete(old_pid)
+        end
+        @agents[pid] = Agent.new(agent_name, {})
+
+      when /^File descriptor opened: (.+)/
+        fd = $1.to_i
+        if agent = @agents[pid]
+          if agent.fds.has_key?(fd)
+            warn "FD #{fd} already opened"
+          end
+          agent.fds[fd] = Entry.new(source)
+        else
+          warn "No agent information about #{pid}"
+        end
+
+      when /^File descriptor closed: (.+)/
+        fd = $1.to_i
+        if agent = @agents[pid]
+          if agent.fds.has_key?(fd)
+            agent.fds.delete(fd)
+          else
+            warn "FD #{fd} not opened"
+          end
+        else
+          warn "No agent information about #{pid}"
+        end
+
+      when /^File descriptor purpose: (.+?): (.+)/
+        fd = $1.to_i
+        purpose = $2
+        if agent = @agents[pid]
+          if entry = agent.fds[fd]
+            entry.purpose = purpose
+          else
+            warn "FD #{fd} not opened"
+          end
+        else
+          warn "No agent information about #{pid}"
+        end
+      end
+
+      @lineno += 1
+    end
+  rescue EOFError
+  end
+
+  def report
+    @agents.each_pair do |pid, agent|
+      puts
+      puts "#{pid}: #{agent.name}"
+      puts("-" * 80)
+      agent.fds.keys.sort.each do |fd|
+        entry = agent.fds[fd]
+        printf "%-5d  %-30s  %s\n", fd, entry.source, entry.purpose
+      end
+    end
+  end
+
+private
+  def parse_line(line)
+    if line =~ /^\[ (.+?) \]: (.+)/
+      info = $1
+      message = $2
+      fragments = info.split(" ")
+      pid = fragments[2].sub(/\/.*/, '')
+      source = fragments.last
+      [pid, source, message]
+    else
+      nil
+    end
+  end
+
+  def find_agent(name)
+    @agents.each_pair do |pid, agent|
+      if agent.name == name
+        return pid
+      end
+    end
+    nil
+  end
+
+  def warn(message)
+    STDERR.puts "Warning:#{@lineno}: #{message}"
+  end
+end
+
+app = ParserApp.new(ARGV[0])
+app.analyze
+app.report
+app.close

@@ -25,8 +25,8 @@ namespace tut {
 		Channel::State lastState;
 
 		ServerKit_ChannelTest()
-			: bg(),
-			  context(bg.safe),
+			: bg(false, true),
+			  context(bg.safe, bg.libuv_loop),
 			  channel(&context)
 		{
 			channel.dataCallback = dataCallback;

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -199,7 +199,7 @@ AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "supp
 COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "common") + "/"
 APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "apache2") + "/"
 LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libev") + "/"
-LIBEIO_OUTPUT_DIR         = string_option('LIBEIO_OUTPUT_DIR', OUTPUT_DIR + "libeio") + "/"
+LIBUV_OUTPUT_DIR          = string_option('LIBUV_OUTPUT_DIR', OUTPUT_DIR + "libuv") + "/"
 ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
   OUTPUT_DIR + "ruby/" + ruby_extension_archdir) + "/"
@@ -208,5 +208,5 @@ PKG_DIR                   = string_option('PKG_DIR', "pkg")
 
 # Whether to use the vendored libev or the system one.
 USE_VENDORED_LIBEV = boolean_option("USE_VENDORED_LIBEV", true)
-# Whether to use the vendored libeio or the system one.
-USE_VENDORED_LIBEIO = boolean_option("USE_VENDORED_LIBEIO", true)
+# Whether to use the vendored libuv or the system one.
+USE_VENDORED_LIBUV  = boolean_option("USE_VENDORED_LIBUV", true)

@@ -264,6 +264,7 @@ private:
 		for (i = 0; it != end; it++, i++) {
 			const Json::Value &socket = *it;
 			this->sockets.add(
+				info.pid,
 				StaticString(base + log.socketStringOffsets[i].name.offset,
 					log.socketStringOffsets[i].name.size),
 				StaticString(base + log.socketStringOffsets[i].address.offset,
@@ -564,12 +565,13 @@ public:
 
 		P_TRACE(2, "Cleaning up process " << inspect());
 		if (!dummy) {
-			SocketList::const_iterator it, end = sockets.end();
+			SocketList::iterator it, end = sockets.end();
 			for (it = sockets.begin(); it != end; it++) {
 				if (getSocketAddressType(it->address) == SAT_UNIX) {
 					string filename = parseUnixSocketAddress(it->address);
 					syscalls::unlink(filename.c_str());
 				}
+				it->closeAllConnections();
 			}
 		}
 

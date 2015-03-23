@@ -120,7 +120,9 @@ namespace WatchdogAgent {
 		AdminServer *adminServer;
 
 		WorkingObjects()
-			: reportFile(-1),
+			: errorEvent(__FILE__, __LINE__, "WorkingObjects: errorEvent"),
+			  exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
+			  reportFile(-1),
 			  pidsCleanedUp(false),
 			  pidFileCleanedUp(false),
 			  bgloop(NULL),
@@ -338,6 +340,7 @@ readCleanupPids(const WorkingObjectsPtr &wo) {
 			size_t ret;
 
 			ret = fread(buf, 1, 32, f);
+			fclose(f);
 			if (ret > 0) {
 				buf[ret] = '\0';
 				result.push_back(atoi(buf));
@@ -866,8 +869,8 @@ createPidFile() {
 		}
 
 		UPDATE_TRACE_POINT();
+		FdGuard guard(fd, __FILE__, __LINE__);
 		writeExact(fd, pidStr, strlen(pidStr));
-		syscalls::close(fd);
 	}
 }
 
@@ -882,6 +885,7 @@ openReportFile(const WorkingObjectsPtr &wo) {
 			throw FileSystemException("Cannot open report file " + reportFile, e, reportFile);
 		}
 
+		P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, "WorkingObjects: reportFile");
 		wo->reportFile = fd;
 	}
 }
@@ -990,6 +994,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 		throw FileSystemException("Cannot open " + lockFilePath + " for reading",
 			e, lockFilePath);
 	}
+	P_LOG_FILE_DESCRIPTOR_OPEN4(wo->lockFile, __FILE__, __LINE__, "WorkingObjects: lock file");
 
 	createFile(wo->instanceDir->getPath() + "/watchdog.pid", toString(getpid()));
 
@@ -1120,7 +1125,8 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 	UPDATE_TRACE_POINT();
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
 		P_DEBUG("Admin server will listen on " << adminAddresses[i]);
-		wo->adminServerFds[i] = createServer(adminAddresses[i]);
+		wo->adminServerFds[i] = createServer(adminAddresses[i], 0, true,
+			__FILE__, __LINE__);
 		if (getSocketAddressType(adminAddresses[i]) == SAT_UNIX) {
 			makeFileWorldReadableAndWritable(parseUnixSocketAddress(adminAddresses[i]));
 		}
@@ -1128,7 +1134,8 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 
 	UPDATE_TRACE_POINT();
 	wo->bgloop = new BackgroundEventLoop(true, true);
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
+		wo->bgloop->libuv_loop);
 	wo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
 		absolutizePath(options.get("data_buffer_dir"));
 
@@ -1216,6 +1223,7 @@ reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPt
 
 		writeExact(wo->reportFile, str.data(), str.size());
 		close(wo->reportFile);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(wo->reportFile);
 		wo->reportFile = -1;
 	}
 }

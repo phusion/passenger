@@ -36,7 +36,7 @@ namespace tut {
 			socklen_t len = sizeof(addr);
 			Json::Value socket;
 
-			server1 = createTcpServer("127.0.0.1", 0);
+			server1.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server1, (struct sockaddr *) &addr, &len);
 			socket["name"] = "main1";
 			socket["address"] = "tcp://127.0.0.1:" + toString(addr.sin_port);
@@ -44,7 +44,7 @@ namespace tut {
 			socket["concurrency"] = 3;
 			sockets.append(socket);
 
-			server2 = createTcpServer("127.0.0.1", 0);
+			server2.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server2, (struct sockaddr *) &addr, &len);
 			socket = Json::Value();
 			socket["name"] = "main2";
@@ -53,7 +53,7 @@ namespace tut {
 			socket["concurrency"] = 3;
 			sockets.append(socket);
 
-			server3 = createTcpServer("127.0.0.1", 0);
+			server3.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server3, (struct sockaddr *) &addr, &len);
 			socket = Json::Value();
 			socket["name"] = "main3";
@@ -62,8 +62,8 @@ namespace tut {
 			socket["concurrency"] = 3;
 			sockets.append(socket);
 
-			adminSocket = createUnixSocketPair();
-			errorPipe = createPipe();
+			adminSocket = createUnixSocketPair(__FILE__, __LINE__);
+			errorPipe = createPipe(__FILE__, __LINE__);
 
 			gatherOutput = boost::bind(&ApplicationPool2_ProcessTest::_gatherOutput, this, _1, _2);
 		}

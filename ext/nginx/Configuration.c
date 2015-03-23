@@ -84,8 +84,10 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->default_ruby.data = NULL;
     conf->default_ruby.len = 0;
     conf->log_level = (ngx_int_t) NGX_CONF_UNSET;
-    conf->debug_log_file.data = NULL;
-    conf->debug_log_file.len = 0;
+    conf->log_file.data = NULL;
+    conf->log_file.len = 0;
+    conf->file_descriptor_log_file.data = NULL;
+    conf->file_descriptor_log_file.len = 0;
     conf->data_buffer_dir.data = NULL;
     conf->data_buffer_dir.len = 0;
     conf->instance_registry_dir.data = NULL;
@@ -142,8 +144,12 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         conf->log_level = DEFAULT_LOG_LEVEL;
     }
 
-    if (conf->debug_log_file.len == 0) {
-        conf->debug_log_file.data = (u_char *) "";
+    if (conf->log_file.len == 0) {
+        conf->log_file.data = (u_char *) "";
+    }
+
+    if (conf->file_descriptor_log_file.len == 0) {
+        conf->file_descriptor_log_file.data = (u_char *) "";
     }
 
     if (conf->data_buffer_dir.len == 0) {
@@ -1272,11 +1278,18 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, log_level),
       NULL },
 
-    { ngx_string("passenger_debug_log_file"),
+    { ngx_string("passenger_log_file"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, debug_log_file),
+      offsetof(passenger_main_conf_t, log_file),
+      NULL },
+
+    { ngx_string("passenger_file_descriptor_log_file"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, file_descriptor_log_file),
       NULL },
 
     { ngx_string("passenger_data_buffer_dir"),
@@ -1415,6 +1428,15 @@ const ngx_command_t passenger_commands[] = {
     /******** Per-location config ********/
 
     #include "ConfigurationCommands.c"
+
+    /******** Backward compatibility ********/
+
+    { ngx_string("passenger_debug_log_file"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, log_file),
+      NULL },
 
     ngx_null_command
 };

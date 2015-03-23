@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <new>
@@ -163,7 +164,7 @@ void splitIncludeSep(const StaticString & restrict_ref str,
  *
  * Example: ("hello/world\\path/Splitter.cpp", "\\/", 3, sstream) results in sstream << "hel/wor\\pat/Splitter.cpp"
  */
-void truncateBeforeTokens(const char* str, const char *tokens, int maxBetweenTokens, std::stringstream& sstream);
+void truncateBeforeTokens(const char *str, const StaticString &tokens, int maxBetweenTokens, ostream &sstream);
 
 /**
  * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.

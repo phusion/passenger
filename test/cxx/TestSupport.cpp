@@ -8,7 +8,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <cassert>
-#include <eio.h>
 #include <BackgroundEventLoop.cpp>
 #include <Utils/IOUtils.h>
 #include <Utils/ScopeGuard.h>
@@ -31,35 +30,6 @@ createInstanceDir(InstanceDirectoryPtr &instanceDir) {
 	options.defaultUid = pwUser->pw_uid;
 	options.defaultGid = pwUser->pw_gid;
 	instanceDir = boost::make_shared<InstanceDirectory>(options);
-}
-
-static int
-doNothing(eio_req *req) {
-	return 0;
-}
-
-void
-initializeLibeio() {
-	eio_set_idle_timeout(1);
-	eio_set_min_parallel(0);
-	eio_set_max_parallel(1);
-	eio_set_max_idle(0);
-	if (RUNNING_ON_VALGRIND) {
-		// Start an EIO thread to warm up Valgrind.
-		eio_nop(0, doNothing, NULL);
-	}
-}
-
-void
-shutdownLibeio() {
-	// For some reason, eio_nreqs() and eio_npending() never reach 0.
-	// We're probably not shutting down libeio correctly.
-	// As a workaround, we wait for 20 ms after deinitializing.
-	while (eio_nready() > 0) {
-		usleep(10000);
-	}
-	eio_deinit();
-	usleep(20000);
 }
 
 void
@@ -119,7 +89,7 @@ replaceStringInFile(const char *filename, const string &toFind, const string &re
 		message.append("' for writing");
 		throw FileSystemException(message, e, filename);
 	} else {
-		StdioGuard guard(f);
+		StdioGuard guard(f, __FILE__, __LINE__);
 		content = replaceString(content, toFind, replaceWith);
 		fwrite(content.data(), 1, content.size(), f);
 	}
@@ -140,7 +110,7 @@ writeFile(const string &filename, const string &contents) {
 		message.append("' for writing");
 		throw FileSystemException(message, e, filename);
 	} else {
-		StdioGuard guard(f);
+		StdioGuard guard(f, __FILE__, __LINE__);
 		fwrite(contents.data(), 1, contents.size(), f);
 	}
 }

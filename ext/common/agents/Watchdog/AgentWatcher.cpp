@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2013 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -265,7 +265,7 @@ public:
 		 * arguments to this agent process through this fd, and we'll receive
 		 * startup information through it as well.
 		 */
-		fds = createUnixSocketPair();
+		fds = createUnixSocketPair(__FILE__, __LINE__);
 
 		pid = syscalls::fork();
 		if (pid == 0) {
@@ -334,7 +334,7 @@ public:
 			throw SystemException("Cannot fork a new process", e);
 		} else {
 			// Parent
-			FileDescriptor feedbackFd = fds[0];
+			FileDescriptor feedbackFd(fds[0]);
 			vector<string> args;
 
 			fds[1].close();

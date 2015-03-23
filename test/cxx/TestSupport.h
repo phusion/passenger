@@ -105,9 +105,6 @@ extern Json::Value testConfig;
  */
 void createInstanceDir(InstanceDirectoryPtr &instanceDir);
 
-void initializeLibeio();
-void shutdownLibeio();
-
 /**
  * Writes zeroes into the given file descriptor its buffer is full (i.e.
  * the next write will block).
@@ -328,6 +325,8 @@ public:
 
 } // namespace TestSupport
 
-using namespace TestSupport;
+namespace tut {
+	using namespace TestSupport;
+}
 
 #endif /* _TEST_SUPPORT_H_ */

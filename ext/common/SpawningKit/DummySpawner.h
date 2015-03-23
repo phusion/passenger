@@ -55,7 +55,7 @@ public:
 
 		syscalls::usleep(config->spawnTime);
 
-		SocketPair adminSocket = createUnixSocketPair();
+		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
 		unsigned int number = count.fetch_add(1, boost::memory_order_relaxed);
 		Result result;
 		Json::Value socket;

@@ -43,7 +43,8 @@ bool feedbackFdAvailable();
 VariantMap initializeAgent(int argc, char **argv[], const char *processName,
 	OptionParserFunc optionParser = NULL, PreinitializationFunc preinit = NULL,
 	int argStartIndex = 1);
-void initializeAgentOptions(VariantMap &options, PreinitializationFunc preinit = NULL);
+void initializeAgentOptions(const char *processName, VariantMap &options,
+	PreinitializationFunc preinit = NULL);
 void installAgentAbortHandler();
 void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
 

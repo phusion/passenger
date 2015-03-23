@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -165,7 +165,8 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 		options |= O_EXCL;
 	}
 	do {
-		fd = open(filename.c_str(), options, permissions);
+		fd.assign(open(filename.c_str(), options, permissions),
+			__FILE__, __LINE__);
 	} while (fd == -1 && errno == EINTR);
 	if (fd != -1) {
 		FileGuard guard(filename);
@@ -1036,7 +1037,7 @@ runCommandAndCaptureOutput(const char **command) {
 	int e;
 	Pipe p;
 
-	p = createPipe();
+	p = createPipe(__FILE__, __LINE__);
 
 	this_thread::disable_syscall_interruption dsi;
 	pid = syscalls::fork();

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -91,6 +91,8 @@ namespace LoggingAgent {
 			  bgloop(NULL),
 			  serverKitContext(NULL),
 			  loggingServer(NULL),
+			  exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
+			  allClientsDisconnectedEvent(__FILE__, __LINE__, "WorkingObjects: allClientsDisconnectedEvent"),
 			  terminationCount(0)
 			{ }
 	};
@@ -201,7 +203,10 @@ startListening() {
 	vector<string> adminAddresses;
 
 	address = options.get("logging_agent_address");
-	wo->serverSocketFd = createServer(address.c_str());
+	wo->serverSocketFd.assign(createServer(address, 0, true,
+		__FILE__, __LINE__), NULL, 0);
+	P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->serverSocketFd,
+		"Server address: " << wo->serverSocketFd);
 	if (getSocketAddressType(address) == SAT_UNIX) {
 		makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 	}
@@ -210,7 +215,10 @@ startListening() {
 	adminAddresses = options.getStrSet("logging_agent_admin_addresses",
 		false);
 	foreach (address, adminAddresses) {
-		wo->adminSockets.push_back(createServer(address));
+		wo->adminSockets.push_back(createServer(address, 0, true,
+			__FILE__, __LINE__));
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->adminSockets.back(),
+			"Server address: " << wo->adminSockets.back());
 		if (getSocketAddressType(address) == SAT_UNIX) {
 			makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 		}
@@ -278,12 +286,13 @@ initializeUnprivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	wo->bgloop = new BackgroundEventLoop(true, true);
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
+		wo->bgloop->libuv_loop);
 
 	UPDATE_TRACE_POINT();
 	wo->accountsDatabase = boost::make_shared<AccountsDatabase>();
 	wo->accountsDatabase->add("logging", wo->password, false);
-	wo->loggingServer = new LoggingServer(wo->bgloop->loop,
+	wo->loggingServer = new LoggingServer(wo->bgloop->libev_loop,
 		wo->serverSocketFd, wo->accountsDatabase, options);
 
 	UPDATE_TRACE_POINT();
@@ -298,11 +307,11 @@ initializeUnprivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	ev_signal_init(&wo->sigquitWatcher, printInfo, SIGQUIT);
-	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
+	ev_signal_start(wo->bgloop->libev_loop, &wo->sigquitWatcher);
 	ev_signal_init(&wo->sigintWatcher, onTerminationSignal, SIGINT);
-	ev_signal_start(wo->bgloop->loop, &wo->sigintWatcher);
+	ev_signal_start(wo->bgloop->libev_loop, &wo->sigintWatcher);
 	ev_signal_init(&wo->sigtermWatcher, onTerminationSignal, SIGTERM);
-	ev_signal_start(wo->bgloop->loop, &wo->sigtermWatcher);
+	ev_signal_start(wo->bgloop->libev_loop, &wo->sigtermWatcher);
 }
 
 static void

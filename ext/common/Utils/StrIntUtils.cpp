@@ -111,8 +111,8 @@ splitIncludeSep(const StaticString &str, char sep, vector<StaticString> &output)
 }
 
 void
-truncateBeforeTokens(const char* str, const char *tokens, int maxBetweenTokens, std::stringstream& sstream) {
-	std::string source(str);
+truncateBeforeTokens(const char *str, const StaticString &tokens, int maxBetweenTokens, ostream &sstream) {
+	StaticString source(str);
 
 	if (source.empty()) {
 		return;

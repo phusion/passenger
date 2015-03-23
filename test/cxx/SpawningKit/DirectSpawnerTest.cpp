@@ -118,7 +118,8 @@ namespace tut {
 		result = spawner->spawn(options);
 		ensure_equals(result["sockets"].size(), 1u);
 
-		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString()));
+		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString(),
+			__FILE__, __LINE__), NULL, 0);
 		writeExact(fd, "ping\n");
 		ensure_equals(readAll(fd), "pong\n");
 	}
