@@ -100,7 +100,7 @@ bool setLogFile(const string &path, int *errcode = NULL);
  * Returns whether we're using a separate log file for logging file
  * descriptor opening and closing.
  *
- * This method is NOT thread-safe.
+ * See `getFileDescriptorLogFile()` for thread-safety notes.
  */
 bool hasFileDescriptorLogFile();
 
@@ -109,7 +109,11 @@ bool hasFileDescriptorLogFile();
  * opening and closing, or the empty string if we're not using a
  * separate log file.
  *
- * This method is NOT thread-safe.
+ * This method is only thread-safe if `setFileDescriptorLogFile()`
+ * was called before any threads were made, and at the same time
+ * `setFileDescriptorLogFile()` is never called again with a different
+ * argument. In other words, only reopening the same log file is
+ * thread-safe.
  */
 string getFileDescriptorLogFile();
 
@@ -118,7 +122,7 @@ string getFileDescriptorLogFile();
  * logging file descriptor opening and closing, or -1 if we're not using a
  * separate log file.
  *
- * This method is NOT thread-safe.
+ * See `getFileDescriptorLogFile()` for thread-safety notes.
  */
 int getFileDescriptorLogFileFd();
 
@@ -126,7 +130,9 @@ int getFileDescriptorLogFileFd();
  * Sets the log file to use specifically for logging file descriptor
  * opening and closing.
  *
- * This method is NOT thread-safe.
+ * This method is only thread-safe if you `path` equals what
+ * `getFileDescriptorLogFile()` returns. In other words, when
+ * you're reopening the log file.
  *
  * Returns whether the new log file can be opened. If not,
  * errcode (if non-NULL) is set to the relevant filesystem

@@ -554,6 +554,7 @@ private:
 		if (req->method != HTTP_POST) {
 			respondWith405(client, req);
 		} else if (authorize(client, req, FULL)) {
+			int e;
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
 
@@ -562,24 +563,45 @@ private:
 				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
 					"\"code\": \"NO_LOG_FILE\", "
 					"\"message\": \"" PROGRAM_NAME " was not configured with a log file.\" }\n");
-			} else {
-				int e;
-				if (!setLogFile(logFile, &e)) {
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+
+			if (!setLogFile(logFile, &e)) {
+				unsigned int bufsize = 1024;
+				char *message = (char *) psg_pnalloc(req->pool, bufsize);
+				snprintf(message, bufsize, "{ \"status\": \"error\", "
+					"\"code\": \"LOG_FILE_OPEN_ERROR\", "
+					"\"message\": \"Cannot reopen log file %s: %s (errno=%d)\" }",
+					logFile.c_str(), strerror(e), e);
+				writeSimpleResponse(client, 500, &headers, message);
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+			P_NOTICE("Log file reopened.");
+
+			if (hasFileDescriptorLogFile()) {
+				if (!setFileDescriptorLogFile(getFileDescriptorLogFile(), &e)) {
 					unsigned int bufsize = 1024;
 					char *message = (char *) psg_pnalloc(req->pool, bufsize);
 					snprintf(message, bufsize, "{ \"status\": \"error\", "
-						"\"code\": \"LOG_FILE_OPEN_ERROR\", "
-						"\"message\": \"Cannot reopen log file: %s (errno=%d)\" }",
-						strerror(e), e);
+						"\"code\": \"FD_LOG_FILE_OPEN_ERROR\", "
+						"\"message\": \"Cannot reopen file descriptor log file %s: %s (errno=%d)\" }",
+						getFileDescriptorLogFile().c_str(), strerror(e), e);
 					writeSimpleResponse(client, 500, &headers, message);
 					if (!req->ended()) {
 						endRequest(&client, &req);
 					}
 					return;
 				}
-				P_NOTICE("Log file reopened.");
-				writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
+				P_NOTICE("File descriptor log file reopened.");
 			}
+
+			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
 
 			if (!req->ended()) {
 				endRequest(&client, &req);

@@ -105,7 +105,12 @@ setFileDescriptorLogFile(const string &path, int *errcode) {
 			dup2(fd, fileDescriptorLog);
 			close(fd);
 		}
-		fileDescriptorLogFile = path;
+		if (fileDescriptorLogFile != path) {
+			// Do not mutate `fileDescriptorLogFile` if the path
+			// hasn't changed. This allows `setFileDescriptorLogFile()`
+			// to be thread-safe within the documented constraints.
+			fileDescriptorLogFile = path;
+		}
 		return true;
 	} else {
 		if (errcode != NULL) {
