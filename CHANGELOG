@@ -6,7 +6,7 @@ Release 5.0.5
  * Fixes a potential read-past-buffer bug in string-to-integer conversion routines. Thanks to dcb314 for spotting this. Closes GH-1441.
  * There is now an API endpoint for force disconnecting a client: `passenger-config admin-command DELETE /server/<client name>.json`. Closes GH-1246.
  * Fixes some file descriptor leaks. These leaks were caused by the fact that keep-alive connections with application processes were not being closed properly. Closes GH-1439.
- * In order to more easily debug future file descriptor leaks, we've introduced the `PassengerFileDescriptorLogFile` (Apache) and `passenger_file_descriptor_log_file` (Nginx) config options. This allows Passenger to log all file descriptor open/close acitvity to a specific log file.
+ * In order to more easily debug future file descriptor leaks, we've introduced the `PassengerFileDescriptorLogFile` (Apache) and `passenger_file_descriptor_log_file` (Nginx) config options. This allows Passenger to log all file descriptor open/close activity to a specific log file.
  * The `PassengerDebugLogFile` (Apache) and `passenger_debug_log_file` (Nginx) configuration options have been renamed to `PassengerLogFile` and `passenger_log_file`, respectively. The old name is support supported for backward compatibility reasons.
  * [Enterprise] Fixes a bug in Flying Passenger's `--instance-registry-dir` command line parameter. This command line parameter didn't do anything.
  * [Enterprise] The Flying Passenger daemon no longer supports the `--max-preloader-idle-time` config option. This is because the config option never worked. The correct way to set the max preloader idle time is through the Nginx config option, but this was wrongly documented, so the documentation has been fixed.
