@@ -1918,7 +1918,7 @@ You may combine this option with <<PassengerErrorOverride,PassengerErrorOverride
 
 ---------------------------------
 PassengerErrorOverride on
-ErrorDocument 504 /error504.html
+ErrorDocument 503 /error503.html
 ---------------------------------
 
 This option may occur in the following places:

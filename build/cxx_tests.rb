@@ -175,9 +175,6 @@ TEST_CXX_OBJECTS = {
   'test/cxx/EventedClientTest.o' => %w(
     test/cxx/EventedClientTest.cpp
     ext/common/EventedClient.h),
-  'test/cxx/EventedBufferedInput.o' => %w(
-    test/cxx/EventedBufferedInputTest.cpp
-    ext/common/EventedBufferedInput.h),
   'test/cxx/MessageServerTest.o' => %w(
     test/cxx/MessageServerTest.cpp
     ext/common/Logging.h
