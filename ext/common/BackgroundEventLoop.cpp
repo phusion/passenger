@@ -287,6 +287,9 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable, bool usesLibuv)
 		uv_loop_init(&priv->libuv_loop);
 		uv_timer_init(&priv->libuv_loop, &priv->libuv_timer);
 		uv_sem_init(&priv->libuv_sem, 0);
+		P_LOG_FILE_DESCRIPTOR_OPEN2(uv_backend_fd(libuv_loop), "libuv event loop: backend");
+		P_LOG_FILE_DESCRIPTOR_OPEN2(libuv_loop->signal_pipefd[0], "libuv event loop: signal pipe 0");
+		P_LOG_FILE_DESCRIPTOR_OPEN2(libuv_loop->signal_pipefd[1], "libuv event loop: signal pipe 1");
 	}
 
 	priv->thr = NULL;
@@ -304,6 +307,9 @@ BackgroundEventLoop::~BackgroundEventLoop() {
 			syscalls::usleep(10000);
 		}
 		uv_sem_destroy(&priv->libuv_sem);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(uv_backend_fd(libuv_loop));
+		P_LOG_FILE_DESCRIPTOR_CLOSE(libuv_loop->signal_pipefd[0]);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(libuv_loop->signal_pipefd[1]);
 		uv_loop_close(libuv_loop);
 	}
 	uv_barrier_destroy(&priv->startBarrier);
