@@ -139,6 +139,7 @@ serverUsage() {
 	printf("Other options (optional):\n");
 	printf("      --log-file PATH       Log to the given file.\n");
 	printf("      --log-level LEVEL     Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
+	printf("      --fd-log-file PATH    Log file descriptor activity to the given file.\n");
 	printf("      --stat-throttle-rate SECONDS\n");
 	printf("                            Throttle filesystem restart.txt checks to at most\n");
 	printf("                            once per given seconds. Default: %d\n", DEFAULT_STAT_THROTTLE_RATE);
@@ -308,9 +309,14 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		options.setInt("server_log_level", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
-		// We do not set debug_log_file because, when this function is called from
+		// We do not set log_file because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log file.
 		options.set("server_log_file", argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--fd-log-file")) {
+		// We do not set file_descriptor_log_file because, when this function is called from
+		// the Watchdog, we don't want to affect the Watchdog's own log file.
+		options.set("server_file_descriptor_log_file", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--stat-throttle-rate")) {
 		options.setInt("stat_throttle_rate", atoi(argv[i + 1]));
