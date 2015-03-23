@@ -484,12 +484,13 @@ public:
 
 		P_TRACE(2, "Cleaning up process " << inspect());
 		if (!dummy) {
-			SocketList::const_iterator it, end = sockets.end();
+			SocketList::iterator it, end = sockets.end();
 			for (it = sockets.begin(); it != end; it++) {
 				if (getSocketAddressType(it->address) == SAT_UNIX) {
 					string filename = parseUnixSocketAddress(it->address);
 					syscalls::unlink(filename.c_str());
 				}
+				it->closeAllConnections();
 			}
 		}
 

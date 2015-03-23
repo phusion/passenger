@@ -72,9 +72,9 @@ private:
 	mutable boost::atomic<int> refcount;
 	bool closed;
 
-	void deinitiate(bool success, bool persistent) {
+	void deinitiate(bool success, bool wantKeepAlive) {
 		connection.fail = !success;
-		connection.persistent = persistent;
+		connection.wantKeepAlive = wantKeepAlive;
 		socket->checkinConnection(connection);
 		connection.fd = -1;
 	}
@@ -172,9 +172,9 @@ public:
 	/**
 	 * This Session object becomes fully unsable after closing.
 	 */
-	void close(bool success, bool persistent = false) {
+	void close(bool success, bool wantKeepAlive = false) {
 		if (OXT_LIKELY(initiated())) {
-			deinitiate(success, persistent);
+			deinitiate(success, wantKeepAlive);
 		}
 		if (OXT_LIKELY(!closed)) {
 			callOnClose();
