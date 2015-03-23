@@ -159,7 +159,7 @@ private:
 
 		for (i = 0; i < newClientCount; i++) {
 			ServerKit::Context *ctx = servers[nextServer]->getContext();
-			P_TRACE(2, "Feeding client to server thread " << nextServer <<
+			P_TRACE(2, "Feeding client to server thread " << (int) nextServer <<
 				": file descriptor " << newClients[i]);
 			ctx->libev->runLater(boost::bind(feedNewClient, servers[nextServer],
 				newClients[i]));
