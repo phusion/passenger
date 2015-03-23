@@ -109,8 +109,8 @@ if USE_VENDORED_LIBEV
     "ext/libev/Makefile.am"
   ]
   file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
-    cc = PlatformInfo.cc
-    cxx = PlatformInfo.cxx
+    cc = CC
+    cxx = CXX
     if OPTIMIZE && LTO
       cc = "#{cc} -flto"
       cxx = "#{cxx} -flto"
@@ -167,8 +167,8 @@ if USE_VENDORED_LIBEIO
     "ext/libeio/Makefile.am"
   ]
   file LIBEIO_OUTPUT_DIR + "Makefile" => dependencies do
-    cc = PlatformInfo.cc
-    cxx = PlatformInfo.cxx
+    cc = CC
+    cxx = CXX
     if OPTIMIZE && LTO
       cc = "#{cc} -flto"
       cxx = "#{cxx} -flto"

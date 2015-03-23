@@ -37,7 +37,7 @@ describe "Phusion Passenger for Nginx" do
     log "End of test"
     if example.exception
       puts "\t---------------- Begin logs -------------------"
-      File.open("test.log", "r") do |f|
+      File.open("test.log", "rb") do |f|
         f.seek(@test_log_pos)
         puts f.read.split("\n").map{ |line| "\t#{line}" }.join("\n")
       end

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -49,7 +49,7 @@ module PhusionPassenger
           opts.banner = "Usage: passenger-config reopen-logs [OPTIONS]\n"
           opts.separator ""
           opts.separator "  Instruct #{PROGRAM_NAME} agent processes to reopen their log files. This"
-          opts.separator "  should be involved after you've rotated logs. This command returns after"
+          opts.separator "  should be invoked after you've rotated log files. This command returns after"
           opts.separator "  the log files have been reopened."
           opts.separator ""
 

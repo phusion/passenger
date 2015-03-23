@@ -134,6 +134,7 @@ private:
 
 	void initialize() {
 		burstReadCount = 1;
+		watcher.active = false;
 		watcher.fd = -1;
 		watcher.data = this;
 	}
@@ -152,7 +153,7 @@ public:
 	}
 
 	~FdSourceChannel() {
-		if (ctx != NULL) {
+		if (ctx != NULL && ev_is_active(&watcher)) {
 			ev_io_stop(ctx->libev->getLoop(), &watcher);
 		}
 	}
@@ -170,7 +171,9 @@ public:
 
 	void deinitialize() {
 		buffer = MemoryKit::mbuf();
-		ev_io_stop(ctx->libev->getLoop(), &watcher);
+		if (ev_is_active(&watcher)) {
+			ev_io_stop(ctx->libev->getLoop(), &watcher);
+		}
 		watcher.fd = -1;
 		consumedCallback = NULL;
 		Channel::deinitialize();
