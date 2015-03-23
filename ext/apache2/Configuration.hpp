@@ -177,7 +177,8 @@ struct ServerConfig {
 	int logLevel;
 
 	/** A file to print debug messages to, or NULL to just use STDERR. */
-	const char *debugLogFile;
+	const char *logFile;
+	const char *fileDescriptorLogFile;
 
 	/** The maximum number of simultaneously alive application
 	 * instances. */
@@ -219,7 +220,8 @@ struct ServerConfig {
 		root               = NULL;
 		defaultRuby        = DEFAULT_RUBY;
 		logLevel           = DEFAULT_LOG_LEVEL;
-		debugLogFile       = NULL;
+		logFile            = NULL;
+		fileDescriptorLogFile = NULL;
 		maxPoolSize        = DEFAULT_MAX_POOL_SIZE;
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
 		responseBufferHighWatermark = DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK;

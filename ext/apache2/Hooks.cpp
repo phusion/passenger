@@ -1205,8 +1205,11 @@ public:
 	{
 		serverConfig.finalize();
 		Passenger::setLogLevel(serverConfig.logLevel);
-		if (serverConfig.debugLogFile != NULL) {
-			Passenger::setLogFile(serverConfig.debugLogFile);
+		if (serverConfig.logFile != NULL) {
+			Passenger::setLogFile(serverConfig.logFile);
+		}
+		if (serverConfig.fileDescriptorLogFile != NULL) {
+			Passenger::setFileDescriptorLogFile(serverConfig.fileDescriptorLogFile);
 		}
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
@@ -1235,7 +1238,9 @@ public:
 			.set    ("server_software", webServerDesc)
 			.setBool("multi_app", true)
 			.setBool("load_shell_envvars", true)
-			.set    ("debug_log_file", (serverConfig.debugLogFile == NULL) ? "" : serverConfig.debugLogFile)
+			.set    ("log_file", (serverConfig.logFile == NULL) ? "" : serverConfig.logFile)
+			.set    ("file_descriptor_log_file", (serverConfig.fileDescriptorLogFile == NULL)
+				? "" : serverConfig.fileDescriptorLogFile)
 			.set    ("data_buffer_dir", serverConfig.dataBufferDir)
 			.set    ("instance_registry_dir", serverConfig.instanceRegistryDir)
 			.setBool("user_switching", serverConfig.userSwitching)

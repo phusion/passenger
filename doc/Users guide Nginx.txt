@@ -1992,14 +1992,34 @@ Possible values are:
 
 This option may only occur once, in the 'http' configuration block. The default is '3'.
 
-==== passenger_debug_log_file <filename> ====
-By default Phusion Passenger debugging and error messages are written to the global
-web server error log. This option allows one to specify the file that debugging and
-error messages should be written to instead.
+[[PassengerLogFile]]
+==== passenger_log_file <filename> ====
+:version: 5.0.5
+include::users_guide_snippets/since_version.txt[]
+
+By default Phusion Passenger log messages are written to the global web server error log. With this option, you can have those messages logged to a different file instead.
 
 This option may only occur once, in the 'http' configuration block.
 
 :option: `--log-file`
+include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+
+==== PassengerFileDescriptorLogFile <filename>
+:version: 5.0.5
+include::users_guide_snippets/since_version.txt[]
+
+Log file descriptor debug tracing messages to the given file.
+
+Phusion Passenger has the ability to log all file descriptors that it opens and closes. These logs are useful to the Phusion Passenger developers for the purpose of analyzing file descriptor leaks.
+
+File descriptor activity is logged as follows:
+
+ * If `passenger_file_descriptor_log_file` is not set, then file descriptor activity is logged to the <<PassengerLogFile,main log file>>, but only if the <<PassengerLogLevel,log level>> is 5 (debug) or higher.
+ * If `passenger_file_descriptor_log_file` is set, then file descriptor activity is logged to the specified file, regardless of the log level.
+
+This option may only occur once, in the 'http' configuration block.
+
+:option: `--file-descriptor-log-file`
 include::users_guide_snippets/alternative_for_flying_passenger.txt[]
 
 ==== passenger_debugger <on|off> ====
@@ -2093,13 +2113,16 @@ Enables <<flying_passenger,Flying Passenger>> mode, and configures Nginx to conn
 This option may only occur once, in the 'http' configuration block. When not set, Flying Passenger is not enabled.
 
 
-=== Deprecated options ===
+=== Deprecated or removed options ===
 
-The following options have been deprecated, but are still supported for backwards
+The following options have been deprecated or removed. Some are still supported for backwards
 compatibility reasons.
 
 ==== rails_spawn_method ====
 Deprecated in favor of <<PassengerSpawnMethod,passenger_spawn_method>>.
+
+==== passenger_debug_log_file ====
+This option has been renamed in version 5.0.5 to <<PassengerLogFile,passenger_log_file>>.
 
 
 [[troubleshooting]]
