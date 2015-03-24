@@ -49,7 +49,7 @@ inline bool parseImfFixdate_zone(const char **pos, const char *end, int &zone);
 
 
 /**
- * Parses an IMF-fixdate, as defined by RFC 5322.
+ * Parses an IMF-fixdate, as defined by RFC 7231 (while referencing RFC 5322).
  * Returns whether parsing succeeded.
  */
 inline bool
@@ -79,10 +79,24 @@ parseImfFixdate(const char *date, const char *end, struct tm &tm, int &zone) {
  */
 inline time_t
 parsedDateToTimestamp(struct tm &tm, int zone) {
-	time_t result = mktime(&tm);
-	result -= zone / 100 * 60 * 60 + zone % 100 * 60;
-	result += tm.tm_gmtoff;
-	return result;
+	time_t timeUsingLocalTZ = mktime(&tm);
+	// tmUsingLocalTZ now contains tm interpreted as being in our local timezone instead of the intended UTC
+	// Example: 10 UTC interpreted as 10 GMT+1 instead of 11 GMT+1
+
+#if !defined(sun) && !defined(__sun)
+	// tm_gmtoff = "seconds east of UTC", so the example 10 GMT+1 would now be corrected to (10+1) GMT+1
+	timeUsingLocalTZ += tm.tm_gmtoff;
+#else
+	// Solaris doesn't have tm_gmtoff, so we calculate the current offset by converting to UTC (gmtime) and pretending
+	// that is local time again (mktime), resulting in a "corrected" timestamp that we can delta with the original timestamp.
+	// In the example: gmtime(10 GMT+1) = 9 UTC, interpreted as 9 GMT+1 gives use delta (10 - 9) = +1 to correct 10 GMT+1 with.
+	struct tm *tmAsUTC = gmtime(&timeUsingLocalTZ);
+	time_t utcUsingLocalTZ = mktime(tmAsUTC);
+	timeUsingLocalTZ += (timeUsingLocalTZ - utcUsingLocalTZ);
+#endif
+
+	// The final result also needs to take into account the desired zone.
+	return timeUsingLocalTZ - (zone / 100 * 60 * 60 + zone % 100 * 60);
 }
 
 inline void

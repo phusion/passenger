@@ -230,9 +230,11 @@
 
 7.9.1. PassengerLogLevel <integer>	=>	passengerloglevel-integer--s3kbil
 
-7.9.2. PassengerDebugLogFile <filename>	=>	passengerdebuglogfile-filename--1wjm2j1
+7.9.2. PassengerLogFile <filename>	=>	passengerdebuglogfile-filename--1wjm2j1
 
-7.9.3. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--19you7e
+7.9.3. PassengerFileDescriptorLogFile <filename>	=>	passengerfiledescriptorlogfile-filename--1su5dcn
+
+7.9.4. PassengerDebugger <on|off>	=>	passengerdebugger-on-off--19you7e
 
 7.10. Advanced options	=>	advanced-options-1ab1jkq
 
@@ -259,6 +261,8 @@
 7.11.8. RailsAppSpawnerIdleTime	=>	railsappspawneridletime-heh41r
 
 7.11.9. RailsFrameworkSpawnerIdleTime	=>	railsframeworkspawneridletime-adcf9k
+
+7.11.10. PassengerDebugLogFile	=>	passengerdebuglogfile-1mb9h6h
 
 8. Troubleshooting	=>	troubleshooting-2ihihi
 
