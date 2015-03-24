@@ -244,9 +244,11 @@
 
 7.7.1. passenger_log_level <integer>	=>	passenger-log-level-integer--17snhon
 
-7.7.2. passenger_debug_log_file <filename>	=>	passenger-debug-log-file-filename--21ubaj
+7.7.2. passenger_log_file <filename>	=>	passenger-debug-log-file-filename--21ubaj
 
-7.7.3. passenger_debugger <on|off>	=>	passenger-debugger-on-off--1wkuq85
+7.7.3. PassengerFileDescriptorLogFile <filename>	=>	passengerfiledescriptorlogfile-filename--bqbga8
+
+7.7.4. passenger_debugger <on|off>	=>	passenger-debugger-on-off--1wkuq85
 
 7.8. Advanced options	=>	advanced-options-hnuhqz
 
@@ -256,9 +258,11 @@
 
 7.8.3. passenger_fly_with <socket filename>	=>	passenger-fly-with-socket-filename--1amd1xn
 
-7.9. Deprecated options	=>	deprecated-options-1dtzo0g
+7.9. Deprecated or removed options	=>	deprecated-options-1dtzo0g
 
 7.9.1. rails_spawn_method	=>	rails-spawn-method-17vdnpt
+
+7.9.2. passenger_debug_log_file	=>	passenger-debug-log-file-1aqru34
 
 8. Troubleshooting	=>	troubleshooting-1pt0c76
 
