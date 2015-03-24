@@ -4,6 +4,7 @@ Release 5.0.5
  * Fixes various crashes due to use of uninitialized memory. One such crash is documented in GH-1431.
  * Fixes a connection stall in the Apache module. Closes GH-1425.
  * Fixes a potential read-past-buffer bug in string-to-integer conversion routines. Thanks to dcb314 for spotting this. Closes GH-1441.
+ * Fixes a compilation problem on Solaris. This problem was caused by the fact that `tm_gmtoff` is not supported on that platform. Closes GH-1435.
  * There is now an API endpoint for force disconnecting a client: `passenger-config admin-command DELETE /server/<client name>.json`. Closes GH-1246.
  * Fixes some file descriptor leaks. These leaks were caused by the fact that keep-alive connections with application processes were not being closed properly. Closes GH-1439.
  * In order to more easily debug future file descriptor leaks, we've introduced the `PassengerFileDescriptorLogFile` (Apache) and `passenger_file_descriptor_log_file` (Nginx) config options. This allows Passenger to log all file descriptor open/close activity to a specific log file.
