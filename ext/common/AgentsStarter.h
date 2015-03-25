@@ -208,6 +208,21 @@ private:
 		}
 	}
 
+	void throwEnrichedWatchdogFailReason(string simpleReason) {
+		string passengerRootConfig;
+		string docURL;
+		if (type == AS_APACHE) {
+			passengerRootConfig = "PassengerRoot";
+			docURL = APACHE2_DOC_URL "#PassengerRoot";
+		} else {
+			passengerRootConfig = "passenger_root";
+			docURL = NGINX_DOC_URL "#PassengerRoot";
+		}
+		throw RuntimeException("Unable to start Phusion Passenger: " + simpleReason + ". This probably means that your " PROGRAM_NAME
+			" installation is broken or incomplete, or that your '" + passengerRootConfig + "' setting contains the wrong value."
+			" Please reinstall " PROGRAM_NAME " or adjust the setting (see: " + docURL + ").");
+	}
+
 	static void killProcessGroupAndWait(pid_t *pid, unsigned long long timeout = 0) {
 		if (*pid != -1 && (timeout == 0 || timedWaitPid(*pid, NULL, timeout) <= 0)) {
 			this_thread::disable_syscall_interruption dsi;
@@ -312,7 +327,14 @@ public:
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		ResourceLocator locator(passengerRoot);
-		string agentFilename = locator.findSupportBinary(AGENT_EXE);
+
+		string agentFilename;
+		try {
+			agentFilename = locator.findSupportBinary(AGENT_EXE);
+		} catch (const Passenger::RuntimeException &e) {
+			string locatorError = e.what();
+			throwEnrichedWatchdogFailReason(locatorError);
+		}
 		SocketPair fds;
 		int e;
 		pid_t pid;
@@ -468,24 +490,7 @@ public:
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
 				if (e == ENOENT) {
-					string passengerRootConfig;
-					string docURL;
-					if (type == AS_APACHE) {
-						passengerRootConfig = "PassengerRoot";
-						docURL = APACHE2_DOC_URL "#PassengerRoot";
-					} else {
-						passengerRootConfig = "passenger_root";
-						docURL = NGINX_DOC_URL "#PassengerRoot";
-					}
-					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog "
-						"because its executable (" + agentFilename + ") does "
-						"not exist. This probably means that your " PROGRAM_NAME " "
-						"installation is broken or incomplete, or that your '" +
-						passengerRootConfig + "' directive is set to the wrong value. "
-						"Please reinstall " PROGRAM_NAME " or fix your '" +
-						passengerRootConfig + "' directive, whichever is applicable. "
-						"To learn how to fix '" + passengerRootConfig + "', please read " +
-						docURL);
+					throwEnrichedWatchdogFailReason("Executable " + agentFilename + " found.");
 				} else {
 					throw SystemException("Unable to start the " PROGRAM_NAME " watchdog (" +
 						agentFilename + ")", e);
