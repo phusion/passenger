@@ -1,3 +1,9 @@
+Release 5.0.6
+-------------
+
+ * Fixes a number of memory leaks. Memory was leaked upon processing a request with multiple headers, upon processing a response with multiple headers, and upon processing a response with Set-Cookie headers. Every time such a request or response was processed, 512 bytes of memory was leaked due to improperly dereferencing relevant memory buffers. Closes GH-1455.
+
+
 Release 5.0.5
 -------------
 

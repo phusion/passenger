@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -77,7 +77,7 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 				sizeof("content-length") - 1).hash();
 
 			req->headers.erase(HTTP_TRANSFER_ENCODING);
-			req->headers.insert(header, req->pool);
+			req->headers.insert(&header, req->pool);
 		}
 		checkoutSession(client, req);
 		return Channel::Result(0, true);
