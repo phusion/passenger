@@ -571,7 +571,8 @@ public:
 				req->appResponse.cacheControl->start->data,
 				req->appResponse.cacheControl->size);
 			if (cacheControl.find(P_STATIC_STRING("no-store")) != string::npos
-			 || cacheControl.find(P_STATIC_STRING("private")) != string::npos)
+			 || cacheControl.find(P_STATIC_STRING("private")) != string::npos
+			 || cacheControl.find(P_STATIC_STRING("no-cache")) != string::npos)
 			{
 				return false;
 			}

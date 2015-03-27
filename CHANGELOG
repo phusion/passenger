@@ -1,3 +1,11 @@
+Release 5.0.6
+-------------
+
+ * The turbocache no longer caches responses for which the Cache-Control header contains "no-cache". Please note that "no-cache" does not mean "do not cache this response". Instead, it means "any caching servers may only serve the cached response after validating it". Since the turbocache does not support validation, we've chosen to skip caching instead.
+
+   Coincidentally, this change "fixes" problems with applications that erroneously use "no-cache" as a flag for "do not cache this response". What these applications should actually use is "no-store". We recommend the developers of such applications to change their caching headers in this manner, because even if Passenger doesn't unintentionally cache the response, any intermediate proxies that visitors are behind may still cache the response.
+
+
 Release 5.0.5
 -------------
 
