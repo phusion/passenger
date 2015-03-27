@@ -34,47 +34,49 @@
 
 2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
 
-2.5. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7
+2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-jh07kr
 
-2.6. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43
+2.6. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7
 
-2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-1a58c2b
+2.7. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43
 
-2.8. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-2goray
+2.8. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-1a58c2b
 
-2.8.1. Synopsis	=>	synopsis-4fv6zw
+2.9. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-2goray
 
-2.8.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1qfpaj4
+2.9.1. Synopsis	=>	synopsis-4fv6zw
 
-2.8.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-i7f1vj
+2.9.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1qfpaj4
 
-2.8.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-dr9466
+2.9.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-i7f1vj
 
-2.8.5. Verifying Git signatures	=>	verifying-git-signatures-dyo4fk
+2.9.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-dr9466
 
-2.8.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-1ed36d5
+2.9.5. Verifying Git signatures	=>	verifying-git-signatures-dyo4fk
 
-2.8.7. Revocation	=>	revocation-xwvhea
+2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-1ed36d5
 
-2.9. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
+2.9.7. Revocation	=>	revocation-xwvhea
 
-2.10. Customizing the compilation process	=>	customizing-the-compilation-process-u4cdcf
+2.10. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
 
-2.10.1. Setting the compiler	=>	setting-the-compiler-1l6dpe1
+2.11. Customizing the compilation process	=>	customizing-the-compilation-process-u4cdcf
 
-2.10.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-1jehjon
+2.11.1. Setting the compiler	=>	setting-the-compiler-1l6dpe1
 
-2.10.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1j93cki
+2.11.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-1jehjon
 
-2.11. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
+2.11.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1j93cki
 
-2.12. Creating an Nginx init script	=>	creating-an-nginx-init-script-1kd8zg5
+2.12. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
 
-2.13. Disabling without uninstalling	=>	disabling-without-uninstalling-1t5tqan
+2.13. Creating an Nginx init script	=>	creating-an-nginx-init-script-1kd8zg5
 
-2.14. Uninstalling	=>	uninstalling-phusion-passenger-wuycvb
+2.14. Disabling without uninstalling	=>	disabling-without-uninstalling-1t5tqan
 
-2.15. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
+2.15. Uninstalling	=>	uninstalling-phusion-passenger-wuycvb
+
+2.16. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
 
 3. Deploying a Rack-based Ruby application	=>	deploying-a-rack-based-ruby-application-including-rails-3--12benx3
 

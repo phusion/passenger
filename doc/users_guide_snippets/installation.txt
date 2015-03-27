@@ -322,6 +322,11 @@ yum install passenger-standalone
 There are instructions for building your own packages and Yum repositories in the link:https://github.com/phusion/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/phusion/passenger[GitHub repository].
 
 
+=== Installing or upgrading on Heroku
+
+Please refer to our link:https://github.com/phusion/passenger-ruby-heroku-demo#readme[Heroku Ruby demo] for installation and upgrade instructions for Heroku.
+
+
 [[rubygems_generic_install]]
 === Generic installation, upgrade and downgrade method: via RubyGems
 

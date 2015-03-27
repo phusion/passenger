@@ -32,39 +32,41 @@
 
 2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-16cek45
 
-2.5. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-1229ugi
+2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-rspclc
 
-2.6. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-1rwvasy
+2.6. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-1229ugi
 
-2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-1kezors
+2.7. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-1rwvasy
 
-2.8. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-85nwoi
+2.8. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-1kezors
 
-2.8.1. Synopsis	=>	synopsis-1ij8j9r
+2.9. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-85nwoi
 
-2.8.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1u5hkcr
+2.9.1. Synopsis	=>	synopsis-1ij8j9r
 
-2.8.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-qor1n1
+2.9.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1u5hkcr
 
-2.8.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-i7tj7a
+2.9.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-qor1n1
 
-2.8.5. Verifying Git signatures	=>	verifying-git-signatures-dltpan
+2.9.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-i7tj7a
 
-2.8.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-uga0ho
+2.9.5. Verifying Git signatures	=>	verifying-git-signatures-dltpan
 
-2.8.7. Revocation	=>	revocation-ukzeg9
+2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-uga0ho
 
-2.9. Customizing the compilation process	=>	customizing-the-compilation-process-j4xj2t
+2.9.7. Revocation	=>	revocation-ukzeg9
 
-2.9.1. Setting the compiler	=>	setting-the-compiler-1fxfulc
+2.10. Customizing the compilation process	=>	customizing-the-compilation-process-j4xj2t
 
-2.9.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-nxfour
+2.10.1. Setting the compiler	=>	setting-the-compiler-1fxfulc
 
-2.9.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-command-line-tools-and-dependencies-xajpg1
+2.10.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-nxfour
 
-2.10. Uninstalling	=>	uninstalling-3hpprb
+2.10.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-command-line-tools-and-dependencies-xajpg1
 
-2.11. Moving to a different directory	=>	moving-to-a-different-directory-b3lpy1
+2.11. Uninstalling	=>	uninstalling-3hpprb
+
+2.12. Moving to a different directory	=>	moving-to-a-different-directory-b3lpy1
 
 3. Usage	=>	usage-1eyt33o
 

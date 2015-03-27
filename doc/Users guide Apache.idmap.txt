@@ -32,47 +32,49 @@
 
 2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
 
-2.5. Generic installation, upgrade and downgrade method: via RubyGems	=>	installing-via-the-gem-39jw1u
+2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-o0o2mk
 
-2.6. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
+2.6. Generic installation, upgrade and downgrade method: via RubyGems	=>	installing-via-the-gem-39jw1u
 
-2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
+2.7. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
 
-2.8. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-ed3r9v
+2.8. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
 
-2.8.1. Synopsis	=>	synopsis-uwnz2o
+2.9. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-ed3r9v
 
-2.8.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1x0rhv
+2.9.1. Synopsis	=>	synopsis-uwnz2o
 
-2.8.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-10430lg
+2.9.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1x0rhv
 
-2.8.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-1nf0uov
+2.9.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-10430lg
 
-2.8.5. Verifying Git signatures	=>	verifying-git-signatures-oaafwd
+2.9.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-1nf0uov
 
-2.8.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-vgtv04
+2.9.5. Verifying Git signatures	=>	verifying-git-signatures-oaafwd
 
-2.8.7. Revocation	=>	revocation-4o01n2
+2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-vgtv04
 
-2.9. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
+2.9.7. Revocation	=>	revocation-4o01n2
 
-2.10. Customizing the compilation process	=>	customizing-the-compilation-process-1sds3od
+2.10. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
 
-2.10.1. Setting the compiler	=>	setting-the-compiler-1symq7h
+2.11. Customizing the compilation process	=>	customizing-the-compilation-process-1sds3od
 
-2.10.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
+2.11.1. Setting the compiler	=>	setting-the-compiler-1symq7h
 
-2.10.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1hym30u
+2.11.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
 
-2.11. Dealing with multiple Apache installations	=>	dealing-with-multiple-apache-installations-ks5nkz
+2.11.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1hym30u
 
-2.12. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
+2.12. Dealing with multiple Apache installations	=>	dealing-with-multiple-apache-installations-ks5nkz
 
-2.13. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
+2.13. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
 
-2.14. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+2.14. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
 
-2.15. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
+2.15. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+
+2.16. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
 
 3. Deploying a Rack-based Ruby application	=>	deploying-a-rack-based-ruby-application-including-rails-3--hcs66f
 
