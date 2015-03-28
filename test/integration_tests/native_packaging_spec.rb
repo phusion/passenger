@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2014 Phusion
+#  Copyright (c) 2013-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -73,10 +73,10 @@ when "deb"
   APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
   SUPPORTS_COMPILING_APACHE_MODULE = false
 
-  if `lsb_release -r -s`.strip <= '12.04'
-    APXS2 = "/usr/bin/apxs2"
-  else
+  if File.exist?("/usr/bin/apxs")
     APXS2 = "/usr/bin/apxs"
+  else
+    APXS2 = "/usr/bin/apxs2"
   end
   APACHE2 = "/usr/sbin/apache2"
   APACHE2CTL = "/usr/sbin/apache2ctl"
