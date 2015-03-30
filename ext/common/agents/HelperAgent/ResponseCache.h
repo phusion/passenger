@@ -60,7 +60,10 @@ public:
 		time_t date;
 
 		Header()
-			: valid(false)
+			: valid(false),
+			  keySize(0),
+			  hash(0),
+			  date(0)
 			{ }
 	};
 
@@ -72,6 +75,14 @@ public:
 		char httpHeaderData[MAX_HEADER_SIZE];
 		// This data is dechunked.
 		char httpBodyData[MAX_BODY_SIZE];
+
+		Body()
+			: httpHeaderSize(0),
+			  httpBodySize(0),
+			  expiryDate(0)
+		{
+			key[0] = httpHeaderData[0] = httpBodyData[0] = '\0';
+		}
 	};
 
 	struct Entry {
