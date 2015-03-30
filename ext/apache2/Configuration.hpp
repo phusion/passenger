@@ -92,9 +92,6 @@ struct DirConfig {
 
 	vector<string> unionStationFilters;
 
-	char *envvarsCache;
-	unsigned int envvarsCacheSize;
-
 	/**
 	 * Whether analytics logging should be enabled.
 	 */
@@ -107,15 +104,6 @@ struct DirConfig {
 
 	/*************************************/
 	/*************************************/
-
-	DirConfig() {
-		envvarsCache = NULL;
-		envvarsCacheSize = 0;
-	}
-
-	~DirConfig() {
-		free(envvarsCache);
-	}
 
 	bool isEnabled() const {
 		return enabled != DISABLED;

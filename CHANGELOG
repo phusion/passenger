@@ -11,6 +11,7 @@ Release 5.0.6
  * Fixes a Union Station-related file descriptor leak. Closes GH-1439.
  * Fixes some bugs w.r.t. use of uninitialized memory.
  * More informative error message if a support binary is not found, including a resolution hint. Closes GH-1395.
+ * [Apache] `SetEnv` variables are now passed as Rack/CGI/request variables. This was also the case in Passenger 4, but not in Passenger 5.0.0-5.0.5. We've restored the old behavior because the behavior in 5.0.0-5.0.5 breaks certain Apache modules such as Shibboleth. Closes GH-1446.
  * [Standalone] PID and log files now correctly created if user specifies relative path.
 
 

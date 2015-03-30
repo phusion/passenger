@@ -944,47 +944,43 @@ private:
 
 		// Add environment variables.
 
-		if (config->envvarsCache == NULL) {
-			const apr_array_header_t *env_arr;
-			env_arr = apr_table_elts(r->subprocess_env);
+		const apr_array_header_t *env_arr;
+		env_arr = apr_table_elts(r->subprocess_env);
 
-			if (env_arr->nelts > 0) {
-				apr_table_entry_t *env;
-				string envvarsData;
-				size_t len;
+		if (env_arr->nelts > 0) {
+			apr_table_entry_t *env;
+			string envvarsData;
+			char *envvarsBase64Data;
+			size_t envvarsBase64Len;
 
-				env = (apr_table_entry_t*) env_arr->elts;
+			env = (apr_table_entry_t*) env_arr->elts;
 
-				for (i = 0; i < env_arr->nelts; ++i) {
-					envvarsData.append(env[i].key);
-					envvarsData.append("\0", 1);
-					if (env[i].val != NULL) {
-						envvarsData.append(env[i].val);
-					}
-					envvarsData.append("\0", 1);
+			for (i = 0; i < env_arr->nelts; ++i) {
+				envvarsData.append(env[i].key);
+				envvarsData.append("\0", 1);
+				if (env[i].val != NULL) {
+					envvarsData.append(env[i].val);
 				}
-
-				config->envvarsCache = (char *) malloc(modp_b64_encode_len(
-					envvarsData.size()));
-				if (config->envvarsCache == NULL) {
-					throw RuntimeException("Unable to allocate memory for base64 "
-						"encoding of environment variables");
-				}
-				len = modp_b64_encode(config->envvarsCache,
-					envvarsData.data(), envvarsData.size());
-				if (len == (size_t) -1) {
-					free(config->envvarsCache);
-					config->envvarsCache = NULL;
-					throw RuntimeException("Unable to base64 encode environment variables");
-				}
-				config->envvarsCacheSize = len;
+				envvarsData.append("\0", 1);
 			}
-		}
 
-		if (config->envvarsCache != NULL) {
+			envvarsBase64Data = (char *) malloc(modp_b64_encode_len(
+				envvarsData.size()));
+			if (envvarsBase64Data == NULL) {
+				throw RuntimeException("Unable to allocate memory for base64 "
+					"encoding of environment variables");
+			}
+			envvarsBase64Len = modp_b64_encode(envvarsBase64Data,
+				envvarsData.data(), envvarsData.size());
+			if (envvarsBase64Len == (size_t) -1) {
+				free(envvarsBase64Data);
+				throw RuntimeException("Unable to base64 encode environment variables");
+			}
+
 			result.append("!~PASSENGER_ENV_VARS: ", sizeof("!~PASSENGER_ENV_VARS: ") - 1);
-			result.append(config->envvarsCache, config->envvarsCacheSize);
+			result.append(envvarsBase64Data, envvarsBase64Len);
 			result.append("\r\n", 2);
+			free(envvarsBase64Data);
 		}
 
 		// Add flags.
