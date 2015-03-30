@@ -234,7 +234,7 @@ namespace tut {
 	TEST_METHOD(33) {
 		set_test_name("It fails if the request's Cache-Control header contains no-cache");
 		initCacheableResponse();
-		req.headers.insert(createHeader(
+		insertReqHeader(createHeader(
 			"cache-control", "no-cache"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -310,7 +310,7 @@ namespace tut {
 
 	TEST_METHOD(46) {
 		set_test_name("It fails if the response's Cache-Control header contains no-cache");
-		req.appResponse.headers.insert(createHeader(
+		insertAppResponseHeader(createHeader(
 			"cache-control", "no-cache"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
