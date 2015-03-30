@@ -148,6 +148,9 @@ module PhusionPassenger
           add_param(command, :union_station_gateway_address, "--union-station-gateway-address")
           add_param(command, :union_station_gateway_port, "--union-station-gateway-port")
           add_param(command, :union_station_key, "--union-station-key")
+          add_param(command, :ruby, "--ruby")
+          add_param(command, :python, "--python")
+          add_param(command, :nodejs, "--nodejs")
 
           command << " #{Shellwords.escape(@apps[0][:root])}"
 
