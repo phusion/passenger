@@ -114,6 +114,8 @@ virtual void deinitializeRequest(Client *client, Request *req) {
 	req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
 	req->endScopeLog(&req->scopeLogs.requestProcessing, false);
 
+	req->options.transaction.reset();
+
 	req->appSink.setConsumedCallback(NULL);
 	req->appSink.deinitialize();
 	req->appSource.deinitialize();
