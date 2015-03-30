@@ -37,8 +37,8 @@ protected:
 
 	virtual void execProgram() const {
 		if (hasEnvOption("PASSENGER_RUN_HELPER_AGENT_IN_VALGRIND", false)) {
-			execlp("valgrind", "valgrind", "--dsymutil=yes",
-				agentFilename.c_str(), AGENT_EXE, "server",
+			execlp("valgrind", "valgrind", "--dsymutil=yes", "--track-origins=yes", "--leak-check=full",
+				agentFilename.c_str(), "server",
 				// Some extra space to allow the child process to change its process title.
 				"                                                ", (char *) 0);
 		} else {
