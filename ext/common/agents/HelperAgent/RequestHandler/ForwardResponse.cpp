@@ -981,6 +981,7 @@ void
 handleAppResponseBodyEnd(Client *client, Request *req) {
 	keepAliveAppConnection(client, req);
 	storeAppResponseInTurboCache(client, req);
+	finalizeUnionStationWithSuccess(client, req);
 }
 
 OXT_FORCE_INLINE void
@@ -1021,4 +1022,10 @@ storeAppResponseInTurboCache(Client *client, Request *req) {
 			SKC_DEBUG(client, "Could not store app response for turbocaching");
 		}
 	}
+}
+
+void
+finalizeUnionStationWithSuccess(Client *client, Request *req) {
+	req->endScopeLog(&req->scopeLogs.requestProcessing, true);
+	req->endScopeLog(&req->scopeLogs.requestProxying, true);
 }
