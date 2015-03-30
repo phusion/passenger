@@ -97,6 +97,12 @@ string getLogFile();
 bool setLogFile(const string &path, int *errcode = NULL);
 
 /**
+ * Sets the general log file, assuming that it's already opened
+ * at the given fd. This method is thread-safe.
+ */
+void setLogFileWithFd(const string &path, int fd);
+
+/**
  * Returns whether we're using a separate log file for logging file
  * descriptor opening and closing.
  *

@@ -156,6 +156,30 @@ isLocalSocketAddress(const StaticString &address) {
 }
 
 void
+setBlocking(int fd) {
+	int flags, ret;
+
+	do {
+		flags = fcntl(fd, F_GETFL);
+	} while (flags == -1 && errno == EINTR);
+	if (flags == -1) {
+		int e = errno;
+		throw SystemException("Cannot set socket to blocking mode: "
+			"cannot get socket flags",
+			e);
+	}
+	do {
+		ret = fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
+		int e = errno;
+		throw SystemException("Cannot set socket to blocking mode: "
+			"cannot set socket flags",
+			e);
+	}
+}
+
+void
 setNonBlocking(int fd) {
 	int flags, ret;
 

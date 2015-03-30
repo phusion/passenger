@@ -69,14 +69,34 @@ module PhusionPassenger
 
       def perform_reopen_logs
         perform_reopen_logs_on("watchdog", "watchdog")
-        perform_reopen_logs_on("server", "server_admin")
-        perform_reopen_logs_on("logger", "logging_admin")
+        perform_reinherit_logs_on("server", "server_admin")
+        perform_reinherit_logs_on("logger", "logging_admin")
         puts "All done"
       end
 
       def perform_reopen_logs_on(name, socket_name)
         puts "Reopening logs for #{AGENT_EXE} #{name}"
         request = Net::HTTP::Post.new("/reopen_logs.json")
+        try_performing_full_admin_basic_auth(request, @instance)
+        request.content_type = "application/json"
+        response = @instance.http_request("agents.s/#{socket_name}", request)
+        if response.code.to_i == 401
+          print_full_admin_command_permission_error
+          abort
+        elsif response["content-type"] == "application/json"
+          if response.code.to_i / 100 != 2
+            handle_error(name, response)
+          end
+        else
+          STDERR.puts "*** An error occured while communicating with the #{AGENT_EXE} #{name} (code #{response.code}):"
+          STDERR.puts response.body
+          abort
+        end
+      end
+
+      def perform_reinherit_logs_on(name, socket_name)
+        puts "Reopen logs for #{AGENT_EXE} #{name} (through reinheritance)"
+        request = Net::HTTP::Post.new("/reinherit_logs.json")
         try_performing_full_admin_basic_auth(request, @instance)
         request.content_type = "application/json"
         response = @instance.http_request("agents.s/#{socket_name}", request)

@@ -39,6 +39,7 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/modp_b64.h>
 #include <Utils/json.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 namespace WatchdogAgent {
@@ -189,6 +190,45 @@ private:
 		}
 	}
 
+	bool authorizeFdPassingOperation(Client *client, Request *req) {
+		const LString *password = req->headers.lookup("fd-passing-password");
+		if (password == NULL) {
+			return false;
+		}
+
+		password = psg_lstr_make_contiguous(password, req->pool);
+		return constantTimeCompare(StaticString(password->start->data, password->size),
+			fdPassingPassword);
+	}
+
+	void processConfigLogFileFd(Client *client, Request *req) {
+		if (req->method != HTTP_GET) {
+			respondWith405(client, req);
+		} else if (authorizeFdPassingOperation(client, req)) {
+			HeaderTable headers;
+			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+			headers.insert(req->pool, "content-type", "text/plain");
+			headers.insert(req->pool, "filename", getLogFile());
+			req->wantKeepAlive = false;
+			writeSimpleResponse(client, 200, &headers, "");
+			if (req->ended()) {
+				return;
+			}
+
+			unsigned long long timeout = 1000000;
+			setBlocking(client->getFd());
+			writeFileDescriptorWithNegotiation(client->getFd(), STDERR_FILENO,
+				&timeout);
+			setNonBlocking(client->getFd());
+
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith401(client, req);
+		}
+	}
+
 	void processReopenLogs(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
 			respondWith405(client, req);
@@ -292,20 +332,31 @@ protected:
 	virtual void onRequestBegin(Client *client, Request *req) {
 		const StaticString path(req->path.start->data, req->path.size);
 
-		P_INFO("Admin request: " << path);
+		P_INFO("Admin request: " << http_method_str(req->method) <<
+			" " << StaticString(req->path.start->data, req->path.size));
 
-		if (path == P_STATIC_STRING("/status.txt")) {
-			processStatusTxt(client, req);
-		} else if (path == P_STATIC_STRING("/ping.json")) {
-			processPing(client, req);
-		} else if (path == P_STATIC_STRING("/shutdown.json")) {
-			processShutdown(client, req);
-		} else if (path == P_STATIC_STRING("/config.json")) {
-			processConfig(client, req);
-		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
-			processReopenLogs(client, req);
-		} else {
-			respondWith404(client, req);
+		try {
+			if (path == P_STATIC_STRING("/status.txt")) {
+				processStatusTxt(client, req);
+			} else if (path == P_STATIC_STRING("/ping.json")) {
+				processPing(client, req);
+			} else if (path == P_STATIC_STRING("/shutdown.json")) {
+				processShutdown(client, req);
+			} else if (path == P_STATIC_STRING("/config.json")) {
+				processConfig(client, req);
+			} else if (path == P_STATIC_STRING("/config/log_file.fd")) {
+				processConfigLogFileFd(client, req);
+			} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
+				processReopenLogs(client, req);
+			} else {
+				respondWith404(client, req);
+			}
+		} catch (const oxt::tracable_exception &e) {
+			SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
+			if (!req->ended()) {
+				req->wantKeepAlive = false;
+				endRequest(&client, &req);
+			}
 		}
 	}
 
@@ -341,6 +392,7 @@ protected:
 public:
 	AdminAccountDatabase *adminAccountDatabase;
 	EventFd *exitEvent;
+	string fdPassingPassword;
 
 	AdminServer(ServerKit::Context *context)
 		: ParentClass(context),

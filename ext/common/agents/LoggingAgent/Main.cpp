@@ -287,6 +287,8 @@ initializeUnprivilegedWorkingObjects() {
 	wo->adminServer = new LoggingAgent::AdminServer(wo->serverKitContext);
 	wo->adminServer->loggingServer = wo->loggingServer;
 	wo->adminServer->adminAccountDatabase = &wo->adminAccountDatabase;
+	wo->adminServer->instanceDir = options.get("instance_dir", false);
+	wo->adminServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
 	wo->adminServer->exitEvent = &wo->exitEvent;
 	wo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
 	foreach (fd, wo->adminSockets) {

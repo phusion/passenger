@@ -44,6 +44,8 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/modp_b64.h>
 #include <Utils/json.h>
+#include <Utils/BufferedIO.h>
+#include <Utils/MessageIO.h>
 
 namespace Passenger {
 namespace ServerAgent {
@@ -487,6 +489,96 @@ private:
 		}
 	}
 
+	void processReinheritLogs(Client *client, Request *req) {
+		if (req->method != HTTP_POST) {
+			respondWith405(client, req);
+		} else if (authorizeAdminOperation(this, client, req)) {
+			HeaderTable headers;
+			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+			headers.insert(req->pool, "content-type", "application/json");
+
+			if (instanceDir.empty() || fdPassingPassword.empty()) {
+				writeSimpleResponse(client, 501, &headers, "{ \"status\": \"error\", "
+					"\"code\": \"NO_WATCHDOG\", "
+					"\"message\": \"No Watchdog process\" }\n");
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+
+			FileDescriptor watchdog(connectToUnixServer(instanceDir + "/agents.s/watchdog",
+				NULL, 0), __FILE__, __LINE__);
+			writeExact(watchdog,
+				"GET /config/log_file.fd HTTP/1.1\r\n"
+				"Connection: close\r\n"
+				"Fd-Passing-Password: " + fdPassingPassword + "\r\n"
+				"\r\n");
+			BufferedIO io(watchdog);
+			string response = io.readLine();
+			SKC_DEBUG(client, "Watchdog response: \"" << cEscapeString(response) << "\"");
+			if (response != "HTTP/1.1 200 OK\r\n") {
+				watchdog.close();
+				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+					"\"code\": \"INHERIT_ERROR\", "
+					"\"message\": \"Error communicating with Watchdog process: non-200 response\" }\n");
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+
+			string logFilePath;
+			while (true) {
+				response = io.readLine();
+				SKC_DEBUG(client, "Watchdog response: \"" << cEscapeString(response) << "\"");
+				if (response.empty()) {
+					watchdog.close();
+					writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+						"\"code\": \"INHERIT_ERROR\", "
+						"\"message\": \"Error communicating with Watchdog process: "
+							"premature EOF encountered in response\" }\n");
+					if (!req->ended()) {
+						endRequest(&client, &req);
+					}
+					return;
+				} else if (response == "\r\n") {
+					break;
+				} else if (startsWith(response, "filename: ")
+					|| startsWith(response, "Filename: "))
+				{
+					response.erase(0, strlen("filename: "));
+					logFilePath = response;
+				}
+			}
+
+			if (logFilePath.empty()) {
+				watchdog.close();
+				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+					"\"code\": \"INHERIT_ERROR\", "
+					"\"message\": \"Error communicating with Watchdog process: "
+						"no log filename received in response\" }\n");
+				if (!req->ended()) {
+					endRequest(&client, &req);
+				}
+				return;
+			}
+
+			unsigned long long timeout = 1000000;
+			int fd = readFileDescriptorWithNegotiation(watchdog, &timeout);
+			setLogFileWithFd(logFilePath, fd);
+			safelyClose(fd);
+			watchdog.close();
+
+			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			respondWith401(client, req);
+		}
+	}
+
 	void processReopenLogs(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
 			respondWith405(client, req);
@@ -643,6 +735,8 @@ protected:
 				processGc(client, req);
 			} else if (path == P_STATIC_STRING("/config.json")) {
 				processConfig(client, req);
+			} else if (path == P_STATIC_STRING("/reinherit_logs.json")) {
+				processReinheritLogs(client, req);
 			} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
 				processReopenLogs(client, req);
 			} else {
@@ -651,6 +745,7 @@ protected:
 		} catch (const oxt::tracable_exception &e) {
 			SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
 			if (!req->ended()) {
+				req->wantKeepAlive = false;
 				endRequest(&client, &req);
 			}
 		}
@@ -710,6 +805,8 @@ public:
 	vector<RequestHandler *> requestHandlers;
 	AdminAccountDatabase *adminAccountDatabase;
 	ApplicationPool2::PoolPtr appPool;
+	string instanceDir;
+	string fdPassingPassword;
 	EventFd *exitEvent;
 	vector<Authorization> authorizations;
 

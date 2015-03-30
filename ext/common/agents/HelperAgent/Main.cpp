@@ -628,6 +628,8 @@ initializeNonPrivilegedWorkingObjects() {
 		}
 		awo->adminServer->adminAccountDatabase = &wo->adminAccountDatabase;
 		awo->adminServer->appPool = wo->appPool;
+		awo->adminServer->instanceDir = options.get("instance_dir", false);
+		awo->adminServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
 		awo->adminServer->exitEvent = &wo->exitEvent;
 		awo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
 

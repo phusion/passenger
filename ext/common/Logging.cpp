@@ -66,11 +66,8 @@ bool
 setLogFile(const string &path, int *errcode) {
 	int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
 	if (fd != -1) {
-		boost::lock_guard<boost::mutex> l(logFileMutex);
-		dup2(fd, STDOUT_FILENO);
-		dup2(fd, STDERR_FILENO);
+		setLogFileWithFd(path, fd);
 		close(fd);
-		logFile = path;
 		return true;
 	} else {
 		if (errcode != NULL) {
@@ -78,6 +75,14 @@ setLogFile(const string &path, int *errcode) {
 		}
 		return false;
 	}
+}
+
+void
+setLogFileWithFd(const string &path, int fd) {
+	boost::lock_guard<boost::mutex> l(logFileMutex);
+	dup2(fd, STDOUT_FILENO);
+	dup2(fd, STDERR_FILENO);
+	logFile = path;
 }
 
 bool

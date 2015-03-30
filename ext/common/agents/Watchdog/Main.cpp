@@ -1017,6 +1017,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 			fullAdminPassword, S_IRUSR | S_IWUSR);
 	}
 	options.setDefault("server_pid_file", wo->instanceDir->getPath() + "/server.pid");
+	options.set("watchdog_fd_passing_password", wo->randomGenerator.generateAsciiString(24));
 
 	UPDATE_TRACE_POINT();
 	strset = options.getStrSet("server_addresses", false);
@@ -1128,6 +1129,7 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 	wo->adminServer = new AdminServer(wo->serverKitContext);
 	wo->adminServer->adminAccountDatabase = &wo->adminAccountDatabase;
 	wo->adminServer->exitEvent = &wo->exitEvent;
+	wo->adminServer->fdPassingPassword = options.get("watchdog_fd_passing_password");
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
 		wo->adminServer->listen(wo->adminServerFds[i]);
 	}

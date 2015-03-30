@@ -95,6 +95,14 @@ void parseTcpSocketAddress(const StaticString & restrict_ref address,
 bool isLocalSocketAddress(const StaticString &address);
 
 /**
+ * Sets a socket in blocking mode.
+ *
+ * @throws SystemException Something went wrong.
+ * @ingroup Support
+ */
+void setBlocking(int fd);
+
+/**
  * Sets a socket in non-blocking mode.
  *
  * @throws SystemException Something went wrong.
