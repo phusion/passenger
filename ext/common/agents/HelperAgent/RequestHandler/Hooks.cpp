@@ -187,6 +187,9 @@ void deinitializeAppResponse(Client *client, Request *req) {
 	resp->headers.clear();
 	resp->secureHeaders.clear();
 
+	if (resp->setCookie != NULL) {
+		psg_lstr_deinit(resp->setCookie);
+	}
 	psg_lstr_deinit(&resp->bodyCacheBuffer);
 }
 

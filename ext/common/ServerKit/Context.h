@@ -98,6 +98,26 @@ public:
 			* mbuf_pool.mbuf_block_chunk_size);
 		mbufDoc["active_memory"] = byteSizeToJson(mbuf_pool.nactive_mbuf_blockq
 			* mbuf_pool.mbuf_block_chunk_size);
+		#ifdef MBUF_ENABLE_DEBUGGING
+			struct MemoryKit::active_mbuf_block_list *list =
+				const_cast<struct MemoryKit::active_mbuf_block_list *>(
+					&mbuf_pool.active_mbuf_blockq);
+			struct MemoryKit::mbuf_block *block;
+			Json::Value listJson(Json::arrayValue);
+
+			TAILQ_FOREACH (block, list, active_q) {
+				Json::Value blockJson;
+				blockJson["refcount"] = block->refcount;
+				#ifdef MBUF_ENABLE_BACKTRACES
+					blockJson["backtrace"] =
+						(block->backtrace == NULL)
+						? "(null)"
+						: block->backtrace;
+				#endif
+				listJson.append(blockJson);
+			}
+			mbufDoc["active_blocks_list"] = listJson;
+		#endif
 
 		doc["mbuf_pool"] = mbufDoc;
 

@@ -78,7 +78,7 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 				sizeof("content-length") - 1).hash();
 
 			req->headers.erase(HTTP_TRANSFER_ENCODING);
-			req->headers.insert(header, req->pool);
+			req->headers.insert(&header, req->pool);
 		}
 		req->endScopeLog(&req->scopeLogs.bufferingRequestBody);
 		checkoutSession(client, req);
