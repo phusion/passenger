@@ -7,6 +7,7 @@ Release 5.0.6
  * Fixes various bugs related to Union Station data collection.
 
    Union Station is our upcoming application analytics and performance monitoring SaaS platform. It is opt-in: no data is collected unless you turn the feature on.
+ * Fixes a Union Station-related file descriptor leak. Closes GH-1439.
 
 
 Release 5.0.5
