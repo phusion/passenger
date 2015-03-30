@@ -438,6 +438,8 @@ private:
 
 	void finishShutdown() {
 		TRACE_POINT();
+		compact(LVL_INFO);
+
 		SKS_NOTICE("Shutdown finished");
 		serverState = FINISHED_SHUTDOWN;
 		if (shutdownFinishCallback != NULL) {
