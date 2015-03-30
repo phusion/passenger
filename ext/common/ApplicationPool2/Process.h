@@ -595,8 +595,8 @@ public:
 		return info.groupInfo->name;
 	}
 
-	StaticString getGroupSecret() const {
-		return StaticString(info.groupInfo->secret, BasicGroupInfo::SECRET_SIZE);
+	const ApiKey &getApiKey() const {
+		return info.groupInfo->apiKey;
 	}
 
 	const BasicProcessInfo &getInfo() const {

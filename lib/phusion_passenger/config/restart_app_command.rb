@@ -202,7 +202,7 @@ module PhusionPassenger
           group_name = group.elements["name"].text
           puts "Restarting #{group_name}"
           request = Net::HTTP::Post.new("/pool/restart_app_group.json")
-          request.basic_auth("admin", obtain_full_admin_password(@instance))
+          try_performing_full_admin_basic_auth(request, @instance)
           request.content_type = "application/json"
           request.body = PhusionPassenger::Utils::JSON.generate(
             :name => group_name,
@@ -210,6 +210,9 @@ module PhusionPassenger
           response = @instance.http_request("agents.s/server_admin", request)
           if response.code.to_i / 100 == 2
             response.body
+          elsif response.code.to_i == 401
+            print_full_admin_command_permission_error
+            abort
           else
             STDERR.puts "*** An error occured while communicating with the #{PROGRAM_NAME} server:"
             STDERR.puts response.body
@@ -229,10 +232,13 @@ module PhusionPassenger
 
       def query_pool_xml
         request = Net::HTTP::Get.new("/pool.xml")
-        request.basic_auth("ro_admin", obtain_read_only_admin_password(@instance))
+        try_performing_ro_admin_basic_auth(request, @instance)
         response = @instance.http_request("agents.s/server_admin", request)
         if response.code.to_i / 100 == 2
           REXML::Document.new(response.body)
+        elsif response.code.to_i == 401
+          print_instance_querying_permission_error
+          abort
         else
           STDERR.puts "*** An error occured while querying the #{PROGRAM_NAME} server:"
           STDERR.puts response.body

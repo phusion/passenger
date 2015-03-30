@@ -162,7 +162,10 @@ module PhusionPassenger
         else
           select_passenger_instance
           @socket_path = "#{@instance.path}/agents.s/#{@options[:agent_name]}"
-          @password = obtain_full_admin_password(@instance)
+          begin
+            @password = @instance.full_admin_password
+          rescue Errno::EACCES
+          end
         end
       end
 

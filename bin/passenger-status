@@ -106,17 +106,20 @@ end
 
 def show_status(instance, options)
   # if the noshow override is not specified, the default is to show the header, unless show=xml
-  if options[:noheader] != true && options[:show] != 'xml' 
+  if options[:noheader] != true && options[:show] != 'xml'
     print_header(STDOUT, instance)
   end
 
   case options[:show]
   when 'pool'
     request = Net::HTTP::Get.new("/pool.txt?colorize=#{options[:color]}&verbose=#{options[:verbose]}")
-    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    try_performing_ro_admin_basic_auth(request, instance)
     response = instance.http_request("agents.s/server_admin", request)
     if response.code.to_i / 100 == 2
       puts response.body
+    elsif response.code.to_i == 401
+      print_permission_error_message
+      exit 2
     else
       STDERR.puts "*** An error occured."
       STDERR.puts "#{response.code}: #{response.body}"
@@ -125,10 +128,13 @@ def show_status(instance, options)
 
   when 'requests', 'server'
     request = Net::HTTP::Get.new("/server.json")
-    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    try_performing_ro_admin_basic_auth(request, instance)
     response = instance.http_request("agents.s/server_admin", request)
     if response.code.to_i / 100 == 2
       puts response.body
+    elsif response.code.to_i == 401
+      print_permission_error_message
+      exit 2
     else
       STDERR.puts "*** An error occured."
       STDERR.puts "#{response.code}: #{response.body}"
@@ -137,7 +143,7 @@ def show_status(instance, options)
 
   when 'backtraces'
     request = Net::HTTP::Get.new("/backtraces.txt")
-    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    try_performing_ro_admin_basic_auth(request, instance)
     response = instance.http_request("agents.s/server_admin", request)
     if response.code.to_i / 100 == 2
       text = response.body
@@ -146,6 +152,9 @@ def show_status(instance, options)
       text.gsub!(/^(Thread .*:)$/, color.black_bg + color.yellow + '\1' + color.reset)
       text.gsub!(/^( +in '.*? )(.*?)\(/, '\1' + color.bold + '\2' + color.reset + '(')
       puts text
+    elsif response.code.to_i == 401
+      print_permission_error_message
+      exit 2
     else
       STDERR.puts "*** An error occured."
       STDERR.puts "#{response.code}: #{response.body}"
@@ -154,7 +163,7 @@ def show_status(instance, options)
 
   when 'xml'
     request = Net::HTTP::Get.new("/pool.xml?secrets=#{options[:verbose]}")
-    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    try_performing_ro_admin_basic_auth(request, instance)
     response = instance.http_request("agents.s/server_admin", request)
     if response.code.to_i / 100 == 2
       indented = format_with_xmllint(response.body)
@@ -164,6 +173,9 @@ def show_status(instance, options)
         puts response.body
         STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
       end
+    elsif response.code.to_i == 401
+      print_permission_error_message
+      exit 2
     else
       STDERR.puts "*** An error occured."
       STDERR.puts "#{response.code}: #{response.body}"
@@ -172,10 +184,13 @@ def show_status(instance, options)
 
   when 'union_station'
     request = Net::HTTP::Get.new("/status.txt")
-    request.basic_auth("ro_admin", obtain_read_only_admin_password(instance))
+    try_performing_ro_admin_basic_auth(request, instance)
     response = instance.http_request("agents.s/logging_admin", request)
     if response.code.to_i / 100 == 2
       puts response.body
+    elsif response.code.to_i == 401
+      print_permission_error_message
+      exit 2
     else
       STDERR.puts "*** An error occured."
       STDERR.puts "#{response.code}: #{response.body}"
@@ -191,13 +206,13 @@ def print_header(io, instance)
   io.puts
 end
 
-def obtain_read_only_admin_password(instance)
+def try_performing_ro_admin_basic_auth(request, instance)
   begin
     password = instance.read_only_admin_password
   rescue Errno::EACCES
-    print_permission_error_message
-    exit 2
+    return
   end
+  request.basic_auth("ro_admin", password)
 end
 
 def print_permission_error_message

@@ -28,6 +28,7 @@
 #include <string>
 #include <cstddef>
 #include <ApplicationPool2/Context.h>
+#include <ApplicationPool2/ApiKey.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -48,8 +49,6 @@ class Group;
  */
 class BasicGroupInfo {
 public:
-	static const unsigned int SECRET_SIZE = 16;
-
 	Context *context;
 
 	/**
@@ -65,24 +64,14 @@ public:
 	std::string name;
 
 	/**
-	 * A secret token that may be known among all processes in this Group. Used
-	 * for securing intra-group process communication.
-	 *
-	 * On x86_64 the secret is as big as a StaticString,
-	 * so might as well directly embed the data instead.
+	 * This Group's unique API key.
 	 */
-	char secret[SECRET_SIZE];
+	ApiKey apiKey;
 
 	BasicGroupInfo()
 		: context(NULL),
 		  group(NULL)
-	{
-		secret[0] = '\0';
-	}
-
-	StaticString getSecret() const {
-		return StaticString(secret, SECRET_SIZE);
-	}
+		{ }
 };
 
 

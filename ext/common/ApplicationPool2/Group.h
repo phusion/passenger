@@ -39,6 +39,7 @@
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/dynamic_thread_group.hpp>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <cstdlib>
 #include <cassert>
@@ -48,6 +49,7 @@
 #include <ApplicationPool2/Process.h>
 #include <ApplicationPool2/Options.h>
 #include <SpawningKit/Factory.h>
+#include <SpawningKit/UserSwitchingRules.h>
 #include <MemoryKit/palloc.h>
 #include <Hooks.h>
 #include <Utils.h>
@@ -187,7 +189,7 @@ public:
 	GroupPtr selfPointer;
 
 
-	static void generateSecret(const Pool *pool, char *secret);
+	static ApiKey generateApiKey(const Pool *pool);
 	static string generateUuid(const Pool *pool);
 	static void _onSessionInitiateFailure(Session *session);
 	static void _onSessionClose(Session *session);
@@ -776,8 +778,8 @@ public:
 		return info.name;
 	}
 
-	StaticString getSecret() const {
-		return info.getSecret();
+	const ApiKey &getApiKey() const {
+		return info.apiKey;
 	}
 
 	unsigned int getProcessCount() const {
@@ -945,6 +947,14 @@ public:
 
 	bool restarting() const {
 		return m_restarting;
+	}
+
+	bool authorizeByUid(uid_t uid) const {
+		return uid == 0 || SpawningKit::prepareUserSwitching(options).uid == uid;
+	}
+
+	bool authorizeByApiKey(const ApiKey &key) const {
+		return key.isSuper() || key == getApiKey();
 	}
 };
 

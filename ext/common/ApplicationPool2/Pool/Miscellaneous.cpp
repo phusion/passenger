@@ -216,6 +216,29 @@ Pool::isSpawning(bool lock) const {
 	return false;
 }
 
+bool
+Pool::authorizeByApiKey(const ApiKey &key, bool lock) const {
+	return key.isSuper() || findGroupByApiKey(key.toStaticString(), lock) != NULL;
+}
+
+bool
+Pool::authorizeByUid(uid_t uid, bool lock) const {
+	if (uid == 0 || uid == geteuid()) {
+		return true;
+	}
+
+	DynamicScopedLock l(syncher, lock);
+	GroupMap::ConstIterator g_it(groups);
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
+		if (group->authorizeByUid(uid)) {
+			return true;
+		}
+		g_it.next();
+	}
+	return false;
+}
+
 
 } // namespace ApplicationPool2
 } // namespace Passenger

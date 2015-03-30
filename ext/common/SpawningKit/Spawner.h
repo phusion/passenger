@@ -81,6 +81,7 @@
 #include <SpawningKit/Options.h>
 #include <SpawningKit/Result.h>
 #include <SpawningKit/BackgroundIOCapturer.h>
+#include <SpawningKit/UserSwitchingRules.h>
 #include <FileDescriptor.h>
 #include <Exceptions.h>
 #include <StaticString.h>
@@ -205,16 +206,7 @@ protected:
 		 */
 		vector<string> appRootPathsInsideChroot;
 
-		// User switching
-		bool switchUser;
-		string username;
-		string groupname;
-		string home;
-		string shell;
-		uid_t uid;
-		gid_t gid;
-		int ngroups;
-		shared_array<gid_t> gidset;
+		UserSwitchingInfo userSwitching;
 
 		// Other information
 		string codeRevision;
@@ -282,8 +274,8 @@ private:
 				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
 				"gupid: " + details.gupid + "\n"
 				"UNIX_PATH_MAX: " + toString(UNIX_PATH_MAX) + "\n";
-			if (!details.options->groupSecret.empty()) {
-				data.append("connect_password: " + details.options->groupSecret + "\n");
+			if (!details.options->apiKey.empty()) {
+				data.append("connect_password: " + details.options->apiKey + "\n");
 			}
 			if (!config->instanceDir.empty()) {
 				data.append("socket_dir: " + config->instanceDir + "/apps.s\n");
@@ -405,7 +397,7 @@ private:
 
 				pids.push_back(pid);
 				ProcessMetricMap metrics = collector.collect(pids);
-				if (metrics[pid].uid != details.preparation->uid) {
+				if (metrics[pid].uid != details.preparation->userSwitching.uid) {
 					throwAppSpawnException("An error occurred while starting the "
 						"web application. The PID that the loader has returned does "
 						"not have the same UID as the loader itself.",
@@ -553,9 +545,9 @@ protected:
 					e << ": " << strerror(e) << ")";
 				break;
 			}
-			if (buf.st_uid != details.preparation->uid) {
+			if (buf.st_uid != details.preparation->userSwitching.uid) {
 				error << "It advertised a Unix domain socket that has a different " <<
-					"owner than expected (should be UID " << details.preparation->uid <<
+					"owner than expected (should be UID " << details.preparation->userSwitching.uid <<
 					", but actual UID was " << buf.st_uid << ")";
 				break;
 			}
@@ -722,7 +714,7 @@ protected:
 		TRACE_POINT();
 		SpawnPreparationInfo info;
 		prepareChroot(info, options);
-		prepareUserSwitching(info, options);
+		info.userSwitching = prepareUserSwitching(options);
 		prepareSwitchingWorkingDirectory(info, options);
 		inferApplicationInfo(info);
 		return info;
@@ -750,201 +742,6 @@ protected:
 		} else {
 			info.appRootInsideChroot = info.appRoot.substr(info.chrootDir.size());
 		}
-	}
-
-	void prepareUserSwitching(SpawnPreparationInfo &info, const Options &options) const {
-		TRACE_POINT();
-		if (geteuid() != 0) {
-			struct passwd pwd, *userInfo;
-			long bufSize;
-			shared_array<char> strings;
-
-			// _SC_GETPW_R_SIZE_MAX is not a maximum:
-			// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-			bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
-			strings.reset(new char[bufSize]);
-
-			userInfo = (struct passwd *) NULL;
-			if (getpwuid_r(geteuid(), &pwd, strings.get(), bufSize, &userInfo) != 0
-			 || userInfo == (struct passwd *) NULL)
-			{
-				throw RuntimeException("Cannot get user database entry for user " +
-					getProcessUsername() + "; it looks like your system's " +
-					"user database is broken, please fix it.");
-			}
-
-			info.switchUser = false;
-			info.username = userInfo->pw_name;
-			info.groupname = getGroupName(userInfo->pw_gid);
-			info.home = userInfo->pw_dir;
-			info.shell = userInfo->pw_shell;
-			info.uid = geteuid();
-			info.gid = getegid();
-			info.ngroups = 0;
-			return;
-		}
-
-		UPDATE_TRACE_POINT();
-		string defaultGroup;
-		string startupFile = absolutizePath(options.getStartupFile(), info.appRoot);
-		struct passwd pwd, *userInfo;
-		struct group  grp;
-		gid_t  groupId = (gid_t) -1;
-		long pwdBufSize, grpBufSize;
-		shared_array<char> pwdBuf, grpBuf;
-		int ret;
-
-		// _SC_GETPW_R_SIZE_MAX/_SC_GETGR_R_SIZE_MAX are not maximums:
-		// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-		pwdBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
-		pwdBuf.reset(new char[pwdBufSize]);
-		grpBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
-		grpBuf.reset(new char[grpBufSize]);
-
-		if (options.defaultGroup.empty()) {
-			struct passwd *info;
-			struct group *group;
-
-			info = (struct passwd *) NULL;
-			ret = getpwnam_r(options.defaultUser.c_str(), &pwd, pwdBuf.get(),
-				pwdBufSize, &info);
-			if (ret != 0) {
-				info = (struct passwd *) NULL;
-			}
-			if (info == (struct passwd *) NULL) {
-				throw RuntimeException("Cannot get user database entry for username '" +
-					options.defaultUser + "'");
-			}
-
-			group = (struct group *) NULL;
-			ret = getgrgid_r(info->pw_gid, &grp, grpBuf.get(), grpBufSize, &group);
-			if (ret != 0) {
-				group = (struct group *) NULL;
-			}
-			if (group == (struct group *) NULL) {
-				throw RuntimeException(string("Cannot get group database entry for ") +
-					"the default group belonging to username '" +
-					options.defaultUser + "'");
-			}
-			defaultGroup = group->gr_name;
-		} else {
-			defaultGroup = options.defaultGroup;
-		}
-
-		UPDATE_TRACE_POINT();
-		userInfo = (struct passwd *) NULL;
-		if (!options.userSwitching) {
-			// Keep userInfo at NULL so that it's set to defaultUser's UID.
-		} else if (!options.user.empty()) {
-			ret = getpwnam_r(options.user.c_str(), &pwd, pwdBuf.get(),
-				pwdBufSize, &userInfo);
-			if (ret != 0) {
-				userInfo = (struct passwd *) NULL;
-			}
-		} else {
-			struct stat buf;
-			if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
-				int e = errno;
-				throw SystemException("Cannot lstat(\"" + startupFile +
-					"\")", e);
-			}
-			ret = getpwuid_r(buf.st_uid, &pwd, pwdBuf.get(),
-				pwdBufSize, &userInfo);
-			if (ret != 0) {
-				userInfo = (struct passwd *) NULL;
-			}
-		}
-		if (userInfo == (struct passwd *) NULL || userInfo->pw_uid == 0) {
-			userInfo = (struct passwd *) NULL;
-			ret = getpwnam_r(options.defaultUser.c_str(), &pwd,
-				pwdBuf.get(), pwdBufSize, &userInfo);
-			if (ret != 0) {
-				userInfo = (struct passwd *) NULL;
-			}
-		}
-
-		UPDATE_TRACE_POINT();
-		if (!options.userSwitching) {
-			// Keep groupId at -1 so that it's set to defaultGroup's GID.
-		} else if (!options.group.empty()) {
-			struct group *groupInfo = (struct group *) NULL;
-
-			if (options.group == "!STARTUP_FILE!") {
-				struct stat buf;
-
-				if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
-					int e = errno;
-					throw SystemException("Cannot lstat(\"" +
-						startupFile + "\")", e);
-				}
-
-				ret = getgrgid_r(buf.st_gid, &grp, grpBuf.get(), grpBufSize,
-					&groupInfo);
-				if (ret != 0) {
-					groupInfo = (struct group *) NULL;
-				}
-				if (groupInfo != NULL) {
-					groupId = buf.st_gid;
-				} else {
-					groupId = (gid_t) -1;
-				}
-			} else {
-				ret = getgrnam_r(options.group.c_str(), &grp, grpBuf.get(),
-					grpBufSize, &groupInfo);
-				if (ret != 0) {
-					groupInfo = (struct group *) NULL;
-				}
-				if (groupInfo != NULL) {
-					groupId = groupInfo->gr_gid;
-				} else {
-					groupId = (gid_t) -1;
-				}
-			}
-		} else if (userInfo != (struct passwd *) NULL) {
-			groupId = userInfo->pw_gid;
-		}
-		if (groupId == 0 || groupId == (gid_t) -1) {
-			groupId = lookupGid(defaultGroup);
-		}
-
-		UPDATE_TRACE_POINT();
-		if (userInfo == (struct passwd *) NULL) {
-			throw RuntimeException("Cannot determine a user to lower privilege to");
-		}
-		if (groupId == (gid_t) -1) {
-			throw RuntimeException("Cannot determine a group to lower privilege to");
-		}
-
-		UPDATE_TRACE_POINT();
-		#ifdef __APPLE__
-			int groups[1024];
-			info.ngroups = sizeof(groups) / sizeof(int);
-		#else
-			gid_t groups[1024];
-			info.ngroups = sizeof(groups) / sizeof(gid_t);
-		#endif
-		info.switchUser = true;
-		info.username = userInfo->pw_name;
-		info.groupname = getGroupName(groupId);
-		info.home = userInfo->pw_dir;
-		info.shell = userInfo->pw_shell;
-		info.uid = userInfo->pw_uid;
-		info.gid = groupId;
-		#if !defined(HAVE_GETGROUPLIST) && (defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__))
-			#define HAVE_GETGROUPLIST
-		#endif
-		#ifdef HAVE_GETGROUPLIST
-			ret = getgrouplist(userInfo->pw_name, groupId,
-				groups, &info.ngroups);
-			if (ret == -1) {
-				int e = errno;
-				throw SystemException("getgrouplist() failed", e);
-			}
-			info.gidset = shared_array<gid_t>(new gid_t[info.ngroups]);
-			for (int i = 0; i < info.ngroups; i++) {
-				info.gidset[i] = groups[i];
-			}
-		#endif
 	}
 
 	void prepareSwitchingWorkingDirectory(SpawnPreparationInfo &info, const Options &options) const {
@@ -1018,7 +815,7 @@ protected:
 
 	bool shouldLoadShellEnvvars(const Options &options, const SpawnPreparationInfo &preparation) const {
 		if (options.loadShellEnvvars) {
-			string shellName = extractBaseName(preparation.shell);
+			string shellName = extractBaseName(preparation.userSwitching.shell);
 			return shellName == "bash" || shellName == "zsh" || shellName == "ksh";
 		} else {
 			return false;
@@ -1073,23 +870,27 @@ protected:
 	}
 
 	void switchUser(const SpawnPreparationInfo &info) {
-		if (info.switchUser) {
+		if (info.userSwitching.enabled) {
 			bool setgroupsCalled = false;
 			#ifdef HAVE_GETGROUPLIST
-				if (info.ngroups <= NGROUPS_MAX) {
+				if (info.userSwitching.ngroups <= NGROUPS_MAX) {
 					setgroupsCalled = true;
-					if (setgroups(info.ngroups, info.gidset.get()) == -1) {
+					if (setgroups(info.userSwitching.ngroups,
+						info.userSwitching.gidset.get()) == -1)
+					{
 						int e = errno;
 						printf("!> Error\n");
 						printf("!> \n");
 						printf("setgroups(%d, ...) failed: %s (errno=%d)\n",
-							info.ngroups, strerror(e), e);
+							info.userSwitching.ngroups, strerror(e), e);
 						fflush(stdout);
 						_exit(1);
 					}
 				}
 			#endif
-			if (!setgroupsCalled && initgroups(info.username.c_str(), info.gid) == -1) {
+			if (!setgroupsCalled && initgroups(info.userSwitching.username.c_str(),
+				info.userSwitching.gid) == -1)
+			{
 				int e = errno;
 				printf("!> Error\n");
 				printf("!> \n");
@@ -1098,7 +899,7 @@ protected:
 				fflush(stdout);
 				_exit(1);
 			}
-			if (setgid(info.gid) == -1) {
+			if (setgid(info.userSwitching.gid) == -1) {
 				int e = errno;
 				printf("!> Error\n");
 				printf("!> \n");
@@ -1107,7 +908,7 @@ protected:
 				fflush(stdout);
 				_exit(1);
 			}
-			if (setuid(info.uid) == -1) {
+			if (setuid(info.userSwitching.uid) == -1) {
 				int e = errno;
 				printf("!> Error\n");
 				printf("!> \n");
@@ -1121,10 +922,10 @@ protected:
 			// in the SpawnPreparer because SpawnPreparer might
 			// be executed by bash, but these environment variables
 			// must be set before bash.
-			setenv("USER", info.username.c_str(), 1);
-			setenv("LOGNAME", info.username.c_str(), 1);
-			setenv("SHELL", info.shell.c_str(), 1);
-			setenv("HOME", info.home.c_str(), 1);
+			setenv("USER", info.userSwitching.username.c_str(), 1);
+			setenv("LOGNAME", info.userSwitching.username.c_str(), 1);
+			setenv("SHELL", info.userSwitching.shell.c_str(), 1);
+			setenv("HOME", info.userSwitching.home.c_str(), 1);
 		}
 	}
 
@@ -1173,8 +974,8 @@ protected:
 					"However, the parent directory '%s' has wrong permissions, thereby "
 					"preventing this process from accessing its application root directory. "
 					"Please fix the permissions of the directory '%s' first.\n",
-					info.username.c_str(),
-					info.groupname.c_str(),
+					info.userSwitching.username.c_str(),
+					info.userSwitching.groupname.c_str(),
 					info.appRootPaths.back().c_str(),
 					parent,
 					parent);
@@ -1201,8 +1002,8 @@ protected:
 				"and must be able to access its application root directory '%s'. "
 				"However this directory is not accessible because it has wrong permissions. "
 				"Please fix these permissions first.\n",
-				info.username.c_str(),
-				info.groupname.c_str(),
+				info.userSwitching.username.c_str(),
+				info.userSwitching.groupname.c_str(),
 				info.appRootPaths.back().c_str());
 			fflush(stdout);
 			_exit(1);

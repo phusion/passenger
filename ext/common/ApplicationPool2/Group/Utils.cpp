@@ -66,8 +66,8 @@ resetOptions(const Options &newOptions, Options *destination = NULL) {
 	*destination = newOptions;
 	destination->persist(newOptions);
 	destination->clearPerRequestFields();
-	destination->groupSecret = getSecret();
-	destination->groupUuid   = uuid;
+	destination->apiKey    = getApiKey().toStaticString();
+	destination->groupUuid = uuid;
 }
 
 /**

@@ -155,12 +155,12 @@ Pool::findOrCreateGroup(const Options &options) {
 }
 
 GroupPtr
-Pool::findGroupBySecret(const string &secret, bool lock) const {
+Pool::findGroupByApiKey(const StaticString &value, bool lock) const {
 	DynamicScopedLock l(syncher, lock);
 	GroupMap::ConstIterator g_it(groups);
 	while (*g_it != NULL) {
 		const GroupPtr &group = g_it.getValue();
-		if (group->getSecret() == secret) {
+		if (group->getApiKey() == value) {
 			return group;
 		}
 		g_it.next();
@@ -169,7 +169,7 @@ Pool::findGroupBySecret(const string &secret, bool lock) const {
 }
 
 bool
-Pool::detachGroupByName(const string &name) {
+Pool::detachGroupByName(const HashedStaticString &name) {
 	TRACE_POINT();
 	ScopedLock l(syncher);
 	GroupPtr group = groups.lookupCopy(name);
@@ -213,9 +213,9 @@ Pool::detachGroupByName(const string &name) {
 }
 
 bool
-Pool::detachGroupBySecret(const string &groupSecret) {
+Pool::detachGroupByApiKey(const StaticString &value) {
 	ScopedLock l(syncher);
-	GroupPtr group = findGroupBySecret(groupSecret, false);
+	GroupPtr group = findGroupByApiKey(value, false);
 	if (group != NULL) {
 		string name = group->getName();
 		group.reset();
@@ -227,14 +227,19 @@ Pool::detachGroupBySecret(const string &groupSecret) {
 }
 
 bool
-Pool::restartGroupByName(const StaticString &name, RestartMethod method) {
+Pool::restartGroupByName(const StaticString &name, const RestartOptions &options) {
 	ScopedLock l(syncher);
 	GroupMap::ConstIterator g_it(groups);
 	while (*g_it != NULL) {
 		const GroupPtr &group = g_it.getValue();
 		if (name == group->getName()) {
+			if (!group->authorizeByUid(options.uid)
+			 && !group->authorizeByApiKey(options.apiKey))
+			{
+				throw SecurityException("Operation unauthorized");
+			}
 			if (!group->restarting()) {
-				group->restart(group->options, method);
+				group->restart(group->options, options.method);
 			}
 			return true;
 		}
@@ -245,7 +250,7 @@ Pool::restartGroupByName(const StaticString &name, RestartMethod method) {
 }
 
 unsigned int
-Pool::restartGroupsByAppRoot(const StaticString &appRoot, RestartMethod method) {
+Pool::restartGroupsByAppRoot(const StaticString &appRoot, const RestartOptions &options) {
 	ScopedLock l(syncher);
 	GroupMap::ConstIterator g_it(groups);
 	unsigned int result = 0;
@@ -253,8 +258,12 @@ Pool::restartGroupsByAppRoot(const StaticString &appRoot, RestartMethod method) 
 	while (*g_it != NULL) {
 		const GroupPtr &group = g_it.getValue();
 		if (appRoot == group->options.appRoot) {
-			result++;
-			group->restart(group->options, method);
+			if (group->authorizeByUid(options.uid)
+			 || group->authorizeByApiKey(options.apiKey))
+			{
+				result++;
+				group->restart(group->options, options.method);
+			}
 		}
 		g_it.next();
 	}

@@ -26,6 +26,7 @@
 #ifndef _GNU_SOURCE
 	// Needed for IOV_MAX on Linux:
 	// https://bugzilla.redhat.com/show_bug.cgi?id=165427
+	// Also needed for SO_PEERCRED.
 	#define _GNU_SOURCE
 #endif
 
@@ -1147,6 +1148,51 @@ writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout) {
 	if (ret == -1) {
 		throw SystemException("Cannot send file descriptor with sendmsg()", errno);
 	}
+}
+
+void
+readPeerCredentials(int sock, uid_t *uid, gid_t *gid) {
+	union {
+		struct sockaddr genericAddress;
+		struct sockaddr_un unixAddress;
+		struct sockaddr_in inetAddress;
+	} addr;
+	socklen_t len = sizeof(addr);
+
+	/*
+	 * The functions for receiving the peer credentials are not guaranteed to
+	 * fail if the socket is not a Unix domain socket. For example, OS X getpeereid()
+	 * just returns garbage when invoked on a TCP socket. So we check here
+	 * whether 'sock' is a Unix domain socket.
+	 */
+	if (getsockname(sock, &addr.genericAddress, &len) == -1) {
+		int e = errno;
+		throw SystemException("Unable to autodetect socket type (getsockname() failed)", e);
+	}
+	if (addr.genericAddress.sa_family != AF_LOCAL) {
+		throw SystemException("Cannot receive process credentials: the connection is not a Unix domain socket",
+			EPROTONOSUPPORT);
+	}
+
+	#if defined(__linux__)
+		struct ucred credentials;
+		socklen_t ucred_length = sizeof(struct ucred);
+
+		if (getsockopt(sock, SOL_SOCKET, SO_PEERCRED, &credentials, &ucred_length) != 0) {
+			int e = errno;
+			throw SystemException("Cannot receive process credentials over Unix domain socket", e);
+		}
+
+		*uid = credentials.uid;
+		*gid = credentials.gid;
+	#elif defined(__FreeBSD__) || defined(__APPLE__)
+		if (getpeereid(sock, uid, gid) == -1) {
+			int e = errno;
+			throw SystemException("Cannot receive process credentials over Unix domain socket", e);
+		}
+	#else
+		throw SystemException("Cannot receive process credentials over Unix domain socket", ENOSYS);
+	#endif
 }
 
 void

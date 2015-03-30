@@ -68,20 +68,22 @@ module PhusionPassenger
       end
 
       def perform_reopen_logs
-        password = obtain_full_admin_password(@instance)
-        perform_reopen_logs_on("watchdog", "watchdog", password)
-        perform_reopen_logs_on("server", "server_admin", password)
-        perform_reopen_logs_on("logger", "logging_admin", password)
+        perform_reopen_logs_on("watchdog", "watchdog")
+        perform_reopen_logs_on("server", "server_admin")
+        perform_reopen_logs_on("logger", "logging_admin")
         puts "All done"
       end
 
-      def perform_reopen_logs_on(name, socket_name, password)
+      def perform_reopen_logs_on(name, socket_name)
         puts "Reopening logs for #{AGENT_EXE} #{name}"
         request = Net::HTTP::Post.new("/reopen_logs.json")
-        request.basic_auth("admin", password)
+        try_performing_full_admin_basic_auth(request, @instance)
         request.content_type = "application/json"
         response = @instance.http_request("agents.s/#{socket_name}", request)
-        if response["content-type"] == "application/json"
+        if response.code.to_i == 401
+          print_full_admin_command_permission_error
+          abort
+        elsif response["content-type"] == "application/json"
           if response.code.to_i / 100 != 2
             handle_error(name, response)
           end

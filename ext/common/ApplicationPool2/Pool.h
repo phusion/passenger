@@ -45,6 +45,7 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/backtrace.hpp>
+#include <sys/types.h>
 #include <ApplicationPool2/Common.h>
 #include <ApplicationPool2/Context.h>
 #include <ApplicationPool2/Process.h>
@@ -74,9 +75,41 @@ using namespace oxt;
 
 class Pool: public boost::enable_shared_from_this<Pool> {
 public:
+	struct AuthenticationOptions {
+		uid_t uid;
+		ApiKey apiKey;
+
+		AuthenticationOptions()
+			: uid(-1)
+			{ }
+
+		static AuthenticationOptions makeAuthorized() {
+			AuthenticationOptions options;
+			options.apiKey = ApiKey::makeSuper();
+			return options;
+		}
+	};
+
+
+	/****** Group data structure utilities ******/
+
+	struct RestartOptions: public AuthenticationOptions {
+		RestartMethod method;
+
+		RestartOptions()
+			: method(RM_DEFAULT)
+			{ }
+
+		static RestartOptions makeAuthorized() {
+			RestartOptions options;
+			options.apiKey = ApiKey::makeSuper();
+			return options;
+		}
+	};
+
 	/****** State inspection ******/
 
-	struct InspectOptions {
+	struct InspectOptions: public AuthenticationOptions {
 		bool colorize;
 		bool verbose;
 
@@ -89,6 +122,30 @@ public:
 			: colorize(options.getBool("colorize", false, false)),
 			  verbose(options.getBool("verbose", false, false))
 			{ }
+
+		static InspectOptions makeAuthorized() {
+			InspectOptions options;
+			options.apiKey = ApiKey::makeSuper();
+			return options;
+		}
+	};
+
+	struct ToXmlOptions: public AuthenticationOptions {
+		bool secrets;
+
+		ToXmlOptions()
+			: secrets(true)
+			{ }
+
+		ToXmlOptions(const VariantMap &options)
+			: secrets(options.getBool("secrets", false, false))
+			{ }
+
+		static ToXmlOptions makeAuthorized() {
+			ToXmlOptions options;
+			options.apiKey = ApiKey::makeSuper();
+			return options;
+		}
 	};
 
 
@@ -353,11 +410,13 @@ public:
 	/****** Group manipulation ******/
 
 	GroupPtr findOrCreateGroup(const Options &options);
-	GroupPtr findGroupBySecret(const string &secret, bool lock = true) const;
-	bool detachGroupByName(const string &name);
-	bool detachGroupBySecret(const string &groupSecret);
-	bool restartGroupByName(const StaticString &name, RestartMethod method = RM_DEFAULT);
-	unsigned int restartGroupsByAppRoot(const StaticString &appRoot, RestartMethod method = RM_DEFAULT);
+	GroupPtr findGroupByApiKey(const StaticString &value, bool lock = true) const;
+	bool detachGroupByName(const HashedStaticString &name);
+	bool detachGroupByApiKey(const StaticString &value);
+	bool restartGroupByName(const StaticString &name,
+		const RestartOptions &options = RestartOptions::makeAuthorized());
+	unsigned int restartGroupsByAppRoot(const StaticString &appRoot,
+		const RestartOptions &options = RestartOptions::makeAuthorized());
 
 
 	/***** Process manipulation ******/
@@ -366,8 +425,10 @@ public:
 	ProcessPtr findProcessByGupid(const StaticString &gupid, bool lock = true) const;
 	ProcessPtr findProcessByPid(pid_t pid, bool lock = true) const;
 	bool detachProcess(const ProcessPtr &process);
-	bool detachProcess(pid_t pid);
-	bool detachProcess(const string &gupid);
+	bool detachProcess(pid_t pid,
+		const AuthenticationOptions &options = AuthenticationOptions::makeAuthorized());
+	bool detachProcess(const string &gupid,
+		const AuthenticationOptions &options = AuthenticationOptions::makeAuthorized());
 	DisableResult disableProcess(const StaticString &gupid);
 
 
@@ -377,8 +438,10 @@ public:
 	bool atFullCapacity() const;
 	unsigned int getProcessCount(bool lock = true) const;
 	unsigned int getGroupCount() const;
-	string inspect(const InspectOptions &options = InspectOptions(), bool lock = true) const;
-	string toXml(bool includeSecrets = true, bool lock = true) const;
+	string inspect(const InspectOptions &options = InspectOptions::makeAuthorized(),
+		bool lock = true) const;
+	string toXml(const ToXmlOptions &options = ToXmlOptions::makeAuthorized(),
+		bool lock = true) const;
 
 
 	/****** Miscellaneous ******/
@@ -389,6 +452,8 @@ public:
 	void setMaxIdleTime(unsigned long long value);
 	void enableSelfChecking(bool enabled);
 	bool isSpawning(bool lock = true) const;
+	bool authorizeByApiKey(const ApiKey &key, bool lock = true) const;
+	bool authorizeByUid(uid_t uid, bool lock = true) const;
 };
 
 

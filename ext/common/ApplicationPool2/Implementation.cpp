@@ -318,9 +318,9 @@ Group::Group(Pool *_pool, const Options &_options)
 	  uuid(generateUuid(_pool))
 {
 	info.context = _pool->getContext();
-	info.group = this;
-	info.name = _options.getAppGroupName().toString();
-	generateSecret(_pool, info.secret);
+	info.group   = this;
+	info.name    = _options.getAppGroupName().toString();
+	info.apiKey  = generateApiKey(_pool);
 	resetOptions(_options);
 	enabledCount   = 0;
 	disablingCount = 0;
@@ -719,7 +719,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		data.push_back(P_STATIC_STRING_WITH_NULL("OOBW"));
 
 		data.push_back(P_STATIC_STRING_WITH_NULL("PASSENGER_CONNECT_PASSWORD"));
-		data.push_back(getSecret());
+		data.push_back(getApiKey().toStaticString());
 		data.push_back(StaticString("", 1));
 
 		boost::uint32_t dataSize = 0;
@@ -1300,9 +1300,11 @@ Group::setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &opti
 	options.environment.push_back(make_pair("PASSENGER_APP_ROOT", this->options.appRoot));
 }
 
-void
-Group::generateSecret(const Pool *pool, char *secret) {
-	pool->getRandomGenerator()->generateAsciiString(secret, BasicGroupInfo::SECRET_SIZE);
+ApiKey
+Group::generateApiKey(const Pool *pool) {
+	char value[ApiKey::SIZE];
+	pool->getRandomGenerator()->generateAsciiString(value, ApiKey::SIZE);
+	return ApiKey(StaticString(value, ApiKey::SIZE));
 }
 
 string

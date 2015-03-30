@@ -89,7 +89,7 @@ module PhusionPassenger
 
       def perform_detach
         request = Net::HTTP::Post.new("/pool/detach_process.json")
-        request.basic_auth("admin", obtain_full_admin_password(@instance))
+        try_performing_full_admin_basic_auth(request, @instance)
         request.content_type = "application/json"
         request.body = PhusionPassenger::Utils::JSON.generate(:pid => @pid)
         response = @instance.http_request("agents.s/server_admin", request)
@@ -102,6 +102,9 @@ module PhusionPassenger
           else
             abort "Could not detach process #{@pid}."
           end
+        elsif response.code.to_i == 401
+          print_full_admin_command_permission_error
+          abort
         else
           STDERR.puts "*** An error occured while communicating with the #{PROGRAM_NAME} server:"
           STDERR.puts response.body

@@ -96,22 +96,20 @@ module PhusionPassenger
         end
       end
 
-      def obtain_read_only_admin_password(instance)
+      def try_performing_ro_admin_basic_auth(request, instance)
         begin
-          return instance.read_only_admin_password
+          password = instance.read_only_admin_password
         rescue Errno::EACCES
-          print_instance_querying_permission_error
-          abort
         end
+        request.basic_auth("ro_admin", password)
       end
 
-      def obtain_full_admin_password(instance)
+      def try_performing_full_admin_basic_auth(request, instance)
         begin
-          return instance.full_admin_password
+          password = instance.full_admin_password
         rescue Errno::EACCES
-          print_instance_querying_permission_error
-          abort
         end
+        request.basic_auth("admin", password)
       end
 
 
@@ -119,6 +117,13 @@ module PhusionPassenger
         PhusionPassenger.require_passenger_lib 'platform_info/ruby'
         STDERR.puts "*** ERROR: You are not authorized to query the status for this " +
           "#{PROGRAM_NAME} instance. Please try again with " +
+          "'#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
+      end
+
+      def print_full_admin_command_permission_error
+        PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+        STDERR.puts "*** ERROR: You are not authorized to perform this particular " +
+          "administration command on this #{PROGRAM_NAME} instance. Please try again with " +
           "'#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
       end
 

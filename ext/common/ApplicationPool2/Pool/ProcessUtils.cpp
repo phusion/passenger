@@ -253,32 +253,46 @@ Pool::detachProcess(const ProcessPtr &process) {
 }
 
 bool
-Pool::detachProcess(pid_t pid) {
+Pool::detachProcess(pid_t pid, const AuthenticationOptions &options) {
 	ScopedLock l(syncher);
 	ProcessPtr process = findProcessByPid(pid, false);
 	if (process != NULL) {
-		boost::container::vector<Callback> actions;
-		bool result = detachProcessUnlocked(process, actions);
-		fullVerifyInvariants();
-		l.unlock();
-		runAllActions(actions);
-		return result;
+		const Group *group = process->getGroup();
+		if (group->authorizeByUid(options.uid)
+		 || group->authorizeByApiKey(options.apiKey))
+		{
+			boost::container::vector<Callback> actions;
+			bool result = detachProcessUnlocked(process, actions);
+			fullVerifyInvariants();
+			l.unlock();
+			runAllActions(actions);
+			return result;
+		} else {
+			throw SecurityException("Operation unauthorized");
+		}
 	} else {
 		return false;
 	}
 }
 
 bool
-Pool::detachProcess(const string &gupid) {
+Pool::detachProcess(const string &gupid, const AuthenticationOptions &options) {
 	ScopedLock l(syncher);
 	ProcessPtr process = findProcessByGupid(gupid, false);
 	if (process != NULL) {
-		boost::container::vector<Callback> actions;
-		bool result = detachProcessUnlocked(process, actions);
-		fullVerifyInvariants();
-		l.unlock();
-		runAllActions(actions);
-		return result;
+		const Group *group = process->getGroup();
+		if (group->authorizeByUid(options.uid)
+		 || group->authorizeByApiKey(options.apiKey))
+		{
+			boost::container::vector<Callback> actions;
+			bool result = detachProcessUnlocked(process, actions);
+			fullVerifyInvariants();
+			l.unlock();
+			runAllActions(actions);
+			return result;
+		} else {
+			throw SecurityException("Operation unauthorized");
+		}
 	} else {
 		return false;
 	}

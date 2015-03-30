@@ -99,8 +99,8 @@ private:
 		vector<string> command;
 
 		if (shouldLoadShellEnvvars(options, preparation)) {
-			command.push_back(preparation.shell);
-			command.push_back(preparation.shell);
+			command.push_back(preparation.userSwitching.shell);
+			command.push_back(preparation.userSwitching.shell);
 			command.push_back("-lc");
 			command.push_back("exec \"$@\"");
 			command.push_back("SpawnPreparerShell");
@@ -209,7 +209,8 @@ private:
 		vector<string> command = createRealPreloaderCommand(options, args);
 		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
 		Pipe errorPipe = createPipe(__FILE__, __LINE__);
-		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
+		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.userSwitching.uid,
+			preparation.userSwitching.gid);
 		pid_t pid;
 
 		pid = syscalls::fork();
@@ -345,8 +346,8 @@ private:
 				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"UNIX_PATH_MAX: " + toString(UNIX_PATH_MAX) + "\n";
-			if (!details.options->groupSecret.empty()) {
-				data.append("connect_password: " + details.options->groupSecret + "\n");
+			if (!details.options->apiKey.empty()) {
+				data.append("connect_password: " + details.options->apiKey + "\n");
 			}
 			if (!config->instanceDir.empty()) {
 				data.append("socket_dir: " + config->instanceDir + "/apps.s\n");

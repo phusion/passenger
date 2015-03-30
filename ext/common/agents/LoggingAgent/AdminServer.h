@@ -29,6 +29,8 @@
 #include <string>
 
 #include <agents/LoggingAgent/LoggingServer.h>
+#include <agents/AdminServerUtils.h>
+#include <ApplicationPool2/ApiKey.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
 #include <Exceptions.h>
@@ -52,77 +54,13 @@ public:
 };
 
 class AdminServer: public ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > {
-public:
-	enum PrivilegeLevel {
-		NONE,
-		READONLY,
-		FULL
-	};
-
-	struct Authorization {
-		PrivilegeLevel level;
-		string username;
-		string password;
-	};
-
 private:
 	typedef ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
 
-	bool parseAuthorizationHeader(Request *req, string &username,
-		string &password) const
-	{
-		const LString *auth = req->headers.lookup("authorization");
-
-		if (auth == NULL || auth->size <= 6 || !psg_lstr_cmp(auth, "Basic ", 6)) {
-			return false;
-		}
-
-		auth = psg_lstr_make_contiguous(auth, req->pool);
-		string authData = modp::b64_decode(
-			auth->start->data + sizeof("Basic ") - 1,
-			auth->size - (sizeof("Basic ") - 1));
-		string::size_type pos = authData.find(':');
-		if (pos == string::npos) {
-			return false;
-		}
-
-		username = authData.substr(0, pos);
-		password = authData.substr(pos + 1);
-		return true;
-	}
-
-	const Authorization *lookupAuthorizationRecord(const StaticString &username) const {
-		vector<Authorization>::const_iterator it, end = authorizations.end();
-
-		for (it = authorizations.begin(); it != end; it++) {
-			if (it->username == username) {
-				return &(*it);
-			}
-		}
-
-		return NULL;
-	}
-
-	bool authorize(Client *client, Request *req, PrivilegeLevel level) const {
-		if (authorizations.empty()) {
-			return true;
-		}
-
-		string username, password;
-		if (!parseAuthorizationHeader(req, username, password)) {
-			return false;
-		}
-
-		const Authorization *auth = lookupAuthorizationRecord(username);
-		return auth != NULL
-			&& auth->level >= level
-			&& constantTimeCompare(password, auth->password);
-	}
-
 	void processPing(Client *client, Request *req) {
-		if (authorize(client, req, READONLY)) {
+		if (authorizeStateInspectionOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 			headers.insert(req->pool, "content-type", "application/json");
@@ -138,7 +76,7 @@ private:
 	void processShutdown(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
 			respondWith405(client, req);
-		} else if (authorize(client, req, FULL)) {
+		} else if (authorizeAdminOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
 			exitEvent->notify();
@@ -153,7 +91,7 @@ private:
 
 	void processConfig(Client *client, Request *req) {
 		if (req->method == HTTP_GET) {
-			if (!authorize(client, req, READONLY)) {
+			if (!authorizeStateInspectionOperation(this, client, req)) {
 				respondWith401(client, req);
 			}
 
@@ -176,7 +114,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else if (req->method == HTTP_PUT) {
-			if (!authorize(client, req, FULL)) {
+			if (!authorizeAdminOperation(this, client, req)) {
 				respondWith401(client, req);
 			} else if (!req->hasBody()) {
 				endAsBadRequest(&client, &req, "Body required");
@@ -238,7 +176,7 @@ private:
 	void processReopenLogs(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
 			respondWith405(client, req);
-		} else if (authorize(client, req, FULL)) {
+		} else if (authorizeAdminOperation(this, client, req)) {
 			int e;
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
@@ -299,7 +237,7 @@ private:
 	void processStatusTxt(Client *client, Request *req) {
 		if (req->method != HTTP_GET) {
 			respondWith405(client, req);
-		} else if (authorize(client, req, READONLY)) {
+		} else if (authorizeStateInspectionOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "text/plain");
 
@@ -404,12 +342,13 @@ protected:
 
 public:
 	LoggingServer *loggingServer;
+	AdminAccountDatabase *adminAccountDatabase;
 	EventFd *exitEvent;
-	vector<Authorization> authorizations;
 
 	AdminServer(ServerKit::Context *context)
 		: ParentClass(context),
 		  loggingServer(NULL),
+		  adminAccountDatabase(NULL),
 		  exitEvent(NULL)
 		{ }
 
@@ -417,14 +356,16 @@ public:
 		return P_STATIC_STRING("LoggerAdminServer");
 	}
 
-	static PrivilegeLevel parseLevel(const StaticString &level) {
-		if (level == "readonly") {
-			return READONLY;
-		} else if (level == "full") {
-			return FULL;
-		} else {
-			throw RuntimeException("Invalid privilege level " + level);
-		}
+	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
+		return ParentClass::getClientName(client, buf, size);
+	}
+
+	bool authorizeByUid(uid_t uid) const {
+		return uid == 0 || uid == geteuid();
+	}
+
+	bool authorizeByApiKey(const ApplicationPool2::ApiKey &apiKey) const {
+		return apiKey.isSuper();
 	}
 };
 

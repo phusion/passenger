@@ -1,3 +1,9 @@
+Release 5.0.10
+--------------
+
+ * It is now possible to run `passenger-status`, `passenger-config restart-app` and other admin commands without using sudo. When run without sudo, these admin commands will allow you to operate on apps and processes that are owned by the user that invoked the admin command.
+
+
 Release 5.0.8
 -------------
 

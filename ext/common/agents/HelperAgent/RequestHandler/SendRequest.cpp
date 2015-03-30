@@ -290,7 +290,7 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	}
 
 	dataSize += sizeof("PASSENGER_CONNECT_PASSWORD");
-	dataSize += req->session->getGroupSecret().size() + 1;
+	dataSize += ApplicationPool2::ApiKey::SIZE + 1;
 
 	if (req->https) {
 		dataSize += sizeof("HTTPS");
@@ -404,7 +404,7 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	}
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_CONNECT_PASSWORD"));
-	pos = appendData(pos, end, req->session->getGroupSecret());
+	pos = appendData(pos, end, req->session->getApiKey().toStaticString());
 	pos = appendData(pos, end, "", 1);
 
 	if (req->https) {

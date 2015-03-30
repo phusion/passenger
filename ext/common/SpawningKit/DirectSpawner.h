@@ -121,8 +121,8 @@ private:
 		}
 
 		if (shouldLoadShellEnvvars(options, preparation)) {
-			command.push_back(preparation.shell);
-			command.push_back(preparation.shell);
+			command.push_back(preparation.userSwitching.shell);
+			command.push_back(preparation.userSwitching.shell);
 			command.push_back("-lc");
 			command.push_back("exec \"$@\"");
 			command.push_back("SpawnPreparerShell");
@@ -162,7 +162,8 @@ public:
 		vector<string> command = createCommand(options, preparation, args);
 		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
 		Pipe errorPipe = createPipe(__FILE__, __LINE__);
-		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.uid, preparation.gid);
+		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.userSwitching.uid,
+			preparation.userSwitching.gid);
 		pid_t pid;
 
 		pid = syscalls::fork();

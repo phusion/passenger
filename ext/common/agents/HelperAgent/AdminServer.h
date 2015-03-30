@@ -30,8 +30,10 @@
 #include <sstream>
 #include <string>
 #include <cstring>
+#include <sys/types.h>
 
 #include <agents/HelperAgent/RequestHandler.h>
+#include <agents/AdminServerUtils.h>
 #include <ApplicationPool2/Pool.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
@@ -53,24 +55,12 @@ class Request: public ServerKit::BaseHttpRequest {
 public:
 	string body;
 	Json::Value jsonBody;
+	Authorization authorization;
 
 	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Request);
 };
 
 class AdminServer: public ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > {
-public:
-	enum PrivilegeLevel {
-		NONE,
-		READONLY,
-		FULL
-	};
-
-	struct Authorization {
-		PrivilegeLevel level;
-		string username;
-		string password;
-	};
-
 private:
 	typedef ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
@@ -80,57 +70,6 @@ private:
 
 	bool regex_match(const StaticString &str, const boost::regex &e) const {
 		return boost::regex_match(str.data(), str.data() + str.size(), e);
-	}
-
-	bool parseAuthorizationHeader(Request *req, string &username,
-		string &password) const
-	{
-		const LString *auth = req->headers.lookup("authorization");
-
-		if (auth == NULL || auth->size <= 6 || !psg_lstr_cmp(auth, "Basic ", 6)) {
-			return false;
-		}
-
-		auth = psg_lstr_make_contiguous(auth, req->pool);
-		string authData = modp::b64_decode(
-			auth->start->data + sizeof("Basic ") - 1,
-			auth->size - (sizeof("Basic ") - 1));
-		string::size_type pos = authData.find(':');
-		if (pos == string::npos) {
-			return false;
-		}
-
-		username = authData.substr(0, pos);
-		password = authData.substr(pos + 1);
-		return true;
-	}
-
-	const Authorization *lookupAuthorizationRecord(const StaticString &username) const {
-		vector<Authorization>::const_iterator it, end = authorizations.end();
-
-		for (it = authorizations.begin(); it != end; it++) {
-			if (it->username == username) {
-				return &(*it);
-			}
-		}
-
-		return NULL;
-	}
-
-	bool authorize(Client *client, Request *req, PrivilegeLevel level) const {
-		if (authorizations.empty()) {
-			return true;
-		}
-
-		string username, password;
-		if (!parseAuthorizationHeader(req, username, password)) {
-			return false;
-		}
-
-		const Authorization *auth = lookupAuthorizationRecord(username);
-		return auth != NULL
-			&& auth->level >= level
-			&& constantTimeCompare(password, auth->password);
 	}
 
 	int extractThreadNumberFromClientName(const string &clientName) const {
@@ -146,41 +85,12 @@ private:
 		return stringToUint(results.str(1));
 	}
 
-	static VariantMap parseQueryString(const StaticString &query) {
-		VariantMap params;
-		const char *pos = query.data();
-		const char *end = query.data() + query.size();
-
-		while (pos < end) {
-			const char *assignmentPos = (const char *) memchr(pos, '=', end - pos);
-			if (assignmentPos != NULL) {
-				string name = urldecode(StaticString(pos, assignmentPos - pos));
-				const char *sepPos = (const char *) memchr(assignmentPos + 1, '&',
-					end - assignmentPos - 1);
-				if (sepPos != NULL) {
-					string value = urldecode(StaticString(assignmentPos + 1,
-						sepPos - assignmentPos - 1));
-					params.set(name, value);
-					pos = sepPos + 1;
-				} else {
-					StaticString value(assignmentPos + 1, end - assignmentPos - 1);
-					params.set(name, value);
-					pos = end;
-				}
-			} else {
-				throw SyntaxError("Invalid query string format");
-			}
-		}
-
-		return params;
-	}
-
 	static void disconnectClient(RequestHandler *rh, string clientName) {
 		rh->disconnect(clientName);
 	}
 
 	void processServerConnectionOperation(Client *client, Request *req) {
-		if (!authorize(client, req, FULL)) {
+		if (!authorizeAdminOperation(this, client, req)) {
 			respondWith401(client, req);
 		} else if (req->method == HTTP_DELETE) {
 			StaticString path = req->getPathWithoutQueryString();
@@ -226,7 +136,7 @@ private:
 	}
 
 	void processServerStatus(Client *client, Request *req) {
-		if (authorize(client, req, READONLY)) {
+		if (authorizeStateInspectionOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
 
@@ -252,17 +162,17 @@ private:
 	}
 
 	void processPoolStatusXml(Client *client, Request *req) {
-		if (authorize(client, req, READONLY)) {
-			try {
-				VariantMap params = parseQueryString(req->getQueryString());
-				HeaderTable headers;
-				headers.insert(req->pool, "content-type", "text/xml");
-				writeSimpleResponse(client, 200, &headers,
-					psg_pstrdup(req->pool, appPool->toXml(
-						params.getBool("secrets", false, false))));
-			} catch (const SyntaxError &e) {
-				SKC_ERROR(client, e.what());
-			}
+		Authorization auth(authorize(this, client, req));
+		if (auth.canReadPool) {
+			ApplicationPool2::Pool::ToXmlOptions options(
+				parseQueryString(req->getQueryString()));
+			options.uid = auth.uid;
+			options.apiKey = auth.apiKey;
+
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "text/xml");
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, appPool->toXml(options)));
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
@@ -272,17 +182,17 @@ private:
 	}
 
 	void processPoolStatusTxt(Client *client, Request *req) {
-		if (authorize(client, req, READONLY)) {
-			try {
-				ApplicationPool2::Pool::InspectOptions options(
-					parseQueryString(req->getQueryString()));
-				HeaderTable headers;
-				headers.insert(req->pool, "content-type", "text/plain");
-				writeSimpleResponse(client, 200, &headers,
-					psg_pstrdup(req->pool, appPool->inspect(options)));
-			} catch (const SyntaxError &e) {
-				SKC_ERROR(client, e.what());
-			}
+		Authorization auth(authorize(this, client, req));
+		if (auth.canReadPool) {
+			ApplicationPool2::Pool::InspectOptions options(
+				parseQueryString(req->getQueryString()));
+			options.uid = auth.uid;
+			options.apiKey = auth.apiKey;
+
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "text/plain");
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, appPool->inspect(options)));
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
@@ -292,48 +202,60 @@ private:
 	}
 
 	void processPoolRestartAppGroup(Client *client, Request *req) {
-		if (req->method != HTTP_POST) {
-			respondWith405(client, req);
-		} else if (!authorize(client, req, FULL)) {
+		Authorization auth(authorize(this, client, req));
+		if (!auth.canModifyPool) {
 			respondWith401(client, req);
+		} else if (req->method != HTTP_POST) {
+			respondWith405(client, req);
 		} else if (!req->hasBody()) {
 			endAsBadRequest(&client, &req, "Body required");
 		} else if (requestBodyExceedsLimit(client, req)) {
 			respondWith413(client, req);
+		} else {
+			req->authorization = auth;
+			// Continues in processPoolRestartAppGroupBody().
 		}
-		// Continues in processPoolRestartAppGroupBody().
 	}
 
 	void processPoolRestartAppGroupBody(Client *client, Request *req) {
-		HeaderTable headers;
-		RestartMethod method = ApplicationPool2::RM_DEFAULT;
-
-		headers.insert(req->pool, "content-type", "application/json");
-		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
-
 		if (!req->jsonBody.isMember("name")) {
 			endAsBadRequest(&client, &req, "Name required");
 			return;
 		}
 
+		ApplicationPool2::Pool::RestartOptions options;
+		options.uid = req->authorization.uid;
+		options.apiKey = req->authorization.apiKey;
 		if (req->jsonBody.isMember("restart_method")) {
 			string restartMethodString = req->jsonBody["restart_method"].asString();
 			if (restartMethodString == "blocking") {
-				method = RM_BLOCKING;
+				options.method = RM_BLOCKING;
 			} else if (restartMethodString == "rolling") {
-				method = RM_ROLLING;
+				options.method = RM_ROLLING;
 			} else {
 				endAsBadRequest(&client, &req, "Unsupported restart method");
 				return;
 			}
 		}
 
+		bool result;
 		const char *response;
-		if (appPool->restartGroupByName(req->jsonBody["name"].asString(), method)) {
+		try {
+			result = appPool->restartGroupByName(req->jsonBody["name"].asString(),
+				options);
+		} catch (const SecurityException &) {
+			respondWith401(client, req);
+			return;
+		}
+		if (result) {
 			response = "{ \"restarted\": true }";
 		} else {
 			response = "{ \"restarted\": false }";
 		}
+
+		HeaderTable headers;
+		headers.insert(req->pool, "content-type", "application/json");
+		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 		writeSimpleResponse(client, 200, &headers, response);
 
 		if (!req->ended()) {
@@ -342,32 +264,46 @@ private:
 	}
 
 	void processPoolDetachProcess(Client *client, Request *req) {
-		if (req->method != HTTP_POST) {
-			respondWith405(client, req);
-		} else if (!authorize(client, req, FULL)) {
+		Authorization auth(authorize(this, client, req));
+		if (!auth.canModifyPool) {
 			respondWith401(client, req);
+		} else if (req->method != HTTP_POST) {
+			respondWith405(client, req);
 		} else if (!req->hasBody()) {
 			endAsBadRequest(&client, &req, "Body required");
 		} else if (requestBodyExceedsLimit(client, req)) {
 			respondWith413(client, req);
+		} else {
+			req->authorization = auth;
+			// Continues in processPoolDetachProcessBody().
 		}
-		// Continues in processPoolDetachProcessBody().
 	}
 
 	void processPoolDetachProcessBody(Client *client, Request *req) {
-		HeaderTable headers;
-		const char *response;
-
-		headers.insert(req->pool, "content-type", "application/json");
-		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
-
 		if (req->jsonBody.isMember("pid")) {
 			pid_t pid = (pid_t) req->jsonBody["pid"].asUInt();
-			if (appPool->detachProcess(pid)) {
+			ApplicationPool2::Pool::AuthenticationOptions options;
+			options.uid = req->authorization.uid;
+			options.apiKey = req->authorization.apiKey;
+
+			bool result;
+			try {
+				result = appPool->detachProcess(pid, options);
+			} catch (const SecurityException &) {
+				respondWith401(client, req);
+				return;
+			}
+
+			const char *response;
+			if (result) {
 				response = "{ \"detached\": true }";
 			} else {
 				response = "{ \"detached\": false }";
 			}
+
+			HeaderTable headers;
+			headers.insert(req->pool, "content-type", "application/json");
+			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 			writeSimpleResponse(client, 200, &headers, response);
 			if (!req->ended()) {
 				endRequest(&client, &req);
@@ -378,7 +314,7 @@ private:
 	}
 
 	void processBacktraces(Client *client, Request *req) {
-		if (authorize(client, req, READONLY)) {
+		if (authorizeStateInspectionOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "text/plain");
 			writeSimpleResponse(client, 200, &headers,
@@ -392,7 +328,8 @@ private:
 	}
 
 	void processPing(Client *client, Request *req) {
-		if (authorize(client, req, READONLY)) {
+		Authorization auth(authorize(this, client, req));
+		if (auth.canReadPool || auth.canInspectState) {
 			HeaderTable headers;
 			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 			headers.insert(req->pool, "content-type", "application/json");
@@ -408,7 +345,7 @@ private:
 	void processShutdown(Client *client, Request *req) {
 		if (req->method != HTTP_PUT) {
 			respondWith405(client, req);
-		} else if (authorize(client, req, FULL)) {
+		} else if (authorizeAdminOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
 			exitEvent->notify();
@@ -434,7 +371,7 @@ private:
 	void processGc(Client *client, Request *req) {
 		if (req->method != HTTP_PUT) {
 			respondWith405(client, req);
-		} else if (authorize(client, req, FULL)) {
+		} else if (authorizeAdminOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
 			for (unsigned int i = 0; i < requestHandlers.size(); i++) {
@@ -456,7 +393,7 @@ private:
 
 	void processConfig(Client *client, Request *req) {
 		if (req->method == HTTP_GET) {
-			if (!authorize(client, req, READONLY)) {
+			if (!authorizeStateInspectionOperation(this, client, req)) {
 				respondWith401(client, req);
 			}
 
@@ -482,7 +419,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else if (req->method == HTTP_PUT) {
-			if (!authorize(client, req, FULL)) {
+			if (!authorizeAdminOperation(this, client, req)) {
 				respondWith401(client, req);
 			} else if (!req->hasBody()) {
 				endAsBadRequest(&client, &req, "Body required");
@@ -553,7 +490,7 @@ private:
 	void processReopenLogs(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
 			respondWith405(client, req);
-		} else if (authorize(client, req, FULL)) {
+		} else if (authorizeAdminOperation(this, client, req)) {
 			int e;
 			HeaderTable headers;
 			headers.insert(req->pool, "content-type", "application/json");
@@ -665,6 +602,16 @@ private:
 		}
 	}
 
+	void respondWith500(Client *client, Request *req, const StaticString &body) {
+		HeaderTable headers;
+		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "content-type", "text/plain; charset=utf-8");
+		writeSimpleResponse(client, 500, &headers, body);
+		if (!req->ended()) {
+			endRequest(&client, &req);
+		}
+	}
+
 protected:
 	virtual void onRequestBegin(Client *client, Request *req) {
 		TRACE_POINT();
@@ -755,7 +702,26 @@ protected:
 		if (!req->jsonBody.isNull()) {
 			req->jsonBody = Json::Value();
 		}
+		req->authorization = Authorization();
 		ParentClass::deinitializeRequest(client, req);
+	}
+
+public:
+	vector<RequestHandler *> requestHandlers;
+	AdminAccountDatabase *adminAccountDatabase;
+	ApplicationPool2::PoolPtr appPool;
+	EventFd *exitEvent;
+	vector<Authorization> authorizations;
+
+	AdminServer(ServerKit::Context *context)
+		: ParentClass(context),
+		  serverConnectionPath("^/server/(.+)\\.json$"),
+		  adminAccountDatabase(NULL),
+		  exitEvent(NULL)
+		{ }
+
+	virtual StaticString getServerName() const {
+		return P_STATIC_STRING("AdminServer");
 	}
 
 	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
@@ -767,30 +733,12 @@ protected:
 		return pos - buf;
 	}
 
-public:
-	vector<RequestHandler *> requestHandlers;
-	ApplicationPool2::PoolPtr appPool;
-	EventFd *exitEvent;
-	vector<Authorization> authorizations;
-
-	AdminServer(ServerKit::Context *context)
-		: ParentClass(context),
-		  serverConnectionPath("^/server/(.+)\\.json$"),
-		  exitEvent(NULL)
-		{ }
-
-	virtual StaticString getServerName() const {
-		return P_STATIC_STRING("AdminServer");
+	bool authorizeByUid(uid_t uid) const {
+		return appPool->authorizeByUid(uid);
 	}
 
-	static PrivilegeLevel parseLevel(const StaticString &level) {
-		if (level == "readonly") {
-			return READONLY;
-		} else if (level == "full") {
-			return FULL;
-		} else {
-			throw RuntimeException("Invalid privilege level " + level);
-		}
+	bool authorizeByApiKey(const ApplicationPool2::ApiKey &apiKey) const {
+		return appPool->authorizeByApiKey(apiKey);
 	}
 };
 

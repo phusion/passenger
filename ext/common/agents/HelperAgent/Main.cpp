@@ -55,6 +55,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
@@ -69,6 +70,7 @@
 #include <agents/HelperAgent/RequestHandler.h>
 #include <agents/HelperAgent/AdminServer.h>
 #include <agents/Base.h>
+#include <agents/AdminServerUtils.h>
 #include <Constants.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
@@ -125,7 +127,7 @@ namespace ServerAgent {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		string password;
-		vector<ServerAgent::AdminServer::Authorization> adminAuthorizations;
+		AdminAccountDatabase adminAccountDatabase;
 
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
@@ -180,30 +182,6 @@ static void adminServerShutdownFinished(ServerAgent::AdminServer *server);
 static void printInfoInThread();
 
 static void
-parseAndAddAdminAuthorization(const string &description) {
-	TRACE_POINT();
-	WorkingObjects *wo = workingObjects;
-	ServerAgent::AdminServer::Authorization auth;
-	vector<string> args;
-
-	split(description, ':', args);
-
-	if (args.size() == 2) {
-		auth.level = ServerAgent::AdminServer::FULL;
-		auth.username = args[0];
-		auth.password = strip(readAll(args[1]));
-	} else if (args.size() == 3) {
-		auth.level = ServerAgent::AdminServer::parseLevel(args[0]);
-		auth.username = args[1];
-		auth.password = strip(readAll(args[2]));
-	} else {
-		P_BUG("Too many elements in authorization description");
-	}
-
-	wo->adminAuthorizations.push_back(auth);
-}
-
-static void
 initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
 	const VariantMap &options = *agentsOptions;
@@ -224,7 +202,11 @@ initializePrivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	foreach (description, authorizations) {
-		parseAndAddAdminAuthorization(description);
+		try {
+			wo->adminAccountDatabase.add(description);
+		} catch (const ArgumentException &e) {
+			throw std::runtime_error(e.what());
+		}
 	}
 }
 
@@ -473,7 +455,7 @@ dumpDiagnosticsOnCrash(void *userData) {
 
 	cerr << "### Pool state (simple)\n";
 	// Do not lock, the crash may occur within the pool.
-	Pool::InspectOptions options;
+	Pool::InspectOptions options(Pool::InspectOptions::makeAuthorized());
 	options.verbose = true;
 	cerr << wo->appPool->inspect(options, false);
 	cerr << "\n";
@@ -490,7 +472,9 @@ dumpDiagnosticsOnCrash(void *userData) {
 	cerr.flush();
 
 	cerr << "### Pool state (XML)\n";
-	cerr << wo->appPool->toXml(true, false);
+	Pool::ToXmlOptions options2(Pool::ToXmlOptions::makeAuthorized());
+	options2.secrets = true;
+	cerr << wo->appPool->toXml(options2, false);
 	cerr << "\n\n";
 	cerr.flush();
 }
@@ -642,10 +626,10 @@ initializeNonPrivilegedWorkingObjects() {
 			awo->adminServer->requestHandlers.push_back(
 				wo->threadWorkingObjects[i].requestHandler);
 		}
+		awo->adminServer->adminAccountDatabase = &wo->adminAccountDatabase;
 		awo->adminServer->appPool = wo->appPool;
 		awo->adminServer->exitEvent = &wo->exitEvent;
 		awo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
-		awo->adminServer->authorizations = wo->adminAuthorizations;
 
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
 	}
@@ -968,6 +952,10 @@ runServer() {
 		cleanup();
 	} catch (const tracable_exception &e) {
 		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
+		deletePidFile();
+		return 1;
+	} catch (const std::runtime_error &e) {
+		P_CRITICAL("ERROR: " << e.what());
 		deletePidFile();
 		return 1;
 	}

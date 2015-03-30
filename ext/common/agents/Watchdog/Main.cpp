@@ -22,6 +22,9 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+// Include ev++.h early to avoid macro clash on EV_ERROR.
+#include <ev++.h>
+
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
 #include <boost/function.hpp>
@@ -55,6 +58,7 @@
 #include <cerrno>
 
 #include <agents/Base.h>
+#include <agents/AdminServerUtils.h>
 #include <agents/HelperAgent/OptionParser.h>
 #include <agents/LoggingAgent/OptionParser.h>
 #include <agents/Watchdog/AdminServer.h>
@@ -113,7 +117,7 @@ namespace WatchdogAgent {
 		bool pidsCleanedUp;
 		bool pidFileCleanedUp;
 
-		vector<AdminServer::Authorization> adminAuthorizations;
+		AdminAccountDatabase adminAccountDatabase;
 		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
@@ -1074,29 +1078,6 @@ makeFileWorldReadableAndWritable(const string &path) {
 }
 
 static void
-parseAndAddAdminAuthorization(const WorkingObjectsPtr &wo, const string &description) {
-	TRACE_POINT();
-	AdminServer::Authorization auth;
-	vector<string> args;
-
-	split(description, ':', args);
-
-	if (args.size() == 2) {
-		auth.level = AdminServer::FULL;
-		auth.username = args[0];
-		auth.password = strip(readAll(args[1]));
-	} else if (args.size() == 3) {
-		auth.level = AdminServer::parseLevel(args[0]);
-		auth.username = args[1];
-		auth.password = strip(readAll(args[2]));
-	} else {
-		P_BUG("Too many elements in authorization description");
-	}
-
-	wo->adminAuthorizations.push_back(auth);
-}
-
-static void
 initializeAdminServer(const WorkingObjectsPtr &wo) {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
@@ -1114,7 +1095,11 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 	options.setStrSet("watchdog_authorizations", authorizations);
 
 	foreach (description, authorizations) {
-		parseAndAddAdminAuthorization(wo, description);
+		try {
+			wo->adminAccountDatabase.add(description);
+		} catch (const ArgumentException &e) {
+			throw std::runtime_error(e.what());
+		}
 	}
 
 	UPDATE_TRACE_POINT();
@@ -1141,8 +1126,8 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 
 	UPDATE_TRACE_POINT();
 	wo->adminServer = new AdminServer(wo->serverKitContext);
+	wo->adminServer->adminAccountDatabase = &wo->adminAccountDatabase;
 	wo->adminServer->exitEvent = &wo->exitEvent;
-	wo->adminServer->authorizations = wo->adminAuthorizations;
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
 		wo->adminServer->listen(wo->adminServerFds[i]);
 	}

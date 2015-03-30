@@ -592,6 +592,17 @@ int readFileDescriptor(int fd, unsigned long long *timeout = NULL);
 void writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout = NULL);
 
 /**
+ * Return the effective UID and GID of the peer connected to a Unix domain socket.
+ *
+ * @throws SystemException Something went wrong. If reading credentials over a Unix
+ *                         domain socket is not supported for the current platform,
+ *                         then the error code is ENOSYS. If the socket does not
+ *                         support credentials passing, then the error code is
+ *                         EPROTONOSUPPORT.
+ */
+void readPeerCredentials(int sock, uid_t *uid, gid_t *gid);
+
+/**
  * Closes the given file descriptor and throws an exception if anything goes wrong.
  * This function also works around certain close() bugs and quirks on certain
  * operating systems, such as the FreeBSD ENOTCONN-on-close bug and the fact that
