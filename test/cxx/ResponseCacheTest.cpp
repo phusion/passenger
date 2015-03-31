@@ -437,11 +437,6 @@ namespace tut {
 
 		reset();
 		req.method = HTTP_POST;
-		/* psg_lstr_init(&req.path);
-		psg_lstr_append(&req.path, req.pool, "/foo");
-		insertAppResponseHeader(createHeader(
-			"Location", "/"),
-			req.pool); */
 		ensure("(10)", responseCache.prepareRequest(this, &req));
 		ensure("(11)", !responseCache.requestAllowsStoring(&req));
 		ensure("(12)", responseCache.requestAllowsInvalidating(&req));
