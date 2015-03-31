@@ -117,7 +117,7 @@ module PhusionPassenger
 
       def print_instance_querying_permission_error
         PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-        STDERR.puts "*** ERROR: You are not authorized to query the status for this "
+        STDERR.puts "*** ERROR: You are not authorized to query the status for this " +
           "#{PROGRAM_NAME} instance. Please try again with " +
           "'#{PhusionPassenger::PlatformInfo.ruby_sudo_command}'."
       end
