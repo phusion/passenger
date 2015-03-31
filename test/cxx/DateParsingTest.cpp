@@ -72,4 +72,54 @@ namespace tut {
 		ensure_equals(zone, -300);
 		ensure_equals(parsedDateToTimestamp(tm, zone), 1420749194);
 	}
+
+	TEST_METHOD(5) {
+		set_test_name("The Netherlands: 1 min. before changing summertime to wintertime (no DST)");
+		parse("Sun, 26 Oct 2014 02:59 +0200");
+		ensure_equals(tm.tm_year, 2014 - 1900);
+		ensure_equals(tm.tm_mon, 10 - 1);
+		ensure_equals(tm.tm_mday, 26);
+		ensure_equals(tm.tm_hour, 2);
+		ensure_equals(tm.tm_min, 59);
+		ensure_equals(tm.tm_sec, 0);
+		ensure_equals(zone, +200);
+		ensure_equals(parsedDateToTimestamp(tm, zone), 1414285200 - 60);
+	}
+
+	TEST_METHOD(6) {
+		set_test_name("The Netherlands: changed summertime to wintertime (no DST)");
+		parse("Sun, 26 Oct 2014 02:00 +0100");
+		ensure_equals(tm.tm_year, 2014 - 1900);
+		ensure_equals(tm.tm_mon, 10 - 1);
+		ensure_equals(tm.tm_mday, 26);
+		ensure_equals(tm.tm_hour, 2);
+		ensure_equals(tm.tm_min, 0);
+		ensure_equals(tm.tm_sec, 0);
+		ensure_equals(zone, +100);
+		ensure_equals(parsedDateToTimestamp(tm, zone), 1414285200);
+	}
+
+	TEST_METHOD(7) {
+		parse("Sun, 26 Oct 2014 02:00 +0200");
+		ensure_equals(tm.tm_year, 2014 - 1900);
+		ensure_equals(tm.tm_mon, 10 - 1);
+		ensure_equals(tm.tm_mday, 26);
+		ensure_equals(tm.tm_hour, 2);
+		ensure_equals(tm.tm_min, 0);
+		ensure_equals(tm.tm_sec, 0);
+		ensure_equals(zone, +200);
+		ensure_equals(parsedDateToTimestamp(tm, zone), 1414281600);
+	}
+
+	TEST_METHOD(8) {
+		parse("Sun, 26 Oct 2014 03:00 +0200");
+		ensure_equals(tm.tm_year, 2014 - 1900);
+		ensure_equals(tm.tm_mon, 10 - 1);
+		ensure_equals(tm.tm_mday, 26);
+		ensure_equals(tm.tm_hour, 3);
+		ensure_equals(tm.tm_min, 0);
+		ensure_equals(tm.tm_sec, 0);
+		ensure_equals(zone, +200);
+		ensure_equals(parsedDateToTimestamp(tm, zone), 1414285200);
+	}
 }

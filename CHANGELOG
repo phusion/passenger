@@ -1,9 +1,27 @@
+Release 5.0.6
+-------------
+
+ * The turbocache no longer caches responses for which the Cache-Control header contains "no-cache". Please note that "no-cache" does not mean "do not cache this response". Instead, it means "any caching servers may only serve the cached response after validating it". Since the turbocache does not support validation, we've chosen to skip caching instead.
+
+   Coincidentally, this change "fixes" problems with applications that erroneously use "no-cache" as a flag for "do not cache this response". What these applications should actually use is "no-store". We recommend the developers of such applications to change their caching headers in this manner, because even if Passenger doesn't unintentionally cache the response, any intermediate proxies that visitors are behind may still cache the response.
+ * Fixes a number of memory leaks. Memory was leaked upon processing a request with multiple headers, upon processing a response with multiple headers, and upon processing a response with Set-Cookie headers. Every time such a request or response was processed, 512 bytes of memory was leaked due to improperly dereferencing relevant memory buffers. Closes GH-1455.
+ * Fixes various bugs related to Union Station data collection.
+
+   Union Station is our upcoming application analytics and performance monitoring SaaS platform. It is opt-in: no data is collected unless you turn the feature on.
+ * Fixes a Union Station-related file descriptor leak. Closes GH-1439.
+ * Fixes some bugs w.r.t. use of uninitialized memory.
+ * More informative error message if a support binary is not found, including a resolution hint. Closes GH-1395.
+ * [Apache] `SetEnv` variables are now passed as Rack/CGI/request variables. This was also the case in Passenger 4, but not in Passenger 5.0.0-5.0.5. We've restored the old behavior because the behavior in 5.0.0-5.0.5 breaks certain Apache modules such as Shibboleth. Closes GH-1446.
+ * [Standalone] PID and log files now correctly created if user specifies relative path.
+
+
 Release 5.0.5
 -------------
 
  * Fixes various crashes due to use of uninitialized memory. One such crash is documented in GH-1431.
  * Fixes a connection stall in the Apache module. Closes GH-1425.
  * Fixes a potential read-past-buffer bug in string-to-integer conversion routines. Thanks to dcb314 for spotting this. Closes GH-1441.
+ * Fixes a compilation problem on Solaris. This problem was caused by the fact that `tm_gmtoff` is not supported on that platform. Closes GH-1435.
  * There is now an API endpoint for force disconnecting a client: `passenger-config admin-command DELETE /server/<client name>.json`. Closes GH-1246.
  * Fixes some file descriptor leaks. These leaks were caused by the fact that keep-alive connections with application processes were not being closed properly. Closes GH-1439.
  * In order to more easily debug future file descriptor leaks, we've introduced the `PassengerFileDescriptorLogFile` (Apache) and `passenger_file_descriptor_log_file` (Nginx) config options. This allows Passenger to log all file descriptor open/close activity to a specific log file.

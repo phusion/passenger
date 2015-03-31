@@ -337,6 +337,7 @@ BackgroundEventLoop::stop() {
 		}
 		ev_async_send(libev_loop, &priv->exitSignaller);
 		priv->thr->join();
+		delete priv->thr;
 		priv->thr = NULL;
 	}
 }

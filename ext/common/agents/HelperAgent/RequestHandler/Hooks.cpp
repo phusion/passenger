@@ -114,6 +114,8 @@ virtual void deinitializeRequest(Client *client, Request *req) {
 	req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
 	req->endScopeLog(&req->scopeLogs.requestProcessing, false);
 
+	req->options.transaction.reset();
+
 	req->appSink.setConsumedCallback(NULL);
 	req->appSink.deinitialize();
 	req->appSource.deinitialize();
@@ -185,6 +187,9 @@ void deinitializeAppResponse(Client *client, Request *req) {
 	resp->headers.clear();
 	resp->secureHeaders.clear();
 
+	if (resp->setCookie != NULL) {
+		psg_lstr_deinit(resp->setCookie);
+	}
 	psg_lstr_deinit(&resp->bodyCacheBuffer);
 }
 

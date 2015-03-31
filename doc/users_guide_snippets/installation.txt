@@ -157,11 +157,11 @@ ifdef::apache[]
 sudo apt-get install libapache2-mod-passenger
 --------------------------------------------------------------
 +
-3. Enable the Phusion Passenger Apache module and restart Apache:
+3. Enable the Phusion Passenger Apache module and stop/start Apache (reload or restart is not enough when upgrading):
 +
 --------------------------------------------------------------
 sudo a2enmod passenger
-sudo service apache2 restart
+sudo apache2ctl stop; sudo apache2ctl start
 --------------------------------------------------------------
 endif::[]
 ifdef::standalone[]
@@ -197,11 +197,11 @@ ifdef::apache[]
 sudo apt-get install libapache2-mod-passenger-enterprise
 --------------------------------------------------------------
 +
-4. Enable the Phusion Passenger Apache module and restart Apache:
+4. Enable the Phusion Passenger Apache module and stop/start Apache (reload or restart is not enough when upgrading):
 +
 --------------------------------------------------------------
 sudo a2enmod passenger
-sudo service apache2 restart
+sudo apache2ctl stop; sudo apache2ctl start
 --------------------------------------------------------------
 endif::[]
 ifdef::standalone[]
@@ -320,6 +320,11 @@ yum install passenger-standalone
 ==== Building your own packages
 
 There are instructions for building your own packages and Yum repositories in the link:https://github.com/phusion/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/phusion/passenger[GitHub repository].
+
+
+=== Installing or upgrading on Heroku
+
+Please refer to our link:https://github.com/phusion/passenger-ruby-heroku-demo#readme[Heroku Ruby demo] for installation and upgrade instructions for Heroku.
 
 
 [[rubygems_generic_install]]

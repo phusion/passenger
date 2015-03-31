@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -51,7 +51,7 @@ task 'test:install_deps' do
   install_doctools  = boolean_option('DOCTOOLS', default)
 
   if deps_target = string_option('DEPS_TARGET')
-    bundle_args = " --path #{deps_target}"
+    bundle_args = "--path #{deps_target} #{ENV['BUNDLE_ARGS']}".strip
   end
 
   if !PlatformInfo.locate_ruby_tool('bundle')

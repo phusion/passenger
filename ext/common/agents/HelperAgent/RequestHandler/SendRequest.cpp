@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -89,7 +89,17 @@ struct SessionProtocolWorkingState {
 	const LString *remoteUser;
 	const LString *contentType;
 	const LString *contentLength;
+	char *environmentVariablesData;
+	size_t environmentVariablesSize;
 	bool hasBaseURI;
+
+	SessionProtocolWorkingState()
+		: environmentVariablesData(NULL)
+		{ }
+
+	~SessionProtocolWorkingState() {
+		free(environmentVariablesData);
+	}
 };
 
 void
@@ -182,6 +192,21 @@ determineHeaderSizeForSessionProtocol(Request *req,
 		state.contentLength = req->headers.lookup(HTTP_CONTENT_LENGTH);
 	} else {
 		state.contentLength = NULL;
+	}
+	if (!req->options.environmentVariables.empty()) {
+		size_t len = modp_b64_decode_len(req->options.environmentVariables.size());
+		state.environmentVariablesData = (char *) malloc(len);
+		if (state.environmentVariablesData == NULL) {
+			throw RuntimeException("Unable to allocate memory for base64 "
+				"decoding of environment variables");
+		}
+		len = modp_b64_decode(state.environmentVariablesData,
+			req->options.environmentVariables.data(),
+			req->options.environmentVariables.size());
+		if (len == (size_t) -1) {
+			throw RuntimeException("Unable to base64 decode environment variables");
+		}
+		state.environmentVariablesSize = len;
 	}
 
 	dataSize += sizeof("REQUEST_URI");
@@ -287,6 +312,10 @@ determineHeaderSizeForSessionProtocol(Request *req,
 		dataSize += sizeof("HTTP_") - 1 + it->header->key.size + 1;
 		dataSize += it->header->val.size + 1;
 		it.next();
+	}
+
+	if (state.environmentVariablesData != NULL) {
+		dataSize += state.environmentVariablesSize;
 	}
 
 	return dataSize + 1;
@@ -425,6 +454,10 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 		pos = appendData(pos, end, "", 1);
 
 		it.next();
+	}
+
+	if (state.environmentVariablesData != NULL) {
+		pos = appendData(pos, end, state.environmentVariablesData, state.environmentVariablesSize);
 	}
 
 	Uint32Message::generate(buffer, pos - buffer - sizeof(boost::uint32_t));

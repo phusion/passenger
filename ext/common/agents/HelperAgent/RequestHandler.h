@@ -45,6 +45,8 @@
 #include <utility>
 #include <typeinfo>
 #include <cstdio>
+#include <cstdlib>
+#include <cstddef>
 #include <cassert>
 #include <cctype>
 
