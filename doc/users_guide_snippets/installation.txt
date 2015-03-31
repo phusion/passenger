@@ -239,7 +239,7 @@ http {
 }
 -------------------------------------------------------------
 
-Once you're done editing nginx.conf, continue with step 4.
+Once you're done editing nginx.conf, continue with <<deploying_a_rack_app,Deploying a Rack-based Ruby application>> or <<deploying_a_wsgi_app,Deploying a WSGI (Python) application>>.
 endif::nginx[]
 
 
