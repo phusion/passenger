@@ -28,6 +28,7 @@ STDERR.sync = true
 require 'uri'
 require 'socket'
 require 'timeout'
+require 'base64'
 
 class PrespawnLocation
   class InvalidURLError < RuntimeError
@@ -90,6 +91,7 @@ class PrespawnLocation
   def head_request
     socket.write("HEAD #{request_path} HTTP/1.1\r\n")
     socket.write("Host: #{request_host}\r\n")
+    socket.write("Authorization: Basic " + Base64.encode64(@uri.userinfo) + "\r\n") if @uri.userinfo
     socket.write("Connection: close\r\n")
     socket.write("\r\n")
 
