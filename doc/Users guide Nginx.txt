@@ -1072,7 +1072,7 @@ In each place, it may be specified at most once. The default value depends on <<
 [[PassengerMaxPoolSize]]
 ==== passenger_max_pool_size <integer> ====
 The maximum number of <<application_process,application processes>> that may
-simultanously exist. A larger number results in higher memory usage,
+simultaneously exist. A larger number results in higher memory usage,
 but improves the ability to handle concurrent HTTP requests.
 
 The optimal value depends on your system's hardware and your workload. You can learn more at the Phusion article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's concurrency settings].
@@ -1127,7 +1127,7 @@ be spawned in the background. After 10 seconds, when the idle timeout has
 been reached, these 3 application processes will not be cleaned up.
 
 Now suppose that there's a sudden spike of traffic, and 100 users visit 'foobar.com'
-simultanously. Phusion Passenger will start 12 more application processes. After the idle
+simultaneously. Phusion Passenger will start 12 more application processes. After the idle
 timeout of 10 seconds have passed, Phusion Passenger will clean up 12 application
 processes, keeping 3 processes around.
 
