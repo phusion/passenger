@@ -1,3 +1,9 @@
+Release 5.0.7
+-------------
+
+ * Introduced `passenger_read_timeout` for rare cases when server needs more than the default 10 minute timeout. Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
+
+
 Release 5.0.6
 -------------
 
