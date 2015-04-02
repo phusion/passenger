@@ -272,6 +272,7 @@ describe "Phusion Passenger for Nginx" do
         server[:root]        = "#{@stub.full_app_root}/public"
         server[:passenger_app_group_name] = "secondary"
         server[:passenger_load_shell_envvars] = "off"
+        server[:passenger_read_timeout] = '3000ms'
       end
       @nginx.add_server do |server|
         server[:server_name] = "3.passenger.test"
@@ -336,6 +337,16 @@ describe "Phusion Passenger for Nginx" do
       get("/pid").should == pid
       get("/pid").should_not == pid
     end
+    
+    it "respects read_timeout setting" do
+      @server = "http://2.passenger.test:#{@nginx.port}/"
+
+      response = get_response('/?sleep_seconds=1')
+      response.class.should == Net::HTTPOK
+      response = get_response('/?sleep_seconds=6')
+      response.class.should == Net::HTTPGatewayTimeOut 
+    end
+
   end
 
   describe "oob work" do
