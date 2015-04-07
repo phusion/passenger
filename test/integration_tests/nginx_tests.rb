@@ -306,6 +306,13 @@ describe "Phusion Passenger for Nginx" do
       get('/').should =~ /nginx/i
     end
 
+    it "tries index.html when path ends in /" do
+      Dir.mkdir("#{@stub.app_root}/public/test")
+      File.write("#{@stub.app_root}/public/test/index.html", "indexsuccess")
+      data = get('/test/')
+      data.should == "indexsuccess"
+    end
+
     it "displays a friendly error page if the application fails to spawn" do
       File.write("#{@stub.app_root}/config.ru", %q{
         raise "my error"
