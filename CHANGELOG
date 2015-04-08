@@ -2,6 +2,7 @@ Release 5.0.7
 -------------
 
  * Fix crash on invalid request from localhost on internal HTTP interface (contributed by: jbergler). Closes GH-1311.
+ * Enable configuring ruby/nodejs/python executables for passenger standalone (nginx/builtin) through command line options --ruby, --nodejs, --python. Closes GH-1442.
  * Introduced `passenger_read_timeout` for rare cases when server needs more than the default 10 minute timeout (contributed by: pkmiec). Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
  * Have the nginx module look for index.html if the path ends in / so that it works intuitively, without needing to use try_files.
  * Various documentation improvements. Closes [GH-PR-1332](https://github.com/phusion/passenger/pull/1332), [GH-PR-1354](https://github.com/phusion/passenger/pull/1354), [GH-PR-1216](https://github.com/phusion/passenger/pull/1216), [GH-PR-1385](https://github.com/phusion/passenger/pull/1385), [GH-PR-1302](https://github.com/phusion/passenger/pull/1302).

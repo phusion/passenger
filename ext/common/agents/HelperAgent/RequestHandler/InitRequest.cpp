@@ -207,6 +207,12 @@ initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 void
 fillPoolOptionsFromAgentsOptions(Options &options) {
 	options.ruby = defaultRuby;
+	if (agentsOptions->has("default_nodejs")) {
+		options.nodejs = agentsOptions->get("default_nodejs");
+	}
+	if (agentsOptions->has("default_python")) {
+		options.python = agentsOptions->get("default_python");
+	}
 	options.logLevel = getLogLevel();
 	options.loggingAgentAddress = loggingAgentAddress;
 	options.loggingAgentUsername = P_STATIC_STRING("logging");

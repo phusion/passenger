@@ -29,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'standalone/command'
 PhusionPassenger.require_passenger_lib 'standalone/config_utils'
 PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 # We lazy load as many libraries as possible not only to improve startup performance,
 # but also to ensure that we don't require libraries before we've passed the dependency
@@ -171,6 +172,16 @@ module PhusionPassenger
             "Framework environment.#{nl}" +
             "Default: #{DEFAULT_OPTIONS[:environment]}") do |value|
             options[:environment] = value
+          end
+          opts.on("--ruby FILENAME", String, "Executable to use for Ruby apps#{nl}" +
+            "Default: " + PlatformInfo.ruby_command + " (current context)") do |value|
+            options[:ruby] = value
+          end
+          opts.on("--nodejs FILENAME", String, "Executable to use for NodeJs apps") do |value|
+            options[:nodejs] = value
+          end
+          opts.on("--python FILENAME", String, "Executable to use for Python apps") do |value|
+            options[:python] = value
           end
           opts.on("-R", "--rackup FILE", String,
             "Consider application a Ruby app, and use#{nl}" +

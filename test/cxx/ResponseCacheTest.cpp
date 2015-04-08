@@ -1,4 +1,5 @@
 #include "TestSupport.h"
+#include <time.h>
 #include <ServerKit/HttpRequest.h>
 #include <MemoryKit/palloc.h>
 #include <agents/HelperAgent/RequestHandler/Request.h>
@@ -18,6 +19,17 @@ namespace tut {
 		StaticString defaultVaryTurbocacheByCookie;
 
 		ResponseCacheTest() {
+			req.pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+			reset();
+		}
+
+		~ResponseCacheTest() {
+			psg_destroy_pool(req.pool);
+		}
+
+		void reset() {
+			req.headers.clear();
+			req.secureHeaders.clear();
 			req.httpMajor = 1;
 			req.httpMinor = 0;
 			req.httpState = Request::COMPLETE;
@@ -26,7 +38,6 @@ namespace tut {
 			req.wantKeepAlive = false;
 			req.responseBegun = false;
 			req.client    = NULL;
-			req.pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 			req.hooks.impl     = NULL;
 			req.hooks.userData = NULL;
 			psg_lstr_init(&req.path);
@@ -50,6 +61,8 @@ namespace tut {
 			req.cacheControl = NULL;
 			req.varyCookie = NULL;
 
+			req.appResponse.headers.clear();
+			req.appResponse.secureHeaders.clear();
 			req.appResponse.httpMajor  = 1;
 			req.appResponse.httpMinor  = 1;
 			req.appResponse.httpState  = AppResponse::COMPLETE;
@@ -66,10 +79,10 @@ namespace tut {
 			req.appResponse.headerCacheBuffers = NULL;
 			req.appResponse.nHeaderCacheBuffers = 0;
 			psg_lstr_init(&req.appResponse.bodyCacheBuffer);
-		}
 
-		~ResponseCacheTest() {
-			psg_destroy_pool(req.pool);
+			insertAppResponseHeader(createHeader(
+				"date", createTodayString(req.pool)),
+				req.pool);
 		}
 
 		LString *createHostString() {
@@ -77,6 +90,15 @@ namespace tut {
 			psg_lstr_init(str);
 			psg_lstr_append(str, req.pool, "foo.com");
 			return str;
+		}
+
+		StaticString createTodayString(psg_pool_t *pool) {
+			time_t the_time = time(NULL);
+			struct tm the_tm;
+			gmtime_r(&the_time, &the_tm);
+			char *buf = (char *) psg_pnalloc(pool, 64);
+			size_t size = strftime(buf, 64, "%a, %d %b %Y %H:%M:%S GMT", &the_tm);
+			return StaticString(buf, size);
 		}
 
 		Header *createHeader(const HashedStaticString &key, const StaticString &val) {
@@ -108,9 +130,14 @@ namespace tut {
 				"cache-control", "private"),
 				req.pool);
 		}
+
+		void initResponseBody(const string &body) {
+			req.appResponse.bodyType = AppResponse::RBT_CONTENT_LENGTH;
+			req.appResponse.aux.bodyInfo.contentLength = body.size();
+		}
 	};
 
-	DEFINE_TEST_GROUP(ResponseCacheTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ResponseCacheTest, 100);
 
 
 	/***** Preparation *****/
@@ -152,6 +179,45 @@ namespace tut {
 		set_test_name("It generates a cache key on success");
 		ensure(responseCache.prepareRequest(this, &req));
 		ensure(req.cacheKey.size() > 0);
+	}
+
+
+	/***** Storing and fetching *****/
+
+	TEST_METHOD(10) {
+		set_test_name("Storing and fetching works");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0);
+
+
+		reset();
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(12)", entry2.valid());
+		ensure_equals("(13)", entry2.index, 0);
+		ensure_equals<int>("(14)", entry2.body->httpHeaderSize, responseHeadersStr.size());
+		ensure_equals<int>("(15)", entry2.body->httpBodySize, responseBodyStr.size());
+	}
+
+	TEST_METHOD(11) {
+		set_test_name("Fetching fails if there is no entry with the given cache");
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(3)", !entry2.valid());
 	}
 
 
@@ -346,5 +412,117 @@ namespace tut {
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+
+	/***** Invalidation *****/
+
+	TEST_METHOD(60) {
+		set_test_name("Direct invalidation");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0);
+
+
+		reset();
+		req.method = HTTP_POST;
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", !responseCache.requestAllowsStoring(&req));
+		ensure("(12)", responseCache.requestAllowsInvalidating(&req));
+		responseCache.invalidate(&req);
+
+
+		reset();
+		ensure("(20)", responseCache.prepareRequest(this, &req));
+		ensure("(21)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(22)", !entry2.valid());
+	}
+
+	TEST_METHOD(61) {
+		set_test_name("Invalidation via Location response header");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0);
+
+
+		reset();
+		req.method = HTTP_POST;
+		psg_lstr_init(&req.path);
+		psg_lstr_append(&req.path, req.pool, "/foo");
+		insertAppResponseHeader(createHeader(
+			"location", "/"),
+			req.pool);
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", !responseCache.requestAllowsStoring(&req));
+		ensure("(12)", responseCache.requestAllowsInvalidating(&req));
+		responseCache.invalidate(&req);
+
+
+		reset();
+		ensure("(20)", responseCache.prepareRequest(this, &req));
+		ensure("(21)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(22)", !entry2.valid());
+	}
+
+	TEST_METHOD(62) {
+		set_test_name("Invalidation via Content-Location response header");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0);
+
+
+		reset();
+		req.method = HTTP_POST;
+		psg_lstr_init(&req.path);
+		psg_lstr_append(&req.path, req.pool, "/foo");
+		insertAppResponseHeader(createHeader(
+			"content-location", "/"),
+			req.pool);
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", !responseCache.requestAllowsStoring(&req));
+		ensure("(12)", responseCache.requestAllowsInvalidating(&req));
+		responseCache.invalidate(&req);
+
+
+		reset();
+		ensure("(20)", responseCache.prepareRequest(this, &req));
+		ensure("(21)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(22)", !entry2.valid());
 	}
 }

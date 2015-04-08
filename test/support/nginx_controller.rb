@@ -11,6 +11,7 @@ class NginxController
     root_dir     = File.expand_path(root_dir)
     @passenger_root = PhusionPassenger.install_spec
     @nginx_root  = root_dir
+    @nginx_client_body_temp_path = "#{root_dir}/tmp"
     @port        = PORT
     @config_file = "#{root_dir}/nginx.conf"
     @pid_file    = "#{root_dir}/nginx.pid"

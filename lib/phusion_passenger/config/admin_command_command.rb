@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -37,13 +37,13 @@ module PhusionPassenger
       include PhusionPassenger::Config::Utils
 
       def self.create_default_options
-        return { :socket => "server_admin" }
+        return { :agent_name => "server_admin" }
       end
 
       def run
         parse_options
         initialize_objects
-        select_passenger_instance
+        infer_socket_path_and_credentials
         invoke
       end
 
@@ -62,16 +62,21 @@ module PhusionPassenger
           opts.separator "  METHOD is an HTTP verb, like 'GET', 'POST', 'PUT' or 'DELETE'."
           opts.separator "  PATH is the admin URI. You can pass POST data with '-d'."
           opts.separator ""
-          opts.separator "  Example: passenger-config admin-command GET /server.json"
+          opts.separator "  Example 1: passenger-config admin-command GET /server.json"
           opts.separator "  Sends the 'GET /server.json' command to the HTTP server agent."
           opts.separator ""
-          opts.separator "  Example: passenger-config admin-command PUT /config.json \\"
-          opts.separator "           -d '{\"log_level\", 7}'"
+          opts.separator "  Example 2: passenger-config admin-command PUT /config.json \\"
+          opts.separator "             -d '{\"log_level\", 7}'"
           opts.separator "  Sends the 'PUT /config.json' command to the HTTP server agent, with the"
           opts.separator "  given PUT data."
           opts.separator ""
-          opts.separator "  Example: passenger-config admin-command POST /shutdown.json -a watchdog"
+          opts.separator "  Example 3: passenger-config admin-command POST /shutdown.json -a watchdog"
           opts.separator "  Sends the 'POST /shutdown.json' command to the watchdog, with no POST data."
+          opts.separator ""
+          opts.separator "  Example 4: passenger-config admin-command POST /shutdown.json \\"
+          opts.separator "             -S /tmp/watchdog.sock"
+          opts.separator "  Sends the 'POST /shutdown.json' command to the watchdog listening at the"
+          opts.separator "  specific socket file /tmp/watchdog.sock. No POST data."
           opts.separator ""
 
           opts.separator "Options:"
@@ -90,12 +95,19 @@ module PhusionPassenger
             "is sent to. Choices: watchdog,#{nl}" +
             "server_admin, logging_admin.#{nl}" +
             "Default: server_admin") do |val|
-            options[:socket] = val
+            options[:agent_name] = val
+          end
+          opts.on("-S", "--socket PATH", String, "Instead of inferring the socket path from#{nl}" +
+            "the #{PROGRAM_NAME} instance directory#{nl}" +
+            "and agent name, send the command to a#{nl}" +
+            "specific Unix domain socket directly") do |val|
+            options[:socket_path] = val
           end
           opts.on("--show-headers", "Show HTTP response headers") do
             options[:show_headers] = true
           end
-          opts.on("--ignore-response-code", "Exit successfully even if a non-2xx response was returned") do
+          opts.on("--ignore-response-code", "Exit successfully even if a non-2xx#{nl}" +
+            "response was returned") do
             options[:ignore_response_code] = true
           end
           opts.on("--instance NAME", String, "The #{PROGRAM_NAME} instance to select") do |value|
@@ -144,15 +156,43 @@ module PhusionPassenger
         end
       end
 
+      def infer_socket_path_and_credentials
+        if @options[:socket_path]
+          @socket_path = @options[:socket_path]
+        else
+          select_passenger_instance
+          @socket_path = "#{@instance.path}/agents.s/#{@options[:agent_name]}"
+          @password = obtain_full_admin_password(@instance)
+        end
+      end
+
       def invoke
-        password = obtain_full_admin_password(@instance)
-        @request.basic_auth("admin", password)
+        if @password
+          @request.basic_auth("admin", @password)
+        end
         @request["connection"] = "close"
         if @options[:data]
           @request.content_type = "application/json"
           @request.body = @options[:data]
         end
-        response = @instance.http_request("agents.s/#{@options[:socket]}", @request)
+
+        sock = Net::BufferedIO.new(UNIXSocket.new(@socket_path))
+        begin
+          @request.exec(sock, "1.1", @request.path)
+
+          done = false
+          while !done
+            response = Net::HTTPResponse.read_new(sock)
+            done = !response.kind_of?(Net::HTTPContinue)
+          end
+
+          response.reading_body(sock, @request.response_body_permitted?) do
+            # Nothing
+          end
+        ensure
+          sock.close
+        end
+
         if @options[:show_headers]
           print_headers(response)
         end
