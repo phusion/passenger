@@ -200,6 +200,7 @@ initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 	}
 
 	if (!req->ended()) {
+		fillPoolOption(req, req->options.environmentVariables, PASSENGER_ENV_VARS);
 		fillPoolOption(req, req->options.maxRequests, PASSENGER_MAX_REQUESTS);
 	}
 }
@@ -368,7 +369,6 @@ createNewPoolOptions(Client *client, Request *req, const HashedStaticString &app
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
-	fillPoolOption(req, options.environmentVariables, "!~PASSENGER_ENV_VARS");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	/******************/
 

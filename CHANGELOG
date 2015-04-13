@@ -1,6 +1,7 @@
 Release 5.0.7
 -------------
 
+ * Request-specific environment variables are no longer cached. This fixes a number of issues, such as Shibboleth not working properly and conflicts between HTTPS and non-HTTPS virtual hosts. Closes GH-1472.
  * Fix crash on invalid request from localhost on internal HTTP interface (contributed by: jbergler). Closes GH-1311.
  * Enable configuring ruby/nodejs/python executables for passenger standalone (nginx/builtin) through command line options --ruby, --nodejs, --python. Closes GH-1442.
  * Make `passenger-status --show=xml` not output the non-xml header by default again, instead of requiring `--no-header` flag. Closes GH-1136 (again).
