@@ -45,7 +45,7 @@ include PhusionPassenger::SharedConstants
 include PhusionPassenger::AdminTools
 include PhusionPassenger::Utils::AnsiColors
 
-DEFAULT_OPTIONS = { :show => 'pool', :color => STDOUT.tty?, :header => true }.freeze
+DEFAULT_OPTIONS = { :show => 'pool', :color => STDOUT.tty? }.freeze
 
 
 ##### Show status command #####
@@ -105,7 +105,10 @@ def find_instance_by_name_prefix(name)
 end
 
 def show_status(instance, options)
-  print_header(STDOUT, instance) if options[:header]
+  # if the noshow override is not specified, the default is to show the header, unless show=xml
+  if options[:noheader] != true && options[:show] != 'xml' 
+    print_header(STDOUT, instance)
+  end
 
   case options[:show]
   when 'pool'
@@ -265,7 +268,7 @@ def create_option_parser(options)
     opts.on("--no-header", "Do not display an informative header#{nl}" <<
             "containing the timestamp, version number,#{nl}" <<
             "etc.") do
-      options[:header] = false
+      options[:noheader] = true
     end
     opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
       options[:color] = true
