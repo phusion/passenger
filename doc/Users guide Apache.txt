@@ -648,7 +648,7 @@ Example:
 
 [[PassengerAppGroupName]]
 ==== PassengerAppGroupName <name>
-Sets the name of the application group that the current application should belong to. Its default value is the <<PassengerRoot,application root>>, plus (if it is set), the <<PassengerAppEnv,application environment name>>.
+Sets the name of the application group that the current application should belong to. Its default value is the <<application_root,application root>>, plus (if it is set), the <<PassengerAppEnv,application environment name>>.
 
 Phusion Passenger stores and caches most application spawning settings -- such as environment variables, process limits, etc -- on a per-app-group-name basis. This means that if you want to start two versions of your application, with each version having different environment variables, then you must assign them under different application group names.
 
