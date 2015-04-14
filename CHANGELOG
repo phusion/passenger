@@ -3,10 +3,11 @@ Release 5.0.7
 
  * A buffer overflow has been fixed in the code responsible for buffering request bodies. This buffer overflow was caused by passing the incorrect buffer length to an integer-to-string conversion function. Thanks to Marcus Rückert of SUSE for reporting this.
  * Request-specific environment variables are no longer cached. This fixes a number of issues, such as Shibboleth not working properly and conflicts between HTTPS and non-HTTPS virtual hosts. Closes GH-1472.
+ * Re-introduced signal catchers during shutdown, to allow clean shutdown in Foreman. Closes GH-1454.
+ * `passenger-status --show=xml` no longer outputs the non-XML header by default. This fixes a regression as reported in a comment in GH-1136.
  * [Standalone] It is now possible to configure the Ruby, Node.js and Python executable to use in Passenger Standalone through the command line options --ruby, --nodejs and --python. Closes GH-1442.
  * [Nginx] Introduces the `passenger_read_timeout` option for rare cases when server needs more than the default 10 minute timeout. Contributed by pkmiec. Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
- * `passenger-status --show=xml` no longer outputs the non-XML header by default. This fixes a regression as reported in a comment in GH-1136.
- * The Nginx module now looks for index.html if the path ends in / so that it works intuitively, without needing to use try_files.
+ * [Nginx] The Nginx module now looks for index.html if the path ends in / so that it works intuitively, without needing to use try_files.
  * Fixes an ugly backtrace that would be shown if an invalid request is made to an application process using the private HTTP interface. Contributed by jbergler. Closes GH-1311.
  * Various documentation improvements. Closes [GH-PR-1332](https://github.com/phusion/passenger/pull/1332), [GH-PR-1354](https://github.com/phusion/passenger/pull/1354), [GH-PR-1216](https://github.com/phusion/passenger/pull/1216), [GH-PR-1385](https://github.com/phusion/passenger/pull/1385), [GH-PR-1302](https://github.com/phusion/passenger/pull/1302).
 

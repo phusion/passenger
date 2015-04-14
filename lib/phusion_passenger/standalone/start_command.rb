@@ -74,20 +74,22 @@ module PhusionPassenger
           watch_log_files_in_background if should_watch_logs?
           wait_until_engine_has_exited if should_wait_until_engine_has_exited?
         rescue Interrupt
-          shutdown_and_cleanup(true)
+          trapsafe_shutdown_and_cleanup(true)
           exit 2
         rescue SignalException => signal
-          shutdown_and_cleanup(true)
+          trapsafe_shutdown_and_cleanup(true)
           if signal.message == 'SIGINT' || signal.message == 'SIGTERM'
             exit 2
           else
             raise
           end
         rescue Exception
-          shutdown_and_cleanup(true)
+          trapsafe_shutdown_and_cleanup(true)
           raise
         else
-          shutdown_and_cleanup(false)
+          trapsafe_shutdown_and_cleanup(false)
+        ensure
+          reset_traps_intterm
         end
       end
 
@@ -715,7 +717,32 @@ module PhusionPassenger
 
       ################## Shut down and cleanup ##################
 
-      def shutdown_and_cleanup(error_occurred)
+      def capture_traps_intterm
+        return if @traps_captured
+        @traps_captured = 1
+        trap("INT", &method(:trapped_intterm))
+        trap("TERM", &method(:trapped_intterm))
+      end
+
+      def reset_traps_intterm
+        @traps_captured = nil
+        trap("INT", "DEFAULT")
+        trap("TERM", "DEFAULT")
+      end
+  
+      def trapped_intterm(signal)
+        if @traps_captured == 1
+          @traps_captured += 1
+          puts "Ignoring signal #{signal} during shutdown. Send it again to force exit."
+        else
+          exit!(1)
+        end
+      end
+    
+      def trapsafe_shutdown_and_cleanup(error_occurred)
+        # Ignore INT and TERM once, to allow clean shutdown in e.g. Foreman
+        capture_traps_intterm
+        
         # Stop engine
         if @engine && (error_occurred || should_wait_until_engine_has_exited?)
           @console_mutex.synchronize do
