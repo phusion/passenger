@@ -433,7 +433,7 @@ public:
 			}
 		}
 
-		if (req->session != NULL || resp->httpState != AppResponse::PARSING_HEADERS) {
+		if (req->appResponseInitialized) {
 			doc["app_response_http_state"] = resp->getHttpStateString();
 			doc["app_response_http_major"] = resp->httpMajor;
 			doc["app_response_http_minor"] = resp->httpMinor;
