@@ -60,13 +60,13 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 			// The data that we've stored in the body buffer is dechunked, so when forwarding
 			// the buffered body to the app we must advertise it as being a fixed-length,
 			// non-chunked body.
+			const unsigned int UINT64_STRSIZE = sizeof("18446744073709551615");
 			SKC_TRACE(client, 2, "Adjusting forwarding headers as fixed-length, non-chunked");
 			ServerKit::Header *header = (ServerKit::Header *)
 				psg_palloc(req->pool, sizeof(ServerKit::Header));
-			char *contentLength = (char *) psg_pnalloc(req->pool,
-				sizeof("18446744073709551615"));
+			char *contentLength = (char *) psg_pnalloc(req->pool, UINT64_STRSIZE);
 			unsigned int size = integerToOtherBase<boost::uint64_t, 10>(
-				req->bodyBytesBuffered, contentLength, sizeof(contentLength));
+				req->bodyBytesBuffered, contentLength, UINT64_STRSIZE);
 
 			psg_lstr_init(&header->key);
 			psg_lstr_append(&header->key, req->pool, "content-length",

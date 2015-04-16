@@ -1,6 +1,7 @@
 Release 5.0.7
 -------------
 
+ * A buffer overflow has been fixed in the code responsible for buffering request bodies. This buffer overflow was caused by passing the incorrect buffer length to an integer-to-string conversion function. Thanks to Marcus Rückert of SUSE for reporting this.
  * Request-specific environment variables are no longer cached. This fixes a number of issues, such as Shibboleth not working properly and conflicts between HTTPS and non-HTTPS virtual hosts. Closes GH-1472.
  * [Standalone] It is now possible to configure the Ruby, Node.js and Python executable to use in Passenger Standalone through the command line options --ruby, --nodejs and --python. Closes GH-1442.
  * [Nginx] Introduces the `passenger_read_timeout` option for rare cases when server needs more than the default 10 minute timeout. Contributed by pkmiec. Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
