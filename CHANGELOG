@@ -1,7 +1,7 @@
 Release 5.0.7
 -------------
 
- * An integer-to-string conversion bug has been fixed in the code responsible for buffering request bodies. This bug could cause the PassengerAgent to crash due to an exception. Thanks to Marcus Rückert of SUSE for reporting this.
+ * An integer-to-string conversion bug has been fixed in the code responsible for buffering chunked request bodies. This bug could cause the PassengerAgent to crash due to an exception. Thanks to Marcus Rückert of SUSE for reporting this.
  * Request-specific environment variables are no longer cached. This fixes a number of issues, such as Shibboleth not working properly and conflicts between HTTPS and non-HTTPS virtual hosts. Closes GH-1472.
  * Re-introduced signal catchers during shutdown, to allow clean shutdown in Foreman. Closes GH-1454.
  * `passenger-status --show=xml` no longer outputs the non-XML header by default. This fixes a regression as reported in a comment in GH-1136.
