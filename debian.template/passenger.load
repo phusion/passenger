@@ -1,3 +1,0 @@
-### Begin automatically installed Phusion Passenger load snippet ###
-LoadModule passenger_module /usr/lib/apache2/modules/mod_passenger.so
-### End automatically installed Phusion Passenger load snippet ###

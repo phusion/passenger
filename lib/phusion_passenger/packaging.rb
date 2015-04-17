@@ -127,13 +127,9 @@ module PhusionPassenger
       'Vagrantfile',
       'Passenger.sublime-project',
       'Passenger.xcodeproj/**/*',
-      'debian.template/**/*',
       'packaging/**/*',
       'test/**/*'
     ]
-
-    # Files that should be excluded from the Debian tarball.
-    DEBIAN_EXCLUDE_GLOB = []
 
     # Files and directories that should be excluded from the Homebrew installation.
     HOMEBREW_EXCLUDE = [
@@ -144,10 +140,6 @@ module PhusionPassenger
       result = Dir[*GLOB] - Dir[*EXCLUDE_GLOB]
       result.reject! { |path| path =~ %r{/\.\.?$} }
       result
-    end
-
-    def self.debian_orig_tarball_files
-      files - Dir[*DEBIAN_EXCLUDE_GLOB]
     end
   end
 
