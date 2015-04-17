@@ -1,8 +1,9 @@
 Release 5.0.7
 -------------
 
- * An integer-to-string conversion bug has been fixed in the code responsible for buffering chunked request bodies. This bug could cause the PassengerAgent to crash due to an exception. Thanks to Marcus Rückert of SUSE for reporting this.
+ * Fixes an integer-to-string conversion bug in the code responsible for buffering chunked request bodies. This bug could cause the PassengerAgent to crash due to an exception. Thanks to Marcus Rückert of SUSE for reporting this.
  * Request-specific environment variables are no longer cached. This fixes a number of issues, such as Shibboleth not working properly and conflicts between HTTPS and non-HTTPS virtual hosts. Closes GH-1472.
+ * Fixes a memory corruption bug that would be triggered when using `passenger_base_uri`. The memory corruption bug resided in the code for resolving symlinks. Closes GH-1388.
  * Re-introduced signal catchers during shutdown, to allow clean shutdown in Foreman. Closes GH-1454.
  * `passenger-status --show=xml` no longer outputs the non-XML header by default. This fixes a regression as reported in a comment in GH-1136.
  * Passenger now prefers to load Rack and Bundler from RubyGems instead of from `vendor_ruby`. This solves some issues with Rack and Bundler on Debian systems. Closes GH-1480 and GH-1478.

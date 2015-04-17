@@ -192,10 +192,10 @@ gatherBuffers(char * restrict dest, unsigned int size, const struct iovec *buffe
 // `path` MUST be NULL-terminated. Returns a contiguous LString.
 static LString *
 resolveSymlink(const StaticString &path, psg_pool_t *pool) {
-	char linkbuf[PATH_MAX];
+	char linkbuf[PATH_MAX + 1];
 	ssize_t size;
 
-	size = readlink(path.data(), linkbuf, sizeof(linkbuf) - 1);
+	size = readlink(path.data(), linkbuf, PATH_MAX);
 	if (size == -1) {
 		if (errno == EINVAL) {
 			return psg_lstr_create(pool, path);
@@ -215,7 +215,11 @@ resolveSymlink(const StaticString &path, psg_pool_t *pool) {
 			throw FileSystemException(message, ENOENT, path.data());
 		} else if (linkbuf[0] == '/') {
 			// Symlink points to an absolute path.
-			return psg_lstr_create(pool, linkbuf, strlen(linkbuf));
+			size_t len = strlen(linkbuf);
+			char *data = (char *) psg_pnalloc(pool, len + 1);
+			memcpy(data, linkbuf, len);
+			data[len] = '\0';
+			return psg_lstr_create(pool, data, len);
 		} else {
 			// Symlink points to a relative path.
 			// We do not use absolutizePath() because it's too slow.
