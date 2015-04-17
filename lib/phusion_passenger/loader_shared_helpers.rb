@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2011-2013 Phusion
+#  Copyright (c) 2011-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -274,8 +274,7 @@ module PhusionPassenger
         # there's always the load_path_setup_file option and
         # setup_load_paths.rb.
         running_bundler(options) do
-          require 'rubygems'
-          require 'bundler/setup'
+          activate_gem 'bundler', 'bundler/setup'
         end
       end
 
@@ -374,6 +373,27 @@ module PhusionPassenger
     # will fire off necessary events perform necessary cleanup tasks.
     def after_handling_requests
       PhusionPassenger.call_event(:stopping_worker_process)
+    end
+
+    # Activate a gem and require it. This method exists in order to load
+    # a library from RubyGems instead of from vendor_ruby. For example,
+    # on Debian systems, Rack may be installed from APT, but that is usually
+    # a very old version which we don't want. This method ensures that the
+    # RubyGems-installed version is loaded, not the the version in vendor_ruby.
+    # See the following threads for discussion:
+    # https://github.com/phusion/passenger/issues/1478
+    # https://github.com/phusion/passenger/issues/1480
+    def activate_gem(gem_name, library_name = nil)
+      if !defined?(::Gem)
+        begin
+          require 'rubygems'
+        rescue LoadError
+        end
+      end
+      if Kernel.respond_to?(:gem, true)
+        gem(gem_name)
+      end
+      require(library_name || gem_name)
     end
 
   private
