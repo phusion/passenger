@@ -131,6 +131,7 @@ private:
 	StaticString defaultVaryTurbocacheByCookie;
 
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
+	HashedStaticString PASSENGER_ENV_VARS;
 	HashedStaticString PASSENGER_MAX_REQUESTS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS_COOKIE_NAME;
@@ -195,6 +196,7 @@ public:
 		  poolOptionsCache(4),
 
 		  PASSENGER_APP_GROUP_NAME("!~PASSENGER_APP_GROUP_NAME"),
+		  PASSENGER_ENV_VARS("!~PASSENGER_ENV_VARS"),
 		  PASSENGER_MAX_REQUESTS("!~PASSENGER_MAX_REQUESTS"),
 		  PASSENGER_STICKY_SESSIONS("!~PASSENGER_STICKY_SESSIONS"),
 		  PASSENGER_STICKY_SESSIONS_COOKIE_NAME("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME"),
@@ -431,7 +433,7 @@ public:
 			}
 		}
 
-		if (req->session != NULL || resp->httpState != AppResponse::PARSING_HEADERS) {
+		if (req->appResponseInitialized) {
 			doc["app_response_http_state"] = resp->getHttpStateString();
 			doc["app_response_http_major"] = resp->httpMajor;
 			doc["app_response_http_minor"] = resp->httpMinor;

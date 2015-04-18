@@ -87,7 +87,7 @@ In our experience, a typical medium-sized single-threaded Rails application proc
 
 #### Step 2: determine the system's limits
 
-First, let's define the maximum number of (single-threaded) processes, or the number of threads, that you can comfortably have given the amount of RAM you have. This is a reasonable upper limit that you can reach without degrading system performance. This number is not the final optimal number, but is merely used for further caculations in later steps.
+First, let's define the maximum number of (single-threaded) processes, or the total number of threads, that you can comfortably have given the amount of RAM you have. This is a reasonable upper limit that you can reach without degrading system performance. This number is not the final optimal number, but is merely used for further caculations in later steps.
 
 There are two formulas that we can use, depending on what kind of concurrency model your application is using in production.
 
@@ -110,15 +110,16 @@ The formula for multithreaded concurrency is as follows:
 
     max_app_threads_per_process =
       ((TOTAL_RAM * 0.75) - (CHOSEN_NUMBER_OF_PROCESSES * RAM_PER_PROCESS * 0.9)) /
-      (RAM_PER_PROCESS / 10)
+      (RAM_PER_PROCESS / 10) /
+      CHOSEN_NUMBER_OF_PROCESSES
 
 Here, `CHOSEN_NUMBER_OF_PROCESSES` is the number of application processes you want to use. In case of Ruby, Python, Node.js and Meteor, this should be equal to `NUMBER_OF_CPUS`. This is because all these languages can only utilize a single CPU core per process. If you're using a language runtime that does not have a Global Interpreter Lock, e.g. JRuby or Rubinius, then `CHOSEN_NUMBER_OF_PROCESSES` can be 1.
 
 The formula is derived as follows:
 
  * `(TOTAL_RAM * 0.75)`: The same as explained earlier.
- * `(CHOSEN_NUMBER_OF_PROCESSES * RAM_PER_PROCESS)`: In multithreaded scenarios, the application processes consume a constant amount of memory, so we deduct this from the RAM that is available to applications. The result is the amount of RAM available to application threads.
- * `/ (RAM_PER_PROCESS / 10)`: A thread consumes about 10% of the amount of memory a process would, so we divide the amount of RAM available to threads with this number. What we get is the number of threads that the system can handle.
+ * `(CHOSEN_NUMBER_OF_PROCESSES * RAM_PER_PROCESS * 0.9)`: This calculates the amount of memory that all the processes together would consume, assuming they're not running any threads. When this is deducted from `TOTAL_RAM * 0.75`, we end up with the amount of RAM available to application threads.
+ * `/ (RAM_PER_PROCESS / 10)`: We estimate that a thread consumes ~10% of the amount of memory a process would, so we divide the amount of RAM available to threads with this number. What we get is the number of threads that the system can handle.
 
 On 32-bit systems, `max_app_threads_per_process` should not be higher than about 200. Assuming an 8 MB stack size per thread, you will run out of virtual address space if you go much further. On 64-bit systems you don’t have to worry about this problem.
 
@@ -263,25 +264,25 @@ But this time you're using multithreading with 8 application processes (because 
 
     # Use this formula for multithreaded deployments.
     max_app_threads_per_process
-    = ((1024 * 32 * 0.75) - (8 * 150)) / (150 / 10)
-    = 1558.4
+    = ((1024 * 32 * 0.75) - (8 * 150)) / (150 / 10) / 8
+    = 194.8
 
-Conclusion: you should use 1558 threads per process.
+Conclusion: you should use 195 threads per process.
 
     # Standalone
-    passenger start --max-pool-size=8 --min-instances=8 --concurrency-model=thread --thread-count=1558
+    passenger start --max-pool-size=8 --min-instances=8 --concurrency-model=thread --thread-count=195
 
     # Nginx
     passenger_max_pool_size 8;
     passenger_min_instances 8;
     passenger_concurrency_model thread;
-    passenger_thread_count 1558;
+    passenger_thread_count 195;
 
     # Apache
     PassengerMaxPoolSize 8
-    PassengerMinInstances *
+    PassengerMinInstances 8
     PassengerConcurrencyModel thread
-    PassengerThreadCount 1558
+    PassengerThreadCount 195
 
 Because of the huge number of threads, this only works on a 64-bit platform. If you're on a 32-bit platform, consider lowering the number of threads while raising the number of processes. For example, you can double the number of processes (to 16) and halve the number of threads (to 779).
 

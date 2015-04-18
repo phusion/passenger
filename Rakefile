@@ -53,7 +53,6 @@ else
   require 'build/node_tests'
   require 'build/integration_tests'
   require 'build/misc'
-  require 'build/debian'
 end
 
 #### Default tasks
