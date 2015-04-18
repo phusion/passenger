@@ -130,6 +130,8 @@ private:
 	HashedStaticString AUTHORIZATION;
 	HashedStaticString VARY;
 	HashedStaticString WWW_AUTHENTICATE;
+	HashedStaticString X_SENDFILE;
+	HashedStaticString X_ACCEL_REDIRECT;
 	HashedStaticString EXPIRES;
 	HashedStaticString LAST_MODIFIED;
 	HashedStaticString LOCATION;
@@ -412,6 +414,8 @@ public:
 		  AUTHORIZATION("authorization"),
 		  VARY("vary"),
 		  WWW_AUTHENTICATE("www-authenticate"),
+		  X_SENDFILE("x-sendfile"),
+		  X_ACCEL_REDIRECT("x-accel-redirect"),
 		  EXPIRES("expires"),
 		  LAST_MODIFIED("last-modified"),
 		  LOCATION("location"),
@@ -591,7 +595,9 @@ public:
 
 		if (req->headers.lookup(AUTHORIZATION) != NULL
 		 || respHeaders.lookup(VARY) != NULL
-		 || respHeaders.lookup(WWW_AUTHENTICATE) != NULL)
+		 || respHeaders.lookup(WWW_AUTHENTICATE) != NULL
+		 || respHeaders.lookup(X_SENDFILE) != NULL
+		 || respHeaders.lookup(X_ACCEL_REDIRECT) != NULL)
 		{
 			return false;
 		}

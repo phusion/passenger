@@ -421,6 +421,28 @@ namespace tut {
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
+	TEST_METHOD(50) {
+		set_test_name("It fails if the response has an X-Sendfile header");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"x-sendfile", "foo"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+	TEST_METHOD(51) {
+		set_test_name("It fails if the response has an X-Accel-Redirect header");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"x-accel-redirect", "foo"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
 
 	/***** Invalidation *****/
 
@@ -439,7 +461,7 @@ namespace tut {
 		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
 			responseHeadersStr.size(), responseBodyStr.size()));
 		ensure("(5)", entry.valid());
-		ensure_equals("(6)", entry.index, 0);
+		ensure_equals("(6)", entry.index, 0u);
 
 
 		reset();
@@ -472,7 +494,7 @@ namespace tut {
 		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
 			responseHeadersStr.size(), responseBodyStr.size()));
 		ensure("(5)", entry.valid());
-		ensure_equals("(6)", entry.index, 0u);
+		ensure_equals("(6)", entry.index, 0);
 
 
 		reset();
