@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -110,7 +110,11 @@ module PhusionPassenger
         # Meteor its own process group, and sending signals to the
         # entire process group.
         Process.setpgrp
-        exec("meteor run -p #{port} #{production}")
+        
+        if options["environment"] == "production"
+          puts("Warning: meteor running in simulated production mode (--production). For real production use, bundle your app.")
+        end          
+        exec("meteor run -p #{port} #{production} --settings settings.json")
       end
       $0 = options["process_title"] if options["process_title"]
       $0 = "#{$0} (#{pid})"
