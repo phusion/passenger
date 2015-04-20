@@ -8,6 +8,7 @@ Release 5.0.7
  * `passenger-status --show=xml` no longer outputs the non-XML header by default. This fixes a regression as reported in a comment in GH-1136.
  * Passenger now prefers to load Rack and Bundler from RubyGems instead of from `vendor_ruby`. This solves some issues with Rack and Bundler on Debian systems. Closes GH-1480 and GH-1478.
  * The turbocache no longer caches responses that contain the `X-Sendfile` or the `X-Accel-Redirect` header.
+ * The preferred Nginx version has been upgraded to 1.6.3.
  * [Standalone] It is now possible to configure the Ruby, Node.js and Python executable to use in Passenger Standalone through the command line options --ruby, --nodejs and --python. Closes GH-1442.
  * [Nginx] Introduces the `passenger_read_timeout` option for rare cases when server needs more than the default 10 minute timeout. Contributed by pkmiec. Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
  * [Nginx] The Nginx module now looks for index.html if the path ends in / so that it works intuitively, without needing to use try_files.
