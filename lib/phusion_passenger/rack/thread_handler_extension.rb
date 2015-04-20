@@ -180,7 +180,6 @@ module PhusionPassenger
             headers_output << CRLF
           end
           connection.writev(headers_output)
-          puts "output_body = #{output_body}!!!"
           if output_body && body
             begin
               if chunk
