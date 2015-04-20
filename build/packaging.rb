@@ -95,6 +95,14 @@ def git_tag
   return "#{git_tag_prefix}-#{VERSION_STRING}"
 end
 
+def apt_repo_name
+  if is_open_source?
+    "passenger"
+  else
+    "passenger-enterprise"
+  end
+end
+
 def homebrew_dir
   return "/tmp/homebrew"
 end
@@ -436,7 +444,7 @@ task 'package:initiate_debian_building' do
   end
 
   uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
-    "job=Passenger%20#{type}%20Debian%20packages%20(release)&ref=#{git_tag}")
+    "job=Passenger%20#{type}%20Debian%20packages%20(release)&ref=#{git_tag}&repo=#{apt_repo_name}")
   http = Net::HTTP.new(uri.host, uri.port)
   http.use_ssl = true
   http.verify_mode = OpenSSL::SSL::VERIFY_PEER

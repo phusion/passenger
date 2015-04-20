@@ -199,7 +199,7 @@ namespace tut {
 		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
 			responseHeadersStr.size(), responseBodyStr.size()));
 		ensure("(5)", entry.valid());
-		ensure_equals("(6)", entry.index, 0);
+		ensure_equals("(6)", entry.index, 0u);
 
 
 		reset();
@@ -207,7 +207,7 @@ namespace tut {
 		ensure("(11)", responseCache.requestAllowsFetching(&req));
 		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
 		ensure("(12)", entry2.valid());
-		ensure_equals("(13)", entry2.index, 0);
+		ensure_equals("(13)", entry2.index, 0u);
 		ensure_equals<int>("(14)", entry2.body->httpHeaderSize, responseHeadersStr.size());
 		ensure_equals<int>("(15)", entry2.body->httpBodySize, responseBodyStr.size());
 	}
@@ -269,7 +269,7 @@ namespace tut {
 	}
 
 
-	/***** Checking whether request should be stored to cache *****/
+	/***** Checking whether response should be stored to cache *****/
 
 	TEST_METHOD(30) {
 		set_test_name("It fails on HEAD requests");
@@ -309,6 +309,7 @@ namespace tut {
 
 	TEST_METHOD(34) {
 		set_test_name("It fails if the request is not default cacheable");
+		initCacheableResponse();
 		req.appResponse.statusCode = 205;
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
@@ -356,6 +357,7 @@ namespace tut {
 
 	TEST_METHOD(39) {
 		set_test_name("It fails if the response's Cache-Control header contains no-store");
+		initCacheableResponse();
 		insertAppResponseHeader(createHeader(
 			"cache-control", "no-store"),
 			req.pool);
@@ -366,6 +368,7 @@ namespace tut {
 
 	TEST_METHOD(45) {
 		set_test_name("It fails if the response's Cache-Control header contains private");
+		initCacheableResponse();
 		insertAppResponseHeader(createHeader(
 			"cache-control", "private"),
 			req.pool);
@@ -376,6 +379,7 @@ namespace tut {
 
 	TEST_METHOD(46) {
 		set_test_name("It fails if the response's Cache-Control header contains no-cache");
+		initCacheableResponse();
 		insertAppResponseHeader(createHeader(
 			"cache-control", "no-cache"),
 			req.pool);
@@ -385,7 +389,8 @@ namespace tut {
 	}
 
 	TEST_METHOD(47) {
-		set_test_name("It fails if the request has a Authorization header");
+		set_test_name("It fails if the request has an Authorization header");
+		initCacheableResponse();
 		insertReqHeader(createHeader(
 			"authorization", "foo"),
 			req.pool);
@@ -396,6 +401,7 @@ namespace tut {
 
 	TEST_METHOD(48) {
 		set_test_name("It fails if the response has a Vary header");
+		initCacheableResponse();
 		insertAppResponseHeader(createHeader(
 			"vary", "foo"),
 			req.pool);
@@ -406,8 +412,31 @@ namespace tut {
 
 	TEST_METHOD(49) {
 		set_test_name("It fails if the response has a WWW-Authenticate header");
+		initCacheableResponse();
 		insertAppResponseHeader(createHeader(
 			"www-authenticate", "foo"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+	TEST_METHOD(50) {
+		set_test_name("It fails if the response has an X-Sendfile header");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"x-sendfile", "foo"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+	TEST_METHOD(51) {
+		set_test_name("It fails if the response has an X-Accel-Redirect header");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"x-accel-redirect", "foo"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
@@ -432,7 +461,7 @@ namespace tut {
 		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
 			responseHeadersStr.size(), responseBodyStr.size()));
 		ensure("(5)", entry.valid());
-		ensure_equals("(6)", entry.index, 0);
+		ensure_equals("(6)", entry.index, 0u);
 
 
 		reset();

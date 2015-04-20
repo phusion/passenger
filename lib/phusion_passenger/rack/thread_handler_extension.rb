@@ -81,6 +81,10 @@ module PhusionPassenger
             end
           end
 
+          # Rails somehow modifies env['REQUEST_METHOD'], so we perform the comparison
+          # before the Rack application object is called.
+          is_head_request = env[REQUEST_METHOD] == HEAD
+
           begin
             status, headers, body = @app.call(env)
           rescue => e
@@ -101,7 +105,8 @@ module PhusionPassenger
           return true if env[RACK_HIJACK_IO]
 
           begin
-            process_body(env, connection, socket_wrapper, status.to_i, headers, body)
+            process_body(env, connection, socket_wrapper, status.to_i, is_head_request,
+              headers, body)
           rescue Exception => e
             disable_keep_alive
             raise
@@ -115,7 +120,7 @@ module PhusionPassenger
 
     private
       # The code here is ugly, but it's necessary for performance.
-      def process_body(env, connection, socket_wrapper, status, headers, body)
+      def process_body(env, connection, socket_wrapper, status, is_head_request, headers, body)
         if hijack_callback = headers[RACK_HIJACK]
           # Application requested a partial socket hijack.
           body = nil
@@ -132,7 +137,7 @@ module PhusionPassenger
           # object instead of a real Array, even when #is_a? claims so.
           # Call #to_a just to be sure.
           body = body.to_a
-          output_body = should_output_body?(status, env)
+          output_body = should_output_body?(status, is_head_request)
           headers_output = generate_headers_array(status, headers)
           perform_keep_alive(env, headers_output)
           if output_body && should_add_message_length_header?(status, headers)
@@ -150,7 +155,7 @@ module PhusionPassenger
           end
           false
         elsif body.is_a?(String)
-          output_body = should_output_body?(status, env)
+          output_body = should_output_body?(status, is_head_request)
           headers_output = generate_headers_array(status, headers)
           perform_keep_alive(env, headers_output)
           if output_body && should_add_message_length_header?(status, headers)
@@ -165,7 +170,7 @@ module PhusionPassenger
           connection.writev(headers_output)
           false
         else
-          output_body = should_output_body?(status, env)
+          output_body = should_output_body?(status, is_head_request)
           headers_output = generate_headers_array(status, headers)
           perform_keep_alive(env, headers_output)
           chunk = output_body && should_add_message_length_header?(status, headers)
@@ -240,10 +245,10 @@ module PhusionPassenger
         @keepalive_performed = false
       end
 
-      def should_output_body?(status, env)
+      def should_output_body?(status, is_head_request)
         return (status < 100 ||
           (status >= 200 && status != 204 && status != 205 && status != 304)) &&
-          env[REQUEST_METHOD] != HEAD
+          !is_head_request
       end
 
       def should_add_message_length_header?(status, headers)
