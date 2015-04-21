@@ -59,6 +59,11 @@
 	
 
 	
+		conf->meteor_app_settings.data = NULL;
+		conf->meteor_app_settings.len  = 0;
+	
+
+	
 		conf->environment.data = NULL;
 		conf->environment.len  = 0;
 	

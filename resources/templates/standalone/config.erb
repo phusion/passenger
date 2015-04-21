@@ -162,6 +162,9 @@ http {
             ssl_certificate <%= app[:ssl_certificate] %>;
             ssl_certificate_key <%= app[:ssl_certificate_key] %>;
         <% end %>
+        <% if @options[:meteor_app_settings] %>
+          passenger_meteor_app_settings <%= @options[:meteor_app_settings] %>;
+        <% end %>
 
         <% app[:envvars].each_pair do |name, value| %>
             passenger_env_var '<%= name %>' '<%= value %>';

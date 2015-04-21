@@ -1,6 +1,7 @@
 Release 5.0.7
 -------------
 
+ * Supports changed way of specifying settings for (non-bundled) Meteor apps. Closes GH-1403.
  * Fixes an integer-to-string conversion bug in the code responsible for buffering chunked request bodies. This bug could cause the PassengerAgent to crash due to an exception. Thanks to Marcus Rückert of SUSE for reporting this.
  * Request-specific environment variables are no longer cached. This fixes a number of issues, such as Shibboleth not working properly and conflicts between HTTPS and non-HTTPS virtual hosts. Closes GH-1472.
  * Fixes a memory corruption bug that would be triggered when using `passenger_base_uri`. The memory corruption bug resided in the code for resolving symlinks. Closes GH-1388.

@@ -151,6 +151,7 @@ module PhusionPassenger
           add_param(command, :ruby, "--ruby")
           add_param(command, :python, "--python")
           add_param(command, :nodejs, "--nodejs")
+          add_param(command, :meteor_app_settings, "--meteor-app-settings")
 
           command << " #{Shellwords.escape(@apps[0][:root])}"
 

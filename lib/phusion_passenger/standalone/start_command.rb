@@ -185,6 +185,9 @@ module PhusionPassenger
           opts.on("--python FILENAME", String, "Executable to use for Python apps") do |value|
             options[:python] = value
           end
+          opts.on("--meteor-app-settings FILENAME", String, "Settings file to use for (development mode) Meteor apps") do |value|
+            options[:meteor_app_settings] = value
+          end
           opts.on("-R", "--rackup FILE", String,
             "Consider application a Ruby app, and use#{nl}" +
             "the given rackup file") do |value|

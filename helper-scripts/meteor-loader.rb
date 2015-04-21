@@ -113,7 +113,16 @@ module PhusionPassenger
         
         if options["environment"] == "production"
           puts("Warning: meteor running in simulated production mode (--production). For real production use, bundle your app.")
-        end          
+        end
+        
+        if options["meteor_app_settings"]
+          PhusionPassenger.require_passenger_lib 'utils/shellwords'
+          app_settings_file = Shellwords.escape(options["meteor_app_settings"])
+          puts("Using application settings from file #{app_settings_file}")
+          exec("meteor run -p #{port} --settings #{app_settings_file} #{production}")
+        else
+          exec("meteor run -p #{port} #{production}")
+        end
         exec("meteor run -p #{port} #{production} --settings settings.json")
       end
       $0 = options["process_title"] if options["process_title"]

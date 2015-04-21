@@ -91,6 +91,8 @@
 
 	ngx_str_t group;
 
+	ngx_str_t meteor_app_settings;
+
 	ngx_str_t nodejs;
 
 	ngx_str_t python;
