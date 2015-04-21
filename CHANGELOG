@@ -10,6 +10,7 @@ Release 5.0.7
  * The turbocache no longer caches responses that contain the `X-Sendfile` or the `X-Accel-Redirect` header.
  * The preferred Nginx version has been upgraded to 1.6.3.
  * [Standalone] It is now possible to configure the Ruby, Node.js and Python executable to use in Passenger Standalone through the command line options --ruby, --nodejs and --python. Closes GH-1442.
+ * [Apache] Fixed some issues with X-Sendfile. Closes GH-1376.
  * [Nginx] Introduces the `passenger_read_timeout` option for rare cases when server needs more than the default 10 minute timeout. Contributed by pkmiec. Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
  * [Nginx] The Nginx module now looks for index.html if the path ends in / so that it works intuitively, without needing to use try_files.
  * Fixes an ugly backtrace that would be shown if an invalid request is made to an application process using the private HTTP interface. Contributed by jbergler. Closes GH-1311.
