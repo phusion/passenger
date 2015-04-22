@@ -192,6 +192,10 @@ initializePrivilegedWorkingObjects() {
 	foreach (description, authorizations) {
 		parseAndAddAdminAuthorization(description);
 	}
+
+	// Initialize ResourceLocator here in case passenger_root's parent
+	// directory is not executable by the unprivileged user.
+	wo->resourceLocator = new ResourceLocator(options.get("passenger_root"));
 }
 
 static void
@@ -280,7 +284,6 @@ initializeUnprivilegedWorkingObjects() {
 	WorkingObjects *wo = workingObjects;
 	int fd;
 
-	wo->resourceLocator = new ResourceLocator(options.get("passenger_root"));
 	options.set("union_station_gateway_cert", findUnionStationGatewayCert(
 		*wo->resourceLocator, options.get("union_station_gateway_cert", false)));
 
