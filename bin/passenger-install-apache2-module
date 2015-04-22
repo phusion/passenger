@@ -197,11 +197,23 @@ private
       detector.report
       @apache2 = detector.result_for(PlatformInfo.apxs2)
       if @apache2.nil?
-        render_template 'apache2/apache_install_broken',
-          :apxs2 => PlatformInfo.apxs2,
-          :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
-          :ruby => PhusionPassenger::PlatformInfo.ruby_command,
-          :passenger_config => "#{PhusionPassenger.bin_dir}/passenger-config"
+        # Print an extra newline because the autodetection routines
+        # may have run some commands which printed stuff to stderr.
+        puts
+
+        if Process.uid == 0
+          render_template 'apache2/apache_install_broken',
+            :apxs2 => PlatformInfo.apxs2,
+            :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+            :ruby => PhusionPassenger::PlatformInfo.ruby_command,
+            :passenger_config => "#{PhusionPassenger.bin_dir}/passenger-config"
+        else
+          render_template 'apache2/run_installer_as_root_for_apache_analysis',
+            :sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
+            :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+            :ruby => PhusionPassenger::PlatformInfo.ruby_command,
+            :installer => "#{PhusionPassenger.bin_dir}/passenger-install-apache2-module #{ORIG_ARGV.join(' ')}"
+        end
         return false
       end
       if detector.results.size > 1
