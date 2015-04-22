@@ -583,6 +583,14 @@ include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Node.js command to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'node', meaning that the Node.js command will be looked up according to the `PATH` environment variable.
 
+==== PassengerMeteorAppSettings <filename>
+:version: 5.0.7
+include::users_guide_snippets/since_version.txt[]
+
+When using a Meteor application in non-bundled mode, use this option to specify a (JSON) file with settings for the application. Meteor will be started with the `--settings` parameter set to this option. 
+
+N.B. For bundled mode, Meteor requires you to put applications settings in the `METEOR_SETTINGS` environment variable.
+
 [[PassengerAppEnv]]
 ==== PassengerAppEnv <string> ====
 This option sets the value of the following environment variables:
