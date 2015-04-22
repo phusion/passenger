@@ -157,43 +157,6 @@ Phusion Passenger automatically leverages operating system virtual memory copy-o
 - MRI Ruby >= 2.0. Versions prior to 2.0 did not have a copy-on-write friendly garbage collector.
 - http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition], which was Phusion's branch of MRI Ruby 1.8 with a copy-on-write friendly garbage collector and other enhancement. It has reached End-Of-Life as of 2012, but remains available for legacy systems.
 
-
-[[capistrano]]
-=== Capistrano recipe ===
-
-Phusion Passenger can be combined with link:http://capify.org/[Capistrano].
-The following Capistrano recipe demonstrates Phusion Passenger support.
-It assumes that you're using Git as version control system.
-
---------------------------------------------------
-set :application, "myapp"
-set :domain,      "example.com"
-set :repository,  "ssh://#{domain}/path-to-your-git-repo/#{application}.git"
-set :use_sudo,    false
-set :deploy_to,   "/path-to-your-web-app-directory/#{application}"
-set :scm,         "git"
-
-role :app, domain
-role :web, domain
-role :db,  domain, :primary => true
-
-namespace :deploy do
-  task :start, :roles => :app do
-    run "touch #{current_release}/tmp/restart.txt"
-  end
-  
-  task :stop, :roles => :app do
-    # Do nothing.
-  end
-  
-  desc "Restart Application"
-  task :restart, :roles => :app do
-    run "touch #{current_release}/tmp/restart.txt"
-  end
-end
---------------------------------------------------
-
-
 [[bundler_support]]
 === Bundler support ===
 
