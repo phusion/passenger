@@ -312,7 +312,7 @@
 
 10.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
 
-10.3. Capistrano recipe	=>	capistrano-recipe-pfn4qu
+10.3. Tuning for Server Sent Events and WebSockets	=>	tuning-for-server-sent-events-and-websockets-8ec9td
 
 10.4. Bundler support	=>	bundler-support-19v1h43
 

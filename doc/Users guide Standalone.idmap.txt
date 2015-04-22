@@ -96,25 +96,33 @@
 
 7.3. I get "command not found" when running a Phusion Passenger command through sudo	=>	i-get-command-not-found-when-running-a-phusion-passenger-command-through-sudo-14k8kde
 
-8. Appendix: About environment variables	=>	appendix-about-environment-variables-1ct91x3
+8. Under the hood	=>	under-the-hood-ub7j3q
 
-8.1. Working with environment variables	=>	working-with-environment-variables-11cmwlv
+8.1. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1usvd0o
 
-8.2. The PATH environment variable	=>	the-path-environment-variable-yzfn3k
+8.1.1. How Ruby is used	=>	how-ruby-is-used-1saha86
 
-8.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-d7k5mh
+8.1.2. When the system has multiple Ruby interpreters	=>	when-the-system-has-multiple-ruby-interpreters-acf6d
 
-8.3. Making environment variables permanent	=>	making-environment-variables-permanent-mkq46d
+9. Appendix: About environment variables	=>	appendix-about-environment-variables-1ct91x3
 
-8.3.1. bash	=>	bash-hmcscc
+9.1. Working with environment variables	=>	working-with-environment-variables-11cmwlv
 
-8.3.2. Apache	=>	apache-15y3bm0
+9.2. The PATH environment variable	=>	the-path-environment-variable-yzfn3k
 
-8.3.3. Nginx	=>	nginx-uarf27
+9.2.1. Adding Phusion Passenger’s administration tools to PATH	=>	adding-phusion-passenger-s-administration-tools-to-path-d7k5mh
 
-8.3.4. cron	=>	cron-6272ar
+9.3. Making environment variables permanent	=>	making-environment-variables-permanent-mkq46d
 
-8.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-127wbl2
+9.3.1. bash	=>	bash-hmcscc
 
-8.4. Environment variables and sudo	=>	environment-variables-and-sudo-znzmif
+9.3.2. Apache	=>	apache-15y3bm0
+
+9.3.3. Nginx	=>	nginx-uarf27
+
+9.3.4. cron	=>	cron-6272ar
+
+9.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-127wbl2
+
+9.4. Environment variables and sudo	=>	environment-variables-and-sudo-znzmif
 
