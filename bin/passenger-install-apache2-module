@@ -48,6 +48,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/apache'
 PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
 PhusionPassenger.require_passenger_lib 'abstract_installer'
+PhusionPassenger.require_passenger_lib 'config/validate_install_command'
 PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 
 class Installer < PhusionPassenger::AbstractInstaller
@@ -133,6 +134,7 @@ class Installer < PhusionPassenger::AbstractInstaller
     check_write_permission_to_web_server_config_files || exit(1)
     if compile_apache2_module
       install_apache2_config_snippets || exit(1)
+      validate_install
       show_deployment_example
     else
       show_possible_solutions_for_compilation_and_installation_problems
@@ -774,6 +776,27 @@ private
     render_template 'apache2/config_snippets',
       :snippet => apache2_config_snippets
     wait
+  end
+
+  def validate_install
+    new_screen
+    puts "<banner>Validating installation...</banner>"
+    puts
+    validator = PhusionPassenger::Config::ValidateInstallCommand.new([
+      "--auto", "--validate-apache2", "--invoked-from-installer"])
+    exit_code = validator.run_and_get_exit_code
+    STDOUT.write(@colors.default_terminal_color)
+
+    case exit_code
+    when PhusionPassenger::Config::ValidateInstallCommand::FAIL_EXIT_CODE
+      puts "<b>Please solve the above issues, then press ENTER to continue.</b>"
+      wait
+    when PhusionPassenger::Config::ValidateInstallCommand::WARN_EXIT_CODE
+      puts "<b>Press ENTER to continue.</b>"
+      wait
+    else
+      exit(exit_code)
+    end
   end
 
   def show_deployment_example

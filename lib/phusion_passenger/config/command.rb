@@ -30,6 +30,15 @@ module PhusionPassenger
         @options = self.class.create_default_options
       end
 
+      def run_and_get_exit_code
+        begin
+          run
+          exit(0)
+        rescue SystemExit => e
+          e.status
+        end
+      end
+
     private
       def self.create_default_options
         return {}
