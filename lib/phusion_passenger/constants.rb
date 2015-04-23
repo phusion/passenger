@@ -87,6 +87,7 @@ module PhusionPassenger
     # Misc
     FEEDBACK_FD = 3
     PROGRAM_NAME = "Phusion Passenger"
+    SHORT_PROGRAM_NAME = "Passenger"
     SERVER_TOKEN_NAME = "Phusion_Passenger"
     FLYING_PASSENGER_NAME = "Flying Passenger"
     INDEX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide.html"
