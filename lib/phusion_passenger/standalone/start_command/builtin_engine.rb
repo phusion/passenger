@@ -88,9 +88,7 @@ module PhusionPassenger
           command << " --no-user-switching"
           command << " --no-delete-pid-file"
           command << " --cleanup-pidfile #{Shellwords.escape @working_dir}/temp_dir_toucher.pid"
-          if should_wait_until_engine_has_exited?
-            command << " --report-file #{Shellwords.escape @working_dir}/report.json"
-          end
+          command << " --report-file #{Shellwords.escape @working_dir}/report.json"
           add_param(command, :user, "--user")
           add_param(command, :log_file, "--log-file")
           add_param(command, :pid_file, "--pid-file")
