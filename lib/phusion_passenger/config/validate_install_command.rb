@@ -271,7 +271,7 @@ module PhusionPassenger
       end
 
       def check_whether_there_are_multiple_apache_installs
-        log '<banner>Sanity checking Apache installation...</banner>'
+        log '<banner>Checking whether there are multiple Apache installations...</banner>'
 
         output = StringIO.new
         detector = PlatformInfo::ApacheDetector.new(output)
@@ -348,7 +348,7 @@ module PhusionPassenger
               exit(INTERNAL_ERROR_CODE)
             end
           else
-            log '<green>All good!</green>'
+            log '<green>Only a single installation detected. This is good.</green>'
           end
 
           display_separator

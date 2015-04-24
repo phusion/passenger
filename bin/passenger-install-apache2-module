@@ -190,7 +190,7 @@ private
 
   def check_whether_there_are_multiple_apache_installs
     new_screen
-    puts '<banner>Sanity checking Apache installation...</banner>'
+    puts '<banner>Checking whether there are multiple Apache installations...</banner>'
 
     output = StringIO.new
     detector = PlatformInfo::ApacheDetector.new(output)
@@ -238,7 +238,7 @@ private
           return true
         end
       else
-        puts '<green>All good!</green>'
+        puts '<green>Only a single installation detected. This is good.</green>'
         return true
       end
     ensure
