@@ -211,7 +211,7 @@ module PhusionPassenger
           suggest %Q{
             Please add #{PhusionPassenger.bin_dir} to PATH.
             Otherwise you will get "command not found" errors upon running
-            passenger-status and other tools.
+            any Passenger commands.
 
             Learn more at about PATH at:
 
@@ -255,12 +255,17 @@ module PhusionPassenger
         else
           check_warning
           suggest %Q{
-            Besides this #{PROGRAM_NAME} installation, the following other
-            #{PROGRAM_NAME} installations have been detected:
+            You are currently validating against #{PROGRAM_NAME} #{VERSION_STRING}, located in:
+
+              #{PhusionPassenger.bin_dir}/passenger
+
+            Besides this #{SHORT_PROGRAM_NAME} installation, the following other
+            #{SHORT_PROGRAM_NAME} installations have also been detected:
 
               #{other_installs.join("\n              ")}
 
-            Please uninstall them to avoid confusion or conflicts.
+            Please uninstall these other #{SHORT_PROGRAM_NAME} installations to avoid
+            confusion or conflicts.
           }
         end
       end
