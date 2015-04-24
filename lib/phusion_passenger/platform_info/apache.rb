@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -115,7 +115,7 @@ module PhusionPassenger
         if envvars_file = httpd_envvars_file(options)
           command = ". '#{envvars_file}' && #{command}"
         end
-        return `#{command}`
+        return `#{command} 2>/dev/null`
       else
         return nil
       end
