@@ -433,13 +433,15 @@ module PhusionPassenger
 
         occurrences = 0
         occurrence_files = []
+        module_path = nil
 
         result[:files].each do |path|
           lines = File.open(path, "rb") do |f|
             f.read.split("\n")
           end
           lines.each do |line|
-            if line !~ /^[\s\t]*#/ && line =~ /LoadModule[\s\t]+passenger_module[\s\t]+/
+            if line !~ /^[\s\t]*#/ && line =~ /LoadModule[\s\t]+passenger_module[\s\t]+(.*)/
+              module_path = $1
               occurrences += 1
               occurrence_files << path
             end
@@ -447,7 +449,28 @@ module PhusionPassenger
         end
 
         if occurrences == 1
-          check_ok
+          if module_path == PhusionPassenger.apache2_module_path
+            check_ok
+          else
+            check_error
+            suggest %Q{
+              Incorrect #{SHORT_PROGRAM_NAME} module path detected
+
+              #{PROGRAM_NAME} for Apache requires a 'LoadModule passenger_module'
+              directive inside an Apache configuration file. This directive has been
+              detected in the following config file:
+
+                 #{occurrence_files[0]}
+
+              However, the directive refers to the following Apache module, which is wrong:
+
+                 #{module_path}
+
+              Please edit the config file and change the directive to this instead:
+
+                 LoadModule passenger_module #{PhusionPassenger.apache2_module_path}
+            }
+          end
         elsif occurrences == 0
           if @options[:invoked_from_installer]
             check_warning
