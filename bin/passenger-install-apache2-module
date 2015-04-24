@@ -247,13 +247,13 @@ private
   end
 
   def check_whether_apache_uses_compatible_mpm
-    # 'httpd -V' output is in the form of:
+    # 'apache2ctl -V' output is in the form of:
     #
     # Server MPM:      Prefork     # <--- this line is not always available!
     # ...
     # Server compiled with....
     #  -D APACHE_MPM_DIR="server/mpm/prefork"
-    output = PlatformInfo.httpd_V
+    output = PlatformInfo.apache2ctl_V
     output =~ /^Server MPM: +(.*)$/
     if $1
       mpm = $1.downcase
