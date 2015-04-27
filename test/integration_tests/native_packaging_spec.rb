@@ -282,7 +282,7 @@ describe "A natively packaged Phusion Passenger" do
     end
 
     it "validates the install as working" do
-      system("passenger-config validate-install >/dev/null 2>/dev/null")
+      system("passenger-config validate-install --auto >/dev/null 2>/dev/null")
       [0, Config::ValidateInstallCommand::WARN_EXIT_CODE].should include($?.exitstatus)
     end
   end

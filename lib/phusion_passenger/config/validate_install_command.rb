@@ -148,6 +148,7 @@ module PhusionPassenger
         PhusionPassenger.require_passenger_lib 'platform_info/apache'
         PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
         require 'stringio'
+        require 'pathname'
 
         @error_count = 0
         @warning_count = 0
@@ -449,7 +450,15 @@ module PhusionPassenger
         end
 
         if occurrences == 1
-          if module_path == PhusionPassenger.apache2_module_path
+          if module_path !~ /^\//
+            # Non-absolute path. Absolutize using ServerRoot.
+            module_path = "#{PlatformInfo.httpd_default_root}/#{module_path}"
+          end
+          # Resolve symlinks.
+          module_path = Pathname.new(module_path).realpath
+          expected_module_path = Pathname.new(PhusionPassenger.apache2_module_path).realpath
+
+          if module_path == expected_module_path
             check_ok
           else
             check_error
