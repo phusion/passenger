@@ -105,6 +105,8 @@ private:
 		result.push_back(&options.ruby);
 		result.push_back(&options.python);
 		result.push_back(&options.nodejs);
+		result.push_back(&options.meteorAppSettings);
+
 		result.push_back(&options.environmentVariables);
 		result.push_back(&options.loggingAgentAddress);
 		result.push_back(&options.loggingAgentUsername);
@@ -259,6 +261,12 @@ public:
 	 * is a Node.js app.
 	 */
 	StaticString nodejs;
+
+	/**
+	 * When running meteor in non-bundled mode, settings for the application need to be specified
+	 * via --settings (instead of through the METEOR_SETTINGS environment variable),
+	 */
+	StaticString meteorAppSettings;
 
 	/**
 	 * Any rights that the spawned application process may have. The SpawnManager
@@ -588,6 +596,7 @@ public:
 			appendKeyValue (vec, "ruby",               ruby);
 			appendKeyValue (vec, "python",             python);
 			appendKeyValue (vec, "nodejs",             nodejs);
+			appendKeyValue (vec, "meteor_app_settings", meteorAppSettings);
 			appendKeyValue (vec, "logging_agent_address",  loggingAgentAddress);
 			appendKeyValue (vec, "logging_agent_username", loggingAgentUsername);
 			appendKeyValue (vec, "logging_agent_password", loggingAgentPassword);

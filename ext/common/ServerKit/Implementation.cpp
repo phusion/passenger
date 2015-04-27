@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -31,6 +31,9 @@ namespace ServerKit {
 // Define 'extern' so that the compiler doesn't output warnings.
 extern const HashedStaticString HTTP_COOKIE;
 extern const HashedStaticString HTTP_SET_COOKIE;
+extern const HashedStaticString HTTP_CONTENT_LENGTH;
+extern const HashedStaticString HTTP_X_SENDFILE;
+extern const HashedStaticString HTTP_X_ACCEL_REDIRECT;
 extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
 extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
 
@@ -45,6 +48,9 @@ const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE =
 	sizeof(DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE) - 1;
 const HashedStaticString HTTP_COOKIE("cookie");
 const HashedStaticString HTTP_SET_COOKIE("set-cookie");
+const HashedStaticString HTTP_CONTENT_LENGTH("content-length");
+const HashedStaticString HTTP_X_SENDFILE("x-sendfile");
+const HashedStaticString HTTP_X_ACCEL_REDIRECT("x-accel-redirect");
 
 
 } // namespace ServerKit

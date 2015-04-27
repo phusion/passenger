@@ -13,6 +13,10 @@ endif::[]
 ifdef::nginx[]
 <<PassengerPreStart,passenger_pre_start>>)
 endif::[]
+ifdef::standalone[]
+<<PassengerPreStart,passenger_pre_start>>)
+endif::[]
+
 are written in Ruby as well.
  * Ruby web application support is implemented in Ruby.
  * If you use <<flying_passenger,Flying Passenger>>, then the Flying Passenger daemon is written in Ruby. The daemon is a small (less than 500 lines of code) and offloads most tasks to the C++ core.
@@ -31,6 +35,9 @@ ifdef::apache[]
 <<PassengerRuby,PassengerRuby>>
 endif::[]
 ifdef::nginx[]
+<<PassengerRuby,passenger_ruby>>
+endif::[]
+ifdef::standalone[]
 <<PassengerRuby,passenger_ruby>>
 endif::[]
 directive to learn how run different web applications under different Ruby interpreters.

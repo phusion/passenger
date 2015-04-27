@@ -214,6 +214,10 @@ module PhusionPassenger
       end
 
       def download_nginx_engine
+        if @options[:nginx_version] != PREFERRED_NGINX_VERSION
+          return false
+        end
+
         if @options[:brief]
           puts " --> Installing Nginx #{@options[:nginx_version]} engine"
         else

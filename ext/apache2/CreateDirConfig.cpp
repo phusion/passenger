@@ -41,6 +41,7 @@
 			config->ruby = NULL;
 				config->python = NULL;
 				config->nodejs = NULL;
+				config->meteorAppSettings = NULL;
 				config->appEnv = NULL;
 				config->minInstances = UNSET_INT_VALUE;
 				config->maxInstancesPerApp = UNSET_INT_VALUE;

@@ -76,6 +76,8 @@
 	const char *appType;
 	/** The group that Ruby applications must run as. */
 	const char *group;
+	/** Settings file for (non-bundled) Meteor apps. */
+	const char *meteorAppSettings;
 	/** The Node.js command to use. */
 	const char *nodejs;
 	/** The Python interpreter to use. */

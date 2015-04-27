@@ -214,6 +214,10 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	if (agentsOptions->has("default_python")) {
 		options.python = agentsOptions->get("default_python");
 	}
+	if (agentsOptions->has("meteor_app_settings")) {
+		options.meteorAppSettings = agentsOptions->get("meteor_app_settings");
+	}
+
 	options.logLevel = getLogLevel();
 	options.loggingAgentAddress = loggingAgentAddress;
 	options.loggingAgentUsername = P_STATIC_STRING("logging");
@@ -357,6 +361,7 @@ createNewPoolOptions(Client *client, Request *req, const HashedStaticString &app
 	fillPoolOption(req, options.ruby, "!~PASSENGER_RUBY");
 	fillPoolOption(req, options.python, "!~PASSENGER_PYTHON");
 	fillPoolOption(req, options.nodejs, "!~PASSENGER_NODEJS");
+	fillPoolOption(req, options.meteorAppSettings, "!~PASSENGER_METEOR_APP_SETTINGS");
 	fillPoolOption(req, options.user, "!~PASSENGER_USER");
 	fillPoolOption(req, options.group, "!~PASSENGER_GROUP");
 	fillPoolOption(req, options.minProcesses, "!~PASSENGER_MIN_PROCESSES");

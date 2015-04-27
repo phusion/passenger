@@ -64,6 +64,12 @@
 	
 
 	
+		ngx_conf_merge_str_value(conf->meteor_app_settings,
+			prev->meteor_app_settings,
+			NULL);
+	
+
+	
 		ngx_conf_merge_str_value(conf->environment,
 			prev->environment,
 			NULL);

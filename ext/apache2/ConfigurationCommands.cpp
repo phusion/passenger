@@ -61,6 +61,13 @@
 		"The Node.js command to use."),
 
 	
+	AP_INIT_TAKE1("PassengerMeteorAppSettings",
+		(Take1Func) cmd_passenger_meteor_app_settings,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Settings file for (non-bundled) Meteor apps."),
+
+	
 	AP_INIT_TAKE1("PassengerAppEnv",
 		(Take1Func) cmd_passenger_app_env,
 		NULL,

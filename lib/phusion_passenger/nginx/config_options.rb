@@ -107,6 +107,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :type  => :string
   },
   {
+    :name  => 'passenger_meteor_app_settings',
+    :type  => :string
+  },
+  {
     :name  => 'passenger_app_env',
     :type  => :string,
     :field => 'environment'

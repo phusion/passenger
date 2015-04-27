@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -48,6 +48,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/apache'
 PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
 PhusionPassenger.require_passenger_lib 'abstract_installer'
+PhusionPassenger.require_passenger_lib 'config/validate_install_command'
 PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 
 class Installer < PhusionPassenger::AbstractInstaller
@@ -133,6 +134,7 @@ class Installer < PhusionPassenger::AbstractInstaller
     check_write_permission_to_web_server_config_files || exit(1)
     if compile_apache2_module
       install_apache2_config_snippets || exit(1)
+      validate_install
       show_deployment_example
     else
       show_possible_solutions_for_compilation_and_installation_problems
@@ -188,7 +190,7 @@ private
 
   def check_whether_there_are_multiple_apache_installs
     new_screen
-    puts '<banner>Sanity checking Apache installation...</banner>'
+    puts '<banner>Checking whether there are multiple Apache installations...</banner>'
 
     output = StringIO.new
     detector = PlatformInfo::ApacheDetector.new(output)
@@ -197,14 +199,25 @@ private
       detector.report
       @apache2 = detector.result_for(PlatformInfo.apxs2)
       if @apache2.nil?
-        render_template 'apache2/apache_install_broken',
-          :apxs2 => PlatformInfo.apxs2,
-          :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
-          :ruby => PhusionPassenger::PlatformInfo.ruby_command,
-          :passenger_config => "#{PhusionPassenger.bin_dir}/passenger-config"
+        # Print an extra newline because the autodetection routines
+        # may have run some commands which printed stuff to stderr.
+        puts
+
+        if Process.uid == 0
+          render_template 'apache2/apache_install_broken',
+            :apxs2 => PlatformInfo.apxs2,
+            :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+            :ruby => PhusionPassenger::PlatformInfo.ruby_command,
+            :passenger_config => "#{PhusionPassenger.bin_dir}/passenger-config"
+        else
+          render_template 'apache2/run_installer_as_root_for_apache_analysis',
+            :sudo => PhusionPassenger::PlatformInfo.ruby_sudo_command,
+            :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
+            :ruby => PhusionPassenger::PlatformInfo.ruby_command,
+            :installer => "#{PhusionPassenger.bin_dir}/passenger-install-apache2-module #{ORIG_ARGV.join(' ')}"
+        end
         return false
-      end
-      if detector.results.size > 1
+      elsif detector.results.size > 1
         other_installs = detector.results - [@apache2]
         render_template 'apache2/multiple_apache_installations_detected',
           :current => @apache2,
@@ -225,7 +238,7 @@ private
           return true
         end
       else
-        puts '<green>All good!</green>'
+        puts '<green>Only a single installation detected. This is good.</green>'
         return true
       end
     ensure
@@ -234,13 +247,13 @@ private
   end
 
   def check_whether_apache_uses_compatible_mpm
-    # 'httpd -V' output is in the form of:
+    # 'apache2ctl -V' output is in the form of:
     #
     # Server MPM:      Prefork     # <--- this line is not always available!
     # ...
     # Server compiled with....
     #  -D APACHE_MPM_DIR="server/mpm/prefork"
-    output = PlatformInfo.httpd_V
+    output = PlatformInfo.apache2ctl_V
     output =~ /^Server MPM: +(.*)$/
     if $1
       mpm = $1.downcase
@@ -763,6 +776,27 @@ private
     render_template 'apache2/config_snippets',
       :snippet => apache2_config_snippets
     wait
+  end
+
+  def validate_install
+    new_screen
+    puts "<banner>Validating installation...</banner>"
+    puts
+    validator = PhusionPassenger::Config::ValidateInstallCommand.new([
+      "--auto", "--validate-apache2", "--invoked-from-installer"])
+    exit_code = validator.run_and_get_exit_code
+    STDOUT.write(@colors.default_terminal_color)
+
+    case exit_code
+    when PhusionPassenger::Config::ValidateInstallCommand::FAIL_EXIT_CODE
+      puts "<b>Please solve the above issues, then press ENTER to continue.</b>"
+      wait
+    when PhusionPassenger::Config::ValidateInstallCommand::WARN_EXIT_CODE
+      puts "<b>Press ENTER to continue.</b>"
+      wait
+    else
+      exit(exit_code)
+    end
   end
 
   def show_deployment_example

@@ -157,42 +157,30 @@ Phusion Passenger automatically leverages operating system virtual memory copy-o
 - MRI Ruby >= 2.0. Versions prior to 2.0 did not have a copy-on-write friendly garbage collector.
 - http://www.rubyenterpriseedition.com/[Ruby Enterprise Edition], which was Phusion's branch of MRI Ruby 1.8 with a copy-on-write friendly garbage collector and other enhancement. It has reached End-Of-Life as of 2012, but remains available for legacy systems.
 
+[[tuning_sse_websockets]]
+=== Tuning for Server Sent Events and WebSockets ===
 
-[[capistrano]]
-=== Capistrano recipe ===
+Phusion Passenger supports Server Sent Events (SSE) and WebSockets out of the box with no configuration, but there are some things you need to know.
 
-Phusion Passenger can be combined with link:http://capify.org/[Capistrano].
-The following Capistrano recipe demonstrates Phusion Passenger support.
-It assumes that you're using Git as version control system.
+First, WebSockets are link:https://github.com/phusion/passenger/issues/1202[not yet supported when using the Apache integration mode].
 
---------------------------------------------------
-set :application, "myapp"
-set :domain,      "example.com"
-set :repository,  "ssh://#{domain}/path-to-your-git-repo/#{application}.git"
-set :use_sudo,    false
-set :deploy_to,   "/path-to-your-web-app-directory/#{application}"
-set :scm,         "git"
+Second, for Ruby apps only, you need to insert a configuration snippet inside your `config.ru`:
 
-role :app, domain
-role :web, domain
-role :db,  domain, :primary => true
-
-namespace :deploy do
-  task :start, :roles => :app do
-    run "touch #{current_release}/tmp/restart.txt"
-  end
-  
-  task :stop, :roles => :app do
-    # Do nothing.
-  end
-  
-  desc "Restart Application"
-  task :restart, :roles => :app do
-    run "touch #{current_release}/tmp/restart.txt"
-  end
+[code,ruby]
+----------------------------------------------------------
+if defined?(PhusionPassenger)
+  PhusionPassenger.advertised_concurrency_level = 0
 end
---------------------------------------------------
+----------------------------------------------------------
 
+[NOTE]
+==========================================================
+This snippet tells Passenger that your Ruby app will handle SSE and WebSockets. In response, Passenger will adjust the connection concurrency settings for your app. Without this configuration snippet, SSE and WebSockets still work, but with degraded performance.
+
+This configuration snippet is currently necessary because of the way Passenger is implemented. We are link:https://github.com/phusion/passenger/issues/1195[working on improving this mechanism]. One day, the above configuration snippet will no longer be necessary. For now, you should include the above configuration snippet for optimal SSE and WebSocket performance.
+==========================================================
+
+Finally, you can find Passenger SSE and WebSocket demo apps on link:https://www.phusionpassenger.com/documentation_and_support[the Passenger documentation overview page], under section "Demos".
 
 [[bundler_support]]
 === Bundler support ===
