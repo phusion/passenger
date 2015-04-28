@@ -16,6 +16,7 @@ Release 5.0.7
  * [Standalone] Running `passenger start --nginx-version=XXX` would crash. This has been fixed. Closes GH-1490.
  * [Apache] Fixed some issues with X-Sendfile. Closes GH-1376.
  * [Apache] If the installer fails to autodetect Apache while the installer is running as a normal user, it will now ask you to give it root privileges. Closes GH-1289.
+ * [Apache] The installer now validates your Apache configuration file to check for common problems. The validator can also be accessed separately by running `passenger-config validate-install --validate-apache2`.
  * [Nginx] Introduces the `passenger_read_timeout` option for rare cases when server needs more than the default 10 minute timeout. Contributed by pkmiec. Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
  * [Nginx] The Nginx module now looks for index.html if the path ends in / so that it works intuitively, without needing to use try_files.
  * Fixes wrong memory address display in crash dumps. Thanks to thoughtpolice for pointing it out.
