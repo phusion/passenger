@@ -239,9 +239,16 @@ module PhusionPassenger
         # These may not be in PATH if the user did not run this command through sudo.
         paths << "/usr/bin"
         paths << "/usr/sbin"
-        paths.delete(gem_bindir)
-        paths.delete(homebrew_bindir)
-        paths.delete(PhusionPassenger.bin_dir)
+        # Some of the paths may be symlinks, so we take the realpaths when
+        # possible and remove duplicates. This is especially important on
+        # Red Hat 7, where /bin is a symlink to /usr/bin.
+        paths.map! do |path|
+          try_realpath(path)
+        end
+
+        paths.delete(try_realpath(gem_bindir))
+        paths.delete(try_realpath(homebrew_bindir))
+        paths.delete(try_realpath(PhusionPassenger.bin_dir))
         paths.uniq!
 
         other_installs = []
@@ -455,8 +462,8 @@ module PhusionPassenger
             module_path = "#{PlatformInfo.httpd_default_root}/#{module_path}"
           end
           # Resolve symlinks.
-          module_path = Pathname.new(module_path).realpath
-          expected_module_path = Pathname.new(PhusionPassenger.apache2_module_path).realpath
+          module_path = try_realpath(module_path)
+          expected_module_path = try_realpath(PhusionPassenger.apache2_module_path)
 
           if module_path == expected_module_path
             check_ok
@@ -652,6 +659,18 @@ module PhusionPassenger
 
       def ruby_command
         PlatformInfo.ruby_command
+      end
+
+      def try_realpath(path)
+        if path
+          begin
+            Pathname.new(path).realpath.to_s
+          rescue Errno::ENOENT, Errno::EACCES
+            path
+          end
+        else
+          nil
+        end
       end
     end
 
