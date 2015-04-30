@@ -84,7 +84,9 @@ module PhusionPassenger
         puts "<banner>Installing...</banner>"
         download_and_extract_nginx_sources
         determine_support_libraries
-        compile_support_libraries
+        if PhusionPassenger.build_system_dir
+          compile_support_libraries
+        end
         configure_and_compile_nginx
       end
 
@@ -230,11 +232,18 @@ module PhusionPassenger
       end
 
       def determine_support_libraries
-        lib_dir = "#{@working_dir}/common/libpassenger_common"
-        @support_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
-          set_output_dir(lib_dir).
-          link_objects
-        @support_libs << "#{@working_dir}/common/libboost_oxt.a"
+        if PhusionPassenger.build_system_dir
+          lib_dir = "#{@working_dir}/common/libpassenger_common"
+          @support_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
+            set_output_dir(lib_dir).
+            link_objects
+          @support_libs << "#{@working_dir}/common/libboost_oxt.a"
+        else
+          @support_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
+            set_output_dir("#{PhusionPassenger.lib_dir}/common/libpassenger_common").
+            link_objects
+          @support_libs << "#{PhusionPassenger.lib_dir}/common/libboost_oxt.a"
+        end
         @support_libs_string = @support_libs.join(" ")
       end
 
@@ -295,7 +304,7 @@ module PhusionPassenger
         command << "#{shell} ./configure --prefix=/tmp " +
           "#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " +
           "--add-module=#{Shellwords.escape PhusionPassenger.nginx_module_source_dir}"
-        run_command_yield_activity(command) do |throbber|
+        run_command_yield_activity(command) do
           yield
         end
       end
