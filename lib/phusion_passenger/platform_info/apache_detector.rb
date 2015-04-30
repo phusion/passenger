@@ -196,11 +196,23 @@ module PhusionPassenger
         end
 
         if @results.empty?
+          PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
+          PlatformInfo::Depcheck.load("depcheck_specs/apache2")
+          apache2 = PlatformInfo::Depcheck.find("apache2")
+          apache2_install_instructions = apache2.install_instructions.split("\n").join("\n   ")
+          # apxs2 is part of the development headers.
+          apache2_dev = PlatformInfo::Depcheck.find("apache2-dev")
+          apache2_dev_install_instructions = apache2_dev.install_instructions.split("\n").join("\n   ")
+
           log "<red>Sorry, this program cannot find an Apache installation.</red>"
           log ""
-          log "To install Apache, please run the following. It will tell you how to install Apache."
+          log "Please install Apache and its development headers."
           log ""
-          log "   <b>#{PhusionPassenger.bin_dir}/passenger-install-apache2-module</b>"
+          log " <yellow>* To install Apache:</yellow>"
+          log "   #{apache2_install_instructions}"
+          log ""
+          log " <yellow>* To install Apache development headers:</yellow>"
+          log "   #{apache2_dev_install_instructions}"
           log ""
           log "If you are sure that you have Apache installed, please read the documentation:"
           log "<b>#{APACHE2_DOC_URL}#forcing_location_of_command_line_tools_and_dependencies</b>"
