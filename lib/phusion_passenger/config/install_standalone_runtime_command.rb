@@ -91,6 +91,8 @@ module PhusionPassenger
           opts.on("--nginx-version VERSION", String, "Nginx version to compile. " +
             "Default: #{PREFERRED_NGINX_VERSION}") do |val|
             options[:nginx_version] = val
+            options[:compile_args] << "--nginx-version"
+            options[:compile_args] << val
           end
           opts.on("--nginx-tarball PATH", String, "Use the given Nginx tarball instead of#{nl}" +
             "downloading it. You MUST also specify the#{nl}" +

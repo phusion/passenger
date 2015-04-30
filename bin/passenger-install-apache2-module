@@ -782,8 +782,11 @@ private
     new_screen
     puts "<banner>Validating installation...</banner>"
     puts
-    validator = PhusionPassenger::Config::ValidateInstallCommand.new([
-      "--auto", "--validate-apache2", "--invoked-from-installer"])
+    args = ["--validate-apache2", "--invoked-from-installer"]
+    args << "--auto" if @auto
+    # The validator will get the path to apxs2 from the APXS2 environment
+    # variable that this installer sets.
+    validator = PhusionPassenger::Config::ValidateInstallCommand.new(args)
     exit_code = validator.run_and_get_exit_code
     STDOUT.write(@colors.default_terminal_color)
 

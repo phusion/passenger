@@ -42,14 +42,14 @@ module PhusionPassenger
         parse_options
         prepare
         begin
-          if !@options[:auto]
+          if !@options[:auto] && !@options[:invoked_from_installer]
             ask_what_to_validate
-            if @options[:validate_apache2]
-              initialize_apache_envvars
+          end
+          if @options[:validate_apache2]
+            initialize_apache_envvars
+            if !@options[:auto] && !@options[:invoked_from_installer]
               check_whether_there_are_multiple_apache_installs
             end
-          elsif @options[:validate_apache2]
-            initialize_apache_envvars
           end
 
           if @options[:validate_passenger]
@@ -57,7 +57,9 @@ module PhusionPassenger
             check_no_other_installs_in_path
           end
           if @options[:validate_apache2]
-            check_apache2_load_module_config
+            if check_apache2_installed
+              check_apache2_load_module_config
+            end
           end
 
           if @options[:summary]
@@ -147,6 +149,7 @@ module PhusionPassenger
         PhusionPassenger.require_passenger_lib 'platform_info/ruby'
         PhusionPassenger.require_passenger_lib 'platform_info/apache'
         PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
+        PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
         require 'stringio'
         require 'pathname'
 
@@ -239,9 +242,16 @@ module PhusionPassenger
         # These may not be in PATH if the user did not run this command through sudo.
         paths << "/usr/bin"
         paths << "/usr/sbin"
-        paths.delete(gem_bindir)
-        paths.delete(homebrew_bindir)
-        paths.delete(PhusionPassenger.bin_dir)
+        # Some of the paths may be symlinks, so we take the realpaths when
+        # possible and remove duplicates. This is especially important on
+        # Red Hat 7, where /bin is a symlink to /usr/bin.
+        paths.map! do |path|
+          try_realpath(path)
+        end
+
+        paths.delete(try_realpath(gem_bindir))
+        paths.delete(try_realpath(homebrew_bindir))
+        paths.delete(try_realpath(PhusionPassenger.bin_dir))
         paths.uniq!
 
         other_installs = []
@@ -272,6 +282,11 @@ module PhusionPassenger
       end
 
       def check_whether_there_are_multiple_apache_installs
+        if PlatformInfo.httpd.nil? || PlatformInfo.apxs2.nil?
+          # check_apache2_installed will handle this.
+          return
+        end
+
         log '<banner>Checking whether there are multiple Apache installations...</banner>'
 
         output = StringIO.new
@@ -355,6 +370,55 @@ module PhusionPassenger
           display_separator
         ensure
           detector.finish
+        end
+      end
+
+      def check_apache2_installed
+        checking "whether Apache is installed"
+
+        if PlatformInfo.httpd
+          if PlatformInfo.apxs2
+            check_ok
+            true
+          else
+            check_error
+
+            PlatformInfo::Depcheck.load("depcheck_specs/apache2")
+            dep = PlatformInfo::Depcheck.find("apache2-dev")
+            install_instructions = dep.install_instructions.split("\n").join("\n              ")
+
+            if !@options[:invoked_from_installer]
+              next_step = "When done, please re-run this program."
+            end
+
+            suggest %Q{
+              Unable to validate your Apache installation: more software required
+
+              This program requires the <b>apxs2</b> tool in order to be able to validate your
+              Apache installation. This tool is currently not installed. You can solve this
+              as follows:
+
+              #{install_instructions}
+
+              #{next_step}
+            }
+
+            false
+          end
+        else
+          check_error
+
+          PlatformInfo::Depcheck.load("depcheck_specs/apache2")
+          dep = PlatformInfo::Depcheck.find("apache2")
+          install_instructions = dep.install_instructions.split("\n").join("\n            ")
+
+          suggest %Q{
+            Apache is not installed. You can solve this as follows:
+
+            #{install_instructions}
+          }
+
+          false
         end
       end
 
@@ -455,8 +519,8 @@ module PhusionPassenger
             module_path = "#{PlatformInfo.httpd_default_root}/#{module_path}"
           end
           # Resolve symlinks.
-          module_path = Pathname.new(module_path).realpath
-          expected_module_path = Pathname.new(PhusionPassenger.apache2_module_path).realpath
+          module_path = try_realpath(module_path)
+          expected_module_path = try_realpath(PhusionPassenger.apache2_module_path)
 
           if module_path == expected_module_path
             check_ok
@@ -652,6 +716,18 @@ module PhusionPassenger
 
       def ruby_command
         PlatformInfo.ruby_command
+      end
+
+      def try_realpath(path)
+        if path
+          begin
+            Pathname.new(path).realpath.to_s
+          rescue Errno::ENOENT, Errno::EACCES
+            path
+          end
+        else
+          nil
+        end
       end
     end
 

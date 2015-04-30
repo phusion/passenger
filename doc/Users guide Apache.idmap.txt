@@ -136,29 +136,31 @@
 
 7.4.3. PassengerNodejs <filename>	=>	passengernodejs-filename--2mjb1j
 
-7.4.4. PassengerAppEnv <string>	=>	passengerappenv-string--s3ojlc
+7.4.4. PassengerMeteorAppSettings <filename>	=>	passengermeteorappsettings-filename--inl1bd
 
-7.4.5. RailsEnv <string>	=>	railsenv-string--1b0xxvu
+7.4.5. PassengerAppEnv <string>	=>	passengerappenv-string--s3ojlc
 
-7.4.6. RackEnv <string>	=>	rackenv-string--vve9py
+7.4.6. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
-7.4.7. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
+7.4.7. RackEnv <string>	=>	rackenv-string--vve9py
 
-7.4.8. PassengerAppGroupName <name>	=>	passenger-app-group-name-name--6unn5c
+7.4.8. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-7.4.9. PassengerAppType <name>	=>	passengerapptype-name--62jzqf
+7.4.9. PassengerAppGroupName <name>	=>	passenger-app-group-name-name--6unn5c
 
-7.4.10. PassengerStartupFile <filename>	=>	passengerstartupfile-filename--14vhvn9
+7.4.10. PassengerAppType <name>	=>	passengerapptype-name--62jzqf
 
-7.4.11. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+7.4.11. PassengerStartupFile <filename>	=>	passengerstartupfile-filename--14vhvn9
 
-7.4.12. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
+7.4.12. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-7.4.13. PassengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
+7.4.13. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
 
-7.4.14. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+7.4.14. PassengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
 
-7.4.15. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
+7.4.15. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+
+7.4.16. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
 7.5. Security options	=>	security-options-1pb75ho
 

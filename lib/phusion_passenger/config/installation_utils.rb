@@ -1,7 +1,7 @@
 # encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -233,7 +233,13 @@ module PhusionPassenger
 
       def render_template(name, options = {})
         options.merge!(:colors => @colors || PhusionPassenger::Utils::AnsiColors.new)
-        puts ConsoleTextTemplate.new({ :file => "config/#{name}" }, options).result
+        # This check here is necessary for NginxEngineCompiler. NginxEngineCompiler
+        # derives from AbstractInstaller but also includes InstallationUtils. We want
+        # the AbstractInstaller methods to work when they call render_template.
+        if !File.exist?("#{PhusionPassenger.resources_dir}/templates/#{name}.txt.erb")
+          name = "config/#{name}"
+        end
+        puts ConsoleTextTemplate.new({ :file => name }, options).result
       end
     end
 
