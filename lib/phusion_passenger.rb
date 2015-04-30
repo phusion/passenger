@@ -149,7 +149,7 @@ module PhusionPassenger
   # method was used. Can be 'deb', 'rpm', 'homebrew', 'test'
   # or 'unknown'.
   def self.packaging_method
-    return @custom_packaging_method
+    return @packaging_method
   end
 
   # Whether the current Phusion Passenger installation is installed
