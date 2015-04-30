@@ -1,3 +1,9 @@
+Release 5.0.8
+-------------
+
+ * Fixes a Passenger crash (SIGSEGV) that occurs occasionally when out-of-band garbage collection is enabled. Closes GH-1469.
+
+
 Release 5.0.7
 -------------
 
