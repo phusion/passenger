@@ -213,7 +213,7 @@ module PhusionPassenger
 
       def result_for(apxs2)
         # All the results use realpaths, so the input must too.
-        apxs2 = Pathname.new(apxs2).realpath
+        apxs2 = try_realpath(apxs2)
         return @results.find { |r| r.apxs2 == apxs2 }
       end
 
@@ -234,7 +234,7 @@ module PhusionPassenger
       def remove_symlink_duplications(filenames)
         old_size = filenames.size
         filenames = filenames.map do |filename|
-          Pathname.new(filename).realpath
+          try_realpath(filename)
         end
         filenames.uniq!
         if old_size != filenames.size
@@ -249,6 +249,18 @@ module PhusionPassenger
           @results << result
         else
           @failures += 1
+        end
+      end
+
+      def try_realpath(path)
+        if path
+          begin
+            Pathname.new(path).realpath.to_s
+          rescue Errno::ENOENT, Errno::EACCES
+            path
+          end
+        else
+          nil
         end
       end
     end
