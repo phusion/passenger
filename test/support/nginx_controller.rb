@@ -11,14 +11,13 @@ class NginxController
     root_dir     = File.expand_path(root_dir)
     @passenger_root = PhusionPassenger.install_spec
     @nginx_root  = root_dir
-    @nginx_client_body_temp_path = "#{root_dir}/tmp"
     @port        = PORT
     @config_file = "#{root_dir}/nginx.conf"
     @pid_file    = "#{root_dir}/nginx.pid"
     @log_file    = "#{root_dir}/error.log"
     @controller  = PhusionPassenger::DaemonController.new(
       :identifier    => 'Nginx',
-      :start_command => "#{CONFIG['nginx']} -c '#{@config_file}'",
+      :start_command => "#{CONFIG['nginx']} -p #{root_dir} -c '#{@config_file}'",
       :ping_command  => [:tcp, '127.0.0.1', PORT],
       :pid_file      => @pid_file,
       :log_file      => @log_file,
