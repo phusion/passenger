@@ -69,6 +69,29 @@ findProcessWithLowestBusyness(const ProcessList &processes) const {
 		return NULL;
 	}
 
+	int lowestBusyness = -1;
+	Process *leastBusyProcess = NULL;
+	ProcessList::const_iterator it;
+	ProcessList::const_iterator end = processes.end();
+	for (it = processes.begin(); it != end; it++) {
+		Process *process = (*it).get();
+		int busyness = process->busyness();
+		if (lowestBusyness == -1 || lowestBusyness > busyness) {
+			lowestBusyness = busyness;
+			leastBusyProcess = process;
+		}
+	}
+	return leastBusyProcess;
+}
+
+/**
+ * Cache-optimized version of findProcessWithLowestBusyness() for the common case.
+ */
+Process *findEnabledProcessWithLowestBusyness() const {
+	if (enabledProcesses.empty()) {
+		return NULL;
+	}
+
 	int leastBusyProcessIndex = -1;
 	int lowestBusyness = 0;
 	unsigned int i, size = enabledProcessBusynessLevels.size();

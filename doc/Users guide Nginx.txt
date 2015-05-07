@@ -1974,7 +1974,7 @@ This option may only occur once, in the 'http' configuration block. The default 
 
 ==== passenger_buffer_size ====
 ==== passenger_buffers ====
-==== passenger_busy_buffer_size ====
+==== passenger_busy_buffers_size ====
 These options have the same effect as ngx_http_proxy_module's similarly named options.
 They can be used to modify the maximum allowed HTTP header size.
 

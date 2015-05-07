@@ -246,6 +246,11 @@ module PhusionPassenger
             "application. Default: 1") do |value|
             options[:min_instances] = value
           end
+          opts.on("--pool-idle-time SECONDS", Integer,
+            "Maximum time that processes may be idle.#{nl}" +
+            "Default: #{DEFAULT_POOL_IDLE_TIME}") do |value|
+            options[:pool_idle_time] = value
+          end
           opts.on("--concurrency-model NAME", String,
             "The concurrency model to use, either#{nl}" +
             "'process' or 'thread' (Enterprise only).#{nl}" +
@@ -732,7 +737,7 @@ module PhusionPassenger
         trap("INT", "DEFAULT")
         trap("TERM", "DEFAULT")
       end
-  
+
       def trapped_intterm(signal)
         if @traps_captured == 1
           @traps_captured += 1
@@ -741,11 +746,11 @@ module PhusionPassenger
           exit!(1)
         end
       end
-    
+
       def trapsafe_shutdown_and_cleanup(error_occurred)
         # Ignore INT and TERM once, to allow clean shutdown in e.g. Foreman
         capture_traps_intterm
-        
+
         # Stop engine
         if @engine && (error_occurred || should_wait_until_engine_has_exited?)
           @console_mutex.synchronize do

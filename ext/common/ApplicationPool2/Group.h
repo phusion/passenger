@@ -275,7 +275,7 @@ public:
 	RouteResult route(const Options &options) const {
 		if (OXT_LIKELY(enabledCount > 0)) {
 			if (options.stickySessionId == 0) {
-				Process *process = findProcessWithLowestBusyness(enabledProcesses);
+				Process *process = findEnabledProcessWithLowestBusyness();
 				if (process->canBeRoutedTo()) {
 					return RouteResult(process);
 				} else {
@@ -684,8 +684,7 @@ public:
 			assert(m_spawning || restarting() || poolAtFullCapacity());
 
 			if (disablingCount > 0 && !restarting()) {
-				Process *process = findProcessWithLowestBusyness(
-					disablingProcesses);
+				Process *process = findProcessWithLowestBusyness(disablingProcesses);
 				assert(process != NULL);
 				if (!process->isTotallyBusy()) {
 					return newSession(process, newOptions.currentTime);

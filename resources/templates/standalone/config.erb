@@ -41,7 +41,7 @@ events {
 http {
     log_format debug '[$time_local] $msec  "$request" $status conn=$connection sent=$bytes_sent body_sent=$body_bytes_sent';
     include '<%= PhusionPassenger.resources_dir %>/mime.types';
-    
+
     <% if @options[:ruby] %>
         passenger_ruby <%= @options[:ruby] %>;
     <% else %>
@@ -53,7 +53,7 @@ http {
     <% if @options[:python] %>
         passenger_python <%= @options[:python] %>;
     <% end %>
-    
+
     passenger_root '<%= PhusionPassenger.install_spec %>';
     passenger_abort_on_startup_error on;
     passenger_ctl cleanup_pidfiles <%= serialize_strset("#{@working_dir}/temp_dir_toucher.pid") %>;
@@ -61,6 +61,7 @@ http {
     <%= nginx_option :passenger_log_level, :log_level %>
     <%= nginx_option :passenger_max_pool_size, :max_pool_size %>
     <%= nginx_option :passenger_min_instances, :min_instances %>
+    <%= nginx_option :passenger_pool_idle_time, :pool_idle_time %>
     <% if @options[:user] %>
         passenger_user <%= @options[:user] %>;
         passenger_default_user <%= @options[:user] %>;
