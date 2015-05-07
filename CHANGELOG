@@ -2,6 +2,7 @@ Release 5.0.8
 -------------
 
  * Fixes a Passenger crash (SIGSEGV) that occurs occasionally when out-of-band garbage collection is enabled. Closes GH-1469.
+ * Fixes cases when Passenger shuts down more processes than is allowed by the `min_instances` limit. Closes GH-1500.
  * [Standalone] Adds the `--pool-time-time` command line parameter.
 
 
