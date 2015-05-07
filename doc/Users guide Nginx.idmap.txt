@@ -242,7 +242,8 @@
 
 7.6.15. passenger_buffers	=>	passenger-busy-buffers
 
-7.6.16. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
+# fuzzy
+7.6.16. passenger_busy_buffers_size	=>	passenger-busy-buffer-size-124sj61
 
 7.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 

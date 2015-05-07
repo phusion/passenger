@@ -1,6 +1,8 @@
 Release 5.0.8
 -------------
 
+ * Adds Debian 8 and Ubuntu 15.04 packages. Closes GH-1494 and GH-1400.
+ * We no longer supply Ubuntu 10.04 packages because Ubuntu 10.04 is no longer supported by Canonical.
  * Fixes a Passenger crash (SIGSEGV) that occurs occasionally when out-of-band garbage collection is enabled. Closes GH-1469.
  * Fixes cases when Passenger shuts down more processes than is allowed by the `min_instances` limit. Closes GH-1500.
  * Fixes "Bad Gateway" errors that would occur when an application sets the X-Sendfile or X-Accel-Redirect header, together with a non-empty response body. Closes GH-1498.
