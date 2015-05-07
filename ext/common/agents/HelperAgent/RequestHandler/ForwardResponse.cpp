@@ -335,6 +335,12 @@ onAppResponseBegin(Client *client, Request *req) {
 			req->wantKeepAlive = false;
 		}
 	}
+	if (resp->headers.lookup(HTTP_X_SENDFILE) != NULL
+	 || resp->headers.lookup(HTTP_X_ACCEL_REDIRECT) != NULL)
+	{
+		// https://github.com/phusion/passenger/issues/1498
+		resp->wantKeepAlive = false;
+	}
 
 	prepareAppResponseCaching(client, req);
 
