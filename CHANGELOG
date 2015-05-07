@@ -2,6 +2,7 @@ Release 5.0.8
 -------------
 
  * Fixes a Passenger crash (SIGSEGV) that occurs occasionally when out-of-band garbage collection is enabled. Closes GH-1469.
+ * [Standalone] Adds the `--pool-time-time` command line parameter.
 
 
 Release 5.0.7

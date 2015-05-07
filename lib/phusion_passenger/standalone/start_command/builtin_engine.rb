@@ -134,6 +134,7 @@ module PhusionPassenger
           add_flag_param(command, :load_shell_envvars, "--load-shell-envvars")
           add_param(command, :max_pool_size, "--max-pool-size")
           add_param(command, :min_instances, "--min-instances")
+          add_param(command, :pool_idle_time, "--pool-idle-time")
           add_enterprise_param(command, :concurrency_model, "--concurrency-model")
           add_enterprise_param(command, :thread_count, "--app-thread-count")
           add_enterprise_param(command, :max_request_time, "--max-request-time")
