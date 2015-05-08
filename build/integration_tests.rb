@@ -91,8 +91,9 @@ task 'test:integration:native_packaging' do
   case PlatformInfo.os_name
   when "linux"
     if PlatformInfo.linux_distro_tags.include?(:debian)
+      rubylibdir = RbConfig::CONFIG["vendordir"]
       command = "env NATIVE_PACKAGING_METHOD=deb " +
-        "LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini " +
+        "LOCATIONS_INI=#{rubylibdir}/phusion_passenger/locations.ini " +
         command
     elsif PlatformInfo.linux_distro_tags.include?(:redhat)
       command = "env NATIVE_PACKAGING_METHOD=rpm " +
