@@ -520,6 +520,8 @@ task :fakeroot => [:apache2, :nginx, :doc] do
   psg_apache2_module_path       = ENV['APACHE2_MODULE_PATH'] || "#{fs_libdir}/apache2/modules/mod_passenger.so"
   psg_ruby_extension_source_dir = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/ruby_extension_source"
   psg_nginx_module_source_dir   = "#{fs_datadir}/#{GLOBAL_NAMESPACE_DIRNAME}/ngx_http_passenger_module"
+  psg_ruby       = ENV['RUBY'] || "#{fs_bindir}/ruby"
+  psg_free_ruby  = ENV['FREE_RUBY'] || "/usr/bin/env ruby"
 
   fakeroot = "pkg/fakeroot"
   fake_rubylibdir = "#{fakeroot}#{psg_rubylibdir}"
@@ -616,18 +618,24 @@ task :fakeroot => [:apache2, :nginx, :doc] do
   sh "mkdir -p #{fake_bindir}"
   Packaging::USER_EXECUTABLES.each do |exe|
     sh "cp bin/#{exe} #{fake_bindir}/"
-    if !Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
-      change_shebang("#{fake_bindir}/#{exe}", "#{fs_bindir}/ruby")
+    if Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
+      shebang = psg_free_ruby
+    else
+      shebang = psg_ruby
     end
+    change_shebang("#{fake_bindir}/#{exe}", shebang)
   end
 
   # Superuser binaries
   sh "mkdir -p #{fake_sbindir}"
   Packaging::SUPER_USER_EXECUTABLES.each do |exe|
     sh "cp bin/#{exe} #{fake_sbindir}/"
-    if !Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
-      change_shebang("#{fake_sbindir}/#{exe}", "#{fs_bindir}/ruby")
+    if Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
+      shebang = psg_free_ruby
+    else
+      shebang = psg_ruby
     end
+    change_shebang("#{fake_sbindir}/#{exe}", shebang)
   end
 
   # Apache 2 module
