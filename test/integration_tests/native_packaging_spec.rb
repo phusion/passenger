@@ -83,6 +83,9 @@ when "deb"
   APACHE_CONFIG_FILE = "/etc/apache2/apache2.conf"
   APACHE_ERROR_LOG = "/var/log/apache2/error.log"
 when "rpm"
+  File.read("/etc/redhat-release") =~ /release ([0-9]+)/
+  redhat_major_release = $1.to_i
+
   BINDIR = "/usr/bin"
   SBINDIR = "/usr/sbin"
   INCLUDEDIR = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/include"
@@ -94,7 +97,11 @@ when "rpm"
   APACHE2_MODULE_PATH = "/usr/lib64/httpd/modules/mod_passenger.so"
   SUPPORTS_COMPILING_APACHE_MODULE = false
 
-  APXS2 = "/usr/sbin/apxs"
+  if redhat_major_release >= 7
+    APXS2 = "/usr/bin/apxs"
+  else
+    APXS2 = "/usr/sbin/apxs"
+  end
   APACHE2 = "/usr/sbin/httpd"
   APACHE2CTL = "/usr/sbin/apachectl"
   APACHE_CONFIG_FILE = "/etc/httpd/conf/httpd.conf"

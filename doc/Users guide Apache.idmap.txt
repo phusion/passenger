@@ -324,7 +324,9 @@
 
 10.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-161hgge
 
-10.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-7uwrol
+10.1.4. Red Hat and CentOS caveats	=>	red-hat-and-centos-caveats-1335bpz
+
+10.1.5. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-7uwrol
 
 10.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1ubxnq0
 

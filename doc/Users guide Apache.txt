@@ -1002,6 +1002,8 @@ Whether to enable <<user_switching,user switching support>>.
 This option may only occur once, in the global server configuration.
 The default value is 'on'.
 
+WARNING: If you're on Red Hat or CentOS, be sure to read <<user_switching_rpm_caveats,the Red Hat and CentOS user switching caveats>>.
+
 [[PassengerUser]]
 ==== PassengerUser <username> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
@@ -2146,10 +2148,10 @@ This option is also useful if Apache is not allowed to write to the system's tem
 
 The instance directory is automatically removed when Apache shuts down.
 
-This option may be specified once, in the global server configuration. The default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
+This option may be specified once, in the global server configuration. The default value is as follows:
 
-:option: `--instance-registry-dir`
-include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+ * If you are on Red Hat and CentOS, and installed Passenger through the RPMs provided by Phusion, then the default value is `/var/run/passenger-instreg`.
+ * Otherwise, the default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
 
 .Note regarding command line tools
 Some Phusion Passenger command line administration tools, such as `passenger-status`, must know what Phusion Passenger's instance registry directory is in order to function properly. You can pass the directory through the `PASSENGER_INSTANCE_REGISTRY_DIR` or the `TMPDIR` environment variable.

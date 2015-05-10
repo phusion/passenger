@@ -208,39 +208,6 @@ if [[ "$TEST_STANDALONE" = 1 ]]; then
 	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:standalone
 fi
 
-if [[ "$TEST_RPM_PACKAGING" = 1 ]]; then
-	if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
-		pushd packaging/rpm
-		run mkdir -p "$CACHE_DIR/passenger_rpm"
-		run mkdir -p "$CACHE_DIR/passenger_rpm/cache"
-		run mkdir "$CACHE_DIR/passenger_rpm/output"
-		run ./build -S "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm" \
-			-P "$PASSENGER_ROOT_ON_DOCKER_HOST" \
-			-o "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output" \
-			-c "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/cache" \
-			-d el6 -a x86_64
-		popd >/dev/null
-	fi
-
-	echo "------------- Testing built RPMs -------------"
-	run cp "test/config.json.rpm-automation" "test/config.json"
-	run mkdir -p "$CACHE_DIR/passenger_rpm/output/el6-x86_64"
-	if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
-		run rm "$CACHE_DIR/passenger_rpm/output/el6-x86_64"/*.src.rpm
-	fi
-	run docker run --rm \
-		-v "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm:/system:ro" \
-		-v "$PASSENGER_ROOT_ON_DOCKER_HOST:/passenger" \
-		-v "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output/el6-x86_64:/packages:ro" \
-		-e "APP_UID=`id -u`" \
-		-e "APP_GID=`id -g`" \
-		phusion/passenger_rpm_automation \
-		/system/internal/my_init --skip-runit --skip-startup-files --quiet -- \
-		/system/internal/inituidgid \
-		/bin/bash -c "cd /passenger && exec ./dev/ci/run_rpm_tests.sh"
-	run cp "test/config.json.travis" "test/config.json"
-fi
-
 if [[ "$TEST_SOURCE_PACKAGING" = 1 ]]; then
 	apt_get_update
 	run sudo apt-get install -y --no-install-recommends source-highlight

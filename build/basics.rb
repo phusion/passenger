@@ -145,12 +145,14 @@ LIBEXT   = PlatformInfo.library_extension
 USE_DMALLOC = boolean_option('USE_DMALLOC')
 USE_EFENCE  = boolean_option('USE_EFENCE')
 USE_ASAN    = boolean_option('USE_ASAN')
+USE_SELINUX = boolean_option('USE_SELINUX')
 OPTIMIZE    = boolean_option('OPTIMIZE')
 LTO         = OPTIMIZE && boolean_option('LTO')
 
 # Agent-specific compiler flags.
 AGENT_CFLAGS  = ""
 AGENT_CFLAGS << " -O" if OPTIMIZE
+AGENT_CFLAGS << " -DUSE_SELINUX" if USE_SELINUX
 AGENT_CFLAGS << " -flto" if LTO
 AGENT_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 AGENT_CFLAGS.strip!
@@ -162,6 +164,7 @@ AGENT_LDFLAGS << " -flto" if LTO
 AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
 AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
 AGENT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
+AGENT_LDFLAGS << " -lselinux" if USE_SELINUX
 # Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
 AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.

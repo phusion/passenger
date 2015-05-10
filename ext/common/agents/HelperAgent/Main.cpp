@@ -31,6 +31,9 @@
 	#include <sched.h>
 	#include <pthread.h>
 #endif
+#ifdef USE_SELINUX
+	#include <selinux/selinux.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -268,6 +271,47 @@ makeFileWorldReadableAndWritable(const string &path) {
 	} while (ret == -1 && errno == EINTR);
 }
 
+#ifdef USE_SELINUX
+	// Set next socket context to *:system_r:passenger_instance_httpd_socket_t
+	static void
+	setSelinuxSocketContext() {
+		security_context_t currentCon;
+		string newCon;
+		int e;
+
+		if (getcon(&currentCon) == -1) {
+			e = errno;
+			P_DEBUG("Unable to obtain SELinux context: " <<
+				strerror(e) << " (errno=" << e << ")");
+			return;
+		}
+
+		P_DEBUG("Current SELinux process context: " << currentCon);
+
+		if (strstr(currentCon, ":unconfined_r:unconfined_t:") == NULL) {
+			goto cleanup;
+		}
+
+		newCon = replaceString(currentCon,
+			":unconfined_r:unconfined_t:",
+			":object_r:passenger_instance_httpd_socket_t:");
+		if (setsockcreatecon((security_context_t) newCon.c_str()) == -1) {
+			e = errno;
+			P_WARN("Cannot set SELinux socket context to " << newCon <<
+				": " << strerror(e) << " (errno=" << e << ")");
+			goto cleanup;
+		}
+
+		cleanup:
+		freecon(currentCon);
+	}
+
+	static void
+	resetSelinuxSocketContext() {
+		setsockcreatecon(NULL);
+	}
+#endif
+
 static void
 startListening() {
 	TRACE_POINT();
@@ -275,9 +319,18 @@ startListening() {
 	vector<string> addresses = agentsOptions->getStrSet("server_addresses");
 	vector<string> adminAddresses = agentsOptions->getStrSet("server_admin_addresses", false);
 
+	#ifdef USE_SELINUX
+		// Set SELinux context on the first socket that we create
+		// so that the web server can access it.
+		setSelinuxSocketContext();
+	#endif
+
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->serverFds[i] = createServer(addresses[i], 0, true,
 			__FILE__, __LINE__);
+		#ifdef USE_SELINUX
+			resetSelinuxSocketContext();
+		#endif
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->serverFds[i],
 			"Server address: " << addresses[i]);
 		if (getSocketAddressType(addresses[i]) == SAT_UNIX) {

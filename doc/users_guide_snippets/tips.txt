@@ -104,6 +104,22 @@ The most likely reason why your application is started as 'nobody' is probably b
 
 Whatever user your application runs as, it must have read access to the <<application_root,application root>>, and read/write access to the application's 'logs' directory.
 
+[[user_switching_rpm_caveats]]
+==== Red Hat and CentOS caveats
+
+NOTE: This information only applies if you installed Passenger through the RPM packages provided by Phusion. If you did not installed Passenger through the RPM packages provided by Phusion, then you can ignore this section.
+
+If you installed Passenger through Phusion's RPM packages, and you want to disable user switching, then you must also change <<PassengerInstanceRegistryDir,the location of the instance registry directory>>.
+
+This is because our RPMs configure the default instance registry directory to `/var/run/passenger-instreg`, which is only writable by root. If you disable user switching, then the Passenger processes will run as
+ifdef::apache[]
+  <<PassengerDefaultUser,PassengerDefaultUser>>,
+endif::[]
+ifdef::nginx[]
+  <<PassengerDefaultUser,passenger_default_user>>,
+endif::[]
+which (as long as it's not root) won't be able to write to that directory.
+
 [[finding_out_app_user]]
 ==== Finding out what user an application is running as
 
