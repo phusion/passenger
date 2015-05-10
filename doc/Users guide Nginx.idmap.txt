@@ -311,7 +311,9 @@
 
 10.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-mbw582
 
-10.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
+10.1.4. Red Hat and CentOS caveats	=>	red-hat-and-centos-caveats-ilqxyl
+
+10.1.5. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
 
 10.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
 

@@ -977,6 +977,8 @@ The default value is 'on'.
 
 NOTE: This option has no effect when you are using <<flying_passenger,Flying Passenger>>. You can disable user switching for Flying Passenger by starting the Flying Passenger daemon as a non-root user.
 
+WARNING: If you're on Red Hat or CentOS, be sure to read <<user_switching_rpm_caveats,the Red Hat and CentOS user switching caveats>>.
+
 [[PassengerUser]]
 ==== passenger_user <username> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
@@ -2074,7 +2076,10 @@ This option is also useful if the partition that the temporary directory lives o
 
 The instance directory is automatically removed when Nginx shuts down.
 
-This option may be specified once, in the `http` configuration block. The default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
+This option may be specified once, in the `http` configuration block. The default value is as follows:
+
+ * If you are on Red Hat and CentOS, and installed Passenger through the RPMs provided by Phusion, then the default value is `/var/run/passenger-instreg`.
+ * Otherwise, the default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
 
 :option: `--instance-registry-dir`
 include::users_guide_snippets/alternative_for_flying_passenger.txt[]
