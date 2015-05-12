@@ -1,0 +1,19 @@
+<banner>Installation through RPMs recommended</banner>
+
+It looks like you are on a Red Hat or CentOS operating system, with <b>SELinux</b>
+enabled. SELinux is a security mechanism for which special <%= SHORT_PROGRAM_NAME %>-specific
+configuration is required. We supply this configuration as part of
+our <%= SHORT_PROGRAM_NAME %> <b>RPMs</b>.
+
+However, <%= SHORT_PROGRAM_NAME %> is currently installed through <%= PhusionPassenger.packaging_method_description %> and does not
+include any SELinux configuration. Therefore, we recommend that you:
+
+ 1. Uninstall your current <%= SHORT_PROGRAM_NAME %> install.
+ 2. Reinstall <%= SHORT_PROGRAM_NAME %> through the RPMs that we provide:
+    <yellow><%= APACHE2_DOC_URL %>#installing_or_upgrading_on_red_hat</yellow>
+
+What would you like to do?
+
+<b>Press Ctrl-C to exit this installer so that you can install RPMs (recommended)</b>
+  -OR-
+<b>Press Enter to continue using this installer anyway</b>

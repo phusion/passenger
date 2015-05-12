@@ -152,6 +152,19 @@ module PhusionPassenger
     return @packaging_method
   end
 
+  def self.packaging_method_description
+    case packaging_method
+    when "deb"
+      "Debian packages"
+    when "rpm"
+      "RPM packages"
+    when "homebrew"
+      "Homebrew"
+    else
+      "gem or tarball"
+    end
+  end
+
   # Whether the current Phusion Passenger installation is installed
   # from a release package, e.g. an official gem or official tarball.
   # Retruns false if e.g. the gem was built by the user, or if this

@@ -45,6 +45,7 @@ require 'optparse'
 require 'stringio'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/linux'
 PhusionPassenger.require_passenger_lib 'platform_info/apache'
 PhusionPassenger.require_passenger_lib 'platform_info/apache_detector'
 PhusionPassenger.require_passenger_lib 'abstract_installer'
@@ -122,6 +123,7 @@ class Installer < PhusionPassenger::AbstractInstaller
 
     Dir.chdir(PhusionPassenger.build_system_dir)
     show_welcome_screen
+    check_selinux_and_suggest_rpm
     query_interested_languages
     check_gem_install_permission_problems || exit(1)
     check_directory_accessible_by_web_server
@@ -146,6 +148,27 @@ private
   def show_welcome_screen
     render_template 'apache2/welcome', :version => VERSION_STRING
     wait
+  end
+
+  def check_selinux_and_suggest_rpm
+    return if !PhusionPassenger.originally_packaged? ||
+      !(PlatformInfo.linux_distro_tags.include?(:rhel) ||
+          PlatformInfo.linux_distro_tags.include?(:centos))
+      !PlatformInfo.find_command('sestatus')
+
+    begin
+      sestatus = `sestatus`
+      getenforce = `getenforce`
+    rescue Errno::ENOTENT
+      return
+    end
+
+    status = sestatus.scan(/^SELinux status:.*/).first
+    if status =~ /enabled/ && getenforce =~ /Enforcing/
+      new_screen
+      render_template 'apache2/rpm_installation_recommended'
+      wait
+    end
   end
 
   def query_interested_languages
