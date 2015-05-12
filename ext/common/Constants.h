@@ -96,6 +96,8 @@
 
 	#define DEFAULT_UNION_STATION_GATEWAY_PORT 443
 
+	#define DEFAULT_USER "nobody"
+
 	#define DEFAULT_WEB_APP_USER "nobody"
 
 	#define ENTERPRISE_URL "https://www.phusionpassenger.com/enterprise"

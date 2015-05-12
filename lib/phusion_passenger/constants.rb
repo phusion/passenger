@@ -53,6 +53,7 @@ module PhusionPassenger
     DEFAULT_WEB_APP_USER = "nobody"
     DEFAULT_APP_ENV = "production"
     DEFAULT_SPAWN_METHOD = "smart"
+    DEFAULT_USER = "nobody"
     DEFAULT_CONCURRENCY_MODEL = "process"
     DEFAULT_STICKY_SESSIONS_COOKIE_NAME = "_passenger_route"
     DEFAULT_APP_THREAD_COUNT = 1
