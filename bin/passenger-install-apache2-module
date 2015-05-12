@@ -381,10 +381,14 @@ private
   end
 
   def config_snippet
-    return "<IfModule mod_passenger.c>\n" +
+    result = "<IfModule mod_passenger.c>\n" +
       "  PassengerRoot #{PhusionPassenger.install_spec}\n" +
-      "  PassengerDefaultRuby #{PlatformInfo.ruby_command}\n" +
-      "</IfModule>"
+      "  PassengerDefaultRuby #{PlatformInfo.ruby_command}\n"
+    if PhusionPassenger.packaging_method == "rpm"
+      result << "  PassengerInstanceRegistryDir /var/run/passenger-instreg\n"
+    end
+    result << "</IfModule>"
+    result
   end
 
   def apache2_config_snippets
