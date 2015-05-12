@@ -286,7 +286,7 @@
 
 8.6. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
 
-8.7. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
+8.7. Apache cannot access my app’s files because of SELinux errors	=>	apache-cannot-access-my-app-s-files-because-of-selinux-errors-6febhd
 
 8.8. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-u9fcp1
 
@@ -443,4 +443,9 @@
 15.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-478vyt
 
 15.4. Environment variables and sudo	=>	environment-variables-and-sudo-1odzcpz
+
+
+### These sections appear to have been removed. Please check.
+
+8.7. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
 

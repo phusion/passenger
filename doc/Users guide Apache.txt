@@ -2283,40 +2283,18 @@ See also link:http://groups.google.com/group/phusion-passenger/browse_thread/thr
    Please make sure that the Rails application's folder, as well as all of its parent folders,
    have the correct permissions and/or ownerships.
 
-=== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it
+[[apache_selinux_permissions]]
+=== Apache cannot access my app's files because of SELinux errors
 
-If you are sure that the 'PassengerRoot' configuration option is set correctly,
-then this problem is most likely caused by the fact that you're running Apache
-with SELinux. On Fedora, CentOS and RedHat Enterprise Linux, Apache is locked
-down by SELinux policies.
+On Red Hat Enterprise Linux and CentOS, Apache is locked down by a security mechanism called SELinux. This security mechanism works on top of normal Unix permissions. In order for Apache to be able to access your app's files, you must set the proper SELinux labels on your files.
 
-To solve this problem, you must set some permissions on the Phusion Passenger files
-and folders, so that Apache can access them.
+First, ensure that your app does not live in a home directory. It is not possible to allow Apache to read files from your home directory.
 
-- If you've installed Phusion Passenger via a gem, then run this command to determine
-  Phusion Passenger's root folder:
-+
-------------------------------------------------------------------
-passenger-config --root
-------------------------------------------------------------------
-+
-Next, run the following command:
-+
-------------------------------------------------------------------
-chcon -R -h -t httpd_sys_content_t /path-to-passenger-root
-------------------------------------------------------------------
-+
-where '/path-to-passenger-root' should be replaced with whatever
-`passenger-config --root` printed.
+Second, give your app's files the `httpd_sys_content_t` labels by running the following command:
 
-- If you've installed Phusion Passenger via the source tarball, then run the following
-  command:
-+
 ------------------------------------------------------------------
-chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
+sudo chcon -R -h -t httpd_sys_content_t /path-to-your-app
 ------------------------------------------------------------------
-
-Once the permissions are fixed, restart Apache.
 
 === The application thinks its not on SSL even though it is
 
