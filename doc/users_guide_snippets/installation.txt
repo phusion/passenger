@@ -264,83 +264,143 @@ http {
 endif::nginx[]
 
 
-=== Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux
+[[installing_or_upgrading_on_red_hat]]
+=== Installing or upgrading on Red Hat or CentOS
 
-WARNING: The RPMs are currently unmaintained. As such, the repository only contains Phusion Passenger 3.x (the latest version is 4.x), which did not support Node.js, Meteor, multiple Rubies, etc. For more recent versions of Phusion Passenger, you are suggested to install from gem or tarball instead.
+We provide an official Phusion Passenger YUM repository with packages for Red Hat Enterprise Linux and CentOS. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
 
-YUM repositories with RPMs are maintained by link:https://github.com/erikogan/passenger[Erik Ogan] and link:http://stealthymonkeys.com/[Stealthy Monkeys Consulting]. Only packages for the open source version of Phusion Passenger are provided. link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers should use the <<rubygems_generic_install,generic RubyGems installation method>> or <<tarball_generic_install,the generic tarball installation method>> instead.
+If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need. These packages also come with SELinux policy modules so that Passenger works nicely with SELinux.
 
-If you use YUM to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. The YUM packages contain all the binaries that you need. You also don't need to modify any Apache or Nginx configuration to get them to load Phusion Passenger, the packages provide configuration snippets for you as well.
+Packages are available for the x86 and x86_64 architectures. Our policy is to support all Red Hat and CentOS releases that still receive full updates by their vendors. The earliest Red Hat and CentOS version we support is version 5.
 
-[float]
-==== Step 1: Import the Stealthy Monkeys Consulting's GPG key
+[[install_add_yum_repo]]
+==== Adding our YUM repository
 
----------------------------------------------
-rpm --import http://passenger.stealthymonkeys.com/RPM-GPG-KEY-stealthymonkeys.asc
----------------------------------------------
+1. Install link:https://fedoraproject.org/wiki/EPEL[EPEL] and a few other prerequisites.
++
+--------------------------------------------------------------
+sudo yum install epel-release pygpgme curl
+--------------------------------------------------------------
 
-[float]
-==== Step 2: Install the release package
+2. Download the Passenger YUM repository definition.
++
+**Open source**::
++
+--------------------------------------------------------------
+sudo curl --fail -sSLo /etc/yum.repos.d/passenger.repo https://oss-binaries.phusionpassenger.com/yum/definitions/el-passenger.repo
+--------------------------------------------------------------
++
+**Enterprise**::
++
+--------------------------------------------------------------
+unset HISTFILE
+sudo curl --fail -sSLo -u download:YOUR_DOWNLOAD_TOKEN /etc/yum.repos.d/passenger.repo https://www.phusionpassenger.com/enterprise_yum/el-passenger-enterprise.repo
+--------------------------------------------------------------
++
+The `unset HISTFILE` command ensures that your download token isn't saved to the Bash history file.
++
+You can find the correct value for 'YOUR_DOWNLOAD_TOKEN' in the link:https://www.phusionpassenger.com/orders[Customer Area].
 
-Install the passenger-release package from the link:http://passenger.stealthymonkeys.com/[main repository].
+3. Secure `passenger.repo`:
++
+--------------------------------------------------------------
+sudo chown root: /etc/yum.repos.d/passenger.repo
+sudo chmod 600 /etc/yum.repos.d/passenger.repo
+--------------------------------------------------------------
 
-Fedora Core 17:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/17/passenger-release.noarch.rpm
----------------------------------------------
+==== Installing packages
 
-Fedora Core 16:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/16/passenger-release.noarch.rpm
----------------------------------------------
+.Notes about SELinux on Red Hat 6 and CentOS 6
+[NOTE]
+====================================================
+If you are on Red Hat 6 or CentOS 6, and you are also using SELinux in enforcing mode, then Passenger requires kernel >= 2.6.39.
 
-Fedora Core 15:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/15/passenger-release.noarch.rpm
----------------------------------------------
+If you want to install Passenger on Red Hat 6 or CentOS 6, without upgrading your kernel, then you must *disable* SELinux completely. Edit `/etc/selinux/config`, set `SELINUX=disabled` and reboot. Note that merely setting SELinux to permissive mode is not enough.
 
-Fedora Core 14:
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/fedora/14/passenger-release.noarch.rpm
----------------------------------------------
+This issue does not apply to Red Hat >= 7 and CentOS >= 7, because these OS versions supply recent enough kernel versions.
+====================================================
 
-RHEL 6 / CentOS 6 / ScientificLinux 6: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
----------------------------------------------
-yum install http://passenger.stealthymonkeys.com/rhel/6/passenger-release.noarch.rpm
----------------------------------------------
+You can install the Passenger packages as follows.
 
-RHEL 5 / CentOS 5 / ScientificLinux 5: (Note: these packages depend on link:http://fedoraproject.org/wiki/EPEL[EPEL].)
----------------------------------------------
-rpm -Uvh http://passenger.stealthymonkeys.com/rhel/5/passenger-release.noarch.rpm
----------------------------------------------
+**Open source**::
++
+1. <<install_add_yum_repo,Add our YUM repository.>>
+ifdef::nginx[]
+2. Install the packages:
++
+--------------------------------------------------------------
+sudo yum install nginx passenger
+--------------------------------------------------------------
++
+3. Edit `/etc/nginx/conf.d/passenger.conf` and uncomment `passenger_root`, `passenger_ruby` and `passenger_instance_registry_dir`.
++
+Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it!
++
+4. Restart Nginx:
++
+--------------------------------------------------------------
+sudo service nginx restart
+--------------------------------------------------------------
+endif::[]
+ifdef::apache[]
+2. Install the package:
++
+--------------------------------------------------------------
+sudo yum install mod_passenger
+--------------------------------------------------------------
++
+3. Stop/start Apache (reload or restart is not enough when upgrading):
++
+--------------------------------------------------------------
+sudo service httpd stop; sudo service httpd start
+--------------------------------------------------------------
+endif::[]
+ifdef::standalone[]
+2. Install the package:
++
+--------------------------------------------------------------
+sudo yum install passenger
+--------------------------------------------------------------
+endif::[]
 
-[float]
-==== Step 3: Install the right Phusion Passenger package
+**Enterprise**::
++
+1. Download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
+2. <<install_add_yum_repo,Add our YUM repository.>>
+3. Install the packages:
++
+ifdef::nginx[]
+--------------------------------------------------------------
+sudo yum install nginx passenger-enterprise
+--------------------------------------------------------------
+4. Edit `/etc/nginx/conf.d/passenger.conf` and uncomment `passenger_root`, `passenger_ruby` and `passenger_instance_registry_dir`.
++
+Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it!
++
+5. Restart Nginx:
++
+--------------------------------------------------------------
+sudo service nginx restart
+--------------------------------------------------------------
+endif::[]
+ifdef::apache[]
+--------------------------------------------------------------
+sudo apt-get install mod_passenger-enterprise
+--------------------------------------------------------------
++
+4. Stop/start Apache (reload or restart is not enough when upgrading):
++
+--------------------------------------------------------------
+sudo service httpd stop; sudo service httpd start
+--------------------------------------------------------------
+endif::[]
+ifdef::standalone[]
+--------------------------------------------------------------
+sudo yum install passenger-enterprise
+--------------------------------------------------------------
+endif::[]
 
-From there you can use link:http://prefetch.net/articles/yum.html[YUM] to install packages. For example, try one of these:
-
-Phusion Passenger for Apache:
-
----------------------------------------------
-yum install mod_passenger
----------------------------------------------
-
-Phusion Passenger for Nginx:
-
----------------------------------------------
-yum install nginx-passenger
----------------------------------------------
-
-Phusion Passenger Standalone:
-
----------------------------------------------
-yum install passenger-standalone
----------------------------------------------
-
-[float]
-==== Building your own packages
-
-There are instructions for building your own packages and Yum repositories in the link:https://github.com/phusion/passenger/tree/master/rpm#readme[rpm directory ReadMe] within the link:https://github.com/phusion/passenger[GitHub repository].
+You can now proceed with a chapter for Deploying your (specific type of) application. 
 
 
 === Installing or upgrading on Heroku

@@ -30,7 +30,11 @@
 
 2.3.2. Installing packages	=>	installing-packages-k1zxbg
 
-2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-16cek45
+2.4. Installing or upgrading on Red Hat or CentOS	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-16cek45
+
+2.4.1. Adding our YUM repository	=>	adding-our-yum-repository-7c3y3z
+
+2.4.2. Installing packages	=>	installing-packages-1i5z60y
 
 2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-rspclc
 
