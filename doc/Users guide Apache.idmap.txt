@@ -444,8 +444,3 @@
 
 15.4. Environment variables and sudo	=>	environment-variables-and-sudo-1odzcpz
 
-
-### These sections appear to have been removed. Please check.
-
-8.7. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
-
