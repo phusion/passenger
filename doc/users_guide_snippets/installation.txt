@@ -385,7 +385,7 @@ sudo service nginx restart
 endif::[]
 ifdef::apache[]
 --------------------------------------------------------------
-sudo apt-get install mod_passenger-enterprise
+sudo yum install mod_passenger_enterprise
 --------------------------------------------------------------
 +
 4. Stop/start Apache (reload or restart is not enough when upgrading):
