@@ -30,7 +30,11 @@
 
 2.3.2. Installing packages	=>	installing-packages-1jxn722
 
-2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
+2.4. Installing or upgrading on Red Hat or CentOS	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
+
+2.4.1. Adding our YUM repository	=>	adding-our-yum-repository-1fb671i
+
+2.4.2. Installing packages	=>	installing-packages-12a3uty
 
 2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-o0o2mk
 
@@ -282,7 +286,7 @@
 
 8.6. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
 
-8.7. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
+8.7. Apache cannot access my app’s files because of SELinux errors	=>	apache-cannot-access-my-app-s-files-because-of-selinux-errors-6febhd
 
 8.8. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-u9fcp1
 

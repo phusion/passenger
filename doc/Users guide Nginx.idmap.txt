@@ -32,7 +32,11 @@
 
 2.3.3. Inserting passenger_root into nginx.conf	=>	inserting-passenger-root-into-nginx-conf--1pmj19o
 
-2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
+2.4. Installing or upgrading on Red Hat or CentOS	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
+
+2.4.1. Adding our YUM repository	=>	adding-our-yum-repository-2i9z9o
+
+2.4.2. Installing packages	=>	installing-packages-1actlet
 
 2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-jh07kr
 
@@ -242,7 +246,6 @@
 
 7.6.15. passenger_buffers	=>	passenger-busy-buffers
 
-# fuzzy
 7.6.16. passenger_busy_buffers_size	=>	passenger-busy-buffer-size-124sj61
 
 7.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni

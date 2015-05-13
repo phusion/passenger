@@ -13,9 +13,6 @@ fi
 
 JENKINS_CACHE_DIR="$WORKSPACE/.jenkins_cache"
 mkdir -p "$JENKINS_CACHE_DIR"
-if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
-	rm -rf "$JENKINS_CACHE_DIR/passenger_rpm/output"
-fi
 
 # run_travis.sh defaults COMPILE_CONCURRENCY to 2, but
 # Jenkins jobs are run on a single machine so we'll want
@@ -66,11 +63,8 @@ run_exec docker run --rm \
 	-e "TEST_APACHE2=$TEST_APACHE2" \
 	-e "TEST_STANDALONE=$TEST_STANDALONE" \
 	-e "TEST_SOURCE_PACKAGING=$TEST_SOURCE_PACKAGING" \
-	-e "TEST_DEBIAN_PACKAGING=$TEST_DEBIAN_PACKAGING" \
-	-e "TEST_RPM_PACKAGING=$TEST_RPM_PACKAGING" \
-	-e "TEST_RPM_BUILDING=$TEST_RPM_BUILDING" \
 	phusion/apachai-hopachai-sandbox \
-	python /passenger/packaging/rpm/internal/my_init --skip-runit --skip-startup-files --quiet -- \
+	python /passenger/packaging/rpm/internal/scripts/my_init --skip-runit --skip-startup-files --quiet -- \
 	/passenger/dev/ci/inituidgid \
 	/sbin/setuser appa \
 	/bin/bash -lc "cd /passenger && exec ./dev/ci/run_travis.sh"

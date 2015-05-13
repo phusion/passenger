@@ -120,6 +120,28 @@ ifdef::nginx[]
 endif::[]
 which (as long as it's not root) won't be able to write to that directory.
 
+Note that any alternative instance registry directory must have the proper SELinux context, allowing the web server to read and write to it. We recommend that you create a directory `/var/lib/passenger-instreg` and give it the label `var_run_t`:
+
+------------------------------------------
+sudo mkdir /var/lib/passenger-instreg
+sudo chcon -t var_run_t /var/lib/passenger-instreg
+------------------------------------------
+
+ifdef::apache[]
+Then, in your Apache config file:
+
+------------------------------------------
+PassengerInstanceRegistryDir /var/lib/passenger-instreg
+------------------------------------------
+endif::[]
+ifdef::nginx[]
+Then, in your Nginx config file:
+
+------------------------------------------
+passenger_instance_registry_dir /var/lib/passenger-instreg;
+------------------------------------------
+endif::[]
+
 [[finding_out_app_user]]
 ==== Finding out what user an application is running as
 

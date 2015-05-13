@@ -348,6 +348,12 @@ public:
 			.setInt ("log_level",       getLogLevel());
 		extraParams.addTo(params);
 
+		if (!params.getBool("user_switching", false, true)
+		 && !params.has("user"))
+		{
+			params.set("user", params.get("default_user", false, DEFAULT_USER));
+		}
+
 		fds = createUnixSocketPair(__FILE__, __LINE__);
 		pid = syscalls::fork();
 		if (pid == 0) {

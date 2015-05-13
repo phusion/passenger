@@ -117,6 +117,20 @@ private:
 	private:
 		FileSystemException e;
 
+		#ifdef __linux__
+			bool selinuxIsEnforcing() const {
+				FILE *f = fopen("/sys/fs/selinux/enforce", "r");
+				if (f != NULL) {
+					char buf;
+					size_t ret = fread(&buf, 1, 1, f);
+					fclose(f);
+					return ret == 1 && buf == '1';
+				} else {
+					return false;
+				}
+			}
+		#endif
+
 	public:
 		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
 
@@ -124,16 +138,28 @@ private:
 			r->status = 500;
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
-			ap_rputs("An error occurred while trying to access '", r);
+			ap_rputs("<p>An error occurred while trying to access '", r);
 			ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
 			ap_rputs("': ", r);
 			ap_rputs(ap_escape_html(r->pool, e.what()), r);
+			ap_rputs("</p>\n", r);
+
 			if (e.code() == EACCES || e.code() == EPERM) {
 				ap_rputs("<p>", r);
 				ap_rputs("Apache doesn't have read permissions to that file. ", r);
 				ap_rputs("Please fix the relevant file permissions.", r);
-				ap_rputs("</p>", r);
+				ap_rputs("</p>\n", r);
+				#ifdef __linux__
+					if (selinuxIsEnforcing()) {
+						ap_rputs("<p>", r);
+						ap_rputs("The permission problems may also be caused by SELinux restrictions. ", r);
+						ap_rputs("Please read " APACHE2_DOC_URL "#apache_selinux_permissions to learn ", r);
+						ap_rputs("how to fix SELinux permission issues. ", r);
+						ap_rputs("</p>", r);
+					}
+				#endif
 			}
+
 			P_ERROR("A filesystem exception occured.\n" <<
 				"  Message: " << e.what() << "\n" <<
 				"  Backtrace:\n" << e.backtrace());
