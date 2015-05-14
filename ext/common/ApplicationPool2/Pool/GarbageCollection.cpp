@@ -22,21 +22,32 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <ApplicationPool2/Pool.h>
 
-// This file is included inside the Pool class.
+/*************************************************************************
+ *
+ * Garbage collection functions for ApplicationPool2::Pool
+ *
+ *************************************************************************/
 
-private:
+namespace Passenger {
+namespace ApplicationPool2 {
 
-struct GarbageCollectorState {
-	unsigned long long now;
-	unsigned long long nextGcRunTime;
-	boost::container::vector<Callback> actions;
-};
-
-boost::condition_variable garbageCollectionCond;
+using namespace std;
+using namespace boost;
 
 
-static void garbageCollect(PoolPtr self) {
+void
+Pool::initializeGarbageCollection() {
+	interruptableThreads.create_thread(
+		boost::bind(garbageCollect, shared_from_this()),
+		"Pool garbage collector",
+		POOL_HELPER_THREAD_STACK_SIZE
+	);
+}
+
+void
+Pool::garbageCollect(PoolPtr self) {
 	TRACE_POINT();
 	{
 		ScopedLock lock(self->syncher);
@@ -59,13 +70,15 @@ static void garbageCollect(PoolPtr self) {
 	}
 }
 
-void maybeUpdateNextGcRuntime(GarbageCollectorState &state, unsigned long candidate) {
+void
+Pool::maybeUpdateNextGcRuntime(GarbageCollectorState &state, unsigned long candidate) {
 	if (state.nextGcRunTime == 0 || candidate < state.nextGcRunTime) {
 		state.nextGcRunTime = candidate;
 	}
 }
 
-void checkWhetherProcessCanBeGarbageCollected(GarbageCollectorState &state,
+void
+Pool::checkWhetherProcessCanBeGarbageCollected(GarbageCollectorState &state,
 	const GroupPtr &group, const ProcessPtr &process, ProcessList &output)
 {
 	assert(maxIdleTime > 0);
@@ -82,7 +95,8 @@ void checkWhetherProcessCanBeGarbageCollected(GarbageCollectorState &state,
 	}
 }
 
-void garbageCollectProcessesInGroup(GarbageCollectorState &state,
+void
+Pool::garbageCollectProcessesInGroup(GarbageCollectorState &state,
 	const GroupPtr &group)
 {
 	ProcessList &processes = group->enabledProcesses;
@@ -108,7 +122,8 @@ void garbageCollectProcessesInGroup(GarbageCollectorState &state,
 	}
 }
 
-void maybeCleanPreloader(GarbageCollectorState &state, const GroupPtr &group) {
+void
+Pool::maybeCleanPreloader(GarbageCollectorState &state, const GroupPtr &group) {
 	if (group->spawner->cleanable() && group->options.getMaxPreloaderIdleTime() != 0) {
 		unsigned long long spawnerGcTime =
 			group->spawner->lastUsed() +
@@ -123,7 +138,7 @@ void maybeCleanPreloader(GarbageCollectorState &state, const GroupPtr &group) {
 }
 
 unsigned long long
-realGarbageCollect() {
+Pool::realGarbageCollect() {
 	TRACE_POINT();
 	ScopedLock lock(syncher);
 	GroupMap::ConstIterator g_it(groups);
@@ -175,17 +190,11 @@ realGarbageCollect() {
 	return sleepTime;
 }
 
-
-protected:
-
-void initializeGarbageCollection() {
-	interruptableThreads.create_thread(
-		boost::bind(garbageCollect, shared_from_this()),
-		"Pool garbage collector",
-		POOL_HELPER_THREAD_STACK_SIZE
-	);
-}
-
-void wakeupGarbageCollector() {
+void
+Pool::wakeupGarbageCollector() {
 	garbageCollectionCond.notify_all();
 }
+
+
+} // namespace ApplicationPool2
+} // namespace Passenger

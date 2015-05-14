@@ -22,30 +22,53 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <ApplicationPool2/Pool.h>
 
-// This file is included inside the Pool class.
+/*************************************************************************
+ *
+ * State inspection functions for ApplicationPool2::Pool
+ *
+ *************************************************************************/
 
-public:
+namespace Passenger {
+namespace ApplicationPool2 {
 
-struct InspectOptions {
-	bool colorize;
-	bool verbose;
-
-	InspectOptions()
-		: colorize(false),
-		  verbose(false)
-		{ }
-
-	InspectOptions(const VariantMap &options)
-		: colorize(options.getBool("colorize", false, false)),
-		  verbose(options.getBool("verbose", false, false))
-		{ }
-};
+using namespace std;
+using namespace boost;
 
 
-private:
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
 
-void inspectProcessList(const InspectOptions &options, stringstream &result,
+
+unsigned int
+Pool::capacityUsedUnlocked() const {
+	if (groups.size() == 1) {
+		GroupPtr *group;
+		groups.lookupRandom(NULL, &group);
+		return (*group)->capacityUsed();
+	} else {
+		GroupMap::ConstIterator g_it(groups);
+		int result = 0;
+		while (*g_it != NULL) {
+			const GroupPtr &group = g_it.getValue();
+			result += group->capacityUsed();
+			g_it.next();
+		}
+		return result;
+	}
+}
+
+bool
+Pool::atFullCapacityUnlocked() const {
+	return capacityUsedUnlocked() >= max;
+}
+
+void
+Pool::inspectProcessList(const InspectOptions &options, stringstream &result,
 	const Group *group, const ProcessList &processes) const
 {
 	ProcessList::const_iterator p_it;
@@ -59,15 +82,15 @@ void inspectProcessList(const InspectOptions &options, stringstream &result,
 		snprintf(membuf, sizeof(membuf), "%ldM",
 			(unsigned long) (process->metrics.realMemory() / 1024));
 		snprintf(buf, sizeof(buf),
-				"  * PID: %-5lu   Sessions: %-2u      Processed: %-5u   Uptime: %s\n"
-				"    CPU: %-5s   Memory  : %-5s   Last used: %s ago",
-				(unsigned long) process->getPid(),
-				process->sessions,
-				process->processed,
-				process->uptime().c_str(),
-				cpubuf,
-				membuf,
-				distanceOfTimeInWords(process->lastUsed / 1000000).c_str());
+			"  * PID: %-5lu   Sessions: %-2u      Processed: %-5u   Uptime: %s\n"
+			"    CPU: %-5s   Memory  : %-5s   Last used: %s ago",
+			(unsigned long) process->getPid(),
+			process->sessions,
+			process->processed,
+			process->uptime().c_str(),
+			cpubuf,
+			membuf,
+			distanceOfTimeInWords(process->lastUsed / 1000000).c_str());
 		result << buf << endl;
 
 		if (process->enabled == Process::DISABLING) {
@@ -86,18 +109,16 @@ void inspectProcessList(const InspectOptions &options, stringstream &result,
 	}
 }
 
-static const char *maybeColorize(const InspectOptions &options, const char *color) {
-	if (options.colorize) {
-		return color;
-	} else {
-		return "";
-	}
-}
+
+/****************************
+ *
+ * Public methods
+ *
+ ****************************/
 
 
-public:
-
-string inspect(const InspectOptions &options = InspectOptions(), bool lock = true) const {
+string
+Pool::inspect(const InspectOptions &options, bool lock) const {
 	DynamicScopedLock l(syncher, lock);
 	stringstream result;
 	const char *headerColor = maybeColorize(options, ANSI_COLOR_YELLOW ANSI_COLOR_BLUE_BG ANSI_COLOR_BOLD);
@@ -148,7 +169,8 @@ string inspect(const InspectOptions &options = InspectOptions(), bool lock = tru
 	return result.str();
 }
 
-string toXml(bool includeSecrets = true, bool lock = true) const {
+string
+Pool::toXml(bool includeSecrets, bool lock) const {
 	DynamicScopedLock l(syncher, lock);
 	stringstream result;
 	GroupMap::ConstIterator g_it(groups);
@@ -202,3 +224,44 @@ string toXml(bool includeSecrets = true, bool lock = true) const {
 	result << "</info>";
 	return result.str();
 }
+
+
+unsigned int
+Pool::capacityUsed() const {
+	LockGuard l(syncher);
+	return capacityUsedUnlocked();
+}
+
+bool
+Pool::atFullCapacity() const {
+	LockGuard l(syncher);
+	return atFullCapacityUnlocked();
+}
+
+/**
+ * Returns the total number of processes in the pool, including all disabling and
+ * disabled processes, but excluding processes that are shutting down and excluding
+ * processes that are being spawned.
+ */
+unsigned int
+Pool::getProcessCount(bool lock) const {
+	DynamicScopedLock l(syncher, lock);
+	unsigned int result = 0;
+	GroupMap::ConstIterator g_it(groups);
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
+		result += group->getProcessCount();
+		g_it.next();
+	}
+	return result;
+}
+
+unsigned int
+Pool::getGroupCount() const {
+	LockGuard l(syncher);
+	return groups.size();
+}
+
+
+} // namespace ApplicationPool2
+} // namespace Passenger

@@ -37,6 +37,14 @@
 #include <ApplicationPool2/Pool.h>
 #include <ApplicationPool2/Group.h>
 #include <ApplicationPool2/ErrorRenderer.h>
+#include <ApplicationPool2/Pool/InitializationAndShutdown.cpp>
+#include <ApplicationPool2/Pool/AnalyticsCollection.cpp>
+#include <ApplicationPool2/Pool/GarbageCollection.cpp>
+#include <ApplicationPool2/Pool/GeneralUtils.cpp>
+#include <ApplicationPool2/Pool/GroupUtils.cpp>
+#include <ApplicationPool2/Pool/ProcessUtils.cpp>
+#include <ApplicationPool2/Pool/StateInspection.cpp>
+#include <ApplicationPool2/Pool/Miscellaneous.cpp>
 #include <Exceptions.h>
 #include <Hooks.h>
 #include <MessageReadersWriters.h>
@@ -302,17 +310,6 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 void
 recreateString(psg_pool_t *pool, StaticString &str) {
 	str = psg_pstrdup(pool, str);
-}
-
-
-const GroupPtr
-Pool::getGroup(const char *name) {
-	GroupPtr *group;
-	if (groups.lookup(name, &group)) {
-		return *group;
-	} else {
-		return GroupPtr();
-	}
 }
 
 
