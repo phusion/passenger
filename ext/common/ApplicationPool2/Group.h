@@ -389,7 +389,7 @@ public:
 	RouteResult route(const Options &options) const {
 		if (OXT_LIKELY(enabledCount > 0)) {
 			if (options.stickySessionId == 0) {
-				Process *process = findProcessWithLowestBusyness(enabledProcesses);
+				Process *process = findEnabledProcessWithLowestBusyness();
 				if (process->canBeRoutedTo()) {
 					return RouteResult(process);
 				} else {
@@ -493,6 +493,29 @@ public:
 
 	Process *findProcessWithLowestBusyness(const ProcessList &processes) const {
 		if (processes.empty()) {
+			return NULL;
+		}
+
+		int lowestBusyness = -1;
+		Process *leastBusyProcess = NULL;
+		ProcessList::const_iterator it;
+		ProcessList::const_iterator end = processes.end();
+		for (it = processes.begin(); it != end; it++) {
+			Process *process = (*it).get();
+			int busyness = process->busyness();
+			if (lowestBusyness == -1 || lowestBusyness > busyness) {
+				lowestBusyness = busyness;
+				leastBusyProcess = process;
+			}
+		}
+		return leastBusyProcess;
+	}
+
+	/**
+	 * Cache-optimized version of findProcessWithLowestBusyness() for the common case.
+	 */
+	Process *findEnabledProcessWithLowestBusyness() const {
+		if (enabledProcesses.empty()) {
 			return NULL;
 		}
 
@@ -1006,8 +1029,7 @@ public:
 			assert(m_spawning || restarting() || poolAtFullCapacity());
 
 			if (disablingCount > 0 && !restarting()) {
-				Process *process = findProcessWithLowestBusyness(
-					disablingProcesses);
+				Process *process = findProcessWithLowestBusyness(disablingProcesses);
 				assert(process != NULL);
 				if (!process->isTotallyBusy()) {
 					return newSession(process, newOptions.currentTime);

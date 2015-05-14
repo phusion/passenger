@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2014 Phusion
+#  Copyright (c) 2013-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -73,16 +73,19 @@ when "deb"
   APACHE2_MODULE_PATH = "/usr/lib/apache2/modules/mod_passenger.so"
   SUPPORTS_COMPILING_APACHE_MODULE = false
 
-  if `lsb_release -r -s`.strip <= '12.04'
-    APXS2 = "/usr/bin/apxs2"
-  else
+  if File.exist?("/usr/bin/apxs")
     APXS2 = "/usr/bin/apxs"
+  else
+    APXS2 = "/usr/bin/apxs2"
   end
   APACHE2 = "/usr/sbin/apache2"
   APACHE2CTL = "/usr/sbin/apache2ctl"
   APACHE_CONFIG_FILE = "/etc/apache2/apache2.conf"
   APACHE_ERROR_LOG = "/var/log/apache2/error.log"
 when "rpm"
+  File.read("/etc/redhat-release") =~ /release ([0-9]+)/
+  redhat_major_release = $1.to_i
+
   BINDIR = "/usr/bin"
   SBINDIR = "/usr/sbin"
   INCLUDEDIR = "/usr/share/#{GLOBAL_NAMESPACE_DIRNAME}/include"
@@ -94,7 +97,11 @@ when "rpm"
   APACHE2_MODULE_PATH = "/usr/lib64/httpd/modules/mod_passenger.so"
   SUPPORTS_COMPILING_APACHE_MODULE = false
 
-  APXS2 = "/usr/sbin/apxs"
+  if redhat_major_release >= 7
+    APXS2 = "/usr/bin/apxs"
+  else
+    APXS2 = "/usr/sbin/apxs"
+  end
   APACHE2 = "/usr/sbin/httpd"
   APACHE2CTL = "/usr/sbin/apachectl"
   APACHE_CONFIG_FILE = "/etc/httpd/conf/httpd.conf"
@@ -282,7 +289,7 @@ describe "A natively packaged Phusion Passenger" do
     end
 
     it "validates the install as working" do
-      system("passenger-config validate-install >/dev/null 2>/dev/null")
+      system("passenger-config validate-install --auto >/dev/null 2>/dev/null")
       [0, Config::ValidateInstallCommand::WARN_EXIT_CODE].should include($?.exitstatus)
     end
   end

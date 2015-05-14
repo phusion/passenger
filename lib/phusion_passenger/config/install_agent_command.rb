@@ -84,6 +84,10 @@ module PhusionPassenger
             options[:download_args] << "     "
             options[:download_args] << "--no-download-progress"
           end
+          opts.on("--auto", "Run in non-interactive mode. Default when#{nl}" +
+            "stdin or stdout is not a TTY") do
+            options[:compile_args] << "--auto"
+          end
           opts.on("-f", "--force", "Skip sanity checks") do
             options[:force] = true
             options[:download_args] << "--force"

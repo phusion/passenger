@@ -415,6 +415,10 @@ Any options that you pass to the `passenger` command will affect all deployed we
 
 include::users_guide_snippets/troubleshooting/default.txt[]
 
+== Under the hood
+
+include::users_guide_snippets/under_the_hood/relationship_with_ruby.txt[]
+
 [[about_environment_variables]]
 == Appendix: About environment variables
 

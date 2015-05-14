@@ -1,4 +1,5 @@
 #include "TestSupport.h"
+#include <time.h>
 #include <ServerKit/HttpRequest.h>
 #include <MemoryKit/palloc.h>
 #include <agents/HelperAgent/RequestHandler/Request.h>
@@ -18,6 +19,17 @@ namespace tut {
 		StaticString defaultVaryTurbocacheByCookie;
 
 		ResponseCacheTest() {
+			req.pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+			reset();
+		}
+
+		~ResponseCacheTest() {
+			psg_destroy_pool(req.pool);
+		}
+
+		void reset() {
+			req.headers.clear();
+			req.secureHeaders.clear();
 			req.httpMajor = 1;
 			req.httpMinor = 0;
 			req.httpState = Request::COMPLETE;
@@ -26,7 +38,6 @@ namespace tut {
 			req.wantKeepAlive = false;
 			req.responseBegun = false;
 			req.client    = NULL;
-			req.pool      = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 			req.hooks.impl     = NULL;
 			req.hooks.userData = NULL;
 			psg_lstr_init(&req.path);
@@ -50,6 +61,8 @@ namespace tut {
 			req.cacheControl = NULL;
 			req.varyCookie = NULL;
 
+			req.appResponse.headers.clear();
+			req.appResponse.secureHeaders.clear();
 			req.appResponse.httpMajor  = 1;
 			req.appResponse.httpMinor  = 1;
 			req.appResponse.httpState  = AppResponse::COMPLETE;
@@ -66,10 +79,10 @@ namespace tut {
 			req.appResponse.headerCacheBuffers = NULL;
 			req.appResponse.nHeaderCacheBuffers = 0;
 			psg_lstr_init(&req.appResponse.bodyCacheBuffer);
-		}
 
-		~ResponseCacheTest() {
-			psg_destroy_pool(req.pool);
+			insertAppResponseHeader(createHeader(
+				"date", createTodayString(req.pool)),
+				req.pool);
 		}
 
 		LString *createHostString() {
@@ -77,6 +90,15 @@ namespace tut {
 			psg_lstr_init(str);
 			psg_lstr_append(str, req.pool, "foo.com");
 			return str;
+		}
+
+		StaticString createTodayString(psg_pool_t *pool) {
+			time_t the_time = time(NULL);
+			struct tm the_tm;
+			gmtime_r(&the_time, &the_tm);
+			char *buf = (char *) psg_pnalloc(pool, 64);
+			size_t size = strftime(buf, 64, "%a, %d %b %Y %H:%M:%S GMT", &the_tm);
+			return StaticString(buf, size);
 		}
 
 		Header *createHeader(const HashedStaticString &key, const StaticString &val) {
@@ -89,20 +111,33 @@ namespace tut {
 			return header;
 		}
 
+		void insertReqHeader(Header *header, psg_pool_t *pool) {
+			req.headers.insert(&header, pool);
+		}
+
+		void insertAppResponseHeader(Header *header, psg_pool_t *pool) {
+			req.appResponse.headers.insert(&header, pool);
+		}
+
 		void initCacheableResponse() {
-			req.appResponse.headers.insert(createHeader(
+			insertAppResponseHeader(createHeader(
 				"cache-control", "public,max-age=99999"),
 				req.pool);
 		}
 
 		void initUncacheableResponse() {
-			req.appResponse.headers.insert(createHeader(
+			insertAppResponseHeader(createHeader(
 				"cache-control", "private"),
 				req.pool);
 		}
+
+		void initResponseBody(const string &body) {
+			req.appResponse.bodyType = AppResponse::RBT_CONTENT_LENGTH;
+			req.appResponse.aux.bodyInfo.contentLength = body.size();
+		}
 	};
 
-	DEFINE_TEST_GROUP(ResponseCacheTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ResponseCacheTest, 100);
 
 
 	/***** Preparation *****/
@@ -147,6 +182,45 @@ namespace tut {
 	}
 
 
+	/***** Storing and fetching *****/
+
+	TEST_METHOD(10) {
+		set_test_name("Storing and fetching works");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0u);
+
+
+		reset();
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(12)", entry2.valid());
+		ensure_equals("(13)", entry2.index, 0u);
+		ensure_equals<int>("(14)", entry2.body->httpHeaderSize, responseHeadersStr.size());
+		ensure_equals<int>("(15)", entry2.body->httpBodySize, responseBodyStr.size());
+	}
+
+	TEST_METHOD(11) {
+		set_test_name("Fetching fails if there is no entry with the given cache");
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(3)", !entry2.valid());
+	}
+
+
 	/***** Checking whether request should be fetched from cache *****/
 
 	TEST_METHOD(15) {
@@ -178,7 +252,7 @@ namespace tut {
 
 	TEST_METHOD(19) {
 		set_test_name("It fails if the request has a Cache-Control header");
-		req.headers.insert(createHeader(
+		insertReqHeader(createHeader(
 			"cache-control", "xyz"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -187,7 +261,7 @@ namespace tut {
 
 	TEST_METHOD(20) {
 		set_test_name("It fails if the request has a Pragma header");
-		req.headers.insert(createHeader(
+		insertReqHeader(createHeader(
 			"pragma", "xyz"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -195,7 +269,7 @@ namespace tut {
 	}
 
 
-	/***** Checking whether request should be stored to cache *****/
+	/***** Checking whether response should be stored to cache *****/
 
 	TEST_METHOD(30) {
 		set_test_name("It fails on HEAD requests");
@@ -216,7 +290,7 @@ namespace tut {
 	TEST_METHOD(32) {
 		set_test_name("It fails if the request's Cache-Control header contains no-store");
 		initCacheableResponse();
-		req.headers.insert(createHeader(
+		insertReqHeader(createHeader(
 			"cache-control", "no-store"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -224,14 +298,25 @@ namespace tut {
 	}
 
 	TEST_METHOD(33) {
+		set_test_name("It fails if the request's Cache-Control header contains no-cache");
+		initCacheableResponse();
+		insertReqHeader(createHeader(
+			"cache-control", "no-cache"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", !responseCache.requestAllowsStoring(&req));
+	}
+
+	TEST_METHOD(34) {
 		set_test_name("It fails if the request is not default cacheable");
+		initCacheableResponse();
 		req.appResponse.statusCode = 205;
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(34) {
+	TEST_METHOD(35) {
 		set_test_name("It fails if the request is default cacheable, but the response has "
 			"no Cache-Control and no Expires header that allow caching");
 		ensure_equals(req.appResponse.statusCode, 200);
@@ -240,9 +325,9 @@ namespace tut {
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(35) {
+	TEST_METHOD(36) {
 		set_test_name("It succeeds if the response contains a Cache-Control header with public directive");
-		req.appResponse.headers.insert(createHeader(
+		insertAppResponseHeader(createHeader(
 			"cache-control", "public"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -250,9 +335,9 @@ namespace tut {
 		ensure("(3)", responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(36) {
+	TEST_METHOD(37) {
 		set_test_name("It succeeds if the response contains a Cache-Control header with max-age directive");
-		req.appResponse.headers.insert(createHeader(
+		insertAppResponseHeader(createHeader(
 			"cache-control", "max-age=999"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -260,9 +345,9 @@ namespace tut {
 		ensure("(3)", responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(37) {
+	TEST_METHOD(38) {
 		set_test_name("It succeeds if the response contains an Expires header");
-		req.appResponse.headers.insert(createHeader(
+		insertAppResponseHeader(createHeader(
 			"expires", "Tue, 01 Jan 2030 00:00:00 GMT"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -270,9 +355,10 @@ namespace tut {
 		ensure("(3)", responseCache.prepareRequestForStoring(&req));
 	}
 
-	TEST_METHOD(38) {
+	TEST_METHOD(39) {
 		set_test_name("It fails if the response's Cache-Control header contains no-store");
-		req.appResponse.headers.insert(createHeader(
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
 			"cache-control", "no-store"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -282,7 +368,8 @@ namespace tut {
 
 	TEST_METHOD(45) {
 		set_test_name("It fails if the response's Cache-Control header contains private");
-		req.appResponse.headers.insert(createHeader(
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
 			"cache-control", "private"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
@@ -291,9 +378,10 @@ namespace tut {
 	}
 
 	TEST_METHOD(46) {
-		set_test_name("It fails if the request has a Authorization header");
-		req.headers.insert(createHeader(
-			"authorization", "foo"),
+		set_test_name("It fails if the response's Cache-Control header contains no-cache");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"cache-control", "no-cache"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
@@ -301,9 +389,10 @@ namespace tut {
 	}
 
 	TEST_METHOD(47) {
-		set_test_name("It fails if the response has a Vary header");
-		req.appResponse.headers.insert(createHeader(
-			"vary", "foo"),
+		set_test_name("It fails if the request has an Authorization header");
+		initCacheableResponse();
+		insertReqHeader(createHeader(
+			"authorization", "foo"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
@@ -311,12 +400,158 @@ namespace tut {
 	}
 
 	TEST_METHOD(48) {
+		set_test_name("It fails if the response has a Vary header");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"vary", "foo"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+	TEST_METHOD(49) {
 		set_test_name("It fails if the response has a WWW-Authenticate header");
-		req.appResponse.headers.insert(createHeader(
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
 			"www-authenticate", "foo"),
 			req.pool);
 		ensure("(1)", responseCache.prepareRequest(this, &req));
 		ensure("(2)", responseCache.requestAllowsStoring(&req));
 		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+	TEST_METHOD(50) {
+		set_test_name("It fails if the response has an X-Sendfile header");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"x-sendfile", "foo"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+	TEST_METHOD(51) {
+		set_test_name("It fails if the response has an X-Accel-Redirect header");
+		initCacheableResponse();
+		insertAppResponseHeader(createHeader(
+			"x-accel-redirect", "foo"),
+			req.pool);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", !responseCache.prepareRequestForStoring(&req));
+	}
+
+
+	/***** Invalidation *****/
+
+	TEST_METHOD(60) {
+		set_test_name("Direct invalidation");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0u);
+
+
+		reset();
+		req.method = HTTP_POST;
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", !responseCache.requestAllowsStoring(&req));
+		ensure("(12)", responseCache.requestAllowsInvalidating(&req));
+		responseCache.invalidate(&req);
+
+
+		reset();
+		ensure("(20)", responseCache.prepareRequest(this, &req));
+		ensure("(21)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(22)", !entry2.valid());
+	}
+
+	TEST_METHOD(61) {
+		set_test_name("Invalidation via Location response header");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0);
+
+
+		reset();
+		req.method = HTTP_POST;
+		psg_lstr_init(&req.path);
+		psg_lstr_append(&req.path, req.pool, "/foo");
+		insertAppResponseHeader(createHeader(
+			"location", "/"),
+			req.pool);
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", !responseCache.requestAllowsStoring(&req));
+		ensure("(12)", responseCache.requestAllowsInvalidating(&req));
+		responseCache.invalidate(&req);
+
+
+		reset();
+		ensure("(20)", responseCache.prepareRequest(this, &req));
+		ensure("(21)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(22)", !entry2.valid());
+	}
+
+	TEST_METHOD(62) {
+		set_test_name("Invalidation via Content-Location response header");
+		string responseHeadersStr =
+			"content-length: 5\r\n"
+			"cache-control: public,max-age=99999\r\n";
+		string responseBodyStr = "hello";
+		initCacheableResponse();
+		initResponseBody(responseBodyStr);
+		ensure("(1)", responseCache.prepareRequest(this, &req));
+		ensure("(2)", responseCache.requestAllowsStoring(&req));
+		ensure("(3)", responseCache.prepareRequestForStoring(&req));
+
+		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
+			responseHeadersStr.size(), responseBodyStr.size()));
+		ensure("(5)", entry.valid());
+		ensure_equals("(6)", entry.index, 0);
+
+
+		reset();
+		req.method = HTTP_POST;
+		psg_lstr_init(&req.path);
+		psg_lstr_append(&req.path, req.pool, "/foo");
+		insertAppResponseHeader(createHeader(
+			"content-location", "/"),
+			req.pool);
+		ensure("(10)", responseCache.prepareRequest(this, &req));
+		ensure("(11)", !responseCache.requestAllowsStoring(&req));
+		ensure("(12)", responseCache.requestAllowsInvalidating(&req));
+		responseCache.invalidate(&req);
+
+
+		reset();
+		ensure("(20)", responseCache.prepareRequest(this, &req));
+		ensure("(21)", responseCache.requestAllowsFetching(&req));
+		ResponseCacheType::Entry entry2(responseCache.fetch(&req, time(NULL)));
+		ensure("(22)", !entry2.valid());
 	}
 }

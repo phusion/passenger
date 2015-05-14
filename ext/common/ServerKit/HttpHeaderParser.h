@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -43,6 +43,10 @@
 namespace Passenger {
 namespace ServerKit {
 
+
+extern const HashedStaticString HTTP_CONTENT_LENGTH;
+extern const HashedStaticString HTTP_X_SENDFILE;
+extern const HashedStaticString HTTP_X_ACCEL_REDIRECT;
 
 struct HttpParseRequest {};
 struct HttpParseResponse {};
@@ -106,9 +110,9 @@ private:
 
 	void insertCurrentHeader() {
 		if (!state->secureMode) {
-			message->headers.insert(state->currentHeader, pool);
+			message->headers.insert(&state->currentHeader, pool);
 		} else {
-			message->secureHeaders.insert(state->currentHeader, pool);
+			message->secureHeaders.insert(&state->currentHeader, pool);
 		}
 	}
 
@@ -366,6 +370,14 @@ private:
 				message->httpState = Message::ONEHUNDRED_CONTINUE;
 			}
 			message->bodyType = Message::RBT_NO_BODY;
+		} else if (message->headers.lookup(HTTP_X_SENDFILE) != NULL
+		 || message->headers.lookup(HTTP_X_ACCEL_REDIRECT) != NULL)
+		{
+			// Ignore Content-Length when X-Sendfile or X-Accel-Redirect is set.
+			// See https://github.com/phusion/passenger/issues/1376
+			message->httpState = Message::COMPLETE;
+			message->bodyType = Message::RBT_NO_BODY;
+			message->headers.erase(HTTP_CONTENT_LENGTH);
 		} else if (state->parser.flags & F_CHUNKED) {
 			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
 				message->httpState = Message::PARSING_CHUNKED_BODY;

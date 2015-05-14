@@ -117,6 +117,20 @@ private:
 	private:
 		FileSystemException e;
 
+		#ifdef __linux__
+			bool selinuxIsEnforcing() const {
+				FILE *f = fopen("/sys/fs/selinux/enforce", "r");
+				if (f != NULL) {
+					char buf;
+					size_t ret = fread(&buf, 1, 1, f);
+					fclose(f);
+					return ret == 1 && buf == '1';
+				} else {
+					return false;
+				}
+			}
+		#endif
+
 	public:
 		ReportFileSystemError(const FileSystemException &ex): e(ex) { }
 
@@ -124,16 +138,28 @@ private:
 			r->status = 500;
 			ap_set_content_type(r, "text/html; charset=UTF-8");
 			ap_rputs("<h1>Passenger error #2</h1>\n", r);
-			ap_rputs("An error occurred while trying to access '", r);
+			ap_rputs("<p>An error occurred while trying to access '", r);
 			ap_rputs(ap_escape_html(r->pool, e.filename().c_str()), r);
 			ap_rputs("': ", r);
 			ap_rputs(ap_escape_html(r->pool, e.what()), r);
+			ap_rputs("</p>\n", r);
+
 			if (e.code() == EACCES || e.code() == EPERM) {
 				ap_rputs("<p>", r);
 				ap_rputs("Apache doesn't have read permissions to that file. ", r);
 				ap_rputs("Please fix the relevant file permissions.", r);
-				ap_rputs("</p>", r);
+				ap_rputs("</p>\n", r);
+				#ifdef __linux__
+					if (selinuxIsEnforcing()) {
+						ap_rputs("<p>", r);
+						ap_rputs("The permission problems may also be caused by SELinux restrictions. ", r);
+						ap_rputs("Please read " APACHE2_DOC_URL "#apache_selinux_permissions to learn ", r);
+						ap_rputs("how to fix SELinux permission issues. ", r);
+						ap_rputs("</p>", r);
+					}
+				#endif
 			}
+
 			P_ERROR("A filesystem exception occured.\n" <<
 				"  Message: " << e.what() << "\n" <<
 				"  Backtrace:\n" << e.backtrace());
@@ -944,47 +970,43 @@ private:
 
 		// Add environment variables.
 
-		if (config->envvarsCache == NULL) {
-			const apr_array_header_t *env_arr;
-			env_arr = apr_table_elts(r->subprocess_env);
+		const apr_array_header_t *env_arr;
+		env_arr = apr_table_elts(r->subprocess_env);
 
-			if (env_arr->nelts > 0) {
-				apr_table_entry_t *env;
-				string envvarsData;
-				size_t len;
+		if (env_arr->nelts > 0) {
+			apr_table_entry_t *env;
+			string envvarsData;
+			char *envvarsBase64Data;
+			size_t envvarsBase64Len;
 
-				env = (apr_table_entry_t*) env_arr->elts;
+			env = (apr_table_entry_t*) env_arr->elts;
 
-				for (i = 0; i < env_arr->nelts; ++i) {
-					envvarsData.append(env[i].key);
-					envvarsData.append("\0", 1);
-					if (env[i].val != NULL) {
-						envvarsData.append(env[i].val);
-					}
-					envvarsData.append("\0", 1);
+			for (i = 0; i < env_arr->nelts; ++i) {
+				envvarsData.append(env[i].key);
+				envvarsData.append("\0", 1);
+				if (env[i].val != NULL) {
+					envvarsData.append(env[i].val);
 				}
-
-				config->envvarsCache = (char *) malloc(modp_b64_encode_len(
-					envvarsData.size()));
-				if (config->envvarsCache == NULL) {
-					throw RuntimeException("Unable to allocate memory for base64 "
-						"encoding of environment variables");
-				}
-				len = modp_b64_encode(config->envvarsCache,
-					envvarsData.data(), envvarsData.size());
-				if (len == (size_t) -1) {
-					free(config->envvarsCache);
-					config->envvarsCache = NULL;
-					throw RuntimeException("Unable to base64 encode environment variables");
-				}
-				config->envvarsCacheSize = len;
+				envvarsData.append("\0", 1);
 			}
-		}
 
-		if (config->envvarsCache != NULL) {
+			envvarsBase64Data = (char *) malloc(modp_b64_encode_len(
+				envvarsData.size()));
+			if (envvarsBase64Data == NULL) {
+				throw RuntimeException("Unable to allocate memory for base64 "
+					"encoding of environment variables");
+			}
+			envvarsBase64Len = modp_b64_encode(envvarsBase64Data,
+				envvarsData.data(), envvarsData.size());
+			if (envvarsBase64Len == (size_t) -1) {
+				free(envvarsBase64Data);
+				throw RuntimeException("Unable to base64 encode environment variables");
+			}
+
 			result.append("!~PASSENGER_ENV_VARS: ", sizeof("!~PASSENGER_ENV_VARS: ") - 1);
-			result.append(config->envvarsCache, config->envvarsCacheSize);
+			result.append(envvarsBase64Data, envvarsBase64Len);
 			result.append("\r\n", 2);
+			free(envvarsBase64Data);
 		}
 
 		// Add flags.

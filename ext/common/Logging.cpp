@@ -130,10 +130,10 @@ _prepareLogEntry(FastStringStream<> &sstream, const char *file, unsigned int lin
 	gettimeofday(&tv, NULL);
 	localtime_r(&tv.tv_sec, &the_tm);
 	datetime_size = snprintf(datetime_buf, sizeof(datetime_buf),
-		"%d-%02d-%02d %02d:%02d:%02d.%04u",
+		"%d-%02d-%02d %02d:%02d:%02d.%04llu",
 		the_tm.tm_year + 1900, the_tm.tm_mon + 1, the_tm.tm_mday,
 		the_tm.tm_hour, the_tm.tm_min, the_tm.tm_sec,
-		tv.tv_usec / 100);
+		(unsigned long long) tv.tv_usec / 100);
 	sstream <<
 		"[ " << StaticString(datetime_buf, datetime_size) <<
 		" " << std::dec << getpid() << "/" <<

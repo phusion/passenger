@@ -85,8 +85,9 @@ module PhusionPassenger
       attr_reader :results
 
       def initialize(output)
-        @output  = output
-        @results = []
+        @output   = output
+        @results  = []
+        @failures = 0
         PlatformInfo.verbose = true
         PlatformInfo.log_implementation = lambda do |message|
           if message =~ /: found$/
@@ -169,16 +170,49 @@ module PhusionPassenger
       end
 
       def report
+        if @failures > 0 && Process.uid != 0
+          user = `whoami`.strip
+          sudo_s_e = PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E")
+          ruby = PhusionPassenger::PlatformInfo.ruby_command
+          log ""
+          log "----------------------------"
+          log ""
+          log "<red>Permission problems</red>"
+          log ""
+          log "Sorry, this program doesn't have enough permissions to autodetect all your"
+          log "Apache installations, because it's running as the <b>#{`whoami`.strip}</b> user."
+          log "Please re-run this program with root privileges:"
+          log ""
+          log "  <b>export ORIG_PATH=\"$PATH\"</b>"
+          log "  <b>#{sudo_s_e}</b>"
+          log "  <b>export PATH=\"$ORIG_PATH\"</b>"
+          log "  <b>#{ruby} #{PhusionPassenger.bin_dir}/passenger-config --detect-apache2</b>"
+          return
+        end
+
         log "<banner>Final autodetection results</banner>"
         @results.each do |result|
           result.report
         end
+
         if @results.empty?
+          PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
+          PlatformInfo::Depcheck.load("depcheck_specs/apache2")
+          apache2 = PlatformInfo::Depcheck.find("apache2")
+          apache2_install_instructions = apache2.install_instructions.split("\n").join("\n   ")
+          # apxs2 is part of the development headers.
+          apache2_dev = PlatformInfo::Depcheck.find("apache2-dev")
+          apache2_dev_install_instructions = apache2_dev.install_instructions.split("\n").join("\n   ")
+
           log "<red>Sorry, this program cannot find an Apache installation.</red>"
           log ""
-          log "To install Apache, please run the following. It will tell you how to install Apache."
+          log "Please install Apache and its development headers."
           log ""
-          log "   <b>#{PhusionPassenger.bin_dir}/passenger-install-apache2-module</b>"
+          log " <yellow>* To install Apache:</yellow>"
+          log "   #{apache2_install_instructions}"
+          log ""
+          log " <yellow>* To install Apache development headers:</yellow>"
+          log "   #{apache2_dev_install_instructions}"
           log ""
           log "If you are sure that you have Apache installed, please read the documentation:"
           log "<b>#{APACHE2_DOC_URL}#forcing_location_of_command_line_tools_and_dependencies</b>"
@@ -191,7 +225,7 @@ module PhusionPassenger
 
       def result_for(apxs2)
         # All the results use realpaths, so the input must too.
-        apxs2 = Pathname.new(apxs2).realpath
+        apxs2 = try_realpath(apxs2)
         return @results.find { |r| r.apxs2 == apxs2 }
       end
 
@@ -212,7 +246,7 @@ module PhusionPassenger
       def remove_symlink_duplications(filenames)
         old_size = filenames.size
         filenames = filenames.map do |filename|
-          Pathname.new(filename).realpath
+          try_realpath(filename)
         end
         filenames.uniq!
         if old_size != filenames.size
@@ -223,7 +257,23 @@ module PhusionPassenger
 
       def add_result
         result = Result.new(self)
-        @results << result if yield(result)
+        if yield(result)
+          @results << result
+        else
+          @failures += 1
+        end
+      end
+
+      def try_realpath(path)
+        if path
+          begin
+            Pathname.new(path).realpath.to_s
+          rescue Errno::ENOENT, Errno::EACCES
+            path
+          end
+        else
+          nil
+        end
       end
     end
 

@@ -151,6 +151,10 @@ mbuf_block_put(struct mbuf_block *mbuf_block)
 	mbuf_block->pool->nfree_mbuf_blockq++;
 	mbuf_block->pool->nactive_mbuf_blockq--;
 	STAILQ_INSERT_HEAD(&mbuf_block->pool->free_mbuf_blockq, mbuf_block, next);
+
+	#ifdef MBUF_ENABLE_DEBUGGING
+		TAILQ_REMOVE(&mbuf_block->pool->active_mbuf_blockq, mbuf_block, active_q);
+	#endif
 }
 
 /*

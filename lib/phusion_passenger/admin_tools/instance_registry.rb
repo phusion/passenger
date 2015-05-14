@@ -29,38 +29,42 @@ module PhusionPassenger
   module AdminTools
 
     class InstanceRegistry
-      def initialize(path = nil)
-        @path = path || default_path
+      def initialize(paths = nil)
+        @paths = [paths || default_paths].flatten
       end
 
       def list(options = {})
         options = {
           :clean_stale_or_corrupted => true
         }.merge(options)
+
         instances = []
 
-        Dir["#{@path}/passenger.*"].each do |dir|
-          instance = Instance.new(dir)
-          case instance.state
-          when :good
-            if instance.locked?
-              instances << instance
-            elsif options[:clean_stale_or_corrupted]
-              cleanup(dir)
-            end
-          when :structure_version_unsupported
-            next
-          when :corrupted
-            if !instance.locked? && options[:clean_stale_or_corrupted]
-              cleanup(dir)
-            end
-          when :not_finalized
-            if instance.stale? && options[:clean_stale_or_corrupted]
-              cleanup(dir)
+        @paths.each do |path|
+          Dir["#{path}/passenger.*"].each do |dir|
+            instance = Instance.new(dir)
+            case instance.state
+            when :good
+              if instance.locked?
+                instances << instance
+              elsif options[:clean_stale_or_corrupted]
+                cleanup(dir)
+              end
+            when :structure_version_unsupported
+              next
+            when :corrupted
+              if !instance.locked? && options[:clean_stale_or_corrupted]
+                cleanup(dir)
+              end
+            when :not_finalized
+              if instance.stale? && options[:clean_stale_or_corrupted]
+                cleanup(dir)
+              end
             end
           end
         end
-        return instances
+
+        instances
       end
 
       def find_by_name(name, options = {})
@@ -78,13 +82,22 @@ module PhusionPassenger
       end
 
     private
-      def default_path
-        ["PASSENGER_INSTANCE_REGISTRY_DIR", "TMPDIR"].each do |name|
-          if ENV.has_key?(name) && !ENV[name].empty?
-            return ENV[name]
-          end
+      def default_paths
+        if result = string_env("PASSENGER_INSTANCE_REGISTRY_DIR")
+          return result
         end
-        return "/tmp"
+
+        # The RPM packages configure Apache and Nginx to use /var/run/passenger-instreg
+        # as the instance registry dir. See https://github.com/phusion/passenger/issues/1475
+        [string_env("TMPDIR") || "/tmp", "/var/run/passenger-instreg"]
+      end
+
+      def string_env(name)
+        if (result = ENV[name]) && !result.empty?
+          result
+        else
+          nil
+        end
       end
 
       def cleanup(path)

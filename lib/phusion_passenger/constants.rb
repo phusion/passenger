@@ -53,6 +53,7 @@ module PhusionPassenger
     DEFAULT_WEB_APP_USER = "nobody"
     DEFAULT_APP_ENV = "production"
     DEFAULT_SPAWN_METHOD = "smart"
+    DEFAULT_USER = "nobody"
     DEFAULT_CONCURRENCY_MODEL = "process"
     DEFAULT_STICKY_SESSIONS_COOKIE_NAME = "_passenger_route"
     DEFAULT_APP_THREAD_COUNT = 1
@@ -87,6 +88,7 @@ module PhusionPassenger
     # Misc
     FEEDBACK_FD = 3
     PROGRAM_NAME = "Phusion Passenger"
+    SHORT_PROGRAM_NAME = "Passenger"
     SERVER_TOKEN_NAME = "Phusion_Passenger"
     FLYING_PASSENGER_NAME = "Flying Passenger"
     INDEX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide.html"

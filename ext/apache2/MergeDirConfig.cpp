@@ -61,6 +61,13 @@
 	
 
 	
+		config->meteorAppSettings =
+			(add->meteorAppSettings == NULL) ?
+			base->meteorAppSettings :
+			add->meteorAppSettings;
+	
+
+	
 		config->appEnv =
 			(add->appEnv == NULL) ?
 			base->appEnv :

@@ -29,6 +29,7 @@ PhusionPassenger.require_passenger_lib 'standalone/command'
 PhusionPassenger.require_passenger_lib 'standalone/config_utils'
 PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 # We lazy load as many libraries as possible not only to improve startup performance,
 # but also to ensure that we don't require libraries before we've passed the dependency
@@ -45,6 +46,7 @@ module PhusionPassenger
         :engine            => "nginx",
         :nginx_version     => PREFERRED_NGINX_VERSION,
         :log_level         => DEFAULT_LOG_LEVEL,
+        :auto              => !STDIN.tty? || !STDOUT.tty?,
         :ctls              => [],
         :envvars           => {}
       }.freeze
@@ -73,20 +75,22 @@ module PhusionPassenger
           watch_log_files_in_background if should_watch_logs?
           wait_until_engine_has_exited if should_wait_until_engine_has_exited?
         rescue Interrupt
-          shutdown_and_cleanup(true)
+          trapsafe_shutdown_and_cleanup(true)
           exit 2
         rescue SignalException => signal
-          shutdown_and_cleanup(true)
+          trapsafe_shutdown_and_cleanup(true)
           if signal.message == 'SIGINT' || signal.message == 'SIGTERM'
             exit 2
           else
             raise
           end
         rescue Exception
-          shutdown_and_cleanup(true)
+          trapsafe_shutdown_and_cleanup(true)
           raise
         else
-          shutdown_and_cleanup(false)
+          trapsafe_shutdown_and_cleanup(false)
+        ensure
+          reset_traps_intterm
         end
       end
 
@@ -149,17 +153,19 @@ module PhusionPassenger
           opts.on("--log-file FILENAME", String,
             "Where to write log messages. Default:#{nl}" +
             "console, or /dev/null when daemonized") do |value|
-            options[:log_file] = value
+            options[:log_file] = File.absolute_path_no_resolve(value)
           end
           opts.on("--pid-file FILENAME", String, "Where to store the PID file") do |value|
-            options[:pid_file] = value
+            options[:pid_file] = File.absolute_path_no_resolve(value)
           end
           opts.on("--instance-registry-dir PATH", String,
             "Use the given instance registry directory") do |value|
-            options[:instance_registry_dir] = value
+              # relative values OK
+              options[:instance_registry_dir] = value
           end
           opts.on("--data-buffer-dir PATH", String,
             "Use the given data buffer directory") do |value|
+            # relative values OK (absolutizePath in HelperAgent Main)
             options[:data_buffer_dir] = value
           end
 
@@ -170,10 +176,24 @@ module PhusionPassenger
             "Default: #{DEFAULT_OPTIONS[:environment]}") do |value|
             options[:environment] = value
           end
+          opts.on("--ruby FILENAME", String, "Executable to use for Ruby apps#{nl}" +
+            "Default: " + PlatformInfo.ruby_command + " (current context)") do |value|
+            options[:ruby] = value
+          end
+          opts.on("--nodejs FILENAME", String, "Executable to use for NodeJs apps") do |value|
+            options[:nodejs] = value
+          end
+          opts.on("--python FILENAME", String, "Executable to use for Python apps") do |value|
+            options[:python] = value
+          end
+          opts.on("--meteor-app-settings FILENAME", String, "Settings file to use for (development mode) Meteor apps") do |value|
+            options[:meteor_app_settings] = value
+          end
           opts.on("-R", "--rackup FILE", String,
             "Consider application a Ruby app, and use#{nl}" +
             "the given rackup file") do |value|
             options[:app_type] = "rack"
+            # relative w.r.t. app dir
             options[:startup_file] = value
           end
           opts.on("--app-type NAME", String,
@@ -182,6 +202,7 @@ module PhusionPassenger
           end
           opts.on("--startup-file FILENAME", String,
             "Force given startup file to be used") do |value|
+            # relative w.r.t. app dir
             options[:startup_file] = value
           end
           opts.on("--spawn-method NAME", String,
@@ -225,6 +246,11 @@ module PhusionPassenger
             "Minimum number of processes per#{nl}" +
             "application. Default: 1") do |value|
             options[:min_instances] = value
+          end
+          opts.on("--pool-idle-time SECONDS", Integer,
+            "Maximum time that processes may be idle.#{nl}" +
+            "Default: #{DEFAULT_POOL_IDLE_TIME}") do |value|
+            options[:pool_idle_time] = value
           end
           opts.on("--concurrency-model NAME", String,
             "The concurrency model to use, either#{nl}" +
@@ -285,6 +311,7 @@ module PhusionPassenger
           opts.separator ""
           opts.separator "Nginx engine options:"
           opts.on("--nginx-bin FILENAME", String, "Nginx binary to use as core") do |value|
+            # relative values OK
             options[:nginx_bin] = value
           end
           opts.on("--nginx-version VERSION", String,
@@ -313,6 +340,10 @@ module PhusionPassenger
           end
           opts.on("--log-level NUMBER", Integer, "Log level to use. Default: #{DEFAULT_LOG_LEVEL}") do |value|
             options[:log_level] = value
+          end
+          opts.on("--auto", "Run in non-interactive mode. Default when#{nl}" +
+            "stdin or stdout is not a TTY") do
+            options[:auto] = true
           end
           opts.on("--ctl NAME=VALUE", String) do |value|
             if value !~ /=.+/
@@ -458,6 +489,9 @@ module PhusionPassenger
           "--connect-timeout", "0",
           "--idle-timeout", "0"
         ]
+        if @options[:auto]
+          args << "--auto"
+        end
         if @options[:binaries_url_root]
           args << "--url-root"
           args << @options[:binaries_url_root]
@@ -699,7 +733,32 @@ module PhusionPassenger
 
       ################## Shut down and cleanup ##################
 
-      def shutdown_and_cleanup(error_occurred)
+      def capture_traps_intterm
+        return if @traps_captured
+        @traps_captured = 1
+        trap("INT", &method(:trapped_intterm))
+        trap("TERM", &method(:trapped_intterm))
+      end
+
+      def reset_traps_intterm
+        @traps_captured = nil
+        trap("INT", "DEFAULT")
+        trap("TERM", "DEFAULT")
+      end
+
+      def trapped_intterm(signal)
+        if @traps_captured == 1
+          @traps_captured += 1
+          puts "Ignoring signal #{signal} during shutdown. Send it again to force exit."
+        else
+          exit!(1)
+        end
+      end
+
+      def trapsafe_shutdown_and_cleanup(error_occurred)
+        # Ignore INT and TERM once, to allow clean shutdown in e.g. Foreman
+        capture_traps_intterm
+
         # Stop engine
         if @engine && (error_occurred || should_wait_until_engine_has_exited?)
           @console_mutex.synchronize do

@@ -91,6 +91,8 @@ module PhusionPassenger
           opts.on("--nginx-version VERSION", String, "Nginx version to compile. " +
             "Default: #{PREFERRED_NGINX_VERSION}") do |val|
             options[:nginx_version] = val
+            options[:compile_args] << "--nginx-version"
+            options[:compile_args] << val
           end
           opts.on("--nginx-tarball PATH", String, "Use the given Nginx tarball instead of#{nl}" +
             "downloading it. You MUST also specify the#{nl}" +
@@ -105,6 +107,10 @@ module PhusionPassenger
             options[:download_args] << "--log-prefix"
             options[:download_args] << "     "
             options[:download_args] << "--no-download-progress"
+          end
+          opts.on("--auto", "Run in non-interactive mode. Default when#{nl}" +
+            "stdin or stdout is not a TTY") do
+            options[:install_agent_args] << "--auto"
           end
           opts.on("-f", "--force", "Skip sanity checks") do
             options[:force] = true
@@ -214,6 +220,10 @@ module PhusionPassenger
       end
 
       def download_nginx_engine
+        if @options[:nginx_version] != PREFERRED_NGINX_VERSION
+          return false
+        end
+
         if @options[:brief]
           puts " --> Installing Nginx #{@options[:nginx_version]} engine"
         else

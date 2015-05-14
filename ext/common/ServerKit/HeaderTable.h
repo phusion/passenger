@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -239,8 +239,13 @@ public:
 		return const_cast<LString *>(static_cast<const HeaderTable *>(this)->lookup(key));
 	}
 
-	/** header must stay alive */
-	void insert(Header *header, psg_pool_t *pool) {
+	/**
+	 * HeaderTable takes over ownership of `header`. But you must ensure that the pool
+	 * that the header was allocated from is not destroyed before the HeaderTable
+	 * is destroyed or cleared.
+	 */
+	void insert(Header **headerPtr, psg_pool_t *pool) {
+		Header *header = *headerPtr;
 		assert(header->key.size < MAX_KEY_LENGTH);
 
 		if (m_cells == NULL) {
@@ -260,6 +265,7 @@ public:
 					m_population++;
 
 					cell->header = header;
+					*headerPtr = NULL;
 					return;
 				} else if (psg_lstr_cmp(&cell->header->key, &header->key)) {
 					// Cell matches, so merge value into header.
@@ -278,6 +284,8 @@ public:
 						psg_lstr_append_part(&cell->header->val, part);
 						part = next;
 					}
+					psg_lstr_deinit(&header->key);
+					*headerPtr = NULL;
 					return;
 				} else {
 					cell = PHT_CIRCULAR_NEXT(cell);
@@ -295,7 +303,7 @@ public:
 		psg_lstr_init(&header->val);
 		psg_lstr_append(&header->val, pool, value.data(), value.size());
 		header->hash = name.hash();
-		insert(header, pool);
+		insert(&header, pool);
 		return header;
 	}
 

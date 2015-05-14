@@ -32,49 +32,55 @@
 
 2.3.3. Inserting passenger_root into nginx.conf	=>	inserting-passenger-root-into-nginx-conf--1pmj19o
 
-2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
+2.4. Installing or upgrading on Red Hat or CentOS	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1uus5a1
 
-2.5. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7
+2.4.1. Adding our YUM repository	=>	adding-our-yum-repository-2i9z9o
 
-2.6. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43
+2.4.2. Installing packages	=>	installing-packages-1actlet
 
-2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-1a58c2b
+2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-jh07kr
 
-2.8. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-2goray
+2.6. Generic installation, upgrade and downgrade method: via RubyGems	=>	generic-installation-upgrade-and-downgrade-method-via-rubygems-76uol7
 
-2.8.1. Synopsis	=>	synopsis-4fv6zw
+2.7. Generic installation, upgrade and downgrade method: via tarball	=>	generic-installation-upgrade-and-downgrade-method-via-tarball-2gkx43
 
-2.8.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1qfpaj4
+2.8. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-1a58c2b
 
-2.8.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-i7f1vj
+2.9. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-2goray
 
-2.8.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-dr9466
+2.9.1. Synopsis	=>	synopsis-4fv6zw
 
-2.8.5. Verifying Git signatures	=>	verifying-git-signatures-dyo4fk
+2.9.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1qfpaj4
 
-2.8.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-1ed36d5
+2.9.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-i7f1vj
 
-2.8.7. Revocation	=>	revocation-xwvhea
+2.9.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-dr9466
 
-2.9. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
+2.9.5. Verifying Git signatures	=>	verifying-git-signatures-dyo4fk
 
-2.10. Customizing the compilation process	=>	customizing-the-compilation-process-u4cdcf
+2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-1ed36d5
 
-2.10.1. Setting the compiler	=>	setting-the-compiler-1l6dpe1
+2.9.7. Revocation	=>	revocation-xwvhea
 
-2.10.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-1jehjon
+2.10. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
 
-2.10.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1j93cki
+2.11. Customizing the compilation process	=>	customizing-the-compilation-process-u4cdcf
 
-2.11. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
+2.11.1. Setting the compiler	=>	setting-the-compiler-1l6dpe1
 
-2.12. Creating an Nginx init script	=>	creating-an-nginx-init-script-1kd8zg5
+2.11.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-1jehjon
 
-2.13. Disabling without uninstalling	=>	disabling-without-uninstalling-1t5tqan
+2.11.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1j93cki
 
-2.14. Uninstalling	=>	uninstalling-phusion-passenger-wuycvb
+2.12. Installing as a normal Nginx module without using the installer	=>	installing-as-a-normal-nginx-module-without-using-the-installer-1kkpes5
 
-2.15. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
+2.13. Creating an Nginx init script	=>	creating-an-nginx-init-script-1kd8zg5
+
+2.14. Disabling without uninstalling	=>	disabling-without-uninstalling-1t5tqan
+
+2.15. Uninstalling	=>	uninstalling-phusion-passenger-wuycvb
+
+2.16. Moving to a different directory	=>	moving-to-a-different-directory-gif3wo
 
 3. Deploying a Rack-based Ruby application	=>	deploying-a-rack-based-ruby-application-including-rails-3--12benx3
 
@@ -136,29 +142,31 @@
 
 7.3.3. passenger_nodejs <filename>	=>	passenger-nodejs-filename--16hzjsv
 
-7.3.4. passenger_app_env <string>	=>	passenger-app-env-string--qjeimp
+7.3.4. passenger_meteor_app_settings <filename>	=>	passenger-meteor-app-settings-filename--1toqnaz
 
-7.3.5. rails_env <string>	=>	rails-env-string--jlh7v9
+7.3.5. passenger_app_env <string>	=>	passenger-app-env-string--qjeimp
 
-7.3.6. rack_env <string>	=>	rack-env-string--tqmrt0
+7.3.6. rails_env <string>	=>	rails-env-string--jlh7v9
 
-7.3.7. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
+7.3.7. rack_env <string>	=>	rack-env-string--tqmrt0
 
-7.3.8. passenger_app_group_name <name>	=>	passenger-app-group-name-name--11jrx8u
+7.3.8. passenger_app_root <path/to/root>	=>	passenger-app-root-path-to-root--1dbudc6
 
-7.3.9. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
+7.3.9. passenger_app_group_name <name>	=>	passenger-app-group-name-name--11jrx8u
 
-7.3.10. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
+7.3.10. passenger_app_type <name>	=>	passenger-app-type-name--g9zccv
 
-7.3.11. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
+7.3.11. passenger_startup_file <filename>	=>	passenger-startup-file-filename--y4gy1m
 
-7.3.12. passenger_env_var <name> <value>	=>	passenger-env-var-name-value--y8e7wh
+7.3.12. passenger_spawn_method <string>	=>	passenger-spawn-method-string--1sc6njl
 
-7.3.13. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
+7.3.13. passenger_env_var <name> <value>	=>	passenger-env-var-name-value--y8e7wh
 
-7.3.14. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+7.3.14. passenger_load_shell_envvars <on|off>	=>	passenger-load-shell-envvars-on-off--fw5u4l
 
-7.3.15. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
+7.3.15. passenger_rolling_restarts <on|off>	=>	passenger-rolling-restarts
+
+7.3.16. passenger_resist_deployment_errors <on|off>	=>	passenger-resist-deployment-errors-on-off--k9yf1
 
 7.4. Security options	=>	security-options-1bv93g4
 
@@ -238,7 +246,7 @@
 
 7.6.15. passenger_buffers	=>	passenger-busy-buffers
 
-7.6.16. passenger_busy_buffer_size	=>	passenger-busy-buffer-size-124sj61
+7.6.16. passenger_busy_buffers_size	=>	passenger-busy-buffer-size-124sj61
 
 7.7. Logging and debugging options	=>	logging-and-debugging-options-14e91ni
 
@@ -306,11 +314,13 @@
 
 10.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-mbw582
 
-10.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
+10.1.4. Red Hat and CentOS caveats	=>	red-hat-and-centos-caveats-ilqxyl
+
+10.1.5. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-1ni7zk6
 
 10.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1o3z66q
 
-10.3. Capistrano recipe	=>	capistrano-recipe-pfn4qu
+10.3. Tuning for Server Sent Events and WebSockets	=>	tuning-for-server-sent-events-and-websockets-8ec9td
 
 10.4. Bundler support	=>	bundler-support-19v1h43
 

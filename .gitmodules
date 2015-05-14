@@ -1,3 +1,6 @@
 [submodule "packaging/rpm"]
 	path = packaging/rpm
 	url = https://github.com/phusion/passenger_rpm_automation.git
+[submodule "packaging/debian"]
+	path = packaging/debian
+	url = https://github.com/phusion/passenger_apt_automation.git

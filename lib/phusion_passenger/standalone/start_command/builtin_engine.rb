@@ -88,9 +88,7 @@ module PhusionPassenger
           command << " --no-user-switching"
           command << " --no-delete-pid-file"
           command << " --cleanup-pidfile #{Shellwords.escape @working_dir}/temp_dir_toucher.pid"
-          if should_wait_until_engine_has_exited?
-            command << " --report-file #{Shellwords.escape @working_dir}/report.json"
-          end
+          command << " --report-file #{Shellwords.escape @working_dir}/report.json"
           add_param(command, :user, "--user")
           add_param(command, :log_file, "--log-file")
           add_param(command, :pid_file, "--pid-file")
@@ -136,6 +134,7 @@ module PhusionPassenger
           add_flag_param(command, :load_shell_envvars, "--load-shell-envvars")
           add_param(command, :max_pool_size, "--max-pool-size")
           add_param(command, :min_instances, "--min-instances")
+          add_param(command, :pool_idle_time, "--pool-idle-time")
           add_enterprise_param(command, :concurrency_model, "--concurrency-model")
           add_enterprise_param(command, :thread_count, "--app-thread-count")
           add_enterprise_param(command, :max_request_time, "--max-request-time")
@@ -148,6 +147,10 @@ module PhusionPassenger
           add_param(command, :union_station_gateway_address, "--union-station-gateway-address")
           add_param(command, :union_station_gateway_port, "--union-station-gateway-port")
           add_param(command, :union_station_key, "--union-station-key")
+          add_param(command, :ruby, "--ruby")
+          add_param(command, :python, "--python")
+          add_param(command, :nodejs, "--nodejs")
+          add_param(command, :meteor_app_settings, "--meteor-app-settings")
 
           command << " #{Shellwords.escape(@apps[0][:root])}"
 

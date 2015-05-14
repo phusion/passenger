@@ -200,6 +200,7 @@ initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 	}
 
 	if (!req->ended()) {
+		fillPoolOption(req, req->options.environmentVariables, PASSENGER_ENV_VARS);
 		fillPoolOption(req, req->options.maxRequests, PASSENGER_MAX_REQUESTS);
 	}
 }
@@ -207,6 +208,16 @@ initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 void
 fillPoolOptionsFromAgentsOptions(Options &options) {
 	options.ruby = defaultRuby;
+	if (agentsOptions->has("default_nodejs")) {
+		options.nodejs = agentsOptions->get("default_nodejs");
+	}
+	if (agentsOptions->has("default_python")) {
+		options.python = agentsOptions->get("default_python");
+	}
+	if (agentsOptions->has("meteor_app_settings")) {
+		options.meteorAppSettings = agentsOptions->get("meteor_app_settings");
+	}
+
 	options.logLevel = getLogLevel();
 	options.loggingAgentAddress = loggingAgentAddress;
 	options.loggingAgentUsername = P_STATIC_STRING("logging");
@@ -350,6 +361,7 @@ createNewPoolOptions(Client *client, Request *req, const HashedStaticString &app
 	fillPoolOption(req, options.ruby, "!~PASSENGER_RUBY");
 	fillPoolOption(req, options.python, "!~PASSENGER_PYTHON");
 	fillPoolOption(req, options.nodejs, "!~PASSENGER_NODEJS");
+	fillPoolOption(req, options.meteorAppSettings, "!~PASSENGER_METEOR_APP_SETTINGS");
 	fillPoolOption(req, options.user, "!~PASSENGER_USER");
 	fillPoolOption(req, options.group, "!~PASSENGER_GROUP");
 	fillPoolOption(req, options.minProcesses, "!~PASSENGER_MIN_PROCESSES");
@@ -362,7 +374,6 @@ createNewPoolOptions(Client *client, Request *req, const HashedStaticString &app
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
-	fillPoolOption(req, options.environmentVariables, "!~PASSENGER_ENV_VARS");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	/******************/
 

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -91,12 +91,15 @@ task 'test:integration:native_packaging' do
   case PlatformInfo.os_name
   when "linux"
     if PlatformInfo.linux_distro_tags.include?(:debian)
+      rubylibdir = RbConfig::CONFIG["vendordir"]
       command = "env NATIVE_PACKAGING_METHOD=deb " +
-        "LOCATIONS_INI=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini " +
+        "LOCATIONS_INI=#{rubylibdir}/phusion_passenger/locations.ini " +
         command
     elsif PlatformInfo.linux_distro_tags.include?(:redhat)
+      vendorlibdir = RbConfig::CONFIG["vendorlibdir"]
+      locations_ini = File.join(vendorlibdir, "phusion_passenger/locations.ini")
       command = "env NATIVE_PACKAGING_METHOD=rpm " +
-        "LOCATIONS_INI=/usr/lib/ruby/site_ruby/1.8/phusion_passenger/locations.ini " +
+        "LOCATIONS_INI=#{locations_ini} " +
         command
     else
       abort "Unsupported Linux distribution"

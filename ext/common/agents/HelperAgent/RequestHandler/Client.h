@@ -43,7 +43,9 @@ public:
 
 	Client(void *server)
 		: ServerKit::BaseHttpClient<Request>(server)
-		{ }
+	{
+		SERVER_KIT_BASE_HTTP_CLIENT_INIT();
+	}
 
 	DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER(Client, Request);
 };

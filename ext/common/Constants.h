@@ -96,6 +96,8 @@
 
 	#define DEFAULT_UNION_STATION_GATEWAY_PORT 443
 
+	#define DEFAULT_USER "nobody"
+
 	#define DEFAULT_WEB_APP_USER "nobody"
 
 	#define ENTERPRISE_URL "https://www.phusionpassenger.com/enterprise"
@@ -114,7 +116,7 @@
 
 	#define NGINX_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"
 
-	#define PASSENGER_VERSION "5.0.5"
+	#define PASSENGER_VERSION "5.0.8"
 
 	#define POOL_HELPER_THREAD_STACK_SIZE 262144
 
@@ -139,6 +141,8 @@
 	#define SERVER_KIT_MAX_SERVER_ENDPOINTS 4
 
 	#define SERVER_TOKEN_NAME "Phusion_Passenger"
+
+	#define SHORT_PROGRAM_NAME "Passenger"
 
 	#define STANDALONE_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
 

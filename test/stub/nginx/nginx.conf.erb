@@ -24,7 +24,7 @@ http {
                       '"$status" $body_bytes_sent "$http_referer" '
                       '"$http_user_agent" "$http_x_forwarded_for"';
     access_log <%= @nginx_root %>/access.log main;
-    
+
     passenger_root <%= @passenger_root %>;
     passenger_ruby <%= PlatformInfo.ruby_command %>;
     passenger_nodejs <%= PlatformInfo.find_command('node') %>;

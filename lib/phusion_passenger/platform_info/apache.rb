@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -26,6 +26,7 @@ PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'platform_info/linux'
+PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
 module PhusionPassenger
 
@@ -101,47 +102,58 @@ module PhusionPassenger
     end
     memoize :httpd_version
 
-    # Run `httpd -V` and return its output. On some systems, such as Ubuntu 13.10,
-    # `httpd -V` fails without the environment variables defined in various scripts.
-    # Here we take care of evaluating those scripts before running `httpd -V`.
-    def self.httpd_V(options = nil)
+    # Run `apache2ctl -V` and return its output.
+    #
+    # We used to run `httpd -V`, but on systems like Ubuntu it depends on various
+    # environment variables or directories, wich apache2ctl loads or initializes.
+    def self.apache2ctl_V(options = nil)
       if options
-        httpd = options[:httpd] || self.httpd(options)
+        apache2ctl = options[:apache2ctl] || self.apache2ctl(options)
       else
-        httpd = self.httpd
+        apache2ctl = self.apache2ctl
       end
-      if httpd
-        command = "#{httpd} -V"
-        if envvars_file = httpd_envvars_file(options)
-          command = ". '#{envvars_file}' && #{command}"
+      if apache2ctl
+        create_temp_file("apache2ctl_V") do |filename, f|
+          e_filename = Shellwords.escape(filename)
+          output = `#{apache2ctl} -V 2>#{e_filename}`
+
+          stderr_text = File.open(filename, "rb") do |f2|
+            f2.read
+          end
+          # This stderr message shows up on Ubuntu. We ignore it.
+          stderr_text.sub!(/.*Could not reliably determine the server's fully qualified domain name.*\r?\n?/, "")
+          # But we print the rest of stderr.
+          STDERR.write(stderr_text)
+          STDERR.flush
+
+          output
         end
-        return `#{command}`
       else
-        return nil
+        nil
       end
     end
-    memoize :httpd_V
+    memoize :apache2ctl_V
 
     # The Apache executable's architectural bits. Returns 32 or 64,
     # or nil if unable to detect.
     def self.httpd_architecture_bits(options = nil)
       if options
-        httpd = options[:httpd] || self.httpd(options)
+        info = apache2ctl_V(options)
       else
-        httpd = self.httpd
+        info = apache2ctl_V
       end
-      if httpd
-        `#{httpd} -V` =~ %r{Architecture:(.*)}
+      if info
+        info =~ %r{Architecture:(.*)}
         text = $1
         if text =~ /32/
-          return 32
+          32
         elsif text =~ /64/
-          return 64
+          64
         else
-          return nil
+          nil
         end
       else
-        return nil
+        nil
       end
     end
     memoize :httpd_architecture_bits
@@ -150,9 +162,9 @@ module PhusionPassenger
     # This may be different from the value of the ServerRoot directive.
     def self.httpd_default_root(options = nil)
       if options
-        info = httpd_V(options)
+        info = apache2ctl_V(options)
       else
-        info = httpd_V
+        info = apache2ctl_V
       end
       if info
         info =~ / -D HTTPD_ROOT="(.+)"$/
@@ -166,9 +178,9 @@ module PhusionPassenger
     # The default Apache configuration file, or nil if Apache is not found.
     def self.httpd_default_config_file(options = nil)
       if options
-        info = httpd_V(options)
+        info = apache2ctl_V(options)
       else
-        info = httpd_V
+        info = apache2ctl_V
       end
       if info
         info =~ /-D SERVER_CONFIG_FILE="(.+)"$/
@@ -216,7 +228,7 @@ module PhusionPassenger
     # Returns nil if Apache is not detected, or if the default error log filename
     # cannot be detected.
     def self.httpd_default_error_log(options = nil)
-      if info = httpd_V(options)
+      if info = apache2ctl_V(options)
         info =~ /-D DEFAULT_ERRORLOG="(.+)"$/
         filename = $1
         if filename =~ /\A\//
@@ -263,7 +275,7 @@ module PhusionPassenger
         elsif contents =~ /ErrorLog/i
           # The user apparently has ErrorLog set somewhere but
           # we can't parse it. The default error log location,
-          # as reported by `httpd -V`, may be wrong (it is on OS X).
+          # as reported by `apache2ctl -V`, may be wrong (it is on OS X).
           # So to be safe, let's assume that we don't know.
           log "Unable to parse ErrorLog directive in Apache configuration file"
           return nil

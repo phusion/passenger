@@ -68,6 +68,14 @@ u_char int_buf[32], *end, *buf, *pos;
 	
 
 	
+		if (conf->meteor_app_settings.data != NULL) {
+			len += sizeof("!~PASSENGER_METEOR_APP_SETTINGS: ") - 1;
+			len += conf->meteor_app_settings.len;
+			len += sizeof("\r\n") - 1;
+		}
+	
+
+	
 		if (conf->environment.data != NULL) {
 			len += sizeof("!~PASSENGER_APP_ENV: ") - 1;
 			len += conf->environment.len;
@@ -332,6 +340,18 @@ if (buf == NULL) {
 			pos = ngx_copy(pos,
 				conf->nodejs.data,
 				conf->nodejs.len);
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+		}
+	
+
+	
+		if (conf->meteor_app_settings.data != NULL) {
+			pos = ngx_copy(pos,
+				"!~PASSENGER_METEOR_APP_SETTINGS: ",
+				sizeof("!~PASSENGER_METEOR_APP_SETTINGS: ") - 1);
+			pos = ngx_copy(pos,
+				conf->meteor_app_settings.data,
+				conf->meteor_app_settings.len);
 			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
 		}
 	

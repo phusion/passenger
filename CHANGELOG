@@ -1,3 +1,60 @@
+Release 5.0.8
+-------------
+
+ * We now supply Debian 8 and Ubuntu 15.04 packages. Closes GH-1494 and GH-1400.
+ * We now supply Red Hat 6, Red Hat 7, CentOS 6 and CentOS 7 packages.
+ * We no longer supply Ubuntu 10.04 packages because Ubuntu 10.04 is no longer supported by Canonical.
+ * Fixes a Passenger crash (SIGSEGV) that occurs occasionally when out-of-band garbage collection is enabled. Closes GH-1469.
+ * Fixes cases when Passenger shuts down more processes than is allowed by the `min_instances` limit. Closes GH-1500.
+ * Fixes "Bad Gateway" errors that would occur when an application sets the X-Sendfile or X-Accel-Redirect header, together with a non-empty response body. Closes GH-1498.
+ * Fixes the fact that Passenger agent processes don't lower their privilege when user switching is turned off.
+ * [Standalone] Adds the `--pool-idle-time` command line parameter.
+ * [Standalone] Adds the `--auto` command line parameter for running non-interactively. This supresses prompts. Closes GH-1511.
+
+
+Release 5.0.7
+-------------
+
+ * Supports changed way of specifying settings for (non-bundled) Meteor apps. Closes GH-1403.
+ * Fixes an integer-to-string conversion bug in the code responsible for buffering chunked request bodies. This bug could cause the PassengerAgent to crash due to an exception. Thanks to Marcus Rückert of SUSE for reporting this.
+ * Request-specific environment variables are no longer cached. This fixes a number of issues, such as Shibboleth not working properly and conflicts between HTTPS and non-HTTPS virtual hosts. Closes GH-1472.
+ * Fixes a memory corruption bug that would be triggered when using `passenger_base_uri`. The memory corruption bug resided in the code for resolving symlinks. Closes GH-1388.
+ * Re-introduced signal catchers during shutdown, to allow clean shutdown in Foreman. Closes GH-1454.
+ * `passenger-status --show=xml` no longer outputs the non-XML header by default. This fixes a regression as reported in a comment in GH-1136.
+ * Passenger now prefers to load Rack and Bundler from RubyGems instead of from `vendor_ruby`. This solves some issues with Rack and Bundler on Debian systems. Closes GH-1480 and GH-1478.
+ * The turbocache no longer caches responses that contain the `X-Sendfile` or the `X-Accel-Redirect` header.
+ * The preferred Nginx version has been upgraded to 1.6.3.
+ * The logging agent no longer aborts with an error if one of the Passenger root directory's parent directories is not world-executable. Closes GH-1487.
+ * [Standalone] It is now possible to configure the Ruby, Node.js and Python executable to use in Passenger Standalone through the command line options --ruby, --nodejs and --python. Closes GH-1442.
+ * [Standalone] Running `passenger start --engine=builtin --daemonize` would fail with a timeout error. This has been fixed.
+ * [Standalone] Running `passenger start --nginx-version=XXX` would crash. This has been fixed. Closes GH-1490.
+ * [Apache] Fixed some issues with X-Sendfile. Closes GH-1376.
+ * [Apache] If the installer fails to autodetect Apache while the installer is running as a normal user, it will now ask you to give it root privileges. Closes GH-1289.
+ * [Apache] The installer now validates your Apache configuration file to check for common problems. The validator can also be accessed separately by running `passenger-config validate-install --validate-apache2`.
+ * [Nginx] Introduces the `passenger_read_timeout` option for rare cases when server needs more than the default 10 minute timeout. Contributed by pkmiec. Closes [GH-PR-34](https://github.com/phusion/passenger/pull/34).
+ * [Nginx] The Nginx module now looks for index.html if the path ends in / so that it works intuitively, without needing to use try_files.
+ * Fixes wrong memory address display in crash dumps. Thanks to thoughtpolice for pointing it out.
+ * Fixes an ugly backtrace that would be shown if an invalid request is made to an application process using the private HTTP interface. Contributed by jbergler. Closes GH-1311.
+ * Various documentation improvements. Closes [GH-PR-1332](https://github.com/phusion/passenger/pull/1332), [GH-PR-1354](https://github.com/phusion/passenger/pull/1354), [GH-PR-1216](https://github.com/phusion/passenger/pull/1216), [GH-PR-1385](https://github.com/phusion/passenger/pull/1385), [GH-PR-1302](https://github.com/phusion/passenger/pull/1302).
+
+
+Release 5.0.6
+-------------
+
+ * The turbocache no longer caches responses for which the Cache-Control header contains "no-cache". Please note that "no-cache" does not mean "do not cache this response". Instead, it means "any caching servers may only serve the cached response after validating it". Since the turbocache does not support validation, we've chosen to skip caching instead.
+
+   Coincidentally, this change "fixes" problems with applications that erroneously use "no-cache" as a flag for "do not cache this response". What these applications should actually use is "no-store". We recommend the developers of such applications to change their caching headers in this manner, because even if Passenger doesn't unintentionally cache the response, any intermediate proxies that visitors are behind may still cache the response.
+ * Fixes a number of memory leaks. Memory was leaked upon processing a request with multiple headers, upon processing a response with multiple headers, and upon processing a response with Set-Cookie headers. Every time such a request or response was processed, 512 bytes of memory was leaked due to improperly dereferencing relevant memory buffers. Closes GH-1455.
+ * Fixes various bugs related to Union Station data collection.
+
+   Union Station is our upcoming application analytics and performance monitoring SaaS platform. It is opt-in: no data is collected unless you turn the feature on.
+ * Fixes a Union Station-related file descriptor leak. Closes GH-1439.
+ * Fixes some bugs w.r.t. use of uninitialized memory.
+ * More informative error message if a support binary is not found, including a resolution hint. Closes GH-1395.
+ * [Apache] `SetEnv` variables are now passed as Rack/CGI/request variables. This was also the case in Passenger 4, but not in Passenger 5.0.0-5.0.5. We've restored the old behavior because the behavior in 5.0.0-5.0.5 breaks certain Apache modules such as Shibboleth. Closes GH-1446.
+ * [Standalone] PID and log files now correctly created if user specifies relative path.
+
+
 Release 5.0.5
 -------------
 

@@ -167,6 +167,7 @@ echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
 To make them permanent for future bash sessions **for all users**, add them to `/etc/bashrc`.
 
 NOTE: Depending on the system, the bashrc file may have a different filename. On Debian and Ubuntu, it's `/etc/bash.bashrc`.
+NOTE: Make sure your `~/.bashrc` is actually included by your `~/.profile`, which might not be the case if you created the user with `useradd` instead of `adduser` for example
 
 ==== Apache
 
@@ -225,7 +226,7 @@ PATH=/usr/bin:/usr/local/bin
 You can pass environment variables to Phusion Passenger-served apps through various methods:
 
  * When running Apache, use the `PassEnv` and `SetEnv` directives of link:http://httpd.apache.org/docs/2.4/mod/mod_env.html[mod_env]. This is supported starting from Phusion Passenger 4.0.
- * When running Nginx, use the <<passenger_env_var,passenger_env_var>> directive.
+ * When running Nginx, use the <<PassengerEnvVar,passenger_env_var>> directive.
  * Through your `bashrc`. Starting from version 4.0, Phusion Passenger 4.0 spawns applications through bash and inherit all bash environment variables. Phusion Passenger Standalone tends to be started from the shell and thus inherits all environment variables set by the shell.
  * Through Apache and Nginx, as described earlier in this chapter. Any environment variables that you set on Apache and Nginx itself are inherited by Phusion Passenger, and thus by Phusion Passenger-served apps as well.
  * Through the application itself. Most programming languages provide APIs for setting environment variables. For example in Ruby you can write:

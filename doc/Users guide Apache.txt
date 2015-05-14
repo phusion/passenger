@@ -583,6 +583,14 @@ include::users_guide_snippets/since_version.txt[]
 
 This option allows one to specify the Node.js command to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'node', meaning that the Node.js command will be looked up according to the `PATH` environment variable.
 
+==== PassengerMeteorAppSettings <filename>
+:version: 5.0.7
+include::users_guide_snippets/since_version.txt[]
+
+When using a Meteor application in non-bundled mode, use this option to specify a (JSON) file with settings for the application. Meteor will be started with the `--settings` parameter set to this option. 
+
+N.B. For bundled mode, Meteor requires you to put applications settings in the `METEOR_SETTINGS` environment variable.
+
 [[PassengerAppEnv]]
 ==== PassengerAppEnv <string> ====
 This option sets the value of the following environment variables:
@@ -648,7 +656,7 @@ Example:
 
 [[PassengerAppGroupName]]
 ==== PassengerAppGroupName <name>
-Sets the name of the application group that the current application should belong to. Its default value is the <<PassengerRoot,application root>>, plus (if it is set), the <<PassengerAppEnv,application environment name>>.
+Sets the name of the application group that the current application should belong to. Its default value is the <<application_root,application root>>, plus (if it is set), the <<PassengerAppEnv,application environment name>>.
 
 Phusion Passenger stores and caches most application spawning settings -- such as environment variables, process limits, etc -- on a per-app-group-name basis. This means that if you want to start two versions of your application, with each version having different environment variables, then you must assign them under different application group names.
 
@@ -993,6 +1001,8 @@ Whether to enable <<user_switching,user switching support>>.
 
 This option may only occur once, in the global server configuration.
 The default value is 'on'.
+
+WARNING: If you're on Red Hat or CentOS, be sure to read <<user_switching_rpm_caveats,the Red Hat and CentOS user switching caveats>>.
 
 [[PassengerUser]]
 ==== PassengerUser <username> ====
@@ -2138,10 +2148,10 @@ This option is also useful if Apache is not allowed to write to the system's tem
 
 The instance directory is automatically removed when Apache shuts down.
 
-This option may be specified once, in the global server configuration. The default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
+This option may be specified once, in the global server configuration. The default value is as follows:
 
-:option: `--instance-registry-dir`
-include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+ * If you are on Red Hat and CentOS, and installed Passenger through the RPMs provided by Phusion, then the default value is `/var/run/passenger-instreg`.
+ * Otherwise, the default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
 
 .Note regarding command line tools
 Some Phusion Passenger command line administration tools, such as `passenger-status`, must know what Phusion Passenger's instance registry directory is in order to function properly. You can pass the directory through the `PASSENGER_INSTANCE_REGISTRY_DIR` or the `TMPDIR` environment variable.
@@ -2273,40 +2283,18 @@ See also link:http://groups.google.com/group/phusion-passenger/browse_thread/thr
    Please make sure that the Rails application's folder, as well as all of its parent folders,
    have the correct permissions and/or ownerships.
 
-=== The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it
+[[apache_selinux_permissions]]
+=== Apache cannot access my app's files because of SELinux errors
 
-If you are sure that the 'PassengerRoot' configuration option is set correctly,
-then this problem is most likely caused by the fact that you're running Apache
-with SELinux. On Fedora, CentOS and RedHat Enterprise Linux, Apache is locked
-down by SELinux policies.
+On Red Hat Enterprise Linux and CentOS, Apache is locked down by a security mechanism called SELinux. This security mechanism works on top of normal Unix permissions. In order for Apache to be able to access your app's files, you must set the proper SELinux labels on your files.
 
-To solve this problem, you must set some permissions on the Phusion Passenger files
-and folders, so that Apache can access them.
+First, ensure that your app does not live in a home directory. It is not possible to allow Apache to read files from your home directory.
 
-- If you've installed Phusion Passenger via a gem, then run this command to determine
-  Phusion Passenger's root folder:
-+
-------------------------------------------------------------------
-passenger-config --root
-------------------------------------------------------------------
-+
-Next, run the following command:
-+
-------------------------------------------------------------------
-chcon -R -h -t httpd_sys_content_t /path-to-passenger-root
-------------------------------------------------------------------
-+
-where '/path-to-passenger-root' should be replaced with whatever
-`passenger-config --root` printed.
+Second, give your app's files the `httpd_sys_content_t` labels by running the following command:
 
-- If you've installed Phusion Passenger via the source tarball, then run the following
-  command:
-+
 ------------------------------------------------------------------
-chcon -R -h -t httpd_sys_content_t /path/to/passenger/folder
+sudo chcon -R -h -t httpd_sys_content_t /path-to-your-app
 ------------------------------------------------------------------
-
-Once the permissions are fixed, restart Apache.
 
 === The application thinks its not on SSL even though it is
 

@@ -23,8 +23,9 @@ export rvmsudo_secure_path=1
 export LC_CTYPE=C.UTF-8
 unset BUNDLE_GEMFILE
 
-if [[ -e /etc/workaround-docker-2267/hosts ]]; then
+if [[ -e /etc/workaround-docker-2267 ]]; then
 	HOSTS_FILE=/etc/workaround-docker-2267/hosts
+	sudo ln -s /etc/hosts /etc/workaround-docker-2267/hosts
 	sudo workaround-docker-2267
 	find /usr/local/rvm/rubies/*/lib/ruby -name resolv.rb | sudo xargs sed -i 's|/etc/hosts|/cte/hosts|g'
 else
@@ -74,16 +75,6 @@ function retry_run()
 function apt_get_update() {
 	if [[ "$apt_get_updated" = "" ]]; then
 		apt_get_updated=1
-		if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
-			if ! [[ -e /usr/bin/add-apt-repository ]]; then
-				run sudo apt-get update
-				run sudo apt-get install -y --no-install-recommends python-software-properties
-				if ! [[ -e /usr/bin/add-apt-repository ]]; then
-					run sudo apt-get install -y --no-install-recommends software-properties-common
-				fi
-			fi
-			run sudo add-apt-repository -y ppa:phusion.nl/misc
-		fi
 		run sudo apt-get update
 	fi
 }
@@ -216,65 +207,6 @@ fi
 if [[ "$TEST_STANDALONE" = 1 ]]; then
 	install_base_test_deps
 	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:standalone
-fi
-
-if [[ "$TEST_DEBIAN_PACKAGING" = 1 ]]; then
-	apt_get_update
-	run sudo apt-get install -y --no-install-recommends \
-		devscripts debhelper rake apache2-mpm-worker apache2-threaded-dev \
-		libev-dev gdebi-core source-highlight
-	if [[ `lsb_release -r -s` = 12.04 ]]; then
-		sudo apt-get install -y --no-install-recommends \
-			ruby1.8 ruby1.8-dev ruby1.9.1 ruby1.9.1-dev rubygems
-	else
-		sudo apt-get install -y --no-install-recommends \
-			ruby1.9.1 ruby1.9.1-dev ruby2.0 ruby2.0-dev
-	fi
-	install_test_deps_with_doctools
-	install_node_and_modules
-	run bundle exec rake debian:dev debian:dev:reinstall
-	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:native_packaging SUDO=1 PRINT_FAILED_COMMAND_OUTPUT=1
-	(
-		export GEM_PATH="$ORIG_GEM_PATH"
-		if ! env NOEXEC_DISABLE=1 rvmsudo -E ruby -rrack -e '' 2>/dev/null; then
-			retry_run 3 gem install rack --no-rdoc --no-ri
-		fi
-	)
-	run env PASSENGER_LOCATION_CONFIGURATION_FILE=/usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini \
-		bundle exec drake -j$COMPILE_CONCURRENCY test:integration:apache2 SUDO=1
-fi
-
-if [[ "$TEST_RPM_PACKAGING" = 1 ]]; then
-	if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
-		pushd packaging/rpm
-		run mkdir -p "$CACHE_DIR/passenger_rpm"
-		run mkdir -p "$CACHE_DIR/passenger_rpm/cache"
-		run mkdir "$CACHE_DIR/passenger_rpm/output"
-		run ./build -S "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm" \
-			-P "$PASSENGER_ROOT_ON_DOCKER_HOST" \
-			-o "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output" \
-			-c "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/cache" \
-			-d el6 -a x86_64
-		popd >/dev/null
-	fi
-
-	echo "------------- Testing built RPMs -------------"
-	run cp "test/config.json.rpm-automation" "test/config.json"
-	run mkdir -p "$CACHE_DIR/passenger_rpm/output/el6-x86_64"
-	if [[ "$TEST_RPM_BUILDING" != 0 ]]; then
-		run rm "$CACHE_DIR/passenger_rpm/output/el6-x86_64"/*.src.rpm
-	fi
-	run docker run --rm \
-		-v "$PASSENGER_ROOT_ON_DOCKER_HOST/packaging/rpm:/system:ro" \
-		-v "$PASSENGER_ROOT_ON_DOCKER_HOST:/passenger" \
-		-v "$CACHE_DIR_ON_DOCKER_HOST/passenger_rpm/output/el6-x86_64:/packages:ro" \
-		-e "APP_UID=`id -u`" \
-		-e "APP_GID=`id -g`" \
-		phusion/passenger_rpm_automation \
-		/system/internal/my_init --skip-runit --skip-startup-files --quiet -- \
-		/system/internal/inituidgid \
-		/bin/bash -c "cd /passenger && exec ./dev/ci/run_rpm_tests.sh"
-	run cp "test/config.json.travis" "test/config.json"
 fi
 
 if [[ "$TEST_SOURCE_PACKAGING" = 1 ]]; then

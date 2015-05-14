@@ -71,8 +71,7 @@ void checkWhetherProcessCanBeGarbageCollected(GarbageCollectorState &state,
 	assert(maxIdleTime > 0);
 	unsigned long long processGcTime = process->lastUsed + maxIdleTime;
 	if (process->sessions == 0
-	 && state.now >= processGcTime
-	 && (unsigned long) group->getProcessCount() > group->options.minProcesses)
+	 && state.now >= processGcTime)
 	{
 		if (output.capacity() == 0) {
 			output.reserve(group->enabledCount);
@@ -96,12 +95,16 @@ void garbageCollectProcessesInGroup(GarbageCollectorState &state,
 			processesToGc);
 	}
 
+	p_it  = processesToGc.begin();
 	p_end = processesToGc.end();
-	for (p_it = processesToGc.begin(); p_it != p_end; p_it++) {
+	while (p_it != p_end
+	 && (unsigned long) group->getProcessCount() > group->options.minProcesses)
+	{
 		ProcessPtr process = *p_it;
 		P_DEBUG("Garbage collect idle process: " << process->inspect() <<
 			", group=" << group->name);
 		group->detach(process, state.actions);
+		p_it++;
 	}
 }
 

@@ -433,7 +433,7 @@ pre_config_init(ngx_conf_t *cf)
  */
 static ngx_int_t
 init_module(ngx_cycle_t *cycle) {
-    if (passenger_main_conf.root_dir.len != 0) {
+    if (passenger_main_conf.root_dir.len != 0 && !ngx_test_config) {
         if (first_start) {
             /* Ignore SIGPIPE now so that, if the helper server fails to start,
              * Nginx doesn't get killed by the default SIGPIPE handler upon
@@ -463,7 +463,7 @@ static ngx_int_t
 init_worker_process(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
 
-    if (passenger_main_conf.root_dir.len != 0) {
+    if (passenger_main_conf.root_dir.len != 0 && !ngx_test_config) {
         save_master_process_pid(cycle);
 
         core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);

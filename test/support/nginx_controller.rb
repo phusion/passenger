@@ -17,7 +17,7 @@ class NginxController
     @log_file    = "#{root_dir}/error.log"
     @controller  = PhusionPassenger::DaemonController.new(
       :identifier    => 'Nginx',
-      :start_command => "#{CONFIG['nginx']} -c '#{@config_file}'",
+      :start_command => "#{CONFIG['nginx']} -p #{root_dir} -c '#{@config_file}'",
       :ping_command  => [:tcp, '127.0.0.1', PORT],
       :pid_file      => @pid_file,
       :log_file      => @log_file,

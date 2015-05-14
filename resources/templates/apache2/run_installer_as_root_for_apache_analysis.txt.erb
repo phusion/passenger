@@ -1,0 +1,9 @@
+<red>Permission problems</red>
+This installer must be able to analyze your Apache installation. But it can't
+do that, because you're running the installer as <b><%= `whoami`.strip %></b>.
+Please give this installer root privileges, by re-running it with <yellow><%= @sudo %></yellow>:
+
+  <b>export ORIG_PATH="$PATH"
+  <%= @sudo_s_e %>
+  export PATH="$ORIG_PATH"
+  <%= @ruby %> <%= @installer %></b>

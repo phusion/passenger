@@ -30,49 +30,55 @@
 
 2.3.2. Installing packages	=>	installing-packages-1jxn722
 
-2.4. Installing or upgrading on Red Hat, Fedora, CentOS or ScientificLinux	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
+2.4. Installing or upgrading on Red Hat or CentOS	=>	installing-or-upgrading-on-red-hat-fedora-centos-or-scientificlinux-1y5ie8b
 
-2.5. Generic installation, upgrade and downgrade method: via RubyGems	=>	installing-via-the-gem-39jw1u
+2.4.1. Adding our YUM repository	=>	adding-our-yum-repository-1fb671i
 
-2.6. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
+2.4.2. Installing packages	=>	installing-packages-12a3uty
 
-2.7. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
+2.5. Installing or upgrading on Heroku	=>	installing-or-upgrading-on-heroku-o0o2mk
 
-2.8. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-ed3r9v
+2.6. Generic installation, upgrade and downgrade method: via RubyGems	=>	installing-via-the-gem-39jw1u
 
-2.8.1. Synopsis	=>	synopsis-uwnz2o
+2.7. Generic installation, upgrade and downgrade method: via tarball	=>	installing-via-the-source-tarball-1cgxrqc
 
-2.8.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1x0rhv
+2.8. Upgrading from open source to Enterprise	=>	upgrading-from-open-source-to-enterprise-b17h8g
 
-2.8.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-10430lg
+2.9. Cryptographic verification of installation files	=>	cryptographic-verification-of-installation-files-ed3r9v
 
-2.8.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-1nf0uov
+2.9.1. Synopsis	=>	synopsis-uwnz2o
 
-2.8.5. Verifying Git signatures	=>	verifying-git-signatures-oaafwd
+2.9.2. Importing the Phusion Software Signing key	=>	importing-the-phusion-software-signing-key-1x0rhv
 
-2.8.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-vgtv04
+2.9.3. Verifying the Phusion Software Signing key	=>	verifying-the-phusion-software-signing-key-10430lg
 
-2.8.7. Revocation	=>	revocation-4o01n2
+2.9.4. Verifying the gem and tarball	=>	verifying-the-gem-and-tarball-1nf0uov
 
-2.9. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
+2.9.5. Verifying Git signatures	=>	verifying-git-signatures-oaafwd
 
-2.10. Customizing the compilation process	=>	customizing-the-compilation-process-1sds3od
+2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-vgtv04
 
-2.10.1. Setting the compiler	=>	setting-the-compiler-1symq7h
+2.9.7. Revocation	=>	revocation-4o01n2
 
-2.10.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
+2.10. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
 
-2.10.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1hym30u
+2.11. Customizing the compilation process	=>	customizing-the-compilation-process-1sds3od
 
-2.11. Dealing with multiple Apache installations	=>	dealing-with-multiple-apache-installations-ks5nkz
+2.11.1. Setting the compiler	=>	setting-the-compiler-1symq7h
 
-2.12. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
+2.11.2. Adding additional compiler or linker flags	=>	adding-additional-compiler-or-linker-flags-wzu0ey
 
-2.13. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
+2.11.3. Forcing location of command line tools and dependencies	=>	forcing-location-of-certain-command-line-tools-1hym30u
 
-2.14. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+2.12. Dealing with multiple Apache installations	=>	dealing-with-multiple-apache-installations-ks5nkz
 
-2.15. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
+2.13. Working with the Apache configuration file	=>	locating-the-apache-configuration-file-1fterqv
+
+2.14. Disabling without uninstalling	=>	unloading-disabling-phusion-passenger-from-apache-without-uninstalling-it-s1axnx
+
+2.15. Uninstalling	=>	uninstalling-phusion-passenger-1qb4ssq
+
+2.16. Moving to a different directory	=>	moving-to-a-different-directory-1n0gkwh
 
 3. Deploying a Rack-based Ruby application	=>	deploying-a-rack-based-ruby-application-including-rails-3--hcs66f
 
@@ -134,29 +140,31 @@
 
 7.4.3. PassengerNodejs <filename>	=>	passengernodejs-filename--2mjb1j
 
-7.4.4. PassengerAppEnv <string>	=>	passengerappenv-string--s3ojlc
+7.4.4. PassengerMeteorAppSettings <filename>	=>	passengermeteorappsettings-filename--inl1bd
 
-7.4.5. RailsEnv <string>	=>	railsenv-string--1b0xxvu
+7.4.5. PassengerAppEnv <string>	=>	passengerappenv-string--s3ojlc
 
-7.4.6. RackEnv <string>	=>	rackenv-string--vve9py
+7.4.6. RailsEnv <string>	=>	railsenv-string--1b0xxvu
 
-7.4.7. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
+7.4.7. RackEnv <string>	=>	rackenv-string--vve9py
 
-7.4.8. PassengerAppGroupName <name>	=>	passenger-app-group-name-name--6unn5c
+7.4.8. PassengerAppRoot <path/to/root>	=>	passengerapproot-path-to-root--uf24yd
 
-7.4.9. PassengerAppType <name>	=>	passengerapptype-name--62jzqf
+7.4.9. PassengerAppGroupName <name>	=>	passenger-app-group-name-name--6unn5c
 
-7.4.10. PassengerStartupFile <filename>	=>	passengerstartupfile-filename--14vhvn9
+7.4.10. PassengerAppType <name>	=>	passengerapptype-name--62jzqf
 
-7.4.11. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
+7.4.11. PassengerStartupFile <filename>	=>	passengerstartupfile-filename--14vhvn9
 
-7.4.12. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
+7.4.12. PassengerRestartDir <directory>	=>	passengerrestartdir-directory--1fmhmv0
 
-7.4.13. PassengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
+7.4.13. PassengerSpawnMethod <string>	=>	passengerspawnmethod-string--sodg2y
 
-7.4.14. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+7.4.14. PassengerLoadShellEnvvars <on|off>	=>	passengerloadshellenvvars-on-off--1290yz1
 
-7.4.15. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
+7.4.15. PassengerRollingRestarts <on|off>	=>	passengerrollingrestarts
+
+7.4.16. PassengerResistDeploymentErrors <on|off>	=>	passengerresistdeploymenterrors
 
 7.5. Security options	=>	security-options-1pb75ho
 
@@ -278,7 +286,7 @@
 
 8.6. Static assets such as images and stylesheets aren’t being displayed	=>	static-assets-such-as-images-and-stylesheets-aren-t-being-displayed-uaptpi
 
-8.7. The Apache error log says that the spawn manager script does not exist, or that it does not have permission to execute it	=>	the-apache-error-log-says-that-the-spawn-manager-script-does-not-exist-or-that-it-does-not-have-permission-to-execute-it-1fmoozk
+8.7. Apache cannot access my app’s files because of SELinux errors	=>	apache-cannot-access-my-app-s-files-because-of-selinux-errors-6febhd
 
 8.8. The application thinks its not on SSL even though it is	=>	the-application-thinks-its-not-on-ssl-even-though-it-is-u9fcp1
 
@@ -320,11 +328,13 @@
 
 10.1.3. Caveats & troubleshooting	=>	caveats-troubleshooting-161hgge
 
-10.1.4. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-7uwrol
+10.1.4. Red Hat and CentOS caveats	=>	red-hat-and-centos-caveats-1335bpz
+
+10.1.5. Finding out what user an application is running as	=>	finding-out-what-user-an-application-is-running-as-7uwrol
 
 10.2. Copy-on-write memory support (reducing memory consumption of Ruby applications)	=>	reducing-memory-consumption-of-ruby-on-rails-applications-by-33--1ubxnq0
 
-10.3. Capistrano recipe	=>	capistrano-recipe-syzgo7
+10.3. Tuning for Server Sent Events and WebSockets	=>	tuning-for-server-sent-events-and-websockets-1hy6qa9
 
 10.4. Bundler support	=>	bundler-support-cf72ih
 

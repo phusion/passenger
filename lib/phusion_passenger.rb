@@ -30,10 +30,10 @@ module PhusionPassenger
 
   PACKAGE_NAME = 'passenger'
   # Run 'rake ext/common/Constants.h' after changing this number.
-  VERSION_STRING = '5.0.5'
+  VERSION_STRING = '5.0.8'
 
-  PREFERRED_NGINX_VERSION = '1.6.2'
-  NGINX_SHA256_CHECKSUM = 'b5608c2959d3e7ad09b20fc8f9e5bd4bc87b3bc8ba5936a513c04ed8f1391a18'
+  PREFERRED_NGINX_VERSION = '1.6.3'
+  NGINX_SHA256_CHECKSUM = '0a98e95b366e4d6042f331e1fa4d70e18fd1e49d8993e589008e70e742b7e757'
 
   PREFERRED_PCRE_VERSION  = '8.34'
   PCRE_SHA256_CHECKSUM = '1dd78994c81e44ac41cf30b2a21d4b4cc6d76ccde7fc6e77713ed51d7bddca47'
@@ -149,7 +149,20 @@ module PhusionPassenger
   # method was used. Can be 'deb', 'rpm', 'homebrew', 'test'
   # or 'unknown'.
   def self.packaging_method
-    return @custom_packaging_method
+    return @packaging_method
+  end
+
+  def self.packaging_method_description
+    case packaging_method
+    when "deb"
+      "Debian packages"
+    when "rpm"
+      "RPM packages"
+    when "homebrew"
+      "Homebrew"
+    else
+      "gem or tarball"
+    end
   end
 
   # Whether the current Phusion Passenger installation is installed
