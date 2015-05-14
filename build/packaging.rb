@@ -193,6 +193,8 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
       if !is_beta
         puts "Initiating building of Debian packages"
         Rake::Task['package:initiate_debian_building'].invoke
+        puts "Initiating building of RPM packages"
+        Rake::Task['package:initiate_rpm_building'].invoke
       end
 
       puts "Building OS X binaries..."
@@ -234,6 +236,8 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
       if !is_beta
         puts "Initiating building of Debian packages"
         Rake::Task['package:initiate_debian_building'].invoke
+        puts "Initiating building of RPM packages"
+        Rake::Task['package:initiate_rpm_building'].invoke
       end
 
       puts "Building OS X binaries..."
@@ -457,6 +461,54 @@ task 'package:initiate_debian_building' do
       response.body
   end
   puts "Initiated building of Debian packages."
+end
+
+task 'package:initiate_rpm_building' do
+  require 'yaml'
+  require 'uri'
+  require 'net/http'
+  require 'net/https'
+  version = VERSION_STRING
+  begin
+    website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
+  rescue Errno::ENOENT
+    STDERR.puts "-------------------"
+    abort "*** ERROR: Please put the Phusion Passenger website admin " +
+      "password in ~/.passenger_website.yml:\n" +
+      "admin_password: ..."
+  end
+  if is_open_source?
+    type = "open%20source"
+    jenkins_token = website_config["jenkins_token"]
+    if !jenkins_token
+      abort "*** ERROR: Please put the Passenger open source Jenkins " +
+        "authentication token in ~/.passenger_website.yml, under " +
+        "the 'jenkins_token' key."
+    end
+  else
+    type = "Enterprise"
+    jenkins_token = website_config["jenkins_enterprise_token"]
+    if !jenkins_token
+      abort "*** ERROR: Please put the Passenger Enterprise Jenkins " +
+        "authentication token in ~/.passenger_website.yml, under " +
+        "the 'jenkins_enterprise_token' key."
+    end
+  end
+
+  uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
+    "job=Passenger%20#{type}%20RPM%20packages%20(release)&ref=#{git_tag}&repo=#{apt_repo_name}")
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+  request = Net::HTTP::Post.new(uri.request_uri)
+  request.set_form_data("token" => jenkins_token)
+  response = http.request(request)
+  if response.code != 200 && response.body != "Scheduled.\n"
+    abort "*** ERROR: Cannot initiate building of RPM packages:\n" +
+      "Status: #{response.code}\n\n" +
+      response.body
+  end
+  puts "Initiated building of RPM packages."
 end
 
 task 'package:build_osx_binaries' do

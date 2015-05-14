@@ -46,6 +46,7 @@ module PhusionPassenger
         :engine            => "nginx",
         :nginx_version     => PREFERRED_NGINX_VERSION,
         :log_level         => DEFAULT_LOG_LEVEL,
+        :auto              => !STDIN.tty? || !STDOUT.tty?,
         :ctls              => [],
         :envvars           => {}
       }.freeze
@@ -340,6 +341,10 @@ module PhusionPassenger
           opts.on("--log-level NUMBER", Integer, "Log level to use. Default: #{DEFAULT_LOG_LEVEL}") do |value|
             options[:log_level] = value
           end
+          opts.on("--auto", "Run in non-interactive mode. Default when#{nl}" +
+            "stdin or stdout is not a TTY") do
+            options[:auto] = true
+          end
           opts.on("--ctl NAME=VALUE", String) do |value|
             if value !~ /=.+/
               abort "*** ERROR: invalid --ctl format: #{value}"
@@ -484,6 +489,9 @@ module PhusionPassenger
           "--connect-timeout", "0",
           "--idle-timeout", "0"
         ]
+        if @options[:auto]
+          args << "--auto"
+        end
         if @options[:binaries_url_root]
           args << "--url-root"
           args << @options[:binaries_url_root]
