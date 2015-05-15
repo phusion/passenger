@@ -8,6 +8,7 @@ Release 5.0.8
  * Fixes cases when Passenger shuts down more processes than is allowed by the `min_instances` limit. Closes GH-1500.
  * Fixes "Bad Gateway" errors that would occur when an application sets the X-Sendfile or X-Accel-Redirect header, together with a non-empty response body. Closes GH-1498.
  * Fixes the fact that Passenger agent processes don't lower their privilege when user switching is turned off.
+ * Fixes autodetection of Apache on Gentoo. Closes GH-1510.
  * [Standalone] Adds the `--pool-idle-time` command line parameter.
  * [Standalone] Adds the `--auto` command line parameter for running non-interactively. This supresses prompts. Closes GH-1511.
 

@@ -112,10 +112,26 @@ module PhusionPassenger
       else
         apache2ctl = self.apache2ctl
       end
-      if apache2ctl
+      if os_name == "linux" &&
+         linux_distro_tags.include?(:gentoo) &&
+         apache2ctl == "/usr/sbin/apache2ctl"
+        # On Gentoo, `apache2ctl -V` doesn't forward the command to `apache2 -V`,
+        # but instead prints the OpenRC init system's version.
+        # https://github.com/phusion/passenger/issues/1510
+        if options
+          httpd = options[:httpd] || self.httpd(options)
+        else
+          httpd = self.httpd
+        end
+        version_command = httpd
+      else
+        version_command = apache2ctl
+      end
+
+      if version_command
         create_temp_file("apache2ctl_V") do |filename, f|
           e_filename = Shellwords.escape(filename)
-          output = `#{apache2ctl} -V 2>#{e_filename}`
+          output = `#{version_command} -V 2>#{e_filename}`
 
           stderr_text = File.open(filename, "rb") do |f2|
             f2.read
