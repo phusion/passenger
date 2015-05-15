@@ -5,6 +5,7 @@ Release 5.0.8
  * We now supply Red Hat 6, Red Hat 7, CentOS 6 and CentOS 7 packages.
  * We no longer supply Ubuntu 10.04 packages because Ubuntu 10.04 is no longer supported by Canonical.
  * Fixes a Passenger crash (SIGSEGV) that occurs occasionally when out-of-band garbage collection is enabled. Closes GH-1469.
+ * Fixes a Passenger crash (SIGSEGV) that occurs occasionally with redirects to relative URLs. Closes GH-1513.
  * Fixes cases when Passenger shuts down more processes than is allowed by the `min_instances` limit. Closes GH-1500.
  * Fixes "Bad Gateway" errors that would occur when an application sets the X-Sendfile or X-Accel-Redirect header, together with a non-empty response body. Closes GH-1498.
  * Fixes the fact that Passenger agent processes don't lower their privilege when user switching is turned off.
