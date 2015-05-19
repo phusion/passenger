@@ -10,6 +10,7 @@ Release 5.0.8
  * Fixes "Bad Gateway" errors that would occur when an application sets the X-Sendfile or X-Accel-Redirect header, together with a non-empty response body. Closes GH-1498.
  * Fixes the fact that Passenger agent processes don't lower their privilege when user switching is turned off.
  * Fixes autodetection of Apache on Gentoo. Closes GH-1510.
+ * Fixes compilation problems on Solaris. Closes GH-1508.
  * [Standalone] Adds the `--pool-idle-time` command line parameter.
  * [Standalone] Adds the `--auto` command line parameter for running non-interactively. This supresses prompts. Closes GH-1511.
 
