@@ -351,7 +351,7 @@ public:
 		if (!params.getBool("user_switching", false, true)
 		 && !params.has("user"))
 		{
-			params.set("user", params.get("default_user", false, DEFAULT_USER));
+			params.set("user", params.get("default_user", false, PASSENGER_DEFAULT_USER));
 		}
 
 		fds = createUnixSocketPair(__FILE__, __LINE__);
