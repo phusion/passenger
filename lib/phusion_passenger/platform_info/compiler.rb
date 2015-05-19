@@ -261,6 +261,7 @@ module PhusionPassenger
     # for that too.
     def self.try_compile_with_warning_flag(description, language, source, flags = nil)
       extension = detect_language_extension(language)
+      result = nil
       create_temp_file("passenger-compile-check.#{extension}") do |filename, f|
         f.puts(source)
         f.close
@@ -268,8 +269,27 @@ module PhusionPassenger
           "-c '#{filename}' -o '#{filename}.o'",
           flags)
         result = run_compiler(description, command, filename, source, true)
-        return result && result[:result] && result[:output] !~ /unknown warning option/i
+        result = result && result[:result] && result[:output] !~ /unknown warning option/i
       end
+      return false if !result
+
+      # For some reason, GCC does not complain about a warning flag
+      # not being supported unless the source contains another error. So we
+      # check for this.
+      create_temp_file("passenger-compile-check.#{extension}") do |filename, f|
+        source = %Q{
+          void foo() {
+            return error;
+          }
+        }
+        f.puts(source)
+        f.close
+        command = create_compiler_command(language,
+          "-c '#{filename}' -o '#{filename}.o'",
+          flags)
+        result = run_compiler("#{description} (really)", command, filename, source, :always)
+      end
+      result && !result[:output].include?(flags)
     end
 
     def self.try_link(description, language, source, flags = nil)
@@ -378,34 +398,9 @@ module PhusionPassenger
     memoize :cxx_supports_no_tls_direct_seg_refs_option?, true
 
     def self.compiler_supports_wno_ambiguous_member_template?
-      result = try_compile_with_warning_flag(
+      try_compile_with_warning_flag(
         "Checking for C++ compiler '-Wno-ambiguous-member-template' support",
         :cxx, '', '-Wno-ambiguous-member-template')
-      return false if !result
-
-      # For some reason, GCC does not complain about -Wno-ambiguous-member-template
-      # not being supported unless the source contains another error. So we
-      # check for this.
-      create_temp_file("passenger-compile-check.cpp") do |filename, f|
-        source = %Q{
-          void foo() {
-            return error;
-          }
-        }
-        f.puts(source)
-        f.close
-        begin
-          command = create_compiler_command(:cxx,
-            "-c '#{filename}' -o '#{filename}.o'",
-            '-Wno-ambiguous-member-template')
-          result = run_compiler("Checking whether C++ compiler '-Wno-ambiguous-member-template' support is *really* supported",
-            command, filename, source, :always)
-        ensure
-          File.unlink("#{filename}.o") rescue nil
-        end
-      end
-
-      return result && result[:output] !~ /-Wno-ambiguous-member-template/
     end
     memoize :compiler_supports_wno_ambiguous_member_template?, true
 
