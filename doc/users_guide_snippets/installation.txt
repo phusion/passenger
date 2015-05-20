@@ -91,8 +91,6 @@ deb https://oss-binaries.phusionpassenger.com/apt/passenger vivid main
 deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main
 # Ubuntu 12.04
 deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
-# Ubuntu 10.04
-deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
 # Debian 8
 deb https://oss-binaries.phusionpassenger.com/apt/passenger jessie main
 # Debian 7
@@ -112,8 +110,6 @@ deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt
 deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt trusty main
 # Ubuntu 12.04
 deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt precise main
-# Ubuntu 10.04
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt lucid main
 # Debian 8
 deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt jessie main
 # Debian 7
