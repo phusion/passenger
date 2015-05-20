@@ -56,9 +56,11 @@
 
 2.9.5. Verifying Git signatures	=>	verifying-git-signatures-dltpan
 
-2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-uga0ho
+2.9.6. Verifying Debian packages	=>	verifying-deb-and-rpm-packages-uga0ho
 
-2.9.7. Revocation	=>	revocation-ukzeg9
+2.9.7. Verifying RPM packages	=>	verifying-rpm-packages-1m745i5
+
+2.9.8. Revocation	=>	revocation-ukzeg9
 
 2.10. Customizing the compilation process	=>	customizing-the-compilation-process-j4xj2t
 

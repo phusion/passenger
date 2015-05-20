@@ -290,7 +290,7 @@ sudo curl --fail -sSLo /etc/yum.repos.d/passenger.repo https://oss-binaries.phus
 +
 --------------------------------------------------------------
 unset HISTFILE
-sudo curl --fail -sSLo -u download:YOUR_DOWNLOAD_TOKEN /etc/yum.repos.d/passenger.repo https://www.phusionpassenger.com/enterprise_yum/el-passenger-enterprise.repo
+sudo curl --fail -sSL -u download:YOUR_DOWNLOAD_TOKEN -o /etc/yum.repos.d/passenger.repo https://www.phusionpassenger.com/enterprise_yum/el-passenger-enterprise.repo
 --------------------------------------------------------------
 +
 The `unset HISTFILE` command ensures that your download token isn't saved to the Bash history file.
@@ -731,9 +731,13 @@ gpg: Signature made Mon Mar 11 10:12:02 2013 CET using RSA key ID 0A212A8C
 gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
 -------------------------------------------------------
 
-==== Verifying DEB and RPM packages
+==== Verifying Debian packages
 
-The DEB and RPM packages are signed with the signatures of the respective packagers. They are automatically checked upon installation.
+Our <<install_on_debian_ubuntu,APT repository>> is signed by Phusion Automated Software Signing (auto-software-signing@phusion.nl). Packages are automatically checked upon installation.
+
+==== Verifying RPM packages
+
+Our <<installing_or_upgrading_on_red_hat,YUM repository>> is signed by link:https://packagecloud.io[PackageCloud] (ops@packagecloud.io). PackageCloud is the RPM package hosting service that we use. You can find their key link:https://packagecloud.io/gpg.key[here]. Packages are automatically checked upon installation.
 
 ==== Revocation
 
