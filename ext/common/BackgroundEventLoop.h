@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011, 2012 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -31,7 +31,7 @@
 
 extern "C" {
 	struct ev_loop;
-	struct ev_async;
+	struct uv_loop_s;
 }
 
 namespace Passenger {
@@ -45,12 +45,12 @@ namespace Passenger {
 	 * Implements a libev event loop that runs in a background thread.
 	 */
 	struct BackgroundEventLoop {
-		struct ev_loop *loop;
-		ev_async *async;
+		struct ev_loop *libev_loop;
+		struct uv_loop_s *libuv_loop;
 		boost::shared_ptr<SafeLibev> safe;
 		BackgroundEventLoopPrivate *priv;
 
-		BackgroundEventLoop(bool scalable = false, bool useLibeio = false);
+		BackgroundEventLoop(bool scalable = false, bool usesLibuv = true);
 		~BackgroundEventLoop();
 
 		void start(const string &threadName = "", unsigned int stackSize = 1024 * 1024);

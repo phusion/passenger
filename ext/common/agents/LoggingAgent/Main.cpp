@@ -289,12 +289,13 @@ initializeUnprivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	wo->bgloop = new BackgroundEventLoop(true, true);
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe);
+	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
+		wo->bgloop->libuv_loop);
 
 	UPDATE_TRACE_POINT();
 	wo->accountsDatabase = boost::make_shared<AccountsDatabase>();
 	wo->accountsDatabase->add("logging", wo->password, false);
-	wo->loggingServer = new LoggingServer(wo->bgloop->loop,
+	wo->loggingServer = new LoggingServer(wo->bgloop->libev_loop,
 		wo->serverSocketFd, wo->accountsDatabase, options);
 
 	UPDATE_TRACE_POINT();
@@ -309,11 +310,11 @@ initializeUnprivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	ev_signal_init(&wo->sigquitWatcher, printInfo, SIGQUIT);
-	ev_signal_start(wo->bgloop->loop, &wo->sigquitWatcher);
+	ev_signal_start(wo->bgloop->libev_loop, &wo->sigquitWatcher);
 	ev_signal_init(&wo->sigintWatcher, onTerminationSignal, SIGINT);
-	ev_signal_start(wo->bgloop->loop, &wo->sigintWatcher);
+	ev_signal_start(wo->bgloop->libev_loop, &wo->sigintWatcher);
 	ev_signal_init(&wo->sigtermWatcher, onTerminationSignal, SIGTERM);
-	ev_signal_start(wo->bgloop->loop, &wo->sigtermWatcher);
+	ev_signal_start(wo->bgloop->libev_loop, &wo->sigtermWatcher);
 }
 
 static void

@@ -278,16 +278,16 @@ Optional fields:
 
 # Vendoring of libraries
 
-Phusion Passenger vendors libev and libeio in order to make installation easier
+Phusion Passenger vendors libev and libuv in order to make installation easier
 for users on operating systems without proper package management, like OS X.
 If you want Phusion Passenger to compile against the system-provided
-libev and/or libeio instead, then set the following environment variables
+libev and/or libuv instead, then set the following environment variables
 before compiling:
 
  * `export USE_VENDORED_LIBEV=no`
- * `export USE_VENDORED_LIBEIO=no`
+ * `export USE_VENDORED_LIBUV=no`
 
-Note that we require at least libev 4.11 and libeio 1.0.
+Note that we require at least libev 4.11 and libuv 1.4.2.
 
 
 # Generating gem and tarball

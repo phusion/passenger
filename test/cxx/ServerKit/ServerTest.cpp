@@ -28,9 +28,8 @@ namespace tut {
 
 		ServerKit_ServerTest()
 			: bg(false, true),
-			  context(bg.safe)
+			  context(bg.safe, bg.libuv_loop)
 		{
-			initializeLibeio();
 			setLogLevel(LVL_CRIT);
 			serverSocket1 = createUnixServer("tmp.server1");
 			serverSocket2 = createUnixServer("tmp.server2");
@@ -49,7 +48,6 @@ namespace tut {
 			unlink("tmp.server2");
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			bg.stop();
-			shutdownLibeio();
 		}
 
 		void startServer() {

@@ -172,7 +172,7 @@ dependencies = [
   COMMON_LIBRARY.link_objects,
   LIBBOOST_OXT,
   LIBEV_TARGET,
-  LIBEIO_TARGET
+  LIBUV_TARGET
 ].flatten.compact
 task :compile_app => dependencies do
   source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
@@ -191,16 +191,16 @@ task :compile_app => dependencies do
   begin
     compile_cxx(source,
       "-DSTANDALONE -o #{object} " <<
-      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBUV_CFLAGS} " <<
       "#{EXTRA_CXXFLAGS}")
     create_executable(exe, object,
       "-DSTANDALONE " <<
-      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBEIO_CFLAGS} " <<
+      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBUV_CFLAGS} " <<
       "#{EXTRA_CXXFLAGS} " <<
       "#{COMMON_LIBRARY.link_objects_as_string} " <<
       "#{LIBBOOST_OXT_LINKARG} " <<
       "#{LIBEV_LIBS} " <<
-      "#{LIBEIO_LIBS} " <<
+      "#{LIBUV_LIBS} " <<
       "#{PlatformInfo.portability_cxx_ldflags} " <<
       "#{EXTRA_CXX_LDFLAGS}")
   ensure

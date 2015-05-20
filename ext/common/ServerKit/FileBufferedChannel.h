@@ -31,7 +31,7 @@
 #include <boost/move/move.hpp>
 #include <boost/atomic.hpp>
 #include <sys/types.h>
-#include <eio.h>
+#include <uv.h>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -57,6 +57,13 @@ using namespace std;
 	P_TRACE_WITH_POS(3, file, line, "[FBC " << (void *) this << "] " << expr)
 #define FBC_DEBUG_FROM_STATIC(expr) \
 	P_TRACE(3, "[FBC " << (void *) self << "] " << expr)
+
+#define FBC_DEBUG_FROM_CALLBACK(context, expr) \
+	P_TRACE(3, "[FBC " << (void *) context->logbase << "] " << expr)
+#define FBC_ERROR_FROM_CALLBACK(context, expr) \
+	P_ERROR("[FBC " << (void *) context->logbase << "] " << expr)
+#define FBC_CRITICAL_FROM_CALLBACK(context, expr) \
+	P_CRITICAL("[FBC " << (void *) context->logbase << "] " << expr)
 
 
 /**
@@ -196,51 +203,81 @@ public:
 
 
 private:
-	struct IOContext {
-		FileBufferedChannel *self;
-		SafeLibevPtr libev;
-		eio_req *req;
-		boost::atomic<bool> canceled;
+	/**
+	 * A structure containing the details of a libuv asynchronous
+	 * filesystem I/O request.
+	 *
+	 * The I/O callback is responsible for destroying its corresponding
+	 * FileIOContext object.
+	 */
+	struct FileIOContext {
 		/**
-		 * Synchronizes access to `req`. Because all I/O callbacks call
-		 * `eioFinished()`, this mutex blocks callbacks until the main
-		 * thread is done assigning `req`.
-		 * See https://github.com/phusion/passenger/issues/1326
+		 * A back pointer to the FileBufferedChannel that created this
+		 * IOContext.
+		 *
+		 * This pointer is set to NULL when this I/O operation is
+		 * canceled (through the `cancel()` method). Cancelation
+		 * occurs when the FileBufferedChannel is about to be deinitialized.
+		 * So be sure to check for cancellation (using `isCanceled`)
+		 * before using the backpointer.
 		 */
-		boost::mutex syncher;
+		FileBufferedChannel *self;
+		/**
+		 * Pointers to the libev and libuv loops that this FileBufferedChannel
+		 * used. We keep the pointers here so that callbacks can perform
+		 * asynchronous I/O operations as part of their cleanup, even in the
+		 * event the original I/O operation is canceled.
+		 *
+		 * I/O callbacks do not have to worry about whether these pointers are
+		 * stale, because callbacks are run inside the event loop, and we stop the
+		 * event loop before destryoing it.
+		 */
+		SafeLibevPtr libev;
+		uv_loop_t *libuv;
+		/* req.data always refers back to the FileIOContext object itself. */
+		uv_fs_t req;
 
-		eio_ssize_t result;
-		int errcode;
+		/**
+		 * Also a pointer to the FileBufferedChannel, but this is used for
+		 * logging purposes inside callbacks (see FBC_DEBUG_FROM_CALLBACK).
+		 * This pointer is never set to NULL, may be still, and is never
+		 * followed.
+		 */
+		void *logbase;
 
-		IOContext(FileBufferedChannel *_self)
+		FileIOContext(FileBufferedChannel *_self)
 			: self(_self),
 			  libev(_self->ctx->libev),
-			  req(NULL),
-			  canceled(false),
-			  result(-1),
-			  errcode(-1)
-			{ }
+			  libuv(_self->ctx->libuv),
+			  logbase(_self)
+		{
+			req.type = UV_UNKNOWN_REQ;
+			req.result = -1;
+			req.data = this;
+		}
 
-		virtual ~IOContext() { }
+		virtual ~FileIOContext() { }
 
 		void cancel() {
-			boost::lock_guard<boost::mutex> l(syncher);
-			if (req != NULL) {
-				eio_cancel(req);
+			if (!isCanceled()) {
+				// uv_cancel() fails if the work is already in progress
+				// or completed, so we set self to NULL as an extra
+				// indicator that this I/O operation is canceled.
+				uv_cancel((uv_req_t *) &req);
+				self = NULL;
 			}
-			canceled.store(true, boost::memory_order_release);
 		}
 
+		/**
+		 * Checks whether this I/O operation has been canceled.
+		 * Note that the libuv request may not have been canceled
+		 * because it was already executing at the time `cancel()`
+		 * was called. So after you've checked that `isCanceled()`
+		 * returns true, you must also cleanup any potential finished
+		 * work in `req`.
+		 */
 		bool isCanceled() const {
-			return (req != NULL && EIO_CANCELLED(req))
-				|| canceled.load(boost::memory_order_acquire);
-		}
-
-		void eioFinished() {
-			boost::lock_guard<boost::mutex> l(syncher);
-			result = req->result;
-			errcode = req->errorno;
-			req = NULL;
+			return self == NULL || req.result == UV_ECANCELED;
 		}
 	};
 
@@ -254,9 +291,9 @@ private:
 	 *   fast case where the consumer can keep up with the writes.
 	 * - We improve the clarity of the code by clearly grouping variables
 	 *   that are only used in the in-file mode.
-	 * - While eio operations are in progress, they hold a smart pointer to the
+	 * - While libuv operations are in progress, they hold a smart pointer to the
 	 *   InFileMode structure, which ensures that the file descriptor that they
-	 *   operate on stays open until all eio operations have finished (or until
+	 *   operate on stays open until all libuv operations have finished (or until
 	 *   their cancellation have been acknowledged by their callbacks).
 	 *
 	 * The variables inside this structure point to different places in the file:
@@ -283,6 +320,11 @@ private:
 		/***** Common state *****/
 
 		/**
+		 * The libuv loop associated with the FileBufferedChannel.
+		 */
+		uv_loop_t *libuv;
+
+		/**
 		 * The file descriptor of the temp file. It's -1 if the file is being
 		 * created.
 		 */
@@ -306,12 +348,12 @@ private:
 
 		/**
 		 * The write operation that the writer is currently performing. Might be
-		 * an `eio_open()`, `eio_write()`, or whatever.
+		 * an `uv_fs_open()`, `uv_fs_write()`, or whatever.
 		 *
 		 * @invariant
 		 *     (writerRequest != NULL) == (writerState == WS_CREATING_FILE || writerState == WS_MOVING)
 		 */
-		IOContext *writerRequest;
+		FileIOContext *writerRequest;
 
 		/**
 		 * Number of bytes already read from the file by the reader.
@@ -331,8 +373,9 @@ private:
 		 */
 		boost::int64_t written;
 
-		InFileMode()
-			: fd(-1),
+		InFileMode(uv_loop_t *_libuv)
+			: libuv(_libuv),
+			  fd(-1),
 			  readRequest(NULL),
 			  writerState(WS_INACTIVE),
 			  writerRequest(NULL),
@@ -344,9 +387,31 @@ private:
 			P_ASSERT_EQ(readRequest, 0);
 			P_ASSERT_EQ(writerRequest, 0);
 			if (fd != -1) {
-				P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
-				eio_close(fd, 0, NULL, NULL);
+				closeFdInBackground();
 			}
+		}
+
+		void closeFdInBackground() {
+			uv_fs_t *req = (uv_fs_t *) malloc(sizeof(uv_fs_t));
+			if (req == NULL) {
+				P_CRITICAL("Cannot close file descriptor for FileBufferedChannel temp file: "
+					"cannot allocate memory for necessary temporary data structure");
+				abort();
+			}
+
+			int result = uv_fs_close(libuv, req, fd, fileClosed);
+			if (result != 0) {
+				P_CRITICAL("Cannot close file descriptor for FileBufferedChannel temp file: "
+					"cannot initiate I/O operation: "
+					<< uv_strerror(result) << " (errno=" << -result << ")");
+				abort();
+			}
+		}
+
+		static void fileClosed(uv_fs_t *req) {
+			P_LOG_FILE_DESCRIPTOR_CLOSE(req->file);
+			uv_fs_req_cleanup(req);
+			free(req);
 		}
 	};
 
@@ -642,14 +707,15 @@ private:
 		terminateReaderBecauseOfEOF();
 	}
 
-	struct ReadContext: public IOContext {
+	struct ReadContext: public FileIOContext {
 		MemoryKit::mbuf buffer;
-		// Smart pointer to keep fd open until eio operation
+		uv_buf_t uvBuffer;
+		// Smart pointer to keep fd open until libuv operation
 		// is finished.
 		boost::shared_ptr<InFileMode> inFileMode;
 
 		ReadContext(FileBufferedChannel *self)
-			: IOContext(self)
+			: FileIOContext(self)
 			{ }
 	};
 
@@ -665,57 +731,25 @@ private:
 		ReadContext *readContext = new ReadContext(this);
 		readContext->buffer = MemoryKit::mbuf_get(&ctx->mbuf_pool);
 		readContext->inFileMode = inFileMode;
+		readContext->uvBuffer = uv_buf_init(readContext->buffer.start, size);
 		readerState = RS_READING_FROM_FILE;
 		inFileMode->readRequest = readContext;
-		boost::unique_lock<boost::mutex> l(readContext->syncher);
-		readContext->req = eio_read(inFileMode->fd, readContext->buffer.start,
-			size, inFileMode->readOffset, 0, _nextChunkDoneReading, readContext);
-		l.unlock();
+
+		uv_fs_read(ctx->libuv, &readContext->req, inFileMode->fd,
+			&readContext->uvBuffer, 1, inFileMode->readOffset,
+			_nextChunkDoneReading);
 		verifyInvariants();
 	}
 
-	// Since a ReadContext contains an mbuf, we may only destroy it
-	// in the event loop thread.
-	static void destroyReadContext(ReadContext *readContext) {
-		if (readContext->libev->onEventLoopThread()) {
-			destroyReadContext_onEventLoopThread(readContext);
-		} else {
-			readContext->libev->runLater(boost::bind(
-				destroyReadContext_onEventLoopThread,
-				readContext));
-		}
-	}
-
-	static void destroyReadContext_onEventLoopThread(ReadContext *readContext) {
-		delete readContext;
-	}
-
-	static int _nextChunkDoneReading(eio_req *req) {
+	static void _nextChunkDoneReading(uv_fs_t *req) {
 		ReadContext *readContext = (ReadContext *) req->data;
-		readContext->eioFinished();
+		uv_fs_req_cleanup(req);
 		if (readContext->isCanceled()) {
-			destroyReadContext(readContext);
-			return 0;
-		}
-
-		if (readContext->libev->onEventLoopThread()) {
-			_nextChunkDoneReading_onEventLoopThread(readContext);
-		} else {
-			readContext->libev->runLater(boost::bind(
-				_nextChunkDoneReading_onEventLoopThread,
-				readContext));
-		}
-		return 0;
-	}
-
-	static void _nextChunkDoneReading_onEventLoopThread(ReadContext *readContext) {
-		if (readContext->isCanceled()) {
-			destroyReadContext(readContext);
+			delete readContext;
 			return;
 		}
 
-		FileBufferedChannel *self = readContext->self;
-		self->nextChunkDoneReading(readContext);
+		readContext->self->nextChunkDoneReading(readContext);
 	}
 
 	void nextChunkDoneReading(ReadContext *readContext) {
@@ -724,13 +758,12 @@ private:
 		FBC_DEBUG("Reader: done reading chunk");
 		P_ASSERT_EQ(readerState, RS_READING_FROM_FILE);
 		verifyInvariants();
-		int fd = readContext->result;
-		int errcode = readContext->errcode;
 		MemoryKit::mbuf buffer(boost::move(readContext->buffer));
-		destroyReadContext(readContext);
+		delete readContext;
 		inFileMode->readRequest = NULL;
 
-		if (fd != -1) {
+		if (readContext->req.result >= 0) {
+			int fd = readContext->req.result;
 			unsigned int generation = this->generation;
 
 			assert(fd <= inFileMode->written);
@@ -757,6 +790,7 @@ private:
 				terminateReaderBecauseOfEOF();
 			}
 		} else {
+			int errcode = -readContext->req.result;
 			setError(errcode, __FILE__, __LINE__);
 		}
 	}
@@ -800,7 +834,7 @@ private:
 
 		FBC_DEBUG("Switching to in-file mode");
 		mode = IN_FILE_MODE;
-		inFileMode = boost::make_shared<InFileMode>();
+		inFileMode = boost::make_shared<InFileMode>(ctx->libuv);
 		createBufferFile();
 	}
 
@@ -826,11 +860,11 @@ private:
 
 	/***** File creator *****/
 
-	struct FileCreationContext: public IOContext {
+	struct FileCreationContext: public FileIOContext {
 		string path;
 
 		FileCreationContext(FileBufferedChannel *self)
-			: IOContext(self)
+			: FileIOContext(self)
 			{ }
 	};
 
@@ -847,41 +881,28 @@ private:
 		inFileMode->writerState = WS_CREATING_FILE;
 		inFileMode->writerRequest = fcContext;
 
-		boost::lock_guard<boost::mutex> l(fcContext->syncher);
 		if (config->delayInFileModeSwitching == 0) {
 			FBC_DEBUG("Writer: creating file " << fcContext->path);
-			fcContext->req = eio_open(fcContext->path.c_str(),
-				O_RDWR | O_CREAT | O_EXCL, 0600, 0,
-				_bufferFileCreated, fcContext);
+			int result = uv_fs_open(ctx->libuv, &fcContext->req,
+				fcContext->path.c_str(), O_RDWR | O_CREAT | O_EXCL,
+				0600, _bufferFileCreated);
+			if (result != 0) {
+				fcContext->req.result = result;
+				ctx->libev->runLater(boost::bind(_bufferFileCreated,
+					&fcContext->req));
+			}
 		} else {
 			FBC_DEBUG("Writer: delaying in-file mode switching for " <<
 				config->delayInFileModeSwitching << "ms");
-			fcContext->req = eio_busy(
-				(eio_tstamp) config->delayInFileModeSwitching / 1000.0,
-				0, _bufferFileDoneDelaying, fcContext);
+			ctx->libev->runAfter(config->delayInFileModeSwitching,
+				boost::bind(_bufferFileDoneDelaying, fcContext));
 		}
 	}
 
-	static int _bufferFileDoneDelaying(eio_req *req) {
-		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
-		fcContext->eioFinished();
+	static void _bufferFileDoneDelaying(FileCreationContext *fcContext) {
 		if (fcContext->isCanceled()) {
-			delete fcContext;
-			return 0;
-		}
-
-		if (fcContext->libev->onEventLoopThread()) {
-			_bufferFileDoneDelaying_onEventLoopThread(fcContext);
-		} else {
-			fcContext->libev->runLater(boost::bind(
-				_bufferFileDoneDelaying_onEventLoopThread,
-				fcContext));
-		}
-		return 0;
-	}
-
-	static void _bufferFileDoneDelaying_onEventLoopThread(FileCreationContext *fcContext) {
-		if (fcContext->isCanceled()) {
+			// We don't cleanup fcContext->req here because we didn't
+			// start a libuv request.
 			delete fcContext;
 			return;
 		}
@@ -891,72 +912,52 @@ private:
 	}
 
 	void bufferFileDoneDelaying(FileCreationContext *fcContext) {
-		boost::lock_guard<boost::mutex> l(fcContext->syncher);
 		FBC_DEBUG("Writer: done delaying in-file mode switching. "
 			"Creating file: " << fcContext->path);
-		fcContext->req = eio_open(fcContext->path.c_str(),
-			O_RDWR | O_CREAT | O_EXCL, 0600, 0,
-			_bufferFileCreated, fcContext);
+		int result = uv_fs_open(ctx->libuv, &fcContext->req,
+			fcContext->path.c_str(), O_RDWR | O_CREAT | O_EXCL,
+			0600, _bufferFileCreated);
+		if (result != 0) {
+			fcContext->req.result = result;
+			_bufferFileCreated(&fcContext->req);
+		}
 	}
 
-	static int _bufferFileCreated(eio_req *req) {
+	static void _bufferFileCreated(uv_fs_t *req) {
 		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
-		fcContext->eioFinished();
+		uv_fs_req_cleanup(req);
 		if (fcContext->isCanceled()) {
-			if (req->result != -1) {
-				FileBufferedChannel *self = fcContext->self;
-				FBC_DEBUG_FROM_STATIC("Writer: creation of file " << fcContext->path <<
+			if (req->result >= 0) {
+				FBC_DEBUG_FROM_CALLBACK(fcContext,
+					"Writer: creation of file " << fcContext->path <<
 					"canceled. Deleting file in the background");
-				eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
-				eio_close(req->result, 0, NULL, NULL);
-			} else {
-				delete fcContext;
-			}
-			return 0;
-		}
-
-		if (fcContext->libev->onEventLoopThread()) {
-			_bufferFileCreated_onEventLoopThread(fcContext);
-		} else {
-			fcContext->libev->runLater(boost::bind(
-				_bufferFileCreated_onEventLoopThread,
-				fcContext));
-		}
-		return 0;
-	}
-
-	static void _bufferFileCreated_onEventLoopThread(FileCreationContext *fcContext) {
-		if (fcContext->isCanceled()) {
-			if (fcContext->result != -1) {
-				FileBufferedChannel *self = fcContext->self;
-				FBC_DEBUG_FROM_STATIC("Writer: creation of file " << fcContext->path <<
-					"canceled. Deleting file in the background");
-				eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
-				eio_close(fcContext->result, 0, NULL, NULL);
+				closeBufferFileInBackground(fcContext);
+				// Will take care of deleting fcContext
+				unlinkBufferFileInBackground(fcContext);
 			} else {
 				delete fcContext;
 			}
 			return;
 		}
 
-		FileBufferedChannel *self = fcContext->self;
-		self->bufferFileCreated(fcContext);
+		fcContext->self->bufferFileCreated(fcContext);
 	}
 
 	void bufferFileCreated(FileCreationContext *fcContext) {
 		P_ASSERT_EQ(inFileMode->writerState, WS_CREATING_FILE);
 		verifyInvariants();
-		int fd = fcContext->result;
-		int errcode = fcContext->errcode;
 		inFileMode->writerRequest = NULL;
 
-		if (fd != -1) {
+		if (fcContext->req.result >= 0) {
 			FBC_DEBUG("Writer: file created. Deleting file in the background");
-			P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, "FileBufferedChannel buffer file");
-			eio_unlink(fcContext->path.c_str(), 0, bufferFileUnlinked, fcContext);
-			inFileMode->fd = fd;
+			P_LOG_FILE_DESCRIPTOR_OPEN4(fcContext->req.result, __FILE__, __LINE__,
+				"FileBufferedChannel buffer file");
+			inFileMode->fd = fcContext->req.result;
+			// Will take care of deleting fcContext
+			unlinkBufferFileInBackground(fcContext);
 			moveNextBufferToFile();
 		} else {
+			int errcode = -fcContext->req.result;
 			delete fcContext;
 			if (errcode == EEXIST) {
 				FBC_DEBUG("Writer: file already exists, retrying");
@@ -969,38 +970,97 @@ private:
 		}
 	}
 
-	static int bufferFileUnlinked(eio_req *req) {
-		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
-		FileBufferedChannel *self = fcContext->self;
+	static void closeBufferFileInBackground(FileCreationContext *fcContext) {
+		// Do not use fcContext->self in here. This method may be called
+		// when the I/O operation is already canceled.
 
-		if (fcContext->isCanceled()) {
+		assert(fcContext->req.result >= 0);
+
+		uv_fs_t *closeReq = (uv_fs_t *) malloc(sizeof(uv_fs_t));
+		if (closeReq == NULL) {
+			FBC_CRITICAL_FROM_CALLBACK(fcContext,
+				"Cannot close file descriptor for " << fcContext->path
+				<< ": cannot allocate memory for necessary temporary data structure");
+			abort();
+		}
+
+		int result = uv_fs_close(fcContext->libuv, closeReq, fcContext->req.result,
+			bufferFileClosed);
+		if (result != 0) {
+			FBC_CRITICAL_FROM_CALLBACK(fcContext,
+				"Cannot close file descriptor for " << fcContext->path
+				<< ": cannot initiate I/O operation: "
+				<< uv_strerror(result) << " (errno=" << -result << ")");
+			abort();
+		}
+	}
+
+	static void unlinkBufferFileInBackground(FileCreationContext *fcContext) {
+		// Nobody will cancel this unlink operation. We set self to NULL
+		// here as a warning that we should not use the backpointer.
+		fcContext->self = NULL;
+
+		uv_fs_t *unlinkReq = (uv_fs_t *) malloc(sizeof(uv_fs_t));
+		if (unlinkReq == NULL) {
+			FBC_ERROR_FROM_CALLBACK(fcContext,
+				"Cannot delete " << fcContext->path <<
+				": cannot allocate memory for necessary temporary data structure");
 			delete fcContext;
-			return 0;
-		}
-
-		if (req->result != -1) {
-			FBC_DEBUG_FROM_STATIC("Writer: file " << fcContext->path << " deleted");
 		} else {
-			FBC_DEBUG_FROM_STATIC("Writer: failed to delete " << fcContext->path <<
-				": errno=" << req->errorno << " (" << strerror(req->errorno) << ")");
+			unlinkReq->data = fcContext;
+			int result = uv_fs_unlink(fcContext->libuv, unlinkReq, fcContext->path.c_str(),
+				bufferFileUnlinked);
+			if (result != 0) {
+				FBC_ERROR_FROM_CALLBACK(fcContext,
+					"Cannot delete " << fcContext->path << ": cannot initiate I/O operation: "
+					<< uv_strerror(result) << " (errno=" << -result << ")");
+				free(unlinkReq);
+				delete fcContext;
+			}
+		}
+	}
+
+	static void bufferFileUnlinked(uv_fs_t *req) {
+		FileCreationContext *fcContext = static_cast<FileCreationContext *>(req->data);
+		assert(fcContext->self == NULL);
+
+		if (req->result == UV_ECANCELED) {
+			uv_fs_req_cleanup(req);
+			delete fcContext;
+			return;
 		}
 
+		if (req->result >= 0) {
+			FBC_DEBUG_FROM_CALLBACK(fcContext,
+				"Writer: file " << fcContext->path << " deleted");
+		} else {
+			FBC_DEBUG_FROM_CALLBACK(fcContext,
+				"Writer: failed to delete " << fcContext->path <<
+				": " << uv_strerror(req->result) << " (errno=" << -req->result << ")");
+		}
+
+		uv_fs_req_cleanup(req);
 		delete fcContext;
-		return 0;
+	}
+
+	static void bufferFileClosed(uv_fs_t *req) {
+		uv_fs_req_cleanup(req);
+		free(req);
 	}
 
 
 	/***** Mover *****/
 
-	struct MoveContext: public IOContext {
-		// Smart pointer to keep fd open until eio operation
+	struct MoveContext: public FileIOContext {
+		// Smart pointer to keep fd open until libuv operation
 		// is finished.
 		boost::shared_ptr<InFileMode> inFileMode;
 		MemoryKit::mbuf buffer;
+		uv_buf_t uvBuffer;
 		size_t written;
 
 		MoveContext(FileBufferedChannel *self)
-			: IOContext(self)
+			: FileIOContext(self)
 			{ }
 	};
 
@@ -1026,61 +1086,32 @@ private:
 		moveContext->inFileMode = inFileMode;
 		moveContext->buffer = peekBuffer();
 		moveContext->written = 0;
+		moveContext->uvBuffer = uv_buf_init(moveContext->buffer.start,
+			moveContext->buffer.size());
 
 		inFileMode->writerState = WS_MOVING;
 		inFileMode->writerRequest = moveContext;
-		boost::unique_lock<boost::mutex> l(moveContext->syncher);
-		moveContext->req = eio_write(inFileMode->fd,
-			moveContext->buffer.start,
-			moveContext->buffer.size(),
+		int result = uv_fs_write(ctx->libuv, &moveContext->req, inFileMode->fd,
+			&moveContext->uvBuffer, 1,
 			inFileMode->readOffset + inFileMode->written,
-			0, _bufferWrittenToFile, moveContext);
-		l.unlock();
+			_bufferWrittenToFile);
+		if (result != 0) {
+			moveContext->req.result = result;
+			ctx->libev->runLater(boost::bind(_bufferWrittenToFile,
+				&moveContext->req));
+		}
 		verifyInvariants();
 	}
 
-	// Since a MoveContext contains an mbuf, we may only destroy it
-	// in the event loop thread.
-	static void destroyMoveContext(MoveContext *moveContext) {
-		if (moveContext->libev->onEventLoopThread()) {
-			destroyMoveContext_onEventLoopThread(moveContext);
-		} else {
-			moveContext->libev->runLater(boost::bind(
-				destroyMoveContext_onEventLoopThread,
-				moveContext));
-		}
-	}
-
-	static void destroyMoveContext_onEventLoopThread(MoveContext *moveContext) {
-		delete moveContext;
-	}
-
-	static int _bufferWrittenToFile(eio_req *req) {
+	static void _bufferWrittenToFile(uv_fs_t *req) {
 		MoveContext *moveContext = static_cast<MoveContext *>(req->data);
-		moveContext->eioFinished();
+		uv_fs_req_cleanup(req);
 		if (moveContext->isCanceled()) {
-			destroyMoveContext(moveContext);
-			return 0;
-		}
-
-		if (moveContext->libev->onEventLoopThread()) {
-			_bufferWrittenToFile_onEventLoopThread(moveContext);
-		} else {
-			moveContext->libev->runLater(boost::bind(
-				_bufferWrittenToFile_onEventLoopThread,
-				moveContext));
-		}
-		return 0;
-	}
-
-	static void _bufferWrittenToFile_onEventLoopThread(MoveContext *moveContext) {
-		if (moveContext->isCanceled()) {
-			destroyMoveContext(moveContext);
+			delete moveContext;
 			return;
 		}
 
-		FileBufferedChannel *self = moveContext->self;
-		self->bufferWrittenToFile(moveContext);
+		moveContext->self->bufferWrittenToFile(moveContext);
 	}
 
 	void bufferWrittenToFile(MoveContext *moveContext) {
@@ -1089,8 +1120,8 @@ private:
 		assert(!peekBuffer().empty());
 		verifyInvariants();
 
-		if (moveContext->result != -1) {
-			moveContext->written += moveContext->result;
+		if (moveContext->req.result >= 0) {
+			moveContext->written += moveContext->req.result;
 			assert(moveContext->written <= moveContext->buffer.size());
 
 			if (moveContext->written == moveContext->buffer.size()) {
@@ -1106,29 +1137,34 @@ private:
 				if (generation != this->generation || mode >= ERROR) {
 					// buffersFlushedCallback deinitialized this object, or callback
 					// called a method that encountered an error.
-					destroyMoveContext(moveContext);
+					delete moveContext;
 					return;
 				}
 
 				inFileMode->writerRequest = NULL;
-				destroyMoveContext(moveContext);
+				delete moveContext;
 				moveNextBufferToFile();
 			} else {
 				FBC_DEBUG("Writer: move incomplete, proceeding " <<
 					"with writing rest of buffer");
-				boost::unique_lock<boost::mutex> l(moveContext->syncher);
-				moveContext->req = eio_write(inFileMode->fd,
+				moveContext->uvBuffer = uv_buf_init(
 					moveContext->buffer.start + moveContext->written,
-					moveContext->buffer.size() - moveContext->written,
+					moveContext->buffer.size() - moveContext->written);
+				int result = uv_fs_write(ctx->libuv, &moveContext->req,
+					inFileMode->fd, &moveContext->uvBuffer, 1,
 					inFileMode->readOffset + inFileMode->written,
-					0, _bufferWrittenToFile, moveContext);
-				l.unlock();
+					_bufferWrittenToFile);
+				if (result != 0) {
+					moveContext->req.result = result;
+					ctx->libev->runLater(boost::bind(_bufferWrittenToFile,
+						&moveContext->req));
+				}
 				verifyInvariants();
 			}
 		} else {
 			FBC_DEBUG("Writer: file write failed");
-			int errcode = moveContext->errcode;
-			destroyMoveContext(moveContext);
+			int errcode = -moveContext->req.result;
+			delete moveContext;
 			inFileMode->writerRequest = NULL;
 			inFileMode->writerState = WS_TERMINATED;
 			setError(errcode, __FILE__, __LINE__);

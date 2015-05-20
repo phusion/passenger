@@ -240,9 +240,8 @@ namespace tut {
 
 		ServerKit_HttpServerTest()
 			: bg(false, true),
-			  context(bg.safe)
+			  context(bg.safe, bg.libuv_loop)
 		{
-			initializeLibeio();
 			setLogLevel(LVL_WARN);
 			serverSocket = createUnixServer("tmp.server");
 			server = boost::make_shared<MyServer>(&context);
@@ -262,7 +261,6 @@ namespace tut {
 			unlink("tmp.server");
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			bg.stop();
-			shutdownLibeio();
 		}
 
 		void startLoop() {
