@@ -1,3 +1,4 @@
+# encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2015 Phusion
 #
@@ -98,8 +99,7 @@ end
 if USE_VENDORED_LIBEV
   LIBEV_SOURCE_DIR = File.expand_path("../ext/libev", File.dirname(__FILE__)) + "/"
   LIBEV_CFLAGS = "-Iext/libev"
-  LIBEV_LIBS = LIBEV_OUTPUT_DIR + ".libs/libev.a"
-  LIBEV_TARGET = LIBEV_LIBS
+  LIBEV_TARGET = LIBEV_OUTPUT_DIR + ".libs/libev.a"
 
   task :libev => LIBEV_TARGET
 
@@ -140,11 +140,22 @@ if USE_VENDORED_LIBEV
   end
 
   task :clean => 'libev:clean'
+
+  def libev_libs
+    la_contents = File.open(LIBEV_OUTPUT_DIR + ".libs/libev.la", "r") do |f|
+      f.read
+    end
+    la_contents =~ /dependency_libs='(.+)'/
+    "#{LIBEV_OUTPUT_DIR}.libs/libev.a #{$1}".strip
+  end
 else
   LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
-  LIBEV_LIBS   = string_option('LIBEV_LIBS', '-lev')
   LIBEV_TARGET = nil
   task :libev  # do nothing
+
+  def libev_libs
+    string_option('LIBEV_LIBS', '-lev')
+  end
 end
 
 # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
@@ -156,8 +167,7 @@ LIBEV_CFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.compiler_suppo
 if USE_VENDORED_LIBUV
   LIBUV_SOURCE_DIR = File.expand_path("../ext/libuv", File.dirname(__FILE__)) + "/"
   LIBUV_CFLAGS = "-Iext/libuv/include"
-  LIBUV_LIBS = LIBUV_OUTPUT_DIR + ".libs/libuv.a"
-  LIBUV_TARGET = LIBUV_LIBS
+  LIBUV_TARGET = LIBUV_OUTPUT_DIR + ".libs/libuv.a"
 
   task :libuv => LIBUV_TARGET
 
@@ -182,7 +192,7 @@ if USE_VENDORED_LIBUV
       "--disable-shared --enable-static " +
       # libuv's configure script may select a different default compiler than we
       # do, so we force our compiler choice.
-      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}'"
+      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}' AM_V_CC= AM_V_CCLD="
   end
 
   libuv_sources = Dir["ext/libuv/**/{*.c,*.h}"]
@@ -200,11 +210,22 @@ if USE_VENDORED_LIBUV
   end
 
   task :clean => 'libuv:clean'
+
+  def libuv_libs
+    la_contents = File.open(LIBUV_OUTPUT_DIR + ".libs/libuv.la", "r") do |f|
+      f.read
+    end
+    la_contents =~ /dependency_libs='(.+)'/
+    "#{LIBUV_OUTPUT_DIR}.libs/libuv.a #{$1}".strip
+  end
 else
   LIBUV_CFLAGS = string_option('LIBUV_CFLAGS', '-I/usr/include/libuv')
-  LIBUV_LIBS   = string_option('LIBUV_LIBS', '-luv')
   LIBUV_TARGET = nil
   task :libuv  # do nothing
+
+  def libuv_libs
+    string_option('LIBUV_LIBS', '-luv')
+  end
 end
 
 
