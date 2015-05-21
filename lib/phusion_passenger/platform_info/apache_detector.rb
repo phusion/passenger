@@ -107,6 +107,10 @@ module PhusionPassenger
         log "<banner>Looking for possible Apache installations...</banner>"
         apxses = PlatformInfo.find_all_commands("apxs2") +
           PlatformInfo.find_all_commands("apxs")
+        if !apxses.include?(PlatformInfo.apxs2)
+          PlatformInfo.send(:log, "Looking for #{PlatformInfo.apxs2}: found")
+          apxses << PlatformInfo.apxs2
+        end
         apxses = remove_symlink_duplications(apxses)
         log ""
         apxses.each do |apxs2|
