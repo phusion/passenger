@@ -649,14 +649,25 @@ module PhusionPassenger
     # Linker flags that are necessary for linking an Apache module.
     # Already includes APR and APU linker flags.
     def self.apache2_module_cxx_ldflags
-      if cxx_is_sun_studio?
-        flags = "-KPIC"
-      else
-        flags = "-fPIC"
+      flags = ""
+      if !apxs2.nil?
+        flags << `#{apxs2} -q LDFLAGS`.strip
       end
-      flags << " #{apr_cxx_ldflags} #{apu_cxx_ldflags}"
+
+      # We must include the cxxflags in the linker flags. On some multilib
+      # Solaris systems, `apxs -q CFLAGS` outputs a flag that tells the compiler
+      # which architecture to compile against, while `apxs -q LDFLAGS` doesn't.
+      flags << " #{apache2_module_cxxflags} #{apr_cxx_ldflags} #{apu_cxx_ldflags}"
+
+      if cxx_is_sun_studio?
+        flags.gsub!("-fPIC", "-KPIC")
+        flags << " -KPIC" if !flags.include?("-KPIC")
+      else
+        flags << " -fPIC" if !flags.include?("-fPIC")
+      end
+
       flags.strip!
-      return flags
+      flags
     end
     memoize :apache2_module_cxx_ldflags
 
