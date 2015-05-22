@@ -1,6 +1,7 @@
 Release 5.0.9
 -------------
 
+ * [Apache] Fixes the internal `Connection: close` header leaking to the client and breaking Keep-Alive. Closes GH-1516.
  * Internal refactoring: we've replaced libeio with libuv. This makes some of our code simpler. Closes GH-1428.
  * When the passenger-status tool tries to cleanup a sale instance directory, it will no longer abort with an error when it fails to do that. It will now merely print a warning. Fixes [StackOverflow question 30354732](http://stackoverflow.com/questions/30354732/cap-aborted-capistrano-aborts-rails-deploy-while-attempting-to-chown-tmp-p/30357100#30357100).
  * [Apache] If you pass the `--apxs2-path` parameter to `passenger-install-apache2-module`, and the apxs2 path that you specified is not in PATH, then the installer would think that Apache installation is broken. This has been fixed.
