@@ -617,7 +617,19 @@ private:
 			char backendData[MAX_STRING_LEN];
 			Timer timer;
 			getsfunc_BRIGADE(backendData, MAX_STRING_LEN, bb);
+
+			// The bucket brigade is an interface to the HTTP response sent by the
+			// PassengerAgent. The scanner parses (line by line) response headers
+			// into error_headers_out (mostly) as well as headers_out.
 			ret = ap_scan_script_header_err_brigade(r, bb, backendData);
+
+			// The PassengerAgent sets the Connection: close header because it wants
+			// the bb connection closed, but because we fed everything to the
+			// ap_scan_script it will also be set in the response to the client and
+			// that breaks HTTP 1.1 keep-alive, so unset it.
+			apr_table_unset(r->err_headers_out, "Connection");
+			// It's undefined in which of the tables it ends up in, so unset on both.
+			apr_table_unset(r->headers_out, "Connection");
 
 			if (ret == OK) {
 				// The API documentation for ap_scan_script_err_brigade() says it
