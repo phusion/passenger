@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -366,6 +366,18 @@ module PhusionPassenger
       ["/opt/*/bin", "/opt/*/sbin", "/usr/local/*/bin", "/usr/local/*/sbin"].each do |glob|
         search_dirs.concat(Dir[glob])
       end
+
+      # Solaris systems may have Apache installations in
+      # /usr/apache2/2.2/bin/sparcv9/
+      Dir["/usr/apache2/*/bin"].each do |bindir|
+        search_dirs << bindir
+        Dir["#{bindir}/*"].each do |binsubdir|
+          if File.directory?(binsubdir)
+            search_dirs << binsubdir
+          end
+        end
+      end
+
       search_dirs.delete("")
       search_dirs.uniq!
 
