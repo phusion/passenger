@@ -101,7 +101,40 @@ module PhusionPassenger
           end
 
           # Application requested a full socket hijack.
-          return true if env[RACK_HIJACK_IO]
+          if env[RACK_HIJACK_IO]
+            # Since the app hijacked the socket, we don't know what state we're
+            # in and we don't know whether we can recover from it, so we don't
+            # catch any exception here.
+            #
+            # The Rack specification doesn't specify whether the body should
+            # be closed when the socket is hijacked. As of February 2 2015,
+            # Puma and Thin close the body, while Unicorn does not.
+            # However, Rack::Lock and possibly many other middlewares count
+            # on the body being closed, as described here:
+            # https://github.com/ngauthier/tubesock/issues/10#issuecomment-72539461
+            # So we have chosen to close the body.
+            body.close if body && body.respond_to?(:close)
+            return true
+          end
+
+          # Application requested a partial socket hijack.
+          if hijack_callback = headers[RACK_HIJACK]
+            # We don't catch exceptions here. EPIPE is already handled
+            # by ThreadHandler's #accept_and_process_next_request.
+            # On any other exception, we don't know what state we're
+            # in and we don't know whether we can recover from it.
+            begin
+              headers_output = generate_headers_array(status, headers)
+              headers_output << CONNECTION_CLOSE_CRLF2
+              connection.writev(headers_output)
+              connection.flush
+              hijacked_socket = env[RACK_HIJACK].call
+              hijack_callback.call(hijacked_socket)
+              return true
+            ensure
+              body.close if body && body.respond_to?(:close)
+            end
+          end
 
           begin
             process_body(env, connection, socket_wrapper, status.to_i, is_head_request,
@@ -111,10 +144,17 @@ module PhusionPassenger
               print_exception("Rack response body object", e)
               PhusionPassenger.log_request_exception(env, e)
             end
-            false
           ensure
-            body.close if body && body.respond_to?(:close)
+            begin
+              body.close if body && body.respond_to?(:close)
+            rescue => e
+              if !should_swallow_app_error?(e, socket_wrapper)
+                print_exception("Rack response body object's #close method", e)
+                PhusionPassenger.log_request_exception(env, e)
+              end
+            end
           end
+          false
         ensure
           rewindable_input.close
         end
@@ -122,19 +162,6 @@ module PhusionPassenger
 
     private
       def process_body(env, connection, socket_wrapper, status, is_head_request, headers, body)
-        if hijack_callback = headers[RACK_HIJACK]
-          # Application requested a partial socket hijack.
-          body = nil
-          headers_output = generate_headers_array(status, headers)
-          headers_output << CONNECTION_CLOSE_CRLF2
-          connection.writev(headers_output)
-          connection.flush
-          hijacked_socket = env[RACK_HIJACK].call
-          hijack_callback.call(hijacked_socket)
-          return true
-        end
-
-
         # Fix up incompliant body objects. Ensure that the body object
         # can respond to #each.
         output_body = should_output_body?(status, is_head_request)
@@ -241,8 +268,7 @@ module PhusionPassenger
         if !output_body
           connection.writev(headers_output)
           signal_keep_alive_allowed!
-          # Indicate that connection was not hijacked.
-          return false
+          return
         end
 
         # Otherwise, write out headers and body, then verify at the end whether what
@@ -275,9 +301,6 @@ module PhusionPassenger
         end
 
         signal_keep_alive_allowed!
-
-        # Indicate that connection was not hijacked.
-        false
       end
 
       def generate_headers_array(status, headers)
