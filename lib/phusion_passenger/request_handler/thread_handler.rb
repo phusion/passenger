@@ -149,8 +149,10 @@ module PhusionPassenger
               process_request(headers, connection, socket_wrapper, @protocol == :http)
             elsif headers[REQUEST_METHOD] == PING
               process_ping(headers, connection)
+              false
             elsif headers[REQUEST_METHOD] == OOBW
               process_oobw(headers, connection)
+              false
             else
               process_request(headers, connection, socket_wrapper, @protocol == :http)
             end
@@ -168,14 +170,13 @@ module PhusionPassenger
           end
         else
           trace(2, "No headers parsed; disconnecting client.")
+          false
         end
       rescue Interrupted
         raise
       rescue => e
         if socket_wrapper && socket_wrapper.source_of_exception?(e)
           # EPIPE is harmless, it just means that the client closed the connection.
-          # Other errors might indicate a problem so we print them, but they're
-          # probably not bad enough to warrant stopping the request handler.
           if !e.is_a?(Errno::EPIPE)
             print_exception("Passenger RequestHandler's client socket", e)
           end
@@ -183,8 +184,18 @@ module PhusionPassenger
           if headers
             PhusionPassenger.log_request_exception(headers, e)
           end
+          # should_reraise_error? returns true except in unit tests,
+          # so we normally stop the request handler upon encountering
+          # non-EPIPE errors. We do this because process_request is already
+          # supposed to catch application-level exceptions. If an
+          # exception happened outside of process_request, then it's
+          # probably serious enough to warrant stopping the request handler.
           raise e if should_reraise_error?(e)
         end
+        # Here we do not know whether the connection was hijacked, but
+        # to be on the safe side (and have a new socket_wrapper created)
+        # let's say that it is.
+        true
       ensure
         # Close connection if keep-alive not possible
         if connection && !connection.closed? && !@last_connection
@@ -401,10 +412,6 @@ module PhusionPassenger
       def should_reraise_error?(e)
         # Stubable by unit tests.
         return true
-      end
-
-      def should_reraise_app_error?(e, socket_wrapper)
-        return false
       end
 
       def should_swallow_app_error?(e, socket_wrapper)

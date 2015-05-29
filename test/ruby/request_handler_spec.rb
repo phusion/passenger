@@ -357,8 +357,8 @@ describe RequestHandler do
       client.close_write
       client.read.should ==
         "HTTP/1.1 200 Whatever\r\n" +
-        "Connection: close\r\n" +
         "Content-Length: 2\r\n" +
+        "Connection: close\r\n" +
         "\r\n" +
         "ok"
     ensure
@@ -399,8 +399,8 @@ describe RequestHandler do
       client.close_write
       client.read.should ==
         "HTTP/1.1 200 Whatever\r\n" +
-        "Connection: close\r\n" +
         "Content-Length: 2\r\n" +
+        "Connection: close\r\n" +
         "\r\n" +
         "ok"
     ensure
@@ -434,8 +434,8 @@ describe RequestHandler do
       client.close_write
       client.read.should ==
         "HTTP/1.1 200 Whatever\r\n" +
-        "Connection: close\r\n" +
         "Content-Length: 2\r\n" +
+        "Connection: close\r\n" +
         "\r\n" +
         "ok"
     ensure
@@ -471,8 +471,8 @@ describe RequestHandler do
         client.read.should ==
           "HTTP/1.1 200 Whatever\r\n" +
           "Content-Type: text/plain\r\n" +
-          "Connection: close\r\n" +
           "Content-Length: 2\r\n" +
+          "Connection: close\r\n" +
           "\r\n" +
           "\"\""
       ensure

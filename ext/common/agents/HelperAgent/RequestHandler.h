@@ -150,8 +150,6 @@ private:
 	HashedStaticString HTTP_CONNECTION;
 	HashedStaticString HTTP_STATUS;
 	HashedStaticString HTTP_TRANSFER_ENCODING;
-	HashedStaticString HTTP_X_SENDFILE;
-	HashedStaticString HTTP_X_ACCEL_REDIRECT;
 
 	unsigned int threadNumber;
 	StaticString serverLogName;
@@ -217,8 +215,6 @@ public:
 		  HTTP_CONNECTION("connection"),
 		  HTTP_STATUS("status"),
 		  HTTP_TRANSFER_ENCODING("transfer-encoding"),
-		  HTTP_X_SENDFILE("x-sendfile"),
-		  HTTP_X_ACCEL_REDIRECT("x-accel-redirect"),
 
 		  threadNumber(_threadNumber),
 		  turboCaching(getTurboCachingInitialState(_agentsOptions))
