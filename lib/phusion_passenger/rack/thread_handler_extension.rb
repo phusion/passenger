@@ -43,9 +43,11 @@ module PhusionPassenger
       REQUEST_METHOD = "REQUEST_METHOD"          # :nodoc:
       TRANSFER_ENCODING_HEADER  = "Transfer-Encoding"   # :nodoc:
       CONTENT_LENGTH_HEADER     = "Content-Length"      # :nodoc:
+      X_SENDFILE_HEADER         = "X-Sendfile"          # :nodoc:
+      X_ACCEL_REDIRECT_HEADER   = "X-Accel-Redirect"    # :nodoc:
       CONTENT_LENGTH_HEADER_AND_SEPARATOR      = "Content-Length: " # :nodoc
-      TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF2 = "Transfer-Encoding: chunked\r\n\r\n" # :nodoc:
-      CONNECTION_CLOSE_CRLF     = "Connection: close\r\n"     # :nodoc:
+      TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF  = "Transfer-Encoding: chunked\r\n" # :nodoc:
+      CONNECTION_CLOSE_CRLF2    = "Connection: close\r\n\r\n"     # :nodoc:
       HEAD           = "HEAD"   # :nodoc:
       HTTPS          = "HTTPS"  # :nodoc:
       HTTPS_DOWNCASE = "https"  # :nodoc:
@@ -88,10 +90,7 @@ module PhusionPassenger
           begin
             status, headers, body = @app.call(env)
           rescue => e
-            disable_keep_alive
-            if should_reraise_app_error?(e, socket_wrapper)
-              raise e
-            elsif !should_swallow_app_error?(e, socket_wrapper)
+            if !should_swallow_app_error?(e, socket_wrapper)
               # It's a good idea to catch application exceptions here because
               # otherwise maliciously crafted responses can crash the app,
               # forcing it to be respawned, and thereby effectively DoSing it.
@@ -107,9 +106,12 @@ module PhusionPassenger
           begin
             process_body(env, connection, socket_wrapper, status.to_i, is_head_request,
               headers, body)
-          rescue Exception => e
-            disable_keep_alive
-            raise
+          rescue => e
+            if !should_swallow_app_error?(e, socket_wrapper)
+              print_exception("Rack response body object", e)
+              PhusionPassenger.log_request_exception(env, e)
+            end
+            false
           ensure
             body.close if body && body.respond_to?(:close)
           end
@@ -119,95 +121,163 @@ module PhusionPassenger
       end
 
     private
-      # The code here is ugly, but it's necessary for performance.
       def process_body(env, connection, socket_wrapper, status, is_head_request, headers, body)
         if hijack_callback = headers[RACK_HIJACK]
           # Application requested a partial socket hijack.
           body = nil
           headers_output = generate_headers_array(status, headers)
-          headers_output << "Connection: close\r\n"
-          headers_output << CRLF
+          headers_output << CONNECTION_CLOSE_CRLF2
           connection.writev(headers_output)
           connection.flush
           hijacked_socket = env[RACK_HIJACK].call
           hijack_callback.call(hijacked_socket)
-          true
-        elsif body.is_a?(Array)
+          return true
+        end
+
+
+        # Fix up incompliant body objects. Ensure that the body object
+        # can respond to #each.
+        output_body = should_output_body?(status, is_head_request)
+        if body.is_a?(String)
+          body = [body]
+        elsif body.nil?
+          body = []
+        elsif output_body && body.is_a?(Array)
           # The body may be an ActionController::StringCoercion::UglyBody
           # object instead of a real Array, even when #is_a? claims so.
-          # Call #to_a just to be sure.
+          # Call #to_a just to be sure that connection.writev() can
+          # accept the body object.
           body = body.to_a
-          output_body = should_output_body?(status, is_head_request)
-          headers_output = generate_headers_array(status, headers)
-          perform_keep_alive(env, headers_output)
-          if output_body && should_add_message_length_header?(status, headers)
-            body_size = 0
-            body.each { |part| body_size += bytesize(part.to_s) }
-            headers_output << CONTENT_LENGTH_HEADER_AND_SEPARATOR
-            headers_output << body_size.to_s
-            headers_output << CRLF
+        end
+
+        # Generate preliminary headers and determine whether we need to output a body.
+        headers_output = generate_headers_array(status, headers)
+
+
+        # Determine how big the body is, determine whether we should try to keep-alive
+        # the connection, and fix up the headers according to the situation.
+        #
+        # It may not be possible to determine the body's size (e.g. because it's streamed
+        # through #each). In that case we'll want to output the body with a chunked transfer
+        # encoding. But it matters whether the app has already chunked the body or not.
+        #
+        # Note that if the Rack response header contains "Transfer-Encoding: chunked",
+        # then we assume that the Rack body is already in chunked form. This is the way
+        # Rails streaming and Rack::Chunked::Body behave.
+        # The only gem that doesn't behave this way is JRuby-Rack (see
+        # https://blog.engineyard.com/2011/taking-stock-jruby-web-servers), but I'm not
+        # aware of anybody using JRuby-Rack these days.
+        #
+        # We only try to keep-alive the connection if we are able to determine ahead of
+        # time that the body we write out is guaranteed to match what the headers say.
+        # Otherwise we disable keep-alive to prevent the app from being able to mess
+        # up the keep-alive connection.
+        if header = headers[CONTENT_LENGTH_HEADER]
+          # Easiest case: app has a Content-Length header. The headers
+          # need no fixing.
+          message_length_type = :content_length
+          content_length = header.to_i
+          if headers.has_key?(TRANSFER_ENCODING_HEADER)
+            # Disallowed by the HTTP spec
+            raise "Response object may not contain both Content-Length and Transfer-Encoding"
           end
-          headers_output << CRLF
           if output_body
+            if !body.is_a?(Array) || headers.has_key?(X_SENDFILE_HEADER) ||
+               headers.has_key?(X_ACCEL_REDIRECT_HEADER)
+              # If X-Sendfile or X-Accel-Redirect is set, don't check the
+              # body size. PassengerAgent's RequestHandler will ignore the
+              # body anyway. See
+              # ServerKit::HttpHeaderParser::processParseResult(const HttpParseResponse &)
+              @can_keepalive = false
+            else
+              body_size = 0
+              body.each { |part| body_size += bytesize(part) }
+              if body_size != content_length
+                raise "Response body size doesn't match Content-Length header: #{body_size} vs #{content_length}"
+              end
+            end
+          end
+        elsif headers.has_key?(TRANSFER_ENCODING_HEADER)
+          # App has a Transfer-Encoding header. We assume that the app
+          # has already chunked the body. The headers need no fixing.
+          message_length_type = :chunked_by_app
+          if output_body
+            # We have no way to determine whether the body was correct (save for
+            # parsing the chunking headers), so we don't keep-alive the connection
+            # just to be safe.
+            @can_keepalive = false
+          end
+          if headers.has_key?(CONTENT_LENGTH_HEADER)
+            # Disallowed by the HTTP spec
+            raise "Response object may not contain both Content-Length and Transfer-Encoding"
+          end
+        else
+          # The app has set neither the Content-Length nor the Transfer-Encoding
+          # header. This means we'll have to add one of those headers. We know exactly how
+          # big our body will be, so we can keep-alive the connection.
+          if body.is_a?(Array)
+            message_length_type = :content_length
+            content_length = 0
+            body.each { |part| content_length += bytesize(part.to_s) }
+
+            headers_output << CONTENT_LENGTH_HEADER_AND_SEPARATOR
+            headers_output << content_length.to_s
+            headers_output << CRLF
+          else
+            message_length_type = :needs_chunking
+            headers_output << TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF
+          end
+        end
+
+        # Finalize headers data.
+        if @can_keepalive
+          headers_output << CRLF
+        else
+          headers_output << CONNECTION_CLOSE_CRLF2
+        end
+
+
+        # If this is a request without body, write out headers without body.
+        if !output_body
+          connection.writev(headers_output)
+          signal_keep_alive_allowed!
+          # Indicate that connection was not hijacked.
+          return false
+        end
+
+        # Otherwise, write out headers and body, then verify at the end whether what
+        # we wrote is matches the message length. Only keep-alive connection if it
+        # is the case.
+        case message_length_type
+        when :content_length
+          if body.is_a?(Array)
             connection.writev2(headers_output, body)
           else
             connection.writev(headers_output)
-          end
-          false
-        elsif body.is_a?(String)
-          output_body = should_output_body?(status, is_head_request)
-          headers_output = generate_headers_array(status, headers)
-          perform_keep_alive(env, headers_output)
-          if output_body && should_add_message_length_header?(status, headers)
-            headers_output << CONTENT_LENGTH_HEADER_AND_SEPARATOR
-            headers_output << bytesize(body).to_s
-            headers_output << CRLF
-          end
-          headers_output << CRLF
-          if output_body
-            headers_output << body
-          end
-          connection.writev(headers_output)
-          false
-        else
-          output_body = should_output_body?(status, is_head_request)
-          headers_output = generate_headers_array(status, headers)
-          perform_keep_alive(env, headers_output)
-          chunk = output_body && should_add_message_length_header?(status, headers)
-          if chunk
-            headers_output << TRANSFER_ENCODING_HEADER_AND_VALUE_CRLF2
-          else
-            headers_output << CRLF
-          end
-          connection.writev(headers_output)
-          if output_body && body
-            begin
-              if chunk
-                body.each do |part|
-                  size = bytesize(part)
-                  if size != 0
-                    connection.writev(chunk_data(part, size))
-                  end
-                end
-                connection.write(TERMINATION_CHUNK)
-              else
-                body.each do |s|
-                  connection.write(s)
-                end
-              end
-            rescue => e
-              disable_keep_alive
-              if should_reraise_app_error?(e, socket_wrapper)
-                raise e
-              elsif !should_swallow_app_error?(e, socket_wrapper)
-                # Body objects can raise exceptions in #each.
-                print_exception("Rack body object #each method", e)
-              end
-              false
+            body.each do |part|
+              connection.write(part.to_s)
             end
           end
-          false
+        when :chunked_by_app
+          connection.writev(headers_output)
+          body.each do |part|
+            connection.write(part.to_s)
+          end
+        when :needs_chunking
+          connection.writev(headers_output)
+          body.each do |part|
+            size = bytesize(part.to_s)
+            if size != 0
+              connection.writev(chunk_data(part.to_s, size))
+            end
+          end
+          connection.write(TERMINATION_CHUNK)
         end
+
+        signal_keep_alive_allowed!
+
+        # Indicate that connection was not hijacked.
+        false
       end
 
       def generate_headers_array(status, headers)
@@ -233,31 +303,20 @@ module PhusionPassenger
         return result
       end
 
-      def perform_keep_alive(env, headers)
-        if @can_keepalive
-          @keepalive_performed = true
-        else
-          headers << CONNECTION_CLOSE_CRLF
-        end
-      end
-
-      def disable_keep_alive
-        @keepalive_performed = false
-      end
-
       def should_output_body?(status, is_head_request)
         return (status < 100 ||
           (status >= 200 && status != 204 && status != 205 && status != 304)) &&
           !is_head_request
       end
 
-      def should_add_message_length_header?(status, headers)
-        return !headers.has_key?(TRANSFER_ENCODING_HEADER) &&
-          !headers.has_key?(CONTENT_LENGTH_HEADER)
-      end
-
       def chunk_data(data, size)
         [size.to_s(16), CRLF, data, CRLF]
+      end
+
+      # Called when body is written out successfully. Indicates that we should
+      # keep-alive the connection if we can.
+      def signal_keep_alive_allowed!
+        @keepalive_performed = @can_keepalive
       end
 
       if "".respond_to?(:bytesize)
