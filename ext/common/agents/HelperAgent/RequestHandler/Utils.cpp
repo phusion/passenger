@@ -54,10 +54,16 @@ generateServerLogName(unsigned int number) {
 void
 disconnectWithClientSocketWriteError(Client **client, int e) {
 	stringstream message;
+	PassengerLogLevel logLevel;
 	message << "client socket write error: ";
 	message << ServerKit::getErrorDesc(e);
 	message << " (errno=" << e << ")";
-	disconnectWithError(client, message.str());
+	if (e == EPIPE || e == ECONNRESET) {
+		logLevel = LVL_INFO;
+	} else {
+		logLevel = LVL_WARN;
+	}
+	disconnectWithError(client, message.str(), logLevel);
 }
 
 void

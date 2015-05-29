@@ -615,7 +615,14 @@ protected:
 		int ret = snprintf(message, sizeof(message),
 			"client socket write error: %s (errno=%d)",
 			getErrorDesc(errcode), errcode);
-		disconnectWithError(&client, StaticString(message, ret));
+		disconnectWithError(&client, StaticString(message, ret),
+			getClientOutputErrorDisconnectionLogLevel(client, errcode));
+	}
+
+	virtual PassengerLogLevel getClientOutputErrorDisconnectionLogLevel(
+		Client *client, int errcode) const
+	{
+		return LVL_WARN;
 	}
 
 	virtual void reinitializeClient(Client *client, int fd) {
@@ -913,8 +920,10 @@ public:
 		disconnect(client);
 	}
 
-	void disconnectWithError(Client **client, const StaticString &message) {
-		SKC_WARN(*client, "Disconnecting client with error: " << message);
+	void disconnectWithError(Client **client, const StaticString &message,
+		PassengerLogLevel logLevel = LVL_WARN)
+	{
+		SKC_LOG(*client, logLevel, "Disconnecting client with error: " << message);
 		disconnect(client);
 	}
 
