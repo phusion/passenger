@@ -439,22 +439,24 @@ public:
 
 		if (req->appResponseInitialized) {
 			doc["app_response_http_state"] = resp->getHttpStateString();
-			doc["app_response_http_major"] = resp->httpMajor;
-			doc["app_response_http_minor"] = resp->httpMinor;
-			doc["app_response_want_keep_alive"] = resp->wantKeepAlive;
-			doc["app_response_body_type"] = resp->getBodyTypeString();
-			doc["app_response_body_fully_read"] = resp->bodyFullyRead();
-			doc["app_response_body_already_read"] = byteSizeToJson(
-				resp->bodyAlreadyRead);
-			if (resp->httpState != AppResponse::ERROR) {
-				if (resp->bodyType == AppResponse::RBT_CONTENT_LENGTH) {
-					doc["app_response_content_length"] = byteSizeToJson(
-						resp->aux.bodyInfo.contentLength);
-				} else if (resp->bodyType == AppResponse::RBT_CHUNKED) {
-					doc["app_response_end_chunk_reached"] = resp->aux.bodyInfo.endChunkReached;
+			if (resp->begun()) {
+				doc["app_response_http_major"] = resp->httpMajor;
+				doc["app_response_http_minor"] = resp->httpMinor;
+				doc["app_response_want_keep_alive"] = resp->wantKeepAlive;
+				doc["app_response_body_type"] = resp->getBodyTypeString();
+				doc["app_response_body_fully_read"] = resp->bodyFullyRead();
+				doc["app_response_body_already_read"] = byteSizeToJson(
+					resp->bodyAlreadyRead);
+				if (resp->httpState != AppResponse::ERROR) {
+					if (resp->bodyType == AppResponse::RBT_CONTENT_LENGTH) {
+						doc["app_response_content_length"] = byteSizeToJson(
+							resp->aux.bodyInfo.contentLength);
+					} else if (resp->bodyType == AppResponse::RBT_CHUNKED) {
+						doc["app_response_end_chunk_reached"] = resp->aux.bodyInfo.endChunkReached;
+					}
+				} else {
+					doc["app_response_parse_error"] = ServerKit::getErrorDesc(resp->aux.parseError);
 				}
-			} else {
-				doc["app_response_parse_error"] = ServerKit::getErrorDesc(resp->aux.parseError);
 			}
 		}
 
