@@ -39,6 +39,8 @@ module PhusionPassenger
       RACK_URL_SCHEME    = "rack.url_scheme"     # :nodoc:
       RACK_HIJACK_P      = "rack.hijack?"        # :nodoc:
       RACK_HIJACK        = "rack.hijack"         # :nodoc:
+      HTTP_VERSION       = "HTTP_VERSION"        # :nodoc:
+      HTTP_1_1           = "HTTP/1.1"            # :nodoc:
       SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
       REQUEST_METHOD = "REQUEST_METHOD"          # :nodoc:
       TRANSFER_ENCODING_HEADER  = "Transfer-Encoding"   # :nodoc:
@@ -80,6 +82,7 @@ module PhusionPassenger
               connection
             end
           end
+          env[HTTP_VERSION] = HTTP_1_1
 
           # Rails somehow modifies env['REQUEST_METHOD'], so we perform the comparison
           # before the Rack application object is called.
