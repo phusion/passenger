@@ -423,8 +423,8 @@ which ruby
 
 Do you see a filename that references '/home' or '/Users'? If so then your Ruby interpreter is installed in your home directory and you can proceed to step 2. Otherwise, you need to switch to a root prompt by running one of the following commands:
 
-* Are you using RVM? Run `rvmsudo -s`
-* Are you not using RVM, or do you not know what RVM is? Run `sudo -s`
+* Are you using RVM? Run `rvmsudo -H bash`
+* Are you not using RVM, or do you not know what RVM is? Run `sudo -H -s`
 * Is 'sudo' not installed on your system? Run `su -c bash`
 
 You must maintain this root prompt throughout this installation guide.
@@ -471,7 +471,7 @@ gem source --add https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/e
 +
 Substitute 'YOUR_DOWNLOAD_TOKEN' with the one you find in the link:https://www.phusionpassenger.com/orders[Customer Area]. And notice the **trailing slash** in the URL! It is very important.
 +
-Finally, install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
+Finally, install the latest gem to obtain the files for the latest stable version of Passenger Enterprise:
 +
 ----------------------
 gem install passenger-enterprise-server
