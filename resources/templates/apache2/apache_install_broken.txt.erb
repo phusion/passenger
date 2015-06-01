@@ -9,7 +9,8 @@ However, this Apache installation appears to be broken, so this installer
 cannot continue. To find out why this installer thinks the above Apache
 installation is broken, run:
 
-  <b>export ORIG_PATH="$PATH"
+  <b>export ORIG_PATH="$PATH:<%= @extra_paths %>"
+  export APXS2="<%= @apxs2 %>"
   <%= @sudo_s_e %>
   export PATH="$ORIG_PATH"
   <%= @ruby %> <%= @passenger_config %> --detect-apache2</b>

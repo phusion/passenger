@@ -199,8 +199,8 @@ task :compile_app => dependencies do
       "#{EXTRA_CXXFLAGS} " <<
       "#{COMMON_LIBRARY.link_objects_as_string} " <<
       "#{LIBBOOST_OXT_LINKARG} " <<
-      "#{LIBEV_LIBS} " <<
-      "#{LIBUV_LIBS} " <<
+      "#{libev_libs} " <<
+      "#{libuv_libs} " <<
       "#{PlatformInfo.portability_cxx_ldflags} " <<
       "#{EXTRA_CXX_LDFLAGS}")
   ensure

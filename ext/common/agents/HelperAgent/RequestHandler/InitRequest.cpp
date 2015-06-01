@@ -426,7 +426,7 @@ setStickySessionId(Client *client, Request *req) {
 		// headers, although this is in practice extremely rare.
 		// http://stackoverflow.com/questions/16305814/are-multiple-cookie-headers-allowed-in-an-http-request
 		const LString *cookieHeader = req->headers.lookup(HTTP_COOKIE);
-		if (cookieHeader != NULL) {
+		if (cookieHeader != NULL && cookieHeader->size > 0) {
 			const LString *cookieName = getStickySessionCookieName(req);
 			vector< pair<StaticString, StaticString> > cookies;
 			pair<StaticString, StaticString> cookie;

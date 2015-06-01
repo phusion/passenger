@@ -91,8 +91,6 @@ deb https://oss-binaries.phusionpassenger.com/apt/passenger vivid main
 deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main
 # Ubuntu 12.04
 deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
-# Ubuntu 10.04
-deb https://oss-binaries.phusionpassenger.com/apt/passenger lucid main
 # Debian 8
 deb https://oss-binaries.phusionpassenger.com/apt/passenger jessie main
 # Debian 7
@@ -112,8 +110,6 @@ deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt
 deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt trusty main
 # Ubuntu 12.04
 deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt precise main
-# Ubuntu 10.04
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt lucid main
 # Debian 8
 deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt jessie main
 # Debian 7
@@ -294,7 +290,7 @@ sudo curl --fail -sSLo /etc/yum.repos.d/passenger.repo https://oss-binaries.phus
 +
 --------------------------------------------------------------
 unset HISTFILE
-sudo curl --fail -sSLo -u download:YOUR_DOWNLOAD_TOKEN /etc/yum.repos.d/passenger.repo https://www.phusionpassenger.com/enterprise_yum/el-passenger-enterprise.repo
+sudo curl --fail -sSL -u download:YOUR_DOWNLOAD_TOKEN -o /etc/yum.repos.d/passenger.repo https://www.phusionpassenger.com/enterprise_yum/el-passenger-enterprise.repo
 --------------------------------------------------------------
 +
 The `unset HISTFILE` command ensures that your download token isn't saved to the Bash history file.
@@ -427,8 +423,8 @@ which ruby
 
 Do you see a filename that references '/home' or '/Users'? If so then your Ruby interpreter is installed in your home directory and you can proceed to step 2. Otherwise, you need to switch to a root prompt by running one of the following commands:
 
-* Are you using RVM? Run `rvmsudo -s`
-* Are you not using RVM, or do you not know what RVM is? Run `sudo -s`
+* Are you using RVM? Run `rvmsudo -H bash`
+* Are you not using RVM, or do you not know what RVM is? Run `sudo -H -s`
 * Is 'sudo' not installed on your system? Run `su -c bash`
 
 You must maintain this root prompt throughout this installation guide.
@@ -475,7 +471,7 @@ gem source --add https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/e
 +
 Substitute 'YOUR_DOWNLOAD_TOKEN' with the one you find in the link:https://www.phusionpassenger.com/orders[Customer Area]. And notice the **trailing slash** in the URL! It is very important.
 +
-Finally, install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
+Finally, install the latest gem to obtain the files for the latest stable version of Passenger Enterprise:
 +
 ----------------------
 gem install passenger-enterprise-server
@@ -735,9 +731,13 @@ gpg: Signature made Mon Mar 11 10:12:02 2013 CET using RSA key ID 0A212A8C
 gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
 -------------------------------------------------------
 
-==== Verifying DEB and RPM packages
+==== Verifying Debian packages
 
-The DEB and RPM packages are signed with the signatures of the respective packagers. They are automatically checked upon installation.
+Our <<install_on_debian_ubuntu,APT repository>> is signed by Phusion Automated Software Signing (auto-software-signing@phusion.nl). Packages are automatically checked upon installation.
+
+==== Verifying RPM packages
+
+Our <<installing_or_upgrading_on_red_hat,YUM repository>> is signed by link:https://packagecloud.io[PackageCloud] (ops@packagecloud.io). PackageCloud is the RPM package hosting service that we use. You can find their key link:https://packagecloud.io/gpg.key[here]. Packages are automatically checked upon installation.
 
 ==== Revocation
 

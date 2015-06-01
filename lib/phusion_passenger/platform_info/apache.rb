@@ -561,22 +561,31 @@ module PhusionPassenger
         flags << "-fPIC"
       end
       if with_apr_flags
-        flags << apr_flags
-        flags << apu_flags
+        if language == :c
+          flags << apr_cflags
+          flags << apu_cflags
+        else
+          flags << apr_cxxflags
+          flags << apu_cxxflags
+        end
       end
       if !apxs2.nil?
         apxs2_flags = `#{apxs2} -q CFLAGS`.strip << " -I" << `#{apxs2} -q INCLUDEDIR`.strip
         apxs2_flags.gsub!(/-O\d? /, '')
 
-        # Remove flags not supported by GCC
-        if os_name =~ /solaris/ # TODO: Add support for people using SunStudio
-          # The big problem is Coolstack apxs includes a bunch of solaris -x directives.
-          options = apxs2_flags.split
-          options.reject! { |f| f =~ /^\-x/ }
-          options.reject! { |f| f =~ /^\-Xa/ }
-          options.reject! { |f| f =~ /^\-fast/ }
-          options.reject! { |f| f =~ /^\-mt/ }
-          apxs2_flags = options.join(' ')
+        if os_name =~ /solaris/
+          if (language == :c && !cc_is_sun_studio?) || (language == :cxx && !cxx_is_sun_studio?)
+            # Remove flags not supported by GCC
+            # The big problem is Coolstack apxs includes a bunch of solaris -x directives.
+            options = apxs2_flags.split
+            options.reject! { |f| f =~ /^\-x/ }
+            options.reject! { |f| f =~ /^\-Xa/ }
+            options.reject! { |f| f =~ /^\-fast/ }
+            options.reject! { |f| f =~ /^\-mt/ }
+            options.reject! { |f| f =~ /^\-W2/ }
+            apxs2_flags = options.join(' ')
+            apxs2_flags.gsub!(/ ?-Qoption cg ?/, " ")
+          end
         end
 
         if os_name == "linux" &&
@@ -640,35 +649,66 @@ module PhusionPassenger
     # Linker flags that are necessary for linking an Apache module.
     # Already includes APR and APU linker flags.
     def self.apache2_module_cxx_ldflags
-      if cxx_is_sun_studio?
-        flags = "-KPIC"
-      else
-        flags = "-fPIC"
+      flags = ""
+      if !apxs2.nil?
+        flags << `#{apxs2} -q LDFLAGS`.strip
       end
-      flags << " #{apr_libs} #{apu_libs}"
+
+      # We must include the cxxflags in the linker flags. On some multilib
+      # Solaris systems, `apxs -q CFLAGS` outputs a flag that tells the compiler
+      # which architecture to compile against, while `apxs -q LDFLAGS` doesn't.
+      flags << " #{apache2_module_cxxflags} #{apr_cxx_ldflags} #{apu_cxx_ldflags}"
+
+      if cxx_is_sun_studio?
+        flags.gsub!("-fPIC", "-KPIC")
+        flags << " -KPIC" if !flags.include?("-KPIC")
+      else
+        flags << " -fPIC" if !flags.include?("-fPIC")
+      end
+
       flags.strip!
-      return flags
+      flags
     end
     memoize :apache2_module_cxx_ldflags
 
     # The C compiler flags that are necessary for programs that use APR.
-    def self.apr_flags
-      return determine_apr_info[0]
+    def self.apr_cflags
+      determine_apr_c_info[0]
+    end
+
+    # The C++ compiler flags that are necessary for programs that use APR.
+    def self.apr_cxxflags
+      determine_apr_c_info[0]
     end
 
     # The linker flags that are necessary for linking programs that use APR.
-    def self.apr_libs
-      return determine_apr_info[1]
+    def self.apr_c_ldflags
+      determine_apr_c_info[1]
+    end
+
+    # The linker flags that are necessary for linking C++ programs that use APR.
+    def self.apr_cxx_ldflags
+      determine_apr_cxx_info[1]
     end
 
     # The C compiler flags that are necessary for programs that use APR-Util.
-    def self.apu_flags
-      return determine_apu_info[0]
+    def self.apu_cflags
+      determine_apu_c_info[0]
     end
 
-    # The linker flags that are necessary for linking programs that use APR-Util.
-    def self.apu_libs
-      return determine_apu_info[1]
+    # The C++ compiler flags that are necessary for programs that use APR-Util.
+    def self.apu_cxxflags
+      determine_apu_cxx_info[0]
+    end
+
+    # The linker flags that are necessary for linking C programs that use APR-Util.
+    def self.apu_c_ldflags
+      determine_apu_c_info[1]
+    end
+
+    # The linker flags that are necessary for linking C++ programs that use APR-Util.
+    def self.apu_cxx_ldflags
+      determine_apu_cxx_info[1]
     end
 
     ################ Miscellaneous information ################
@@ -686,37 +726,73 @@ module PhusionPassenger
     memoize :apr_config_needed_for_building_apache_modules?, true
 
   private
-    def self.determine_apr_info
+    def self.determine_apr_info(language)
       if apr_config.nil?
-        return [nil, nil]
+        [nil, nil]
       else
         flags = `#{apr_config} --cppflags --includes`.strip
         libs = `#{apr_config} --link-ld`.strip
         flags.gsub!(/-O\d? /, '')
         if os_name =~ /solaris/
-          # Remove flags not supported by GCC
-          flags = flags.split(/ +/).reject{ |f| f =~ /^\-mt/ }.join(' ')
+          if (language == :c && !cc_is_sun_studio?) || (language == :cxx && !cxx_is_sun_studio?)
+            # Remove flags not supported by non-Sun Studio compilers
+            flags = flags.split(/ +/).reject do |f|
+              f =~ /^\-mt/
+            end
+            flags = flags.join(' ')
+          end
         elsif os_name =~ /aix/
           libs << " -Wl,-G -Wl,-brtl"
         end
-        return [flags, libs]
+        [flags, libs]
       end
     end
-    memoize :determine_apr_info, true
     private_class_method :determine_apr_info
 
-    def self.determine_apu_info
+    def self.determine_apr_c_info
+      determine_apr_info(:c)
+    end
+    private_class_method :determine_apr_c_info
+    memoize :determine_apr_c_info, true
+
+    def self.determine_apr_cxx_info
+      determine_apr_info(:cxx)
+    end
+    private_class_method :determine_apr_cxx_info
+    memoize :determine_apr_cxx_info, true
+
+    def self.determine_apu_info(language)
       if apu_config.nil?
-        return [nil, nil]
+        [nil, nil]
       else
         flags = `#{apu_config} --includes`.strip
         libs = `#{apu_config} --link-ld`.strip
         flags.gsub!(/-O\d? /, '')
-        return [flags, libs]
+        if os_name =~ /solaris/
+          if (language == :c && !cc_is_sun_studio?) || (language == :cxx && !cxx_is_sun_studio?)
+            # Remove flags not supported by non-Sun Studio compilers
+            flags = flags.split(/ +/).reject do |f|
+              f =~ /^\-mt/
+            end
+            flags = flags.join(' ')
+          end
+        end
+        [flags, libs]
       end
     end
-    memoize :determine_apu_info, true
     private_class_method :determine_apu_info
+
+    def self.determine_apu_c_info
+      determine_apu_info(:c)
+    end
+    private_class_method :determine_apu_c_info
+    memoize :determine_apu_c_info, true
+
+    def self.determine_apu_cxx_info
+      determine_apu_info(:cxx)
+    end
+    private_class_method :determine_apu_cxx_info
+    memoize :determine_apu_cxx_info, true
 
     def self.scan_for_included_apache2_config_files(config_file, state, options = nil)
       begin

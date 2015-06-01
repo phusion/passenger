@@ -59,28 +59,32 @@ module PhusionPassenger
 
       def locked?
         if defined?(File::LOCK_EX)
-          return !File.open("#{@path}/lock", "r") do |f|
-            f.flock(File::LOCK_EX | File::LOCK_NB)
+          begin
+            !File.open("#{@path}/lock", "r") do |f|
+              f.flock(File::LOCK_EX | File::LOCK_NB)
+            end
+          rescue Errno::ENOENT
+            false
           end
         else
           # Solaris :-(
           # Since using fcntl locks in Ruby is a huge pain,
           # we'll fallback to checking the watchdog PID.
-          return watchdog_alive?
+          watchdog_alive?
         end
       end
 
       def stale?
         stat = File.stat(@path)
         if stat.mtime < Time.now - STALE_TIMEOUT
-          return !locked?
+          !locked?
         else
-          return false
+          false
         end
       end
 
       def watchdog_alive?
-        return process_is_alive?(@watchdog_pid)
+        process_is_alive?(@watchdog_pid)
       end
 
       def http_request(socket_path, request)

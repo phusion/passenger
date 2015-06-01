@@ -338,20 +338,23 @@ describe "Phusion Passenger for Nginx" do
     end
 
     it "respawns the app after handling max_requests requests" do
-      @server = "http://3.passenger.test:#{@nginx.port}/"
+      @server = "http://3.passenger.test:#{@nginx.port}"
       pid = get("/pid")
       get("/pid").should == pid
       get("/pid").should == pid
       get("/pid").should_not == pid
     end
-    
+
     it "respects read_timeout setting" do
-      @server = "http://2.passenger.test:#{@nginx.port}/"
+      @server = "http://2.passenger.test:#{@nginx.port}"
+
+      # Start process
+      get("/pid")
 
       response = get_response('/?sleep_seconds=1')
       response.class.should == Net::HTTPOK
       response = get_response('/?sleep_seconds=6')
-      response.class.should == Net::HTTPGatewayTimeOut 
+      response.class.should == Net::HTTPGatewayTimeOut
     end
 
   end

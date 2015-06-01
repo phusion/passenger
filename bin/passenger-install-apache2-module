@@ -39,7 +39,8 @@ PhusionPassenger.locate_directories
 # the 'sbin' folders to $PATH just in case. On some systems
 # 'sbin' isn't in $PATH unless the user is logged in as root from
 # the start (i.e. not via 'su' or 'sudo').
-ENV["PATH"] += ":/usr/sbin:/sbin:/usr/local/sbin"
+EXTRA_INSTALLER_PATHS = ":/usr/sbin:/sbin:/usr/local/sbin"
+ENV["PATH"] += EXTRA_INSTALLER_PATHS
 
 require 'optparse'
 require 'stringio'
@@ -231,6 +232,7 @@ private
         if Process.uid == 0
           render_template 'apache2/apache_install_broken',
             :apxs2 => PlatformInfo.apxs2,
+            :extra_paths => EXTRA_INSTALLER_PATHS,
             :sudo_s_e => PhusionPassenger::PlatformInfo.ruby_sudo_shell_command("-E"),
             :ruby => PhusionPassenger::PlatformInfo.ruby_command,
             :passenger_config => "#{PhusionPassenger.bin_dir}/passenger-config"

@@ -410,13 +410,13 @@ am__test_run_tests_SOURCES_DIST = test/blackhole-server.c \
 	test/test-tcp-unexpected-read.c test/test-tcp-oob.c \
 	test/test-tcp-write-to-half-open-connection.c \
 	test/test-tcp-write-after-connect.c test/test-tcp-writealot.c \
-	test/test-tcp-try-write.c test/test-tcp-write-queue-order.c \
-	test/test-thread-equal.c test/test-thread.c \
-	test/test-threadpool-cancel.c test/test-threadpool.c \
-	test/test-timer-again.c test/test-timer-from-check.c \
-	test/test-timer.c test/test-tty.c test/test-udp-bind.c \
-	test/test-udp-dgram-too-big.c test/test-udp-ipv6.c \
-	test/test-udp-multicast-interface.c \
+	test/test-tcp-write-fail.c test/test-tcp-try-write.c \
+	test/test-tcp-write-queue-order.c test/test-thread-equal.c \
+	test/test-thread.c test/test-threadpool-cancel.c \
+	test/test-threadpool.c test/test-timer-again.c \
+	test/test-timer-from-check.c test/test-timer.c test/test-tty.c \
+	test/test-udp-bind.c test/test-udp-dgram-too-big.c \
+	test/test-udp-ipv6.c test/test-udp-multicast-interface.c \
 	test/test-udp-multicast-interface6.c \
 	test/test-udp-multicast-join.c test/test-udp-multicast-join6.c \
 	test/test-udp-multicast-ttl.c test/test-udp-open.c \
@@ -523,6 +523,7 @@ am_test_run_tests_OBJECTS =  \
 	test/test_run_tests-test-tcp-write-to-half-open-connection.$(OBJEXT) \
 	test/test_run_tests-test-tcp-write-after-connect.$(OBJEXT) \
 	test/test_run_tests-test-tcp-writealot.$(OBJEXT) \
+	test/test_run_tests-test-tcp-write-fail.$(OBJEXT) \
 	test/test_run_tests-test-tcp-try-write.$(OBJEXT) \
 	test/test_run_tests-test-tcp-write-queue-order.$(OBJEXT) \
 	test/test_run_tests-test-thread-equal.$(OBJEXT) \
@@ -870,13 +871,13 @@ test_run_tests_SOURCES = test/blackhole-server.c test/dns-server.c \
 	test/test-tcp-unexpected-read.c test/test-tcp-oob.c \
 	test/test-tcp-write-to-half-open-connection.c \
 	test/test-tcp-write-after-connect.c test/test-tcp-writealot.c \
-	test/test-tcp-try-write.c test/test-tcp-write-queue-order.c \
-	test/test-thread-equal.c test/test-thread.c \
-	test/test-threadpool-cancel.c test/test-threadpool.c \
-	test/test-timer-again.c test/test-timer-from-check.c \
-	test/test-timer.c test/test-tty.c test/test-udp-bind.c \
-	test/test-udp-dgram-too-big.c test/test-udp-ipv6.c \
-	test/test-udp-multicast-interface.c \
+	test/test-tcp-write-fail.c test/test-tcp-try-write.c \
+	test/test-tcp-write-queue-order.c test/test-thread-equal.c \
+	test/test-thread.c test/test-threadpool-cancel.c \
+	test/test-threadpool.c test/test-timer-again.c \
+	test/test-timer-from-check.c test/test-timer.c test/test-tty.c \
+	test/test-udp-bind.c test/test-udp-dgram-too-big.c \
+	test/test-udp-ipv6.c test/test-udp-multicast-interface.c \
 	test/test-udp-multicast-interface6.c \
 	test/test-udp-multicast-join.c test/test-udp-multicast-join6.c \
 	test/test-udp-multicast-ttl.c test/test-udp-open.c \
@@ -1310,6 +1311,8 @@ test/test_run_tests-test-tcp-write-after-connect.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-tcp-writealot.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-tcp-write-fail.$(OBJEXT):  \
+	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-tcp-try-write.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-tcp-write-queue-order.$(OBJEXT):  \
@@ -1541,6 +1544,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-try-write.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-unexpected-read.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-write-after-connect.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-write-fail.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-write-queue-order.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-write-to-half-open-connection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-writealot.Po@am__quote@
@@ -3335,6 +3339,20 @@ test/test_run_tests-test-tcp-writealot.obj: test/test-tcp-writealot.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-tcp-writealot.c' object='test/test_run_tests-test-tcp-writealot.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-tcp-writealot.obj `if test -f 'test/test-tcp-writealot.c'; then $(CYGPATH_W) 'test/test-tcp-writealot.c'; else $(CYGPATH_W) '$(srcdir)/test/test-tcp-writealot.c'; fi`
+
+test/test_run_tests-test-tcp-write-fail.o: test/test-tcp-write-fail.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-tcp-write-fail.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-tcp-write-fail.Tpo -c -o test/test_run_tests-test-tcp-write-fail.o `test -f 'test/test-tcp-write-fail.c' || echo '$(srcdir)/'`test/test-tcp-write-fail.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-tcp-write-fail.Tpo test/$(DEPDIR)/test_run_tests-test-tcp-write-fail.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-tcp-write-fail.c' object='test/test_run_tests-test-tcp-write-fail.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-tcp-write-fail.o `test -f 'test/test-tcp-write-fail.c' || echo '$(srcdir)/'`test/test-tcp-write-fail.c
+
+test/test_run_tests-test-tcp-write-fail.obj: test/test-tcp-write-fail.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-tcp-write-fail.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-tcp-write-fail.Tpo -c -o test/test_run_tests-test-tcp-write-fail.obj `if test -f 'test/test-tcp-write-fail.c'; then $(CYGPATH_W) 'test/test-tcp-write-fail.c'; else $(CYGPATH_W) '$(srcdir)/test/test-tcp-write-fail.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-tcp-write-fail.Tpo test/$(DEPDIR)/test_run_tests-test-tcp-write-fail.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-tcp-write-fail.c' object='test/test_run_tests-test-tcp-write-fail.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-tcp-write-fail.obj `if test -f 'test/test-tcp-write-fail.c'; then $(CYGPATH_W) 'test/test-tcp-write-fail.c'; else $(CYGPATH_W) '$(srcdir)/test/test-tcp-write-fail.c'; fi`
 
 test/test_run_tests-test-tcp-try-write.o: test/test-tcp-try-write.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-tcp-try-write.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-tcp-try-write.Tpo -c -o test/test_run_tests-test-tcp-try-write.o `test -f 'test/test-tcp-try-write.c' || echo '$(srcdir)/'`test/test-tcp-try-write.c

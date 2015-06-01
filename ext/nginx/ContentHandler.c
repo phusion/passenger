@@ -140,12 +140,12 @@ map_uri_to_page_cache_file(ngx_http_request_t *r, ngx_str_t *public_dir,
 
     } else if (filename[filename_len - 1] == '/') {
         /* if the filename ends with '/' check for filename + "index.html". */
-        
+
         if (filename_len + sizeof("index.html") > page_cache_file->len) {
             /* Page cache filename doesn't fit in the buffer. */
             return 0;
         }
-        
+
         end = ngx_copy(page_cache_file->data, filename, filename_len);
         end = ngx_copy(end, "index.html", sizeof("index.html"));
     } else {
@@ -416,16 +416,27 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
      * Nginx unescapes URI's before passing them to Phusion Passenger,
      * but backend processes expect the escaped version.
      * http://code.google.com/p/phusion-passenger/issues/detail?id=404
+     *
+     * Here we check whether Nginx has rewritten the URI or not. If not,
+     * we can use the raw, unparsed URI as sent by the client.
      */
-    state->escaped_uri.len =
-        2 * ngx_escape_uri(NULL, r->uri.data, r->uri.len, NGX_ESCAPE_URI)
-        + r->uri.len;
-    state->escaped_uri.data = ngx_pnalloc(r->pool, state->escaped_uri.len);
-    if (state->escaped_uri.data == NULL) {
-        return NGX_ERROR;
+    if (r->valid_unparsed_uri && r->main) {
+        state->escaped_uri = r->unparsed_uri;
+        const char *pos = memchr((const char *) r->unparsed_uri.data, '?', r->unparsed_uri.len);
+        if (pos != NULL) {
+            state->escaped_uri.len = pos - (const char *) r->unparsed_uri.data;
+        }
+    } else {
+        state->escaped_uri.len =
+            2 * ngx_escape_uri(NULL, r->uri.data, r->uri.len, NGX_ESCAPE_URI)
+            + r->uri.len;
+        state->escaped_uri.data = ngx_pnalloc(r->pool, state->escaped_uri.len);
+        if (state->escaped_uri.data == NULL) {
+            return NGX_ERROR;
+        }
+        ngx_escape_uri(state->escaped_uri.data, r->uri.data, r->uri.len,
+            NGX_ESCAPE_URI);
     }
-    ngx_escape_uri(state->escaped_uri.data, r->uri.data, r->uri.len,
-        NGX_ESCAPE_URI);
 
     if (r->headers_in.chunked) {
         /* If the request body is chunked, then Nginx sets r->headers_in.content_length_n

@@ -56,9 +56,11 @@
 
 2.9.5. Verifying Git signatures	=>	verifying-git-signatures-oaafwd
 
-2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-vgtv04
+2.9.6. Verifying Debian packages	=>	verifying-deb-and-rpm-packages-vgtv04
 
-2.9.7. Revocation	=>	revocation-4o01n2
+2.9.7. Verifying RPM packages	=>	verifying-rpm-packages-1nlx51r
+
+2.9.8. Revocation	=>	revocation-4o01n2
 
 2.10. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-1arnxii
 

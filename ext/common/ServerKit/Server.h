@@ -79,6 +79,7 @@ using namespace oxt;
 
 #define SKS_NOTICE_FROM_STATIC(server, expr) P_NOTICE("[" << server->getServerName() << "] " << expr)
 
+#define SKC_LOG(client, level, expr) SKC_LOG_FROM_STATIC(this, client, level, expr)
 #define SKC_ERROR(client, expr) SKC_ERROR_FROM_STATIC(this, client, expr)
 #define SKC_WARN(client, expr) SKC_WARN_FROM_STATIC(this, client, expr)
 #define SKC_NOTICE(client, expr) SKC_NOTICE_FROM_STATIC(this, client, expr)
@@ -90,40 +91,25 @@ using namespace oxt;
 #define SKC_TRACE_WITH_POS(client, level, file, line, expr) \
 	SKC_TRACE_FROM_STATIC_WITH_POS(this, client, level, file, line, expr)
 
+#define SKC_LOG_FROM_STATIC(server, client, level, expr) \
+	do { \
+		if (Passenger::getLogLevel() >= level) { \
+			char _clientName[16]; \
+			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
+			P_LOG(level, __FILE__, __LINE__, \
+				"[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
+		} \
+	} while (0)
 #define SKC_ERROR_FROM_STATIC(server, client, expr) \
-	do { \
-		if (Passenger::getLogLevel() >= LVL_ERROR) { \
-			char _clientName[16]; \
-			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_ERROR("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
-		} \
-	} while (0)
+	SKC_LOG_FROM_STATIC(server, client, LVL_ERROR, expr)
 #define SKC_WARN_FROM_STATIC(server, client, expr) \
-	do { \
-		if (Passenger::getLogLevel() >= LVL_WARN) { \
-			char _clientName[16]; \
-			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_WARN("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
-		} \
-	} while (0)
+	SKC_LOG_FROM_STATIC(server, client, LVL_WARN, expr)
 #define SKC_NOTICE_FROM_STATIC(server, client, expr) \
-	do { \
-		if (Passenger::getLogLevel() >= LVL_WARN) { \
-			char _clientName[16]; \
-			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_NOTICE("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
-		} \
-	} while (0)
+	SKC_LOG_FROM_STATIC(server, client, LVL_NOTICE, expr)
 #define SKC_INFO_FROM_STATIC(server, client, expr) \
-	do { \
-		if (Passenger::getLogLevel() >= LVL_WARN) { \
-			char _clientName[16]; \
-			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_INFO("[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
-		} \
-	} while (0)
+	SKC_LOG_FROM_STATIC(server, client, LVL_INFO, expr)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \
-	SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, __FILE__, __LINE__, expr)
+	SKC_LOG_FROM_STATIC(server, client, LVL_DEBUG, expr)
 #define SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, file, line, expr) \
 	do { \
 		if (OXT_UNLIKELY(Passenger::getLogLevel() >= LVL_DEBUG)) { \
@@ -629,7 +615,14 @@ protected:
 		int ret = snprintf(message, sizeof(message),
 			"client socket write error: %s (errno=%d)",
 			getErrorDesc(errcode), errcode);
-		disconnectWithError(&client, StaticString(message, ret));
+		disconnectWithError(&client, StaticString(message, ret),
+			getClientOutputErrorDisconnectionLogLevel(client, errcode));
+	}
+
+	virtual PassengerLogLevel getClientOutputErrorDisconnectionLogLevel(
+		Client *client, int errcode) const
+	{
+		return LVL_WARN;
 	}
 
 	virtual void reinitializeClient(Client *client, int fd) {
@@ -927,8 +920,10 @@ public:
 		disconnect(client);
 	}
 
-	void disconnectWithError(Client **client, const StaticString &message) {
-		SKC_WARN(*client, "Disconnecting client with error: " << message);
+	void disconnectWithError(Client **client, const StaticString &message,
+		PassengerLogLevel logLevel = LVL_WARN)
+	{
+		SKC_LOG(*client, logLevel, "Disconnecting client with error: " << message);
 		disconnect(client);
 	}
 

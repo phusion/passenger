@@ -142,6 +142,13 @@ shared_examples_for "an example web app" do
     response["X-Foo"].should == "Bar"
   end
 
+  it "doesn't break keep-alive" do
+    response = get_response('/extra_header')
+    if response["Connection"] != nil
+      response["Connection"].downcase.should == "keep-alive"
+    end
+  end
+
   it "sets the 'Status' header in responses" do
     response = get_response('/nonexistant')
     response["Status"].should == "404 Not Found"

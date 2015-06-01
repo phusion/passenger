@@ -32,6 +32,7 @@ namespace ServerKit {
 extern const HashedStaticString HTTP_COOKIE;
 extern const HashedStaticString HTTP_SET_COOKIE;
 extern const HashedStaticString HTTP_CONTENT_LENGTH;
+extern const HashedStaticString HTTP_TRANSFER_ENCODING;
 extern const HashedStaticString HTTP_X_SENDFILE;
 extern const HashedStaticString HTTP_X_ACCEL_REDIRECT;
 extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
@@ -49,6 +50,7 @@ const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE =
 const HashedStaticString HTTP_COOKIE("cookie");
 const HashedStaticString HTTP_SET_COOKIE("set-cookie");
 const HashedStaticString HTTP_CONTENT_LENGTH("content-length");
+const HashedStaticString HTTP_TRANSFER_ENCODING("transfer-encoding");
 const HashedStaticString HTTP_X_SENDFILE("x-sendfile");
 const HashedStaticString HTTP_X_ACCEL_REDIRECT("x-accel-redirect");
 

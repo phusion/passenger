@@ -160,8 +160,8 @@ file AGENT_OUTPUT_DIR + AGENT_EXE => dependencies do
     "#{agent_objects_as_string} " <<
     "#{LIBBOOST_OXT_LINKARG} " <<
     "#{EXTRA_PRE_CXX_LDFLAGS} " <<
-    "#{LIBEV_LIBS} " <<
-    "#{LIBUV_LIBS} " <<
+    "#{libev_libs} " <<
+    "#{libuv_libs} " <<
     "#{PlatformInfo.curl_libs} " <<
     "#{PlatformInfo.zlib_libs} " <<
     "#{PlatformInfo.portability_cxx_ldflags} " <<

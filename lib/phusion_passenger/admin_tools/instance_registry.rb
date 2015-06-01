@@ -102,8 +102,12 @@ module PhusionPassenger
 
       def cleanup(path)
         puts "*** Cleaning stale instance directory #{path}"
-        FileUtils.chmod_R(0700, path) rescue nil
-        FileUtils.remove_entry_secure(path)
+        begin
+          FileUtils.chmod_R(0700, path) rescue nil
+          FileUtils.remove_entry_secure(path)
+        rescue SystemCallError => e
+          puts "    Warning: #{e}"
+        end
       end
     end
 

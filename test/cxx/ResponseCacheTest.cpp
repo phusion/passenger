@@ -494,7 +494,7 @@ namespace tut {
 		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
 			responseHeadersStr.size(), responseBodyStr.size()));
 		ensure("(5)", entry.valid());
-		ensure_equals("(6)", entry.index, 0);
+		ensure_equals("(6)", entry.index, 0u);
 
 
 		reset();
@@ -532,7 +532,7 @@ namespace tut {
 		ResponseCacheType::Entry entry(responseCache.store(&req, time(NULL),
 			responseHeadersStr.size(), responseBodyStr.size()));
 		ensure("(5)", entry.valid());
-		ensure_equals("(6)", entry.index, 0);
+		ensure_equals("(6)", entry.index, 0u);
 
 
 		reset();

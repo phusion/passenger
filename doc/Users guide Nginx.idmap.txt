@@ -58,9 +58,11 @@
 
 2.9.5. Verifying Git signatures	=>	verifying-git-signatures-dyo4fk
 
-2.9.6. Verifying DEB and RPM packages	=>	verifying-deb-and-rpm-packages-1ed36d5
+2.9.6. Verifying Debian packages	=>	verifying-deb-and-rpm-packages-1ed36d5
 
-2.9.7. Revocation	=>	revocation-xwvhea
+2.9.7. Verifying RPM packages	=>	verifying-rpm-packages-1wwblzx
+
+2.9.8. Revocation	=>	revocation-xwvhea
 
 2.10. Non-interactive, automatic, headless installs or upgrades	=>	non-interactive-automatic-headless-installs-or-upgrades-834ymv
 
