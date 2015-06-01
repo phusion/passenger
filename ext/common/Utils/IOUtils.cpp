@@ -360,6 +360,17 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 	}
 	// Ignore SO_REUSEADDR error, it's not fatal.
 
+	#ifdef SO_REUSEPORT
+		optval = 1;
+		if (syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
+			&optval, sizeof(optval)) == -1)
+		{
+			int e = errno;
+			fprintf(stderr, "so_reuseport failed: %s\n", strerror(e));
+		}
+		// Ignore SO_REUSEPORT error, it's not fatal.
+	#endif
+
 	if (backlogSize == 0) {
 		backlogSize = 1024;
 	}
