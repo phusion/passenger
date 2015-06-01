@@ -422,6 +422,10 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
      */
     if (r->valid_unparsed_uri && r->main) {
         state->escaped_uri = r->unparsed_uri;
+        const char *pos = memchr((const char *) r->unparsed_uri.data, '?', r->unparsed_uri.len);
+        if (pos != NULL) {
+            state->escaped_uri.len = pos - (const char *) r->unparsed_uri.data;
+        }
     } else {
         state->escaped_uri.len =
             2 * ngx_escape_uri(NULL, r->uri.data, r->uri.len, NGX_ESCAPE_URI)
