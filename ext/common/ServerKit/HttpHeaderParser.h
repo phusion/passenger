@@ -173,7 +173,7 @@ private:
 		 || self->state->state == HttpHeaderParserState::PARSING_HEADER_VALUE
 		 || self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_VALUE)
 		{
-			// New header key encountered.
+			// New header field encountered.
 
 			if (self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_VALUE
 			 || self->state->state == HttpHeaderParserState::PARSING_HEADER_VALUE)
@@ -185,8 +185,10 @@ private:
 				self->insertCurrentHeader();
 			}
 
+			// Initialize new header field.
 			self->state->currentHeader = (Header *) psg_palloc(self->pool, sizeof(Header));
 			psg_lstr_init(&self->state->currentHeader->key);
+			psg_lstr_init(&self->state->currentHeader->origKey);
 			psg_lstr_init(&self->state->currentHeader->val);
 			self->state->hasher.reset();
 			if (self->state->state == HttpHeaderParserState::PARSING_URL) {
@@ -196,12 +198,20 @@ private:
 			}
 		}
 
-		psg_lstr_append(&self->state->currentHeader->key, self->pool,
+		psg_lstr_append(&self->state->currentHeader->origKey, self->pool,
 			*self->currentBuffer, data, len);
-		if (psg_lstr_first_byte(&self->state->currentHeader->key) != '!') {
-			convertLowerCase((unsigned char *) const_cast<char *>(data), len);
+		if (psg_lstr_first_byte(&self->state->currentHeader->origKey) == '!') {
+			psg_lstr_append(&self->state->currentHeader->key, self->pool,
+				*self->currentBuffer, data, len);
+			self->state->hasher.update(data, len);
+		} else {
+			char *downcasedData = (char *) psg_pnalloc(self->pool, len);
+			convertLowerCase((const unsigned char *) data,
+				(unsigned char *) downcasedData, len);
+			psg_lstr_append(&self->state->currentHeader->key, self->pool,
+				downcasedData, len);
+			self->state->hasher.update(downcasedData, len);
 		}
-		self->state->hasher.update(data, len);
 
 		return 0;
 	}

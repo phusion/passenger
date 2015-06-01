@@ -127,7 +127,7 @@ private:
 		if (authorize(client, req, READONLY)) {
 			HeaderTable headers;
 			//stringstream stream;
-			headers.insert(req->pool, "content-type", "text/plain");
+			headers.insert(req->pool, "Content-Type", "text/plain");
 			//loggingServer->dump(stream);
 			//writeSimpleResponse(client, 200, &headers, stream.str());
 			if (!req->ended()) {
@@ -141,8 +141,8 @@ private:
 	void processPing(Client *client, Request *req) {
 		if (authorize(client, req, READONLY)) {
 			HeaderTable headers;
-			headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
-			headers.insert(req->pool, "content-type", "application/json");
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			headers.insert(req->pool, "Content-Type", "application/json");
 			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 			if (!req->ended()) {
 				endRequest(&client, &req);
@@ -157,7 +157,7 @@ private:
 			respondWith405(client, req);
 		} else if (authorize(client, req, FULL)) {
 			HeaderTable headers;
-			headers.insert(req->pool, "content-type", "application/json");
+			headers.insert(req->pool, "Content-Type", "application/json");
 			exitEvent->notify();
 			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 			if (!req->ended()) {
@@ -179,7 +179,7 @@ private:
 			string logFile = getLogFile();
 			string fileDescriptorLogFile = getFileDescriptorLogFile();
 
-			headers.insert(req->pool, "content-type", "application/json");
+			headers.insert(req->pool, "Content-Type", "application/json");
 			doc["log_level"] = getLogLevel();
 			if (!logFile.empty()) {
 				doc["log_file"] = logFile;
@@ -208,7 +208,7 @@ private:
 		HeaderTable headers;
 		Json::Value &json = req->jsonBody;
 
-		headers.insert(req->pool, "content-type", "application/json");
+		headers.insert(req->pool, "Content-Type", "application/json");
 
 		if (json.isMember("log_level")) {
 			setLogLevel(json["log_level"].asInt());
@@ -258,7 +258,7 @@ private:
 		} else if (authorize(client, req, FULL)) {
 			int e;
 			HeaderTable headers;
-			headers.insert(req->pool, "content-type", "application/json");
+			headers.insert(req->pool, "Content-Type", "application/json");
 
 			string logFile = getLogFile();
 			if (logFile.empty()) {
@@ -315,8 +315,8 @@ private:
 
 	void respondWith401(Client *client, Request *req) {
 		HeaderTable headers;
-		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "www-authenticate", "Basic realm=\"admin\"");
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"admin\"");
 		writeSimpleResponse(client, 401, &headers, "Unauthorized");
 		if (!req->ended()) {
 			endRequest(&client, &req);
@@ -325,7 +325,7 @@ private:
 
 	void respondWith404(Client *client, Request *req) {
 		HeaderTable headers;
-		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 		writeSimpleResponse(client, 404, &headers, "Not found");
 		if (!req->ended()) {
 			endRequest(&client, &req);
@@ -334,7 +334,7 @@ private:
 
 	void respondWith405(Client *client, Request *req) {
 		HeaderTable headers;
-		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 		writeSimpleResponse(client, 405, &headers, "Method not allowed");
 		if (!req->ended()) {
 			endRequest(&client, &req);
@@ -343,8 +343,8 @@ private:
 
 	void respondWith422(Client *client, Request *req, const StaticString &body) {
 		HeaderTable headers;
-		headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "content-type", "text/plain; charset=utf-8");
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "Content-Type", "text/plain; charset=utf-8");
 		writeSimpleResponse(client, 422, &headers, body);
 		if (!req->ended()) {
 			endRequest(&client, &req);

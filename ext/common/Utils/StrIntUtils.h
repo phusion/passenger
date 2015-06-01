@@ -388,7 +388,7 @@ roundUp(IntegerType number, IntegerType multiple) {
 /**
  * Converts the given character array to lowercase.
  */
-void convertLowerCase(unsigned char *data, size_t len);
+void convertLowerCase(const unsigned char * restrict data, unsigned char * restrict output, size_t len);
 
 /**
  * Compare two strings using a constant time algorithm to avoid timing attacks.

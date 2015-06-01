@@ -18,13 +18,15 @@ namespace tut {
 			psg_destroy_pool(pool);
 		}
 
-		Header *createHeader(const HashedStaticString &key, const StaticString &val) {
+		Header *createHeader(const HashedStaticString &downcasedKey, const StaticString &val) {
 			Header *header = (Header *) psg_palloc(pool, sizeof(Header));
 			psg_lstr_init(&header->key);
+			psg_lstr_init(&header->origKey);
 			psg_lstr_init(&header->val);
-			psg_lstr_append(&header->key, pool, key.data(), key.size());
+			psg_lstr_append(&header->key, pool, downcasedKey.data(), downcasedKey.size());
+			psg_lstr_append(&header->origKey, pool, downcasedKey.data(), downcasedKey.size());
 			psg_lstr_append(&header->val, pool, val.data(), val.size());
-			header->hash = key.hash();
+			header->hash = downcasedKey.hash();
 			return header;
 		}
 
@@ -177,5 +179,16 @@ namespace tut {
 		ensure("(2)", psg_lstr_cmp(table.lookup("Cache-Control"), "must-invalidate,private"));
 		ensure("(3)", psg_lstr_cmp(table.lookup("cookie"), "a;b"));
 		ensure("(4)", psg_lstr_cmp(table.lookup("set-cookie"), "c=123\nd=456"));
+	}
+
+	TEST_METHOD(10) {
+		set_test_name("insert() inserts a downcased version of the header for lookup while preserving the original");
+		table.insert(pool, "Content-Length", "5");
+
+		Header *header = table.lookupHeader("content-length");
+		ensure("(1)", header != NULL);
+		ensure_equals("(2)", StaticString(header->origKey.start->data, header->origKey.size), "Content-Length");
+
+		ensure_equals<void *>("(3)", table.lookup("Content-Length"), NULL);
 	}
 }

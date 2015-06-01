@@ -1035,6 +1035,7 @@ protected:
 		HeaderTable::Iterator it(req->headers);
 		while (*it != NULL) {
 			psg_lstr_deinit(&it->header->key);
+			psg_lstr_deinit(&it->header->origKey);
 			psg_lstr_deinit(&it->header->val);
 			it.next();
 		}
@@ -1042,6 +1043,7 @@ protected:
 		it = HeaderTable::Iterator(req->secureHeaders);
 		while (*it != NULL) {
 			psg_lstr_deinit(&it->header->key);
+			psg_lstr_deinit(&it->header->origKey);
 			psg_lstr_deinit(&it->header->val);
 			it.next();
 		}
