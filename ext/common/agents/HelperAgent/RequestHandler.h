@@ -332,7 +332,7 @@ public:
 						StaticString hostStr;
 
 						size = getClientName(client, clientName, sizeof(clientName));
-						if (req->host != NULL) {
+						if (req->host != NULL && req->host->size > 0) {
 							host = psg_lstr_make_contiguous(req->host, req->pool);
 							hostStr = StaticString(host->start->data, host->size);
 						}

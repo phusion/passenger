@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -257,6 +257,7 @@ parseCookieHeader(psg_pool_t *pool, const LString *headerValue,
 	vector<StaticString> parts;
 	vector<StaticString>::const_iterator it, it_end;
 
+	assert(headerValue->size > 0);
 	headerValue = psg_lstr_make_contiguous(headerValue, pool);
 	split(StaticString(headerValue->start->data, headerValue->size),
 		';', parts);

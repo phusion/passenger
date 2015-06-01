@@ -228,7 +228,7 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += sizeof("REQUEST_METHOD");
 	dataSize += state.methodStr.size() + 1;
 
-	if (req->host != NULL) {
+	if (req->host != NULL && req->host->size > 0) {
 		const LString *host = psg_lstr_make_contiguous(req->host, req->pool);
 		const char *sep = (const char *) memchr(host->start->data, ':', host->size);
 		if (sep != NULL) {
