@@ -124,6 +124,8 @@ AGENT_OBJECTS.each_pair do |agent_object, agent_dependencies|
       "#{EXTRA_PRE_CXXFLAGS} " <<
       "-Iext -Iext/common " <<
       "#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBUV_CFLAGS} " <<
+      "#{PlatformInfo.curl_flags} " <<
+      "#{PlatformInfo.zlib_flags} " <<
       "#{EXTRA_CXXFLAGS}")
   end
 end
