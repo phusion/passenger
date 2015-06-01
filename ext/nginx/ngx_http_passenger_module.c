@@ -302,6 +302,13 @@ start_watchdog(ngx_cycle_t *cycle) {
 
     if (passenger_main_conf.log_file.len > 0) {
         pp_variant_map_set_ngx_str(params, "log_file", &passenger_main_conf.log_file);
+    } else if (cycle->new_log.file == NULL) {
+        ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "Cannot initialize " PROGRAM_NAME
+            " because Nginx is not configured with an error log file."
+            " Please either configure Nginx with an error log file, or configure "
+            PROGRAM_NAME " with a `passenger_log_file`");
+        result = NGX_ERROR;
+        goto cleanup;
     } else if (cycle->new_log.file->name.len > 0) {
         pp_variant_map_set_ngx_str(params, "log_file", &cycle->new_log.file->name);
     } else if (cycle->log->file->name.len > 0) {
