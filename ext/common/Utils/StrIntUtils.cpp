@@ -458,7 +458,10 @@ atol(const string &s) {
 #if !defined(__x86_64__) && !defined(__x86__)
 	// x86 and x86_64 optimized version is implemented in StrIntUtilsNoStrictAliasing.cpp.
 	void
-	convertLowerCase(unsigned char *data, size_t len) {
+	convertLowerCase(const unsigned char * restrict data,
+		unsigned char * restrict output,
+		size_t len)
+	{
 		static const boost::uint8_t gsToLowerMap[256] = {
 			'\0', 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, '\t',
 			'\n', 0x0b, 0x0c, '\r', 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13,
@@ -492,16 +495,17 @@ atol(const string &s) {
 		const size_t imax = len / 4;
 		size_t i;
 
-		for (i = 0; i < imax; i++, data += 4) {
-			data[0] = (unsigned char) gsToLowerMap[data[0]];
-			data[1] = (unsigned char) gsToLowerMap[data[1]];
-			data[2] = (unsigned char) gsToLowerMap[data[2]];
-			data[3] = (unsigned char) gsToLowerMap[data[3]];
+		for (i = 0; i < imax; i++, data += 4, output += 4) {
+			output[0] = (unsigned char) gsToLowerMap[data[0]];
+			output[1] = (unsigned char) gsToLowerMap[data[1]];
+			output[2] = (unsigned char) gsToLowerMap[data[2]];
+			output[3] = (unsigned char) gsToLowerMap[data[3]];
 		}
 
 		while (data < end) {
-			*data = (unsigned char) gsToLowerMap[*data];
+			*output = (unsigned char) gsToLowerMap[*data];
 			data++;
+			output++;
 		}
 	}
 #endif

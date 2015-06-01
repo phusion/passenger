@@ -795,8 +795,7 @@ private:
 		char *buffer, size_t bufsize) const
 	{
 		assert(bufsize > headerSize);
-		memcpy(buffer, header, headerSize);
-		convertLowerCase((unsigned char *) buffer, headerSize);
+		convertLowerCase((const unsigned char *) header, (unsigned char *) buffer, headerSize);
 		buffer[headerSize] = '\0';
 		return strstr(buffer, "upgrade");
 	}
