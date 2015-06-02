@@ -965,6 +965,8 @@ This option may occur in the following places:
 
 In each place, it may be specified at most once. The default value is 'off'.
 
+NOTE: Are you looking to prevent applications from being restarted when you restart the web server? That is handled by the link:Users%20guide%20Nginx.html#flying_passenger[Flying Passenger mode] (which requires Nginx), not by the rolling restarts feature.
+
 [[PassengerResistDeploymentErrors]]
 ==== PassengerResistDeploymentErrors <on|off>
 :version: 3.0.0
