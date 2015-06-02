@@ -9,6 +9,8 @@ Release 5.0.9
  * The Ruby handler now closes the Rack response body even when the socket connection is hijacked by the application. The Rack specification is unclear about what to do in this case, and different Ruby app servers do different things. We have found that by closing the body object anyway, we maximize compatibility with existing Rack middlewares and apps, such as Rack::Lock. Background information about this issue can be found at https://github.com/ngauthier/tubesock/issues/10#issuecomment-72539461.
  * Fixes a crash that could occur if some HTTP request headers are present, but have the empty value. Closes GH-1524.
  * Fixes a permission problem that prevents the web server from communicating with Passenger when user switching is off. Closes GH-1520.
+ * Fixes a few small one-time memory leaks in the Passenger agent. This wraps up the workitems discovered in valgrind runs on earlier versions.
+ * Fixes use of uninitialized metrics. This could happen for a brief moment after spawning.
  * [Apache] If you pass the `--apxs2-path` parameter to `passenger-install-apache2-module`, and the apxs2 path that you specified is not in PATH, then the installer would think that Apache installation is broken. This has been fixed.
  * [Apache] An `Connection: close` header that was used for internal communication between Passenger processes was being leaked to the client, which breaks HTTP keep-alive connections. This has been fixed. Closes GH-1516.
  * [Nginx] The preferred Nginx version is now 1.8.0. It was previously 1.6.3.
