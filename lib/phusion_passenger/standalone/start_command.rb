@@ -64,9 +64,9 @@ module PhusionPassenger
         find_apps
         find_pid_and_log_file(@app_finder, @options)
         create_working_dir
+        initialize_vars
+        start_engine
         begin
-          initialize_vars
-          start_engine
           show_intro_message
           maybe_daemonize
           touch_temp_dir_in_background

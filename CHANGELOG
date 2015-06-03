@@ -16,6 +16,7 @@ Release 5.0.9
  * [Nginx] The preferred Nginx version is now 1.8.0. It was previously 1.6.3.
  * [Nginx] Passenger now passes to the application the raw URI as sent by the client, as long as Nginx didn't modify the URI (e.g. as part of rewrite rules). This means that escaped slashes (%2F) in the URI now work correctly and out-of-the-box as long as there are no applicable rewrite rules.
  * [Nginx] Fixes that crash that would occur if Nginx is configured to log to syslog. And to prevent log messages from disappearing into a black hole, Passenger will now ask you to set `passenger_log_file` if Nginx is configured to log to syslog. Closes GH-1514.
+ * [Standalone] Prevents an existing instance from being shut down if starting a new instance fails.
 
 
 Release 5.0.8
