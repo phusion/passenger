@@ -557,10 +557,10 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	}
 
 	while (*it != NULL) {
-		dataSize += it->header->key.size + sizeof(": ") - 1;
+		dataSize += it->header->origKey.size + sizeof(": ") - 1;
 		dataSize += it->header->val.size + sizeof("\r\n") - 1;
 
-		part = it->header->key.start;
+		part = it->header->origKey.start;
 		while (part != NULL) {
 			if (buffers != NULL) {
 				buffers[i].iov_base = (void *) part->data;

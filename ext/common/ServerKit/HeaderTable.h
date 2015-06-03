@@ -43,7 +43,10 @@ extern const HashedStaticString HTTP_COOKIE;
 extern const HashedStaticString HTTP_SET_COOKIE;
 
 struct Header {
+	/** Downcased version of the key, for case-insensitive lookup. */
 	LString key;
+	/** Original, unmodified key. */
+	LString origKey;
 	LString val;
 	boost::uint32_t hash;
 };
@@ -225,6 +228,16 @@ public:
 		return const_cast<Cell *>(static_cast<const HeaderTable *>(this)->lookupCell(key));
 	}
 
+	OXT_FORCE_INLINE
+	Header *lookupHeader(const HashedStaticString &key) {
+		Cell *cell = lookupCell(key);
+		if (cell != NULL) {
+			return cell->header;
+		} else {
+			return NULL;
+		}
+	}
+
 	const LString *lookup(const HashedStaticString &key) const {
 		const Cell * const cell = lookupCell(key);
 		if (cell != NULL) {
@@ -285,6 +298,7 @@ public:
 						part = next;
 					}
 					psg_lstr_deinit(&header->key);
+					psg_lstr_deinit(&header->origKey);
 					*headerPtr = NULL;
 					return;
 				} else {
@@ -294,15 +308,24 @@ public:
 		}
 	}
 
-	Header *insert(psg_pool_t *pool, const HashedStaticString &name,
+	Header *insert(psg_pool_t *pool, const StaticString &name,
 		const StaticString &value)
 	{
 		Header *header = (Header *) psg_palloc(pool, sizeof(Header));
+
+		char *downcasedName = (char *) psg_pnalloc(pool, name.size());
+		convertLowerCase((const unsigned char *) name.data(),
+			(unsigned char *) downcasedName, name.size());
 		psg_lstr_init(&header->key);
-		psg_lstr_append(&header->key, pool, name.data(), name.size());
+		psg_lstr_append(&header->key, pool, downcasedName, name.size());
+
+		psg_lstr_init(&header->origKey);
+		psg_lstr_append(&header->origKey, pool, name.data(), name.size());
+
 		psg_lstr_init(&header->val);
 		psg_lstr_append(&header->val, pool, value.data(), value.size());
-		header->hash = name.hash();
+
+		header->hash = HashedStaticString(downcasedName, name.size()).hash();
 		insert(&header, pool);
 		return header;
 	}
@@ -320,6 +343,7 @@ public:
 					// A previous iteration in this loop
 					// could have made cell->header NULL.
 					psg_lstr_deinit(&cell->header->key);
+					psg_lstr_deinit(&cell->header->origKey);
 					psg_lstr_deinit(&cell->header->val);
 					cell->header = NULL;
 				}
@@ -335,6 +359,7 @@ public:
 					// A previous iteration in this loop
 					// could have made cell->header NULL.
 					psg_lstr_deinit(&cell->header->key);
+					psg_lstr_deinit(&cell->header->origKey);
 					psg_lstr_deinit(&cell->header->val);
 				}
 				*cell = *neighbor;
