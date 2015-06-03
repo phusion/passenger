@@ -161,6 +161,21 @@ namespace ServerAgent {
 				adminServerFds[i] = -1;
 			}
 		}
+
+		~WorkingObjects() {
+			delete prestarterThread;
+
+			vector<ThreadWorkingObjects>::iterator it, end = threadWorkingObjects.end();
+			for (it = threadWorkingObjects.begin(); it != end; it++) {
+				delete it->requestHandler;
+				delete it->serverKitContext;
+				delete it->bgloop;
+			}
+
+			delete adminWorkingObjects.adminServer;
+			delete adminWorkingObjects.serverKitContext;
+			delete adminWorkingObjects.bgloop;
+		}
 	};
 } // namespace ServerAgent
 } // namespace Passenger
@@ -905,10 +920,12 @@ cleanup() {
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		delete two->requestHandler;
+		two->requestHandler = NULL;
 	}
 	if (wo->prestarterThread != NULL) {
 		wo->prestarterThread->interrupt_and_join();
 		delete wo->prestarterThread;
+		wo->prestarterThread = NULL;
 	}
 	for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
 		if (wo->serverFds[i] != -1) {
@@ -919,6 +936,8 @@ cleanup() {
 		}
 	}
 	deletePidFile();
+	delete workingObjects;
+	workingObjects = NULL;
 	P_NOTICE(AGENT_EXE " server shutdown finished");
 }
 
@@ -953,6 +972,8 @@ runServer() {
 		UPDATE_TRACE_POINT();
 		cleanup();
 	} catch (const tracable_exception &e) {
+		// We intentionally don't call cleanup() in
+		// order to avoid various destructor assertions.
 		P_CRITICAL("ERROR: " << e.what() << "\n" << e.backtrace());
 		deletePidFile();
 		return 1;
@@ -1167,10 +1188,14 @@ sanityCheckOptions() {
 
 int
 serverMain(int argc, char *argv[]) {
+	int ret;
+
 	agentsOptions = new VariantMap();
 	*agentsOptions = initializeAgent(argc, &argv, AGENT_EXE " server", parseOptions,
 		preinitialize, 2);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
-	return runServer();
+	ret = runServer();
+	shutdownAgent(agentsOptions);
+	return ret;
 }

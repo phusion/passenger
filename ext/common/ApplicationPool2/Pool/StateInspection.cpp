@@ -78,9 +78,14 @@ Pool::inspectProcessList(const InspectOptions &options, stringstream &result,
 		char cpubuf[10];
 		char membuf[10];
 
-		snprintf(cpubuf, sizeof(cpubuf), "%d%%", (int) process->metrics.cpu);
-		snprintf(membuf, sizeof(membuf), "%ldM",
-			(unsigned long) (process->metrics.realMemory() / 1024));
+		 if (process->metrics.isValid()) {
+			snprintf(cpubuf, sizeof(cpubuf), "%d%%", (int) process->metrics.cpu);
+			snprintf(membuf, sizeof(membuf), "%ldM",
+				(unsigned long) (process->metrics.realMemory() / 1024));
+		} else {
+			snprintf(cpubuf, sizeof(cpubuf), "0%%");
+			snprintf(membuf, sizeof(membuf), "0M");
+		}
 		snprintf(buf, sizeof(buf),
 			"  * PID: %-5lu   Sessions: %-2u      Processed: %-5u   Uptime: %s\n"
 			"    CPU: %-5s   Memory  : %-5s   Last used: %s ago",

@@ -339,6 +339,7 @@ BackgroundEventLoop::stop() {
 	if (priv->thr != NULL) {
 		if (priv->usesLibuv) {
 			priv->libuvPollerThr->interrupt_and_join();
+			delete priv->libuvPollerThr;
 			priv->libuvPollerThr = NULL;
 		}
 		ev_async_send(libev_loop, &priv->exitSignaller);

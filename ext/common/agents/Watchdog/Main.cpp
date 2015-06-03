@@ -958,7 +958,9 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 }
 
 static void
-initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceDirToucher) {
+initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceDirToucher,
+	uid_t uidBeforeLoweringPrivilege)
+{
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
 	vector<string> strset;
@@ -981,6 +983,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	UPDATE_TRACE_POINT();
 	InstanceDirectory::CreationOptions instanceOptions;
 	instanceOptions.userSwitching = options.getBool("user_switching");
+	instanceOptions.originalUid = uidBeforeLoweringPrivilege;
 	instanceOptions.defaultUid = wo->defaultUid;
 	instanceOptions.defaultGid = wo->defaultGid;
 	instanceOptions.properties["name"] = wo->randomGenerator.generateAsciiString(8);
@@ -1253,6 +1256,7 @@ watchdogMain(int argc, char *argv[]) {
 	P_DEBUG("Watchdog options: " << agentsOptions->inspect());
 	InstanceDirToucherPtr instanceDirToucher;
 	vector<AgentWatcherPtr> watchers;
+	uid_t uidBeforeLoweringPrivilege = geteuid();
 
 	try {
 		TRACE_POINT();
@@ -1261,7 +1265,7 @@ watchdogMain(int argc, char *argv[]) {
 		createPidFile();
 		openReportFile(wo);
 		lowerPrivilege();
-		initializeWorkingObjects(wo, instanceDirToucher);
+		initializeWorkingObjects(wo, instanceDirToucher, uidBeforeLoweringPrivilege);
 		initializeAgentWatchers(wo, watchers);
 		initializeAdminServer(wo);
 		UPDATE_TRACE_POINT();

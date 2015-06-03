@@ -99,11 +99,15 @@ struct ProcessMetrics {
 
 	ProcessMetrics() {
 		pid = (pid_t) -1;
+		ppid = (pid_t) -1;
+		cpu = -1;
 		rss = -1;
 		pss = -1;
 		privateDirty = -1;
 		swap = -1;
 		vmsize = -1;
+		processGroupId = (pid_t) -1;
+		uid = (uid_t) -1;
 	}
 
 	bool isValid() const {

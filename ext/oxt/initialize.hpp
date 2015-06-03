@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2012 Phusion
+ * Copyright (c) 2012-2015 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,10 @@ namespace oxt {
  * for that.
  */
 void initialize();
+/**
+ * Frees resources allocated by initialize().
+ */
+void shutdown();
 
 } // namespace oxt
 

@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2008-2014 Phusion
+ * Copyright (c) 2008-2015 Phusion
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -326,7 +326,8 @@ tracable_exception::what() const throw() {
 #endif /* OXT_BACKTRACE_IS_ENABLED */
 
 
-void initialize() {
+void
+initialize() {
 	global_context = new global_context_t();
 	init_thread_local_context_support();
 	// For some reason make_shared() crashes here when compiled with clang 3.2 on OS X.
@@ -340,6 +341,12 @@ void initialize() {
 	global_context->registered_threads.push_back(ctx);
 	ctx->iterator = global_context->registered_threads.end();
 	ctx->iterator--;
+}
+
+void shutdown() {
+	free_thread_local_context();
+	delete global_context;
+	global_context = NULL;
 }
 
 

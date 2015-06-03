@@ -1638,4 +1638,10 @@ initializeAgentOptions(const char *processName, VariantMap &options,
 	}
 }
 
+void
+shutdownAgent(VariantMap *agentOptions) {
+	delete agentOptions;
+	oxt::shutdown();
+}
+
 } // namespace Passenger

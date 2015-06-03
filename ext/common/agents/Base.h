@@ -48,6 +48,8 @@ void initializeAgentOptions(const char *processName, VariantMap &options,
 void installAgentAbortHandler();
 void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
 
+void shutdownAgent(VariantMap *agentOptions);
+
 }
 
 #endif /* _PASSENGER_AGENT_BASE_H_ */
