@@ -162,7 +162,7 @@ private
     begin
       sestatus = `sestatus`
       getenforce = `getenforce`
-    rescue Errno::ENOTENT
+    rescue Errno::ENOENT
       return
     end
 
