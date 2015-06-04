@@ -1,6 +1,9 @@
 Release 5.0.10
 --------------
 
+ * Fixes a typo that would cause passenger-install-apache2-module to crash on Red Hat and CentOS systems on which the SELinux command line tools are not installed. Closes GH-1527.
+
+
 Release 5.0.9
 -------------
 
