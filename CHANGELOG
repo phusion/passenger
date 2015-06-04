@@ -2,6 +2,7 @@ Release 5.0.10
 --------------
 
  * `passenger-config restart-app` no longer leaves the terminal in a state with black background. Closes GH-1526.
+ * If Union Station support is enabled, process and system metrics weren't being sent correctly to Union Station. This has been fixed.
  * [Apache] passenger-install-apache2-module no longer aborts with an error if the Apache configuration file contains errors. Closes GH-1525.
  * [Apache] Fixes a typo that would cause passenger-install-apache2-module to crash on Red Hat and CentOS systems on which the SELinux command line tools are not installed. Closes GH-1527.
 

@@ -568,6 +568,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawnerConfig = boost::make_shared<SpawnerConfig>();
 	wo->spawnerConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawnerConfig->agentsOptions = agentsOptions;
+	wo->spawnerConfig->unionStationCore = wo->unionStationCore;
 	wo->spawnerConfig->randomGenerator = wo->randomGenerator;
 	wo->spawnerConfig->instanceDir = options.get("instance_dir", false);
 	if (!wo->spawnerConfig->instanceDir.empty()) {

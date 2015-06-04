@@ -174,6 +174,7 @@ void realCollectAnalytics() {
 	ProcessMetricMap processMetrics;
 	try {
 		UPDATE_TRACE_POINT();
+		P_DEBUG("Collecting process metrics");
 		processMetrics = ProcessMetricsCollector().collect(pids);
 	} catch (const ParseException &) {
 		P_WARN("Unable to collect process metrics: cannot parse 'ps' output.");
@@ -181,6 +182,7 @@ void realCollectAnalytics() {
 	}
 	try {
 		UPDATE_TRACE_POINT();
+		P_DEBUG("Collecting system metrics");
 		systemMetricsCollector.collect(systemMetrics);
 	} catch (const RuntimeException &e) {
 		P_WARN("Unable to collect system metrics: " << e.what());
@@ -223,6 +225,7 @@ void realCollectAnalytics() {
 		UPDATE_TRACE_POINT();
 		if (!logEntries.empty()) {
 			const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
+			P_DEBUG("Sending process and system metrics to Union Station");
 			while (!logEntries.empty()) {
 				UnionStationLogEntry &entry = logEntries.back();
 				UnionStation::TransactionPtr transaction =
