@@ -42,14 +42,21 @@ module PhusionPassenger
     class ApacheDetector
       class Result
         # These are required and are never nil.
-        attr_accessor :apxs2, :httpd, :ctl, :version, :config_file
+        attr_accessor :apxs2, :httpd, :ctl, :version
         # These are optional and may be nil.
         attr_accessor :a2enmod, :a2dismod
+        # Ttis may be nil. It depends on whether 'apache2ctl -V' succeeds.
+        attr_accessor :config_file
         # This may be nil. It depends on how well we can infer information from the config file.
         attr_accessor :error_log
+        attr_writer :config_file_broken
 
         def initialize(detector)
           @detector = detector
+        end
+
+        def config_file_broken?
+          @config_file_broken
         end
 
         def report
@@ -58,8 +65,14 @@ module PhusionPassenger
           log "      apxs2          : #{apxs2}"
           log "      Main executable: #{httpd}"
           log "      Control command: #{ctl}"
-          log "      Config file    : #{config_file}"
+          log "      Config file    : #{config_file || 'unknown'}"
           log "      Error log file : #{error_log || 'unknown'}"
+          if config_file_broken?
+            log ""
+            log "   WARNING:"
+            log "      <red>The configuration file seems to be broken! Please double-check it by running:</red>"
+            log "      <red>#{ctl} -t</red>"
+          end
           log ""
           log "   To install #{PROGRAM_NAME} against this specific Apache version:"
           log "      #{PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-install-apache2-module --apxs2-path='#{apxs2}'"
@@ -145,7 +158,6 @@ module PhusionPassenger
               log " --> #{result.config_file}"
             else
               log "<red> --> Cannot detect default config file location!</red>"
-              result.httpd = nil
             end
           end
           if result.httpd
@@ -161,6 +173,9 @@ module PhusionPassenger
             log "Detecting a2enmod and a2dismod..."
             result.a2enmod = PlatformInfo.a2enmod(:apxs2 => apxs2)
             result.a2dismod = PlatformInfo.a2dismod(:apxs2 => apxs2)
+          end
+          if result.httpd
+            result.config_file_broken = PlatformInfo.apache2ctl_V(:apxs2 => apxs2).nil?
           end
           if result.httpd
             log "<green>Found a usable Apache installation using #{apxs2}.</green>"

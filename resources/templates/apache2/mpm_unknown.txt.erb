@@ -1,0 +1,20 @@
+<red>WARNING:</red> <yellow>unable to autodetect Apache's MPM</yellow>
+
+<%= PROGRAM_NAME %> has only been tested on Apache with the 'prefork', the
+'worker' and the 'event' MPM. However, this installer was not able to
+automatically figure out the MPM that your Apache was compiled with.
+
+This installer tried to autodetect the MPM by running
+<b><%= @control_command %> -V</b>, but that command failed for some reason.
+This may happen if your Apache installation is broken, or if your Apache
+configuration file has errors.
+
+Because at this point this installer is not sure whether your Apache
+installation is compatible with <%= SHORT_PROGRAM_NAME %>, we recommend that you abort
+this installer, run the above command and diagnose the problem before
+continuing. If you cannot figure out what is wrong, please contact the vendor
+that supplied your Apache installation (e.g. your operating system vendor) for
+support.
+
+<b>Press Ctrl-C to abort this installer (so that you can double-check on things).</b>
+<b>Press Enter if you want to continue with installation anyway.</b>

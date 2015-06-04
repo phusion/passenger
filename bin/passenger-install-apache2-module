@@ -281,21 +281,34 @@ private
     # Server compiled with....
     #  -D APACHE_MPM_DIR="server/mpm/prefork"
     output = PlatformInfo.apache2ctl_V
-    output =~ /^Server MPM: +(.*)$/
-    if $1
-      mpm = $1.downcase
-    else
-      output =~ /APACHE_MPM_DIR="server\/mpm\/(.*)"/
+
+    if output
+      output =~ /^Server MPM: +(.*)$/
       if $1
         mpm = $1.downcase
       else
-        mpm = nil
+        output =~ /APACHE_MPM_DIR="server\/mpm\/(.*)"/
+        if $1
+          mpm = $1.downcase
+        else
+          mpm = nil
+        end
       end
-    end
-    if mpm != "prefork" && mpm != "worker" && mpm != "event"
+      if mpm != "prefork" && mpm != "worker" && mpm != "event"
+        new_screen
+        render_template 'apache2/apache_must_be_compiled_with_compatible_mpm',
+          :current_mpm => mpm
+        wait
+      end
+    elsif !@apache2.config_file_broken?
+      # 'output' may be nil because the config file is broken (see
+      # PlatformInfo.apache2ctl_V for more information), but we already
+      # warn the user about in #validate_install.
+      # So here we only warn about not being able to detect an MPM type
+      # if 'output' is nil but not as a result of the config file being broken.
       new_screen
-      render_template 'apache2/apache_must_be_compiled_with_compatible_mpm',
-        :current_mpm => mpm
+      render_template 'apache2/mpm_unknown',
+        :control_command => @apache2.ctl
       wait
     end
   end
