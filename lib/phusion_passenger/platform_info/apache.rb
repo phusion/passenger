@@ -106,6 +106,10 @@ module PhusionPassenger
     #
     # We used to run `httpd -V`, but on systems like Ubuntu it depends on various
     # environment variables or directories, wich apache2ctl loads or initializes.
+    #
+    # Because on some systems (mostly Ubuntu) `apache2ctl -V` attempts to parse
+    # and load the config file, this command can fail because of configuration file
+    # errors.
     def self.apache2ctl_V(options = nil)
       if options
         apache2ctl = options[:apache2ctl] || self.apache2ctl(options)

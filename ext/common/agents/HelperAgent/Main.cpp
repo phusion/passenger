@@ -558,6 +558,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawningKitConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawningKitConfig->agentsOptions = agentsOptions;
 	wo->spawningKitConfig->errorHandler = spawningKitErrorHandler;
+	wo->spawningKitConfig->unionStationCore = wo->unionStationCore;
 	wo->spawningKitConfig->randomGenerator = wo->randomGenerator;
 	wo->spawningKitConfig->instanceDir = options.get("instance_dir", false);
 	if (!wo->spawningKitConfig->instanceDir.empty()) {

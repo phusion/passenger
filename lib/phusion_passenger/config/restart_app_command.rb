@@ -173,6 +173,9 @@ module PhusionPassenger
           index, name = menu.query
         rescue Interrupt
           abort
+        ensure
+          STDOUT.write(colors.reset)
+          STDOUT.flush
         end
 
         if index == choices.size - 1
