@@ -61,8 +61,7 @@ serverUsage() {
 		SERVER_KIT_MAX_SERVER_ENDPOINTS);
 	printf("                            listen on multiple addresses. Default:\n");
 	printf("                            " DEFAULT_HTTP_SERVER_LISTEN_ADDRESS "\n");
-	printf("      --admin-listen ADDRESS\n");
-	printf("                            Listen on the given address for admin commands.\n");
+	printf("      --api-listen ADDRESS  Listen on the given address for API commands.\n");
 	printf("                            The same syntax and limitations as with --listen\n");
 	printf("                            are applicable\n");
 	printf("\n");
@@ -75,8 +74,8 @@ serverUsage() {
 	printf("                            Password-protect access to the HTTP server\n");
 	printf("                            (multi-app mode only)\n");
 	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
-	printf("                            Enables authentication on the admin server, through\n");
-	printf("                            the given admin account. LEVEL indicates the\n");
+	printf("                            Enables authentication on the API server, through\n");
+	printf("                            the given API account. LEVEL indicates the\n");
 	printf("                            privilege level (see below). PASSWORDFILE must\n");
 	printf("                            point to a file containing the password\n");
 	printf("      --no-user-switching   Disables user switching support\n");
@@ -169,7 +168,7 @@ serverUsage() {
 	printf("      --cpu-affine          Enable per-thread CPU affinity (Linux only)\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
-	printf("Admin account privilege levels (ordered from most to least privileges):\n");
+	printf("API account privilege levels (ordered from most to least privileges):\n");
 	printf("  readonly    Read-only access\n");
 	printf("  full        Full access (default)\n");
 }
@@ -198,20 +197,20 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 				"for Unix domain sockets.\n");
 			exit(1);
 		}
-	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--admin-listen")) {
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--api-listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("server_admin_addresses",
+			vector<string> addresses = options.getStrSet("server_api_addresses",
 				false);
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
-				fprintf(stderr, "ERROR: you may specify up to %u --admin-listen addresses.\n",
+				fprintf(stderr, "ERROR: you may specify up to %u --api-listen addresses.\n",
 					SERVER_KIT_MAX_SERVER_ENDPOINTS);
 				exit(1);
 			}
 			addresses.push_back(argv[i + 1]);
-			options.setStrSet("server_admin_addresses", addresses);
+			options.setStrSet("server_api_addresses", addresses);
 			i += 2;
 		} else {
-			fprintf(stderr, "ERROR: invalid address format for --admin-listen. The address "
+			fprintf(stderr, "ERROR: invalid address format for --api-listen. The address "
 				"must be formatted as tcp://IP:PORT for TCP sockets, or unix:PATH "
 				"for Unix domain sockets.\n");
 			exit(1);

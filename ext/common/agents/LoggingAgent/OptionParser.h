@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -55,12 +55,12 @@ loggingAgentUsage() {
 	printf("                              unix:PATH for Unix domain sockets.\n");
 	printf("                              " DEFAULT_LOGGING_AGENT_LISTEN_ADDRESS "\n");
 	printf("\n");
-	printf("      --admin-listen ADDRESS  Listen on the given address for admin commands.\n");
+	printf("      --api-listen ADDRESS    Listen on the given address for API commands.\n");
 	printf("                              The address must be in the same format as that\n");
-	printf("                              of --listen. Default: " DEFAULT_LOGGING_AGENT_ADMIN_LISTEN_ADDRESS "\n");
+	printf("                              of --listen. Default: " DEFAULT_LOGGING_AGENT_API_LISTEN_ADDRESS "\n");
 	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
-	printf("                              Enables authentication on the admin server,\n");
-	printf("                              through the given admin account. LEVEL indicates\n");
+	printf("                              Enables authentication on the API server,\n");
+	printf("                              through the given API account. LEVEL indicates\n");
 	printf("                              the privilege level (see below). PASSWORDFILE must\n");
 	printf("                              point to a file containing the password\n");
 	printf("\n");
@@ -78,7 +78,7 @@ loggingAgentUsage() {
 	printf("\n");
 	printf("  -h, --help                  Show this help\n");
 	printf("\n");
-	printf("Admin account privilege levels (ordered from most to least privileges):\n");
+	printf("API account privilege levels (ordered from most to least privileges):\n");
 	printf("  readonly    Read-only access\n");
 	printf("  full        Full access (default)\n");
 }
@@ -103,20 +103,20 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 				"for Unix domain sockets.\n");
 			exit(1);
 		}
-	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--admin-listen")) {
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--api-listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("logging_agent_admin_addresses",
+			vector<string> addresses = options.getStrSet("logging_agent_api_addresses",
 				false);
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
-				fprintf(stderr, "ERROR: you may specify up to %u --admin-listen addresses.\n",
+				fprintf(stderr, "ERROR: you may specify up to %u --api-listen addresses.\n",
 					SERVER_KIT_MAX_SERVER_ENDPOINTS);
 				exit(1);
 			}
 			addresses.push_back(argv[i + 1]);
-			options.setStrSet("logging_agent_admin_addresses", addresses);
+			options.setStrSet("logging_agent_api_addresses", addresses);
 			i += 2;
 		} else {
-			fprintf(stderr, "ERROR: invalid address format for --admin-listen. The address "
+			fprintf(stderr, "ERROR: invalid address format for --api-listen. The address "
 				"must be formatted as tcp://IP:PORT for TCP sockets, or unix:PATH "
 				"for Unix domain sockets.\n");
 			exit(1);

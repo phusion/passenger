@@ -22,14 +22,14 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_
-#define _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_
+#ifndef _PASSENGER_LOGGING_AGENT_API_SERVER_H_
+#define _PASSENGER_LOGGING_AGENT_API_SERVER_H_
 
 #include <sstream>
 #include <string>
 
 #include <agents/LoggingAgent/LoggingServer.h>
-#include <agents/AdminServerUtils.h>
+#include <agents/ApiServerUtils.h>
 #include <ApplicationPool2/ApiKey.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
@@ -55,9 +55,9 @@ public:
 	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Request);
 };
 
-class AdminServer: public ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > {
+class ApiServer: public ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > {
 private:
-	typedef ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > ParentClass;
+	typedef ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
 
@@ -347,7 +347,7 @@ private:
 	void respondWith401(Client *client, Request *req) {
 		HeaderTable headers;
 		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"admin\"");
+		headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
 		writeSimpleResponse(client, 401, &headers, "Unauthorized");
 		if (!req->ended()) {
 			endRequest(&client, &req);
@@ -386,7 +386,7 @@ protected:
 	virtual void onRequestBegin(Client *client, Request *req) {
 		const StaticString path(req->path.start->data, req->path.size);
 
-		P_INFO("Admin request: " << http_method_str(req->method) <<
+		P_INFO("API request: " << http_method_str(req->method) <<
 			" " << StaticString(req->path.start->data, req->path.size));
 
 		try {
@@ -445,20 +445,20 @@ protected:
 
 public:
 	LoggingServer *loggingServer;
-	AdminAccountDatabase *adminAccountDatabase;
+	ApiAccountDatabase *apiAccountDatabase;
 	string instanceDir;
 	string fdPassingPassword;
 	EventFd *exitEvent;
 
-	AdminServer(ServerKit::Context *context)
+	ApiServer(ServerKit::Context *context)
 		: ParentClass(context),
 		  loggingServer(NULL),
-		  adminAccountDatabase(NULL),
+		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)
 		{ }
 
 	virtual StaticString getServerName() const {
-		return P_STATIC_STRING("LoggerAdminServer");
+		return P_STATIC_STRING("LoggerApiServer");
 	}
 
 	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
@@ -478,4 +478,4 @@ public:
 } // namespace LoggingAgent
 } // namespace Passenger
 
-#endif /* _PASSENGER_LOGGING_AGENT_ADMIN_SERVER_H_ */
+#endif /* _PASSENGER_LOGGING_AGENT_API_SERVER_H_ */

@@ -22,13 +22,13 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_ADMIN_SERVER_UTILS_H_
-#define _PASSENGER_ADMIN_SERVER_UTILS_H_
+#ifndef _PASSENGER_API_SERVER_UTILS_H_
+#define _PASSENGER_API_SERVER_UTILS_H_
 
 /**
- * Utility code shared by HelperAgent/AdminServer.h, LoggingAgent/AdminServer.h
- * and Watchdog/AdminServer.h. This code handles authentication and authorization
- * of connected AdminServer clients.
+ * Utility code shared by HelperAgent/ApiServer.h, LoggingAgent/ApiServer.h
+ * and Watchdog/ApiServer.h. This code handles authentication and authorization
+ * of connected ApiServer clients.
  */
 
 #include <oxt/macros.hpp>
@@ -54,15 +54,15 @@ namespace Passenger {
 using namespace std;
 
 
-struct AdminAccount {
+struct ApiAccount {
 	string username;
 	string password;
 	bool readonly;
 };
 
-class AdminAccountDatabase {
+class ApiAccountDatabase {
 private:
-	vector<AdminAccount> database;
+	vector<ApiAccount> database;
 
 	bool levelDescriptionIsReadOnly(const StaticString &level) const {
 		if (level == "readonly") {
@@ -82,10 +82,10 @@ public:
 	 */
 	void add(const string &username, const string &password, bool readonly) {
 		if (OXT_UNLIKELY(username == "api")) {
-			throw ArgumentException("It is not allowed to register an admin account with username 'api'");
+			throw ArgumentException("It is not allowed to register an API account with username 'api'");
 		}
 
-		AdminAccount account;
+		ApiAccount account;
 		account.username = username;
 		account.password = password;
 		account.readonly = readonly;
@@ -103,7 +103,7 @@ public:
 	 * @throws ArgumentException One if the input arguments contain a disallowed value.
 	 */
 	void add(const StaticString &description) {
-		AdminAccount account;
+		ApiAccount account;
 		vector<string> args;
 
 		split(description, ':', args);
@@ -121,7 +121,7 @@ public:
 		}
 
 		if (OXT_UNLIKELY(account.username == "api")) {
-			throw ArgumentException("It is not allowed to register an admin account with username 'api'");
+			throw ArgumentException("It is not allowed to register an API account with username 'api'");
 		}
 		database.push_back(account);
 	}
@@ -130,8 +130,8 @@ public:
 		return database.empty();
 	}
 
-	const AdminAccount *lookup(const StaticString &username) const {
-		vector<AdminAccount>::const_iterator it, end = database.end();
+	const ApiAccount *lookup(const StaticString &username) const {
+		vector<ApiAccount>::const_iterator it, end = database.end();
 
 		for (it = database.begin(); it != end; it++) {
 			if (it->username == username) {
@@ -195,9 +195,9 @@ truncateApiKey(const StaticString &apiKey) {
 /*
  * @throws oxt::tracable_exception
  */
-template<typename AdminServer, typename Client, typename Request>
+template<typename ApiServer, typename Client, typename Request>
 inline Authorization
-authorize(AdminServer *server, Client *client, Request *req) {
+authorize(ApiServer *server, Client *client, Request *req) {
 	TRACE_POINT();
 	Authorization auth;
 	uid_t uid = -1;
@@ -222,9 +222,9 @@ authorize(AdminServer *server, Client *client, Request *req) {
 		}
 	}
 
-	if (server->adminAccountDatabase->empty()) {
+	if (server->apiAccountDatabase->empty()) {
 		SKC_INFO_FROM_STATIC(server, client,
-			"Authenticated as administrator because admin account database is empty");
+			"Authenticated as administrator because API account database is empty");
 		auth.apiKey = ApplicationPool2::ApiKey::makeSuper();
 		auth.canReadPool = true;
 		auth.canModifyPool = true;
@@ -243,7 +243,7 @@ authorize(AdminServer *server, Client *client, Request *req) {
 				auth.canModifyPool = true;
 			}
 		} else {
-			const AdminAccount *account = server->adminAccountDatabase->lookup(username);
+			const ApiAccount *account = server->apiAccountDatabase->lookup(username);
 			if (account != NULL && constantTimeCompare(password, account->password)) {
 				SKC_INFO_FROM_STATIC(server, client,
 					"Authenticated with administrator account: " << username);
@@ -259,15 +259,15 @@ authorize(AdminServer *server, Client *client, Request *req) {
 	return auth;
 }
 
-template<typename AdminServer, typename Client, typename Request>
+template<typename ApiServer, typename Client, typename Request>
 inline bool
-authorizeStateInspectionOperation(AdminServer *server, Client *client, Request *req) {
+authorizeStateInspectionOperation(ApiServer *server, Client *client, Request *req) {
 	return authorize(server, client, req).canInspectState;
 }
 
-template<typename AdminServer, typename Client, typename Request>
+template<typename ApiServer, typename Client, typename Request>
 inline bool
-authorizeAdminOperation(AdminServer *server, Client *client, Request *req) {
+authorizeAdminOperation(ApiServer *server, Client *client, Request *req) {
 	return authorize(server, client, req).canAdminister;
 }
 
@@ -304,4 +304,4 @@ parseQueryString(const StaticString &query) {
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_ADMIN_SERVER_UTILS_H_ */
+#endif /* _PASSENGER_API_SERVER_UTILS_H_ */

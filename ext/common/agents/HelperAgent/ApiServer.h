@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
-#define _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_
+#ifndef _PASSENGER_SERVER_AGENT_API_SERVER_H_
+#define _PASSENGER_SERVER_AGENT_API_SERVER_H_
 
 #include <boost/regex.hpp>
 #include <oxt/thread.hpp>
@@ -33,7 +33,7 @@
 #include <sys/types.h>
 
 #include <agents/HelperAgent/RequestHandler.h>
-#include <agents/AdminServerUtils.h>
+#include <agents/ApiServerUtils.h>
 #include <ApplicationPool2/Pool.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
@@ -62,9 +62,9 @@ public:
 	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Request);
 };
 
-class AdminServer: public ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > {
+class ApiServer: public ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > {
 private:
-	typedef ServerKit::HttpServer<AdminServer, ServerKit::HttpClient<Request> > ParentClass;
+	typedef ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
 
@@ -650,7 +650,7 @@ private:
 	void respondWith401(Client *client, Request *req) {
 		HeaderTable headers;
 		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"admin\"");
+		headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
 		writeSimpleResponse(client, 401, &headers, "Unauthorized");
 		if (!req->ended()) {
 			endRequest(&client, &req);
@@ -709,7 +709,7 @@ protected:
 		TRACE_POINT();
 		StaticString path = req->getPathWithoutQueryString();
 
-		P_INFO("Admin request: " << http_method_str(req->method) <<
+		P_INFO("API request: " << http_method_str(req->method) <<
 			" " << StaticString(req->path.start->data, req->path.size));
 
 		try {
@@ -803,22 +803,22 @@ protected:
 
 public:
 	vector<RequestHandler *> requestHandlers;
-	AdminAccountDatabase *adminAccountDatabase;
+	ApiAccountDatabase *apiAccountDatabase;
 	ApplicationPool2::PoolPtr appPool;
 	string instanceDir;
 	string fdPassingPassword;
 	EventFd *exitEvent;
 	vector<Authorization> authorizations;
 
-	AdminServer(ServerKit::Context *context)
+	ApiServer(ServerKit::Context *context)
 		: ParentClass(context),
 		  serverConnectionPath("^/server/(.+)\\.json$"),
-		  adminAccountDatabase(NULL),
+		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)
 		{ }
 
 	virtual StaticString getServerName() const {
-		return P_STATIC_STRING("AdminServer");
+		return P_STATIC_STRING("ApiServer");
 	}
 
 	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
@@ -843,4 +843,4 @@ public:
 } // namespace ServerAgent
 } // namespace Passenger
 
-#endif /* _PASSENGER_SERVER_AGENT_ADMIN_SERVER_H_ */
+#endif /* _PASSENGER_SERVER_AGENT_API_SERVER_H_ */

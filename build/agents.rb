@@ -29,7 +29,7 @@ AGENT_OBJECTS = {
     'ext/common/agents/Watchdog/HelperAgentWatcher.cpp',
     'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
     'ext/common/agents/Watchdog/InstanceDirToucher.cpp',
-    'ext/common/agents/Watchdog/AdminServer.h',
+    'ext/common/agents/Watchdog/ApiServer.h',
     'ext/common/agents/HelperAgent/OptionParser.h',
     'ext/common/agents/LoggingAgent/OptionParser.h',
     'ext/common/ServerKit/Server.h',
@@ -44,7 +44,7 @@ AGENT_OBJECTS = {
   'ServerMain.o' => [
     'ext/common/agents/HelperAgent/Main.cpp',
     'ext/common/agents/HelperAgent/OptionParser.h',
-    'ext/common/agents/HelperAgent/AdminServer.h',
+    'ext/common/agents/HelperAgent/ApiServer.h',
     'ext/common/agents/HelperAgent/ResponseCache.h',
     'ext/common/agents/HelperAgent/RequestHandler.h',
     'ext/common/agents/HelperAgent/RequestHandler/Client.h',
@@ -85,7 +85,7 @@ AGENT_OBJECTS = {
   'LoggingMain.o' => [
     'ext/common/agents/LoggingAgent/Main.cpp',
     'ext/common/agents/LoggingAgent/OptionParser.h',
-    'ext/common/agents/LoggingAgent/AdminServer.h',
+    'ext/common/agents/LoggingAgent/ApiServer.h',
     'ext/common/agents/LoggingAgent/LoggingServer.h',
     'ext/common/agents/LoggingAgent/RemoteSender.h',
     'ext/common/agents/LoggingAgent/DataStoreId.h',

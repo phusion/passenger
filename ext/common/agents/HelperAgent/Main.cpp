@@ -68,9 +68,9 @@
 
 #include <agents/HelperAgent/OptionParser.h>
 #include <agents/HelperAgent/RequestHandler.h>
-#include <agents/HelperAgent/AdminServer.h>
+#include <agents/HelperAgent/ApiServer.h>
 #include <agents/Base.h>
-#include <agents/AdminServerUtils.h>
+#include <agents/ApiServerUtils.h>
 #include <Constants.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
@@ -111,23 +111,23 @@ namespace ServerAgent {
 			{ }
 	};
 
-	struct AdminWorkingObjects {
+	struct ApiWorkingObjects {
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
-		AdminServer *adminServer;
+		ApiServer *apiServer;
 
-		AdminWorkingObjects()
+		ApiWorkingObjects()
 			: bgloop(NULL),
 			  serverKitContext(NULL),
-			  adminServer(NULL)
+			  apiServer(NULL)
 			{ }
 	};
 
 	struct WorkingObjects {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
-		int adminServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
+		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		string password;
-		AdminAccountDatabase adminAccountDatabase;
+		ApiAccountDatabase apiAccountDatabase;
 
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
@@ -142,7 +142,7 @@ namespace ServerAgent {
 		struct ev_signal sigtermWatcher;
 		struct ev_signal sigquitWatcher;
 
-		AdminWorkingObjects adminWorkingObjects;
+		ApiWorkingObjects apiWorkingObjects;
 
 		EventFd exitEvent;
 		EventFd allClientsDisconnectedEvent;
@@ -158,7 +158,7 @@ namespace ServerAgent {
 		{
 			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
 				serverFds[i] = -1;
-				adminServerFds[i] = -1;
+				apiServerFds[i] = -1;
 			}
 		}
 
@@ -172,9 +172,9 @@ namespace ServerAgent {
 				delete it->bgloop;
 			}
 
-			delete adminWorkingObjects.adminServer;
-			delete adminWorkingObjects.serverKitContext;
-			delete adminWorkingObjects.bgloop;
+			delete apiWorkingObjects.apiServer;
+			delete apiWorkingObjects.serverKitContext;
+			delete apiWorkingObjects.bgloop;
 		}
 	};
 } // namespace ServerAgent
@@ -193,7 +193,7 @@ static void cleanup();
 static void deletePidFile();
 static void abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process);
 static void requestHandlerShutdownFinished(RequestHandler *server);
-static void adminServerShutdownFinished(ServerAgent::AdminServer *server);
+static void apiServerShutdownFinished(ServerAgent::ApiServer *server);
 static void printInfoInThread();
 
 static void
@@ -218,7 +218,7 @@ initializePrivilegedWorkingObjects() {
 	UPDATE_TRACE_POINT();
 	foreach (description, authorizations) {
 		try {
-			wo->adminAccountDatabase.add(description);
+			wo->apiAccountDatabase.add(description);
 		} catch (const ArgumentException &e) {
 			throw std::runtime_error(e.what());
 		}
@@ -314,7 +314,7 @@ startListening() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
 	vector<string> addresses = agentsOptions->getStrSet("server_addresses");
-	vector<string> adminAddresses = agentsOptions->getStrSet("server_admin_addresses", false);
+	vector<string> apiAddresses = agentsOptions->getStrSet("server_api_addresses", false);
 
 	#ifdef USE_SELINUX
 		// Set SELinux context on the first socket that we create
@@ -334,13 +334,13 @@ startListening() {
 			makeFileWorldReadableAndWritable(parseUnixSocketAddress(addresses[i]));
 		}
 	}
-	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
-		wo->adminServerFds[i] = createServer(adminAddresses[i], 0, true,
+	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
+		wo->apiServerFds[i] = createServer(apiAddresses[i], 0, true,
 			__FILE__, __LINE__);
-		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->adminServerFds[i],
-			"AdminServer address: " << adminAddresses[i]);
-		if (getSocketAddressType(adminAddresses[i]) == SAT_UNIX) {
-			makeFileWorldReadableAndWritable(parseUnixSocketAddress(adminAddresses[i]));
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->apiServerFds[i],
+			"ApiServer address: " << apiAddresses[i]);
+		if (getSocketAddressType(apiAddresses[i]) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(apiAddresses[i]));
 		}
 	}
 }
@@ -533,7 +533,7 @@ initializeNonPrivilegedWorkingObjects() {
 	options.set("data_buffer_dir", absolutizePath(options.get("data_buffer_dir")));
 
 	vector<string> addresses = options.getStrSet("server_addresses");
-	vector<string> adminAddresses = options.getStrSet("server_admin_addresses", false);
+	vector<string> apiAddresses = options.getStrSet("server_api_addresses", false);
 
 	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
 
@@ -622,9 +622,9 @@ initializeNonPrivilegedWorkingObjects() {
 	ev_signal_start(firstLoop->libev_loop, &wo->sigtermWatcher);
 
 	UPDATE_TRACE_POINT();
-	if (!adminAddresses.empty()) {
+	if (!apiAddresses.empty()) {
 		UPDATE_TRACE_POINT();
-		AdminWorkingObjects *awo = &wo->adminWorkingObjects;
+		ApiWorkingObjects *awo = &wo->apiWorkingObjects;
 
 		awo->bgloop = new BackgroundEventLoop(true, true);
 		awo->serverKitContext = new ServerKit::Context(awo->bgloop->safe,
@@ -636,18 +636,18 @@ initializeNonPrivilegedWorkingObjects() {
 			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
-		awo->adminServer = new ServerAgent::AdminServer(awo->serverKitContext);
-		awo->adminServer->requestHandlers.reserve(wo->threadWorkingObjects.size());
+		awo->apiServer = new ServerAgent::ApiServer(awo->serverKitContext);
+		awo->apiServer->requestHandlers.reserve(wo->threadWorkingObjects.size());
 		for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
-			awo->adminServer->requestHandlers.push_back(
+			awo->apiServer->requestHandlers.push_back(
 				wo->threadWorkingObjects[i].requestHandler);
 		}
-		awo->adminServer->adminAccountDatabase = &wo->adminAccountDatabase;
-		awo->adminServer->appPool = wo->appPool;
-		awo->adminServer->instanceDir = options.get("instance_dir", false);
-		awo->adminServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
-		awo->adminServer->exitEvent = &wo->exitEvent;
-		awo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
+		awo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
+		awo->apiServer->appPool = wo->appPool;
+		awo->apiServer->instanceDir = options.get("instance_dir", false);
+		awo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
+		awo->apiServer->exitEvent = &wo->exitEvent;
+		awo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
 
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
 	}
@@ -679,8 +679,8 @@ initializeNonPrivilegedWorkingObjects() {
 			wo->loadBalancer.servers.push_back(two->requestHandler);
 		}
 	}
-	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
-		wo->adminWorkingObjects.adminServer->listen(wo->adminServerFds[i]);
+	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
+		wo->apiWorkingObjects.apiServer->listen(wo->apiServerFds[i]);
 	}
 }
 
@@ -710,7 +710,7 @@ reportInitializationInfo() {
 			NULL);
 	} else {
 		vector<string> addresses = agentsOptions->getStrSet("server_addresses");
-		vector<string> adminAddresses = agentsOptions->getStrSet("server_admin_addresses", false);
+		vector<string> apiAddresses = agentsOptions->getStrSet("server_api_addresses", false);
 		string address;
 
 		P_NOTICE(AGENT_EXE " server online, PID " << getpid() <<
@@ -724,9 +724,9 @@ reportInitializationInfo() {
 			P_NOTICE(" * " << address);
 		}
 
-		if (!adminAddresses.empty()) {
-			P_NOTICE("Admin server listening on " << adminAddresses.size() << " socket(s):");
-			foreach (address, adminAddresses) {
+		if (!apiAddresses.empty()) {
+			P_NOTICE("API server listening on " << apiAddresses.size() << " socket(s):");
+			foreach (address, apiAddresses) {
 				if (startsWith(address, "tcp://")) {
 					address.erase(0, sizeof("tcp://") - 1);
 					address.insert(0, "http://");
@@ -770,8 +770,8 @@ mainLoop() {
 			}
 		#endif
 	}
-	if (wo->adminWorkingObjects.adminServer != NULL) {
-		wo->adminWorkingObjects.bgloop->start("Admin event loop", 0);
+	if (wo->apiWorkingObjects.apiServer != NULL) {
+		wo->apiWorkingObjects.bgloop->start("API event loop", 0);
 	}
 	if (wo->threadWorkingObjects.size() > 1) {
 		wo->loadBalancer.start();
@@ -806,8 +806,8 @@ shutdownRequestHandler(ThreadWorkingObjects *two) {
 }
 
 static void
-shutdownAdminServer() {
-	workingObjects->adminWorkingObjects.adminServer->shutdown();
+shutdownApiServer() {
+	workingObjects->apiWorkingObjects.apiServer->shutdown();
 }
 
 static void
@@ -825,7 +825,7 @@ requestHandlerShutdownFinished(RequestHandler *server) {
 }
 
 static void
-adminServerShutdownFinished(ServerAgent::AdminServer *server) {
+apiServerShutdownFinished(ServerAgent::ApiServer *server) {
 	serverShutdownFinished();
 }
 
@@ -883,8 +883,8 @@ waitForExitEvent() {
 		if (wo->threadWorkingObjects.size() > 1) {
 			wo->loadBalancer.shutdown();
 		}
-		if (wo->adminWorkingObjects.adminServer != NULL) {
-			wo->adminWorkingObjects.bgloop->safe->runLater(shutdownAdminServer);
+		if (wo->apiWorkingObjects.apiServer != NULL) {
+			wo->apiWorkingObjects.bgloop->safe->runLater(shutdownApiServer);
 		}
 
 		UPDATE_TRACE_POINT();
@@ -914,8 +914,8 @@ cleanup() {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		two->bgloop->stop();
 	}
-	if (wo->adminWorkingObjects.adminServer != NULL) {
-		wo->adminWorkingObjects.bgloop->stop();
+	if (wo->apiWorkingObjects.apiServer != NULL) {
+		wo->apiWorkingObjects.bgloop->stop();
 	}
 	wo->appPool.reset();
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
@@ -932,8 +932,8 @@ cleanup() {
 		if (wo->serverFds[i] != -1) {
 			close(wo->serverFds[i]);
 		}
-		if (wo->adminServerFds[i] != -1) {
-			close(wo->adminServerFds[i]);
+		if (wo->apiServerFds[i] != -1) {
+			close(wo->apiServerFds[i]);
 		}
 	}
 	deletePidFile();

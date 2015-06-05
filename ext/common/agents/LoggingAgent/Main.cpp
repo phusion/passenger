@@ -43,10 +43,10 @@
 #include <signal.h>
 
 #include <agents/Base.h>
-#include <agents/AdminServerUtils.h>
+#include <agents/ApiServerUtils.h>
 #include <agents/LoggingAgent/OptionParser.h>
 #include <agents/LoggingAgent/LoggingServer.h>
-#include <agents/LoggingAgent/AdminServer.h>
+#include <agents/LoggingAgent/ApiServer.h>
 
 #include <AccountsDatabase.h>
 #include <Account.h>
@@ -73,8 +73,8 @@ namespace LoggingAgent {
 	struct WorkingObjects {
 		string password;
 		FileDescriptor serverSocketFd;
-		vector<int> adminSockets;
-		AdminAccountDatabase adminAccountDatabase;
+		vector<int> apiSockets;
+		ApiAccountDatabase apiAccountDatabase;
 
 		ResourceLocator *resourceLocator;
 		BackgroundEventLoop *bgloop;
@@ -82,7 +82,7 @@ namespace LoggingAgent {
 		AccountsDatabasePtr accountsDatabase;
 		LoggingServer *loggingServer;
 
-		LoggingAgent::AdminServer *adminServer;
+		LoggingAgent::ApiServer *apiServer;
 		EventFd exitEvent;
 		EventFd allClientsDisconnectedEvent;
 
@@ -114,7 +114,7 @@ static WorkingObjects *workingObjects;
 
 static void printInfo(EV_P_ struct ev_signal *watcher, int revents);
 static void onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents);
-static void adminServerShutdownFinished(LoggingAgent::AdminServer *server);
+static void apiServerShutdownFinished(LoggingAgent::ApiServer *server);
 static void waitForExitEvent();
 
 void
@@ -172,7 +172,7 @@ initializePrivilegedWorkingObjects() {
 	UPDATE_TRACE_POINT();
 	foreach (description, authorizations) {
 		try {
-			wo->adminAccountDatabase.add(description);
+			wo->apiAccountDatabase.add(description);
 		} catch (const ArgumentException &e) {
 			throw std::runtime_error(e.what());
 		}
@@ -189,7 +189,7 @@ startListening() {
 	const VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects;
 	string address;
-	vector<string> adminAddresses;
+	vector<string> apiAddresses;
 
 	address = options.get("logging_agent_address");
 	wo->serverSocketFd.assign(createServer(address, 0, true,
@@ -201,13 +201,13 @@ startListening() {
 	}
 
 	UPDATE_TRACE_POINT();
-	adminAddresses = options.getStrSet("logging_agent_admin_addresses",
+	apiAddresses = options.getStrSet("logging_agent_api_addresses",
 		false);
-	foreach (address, adminAddresses) {
-		wo->adminSockets.push_back(createServer(address, 0, true,
+	foreach (address, apiAddresses) {
+		wo->apiSockets.push_back(createServer(address, 0, true,
 			__FILE__, __LINE__));
-		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->adminSockets.back(),
-			"Server address: " << wo->adminSockets.back());
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->apiSockets.back(),
+			"Server address: " << wo->apiSockets.back());
 		if (getSocketAddressType(address) == SAT_UNIX) {
 			makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 		}
@@ -284,15 +284,15 @@ initializeUnprivilegedWorkingObjects() {
 		wo->serverSocketFd, wo->accountsDatabase, options);
 
 	UPDATE_TRACE_POINT();
-	wo->adminServer = new LoggingAgent::AdminServer(wo->serverKitContext);
-	wo->adminServer->loggingServer = wo->loggingServer;
-	wo->adminServer->adminAccountDatabase = &wo->adminAccountDatabase;
-	wo->adminServer->instanceDir = options.get("instance_dir", false);
-	wo->adminServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
-	wo->adminServer->exitEvent = &wo->exitEvent;
-	wo->adminServer->shutdownFinishCallback = adminServerShutdownFinished;
-	foreach (fd, wo->adminSockets) {
-		wo->adminServer->listen(fd);
+	wo->apiServer = new LoggingAgent::ApiServer(wo->serverKitContext);
+	wo->apiServer->loggingServer = wo->loggingServer;
+	wo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
+	wo->apiServer->instanceDir = options.get("instance_dir", false);
+	wo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
+	wo->apiServer->exitEvent = &wo->exitEvent;
+	wo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
+	foreach (fd, wo->apiSockets) {
+		wo->apiServer->listen(fd);
 	}
 
 	UPDATE_TRACE_POINT();
@@ -349,12 +349,12 @@ mainLoop() {
 }
 
 static void
-shutdownAdminServer() {
-	workingObjects->adminServer->shutdown();
+shutdownApiServer() {
+	workingObjects->apiServer->shutdown();
 }
 
 static void
-adminServerShutdownFinished(LoggingAgent::AdminServer *server) {
+apiServerShutdownFinished(LoggingAgent::ApiServer *server) {
 	workingObjects->allClientsDisconnectedEvent.notify();
 }
 
@@ -397,7 +397,7 @@ waitForExitEvent() {
 		/* We received an exit command. */
 		P_NOTICE("Received command to shutdown gracefully. "
 			"Waiting until all clients have disconnected...");
-		wo->bgloop->safe->runLater(shutdownAdminServer);
+		wo->bgloop->safe->runLater(shutdownApiServer);
 
 		UPDATE_TRACE_POINT();
 		FD_ZERO(&fds);
@@ -420,7 +420,7 @@ cleanup() {
 
 	P_DEBUG("Shutting down " AGENT_EXE " logger...");
 	wo->bgloop->stop();
-	delete wo->adminServer;
+	delete wo->apiServer;
 	P_NOTICE(AGENT_EXE " logger shutdown finished");
 }
 
@@ -490,11 +490,11 @@ preinitialize(VariantMap &options) {
 static void
 setAgentsOptionsDefaults() {
 	VariantMap &options = *agentsOptions;
-	set<string> defaultAdminListenAddress;
-	defaultAdminListenAddress.insert(DEFAULT_LOGGING_AGENT_ADMIN_LISTEN_ADDRESS);
+	set<string> defaultApiListenAddress;
+	defaultApiListenAddress.insert(DEFAULT_LOGGING_AGENT_API_LISTEN_ADDRESS);
 
 	options.setDefault("logging_agent_address", DEFAULT_LOGGING_AGENT_LISTEN_ADDRESS);
-	options.setDefaultStrSet("logging_agent_admin_addresses", defaultAdminListenAddress);
+	options.setDefaultStrSet("logging_agent_api_addresses", defaultApiListenAddress);
 }
 
 static void
