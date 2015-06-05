@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -92,7 +92,7 @@ module PhusionPassenger
         try_performing_full_admin_basic_auth(request, @instance)
         request.content_type = "application/json"
         request.body = PhusionPassenger::Utils::JSON.generate(:pid => @pid)
-        response = @instance.http_request("agents.s/server_admin", request)
+        response = @instance.http_request("agents.s/server_api", request)
         if response.code.to_i / 100 == 2
           body = PhusionPassenger::Utils::JSON.parse(response.body)
           if body['detached']

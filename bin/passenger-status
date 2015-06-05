@@ -114,7 +114,7 @@ def show_status(instance, options)
   when 'pool'
     request = Net::HTTP::Get.new("/pool.txt?colorize=#{options[:color]}&verbose=#{options[:verbose]}")
     try_performing_ro_admin_basic_auth(request, instance)
-    response = instance.http_request("agents.s/server_admin", request)
+    response = instance.http_request("agents.s/server_api", request)
     if response.code.to_i / 100 == 2
       puts response.body
     elsif response.code.to_i == 401
@@ -129,7 +129,7 @@ def show_status(instance, options)
   when 'requests', 'server'
     request = Net::HTTP::Get.new("/server.json")
     try_performing_ro_admin_basic_auth(request, instance)
-    response = instance.http_request("agents.s/server_admin", request)
+    response = instance.http_request("agents.s/server_api", request)
     if response.code.to_i / 100 == 2
       puts response.body
     elsif response.code.to_i == 401
@@ -144,7 +144,7 @@ def show_status(instance, options)
   when 'backtraces'
     request = Net::HTTP::Get.new("/backtraces.txt")
     try_performing_ro_admin_basic_auth(request, instance)
-    response = instance.http_request("agents.s/server_admin", request)
+    response = instance.http_request("agents.s/server_api", request)
     if response.code.to_i / 100 == 2
       text = response.body
       # Colorize output
@@ -164,7 +164,7 @@ def show_status(instance, options)
   when 'xml'
     request = Net::HTTP::Get.new("/pool.xml?secrets=#{options[:verbose]}")
     try_performing_ro_admin_basic_auth(request, instance)
-    response = instance.http_request("agents.s/server_admin", request)
+    response = instance.http_request("agents.s/server_api", request)
     if response.code.to_i / 100 == 2
       indented = format_with_xmllint(response.body)
       if indented
@@ -185,7 +185,7 @@ def show_status(instance, options)
   when 'union_station'
     request = Net::HTTP::Get.new("/status.txt")
     try_performing_ro_admin_basic_auth(request, instance)
-    response = instance.http_request("agents.s/logging_admin", request)
+    response = instance.http_request("agents.s/logging_api", request)
     if response.code.to_i / 100 == 2
       puts response.body
     elsif response.code.to_i == 401

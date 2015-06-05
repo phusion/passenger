@@ -1032,7 +1032,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 
 	strset = options.getStrSet("server_admin_addresses", false);
 	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/server_admin");
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/server_api");
 	options.setStrSet("server_admin_addresses", strset);
 
 	UPDATE_TRACE_POINT();
@@ -1042,7 +1042,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 		wo->randomGenerator.generateAsciiString(24));
 	strset = options.getStrSet("logging_agent_admin_addresses", false);
 	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/logging_admin");
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/logging_api");
 	options.setStrSet("logging_agent_admin_addresses", strset);
 
 	UPDATE_TRACE_POINT();
@@ -1108,7 +1108,7 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 
 	UPDATE_TRACE_POINT();
 	adminAddresses.insert(adminAddresses.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/watchdog");
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/watchdog_api");
 	options.setStrSet("watchdog_admin_addresses", adminAddresses);
 
 	UPDATE_TRACE_POINT();
@@ -1135,6 +1135,45 @@ initializeAdminServer(const WorkingObjectsPtr &wo) {
 	wo->adminServer->fdPassingPassword = options.get("watchdog_fd_passing_password");
 	for (unsigned int i = 0; i < adminAddresses.size(); i++) {
 		wo->adminServer->listen(wo->adminServerFds[i]);
+	}
+}
+
+static void
+createCompatSymlinks(const WorkingObjectsPtr &wo) {
+	/* In 5.0.10, 'watchdog' has been renamed to 'watchdog_api',
+	 * 'server_admin' has been renamed to 'server_api',
+	 * and 'logging_admin' has been renamed to 'logging_api'.
+	 * To maintain backward compatibility with older versions of
+	 * passenger-status etc, we create compatibility symlinks.
+	 */
+	int ret, e;
+	string prefix = wo->instanceDir->getPath() + "/agents.s/";
+
+	do {
+		ret = symlink("watchdog_api", (prefix + "watchdog").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + prefix + "watchdog",
+			e, prefix + "watchdog");
+	}
+
+	do {
+		ret = symlink("server_api", (prefix + "server_admin").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + prefix + "server_admin",
+			e, prefix + "server_admin");
+	}
+
+	do {
+		ret = symlink("logging_api", (prefix + "logging_admin").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + prefix + "logging_admin",
+			e, prefix + "logging_admin");
 	}
 }
 
@@ -1268,6 +1307,7 @@ watchdogMain(int argc, char *argv[]) {
 		initializeWorkingObjects(wo, instanceDirToucher, uidBeforeLoweringPrivilege);
 		initializeAgentWatchers(wo, watchers);
 		initializeAdminServer(wo);
+		createCompatSymlinks(wo);
 		UPDATE_TRACE_POINT();
 		runHookScriptAndThrowOnError("before_watchdog_initialization");
 	} catch (const std::exception &e) {

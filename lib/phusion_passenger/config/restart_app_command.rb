@@ -210,7 +210,7 @@ module PhusionPassenger
           request.body = PhusionPassenger::Utils::JSON.generate(
             :name => group_name,
             :method => restart_method)
-          response = @instance.http_request("agents.s/server_admin", request)
+          response = @instance.http_request("agents.s/server_api", request)
           if response.code.to_i / 100 == 2
             response.body
           elsif response.code.to_i == 401
@@ -236,7 +236,7 @@ module PhusionPassenger
       def query_pool_xml
         request = Net::HTTP::Get.new("/pool.xml")
         try_performing_ro_admin_basic_auth(request, @instance)
-        response = @instance.http_request("agents.s/server_admin", request)
+        response = @instance.http_request("agents.s/server_api", request)
         if response.code.to_i / 100 == 2
           REXML::Document.new(response.body)
         elsif response.code.to_i == 401

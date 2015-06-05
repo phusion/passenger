@@ -507,7 +507,7 @@ private:
 				return;
 			}
 
-			FileDescriptor watchdog(connectToUnixServer(instanceDir + "/agents.s/watchdog",
+			FileDescriptor watchdog(connectToUnixServer(instanceDir + "/agents.s/watchdog_api",
 				NULL, 0), __FILE__, __LINE__);
 			writeExact(watchdog,
 				"GET /config/log_file.fd HTTP/1.1\r\n"
