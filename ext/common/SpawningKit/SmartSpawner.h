@@ -350,6 +350,7 @@ private:
 				data.append("connect_password: " + details.options->apiKey + "\n");
 			}
 			if (!config->instanceDir.empty()) {
+				data.append("instance_dir: " + config->instanceDir + "\n");
 				data.append("socket_dir: " + config->instanceDir + "/apps.s\n");
 			}
 
