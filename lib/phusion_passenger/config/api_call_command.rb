@@ -33,7 +33,7 @@ PhusionPassenger.require_passenger_lib 'utils/json'
 module PhusionPassenger
   module Config
 
-    class AdminCommandCommand < Command
+    class ApiCallCommand < Command
       include PhusionPassenger::Config::Utils
 
       def self.create_default_options
@@ -51,29 +51,29 @@ module PhusionPassenger
       def self.create_option_parser(options)
         OptionParser.new do |opts|
           nl = "\n" + ' ' * 37
-          opts.banner = "Usage: passenger-config invoke-command <METHOD> <PATH> [OPTIONS]\n"
+          opts.banner = "Usage: passenger-config api-call <METHOD> <PATH> [OPTIONS]\n"
           opts.separator ""
-          opts.separator "  Invoke an internal #{PROGRAM_NAME} admin command. #{PROGRAM_NAME} listens"
-          opts.separator "  on a local HTTP server for admin commands. Other `passenger-config` commands"
-          opts.separator "  are just shortcuts for sending specific HTTP requests to the"
-          opts.separator "  #{PROGRAM_NAME} admin HTTP server. `passenger-config invoke-command` allows"
-          opts.separator "  you to send requests directly."
+          opts.separator "  Makes an API call to one of the #{PROGRAM_NAME} agents. #{PROGRAM_NAME}"
+          opts.separator "  listens on a local HTTP server for admin commands. Many `passenger-config`"
+          opts.separator "  commands are just shortcuts for sending HTTP API calls to the"
+          opts.separator "  #{PROGRAM_NAME} admin HTTP server. `passenger-config api-call` allows"
+          opts.separator "  you to send API calls directly."
           opts.separator ""
           opts.separator "  METHOD is an HTTP verb, like 'GET', 'POST', 'PUT' or 'DELETE'."
           opts.separator "  PATH is the admin URI. You can pass POST data with '-d'."
           opts.separator ""
-          opts.separator "  Example 1: passenger-config admin-command GET /server.json"
+          opts.separator "  Example 1: passenger-config api-call GET /server.json"
           opts.separator "  Sends the 'GET /server.json' command to the HTTP server agent."
           opts.separator ""
-          opts.separator "  Example 2: passenger-config admin-command PUT /config.json \\"
+          opts.separator "  Example 2: passenger-config api-call PUT /config.json \\"
           opts.separator "             -d '{\"log_level\", 7}'"
           opts.separator "  Sends the 'PUT /config.json' command to the HTTP server agent, with the"
           opts.separator "  given PUT data."
           opts.separator ""
-          opts.separator "  Example 3: passenger-config admin-command POST /shutdown.json -a watchdog"
+          opts.separator "  Example 3: passenger-config api-call POST /shutdown.json -a watchdog"
           opts.separator "  Sends the 'POST /shutdown.json' command to the watchdog, with no POST data."
           opts.separator ""
-          opts.separator "  Example 4: passenger-config admin-command POST /shutdown.json \\"
+          opts.separator "  Example 4: passenger-config api-call POST /shutdown.json \\"
           opts.separator "             -S /tmp/watchdog.sock"
           opts.separator "  Sends the 'POST /shutdown.json' command to the watchdog listening at the"
           opts.separator "  specific socket file /tmp/watchdog.sock. No POST data."

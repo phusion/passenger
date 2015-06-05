@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2014 Phusion
+#  Copyright (c) 2013-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -32,7 +32,7 @@ module PhusionPassenger
       ["restart-app", "RestartAppCommand"],
       ["list-instances", "ListInstancesCommand"],
       ["reopen-logs", "ReopenLogsCommand"],
-      ["admin-command", "AdminCommandCommand"],
+      ["api-call", "ApiCallCommand"],
       ["validate-install", "ValidateInstallCommand"],
       ["build-native-support", "BuildNativeSupportCommand"],
 
@@ -90,9 +90,7 @@ module PhusionPassenger
       puts "  restart-app            Restart an application"
       puts "  reopen-logs            Instruct #{PROGRAM_NAME} agents to reopen their log"
       puts "                         files"
-      if all
-        puts "  admin-command          Invoke an internal #{PROGRAM_NAME} admin command."
-      end
+      puts "  api-call               Makes an API call to a #{PROGRAM_NAME} agent."
       puts
       puts "Informational commands:"
       puts "  list-instances         List running #{PROGRAM_NAME} instances"
