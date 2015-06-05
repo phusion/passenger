@@ -432,9 +432,15 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
       ApplicationPool2/Pool/StateInspection.cpp
       ApplicationPool2/Pool/Miscellaneous.cpp
       ApplicationPool2/Group.h
+      ApplicationPool2/Group/InitializationAndShutdown.cpp
+      ApplicationPool2/Group/LifetimeAndBasics.cpp
+      ApplicationPool2/Group/SessionManagement.cpp
+      ApplicationPool2/Group/SpawningAndRestarting.cpp
       ApplicationPool2/Group/ProcessListManagement.cpp
-      ApplicationPool2/Group/Utils.cpp
-      ApplicationPool2/Group/Inspection.cpp
+      ApplicationPool2/Group/OutOfBandWork.cpp
+      ApplicationPool2/Group/Miscellaneous.cpp
+      ApplicationPool2/Group/InternalUtils.cpp
+      ApplicationPool2/Group/StateInspection.cpp
       ApplicationPool2/Group/Verification.cpp
       ApplicationPool2/BasicGroupInfo.h
       ApplicationPool2/BasicProcessInfo.h

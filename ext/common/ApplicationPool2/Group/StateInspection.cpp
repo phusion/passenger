@@ -22,14 +22,100 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <ApplicationPool2/Group.h>
 
-// This file is included inside the Group class.
+/*************************************************************************
+ *
+ * Session management functions for ApplicationPool2::Group
+ *
+ *************************************************************************/
 
-public:
+namespace Passenger {
+namespace ApplicationPool2 {
 
-template<typename Stream>
+using namespace std;
+using namespace boost;
+
+
+/****************************
+ *
+ * Public methods
+ *
+ ****************************/
+
+
+unsigned int
+Group::getProcessCount() const {
+	return enabledCount + disablingCount + disabledCount;
+}
+
+/**
+ * Returns whether the lower bound of the group-specific process limits
+ * have been satisfied. Note that even if the result is false, the pool limits
+ * may not allow spawning, so you should check `pool->atFullCapacity()` too.
+ */
+bool
+Group::processLowerLimitsSatisfied() const {
+	return capacityUsed() >= options.minProcesses;
+}
+
+/**
+ * Returns whether the upper bound of the group-specific process limits have
+ * been reached, or surpassed. Does not check whether pool limits have been
+ * reached. Use `pool->atFullCapacity()` to check for that.
+ */
+bool
+Group::processUpperLimitsReached() const {
+	return options.maxProcesses != 0 && capacityUsed() >= options.maxProcesses;
+}
+
+/**
+ * Returns whether all enabled processes are totally busy. If so, another
+ * process should be spawned, if allowed by the process limits.
+ * Returns false if there are no enabled processes.
+ */
+bool
+Group::allEnabledProcessesAreTotallyBusy() const {
+	return nEnabledProcessesTotallyBusy == enabledCount;
+}
+
+/**
+ * Returns the number of processes in this group that should be part of the
+ * ApplicationPool process limits calculations.
+ */
+unsigned int
+Group::capacityUsed() const {
+	return enabledCount + disablingCount + disabledCount + processesBeingSpawned;
+}
+
+/**
+ * Checks whether this group is waiting for capacity on the pool to
+ * become available before it can continue processing requests.
+ */
+bool
+Group::isWaitingForCapacity() const {
+	return enabledProcesses.empty()
+		&& processesBeingSpawned == 0
+		&& !m_restarting
+		&& !getWaitlist.empty();
+}
+
+bool
+Group::garbageCollectable(unsigned long long now) const {
+	/* if (now == 0) {
+		now = SystemTime::getUsec();
+	}
+	return busyness() == 0
+		&& getWaitlist.empty()
+		&& disabledProcesses.empty()
+		&& options.getMaxPreloaderIdleTime() != 0
+		&& now - spawner->lastUsed() >
+			(unsigned long long) options.getMaxPreloaderIdleTime() * 1000000; */
+	return false;
+}
+
 void
-inspectXml(Stream &stream, bool includeSecrets = true) const {
+Group::inspectXml(std::ostream &stream, bool includeSecrets) const {
 	ProcessList::const_iterator it;
 
 	stream << "<name>" << escapeForXml(info.name) << "</name>";
@@ -105,3 +191,7 @@ inspectXml(Stream &stream, bool includeSecrets = true) const {
 
 	stream << "</processes>";
 }
+
+
+} // namespace ApplicationPool2
+} // namespace Passenger

@@ -67,12 +67,8 @@ TEST_CXX_OBJECTS = {
     ext/common/SpawningKit/DummySpawner.h),
   'test/cxx/ApplicationPool2/PoolTest.o' => %w(
     test/cxx/ApplicationPool2/PoolTest.cpp
-    ext/common/ApplicationPool2/Group.h
-    ext/common/ApplicationPool2/Group/ProcessListManagement.cpp
-    ext/common/ApplicationPool2/Group/Utils.cpp
-    ext/common/ApplicationPool2/Group/Inspection.cpp
-    ext/common/ApplicationPool2/Group/Verification.cpp
     ext/common/ApplicationPool2/Pool.h
+    ext/common/ApplicationPool2/Group.h
     ext/common/ApplicationPool2/BasicGroupInfo.h
     ext/common/ApplicationPool2/BasicProcessInfo.h
     ext/common/ApplicationPool2/Context.h

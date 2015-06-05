@@ -22,13 +22,30 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <ApplicationPool2/Group.h>
 
-// This file is included inside the Group class.
+/*************************************************************************
+ *
+ * Process list management functions for ApplicationPool2::Group
+ *
+ *************************************************************************/
 
-private:
+namespace Passenger {
+namespace ApplicationPool2 {
+
+using namespace std;
+using namespace boost;
+
+
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
+
 
 Process *
-findProcessWithStickySessionId(unsigned int id) const {
+Group::findProcessWithStickySessionId(unsigned int id) const {
 	ProcessList::const_iterator it, end = enabledProcesses.end();
 	for (it = enabledProcesses.begin(); it != end; it++) {
 		Process *process = it->get();
@@ -40,7 +57,7 @@ findProcessWithStickySessionId(unsigned int id) const {
 }
 
 Process *
-findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
+Group::findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
 	int leastBusyProcessIndex = -1;
 	int lowestBusyness = 0;
 	unsigned int i, size = enabledProcessBusynessLevels.size();
@@ -64,7 +81,7 @@ findProcessWithStickySessionIdOrLowestBusyness(unsigned int id) const {
 }
 
 Process *
-findProcessWithLowestBusyness(const ProcessList &processes) const {
+Group::findProcessWithLowestBusyness(const ProcessList &processes) const {
 	if (processes.empty()) {
 		return NULL;
 	}
@@ -87,7 +104,8 @@ findProcessWithLowestBusyness(const ProcessList &processes) const {
 /**
  * Cache-optimized version of findProcessWithLowestBusyness() for the common case.
  */
-Process *findEnabledProcessWithLowestBusyness() const {
+Process *
+Group::findEnabledProcessWithLowestBusyness() const {
 	if (enabledProcesses.empty()) {
 		return NULL;
 	}
@@ -107,11 +125,44 @@ Process *findEnabledProcessWithLowestBusyness() const {
 }
 
 /**
+ * Adds a process to the given list (enabledProcess, disablingProcesses, disabledProcesses)
+ * and sets the process->enabled flag accordingly.
+ * The process must currently not be in any list. This function does not fix
+ * getWaitlist invariants or other stuff.
+ */
+void
+Group::addProcessToList(const ProcessPtr &process, ProcessList &destination) {
+	destination.push_back(process);
+	process->setIndex(destination.size() - 1);
+	if (&destination == &enabledProcesses) {
+		process->enabled = Process::ENABLED;
+		enabledCount++;
+		enabledProcessBusynessLevels.push_back(process->busyness());
+		if (process->isTotallyBusy()) {
+			nEnabledProcessesTotallyBusy++;
+		}
+	} else if (&destination == &disablingProcesses) {
+		process->enabled = Process::DISABLING;
+		disablingCount++;
+	} else if (&destination == &disabledProcesses) {
+		assert(process->sessions == 0);
+		process->enabled = Process::DISABLED;
+		disabledCount++;
+	} else if (&destination == &detachedProcesses) {
+		assert(process->isAlive());
+		process->enabled = Process::DETACHED;
+		callAbortLongRunningConnectionsCallback(process);
+	} else {
+		P_BUG("Unknown destination list");
+	}
+}
+
+/**
  * Removes a process to the given list (enabledProcess, disablingProcesses, disabledProcesses).
  * This function does not fix getWaitlist invariants or other stuff.
  */
 void
-removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
+Group::removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
 	ProcessPtr p = process; // Keep an extra reference count just in case.
 
 	source.erase(source.begin() + process->getIndex());
@@ -159,60 +210,8 @@ removeProcessFromList(const ProcessPtr &process, ProcessList &source) {
 	}
 }
 
-/**
- * Adds a process to the given list (enabledProcess, disablingProcesses, disabledProcesses)
- * and sets the process->enabled flag accordingly.
- * The process must currently not be in any list. This function does not fix
- * getWaitlist invariants or other stuff.
- */
 void
-addProcessToList(const ProcessPtr &process, ProcessList &destination) {
-	destination.push_back(process);
-	process->setIndex(destination.size() - 1);
-	if (&destination == &enabledProcesses) {
-		process->enabled = Process::ENABLED;
-		enabledCount++;
-		enabledProcessBusynessLevels.push_back(process->busyness());
-		if (process->isTotallyBusy()) {
-			nEnabledProcessesTotallyBusy++;
-		}
-	} else if (&destination == &disablingProcesses) {
-		process->enabled = Process::DISABLING;
-		disablingCount++;
-	} else if (&destination == &disabledProcesses) {
-		assert(process->sessions == 0);
-		process->enabled = Process::DISABLED;
-		disabledCount++;
-	} else if (&destination == &detachedProcesses) {
-		assert(process->isAlive());
-		process->enabled = Process::DETACHED;
-		callAbortLongRunningConnectionsCallback(process);
-	} else {
-		P_BUG("Unknown destination list");
-	}
-}
-
-void
-enableAllDisablingProcesses(boost::container::vector<Callback> &postLockActions) {
-	P_DEBUG("Enabling all DISABLING processes with result DR_ERROR");
-	deque<DisableWaiter>::iterator it, end = disableWaitlist.end();
-	for (it = disableWaitlist.begin(); it != end; it++) {
-		const DisableWaiter &waiter = *it;
-		const ProcessPtr process = waiter.process;
-		// A process can appear multiple times in disableWaitlist.
-		assert(process->enabled == Process::DISABLING
-			|| process->enabled == Process::ENABLED);
-		if (process->enabled == Process::DISABLING) {
-			removeProcessFromList(process, disablingProcesses);
-			addProcessToList(process, enabledProcesses);
-			P_DEBUG("Enabled process " << process->inspect());
-		}
-	}
-	clearDisableWaitlist(DR_ERROR, postLockActions);
-}
-
-void
-removeFromDisableWaitlist(const ProcessPtr &p, DisableResult result,
+Group::removeFromDisableWaitlist(const ProcessPtr &p, DisableResult result,
 	boost::container::vector<Callback> &postLockActions)
 {
 	deque<DisableWaiter>::const_iterator it, end = disableWaitlist.end();
@@ -230,7 +229,7 @@ removeFromDisableWaitlist(const ProcessPtr &p, DisableResult result,
 }
 
 void
-clearDisableWaitlist(DisableResult result,
+Group::clearDisableWaitlist(DisableResult result,
 	boost::container::vector<Callback> &postLockActions)
 {
 	// This function may be called after processes in the disableWaitlist
@@ -244,12 +243,149 @@ clearDisableWaitlist(DisableResult result,
 	}
 }
 
+void
+Group::enableAllDisablingProcesses(boost::container::vector<Callback> &postLockActions) {
+	P_DEBUG("Enabling all DISABLING processes with result DR_ERROR");
+	deque<DisableWaiter>::iterator it, end = disableWaitlist.end();
+	for (it = disableWaitlist.begin(); it != end; it++) {
+		const DisableWaiter &waiter = *it;
+		const ProcessPtr process = waiter.process;
+		// A process can appear multiple times in disableWaitlist.
+		assert(process->enabled == Process::DISABLING
+			|| process->enabled == Process::ENABLED);
+		if (process->enabled == Process::DISABLING) {
+			removeProcessFromList(process, disablingProcesses);
+			addProcessToList(process, enabledProcesses);
+			P_DEBUG("Enabled process " << process->inspect());
+		}
+	}
+	clearDisableWaitlist(DR_ERROR, postLockActions);
+}
 
-/********************************************
+/**
+ * The `immediately` parameter only has effect if the detached processes checker
+ * thread is active. It means that, if the thread is currently sleeping, it should
+ * wake up immediately and perform work.
+ */
+void
+Group::startCheckingDetachedProcesses(bool immediately) {
+	if (!detachedProcessesCheckerActive) {
+		P_DEBUG("Starting detached processes checker");
+		getPool()->nonInterruptableThreads.create_thread(
+			boost::bind(&Group::detachedProcessesCheckerMain, this, shared_from_this()),
+			"Detached processes checker: " + getName(),
+			POOL_HELPER_THREAD_STACK_SIZE
+		);
+		detachedProcessesCheckerActive = true;
+	} else if (detachedProcessesCheckerActive && immediately) {
+		detachedProcessesCheckerCond.notify_all();
+	}
+}
+
+void
+Group::detachedProcessesCheckerMain(GroupPtr self) {
+	TRACE_POINT();
+	Pool *pool = getPool();
+
+	Pool::DebugSupportPtr debug = pool->debugSupport;
+	if (debug != NULL && debug->detachedProcessesChecker) {
+		debug->debugger->send("About to start detached processes checker");
+		debug->messages->recv("Proceed with starting detached processes checker");
+	}
+
+	boost::unique_lock<boost::mutex> lock(pool->syncher);
+	while (true) {
+		assert(detachedProcessesCheckerActive);
+
+		if (getLifeStatus() == SHUT_DOWN || this_thread::interruption_requested()) {
+			UPDATE_TRACE_POINT();
+			P_DEBUG("Stopping detached processes checker");
+			detachedProcessesCheckerActive = false;
+			break;
+		}
+
+		UPDATE_TRACE_POINT();
+		if (!detachedProcesses.empty()) {
+			P_TRACE(2, "Checking whether any of the " << detachedProcesses.size() <<
+				" detached processes have exited...");
+			ProcessList::iterator it, end = detachedProcesses.end();
+			ProcessList processesToRemove;
+
+			for (it = detachedProcesses.begin(); it != end; it++) {
+				const ProcessPtr process = *it;
+				switch (process->getLifeStatus()) {
+				case Process::ALIVE:
+					if (process->canTriggerShutdown()) {
+						P_DEBUG("Detached process " << process->inspect() <<
+							" has 0 active sessions now. Triggering shutdown.");
+						process->triggerShutdown();
+						assert(process->getLifeStatus() == Process::SHUTDOWN_TRIGGERED);
+					}
+					break;
+				case Process::SHUTDOWN_TRIGGERED:
+					if (process->canCleanup()) {
+						P_DEBUG("Detached process " << process->inspect() << " has shut down. Cleaning up associated resources.");
+						process->cleanup();
+						assert(process->getLifeStatus() == Process::DEAD);
+						processesToRemove.push_back(process);
+					} else if (process->shutdownTimeoutExpired()) {
+						P_WARN("Detached process " << process->inspect() <<
+							" didn't shut down within " PROCESS_SHUTDOWN_TIMEOUT_DISPLAY
+							". Forcefully killing it with SIGKILL.");
+						kill(process->getPid(), SIGKILL);
+					}
+					break;
+				default:
+					P_BUG("Unknown 'lifeStatus' state " << (int) process->getLifeStatus());
+				}
+			}
+
+			UPDATE_TRACE_POINT();
+			end = processesToRemove.end();
+			for (it = processesToRemove.begin(); it != end; it++) {
+				removeProcessFromList(*it, detachedProcesses);
+			}
+		}
+
+		UPDATE_TRACE_POINT();
+		if (detachedProcesses.empty()) {
+			UPDATE_TRACE_POINT();
+			P_DEBUG("Stopping detached processes checker");
+			detachedProcessesCheckerActive = false;
+
+			boost::container::vector<Callback> actions;
+			if (shutdownCanFinish()) {
+				UPDATE_TRACE_POINT();
+				finishShutdown(actions);
+			}
+
+			verifyInvariants();
+			verifyExpensiveInvariants();
+			lock.unlock();
+			UPDATE_TRACE_POINT();
+			runAllActions(actions);
+			break;
+		} else {
+			UPDATE_TRACE_POINT();
+			verifyInvariants();
+			verifyExpensiveInvariants();
+		}
+
+		// Not all processes can be shut down yet. Sleep for a while unless
+		// someone wakes us up.
+		UPDATE_TRACE_POINT();
+		detachedProcessesCheckerCond.timed_wait(lock,
+			posix_time::milliseconds(100));
+	}
+}
+
+
+/****************************
+ *
  * Public methods
- ********************************************/
+ *
+ ****************************/
 
-public:
 
 /**
  * Attaches the given process to this Group and mark it as enabled. This
@@ -257,7 +393,7 @@ public:
  * afterwards if necessary, e.g. by calling `assignSessionsToGetWaiters()`.
  */
 AttachResult
-attach(const ProcessPtr &process,
+Group::attach(const ProcessPtr &process,
 	boost::container::vector<Callback> &postLockActions)
 {
 	TRACE_POINT();
@@ -320,7 +456,7 @@ attach(const ProcessPtr &process,
  * that method over this one.
  */
 void
-detach(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
+Group::detach(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
 	TRACE_POINT();
 	assert(process->getGroup() == this);
 	assert(process->isAlive());
@@ -359,7 +495,7 @@ detach(const ProcessPtr &process, boost::container::vector<Callback> &postLockAc
  * getWaitlist so be sure to fix its invariants afterwards if necessary.
  */
 void
-detachAll(boost::container::vector<Callback> &postLockActions) {
+Group::detachAll(boost::container::vector<Callback> &postLockActions) {
 	assert(isAlive());
 	P_DEBUG("Detaching all processes in group " << info.name);
 
@@ -390,7 +526,7 @@ detachAll(boost::container::vector<Callback> &postLockActions) {
  * so be sure to fix its invariants afterwards if necessary.
  */
 void
-enable(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
+Group::enable(const ProcessPtr &process, boost::container::vector<Callback> &postLockActions) {
 	assert(process->getGroup() == this);
 	assert(process->isAlive());
 	assert(isAlive());
@@ -415,7 +551,7 @@ enable(const ProcessPtr &process, boost::container::vector<Callback> &postLockAc
  * called later with the result of this action.
  */
 DisableResult
-disable(const ProcessPtr &process, const DisableCallback &callback) {
+Group::disable(const ProcessPtr &process, const DisableCallback &callback) {
 	assert(process->getGroup() == this);
 	assert(process->isAlive());
 	assert(isAlive());
@@ -464,3 +600,7 @@ disable(const ProcessPtr &process, const DisableCallback &callback) {
 		return DR_NOOP;
 	}
 }
+
+
+} // namespace ApplicationPool2
+} // namespace Passenger
