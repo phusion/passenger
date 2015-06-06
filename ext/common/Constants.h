@@ -114,6 +114,12 @@
 
 	#define NGINX_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"
 
+	#define PASSENGER_API_VERSION "0.2"
+
+	#define PASSENGER_API_VERSION_MAJOR 0
+
+	#define PASSENGER_API_VERSION_MINOR 2
+
 	#define PASSENGER_DEFAULT_USER "nobody"
 
 	#define PASSENGER_VERSION "5.0.10"

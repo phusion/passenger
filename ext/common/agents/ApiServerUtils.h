@@ -72,6 +72,7 @@
 #include <Utils/BufferedIO.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/modp_b64.h>
+#include <Utils/json.h>
 #include <Utils/VariantMap.h>
 
 namespace Passenger {
@@ -436,6 +437,35 @@ apiServerProcessPing(Server *server, Client *client, Request *req) {
 		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 		headers.insert(req->pool, "Content-Type", "application/json");
 		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+		if (!req->ended()) {
+			server->endRequest(&client, &req);
+		}
+	} else {
+		apiServerRespondWith401(server, client, req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerProcessVersion(Server *server, Client *client, Request *req) {
+	Authorization auth(authorize(server, client, req));
+	if (auth.canReadPool || auth.canInspectState) {
+		ServerKit::HeaderTable headers;
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "Content-Type", "application/json");
+
+		Json::Value response;
+		response["program_name"] = PROGRAM_NAME;
+		response["program_version"] = PASSENGER_VERSION;
+		response["api_version"] = PASSENGER_API_VERSION;
+		response["api_version_major"] = PASSENGER_API_VERSION_MAJOR;
+		response["api_version_minor"] = PASSENGER_API_VERSION_MINOR;
+		#ifdef PASSENGER_IS_ENTERPRISE
+			response["passenger_enterprise"] = true;
+		#endif
+
+		server->writeSimpleResponse(client, 200, &headers,
+			response.toStyledString());
 		if (!req->ended()) {
 			server->endRequest(&client, &req);
 		}

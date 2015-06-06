@@ -91,6 +91,41 @@ private:
 		rh->disconnect(clientName);
 	}
 
+	void route(Client *client, Request *req, const StaticString &path) {
+		if (path == P_STATIC_STRING("/server.json")) {
+			processServerStatus(client, req);
+		} else if (regex_match(path, serverConnectionPath)) {
+			processServerConnectionOperation(client, req);
+		} else if (path == P_STATIC_STRING("/pool.xml")) {
+			processPoolStatusXml(client, req);
+		} else if (path == P_STATIC_STRING("/pool.txt")) {
+			processPoolStatusTxt(client, req);
+		} else if (path == P_STATIC_STRING("/pool/restart_app_group.json")) {
+			processPoolRestartAppGroup(client, req);
+		} else if (path == P_STATIC_STRING("/pool/detach_process.json")) {
+			processPoolDetachProcess(client, req);
+		} else if (path == P_STATIC_STRING("/backtraces.txt")) {
+			processBacktraces(client, req);
+		} else if (path == P_STATIC_STRING("/ping.json")) {
+			apiServerProcessPing(this, client, req);
+		} else if (path == P_STATIC_STRING("/version.json")) {
+			apiServerProcessVersion(this, client, req);
+		} else if (path == P_STATIC_STRING("/shutdown.json")) {
+			processShutdown(client, req);
+		} else if (path == P_STATIC_STRING("/gc.json")) {
+			processGc(client, req);
+		} else if (path == P_STATIC_STRING("/config.json")) {
+			processConfig(client, req);
+		} else if (path == P_STATIC_STRING("/reinherit_logs.json")) {
+			apiServerProcessReinheritLogs(this, client, req,
+				instanceDir, fdPassingPassword);
+		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
+			processReopenLogs(client, req);
+		} else {
+			apiServerRespondWith404(this, client, req);
+		}
+	}
+
 	void processServerConnectionOperation(Client *client, Request *req) {
 		if (!authorizeAdminOperation(this, client, req)) {
 			apiServerRespondWith401(this, client, req);
@@ -551,36 +586,7 @@ protected:
 			" " << StaticString(req->path.start->data, req->path.size));
 
 		try {
-			if (path == P_STATIC_STRING("/server.json")) {
-				processServerStatus(client, req);
-			} else if (regex_match(path, serverConnectionPath)) {
-				processServerConnectionOperation(client, req);
-			} else if (path == P_STATIC_STRING("/pool.xml")) {
-				processPoolStatusXml(client, req);
-			} else if (path == P_STATIC_STRING("/pool.txt")) {
-				processPoolStatusTxt(client, req);
-			} else if (path == P_STATIC_STRING("/pool/restart_app_group.json")) {
-				processPoolRestartAppGroup(client, req);
-			} else if (path == P_STATIC_STRING("/pool/detach_process.json")) {
-				processPoolDetachProcess(client, req);
-			} else if (path == P_STATIC_STRING("/backtraces.txt")) {
-				processBacktraces(client, req);
-			} else if (path == P_STATIC_STRING("/ping.json")) {
-				apiServerProcessPing(this, client, req);
-			} else if (path == P_STATIC_STRING("/shutdown.json")) {
-				processShutdown(client, req);
-			} else if (path == P_STATIC_STRING("/gc.json")) {
-				processGc(client, req);
-			} else if (path == P_STATIC_STRING("/config.json")) {
-				processConfig(client, req);
-			} else if (path == P_STATIC_STRING("/reinherit_logs.json")) {
-				apiServerProcessReinheritLogs(this, client, req,
-					instanceDir, fdPassingPassword);
-			} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
-				processReopenLogs(client, req);
-			} else {
-				apiServerRespondWith404(this, client, req);
-			}
+			route(client, req, path);
 		} catch (const oxt::tracable_exception &e) {
 			SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
 			if (!req->ended()) {
