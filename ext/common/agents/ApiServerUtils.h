@@ -478,6 +478,22 @@ apiServerProcessVersion(Server *server, Client *client, Request *req) {
 
 template<typename Server, typename Client, typename Request>
 inline void
+apiServerProcessBacktraces(Server *server, Client *client, Request *req) {
+	if (authorizeStateInspectionOperation(server, client, req)) {
+		ServerKit::HeaderTable headers;
+		headers.insert(req->pool, "Content-Type", "text/plain");
+		server->writeSimpleResponse(client, 200, &headers,
+			psg_pstrdup(req->pool, oxt::thread::all_backtraces()));
+		if (!req->ended()) {
+			server->endRequest(&client, &req);
+		}
+	} else {
+		apiServerRespondWith401(server, client, req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
 apiServerProcessShutdown(Server *server, Client *client, Request *req) {
 	if (req->method != HTTP_POST) {
 		apiServerRespondWith405(server, client, req);

@@ -105,7 +105,7 @@ private:
 		} else if (path == P_STATIC_STRING("/pool/detach_process.json")) {
 			processPoolDetachProcess(client, req);
 		} else if (path == P_STATIC_STRING("/backtraces.txt")) {
-			processBacktraces(client, req);
+			apiServerProcessBacktraces(this, client, req);
 		} else if (path == P_STATIC_STRING("/ping.json")) {
 			apiServerProcessPing(this, client, req);
 		} else if (path == P_STATIC_STRING("/version.json")) {
@@ -347,20 +347,6 @@ private:
 			}
 		} else {
 			endAsBadRequest(&client, &req, "PID required");
-		}
-	}
-
-	void processBacktraces(Client *client, Request *req) {
-		if (authorizeStateInspectionOperation(this, client, req)) {
-			HeaderTable headers;
-			headers.insert(req->pool, "Content-Type", "text/plain");
-			writeSimpleResponse(client, 200, &headers,
-				psg_pstrdup(req->pool, oxt::thread::all_backtraces()));
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-		} else {
-			apiServerRespondWith401(this, client, req);
 		}
 	}
 

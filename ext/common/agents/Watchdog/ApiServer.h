@@ -70,6 +70,8 @@ private:
 			apiServerProcessVersion(this, client, req);
 		} else if (path == P_STATIC_STRING("/shutdown.json")) {
 			apiServerProcessShutdown(this, client, req);
+		} else if (path == P_STATIC_STRING("/backtraces.txt")) {
+			apiServerProcessBacktraces(this, client, req);
 		} else if (path == P_STATIC_STRING("/config.json")) {
 			processConfig(client, req);
 		} else if (path == P_STATIC_STRING("/config/log_file.fd")) {
