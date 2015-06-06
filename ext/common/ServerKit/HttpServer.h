@@ -1028,7 +1028,7 @@ public:
 				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
 				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length")))
 				{
-					pos = appendLStringData(pos, end, &it->header->key);
+					pos = appendLStringData(pos, end, &it->header->origKey);
 					pos = appendData(pos, end, P_STATIC_STRING(": "));
 					pos = appendLStringData(pos, end, &it->header->val);
 					pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
