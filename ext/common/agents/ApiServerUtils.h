@@ -54,8 +54,11 @@
  * in the various API servers.
  */
 
+#include <boost/foreach.hpp>
+#include <boost/bind.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/backtrace.hpp>
+#include <oxt/thread.hpp>
 #include <sys/types.h>
 #include <string>
 #include <vector>
@@ -68,6 +71,7 @@
 #include <DataStructures/LString.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/HeaderTable.h>
+#include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/StrIntUtils.h>
@@ -475,6 +479,188 @@ apiServerProcessVersion(Server *server, Client *client, Request *req) {
 }
 
 template<typename Server, typename Client, typename Request>
+struct ApiServerProcessReinheritLogsParams {
+	struct Result {
+		Server *server;
+		Client *client;
+		Request *req;
+		vector<string> debugLogs;
+		string errorLogs;
+		int status;
+		string response;
+	};
+
+	typedef void (*Callback)(Result result);
+
+	Server *server;
+	Client *client;
+	Request *req;
+	string instanceDir;
+	string fdPassingPassword;
+	Callback callback;
+};
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerProcessReinheritLogsThreadMain(ApiServerProcessReinheritLogsParams<Server, Client, Request> params) {
+	typedef ApiServerProcessReinheritLogsParams<Server, Client, Request> Params;
+	typedef typename Params::Result Result;
+
+	struct Guard {
+		Params &params;
+		Result &result;
+		SafeLibevPtr libev;
+		bool cleared;
+
+		Guard(Params &_params, Result &_result, const SafeLibevPtr &_libev)
+			: params(_params),
+			  result(_result),
+			  libev(_libev),
+			  cleared(false)
+			{ }
+
+		~Guard() {
+			if (!cleared) {
+				result.status = 500;
+				result.response = "{ \"status\": \"error\", "
+					"\"code\": \"INTERNAL_ERROR\", "
+					"\"message\": \"Internal error\" }\n";
+				libev->runLater(boost::bind(params.callback, result));
+			}
+		}
+
+		void clear() {
+			cleared = true;
+		}
+	};
+
+	Result result;
+	SafeLibevPtr libev = params.server->getContext()->libev;
+
+	result.server = params.server;
+	result.client = params.client;
+	result.req    = params.req;
+	result.status = 500;
+
+	Guard guard(params, result, libev);
+
+
+	try {
+		FileDescriptor watchdog(connectToUnixServer(
+			params.instanceDir + "/agents.s/watchdog_api",
+			NULL, 0), __FILE__, __LINE__);
+		writeExact(watchdog,
+			"GET /config/log_file.fd HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Fd-Passing-Password: " + params.fdPassingPassword + "\r\n"
+			"\r\n");
+
+		BufferedIO io(watchdog);
+		string response = io.readLine();
+		result.debugLogs.push_back("Watchdog response: \"" + cEscapeString(response) + "\"");
+
+		if (response != "HTTP/1.1 200 OK\r\n") {
+			watchdog.close();
+			guard.clear();
+			result.status = 500;
+			result.response = "{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: non-200 response\" }\n";
+			libev->runLater(boost::bind(params.callback, result));
+			return;
+		}
+
+		string logFilePath;
+		while (true) {
+			response = io.readLine();
+			result.debugLogs.push_back("Watchdog response: \"" + cEscapeString(response) + "\"");
+			if (response.empty()) {
+				watchdog.close();
+				guard.clear();
+				result.status = 500;
+				result.response = "{ \"status\": \"error\", "
+					"\"code\": \"INHERIT_ERROR\", "
+					"\"message\": \"Error communicating with Watchdog process: "
+						"premature EOF encountered in response\" }\n";
+				libev->runLater(boost::bind(params.callback, result));
+				return;
+			} else if (response == "\r\n") {
+				break;
+			} else if (startsWith(response, "filename: ")
+				|| startsWith(response, "Filename: "))
+			{
+				response.erase(0, strlen("filename: "));
+				logFilePath = response;
+			}
+		}
+
+		if (logFilePath.empty()) {
+			watchdog.close();
+			guard.clear();
+			result.status = 500;
+			result.response = "{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: "
+					"no log filename received in response\" }\n";
+			libev->runLater(boost::bind(params.callback, result));
+			return;
+		}
+
+		unsigned long long timeout = 1000000;
+		int fd = readFileDescriptorWithNegotiation(watchdog, &timeout);
+		setLogFileWithFd(logFilePath, fd);
+		safelyClose(fd);
+		watchdog.close();
+
+		guard.clear();
+		result.status = 200;
+		result.response = "{ \"status\": \"ok\" }\n";
+		libev->runLater(boost::bind(params.callback, result));
+	} catch (const oxt::tracable_exception &e) {
+		result.errorLogs.append("Exception: ");
+		result.errorLogs.append(e.what());
+		result.errorLogs.append("\n");
+		result.errorLogs.append(e.backtrace());
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerProcessReinheritLogsDone(typename ApiServerProcessReinheritLogsParams<Server,
+	Client, Request>::Result result)
+{
+	Server *server = result.server;
+	Client *client = result.client;
+	Request *req   = result.req;
+
+	if (!result.debugLogs.empty()) {
+		foreach (string log, result.debugLogs) {
+			SKC_DEBUG_FROM_STATIC(server, client, log);
+		}
+	}
+	if (!result.errorLogs.empty()) {
+		SKC_ERROR_FROM_STATIC(server, client, result.errorLogs);
+	}
+
+	if (req->ended()) {
+		server->unrefRequest(req, __FILE__, __LINE__);
+		return;
+	}
+
+	ServerKit::HeaderTable headers;
+	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+	headers.insert(req->pool, "Content-Type", "application/json");
+
+	req->wantKeepAlive = false;
+	server->writeSimpleResponse(client, result.status, &headers, result.response);
+	Request *req2 = req;
+	if (!req->ended()) {
+		server->endRequest(&client, &req);
+	}
+	server->unrefRequest(req2, __FILE__, __LINE__);
+}
+
+template<typename Server, typename Client, typename Request>
 inline void
 apiServerProcessReinheritLogs(Server *server, Client *client, Request *req,
 	const StaticString &instanceDir, const StaticString &fdPassingPassword)
@@ -497,76 +683,18 @@ apiServerProcessReinheritLogs(Server *server, Client *client, Request *req,
 			return;
 		}
 
-		FileDescriptor watchdog(connectToUnixServer(instanceDir + "/agents.s/watchdog_api",
-			NULL, 0), __FILE__, __LINE__);
-		writeExact(watchdog,
-			"GET /config/log_file.fd HTTP/1.1\r\n"
-			"Connection: close\r\n"
-			"Fd-Passing-Password: " + fdPassingPassword + "\r\n"
-			"\r\n");
-		BufferedIO io(watchdog);
-		string response = io.readLine();
-		SKC_DEBUG_FROM_STATIC(server, client,
-			"Watchdog response: \"" << cEscapeString(response) << "\"");
-		if (response != "HTTP/1.1 200 OK\r\n") {
-			watchdog.close();
-			server->writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
-				"\"code\": \"INHERIT_ERROR\", "
-				"\"message\": \"Error communicating with Watchdog process: non-200 response\" }\n");
-			if (!req->ended()) {
-				server->endRequest(&client, &req);
-			}
-			return;
-		}
+		ApiServerProcessReinheritLogsParams<Server, Client, Request> params;
+		params.server = server;
+		params.client = client;
+		params.req    = req;
+		params.instanceDir = instanceDir;
+		params.fdPassingPassword = fdPassingPassword;
+		params.callback = apiServerProcessReinheritLogsDone<Server, Client, Request>;
 
-		string logFilePath;
-		while (true) {
-			response = io.readLine();
-			SKC_DEBUG_FROM_STATIC(server,
-				client, "Watchdog response: \"" << cEscapeString(response) << "\"");
-			if (response.empty()) {
-				watchdog.close();
-				server->writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
-					"\"code\": \"INHERIT_ERROR\", "
-					"\"message\": \"Error communicating with Watchdog process: "
-						"premature EOF encountered in response\" }\n");
-				if (!req->ended()) {
-					server->endRequest(&client, &req);
-				}
-				return;
-			} else if (response == "\r\n") {
-				break;
-			} else if (startsWith(response, "filename: ")
-				|| startsWith(response, "Filename: "))
-			{
-				response.erase(0, strlen("filename: "));
-				logFilePath = response;
-			}
-		}
-
-		if (logFilePath.empty()) {
-			watchdog.close();
-			server->writeSimpleResponse(client, 500, &headers,
-				"{ \"status\": \"error\", "
-				"\"code\": \"INHERIT_ERROR\", "
-				"\"message\": \"Error communicating with Watchdog process: "
-					"no log filename received in response\" }\n");
-			if (!req->ended()) {
-				server->endRequest(&client, &req);
-			}
-			return;
-		}
-
-		unsigned long long timeout = 1000000;
-		int fd = readFileDescriptorWithNegotiation(watchdog, &timeout);
-		setLogFileWithFd(logFilePath, fd);
-		safelyClose(fd);
-		watchdog.close();
-
-		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
-		if (!req->ended()) {
-			server->endRequest(&client, &req);
-		}
+		server->refRequest(req, __FILE__, __LINE__);
+		oxt::thread(boost::bind(
+			apiServerProcessReinheritLogsThreadMain<Server, Client, Request>,
+			params), "API command: reinherit logs", 1024 * 128);
 	} else {
 		apiServerRespondWith401(server, client, req);
 	}
