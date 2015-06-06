@@ -93,7 +93,7 @@ private:
 
 	void processServerConnectionOperation(Client *client, Request *req) {
 		if (!authorizeAdminOperation(this, client, req)) {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		} else if (req->method == HTTP_DELETE) {
 			StaticString path = req->getPathWithoutQueryString();
 			boost::smatch results;
@@ -129,7 +129,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		}
 	}
 
@@ -159,7 +159,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
@@ -179,7 +179,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
@@ -199,20 +199,20 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
 	void processPoolRestartAppGroup(Client *client, Request *req) {
 		Authorization auth(authorize(this, client, req));
 		if (!auth.canModifyPool) {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		} else if (req->method != HTTP_POST) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (!req->hasBody()) {
 			endAsBadRequest(&client, &req, "Body required");
 		} else if (requestBodyExceedsLimit(client, req)) {
-			respondWith413(client, req);
+			apiServerRespondWith413(this, client, req);
 		} else {
 			req->authorization = auth;
 			// Continues in processPoolRestartAppGroupBody().
@@ -246,7 +246,7 @@ private:
 			result = appPool->restartGroupByName(req->jsonBody["name"].asString(),
 				options);
 		} catch (const SecurityException &) {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 			return;
 		}
 		if (result) {
@@ -268,13 +268,13 @@ private:
 	void processPoolDetachProcess(Client *client, Request *req) {
 		Authorization auth(authorize(this, client, req));
 		if (!auth.canModifyPool) {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		} else if (req->method != HTTP_POST) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (!req->hasBody()) {
 			endAsBadRequest(&client, &req, "Body required");
 		} else if (requestBodyExceedsLimit(client, req)) {
-			respondWith413(client, req);
+			apiServerRespondWith413(this, client, req);
 		} else {
 			req->authorization = auth;
 			// Continues in processPoolDetachProcessBody().
@@ -292,7 +292,7 @@ private:
 			try {
 				result = appPool->detachProcess(pid, options);
 			} catch (const SecurityException &) {
-				respondWith401(client, req);
+				apiServerRespondWith401(this, client, req);
 				return;
 			}
 
@@ -325,28 +325,13 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
-		}
-	}
-
-	void processPing(Client *client, Request *req) {
-		Authorization auth(authorize(this, client, req));
-		if (auth.canReadPool || auth.canInspectState) {
-			HeaderTable headers;
-			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-			headers.insert(req->pool, "Content-Type", "application/json");
-			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
 	void processShutdown(Client *client, Request *req) {
 		if (req->method != HTTP_PUT) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (authorizeAdminOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "Content-Type", "application/json");
@@ -356,7 +341,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
@@ -372,7 +357,7 @@ private:
 
 	void processGc(Client *client, Request *req) {
 		if (req->method != HTTP_PUT) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (authorizeAdminOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "Content-Type", "application/json");
@@ -385,7 +370,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
@@ -396,7 +381,7 @@ private:
 	void processConfig(Client *client, Request *req) {
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
-				respondWith401(client, req);
+				apiServerRespondWith401(this, client, req);
 			}
 
 			HeaderTable headers;
@@ -422,13 +407,13 @@ private:
 			}
 		} else if (req->method == HTTP_PUT) {
 			if (!authorizeAdminOperation(this, client, req)) {
-				respondWith401(client, req);
+				apiServerRespondWith401(this, client, req);
 			} else if (!req->hasBody()) {
 				endAsBadRequest(&client, &req, "Body required");
 			}
 			// Continue in processConfigBody()
 		} else {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		}
 	}
 
@@ -489,99 +474,9 @@ private:
 		}
 	}
 
-	void processReinheritLogs(Client *client, Request *req) {
-		if (req->method != HTTP_POST) {
-			respondWith405(client, req);
-		} else if (authorizeAdminOperation(this, client, req)) {
-			HeaderTable headers;
-			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-			headers.insert(req->pool, "Content-Type", "application/json");
-
-			if (instanceDir.empty() || fdPassingPassword.empty()) {
-				writeSimpleResponse(client, 501, &headers, "{ \"status\": \"error\", "
-					"\"code\": \"NO_WATCHDOG\", "
-					"\"message\": \"No Watchdog process\" }\n");
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
-			}
-
-			FileDescriptor watchdog(connectToUnixServer(instanceDir + "/agents.s/watchdog_api",
-				NULL, 0), __FILE__, __LINE__);
-			writeExact(watchdog,
-				"GET /config/log_file.fd HTTP/1.1\r\n"
-				"Connection: close\r\n"
-				"Fd-Passing-Password: " + fdPassingPassword + "\r\n"
-				"\r\n");
-			BufferedIO io(watchdog);
-			string response = io.readLine();
-			SKC_DEBUG(client, "Watchdog response: \"" << cEscapeString(response) << "\"");
-			if (response != "HTTP/1.1 200 OK\r\n") {
-				watchdog.close();
-				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
-					"\"code\": \"INHERIT_ERROR\", "
-					"\"message\": \"Error communicating with Watchdog process: non-200 response\" }\n");
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
-			}
-
-			string logFilePath;
-			while (true) {
-				response = io.readLine();
-				SKC_DEBUG(client, "Watchdog response: \"" << cEscapeString(response) << "\"");
-				if (response.empty()) {
-					watchdog.close();
-					writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
-						"\"code\": \"INHERIT_ERROR\", "
-						"\"message\": \"Error communicating with Watchdog process: "
-							"premature EOF encountered in response\" }\n");
-					if (!req->ended()) {
-						endRequest(&client, &req);
-					}
-					return;
-				} else if (response == "\r\n") {
-					break;
-				} else if (startsWith(response, "filename: ")
-					|| startsWith(response, "Filename: "))
-				{
-					response.erase(0, strlen("filename: "));
-					logFilePath = response;
-				}
-			}
-
-			if (logFilePath.empty()) {
-				watchdog.close();
-				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
-					"\"code\": \"INHERIT_ERROR\", "
-					"\"message\": \"Error communicating with Watchdog process: "
-						"no log filename received in response\" }\n");
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
-			}
-
-			unsigned long long timeout = 1000000;
-			int fd = readFileDescriptorWithNegotiation(watchdog, &timeout);
-			setLogFileWithFd(logFilePath, fd);
-			safelyClose(fd);
-			watchdog.close();
-
-			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-		} else {
-			respondWith401(client, req);
-		}
-	}
-
 	void processReopenLogs(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (authorizeAdminOperation(this, client, req)) {
 			int e;
 			HeaderTable headers;
@@ -636,7 +531,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
@@ -645,63 +540,6 @@ private:
 				&& req->aux.bodyInfo.contentLength > limit)
 			|| (req->bodyType == Request::RBT_CHUNKED
 				&& req->body.size() > limit);
-	}
-
-	void respondWith401(Client *client, Request *req) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
-		writeSimpleResponse(client, 401, &headers, "Unauthorized");
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith404(Client *client, Request *req) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		writeSimpleResponse(client, 404, &headers, "Not found");
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith405(Client *client, Request *req) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		writeSimpleResponse(client, 405, &headers, "Method not allowed");
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith413(Client *client, Request *req) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		writeSimpleResponse(client, 413, &headers, "Request body too large");
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith422(Client *client, Request *req, const StaticString &body) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "Content-Type", "text/plain; charset=utf-8");
-		writeSimpleResponse(client, 422, &headers, body);
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith500(Client *client, Request *req, const StaticString &body) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "Content-Type", "text/plain; charset=utf-8");
-		writeSimpleResponse(client, 500, &headers, body);
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
 	}
 
 protected:
@@ -728,7 +566,7 @@ protected:
 			} else if (path == P_STATIC_STRING("/backtraces.txt")) {
 				processBacktraces(client, req);
 			} else if (path == P_STATIC_STRING("/ping.json")) {
-				processPing(client, req);
+				apiServerProcessPing(this, client, req);
 			} else if (path == P_STATIC_STRING("/shutdown.json")) {
 				processShutdown(client, req);
 			} else if (path == P_STATIC_STRING("/gc.json")) {
@@ -736,11 +574,12 @@ protected:
 			} else if (path == P_STATIC_STRING("/config.json")) {
 				processConfig(client, req);
 			} else if (path == P_STATIC_STRING("/reinherit_logs.json")) {
-				processReinheritLogs(client, req);
+				apiServerProcessReinheritLogs(this, client, req,
+					instanceDir, fdPassingPassword);
 			} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
 				processReopenLogs(client, req);
 			} else {
-				respondWith404(client, req);
+				apiServerRespondWith404(this, client, req);
 			}
 		} catch (const oxt::tracable_exception &e) {
 			SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
@@ -759,7 +598,7 @@ protected:
 			// Data
 			req->body.append(buffer.start, buffer.size());
 			if (requestBodyExceedsLimit(client, req)) {
-				respondWith413(client, req);
+				apiServerRespondWith413(this, client, req);
 			}
 		} else if (errcode == 0) {
 			// EOF
@@ -783,7 +622,7 @@ protected:
 					}
 				}
 			} else {
-				respondWith422(client, req, reader.getFormattedErrorMessages());
+				apiServerRespondWith422(this, client, req, reader.getFormattedErrorMessages());
 			}
 		} else {
 			// Error

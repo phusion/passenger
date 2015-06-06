@@ -72,27 +72,13 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
-		}
-	}
-
-	void processPing(Client *client, Request *req) {
-		if (authorizeStateInspectionOperation(this, client, req)) {
-			HeaderTable headers;
-			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-			headers.insert(req->pool, "Content-Type", "application/json");
-			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
 	void processShutdown(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (authorizeAdminOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "Content-Type", "application/json");
@@ -102,14 +88,14 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
 	void processConfig(Client *client, Request *req) {
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
-				respondWith401(client, req);
+				apiServerRespondWith401(this, client, req);
 			}
 
 			HeaderTable headers;
@@ -132,13 +118,13 @@ private:
 			}
 		} else if (req->method == HTTP_PUT) {
 			if (!authorizeAdminOperation(this, client, req)) {
-				respondWith401(client, req);
+				apiServerRespondWith401(this, client, req);
 			} else if (!req->hasBody()) {
 				endAsBadRequest(&client, &req, "Body required");
 			}
 			// Continue in processConfigBody()
 		} else {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		}
 	}
 
@@ -203,7 +189,7 @@ private:
 
 	void processConfigLogFileFd(Client *client, Request *req) {
 		if (req->method != HTTP_GET) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (authorizeFdPassingOperation(client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
@@ -225,13 +211,13 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
 	void processReopenLogs(Client *client, Request *req) {
 		if (req->method != HTTP_POST) {
-			respondWith405(client, req);
+			apiServerRespondWith405(this, client, req);
 		} else if (authorizeAdminOperation(this, client, req)) {
 			int e;
 			HeaderTable headers;
@@ -286,45 +272,7 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			respondWith401(client, req);
-		}
-	}
-
-	void respondWith401(Client *client, Request *req) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
-		writeSimpleResponse(client, 401, &headers, "Unauthorized");
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith404(Client *client, Request *req) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		writeSimpleResponse(client, 404, &headers, "Not found");
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith405(Client *client, Request *req) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		writeSimpleResponse(client, 405, &headers, "Method not allowed");
-		if (!req->ended()) {
-			endRequest(&client, &req);
-		}
-	}
-
-	void respondWith422(Client *client, Request *req, const StaticString &body) {
-		HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-		headers.insert(req->pool, "Content-Type", "text/plain; charset=utf-8");
-		writeSimpleResponse(client, 422, &headers, body);
-		if (!req->ended()) {
-			endRequest(&client, &req);
+			apiServerRespondWith401(this, client, req);
 		}
 	}
 
@@ -339,7 +287,7 @@ protected:
 			if (path == P_STATIC_STRING("/status.txt")) {
 				processStatusTxt(client, req);
 			} else if (path == P_STATIC_STRING("/ping.json")) {
-				processPing(client, req);
+				apiServerProcessPing(this, client, req);
 			} else if (path == P_STATIC_STRING("/shutdown.json")) {
 				processShutdown(client, req);
 			} else if (path == P_STATIC_STRING("/config.json")) {
@@ -349,7 +297,7 @@ protected:
 			} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
 				processReopenLogs(client, req);
 			} else {
-				respondWith404(client, req);
+				apiServerRespondWith404(this, client, req);
 			}
 		} catch (const oxt::tracable_exception &e) {
 			SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
@@ -372,7 +320,7 @@ protected:
 			if (reader.parse(req->body, req->jsonBody)) {
 				processConfigBody(client, req);
 			} else {
-				respondWith422(client, req, reader.getFormattedErrorMessages());
+				apiServerRespondWith422(this, client, req, reader.getFormattedErrorMessages());
 			}
 		} else {
 			// Error

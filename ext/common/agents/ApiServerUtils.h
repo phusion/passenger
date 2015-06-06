@@ -29,6 +29,29 @@
  * Utility code shared by HelperAgent/ApiServer.h, LoggingAgent/ApiServer.h
  * and Watchdog/ApiServer.h. This code handles authentication and authorization
  * of connected ApiServer clients.
+ *
+ * This file consists of the following items.
+ *
+ * ## API accounts
+ *
+ * API servers can be password protected. They support multiple accounts,
+ * each with its own privilege level. These accounts are represented by
+ * ApiAccount, stored in ApiAccountDatabase objects.
+ *
+ * ## Authorization
+ *
+ * The authorize*() family of functions implement authorization checking on a
+ * connected client. Given a client and a request, they perform various
+ * checks and return information on what the client is authorized to do.
+ *
+ * ## Utility
+ *
+ * Various utility functions
+ *
+ * ## Common endpoints
+ *
+ * The apiServerProcess*() family of functions implement common endpoints
+ * in the various API servers.
  */
 
 #include <oxt/macros.hpp>
@@ -44,7 +67,9 @@
 #include <Exceptions.h>
 #include <DataStructures/LString.h>
 #include <ServerKit/Server.h>
+#include <ServerKit/HeaderTable.h>
 #include <Utils/IOUtils.h>
+#include <Utils/BufferedIO.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/modp_b64.h>
 #include <Utils/VariantMap.h>
@@ -53,6 +78,16 @@ namespace Passenger {
 
 using namespace std;
 
+
+// Forward declarations
+inline string truncateApiKey(const StaticString &apiKey);
+
+
+/*******************************
+ *
+ * API accounts
+ *
+ *******************************/
 
 struct ApiAccount {
 	string username;
@@ -143,6 +178,14 @@ public:
 	}
 };
 
+
+/*******************************
+ *
+ * Authorization functions
+ *
+ *******************************/
+
+
 struct Authorization {
 	uid_t  uid;
 	ApplicationPool2::ApiKey apiKey;
@@ -182,14 +225,6 @@ parseBasicAuthHeader(Request *req, string &username, string &password) {
 	username = authData.substr(0, pos);
 	password = authData.substr(pos + 1);
 	return true;
-}
-
-inline string
-truncateApiKey(const StaticString &apiKey) {
-	assert(apiKey.size() == ApplicationPool2::ApiKey::SIZE);
-	char prefix[3];
-	memcpy(prefix, apiKey.data(), 3);
-	return string(prefix, 3) + "*****";
 }
 
 /*
@@ -271,6 +306,13 @@ authorizeAdminOperation(ApiServer *server, Client *client, Request *req) {
 	return authorize(server, client, req).canAdminister;
 }
 
+
+/*******************************
+ *
+ * Utility functions
+ *
+ *******************************/
+
 inline VariantMap
 parseQueryString(const StaticString &query) {
 	VariantMap params;
@@ -299,6 +341,205 @@ parseQueryString(const StaticString &query) {
 	}
 
 	return params;
+}
+
+inline string
+truncateApiKey(const StaticString &apiKey) {
+	assert(apiKey.size() == ApplicationPool2::ApiKey::SIZE);
+	char prefix[3];
+	memcpy(prefix, apiKey.data(), 3);
+	return string(prefix, 3) + "*****";
+}
+
+
+/*******************************
+ *
+ * Common endpoints
+ *
+ *******************************/
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerRespondWith401(Server *server, Client *client, Request *req) {
+	ServerKit::HeaderTable headers;
+	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+	headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
+	server->writeSimpleResponse(client, 401, &headers, "Unauthorized");
+	if (!req->ended()) {
+		server->endRequest(&client, &req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerRespondWith404(Server *server, Client *client, Request *req) {
+	ServerKit::HeaderTable headers;
+	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+	server->writeSimpleResponse(client, 404, &headers, "Not found");
+	if (!req->ended()) {
+		server->endRequest(&client, &req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerRespondWith405(Server *server, Client *client, Request *req) {
+	ServerKit::HeaderTable headers;
+	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+	server->writeSimpleResponse(client, 405, &headers, "Method not allowed");
+	if (!req->ended()) {
+		server->endRequest(&client, &req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerRespondWith413(Server *server, Client *client, Request *req) {
+	ServerKit::HeaderTable headers;
+	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+	server->writeSimpleResponse(client, 413, &headers, "Request body too large");
+	if (!req->ended()) {
+		server->endRequest(&client, &req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerRespondWith422(Server *server, Client *client, Request *req, const StaticString &body) {
+	ServerKit::HeaderTable headers;
+	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+	headers.insert(req->pool, "Content-Type", "text/plain; charset=utf-8");
+	server->writeSimpleResponse(client, 422, &headers, body);
+	if (!req->ended()) {
+		server->endRequest(&client, &req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerRespondWith500(Server *server, Client *client, Request *req, const StaticString &body) {
+	ServerKit::HeaderTable headers;
+	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+	headers.insert(req->pool, "Content-Type", "text/plain; charset=utf-8");
+	server->writeSimpleResponse(client, 500, &headers, body);
+	if (!req->ended()) {
+		server->endRequest(&client, &req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerProcessPing(Server *server, Client *client, Request *req) {
+	Authorization auth(authorize(server, client, req));
+	if (auth.canReadPool || auth.canInspectState) {
+		ServerKit::HeaderTable headers;
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "Content-Type", "application/json");
+		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+		if (!req->ended()) {
+			server->endRequest(&client, &req);
+		}
+	} else {
+		apiServerRespondWith401(server, client, req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerProcessReinheritLogs(Server *server, Client *client, Request *req,
+	const StaticString &instanceDir, const StaticString &fdPassingPassword)
+{
+	if (req->method != HTTP_POST) {
+		apiServerRespondWith405(server, client, req);
+	} else if (authorizeAdminOperation(server, client, req)) {
+		ServerKit::HeaderTable headers;
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+		headers.insert(req->pool, "Content-Type", "application/json");
+
+		if (instanceDir.empty() || fdPassingPassword.empty()) {
+			server->writeSimpleResponse(client, 501, &headers,
+				"{ \"status\": \"error\", "
+				"\"code\": \"NO_WATCHDOG\", "
+				"\"message\": \"No Watchdog process\" }\n");
+			if (!req->ended()) {
+				server->endRequest(&client, &req);
+			}
+			return;
+		}
+
+		FileDescriptor watchdog(connectToUnixServer(instanceDir + "/agents.s/watchdog_api",
+			NULL, 0), __FILE__, __LINE__);
+		writeExact(watchdog,
+			"GET /config/log_file.fd HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Fd-Passing-Password: " + fdPassingPassword + "\r\n"
+			"\r\n");
+		BufferedIO io(watchdog);
+		string response = io.readLine();
+		SKC_DEBUG_FROM_STATIC(server, client,
+			"Watchdog response: \"" << cEscapeString(response) << "\"");
+		if (response != "HTTP/1.1 200 OK\r\n") {
+			watchdog.close();
+			server->writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: non-200 response\" }\n");
+			if (!req->ended()) {
+				server->endRequest(&client, &req);
+			}
+			return;
+		}
+
+		string logFilePath;
+		while (true) {
+			response = io.readLine();
+			SKC_DEBUG_FROM_STATIC(server,
+				client, "Watchdog response: \"" << cEscapeString(response) << "\"");
+			if (response.empty()) {
+				watchdog.close();
+				server->writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+					"\"code\": \"INHERIT_ERROR\", "
+					"\"message\": \"Error communicating with Watchdog process: "
+						"premature EOF encountered in response\" }\n");
+				if (!req->ended()) {
+					server->endRequest(&client, &req);
+				}
+				return;
+			} else if (response == "\r\n") {
+				break;
+			} else if (startsWith(response, "filename: ")
+				|| startsWith(response, "Filename: "))
+			{
+				response.erase(0, strlen("filename: "));
+				logFilePath = response;
+			}
+		}
+
+		if (logFilePath.empty()) {
+			watchdog.close();
+			server->writeSimpleResponse(client, 500, &headers,
+				"{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: "
+					"no log filename received in response\" }\n");
+			if (!req->ended()) {
+				server->endRequest(&client, &req);
+			}
+			return;
+		}
+
+		unsigned long long timeout = 1000000;
+		int fd = readFileDescriptorWithNegotiation(watchdog, &timeout);
+		setLogFileWithFd(logFilePath, fd);
+		safelyClose(fd);
+		watchdog.close();
+
+		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
+		if (!req->ended()) {
+			server->endRequest(&client, &req);
+		}
+	} else {
+		apiServerRespondWith401(server, client, req);
+	}
 }
 
 
