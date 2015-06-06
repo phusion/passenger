@@ -69,13 +69,13 @@ private:
 		} else if (path == P_STATIC_STRING("/version.json")) {
 			apiServerProcessVersion(this, client, req);
 		} else if (path == P_STATIC_STRING("/shutdown.json")) {
-			processShutdown(client, req);
+			apiServerProcessShutdown(this, client, req);
 		} else if (path == P_STATIC_STRING("/config.json")) {
 			processConfig(client, req);
 		} else if (path == P_STATIC_STRING("/config/log_file.fd")) {
 			processConfigLogFileFd(client, req);
 		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
-			processReopenLogs(client, req);
+			apiServerProcessReopenLogs(this, client, req);
 		} else {
 			apiServerRespondWith404(this, client, req);
 		}
@@ -88,22 +88,6 @@ private:
 			headers.insert(req->pool, "Content-Type", "text/plain");
 			//loggingServer->dump(stream);
 			//writeSimpleResponse(client, 200, &headers, stream.str());
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-		} else {
-			apiServerRespondWith401(this, client, req);
-		}
-	}
-
-	void processShutdown(Client *client, Request *req) {
-		if (req->method != HTTP_POST) {
-			apiServerRespondWith405(this, client, req);
-		} else if (authorizeAdminOperation(this, client, req)) {
-			HeaderTable headers;
-			headers.insert(req->pool, "Content-Type", "application/json");
-			exitEvent->notify();
-			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
@@ -226,67 +210,6 @@ private:
 			writeFileDescriptorWithNegotiation(client->getFd(), STDERR_FILENO,
 				&timeout);
 			setNonBlocking(client->getFd());
-
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-		} else {
-			apiServerRespondWith401(this, client, req);
-		}
-	}
-
-	void processReopenLogs(Client *client, Request *req) {
-		if (req->method != HTTP_POST) {
-			apiServerRespondWith405(this, client, req);
-		} else if (authorizeAdminOperation(this, client, req)) {
-			int e;
-			HeaderTable headers;
-			headers.insert(req->pool, "Content-Type", "application/json");
-
-			string logFile = getLogFile();
-			if (logFile.empty()) {
-				writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
-					"\"code\": \"NO_LOG_FILE\", "
-					"\"message\": \"" PROGRAM_NAME " was not configured with a log file.\" }\n");
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
-			}
-
-			if (!setLogFile(logFile, &e)) {
-				unsigned int bufsize = 1024;
-				char *message = (char *) psg_pnalloc(req->pool, bufsize);
-				snprintf(message, bufsize, "{ \"status\": \"error\", "
-					"\"code\": \"LOG_FILE_OPEN_ERROR\", "
-					"\"message\": \"Cannot reopen log file %s: %s (errno=%d)\" }",
-					logFile.c_str(), strerror(e), e);
-				writeSimpleResponse(client, 500, &headers, message);
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
-			}
-			P_NOTICE("Log file reopened.");
-
-			if (hasFileDescriptorLogFile()) {
-				if (!setFileDescriptorLogFile(getFileDescriptorLogFile(), &e)) {
-					unsigned int bufsize = 1024;
-					char *message = (char *) psg_pnalloc(req->pool, bufsize);
-					snprintf(message, bufsize, "{ \"status\": \"error\", "
-						"\"code\": \"FD_LOG_FILE_OPEN_ERROR\", "
-						"\"message\": \"Cannot reopen file descriptor log file %s: %s (errno=%d)\" }",
-						getFileDescriptorLogFile().c_str(), strerror(e), e);
-					writeSimpleResponse(client, 500, &headers, message);
-					if (!req->ended()) {
-						endRequest(&client, &req);
-					}
-					return;
-				}
-				P_NOTICE("File descriptor log file reopened.");
-			}
-
-			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
 
 			if (!req->ended()) {
 				endRequest(&client, &req);

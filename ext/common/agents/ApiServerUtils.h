@@ -40,7 +40,7 @@
  *
  * ## Authorization
  *
- * The authorize*() family of functions implement authorization checking on a
+ * The authorizeXXX() family of functions implement authorization checking on a
  * connected client. Given a client and a request, they perform various
  * checks and return information on what the client is authorized to do.
  *
@@ -50,7 +50,7 @@
  *
  * ## Common endpoints
  *
- * The apiServerProcess*() family of functions implement common endpoints
+ * The apiServerProcessXXX() family of functions implement common endpoints
  * in the various API servers.
  */
 
@@ -470,6 +470,87 @@ apiServerProcessVersion(Server *server, Client *client, Request *req) {
 
 		server->writeSimpleResponse(client, 200, &headers,
 			response.toStyledString());
+		if (!req->ended()) {
+			server->endRequest(&client, &req);
+		}
+	} else {
+		apiServerRespondWith401(server, client, req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerProcessShutdown(Server *server, Client *client, Request *req) {
+	if (req->method != HTTP_POST) {
+		apiServerRespondWith405(server, client, req);
+	} else if (authorizeAdminOperation(server, client, req)) {
+		ServerKit::HeaderTable headers;
+		headers.insert(req->pool, "Content-Type", "application/json");
+		server->exitEvent->notify();
+		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+		if (!req->ended()) {
+			server->endRequest(&client, &req);
+		}
+	} else {
+		apiServerRespondWith401(server, client, req);
+	}
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerProcessReopenLogs(Server *server, Client *client, Request *req) {
+	if (req->method != HTTP_POST) {
+		apiServerRespondWith405(server, client, req);
+	} else if (authorizeAdminOperation(server, client, req)) {
+		int e;
+		ServerKit::HeaderTable headers;
+		headers.insert(req->pool, "Content-Type", "application/json");
+
+		string logFile = getLogFile();
+		if (logFile.empty()) {
+			server->writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
+				"\"code\": \"NO_LOG_FILE\", "
+				"\"message\": \"" PROGRAM_NAME " was not configured with a log file.\" }\n");
+			if (!req->ended()) {
+				server->endRequest(&client, &req);
+			}
+			return;
+		}
+
+		if (!setLogFile(logFile, &e)) {
+			unsigned int bufsize = 1024;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"code\": \"LOG_FILE_OPEN_ERROR\", "
+				"\"message\": \"Cannot reopen log file %s: %s (errno=%d)\" }",
+				logFile.c_str(), strerror(e), e);
+			server->writeSimpleResponse(client, 500, &headers, message);
+			if (!req->ended()) {
+				server->endRequest(&client, &req);
+			}
+			return;
+		}
+		P_NOTICE("Log file reopened.");
+
+		if (hasFileDescriptorLogFile()) {
+			if (!setFileDescriptorLogFile(getFileDescriptorLogFile(), &e)) {
+				unsigned int bufsize = 1024;
+				char *message = (char *) psg_pnalloc(req->pool, bufsize);
+				snprintf(message, bufsize, "{ \"status\": \"error\", "
+					"\"code\": \"FD_LOG_FILE_OPEN_ERROR\", "
+					"\"message\": \"Cannot reopen file descriptor log file %s: %s (errno=%d)\" }",
+					getFileDescriptorLogFile().c_str(), strerror(e), e);
+				server->writeSimpleResponse(client, 500, &headers, message);
+				if (!req->ended()) {
+					server->endRequest(&client, &req);
+				}
+				return;
+			}
+			P_NOTICE("File descriptor log file reopened.");
+		}
+
+		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
+
 		if (!req->ended()) {
 			server->endRequest(&client, &req);
 		}
