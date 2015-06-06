@@ -56,6 +56,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
+#include <boost/regex.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/thread.hpp>
@@ -69,6 +70,7 @@
 #include <StaticString.h>
 #include <Exceptions.h>
 #include <DataStructures/LString.h>
+#include <DataStructures/StringKeyTable.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/HeaderTable.h>
 #include <Utils.h>
@@ -356,6 +358,242 @@ truncateApiKey(const StaticString &apiKey) {
 	return string(prefix, 3) + "*****";
 }
 
+template<typename Server, typename Client, typename Request>
+struct ApiServerInternalHttpResponse {
+	static const int ERROR_INVALID_HEADER = -1;
+	static const int ERROR_INVALID_BODY = -2;
+	static const int ERROR_INTERNAL = -3;
+
+	Server *server;
+	Client *client;
+	Request *req;
+	int status;
+	StringKeyTable<string> headers;
+	string body;
+
+	vector<string> debugLogs;
+	string errorLogs;
+	BufferedIO io;
+};
+
+template<typename Server, typename Client, typename Request>
+struct ApiServerInternalHttpRequest {
+	Server *server;
+	Client *client;
+	Request *req;
+
+	string address;
+	http_method method;
+	string uri;
+	StringKeyTable<string> headers;
+	boost::function<void (ApiServerInternalHttpResponse<Server, Client, Request>)> callback;
+
+	unsigned long long timeout;
+	boost::function<
+		void (ApiServerInternalHttpRequest<Server, Client, Request> &req,
+			ApiServerInternalHttpResponse<Server, Client, Request> &resp,
+			BufferedIO &io
+		)> bodyProcessor;
+
+	ApiServerInternalHttpRequest()
+		: server(NULL),
+		  client(NULL),
+		  req(NULL),
+		  method(HTTP_GET),
+		  timeout(60 * 1000000)
+		{ }
+};
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerMakeInternalHttpRequestCallbackWrapper(
+	boost::function<void (ApiServerInternalHttpResponse<Server, Client, Request>)> callback,
+	ApiServerInternalHttpResponse<Server, Client, Request> resp)
+{
+	if (!resp.debugLogs.empty()) {
+		foreach (string log, resp.debugLogs) {
+			SKC_DEBUG_FROM_STATIC(resp.server, resp.client, log);
+		}
+	}
+	if (!resp.errorLogs.empty()) {
+		SKC_ERROR_FROM_STATIC(resp.server, resp.client, resp.errorLogs);
+	}
+	callback(resp);
+	resp.server->unrefRequest(resp.req, __FILE__, __LINE__);
+}
+
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerMakeInternalHttpRequestThreadMain(ApiServerInternalHttpRequest<Server, Client, Request> req) {
+	typedef ApiServerInternalHttpRequest<Server, Client, Request> InternalRequest;
+	typedef ApiServerInternalHttpResponse<Server, Client, Request> InternalResponse;
+
+	struct Guard {
+		InternalRequest &req;
+		InternalResponse &resp;
+		SafeLibevPtr libev;
+		bool cleared;
+
+		Guard(InternalRequest &_req, InternalResponse &_resp, const SafeLibevPtr &_libev)
+			: req(_req),
+			  resp(_resp),
+			  libev(_libev),
+			  cleared(false)
+			{ }
+
+		~Guard() {
+			if (!cleared) {
+				resp.status = InternalResponse::ERROR_INTERNAL;
+				resp.headers.clear();
+				resp.body.clear();
+				libev->runLater(boost::bind(
+					apiServerMakeInternalHttpRequestCallbackWrapper<Server, Client, Request>,
+					req.callback, resp));
+			}
+		}
+
+		void clear() {
+			cleared = true;
+		}
+	};
+
+	InternalResponse resp;
+	SafeLibevPtr libev = req.server->getContext()->libev;
+
+	resp.server = req.server;
+	resp.client = req.client;
+	resp.req    = req.req;
+	resp.status = InternalResponse::ERROR_INTERNAL;
+
+	Guard guard(req, resp, libev);
+
+
+	try {
+		FileDescriptor conn(connectToServer(req.address, NULL, 0), __FILE__, __LINE__);
+		BufferedIO io(conn);
+
+		string header;
+		header.append(http_method_str(req.method));
+		header.append(" ", 1);
+		header.append(req.uri);
+		header.append(" HTTP/1.1\r\n");
+
+		StringKeyTable<string>::ConstIterator it(req.headers);
+		while (*it != NULL) {
+			header.append(it.getKey());
+			header.append(": ", 2);
+			header.append(it.getValue());
+			header.append("\r\n", 2);
+			it.next();
+		}
+		header.append("Connection: close\r\n\r\n");
+
+		writeExact(conn, header, &req.timeout);
+
+
+		string statusLine = io.readLine();
+		resp.debugLogs.push_back("Internal request response data: \"" + cEscapeString(statusLine) + "\"");
+		boost::regex statusLineRegex("^HTTP/.*? ([0-9]+) (.*)$");
+		boost::smatch results;
+		if (!boost::regex_match(statusLine, results, statusLineRegex)) {
+			guard.clear();
+			resp.status = InternalResponse::ERROR_INVALID_HEADER;
+			libev->runLater(boost::bind(
+				apiServerMakeInternalHttpRequestCallbackWrapper<Server, Client, Request>,
+				req.callback, resp));
+			return;
+		}
+		resp.status = (int) stringToUint(results.str(1));
+		if (resp.status <= 0 || resp.status >= 1000) {
+			guard.clear();
+			resp.status = InternalResponse::ERROR_INVALID_HEADER;
+			libev->runLater(boost::bind(
+				apiServerMakeInternalHttpRequestCallbackWrapper<Server, Client, Request>,
+				req.callback, resp));
+			return;
+		}
+
+		string response;
+		while (true) {
+			response = io.readLine();
+			resp.debugLogs.push_back("Internal request response data: \"" + cEscapeString(response) + "\"");
+			if (response.empty()) {
+				guard.clear();
+				resp.status = InternalResponse::ERROR_INVALID_HEADER;
+				libev->runLater(boost::bind(
+					apiServerMakeInternalHttpRequestCallbackWrapper<Server, Client, Request>,
+					req.callback, resp));
+				return;
+			} else if (response == "\r\n") {
+				break;
+			} else {
+				const char *pos = (const char *) memchr(response.data(), ':', response.size());
+				if (pos == NULL) {
+					guard.clear();
+					resp.status = InternalResponse::ERROR_INVALID_HEADER;
+					libev->runLater(boost::bind(
+						apiServerMakeInternalHttpRequestCallbackWrapper<Server, Client, Request>,
+						req.callback, resp));
+					return;
+				}
+
+				string key(strip(response.substr(0, pos - response.data())));
+				string value(response.substr(pos - response.data()));
+				value.erase(0, 1);
+				value = strip(value);
+				if (!value.empty() && value[value.size() - 1] == '\r') {
+					value.erase(value.size() - 1, 1);
+				}
+
+				if (key.empty() || value.empty()) {
+					guard.clear();
+					resp.status = InternalResponse::ERROR_INVALID_HEADER;
+					libev->runLater(boost::bind(
+						apiServerMakeInternalHttpRequestCallbackWrapper<Server, Client, Request>,
+						req.callback, resp));
+					return;
+				}
+
+				resp.headers.insert(key, value);
+			}
+		}
+
+		if (req.bodyProcessor != NULL) {
+			req.bodyProcessor(req, resp, io);
+		} else {
+			resp.body = io.readAll(&req.timeout);
+		}
+		guard.clear();
+		libev->runLater(boost::bind(
+			apiServerMakeInternalHttpRequestCallbackWrapper<Server, Client, Request>,
+			req.callback, resp));
+	} catch (const oxt::tracable_exception &e) {
+		resp.errorLogs.append("Exception: ");
+		resp.errorLogs.append(e.what());
+		resp.errorLogs.append("\n");
+		resp.errorLogs.append(e.backtrace());
+	}
+}
+
+/**
+ * Utility function for API servers for making an internal HTTP request,
+ * usually to another agent. The request is made in a background thread.
+ * When done, the callback is called on the event loop. While the request
+ * is being made, a reference to the ServerKit request object is held.
+ *
+ * This is not a fully featured HTTP client and doesn't fully correctly
+ * parse HTTP, so it can't be used with arbitrary servers. It doesn't
+ * support keep-alive and chunked transfer-encodings.
+ */
+template<typename Server, typename Client, typename Request>
+inline void
+apiServerMakeInternalHttpRequest(const ApiServerInternalHttpRequest<Server, Client, Request> &params) {
+	params.server->refRequest(params.req, __FILE__, __LINE__);
+	oxt::thread(boost::bind(
+		apiServerMakeInternalHttpRequestThreadMain<Server, Client, Request>,
+		params), "Internal HTTP request", 1024 * 128);
+}
+
 
 /*******************************
  *
@@ -574,185 +812,88 @@ apiServerProcessReopenLogs(Server *server, Client *client, Request *req) {
 }
 
 template<typename Server, typename Client, typename Request>
-struct ApiServerProcessReinheritLogsParams {
-	struct Result {
-		Server *server;
-		Client *client;
-		Request *req;
-		vector<string> debugLogs;
-		string errorLogs;
-		int status;
-		string response;
-	};
-
-	typedef void (*Callback)(Result result);
-
-	Server *server;
-	Client *client;
-	Request *req;
-	string instanceDir;
-	string fdPassingPassword;
-	Callback callback;
-};
-
-template<typename Server, typename Client, typename Request>
 inline void
-apiServerProcessReinheritLogsThreadMain(ApiServerProcessReinheritLogsParams<Server, Client, Request> params) {
-	typedef ApiServerProcessReinheritLogsParams<Server, Client, Request> Params;
-	typedef typename Params::Result Result;
+_apiServerProcessReinheritLogsResponseBody(
+	ApiServerInternalHttpRequest<Server, Client, Request> &req,
+	ApiServerInternalHttpResponse<Server, Client, Request> &resp,
+	BufferedIO &io)
+{
+	typedef ApiServerInternalHttpResponse<Server, Client, Request> InternalResponse;
 
-	struct Guard {
-		Params &params;
-		Result &result;
-		SafeLibevPtr libev;
-		bool cleared;
-
-		Guard(Params &_params, Result &_result, const SafeLibevPtr &_libev)
-			: params(_params),
-			  result(_result),
-			  libev(_libev),
-			  cleared(false)
-			{ }
-
-		~Guard() {
-			if (!cleared) {
-				result.status = 500;
-				result.response = "{ \"status\": \"error\", "
-					"\"code\": \"INTERNAL_ERROR\", "
-					"\"message\": \"Internal error\" }\n";
-				libev->runLater(boost::bind(params.callback, result));
-			}
-		}
-
-		void clear() {
-			cleared = true;
-		}
-	};
-
-	Result result;
-	SafeLibevPtr libev = params.server->getContext()->libev;
-
-	result.server = params.server;
-	result.client = params.client;
-	result.req    = params.req;
-	result.status = 500;
-
-	Guard guard(params, result, libev);
-
-
-	try {
-		FileDescriptor watchdog(connectToUnixServer(
-			params.instanceDir + "/agents.s/watchdog_api",
-			NULL, 0), __FILE__, __LINE__);
-		writeExact(watchdog,
-			"GET /config/log_file.fd HTTP/1.1\r\n"
-			"Connection: close\r\n"
-			"Fd-Passing-Password: " + params.fdPassingPassword + "\r\n"
-			"\r\n");
-
-		BufferedIO io(watchdog);
-		string response = io.readLine();
-		result.debugLogs.push_back("Watchdog response: \"" + cEscapeString(response) + "\"");
-
-		if (response != "HTTP/1.1 200 OK\r\n") {
-			watchdog.close();
-			guard.clear();
-			result.status = 500;
-			result.response = "{ \"status\": \"error\", "
-				"\"code\": \"INHERIT_ERROR\", "
-				"\"message\": \"Error communicating with Watchdog process: non-200 response\" }\n";
-			libev->runLater(boost::bind(params.callback, result));
-			return;
-		}
-
-		string logFilePath;
-		while (true) {
-			response = io.readLine();
-			result.debugLogs.push_back("Watchdog response: \"" + cEscapeString(response) + "\"");
-			if (response.empty()) {
-				watchdog.close();
-				guard.clear();
-				result.status = 500;
-				result.response = "{ \"status\": \"error\", "
-					"\"code\": \"INHERIT_ERROR\", "
-					"\"message\": \"Error communicating with Watchdog process: "
-						"premature EOF encountered in response\" }\n";
-				libev->runLater(boost::bind(params.callback, result));
-				return;
-			} else if (response == "\r\n") {
-				break;
-			} else if (startsWith(response, "filename: ")
-				|| startsWith(response, "Filename: "))
-			{
-				response.erase(0, strlen("filename: "));
-				logFilePath = response;
-			}
-		}
-
-		if (logFilePath.empty()) {
-			watchdog.close();
-			guard.clear();
-			result.status = 500;
-			result.response = "{ \"status\": \"error\", "
-				"\"code\": \"INHERIT_ERROR\", "
-				"\"message\": \"Error communicating with Watchdog process: "
-					"no log filename received in response\" }\n";
-			libev->runLater(boost::bind(params.callback, result));
-			return;
-		}
-
-		unsigned long long timeout = 1000000;
-		int fd = readFileDescriptorWithNegotiation(watchdog, &timeout);
-		setLogFileWithFd(logFilePath, fd);
-		safelyClose(fd);
-		watchdog.close();
-
-		guard.clear();
-		result.status = 200;
-		result.response = "{ \"status\": \"ok\" }\n";
-		libev->runLater(boost::bind(params.callback, result));
-	} catch (const oxt::tracable_exception &e) {
-		result.errorLogs.append("Exception: ");
-		result.errorLogs.append(e.what());
-		result.errorLogs.append("\n");
-		result.errorLogs.append(e.backtrace());
+	string logFilePath = resp.headers.lookupCopy("Filename");
+	if (logFilePath.empty()) {
+		resp.status = InternalResponse::ERROR_INVALID_BODY;
+		resp.errorLogs.append("Error communicating with Watchdog process: "
+			"no log filename received in response");
+		return;
 	}
+
+	int fd = readFileDescriptorWithNegotiation(io.getFd(), &req.timeout);
+	setLogFileWithFd(logFilePath, fd);
+	safelyClose(fd);
 }
 
 template<typename Server, typename Client, typename Request>
 inline void
-apiServerProcessReinheritLogsDone(typename ApiServerProcessReinheritLogsParams<Server,
-	Client, Request>::Result result)
-{
-	Server *server = result.server;
-	Client *client = result.client;
-	Request *req   = result.req;
+_apiServerProcessReinheritLogsDone(ApiServerInternalHttpResponse<Server, Client, Request> resp) {
+	typedef ApiServerInternalHttpResponse<Server, Client, Request> InternalResponse;
 
-	if (!result.debugLogs.empty()) {
-		foreach (string log, result.debugLogs) {
-			SKC_DEBUG_FROM_STATIC(server, client, log);
-		}
-	}
-	if (!result.errorLogs.empty()) {
-		SKC_ERROR_FROM_STATIC(server, client, result.errorLogs);
-	}
+	Server *server = resp.server;
+	Client *client = resp.client;
+	Request *req   = resp.req;
+	int status;
+	StaticString body;
 
 	if (req->ended()) {
-		server->unrefRequest(req, __FILE__, __LINE__);
 		return;
+	}
+
+	if (resp.status < 0) {
+		status = 500;
+		switch (resp.status) {
+		case InternalResponse::ERROR_INVALID_HEADER:
+			body = "{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: "
+					"invalid response headers from Watchdog\" }\n";
+			break;
+		case InternalResponse::ERROR_INVALID_BODY:
+			body = "{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: "
+					"invalid response body from Watchdog\" }\n";
+			break;
+		case InternalResponse::ERROR_INTERNAL:
+			body = "{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: "
+					"an internal error occurred\" }\n";
+			break;
+		default:
+			body = "{ \"status\": \"error\", "
+				"\"code\": \"INHERIT_ERROR\", "
+				"\"message\": \"Error communicating with Watchdog process: "
+					"unknown error\" }\n";
+			break;
+		}
+	} else if (resp.status == 200) {
+		status = 200;
+		body = "{ \"status\": \"ok\" }\n";
+	} else {
+		status = 500;
+		body = "{ \"status\": \"error\", "
+			"\"code\": \"INHERIT_ERROR\", "
+			"\"message\": \"Error communicating with Watchdog process: non-200 response\" }\n";
 	}
 
 	ServerKit::HeaderTable headers;
 	headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 	headers.insert(req->pool, "Content-Type", "application/json");
-
 	req->wantKeepAlive = false;
-	server->writeSimpleResponse(client, result.status, &headers, result.response);
-	Request *req2 = req;
+	server->writeSimpleResponse(client, status, &headers, body);
 	if (!req->ended()) {
 		server->endRequest(&client, &req);
 	}
-	server->unrefRequest(req2, __FILE__, __LINE__);
 }
 
 template<typename Server, typename Client, typename Request>
@@ -778,18 +919,17 @@ apiServerProcessReinheritLogs(Server *server, Client *client, Request *req,
 			return;
 		}
 
-		ApiServerProcessReinheritLogsParams<Server, Client, Request> params;
+		ApiServerInternalHttpRequest<Server, Client, Request> params;
 		params.server = server;
 		params.client = client;
 		params.req    = req;
-		params.instanceDir = instanceDir;
-		params.fdPassingPassword = fdPassingPassword;
-		params.callback = apiServerProcessReinheritLogsDone<Server, Client, Request>;
-
-		server->refRequest(req, __FILE__, __LINE__);
-		oxt::thread(boost::bind(
-			apiServerProcessReinheritLogsThreadMain<Server, Client, Request>,
-			params), "API command: reinherit logs", 1024 * 128);
+		params.address = "unix:" + instanceDir + "/agents.s/watchdog_api";
+		params.method = HTTP_GET;
+		params.uri    = "/config/log_file.fd";
+		params.headers.insert("Fd-Passing-Password", fdPassingPassword);
+		params.callback = _apiServerProcessReinheritLogsDone<Server, Client, Request>;
+		params.bodyProcessor = _apiServerProcessReinheritLogsResponseBody<Server, Client, Request>;
+		apiServerMakeInternalHttpRequest(params);
 	} else {
 		apiServerRespondWith401(server, client, req);
 	}
