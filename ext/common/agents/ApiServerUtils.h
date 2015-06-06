@@ -438,7 +438,6 @@ apiServerProcessPing(Server *server, Client *client, Request *req) {
 	Authorization auth(authorize(server, client, req));
 	if (auth.canReadPool || auth.canInspectState) {
 		ServerKit::HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 		headers.insert(req->pool, "Content-Type", "application/json");
 		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 		if (!req->ended()) {
@@ -455,7 +454,6 @@ apiServerProcessVersion(Server *server, Client *client, Request *req) {
 	Authorization auth(authorize(server, client, req));
 	if (auth.canReadPool || auth.canInspectState) {
 		ServerKit::HeaderTable headers;
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 		headers.insert(req->pool, "Content-Type", "application/json");
 
 		Json::Value response;
