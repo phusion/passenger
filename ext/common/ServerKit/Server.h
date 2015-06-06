@@ -491,63 +491,6 @@ private:
 	}
 
 protected:
-	/***** Protected API *****/
-
-	/** Get a thread-safe reference to the client. As long as the client
-	 * has a reference, it will never be added to the freelist.
-	 */
-	ClientRefType getClientRef(Client *client, const char *file, unsigned int line) {
-		return ClientRefType(client, file, line);
-	}
-
-	/**
-	 * Returns a pointer to the BaseServer that created the given Client object.
-	 * Unlike the void pointer that Client::getServerBaseClassPointer() returns,
-	 * this method's typed return value allows safe recasting of the result pointer.
-	 */
-	static const BaseServer *getConstServerFromClient(const Client *client) {
-		return static_cast<BaseServer *>(client->getServerBaseClassPointer());
-	}
-
-	static BaseServer *getServerFromClient(Client *client) {
-		return static_cast<BaseServer *>(client->getServerBaseClassPointer());
-	}
-
-	/** Increase client reference count. */
-	void refClient(Client *client, const char *file, unsigned int line) {
-		int oldRefcount = client->refcount.fetch_add(1, boost::memory_order_relaxed);
-		SKC_TRACE_WITH_POS(client, 3, file, line,
-			"Refcount increased; it is now " << (oldRefcount + 1));
-	}
-
-	/** Decrease client reference count. Adds client to the
-	 * freelist if reference count drops to 0.
-	 */
-	void unrefClient(Client *client, const char *file, unsigned int line) {
-		int oldRefcount = client->refcount.fetch_sub(1, boost::memory_order_release);
-		assert(oldRefcount >= 1);
-
-		SKC_TRACE_WITH_POS(client, 3, file, line,
-			"Refcount decreased; it is now " << (oldRefcount - 1));
-		if (oldRefcount == 1) {
-			boost::atomic_thread_fence(boost::memory_order_acquire);
-
-			if (ctx->libev->onEventLoopThread()) {
-				assert(client->getConnState() != Client::IN_FREELIST);
-				/* As long as the client is still in the ACTIVE state, it has at least
-				 * one reference, namely from the Server itself. Therefore it's impossible
-				 * to get to a zero reference count without having disconnected a client. */
-				P_ASSERT_EQ(client->getConnState(), Client::DISCONNECTED);
-				clientReachedZeroRefcount(client);
-			} else {
-				// Let the event loop handle the client reaching the 0 refcount.
-				SKC_TRACE(client, 3, "Passing client object to event loop thread");
-				passClientToEventLoopThread(client);
-			}
-		}
-	}
-
-
 	/***** Hooks *****/
 
 	virtual void onClientObjectCreated(Client *client) {
@@ -864,6 +807,40 @@ public:
 		return NULL;
 	}
 
+	/** Increase client reference count. */
+	void refClient(Client *client, const char *file, unsigned int line) {
+		int oldRefcount = client->refcount.fetch_add(1, boost::memory_order_relaxed);
+		SKC_TRACE_WITH_POS(client, 3, file, line,
+			"Refcount increased; it is now " << (oldRefcount + 1));
+	}
+
+	/** Decrease client reference count. Adds client to the
+	 * freelist if reference count drops to 0.
+	 */
+	void unrefClient(Client *client, const char *file, unsigned int line) {
+		int oldRefcount = client->refcount.fetch_sub(1, boost::memory_order_release);
+		assert(oldRefcount >= 1);
+
+		SKC_TRACE_WITH_POS(client, 3, file, line,
+			"Refcount decreased; it is now " << (oldRefcount - 1));
+		if (oldRefcount == 1) {
+			boost::atomic_thread_fence(boost::memory_order_acquire);
+
+			if (ctx->libev->onEventLoopThread()) {
+				assert(client->getConnState() != Client::IN_FREELIST);
+				/* As long as the client is still in the ACTIVE state, it has at least
+				 * one reference, namely from the Server itself. Therefore it's impossible
+				 * to get to a zero reference count without having disconnected a client. */
+				P_ASSERT_EQ(client->getConnState(), Client::DISCONNECTED);
+				clientReachedZeroRefcount(client);
+			} else {
+				// Let the event loop handle the client reaching the 0 refcount.
+				SKC_TRACE(client, 3, "Passing client object to event loop thread");
+				passClientToEventLoopThread(client);
+			}
+		}
+	}
+
 	bool disconnect(int fd) {
 		assert(serverState != FINISHED_SHUTDOWN);
 		Client *client = lookupClient(fd);
@@ -1021,6 +998,29 @@ public:
 		doc["output_channel_state"] = client->output.inspectAsJson();
 
 		return doc;
+	}
+
+
+	/***** Miscellaneous *****/
+
+	/** Get a thread-safe reference to the client. As long as the client
+	 * has a reference, it will never be added to the freelist.
+	 */
+	ClientRefType getClientRef(Client *client, const char *file, unsigned int line) {
+		return ClientRefType(client, file, line);
+	}
+
+	/**
+	 * Returns a pointer to the BaseServer that created the given Client object.
+	 * Unlike the void pointer that Client::getServerBaseClassPointer() returns,
+	 * this method's typed return value allows safe recasting of the result pointer.
+	 */
+	static const BaseServer *getConstServerFromClient(const Client *client) {
+		return static_cast<BaseServer *>(client->getServerBaseClassPointer());
+	}
+
+	static BaseServer *getServerFromClient(Client *client) {
+		return static_cast<BaseServer *>(client->getServerBaseClassPointer());
 	}
 
 

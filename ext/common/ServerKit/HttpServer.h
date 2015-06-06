@@ -657,221 +657,6 @@ private:
 	}
 
 protected:
-	/***** Protected API *****/
-
-	/** Increase request reference count. */
-	void refRequest(Request *req, const char *file, unsigned int line) {
-		int oldRefcount = req->refcount.fetch_add(1, boost::memory_order_relaxed);
-		SKC_TRACE_WITH_POS(static_cast<Client *>(req->client), 3, file, line,
-			"Request refcount increased; it is now " << (oldRefcount + 1));
-	}
-
-	/** Decrease request reference count. Adds request to the
-	 * freelist if reference count drops to 0.
-	 */
-	void unrefRequest(Request *req, const char *file, unsigned int line) {
-		int oldRefcount = req->refcount.fetch_sub(1, boost::memory_order_release);
-		assert(oldRefcount >= 1);
-
-		SKC_TRACE_WITH_POS(static_cast<Client *>(req->client), 3, file, line,
-			"Request refcount decreased; it is now " << (oldRefcount - 1));
-		if (oldRefcount == 1) {
-			boost::atomic_thread_fence(boost::memory_order_acquire);
-
-			if (this->getContext()->libev->onEventLoopThread()) {
-				requestReachedZeroRefcount(req);
-			} else {
-				// Let the event loop handle the request reaching the 0 refcount.
-				passRequestToEventLoopThread(req);
-			}
-		}
-	}
-
-	object_pool<HttpHeaderParserState> &getHeaderParserStatePool() {
-		return headerParserStatePool;
-	}
-
-	bool canKeepAlive(Request *req) const {
-		return req->wantKeepAlive
-			&& req->bodyFullyRead()
-			&& HttpServer::serverState < HttpServer::SHUTTING_DOWN;
-	}
-
-	void writeResponse(Client *client, const MemoryKit::mbuf &buffer) {
-		client->currentRequest->responseBegun = true;
-		client->output.feedWithoutRefGuard(buffer);
-	}
-
-	void writeResponse(Client *client, const char *data, unsigned int size) {
-		writeResponse(client, MemoryKit::mbuf(data, size));
-	}
-
-	void writeResponse(Client *client, const StaticString &data) {
-		writeResponse(client, data.data(), data.size());
-	}
-
-	void
-	writeSimpleResponse(Client *client, int code, const HeaderTable *headers,
-		const StaticString &body)
-	{
-		unsigned int headerBufSize = 300;
-
-		if (headers != NULL) {
-			HeaderTable::ConstIterator it(*headers);
-			while (*it != NULL) {
-				headerBufSize += it->header->key.size + sizeof(": ") - 1;
-				headerBufSize += it->header->val.size + sizeof("\r\n") - 1;
-				it.next();
-			}
-		}
-
-		Request *req = client->currentRequest;
-		char *header = (char *) psg_pnalloc(req->pool, headerBufSize);
-		char statusBuffer[50];
-		char *pos = header;
-		const char *end = header + headerBufSize;
-		const char *status;
-		const LString *value;
-
-		status = getStatusCodeAndReasonPhrase(code);
-		if (status == NULL) {
-			snprintf(statusBuffer, sizeof(statusBuffer), "%d Unknown Reason-Phrase", code);
-			status = statusBuffer;
-		}
-
-		pos += snprintf(pos, end - pos,
-			"HTTP/%d.%d %s\r\n"
-			"Status: %s\r\n",
-			(int) req->httpMajor, (int) req->httpMinor, status, status);
-
-		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("content-type")) : NULL;
-		if (value == NULL) {
-			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: text/html; charset=UTF-8\r\n"));
-		} else {
-			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: "));
-			pos = appendLStringData(pos, end, value);
-			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
-		}
-
-		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("date")) : NULL;
-		pos = appendData(pos, end, P_STATIC_STRING("Date: "));
-		if (value == NULL) {
-			time_t the_time = time(NULL);
-			struct tm the_tm;
-			gmtime_r(&the_time, &the_tm);
-			pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %z", &the_tm);
-		} else {
-			pos = appendLStringData(pos, end, value);
-		}
-		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
-
-		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("connection")) : NULL;
-		if (value == NULL) {
-			if (canKeepAlive(req)) {
-				pos = appendData(pos, end, P_STATIC_STRING("Connection: keep-alive\r\n"));
-			} else {
-				pos = appendData(pos, end, P_STATIC_STRING("Connection: close\r\n"));
-			}
-		} else {
-			pos = appendData(pos, end, P_STATIC_STRING("Connection: "));
-			pos = appendLStringData(pos, end, value);
-			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
-			if (!psg_lstr_cmp(value, P_STATIC_STRING("Keep-Alive"))
-			 && !psg_lstr_cmp(value, P_STATIC_STRING("keep-alive")))
-			{
-				req->wantKeepAlive = false;
-			}
-		}
-
-		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("content-length")) : NULL;
-		pos = appendData(pos, end, P_STATIC_STRING("Content-Length: "));
-		if (value == NULL) {
-			pos += snprintf(pos, end - pos, "%u", (unsigned int) body.size());
-		} else {
-			pos = appendLStringData(pos, end, value);
-		}
-		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
-
-		if (headers != NULL) {
-			HeaderTable::ConstIterator it(*headers);
-			while (*it != NULL) {
-				if (!psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
-				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("date"))
-				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
-				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length")))
-				{
-					pos = appendLStringData(pos, end, &it->header->key);
-					pos = appendData(pos, end, P_STATIC_STRING(": "));
-					pos = appendLStringData(pos, end, &it->header->val);
-					pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
-				}
-				it.next();
-			}
-		}
-
-		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
-
-		writeResponse(client, header, pos - header);
-		if (!req->ended() && req->method != HTTP_HEAD) {
-			writeResponse(client, body.data(), body.size());
-		}
-	}
-
-	bool endRequest(Client **client, Request **request) {
-		Client *c = *client;
-		Request *req = *request;
-		psg_pool_t *pool;
-
-		*client = NULL;
-		*request = NULL;
-
-		if (req->ended()) {
-			return false;
-		}
-
-		SKC_TRACE(c, 2, "Ending request");
-		assert(c->currentRequest == req);
-
-		if (OXT_UNLIKELY(!req->responseBegun)) {
-			writeDefault500Response(c, req);
-			if (req->ended()) {
-				return false;
-			}
-		}
-
-		// The memory buffers that we're writing out during the
-		// FLUSHING_OUTPUT state might live in the palloc pool,
-		// so we want to deinitialize the request while preserving
-		// the pool. We'll destroy the pool when the output is
-		// flushed.
-		pool = req->pool;
-		req->pool = NULL;
-		deinitializeRequestAndAddToFreelist(c, req);
-		req->pool = pool;
-
-		if (!c->output.ended()) {
-			c->output.feedWithoutRefGuard(MemoryKit::mbuf());
-		}
-		if (c->output.endAcked()) {
-			doneWithCurrentRequest(&c);
-		} else {
-			// Call doneWithCurrentRequest() when data flushed
-			SKC_TRACE(c, 2, "Waiting until output is flushed");
-			req->httpState = Request::FLUSHING_OUTPUT;
-			// If the request body is not fully read at this time,
-			// then ensure that onClientDataReceived() discards any
-			// request body data that we receive from now on.
-			req->wantKeepAlive = canKeepAlive(req);
-		}
-
-		return true;
-	}
-
-	void endAsBadRequest(Client **client, Request **req, const StaticString &body) {
-		endWithErrorResponse(client, req, 400, body);
-	}
-
-
 	/***** Hook overrides *****/
 
 	virtual void onClientObjectCreated(Client *client) {
@@ -1079,6 +864,9 @@ public:
 		STAILQ_INIT(&freeRequests);
 	}
 
+
+	/***** Server management *****/
+
 	virtual void compact(int logLevel = LVL_NOTICE) {
 		ParentClass::compact();
 		unsigned int count = freeRequestCount;
@@ -1099,6 +887,220 @@ public:
 		SKS_LOG(logLevel, __FILE__, __LINE__,
 			"Freed " << count << " spare request objects");
 	}
+
+
+	/***** Request manipulation *****/
+
+		/** Increase request reference count. */
+	void refRequest(Request *req, const char *file, unsigned int line) {
+		int oldRefcount = req->refcount.fetch_add(1, boost::memory_order_relaxed);
+		SKC_TRACE_WITH_POS(static_cast<Client *>(req->client), 3, file, line,
+			"Request refcount increased; it is now " << (oldRefcount + 1));
+	}
+
+	/** Decrease request reference count. Adds request to the
+	 * freelist if reference count drops to 0.
+	 */
+	void unrefRequest(Request *req, const char *file, unsigned int line) {
+		int oldRefcount = req->refcount.fetch_sub(1, boost::memory_order_release);
+		assert(oldRefcount >= 1);
+
+		SKC_TRACE_WITH_POS(static_cast<Client *>(req->client), 3, file, line,
+			"Request refcount decreased; it is now " << (oldRefcount - 1));
+		if (oldRefcount == 1) {
+			boost::atomic_thread_fence(boost::memory_order_acquire);
+
+			if (this->getContext()->libev->onEventLoopThread()) {
+				requestReachedZeroRefcount(req);
+			} else {
+				// Let the event loop handle the request reaching the 0 refcount.
+				passRequestToEventLoopThread(req);
+			}
+		}
+	}
+
+	bool canKeepAlive(Request *req) const {
+		return req->wantKeepAlive
+			&& req->bodyFullyRead()
+			&& HttpServer::serverState < HttpServer::SHUTTING_DOWN;
+	}
+
+	void writeResponse(Client *client, const MemoryKit::mbuf &buffer) {
+		client->currentRequest->responseBegun = true;
+		client->output.feedWithoutRefGuard(buffer);
+	}
+
+	void writeResponse(Client *client, const char *data, unsigned int size) {
+		writeResponse(client, MemoryKit::mbuf(data, size));
+	}
+
+	void writeResponse(Client *client, const StaticString &data) {
+		writeResponse(client, data.data(), data.size());
+	}
+
+	void
+	writeSimpleResponse(Client *client, int code, const HeaderTable *headers,
+		const StaticString &body)
+	{
+		unsigned int headerBufSize = 300;
+
+		if (headers != NULL) {
+			HeaderTable::ConstIterator it(*headers);
+			while (*it != NULL) {
+				headerBufSize += it->header->key.size + sizeof(": ") - 1;
+				headerBufSize += it->header->val.size + sizeof("\r\n") - 1;
+				it.next();
+			}
+		}
+
+		Request *req = client->currentRequest;
+		char *header = (char *) psg_pnalloc(req->pool, headerBufSize);
+		char statusBuffer[50];
+		char *pos = header;
+		const char *end = header + headerBufSize;
+		const char *status;
+		const LString *value;
+
+		status = getStatusCodeAndReasonPhrase(code);
+		if (status == NULL) {
+			snprintf(statusBuffer, sizeof(statusBuffer), "%d Unknown Reason-Phrase", code);
+			status = statusBuffer;
+		}
+
+		pos += snprintf(pos, end - pos,
+			"HTTP/%d.%d %s\r\n"
+			"Status: %s\r\n",
+			(int) req->httpMajor, (int) req->httpMinor, status, status);
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("content-type")) : NULL;
+		if (value == NULL) {
+			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: text/html; charset=UTF-8\r\n"));
+		} else {
+			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: "));
+			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+		}
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("date")) : NULL;
+		pos = appendData(pos, end, P_STATIC_STRING("Date: "));
+		if (value == NULL) {
+			time_t the_time = time(NULL);
+			struct tm the_tm;
+			gmtime_r(&the_time, &the_tm);
+			pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %z", &the_tm);
+		} else {
+			pos = appendLStringData(pos, end, value);
+		}
+		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("connection")) : NULL;
+		if (value == NULL) {
+			if (canKeepAlive(req)) {
+				pos = appendData(pos, end, P_STATIC_STRING("Connection: keep-alive\r\n"));
+			} else {
+				pos = appendData(pos, end, P_STATIC_STRING("Connection: close\r\n"));
+			}
+		} else {
+			pos = appendData(pos, end, P_STATIC_STRING("Connection: "));
+			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+			if (!psg_lstr_cmp(value, P_STATIC_STRING("Keep-Alive"))
+			 && !psg_lstr_cmp(value, P_STATIC_STRING("keep-alive")))
+			{
+				req->wantKeepAlive = false;
+			}
+		}
+
+		value = (headers != NULL) ? headers->lookup(P_STATIC_STRING("content-length")) : NULL;
+		pos = appendData(pos, end, P_STATIC_STRING("Content-Length: "));
+		if (value == NULL) {
+			pos += snprintf(pos, end - pos, "%u", (unsigned int) body.size());
+		} else {
+			pos = appendLStringData(pos, end, value);
+		}
+		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+
+		if (headers != NULL) {
+			HeaderTable::ConstIterator it(*headers);
+			while (*it != NULL) {
+				if (!psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
+				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("date"))
+				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
+				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length")))
+				{
+					pos = appendLStringData(pos, end, &it->header->key);
+					pos = appendData(pos, end, P_STATIC_STRING(": "));
+					pos = appendLStringData(pos, end, &it->header->val);
+					pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+				}
+				it.next();
+			}
+		}
+
+		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
+
+		writeResponse(client, header, pos - header);
+		if (!req->ended() && req->method != HTTP_HEAD) {
+			writeResponse(client, body.data(), body.size());
+		}
+	}
+
+	bool endRequest(Client **client, Request **request) {
+		Client *c = *client;
+		Request *req = *request;
+		psg_pool_t *pool;
+
+		*client = NULL;
+		*request = NULL;
+
+		if (req->ended()) {
+			return false;
+		}
+
+		SKC_TRACE(c, 2, "Ending request");
+		assert(c->currentRequest == req);
+
+		if (OXT_UNLIKELY(!req->responseBegun)) {
+			writeDefault500Response(c, req);
+			if (req->ended()) {
+				return false;
+			}
+		}
+
+		// The memory buffers that we're writing out during the
+		// FLUSHING_OUTPUT state might live in the palloc pool,
+		// so we want to deinitialize the request while preserving
+		// the pool. We'll destroy the pool when the output is
+		// flushed.
+		pool = req->pool;
+		req->pool = NULL;
+		deinitializeRequestAndAddToFreelist(c, req);
+		req->pool = pool;
+
+		if (!c->output.ended()) {
+			c->output.feedWithoutRefGuard(MemoryKit::mbuf());
+		}
+		if (c->output.endAcked()) {
+			doneWithCurrentRequest(&c);
+		} else {
+			// Call doneWithCurrentRequest() when data flushed
+			SKC_TRACE(c, 2, "Waiting until output is flushed");
+			req->httpState = Request::FLUSHING_OUTPUT;
+			// If the request body is not fully read at this time,
+			// then ensure that onClientDataReceived() discards any
+			// request body data that we receive from now on.
+			req->wantKeepAlive = canKeepAlive(req);
+		}
+
+		return true;
+	}
+
+	void endAsBadRequest(Client **client, Request **req, const StaticString &body) {
+		endWithErrorResponse(client, req, 400, body);
+	}
+
+
+	/***** Configuration and introspection *****/
 
 	virtual void configure(const Json::Value &doc) {
 		ParentClass::configure(doc);
@@ -1183,6 +1185,14 @@ public:
 
 		return doc;
 	}
+
+
+	/***** Miscellaneous *****/
+
+	object_pool<HttpHeaderParserState> &getHeaderParserStatePool() {
+		return headerParserStatePool;
+	}
+
 
 	/***** Friend-public methods and hook implementations *****/
 
