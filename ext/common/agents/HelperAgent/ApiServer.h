@@ -140,8 +140,6 @@ private:
 			}
 
 			int threadNumber = extractThreadNumberFromClientName(results.str(1));
-			P_WARN(results.str(1));
-			P_WARN(threadNumber);
 			if (threadNumber < 1 || (unsigned int) threadNumber > requestHandlers.size()) {
 				HeaderTable headers;
 				headers.insert(req->pool, "Content-Type", "application/json");
@@ -533,6 +531,7 @@ protected:
 				} catch (const oxt::tracable_exception &e) {
 					SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
 					if (!req->ended()) {
+						req->wantKeepAlive = false;
 						endRequest(&client, &req);
 					}
 				}

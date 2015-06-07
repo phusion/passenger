@@ -249,7 +249,15 @@ protected:
 			// EOF
 			Json::Reader reader;
 			if (reader.parse(req->body, req->jsonBody)) {
-				processConfigBody(client, req);
+				try {
+					processConfigBody(client, req);
+				} catch (const oxt::tracable_exception &e) {
+					SKC_ERROR(client, "Exception: " << e.what() << "\n" << e.backtrace());
+					if (!req->ended()) {
+						req->wantKeepAlive = false;
+						endRequest(&client, &req);
+					}
+				}
 			} else {
 				apiServerRespondWith422(this, client, req, reader.getFormattedErrorMessages());
 			}
