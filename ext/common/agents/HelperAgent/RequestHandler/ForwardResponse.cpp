@@ -1002,6 +1002,7 @@ keepAliveAppConnection(Client *client, Request *req) {
 void
 storeAppResponseInTurboCache(Client *client, Request *req) {
 	if (turboCaching.isEnabled() && !req->cacheKey.empty()) {
+		TRACE_POINT();
 		AppResponse *resp = &req->appResponse;
 		unsigned int headerSize = 0;
 		unsigned int i;
@@ -1013,6 +1014,7 @@ storeAppResponseInTurboCache(Client *client, Request *req) {
 			turboCaching.responseCache.store(req, ev_now(getLoop()),
 				headerSize, resp->bodyCacheBuffer.size));
 		if (entry.valid()) {
+			UPDATE_TRACE_POINT();
 			SKC_DEBUG(client, "Storing app response in turbocache");
 			SKC_TRACE(client, 2, "Turbocache entries:\n" << turboCaching.responseCache.inspect());
 
