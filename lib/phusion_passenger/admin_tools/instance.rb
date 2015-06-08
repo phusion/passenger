@@ -174,7 +174,7 @@ module PhusionPassenger
 
         version_supported =
           major_version == PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION &&
-          minor_version <= PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION
+          minor_version >= PhusionPassenger::SERVER_INSTANCE_DIR_STRUCTURE_MIN_SUPPORTED_MINOR_VERSION
         if !version_supported
           @state = :structure_version_unsupported
           return
