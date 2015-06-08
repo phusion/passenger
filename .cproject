@@ -33,34 +33,40 @@
 									<listOptionValue builtIn="false" value="/usr/include/nginx/http"/>
 									<listOptionValue builtIn="false" value="/usr/include/ruby"/>
 									<listOptionValue builtIn="false" value="/usr/include/apr-1.0/"/>
+									<listOptionValue builtIn="false" value="/usr/include/nginx/os/unix"/>
+									<listOptionValue builtIn="false" value="/usr/include/nginx/event"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.192760208" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.macosx.base.178527825" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.macosx.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.macosx.base.1953202798" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.macosx.base">
-								<option id="gnu.cpp.compiler.option.include.paths.457683779" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
+								<option id="gnu.cpp.compiler.option.include.paths.457683779" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/apache2"/>
 									<listOptionValue builtIn="false" value="/usr/include/apr-1.0"/>
 									<listOptionValue builtIn="false" value="/usr/include/nginx/core"/>
 									<listOptionValue builtIn="false" value="/usr/include/nginx/http"/>
+									<listOptionValue builtIn="false" value="/usr/include/nginx/os/unix"/>
 									<listOptionValue builtIn="false" value="/usr/include/ruby"/>
+									<listOptionValue builtIn="false" value="/usr/include/nginx/event"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1186431697" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.macosx.base.1022662582" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.macosx.base">
-								<option id="gnu.c.compiler.option.include.paths.1871330626" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+								<option id="gnu.c.compiler.option.include.paths.1871330626" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/include/apache2"/>
 									<listOptionValue builtIn="false" value="/usr/include/apr-1.0"/>
 									<listOptionValue builtIn="false" value="/usr/include/nginx/core"/>
 									<listOptionValue builtIn="false" value="/usr/include/nginx/http"/>
 									<listOptionValue builtIn="false" value="/usr/include/ruby"/>
+									<listOptionValue builtIn="false" value="/usr/include/nginx/os/unix"/>
+									<listOptionValue builtIn="false" value="/usr/include/nginx/event"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1132704596" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="ext/oxt|ext/libev|ext/libeio|ext/boost" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="ext/libuv|ext/ruby|ext/oxt|ext/libev|ext/boost" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
