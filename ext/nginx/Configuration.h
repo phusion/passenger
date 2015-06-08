@@ -31,25 +31,7 @@
 #include <ngx_config.h>
 #include <ngx_http.h>
 
-typedef struct {
-    ngx_http_upstream_conf_t upstream_config;
-    ngx_array_t *flushes;
-    ngx_array_t *headers_set_len;
-    ngx_array_t *headers_set;
-    ngx_hash_t   headers_set_hash;
-
-    /** Raw HTTP header data for this location are cached here. */
-    ngx_str_t    options_cache;
-    ngx_str_t    env_vars_cache;
-
-    #include "ConfigurationFields.h"
-
-#if (NGX_HTTP_CACHE)
-    ngx_http_complex_value_t cache_key;
-#endif
-
-    /************************************/
-} passenger_loc_conf_t;
+#include "ConfigurationFields.h"
 
 typedef struct {
     ngx_str_t    root_dir;

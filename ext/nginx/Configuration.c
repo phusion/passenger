@@ -248,6 +248,8 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     return NGX_CONF_OK;
 }
 
+#include "CreateLocationConfig.c"
+
 void *
 passenger_create_loc_conf(ngx_conf_t *cf)
 {
@@ -273,7 +275,7 @@ passenger_create_loc_conf(ngx_conf_t *cf)
      *     conf->upstream_config.store_values = NULL;
      */
 
-    #include "CreateLocationConfig.c"
+    generated_set_conf_part(conf);
 
     /******************************/
     /******************************/
@@ -349,6 +351,8 @@ passenger_create_loc_conf(ngx_conf_t *cf)
     return conf;
 }
 
+#include "CacheLocationConfig.c"
+
 static ngx_int_t
 cache_loc_conf_options(ngx_conf_t *cf, passenger_loc_conf_t *conf)
 {
@@ -357,9 +361,15 @@ cache_loc_conf_options(ngx_conf_t *cf, passenger_loc_conf_t *conf)
     size_t         unencoded_len;
     u_char        *unencoded_buf;
 
-    #include "CacheLocationConfig.c"
+    if (generated_cache_location_part(cf, conf) == 0) {
+    	return NGX_ERROR;
+    }
 
     if (conf->env_vars != NULL) {
+    	size_t len = 0;
+    	u_char *buf;
+    	u_char *pos;
+
         /* Cache env vars data as base64-serialized string.
          * First, calculate the length of the unencoded data.
          */
@@ -418,6 +428,8 @@ cache_loc_conf_options(ngx_conf_t *cf, passenger_loc_conf_t *conf)
     return NGX_OK;
 }
 
+#include "MergeLocationConfig.c"
+
 char *
 passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
@@ -430,7 +442,10 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
 
-    #include "MergeLocationConfig.c"
+    if (generated_merge_part(conf, prev, cf) == 0) {
+    	return NGX_CONF_ERROR;
+    }
+
     if (prev->options_cache.data == NULL) {
         if (cache_loc_conf_options(cf, prev) != NGX_OK) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,

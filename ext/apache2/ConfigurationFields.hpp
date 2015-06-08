@@ -36,6 +36,8 @@
  *   rake ext/apache2/ConfigurationFields.hpp
  */
 
+struct GeneratedDirConfigPart {
+	enum Threeway { ENABLED, DISABLED, UNSET };
 
 
 	/** Whether to buffer file uploads. */
@@ -93,3 +95,4 @@
 	/** The user that Ruby applications must run as. */
 	const char *user;
 
+};

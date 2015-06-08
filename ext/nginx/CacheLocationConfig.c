@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -38,8 +38,10 @@
 
 
 
-size_t len = 0;
-u_char int_buf[32], *end, *buf, *pos;
+/* 0: NGX_ERROR, 1: OK */
+int generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
+	size_t len = 0;
+	u_char int_buf[32], *end, *buf, *pos;
 
 /* Calculate lengths */
 
@@ -304,7 +306,7 @@ u_char int_buf[32], *end, *buf, *pos;
 /* Create string */
 buf = pos = ngx_pnalloc(cf->pool, len);
 if (buf == NULL) {
-	return NGX_ERROR;
+	return 0;
 }
 
 
@@ -664,5 +666,8 @@ if (buf == NULL) {
 	
 
 
-conf->options_cache.data = buf;
-conf->options_cache.len = pos - buf;
+	conf->options_cache.data = buf;
+	conf->options_cache.len = pos - buf;
+	
+	return 1;
+}

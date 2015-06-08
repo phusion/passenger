@@ -61,10 +61,9 @@ using namespace std;
  * Use the getter methods to query information, because those will return
  * the default value if the value is not specified.
  */
-struct DirConfig {
-	enum Threeway { ENABLED, DISABLED, UNSET };
+#include "ConfigurationFields.hpp"
 
-	#include "ConfigurationFields.hpp"
+struct DirConfig : GeneratedDirConfigPart {
 
 	std::set<std::string> baseURIs;
 

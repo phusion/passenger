@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -36,6 +36,8 @@
  *   rake ext/nginx/MergeLocationConfig.c
  */
 
+/* 0: NGX_CONF_ERROR, 1: OK */
+int generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev, ngx_conf_t *cf) {
 
 
 
@@ -109,7 +111,7 @@
 		if (merge_string_array(cf, &prev->base_uris, &conf->base_uris) != NGX_OK) {
 			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
 				"cannot merge \"passenger_base_uri\" configurations");
-			return NGX_CONF_ERROR;
+			return 0;
 		}
 	
 
@@ -159,7 +161,7 @@
 		if (merge_string_array(cf, &prev->union_station_filters, &conf->union_station_filters) != NGX_OK) {
 			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
 				"cannot merge \"union_station_filter\" configurations");
-			return NGX_CONF_ERROR;
+			return 0;
 		}
 	
 
@@ -179,7 +181,7 @@
 		if (merge_string_keyval_table(cf, &prev->env_vars, &conf->env_vars) != NGX_OK) {
 			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
 				"cannot merge \"passenger_env_var\" configurations");
-			return NGX_CONF_ERROR;
+			return 0;
 		}
 	
 
@@ -261,3 +263,5 @@
 			NULL);
 	
 
+	return 1;
+}
