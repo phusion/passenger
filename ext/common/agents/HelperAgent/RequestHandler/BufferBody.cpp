@@ -71,6 +71,9 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 			psg_lstr_init(&header->key);
 			psg_lstr_append(&header->key, req->pool, "content-length",
 				sizeof("content-length") - 1);
+			psg_lstr_init(&header->origKey);
+			psg_lstr_append(&header->origKey, req->pool, "Content-Length",
+				sizeof("Content-Length") - 1);
 			psg_lstr_init(&header->val);
 			psg_lstr_append(&header->val, req->pool, contentLength, size);
 
