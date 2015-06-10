@@ -104,8 +104,10 @@ namespace tut {
 		Header *createHeader(const HashedStaticString &key, const StaticString &val) {
 			Header *header = (Header *) psg_palloc(req.pool, sizeof(Header));
 			psg_lstr_init(&header->key);
+			psg_lstr_init(&header->origKey);
 			psg_lstr_init(&header->val);
 			psg_lstr_append(&header->key, req.pool, key.data(), key.size());
+			psg_lstr_append(&header->origKey, req.pool, key.data(), key.size());
 			psg_lstr_append(&header->val, req.pool, val.data(), val.size());
 			header->hash = key.hash();
 			return header;
