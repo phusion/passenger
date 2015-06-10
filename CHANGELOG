@@ -3,7 +3,6 @@ Release 5.0.10
 
  * It is now possible to run `passenger-status`, `passenger-config restart-app` and other admin commands without using sudo. When run without sudo, these admin commands will allow you to operate on apps and processes that are owned by the user that invoked the admin command. Closes GH-1392.
  * The `passenger-config reopen-logs` command now works by instructing the Watchdog process to reopen the log file, while instructing the other Passenger processes to re-inerhit the log file from the Watchdog instead of trying to reopen the log file on their own. This makes log file reopening more robust. Closes GH-1452.
- * Fixes a typo that would cause passenger-install-apache2-module to crash on Red Hat and CentOS systems on which the SELinux command line tools are not installed. Closes GH-1527.
  * `passenger-config restart-app` no longer leaves the terminal in a state with black background. Closes GH-1526.
  * `passenger-config admin-command` has been renamed to `passenger-config api-call` in order to avoid confusion with any potential admin interfaces that we will introduce in the future.
  * If Union Station support is enabled, process and system metrics weren't being sent correctly to Union Station. This has been fixed.
