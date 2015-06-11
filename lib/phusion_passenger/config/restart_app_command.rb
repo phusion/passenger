@@ -240,8 +240,12 @@ module PhusionPassenger
         if response.code.to_i / 100 == 2
           REXML::Document.new(response.body)
         elsif response.code.to_i == 401
-          print_instance_querying_permission_error
-          abort
+          if response["pool-empty"] == "true"
+            REXML::Document.new('<?xml version="1.0" encoding="iso8859-1"?><info version="3"></info>')
+          else
+            print_instance_querying_permission_error
+            abort
+          end
         else
           STDERR.puts "*** An error occured while querying the #{PROGRAM_NAME} server:"
           STDERR.puts response.body

@@ -202,7 +202,7 @@ struct Authorization {
 	bool   canAdminister;
 
 	Authorization()
-		: uid(-1),
+		: uid((uid_t) -1),
 		  canReadPool(false),
 		  canModifyPool(false),
 		  canInspectState(false),

@@ -1193,6 +1193,7 @@ readPeerCredentials(int sock, uid_t *uid, gid_t *gid) {
 		struct sockaddr_in inetAddress;
 	} addr;
 	socklen_t len = sizeof(addr);
+	int ret;
 
 	/*
 	 * The functions for receiving the peer credentials are not guaranteed to
@@ -1200,7 +1201,10 @@ readPeerCredentials(int sock, uid_t *uid, gid_t *gid) {
 	 * just returns garbage when invoked on a TCP socket. So we check here
 	 * whether 'sock' is a Unix domain socket.
 	 */
-	if (getsockname(sock, &addr.genericAddress, &len) == -1) {
+	do {
+		ret = getsockname(sock, &addr.genericAddress, &len);
+	} while (ret == -1 && errno == EINTR);
+	if (ret == -1) {
 		int e = errno;
 		throw SystemException("Unable to autodetect socket type (getsockname() failed)", e);
 	}

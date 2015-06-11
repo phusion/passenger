@@ -118,8 +118,12 @@ def show_status(instance, options)
     if response.code.to_i / 100 == 2
       puts response.body
     elsif response.code.to_i == 401
-      print_permission_error_message
-      exit 2
+      if response["pool-empty"] == "true"
+        puts "#{PROGRAM_NAME} is currently not serving any applications."
+      else
+        print_permission_error_message
+        exit 2
+      end
     else
       STDERR.puts "*** An error occured."
       STDERR.puts "#{response.code}: #{response.body}"
@@ -174,8 +178,12 @@ def show_status(instance, options)
         STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
       end
     elsif response.code.to_i == 401
-      print_permission_error_message
-      exit 2
+      if response["pool-empty"] == "true"
+        puts "#{PROGRAM_NAME} is currently not serving any applications."
+      else
+        print_permission_error_message
+        exit 2
+      end
     else
       STDERR.puts "*** An error occured."
       STDERR.puts "#{response.code}: #{response.body}"

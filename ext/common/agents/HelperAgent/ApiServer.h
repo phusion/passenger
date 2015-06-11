@@ -212,7 +212,19 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			apiServerRespondWith401(this, client, req);
+			HeaderTable headers;
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
+			if (clientOnUnixDomainSocket(client) && appPool->getGroupCount() == 0) {
+				// Allow admin tools that connected through the Unix domain socket
+				// to know that this authorization error is caused by the fact
+				// that the pool is empty.
+				headers.insert(req->pool, "Pool-Empty", "true");
+			}
+			writeSimpleResponse(client, 401, &headers, "Unauthorized");
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		}
 	}
 
@@ -232,7 +244,19 @@ private:
 				endRequest(&client, &req);
 			}
 		} else {
-			apiServerRespondWith401(this, client, req);
+			HeaderTable headers;
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
+			if (clientOnUnixDomainSocket(client) && appPool->getGroupCount() == 0) {
+				// Allow admin tools that connected through the Unix domain socket
+				// to know that this authorization error is caused by the fact
+				// that the pool is empty.
+				headers.insert(req->pool, "Pool-Empty", "true");
+			}
+			writeSimpleResponse(client, 401, &headers, "Unauthorized");
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		}
 	}
 

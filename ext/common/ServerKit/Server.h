@@ -807,6 +807,30 @@ public:
 		return NULL;
 	}
 
+	bool clientOnUnixDomainSocket(Client *client) {
+		union {
+			struct sockaddr genericAddress;
+			struct sockaddr_un unixAddress;
+			struct sockaddr_in inetAddress;
+		} addr;
+		socklen_t len = sizeof(addr);
+		int ret;
+
+		do {
+			ret = getsockname(client->getFd(), &addr.genericAddress, &len);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			int e = errno;
+			throw SystemException("Unable to autodetect socket type (getsockname() failed)", e);
+		} else {
+			#ifdef AF_UNIX
+				return addr.genericAddress.sa_family == AF_UNIX;
+			#else
+				return addr.genericAddress.sa_family == AF_LOCAL;
+			#endif
+		}
+	}
+
 	/** Increase client reference count. */
 	void refClient(Client *client, const char *file, unsigned int line) {
 		int oldRefcount = client->refcount.fetch_add(1, boost::memory_order_relaxed);
