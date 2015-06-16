@@ -221,9 +221,8 @@ module PhusionPassenger
     def self.rvm_paths
       if in_rvm?
         result = []
-        [ENV['rvm_path'], "~/.rvm", "/usr/local/rvm"].each do |path|
+        [ENV['rvm_path'], "#{PhusionPassenger.home_dir}/.rvm", "/usr/local/rvm"].each do |path|
           next if path.nil?
-          path = File.expand_path(path)
           rubies_path = File.join(path, 'rubies')
           wrappers_path = File.join(path, 'wrappers')
           gems_path = File.join(path, 'gems')
