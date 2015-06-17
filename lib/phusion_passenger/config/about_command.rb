@@ -167,7 +167,7 @@ module PhusionPassenger
           end
           puts
           puts "## Notes for RVM users"
-          puts "Do you want to know which command to use for a different Ruby interpreter? 'rvm use' that Ruby interpreter, then re-run 'passenger-config --ruby-command'."
+          puts "Do you want to know which command to use for a different Ruby interpreter? 'rvm use' that Ruby interpreter, then re-run 'passenger-config about ruby-command'."
         when "--rubyext-compat-id"
           PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
           puts PhusionPassenger::PlatformInfo.ruby_extension_binary_compatibility_id
