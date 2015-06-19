@@ -360,7 +360,7 @@ Phusion Passenger supports out-of-band garbage collection for Ruby apps. With th
 
 In certain situations, using the builtin HTTP engine in Passenger Standalone may yield some performance benefits because it skips a layer of processing.
 
-Passenger normally works by integrating into Nginx or Apache. As described in the [Design & Architecture](Design%20and%20architecture.html) document, requests are first handled by Nginx or Apache, and then forwarded to the Passenger core process (the HelperAgent) and the application process. This architecture provides various benefits, such as security benefits (Nginx and Apache's HTTP connection handling routines are thoroughly battle-tested and secure) and feature benefits (e.g. Gzip compression, superb static file handling).
+Passenger normally works by integrating into Nginx or Apache. As described in the [Design & Architecture](Design%20and%20Architecture.html) document, requests are first handled by Nginx or Apache, and then forwarded to the Passenger core process (the HelperAgent) and the application process. This architecture provides various benefits, such as security benefits (Nginx and Apache's HTTP connection handling routines are thoroughly battle-tested and secure) and feature benefits (e.g. Gzip compression, superb static file handling).
 
 This is even true if you use the Standalone mode. Although it acts standalone, it is implemented under the hood by running Passenger in a builtin Nginx engine.
 
