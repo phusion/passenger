@@ -16,8 +16,8 @@ endif::[]
 ifdef::standalone[]
 <<PassengerPreStart,passenger_pre_start>>)
 endif::[]
-
 are written in Ruby as well.
+
  * Ruby web application support is implemented in Ruby.
  * If you use <<flying_passenger,Flying Passenger>>, then the Flying Passenger daemon is written in Ruby. The daemon is a small (less than 500 lines of code) and offloads most tasks to the C++ core.
  * If you use link:Users%20guide%20Standalone.html[Phusion Passenger Standalone], then the frontend (the `passenger` command) is written in Ruby. The frontend is small (less than 1500 lines of code) and offloads most tasks to the C++ core.
