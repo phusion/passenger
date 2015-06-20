@@ -344,6 +344,7 @@ module PhusionPassenger
 
       trap('ABRT') do
         print_status_report
+        abort
       end if trappable_signals.has_key?('ABRT')
       trap('QUIT') do
         print_status_report
