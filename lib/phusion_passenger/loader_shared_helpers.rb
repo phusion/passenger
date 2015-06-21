@@ -293,7 +293,7 @@ module PhusionPassenger
     def after_loading_app_code(options)
       # Post-install framework extensions. Possibly preceded by a call to
       # PhusionPassenger.install_framework_extensions!
-      if defined?(::Rails) && !defined?(::Rails::VERSION)
+      if defined?(::Rails) && !defined?(::Rails::VERSION) && Gem::Specification.find_all_by_name('railties').any?
         require 'rails/version'
       end
     end
