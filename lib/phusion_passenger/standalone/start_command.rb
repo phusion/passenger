@@ -386,7 +386,7 @@ module PhusionPassenger
         if app_dir
           begin
             ConfigUtils.load_local_config_file!(app_dir, @local_options)
-          rescue ConfigLoadError => e
+          rescue ConfigUtils::ConfigLoadError => e
             abort "*** ERROR: #{e.message}"
           end
         end
