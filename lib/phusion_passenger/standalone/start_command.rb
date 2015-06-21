@@ -153,10 +153,10 @@ module PhusionPassenger
           opts.on("--log-file FILENAME", String,
             "Where to write log messages. Default:#{nl}" +
             "console, or /dev/null when daemonized") do |value|
-            options[:log_file] = value
+            options[:log_file] = File.absolute_path_no_resolve(value)
           end
           opts.on("--pid-file FILENAME", String, "Where to store the PID file") do |value|
-            options[:pid_file] = value
+            options[:pid_file] = File.absolute_path_no_resolve(value)
           end
           opts.on("--instance-registry-dir PATH", String,
             "Use the given instance registry directory") do |value|
@@ -439,13 +439,6 @@ module PhusionPassenger
           check_nginx_option_used_with_builtin_engine(:static_files_dir, "--static-files-dir")
         end
 
-        if @options[:log_file]
-          @options[:log_file] = File.absolute_path_no_resolve(@options[:log_file])
-        end
-        if @options[:pid_file]
-          @options[:pid_file] = File.absolute_path_no_resolve(@options[:pid_file])
-        end
-
         #############
       end
 
@@ -561,6 +554,9 @@ module PhusionPassenger
         else
           options[:log_file] ||= "#{exec_root}/#{log_basename}"
         end
+
+        options[:log_file] = File.expand_path(options[:log_file], exec_root)
+        options[:pid_file] = File.expand_path(options[:pid_file], exec_root)
       end
 
       def create_working_dir
