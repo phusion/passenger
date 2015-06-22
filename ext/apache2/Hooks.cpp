@@ -312,6 +312,19 @@ private:
 		return conn;
 	}
 
+	vector<string> getConfigFiles(server_rec *s) const {
+		server_rec *server;
+		vector<string> result;
+
+		for (server = s; server != NULL; server = server->next) {
+			if (server->defn_name != NULL) {
+				result.push_back(server->defn_name);
+			}
+		}
+
+		return result;
+	}
+
 	bool hasModRewrite() {
 		if (m_hasModRewrite == UNKNOWN) {
 			if (ap_find_linked_module("mod_rewrite.c")) {
@@ -1275,6 +1288,7 @@ public:
 		VariantMap params;
 		params
 			.setPid ("web_server_pid", getpid())
+			.setStrSet("web_server_config_files", getConfigFiles(s))
 			.set    ("server_software", webServerDesc)
 			.setBool("multi_app", true)
 			.setBool("load_shell_envvars", true)
@@ -1302,19 +1316,6 @@ public:
 		serverConfig.ctl.addTo(params);
 
 		agentsStarter.start(serverConfig.root, params);
-
-		// Store some relevant information in the generation directory.
-		string instanceDir = agentsStarter.getInstanceDir();
-		server_rec *server;
-		string configFiles;
-
-		for (server = s; server != NULL; server = server->next) {
-			if (server->defn_name != NULL) {
-				configFiles.append(server->defn_name);
-				configFiles.append(1, '\n');
-			}
-		}
-		createFile(instanceDir + "/config_files.txt", configFiles);
 	}
 
 	void childInit(apr_pool_t *pchild, server_rec *s) {

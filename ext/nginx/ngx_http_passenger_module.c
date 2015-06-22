@@ -97,8 +97,10 @@ ignore_sigpipe() {
 static char *
 ngx_str_null_terminate(ngx_str_t *str) {
     char *result = malloc(str->len + 1);
-    memcpy(result, str->data, str->len);
-    result[str->len] = '\0';
+    if (result != NULL) {
+        memcpy(result, str->data, str->len);
+        result[str->len] = '\0';
+    }
     return result;
 }
 
@@ -241,6 +243,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
     ngx_uint_t       i;
+    char            *config_file = NULL;
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
     ngx_keyval_t    *ctl = NULL;
@@ -253,24 +256,29 @@ start_watchdog(ngx_cycle_t *cycle) {
     result    = NGX_OK;
     params    = pp_variant_map_new();
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
+    if (passenger_root == NULL) {
+        goto error_enomem;
+    }
 
     pp_app_type_detector_set_throttle_rate(pp_app_type_detector,
         passenger_main_conf.stat_throttle_rate);
 
+    config_file = ngx_str_null_terminate(&cycle->conf_file);
+    if (config_file == NULL) {
+        goto error_enomem;
+    }
+
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
     prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
     for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
-        prestart_uris_ary[i] = malloc(prestart_uris[i].len + 1);
+        prestart_uris_ary[i] = ngx_str_null_terminate(&prestart_uris[i]);
         if (prestart_uris_ary[i] == NULL) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ENOMEM, "Cannot allocate memory");
-            result = NGX_ERROR;
-            goto cleanup;
+            goto error_enomem;
         }
-        memcpy(prestart_uris_ary[i], prestart_uris[i].data, prestart_uris[i].len);
-        prestart_uris_ary[i][prestart_uris[i].len] = '\0';
     }
 
     pp_variant_map_set_int    (params, "web_server_pid", getpid());
+    pp_variant_map_set_strset (params, "web_server_config_files", (const char **) &config_file, 1);
     pp_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
     pp_variant_map_set_bool   (params, "multi_app", 1);
     pp_variant_map_set_bool   (params, "load_shell_envvars", 1);
@@ -350,29 +358,11 @@ start_watchdog(ngx_cycle_t *cycle) {
         goto cleanup;
     }
 
-    /* Create various other info files. */
-    last = ngx_snprintf(filename, sizeof(filename) - 1,
-                        "%s/web_server.txt",
-                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
-    *last = (u_char) '\0';
-    if (create_file(cycle, filename, (const u_char *) NGINX_VER, strlen(NGINX_VER)) != NGX_OK) {
-        result = NGX_ERROR;
-        goto cleanup;
-    }
-
-    last = ngx_snprintf(filename, sizeof(filename) - 1,
-                        "%s/config_files.txt",
-                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
-    *last = (u_char) '\0';
-    if (create_file(cycle, filename, cycle->conf_file.data, cycle->conf_file.len) != NGX_OK) {
-        result = NGX_ERROR;
-        goto cleanup;
-    }
-
 cleanup:
     pp_variant_map_free(params);
     free(passenger_root);
     free(error_message);
+    free(config_file);
     if (prestart_uris_ary != NULL) {
         for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
             free(prestart_uris_ary[i]);
@@ -385,6 +375,11 @@ cleanup:
     }
 
     return result;
+
+error_enomem:
+    ngx_log_error(NGX_LOG_ALERT, cycle->log, ENOMEM, "Cannot allocate memory");
+    result = NGX_ERROR;
+    goto cleanup;
 }
 
 /**

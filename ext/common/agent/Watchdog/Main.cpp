@@ -989,6 +989,16 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	instanceOptions.defaultGid = wo->defaultGid;
 	instanceOptions.properties["name"] = wo->randomGenerator.generateAsciiString(8);
 	instanceOptions.properties["server_software"] = options.get("server_software");
+	if (options.has("web_server_config_files")) {
+		vector<string> configFiles = options.getStrSet("web_server_config_files");
+		Json::Value array(Json::arrayValue);
+
+		foreach (string configFile, configFiles) {
+			array.append(configFile);
+		}
+
+		instanceOptions.properties["web_server_config_files"] = array;
+	}
 	wo->instanceDir = boost::make_shared<InstanceDirectory>(instanceOptions,
 		options.get("instance_registry_dir"));
 	options.set("instance_dir", wo->instanceDir->getPath());
