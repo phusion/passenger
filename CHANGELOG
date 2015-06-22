@@ -2,7 +2,8 @@ Release 5.0.11
 --------------
 
  * In 5.0.10, admin tools such as `passenger-status` and `passenger-config restart-app` display an authorization error if they are run without sudo, while at the same time Passenger isn't serving any applications. Since this is confusing, they have now been modified to display a more appropriate error message.
- * Fixes a bug in the RPMs that prevent admin tools such as `passenger-status` and `passenger-config restart-app` from working without root privileges.
+ * Fixes a bug in the RPMs that prevent admin tools such as `passenger-status` and `passenger-config restart-app` from working when they are invoked without root privileges.
+ * Fixes a bug on OS X that prevent admin tools such as `passenger-status` and `passenger-config restart-app` from detecting Passenger instance directories when they are invoked without root privileges. Closes GH-1535.
  * Fixes a bug that causes Passenger not to work if the HOME environment variable is not set.
  * Relative values for the `pid_file` and `log_file` options in Passengerfile.json are now supported.
  * If Passengerfile.json contains a syntax error, Passenger Standalone now correctly prints an error message instead of crashing.

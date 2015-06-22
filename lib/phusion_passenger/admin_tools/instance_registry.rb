@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -84,12 +84,16 @@ module PhusionPassenger
     private
       def default_paths
         if result = string_env("PASSENGER_INSTANCE_REGISTRY_DIR")
-          return result
+          return [result]
         end
 
+        # On OSX, TMPDIR is set to a different value per-user. But Apache
+        # is launched through Launchctl and runs without TMPDIR (and thus
+        # uses the default /tmp).
+        #
         # The RPM packages configure Apache and Nginx to use /var/run/passenger-instreg
         # as the instance registry dir. See https://github.com/phusion/passenger/issues/1475
-        [string_env("TMPDIR") || "/tmp", "/var/run/passenger-instreg"]
+        [string_env("TMPDIR"), "/tmp", "/var/run/passenger-instreg"].compact
       end
 
       def string_env(name)
