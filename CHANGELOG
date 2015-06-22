@@ -5,6 +5,7 @@ Release 5.0.11
  * Fixes a bug in the RPMs that prevent admin tools such as `passenger-status` and `passenger-config restart-app` from working when they are invoked without root privileges.
  * Fixes a bug on OS X that prevent admin tools such as `passenger-status` and `passenger-config restart-app` from detecting Passenger instance directories when they are invoked without root privileges. Closes GH-1535.
  * Fixes a bug that causes Passenger not to work if the HOME environment variable is not set.
+ * Fixes compatibility with non-Rails Ruby apps that require the actionview gem. Closes GH-1547.
  * Relative values for the `pid_file` and `log_file` options in Passengerfile.json are now supported.
  * If Passengerfile.json contains a syntax error, Passenger Standalone now correctly prints an error message instead of crashing.
  * Sending a SIGABRT signal to a Ruby process now properly makes it terminate.

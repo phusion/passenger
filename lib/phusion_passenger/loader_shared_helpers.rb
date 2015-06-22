@@ -291,11 +291,7 @@ module PhusionPassenger
     # This method is to be called after loading the application code but
     # before forking a worker process.
     def after_loading_app_code(options)
-      # Post-install framework extensions. Possibly preceded by a call to
-      # PhusionPassenger.install_framework_extensions!
-      if defined?(::Rails) && !defined?(::Rails::VERSION)
-        require 'rails/version'
-      end
+      # Do nothing.
     end
 
     def create_socket_address(protocol, address)
