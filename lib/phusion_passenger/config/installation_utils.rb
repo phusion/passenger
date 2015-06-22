@@ -32,6 +32,7 @@ PhusionPassenger.require_passenger_lib 'console_text_template'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
+PhusionPassenger.require_passenger_lib 'utils/tmpio'
 
 module PhusionPassenger
   module Config
@@ -123,29 +124,41 @@ module PhusionPassenger
       end
 
       def run_rake_task!(target)
-        total_lines = `#{rake} #{target} --dry-run STDERR_TO_STDOUT=1`.split("\n").size - 1
-        backlog = ""
+        total_lines = `#{rake} #{target} --dry-run STDERR_TO_STDOUT=1 2>&1`.split("\n").size - 1
+        partial_backlog = ""
+        logfile = PhusionPassenger::Utils::TmpIO.new("passenger-install-log",
+          :mode => File::WRONLY, :unlink_immediately => false)
 
-        command = "#{rake} #{target} --trace STDERR_TO_STDOUT=1"
-        IO.popen(command, "rb") do |io|
-          progress = 1
-          while !io.eof?
-            line = io.readline
-            yield(progress, total_lines)
-            if line =~ /^\*\* /
-              backlog.replace("")
-              progress += 1
-            else
-              backlog << line
+        begin
+          command = "#{rake} #{target} --trace STDERR_TO_STDOUT=1 2>&1"
+          IO.popen(command, "rb") do |io|
+            progress = 1
+            while !io.eof?
+              line = io.readline
+              logfile.write(line)
+              yield(progress, total_lines)
+              if line =~ /^\*\* /
+                partial_backlog.replace("")
+                progress += 1
+              else
+                partial_backlog << line
+              end
             end
           end
-        end
-        if $?.exitstatus != 0
-          stderr = @stderr || STDERR
-          stderr.puts
-          stderr.puts "*** ERROR: the following command failed:"
-          stderr.puts(backlog)
-          exit 1
+          if $?.exitstatus != 0
+            colors = @colors || PhusionPassenger::Utils::AnsiColors.new
+            stderr = @stderr || STDERR
+            stderr.puts
+            stderr.puts "#{colors.red}*** ERROR: a Rake command failed. You can find the full " +
+              "log in #{logfile.path}. Below, you can find the last few lines of the command's output.#{colors.reset}"
+            stderr.puts "#{colors.red}------------- Begin command output snippet -------------#{colors.reset}"
+            stderr.puts(partial_backlog)
+            stderr.puts "#{colors.red}------------- End command output snippet -------------#{colors.reset}"
+            stderr.puts "#{colors.red}The full log can be found in #{logfile.path}#{colors.reset}"
+            exit 1
+          end
+        ensure
+          logfile.close
         end
       end
 
