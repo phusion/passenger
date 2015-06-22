@@ -9,6 +9,7 @@ Release 5.0.11
  * Relative values for the `pid_file` and `log_file` options in Passengerfile.json are now supported.
  * If Passengerfile.json contains a syntax error, Passenger Standalone now correctly prints an error message instead of crashing.
  * Sending a SIGABRT signal to a Ruby process now properly makes it terminate.
+ * [Standalone] Passenger Standalone's Nginx engine now includes the RealIP module. Closes GH-1389.
 
 
 Release 5.0.10
