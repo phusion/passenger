@@ -906,7 +906,7 @@ include::users_guide_snippets/since_version.txt[]
 
 Enables or disables the loading of shell environment variables before spawning the application.
 
-If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerHelperAgent` process.
+If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerAgent core` process.
 
 This option may occur in the following places:
 
@@ -1443,7 +1443,7 @@ The <<PassengerMemoryLimit,PassengerMemoryLimit>> directive uses
 queries `/proc` to obtain additional memory usage information that's
 not obtainable through `ps`. You should ensure that the `ps` works
 correctly and that the `/proc` filesystem is accessible by the
-`PassengerHelperAgent` process.
+`PassengerAgent core` process.
 =====================================================
 
 [CAUTION]

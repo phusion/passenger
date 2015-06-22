@@ -68,9 +68,9 @@
 #include <Utils/HttpConstants.h>
 #include <Utils/VariantMap.h>
 #include <Utils/Timer.h>
-#include <agents/HelperAgent/RequestHandler/Client.h>
-#include <agents/HelperAgent/RequestHandler/AppResponse.h>
-#include <agents/HelperAgent/RequestHandler/TurboCaching.h>
+#include <agent/Core/RequestHandler/Client.h>
+#include <agent/Core/RequestHandler/AppResponse.h>
+#include <agent/Core/RequestHandler/TurboCaching.h>
 
 namespace Passenger {
 
@@ -120,8 +120,8 @@ private:
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
 
 	StaticString defaultRuby;
-	StaticString loggingAgentAddress;
-	StaticString loggingAgentPassword;
+	StaticString ustRouterAddress;
+	StaticString ustRouterPassword;
 	StaticString defaultUser;
 	StaticString defaultGroup;
 	StaticString defaultServerName;
@@ -170,13 +170,13 @@ public:
 	UnionStation::CorePtr unionStationCore;
 
 protected:
-	#include <agents/HelperAgent/RequestHandler/Utils.cpp>
-	#include <agents/HelperAgent/RequestHandler/Hooks.cpp>
-	#include <agents/HelperAgent/RequestHandler/InitRequest.cpp>
-	#include <agents/HelperAgent/RequestHandler/BufferBody.cpp>
-	#include <agents/HelperAgent/RequestHandler/CheckoutSession.cpp>
-	#include <agents/HelperAgent/RequestHandler/SendRequest.cpp>
-	#include <agents/HelperAgent/RequestHandler/ForwardResponse.cpp>
+	#include <agent/Core/RequestHandler/Utils.cpp>
+	#include <agent/Core/RequestHandler/Hooks.cpp>
+	#include <agent/Core/RequestHandler/InitRequest.cpp>
+	#include <agent/Core/RequestHandler/BufferBody.cpp>
+	#include <agent/Core/RequestHandler/CheckoutSession.cpp>
+	#include <agent/Core/RequestHandler/SendRequest.cpp>
+	#include <agent/Core/RequestHandler/ForwardResponse.cpp>
 
 public:
 	RequestHandler(ServerKit::Context *context, const VariantMap *_agentsOptions,
@@ -189,7 +189,7 @@ public:
 		  singleAppMode(false),
 		  showVersionInHeader(_agentsOptions->getBool("show_version_in_header")),
 		  stickySessions(_agentsOptions->getBool("sticky_sessions")),
-		  gracefulExit(_agentsOptions->getBool("server_graceful_exit")),
+		  gracefulExit(_agentsOptions->getBool("core_graceful_exit")),
 
 		  agentsOptions(_agentsOptions),
 		  stringPool(psg_create_pool(1024 * 4)),
@@ -221,10 +221,10 @@ public:
 	{
 		defaultRuby = psg_pstrdup(stringPool,
 			agentsOptions->get("default_ruby"));
-		loggingAgentAddress = psg_pstrdup(stringPool,
-			agentsOptions->get("logging_agent_address", false));
-		loggingAgentPassword = psg_pstrdup(stringPool,
-			agentsOptions->get("logging_agent_password", false));
+		ustRouterAddress = psg_pstrdup(stringPool,
+			agentsOptions->get("ust_router_address", false));
+		ustRouterPassword = psg_pstrdup(stringPool,
+			agentsOptions->get("ust_router_password", false));
 		defaultUser = psg_pstrdup(stringPool,
 			agentsOptions->get("default_user", false));
 		defaultGroup = psg_pstrdup(stringPool,

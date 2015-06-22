@@ -38,7 +38,7 @@
 #include "Configuration.h"
 #include "ContentHandler.h"
 #include "common/Constants.h"
-#include "common/agents/LoggingAgent/FilterSupport.h"
+#include "common/agent/UstRouter/FilterSupport.h"
 #include "common/Utils/modp_b64.h"
 
 
@@ -1121,9 +1121,9 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         passenger_conf->enabled = 1;
 
         /* Register a placeholder value as upstream address. The real upstream
-         * address (the helper agent socket filename) will be set while processing
-         * requests, because we can't start the helper agent until config
-         * loading is done.
+         * address (the Passenger core socket filename) will be set while processing
+         * requests, because we can't start the watchdog (and thus the Passenger core)
+         * until config loading is done.
          */
         ngx_memzero(&upstream_url, sizeof(ngx_url_t));
         upstream_url.url = pp_placeholder_upstream_address;

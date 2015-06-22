@@ -775,9 +775,9 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 	const vector<string> &prestartURLs)
 {
 	/* Apache calls the initialization routines twice during startup, and
-	 * as a result it starts two helper servers, where the first one exits
+	 * as a result it starts two watchdogs, where the first one exits
 	 * after a short idle period. We want any prespawning requests to reach
-	 * the second helper server, so we sleep for a short period before
+	 * the second watchdog, so we sleep for a short period before
 	 * executing the prespawning scripts.
 	 */
 	syscalls::sleep(2);

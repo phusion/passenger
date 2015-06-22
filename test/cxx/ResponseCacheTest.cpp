@@ -2,9 +2,9 @@
 #include <time.h>
 #include <ServerKit/HttpRequest.h>
 #include <MemoryKit/palloc.h>
-#include <agents/HelperAgent/RequestHandler/Request.h>
-#include <agents/HelperAgent/RequestHandler/AppResponse.h>
-#include <agents/HelperAgent/ResponseCache.h>
+#include <agent/Core/RequestHandler/Request.h>
+#include <agent/Core/RequestHandler/AppResponse.h>
+#include <agent/Core/ResponseCache.h>
 
 using namespace Passenger;
 using namespace Passenger::ServerKit;

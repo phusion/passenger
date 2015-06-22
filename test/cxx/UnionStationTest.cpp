@@ -2,7 +2,7 @@
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
 #include <MessageClient.h>
-#include <agents/LoggingAgent/LoggingServer.h>
+#include <agent/UstRouter/LoggingServer.h>
 #include <Utils/MessageIO.h>
 #include <Utils/ScopeGuard.h>
 
@@ -63,7 +63,7 @@ namespace tut {
 
 		void startLoggingServer(const boost::function<void ()> &initFunc = boost::function<void ()>()) {
 			VariantMap options;
-			options.set("analytics_dump_file", dumpFile);
+			options.set("ust_router_dump_file", dumpFile);
 			serverFd.assign(createUnixServer(socketFilename.c_str(), 0, true, __FILE__, __LINE__), NULL, 0);
 			server = ptr(new LoggingServer(eventLoop,
 				serverFd, accountsDatabase, options));
@@ -271,7 +271,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(12) {
-		// If the logging server crashed and was restarted then
+		// If the UstRouter crashed and was restarted then
 		// newTransaction() and continueTransaction() print a warning and return
 		// a null log object. One of the next newTransaction()/continueTransaction()
 		// calls will reestablish the connection when the connection timeout
@@ -326,7 +326,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(14) {
-		// If a client disconnects from the logging server then all its
+		// If a client disconnects from the UstRouter then all its
 		// transactions that are no longer referenced and have crash protection enabled
 		// will be closed and written to the sink.
 		MessageClient client1 = createConnection();
@@ -362,7 +362,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(15) {
-		// If a client disconnects from the logging server then all its
+		// If a client disconnects from the UstRouter then all its
 		// transactions that are no longer referenced and don't have crash
 		// protection enabled will be closed and discarded.
 		MessageClient client1 = createConnection();
@@ -571,7 +571,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(25) {
-		// The 'exit' command causes the logging server to exit some time after
+		// The 'exit' command causes the UstRouter to exit some time after
 		// the last client has disconnected. New clients are still accepted
 		// as long as the server hasn't exited.
 		SystemTime::forceAll(YESTERDAY);
@@ -627,7 +627,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(26) {
-		// The 'exit semi-gracefully' command causes the logging server to
+		// The 'exit semi-gracefully' command causes the UstRouter to
 		// refuse new clients while exiting some time after the last client has
 		// disconnected.
 		SystemTime::forceAll(YESTERDAY);
@@ -661,7 +661,7 @@ namespace tut {
 	}
 
 	TEST_METHOD(27) {
-		// The 'exit immediately' command causes the logging server to
+		// The 'exit immediately' command causes the UstRouter to
 		// immediately exit. Open transactions are not automatically
 		// closed and written out, even those with crash protection
 		// turned on.

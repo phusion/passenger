@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -137,21 +137,21 @@ pp_agents_starter_start(PP_AgentsStarter *as,
 }
 
 const char *
-pp_agents_starter_get_server_address(PP_AgentsStarter *as, unsigned int *size) {
+pp_agents_starter_get_core_address(PP_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
-		*size = agentsStarter->getServerAddress().size();
+		*size = agentsStarter->getCoreAddress().size();
 	}
-	return agentsStarter->getServerAddress().c_str();
+	return agentsStarter->getCoreAddress().c_str();
 }
 
 const char *
-pp_agents_starter_get_server_password(PP_AgentsStarter *as, unsigned int *size) {
+pp_agents_starter_get_core_password(PP_AgentsStarter *as, unsigned int *size) {
 	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
 	if (size != NULL) {
-		*size = agentsStarter->getServerPassword().size();
+		*size = agentsStarter->getCorePassword().size();
 	}
-	return agentsStarter->getServerPassword().c_str();
+	return agentsStarter->getCorePassword().c_str();
 }
 
 const char *

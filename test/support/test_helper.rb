@@ -361,12 +361,12 @@ module TestHelper
     end
   end
 
-  def spawn_logging_agent(tmpdir, dump_file, password)
-    socket_filename = "#{tmpdir}/logging.socket"
+  def spawn_ust_router(tmpdir, dump_file, password)
+    socket_filename = "#{tmpdir}/ust_router.socket"
     password_filename = "#{tmpdir}/password"
     File.write(password_filename, password)
     pid = spawn_process("#{PhusionPassenger.support_binaries_dir}/#{PhusionPassenger::AGENT_EXE}",
-      "logger",
+      "ust-router",
       "--passenger-root", PhusionPassenger.install_spec,
       "--log-level", PhusionPassenger::DebugLogging.log_level,
       "--dump-file", dump_file,
@@ -386,7 +386,7 @@ module TestHelper
     raise e
   end
 
-  def flush_logging_agent(password, socket_address)
+  def flush_ust_router(password, socket_address)
     PhusionPassenger.require_passenger_lib 'message_client' if !defined?(PhusionPassenger::MessageClient)
     client = PhusionPassenger::MessageClient.new("logging", password, socket_address)
     begin

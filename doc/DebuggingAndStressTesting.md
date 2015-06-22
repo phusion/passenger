@@ -26,7 +26,7 @@ Whenever a Phusion Passenger agent process crashes because of a signal (SIGABRT,
 
  * A simple libc-level backtrace of the current thread. This backtrace may or may not correspond to the thread that caused the crash.
  * A detailed backtrace report, covering all threads. This report even contains the values of variables on the stack. The report is obtained through the [crash-watch](https://github.com/FooBarWidget/crash-watch) tool so you must have it installed. Crash-watch in turn requires gdb, which must also be installed.
- * Agent-specific diagnostics information. For example the HelperAgent will report the status of its process pool and its connected clients.
+ * Agent-specific diagnostics information. For example the Passenger core will report the status of its process pool and its connected clients.
 
 You can change the crash behavior with the following environment variables:
 
@@ -55,6 +55,6 @@ To enable, set the environment variable `PASSENGER_SIMULATE_SYSCALL_FAILURES`. T
 
 `program_nameN` specifies the name of the Phusion Passenger process for which system call failure simulation should be enabled. This is followed by a list of system call `errno` names and the respective probabilities (between 0 and 1). For example:
 
-    export PASSENGER_SIMULATE_SYSCALL_FAILURES='watchdog=ENOSPC:0.01;server=EMFILE:0.001,ECONNREFUSED:0.02'
+    export PASSENGER_SIMULATE_SYSCALL_FAILURES='PassengerAgent watchdog=ENOSPC:0.01;PassengerAgent core=EMFILE:0.001,ECONNREFUSED:0.02'
 
-This will enable system call failure simulation only for the watchdog and the HTTP server, but not for the logging agent. All system calls in the watchdog will have a 1% probability of throwing ENOSPC. All system calls in the HTTP server will have a 0.1% probability of throwing EMFILE, and a 2% probability of throwing ECONNREFUSED.
+This will enable system call failure simulation only for the watchdog and the core, but not for the UstRouter. All system calls in the watchdog will have a 1% probability of throwing ENOSPC. All system calls in the HTTP server will have a 0.1% probability of throwing EMFILE, and a 2% probability of throwing ECONNREFUSED.

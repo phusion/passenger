@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -34,7 +34,7 @@ module PhusionPassenger
     include Utils
 
     # Connect to the given server. By default it connects to the current
-    # generation's helper server.
+    # generation's core.
     def initialize(username, password, address)
       @socket = connect_to_server(address)
       begin
@@ -73,7 +73,7 @@ module PhusionPassenger
       return !!@channel
     end
 
-    ### HelperAgent methods ###
+    ### Passenger core process methods ###
 
     def pool_detach_process(pid)
       write("detach_process", pid)
@@ -123,23 +123,23 @@ module PhusionPassenger
       end
     end
 
-    def helper_agent_requests
+    def core_requests
       write("requests")
       check_security_response
       return read_scalar
     end
 
-    ### HelperAgent BacktracesServer methods ###
+    ### Passenger core BacktracesServer methods ###
 
-    def helper_agent_backtraces
+    def core_backtraces
       write("backtraces")
       check_security_response
       return read_scalar
     end
 
-    ### LoggingAgent AdminServer methods ###
+    ### Passenger UstRouter AdminServer methods ###
 
-    def logging_agent_status
+    def ust_router_status
       write("status")
       check_security_response
       return read_scalar

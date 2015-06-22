@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2014 Phusion
+ *  Copyright (c) 2011-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -28,7 +28,7 @@
 #include <ev++.h>
 #include <ostream>
 #include <ServerKit/HttpClient.h>
-#include <agents/HelperAgent/RequestHandler/Request.h>
+#include <agent/Core/RequestHandler/Request.h>
 
 namespace Passenger {
 

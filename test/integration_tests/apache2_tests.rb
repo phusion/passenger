@@ -504,7 +504,7 @@ describe "Apache 2 module" do
     end
   end
 
-  describe "HelperAgent" do
+  describe "core" do
     AdminTools = PhusionPassenger::AdminTools
 
     before :all do
@@ -528,19 +528,19 @@ describe "Apache 2 module" do
 
     it "is restarted if it crashes" do
       # Make sure that all Apache worker processes have connected to
-      # the helper agent.
+      # the Passenger core.
       10.times do
         get('/').should == "front page"
         sleep 0.1
       end
 
-      # Now kill the helper agent.
+      # Now kill the Passenger core.
       instance = AdminTools::InstanceRegistry.new.list.first
-      Process.kill('SIGKILL', instance.server_pid)
+      Process.kill('SIGKILL', instance.core_pid)
       sleep 0.02 # Give the signal a small amount of time to take effect.
 
       # Each worker process should detect that the old
-      # helper agent has died, and should reconnect.
+      # Passenger core has died, and should reconnect.
       10.times do
         get('/').should == "front page"
         sleep 0.1

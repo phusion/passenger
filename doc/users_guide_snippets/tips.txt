@@ -489,7 +489,7 @@ Here are some of the environment variables which are passed to all hooks, unless
 
 Except when otherwise documented, all hooks block in the background. That is, while your hook command is running, Phusion Passenger can still handle web requests, but the background thread which is running your hook will be blocked and won't be able to perform any further operations. For example, if you wrote a hook script for the `attached_process` event, then Phusion Passenger won't be able to attach further processes until your hook script finishes. You should therefore be careful when writing hook scripts.
 
-If you have a bug in your script and it blocks, then you will be able to see that using the command `passenger-status --show=backtraces` which prints the backtraces of all threads in the Phusion Passenger HelperAgent. Look for the `runSingleHookScript` function in the backtrace. The following example shows at line 2 that Phusion Passenger is waiting for the hook script `/home/phusion/badscript.sh`.
+If you have a bug in your script and it blocks, then you will be able to see that using the command `passenger-status --show=backtraces` which prints the backtraces of all threads in the Phusion Passenger core. Look for the `runSingleHookScript` function in the backtrace. The following example shows at line 2 that Phusion Passenger is waiting for the hook script `/home/phusion/badscript.sh`.
 
 ---------------------------------------------------------------------------------------------------
 Thread 'Group process spawner: /home/phusion/webapp.test#default' (0x1062d4000):
@@ -511,7 +511,7 @@ Because hooks are inherently tied to the implementation of Phusion Passenger, th
 ==== Available hooks
 
 `before_watchdog_initialization`::
-	Called at the very beginning of Phusion Passenger's life cycle, during the start of the Watchdog process. The first hook is called before initialization is performed (before the HelperAgent is started). Errors in the hook script cause Phusion Passenger to abort.
+	Called at the very beginning of Phusion Passenger's life cycle, during the start of the Watchdog process. The first hook is called before initialization is performed (before the Passenger core is started). Errors in the hook script cause Phusion Passenger to abort.
 `after_watchdog_initialization`::
 	Like `before_watchdog_initialization`, but called after initialization of all Phusion Passenger agent processes. Errors in the hook script cause Phusion Passenger to abort.
 `before_watchdog_shutdown`::	

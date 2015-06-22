@@ -26,8 +26,8 @@
 #define _PASSENGER_API_SERVER_UTILS_H_
 
 /**
- * Utility code shared by HelperAgent/ApiServer.h, LoggingAgent/ApiServer.h
- * and Watchdog/ApiServer.h. This code handles authentication and authorization
+ * Utility code shared by agent/Core/ApiServer.h, agent/UstRouter/ApiServer.h
+ * and agent/Watchdog/ApiServer.h. This code handles authentication and authorization
  * of connected ApiServer clients.
  *
  * This file consists of the following items.

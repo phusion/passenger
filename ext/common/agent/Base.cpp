@@ -57,7 +57,7 @@
 #include <string>
 #include <vector>
 
-#include <agents/Base.h>
+#include <agent/Base.h>
 #include <Constants.h>
 #include <Exceptions.h>
 #include <Logging.h>
@@ -1399,7 +1399,7 @@ lookupErrno(const char *name) {
 static void
 initializeSyscallFailureSimulation(const char *processName) {
 	// Format:
-	// PassengerWatchdog=EMFILE:0.1,ECONNREFUSED:0.25;PassengerHelperAgent=ESPIPE=0.4
+	// PassengerAgent watchdog=EMFILE:0.1,ECONNREFUSED:0.25;PassengerAgent core=ESPIPE=0.4
 	const char *spec = getenv("PASSENGER_SIMULATE_SYSCALL_FAILURES");
 	string prefix = string(processName) + "=";
 	vector<string> components;

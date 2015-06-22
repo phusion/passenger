@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -62,7 +62,7 @@ public:
 		ALL                       = ~0,
 		NONE                      = 0,
 
-		// HelperAgent ApplicationPool rights.
+		// Passenger core ApplicationPool rights.
 		CLEAR                     = 1 << 0,
 		DETACH                    = 1 << 1,
 		SET_PARAMETERS            = 1 << 2,
@@ -70,7 +70,7 @@ public:
 		INSPECT_BASIC_INFO        = 1 << 4,
 		INSPECT_SENSITIVE_INFO    = 1 << 5,
 
-		// HelperAgent admin rights.
+		// Passenger core admin rights.
 		INSPECT_REQUESTS          = 1 << 8,
 		INSPECT_BACKTRACES        = 1 << 9,
 

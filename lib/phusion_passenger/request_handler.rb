@@ -257,7 +257,7 @@ module PhusionPassenger
       # when we know EOF is not reached.
       #
       # The ApplicationPool infrastructure used to connect to a backend
-      # process's Unix socket in the helper server process, and then
+      # process's Unix socket in the Passenger core process, and then
       # pass the connection file descriptor to the web server, which
       # triggers this kernel bug. We used to work around this by using
       # TCP sockets instead of Unix sockets; TCP sockets can still fail
@@ -265,7 +265,7 @@ module PhusionPassenger
       # as with Unix sockets.
       #
       # This problem no longer applies today. The web server now passes
-      # all I/O through the HelperAgent, and the bug is no longer
+      # all I/O through the Passenger core, and the bug is no longer
       # triggered. Nevertheless, we keep this function intact so that
       # if something like this ever happens again, we know why, and we
       # can easily reactivate the workaround. Or maybe if we just need

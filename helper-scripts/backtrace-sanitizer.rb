@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013 Phusion
+#  Copyright (c) 2013-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -102,7 +102,7 @@ begin
     # Example lines:
     # ./test() [0x400b64]
     # /lib/libc.so.6(__libc_start_main+0xfd) [0x7fcc0ad00c8d]
-    # PassengerAgent server[0x4d2697]
+    # Passenger core[0x4d2697]
     if line =~ /(.*)\[(.*?)\]$/
       # Split line into:
       # subject: /lib/libc.so.6(__libc_start_main+0xfd)

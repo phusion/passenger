@@ -71,7 +71,7 @@ app = lambda do |env|
     text_response("ok")
   when '/print_stdout_and_stderr'
     STDOUT.puts "hello stdout!"
-    sleep 0.1  # Give HelperAgent the time to process stdout first.
+    sleep 0.1  # Give Passenger core some time to process stdout first.
     STDERR.puts "hello stderr!"
     text_response("ok")
   when '/switch_protocol'

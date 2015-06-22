@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_LOGGING_AGENT_OPTION_PARSER_H_
-#define _PASSENGER_LOGGING_AGENT_OPTION_PARSER_H_
+#ifndef _PASSENGER_UST_ROUTER_OPTION_PARSER_H_
+#define _PASSENGER_UST_ROUTER_OPTION_PARSER_H_
 
 #include <cstdio>
 #include <cstdlib>
@@ -39,25 +39,25 @@ using namespace std;
 
 
 inline void
-loggingAgentUsage() {
-	printf("Usage: " AGENT_EXE " logger <OPTIONS...>\n");
-	printf("Runs the " PROGRAM_NAME " logging agent.\n");
+ustRouterUsage() {
+	printf("Usage: " AGENT_EXE " ust-router <OPTIONS...>\n");
+	printf("Runs the " PROGRAM_NAME " UstRouter.\n");
 	printf("\n");
 	printf("Required options:\n");
 	printf("      --passenger-root PATH   The location to the " PROGRAM_NAME " source\n");
 	printf("                              directory\n");
-	printf("      --password-file PATH    Protect the logging server with the password in\n");
+	printf("      --password-file PATH    Protect the UstRouter controller with the password in\n");
 	printf("                              this file\n");
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("  -l, --listen ADDRESS        Listen on the given address. The address must be\n");
 	printf("                              formatted as tcp://IP:PORT for TCP sockets, or\n");
 	printf("                              unix:PATH for Unix domain sockets.\n");
-	printf("                              " DEFAULT_LOGGING_AGENT_LISTEN_ADDRESS "\n");
+	printf("                              " DEFAULT_UST_ROUTER_LISTEN_ADDRESS "\n");
 	printf("\n");
 	printf("      --api-listen ADDRESS    Listen on the given address for API commands.\n");
 	printf("                              The address must be in the same format as that\n");
-	printf("                              of --listen. Default: " DEFAULT_LOGGING_AGENT_API_LISTEN_ADDRESS "\n");
+	printf("                              of --listen. Default: " DEFAULT_UST_ROUTER_API_LISTEN_ADDRESS "\n");
 	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
 	printf("                              Enables authentication on the API server,\n");
 	printf("                              through the given API account. LEVEL indicates\n");
@@ -84,18 +84,18 @@ loggingAgentUsage() {
 }
 
 inline bool
-parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &options) {
-	OptionParser p(loggingAgentUsage);
+parseUstRouterOption(int argc, const char *argv[], int &i, VariantMap &options) {
+	OptionParser p(ustRouterUsage);
 
 	if (p.isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
 		options.set("passenger_root", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--password-file")) {
-		options.set("logging_agent_password_file", argv[i + 1]);
+		options.set("ust_router_password_file", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'l', "--listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			options.set("logging_agent_address", argv[i + 1]);
+			options.set("ust_router_address", argv[i + 1]);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --listen. The address "
@@ -105,7 +105,7 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 		}
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--api-listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("logging_agent_api_addresses",
+			vector<string> addresses = options.getStrSet("ust_router_api_addresses",
 				false);
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
 				fprintf(stderr, "ERROR: you may specify up to %u --api-listen addresses.\n",
@@ -113,7 +113,7 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 				exit(1);
 			}
 			addresses.push_back(argv[i + 1]);
-			options.setStrSet("logging_agent_api_addresses", addresses);
+			options.setStrSet("ust_router_api_addresses", addresses);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --api-listen. The address "
@@ -123,7 +123,7 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 		}
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
 		vector<string> args;
-		vector<string> authorizations = options.getStrSet("logging_agent_authorizations",
+		vector<string> authorizations = options.getStrSet("ust_router_authorizations",
 				false);
 
 		split(argv[i + 1], ':', args);
@@ -134,10 +134,10 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 		}
 
 		authorizations.push_back(argv[i + 1]);
-		options.setStrSet("logging_agent_authorizations", authorizations);
+		options.setStrSet("ust_router_authorizations", authorizations);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--dump-file")) {
-		options.set("analytics_dump_file", argv[i + 1]);
+		options.set("ust_router_dump_file", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--user")) {
 		options.set("analytics_log_user", argv[i + 1]);
@@ -148,12 +148,12 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 		// We do not set log_level because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log level.
-		options.setInt("logging_agent_log_level", atoi(argv[i + 1]));
+		options.setInt("ust_router_log_level", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
 		// We do not set debug_log_file because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log file.
-		options.set("logging_agent_log_file", argv[i + 1]);
+		options.set("ust_router_log_file", argv[i + 1]);
 		i += 2;
 	} else {
 		return false;
@@ -164,4 +164,4 @@ parseLoggingAgentOption(int argc, const char *argv[], int &i, VariantMap &option
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_LOGGING_AGENT_OPTION_PARSER_H_ */
+#endif /* _PASSENGER_UST_ROUTER_OPTION_PARSER_H_ */

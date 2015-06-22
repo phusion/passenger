@@ -74,9 +74,9 @@ using namespace boost;
  * accepts are distributed to all registered Server objects, in a
  * round-robin manner.
  *
- * Inside the "PassengerAgent server", we activate AcceptLoadBalancer
- * only if `server_threads > 1`, which is often the case because
- * `server_threads` defaults to the number of CPU cores.
+ * Inside the "PassengerAgent core", we activate AcceptLoadBalancer
+ * only if `core_threads > 1`, which is often the case because
+ * `core_threads` defaults to the number of CPU cores.
  */
 template<typename Server>
 class AcceptLoadBalancer {

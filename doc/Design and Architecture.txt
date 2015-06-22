@@ -92,36 +92,36 @@ image:images/passenger_architecture_overview.png[An overview of Phusion Passenge
 
 Phusion Passenger is not a single, monolithic entity. Instead, it consists of multiple components and processes that work together. Part of the reason why Phusion Passenger is split like this, is because it's technically necessary (no other way to implement it). But another part of the reason is stability and robustness. Individual components can crash and can be restarted independently from each other. If we were to put everything inside a single process, then a crash will take down all of Phusion Passenger.
 
-Thus, if the HelperAgent crashes, or if an application process crashes, they can both be restarted without affecting the web server's stability.
+Thus, if the Passenger core crashes, or if an application process crashes, they can both be restarted without affecting the web server's stability.
 
 ==== Web server module
 
-When an HTTP client sends a request, it is received by the web server (Nginx or Apache). Both Apache and Nginx can be extended with **modules**. Phusion Passenger provides such a module. The module is loaded into Nginx/Apache. It checks whether the request should be handled by a Phusion Passenger-served web application, and if so, forwards the request to the HelperAgent. The internal wire protocol used during this forwarding, is a modified version of link:http://en.wikipedia.org/wiki/SCGI[SCGI].
+When an HTTP client sends a request, it is received by the web server (Nginx or Apache). Both Apache and Nginx can be extended with **modules**. Phusion Passenger provides such a module. The module is loaded into Nginx/Apache. It checks whether the request should be handled by a Phusion Passenger-served web application, and if so, forwards the request to the Passenger core. The internal wire protocol used during this forwarding, is a modified version of link:http://en.wikipedia.org/wiki/SCGI[SCGI].
 
-The Nginx module and Apache module have an entirely different code base. Their code bases are in `ext/nginx` and `ext/apache2`, respectively. Both modules are relatively small because they outsource most logic to the HelperAgent, and because they utilize a common library (`ext/common`). This allows us to support both Nginx and Apache without having to write a lot of things twice.
+The Nginx module and Apache module have an entirely different code base. Their code bases are in `ext/nginx` and `ext/apache2`, respectively. Both modules are relatively small because they outsource most logic to the Passenger core, and because they utilize a common library (`ext/common`). This allows us to support both Nginx and Apache without having to write a lot of things twice.
 
-==== HelperAgent
+==== Passenger core
 
-The **HelperAgent** is Phusion Passenger's core, where most of the processing is done. The HelperAgent keeps track of which application processes currently exist, and using load balancing rules, determines which process a request should be forwarded to. The HelperAgent also takes care of **application spawning**: if it determines that having more application processes is necessary or beneficial, then it will make that happen. Process spawning is subject to user-configured limits: the HelperAgent will never spawn more processes than a user-configured maximum.
+The **Passenger core** is where most of the processing is done. The core keeps track of which application processes currently exist, and using load balancing rules, determines which process a request should be forwarded to. The core also takes care of **application spawning**: if it determines that having more application processes is necessary or beneficial, then it will make that happen. Process spawning is subject to user-configured limits: the core will never spawn more processes than a user-configured maximum.
 
-The HelperAgent also has monitoring and statistics gathering capabilities. It constantly keeps track of applications' memory usage, how many requests they've handled, etc. This information can later be queried from administration tools. And if an application process crashes, the HelperAgent restarts it.
+The core also has monitoring and statistics gathering capabilities. It constantly keeps track of applications' memory usage, how many requests they've handled, etc. This information can later be queried from administration tools. And if an application process crashes, the core restarts it.
 
-The HelperAgent is by far the largest and most complex part of the system, but it is itself composed of several smaller subsystems. Most of the <<helper_agent_architecture,HelperAgent architecture>> chapter is devoted to describing the HelperAgent.
+The core is by far the largest and most complex part of the system, but it is itself composed of several smaller subsystems. Most of the <<passenger_core_architecture,core architecture>> chapter is devoted to describing the core.
 
-==== LoggingAgent
+==== UstRouter
 
-The HelperAgent cooperates with the **LoggingAgent**. This latter is responsible for sending data to link:https://www.unionstationapp.com[Union Station], a monitoring web service. If you didn't explicitly tell Phusion Passenger to send data to Union Station, then the LoggingAgent sits idle and does not consume resources.
+The core cooperates with the **UstRouter**. This latter is responsible for sending data to link:https://www.unionstationapp.com[Union Station], a monitoring web service. If you didn't explicitly tell Phusion Passenger to send data to Union Station, then the UstRouter sits idle and does not consume resources.
 
 ==== Watchdog
 
-The HelperAgent and the LoggingAgent contain complex logic, so they could contain bugs which could crash them.
+The core and the UstRouter contain complex logic, so they could contain bugs which could crash them.
 So as a safety measure, they are both monitored by the **Watchdog**. If either of them crash, they are restarted by the Watchdog. This setup seeks to ensure that the system stays up, no matter what.
 
 You might now wonder: what happens if the Watchdog crashes? Shouldn't the Watchdog be monitored by another Watchdog? We've contemplated this possibility, but the Watchdog is very simple, and since 2012 we haven't seen a single report of the Watchdog crashing, nor have we been able to make it crash since that time. So, for the sake of keeping the codebase as simple as possible, we've chosen not to introduce multiple Watchdogs.
 
 ==== Command line tools
 
-Finally, there is an array of **command line tools** which support Phusion Passenger. The installers -- `passenger-install-*-module` -- are responsible for installing Phusion Passenger. There are administrative tools such as `passenger-status` and `passenger-memory-stats`. And many more. Some of these tools may communicate with one of the agents. For example, the `passenger-status` queries the HelperAgent for information that the HelperAgent has collected. How this communication is done, is described in <<instance_state_and_communication,Instance state and communication>>.
+Finally, there is an array of **command line tools** which support Phusion Passenger. The installers -- `passenger-install-*-module` -- are responsible for installing Phusion Passenger. There are administrative tools such as `passenger-status` and `passenger-memory-stats`. And many more. Some of these tools may communicate with one of the agents. For example, the `passenger-status` queries the core for information that the core has collected. How this communication is done, is described in <<instance_state_and_communication,Instance state and communication>>.
 
 ==== Passenger Standalone
 
@@ -129,10 +129,10 @@ You might have noticed that Phusion Passenger Standalone is not part of the diag
 
 === Build system and source tree
 
-Phusion Passenger is written mostly in C\++ and Ruby. The web server modules, HelperAgent, LoggingAgent and Watchdog are written in C++. Most command line tools are written in Ruby. You can find each component here:
+Phusion Passenger is written mostly in C\++ and Ruby. The web server modules, core, UstRouter and Watchdog are written in C++. Most command line tools are written in Ruby. You can find each component here:
 
  * The web server modules can be found in `ext/apache2` and `ext/nginx`.
- * The HelperAgent, LoggingAgent and Watchdog can be found in `ext/common/agents`.
+ * The Passenger core, UstRouter and Watchdog can be found in `ext/common/agent`.
  * The command line tools can be found in `bin`, with some parts of their code in `lib`.
 
 More information can be found in the link:https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md[Contributors Guide]. This guide also teaches you how to compile Phusion Passenger.
@@ -152,33 +152,33 @@ Phusion Passenger initializes as follows.
  * `ext/apache2/Hooks.cpp`, in the constructor for the `Hooks` class.
  * `ext/common/AgentsStarter.h` and `AgentsStarter.cpp`. Most of the logic pertaining starting the Watchdog is in this file.
 
-3. The Watchdog first initializes a <<instance_state_and_communication,"instance directory">>, which is a temporary directory containing files that will be used during the life time of this Phusion Passenger instance. For example, the directory contains Unix domain socket files, so that the different Phusion Passenger processes can communicate with each other. The Watchdog is implemented in `ext/common/agents/Watchdog/Main.cpp`.
+3. The Watchdog first initializes a <<instance_state_and_communication,"instance directory">>, which is a temporary directory containing files that will be used during the life time of this Phusion Passenger instance. For example, the directory contains Unix domain socket files, so that the different Phusion Passenger processes can communicate with each other. The Watchdog is implemented in `ext/common/agent/Watchdog/Main.cpp`.
 
-4. The Watchdog starts the HelperAgent and the LoggingAgent simultaneously. Each performs its own initialization.
+4. The Watchdog starts the Passenger core and the UstRouter simultaneously. Each performs its own initialization.
 
-5. When the HelperAgent is done initializing, it will send a message back to the Watchdog saying that it's done. The LoggingAgent does something similar. When the Watchdog has received both acknowledgment messages, it finishes initialization. If the Watchdog notices that one of the agents have exited without sending an acknowledgment message, then it enters an error state.
+5. When the core is done initializing, it will send a message back to the Watchdog saying that it's done. The UstRouter does something similar. When the Watchdog has received both acknowledgment messages, it finishes initialization. If the Watchdog notices that one of the agents have exited without sending an acknowledgment message, then it enters an error state.
 
 6. The Watchdog reports successful startup back to the Phusion Passenger module that's running inside Nginx/Apache. Or, if initialization didn't success, the Watchdog reports back an error. The Phusion Passenger module inside Nginx/Apache then logs the error.
 
 After initialization, Phusion Passenger is ready to receive and to process requests.
 
 
-[[helper_agent_architecture]]
-== HelperAgent architecture
+[[passenger_core_architecture]]
+== Passenger core architecture
 
-image:images/helper_agent_core_architecture.png[HelperAgent architecture]
+image:images/passenger_core_architecture.png[Passenger core architecture]
 
-The HelperAgent consists of two subsystems. One is the *request handling subsystem*. The other is *the ApplicationPool subsystem*, which performs the bulk of process management. The HelperAgent also uses a number of support libraries. The largest third-party support libraries are shown in the diagram. Many more -- internal -- support libraries are used, but they're omitted from the diagram. You can find these internal support libraries in the directory `ext/common/Utils`.
+The Passenger core consists of two subsystems. One is the *request handling subsystem*. The other is *the ApplicationPool subsystem*, which performs the bulk of process management. The core also uses a number of support libraries. The largest third-party support libraries are shown in the diagram. Many more -- internal -- support libraries are used, but they're omitted from the diagram. You can find these internal support libraries in the directory `ext/common/Utils`.
 
 === Request handling
 
-Recall that requests are first received from the web server. The web server serializes the request into a slightly modified version of link:http://en.wikipedia.org/wiki/SCGI[the SCGI format], and sends it to the HelperAgent's RequestHandler. The RequestHandler performs some work, and eventually sends back a regular HTTP response. The web server parses the RequestHandler response, and sends a response to the original HTTP client.
+Recall that requests are first received from the web server. The web server serializes the request into a slightly modified version of link:http://en.wikipedia.org/wiki/SCGI[the SCGI format], and sends it to the core's RequestHandler. The RequestHandler performs some work, and eventually sends back a regular HTTP response. The web server parses the RequestHandler response, and sends a response to the original HTTP client.
 
 The RequestHandler listens on a Unix domain socket file. This Unix domain socket file is called `request`, and is located in <<instance_state_and_communication,the instance directory>>.
 
 ==== One client per request
 
-The web server creates a new connection to the HelperAgent on every request. Thus, from the viewpoint of the RequestHandler, its client is the web server. Every time a client connects (i.e. a new request is forwarded), the RequestHandler creates a new Client object which represents that request. All request-specific state is stored inside the Client. After the RequestHandler is done processing a request, it closes the client socket.
+The web server creates a new connection to the core on every request. Thus, from the viewpoint of the RequestHandler, its client is the web server. Every time a client connects (i.e. a new request is forwarded), the RequestHandler creates a new Client object which represents that request. All request-specific state is stored inside the Client. After the RequestHandler is done processing a request, it closes the client socket.
 
 Note that in the diagram, a Client has a 0..1 association with RequestHandler. That's because when a Client is disconnected, the pointer to the associated RequestHandler is set to NULL. There might be background operations left which still have a pointer to the Client. As soon as those background operations finish, they check whether the Client has a valid pointer to the RequestHandler. If so, they commit their work; if not, they discard their work. The Client is destroyed when all its associated background operations have finished.
 
@@ -257,7 +257,7 @@ The details of the spawning process is described in <<app_spawning_and_loading,A
 [[app_spawning_and_loading]]
 == Application spawning and loading
 
-Application processes are spawned from the HelperAgent process. Spawning a process involves a lot of **preparation work**, such as setting up communication channels, setting up the current working directory, environment variables, etc. This preparation work is done by <<spawner_subsystem,a Spawner object>>, together with various support executables.
+Application processes are spawned from the Passenger core process. Spawning a process involves a lot of **preparation work**, such as setting up communication channels, setting up the current working directory, environment variables, etc. This preparation work is done by <<spawner_subsystem,a Spawner object>>, together with various support executables.
 
 When preparation is done, your application's entry point has to be loaded somehow. That loading is done through a language-specific **loader program**. The loader program communicates with the Spawner through the communication channel that was set up earlier, initializes the language-specific environment, sets up a server, and reports back to the Spawner. This communication is done through a certain **protocol**.
 
@@ -274,7 +274,7 @@ The communication channel in question is -- from the viewpoint of the (pre)loade
 
 ==== Loading SpawnPreparer, possibly through bash
 
-Because the HelperAgent is heavily multi-threaded, the child process has been forked by the Spawner link:http://pubs.opengroup.org/onlinepubs/009695399/functions/fork.html[may only perform async-signal-safe operations]:
+Because the Passenger core is heavily multi-threaded, the child process has been forked by the Spawner link:http://pubs.opengroup.org/onlinepubs/009695399/functions/fork.html[may only perform async-signal-safe operations]:
 
 [quote, The Open Group's POSIX specification, fork() man page]
 "A process shall be created with a single thread. If a multi-threaded process calls fork(), the new process shall contain a replica of the calling thread and its entire address space, possibly including the states of mutexes and other resources. Consequently, to avoid errors, the child process may only execute async-signal-safe operations until such time as one of the exec functions is called. Fork handlers may be established by means of the pthread_atfork() function in order to maintain application invariants across fork() calls."
@@ -417,7 +417,7 @@ After reporting readiness, the loader can <<loader_main_loop,enter a main loop a
 
 If something goes wrong in any of the stages, the loader can report an error in two ways:
 
- 1. Just write the error message to stdout as you normally do, and abort without printing the `!> Ready` message. The HelperAgent will read everything that the loader has written to stdout, and use it as the error message. This error message is considered to be plain text.
+ 1. Just write the error message to stdout as you normally do, and abort without printing the `!> Ready` message. The Passenger core will read everything that the loader has written to stdout, and use it as the error message. This error message is considered to be plain text.
  2. Abort after printing a special `!> Error` message. The loader can signal that the message is HTML. The RequestHandler will format the error message as HTML.
 
 [[loader_main_loop]]
@@ -434,7 +434,7 @@ If the server was listening on a Unix domain socket file, then the loader doesn'
 
 ==== Stdout and stderr forwarding
 
-All lines that the loader writes to stdout, and that are not prefixed with `!> `, are forwarded by the HelperAgent to its own stdout. Similarly, everything that the loader writes to stderr, whether prefixed with `!> ` or not, is forwarded by the HelperAgent to its own stdout.
+All lines that the loader writes to stdout, and that are not prefixed with `!> `, are forwarded by the Passenger core to its own stdout. Similarly, everything that the loader writes to stderr, whether prefixed with `!> ` or not, is forwarded by the Passenger core to its own stdout.
 
 While the Spawner is still doing its work, it takes care of this forwarding by itself. Once the Spawner is done, it outsources this work to two PipeWatcher objects, each which spawns a background thread for this purpose.
 
@@ -459,7 +459,7 @@ When a spawn command is received, the preloader forks off a child process (which
 [[app_types_registry]]
 === The AppTypes registry
 
-When the web server receives a request, the Phusion Passenger module inside it autodetects the type of application that the request belongs to. It does that by examening the filesystem and checking which one of the startup files exist. For example, if `config.ru` exists, then it assumes that it's a Ruby app. Or if `app.js` exists, then it assumes that it's a Node.js app. The Phusion Passenger module forwards the inferred application type to the HelperAgent.
+When the web server receives a request, the Phusion Passenger module inside it autodetects the type of application that the request belongs to. It does that by examening the filesystem and checking which one of the startup files exist. For example, if `config.ru` exists, then it assumes that it's a Ruby app. Or if `app.js` exists, then it assumes that it's a Node.js app. The Phusion Passenger module forwards the inferred application type to the Passenger core.
 
 Given an application type, the associated loader and preloader can be looked up.
 
@@ -474,7 +474,7 @@ Information about the supported application types, startup files, loaders and pr
 [[instance_state_and_communication]]
 == Instance state and communication
 
-Every time you start Phusion Passenger, you've created a new *instance*. Every instance consists of multiple processes that work together (Watchdog, HelperAgent, LoggingAgent, application processes). All those processes have to be able to communicate with each other. Those processes must also *not* communicate with the processes belonging to other instances. For example, if you start Apache+Passenger *and* Nginx+Passenger, then we don't want the HelperAgent that's started from Apache to use LoggingAgent that's started from Nginx.
+Every time you start Phusion Passenger, you've created a new *instance*. Every instance consists of multiple processes that work together (Watchdog, Passenger core, UstRouter, application processes). All those processes have to be able to communicate with each other. Those processes must also *not* communicate with the processes belonging to other instances. For example, if you start Apache+Passenger *and* Nginx+Passenger, then we don't want the Passenger core that's started from Apache to use UstRouter that's started from Nginx.
 
 Clearly, the processes can't listen on a specific TCP port for communication. Nor can they listen on a fixed Unix domain socket filename.
 

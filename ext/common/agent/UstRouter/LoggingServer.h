@@ -43,9 +43,9 @@
 #include <ctime>
 #include <cassert>
 
-#include <agents/LoggingAgent/DataStoreId.h>
-#include <agents/LoggingAgent/RemoteSender.h>
-#include <agents/LoggingAgent/FilterSupport.h>
+#include <agent/UstRouter/DataStoreId.h>
+#include <agent/UstRouter/RemoteSender.h>
+#include <agent/UstRouter/FilterSupport.h>
 
 #include <EventedMessageServer.h>
 #include <MessageReadersWriters.h>
@@ -1128,7 +1128,7 @@ public:
 		  garbageCollectionTimer(loop),
 		  sinkFlushingTimer(loop),
 		  exitTimer(loop),
-		  dumpFile(options.get("analytics_dump_file", false, "/dev/null"))
+		  dumpFile(options.get("ust_router_dump_file", false, "/dev/null"))
 	{
 		int sinkFlushTimerInterval = options.getInt("analytics_sink_flush_timer_interval", false, 5);
 		sinkFlushInterval = options.getInt("analytics_sink_flush_interval", false, 0);

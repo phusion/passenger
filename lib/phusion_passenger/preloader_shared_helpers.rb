@@ -123,7 +123,7 @@ module PhusionPassenger
       File.chmod(0600, socket_filename)
 
       # Update the dump information just before telling the preloader that we're
-      # ready because the HelperAgent will read and memorize this information.
+      # ready because the Passenger core will read and memorize this information.
       LoaderSharedHelpers.dump_all_information(options)
 
       puts "!> Ready"

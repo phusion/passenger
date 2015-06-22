@@ -72,8 +72,8 @@ int pp_agents_starter_start(PP_AgentsStarter *as,
 	const PP_AfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage);
-const char *pp_agents_starter_get_server_address(PP_AgentsStarter *as, unsigned int *size);
-const char *pp_agents_starter_get_server_password(PP_AgentsStarter *as, unsigned int *size);
+const char *pp_agents_starter_get_core_address(PP_AgentsStarter *as, unsigned int *size);
+const char *pp_agents_starter_get_core_password(PP_AgentsStarter *as, unsigned int *size);
 const char *pp_agents_starter_get_instance_dir(PP_AgentsStarter *as, unsigned int *size);
 pid_t       pp_agents_starter_get_pid(PP_AgentsStarter *as);
 void        pp_agents_starter_detach(PP_AgentsStarter *as);
@@ -130,15 +130,15 @@ private:
 	 /** The watchdog's feedback file descriptor. */
 	FileDescriptor feedbackFd;
 
-	/** The address on which the Phusion Passenger HTTP server listens, and the
+	/** The address on which the Passenger core listens for HTTP requests, and the
 	 * corresponding password.
 	 */
-	string serverAddress;
-	string serverPassword;
+	string coreAddress;
+	string corePassword;
 
-	/** The logging agent's socket address and its password. */
-	string loggingAgentAddress;
-	string loggingAgentPassword;
+	/** The UstRouter's socket address and its password. */
+	string ustRouterAddress;
+	string ustRouterPassword;
 
 	string instanceDir;
 
@@ -291,20 +291,20 @@ public:
 
 	// The 'const string &' here is on purpose. The C getter functions
 	// return the string pointer directly.
-	const string &getServerAddress() const {
-		return serverAddress;
+	const string &getCoreAddress() const {
+		return coreAddress;
 	}
 
-	const string &getServerPassword() const {
-		return serverPassword;
+	const string &getCorePassword() const {
+		return corePassword;
 	}
 
-	const string &getLoggingAgentAddress() const {
-		return loggingAgentAddress;
+	const string &getUstRouterAddress() const {
+		return ustRouterAddress;
 	}
 
-	const string &getLoggingAgentPassword() const {
-		return loggingAgentPassword;
+	const string &getUstRouterPassword() const {
+		return ustRouterPassword;
 	}
 
 	const string &getInstanceDir() const {
@@ -475,11 +475,11 @@ public:
 
 				this->pid        = pid;
 				this->feedbackFd = feedbackFd;
-				serverAddress    = info.get("server_address");
-				serverPassword   = info.get("server_password");
+				coreAddress      = info.get("core_address");
+				corePassword     = info.get("core_password");
 				instanceDir      = info.get("instance_dir");
-				loggingAgentAddress  = info.get("logging_agent_address");
-				loggingAgentPassword = info.get("logging_agent_password");
+				ustRouterAddress  = info.get("ust_router_address");
+				ustRouterPassword = info.get("ust_router_password");
 				guard.clear();
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);

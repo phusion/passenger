@@ -13,7 +13,7 @@
    height="300"
    id="svg2"
    sodipodi:version="0.32"
-   inkscape:version="0.48.2 r9819"
+   inkscape:version="0.48.5 r10040"
    sodipodi:docname="passenger_architecture.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    version="1.0"
@@ -77,14 +77,14 @@
      inkscape:cy="197.81434"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
-     inkscape:window-width="1345"
-     inkscape:window-height="860"
-     inkscape:window-x="-1"
+     inkscape:window-width="1359"
+     inkscape:window-height="856"
+     inkscape:window-x="81"
      inkscape:window-y="0"
      height="255px"
      width="690px"
      showgrid="false"
-     inkscape:window-maximized="0" />
+     inkscape:window-maximized="1" />
   <metadata
      id="metadata7">
     <rdf:RDF>
@@ -206,13 +206,14 @@
         <text
            xml:space="preserve"
            style="font-size:19.99363899px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
-           x="337.47308"
-           y="122.29496"
+           x="342.47308"
+           y="120.29496"
            id="text2170"><tspan
              sodipodi:role="line"
              id="tspan2172"
-             x="337.47308"
-             y="122.29496">Helper agent</tspan></text>
+             x="342.47308"
+             y="120.29496"
+             style="font-size:16px">Passenger core</tspan></text>
       </g>
     </g>
     <g

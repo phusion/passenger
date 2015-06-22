@@ -560,9 +560,9 @@ describe RequestHandler do
         Process.waitpid(@agent_pid)
       end
       @dump_file = "#{@temp_dir}/log.txt"
-      @logging_agent_password = "1234"
-      @agent_pid, @socket_filename, @socket_address = spawn_logging_agent(
-        @temp_dir, @dump_file, @logging_agent_password)
+      @ust_router_password = "1234"
+      @agent_pid, @socket_filename, @socket_address = spawn_ust_router(
+        @temp_dir, @dump_file, @ust_router_password)
 
       @union_station_core = UnionStation::Core.new(@socket_address, "logging",
         "1234", "localhost")
@@ -622,7 +622,7 @@ describe RequestHandler do
         client.close
       end
       eventually(5) do
-        flush_logging_agent(@logging_agent_password, @socket_address)
+        flush_ust_router(@ust_router_password, @socket_address)
         if File.exist?(@dump_file)
           log_data = File.read(@dump_file)
         else

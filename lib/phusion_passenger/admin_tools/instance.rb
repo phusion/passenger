@@ -108,8 +108,8 @@ module PhusionPassenger
         return response
       end
 
-      def server_pid
-        @server_pid ||= File.read("#{@path}/server.pid").to_i
+      def core_pid
+        @core_pid ||= File.read("#{@path}/core.pid").to_i
       end
 
       def full_admin_password

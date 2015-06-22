@@ -57,11 +57,11 @@
 #include <cstring>
 #include <cerrno>
 
-#include <agents/Base.h>
-#include <agents/ApiServerUtils.h>
-#include <agents/HelperAgent/OptionParser.h>
-#include <agents/LoggingAgent/OptionParser.h>
-#include <agents/Watchdog/ApiServer.h>
+#include <agent/Base.h>
+#include <agent/ApiServerUtils.h>
+#include <agent/Core/OptionParser.h>
+#include <agent/UstRouter/OptionParser.h>
+#include <agent/Watchdog/ApiServer.h>
 #include <Constants.h>
 #include <InstanceDirectory.h>
 #include <FileDescriptor.h>
@@ -154,8 +154,8 @@ static void cleanup(const WorkingObjectsPtr &wo);
 
 #include "AgentWatcher.cpp"
 #include "InstanceDirToucher.cpp"
-#include "HelperAgentWatcher.cpp"
-#include "LoggingAgentWatcher.cpp"
+#include "CoreWatcher.cpp"
+#include "UstRouterWatcher.cpp"
 
 
 /***** Functions *****/
@@ -529,22 +529,22 @@ usage() {
 	printf("Usage: " AGENT_EXE " watchdog <OPTIONS...>\n");
 	printf("Runs the " PROGRAM_NAME " watchdog.\n\n");
 	printf("The watchdog runs and supervises various " PROGRAM_NAME " agent processes,\n");
-	printf("namely the HTTP server and logging server. Arguments marked with \"[A]\", e.g.\n");
+	printf("namely the core and the UstRouter. Arguments marked with \"[A]\", e.g.\n");
 	printf("--passenger-root and --log-level, are automatically passed to all supervised\n");
 	printf("agents, unless you explicitly override them by passing extra arguments to a\n");
 	printf("supervised agent specifically. You can pass arguments to a supervised agent by\n");
-	printf("wrapping those arguments between --BS/--ES and --BL/--EL.\n");
+	printf("wrapping those arguments between --BC/--EC and --BU/--EU.\n");
 	printf("\n");
-	printf("  Example 1: pass some arguments to the HTTP server.\n\n");
-	printf("  " AGENT_EXE " watchdog --passenger-root /opt/passenger \\\n");
-	printf("    --BS --listen tcp://127.0.0.1:4000 /webapps/foo\n");
+	printf("  Example 1: pass some arguments to the core.\n\n");
+	printf("  " SHORT_PROGRAM_NAME " watchdog --passenger-root /opt/passenger \\\n");
+	printf("    --BC --listen tcp://127.0.0.1:4000 /webapps/foo\n");
 	printf("\n");
-	printf("  Example 2: pass some arguments to the HTTP server, and some others to the\n");
-	printf("  logging server. The watchdog itself and the HTTP server will use logging\n");
-	printf("  level 3, while the logging server will use logging level 1.\n\n");
-	printf("  " AGENT_EXE " watchdog --passenger-root /opt/passenger \\\n");
-	printf("    --BS --listen tcp://127.0.0.1:4000 /webapps/foo --ES \\\n");
-	printf("    --BL --log-level 1 --EL \\\n");
+	printf("  Example 2: pass some arguments to the core, and some others to the\n");
+	printf("  UstRouter. The watchdog itself and the core will use logging\n");
+	printf("  level 3, while the UstRouter will use logging level 1.\n\n");
+	printf("  " SHORT_PROGRAM_NAME " watchdog --passenger-root /opt/passenger \\\n");
+	printf("    --BC --listen tcp://127.0.0.1:4000 /webapps/foo --EC \\\n");
+	printf("    --BU --log-level 1 --EU \\\n");
 	printf("    --log-level 3\n");
 	printf("\n");
 	printf("Required options:\n");
@@ -552,14 +552,16 @@ usage() {
 	printf("                              directory [A]\n");
 	printf("\n");
 	printf("Argument passing options (optional):\n");
-	printf("  --BS, --begin-server-args   Signals the beginning of arguments to pass to the\n");
-	printf("                              HTTP server\n");
-	printf("  --ES, --end-server-args     Signals the end of arguments to pass to the HTTP\n");
-	printf("                              server\n");
-	printf("  --BL, --begin-logger-args   Signals the beginning of arguments to pass to the\n");
-	printf("                              logging server\n");
-	printf("  --EL, --end-logger-args     Signals the end of arguments to pass to the\n");
-	printf("                              logging server\n");
+	printf("  --BC, --begin-core-args   Signals the beginning of arguments to pass to the\n");
+	printf("                            Passenger core\n");
+	printf("  --EC, --end-core-args     Signals the end of arguments to pass to the\n");
+	printf("                            Passenger core\n");
+	printf("  --BU, --begin-ust-router-args\n");
+	printf("                            Signals the beginning of arguments to pass to the\n");
+	printf("                            UstRouter\n");
+	printf("  --EU, --end-ust-router-args\n");
+	printf("                              Signals the end of arguments to pass to the\n");
+	printf("                            UstRouter\n");
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("      --api-listen ADDRESS  Listen on the given address for API commands.\n");
@@ -616,43 +618,43 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 		if (p.isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
 			options.set("passenger_root", argv[i + 1]);
 			i += 2;
-		} else if (p.isFlag(argv[i], '\0', "--BS")
-			|| p.isFlag(argv[i], '\0', "--begin-server-args"))
+		} else if (p.isFlag(argv[i], '\0', "--BC")
+			|| p.isFlag(argv[i], '\0', "--begin-core-args"))
 		{
 			i++;
 			while (i < argc) {
-				if (p.isFlag(argv[i], '\0', "--ES")
-				 || p.isFlag(argv[i], '\0', "--end-server-args"))
+				if (p.isFlag(argv[i], '\0', "--EC")
+				 || p.isFlag(argv[i], '\0', "--end-core-args"))
 				{
 					i++;
 					break;
-				} else if (p.isFlag(argv[i], '\0', "--BL")
-				 || p.isFlag(argv[i], '\0', "--begin-logger-args"))
+				} else if (p.isFlag(argv[i], '\0', "--BU")
+				 || p.isFlag(argv[i], '\0', "--begin-ust-router-args"))
 				{
 					break;
-				} else if (!parseServerOption(argc, argv, i, options)) {
-					fprintf(stderr, "ERROR: unrecognized HTTP server argument %s. Please "
-						"type '%s server --help' for usage.\n", argv[i], argv[0]);
+				} else if (!parseCoreOption(argc, argv, i, options)) {
+					fprintf(stderr, "ERROR: unrecognized core argument %s. Please "
+						"type '%s core --help' for usage.\n", argv[i], argv[0]);
 					exit(1);
 				}
 			}
-		} else if (p.isFlag(argv[i], '\0', "--BL")
-			|| p.isFlag(argv[i], '\0', "--begin-logger-args"))
+		} else if (p.isFlag(argv[i], '\0', "--BU")
+			|| p.isFlag(argv[i], '\0', "--begin-ust-router-args"))
 		{
 			i++;
 			while (i < argc) {
-				if (p.isFlag(argv[i], '\0', "--EL")
-				 || p.isFlag(argv[i], '\0', "--end-logger-args"))
+				if (p.isFlag(argv[i], '\0', "--EU")
+				 || p.isFlag(argv[i], '\0', "--end-ust-router-args"))
 				{
 					i++;
 					break;
-				} else if (p.isFlag(argv[i], '\0', "--BS")
-				 || p.isFlag(argv[i], '\0', "--begin-server-args"))
+				} else if (p.isFlag(argv[i], '\0', "--BC")
+				 || p.isFlag(argv[i], '\0', "--begin-core-args"))
 				{
 					break;
-				} else if (!parseLoggingAgentOption(argc, argv, i, options)) {
-					fprintf(stderr, "ERROR: unrecognized logging agent argument %s. Please "
-						"type '%s logger --help' for usage.\n", argv[i], argv[0]);
+				} else if (!parseUstRouterOption(argc, argv, i, options)) {
+					fprintf(stderr, "ERROR: unrecognized UstRouter argument %s. Please "
+						"type '%s ust-router --help' for usage.\n", argv[i], argv[0]);
 					exit(1);
 				}
 			}
@@ -776,7 +778,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	oldOomScore = setOomScoreNeverKill();
 
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, AGENT_EXE " watchdog",
+	*agentsOptions = initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " watchdog",
 		parseOptions, NULL, 2);
 
 	// Start all sub-agents with this environment variable.
@@ -912,19 +914,19 @@ lowerPrivilege() {
 
 		if (initgroups(userName.c_str(), gid) != 0) {
 			int e = errno;
-			throw SystemException("Unable to lower " AGENT_EXE " watchdog's privilege "
+			throw SystemException("Unable to lower " SHORT_PROGRAM_NAME " watchdog's privilege "
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set supplementary groups", e);
 		}
 		if (setgid(gid) != 0) {
 			int e = errno;
-			throw SystemException("Unable to lower " AGENT_EXE " watchdog's privilege "
+			throw SystemException("Unable to lower " SHORT_PROGRAM_NAME " watchdog's privilege "
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set group ID to " + toString(gid), e);
 		}
 		if (setuid(pwUser->pw_uid) != 0) {
 			int e = errno;
-			throw SystemException("Unable to lower " AGENT_EXE " watchdog's privilege "
+			throw SystemException("Unable to lower " SHORT_PROGRAM_NAME " watchdog's privilege "
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set user ID to " + toString(pwUser->pw_uid), e);
 		}
@@ -1018,57 +1020,57 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
 			fullAdminPassword, S_IRUSR | S_IWUSR);
 	}
-	options.setDefault("server_pid_file", wo->instanceDir->getPath() + "/server.pid");
+	options.setDefault("core_pid_file", wo->instanceDir->getPath() + "/core.pid");
 	options.set("watchdog_fd_passing_password", wo->randomGenerator.generateAsciiString(24));
 
 	UPDATE_TRACE_POINT();
-	strset = options.getStrSet("server_addresses", false);
+	strset = options.getStrSet("core_addresses", false);
 	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/server");
-	options.setStrSet("server_addresses", strset);
-	options.setDefault("server_password",
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/core");
+	options.setStrSet("core_addresses", strset);
+	options.setDefault("core_password",
 		wo->randomGenerator.generateAsciiString(24));
 
-	strset = options.getStrSet("server_api_addresses", false);
+	strset = options.getStrSet("core_api_addresses", false);
 	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/server_api");
-	options.setStrSet("server_api_addresses", strset);
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/core_api");
+	options.setStrSet("core_api_addresses", strset);
 
 	UPDATE_TRACE_POINT();
-	options.setDefault("logging_agent_address",
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/logging");
-	options.setDefault("logging_agent_password",
+	options.setDefault("ust_router_address",
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/ust_router");
+	options.setDefault("ust_router_password",
 		wo->randomGenerator.generateAsciiString(24));
-	strset = options.getStrSet("logging_agent_api_addresses", false);
+	strset = options.getStrSet("ust_router_api_addresses", false);
 	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/logging_api");
-	options.setStrSet("logging_agent_api_addresses", strset);
+		"unix:" + wo->instanceDir->getPath() + "/agents.s/ust_router_api");
+	options.setStrSet("ust_router_api_addresses", strset);
 
 	UPDATE_TRACE_POINT();
-	strset = options.getStrSet("logging_agent_authorizations", false);
+	strset = options.getStrSet("ust_router_authorizations", false);
 	strset.insert(strset.begin(),
 		"readonly:ro_admin:" + wo->instanceDir->getPath() +
 		"/read_only_admin_password.txt");
 	strset.insert(strset.begin(),
 		"full:admin:" + wo->instanceDir->getPath() +
 		"/full_admin_password.txt");
-	options.setStrSet("logging_agent_authorizations", strset);
+	options.setStrSet("ust_router_authorizations", strset);
 
-	strset = options.getStrSet("server_authorizations", false);
+	strset = options.getStrSet("core_authorizations", false);
 	strset.insert(strset.begin(),
 		"readonly:ro_admin:" + wo->instanceDir->getPath() +
 		"/read_only_admin_password.txt");
 	strset.insert(strset.begin(),
 		"full:admin:" + wo->instanceDir->getPath() +
 		"/full_admin_password.txt");
-	options.setStrSet("server_authorizations", strset);
+	options.setStrSet("core_authorizations", strset);
 }
 
 static void
 initializeAgentWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
-	watchers.push_back(boost::make_shared<HelperAgentWatcher>(wo));
-	watchers.push_back(boost::make_shared<LoggingAgentWatcher>(wo));
+	watchers.push_back(boost::make_shared<CoreWatcher>(wo));
+	watchers.push_back(boost::make_shared<UstRouterWatcher>(wo));
 }
 
 static void
@@ -1139,13 +1141,11 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 
 static void
 createCompatSymlinks(const WorkingObjectsPtr &wo) {
-	/* In 5.0.10, 'watchdog' has been renamed to 'watchdog_api',
-	 * 'server_admin' has been renamed to 'server_api',
-	 * and 'logging_admin' has been renamed to 'logging_api'.
-	 * To maintain backward compatibility with older versions of
+	/* To maintain backward compatibility with older versions of
 	 * passenger-status etc, we create compatibility symlinks.
 	 */
 	int ret, e;
+	string instanceDir = wo->instanceDir->getPath() + "/";
 	string prefix = wo->instanceDir->getPath() + "/agents.s/";
 
 	do {
@@ -1158,7 +1158,16 @@ createCompatSymlinks(const WorkingObjectsPtr &wo) {
 	}
 
 	do {
-		ret = symlink("server_api", (prefix + "server_admin").c_str());
+		ret = symlink("core", (prefix + "server").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + prefix + "server",
+			e, prefix + "server");
+	}
+
+	do {
+		ret = symlink("core_api", (prefix + "server_admin").c_str());
 	} while (ret == -1 && errno == EAGAIN);
 	if (ret == -1) {
 		e = errno;
@@ -1167,12 +1176,49 @@ createCompatSymlinks(const WorkingObjectsPtr &wo) {
 	}
 
 	do {
-		ret = symlink("logging_api", (prefix + "logging_admin").c_str());
+		ret = symlink("core_api", (prefix + "server_api").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + prefix + "server_api",
+			e, prefix + "server_api");
+	}
+
+	do {
+		ret = symlink("ust_router", (prefix + "logging").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + prefix + "logging",
+			e, prefix + "logging");
+	}
+
+	do {
+		ret = symlink("ust_router_api", (prefix + "logging_admin").c_str());
 	} while (ret == -1 && errno == EAGAIN);
 	if (ret == -1) {
 		e = errno;
 		throw FileSystemException("Cannot create symlink: " + prefix + "logging_admin",
 			e, prefix + "logging_admin");
+	}
+
+	do {
+		ret = symlink("ust_router_api", (prefix + "logging_api").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + prefix + "logging_api",
+			e, prefix + "logging_api");
+	}
+
+
+	do {
+		ret = symlink("core.pid", (instanceDir + "server.pid").c_str());
+	} while (ret == -1 && errno == EAGAIN);
+	if (ret == -1) {
+		e = errno;
+		throw FileSystemException("Cannot create symlink: " + instanceDir + "logging_api",
+			e, instanceDir + "server.pid");
 	}
 }
 
@@ -1290,7 +1336,7 @@ watchdogMain(int argc, char *argv[]) {
 	initializeBareEssentials(argc, argv, wo);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
-	P_NOTICE("Starting " AGENT_EXE " watchdog...");
+	P_NOTICE("Starting " SHORT_PROGRAM_NAME " watchdog...");
 	P_DEBUG("Watchdog options: " << agentsOptions->inspect());
 	InstanceDirToucherPtr instanceDirToucher;
 	vector<AgentWatcherPtr> watchers;

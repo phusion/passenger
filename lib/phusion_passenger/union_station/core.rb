@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -40,10 +40,10 @@ module PhusionPassenger
       include DebugLogging
 
       def self.new_from_options(options)
-        if options["analytics"] && options["logging_agent_address"]
-          return new(options["logging_agent_address"],
-            options["logging_agent_username"],
-            options["logging_agent_password"],
+        if options["analytics"] && options["ust_router_address"]
+          return new(options["ust_router_address"],
+            options["ust_router_username"],
+            options["ust_router_password"],
             options["node_name"])
         else
           return nil
@@ -53,8 +53,8 @@ module PhusionPassenger
       attr_accessor :max_connect_tries
       attr_accessor :reconnect_timeout
 
-      def initialize(logging_agent_address, username, password, node_name)
-        @server_address = logging_agent_address
+      def initialize(ust_router_address, username, password, node_name)
+        @server_address = ust_router_address
         @username = username
         @password = password
         if node_name && !node_name.empty?
@@ -120,7 +120,7 @@ module PhusionPassenger
                 connection_lock.reset(@connection.mutex)
               rescue SystemCallError, IOError
                 @connection.disconnect
-                warn("Cannot connect to the logging agent at #{@server_address}; " +
+                warn("Cannot connect to the UstRouter at #{@server_address}; " +
                   "retrying in #{@reconnect_timeout} second(s).")
                 @next_reconnect_time = current_time + @reconnect_timeout
                 return Transaction.new
@@ -139,12 +139,12 @@ module PhusionPassenger
                 true)
               result = @connection.channel.read
               if result != ["ok"]
-                raise "Expected logging server to respond with 'ok', but got #{result.inspect} instead"
+                raise "Expected the UstRouter to respond with 'ok', but got #{result.inspect} instead"
               end
               return Transaction.new(@connection, txn_id)
             rescue SystemCallError, IOError
               @connection.disconnect
-              warn("The logging agent at #{@server_address}" <<
+              warn("The UstRouter at #{@server_address}" <<
                 " closed the connection; will reconnect in " <<
                 "#{@reconnect_timeout} second(s).")
               @next_reconnect_time = current_time + @reconnect_timeout
@@ -176,7 +176,7 @@ module PhusionPassenger
                 connection_lock.reset(@connection.mutex)
               rescue SystemCallError, IOError
                 @connection.disconnect
-                warn("Cannot connect to the logging agent at #{@server_address}; " +
+                warn("Cannot connect to the UstRouter at #{@server_address}; " +
                   "retrying in #{@reconnect_timeout} second(s).")
                 @next_reconnect_time = current_time + @reconnect_timeout
                 return Transaction.new
@@ -195,7 +195,7 @@ module PhusionPassenger
               return Transaction.new(@connection, txn_id)
             rescue SystemCallError, IOError
               @connection.disconnect
-              warn("The logging agent at #{@server_address}" <<
+              warn("The UstRouter at #{@server_address}" <<
                 " closed the connection; will reconnect in " <<
                 "#{@reconnect_timeout} second(s).")
               @next_reconnect_time = current_time + @reconnect_timeout
@@ -223,9 +223,9 @@ module PhusionPassenger
         if result.nil?
           raise EOFError
         elsif result.size != 2 || result[0] != "version"
-          raise IOError, "The logging agent didn't sent a valid version identifier"
+          raise IOError, "The UstRouter didn't sent a valid version identifier"
         elsif result[1] != "1"
-          raise IOError, "Unsupported logging agent protocol version #{result[1]}"
+          raise IOError, "Unsupported UstRouter protocol version #{result[1]}"
         end
 
         channel.write_scalar(@username)
@@ -241,13 +241,13 @@ module PhusionPassenger
         channel.write("init", @node_name)
         args = channel.read
         if !args
-          raise Errno::ECONNREFUSED, "Cannot connect to logging agent"
+          raise Errno::ECONNREFUSED, "Cannot connect to UstRouter"
         elsif args.size != 1
-          raise IOError, "Logging agent returned an invalid reply for the 'init' command"
+          raise IOError, "UstRouter returned an invalid reply for the 'init' command"
         elsif args[0] == "server shutting down"
-          raise Errno::ECONNREFUSED, "Cannot connect to logging agent"
+          raise Errno::ECONNREFUSED, "Cannot connect to UstRouter"
         elsif args[0] != "ok"
-          raise IOError, "Logging agent returned an invalid reply for the 'init' command"
+          raise IOError, "UstRouter returned an invalid reply for the 'init' command"
         end
 
         @connection.unref

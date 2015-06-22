@@ -69,8 +69,8 @@ module PhusionPassenger
 
       def perform_reopen_logs
         perform_reopen_logs_on("watchdog", "watchdog")
-        perform_reinherit_logs_on("server", "server_api")
-        perform_reinherit_logs_on("logger", "logging_api")
+        perform_reinherit_logs_on("core", "core_api")
+        perform_reinherit_logs_on("UstRouter", "ust_router_api")
         puts "All done"
       end
 

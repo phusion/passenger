@@ -37,7 +37,7 @@ module PhusionPassenger
       include PhusionPassenger::Config::Utils
 
       def self.create_default_options
-        { :agent_name => "server_api" }
+        { :agent_name => "core_api" }
       end
 
       def run
@@ -93,8 +93,8 @@ module PhusionPassenger
           opts.on("-a", "--agent NAME", String, "The name of the socket to send the command#{nl}" +
             "to. This specifies which agent the request#{nl}" +
             "is sent to. Choices: watchdog_api,#{nl}" +
-            "server_api, logging_api.#{nl}" +
-            "Default: server_api") do |val|
+            "core_api, ust_router_api.#{nl}" +
+            "Default: core_api") do |val|
             options[:agent_name] = val
           end
           opts.on("-S", "--socket PATH", String, "Instead of inferring the socket path from#{nl}" +

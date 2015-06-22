@@ -113,7 +113,7 @@ module PhusionPassenger
             command << " --default-user #{Shellwords.escape user}"
           end
 
-          command << " --BS"
+          command << " --BC"
           command << " --listen #{listen_address}"
           command << " --no-graceful-exit"
           add_param(command, :environment, "--environment")

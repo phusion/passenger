@@ -164,7 +164,7 @@ module PhusionPassenger
     def dump_system_metrics(options)
       if dir = ENV['PASSENGER_DEBUG_DIR']
         # When invoked through Passenger Standalone, we want passenger-config
-        # to use the HelperAgent in the Passsenger Standalone buildout directory,
+        # to use the PassengerAgent in the Passsenger Standalone buildout directory,
         # because the one in the source root may not exist.
         passenger_config = "#{PhusionPassenger.bin_dir}/passenger-config"
         if is_ruby_program?(passenger_config)

@@ -66,11 +66,11 @@
 
 #include <ev++.h>
 
-#include <agents/HelperAgent/OptionParser.h>
-#include <agents/HelperAgent/RequestHandler.h>
-#include <agents/HelperAgent/ApiServer.h>
-#include <agents/Base.h>
-#include <agents/ApiServerUtils.h>
+#include <agent/Core/OptionParser.h>
+#include <agent/Core/RequestHandler.h>
+#include <agent/Core/ApiServer.h>
+#include <agent/Base.h>
+#include <agent/ApiServerUtils.h>
 #include <Constants.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
@@ -98,7 +98,7 @@ using namespace Passenger::ApplicationPool2;
 /***** Structures, constants, global variables and forward declarations *****/
 
 namespace Passenger {
-namespace ServerAgent {
+namespace Core {
 	struct ThreadWorkingObjects {
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
@@ -177,23 +177,23 @@ namespace ServerAgent {
 			delete apiWorkingObjects.bgloop;
 		}
 	};
-} // namespace ServerAgent
+} // namespace Core
 } // namespace Passenger
 
-using namespace Passenger::ServerAgent;
+using namespace Passenger::Core;
 
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
 
 
-/***** Server stuff *****/
+/***** Core stuff *****/
 
 static void waitForExitEvent();
 static void cleanup();
 static void deletePidFile();
 static void abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process);
 static void requestHandlerShutdownFinished(RequestHandler *server);
-static void apiServerShutdownFinished(ServerAgent::ApiServer *server);
+static void apiServerShutdownFinished(Core::ApiServer *server);
 static void printInfoInThread();
 
 static void
@@ -204,14 +204,14 @@ initializePrivilegedWorkingObjects() {
 
 	wo->prestarterThread = NULL;
 
-	wo->password = options.get("server_password", false);
+	wo->password = options.get("core_password", false);
 	if (wo->password == "-") {
 		wo->password.clear();
-	} else if (wo->password.empty() && options.has("server_password_file")) {
-		wo->password = strip(readAll(options.get("server_password_file")));
+	} else if (wo->password.empty() && options.has("core_password_file")) {
+		wo->password = strip(readAll(options.get("core_password_file")));
 	}
 
-	vector<string> authorizations = options.getStrSet("server_authorizations",
+	vector<string> authorizations = options.getStrSet("core_authorizations",
 		false);
 	string description;
 
@@ -231,7 +231,7 @@ initializeSingleAppMode() {
 	VariantMap &options = *agentsOptions;
 
 	if (options.getBool("multi_app")) {
-		P_NOTICE(AGENT_EXE " server running in multi-application mode.");
+		P_NOTICE(SHORT_PROGRAM_NAME " core running in multi-application mode.");
 		return;
 	}
 
@@ -244,7 +244,7 @@ initializeSingleAppMode() {
 				"lives in %s. Please specify information about the app using "
 				"--app-type and --startup-file, or specify a correct location to "
 				"the application you want to serve.\n"
-				"Type '" AGENT_EXE " server --help' for more information.\n",
+				"Type '" SHORT_PROGRAM_NAME " core --help' for more information.\n",
 				options.get("app_root").c_str());
 			exit(1);
 		}
@@ -253,7 +253,7 @@ initializeSingleAppMode() {
 		options.set("startup_file", getAppTypeStartupFile(appType));
 	}
 
-	P_NOTICE(AGENT_EXE " server running in single-application mode.");
+	P_NOTICE(SHORT_PROGRAM_NAME " core running in single-application mode.");
 	P_NOTICE("Serving app     : " << options.get("app_root"));
 	P_NOTICE("App type        : " << options.get("app_type"));
 	P_NOTICE("App startup file: " << options.get("startup_file"));
@@ -313,8 +313,8 @@ static void
 startListening() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
-	vector<string> addresses = agentsOptions->getStrSet("server_addresses");
-	vector<string> apiAddresses = agentsOptions->getStrSet("server_api_addresses", false);
+	vector<string> addresses = agentsOptions->getStrSet("core_addresses");
+	vector<string> apiAddresses = agentsOptions->getStrSet("core_api_addresses", false);
 
 	#ifdef USE_SELINUX
 		// Set SELinux context on the first socket that we create
@@ -348,7 +348,7 @@ startListening() {
 static void
 createPidFile() {
 	TRACE_POINT();
-	string pidFile = agentsOptions->get("server_pid_file", false);
+	string pidFile = agentsOptions->get("core_pid_file", false);
 	if (!pidFile.empty()) {
 		char pidStr[32];
 
@@ -532,8 +532,8 @@ initializeNonPrivilegedWorkingObjects() {
 	setenv("SERVER_SOFTWARE", options.get("server_software").c_str(), 1);
 	options.set("data_buffer_dir", absolutizePath(options.get("data_buffer_dir")));
 
-	vector<string> addresses = options.getStrSet("server_addresses");
-	vector<string> apiAddresses = options.getStrSet("server_api_addresses", false);
+	vector<string> addresses = options.getStrSet("core_addresses");
+	vector<string> apiAddresses = options.getStrSet("core_api_addresses", false);
 
 	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
 
@@ -546,11 +546,11 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
-	if (options.has("logging_agent_address")) {
+	if (options.has("ust_router_address")) {
 		wo->unionStationCore = boost::make_shared<UnionStation::Core>(
-			options.get("logging_agent_address"),
+			options.get("ust_router_address"),
 			"logging",
-			options.get("logging_agent_password"));
+			options.get("ust_router_password"));
 	}
 
 	UPDATE_TRACE_POINT();
@@ -577,7 +577,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->appPool->abortLongRunningConnectionsCallback = abortLongRunningConnections;
 
 	UPDATE_TRACE_POINT();
-	unsigned int nthreads = options.getInt("server_threads");
+	unsigned int nthreads = options.getInt("core_threads");
 	BackgroundEventLoop *firstLoop = NULL; // Avoid compiler warning
 	wo->threadWorkingObjects.reserve(nthreads);
 	for (unsigned int i = 0; i < nthreads; i++) {
@@ -636,7 +636,7 @@ initializeNonPrivilegedWorkingObjects() {
 			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
-		awo->apiServer = new ServerAgent::ApiServer(awo->serverKitContext);
+		awo->apiServer = new Core::ApiServer(awo->serverKitContext);
 		awo->apiServer->requestHandlers.reserve(wo->threadWorkingObjects.size());
 		for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 			awo->apiServer->requestHandlers.push_back(
@@ -704,16 +704,16 @@ static void
 reportInitializationInfo() {
 	TRACE_POINT();
 	if (feedbackFdAvailable()) {
-		P_NOTICE(AGENT_EXE " server online, PID " << getpid());
+		P_NOTICE(SHORT_PROGRAM_NAME " core online, PID " << getpid());
 		writeArrayMessage(FEEDBACK_FD,
 			"initialized",
 			NULL);
 	} else {
-		vector<string> addresses = agentsOptions->getStrSet("server_addresses");
-		vector<string> apiAddresses = agentsOptions->getStrSet("server_api_addresses", false);
+		vector<string> addresses = agentsOptions->getStrSet("core_addresses");
+		vector<string> apiAddresses = agentsOptions->getStrSet("core_api_addresses", false);
 		string address;
 
-		P_NOTICE(AGENT_EXE " server online, PID " << getpid() <<
+		P_NOTICE(SHORT_PROGRAM_NAME " core online, PID " << getpid() <<
 			", listening on " << addresses.size() << " socket(s):");
 		foreach (address, addresses) {
 			if (startsWith(address, "tcp://")) {
@@ -744,7 +744,7 @@ mainLoop() {
 	WorkingObjects *wo = workingObjects;
 	#ifdef SUPPORTS_PER_THREAD_CPU_AFFINITY
 		unsigned int maxCpus = boost::thread::hardware_concurrency();
-		bool cpuAffine = agentsOptions->getBool("server_cpu_affine")
+		bool cpuAffine = agentsOptions->getBool("core_cpu_affine")
 			&& maxCpus <= CPU_SETSIZE;
 	#endif
 
@@ -759,12 +759,12 @@ mainLoop() {
 
 				CPU_ZERO(&cpus);
 				CPU_SET(i % maxCpus, &cpus);
-				P_DEBUG("Setting CPU affinity of server thread " << (i + 1)
+				P_DEBUG("Setting CPU affinity of core thread " << (i + 1)
 					<< " to CPU " << (i % maxCpus + 1));
 				result = pthread_setaffinity_np(two->bgloop->getNativeHandle(),
 					maxCpus, &cpus);
 				if (result != 0) {
-					P_WARN("Cannot set CPU affinity on server thread " << (i + 1)
+					P_WARN("Cannot set CPU affinity on core thread " << (i + 1)
 						<< ": " << strerror(result) << " (errno=" << result << ")");
 				}
 			}
@@ -825,7 +825,7 @@ requestHandlerShutdownFinished(RequestHandler *server) {
 }
 
 static void
-apiServerShutdownFinished(ServerAgent::ApiServer *server) {
+apiServerShutdownFinished(Core::ApiServer *server) {
 	serverShutdownFinished();
 }
 
@@ -907,7 +907,7 @@ cleanup() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
 
-	P_DEBUG("Shutting down " AGENT_EXE " server...");
+	P_DEBUG("Shutting down " SHORT_PROGRAM_NAME " core...");
 	wo->appPool->destroy();
 	installDiagnosticsDumper(NULL, NULL);
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
@@ -939,22 +939,22 @@ cleanup() {
 	deletePidFile();
 	delete workingObjects;
 	workingObjects = NULL;
-	P_NOTICE(AGENT_EXE " server shutdown finished");
+	P_NOTICE(SHORT_PROGRAM_NAME " core shutdown finished");
 }
 
 static void
 deletePidFile() {
 	TRACE_POINT();
-	string pidFile = agentsOptions->get("server_pid_file", false);
+	string pidFile = agentsOptions->get("core_pid_file", false);
 	if (!pidFile.empty()) {
 		syscalls::unlink(pidFile.c_str());
 	}
 }
 
 static int
-runServer() {
+runCore() {
 	TRACE_POINT();
-	P_NOTICE("Starting " AGENT_EXE " server...");
+	P_NOTICE("Starting " SHORT_PROGRAM_NAME " core...");
 
 	try {
 		UPDATE_TRACE_POINT();
@@ -992,18 +992,18 @@ runServer() {
 
 static void
 parseOptions(int argc, const char *argv[], VariantMap &options) {
-	OptionParser p(serverUsage);
+	OptionParser p(coreUsage);
 	int i = 2;
 
 	while (i < argc) {
-		if (parseServerOption(argc, argv, i, options)) {
+		if (parseCoreOption(argc, argv, i, options)) {
 			continue;
 		} else if (p.isFlag(argv[i], 'h', "--help")) {
-			serverUsage();
+			coreUsage();
 			exit(0);
 		} else {
 			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
-				"'%s server --help' for usage.\n", argv[i], argv[0]);
+				"'%s core --help' for usage.\n", argv[i], argv[0]);
 			exit(1);
 		}
 	}
@@ -1013,14 +1013,14 @@ static void
 preinitialize(VariantMap &options) {
 	// Set log_level here so that initializeAgent() calls setLogLevel()
 	// and setLogFile() with the right value.
-	if (options.has("server_log_level")) {
-		options.setInt("log_level", options.getInt("server_log_level"));
+	if (options.has("core_log_level")) {
+		options.setInt("log_level", options.getInt("core_log_level"));
 	}
-	if (options.has("server_log_file")) {
-		options.set("log_file", options.get("server_log_file"));
+	if (options.has("core_log_file")) {
+		options.set("log_file", options.get("core_log_file"));
 	}
-	if (options.has("server_file_descriptor_log_file")) {
-		options.set("file_descriptor_log_file", options.get("server_file_descriptor_log_file"));
+	if (options.has("core_file_descriptor_log_file")) {
+		options.set("file_descriptor_log_file", options.get("core_file_descriptor_log_file"));
 	}
 }
 
@@ -1047,7 +1047,7 @@ setAgentsOptionsDefaults() {
 		options.set("default_group",
 			inferDefaultGroup(options.get("default_user")));
 	}
-	options.setDefaultStrSet("server_addresses", defaultAddress);
+	options.setDefaultStrSet("core_addresses", defaultAddress);
 	options.setDefaultBool("multi_app", false);
 	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);
@@ -1067,14 +1067,14 @@ setAgentsOptionsDefaults() {
 	options.setDefaultUint("file_buffer_threshold", DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD);
 	options.setDefaultInt("response_buffer_high_watermark", DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
 	options.setDefaultBool("selfchecks", false);
-	options.setDefaultBool("server_graceful_exit", true);
-	options.setDefaultInt("server_threads", boost::thread::hardware_concurrency());
-	options.setDefaultBool("server_cpu_affine", false);
+	options.setDefaultBool("core_graceful_exit", true);
+	options.setDefaultInt("core_threads", boost::thread::hardware_concurrency());
+	options.setDefaultBool("core_cpu_affine", false);
 	options.setDefault("friendly_error_pages", "auto");
 	options.setDefaultBool("rolling_restarts", false);
 	options.setDefaultBool("resist_deployment_errors", false);
 
-	string firstAddress = options.getStrSet("server_addresses")[0];
+	string firstAddress = options.getStrSet("core_addresses")[0];
 	if (getSocketAddressType(firstAddress) == SAT_TCP) {
 		string host;
 		unsigned short port;
@@ -1173,7 +1173,7 @@ sanityCheckOptions() {
 			options.get("benchmark_mode", false).c_str());
 		ok = false;
 	}
-	if (options.getInt("server_threads") < 1) {
+	if (options.getInt("core_threads") < 1) {
 		fprintf(stderr, "ERROR: you may only specify for --threads a number greater than or equal to 1.\n");
 		ok = false;
 	}
@@ -1188,15 +1188,15 @@ sanityCheckOptions() {
 }
 
 int
-serverMain(int argc, char *argv[]) {
+coreMain(int argc, char *argv[]) {
 	int ret;
 
 	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, AGENT_EXE " server", parseOptions,
+	*agentsOptions = initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " core", parseOptions,
 		preinitialize, 2);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
-	ret = runServer();
+	ret = runCore();
 	shutdownAgent(agentsOptions);
 	return ret;
 }

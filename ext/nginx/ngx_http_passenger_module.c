@@ -47,10 +47,6 @@
 #include "common/Utils/modp_b64.cpp" /* File is C compatible. */
 
 
-#define HELPER_SERVER_MAX_SHUTDOWN_TIME 5
-#define HELPER_SERVER_PASSWORD_SIZE     64
-
-
 static int                first_start = 1;
 ngx_str_t                 pp_schema_string;
 ngx_str_t                 pp_placeholder_upstream_address;
@@ -147,10 +143,10 @@ save_master_process_pid(ngx_cycle_t *cycle) {
 }
 
 /**
- * This function is called after forking and just before exec()ing the helper server.
+ * This function is called after forking and just before exec()ing the watchdog.
  */
 static void
-starting_helper_server_after_fork(void *arg) {
+starting_watchdog_after_fork(void *arg) {
     ngx_cycle_t *cycle = (void *) arg;
     char        *log_filename;
     FILE        *log_file;
@@ -325,7 +321,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     ret = pp_agents_starter_start(pp_agents_starter,
         passenger_root,
         params,
-        starting_helper_server_after_fork,
+        starting_watchdog_after_fork,
         cycle,
         &error_message);
     if (!ret) {
@@ -392,10 +388,10 @@ cleanup:
 }
 
 /**
- * Shutdown the helper server, if there's one running.
+ * Shutdown the watchdog, if there's one running.
  */
 static void
-shutdown_helper_server() {
+shutdown_watchdog() {
     if (pp_agents_starter != NULL) {
         pp_agents_starter_free(pp_agents_starter);
         pp_agents_starter = NULL;
@@ -413,13 +409,13 @@ pre_config_init(ngx_conf_t *cf)
 {
     char *error_message;
 
-    shutdown_helper_server();
+    shutdown_watchdog();
 
     ngx_memzero(&passenger_main_conf, sizeof(passenger_main_conf_t));
     pp_schema_string.data = (u_char *) "passenger:";
     pp_schema_string.len  = sizeof("passenger:") - 1;
-    pp_placeholder_upstream_address.data = (u_char *) "unix:/passenger_helper_server";
-    pp_placeholder_upstream_address.len  = sizeof("unix:/passenger_helper_server") - 1;
+    pp_placeholder_upstream_address.data = (u_char *) "unix:/passenger_core";
+    pp_placeholder_upstream_address.len  = sizeof("unix:/passenger_core") - 1;
     pp_stat_cache = pp_cached_file_stat_new(1024);
     pp_app_type_detector = pp_app_type_detector_new(DEFAULT_STAT_THROTTLE_RATE);
     pp_agents_starter = pp_agents_starter_new(AS_NGINX, &error_message);
@@ -442,9 +438,9 @@ static ngx_int_t
 init_module(ngx_cycle_t *cycle) {
     if (passenger_main_conf.root_dir.len != 0 && !ngx_test_config) {
         if (first_start) {
-            /* Ignore SIGPIPE now so that, if the helper server fails to start,
+            /* Ignore SIGPIPE now so that, if the watchdog fails to start,
              * Nginx doesn't get killed by the default SIGPIPE handler upon
-             * writing the password to the helper server.
+             * writing the password to the watchdog.
              */
             ignore_sigpipe();
             first_start = 0;
@@ -486,7 +482,7 @@ init_worker_process(ngx_cycle_t *cycle) {
  */
 static void
 exit_master(ngx_cycle_t *cycle) {
-    shutdown_helper_server();
+    shutdown_watchdog();
 }
 
 

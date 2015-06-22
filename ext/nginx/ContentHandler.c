@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (C) 2010-2014 Phusion
+ * Copyright (C) 2010-2015 Phusion
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -207,35 +207,35 @@ static void
 set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_conf_t *upstream_config) {
     ngx_http_upstream_server_t *servers = upstream_config->upstream->servers->elts;
     ngx_addr_t                 *address = &servers[0].addrs[0];
-    const char                 *server_address;
-    unsigned int                server_address_len;
+    const char                 *core_address;
+    unsigned int                core_address_len;
     struct sockaddr_un         *sockaddr;
 
     /* The Nginx API makes it extremely difficult to register an upstream server
      * address outside of the configuration loading phase. However we don't know
-     * the helper agent's request socket filename until we're done with loading
+     * the Passenger core's request socket filename until we're done with loading
      * the configuration. So during configuration loading we register a placeholder
      * address for the upstream configuration, and while processing requests
-     * we substitute the placeholder filename with the real helper agent request
+     * we substitute the placeholder filename with the real Passenger core request
      * socket filename.
      */
     if (address->name.data == pp_placeholder_upstream_address.data) {
         sockaddr = (struct sockaddr_un *) address->sockaddr;
-        server_address =
-            pp_agents_starter_get_server_address(pp_agents_starter,
-                                                 &server_address_len);
-        server_address += sizeof("unix:") - 1;
-        server_address_len -= sizeof("unix:") - 1;
+        core_address =
+            pp_agents_starter_get_core_address(pp_agents_starter,
+                                               &core_address_len);
+        core_address += sizeof("unix:") - 1;
+        core_address_len -= sizeof("unix:") - 1;
 
-        address->name.data = (u_char *) server_address;
-        address->name.len  = server_address_len;
-        strncpy(sockaddr->sun_path, server_address, sizeof(sockaddr->sun_path));
+        address->name.data = (u_char *) core_address;
+        address->name.len  = core_address_len;
+        strncpy(sockaddr->sun_path, core_address, sizeof(sockaddr->sun_path));
         sockaddr->sun_path[sizeof(sockaddr->sun_path) - 1] = '\0';
     }
 }
 
 /**
- * If the helper agent socket cannot be connected to then we want Nginx to print
+ * If the Passenger core socket cannot be connected to then we want Nginx to print
  * the proper socket filename in the error message. The socket filename is stored
  * in one of the upstream peer data structures. This name is initialized during
  * the first ngx_http_read_client_request_body() call so there's no way to fix the
@@ -247,8 +247,8 @@ fix_peer_address(ngx_http_request_t *r) {
     ngx_http_upstream_rr_peers_t     *peers;
     ngx_http_upstream_rr_peer_t      *peer;
     unsigned int                      peer_index;
-    const char                       *server_address;
-    unsigned int                      server_address_len;
+    const char                       *core_address;
+    unsigned int                      core_address_len;
 
     if (r->upstream->peer.get != ngx_http_upstream_get_round_robin_peer) {
         /* This function only supports the round-robin upstream method. */
@@ -257,24 +257,24 @@ fix_peer_address(ngx_http_request_t *r) {
 
     rrp        = r->upstream->peer.data;
     peers      = rrp->peers;
-    server_address =
-        pp_agents_starter_get_server_address(pp_agents_starter,
-                                             &server_address_len);
+    core_address =
+        pp_agents_starter_get_core_address(pp_agents_starter,
+                                             &core_address_len);
 
     while (peers != NULL) {
         if (peers->name) {
-            if (peers->name->data == (u_char *) server_address) {
+            if (peers->name->data == (u_char *) core_address) {
                 /* Peer names already fixed. */
                 return;
             }
-            peers->name->data = (u_char *) server_address;
-            peers->name->len  = server_address_len;
+            peers->name->data = (u_char *) core_address;
+            peers->name->len  = core_address_len;
         }
         peer_index = 0;
         while (1) {
             peer = &peers->peer[peer_index];
-            peer->name.data = (u_char *) server_address;
-            peer->name.len  = server_address_len;
+            peer->name.data = (u_char *) core_address;
+            peer->name.len  = core_address_len;
             if (peer->down) {
                 peer_index++;
             } else {
@@ -312,7 +312,7 @@ create_key(ngx_http_request_t *r)
 
 /**
  * Checks whether the given header is "Transfer-Encoding".
- * We do not pass Transfer-Encoding headers to the HelperAgent because
+ * We do not pass Transfer-Encoding headers to the Passenger core because
  * Nginx always buffers the request body and always sets Content-Length
  * in the request headers.
  */
@@ -342,7 +342,7 @@ typedef struct {
     ngx_str_t     app_type;
     ngx_str_t     escaped_uri;
     ngx_str_t     content_length;
-    ngx_str_t     server_password;
+    ngx_str_t     core_password;
     ngx_str_t     remote_port;
 } buffer_construction_state;
 
@@ -448,9 +448,9 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
             - state->content_length.data;
     }
 
-    state->server_password.data = (u_char *) pp_agents_starter_get_server_password(
+    state->core_password.data = (u_char *) pp_agents_starter_get_core_password(
         pp_agents_starter, &len);
-    state->server_password.len  = len;
+    state->core_password.len  = len;
 
     switch (r->connection->sockaddr->sa_family) {
     #if (NGX_HAVE_INET6)
@@ -628,11 +628,11 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
 
     if (b != NULL) {
         b->last = ngx_copy(b->last, "!~: ", sizeof("!~: ") - 1);
-        b->last = ngx_copy(b->last, state->server_password.data,
-            state->server_password.len);
+        b->last = ngx_copy(b->last, state->core_password.data,
+            state->core_password.len);
         b->last = ngx_copy(b->last, "\r\n", sizeof("\r\n") - 1);
     }
-    total_size += (sizeof("!~: \r\n") - 1) + state->server_password.len;
+    total_size += (sizeof("!~: \r\n") - 1) + state->core_password.len;
 
     PUSH_STATIC_STR("!~DOCUMENT_ROOT: ");
     if (b != NULL) {
@@ -1450,7 +1450,7 @@ passenger_content_handler(ngx_http_request_t *r)
     }
 
 
-    /* Setup upstream stuff and prepare sending the request to the HelperAgent. */
+    /* Setup upstream stuff and prepare sending the request to the Passenger core. */
 
     if (ngx_http_upstream_create(r) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;

@@ -83,7 +83,7 @@ public:
 
 
 /**
- * Represents a connection to the logging server.
+ * Represents a connection to the UstRouter.
  * All access to the file descriptor must be synchronized through the syncher.
  * You can use the ConnectionLock to do that.
  */

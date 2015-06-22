@@ -36,7 +36,7 @@
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
 #include <UnionStation/ScopeLog.h>
-#include <agents/HelperAgent/RequestHandler/AppResponse.h>
+#include <agent/Core/RequestHandler/AppResponse.h>
 #include <Logging.h>
 
 namespace Passenger {

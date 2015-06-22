@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -60,7 +60,7 @@ module PhusionPassenger
             @connection.channel.write_scalar(text)
           rescue SystemCallError, IOError => e
             @connection.disconnect
-            warn("Error communicating with the logging agent: #{e.message}")
+            warn("Error communicating with the UstRouter: #{e.message}")
           rescue Exception => e
             @connection.disconnect
             raise e
@@ -125,18 +125,18 @@ module PhusionPassenger
               Core.timestamp_string, true)
             result = @connection.channel.read
             if result != ["ok"]
-              raise "Expected logging agent to respond with 'ok', but got #{result.inspect} instead"
+              raise "Expected UstRouter to respond with 'ok', but got #{result.inspect} instead"
             end
             if flush_to_disk
               @connection.channel.write("flush")
               result = @connection.channel.read
               if result != ["ok"]
-                raise "Invalid logging agent response #{result.inspect} to the 'flush' command"
+                raise "Invalid UstRouter response #{result.inspect} to the 'flush' command"
               end
             end
           rescue SystemCallError, IOError => e
             @connection.disconnect
-            warn("Error communicating with the logging agent: #{e.message}")
+            warn("Error communicating with the UstRouter: #{e.message}")
           rescue Exception => e
             @connection.disconnect
             raise e

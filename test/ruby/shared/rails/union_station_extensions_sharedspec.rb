@@ -8,16 +8,16 @@ module PhusionPassenger
 
 shared_examples_for "Union Station extensions for Rails" do
   before :each do
-    @logging_agent_password = "1234"
+    @ust_router_password = "1234"
     @us_tmpdir = Dir.mktmpdir
     @dump_file = "#{@us_tmpdir}/log.txt"
-    @agent_pid, @socket_filename, @socket_address = spawn_logging_agent(@us_tmpdir,
-      @dump_file, @logging_agent_password)
+    @agent_pid, @socket_filename, @socket_address = spawn_ust_router(@us_tmpdir,
+      @dump_file, @ust_router_password)
     @options = {
       "analytics" => true,
-      "logging_agent_address" => @socket_address,
-      "logging_agent_username" => "logging",
-      "logging_agent_password" => "1234",
+      "ust_router_address" => @socket_address,
+      "ust_router_username" => "logging",
+      "ust_router_password" => "1234",
       "node_name" => "localhost",
       "app_group_name" => "foobar"
     }
@@ -76,7 +76,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/foo")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?("Controller action: FooController#index\n")
     end
@@ -93,7 +93,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/crash")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?("Request transaction ID: 1234-abcd\n") &&
         log.include?("Message: " + base64("something went wrong")) &&
@@ -121,7 +121,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/foo")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?('BEGIN: BENCHMARK: hello') &&
         log.include?('END: BENCHMARK: hello')
@@ -141,7 +141,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/foo")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?('BEGIN: BENCHMARK: hello') &&
         log.include?('END: BENCHMARK: hello')
@@ -163,7 +163,7 @@ shared_examples_for "Union Station extensions for Rails" do
     send_request_to_app("PATH_INFO" => "/foo")
     extra_info_regex = Regexp.escape(base64("SQL\nCREATE TABLE foobar (id INT)"))
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
         log =~ /END: DB BENCHMARK: .* \(.*\)$/
@@ -185,7 +185,7 @@ shared_examples_for "Union Station extensions for Rails" do
     send_request_to_app("PATH_INFO" => "/foo")
     extra_info_regex = Regexp.escape(base64("SQL\nCREATE TABLE foobar (id INT)--PASSWORD"))
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
         log =~ /END: DB BENCHMARK: .* \(.*\)$/
@@ -215,7 +215,7 @@ shared_examples_for "Union Station extensions for Rails" do
       end
     else
       eventually(5) do
-        flush_logging_agent(@logging_agent_password, @socket_address)
+        flush_ust_router(@ust_router_password, @socket_address)
         log = read_log
         log =~ /BEGIN: DB BENCHMARK: .* \(.*\) #{extra_info_regex}$/ &&
           log =~ /FAIL: DB BENCHMARK: .* \(.*\)$/
@@ -234,7 +234,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/foo")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?("BEGIN: framework request processing") &&
         log.include?("END: framework request processing")
@@ -252,7 +252,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/foo")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?("BEGIN: framework request processing") &&
         log.include?("FAIL: framework request processing")
@@ -273,7 +273,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/foo")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?("BEGIN: view rendering") &&
         log.include?("END: view rendering") &&
@@ -295,7 +295,7 @@ shared_examples_for "Union Station extensions for Rails" do
     start!(@options)
     send_request_to_app("PATH_INFO" => "/foo")
     eventually(5) do
-      flush_logging_agent(@logging_agent_password, @socket_address)
+      flush_ust_router(@ust_router_password, @socket_address)
       log = read_log
       log.include?("BEGIN: view rendering") &&
         log.include?("FAIL: view rendering")
@@ -320,7 +320,7 @@ shared_examples_for "Union Station extensions for Rails" do
       start!(@options)
       send_request_to_app("PATH_INFO" => "/foo")
       eventually(5) do
-        flush_logging_agent(@logging_agent_password, @socket_address)
+        flush_ust_router(@ust_router_password, @socket_address)
         log = read_log
         log.include?("Cache hit: key1") &&
           log.include?("Cache hit: key2") &&
@@ -344,7 +344,7 @@ shared_examples_for "Union Station extensions for Rails" do
       start!(@options)
       send_request_to_app("PATH_INFO" => "/foo")
       eventually(5) do
-        flush_logging_agent(@logging_agent_password, @socket_address)
+        flush_ust_router(@ust_router_password, @socket_address)
         log = read_log
         log.include?("Cache miss: key1") &&
           log.include?("Cache miss: key2") &&

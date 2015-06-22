@@ -145,17 +145,17 @@ private:
 		fd = connectToServer(serverAddress, __FILE__, __LINE__);
 		FdGuard guard(fd, NULL, 0, true);
 
-		P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "Connection to " AGENT_EXE " logger");
+		P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "Connection to " SHORT_PROGRAM_NAME " UstRouter");
 
 		// Handshake: process protocol version number.
 		if (!readArrayMessage(fd, args, &timeout)) {
-			throw IOException("The logging agent closed the connection before sending a version identifier.");
+			throw IOException("The UstRouter closed the connection before sending a version identifier.");
 		}
 		if (args.size() != 2 || args[0] != "version") {
-			throw IOException("The logging agent server didn't sent a valid version identifier.");
+			throw IOException("The UstRouter server didn't sent a valid version identifier.");
 		}
 		if (args[1] != "1") {
-			string message = "Unsupported logging agent protocol version " +
+			string message = "Unsupported UstRouter protocol version " +
 				args[1] + ".";
 			throw IOException(message);
 		}
@@ -167,24 +167,24 @@ private:
 
 		UPDATE_TRACE_POINT();
 		if (!readArrayMessage(fd, args, &timeout)) {
-			throw IOException("The logging agent did not send an authentication response.");
+			throw IOException("The UstRouter did not send an authentication response.");
 		} else if (args.size() != 1) {
-			throw IOException("The authentication response that the logging agent sent is not valid.");
+			throw IOException("The authentication response that the UstRouter sent is not valid.");
 		} else if (args[0] != "ok") {
-			throw SecurityException("The logging agent server denied authentication: " + args[0]);
+			throw SecurityException("The UstRouter server denied authentication: " + args[0]);
 		}
 
 		// Initialize session.
 		UPDATE_TRACE_POINT();
 		writeArrayMessage(fd, &timeout, "init", nodeName.c_str(), NULL);
 		if (!readArrayMessage(fd, args, &timeout)) {
-			throw SystemException("Cannot connect to logging server", ECONNREFUSED);
+			throw SystemException("Cannot connect to the UstRouter", ECONNREFUSED);
 		} else if (args.size() != 1) {
-			throw IOException("Logging server returned an invalid reply for the 'init' command");
+			throw IOException("UstRouter returned an invalid reply for the 'init' command");
 		} else if (args[0] == "server shutting down") {
 			throw SystemException("Cannot connect to server", ECONNREFUSED);
 		} else if (args[0] != "ok") {
-			throw IOException("Logging server returned an invalid reply for the 'init' command");
+			throw IOException("UstRouter returned an invalid reply for the 'init' command");
 		}
 
 		ConnectionPtr connection = boost::make_shared<Connection>(fd);
@@ -226,13 +226,13 @@ public:
 			}
 
 			l.unlock();
-			P_TRACE(3, "Creating new connection with logging agent");
+			P_TRACE(3, "Creating new connection with UstRouter");
 			ConnectionPtr connection;
 			try {
 				connection = createNewConnection();
 			} catch (const TimeoutException &) {
 				l.lock();
-				P_WARN("Timeout trying to connect to the logging agent at " << serverAddress << "; " <<
+				P_WARN("Timeout trying to connect to the UstRouter at " << serverAddress << "; " <<
 					"will reconnect in " << reconnectTimeout / 1000000 << " second(s).");
 				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 				return ConnectionPtr();
@@ -240,7 +240,7 @@ public:
 				l.lock();
 				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 				if (instanceof<IOException>(e) || instanceof<SystemException>(e)) {
-					P_WARN("Cannot connect to the logging agent at " << serverAddress <<
+					P_WARN("Cannot connect to the UstRouter at " << serverAddress <<
 						" (" << e.what() << "); will reconnect in " <<
 						reconnectTimeout / 1000000 << " second(s).");
 					return ConnectionPtr();
@@ -285,7 +285,7 @@ public:
 				vector<string> args;
 				if (!readArrayMessage(connection->fd, args, &timeout)) {
 					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The logging agent at " << serverAddress <<
+					P_WARN("The UstRouter at " << serverAddress <<
 						" closed the connection (no error message given);" <<
 						" will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
@@ -293,7 +293,7 @@ public:
 					return false;
 				} else if (args.size() == 2 && args[0] == "error") {
 					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The logging agent at " << serverAddress <<
+					P_WARN("The UstRouter at " << serverAddress <<
 						" closed the connection (error message: " << args[1] <<
 						"); will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
@@ -301,7 +301,7 @@ public:
 					return false;
 				} else if (args.empty() || args[0] != "ok") {
 					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The logging agent at " << serverAddress <<
+					P_WARN("The UstRouter at " << serverAddress <<
 						" sent an unexpected reply;" <<
 						" will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
@@ -315,7 +315,7 @@ public:
 
 		} catch (const TimeoutException &) {
 			boost::lock_guard<boost::mutex> l(syncher);
-			P_WARN("Timeout trying to communicate with the logging agent at " << serverAddress << "; " <<
+			P_WARN("Timeout trying to communicate with the UstRouter at " << serverAddress << "; " <<
 				"will reconnect in " << reconnectTimeout / 1000000 << " second(s).");
 			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 			return false;
@@ -329,12 +329,12 @@ public:
 				gotErrorResponse = connection->disconnect(errorResponse);
 				boost::lock_guard<boost::mutex> l(syncher);
 				if (gotErrorResponse) {
-					P_WARN("The logging agent at " << serverAddress <<
+					P_WARN("The UstRouter at " << serverAddress <<
 						" closed the connection (error message: " << errorResponse <<
 						"); will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
 				} else {
-					P_WARN("The logging agent at " << serverAddress <<
+					P_WARN("The UstRouter at " << serverAddress <<
 						" closed the connection (no error message given);" <<
 						" will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
@@ -380,7 +380,7 @@ public:
 		};
 		unsigned int nparams = sizeof(params) / sizeof(StaticString);
 
-		// Get a connection to the logging server.
+		// Get a connection to the UstRouter.
 		ConnectionPtr connection = checkoutConnection();
 		if (connection == NULL) {
 			P_TRACE(2, "Created NULL Union Station transaction: group=" << groupName <<
@@ -440,7 +440,7 @@ public:
 		};
 		unsigned int nparams = sizeof(params) / sizeof(StaticString);
 
-		// Get a connection to the logging server.
+		// Get a connection to the UstRouter.
 		ConnectionPtr connection = checkoutConnection();
 		if (connection == NULL) {
 			return createNullTransaction();

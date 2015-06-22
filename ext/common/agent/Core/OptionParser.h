@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_SERVER_OPTION_PARSER_H_
-#define _PASSENGER_SERVER_OPTION_PARSER_H_
+#ifndef _PASSENGER_CORE_OPTION_PARSER_H_
+#define _PASSENGER_CORE_OPTION_PARSER_H_
 
 #include <boost/thread.hpp>
 #include <cstdio>
@@ -40,12 +40,12 @@ using namespace std;
 
 
 inline void
-serverUsage() {
+coreUsage() {
 	// ....|---------------Keep output within standard terminal width (80 chars)------------|
-	printf("Usage: " AGENT_EXE " server <OPTIONS...> [APP DIRECTORY]\n");
-	printf("Runs the " PROGRAM_NAME " standalone HTTP server agent.\n");
+	printf("Usage: " AGENT_EXE " core <OPTIONS...> [APP DIRECTORY]\n");
+	printf("Runs the " PROGRAM_NAME " core.\n");
 	printf("\n");
-	printf("The server starts in single-app mode, unless --multi-app is specified. When\n");
+	printf("The core starts in single-app mode, unless --multi-app is specified. When\n");
 	printf("in single-app mode, it serves the app at the current working directory, or the\n");
 	printf("app specified by APP DIRECTORY.\n");
 	printf("\n");
@@ -66,12 +66,12 @@ serverUsage() {
 	printf("                            are applicable\n");
 	printf("\n");
 	printf("Daemon options (optional):\n");
-	printf("      --pid-file PATH       Store the server's PID in the given file. The file\n");
+	printf("      --pid-file PATH       Store the core's PID in the given file. The file\n");
 	printf("                            is deleted on exit\n");
 	printf("\n");
 	printf("Security options (optional):\n");
 	printf("      --multi-app-password-file PATH\n");
-	printf("                            Password-protect access to the HTTP server\n");
+	printf("                            Password-protect access to the core's HTTP server\n");
 	printf("                            (multi-app mode only)\n");
 	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
 	printf("                            Enables authentication on the API server, through\n");
@@ -174,22 +174,22 @@ serverUsage() {
 }
 
 inline bool
-parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
-	OptionParser p(serverUsage);
+parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
+	OptionParser p(coreUsage);
 
 	if (p.isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
 		options.set("passenger_root", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'l', "--listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("server_addresses", false);
+			vector<string> addresses = options.getStrSet("core_addresses", false);
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
 				fprintf(stderr, "ERROR: you may specify up to %u --listen addresses.\n",
 					SERVER_KIT_MAX_SERVER_ENDPOINTS);
 				exit(1);
 			}
 			addresses.push_back(argv[i + 1]);
-			options.setStrSet("server_addresses", addresses);
+			options.setStrSet("core_addresses", addresses);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --listen. The address "
@@ -199,7 +199,7 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		}
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--api-listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("server_api_addresses",
+			vector<string> addresses = options.getStrSet("core_api_addresses",
 				false);
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
 				fprintf(stderr, "ERROR: you may specify up to %u --api-listen addresses.\n",
@@ -207,7 +207,7 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 				exit(1);
 			}
 			addresses.push_back(argv[i + 1]);
-			options.setStrSet("server_api_addresses", addresses);
+			options.setStrSet("core_api_addresses", addresses);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --api-listen. The address "
@@ -216,11 +216,11 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 			exit(1);
 		}
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--pid-file")) {
-		options.set("server_pid_file", argv[i + 1]);
+		options.set("core_pid_file", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
 		vector<string> args;
-		vector<string> authorizations = options.getStrSet("server_authorizations",
+		vector<string> authorizations = options.getStrSet("core_authorizations",
 				false);
 
 		split(argv[i + 1], ':', args);
@@ -231,7 +231,7 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		}
 
 		authorizations.push_back(argv[i + 1]);
-		options.setStrSet("server_authorizations", authorizations);
+		options.setStrSet("core_authorizations", authorizations);
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--no-user-switching")) {
 		options.setBool("user_switching", false);
@@ -320,17 +320,17 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 		// We do not set log_level because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log level.
-		options.setInt("server_log_level", atoi(argv[i + 1]));
+		options.setInt("core_log_level", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
 		// We do not set log_file because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log file.
-		options.set("server_log_file", argv[i + 1]);
+		options.set("core_log_file", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--fd-log-file")) {
 		// We do not set file_descriptor_log_file because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log file.
-		options.set("server_file_descriptor_log_file", argv[i + 1]);
+		options.set("core_file_descriptor_log_file", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--stat-throttle-rate")) {
 		options.setInt("stat_throttle_rate", atoi(argv[i + 1]));
@@ -342,7 +342,7 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		options.setInt("data_buffer_dir", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--no-graceful-exit")) {
-		options.setBool("server_graceful_exit", false);
+		options.setBool("core_graceful_exit", false);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--benchmark")) {
 		options.set("benchmark_mode", argv[i + 1]);
@@ -351,10 +351,10 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		options.setBool("selfchecks", false);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--threads")) {
-		options.setInt("server_threads", atoi(argv[i + 1]));
+		options.setInt("core_threads", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--cpu-affine")) {
-		options.setBool("server_cpu_affine", true);
+		options.setBool("core_cpu_affine", true);
 		i++;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {
@@ -362,7 +362,7 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 			i++;
 		} else {
 			fprintf(stderr, "ERROR: you may not pass multiple application directories. "
-				"Please type '%s server --help' for usage.\n", argv[0]);
+				"Please type '%s core --help' for usage.\n", argv[0]);
 			exit(1);
 		}
 	} else {
@@ -374,4 +374,4 @@ parseServerOption(int argc, const char *argv[], int &i, VariantMap &options) {
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_SERVER_OPTION_PARSER_H_ */
+#endif /* _PASSENGER_CORE_OPTION_PARSER_H_ */

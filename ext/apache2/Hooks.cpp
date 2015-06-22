@@ -254,43 +254,43 @@ private:
 		}
 	}
 
-	StaticString getServerAddress() const {
-		return agentsStarter.getServerAddress();
+	StaticString getCoreAddress() const {
+		return agentsStarter.getCoreAddress();
 	}
 
-	StaticString getServerPassword() const {
-		return agentsStarter.getServerPassword();
+	StaticString getCorePassword() const {
+		return agentsStarter.getCorePassword();
 	}
 
 	/**
-	 * Connect to the helper agent. If it looks like the helper agent crashed,
-	 * wait and retry for a short period of time until the helper agent has been
-	 * restarted.
+	 * Connect to the Passenger core. If it looks like the core crashed,
+	 * wait and retry for a short period of time until the core has been
+	 * restarted by the watchdog.
 	 */
 	FileDescriptor connectToInternalServer() {
 		TRACE_POINT();
 		FileDescriptor conn;
 
 		try {
-			conn.assign(connectToServer(getServerAddress(), __FILE__, __LINE__), NULL, 0);
+			conn.assign(connectToServer(getCoreAddress(), __FILE__, __LINE__), NULL, 0);
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE || e.code() == ECONNREFUSED || e.code() == ENOENT) {
 				UPDATE_TRACE_POINT();
 				bool connected = false;
 
-				// Maybe the helper agent crashed. First wait 50 ms.
+				// Maybe the core crashed. First wait 50 ms.
 				usleep(50000);
 
-				// Then try to reconnect to the helper agent for the
+				// Then try to reconnect to the core for the
 				// next 5 seconds.
 				time_t deadline = time(NULL) + 5;
 				while (!connected && time(NULL) < deadline) {
 					try {
-						conn.assign(connectToServer(getServerAddress(), __FILE__, __LINE__), NULL, 0);
+						conn.assign(connectToServer(getCoreAddress(), __FILE__, __LINE__), NULL, 0);
 						connected = true;
 					} catch (const SystemException &e) {
 						if (e.code() == EPIPE || e.code() == ECONNREFUSED || e.code() == ENOENT) {
-							// Looks like the helper agent hasn't been
+							// Looks like the core hasn't been
 							// restarted yet. Wait between 20 and 100 ms.
 							usleep(20000 + rand() % 80000);
 							// Don't care about thread-safety of rand()
@@ -302,8 +302,8 @@ private:
 
 				if (!connected) {
 					UPDATE_TRACE_POINT();
-					throw IOException("Cannot connect to the helper agent at " +
-						getServerAddress());
+					throw IOException("Cannot connect to the Passenger core at " +
+						getCoreAddress());
 				}
 			} else {
 				throw;
@@ -499,7 +499,7 @@ private:
 
 	/**
 	 * Most of the high-level logic for forwarding a request to the
-	 * HelperAgent is contained in this method.
+	 * Passenger core is contained in this method.
 	 */
 	int handleRequest(request_rec *r) {
 		/********** Step 1: preparation work **********/
@@ -573,7 +573,7 @@ private:
 
 
 			/********** Step 3: forwarding the request and request body
-			                    to the HelperAgent **********/
+			                    to the Passenger core **********/
 
 			int ret;
 			bool bodyIsChunked = false;
@@ -587,7 +587,7 @@ private:
 			}
 
 
-			/********** Step 4: forwarding the response from the HelperAgent
+			/********** Step 4: forwarding the response from the Passenger core
 			                    back to the HTTP client **********/
 
 			UPDATE_TRACE_POINT();
@@ -672,7 +672,7 @@ private:
 				}
 				return OK;
 			} else {
-				// HelperAgent sent an empty response, or an invalid response.
+				// Passenger core sent an empty response, or an invalid response.
 				apr_brigade_cleanup(bb);
 				apr_table_setn(r->err_headers_out, "Status", "500 Internal Server Error");
 				return HTTP_INTERNAL_SERVER_ERROR;
@@ -926,7 +926,7 @@ private:
 		// Add secure headers.
 
 		result.append("!~: ", sizeof("!~: ") - 1);
-		result.append(getServerPassword().data(), getServerPassword().size());
+		result.append(getCorePassword().data(), getCorePassword().size());
 		result.append("\r\n!~DOCUMENT_ROOT: ", sizeof("\r\n!~DOCUMENT_ROOT: ") - 1);
 		result.append(ap_document_root(r));
 		result.append("\r\n", 2);
@@ -1222,7 +1222,7 @@ private:
 			}
 		} catch (const SystemException &e) {
 			if (e.code() == EPIPE || e.code() == ECONNRESET) {
-				// The HelperAgent stopped reading the body, probably
+				// The Passenger core stopped reading the body, probably
 				// because the application already sent EOF.
 				return;
 			} else {

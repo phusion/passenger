@@ -160,16 +160,16 @@ TEST_CXX_OBJECTS = {
     ext/common/Utils/Dechunker.h),
   'test/cxx/ResponseCacheTest.o' => %w(
     test/cxx/ResponseCacheTest.cpp
-    ext/common/agents/HelperAgent/ResponseCache.h
-    ext/common/agents/HelperAgent/RequestHandler/Request.h
-    ext/common/agents/HelperAgent/RequestHandler/AppResponse.h
+    ext/common/agent/Core/ResponseCache.h
+    ext/common/agent/Core/RequestHandler/Request.h
+    ext/common/agent/Core/RequestHandler/AppResponse.h
     ext/common/ServerKit/HttpRequest.h),
   'test/cxx/UnionStationTest.o' => %w(
     test/cxx/UnionStationTest.cpp
-    ext/common/agents/LoggingAgent/LoggingServer.h
-    ext/common/agents/LoggingAgent/RemoteSender.h
-    ext/common/agents/LoggingAgent/DataStoreId.h
-    ext/common/agents/LoggingAgent/FilterSupport.h
+    ext/common/agent/UstRouter/LoggingServer.h
+    ext/common/agent/UstRouter/RemoteSender.h
+    ext/common/agent/UstRouter/DataStoreId.h
+    ext/common/agent/UstRouter/FilterSupport.h
     ext/common/UnionStation/Connection.h
     ext/common/UnionStation/Core.h
     ext/common/UnionStation/Transaction.h
@@ -190,10 +190,10 @@ TEST_CXX_OBJECTS = {
     ext/common/MessageServer.h),
   # 'test/cxx/RequestHandlerTest.o' => %w(
   #   test/cxx/RequestHandlerTest.cpp
-  #   ext/common/agents/HelperAgent/RequestHandler.h
-  #   ext/common/agents/HelperAgent/FileBackedPipe.h
-  #   ext/common/agents/HelperAgent/ScgiRequestParser.h
-  #   ext/common/agents/HelperAgent/AgentOptions.h
+  #   ext/common/agent/Core/RequestHandler.h
+  #   ext/common/agent/Core/FileBackedPipe.h
+  #   ext/common/agent/Core/ScgiRequestParser.h
+  #   ext/common/agent/Core/AgentOptions.h
   #   ext/common/UnionStation/Connection.h
   #   ext/common/UnionStation/Core.h
   #   ext/common/UnionStation/Transaction.h
@@ -221,7 +221,7 @@ TEST_CXX_OBJECTS = {
     ext/common/Utils/SystemTime.cpp),
   'test/cxx/FilterSupportTest.o' => %w(
     test/cxx/FilterSupportTest.cpp
-    ext/common/agents/LoggingAgent/FilterSupport.h),
+    ext/common/agent/UstRouter/FilterSupport.h),
   'test/cxx/CachedFileStatTest.o' => %w(
     test/cxx/CachedFileStatTest.cpp
     ext/common/Utils/CachedFileStat.hpp

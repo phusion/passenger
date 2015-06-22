@@ -178,9 +178,9 @@ The most important directories are:
    Source code shared by the Apache and Nginx modules.
  * `ext/common/agents` <br>
    Source code of the PassengerAgent executable. The agent can be started in multiple modes.
-   * The watchdog is is the main Phusion Passenger control process, starts the HTTP server and the logging agent, and restarts them when they crash. It also cleans everything up upon shut down.
-   * The HTTP server performs most of the heavy lifting. It parses requests, spawns application processes, forwards requests to the correct process and forwards application responses back to the web server.
-   * The logging agent processes Union Station data and sends them to the Union Station server.
+   * The watchdog is the main Phusion Passenger process. It starts the Passenger core and the UstRouter, and restarts them when they crash. It also cleans everything up upon shut down.
+   * The core performs most of the heavy lifting. It parses requests, spawns application processes, forwards requests to the correct process and forwards application responses back to the web server.
+   * The UstRouter processes Union Station data and sends them to the Union Station server.
  * `bin` <br>
    User executables.
  * `helper-scripts` <br>

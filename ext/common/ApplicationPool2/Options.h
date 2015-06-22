@@ -108,9 +108,9 @@ private:
 		result.push_back(&options.meteorAppSettings);
 
 		result.push_back(&options.environmentVariables);
-		result.push_back(&options.loggingAgentAddress);
-		result.push_back(&options.loggingAgentUsername);
-		result.push_back(&options.loggingAgentPassword);
+		result.push_back(&options.ustRouterAddress);
+		result.push_back(&options.ustRouterUsername);
+		result.push_back(&options.ustRouterPassword);
 		result.push_back(&options.apiKey);
 		result.push_back(&options.hostName);
 		result.push_back(&options.uri);
@@ -303,13 +303,13 @@ public:
 	 * It does *not* necessarily result in a request logging data to Union Station.
 	 * That depends on whether the `transaction` member is set.
 	 *
-	 * If this is set to true, then 'loggingAgentAddress', 'loggingAgentUsername'
-	 * and 'loggingAgentPassword' must be non-empty.
+	 * If this is set to true, then 'ustRouterAddress', 'ustRouterUsername'
+	 * and 'ustRouterPassword' must be non-empty.
 	 */
 	bool analytics;
-	StaticString loggingAgentAddress;
-	StaticString loggingAgentUsername;
-	StaticString loggingAgentPassword;
+	StaticString ustRouterAddress;
+	StaticString ustRouterUsername;
+	StaticString ustRouterPassword;
 
 	/**
 	 * Whether Spawner should raise an internal error when spawning. Used
@@ -597,9 +597,9 @@ public:
 			appendKeyValue (vec, "python",             python);
 			appendKeyValue (vec, "nodejs",             nodejs);
 			appendKeyValue (vec, "meteor_app_settings", meteorAppSettings);
-			appendKeyValue (vec, "logging_agent_address",  loggingAgentAddress);
-			appendKeyValue (vec, "logging_agent_username", loggingAgentUsername);
-			appendKeyValue (vec, "logging_agent_password", loggingAgentPassword);
+			appendKeyValue (vec, "ust_router_address",  ustRouterAddress);
+			appendKeyValue (vec, "ust_router_username", ustRouterUsername);
+			appendKeyValue (vec, "ust_router_password", ustRouterPassword);
 			appendKeyValue4(vec, "debugger",           debugger);
 			appendKeyValue4(vec, "analytics",          analytics);
 

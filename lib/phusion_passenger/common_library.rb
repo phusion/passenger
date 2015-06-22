@@ -475,18 +475,18 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
       Utils/IniFile.h
       Utils/VariantMap.h
     )
-  define_component 'AgentsBase.o',
-    :source   => 'agents/Base.cpp',
+  define_component 'AgentBase.o',
+    :source   => 'agent/Base.cpp',
     :category => :other,
     :deps     => %w(
-      agents/Base.h
+      agent/Base.h
       Utils/VariantMap.h
     )
-  define_component 'agents/LoggingAgent/FilterSupport.o',
-    :source   => 'agents/LoggingAgent/FilterSupport.cpp',
-    :category => :logging_agent,
+  define_component 'agent/UstRouter/FilterSupport.o',
+    :source   => 'agent/UstRouter/FilterSupport.cpp',
+    :category => :ust_router,
     :deps     => %w(
-      agents/LoggingAgent/FilterSupport.h
+      agent/UstRouter/FilterSupport.h
     )
   define_component 'MemoryKit/mbuf.o',
     :source   => 'MemoryKit/mbuf.cpp',
@@ -546,4 +546,4 @@ end
 
 # Objects that must be linked into the Nginx binary.
 NGINX_LIBS_SELECTOR = [:base, 'AgentsStarter.o', 'ApplicationPool2/AppTypes.o',
-  'Utils/CachedFileStat.o', 'agents/LoggingAgent/FilterSupport.o']
+  'Utils/CachedFileStat.o', 'agent/UstRouter/FilterSupport.o']

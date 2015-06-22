@@ -165,7 +165,7 @@ AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
 AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
 AGENT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 AGENT_LDFLAGS << " -lselinux" if USE_SELINUX
-# Extra linker flags for backtrace_symbols() to generate useful output (see AgentsBase.cpp).
+# Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).
 AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.
 AGENT_LDFLAGS << " -Wl,-dead_strip" if PlatformInfo.os_name == "macosx"

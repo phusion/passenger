@@ -165,7 +165,7 @@ module PhusionPassenger
           end
           opts.on("--data-buffer-dir PATH", String,
             "Use the given data buffer directory") do |value|
-            # relative values OK (absolutizePath in HelperAgent Main)
+            # relative values OK (absolutizePath in Passenger core main)
             options[:data_buffer_dir] = value
           end
 

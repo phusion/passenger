@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -188,7 +188,7 @@ public:
 			guard.clear();
 			if (connection->disconnect(errorResponse)) {
 				handleException(IOException(
-					"Logging agent disconnected with error: " +
+					"UstRouter disconnected with error: " +
 					errorResponse));
 			} else {
 				handleException(e);
@@ -230,7 +230,7 @@ public:
 			guard.clear();
 			if (connection->disconnect(errorResponse)) {
 				handleException(IOException(
-					"Logging agent disconnected with error: " +
+					"UstRouter disconnected with error: " +
 					errorResponse));
 			} else {
 				handleException(e);

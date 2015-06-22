@@ -22,14 +22,14 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_LOGGING_AGENT_API_SERVER_H_
-#define _PASSENGER_LOGGING_AGENT_API_SERVER_H_
+#ifndef _PASSENGER_UST_ROUTER_API_SERVER_H_
+#define _PASSENGER_UST_ROUTER_API_SERVER_H_
 
 #include <sstream>
 #include <string>
 
-#include <agents/LoggingAgent/LoggingServer.h>
-#include <agents/ApiServerUtils.h>
+#include <agent/UstRouter/LoggingServer.h>
+#include <agent/ApiServerUtils.h>
 #include <ApplicationPool2/ApiKey.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
@@ -42,7 +42,7 @@
 #include <Utils/MessageIO.h>
 
 namespace Passenger {
-namespace LoggingAgent {
+namespace UstRouter {
 
 using namespace std;
 
@@ -273,7 +273,7 @@ public:
 };
 
 
-} // namespace LoggingAgent
+} // namespace UstRouter
 } // namespace Passenger
 
-#endif /* _PASSENGER_LOGGING_AGENT_API_SERVER_H_ */
+#endif /* _PASSENGER_UST_ROUTER_API_SERVER_H_ */

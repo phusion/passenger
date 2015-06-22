@@ -37,16 +37,16 @@ Follow these instructions on each server running Phusion Passenger Enterprise wi
 
     Then restart Apache/Nginx. This configuration tells Phusion Passenger Enterprise not to automatically send usage data to the Phusion licensing server.
 
- 3. Find out what user the PassengerHelperAgent process is running as.
+ 3. Find out what user the Passenger core process is running as.
 
-    First, look for the PID of the PassengerHelperAgent process.
+    First, look for the PID of the Passenger core process.
 
         bash# passenger-memory-stats
         ...
         ------ Passenger processes ------
         PID    VMSize     Resident  Name
         ---------------------------------
-        11243  2405.8 MB  2.7 MB    PassengerHelperAgent
+        11243  2405.8 MB  2.7 MB    PassengerAgent: core
         ...
 
     Then use `ps` to determine what user it's running as. Usually, it's running as root.
@@ -59,7 +59,7 @@ Follow these instructions on each server running Phusion Passenger Enterprise wi
 
         bash# mkdir /var/lib/passenger-enterprise-usage
 
-    Ensure that it's owned by the user that PassengerHelperAgent runs as, and make it owner-accessible only:
+    Ensure that it's owned by the user that the core runs as, and make it owner-accessible only:
 
         bash# chown root: /var/lib/passenger-enterprise-usage
         bash# chmod 700 /var/lib/passenger-enterprise-usage
@@ -86,7 +86,7 @@ Follow these instructions on each server running Phusion Passenger Enterprise wi
 
     Here, `foo@reporter-machine-host-name` specifies which reporter machine you want to copy the package to, and which username you want to use to login to the reporter machine. Replace this with an appropriate value.
 
-    **Notes about SSH keys**: don't forget to setup SSH keys so that the script can scp to the reporter machine. The script will be run as the user that PassengerHelperAgent is running as.
+    **Notes about SSH keys**: don't forget to setup SSH keys so that the script can scp to the reporter machine. The script will be run as the user that the Passenger core is running as.
 
     **Notes about PATH**: the above script assumes that the `passenger-config` command is in PATH. This is always the case if you installed Passenger Enterprise using Debian or RPM packages, but may not be the case if you installed it using RubyGems or tarball. If it's not in PATH, or when in doubt, you should specify the full path to passenger-config. You can find out where passenger-config is using `which`. For example:
 
@@ -97,7 +97,7 @@ Follow these instructions on each server running Phusion Passenger Enterprise wi
 
         /opt/passenger-enterprise-x.x.x/bin/passenger-config package-cloud-usage ...
 
- 6. Open the crontab of the user that PassengerHelperAgent is running as. For example, if PassengerHelperAgent is running as root:
+ 6. Open the crontab of the user that the Passenger core is running as. For example, if the core is running as root:
 
         bash# sudo -u root -H crontab -e
 
@@ -105,7 +105,7 @@ Follow these instructions on each server running Phusion Passenger Enterprise wi
 
         0 0 1 * * /var/lib/passenger-enterprise-usage/script
 
- 8. Ensure that `/var/lib/passenger-enterprise-usage/script` is run during system shutdown, as the user that PassengerHelperAgent is running as. On most Linux systems, this can be achieved by as follows:
+ 8. Ensure that `/var/lib/passenger-enterprise-usage/script` is run during system shutdown, as the user that the Passenger core is running as. On most Linux systems, this can be achieved by as follows:
 
         bash# touch /etc/init.d/passenger-enterprise-cloud-license
         bash# chmod +x /etc/init.d/passenger-enterprise-cloud-license
@@ -113,13 +113,13 @@ Follow these instructions on each server running Phusion Passenger Enterprise wi
         bash# ln -s /etc/init.d/passenger-enterprise-cloud-license /etc/rc6.d/K00passenger-enterprise-cloud-license
         bash# editor /etc/init.d/passenger-enterprise-cloud-license
 
-    If PassengerHelperAgent is running as root, then `/etc/init.d/passenger-enterprise-cloud-license` should contain:
+    If the Passenger core is running as root, then `/etc/init.d/passenger-enterprise-cloud-license` should contain:
 
         #!/bin/bash
         set -e
         exec /var/lib/passenger-enterprise-usage/script
 
-    If PassengerHelperAgent is not running as root, then it should contain:
+    If the Passenger core is not running as root, then it should contain:
 
         #!/bin/bash
         set -e
@@ -166,7 +166,7 @@ In phase 1, you've setup web servers to scp usage data packages to the reporter 
 
 Once the web servers and the reporter machine are all setup, you can test whether the setup works correctly.
 
- 1. On each web server, run `/var/lib/passenger-enterprise-usage/script` as the user that PassengerHelperAgent runs as. For example, if PassengerHelperAgent is running as root:
+ 1. On each web server, run `/var/lib/passenger-enterprise-usage/script` as the user that the Passenger core runs as. For example, if the core is running as root:
 
         sudo -u root -H /var/lib/passenger-enterprise-usage/script
 

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -30,8 +30,8 @@
 using namespace std;
 
 int watchdogMain(int argc, char *argv[]);
-int serverMain(int argc, char *argv[]);
-int loggingAgentMain(int argc, char *argv[]);
+int coreMain(int argc, char *argv[]);
+int ustRouterMain(int argc, char *argv[]);
 int systemMetricsMain(int argc, char *argv[]);
 int tempDirToucherMain(int argc, char *argv[]);
 int spawnPreparerMain(int argc, char *argv[]);
@@ -51,9 +51,9 @@ usage(int argc, char *argv[]) {
 		argv[0]);
 	printf("\n");
 	printf("Daemon subcommands:\n");
-	printf("  server\n");
+	printf("  core\n");
 	printf("  watchdog\n");
-	printf("  logger\n");
+	printf("  ust-router\n");
 	printf("\n");
 	printf("Utility subcommands:\n");
 	printf("  system-metrics\n");
@@ -79,10 +79,10 @@ static void
 dispatchSubcommand(int argc, char *argv[]) {
 	if (strcmp(argv[1], "watchdog") == 0) {
 		exit(watchdogMain(argc, argv));
-	} else if (strcmp(argv[1], "server") == 0) {
-		exit(serverMain(argc, argv));
-	} else if (strcmp(argv[1], "logger") == 0) {
-		exit(loggingAgentMain(argc, argv));
+	} else if (strcmp(argv[1], "core") == 0) {
+		exit(coreMain(argc, argv));
+	} else if (strcmp(argv[1], "ust-router") == 0) {
+		exit(ustRouterMain(argc, argv));
 	} else if (strcmp(argv[1], "system-metrics") == 0) {
 		exit(systemMetricsMain(argc, argv));
 	} else if (strcmp(argv[1], "temp-dir-toucher") == 0) {

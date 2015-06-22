@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -380,7 +380,7 @@ module PhusionPassenger
             end
           rescue Exception
             # Maybe this exception was raised while communicating
-            # with the logging agent. If that is the case then
+            # with the UstRouter. If that is the case then
             # transaction.close may also raise an exception, but we're only
             # interested in the original exception. So if this
             # situation occurs we must ignore any exceptions raised
@@ -389,9 +389,9 @@ module PhusionPassenger
             raise
           ensure
             # It is important that the following call receives an ACK
-            # from the logging agent and that we don't close the socket
+            # from the UstRouter and that we don't close the socket
             # connection until the ACK has been received, otherwise
-            # the helper agent may close the transaction before this
+            # the Passenger core may close the transaction before this
             # process's openTransaction command is processed.
             begin
               transaction.close

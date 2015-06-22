@@ -219,9 +219,9 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	}
 
 	options.logLevel = getLogLevel();
-	options.loggingAgentAddress = loggingAgentAddress;
-	options.loggingAgentUsername = P_STATIC_STRING("logging");
-	options.loggingAgentPassword = loggingAgentPassword;
+	options.ustRouterAddress = ustRouterAddress;
+	options.ustRouterUsername = P_STATIC_STRING("logging");
+	options.ustRouterPassword = ustRouterPassword;
 	options.userSwitching = agentsOptions->getBool("user_switching");
 	if (agentsOptions->has("default_user")) {
 		options.defaultUser = agentsOptions->get("default_user");

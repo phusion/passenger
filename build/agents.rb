@@ -23,16 +23,16 @@
 
 AGENT_OBJECTS = {
   'WatchdogMain.o' => [
-    'ext/common/agents/Watchdog/Main.cpp',
-    'ext/common/agents/Watchdog/Main.cpp',
-    'ext/common/agents/Watchdog/AgentWatcher.cpp',
-    'ext/common/agents/Watchdog/HelperAgentWatcher.cpp',
-    'ext/common/agents/Watchdog/LoggingAgentWatcher.cpp',
-    'ext/common/agents/Watchdog/InstanceDirToucher.cpp',
-    'ext/common/agents/Watchdog/ApiServer.h',
-    'ext/common/agents/ApiServerUtils.h',
-    'ext/common/agents/HelperAgent/OptionParser.h',
-    'ext/common/agents/LoggingAgent/OptionParser.h',
+    'ext/common/agent/Watchdog/Main.cpp',
+    'ext/common/agent/Watchdog/Main.cpp',
+    'ext/common/agent/Watchdog/AgentWatcher.cpp',
+    'ext/common/agent/Watchdog/CoreWatcher.cpp',
+    'ext/common/agent/Watchdog/UstRouterWatcher.cpp',
+    'ext/common/agent/Watchdog/InstanceDirToucher.cpp',
+    'ext/common/agent/Watchdog/ApiServer.h',
+    'ext/common/agent/ApiServerUtils.h',
+    'ext/common/agent/Core/OptionParser.h',
+    'ext/common/agent/UstRouter/OptionParser.h',
     'ext/common/ServerKit/Server.h',
     'ext/common/ServerKit/HttpServer.h',
     'ext/common/ServerKit/HttpHeaderParser.h',
@@ -42,23 +42,23 @@ AGENT_OBJECTS = {
     'ext/common/ResourceLocator.h',
     'ext/common/Utils/VariantMap.h'
   ],
-  'ServerMain.o' => [
-    'ext/common/agents/HelperAgent/Main.cpp',
-    'ext/common/agents/HelperAgent/OptionParser.h',
-    'ext/common/agents/HelperAgent/ApiServer.h',
-    'ext/common/agents/HelperAgent/ResponseCache.h',
-    'ext/common/agents/HelperAgent/RequestHandler.h',
-    'ext/common/agents/HelperAgent/RequestHandler/Client.h',
-    'ext/common/agents/HelperAgent/RequestHandler/AppResponse.h',
-    'ext/common/agents/HelperAgent/RequestHandler/TurboCaching.h',
-    'ext/common/agents/HelperAgent/RequestHandler/Utils.cpp',
-    'ext/common/agents/HelperAgent/RequestHandler/Hooks.cpp',
-    'ext/common/agents/HelperAgent/RequestHandler/InitRequest.cpp',
-    'ext/common/agents/HelperAgent/RequestHandler/BufferBody.cpp',
-    'ext/common/agents/HelperAgent/RequestHandler/CheckoutSession.cpp',
-    'ext/common/agents/HelperAgent/RequestHandler/SendRequest.cpp',
-    'ext/common/agents/HelperAgent/RequestHandler/ForwardResponse.cpp',
-    'ext/common/agents/ApiServerUtils.h',
+  'CoreMain.o' => [
+    'ext/common/agent/Core/Main.cpp',
+    'ext/common/agent/Core/OptionParser.h',
+    'ext/common/agent/Core/ApiServer.h',
+    'ext/common/agent/Core/ResponseCache.h',
+    'ext/common/agent/Core/RequestHandler.h',
+    'ext/common/agent/Core/RequestHandler/Client.h',
+    'ext/common/agent/Core/RequestHandler/AppResponse.h',
+    'ext/common/agent/Core/RequestHandler/TurboCaching.h',
+    'ext/common/agent/Core/RequestHandler/Utils.cpp',
+    'ext/common/agent/Core/RequestHandler/Hooks.cpp',
+    'ext/common/agent/Core/RequestHandler/InitRequest.cpp',
+    'ext/common/agent/Core/RequestHandler/BufferBody.cpp',
+    'ext/common/agent/Core/RequestHandler/CheckoutSession.cpp',
+    'ext/common/agent/Core/RequestHandler/SendRequest.cpp',
+    'ext/common/agent/Core/RequestHandler/ForwardResponse.cpp',
+    'ext/common/agent/ApiServerUtils.h',
     'ext/common/ServerKit/Server.h',
     'ext/common/ServerKit/HttpServer.h',
     'ext/common/ServerKit/HttpHeaderParser.h',
@@ -84,15 +84,15 @@ AGENT_OBJECTS = {
     'ext/common/Utils/SystemMetricsCollector.h',
     'ext/common/Utils/VariantMap.h'
   ],
-  'LoggingMain.o' => [
-    'ext/common/agents/LoggingAgent/Main.cpp',
-    'ext/common/agents/LoggingAgent/OptionParser.h',
-    'ext/common/agents/LoggingAgent/ApiServer.h',
-    'ext/common/agents/LoggingAgent/LoggingServer.h',
-    'ext/common/agents/LoggingAgent/RemoteSender.h',
-    'ext/common/agents/LoggingAgent/DataStoreId.h',
-    'ext/common/agents/LoggingAgent/FilterSupport.h',
-    'ext/common/agents/ApiServerUtils.h',
+  'UstRouterMain.o' => [
+    'ext/common/agent/UstRouter/Main.cpp',
+    'ext/common/agent/UstRouter/OptionParser.h',
+    'ext/common/agent/UstRouter/ApiServer.h',
+    'ext/common/agent/UstRouter/LoggingServer.h',
+    'ext/common/agent/UstRouter/RemoteSender.h',
+    'ext/common/agent/UstRouter/DataStoreId.h',
+    'ext/common/agent/UstRouter/FilterSupport.h',
+    'ext/common/agent/ApiServerUtils.h',
     'ext/common/ServerKit/Server.h',
     'ext/common/ServerKit/HttpServer.h',
     'ext/common/ServerKit/HttpHeaderParser.h',
@@ -104,15 +104,15 @@ AGENT_OBJECTS = {
     'ext/common/Utils/VariantMap.h',
     'ext/common/Utils/BlockingQueue.h'
   ],
-  'SystemMetricsTool.o' => [
-    'ext/common/agents/HelperAgent/SystemMetricsTool.cpp',
+  'SystemMetricsMain.o' => [
+    'ext/common/agent/SystemMetrics/Main.cpp',
     'ext/common/Utils/SystemMetricsCollector.h'
   ],
-  'TempDirToucher.o' => [
-    'ext/common/agents/TempDirToucher/Main.cpp'
+  'TempDirToucherMain.o' => [
+    'ext/common/agent/TempDirToucher/Main.cpp'
   ],
-  'SpawnPreparer.o' => [
-    'ext/common/agents/SpawnPreparer/Main.cpp'
+  'SpawnPreparerMain.o' => [
+    'ext/common/agent/SpawnPreparer/Main.cpp'
   ]
 }
 
@@ -133,12 +133,12 @@ AGENT_OBJECTS.each_pair do |agent_object, agent_dependencies|
 end
 
 agent_libs = COMMON_LIBRARY.
-  only(:base, :logging_agent, :other).
+  only(:base, :ust_router, :other).
   exclude('AgentsStarter.o')
 agent_objects = AGENT_OBJECTS.keys.map { |x| "#{AGENT_OUTPUT_DIR}#{x}" }
 dependencies = agent_objects + [
   'ext/common/Constants.h',
-  'ext/common/agents/Main.cpp',
+  'ext/common/agent/Main.cpp',
   LIBBOOST_OXT,
   agent_libs.link_objects,
   LIBEV_TARGET,
@@ -147,7 +147,7 @@ dependencies = agent_objects + [
 file AGENT_OUTPUT_DIR + AGENT_EXE => dependencies do
   agent_objects_as_string = agent_objects.join(" ")
   sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-  compile_cxx("ext/common/agents/Main.cpp",
+  compile_cxx("ext/common/agent/Main.cpp",
     "-o #{AGENT_OUTPUT_DIR}#{AGENT_EXE}.o " <<
     "#{EXTRA_PRE_CXXFLAGS} " <<
     "-Iext -Iext/common " <<

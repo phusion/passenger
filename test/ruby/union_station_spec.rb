@@ -36,7 +36,7 @@ describe UnionStation::Core do
   end
 
   def start_agent
-    @agent_pid, @socket_filename, @socket_address = spawn_logging_agent(
+    @agent_pid, @socket_filename, @socket_address = spawn_ust_router(
       @tmpdir, @dump_file, @password)
   end
 
@@ -155,7 +155,7 @@ describe UnionStation::Core do
     File.read(@dump_file).should =~ /hello/
   end
 
-  specify "#new_transaction and #continue_transaction eventually reestablish the connection to the logging server if the logging server crashed and was restarted" do
+  specify "#new_transaction and #continue_transaction eventually reestablish the connection to the UstRouter if the UstRouter crashed and was restarted" do
     mock_time(TODAY)
 
     transaction = @core.new_transaction("foobar")

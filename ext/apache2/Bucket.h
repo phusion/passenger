@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -51,7 +51,7 @@ struct PassengerBucketState {
 	 */
 	int errorCode;
 
-	/** Connection to the helper agent. */
+	/** Connection to the Passenger core. */
 	FileDescriptor connection;
 
 	PassengerBucketState(const FileDescriptor &conn) {
@@ -75,9 +75,9 @@ typedef boost::shared_ptr<PassengerBucketState> PassengerBucketStatePtr;
  *   to read less data than can actually be read.
  *
  * PassengerBucket is like apr_bucket_pipe, but:
- * - It also holds a reference to the helper agent connection. When a read
- *   error has occured or when end-of-stream has been reached this connection
- *   will be closed.
+ * - It also holds a reference to the connection with the Passenger core.
+ *   When a read error has occured or when end-of-stream has been reached
+ *   this connection will be closed.
  * - It ignores the APR_NONBLOCK_READ flag because that's known to cause
  *   strange I/O problems.
  * - It can store its current state in a PassengerBucketState data structure.

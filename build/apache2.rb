@@ -35,7 +35,7 @@ APACHE2_MODULE_INPUT_FILES = {
     ext/apache2/Configuration.cpp
     ext/apache2/Configuration.h
     ext/apache2/Configuration.hpp
-    ext/common/agents/LoggingAgent/FilterSupport.h),
+    ext/common/agent/UstRouter/FilterSupport.h),
   APACHE2_OUTPUT_DIR + 'Bucket.o' => %w(
     ext/apache2/Bucket.cpp
     ext/apache2/Bucket.h),

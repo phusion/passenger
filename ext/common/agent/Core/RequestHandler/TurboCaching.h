@@ -32,7 +32,7 @@
 #include <cassert>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
-#include <agents/HelperAgent/ResponseCache.h>
+#include <agent/Core/ResponseCache.h>
 #include <Constants.h>
 #include <Logging.h>
 #include <Utils/StrIntUtils.h>
