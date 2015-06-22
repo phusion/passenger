@@ -52,7 +52,8 @@ module PhusionPassenger
           nl = "\n" + ' ' * 37
           opts.banner =
             "Usage 1: passenger-config restart-app <APP PATH PREFIX> [OPTIONS]\n" +
-            "Usage 2: passenger-config restart-app --name <APP GROUP NAME> [OPTIONS]"
+            "Usage 2: passenger-config restart-app . [OPTIONS]\n" +
+            "Usage 3: passenger-config restart-app --name <APP GROUP NAME> [OPTIONS]"
           opts.separator ""
           opts.separator "  Restart an application. The syntax determines how the application that is to"
           opts.separator "  be restarted, will be selected."
@@ -63,7 +64,13 @@ module PhusionPassenger
           opts.separator "     Restarts all apps whose path begin with /webapps, such as /webapps/foo,"
           opts.separator "     /webapps/bar and /webapps123."
           opts.separator ""
-          opts.separator "  2. Selects a specific application based on an exact match of its app group"
+          opts.separator "  2. Selects all application whose paths fall under the current working"
+          opts.separator "     directory."
+          opts.separator "     Example: passenger-config restart-app ."
+          opts.separator "     If the current working directory is /webapps, restarts all apps whose path"
+          opts.separator "     begin with /webapps, such as /webapps/foo, /webapps/bar and /webapps123."
+          opts.separator ""
+          opts.separator "  3. Selects a specific application based on an exact match of its app group"
           opts.separator "     name."
           opts.separator ""
           opts.separator "     Example: passenger-config restart-app --name /webapps/foo"
@@ -187,6 +194,9 @@ module PhusionPassenger
       end
 
       def select_app_group_name_by_app_root_regex(app_root)
+        if app_root == "."
+          app_root = Dir.pwd
+        end
         regex = /^#{Regexp.escape(app_root)}/
         query_pool_xml.elements.each("info/supergroups/supergroup/group") do |group|
           if group.elements["app_root"].text =~ regex
