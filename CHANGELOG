@@ -10,6 +10,7 @@ Release 5.0.11
  * If Passengerfile.json contains a syntax error, Passenger Standalone now correctly prints an error message instead of crashing.
  * Sending a SIGABRT signal to a Ruby process now properly makes it terminate.
  * The `passenger-config restart-app` command now accepts `.` as parameter, which it will interpreter as "restart the app in the current working directory". Closes GH-1386.
+ * [Apache] Setting `PassengerLogLevel` no longer redirects Apache's own stderr to that log file. Closes GH-1373.
  * [Standalone] Passenger Standalone's Nginx engine now includes the RealIP module. Closes GH-1389.
 
 

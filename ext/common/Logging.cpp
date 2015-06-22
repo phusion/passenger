@@ -44,6 +44,7 @@ static bool printAppOutputAsDebuggingMessages = false;
 
 static boost::mutex logFileMutex;
 static string logFile;
+static int logFd = STDERR_FILENO;
 
 static int fileDescriptorLog = -1;
 static string fileDescriptorLogFile;
@@ -83,6 +84,26 @@ setLogFileWithFd(const string &path, int fd) {
 	dup2(fd, STDOUT_FILENO);
 	dup2(fd, STDERR_FILENO);
 	logFile = path;
+}
+
+bool
+setLogFileWithoutRedirectingStderr(const string &path, int *errcode) {
+	int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd != -1) {
+		int oldLogFd = logFd;
+		logFd = fd;
+		if (oldLogFd != STDERR_FILENO) {
+			close(oldLogFd);
+		}
+		boost::lock_guard<boost::mutex> l(logFileMutex);
+		logFile = path;
+		return true;
+	} else {
+		if (errcode != NULL) {
+			*errcode = errno;
+		}
+		return false;
+	}
 }
 
 bool
@@ -195,7 +216,7 @@ writeExactWithoutOXT(int fd, const char *str, unsigned int size) {
 
 void
 _writeLogEntry(const char *str, unsigned int size) {
-	writeExactWithoutOXT(STDERR_FILENO, str, size);
+	writeExactWithoutOXT(logFd, str, size);
 }
 
 void

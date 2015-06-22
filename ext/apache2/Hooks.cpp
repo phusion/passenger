@@ -1239,7 +1239,14 @@ public:
 		serverConfig.finalize();
 		Passenger::setLogLevel(serverConfig.logLevel);
 		if (serverConfig.logFile != NULL) {
-			Passenger::setLogFile(serverConfig.logFile);
+			int errcode;
+			if (!Passenger::setLogFileWithoutRedirectingStderr(serverConfig.logFile, &errcode)) {
+				fprintf(stderr,
+					"ERROR: cannot open log file %s: %s (errno=%d)\n",
+					serverConfig.logFile,
+					strerror(errcode),
+					errcode);
+			}
 		}
 		if (serverConfig.fileDescriptorLogFile != NULL) {
 			Passenger::setFileDescriptorLogFile(serverConfig.fileDescriptorLogFile);

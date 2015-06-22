@@ -84,14 +84,14 @@ void setLogLevel(int value);
  * Returns the general log file that we're using, or the empty string
  * if we're not using a log file.
  *
- * This method is NOT thread-safe.
+ * This method is thread-safe.
  */
 string getLogFile();
 
 /**
  * Sets the general log file. This method is thread-safe.
  * Returns whether the new log file can be opened. If not,
- * errcode (if non-NULL) is set to the relevant filesystem
+ * `errcode` (if non-NULL) is set to the relevant filesystem
  * error code.
  */
 bool setLogFile(const string &path, int *errcode = NULL);
@@ -101,6 +101,23 @@ bool setLogFile(const string &path, int *errcode = NULL);
  * at the given fd. This method is thread-safe.
  */
 void setLogFileWithFd(const string &path, int fd);
+
+/**
+ * Sets the general log file. Unlike `setLogFile()` and `setLogFileWithFd()`,
+ * this method does not redirect stderr to that file. This is useful in
+ * e.g. the Apache module where redirecting stderr is not safe because it
+ * would affect all the other Apache modules too.
+ *
+ * Returns whether the new log file can be opened. If not,
+ * `errcode` (if non-NULL) is set to the relevant filesystem
+ * error code.
+ *
+ * WARNING:
+ * This method is NOT thread-safe.
+ * Once you have called this method, you may not call `setLogFile()`
+ * or `setLogFileWithFd()`.
+ */
+bool setLogFileWithoutRedirectingStderr(const string &path, int *errcode = NULL);
 
 /**
  * Returns whether we're using a separate log file for logging file

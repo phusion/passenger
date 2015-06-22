@@ -154,7 +154,7 @@
 
 	#define STANDALONE_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
 
-	#define STANDALONE_NGINX_CONFIGURE_OPTIONS "--with-cc-opt='-Wno-error' --without-http_fastcgi_module --without-http_scgi_module --without-http_uwsgi_module --with-http_gzip_static_module --with-http_stub_status_module --with-http_ssl_module"
+	#define STANDALONE_NGINX_CONFIGURE_OPTIONS "--with-cc-opt='-Wno-error' --without-http_fastcgi_module --without-http_scgi_module --without-http_uwsgi_module --with-http_gzip_static_module --with-http_stub_status_module --with-http_ssl_module --with-http_realip_module"
 
 	#define SUPPORT_URL "https://www.phusionpassenger.com/documentation_and_support"
 
