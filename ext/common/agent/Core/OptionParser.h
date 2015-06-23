@@ -127,6 +127,10 @@ coreUsage() {
 	printf("      --pool-idle-time SECS\n");
 	printf("                            Maximum number of seconds an application process\n");
 	printf("                            may be idle. Default: %d\n", DEFAULT_POOL_IDLE_TIME);
+	printf("      --max-preloader-idle-time SECS\n");
+	printf("                            Maximum time that preloader processes may be\n");
+	printf("                            be idle. A value of 0 means that preloader\n");
+	printf("                            processes never timeout. Default: %d\n", DEFAULT_MAX_PRELOADER_IDLE_TIME);
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
 	printf("\n");
 	printf("Request handling options (optional):\n");
@@ -247,6 +251,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--pool-idle-time")) {
 		options.setInt("pool_idle_time", atoi(argv[i + 1]));
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-preloader-idle-time")) {
+		options.setInt("max_preloader_idle_time", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
 		options.setInt("min_instances", atoi(argv[i + 1]));

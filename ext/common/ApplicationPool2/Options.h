@@ -683,7 +683,7 @@ public:
 
 	unsigned long getMaxPreloaderIdleTime() const {
 		if (maxPreloaderIdleTime == -1) {
-			return 5 * 60;
+			return DEFAULT_MAX_PRELOADER_IDLE_TIME;
 		} else {
 			return maxPreloaderIdleTime;
 		}

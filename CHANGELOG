@@ -13,6 +13,7 @@ Release 5.0.11
  * The `passenger-config restart-app` command now accepts `.` as parameter, which it will interpreter as "restart the app in the current working directory". Closes GH-1386.
  * [Apache] Setting `PassengerLogLevel` no longer redirects Apache's own stderr to that log file. Closes GH-1373.
  * [Standalone] Passenger Standalone's Nginx engine now includes the RealIP module. Closes GH-1389.
+ * [Standalone] The `--max-preloader-idle-time` option has been added.
 
 
 Release 5.0.10

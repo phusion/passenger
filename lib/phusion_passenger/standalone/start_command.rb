@@ -252,6 +252,12 @@ module PhusionPassenger
             "Default: #{DEFAULT_POOL_IDLE_TIME}") do |value|
             options[:pool_idle_time] = value
           end
+          opts.on("--max-preloader-idle-time SECONDS", Integer,
+            "Maximum time that preloader processes may#{nl}" +
+            "be idle. A value of 0 means that preloader#{nl}" +
+            "processes never timeout. Default: #{DEFAULT_MAX_PRELOADER_IDLE_TIME}") do |value|
+            options[:max_preloader_idle_time] = value
+          end
           opts.on("--concurrency-model NAME", String,
             "The concurrency model to use, either#{nl}" +
             "'process' or 'thread' (Enterprise only).#{nl}" +
@@ -287,7 +293,8 @@ module PhusionPassenger
             options[:sticky_sessions_cookie_name] = value
           end
           opts.on("--vary-turbocache-by-cookie NAME", String,
-            "Vary the turbocache by the cookie of the given name") do |value|
+            "Vary the turbocache by the cookie of the#{nl}" +
+            "given name") do |value|
             options[:vary_turbocache_by_cookie] = value
           end
           opts.on("--disable-turbocaching", "Disable turbocaching") do

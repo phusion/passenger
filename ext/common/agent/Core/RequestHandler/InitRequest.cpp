@@ -230,6 +230,7 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 		options.defaultGroup = agentsOptions->get("default_group");
 	}
 	options.minProcesses = agentsOptions->getInt("min_instances");
+	options.maxPreloaderIdleTime = agentsOptions->getInt("max_preloader_idle_time");
 	options.spawnMethod = agentsOptions->get("spawn_method");
 	options.loadShellEnvvars = agentsOptions->getBool("load_shell_envvars");
 	options.statThrottleRate = statThrottleRate;
