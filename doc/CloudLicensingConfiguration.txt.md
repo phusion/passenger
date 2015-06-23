@@ -46,7 +46,7 @@ Follow these instructions on each server running Phusion Passenger Enterprise wi
         ------ Passenger processes ------
         PID    VMSize     Resident  Name
         ---------------------------------
-        11243  2405.8 MB  2.7 MB    PassengerAgent: core
+        11243  2405.8 MB  2.7 MB    Passenger: core
         ...
 
     Then use `ps` to determine what user it's running as. Usually, it's running as root.
