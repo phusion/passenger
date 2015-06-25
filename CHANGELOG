@@ -1,3 +1,9 @@
+Release 5.0.12
+--------------
+
+ * [Enterprise] Fixed passenger-irb. It was broken in 5.0.10 because of the change that made using admin commands without sudo possible.
+
+
 Release 5.0.11
 --------------
 
