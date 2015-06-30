@@ -1287,7 +1287,7 @@ public:
 
 		VariantMap params;
 		params
-			.setPid ("web_server_pid", getpid())
+			.setPid ("web_server_control_process_pid", getpid())
 			.setStrSet("web_server_config_files", getConfigFiles(s))
 			.set    ("server_software", webServerDesc)
 			.setBool("multi_app", true)

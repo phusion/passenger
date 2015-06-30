@@ -799,6 +799,10 @@ setAgentsOptionsDefaults() {
 		options.set("default_group",
 			inferDefaultGroup(options.get("default_user")));
 	}
+	options.setDefault("integration_mode", "standalone");
+	if (options.get("integration_mode") == "standalone") {
+		options.setDefault("standalone_engine", "builtin");
+	}
 	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultStrSet("cleanup_pidfiles", vector<string>());
 	options.setDefault("data_buffer_dir", getSystemTempDir());
@@ -988,7 +992,11 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	instanceOptions.defaultUid = wo->defaultUid;
 	instanceOptions.defaultGid = wo->defaultGid;
 	instanceOptions.properties["name"] = wo->randomGenerator.generateAsciiString(8);
+	instanceOptions.properties["integration_mode"] = options.get("integration_mode");
 	instanceOptions.properties["server_software"] = options.get("server_software");
+	if (options.get("integration_mode") == "standalone") {
+		instanceOptions.properties["standalone_engine"] = options.get("standalone_engine");
+	}
 	if (options.has("web_server_config_files")) {
 		vector<string> configFiles = options.getStrSet("web_server_config_files");
 		Json::Value array(Json::arrayValue);

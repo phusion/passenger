@@ -116,9 +116,11 @@ pp_variant_map_set_ngx_str(PP_VariantMap *m,
  * Save the Nginx master process's PID into a file in the instance directory.
  * This PID file isn't currently used, but it might be useful for future tooling.
  *
- * The reason why we create this PID file now, instead of just passing the information
- * to the Watchdog during startup, is because a bug/limitation in Nginx doesn't allow
- * us to start the Watchdog *after* Nginx has daemonized.
+ * The master process's PID is already passed to the Watchdog through the
+ * "web_server_control_process_pid" property, but that isn't enough. The Watchdog
+ * is started *before* Nginx has daemonized, so after Nginx has daemonized,
+ * the PID that we passed to the Watchdog is no longer valid. We fix that by
+ * creating this PID file after daemonization.
  */
 static ngx_int_t
 save_master_process_pid(ngx_cycle_t *cycle) {
@@ -275,7 +277,7 @@ start_watchdog(ngx_cycle_t *cycle) {
         }
     }
 
-    pp_variant_map_set_int    (params, "web_server_pid", getpid());
+    pp_variant_map_set_int    (params, "web_server_control_process_pid", getpid());
     pp_variant_map_set_strset (params, "web_server_config_files", (const char **) &config_file, 1);
     pp_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
     pp_variant_map_set_bool   (params, "multi_app", 1);

@@ -57,6 +57,8 @@ http {
     passenger_root '<%= PhusionPassenger.install_spec %>';
     passenger_abort_on_startup_error on;
     passenger_ctl cleanup_pidfiles <%= serialize_strset("#{@working_dir}/temp_dir_toucher.pid") %>;
+    passenger_ctl integration_mode standalone;
+    passenger_ctl standalone_engine nginx;
     passenger_user_switching off;
     <%= nginx_option :passenger_log_level, :log_level %>
     <%= nginx_option :passenger_max_pool_size, :max_pool_size %>

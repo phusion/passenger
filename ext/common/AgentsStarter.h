@@ -35,7 +35,8 @@
 
 typedef enum {
 	AS_APACHE,
-	AS_NGINX
+	AS_NGINX,
+	AS_STANDALONE
 } PP_AgentsStarterType;
 
 typedef void PP_AgentsStarter;
@@ -289,6 +290,19 @@ public:
 		return pid;
 	}
 
+	const char *getIntegrationModeString() const {
+		switch (type) {
+		case AS_APACHE:
+			return "apache";
+		case AS_NGINX:
+			return "nginx";
+		case AS_STANDALONE:
+			return "standalone";
+		default:
+			return "unknown";
+		}
+	}
+
 	// The 'const string &' here is on purpose. The C getter functions
 	// return the string pointer directly.
 	const string &getCoreAddress() const {
@@ -341,9 +355,9 @@ public:
 
 		VariantMap params;
 		params
-			.set    ("web_server_type", type == AS_APACHE ? "apache" : "nginx")
-			.setPid ("web_server_pid",  getpid())
+			.setPid ("web_server_control_process_pid",  getpid())
 			.set    ("web_server_passenger_version", PASSENGER_VERSION)
+			.set    ("integration_mode", getIntegrationModeString())
 			.set    ("passenger_root",  passengerRoot)
 			.setInt ("log_level",       getLogLevel());
 		extraParams.addTo(params);
