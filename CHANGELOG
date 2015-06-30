@@ -2,6 +2,7 @@ Release 5.0.13
 --------------
 
  * The `passenger-config restart-app` command now supports the option `--ignore-passenger-not-running`. If this option is given, the command will exit normally instead of exiting with an error, if Passenger is not running. This option is useful in deployments involving Passenger Standalone. In an initial deployment, Passenger Standalone may not yet be running. Passenger this option allows you to ignore that issue.
+ * SELinux policy issues in the RPMs have been fixed.
  * [Apache] `passenger-config reopen-logs` didn't work on Apache unless you explicitly set `PassengerLogFile`. This has now been fixed.
  * [Standalone] Due to some internal refactorings, the Passenger Standalone Nginx configuration template has changed. If you used a custom Nginx configuration template, please merge our latest changes into it.
 
