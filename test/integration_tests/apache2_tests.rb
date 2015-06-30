@@ -557,7 +557,7 @@ describe "Apache 2 module" do
 
       request = Net::HTTP::Get.new("/pool.xml")
       request.basic_auth("ro_admin", instance.read_only_admin_password)
-      response = instance.http_request("agents.s/server_api", request)
+      response = instance.http_request("agents.s/core_api", request)
       if response.code.to_i / 100 == 2
         doc = REXML::Document.new(response.body)
       else

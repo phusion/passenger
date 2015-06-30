@@ -388,7 +388,7 @@ module TestHelper
 
   def flush_ust_router(password, socket_address)
     PhusionPassenger.require_passenger_lib 'message_client' if !defined?(PhusionPassenger::MessageClient)
-    client = PhusionPassenger::MessageClient.new("logging", password, socket_address)
+    client = PhusionPassenger::MessageClient.new("ust_router", password, socket_address)
     begin
       client.write("flush")
       client.read

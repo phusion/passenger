@@ -68,14 +68,14 @@ module PhusionPassenger
       end
 
       def perform_reopen_logs
-        perform_reopen_logs_on("watchdog", "watchdog")
+        perform_reopen_logs_on("watchdog", "watchdog_api")
         perform_reinherit_logs_on("core", "core_api")
         perform_reinherit_logs_on("UstRouter", "ust_router_api")
         puts "All done"
       end
 
       def perform_reopen_logs_on(name, socket_name)
-        puts "Reopening logs for #{AGENT_EXE} #{name}"
+        puts "Reopening logs for #{PROGRAM_NAME} #{name}"
         request = Net::HTTP::Post.new("/reopen_logs.json")
         try_performing_full_admin_basic_auth(request, @instance)
         request.content_type = "application/json"
