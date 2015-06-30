@@ -1,6 +1,7 @@
 Release 5.0.13
 --------------
 
+ * [Apache] `passenger-config reopen-logs` didn't work on Apache unless you explicitly set `PassengerLogFile`. This has now been fixed.
  * [Standalone] Due to some internal refactorings, the Passenger Standalone Nginx configuration template has changed. If you used a custom Nginx configuration template, please merge our latest changes into it.
 
 

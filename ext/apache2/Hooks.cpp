@@ -1292,7 +1292,6 @@ public:
 			.set    ("server_software", webServerDesc)
 			.setBool("multi_app", true)
 			.setBool("load_shell_envvars", true)
-			.set    ("log_file", (serverConfig.logFile == NULL) ? "" : serverConfig.logFile)
 			.set    ("file_descriptor_log_file", (serverConfig.fileDescriptorLogFile == NULL)
 				? "" : serverConfig.fileDescriptorLogFile)
 			.set    ("data_buffer_dir", serverConfig.dataBufferDir)
@@ -1313,6 +1312,29 @@ public:
 			.set    ("union_station_proxy_address", serverConfig.unionStationProxyAddress)
 			.setBool("turbocaching", serverConfig.turbocaching)
 			.setStrSet("prestart_urls", serverConfig.prestartURLs);
+
+		if (serverConfig.logFile != NULL) {
+			params.set("log_file", serverConfig.logFile);
+		} else if (s->error_fname == NULL) {
+			throw ConfigurationException("Cannot initialize " PROGRAM_NAME
+				" because Apache is not configured with an error log file."
+				" Please either configure Apache with an error log file"
+				" (with the ErrorLog directive), or configure "
+				PROGRAM_NAME " with a `PassengerLogFile` directive.");
+		} else if (s->error_fname[0] == '|') {
+			throw ConfigurationException("Apache is configured to log to a pipe,"
+				" so " SHORT_PROGRAM_NAME " cannot be initialized because it doesn't"
+				" support logging to a pipe. Please configure " SHORT_PROGRAM_NAME
+				" with an explicit log file using the `PassengerLogFile` directive.");
+		} else if (strcmp(s->error_fname, "syslog") == 0) {
+			throw ConfigurationException("Apache is configured to log to syslog,"
+				" so " SHORT_PROGRAM_NAME " cannot be initialized because it doesn't"
+				" support logging to syslog. Please configure " SHORT_PROGRAM_NAME
+				" with an explicit log file using the `PassengerLogFile` directive.");
+		} else {
+			params.set("log_file", ap_server_root_relative(pconf, s->error_fname));
+		}
+
 		serverConfig.ctl.addTo(params);
 
 		agentsStarter.start(serverConfig.root, params);
