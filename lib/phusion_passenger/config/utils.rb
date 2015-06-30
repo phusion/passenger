@@ -41,18 +41,32 @@ module PhusionPassenger
         if name = @options[:instance]
           @instance = AdminTools::InstanceRegistry.new.find_by_name_prefix(name)
           if !@instance
-            STDERR.puts "*** ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running with the name '#{name}'."
+            if @options[:ignore_passenger_not_running]
+              message_type = "WARNING"
+            else
+              message_type = "ERROR"
+            end
+            STDERR.puts "*** #{message_type}: there doesn't seem to be a #{PROGRAM_NAME} instance running with the name '#{name}'."
             list_all_passenger_instances(AdminTools::InstanceRegistry.new.list)
             STDERR.puts
             STDERR.puts "Please pass `--instance <NAME>` to select a specific #{PROGRAM_NAME} instance."
-            abort
+            if @options[:ignore_passenger_not_running]
+              exit
+            else
+              abort
+            end
           elsif @instance == :ambigious
             abort "*** ERROR: there are multiple instances whose name start with '#{name}'. Please specify the full name."
           end
         else
           instances = AdminTools::InstanceRegistry.new.list
           if instances.empty?
-            STDERR.puts "*** ERROR: #{PROGRAM_NAME} doesn't seem to be running. If you are sure that it"
+            if @options[:ignore_passenger_not_running]
+              message_type = "WARNING"
+            else
+              message_type = "ERROR"
+            end
+            STDERR.puts "*** #{message_type}: #{PROGRAM_NAME} doesn't seem to be running. If you are sure that it"
             STDERR.puts "is running, then the causes of this problem could be one of:"
             STDERR.puts
             STDERR.puts " 1. You customized the instance registry directory using Apache's"
@@ -66,7 +80,11 @@ module PhusionPassenger
             STDERR.puts "    PassengerInstanceRegistryDir option, Nginx's passenger_instance_registry_dir"
             STDERR.puts "    option, or #{PROGRAM_NAME} Standalone's --instance-registry-dir command"
             STDERR.puts "    line argument."
-            abort
+            if @options[:ignore_passenger_not_running]
+              exit
+            else
+              abort
+            end
           elsif instances.size == 1
             @instance = instances.first
           else
@@ -91,8 +109,12 @@ module PhusionPassenger
         puts
         printf "%-25s  %s\n", "Name", "Description"
         puts "------------------------------------------------------------------"
-        instances.each do |instance|
-          printf "%-25s  %s\n", instance.name, instance.server_software
+        if instances.empty?
+          printf "%-25s  %s\n", "(list empty)", "-"
+        else
+          instances.each do |instance|
+            printf "%-25s  %s\n", instance.name, instance.server_software
+          end
         end
       end
 
