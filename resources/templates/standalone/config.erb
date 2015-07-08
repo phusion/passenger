@@ -65,6 +65,7 @@ http {
     <%= nginx_option :passenger_min_instances, :min_instances %>
     <%= nginx_option :passenger_pool_idle_time, :pool_idle_time %>
     <%= nginx_option :passenger_max_preloader_idle_time, :max_preloader_idle_time %>
+    <%= nginx_option :passenger_turbocaching, :turbocaching %>
     <% if @options[:user] %>
         passenger_user <%= @options[:user] %>;
         passenger_default_user <%= @options[:user] %>;

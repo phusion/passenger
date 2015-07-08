@@ -161,8 +161,16 @@ module PhusionPassenger
         end
 
         def nginx_option(nginx_config_name, option_name)
-          if @options[option_name]
-            return "#{nginx_config_name} #{@options[option_name]};"
+          if @options.has_key?(option_name)
+            value = @options[option_name]
+            if value.is_a?(String)
+              value = "'#{value}'"
+            elsif value == true
+              value = "on"
+            elsif value == false
+              value = "off"
+            end
+            "#{nginx_config_name} #{value};"
           end
         end
 

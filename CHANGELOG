@@ -7,6 +7,7 @@ Release 5.0.14
    - If a relative path is given via Passengerfile.json, then it is relative to Passengerfile.json.
 
    Closes GH-1557.
+ * [Standalone] The `--disable-turbocaching` now works with the Nginx engine.
 
 
 Release 5.0.13
