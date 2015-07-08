@@ -1,7 +1,7 @@
 Release 5.0.15
 --------------
 
-
+ * Support SHA256 digests for the Rails asset pipeline, as used by Sprockets 3.x.
 
 Release 5.0.14
 --------------
