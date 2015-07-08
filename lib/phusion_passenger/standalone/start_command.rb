@@ -31,9 +31,21 @@ PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
+# ## Coding notes
+#
+# ### Lazy library loading
+#
 # We lazy load as many libraries as possible not only to improve startup performance,
 # but also to ensure that we don't require libraries before we've passed the dependency
 # checking stage of the runtime installer.
+#
+# ### Path handling
+#
+# Handle paths as follows so that the behavior complies with the documentation:
+# - Immediately absolutize all paths in the option parser, so that relative paths passed
+#   through the command line are relative to the current working directory.
+# - Add the path's option key to ConfigUtils#resolve_config_file_paths so that relative
+#   paths in Passengerfile.json are absolutized relative to Passengerfile.json.
 
 module PhusionPassenger
   module Standalone
@@ -122,7 +134,7 @@ module PhusionPassenger
           opts.on("-S", "--socket FILE", String,
             "Bind to Unix domain socket instead of TCP#{nl}" +
             "socket") do |value|
-            options[:socket_file] = value
+            options[:socket_file] = File.absolute_path_no_resolve(value)
           end
           opts.on("--ssl", "Enable SSL support (Nginx#{nl}" +
             "engine only)") do
@@ -160,13 +172,11 @@ module PhusionPassenger
           end
           opts.on("--instance-registry-dir PATH", String,
             "Use the given instance registry directory") do |value|
-              # relative values OK
-              options[:instance_registry_dir] = value
+            options[:instance_registry_dir] = File.absolute_path_no_resolve(value)
           end
           opts.on("--data-buffer-dir PATH", String,
             "Use the given data buffer directory") do |value|
-            # relative values OK (absolutizePath in Passenger core main)
-            options[:data_buffer_dir] = value
+            options[:data_buffer_dir] = File.absolute_path_no_resolve(value)
           end
 
           opts.separator ""
@@ -186,15 +196,15 @@ module PhusionPassenger
           opts.on("--python FILENAME", String, "Executable to use for Python apps") do |value|
             options[:python] = value
           end
-          opts.on("--meteor-app-settings FILENAME", String, "Settings file to use for (development mode) Meteor apps") do |value|
-            options[:meteor_app_settings] = value
+          opts.on("--meteor-app-settings FILENAME", String,
+            "Settings file to use for (development mode) Meteor apps") do |value|
+            options[:meteor_app_settings] = File.absolute_path_no_resolve(value)
           end
           opts.on("-R", "--rackup FILE", String,
             "Consider application a Ruby app, and use#{nl}" +
             "the given rackup file") do |value|
             options[:app_type] = "rack"
-            # relative w.r.t. app dir
-            options[:startup_file] = value
+            options[:startup_file] = File.absolute_path_no_resolve(value)
           end
           opts.on("--app-type NAME", String,
             "Force app to be detected as the given type") do |value|
@@ -202,8 +212,7 @@ module PhusionPassenger
           end
           opts.on("--startup-file FILENAME", String,
             "Force given startup file to be used") do |value|
-            # relative w.r.t. app dir
-            options[:startup_file] = value
+            options[:startup_file] = File.absolute_path_no_resolve(value)
           end
           opts.on("--spawn-method NAME", String,
             "The spawn method to use. Default: #{DEFAULT_OPTIONS[:spawn_method]}") do |value|
@@ -318,8 +327,7 @@ module PhusionPassenger
           opts.separator ""
           opts.separator "Nginx engine options:"
           opts.on("--nginx-bin FILENAME", String, "Nginx binary to use as core") do |value|
-            # relative values OK
-            options[:nginx_bin] = value
+            options[:nginx_bin] = File.absolute_path_no_resolve(value)
           end
           opts.on("--nginx-version VERSION", String,
             "Nginx version to use as core.#{nl}" +
@@ -414,9 +422,17 @@ module PhusionPassenger
           merge(@global_options).
           merge(@local_options).
           merge(@parsed_options)
+        @options.delete(:config_filename)
       end
 
       def sanity_check_options_and_set_defaults
+        if @argv.size > 1
+          PhusionPassenger.require_passenger_lib 'standalone/app_finder'
+          if !AppFinder.supports_multi?
+            abort "You can only specify a single application directory as argument."
+          end
+        end
+
         if (@options[:address] || @options[:port]) && @options[:socket_file]
           abort "You cannot specify both --address/--port and --socket. Please choose either one."
         end
@@ -561,9 +577,6 @@ module PhusionPassenger
         else
           options[:log_file] ||= "#{exec_root}/#{log_basename}"
         end
-
-        options[:log_file] = File.expand_path(options[:log_file], exec_root)
-        options[:pid_file] = File.expand_path(options[:pid_file], exec_root)
       end
 
       def create_working_dir

@@ -1,3 +1,14 @@
+Release 5.0.14
+--------------
+
+ * [Standalone] Relative path handling has been improved. In previous versions, relative paths were not handled in a consistent manner. Relative paths are now handled consistently according to the following rules:
+
+   - If a relative path is given via a command line option, then it is relative to the current working directory.
+   - If a relative path is given via Passengerfile.json, then it is relative to Passengerfile.json.
+
+   Closes GH-1557.
+
+
 Release 5.0.13
 --------------
 

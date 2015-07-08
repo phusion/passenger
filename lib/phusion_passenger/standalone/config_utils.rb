@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion
+#  Copyright (c) 2014-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -20,6 +20,8 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
+
+PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 
 module PhusionPassenger
   module Standalone
@@ -79,7 +81,27 @@ module PhusionPassenger
         config.each_pair do |key, val|
           result[key.to_sym] = val
         end
-        return result
+
+        resolve_config_file_paths(result, filename)
+
+        result
+      end
+
+      # Absolutize relative paths. Make them relative to the config file in which
+      # it's specified.
+      def resolve_config_file_paths(config_file_options, config_filename)
+        options = config_file_options
+        config_file_dir = File.dirname(File.absolute_path_no_resolve(config_filename))
+
+        keys = [:socket_file, :ssl_certificate, :ssl_certificate_key, :log_file,
+          :pid_file, :instance_registry_dir, :data_buffer_dir, :meteor_app_settings,
+          :rackup, :startup_file, :static_files_dir, :restart_dir,
+          :nginx_config_template]
+        keys.each do |key|
+          if filename = options[key]
+            options[key] = File.expand_path(filename, config_file_dir)
+          end
+        end
       end
     end
 

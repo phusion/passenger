@@ -52,6 +52,10 @@ module PhusionPassenger
           end
       end
 
+      def self.supports_multi?
+        false
+      end
+
       def initialize(dirs, options = {})
         @dirs = dirs
         @options = options.dup
@@ -168,9 +172,11 @@ module PhusionPassenger
       def determine_mode_and_execution_root(options)
         @mode = :single
         if @dirs.empty?
-          @execution_root = File.absolute_path_no_resolve(".")
-        else
+          @execution_root = Dir.pwd_no_resolve
+        elsif @dirs.size == 1
           @execution_root = File.absolute_path_no_resolve(@dirs[0])
+        else
+          @execution_root = Dir.pwd_no_resolve
         end
       end
 
