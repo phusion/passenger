@@ -210,18 +210,26 @@ private:
 	}
 
 	void throwEnrichedWatchdogFailReason(string simpleReason) {
-		string passengerRootConfig;
-		string docURL;
-		if (type == AS_APACHE) {
-			passengerRootConfig = "PassengerRoot";
-			docURL = APACHE2_DOC_URL "#PassengerRoot";
+		if (type == AS_STANDALONE) {
+			throw RuntimeException("Unable to start " PROGRAM_NAME ": " + simpleReason +
+				". This probably means that your " SHORT_PROGRAM_NAME
+				" installation is broken or incomplete. Please try reinstalling " SHORT_PROGRAM_NAME);
 		} else {
-			passengerRootConfig = "passenger_root";
-			docURL = NGINX_DOC_URL "#PassengerRoot";
+			string passengerRootConfig;
+			string docURL;
+			if (type == AS_APACHE) {
+				passengerRootConfig = "PassengerRoot";
+				docURL = "https://www.phusionpassenger.com/library/config/apache/reference/#passengerroot";
+			} else {
+				passengerRootConfig = "passenger_root";
+				docURL = "https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_root";
+			}
+			throw RuntimeException("Unable to start " PROGRAM_NAME ": " + simpleReason +
+				". This probably means that your " SHORT_PROGRAM_NAME
+				" installation is broken or incomplete, or that your '" + passengerRootConfig +
+				"' setting contains the wrong value. Please reinstall " SHORT_PROGRAM_NAME
+				" or, or see " + docURL + " to learn how to adjust the setting.");
 		}
-		throw RuntimeException("Unable to start Phusion Passenger: " + simpleReason + ". This probably means that your " PROGRAM_NAME
-			" installation is broken or incomplete, or that your '" + passengerRootConfig + "' setting contains the wrong value."
-			" Please reinstall " PROGRAM_NAME " or adjust the setting (see: " + docURL + ").");
 	}
 
 	static void killProcessGroupAndWait(pid_t *pid, unsigned long long timeout = 0) {

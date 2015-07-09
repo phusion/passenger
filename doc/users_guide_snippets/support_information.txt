@@ -1,53 +1,6 @@
 === Supported operating systems and languages ===
 
-Phusion Passenger works on almost any POSIX-compliant operating system. In other
-words: practically any operating system on earth, except Microsoft Windows.
-
-Supported operating systems:
-
-[options="header"]
-|==================================================
-| OS                  | Minimum version
-| Ubuntu              | 10.04
-| Debian              | 6
-| Red Hat, CentOS     | 5
-| Amazon Linux        | All versions supported
-| Mac OS X            | 10.8 Mountain Lion
-| FreeBSD             | 8
-| OpenBSD             | 5.2
-| Other Unix          | -
-|==================================================
-
-"Other Unix" is supported on a "best-effort" basis. We do not regularly check whether Phusion Passenger still works on other Unices, but if users report issues then we'll try to address them.
-
-Supported architectures:
-
-[options="header"]
-|==================================================
-| Architecture      | Notes
-| x86 (32-bit)      | -
-| x86_64 (64-bit)   | -
-| Other             | Supported on a "best-effort" basis.
-|==================================================
-
-Supported languages and frameworks:
-
-[options="header"]
-|==================================================
-| Language/framework  | Minimum version
-| Ruby (MRI)          | 1.8.5
-| JRuby               | 1.7.0
-| Rubinius            | 2.2.0
-| Ruby on Rails       | 2.3
-| Python              | 2.6
-| Node.js/io.js       | 0.10
-| Meteor              | 0.6
-|==================================================
-
-If you run into any issues, please
-link:https://github.com/phusion/passenger/issues[report a bug]
-or
-link:http://groups.google.com/group/phusion-passenger[join our discussion forum].
+This documentation has moved. https://www.phusionpassenger.com/library/install/supported_operating_systems_and_languages.html
 
 [[where_to_get_support]]
 === Where to get support ===

@@ -1,261 +1,33 @@
 === Synopsis
 
-Because Phusion Passenger is designed to run in a wide variety of operating systems and configurations, there are multiple ways to install it. Most users  -- especially first-time users -- will prefer _OS-specific installation instructions_. These are not only the easiest, but also allow Phusion Passenger to integrate into the operating system in the best way possible. Other users should consult the _generic installation instructions_.
-
-The steps for upgrading or downgrading Phusion Passenger is almost the same as the steps for installing. All the installation guides in this section will also teach you how to upgrade and downgrade.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/
 
 
 [[install_osx_homebrew]]
 === Installing or upgrading on Mac OS X with Homebrew
 
-**Open source**::
-	Every time we release a new Phusion Passenger version, we make it available through link:http://brew.sh/[Homebrew]. Please note that the Homebrew maintainers have to merge our pull requests manually, so it may take a day or two before a new version shows up in the official Homebrew repository.
-+
-1. Update the Homebrew recipes:
-+
----------------------------
-brew update
----------------------------
-2. Run one of the following, and follow the instructions:
-+
-ifdef::nginx[]
----------------------------
-brew install passenger nginx --with-passenger
--OR-
-brew upgrade passenger nginx --with-passenger
----------------------------
-+
-.Upgrade note
-[NOTE]
-=======================================
-If Phusion Passenger has been updated, but no new Nginx version has been released, then you must also reinstall Nginx against the latest version of Phusion Passenger:
-
----------------------------
-brew reinstall nginx --with-passenger
----------------------------
-=======================================
-endif::[]
-ifdef::apache[]
----------------------------
-brew install passenger
--OR-
-brew upgrade passenger
----------------------------
-endif::[]
-ifdef::standalone[]
----------------------------
-brew install passenger
--OR-
-brew upgrade passenger
----------------------------
-endif::[]
-
-**Enterprise**::
-	link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] is currently not available through Homebrew. Please try one of the other installation methods instead.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/
 
 
 [[install_on_debian_ubuntu]]
 === Installing or upgrading on Debian or Ubuntu
 
-We provide an official Phusion Passenger APT repository. This APT repository contains Phusion Passenger packages for multiple versions of Debian and Ubuntu. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
-
-If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need.
-
-Packages are available for the x86 and x86_64 architectures. Our policy is to support all Ubuntu LTS releases that are still supported by Canonical, plus the latest Ubuntu release, plus all Debian releases that are still supported by Debian.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apt_repo/
 
 [[install_add_apt_repo]]
 ==== Adding our APT repository
 
-1. Install our PGP key. Packages are signed by "Phusion Automated Software Signing (auto-software-signing@phusion.nl)", fingerprint 1637 8A33 A6EF 1676 2922 526E 561F 9B9C AC40 B2F7.
-+
---------------------------------------------------------------
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7
---------------------------------------------------------------
-
-2. Add HTTPS support for APT. Our APT repository is stored on an HTTPS server.
-+
---------------------------------------------------------------
-sudo apt-get install apt-transport-https ca-certificates
---------------------------------------------------------------
-
-3. Create a file `/etc/apt/sources.list.d/passenger.list` and insert **one of** the following lines, depending on your distribution.
-+
-**Open source**:::
-+
-[source,sh]
---------------------------------------------------------------
-##### !!!! Only add ONE of these lines, not all of them !!!! #####
-# Ubuntu 15.04
-deb https://oss-binaries.phusionpassenger.com/apt/passenger vivid main
-# Ubuntu 14.04
-deb https://oss-binaries.phusionpassenger.com/apt/passenger trusty main
-# Ubuntu 12.04
-deb https://oss-binaries.phusionpassenger.com/apt/passenger precise main
-# Debian 8
-deb https://oss-binaries.phusionpassenger.com/apt/passenger jessie main
-# Debian 7
-deb https://oss-binaries.phusionpassenger.com/apt/passenger wheezy main
-# Debian 6
-deb https://oss-binaries.phusionpassenger.com/apt/passenger squeeze main
---------------------------------------------------------------
-+
-**Enterprise**:::
-+
-[source,sh]
---------------------------------------------------------------
-##### !!!! Only add ONE of these lines, not all of them !!!! #####
-# Ubuntu 15.04
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt vivid main
-# Ubuntu 14.04
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt trusty main
-# Ubuntu 12.04
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt precise main
-# Debian 8
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt jessie main
-# Debian 7
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt wheezy main
-# Debian 6
-deb https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_apt squeeze main
---------------------------------------------------------------
-+
-You can find the correct value for 'YOUR_DOWNLOAD_TOKEN' in the link:https://www.phusionpassenger.com/orders[Customer Area].
-
-4. Secure `passenger.list` and update your APT cache:
-+
---------------------------------------------------------------
-sudo chown root: /etc/apt/sources.list.d/passenger.list
-sudo chmod 600 /etc/apt/sources.list.d/passenger.list
-sudo apt-get update
---------------------------------------------------------------
-
-5. (Optional) If using `unattended-upgrades`, add our APT repository to the list of `Allowed-Origins` for upgrades, `/etc/apt/apt.conf.d/50unattended-upgrades`:
-+
-[source,sh]
---------------------------------------------------------------
-// Automatically upgrade packages from these (origin:archive) pairs
-Unattended-Upgrade::Allowed-Origins {
-  // To check "Origin:" and "Suite:", you could use e.g.: 
-  // grep "Origin\|Suite" /var/lib/apt/lists/oss-binaries.phusionpassenger.com*
-  "Phusion:stable";
-};
---------------------------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apt_repo/
 
 ==== Installing packages
 
-ifdef::nginx[]
-NOTE: You should install `nginx-extras` even if you have already installed an Nginx package from the official Debian/Ubuntu repository. This is because the Nginx binary that our packages supply is compiled with the Passenger module.
-endif::nginx[]
-
-**Open source**::
-+
-1. <<install_add_apt_repo,Add our APT repository.>>
-ifdef::nginx[]
-2. Install the packages:
-+
---------------------------------------------------------------
-sudo apt-get install nginx-extras passenger
---------------------------------------------------------------
-+
-3. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
-+
-Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it! If you don't see a commented version of `passenger_root` inside nginx.conf, then you need to <<inserting_passenger_root_for_apt,insert it yourself>>.
-+
-4. Restart Nginx:
-+
---------------------------------------------------------------
-sudo service nginx restart
---------------------------------------------------------------
-endif::[]
-ifdef::apache[]
-2. Install the package:
-+
---------------------------------------------------------------
-sudo apt-get install libapache2-mod-passenger
---------------------------------------------------------------
-+
-3. Enable the Phusion Passenger Apache module and stop/start Apache (reload or restart is not enough when upgrading):
-+
---------------------------------------------------------------
-sudo a2enmod passenger
-sudo apache2ctl stop; sudo apache2ctl start
---------------------------------------------------------------
-endif::[]
-ifdef::standalone[]
-2. Install the package:
-+
---------------------------------------------------------------
-sudo apt-get install passenger
---------------------------------------------------------------
-endif::[]
-
-**Enterprise**::
-+
-1. Download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
-2. <<install_add_apt_repo,Add our APT repository.>>
-3. Install the packages:
-+
-ifdef::nginx[]
---------------------------------------------------------------
-sudo apt-get install nginx-extras passenger-enterprise
---------------------------------------------------------------
-4. Edit `/etc/nginx/nginx.conf` and uncomment `passenger_root` and `passenger_ruby`.
-+
-Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it! If you don't see a commented version of `passenger_root` inside nginx.conf, then you need to <<inserting_passenger_root_for_apt,insert it yourself>>.
-+
-5. Restart Nginx:
-+
---------------------------------------------------------------
-sudo service nginx restart
---------------------------------------------------------------
-endif::[]
-ifdef::apache[]
---------------------------------------------------------------
-sudo apt-get install libapache2-mod-passenger-enterprise
---------------------------------------------------------------
-+
-4. Enable the Phusion Passenger Apache module and stop/start Apache (reload or restart is not enough when upgrading):
-+
---------------------------------------------------------------
-sudo a2enmod passenger
-sudo apache2ctl stop; sudo apache2ctl start
---------------------------------------------------------------
-endif::[]
-ifdef::standalone[]
---------------------------------------------------------------
-sudo apt-get install passenger-enterprise
---------------------------------------------------------------
-endif::[]
-
-You can now proceed with a chapter for Deploying your (specific type of) application. 
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apt_repo/
 
 ifdef::nginx[]
 [[inserting_passenger_root_for_apt]]
 ==== Inserting `passenger_root` into nginx.conf
 
-If there is no <<PassengerRoot,passenger_root>> directive in `/etc/nginx/nginx.conf`, you can insert it yourself as follows:
-
-First, run the following command and take note of its output:
-
------------------------------------
-/usr/bin/passenger-config --root
------------------------------------
-
-Next, insert the following snippet into `/etc/nginx/nginx.conf`, under the `http` block:
-
--------------------------------------------------------------
-passenger_root whatever_value_you_got_from_previous_command;
--------------------------------------------------------------
-
-Here is an example:
-
--------------------------------------------------------------
-...
-http {
-   # path-to-locations.ini is given to you by `passenger-config --root`.
-   passenger_root /path-to-locations.ini;
-   ...
-}
--------------------------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_root
 
 endif::nginx[]
 
@@ -263,140 +35,16 @@ endif::nginx[]
 [[installing_or_upgrading_on_red_hat]]
 === Installing or upgrading on Red Hat or CentOS
 
-We provide an official Phusion Passenger YUM repository with packages for Red Hat Enterprise Linux and CentOS. These packages are automatically built by our build server after we push out a source release, and thus are always up to date with the official source releases.
-
-If you use these packages to install Phusion Passenger then you do not need to run `passenger-install-apache2-module` or `passenger-install-nginx-module`. These packages contain all the binaries that you need. These packages also come with SELinux policy modules so that Passenger works nicely with SELinux.
-
-Packages are available for the x86 and x86_64 architectures. Our policy is to support all Red Hat and CentOS releases that still receive full updates by their vendors. The earliest Red Hat and CentOS version we support is version 5.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/yum_repo/
 
 [[install_add_yum_repo]]
 ==== Adding our YUM repository
 
-1. Install link:https://fedoraproject.org/wiki/EPEL[EPEL] and a few other prerequisites.
-+
---------------------------------------------------------------
-sudo yum install epel-release pygpgme curl
---------------------------------------------------------------
-
-2. Download the Passenger YUM repository definition.
-+
-**Open source**::
-+
---------------------------------------------------------------
-sudo curl --fail -sSLo /etc/yum.repos.d/passenger.repo https://oss-binaries.phusionpassenger.com/yum/definitions/el-passenger.repo
---------------------------------------------------------------
-+
-**Enterprise**::
-+
---------------------------------------------------------------
-unset HISTFILE
-sudo curl --fail -sSL -u download:YOUR_DOWNLOAD_TOKEN -o /etc/yum.repos.d/passenger.repo https://www.phusionpassenger.com/enterprise_yum/el-passenger-enterprise.repo
---------------------------------------------------------------
-+
-The `unset HISTFILE` command ensures that your download token isn't saved to the Bash history file.
-+
-You can find the correct value for 'YOUR_DOWNLOAD_TOKEN' in the link:https://www.phusionpassenger.com/orders[Customer Area].
-
-3. Secure `passenger.repo`:
-+
---------------------------------------------------------------
-sudo chown root: /etc/yum.repos.d/passenger.repo
-sudo chmod 600 /etc/yum.repos.d/passenger.repo
---------------------------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/yum_repo/
 
 ==== Installing packages
 
-.Notes about SELinux on Red Hat 6 and CentOS 6
-[NOTE]
-====================================================
-If you are on Red Hat 6 or CentOS 6, and you are also using SELinux in enforcing mode, then Passenger requires kernel >= 2.6.39.
-
-If you want to install Passenger on Red Hat 6 or CentOS 6, without upgrading your kernel, then you must *disable* SELinux completely. Edit `/etc/selinux/config`, set `SELINUX=disabled` and reboot. Note that merely setting SELinux to permissive mode is not enough.
-
-This issue does not apply to Red Hat >= 7 and CentOS >= 7, because these OS versions supply recent enough kernel versions.
-====================================================
-
-You can install the Passenger packages as follows.
-
-**Open source**::
-+
-1. <<install_add_yum_repo,Add our YUM repository.>>
-ifdef::nginx[]
-2. Install the packages:
-+
---------------------------------------------------------------
-sudo yum install nginx passenger
---------------------------------------------------------------
-+
-3. Edit `/etc/nginx/conf.d/passenger.conf` and uncomment `passenger_root`, `passenger_ruby` and `passenger_instance_registry_dir`.
-+
-Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it!
-+
-4. Restart Nginx:
-+
---------------------------------------------------------------
-sudo service nginx restart
---------------------------------------------------------------
-endif::[]
-ifdef::apache[]
-2. Install the package:
-+
---------------------------------------------------------------
-sudo yum install mod_passenger
---------------------------------------------------------------
-+
-3. Stop/start Apache (reload or restart is not enough when upgrading):
-+
---------------------------------------------------------------
-sudo service httpd stop; sudo service httpd start
---------------------------------------------------------------
-endif::[]
-ifdef::standalone[]
-2. Install the package:
-+
---------------------------------------------------------------
-sudo yum install passenger
---------------------------------------------------------------
-endif::[]
-
-**Enterprise**::
-+
-1. Download your license key from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
-2. <<install_add_yum_repo,Add our YUM repository.>>
-3. Install the packages:
-+
-ifdef::nginx[]
---------------------------------------------------------------
-sudo yum install nginx passenger-enterprise
---------------------------------------------------------------
-4. Edit `/etc/nginx/conf.d/passenger.conf` and uncomment `passenger_root`, `passenger_ruby` and `passenger_instance_registry_dir`.
-+
-Especially <<PassengerRoot,passenger_root>> is important: Phusion Passenger won't work without it!
-+
-5. Restart Nginx:
-+
---------------------------------------------------------------
-sudo service nginx restart
---------------------------------------------------------------
-endif::[]
-ifdef::apache[]
---------------------------------------------------------------
-sudo yum install mod_passenger_enterprise
---------------------------------------------------------------
-+
-4. Stop/start Apache (reload or restart is not enough when upgrading):
-+
---------------------------------------------------------------
-sudo service httpd stop; sudo service httpd start
---------------------------------------------------------------
-endif::[]
-ifdef::standalone[]
---------------------------------------------------------------
-sudo yum install passenger-enterprise
---------------------------------------------------------------
-endif::[]
-
-You can now proceed with a chapter for Deploying your (specific type of) application. 
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/yum_repo/
 
 
 === Installing or upgrading on Heroku
@@ -407,702 +55,174 @@ Please refer to our link:https://github.com/phusion/passenger-ruby-heroku-demo#r
 [[rubygems_generic_install]]
 === Generic installation, upgrade and downgrade method: via RubyGems
 
-RubyGems is only used as a method to obtain the Phusion Passenger files, so in case you have multiple Ruby versions it does not matter which Ruby's RubyGems you use for installation. Once installed, Phusion Passenger can work with all other Ruby versions on your system. This is explained in <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>>.
-
-[[is_ruby_home_or_system_wide_installed]]
-[float]
-==== Step 1: figuring out whether your Ruby is installed in the home directory or system-wide
-
-Ruby may either be installed in the home directory, or system-wide. If it's installed system-wide then we will want to install gems system-wide as well, so you need to switch to a root prompt first. If Ruby is installed in the home directory then we will want to install gems to the home directory as well, as a normal user.
-
-To find out which case applies, run the following command to find out where the `ruby` command is:
-
---------------
-which ruby
---------------
-
-Do you see a filename that references '/home' or '/Users'? If so then your Ruby interpreter is installed in your home directory and you can proceed to step 2. Otherwise, you need to switch to a root prompt by running one of the following commands:
-
-* Are you using RVM? Run `rvmsudo -H bash`
-* Are you not using RVM, or do you not know what RVM is? Run `sudo -H -s`
-* Is 'sudo' not installed on your system? Run `su -c bash`
-
-You must maintain this root prompt throughout this installation guide.
-
-[float]
-==== Step 2: install the gem
-
-**Open Source**::
-	Install the latest gem to obtain the files for the latest stable version of the open source Phusion Passenger:
-+
-----------------------
-gem install passenger
-----------------------
-+
-.Previous versions and beta versions
-********************************************************
-Sometimes you will want to obtain the latest beta version of Phusion Passenger. Beta versions are not normally selected by `gem install`, so to opt-in for beta versions you have to add the `--pre` argument:
-
------------------------------------
-gem install passenger --pre
------------------------------------
-
-If you want to obtain a specific version of Phusion Passenger, e.g. because you are downgrading, then specify the version number with `--version`:
-
------------------------------------
-gem install passenger --version 3.0.0
------------------------------------
-
-If you want to obtain a specific *beta* version of Phusion Passenger then you must also pass `--pre`:
-
-----------------------------------------------------
-gem install passenger --version 3.9.1.beta --pre
-----------------------------------------------------
-********************************************************
-
-**Enterprise**::
-First, download the *license key* from the link:https://www.phusionpassenger.com/orders[Customer Area] and save it as `/etc/passenger-enterprise-license`.
-+
-Next, add the Phusion Passenger Enterprise gem server to your RubyGems source list:
-+
-------------------------------------------
-gem source --add https://download:YOUR_DOWNLOAD_TOKEN@www.phusionpassenger.com/enterprise_gems/
-------------------------------------------
-+
-Substitute 'YOUR_DOWNLOAD_TOKEN' with the one you find in the link:https://www.phusionpassenger.com/orders[Customer Area]. And notice the **trailing slash** in the URL! It is very important.
-+
-Finally, install the latest gem to obtain the files for the latest stable version of Passenger Enterprise:
-+
-----------------------
-gem install passenger-enterprise-server
-----------------------
-+
-.Previous versions and beta versions
-********************************************************
-Sometimes you will want to obtain the latest beta version of Phusion Passenger Enterprise. Beta versions are not normally selected by `gem install`, so to opt-in for beta versions you have to add the `--pre` argument:
-
------------------------------------
-gem install passenger-enterprise-server --pre
------------------------------------
-
-If you want to obtain a specific version of Phusion Passenger Enterprise, e.g. because you are downgrading, then specify the version number with `--version`:
-
------------------------------------
-gem install passenger-enterprise-server --version 3.0.0
------------------------------------
-
-If you want to obtain a specific *beta* version of Phusion Passenger then you must also pass `--pre`:
-
-----------------------------------------------------
-gem install passenger-enterprise-server --version 3.9.1.beta --pre
-----------------------------------------------------
-********************************************************
-
-ifndef::standalone[]
-[[run_passenger_installer]]
-[float]
-==== Step 3: run the Phusion Passenger installer
-
-:gem: true
-include::installation/run_installer.txt[]
-
-:gem!:
-
-[float]
-==== Step 4: restarting the Flying Passenger daemon
-
-If you are using <<flying_passenger,Flying Passenger>> then you must restart the Flying Passenger daemon by sending it the SIGTERM signal:
-
--------------------------------
-kill `cat /path-to/flying-passenger.pid`
--------------------------------
-
-Or, if Flying Passenger is not running with a PID file, look up its PID us `ps` and then send it SIGTERM:
-
--------------------------------
-ps aux | grep flying-passenger
-kill PID_OF_FLYING_PASSENGER
--------------------------------
-
-[[verify_passenger_running]]
-[float]
-==== Step 5: verifying that Phusion Passenger is running
-
-Restart your web server and run:
-
----------------------------
-passenger-memory-stats
----------------------------
-
-include::installation/verify_running_epilogue.txt[]
-
-endif::[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/
 
 
 [[tarball_generic_install]]
 === Generic installation, upgrade and downgrade method: via tarball
 
-[float]
-==== Step 1: installing Ruby
-
-Phusion Passenger supports multiple languages and its core is written in C++, but its installer and administration tools are written in Ruby, so you must install Ruby.
-
-Even though Ruby is required, Ruby will normally not be loaded during normal operation unless you deploy a Ruby web application on Phusion Passenger. Phusion Passenger's dependency on Ruby is very minimal. See <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>> for details.
-
-|==========================================================
-| Debian, Ubuntu | `sudo apt-get update` +
-`sudo apt-get install ruby rake`
-| Red Hat, CentOS, ScientificLinux, Amazon Linux | Enable link:http://fedoraproject.org/wiki/EPEL[EPEL], then run as root: +
-`yum install ruby rubygem-rake`
-| Mac OS X | No action needed. Ruby is installed by default.
-| Other operating systems | Install Ruby from link:http://www.ruby-lang.org/[the Ruby website].
-|==========================================================
-
-[float]
-==== Step 2: download and extract the tarball
-
-**Open Source**::
-	Download the open source Phusion Passenger tarball from link:https://www.phusionpassenger.com/download#open_source[the Phusion Passenger website].
-+
-Older versions can be found in link:https://www.phusionpassenger.com/file_releases[the release archive].
-
-**Enterprise**::
-	link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customers can download the Phusion Passenger Enterprise tarball from the link:https://www.phusionpassenger.com/orders[Customer Area].
-+
-Also be sure to download the *license key* and save it as `/etc/passenger-enterprise-license`.
-
-Once you have downloaded the tarball, pick a location to extract it to. You can pick any location. A good location is '/opt/passenger'. Create this directory and extract the tarball as follows:
-
---------------------------------------------------
-mkdir /opt/passenger
-cd /opt/passenger
-tar xzvf /location-to/passenger-x.x.x.tar.gz
-cd /opt/passenger/passenger-x.x.x
---------------------------------------------------
-
-Note that `passenger-x.x.x` should be `passenger-enterprise-server-x.x.x` if you're using Phusion Passenger Enterprise.
-
-ifdef::standalone[]
-[float]
-==== Step 3: adding the Phusion Passenger tools to PATH
-
-Edit `/etc/bashrc` (or `/etc/bash.bashrc` on some systems) and append the following to the end of the file:
-
----------------------
-export PATH=/opt/passenger/passenger-x.x.x/bin:$PATH
----------------------
-
-Finally, restart all your shell sessions in order to activate this change. The installation is now complete.
-
-endif::[]
-
-ifndef::standalone[]
-[float]
-==== Step 3: run the Phusion Passenger installer
-
-:tarball: true
-include::installation/run_installer.txt[]
-
-:tarball!:
-
-ifdef::nginx[]
-[float]
-==== Step 4: restarting the Flying Passenger daemon
-
-If you are using <<flying_passenger,Flying Passenger>> then you must restart the Flying Passenger daemon by sending it the SIGTERM signal:
-
--------------------------------
-kill `cat /path-to/flying-passenger.pid`
--------------------------------
-
-Or, if Flying Passenger is not running with a PID file, look up its PID us `ps` and then send it SIGTERM:
-
--------------------------------
-ps aux | grep flying-passenger
-kill PID_OF_FLYING_PASSENGER
--------------------------------
-endif::[]
-
-[float]
-ifdef::apache[]
-==== Step 4: verifying that Phusion Passenger is running
-endif::[]
-ifdef::nginx[]
-==== Step 5: verifying that Phusion Passenger is running
-endif::[]
-
-Restart your web server and run:
-
----------------------------
-./bin/passenger-memory-stats
----------------------------
-
-include::installation/verify_running_epilogue.txt[]
-
-endif::[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/
 
 
 === Upgrading from open source to Enterprise
 
-Phusion Passenger comes in two variants: an open source version, as well as an link:https://www.phusionpassenger.com/enterprise[Enterprise version] which introduces a myriad of useful features that can improve stability and performance and efficiency.
-
-Customers who have bought Phusion Passenger Enterprise can upgrade their open source installation to Enterprise as follows:
-
-1. <<uninstalling,Uninstall the open source Phusion Passenger>>.
-2. Install the Enterprise version by following one of the installation guides in this section (e.g. <<rubygems_generic_install,RubyGems generic installation>> or <<tarball_generic_install,tarball generic installation>>).
-
-The uninstallation is necessary because the Enterprise Ruby gem has a different gem name ('passenger-enterprise-server' instead of 'passenger'), but the same administration command names (e.g. `passenger-status`). Uninstalling the open source version avoids any conflicts.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/upgrading_from_oss_to_enterprise.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/upgrading_from_oss_to_enterprise.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. https://www.phusionpassenger.com/library/install/standalone/upgrading_from_oss_to_enterprise.html
+endif::[]
 
 
 === Cryptographic verification of installation files
 
 ==== Synopsis
 
-We digitally sign various files with our GPG key so that you can check whether they're legit, i.e. whether they really came from Phusion and haven't been tampered with by a third party. We apply signing since the open source version 4.0.0 RC 4, or the Enterprise version 4.0.0 RC 1.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 ==== Importing the Phusion Software Signing key
 
-Phusion's GPG key for signing software is as follows:
-
-  Phusion Software Signing (software-signing@phusion.nl)
-  Short key ID: 0x0A212A8C
-  Long key ID: 0x2AC745A50A212A8C
-  Fingerprint: D5F0 8514 2693 9232 F437  AB72 2AC7 45A5 0A21 2A8C
-
-This key is stored at link:http://www.phusion.nl/about/gpg[the Phusion website] and at the key servers link:http://pool.sks-keyservers.net/pks/lookup?op=get&search=0x2AC745A50A212A8C[sks-keyservers.net] and link:http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2AC745A50A212A8C[keyserver.ubuntu.com]. You can import it to your keyring with one of these command:
-
--------------------------------------------------------------------------
-gpg --keyserver pool.sks-keyservers.net --search-keys 0x2AC745A50A212A8C
-# -OR-
-gpg --keyserver keyserver.ubuntu.com --search-keys 0x2AC745A50A212A8C
--------------------------------------------------------------------------
-
-The Phusion Software Signing key is only used for signing software. It's never used for signing emails or for encrypting files, so please be suspicious if you encounter usage of this key outside the context of signing software, and alert us at support@phusion.nl. Include "notspam" in the message to bypass our spam filter.
-
-The email address software-signing@phusion.nl redirects to info@phusion.nl so it's safe to send email there.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 ==== Verifying the Phusion Software Signing key
 
-The Phusion Software Signing key is also *signed by the Phusion founders*. Their keys are as follows:
-
-  Hongli Lai (hongli@phusion.nl)
-  Short key ID: 8C59158F
-  Long key ID: CD70085E8C59158F
-  Fingerprint: 218A 7255 83D0 2ECE F3A9 C2A7 CD70 085E 8C59 158F
-
-  Ninh Bui (ninh@phusion.nl)
-  Short key ID: 69481265
-  Long key ID: AE405F7869481265
-  Fingerprint: A77C 9CEF 766D 0E7D A95B 8778 AE40 5F78 6948 1265
-
-Both keys are stored at both sks-servers.net and keyserver.ubuntu.com. Import them with:
-
-------------------------------------------
-gpg --keyserver pool.sks-servers.net --search-keys 0xCD70085E8C59158F
-gpg --keyserver pool.sks-servers.net --search-keys 0xAE405F7869481265
-# -OR-
-gpg --keyserver keyserver.ubuntu.com --search-keys 0xCD70085E8C59158F
-gpg --keyserver keyserver.ubuntu.com --search-keys 0xAE405F7869481265
-------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 ==== Verifying the gem and tarball
 
-You can find the open source version's gem and tarball GPG signatures at https://www.phusionpassenger.com/file_releases. The Enterprise version's GPG signatures can be found in the link:https://www.phusionpassenger.com/orders[Customer Area]. All signatures have the '.asc' extension. Once you have imported our key, you can verify the validity of a file against its signature as follows:
-
------------------------------------------
-$ gpg --verify passenger-x.x.x.tar.gz.asc passenger-x.x.x.tar.gz
-gpg: Signature made Mon Mar 11 09:45:46 2013 CET using RSA key ID 0A212A8C
-gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 ==== Verifying Git signatures
 
-Tags in the link:https://github.com/phusion/passenger[Git repository for the open source version] are also tagged. You can verify a Git tag as follows:
-
--------------------------------------------------------
-$ git tag --verify release-x.x.x
-object d886f34b5705e4314feccaf0d77b9a38416e15e0
-type commit
-tag release-4.0.0.rc5
-tagger Hongli Lai (Phusion) <hongli@phusion.nl> 1362993117 +0100
-
-This is a tag message.
-gpg: Signature made Mon Mar 11 10:12:02 2013 CET using RSA key ID 0A212A8C
-gpg: Good signature from "Phusion Software Signing <software-signing@phusion.nl>"
--------------------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 ==== Verifying Debian packages
 
-Our <<install_on_debian_ubuntu,APT repository>> is signed by Phusion Automated Software Signing (auto-software-signing@phusion.nl). Packages are automatically checked upon installation.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 ==== Verifying RPM packages
 
-Our <<installing_or_upgrading_on_red_hat,YUM repository>> is signed by link:https://packagecloud.io[PackageCloud] (ops@packagecloud.io). PackageCloud is the RPM package hosting service that we use. You can find their key link:https://packagecloud.io/gpg.key[here]. Packages are automatically checked upon installation.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 ==== Revocation
 
-In the event our key is compromised, we will revoke the key and upload the revocation information to sks-servers.net and keyserver.ubuntu.com. However your system will not know about the revocation until you update the keys from the keyservers. You should update your keys regularly (e.g. once a week) by invoking:
-
--------------------------------------------------------
-gpg --refresh-keys --keyserver pool.sks-servers.net
-# -OR-
-gpg --refresh-keys --keyserver keyserver.ubuntu.com
--------------------------------------------------------
-
-If you installed Phusion Passenger through our APT repository, then you should update APT's keyring from time to time as well:
-
--------------------------------------------------------
-sudo apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com
--------------------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/crypto_verify_install.html
 
 
 ifndef::standalone[]
 === Non-interactive, automatic, headless installs or upgrades
 
 ifdef::apache[]
-By default, the installer (`passenger-install-apache2-module`) is interactive. If you want to automate installation then you can do so by passing `--auto` to the installer. See also `passenger-install-apache2-module --help` for more options.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/noninteractive_install.html
 endif::[]
 ifdef::nginx[]
-By default, the installer (`passenger-install-nginx-module`) is interactive. If you want to automate installation then you can do so by passing various answers to the installer through command line options. Please run the installer with `--help` for a list of available command line options.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/noninteractive_install.html
 endif::[]
 endif::[]
 
 
 === Customizing the compilation process
 
-The Phusion Passenger compilation process can be customized with environment variables. You can learn more about environment variables in <<about_environment_variables,About environment variables>>.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/customizing_compilation_process.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/customizing_compilation_process.html
+endif::[]
 
 ==== Setting the compiler
 
-You can force the Phusion Passenger build system to use a specific C or C++ compiler by setting the `CC` and `CXX` environment variables. These may be set to any arbitrary shell commands.
-
-For example, contributors who want to hack on Phusion Passenger may want to use Clang for faster compilation and link:http://ccache.samba.org/[ccache] for faster recompilation, and may want to enable more error-catching compilation flags:
-
-[source,sh]
-----------------------
-export CC='ccache clang -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
-export CXX='ccache clang++ -fcolor-diagnostics -Qunused-arguments -fcatch-undefined-behavior -ftrapv'
-----------------------
-
-NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/customizing_compilation_process.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/customizing_compilation_process.html
+endif::[]
 
 ==== Adding additional compiler or linker flags
 
-On some systems, C/C++ libraries and headers that Phusion Passenger requires may be located in a non-standard directory. You can force the Phusion Passenger build system to look in those locations by injecting compiler and linker flags using the following environment variables:
-
-`EXTRA_PRE_CFLAGS`::
-	These flags are injected into all C compiler invocations that involve compiling C source files. This also covers compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, even before `EXTRA_PRE_LDFLAGS`.
-`EXTRA_CFLAGS`::
-	Similar to `EXTRA_PRE_CFLAGS`, but injected at the end of the command string, before `EXTRA_LDFLAGS`.
-`EXTRA_PRE_CXXFLAGS`::
-	Similar to `EXTRA_PRE_CFLAGS`, but for C++ compiler invocations.
-`EXTRA_CXXFLAGS`::
-	Similar to `EXTRA_CFLAGS`, but for C++ compiler invocations.
-`EXTRA_PRE_LDFLAGS`::
-	These flags are injected into all C/C++ compiler invocations that involve linking. This includes compiler invocations that compile *and* link. The flags are injected at the beginning of the command string, but after `EXTRA_PRE_CFLAGS`/`EXTRA_PRE_CXXFLAGS`.
-`EXTRA_PRE_C_LDFLAGS`::
-	These flags are injected into all C compiler invocations that involve linking, right after `EXTRA_PRE_LDFLAGS`.
-`EXTRA_PRE_CXX_LDFLAGS`::
-	Similar to `EXTRA_PRE_CXX_LDFLAGS`, but for C++ compiler invocations.
-`EXTRA_LDFLAGS`::
-	Similar to `EXTRA_PRE_LDFLAGS`, but injected at the very end of the command string, even after `EXTRA_CFLAGS` and `EXTRA_CXXFLAGS`.
-`EXTRA_C_LDFLAGS`::
-	Similar to `EXTRA_LDFLAGS`, but only injected for C executable linking commands. Injected right after `EXTRA_LDFLAGS`.
-`EXTRA_CXX_LDFLAGS`::
-	Similar to `EXTRA_LDFLAGS`, but only injected for C++ executable linking commands. Injected right after `EXTRA_LDFLAGS`.
-`PASSENGER_THREAD_LOCAL_STORAGE`::
-	Setting this to 1 will enable the `PASSENGER_THREAD_LOCAL_STORAGE` macro, which forcefully disables the use of thread-local storage inside the Phusion Passenger codebase. Setting this environment variable is useful on systems that have broken support for thread-local storage, despite passing our build system's check for proper thread-local storage support. At the time of writing, one user has reported that Ubuntu 12.04 32-bit has broken thread-local storage report although neither the reporter nor us were able to reproduce the problem on any other systems running Ubuntu 12.04 32-bit. Note that this flag has no effect on non-Phusion Passenger code.
-
-NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/customizing_compilation_process.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/customizing_compilation_process.html
+endif::[]
 
 [[forcing_location_of_command_line_tools_and_dependencies]]
 ==== Forcing location of command line tools and dependencies
 
-The Phusion Passenger build system attempts to autodetect many things by locating relevant helper tools. For example, to find out which compiler flags it should use for compiling Apache modules, it locates the `apxs2` command and queries it. To find out which compiler flags it should use for libcurl, it queries the `curl-config` command. These commands may not be in `$PATH`, or even when they are you may want to use a different one.
-
-You can force the build to find certain command line tools at certain locations by using the following environment variables:
-
-`HTTPD`::
-	The location of the `httpd` executable (the Apache server executable).
-`APXS2`::
-	The location of the `apxs2` executable (the Apache module developer tool). Only used by `passenger-install-apache2-module`.
-+
-This environment variable, together with `HTTPD`, are what you need to customize if you have multiple Apache installations on your system, or if your Apache is located in a non-standard location which Phusion Passenger cannot detect. By setting `APXS2` and `HTTP` to the right paths, you can force Phusion Passenger to be compiled against that specific Apache installation.
-+
-For example, if your Apache installation is located in `/opt/lamp/apache2`, then you can run the installer as follows:
-+
----------------------------------------
-$ sudo bash
-# export HTTPD=/opt/lampp/apache2/bin/apache
-# export APXS2=/opt/lampp/apache2/bin/apxs
-# passenger-install-apache2-module
----------------------------------------
-`APR_CONFIG`::
-	The location of the `apr-config` executable (the Apache Portable Runtime developer tool).
-`APU_CONFIG`::
-	The location of the `apu-config` executable (the Apache Portable Runtime Utility developer tool).
-`MAKE`::
-	The location of a `make` tool. It does not matter which implementation of `make` this is.
-`GMAKE`::
-	The location of the GNU-compatible `make` tool.
-
-TIP: If you do not know what environment variables are, or how to use them, then please read <<env_vars_and_sudo,Environment variables and sudo>>.
-
-NOTE: If you run the installer with `sudo` then environment variables may not be passed properly. Learn more at <<env_vars_and_sudo,Environment variables and sudo>>.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/customizing_compilation_process.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/customizing_compilation_process.html
+endif::[]
 
 
 ifdef::apache[]
 [[multiple_apache_installs]]
 === Dealing with multiple Apache installations
-Some systems have multiple Apache installations. Maybe you already know about that, and you installed multiple Apaches for a reason. Or maybe you did so in the past but then forgot about the other installs. Or maybe someone else -- or some other software -- installed another Apache for you without your knowledge.
 
-Whatever the reason might be, it is important that you know about the existance of multiple Apache installations, and that you decide *which one* you want to use. **Unless you know exactly what you are doing, we recommend that you remove all the Apache installations that you don't intend to use, in order to avoid confusion and problems**. You should end up with only a single Apache installation. Unfortunately, this manual cannot tell you how to remove the other Apache installs: it depends on how you originally installed them. Usually it's a matter of removing the directories that they're located in, and removing their configuration files. But some Apache distributions might bundle an uninstaller. You need to do the proper research on how they ended up there in the first place.
-
-Phusion Passenger provides a tool to check whether you have multiple Apache installations on your system. You can invoke the tool by running `passenger-config --detect-apache2`.
-
-If the existance of multiple Apache installations is intentional, then Phusion Passenger can happily go along with your choice: you simply have to tell `passenger-install-apache2-module` which Apache to install against. There are several ways to specify which Apache you want to install against:
-
- * By passing the `--apxs2-path` parameter. The `passenger-config --detect-apache2` command will tell you how to use this parameter.
- * By setting `APXS2`, `HTTPD` and other kinds of environment variables. Please refer to <<forcing_location_of_command_line_tools_and_dependencies,Forcing location of command line tools and dependencies>> for more information.
-
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/multiple_apache_installs.html
 
 [[working_with_apache_conf]]
 === Working with the Apache configuration file
 
-On most systems the Apache configuration file is located in either '/etc/apache2/httpd.conf' or '/etc/apache2/apache2.conf'. However, to allow better organization, many operating systems and Apache distributions also read configuration files in the 'conf.d', 'mods-enabled' and 'sites-enabled' subdirectories.
-
-'mods-enabled' contains symlinks to files in 'mods-available'. This latter subdirectory contains config files for all available modules, while 'mods-enabled' contains only a subset, namely the modules that should actually be enabled. The symlinks are created using the `a2enmod` tool. '*.load' files contain `LoadModule` directives, while '*.conf' files contain all other configuration directives.
-
-Use 'mods-enabled'/'mods-available' to store Phusion Passenger configuration if you can:
-
-- Create '/etc/apache2/mods-available/passenger.load' and paste the `LoadModule ...` directive that `passenger-install-apache2-module` outputs.
-- Create '/etc/apache2/mods-available/passenger.conf' and paste the `PassengerRoot` and other Phusion Passenger options.
-- Enable by running `sudo a2enmod passenger`.
-
-If the 'mods-enabled' mechanism is not available then you can paste configuration snippets into 'httpd.conf' or 'apache2.conf' directly.
-
-On OS X Server >= 10.8 Mountain Lion the location of the Apache configuration file depends on whether you use Web Services or not. If you do, then the configuration file is in '/Library/Server/Web/Config/apache2/httpd_server_app.conf'. If you do not, then the configuration file is in '/etc/apache2/httpd.conf'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/working_with_the_apache_config_file.html
 endif::[]
 
 
 ifdef::nginx[]
 === Installing as a normal Nginx module without using the installer
 
-You can also install Phusion Passenger the way you install any other Nginx module, e.g. with `--add-module`. This installation mode is useful if you already have an Nginx tarball somewhere.
-
-You need to run Nginx's configure script with `--add-module=/path-to-passenger-nginx-addon-dir`. The right value for `/path-to-passenger-nginx-addon-dir` can be obtained with the command:
-
--------------------------------------
-passenger-config --nginx-addon-dir
--------------------------------------
-
-After having installed Nginx with Phusion Passenger support, you must paste the following
-line into your Nginx configuration file:
-
-------------------------------------------
-passenger_root /path-to-passenger-root;
-------------------------------------------
-
-The right value for `/path-to-passenger-root` can be obtained by running the following command:
-
--------------------------------------
-passenger-config --root
--------------------------------------
-
-After having modified the Nginx configuration file, restart Nginx.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/install_as_nginx_module.html
 
 
 [[nginx_init_script]]
 === Creating an Nginx init script
 
-If you installed Nginx with one of the generic installation methods then you won't have an init script to start, stop and restart Nginx with. A bare Nginx installation works with signals: you start it by invoking it from the command line, you stop it by sending SIGTERM to it and you gracefully restart it by sending SIGHUP to it.
-
-If you prefer to use an init script then please refer to the following resources:
-
-- link:http://wiki.nginx.org/Nginx-init-ubuntu[Init script for Ubuntu 8.04-9.10]
-- link:http://library.linode.com/web-servers/nginx/installation/ubuntu-12.04-precise-pangolin#sph_create-an-init-script-to-manage-nginx[Init script for Ubuntu 12.04]
-- link:http://wiki.nginx.org/RedHatNginxInitScript[Init script for Red Hat, Fedora and CentOS]
-
-When using one of those init scripts, please make sure that the paths inside the init script are correct. In particular, the paths to the Nginx binary, to the PID file and to the configuration file must match the actual locations of your Nginx installation.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/nginx_init_script.html
 endif::[]
 
 
 ifndef::standalone[]
 === Disabling without uninstalling
 
-You can temporarily unload (disable) Phusion Passenger from the web server, without
-uninstalling the Phusion Passenger files, so that the web server behaves as if Phusion
-Passenger was never installed in the first place. This might be useful to you if -
-for example - you seem to be experiencing a problem caused by Phusion Passenger,
-but you want to make sure whether that's actually the case without having
-to go through the hassle of uninstalling Phusion Passenger completely. When disabled,
-Phusion Passenger will not occupy any memory or CPU or otherwise interfere with
-the web server.
-
 ifdef::apache[]
-To unload Phusion Passenger from the web server, edit your Apache configuration file(s)
-and comment out:
-
-- all Phusion Passenger configuration directives.
-- the `LoadModule passenger_module` directive.
-
-For example, if your configuration file looks like this...
-
------------------------------------
-Listen *:80
-NameVirtualHosts *:80
-....
-
-LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
-
-PassengerRoot /somewhere/passenger/x.x.x
-PassengerDefaultRuby /usr/bin/ruby
-PassengerMaxPoolSize 10
-
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /webapps/foo/public
-    RailsBaseURI /rails
-</VirtualHost>
------------------------------------
-
-...then comment out the relevant directives, so that it looks like this:
-
------------------------------------
-Listen *:80
-NameVirtualHosts *:80
-....
-
-# LoadModule passenger_module /somewhere/passenger-x.x.x/ext/apache2/mod_passenger.so
-
-# PassengerRoot /somewhere/passenger/x.x.x
-# PassengerDefaultRuby /usr/bin/ruby
-# PassengerMaxPoolSize 10
-
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /webapps/foo/public
-    # RailsBaseURI /rails
-</VirtualHost>
------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/disable.html
 endif::[]
 ifdef::nginx[]
-To unload Phusion Passenger, edit your Nginx configuration file(s)
-and comment out all Phusion Passenger configuration directives.
-
-For example, if your configuration file looks like this...
-
------------------------------------
-...
-
-http {
-    passenger_root /somewhere/passenger-x.x.x;
-    passenger_ruby /usr/bin/ruby;
-    passenger_max_pool_size 10;
-
-    gzip on;
-
-    server {
-        server_name www.foo.com;
-        listen 80;
-        root /webapps/foo/public;
-        passenger_enabled on;
-    }
-}
------------------------------------
-
-...then comment out the relevant directives, so that it looks like this:
-
------------------------------------
-...
-
-http {
-    # passenger_root /somewhere/passenger-x.x.x;
-    # passenger_ruby /usr/bin/ruby;
-    # passenger_max_pool_size 10;
-
-    gzip on;
-
-    server {
-        server_name www.foo.com;
-        listen 80;
-        root /webapps/foo/public;
-        # passenger_enabled on;
-    }
-}
------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/disable.html
 endif::[]
-
-After you've done this, save the configuration file and restart the web server.
 endif::[]
 
 [[uninstalling]]
 === Uninstalling
 
-ifndef::standalone[]
-To uninstall Phusion Passenger, please first remove all Phusion Passenger
-configuration directives from your web server configuration file(s). After you've
-done this, you need to remove the Phusion Passenger files.
-endif::[]
-
-- If you installed Phusion Passenger through Homebrew, then run `brew uninstall passenger`.
 ifdef::apache[]
-Then run `rm -f /etc/apache2/other/passenger.conf`.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/uninstall/
 endif::[]
-- If you installed Phusion Passenger via a Ruby gem, then run `gem uninstall passenger` (or, if you're a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] user, `gem uninstall passenger-enterprise-server`).
-  You <<is_ruby_home_or_system_wide_installed,might have to run this as root>>.
-- If you installed Phusion Passenger via a source tarball, then remove the directory
-  in which you placed the extracted Phusion Passenger files. This directory is the
-  same as the one pointed to the by `PassengerRoot`/`passenger_root` configuration directive.
-- If you installed Phusion Passenger through APT or YUM, then use them to uninstall Phusion Passenger.
-
 ifdef::nginx[]
-Nginx does not have to be recompiled after uninstalling Phusion Passenger. Altough Nginx will contain the Phusion Passenger Nginx module, the module will not do anything when all Phusion Passenger configuration directives are removed.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/uninstall/
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/standalone/uninstall/
 endif::[]
 
 
 [[moving_phusion_passenger]]
 === Moving to a different directory
 
-If you installed Phusion Passenger through a tarball then you can move the Phusion Passenger directory to another location. This is not possible if you used any of the other installation methods.
-
-First, move the directory to whereever you like:
-
---------------------------------------------------------------
-mv /opt/passenger/passenger-4.0.0 /usr/local/passenger-4.0.0
---------------------------------------------------------------
 
 ifdef::apache[]
-Next you must tell Apache that Phusion Passenger has moved.
-Open your <<working_with_apache_conf,Apache configuration file>> and set the 'PassengerRoot' directive to the new location:
-
----------------------------------------------
-PassengerRoot /usr/local/passenger-4.0.0
----------------------------------------------
-
-Restart your web server to finalize the change.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/apache/moving.html
 endif::[]
 ifdef::nginx[]
-Next you must tell Nginx that Phusion Passenger has moved.
-Open your Nginx configuration file and set the 'passenger_root' directive to the new location:
-
----------------------------------------------
-passenger_root /usr/local/passenger-4.0.0;
----------------------------------------------
-
-Restart your web server to finalize the change.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/nginx/moving.html
 endif::[]
-
-If you used <<tarball_generic_install,the tarball installation method>> and you added Phusion Passenger's `bin` subdirectory to `PATH`, then you must update your PATH with the new location. Open `/etc/bashrc` (or `/etc/bash.bashrc` on some systems) and change:
-
----------------------
-export PATH=/opt/passenger/passenger-4.0.0/bin:$PATH
----------------------
-
-to:
-
----------------------
-export PATH=/usr/local/passenger-4.0.0/bin:$PATH
----------------------
-
-Finally, restart all your shell sessions to activate the PATH change.
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/install/standalone/moving.html
+endif::[]

@@ -46,15 +46,25 @@ module PhusionPassenger
     def check_rvm_using_wrapper_script(options)
       ruby = options["ruby"]
       if ruby =~ %r(/\.?rvm/) && ruby =~ %r(/bin/ruby$)
-        raise "You've set the `PassengerRuby` (Apache) or `passenger_ruby` (Nginx) option to '#{ruby}'. " +
+        case options["integration_mode"] || DEFAULT_INTEGRATION_MODE
+        when "nginx"
+          passenger_ruby = "passenger_ruby"
+          passenger_ruby_doc = "https://www.phusionpassenger.com/library/config/nginx/reference/#setting_correct_passenger_ruby_value"
+        when "apache"
+          passenger_ruby = "PassengerRuby"
+          passenger_ruby_doc = "https://www.phusionpassenger.com/library/config/apache/reference/#setting_correct_passenger_ruby_value"
+        when "standalone"
+          passenger_ruby = "--ruby"
+          passenger_ruby_doc = "https://www.phusionpassenger.com/library/config/standalone/reference/#setting_correct_passenger_ruby_value"
+        end
+
+        raise "You've set the `#{passenger_ruby}` option to '#{ruby}'. " +
           "However, because you are using RVM, this is not allowed: the option must point to " +
           "an RVM wrapper script, not a raw Ruby binary. This is because RVM is implemented " +
           "through various environment variables, which are set through the wrapper script.\n" +
           "\n" +
-          "To find out the correct value for `PassengerRuby`/`passenger_ruby`, please read:\n\n" +
-          "  #{APACHE2_DOC_URL}#PassengerRuby\n\n" +
-          "  #{NGINX_DOC_URL}#PassengerRuby\n\n" +
-          "Scroll to section 'RVM helper tool'.\n" +
+          "To find out the correct value for `#{passenger_ruby}`, please read:\n\n" +
+          "  #{passenger_ruby_doc}\n" +
           "\n-------------------------\n"
       end
     end

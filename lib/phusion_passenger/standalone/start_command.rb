@@ -652,7 +652,7 @@ module PhusionPassenger
         else
           puts "You can stop #{PROGRAM_NAME} Standalone by pressing Ctrl-C."
         end
-        puts "Problems? Check #{STANDALONE_DOC_URL}#troubleshooting"
+        puts "Problems? Check https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/"
         puts "==============================================================================="
       end
 

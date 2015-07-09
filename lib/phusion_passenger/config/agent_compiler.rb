@@ -1,7 +1,7 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -56,12 +56,12 @@ module PhusionPassenger
         return [specs, ids]
       end
 
-      def users_guide_path
-        return PhusionPassenger.standalone_doc_path
+      def install_doc_url
+        "https://www.phusionpassenger.com/library/install/standalone/"
       end
 
-      def users_guide_url
-        return STANDALONE_DOC_URL
+      def troubleshooting_doc_url
+        "https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/"
       end
 
       def run_steps

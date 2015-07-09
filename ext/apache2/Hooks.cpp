@@ -153,8 +153,8 @@ private:
 					if (selinuxIsEnforcing()) {
 						ap_rputs("<p>", r);
 						ap_rputs("The permission problems may also be caused by SELinux restrictions. ", r);
-						ap_rputs("Please read " APACHE2_DOC_URL "#apache_selinux_permissions to learn ", r);
-						ap_rputs("how to fix SELinux permission issues. ", r);
+						ap_rputs("Please read https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=apache-cannot-access-my-app-s-files-because-of-selinux-errors ", r);
+						ap_rputs("to learn how to fix SELinux permission issues. ", r);
 						ap_rputs("</p>", r);
 					}
 				#endif

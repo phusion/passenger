@@ -1426,9 +1426,8 @@ passenger_content_handler(ngx_http_request_t *r)
                 ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0,
                               "%s; This error means that the Nginx worker process (PID %d, "
                               "running as UID %d) does not have permission to access this file. "
-                              "Please read the manual to learn how to fix this problem: "
-                              "section 'Troubleshooting' -> 'Upon accessing the web app, Nginx "
-                              "reports a \"Permission denied\" error'; Extra info",
+                              "Please read this page to learn how to fix this problem: "
+                              "https://www.phusionpassenger.com/library/admin/nginx/troubleshooting/?a=upon-accessing-the-web-app-nginx-reports-a-permission-denied-error; Extra info",
                               error.message,
                               (int) getpid(),
                               (int) getuid());

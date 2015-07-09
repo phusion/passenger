@@ -219,7 +219,7 @@ module PhusionPassenger
 
             Learn more at about PATH at:
 
-              #{NGINX_DOC_URL}#_the_path_environment_variable
+              https://www.phusionpassenger.com/library/indepth/environment_variables.html#the-path-environment-variable
           }
         end
       end
@@ -352,10 +352,10 @@ module PhusionPassenger
                 log "   Re-run this program with: <b>--apxs2-path '#{result.apxs2}'</b>"
               end
               log ""
-              log "You may also want to read the \"Installation\" section of the manual for"
+              log "You may also want to read the \"Installation\" section of Passenger Library"
               log "installation troubleshooting:"
               log ""
-              log "  #{APACHE2_DOC_URL}"
+              log "  https://www.phusionpassenger.com/library/install/apache/"
               log ""
               log "If you keep having problems installing, please visit the following website for"
               log "support:"

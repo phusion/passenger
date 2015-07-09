@@ -2,26 +2,29 @@
 
 ==== The "About your application's environment" link does not work
 
-The "About your application's environment" link only works if the application is started in the 'development' environment. Phusion Passenger starts the application in the 'production' environment by default. Please use
 ifdef::apache[]
-<<RailsEnv,RailsEnv>>
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/ruby/#the-about-your-application-s-environment-link-does-not-work
 endif::[]
 ifdef::nginx[]
-<<RailsEnv,rails_env>>
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/nginx/troubleshooting/ruby/#the-about-your-application-s-environment-link-does-not-work
 endif::[]
-to change it.
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/ruby/#the-about-your-application-s-environment-link-does-not-work
+endif::[]
+
 
 
 ==== The Rails application reports that it's unable to start because of a permission error
 
-Please check whether your Rails application's folder has the correct
-permissions. By default, Rails applications are started as the owner of the
-file `config.ru`, except if the file is owned by root. If the
-file is owned by root, then the Rails application will be started as 'nobody'
-(or as the user specify by <<RailsDefaultUser,RailsDefaultUser>>, if that's
-specified).
-
-Please read <<user_switching,User switching (security)>> for details.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/ruby/#the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/nginx/troubleshooting/ruby/#the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/ruby/#the-rails-application-reports-that-it-s-unable-to-start-because-of-a-permission-error
+endif::[]
 
 
 ==== The Rails application's log file is not being written to

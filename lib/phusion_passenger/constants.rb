@@ -43,6 +43,7 @@ module PhusionPassenger
   module SharedConstants
     # Default config values
     DEFAULT_LOG_LEVEL = 3
+    DEFAULT_INTEGRATION_MODE = "standalone"
     DEFAULT_RUBY = "ruby"
     DEFAULT_PYTHON = "python"
     DEFAULT_NODEJS = "node"
@@ -96,10 +97,6 @@ module PhusionPassenger
     SHORT_PROGRAM_NAME = "Passenger"
     SERVER_TOKEN_NAME = "Phusion_Passenger"
     FLYING_PASSENGER_NAME = "Flying Passenger"
-    INDEX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide.html"
-    APACHE2_DOC_URL     = "https://www.phusionpassenger.com/documentation/Users%20guide%20Apache.html"
-    NGINX_DOC_URL       = "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"
-    STANDALONE_DOC_URL  = "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
     SUPPORT_URL         = "https://www.phusionpassenger.com/documentation_and_support"
     ENTERPRISE_URL      = "https://www.phusionpassenger.com/enterprise"
     GLOBAL_NAMESPACE_DIRNAME            = PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME_

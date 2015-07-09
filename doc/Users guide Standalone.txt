@@ -2,13 +2,7 @@
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-link:https://www.phusionpassenger.com/[Phusion Passenger] is a web server and application server, designed to be fast, robust and lightweight. It runs your web apps with the least amount of hassle by taking care of almost all administrative heavy lifting for you. Advanced administration tools allow you to gain deep insight into your web applications' operations and to keep your servers healthy. Phusion Passenger is polyglot by design, and currently supports Ruby (Rack), Python (WSGI) and Node.js.
-
-In the Standalone mode, Phusion Passenger operates as a fully-featured, secure standalone HTTP server. You do not need to have an existing web server like Apache or Nginx. This mode is ideal...
-
- * ...if you are not familiar with Apache or Nginx
- * ...when you want to quickly start up a server without editing configuration files (e.g. during development)
- * ...or when you want to decouple the web server from the application server, by setting up reverse proxies.
+This is the old, deprecated Passenger Standalone documentation. Please visit https://www.phusionpassenger.com/library/ for the new documentation.
 
 == Support information
 
@@ -23,397 +17,59 @@ include::users_guide_snippets/installation.txt[]
 
 == Usage
 
-Go to your application's root directory, and run:
-
-------------------------------
-passenger start
-------------------------------
+This documentation has moved. Please visit the walkthroughs at https://www.phusionpassenger.com/library/ to learn how to use Passenger Standalone. Or visit link:https://www.phusionpassenger.com/library/deploy/standalone/deploy/[the new deployment documentation].
 
 == Configuration
 
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/standalone/
+
 === Command line options
 
-Most configuration is done by customizing the arguments passed to the `passenger` command. The most important ones are:
-
-`--port NUMBER`::
-	The port number that Phusion Passenger Standalone should listen on. If not given, port 3000 is assumed.
-`--environment NAME`::
-	Customizes the value of the `RAILS_ENV`, `RACK_ENV`, `WSGI_ENV`, `NODE_ENV` and `PASSENGER_APP_ENV` environment variables. Some web frameworks, for example Rails and Connect.js, adjust their behavior according to the environment. The default value is 'development'.
-`--max-pool-size NUMBER`::
-	The maximum number of application processes to run. The maximum number that you can run depends on the amount of memory your server has. The article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's concurrency settings] explains how you can infer a good number for this option.
-`--min-instances NUMBER`::
-	If you don't want the number of application processes to scale dynamically, then use this option to set it to a value equal to `--max-pool-size`.
-`--spawn-method NAME`::
-	When set to "smart" (the default), Phusion Passenger preloads your app and utilizes copy-on-write in order to save memory. You can disable this by setting this option to "direct". Preloading is only supported for Ruby apps. For apps written in other languages, it is as if "direct" is always used.
-`--friendly-error-pages`::
-    Phusion Passenger can display a friendly error page whenever your application fails to start. The friendly error page presents the startup error message, some suggestions for solving the problem, a backtrace, and a dump of the environment variables. This feature is very useful during application development and useful for less experienced system administrators, but the page might reveal potentially sensitive information, depending on the application. For this reason, friendly error pages are turned off by default when `--environment` is set to 'staging' or 'production', but enabled by default otherwise.
-+
-You can use `--friendly-error-pages` and `--no-friendly-error-pages` to explicitly enable or disable this feature, respectively.
-
-`--sticky-sessions`::
-    Enables link:Users%20guide%20Nginx.html#PassengerStickySessions[sticky sessions]. Required for SockJS, Socket.io, faye-websocket and Meteor JS applications.
-`--sticky-sessions-cookie-name NAME`::
-    Allows customizing the sticky session cookie name.
-`--ssl`::
-	Enables SSL support. If this is set, you must also set `--ssl-certificate` and `--ssl-certificate-key` to the SSL certificate and key files, respectively.
-`--ssl-port`::
-	If `--ssl` is given, and you set this option, then Phusion Passenger Standalone will listen for HTTP on the regular `--port` number, *as well as* listen for HTTPS on the port you specified with this option. For example:
-+
-------------------------------------------------------------------------------
-# Listen for HTTP on port 3000, HTTPS on port 3001.
-passenger start --ssl --ssl-certificate ... --ssl-certificate-key ... --ssl-port 3001
-------------------------------------------------------------------------------
-
-`--nginx-config-template`::
-	Specifies the Nginx configuration template file to use. See <<advanced_configuration,Advanced configuration>>.
-
-See `--help` for all available options.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/standalone/reference/
 
 
 [[config_file]]
 === Configuration file
-:version: 4.0.24
-include::users_guide_snippets/since_version.txt[]
 
-It is possible to store some options in a configuration file `Passengerfile.json` in the application directory. Configuration in this file overrides command line options. The configuration file format is JSON.
-
-In case Passenger Standalone is in <<mass_deployment,mass deployment mode>>, such a configuration file allows customizing options on a per-application basis.
-
-The following configuration options are supported:
-
-`port`::
-	Equivalent to the `--port` command line option.
-`environment`::
-	Equivalent to the `--environment` command line option.
-`max_pool_size`::
-	Equivalent to the `--max-pool-size` command line option. But when in mass deployment mode, this option in the configuration file has no effect; the command line option should be used to customize this.
-`min_instances`::
-	Equivalent to the `--min-instances` command line option.
-`spawn_method`::
-	Equivalent to the `--spawn-method` command line option.
-`sticky_sessions`::
-    Equivalent to the `--sticky-sessions` command line option.
-`sticky_sessions_cookie_name`::
-    Equivalent to the `--sticky-sessions-cookie-name` command line option.
-`ssl`::
-	Equivalent to the `--ssl` command line option. When given, you must also set `ssl_certificate` and `ssl_certificate_key` in the configuration file.
-`ssl_port`::
-	Equivalent to the `--ssl-port` command line option.
-+
-When in <<mass_deployment,mass deployment mode>>, you will probably want to set a different `port` too. If you don't, and you end up in a situation in which a port is used for both HTTP and HTTPS traffic, then the builtin Nginx core will abort with an error.
-
-`server_names` (Enterprise only)::
-	Only relevant in <<mass_deployment,mass deployment mode>>. This option specifies which server names (host names) should be routed to this application. This option must be an array of names, e.g. `"server_names": ["foo.com", "bar.com"]`. By default, the name of the application directory is used as the server name. For example, for an application located in /webapps/foobar.com, "foobar.com" is used as the server name.
-`envvars` (since 5.0.0 RC 1)::
-	Environment variables to pass to the application. This option must be a key-value map, e.g. `"envvars": { "ADMIN_EMAIL": "root@phusion.nl", "SECRET_KEY": "12345" }`.
-`nginx_config_template`::
-	Equivalent to the `--nginx-config-template` command line option.
-
-Here is an example configuration file:
-
-[source,javascript]
-------------------
-{
-	"port": 8000,
-	"environment": "production",
-	"ssl": true,
-	"ssl_certificate": "/path-to-cert.crt",
-	"ssl_certificate_key": "/path-to-cert.key"
-}
-------------------
+This documentation has moved. Please visit link:https://www.phusionpassenger.com/library/config/standalone/reference/[the new configuration reference] or link:https://www.phusionpassenger.com/library/config/standalone/intro.html[the new configuration introduction document].
 
 
 [[advanced_configuration]]
 === Advanced configuration
-:version: 4.0.39
-include::users_guide_snippets/since_version.txt[]
 
-Phusion Passenger Standalone is built on the same technology that powers link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx], so any configuration option supported by Phusion Passenger for Nginx can be applied to Standalone as well. You can do this by editing the Standalone configuration template directly.
-
-First, create a copy of the default Phusion Passenger Nginx configuration template file:
-
--------------------------------------
-cp $(passenger-config about resourcesdir)/templates/standalone/config.erb nginx.conf.erb
--------------------------------------
-
-Then open `nginx.conf.erb` and modify it as you see fit. The file is a normal Nginx configuration file, in the ERB template format.
-
-Every time you start Standalone, you must pass the `--nginx-config-template` parameter, which tells Standalone to use your specific Nginx configuration template file. For example:
-
-[source,sh]
-------------------------------------------
-passenger start --nginx-config-template nginx.conf.erb
-------------------------------------------
-
-Alternatively, if you don't want to pass this parameter every time, you can also set the `nginx_config_template` option in <<config_file,Passengerfile.json>>.
-
-NOTE: The original configuration template file may change from time to time, e.g. because new features are introduced into Phusion Passenger. If your configuration template file does not contain the required changes, then these new features may not work properly. In the worst case, Standalone might even malfunction. Therefore, every time you upgrade Phusion Passenger, you should check whether the original configuration template file has changed, and merge back any changes into your own file.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/standalone/intro.html#nginx-configuration-template
 
 
 == Using Passenger Standalone in production
 
-[[starting_at_system_boot]]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/
+
 === Starting Passenger Standalone at system boot
 
-The easiest way to have Passenger Standalone started during system boot is add it to the file `/etc/rc.local`. This script is called during system boot.
-
-Here's an example of what you may want to add to `/etc/rc.local`. If there is an `exit` command in `rc.local`, make sure you add these _before_ the `exit` command.
-
-[source,sh]
-------------------------------------------
-# If you installed Phusion Passenger from tarball, add its `bin` directory to PATH.
-#export PATH=/path-to-passenger/bin:$PATH
-
-# Change working directory to your webapp.
-cd /path-to-your-webapp
-
-# Start Passenger Standalone in daemonized mode. Passenger will be started as
-# root when run from this file, so we also tell it to drop its privileges to a
-# normal user. Replace 'someusername' with the user you want to run your
-# application under.
-passenger start --daemonize --port 80 --user someusername
-------------------------------------------
-
-To stop Passenger Standalone, run:
-
-[source,sh]
-------------------------------------------
-cd /path-to-your-webapp
-
-# If you use RVM, use 'rvmsudo' instead of 'sudo'
-sudo passenger stop
-------------------------------------------
-
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/deploy/ruby/#step-4-make-sure-passenger-standalone-starts-on-system-boot
 
 [[sharing_port]]
 === Sharing the same port between multiple Passenger Standalone instances
 
-If you have multiple applications on your server then it is desirable to have all of them listen on the same port (e.g. port 80), with the HTTP request's host name determining which Passenger Standalone instance should handle the request. There are three ways to achieve this.
-
- 1. The first way is to use the <<mass_deployment,Mass deployment>> feature, which allows Passenger Standalone to directly host multiple applications at the same time. Please refer to that section to learn more.
- 2. The second way is to run multiple Passenger Standalone instances -- one for each application -- and to put all of them behind a *reverse proxy* or *load balancer*. The reverse proxy/load balancer can for example be Nginx, Apache or HAProxy. The reverse proxy/load balancer listens on port 80, determines which Passenger Standalone instance should handle the request, and forwards the request to that instance.
- 3. The third way is to use link:Users%20guide%20Nginx.html[Phusion Passenger for Nginx] or link:Users%20guide%20Apache.html[Phusion Passenger for Apache]. These are two modes of Phusion Passenger that are distinct from the Standalone mode, which this document describes. In the Nginx and Apache modes, Phusion Passenger integrates directly into Nginx and Apache, and makes it very easy to host multiple applications directly on Nginx or Apache.
-+
-Compared method 2 -- putting Passenger Standalone behind a reverse proxy or load balancer -- the Nginx or Apache modes are easier to use and require less configuration. On the other hand, the Nginx modes requires reinstalling or recompiling Nginx, while the Apache mode requires that the Phusion Passenger Apache module is installed.
-
-**The rest of this subsection describes method 2.**
-
-[float]
-==== Step 1: starting all applications
-
-Putting Passenger Standalone behind a reverse proxy requires three steps. First, you must start all Passenger Standalone instances that you want. Each one must be listening on a different port, because two applications can't listen on the same port. Suppose that you have two applications, `/webapps/foo` and `/webapps/bar`. Here's how you may start them:
-
-[source,sh]
-------------------------------
-# Start foo on port 4000
-cd /webapps/foo
-passenger start --daemonize --address 127.0.0.1 --port 4000
-
-# Start bar on port 4010
-cd /webapps/bar
-passenger start --daemonize --address 127.0.0.1 --port 4010
-------------------------------
-
-Notice the fact that we pass `--address 127.0.0.1`, which tells Passenger Standalone to only listen for requests that originate from the local machine. This is because the reverse proxy/load balancer, not Passenger Standalone, is supposed to be responsible for receiving external HTTP requests. The reverse proxy/load balancer will be running on the same machine only, so limiting Passenger Standalone in this manner improves security.
-
-[float]
-==== Step 2: install and configure the reverse proxy/load balancer
-
-The next step is to **install a reverse proxy/load balancer**, and to **configure** it to do the following:
-
- * To listen on port 80.
- * To forward requests to either 'foo' or 'bar', depending on the request's HTTP host name.
-
-You can use any reverse proxy/load balancer you want, but we're going to show an example using link:http://www.nginx.org/[Nginx] because it's a pretty popular choice. Install Nginx as follows:
-
-|======================================================================
-| Debian, Ubuntu | `sudo apt-get update` +
-`sudo apt-get install nginx-extras`
-| Red Hat, CentOS, ScientificLinux, Amazon Linux | Enable link:http://fedoraproject.org/wiki/EPEL[EPEL], then run as root: +
-`yum install nginx`
-| Mac OS X (Homebrew) | `brew install nginx`
-| Other operating systems | Install Nginx from link:http://www.nginx.org/[the Nginx website].
-|======================================================================
-
-Open the Nginx configuration file:
-
-|======================================================================
-| Debian, Ubuntu | `/etc/nginx/nginx.conf`
-| Red Hat, CentOS, ScientificLinux, Amazon Linux | `/etc/nginx/nginx.conf`
-| Mac OS X (Homebrew) | `/usr/local/etc/nginx/nginx.conf`
-| Other operating systems | It depends on how you installed Nginx, but it's usually `$PREFIX/conf/nginx.conf`, where `$PREFIX` is the prefix you installed Nginx to.
-|======================================================================
-
-Add virtual host entries for your applications foo and bar. While making the virtual host entries, you must determine what host names foo and bar should respond to. Let's say that foo should respond to 'www.foo.com' and bar should respond to 'www.bar.com'. Then the following entries will tell Nginx to listen on port 80, and to handle requests for the domains 'www.foo.com' and 'www.bar.com' differently.
-
---------------------------
-http {
-    ...
-
-    # These are some "magic" Nginx configuration options that aid in making
-    # WebSockets work properly with Passenger Standalone. Please learn more
-    # at http://nginx.org/en/docs/http/websocket.html
-    map $http_upgrade $connection_upgrade {
-        default upgrade;
-        ''      close;
-    }
-
-    server {
-        listen 80;
-        server_name www.foo.com;
-
-        # Tells Nginx to serve static assets from this directory.
-        root /webapps/foo/public;
-
-        location / {
-            # Tells Nginx to forward all requests for www.foo.com
-            # to the Passenger Standalone instance listening on port 4000.
-            proxy_pass http://127.0.0.1:4000;
-
-            # These are "magic" Nginx configuration options that
-            # should be present in order to make the reverse proxying
-            # work properly. Also contains some options that make WebSockets
-            # work properly with Passenger Standalone. Please learn more at
-            # http://nginx.org/en/docs/http/ngx_http_proxy_module.html
-            proxy_http_version 1.1;
-            proxy_set_header Host $http_host;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection $connection_upgrade;
-            proxy_buffering off;
-        }
-    }
-
-    # We handle bar in a similar manner.
-    server {
-        listen 80;
-        server_name www.bar.com;
-
-        root /webapps/bar/public;
-
-        location / {
-            # bar is listening on port 4010 instead of 4000, we
-            # change the URL here.
-            proxy_pass http://127.0.0.1:4010;
-
-            proxy_http_version 1.1;
-            proxy_set_header Host $http_host;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection $connection_upgrade;
-            proxy_buffering off;
-        }
-    }
-}
---------------------------
-
-Once you're done editing the Nginx configuration file, restart Nginx:
-
-|======================================================================
-| Debian, Ubuntu | `sudo /etc/init.d/nginx restart`
-| Red Hat, CentOS, ScientificLinux, Amazon Linux | `sudo service nginx restart`
-| Mac OS X (Homebrew) | 1. Run `sudo kill $(cat /usr/local/var/run/nginx.pid)` +
- 2. You you installed the Nginx launchd plist that Homebrew provides (see `brew info nginx` to learn more), then you don't have to do anything, and launchd will automatically restart Nginx. Otherwise, you have to manually start Nginx again: `sudo /usr/local/bin/nginx`.
-| Other operating systems | It depends on how you installed Nginx, but it's usually as follows:
-
- 1. Lookup the PID of the Nginx master process using `ps aux`. +
- 2. Run `sudo kill <PID>` +
- 3. Start Nginx again: `sudo $PREFIX/sbin/nginx`, where `$PREFIX` is the prefix you installed Nginx to.
-|======================================================================
-
-[float]
-==== Step 3: testing
-
-Nginx should now be listening on port 80, and should forward requests to foo and bar respectively. Let's test it out by accessing http://www.foo.com and http://www.bar.com. But first, we need to ensure that any requests to 'www.foo.com' and 'www.bar.com', that originate from the local machine, actually end up at the local host, and not at the IP address specified in the DNS records. To do this, edit `/etc/hosts` and add:
-
---------------------------------
-127.0.0.1  www.foo.com www.bar.com
---------------------------------
-
-Now visit http://www.foo.com and http://www.bar.com, and verify that it works.
-
-[float]
-==== Step 4: making all apps start at system boot
-
-Once you restart the server, the reverse proxy/load balancer will no longer be able to serve 'www.foo.com' or 'www.bar.com' because the Passenger Standalone instances that host them are no longer running. You must therefore configure the system to start Passenger Standalone at system boot. Please refer to <<starting_at_system_boot,Starting Passenger Standalone at system boot>> for more information.
-
-For example, you can put this in `/etc/rc.local` to make the system start foo and bar at system boot:
-
-[source,sh]
------------------------------------
-# If you installed Phusion Passenger from tarball, add its `bin` directory to PATH.
-#export PATH=/path-to-passenger/bin:$PATH
-
-cd /webapps/foo
-passenger start --daemonize --port 4000 --user someusername1
-
-cd /webapps/bar
-passenger start --daemonize --port 4010 --user someusername2
------------------------------------
-
-[float]
-==== Step 5: wrapping up
-
-Edit `/etc/hosts` and remove the entry that you added in step 3.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/reverse_proxy.html
 
 
 === Installing Passenger Standalone behind Nginx
 
-This is described in <<sharing_port,Sharing the same port between multiple Passenger Standalone instances>>.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/reverse_proxy.html
 
 
 
 [[mass_deployment]]
 == Mass deployment
-:version: 3.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-Mass deployment is a special mode in Phusion Passenger Standalone that allows you to deploy multiple web applications without having to create configuration entries for each one of them. Given a directory with multiple web applications, Passenger Standalone will automatically give each web application its own virtual host entry, and serve all of them from a single server. The virtual host's server name is equal to the web application's directory name. Whenever a new web application is added or removed, Passenger Standalone automatically reconfigures itself without administrator intervention. This makes the mass deployment mode especially useful when there are a large number of web applications.
-
-For example, suppose we have a directory `/webapps` with three web applications: Ruby app, a Python app and a Node.js app.
-
-----------------------------
-/webapps
-  |
-  +-- rubyapp.com
-  |    |
-  |    +-- config.ru
-  |
-  +-- pythonapp.com
-  |    |
-  |    +-- passenger_wsgi.py
-  |
-  +-- nodeapp.com
-       |
-       +-- app.js
-----------------------------
-
-You can activate Passenger Standalone in mass deployment mode by changing the working directory to `/webapps` and running `passenger start`:
-
-----------------------------
-$ cd /webapps
-$ passenger start
-=============== Phusion Passenger Standalone web server started ===============
-PID file: /webapps/passenger.3000.pid
-Log file: /webapps/passenger.3000.log
-Environment: development
-
-Serving these applications on 0.0.0.0 port 3000:
- Host name                     Directory
-.-----------------------------------------------------------
- rubyapp.com                   /webapps/rubyapp.com
- pythonapp.com                 /webapps/pythonapp.com
- nodeapp.com                   /webapps/nodeapp.com
-.-----------------------------------------------------------
-----------------------------
-
-If you for example remove `/webapps/rubyapp.com`, Passenger Standalone will reconfigure itself without that web application. Or if you add a new web applications `/webapps/newapp.org`, Passenger Standalone will reconfigure itself with that web application.
-
-Any options that you pass to the `passenger` command will affect all deployed web applications. It is also possible to change options on a per-application basis through the use of <<config_file,a `Passengerfile.json` file inside each application's directory>>.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/mass_deployment.html
 
 
 [[troubleshooting]]
 == Troubleshooting
 
-include::users_guide_snippets/troubleshooting/default.txt[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/standalone/
 
 == Under the hood
 

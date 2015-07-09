@@ -799,7 +799,7 @@ setAgentsOptionsDefaults() {
 		options.set("default_group",
 			inferDefaultGroup(options.get("default_user")));
 	}
-	options.setDefault("integration_mode", "standalone");
+	options.setDefault("integration_mode", DEFAULT_INTEGRATION_MODE);
 	if (options.get("integration_mode") == "standalone") {
 		options.setDefault("standalone_engine", "builtin");
 	}

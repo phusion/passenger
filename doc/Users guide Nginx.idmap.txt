@@ -96,18 +96,6 @@
 
 3.5. Rackup specifications for various web frameworks	=>	rackup-specifications-for-various-web-frameworks-1a2cs41
 
-3.5.1. Camping	=>	camping-16vz2yb
-
-3.5.2. Halcyon	=>	halcyon-1benlfl
-
-3.5.3. Mack	=>	mack-1ezijq6
-
-3.5.4. Merb	=>	merb-ddsh55
-
-3.5.5. Ramaze	=>	ramaze-1p2zod
-
-3.5.6. Sinatra	=>	sinatra-a7u9ag
-
 4. Deploying a WSGI (Python) application	=>	deploying-a-wsgi-python-application-1or2efo
 
 4.1. Tutorial/example: writing and deploying a Hello World WSGI application	=>	tutorial-example-writing-and-deploying-a-hello-world-wsgi-application-k5ron2
@@ -425,4 +413,19 @@
 15.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-uiewl5
 
 15.4. Environment variables and sudo	=>	environment-variables-and-sudo-10lphxn
+
+
+### These sections appear to have been removed. Please check.
+
+3.5.1. Camping	=>	camping-16vz2yb
+
+3.5.2. Halcyon	=>	halcyon-1benlfl
+
+3.5.3. Mack	=>	mack-1ezijq6
+
+3.5.4. Merb	=>	merb-ddsh55
+
+3.5.5. Ramaze	=>	ramaze-1p2zod
+
+3.5.6. Sinatra	=>	sinatra-a7u9ag
 

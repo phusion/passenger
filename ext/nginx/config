@@ -1,8 +1,8 @@
 # passenger-config is run with the 'ruby' command in $PATH, even when natively packaged,
 # so we check whether 'ruby' is correctly in $PATH.
 if ! ruby -v >/dev/null 2>/dev/null; then
-    echo '*** ERROR: Cannot find the "ruby" command in $PATH. Please fix your $PATH. You can learn more about $PATH at: https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html#_the_path_environment_variable'
-    echo '*** Do you think that you set $PATH correctly, and you happen to be using sudo or rvmsudo? Read this: https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html#env_vars_and_sudo'
+    echo '*** ERROR: Cannot find the "ruby" command in $PATH. Please fix your $PATH. You can learn more about $PATH at: https://www.phusionpassenger.com/library/indepth/environment_variables.html#the-path-environment-variable'
+    echo '*** Do you think that you set $PATH correctly, and you happen to be using sudo or rvmsudo? Read this: https://www.phusionpassenger.com/library/indepth/environment_variables.html#environment-variables-and-sudo'
     exit 1
 fi
 

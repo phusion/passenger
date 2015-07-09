@@ -3,19 +3,7 @@ Phusion Passenger users guide, Apache version
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Phusion Passenger is an application server which can directly integrate into Apache. It is designed to be easy to use, fast, stable and reliable and is used by link:http://trends.builtwith.com/Web-Server/Phusion-Passenger[hundreds of thousands of websites] all over the world.
-
-Phusion Passenger is a so-called polyglot application server because it supports applications written in multiple programming languages. At this time, Ruby and Python are supported.
-
-This users guide will teach you:
-
-- How to install Phusion Passenger.
-- How to configure Phusion Passenger.
-- How to deploy Ruby and Python applications.
-- How to solve common problems.
-
-This guide assumes that the reader is somewhat familiar with Apache and with
-using the command line.
+This is the old, deprecated Passenger Standalone documentation. Please visit https://www.phusionpassenger.com/library/ for the new documentation.
 
 
 == Support information
@@ -30,192 +18,24 @@ include::users_guide_snippets/installation.txt[]
 
 == Deploying a Rack-based Ruby application ==
 
-Phusion Passenger supports arbitrary Ruby web applications that follow the
-link:http://rack.rubyforge.org/[Rack] interface.
-
-Phusion Passenger assumes that Rack application directories have a certain layout.
-Suppose that you have a Rack application in '/webapps/rackapp'. Then that
-folder must contain at least three entries:
-
-- 'config.ru', a Rackup file for starting the Rack application. This file must contain
-  the complete logic for initializing the application.
-- 'public/', a folder containing public static web assets, like images and stylesheets.
-- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will
-  be explained in a following subsection.
-
-So '/webapps/rackapp' must, at minimum, look like this:
-----------------------
-/webapps/rackapp
-  |
-  +-- config.ru
-  |
-  +-- public/
-  |
-  +-- tmp/
-----------------------
-
-Suppose you own the domain 'www.rackapp.com'. You can either deploy your application
-to the virtual host's root (i.e. the application will be accessible from the root URL,
-'http://www.rackapp.com/'), or in a sub URI (i.e. the application will be
-accessible from a sub URL, such as 'http://www.rackapp.com/rackapp').
-
-NOTE: The default `RACK_ENV` environment in which deployed Rack applications
-are run, is ``production''. You can change this by changing the
-<<rack_env,'RackEnv'>> configuration option.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 === Tutorial/example: writing and deploying a Hello World Rack application ===
 
-First we create a Phusion Passenger-compliant Rack directory structure:
-
--------------------------------------------
-$ mkdir /webapps/rack_example
-$ mkdir /webapps/rack_example/public
-$ mkdir /webapps/rack_example/tmp
--------------------------------------------
-
-Next, we write a minimal "hello world" Rack application:
-
--------------------------------------------
-$ cd /webapps/rack_example
-$ some_awesome_editor config.ru
-...type in some source code...
-$ cat config.ru
-app = proc do |env|
-    [200, { "Content-Type" => "text/html" }, ["hello <b>world</b>"]]
-end
-run app
--------------------------------------------
-
-Finally, we deploy it by adding the following configuration options to
-the Apache configuration file:
-
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.rackexample.com
-    DocumentRoot /webapps/rack_example/public
-    <Directory /webapps/rack_example/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-And we're done! After an Apache restart, the above Rack application will be available
-under the URL 'http://www.rackexample.com/'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 === Deploying to a virtual host's root ===
 
-Add a virtual host entry to your Apache configuration file. Make sure that the
-following conditions are met:
-
-- The virtual host's document root must point to your Rack application's
-  'public' folder.
-- The Apache per-directory permissions must allow access to this folder.
-- MultiViews must be disabled for this folder.
-
-For example:
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.rackapp.com
-    DocumentRoot /webapps/rackapp/public
-    <Directory /webapps/rackapp/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-You may also need to tweak your file/folder permissions. Make sure that the
-following folders are readable and executable by Apache:
-
- * this 'public' folder.
- * the application's 'config' folder.
- * all parent folders. That is, /webapps/rackapp and /webapps must also be readable and executable by Apache.
-
-Then restart Apache. The application has now been deployed.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 [[deploying_rack_to_sub_uri]]
 === Deploying to a sub URI ===
 
-Suppose that you already have a virtual host:
-
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.phusion.nl
-    DocumentRoot /websites/phusion
-    <Directory /websites/phusion>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-And you want your Rack application, located in `/websites/rack`, to be accessible from the URL
-'http://www.phusion.nl/subapp'.
-
-To do this, you need to perform the following:
-
- 1. Set `Alias {SUBURI} {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}`.
- 2. Create a `<Location /{SUBURI}>` block.
- 3. Inside the Location block, set `PassengerBaseURI /{SUBURI}`.
- 4. Inside the Location block, set `PassengerAppRoot {PATH TO YOUR APPLICATION ROOT}`.
- 5. Create a `<Directory {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}>` block.
- 6. Inside the Directory block, set `Allow from all`, and (if you're on Apache >= 2.4) `Require all granted`.
- 7. Inside the Directory block, disable MultiViews.
-
-Here is an example:
-
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.phusion.nl
-    DocumentRoot /websites/phusion
-    <Directory /websites/phusion>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-    
-    # These have been added:
-    Alias /subapp /websites/rack/public
-    <Location /subapp>
-        PassengerBaseURI /subapp
-        PassengerAppRoot /websites/rack
-    </Location>
-    <Directory /websites/rack/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-Then restart Apache. The application has now been deployed to the sub-URI.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 === Redeploying (restarting the Rack application) ===
 
-Deploying a new version of a Rack application is as simple as
-re-uploading the application files, and restarting the application.
-
-There are two ways to restart the application:
-
-1. By restarting Apache.
-2. By creating or modifying the file 'tmp/restart.txt' in the Rack
-   application's <<application_root,root folder>>. Phusion Passenger will
-   automatically restart the application.
-
-For example, to restart our example application, we type this in the
-command line:
--------------------------------------------
-touch /webapps/rackapp/tmp/restart.txt
--------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/restart_app.html
 
 === Rackup specifications for various web frameworks ===
 include::users_guide_snippets/rackup_specifications.txt[]
@@ -223,1548 +43,250 @@ include::users_guide_snippets/rackup_specifications.txt[]
 
 == Deploying a WSGI (Python) application
 
-Phusion Passenger supports all WSGI-compliant Python web applications. Suppose that you have a WSGI application in '/webapps/wsgiapp'. Then that folder must contain at least three entries:
-
-- 'passenger_wsgi.py', which Phusion Passenger will use as the main entry point for your application. This file must export a WSGI object called `application`.
-- 'public/', a folder containing public static web assets, like images and stylesheets.
-- 'tmp/', used for 'restart.txt' (our application restart mechanism). This will be explained in a following subsection.
-
-So '/webapps/wsgiapp' must, at minimum, look like this:
-----------------------
-/webapps/wsgiapp
-  |
-  +-- passenger_wsgi.py
-  |
-  +-- public/
-  |
-  +-- tmp/
-----------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 === Tutorial/example: writing and deploying a Hello World WSGI application ===
 
-First we create a Phusion Passenger-compliant WSGI directory structure:
-
--------------------------------------------
-$ mkdir /webapps/wsgi_example
-$ mkdir /webapps/wsgi_example/public
-$ mkdir /webapps/wsgi_example/tmp
--------------------------------------------
-
-Next, we write a minimal "hello world" WSGI application:
-
--------------------------------------------
-$ cd /webapps/wsgi_example
-$ some_awesome_editor passenger_wsgi.py
-...type in some source code...
-$ cat passenger_wsgi.py
-def application(environ, start_response):
-  start_response('200 OK', [('Content-Type', 'text/plain')])
-  return [b"hello world!\n"]
--------------------------------------------
-
-Finally, we deploy it by adding the following configuration options to
-the Apache configuration file:
-
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.wsgiexample.com
-    DocumentRoot /webapps/wsgi_example/public
-    <Directory /webapps/wsgi_example/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-And we're done! After an Apache restart, the above WSGI application will be available
-under the URL 'http://www.wsgiexample.com/'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 === Deploying to a virtual host's root ===
 
-Add a virtual host entry to your Apache configuration file. Make sure that the
-following conditions are met:
-
-- The virtual host's document root must point to your WSGI application's
-  'public' folder.
-- The WSGI per-directory permissions must allow access to this folder.
-- MultiViews must be disabled for this folder.
-
-For example:
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.wsgiapp.com
-    DocumentRoot /webapps/wsgiapp/public
-    <Directory /webapps/wsgiapp/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-You may also need to tweak your file/folder permissions. Make sure that the
-following folders are readable and executable by Apache:
-
- * this 'public' folder.
- * the application's 'config' folder.
- * all parent folders. That is, /webapps/wsgiapp and /webapps must also be readable and executable by Apache.
-
-Then restart Apache. The application has now been deployed.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 [[deploying_python_to_sub_uri]]
 === Deploying to a sub URI ===
 
-Suppose that you already have a virtual host:
-
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.phusion.nl
-    DocumentRoot /websites/phusion
-    <Directory /websites/phusion>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-And you want your Python application, located in `/websites/python`, to be accessible from the URL
-'http://www.phusion.nl/subapp'.
-
-To do this, you need to perform the following:
-
- 1. Set `Alias {SUBURI} {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}`.
- 2. Create a `<Location /{SUBURI}>` block.
- 3. Inside the Location block, set `PassengerBaseURI /{SUBURI}`.
- 4. Inside the Location block, set `PassengerAppRoot {PATH TO YOUR APPLICATION ROOT}`.
- 5. Create a `<Directory {PATH TO YOUR APPLICATION'S PUBLIC DIRECTORY}>` block.
- 6. Inside the Directory block, set `Allow from all`, and (if you're on Apache >= 2.4) `Require all granted`.
- 7. Inside the Directory block, disable MultiViews.
-
-Here is an example:
-
--------------------------------------------
-<VirtualHost *:80>
-    ServerName www.phusion.nl
-    DocumentRoot /websites/phusion
-    <Directory /websites/phusion>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-    
-    # These have been added:
-    Alias /subapp /websites/python/public
-    <Location /subapp>
-        PassengerBaseURI /subapp
-        PassengerAppRoot /websites/python
-    </Location>
-    <Directory /websites/python/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
--------------------------------------------
-
-Then restart Apache. The application has now been deployed to the sub-URI.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 === Redeploying (restarting the WSGI application) ===
 
-Deploying a new version of a WSGI application is as simple as
-re-uploading the application files, and restarting the application.
-
-There are two ways to restart the application:
-
-1. By restarting Apache.
-2. By creating or modifying the file 'tmp/restart.txt' in the WSGI
-   application's <<application_root,root folder>>. Phusion Passenger will
-   automatically restart the application.
-
-For example, to restart our example application, we type this in the
-command line:
--------------------------------------------
-touch /webapps/wsgiapp/tmp/restart.txt
--------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/restart_app.html
 
 === Sample `passenger_wsgi.py` for Django
 
-For Django applications, `passenger_wsgi.py` should look like this:
-
-[code,python]
--------------------------------------------
-import myproject.wsgi
-application = myproject.wsgi.application
--------------------------------------------
-
-Replace `myproject` with your project's module name.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/wsgi_spec.html
 
 
 == Deploying a Node.js application
 
-Please refer to link:https://github.com/phusion/passenger/wiki/Phusion-Passenger%3A-Node.js-tutorial[the Node.js tutorial].
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 
 == Deploying a Meteor application
 
-Please refer to link:https://github.com/phusion/passenger/wiki/Phusion-Passenger:-Meteor-tutorial[the Meteor tutorial].
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/
 
 
 == Configuring Phusion Passenger ==
 
-After installation, Phusion Passenger does not need any further configurations.
-Nevertheless, the system administrator may be interested in changing
-Phusion Passenger's behavior. Phusion Passenger's Apache module supports the
-following configuration options:
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/
 
 [[PassengerRoot]]
 === PassengerRoot <directory> ===
-The location to the Phusion Passenger root directory. This configuration option
-is essential to Phusion Passenger, and allows Phusion Passenger to locate its own
-data files. If you do not set this option, or if you set this option to the wrong value, then Phusion Passenger will make Apache abort with an error.
 
-While installing Phusion Passenger, you have been told to set this option in your Apache configuration file, and you have been told what value to set it to. So under normal conditions, you don't have ask yourself what value to set for this option. But in case you lost the value (e.g. because you accidentally removed the Apache configuration file, and you are trying to reconstruct it), or in case you didn't follow the installation instructions correctly, then here's how you can find out the correct value:
-
- * If you installed Phusion Passenger through <<install_on_debian_ubuntu,our APT repository>>, then the value can be obtained by running `/usr/bin/passenger-config --root`.
- * If you installed Phusion Passenger through RubyGems, then the value can be obtained by running `passenger-config --root`.
- * If you installed Phusion Passenger through the source tarball, then the value is the path to the Phusion Passenger directory. For example, if you extracted the tarball's contents to `/opt/passenger/passenger-x.x.x`, then `passenger_root` must be `/opt/passenger/passenger-x.x.x`.
-
-If you've moved Phusion Passenger to a different directory then you need to update
-this option as well. Please read
-<<moving_phusion_passenger,Moving Phusion Passenger to a different directory>> for more information.
-
-This required option may only occur once, in the global server configuration.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerroot
 
 [[PassengerDefaultRuby]]
 === PassengerDefaultRuby <filename> ===
-:version: 4.0.0
-include::users_guide_snippets/since_version.txt[]
 
-This option specifies the default Ruby interpreter to use for web apps as well as for all sorts of internal Phusion Passenger helper scripts, e.g. the one used by <<PassengerPreStart,PassengerPreStart>>. Please see <<PassengerRuby,PassengerRuby>> for more information, as well as how it relates to <<PassengerRuby,PassengerRuby>>.
-
-This option may occur in the global server configuration. The default value is 'ruby', meaning that the Ruby interpreter will be looked up according to the `PATH` environment variable.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerdefaultruby
 
 === Deployment options
 
 [[PassengerEnabled]]
 ==== PassengerEnabled <on|off>
-You can set this option to 'off' to completely disable Phusion Passenger for
-a certain location. This is useful if, for example, you want to integrate a PHP
-application into the same virtual host as a Rails application.
 
-Suppose that you have a Rails application in '/apps/foo'. Suppose that you've
-dropped Wordpress -- a blogging application written in PHP -- in
-'/apps/foo/public/wordpress'. You can then configure Phusion Passenger as
-follows:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /apps/foo/public
-    <Directory /apps/foo/public/wordpress>
-        PassengerEnabled off
-        AllowOverride all      # <-- Makes Wordpress's .htaccess file work.
-    </Directory>
-</VirtualHost>
-------------------------------------
-
-This way, Phusion Passenger will not interfere with Wordpress.
-
-'PassengerEnabled' may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'on'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerenabled
 
 [[PassengerBaseURI]]
 ==== PassengerBaseURI <uri> ====
-Used to specify that the given URI is a Phusion Passenger-served application. Please refer
-to the following sections for examples:
 
- * <<deploying_rails_to_sub_uri,Deploying Rails 1.x and 2.x to a sub URI>>
- * <<deploying_rack_to_sub_uri,Deploying Rack (including Rails >= 3) to a sub URI>>
- * <<deploying_python_to_sub_uri,Deploying Python to a sub URI>>
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerbaseuri
 
 === Application loading options
 
 [[PassengerRuby]]
 ==== PassengerRuby <filename>
-The `PassengerDefaultRuby` and `PassengerRuby` directives specify the Ruby interpreter to use. Similarly, the `PassengerPython` and `PassengerNodejs` directives are for specifying the Python interpreter and the Node.js command, respectively.
 
-The relationship between `PassengerDefaultRuby` and `PassengerRuby` is as follows:
-
- * `PassengerDefaultRuby` may only occur in the global server configuration.
- * `PassengerRuby` may occur everywhere: in the global server configuration, in `<VirtualHost>`, in `<Directory>`, in `<Location>`, and in '.htaccess' if `AllowOverride Options` is on.
- * You don't *have* to specify `PassengerRuby`. In this case `PassengerDefaultRuby` is used as the Ruby interpreter. But if you do specify `PassengerRuby` then it will override `PassengerDefaultRuby` in that context. This allows you to use `PassengerRuby` to specify a different Ruby interpreter on a per-application basis.
-
-Phusion Passenger not only uses Ruby to run web apps, but also for running certain helper tools that are written in Ruby, e.g. the internal helper script used by <<PassengerPreStart,PassengerPreStart>>. These tools are always run using `PassengerDefaultRuby`, never by `PassengerRuby`. `PassengerRuby` is only used for running web apps. You can learn more about the internal helper scripts in <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>>.
-
-It is okay if `PassengerDefaultRuby` refers to a different Ruby interpreter than the one you originally installed Phusion Passenger with. This too is explained in <<relationship_with_ruby,Phusion Passenger and its relationship with Ruby>>.
-
-The reason why `PassengerDefaultRuby` exists at all is because limitations in the Apache API prevents us from implementing the same behavior using only the `PassengerRuby` directive.
-
-There is no `PassengerDefaultPython` etc because there are no Phusion Passenger tools written in Python. As such, having `PassengerPython` is enough.
-
-The following example illustrates how it works and how you can use these options to specify different interpreters for different web apps.
-
-------------------------------
-# Use Ruby 1.8.7 by default.
-PassengerDefaultRuby /usr/bin/ruby1.8
-# Use Python 2.6 by default.
-PassengerPython /usr/bin/python2.6
-# Use /usr/bin/node by default.
-PassengerNodejs /usr/bin/node;
-
-<VirtualHost *:80>
-    # This Rails web app will use Ruby 1.8.7
-    ServerName www.foo.com
-    DocumentRoot /webapps/foo/public
-</VirtualHost>
-
-<VirtualHost *:80>
-    # This Rails web app will use Ruby 1.9.3, as installed by RVM
-    PassengerRuby /usr/local/rvm/wrappers/ruby-1.9.3/ruby
-    ServerName www.bar.com
-    DocumentRoot /webapps/bar/public
-
-    # If you have a web app deployed in a sub-URI, customize
-    # PassengerRuby/PassengerPython inside a <Location> block.
-    # The web app under www.bar.com/blog will use JRuby 1.7.1
-    Alias /blog /websites/blog/public
-    <Location /blog>
-        PassengerBaseURI /blog
-        PassengerAppRoot /websites/blog
-
-        PassengerRuby /usr/local/rvm/wrappers/jruby-1.7.1/ruby
-    </Location>
-    <Directory /websites/blog/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
-
-<VirtualHost *:80>
-    # This Flask web app will use Python 3.0
-    PassengerPython /usr/bin/python3.0
-    ServerName www.baz.com
-    DocumentRoot /webapps/baz/public
-</VirtualHost>
-------------------------------
-
-include::users_guide_snippets/rvm_helper_tool.txt[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerruby
 
 ==== PassengerPython <filename>
-:version: 4.0.0
-include::users_guide_snippets/since_version.txt[]
 
-This option allows one to specify the Python interpreter to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'python', meaning that the Python interpreter will be looked up according to the `PATH` environment variable.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerpython
 
 ==== PassengerNodejs <filename>
-:version: 4.0.24
-include::users_guide_snippets/since_version.txt[]
 
-This option allows one to specify the Node.js command to use. See <<PassengerRuby,PassengerRuby>> for more information. The default value is 'node', meaning that the Node.js command will be looked up according to the `PATH` environment variable.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengernodejs
 
 ==== PassengerMeteorAppSettings <filename>
-:version: 5.0.7
-include::users_guide_snippets/since_version.txt[]
 
-When using a Meteor application in non-bundled mode, use this option to specify a (JSON) file with settings for the application. Meteor will be started with the `--settings` parameter set to this option. 
-
-N.B. For bundled mode, Meteor requires you to put applications settings in the `METEOR_SETTINGS` environment variable.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermeteorappsettings
 
 [[PassengerAppEnv]]
 ==== PassengerAppEnv <string> ====
-This option sets the value of the following environment variables:
 
- * `RAILS_ENV`
- * `RACK_ENV`
- * `WSGI_ENV`
- * `NODE_ENV`
- * `PASSENGER_APP_ENV`
-
-Some web frameworks, for example Rails and Connect.js, adjust their behavior according to the value in one of these environment variables.
-
-Phusion Passenger for Apache sets the default value to **production**. If you're developing an Rails application then you should set this to `development`.
-
-If you want to set other environment variables, please refer to <<env_vars_passenger_apps,Setting environment variables for Phusion Passenger-served apps>>.
-
-Setting this option also adds the application environment name to the default <<PassengerAppGroupName,application group name>>, so that you can run multiple versions of your application with different application environment names.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerappenv
 
 [[rails_env]]
 ==== RailsEnv <string> ====
-An alias for <<PassengerAppEnv,PassengerAppEnv>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsenv-rackenv
 
 [[rack_env]]
 ==== RackEnv <string> ====
-An alias for <<PassengerAppEnv,PassengerAppEnv>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsenv-rackenv
 
 [[PassengerAppRoot]]
 ==== PassengerAppRoot <path/to/root>
-By default, Phusion Passenger assumes that the application's root directory
-is the parent directory of the 'public' directory. This option allows one to
-specify the application's root independently from the DocumentRoot, which
-is useful if the 'public' directory lives in a non-standard place.
 
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once.
-
-Example:
-
------------------------------
-<VirtualHost test.host>
-    DocumentRoot /var/rails/zena/sites/example.com/public
-    # Normally Phusion Passenger would have assumed that the
-    # application root is "/var/rails/zena/sites/example.com".
-    # This overrides it.
-    PassengerAppRoot /var/rails/zena
-</VirtualHost>
------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerapproot
 
 [[PassengerAppGroupName]]
 ==== PassengerAppGroupName <name>
-Sets the name of the application group that the current application should belong to. Its default value is the <<application_root,application root>>, plus (if it is set), the <<PassengerAppEnv,application environment name>>.
 
-Phusion Passenger stores and caches most application spawning settings -- such as environment variables, process limits, etc -- on a per-app-group-name basis. This means that if you want to start two versions of your application, with each version having different environment variables, then you must assign them under different application group names.
-
-For example, consider a situation in which you are running multiple versions of the same app, with each version intended for a different customer. You use the `CUSTOMER_NAME` environment variable to tell the app which customer that version should serve.
-
-------------------------------------
-# WRONG example! Doesn't work!
-
-<VirtualHost *:80>
-    ServerName customer1.foo.com
-    DocumentRoot /webapps/foo/public
-    SetEnv CUSTOMER_NAME customer1
-</VirtualHost>
-
-<VirtualHost *:80>
-    ServerName customer2.foo.com
-    DocumentRoot /webapps/foo/public
-    SetEnv CUSTOMER_NAME customer2
-</VirtualHost>
-------------------------------------
-
-This example doesn't work, because Phusion Passenger thinks that they are the same application. When a user visits customer1.foo.com, Phusion Passenger will start a process with `CUSTOMER_NAME=customer1`. When another user visits customer2.foo.com, Phusion Passenger will route the request to the application process that was started earlier. Because environment variables are only set during application process startup, the second user will be served the website for customer 1.
-
-To make this work, assign unique application group names:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName customer1.foo.com
-    DocumentRoot /webapps/foo/public
-    SetEnv CUSTOMER_NAME customer1
-    PassengerAppGroupName foo_customer1
-</VirtualHost>
-
-<VirtualHost *:80>
-    ServerName customer2.foo.com
-    DocumentRoot /webapps/foo/public
-    SetEnv CUSTOMER_NAME customer2
-    PassengerAppGroupName foo_customer2
-</VirtualHost>
-------------------------------------
-
-Note that it is not necessary to set `PassengerAppGroupName` if you want to run two versions of your application under different <<PassengerAppEnv,application environment names>>, because the application environment name is included in the default application group name. For example, consider a situation in which you want to run a production and a staging version of your application. The following configuration will work fine:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName bar.com
-    DocumentRoot /webapps/bar/public
-    # Phusion Passenger implicitly sets:
-    # PassengerAppGroupName /webapps/bar
-</VirtualHost>
-
-<VirtualHost *:80>
-    ServerName staging.bar.com
-    DocumentRoot /webapps/bar/public
-    PassengerAppEnv staging
-    # Phusion Passenger implicitly sets:
-    # PassengerAppGroupName '/webapps/bar (staging)'
-</VirtualHost>
-------------------------------------
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerappgroupname
 
 [[PassengerAppType]]
 ==== PassengerAppType <name>
-:version: 4.0.25
-include::users_guide_snippets/since_version.txt[]
 
-By default, Phusion Passenger autodetects the type of the application, e.g. whether it's a Ruby, Python, Node.js or Meteor app. If it's unable to autodetect the type of the application (e.g. because you've specified a custom <<PassengerStartupFile,PassengerStartupFile>>) then you can use this option to force Phusion Passenger to recognize the application as a specific type.
-
-Allowed values are:
-
- * `rack` - Ruby and Rails
- * `wsgi` - Python
- * `node` - Node.js, or Meteor JS in bundled mode
- * `meteor` - Meteor JS in non-bundled mode
-
-If you set this option, then you **must** also set <<PassengerAppRoot,PassengerAppRoot>>, otherwise Phusion Passenger does not properly recognize your application.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once.
-
-Example:
-
------------------------------
-<VirtualHost test.host>
-    DocumentRoot /webapps/example.com/public
-    # Use server.js as the startup file (entry point file) for
-    # your Node.js application, instead of the default app.js
-    PassengerStartupFile server.js
-    PassengerAppType node
-    PassengerAppRoot /webapps/example.com
-</VirtualHost>
------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerapptype
 
 [[PassengerStartupFile]]
 ==== PassengerStartupFile <filename>
-:version: 4.0.25
-include::users_guide_snippets/since_version.txt[]
 
-This option specifies the startup file that Phusion Passenger should use when loading the application.
-
-Every application has a *startup file* or *entry point file*: a file where the application begins execution. Some languages have widely accepted conventions about how such a file should be called (e.g. Ruby, with its `config.ru`). Other languages have somewhat-accepted conventions (e.g. Node.js, with its `app.js`). In these cases, Phusion Passenger reuses these conventions, and executes applications through those files.
-
-Other languages have no conventions at all, and so Phusion Passenger invents one (e.g. Python WSGI with `passenger_wsgi.py`).
-
-Here's a list of the language-specific conventions that Phusion Passenger accepts:
-
-[options="header"]
-|================================================
-| Language                        | Phusion Passenger convention
-| Ruby on Rails >= 3.0, Ruby Rack | config.ru
-| Ruby on Rails 1.x and 2.x       | config/environment.rb
-| Python                          | passenger_wsgi.py
-| Node.js                         | app.js
-|================================================
-
-But sometimes you might not want to adhere to the convention that Phusion Passenger accepts. For example, on Node.js, you might want to use `server.js` as the startup file instead of the default `app.js`. With this option, you can customize the startup file to any file you like.
-
-Notes:
-
- * Customizing the startup file affects <<user_switching,user switching>>. After all, if user switching is enabled, the application is executed as the user that owns the startup file.
- * If you set this option, you **must** also set <<PassengerAppRoot,PassengerAppRoot>> and <<PassengerAppType,PassengerAppType>>, otherwise Phusion Passenger doesn't know what kind of application it is.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once.
-
-Example:
-
------------------------------
-<VirtualHost test.host>
-    DocumentRoot /webapps/example.com/public
-    # Use server.js as the startup file (entry point file) for
-    # your Node.js application, instead of the default app.js
-    PassengerStartupFile server.js
-    PassengerAppType node
-    PassengerAppRoot /webapps/example.com
-</VirtualHost>
------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerstartupfile
 
 ==== PassengerRestartDir <directory>
-As described in the deployment chapters of this document, Phusion Passenger
-checks the file 'tmp/restart.txt' in the applications'
-<<application_root,root directory>> for restarting applications. Sometimes it
-may be desirable for Phusion Passenger to look in a different directory instead,
-for example for security reasons (see below). This option allows you to
-customize the directory in which 'restart.txt' is searched for.
 
-You may specify 'PassengerRestartDir' in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverrides Options` is enabled.
-
-In each place, it may be specified at most once.
-
-You can either set it to an absolute directory, or to a directory relative to
-the <<application_root,application root>>. Examples:
-
------------------------------------
-<VirtualHost *:80>
-    ServerName www.foo.com
-    # Phusion Passenger will check for /apps/foo/public/tmp/restart.txt
-    DocumentRoot /apps/foo/public
-</VirtualHost>
-
-<VirtualHost *:80>
-    ServerName www.bar.com
-    DocumentRoot /apps/bar/public
-    # An absolute filename is given; Phusion Passenger will
-    # check for /restart_files/bar/restart.txt
-    PassengerRestartDir /restart_files/bar
-</VirtualHost>
-
-<VirtualHost *:80>
-    ServerName www.baz.com
-    DocumentRoot /apps/baz/public
-    # A relative filename is given; Phusion Passenger will
-    # check for /apps/baz/restart_files/restart.txt
-    #
-    # Note that this directory is relative to the APPLICATION ROOT, *not*
-    # the value of DocumentRoot!
-    PassengerRestartDir restart_files
-</VirtualHost>
------------------------------------
-
-.What are the security reasons for wanting to customize PassengerRestartDir?
-Touching restart.txt will cause Phusion Passenger to restart the application.
-So anybody who can touch restart.txt can effectively cause a Denial-of-Service
-attack by touching restart.txt over and over. If your web server or one of your
-web applications has the permission to touch restart.txt, and one of them has a
-security flaw which allows an attacker to touch restart.txt, then that will
-allow the attacker to cause a Denial-of-Service.
-
-You can prevent this from happening by pointing PassengerRestartDir to a
-directory that's readable by Apache, but only writable by administrators.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerrestartdir
 
 [[PassengerSpawnMethod]]
 ==== PassengerSpawnMethod <string>
-[TIP]
-."What spawn method should I use?"
-=========================================================
-This subsection attempts to describe spawn methods, but it's okay if you don't (want to)
-understand it, as it's mostly a technical detail. You can basically follow this rule of thumb:
 
-************************************************
-If your application works on Mongrel or Thin, but not on Phusion Passenger, then set
-`PassengerSpawnMethod` to 'direct'. Otherwise, leave it at 'smart' (the default).
-************************************************
-
-However, we do recommend you to try to understand it. The 'smart' spawn
-method bring many benefits.
-=========================================================
-
-include::users_guide_snippets/passenger_spawn_method.txt[]
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is 'smart'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerspawnmethod
 
 [[PassengerLoadShellEnvvars]]
 ==== PassengerLoadShellEnvvars <on|off>
-:version: 4.0.20
-include::users_guide_snippets/since_version.txt[]
 
-Enables or disables the loading of shell environment variables before spawning the application.
-
-If this option is turned on, and the user's shell is `bash`, then applications are loaded by running them with `bash -l -c`. Otherwise, they are loaded by running them directly from the `PassengerAgent core` process.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value is 'on'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerloadshellenvvars
 
 [[PassengerRollingRestarts]]
 ==== PassengerRollingRestarts <on|off>
-:version: 3.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-Enables or disables support for rolling restarts through restart.txt. Normally when you
-restart an application by touching restart.txt, Phusion Passenger would
-shut down all application processes and spawn a new one. The spawning
-of a new application process could take a while, and any requests that
-come in during this time will be blocked until this first application
-process has spawned.
-
-But when rolling restarts are enabled, Phusion Passenger Enterprise will:
-
-1. Spawn a new process in the background.
-2. When it's done spawning, Phusion Passenger Enterprise will replace one of the old processes with this newly spawned one.
-3. Step 1 and 2 are repeated until all processes have been replaced.
-
-This way, visitors will not experience any delays when you are restarting your application. This allows you to, for example, upgrade your application often without degrading user experience.
-
-Rolling restarts have a few caveat however that you should be aware of:
-
-- Upgrading an application sometimes involves upgrading the database schema.
-  With rolling restarts, there may be a point in time during which processes
-  belonging to the previous version and processes belonging to the new version
-  both exist at the same time. Any database schema upgrades you perform must
-  therefore be backwards-compatible with the old application version.
-- Because there's no telling which process will serve a request, users may
-  not see changes brought about by the new version until all processes have
-  been restarted. It is for this reason that you should not use rolling
-  restarts in development, only in production.
-
-If Passenger Enterprise could not rolling restart a process (let's call it 'A') because it is unable to spawn a new process (let's call it 'B'), then Passenger Enterprise will give up trying to rolling restart that particular process 'A'. What happens next depends on whether <<PassengerResistDeploymentErrors,deployment error resistance>> is enabled:
-
-- If deployment error resistance is disabled (the default), then Passenger Enterprise will proceed with trying to restart the remaining processes.
-- If deployment error resistance is enabled, the Passenger Enterprise will give up rolling restarting immediately. The application group will be put into Deployment Error Resistance Mode.
-
-Please note that `PassengerRollingRestarts` is completely unrelated to the `passenger-config restart-app` command. That command always initiates a blocking restart, unless `--rolling-restart` is given.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value is 'off'.
-
-NOTE: Are you looking to prevent applications from being restarted when you restart the web server? That is handled by the link:Users%20guide%20Nginx.html#flying_passenger[Flying Passenger mode] (which requires Nginx), not by the rolling restarts feature.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerrollingrestarts
 
 [[PassengerResistDeploymentErrors]]
 ==== PassengerResistDeploymentErrors <on|off>
-:version: 3.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-Enables or disables resistance against deployment errors.
-
-Suppose you've upgraded your application and you've issues a command to restart it (by touching restart.txt), but the application code contains an error that prevents Phusion Passenger from successfully spawning a process (e.g. a syntax error). Phusion Passenger would normally display an error message in response to this.
-
-By enabling deployment error resistance, Phusion Passenger Enterprise would instead do this:
-
-- It passes the request to one of the existing application processes (that belong to the previous version of the application). The visitor will not see a Phusion Passenger process spawning error message.
-- It logs the error to the global web server error log file.
-- It sets an internal flag (Deployment Error Resistance Mode) so that no processes for this application will be spawned (even when the current traffic would normally result in more processes being spawned) and no processes will be idle cleaned. Processes *could* still be shutdown because of other events, e.g. because their <<PassengerMemoryLimit,memory limit>> have been reached. You can see whether the flag is set by invoking `passenger-status`. If you see the message "Resisting deployment error" then the flag is set.
-
-This way, visitors will suffer minimally from deployment errors. Phusion Passenger will attempt to restart the application again next time restart.txt is touched.
-
-Enabling deployment error resistance only works if <<PassengerRollingRestarts,rolling restart>> is also enabled.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value is 'off'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerresistdeploymenterrors
 
 === Security options ===
 
 [[PassengerUserSwitching]]
 ==== PassengerUserSwitching <on|off> ====
-Whether to enable <<user_switching,user switching support>>.
 
-This option may only occur once, in the global server configuration.
-The default value is 'on'.
-
-WARNING: If you're on Red Hat or CentOS, be sure to read <<user_switching_rpm_caveats,the Red Hat and CentOS user switching caveats>>.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengeruserswitching
 
 [[PassengerUser]]
 ==== PassengerUser <username> ====
-If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
-by default run the web application as the owner of the file 'config/environment.rb'
-(for Rails apps) or 'config.ru' (for Rack apps). This option allows you to override
-that behavior and explicitly set a user to run the web application as, regardless
-of the ownership of 'environment.rb'/'config.ru'.
 
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
-
-In each place, it may be specified at most once.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengeruser
 
 [[PassengerGroup]]
 ==== PassengerGroup <group name> ====
-If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
-by default run the web application as the primary group of the owner of the file
-'config/environment.rb' (for Rails apps) or 'config.ru' (for Rack apps). This option
-allows you to override that behavior and explicitly set a group to run the web application
-as, regardless of the ownership of 'environment.rb'/'config.ru'.
 
-'<group name>' may also be set to the special value '!STARTUP_FILE!', in which case
-the web application's group will be set to 'environment.rb'/'config.ru''s group.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
-
-In each place, it may be specified at most once.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengergroup
 
 [[PassengerDefaultUser]]
 ==== PassengerDefaultUser <username> ====
-Phusion Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify the user that applications must
-run as, if user switching fails or is disabled.
 
-This option may only occur once, in the global server configuration.
-The default value is 'nobody'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerdefaultuser
 
 [[PassengerDefaultGroup]]
 ==== PassengerDefaultGroup <group name> ====
-Phusion Passenger enables <<user_switching,user switching support>> by default.
-This configuration option allows one to specify the group that applications must
-run as, if user switching fails or is disabled.
 
-This option may only occur once, in the global server configuration.
-The default value is the primary group of the user specifified by
-<<PassengerDefaultUser,PassengerDefaultUser>>.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerdefaultgroup
 
 [[PassengerFriendlyErrorPages]]
 ==== PassengerFriendlyErrorPages <on|off> ====
-Phusion Passenger can display friendly error pages whenever an application fails
-to start. This friendly error page presents the startup error message, some
-suggestions for solving the problem, a backtrace and a dump of the environment variables.
-This feature is very useful during application development and useful for less experienced
-system administrators, but the page might reveal potentially sensitive information,
-depending on the application. For this reason, friendly error pages are turned off by default when
-<<PassengerAppEnv,PassengerAppEnv (and its aliases such as RailsEnv and RackEnv)>>
-is set to 'staging' or 'production', but enabled by default otherwise. You can use
-this option to explicitly enable or disable this feature.
 
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value depends on <<PassengerAppEnv,PassengerAppEnv (and its aliases such as RailsEnv and RackEnv)>>, as documented above.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerfriendlyerrorpages
 
 
 === Resource control and optimization options ===
 
 [[PassengerMaxPoolSize]]
 ==== PassengerMaxPoolSize <integer> ====
-The maximum number of <<application_process,application processes>> that may
-simultaneously exist. A larger number results in higher memory usage,
-but improves the ability to handle concurrent HTTP requests.
 
-The optimal value depends on your system's hardware and your workload. You can learn more at the Phusion article link:http://blog.phusion.nl/2013/03/12/tuning-phusion-passengers-concurrency-settings/[Tuning Phusion Passenger's concurrency settings].
-
-If you find that your server is running out of memory then you should lower this value.
-
-This option may only occur once, in the global server configuration.
-The default value is '6'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermaxpoolsize
 
 [[PassengerMinInstances]]
 ==== PassengerMinInstances <integer> ====
-This specifies the minimum number of application processes that should exist for a
-given application. You should set this option to a
-non-zero value if you want to avoid potentially long startup times after a website
-has been <<idle_process,idle>> for an extended period.
 
-Please note that this option does *not* pre-start application processes during Apache
-startup. It just makes sure that when the application is first accessed:
-
-1. at least the given number of processes will be spawned.
-2. the given number of processes will be kept around even when processes are being
-   idle cleaned (see <<PassengerPoolIdleTime,PassengerPoolIdleTime>>).
-
-If you want to pre-start application processes during Apache startup, then you should use the <<PassengerPreStart,PassengerPreStart>> directive, possibly in combination with
-'PassengerMinInstances'. This behavior might seem counter-intuitive at first sight,
-but <<PassengerPreStart,PassengerPreStart>> explains the rationale behind it.
-
-For example, suppose that you have the following configuration:
-
----------------------------------
-PassengerMaxPoolSize 15
-PassengerPoolIdleTime 10
-
-<VirtualHost *:80>
-    ServerName foobar.com
-    DocumentRoot /webapps/foobar/public
-    PassengerMinInstances 3
-</VirtualHost>
----------------------------------
-
-When you start Apache, there are 0 application processes for 'foobar.com'. Things will
-stay that way until someone visits 'foobar.com'. Suppose that there is only 1 visitor.
-1 application process will be started immediately to serve the visitor, while 2 will
-be spawned in the background. After 10 seconds, when the idle timeout has
-been reached, these 3 application processes will not be cleaned up.
-
-Now suppose that there's a sudden spike of traffic, and 100 users visit 'foobar.com'
-simultaneously. Phusion Passenger will start 12 more application processes. After the idle
-timeout of 10 seconds have passed, Phusion Passenger will clean up 12 application
-processes, keeping 3 processes around.
-
-The PassengerMinInstances option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
-
-In each place, it may be specified at most once. The default value is '1'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermininstances
 
 [[PassengerMaxInstances]]
 ==== PassengerMaxInstances <integer> ====
-:version: 3.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-The maximum number of application processes that may simultaneously exist
-for an application. This helps to make sure that a single application
-will not occupy all available slots in the application pool.
-
-This value must be less than <<PassengerMaxPoolSize,PassengerMaxPoolSize>>. A value of 0
-means that there is no limit placed on the number of processes a single application
-may spawn, i.e. only the global limit of <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
-will be enforced.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is '0'.
-
-.Practical usage example
-[TIP]
-===========================================================================
-Suppose that you're hosting two web applications on your server, a personal
-blog and an e-commerce website. You've set <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
-to 10. The e-commerce website is more important to you. You can then set
-'PassengerMaxInstances' to 3 for your blog, so that it will never spawn more
-than 3 processes, even if it suddenly gets a lot of traffic. Your e-commerce website
-on the other hand will be free to spawn up to 10 processes if it gets a lot of traffic.
-===========================================================================
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermaxinstances
 
 ==== PassengerMaxInstancesPerApp <integer> ====
-The maximum number of application processes that may simultaneously exist
-for a single application. This helps to make sure that a single application
-will not occupy all available slots in the application pool.
 
-This value must be less than <<PassengerMaxPoolSize,PassengerMaxPoolSize>>. A value of 0
-means that there is no limit placed on the number of processes a single application
-may use, i.e. only the global limit of <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
-will be enforced.
-
-This option may only occur once, in the global server configuration.
-The default value is '0'.
-
-.Practical usage example
-[TIP]
-===========================================================================
-Suppose that you're hosting two blogs (blog A and B) on your server, and that
-you've set <<PassengerMaxPoolSize,PassengerMaxPoolSize>> to 10. Under normal
-circumstances, if blog A suddenly gets a lot of traffic, then A will use all 10
-pool slots. If blog B suddenly gets some traffic, then it will only be able to
-use 1 pool slot (forcefully releasing 1 slot from A) until A's traffic has
-settled down and it has released more pool slots.
-
-If you consider both blogs equally important, then you can set
-'PassengerMaxInstancesPerApp' to 5. This way, both blogs will never use more
-than 5 pool slots.
-===========================================================================
-
-.Relation with PassengerMaxInstances
-[NOTE]
-===========================================================================
-Unlike <<PassengerMaxInstances,PassengerMaxInstances>>, this configuration
-option is global and applies to all applications. 'PassengerMaxInstances' on the
-other hand is per-virtual host.
-
-Suppose that you're hosting two web applications on your server, a personal
-blog and an e-commerce website. You've set <<PassengerMaxPoolSize,PassengerMaxPoolSize>>
-to 10. The e-commerce website is more important to you. You can then set
-'PassengerMaxInstances' to 3 for your blog, so that it will never use more than
-3 pool slots, even if it suddenly gets a lot of traffic. Your e-commerce website
-on the other hand will be free to use up all 10 slots if it gets a lot of traffic.
-
-In summary, 'PassengerMaxInstancesPerApp' divides the pool equally among the
-different web applications, while 'PassengerMaxInstances' allows one to divide
-the pool unequally, according to each web application's relative importance.
-===========================================================================
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermaxinstancesperapp
 
 [[PassengerPoolIdleTime]]
 ==== PassengerPoolIdleTime <integer> ====
-The maximum number of seconds that an application process may be idle. That is,
-if an application process hasn't received any traffic after the given number of
-seconds, then it will be shutdown in order to conserve memory.
 
-Decreasing this value means that applications will have to be spawned
-more often. Since spawning is a relatively slow operation, some visitors may
-notice a small delay when they visit your Rails/Rack website. However, it will also
-free up resources used by applications more quickly.
-
-The optimal value depends on the average time that a visitor spends on a single
-Rails/Rack web page. We recommend a value of `2 * x`, where `x` is the average
-number of seconds that a visitor spends on a single Rails/Rack web page. But your
-mileage may vary.
-
-When this value is set to '0', application processes will not be shutdown unless 
-it's really necessary, i.e. when Phusion Passenger is out of application processes
-for a given application and one of the <<inactive_process,inactive application processes>> needs to
-make place for another application process. Setting the value to 0 is
-recommended if you're on a non-shared host that's only running a few
-applications, each which must be available at all times.
-
-This option may only occur once, in the global server configuration.
-The default value is '300'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerpoolidletime
 
 [[PassengerMaxPreloaderIdleTime]]
 ==== PassengerMaxPreloaderIdleTime <integer> ====
-The preloader process(explained in <<spawning_methods_explained,Spawning
-methods explained>>) has an idle timeout, just like the backend processes spawned by
-Phusion Passenger do. That is, it will automatically shutdown if it hasn't done
-anything for a given period.
 
-This option allows you to set the preloader's idle timeout, in
-seconds. A value of '0' means that it should never idle timeout.
-
-Setting a higher value will mean that the preloader is kept around
-longer, which may slightly increase memory usage. But as long as the
-preloader server is running, the time to spawn a Ruby on Rails backend
-process only takes about 10% of the time that is normally needed, assuming that
-you're using the 'smart' <<PassengerSpawnMethod,spawning method>>. So if your
-system has enough memory, is it recommended that you set this option to a high
-value or to '0'.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified at most once. The default value is '300' (5 minutes).
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermaxpreloaderidletime
 
 ==== PassengerStartTimeout <seconds> ====
-:version: 4.0.15
-include::users_guide_snippets/since_version.txt[]
 
-Specifies a timeout for the startup of application processes. If an application process fails to start within the timeout period then it will be forcefully killed with SIGKILL, and the error will be logged.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
-
-In each place, it may be specified at most once. The default value is '90'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerstarttimeout
 
 [[PassengerConcurrencyModel]]
 ==== PassengerConcurrencyModel <process|thread> ====
-:version: 4.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-Specifies the I/O concurrency model that should be used for Ruby application processes. Phusion Passenger supports two concurrency models:
-
- * 'process' - single-threaded, multi-processed I/O concurrency. Each application process only has a single thread and can only handle 1 request at a time. This is the concurrency model that Ruby applications traditionally used. It has excellent compatiblity (can work with applications that are not designed to be thread-safe) but is unsuitable for workloads in which the application has to wait for a lot of external I/O (e.g. HTTP API calls), and uses more memory because each process has a large memory overhead.
- * 'thread' - multi-threaded, multi-processed I/O concurrency. Each application process has multiple threads (customizable via <<PassengerThreadCount,PassengerThreadCount>>). This model provides much better I/O concurrency and uses less memory because threads share memory with each other within the same process. However, using this model may cause compatibility problems if the application is not designed to be thread-safe.
-
-This option has no effect on non-Ruby applications.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'process'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerconcurrencymodel
 
 [[PassengerThreadCount]]
 ==== PassengerThreadCount <number> ====
-:version: 4.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-Specifies the number of threads that Phusion Passenger should spawn per Ruby application process. This option only has effect if <<PassengerConcurrencyModel,PassengerConcurrencyModel>> is 'thread'.
-
-This option has no effect on non-Ruby applications.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is '1'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerthreadcount
 
 [[PassengerMaxRequests]]
 ==== PassengerMaxRequests <integer> ====
-The maximum number of requests an application process will process. After
-serving that many requests, the application process will be shut down and
-Phusion Passenger will restart it. A value of 0 means that there is no maximum:
-an application process will thus be shut down when its idle timeout has been
-reached.
 
-This option is useful if your application is leaking memory. By shutting
-it down after a certain number of requests, all of its memory is guaranteed
-to be freed by the operating system.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
-
-In each place, it may be specified at most once. The default value is '0'.
-
-[CAUTION]
-=====================================================
-The <<PassengerMaxRequests,PassengerMaxRequests>> directive should be considered
-as a workaround for misbehaving applications. It is advised that you fix the
-problem in your application rather than relying on these directives as a
-measure to avoid memory leaks.
-=====================================================
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermaxrequests
 
 [[PassengerMaxRequestTime]]
 ==== PassengerMaxRequestTime <seconds> ====
-:version: 3.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-The maximum amount of time, in seconds, that an application process may take
-to process a request. If the request takes longer than this amount of time,
-then the application process will be forcefully shut down, and possibly
-restarted upon the next request. A value of 0 means that there is no time limit.
-
-This option is useful for preventing your application from freezing for an
-indefinite period of time.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
-
-In each place, it may be specified at most once. The default value is '0'.
-
-.Example
-Suppose that most of your requests are known to finish within 2 seconds.
-However, there is one URI, '/expensive_computation', which is known to take up
-to 10 seconds. You can then configure Phusion Passenger as follows:
-
-----------------------------------------------
-<VirtualHost *:80>
-    ServerName www.example.com
-    DocumentRoot /webapps/my_app/public
-    
-    PassengerMaxRequestTime 2
-    <Location /expensive_computation>
-        PassengerMaxRequestTime 10
-    </Location>
-</VirtualHost>
-----------------------------------------------
-
-If a request to '/expensive_computation' takes more than 10 seconds,
-or if a request to any other URI takes more than 2 seconds,
-then the corresponding application process will be forced to shutdown.
-
-[CAUTION]
-=====================================================
-The <<PassengerMaxRequestTime,PassengerMaxRequestTime>> directive should be
-considered as a workaround for misbehaving applications. It is advised that you
-fix the problem in your application rather than relying on these directives as a
-measure to avoid freezing applications.
-=====================================================
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermaxrequesttime
 
 [[PassengerMemoryLimit]]
 ==== PassengerMemoryLimit <integer> ====
-:version: 3.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-The maximum amount of memory that an application process may use, in megabytes.
-Once an application process has surpassed its memory limit, it will process
-all the requests currently present in its queue and then shut down.
-A value of 0 means that there is no maximum: the application's memory usage
-will not be checked.
-
-This option is useful if your application is leaking memory. By shutting
-it down, all of its memory is guaranteed to be freed by the operating system.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Limits` is on.
-
-In each place, it may be specified at most once. The default value is '0'.
-
-[NOTE]
-.A word about permissions
-=====================================================
-The <<PassengerMemoryLimit,PassengerMemoryLimit>> directive uses
-`ps` command to query memory usage information. On Linux, it further
-queries `/proc` to obtain additional memory usage information that's
-not obtainable through `ps`. You should ensure that the `ps` works
-correctly and that the `/proc` filesystem is accessible by the
-`PassengerAgent core` process.
-=====================================================
-
-[CAUTION]
-=====================================================
-The <<PassengerMaxRequests,PassengerMaxRequests>> and
-<<PassengerMemoryLimit,PassengerMemoryLimit>> directives should be considered
-as workarounds for misbehaving applications. It is advised that you fix the
-problem in your application rather than relying on these directives as a
-measure to avoid memory leaks.
-=====================================================
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermemorylimit
 
 ==== PassengerStatThrottleRate <integer> ====
-By default, Phusion Passenger performs several filesystem checks (or, in
-programmers jargon, 'stat() calls') each time a request is processed:
 
-- It checks which the application <<PassengerStartupFile,startup files>> are present, in order to autodetect the application type.
-- It checks whether 'restart.txt' has changed or whether 'always_restart.txt'
-  exists, in order to determine whether the application should be restarted.
-
-On some systems where disk I/O is expensive, e.g. systems where the harddisk is
-already being heavily loaded, or systems where applications are stored on NFS
-shares, these filesystem checks can incur a lot of overhead.
-
-You can decrease or almost entirely eliminate this overhead by setting
-'PassengerStatThrottleRate'. Setting this option to a value of 'x' means that
-the above list of filesystem checks will be performed at most once every 'x'
-seconds. Setting it to a value of '0' means that no throttling will take place,
-or in other words, that the above list of filesystem checks will be performed on
-every request.
-
-This option may be specified once, in the global server configuration. The default value is '10'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerstatthrottlerate
 
 [[PassengerPreStart]]
 ==== PassengerPreStart <url> ====
-By default, Phusion Passenger does not start any application processes until said
-web application is first accessed. The result is that the first visitor of said
-web application might experience a small delay as Phusion Passenger is starting
-the web application on demand. If that is undesirable, then this directive can be
-used to pre-started application processes during Apache startup.
 
-A few things to be careful of:
-
-- This directive accepts the *URL* of the web application you want to pre-start,
-  not a on/off value! This might seem a bit weird, but read on for rationale. As
-  for the specifics of the URL:
-  * The domain part of the URL must be equal to the value of the 'ServerName'
-    directive of the VirtualHost block that defines the web application.
-  * Unless the web application is deployed on port 80, the URL should contain
-    the web application's port number too.
-  * The path part of the URL must point to some URI that the web application
-    handles.
-- You will probably want to combine this option with
-  <<PassengerMinInstances,PassengerMinInstances>> because application processes
-  started with 'PassengerPreStart' are subject to the usual idle timeout rules.
-  See the example below for an explanation.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
-
-In each place, it may be specified any number of times.
-
-===== Example 1: basic usage =====
-
-Suppose that you have the following web applications.
-
----------------------------
-<VirtualHost *:80>
-   ServerName foo.com
-   DocumentRoot /webapps/foo/public
-</VirtualHost>
-
-<VirtualHost *:3500>
-   ServerName bar.com
-   DocumentRoot /webapps/bar/public
-</VirtualHost>
----------------------------
-
-You want both of them to be pre-started during Apache startup. The URL for
-foo.com is 'http://foo.com/' (or, equivalently, 'http://foo.com:80/') and
-the URL for bar.com is 'http://bar.com:3500/'. So we add two PassengerPreStart
-directives, like this:
-
----------------------------
-<VirtualHost *:80>
-   ServerName foo.com
-   DocumentRoot /webapps/foo/public
-</VirtualHost>
-
-<VirtualHost *:3500>
-   ServerName bar.com
-   DocumentRoot /webapps/bar/public
-</VirtualHost>
-
-PassengerPreStart http://foo.com/           # <--- added
-PassengerPreStart http://bar.com:3500/      # <--- added
----------------------------
-
-===== Example 2: pre-starting apps that are deployed in sub-URIs =====
-
-Suppose that you have a web application deployed in a sub-URI '/store', like this:
-
----------------------------
-<VirtualHost *:80>
-   ServerName myblog.com
-   DocumentRoot /webapps/wordpress
-
-   Alias /store /websites/store/public
-    <Location /store>
-        PassengerBaseURI /store
-        PassengerAppRoot /websites/store
-    </Location>
-    <Directory /websites/store/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
----------------------------
-
-Then specify the domain name of its containing virtual host followed by the sub-URI,
-like this:
-
----------------------------
-<VirtualHost *:80>
-   ServerName myblog.com
-   DocumentRoot /webapps/wordpress
-
-   Alias /store /websites/store/public
-    <Location /store>
-        PassengerBaseURI /store
-        PassengerAppRoot /websites/store
-    </Location>
-    <Directory /websites/store/public>
-        Allow from all
-        Options -MultiViews
-        # Uncomment this if you're on Apache >= 2.4:
-        #Require all granted
-    </Directory>
-</VirtualHost>
-
-PassengerPreStart http://myblog.com/store    # <----- added
----------------------------
-
-The sub-URI *must* be included; if you don't then the directive will have no effect.
-The following example is wrong and won't pre-start the store web application:
-
----------------------------
-PassengerPreStart http://myblog.com/    # <----- WRONG! Missing "/store" part.
----------------------------
-
-===== Example 3: combining with PassengerMinInstances =====
-
-Application processes started with PassengerPreStart are
-also subject to the idle timeout rules as specified by
-<<PassengerPoolIdleTime,PassengerPoolIdleTime>>! That means that by default,
-the pre-started application processes for foo.com and bar.com are shut down
-after a few minutes of inactivity. If you don't want that to happen, then
-you should combine PassengerPreStart with
-<<PassengerMinInstances,PassengerMinInstances>>, like this:
-
----------------------------
-<VirtualHost *:80>
-   ServerName foo.com
-   DocumentRoot /webapps/foo/public
-   # Added!
-   PassengerMinInstances 1
-</VirtualHost>
-
-<VirtualHost *:3500>
-   ServerName bar.com
-   DocumentRoot /webapps/bar/public
-   # Added!
-   PassengerMinInstances 1
-</VirtualHost>
-
-PassengerPreStart http://foo.com/
-PassengerPreStart http://bar.com:3500/
----------------------------
-
-===== So why a URL? Why not just an on/off flag? =====
-
-A directive that accepts a simple on/off flag is definitely more intuitive,
-but due technical difficulties w.r.t. the way Apache works, it's very hard
-to implement it like that:
-
-- It is very hard to obtain a full list of web applications defined in the
-  Apache configuration file(s). In other words, it's hard for Phusion Passenger
-  to know which web applications are deployed on Apache until a web application
-  is first accessed, and without such a list Phusion Passenger wouldn't know
-  which web applications to pre-start. It's probably not completely impossible
-  to obtain such a list, but this brings us to the following point;
-- Users expect things like 'mod_env' to work even in combination with Phusion
-  Passenger. For example some people put ``SetEnv PATH ....'' in their virtual
-  host block and they expect the web application to pick that environment variable
-  up when it's started. Information like this is stored in module-specific
-  locations that Phusion Passenger cannot access directly. Even if the previous
-  bullet point is solved and we can obtain a list of web applications,
-  we cannot start the application with the correct mod_env information.
-  mod_env is just one such example; there are probably many other Apache modules,
-  all of which people expect to work, but we cannot answer to those expectations
-  if PassengerPreStart is implemented as a simple on/off flag.
-
-So as a compromise, we made it accept a URL. This is easier to implement for
-us and altough it looks weird, it behaves consistently w.r.t. cooperation
-with other Apache modules.
-
-===== What does Phusion Passenger do with the URL? =====
-
-During Apache startup, Phusion Passenger will send a dummy HEAD request to the
-given URL and discard the result. In other words, Phusion Passenger simulates a
-web access at the given URL. However this simulated request is always sent to
-localhost, *not* to the IP that the domain resolves to. Suppose that bar.com
-in example 1 resolves to 209.85.227.99; Phusion Passenger will
-send the following HTTP request to 127.0.0.1 port 3500 (and not to 209.85.227.99
-port 3500):
-
-----------------------
-HEAD / HTTP/1.1
-Host: bar.com
-Connection: close
-----------------------
-
-Similarly, for example 2, Phusion Passenger will send the following HTTP request
-to 127.0.0.1 port 80:
-
-----------------------
-HEAD /store HTTP/1.1
-Host: myblog.com
-Connection: close
-----------------------
-
-===== Do I need to edit /etc/hosts and point the domain in the URL to 127.0.0.1? =====
-
-No. See previous subsection.
-
-===== My web application consists of multiple web servers. What URL do I need to specify, and in which web server's Apache config file? =====
-
-Put the web application's virtual host's ServerName value and the virtual host's
-port in the URL, and put
-PassengerPreStart on all machines that you want to pre-start the web application
-on. The simulated web request is always sent to 127.0.0.1, with the domain name
-in the URL as value for the 'Host' HTTP header, so you don't need to worry about
-the request ending up at a different web server in the cluster.
-
-===== Does PassengerPreStart support https:// URLs? =====
-
-Yes. And it does not perform any certificate validation.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerprestart
 
 [[PassengerHighPerformance]]
 ==== PassengerHighPerformance <on|off> ====
-By default, Phusion Passenger is compatible with mod_rewrite and most other
-Apache modules. However, a lot of effort is required in order to be compatible.
-If you turn 'PassengerHighPerformance' to 'on', then Phusion Passenger will be
-a little faster, in return for reduced compatibility with other Apache modules.
 
-In places where 'PassengerHighPerformance' is turned on, mod_rewrite rules will
-likely not work. mod_autoindex (the module which displays a directory index)
-will also not work. Other Apache modules may or may not work, depending on what
-they exactly do. We recommend you to find out how other modules behave in high
-performance mode via testing.
-
-This option is *not* an all-or-nothing global option: you can enable high
-performance mode for certain virtual hosts or certain URLs only.
-The 'PassengerHighPerformance' option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'off',
-so high performance mode is disabled by default, and you have to explicitly
-enable it.
-
-.When to enable high performance mode?
-
-If you do not use mod_rewrite or other Apache modules then it might make
-sense to enable high performance mode.
-
-It's likely that some of your applications depend on mod_rewrite or other
-Apache modules, while some do not. In that case you can enable high performance
-for only those applications that don't use other Apache modules. For example:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /apps/foo/public
-    .... mod_rewrite rules or options for other Apache modules here ...
-</VirtualHost>
-
-<VirtualHost *:80>
-    ServerName www.bar.com
-    DocumentRoot /apps/bar/public
-    PassengerHighPerformance on
-</VirtualHost>
-------------------------------------
-
-In the above example, high performance mode is only enabled for www.bar.com.
-It is disabled for everything else.
-
-If your application generally depends on mod_rewrite or other Apache modules,
-but a certain URL that's accessed often doesn't depend on those other modules,
-then you can enable high performance mode for a certain URL only. For example:
-
-------------------------------------
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /apps/foo/public
-    .... mod_rewrite rules or options for other Apache modules here ...
-    
-    <Location /chatroom/ajax_update_poll>
-        PassengerHighPerformance on
-    </Location>
-</VirtualHost>
-------------------------------------
-
-This enables high performance mode for
-http://www.foo.com/chatroom/ajax_update_poll only.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerhighperformance
 
 
 /////////////////////////////////////////
@@ -1775,461 +297,125 @@ http://www.foo.com/chatroom/ajax_update_poll only.
 
 [[PassengerBufferUpload]]
 ==== PassengerBufferUpload <on|off> ====
-:version: 4.0.26
-include::users_guide_snippets/since_version.txt[]
 
-When turned on, HTTP client request bodies <<PassengerDataBufferDir,will be buffered>> before they are sent the request to the application. This buffering protects the application from slow clients, but also prevents the ability to track upload progress.
-
-If you want to allow your application to track upload progress, it is recommended that you disable upload buffering for specific URIs only. For example:
-
-------------------------
-# Disable upload buffering for /upload_video only.
-<Location /upload_video>
-    PassengerBufferUpload off
-</Location>
-------------------------
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'on'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerbufferupload
 
 [[PassengerBufferResponse]]
 ==== PassengerBufferResponse <on|off> ====
-When turned on, application-generated responses are buffered by Apache. Buffering will
-happen in memory.
 
-Before we proceed with explaining this configuration option, we want to state the following to avoid confusion. If you use Phusion Passenger for Apache, there are in fact two response buffering systems active:
-
-1. The Apache response buffering system. `PassengerBufferResponse` turns this on or off.
-2. The Phusion Passenger response buffering system, a.k.a. 'real-time disk-backed response buffering'. This buffering system is always on, regardless of the value of `PassengerBufferResponse`, but its behavior can be tweaked with <<PassengerResponseBufferHighWatermark,PassengerResponseBufferHighWatermark>>.
-
-Response buffering is useful because it protects against slow HTTP clients that do not read responses immediately or quickly enough. Buffering prevents such slow clients from blocking web applications that have limited concurrency. Because Phusion Passenger's response buffering is always turned on, you are always protected. Therefore, `PassengerBufferResponse` is off by default, and you never should have to turn it on.
-
-If for whatever reason you want to turn Apache-level response buffering on, you can do so with this option.
-
-Apache's response buffering works differently from Phusion Passenger's. Apache's buffering system buffers the entire response before attempting to send it to the client, while Phusion Passenger's attempts to send the data to the client immediately. Therefore, if you turn on `PassengerBufferResponse`, you may interfere with applications that want to stream responses to the client.
-Apache's version also buffers to memory only, making it problematic for large responses. Phusion Passenger's version buffers to disk when the response exceeds a certain threshold.
-
-How does response buffering - whether it's done by Apache or by Phusion Passenger - exactly protect against slow clients?
-Consider an HTTP client that's on a dial-up modem link, and your
-application process generates a 2 MB response. If the response is not buffered
-then your application process will be blocked until the entire 2 MB has been
-sent out to the HTTP client. This disallows your application process to do any useful
-work in the mean time. By buffering responses, Phusion Passenger or Apache will read
-the application response as quickly as possible and will take care of forwarding the data
-to slow clients.
-
-So keep in mind that enabling `passenger_buffering_response` will make streaming responses
-impossible. Consider for example this piece of Rails code:
-
---------------------------------
-render :text => lambda { |response, output|
-    10.times do |i|
-        output.write("entry #{i}\n")
-        output.flush
-        sleep 1
-    end
-}
---------------------------------
-
-...or this piece of Rack code:
-
---------------------------------
-class Response
-    def each
-        10.times do |i|
-            yield("entry #{i}\n")
-            sleep 1
-        end
-    end
-end
-
-app = lambda do |env|
-    [200, { "Content-Type" => "text/plain" }, Response.new]
-end
---------------------------------
-
-When `PassengerBufferResponse` is turned on, Apache will wait until
-the application is done sending the entire response before forwarding it
-to the client. The client will not receive anything for 10 seconds,
-after which it receives the entire response at once.
-When `PassengerBufferResponse` is turned off, it works as expected: the client
-receives an "entry X" message every second for 10 seconds.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'off'.
-
-[NOTE]
-=====================================================
-The <<PassengerBufferResponse,PassengerBufferResponse>> directive should be turned off
-if responses can be huge. Because entire responses are buffered in memory when turned on.
-=====================================================
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerbufferresponse
 
 [[PassengerResponseBufferHighWatermark]]
 ==== PassengerResponseBufferHighWatermark <bytes>
-:version: 5.0.0
-include::users_guide_snippets/since_version.txt[]
 
-As explained in <<passenger_buffer_response,PassengerBufferResponse>>, Phusion Passenger has two response buffering mechanisms. This option configures the maximum size of the real-time disk-backed response buffering system. If the buffer is full, the application will be blocked until the client has fully read the buffer.
-
-This buffering system has a default size of *128 MB* (134217728 bytes). This default value is large enough to prevent most applications from blocking on slow clients, but small enough to prevent broken applications from filling up the hard disk.
-
-You can't disable real-time disk-backed response buffering, but you can set the buffer size to a small value, which is effectively the same as disabling it.
-
-Most of the time, you won't need to tweak this value. But there is one good use case where you may want set this option to a low value: if you are streaming a large response, but want to detect client disconnections as soon as possible. If the buffer size is larger than your response size, then Phusion Passenger will read and buffer the response as fast as it can, offloading the application as soon as it can, thereby preventing the application from detecting client disconnects. But if the buffer size is sufficiently small (say, 64 KB), then your application will effectively output response data at the same speed as the client reads it, allowing you to detect client disconnects almost immediately. This is also a down side, because many slow clients blocking your application can result in a denial of service, so use this option with care.
-
-If your application outputs responses larger than 128 MB and you are not interested in detecting client disconnects as soon as possible, then you should raise this value, or set it to 0.
-
-A value of 0 means that the buffer size is unlimited.
-
-This option may only occur once, in the global server configuration. The default value is '134217728' (128 MB).
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerresponsebufferhighwatermark
 
 [[PassengerErrorOverride]]
 ==== PassengerErrorOverride <on|off> ====
-:version: 4.0.24
-include::users_guide_snippets/since_version.txt[]
 
-Decides whether Apache will intercept and handle responses with HTTP status codes of 400 and higher. This directive is useful where you want to have a common look and feel on the error pages seen by the end user. This also allows for included files (via mod_include's SSI) to get the error code and act accordingly (default behavior would display the error page of the proxied server, turning this on shows the SSI Error message).
-
-This directive does not affect the processing of informational (1xx), normal success (2xx), or redirect (3xx) responses.
-
-By default, all responses are sent as-is from the application or from the Phusion Passenger core. If you turn this option on then Apache will be able to handle such responses using the Apache `ErrorDocument` option.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is 'off'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengererroroverride
 
 [[PassengerMaxRequestQueueSize]]
 ==== PassengerMaxRequestQueueSize <number> ====
-:version: 4.0.15
-include::users_guide_snippets/since_version.txt[]
 
-When all application processes are already handling their maximum number of concurrent requests, Phusion Passenger will queue all incoming requests. This option specifies the maximum size for that queue. If the queue is already at this specified limit, then Phusion Passenger will immediately send a "503 Service Unavailable" error to any incoming requests.
-
-A value of 0 means that the queue is unbounded.
-
-link:http://stackoverflow.com/questions/20402801/what-is-optimal-value-for-phusion-passenger-passengermaxrequestqueuesize[This article on StackOverflow] explains how the request queue works, what it means for the queue to grow or become full, why that is bad, and what you can do about it.
-
-You may combine this option with <<PassengerErrorOverride,PassengerErrorOverride>> and `ErrorDocument` to set a custom error page whenever the queue is full. In the following example, Apache will serve /error503.html whenever the queue is full:
-
----------------------------------
-PassengerErrorOverride on
-ErrorDocument 503 /error503.html
----------------------------------
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is '100'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengermaxrequestqueuesize
 
 [[PassengerStickySessions]]
 ==== PassengerStickySessions <on|off>
-:version: 4.0.45
-include::users_guide_snippets/since_version.txt[]
 
-When sticky sessions are enabled, all requests that a client sends will be routed to the same originating application process, whenever possible. When sticky sessions are disabled, requests may be distributed over multiple processes, and may not necessarily be routed to the originating process, in order to balance traffic over multiple CPU cores. Because of this, sticky sessions should only be enabled in specific circumstances.
-
-For applications that store important state inside the process's own memory -- that is, as opposed to storing state in a distributed data store, such as the database or Redis -- sticky sessions *should* be enabled. This is because otherwise, some requests could be routed to a different process, which stores different state data. Because processes don't share memory with each other, there's no way for one process to know about the state in another process, and then things can go wrong.
-
-One prominent example is the popular link:http://sockjs.org/[SockJS library], which is capable of emulating WebSockets through long polling. This is implemented through two HTTP endpoints, `/SESSION_ID/xhr_stream` (a long polling end point which sends data from the server to the client), and `/SESSION_ID/xhr_send` (a normal POST endpoint which is used for sending data from the client to the server). SockJS correlates the two requests with each other through a session identifier. At the same time, in its default configuration, it stores all known session identifiers in an in-memory data structure. It is therefore important that a particular `/SESSION_ID/xhr_send` request is sent to the same process where the corresponding `/SESSION_ID/xhr_stream` request originates from; otherwise, SockJS cannot correlate the two requests, and an error occurs.
-
-So prominent examples where sticky sessions should (or even *must*) be enabled, include:
-
- * Applications that use the SockJS library (unless configured with a distributed data store)
- * Applications that use the Socket.io library (unless configured with a distributed data store)
- * Applications that use the faye-websocket gem (unless configured with a distributed data store)
- * Meteor JS applications (because Meteor uses SockJS)
-
-Sticky sessions work through the use of a special cookie, whose name can be customized with <<PassengerStickySessionsCookieName,PassengerStickySessionsCookieName>>. Phusion Passenger puts an identifier in this cookie, which tells Phusion Passenger what the originating process is. Next time the client sends a request, Phusion Passenger reads this cookie and uses the value in the cookie to route the request back to the originating process. If the originating process no longer exists (e.g. because it has crashed or restarted) then Phusion Passenger will route the request to some other process, and reset the cookie.
-
-If you have a load balancer in front end of Phusion Passenger + Apache, then you must configure sticky sessions on that load balancer too. Otherwise, the load balancer could route the request to a different server.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is `off`.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerstickysessions
 
 [[PassengerStickySessionsCookieName]]
 ==== PassengerStickySessionsCookieName
-:version: 4.0.45
-include::users_guide_snippets/since_version.txt[]
 
-Sets the name of the <<PassengerStickySessions,sticky sessions>> cookie.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess'.
-
-In each place, it may be specified at most once. The default value is `passenger_route`.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerstickysessionscookiename
 
 
 === Compatibility options ===
 
 [[PassengerResolveSymlinksInDocumentRoot]]
 ==== PassengerResolveSymlinksInDocumentRoot <on|off> ====
-Configures whether Phusion Passenger should resolve symlinks in the document root.
-Please refer to <<application_detection,How Phusion Passenger detects whether a
-virtual host is a web application>> for more information.
 
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. It is off by default.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerresolvesymlinksindocumentroot
 
 ==== PassengerAllowEncodedSlashes <on|off> ====
-By default, Apache doesn't support URLs with encoded slashes (%2f), e.g. URLs like
-this: `/users/fujikura%2fyuu`. If you access such an URL then Apache will return a
-404 Not Found error. This can be solved by turning on PassengerAllowEncodedSlashes
-as well as Apache's
-link:http://httpd.apache.org/docs/2.0/mod/core.html#allowencodedslashes[AllowEncodedSlashes].
 
-Is it important that you turn on both AllowEncodedSlashes *and* PassengerAllowEncodedSlashes,
-otherwise this feature will not work properly.
-
-PassengerAllowEncodedSlashes may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. It is off by default.
-
-Please note however that turning on support for encoded slashes will break support for
-mod_rewrite passthrough rules. Because of bugs/limitations in Apache, Phusion Passenger
-can support either encoded slashes or mod_rewrite passthrough rules, but not both at the
-same time. Luckily this option can be specified anywhere, so you can enable it only for
-virtual hosts or URLs that need it:
-
-----------------------------------
-<VirtualHost *:80>
-    ServerName www.example.com
-    DocumentRoot /webapps/example/public
-    AllowEncodedSlashes on
-    RewriteEngine on
-    
-    # Check for maintenance file and redirect all requests
-    RewriteCond %{DOCUMENT_ROOT}/system/maintenance.html -f
-    RewriteCond %{SCRIPT_FILENAME} !maintenance.html
-    RewriteRule ^.*$ /system/maintenance.html [L]
-    
-    # Make /about an alias for /info/about.
-    RewriteRule ^/about$ /info/about [PT,L]
-    
-    <Location ~ "^/users/">
-        # In a location block so that it doesn't interfere with the
-        # above /about mod_rewrite rule.
-        PassengerAllowEncodedSlashes on
-    </Location>
-</VirtualHost>
-----------------------------------
-
-With this, http://www.example.com/users/fujikura%2fyuu will work properly, and
-accessing http://www.example.com/about will properly display the result of
-http://www.example.com/info/about. Notice that PassengerAllowEncodedSlashes only
-interferes with passthrough rules, not with any other mod_rewrite rules. The rules for
-displaying maintenance.html will work fine even for URLs starting with "/users".
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerallowencodedslashes
 
 
 === Logging and debugging options ===
 
 [[PassengerLogLevel]]
 ==== PassengerLogLevel <integer> ====
-This option allows one to specify how much information Phusion Passenger should
-write to the Apache error log file. A higher log level value means that more
-information will be logged.
 
-Possible values are:
-
-- '0' (crit): Show only critical errors which would cause Phusion Passenger to abort.
-- '1' (error): Also show non-critical errors -- errors that do not cause Phusion Passenger to abort.
-- '2' (warn): Also show warnings. These are not errors, and Phusion Passenger continues to operate correctly, but they might be an indication that something is wrong with the system.
-- '3' (notice): Also show important informational messages. These give you a high-level overview of what Phusion Passenger is doing.
-- '4' (info): Also show less important informational messages. These messages show more details about what Phusion Passenger is doing. They're high-level enough to be readable by users.
-- '5' (debug): Also show the most important debugging information. Reading this information requires some system or programming knowledge, but the information shown is typically high-level enough to be understood by experienced system administrators.
-- '6' (debug2): Show more debugging information. This is typically only useful for developers.
-- '7' (debug3): Show even more debugging information.
-
-This option may only occur once, in the global server configuration. The default is '3'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerloglevel
 
 [[PassengerLogFile]]
 ==== PassengerLogFile <filename> ====
-:version: 5.0.5
-include::users_guide_snippets/since_version.txt[]
 
-By default Phusion Passenger log messages are written to the global web server error log. With this option, you can have those messages logged to a different file instead.
-
-This option may only occur once, in the global server configuration.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerlogfile
 
 ==== PassengerFileDescriptorLogFile <filename>
-:version: 5.0.5
-include::users_guide_snippets/since_version.txt[]
 
-Log file descriptor debug tracing messages to the given file.
-
-Phusion Passenger has the ability to log all file descriptors that it opens and closes. These logs are useful to the Phusion Passenger developers for the purpose of analyzing file descriptor leaks.
-
-File descriptor activity is logged as follows:
-
- * If `PassengerFileDescriptorLogFile` is not set, then file descriptor activity is logged to the <<PassengerLogFile,main log file>>, but only if the <<PassengerLogLevel,log level>> is 5 (debug) or higher.
- * If `PassengerFileDescriptorLogFile` is set, then file descriptor activity is logged to the specified file, regardless of the log level.
-
-This option may only occur once, in the global server configuration.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerfiledescriptorlogfile
 
 ==== PassengerDebugger <on|off> ====
-:version: 3.0.0
-include::users_guide_snippets/enterprise_only.txt[]
 
-Turns support for application debugging on or off. In case of Ruby applications,
-turning this option on will cause them to load the `ruby-debug` gem (when on Ruby 1.8),
-the `debugger` gem (when on Ruby 1.9) or the `byebug` gem (when on Ruby 2.0). If you're
-using Bundler, you should add this to your Gemfile:
-
--------------------------------------------
-gem 'ruby-debug', :platforms => :ruby_18
-gem 'debugger', :platforms => :ruby_19
-gem 'byebug', :platforms => :ruby_20
--------------------------------------------
-
-Once debugging is turned on, you can use the command `passenger-irb --debug <PID>` to attach an rdebug console to the application process with the given PID. Attaching will succeed once the application process executes a `debugger` command.
-
-This option may occur in the following places:
-
- * In the global server configuration.
- * In a virtual host configuration block.
- * In a `<Directory>` or `<Location>` block.
- * In '.htaccess', if `AllowOverride Options` is on.
-
-In each place, it may be specified at most once. The default value is 'off'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerdebugger
 
 === Advanced options
 
 [[PassengerInstanceRegistryDir]]
 ==== PassengerInstanceRegistryDir <directory>
-:version: 5.0.0
-include::users_guide_snippets/since_version.txt[]
 
-Specifies the directory that Phusion Passenger should use for registering its current instance.
-
-When Phusion Passenger starts up, it creates a temporary directory inside the 'instance registry directory'. This temporary directory is called the 'instance directory'. It contains all sorts of files that are important to that specific running Phusion Passenger instance, such as Unix domain socket files so that all the different Phusion Passenger processes can communicate with each other. Command line tools such as `passenger-status` use the files in this directory in order to query Phusion Passenger's status.
-
-It is therefore important that, while Phusion Passenger is working, the instance directory is never removed or tampered with. However, the default path for the instance registry directory is the system's temporary directory, and some systems may run background jobs that periodically clean this directory. If this happens, and the files inside the instance directory are removed, then it will cause Phusion Passenger to malfunction: Phusion Passenger won't be able to communicate with its own processes, and you will see all kinds of connection errors in the log files. This malfunction can only be recovered from by restarting Apache. You can prevent such cleaning background jobs from interfering by setting this option to a different directory.
-
-This option is also useful if Apache is not allowed to write to the system's temporary directory (which is the case on some systems with strict SELinux policies) or if the partition that the temporary directory lives on doesn't have enough disk space.
-
-The instance directory is automatically removed when Apache shuts down.
-
-This option may be specified once, in the global server configuration. The default value is as follows:
-
- * If you are on Red Hat and CentOS, and installed Passenger through the RPMs provided by Phusion, then the default value is `/var/run/passenger-instreg`.
- * Otherwise, the default value is the value of the `$TMPDIR` environment variable. Or, if `$TMPDIR` is not set, `/tmp`.
-
-.Note regarding command line tools
-Some Phusion Passenger command line administration tools, such as `passenger-status`, must know what Phusion Passenger's instance registry directory is in order to function properly. You can pass the directory through the `PASSENGER_INSTANCE_REGISTRY_DIR` or the `TMPDIR` environment variable.
-
-For example, if you set 'PassengerInstanceRegistryDir' to '/my_temp_dir', then invoke `passenger-status` after you've set the `PASSENGER_INSTANCE_REGISTRY_DIR`, like this:
-
-----------------------------------------------------------
-export PASSENGER_INSTANCE_REGISTRY_DIR=/my_temp-dir
-sudo -E passenger-status
-----------------------------------------------------------
-
-Notes regarding the above example:
-
- * The -E option tells 'sudo' to preserve environment variables.
- * If Phusion Passenger is installed through an RVM Ruby, then you must use `rvmsudo` instead of `sudo`.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerinstanceregistrydir
 
 [[PassengerDataBufferDir]]
 ==== PassengerDataBufferDir <directory>
-:version: 5.0.0
-include::users_guide_snippets/since_version.txt[]
 
-By default, Phusion Passenger buffers the following things to disk:
-
- * Large HTTP client request bodies. This prevents slow HTTP clients from blocking web applications by sending request bodies very slowly. Read <<PassengerBufferUpload,PassengerBufferUpload>> to learn more.
- * Large web application responses. This prevents slow HTTP clients from blocking web applications by reading responses very slowly. This feature is also known as 'real-time disk-backed response buffering'.
-
-By default, such buffers are stored in the directory given by the `$TMPDIR` environment variable, or (if `$TMPDIR` is not set) the `/tmp` directory. This configuration directive allows you to specify a different directory.
-
-Changing this option is especially useful in the following cases:
-
- * If Apache is not allowed to write to the system's temporary directory. This is the case on some systems with strict SELinux policies.
- * If the partition that the default directory lives on doesn't have enough disk space.
-
-If you've specified such a directory (as opposed to using Phusion Passenger's default) then you *must* ensure that this directory exists.
-
-You can disable client request body buffering by turning <<PassengerBufferUpload,PassengerBufferUpload>> off. It is not possible to turn off real-time disk-backed response buffering.
-
-This option may be specified once, in the global server configuration.
-
-:option: `--data-buffer-dir`
-include::users_guide_snippets/alternative_for_flying_passenger.txt[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerdatabufferdir
 
 === Deprecated or removed options ===
 
-The following options have been deprecated or removed. Some are still supported for backwards compatibility reasons.
-
 ==== RailsRuby ====
-Deprecated in favor of <<PassengerRuby,PassengerRuby>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsruby
 
 ==== RailsBaseURI and RackBaseURI ====
-Deprecated in favor of <<PassengerBaseURI,PassengerBaseURI>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsbaseuri-rackbaseuri
 
 ==== RailsUserSwitching ====
-Deprecated in favor of <<PassengerUserSwitching,PassengerUserSwitching>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsuserswitching
 
 ==== RailsDefaultUser ====
-Deprecated in favor of <<PassengerDefaultUser,PassengerDefaultUser>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsdefaultuser
 
 ==== RailsAllowModRewrite ====
-This option doesn't do anything anymore in recent versions of Phusion Passenger.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsallowmodrewrite
 
 ==== RailsSpawnMethod ====
-Deprecated in favor of <<PassengerSpawnMethod,PassengerSpawnMethod>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsspawnmethod
 
 ==== RailsAutoDetect, RackAutoDetect and WsgiAutoDetect ====
-These options have been removed in version 4.0.0 as part of an optimization. You should use <<PassengerEnabled,PassengerEnabled>> instead.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsautodetect-rackautodetect-and-wsgiautodetect
 
 ==== RailsAppSpawnerIdleTime ====
-This option has been removed in version 4.0.0, and replaced with <<PassengerMaxPreloaderIdleTime,PassengerMaxPreloaderIdleTime>>.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsappspawneridletime
 
 ==== RailsFrameworkSpawnerIdleTime ====
-This option is no longer available in version 4.0.0. There is no alternative because framework spawning has been removed altogether. You should use smart spawning instead.
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#railsframeworkspawneridletime
 
 ==== PassengerDebugLogFile ====
-This option has been renamed in version 5.0.5 to <<PassengerLogFile,PassengerLogFile>>.
 
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerdebuglogfile
 
 
 [[troubleshooting]]
@@ -2239,104 +425,24 @@ include::users_guide_snippets/troubleshooting/default.txt[]
 
 === OS X: The installer cannot locate MAMP's Apache
 
-**Symptoms**::
-	The installer finds Apache 2 development headers at `/Applications/MAMP/Library/bin/apxs`. However, Apache cannot be found. The installer also outputs the following error:
-+
-------------------------------------
-cannot open /Applications/MAMP/Library/build/config_vars.mk:
-No such file or directory at /Applications/MAMP/Library/bin/apxs line 218.
-------------------------------------
-
-**Cause**::
-	Your MAMP installation seems to be broken. In particular, 'config_vars.mk' is missing.
-
-**Solution**::
-	Please read link:http://forum.mamp.info/viewtopic.php?t=1866[this forum topic] to learn how to fix this problem. See also link:http://code.google.com/p/phusion-passenger/issues/detail?id=12[this bug report].
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=os-x-the-installer-cannot-locate-mamp-s-apache
 
 === Apache reports a "403 Forbidden" error
 
-See next subsection.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=static-assets-such-as-images-and-stylesheets-aren-t-being-displayed
 
 === Static assets such as images and stylesheets aren't being displayed
 
-Static assets are accelerated, i.e. they are served directly by Apache and do not
-go through the Rails stack. There are two reasons why Apache doesn't serve static
-assets correctly:
-
-1. Your Apache configuration is too strict, and does not allow HTTP clients to
-   access static assets. This can be achieved with an `Allow from all` directive
-   in the correct place. For example:
-+
------------------------------------------
-<Directory "/webapps/mycook/public">
-   Options FollowSymLinks
-   AllowOverride None
-   Order allow,deny
-   Allow from all
-   Options -MultiViews
-   # Uncomment this if you're on Apache >= 2.4:
-   #Require all granted
-</Directory>
------------------------------------------
-+
-See also link:http://groups.google.com/group/phusion-passenger/browse_thread/thread/9699a639a87f85f4/b9d71a03bf2670a5[this discussion].
-
-2. The Apache process doesn't have permission to access your Rails application's folder.
-   Please make sure that the Rails application's folder, as well as all of its parent folders,
-   have the correct permissions and/or ownerships.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=static-assets-such-as-images-and-stylesheets-aren-t-being-displayed
 
 [[apache_selinux_permissions]]
 === Apache cannot access my app's files because of SELinux errors
 
-On Red Hat Enterprise Linux and CentOS, Apache is locked down by a security mechanism called SELinux. This security mechanism works on top of normal Unix permissions. In order for Apache to be able to access your app's files, you must set the proper SELinux labels on your files.
-
-First, ensure that your app does not live in a home directory. It is not possible to allow Apache to read files from your home directory.
-
-Second, give your app's files the `httpd_sys_content_t` labels by running the following command:
-
-------------------------------------------------------------------
-sudo chcon -R -h -t httpd_sys_content_t /path-to-your-app
-------------------------------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=apache-cannot-access-my-app-s-files-because-of-selinux-errors
 
 === The application thinks its not on SSL even though it is
 
-Rails and many other frameworks infers whether it's running on SSL through the CGI
-environment variable `HTTPS`. Apache always sets this variable when on SSL,
-except when SSL is incorrectly configured.
-
-Most Apache installations already configure SSL by default on port 443
-(conf/extra/httpd-ssl.conf). Some people think they can save some typing in
-subsequent SSL vhost blocks, and omit important options like 'SSLEngine on',
-like this:
-
---------------------------------------
-# httpd-ssl.conf contains something like:
-# <VirtualHost _default_:443>
-#     SSLEngine on
-#     ...
-# </VirtualHost>
-Include conf/extra/httpd-ssl.conf
-
-<VirtualHost *:443>
-    ServerName www.example.com
-    DocumentRoot /webapps/example/public
-</Virtualhost>
---------------------------------------
-
-*This is wrong!* In each SSL vhost block you must re-specify all the SSL options.
-Otherwise Apache won't properly detect the vhost as an SSL vhost block. Here's
-the corrected example:
-
---------------------------------------
-Include conf/extra/httpd-ssl.conf
-
-<VirtualHost *:443>
-    ServerName www.example.com
-    DocumentRoot /webapps/example/public
-    SSLEngine on
-    ...more SSL options here...
-</Virtualhost>
---------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=the-application-thinks-its-not-on-ssl-even-though-it-is
 
 
 include::users_guide_snippets/troubleshooting/rails.txt[]
@@ -2346,16 +452,15 @@ include::users_guide_snippets/troubleshooting/rails.txt[]
 
 ==== mod_userdir ====
 
-'mod_userdir' is not compatible with Phusion Passenger at the moment.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=conflicting-apache-modules
 
 ==== MultiViews (mod_negotiation) ====
 
-MultiViews is not compatible with Phusion Passenger. You should disable MultiViews
-for all Phusion Passenger hosts.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=conflicting-apache-modules
 
 ==== VirtualDocumentRoot ====
 
-VirtualDocumentRoot is not compatible with Phusion Passenger at the moment.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=conflicting-apache-modules
 
 
 == Analysis and system maintenance ==
@@ -2409,47 +514,8 @@ them.
 
 [[application_detection]]
 === How Phusion Passenger detects whether a virtual host is a web application ===
-After you've read the deployment instructions you might wonder how Phusion Passenger
-knows that the DocumentRoot points to a web application that Phusion Passenger is
-able to serve, and how it knows what kind of web application it is (e.g. Rails or Rack).
 
-Phusion Passenger checks whether the virtual host is a Rails application by checking
-whether the following file exists:
-
-------------------------------------------------
-dirname(DocumentRoot) + "/config/environment.rb"
-------------------------------------------------
-
-If you're not a programmer and don't understand the above pseudo-code snippet, it means
-that Phusion Passenger will:
-
-1. Extract the parent directory filename from the value of the DocumentRoot directory.
-2. Append the text "/config/environment.rb" to the result, and check whether the resulting
-   filename exists.
-
-So suppose that your document root is '/webapps/foo/public'. Phusion Passenger will check
-whether the file '/webapps/foo/config/environment.rb' exists.
-
-Note that Phusion Passenger does *not* resolve any symlinks in the document root path by
-default since version 2.2.0 -- in contrast to versions earlier than 2.2.0, which do resolve
-symlinks.
-So for example, suppose that your DocumentRoot points to '/home/www/example.com', which in
-turn is a symlink to '/webapps/example.com/public'. In versions earlier than 2.2.0, Phusion
-Passenger will check whether '/webapps/example.com/config/environment.rb' exists because it
-resolves all symlinks. Phusion Passenger 2.2.0 and later however will check for
-'/home/www/config/environment.rb'. This file of course doesn't exist, and as a result Phusion
-Passenger will not activate itself for this virtual host, and you'll most likely see an Apache
-mod_dirindex directory listing.
-
-If you need the old symlink-resolving behavior for whatever reason, then you can turn on
-<<PassengerResolveSymlinksInDocumentRoot,PassengerResolveSymlinksInDocumentRoot>>.
-
-Another way to solve this situation is to explicitly tell Phusion Passenger what the
-correct application root is through the <<PassengerAppRoot,PassengerAppRoot>> configuration
-directive.
-
-Autodetection of Rack applications happens through the same mechanism, exception that
-Phusion Passenger will look for 'config.ru' instead of 'config/environment.rb'.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/app_autodetection/apache/
 
 
 include::users_guide_snippets/appendix_a_about.txt[]

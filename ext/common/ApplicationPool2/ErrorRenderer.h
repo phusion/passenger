@@ -104,9 +104,6 @@ public:
 		StringMap<StaticString> params;
 
 		params.set("PROGRAM_NAME", PROGRAM_NAME);
-		params.set("NGINX_DOC_URL", NGINX_DOC_URL);
-		params.set("APACHE2_DOC_URL", APACHE2_DOC_URL);
-		params.set("STANDALONE_DOC_URL", STANDALONE_DOC_URL);
 
 		return Template::apply(readAll(templateFile), params);
 	}

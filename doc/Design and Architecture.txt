@@ -243,7 +243,7 @@ The Spawner subsystem is a sub-subsystem within ApplicationPool. It is responsib
 
 The `Spawner` interface encapsulates all low-level process spawning logic. Pool calls Spawner whenever it needs to spawn another application process.
 
-Recall that Phusion Passenger supports multiple spawn methods. For example, the `smart` spawn method spawns processes through an intermediate preloader process, and can utilize copy-on-write. This is explained in detail in link:Users%20guide%20Nginx.html#spawning_methods_explained[Spawn methods explained] in the Phusion Passenger manual. Each spawn method corresponds to a different implementation of the Spawner interface. The following implementations are available:
+Recall that Phusion Passenger supports multiple spawn methods. For example, the `smart` spawn method spawns processes through an intermediate preloader process, and can utilize copy-on-write. This is explained in detail in link:https://www.phusionpassenger.com/library/indepth/spawn_methods/[Spawn methods explained] in the Phusion Passenger manual. Each spawn method corresponds to a different implementation of the Spawner interface. The following implementations are available:
 
  * DirectSpawner -- implements the `direct` spawn method.
  * SmartSpawner -- implements the `smart` spawn method.
@@ -268,7 +268,7 @@ image:images/spawning_preparation_work.png[Spawning preparation work]
 [[basic_setup_and_forking]]
 ==== Basic setup and forking
 
-Spawning begins when the `spawn()` method is called on a <<spawner_subsystem,Spawner object>>. The Spawner determines link:Users%20guide%20Nginx.html#user_switching[which user the process should run as], and sets up some communication channels (anonymous Unix domain socket pairs), and forks a process. The parent waits until the child exits, or replies with something over the communication channel.
+Spawning begins when the `spawn()` method is called on a <<spawner_subsystem,Spawner object>>. The Spawner determines link:https://www.phusionpassenger.com/library/deploy/nginx/user_sandboxing.html[which user the process should run as], and sets up some communication channels (anonymous Unix domain socket pairs), and forks a process. The parent waits until the child exits, or replies with something over the communication channel.
 
 The communication channel in question is -- from the viewpoint of the (pre)loader -- actually just stdin, stdout and stderr! The anonymous Unix domain socket pairs that the Spawner creates, is mapped to the child process's stdin, stdout and stderr file descriptors. Thus, Spawner sends data to the (pre)loader by writing stuff to its stdin, and the (pre)loader sends data back to the Spawner by writing stuff to stdout or stderr.
 
@@ -287,7 +287,7 @@ To execute the SpawnPreparer, the child process executes one of the following co
 +
 `bash -l -c '/path-to/SpawnPreparer /path-to-loader-or-preloader'`
 +
-This causes bash to load its startup files, e.g. bashrc, profile, etc, after which it executes the SpawnPreparer with the given parameters. The reason why we do this is because a lot of users try to set environment variables in their bashrc, and they expect these environment variables to be picked up by applications spawned by Phusion Passenger. Unfortunately environment variables link:Users%20guide%20Nginx.html#about_environment_variables[don't work that way], but we support it anyway because it is good for usability.
+This causes bash to load its startup files, e.g. bashrc, profile, etc, after which it executes the SpawnPreparer with the given parameters. The reason why we do this is because a lot of users try to set environment variables in their bashrc, and they expect these environment variables to be picked up by applications spawned by Phusion Passenger. Unfortunately environment variables link:https://www.phusionpassenger.com/library/indepth/environment_variables.html[don't work that way], but we support it anyway because it is good for usability.
 
   * Otherwise, the SpawnPreparer is executed directly, without bash:
 +
@@ -441,7 +441,7 @@ While the Spawner is still doing its work, it takes care of this forwarding by i
 [[preloaders]]
 === Preloaders
 
-Preloaders are a special kind of loaders, used for reducing spawn time and leveraging copy-on-write. You can learn more about this at link:Users%20guide%20Nginx.html#spawning_methods_explained[Spawning methods explained].
+Preloaders are a special kind of loaders, used for reducing spawn time and leveraging copy-on-write. You can learn more about this at link:https://www.phusionpassenger.com/library/indepth/spawn_methods/[Spawning methods explained].
 
 Preloaders look a lot like loaders, but behave slightly differently. They also use stdin, stderr and stdout to communicate with the Spawner. The protocols are very similar.
 

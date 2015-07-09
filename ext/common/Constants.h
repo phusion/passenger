@@ -64,6 +64,8 @@
 
 	#define DEFAULT_HTTP_SERVER_LISTEN_ADDRESS "tcp://127.0.0.1:3000"
 
+	#define DEFAULT_INTEGRATION_MODE "standalone"
+
 	#define DEFAULT_LOG_LEVEL 3
 
 	#define DEFAULT_MAX_POOL_SIZE 6

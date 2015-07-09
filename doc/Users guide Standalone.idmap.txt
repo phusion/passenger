@@ -96,12 +96,6 @@
 
 7. Troubleshooting	=>	troubleshooting-o7g75o
 
-7.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-2vokcr
-
-7.2. Upon uploading a file, Phusion Passenger reports "client_body_temp/00000000xx failed (2: No such file or directory)"	=>	upon-uploading-a-file-phusion-passenger-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--d01goe
-
-7.3. I get "command not found" when running a Phusion Passenger command through sudo	=>	i-get-command-not-found-when-running-a-phusion-passenger-command-through-sudo-14k8kde
-
 8. Under the hood	=>	under-the-hood-ub7j3q
 
 8.1. Phusion Passenger and its relationship with Ruby	=>	phusion-passenger-and-its-relationship-with-ruby-1usvd0o
@@ -131,4 +125,13 @@
 9.3.5. Phusion Passenger-served apps	=>	phusion-passenger-served-apps-127wbl2
 
 9.4. Environment variables and sudo	=>	environment-variables-and-sudo-znzmif
+
+
+### These sections appear to have been removed. Please check.
+
+7.1. Generic troubleshooting tips	=>	generic-troubleshooting-tips-2vokcr
+
+7.2. Upon uploading a file, Phusion Passenger reports "client_body_temp/00000000xx failed (2: No such file or directory)"	=>	upon-uploading-a-file-phusion-passenger-reports-client-body-temp-00000000xx-failed-2-no-such-file-or-directory--d01goe
+
+7.3. I get "command not found" when running a Phusion Passenger command through sudo	=>	i-get-command-not-found-when-running-a-phusion-passenger-command-through-sudo-14k8kde
 

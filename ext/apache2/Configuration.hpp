@@ -75,8 +75,8 @@ struct DirConfig : GeneratedDirConfigPart {
 	const char *appRoot;
 
 	/** Whether symlinks in the document root path should be resolved.
-	 * The implication of this is documented in the users guide, section
-	 * "How Phusion Passenger detects whether a virtual host is a web application".
+	 * The implication of this is documented at
+	 * https://www.phusionpassenger.com/library/indepth/ruby/app_autodetection/apache/.
 	 */
 	Threeway resolveSymlinksInDocRoot;
 

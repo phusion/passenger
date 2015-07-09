@@ -1,190 +1,77 @@
 [[user_switching]]
 === User Switching (security feature) ===
 
-Phusion Passenger supports automatic 'user switching': by default, it attempts to run applications as the "right" user, instead of running all applications as the same user.
-
-To better understand the problem, let us consider the situation with PHP.
-There is a problem that plagues most PHP web hosts, namely the fact that all PHP
-applications are run in the same user context as the web server. So for
-example, Joe's PHP application will be able to read Jane's PHP application's
-passwords. This is obviously undesirable on many servers.
-
-Phusion Passenger's 'user switching' feature solves this problem. Applications are
-run as the owner of their "startup file". For Ruby apps, the startup file is
-`config.ru` (Rack and Rails >= 3) or `config/environment.rb` (Rails 1 and 2). For
-Python apps, the startup file is `passenger_wsgi.py`. So suppose that `config.ru`
-is owned by user 'joe', then Phusion Passenger will spawn the corresponding
-application as 'joe' as well. The exact rules are a little bit more complicated,
-and they're explained further down in this section.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/user_sandboxing.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/user_sandboxing.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/user_sandboxing.html
+endif::[]
 
 ==== Requirements
 
-User switching is only enabled when all of the following conditions are met:
-
-- When not using <<flying_passenger,Flying Passenger>> (this is probably the case):
-  * The
 ifdef::apache[]
-  <<PassengerUserSwitching,PassengerUserSwitching>>
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/user_sandboxing.html
 endif::[]
 ifdef::nginx[]
-  <<PassengerUserSwitching,passenger_user_switching>>
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/user_sandboxing.html
 endif::[]
-option must be enabled.
-  * The web server's control process must have root privileges. This is the case on most installations.
-- When using <<flying_passenger,Flying Passenger>>:
-  * The Flying Passenger daemon must be run with root privileges.
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/user_sandboxing.html
+endif::[]
 
 ==== Effects
 
-When not using Flying Passenger, the following table illustrates the effect for different combinations of the requirements.
-
-|==========================================================
 ifdef::apache[]
-|                                   | **PassengerUserSwitching on**   | **PassengerUserSwitching off**
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/user_sandboxing.html
 endif::[]
 ifdef::nginx[]
-|                                   | **passenger_user_switching on** | **passenger_user_switching off**
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/user_sandboxing.html
 endif::[]
-| **Web server has root privileges**
-  | User switching enabled.
-  | User switching disabled. Apps are run as
-ifdef::apache[]
-  <<PassengerDefaultUser,PassengerDefaultUser>> and
-  <<PassengerDefaultGroup,PassengerDefaultGroup>>.
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/user_sandboxing.html
 endif::[]
-ifdef::nginx[]
-  <<PassengerDefaultUser,passenger_default_user>> and
-  <<PassengerDefaultGroup,passenger_default_group>>.
-endif::[]
-| **Web server has no root privileges**
-  | User switching disabled. Apps are run as the web server's user.
-  | User switching disabled. Apps are run as the web server's user.
-|==========================================================
-
-When using Flying Passenger, the effect is as follows:
-
-|==========================================================
-| **Daemon run with root privileges** | User switching enabled.
-| **Daemon run without root privileges** | User switching disabled. Apps are run as the daemon's user.
-|==========================================================
-
-When user switching is enabled, the following rules are followed to determine what user an application should be run as. The first matching rule is the rule that will be followed.
-
-1. If
-ifdef::apache[]
-  <<PassengerUser,PassengerUser>> or
-  <<PassengerGroup,PassengerGroup>>
-endif::[]
-ifdef::nginx[]
-  <<PassengerUser,passenger_user>> or
-  <<PassengerGroup,passenger_group>>
-endif::[]
-are set, then the application will be run as the specified user/group. Thus, these options are a good way to override user switching settings.
-2. If the startup file is owned by root or an unknown user, then the application will run as the user specified by
-ifdef::apache[]
-  <<PassengerDefaultUser,PassengerDefaultUser>> and
-  <<PassengerDefaultGroup,PassengerDefaultGroup>>.
-endif::[]
-ifdef::nginx[]
-  <<PassengerDefaultUser,passenger_default_user>> and
-  <<PassengerDefaultGroup,passenger_default_group>>.
-endif::[]
-3. Otherwise, the application is run as the owner of the startup file.
 
 ==== Caveats & troubleshooting
 
-If your application regularly encounters permission errors or fails to find certain files, then this is an indication that your application is started as a user that you did not intent it to be run as. Other symptoms include:
-
-- The application fails to start because Bundler complains that it cannot find gems. This probably indicates that Bundler does not have read access to the directory that contains Bundler-installed gems.
-- The application fails to start and its error message mentions the path '/nonexistent'. This probably indicates that your application is started as the 'nobody' user. This is because on many systems, the 'nobody' user's home directory is '/nonexistent'.
-
-To check whether it is indeed the case that your application is started as a different user than you intended to, see <<finding_out_app_user,Finding out what user an application is running as>>.
-
-The most likely reason why your application is started as 'nobody' is probably because your startup file is owned by 'root', by 'nobody' or by an unknown user. To fix this, change the owner of the startup file to the owner that you want to run the application as.
-
-Whatever user your application runs as, it must have read access to the <<application_root,application root>>, and read/write access to the application's 'logs' directory.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/user_sandboxing.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/user_sandboxing.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/user_sandboxing.html
+endif::[]
 
 [[user_switching_rpm_caveats]]
 ==== Red Hat and CentOS caveats
 
-NOTE: This information only applies if you installed Passenger through the RPM packages provided by Phusion. If you did not installed Passenger through the RPM packages provided by Phusion, then you can ignore this section.
-
-If you installed Passenger through Phusion's RPM packages, and you want to disable user switching, then you must also change <<PassengerInstanceRegistryDir,the location of the instance registry directory>>.
-
-This is because our RPMs configure the default instance registry directory to `/var/run/passenger-instreg`, which is only writable by root. If you disable user switching, then the Passenger processes will run as
 ifdef::apache[]
-  <<PassengerDefaultUser,PassengerDefaultUser>>,
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/user_sandboxing.html
 endif::[]
 ifdef::nginx[]
-  <<PassengerDefaultUser,passenger_default_user>>,
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/user_sandboxing.html
 endif::[]
-which (as long as it's not root) won't be able to write to that directory.
-
-Note that any alternative instance registry directory must have the proper SELinux context, allowing the web server to read and write to it. We recommend that you create a directory `/var/lib/passenger-instreg` and give it the label `var_run_t`:
-
-------------------------------------------
-sudo mkdir /var/lib/passenger-instreg
-sudo chcon -t var_run_t /var/lib/passenger-instreg
-------------------------------------------
-
-ifdef::apache[]
-Then, in your Apache config file:
-
-------------------------------------------
-PassengerInstanceRegistryDir /var/lib/passenger-instreg
-------------------------------------------
-endif::[]
-ifdef::nginx[]
-Then, in your Nginx config file:
-
-------------------------------------------
-passenger_instance_registry_dir /var/lib/passenger-instreg;
-------------------------------------------
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/user_sandboxing.html
 endif::[]
 
 [[finding_out_app_user]]
 ==== Finding out what user an application is running as
 
-To find our what user an application is started as, first access its URL in your browser so that Phusion Passenger starts the application. For example:
-
-----------------------------------
-http://www.example.local/
-----------------------------------
-
-The application will now either successfully start or fail to start. If it fails to start then you will see an error page that tells you what user the application was being started as. If you do not see the error page in the browser then set
 ifdef::apache[]
-  <<PassengerFriendlyErrorPages,PassengerFriendlyErrorPages>>
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/user_sandboxing.html
 endif::[]
 ifdef::nginx[]
-  <<PassengerFriendlyErrorPages,passenger_friendly_error_pages>>
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/user_sandboxing.html
 endif::[]
-on.
-
-If the application successfully started, then run `passenger-status` to find the process's PID:
-
-------------------------------------------------
-.---------- General information -----------
-Max pool size : 6
-Processes     : 1
-Requests in top-level queue : 0
-
-.---------- Application groups -----------
-/webapps/example.local#default:
-  App root: /webapps/example.local
-  Requests in queue: 0
-  * PID: 16915   Sessions: 0       Processed: 1       Uptime: 2s
-    CPU: 0%      Memory  : 9M      Last used: 2s ago
-------------------------------------------------
-
-In the above example we see that the PID is 16915. Next, use 'ps' to find out the user that it is running as:
-
---------------------------------------------------
-# ps -o pid,user,comm -p 16915
-  PID USER    COMM
-16915 phusion Passenger RackApp: /webapps/example.local
---------------------------------------------------
-
-As you can see, the application in this example is being run as user 'phusion'.
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/standalone/user_sandboxing.html
+endif::[]
 
 
 [[reducing_memory_usage]]
@@ -198,71 +85,25 @@ Phusion Passenger automatically leverages operating system virtual memory copy-o
 [[tuning_sse_websockets]]
 === Tuning for Server Sent Events and WebSockets ===
 
-Phusion Passenger supports Server Sent Events (SSE) and WebSockets out of the box with no configuration, but there are some things you need to know.
-
-First, WebSockets are link:https://github.com/phusion/passenger/issues/1202[not yet supported when using the Apache integration mode].
-
-Second, for Ruby apps only, you need to insert a configuration snippet inside your `config.ru`:
-
-[code,ruby]
-----------------------------------------------------------
-if defined?(PhusionPassenger)
-  PhusionPassenger.advertised_concurrency_level = 0
-end
-----------------------------------------------------------
-
-[NOTE]
-==========================================================
-This snippet tells Passenger that your Ruby app will handle SSE and WebSockets. In response, Passenger will adjust the connection concurrency settings for your app. Without this configuration snippet, SSE and WebSockets still work, but with degraded performance.
-
-This configuration snippet is currently necessary because of the way Passenger is implemented. We are link:https://github.com/phusion/passenger/issues/1195[working on improving this mechanism]. One day, the above configuration snippet will no longer be necessary. For now, you should include the above configuration snippet for optimal SSE and WebSocket performance.
-==========================================================
-
-Finally, you can find Passenger SSE and WebSocket demo apps on link:https://www.phusionpassenger.com/documentation_and_support[the Passenger documentation overview page], under section "Demos".
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/tuning_sse_and_websockets.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/nginx/tuning_sse_and_websockets.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/standalone/tuning_sse_and_websockets.html
+endif::[]
 
 [[bundler_support]]
 === Bundler support ===
 
-Phusion Passenger has automatic support for link:http://gembundler.com/git.html[Bundler].
-The support consists of loading your application under the environment defined by your
-Gemfile. In other words, Phusion Passenger loads your application as if 'bundle exec' was used.
-
-The Bundler support works as follows:
-
-- If you have a '.bundle/environment.rb' in your application root, then Phusion
-  Passenger will require that file before loading your application.
-- Otherwise, if you have a 'Gemfile', then Phusion Passenger will automatically call
-  `Bundler.setup()` before loading your application.
-
-It's possible that your application also calls `Bundler.setup` during loading, e.g. in
-'config.ru' or in 'config/boot.rb'. This is the case with Rails 3, and is also the case if you
-modified your 'config/boot.rb' according to the
-link:http://gembundler.com/rails23.html[Bundler Rails 2.3 instructions].
-This leads to `Bundler.setup` being called twice, once before the application startup file
-is required and once during application startup. However this is harmless and doesn't
-have any negative effects.
-
-Phusion Passenger assumes that you're using Bundler >= 0.9.5. If you don't want Phusion
-Passenger to run its Bundler support code, e.g. because you need to use an older version
-of Bundler with an incompatible API or because you use a system other than Bundler, then
-you can override Phusion Passenger's Bundler support code by creating an empty file
-'config/setup_load_paths.rb'. If this file exists then it will be required before loading
-the application startup file. In this file you can do whatever you need to setup Bundler
-or a similar system.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/ruby/bundler.html
 
 [[add_passenger_to_gemfile]]
 ==== Does Phusion Passenger itself need to be added to the Gemfile?
 
-It is never necessary to add Phusion Passenger to the application's Gemfile. In case of Phusion Passenger Standalone, it is not necessary to execute the `passenger` command through `bundle exec`. The reason for this is because Phusion Passenger automatically loads the Gemfile environment. Most other Ruby application servers do not automatically load the Gemfile environment, which is why they must be added to the Gemfile and be executed with `bundle exec`.
-
-Even when your application uses any of the Phusion Passenger APIs, you still do not need to add Phusion Passenger to the Gemfile. The only thing you need to do is to put Phusion Passenger API calls inside `if` blocks that check whether Phusion Passenger is active, by checking whether the `PhusionPassenger` namespace is defined:
-
-[code,ruby]
-------------------------------------
-if defined?(PhusionPassenger)
-    ...
-end
-------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/ruby/bundler.html#does-passenger-itself-need-to-be-added-to-the-gemfile
 
 === Installing multiple Ruby on Rails versions ===
 
@@ -342,562 +183,120 @@ link:http://api.rubyonrails.org/classes/ActionView/Helpers/AssetTagHelper.html[t
 
 === Out-of-Band Work and Out-of-Band Garbage Collection
 
-**Available since Phusion Passenger 4.0.0.**
-
-**At this time, this feature is only available on Ruby.**
-
-The Out-of-Band Work feature allows you to run arbitrary long-running tasks outside normal request cycles. This works by letting current requests to the process finish, then telling the process to perform the out-of-band work, then resuming passing requests to the process after said work is finished.
-
-A specific (and perhaps primary) use case of of Out-of-Band Work is *Out-of-Band Garbage Collection*. The garbage collector is run outside normal request cycles so that garbage collection runs inside normal request cycles can finish a lot faster. This can potentially save tens to hundreds of milliseconds of latency in requests.
-
-Because Out-of-Band Work is implemented at the Phusion Passenger inter-process request routing level, and not by, say, spawning a thread inside the application process, Out-of-Band Work has the following useful properties:
-
-- It works well even with tasks that can pause all threads. The MRI Ruby garbage collector is a stop-the-world mark-and-sweep garbage collector.
-- Phusion Passenger can spawn more processes as necessary, in order to prevent situations in which all application processes are busy performing out-of-band work. Phusion Passenger guarantees that there's at least one process that's ready to process requests.
-- Phusion Passenger guarantees that no more than 1 process is performing out-of-band work at the same time.
-
-Applications can use Out-of-Band Work as follows:
-
-1. Ensure that
-ifdef::apache[]
-<<PassengerMaxPoolSize,PassengerMaxPoolSize>>
-and
-<<PassengerMinInstances,PassengerMinInstances>>
-endif::[]
-ifdef::nginx[]
-<<PassengerMaxPoolSize,passenger_max_pool_size>>
-and
-<<PassengerMinInstances,passenger_min_instances>>
-endif::[]
-are both larger than 1. Out-of-band work only works if there are at least 2 application processes.
-2. Request out-of-band work by outputting the `!~Request-OOB-Work` header during a request. It does not matter what the value is. At this time, it is not possible to request out-of-band work from outside requests.
-3. You can actually perform out-of-band work when you receive a `:oob_work` Phusion Passenger event.
-
-Note that even though you can request out-of-band work, there's no guarantee that Phusion Passenger will send an `oob_work` event in a timely manner, if at all. It is also possible that Phusion Passenger sends an `oob_work` event without you ever having requested one. This latter could for example happen if the OOB work is administrator-initiated. Do not make any assumptions in your code.
-
-Here's an example which implements out-of-band garbage collection using the Out-of-Band framework. This example code doesn't do anything when the code is not being run in Phusion Passenger, thanks to the `if` block.
-
-[source, ruby]
--------------------------------------------------
-# Somewhere in a controller method:
-# Tell Phusion Passenger we want to perform OOB work.
-response.headers["!~Request-OOB-Work"] = "true"
-
-# Somewhere during application initialization:
-if defined?(PhusionPassenger)
-    PhusionPassenger.on_event(:oob_work) do
-        # Phusion Passenger has told us that we're ready to perform OOB work.
-        t0 = Time.now
-        GC.start
-        Rails.logger.info "Out-Of-Bound GC finished in #{Time.now - t0} sec"
-    end
-end
--------------------------------------------------
-
-For your convenience, Phusion Passenger provides a Rack middleware for out-of-band garbage collection. Add the following to your `config.ru`. Likewise, this example code doesn't do anything when the code is not being run in Phusion Passenger, thanks to the `if` block.
-
-[source, ruby]
-----------------------------------------------------
-if defined?(PhusionPassenger)
-    PhusionPassenger.require_passenger_lib 'rack/out_of_band_gc'
-    
-    # Trigger out-of-band GC every 5 requests.
-    use PhusionPassenger::Rack::OutOfBandGc, 5
-end
-----------------------------------------------------
-
-It should be noted that, although the application uses the Phusion Passenger API, it is <<add_passenger_to_gemfile,*not* necessary to add Phusion Passenger to the Gemfile>>.
-
-References:
-
-- link:http://blog.phusion.nl/2013/01/22/phusion-passenger-4-technology-preview-out-of-band-work/[The Phusion Blog article which first introduced this feature.]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/ruby/out_of_band_work.html
 
 === Hooks
 
-:version: 4.0.28
-include::since_version.txt[]
-
-Phusion Passenger provides a powerful but simple hooking system, which allows you to extend many aspects of Phusion Passenger's behavior. The hooking system works by executing commands during certain events. Event parameters are passed to the command in the form of environment variables.
-
-ifdef::apache[]
-You can define hooks by setting the configuration option `PassengerCtl hook_<HOOK NAME> <COMMAND TO EXECUTE>`.
-endif::apache[]
-ifdef::nginx[]
-You can define hooks by setting the configuration option `passenger_ctl hook_<HOOK NAME> <COMMAND TO EXECUTE>;`.
-endif::nginx[]
-ifdef::standalone[]
-You can define hooks by <<advanced_configuration,editing the advanced configuration file>>, and adding the configuration option `passenger_ctl hook_<HOOK NAME> <COMMAND TO EXECUTE>;`.
-endif::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/hooks.html
 
 ==== Example
 
-The hook system is best demonstrated with a simple example. In the following example we will hook into the `attached_process` event. This event is called whenever Phusion Passenger has successfully spawned an application processes and added it to the process pool. We print the process's PID and application root.
-
-First, let's create a script `/home/phusion/attached.sh` which is to be called during the hook.
-
-[source,sh]
----------------------------------------------------
-#!/bin/sh
-echo "Attached process $PASSENGER_PROCESS_PID for app $PASSENGER_APP_ROOT."
----------------------------------------------------
-
-Then we make it executable:
-
----------------------------------------------------
-chmod +x /home/phusion/attached.sh
----------------------------------------------------
-
-And we define the hook in the configuration file:
-
-ifdef::apache[]
----------------------------------------------------
-PassengerCtl hook_attached_process /home/phusion/attached.sh
----------------------------------------------------
-endif::apache[]
-ifdef::nginx[]
----------------------------------------------------
-passenger_ctl hook_attached_process /home/phusion/attached.sh;
----------------------------------------------------
-endif::nginx[]
-ifdef::standalone[]
----------------------------------------------------
-passenger_ctl hook_attached_process /home/phusion/attached.sh;
----------------------------------------------------
-endif::standalone[]
-
-Now restart the web server and access a web app hosted by Phusion Passenger. You should see our message in the web server error log:
-
----------------------------------------------------
-[ 2013-12-10 16:12:21.6456 28934/0x1064cb000 Hooks.h:129 ]: Running attached_process hook script: /home/phusion/attached.sh
-Attached process 28303 for app /webapps/foobar.
-[ 2013-12-10 16:12:21.6580 28934/0x1064cb000 Hooks.h:161 ]: Hook script /home/phusion/attached.sh (PID 28948) exited with status 0
----------------------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/hooks.html#example
 
 ==== Environment
 
-A lot of information is passed to hook scripts in the form of environment variables. They are all uppercase and begin with `PASSENGER_`. Some environment variables are passed to all hook scripts, others are passed depending on the hook.
-
-Here are some of the environment variables which are passed to all hooks, unless documented otherwise:
-
- * `PASSENGER_HOOK_NAME`
- * `PASSENGER_VERSION`
- * `PASSENGER_PASSENGER_ROOT`
- * `PASSENGER_INSTANCE_DIR`
- * `PASSENGER_INSTANCE_REGISTRY_DIR`
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/hooks.html#environment
 
 ==== Blocking and concurrency
 
-Except when otherwise documented, all hooks block in the background. That is, while your hook command is running, Phusion Passenger can still handle web requests, but the background thread which is running your hook will be blocked and won't be able to perform any further operations. For example, if you wrote a hook script for the `attached_process` event, then Phusion Passenger won't be able to attach further processes until your hook script finishes. You should therefore be careful when writing hook scripts.
-
-If you have a bug in your script and it blocks, then you will be able to see that using the command `passenger-status --show=backtraces` which prints the backtraces of all threads in the Phusion Passenger core. Look for the `runSingleHookScript` function in the backtrace. The following example shows at line 2 that Phusion Passenger is waiting for the hook script `/home/phusion/badscript.sh`.
-
----------------------------------------------------------------------------------------------------
-Thread 'Group process spawner: /home/phusion/webapp.test#default' (0x1062d4000):
-     in 'bool Passenger::runSingleHookScript(Passenger::HookScriptOptions &, const string &, const vector<pair<string, string> > &)' (Hooks.h:116) -- /home/phusion/badscript.sh
-     in 'bool Passenger::runHookScripts(Passenger::HookScriptOptions &)' (Hooks.h:159)
-     in 'void Passenger::ApplicationPool2::Group::spawnThreadRealMain(const SpawnerPtr &, const Passenger::ApplicationPool2::Options &, unsigned int)' (Implementation.cpp:878)
----------------------------------------------------------------------------------------------------
-
-Hooks may be called concurrently, because Phusion Passenger sometimes uses multiple background threads. For example, while the `attached_process` hook is being called, a `detached_process` hook may be called, perhaps even for the same application. It is your responsibility to ensure that your hook scripts are concurrency-safe, e.g. by employing locks and other concurrency control techniques.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/hooks.html#blocking-and-concurrency
 
 ==== Error handling
 
-If a hook script fails -- that is, if it exits with anything other than exit code 0 -- then the error handling depends on the hook. Some hooks will abort, other hooks will ignore the error. In all cases, the result of the hook script is printed to the log.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/hooks.html#error-handling
 
 ==== Compatibility
 
-Because hooks are inherently tied to the implementation of Phusion Passenger, there is no guarantee that hooks that currently work will continue to be available in the future versions of Phusion Passenger. The availability of hooks is very much tied to the specific version of Phusion Passenger.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/hooks.html#compatibility
 
 ==== Available hooks
 
-`before_watchdog_initialization`::
-	Called at the very beginning of Phusion Passenger's life cycle, during the start of the Watchdog process. The first hook is called before initialization is performed (before the Passenger core is started). Errors in the hook script cause Phusion Passenger to abort.
-`after_watchdog_initialization`::
-	Like `before_watchdog_initialization`, but called after initialization of all Phusion Passenger agent processes. Errors in the hook script cause Phusion Passenger to abort.
-`before_watchdog_shutdown`::	
-	Called after an exit signal has been noticed (e.g. webserver exit), before the Watchdog starts terminating agents 
-`after_watchdog_shutdown`::
-	Called after the Watchdog is done and about to exit
-`attached_process`::
-	Called when Phusion Passenger has successfully spawned an application processes and added it to the process pool. Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
-`detached_process`::
-	Called when Phusion Passenger has removed an application process from the process pool. This could happen when:
-+
- - The process has crashed, and Phusion Passenger noticed it.
- - Phusion Passenger has shut down a process because it's been idle for too long.
- - The administrator configured different resource limits, and Phusion Passenger is starting or shutting down processes in response.
- - Phusion Passenger itself is shutting down.
-
-+
-Extra environment variables: `PASSENGER_PROCESS_PID`, `PASSENGER_APP_ROOT`. Errors in the hook script are ignored.
-
-`spawn_failed` (since 4.0.49)::
-	Called when an application process could not be spawned. This could happen when:
-+
-- The application failing to start. For example: bugs in the application, database problems causing the application to crash, incorrectly installed dependencies.
-- Operating system-level problems, such as running out of memory.
-- The application taking too long to start, and hitting Phusion Passenger's timeout.
-
-+
-`queue_full_error` (since 5.0.0 RC 1)::
-	The server rejects new requests (default: HTTP 503) while the request queue is full (https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html#passenger_max_request_queue_size). 
-	This hook gets called for each rejection.
-+
-Extra environment variables:
-+
-- `PASSENGER_APP_ROOT`: the path to the application that failed to spawn.
-- `PASSENGER_APP_GROUP_NAME`: the configured app group name.
-- `PASSENGER_ERROR_MESSAGE`: an error message that describes the problem.
-- `PASSENGER_ERROR_ID`: a unique ID for this error event. If you search for this ID in the web server error log files, you should be able to find details about the error.
-- `PASSENGER_APP_ERROR_MESSAGE`: output captured from the application at the time the error occurred.
-
-+
-This hook does not block because it's always run in an extra background thread. Errors in the hook script are ignored.
-
-`max_request_time_reached` (since 5.0.2, Enterprise-only)::
-	Called when a <<PassengerMaxRequestTime,max request time limit>> has been reached. Please note that as soon as this hook has finished executing, the application process will be killed with SIGKILL. So if you want to perform any diagnostics on the process in question (e.g. with strace, gdb, etc), please do not exit your hook script until you've obtained all the diagnostics you want.
-+
-Extra environment variables:
-+
-- `PASSENGER_APP_ID`: the PID of the process whose request took too long.
-- `PASSENGER_REQUEST_PATH`: the path of the request that took took long, e.g. "/photos/edit?id=123".
-- `PASSENGER_REQUEST_HOST`: the host name of the request that took too long, e.g. "www.example.com". This environment variable is not set if the request doesn't contain a Host header.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/hooks.html#available-hooks
 
 [[flying_passenger]]
 === Flying Passenger
+
 ifdef::apache[]
-:version: 4.0.45
-include::enterprise_only.txt[]
-endif::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/flying_passenger.html
+endif::[]
 ifdef::nginx[]
-:version: 4.0.6
-include::enterprise_only.txt[]
-endif::nginx[]
-
-Flying Passenger allows one to decouple Phusion Passenger's life time from the web server's life time, so that the web server can be independently restarted from Phusion Passenger, and from any of the application processes served by Phusion Passenger.
-
-Normally, Phusion Passenger starts together with the web server, and shuts down together with the web server. The advantages of this default behavior is that it makes Phusion Passenger easy to administer: one only has to deal with the web server process and can expect all relevant processes to be cleaned up after a web server shut down. However this also brings about a disadvantage: every time one restarts the web server (e.g. to make a minor configuration change), Phusion Passenger and all its application processes also get restarted.
-
-This problem is solved by 'Flying Passenger', which is an advanced mode of operation in Phusion Passenger that allows the web server to be indepedently restarted from Phusion Passenger. When this mode is enabled:
-
-- One must start Phusion Passenger separately from the web server, namely by starting the Flying Passenger daemon. This daemon must - to an extent - be separately configured and managed from the web server.
-- The web server must be configured to forward requests to the Flying Passenger daemon.
-- You should beware of the <<flying_passenger_caveats,caveats and limitations>>.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
 
 ==== Requirements
 
-Before you can use the Flying Passenger feature, you must have Phusion Passenger for
 ifdef::apache[]
-Apache
-endif::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/flying_passenger.html
+endif::[]
 ifdef::nginx[]
-Nginx
-endif::nginx[]
-properly installed.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
 
 ==== Basic usage
 
-Start the Flying Passenger daemon by invoking the `flying-passenger` command. The only required option is `--socket-file`. Depending on whether you wish to enable <<user_switching,User Switching>>, you have to start `flying-passenger` with root privileges or not.
-
--------------------
-$ sudo flying-passenger --socket-file=/var/run/flying-passenger.sock
-I, [2013-06-14T09:10:13.095339 #77179]  INFO -- : Welcome to Flying Passenger 4.1.0
-I, [2013-06-14T09:10:13.095339 #77179]  INFO -- : Starting PassengerWatchdog...
-I, [2013-06-14T09:10:13.097036 #77179]  INFO -- : PassengerWatchdog started on PID 77181
-...
-I, [2013-06-14T09:10:13.129017 #77179]  INFO -- : PassengerWatchdog initialized properly
-I, [2013-06-14T09:10:13.129127 #77179]  INFO -- : Flying Passenger up and listening on /var/run/flying-passenger.sock!
--------------------
-
-Now configure the web server to make use of the Flying Passenger daemon,
 ifdef::apache[]
-by setting the `PassengerFlyWith` option to the socket filename:
-
--------------------
-PassengerFlyWith /var/run/flying-passenger.sock
--------------------
-endif::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/flying_passenger.html
+endif::[]
 ifdef::nginx[]
-by setting the `passenger_fly_with` option to the socket filename:
-
--------------------
-http {
-    ...
-    passenger_fly_with /var/run/flying-passenger.sock;
-    ...
-}
--------------------
-endif::nginx[]
-
-After (re)starting
-ifdef::apache[]
-Apache, Apache + Flying Passenger is fully operational:
-
--------------------
-$ sudo service apache2 restart
--------------------
-endif::apache[]
-ifdef::nginx[]
-Nginx, Nginx + Flying Passenger is fully operational:
-
--------------------
-$ sudo /path-to/nginx
--------------------
-endif::nginx[]
-Flying Passenger is fully operational:
-
-You can test it by adding a virtual host for a web app:
-
-ifdef::apache[]
--------------------
-<VirtualHost *:80>
-    ServerName www.foo.local
-    DocumentRoot /webapps/foo/public
-</VirtualHost>
--------------------
-endif::apache[]
-ifdef::nginx[]
--------------------
-http {
-    ...
-
-    server {
-        listen 80;
-        server_name www.foo.local;
-        root /webapps/foo/public;
-        passenger_enabled on;
-    }
-}
--------------------
-endif::nginx[]
-
-Verify that it works by making an HTTP request to it:
-
----------------------------------
-$ curl http://www.foo.local/
----------------------------------
-
-Now let's verify that restarting the web server does not restart the just-spawned application process. Run `passenger-status` to obtain the PID of the application process:
-
----------------------------------
-$ sudo passenger-status
-Version: 4.1.0
-Date   : 2013-06-14 09:21:51 -0400
-.---------- General information -----------
-Max pool size : 6
-Processes     : 1
-Requests in top-level queue : 0
-
-.---------- Application groups -----------
-/webapps/foo#default:
-  App root: /webapps/foo
-  Requests in queue: 0
-  * PID: 77283   Sessions: 0       Processed: 1       Uptime: 2s
-    CPU: 1%      Memory  : 8M      Last used: 2s ago
----------------------------------
-
-As you can see, the PID of the application process is **77283**. Now let's see what happens if we restart the web server:
-
-ifdef::apache[]
-------------------------
-$ sudo service apache2 restart
-$ sudo passenger-status
-------------------------
-endif::apache[]
-ifdef::nginx[]
-------------------------
-$ sudo /path-to/nginx -s stop
-$ sudo /path-to/nginx
-$ sudo passenger-status
-------------------------
-endif::nginx[]
-
-The application process should remain there, unchanged:
-
----------------------------------
-$ sudo passenger-status
-Version: 4.1.0
-Date   : 2013-06-14 09:21:51 -0400
-.---------- General information -----------
-Max pool size : 6
-Processes     : 1
-Requests in top-level queue : 0
-
-.---------- Application groups -----------
-/webapps/foo#default:
-  App root: /webapps/foo
-  Requests in queue: 0
-  * PID: 77283   Sessions: 0       Processed: 1       Uptime: 18s
-    CPU: 1%      Memory  : 8M      Last used: 18s ago
----------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
 
 [[configuring_flying_passenger]]
 ==== Configuring Flying Passenger
 
-Flying Passenger gets *some* configuration from the web server, but not all. In particular, most web server directives that are only valid in the
 ifdef::apache[]
-global context, e.g. <<PassengerLogLevel,PassengerLogLevel>>,
-endif::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/flying_passenger.html
+endif::[]
 ifdef::nginx[]
-`http` context, e.g. <<PassengerLogLevel,passenger_log_level>>,
-endif::nginx[]
-have no effect when using Flying Passenger. Instead, you are supposed to pass these configuration directives through command line options to the Flying Passenger daemon. Configuration directives that have no effect on Flying Passenger are documented as such. You can assume that configuration directives that are not documented as such, work fine on Flying Passenger.
-
-For example, to achieve the same effect as setting
-ifdef::apache[]
-`PassengerLogLevel`
-endif::apache[]
-ifdef::nginx[]
-`passenger_log_level`
-endif::nginx[]
-to 2, run the Flying Passenger daemon as follows:
-
-----------------------------------
-$ sudo flying-passenger --socket-file=/var/run/flying-passenger.sock --log-level=2
-----------------------------------
-
-Currently, not all configuration directives have a Flying Passenger equivalent. Run the following command to see an overview of available options:
-
-----------------------------
-$ flying-passenger --help
-----------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
 
 ==== Managing the Flying Passenger daemon
 
-The Flying Passenger daemon runs in the foreground by default. This is undesirable on server environments. You can make it go into the background by passing `--daemonize`, `--log-file` and `--pid-file`:
-
---------------------------------------------------------------------------------
-$ sudo flying-passenger --socket-file=/var/run/flying-passenger.sock \
-    --daemonize --log-file=/var/log/flying-passenger.log \
-    --pid-file=/var/run/flying-passenger.pid
---------------------------------------------------------------------------------
-
-You can shut down a Flying Passenger daemon by sending SIGINT or SIGTERM to it:
-
---------------------------------------------------------------------------------
-$ kill `cat /var/run/flying-passenger.pid`
---------------------------------------------------------------------------------
-
-We recommend using link:http://cr.yp.to/daemontools.html[daemontools] or link:http://smarden.org/runit/[runit] for managing the Flying Passenger daemon. These tools will allow automatically starting the Flying Passenger daemon at boot, and will automatically restart the daemon if it crashes. You can create and enable a daemontools/runit service as folows:
-
---------------------------------
-$ sudo mkdir /etc/service/flying-passenger
-$ sudo nano /etc/service/flying-passenger/run
-#!/bin/sh
-exec /path-to/flying-passenger \
-    --socket-file=/var/run/flying-passenger.sock \
-    --log-file=/var/log/flying-passenger.log \
-    --pid-file=/var/run/flying-passenger.pid
---------------------------------
-
-Immediately after creating the `run` file, daemontools/runit automatically runs it to start the daemon. Note that the location (`/etc/service`) depends on the OS or Linux distros. Sometimes it's `/service`. Also note that we start the Flying Passenger daemon without `--daemonize`.
-
-To shut down a daemontools/runit-managed daemon, you need to use `svc -d /etc/service/flying-passenger` (daemontools) or `sv stop /etc/service/flying-passenger` (runit) instead of sending a signal to the process.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/flying_passenger.html
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
 
 [[using_flying_passenger_with_mri_18_or_jruby]]
 ==== Using Flying Passenger with MRI 1.8 or JRuby
 
-Using Flying Passenger in combination with MRI Ruby 1.8 or with JRuby requires special attention. This is because the Flying Passenger daemon is written in Ruby, and requires proper `Process.spawn` support, which neither MRI 1.8 nor JRuby support.
-
-It is however possible to use Flying Passenger with MRI Ruby 1.8 and JRuby. You can't run the Flying Passenger daemon in MRI 1.8 or JRuby, but you can still run the web applications - hosted under Flying Passenger - in MRI 1.8 or JRuby.
-
-First, edit your web server configuration file and specify a Ruby interpreter for your web applications. For example:
-
 ifdef::apache[]
---------------------
-# Connect to the Flying Passenger daemon on the following socket
-PassengerFlyWith /var/run/flying-passenger.sock
-...
-
-<VirtualHost *:80>
-    ServerName www.foo.com
-    DocumentRoot /webapps/foo/public
-    # Use JRuby for this web application
-    PassengerRuby /opt/jruby/bin/jruby
-</VirtualHost>
---------------------
-endif::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/flying_passenger.html
+endif::[]
 ifdef::nginx[]
---------------------
-# Connect to the Flying Passenger daemon on the following socket
-passenger_fly_with /var/run/flying-passenger.sock;
-...
-
-server {
-    listen 80;
-    server_name www.foo.com;
-    root /webapps/foo/public;
-    passenger_enabled on;
-    # Use JRuby for this web application
-    passenger_ruby /opt/jruby/bin/jruby;
-}
---------------------
-endif::nginx[]
-
-Then you need to install a Ruby 1.9-compatible Ruby interpreter with POSIX spawn support, alongside JRuby/MRI 1.8. Ruby interpreters which can be used for running the Flying Passenger daemon include:
-
- * MRI Ruby >= 1.9.
- * Rubinius.
-
-The following example demonstrates how you can install MRI Ruby 1.9 in parallel with your MRI Ruby 1.8 or JRuby installation.
-
-Example for Debian/Ubuntu users:
-
-[source,sh]
---------------------------------
-# Install Ruby 1.9
-sudo apt-get install ruby1.9.3
-# Run the Flying Passenger daemon in Ruby 1.9
-ruby1.9 -S flying-passenger --socket-file=/var/run/flying-passenger.sock
---------------------------------
-
-Example for RVM users:
-
-[source,sh]
---------------------------------
-# Install Ruby 1.9
-rvm install 1.9.3
-# Run the Flying Passenger daemon in Ruby 1.9
-$ rvm-exec 1.9.3 ruby -S flying-passenger --socket-file=/var/run/flying-passenger.sock
---------------------------------
-
-The Flying Passenger daemon will now be run on Ruby 1.9, while the web application 'www.foo.com' will be run on JRuby.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
 
 [[flying_passenger_caveats]]
 ==== Caveats and limitations
 
-Beware of the following caveats and limitations when using Flying Passenger:
-
 ifdef::apache[]
-- The Phusion Passenger module that is loaded into Apache, **must** be of the same version as the Flying Passenger daemon. Failing to meet this requirement may result in cryptic errors, or may result in certain features not working, until you've fixed the situation. When upgrading Phusion Passenger, you must restart both Apache and the Flying Passenger daemon.
-- The <<PassengerRoot,PassengerRoot>> directive has no effect. When using Flying Passenger, you are not supposed to set `PassengerRoot`.
-endif::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/apache/flying_passenger.html
+endif::[]
 ifdef::nginx[]
-- The Nginx executable **must** be compiled with the same version of Phusion Passenger as the Flying Passenger daemon. Failing to meet this requirement may result in cryptic errors, or may result in certain features not working, until you've fixed the situation. When upgrading Phusion Passenger, you must restart both Nginx and the Flying Passenger daemon.
-- The <<PassengerRoot,passenger_root>> directive has no effect. When using Flying Passenger, you are not supposed to set `passenger_root`.
-endif::nginx[]
-- The Flying Passenger daemon is written in Ruby. It requires a Ruby interpreter with proper `Process#spawn` support. At the time of writing, all Ruby interpreters in existance satisfy this requirement, except for MRI Ruby 1.8 and JRuby. See <<using_flying_passenger_with_mri_18_or_jruby,Using Flying Passenger with MRI 1.8 or JRuby>> for more information.
-- When you add a new application to the web server configuration, Flying Passenger will automatically pick up the application's settings and spawn this new application upon the first request to it. However it is not capable of automatically starting the new app before a request has been sent to it (i.e.
-ifdef::apache[]
-<<PassengerPreStart,PassengerPreStart>>-like
-endif::apache[]
-ifdef::nginx[]
-<<PassengerPreStart,passenger_pre_start>>-like
-endif::nginx[]
-behavior is not available in this case). As a workaround, you can send an HTTP request to your application after starting the daemon, which forces it to spawn application processes.
-- When you remove an application from the web server configuration, Flying Passenger will not detect the removal and will not shut down the associated application processes. Killing the application processes will also not help, because Flying Passenger will restart them per the (now-removed, but still in the Flying Passenger daemon's memory)
-ifdef::apache[]
-<<PassengerMinInstances,PassengerMinInstances>>
-endif::apache[]
-ifdef::nginx[]
-<<PassengerMinInstances,passenger_min_instances>>
-endif::nginx[]
-settings. At the moment, there are two ways to get rid of those processes:
-+
-ifdef::apache[]
-  * Before removing the application from the web server configuration, explicitly set its `PassengerMinInstances` to 0. Next, send a request to it, which will cause the Flying Passenger daemon to take over the new `PassengerMinInstances 0` option. You can then proceed with removing the application from the web server configuration, and restarting the web server. Finally, kill the PIDs associated to those application processes and remove the application configuration.
-endif::apache[]
-ifdef::nginx[]
-  * Before removing the application from the web server configuration, explicitly set its `passenger_min_instances` to 0. Next, send a request to it, which will cause the Flying Passenger daemon to take over the new `passenger_min_instances 0` option. You can then proceed with removing the application from the web server configuration, and restarting the web server. Finally, kill the PIDs associated to those application processes and remove the application configuration.
-endif::nginx[]
-  * Restart the Flying Passenger daemon.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/nginx/flying_passenger.html
+endif::[]

@@ -102,6 +102,8 @@ private:
 		result.push_back(&options.preexecChroot);
 		result.push_back(&options.postexecChroot);
 
+		result.push_back(&options.integrationMode);
+
 		result.push_back(&options.ruby);
 		result.push_back(&options.python);
 		result.push_back(&options.nodejs);
@@ -243,6 +245,8 @@ public:
 
 	StaticString preexecChroot;
 	StaticString postexecChroot;
+
+	StaticString integrationMode;
 
 	/**
 	 * Path to the Ruby interpreter to use, in case the application to spawn
@@ -460,6 +464,7 @@ public:
 		  baseURI("/", 1),
 		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
 		  defaultUser(PASSENGER_DEFAULT_USER, sizeof(PASSENGER_DEFAULT_USER) - 1),
+		  integrationMode(DEFAULT_INTEGRATION_MODE, sizeof(DEFAULT_INTEGRATION_MODE) - 1),
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
 		  nodejs(DEFAULT_NODEJS, sizeof(DEFAULT_NODEJS) - 1),
@@ -593,6 +598,7 @@ public:
 			appendKeyValue (vec, "restart_dir",        restartDir);
 			appendKeyValue (vec, "preexec_chroot",     preexecChroot);
 			appendKeyValue (vec, "postexec_chroot",    postexecChroot);
+			appendKeyValue (vec, "integration_mode",   integrationMode);
 			appendKeyValue (vec, "ruby",               ruby);
 			appendKeyValue (vec, "python",             python);
 			appendKeyValue (vec, "nodejs",             nodejs);

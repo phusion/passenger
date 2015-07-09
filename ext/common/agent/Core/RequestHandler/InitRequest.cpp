@@ -219,6 +219,8 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	}
 
 	options.logLevel = getLogLevel();
+	options.integrationMode = agentsOptions->get("integration_mode",
+		false, DEFAULT_INTEGRATION_MODE);
 	options.ustRouterAddress = ustRouterAddress;
 	options.ustRouterUsername = P_STATIC_STRING("logging");
 	options.ustRouterPassword = ustRouterPassword;

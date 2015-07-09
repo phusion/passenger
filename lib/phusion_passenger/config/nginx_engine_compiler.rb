@@ -61,12 +61,12 @@ module PhusionPassenger
         return [specs, ids]
       end
 
-      def users_guide_path
-        return PhusionPassenger.standalone_doc_path
+      def install_doc_url
+        "https://www.phusionpassenger.com/library/install/standalone/"
       end
 
-      def users_guide_url
-        return STANDALONE_DOC_URL
+      def troubleshooting_doc_url
+        "https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/"
       end
 
       def run_steps

@@ -207,22 +207,6 @@ module PhusionPassenger
     return nil
   end
 
-  def self.index_doc_path
-    return "#{doc_dir}/#{INDEX_DOC_NAME}"
-  end
-
-  def self.apache2_doc_path
-    return "#{doc_dir}/#{APACHE2_DOC_NAME}"
-  end
-
-  def self.nginx_doc_path
-    return "#{doc_dir}/#{NGINX_DOC_NAME}"
-  end
-
-  def self.standalone_doc_path
-    return "#{doc_dir}/#{STANDALONE_DOC_NAME}"
-  end
-
 
   ###### Other resource locations ######
 

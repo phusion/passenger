@@ -1,162 +1,48 @@
 === Generic troubleshooting tips
 
-One of the first things you should do upon encountering a problem, is to check
 ifdef::apache[]
-the *global* (not the per-vhost) Apache error log file. This is typically located in `/var/log/apache2/error_log`. You can find out the exact location of the error log by running `passenger-config --detect-apache2`.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/
 endif::[]
 ifdef::nginx[]
-the global Nginx error log file. This is one specified by the `error_log` directive in the main context (*not* the one inside the `http` context). The file is typically located in /var/log/nginx/error.log.
-endif::[]
-ifndef::standalone[]
-This log file contains:
-
- * Phusion Passenger error messages.
- * Everything that the application writes to STDERR. This typically consists of errors that the application encounters during startup, but not errors that it encounters when it's handling requests.
-
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/nginx/troubleshooting/
 endif::[]
 ifdef::standalone[]
-Phusion Passenger Standalone log file. This is typically located in `log/passenger.[PORT NUMBER].log`. Most problems are logged to this log file.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/
 endif::[]
-
-ifndef::standalone[]
-If you're using Ruby on Rails, then you should also check out `log/development.log` and `log/production.log`. When an error occurs during request handling, it is typically logged here. This file does **not** contain errors that Rails encounters during startup.
-
-Finally, you should be aware that Phusion Passenger runs your application under the 'production' environment by default, not 'development'. You can change this using the
-ifdef::apache[]
-<<RailsEnv,RailsEnv>>
-endif::[]
-ifdef::nginx[]
-<<RailsEnv,rails_env>>
-endif::[]
-option.
-endif::[]
-
-If neither the logs nor this troubleshooting guide can help you, then please check out our <<where_to_get_support,support resources>>.
 
 
 ifndef::standalone[]
 === Why does the first request take a long time?
 
-**Symptoms**::
-	The first request to your application takes more time than usual. Subsequent requests have the normal speed.
-
-**Cause**::
-	Phusion Passenger starts your application the first time it is accessed, not during web server startup. Some applications can take several seconds to start. If you're using Ruby on Rails, then needing 10 seconds to start your application is normal. On slow or heavily loaded servers, or in case of large and heavy applications, the startup time may be even longer.
-
-**Solution**::
-	Use the
 ifdef::nginx[]
-<<PassengerPreStart,passenger_pre_start>>
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/nginx/troubleshooting/?a=why-does-the-first-request-take-a-long-time
 endif::[]
 ifdef::apache[]
-<<PassengerPreStart,PassengerPreStart>>
-endif::[]
-configuration option.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=why-does-the-first-request-take-a-long-time
 endif::[]
 
 
 ifdef::nginx[]
 === Upon accessing the web app, Nginx reports a "Permission denied" error
 
-**Symptoms**::
-	A typical error message looks like this:
-+
----------------------------------------------
-2013/10/21 17:16:03 [alert] 98687#0: *1 Cannot stat
-'/Users/phusion/Sites/rack.test/config.ru': Permission denied (errno=13); This
-error means that the Nginx worker process (PID 99064, running as UID 70) does
-not have permission to access this file. Please read the manual to learn how to
-fix this problem: section 'Troubleshooting' -> 'Upon accessing the web app,
-Nginx reports a "Permission denied" error'; Extra info, client: 127.0.0.1,
-server: www.foo.com, request: "GET / HTTP/1.1", host: "www.foo.com"
----------------------------------------------
-
-**Cause**::
-	Phusion Passenger tries to access your application directory in order to find out what language it's written in. This access is initiated from inside an Nginx worker process. This error indicates that the Nginx worker process does not have the proper permissions to access your application's root directory.
-
-**Solution**::
-	You need to relax permissions to that the Nginx worker process can access your application directory, by making the directory group- and world-*executable*:
-+
----------------------------------------------------
-sudo chmod g+x,o+x /Users/phusion/Sites/rack.test
----------------------------------------------------
-+
-You *also* need to ensure that all parent directories are also 'executable' by the Nginx process:
-+
----------------------------------------------------
-sudo chmod g+x,o+x /Users/phusion/Sites
-sudo chmod g+x,o+x /Users/phusion
-sudo chmod g+x,o+x /Users
----------------------------------------------------
-+
-.Why 'executable' permission and not 'readable'?
-[NOTE]
-On Unix, the 'executable' permission on directories dictates whether a process is allowed to *access* files or subdirectories within that directory. The 'readable' permission dictates whether a process is allowed to see what files are inside the directory, but does not necessarily allow access to them. You can learn more at link:http://en.wikipedia.org/wiki/File_system_permissions#Permissions[Wikipedia].
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/nginx/troubleshooting/?a=upon-accessing-the-web-app-nginx-reports-a-permission-denied-error
 endif::[]
 
 
 ifdef::standalone[]
 === Upon uploading a file, Phusion Passenger reports "client_body_temp/00000000xx failed (2: No such file or directory)"
 
-**Symptoms**::
-	When performing an HTTP POST call, the request sometimes fails, with Phusion Passenger reporting an error along the lines of:
-+
--------------------------
-/tmp/passenger-standalone.8583/client_body_temp/0000000022" failed (2: No such
-file or directory), client: 127.0.0.1, server: www.foo.com
--------------------------
-
-**Cause**::
-	Phusion Passenger buffers HTTP POST bodies (file uploads) to a temporary directory, by default `/tmp/passenger-standalone.xxx`. This error means that Phusion Passenger that that directory has been removed, probably by some other program.
-
-**Solution**::
-	Tell Phusion Passenger to use a different directory to store its temporary files passing the `--temp-dir` command line option. For example:
-+
----------------------------------------
-mkdir $HOME/tmp
-cd /path-to-your-app
-passenger start --temp-dir=$HOME/tmp
----------------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/?a=upon-uploading-a-file-passenger-reports-client_body_temp-00000000xx-failed-2-no-such-file-or-directory
 endif::[]
 
 === I get "command not found" when running a Phusion Passenger command through sudo
 
-**Symptoms**::
-	Phusion Passenger commands can be found as a normal user, but not when run through sudo:
-+
--------------------------
-$ passenger-status
-...some output, but no "command not found" error...
-$ passenger-install-apache2-module
-...some output, but no "command not found" error...
-$ sudo passenger-status
-sudo: passenger-status: command not found
-$ sudo passenger-install-apache2-module
-sudo: passenger-install-apache2-module: command not found
--------------------------
-
-**Cause**::
-	The operating system looks up commands using <<the_path_env_var,the PATH environment variable>>. However, sudo resets all environment variables to a default value, dictated by sudo. If Phusion Passenger was installed to a location that is not in the default sudo PATH value, then sudo will not be able to find the Phusion Passenger commands.
-+
-In addition, if you installed Phusion Passenger using a Ruby interpreter that was installed through RVM, then you **must** use rvmsudo instead of sudo. As a rule, when you're an RVM user, always use rvmsudo instead of sudo.
-
-**Solution**::
-	Execute the command using its full path. You can use `which` as a normal user to lookup the full path:
-+
----------------------------------------
-$ which passenger-status
-/somewhere/bin/passenger-status
----------------------------------------
-+
-Next, run full path of the command using either sudo or rvmsudo:
-+
----------------------------------------
-$ sudo /somewhere/bin/passenger-status
-
-# -OR, if you're using RVM:-
-
-$ rvmsudo /somewhere/bin/passenger-status
----------------------------------------
-
-**Recommended reading**::
-	When using sudo, you will probably run into similar "command not found" issues in the future, with components other than Phusion Passenger. We **strongly recommend** you to <<about_environment_variables,learn about environment variables>> so that you know what to do in the future.
+ifdef::apache[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/apache/troubleshooting/?a=i-get-command-not-found-when-running-a-passenger-command-through-sudo
+endif::[]
+ifdef::nginx[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/nginx/troubleshooting/?a=i-get-command-not-found-when-running-a-passenger-command-through-sudo
+endif::[]
+ifdef::standalone[]
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/admin/standalone/troubleshooting/?a=i-get-command-not-found-when-running-a-passenger-command-through-sudo
+endif::[]

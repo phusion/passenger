@@ -35,20 +35,13 @@
       <p>The {{PROGRAM_NAME}} application server encountered an error while starting your web application.
         Because you are running this web application in staging or production mode, the details of the error
         have been omitted from this web page for security reasons.</p>
-      <p><strong>Please read the web server error log to find the details of the error.</strong>
-        If you don't know where the web server error log is, read the troubleshooting documentation below.</p>
+      <p><strong>Please read <a href="https://www.phusionpassenger.com/library/admin/log_file/">the Passenger log file</a> to find the details of the error.</strong></p>
       <p>Alternatively, you can turn on the "friendly error pages" feature (see below), which will make {{PROGRAM_NAME}} show many details about the error right in the browser.</p>
-      <p>{{PROGRAM_NAME}} troubleshooting documentation:</p>
-      <ul>
-        <li><a href="{{NGINX_DOC_URL|raw}}#troubleshooting">Nginx integration mode</a></li>
-        <li><a href="{{APACHE2_DOC_URL|raw}}#troubleshooting">Apache integration mode</a></li>
-        <li><a href="{{STANDALONE_DOC_URL|raw}}#troubleshooting">Standalone mode</a></li>
-      </ul>
       <p>To turn on friendly error pages:</p>
       <ul>
-        <li><a href="{{NGINX_DOC_URL|raw}}#PassengerFriendlyErrorPages">Nginx integration mode</a></li>
-        <li><a href="{{APACHE2_DOC_URL|raw}}#PassengerFriendlyErrorPages">Apache integration mode</a></li>
-        <li>Standalone mode: pass the <code>--friendly-error-pages</code> parameter to the <code>passenger</code> command.</li>
+        <li><a href="https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_friendly_error_pages">Nginx integration mode</a></li>
+        <li><a href="https://www.phusionpassenger.com/library/config/apache/reference/#passengerfriendlyerrorpages">Apache integration mode</a></li>
+        <li><a href="https://www.phusionpassenger.com/library/config/standalone/reference/#--friendly-error-pages---no-friendly-error-pages-friendly_error_pages">Standalone mode</a></li>
       </ul>
     </div>
   </div>

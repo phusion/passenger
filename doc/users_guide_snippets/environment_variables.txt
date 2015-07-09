@@ -1,276 +1,44 @@
-Environment variables are named values that affect how the system works. For example they tell the system where to look for commands (the `PATH` variable) or where to look for libraries (`LD_LIBRARY_PATH`). Their names are often in all-uppercase. Sometimes people refer to an environment variable with a dollar sign `$` in front, but that's the same thing: when people say "the $PATH environment variable" they mean "the PATH environment variable". This is because the dollar sign `$` is a shell syntax for refering to an environment variable, as you will learn later.
-
-Environment variables are set on a **per-process** basis, but they are **inherited** by child processes. This means that if you set environment variables in process A, another already running process B will not see these new environment variables. But if A spawns a child process C, then C will have all environment variables that A had. If you once again change the environment variables in A, then C will not see the changes.
-
-The per-process nature of environment variables some implications. When you set environment variables in your `bashrc` or other bash startup files...
-
- * ...only newly spawned bash shells see them.
- * ...the web server usually does not see them, because the web server tends to be started from init scripts, not from bash.
- * ...cron jobs do not see them, because cron jobs' environment variables are entirely dictated by their crontabs.
-
-NOTE: Because this chapter is meant for beginners, it assumes that the reader uses the bash shell. This chapter does not describe instructions for zsh, csh or other shells. We assume that users of other shells are familiar with the Bourne shell syntax, and know how to apply the instructions in this chapter in their shells' native syntaxes.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html
 
 === Working with environment variables
 
-You can see all environment variables in your shell by running the following command:
-
-[source,sh]
----------------------------------
-env
----------------------------------
-
-You can set an evironment variable with the syntax `export <NAME>=<VALUE>`. For example, to set the `APXS2` variable to the value `/usr/sbin/apxs2`:
-
-[source,sh]
----------------------------------
-export APXS2=/usr/sbin/apxs2
----------------------------------
-
-Any process that you run from your shell from that point on will have said environment variable:
-
-[source,sh]
----------------------------------
-export APXS2=/usr/sbin/apxs2
-ruby -e 'p ENV["APXS2"]'
-# => "/usr/sbin/apxs2"
----------------------------------
-
-.The "export" keyword is important
-[NOTE]
-===================================================
-You **must** set the `export` keyword. If you omit the `export` keyword then the environment variable will not be visible to other processes:
-
-[source,sh]
----------------------------------
-APXS2=/usr/sbin/apxs2
-ruby -e 'p ENV["APXS2"]'
-# => nil
----------------------------------
-===================================================
-
-You can reference an environment variable in your shell by typing the `$` sign followed by the environment variable's name. For example, to see the value of the `PATH` variable:
-
-[source,sh]
----------------------------------
-echo $PATH
----------------------------------
-
-You can also use this trick to extend the value of an environment variable:
-
-[source,sh]
----------------------------------
-export PATH=/usr/bin
-
-# Prepends '/opt/local/bin', so that it becomes /opt/local/bin:/usr/bin
-export PATH=/opt/local/bin:$PATH
-# Appends '/usr/local/bin', so that it becomes /opt/local/bin:/usr/bin:/usr/local/bin
-export PATH=$PATH:/usr/local/bin
----------------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#working-with-environment-variables
 
 [[the_path_env_var]]
 === The PATH environment variable
 
-The `PATH` environment variable dictates where the system looks for command. It is a colon-separated list of directories. If you get a "command not found" error while you know that the command is installed, then setting `PATH` will help. For example suppose that the command `frobnicator` is in `/opt/local/bin`:
-
-[source,sh]
-----------------------
-user@localhost bash$ frobnicator
-bash: frobnicator: command not found
-----------------------
-
-We verify that `/opt/local/bin` is not in `PATH`:
-
-[source,sh]
-----------------------
-user@localhost bash$ echo $PATH
-/bin:/usr/bin:/usr/local/bin
-----------------------
-
-We can run `frobnicator` through it's full path...
-
-[source,sh]
-----------------------
-user@localhost bash$ /opt/local/bin/frobnicator
-# => success!
-----------------------
-
-...or we can add `/opt/local/bin` to `PATH`.
-
-[source,sh]
-----------------------
-user@localhost bash$ export PATH=$PATH:/opt/local/bin
-user@localhost bash$ frobnicator
-# => success!
-----------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#the-path-environment-variable
 
 ==== Adding Phusion Passenger's administration tools to PATH
 
-If you get a "command not found" error when invoking one of the Phusion Passenger administration tools (e.g. `passenger-status` or `passenger-memory-stats` then that means the tools are not in `PATH`, so you need to add them.
-
- * If you <<rubygems_generic_install,installed Phusion Passenger with RubyGems>>, then the tools are in your RubyGems executable path. You can view the gem path using the command `gem env`:
-+
-------------------------------
-$ gem env
-RubyGems Environment:
-  - RUBYGEMS VERSION: 1.8.15
-  - RUBY VERSION: 1.8.7 (2011-12-28 patchlevel 357) [i686-darwin10.8.0]
-  - INSTALLATION DIRECTORY: /opt/ruby-enterprise-1.8.7-2010.01/lib/ruby/gems/1.8
-  - RUBY EXECUTABLE: /opt/ruby-enterprise-1.8.7-2010.01/bin/ruby
-  - EXECUTABLE DIRECTORY: /opt/ruby-enterprise-1.8.7-2010.01/bin    <--------- !!
-  - RUBYGEMS PLATFORMS:
-    - ruby
-    - x86-darwin-10
-  - GEM PATHS:
-     - /opt/ruby-enterprise-1.8.7-2010.01/lib/ruby/gems/1.8
-     - /Users/hongli/.gem/ruby/1.8
-  - GEM CONFIGURATION:
-     - :update_sources => true
-     - :verbose => true
-     - :benchmark => false
-     - :backtrace => false
-     - :bulk_threshold => 1000
-     - "gem" => "--no-ri --no-rdoc"
-  - REMOTE SOURCES:
-     - http://rubygems.org/
-------------------------------
-+
-As you can see, the RubyGems executable path in the example happens to be `/opt/ruby-enterprise-1.8.7-2010.01/bin`. So that directory must be added to `PATH`.
-
- * If you <<tarball_generic_install,installed Phusion Passenger using the tarball>>, then the tools are in the `bin` subdirectory of the Phusion Passenger tarball directory that you extracted. For example, if you extracted `passenger-4.9.0.tar.gz` inside `/opt`, then the tools are located in `/opt/passenger-4.0.9/bin`. In that case, you need to add `/opt/passenger-4.0.9/bin` to your `PATH`.
- * If you installed Phusion Passenger using native OS packages, then some Phusion Passenger administration tools are in `/usr/bin`, while others are in `/usr/sbin`. If you are not logged in as root, then `/usr/sbin` may not be in `PATH`, which would explain why you get a "command not found" when trying to invoke some of the tools. You should `/usr/sbin` to `PATH`.
- * If you are unsure where your Phusion Passenger directory is then you can use the `find` command to look them up. Go to the root directory and invoke `find` with `sudo`:
-+
---------------------------------
-$ cd /
-$ sudo find . -name passenger-status
-/usr/local/passenger/bin/passenger-status
---------------------------------
-+
-In this example, the administration tools happen to be in `/usr/local/passenger/bin`, so you must add that to `PATH`.
-
-NOTE: You may still get a "command not found" when invoking the tools through sudo, even after you've added the relevant directory to `PATH`. Please read <<env_vars_and_sudo,Environment variables and sudo>> to learn more.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#adding-passenger-s-administration-tools-to-path
 
 === Making environment variables permanent
 
-When you exit your shell, the evironment variable changes are lost. There is no standard method to set environment variables system-wide, so you have to set them in different configuration files for different services.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#making-environment-variables-permanent
 
 ==== bash
 
-To make environment variables permanent for future bash sessions **for the current user**, add them to your `~/.bashrc`:
-
-[source,sh]
----------------------------------
-echo 'export FOO=bar' >> ~/.bashrc
-echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
----------------------------------
-
-To make them permanent for future bash sessions **for all users**, add them to `/etc/bashrc`.
-
-NOTE: Depending on the system, the bashrc file may have a different filename. On Debian and Ubuntu, it's `/etc/bash.bashrc`.
-NOTE: Make sure your `~/.bashrc` is actually included by your `~/.profile`, which might not be the case if you created the user with `useradd` instead of `adduser` for example
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#bash
 
 ==== Apache
 
-NOTE: This subsection describes how to set environment variables on Apache itself, not on apps served through Phusion Passenger for Apache. The environment variables you set here will be passed to all apps, but you cannot customize them on a per-app basis. See also <<env_vars_passenger_apps,Setting environment variables on Phusion Passenger-served apps>>.
-
-On Debian and Ubuntu, with an Apache installed through apt, Apache environment variables are defined in the file `/etc/apache2/envvars`. This is a shell script so environment variables must be specified with the shell syntax.
-
-On Red Hat, Fedora, CentOS and ScientificLinux, with an Apache installed through YUM, Apache environment variables are defined in `/etc/sysconfig/httpd`.
-
-On OS X they are defined in `/System/Library/LaunchDaemons/org.apache.httpd.plist`, as explained link:http://stackoverflow.com/questions/6833939/path-environment-variable-for-apache2-on-mac[here on Stack Overflow].
-
-On other systems, or if you did not install Apache through the system's package manager, the configuration file for environment variables is specific to the vendor that supplied Apache. There may not even be such a configuration file. You should contact the vendor for support.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#apache
 
 ==== Nginx
 
-NOTE: This subsection describes how to set environment variables on Nginx itself, not on apps served through Phusion Passenger for Nginx. The environment variables you set here will be passed to all apps, but you cannot customize them on a per-app basis. See also <<env_vars_passenger_apps,Setting environment variables on Phusion Passenger-served apps>>.
-
-If you installed Nginx through <<install_on_debian_ubuntu,the Debian or Ubuntu packages>>, then you can define environment variables in `/etc/default/nginx`. This is a shell script so you must use the `export FOO=bar` syntax.
-
-Otherwise, environment variables are best set through the script which starts Nginx. For example, if you installed Nginx from source and you used
-ifdef::apache[]
-the Nginx init script described in the link:Users%20guide%20Nginx.html[Phusion Passenger Users Guide, Nginx version],
-endif::apache[]
-ifdef::nginx[]
-<<nginx_init_script,the Nginx init script described earlier in this manual>>,
-endif::nginx[]
-then you should edit that script to define the environment variables. Those init scripts are regular shell scripts, so use the `export FOO=bar` syntax. Just make sure your set your environment variables before the script starts Nginx.
-
-NOTE: Setting environment variables on Nginx has no effect on the <<flying_passenger,Flying Passenger daemon>> because the daemon is started seperately. You should set the environment variables in the shell right before starting the daemon.
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#nginx
 
 ==== cron
 
-To make environment variables permanent for cron jobs, add those variables to the relevant crontab. But note that inside crontabs you cannot refer to existing environment variables with the `$` syntax because crontabs are not shell scripts. You have to specify the entire value.
-
-.What to put in "crontab -e"
--------------------------
-# Environment variable definitions
-FOO=bar
-APXS2=/usr/sbin/apxs2
-
-# **WRONG!** You cannot refer to existing variables with the `$` syntax!
-PATH=/usr/bin:$PATH
-# **WRONG!** You cannot use the 'export' keyword!
-export PATH=/usr/bin:/usr/local/bin
-# Correct:
-PATH=/usr/bin:/usr/local/bin
-
-# Jobs:
-# m h  dom mon dow   command
-  * *  *   *   *     frobnicator
--------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#cron
 
 [[env_vars_passenger_apps]]
 ==== Phusion Passenger-served apps
 
-You can pass environment variables to Phusion Passenger-served apps through various methods:
-
- * When running Apache, use the `PassEnv` and `SetEnv` directives of link:http://httpd.apache.org/docs/2.4/mod/mod_env.html[mod_env]. This is supported starting from Phusion Passenger 4.0.
- * When running Nginx, use the <<PassengerEnvVar,passenger_env_var>> directive.
- * Through your `bashrc`. Starting from version 4.0, Phusion Passenger 4.0 spawns applications through bash and inherit all bash environment variables. Phusion Passenger Standalone tends to be started from the shell and thus inherits all environment variables set by the shell.
- * Through Apache and Nginx, as described earlier in this chapter. Any environment variables that you set on Apache and Nginx itself are inherited by Phusion Passenger, and thus by Phusion Passenger-served apps as well.
- * Through the application itself. Most programming languages provide APIs for setting environment variables. For example in Ruby you can write:
-+
-[source,ruby]
--------------------
-ENV['FOO'] = 'bar'
--------------------
-+
-In Python you can write:
-+
-[source,python]
--------------------
-import os
-os.environ['FOO'] = 'bar'
--------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#passenger-served-apps
 
 [[env_vars_and_sudo]]
 === Environment variables and sudo
 
-NOTE: RVM users should always use the `rvmsudo` command instead of `sudo`. However all information in this section apply to `rvmsudo` as well.
-
-The `sudo` command resets all environment variables before running the specified command, for security reasons. So if you set environment variables before running `sudo passenger-install-xxx-module`, `sudo passenger-status` or any other commands, then the environment variables are not correctly passed to the command. You can solve this by running sudo with `-E` (preserve environment variables):
-
-[source,sh]
--------------------------
-user@localhost bash$ export APXS2=/usr/sbin/apxs2
-user@localhost bash$ sudo -E passenger-install-apache2-module
--------------------------
-
-Alternatively, you can obtain a root prompt with sudo first, and *then* set the environment variables, before running any further commands:
-
--------------------------
-user@localhost bash$ sudo -s
-Password: ...
-root@localhost bash# export APXS2=/usr/sbin/apxs2
-root@localhost bash# passenger-install-apache2-module
--------------------------
-
-Note that for security reasons, `sudo` **always resets the `PATH` environment variable**, even if you pass `-E`! You can get around this problem by obtaining a root prompt first, and then set the environment variables:
-
--------------------------
-user@localhost bash$ sudo -s
-Password: ...
-root@localhost bash# export PATH=$PATH:/opt/myruby/bin
-root@localhost bash# passenger-install-apache2-module
--------------------------
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#environment-variables-and-sudo
