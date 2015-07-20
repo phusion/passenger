@@ -320,17 +320,16 @@ module PhusionPassenger
 
         if @union_station_core && headers[PASSENGER_TXN_ID]
           txn_id = headers[PASSENGER_TXN_ID]
-          union_station_key = headers[PASSENGER_UNION_STATION_KEY]
           transaction = @union_station_core.continue_transaction(txn_id,
             @app_group_name,
-            :requests, union_station_key)
+            :requests,
+            PhusionPassenger.union_station_key)
           headers[UNION_STATION_REQUEST_TRANSACTION] = transaction
           headers[UNION_STATION_CORE] = @union_station_core
           headers[PASSENGER_APP_GROUP_NAME] = @app_group_name
           Thread.current[UNION_STATION_REQUEST_TRANSACTION] = transaction
           Thread.current[UNION_STATION_CORE] = @union_station_core
           Thread.current[PASSENGER_TXN_ID] = txn_id
-          Thread.current[PASSENGER_UNION_STATION_KEY] = union_station_key
           if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
             transaction.message("Initial objects on heap: #{ObjectSpace.live_objects}")
           end

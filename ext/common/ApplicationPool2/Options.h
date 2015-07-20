@@ -602,7 +602,6 @@ public:
 			appendKeyValue (vec, "ust_router_password", ustRouterPassword);
 			appendKeyValue4(vec, "debugger",           debugger);
 			appendKeyValue4(vec, "analytics",          analytics);
-
 			appendKeyValue (vec, "api_key",            apiKey);
 
 			/*********************************/
@@ -612,6 +611,8 @@ public:
 			appendKeyValue3(vec, "max_processes",       maxProcesses);
 			appendKeyValue2(vec, "max_preloader_idle_time", maxPreloaderIdleTime);
 			appendKeyValue3(vec, "max_out_of_band_work_instances", maxOutOfBandWorkInstances);
+		}
+		if ((fields & SPAWN_OPTIONS) || (fields & PER_GROUP_POOL_OPTIONS)) {
 			appendKeyValue (vec, "union_station_key",   unionStationKey);
 		}
 

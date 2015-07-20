@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,6 +30,7 @@ module PhusionPassenger
     @@event_after_installing_signal_handlers = []
     @@event_oob_work = []
     @@advertised_concurrency_level = nil
+    @@union_station_key = nil
 
     def on_event(name, &block)
       callback_list_for_event(name) << block
@@ -57,6 +58,10 @@ module PhusionPassenger
       @@advertised_concurrency_level = value
     end
 
+    def union_station_key
+      @@union_station_key ||= PhusionPassenger::App.options["union_station_key"]
+    end
+
     def measure_and_log_event(env, name)
       transaction = lookup_union_station_web_transaction(env)
       if transaction
@@ -80,7 +85,7 @@ module PhusionPassenger
         transaction = core.new_transaction(
           env[PASSENGER_APP_GROUP_NAME],
           :exceptions,
-          env[PASSENGER_UNION_STATION_KEY])
+          union_station_key)
         begin
           request_txn_id = env[PASSENGER_TXN_ID]
           message = exception.message
