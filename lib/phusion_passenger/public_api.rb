@@ -59,7 +59,11 @@ module PhusionPassenger
     end
 
     def union_station_key
-      @@union_station_key ||= PhusionPassenger::App.options["union_station_key"]
+      @@union_station_key
+    end
+
+    def union_station_key=(value)
+      @@union_station_key = value
     end
 
     def measure_and_log_event(env, name)

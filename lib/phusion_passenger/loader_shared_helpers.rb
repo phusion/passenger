@@ -213,6 +213,7 @@ module PhusionPassenger
       # Instantiate the Union Station core if requested. Can be nil.
       PhusionPassenger.require_passenger_lib 'union_station/core'
       options["union_station_core"] = UnionStation::Core.new_from_options(options)
+      PhusionPassenger.union_station_key = options["union_station_key"]
     end
 
     def run_load_path_setup_code(options)
