@@ -91,7 +91,10 @@ class IO
 
   if IO.method_defined?(:close_on_exec=)
     def close_on_exec!
-      self.close_on_exec = true
+      begin
+        self.close_on_exec = true
+      rescue NotImplementedError
+      end
     end
   else
     require 'fcntl'
