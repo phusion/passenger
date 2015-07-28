@@ -4,6 +4,7 @@ Release 5.0.15
  * Support SHA256 digests for the Rails asset pipeline, as used by Sprockets 3.x.
  * Support for JRuby 9.0.0.0. Closes GH-1562.
  * Fixes some bugs in Union Station support, which causes some data (such as controller information and exceptions) to not be logged.
+ * The old Users Guides have been deprecated in favor of the [Passenger Library](https://www.phusionpassenger.com/library/). The Users Guides now redirect to appropriate sections in the Passenger Library.
 
 
 Release 5.0.14
