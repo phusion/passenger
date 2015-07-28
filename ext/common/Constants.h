@@ -38,8 +38,6 @@
 
 	#define AGENT_EXE "PassengerAgent"
 
-	#define APACHE2_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Apache.html"
-
 	#define DEB_APACHE_MODULE_PACKAGE "libapache2-mod-passenger"
 
 	#define DEB_DEV_PACKAGE "passenger-dev"
@@ -110,13 +108,9 @@
 
 	#define GLOBAL_NAMESPACE_DIRNAME "passenger"
 
-	#define INDEX_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide.html"
-
 	#define MESSAGE_SERVER_MAX_PASSWORD_SIZE 100
 
 	#define MESSAGE_SERVER_MAX_USERNAME_SIZE 100
-
-	#define NGINX_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Nginx.html"
 
 	#define PASSENGER_API_VERSION "0.2"
 
@@ -155,8 +149,6 @@
 	#define SERVER_TOKEN_NAME "Phusion_Passenger"
 
 	#define SHORT_PROGRAM_NAME "Passenger"
-
-	#define STANDALONE_DOC_URL "https://www.phusionpassenger.com/documentation/Users%20guide%20Standalone.html"
 
 	#define STANDALONE_NGINX_CONFIGURE_OPTIONS "--with-cc-opt='-Wno-error' --without-http_fastcgi_module --without-http_scgi_module --without-http_uwsgi_module --with-http_gzip_static_module --with-http_stub_status_module --with-http_ssl_module --with-http_realip_module"
 
