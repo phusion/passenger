@@ -1,22 +1,11 @@
-<banner>Deploying a web application: an example</banner>
+<banner>Deploying a web application</banner>
 
-Suppose you have a web application in <b>/somewhere</b>. Add a <b>server</b> block
-to your Nginx configuration file, set its <b>root</b> to <b>/somewhere/public</b>, and set
-<b>'passenger_enabled on'</b>, like this:
-<b>
-   server {
-      listen 80;
-      server_name www.yourhost.com;
-      root /somewhere/public;   # <--- be sure to point to 'public'!
-      passenger_enabled on;
-   }
-</b>
-And that's it! You may also want to check the Passenger Library for security
-and optimization tips, troubleshooting and other useful information:
+To learn how to deploy a web app on Passenger, please follow the deployment
+guide:
 
-  <yellow><%= @passenger_library_url %></yellow>
+  <yellow><%= @deployment_guide_url %></yellow>
 
 Enjoy Phusion Passenger, a product of Phusion (<b><%= @phusion_website %></b>) :-)
 <b><%= @passenger_website %></b>
 
-Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+Phusion Passenger is a registered trademark of Hongli Lai & Ninh Bui.

@@ -849,7 +849,7 @@ private
   def show_deployment_example
     new_screen
     render_template 'apache2/deployment_example',
-      :passenger_library_url => PASSENGER_LIBRARY_URL,
+      :deployment_guide_url => "https://www.phusionpassenger.com/library/deploy/apache/deploy/",
       :phusion_website => PHUSION_WEBSITE,
       :passenger_website => PASSENGER_WEBSITE
   end
