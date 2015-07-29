@@ -5,4 +5,4 @@ image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
 == The documentation has moved
 
-This is the old, deprecated Passenger Standalone documentation. Please visit https://www.phusionpassenger.com/library/ for the new documentation.
+This is the old, deprecated Passenger documentation. Please visit https://www.phusionpassenger.com/library/ for the new documentation.
