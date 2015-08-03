@@ -58,7 +58,7 @@ Group::generateUuid(const Pool *pool) {
 
 bool
 Group::shutdownCanFinish() const {
-	LifeStatus lifeStatus = (LifeStatus) this->lifeStatus.load(boost::memory_order_relaxed);
+	LifeStatus lifeStatus = (LifeStatus) this->lifeStatus.load(boost::memory_order_seq_cst);
 	return lifeStatus == SHUTTING_DOWN
 		&& enabledCount == 0
 		&& disablingCount == 0
@@ -83,7 +83,7 @@ Group::finishShutdown(boost::container::vector<Callback> &postLockActions) {
 	}
 	postLockActions.push_back(boost::bind(interruptAndJoinAllThreads,
 		shared_from_this()));
-	this->lifeStatus.store(SHUT_DOWN, boost::memory_order_release);
+	this->lifeStatus.store(SHUT_DOWN, boost::memory_order_seq_cst);
 	selfPointer.reset();
 }
 
@@ -182,7 +182,7 @@ Group::shutdown(const Callback &callback,
 	spawner.reset();
 	selfPointer = shared_from_this();
 	assert(disableWaitlist.empty());
-	lifeStatus.store(SHUTTING_DOWN, boost::memory_order_release);
+	lifeStatus.store(SHUTTING_DOWN, boost::memory_order_seq_cst);
 }
 
 

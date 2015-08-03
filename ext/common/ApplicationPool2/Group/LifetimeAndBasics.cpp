@@ -55,7 +55,7 @@ Group::isAlive() const {
 OXT_FORCE_INLINE
 Group::LifeStatus
 Group::getLifeStatus() const {
-	return (LifeStatus) lifeStatus.load(boost::memory_order_acquire);
+	return (LifeStatus) lifeStatus.load(boost::memory_order_seq_cst);
 }
 
 StaticString
