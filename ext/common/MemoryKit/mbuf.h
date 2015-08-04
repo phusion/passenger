@@ -71,7 +71,7 @@ struct mhdr;
 typedef void (*mbuf_block_copy_t)(struct mbuf_block *, void *);
 
 struct mbuf_block {
-	uint32_t           magic;     /* mbuf_block magic (const) */
+	boost::uint32_t    magic;     /* mbuf_block magic (const) */
 	STAILQ_ENTRY(struct mbuf_block) next;         /* next free mbuf_block */
 	#ifdef MBUF_ENABLE_DEBUGGING
 		TAILQ_ENTRY(struct mbuf_block) active_q;  /* prev and next active mbuf_block */
@@ -79,8 +79,6 @@ struct mbuf_block {
 	#ifdef MBUF_ENABLE_BACKTRACES
 		char *backtrace;
 	#endif
-	char              *pos;       /* read marker */
-	char              *last;      /* write marker */
 	char              *start;     /* start of buffer (const) */
 	char              *end;       /* end of buffer (const) */
 	struct mbuf_pool  *pool;      /* containing pool (const) */
@@ -93,8 +91,8 @@ STAILQ_HEAD(mhdr, struct mbuf_block);
 #endif
 
 struct mbuf_pool {
-	uint32_t nfree_mbuf_blockq;   /* # free mbuf_block */
-	uint32_t nactive_mbuf_blockq; /* # active (non-free) mbuf_block */
+	boost::uint32_t nfree_mbuf_blockq;   /* # free mbuf_block */
+	boost::uint32_t nactive_mbuf_blockq; /* # active (non-free) mbuf_block */
 	struct mhdr free_mbuf_blockq; /* free mbuf_block q */
 	#ifdef MBUF_ENABLE_DEBUGGING
 		struct active_mbuf_block_list active_mbuf_blockq; /* active mbuf_block q */
@@ -120,14 +118,6 @@ unsigned int mbuf_pool_compact(struct mbuf_pool *pool);
 
 struct mbuf_block *mbuf_block_get(struct mbuf_pool *pool);
 void mbuf_block_put(struct mbuf_block *mbuf_block);
-void mbuf_block_rewind(struct mbuf_block *mbuf_block);
-uint32_t mbuf_block_length(struct mbuf_block *mbuf_block);
-uint32_t mbuf_block_size(struct mbuf_block *mbuf_block);
-void mbuf_block_insert(struct mhdr *mhdr, struct mbuf_block *mbuf_block);
-void mbuf_block_remove(struct mhdr *mhdr, struct mbuf_block *mbuf_block);
-void mbuf_block_copy(struct mbuf_block *mbuf_block, char *pos, size_t n);
-struct mbuf_block *mbuf_block_split(struct mbuf_pool *pool, struct mhdr *h,
-	char *pos, mbuf_block_copy_t cb, void *cbarg);
 
 void mbuf_block_ref(struct mbuf_block *mbuf_block);
 void mbuf_block_unref(struct mbuf_block *mbuf_block);

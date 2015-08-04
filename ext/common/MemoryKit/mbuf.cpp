@@ -60,13 +60,12 @@ _mbuf_block_get(struct mbuf_pool *pool)
 	 *   |       mbuf_block data          |  mbuf_block header   |
 	 *   |     (mbuf_block_offset)        | (struct mbuf_block)  |
 	 *   +-------------------------------------------------------+
-	 *   ^           ^          ^         ^^
-	 *   |           |          |         ||
-	 *   \           |          |         |\
-	 * block->start  \          |         | block->end (one byte past valid bound)
-	 *              block->pos  |         \
-	 *                          \         block
-	 *                          block->last (one byte past valid byte)
+	 *   ^                                ^^
+	 *   |                                ||
+	 *   \                                |\
+	 * block->start                       | block->end (one byte past valid bound)
+	 *                                    \
+	 *                                    block
 	 *
 	 */
 	mbuf_block = (struct mbuf_block *)(buf + pool->mbuf_block_offset);
@@ -104,9 +103,6 @@ mbuf_block_get(struct mbuf_pool *pool)
 	assert(mbuf_block->end - mbuf_block->start == (int)pool->mbuf_block_offset);
 	assert(mbuf_block->start < mbuf_block->end);
 
-	mbuf_block->pos = mbuf_block->start;
-	mbuf_block->last = mbuf_block->start;
-
 	#ifdef MBUF_DEBUG
 		printf("[%p] mbuf_block get %p\n", oxt::thread_signature, mbuf_block);
 	#endif
@@ -119,7 +115,7 @@ mbuf_block_free(struct mbuf_pool *pool, struct mbuf_block *mbuf_block)
 {
 	char *buf;
 
-	//log_debug(LOG_VVERB, "put mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
+	//log_debug(LOG_VVERB, "put mbuf_block %p", mbuf_block);
 
 	assert(STAILQ_NEXT(mbuf_block, next) == NULL);
 	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
@@ -158,126 +154,15 @@ mbuf_block_put(struct mbuf_block *mbuf_block)
 }
 
 /*
- * Rewind the mbuf_block by discarding any of the read or unread data that it
- * might hold.
- */
-void
-mbuf_block_rewind(struct mbuf_block *mbuf_block)
-{
-	mbuf_block->pos = mbuf_block->start;
-	mbuf_block->last = mbuf_block->start;
-}
-
-/*
- * Return the length of data in mbuf_block. Mbuf cannot contain more than
- * 2^32 bytes (4G).
- */
-uint32_t
-mbuf_block_length(struct mbuf_block *mbuf_block)
-{
-	assert(mbuf_block->last >= mbuf_block->pos);
-
-	return (uint32_t)(mbuf_block->last - mbuf_block->pos);
-}
-
-/*
- * Return the remaining space size for any new data in mbuf_block. Mbuf cannot
- * contain more than 2^32 bytes (4G).
- */
-uint32_t
-mbuf_block_size(struct mbuf_block *mbuf_block)
-{
-	assert(mbuf_block->end >= mbuf_block->last);
-
-	return (uint32_t)(mbuf_block->end - mbuf_block->last);
-}
-
-/*
- * Insert mbuf_block at the tail of the mhdr Q
- */
-void
-mbuf_block_insert(struct mhdr *mhdr, struct mbuf_block *mbuf_block)
-{
-	STAILQ_INSERT_TAIL(mhdr, mbuf_block, next);
-	//log_debug(LOG_VVERB, "insert mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
-}
-
-/*
  * Remove mbuf_block from the mhdr Q
  */
-void
+static void
 mbuf_block_remove(struct mhdr *mhdr, struct mbuf_block *mbuf_block)
 {
-	//log_debug(LOG_VVERB, "remove mbuf_block %p len %d", mbuf_block, mbuf_block->last - mbuf_block->pos);
+	//log_debug(LOG_VVERB, "remove mbuf_block %p", mbuf_block);
 
 	STAILQ_REMOVE(mhdr, mbuf_block, struct mbuf_block, next);
 	STAILQ_NEXT(mbuf_block, next) = NULL;
-}
-
-/*
- * Copy n bytes from memory area pos to mbuf_block.
- *
- * The memory areas should not overlap and the mbuf_block should have
- * enough space for n bytes.
- */
-void
-mbuf_block_copy(struct mbuf_block *mbuf_block, char *pos, size_t n)
-{
-	if (n == 0) {
-		return;
-	}
-
-	/* mbuf_block has space for n bytes */
-	assert(!MBUF_BLOCK_FULL(mbuf_block) && n <= mbuf_block_size(mbuf_block));
-
-	/* no overlapping copy */
-	assert(pos < mbuf_block->start || pos >= mbuf_block->end);
-
-	memcpy(mbuf_block->last, pos, n);
-	mbuf_block->last += n;
-}
-
-/*
- * Split mbuf_block h into h and t by copying data from h to t. Before
- * the copy, we invoke a precopy handler cb that will copy a predefined
- * string to the head of t.
- *
- * Return new mbuf_block t, if the split was successful.
- */
-struct mbuf_block *
-mbuf_block_split(struct mbuf_pool *pool, struct mhdr *h, char *pos,
-	mbuf_block_copy_t cb, void *cbarg)
-{
-	struct mbuf_block *mbuf_block, *nbuf;
-	size_t size;
-
-	assert(!STAILQ_EMPTY(h));
-
-	mbuf_block = STAILQ_LAST(h, struct mbuf_block, next);
-	assert(pos >= mbuf_block->pos && pos <= mbuf_block->last);
-
-	nbuf = mbuf_block_get(pool);
-	if (nbuf == NULL) {
-		return NULL;
-	}
-
-	if (cb != NULL) {
-		/* precopy nbuf */
-		cb(nbuf, cbarg);
-	}
-
-	/* copy data from mbuf_block to nbuf */
-	size = (size_t)(mbuf_block->last - pos);
-	mbuf_block_copy(nbuf, pos, size);
-
-	/* adjust mbuf_block */
-	mbuf_block->last = pos;
-
-	//log_debug(LOG_VVERB, "split into mbuf_block %p len %"PRIu32" and nbuf %p len "
-	//          "%"PRIu32" copied %zu bytes", mbuf_block, mbuf_block_length(mbuf_block), nbuf,
-	//          mbuf_block_length(nbuf), size);
-
-	return nbuf;
 }
 
 void
