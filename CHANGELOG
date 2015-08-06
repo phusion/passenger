@@ -1,6 +1,8 @@
 Release 5.0.16
 --------------
 
+ * Allow independent configuration of Union Station gateway address, port and certificate. Closes GH-1543.
+
 
 Release 5.0.15
 --------------

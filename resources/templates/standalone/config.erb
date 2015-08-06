@@ -87,7 +87,11 @@ http {
 
     <% if @options[:union_station_gateway_address] %>
         union_station_gateway_address <%= @options[:union_station_gateway_address] %>;
+    <% end %>
+    <% if @options[:union_station_gateway_port] %>
         union_station_gateway_port <%= @options[:union_station_gateway_port] %>;
+    <% end %>
+    <% if @options[:union_station_gateway_cert] %>
         union_station_gateway_cert -;
     <% end %>
 
