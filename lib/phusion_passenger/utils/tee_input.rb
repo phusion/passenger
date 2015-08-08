@@ -167,6 +167,16 @@ class TeeInput
     end
   end
 
+  def seek(*args)
+    if !socket_drained?
+      # seek may be forward, or relative to the end, so we need to consume the socket fully into tmp
+      pos = @tmp.pos # save/restore tmp.pos, to not break relative seeks
+      consume!
+      @tmp.pos = pos
+    end
+    @tmp.seek(*args) 
+  end
+  
   def rewind
     return 0 if 0 == @tmp.size
     consume! if !socket_drained?
