@@ -23,8 +23,7 @@
 
 AGENT_OBJECTS = {
   'WatchdogMain.o' => [
-    'ext/common/agent/Watchdog/Main.cpp',
-    'ext/common/agent/Watchdog/Main.cpp',
+    'ext/common/agent/Watchdog/WatchdogMain.cpp',
     'ext/common/agent/Watchdog/AgentWatcher.cpp',
     'ext/common/agent/Watchdog/CoreWatcher.cpp',
     'ext/common/agent/Watchdog/UstRouterWatcher.cpp',
@@ -43,7 +42,7 @@ AGENT_OBJECTS = {
     'ext/common/Utils/VariantMap.h'
   ],
   'CoreMain.o' => [
-    'ext/common/agent/Core/Main.cpp',
+    'ext/common/agent/Core/CoreMain.cpp',
     'ext/common/agent/Core/OptionParser.h',
     'ext/common/agent/Core/ApiServer.h',
     'ext/common/agent/Core/ResponseCache.h',
@@ -85,7 +84,7 @@ AGENT_OBJECTS = {
     'ext/common/Utils/VariantMap.h'
   ],
   'UstRouterMain.o' => [
-    'ext/common/agent/UstRouter/Main.cpp',
+    'ext/common/agent/UstRouter/UstRouterMain.cpp',
     'ext/common/agent/UstRouter/OptionParser.h',
     'ext/common/agent/UstRouter/ApiServer.h',
     'ext/common/agent/UstRouter/LoggingServer.h',
@@ -105,14 +104,14 @@ AGENT_OBJECTS = {
     'ext/common/Utils/BlockingQueue.h'
   ],
   'SystemMetricsMain.o' => [
-    'ext/common/agent/SystemMetrics/Main.cpp',
+    'ext/common/agent/SystemMetrics/SystemMetricsMain.cpp',
     'ext/common/Utils/SystemMetricsCollector.h'
   ],
   'TempDirToucherMain.o' => [
-    'ext/common/agent/TempDirToucher/Main.cpp'
+    'ext/common/agent/TempDirToucher/TempDirToucherMain.cpp'
   ],
   'SpawnPreparerMain.o' => [
-    'ext/common/agent/SpawnPreparer/Main.cpp'
+    'ext/common/agent/SpawnPreparer/SpawnPreparerMain.cpp'
   ]
 }
 
@@ -138,7 +137,7 @@ agent_libs = COMMON_LIBRARY.
 agent_objects = AGENT_OBJECTS.keys.map { |x| "#{AGENT_OUTPUT_DIR}#{x}" }
 dependencies = agent_objects + [
   'ext/common/Constants.h',
-  'ext/common/agent/Main.cpp',
+  'ext/common/agent/AgentMain.cpp',
   LIBBOOST_OXT,
   agent_libs.link_objects,
   LIBEV_TARGET,
@@ -147,7 +146,7 @@ dependencies = agent_objects + [
 file AGENT_OUTPUT_DIR + AGENT_EXE => dependencies do
   agent_objects_as_string = agent_objects.join(" ")
   sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-  compile_cxx("ext/common/agent/Main.cpp",
+  compile_cxx("ext/common/agent/AgentMain.cpp",
     "-o #{AGENT_OUTPUT_DIR}#{AGENT_EXE}.o " <<
     "#{EXTRA_PRE_CXXFLAGS} " <<
     "-Iext -Iext/common " <<
