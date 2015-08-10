@@ -34,7 +34,7 @@ beginBufferingBody(Client *client, Request *req) {
 	req->bodyChannel.start();
 	req->bodyBuffer.reinitialize();
 	req->bodyBuffer.stop();
-	req->beginScopeLog(&req->scopeLogs.bufferingRequestBody, "buffering request body");
+	req->beginStopwatchLog(&req->stopwatchLogs.bufferingRequestBody, "buffering request body");
 }
 
 Channel::Result
@@ -83,7 +83,7 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 			req->headers.erase(HTTP_TRANSFER_ENCODING);
 			req->headers.insert(&header, req->pool);
 		}
-		req->endScopeLog(&req->scopeLogs.bufferingRequestBody);
+		req->endStopwatchLog(&req->stopwatchLogs.bufferingRequestBody);
 		checkoutSession(client, req);
 		return Channel::Result(0, true);
 	} else {

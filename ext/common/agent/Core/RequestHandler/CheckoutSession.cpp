@@ -35,7 +35,7 @@ checkoutSession(Client *client, Request *req) {
 	RH_BENCHMARK_POINT(client, req, BM_BEFORE_CHECKOUT);
 	SKC_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
 	req->state = Request::CHECKING_OUT_SESSION;
-	req->beginScopeLog(&req->scopeLogs.getFromPool, "get from pool");
+	req->beginStopwatchLog(&req->stopwatchLogs.getFromPool, "get from pool");
 	if (req->requestBodyBuffering) {
 		assert(!req->bodyBuffer.isStarted());
 	} else {
@@ -119,7 +119,7 @@ sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 		initiateSession(client, req);
 	} else {
 		UPDATE_TRACE_POINT();
-		req->endScopeLog(&req->scopeLogs.getFromPool, false);
+		req->endStopwatchLog(&req->stopwatchLogs.getFromPool, false);
 		reportSessionCheckoutError(client, req, e);
 	}
 }
@@ -171,11 +171,11 @@ initiateSession(Client *client, Request *req) {
 
 	UPDATE_TRACE_POINT();
 	if (req->useUnionStation()) {
-		req->endScopeLog(&req->scopeLogs.getFromPool);
+		req->endStopwatchLog(&req->stopwatchLogs.getFromPool);
 		req->logMessage("Application PID: " +
 			toString(req->session->getPid()) +
 			" (GUPID: " + req->session->getGupid() + ")");
-		req->beginScopeLog(&req->scopeLogs.requestProxying, "request proxying");
+		req->beginStopwatchLog(&req->stopwatchLogs.requestProxying, "request proxying");
 	}
 
 	UPDATE_TRACE_POINT();

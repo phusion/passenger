@@ -1047,6 +1047,6 @@ storeAppResponseInTurboCache(Client *client, Request *req) {
 
 void
 finalizeUnionStationWithSuccess(Client *client, Request *req) {
-	req->endScopeLog(&req->scopeLogs.requestProcessing, true);
-	req->endScopeLog(&req->scopeLogs.requestProxying, true);
+	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, true);
+	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, true);
 }

@@ -109,10 +109,10 @@ virtual void reinitializeRequest(Client *client, Request *req) {
 virtual void deinitializeRequest(Client *client, Request *req) {
 	req->session.reset();
 
-	req->endScopeLog(&req->scopeLogs.requestProxying, false);
-	req->endScopeLog(&req->scopeLogs.getFromPool, false);
-	req->endScopeLog(&req->scopeLogs.bufferingRequestBody, false);
-	req->endScopeLog(&req->scopeLogs.requestProcessing, false);
+	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, false);
+	req->endStopwatchLog(&req->stopwatchLogs.getFromPool, false);
+	req->endStopwatchLog(&req->stopwatchLogs.bufferingRequestBody, false);
+	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, false);
 
 	req->options.transaction.reset();
 

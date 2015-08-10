@@ -35,7 +35,7 @@
 #include <ApplicationPool2/Pool.h>
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
-#include <UnionStation/ScopeLog.h>
+#include <UnionStation/StopwatchLog.h>
 #include <agent/Core/RequestHandler/AppResponse.h>
 #include <Logging.h>
 
@@ -84,11 +84,11 @@ public:
 	boost::uint64_t bodyBytesBuffered; // After dechunking
 
 	struct {
-		UnionStation::ScopeLog *requestProcessing;
-		UnionStation::ScopeLog *bufferingRequestBody;
-		UnionStation::ScopeLog *getFromPool;
-		UnionStation::ScopeLog *requestProxying;
-	} scopeLogs;
+		UnionStation::StopwatchLog *requestProcessing;
+		UnionStation::StopwatchLog *bufferingRequestBody;
+		UnionStation::StopwatchLog *getFromPool;
+		UnionStation::StopwatchLog *requestProxying;
+	} stopwatchLogs;
 
 	HashedStaticString cacheKey;
 	LString *cacheControl;
@@ -105,7 +105,7 @@ public:
 	Request()
 		: BaseHttpRequest()
 	{
-		memset(&scopeLogs, 0, sizeof(scopeLogs));
+		memset(&stopwatchLogs, 0, sizeof(stopwatchLogs));
 	}
 
 	const char *getStateString() const {
@@ -131,18 +131,18 @@ public:
 		return options.transaction != NULL;
 	}
 
-	void beginScopeLog(UnionStation::ScopeLog **scopeLog, const char *name) {
+	void beginStopwatchLog(UnionStation::StopwatchLog **stopwatchLog, const char *name) {
 		if (options.transaction != NULL) {
-			*scopeLog = new UnionStation::ScopeLog(options.transaction, name);
+			*stopwatchLog = new UnionStation::StopwatchLog(options.transaction, name);
 		}
 	}
 
-	void endScopeLog(UnionStation::ScopeLog **scopeLog, bool success = true) {
-		if (success && *scopeLog != NULL) {
-			(*scopeLog)->success();
+	void endStopwatchLog(UnionStation::StopwatchLog **stopwatchLog, bool success = true) {
+		if (success && *stopwatchLog != NULL) {
+			(*stopwatchLog)->success();
 		}
-		delete *scopeLog;
-		*scopeLog = NULL;
+		delete *stopwatchLog;
+		*stopwatchLog = NULL;
 	}
 
 	void logMessage(const StaticString &message) {

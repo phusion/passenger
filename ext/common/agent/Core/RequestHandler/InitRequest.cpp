@@ -416,7 +416,7 @@ initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) 
 			options.unionStationKey = StaticString(key->start->data, key->size);
 		}
 
-		req->beginScopeLog(&req->scopeLogs.requestProcessing, "request processing");
+		req->beginStopwatchLog(&req->stopwatchLogs.requestProcessing, "request processing");
 		req->logMessage(string("Request method: ") + http_method_str(req->method));
 		req->logMessage("URI: " + StaticString(req->path.start->data, req->path.size));
 	}

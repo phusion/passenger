@@ -197,7 +197,7 @@ TEST_CXX_OBJECTS = {
   #   ext/common/UnionStation/Connection.h
   #   ext/common/UnionStation/Core.h
   #   ext/common/UnionStation/Transaction.h
-  #   ext/common/UnionStation/ScopeLog.h
+  #   ext/common/UnionStation/StopwatchLog.h
   #   ext/common/ApplicationPool2/Pool.h
   #   ext/common/ApplicationPool2/SuperGroup.h
   #   ext/common/ApplicationPool2/Group.h
