@@ -7,7 +7,8 @@ Release 5.0.16
  * [Enterprise] Fixes installation of the Passenger Enterprise Apache module on Debian Testing.
  * Fix logging HTTP response code for monitoring (Union Station). Regression introduced by Passenger 5. Closes GH-1581. 
  * Added a new subcommand `passenger-config about support-binaries-dir`.
- 
+ * Fix regression in Node.js loader with custom startup files, introduced in 5.0.14. Closes GH-1557 (again).
+
 
 Release 5.0.15
 --------------

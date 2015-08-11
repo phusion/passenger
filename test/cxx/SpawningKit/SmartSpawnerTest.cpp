@@ -206,6 +206,7 @@ namespace tut {
 		config->outputHandler = gatherOutput;
 		Options options = createOptions();
 		options.appRoot = "stub/rack";
+		options.appType = "rack";
 
 		{
 			vector<string> preloaderCommand;

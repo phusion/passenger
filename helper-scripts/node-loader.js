@@ -116,8 +116,8 @@ function configure(_options) {
 
 function loadApplication() {
 	var appRoot = PhusionPassenger.options.app_root || process.cwd();
-	var startupFile = PhusionPassenger.options.startup_file || 'app.js';
-	require(appRoot + '/' + startupFile);
+	var startupFile = PhusionPassenger.options.startup_file || (appRoot + '/' + 'app.js');
+	require(startupFile);
 }
 
 function extractCallback(args) {
