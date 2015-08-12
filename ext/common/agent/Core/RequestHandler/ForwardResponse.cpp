@@ -836,6 +836,15 @@ logResponseHeaders(Client *client, Request *req, struct iovec *buffers,
 		SKC_TRACE(client, 3, "Sending response headers: \"" <<
 			cEscapeString(StaticString(buffer, dataSize)) << "\"");
 	}
+
+	if (req->useUnionStation()) {
+		const char *status = getStatusCodeAndReasonPhrase(req->appResponse.statusCode);
+		if (status != NULL) {
+			req->logMessage("Status: " + StaticString(status));
+		} else {
+			req->logMessage("Status: " + toString(req->appResponse.statusCode));
+		}
+	}
 }
 
 void
