@@ -823,6 +823,14 @@ private
   end
 
   def validate_install
+    # By compiling Passenger, we may have changed Apache's state. For example,
+    # if 'apache2ctl -V' failed because it referenced an Apache module that
+    # didn't exist, then it may exist now, causing 'apache2ctl -V' to succeed.
+    # We want ValidateInstallCommand to reflect the current Apache state,
+    # not the one before compilation started, so we clear PlatformInfo
+    # memoizations here.
+    PlatformInfo.clear_memoizations
+
     new_screen
     puts "<banner>Validating installation...</banner>"
     puts

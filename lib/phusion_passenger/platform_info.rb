@@ -226,6 +226,16 @@ module PhusionPassenger
       return ""
     end
 
+    # Clears all memoized values. However, the disk cache (if any is configured)
+    # is still used.
+    def self.clear_memoizations
+      class_variables.each do |name|
+        if name.to_s =~ /^@@has_memoized_/
+          class_variable_set(name, false)
+        end
+      end
+    end
+
     def self.tmpdir
       result = ENV['TMPDIR']
       if result && !result.empty?

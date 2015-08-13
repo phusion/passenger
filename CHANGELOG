@@ -3,6 +3,7 @@ Release 5.0.16
 
  * Allow independent configuration of Union Station gateway address, port and certificate. Closes GH-1543.
  * Support seek() such that body.rewind works when using Rack middleware that uses Zlib::GzipReader (e.g. for compressed requests). Closes GH-1553.
+ * [Apache] Improves detection of Apache configuration file problems. Closes GH-1577.
 
 
 Release 5.0.15
