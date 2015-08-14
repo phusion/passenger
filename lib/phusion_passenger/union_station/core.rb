@@ -105,9 +105,6 @@ module PhusionPassenger
           raise ArgumentError, "Group name may not be empty"
         end
 
-        txn_id = (Core.current_time.to_i / 60).to_s(36)
-        txn_id << "-#{random_token(11)}"
-
         Utils::Lock.new(@mutex).synchronize do |lock|
           if current_time < @next_reconnect_time
             return Transaction.new
@@ -132,15 +129,17 @@ module PhusionPassenger
 
             begin
               @connection.channel.write("openTransaction",
-                txn_id, group_name, "", category,
+                "", group_name, "", category,
                 Core.timestamp_string,
                 union_station_key,
                 true,
                 true)
               result = @connection.channel.read
-              if result != ["ok"]
+              if result[0] != "ok"
                 raise "Expected the UstRouter to respond with 'ok', but got #{result.inspect} instead"
               end
+              txn_id = result[1]
+              
               return Transaction.new(@connection, txn_id)
             rescue SystemCallError, IOError
               @connection.disconnect
@@ -255,14 +254,6 @@ module PhusionPassenger
       rescue Exception => e
         socket.close if socket && !socket.closed?
         raise e
-      end
-
-      def random_token(length)
-        token = ""
-        @random_dev.read(length).each_byte do |c|
-          token << RANDOM_CHARS[c % RANDOM_CHARS.size]
-        end
-        return token
       end
 
       def current_time

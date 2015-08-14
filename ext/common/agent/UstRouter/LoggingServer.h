@@ -281,6 +281,11 @@ private:
 		}
 	};
 
+	static const unsigned int TXN_ID_MAX_SIZE =
+			2 * sizeof(unsigned int) +    // max hex timestamp size
+			11 +                          // space for a random identifier
+			1;                            // null terminator
+
 	struct Transaction {
 		LoggingServer *server;
 		LogSinkPtr logSink;
@@ -297,6 +302,11 @@ private:
 			this->server = server;
 			this->createdAt = createdAt;
 			data.reserve(8 * 1024);
+
+			discarded = false;
+			writeCount = 0;
+			crashProtect = false;
+			refcount = 0;
 		}
 
 		~Transaction() {
@@ -499,6 +509,28 @@ private:
 		} else {
 			return defaultValue;
 		}
+	}
+
+	void createTxnId(char *txnId, char **txnIdEnd, unsigned long long timestamp) {
+		unsigned int timestampSize;
+		char *end;
+		// "[timestamp]"
+		// Our timestamp is like a Unix timestamp but with minutes
+		// resolution instead of seconds. 32 bits will last us for
+		// about 8000 years.
+		timestampSize = integerToHexatri<unsigned int>(
+			timestamp / 1000000 / 60,
+			txnId);
+		end = txnId + timestampSize;
+
+		// "[timestamp]-"
+		*end = '-';
+		end++;
+		// "[timestamp]-[random id]"
+		randomGenerator.generateAsciiString(end, 11);
+		end += 11;
+		*end = '\0';
+		*txnIdEnd = end;
 	}
 
 	bool validTxnId(const StaticString &txnId) const {
@@ -834,6 +866,12 @@ protected:
 			bool         ack             = getBool(args, 8, false);
 			StaticString filters         = getStaticString(args, 9);
 
+			if (txnId.empty() && ack) { // autogeneration requested
+				unsigned long long timestamp = SystemTime::getUsec();
+				char txnIdBuf[TXN_ID_MAX_SIZE], *txnIdBufEnd;
+				createTxnId(txnIdBuf, &txnIdBufEnd, timestamp);
+				txnId = StaticString(txnIdBuf, txnIdBufEnd - txnIdBuf);
+			}
 			if (OXT_UNLIKELY( !validTxnId(txnId) )) {
 				sendErrorToClient(client, "Invalid transaction ID format");
 				client->disconnect();
@@ -934,7 +972,7 @@ protected:
 			writeLogEntry(client, transaction, timestamp, "ATTACH");
 
 			if (ack) {
-				client->writeArrayMessage("ok", NULL);
+				client->writeArrayMessage("ok", txnId.c_str(), NULL);
 			}
 
 		} else if (args[0] == "closeTransaction") {
