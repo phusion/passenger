@@ -88,14 +88,14 @@ module PhusionPassenger
             handle_error(name, response)
           end
         else
-          STDERR.puts "*** An error occured while communicating with the #{AGENT_EXE} #{name} (code #{response.code}):"
+          STDERR.puts "*** An error occured while communicating with the #{PROGRAM_NAME} #{name} (code #{response.code}):"
           STDERR.puts response.body
           abort
         end
       end
 
       def perform_reinherit_logs_on(name, socket_name)
-        puts "Reopen logs for #{AGENT_EXE} #{name} (through reinheritance)"
+        puts "Reopening logs for #{PROGRAM_NAME} #{name} (through reinheritance)"
         request = Net::HTTP::Post.new("/reinherit_logs.json")
         try_performing_full_admin_basic_auth(request, @instance)
         request.content_type = "application/json"
@@ -108,7 +108,7 @@ module PhusionPassenger
             handle_error(name, response)
           end
         else
-          STDERR.puts "*** An error occured while communicating with the #{AGENT_EXE} #{name} (code #{response.code}):"
+          STDERR.puts "*** An error occured while communicating with the #{PROGRAM_NAME} #{name} (code #{response.code}):"
           STDERR.puts response.body
           abort
         end
@@ -117,7 +117,7 @@ module PhusionPassenger
       def handle_error(name, response)
         json = PhusionPassenger::Utils::JSON.parse(response.body)
         if !should_ignore_error?(json)
-          STDERR.puts "*** An error occured while communicating with the #{AGENT_EXE} #{name} (code #{response.code}):"
+          STDERR.puts "*** An error occured while communicating with the #{PROGRAM_NAME} #{name} (code #{response.code}):"
           STDERR.puts json['message']
           abort
         end
