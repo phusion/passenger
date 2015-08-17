@@ -42,8 +42,8 @@ task :sloccount do
       "ext/nginx",
       "ext/common",
       "ext/oxt",
-      "ext/phusion_passenger/*.c",
-      "test/**/*.{cpp,rb,h}"
+      "ext/ruby/*.c",
+      "helper-scripts/*"
     ]
   ensure
     system "rm -rf #{tmpdir}"
