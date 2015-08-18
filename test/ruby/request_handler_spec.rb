@@ -559,10 +559,9 @@ describe RequestHandler do
         Process.kill('KILL', @agent_pid)
         Process.waitpid(@agent_pid)
       end
-      @dump_file = "#{@temp_dir}/log.txt"
       @ust_router_password = "1234"
       @agent_pid, @socket_filename, @socket_address = spawn_ust_router(
-        @temp_dir, @dump_file, @ust_router_password)
+        @temp_dir, @ust_router_password)
 
       @union_station_core = UnionStation::Core.new(@socket_address, "logging",
         "1234", "localhost")
@@ -623,8 +622,8 @@ describe RequestHandler do
       end
       eventually(5) do
         flush_ust_router(@ust_router_password, @socket_address)
-        if File.exist?(@dump_file)
-          log_data = File.read(@dump_file)
+        if File.exist?("#{@temp_dir}/exceptions")
+          log_data = File.read("#{@temp_dir}/exceptions")
         else
           log_data = ""
         end

@@ -103,63 +103,6 @@ struct Connection: public boost::noncopyable {
 		return fd != -1;
 	}
 
-	/**
-	 * Disconnect from the server. If the server sent an error response
-	 * right before closing the connection, try to read it and return it
-	 * through `errorResponse`. Returns whether an error response was read.
-	 *
-	 * Reading the error response might result in an exception, e.g.
-	 * because of networking and protocol exceptions. In such an event,
-	 * the connection is still guaranteed to be disconnected.
-	 */
-	bool disconnect(string &errorResponse) {
-		if (!connected()) {
-			return false;
-		}
-
-		ConnectionGuard guard(this);
-
-		/* The server might send an "error" array message
-		 * just before disconnecting. Try to read it.
-		 */
-		TRACE_POINT();
-		vector<string> response;
-		try {
-			unsigned long long timeout = 20000000;
-			while (true) {
-				response = readArrayMessage(fd, &timeout);
-			}
-		} catch (const TimeoutException &) {
-			/* This means that the last message isn't an array
-			 * message or that the server didn't send it quickly
-			 * enough. In any case, discard whatever previous
-			 * array messages we were able to read because they're
-			 * guaranteed not to be the error message we're expecting.
-			 */
-			response.clear();
-		} catch (const SystemException &e) {
-			/* We treat ECONNRESET the same as EOFException.
-			 * Other errors are treated as TimeoutException.
-			 */
-			if (e.code() != ECONNRESET) {
-				response.clear();
-			}
-		} catch (const EOFException &) {
-			/* Do nothing. We've successfully read the last array message. */
-		}
-
-		UPDATE_TRACE_POINT();
-		if (response.size() == 2 && response[0] == "error") {
-			errorResponse = response[1];
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	/** Disconnect from the server, ignoring any error responses the
-	 * server might have sent.
-	 */
 	void disconnect() {
 		if (fd != -1) {
 			this_thread::disable_interruption di;

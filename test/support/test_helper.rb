@@ -361,7 +361,7 @@ module TestHelper
     end
   end
 
-  def spawn_ust_router(tmpdir, dump_file, password)
+  def spawn_ust_router(tmpdir, password)
     socket_filename = "#{tmpdir}/ust_router.socket"
     password_filename = "#{tmpdir}/password"
     File.write(password_filename, password)
@@ -369,7 +369,8 @@ module TestHelper
       "ust-router",
       "--passenger-root", PhusionPassenger.install_spec,
       "--log-level", PhusionPassenger::DebugLogging.log_level,
-      "--dump-file", dump_file,
+      "--dev-mode",
+      "--dump-dir", tmpdir,
       "--user",  CONFIG['normal_user_1'],
       "--group", CONFIG['normal_group_1'],
       "--listen", "unix:#{socket_filename}",

@@ -49,7 +49,7 @@ ustRouterUsage() {
 	printf("      --password-file PATH    Protect the UstRouter controller with the password in\n");
 	printf("                              this file\n");
 	printf("\n");
-	printf("Other options (optional):\n");
+	printf("Socket options (optional):\n");
 	printf("  -l, --listen ADDRESS        Listen on the given address. The address must be\n");
 	printf("                              formatted as tcp://IP:PORT for TCP sockets, or\n");
 	printf("                              unix:PATH for Unix domain sockets.\n");
@@ -64,9 +64,12 @@ ustRouterUsage() {
 	printf("                              the privilege level (see below). PASSWORDFILE must\n");
 	printf("                              point to a file containing the password\n");
 	printf("\n");
-	printf("      --dump-file PATH        Dump transactions without Union Station key to the\n");
-	printf("                              following file. Default: /dev/null\n");
+	printf("Operational options (optional):\n");
+	printf("      --dev-mode              Enable development mode: dump data to a directory\n");
+	printf("                              instead of sending them to the Union Station gateway\n");
+	printf("      --dump-dir  PATH        Directory to dump to\n");
 	printf("\n");
+	printf("Other options (optional):\n");
 	printf("      --user USERNAME         Lower privilege to the given user. Only has\n");
 	printf("                              effect when started as root\n");
 	printf("      --group GROUPNAME       Lower privilege to the given group. Only has\n");
@@ -136,8 +139,11 @@ parseUstRouterOption(int argc, const char *argv[], int &i, VariantMap &options) 
 		authorizations.push_back(argv[i + 1]);
 		options.setStrSet("ust_router_authorizations", authorizations);
 		i += 2;
-	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--dump-file")) {
-		options.set("ust_router_dump_file", argv[i + 1]);
+	} else if (p.isFlag(argv[i], '\0', "--dev-mode")) {
+		options.setBool("ust_router_dev_mode", true);
+		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--dump-dir")) {
+		options.set("ust_router_dump_dir", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--user")) {
 		options.set("analytics_log_user", argv[i + 1]);

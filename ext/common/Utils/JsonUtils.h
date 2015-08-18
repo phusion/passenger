@@ -188,10 +188,10 @@ jsonString(const Passenger::StaticString &str) {
 }
 
 /**
- * Encodes the given Unix timestamp into a JSON object that
+ * Encodes the given Unix timestamp (in microseconds) into a JSON object that
  * describes it.
  *
- *     timeToJson(time(NULL) - 10);
+ *     timeToJson((time(NULL) - 10) * 1000000.0);
  *     // {
  *     //   "timestamp": 1424887842,
  *     //   "local": "Wed Feb 25 19:10:34 CET 2015",

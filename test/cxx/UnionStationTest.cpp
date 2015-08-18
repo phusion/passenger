@@ -2,7 +2,7 @@
 #include <UnionStation/Core.h>
 #include <UnionStation/Transaction.h>
 #include <MessageClient.h>
-#include <agent/UstRouter/LoggingServer.h>
+#include <agent/UstRouter/Controller.h>
 #include <Utils/MessageIO.h>
 #include <Utils/ScopeGuard.h>
 
@@ -24,27 +24,28 @@ namespace tut {
 		#define TODAY_TXN_ID "cjb8n-abcd"
 		#define TODAY_TIMESTAMP_STR "cftz90m3k0"
 
-		InstanceDirectoryPtr instanceDir;
+		boost::shared_ptr<BackgroundEventLoop> bg;
+		boost::shared_ptr<ServerKit::Context> context;
+		TempDir tmpdir;
 		string socketFilename;
 		string socketAddress;
-		string dumpFile;
-		AccountsDatabasePtr accountsDatabase;
-		ev::dynamic_loop eventLoop;
 		FileDescriptor serverFd;
-		LoggingServerPtr server;
-		boost::shared_ptr<oxt::thread> serverThread;
+		VariantMap controllerOptions;
+		boost::shared_ptr<UstRouter::Controller> controller;
 		CorePtr core, core2, core3, core4;
 
-		UnionStationTest() {
-			createInstanceDir(instanceDir);
-			socketFilename = instanceDir->getPath() + "/logging.socket";
+		UnionStationTest()
+			: tmpdir("tmp.union_station")
+		{
+			socketFilename = tmpdir.getPath() + "/socket";
 			socketAddress = "unix:" + socketFilename;
-			dumpFile = instanceDir->getPath() + "/log.txt";
-			accountsDatabase = ptr(new AccountsDatabase());
-			accountsDatabase->add("test", "1234", false);
 			setLogLevel(LVL_ERROR);
 
-			startLoggingServer();
+			controllerOptions.set("ust_router_username", "test");
+			controllerOptions.set("ust_router_password", "1234");
+			controllerOptions.setBool("ust_router_dev_mode", true);
+			controllerOptions.set("ust_router_dump_dir", tmpdir.getPath());
+
 			core = boost::make_shared<Core>(socketAddress, "test", "1234",
 				"localhost");
 			core2 = boost::make_shared<Core>(socketAddress, "test", "1234",
@@ -56,46 +57,45 @@ namespace tut {
 		}
 
 		~UnionStationTest() {
-			stopLoggingServer();
+			// Silence error disconnection messages during shutdown.
+			setLogLevel(LVL_CRIT);
+			shutdown();
 			SystemTime::releaseAll();
 			setLogLevel(DEFAULT_LOG_LEVEL);
 		}
 
-		void startLoggingServer(const boost::function<void ()> &initFunc = boost::function<void ()>()) {
-			VariantMap options;
-			options.set("ust_router_dump_file", dumpFile);
+		void init() {
+			bg = boost::make_shared<BackgroundEventLoop>(false, true);
+			context = boost::make_shared<ServerKit::Context>(bg->safe, bg->libuv_loop);
 			serverFd.assign(createUnixServer(socketFilename.c_str(), 0, true, __FILE__, __LINE__), NULL, 0);
-			server = ptr(new LoggingServer(eventLoop,
-				serverFd, accountsDatabase, options));
-			if (initFunc) {
-				initFunc();
-			}
-			serverThread = ptr(new oxt::thread(
-				boost::bind(&UnionStationTest::runLoop, this)
-			));
+			controller = make_shared<UstRouter::Controller>(context.get(), controllerOptions);
+			controller->listen(serverFd);
+			bg->start();
 		}
 
-		void stopLoggingServer(bool destroy = true) {
-			if (serverThread != NULL) {
-				MessageClient client;
-				client.connect(socketAddress, "test", "1234");
-				client.write("exit", "immediately", NULL);
-				joinLoggingServer(destroy);
+		void shutdown() {
+			if (bg != NULL) {
+				bg->safe->runSync(boost::bind(&UstRouter::Controller::shutdown, controller.get(), true));
+				while (getControllerState() != UstRouter::Controller::FINISHED_SHUTDOWN) {
+					syscalls::usleep(1000000);
+				}
+				controller.reset();
+				bg->stop();
+				bg.reset();
+				context.reset();
+				serverFd.close();
 			}
 		}
 
-		void joinLoggingServer(bool destroy = true) {
-			serverThread->join();
-			serverThread.reset();
-			if (destroy) {
-				server.reset();
-			}
-			unlink(socketFilename.c_str());
+		UstRouter::Controller::State getControllerState() {
+			UstRouter::Controller::State result;
+			bg->safe->runSync(boost::bind(&UnionStationTest::_getControllerState,
+				this, &result));
+			return result;
 		}
 
-		void runLoop() {
-			eventLoop.loop();
-			serverFd.close();
+		void _getControllerState(UstRouter::Controller::State *state) {
+			*state = controller->serverState;
 		}
 
 		string timestampString(unsigned long long timestamp) {
@@ -115,8 +115,12 @@ namespace tut {
 			return client;
 		}
 
-		string readDumpFile() {
-			return readAll(dumpFile);
+		string readDumpFile(const string &category = "requests") {
+			return readAll(getDumpFilePath(category));
+		}
+
+		string getDumpFilePath(const string &category = "requests") {
+			return tmpdir.getPath() + "/" + category;
 		}
 	};
 
@@ -127,6 +131,7 @@ namespace tut {
 
 	TEST_METHOD(1) {
 		// Test logging of new transaction.
+		init();
 		SystemTime::forceAll(YESTERDAY);
 
 		TransactionPtr log = core->newTransaction("foobar");
@@ -146,6 +151,7 @@ namespace tut {
 
 	TEST_METHOD(2) {
 		// Test logging of existing transaction.
+		init();
 		SystemTime::forceAll(YESTERDAY);
 
 		TransactionPtr log = core->newTransaction("foobar");
@@ -167,7 +173,9 @@ namespace tut {
 
 	TEST_METHOD(3) {
 		// Test logging with different points in time.
+		init();
 		SystemTime::forceAll(YESTERDAY);
+
 		TransactionPtr log = core->newTransaction("foobar");
 		log->message("message 1");
 		SystemTime::forceAll(TODAY);
@@ -199,7 +207,9 @@ namespace tut {
 		// newTransaction() and continueTransaction() write an ATTACH message
 		// to the log file, while UnionStation::Transaction writes a DETACH message upon
 		// destruction.
+		init();
 		SystemTime::forceAll(YESTERDAY);
+
 		TransactionPtr log = core->newTransaction("foobar");
 
 		SystemTime::forceAll(TODAY);
@@ -222,6 +232,8 @@ namespace tut {
 	TEST_METHOD(5) {
 		// newTransaction() generates a new ID, while continueTransaction()
 		// reuses the ID.
+		init();
+
 		TransactionPtr log = core->newTransaction("foobar");
 		TransactionPtr log2 = core2->newTransaction("foobar");
 		TransactionPtr log3 = core3->continueTransaction(log->getTxnId(),
@@ -236,34 +248,38 @@ namespace tut {
 
 	TEST_METHOD(6) {
 		// An empty UnionStation::Transaction doesn't do anything.
+		init();
+
 		UnionStation::Transaction log;
 		ensure(log.isNull());
 		log.message("hello world");
-		ensure_equals(getFileType(dumpFile), FT_NONEXISTANT);
+		ensure_equals(getFileType(getDumpFilePath()), FT_NONEXISTANT);
 	}
 
 	TEST_METHOD(7) {
 		// An empty UnionStation::Core doesn't do anything.
 		UnionStation::Core core;
+		init();
 		ensure(core.isNull());
 
 		TransactionPtr log = core.newTransaction("foo");
 		ensure(log->isNull());
 		log->message("hello world");
-		ensure_equals(getFileType(dumpFile), FT_NONEXISTANT);
+		ensure_equals(getFileType(getDumpFilePath()), FT_NONEXISTANT);
 	}
 
 	TEST_METHOD(11) {
 		// newTransaction() does not reconnect to the server for a short
 		// period of time if connecting failed
+		init();
 		core->setReconnectTimeout(60 * 1000000);
 
 		SystemTime::forceAll(TODAY);
-		stopLoggingServer();
+		shutdown();
 		ensure(core->newTransaction("foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 30 * 1000000);
-		startLoggingServer();
+		init();
 		ensure(core->newTransaction("foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 61 * 1000000);
@@ -276,14 +292,15 @@ namespace tut {
 		// a null log object. One of the next newTransaction()/continueTransaction()
 		// calls will reestablish the connection when the connection timeout
 		// has passed.
+		init();
 		SystemTime::forceAll(TODAY);
 		TransactionPtr log, log2;
 
 		log = core->newTransaction("foobar");
 		core2->continueTransaction(log->getTxnId(), "foobar");
 		log.reset(); // Check connection back into the pool.
-		stopLoggingServer();
-		startLoggingServer();
+		shutdown();
+		init();
 
 		log = core->newTransaction("foobar");
 		ensure("(1)", log->isNull());
@@ -308,27 +325,31 @@ namespace tut {
 	TEST_METHOD(13) {
 		// continueTransaction() does not reconnect to the server for a short
 		// period of time if connecting failed
+		init();
 		core->setReconnectTimeout(60 * 1000000);
 		core2->setReconnectTimeout(60 * 1000000);
 
 		SystemTime::forceAll(TODAY);
 		TransactionPtr log = core->newTransaction("foobar");
-		core2->continueTransaction(log->getTxnId(), "foobar");
-		stopLoggingServer();
-		ensure(core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		ensure("(1)", !log->isNull());
+		ensure("(2)", !core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		shutdown();
+		ensure("(3)", core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 30 * 1000000);
-		startLoggingServer();
-		ensure(core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		init();
+		ensure("(3)", core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 61 * 1000000);
-		ensure(!core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		ensure("(4)", !core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 	}
 
 	TEST_METHOD(14) {
 		// If a client disconnects from the UstRouter then all its
 		// transactions that are no longer referenced and have crash protection enabled
 		// will be closed and written to the sink.
+		init();
+
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
 		MessageClient client3 = createConnection();
@@ -365,6 +386,8 @@ namespace tut {
 		// If a client disconnects from the UstRouter then all its
 		// transactions that are no longer referenced and don't have crash
 		// protection enabled will be closed and discarded.
+		init();
+
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
 		MessageClient client3 = createConnection();
@@ -386,13 +409,15 @@ namespace tut {
 		client3.write("flush", NULL);
 		client3.read(args);
 		SHOULD_NEVER_HAPPEN(500,
-			result = fileExists(dumpFile) && !readDumpFile().empty();
+			result = fileExists(getDumpFilePath()) && !readDumpFile().empty();
 		);
 	}
 
 	TEST_METHOD(16) {
 		// Upon server shutdown, all transaction that have crash protection enabled
 		// will be closed and written to to the sink.
+		init();
+
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
 		vector<string> args;
@@ -409,15 +434,17 @@ namespace tut {
 		client2.write("flush", NULL);
 		client2.read(args);
 
-		stopLoggingServer();
+		shutdown();
 		EVENTUALLY(5,
-			result = fileExists(dumpFile) && !readDumpFile().empty();
+			result = fileExists(getDumpFilePath()) && !readDumpFile().empty();
 		);
 	}
 
 	TEST_METHOD(17) {
 		// Upon server shutdown, all transaction that don't have crash protection
 		// enabled will be discarded.
+		init();
+
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
 		vector<string> args;
@@ -434,14 +461,15 @@ namespace tut {
 		client2.write("flush", NULL);
 		client2.read(args);
 
-		stopLoggingServer();
+		shutdown();
 		SHOULD_NEVER_HAPPEN(200,
-			result = fileExists(dumpFile) && !readDumpFile().empty();
+			result = fileExists(getDumpFilePath()) && !readDumpFile().empty();
 		);
 	}
 
 	TEST_METHOD(18) {
 		// Test DataStoreId
+		init();
 		{
 			// Empty construction.
 			DataStoreId id;
@@ -513,18 +541,21 @@ namespace tut {
 
 	TEST_METHOD(22) {
 		// The destructor flushes all data.
+		init();
+
 		TransactionPtr log = core->newTransaction("foobar");
 		log->message("hello world");
 		log.reset();
-		stopLoggingServer();
+		shutdown();
 
 		struct stat buf;
-		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
+		ensure_equals(stat(getDumpFilePath().c_str(), &buf), 0);
 		ensure(buf.st_size > 0);
 	}
 
 	TEST_METHOD(23) {
 		// The 'flush' command flushes all data.
+		init();
 		SystemTime::forceAll(YESTERDAY);
 
 		TransactionPtr log = core->newTransaction("foobar");
@@ -534,18 +565,20 @@ namespace tut {
 		ConnectionPtr connection = core->checkoutConnection();
 		vector<string> args;
 		writeArrayMessage(connection->fd, "flush", NULL);
-		ensure(readArrayMessage(connection->fd, args));
-		ensure_equals(args.size(), 1u);
-		ensure_equals(args[0], "ok");
+		ensure("(1)", readArrayMessage(connection->fd, args));
+		ensure_equals("(2)", args.size(), 2u);
+		ensure_equals("(3)", args[0], "status");
+		ensure_equals("(4)", args[1], "ok");
 
 		struct stat buf;
-		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
-		ensure(buf.st_size > 0);
+		ensure_equals("(5)", stat(getDumpFilePath().c_str(), &buf), 0);
+		ensure("(6)", buf.st_size > 0);
 	}
 
 	TEST_METHOD(24) {
 		// A transaction's data is not written out by the server
 		// until the transaction is fully closed.
+		init();
 		SystemTime::forceAll(YESTERDAY);
 		vector<string> args;
 
@@ -566,134 +599,13 @@ namespace tut {
 		ensure(readArrayMessage(connection->fd, args));
 
 		struct stat buf;
-		ensure_equals(stat(dumpFile.c_str(), &buf), 0);
+		ensure_equals(stat(getDumpFilePath().c_str(), &buf), 0);
 		ensure_equals(buf.st_size, (off_t) 0);
-	}
-
-	TEST_METHOD(25) {
-		// The 'exit' command causes the UstRouter to exit some time after
-		// the last client has disconnected. New clients are still accepted
-		// as long as the server hasn't exited.
-		SystemTime::forceAll(YESTERDAY);
-		vector<string> args;
-
-		MessageClient client = createConnection();
-
-		MessageClient client2 = createConnection();
-		client2.write("exit", NULL);
-		ensure("(1)", client2.read(args));
-		ensure_equals(args.size(), 1u);
-		ensure_equals(args[0], "Passed security");
-		ensure("(2)", client2.read(args));
-		ensure_equals(args.size(), 1u);
-		ensure_equals(args[0], "exit command received");
-		client2.disconnect();
-
-		// Not exited yet: there is still a client.
-		client2 = createConnection();
-		client2.write("ping", NULL);
-		ensure("(3)", client2.read(args));
-		client2.disconnect();
-
-		client.disconnect();
-		setLogLevel(LVL_CRIT);
-		usleep(25000); // Give server some time to process the connection closes.
-
-		// No clients now, but we can still connect because the timeout
-		// hasn't passed yet.
-		SystemTime::forceAll(YESTERDAY + 1000000);
-		SHOULD_NEVER_HAPPEN(250,
-			try {
-				FdGuard(connectToUnixServer(socketFilename, __FILE__, __LINE__), NULL, 0);
-				result = false;
-			} catch (const SystemException &) {
-				result = true;
-			}
-		);
-
-		usleep(50000); // Give server some time to process the connection closes.
-
-		// It'll be gone in a few seconds.
-		SystemTime::forceAll(YESTERDAY + 1000000 + 5000000);
-		usleep(100000); // Give server some time to run the timer.
-		try {
-			FdGuard(connectToUnixServer(socketFilename, __FILE__, __LINE__), NULL, 0);
-			fail("(4)");
-		} catch (const SystemException &) {
-			// Success
-		}
-
-		joinLoggingServer();
-	}
-
-	TEST_METHOD(26) {
-		// The 'exit semi-gracefully' command causes the UstRouter to
-		// refuse new clients while exiting some time after the last client has
-		// disconnected.
-		SystemTime::forceAll(YESTERDAY);
-		vector<string> args;
-
-		MessageClient client = createConnection();
-
-		MessageClient client2 = createConnection();
-		client2.write("exit", "semi-gracefully", NULL);
-		client2.disconnect();
-
-		// New connections are refused.
-		client2 = createConnection();
-		ensure("(1)", !client2.read(args));
-
-		client.disconnect();
-		setLogLevel(LVL_CRIT);
-		usleep(50000); // Give server some time to process the connection closes.
-
-		// It'll be gone in a few seconds.
-		SystemTime::forceAll(YESTERDAY + 1000000 + 5000000);
-		usleep(100000); // Give server some time to run the timer.
-		try {
-			FdGuard(connectToUnixServer(socketFilename, __FILE__, __LINE__), NULL, 0);
-			fail("(2)");
-		} catch (const SystemException &) {
-			// Success
-		}
-
-		joinLoggingServer();
-	}
-
-	TEST_METHOD(27) {
-		// The 'exit immediately' command causes the UstRouter to
-		// immediately exit. Open transactions are not automatically
-		// closed and written out, even those with crash protection
-		// turned on.
-		SystemTime::forceAll(YESTERDAY);
-
-		TransactionPtr log = core->newTransaction("foobar");
-		log->message("hello world");
-		log.reset();
-
-		MessageClient client = createConnection();
-		client.write("exit", "immediately", NULL);
-		client.disconnect();
-
-		// Assertion: the following doesn't block.
-		joinLoggingServer();
-	}
-
-	TEST_METHOD(28) {
-		// UnionStation::Core treats a server that's semi-gracefully exiting as
-		// one that's refusing connections.
-		SystemTime::forceAll(YESTERDAY);
-
-		MessageClient client = createConnection();
-		client.write("exit", "semi-gracefully", NULL);
-		client.disconnect();
-
-		TransactionPtr log = core->newTransaction("foobar");
-		ensure(log->isNull());
 	}
 
 	TEST_METHOD(29) {
 		// One can supply a custom node name per openTransaction command.
+		init();
 		MessageClient client1 = createConnection();
 		vector<string> args;
 
@@ -707,12 +619,13 @@ namespace tut {
 		client1.read(args);
 		client1.disconnect();
 
-		ensure(fileExists(dumpFile));
+		ensure(fileExists(getDumpFilePath()));
 	}
 
 	TEST_METHOD(30) {
 		// A transaction is only written to the sink if it passes all given filters.
 		// Test logging of new transaction.
+		init();
 		SystemTime::forceAll(YESTERDAY);
 
 		TransactionPtr log = core->newTransaction("foobar", "requests", "-",

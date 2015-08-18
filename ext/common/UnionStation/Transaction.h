@@ -182,17 +182,10 @@ public:
 			_checkinConnection(core, connection);
 			guard.clear();
 		} catch (const SystemException &e) {
-			string errorResponse;
-
 			UPDATE_TRACE_POINT();
 			guard.clear();
-			if (connection->disconnect(errorResponse)) {
-				handleException(IOException(
-					"UstRouter disconnected with error: " +
-					errorResponse));
-			} else {
-				handleException(e);
-			}
+			connection->disconnect();
+			handleException(e);
 		}
 	}
 
@@ -224,17 +217,10 @@ public:
 			writeScalarMessage(connection->fd, text, &timeout);
 			guard.clear();
 		} catch (const std::exception &e) {
-			string errorResponse;
-
 			UPDATE_TRACE_POINT();
 			guard.clear();
-			if (connection->disconnect(errorResponse)) {
-				handleException(IOException(
-					"UstRouter disconnected with error: " +
-					errorResponse));
-			} else {
-				handleException(e);
-			}
+			connection->disconnect();
+			handleException(e);
 		}
 	}
 

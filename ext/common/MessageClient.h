@@ -74,11 +74,19 @@ protected:
 		sendPassword(fd, userSuppliedPassword, timeout);
 
 		if (!readArrayMessage(fd, args, timeout)) {
-			throw IOException("The message server did not send an authentication response.");
-		} else if (args.size() != 1) {
-			throw IOException("The authentication response that the message server sent is not valid.");
-		} else if (args[0] != "ok") {
-			throw SecurityException("The message server denied authentication: " + args[0]);
+			throw IOException("The message server did not send an authentication response");
+		} else if (args.size() < 2 || args[0] != "status") {
+			throw IOException("The authentication response that the message server sent is not valid");
+		} else if (args[1] == "ok") {
+			// Do nothing
+		} else if (args[1] == "error") {
+			if (args.size() >= 3) {
+				throw SecurityException("The message server denied authentication: " + args[2]);
+			} else {
+				throw SecurityException("The message server denied authentication (no server message given)");
+			}
+		} else {
+			throw IOException("The authentication response that the message server sent is not valid");
 		}
 	}
 

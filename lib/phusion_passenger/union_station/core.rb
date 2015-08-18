@@ -138,9 +138,20 @@ module PhusionPassenger
                 true,
                 true)
               result = @connection.channel.read
-              if result != ["ok"]
-                raise "Expected the UstRouter to respond with 'ok', but got #{result.inspect} instead"
+              if result[0] != "status"
+                raise "Expected UstRouter to respond with 'status', but got #{result.inspect} instead"
+              elsif result[1] == "ok"
+                # Do nothing
+              elsif result[1] == "error"
+                if result[2]
+                  raise "Unable to close transaction: #{result[2]}"
+                else
+                  raise "Unable to close transaction (no server message given)"
+                end
+              else
+                raise "Expected UstRouter to respond with 'ok' or 'error', but got #{result.inspect} instead"
               end
+
               return Transaction.new(@connection, txn_id)
             rescue SystemCallError, IOError
               @connection.disconnect
@@ -234,20 +245,36 @@ module PhusionPassenger
         result = channel.read
         if result.nil?
           raise EOFError
-        elsif result[0] != "ok"
-          raise SecurityError, result[0]
+        elsif result[0] != "status"
+          raise "Invalid UstRouter authentication response: expected \"status\", got #{result[0].inspect}"
+        elsif result[1] == "ok"
+          # Do nothing
+        elsif result[1] == "error"
+          if result[2]
+            raise SecurityError, "UstRouter authentication error: #{result[2]}"
+          else
+            raise SecurityError, "UstRouter authentication error (no server message given)"
+          end
+        else
+          raise "Invalid UstRouter authentication response: #{result.inspect}"
         end
 
         channel.write("init", @node_name)
         args = channel.read
         if !args
           raise Errno::ECONNREFUSED, "Cannot connect to UstRouter"
-        elsif args.size != 1
-          raise IOError, "UstRouter returned an invalid reply for the 'init' command"
-        elsif args[0] == "server shutting down"
-          raise Errno::ECONNREFUSED, "Cannot connect to UstRouter"
-        elsif args[0] != "ok"
-          raise IOError, "UstRouter returned an invalid reply for the 'init' command"
+        elsif result[0] != "status"
+          raise "Invalid UstRouter client initialization response: expected \"status\", got #{result[0].inspect}"
+        elsif result[1] == "ok"
+          # Do nothing
+        elsif result[1] == "error"
+          if result[2]
+            raise SecurityError, "UstRouter client initialization error: #{result[2]}"
+          else
+            raise SecurityError, "UstRouter client initialization error (no server message given)"
+          end
+        else
+          raise "Invalid UstRouter client initialization response: #{result.inspect}"
         end
 
         @connection.unref

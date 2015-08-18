@@ -123,15 +123,37 @@ module PhusionPassenger
             # We need an ACK here. See thread_handler.rb finalize_request.
             @connection.channel.write("closeTransaction", @txn_id,
               Core.timestamp_string, true)
+
             result = @connection.channel.read
-            if result != ["ok"]
-              raise "Expected UstRouter to respond with 'ok', but got #{result.inspect} instead"
+            if result[0] != "status"
+              raise "Expected UstRouter to respond with 'status', but got #{result.inspect} instead"
+            elsif result[1] == "ok"
+              # Do nothing
+            elsif result[1] == "error"
+              if result[2]
+                raise "Unable to close transaction: #{result[2]}"
+              else
+                raise "Unable to close transaction (no server message given)"
+              end
+            else
+              raise "Expected UstRouter to respond with 'ok' or 'error', but got #{result.inspect} instead"
             end
+
             if flush_to_disk
               @connection.channel.write("flush")
               result = @connection.channel.read
-              if result != ["ok"]
-                raise "Invalid UstRouter response #{result.inspect} to the 'flush' command"
+              if result[0] != "status"
+                raise "Expected UstRouter to respond with 'status', but got #{result.inspect} instead"
+              elsif result[1] == "ok"
+                # Do nothing
+              elsif result[1] == "error"
+                if result[2]
+                  raise "Unable to close transaction: #{result[2]}"
+                else
+                  raise "Unable to close transaction (no server message given)"
+                end
+              else
+                raise "Expected UstRouter to respond with 'ok' or 'error', but got #{result.inspect} instead"
               end
             end
           rescue SystemCallError, IOError => e

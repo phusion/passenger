@@ -186,6 +186,10 @@ public:
 			removeDirTree(name);
 		}
 	}
+
+	string getPath() const {
+		return name;
+	}
 };
 
 

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -46,6 +46,7 @@
 #include <Utils/ScopeGuard.h>
 #include <Utils/modp_b64.h>
 #include <Utils/json.h>
+#include <Utils/JsonUtils.h>
 #include <Utils/Curl.h>
 
 namespace Passenger {
@@ -517,6 +518,14 @@ private:
 		return true;
 	}
 
+	Json::Value inspectAvailableServersStateAsJson() const {
+		Json::Value doc(Json::arrayValue);
+		foreach (const ServerPtr server, servers) {
+			doc.append(server->name());
+		}
+		return doc;
+	}
+
 public:
 	RemoteSender(const string &gatewayAddress, unsigned short gatewayPort, const string &certificate,
 		const string &proxyAddress)
@@ -595,23 +604,20 @@ public:
 		return queue.size();
 	}
 
-	template<typename Stream>
-	void inspect(Stream &stream) const {
+	Json::Value inspectStateAsJson() const {
+		Json::Value doc;
 		boost::lock_guard<boost::mutex> l(syncher);
-		stream << "  Available servers (" << servers.size() << "): ";
-		foreach (const ServerPtr server, servers) {
-			stream << server->name() << " ";
-		}
-		stream << "\n";
-		stream << "  Items in queue: " << queue.size() << "\n";
-		stream << "  Packets sent out so far: " << packetsSent << "\n";
-		stream << "  Packets dropped out so far: " << packetsDropped << "\n";
-		stream << "  Next server checkup time: ";
+		doc["available_servers"] = inspectAvailableServersStateAsJson();
+		doc["queue_size"] = queue.size();
+		doc["packets_sent_to_gateway"] = packetsSent;
+		doc["packets_dropped"] = packetsDropped;
 		if (nextCheckupTime == 0) {
-			stream << "not yet scheduled, waiting for first packet\n";
+			doc["next_server_checkup_time"] = Json::Value(Json::nullValue);
+			doc["next_server_checkup_time_note"] = "not yet scheduled, waiting for first packet";
 		} else {
-			stream << "in " << distanceOfTimeInWords(nextCheckupTime) << "\n";
+			doc["next_server_checkout_time"] = timeToJson(nextCheckupTime * 1000000.0);
 		}
+		return doc;
 	}
 };
 

@@ -25,10 +25,9 @@
 #ifndef _PASSENGER_UST_ROUTER_API_SERVER_H_
 #define _PASSENGER_UST_ROUTER_API_SERVER_H_
 
-#include <sstream>
 #include <string>
 
-#include <agent/UstRouter/LoggingServer.h>
+#include <agent/UstRouter/Controller.h>
 #include <agent/ApiServerUtils.h>
 #include <ApplicationPool2/ApiKey.h>
 #include <ServerKit/HttpServer.h>
@@ -77,8 +76,8 @@ private:
 				instanceDir, fdPassingPassword);
 		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
 			apiServerProcessReopenLogs(this, client, req);
-		} else if (path == P_STATIC_STRING("/status.txt")) {
-			processStatusTxt(client, req);
+		} else if (path == P_STATIC_STRING("/server.json")) {
+			processServerStatus(client, req);
 		} else {
 			apiServerRespondWith404(this, client, req);
 		}
@@ -168,16 +167,23 @@ private:
 		}
 	}
 
-	void processStatusTxt(Client *client, Request *req) {
+	static void inspectControllerState(Controller *controller, Json::Value *json) {
+		*json = controller->inspectStateAsJson();
+	}
+
+	void processServerStatus(Client *client, Request *req) {
 		if (req->method != HTTP_GET) {
 			apiServerRespondWith405(this, client, req);
 		} else if (authorizeStateInspectionOperation(this, client, req)) {
 			HeaderTable headers;
-			headers.insert(req->pool, "Content-Type", "text/plain");
+			headers.insert(req->pool, "Content-Type", "text/json");
 
-			stringstream stream;
-			loggingServer->dump(stream);
-			writeSimpleResponse(client, 200, &headers, stream.str());
+			Json::Value json;
+			controller->getContext()->libev->runSync(boost::bind(
+				inspectControllerState, controller, &json));
+
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, json.toStyledString()));
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
@@ -242,7 +248,7 @@ protected:
 	}
 
 public:
-	LoggingServer *loggingServer;
+	Controller *controller;
 	ApiAccountDatabase *apiAccountDatabase;
 	string instanceDir;
 	string fdPassingPassword;
@@ -250,13 +256,13 @@ public:
 
 	ApiServer(ServerKit::Context *context)
 		: ParentClass(context),
-		  loggingServer(NULL),
+		  controller(NULL),
 		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)
 		{ }
 
 	virtual StaticString getServerName() const {
-		return P_STATIC_STRING("LoggerApiServer");
+		return P_STATIC_STRING("UstRouterApiServer");
 	}
 
 	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {

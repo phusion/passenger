@@ -166,7 +166,11 @@ TEST_CXX_OBJECTS = {
     ext/common/ServerKit/HttpRequest.h),
   'test/cxx/UnionStationTest.o' => %w(
     test/cxx/UnionStationTest.cpp
-    ext/common/agent/UstRouter/LoggingServer.h
+    ext/common/agent/UstRouter/Controller.h
+    ext/common/agent/UstRouter/Client.h
+    ext/common/agent/UstRouter/LogSink.h
+    ext/common/agent/UstRouter/FileSink.h
+    ext/common/agent/UstRouter/RemoteSink.h
     ext/common/agent/UstRouter/RemoteSender.h
     ext/common/agent/UstRouter/DataStoreId.h
     ext/common/agent/UstRouter/FilterSupport.h
@@ -174,14 +178,8 @@ TEST_CXX_OBJECTS = {
     ext/common/UnionStation/Core.h
     ext/common/UnionStation/Transaction.h
     ext/common/Utils.h
-    ext/common/EventedServer.h
-    ext/common/EventedClient.h
-    ext/common/EventedMessageServer.h
     ext/common/MessageReadersWriters.h
     ext/common/MessageClient.h),
-  'test/cxx/EventedClientTest.o' => %w(
-    test/cxx/EventedClientTest.cpp
-    ext/common/EventedClient.h),
   # 'test/cxx/RequestHandlerTest.o' => %w(
   #   test/cxx/RequestHandlerTest.cpp
   #   ext/common/agent/Core/RequestHandler.h

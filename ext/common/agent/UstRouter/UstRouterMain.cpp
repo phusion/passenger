@@ -45,11 +45,9 @@
 #include <agent/Base.h>
 #include <agent/ApiServerUtils.h>
 #include <agent/UstRouter/OptionParser.h>
-#include <agent/UstRouter/LoggingServer.h>
+#include <agent/UstRouter/Controller.h>
 #include <agent/UstRouter/ApiServer.h>
 
-#include <AccountsDatabase.h>
-#include <Account.h>
 #include <Exceptions.h>
 #include <FileDescriptor.h>
 #include <BackgroundEventLoop.h>
@@ -70,17 +68,17 @@ using namespace Passenger;
 namespace Passenger {
 namespace UstRouter {
 	struct WorkingObjects {
-		string password;
 		FileDescriptor serverSocketFd;
 		vector<int> apiSockets;
+		ResourceLocator *resourceLocator;
 		ApiAccountDatabase apiAccountDatabase;
 
-		ResourceLocator *resourceLocator;
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
-		AccountsDatabasePtr accountsDatabase;
-		LoggingServer *loggingServer;
+		Controller *controller;
 
+		BackgroundEventLoop *apiBgloop;
+		ServerKit::Context *apiServerKitContext;
 		UstRouter::ApiServer *apiServer;
 		EventFd exitEvent;
 		EventFd allClientsDisconnectedEvent;
@@ -94,7 +92,10 @@ namespace UstRouter {
 			: resourceLocator(NULL),
 			  bgloop(NULL),
 			  serverKitContext(NULL),
-			  loggingServer(NULL),
+			  controller(NULL),
+			  apiBgloop(NULL),
+			  apiServerKitContext(NULL),
+			  apiServer(NULL),
 			  exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
 			  allClientsDisconnectedEvent(__FILE__, __LINE__, "WorkingObjects: allClientsDisconnectedEvent"),
 			  terminationCount(0)
@@ -112,6 +113,7 @@ static WorkingObjects *workingObjects;
 /***** Functions *****/
 
 static void printInfo(EV_P_ struct ev_signal *watcher, int revents);
+static void printInfoInThread();
 static void onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents);
 static void apiServerShutdownFinished(UstRouter::ApiServer *server);
 static void waitForExitEvent();
@@ -156,12 +158,15 @@ makeFileWorldReadableAndWritable(const string &path) {
 static void
 initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
-	const VariantMap &options = *agentsOptions;
+	VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects = new WorkingObjects();
 
-	wo->password = options.get("ust_router_password", false);
-	if (wo->password.empty()) {
-		wo->password = strip(readAll(options.get("ust_router_password_file")));
+	options.set("ust_router_username", "logging");
+
+	string password = options.get("ust_router_password", false);
+	if (password.empty()) {
+		password = strip(readAll(options.get("ust_router_password_file")));
+		options.set("ust_router_password", password);
 	}
 
 	vector<string> authorizations = options.getStrSet("ust_router_authorizations",
@@ -275,23 +280,24 @@ initializeUnprivilegedWorkingObjects() {
 	wo->bgloop = new BackgroundEventLoop(true, true);
 	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
 		wo->bgloop->libuv_loop);
+	wo->controller = new Controller(wo->serverKitContext, options);
+	wo->controller->listen(wo->serverSocketFd);
 
 	UPDATE_TRACE_POINT();
-	wo->accountsDatabase = boost::make_shared<AccountsDatabase>();
-	wo->accountsDatabase->add("logging", wo->password, false);
-	wo->loggingServer = new LoggingServer(wo->bgloop->libev_loop,
-		wo->serverSocketFd, wo->accountsDatabase, options);
-
-	UPDATE_TRACE_POINT();
-	wo->apiServer = new UstRouter::ApiServer(wo->serverKitContext);
-	wo->apiServer->loggingServer = wo->loggingServer;
-	wo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
-	wo->apiServer->instanceDir = options.get("instance_dir", false);
-	wo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
-	wo->apiServer->exitEvent = &wo->exitEvent;
-	wo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
-	foreach (fd, wo->apiSockets) {
-		wo->apiServer->listen(fd);
+	if (!wo->apiSockets.empty()) {
+		wo->apiBgloop = new BackgroundEventLoop(true, true);
+		wo->apiServerKitContext = new ServerKit::Context(wo->apiBgloop->safe,
+			wo->apiBgloop->libuv_loop);
+		wo->apiServer = new UstRouter::ApiServer(wo->apiServerKitContext);
+		wo->apiServer->controller = wo->controller;
+		wo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
+		wo->apiServer->instanceDir = options.get("instance_dir", false);
+		wo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
+		wo->apiServer->exitEvent = &wo->exitEvent;
+		wo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
+		foreach (fd, wo->apiSockets) {
+			wo->apiServer->listen(fd);
+		}
 	}
 
 	UPDATE_TRACE_POINT();
@@ -306,21 +312,75 @@ initializeUnprivilegedWorkingObjects() {
 static void
 reportInitializationInfo() {
 	TRACE_POINT();
-
-	P_NOTICE(SHORT_PROGRAM_NAME " UstRouter online, PID " << getpid());
 	if (feedbackFdAvailable()) {
+		P_NOTICE(SHORT_PROGRAM_NAME " UstRouter online, PID " << getpid());
 		writeArrayMessage(FEEDBACK_FD,
 			"initialized",
 			NULL);
+	} else {
+		vector<string> apiAddresses = agentsOptions->getStrSet("ust_router_api_addresses", false);
+
+		P_NOTICE(SHORT_PROGRAM_NAME " UstRouter online, PID " << getpid()
+			<< ", listening on " << agentsOptions->get("ust_router_address"));
+
+		if (!apiAddresses.empty()) {
+			string address;
+			P_NOTICE("API server listening on " << apiAddresses.size() << " socket(s):");
+			foreach (address, apiAddresses) {
+				if (startsWith(address, "tcp://")) {
+					address.erase(0, sizeof("tcp://") - 1);
+					address.insert(0, "http://");
+					address.append("/");
+				}
+				P_NOTICE(" * " << address);
+			}
+		}
 	}
 }
 
 static void
 printInfo(EV_P_ struct ev_signal *watcher, int revents) {
-	cerr << "---------- Begin UstRouter status ----------\n";
-	workingObjects->loggingServer->dump(cerr);
+	oxt::thread(printInfoInThread, "Information printer");
+}
+
+static void
+inspectControllerStateAsJson(Controller *controller, string *result) {
+	*result = controller->inspectStateAsJson().toStyledString();
+}
+
+static void
+getMbufStats(struct MemoryKit::mbuf_pool *input, struct MemoryKit::mbuf_pool *result) {
+	*result = *input;
+}
+
+static void
+printInfoInThread() {
+	TRACE_POINT();
+	WorkingObjects *wo = workingObjects;
+
+	cerr << "### Backtraces\n";
+	cerr << "\n" << oxt::thread::all_backtraces();
+	cerr << "\n";
 	cerr.flush();
-	cerr << "---------- End UstRouter status   ----------\n";
+
+	string json;
+	cerr << "### Controller state\n";
+	wo->bgloop->safe->runSync(boost::bind(inspectControllerStateAsJson,
+		wo->controller, &json));
+	cerr << json;
+	cerr << "\n";
+	cerr.flush();
+
+	struct MemoryKit::mbuf_pool stats;
+	cerr << "### mbuf stats\n\n";
+	wo->bgloop->safe->runSync(boost::bind(getMbufStats,
+		&wo->serverKitContext->mbuf_pool,
+		&stats));
+	cerr << "nfree_mbuf_blockq    : " << stats.nfree_mbuf_blockq << "\n";
+	cerr << "nactive_mbuf_blockq  : " << stats.nactive_mbuf_blockq << "\n";
+	cerr << "mbuf_block_chunk_size: " << stats.mbuf_block_chunk_size << "\n";
+	cerr << "\n";
+	cerr.flush();
 }
 
 static void
@@ -344,7 +404,15 @@ onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents) {
 static void
 mainLoop() {
 	workingObjects->bgloop->start("Main event loop", 0);
+	if (workingObjects->apiBgloop != NULL) {
+		workingObjects->apiBgloop->start("API event loop", 0);
+	}
 	waitForExitEvent();
+}
+
+static void
+shutdownController() {
+	workingObjects->controller->shutdown();
 }
 
 static void
@@ -396,7 +464,10 @@ waitForExitEvent() {
 		/* We received an exit command. */
 		P_NOTICE("Received command to shutdown gracefully. "
 			"Waiting until all clients have disconnected...");
-		wo->bgloop->safe->runLater(shutdownApiServer);
+		wo->bgloop->safe->runLater(shutdownController);
+		if (wo->apiBgloop != NULL) {
+			wo->apiBgloop->safe->runLater(shutdownApiServer);
+		}
 
 		UPDATE_TRACE_POINT();
 		FD_ZERO(&fds);
@@ -419,7 +490,10 @@ cleanup() {
 
 	P_DEBUG("Shutting down " SHORT_PROGRAM_NAME " UstRouter...");
 	wo->bgloop->stop();
-	delete wo->apiServer;
+	if (wo->apiServer != NULL) {
+		wo->apiBgloop->stop();
+		delete wo->apiServer;
+	}
 	P_NOTICE(SHORT_PROGRAM_NAME " UstRouter shutdown finished");
 }
 
@@ -511,6 +585,20 @@ sanityCheckOptions() {
 	{
 		fprintf(stderr, "ERROR: please set the --password-file argument.\n");
 		ok = false;
+	}
+
+	if (options.getBool("ust_router_dev_mode", false, false)) {
+		if (!options.has("ust_router_dump_dir")) {
+			fprintf(stderr, "ERROR: if development mode is enabled, you must also set the --dump-dir argument.\n");
+			ok = false;
+		} else {
+			FileType ft = getFileType(options.get("ust_router_dump_dir"));
+			if (ft != FT_DIRECTORY) {
+				fprintf(stderr, "ERROR: '%s' is not a valid directory.\n",
+					options.get("ust_router_dump_dir").c_str());
+				ok = false;
+			}
+		}
 	}
 
 	// Sanity check user accounts

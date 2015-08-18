@@ -15,7 +15,6 @@ describe UnionStation::Core do
     @username  = "logging"
     @password  = "1234"
     @tmpdir    = Dir.mktmpdir
-    @dump_file =  "#{@tmpdir}/transaction.txt"
     start_agent
     @core      = UnionStation::Core.new(@socket_address, @username, @password, "localhost")
     @core2     = UnionStation::Core.new(@socket_address, @username, @password, "localhost")
@@ -37,7 +36,7 @@ describe UnionStation::Core do
 
   def start_agent
     @agent_pid, @socket_filename, @socket_address = spawn_ust_router(
-      @tmpdir, @dump_file, @password)
+      @tmpdir, @password)
   end
 
   def kill_agent
@@ -47,6 +46,14 @@ describe UnionStation::Core do
       File.unlink(@socket_filename)
       @agent_pid = nil
     end
+  end
+
+  def dump_file_path(category = "requests")
+    "#{@tmpdir}/#{category}"
+  end
+
+  def read_dump_file(category = "requests")
+    File.read(dump_file_path(category))
   end
 
   specify "logging with #new_transaction works" do
@@ -60,7 +67,7 @@ describe UnionStation::Core do
       transaction.close(true)
     end
 
-    File.read(@dump_file).should =~ /hello/
+    File.read(dump_file_path).should =~ /hello/
 
     transaction = @core.new_transaction("foobar", :processes)
     transaction.should_not be_null
@@ -70,7 +77,7 @@ describe UnionStation::Core do
       transaction.close(true)
     end
 
-    File.read(@dump_file).should =~ /world/
+    File.read(dump_file_path("processes")).should =~ /world/
   end
 
   specify "#new_transaction reestablishes the connection if disconnected" do
@@ -90,7 +97,7 @@ describe UnionStation::Core do
       transaction.close(true)
     end
 
-    File.read(@dump_file).should =~ /hello/
+    File.read(dump_file_path).should =~ /hello/
   end
 
   specify "#new_transaction does not reconnect to the server for a short period of time if connecting failed" do
@@ -127,8 +134,8 @@ describe UnionStation::Core do
       transaction.close(true)
     end
 
-    File.read(@dump_file).should =~ /#{Regexp.escape transaction.txn_id} .* hello$/
-    File.read(@dump_file).should =~ /#{Regexp.escape transaction.txn_id} .* world$/
+    File.read(dump_file_path("processes")).should =~ /#{Regexp.escape transaction.txn_id} .* hello$/
+    File.read(dump_file_path("processes")).should =~ /#{Regexp.escape transaction.txn_id} .* world$/
   end
 
   specify "#continue_transaction reestablishes the connection if disconnected" do
@@ -152,7 +159,7 @@ describe UnionStation::Core do
       transaction2.close(true)
     end
 
-    File.read(@dump_file).should =~ /hello/
+    File.read(dump_file_path).should =~ /hello/
   end
 
   specify "#new_transaction and #continue_transaction eventually reestablish the connection to the UstRouter if the UstRouter crashed and was restarted" do
@@ -178,7 +185,7 @@ describe UnionStation::Core do
     end
     transaction.close(true)
 
-    File.read(@dump_file).should =~ /hello/
+    File.read(dump_file_path).should =~ /hello/
   end
 
   specify "#continue_transaction does not reconnect to the server for a short period of time if connecting failed" do

@@ -149,10 +149,10 @@ private:
 
 		// Handshake: process protocol version number.
 		if (!readArrayMessage(fd, args, &timeout)) {
-			throw IOException("The UstRouter closed the connection before sending a version identifier.");
+			throw IOException("The UstRouter closed the connection before sending a version identifier");
 		}
 		if (args.size() != 2 || args[0] != "version") {
-			throw IOException("The UstRouter server didn't sent a valid version identifier.");
+			throw IOException("The UstRouter didn't sent a valid version identifier");
 		}
 		if (args[1] != "1") {
 			string message = "Unsupported UstRouter protocol version " +
@@ -167,11 +167,19 @@ private:
 
 		UPDATE_TRACE_POINT();
 		if (!readArrayMessage(fd, args, &timeout)) {
-			throw IOException("The UstRouter did not send an authentication response.");
-		} else if (args.size() != 1) {
-			throw IOException("The authentication response that the UstRouter sent is not valid.");
-		} else if (args[0] != "ok") {
-			throw SecurityException("The UstRouter server denied authentication: " + args[0]);
+			throw IOException("The UstRouter did not send an authentication response");
+		} else if (args.size() < 2 || args[0] != "status") {
+			throw IOException("The authentication response that the UstRouter sent is not valid");
+		} else if (args[1] == "ok") {
+			// Do nothing
+		} else if (args[1] == "error") {
+			if (args.size() >= 3) {
+				throw SecurityException("The UstRouter denied authentication: " + args[2]);
+			} else {
+				throw SecurityException("The UstRouter denied authentication (no server message given)");
+			}
+		} else {
+			throw IOException("The authentication response that the UstRouter sent is not valid");
 		}
 
 		// Initialize session.
@@ -179,12 +187,18 @@ private:
 		writeArrayMessage(fd, &timeout, "init", nodeName.c_str(), NULL);
 		if (!readArrayMessage(fd, args, &timeout)) {
 			throw SystemException("Cannot connect to the UstRouter", ECONNREFUSED);
-		} else if (args.size() != 1) {
-			throw IOException("UstRouter returned an invalid reply for the 'init' command");
-		} else if (args[0] == "server shutting down") {
-			throw SystemException("Cannot connect to server", ECONNREFUSED);
-		} else if (args[0] != "ok") {
-			throw IOException("UstRouter returned an invalid reply for the 'init' command");
+		} else if (args.size() < 2 || args[0] != "status") {
+			throw IOException("The UstRouter returned an invalid reply for the 'init' command");
+		} else if (args[1] == "ok") {
+			// Do nothing
+		} else if (args[1] == "error") {
+			if (args.size() >= 3) {
+				throw IOException("The UstRouter denied client initialization: " + args[2]);
+			} else {
+				throw IOException("The UstRouter denied client initialization (no server message given)");
+			}
+		} else {
+			throw IOException("The UstRouter returned an invalid reply for the 'init' command");
 		}
 
 		ConnectionPtr connection = boost::make_shared<Connection>(fd);
@@ -285,24 +299,36 @@ public:
 				vector<string> args;
 				if (!readArrayMessage(connection->fd, args, &timeout)) {
 					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The UstRouter at " << serverAddress <<
-						" closed the connection (no error message given);" <<
+					P_WARN("The UstRouter closed the connection (no error message given);" <<
 						" will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
 					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 					return false;
-				} else if (args.size() == 2 && args[0] == "error") {
+				} else if (args.size() < 2 || args[0] != "status") {
 					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The UstRouter at " << serverAddress <<
-						" closed the connection (error message: " << args[1] <<
-						"); will reconnect in " << reconnectTimeout / 1000000 <<
+					P_WARN("The UstRouter sent an invalid reply message;" <<
+						" will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
 					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 					return false;
-				} else if (args.empty() || args[0] != "ok") {
+				} else if (args[1] == "ok") {
+					// Do nothing
+				} else if (args[1] == "error") {
 					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The UstRouter at " << serverAddress <<
-						" sent an unexpected reply;" <<
+					if (args.size() >= 3) {
+						P_WARN("The UstRouter closed the connection (error message: " << args[2] <<
+							"); will reconnect in " << reconnectTimeout / 1000000 <<
+							" second(s).");
+					} else {
+						P_WARN("The UstRouter closed the connection (no server message given); " <<
+							"will reconnect in " << reconnectTimeout / 1000000 <<
+							" second(s).");
+					}
+					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+					return false;
+				} else {
+					boost::lock_guard<boost::mutex> l(syncher);
+					P_WARN("The UstRouter sent an invalid reply message;" <<
 						" will reconnect in " << reconnectTimeout / 1000000 <<
 						" second(s).");
 					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
@@ -322,23 +348,9 @@ public:
 
 		} catch (const SystemException &e) {
 			if (e.code() == ENOENT || isNetworkError(e.code())) {
-				string errorResponse;
-				bool gotErrorResponse;
-
 				guard.clear();
-				gotErrorResponse = connection->disconnect(errorResponse);
+				connection->disconnect();
 				boost::lock_guard<boost::mutex> l(syncher);
-				if (gotErrorResponse) {
-					P_WARN("The UstRouter at " << serverAddress <<
-						" closed the connection (error message: " << errorResponse <<
-						"); will reconnect in " << reconnectTimeout / 1000000 <<
-						" second(s).");
-				} else {
-					P_WARN("The UstRouter at " << serverAddress <<
-						" closed the connection (no error message given);" <<
-						" will reconnect in " << reconnectTimeout / 1000000 <<
-						" second(s).");
-				}
 				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
 				return false;
 			} else {
@@ -374,8 +386,8 @@ public:
 			category,
 			timestampStr,
 			unionStationKey,
-			StaticString("true", 4), // crashProtect
-			StaticString("true", 4), // ack
+			P_STATIC_STRING("true"), // crashProtect
+			P_STATIC_STRING("true"), // ack
 			filters
 		};
 		unsigned int nparams = sizeof(params) / sizeof(StaticString);
@@ -435,8 +447,8 @@ public:
 			category,
 			timestampStr,
 			unionStationKey,
-			StaticString("true", 4),  // crashProtect
-			StaticString("false", 4)  // ack
+			P_STATIC_STRING("true"),  // crashProtect
+			P_STATIC_STRING("false")  // ack
 		};
 		unsigned int nparams = sizeof(params) / sizeof(StaticString);
 

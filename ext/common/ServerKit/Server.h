@@ -582,6 +582,10 @@ protected:
 		client->output.deinitialize();
 	}
 
+	virtual void onShutdown(bool forceDisconnect) {
+		// Do nothing.
+	}
+
 public:
 	/***** Public methods *****/
 
@@ -666,7 +670,9 @@ public:
 		Client *client;
 		typename vector<Client *>::iterator v_it, v_end;
 
+		SKS_DEBUG("Shutting down");
 		serverState = SHUTTING_DOWN;
+		onShutdown(forceDisconnect);
 
 		// Stop listening on all endpoints.
 		acceptResumptionWatcher.stop();
@@ -944,7 +950,7 @@ public:
 	}
 
 	OXT_FORCE_INLINE
-	struct ev_loop * getLoop() const {
+	struct ev_loop *getLoop() const {
 		return ctx->libev->getLoop();
 	}
 
