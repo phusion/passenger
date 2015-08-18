@@ -955,13 +955,15 @@ protected:
 				}
 				if (OXT_UNLIKELY( transaction->getNodeName() != nodeName )) {
 					sendErrorToClient(client,
-						"Cannot open transaction: transaction already opened with a different node name");
+						"Cannot open transaction: transaction already opened with a different node name ('" +
+						nodeName + "' vs '" + transaction->getNodeName() + "')");
 					client->disconnect();
 					return true;
 				}
 				if (OXT_UNLIKELY( transaction->getCategory() != category )) {
 					sendErrorToClient(client,
-						"Cannot open transaction: transaction already opened with a different category name");
+						"Cannot open transaction: transaction already opened with a different category name ('" +
+						category + "' vs '" + transaction->getCategory() + "')");
 					client->disconnect();
 					return true;
 				}

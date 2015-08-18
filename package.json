@@ -1,6 +1,6 @@
 {
   "__comment__": [
-    "This file is only meant for shrinkwrapping the development dependencies."
+    "Indicate Passenger dependencies on Node modules here, and use it to regenerate npm-shrinkwrap.json via 'npm shrinkwrap'."
   ],
   "name": "passenger",
   "version": "0.0.0",
@@ -10,7 +10,11 @@
     "should": "^2.0.1",
     "sinon": "^1.7.3",
     "express": "^3.4.8",
-    "mocha": "^1.15.1"
+    "mocha": "^1.15.1",
+    "network-byte-order": "^0.2.0",
+    "codify": "^0.3.0",
+    "microtime": "^2.0.0",
+    "continuation-local-storage": "^3.1.4"
   },
   "scripts": {
     "test": "rake test:node"
