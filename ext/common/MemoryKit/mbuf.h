@@ -70,6 +70,7 @@ struct mhdr;
 
 typedef void (*mbuf_block_copy_t)(struct mbuf_block *, void *);
 
+/* See _mbuf_block_init() for format description */
 struct mbuf_block {
 	boost::uint32_t    magic;     /* mbuf_block magic (const) */
 	STAILQ_ENTRY(struct mbuf_block) next;         /* next free mbuf_block */
@@ -82,7 +83,8 @@ struct mbuf_block {
 	char              *start;     /* start of buffer (const) */
 	char              *end;       /* end of buffer (const) */
 	struct mbuf_pool  *pool;      /* containing pool (const) */
-	unsigned int       refcount;  /* number of references by mbuf subsets */
+	boost::uint32_t    refcount;  /* number of references by mbuf subsets */
+	boost::uint32_t    offset;    /* standalone mbuf_block data size */
 };
 
 STAILQ_HEAD(mhdr, struct mbuf_block);
@@ -248,6 +250,7 @@ public:
 
 mbuf mbuf_block_subset(struct mbuf_block *mbuf_block, unsigned int start, unsigned int len);
 mbuf mbuf_get(struct mbuf_pool *pool);
+mbuf mbuf_get_with_size(struct mbuf_pool *pool, size_t size);
 
 
 } // namespace MemoryKit

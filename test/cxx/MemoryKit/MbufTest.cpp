@@ -210,4 +210,32 @@ namespace tut {
 		ensure_equals("(1)", pool.nfree_mbuf_blockq, 0u);
 		ensure_equals("(2)", pool.nactive_mbuf_blockq, 2u);
 	}
+
+	TEST_METHOD(12) {
+		set_test_name("mbuf_get_with_size (small)");
+		{
+			mbuf buffer(mbuf_get_with_size(&pool, 6));
+			ensure_equals("(1)", pool.nfree_mbuf_blockq, 0u);
+			ensure_equals("(2)", pool.nactive_mbuf_blockq, 1u);
+			ensure_equals("(3)", buffer.size(), 6u);
+			memcpy(buffer.start, "hello", 6);
+			ensure_equals("(4)", string(buffer.start), "hello");
+		}
+		ensure_equals("(5)", pool.nfree_mbuf_blockq, 1u);
+		ensure_equals("(6)", pool.nactive_mbuf_blockq, 0u);
+	}
+
+	TEST_METHOD(13) {
+		set_test_name("mbuf_get_with_size (large)");
+		{
+			mbuf buffer(mbuf_get_with_size(&pool, mbuf_pool_data_size(&pool) + 10));
+			ensure_equals("(1)", pool.nfree_mbuf_blockq, 0u);
+			ensure_equals("(2)", pool.nactive_mbuf_blockq, 1u);
+			ensure_equals("(3)", buffer.size(), mbuf_pool_data_size(&pool) + 10);
+			memcpy(buffer.start, "hello", 6);
+			ensure_equals("(4)", string(buffer.start), "hello");
+		}
+		ensure_equals("(5)", pool.nfree_mbuf_blockq, 0u);
+		ensure_equals("(6)", pool.nactive_mbuf_blockq, 0u);
+	}
 }

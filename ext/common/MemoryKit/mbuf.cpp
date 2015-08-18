@@ -20,6 +20,7 @@
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <cstring>
+#include <algorithm>
 #include <MemoryKit/mbuf.h>
 
 namespace Passenger {
@@ -27,6 +28,79 @@ namespace MemoryKit {
 
 //#define MBUF_DEBUG
 
+
+static void
+_mbuf_block_mark_as_active(struct mbuf_pool *pool, struct mbuf_block *mbuf_block)
+{
+	STAILQ_NEXT(mbuf_block, next) = NULL;
+	#ifdef MBUF_ENABLE_DEBUGGING
+		TAILQ_INSERT_HEAD(&pool->active_mbuf_blockq, mbuf_block, active_q);
+	#endif
+	#ifdef MBUF_ENABLE_BACKTRACES
+		mbuf_block->backtrace = strdup(oxt::thread::current_backtrace().c_str());
+	#endif
+	pool->nactive_mbuf_blockq++;
+}
+
+static struct mbuf_block *
+_mbuf_block_init(struct mbuf_pool *pool, char *buf, size_t block_offset)
+{
+	struct mbuf_block *mbuf_block;
+
+	/*
+	 * There are two types of mbuf_blocks: normal ones and standalone ones.
+	 *
+	 * ## Normal mbuf_blocks
+	 *
+	 * mbuf_block header is at the tail end of the mbuf_block. The data
+	 * precedes the header. This enables us to catch buffer overrun early
+	 * by asserting on the magic value during get or put operations.
+	 * All normal mbuf_blocks in a pool have the same mbuf_block_offset,
+	 * allowing them to be reused through a freelist.
+	 *
+	 *   <------------ pool->mbuf_block_chunk_size -------------->
+	 *   +-------------------------------------------------------+
+	 *   |       mbuf_block data          |  mbuf_block header   |
+	 *   |                                |                      |
+	 *   |  (pool->mbuf_block_offset)     | (struct mbuf_block)  |
+	 *   +-------------------------------------------------------+
+	 *   ^                                ^
+	 *   |                                |
+	 *   \                                |\
+	 * block->start                       | block->end (one byte past valid bound)
+	 *                                    \
+	 *                                    block
+	 *
+	 * ## Standalone mbuf_blocks
+	 *
+	 * Standalone mbuf_blocks are like normal ones, but can contain
+	 * arbitrarily-sized data. Different standalone mbuf_blocks in a pool
+	 * can have different data sizes. They cannot be reused through the
+	 * freelist. The fact that the 'offset' field in the header is set to
+	 * a non-zero is an indication that it is standalone.
+	 *
+	 *   <------------- offset + MBUF_BLOCK_HSIZE --------------->
+	 *   +-------------------------------------------------------+
+	 *   |       mbuf_block data          |  mbuf_block header   |
+	 *   |                                |                      |
+	 *   |           (offset)             | (struct mbuf_block)  |
+	 *   +-------------------------------------------------------+
+	 *   ^                                ^
+	 *   |                                |
+	 *   \                                |\
+	 * block->start                       | block->end (one byte past valid bound)
+	 *                                    \
+	 *                                    block
+	 */
+	mbuf_block = (struct mbuf_block *)(buf + block_offset);
+	mbuf_block->magic = MBUF_BLOCK_MAGIC;
+	mbuf_block->pool  = pool;
+	mbuf_block->refcount = 1;
+	mbuf_block->offset = 0;
+
+	_mbuf_block_mark_as_active(pool, mbuf_block);
+	return mbuf_block;
+}
 
 static struct mbuf_block *
 _mbuf_block_get(struct mbuf_pool *pool)
@@ -42,7 +116,8 @@ _mbuf_block_get(struct mbuf_pool *pool)
 		STAILQ_REMOVE_HEAD(&pool->free_mbuf_blockq, next);
 
 		assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
-		goto done;
+		_mbuf_block_mark_as_active(pool, mbuf_block);
+		return mbuf_block;
 	}
 
 	buf = (char *) malloc(pool->mbuf_block_chunk_size);
@@ -50,39 +125,7 @@ _mbuf_block_get(struct mbuf_pool *pool)
 		return NULL;
 	}
 
-	/*
-	 * mbuf_block header is at the tail end of the mbuf_block. This enables us to catch
-	 * buffer overrun early by asserting on the magic value during get or
-	 * put operations
-	 *
-	 *   <------------- mbuf_block_chunk_size ------------------->
-	 *   +-------------------------------------------------------+
-	 *   |       mbuf_block data          |  mbuf_block header   |
-	 *   |     (mbuf_block_offset)        | (struct mbuf_block)  |
-	 *   +-------------------------------------------------------+
-	 *   ^                                ^^
-	 *   |                                ||
-	 *   \                                |\
-	 * block->start                       | block->end (one byte past valid bound)
-	 *                                    \
-	 *                                    block
-	 *
-	 */
-	mbuf_block = (struct mbuf_block *)(buf + pool->mbuf_block_offset);
-	mbuf_block->magic = MBUF_BLOCK_MAGIC;
-	mbuf_block->pool  = pool;
-	mbuf_block->refcount = 1;
-
-done:
-	STAILQ_NEXT(mbuf_block, next) = NULL;
-	#ifdef MBUF_ENABLE_DEBUGGING
-		TAILQ_INSERT_HEAD(&pool->active_mbuf_blockq, mbuf_block, active_q);
-	#endif
-	#ifdef MBUF_ENABLE_BACKTRACES
-		mbuf_block->backtrace = strdup(oxt::thread::current_backtrace().c_str());
-	#endif
-	pool->nactive_mbuf_blockq++;
-	return mbuf_block;
+	return _mbuf_block_init(pool, buf, pool->mbuf_block_offset);
 }
 
 struct mbuf_block *
@@ -110,24 +153,58 @@ mbuf_block_get(struct mbuf_pool *pool)
 	return mbuf_block;
 }
 
+struct mbuf_block *
+mbuf_block_new_standalone(struct mbuf_pool *pool, size_t size)
+{
+	struct mbuf_block *mbuf_block;
+	size_t block_offset;
+	char *buf;
+
+	block_offset = std::max<size_t>(size, mbuf_pool_data_size(pool));
+	buf = (char *) malloc(MBUF_BLOCK_HSIZE + block_offset);
+	if (OXT_UNLIKELY(buf == NULL)) {
+		return NULL;
+	}
+
+	mbuf_block = _mbuf_block_init(pool, buf, block_offset);
+	mbuf_block->start = buf;
+	mbuf_block->end = buf + size;
+	mbuf_block->offset = block_offset;
+
+	assert(mbuf_block->end - mbuf_block->start == (int)size);
+	assert(mbuf_block->start < mbuf_block->end);
+
+	#ifdef MBUF_DEBUG
+		printf("[%p] mbuf_block new standalone %p\n", oxt::thread_signature, mbuf_block);
+	#endif
+
+	return mbuf_block;
+}
+
 static void
-mbuf_block_free(struct mbuf_pool *pool, struct mbuf_block *mbuf_block)
+mbuf_block_free(struct mbuf_block *mbuf_block)
 {
 	char *buf;
 
-	//log_debug(LOG_VVERB, "put mbuf_block %p", mbuf_block);
+	#ifdef MBUF_DEBUG
+		printf("[%p] mbuf_block free %p\n", oxt::thread_signature, mbuf_block);
+	#endif
 
 	assert(STAILQ_NEXT(mbuf_block, next) == NULL);
 	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
 
 	#ifdef MBUF_ENABLE_DEBUGGING
-		TAILQ_REMOVE(&pool->active_mbuf_blockq, mbuf_block, active_q);
+		TAILQ_REMOVE(&mbuf_block->pool->active_mbuf_blockq, mbuf_block, active_q);
 	#endif
 	#ifdef MBUF_ENABLE_BACKTRACES
 		free(mbuf_block->backtrace);
 	#endif
 
-	buf = (char *) mbuf_block - pool->mbuf_block_offset;
+	if (mbuf_block->offset > 0) {
+		buf = (char *) mbuf_block - mbuf_block->offset;
+	} else {
+		buf = (char *) mbuf_block - mbuf_block->pool->mbuf_block_offset;
+	}
 	free(buf);
 }
 
@@ -142,6 +219,7 @@ mbuf_block_put(struct mbuf_block *mbuf_block)
 	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
 	assert(mbuf_block->refcount == 0);
 	assert(mbuf_block->pool->nactive_mbuf_blockq > 0);
+	assert(mbuf_block->offset == 0);
 
 	mbuf_block->refcount = 1;
 	mbuf_block->pool->nfree_mbuf_blockq++;
@@ -203,7 +281,7 @@ mbuf_pool_compact(struct mbuf_pool *pool)
 	while (!STAILQ_EMPTY(&pool->free_mbuf_blockq)) {
 		struct mbuf_block *mbuf_block = STAILQ_FIRST(&pool->free_mbuf_blockq);
 		mbuf_block_remove(&pool->free_mbuf_blockq, mbuf_block);
-		mbuf_block_free(pool, mbuf_block);
+		mbuf_block_free(mbuf_block);
 		pool->nfree_mbuf_blockq--;
 	}
 	assert(pool->nfree_mbuf_blockq == 0);
@@ -237,7 +315,12 @@ mbuf_block_unref(struct mbuf_block *mbuf_block)
 	assert(mbuf_block->refcount > 0);
 	mbuf_block->refcount--;
 	if (mbuf_block->refcount == 0) {
-		mbuf_block_put(mbuf_block);
+		if (mbuf_block->offset > 0) {
+			mbuf_block->pool->nactive_mbuf_blockq--;
+			mbuf_block_free(mbuf_block);
+		} else {
+			mbuf_block_put(mbuf_block);
+		}
 	}
 }
 
@@ -258,6 +341,24 @@ mbuf_get(struct mbuf_pool *pool)
 	assert(block->refcount == 1);
 	block->refcount--;
 	return mbuf(block, 0, block->end - block->start);
+}
+
+mbuf
+mbuf_get_with_size(struct mbuf_pool *pool, size_t size)
+{
+	struct mbuf_block *block;
+	if (size <= mbuf_pool_data_size(pool)) {
+		block = mbuf_block_get(pool);
+	} else {
+		block = mbuf_block_new_standalone(pool, size);
+	}
+	if (OXT_UNLIKELY(block == NULL)) {
+		return mbuf();
+	}
+
+	assert(block->refcount == 1);
+	block->refcount--;
+	return mbuf(block, 0, size);
 }
 
 
