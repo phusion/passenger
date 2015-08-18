@@ -23,7 +23,7 @@ end
 desc "Configure Nginx source tree"
 task :configure do
   sh "./configure --prefix=/home/vagrant/nginx/inst" +
-    " --add-module=/vagrant/ext/nginx" +
+    " --add-module=/vagrant/src/nginx_module" +
     " --with-http_ssl_module" +
     " --with-http_gzip_static_module" +
     " --with-http_stub_status_module" +

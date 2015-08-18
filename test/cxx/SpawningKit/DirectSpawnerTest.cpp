@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <SpawningKit/DirectSpawner.h>
+#include <Core/SpawningKit/DirectSpawner.h>
 #include <FileDescriptor.h>
 #include <Utils/json.h>
 #include <Utils/IOUtils.h>

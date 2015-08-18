@@ -605,10 +605,10 @@ task :fakeroot => [:apache2, :nginx, :doc] do
   sh "mkdir -p #{fake_nodelibdir}"
   sh "cp -R #{PhusionPassenger.node_libdir}/phusion_passenger #{fake_nodelibdir}/"
 
-  # Phusion Passenger common libraries
+  # C++ support libraries
   sh "mkdir -p #{fake_libdir}"
-  sh "cp -R #{PhusionPassenger.lib_dir}/common #{fake_libdir}/"
-  sh "rm -rf #{fake_libdir}/common/libboost_oxt"
+  sh "cp -R #{PhusionPassenger.lib_dir}/cxx_supportlib #{fake_libdir}/"
+  sh "rm -rf #{fake_libdir}/cxx_supportlib/libboost_oxt"
 
   # Ruby extension binaries
   sh "mkdir -p #{fake_native_support_dir}"
@@ -635,18 +635,18 @@ task :fakeroot => [:apache2, :nginx, :doc] do
   sh "mkdir -p #{fake_include_dir}"
   # Infer headers that the Nginx module needs
   headers = []
-  Dir["ext/nginx/*.[ch]"].each do |filename|
-    File.read(filename).split("\n").grep(%r{#include "common/(.+)"}) do |match|
-      headers << ["ext/common/#{$1}", "common/#{$1}"]
+  Dir["src/nginx_module/*.[ch]"].each do |filename|
+    File.read(filename).split("\n").grep(%r{#include "cxx_supportlib/(.+)"}) do |match|
+      headers << ["src/cxx_supportlib/#{$1}", "cxx_supportlib/#{$1}"]
     end
   end
   # Manually add headers that could not be inferred through
   # the above code
   headers.concat([
-    ["ext/common/Exceptions.h", "common/Exceptions.h"],
-    ["ext/common/Utils/modp_b64.h", "common/Utils/modp_b64.h"],
-    ["ext/common/Utils/modp_b64_data.h", "common/Utils/modp_b64_data.h"],
-    ["ext/boost/detail/endian.hpp", "boost/detail/endian.hpp"]
+    ["src/cxx_supportlib/Exceptions.h", "cxx_supportlib/Exceptions.h"],
+    ["src/cxx_supportlib/Utils/modp_b64.h", "cxx_supportlib/Utils/modp_b64.h"],
+    ["src/cxx_supportlib/Utils/modp_b64_data.h", "cxx_supportlib/Utils/modp_b64_data.h"],
+    ["src/cxx_supportlib/vendor-modified/boost/detail/endian.hpp", "cxx_supportlib/boost/detail/endian.hpp"]
   ])
   headers.each do |header|
     target = "#{fake_include_dir}/#{header[1]}"
@@ -659,7 +659,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 
   # Nginx module sources
   sh "mkdir -p #{fake_nginx_module_source_dir}"
-  sh "cp ext/nginx/* #{fake_nginx_module_source_dir}/"
+  sh "cp src/nginx_module/* #{fake_nginx_module_source_dir}/"
 
   # Documentation
   sh "mkdir -p #{fake_docdir}"

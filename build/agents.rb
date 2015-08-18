@@ -21,153 +21,75 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+AGENT_TARGET = "#{AGENT_OUTPUT_DIR}#{AGENT_EXE}"
+AGENT_MAIN_OBJECT = "#{AGENT_OUTPUT_DIR}AgentMain.o"
 AGENT_OBJECTS = {
-  'WatchdogMain.o' => [
-    'ext/common/agent/Watchdog/WatchdogMain.cpp',
-    'ext/common/agent/Watchdog/AgentWatcher.cpp',
-    'ext/common/agent/Watchdog/CoreWatcher.cpp',
-    'ext/common/agent/Watchdog/UstRouterWatcher.cpp',
-    'ext/common/agent/Watchdog/InstanceDirToucher.cpp',
-    'ext/common/agent/Watchdog/ApiServer.h',
-    'ext/common/agent/ApiServerUtils.h',
-    'ext/common/agent/Core/OptionParser.h',
-    'ext/common/agent/UstRouter/OptionParser.h',
-    'ext/common/ServerKit/Server.h',
-    'ext/common/ServerKit/HttpServer.h',
-    'ext/common/ServerKit/HttpHeaderParser.h',
-    'ext/common/ServerKit/FileBufferedChannel.h',
-    'ext/common/Constants.h',
-    'ext/common/InstanceDirectory.h',
-    'ext/common/ResourceLocator.h',
-    'ext/common/Utils/VariantMap.h'
-  ],
-  'CoreMain.o' => [
-    'ext/common/agent/Core/CoreMain.cpp',
-    'ext/common/agent/Core/OptionParser.h',
-    'ext/common/agent/Core/ApiServer.h',
-    'ext/common/agent/Core/ResponseCache.h',
-    'ext/common/agent/Core/RequestHandler.h',
-    'ext/common/agent/Core/RequestHandler/Client.h',
-    'ext/common/agent/Core/RequestHandler/AppResponse.h',
-    'ext/common/agent/Core/RequestHandler/TurboCaching.h',
-    'ext/common/agent/Core/RequestHandler/Utils.cpp',
-    'ext/common/agent/Core/RequestHandler/Hooks.cpp',
-    'ext/common/agent/Core/RequestHandler/InitRequest.cpp',
-    'ext/common/agent/Core/RequestHandler/BufferBody.cpp',
-    'ext/common/agent/Core/RequestHandler/CheckoutSession.cpp',
-    'ext/common/agent/Core/RequestHandler/SendRequest.cpp',
-    'ext/common/agent/Core/RequestHandler/ForwardResponse.cpp',
-    'ext/common/agent/ApiServerUtils.h',
-    'ext/common/ServerKit/Server.h',
-    'ext/common/ServerKit/HttpServer.h',
-    'ext/common/ServerKit/HttpHeaderParser.h',
-    'ext/common/ServerKit/AcceptLoadBalancer.h',
-    'ext/common/ServerKit/FileBufferedChannel.h',
-    'ext/common/ApplicationPool2/Pool.h',
-    'ext/common/ApplicationPool2/Group.h',
-    'ext/common/ApplicationPool2/BasicGroupInfo.h',
-    'ext/common/ApplicationPool2/BasicProcessInfo.h',
-    'ext/common/ApplicationPool2/Context.h',
-    'ext/common/ApplicationPool2/Process.h',
-    'ext/common/ApplicationPool2/Session.h',
-    'ext/common/SpawningKit/Spawner.h',
-    'ext/common/Constants.h',
-    'ext/common/StaticString.h',
-    'ext/common/Account.h',
-    'ext/common/AccountsDatabase.h',
-    'ext/common/FileDescriptor.h',
-    'ext/common/Logging.h',
-    'ext/common/ResourceLocator.h',
-    'ext/common/Utils/ProcessMetricsCollector.h',
-    'ext/common/Utils/SystemMetricsCollector.h',
-    'ext/common/Utils/VariantMap.h'
-  ],
-  'UstRouterMain.o' => [
-    'ext/common/agent/UstRouter/UstRouterMain.cpp',
-    'ext/common/agent/UstRouter/OptionParser.h',
-    'ext/common/agent/UstRouter/ApiServer.h',
-    'ext/common/agent/UstRouter/Controller.h',
-    'ext/common/agent/UstRouter/Client.h',
-    'ext/common/agent/UstRouter/LogSink.h',
-    'ext/common/agent/UstRouter/FileSink.h',
-    'ext/common/agent/UstRouter/RemoteSink.h',
-    'ext/common/agent/UstRouter/RemoteSender.h',
-    'ext/common/agent/UstRouter/DataStoreId.h',
-    'ext/common/agent/UstRouter/FilterSupport.h',
-    'ext/common/agent/ApiServerUtils.h',
-    'ext/common/ServerKit/Server.h',
-    'ext/common/ServerKit/HttpServer.h',
-    'ext/common/ServerKit/HttpHeaderParser.h',
-    'ext/common/ServerKit/FileBufferedChannel.h',
-    'ext/common/Constants.h',
-    'ext/common/Logging.h',
-    'ext/common/Utils/VariantMap.h',
-    'ext/common/Utils/BlockingQueue.h'
-  ],
-  'SystemMetricsMain.o' => [
-    'ext/common/agent/SystemMetrics/SystemMetricsMain.cpp',
-    'ext/common/Utils/SystemMetricsCollector.h'
-  ],
-  'TempDirToucherMain.o' => [
-    'ext/common/agent/TempDirToucher/TempDirToucherMain.cpp'
-  ],
-  'SpawnPreparerMain.o' => [
-    'ext/common/agent/SpawnPreparer/SpawnPreparerMain.cpp'
-  ]
+  AGENT_MAIN_OBJECT =>
+    "src/agent/AgentMain.cpp",
+  "#{AGENT_OUTPUT_DIR}AgentBase.o" =>
+    "src/agent/Shared/Base.cpp",
+  "#{AGENT_OUTPUT_DIR}WatchdogMain.o" =>
+    "src/agent/Watchdog/WatchdogMain.cpp",
+  "#{AGENT_OUTPUT_DIR}CoreMain.o" =>
+    "src/agent/Core/CoreMain.cpp",
+  "#{AGENT_OUTPUT_DIR}CoreApplicationPool.o" =>
+    "src/agent/Core/ApplicationPool/Implementation.cpp",
+  "#{AGENT_OUTPUT_DIR}UstRouterMain.o" =>
+    "src/agent/UstRouter/UstRouterMain.cpp",
+  "#{AGENT_OUTPUT_DIR}SystemMetricsMain.o" =>
+    "src/agent/SystemMetrics/SystemMetricsMain.cpp",
+  "#{AGENT_OUTPUT_DIR}TempDirToucherMain.o" =>
+    "src/agent/TempDirToucher/TempDirToucherMain.cpp",
+  "#{AGENT_OUTPUT_DIR}SpawnPreparerMain.o" =>
+    "src/agent/SpawnPreparer/SpawnPreparerMain.cpp"
 }
 
-AGENT_OBJECTS.each_pair do |agent_object, agent_dependencies|
-  full_agent_object = "#{AGENT_OUTPUT_DIR}#{agent_object}"
-  full_agent_object_dir = File.dirname(full_agent_object)
-  file(full_agent_object => agent_dependencies) do
-    sh "mkdir -p #{full_agent_object_dir}" if !File.directory?(full_agent_object_dir)
-    compile_cxx(agent_dependencies[0],
-      "-o #{full_agent_object} " <<
-      "#{EXTRA_PRE_CXXFLAGS} " <<
-      "-Iext -Iext/common " <<
-      "#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBUV_CFLAGS} " <<
-      "#{PlatformInfo.curl_flags} " <<
-      "#{PlatformInfo.zlib_flags} " <<
-      "#{EXTRA_CXXFLAGS}")
-  end
+# Define compilation tasks for object files.
+AGENT_OBJECTS.each_pair do |object, source|
+  define_cxx_object_compilation_task(
+    object,
+    source,
+    :include_paths => [
+      "src/agent",
+      *CXX_SUPPORTLIB_INCLUDE_PATHS
+    ],
+    :flags => [
+      AGENT_CFLAGS,
+      LIBEV_CFLAGS,
+      LIBUV_CFLAGS,
+      PlatformInfo.curl_flags,
+      PlatformInfo.zlib_flags
+    ]
+  )
 end
 
+# Define compilation task for the agent executable.
 agent_libs = COMMON_LIBRARY.
   only(:base, :ust_router, :other).
   exclude('AgentsStarter.o')
-agent_objects = AGENT_OBJECTS.keys.map { |x| "#{AGENT_OUTPUT_DIR}#{x}" }
-dependencies = agent_objects + [
-  'ext/common/Constants.h',
-  'ext/common/agent/AgentMain.cpp',
+dependencies = AGENT_OBJECTS.keys + [
   LIBBOOST_OXT,
   agent_libs.link_objects,
   LIBEV_TARGET,
   LIBUV_TARGET
 ].flatten.compact
-file AGENT_OUTPUT_DIR + AGENT_EXE => dependencies do
-  agent_objects_as_string = agent_objects.join(" ")
+file(AGENT_TARGET => dependencies) do
   sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
-  compile_cxx("ext/common/agent/AgentMain.cpp",
-    "-o #{AGENT_OUTPUT_DIR}#{AGENT_EXE}.o " <<
-    "#{EXTRA_PRE_CXXFLAGS} " <<
-    "-Iext -Iext/common " <<
-    "#{AGENT_CFLAGS} #{LIBEV_CFLAGS} #{LIBUV_CFLAGS} " <<
-    "#{PlatformInfo.curl_flags} " <<
-    "#{PlatformInfo.zlib_flags} " <<
-    "#{EXTRA_CXXFLAGS}")
-  create_executable("#{AGENT_OUTPUT_DIR}#{AGENT_EXE}",
-    "#{AGENT_OUTPUT_DIR}#{AGENT_EXE}.o",
-    "#{agent_libs.link_objects_as_string} " <<
-    "#{agent_objects_as_string} " <<
-    "#{LIBBOOST_OXT_LINKARG} " <<
-    "#{EXTRA_PRE_CXX_LDFLAGS} " <<
-    "#{libev_libs} " <<
-    "#{libuv_libs} " <<
-    "#{PlatformInfo.curl_libs} " <<
-    "#{PlatformInfo.zlib_libs} " <<
-    "#{PlatformInfo.portability_cxx_ldflags} " <<
-    "#{AGENT_LDFLAGS} " <<
-    "#{EXTRA_CXX_LDFLAGS}")
+  create_cxx_executable(AGENT_TARGET,
+    [
+      agent_libs.link_objects_as_string,
+      AGENT_OBJECTS.keys,
+      LIBBOOST_OXT_LINKARG
+    ],
+    :flags => [
+      libev_libs,
+      libuv_libs,
+      PlatformInfo.curl_libs,
+      PlatformInfo.zlib_libs,
+      PlatformInfo.portability_cxx_ldflags,
+      AGENT_LDFLAGS
+    ]
+  )
 end
 
 task 'common:clean' do

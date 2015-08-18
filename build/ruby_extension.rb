@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -34,7 +34,7 @@ if !PlatformInfo.passenger_needs_ruby_dev_header?
 else
   output_dir  = RUBY_EXTENSION_OUTPUT_DIR
   output_name = "passenger_native_support.#{LIBEXT}"
-  source_dir  = "ext/ruby"
+  source_dir  = "src/ruby_native_extension"
   NATIVE_SUPPORT_TARGET = File.join(output_dir, output_name)
 
   task :native_support => NATIVE_SUPPORT_TARGET

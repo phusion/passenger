@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <ApplicationPool2/Process.h>
+#include <Core/ApplicationPool/Process.h>
 
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;

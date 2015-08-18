@@ -98,7 +98,7 @@ Thus, if the Passenger core crashes, or if an application process crashes, they 
 
 When an HTTP client sends a request, it is received by the web server (Nginx or Apache). Both Apache and Nginx can be extended with **modules**. Phusion Passenger provides such a module. The module is loaded into Nginx/Apache. It checks whether the request should be handled by a Phusion Passenger-served web application, and if so, forwards the request to the Passenger core. The internal wire protocol used during this forwarding, is a modified version of link:http://en.wikipedia.org/wiki/SCGI[SCGI].
 
-The Nginx module and Apache module have an entirely different code base. Their code bases are in `ext/nginx` and `ext/apache2`, respectively. Both modules are relatively small because they outsource most logic to the Passenger core, and because they utilize a common library (`ext/common`). This allows us to support both Nginx and Apache without having to write a lot of things twice.
+The Nginx module and Apache module have an entirely different code base. Their code bases are in `src/nginx_module` and `src/apache2_module`, respectively. Both modules are relatively small because they outsource most logic to the Passenger core, and because they utilize a common library (`src/cxx_supportlib`). This allows us to support both Nginx and Apache without having to write a lot of things twice.
 
 ==== Passenger core
 
@@ -131,8 +131,8 @@ You might have noticed that Phusion Passenger Standalone is not part of the diag
 
 Phusion Passenger is written mostly in C\++ and Ruby. The web server modules, core, UstRouter and Watchdog are written in C++. Most command line tools are written in Ruby. You can find each component here:
 
- * The web server modules can be found in `ext/apache2` and `ext/nginx`.
- * The Passenger core, UstRouter and Watchdog can be found in `ext/common/agent`.
+ * The web server modules can be found in `src/apache2_module` and `src/nginx_module`.
+ * The Passenger core, UstRouter and Watchdog can be found in `src/agent`.
  * The command line tools can be found in `bin`, with some parts of their code in `lib`.
 
 More information can be found in the link:https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md[Contributors Guide]. This guide also teaches you how to compile Phusion Passenger.
@@ -148,11 +148,11 @@ Phusion Passenger initializes as follows.
 
 2. The Phusion Passenger module inside Nginx/Apache proceeds with starting the Watchdog. This is implemented in:
 +
- * `ext/nginx/ngx_http_passenger_module.c`, function `start_watchdog()`.
- * `ext/apache2/Hooks.cpp`, in the constructor for the `Hooks` class.
- * `ext/common/AgentsStarter.h` and `AgentsStarter.cpp`. Most of the logic pertaining starting the Watchdog is in this file.
+ * `src/nginx_module/ngx_http_passenger_module.c`, function `start_watchdog()`.
+ * `src/apache2_module/Hooks.cpp`, in the constructor for the `Hooks` class.
+ * `src/cxx_supportlib/AgentsStarter.h` and `AgentsStarter.cpp`. Most of the logic pertaining starting the Watchdog is in this file.
 
-3. The Watchdog first initializes a <<instance_state_and_communication,"instance directory">>, which is a temporary directory containing files that will be used during the life time of this Phusion Passenger instance. For example, the directory contains Unix domain socket files, so that the different Phusion Passenger processes can communicate with each other. The Watchdog is implemented in `ext/common/agent/Watchdog/Main.cpp`.
+3. The Watchdog first initializes a <<instance_state_and_communication,"instance directory">>, which is a temporary directory containing files that will be used during the life time of this Phusion Passenger instance. For example, the directory contains Unix domain socket files, so that the different Phusion Passenger processes can communicate with each other. The Watchdog is implemented in `src/agent/Watchdog/Main.cpp`.
 
 4. The Watchdog starts the Passenger core and the UstRouter simultaneously. Each performs its own initialization.
 
@@ -168,7 +168,7 @@ After initialization, Phusion Passenger is ready to receive and to process reque
 
 image:images/passenger_core_architecture.png[Passenger core architecture]
 
-The Passenger core consists of two subsystems. One is the *request handling subsystem*. The other is *the ApplicationPool subsystem*, which performs the bulk of process management. The core also uses a number of support libraries. The largest third-party support libraries are shown in the diagram. Many more -- internal -- support libraries are used, but they're omitted from the diagram. You can find these internal support libraries in the directory `ext/common/Utils`.
+The Passenger core consists of two subsystems. One is the *request handling subsystem*. The other is *the ApplicationPool subsystem*, which performs the bulk of process management. The core also uses a number of support libraries. The largest third-party support libraries are shown in the diagram. Many more -- internal -- support libraries are used, but they're omitted from the diagram. You can find these internal support libraries in the directory `src/cxx_supportlib/Utils`.
 
 === Request handling
 
@@ -383,7 +383,7 @@ The loader sets up a server on which the application listens for requests. The S
 
 As explained in <<request_handler_forwarding_to_app,section 'Request handling' and subsection 'Forwarding to the application'>>, the RequestHandler can talk with the application process in a protocol that the application prefers. The RequestHandler supports two protocols:
 
- * A Phusion Passenger internal protocol which we call the 'session' protocol. This protocol is used by the Ruby loaders and the Python loader. A description of this protocol is outside the scope of this document, but if you're interested in how it looks like and how it behaves, you can study the source code of the Ruby and Python loaders, as well as `ext/common/Utils/MessageIO.h`.
+ * A Phusion Passenger internal protocol which we call the 'session' protocol. This protocol is used by the Ruby loaders and the Python loader. A description of this protocol is outside the scope of this document, but if you're interested in how it looks like and how it behaves, you can study the source code of the Ruby and Python loaders, as well as `src/cxx_supportlib/Utils/MessageIO.h`.
  * The HTTP protocol. This protocol is used by the Node.js and Meteor loaders. If you're writing a new loader then, it's probably easiest to use this protocol, together with whatever HTTP library is available for the loader's target language.
 
 Typically, the server is setup to listen on a Unix domain socket file, inside the `backends` subdirectory of the 'generation directory'. The path to the generation directory was passed during handshake. However the server may also listen on a TCP socket.
@@ -465,10 +465,10 @@ Given an application type, the associated loader and preloader can be looked up.
 
 Information about the supported application types, startup files, loaders and preloaders are defined in the following places:
 
- * The constant `appTypeDefinitions` in the file `ext/common/ApplicationPool2/AppTypes.cpp` keeps a list of supported languages. It also specifies the default startup file name belonging to each language.
- * The method `getStartCommand()` in the file `ext/common/ApplicationPool2/Options.h` defines the loaders that should be used for each language.
- * The method `tryCreateSmartSpawner()` in the file `ext/common/ApplicationPool2/SpawnerFactory.h` defines the preloaders that should be used for each language.
- * The method `looks_like_app_directory?` in the file `lib/phusion_passenger/standalone/app_finder.rb` keeps a list of supported startup files. This is only used within Passenger Standalone.
+ * The constant `appTypeDefinitions` in the file `src/cxx_supportlib/AppTypes.cpp` keeps a list of supported languages. It also specifies the default startup file name belonging to each language.
+ * The method `getStartCommand()` in the file `src/agent/Core/ApplicationPool2/Options.h` defines the loaders that should be used for each language.
+ * The method `tryCreateSmartSpawner()` in the file `src/agent/Core/SpawningKit/Factory.h` defines the preloaders that should be used for each language.
+ * The method `looks_like_app_directory?` in the file `src/ruby_supportlib/phusion_passenger/standalone/app_finder.rb` keeps a list of supported startup files. This is only used within Passenger Standalone.
 
 
 [[instance_state_and_communication]]
@@ -478,7 +478,7 @@ Every time you start Phusion Passenger, you've created a new *instance*. Every i
 
 Clearly, the processes can't listen on a specific TCP port for communication. Nor can they listen on a fixed Unix domain socket filename.
 
-That is where the 'instance directory' comes in. Every Phusion Passenger instance has its own, unique temporary directory. That directory is removed when the instance halts. The directory contains Unix domain socket files that the processes listen on. Every Phusion Passenger related process knows where its own instance directory is, and thus, knows how to communicate with other processes belonging to the same instance. The instance directory is implemented in `ext/common/InstanceDirectory.h`.
+That is where the 'instance directory' comes in. Every Phusion Passenger instance has its own, unique temporary directory. That directory is removed when the instance halts. The directory contains Unix domain socket files that the processes listen on. Every Phusion Passenger related process knows where its own instance directory is, and thus, knows how to communicate with other processes belonging to the same instance. The instance directory is implemented in `src/cxx_supportlib/InstanceDirectory.h`.
 
 Administration tools such as `passenger-status` query information using instance directories. First, they check which instance directories exist on the system. If they find only one, then they query the sockets inside that sole instance directory. Otherwise, they abort with an error and ask the user to specifically select the instance to query.
 

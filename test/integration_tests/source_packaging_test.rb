@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2014 Phusion
+#  Copyright (c) 2013-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -23,7 +23,7 @@
 
 SOURCE_ROOT = File.expand_path("../..", File.dirname(__FILE__))
 Dir.chdir(SOURCE_ROOT)
-$LOAD_PATH.unshift("#{SOURCE_ROOT}/lib")
+$LOAD_PATH.unshift("#{SOURCE_ROOT}/src/ruby_supportlib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'packaging'

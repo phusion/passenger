@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <SpawningKit/SmartSpawner.h>
+#include <Core/SpawningKit/SmartSpawner.h>
 #include <Logging.h>
 #include <FileDescriptor.h>
 #include <Utils/json.h>

@@ -35,7 +35,8 @@ PhusionPassenger.require_passenger_lib 'common_library'
 # Defines tasks for compiling a static library containing Boost and OXT.
 def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   output_file = "#{output_dir}.a"
-  flags = "-Iext #{extra_compiler_flags} #{EXTRA_CXXFLAGS}"
+  flags = "-Isrc/cxx_supportlib -Isrc/cxx_supportlib/vendor-copy -Isrc/cxx_supportlib/vendor-modified " +
+    "#{extra_compiler_flags} #{EXTRA_CXXFLAGS}"
 
   if OPTIMIZE
     optimize = "-O2"
@@ -44,40 +45,42 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
     end
   end
 
-  # Define compilation targets for .cpp files in ext/boost/src/pthread.
+  # Define compilation targets for .cpp files in src/cxx_supportlib/vendor-modified/boost/src/pthread.
   boost_object_files = []
-  Dir['ext/boost/libs/**/*.cpp'].each do |source_file|
+  Dir['src/cxx_supportlib/vendor-modified/boost/libs/**/*.cpp'].each do |source_file|
     object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
     boost_output_dir  = "#{output_dir}/boost"
     object_file = "#{boost_output_dir}/#{object_name}"
     boost_object_files << object_file
 
-    file object_file => source_file do
-      sh "mkdir -p #{boost_output_dir}" if !File.directory?(boost_output_dir)
-      compile_cxx(source_file, "#{optimize} #{flags} -o #{object_file}")
-    end
+    define_cxx_object_compilation_task(
+      object_file,
+      source_file,
+      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+      :flags => [optimize, extra_compiler_flags]
+    )
   end
 
-  # Define compilation targets for .cpp files in ext/oxt.
+  # Define compilation targets for .cpp files in src/cxx_supportlib/oxt.
   oxt_object_files = []
-  oxt_dependency_files = Dir["ext/oxt/*.hpp"] + Dir["ext/oxt/detail/*.hpp"]
-  Dir['ext/oxt/*.cpp'].each do |source_file|
+  Dir['src/cxx_supportlib/oxt/*.cpp'].each do |source_file|
     object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
     oxt_output_dir  = "#{output_dir}/oxt"
     object_file = "#{oxt_output_dir}/#{object_name}"
     oxt_object_files << object_file
 
-    file object_file => [source_file, *oxt_dependency_files] do
-      sh "mkdir -p #{oxt_output_dir}" if !File.directory?(oxt_output_dir)
-      compile_cxx(source_file, "#{optimize} #{flags} -o #{object_file}".strip)
-    end
+    define_cxx_object_compilation_task(
+      object_file,
+      source_file,
+      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+      :flags => [optimize, extra_compiler_flags]
+    )
   end
 
   object_files = boost_object_files + oxt_object_files
 
   file(output_file => object_files) do
-    sh "mkdir -p #{output_dir}"
-    create_static_library(output_file, object_files.join(' '))
+    create_static_library(output_file, object_files)
   end
 
   task "#{namespace}:clean" do
@@ -87,7 +90,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   if OPTIMIZE && LTO
     # Clang -flto does not support static libraries containing
     # .o files that are compiled with -flto themselves.
-    [output_file, Dir["#{output_dir}/*/*.o"].join(" ")]
+    [output_file, [output_file, boost_object_files, oxt_object_files].flatten.join(" ")]
   else
     [output_file, output_file]
   end
@@ -97,16 +100,16 @@ end
 ########## libev ##########
 
 if USE_VENDORED_LIBEV
-  LIBEV_SOURCE_DIR = File.expand_path("../ext/libev", File.dirname(__FILE__)) + "/"
-  LIBEV_CFLAGS = "-Iext/libev"
+  LIBEV_SOURCE_DIR = File.expand_path("../src/cxx_supportlib/vendor-copy/libev", File.dirname(__FILE__)) + "/"
+  LIBEV_CFLAGS = "-Isrc/cxx_supportlib/vendor-copy/libev"
   LIBEV_TARGET = LIBEV_OUTPUT_DIR + ".libs/libev.a"
 
   task :libev => LIBEV_TARGET
 
   dependencies = [
-    "ext/libev/configure",
-    "ext/libev/config.h.in",
-    "ext/libev/Makefile.am"
+    "src/cxx_supportlib/vendor-copy/libev/configure",
+    "src/cxx_supportlib/vendor-copy/libev/config.h.in",
+    "src/cxx_supportlib/vendor-copy/libev/Makefile.am"
   ]
   file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
     cc = CC
@@ -125,7 +128,7 @@ if USE_VENDORED_LIBEV
       "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}' orig_CFLAGS=1"
   end
 
-  libev_sources = Dir["ext/libev/{*.c,*.h}"]
+  libev_sources = Dir["src/cxx_supportlib/vendor-copy/libev/{*.c,*.h}"]
   file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
     sh "rm -f #{LIBEV_OUTPUT_DIR}libev.la"
     sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la"
@@ -165,15 +168,15 @@ LIBEV_CFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.compiler_suppo
 ########## libuv ##########
 
 if USE_VENDORED_LIBUV
-  LIBUV_SOURCE_DIR = File.expand_path("../ext/libuv", File.dirname(__FILE__)) + "/"
-  LIBUV_CFLAGS = "-Iext/libuv/include"
+  LIBUV_SOURCE_DIR = File.expand_path("../src/cxx_supportlib/vendor-copy/libuv", File.dirname(__FILE__)) + "/"
+  LIBUV_CFLAGS = "-Isrc/cxx_supportlib/vendor-copy/libuv/include"
   LIBUV_TARGET = LIBUV_OUTPUT_DIR + ".libs/libuv.a"
 
   task :libuv => LIBUV_TARGET
 
   dependencies = [
-    "ext/libuv/configure",
-    "ext/libuv/Makefile.am"
+    "src/cxx_supportlib/vendor-copy/libuv/configure",
+    "src/cxx_supportlib/vendor-copy/libuv/Makefile.am"
   ]
   file LIBUV_OUTPUT_DIR + "Makefile" => dependencies do
     cc = CC
@@ -195,7 +198,7 @@ if USE_VENDORED_LIBUV
       "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}' AM_V_CC= AM_V_CCLD="
   end
 
-  libuv_sources = Dir["ext/libuv/**/{*.c,*.h}"]
+  libuv_sources = Dir["src/cxx_supportlib/vendor-copy/libuv/**/{*.c,*.h}"]
   file LIBUV_OUTPUT_DIR + ".libs/libuv.a" => [LIBUV_OUTPUT_DIR + "Makefile"] + libuv_sources do
     sh "rm -f #{LIBUV_OUTPUT_DIR}/libuv.la"
     sh "cd #{LIBUV_OUTPUT_DIR} && make -j2 libuv.la"
@@ -235,13 +238,15 @@ end
 # root, for example as is the case with Passenger Standalone.
 #
 # If you add a new shared definition file, don't forget to update
-# lib/phusion_passenger/packaging.rb!
+# src/ruby_supportlib/phusion_passenger/packaging.rb!
 
-dependencies = ['ext/common/Constants.h.erb', 'lib/phusion_passenger.rb', 'lib/phusion_passenger/constants.rb']
-file 'ext/common/Constants.h' => dependencies do
+dependencies = ['src/cxx_supportlib/Constants.h.erb',
+  'src/ruby_supportlib/phusion_passenger.rb',
+  'src/ruby_supportlib/phusion_passenger/constants.rb']
+file 'src/cxx_supportlib/Constants.h' => dependencies do
   PhusionPassenger.require_passenger_lib 'constants'
-  template = TemplateRenderer.new('ext/common/Constants.h.erb')
-  template.render_to('ext/common/Constants.h')
+  template = TemplateRenderer.new('src/cxx_supportlib/Constants.h.erb')
+  template.render_to('src/cxx_supportlib/Constants.h')
 end
 
 

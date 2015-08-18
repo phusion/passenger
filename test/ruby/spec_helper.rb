@@ -31,7 +31,7 @@ DEBUG = boolean_option('DEBUG')
 
 ENV.delete('PASSENGER_DEBUG')
 
-$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 $LOAD_PATH.unshift("#{source_root}/test")
 
 require 'thread'

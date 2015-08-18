@@ -3,7 +3,7 @@
 # and executes the requested start command.
 
 DIR = File.expand_path(File.dirname(__FILE__))
-require File.expand_path("#{DIR}/../../lib/phusion_passenger")
+require File.expand_path("#{DIR}/../../src/ruby_supportlib/phusion_passenger")
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'native_support'
 require 'socket'

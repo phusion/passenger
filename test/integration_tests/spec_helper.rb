@@ -12,7 +12,7 @@ rescue Errno::ENOENT
   exit 1
 end
 
-$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 $LOAD_PATH.unshift("#{source_root}/test")
 
 require 'phusion_passenger'

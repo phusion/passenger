@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <ApplicationPool2/Process.h>
+#include <Core/ApplicationPool/Process.h>
 #include <Utils/IOUtils.h>
 
 using namespace Passenger;

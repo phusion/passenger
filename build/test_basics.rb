@@ -23,23 +23,22 @@
 
 TEST_BOOST_OXT_LIBRARY = LIBBOOST_OXT
 TEST_COMMON_LIBRARY    = COMMON_LIBRARY
-
-TEST_COMMON_CFLAGS = "-DTESTING_APPLICATION_POOL #{EXTRA_CXXFLAGS}"
+TEST_COMMON_CFLAGS     = "-DTESTING_APPLICATION_POOL"
 
 desc "Run all unit tests and integration tests"
 task :test => ['test:oxt', 'test:cxx', 'test:ruby', 'test:node', 'test:integration']
 
 desc "Clean all compiled test files"
 task 'test:clean' do
-  sh("rm -rf test/oxt/oxt_test_main test/oxt/*.o test/cxx/*.dSYM test/cxx/CxxTestMain")
-  sh("rm -f test/cxx/*.o test/cxx/*/*.o test/cxx/*.gch")
-  sh("rm -f test/support/allocate_memory")
+  sh("rm -rf #{TEST_OUTPUT_DIR}")
+  sh("rm -f test/cxx/*.gch")
 end
 
 task :clean => 'test:clean'
 
-file 'test/support/allocate_memory' => 'test/support/allocate_memory.c' do
-  create_c_executable('test/support/allocate_memory', 'test/support/allocate_memory.c')
+file "#{TEST_OUTPUT_DIR}allocate_memory" => 'test/support/allocate_memory.c' do
+  compile_c("#{TEST_OUTPUT_DIR}allocate_memory.o", 'test/support/allocate_memory.c')
+  create_c_executable("#{TEST_OUTPUT_DIR}allocate_memory", "#{TEST_OUTPUT_DIR}allocate_memory.o")
 end
 
 desc "Install developer dependencies"

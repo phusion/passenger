@@ -8,7 +8,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <cassert>
-#include <BackgroundEventLoop.cpp>
 #include <Utils/IOUtils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/json.h>
