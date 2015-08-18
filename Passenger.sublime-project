@@ -5,6 +5,9 @@
 			"path": ".",
 			"folder_exclude_patterns":
 			[
+				".externalToolBuilders",
+				".settings",
+				"Passenger.xcodeproj",
 				"node_modules",
 				"pkg",
 				"buildout"
