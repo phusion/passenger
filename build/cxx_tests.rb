@@ -182,12 +182,6 @@ TEST_CXX_OBJECTS = {
   'test/cxx/EventedClientTest.o' => %w(
     test/cxx/EventedClientTest.cpp
     ext/common/EventedClient.h),
-  'test/cxx/MessageServerTest.o' => %w(
-    test/cxx/MessageServerTest.cpp
-    ext/common/Logging.h
-    ext/common/Account.h
-    ext/common/AccountsDatabase.h
-    ext/common/MessageServer.h),
   # 'test/cxx/RequestHandlerTest.o' => %w(
   #   test/cxx/RequestHandlerTest.cpp
   #   ext/common/agent/Core/RequestHandler.h

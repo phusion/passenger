@@ -75,7 +75,6 @@ AGENT_OBJECTS = {
     'ext/common/StaticString.h',
     'ext/common/Account.h',
     'ext/common/AccountsDatabase.h',
-    'ext/common/MessageServer.h',
     'ext/common/FileDescriptor.h',
     'ext/common/Logging.h',
     'ext/common/ResourceLocator.h',

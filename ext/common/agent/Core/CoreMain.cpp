@@ -75,7 +75,6 @@
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
 #include <ApplicationPool2/Pool.h>
-#include <MessageServer.h>
 #include <MessageReadersWriters.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>

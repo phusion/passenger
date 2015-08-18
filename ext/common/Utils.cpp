@@ -52,7 +52,6 @@
 #endif
 #include <vector>
 #include <FileDescriptor.h>
-#include <MessageServer.h>
 #include <ResourceLocator.h>
 #include <Exceptions.h>
 #include <Utils.h>

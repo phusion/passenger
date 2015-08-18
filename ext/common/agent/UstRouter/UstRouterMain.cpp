@@ -54,7 +54,6 @@
 #include <FileDescriptor.h>
 #include <BackgroundEventLoop.h>
 #include <ResourceLocator.h>
-#include <MessageServer.h>
 #include <Constants.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
