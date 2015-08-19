@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_SERVER_KIT_HTTP_SERVERLER_H_
 #define _PASSENGER_SERVER_KIT_HTTP_SERVERLER_H_
 
-#include <Utils/sysqueue.h>
+#include <psg_sysqueue.h>
 #include <boost/pool/object_pool.hpp>
 #include <oxt/macros.hpp>
 #include <algorithm>

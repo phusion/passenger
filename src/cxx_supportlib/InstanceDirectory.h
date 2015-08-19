@@ -38,7 +38,7 @@
 #include <RandomGenerator.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
-#include <Utils/json.h>
+#include <jsoncpp/json.h>
 
 namespace Passenger {
 

@@ -28,6 +28,8 @@
 #include <sstream>
 #include <string>
 #include <cstring>
+#include <jsoncpp/json.h>
+#include <modp_b64.h>
 
 #include <Shared/ApiServerUtils.h>
 #include <ServerKit/HttpServer.h>
@@ -37,8 +39,6 @@
 #include <Logging.h>
 #include <Constants.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/modp_b64.h>
-#include <Utils/json.h>
 #include <Utils/MessageIO.h>
 
 namespace Passenger {

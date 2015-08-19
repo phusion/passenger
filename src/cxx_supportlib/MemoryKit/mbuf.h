@@ -1,6 +1,7 @@
 /*
  * twemproxy - A fast and lightweight proxy for memcached protocol.
  * Copyright (C) 2011 Twitter, Inc.
+ * Copyright (C) 2014-2015 Phusion
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,7 @@
 #ifndef _PSG_MBUF_BLOCK_H_
 #define _PSG_MBUF_BLOCK_H_
 
-#include <Utils/sysqueue.h>
+#include <psg_sysqueue.h>
 #include <algorithm>
 #include <cstddef>
 #include <cassert>

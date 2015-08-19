@@ -44,7 +44,7 @@
 #include "Configuration.h"
 #include "ContentHandler.h"
 #include "cxx_supportlib/Constants.h"
-#include "cxx_supportlib/Utils/modp_b64.cpp" /* File is C compatible. */
+#include "cxx_supportlib/vendor-modified/modp_b64.cpp" /* File is C compatible. */
 
 
 static int                first_start = 1;

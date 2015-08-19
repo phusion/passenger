@@ -28,9 +28,9 @@
 #include <string>
 #include <cstdio>
 #include <cstddef>
+#include <jsoncpp/json.h>
 #include <boost/cstdint.hpp>
 #include <StaticString.h>
-#include <Utils/json.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/VariantMap.h>
 

@@ -27,9 +27,9 @@
 #include <cstdlib>
 #include <cctype>
 #include <cmath>
+#include <utf8.h>
 #include <algorithm>
 #include <Exceptions.h>
-#include <Utils/utf8.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 

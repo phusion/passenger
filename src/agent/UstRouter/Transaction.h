@@ -27,11 +27,11 @@
 
 #include <string>
 #include <ev++.h>
+#include <jsoncpp/json.h>
 #include <UstRouter/LogSink.h>
 #include <UstRouter/DataStoreId.h>
 #include <UnionStationFilterSupport.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/json.h>
 #include <Utils/JsonUtils.h>
 
 namespace Passenger {

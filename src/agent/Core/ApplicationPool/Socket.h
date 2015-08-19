@@ -32,10 +32,10 @@
 #include <boost/weak_ptr.hpp>
 #include <climits>
 #include <cassert>
+#include <SmallVector.h>
 #include <Logging.h>
 #include <StaticString.h>
 #include <MemoryKit/palloc.h>
-#include <Utils/SmallVector.h>
 #include <Utils/IOUtils.h>
 #include <Core/ApplicationPool/Common.h>
 

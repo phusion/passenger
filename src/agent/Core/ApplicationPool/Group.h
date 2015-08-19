@@ -43,10 +43,10 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <cassert>
+#include <SmallVector.h>
 #include <MemoryKit/palloc.h>
 #include <Hooks.h>
 #include <Utils.h>
-#include <Utils/SmallVector.h>
 #include <Core/ApplicationPool/Common.h>
 #include <Core/ApplicationPool/Context.h>
 #include <Core/ApplicationPool/BasicGroupInfo.h>

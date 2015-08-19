@@ -288,10 +288,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils.o',
     :source   => 'Utils.cpp',
     :category => :base
-  define_component 'Utils/modp_b64.o',
-    :source   => 'Utils/modp_b64.cpp',
-    :category => :other,
-    :optimize => true
   define_component 'Utils/CachedFileStat.o',
     :source   => 'Utils/CachedFileStat.cpp',
     :category => :other
@@ -318,25 +314,25 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :category => :other,
     :optimize => true
 
-  define_component 'Utils/MD5.o',
-    :source   => 'Utils/MD5.cpp',
-    :category => :other,
-    :optimize => true
   define_component 'Utils/Hasher.o',
     :source   => 'Utils/Hasher.cpp',
     :category => :other,
     :optimize => :very_heavy
-  define_component 'Utils/jsoncpp.o',
-    :source   => 'Utils/jsoncpp.cpp',
-    :category => :other,
-    :optimize => true
   define_component 'AppTypes.o',
     :source   => 'AppTypes.cpp',
     :category => :other
 
+  define_component 'jsoncpp.o',
+    :source   => 'vendor-modified/jsoncpp/jsoncpp.cpp',
+    :category => :json,
+    :optimize => true
+  define_component 'vendor-modified/modp_b64.o',
+    :source   => 'vendor-modified/modp_b64.cpp',
+    :category => :bas64,
+    :optimize => true
   define_component 'UnionStationFilterSupport.o',
     :source   => 'UnionStationFilterSupport.cpp',
-    :category => :ust_router
+    :category => :union_station_filter
 end
 
 # A subset of the objects are linked to the Nginx binary. This defines

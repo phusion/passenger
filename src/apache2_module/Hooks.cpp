@@ -53,12 +53,12 @@
 #include "Bucket.h"
 #include "Configuration.hpp"
 #include "DirectoryMapper.h"
+#include <modp_b64.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/Timer.h>
 #include <Utils/HttpConstants.h>
-#include <Utils/modp_b64.h>
 #include <Logging.h>
 #include <AgentsStarter.h>
 #include <Constants.h>

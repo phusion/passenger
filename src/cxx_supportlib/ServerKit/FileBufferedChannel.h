@@ -32,6 +32,7 @@
 #include <boost/atomic.hpp>
 #include <sys/types.h>
 #include <uv.h>
+#include <jsoncpp/json.h>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -43,7 +44,6 @@
 #include <ServerKit/Context.h>
 #include <ServerKit/Errors.h>
 #include <ServerKit/Channel.h>
-#include <Utils/json.h>
 #include <Utils/JsonUtils.h>
 
 namespace Passenger {

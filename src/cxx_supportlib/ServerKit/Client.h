@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion
+ *  Copyright (c) 2014-2015 Phusion
  *
  *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
  *
@@ -25,7 +25,7 @@
 #ifndef _PASSENGER_SERVER_KIT_CLIENT_H_
 #define _PASSENGER_SERVER_KIT_CLIENT_H_
 
-#include <Utils/sysqueue.h>
+#include <psg_sysqueue.h>
 #include <boost/atomic.hpp>
 #include <boost/cstdint.hpp>
 #include <ServerKit/Hooks.h>

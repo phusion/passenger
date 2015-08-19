@@ -10,7 +10,6 @@ CXX_DEPENDENCY_MAP =
    "src/nginx_module/ContentHandler.h",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/UnionStationFilterSupport.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
    "src/nginx_module/CreateLocationConfig.c",
    "src/nginx_module/CacheLocationConfig.c",
    "src/nginx_module/MergeLocationConfig.c",
@@ -29,8 +28,7 @@ CXX_DEPENDENCY_MAP =
  "src/nginx_module/ngx_http_passenger_module.c"=>
   ["src/nginx_module/Configuration.h",
    "src/nginx_module/ContentHandler.h",
-   "src/cxx_supportlib/Constants.h",
-   "src/cxx_supportlib/Utils/modp_b64.cpp"],
+   "src/cxx_supportlib/Constants.h"],
  "src/nginx_module/StaticContentHandler.c"=>
   ["src/nginx_module/StaticContentHandler.h"],
  "src/ruby_native_extension/passenger_native_support.c"=>
@@ -121,7 +119,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils.h",
    "src/cxx_supportlib/Utils/Timer.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/MessageIO.h",
    "src/cxx_supportlib/Utils/VariantMap.h",
    "src/agent/Core/OptionParser.h",
@@ -156,8 +153,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/ResourceLocator.h"],
  "src/agent/SpawnPreparer/SpawnPreparerMain.cpp"=>
-  ["src/cxx_supportlib/Utils/SystemMetricsCollector.h",
-   "src/cxx_supportlib/Utils/modp_b64.h"],
+  ["src/cxx_supportlib/Utils/SystemMetricsCollector.h"],
  "src/agent/SystemMetrics/SystemMetricsMain.cpp"=>
   ["src/cxx_supportlib/Utils.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
@@ -210,7 +206,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Hooks.h",
    "src/cxx_supportlib/ResourceLocator.h",
    "src/cxx_supportlib/Utils.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/Timer.h",
    "src/cxx_supportlib/Utils/ScopeGuard.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
@@ -253,7 +248,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/Utils/Timer.h",
    "src/cxx_supportlib/Utils/HttpConstants.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
    "src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/AgentsStarter.h",
    "src/cxx_supportlib/Constants.h",
@@ -322,21 +316,10 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/IOUtils.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/Utils/ScopeGuard.h"],
- "src/cxx_supportlib/Utils/jsoncpp.cpp"=>
-  ["src/cxx_supportlib/Utils/json.h"],
  "src/cxx_supportlib/Utils/LargeFiles.cpp"=>
   ["src/cxx_supportlib/Utils/LargeFiles.h"],
- "src/cxx_supportlib/Utils/MD5.cpp"=>
-  ["src/cxx_supportlib/Utils/MD5.h",
-   "src/cxx_supportlib/Utils/../vendor-modified/boost/detail/endian.hpp",
-   "src/cxx_supportlib/Utils/StrIntUtils.h"],
- "src/cxx_supportlib/Utils/modp_b64.cpp"=>
-  ["src/cxx_supportlib/Utils/../vendor-modified/boost/detail/endian.hpp",
-   "src/cxx_supportlib/Utils/modp_b64.h",
-   "src/cxx_supportlib/Utils/modp_b64_data.h"],
  "src/cxx_supportlib/Utils/StrIntUtils.cpp"=>
   ["src/cxx_supportlib/Exceptions.h",
-   "src/cxx_supportlib/Utils/utf8.h",
    "src/cxx_supportlib/Utils/SystemTime.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h"],
  "src/cxx_supportlib/Utils/StrIntUtilsNoStrictAliasing.cpp"=>
@@ -364,8 +347,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/BufferedIO.h",
    "src/cxx_supportlib/Utils/MessageIO.h"],
  "src/agent/Core/ApplicationPool/BasicGroupInfo.h"=>
@@ -374,7 +355,6 @@ CXX_DEPENDENCY_MAP =
  "src/agent/Core/ApplicationPool/BasicProcessInfo.h"=>
   ["src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/Exceptions.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/JsonUtils.h",
    "src/agent/Core/ApplicationPool/BasicGroupInfo.h"],
  "src/agent/Core/ApplicationPool/Common.h"=>
@@ -409,7 +389,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/MemoryKit/palloc.h",
    "src/cxx_supportlib/Hooks.h",
    "src/cxx_supportlib/Utils.h",
-   "src/cxx_supportlib/Utils/SmallVector.h",
    "src/agent/Core/ApplicationPool/Common.h",
    "src/agent/Core/ApplicationPool/Context.h",
    "src/agent/Core/ApplicationPool/BasicGroupInfo.h",
@@ -483,7 +462,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/MemoryKit/palloc.h",
-   "src/cxx_supportlib/Utils/SmallVector.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
    "src/agent/Core/ApplicationPool/Common.h"],
  "src/agent/Core/OptionParser.h"=>
@@ -493,8 +471,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/OptionParsing.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h"],
  "src/agent/Core/RequestHandler/AppResponse.h"=>
-  ["src/cxx_supportlib/Utils/sysqueue.h",
-   "src/cxx_supportlib/ServerKit/http_parser.h",
+  ["src/cxx_supportlib/ServerKit/http_parser.h",
    "src/cxx_supportlib/ServerKit/Hooks.h",
    "src/cxx_supportlib/ServerKit/Client.h",
    "src/cxx_supportlib/ServerKit/HeaderTable.h",
@@ -597,8 +574,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/agent/Core/SpawningKit/Config.h"],
  "src/agent/Core/SpawningKit/Result.h"=>
-  ["src/cxx_supportlib/FileDescriptor.h",
-   "src/cxx_supportlib/Utils/json.h"],
+  ["src/cxx_supportlib/FileDescriptor.h"],
  "src/agent/Core/SpawningKit/SmartSpawner.h"=>
   ["src/agent/Core/SpawningKit/Spawner.h",
    "src/agent/Core/SpawningKit/PipeWatcher.h",
@@ -615,7 +591,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/Timer.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
    "src/cxx_supportlib/Utils/ProcessMetricsCollector.h",
    "src/agent/Core/SpawningKit/Config.h",
    "src/agent/Core/SpawningKit/Options.h",
@@ -675,8 +650,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/IOUtils.h",
    "src/cxx_supportlib/Utils/BufferedIO.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/VariantMap.h",
    "src/agent/Core/ApplicationPool/Pool.h",
    "src/agent/Shared/ApplicationPoolApiKey.h"],
@@ -693,8 +666,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/BufferedIO.h",
    "src/cxx_supportlib/Utils/MessageIO.h",
    "src/agent/UstRouter/Controller.h",
@@ -720,8 +691,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/Utils/StringMap.h",
    "src/cxx_supportlib/Utils/SystemTime.h",
-   "src/cxx_supportlib/Utils/VariantMap.h",
-   "src/cxx_supportlib/Utils/SmallVector.h"],
+   "src/cxx_supportlib/Utils/VariantMap.h"],
  "src/agent/UstRouter/DataStoreId.h"=>
   ["src/cxx_supportlib/StaticString.h"],
  "src/agent/UstRouter/FileSink.h"=>
@@ -732,7 +702,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/StrIntUtils.h"],
  "src/agent/UstRouter/LogSink.h"=>
   ["src/agent/UstRouter/DataStoreId.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/JsonUtils.h"],
  "src/agent/UstRouter/OptionParser.h"=>
   ["src/cxx_supportlib/Constants.h",
@@ -748,8 +717,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/BlockingQueue.h",
    "src/cxx_supportlib/Utils/SystemTime.h",
    "src/cxx_supportlib/Utils/ScopeGuard.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/JsonUtils.h",
    "src/cxx_supportlib/Utils/Curl.h"],
  "src/agent/UstRouter/RemoteSink.h"=>
@@ -761,7 +728,6 @@ CXX_DEPENDENCY_MAP =
    "src/agent/UstRouter/DataStoreId.h",
    "src/cxx_supportlib/UnionStationFilterSupport.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/JsonUtils.h"],
  "src/agent/Watchdog/ApiServer.h"=>
   ["src/agent/Shared/ApiServerUtils.h",
@@ -772,8 +738,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/MessageIO.h"],
  "src/apache2_module/Bucket.h"=>
   ["src/cxx_supportlib/FileDescriptor.h"],
@@ -852,16 +816,14 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/RandomGenerator.h",
    "src/cxx_supportlib/Utils.h",
-   "src/cxx_supportlib/Utils/IOUtils.h",
-   "src/cxx_supportlib/Utils/json.h"],
+   "src/cxx_supportlib/Utils/IOUtils.h"],
  "src/cxx_supportlib/Logging.h"=>
   ["src/cxx_supportlib/oxt/thread.hpp",
    "src/cxx_supportlib/oxt/system_calls.hpp",
    "src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/Utils/FastStringStream.h"],
  "src/cxx_supportlib/MemoryKit/mbuf.h"=>
-  ["src/cxx_supportlib/Utils/sysqueue.h",
-   "src/cxx_supportlib/oxt/macros.hpp"],
+  ["src/cxx_supportlib/oxt/macros.hpp"],
  "src/cxx_supportlib/MemoryKit/palloc.h"=>
   ["src/cxx_supportlib/StaticString.h"],
  "src/cxx_supportlib/MessageClient.h"=>
@@ -903,11 +865,9 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/ServerKit/Hooks.h",
    "src/cxx_supportlib/MemoryKit/mbuf.h",
    "src/cxx_supportlib/Logging.h",
-   "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/json.h"],
+   "src/cxx_supportlib/Utils/StrIntUtils.h"],
  "src/cxx_supportlib/ServerKit/Client.h"=>
-  ["src/cxx_supportlib/Utils/sysqueue.h",
-   "src/cxx_supportlib/ServerKit/Hooks.h",
+  ["src/cxx_supportlib/ServerKit/Hooks.h",
    "src/cxx_supportlib/ServerKit/FdSourceChannel.h",
    "src/cxx_supportlib/ServerKit/FileBufferedFdSinkChannel.h"],
  "src/cxx_supportlib/ServerKit/ClientRef.h"=>
@@ -917,7 +877,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/SafeLibev.h",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/JsonUtils.h"],
  "src/cxx_supportlib/ServerKit/CookieUtils.h"=>
   ["src/cxx_supportlib/MemoryKit/palloc.h",
@@ -926,20 +885,17 @@ CXX_DEPENDENCY_MAP =
   ["src/cxx_supportlib/ServerKit/http_parser.h"],
  "src/cxx_supportlib/ServerKit/FdSinkChannel.h"=>
   ["src/cxx_supportlib/oxt/macros.hpp",
-   "src/cxx_supportlib/ServerKit/Channel.h",
-   "src/cxx_supportlib/Utils/json.h"],
+   "src/cxx_supportlib/ServerKit/Channel.h"],
  "src/cxx_supportlib/ServerKit/FdSourceChannel.h"=>
   ["src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/MemoryKit/mbuf.h",
    "src/cxx_supportlib/ServerKit/Context.h",
-   "src/cxx_supportlib/ServerKit/Channel.h",
-   "src/cxx_supportlib/Utils/json.h"],
+   "src/cxx_supportlib/ServerKit/Channel.h"],
  "src/cxx_supportlib/ServerKit/FileBufferedChannel.h"=>
   ["src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/ServerKit/Context.h",
    "src/cxx_supportlib/ServerKit/Errors.h",
    "src/cxx_supportlib/ServerKit/Channel.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/JsonUtils.h"],
  "src/cxx_supportlib/ServerKit/FileBufferedFdSinkChannel.h"=>
   ["src/cxx_supportlib/oxt/macros.hpp",
@@ -960,8 +916,7 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/ServerKit/HttpChunkedBodyParserState.h"=>
   [],
  "src/cxx_supportlib/ServerKit/HttpClient.h"=>
-  ["src/cxx_supportlib/Utils/sysqueue.h",
-   "src/cxx_supportlib/ServerKit/Client.h",
+  ["src/cxx_supportlib/ServerKit/Client.h",
    "src/cxx_supportlib/ServerKit/HttpRequest.h"],
  "src/cxx_supportlib/ServerKit/HttpHeaderParser.h"=>
   ["src/cxx_supportlib/oxt/backtrace.hpp",
@@ -978,8 +933,7 @@ CXX_DEPENDENCY_MAP =
   ["src/cxx_supportlib/DataStructures/LString.h",
    "src/cxx_supportlib/Utils/Hasher.h"],
  "src/cxx_supportlib/ServerKit/HttpRequest.h"=>
-  ["src/cxx_supportlib/Utils/sysqueue.h",
-   "src/cxx_supportlib/ServerKit/http_parser.h",
+  ["src/cxx_supportlib/ServerKit/http_parser.h",
    "src/cxx_supportlib/ServerKit/Hooks.h",
    "src/cxx_supportlib/ServerKit/Client.h",
    "src/cxx_supportlib/ServerKit/HeaderTable.h",
@@ -991,8 +945,7 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/ServerKit/HttpRequestRef.h"=>
   [],
  "src/cxx_supportlib/ServerKit/HttpServer.h"=>
-  ["src/cxx_supportlib/Utils/sysqueue.h",
-   "src/cxx_supportlib/oxt/macros.hpp",
+  ["src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/ServerKit/Server.h",
    "src/cxx_supportlib/ServerKit/HttpClient.h",
@@ -1005,8 +958,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/HttpConstants.h",
    "src/cxx_supportlib/Utils/Hasher.h"],
  "src/cxx_supportlib/ServerKit/Server.h"=>
-  ["src/cxx_supportlib/Utils/sysqueue.h",
-   "src/cxx_supportlib/oxt/system_calls.hpp",
+  ["src/cxx_supportlib/oxt/system_calls.hpp",
    "src/cxx_supportlib/oxt/backtrace.hpp",
    "src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/Logging.h",
@@ -1018,9 +970,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/ServerKit/Client.h",
    "src/cxx_supportlib/ServerKit/ClientRef.h",
    "src/cxx_supportlib/Utils.h",
-   "src/cxx_supportlib/Utils/SmallVector.h",
    "src/cxx_supportlib/Utils/ScopeGuard.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/Utils/IOUtils.h"],
  "src/cxx_supportlib/StaticString.h"=>
@@ -1072,22 +1022,14 @@ CXX_DEPENDENCY_MAP =
   ["src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/FileDescriptor.h"],
- "src/cxx_supportlib/Utils/json-forwards.h"=>
-  [],
- "src/cxx_supportlib/Utils/json.h"=>
-  [],
  "src/cxx_supportlib/Utils/JsonUtils.h"=>
   ["src/cxx_supportlib/StaticString.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/Utils/VariantMap.h"],
  "src/cxx_supportlib/Utils/LargeFiles.h"=>
   [],
  "src/cxx_supportlib/Utils/Lock.h"=>
   [],
- "src/cxx_supportlib/Utils/MD5.h"=>
-  ["src/cxx_supportlib/Utils/../vendor-modified/boost/cstdint.hpp",
-   "src/cxx_supportlib/StaticString.h"],
  "src/cxx_supportlib/Utils/MemoryBarrier.h"=>
   [],
  "src/cxx_supportlib/Utils/MemZeroGuard.h"=>
@@ -1105,10 +1047,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/Utils/SystemTime.h",
    "src/cxx_supportlib/Utils/VariantMap.h"],
- "src/cxx_supportlib/Utils/modp_b64.h"=>
-  [],
- "src/cxx_supportlib/Utils/modp_b64_data.h"=>
-  [],
  "src/cxx_supportlib/Utils/OptionParsing.h"=>
   [],
  "src/cxx_supportlib/Utils/ProcessMetricsCollector.h"=>
@@ -1122,8 +1060,6 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/Utils/ScopeGuard.h"=>
   ["src/cxx_supportlib/oxt/system_calls.hpp",
    "src/cxx_supportlib/Logging.h"],
- "src/cxx_supportlib/Utils/SmallVector.h"=>
-  [],
  "src/cxx_supportlib/Utils/SpeedMeter.h"=>
   ["src/cxx_supportlib/Utils/SystemTime.h"],
  "src/cxx_supportlib/Utils/StringMap.h"=>
@@ -1135,8 +1071,6 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/Utils/StrIntUtils.h"=>
   ["src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/StaticString.h"],
- "src/cxx_supportlib/Utils/sysqueue.h"=>
-  [],
  "src/cxx_supportlib/Utils/SystemMetricsCollector.h"=>
   ["src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/Utils/StringScanning.h",
@@ -1157,21 +1091,11 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Utils/StringMap.h"],
  "src/cxx_supportlib/Utils/Timer.h"=>
   ["src/cxx_supportlib/oxt/system_calls.hpp"],
- "src/cxx_supportlib/Utils/utf8/checked.h"=>
-  ["src/cxx_supportlib/Utils/utf8/core.h"],
- "src/cxx_supportlib/Utils/utf8/core.h"=>
-  [],
- "src/cxx_supportlib/Utils/utf8/unchecked.h"=>
-  ["src/cxx_supportlib/Utils/utf8/core.h"],
- "src/cxx_supportlib/Utils/utf8.h"=>
-  ["src/cxx_supportlib/Utils/utf8/checked.h",
-   "src/cxx_supportlib/Utils/utf8/unchecked.h"],
  "src/cxx_supportlib/Utils/VariantMap.h"=>
   ["src/cxx_supportlib/oxt/backtrace.hpp",
    "src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/modp_b64.h",
    "src/cxx_supportlib/Utils/MessageIO.h"],
  "src/cxx_supportlib/Utils.h"=>
   ["src/cxx_supportlib/StaticString.h",
@@ -1279,7 +1203,6 @@ CXX_DEPENDENCY_MAP =
    "src/agent/Core/ApplicationPool/Pool.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/MessageReadersWriters.h"],
  "test/cxx/ApplicationPool2/ProcessTest.cpp"=>
   ["test/cxx/TestSupport.h",
@@ -1302,8 +1225,7 @@ CXX_DEPENDENCY_MAP =
    "src/agent/Shared/Base.h",
    "src/cxx_supportlib/Utils.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
-   "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/json.h"],
+   "src/cxx_supportlib/Utils/StrIntUtils.h"],
  "test/cxx/DataStructures/LStringTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/DataStructures/LString.h",
@@ -1358,7 +1280,6 @@ CXX_DEPENDENCY_MAP =
   ["test/cxx/TestSupport.h",
    "src/agent/Core/RequestHandler.h",
    "src/agent/Core/ApplicationPool/Pool.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/Utils/Timer.h",
@@ -1414,7 +1335,6 @@ CXX_DEPENDENCY_MAP =
   ["test/cxx/TestSupport.h",
    "src/agent/Core/SpawningKit/DirectSpawner.h",
    "src/cxx_supportlib/FileDescriptor.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
    "test/cxx/SpawningKit/SpawnerTestCases.cpp"],
  "test/cxx/SpawningKit/SmartSpawnerTest.cpp"=>
@@ -1422,7 +1342,6 @@ CXX_DEPENDENCY_MAP =
    "src/agent/Core/SpawningKit/SmartSpawner.h",
    "src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/FileDescriptor.h",
-   "src/cxx_supportlib/Utils/json.h",
    "src/cxx_supportlib/Utils/IOUtils.h",
    "test/cxx/SpawningKit/SpawnerTestCases.cpp"],
  "test/cxx/SpawningKit/SpawnerTestCases.cpp"=>
@@ -1444,8 +1363,7 @@ CXX_DEPENDENCY_MAP =
    "test/cxx/../support/valgrind.h",
    "src/cxx_supportlib/oxt/backtrace.hpp",
    "src/cxx_supportlib/Utils/IOUtils.h",
-   "src/cxx_supportlib/Utils/ScopeGuard.h",
-   "src/cxx_supportlib/Utils/json.h"],
+   "src/cxx_supportlib/Utils/ScopeGuard.h"],
  "test/cxx/UnionStationTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/agent/Core/UnionStation/Core.h",
@@ -1475,5 +1393,4 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/BackgroundEventLoop.h",
    "src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/Utils.h",
-   "src/cxx_supportlib/Utils/SystemTime.h",
-   "src/cxx_supportlib/Utils/json-forwards.h"]}
+   "src/cxx_supportlib/Utils/SystemTime.h"]}

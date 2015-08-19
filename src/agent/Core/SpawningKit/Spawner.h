@@ -77,6 +77,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
+#include <modp_b64.h>
 #include <FileDescriptor.h>
 #include <Exceptions.h>
 #include <StaticString.h>
@@ -86,7 +87,6 @@
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/modp_b64.h>
 #include <Utils/ProcessMetricsCollector.h>
 #include <Core/SpawningKit/Config.h>
 #include <Core/SpawningKit/Options.h>

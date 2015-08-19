@@ -28,11 +28,11 @@
 #include <boost/make_shared.hpp>
 #include <string>
 #include <cstddef>
+#include <jsoncpp/json.h>
 #include <MemoryKit/mbuf.h>
 #include <SafeLibev.h>
 #include <Constants.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/json.h>
 #include <Utils/JsonUtils.h>
 
 extern "C" {

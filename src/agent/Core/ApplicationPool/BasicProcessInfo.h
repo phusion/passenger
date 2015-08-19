@@ -28,9 +28,10 @@
 #include <sys/types.h>
 #include <cstring>
 
+#include <jsoncpp/json.h>
+
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <Utils/json.h>
 #include <Utils/JsonUtils.h>
 #include <Core/ApplicationPool/BasicGroupInfo.h>
 

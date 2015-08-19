@@ -10,7 +10,7 @@
 #include <cassert>
 #include <Utils/IOUtils.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/json.h>
+#include <jsoncpp/json.h>
 
 namespace TestSupport {
 

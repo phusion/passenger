@@ -37,6 +37,8 @@
 #include <oxt/thread.hpp>
 #include <string>
 #include <list>
+#include <jsoncpp/json.h>
+#include <modp_b64.h>
 
 #include <Logging.h>
 #include <StaticString.h>
@@ -44,8 +46,6 @@
 #include <Utils/BlockingQueue.h>
 #include <Utils/SystemTime.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/modp_b64.h>
-#include <Utils/json.h>
 #include <Utils/JsonUtils.h>
 #include <Utils/Curl.h>
 

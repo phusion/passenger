@@ -39,7 +39,7 @@
 #include "ContentHandler.h"
 #include "cxx_supportlib/Constants.h"
 #include "cxx_supportlib/UnionStationFilterSupport.h"
-#include "cxx_supportlib/Utils/modp_b64.h"
+#include "cxx_supportlib/vendor-modified/modp_b64.h"
 
 
 static ngx_str_t headers_to_hide[] = {

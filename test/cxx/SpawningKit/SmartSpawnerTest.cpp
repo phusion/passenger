@@ -1,8 +1,8 @@
 #include <TestSupport.h>
+#include <jsoncpp/json.h>
 #include <Core/SpawningKit/SmartSpawner.h>
 #include <Logging.h>
 #include <FileDescriptor.h>
-#include <Utils/json.h>
 #include <Utils/IOUtils.h>
 #include <unistd.h>
 #include <climits>

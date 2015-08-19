@@ -65,6 +65,7 @@
 #include <oxt/system_calls.hpp>
 
 #include <ev++.h>
+#include <jsoncpp/json.h>
 
 #include <Shared/Base.h>
 #include <Shared/ApiServerUtils.h>
@@ -79,7 +80,6 @@
 #include <Utils.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
-#include <Utils/json.h>
 #include <Utils/MessageIO.h>
 #include <Utils/VariantMap.h>
 #include <Core/OptionParser.h>

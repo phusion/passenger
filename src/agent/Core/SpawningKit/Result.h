@@ -26,7 +26,7 @@
 #define _PASSENGER_SPAWNING_KIT_RESULT_H_
 
 #include <FileDescriptor.h>
-#include <Utils/json.h>
+#include <jsoncpp/json.h>
 
 namespace Passenger {
 namespace SpawningKit {

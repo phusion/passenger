@@ -29,8 +29,8 @@
 #include <cerrno>
 #include <unistd.h>
 #include <ev.h>
+#include <jsoncpp/json.h>
 #include <ServerKit/Channel.h>
-#include <Utils/json.h>
 
 namespace Passenger {
 namespace ServerKit {

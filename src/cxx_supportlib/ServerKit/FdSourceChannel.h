@@ -30,10 +30,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <ev.h>
+#include <jsoncpp/json.h>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/Channel.h>
-#include <Utils/json.h>
 
 namespace Passenger {
 namespace ServerKit {

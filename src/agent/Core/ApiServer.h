@@ -32,6 +32,9 @@
 #include <cstring>
 #include <sys/types.h>
 
+#include <jsoncpp/json.h>
+#include <modp_b64.h>
+
 #include <Core/RequestHandler.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Shared/ApiServerUtils.h>
@@ -42,8 +45,6 @@
 #include <Logging.h>
 #include <Constants.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/modp_b64.h>
-#include <Utils/json.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/MessageIO.h>
 

@@ -31,12 +31,12 @@
 #include <boost/move/core.hpp>
 #include <algorithm>
 #include <cassert>
+#include <jsoncpp/json.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/Hooks.h>
 #include <MemoryKit/mbuf.h>
 #include <Logging.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/json.h>
 
 namespace Passenger {
 namespace ServerKit {

@@ -32,9 +32,9 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <modp_b64.h>
 #include <Exceptions.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/modp_b64.h>
 #include <Utils/MessageIO.h>
 
 namespace Passenger {

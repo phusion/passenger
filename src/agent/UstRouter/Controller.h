@@ -33,6 +33,7 @@
 #include <boost/foreach.hpp>
 #include <oxt/backtrace.hpp>
 #include <ev++.h>
+#include <SmallVector.h>
 #include <ServerKit/Server.h>
 #include <StaticString.h>
 #include <Constants.h>
@@ -48,7 +49,6 @@
 #include <Utils/StringMap.h>
 #include <Utils/SystemTime.h>
 #include <Utils/VariantMap.h>
-#include <Utils/SmallVector.h>
 
 
 namespace Passenger {

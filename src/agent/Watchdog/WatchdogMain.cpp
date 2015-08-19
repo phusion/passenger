@@ -57,6 +57,7 @@
 #include <cstring>
 #include <cerrno>
 
+#include <jsoncpp/json.h>
 #include <Shared/Base.h>
 #include <Shared/ApiServerUtils.h>
 #include <Core/OptionParser.h>
@@ -73,7 +74,6 @@
 #include <Hooks.h>
 #include <ResourceLocator.h>
 #include <Utils.h>
-#include <Utils/json.h>
 #include <Utils/Timer.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/StrIntUtils.h>

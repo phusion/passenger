@@ -15,7 +15,7 @@
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/json.h>
+#include <jsoncpp/json.h>
 
 using namespace std;
 using namespace Passenger;

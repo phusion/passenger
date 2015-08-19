@@ -25,7 +25,7 @@
 #ifndef _PASSENGER_SERVER_KIT_SERVER_H_
 #define _PASSENGER_SERVER_KIT_SERVER_H_
 
-#include <Utils/sysqueue.h>
+#include <psg_sysqueue.h>
 
 #include <boost/cstdint.hpp>
 #include <oxt/system_calls.hpp>
@@ -44,6 +44,8 @@
 #include <errno.h>
 #include <pthread.h>
 #include <cstdio>
+#include <jsoncpp/json.h>
+#include <SmallVector.h>
 
 #include <Logging.h>
 #include <SafeLibev.h>
@@ -54,9 +56,7 @@
 #include <ServerKit/Client.h>
 #include <ServerKit/ClientRef.h>
 #include <Utils.h>
-#include <Utils/SmallVector.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/json.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 

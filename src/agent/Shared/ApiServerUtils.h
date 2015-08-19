@@ -65,6 +65,8 @@
 #include <vector>
 #include <cstddef>
 #include <cstring>
+#include <jsoncpp/json.h>
+#include <modp_b64.h>
 #include <StaticString.h>
 #include <Exceptions.h>
 #include <DataStructures/LString.h>
@@ -75,8 +77,6 @@
 #include <Utils/IOUtils.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/modp_b64.h>
-#include <Utils/json.h>
 #include <Utils/VariantMap.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Shared/ApplicationPoolApiKey.h>
