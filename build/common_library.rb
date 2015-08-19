@@ -131,7 +131,7 @@ if USE_VENDORED_LIBEV
   libev_sources = Dir["src/cxx_supportlib/vendor-copy/libev/{*.c,*.h}"]
   file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
     sh "rm -f #{LIBEV_OUTPUT_DIR}libev.la"
-    sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la"
+    sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la V=1"
   end
 
   task 'libev:clean' do
@@ -195,13 +195,13 @@ if USE_VENDORED_LIBUV
       "--disable-shared --enable-static " +
       # libuv's configure script may select a different default compiler than we
       # do, so we force our compiler choice.
-      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}' AM_V_CC= AM_V_CCLD="
+      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}'"
   end
 
   libuv_sources = Dir["src/cxx_supportlib/vendor-copy/libuv/**/{*.c,*.h}"]
   file LIBUV_OUTPUT_DIR + ".libs/libuv.a" => [LIBUV_OUTPUT_DIR + "Makefile"] + libuv_sources do
     sh "rm -f #{LIBUV_OUTPUT_DIR}/libuv.la"
-    sh "cd #{LIBUV_OUTPUT_DIR} && make -j2 libuv.la"
+    sh "cd #{LIBUV_OUTPUT_DIR} && make -j2 libuv.la V=1"
   end
 
   task 'libuv:clean' do

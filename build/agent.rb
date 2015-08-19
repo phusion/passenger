@@ -65,7 +65,7 @@ end
 
 # Define compilation task for the agent executable.
 agent_libs = COMMON_LIBRARY.
-  only(:base, :ust_router, :other).
+  only(:base, :bas64, :json, :union_station_filter, :other).
   exclude('AgentsStarter.o')
 dependencies = AGENT_OBJECTS.keys + [
   LIBBOOST_OXT,

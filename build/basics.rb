@@ -45,7 +45,6 @@ include PhusionPassenger
 include PhusionPassenger::PlatformInfo
 
 require 'build/cxx_dependency_map'
-require 'build/rake_extensions'
 require 'build/cplusplus_support'
 
 #################################################

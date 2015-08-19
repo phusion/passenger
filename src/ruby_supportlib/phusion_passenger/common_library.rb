@@ -77,19 +77,8 @@ class CommonLibraryBuilder
     result = []
 
     selected_categories.each do |category|
-      if category_complete?(category) && false
-        # Feature disabled: we don't want to waste too much space when
-        # packaging the runtime ('passenger package-runtime') so we
-        # never generate static libraries.
-        if aggregate_sources?
-          result << "#{@output_dir}/#{category}.o"
-        else
-          result << "#{@output_dir}/#{category}.a"
-        end
-      else
-        object_names = selected_objects_beloging_to_category(category)
-        result.concat(object_filenames_for(object_names))
-      end
+      object_names = selected_objects_beloging_to_category(category)
+      result.concat(object_filenames_for(object_names))
     end
 
     result
@@ -127,48 +116,6 @@ private
     object_filenames = object_filenames_for(object_names)
     task "#{@namespace}:clean" do
       sh "rm -f #{object_filenames.join(' ')}"
-    end
-
-    if aggregate_sources?
-      aggregate_source = "#{@output_dir}/#{category}.cpp"
-      aggregate_object = "#{@output_dir}/#{category}.o"
-
-      file(aggregate_object => dependencies_for(object_names)) do
-        ensure_directory_exists(File.dirname(aggregate_source))
-        ensure_directory_exists(File.dirname(aggregate_object))
-
-        File.open(aggregate_source, "w") do |f|
-          f.puts %q{
-            #ifndef _GNU_SOURCE
-              #define _GNU_SOURCE
-            #endif
-          }
-          object_names.each do |object_name|
-            options = @all_components[object_name]
-            source_file = options[:source].sub(%r(^src/cxx_supportlib), '')
-            f.puts "#include \"#{source_file}\""
-          end
-        end
-
-        compile_cxx(aggregate_source, "#{flags} -o #{aggregate_object}")
-      end
-
-      task "#{@namespace}:clean" do
-        sh "rm -f #{aggregate_source} #{aggregate_object}"
-      end
-    elsif false
-      # Feature disabled: we don't want to waste too much space when
-      # packaging the runtime ('passenger package-runtime') so we
-      # never generate static libraries.
-      library = "#{@output_dir}/#{category}.a"
-
-      file(library => object_filenames) do
-        create_static_library(library, object_filenames.join(' '))
-      end
-
-      task "#{@namespace}:clean" do
-        sh "rm -f #{library}"
-      end
     end
   end
 
@@ -310,13 +257,6 @@ private
   def locate_source_file(path)
     "src/cxx_supportlib/#{path}"
   end
-
-  def aggregate_sources?
-    # Feature disabled: it's too hard to make it work because
-    # lots of executables have to be linked to individual objects
-    # anyway.
-    return false
-  end
 end
 
 
@@ -397,12 +337,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'UnionStationFilterSupport.o',
     :source   => 'UnionStationFilterSupport.cpp',
     :category => :ust_router
-
-  #'BCrypt.o' => %w(
-  # BCrypt.cpp
-  # BCrypt.h
-  # Blowfish.h
-  # Blowfish.c)
 end
 
 # A subset of the objects are linked to the Nginx binary. This defines

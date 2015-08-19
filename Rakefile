@@ -41,7 +41,7 @@ if boolean_option('ONLY_RUBY')
 else
   require 'build/ruby_extension'
   require 'build/common_library'
-  require 'build/agents'
+  require 'build/agent'
   require 'build/apache2'
   require 'build/nginx'
   require 'build/documentation'
