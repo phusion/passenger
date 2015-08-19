@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include "../support/valgrind.h"
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>

@@ -7,7 +7,7 @@ using namespace Passenger::ApplicationPool2;
 using namespace std;
 
 namespace tut {
-	struct ApplicationPool2_ProcessTest {
+	struct Core_ApplicationPool_ProcessTest {
 		Context context;
 		BasicGroupInfo groupInfo;
 		Json::Value sockets;
@@ -18,7 +18,7 @@ namespace tut {
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
 
-		ApplicationPool2_ProcessTest() {
+		Core_ApplicationPool_ProcessTest() {
 			setPrintAppOutputAsDebuggingMessages(true);
 
 			SpawningKit::ConfigPtr spawningKitConfig = boost::make_shared<SpawningKit::Config>();
@@ -65,10 +65,10 @@ namespace tut {
 			adminSocket = createUnixSocketPair(__FILE__, __LINE__);
 			errorPipe = createPipe(__FILE__, __LINE__);
 
-			gatherOutput = boost::bind(&ApplicationPool2_ProcessTest::_gatherOutput, this, _1, _2);
+			gatherOutput = boost::bind(&Core_ApplicationPool_ProcessTest::_gatherOutput, this, _1, _2);
 		}
 
-		~ApplicationPool2_ProcessTest() {
+		~Core_ApplicationPool_ProcessTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			setPrintAppOutputAsDebuggingMessages(false);
 		}
@@ -97,7 +97,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(ApplicationPool2_ProcessTest);
+	DEFINE_TEST_GROUP(Core_ApplicationPool_ProcessTest);
 
 	TEST_METHOD(1) {
 		set_test_name("Test initial state");

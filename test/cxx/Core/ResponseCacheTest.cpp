@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <time.h>
 #include <ServerKit/HttpRequest.h>
 #include <MemoryKit/palloc.h>
@@ -13,17 +13,17 @@ using namespace std;
 namespace tut {
 	typedef ResponseCache<Request> ResponseCacheType;
 
-	struct ResponseCacheTest {
+	struct Core_ResponseCacheTest {
 		ResponseCacheType responseCache;
 		Request req;
 		StaticString defaultVaryTurbocacheByCookie;
 
-		ResponseCacheTest() {
+		Core_ResponseCacheTest() {
 			req.pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 			reset();
 		}
 
-		~ResponseCacheTest() {
+		~Core_ResponseCacheTest() {
 			psg_destroy_pool(req.pool);
 		}
 
@@ -139,7 +139,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(ResponseCacheTest, 100);
+	DEFINE_TEST_GROUP_WITH_LIMIT(Core_ResponseCacheTest, 100);
 
 
 	/***** Preparation *****/

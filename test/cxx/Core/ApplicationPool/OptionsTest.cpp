@@ -6,12 +6,12 @@ using namespace Passenger::ApplicationPool2;
 using namespace std;
 
 namespace tut {
-	struct ApplicationPool2_OptionsTest {
-		ApplicationPool2_OptionsTest() {
+	struct Core_ApplicationPool_OptionsTest {
+		Core_ApplicationPool_OptionsTest() {
 		}
 	};
 
-	DEFINE_TEST_GROUP(ApplicationPool2_OptionsTest);
+	DEFINE_TEST_GROUP(Core_ApplicationPool_OptionsTest);
 
 	TEST_METHOD(1) {
 		// Test persist().

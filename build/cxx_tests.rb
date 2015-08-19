@@ -29,18 +29,25 @@ TEST_CXX_OBJECTS = {
     "test/cxx/CxxTestMain.cpp",
   "#{TEST_OUTPUT_DIR}cxx/TestSupport.o" =>
     "test/cxx/TestSupport.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/ApplicationPool2/OptionsTest.o" =>
-    "test/cxx/ApplicationPool2/OptionsTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/ApplicationPool2/ProcessTest.o" =>
-    "test/cxx/ApplicationPool2/ProcessTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/ApplicationPool2/PoolTest.o" =>
-    "test/cxx/ApplicationPool2/PoolTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/SpawningKit/DirectSpawnerTest.o" =>
-    "test/cxx/SpawningKit/DirectSpawnerTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/SpawningKit/SmartSpawnerTest.o" =>
-    "test/cxx/SpawningKit/SmartSpawnerTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/MemoryKit/MbufTest.o" =>
-    "test/cxx/MemoryKit/MbufTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/Core/ApplicationPool/OptionsTest.o" =>
+    "test/cxx/Core/ApplicationPool/OptionsTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/ApplicationPool/ProcessTest.o" =>
+    "test/cxx/Core/ApplicationPool/ProcessTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/ApplicationPool/PoolTest.o" =>
+    "test/cxx/Core/ApplicationPool/PoolTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/DirectSpawnerTest.o" =>
+    "test/cxx/Core/SpawningKit/DirectSpawnerTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/SmartSpawnerTest.o" =>
+    "test/cxx/Core/SpawningKit/SmartSpawnerTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/Core/UnionStationTest.o" =>
+    "test/cxx/Core/UnionStationTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/ResponseCacheTest.o" =>
+    "test/cxx/Core/ResponseCacheTest.cpp",
+  # "#{TEST_OUTPUT_DIR}cxx/Core/RequestHandlerTest.o" =>
+  #   "test/cxx/Core/RequestHandlerTest.cpp",
+
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/ChannelTest.o" =>
     "test/cxx/ServerKit/ChannelTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/FileBufferedChannelTest.o" =>
@@ -53,6 +60,9 @@ TEST_CXX_OBJECTS = {
     "test/cxx/ServerKit/HttpServerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/CookieUtilsTest.o" =>
     "test/cxx/ServerKit/CookieUtilsTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/MemoryKit/MbufTest.o" =>
+    "test/cxx/MemoryKit/MbufTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DataStructures/LStringTest.o" =>
     "test/cxx/DataStructures/LStringTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DataStructures/StringKeyTableTest.o" =>
@@ -63,12 +73,6 @@ TEST_CXX_OBJECTS = {
     "test/cxx/StaticStringTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DechunkerTest.o" =>
     "test/cxx/DechunkerTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/ResponseCacheTest.o" =>
-    "test/cxx/ResponseCacheTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/UnionStationTest.o" =>
-    "test/cxx/UnionStationTest.cpp",
-  # "#{TEST_OUTPUT_DIR}cxx/RequestHandlerTest.o" =>
-  #   "test/cxx/RequestHandlerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileChangeCheckerTest.o" =>
     "test/cxx/FileChangeCheckerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileDescriptorTest.o" =>

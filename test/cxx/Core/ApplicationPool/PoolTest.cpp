@@ -14,7 +14,7 @@ using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
 namespace tut {
-	struct ApplicationPool2_PoolTest {
+	struct Core_ApplicationPool_PoolTest {
 		SpawningKit::ConfigPtr spawningKitConfig;
 		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr pool;
@@ -28,7 +28,7 @@ namespace tut {
 		list<SessionPtr> sessions;
 		bool retainSessions;
 
-		ApplicationPool2_PoolTest() {
+		Core_ApplicationPool_PoolTest() {
 			retainSessions = false;
 			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
 			spawningKitConfig->resourceLocator = resourceLocator;
@@ -42,7 +42,7 @@ namespace tut {
 			setPrintAppOutputAsDebuggingMessages(true);
 		}
 
-		~ApplicationPool2_PoolTest() {
+		~Core_ApplicationPool_PoolTest() {
 			// Explicitly destroy these here because they can run
 			// additional code that depend on other fields in this
 			// class.
@@ -92,7 +92,7 @@ namespace tut {
 		static void _callback(const SessionPtr &session, const ExceptionPtr &e,
 			void *userData)
 		{
-			ApplicationPool2_PoolTest *self = (ApplicationPool2_PoolTest *) userData;
+			Core_ApplicationPool_PoolTest *self = (Core_ApplicationPool_PoolTest *) userData;
 			SessionPtr oldSession;
 			{
 				LockGuard l(self->syncher);
@@ -187,7 +187,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(ApplicationPool2_PoolTest, 100);
+	DEFINE_TEST_GROUP_WITH_LIMIT(Core_ApplicationPool_PoolTest, 100);
 
 	TEST_METHOD(1) {
 		// Test initial state.
@@ -1184,7 +1184,7 @@ namespace tut {
 
 		spawningKitConfig->spawnTime = 60000;
 		AtomicInt code = -1;
-		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+		TempThread thr(boost::bind(&Core_ApplicationPool_PoolTest::disableProcess,
 			this, session->getProcess()->shared_from_this(), &code));
 		EVENTUALLY2(100, 1,
 			result = pool->isSpawning();
@@ -1230,9 +1230,9 @@ namespace tut {
 		ProcessPtr process2 = session2->getProcess()->shared_from_this();
 
 		AtomicInt code1 = -1, code2 = -2;
-		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+		TempThread thr(boost::bind(&Core_ApplicationPool_PoolTest::disableProcess,
 			this, process1, &code1));
-		TempThread thr2(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+		TempThread thr2(boost::bind(&Core_ApplicationPool_PoolTest::disableProcess,
 			this, process2, &code2));
 		EVENTUALLY(5,
 			LockGuard l(pool->syncher);
@@ -1276,9 +1276,9 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 2u);
 
 		AtomicInt code1 = -1, code2 = -1;
-		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+		TempThread thr(boost::bind(&Core_ApplicationPool_PoolTest::disableProcess,
 			this, session1->getProcess()->shared_from_this(), &code1));
-		TempThread thr2(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+		TempThread thr2(boost::bind(&Core_ApplicationPool_PoolTest::disableProcess,
 			this, session2->getProcess()->shared_from_this(), &code2));
 		EVENTUALLY(2,
 			GroupPtr group = session1->getGroup()->shared_from_this();
@@ -1330,7 +1330,7 @@ namespace tut {
 		SessionPtr session = pool->get(options, &ticket);
 
 		AtomicInt code = -1;
-		TempThread thr(boost::bind(&ApplicationPool2_PoolTest::disableProcess,
+		TempThread thr(boost::bind(&Core_ApplicationPool_PoolTest::disableProcess,
 			this, session->getProcess()->shared_from_this(), &code));
 		SHOULD_NEVER_HAPPEN(100,
 			result = code != -1;

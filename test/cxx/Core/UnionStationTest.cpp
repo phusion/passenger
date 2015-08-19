@@ -17,7 +17,7 @@ using namespace std;
 using namespace oxt;
 
 namespace tut {
-	struct UnionStationTest {
+	struct Core_UnionStationTest {
 		static const unsigned long long YESTERDAY = 1263299017000000ull;  // January 12, 2009, 12:23:37 UTC
 		static const unsigned long long TODAY     = 1263385422000000ull;  // January 13, 2009, 12:23:42 UTC
 		static const unsigned long long TOMORROW  = 1263471822000000ull;  // January 14, 2009, 12:23:42 UTC
@@ -34,7 +34,7 @@ namespace tut {
 		boost::shared_ptr<UstRouter::Controller> controller;
 		CorePtr core, core2, core3, core4;
 
-		UnionStationTest()
+		Core_UnionStationTest()
 			: tmpdir("tmp.union_station")
 		{
 			socketFilename = tmpdir.getPath() + "/socket";
@@ -56,7 +56,7 @@ namespace tut {
 				"localhost");
 		}
 
-		~UnionStationTest() {
+		~Core_UnionStationTest() {
 			// Silence error disconnection messages during shutdown.
 			setLogLevel(LVL_CRIT);
 			shutdown();
@@ -89,7 +89,7 @@ namespace tut {
 
 		UstRouter::Controller::State getControllerState() {
 			UstRouter::Controller::State result;
-			bg->safe->runSync(boost::bind(&UnionStationTest::_getControllerState,
+			bg->safe->runSync(boost::bind(&Core_UnionStationTest::_getControllerState,
 				this, &result));
 			return result;
 		}
@@ -124,7 +124,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(UnionStationTest);
+	DEFINE_TEST_GROUP(Core_UnionStationTest);
 
 
 	/*********** Logging interface tests ***********/

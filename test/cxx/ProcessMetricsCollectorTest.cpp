@@ -3,9 +3,9 @@
 #include <unistd.h>
 #include <cstdio>
 #include <cerrno>
-#include "TestSupport.h"
-#include "Utils/StrIntUtils.h"
-#include "Utils/ProcessMetricsCollector.h"
+#include <TestSupport.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/ProcessMetricsCollector.h>
 
 using namespace Passenger;
 

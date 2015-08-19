@@ -1195,19 +1195,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/system_calls.hpp"],
  "test/oxt/counter.hpp"=>
   [],
- "test/cxx/ApplicationPool2/OptionsTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/agent/Core/ApplicationPool/Process.h"],
- "test/cxx/ApplicationPool2/PoolTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/agent/Core/ApplicationPool/Pool.h",
-   "src/cxx_supportlib/Utils/IOUtils.h",
-   "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/MessageReadersWriters.h"],
- "test/cxx/ApplicationPool2/ProcessTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/agent/Core/ApplicationPool/Process.h",
-   "src/cxx_supportlib/Utils/IOUtils.h"],
  "test/cxx/BufferedIOTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/Utils/BufferedIO.h",
@@ -1217,6 +1204,58 @@ CXX_DEPENDENCY_MAP =
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/Utils/CachedFileStat.hpp",
    "src/cxx_supportlib/Utils/SystemTime.h"],
+ "test/cxx/Core/ApplicationPool/OptionsTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/agent/Core/ApplicationPool/Process.h"],
+ "test/cxx/Core/ApplicationPool/PoolTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/agent/Core/ApplicationPool/Pool.h",
+   "src/cxx_supportlib/Utils/IOUtils.h",
+   "src/cxx_supportlib/Utils/StrIntUtils.h",
+   "src/cxx_supportlib/MessageReadersWriters.h"],
+ "test/cxx/Core/ApplicationPool/ProcessTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/agent/Core/ApplicationPool/Process.h",
+   "src/cxx_supportlib/Utils/IOUtils.h"],
+ "test/cxx/Core/RequestHandlerTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/agent/Core/RequestHandler.h",
+   "src/agent/Core/ApplicationPool/Pool.h",
+   "src/cxx_supportlib/Utils/IOUtils.h",
+   "src/cxx_supportlib/Utils/StrIntUtils.h",
+   "src/cxx_supportlib/Utils/Timer.h",
+   "src/cxx_supportlib/Utils/BufferedIO.h"],
+ "test/cxx/Core/ResponseCacheTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/cxx_supportlib/ServerKit/HttpRequest.h",
+   "src/cxx_supportlib/MemoryKit/palloc.h",
+   "src/agent/Core/RequestHandler/Request.h",
+   "src/agent/Core/RequestHandler/AppResponse.h",
+   "src/agent/Core/ResponseCache.h"],
+ "test/cxx/Core/SpawningKit/DirectSpawnerTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/agent/Core/SpawningKit/DirectSpawner.h",
+   "src/cxx_supportlib/FileDescriptor.h",
+   "src/cxx_supportlib/Utils/IOUtils.h",
+   "test/cxx/Core/SpawningKit/SpawnerTestCases.cpp"],
+ "test/cxx/Core/SpawningKit/SmartSpawnerTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/agent/Core/SpawningKit/SmartSpawner.h",
+   "src/cxx_supportlib/Logging.h",
+   "src/cxx_supportlib/FileDescriptor.h",
+   "src/cxx_supportlib/Utils/IOUtils.h",
+   "test/cxx/Core/SpawningKit/SpawnerTestCases.cpp"],
+ "test/cxx/Core/SpawningKit/SpawnerTestCases.cpp"=>
+  [],
+ "test/cxx/Core/UnionStationTest.cpp"=>
+  ["test/cxx/TestSupport.h",
+   "src/agent/Core/UnionStation/Core.h",
+   "src/agent/Core/UnionStation/Transaction.h",
+   "src/cxx_supportlib/MessageClient.h",
+   "src/agent/UstRouter/Controller.h",
+   "src/cxx_supportlib/Utils/MessageIO.h",
+   "src/cxx_supportlib/Utils/ScopeGuard.h",
+   "src/cxx_supportlib/oxt/thread.hpp"],
  "test/cxx/CxxTestMain.cpp"=>
   ["test/cxx/TestSupport.h",
    "test/cxx/../tut/tut_reporter.h",
@@ -1276,21 +1315,6 @@ CXX_DEPENDENCY_MAP =
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/Utils/ProcessMetricsCollector.h"],
- "test/cxx/RequestHandlerTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/agent/Core/RequestHandler.h",
-   "src/agent/Core/ApplicationPool/Pool.h",
-   "src/cxx_supportlib/Utils/IOUtils.h",
-   "src/cxx_supportlib/Utils/StrIntUtils.h",
-   "src/cxx_supportlib/Utils/Timer.h",
-   "src/cxx_supportlib/Utils/BufferedIO.h"],
- "test/cxx/ResponseCacheTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/cxx_supportlib/ServerKit/HttpRequest.h",
-   "src/cxx_supportlib/MemoryKit/palloc.h",
-   "src/agent/Core/RequestHandler/Request.h",
-   "src/agent/Core/RequestHandler/AppResponse.h",
-   "src/agent/Core/ResponseCache.h"],
  "test/cxx/ServerKit/ChannelTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/BackgroundEventLoop.h",
@@ -1331,21 +1355,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/FileDescriptor.h",
    "src/cxx_supportlib/Utils/IOUtils.h"],
- "test/cxx/SpawningKit/DirectSpawnerTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/agent/Core/SpawningKit/DirectSpawner.h",
-   "src/cxx_supportlib/FileDescriptor.h",
-   "src/cxx_supportlib/Utils/IOUtils.h",
-   "test/cxx/SpawningKit/SpawnerTestCases.cpp"],
- "test/cxx/SpawningKit/SmartSpawnerTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/agent/Core/SpawningKit/SmartSpawner.h",
-   "src/cxx_supportlib/Logging.h",
-   "src/cxx_supportlib/FileDescriptor.h",
-   "src/cxx_supportlib/Utils/IOUtils.h",
-   "test/cxx/SpawningKit/SpawnerTestCases.cpp"],
- "test/cxx/SpawningKit/SpawnerTestCases.cpp"=>
-  [],
  "test/cxx/StaticStringTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/StaticString.h"],
@@ -1364,15 +1373,6 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/backtrace.hpp",
    "src/cxx_supportlib/Utils/IOUtils.h",
    "src/cxx_supportlib/Utils/ScopeGuard.h"],
- "test/cxx/UnionStationTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/agent/Core/UnionStation/Core.h",
-   "src/agent/Core/UnionStation/Transaction.h",
-   "src/cxx_supportlib/MessageClient.h",
-   "src/agent/UstRouter/Controller.h",
-   "src/cxx_supportlib/Utils/MessageIO.h",
-   "src/cxx_supportlib/Utils/ScopeGuard.h",
-   "src/cxx_supportlib/oxt/thread.hpp"],
  "test/cxx/Utils/StrIntUtilsTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h"],

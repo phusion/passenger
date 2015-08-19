@@ -10,24 +10,24 @@ using namespace Passenger;
 using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct SpawningKit_DirectSpawnerTest {
+	struct Core_SpawningKit_DirectSpawnerTest {
 		ConfigPtr config;
 		OutputHandler gatherOutput;
 		string gatheredOutput;
 		boost::mutex gatheredOutputSyncher;
 		Result result;
 
-		SpawningKit_DirectSpawnerTest() {
+		Core_SpawningKit_DirectSpawnerTest() {
 			config = boost::make_shared<Config>();
 			config->resourceLocator = resourceLocator;
 			config->finalize();
 
-			gatherOutput = boost::bind(&SpawningKit_DirectSpawnerTest::_gatherOutput, this, _1, _2);
+			gatherOutput = boost::bind(&Core_SpawningKit_DirectSpawnerTest::_gatherOutput, this, _1, _2);
 			setLogLevel(LVL_WARN);
 			setPrintAppOutputAsDebuggingMessages(true);
 		}
 
-		~SpawningKit_DirectSpawnerTest() {
+		~Core_SpawningKit_DirectSpawnerTest() {
 			setLogLevel(DEFAULT_LOG_LEVEL);
 			setPrintAppOutputAsDebuggingMessages(false);
 			unlink("stub/wsgi/passenger_wsgi.pyc");
@@ -50,7 +50,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(SpawningKit_DirectSpawnerTest, 90);
+	DEFINE_TEST_GROUP_WITH_LIMIT(Core_SpawningKit_DirectSpawnerTest, 90);
 
 	#include "SpawnerTestCases.cpp"
 
