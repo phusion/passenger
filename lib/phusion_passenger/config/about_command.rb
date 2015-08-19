@@ -40,6 +40,7 @@ module PhusionPassenger
         puts "  nginx-addon-dir          Show #{PROGRAM_NAME}'s Nginx addon directory."
         puts "  nginx-libs               Show Nginx runtime library flags."
         puts "  resourcesdir             Show #{PROGRAM_NAME}'s resources directory."
+        puts "  support-binaries-dir     Show #{PROGRAM_NAME}'s support binaries dir."
         puts "  compiled                 Check whether runtime libraries are compiled."
         puts "  custom-packaged          Check whether Phusion Passenger is custom"
         puts "                           packaged."
@@ -77,6 +78,8 @@ module PhusionPassenger
           puts "#{common_library.link_objects_as_string} #{PhusionPassenger.lib_dir}/common/libboost_oxt.a"
         when "--resourcesdir"
           puts PhusionPassenger.resources_dir
+        when "--support-binaries-dir"
+          puts PhusionPassenger.support_binaries_dir
         when "--compiled"
           common_library.link_objects.each do |filename|
             if !File.exist?(filename)
