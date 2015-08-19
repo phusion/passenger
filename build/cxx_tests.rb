@@ -71,8 +71,6 @@ TEST_CXX_OBJECTS = {
     "test/cxx/MessageReadersWritersTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/StaticStringTest.o" =>
     "test/cxx/StaticStringTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/DechunkerTest.o" =>
-    "test/cxx/DechunkerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileChangeCheckerTest.o" =>
     "test/cxx/FileChangeCheckerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileDescriptorTest.o" =>

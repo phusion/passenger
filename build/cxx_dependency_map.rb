@@ -1002,9 +1002,6 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/Utils/DateParsing.h"=>
   ["src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/Utils/StrIntUtils.h"],
- "src/cxx_supportlib/Utils/Dechunker.h"=>
-  ["src/cxx_supportlib/StaticString.h",
-   "src/cxx_supportlib/Utils/StrIntUtils.h"],
  "src/cxx_supportlib/Utils/FastStringStream.h"=>
   ["src/cxx_supportlib/oxt/macros.hpp"],
  "src/cxx_supportlib/Utils/FileChangeChecker.h"=>
@@ -1275,10 +1272,6 @@ CXX_DEPENDENCY_MAP =
  "test/cxx/DateParsingTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/Utils/DateParsing.h"],
- "test/cxx/DechunkerTest.cpp"=>
-  ["test/cxx/TestSupport.h",
-   "src/cxx_supportlib/Utils/Dechunker.h",
-   "src/cxx_supportlib/Utils/StrIntUtils.h"],
  "test/cxx/FileChangeCheckerTest.cpp"=>
   ["test/cxx/TestSupport.h",
    "src/cxx_supportlib/Utils/FileChangeChecker.h",
