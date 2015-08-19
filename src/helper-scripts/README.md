@@ -1,0 +1,1 @@
+This directory contains scripts that Passenger executes during runtime. These scripts are not supposed to be directly executed by the user. All the loaders - applications which are responsible for loading an application written in a certain language and hooking it up to Passenger - are in this directory.
