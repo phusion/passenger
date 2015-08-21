@@ -776,6 +776,7 @@ sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten
 	if (constructHeaderBuffersForResponse(req, buffers,
 		maxbuffers, nbuffers, dataSize, nCacheableBuffers))
 	{
+		SKC_TRACE(client, 2, "Sending response headers using writev()");
 		logResponseHeaders(client, req, buffers, nbuffers, dataSize);
 		markHeaderBuffersForTurboCaching(client, req, buffers, nCacheableBuffers);
 
@@ -815,11 +816,13 @@ sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offse
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
 	const unsigned int MBUF_MAX_SIZE = mbuf_pool_data_size(&mbuf_pool);
 	if (dataSize <= MBUF_MAX_SIZE) {
+		SKC_TRACE(client, 2, "Sending response headers using an mbuf");
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
 		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
 		buffer = MemoryKit::mbuf(buffer, offset, dataSize - offset);
 		writeResponse(client, buffer);
 	} else {
+		SKC_TRACE(client, 2, "Sending response headers using a psg_pool buffer");
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);
 		writeResponse(client, buffer + offset, dataSize - offset);
@@ -859,7 +862,7 @@ markHeaderBuffersForTurboCaching(Client *client, Request *req, struct iovec *buf
 		}
 
 		if (totalSize > ResponseCache<Request>::MAX_HEADER_SIZE) {
-			SKC_DEBUG(client, "Response header larger than " <<
+			SKC_DEBUG(client, "Response headers larger than " <<
 				ResponseCache<Request>::MAX_HEADER_SIZE <<
 				" bytes, so response is not eligible for turbocaching");
 			// Decrease store success ratio.
@@ -1001,6 +1004,7 @@ handleAppResponseBodyEnd(Client *client, Request *req) {
 	keepAliveAppConnection(client, req);
 	storeAppResponseInTurboCache(client, req);
 	finalizeUnionStationWithSuccess(client, req);
+	assert(!req->ended());
 }
 
 OXT_FORCE_INLINE void
