@@ -8,6 +8,7 @@ Release 5.0.16
  * Fixes logging of HTTP response code for Union Station. This regression was introduced by Passenger 5. Closes GH-1581. 
  * Adds a new subcommand `passenger-config about support-binaries-dir`.
  * Fixes a regression in the Node.js loader with regard to custom startup files. This bug was introduced in 5.0.14. Closes GH-1557 (again).
+ * Fixes a crash when a Ruby application is accessed through a sub-URI and a root virtual host at the same time.
 
 
 Release 5.0.15

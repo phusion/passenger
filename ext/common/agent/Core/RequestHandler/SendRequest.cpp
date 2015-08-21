@@ -175,7 +175,8 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	unsigned int dataSize = sizeof(boost::uint32_t);
 
 	state.path        = req->getPathWithoutQueryString();
-	state.hasBaseURI  = req->options.baseURI != P_STATIC_STRING("/");
+	state.hasBaseURI  = req->options.baseURI != P_STATIC_STRING("/")
+		&& startsWith(state.path, req->options.baseURI);
 	if (state.hasBaseURI) {
 		state.path = state.path.substr(req->options.baseURI.size());
 		if (state.path.empty()) {
