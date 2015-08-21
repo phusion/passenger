@@ -104,6 +104,8 @@ module PhusionPassenger
         buffer         = ''
         buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
 
+        @union_station_hooks_defined = defined?(UnionStationHooks)
+
         begin
           finish_callback.call
           while true
@@ -182,7 +184,7 @@ module PhusionPassenger
           end
         else
           if headers
-            PhusionPassenger.log_request_exception(headers, e)
+            log_exception_to_union_station(headers, e)
           end
           # should_reraise_error? returns true except in unit tests,
           # so we normally stop the request handler upon encountering
@@ -318,86 +320,20 @@ module PhusionPassenger
           connection.simulate_eof!
         end
 
-        if @union_station_core && headers[PASSENGER_TXN_ID]
-          txn_id = headers[PASSENGER_TXN_ID]
-          transaction = @union_station_core.continue_transaction(txn_id,
-            @app_group_name,
-            :requests,
-            PhusionPassenger.union_station_key)
-          headers[UNION_STATION_REQUEST_TRANSACTION] = transaction
-          headers[UNION_STATION_CORE] = @union_station_core
-          headers[PASSENGER_APP_GROUP_NAME] = @app_group_name
-          Thread.current[UNION_STATION_REQUEST_TRANSACTION] = transaction
-          Thread.current[UNION_STATION_CORE] = @union_station_core
-          Thread.current[PASSENGER_TXN_ID] = txn_id
-          if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
-            transaction.message("Initial objects on heap: #{ObjectSpace.live_objects}")
-          end
-          if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
-            transaction.message("Initial objects allocated so far: #{ObjectSpace.allocated_objects}")
-          elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
-            count = ObjectSpace.count_objects
-            transaction.message("Initial objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
-          end
-          if GC_SUPPORTS_TIME
-            transaction.message("Initial GC time: #{GC.time}")
-          end
-          transaction.begin_measure("app request handler processing")
+        if @union_station_hooks_defined
+          UnionStationHooks.begin_rack_request(headers)
         end
 
         #################
       end
 
       def finalize_request(connection, headers, has_error)
-        transaction = headers[UNION_STATION_REQUEST_TRANSACTION]
-        Thread.current[UNION_STATION_CORE] = nil
-        Thread.current[UNION_STATION_REQUEST_TRANSACTION] = nil
-
         if connection
           connection.stop_simulating_eof!
         end
 
-        if transaction && !transaction.closed?
-          exception_occurred = false
-          begin
-            transaction.end_measure("app request handler processing", has_error)
-            if OBJECT_SPACE_SUPPORTS_LIVE_OBJECTS
-              transaction.message("Final objects on heap: #{ObjectSpace.live_objects}")
-            end
-            if OBJECT_SPACE_SUPPORTS_ALLOCATED_OBJECTS
-              transaction.message("Final objects allocated so far: #{ObjectSpace.allocated_objects}")
-            elsif OBJECT_SPACE_SUPPORTS_COUNT_OBJECTS
-              count = ObjectSpace.count_objects
-              transaction.message("Final objects allocated so far: #{count[:TOTAL] - count[:FREE]}")
-            end
-            if GC_SUPPORTS_TIME
-              transaction.message("Final GC time: #{GC.time}")
-            end
-            if GC_SUPPORTS_CLEAR_STATS
-              # Clear statistics to void integer wraps.
-              GC.clear_stats
-            end
-          rescue Exception
-            # Maybe this exception was raised while communicating
-            # with the UstRouter. If that is the case then
-            # transaction.close may also raise an exception, but we're only
-            # interested in the original exception. So if this
-            # situation occurs we must ignore any exceptions raised
-            # by transaction.close.
-            exception_occurred = true
-            raise
-          ensure
-            # It is important that the following call receives an ACK
-            # from the UstRouter and that we don't close the socket
-            # connection until the ACK has been received, otherwise
-            # the Passenger core may close the transaction before this
-            # process's openTransaction command is processed.
-            begin
-              transaction.close
-            rescue
-              raise if !exception_occurred
-            end
-          end
+        if @union_station_hooks_defined
+          UnionStationHooks.end_rack_request(headers, has_error)
         end
 
         if !has_error && @keepalive_performed && connection
@@ -406,6 +342,13 @@ module PhusionPassenger
         end
 
         #################
+      end
+
+      def log_exception_to_union_station(env, exception)
+        reporter = env['union_station_hooks']
+        if reporter
+          reporter.log_exception(exception)
+        end
       end
 
       def should_reraise_error?(e)

@@ -2,7 +2,6 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 PhusionPassenger.require_passenger_lib 'request_handler'
 PhusionPassenger.require_passenger_lib 'request_handler/thread_handler'
 PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
-PhusionPassenger.require_passenger_lib 'union_station/core'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'utils'
 
@@ -550,85 +549,6 @@ describe RequestHandler do
       end
 
       lambda_called.should be_true
-    end
-  end
-
-  describe "if Union Station core is given" do
-    def preinitialize
-      if @agent_pid
-        Process.kill('KILL', @agent_pid)
-        Process.waitpid(@agent_pid)
-      end
-      @ust_router_password = "1234"
-      @agent_pid, @socket_filename, @socket_address = spawn_ust_router(
-        @temp_dir, @ust_router_password)
-
-      @union_station_core = UnionStation::Core.new(@socket_address, "logging",
-        "1234", "localhost")
-      @options = { "union_station_core" => @union_station_core }
-    end
-
-    after :each do
-      if @agent_pid
-        Process.kill('KILL', @agent_pid)
-        Process.waitpid(@agent_pid)
-      end
-    end
-
-    it "makes the analytics log object available through the request env and a thread-local variable" do
-      header_value = nil
-      thread_value = nil
-      @thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
-        header_value = headers[UNION_STATION_REQUEST_TRANSACTION]
-        thread_value = Thread.current[UNION_STATION_REQUEST_TRANSACTION]
-      end
-      @request_handler.start_main_loop_thread
-      client = connect
-      begin
-        send_binary_request(client,
-          "REQUEST_METHOD" => "GET",
-          "PASSENGER_TXN_ID" => "1234-abcd",
-          "PASSENGER_GROUP_NAME" => "foobar")
-        client.read
-      ensure
-        client.close
-      end
-      header_value.should be_kind_of(UnionStation::Transaction)
-      thread_value.should be_kind_of(UnionStation::Transaction)
-      header_value.should == thread_value
-    end
-
-    it "logs uncaught exceptions for requests that have a transaction ID" do
-      reraised = false
-      @thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
-        raise "something went wrong"
-      end
-      @thread_handler.any_instance.stub(:should_reraise_error?).and_return do |e|
-        reraised = true
-        e.message != "something went wrong"
-      end
-      @request_handler.start_main_loop_thread
-      client = connect
-      begin
-        send_binary_request(client,
-          "REQUEST_METHOD" => "GET",
-          "PASSENGER_TXN_ID" => "1234-abcd")
-      ensure
-        client.close
-      end
-      eventually(5) do
-        flush_ust_router(@ust_router_password, @socket_address)
-        if File.exist?("#{@temp_dir}/exceptions")
-          log_data = File.read("#{@temp_dir}/exceptions")
-        else
-          log_data = ""
-        end
-        log_data.include?("Request transaction ID: 1234-abcd\n") &&
-          log_data.include?("Message: " + Utils.base64("something went wrong")) &&
-          log_data.include?("Class: RuntimeError") &&
-          log_data.include?("Backtrace: ")
-      end
-      reraised.should be_true
     end
   end
 

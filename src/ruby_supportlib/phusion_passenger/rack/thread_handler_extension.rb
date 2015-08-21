@@ -98,7 +98,7 @@ module PhusionPassenger
               # otherwise maliciously crafted responses can crash the app,
               # forcing it to be respawned, and thereby effectively DoSing it.
               print_exception("Rack application object", e)
-              PhusionPassenger.log_request_exception(env, e)
+              log_exception_to_union_station(env, e)
             end
             return false
           end
@@ -145,7 +145,7 @@ module PhusionPassenger
           rescue => e
             if !should_swallow_app_error?(e, socket_wrapper)
               print_exception("Rack response body object", e)
-              PhusionPassenger.log_request_exception(env, e)
+              log_exception_to_union_station(env, e)
             end
           ensure
             begin
@@ -153,7 +153,7 @@ module PhusionPassenger
             rescue => e
               if !should_swallow_app_error?(e, socket_wrapper)
                 print_exception("Rack response body object's #close method", e)
-                PhusionPassenger.log_request_exception(env, e)
+                log_exception_to_union_station(env, e)
               end
             end
           end

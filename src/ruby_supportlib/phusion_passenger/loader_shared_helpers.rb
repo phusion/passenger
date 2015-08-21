@@ -220,10 +220,17 @@ module PhusionPassenger
     def before_loading_app_code_step1(startup_file, options)
       DebugLogging.log_level = options["log_level"] if options["log_level"]
 
-      # Instantiate the Union Station core if requested. Can be nil.
-      PhusionPassenger.require_passenger_lib 'union_station/core'
-      options["union_station_core"] = UnionStation::Core.new_from_options(options)
-      PhusionPassenger.union_station_key = options["union_station_key"]
+      # We always load the union_station_hooks_* gems and do not check for
+      # `options["analytics"]` here. The gems don't actually initialize (and
+      # load the bulk of their code) unless they have determined that
+      # `options["analytics"]` is true. Regardless of whether Union Station
+      # support is enabled in Passenger, the UnionStationHooks namespace must
+      # be available so that applications can call it, even though the actual
+      # calls don't do anything when Union Station support is disabled.
+      PhusionPassenger.require_passenger_lib 'vendor/union_station_hooks_core/lib/union_station_hooks_core'
+      UnionStationHooks.vendored = true
+      PhusionPassenger.require_passenger_lib 'vendor/union_station_hooks_rails/lib/union_station_hooks_rails'
+      UnionStationHooksRails.vendored = true
     end
 
     def run_load_path_setup_code(options)
@@ -295,14 +302,16 @@ module PhusionPassenger
       # point must be specified in the Gemfile. Like ruby-debug if debugging is on...
     end
 
+    # This method is to be called after the load path has been set up
+    # (e.g. Bundler.setup is called), but before loading the app code.
     def before_loading_app_code_step2(options)
-      # Do nothing.
+      # Do nothing
     end
 
     # This method is to be called after loading the application code but
     # before forking a worker process.
     def after_loading_app_code(options)
-      # Do nothing.
+      UnionStationHooks.check_initialized
     end
 
     def create_socket_address(protocol, address)

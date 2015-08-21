@@ -22,8 +22,6 @@
 #  THE SOFTWARE.
 
 module PhusionPassenger
-  UNION_STATION_CORE          = "UNION_STATION_CORE".freeze
-  UNION_STATION_REQUEST_TRANSACTION = "UNION_STATION_REQUEST_TRANSACTION".freeze
   PASSENGER_TXN_ID            = "PASSENGER_TXN_ID".freeze
   PASSENGER_APP_GROUP_NAME    = "PASSENGER_APP_GROUP_NAME".freeze
   RACK_HIJACK_IO              = "rack.hijack_io".freeze

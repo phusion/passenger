@@ -10,8 +10,8 @@ PASSENGER_ROOT_ON_DOCKER_HOST=${PASSENGER_ROOT_ON_DOCKER_HOST:-$PASSENGER_ROOT}
 if [[ "$CACHE_DIR_ON_DOCKER_HOST" != "" ]]; then
 	CACHE_DIR=/host_cache
 else
-	CACHE_DIR=/tmp
-	CACHE_DIR_ON_DOCKER_HOST=/tmp
+	CACHE_DIR="$PWD/cache"
+	CACHE_DIR_ON_DOCKER_HOST="$PWD/cache"
 fi
 
 COMPILE_CONCURRENCY=${COMPILE_CONCURRENCY:-2}
@@ -21,6 +21,11 @@ export TRACE=1
 export DEVDEPS_DEFAULT=no
 export rvmsudo_secure_path=1
 export LC_CTYPE=C.UTF-8
+export DEPS_TARGET="$CACHE_DIR/bundle"
+export USE_CCACHE=true
+export CCACHE_DIR="$CACHE_DIR/ccache"
+export CCACHE_COMPRESS=1
+export CCACHE_COMPRESS_LEVEL=3
 unset BUNDLE_GEMFILE
 
 if [[ -e /etc/workaround-docker-2267 ]]; then
@@ -31,6 +36,9 @@ if [[ -e /etc/workaround-docker-2267 ]]; then
 else
 	HOSTS_FILE=/etc/hosts
 fi
+
+mkdir -p "$DEPS_TARGET"
+mkdir -p "$CCACHE_DIR"
 
 sudo sh -c "cat >> $HOSTS_FILE" <<EOF
 127.0.0.1 passenger.test
@@ -122,12 +130,12 @@ function install_node_and_modules()
 		install_node_and_modules=1
 		if [[ -e /host_cache ]]; then
 			if [[ ! -e /host_cache/node-v0.10.20-linux-x64.tar.gz ]]; then
-				run curl --fail -o /host_cache/node-v0.10.20-linux-x64.tar.gz \
-					http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+				run curl --fail -L -o /host_cache/node-v0.10.20-linux-x64.tar.gz \
+					https://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
 			fi
 			run tar xzf /host_cache/node-v0.10.20-linux-x64.tar.gz
 		else
-			run curl --fail -O http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+			run curl --fail -L -O https://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
 			run tar xzf node-v0.10.20-linux-x64.tar.gz
 		fi
 		export PATH=`pwd`/node-v0.10.20-linux-x64/bin:$PATH
@@ -177,8 +185,22 @@ if [[ "$TEST_CXX" = 1 ]]; then
 fi
 
 if [[ "$TEST_RUBY" = 1 ]]; then
-	retry_run 3 rake_test_install_deps BASE_DEPS=yes RAILS_BUNDLES=yes
+	retry_run 3 rake_test_install_deps BASE_DEPS=yes
 	run bundle exec drake -j$COMPILE_CONCURRENCY test:ruby
+fi
+
+if [[ "$TEST_USH" = 1 ]]; then
+	retry_run 3 rake_test_install_deps BASE_DEPS=yes USH_BUNDLES=yes
+	export PASSENGER_CONFIG="$PWD/bin/passenger-config"
+	run "$PASSENGER_CONFIG" install-standalone-runtime --auto
+
+	pushd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core
+	bundle exec rake spec:travis
+	popd
+
+	pushd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails
+	bundle exec rake spec:travis GEM_BUNDLE_PATH="$DEPS_TARGET"
+	popd
 fi
 
 if [[ "$TEST_NODE" = 1 ]]; then

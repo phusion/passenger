@@ -51,9 +51,11 @@ task 'test:install_deps' do
 
   if deps_target = string_option('DEPS_TARGET')
     bundle_args = "--path #{deps_target} #{ENV['BUNDLE_ARGS']}".strip
+  else
+    bundle_args = ENV['BUNDLE_ARGS'].to_s
   end
 
-  if !PlatformInfo.locate_ruby_tool('bundle')
+  if !PlatformInfo.locate_ruby_tool('bundle') || bundler_too_old?
     sh "#{gem_install} bundler"
   end
 
@@ -67,16 +69,22 @@ task 'test:install_deps' do
       sh "bundle install #{bundle_args} --without base"
     end
   end
-  if boolean_option('RAILS_BUNDLES', default)
-    sh "cd test/stub/rails3.0 && bundle install #{bundle_args}"
-    sh "cd test/stub/rails3.1 && bundle install #{bundle_args}"
-    sh "cd test/stub/rails3.2 && bundle install #{bundle_args}"
-    if RUBY_VERSION >= '1.9'
-      sh "cd test/stub/rails4.0 && bundle install #{bundle_args}"
-      sh "cd test/stub/rails4.1 && bundle install #{bundle_args}"
-    end
+  if boolean_option('USH_BUNDLES', default)
+    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
+      " && bundle install #{bundle_args} --with travis --without doc notravis"
+    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
+      " && bundle install #{bundle_args} --without doc notravis"
+    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
+      " && bundle exec rake install_test_app_bundles"
   end
   if boolean_option('NODE_MODULES', default)
     sh "npm install"
   end
+end
+
+
+def bundler_too_old?
+  `bundle --version` =~ /version (.+)/
+  version = $1.split('.').map { |x| x.to_i }
+  version[0] < 1 || version[0] == 1 && version[1] < 10
 end

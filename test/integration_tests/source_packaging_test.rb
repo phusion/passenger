@@ -49,6 +49,13 @@ end
 shared_examples_for "a proper package" do
   it "includes all files in the git repository" do
     expected_files = `git ls-files`.split("\n")
+    `git submodule status`.split("\n").each do |line|
+      submodule_dir = line.strip.split(' ')[1]
+      submodule_files = `cd #{submodule_dir} && git ls-files`.split("\n")
+      submodule_files.map! { |path| "#{submodule_dir}/#{path}" }
+      expected_files.delete(submodule_dir)
+      expected_files.concat(submodule_files)
+    end
     expected_files -= Dir.glob(PhusionPassenger::Packaging::EXCLUDE_GLOB, File::FNM_DOTMATCH)
 
     package_files = {}

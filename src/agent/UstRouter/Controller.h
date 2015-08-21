@@ -423,7 +423,9 @@ private:
 				goto done;
 			}
 			if (OXT_UNLIKELY(transaction->getNodeName() != nodeName)) {
-				SKC_ERROR(client, "Cannot open transaction: transaction already opened with a different node name");
+				SKC_ERROR(client, "Cannot open transaction: transaction "
+					"already opened with a different node name (" <<
+					transaction->getNodeName() << " vs " << nodeName << ")");
 				if (ack) {
 					sendErrorToClient(client,
 						"Cannot open transaction: transaction already opened with a different node name");
