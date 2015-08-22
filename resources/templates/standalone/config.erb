@@ -110,9 +110,9 @@ http {
     gzip_comp_level 3;
     gzip_min_length 150;
     gzip_proxied any;
-    gzip_types text/plain text/css text/json text/javascript \
-        application/javascript application/x-javascript application/json \
-        application/rss+xml application/vnd.ms-fontobject application/x-font-ttf \
+    gzip_types text/plain text/css text/json text/javascript
+        application/javascript application/x-javascript application/json
+        application/rss+xml application/vnd.ms-fontobject application/x-font-ttf
         application/xml font/opentype image/svg+xml text/xml;
 
     <% if @app_finder.multi_mode? %>
