@@ -249,7 +249,7 @@ initializeSingleAppMode() {
 		}
 
 		options.set("app_type", getAppTypeName(appType));
-		options.set("startup_file", getAppTypeStartupFile(appType));
+		options.set("startup_file", options.get("app_root") + "/" + getAppTypeStartupFile(appType));
 	}
 
 	P_NOTICE(SHORT_PROGRAM_NAME " core running in single-application mode.");

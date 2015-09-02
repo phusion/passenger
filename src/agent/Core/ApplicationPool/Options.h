@@ -584,7 +584,7 @@ public:
 			appendKeyValue (vec, "app_group_name",     getAppGroupName());
 			appendKeyValue (vec, "app_type",           appType);
 			appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
-			appendKeyValue (vec, "startup_file",       getStartupFile());
+			appendKeyValue (vec, "startup_file",       absolutizePath(getStartupFile(), absolutizePath(appRoot)));
 			appendKeyValue (vec, "process_title",      getProcessTitle());
 			appendKeyValue2(vec, "log_level",          logLevel);
 			appendKeyValue3(vec, "start_timeout",      startTimeout);
