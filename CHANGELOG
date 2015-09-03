@@ -2,6 +2,7 @@ Release 5.0.17
 --------------
 
  * Adds packages for Ubuntu 15.10 "Wily", even though Ubuntu 15.10 hasn't been released yet.
+ * Fixes some memory corruption issues in the palloc subsystem. Closes GH-1587.
  * Fixes the Node.js `PhusionPassenger.on('exit')` event. This event worked if you restart the app or detach an application process, but not if you stop Passenger.
 
 

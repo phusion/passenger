@@ -101,6 +101,9 @@ TEST_CXX_OBJECTS = {
   'test/cxx/MemoryKit/MbufTest.o' => %w(
     test/cxx/MemoryKit/MbufTest.cpp
     ext/common/MemoryKit/mbuf.h),
+  'test/cxx/MemoryKit/PallocTest.o' => %w(
+    test/cxx/MemoryKit/PallocTest.cpp
+    ext/common/MemoryKit/mbuf.h),
   'test/cxx/ServerKit/ChannelTest.o' => %w(
     test/cxx/ServerKit/ChannelTest.cpp
     ext/common/ServerKit/Channel.h

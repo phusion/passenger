@@ -85,6 +85,12 @@ typedef struct {
 
 struct psg_pool_s {
 	psg_pool_data_t       data;
+
+	/*
+	 * The following fields are only used for the first psg_pool_s,
+	 * not for any subsequent psg_pool_s objects linked through
+	 * `data.next`.
+	 */
 	size_t                max;
 	psg_pool_t           *current;
 	psg_pool_large_t     *large;

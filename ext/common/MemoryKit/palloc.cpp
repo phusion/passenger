@@ -107,8 +107,11 @@ psg_deinit_pool(psg_pool_t *pool)
 		}
 	}
 
-	for (p = pool->data.next; p != NULL; p = p->data.next) {
+	p = pool->data.next;
+	while (p != NULL) {
+		psg_pool_t *next = p->data.next;
 		free(p);
+		p = next;
 	}
 }
 
@@ -131,7 +134,16 @@ psg_reset_pool(psg_pool_t *pool, size_t size)
 	} else {
 		pool->large = NULL;
 		for (p = pool; p; p = p->data.next) {
-			p->data.last = (char *) p + sizeof(psg_pool_t);
+			char *m = (char *) p;
+			if (p == pool) {
+				m += sizeof(psg_pool_t);
+			} else {
+				m += sizeof(psg_pool_data_t);
+			}
+			m = psg_align_ptr(m, PSG_ALIGNMENT);
+			p->data.last = m;
+
+			p->data.failed = 0;
 		}
 		return false;
 	}
@@ -212,6 +224,10 @@ psg_palloc_block(psg_pool_t *pool, size_t size)
 	new_p->data.next = NULL;
 	new_p->data.failed = 0;
 
+	// We increment by sizeof(psg_pool_data_t) here, NOT
+	// sizeof(psg_pool_t). This is because all fields after `data`
+	// are only used in the first psg_pool_s object, not in any
+	// subsequently linked ones.
 	m += sizeof(psg_pool_data_t);
 	m = psg_align_ptr(m, PSG_ALIGNMENT);
 	new_p->data.last = m + size;
@@ -309,13 +325,22 @@ psg_pstrdup(psg_pool_t *pool, const Passenger::StaticString &str)
 bool
 psg_pfree(psg_pool_t *pool, void *p)
 {
-	psg_pool_large_t  *l;
+	psg_pool_large_t  *l, *prev;
+
+	prev = NULL;
 
 	for (l = pool->large; l; l = l->next) {
 		if (p == l->alloc) {
 			free(l->alloc);
 			l->alloc = NULL;
+			if (prev != NULL) {
+				prev->next = l->next;
+			} else {
+				pool->large = l->next;
+			}
 			return true;
+		} else {
+			prev = l;
 		}
 	}
 
