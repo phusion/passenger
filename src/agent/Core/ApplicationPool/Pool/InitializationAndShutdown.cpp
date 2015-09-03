@@ -129,6 +129,7 @@ Pool::destroy() {
 
 	UPDATE_TRACE_POINT();
 	lock.unlock();
+	P_DEBUG("Shutting down ApplicationPool background threads...");
 	interruptableThreads.interrupt_and_join_all();
 	nonInterruptableThreads.join_all();
 	lock.lock();
