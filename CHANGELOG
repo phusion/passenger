@@ -1,3 +1,9 @@
+Release 5.0.17
+--------------
+
+ * Fixes the Node.js `PhusionPassenger.on('exit')` event. This event worked if you restart the app or detach an application process, but not if you stop Passenger.
+
+
 Release 5.0.16
 --------------
 
