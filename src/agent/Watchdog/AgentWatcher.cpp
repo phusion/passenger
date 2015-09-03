@@ -172,21 +172,21 @@ protected:
 	 */
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) = 0;
 
+	/**
+	 * Kill a process (but not its children) with SIGTERM.
+	 * Does not wait until it has quit.
+	 */
 	static void killAndDontWait(pid_t pid) {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
-		// If the process is a process group leader then killing the
-		// group will likely kill all its child processes too.
-		if (syscalls::killpg(pid, SIGTERM) == -1) {
-			syscalls::kill(pid, SIGTERM);
-		}
+		syscalls::kill(pid, SIGTERM);
 	}
 
 	/**
 	 * Kill a process with SIGKILL, and attempt to kill its children too.
 	 * Then wait until it has quit.
 	 */
-	static void killAndWait(pid_t pid) {
+	static void killProcessGroupAndWait(pid_t pid) {
 		this_thread::disable_interruption di;
 		this_thread::disable_syscall_interruption dsi;
 		// If the process is a process group leader then killing the
@@ -340,7 +340,7 @@ public:
 			fds[1].close();
 			this_thread::restore_interruption ri(di);
 			this_thread::restore_syscall_interruption rsi(dsi);
-			ScopeGuard failGuard(boost::bind(killAndWait, pid));
+			ScopeGuard failGuard(boost::bind(killProcessGroupAndWait, pid));
 
 			/* Send startup arguments. Ignore EPIPE and ECONNRESET here
 			 * because the child process might have sent an feedback message
@@ -477,6 +477,10 @@ public:
 		}
 	}
 
+	/**
+	 * Tell the agent process to gracefully shut down. Returns true if it
+	 * was signaled, or false if it wasn't started.
+	 */
 	virtual bool signalShutdown() {
 		boost::lock_guard<boost::mutex> l(lock);
 		if (pid == 0) {
@@ -496,7 +500,7 @@ public:
 		if (pid == 0) {
 			return false;
 		} else {
-			killAndWait(pid);
+			killProcessGroupAndWait(pid);
 			this->pid = 0;
 			return true;
 		}
