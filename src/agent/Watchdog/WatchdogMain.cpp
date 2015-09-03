@@ -1059,6 +1059,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 		"unix:" + wo->instanceDir->getPath() + "/agents.s/ust_router");
 	options.setDefault("ust_router_password",
 		wo->randomGenerator.generateAsciiString(24));
+
 	strset = options.getStrSet("ust_router_api_addresses", false);
 	strset.insert(strset.begin(),
 		"unix:" + wo->instanceDir->getPath() + "/agents.s/ust_router_api");

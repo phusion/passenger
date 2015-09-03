@@ -563,11 +563,8 @@ preinitialize(VariantMap &options) {
 static void
 setAgentsOptionsDefaults() {
 	VariantMap &options = *agentsOptions;
-	set<string> defaultApiListenAddress;
-	defaultApiListenAddress.insert(DEFAULT_UST_ROUTER_API_LISTEN_ADDRESS);
 
 	options.setDefault("ust_router_address", DEFAULT_UST_ROUTER_LISTEN_ADDRESS);
-	options.setDefaultStrSet("ust_router_api_addresses", defaultApiListenAddress);
 }
 
 static void

@@ -57,7 +57,7 @@ ustRouterUsage() {
 	printf("\n");
 	printf("      --api-listen ADDRESS    Listen on the given address for API commands.\n");
 	printf("                              The address must be in the same format as that\n");
-	printf("                              of --listen. Default: " DEFAULT_UST_ROUTER_API_LISTEN_ADDRESS "\n");
+	printf("                              of --listen\n");
 	printf("      --authorize [LEVEL]:USERNAME:PASSWORDFILE\n");
 	printf("                              Enables authentication on the API server,\n");
 	printf("                              through the given API account. LEVEL indicates\n");
