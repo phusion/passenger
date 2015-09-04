@@ -22,6 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+require 'base64'
+
 module PhusionPassenger
 
   # Utility functions.
@@ -44,8 +46,7 @@ module PhusionPassenger
       end
       case method
       when :base64
-        data = [data].pack('m')
-        data.gsub!("\n", '')
+        data = base64(data)
         data.gsub!("+", '')
         data.gsub!("/", '')
         data.gsub!(/==$/, '')
@@ -176,6 +177,21 @@ module PhusionPassenger
     def install_options_as_ivars(object, options, *keys)
       keys.each do |key|
         object.instance_variable_set("@#{key}", options[key])
+      end
+    end
+
+    if Base64.respond_to?(:strict_encode64)
+      def base64(data)
+        Base64.strict_encode64(data)
+      end
+    else
+      # Base64-encodes the given data. Newlines are removed.
+      # This is like `Base64.strict_encode64`, but also works
+      # on Ruby 1.8 which doesn't have that method.
+      def base64(data)
+        result = Base64.encode64(data)
+        result.delete!("\n")
+        result
       end
     end
 

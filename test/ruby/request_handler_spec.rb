@@ -576,10 +576,6 @@ describe RequestHandler do
       end
     end
 
-    def base64(data)
-      return [data].pack('m').gsub("\n", "")
-    end
-
     it "makes the analytics log object available through the request env and a thread-local variable" do
       header_value = nil
       thread_value = nil
@@ -629,7 +625,7 @@ describe RequestHandler do
           log_data = ""
         end
         log_data.include?("Request transaction ID: 1234-abcd\n") &&
-          log_data.include?("Message: " + base64("something went wrong")) &&
+          log_data.include?("Message: " + Utils.base64("something went wrong")) &&
           log_data.include?("Class: RuntimeError") &&
           log_data.include?("Backtrace: ")
       end
