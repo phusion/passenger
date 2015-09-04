@@ -452,8 +452,8 @@ module PhusionPassenger
         end
 
         if @options[:engine] == "builtin"
-          # We explicitly check for some options are set and warn the user about this,
-          # in case they forget to pass --engine=nginx. We don't warn about options
+          # We explicitly check that some options are set and warn the user about this,
+          # in case they are using the builtin engine. We don't warn about options
           # that begin with --nginx- because that should be obvious.
           check_nginx_option_used_with_builtin_engine(:ssl, "--ssl")
           check_nginx_option_used_with_builtin_engine(:ssl_certificate, "--ssl-certificate")
