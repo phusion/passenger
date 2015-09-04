@@ -25,6 +25,7 @@
 require 'etc'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'standalone/control_utils'
+PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
@@ -89,6 +90,7 @@ module PhusionPassenger
           command << " --no-delete-pid-file"
           command << " --cleanup-pidfile #{Shellwords.escape @working_dir}/temp_dir_toucher.pid"
           command << " --report-file #{Shellwords.escape @working_dir}/report.json"
+          command << " --ctl prestart_urls=#{Shellwords.escape prestart_urls_base64}"
           add_param(command, :user, "--user")
           add_param(command, :log_file, "--log-file")
           add_param(command, :pid_file, "--pid-file")
@@ -114,7 +116,9 @@ module PhusionPassenger
           end
 
           command << " --BC"
-          command << " --listen #{listen_address}"
+          # The builtin engine cannot be used in combination with Mass Deployment,
+          # so we know @apps always has 1 app.
+          command << " --listen #{listen_address(@apps[0])}"
           command << " --no-graceful-exit"
           add_param(command, :environment, "--environment")
           add_param(command, :app_type, "--app-type")
@@ -167,10 +171,14 @@ module PhusionPassenger
 
         def listen_address(options = @options, for_ping_port = false)
           if options[:socket_file]
-            return "unix:" + File.absolute_path_no_resolve(options[:socket_file])
+            return "unix:#{options[:socket_file]}"
           else
             return "tcp://" + compose_ip_and_port(options[:address], options[:port])
           end
+        end
+
+        def prestart_urls_base64
+          Utils.base64(listen_url(@apps[0]))
         end
 
         def add_param(command, option_name, param_name)

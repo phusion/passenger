@@ -140,17 +140,17 @@ module PhusionPassenger
 
         def nginx_listen_address(options = @options)
           if options[:socket_file]
-            return "unix:" + File.absolute_path_no_resolve(options[:socket_file])
+            "unix:#{options[:socket_file]}"
           else
-            return compose_ip_and_port(options[:address], options[:port])
+            compose_ip_and_port(options[:address], options[:port])
           end
         end
 
         def nginx_listen_address_with_ssl_port(options = @options)
           if options[:socket_file]
-            return "unix:" + File.absolute_path_no_resolve(options[:socket_file])
+            "unix:#{options[:socket_file]}"
           else
-            return compose_ip_and_port(options[:address], options[:ssl_port])
+            compose_ip_and_port(options[:address], options[:ssl_port])
           end
         end
 

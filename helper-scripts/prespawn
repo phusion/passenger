@@ -48,14 +48,14 @@ class PrespawnLocation
   def self.parse(url)
     uri = uri_for(url)
 
-    location = if uri.host == 'unix'
-      UNIXPrespawnLocation.new(uri)
+    if uri.scheme == 'unix' || uri.host == 'unix'
+      location = UNIXPrespawnLocation.new(uri)
     else
       case uri.scheme
-        when 'http'
-          TCPPrespawnLocation.new(uri)
-        when 'https'
-          SSLPrespawnLocation.new(uri)
+      when 'http'
+        location = TCPPrespawnLocation.new(uri)
+      when 'https'
+        location = SSLPrespawnLocation.new(uri)
       end
     end
 
