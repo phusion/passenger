@@ -202,6 +202,6 @@ http {
             passenger_enabled on;
         }
     }
-    passenger_pre_start http://<%= nginx_listen_address(app) %>;
+    passenger_pre_start <%= listen_url(app) %>;
     <% end %>
 }

@@ -453,8 +453,8 @@ module PhusionPassenger
         end
 
         if @options[:engine] == "builtin"
-          # We explicitly check for some options are set and warn the user about this,
-          # in case they forget to pass --engine=nginx. We don't warn about options
+          # We explicitly check that some options are set and warn the user about this,
+          # in case they are using the builtin engine. We don't warn about options
           # that begin with --nginx- because that should be obvious.
           check_nginx_option_used_with_builtin_engine(:ssl, "--ssl")
           check_nginx_option_used_with_builtin_engine(:ssl_certificate, "--ssl-certificate")
@@ -610,33 +610,34 @@ module PhusionPassenger
         start_engine_real
       end
 
-      # Returns the URL that the server will be listening on.
-      def listen_url
-        if @options[:socket_file]
-          return @options[:socket_file]
+      # Returns the URL that the server will be listening on
+      # for the given app.
+      def listen_url(app)
+        if app[:socket_file]
+          "unix:#{app[:socket_file]}"
         else
-          if @options[:ssl] && !@options[:ssl_port]
+          if @options[:engine] == 'nginx' && app[:ssl] && !app[:ssl_port]
             scheme = "https"
           else
             scheme = "http"
           end
           result = "#{scheme}://"
-          if @options[:port] == 80
-            result << @options[:address]
+          if app[:port] == 80
+            result << app[:address]
           else
-            result << compose_ip_and_port(@options[:address], @options[:port])
+            result << compose_ip_and_port(app[:address], app[:port])
           end
           result << "/"
-          return result
+          result
         end
       end
 
       def compose_ip_and_port(ip, port)
         if ip =~ /:/
           # IPv6
-          return "[#{ip}]:#{port}"
+          "[#{ip}]:#{port}"
         else
-          return "#{ip}:#{port}"
+          "#{ip}:#{port}"
         end
       end
 
@@ -645,7 +646,7 @@ module PhusionPassenger
         puts "PID file: #{@options[:pid_file]}"
         puts "Log file: #{@options[:log_file]}"
         puts "Environment: #{@options[:environment]}"
-        puts "Accessible via: #{listen_url}"
+        puts "Accessible via: #{listen_url(@apps[0])}"
 
         puts
         if @options[:daemonize]

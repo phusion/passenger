@@ -2,7 +2,10 @@ Release 5.0.17
 --------------
 
  * Adds packages for Ubuntu 15.10 "Wily", even though Ubuntu 15.10 hasn't been released yet.
+ * Fixes some memory corruption issues in the palloc subsystem. Closes GH-1587.
  * Fixes the Node.js `PhusionPassenger.on('exit')` event. This event worked if you restart the app or detach an application process, but not if you stop Passenger.
+ * Fixes support for `passenger_pre_start` URLs that contain very long authentication strings. This was caused by the fact that our Base64 encoder generated unexpected newlines.
+ * [Standalone] Improves application prestarting. Application prestarting is now available in combination with the 'builtin' engine, and now works when SSL is used.
 
 
 Release 5.0.16

@@ -63,6 +63,8 @@ TEST_CXX_OBJECTS = {
 
   "#{TEST_OUTPUT_DIR}cxx/MemoryKit/MbufTest.o" =>
     "test/cxx/MemoryKit/MbufTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/MemoryKit/PallocTest.o" =>
+    "test/cxx/MemoryKit/PallocTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DataStructures/LStringTest.o" =>
     "test/cxx/DataStructures/LStringTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DataStructures/StringKeyTableTest.o" =>
