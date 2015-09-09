@@ -599,7 +599,6 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 			if (buffers != NULL && i >= maxbuffers) { \
 				return false; \
 			} \
-			i++; \
 		} while (false)
 	#define INC_BUFFER_ITER(i) \
 		do { \
@@ -607,6 +606,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		} while (false)
 	#define PUSH_STATIC_BUFFER(buf) \
 		do { \
+			BEGIN_PUSH_NEXT_BUFFER(); \
 			if (buffers != NULL) { \
 				buffers[i].iov_base = (void *) buf; \
 				buffers[i].iov_len  = sizeof(buf) - 1; \
@@ -796,7 +796,8 @@ sendHeaderToAppWithHttpProtocolWithBuffering(Request *req, unsigned int offset,
 	unsigned int nbuffers, dataSize;
 	bool ok;
 
-	ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0, nbuffers, dataSize, cache);
+	ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0, nbuffers,
+		dataSize, cache);
 	assert(ok);
 
 	buffers = (struct iovec *) psg_palloc(req->pool,
