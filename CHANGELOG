@@ -1,6 +1,7 @@
 Release 5.0.18
 --------------
 
+ * Fixes more memory corruption issues in the palloc subsystem.
 
 
 Release 5.0.17

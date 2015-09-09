@@ -132,7 +132,9 @@ psg_reset_pool(psg_pool_t *pool, size_t size)
 		psg_init_pool(pool, size);
 		return true;
 	} else {
+		pool->current = pool;
 		pool->large = NULL;
+
 		for (p = pool; p; p = p->data.next) {
 			char *m = (char *) p;
 			if (p == pool) {
@@ -145,6 +147,7 @@ psg_reset_pool(psg_pool_t *pool, size_t size)
 
 			p->data.failed = 0;
 		}
+
 		return false;
 	}
 }
