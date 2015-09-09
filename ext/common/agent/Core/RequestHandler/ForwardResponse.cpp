@@ -449,15 +449,19 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	unsigned int & restrict_ref dataSize,
 	unsigned int & restrict_ref nCacheableBuffers)
 {
-	#define INC_BUFFER_ITER(i) \
+	#define BEGIN_PUSH_NEXT_BUFFER() \
 		do { \
-			if (buffers != NULL && i == maxbuffers) { \
+			if (buffers != NULL && i >= maxbuffers) { \
 				return false; \
 			} \
+		} while (false)
+	#define INC_BUFFER_ITER(i) \
+		do { \
 			i++; \
 		} while (false)
 	#define PUSH_STATIC_BUFFER(str) \
 		do { \
+			BEGIN_PUSH_NEXT_BUFFER(); \
 			if (buffers != NULL) { \
 				buffers[i].iov_base = (void *) str; \
 				buffers[i].iov_len  = sizeof(str) - 1; \
@@ -478,6 +482,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	PUSH_STATIC_BUFFER("HTTP/");
 
 	if (buffers != NULL) {
+		BEGIN_PUSH_NEXT_BUFFER();
 		const unsigned int BUFSIZE = 16;
 		char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
 		const char *end = buf + BUFSIZE;
@@ -504,7 +509,9 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	statusAndReason = getStatusCodeAndReasonPhrase(resp->statusCode);
 	if (statusAndReason != NULL) {
 		size_t len = strlen(statusAndReason);
+		BEGIN_PUSH_NEXT_BUFFER();
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = (void *) statusAndReason;
 			buffers[i].iov_len  = len;
 		}
@@ -513,6 +520,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 
 		PUSH_STATIC_BUFFER("\r\nStatus: ");
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = (void *) statusAndReason;
 			buffers[i].iov_len  = len;
 		}
@@ -522,6 +530,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		PUSH_STATIC_BUFFER("\r\n");
 	} else {
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			const unsigned int BUFSIZE = 8;
 			char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
 			const char *end = buf + BUFSIZE;
@@ -533,6 +542,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			dataSize += size;
 
 			PUSH_STATIC_BUFFER(" Unknown Reason-Phrase\r\nStatus: ");
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = (void *) buf;
 			buffers[i].iov_len  = size;
 			INC_BUFFER_ITER(i);
@@ -563,6 +573,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		part = it->header->origKey.start;
 		while (part != NULL) {
 			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
 				buffers[i].iov_base = (void *) part->data;
 				buffers[i].iov_len  = part->size;
 			}
@@ -570,6 +581,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			part = part->next;
 		}
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = (void *) ": ";
 			buffers[i].iov_len  = sizeof(": ") - 1;
 		}
@@ -578,6 +590,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		part = it->header->val.start;
 		while (part != NULL) {
 			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
 				buffers[i].iov_base = (void *) part->data;
 				buffers[i].iov_len  = part->size;
 			}
@@ -585,6 +598,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 			part = part->next;
 		}
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = (void *) "\r\n";
 			buffers[i].iov_len  = sizeof("\r\n") - 1;
 		}
@@ -598,6 +612,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		unsigned int size;
 
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			const unsigned int BUFSIZE = 60;
 			char *dateStr = (char *) psg_pnalloc(req->pool, BUFSIZE);
 			size = constructDateHeaderBuffersForResponse(dateStr, BUFSIZE);
@@ -622,6 +637,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 				PUSH_STATIC_BUFFER("\r\nSet-Cookie: ");
 			} else {
 				if (buffers != NULL) {
+					BEGIN_PUSH_NEXT_BUFFER();
 					buffers[i].iov_base = (void *) part->data;
 					buffers[i].iov_len  = part->size;
 				}
@@ -638,6 +654,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	if (resp->bodyType == AppResponse::RBT_CONTENT_LENGTH) {
 		PUSH_STATIC_BUFFER("Content-Length: ");
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			const unsigned int BUFSIZE = 16;
 			char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
 			unsigned int size = integerToOtherBase<boost::uint64_t, 10>(
@@ -690,6 +707,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		part = cookieName->start;
 		while (part != NULL) {
 			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
 				buffers[i].iov_base = (void *) part->data;
 				buffers[i].iov_len  = part->size;
 			}
@@ -706,6 +724,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		PUSH_STATIC_BUFFER("=");
 
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = stickySessionIdStr;
 			buffers[i].iov_len  = stickySessionIdSize;
 		}
@@ -715,6 +734,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		PUSH_STATIC_BUFFER("; Path=");
 
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = (void *) baseURI.data();
 			buffers[i].iov_len  = baseURI.size();
 		}
@@ -741,6 +761,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	nbuffers = i;
 	return true;
 
+	#undef BEGIN_PUSH_NEXT_BUFFER
 	#undef INC_BUFFER_ITER
 	#undef PUSH_STATIC_BUFFER
 }

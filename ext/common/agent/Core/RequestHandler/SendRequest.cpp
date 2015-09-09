@@ -594,11 +594,15 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	unsigned int maxbuffers, unsigned int & restrict_ref nbuffers,
 	unsigned int & restrict_ref dataSize, HttpHeaderConstructionCache &cache)
 {
-	#define INC_BUFFER_ITER(i) \
+	#define BEGIN_PUSH_NEXT_BUFFER() \
 		do { \
-			if (buffers != NULL && i == maxbuffers) { \
+			if (buffers != NULL && i >= maxbuffers) { \
 				return false; \
 			} \
+			i++; \
+		} while (false)
+	#define INC_BUFFER_ITER(i) \
+		do { \
 			i++; \
 		} while (false)
 	#define PUSH_STATIC_BUFFER(buf) \
@@ -626,6 +630,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	}
 
 	if (buffers != NULL) {
+		BEGIN_PUSH_NEXT_BUFFER();
 		buffers[i].iov_base = (void *) cache.methodStr.data();
 		buffers[i].iov_len  = cache.methodStr.size();
 	}
@@ -635,6 +640,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	PUSH_STATIC_BUFFER(" ");
 
 	if (buffers != NULL) {
+		BEGIN_PUSH_NEXT_BUFFER();
 		buffers[i].iov_base = (void *) req->path.start->data;
 		buffers[i].iov_len  = req->path.size;
 	}
@@ -658,6 +664,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 				PUSH_STATIC_BUFFER("\r\nSet-Cookie: ");
 			} else {
 				if (buffers != NULL) {
+					BEGIN_PUSH_NEXT_BUFFER();
 					buffers[i].iov_base = (void *) part->data;
 					buffers[i].iov_len  = part->size;
 				}
@@ -682,6 +689,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		part = it->header->key.start;
 		while (part != NULL) {
 			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
 				buffers[i].iov_base = (void *) part->data;
 				buffers[i].iov_len  = part->size;
 			}
@@ -695,6 +703,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		part = it->header->val.start;
 		while (part != NULL) {
 			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
 				buffers[i].iov_base = (void *) part->data;
 				buffers[i].iov_len  = part->size;
 			}
@@ -718,6 +727,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		part = cache.remoteAddr->start;
 		while (part != NULL) {
 			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
 				buffers[i].iov_base = (void *) part->data;
 				buffers[i].iov_len  = part->size;
 			}
@@ -733,6 +743,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		PUSH_STATIC_BUFFER("Passenger-Txn-Id: ");
 
 		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
 			buffers[i].iov_base = (void *) req->options.transaction->getTxnId().data();
 			buffers[i].iov_len  = req->options.transaction->getTxnId().size();
 		}
@@ -747,6 +758,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	nbuffers = i;
 	return true;
 
+	#undef BEGIN_PUSH_NEXT_BUFFER
 	#undef INC_BUFFER_ITER
 	#undef PUSH_STATIC_BUFFER
 }
