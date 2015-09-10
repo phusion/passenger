@@ -1,3 +1,9 @@
+Release 5.0.19
+--------------
+
+ * Refactoring: extracts the Union Station Ruby hooks to external gems. They are however still bundled with Passenger.
+
+
 Release 5.0.18
 --------------
 
