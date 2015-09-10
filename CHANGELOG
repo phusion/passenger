@@ -1,3 +1,10 @@
+Release 5.0.18
+--------------
+
+ * Fixes more memory corruption issues in the palloc subsystem.
+ * Fixes memory corruption issues in the Passenger core that may occur if the application sets many response headers. The issue was caused by an off-by-one bug.
+
+
 Release 5.0.17
 --------------
 

@@ -78,7 +78,7 @@ typedef struct psg_pool_large_s {
 
 typedef struct {
 	char               *last;   /** Last allocated byte inside this block. */
-	char               *end;    /** End of block memory. */
+	char               *end;    /** End of block memory. Read-only */
 	psg_pool_t         *next;
 	unsigned int        failed;
 } psg_pool_data_t;
@@ -91,7 +91,7 @@ struct psg_pool_s {
 	 * not for any subsequent psg_pool_s objects linked through
 	 * `data.next`.
 	 */
-	size_t                max;
+	size_t                max;      /* Read-only */
 	psg_pool_t           *current;
 	psg_pool_large_t     *large;
 };

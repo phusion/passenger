@@ -171,11 +171,56 @@ namespace tut {
 	}
 
 	TEST_METHOD(6) {
+		set_test_name("It bumps the 'current' pointer to the next data struct"
+			" after upon allocating the 8th data struct");
+		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+
+		while (pool->current == pool) {
+			psg_pnalloc(pool, 32);
+		}
+
+		psg_pool_t *segment = pool;
+		ensure_equals("(1) data.failed is 6", segment->data.failed, 6u);
+
+		segment = segment->data.next;
+		ensure("(2) data struct is not NULL", segment != NULL);
+		ensure_equals("(2) data.failed is 5", segment->data.failed, 5u);
+		ensure_equals("pool->current points to segment 2",
+			pool->current, segment);
+
+		segment = segment->data.next;
+		ensure("(3) data struct is not NULL", segment != NULL);
+		ensure_equals("(3) data.failed is 4", segment->data.failed, 4u);
+
+		segment = segment->data.next;
+		ensure("(4) data struct is not NULL", segment != NULL);
+		ensure_equals("(4) data.failed is 3", segment->data.failed, 3u);
+
+		segment = segment->data.next;
+		ensure("(5) data struct is not NULL", segment != NULL);
+		ensure_equals("(5) data.failed is 2", segment->data.failed, 2u);
+
+		segment = segment->data.next;
+		ensure("(6) data struct is not NULL", segment != NULL);
+		ensure_equals("(6) data.failed is 1", segment->data.failed, 1u);
+
+		segment = segment->data.next;
+		ensure("(7) data struct is not NULL", segment != NULL);
+		ensure_equals("(7) data.failed is 0", segment->data.failed, 0u);
+
+		segment = segment->data.next;
+		ensure("(8) data struct is not NULL", segment != NULL);
+		ensure_equals("(8) data.failed is 0", segment->data.failed, 0u);
+		ensure_equals<void *>("(8) This is the last data struct",
+			segment->data.next, NULL);
+	}
+
+	TEST_METHOD(10) {
 		set_test_name("psg_reset_pool() resets the pool for reuse if the pool"
 			" only has one pool data struct");
 		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 
-		const char *origLast = pool->data.last;
+		void *origLast1 = pool->data.last;
 
 		volatile char *largebuf;
 		TEST_BASIC_ALLOCATIONS();
@@ -183,8 +228,8 @@ namespace tut {
 		ensure("psg_reset_pool succeeds",
 			psg_reset_pool(pool, PSG_DEFAULT_POOL_SIZE));
 
-		ensure_equals<const void *>("pool->data.last is correctly reset",
-			pool->data.last, origLast);
+		ensure_equals<void *>("pool->data.last is correctly reset",
+			pool->data.last, origLast1);
 		ensure_equals("pool->data.failed is 0",
 			pool->data.failed, 0u);
 		ensure_equals<void *>("Only one pool data struct is allocated",
@@ -195,12 +240,12 @@ namespace tut {
 			pool->large, NULL);
 	}
 
-	TEST_METHOD(7) {
+	TEST_METHOD(11) {
 		set_test_name("psg_reset_pool() fails to reset the pool for reuse if the pool"
 			" has multiple pool data structs");
 		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 
-		void *origLast = pool->data.last;
+		void *origLast1 = pool->data.last;
 		while (pool->data.next == NULL) {
 			psg_pnalloc(pool, 32);
 		}
@@ -221,14 +266,35 @@ namespace tut {
 		ensure_equals("pool->data.next->data.failed is 0",
 			pool->data.next->data.failed, 0u);
 		ensure_equals<void *>("pool->data.last is correctly reset",
-			pool->data.last, origLast);
+			pool->data.last, origLast1);
 		ensure_equals<void *>("pool->data.next->data.last is correctly reset",
 			pool->data.next->data.last, origLast2);
 	}
 
-	TEST_METHOD(8) {
-		set_test_name("psg_reset_pool() frees large allocations if the pool"
-			" has multiple pool data structs");
+	TEST_METHOD(12) {
+		set_test_name("psg_reset_pool() frees large allocations correctly"
+			" if the pool only has one pool data struct");
+		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+
+		volatile char *largebuf;
+		TEST_BASIC_ALLOCATIONS();
+		TEST_LARGE_ALLOCATION();
+		ensure("psg_reset_pool succeeds",
+			psg_reset_pool(pool, PSG_DEFAULT_POOL_SIZE));
+
+		ensure_equals<void *>("Only one pool data struct is allocated",
+			pool->data.next, NULL);
+		ensure_equals<void *>("pool->current points to the first pool data struct",
+			pool->current, pool);
+		ensure_equals<void *>("Nothing is allocated through the large list",
+			pool->large, NULL);
+		ensure_equals("pool->data.failed is 0",
+			pool->data.failed, 0u);
+	}
+
+	TEST_METHOD(13) {
+		set_test_name("psg_reset_pool() frees large allocations correctly"
+			" if the pool has multiple pool data structs");
 		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
 
 		while (pool->data.next == NULL) {
@@ -253,10 +319,10 @@ namespace tut {
 			pool->data.failed, 0u);
 	}
 
-	TEST_METHOD(9) {
+	TEST_METHOD(14) {
 		set_test_name("A pool that had 1 data struct can be reused after a reset");
 		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
-		const char *origLast = pool->data.last;
+		void *origLast1 = pool->data.last;
 
 		volatile char *largebuf;
 		TEST_BASIC_ALLOCATIONS();
@@ -269,8 +335,8 @@ namespace tut {
 		ensure("psg_reset_pool succeeds (1)",
 			psg_reset_pool(pool, PSG_DEFAULT_POOL_SIZE));
 
-		ensure_equals<const void *>("pool->data.last is correctly reset",
-			pool->data.last, origLast);
+		ensure_equals<void *>("pool->data.last is correctly reset",
+			pool->data.last, origLast1);
 		ensure_equals("pool->data.failed is 0",
 			pool->data.failed, 0u);
 		ensure_equals<void *>("Only one pool data struct is allocated",
@@ -279,5 +345,98 @@ namespace tut {
 			pool->current, pool);
 		ensure_equals<void *>("Nothing is allocated through the large list",
 			pool->large, NULL);
+	}
+
+	TEST_METHOD(15) {
+		set_test_name("A pool that had multiple data structs can be reused after a reset");
+		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+
+		void *origLast1 = pool->data.last;
+		while (pool->data.next == NULL) {
+			psg_pnalloc(pool, 32);
+		}
+		void *origLast2 = pool->data.next->data.last - 32;
+
+		volatile char *largebuf;
+		TEST_BASIC_ALLOCATIONS();
+		TEST_LARGE_ALLOCATION();
+		ensure("(1) psg_reset_pool fails",
+			!psg_reset_pool(pool, PSG_DEFAULT_POOL_SIZE));
+
+		ensure_equals<void *>("(1) pool->data.last is correctly reset",
+			pool->data.last, origLast1);
+		ensure_equals("(1) pool->data.failed is 0",
+			pool->data.failed, 0u);
+		ensure("(1) At least one pool data struct is allocated",
+			pool->data.next != NULL);
+		ensure_equals<void *>("(1) Exactly two pool data struct are allocated",
+			pool->data.next->data.next, NULL);
+		ensure_equals<void *>("(1) pool->data.next->data.last is correctly reset",
+			pool->data.next->data.last, origLast2);
+		ensure_equals<void *>("(1) pool->current points to the first pool data struct",
+			pool->current, pool);
+		ensure_equals<void *>("(1) Nothing is allocated through the large list",
+			pool->large, NULL);
+
+		TEST_BASIC_ALLOCATIONS();
+		TEST_LARGE_ALLOCATION();
+		ensure("(2) psg_reset_pool fails",
+			!psg_reset_pool(pool, PSG_DEFAULT_POOL_SIZE));
+
+		ensure_equals<void *>("(2) pool->data.last is correctly reset",
+			pool->data.last, origLast1);
+		ensure_equals("(2) pool->data.failed is 0",
+			pool->data.failed, 0u);
+		ensure("(2) At least one pool data struct is allocated",
+			pool->data.next != NULL);
+		ensure_equals<void *>("(2) Exactly two pool data struct are allocated",
+			pool->data.next->data.next, NULL);
+		ensure_equals<void *>("(2) pool->data.next->data.last is correctly reset",
+			pool->data.next->data.last, origLast2);
+		ensure_equals<void *>("(2) pool->current points to the first pool data struct",
+			pool->current, pool);
+		ensure_equals<void *>("(2) Nothing is allocated through the large list",
+			pool->large, NULL);
+	}
+
+	TEST_METHOD(16) {
+		set_test_name("A pool that had its 'current' pointer bumped"
+			" can be reused after a reset");
+		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+
+		void *origLast1 = pool->data.last;
+		while (pool->current == pool) {
+			psg_palloc(pool, sizeof(double));
+		}
+		ensure("psg_reset_pool fails",
+			!psg_reset_pool(pool, PSG_DEFAULT_POOL_SIZE));
+
+		ensure_equals<void *>("pool->data.last is correctly reset",
+			pool->data.last, origLast1);
+		ensure_equals("pool->data.failed is 0",
+			pool->data.failed, 0u);
+		ensure("At least one pool data struct is allocated",
+			pool->data.next != NULL);
+		ensure_equals<void *>("pool->current points to the first pool data struct",
+			pool->current, pool);
+		ensure_equals<void *>("Nothing is allocated through the large list",
+			pool->large, NULL);
+
+		volatile char *largebuf;
+		TEST_BASIC_ALLOCATIONS();
+		TEST_LARGE_ALLOCATION();
+	}
+
+	TEST_METHOD(20) {
+		set_test_name("Miscellaneous stress test");
+		pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+
+		for (unsigned i = 0; i < 1024; i++) {
+			volatile char *largebuf;
+			TEST_BASIC_ALLOCATIONS();
+			TEST_LARGE_ALLOCATION();
+		}
+		ensure("psg_reset_pool fails",
+			!psg_reset_pool(pool, PSG_DEFAULT_POOL_SIZE));
 	}
 }
