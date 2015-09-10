@@ -122,12 +122,12 @@ function install_node_and_modules()
 		install_node_and_modules=1
 		if [[ -e /host_cache ]]; then
 			if [[ ! -e /host_cache/node-v0.10.20-linux-x64.tar.gz ]]; then
-				run curl --fail -o /host_cache/node-v0.10.20-linux-x64.tar.gz \
-					http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+				run curl --fail -L -o /host_cache/node-v0.10.20-linux-x64.tar.gz \
+					https://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
 			fi
 			run tar xzf /host_cache/node-v0.10.20-linux-x64.tar.gz
 		else
-			run curl --fail -O http://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
+			run curl --fail -L -O https://nodejs.org/dist/v0.10.20/node-v0.10.20-linux-x64.tar.gz
 			run tar xzf node-v0.10.20-linux-x64.tar.gz
 		fi
 		export PATH=`pwd`/node-v0.10.20-linux-x64/bin:$PATH
