@@ -2,6 +2,7 @@ Release 5.0.19
 --------------
 
  * Refactoring: extracts the Union Station Ruby hooks to external gems. They are however still bundled with Passenger.
+ * Errors communicating with the Union Station server can now be viewed through `passenger-status --show=union_station`.
 
 
 Release 5.0.18
