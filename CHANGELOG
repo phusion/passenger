@@ -1,6 +1,7 @@
 Release 5.0.19
 --------------
 
+ * Fixes an encoding crash in `passenger-memory-stats` on OS X in case one or more processes are running on the system with names containing UTF-8 characters. Closes GH-1603.
  * Refactoring: extracts the Union Station Ruby hooks to external gems. They are however still bundled with Passenger.
  * Errors communicating with the Union Station server can now be viewed through `passenger-status --show=union_station`.
 

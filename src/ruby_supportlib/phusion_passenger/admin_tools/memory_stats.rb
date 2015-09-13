@@ -1,3 +1,4 @@
+# encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
 #  Copyright (c) 2010-2013 Phusion
 #
@@ -239,15 +240,16 @@ module PhusionPassenger
         processes = []
         case os_name
         when /solaris/
-          list = `#{ps} -o pid,ppid,nlwp,vsz,rss,pcpu,comm`.split("\n")
+          ps_output = `#{ps} -o pid,ppid,nlwp,vsz,rss,pcpu,comm`
           threads_known = true
         when /macosx/
-          list = `#{ps} -w -o pid,ppid,vsz,rss,%cpu,command`.split("\n")
+          ps_output = `#{ps} -w -o pid,ppid,vsz,rss,%cpu,command`
           threads_known = false
         else
-          list = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,%cpu,command`.split("\n")
+          ps_output = `#{ps} -w -o pid,ppid,nlwp,vsz,rss,%cpu,command`
           threads_known = true
         end
+        list = force_binary(ps_output).split("\n")
         list.shift
         list.each do |line|
           line.gsub!(/^ */, '')
@@ -293,6 +295,16 @@ module PhusionPassenger
         end
       rescue Errno::EACCES, Errno::ENOENT
         return nil
+      end
+
+      if ''.respond_to?(:force_encoding)
+        def force_binary(str)
+          str.force_encoding('binary')
+        end
+      else
+        def force_binary(str)
+          str
+        end
       end
     end
 
