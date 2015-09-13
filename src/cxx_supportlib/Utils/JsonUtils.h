@@ -31,6 +31,7 @@
 #include <jsoncpp/json.h>
 #include <boost/cstdint.hpp>
 #include <StaticString.h>
+#include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/VariantMap.h>
 
@@ -199,11 +200,15 @@ jsonString(const Passenger::StaticString &str) {
  *     // }
  */
 inline Json::Value
-timeToJson(unsigned long long timestamp) {
+timeToJson(unsigned long long timestamp, unsigned long long now = 0) {
 	Json::Value doc;
 	time_t time = (time_t) timestamp / 1000000;
 	char buf[32];
 	size_t len;
+
+	if (now == 0) {
+		now = SystemTime::getUsec();
+	}
 
 	doc["timestamp"] = timestamp / (double) 1000000;
 
@@ -214,7 +219,11 @@ timeToJson(unsigned long long timestamp) {
 		buf[len - 1] = '\0';
 	}
 	doc["local"] = buf;
-	doc["relative"] = distanceOfTimeInWords(time) + " ago";
+	if (timestamp > now) {
+		doc["relative"] = distanceOfTimeInWords(time) + " from now";
+	} else {
+		doc["relative"] = distanceOfTimeInWords(time) + " ago";
+	}
 
 	return doc;
 }
