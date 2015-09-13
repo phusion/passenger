@@ -236,7 +236,8 @@ resolveHostname(const string &hostname, unsigned int port, bool shuffle) {
 	ret = getaddrinfo(hostname.c_str(), (port == 0) ? NULL : portString.c_str(),
 		&hints, &res);
 	if (ret != 0) {
-		return result;
+		throw IOException(string("Error resolving ") + hostname + ": "
+			+ gai_strerror(ret));
 	}
 
 	for (current = res; current != NULL; current = current->ai_next) {
@@ -248,6 +249,9 @@ resolveHostname(const string &hostname, unsigned int port, bool shuffle) {
 			NI_NUMERICHOST);
 		if (ret == 0) {
 			result.push_back(host);
+		} else {
+			P_WARN("Cannot get name info for one of the resolved "
+				"IP addresses in host name " << hostname);
 		}
 	}
 	freeaddrinfo(res);

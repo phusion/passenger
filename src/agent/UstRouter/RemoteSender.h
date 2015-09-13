@@ -352,6 +352,7 @@ private:
 	list<ServerPtr> upServers;
 	vector<ServerPtr> downServers;
 	time_t lastCheckupTime, nextCheckupTime;
+	string lastDnsErrorMessage;
 	unsigned int packetsSent, packetsDropped;
 
 	void threadMain() {
@@ -395,9 +396,15 @@ private:
 		vector<string>::const_iterator it;
 		list<ServerPtr> upServers;
 		vector<ServerPtr> downServers;
-		string hostName;
+		string dnsErrorMessage;
 
-		ips = resolveHostname(gatewayAddress, gatewayPort);
+		try {
+			ips = resolveHostname(gatewayAddress, gatewayPort);
+		} catch (const tracable_exception &e) {
+			P_ERROR(e.what());
+			dnsErrorMessage = e.what();
+		}
+
 		P_INFO(ips.size() << " Union Station gateway servers found");
 
 		for (it = ips.begin(); it != ips.end(); it++) {
@@ -423,6 +430,7 @@ private:
 		this->lastCheckupTime = SystemTime::get();
 		this->upServers = upServers;
 		this->downServers = downServers;
+		this->lastDnsErrorMessage = dnsErrorMessage;
 	}
 
 	void freeThreadData() {
@@ -668,6 +676,9 @@ public:
 			doc["next_server_checkup_time_note"] = "not yet scheduled, waiting for first packet";
 		} else {
 			doc["next_server_checkout_time"] = timeToJson(nextCheckupTime * 1000000.0);
+		}
+		if (!lastDnsErrorMessage.empty()) {
+			doc["last_dns_error_message"] = lastDnsErrorMessage;
 		}
 		return doc;
 	}

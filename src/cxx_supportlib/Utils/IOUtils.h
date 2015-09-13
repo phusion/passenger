@@ -121,14 +121,16 @@ int callAccept4(int sock,
 
 /**
  * Resolves the given host name and returns a list of IP addresses.
- * <em>hostname</em> may also be an IP address, in which case it is
- * returned. You may explicitly specify a <em>port</em> as a hint to
+ * `hostname` may also be an IP address, in which case it is
+ * returned. You may explicitly specify a `port` as a hint to
  * the DNS resolver; set to 0 if you don't care or can't provide a
  * port number.
  *
- * If <em>shuffle</em> is set, and the host name resolves to multiple
+ * If `shuffle` is set, and the host name resolves to multiple
  * IP addresses, then these addresses will be shuffled before they are
  * returned in order to improve load balancing.
+ *
+ * @throws IOException DNS resolution failure.
  */
 vector<string> resolveHostname(const string &hostname,
 	unsigned int port = 0,
