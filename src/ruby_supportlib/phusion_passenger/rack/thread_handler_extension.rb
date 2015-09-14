@@ -148,14 +148,7 @@ module PhusionPassenger
               log_exception_to_union_station(env, e)
             end
           ensure
-            begin
-              body.close if body && body.respond_to?(:close)
-            rescue => e
-              if !should_swallow_app_error?(e, socket_wrapper)
-                print_exception("Rack response body object's #close method", e)
-                log_exception_to_union_station(env, e)
-              end
-            end
+            close_body(body, env, socket_wrapper)
           end
           false
         ensure
@@ -165,6 +158,10 @@ module PhusionPassenger
 
     private
       def process_body(env, connection, socket_wrapper, status, is_head_request, headers, body)
+        if @ush_reporter
+          @ush_reporter.log_activity_begin('writing out response body')
+        end
+
         # Fix up incompliant body objects. Ensure that the body object
         # can respond to #each.
         output_body = should_output_body?(status, is_head_request)
@@ -304,6 +301,28 @@ module PhusionPassenger
         end
 
         signal_keep_alive_allowed!
+      ensure
+        if @ush_reporter
+          @ush_reporter.log_activity_end('writing out response body')
+        end
+      end
+
+      def close_body(body, env, socket_wrapper)
+        if @ush_reporter
+          @ush_reporter.log_activity_begin('closing Rack body object')
+        end
+        begin
+          body.close if body && body.respond_to?(:close)
+        rescue => e
+          if !should_swallow_app_error?(e, socket_wrapper)
+            print_exception("Rack response body object's #close method", e)
+            log_exception_to_union_station(env, e)
+          end
+        ensure
+          if @ush_reporter
+            @ush_reporter.log_activity_begin('closing Rack body object')
+          end
+        end
       end
 
       def generate_headers_array(status, headers)
