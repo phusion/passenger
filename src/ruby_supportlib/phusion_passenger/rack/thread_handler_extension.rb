@@ -159,7 +159,7 @@ module PhusionPassenger
     private
       def process_body(env, connection, socket_wrapper, status, is_head_request, headers, body)
         if @ush_reporter
-          @ush_reporter.log_activity_begin('writing out response body')
+          ush_log_id = @ush_reporter.log_writing_rack_body_begin
         end
 
         # Fix up incompliant body objects. Ensure that the body object
@@ -302,14 +302,14 @@ module PhusionPassenger
 
         signal_keep_alive_allowed!
       ensure
-        if @ush_reporter
-          @ush_reporter.log_activity_end('writing out response body')
+        if @ush_reporter && ush_log_id
+          @ush_reporter.log_writing_rack_body_end(ush_log_id)
         end
       end
 
       def close_body(body, env, socket_wrapper)
         if @ush_reporter
-          @ush_reporter.log_activity_begin('closing Rack body object')
+          ush_log_id = @ush_reporter.log_closing_rack_body_begin
         end
         begin
           body.close if body && body.respond_to?(:close)
@@ -319,8 +319,8 @@ module PhusionPassenger
             log_exception_to_union_station(env, e)
           end
         ensure
-          if @ush_reporter
-            @ush_reporter.log_activity_begin('closing Rack body object')
+          if @ush_reporter && ush_log_id
+            @ush_reporter.log_closing_rack_body_end(ush_log_id)
           end
         end
       end
