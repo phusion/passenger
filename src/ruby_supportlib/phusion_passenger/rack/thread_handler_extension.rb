@@ -350,7 +350,7 @@ module PhusionPassenger
 
       def should_output_body?(status, is_head_request)
         return (status < 100 ||
-          (status >= 200 && status != 204 && status != 205 && status != 304)) &&
+          (status >= 200 && status != 204 && status != 304)) &&
           !is_head_request
       end
 

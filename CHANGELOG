@@ -2,6 +2,7 @@ Release 5.0.19
 --------------
 
  * Fixes an encoding crash in `passenger-memory-stats` on OS X in case one or more processes are running on the system with names containing UTF-8 characters. Closes GH-1603.
+ * [Ruby] Fixes handling of HTTP 205 responses, which would cause client connections to freeze.
  * Improves Union Station data collection: more Rack I/O events are now logged. The time taken to write out and to close the Rack response body are now logged.
  * Improves Union Station data sending: errors are now logged more clearly, and DNS errors are now handled more robustly.
  * Improves Union Station troubleshooting: errors can now be diagnosed by running `passenger-status --show=union_station`.
