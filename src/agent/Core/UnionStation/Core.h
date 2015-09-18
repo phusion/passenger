@@ -38,7 +38,6 @@
 
 #include <Logging.h>
 #include <Exceptions.h>
-#include <RandomGenerator.h>
 #include <StaticString.h>
 #include <Utils.h>
 #include <Utils/MessageIO.h>
@@ -56,10 +55,6 @@ using namespace boost;
 class Core: public boost::enable_shared_from_this<Core> {
 private:
 	static const unsigned int CONNECTION_POOL_MAX_SIZE = 10;
-	static const unsigned int TXN_ID_MAX_SIZE =
-		2 * sizeof(unsigned int) +    // max hex timestamp size
-		11 +                          // space for a random identifier
-		1;                            // null terminator
 
 	/**** Server information ****/
 	const string serverAddress;
@@ -68,7 +63,6 @@ private:
 	const string nodeName;
 
 	/**** Working objects ****/
-	RandomGenerator randomGenerator;
 	TransactionPtr nullTransaction;
 
 	/********************** Connection handling fields **********************
@@ -108,31 +102,6 @@ private:
 		nullTransaction   = boost::make_shared<Transaction>();
 		reconnectTimeout  = 1000000;
 		nextReconnectTime = 0;
-	}
-
-	/** Creates a transaction ID string. `txnId` MUST be at least TXN_ID_MAX_SIZE bytes. */
-	void createTxnId(char *txnId, char **txnIdEnd, unsigned long long timestamp) {
-		unsigned int timestampSize;
-		char *end;
-
-		// "[timestamp]"
-		// Our timestamp is like a Unix timestamp but with minutes
-		// resolution instead of seconds. 32 bits will last us for
-		// about 8000 years.
-		timestampSize = integerToHexatri<unsigned int>(
-			timestamp / 1000000 / 60,
-			txnId);
-		end = txnId + timestampSize;
-
-		// "[timestamp]-"
-		*end = '-';
-		end++;
-
-		// "[timestamp]-[random id]"
-		randomGenerator.generateAsciiString(end, 11);
-		end += 11;
-		*end = '\0';
-		*txnIdEnd = end;
 	}
 
 	ConnectionPtr createNewConnection() {
@@ -284,8 +253,32 @@ public:
 		return nullTransaction;
 	}
 
-	bool sendRequest(const ConnectionPtr &connection, StaticString args[],
-		unsigned int nargs, bool expectAck)
+	void handleTimeout() {
+		boost::lock_guard<boost::mutex> l(syncher);
+		P_WARN("Timeout trying to communicate with the UstRouter at " <<
+			serverAddress << "; " << "will reconnect in " <<
+			reconnectTimeout / 1000000 << " second(s).");
+		nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+	}
+
+	void handleNetworkErrorOrThrow(const ConnectionPtr &connection,
+		ConnectionGuard &guard, const SystemException &e)
+	{
+		if (e.code() == ENOENT || isNetworkError(e.code())) {
+			guard.clear();
+			boost::lock_guard<boost::mutex> l(syncher);
+			P_WARN("The UstRouter at " << serverAddress <<
+				" closed the connection (no error message given);" <<
+				" will reconnect in " << reconnectTimeout / 1000000 <<
+				" second(s).");
+			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+		} else {
+			throw e;
+		}
+	}
+
+	bool sendRequest(const ConnectionPtr &connection, StaticString argsSend[],
+			unsigned int nrArgsSend)
 	{
 		ConnectionLock cl(connection);
 		ConnectionGuard guard(connection.get());
@@ -293,69 +286,97 @@ public:
 		try {
 			unsigned long long timeout = 15000000;
 
-			writeArrayMessage(connection->fd, args, nargs, &timeout);
+			writeArrayMessage(connection->fd, argsSend, nrArgsSend, &timeout);
 
-			if (expectAck) {
-				vector<string> args;
-				if (!readArrayMessage(connection->fd, args, &timeout)) {
-					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The UstRouter closed the connection (no error message given);" <<
-						" will reconnect in " << reconnectTimeout / 1000000 <<
+			guard.clear();
+			return true;
+		} catch (const TimeoutException &) {
+			handleTimeout();
+			return false;
+		} catch (const SystemException &e) {
+			handleNetworkErrorOrThrow(connection, guard, e);
+			return false;
+		}
+	}
+
+	bool sendRequestGetResponse(const ConnectionPtr &connection,
+		StaticString argsSend[], unsigned int nrArgsSend,
+		vector<string> &argsReply, unsigned int expectedExtraReplyArgs = 0)
+	{
+		ConnectionLock cl(connection);
+		ConnectionGuard guard(connection.get());
+
+		try {
+			unsigned long long timeout = 15000000;
+
+			writeArrayMessage(connection->fd, argsSend, nrArgsSend, &timeout);
+
+			if (!readArrayMessage(connection->fd, argsReply, &timeout)) {
+				boost::lock_guard<boost::mutex> l(syncher);
+				P_WARN("The UstRouter at " << serverAddress <<
+					" closed the connection (no error message given);" <<
+					" will reconnect in " << reconnectTimeout / 1000000 <<
+					" second(s).");
+				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+				return false;
+			}
+
+			if (argsReply.size() < 2 || argsReply[0] != "status") {
+				boost::lock_guard<boost::mutex> l(syncher);
+				P_WARN("The UstRouter sent an invalid reply message;" <<
+					" will reconnect in " << reconnectTimeout / 1000000 <<
+					" second(s).");
+				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+				return false;
+			}
+
+			if (argsReply[1] == "error") {
+				boost::lock_guard<boost::mutex> l(syncher);
+				if (argsReply.size() >= 3) {
+					P_WARN("The UstRouter closed the connection "
+						"(error message: " << argsReply[2] <<
+						"); will reconnect in " <<
+						reconnectTimeout / 1000000 <<
 						" second(s).");
-					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
-					return false;
-				} else if (args.size() < 2 || args[0] != "status") {
-					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The UstRouter sent an invalid reply message;" <<
-						" will reconnect in " << reconnectTimeout / 1000000 <<
-						" second(s).");
-					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
-					return false;
-				} else if (args[1] == "ok") {
-					// Do nothing
-				} else if (args[1] == "error") {
-					boost::lock_guard<boost::mutex> l(syncher);
-					if (args.size() >= 3) {
-						P_WARN("The UstRouter closed the connection (error message: " << args[2] <<
-							"); will reconnect in " << reconnectTimeout / 1000000 <<
-							" second(s).");
-					} else {
-						P_WARN("The UstRouter closed the connection (no server message given); " <<
-							"will reconnect in " << reconnectTimeout / 1000000 <<
-							" second(s).");
-					}
-					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
-					return false;
 				} else {
-					boost::lock_guard<boost::mutex> l(syncher);
-					P_WARN("The UstRouter sent an invalid reply message;" <<
-						" will reconnect in " << reconnectTimeout / 1000000 <<
+					P_WARN("The UstRouter closed the connection "
+						"(no server message given); " <<
+						"will reconnect in " <<
+						reconnectTimeout / 1000000 <<
 						" second(s).");
-					nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
-					return false;
 				}
+				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+				return false;
+			}
+
+			if (argsReply[1] != "ok") {
+				boost::lock_guard<boost::mutex> l(syncher);
+				P_WARN("The UstRouter sent an invalid reply message;" <<
+					" will reconnect in " << reconnectTimeout / 1000000 <<
+					" second(s).");
+				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+				return false;
+			}
+
+			if (argsReply.size() < 2 + expectedExtraReplyArgs) {
+				boost::lock_guard<boost::mutex> l(syncher);
+				P_WARN("The UstRouter sent an invalid reply message"
+					" (\"ok\" status message has too few arguments);" <<
+					" will reconnect in " << reconnectTimeout / 1000000 <<
+					" second(s).");
+				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+				return false;
 			}
 
 			guard.clear();
 			return true;
 
 		} catch (const TimeoutException &) {
-			boost::lock_guard<boost::mutex> l(syncher);
-			P_WARN("Timeout trying to communicate with the UstRouter at " << serverAddress << "; " <<
-				"will reconnect in " << reconnectTimeout / 1000000 << " second(s).");
-			nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
+			handleTimeout();
 			return false;
-
 		} catch (const SystemException &e) {
-			if (e.code() == ENOENT || isNetworkError(e.code())) {
-				guard.clear();
-				connection->disconnect();
-				boost::lock_guard<boost::mutex> l(syncher);
-				nextReconnectTime = SystemTime::getUsec() + reconnectTimeout;
-				return false;
-			} else {
-				throw;
-			}
+			handleNetworkErrorOrThrow(connection, guard, e);
+			return false;
 		}
 	}
 
@@ -370,15 +391,14 @@ public:
 
 		// Prepare parameters.
 		unsigned long long timestamp = SystemTime::getUsec();
-		char txnId[TXN_ID_MAX_SIZE], *txnIdEnd;
 		char timestampStr[2 * sizeof(unsigned long long) + 1];
 
-		createTxnId(txnId, &txnIdEnd, timestamp);
 		integerToHexatri<unsigned long long>(timestamp, timestampStr);
-
 		StaticString params[] = {
 			StaticString("openTransaction", sizeof("openTransaction") - 1),
-			StaticString(txnId, txnIdEnd - txnId),
+			// empty txnId, implies that it should be autogenerated by
+			// the UstRouter
+			StaticString(),
 			groupName,
 			// empty nodeName, implies using the default
 			// nodeName passed during initialization
@@ -396,30 +416,29 @@ public:
 		ConnectionPtr connection = checkoutConnection();
 		if (connection == NULL) {
 			P_TRACE(2, "Created NULL Union Station transaction: group=" << groupName <<
-				", category=" << category << ", txnId=" <<
-				StaticString(txnId, txnIdEnd - txnId));
+				", category=" << category);
 			return createNullTransaction();
 		}
 
-		// Send request, process reply.
-		if (sendRequest(connection, params, nparams, true)) {
+		// The router will generate a txnId for us and pass it in the response.
+		vector<string> argsReply;
+		if (sendRequestGetResponse(connection, params, nparams, argsReply, 1)) {
+			string txnId = argsReply[2];
 			ConnectionGuard guard(connection.get());
 			TransactionPtr transaction = boost::make_shared<Transaction>(
 				shared_from_this(),
 				connection,
-				string(txnId, txnIdEnd - txnId),
+				txnId,
 				groupName,
 				category,
 				unionStationKey);
 			guard.clear();
 			P_TRACE(2, "Created new Union Station transaction: group=" << groupName <<
-				", category=" << category << ", txnId=" <<
-				StaticString(txnId, txnIdEnd - txnId));
+				", category=" << category << ", txnId=" << txnId);
 			return transaction;
 		} else {
 			P_TRACE(2, "Created NULL Union Station transaction: group=" << groupName <<
-				", category=" << category << ", txnId=" <<
-				StaticString(txnId, txnIdEnd - txnId));
+				", category=" << category);
 			return createNullTransaction();
 		}
 	}
@@ -458,8 +477,8 @@ public:
 			return createNullTransaction();
 		}
 
-		// Send request.
-		if (sendRequest(connection, params, nparams, false)) {
+		// We didn't ask for a response (ack), so just send here.
+		if (sendRequest(connection, params, nparams)) {
 			ConnectionGuard guard(connection.get());
 			TransactionPtr transaction = boost::make_shared<Transaction>(
 				shared_from_this(),
