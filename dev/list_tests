@@ -4,7 +4,7 @@
 #
 # Lists the test names in the given .cpp test file.
 
-require_relative '../src/ruby_testlib/phusion_passenger/utils/ansi_colors'
+require_relative '../src/ruby_supportlib/phusion_passenger/utils/ansi_colors'
 
 include PhusionPassenger::Utils::AnsiColors
 
