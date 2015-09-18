@@ -355,10 +355,6 @@ module PhusionPassenger
         $0 = options["process_title"] + ": " + options["app_group_name"]
       end
 
-      if forked && options["union_station_core"]
-        options["union_station_core"].clear_connection
-      end
-
       # If we were forked from a preloader process then clear or
       # re-establish ActiveRecord database connections. This prevents
       # child processes from concurrently accessing the same
