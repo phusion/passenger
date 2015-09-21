@@ -13,7 +13,8 @@ install: "true"
 script: ./dev/ci/run_travis.sh
 
 cache:
-  - cache
+  directories:
+    - cache
 
 notifications:
   slack: phusionnl:PH5p7JYXyv2XLDpICHh8Nj6F
