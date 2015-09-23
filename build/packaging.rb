@@ -692,7 +692,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 
   # Apache 2 module
   sh "mkdir -p #{File.dirname(fake_apache2_module_path)}"
-  sh "cp #{APACHE2_MODULE} #{fake_apache2_module_path}"
+  sh "cp #{APACHE2_TARGET} #{fake_apache2_module_path}"
 
   # Ruby extension sources
   sh "mkdir -p #{fake_ruby_extension_source_dir}"
