@@ -75,7 +75,8 @@ task 'test:install_deps' do
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
       " && bundle install #{bundle_args} --without doc notravis"
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
-      " && bundle exec rake install_test_app_bundles"
+      " && bundle exec rake install_test_app_bundles" \
+      " BUNDLE_ARGS='#{bundle_args}'"
   end
   if boolean_option('NODE_MODULES', default)
     sh "npm install"
