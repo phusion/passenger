@@ -152,7 +152,7 @@ describe "Downloaded Phusion Passenger binaries" do
       FileUtils.cp_r("download_cache.old", "server_root/#{VERSION_STRING}")
       sh "cd #{PhusionPassenger.build_system_dir} && " +
         "env BINARIES_URL_ROOT=#{url_root} " +
-        "ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
+        "ruby src/helper-scripts/download_binaries/extconf.rb --abort-on-error"
       Dir["download_cache/*"].should_not be_empty
     ensure
       File.unlink("Makefile") rescue nil
@@ -170,7 +170,7 @@ describe "Downloaded Phusion Passenger binaries" do
     begin
       result = system "cd #{PhusionPassenger.build_system_dir} && " +
         "env BINARIES_URL_ROOT=#{url_root} " +
-        "ruby helper-scripts/download_binaries/extconf.rb --abort-on-error"
+        "ruby src/helper-scripts/download_binaries/extconf.rb --abort-on-error"
       result.should be_false
     ensure
       File.unlink("Makefile") rescue nil
