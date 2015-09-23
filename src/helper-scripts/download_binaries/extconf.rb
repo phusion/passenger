@@ -39,7 +39,7 @@ end
 # will at least prevent the gem from being not installable on Windows.
 exit if RUBY_PLATFORM =~ /mswin/i || RUBY_PLATFORM =~ /win32/i || RUBY_PLATFORM =~ /mingw/
 
-source_root = File.expand_path("../..", File.dirname(__FILE__))
+source_root = File.expand_path("../../..", File.dirname(__FILE__))
 $LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
