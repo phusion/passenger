@@ -505,6 +505,9 @@ module PhusionPassenger
             f.read.split("\n")
           end
           lines.each do |line|
+            # Get rid of trailing CR
+            line = line.strip
+
             if line !~ /^[\s\t]*#/ && line =~ /LoadModule[\s\t]+passenger_module[\s\t]+(.*)/
               module_path = $1
               occurrences += 1
