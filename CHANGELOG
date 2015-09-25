@@ -1,3 +1,10 @@
+Release 5.0.20
+--------------
+
+ * Fixes memory management bugs in Union Station support.
+ * Improves the error handling in Union Station support.
+
+
 Release 5.0.19
 --------------
 
