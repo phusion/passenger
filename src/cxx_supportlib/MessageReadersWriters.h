@@ -433,6 +433,7 @@ public:
 		}
 		headerReader.reset();
 		buffer.clear();
+		result = StaticString();
 	}
 
 	size_t feed(const char *data, size_t size) {
