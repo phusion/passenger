@@ -37,9 +37,16 @@ protected:
 	}
 
 	virtual void execProgram() const {
-		execl(agentFilename.c_str(), AGENT_EXE, "ust-router",
-			// Some extra space to allow the child process to change its process title.
-			"                                                ", (char *) 0);
+		if (hasEnvOption("PASSENGER_RUN_UST_ROUTER_IN_VALGRIND", false)) {
+			execlp("valgrind", "valgrind", "--dsymutil=yes", "--track-origins=yes", "--leak-check=full",
+				agentFilename.c_str(), "ust-router",
+				// Some extra space to allow the child process to change its process title.
+				"                                                ", (char *) 0);
+		} else {
+			execl(agentFilename.c_str(), AGENT_EXE, "ust-router",
+				// Some extra space to allow the child process to change its process title.
+				"                                                ", (char *) 0);
+		}
 	}
 
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
