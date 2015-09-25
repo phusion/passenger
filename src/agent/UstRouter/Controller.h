@@ -308,6 +308,23 @@ private:
 	void processLogMessageBody(Client *client, const StaticString &body) {
 		// In here we process the scalar message that's expected to come
 		// after the "log" command.
+
+		if (getLogLevel() == LVL_DEBUG) {
+			string truncatedBody;
+			if (body.size() > 97) {
+				string truncatedBody = body.substr(0, 97);
+				truncatedBody.append("...");
+				SKC_DEBUG(client, "Processing message body (" << body.size() <<
+					" bytes): " << truncatedBody);
+			} else {
+				SKC_DEBUG(client, "Processing message body (" << body.size() <<
+					" bytes): " << body);
+			}
+		} else if (getLogLevel() >= LVL_DEBUG2) {
+			SKC_TRACE(client, 2, "Processing message body (" << body.size() <<
+				" bytes): " << body);
+		}
+
 		writeLogEntry(client,
 			client->logCommandParams.transaction,
 			client->logCommandParams.timestamp,
