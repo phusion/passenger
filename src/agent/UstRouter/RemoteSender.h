@@ -73,6 +73,34 @@ private:
 	};
 
 	class Server {
+	public:
+		enum SendResult {
+			/**
+			 * The gateway accepted the packet.
+			 */
+			SR_OK,
+
+			/**
+			 * Unable to contact the gateway: it appears to be down.
+			 * Unable to obtain a valid HTTP response from the gateway.
+			 */
+			SR_DOWN,
+
+			/**
+			 * We were able to contact the gateway, but it appears to be
+			 * responding with gibberish. It might be so that the gateway
+			 * machine is up, but the actual service running inside is
+			 * down or malfunctioning.
+			 */
+			SR_MALFUNCTION,
+
+			/**
+			 * We were able to contact the gateway, but the
+			 * rejected the packet by responding with an error.
+			 */
+			SR_REJECTED
+		};
+
 	private:
 		string ip;
 		unsigned short port;
@@ -88,7 +116,14 @@ private:
 		string pingURL;
 		string sinkURL;
 
+		mutable boost::mutex syncher;
 		string lastErrorMessage;
+		unsigned long long lastErrorTime;
+		unsigned long long lastSuccessTime;
+		unsigned int pingErrors;
+		unsigned int packetsAccepted;
+		unsigned int packetsRejected;
+		unsigned int packetsDropped;
 
 		void resetConnection() {
 			if (curl != NULL) {
@@ -146,7 +181,7 @@ private:
 			}
 		}
 
-		bool handleSendResponse() {
+		SendResult handleSendResponse(const Item &item) {
 			Json::Reader reader;
 			Json::Value response;
 			long httpCode = -1;
@@ -154,42 +189,88 @@ private:
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
 			if (!reader.parse(responseBody, response, false) || !validateResponse(response)) {
-				lastErrorMessage = "The Union Station gateway server "
-					+ ip + " encountered an error while processing sent analytics data. "
-					"It sent an invalid response (parse error: "
-					+ reader.getFormattedErrorMessages()
+				setRequestError(
+					"The Union Station gateway server " + ip +
+					" encountered an error while processing sent analytics data. "
+					"It sent an invalid response. Key: " + item.unionStationKey
+					+ ". Parse error: " + reader.getFormattedErrorMessages()
 					+ "; HTTP code: " + toString(httpCode)
-					+ "; data: \"" + cEscapeString(responseBody) + "\")";
-				P_ERROR(lastErrorMessage);
-				return false;
+					+ "; data: \"" + cEscapeString(responseBody) + "\"");
+				return SR_MALFUNCTION;
 			} else if (response["status"].asString() == "ok") {
 				if (httpCode == 200) {
-					P_DEBUG("The Union Station gateway server " << ip << " accepted the packet.");
-					return true;
+					handleResponseSuccess();
+					P_DEBUG("The Union Station gateway server " << ip
+						<< " accepted the packet. Key: "
+						<< item.unionStationKey);
+					return SR_OK;
 				} else {
-					lastErrorMessage = "The Union Station gateway server "
-						+ ip + " encountered an error while processing sent "
-						"analytics data. It sent an invalid response "
-						"(HTTP code: " + toString(httpCode)
-						+ "; data: \"" + cEscapeString(responseBody) + "\")";
-					P_ERROR(lastErrorMessage);
-					return false;
+					setRequestError(
+						"The Union Station gateway server " + ip
+						+ " encountered an error while processing sent "
+						"analytics data. It sent an invalid response. Key: "
+						+ item.unionStationKey + ". HTTP code: "
+						+ toString(httpCode) + ". Data: \""
+						+ cEscapeString(responseBody) + "\"");
+					return SR_MALFUNCTION;
 				}
 			} else {
 				// response == error
-				lastErrorMessage = "The Union Station gateway server "
+				setPacketRejectedError(
+					"The Union Station gateway server "
 					+ ip + " did not accept the sent analytics data. "
-					"Error message: " + response["message"].asString();
-				P_ERROR(lastErrorMessage);
-				// Return value of true is intentional. See comment for send().
-				return true;
+					"Key: " + item.unionStationKey + ". "
+					"Error: " + response["message"].asString());
+				return SR_REJECTED;
 			}
 		}
 
-		void handleSendError() {
-			lastErrorMessage = "Could not send data to Union Station gateway server " +
-				ip + ": " + lastCurlErrorMessage;
-			P_ERROR(lastErrorMessage);
+		void handleSendError(const Item &item) {
+			setRequestError(
+				"Could not send data to Union Station gateway server " +
+				ip + ". It might be down. Key: " + item.unionStationKey +
+				". Error: " + lastCurlErrorMessage);
+		}
+
+		void setPingError(const string &message) {
+			boost::lock_guard<boost::mutex> l(syncher);
+			P_INFO(message);
+			setLastErrorMessage(message);
+			pingErrors++;
+		}
+
+		/**
+		 * Handles the case when SendResult == SR_DOWN
+		 * or SendResult == SR_MALFUNCTION.
+		 * See SendResult comments for notes.
+		 */
+		void setRequestError(const string &message) {
+			boost::lock_guard<boost::mutex> l(syncher);
+			P_ERROR(message);
+			setLastErrorMessage(message);
+			packetsDropped++;
+		}
+
+		/**
+		 * Handles the case when SendResult == SR_REJECTED.
+		 * See SendResult comments for notes.
+		 */
+		void setPacketRejectedError(const string &message) {
+			boost::lock_guard<boost::mutex> l(syncher);
+			P_ERROR(message);
+			setLastErrorMessage(message);
+			packetsRejected++;
+		}
+
+		void setLastErrorMessage(const string &message) {
+			lastErrorMessage = message;
+			lastErrorTime = SystemTime::getUsec();
+		}
+
+		void handleResponseSuccess() {
+			boost::lock_guard<boost::mutex> l(syncher);
+			lastSuccessTime = SystemTime::getUsec();
+			packetsAccepted++;
 		}
 
 		static size_t curlDataReceived(void *buffer, size_t size, size_t nmemb, void *userData) {
@@ -199,12 +280,12 @@ private:
 		}
 
 	public:
-		Server(const string &ip, const string &hostName, unsigned short port, const string &cert,
-			const CurlProxyInfo *proxyInfo)
+		Server(const string &ip, const string &hostName, unsigned short port,
+			const string &cert, const CurlProxyInfo *proxyInfo)
 		{
 			this->ip = ip;
 			this->port = port;
-			certificate = cert;
+			this->certificate = cert;
 			this->proxyInfo = proxyInfo;
 
 			hostHeader = "Host: " + hostName;
@@ -222,6 +303,12 @@ private:
 				"/sink";
 
 			curl = NULL;
+			lastErrorTime = 0;
+			lastSuccessTime = 0;
+			pingErrors = 0;
+			packetsAccepted = 0;
+			packetsRejected = 0;
+			packetsDropped = 0;
 			resetConnection();
 		}
 
@@ -243,32 +330,24 @@ private:
 
 			curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
 			if (curl_easy_perform(curl) != 0) {
-				lastErrorMessage = "Could not ping Union Station gateway server " +
-					ip + ": " + lastCurlErrorMessage;
-				P_INFO(lastErrorMessage);
+				setPingError(
+					"Could not ping Union Station gateway server " +
+					ip + ": " + lastCurlErrorMessage);
 				return false;
 			}
 			if (responseBody == "pong") {
 				guard.clear();
 				return true;
 			} else {
-				lastErrorMessage = "Union Station gateway server " + ip +
+				setPingError(
+					"Union Station gateway server " + ip +
 					" returned an unexpected ping message: " +
-					responseBody;
-				P_INFO(lastErrorMessage);
+					responseBody);
 				return false;
 			}
 		}
 
-		/** Returns true if the server is up, false if the server is down.
-		 * The return value does NOT indicate whether the server accepted the data!
-		 * Thus, if (for example) the Union Station key is invalid or disabled,
-		 * but the connection is fine, then this method still returns true.
-		 * This is because the return value is used to determine whether a different
-		 * gateway server should be used. If the server is up but rejects the data
-		 * then we'll want the code to keep sending future packets.
-		 */
-		bool send(const Item &item) {
+		SendResult send(const Item &item) {
 			ScopeGuard guard(boost::bind(&Server::resetConnection, this));
 			prepareRequest(sinkURL);
 
@@ -320,21 +399,41 @@ private:
 
 			if (code == CURLE_OK) {
 				guard.clear();
-				return handleSendResponse();
+				return handleSendResponse(item);
 			} else {
-				handleSendError();
-				return false;
+				handleSendError(item);
+				return SR_DOWN;
 			}
 		}
 
 		Json::Value inspectStateAsJson() const {
-			Json::Value doc;
-			doc["ip"] = ip;
-			doc["port"] = port;
+			Json::Value doc, errorDoc;
+			doc["sink_url"] = sinkURL;
 			doc["ping_url"] = pingURL;
+
+			boost::lock_guard<boost::mutex> l(syncher);
+
+			if (lastErrorTime == 0) {
+				doc["last_error_time"] = Json::Value(Json::nullValue);
+			} else {
+				doc["last_error_time"] = timeToJson(lastErrorTime);
+			}
 			if (!lastErrorMessage.empty()) {
 				doc["last_error_message"] = lastErrorMessage;
 			}
+			if (lastSuccessTime == 0) {
+				doc["last_success_time"] = Json::Value(Json::nullValue);
+			} else {
+				doc["last_success_time"] = timeToJson(lastSuccessTime);
+			}
+
+			errorDoc["ping_errors"] = pingErrors;
+			errorDoc["packets_dropped"] = packetsDropped;
+			errorDoc["packets_rejected"] = packetsRejected;
+
+			doc["errors"] = errorDoc;
+			doc["packets_accepted"] = packetsAccepted;
+
 			return doc;
 		}
 	};
@@ -353,7 +452,7 @@ private:
 	vector<ServerPtr> downServers;
 	time_t lastCheckupTime, nextCheckupTime;
 	string lastDnsErrorMessage;
-	unsigned int packetsSent, packetsDropped;
+	unsigned int packetsAccepted, packetsRejected, packetsDropped;
 
 	void threadMain() {
 		ScopeGuard guard(boost::bind(&RemoteSender::freeThreadData, this));
@@ -417,8 +516,9 @@ private:
 		P_INFO(ips.size() << " Union Station gateway servers found");
 
 		for (it = ips.begin(); it != ips.end(); it++) {
-			ServerPtr server = boost::make_shared<Server>(*it, gatewayAddress, gatewayPort,
-				certificate, &proxyInfo);
+			ServerPtr server = boost::make_shared<Server>(
+				*it, gatewayAddress, gatewayPort, certificate,
+				&proxyInfo);
 			if (server->ping()) {
 				upServers.push_back(server);
 			} else {
@@ -479,29 +579,36 @@ private:
 
 	void sendOut(const Item &item) {
 		boost::unique_lock<boost::mutex> l(syncher);
-		bool sent = false;
-		bool someServersWentDown = false;
+		bool done = false;
+		bool accepted = false;
+		bool rejected = false;
 
-		while (!sent && !upServers.empty()) {
+		while (!done && !upServers.empty()) {
 			// Pick first available server and put it on the back of the list
 			// for round-robin load balancing.
 			ServerPtr server = upServers.front();
+
 			l.unlock();
-			if (server->send(item)) {
-				l.lock();
+			Server::SendResult result = server->send(item);
+			l.lock();
+
+			if (result == Server::SR_OK) {
 				upServers.pop_front();
 				upServers.push_back(server);
-				sent = true;
-				packetsSent++;
+				accepted = true;
+				done = true;
+			} else if (result == Server::SR_REJECTED) {
+				upServers.pop_front();
+				upServers.push_back(server);
+				rejected = true;
+				done = true;
 			} else {
-				l.lock();
 				upServers.pop_front();
 				downServers.push_back(server);
-				someServersWentDown = true;
 			}
 		}
 
-		if (someServersWentDown) {
+		if (!downServers.empty()) {
 			if (upServers.empty()) {
 				scheduleNextCheckup(5 * 60);
 			} else {
@@ -509,13 +616,21 @@ private:
 			}
 		}
 
-		/* If all servers went down then all items in the queue will be
-		 * effectively dropped until after the next checkup has detected
-		 * servers that are up.
-		 */
-		if (!sent) {
+		if (accepted) {
+			packetsAccepted++;
+		} else if (rejected) {
+			packetsRejected++;
+		} else {
 			packetsDropped++;
-			l.unlock();
+		}
+		l.unlock();
+
+		if (!accepted && !rejected) {
+			assert(upServers.empty());
+			/* If all servers went down then all items in the queue will be
+			 * effectively dropped until after the next checkup has detected
+			 * servers that are up.
+			 */
 			P_WARN("Dropping Union Station packet because no servers are"
 				" available. Run `passenger-status --show=union_station` to"
 				" view server status. Details of dropped packet:"
@@ -583,8 +698,8 @@ private:
 	}
 
 public:
-	RemoteSender(const string &gatewayAddress, unsigned short gatewayPort, const string &certificate,
-		const string &proxyAddress)
+	RemoteSender(const string &gatewayAddress, unsigned short gatewayPort,
+		const string &certificate, const string &proxyAddress)
 		: queue(1024)
 	{
 		TRACE_POINT();
@@ -599,7 +714,8 @@ public:
 		}
 		lastCheckupTime = 0;
 		nextCheckupTime = 0;
-		packetsSent = 0;
+		packetsAccepted = 0;
+		packetsRejected = 0;
 		packetsDropped = 0;
 		thr = new oxt::thread(
 			boost::bind(&RemoteSender::threadMain, this),
@@ -667,7 +783,8 @@ public:
 		doc["up_servers"] = inspectUpServersStateAsJson();
 		doc["down_servers"] = inspectDownServersStateAsJson();
 		doc["queue_size"] = queue.size();
-		doc["packets_sent_to_gateway"] = packetsSent;
+		doc["packets_accepted"] = packetsAccepted;
+		doc["packets_rejected"] = packetsRejected;
 		doc["packets_dropped"] = packetsDropped;
 		if (certificate.empty()) {
 			doc["certificate"] = Json::nullValue;
@@ -678,13 +795,13 @@ public:
 			doc["last_server_checkup_time"] = Json::Value(Json::nullValue);
 			doc["last_server_checkup_time_note"] = "not yet started";
 		} else {
-			doc["last_server_checkout_time"] = timeToJson(lastCheckupTime * 1000000.0);
+			doc["last_server_checkup_time"] = timeToJson(lastCheckupTime * 1000000.0);
 		}
 		if (nextCheckupTime == 0) {
 			doc["next_server_checkup_time"] = Json::Value(Json::nullValue);
 			doc["next_server_checkup_time_note"] = "not yet scheduled, waiting for first packet";
 		} else {
-			doc["next_server_checkout_time"] = timeToJson(nextCheckupTime * 1000000.0);
+			doc["next_server_checkup_time"] = timeToJson(nextCheckupTime * 1000000.0);
 		}
 		if (!lastDnsErrorMessage.empty()) {
 			doc["last_dns_error_message"] = lastDnsErrorMessage;
