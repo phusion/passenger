@@ -191,11 +191,21 @@ private:
 		int errcode)
 	{
 		size_t consumed = client->arrayReader.feed(buffer.start, buffer.size());
+
+		if (client->arrayReader.hasError()) {
+			disconnectWithError(&client,
+				string("Error processing message: array message parse error: ")
+				+ client->arrayReader.errorString());
+			return Channel::Result(consumed, true);
+		}
+
 		if (client->arrayReader.done()) {
+			// No error
 			const vector<StaticString> &message = client->arrayReader.value();
 			SKC_DEBUG(client, "Message received: " << toString(message));
 			if (message.size() < 1) {
-				disconnectWithError(&client, "Error processing message: too few parameters");
+				disconnectWithError(&client, "Error processing message:"
+					" too few parameters");
 				return Channel::Result(consumed, true);
 			}
 
@@ -209,7 +219,16 @@ private:
 		int errcode)
 	{
 		size_t consumed = client->scalarReader.feed(buffer.start, buffer.size());
+
+		if (client->scalarReader.hasError()) {
+			disconnectWithError(&client,
+				string("Error processing message: scalar message parse error: ")
+				+ client->scalarReader.errorString());
+			return Channel::Result(consumed, true);
+		}
+
 		if (client->scalarReader.done()) {
+			// No error
 			processLogMessageBody(client, client->scalarReader.value());
 			client->scalarReader.reset();
 		}
