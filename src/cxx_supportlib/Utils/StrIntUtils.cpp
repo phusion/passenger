@@ -589,7 +589,11 @@ cEscapeString(const StaticString &input) {
 		char c = *current;
 		if (c >= 32 && c <= 126) {
 			// Printable ASCII.
-			result.append(1, c);
+			if (c == '"') {
+				result.append("\"");
+			} else {
+				result.append(1, c);
+			}
 		} else {
 			char buf[sizeof("000")];
 			unsigned int size;
