@@ -343,7 +343,7 @@ task 'package:update_homebrew' do
   formula = File.read("/tmp/homebrew/Library/Formula/passenger.rb")
   formula.gsub!(/passenger-.+?\.tar\.gz/, "passenger-#{version}.tar.gz") ||
     abort("Unable to substitute Homebrew formula tarball filename")
-  formula.gsub!(/^  sha256 .*/, "  sha256 '#{sha256}'") ||
+  formula.gsub!(/^  sha256 .*/, "  sha256 \"#{sha256}\"") ||
     abort("Unable to substitute Homebrew formula SHA-256")
   necessary_dirs = ORIG_TARBALL_FILES.call.map{ |filename| filename.split("/").first }.uniq
   necessary_dirs -= Packaging::HOMEBREW_EXCLUDE
