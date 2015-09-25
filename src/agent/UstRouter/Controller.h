@@ -1035,7 +1035,7 @@ protected:
 	virtual void reinitializeClient(Client *client, int fd) {
 		ParentClass::reinitializeClient(client, fd);
 		client->arrayReader.setMaxSize(1024 * 16);
-		client->scalarReader.setMaxSize(1024 * 128);
+		client->scalarReader.setMaxSize(1024 * 1024);
 		client->state = Client::READING_AUTH_USERNAME;
 		client->type = Client::UNINITIALIZED;
 	}
