@@ -3,6 +3,7 @@ Release 5.0.20
 
  * Fixes memory management bugs in Union Station support.
  * Improves the error handling in Union Station support.
+ * `passenger-config validate-install` now properly handles CR characters in Apache configuration files.
 
 
 Release 5.0.19
