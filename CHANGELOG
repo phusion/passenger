@@ -1,6 +1,8 @@
 Release 5.0.21
 --------------
 
+ * [Enterprise] Fixes a bug in passenger-irb where printing strings larger than 64 KB would cause it to crash.
+
 
 Release 5.0.20
 --------------
