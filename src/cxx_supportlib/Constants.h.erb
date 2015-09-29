@@ -33,8 +33,6 @@
  *   rake src/cxx_supportlib/Constants.h
  */
 
-#define DEFAULT_BACKEND_ACCOUNT_RIGHTS Account::DETACH
-
 <% for constant_name in PhusionPassenger::SharedConstants.constants.sort %>
 	#define <%= constant_name %> <%=PhusionPassenger::SharedConstants.const_get(constant_name).inspect %>
 <% end %>

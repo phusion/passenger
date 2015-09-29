@@ -33,8 +33,6 @@
  *   rake src/cxx_supportlib/Constants.h
  */
 
-#define DEFAULT_BACKEND_ACCOUNT_RIGHTS Account::DETACH
-
 
 	#define AGENT_EXE "PassengerAgent"
 

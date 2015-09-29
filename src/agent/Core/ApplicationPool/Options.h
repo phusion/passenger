@@ -30,7 +30,6 @@
 #include <utility>
 #include <boost/shared_array.hpp>
 #include <AppTypes.h>
-#include <Account.h>
 #include <DataStructures/HashedStaticString.h>
 #include <Constants.h>
 #include <ResourceLocator.h>
@@ -273,13 +272,6 @@ public:
 	StaticString meteorAppSettings;
 
 	/**
-	 * Any rights that the spawned application process may have. The SpawnManager
-	 * will create a new account for each spawned app, and that account will be
-	 * assigned these rights.
-	 */
-	Account::Rights rights;
-
-	/**
 	 * Environment variables which should be passed to the spawned application
 	 * process. This is a base64-encoded string of key-value pairs, with each
 	 * element terminated by a NUL character. For example:
@@ -468,7 +460,6 @@ public:
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
 		  nodejs(DEFAULT_NODEJS, sizeof(DEFAULT_NODEJS) - 1),
-		  rights(DEFAULT_BACKEND_ACCOUNT_RIGHTS),
 		  debugger(false),
 		  loadShellEnvvars(true),
 		  userSwitching(true),
