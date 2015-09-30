@@ -22,8 +22,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_AGENTS_STARTER_HPP_
-#define _PASSENGER_AGENTS_STARTER_HPP_
+#ifndef _PASSENGER_WATCHDOG_LAUNCHER_HPsg
+#define _PASSENGER_WATCHDOG_LAUNCHER_HPsg
 
 
 #include <sys/types.h>
@@ -34,51 +34,51 @@
 #endif
 
 typedef enum {
-	AS_APACHE,
-	AS_NGINX,
-	AS_STANDALONE
-} PP_AgentsStarterType;
+	IM_APACHE,
+	IM_NGINX,
+	IM_STANDALONE
+} PsgIntegrationMode;
 
-typedef void PP_AgentsStarter;
-typedef void PP_VariantMap;
-typedef void (*PP_AfterForkCallback)(void *);
+typedef void PsgWatchdogLauncher;
+typedef void PsgVariantMap;
+typedef void (*PsgAfterForkCallback)(void *);
 
-PP_VariantMap *pp_variant_map_new();
-void pp_variant_map_set(PP_VariantMap *m,
+PsgVariantMap *psg_variant_map_new();
+void psg_variant_map_set(PsgVariantMap *m,
 	const char *name,
 	const char *value,
 	unsigned int value_len);
-void pp_variant_map_set2(PP_VariantMap *m,
+void psg_variant_map_set2(PsgVariantMap *m,
 	const char *name,
 	unsigned int name_len,
 	const char *value,
 	unsigned int value_len);
-void pp_variant_map_set_int(PP_VariantMap *m,
+void psg_variant_map_set_int(PsgVariantMap *m,
 	const char *name,
 	int value);
-void pp_variant_map_set_bool(PP_VariantMap *m,
+void psg_variant_map_set_bool(PsgVariantMap *m,
 	const char *name,
 	int value);
-void pp_variant_map_set_strset(PP_VariantMap *m,
+void psg_variant_map_set_strset(PsgVariantMap *m,
 	const char *name,
 	const char **strs,
 	unsigned int count);
-void pp_variant_map_free(PP_VariantMap *m);
+void psg_variant_map_free(PsgVariantMap *m);
 
-PP_AgentsStarter *pp_agents_starter_new(PP_AgentsStarterType type,
+PsgWatchdogLauncher *psg_watchdog_launcher_new(PsgIntegrationMode mode,
 	char **error_message);
-int pp_agents_starter_start(PP_AgentsStarter *as,
+int psg_watchdog_launcher_start(PsgWatchdogLauncher *launcher,
 	const char *passengerRoot,
-	PP_VariantMap *params,
-	const PP_AfterForkCallback afterFork,
+	PsgVariantMap *params,
+	const PsgAfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage);
-const char *pp_agents_starter_get_core_address(PP_AgentsStarter *as, unsigned int *size);
-const char *pp_agents_starter_get_core_password(PP_AgentsStarter *as, unsigned int *size);
-const char *pp_agents_starter_get_instance_dir(PP_AgentsStarter *as, unsigned int *size);
-pid_t       pp_agents_starter_get_pid(PP_AgentsStarter *as);
-void        pp_agents_starter_detach(PP_AgentsStarter *as);
-void        pp_agents_starter_free(PP_AgentsStarter *as);
+const char *psg_watchdog_launcher_get_core_address(PsgWatchdogLauncher *launcher, unsigned int *size);
+const char *psg_watchdog_launcher_get_core_password(PsgWatchdogLauncher *launcher, unsigned int *size);
+const char *psg_watchdog_launcher_get_instance_dir(PsgWatchdogLauncher *launcher, unsigned int *size);
+pid_t       psg_watchdog_launcher_get_pid(PsgWatchdogLauncher *launcher);
+void        psg_watchdog_launcher_detach(PsgWatchdogLauncher *launcher);
+void        psg_watchdog_launcher_free(PsgWatchdogLauncher *launcher);
 
 #ifdef __cplusplus
 	} /* extern "C" */
@@ -108,6 +108,7 @@ void        pp_agents_starter_free(PP_AgentsStarter *as);
 #include <Utils/Timer.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/VariantMap.h>
+#include <Utils/ClassUtils.h>
 
 namespace Passenger {
 
@@ -116,32 +117,52 @@ using namespace boost;
 using namespace oxt;
 
 /**
- * Utility class for starting various Phusion Passenger agents through the watchdog.
+ * Utility class for starting various the Passenger watchdog.
  */
-class AgentsStarter {
-private:
-	PP_AgentsStarterType type;
-
-	/** The watchdog's PID. Equals 0 if the watchdog hasn't been started yet
-	 * or if detach() is called. */
-	pid_t pid;
-
-	/******* Information about the started services. Only valid when pid != 0. *******/
-
-	 /** The watchdog's feedback file descriptor. */
-	FileDescriptor feedbackFd;
-
-	/** The address on which the Passenger core listens for HTTP requests, and the
-	 * corresponding password.
+class WatchdogLauncher {
+	/**
+	 * Whether the starter process is Apache, Nginx or
+	 * Passenger Standalone.
 	 */
-	string coreAddress;
-	string corePassword;
+	P_RO_PROPERTY(private, PsgIntegrationMode, IntegrationMode);
 
-	/** The UstRouter's socket address and its password. */
-	string ustRouterAddress;
-	string ustRouterPassword;
+	/**
+	 * The watchdog's PID. Equals 0 if the watchdog hasn't been started yet
+	 * or if `detach()` is called.
+	 */
+	P_RO_PROPERTY(private, pid_t, Pid);
 
-	string instanceDir;
+	// Note: the use of `CONST_REF` in the properties below is intentional.
+	// The C getter functions return the string pointer directly.
+
+	/**
+	 * The address on which the Passenger core listens for HTTP requests,
+	 * and the corresponding password.
+	 *
+	 * Only valid when `getPid() != 0`.
+	 */
+	P_RO_PROPERTY_CONST_REF(private, string, CoreAddress);
+	P_RO_PROPERTY_CONST_REF(private, string, CorePassword);
+
+	/**
+	 * The address on which the Passenger UstRouter listens, and the
+	 * corresponding password.
+	 *
+	 * Only valid when `getPid() != 0`.
+	 */
+	P_RO_PROPERTY_CONST_REF(private, string, UstRouterAddress);
+	P_RO_PROPERTY_CONST_REF(private, string, UstRouterPassword);
+
+	/**
+	 * The path to the instance directory that the Watchdog has created.
+	 *
+	 * Only valid when `getPid() != 0`.
+	 */
+	P_RO_PROPERTY_CONST_REF(private, string, InstanceDir);
+
+private:
+	/** The watchdog's feedback file descriptor. */
+	FileDescriptor feedbackFd;
 
 	/**
 	 * Safely dup2() the given file descriptor to 3 (FEEDBACK_FD).
@@ -157,7 +178,8 @@ private:
 					NULL);
 				_exit(1);
 			} catch (...) {
-				fprintf(stderr, "Passenger AgentsStarter: dup2() failed: %s (%d)\n",
+				fprintf(stderr,
+					"Passenger WatchdogLauncher: dup2() failed: %s (%d)\n",
 					strerror(e), e);
 				fflush(stderr);
 				_exit(1);
@@ -209,15 +231,15 @@ private:
 		}
 	}
 
-	void throwEnrichedWatchdogFailReason(string simpleReason) {
-		if (type == AS_STANDALONE) {
+	void throwEnrichedWatchdogFailReason(const string &simpleReason) {
+		if (mIntegrationMode == IM_STANDALONE) {
 			throw RuntimeException("Unable to start " PROGRAM_NAME ": " + simpleReason +
 				". This probably means that your " SHORT_PROGRAM_NAME
 				" installation is broken or incomplete. Please try reinstalling " SHORT_PROGRAM_NAME);
 		} else {
 			string passengerRootConfig;
 			string docURL;
-			if (type == AS_APACHE) {
+			if (mIntegrationMode == IM_APACHE) {
 				passengerRootConfig = "PassengerRoot";
 				docURL = "https://www.phusionpassenger.com/library/config/apache/reference/#passengerroot";
 			} else {
@@ -262,18 +284,16 @@ private:
 
 public:
 	/**
-	 * Construct a AgentsStarter object. The watchdog and the agents
-	 * aren't started yet until you call start().
-	 *
-	 * @param type Whether the start process is Apache or Nginx.
+	 * Construct a WatchdogLauncher object. The watchdog won't be started
+	 * until you call `start()`.
 	 */
-	AgentsStarter(PP_AgentsStarterType type) {
-		this->type = type;
-		pid = 0;
-	}
+	WatchdogLauncher(PsgIntegrationMode _integrationMode)
+		: mIntegrationMode(_integrationMode),
+		  mPid(0)
+		{ }
 
-	~AgentsStarter() {
-		if (pid != 0) {
+	~WatchdogLauncher() {
+		if (mPid != 0) {
 			this_thread::disable_syscall_interruption dsi;
 
 			/* Send a message down the feedback fd to tell the watchdog
@@ -282,55 +302,21 @@ public:
 			 */
 			syscalls::write(feedbackFd, "c", 1);
 			feedbackFd.close();
-			syscalls::waitpid(pid, NULL, 0);
+			syscalls::waitpid(mPid, NULL, 0);
 		}
 	}
 
-	PP_AgentsStarterType getType() const {
-		return type;
-	}
-
-	/**
-	 * Returns the watchdog's PID. Equals 0 if the watchdog hasn't been started yet
-	 * or if detach() is called.
-	 */
-	pid_t getPid() const {
-		return pid;
-	}
-
 	const char *getIntegrationModeString() const {
-		switch (type) {
-		case AS_APACHE:
+		switch (mIntegrationMode) {
+		case IM_APACHE:
 			return "apache";
-		case AS_NGINX:
+		case IM_NGINX:
 			return "nginx";
-		case AS_STANDALONE:
+		case IM_STANDALONE:
 			return "standalone";
 		default:
 			return "unknown";
 		}
-	}
-
-	// The 'const string &' here is on purpose. The C getter functions
-	// return the string pointer directly.
-	const string &getCoreAddress() const {
-		return coreAddress;
-	}
-
-	const string &getCorePassword() const {
-		return corePassword;
-	}
-
-	const string &getUstRouterAddress() const {
-		return ustRouterAddress;
-	}
-
-	const string &getUstRouterPassword() const {
-		return ustRouterPassword;
-	}
-
-	const string &getInstanceDir() const {
-		return instanceDir;
 	}
 
 	/**
@@ -420,7 +406,7 @@ public:
 					NULL);
 				_exit(1);
 			} catch (...) {
-				fprintf(stderr, "Passenger AgentsStarter: could not execute %s: %s (%d)\n",
+				fprintf(stderr, "Passenger WatchdogLauncher: could not execute %s: %s (%d)\n",
 					agentFilename.c_str(), strerror(e), e);
 				fflush(stderr);
 				_exit(1);
@@ -436,9 +422,9 @@ public:
 			vector<string> args;
 			bool result = false;
 
-			ScopeGuard guard(boost::bind(&AgentsStarter::killProcessGroupAndWait, &pid, 0));
+			ScopeGuard guard(boost::bind(&WatchdogLauncher::killProcessGroupAndWait, &pid, 0));
 			fds[1].close();
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(feedbackFd, "AgentsStarter: feedback FD");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(feedbackFd, "WatchdogLauncher: feedback FD");
 
 
 			/****** Send arguments to watchdog through the feedback channel ******/
@@ -495,13 +481,13 @@ public:
 					info.set(key, value);
 				}
 
-				this->pid        = pid;
-				this->feedbackFd = feedbackFd;
-				coreAddress      = info.get("core_address");
-				corePassword     = info.get("core_password");
-				instanceDir      = info.get("instance_dir");
-				ustRouterAddress  = info.get("ust_router_address");
-				ustRouterPassword = info.get("ust_router_password");
+				mPid               = pid;
+				this->feedbackFd   = feedbackFd;
+				mCoreAddress       = info.get("core_address");
+				mCorePassword      = info.get("core_password");
+				mInstanceDir       = info.get("instance_dir");
+				mUstRouterAddress  = info.get("ust_router_address");
+				mUstRouterPassword = info.get("ust_router_password");
 				guard.clear();
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);
@@ -534,14 +520,14 @@ public:
 	}
 
 	/**
-	 * Close any file descriptors that this object has, and make it so that the destructor
-	 * doesn't try to shut down the agents.
+	 * Close any file descriptors that this object has, and make it so that
+	 * the destructor doesn't try to shut down the watchdog.
 	 *
 	 * @post getPid() == 0
 	 */
 	void detach() {
 		feedbackFd.close();
-		pid = 0;
+		mPid = 0;
 	}
 };
 
@@ -549,4 +535,4 @@ public:
 
 #endif /* __cplusplus */
 
-#endif /* _PASSENGER_AGENTS_STARTER_HPP_ */
+#endif /* _PASSENGER_WATCHDOG_LAUNCHER_HPsg */

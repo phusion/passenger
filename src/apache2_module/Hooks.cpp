@@ -60,7 +60,7 @@
 #include <Utils/Timer.h>
 #include <Utils/HttpConstants.h>
 #include <Logging.h>
-#include <AgentsStarter.h>
+#include <WatchdogLauncher.h>
 #include <Constants.h>
 
 /* The Apache/APR headers *must* come after the Boost headers, otherwise
@@ -222,7 +222,7 @@ private:
 
 	Threeway m_hasModRewrite, m_hasModDir, m_hasModAutoIndex, m_hasModXsendfile;
 	CachedFileStat cstat;
-	AgentsStarter agentsStarter;
+	WatchdogLauncher watchdogLauncher;
 	boost::mutex cstatMutex;
 
 	inline DirConfig *getDirConfig(request_rec *r) {
@@ -255,11 +255,11 @@ private:
 	}
 
 	StaticString getCoreAddress() const {
-		return agentsStarter.getCoreAddress();
+		return watchdogLauncher.getCoreAddress();
 	}
 
 	StaticString getCorePassword() const {
-		return agentsStarter.getCorePassword();
+		return watchdogLauncher.getCorePassword();
 	}
 
 	/**
@@ -1247,7 +1247,7 @@ private:
 public:
 	Hooks(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 	    : cstat(1024),
-	      agentsStarter(AS_APACHE)
+	      watchdogLauncher(IM_APACHE)
 	{
 		serverConfig.finalize();
 		Passenger::setLogLevel(serverConfig.logLevel);
@@ -1337,11 +1337,11 @@ public:
 
 		serverConfig.ctl.addTo(params);
 
-		agentsStarter.start(serverConfig.root, params);
+		watchdogLauncher.start(serverConfig.root, params);
 	}
 
 	void childInit(apr_pool_t *pchild, server_rec *s) {
-		agentsStarter.detach();
+		watchdogLauncher.detach();
 	}
 
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {

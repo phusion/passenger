@@ -294,8 +294,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils/LargeFiles.o',
     :source   => 'Utils/LargeFiles.cpp',
     :category => :other
-  define_component 'AgentsStarter.o',
-    :source   => 'AgentsStarter.cpp',
+  define_component 'WatchdogLauncher.o',
+    :source   => 'WatchdogLauncher.cpp',
     :category => :other
   define_component 'MemoryKit/mbuf.o',
     :source   => 'MemoryKit/mbuf.cpp',
@@ -337,5 +337,5 @@ end
 
 # A subset of the objects are linked to the Nginx binary. This defines
 # what those objects are.
-NGINX_LIBS_SELECTOR = [:base, 'AgentsStarter.o', 'AppTypes.o',
+NGINX_LIBS_SELECTOR = [:base, 'WatchdogLauncher.o', 'AppTypes.o',
   'Utils/CachedFileStat.o', 'UnionStationFilterSupport.o']

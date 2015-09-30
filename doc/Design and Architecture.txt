@@ -150,7 +150,7 @@ Phusion Passenger initializes as follows.
 +
  * `src/nginx_module/ngx_http_passenger_module.c`, function `start_watchdog()`.
  * `src/apache2_module/Hooks.cpp`, in the constructor for the `Hooks` class.
- * `src/cxx_supportlib/AgentsStarter.h` and `AgentsStarter.cpp`. Most of the logic pertaining starting the Watchdog is in this file.
+ * `src/cxx_supportlib/WatchdogLauncher.h` and `WatchdogLauncher.cpp`. Most of the logic pertaining starting the Watchdog is in this file.
 
 3. The Watchdog first initializes a <<instance_state_and_communication,"instance directory">>, which is a temporary directory containing files that will be used during the life time of this Phusion Passenger instance. For example, the directory contains Unix domain socket files, so that the different Phusion Passenger processes can communicate with each other. The Watchdog is implemented in `src/agent/Watchdog/Main.cpp`.
 

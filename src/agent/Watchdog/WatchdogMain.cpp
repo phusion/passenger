@@ -826,7 +826,7 @@ maybeSetsid() {
 	 * Ctrl-C only affects the web server, and so that
 	 * we can kill all of our subprocesses in a single killpg().
 	 *
-	 * AgentsStarter.h already calls setsid() before exec()ing
+	 * WatchdogLauncher.h already calls setsid() before exec()ing
 	 * the Watchdog, but Flying Passenger does not.
 	 */
 	if (agentsOptions->getBool("setsid", false)) {

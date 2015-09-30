@@ -30,7 +30,7 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
-#include "cxx_supportlib/AgentsStarter.h"
+#include "cxx_supportlib/WatchdogLauncher.h"
 #include "cxx_supportlib/AppTypes.h"
 #include "cxx_supportlib/Utils/CachedFileStat.h"
 
@@ -57,7 +57,7 @@ extern PP_CachedFileStat        *pp_stat_cache;
 
 extern PP_AppTypeDetector       *pp_app_type_detector;
 
-extern PP_AgentsStarter         *pp_agents_starter;
+extern PsgWatchdogLauncher      *psg_watchdog_launcher;
 
 extern ngx_cycle_t              *pp_current_cycle;
 

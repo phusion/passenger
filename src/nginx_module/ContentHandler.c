@@ -222,8 +222,8 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
     if (address->name.data == pp_placeholder_upstream_address.data) {
         sockaddr = (struct sockaddr_un *) address->sockaddr;
         core_address =
-            pp_agents_starter_get_core_address(pp_agents_starter,
-                                               &core_address_len);
+            psg_watchdog_launcher_get_core_address(psg_watchdog_launcher,
+                                                   &core_address_len);
         core_address += sizeof("unix:") - 1;
         core_address_len -= sizeof("unix:") - 1;
 
@@ -258,8 +258,8 @@ fix_peer_address(ngx_http_request_t *r) {
     rrp        = r->upstream->peer.data;
     peers      = rrp->peers;
     core_address =
-        pp_agents_starter_get_core_address(pp_agents_starter,
-                                             &core_address_len);
+        psg_watchdog_launcher_get_core_address(psg_watchdog_launcher,
+                                               &core_address_len);
 
     while (peers != NULL) {
         if (peers->name) {
@@ -448,8 +448,8 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
             - state->content_length.data;
     }
 
-    state->core_password.data = (u_char *) pp_agents_starter_get_core_password(
-        pp_agents_starter, &len);
+    state->core_password.data = (u_char *) psg_watchdog_launcher_get_core_password(
+        psg_watchdog_launcher, &len);
     state->core_password.len  = len;
 
     switch (r->connection->sockaddr->sa_family) {

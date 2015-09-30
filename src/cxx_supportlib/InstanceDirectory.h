@@ -213,7 +213,7 @@ public:
 		createFile(path + "/creation_finalized", "");
 	}
 
-	// The 'const string &' here is on purpose. The AgentsStarter C
+	// The 'const string &' here is on purpose. The WatchdogLauncher C
 	// functions return the string pointer directly.
 	const string &getPath() const {
 		return path;

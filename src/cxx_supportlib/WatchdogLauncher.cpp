@@ -27,7 +27,7 @@
 #include <cerrno>
 #include <cstring>
 #include <string.h>
-#include <AgentsStarter.h>
+#include <WatchdogLauncher.h>
 #include <Exceptions.h>
 
 using namespace std;
@@ -35,13 +35,13 @@ using namespace boost;
 using namespace oxt;
 
 
-PP_VariantMap *
-pp_variant_map_new() {
-	return (PP_VariantMap *) new Passenger::VariantMap();
+PsgVariantMap *
+psg_variant_map_new() {
+	return (PsgVariantMap *) new Passenger::VariantMap();
 }
 
 void
-pp_variant_map_set(PP_VariantMap *m,
+psg_variant_map_set(PsgVariantMap *m,
 	const char *name,
 	const char *value,
 	unsigned int value_len)
@@ -51,7 +51,7 @@ pp_variant_map_set(PP_VariantMap *m,
 }
 
 void
-pp_variant_map_set2(PP_VariantMap *m,
+psg_variant_map_set2(PsgVariantMap *m,
 	const char *name,
 	unsigned int name_len,
 	const char *value,
@@ -62,7 +62,7 @@ pp_variant_map_set2(PP_VariantMap *m,
 }
 
 void
-pp_variant_map_set_int(PP_VariantMap *m,
+psg_variant_map_set_int(PsgVariantMap *m,
 	const char *name,
 	int value)
 {
@@ -71,7 +71,7 @@ pp_variant_map_set_int(PP_VariantMap *m,
 }
 
 void
-pp_variant_map_set_bool(PP_VariantMap *m,
+psg_variant_map_set_bool(PsgVariantMap *m,
 	const char *name,
 	int value)
 {
@@ -80,7 +80,7 @@ pp_variant_map_set_bool(PP_VariantMap *m,
 }
 
 void
-pp_variant_map_set_strset(PP_VariantMap *m,
+psg_variant_map_set_strset(PsgVariantMap *m,
 	const char *name,
 	const char **strs,
 	unsigned int count)
@@ -95,25 +95,25 @@ pp_variant_map_set_strset(PP_VariantMap *m,
 }
 
 void
-pp_variant_map_free(PP_VariantMap *m) {
+psg_variant_map_free(PsgVariantMap *m) {
 	delete (Passenger::VariantMap *) m;
 }
 
 
-PP_AgentsStarter *
-pp_agents_starter_new(PP_AgentsStarterType type, char **error_message) {
-	return (PP_AgentsStarter *) new Passenger::AgentsStarter(type);
+PsgWatchdogLauncher *
+psg_watchdog_launcher_new(PsgIntegrationMode mode, char **error_message) {
+	return (PsgWatchdogLauncher *) new Passenger::WatchdogLauncher(mode);
 }
 
 int
-pp_agents_starter_start(PP_AgentsStarter *as,
+psg_watchdog_launcher_start(PsgWatchdogLauncher *l,
 	const char *passengerRoot,
-	PP_VariantMap *extraParams,
-	const PP_AfterForkCallback afterFork,
+	PsgVariantMap *extraParams,
+	const PsgAfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage)
 {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
+	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
 	this_thread::disable_syscall_interruption dsi;
 	try {
 		boost::function<void ()> afterForkFunctionObject;
@@ -121,7 +121,7 @@ pp_agents_starter_start(PP_AgentsStarter *as,
 		if (afterFork != NULL) {
 			afterForkFunctionObject = boost::bind(afterFork, callbackArgument);
 		}
-		agentsStarter->start(passengerRoot,
+		launcher->start(passengerRoot,
 			*((Passenger::VariantMap *) extraParams),
 			afterForkFunctionObject);
 		return 1;
@@ -137,46 +137,46 @@ pp_agents_starter_start(PP_AgentsStarter *as,
 }
 
 const char *
-pp_agents_starter_get_core_address(PP_AgentsStarter *as, unsigned int *size) {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
+psg_watchdog_launcher_get_core_address(PsgWatchdogLauncher *l, unsigned int *size) {
+	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
 	if (size != NULL) {
-		*size = agentsStarter->getCoreAddress().size();
+		*size = launcher->getCoreAddress().size();
 	}
-	return agentsStarter->getCoreAddress().c_str();
+	return launcher->getCoreAddress().c_str();
 }
 
 const char *
-pp_agents_starter_get_core_password(PP_AgentsStarter *as, unsigned int *size) {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
+psg_watchdog_launcher_get_core_password(PsgWatchdogLauncher *l, unsigned int *size) {
+	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
 	if (size != NULL) {
-		*size = agentsStarter->getCorePassword().size();
+		*size = launcher->getCorePassword().size();
 	}
-	return agentsStarter->getCorePassword().c_str();
+	return launcher->getCorePassword().c_str();
 }
 
 const char *
-pp_agents_starter_get_instance_dir(PP_AgentsStarter *as, unsigned int *size) {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
+psg_watchdog_launcher_get_instance_dir(PsgWatchdogLauncher *l, unsigned int *size) {
+	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
 	if (size != NULL) {
-		*size = agentsStarter->getInstanceDir().size();
+		*size = launcher->getInstanceDir().size();
 	}
-	return agentsStarter->getInstanceDir().c_str();
+	return launcher->getInstanceDir().c_str();
 }
 
 pid_t
-pp_agents_starter_get_pid(PP_AgentsStarter *as) {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
-	return agentsStarter->getPid();
+psg_watchdog_launcher_get_pid(PsgWatchdogLauncher *l) {
+	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
+	return launcher->getPid();
 }
 
 void
-pp_agents_starter_detach(PP_AgentsStarter *as) {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
-	agentsStarter->detach();
+psg_watchdog_launcher_detach(PsgWatchdogLauncher *l) {
+	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
+	launcher->detach();
 }
 
 void
-pp_agents_starter_free(PP_AgentsStarter *as) {
-	Passenger::AgentsStarter *agentsStarter = (Passenger::AgentsStarter *) as;
-	delete agentsStarter;
+psg_watchdog_launcher_free(PsgWatchdogLauncher *l) {
+	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
+	delete launcher;
 }

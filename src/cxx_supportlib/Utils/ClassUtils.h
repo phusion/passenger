@@ -25,6 +25,11 @@
 #ifndef _PASSENGER_CLASS_UTILS_H_
 #define _PASSENGER_CLASS_UTILS_H_
 
+#define P_DEFINE_GETTER(type, name) \
+	type get ## name() const { \
+		return m ## name; \
+	}
+
 #define P_DEFINE_GETTER_CONST_REF(type, name) \
 	const type &get ## name() const { \
 		return m ## name; \
@@ -40,6 +45,12 @@
 		m ## name = value; \
 	}
 
+#define P_RO_PROPERTY(visibility, type, name) \
+	public: \
+		P_DEFINE_GETTER(type, name) \
+	visibility: \
+		type m ## name
+
 #define P_PROPERTY_CONST_REF(visibility, type, name) \
 	public: \
 		P_DEFINE_GETTER_CONST_REF(type, name) \
@@ -50,6 +61,12 @@
 #define P_RO_PROPERTY_REF(visibility, type, name) \
 	public: \
 		P_DEFINE_GETTER_REF(type, name) \
+	visibility: \
+		type m ## name
+
+#define P_RO_PROPERTY_CONST_REF(visibility, type, name) \
+	public: \
+		P_DEFINE_GETTER_CONST_REF(type, name) \
 	visibility: \
 		type m ## name
 

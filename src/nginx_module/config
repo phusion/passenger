@@ -58,7 +58,7 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${ngx_addon_dir}/StaticContentHandler.h \
     ${ngx_addon_dir}/ngx_http_passenger_module.h \
     ${PASSENGER_INCLUDEDIR}/cxx_supportlib/Constants.h \
-    ${PASSENGER_INCLUDEDIR}/cxx_supportlib/AgentsStarter.h \
+    ${PASSENGER_INCLUDEDIR}/cxx_supportlib/WatchdogLauncher.h \
     ${PASSENGER_INCLUDEDIR}/cxx_supportlib/AppTypes.h"
 CORE_INCS="$CORE_INCS $PASSENGER_INCLUDEDIR"
 CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS -lstdc++ -lpthread"

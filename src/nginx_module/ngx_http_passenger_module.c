@@ -52,7 +52,7 @@ ngx_str_t                 pp_schema_string;
 ngx_str_t                 pp_placeholder_upstream_address;
 PP_CachedFileStat        *pp_stat_cache;
 PP_AppTypeDetector       *pp_app_type_detector;
-PP_AgentsStarter         *pp_agents_starter = NULL;
+PsgWatchdogLauncher      *psg_watchdog_launcher = NULL;
 ngx_cycle_t              *pp_current_cycle;
 
 
@@ -105,11 +105,11 @@ ngx_str_null_terminate(ngx_str_t *str) {
 }
 
 static void
-pp_variant_map_set_ngx_str(PP_VariantMap *m,
+psg_variant_map_set_ngx_str(PsgVariantMap *m,
     const char *name,
     ngx_str_t *value)
 {
-    pp_variant_map_set(m, name, (const char *) value->data, value->len);
+    psg_variant_map_set(m, name, (const char *) value->data, value->len);
 }
 
 /**
@@ -129,7 +129,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     FILE *f;
 
     last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/web_server_control_process.pid",
-                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
+                        psg_watchdog_launcher_get_instance_dir(psg_watchdog_launcher, NULL));
     *last = (u_char) '\0';
 
     f = fopen((const char *) filename, "w");
@@ -247,14 +247,14 @@ start_watchdog(ngx_cycle_t *cycle) {
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
     ngx_keyval_t    *ctl = NULL;
-    PP_VariantMap  *params = NULL;
+    PsgVariantMap   *params = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
     char   *passenger_root = NULL;
     char   *error_message = NULL;
 
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
-    params    = pp_variant_map_new();
+    params    = psg_variant_map_new();
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     if (passenger_root == NULL) {
         goto error_enomem;
@@ -277,35 +277,35 @@ start_watchdog(ngx_cycle_t *cycle) {
         }
     }
 
-    pp_variant_map_set_int    (params, "web_server_control_process_pid", getpid());
-    pp_variant_map_set_strset (params, "web_server_config_files", (const char **) &config_file, 1);
-    pp_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
-    pp_variant_map_set_bool   (params, "multi_app", 1);
-    pp_variant_map_set_bool   (params, "load_shell_envvars", 1);
-    pp_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
-    pp_variant_map_set_ngx_str(params, "file_descriptor_log_file", &passenger_main_conf.file_descriptor_log_file);
-    pp_variant_map_set_ngx_str(params, "data_buffer_dir", &passenger_main_conf.data_buffer_dir);
-    pp_variant_map_set_ngx_str(params, "instance_registry_dir", &passenger_main_conf.instance_registry_dir);
-    pp_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
-    pp_variant_map_set_bool   (params, "show_version_in_header", passenger_main_conf.show_version_in_header);
-    pp_variant_map_set_bool   (params, "turbocaching", passenger_main_conf.turbocaching);
-    pp_variant_map_set_ngx_str(params, "default_user", &passenger_main_conf.default_user);
-    pp_variant_map_set_ngx_str(params, "default_group", &passenger_main_conf.default_group);
-    pp_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
-    pp_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
-    pp_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
-    pp_variant_map_set_int    (params, "response_buffer_high_watermark", passenger_main_conf.response_buffer_high_watermark);
-    pp_variant_map_set_int    (params, "stat_throttle_rate", passenger_main_conf.stat_throttle_rate);
-    pp_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
-    pp_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
-    pp_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
-    pp_variant_map_set_int    (params, "union_station_gateway_port", passenger_main_conf.union_station_gateway_port);
-    pp_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
-    pp_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
-    pp_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
+    psg_variant_map_set_int    (params, "web_server_control_process_pid", getpid());
+    psg_variant_map_set_strset (params, "web_server_config_files", (const char **) &config_file, 1);
+    psg_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
+    psg_variant_map_set_bool   (params, "multi_app", 1);
+    psg_variant_map_set_bool   (params, "load_shell_envvars", 1);
+    psg_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
+    psg_variant_map_set_ngx_str(params, "file_descriptor_log_file", &passenger_main_conf.file_descriptor_log_file);
+    psg_variant_map_set_ngx_str(params, "data_buffer_dir", &passenger_main_conf.data_buffer_dir);
+    psg_variant_map_set_ngx_str(params, "instance_registry_dir", &passenger_main_conf.instance_registry_dir);
+    psg_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
+    psg_variant_map_set_bool   (params, "show_version_in_header", passenger_main_conf.show_version_in_header);
+    psg_variant_map_set_bool   (params, "turbocaching", passenger_main_conf.turbocaching);
+    psg_variant_map_set_ngx_str(params, "default_user", &passenger_main_conf.default_user);
+    psg_variant_map_set_ngx_str(params, "default_group", &passenger_main_conf.default_group);
+    psg_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
+    psg_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
+    psg_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
+    psg_variant_map_set_int    (params, "response_buffer_high_watermark", passenger_main_conf.response_buffer_high_watermark);
+    psg_variant_map_set_int    (params, "stat_throttle_rate", passenger_main_conf.stat_throttle_rate);
+    psg_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
+    psg_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
+    psg_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
+    psg_variant_map_set_int    (params, "union_station_gateway_port", passenger_main_conf.union_station_gateway_port);
+    psg_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
+    psg_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
+    psg_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
 
     if (passenger_main_conf.log_file.len > 0) {
-        pp_variant_map_set_ngx_str(params, "log_file", &passenger_main_conf.log_file);
+        psg_variant_map_set_ngx_str(params, "log_file", &passenger_main_conf.log_file);
     } else if (cycle->new_log.file == NULL) {
         ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "Cannot initialize " PROGRAM_NAME
             " because Nginx is not configured with an error log file."
@@ -314,19 +314,19 @@ start_watchdog(ngx_cycle_t *cycle) {
         result = NGX_ERROR;
         goto cleanup;
     } else if (cycle->new_log.file->name.len > 0) {
-        pp_variant_map_set_ngx_str(params, "log_file", &cycle->new_log.file->name);
+        psg_variant_map_set_ngx_str(params, "log_file", &cycle->new_log.file->name);
     } else if (cycle->log->file->name.len > 0) {
-        pp_variant_map_set_ngx_str(params, "log_file", &cycle->log->file->name);
+        psg_variant_map_set_ngx_str(params, "log_file", &cycle->log->file->name);
     }
 
     ctl = (ngx_keyval_t *) passenger_main_conf.ctl->elts;
     for (i = 0; i < passenger_main_conf.ctl->nelts; i++) {
-        pp_variant_map_set2(params,
+        psg_variant_map_set2(params,
             (const char *) ctl[i].key.data, ctl[i].key.len - 1,
             (const char *) ctl[i].value.data, ctl[i].value.len - 1);
     }
 
-    ret = pp_agents_starter_start(pp_agents_starter,
+    ret = psg_watchdog_launcher_start(psg_watchdog_launcher,
         passenger_root,
         params,
         starting_watchdog_after_fork,
@@ -344,7 +344,7 @@ start_watchdog(ngx_cycle_t *cycle) {
      */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
                         "%s/web_server_control_process.pid",
-                        pp_agents_starter_get_instance_dir(pp_agents_starter, NULL));
+                        psg_watchdog_launcher_get_instance_dir(psg_watchdog_launcher, NULL));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
         result = NGX_ERROR;
@@ -359,7 +359,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     }
 
 cleanup:
-    pp_variant_map_free(params);
+    psg_variant_map_free(params);
     free(passenger_root);
     free(error_message);
     free(config_file);
@@ -387,9 +387,9 @@ error_enomem:
  */
 static void
 shutdown_watchdog() {
-    if (pp_agents_starter != NULL) {
-        pp_agents_starter_free(pp_agents_starter);
-        pp_agents_starter = NULL;
+    if (psg_watchdog_launcher != NULL) {
+        psg_watchdog_launcher_free(psg_watchdog_launcher);
+        psg_watchdog_launcher = NULL;
     }
 }
 
@@ -413,9 +413,9 @@ pre_config_init(ngx_conf_t *cf)
     pp_placeholder_upstream_address.len  = sizeof("unix:/passenger_core") - 1;
     pp_stat_cache = pp_cached_file_stat_new(1024);
     pp_app_type_detector = pp_app_type_detector_new(DEFAULT_STAT_THROTTLE_RATE);
-    pp_agents_starter = pp_agents_starter_new(AS_NGINX, &error_message);
+    psg_watchdog_launcher = psg_watchdog_launcher_new(IM_NGINX, &error_message);
 
-    if (pp_agents_starter == NULL) {
+    if (psg_watchdog_launcher == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, ngx_errno, "%s", error_message);
         free(error_message);
         return NGX_ERROR;
@@ -466,7 +466,7 @@ init_worker_process(ngx_cycle_t *cycle) {
 
         core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
         if (core_conf->master) {
-            pp_agents_starter_detach(pp_agents_starter);
+            psg_watchdog_launcher_detach(psg_watchdog_launcher);
         }
     }
     return NGX_OK;
