@@ -100,16 +100,16 @@ end
 ########## libev ##########
 
 if USE_VENDORED_LIBEV
-  LIBEV_SOURCE_DIR = File.expand_path("../src/cxx_supportlib/vendor-copy/libev", File.dirname(__FILE__)) + "/"
-  LIBEV_CFLAGS = "-Isrc/cxx_supportlib/vendor-copy/libev"
+  LIBEV_SOURCE_DIR = File.expand_path("../src/cxx_supportlib/vendor-modified/libev", File.dirname(__FILE__)) + "/"
+  LIBEV_CFLAGS = "-Isrc/cxx_supportlib/vendor-modified/libev"
   LIBEV_TARGET = LIBEV_OUTPUT_DIR + ".libs/libev.a"
 
   task :libev => LIBEV_TARGET
 
   dependencies = [
-    "src/cxx_supportlib/vendor-copy/libev/configure",
-    "src/cxx_supportlib/vendor-copy/libev/config.h.in",
-    "src/cxx_supportlib/vendor-copy/libev/Makefile.am"
+    "src/cxx_supportlib/vendor-modified/libev/configure",
+    "src/cxx_supportlib/vendor-modified/libev/config.h.in",
+    "src/cxx_supportlib/vendor-modified/libev/Makefile.am"
   ]
   file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
     cc = CC
@@ -128,7 +128,7 @@ if USE_VENDORED_LIBEV
       "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}' orig_CFLAGS=1"
   end
 
-  libev_sources = Dir["src/cxx_supportlib/vendor-copy/libev/{*.c,*.h}"]
+  libev_sources = Dir["src/cxx_supportlib/vendor-modified/libev/{*.c,*.h}"]
   file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
     sh "rm -f #{LIBEV_OUTPUT_DIR}libev.la"
     sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la V=1"
