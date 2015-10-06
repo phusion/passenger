@@ -487,9 +487,9 @@ private:
 					"already opened with a different node name (" <<
 					transaction->getNodeName() << " vs " << nodeName << ")");
 				if (ack) {
-					sendErrorToClient(client,"Cannot open transaction: transaction "
-							"already opened with a different node name (" <<
-							transaction->getNodeName() << " vs " << nodeName << ")");
+					sendErrorToClient(client, "Cannot open transaction: transaction "
+							"already opened with a different node name (" +
+							transaction->getNodeName() + " vs " + nodeName + ")");
 					if (client->connected()) {
 						disconnect(&client);
 					}
@@ -501,8 +501,8 @@ private:
 						transaction->getCategory() << " vs " << category << ")");
 				if (ack) {
 					sendErrorToClient(client,
-							"Cannot open transaction: transaction already opened with a different category name (" <<
-							transaction->getCategory() << " vs " << category << ")");
+							"Cannot open transaction: transaction already opened with a different category name (" +
+							transaction->getCategory() + " vs " + category + ")");
 					if (client->connected()) {
 						disconnect(&client);
 					}
