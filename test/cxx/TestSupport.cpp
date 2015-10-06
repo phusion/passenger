@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include "../support/valgrind.h"
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
@@ -8,10 +8,9 @@
 #include <pwd.h>
 #include <grp.h>
 #include <cassert>
-#include <BackgroundEventLoop.cpp>
 #include <Utils/IOUtils.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/json.h>
+#include <jsoncpp/json.h>
 
 namespace TestSupport {
 

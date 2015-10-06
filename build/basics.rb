@@ -44,7 +44,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/cxx_portability'
 include PhusionPassenger
 include PhusionPassenger::PlatformInfo
 
-require 'build/rake_extensions'
+require 'build/cxx_dependency_map'
 require 'build/cplusplus_support'
 
 #################################################
@@ -105,6 +105,13 @@ def maybe_wrap_in_ccache(command)
   end
 end
 
+def ensure_target_directory_exists(target)
+  dir = File.dirname(target)
+  if !File.exist?(dir)
+    sh "mkdir -p #{dir}"
+  end
+end
+
 #################################################
 
 if string_option('OUTPUT_DIR')
@@ -148,6 +155,12 @@ USE_ASAN    = boolean_option('USE_ASAN')
 USE_SELINUX = boolean_option('USE_SELINUX')
 OPTIMIZE    = boolean_option('OPTIMIZE')
 LTO         = OPTIMIZE && boolean_option('LTO')
+
+CXX_SUPPORTLIB_INCLUDE_PATHS = [
+  "src/cxx_supportlib",
+  "src/cxx_supportlib/vendor-copy",
+  "src/cxx_supportlib/vendor-modified"
+]
 
 # Agent-specific compiler flags.
 AGENT_CFLAGS  = ""
@@ -207,6 +220,7 @@ ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
   OUTPUT_DIR + "ruby/" + ruby_extension_archdir) + "/"
 PKG_DIR                   = string_option('PKG_DIR', "pkg")
+TEST_OUTPUT_DIR           = string_option('TEST_OUTPUT_DIR', OUTPUT_DIR + "test") + "/"
 
 
 # Whether to use the vendored libev or the system one.

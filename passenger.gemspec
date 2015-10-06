@@ -1,5 +1,5 @@
 source_root = File.expand_path(File.dirname(__FILE__))
-$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'packaging'
@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.rubyforge_project = "passenger"
   s.author = "Phusion - http://www.phusion.nl/"
   s.email = "software-signing@phusion.nl"
-  s.require_paths = ["lib"]
+  s.require_paths = ["src/ruby_supportlib"]
   s.add_dependency 'rake', '>= 0.8.1'
   s.add_dependency 'rack'
   s.files = Dir[*PhusionPassenger::Packaging::GLOB] -
@@ -24,6 +24,6 @@ Gem::Specification.new do |s|
     "optimized for performance, low memory usage and ease of use."
 
   if ENV['OFFICIAL_RELEASE']
-    s.extensions = ["helper-scripts/download_binaries/extconf.rb"]
+    s.extensions = ["src/helper-scripts/download_binaries/extconf.rb"]
   end
 end

@@ -120,7 +120,7 @@ Thus, if you're packaging Phusion Passenger, then we recommend the following:
 The Phusion Passenger administration tools are written in Ruby. So the first thing
 they do is trying to load `phusion_passenger.rb`, which is the source file
 responsible for figuring out where all the other Phusion Passenger files are. It
-tries to look for phusion_passenger.rb in `<OWN_DIRECTORY>/../lib` where
+tries to look for phusion_passenger.rb in `<OWN_DIRECTORY>/../src/ruby_supportlib` where
 `<OWN_DIRECTORY>` is the directory that the tool is located in. If
 phusion_passenger.rb is not there, then it tries to load it from the normal Ruby
 load path.
@@ -202,7 +202,7 @@ a list of all possible assets and asset directories.
    A directory that contains the Phusion Passenger header files that are
    necessary for compiling Nginx.
 
-   Value when originally packaged: `<SOURCE_ROOT>/ext`
+   Value when originally packaged: `<SOURCE_ROOT>/src`
 
  * `lib_dir`
 
@@ -219,7 +219,7 @@ a list of all possible assets and asset directories.
    irregardless of the value of this key in the location configuration file.
    The value is only useful to non-Ruby Phusion Passenger code.
 
-   Value when originally packaged: `<SOURCE_ROOT>/lib`.
+   Value when originally packaged: `<SOURCE_ROOT>/src/ruby_supportlib`.
 
  * `apache2_module_path`
 
@@ -236,7 +236,7 @@ a list of all possible assets and asset directories.
    when it detects that the user is using a new Ruby interpreter for which
    no Ruby extension has been compiled.
 
-   Value when originally packaged: `<SOURCE_ROOT>/ext/ruby`.
+   Value when originally packaged: `<SOURCE_ROOT>/src/ruby_native_extension`.
 
  * `nginx_module_source_dir`
 
@@ -244,7 +244,7 @@ a list of all possible assets and asset directories.
    module. passenger-install-nginx-module uses these sources to build Nginx
    with Phusion Passenger support.
 
-   Value when originally packaged: `<SOURCE_ROOT>/ext/nginx`.
+   Value when originally packaged: `<SOURCE_ROOT>/src/nginx_module`.
 
 Optional fields:
 

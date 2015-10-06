@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <Utils/StrIntUtils.h>
 
 using namespace Passenger;
@@ -13,7 +13,7 @@ namespace tut {
 		truncateBeforeTokens(str, tokens, maxBetweenTokens, sstream);
 		ensure("got [" +  sstream.str() + "], expected [" + expected + "]", sstream.str() == expected);
 	}
-	
+
 	DEFINE_TEST_GROUP(StrIntUtilsTest);
 
 	TEST_METHOD(1) {

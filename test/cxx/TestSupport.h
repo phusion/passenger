@@ -24,7 +24,7 @@
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
-#include <Utils/json-forwards.h>
+#include <jsoncpp/json-forwards.h>
 
 extern "C" {
 	struct ev_loop;
@@ -185,6 +185,10 @@ public:
 		} else {
 			removeDirTree(name);
 		}
+	}
+
+	string getPath() const {
+		return name;
 	}
 };
 

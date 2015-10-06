@@ -39,7 +39,7 @@ Ruby users can also build a gem from the Git repository and install the gem.
 ## Further reading
 
  * The `doc/` directory.
- * CONTRIBUTING.md.
+ * [Contributors Guide](https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md)
  * https://www.phusionpassenger.com/support
 
 ## Legal

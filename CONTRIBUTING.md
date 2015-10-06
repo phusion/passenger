@@ -17,7 +17,7 @@
    * [Ruby coding style](#ruby_coding_style)
    * [Systems programming fundamentals](#systems_programming_fundamentals)
    * [Further reading](#further_reading)
- * [Git structure] (#git_structure)
+ * [Git structure](#git_structure)
 
 Thank you for your interest in Phusion Passenger. Phusion Passenger is open source so your contributions are very welcome. Although we also provide a [commercial version](https://www.phusionpassenger.com/enterprise) and [commercial support](https://www.phusionpassenger.com/commercial_support), the core remains open source and we remain committed to keep it that way. This guide gives you an overview of the ways with which you can contribute, as well as contribution guidelines.
 
@@ -166,20 +166,20 @@ Note that some tests, such as the ones that test privilege lowering, require roo
 
 The most important directories are:
 
- * `lib/phusion_passenger` <br>
+ * `src/ruby_suppportlib` <br>
    The source code for Ruby parts of Phusion Passenger.
- * `ext/ruby` <br>
+ * `src/ruby_native_extension` <br>
    Native extension for Ruby. Phusion Passenger uses the functions in this extension for optimizing certain operations, but Phusion Passenger can also function without this extension.
- * `ext/apache2` <br>
+ * `src/apache2_module` <br>
    Apache 2-specific source code.
- * `ext/nginx` <br>
+ * `src/nginx_module` <br>
    Nginx-specific source code.
- * `ext/common` <br>
-   Source code shared by the Apache and Nginx modules.
- * `ext/common/agents` <br>
+ * `src/cxx_supportlib` <br>
+   Support code shared between all C++ components.
+ * `src/agent` <br>
    Source code of the PassengerAgent executable. The agent can be started in multiple modes.
-   * The watchdog is the main Phusion Passenger process. It starts the Passenger core and the UstRouter, and restarts them when they crash. It also cleans everything up upon shut down.
-   * The core performs most of the heavy lifting. It parses requests, spawns application processes, forwards requests to the correct process and forwards application responses back to the web server.
+   * The Watchdog is the main Phusion Passenger process. It starts the Passenger core and the UstRouter, and restarts them when they crash. It also cleans everything up upon shut down.
+   * The Core performs most of the heavy lifting. It parses requests, spawns application processes, forwards requests to the correct process and forwards application responses back to the web server.
    * The UstRouter processes Union Station data and sends them to the Union Station server.
  * `bin` <br>
    User executables.
@@ -196,17 +196,17 @@ The most important directories are:
 
 Less important directories:
 
- * `ext/boost` <br>
+ * `src/vendor-modified/boost` <br>
    A stripped-down and customized version of the [Boost C++ library](http://www.boost.org).
- * `ext/oxt` <br>
+ * `src/oxt` <br>
    The "OS eXtensions for boosT" library, which provides various important functionality necessary for writing robust server software. It provides things like support for interruptable system calls and portable backtraces for C++. Boost was modified to make use of the functionality provided by OXT.
  * `dev` <br>
    Tools for Phusion Passenger developers. Not used during production.
  * `resources` <br>
    Various non-executable resource files, used during production.
- * `debian` <br>
+ * `packaging/debian` <br>
    Debian packaging files.
- * `rpm` <br>
+ * `packaging/rpm` <br>
    RPM packaging files.
  * `man` <br>
    Man pages.

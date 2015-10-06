@@ -1,5 +1,5 @@
-#include "TestSupport.h"
-#include "StaticString.h"
+#include <TestSupport.h>
+#include <StaticString.h>
 
 using namespace Passenger;
 using namespace std;

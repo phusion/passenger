@@ -4,3 +4,9 @@
 [submodule "packaging/debian"]
 	path = packaging/debian
 	url = https://github.com/phusion/passenger_apt_automation.git
+[submodule "src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core"]
+	path = src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core
+	url = https://github.com/phusion/union_station_hooks_core.git
+[submodule "src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails"]
+	path = src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails
+	url = https://github.com/phusion/union_station_hooks_rails.git

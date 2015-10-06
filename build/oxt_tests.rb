@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -23,37 +23,46 @@
 
 ### OXT library tests ###
 
-TEST_OXT_CFLAGS = "#{EXTRA_PRE_CXXFLAGS} -Iext -Itest/support #{TEST_COMMON_CFLAGS}"
-TEST_OXT_LDFLAGS = "#{TEST_BOOST_OXT_LIBRARY} #{PlatformInfo.portability_cxx_ldflags} #{EXTRA_CXX_LDFLAGS}"
-TEST_OXT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
+TEST_OXT_TARGET = "#{TEST_OUTPUT_DIR}oxt/main"
 TEST_OXT_OBJECTS = {
-  'oxt_test_main.o' => %w(oxt_test_main.cpp),
-  'backtrace_test.o' => %w(backtrace_test.cpp counter.hpp),
-  'spin_lock_test.o' => %w(spin_lock_test.cpp),
-  'dynamic_thread_group_test.o' => %w(dynamic_thread_group_test.cpp counter.hpp),
-  'syscall_interruption_test.o' => %w(syscall_interruption_test.cpp)
+  "#{TEST_OUTPUT_DIR}oxt/oxt_test_main.o" => "test/oxt/oxt_test_main.cpp",
+  "#{TEST_OUTPUT_DIR}oxt/backtrace_test.o" => "test/oxt/backtrace_test.cpp",
+  "#{TEST_OUTPUT_DIR}oxt/spin_lock_test.o" => "test/oxt/spin_lock_test.cpp",
+  "#{TEST_OUTPUT_DIR}oxt/dynamic_thread_group_test.o" => "test/oxt/dynamic_thread_group_test.cpp",
+  "#{TEST_OUTPUT_DIR}oxt/syscall_interruption_test.o" => "test/oxt/syscall_interruption_test.cpp"
 }
 
-desc "Run unit tests for the OXT library"
-task 'test:oxt' => 'test/oxt/oxt_test_main' do
-  sh "cd test && ./oxt/oxt_test_main"
+# Define compilation tasks for object files.
+TEST_OXT_OBJECTS.each_pair do |object, source|
+  define_cxx_object_compilation_task(
+    object,
+    source,
+    :include_paths => [
+      "test/support",
+      *CXX_SUPPORTLIB_INCLUDE_PATHS
+    ],
+    :flags => TEST_COMMON_CFLAGS
+  )
 end
 
-# Define task for test/oxt/oxt_test_main.
-oxt_test_main_dependencies = TEST_OXT_OBJECTS.keys.map do |object|
-  "test/oxt/#{object}"
-end
-oxt_test_main_dependencies << TEST_BOOST_OXT_LIBRARY
-file 'test/oxt/oxt_test_main' => oxt_test_main_dependencies do
-  objects = TEST_OXT_OBJECTS.keys.map{ |x| "test/oxt/#{x}" }.join(' ')
-  create_executable("test/oxt/oxt_test_main", objects, TEST_OXT_LDFLAGS)
-end
-
-# Define tasks for each OXT test source file.
-TEST_OXT_OBJECTS.each_pair do |target, sources|
-  file "test/oxt/#{target}" => sources.map{ |x| "test/oxt/#{x}" } do
-    source = "test/oxt/#{sources[0]}"
-    object = source.sub(/\.cpp$/, '.o')
-    compile_cxx source, "#{TEST_OXT_CFLAGS} -o #{object}"
+# Define compilation task for the test executable.
+dependencies = TEST_OXT_OBJECTS.keys + [TEST_BOOST_OXT_LIBRARY]
+file(TEST_OXT_TARGET => dependencies) do
+  flags = [
+    TEST_BOOST_OXT_LIBRARY,
+    PlatformInfo.portability_cxx_ldflags
+  ]
+  if USE_ASAN
+    flags << PlatformInfo.adress_sanitizer_flag
   end
+  create_cxx_executable(
+    TEST_OXT_TARGET,
+    TEST_OXT_OBJECTS.keys,
+    :flags => flags
+  )
+end
+
+desc "Run unit tests for the OXT library"
+task 'test:oxt' => TEST_OXT_TARGET do
+  sh "cd test && #{File.expand_path(TEST_OXT_TARGET)}"
 end

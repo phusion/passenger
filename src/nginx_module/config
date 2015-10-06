@@ -1,0 +1,102 @@
+# passenger-config is run with the 'ruby' command in $PATH, even when natively packaged,
+# so we check whether 'ruby' is correctly in $PATH.
+if ! ruby -v >/dev/null 2>/dev/null; then
+    echo '*** ERROR: Cannot find the "ruby" command in $PATH. Please fix your $PATH. You can learn more about $PATH at: https://www.phusionpassenger.com/library/indepth/environment_variables.html#the-path-environment-variable'
+    echo '*** Do you think that you set $PATH correctly, and you happen to be using sudo or rvmsudo? Read this: https://www.phusionpassenger.com/library/indepth/environment_variables.html#environment-variables-and-sudo'
+    exit 1
+fi
+
+## Magic comment: begin bootstrap ##
+# Ensure that this script finds the passenger-config that belongs to this Phusion Passenger installation.
+PATH="$ngx_addon_dir/../../bin:$PATH"
+export PATH
+
+PASSENGER_CONFIG=${PASSENGER_CONFIG:-passenger-config}
+
+if test "x$PASSENGER_LIBS" = "x" && ! $PASSENGER_CONFIG --compiled; then
+    echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
+    echo "*** Running 'rake nginx CACHING=false' in $ngx_addon_dir... ***"
+    old_dir=`pwd`
+    if ! cd $ngx_addon_dir; then
+        exit 1
+    fi
+    if test "x$TRACE" = 1; then
+        if ! rake --trace nginx CACHING=false; then
+            exit 1
+        fi
+    else
+        if ! rake nginx CACHING=false; then
+            exit 1
+        fi
+    fi
+    cd "$old_dir"
+    echo "*** Phusion Passenger support files have been successfully compiled. ***"
+fi
+## Magic comment: end bootstrap ##
+
+if test "x$PASSENGER_INCLUDEDIR" = "x"; then
+    PASSENGER_INCLUDEDIR=`$PASSENGER_CONFIG --includedir`
+fi
+if test "x$PASSENGER_LIBS" = "x"; then
+    PASSENGER_LIBS=`$PASSENGER_CONFIG --nginx-libs`
+fi
+
+ngx_addon_name=ngx_http_passenger_module
+HTTP_MODULES="$HTTP_MODULES ngx_http_passenger_module"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS \
+    ${ngx_addon_dir}/ngx_http_passenger_module.c \
+    ${ngx_addon_dir}/Configuration.c \
+    ${ngx_addon_dir}/ContentHandler.c \
+    ${ngx_addon_dir}/StaticContentHandler.c"
+NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
+    ${ngx_addon_dir}/Configuration.h \
+    ${ngx_addon_dir}/ConfigurationCommands.c \
+    ${ngx_addon_dir}/CreateLocationConfig.c \
+    ${ngx_addon_dir}/MergeLocationConfig.c \
+    ${ngx_addon_dir}/CacheLocationConfig.c \
+    ${ngx_addon_dir}/ContentHandler.h \
+    ${ngx_addon_dir}/StaticContentHandler.h \
+    ${ngx_addon_dir}/ngx_http_passenger_module.h \
+    ${PASSENGER_INCLUDEDIR}/cxx_supportlib/Constants.h \
+    ${PASSENGER_INCLUDEDIR}/cxx_supportlib/WatchdogLauncher.h \
+    ${PASSENGER_INCLUDEDIR}/cxx_supportlib/AppTypes.h"
+CORE_INCS="$CORE_INCS $PASSENGER_INCLUDEDIR"
+CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS -lstdc++ -lpthread"
+
+ngx_feature="Math library"
+ngx_feature_name=
+ngx_feature_run=no
+ngx_feature_incs="#include <math.h>"
+ngx_feature_path=
+ngx_feature_libs="-lm"
+ngx_feature_test="pow(1, 2)"
+. auto/feature
+if [ $ngx_found = yes ]; then
+    CORE_LIBS="$CORE_LIBS -lm"
+fi
+
+ngx_feature="POSIX realtime library"
+ngx_feature_name=
+ngx_feature_run=no
+ngx_feature_incs=
+ngx_feature_path=
+ngx_feature_libs="-lrt"
+ngx_feature_test=
+. auto/feature
+if [ $ngx_found = yes ]; then
+    CORE_LIBS="$CORE_LIBS -lrt"
+fi
+
+nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g' | head -n1`
+
+nginx_major_version=`echo "$nginx_version" | cut -d . -f 1`
+have=PASSENGER_NGINX_MAJOR_VERSION value="$nginx_major_version"
+. auto/define
+
+nginx_minor_version=`echo "$nginx_version" | cut -d . -f 2`
+have=PASSENGER_NGINX_MINOR_VERSION value="$nginx_minor_version"
+. auto/define
+
+nginx_micro_version=`echo "$nginx_version" | cut -d . -f 3`
+have=PASSENGER_NGINX_MICRO_VERSION value="$nginx_micro_version"
+. auto/define

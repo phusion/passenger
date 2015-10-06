@@ -41,7 +41,7 @@ if defined?(Bundler)
 end
 
 source_root = File.expand_path("../..", File.dirname(__FILE__))
-$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'constants'
@@ -113,11 +113,11 @@ when "homebrew"
 
   BINDIR = "#{root}/bin"
   SBINDIR = BINDIR
-  INCLUDEDIR = "#{root}/ext"
-  NGINX_ADDON_DIR = "#{root}/ext/nginx"
+  INCLUDEDIR = "#{root}/src"
+  NGINX_ADDON_DIR = "#{root}/src/nginx_module"
   DOCDIR = "#{root}/doc"
-  HELPER_SCRIPTS_DIR = "#{root}/helper-scripts"
-  RUBY_EXTENSION_SOURCE_DIR = "#{root}/ext/ruby"
+  HELPER_SCRIPTS_DIR = "#{root}/src/helper-scripts"
+  RUBY_EXTENSION_SOURCE_DIR = "#{root}/src/ruby_native_extension"
   SUPPORT_BINARIES_DIR = "#{root}/buildout/support-binaries"
   APACHE2_MODULE_PATH = "#{root}/buildout/apache2/mod_passenger.so"
   SUPPORTS_COMPILING_APACHE_MODULE = true
@@ -199,7 +199,7 @@ describe "A natively packaged Phusion Passenger" do
 
   specify "the Nginx runtime library headers exist" do
     File.directory?(INCLUDEDIR).should be_true
-    Dir["#{INCLUDEDIR}/common/*.h"].should_not be_empty
+    Dir["#{INCLUDEDIR}/cxx_supportlib/*.h"].should_not be_empty
   end
 
   specify "the Nginx addon directory exists" do

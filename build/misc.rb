@@ -37,13 +37,7 @@ task :sloccount do
     end
     sh "sloccount", *Dir[
       "#{tmpdir}/*",
-      "lib/phusion_passenger",
-      "ext/apache2",
-      "ext/nginx",
-      "ext/common",
-      "ext/oxt",
-      "ext/ruby/*.c",
-      "helper-scripts/*"
+      "src"
     ]
   ensure
     system "rm -rf #{tmpdir}"
@@ -148,6 +142,11 @@ task :contributors do
   puts "Updated CONTRIBUTORS"
 end
 
+desc "Update the C++ dependency map"
+task :dependency_map do
+  sh "./dev/index_cxx_dependencies.rb > build/cxx_dependency_map.rb"
+end
+
 # Compile the WebHelper binary, used by Homebrew packaging.
 task :webhelper => :nginx do
   require 'tmpdir'
@@ -162,7 +161,7 @@ task :webhelper => :nginx do
     sh "cd '#{path}/nginx-#{PREFERRED_NGINX_VERSION}' && " +
       "./configure --prefix=/tmp " +
       "#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " +
-      "--add-module='#{Dir.pwd}/ext/nginx' && " +
+      "--add-module='#{Dir.pwd}/src/nginx_module' && " +
       "make"
     sh "cp '#{path}/nginx-#{PREFERRED_NGINX_VERSION}/objs/nginx' '#{AGENT_OUTPUT_DIR}nginx-#{PREFERRED_NGINX_VERSION}'"
   end
@@ -189,20 +188,28 @@ task :compile_app => dependencies do
   object = source.sub(/\.cpp$/, '.o')
   exe = source.sub(/\.cpp$/, '')
   begin
-    compile_cxx(source,
-      "-DSTANDALONE -o #{object} " <<
-      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBUV_CFLAGS} " <<
-      "#{EXTRA_CXXFLAGS}")
-    create_executable(exe, object,
-      "-DSTANDALONE " <<
-      "-Iext -Iext/common #{LIBEV_CFLAGS} #{LIBUV_CFLAGS} " <<
-      "#{EXTRA_CXXFLAGS} " <<
-      "#{COMMON_LIBRARY.link_objects_as_string} " <<
-      "#{LIBBOOST_OXT_LINKARG} " <<
-      "#{libev_libs} " <<
-      "#{libuv_libs} " <<
-      "#{PlatformInfo.portability_cxx_ldflags} " <<
-      "#{EXTRA_CXX_LDFLAGS}")
+    compile_cxx(object,
+      source,
+      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+      :flags => [
+        "-DSTANDALONE",
+        LIBEV_CFLAGS,
+        LIBUV_CFLAGS
+      ]
+    )
+    create_cxx_executable(exe,
+      object,
+      :flags => [
+        "-DSTANDALONE",
+        LIBEV_CFLAGS,
+        LIBUV_CFLAGS,
+        COMMON_LIBRARY.link_objects_as_string,
+        LIBBOOST_OXT_LINKARG,
+        libev_libs,
+        libuv_libs,
+        PlatformInfo.portability_cxx_ldflags
+      ]
+    )
   ensure
     File.unlink('_source.cpp') rescue nil
   end

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (C) 2008-2014  Phusion
+#  Copyright (C) 2008-2015  Phusion
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 
 source_root = File.expand_path(File.dirname(__FILE__))
 $LOAD_PATH.unshift(source_root)
-$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 
 # Clean Bundler environment variables, preserve Rake environment variables.
 # Otherwise all Ruby commands will take slightly longer to start, which messes up
@@ -41,7 +41,7 @@ if boolean_option('ONLY_RUBY')
 else
   require 'build/ruby_extension'
   require 'build/common_library'
-  require 'build/agents'
+  require 'build/agent'
   require 'build/apache2'
   require 'build/nginx'
   require 'build/documentation'

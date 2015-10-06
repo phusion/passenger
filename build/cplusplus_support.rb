@@ -53,35 +53,83 @@ def run_compiler(*command)
   end
 end
 
-def compile_c(source, flags = "#{EXTRA_PRE_CFLAGS} #{EXTRA_CFLAGS}")
-  run_compiler "#{CC} #{flags} -c #{source}"
+def build_compiler_flags_from_options_or_flags(options_or_flags)
+  if options_or_flags.is_a?(Hash)
+    result = []
+    options = options_or_flags
+
+    (options[:include_paths] || []).each do |path|
+      result << "-I#{path}"
+    end
+
+    if flags = options[:flags]
+      result.concat([flags].flatten)
+    end
+
+    result.flatten.reject{ |x| x.nil? || x.empty? }.join(" ")
+  elsif options_or_flags.is_a?(String)
+    options_or_flags
+  elsif options_or_flags.respond_to?(:call)
+    build_compiler_flags_from_options_or_flags(options_or_flags.call)
+  elsif options_or_flags.nil?
+    ""
+  else
+    raise ArgumentError, "Invalid argument type: #{options_or_flags.inspect}"
+  end
 end
 
-def compile_cxx(source, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_CXXFLAGS}")
-  run_compiler "#{CXX} #{flags} -c #{source}"
+def generate_compilation_task_dependencies(source, options = nil)
+  result = [source]
+  if dependencies = CXX_DEPENDENCY_MAP[source]
+    result.concat(dependencies)
+  end
+  if options && options[:deps]
+    result.concat(options[:deps])
+  end
+  result
 end
 
-def create_static_library(target, sources)
+def compile_c(object, source, options_or_flags = nil)
+  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  ensure_target_directory_exists(object)
+  run_compiler("#{CC} -o #{object} #{EXTRA_PRE_CFLAGS} #{flags} #{EXTRA_CFLAGS} -c #{source}")
+end
+
+def compile_cxx(object, source, options_or_flags = nil)
+  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  ensure_target_directory_exists(object)
+  run_compiler("#{CXX} -o #{object} #{EXTRA_PRE_CXXFLAGS} #{flags} #{EXTRA_CXXFLAGS} -c #{source}")
+end
+
+def create_c_executable(target, objects, options_or_flags = nil)
+  objects = [objects].flatten.join(" ")
+  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  ensure_target_directory_exists(target)
+  run_compiler("#{CC} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{EXTRA_C_LDFLAGS}")
+end
+
+def create_cxx_executable(target, objects, options_or_flags = nil)
+  objects = [objects].flatten.join(" ")
+  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  ensure_target_directory_exists(target)
+  run_compiler("#{CXX} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{EXTRA_CXX_LDFLAGS}")
+end
+
+def create_static_library(target, objects)
   # On OS X, 'ar cru' will sometimes fail with an obscure error:
   #
   #   ar: foo.a is a fat file (use libtool(1) or lipo(1) and ar(1) on it)
   #   ar: foo.a: Inappropriate file type or format
   #
   # So here we delete the ar file before creating it, which bypasses this problem.
+  objects = [objects].flatten.join(" ")
+  ensure_target_directory_exists(target)
   sh "rm -rf #{target}"
-  sh "ar cru #{target} #{sources}"
+  sh "ar cru #{target} #{objects}"
   sh "ranlib #{target}"
 end
 
-def create_executable(target, sources, linkflags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_C_LDFLAGS} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_cxx_ldflags} #{EXTRA_CXX_LDFLAGS}")
-  run_compiler "#{CXX} #{sources} -o #{target} #{linkflags}"
-end
-
-def create_c_executable(target, sources, linkflags = "#{EXTRA_PRE_CFLAGS} #{EXTRA_PRE_CXX_LDFLAGS}#{EXTRA_CFLAGS} #{PlatformInfo.portability_c_ldflags} #{EXTRA_C_LDFLAGS}")
-  run_compiler "#{CC} #{sources} -o #{target} #{linkflags}"
-end
-
-def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTRA_PRE_CXX_LDFLAGS} #{EXTRA_CXXFLAGS} #{PlatformInfo.portability_cxx_ldflags} #{EXTRA_CXX_LDFLAGS}")
+def create_shared_library(target, objects, options_or_flags = nil)
   if PlatformInfo.os_name == "macosx"
     shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"
   else
@@ -92,5 +140,30 @@ def create_shared_library(target, sources, flags = "#{EXTRA_PRE_CXXFLAGS} #{EXTR
   else
     fPIC = "-fPIC"
   end
-  run_compiler "#{CXX} #{shlib_flag} #{sources} #{fPIC} -o #{target} #{flags}"
+  objects = [objects].flatten.join(" ")
+  flags = build_compiler_flags_from_options_or_flags(options_or_flags)
+  ensure_target_directory_exists(target)
+  run_compiler("#{CXX} #{shlib_flag} #{objects} #{fPIC} -o #{target} #{flags}")
+end
+
+def define_c_object_compilation_task(object, source, options_or_flags = nil)
+  options = options_or_flags if options.is_a?(Hash)
+  file(object => generate_compilation_task_dependencies(source, options)) do
+    compile_c(object, source, options_or_flags)
+  end
+end
+
+def define_cxx_object_compilation_task(object, source, options_or_flags = nil)
+  options = options_or_flags if options.is_a?(Hash)
+  file(object => generate_compilation_task_dependencies(source, options)) do
+    compile_cxx(object, source, options_or_flags)
+  end
+end
+
+def define_c_or_cxx_object_compilation_task(object, source, options_or_flags = nil)
+  if source =~ /\.c$/
+    define_c_object_compilation_task(object, source, options_or_flags)
+  else
+    define_cxx_object_compilation_task(object, source, options_or_flags)
+  end
 end

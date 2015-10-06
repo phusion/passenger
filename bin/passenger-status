@@ -24,7 +24,7 @@
 
 ## Magic comment: begin bootstrap ##
 source_root = File.expand_path("..", File.dirname(__FILE__))
-$LOAD_PATH.unshift("#{source_root}/lib")
+$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 begin
   require 'rubygems'
 rescue LoadError
@@ -191,7 +191,7 @@ def show_status(instance, options)
     end
 
   when 'union_station'
-    request = Net::HTTP::Get.new("/status.txt")
+    request = Net::HTTP::Get.new("/server.json")
     try_performing_ro_admin_basic_auth(request, instance)
     response = instance.http_request("agents.s/ust_router_api", request)
     if response.code.to_i / 100 == 2
