@@ -37,4 +37,4 @@ test/stub/zsfa/mycook
 test/stub/zsfa/foo
 test/support/allocate_memory
 pkg
-node_modules
+/node_modules

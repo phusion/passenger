@@ -10,11 +10,7 @@
     "should": "^2.0.1",
     "sinon": "^1.7.3",
     "express": "^3.4.8",
-    "mocha": "^1.15.1",
-    "network-byte-order": "^0.2.0",
-    "codify": "^0.3.0",
-    "microtime": "^2.0.0",
-    "continuation-local-storage": "^3.1.4"
+    "mocha": "^1.15.1"
   },
   "scripts": {
     "test": "rake test:node"

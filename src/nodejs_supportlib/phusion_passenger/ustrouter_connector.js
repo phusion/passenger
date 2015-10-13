@@ -23,82 +23,209 @@
  *  THE SOFTWARE.
  */
 
+var log;
 var net = require('net');
-var os = require("os");
-var nbo = require('network-byte-order');
-var codify = require('codify');
-var microtime = require('microtime');
+var os = require('os');
+var nbo = require('vendor-copy/network-byte-order');
+var codify = require('vendor-copy/codify');
 
-var ustRouterAddress; // standalone = "localhost:9344";
+var ustRouterAddress; // will normally be a unix sock, although there is a default standalone = "tcp://127.0.0.1:9344";
+var ustRouterPort; // if not a unix sock
 var ustRouterUser;
 var ustRouterPass;
 var ustGatewayKey;
 
-var nodeName = os.hostname();
+var nodeName;
 var appGroupName;
 
 var routerConn;
-var routerState = 0;
-var pendingTxnBuf = [];
+var routerState;
+// -1: disabled (not initialized or unrecoverable error, won't try to reconnect without new init)
+// 0: disconnected, ready to (re)try connect
+// 1: awaiting connect
+// 2: awaiting version
+// 3: awaiting auth OK
+// 4: awaiting init OK
+// 5: idle / ready to send
+// 6: awaiting openTransaction OK
+// 7: awaiting closeTransaction OK
 
-var inspection = false;
+var pendingTxnBuf;
+var pendingTxnBufMaxLength;
+var connTimeoutMs;
+var autoRetryAfterMs;
 
-// some kind of discard timer? failure to connect?
-
-function changeState(newRouterState) {
-	if (inspection) console.log("routerState: " + routerState + " -> " + newRouterState);
-	routerState = newRouterState;
+setDefaults();
+function setDefaults() {
+	nodeName = os.hostname();
+	routerState = -1;
+	pendingTxnBuf = [];
+	pendingTxnBufMaxLength = 5000;
+	connTimeoutMs = 10000;
+	autoRetryAfterMs = 30000;
 }
 
-exports.init = function(routerAddress, routerUser, routerPass, gatewayKey, groupName) {
-	if (routerState != 0) {
-		console.error("ERROR: trying to init when routerState not 0! (ignoring)");
+// Call to initiate a connection with the UstRouter. If called with incomplete parameters the connector will just be
+// disabled (isEnabled() will return false) and no further actions will be taken. If the connection fails, it is auto-retried
+// whenever logToUstTransaction(..) is called.
+exports.init = function(logger, routerAddress, routerUser, routerPass, gatewayKey, groupName) {
+	log = logger;
+	if (routerState > 0) {
+		log.warn("Trying to init when routerState > 0! (ignoring)");
 		return;
 	}
+	
+	routerState = -1;
 	ustRouterAddress = routerAddress;
 	ustRouterUser = routerUser;
 	ustRouterPass = routerPass;
 	ustGatewayKey = gatewayKey;
 	appGroupName = groupName;
 	
-	// createConnection doesn't understand the "unix:" prefix, but it does understand the path that follows.
-	if (ustRouterAddress.indexOf("unix:") == 0) {
-		ustRouterAddress = ustRouterAddress.substring(5);
+	if (ustRouterAddress) {
+		if (ustRouterAddress.indexOf("unix:") == 0) {
+			// createConnection doesn't understand the "unix:" prefix, but it does understand the path that follows.
+			ustRouterAddress = ustRouterAddress.substring(5);
+		} else if (ustRouterAddress.indexOf("tcp://") == 0) {
+			var hostAndPort = ustRouterAddress.substring(6).split(':');
+			ustRouterAddress = hostAndPort[0];
+			ustRouterPort = hostAndPort[1];
+		}
 	}
-	console.log("initialized ustrouter_connector with [" + ustRouterAddress + "] [" + ustRouterUser + "] [" + ustRouterPass + "] [" + 
-		ustGatewayKey + "] [" + appGroupName + "]");
+	log.debug("initialize ustrouter_connector with [routerAddress:" + ustRouterAddress + "] " + 
+		(ustRouterPort ? "[ustRouterPort:" + ustRouterPort + "] " : "") + "[user:" + ustRouterUser + "] [pass:" + 
+		ustRouterPass + "] [key:" +	ustGatewayKey + "] [app:" + appGroupName + "]");
 
+	if (!ustRouterAddress || !ustRouterUser || !ustRouterPass || !ustGatewayKey || !appGroupName) {
+		log.verbose("Union Station logging disabled (incomplete configuration).");
+		return;
+	}
+	
+	changeState(0, "Init approved");
+	
 	beginConnection();
+}
+
+exports.finit = function() {
+	resetState("finit()");
+}
+
+exports.isEnabled = function() {
+	return routerState >= 0;
 }
 
 function beginConnection() {
 	changeState(1);
 
-	routerConn = net.createConnection(ustRouterAddress);
+	setWatchdog(connTimeoutMs); // Watchdog for the entire connect-to-ustRouter process.
 
-	routerConn.on("connect", function() { changeState(2); });
+	if (ustRouterPort) { 
+		routerConn = net.createConnection(ustRouterPort, ustRouterAddress);
+	} else {
+		routerConn = net.createConnection(ustRouterAddress);
+	}
+
+	routerConn.on("connect", onConnect);
 	routerConn.on("error", onError);
-	routerConn.on("end", function() { changeState(0); });
-
+	routerConn.on("end", onEnd);
 	routerConn.on("data", onData);
 }
 
+function onConnect() {
+	changeState(2);
+}
+
+function onError(e) {
+	if (routerState == 1) {
+		log.error("Unable to connect to UstRouter at [" + ustRouterAddress +"], will auto-retry.");
+	} else {
+		// could be called when e.g. a write fails
+		log.error("Uncategorized error in UstRouter connection: " + e + ", will auto-retry.");
+	}
+	resetState("onError");
+}
+
+function onEnd() {
+	// e.g. when connection dies
+	resetState("onEnd");
+}
+
+function getWallclockMicrosec() {
+	// for lack of a more accurate clock
+	return new Date().getTime() * 1000;
+}
+
 function LogTransaction(cat) {
-	this.timestamp = microtime.now();
+	this.timestamp = getWallclockMicrosec();
 	this.category = cat;
 	this.txnId = "";
 	this.logBuf = [];
-	this.state = 1;
+	this.state = 0; // 0: untouched, 1: open sent, 2: close sent
 }
 
-function tryWriteLogs() {
-	if (inspection) console.log("tryWriteLogs");
+function findLastPendingTxnForId(txnId) {
+	for (i = pendingTxnBuf.length - 1; i >= 0; i--) {
+		if (pendingTxnBuf[i].txnId == txnId) {
+			return pendingTxnBuf[i];
+		}
+	}
+}
+
+exports.deferIfPendingTxns = function(txnId, deferThis, deferFn, deferArgs) {
+	var txn = findLastPendingTxnForId(txnId);
+	
+	if (!txn) {
+		return deferFn.apply(deferThis, deferArgs);
+	} else {
+		log.debug("defer response.end() for txn " + txnId);
+		txn.deferThis = deferThis;
+		txn.deferFn = deferFn;
+		txn.deferArgs = deferArgs;
+	}
+}
+
+// Example categories are "requests", "exceptions". The lineArray is a specific format parsed by Union STation.
+// txnIfContinue is an optional txnId and attaches the log to an existing transaction with the specified txnId.
+// N.B. transactions will be dropped if the outgoing buffer limit is reached.
+exports.logToUstTransaction = function(category, lineArray, txnIfContinue) {
+	if (!this.isEnabled()) {
+		return;
+	}
+	
+	if (pendingTxnBuf.length < pendingTxnBufMaxLength) {
+		var logTxn = new LogTransaction(category);
+		
+		if (txnIfContinue) {
+			logTxn.txnId = txnIfContinue;
+		}
+		logTxn.logBuf = lineArray;
+		
+		pendingTxnBuf.push(logTxn);
+	} else {
+		log.debug("Dropping Union Station log due to outgoing buffer limit (" + pendingTxnBufMaxLength + ") reached");
+	}
+	
+	pushPendingData();
+}
+
+function verifyOk(rcvString, topic) {
+	if ("status" != rcvString[0] || "ok" != rcvString[1]) {
+		log.error("Error with " + topic + ": [" + rcvString + "], will auto-retry.");
+		resetState("not OK reply");
+		return false;
+	}
+	return true;
+}
+
+function pushPendingData() {
+	log.debug("pushPendingData");
+
 	if (routerState == 0) {
 		// it disconnected or crashed somehow, reconnect
 		beginConnection();
 		return;
 	} else if (routerState != 5) {
-		return; // we're not idle
+		return; // we're not ready to send
 	}
 
 	// we have an authenticated, active connection; see what we can send
@@ -106,63 +233,193 @@ function tryWriteLogs() {
 		return; // no pending
 	}
 	
-	if (pendingTxnBuf[0].state == 1) {
-		// still need to open the txn
-		changeState(6); // expect ok/txnid in onData()..
-		if (inspection) console.log("open transaction(" + pendingTxnBuf[0].txnId + ")");
-		writeLenArray(routerConn, "openTransaction\0" + pendingTxnBuf[0].txnId + "\0" + appGroupName + "\0" + nodeName + "\0" + 
-			pendingTxnBuf[0].category +	"\0" + codify.toCode(pendingTxnBuf[0].timestamp) + "\0" + ustGatewayKey + "\0true\0true\0\0");
-	} else {
-		// txn is open, log the data & close
-		if (inspection) console.log("log & close transaction(" + pendingTxnBuf[0].txnId + ")");
-		txn = pendingTxnBuf.shift();
-		for (i = 0; i < txn.logBuf.length; i++) {
-			writeLenArray(routerConn, "log\0" + txn.txnId + "\0" + codify.toCode(txn.timestamp) + "\0");
-			writeLenString(routerConn, txn.logBuf[i]);
-		}
+	switch (pendingTxnBuf[0].state) {
+		case 0:
+			// still need to open the txn
+			changeState(6); // expect ok/txnid in onData()..
+			setWatchdog(connTimeoutMs);
+			log.debug("open transaction(" + pendingTxnBuf[0].txnId + ")");
+			pendingTxnBuf[0].state = 1;
+			writeLenArray(routerConn, "openTransaction\0" + pendingTxnBuf[0].txnId + "\0" + appGroupName + "\0" + nodeName + "\0" + 
+				pendingTxnBuf[0].category +	"\0" + codify.toCode(pendingTxnBuf[0].timestamp) + "\0" + ustGatewayKey + "\0true\0true\0\0");
+			break;
 
-		changeState(7); // expect ok in onData()..
-		writeLenArray(routerConn, "closeTransaction\0" + txn.txnId + "\0" + codify.toCode(microtime.now()) + "\0true\0");
+		case 1:
+			// open was sent, still waiting for OK.
+			break;
+			
+		case 2:
+			// txn is open, log the data & close
+			log.debug("log & close transaction(" + pendingTxnBuf[0].txnId + ")");
+			txn = pendingTxnBuf.shift();
+			
+			if (txn.deferFn) {
+				var moveToTxn = findLastPendingTxnForId(txn.txnId);
+				if (!moveToTxn) {
+					log.debug("found deferred response.end(), no other queued attachments for txn " + txn.txnId + ", so calling now that it's safe");
+					txn.deferFn.apply(txn.deferThis, txn.deferArgs);
+				} else {
+					log.debug("moving deferred response.end() because there are other relevant attachment(s) for txn " + txn.txnId);
+					moveToTxn.deferThis = txn.deferThis;
+					moveToTxn.deferFn = txn.deferFn;
+					moveToTxn.deferArgs = txn.deferArgs;
+				}
+			}
+
+			for (i = 0; i < txn.logBuf.length; i++) {
+				writeLenArray(routerConn, "log\0" + txn.txnId + "\0" + codify.toCode(txn.timestamp) + "\0");
+				writeLenString(routerConn, txn.logBuf[i]);
+			}
+
+			changeState(7); // expect ok in onData()..
+			setWatchdog(connTimeoutMs);
+			writeLenArray(routerConn, "closeTransaction\0" + txn.txnId + "\0" + codify.toCode(getWallclockMicrosec()) + "\0true\0");
+			log.debug("wrote log and close for " + txn.txnId);
+			break;
+		
+		default:
+			log.error("Unexpected pendingTxnBuf[0].state " + pendingTxnBuf[0].state + ", discarding it.");
+			pendingTxnBuf.shift();
+			break;
 	}	
 }
 
-exports.getTxnIdFromRequest = function(req) {
-	return req.headers['passenger-txn-id'];
+var watchDogId;
+
+function onWatchdogTimeout() {
+	resetState("onWatchdogTimeout");
 }
 
-exports.logToUstTransaction = function(category, lineArray, txnIfContinue) {
-	logTxn = new LogTransaction(category);
-	
-	if (txnIfContinue) {
-		logTxn.txnId = txnIfContinue;
+// Resets the connection if there is no progress in the next timeoutMs.
+function setWatchdog(timeoutMs) {
+	if (watchDogId) {
+		resetWatchdog();
 	}
-	logTxn.logBuf = lineArray;
-	pendingTxnBuf.push(logTxn);
-	
-	tryWriteLogs();
+	watchDogId = setTimeout(onWatchdogTimeout, timeoutMs);
+}
+
+function resetWatchdog() {
+	if (watchDogId) {
+		clearTimeout(watchDogId);
+		watchDogId = null;
+	}
 }
 
 var readBuf = "";
 // N.B. newData may be partial!
 function readLenArray(newData) {
 	readBuf += newData;
-if (inspection) console.log("read: total len = " + readBuf.length);
-if (inspection) console.log(new Buffer(readBuf));
+	log.silly("read: total len = " + readBuf.length);
+	log.silly(new Buffer(readBuf).toString("hex"));
 	if (readBuf.length < 2) {
-if (inspection) console.log("need more header data..");
+	log.silly("need more header data..");
 		return null; // expecting at least length bytes
 	}
-	lenRcv = nbo.ntohs(new Buffer(readBuf), 0);
-if (inspection) console.log("read: lenRCv = " + lenRcv);
-	if (readBuf.length < 2 + lenRcv) {
-if (inspection) console.log("need more payload data..");
+	payloadLen = nbo.ntohs(new Buffer(readBuf), 0);
+	log.silly("read: payloadLen = " + payloadLen);
+	if (readBuf.length < 2 + payloadLen) {
+	log.silly("need more payload data..");
 		return null; // not fully read yet
 	}
-	resultStr = readBuf.substring(2, lenRcv + 2);
-	readBuf = readBuf.substring(lenRcv + 2); // keep any bytes read beyond length for next read
+	resultStr = readBuf.substring(2, payloadLen + 2);
+	readBuf = readBuf.substring(payloadLen + 2); // keep any bytes read beyond length for next read
 	
 	return resultStr.split("\0");
-//	setTimeout(function () { console.log('timeout..'); c.end() }, 100);
+}
+
+function onData(data) {
+	log.silly("onData [" + data + "] (len = " + data.length + ")");
+	
+	rcvString = readLenArray(data);
+	if (!rcvString) {
+		return;
+	}
+	
+	log.silly("got: [" + rcvString + "]");
+
+	switch (routerState) {
+		case 2:
+			if ("version" == rcvString[0] && "1" == rcvString[1]) {
+				changeState(3);
+
+				writeLenString(routerConn, ustRouterUser);
+				writeLenString(routerConn, ustRouterPass);
+			} else {
+				log.error("Error with UstRouter version: [" + rcvString + "], will auto-retry.");
+				resetState("not OK version reply");
+			}
+			break;
+
+		case 3:
+			if (verifyOk(rcvString, "UstRouter authentication")) {
+				changeState(4);
+				writeLenArray(routerConn, "init\0" + nodeName + "\0");
+			}
+			break;
+
+		case 4:
+			if (verifyOk(rcvString, "UstRouter initialization")) {
+				resetWatchdog(); // initialization done, lift the watchdog guard
+				changeState(5);
+				pushPendingData();
+			}
+			break;
+
+		case 5:
+			log.warn("unexpected data receive state (5)");
+	 		pushPendingData();
+	 		break;
+
+		case 6:
+			resetWatchdog();
+			if (verifyOk(rcvString, "UstRouter openTransaction")) {
+				pendingTxnBuf[0].state = 2;
+				if (pendingTxnBuf[0].txnId.length == 0) {
+					log.debug("use rcvd back txnId: " + rcvString[2]);
+					pendingTxnBuf[0].txnId = rcvString[2]; // fill in the txn from the UstRouter reply
+				}
+
+				changeState(5);
+				pushPendingData();
+			}
+			break;
+
+		case 7:
+			resetWatchdog();
+			if (verifyOk(rcvString, "UstRouter closeTransaction")) {
+				changeState(5);
+				pushPendingData();
+			}
+			break;
+	}
+}
+
+function resetState(reason) {
+	changeState(0, reason);
+
+	// When experiencing a mid-transaction failure (pending transaction state is increased once a transaction open has 
+	// been sent), we don't really know what the other side remembers about the transaction (e.g. nothing if it crashed).
+	// It's even possible that the transaction itself is causing the problem (e.g. invalid category), so we choose to
+	// drop it and disconnect. The drop avoids getting stuck on invalid txns and the disconnect cleans up remote resources.
+	if (pendingTxnBuf.length > 0 && pendingTxnBuf[0].state != 0) {
+		log.debug("Mid-transaction (id: " + pendingTxnBuf[0].txnId + ") failure: drop/skipping Union Station log");
+		pendingTxnBuf.shift();
+	}
+
+	// ensure connection is finished and we don't get any outdated triggers 
+	resetWatchdog();
+
+	if (routerConn) {
+		routerConn.destroy();
+	}
+	
+	setTimeout(function() { pushPendingData(); }, autoRetryAfterMs);
+}
+
+function changeState(newRouterState, optReason) {
+	log.debug("routerState: " + routerState + " -> " + newRouterState + (optReason ? " due to: " + optReason : ""));
+
+	routerState = newRouterState;
 }
 
 function writeLenString(c, str) {
@@ -179,82 +436,13 @@ function writeLenArray(c, str) {
 	c.write(str);
 }
 
-function onError(e) {
-	if (routerState == 1) {
-		console.error("Unable to connect to ustrouter at [" + ustRouterAddress +"], Union Station logging disabled.");
-	} else {
-		console.error("Unexpected error in ustrouter connection: " + e + ", Union Station logging disabled.");
-	}
-	changeState(0);
-}
-
-function onData(data) {
-	if (inspection) console.log(data);
-	rcvString = readLenArray(data);
-	if (!rcvString) {
-		return;
-	}
-	if (inspection) console.log("got: [" + rcvString + "]");
-
-	if (routerState == 2) { // expect version 1
-		if ("version" !== rcvString[0] || "1" !== rcvString[1]) {
-			console.error("Unsupported ustrouter version [" + rcvString + "], Union Station logging disabled.");
-			changeState(0);
-			// TODO: close?
-			return;
-		}
-		changeState(3);
-
-		writeLenString(routerConn, ustRouterUser);
-		writeLenString(routerConn, ustRouterPass);
-	} else if (routerState == 3) { // expect OK from auth
-		if ("ok" != rcvString[0]) {
-			console.error("Error authenticating to ustrouter: [" + rcvString + "], Union Station logging disabled.");
-			changeState(0);
-			// TODO: close?
-			return;
-		}
-		changeState(4);
-
-		writeLenArray(routerConn, "init\0" + nodeName + "\0");
-	} else if (routerState == 4) { // expect OK from init
-		if ("ok" != rcvString[0]) {
-			console.error("Error initializing ustrouter connection: [" + rcvString + "], Union Station logging disabled.");
-			changeState(0);
-			// TODO: close?
-			return;
-		}
+if (process.env.NODE_ENV === 'test') {
+	exports.setDefaults = setDefaults;
+	exports.pushPendingData = pushPendingData;
 	
-		changeState(5);
-		tryWriteLogs();
-	 } else if (routerState == 5) { // not expecting anything
-	 	console.log("unexpected data receive state (5)");
-	 	tryWriteLogs();
-	} else if (routerState == 6) { // expect OK transaction open
-		if ("ok" != rcvString[0]) {
-			console.error("Error opening ustrouter transaction: [" + rcvString + "], Union Station logging disabled.");
-			changeState(0);
-			// TODO: close?
-			return;
-		}
-		
-		pendingTxnBuf[0].state = 2;
-		if (pendingTxnBuf[0].txnId.length == 0) {
-			if (inspection) console.log("use rcvd back txnId: " + rcvString[1]);
-			pendingTxnBuf[0].txnId = rcvString[1]; // fill in the txn from the ustrouter reply
-		}
-
-		changeState(5);
-		tryWriteLogs();
-	} else if (routerState == 7) { // expect OK transaction close
-		if ("ok" != rcvString[0]) {
-			console.error("Error closing ustrouter transaction: [" + rcvString + "], Union Station logging disabled.");
-			changeState(0);
-			// TODO: close?
-			return;
-		}
-		
-		changeState(5);
-		tryWriteLogs();
-	}
+	exports.getRouterState = function() { return routerState; };
+	exports.setPendingTxnBufMaxLength = function(val) { pendingTxnBufMaxLength = val; };
+	exports.getPendingTxnBuf = function() { return pendingTxnBuf; };	
+	exports.setConnTimeoutMs = function(val) { connTimeoutMs = val; };
+	exports.setAutoRetryAfterMs = function(val) { autoRetryAfterMs = val; };
 }

@@ -106,8 +106,12 @@ void
 sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 	TRACE_POINT();
 	SessionProtocolWorkingState state;
+
+	// Workaround for Ruby < 2.1 support.
+	std::string delta_monotonic = boost::to_string(SystemTime::getUsec() - (uv_hrtime() / 1000));
+
 	unsigned int bufferSize = determineHeaderSizeForSessionProtocol(req,
-		state);
+		state, delta_monotonic);
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
 	const unsigned int MBUF_MAX_SIZE = mbuf_pool_data_size(&mbuf_pool);
 	bool ok;
@@ -117,7 +121,7 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		bufferSize = MBUF_MAX_SIZE;
 
 		ok = constructHeaderForSessionProtocol(req, buffer.start,
-			bufferSize, state);
+			bufferSize, state, delta_monotonic);
 		assert(ok);
 		buffer = MemoryKit::mbuf(buffer, 0, bufferSize);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
@@ -127,7 +131,7 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		char *buffer = (char *) psg_pnalloc(req->pool, bufferSize);
 
 		ok = constructHeaderForSessionProtocol(req, buffer,
-			bufferSize, state);
+			bufferSize, state, delta_monotonic);
 		assert(ok);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
 			StaticString(buffer, bufferSize)) << "\"");
@@ -170,7 +174,7 @@ sendBodyToAppWhenAppSinkIdle(Channel *_channel, unsigned int size) {
 
 unsigned int
 determineHeaderSizeForSessionProtocol(Request *req,
-	SessionProtocolWorkingState &state)
+	SessionProtocolWorkingState &state, string delta_monotonic)
 {
 	unsigned int dataSize = sizeof(boost::uint32_t);
 
@@ -301,6 +305,9 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	if (req->options.analytics) {
 		dataSize += sizeof("PASSENGER_TXN_ID");
 		dataSize += req->options.transaction->getTxnId().size() + 1;
+
+		dataSize += sizeof("PASSENGER_DELTA_MONOTONIC");
+		dataSize += delta_monotonic.size() + 1;
 	}
 
 	if (req->upgraded()) {
@@ -324,7 +331,7 @@ determineHeaderSizeForSessionProtocol(Request *req,
 
 bool
 constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned int &size,
-	const SessionProtocolWorkingState &state)
+	const SessionProtocolWorkingState &state, string delta_monotonic)
 {
 	char *pos = buffer;
 	const char *end = buffer + size;
@@ -416,6 +423,10 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 	if (req->options.analytics) {
 		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_TXN_ID"));
 		pos = appendData(pos, end, req->options.transaction->getTxnId());
+		pos = appendData(pos, end, "", 1);
+
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_DELTA_MONOTONIC"));
+		pos = appendData(pos, end, delta_monotonic);
 		pos = appendData(pos, end, "", 1);
 	}
 

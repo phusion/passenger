@@ -1,0 +1,51 @@
+{
+  "name": "network-byte-order",
+  "description": "htonl, htons, ntohl, ntohs - convert values between host and network byte order.",
+  "version": "0.2.0",
+  "main": "lib/index.js",
+  "homepage": "https://github.com/mattcg/network-byte-order",
+  "implements": [
+    "CommonJS/Modules/1.0"
+  ],
+  "contributors": [
+    {
+      "name": "Matthew Caruana Galizia",
+      "email": "m@m.cg"
+    }
+  ],
+  "keywords": [
+    "htonl",
+    "htons",
+    "ntohl",
+    "ntohs",
+    "byte order",
+    "endian",
+    "endianness",
+    "convert"
+  ],
+  "bugs": {
+    "url": "https://github.com/mattcg/network-byte-order/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattcg/network-byte-order.git"
+  },
+  "licenses": [
+    {
+      "type": "Apache License, Version 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "devDependencies": {
+    "jscoverage": "0.x",
+    "mocha": "1.x",
+    "mocha-lcov-reporter": "0.x",
+    "coveralls": "2.x"
+  },
+  "readme": "# JavaScript implementation of htonl, htons, ntohl, ntohs #\n\n[![Build Status](https://travis-ci.org/mattcg/network-byte-order.png?branch=master)](https://travis-ci.org/mattcg/network-byte-order)\n[![Coverage Status](https://coveralls.io/repos/mattcg/network-byte-order/badge.png)](https://coveralls.io/r/mattcg/network-byte-order)\n\nThese routines are used for converting values between host and [network byte order](http://en.wikipedia.org/wiki/Endianness#Endianness_in_networking).\n\nDerived from [an implementation](http://blog.couchbase.com/starting-membase-nodejs) by Membase, Inc.\n\n## Usage ##\n\n### htonl(b, i, v) ###\n\nThe `htonl()` function converts the given unsigned 32-bit (long) integer from host byte order to network byte order (Little-Endian to Big-Endian).\n\n`b` is an [`Array`](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array) of octets or a Node.JS [`Buffer`](http://nodejs.org/api/buffer.html).\n`i` is the zero-based index at which to write into `b`.\n`v` is the value to convert.\n\n### htons(b, i, v) ###\n\nThe `htons()` function converts the given unsigned 16-bit (short) integer from host byte order to network byte order (Little-Endian to Big-Endian).\n\n`b` is an [`Array`](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array) of octets or a Node.JS [`Buffer`](http://nodejs.org/api/buffer.html).\n`i` is the zero-based index at which to write into `b`.\n`v` is the value to convert.\n\n### ntohl(b, i) ###\n\nThe `ntohl()` function converts the unsigned 32-bit (long) integer from network byte order to host byte order (Big-Endian to Little-Endian).\n\n`b` is an [`Array`](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array) of octets or a Node.JS [`Buffer`](http://nodejs.org/api/buffer.html) to read the value from.\n`i` is the zero-based index at which to read from `b`.\n\n### ntohlStr(s, i) ###\n\n`s` is a `string` to the read value from.\n`i` is the zero-based index at which to read from `s`.\n\n### ntohs(b, i) ###\n\nThe `ntohs()` function converts the unsigned 16-bit (short) integer from network byte order to host byte order (Big-Endian to Little-Endian).\n\n`b` is an [`Array`](https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array) of octets or a Node.JS [`Buffer`](http://nodejs.org/api/buffer.html) to read the value from.\n`i` is the zero-based index at which to read from `b`.\n\n### ntohsStr(s, i) ###\n\n`s` is a `string` to the read value from.\n`i` is the zero-based index at which to read from `s`.\n\n## License ##\n\nLicensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).\n",
+  "readmeFilename": "README.md",
+  "_id": "network-byte-order@0.2.0",
+  "_shasum": "6ac11bf44bf610daeddbe90a09a5c817c6e0d2b3",
+  "_from": "network-byte-order@^0.2.0",
+  "_resolved": "https://registry.npmjs.org/network-byte-order/-/network-byte-order-0.2.0.tgz"
+}

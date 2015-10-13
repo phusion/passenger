@@ -1,0 +1,29 @@
+{
+  "author": {
+    "name": "Andrew J. Stone",
+    "email": "andrew.j.stone.1@bozuko.com"
+  },
+  "name": "codify",
+  "description": "Turn integers into base36 codes",
+  "version": "0.3.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bozuko/codify.git"
+  },
+  "main": "codify.js",
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "readme": "Codify lets you transform integers to base36 strings and vice versa. All strings use uppercase letters.\n\n## Example\n\n    var codify = require('codify');\n    var code = codify.toCode(10); // 'A'\n    var testInt = codify.toInt(code); // 10\n\n    // Zero Extend\n    code = codify.toCode(0, 5); // '00000'",
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/bozuko/codify/issues"
+  },
+  "homepage": "https://github.com/bozuko/codify",
+  "_id": "codify@0.3.0",
+  "_shasum": "5489ce3b1c087fab99536d25afbb4b14e4d762f1",
+  "_from": "codify@^0.3.0",
+  "_resolved": "https://registry.npmjs.org/codify/-/codify-0.3.0.tgz"
+}

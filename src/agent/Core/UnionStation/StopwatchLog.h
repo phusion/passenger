@@ -31,6 +31,7 @@
 
 #include <string>
 
+#include <uv.h>
 #include <StaticString.h>
 #include <Exceptions.h>
 #include <Utils/StrIntUtils.h>
@@ -91,7 +92,7 @@ public:
 		pos = appendData(pos, end, "BEGIN: ");
 		pos = appendData(pos, end, name);
 		pos = appendData(pos, end, " (");
-		pos = appendData(pos, end, usecToString(SystemTime::getUsec()));
+		pos = appendData(pos, end, usecToString(uv_hrtime() / 1000));
 		pos = appendData(pos, end, ",");
 		if (getrusage(RUSAGE_SELF, &usage) == -1) {
 			int e = errno;
@@ -139,7 +140,7 @@ public:
 			}
 			pos = appendData(pos, end, data.name);
 			pos = appendData(pos, end, " (");
-			pos = appendData(pos, end, usecToString(SystemTime::getUsec()));
+			pos = appendData(pos, end, usecToString(uv_hrtime() / 1000));
 			pos = appendData(pos, end, ",");
 			if (getrusage(RUSAGE_SELF, &usage) == -1) {
 				int e = errno;

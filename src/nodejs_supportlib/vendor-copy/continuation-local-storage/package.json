@@ -1,0 +1,56 @@
+{
+  "name": "continuation-local-storage",
+  "version": "3.1.4",
+  "description": "userland implementation of https://github.com/joyent/node/issues/5243",
+  "main": "context.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "tap test/*.tap.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/othiym23/node-continuation-local-storage.git"
+  },
+  "keywords": [
+    "threading",
+    "shared",
+    "context",
+    "domains",
+    "tracing",
+    "logging"
+  ],
+  "author": {
+    "name": "Forrest L Norvell",
+    "email": "ogd@aoaioxxysz.net"
+  },
+  "contributors": [
+    {
+      "name": "Tim Caswell",
+      "email": "tim@creationix.com"
+    },
+    {
+      "name": "Forrest L Norvell",
+      "email": "ogd@aoaioxxysz.net"
+    }
+  ],
+  "license": "BSD",
+  "devDependencies": {
+    "tap": "^0.7.1"
+  },
+  "dependencies": {
+    "async-listener": "^0.5.0",
+    "emitter-listener": "^1.0.1"
+  },
+  "readme": "[![NPM](https://nodei.co/npm/continuation-local-storage.png?downloads=true&stars=true)](https://nodei.co/npm/continuation-local-storage/)\n\n# Continuation-Local Storage\n\nContinuation-local storage works like thread-local storage in threaded\nprogramming, but is based on chains of Node-style callbacks instead of threads.\nThe standard Node convention of functions calling functions is very similar to\nsomething called [\"continuation-passing style\"][cps] in functional programming,\nand the name comes from the way this module allows you to set and get values\nthat are scoped to the lifetime of these chains of function calls.\n\nSuppose you're writing a module that fetches a user and adds it to a session\nbefore calling a function passed in by a user to continue execution:\n\n```javascript\n// setup.js\n\nvar createNamespace = require('continuation-local-storage').createNamespace;\nvar session = createNamespace('my session');\n\nvar db = require('./lib/db.js');\n\nfunction start(options, next) {\n  db.fetchUserById(options.id, function (error, user) {\n    if (error) return next(error);\n\n    session.set('user', user);\n\n    next();\n  });\n}\n```\n\nLater on in the process of turning that user's data into an HTML page, you call\nanother function (maybe defined in another module entirely) that wants to fetch\nthe value you set earlier:\n\n```javascript\n// send_response.js\n\nvar getNamespace = require('continuation-local-storage').getNamespace;\nvar session = getNamespace('my session');\n\nvar render = require('./lib/render.js')\n\nfunction finish(response) {\n  var user = session.get('user');\n  render({user: user}).pipe(response);\n}\n```\n\nWhen you set values in continuation-local storage, those values are accessible\nuntil all functions called from the original function – synchronously or\nasynchronously – have finished executing. This includes callbacks passed to\n`process.nextTick` and the [timer functions][] ([setImmediate][],\n[setTimeout][], and [setInterval][]), as well as callbacks passed to\nasynchronous functions that call native functions (such as those exported from\nthe `fs`, `dns`, `zlib` and `crypto` modules).\n\nA simple rule of thumb is anywhere where you might have set a property on the\n`request` or `response` objects in an HTTP handler, you can (and should) now\nuse continuation-local storage. This API is designed to allow you extend the\nscope of a variable across a sequence of function calls, but with values\nspecific to each sequence of calls.\n\nValues are grouped into namespaces, created with `createNamespace()`. Sets of\nfunction calls are grouped together by calling them within the function passed\nto `.run()` on the namespace object. Calls to `.run()` can be nested, and each\nnested context this creates has its own copy of the set of values from the\nparent context. When a function is making multiple asynchronous calls, this\nallows each child call to get, set, and pass along its own context without\noverwriting the parent's.\n\nA simple, annotated example of how this nesting behaves:\n\n```javascript\nvar createNamespace = require('contination-local-storage').createNamespace;\n\nvar writer = createNamespace('writer');\nwriter.run(function () {\n  writer.set('value', 0);\n\n  requestHandler();\n});\n\nfunction requestHandler() {\n  writer.run(function(outer) {\n    // writer.get('value') returns 0\n    // outer.value is 0\n    writer.set('value', 1);\n    // writer.get('value') returns 1\n    // outer.value is 1\n    process.nextTick(function() {\n      // writer.get('value') returns 1\n      // outer.value is 1\n      writer.run(function(inner) {\n        // writer.get('value') returns 1\n        // outer.value is 1\n        // inner.value is 1\n        writer.set('value', 2);\n        // writer.get('value') returns 2\n        // outer.value is 1\n        // inner.value is 2\n      });\n    });\n  });\n\n  setTimeout(function() {\n    // runs with the default context, because nested contexts have ended\n    console.log(writer.get('value')); // prints 0\n  }, 1000);\n}\n```\n\n## cls.createNamespace(name)\n\n* return: {Namespace}\n\nEach application wanting to use continuation-local values should create its own\nnamespace. Reading from (or, more significantly, writing to) namespaces that\ndon't belong to you is a faux pas.\n\n## cls.getNamespace(name)\n\n* return: {Namespace}\n\nLook up an existing namespace.\n\n## cls.destroyNamespace(name)\n\nDispose of an existing namespace. WARNING: be sure to dispose of any references\nto destroyed namespaces in your old code, as contexts associated with them will\nno longer be propagated.\n\n## cls.reset()\n\nCompletely reset all continuation-local storage namespaces. WARNING: while this\nwill stop the propagation of values in any existing namespaces, if there are\nremaining references to those namespaces in code, the associated storage will\nstill be reachable, even though the associated state is no longer being updated.\nMake sure you clean up any references to destroyed namespaces yourself.\n\n## process.namespaces\n\n* return: dictionary of {Namespace} objects\n\nContinuation-local storage has a performance cost, and so it isn't enabled\nuntil the module is loaded for the first time. Once the module is loaded, the\ncurrent set of namespaces is available in `process.namespaces`, so library code\nthat wants to use continuation-local storage only when it's active should test\nfor the existence of `process.namespaces`.\n\n## Class: Namespace\n\nApplication-specific namespaces group values local to the set of functions\nwhose calls originate from a callback passed to `namespace.run()` or\n`namespace.bind()`.\n\n### namespace.active\n\n* return: the currently active context on a namespace\n\n### namespace.set(key, value)\n\n* return: `value`\n\nSet a value on the current continuation context. Must be set within an active\ncontinuation chain started with `namespace.run()` or `namespace.bind()`.\n\n### namespace.get(key)\n\n* return: the requested value, or `undefined`\n\nLook up a value on the current continuation context. Recursively searches from\nthe innermost to outermost nested continuation context for a value associated\nwith a given key. Must be set within an active continuation chain started with\n`namespace.run()` or `namespace.bind()`.\n\n### namespace.run(callback)\n\n* return: the context associated with that callback\n\nCreate a new context on which values can be set or read. Run all the functions\nthat are called (either directly, or indirectly through asynchronous functions\nthat take callbacks themselves) from the provided callback within the scope of\nthat namespace. The new context is passed as an argument to the callback\nwhen it's called.\n\n### namespace.bind(callback, [context])\n\n* return: a callback wrapped up in a context closure\n\nBind a function to the specified namespace. Works analogously to\n`Function.bind()` or `domain.bind()`. If context is omitted, it will default to\nthe currently active context in the namespace, or create a new context if none\nis currently defined.\n\n### namespace.bindEmitter(emitter)\n\nBind an EventEmitter to a namespace. Operates similarly to `domain.add`, with a\nless generic name and the additional caveat that unlike domains, namespaces\nnever implicitly bind EventEmitters to themselves when they're created within\nthe context of an active namespace.\n\nThe most likely time you'd want to use this is when you're using Express or\nConnect and want to make sure your middleware execution plays nice with CLS, or\nare doing other things with HTTP listeners:\n\n```javascript\nhttp.createServer(function (req, res) {\n  writer.add(req);\n  writer.add(res);\n\n  // do other stuff, some of which is asynchronous\n});\n```\n\n### namespace.createContext()\n\n* return: a context cloned from the currently active context\n\nUse this with `namespace.bind()`, if you want to have a fresh context at invocation time,\nas opposed to binding time:\n\n```javascript\nfunction doSomething(p) {\n  console.log(\"%s = %s\", p, ns.get(p));\n}\n\nfunction bindLater(callback) {\n  return writer.bind(callback, writer.createContext());\n}\n\nsetInterval(function () {\n  var bound = bindLater(doSomething);\n  bound('test');\n}, 100);\n```\n\n## context\n\nA context is a plain object created using the enclosing context as its prototype.\n\n[timer functions]: timers.html\n[setImmediate]:    timers.html#timers_setimmediate_callback_arg\n[setTimeout]:      timers.html#timers_settimeout_callback_delay_arg\n[setInterval]:     timers.html#timers_setinterval_callback_delay_arg\n[cps]:             http://en.wikipedia.org/wiki/Continuation-passing_style\n",
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/othiym23/node-continuation-local-storage/issues"
+  },
+  "homepage": "https://github.com/othiym23/node-continuation-local-storage",
+  "_id": "continuation-local-storage@3.1.4",
+  "_shasum": "cd9d604853ef17b4527d006f7b906e3e7375a2e1",
+  "_from": "continuation-local-storage@^3.1.4",
+  "_resolved": "https://registry.npmjs.org/continuation-local-storage/-/continuation-local-storage-3.1.4.tgz"
+}

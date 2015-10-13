@@ -24,6 +24,7 @@
 module PhusionPassenger
   PASSENGER_TXN_ID            = "PASSENGER_TXN_ID".freeze
   PASSENGER_APP_GROUP_NAME    = "PASSENGER_APP_GROUP_NAME".freeze
+  PASSENGER_DELTA_MONOTONIC   = "PASSENGER_DELTA_MONOTONIC".freeze
   RACK_HIJACK_IO              = "rack.hijack_io".freeze
 
   LVL_CRIT   = 0

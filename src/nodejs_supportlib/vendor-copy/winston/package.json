@@ -1,0 +1,87 @@
+{
+  "name": "winston",
+  "description": "A multi-transport async logging library for Node.js",
+  "version": "1.1.2",
+  "author": {
+    "name": "Charlie Robbins",
+    "email": "charlie.robbins@gmail.com"
+  },
+  "maintainers": [
+    {
+      "name": "indexzero",
+      "email": "charlie.robbins@gmail.com"
+    },
+    {
+      "name": "chjj",
+      "email": "chjjeffrey@gmail.com"
+    },
+    {
+      "name": "jcrugzz",
+      "email": "jcrugzz@gmail.com"
+    },
+    {
+      "name": "pose",
+      "email": "albertopose@gmail.com"
+    },
+    {
+      "name": "v1",
+      "email": "info@3rd-Eden.com"
+    },
+    {
+      "name": "3rdeden",
+      "email": "npm@3rd-Eden.com"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/winstonjs/winston.git"
+  },
+  "keywords": [
+    "logging",
+    "sysadmin",
+    "tools"
+  ],
+  "dependencies": {
+    "async": "~1.0.0",
+    "colors": "1.0.x",
+    "cycle": "1.0.x",
+    "eyes": "0.1.x",
+    "isstream": "0.1.x",
+    "pkginfo": "0.3.x",
+    "stack-trace": "0.0.x"
+  },
+  "devDependencies": {
+    "hock": "1.x.x",
+    "std-mocks": "~1.0.0",
+    "vows": "0.7.x"
+  },
+  "main": "./lib/winston",
+  "scripts": {
+    "test": "vows --spec --isolate"
+  },
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "license": "MIT",
+  "gitHead": "2064bfe3b0f3da77c798d248a1609dbc24ff077e",
+  "bugs": {
+    "url": "https://github.com/winstonjs/winston/issues"
+  },
+  "homepage": "https://github.com/winstonjs/winston#readme",
+  "_id": "winston@1.1.2",
+  "_shasum": "68edd769ff79d4f9528cf0e5d80021aade67480c",
+  "_from": "winston@^1.1.0",
+  "_npmVersion": "2.14.5",
+  "_nodeVersion": "0.12.7",
+  "_npmUser": {
+    "name": "indexzero",
+    "email": "charlie.robbins@gmail.com"
+  },
+  "dist": {
+    "shasum": "68edd769ff79d4f9528cf0e5d80021aade67480c",
+    "tarball": "http://registry.npmjs.org/winston/-/winston-1.1.2.tgz"
+  },
+  "directories": {},
+  "_resolved": "https://registry.npmjs.org/winston/-/winston-1.1.2.tgz",
+  "readme": "ERROR: No README data found!"
+}

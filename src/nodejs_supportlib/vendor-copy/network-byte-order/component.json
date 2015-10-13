@@ -1,0 +1,10 @@
+{
+	"name": "network-byte-order",
+	"description": "htonl, htons, ntohl, ntohs - convert values between host and network byte order.",
+	"version": "0.2.0",
+	"main": "lib/index.js",
+	"scripts": [
+		"lib/index.js"
+	],
+	"license": "Apache License, Version 2.0"
+}

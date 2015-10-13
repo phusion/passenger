@@ -23,44 +23,53 @@
  *  THE SOFTWARE.
  */
 
+var ustReporter = global.phusion_passenger_ustReporter;
+
+var log;
 var express;
-var routerThis;
-var ustLog;
 
-var createNamespace = require('continuation-local-storage').createNamespace;
-var clStore = createNamespace('passenger-request-ctx');
+var applicationThis;
 
-exports.initPreLoad = function(appRoot, ustLogger) {
-	ustLog = ustLogger;
-
+exports.initPreLoad = function() {
+	log = ustReporter.getPassengerLogger();
+	var appRoot = ustReporter.getApplicationRoot();
+	
 	try {
 		express = require(appRoot + "/node_modules/express");
-		console.log("==== Instrumentation [Express] ====");
-		console.log("hook application.init, to be the first in the use() line..");
+	} catch (e) {
+		// express not present, no need to instrument.
+		log.debug("Not instrumenting Express (probably not used): " + e);
+		return;
+	}
+	
+	try {
+		log.info("==== Instrumentation [Express] ==== initialize");
+		log.debug("hook application.init, to be the first in the use() line..");
 
 		express.application.initOrig = express.application.init;
 		express.application.init = function() {
-				console.log("Express application.init() called, chain and then be the first to use()..");
+				log.debug("Express application.init() called, chain and then be the first to use()..");
 				var rval = express.application.initOrig.apply(this, arguments);
 
 				this.use(logRequest);
+				
+				applicationThis = this; // store for initPostLoad use
+				
 				return rval;
 			};
 
-		console.log("Express tap: router.use, to be as late as possible in the use() line, but before any other error handlers..");
-		express.Router.useOrig = express.Router.use;
-		express.Router.use = function() {
+		log.debug("Express tap: application.use, to be as late as possible in the use() line, but before any other error handlers..");
+		express.application.useOrig = express.application.use;
+		express.application.use = function() {
 			// Express recognizes error handlers by #params = 4
-			if (arguments.length == 2 && arguments[1].length == 4) {
-				express.Router.useOrig.apply(this, [logException]);
+			if (arguments[0].length == 4) {
+				express.application.useOrig.call(this, logException);
 			}
-
-			express.Router.useOrig.apply(this, arguments);
-
-			routerThis = this;
-		};
+		
+			express.application.useOrig.apply(this, arguments);
+		} 
 	} catch (e) {
-		console.log("Express instrumentation error: " + e);
+		log.error("Unable to instrument Express due to error: " + e);
 	}
 }
 
@@ -69,65 +78,29 @@ exports.initPostLoad = function() {
 		return;
 	}
 
-	console.log("add final error handler..");
-	express.Router.useOrig.apply(routerThis, [logException]);
+	log.debug("add final error handler..");
+	try {
+		if (applicationThis) {
+			express.application.useOrig.call(applicationThis, logException);
+		}
+	} catch (e) {
+		log.error("Unable to instrument Express error flow due to error: " + e);
+	}
 }
 
 function logRequest(req, res, next) {
-	console.log("==== Instrumentation [Express] ==== REQUEST [" + req.method + " " + req.url + "]");
-
-	var logBuf = [];
-	logBuf.push("Got request for: " + req.url);
-
-	clStore.bindEmitter(req);
-	clStore.bindEmitter(res);
-
-	var attachToTxnId = ustLog.getTxnIdFromRequest(req);
-
-	ustLog.logToUstTransaction("requests", logBuf, attachToTxnId);
-
-	clStore.run(function() {
-		clStore.set("attachToTxnId", attachToTxnId);
-		//console.log("SET STORE: " + attachToTxnId);
-		next();
-	});
+	log.verbose("==== Instrumentation [Express] ==== REQUEST [" + req.method + " " + req.url + "] attach");
+	ustReporter.attachToRequest(req, res, next);
 }
 
 function logException(err, req, res, next) {
 	// We may have multiple exception handlers in the routing chain, ensure only the first one actually logs.
 	if (!res.hasLoggedException) {
-		console.log("==== Instrumentation [Express] ==== EXCEPTION + TRACE FOR [" + req.url + "]");
-
-		var logBuf = [];
-		logBuf.push("Request transaction ID: " + ustLog.getTxnIdFromRequest(req));
-		logBuf.push("Message: " + new Buffer(err.message).toString('base64'));
-		logBuf.push("Class: " + err.name);
-		logBuf.push("Backtrace: " + new Buffer(err.stack).toString('base64'));
-		//logBuf.push("Controller action: ?");
-
-		ustLog.logToUstTransaction("exceptions", logBuf);
+		log.verbose("==== Instrumentation [Express] ==== EXCEPTION + TRACE FOR [" + req.url + "]");
+			
+		ustReporter.logException(err.name, err.message, err.stack);
 
 		res.hasLoggedException = true;
 	}
 	next(err);
 }
-
-// DEBUG
-//var Module = require('module')
-
-//Module.loadOrig = Module._load;
-//Module._load = function(request, parent, isMain) { console.log("load: [" + request + ", " +parent+","+isMain+ "]"); return Module.loadOrig(request, parent, isMain); };
-
-//http.createServerOrig = http.createServer;
-//http.createServer = createServerTap;
-
-//var appTap;
-//function createServerTap(listener) {
-	//console.log("CREATE SERVER TAP got "+ listener);
-	//appTap = listener;
-	//appTap.use(logException);
-
-	//http.createServer = http.createServerOrig;
-
-	//return http.createServer(listener);
-//}

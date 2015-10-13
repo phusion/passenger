@@ -50,6 +50,9 @@
 #include <cassert>
 #include <cctype>
 
+// For Ruby < 2.1 workaround in SendRequest.cpp
+#include <uv.h>
+
 #include <Logging.h>
 #include <MessageReadersWriters.h>
 #include <Constants.h>
