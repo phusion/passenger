@@ -224,7 +224,7 @@ module PhusionPassenger
           request.content_type = "application/json"
           request.body = PhusionPassenger::Utils::JSON.generate(
             :name => group_name,
-            :method => restart_method)
+            :restart_method => restart_method)
           response = @instance.http_request("agents.s/core_api", request)
           if response.code.to_i / 100 == 2
             response.body

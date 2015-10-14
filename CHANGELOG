@@ -2,6 +2,7 @@ Release 5.0.21
 --------------
 
  * [Enterprise] Fixes a bug in passenger-irb where printing strings larger than 64 KB would cause it to crash.
+ * [Enterprise] Fixes the `passenger-config restart-app` command so that it performs a non-rolling-restart unless `--rolling-restart` is given as command line option, as per the documentation. Previously, `passenger-config restart-app` without `--rolling-restart` would perform a rolling restart if rolling restarts are configured in the configuration file, but this contradicted documented behavior. Closes GH-1634.
 
 
 Release 5.0.20
