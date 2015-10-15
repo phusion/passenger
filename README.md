@@ -44,4 +44,4 @@ Ruby users can also build a gem from the Git repository and install the gem.
 
 ## Legal
 
-Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+"Passenger", "Phusion Passenger" and "Union Station" are registered trademarks of Phusion Holding B.V.
