@@ -333,13 +333,13 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 				writev_wrapper_data.iov     = groups[i].io_vectors;
 				writev_wrapper_data.iovcnt  = groups[i].count;
 				#if defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
-					ret = (int) rb_thread_call_without_gvl(writev_wrapper,
+					ret = (ssize_t) rb_thread_call_without_gvl(writev_wrapper,
 						&writev_wrapper_data, RUBY_UBF_IO, NULL);
 				#elif defined(HAVE_RB_THREAD_IO_BLOCKING_REGION)
-					ret = (int) rb_thread_io_blocking_region(writev_wrapper,
+					ret = (ssize_t) rb_thread_io_blocking_region(writev_wrapper,
 						&writev_wrapper_data, fd_num);
 				#else
-					ret = (int) rb_thread_blocking_region(writev_wrapper,
+					ret = (ssize_t) rb_thread_blocking_region(writev_wrapper,
 						&writev_wrapper_data, RUBY_UBF_IO, 0);
 				#endif
 			#endif
