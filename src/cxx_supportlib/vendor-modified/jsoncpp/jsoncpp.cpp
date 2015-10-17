@@ -1698,7 +1698,7 @@ Value::CZString::CZString( const CZString &other )
 : cstr_( other.index_ != noDuplication &&  other.cstr_ != 0
                 ?  duplicateStringValue( other.cstr_ )
                 : other.cstr_ )
-   , index_( other.cstr_ ? (other.index_ == noDuplication ? noDuplication : duplicate)
+   , index_( other.cstr_ ? ArrayIndex(other.index_ == noDuplication ? noDuplication : duplicate)
                          : other.index_ )
 {
 }
