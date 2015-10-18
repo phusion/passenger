@@ -1512,7 +1512,7 @@ public:
 		RequestNote *note = getRequestNote(r);
 		if (note != 0 && hasModAutoIndex()) {
 			note->handlerBeforeModAutoIndex = r->handler;
-			r->handler = "";
+			r->handler = "passenger-skip-autoindex";
 		}
 		return DECLINED;
 	}
