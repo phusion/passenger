@@ -147,8 +147,6 @@
 
 	#define SHORT_PROGRAM_NAME "Passenger"
 
-	#define STANDALONE_NGINX_CONFIGURE_OPTIONS "--with-cc-opt='-Wno-error' --without-http_fastcgi_module --without-http_scgi_module --without-http_uwsgi_module --with-http_gzip_static_module --with-http_stub_status_module --with-http_ssl_module --with-http_realip_module"
-
 	#define SUPPORT_URL "https://www.phusionpassenger.com/documentation_and_support"
 
 	#define USER_NAMESPACE_DIRNAME ".passenger"

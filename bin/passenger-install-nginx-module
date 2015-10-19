@@ -39,9 +39,11 @@ require 'digest/sha2'
 require 'optparse'
 require 'fileutils'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 PhusionPassenger.require_passenger_lib 'abstract_installer'
 PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
+PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
 DOWNLOAD_OPTION = {
   :connect_timeout => 30,
@@ -540,11 +542,15 @@ private
   end
 
   def build_nginx_configure_command(prefix, extra_configure_flags = nil)
+    extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags}".strip
+    extra_ldflags = PlatformInfo.openssl_extra_ldflags
+
     command = "sh ./configure --prefix='#{prefix}' "
     command << "--with-http_ssl_module "
     command << "--with-http_gzip_static_module "
     command << "--with-http_stub_status_module "
-    command << "--with-cc-opt='-Wno-error' "
+    command << "--with-cc-opt=#{Shellwords.escape extra_cflags} "
+    command << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
     if @pcre_source_dir
       command << "--with-pcre='#{@pcre_source_dir}' "
     elsif !pcre_is_installed?

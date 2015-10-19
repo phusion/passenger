@@ -76,7 +76,6 @@ class Installer < PhusionPassenger::AbstractInstaller
       'cc',
       'c++',
       'libcurl-dev',
-      'openssl-dev',
       'zlib-dev',
       'apache2',
       'apache2-dev',

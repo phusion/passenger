@@ -109,15 +109,6 @@ module PhusionPassenger
     RPM_DEV_PACKAGE           = "passenger-devel"
     RPM_APACHE_MODULE_PACKAGE = "mod_passenger"
     RPM_NGINX_PACKAGE         = "nginx"
-    STANDALONE_NGINX_CONFIGURE_OPTIONS =
-      "--with-cc-opt='-Wno-error' " <<
-      "--without-http_fastcgi_module " <<
-      "--without-http_scgi_module " <<
-      "--without-http_uwsgi_module " <<
-      "--with-http_gzip_static_module " <<
-      "--with-http_stub_status_module " <<
-      "--with-http_ssl_module " <<
-      "--with-http_realip_module"
   end
 
   SharedConstants.constants.each do |name|
