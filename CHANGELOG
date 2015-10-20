@@ -4,7 +4,7 @@ Release 5.0.21
  * Properly handles Ruby applications that output the `Content-Length` and `Transfer-Encoding` headers in non-standard casing, e.g. `Content-length`. Closes GH-1517.
  * Fixes OpenSSL detection problems on OS X 10.11 El Capitan. OS X 10.11 no longer includes OpenSSL headers, so Passenger will suggest and use OpenSSL from Homebrew. Closes GH-1630.
  * Introduces the [secure HTTP headers](https://www.phusionpassenger.com/library/indepth/meteor/secure_http_headers.html) feature for Node.js and Meteor apps. This mechanism allows Passenger to send per-request information to the application, while guaranteeing that this information is not spoofed by the client.
- * Per-request Apache environment variables are now passed to Node.js and Meteor apps through the [`!~Passenger-Envvars`](https://www.phusionpassenger.com/indepth/nodejs/apache_per_request_envvars.html) secure header.
+ * Per-request Apache environment variables are now passed to Node.js and Meteor apps through the [`!~Passenger-Envvars`](https://www.phusionpassenger.com/library/indepth/nodejs/apache_per_request_envvars.html) secure header.
  * [Enterprise] Fixes a bug in passenger-irb where printing strings larger than 64 KB would cause it to crash.
  * [Enterprise] Fixes the `passenger-config restart-app` command so that it performs a non-rolling-restart unless `--rolling-restart` is given as command line option, as per the documentation. Previously, `passenger-config restart-app` without `--rolling-restart` would perform a rolling restart if rolling restarts are configured in the configuration file, but this contradicted documented behavior. Closes GH-1634.
 
