@@ -38,6 +38,7 @@ if (!defined?(RUBY_ENGINE) || RUBY_ENGINE == "ruby") && RUBY_VERSION < "1.8.7"
       "gem install fastthread"
   end
 end
+require 'pathname'
 
 class Exception
   def backtrace_string(current_location = nil)
@@ -61,32 +62,57 @@ class Exception
 end
 
 class Dir
-  # Dir.pwd resolves symlinks. This version tries not to, by shelling
-  # out to the pwd tool.
-  def self.pwd_no_resolve
-    begin
-      result = `pwd`.strip
-    rescue Errno::ENOENT
-      result = `/bin/pwd`.strip
+  # The current working directory may contain one or more symlinks
+  # in its path. Both Dir.pwd and the C getcwd() call resolve symlinks
+  # in the path.
+  #
+  # It turns out that there is no such thing as a path without
+  # unresolved symlinks. The shell presents a working directory with
+  # unresolved symlinks (which it calls the "logical working directory"),
+  # but that is an illusion provided by the shell. The shell reports
+  # the logical working directory though the PWD environment variable.
+  #
+  # This method tries to use the PWD environment variable if it
+  # matches the actual working directory.
+  #
+  # See also:
+  # https://github.com/phusion/passenger/issues/1596#issuecomment-138154045
+  # http://git.savannah.gnu.org/cgit/coreutils.git/tree/src/pwd.c
+  # http://www.opensource.apple.com/source/shell_cmds/shell_cmds-170/pwd/pwd.c
+  def self.logical_pwd
+    physical_pwd = Dir.pwd
+    logical_pwd = ENV['PWD']
+    if logical_pwd.nil? || logical_pwd.empty?
+      return physical_pwd
     end
-    if result.empty?
-      return Dir.pwd
-    else
-      return result
+
+    # Check whether $PWD matches the actual working directory.
+    # This algorithm similar to the one used by GNU coreutils.
+    begin
+      logical_stat = File.stat(logical_pwd)
+      physical_stat = File.stat(physical_pwd)
+      if logical_stat.ino == physical_stat.ino &&
+         logical_stat.dev == physical_stat.dev
+        logical_pwd
+      else
+        physical_pwd
+      end
+    rescue SystemCallError
+      physical_pwd
     end
   end
 end
 
 class File
   # Dir.pwd resolves symlinks. So in turn, File.expand_path/File.absolute_path
-  # do that too. This method fixes that by using Dir.pwd_no_resolve.
+  # do that too. This method fixes that by using Dir.logical_pwd.
   if File.respond_to?(:absolute_path)
-    def self.absolute_path_no_resolve(path)
-      return File.absolute_path(path, Dir.pwd_no_resolve)
+    def self.absolute_logical_path(path, base = Dir.logical_pwd)
+      return File.absolute_path(path, base)
     end
   else
-    def self.absolute_path_no_resolve(path)
-      return File.expand_path(path, Dir.pwd_no_resolve)
+    def self.absolute_logical_path(path, base = Dir.logical_pwd)
+      return File.expand_path(path, base)
     end
   end
 end

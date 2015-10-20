@@ -92,7 +92,7 @@ module PhusionPassenger
       # it's specified.
       def resolve_config_file_paths(config_file_options, config_filename)
         options = config_file_options
-        config_file_dir = File.dirname(File.absolute_path_no_resolve(config_filename))
+        config_file_dir = File.dirname(File.absolute_logical_path(config_filename))
 
         keys = [:socket_file, :ssl_certificate, :ssl_certificate_key, :log_file,
           :pid_file, :instance_registry_dir, :data_buffer_dir, :meteor_app_settings,

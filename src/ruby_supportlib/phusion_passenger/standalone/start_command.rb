@@ -114,6 +114,8 @@ module PhusionPassenger
         # Clear @parsed_options so that #remerge_all_options works.
         options.clear
 
+        logical_pwd = Dir.logical_pwd
+
         # If you add or change an option, make sure to update the following places too:
         # - src/ruby_supportlib/phusion_passenger/standalone/start_command/builtin_engine.rb,
         #   function #build_daemon_controller_options
@@ -136,7 +138,7 @@ module PhusionPassenger
           opts.on("-S", "--socket FILE", String,
             "Bind to Unix domain socket instead of TCP#{nl}" +
             "socket") do |value|
-            options[:socket_file] = File.absolute_path_no_resolve(value)
+            options[:socket_file] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--ssl", "Enable SSL support (Nginx#{nl}" +
             "engine only)") do
@@ -145,11 +147,11 @@ module PhusionPassenger
           opts.on("--ssl-certificate PATH", String,
             "Specify the SSL certificate path#{nl}" +
             "(Nginx engine only)") do |value|
-            options[:ssl_certificate] = File.absolute_path_no_resolve(value)
+            options[:ssl_certificate] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--ssl-certificate-key PATH", String,
             "Specify the SSL key path") do |value|
-            options[:ssl_certificate_key] = File.absolute_path_no_resolve(value)
+            options[:ssl_certificate_key] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--ssl-port PORT", Integer,
             "Listen for SSL on this port, while#{nl}" +
@@ -167,18 +169,18 @@ module PhusionPassenger
           opts.on("--log-file FILENAME", String,
             "Where to write log messages. Default:#{nl}" +
             "console, or /dev/null when daemonized") do |value|
-            options[:log_file] = File.absolute_path_no_resolve(value)
+            options[:log_file] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--pid-file FILENAME", String, "Where to store the PID file") do |value|
-            options[:pid_file] = File.absolute_path_no_resolve(value)
+            options[:pid_file] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--instance-registry-dir PATH", String,
             "Use the given instance registry directory") do |value|
-            options[:instance_registry_dir] = File.absolute_path_no_resolve(value)
+            options[:instance_registry_dir] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--data-buffer-dir PATH", String,
             "Use the given data buffer directory") do |value|
-            options[:data_buffer_dir] = File.absolute_path_no_resolve(value)
+            options[:data_buffer_dir] = File.absolute_logical_path(value, logical_pwd)
           end
 
           opts.separator ""
@@ -200,13 +202,13 @@ module PhusionPassenger
           end
           opts.on("--meteor-app-settings FILENAME", String,
             "Settings file to use for (development mode) Meteor apps") do |value|
-            options[:meteor_app_settings] = File.absolute_path_no_resolve(value)
+            options[:meteor_app_settings] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("-R", "--rackup FILE", String,
             "Consider application a Ruby app, and use#{nl}" +
             "the given rackup file") do |value|
             options[:app_type] = "rack"
-            options[:startup_file] = File.absolute_path_no_resolve(value)
+            options[:startup_file] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--app-type NAME", String,
             "Force app to be detected as the given type") do |value|
@@ -214,7 +216,7 @@ module PhusionPassenger
           end
           opts.on("--startup-file FILENAME", String,
             "Force given startup file to be used") do |value|
-            options[:startup_file] = File.absolute_path_no_resolve(value)
+            options[:startup_file] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--spawn-method NAME", String,
             "The spawn method to use. Default: #{DEFAULT_OPTIONS[:spawn_method]}") do |value|
@@ -222,11 +224,11 @@ module PhusionPassenger
           end
           opts.on("--static-files-dir PATH", String,
             "Specify the static files dir (Nginx engine#{nl}" +
-            "only)") do |val|
-            options[:static_files_dir] = File.absolute_path_no_resolve(val)
+            "only)") do |value|
+            options[:static_files_dir] = File.absolute_logical_path(value, logical_pwd)
           end
-          opts.on("--restart-dir PATH", String, "Specify the restart dir") do |val|
-            options[:restart_dir] = File.absolute_path_no_resolve(val)
+          opts.on("--restart-dir PATH", String, "Specify the restart dir") do |value|
+            options[:restart_dir] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--friendly-error-pages", "Turn on friendly error pages") do
             options[:friendly_error_pages] = true
@@ -329,7 +331,7 @@ module PhusionPassenger
           opts.separator ""
           opts.separator "Nginx engine options:"
           opts.on("--nginx-bin FILENAME", String, "Nginx binary to use as core") do |value|
-            options[:nginx_bin] = File.absolute_path_no_resolve(value)
+            options[:nginx_bin] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--nginx-version VERSION", String,
             "Nginx version to use as core.#{nl}" +
@@ -340,12 +342,12 @@ module PhusionPassenger
             "If Nginx needs to be installed, then the#{nl}" +
             "given tarball will be used instead of#{nl}" +
             "downloading from the Internet") do |value|
-            options[:nginx_tarball] = File.absolute_path_no_resolve(value)
+            options[:nginx_tarball] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--nginx-config-template FILENAME", String,
             "The template to use for generating the#{nl}" +
             "Nginx config file") do |value|
-            options[:nginx_config_template] = File.absolute_path_no_resolve(value)
+            options[:nginx_config_template] = File.absolute_logical_path(value, logical_pwd)
           end
 
           opts.separator ""
@@ -395,7 +397,7 @@ module PhusionPassenger
 
       def load_local_config_file
         if @argv.empty?
-          app_dir = File.absolute_path_no_resolve(".")
+          app_dir = Dir.logical_pwd
         elsif @argv.size == 1
           app_dir = @argv[0]
         end

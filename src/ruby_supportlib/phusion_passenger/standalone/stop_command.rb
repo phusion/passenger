@@ -80,8 +80,12 @@ module PhusionPassenger
       def find_pid_file
         return if @options[:pid_file]
 
+        logical_pwd = Dir.logical_pwd
+
         ["tmp/pids", "."].each do |dir|
-          path = File.absolute_path_no_resolve("#{dir}/passenger.#{@options[:port]}.pid")
+          path = File.absolute_logical_path(
+            "#{dir}/passenger.#{@options[:port]}.pid",
+            logical_pwd)
           if File.exist?(path)
             @options[:pid_file] = path
             return
