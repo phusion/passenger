@@ -94,6 +94,13 @@ public:
 	HashedStaticString cacheKey;
 	LString *cacheControl;
 	LString *varyCookie;
+	// Value of the `!~PASSENGER_ENV_VARS` header. This is different
+	// from `options.environmentVariables`. If `!~PASSENGER_ENV_VARS`
+	// is not set or is empty, then `envvars` is NULL, while
+	// `options.environmentVariables` retains a previous value.
+	//
+	// This value is guaranteed to be contiguous.
+	LString *envvars;
 
 	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
 		bool timedAppPoolGet;

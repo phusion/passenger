@@ -196,12 +196,20 @@ initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 			}
 		} else {
 			disconnectWithError(&client, "the !~PASSENGER_APP_GROUP_NAME header must be set");
-			return;
 		}
 	}
 
 	if (!req->ended()) {
-		fillPoolOption(req, req->options.environmentVariables, PASSENGER_ENV_VARS);
+		// See comment for req->envvars to learn how it is different
+		// from req->options.environmentVariables.
+		req->envvars = req->secureHeaders.lookup(PASSENGER_ENV_VARS);
+		if (req->envvars != NULL && req->envvars->size > 0) {
+			req->envvars = psg_lstr_make_contiguous(req->envvars, req->pool);
+			req->options.environmentVariables = StaticString(
+				req->envvars->start->data,
+				req->envvars->size);
+		}
+
 		fillPoolOption(req, req->options.maxRequests, PASSENGER_MAX_REQUESTS);
 	}
 }

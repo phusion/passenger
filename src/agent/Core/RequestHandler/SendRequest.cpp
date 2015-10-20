@@ -195,16 +195,16 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	} else {
 		state.contentLength = NULL;
 	}
-	if (!req->options.environmentVariables.empty()) {
-		size_t len = modp_b64_decode_len(req->options.environmentVariables.size());
+	if (req->envvars != NULL) {
+		size_t len = modp_b64_decode_len(req->envvars->size);
 		state.environmentVariablesData = (char *) malloc(len);
 		if (state.environmentVariablesData == NULL) {
 			throw RuntimeException("Unable to allocate memory for base64 "
 				"decoding of environment variables");
 		}
 		len = modp_b64_decode(state.environmentVariablesData,
-			req->options.environmentVariables.data(),
-			req->options.environmentVariables.size());
+			req->envvars->start->data,
+			req->envvars->size);
 		if (len == (size_t) -1) {
 			throw RuntimeException("Unable to base64 decode environment variables");
 		}
@@ -758,15 +758,15 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		PUSH_STATIC_BUFFER("\r\n");
 	}
 
-	if (!req->options.environmentVariables.empty()) {
+	if (req->envvars != NULL) {
 		PUSH_STATIC_BUFFER("!~Passenger-Envvars: ");
 		if (buffers != NULL) {
 			BEGIN_PUSH_NEXT_BUFFER();
-			buffers[i].iov_base = (void *) req->options.environmentVariables.data();
-			buffers[i].iov_len = req->options.environmentVariables.size();
+			buffers[i].iov_base = (void *) req->envvars->start->data;
+			buffers[i].iov_len = req->envvars->size;
 		}
 		INC_BUFFER_ITER(i);
-		dataSize += req->options.environmentVariables.size();
+		dataSize += req->envvars->size;
 		PUSH_STATIC_BUFFER("\r\n");
 	}
 
