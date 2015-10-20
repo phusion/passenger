@@ -97,7 +97,9 @@ module PhusionPassenger
       LoaderSharedHelpers.before_loading_app_code_step2(options)
       LoaderSharedHelpers.activate_gem 'rack'
 
-      rackup_file = options["startup_file"] || "config.ru"
+      app_root = options["app_root"]
+      rackup_file = LoaderSharedHelpers.maybe_make_path_relative_to_app_root(
+        app_root, options["startup_file"] || "#{app_root}/config.ru")
       rackup_code = ::File.open(rackup_file, 'rb') do |f|
         f.read
       end

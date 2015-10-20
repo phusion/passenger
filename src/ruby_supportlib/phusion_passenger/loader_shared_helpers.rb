@@ -25,6 +25,7 @@
 
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'public_api'
+PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'debug_logging'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
@@ -313,6 +314,23 @@ module PhusionPassenger
     # before forking a worker process.
     def after_loading_app_code(options)
       UnionStationHooks.check_initialized
+    end
+
+    # If the current working directory equals `app_root`, and `abs_path` is a
+    # file inside `app_root`, then returns its basename. Otherwise, returns
+    # `abs_path`.
+    #
+    # The main use case for this method is to ensure that we load config.ru
+    # with a relative path (only its base name) in most circumstances,
+    # instead of with an absolute path. This is necessary in order to retain
+    # compatibility with apps that expect config.ru's __FILE__ to be relative.
+    # See https://github.com/phusion/passenger/issues/1596
+    def maybe_make_path_relative_to_app_root(app_root, abs_path)
+      if Dir.logical_pwd == app_root && File.dirname(abs_path) == app_root
+        File.basename(abs_path)
+      else
+        abs_path
+      end
     end
 
     def create_socket_address(protocol, address)
