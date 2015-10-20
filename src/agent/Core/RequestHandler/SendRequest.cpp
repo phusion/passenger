@@ -721,10 +721,27 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 
 	if (req->https) {
 		PUSH_STATIC_BUFFER("X-Forwarded-Proto: https\r\n");
+		PUSH_STATIC_BUFFER("!~Passenger-Proto: https\r\n");
 	}
 
 	if (cache.remoteAddr != NULL && cache.remoteAddr->size > 0) {
 		PUSH_STATIC_BUFFER("X-Forwarded-For: ");
+
+		part = cache.remoteAddr->start;
+		while (part != NULL) {
+			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
+				buffers[i].iov_base = (void *) part->data;
+				buffers[i].iov_len  = part->size;
+			}
+			INC_BUFFER_ITER(i);
+			part = part->next;
+		}
+		dataSize += cache.remoteAddr->size;
+
+		PUSH_STATIC_BUFFER("\r\n");
+
+		PUSH_STATIC_BUFFER("!~Passenger-Client-Address: ");
 
 		part = cache.remoteAddr->start;
 		while (part != NULL) {
@@ -754,7 +771,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	}
 
 	if (req->options.analytics) {
-		PUSH_STATIC_BUFFER("Passenger-Txn-Id: ");
+		PUSH_STATIC_BUFFER("!~Passenger-Txn-Id: ");
 
 		if (buffers != NULL) {
 			BEGIN_PUSH_NEXT_BUFFER();
