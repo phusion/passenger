@@ -547,7 +547,8 @@ sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 		unsigned int nbuffers, dataSize;
 		bool ok;
 
-		ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0, nbuffers, dataSize, cache);
+		ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0,
+			nbuffers, dataSize, cache);
 		assert(ok);
 
 		buffers = (struct iovec *) psg_palloc(req->pool,
@@ -626,7 +627,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	if (!cache.cached) {
 		cache.methodStr  = http_method_str(req->method);
 		cache.remoteAddr = req->secureHeaders.lookup(REMOTE_ADDR);
-		cache.setCookie = req->headers.lookup(ServerKit::HTTP_SET_COOKIE);
+		cache.setCookie  = req->headers.lookup(ServerKit::HTTP_SET_COOKIE);
 		cache.cached     = true;
 	}
 
@@ -737,6 +738,18 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		}
 		dataSize += cache.remoteAddr->size;
 
+		PUSH_STATIC_BUFFER("\r\n");
+	}
+
+	if (!req->options.environmentVariables.empty()) {
+		PUSH_STATIC_BUFFER("!~Passenger-Envvars: ");
+		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
+			buffers[i].iov_base = (void *) req->options.environmentVariables.data();
+			buffers[i].iov_len = req->options.environmentVariables.size();
+		}
+		INC_BUFFER_ITER(i);
+		dataSize += req->options.environmentVariables.size();
 		PUSH_STATIC_BUFFER("\r\n");
 	}
 
