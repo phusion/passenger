@@ -268,7 +268,7 @@ private:
 	 * wait and retry for a short period of time until the core has been
 	 * restarted by the watchdog.
 	 */
-	FileDescriptor connectToInternalServer() {
+	FileDescriptor connectToCore() {
 		TRACE_POINT();
 		FileDescriptor conn;
 
@@ -593,7 +593,7 @@ private:
 			bool bodyIsChunked = false;
 
 			string headers = constructRequestHeaders(r, mapper, bodyIsChunked);
-			FileDescriptor conn = connectToInternalServer();
+			FileDescriptor conn = connectToCore();
 			writeExact(conn, headers);
 			headers.clear();
 			if (expectingBody) {
