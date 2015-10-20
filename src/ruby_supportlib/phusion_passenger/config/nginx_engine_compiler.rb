@@ -45,16 +45,22 @@ module PhusionPassenger
 
       def self.configure_script_options
         extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags}".strip
+        result = "--with-cc-opt=#{Shellwords.escape extra_cflags} "
+
         extra_ldflags = PlatformInfo.openssl_extra_ldflags
-        "--with-cc-opt=#{Shellwords.escape extra_cflags} " \
-          "--with-ld-opt=#{Shellwords.escape extra_ldflags} " \
-          "--without-http_fastcgi_module " \
+        if !extra_ldflags.empty?
+          result << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
+        end
+
+        result << "--without-http_fastcgi_module " \
           "--without-http_scgi_module " \
           "--without-http_uwsgi_module " \
           "--with-http_gzip_static_module " \
           "--with-http_stub_status_module " \
           "--with-http_ssl_module " \
           "--with-http_realip_module"
+
+        result
       end
 
     protected
