@@ -170,7 +170,7 @@ class MessageBox: public boost::enable_shared_from_this<MessageBox> {
 		posix_time::time_duration diff = deadline -
 			posix_time::microsec_clock::local_time();
 		bool timedOut;
-		if (diff.is_negative() < 0) {
+		if (diff.is_negative()) {
 			timedOut = true;
 		} else {
 			timedOut = !cond.timed_wait(l,
