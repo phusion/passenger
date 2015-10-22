@@ -252,9 +252,11 @@ function shutdown() {
 	} catch (e) {
 		// Ignore error.
 	}
-	if (PhusionPassenger.listeners('exit').length == 0) {
-		process.exit(0);
-	} else {
+	if (PhusionPassenger.listeners('exit').length > 0) {
 		PhusionPassenger.emit('exit');
+	} else if (process.listeners('message').length > 0) {
+		process.emit('message', 'shutdown');
+	} else {
+		process.exit(0);
 	}
 }
