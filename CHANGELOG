@@ -7,6 +7,7 @@ Release 5.0.21
  * Introduces the [secure HTTP headers](https://www.phusionpassenger.com/library/indepth/meteor/secure_http_headers.html) feature for Node.js and Meteor apps. This mechanism allows Passenger to send per-request information to the application, while guaranteeing that this information is not spoofed by the client.
  * Per-request Apache environment variables are now passed to Node.js and Meteor apps through the [`!~Passenger-Envvars`](https://www.phusionpassenger.com/library/indepth/nodejs/apache_per_request_envvars.html) secure header.
  * Fixes some unintentional caching of request-specific environment variables. Closes GH-1479.
+ * For Node.js applications, Passenger now calls `process.emit('message', 'shutdown')` whenever Passenger shuts down an application process. This is the same hook as used by PM2, allowing applications which use the PM2 graceful shutdown mechanism to be run on Passenger without changes.
  * [Enterprise] Fixes a bug in passenger-irb where printing strings larger than 64 KB would cause it to crash.
  * [Enterprise] Fixes the `passenger-config restart-app` command so that it performs a non-rolling-restart unless `--rolling-restart` is given as command line option, as per the documentation. Previously, `passenger-config restart-app` without `--rolling-restart` would perform a rolling restart if rolling restarts are configured in the configuration file, but this contradicted documented behavior. Closes GH-1634.
 
