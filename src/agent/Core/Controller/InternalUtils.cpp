@@ -23,21 +23,30 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <Core/Controller.h>
 
-// This file is included inside the RequestHandler class.
+/*************************************************************************
+ *
+ * Internal utility functions for Core::Controller
+ *
+ *************************************************************************/
 
-#define RH_BENCHMARK_POINT(client, req, value) \
-	do { \
-		if (OXT_UNLIKELY(benchmarkMode == value)) { \
-			writeBenchmarkResponse(&client, &req); \
-			return; \
-		} \
-	} while (false)
+namespace Passenger {
+namespace Core {
 
-private:
+using namespace std;
+using namespace boost;
 
-static TurboCaching<Request>::State
-getTurboCachingInitialState(const VariantMap *agentsOptions) {
+
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
+
+
+TurboCaching<Request>::State
+Controller::getTurboCachingInitialState(const VariantMap *agentsOptions) {
 	bool enabled = agentsOptions->getBool("turbocaching", false, true);
 	if (enabled) {
 		return TurboCaching<Request>::ENABLED;
@@ -47,13 +56,13 @@ getTurboCachingInitialState(const VariantMap *agentsOptions) {
 }
 
 void
-generateServerLogName(unsigned int number) {
+Controller::generateServerLogName(unsigned int number) {
 	string name = "ServerThr." + toString(number);
 	serverLogName = psg_pstrdup(stringPool, name);
 }
 
 void
-disconnectWithClientSocketWriteError(Client **client, int e) {
+Controller::disconnectWithClientSocketWriteError(Client **client, int e) {
 	stringstream message;
 	PassengerLogLevel logLevel;
 	message << "client socket write error: ";
@@ -68,12 +77,12 @@ disconnectWithClientSocketWriteError(Client **client, int e) {
 }
 
 void
-disconnectWithAppSocketIncompleteResponseError(Client **client) {
+Controller::disconnectWithAppSocketIncompleteResponseError(Client **client) {
 	disconnectWithError(client, "application did not send a complete response");
 }
 
 void
-disconnectWithAppSocketReadError(Client **client, int e) {
+Controller::disconnectWithAppSocketReadError(Client **client, int e) {
 	stringstream message;
 	message << "app socket read error: ";
 	message << ServerKit::getErrorDesc(e);
@@ -82,7 +91,7 @@ disconnectWithAppSocketReadError(Client **client, int e) {
 }
 
 void
-disconnectWithAppSocketWriteError(Client **client, int e) {
+Controller::disconnectWithAppSocketWriteError(Client **client, int e) {
 	stringstream message;
 	message << "app socket write error: ";
 	message << ServerKit::getErrorDesc(e);
@@ -91,7 +100,7 @@ disconnectWithAppSocketWriteError(Client **client, int e) {
 }
 
 void
-endRequestWithAppSocketIncompleteResponse(Client **client, Request **req) {
+Controller::endRequestWithAppSocketIncompleteResponse(Client **client, Request **req) {
 	if (!(*req)->responseBegun) {
 		SKC_WARN(*client, "Sending 502 response: application did not send a complete response");
 		endRequestWithSimpleResponse(client, req,
@@ -102,7 +111,7 @@ endRequestWithAppSocketIncompleteResponse(Client **client, Request **req) {
 }
 
 void
-endRequestWithAppSocketReadError(Client **client, Request **req, int e) {
+Controller::endRequestWithAppSocketReadError(Client **client, Request **req, int e) {
 	Client *c = *client;
 	if (!(*req)->responseBegun) {
 		SKC_WARN(*client, "Sending 502 response: application socket read error");
@@ -116,7 +125,9 @@ endRequestWithAppSocketReadError(Client **client, Request **req, int e) {
  * `data` must outlive the request.
  */
 void
-endRequestWithSimpleResponse(Client **c, Request **r, const StaticString &body, int code = 200) {
+Controller::endRequestWithSimpleResponse(Client **c, Request **r,
+	const StaticString &body, int code)
+{
 	Client *client = *c;
 	Request *req = *r;
 	ServerKit::HeaderTable headers;
@@ -127,7 +138,7 @@ endRequestWithSimpleResponse(Client **c, Request **r, const StaticString &body, 
 }
 
 void
-endRequestAsBadGateway(Client **client, Request **req) {
+Controller::endRequestAsBadGateway(Client **client, Request **req) {
 	if ((*req)->responseBegun) {
 		disconnectWithError(client, "bad gateway");
 	} else {
@@ -139,7 +150,7 @@ endRequestAsBadGateway(Client **client, Request **req) {
 }
 
 void
-writeBenchmarkResponse(Client **client, Request **req, bool end = true) {
+Controller::writeBenchmarkResponse(Client **client, Request **req, bool end) {
 	if (canKeepAlive(*req)) {
 		writeResponse(*client, P_STATIC_STRING(
 			"HTTP/1.1 200 OK\r\n"
@@ -167,7 +178,9 @@ writeBenchmarkResponse(Client **client, Request **req, bool end = true) {
 }
 
 bool
-getBoolOption(Request *req, const HashedStaticString &name, bool defaultValue = false) {
+Controller::getBoolOption(Request *req, const HashedStaticString &name,
+	bool defaultValue)
+{
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		return psg_lstr_first_byte(value) == 't';
@@ -177,14 +190,14 @@ getBoolOption(Request *req, const HashedStaticString &name, bool defaultValue = 
 }
 
 template<typename Number>
-static Number
-clamp(Number value, Number min, Number max) {
+Number
+Controller::clamp(Number value, Number min, Number max) {
 	return std::max(std::min(value, max), min);
 }
 
-static void
-gatherBuffers(char * restrict dest, unsigned int size, const struct iovec *buffers,
-	unsigned int nbuffers)
+void
+Controller::gatherBuffers(char * restrict dest, unsigned int size,
+	const struct iovec *buffers, unsigned int nbuffers)
 {
 	const char *end = dest + size;
 	char *pos = dest;
@@ -197,8 +210,8 @@ gatherBuffers(char * restrict dest, unsigned int size, const struct iovec *buffe
 }
 
 // `path` MUST be NULL-terminated. Returns a contiguous LString.
-static LString *
-resolveSymlink(const StaticString &path, psg_pool_t *pool) {
+LString *
+Controller::resolveSymlink(const StaticString &path, psg_pool_t *pool) {
 	char linkbuf[PATH_MAX + 1];
 	ssize_t size;
 
@@ -250,7 +263,7 @@ resolveSymlink(const StaticString &path, psg_pool_t *pool) {
 }
 
 void
-parseCookieHeader(psg_pool_t *pool, const LString *headerValue,
+Controller::parseCookieHeader(psg_pool_t *pool, const LString *headerValue,
 	vector< pair<StaticString, StaticString> > &cookies) const
 {
 	// See http://stackoverflow.com/questions/6108207/definite-guide-to-valid-cookie-values
@@ -291,9 +304,9 @@ parseCookieHeader(psg_pool_t *pool, const LString *headerValue,
 	}
 }
 
-#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 	void
-	reportLargeTimeDiff(Client *client, const char *name,
+	Controller::reportLargeTimeDiff(Client *client, const char *name,
 		ev_tstamp fromTime, ev_tstamp toTime)
 	{
 		if (fromTime != 0 && toTime != 0) {
@@ -311,3 +324,7 @@ parseCookieHeader(psg_pool_t *pool, const LString *headerValue,
 		}
 	}
 #endif
+
+
+} // namespace Core
+} // namespace Passenger

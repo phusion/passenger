@@ -23,76 +23,38 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <Core/Controller.h>
 
-// This file is included inside the RequestHandler class.
+/*************************************************************************
+ *
+ * Implements Core::Controller methods pertaining the initialization
+ * of a request.
+ *
+ *************************************************************************/
 
-protected:
+namespace Passenger {
+namespace Core {
 
-struct RequestAnalysis {
+using namespace std;
+using namespace boost;
+
+
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
+
+
+struct Controller::RequestAnalysis {
 	const LString *flags;
 	ServerKit::HeaderTable::Cell *appGroupNameCell;
 	bool unionStationSupport;
 };
 
-virtual void
-onRequestBegin(Client *client, Request *req) {
-	ParentClass::onRequestBegin(client, req);
-
-	RH_BENCHMARK_POINT(client, req, BM_AFTER_ACCEPT);
-
-	{
-		// Perform hash table operations as close to header parsing as possible,
-		// and localize them as much as possible, for better CPU caching.
-		RequestAnalysis analysis;
-		analysis.flags = req->secureHeaders.lookup(FLAGS);
-		analysis.appGroupNameCell = singleAppMode
-			? NULL
-			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
-		analysis.unionStationSupport = unionStationCore != NULL
-			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
-		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
-			this->stickySessions);
-		req->host = req->headers.lookup(HTTP_HOST);
-
-		/***************/
-		/***************/
-
-		SKC_TRACE(client, 2, "Initiating request");
-		req->startedAt = ev_now(getLoop());
-		req->bodyChannel.stop();
-
-		initializeFlags(client, req, analysis);
-		if (respondFromTurboCache(client, req)) {
-			return;
-		}
-		initializePoolOptions(client, req, analysis);
-		if (req->ended()) {
-			return;
-		}
-		initializeUnionStation(client, req, analysis);
-		if (req->ended()) {
-			return;
-		}
-		setStickySessionId(client, req);
-	}
-
-	if (!req->hasBody() || !req->requestBodyBuffering) {
-		req->requestBodyBuffering = false;
-		checkoutSession(client, req);
-	} else {
-		beginBufferingBody(client, req);
-	}
-}
-
-virtual bool
-supportsUpgrade(Client *client, Request *req) {
-	return true;
-}
-
-private:
 
 void
-initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
+Controller::initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 	if (analysis.flags != NULL) {
 		const LString::Part *part = analysis.flags->start;
 		while (part != NULL) {
@@ -138,7 +100,7 @@ initializeFlags(Client *client, Request *req, RequestAnalysis &analysis) {
 }
 
 bool
-respondFromTurboCache(Client *client, Request *req) {
+Controller::respondFromTurboCache(Client *client, Request *req) {
 	if (!turboCaching.isEnabled() || !turboCaching.responseCache.prepareRequest(this, req)) {
 		return false;
 	}
@@ -171,7 +133,7 @@ respondFromTurboCache(Client *client, Request *req) {
 }
 
 void
-initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
+Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 	boost::shared_ptr<Options> *options;
 
 	if (singleAppMode) {
@@ -215,7 +177,7 @@ initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 }
 
 void
-fillPoolOptionsFromAgentsOptions(Options &options) {
+Controller::fillPoolOptionsFromAgentsOptions(Options &options) {
 	options.ruby = defaultRuby;
 	if (agentsOptions->has("default_nodejs")) {
 		options.nodejs = agentsOptions->get("default_nodejs");
@@ -249,8 +211,10 @@ fillPoolOptionsFromAgentsOptions(Options &options) {
 	/******************************/
 }
 
-static void
-fillPoolOption(Request *req, StaticString &field, const HashedStaticString &name) {
+void
+Controller::fillPoolOption(Request *req, StaticString &field,
+	const HashedStaticString &name)
+{
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		value = psg_lstr_make_contiguous(value, req->pool);
@@ -258,16 +222,20 @@ fillPoolOption(Request *req, StaticString &field, const HashedStaticString &name
 	}
 }
 
-static void
-fillPoolOption(Request *req, bool &field, const HashedStaticString &name) {
+void
+Controller::fillPoolOption(Request *req, bool &field,
+	const HashedStaticString &name)
+{
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		field = psg_lstr_first_byte(value) == 't';
 	}
 }
 
-static void
-fillPoolOption(Request *req, unsigned int &field, const HashedStaticString &name) {
+void
+Controller::fillPoolOption(Request *req, unsigned int &field,
+	const HashedStaticString &name)
+{
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		value = psg_lstr_make_contiguous(value, req->pool);
@@ -275,8 +243,10 @@ fillPoolOption(Request *req, unsigned int &field, const HashedStaticString &name
 	}
 }
 
-static void
-fillPoolOption(Request *req, unsigned long &field, const HashedStaticString &name) {
+void
+Controller::fillPoolOption(Request *req, unsigned long &field,
+	const HashedStaticString &name)
+{
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		value = psg_lstr_make_contiguous(value, req->pool);
@@ -284,8 +254,10 @@ fillPoolOption(Request *req, unsigned long &field, const HashedStaticString &nam
 	}
 }
 
-static void
-fillPoolOption(Request *req, long &field, const HashedStaticString &name) {
+void
+Controller::fillPoolOption(Request *req, long &field,
+	const HashedStaticString &name)
+{
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		value = psg_lstr_make_contiguous(value, req->pool);
@@ -293,8 +265,10 @@ fillPoolOption(Request *req, long &field, const HashedStaticString &name) {
 	}
 }
 
-static void
-fillPoolOptionSecToMsec(Request *req, unsigned int &field, const HashedStaticString &name) {
+void
+Controller::fillPoolOptionSecToMsec(Request *req, unsigned int &field,
+	const HashedStaticString &name)
+{
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		value = psg_lstr_make_contiguous(value, req->pool);
@@ -303,7 +277,9 @@ fillPoolOptionSecToMsec(Request *req, unsigned int &field, const HashedStaticStr
 }
 
 void
-createNewPoolOptions(Client *client, Request *req, const HashedStaticString &appGroupName) {
+Controller::createNewPoolOptions(Client *client, Request *req,
+	const HashedStaticString &appGroupName)
+{
 	ServerKit::HeaderTable &secureHeaders = req->secureHeaders;
 	Options &options = req->options;
 
@@ -397,7 +373,7 @@ createNewPoolOptions(Client *client, Request *req, const HashedStaticString &app
 }
 
 void
-initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) {
+Controller::initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) {
 	if (analysis.unionStationSupport) {
 		Options &options = req->options;
 		ServerKit::HeaderTable &headers = req->secureHeaders;
@@ -432,7 +408,7 @@ initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) 
 }
 
 void
-setStickySessionId(Client *client, Request *req) {
+Controller::setStickySessionId(Client *client, Request *req) {
 	if (req->stickySession) {
 		// TODO: This is not entirely correct. Clients MAY send multiple Cookie
 		// headers, although this is in practice extremely rare.
@@ -456,7 +432,7 @@ setStickySessionId(Client *client, Request *req) {
 }
 
 const LString *
-getStickySessionCookieName(Request *req) {
+Controller::getStickySessionCookieName(Request *req) {
 	const LString *value = req->headers.lookup(PASSENGER_STICKY_SESSIONS_COOKIE_NAME);
 	if (value == NULL || value->size == 0) {
 		return psg_lstr_create(req->pool,
@@ -465,3 +441,65 @@ getStickySessionCookieName(Request *req) {
 		return value;
 	}
 }
+
+
+/****************************
+ *
+ * Protected methods
+ *
+ ****************************/
+
+
+void
+Controller::onRequestBegin(Client *client, Request *req) {
+	ParentClass::onRequestBegin(client, req);
+
+	CC_BENCHMARK_POINT(client, req, BM_AFTER_ACCEPT);
+
+	{
+		// Perform hash table operations as close to header parsing as possible,
+		// and localize them as much as possible, for better CPU caching.
+		RequestAnalysis analysis;
+		analysis.flags = req->secureHeaders.lookup(FLAGS);
+		analysis.appGroupNameCell = singleAppMode
+			? NULL
+			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
+		analysis.unionStationSupport = unionStationCore != NULL
+			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
+		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
+			this->stickySessions);
+		req->host = req->headers.lookup(HTTP_HOST);
+
+		/***************/
+		/***************/
+
+		SKC_TRACE(client, 2, "Initiating request");
+		req->startedAt = ev_now(getLoop());
+		req->bodyChannel.stop();
+
+		initializeFlags(client, req, analysis);
+		if (respondFromTurboCache(client, req)) {
+			return;
+		}
+		initializePoolOptions(client, req, analysis);
+		if (req->ended()) {
+			return;
+		}
+		initializeUnionStation(client, req, analysis);
+		if (req->ended()) {
+			return;
+		}
+		setStickySessionId(client, req);
+	}
+
+	if (!req->hasBody() || !req->requestBodyBuffering) {
+		req->requestBodyBuffering = false;
+		checkoutSession(client, req);
+	} else {
+		beginBufferingBody(client, req);
+	}
+}
+
+
+} // namespace Core
+} // namespace Passenger

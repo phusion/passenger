@@ -2,11 +2,12 @@
 #include <time.h>
 #include <ServerKit/HttpRequest.h>
 #include <MemoryKit/palloc.h>
-#include <Core/RequestHandler/Request.h>
-#include <Core/RequestHandler/AppResponse.h>
+#include <Core/Controller/Request.h>
+#include <Core/Controller/AppResponse.h>
 #include <Core/ResponseCache.h>
 
 using namespace Passenger;
+using namespace Passenger::Core;
 using namespace Passenger::ServerKit;
 using namespace std;
 

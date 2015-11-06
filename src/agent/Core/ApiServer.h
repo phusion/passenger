@@ -36,7 +36,7 @@
 #include <jsoncpp/json.h>
 #include <modp_b64.h>
 
-#include <Core/RequestHandler.h>
+#include <Core/Controller.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Shared/ApiServerUtils.h>
 #include <ServerKit/HttpServer.h>
@@ -51,6 +51,7 @@
 
 namespace Passenger {
 namespace Core {
+namespace ApiServer {
 
 using namespace std;
 
@@ -61,7 +62,7 @@ public:
 	Json::Value jsonBody;
 	Authorization authorization;
 
-	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Request);
+	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Core::ApiServer::Request);
 };
 
 class ApiServer: public ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > {
@@ -89,8 +90,8 @@ private:
 		return stringToUint(results.str(1));
 	}
 
-	static void disconnectClient(RequestHandler *rh, string clientName) {
-		rh->disconnect(clientName);
+	static void disconnectClient(Controller *controller, string clientName) {
+		controller->disconnect(clientName);
 	}
 
 	void route(Client *client, Request *req, const StaticString &path) {
@@ -142,7 +143,7 @@ private:
 			}
 
 			int threadNumber = extractThreadNumberFromClientName(results.str(1));
-			if (threadNumber < 1 || (unsigned int) threadNumber > requestHandlers.size()) {
+			if (threadNumber < 1 || (unsigned int) threadNumber > controllers.size()) {
 				HeaderTable headers;
 				headers.insert(req->pool, "Content-Type", "application/json");
 				writeSimpleResponse(client, 400, &headers,
@@ -153,8 +154,8 @@ private:
 				return;
 			}
 
-			requestHandlers[threadNumber - 1]->getContext()->libev->runLater(boost::bind(
-				disconnectClient, requestHandlers[threadNumber - 1], results.str(1)));
+			controllers[threadNumber - 1]->getContext()->libev->runLater(boost::bind(
+				disconnectClient, controllers[threadNumber - 1], results.str(1)));
 
 			HeaderTable headers;
 			headers.insert(req->pool, "Content-Type", "application/json");
@@ -168,8 +169,8 @@ private:
 		}
 	}
 
-	static void inspectRequestHandlerState(RequestHandler *rh, Json::Value *json) {
-		*json = rh->inspectStateAsJson();
+	static void inspectControllerState(Controller *controller, Json::Value *json) {
+		*json = controller->inspectStateAsJson();
 	}
 
 	void processServerStatus(Client *client, Request *req) {
@@ -178,13 +179,13 @@ private:
 			headers.insert(req->pool, "Content-Type", "application/json");
 
 			Json::Value doc;
-			doc["threads"] = (Json::UInt) requestHandlers.size();
-			for (unsigned int i = 0; i < requestHandlers.size(); i++) {
+			doc["threads"] = (Json::UInt) controllers.size();
+			for (unsigned int i = 0; i < controllers.size(); i++) {
 				Json::Value json;
 				string key = "thread" + toString(i + 1);
 
-				requestHandlers[i]->getContext()->libev->runSync(boost::bind(
-					inspectRequestHandlerState, requestHandlers[i], &json));
+				controllers[i]->getContext()->libev->runSync(boost::bind(
+					inspectControllerState, controllers[i], &json));
 				doc[key] = json;
 			}
 
@@ -374,14 +375,14 @@ private:
 		}
 	}
 
-	static void garbageCollect(RequestHandler *rh) {
-		ServerKit::Context *ctx = rh->getContext();
+	static void garbageCollect(Controller *controller) {
+		ServerKit::Context *ctx = controller->getContext();
 		unsigned int count;
 
 		count = mbuf_pool_compact(&ctx->mbuf_pool);
-		SKS_NOTICE_FROM_STATIC(rh, "Freed " << count << " mbufs");
+		SKS_NOTICE_FROM_STATIC(controller, "Freed " << count << " mbufs");
 
-		rh->compact(LVL_NOTICE);
+		controller->compact(LVL_NOTICE);
 	}
 
 	void processGc(Client *client, Request *req) {
@@ -390,9 +391,9 @@ private:
 		} else if (authorizeAdminOperation(this, client, req)) {
 			HeaderTable headers;
 			headers.insert(req->pool, "Content-Type", "application/json");
-			for (unsigned int i = 0; i < requestHandlers.size(); i++) {
-				requestHandlers[i]->getContext()->libev->runLater(boost::bind(
-					garbageCollect, requestHandlers[i]));
+			for (unsigned int i = 0; i < controllers.size(); i++) {
+				controllers[i]->getContext()->libev->runLater(boost::bind(
+					garbageCollect, controllers[i]));
 			}
 			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 			if (!req->ended()) {
@@ -403,8 +404,8 @@ private:
 		}
 	}
 
-	static void getRequestHandlerConfig(RequestHandler *rh, Json::Value *json) {
-		*json = rh->getConfigAsJson();
+	static void getControllerConfig(Controller *controller, Json::Value *json) {
+		*json = controller->getConfigAsJson();
 	}
 
 	void processConfig(Client *client, Request *req) {
@@ -419,8 +420,8 @@ private:
 
 			headers.insert(req->pool, "Content-Type", "application/json");
 			Json::Value doc;
-			requestHandlers[0]->getContext()->libev->runSync(boost::bind(
-				getRequestHandlerConfig, requestHandlers[0], &doc));
+			controllers[0]->getContext()->libev->runSync(boost::bind(
+				getControllerConfig, controllers[0], &doc));
 			doc["log_level"] = getLogLevel();
 			if (!logFile.empty()) {
 				doc["log_file"] = logFile;
@@ -446,8 +447,8 @@ private:
 		}
 	}
 
-	static void configureRequestHandler(RequestHandler *rh, Json::Value json) {
-		rh->configure(json);
+	static void configureController(Controller *controller, Json::Value json) {
+		controller->configure(json);
 	}
 
 	void processConfigBody(Client *client, Request *req) {
@@ -492,9 +493,9 @@ private:
 			}
 			P_NOTICE("Log file opened.");
 		}
-		for (unsigned int i = 0; i < requestHandlers.size(); i++) {
-			requestHandlers[i]->getContext()->libev->runLater(boost::bind(
-				configureRequestHandler, requestHandlers[i], json));
+		for (unsigned int i = 0; i < controllers.size(); i++) {
+			controllers[i]->getContext()->libev->runLater(boost::bind(
+				configureController, controllers[i], json));
 		}
 
 		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
@@ -581,7 +582,7 @@ protected:
 	}
 
 public:
-	vector<RequestHandler *> requestHandlers;
+	vector<Controller *> controllers;
 	ApiAccountDatabase *apiAccountDatabase;
 	ApplicationPool2::PoolPtr appPool;
 	string instanceDir;
@@ -619,6 +620,7 @@ public:
 };
 
 
+} // namespace ApiServer
 } // namespace Core
 } // namespace Passenger
 

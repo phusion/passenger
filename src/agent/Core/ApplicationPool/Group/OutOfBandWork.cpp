@@ -225,7 +225,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		connection.fail = true;
 		ScopeGuard guard(boost::bind(&Socket::checkinConnection, socket, connection));
 
-		// This is copied from RequestHandler when it is sending data using the
+		// This is copied from Core::Controller when it is sending data using the
 		// "session" protocol.
 		char sizeField[sizeof(boost::uint32_t)];
 		SmallVector<StaticString, 10> data;

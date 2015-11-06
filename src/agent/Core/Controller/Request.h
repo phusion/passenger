@@ -38,9 +38,10 @@
 #include <Core/UnionStation/Core.h>
 #include <Core/UnionStation/Transaction.h>
 #include <Core/UnionStation/StopwatchLog.h>
-#include <Core/RequestHandler/AppResponse.h>
+#include <Core/Controller/AppResponse.h>
 
 namespace Passenger {
+namespace Core {
 
 using namespace std;
 using namespace boost;
@@ -102,7 +103,7 @@ public:
 	// This value is guaranteed to be contiguous.
 	LString *envvars;
 
-	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		bool timedAppPoolGet;
 		ev_tstamp timeBeforeAccessingApplicationPool;
 		ev_tstamp timeOnRequestHeaderSent;
@@ -157,10 +158,11 @@ public:
 		options.transaction->message(message);
 	}
 
-	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Request);
+	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Core::Request);
 };
 
 
+} // namespace Core
 } // namespace Passenger
 
 #endif /* _PASSENGER_REQUEST_HANDLER_REQUEST_H_ */

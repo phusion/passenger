@@ -485,19 +485,19 @@ public:
 	 *
 	 * @post result == !req->cacheKey.empty()
 	 */
-	template<typename RequestHandler>
-	bool prepareRequest(RequestHandler *requestHandler, Request *req) {
+	template<typename Controller>
+	bool prepareRequest(Controller *controller, Request *req) {
 		if (req->upgraded() || req->host == NULL) {
 			return false;
 		}
 
 		LString *varyCookieName = req->secureHeaders.lookup(PASSENGER_VARY_TURBOCACHE_BY_COOKIE);
-		if (varyCookieName == NULL && !requestHandler->defaultVaryTurbocacheByCookie.empty()) {
+		if (varyCookieName == NULL && !controller->defaultVaryTurbocacheByCookie.empty()) {
 			varyCookieName = (LString *) psg_palloc(req->pool, sizeof(LString));
 			psg_lstr_init(varyCookieName);
 			psg_lstr_append(varyCookieName, req->pool,
-				requestHandler->defaultVaryTurbocacheByCookie.data(),
-				requestHandler->defaultVaryTurbocacheByCookie.size());
+				controller->defaultVaryTurbocacheByCookie.data(),
+				controller->defaultVaryTurbocacheByCookie.size());
 		}
 		if (varyCookieName != NULL) {
 			LString *cookieHeader = req->headers.lookup(COOKIE);

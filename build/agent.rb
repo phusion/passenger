@@ -35,6 +35,8 @@ AGENT_OBJECTS = {
     "src/agent/Core/CoreMain.cpp",
   "#{AGENT_OUTPUT_DIR}CoreApplicationPool.o" =>
     "src/agent/Core/ApplicationPool/Implementation.cpp",
+  "#{AGENT_OUTPUT_DIR}CoreController.o" =>
+    "src/agent/Core/Controller/Implementation.cpp",
   "#{AGENT_OUTPUT_DIR}UstRouterMain.o" =>
     "src/agent/UstRouter/UstRouterMain.cpp",
   "#{AGENT_OUTPUT_DIR}SystemMetricsMain.o" =>

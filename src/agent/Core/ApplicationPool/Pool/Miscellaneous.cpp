@@ -25,6 +25,12 @@
  */
 #include <Core/ApplicationPool/Pool.h>
 
+/*************************************************************************
+ *
+ * Miscellaneous functions for ApplicationPool2::Pool
+ *
+ *************************************************************************/
+
 namespace Passenger {
 namespace ApplicationPool2 {
 

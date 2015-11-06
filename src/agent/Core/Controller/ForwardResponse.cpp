@@ -23,25 +23,45 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <Core/Controller.h>
 
-// This file is included inside the RequestHandler class.
-// It handles app --> client data forwarding.
+/*************************************************************************
+ *
+ * Implements Core::Controller methods pertaining sending application
+ * response data to the client. This happens in parallel to the process
+ * of sending request data to the application.
+ *
+ *************************************************************************/
 
-private:
+namespace Passenger {
+namespace Core {
 
-static Channel::Result
-_onAppSourceData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) {
+using namespace std;
+using namespace boost;
+
+
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
+
+
+ServerKit::Channel::Result
+Controller::_onAppSourceData(Channel *_channel, const MemoryKit::mbuf &buffer, int errcode) {
 	FdSourceChannel *channel = reinterpret_cast<FdSourceChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
-	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+	Controller *self = static_cast<Controller *>(getServerFromClient(client));
 	return self->onAppSourceData(client, req, buffer, errcode);
 }
 
-Channel::Result
-onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int errcode) {
-	SKC_LOG_EVENT(RequestHandler, client, "onAppSourceData");
+ServerKit::Channel::Result
+Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer,
+	int errcode)
+{
+	SKC_LOG_EVENT(Controller, client, "onAppSourceData");
 	AppResponse *resp = &req->appResponse;
 
 	switch (resp->httpState) {
@@ -292,13 +312,13 @@ onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf &buffer, int
 }
 
 void
-onAppResponseBegin(Client *client, Request *req) {
+Controller::onAppResponseBegin(Client *client, Request *req) {
 	TRACE_POINT();
 	AppResponse *resp = &req->appResponse;
 	ssize_t bytesWritten;
 	bool oobw;
 
-	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		req->timeOnRequestHeaderSent = ev_now(getLoop());
 		reportLargeTimeDiff(client,
 			"Headers sent until response begun",
@@ -375,7 +395,8 @@ onAppResponseBegin(Client *client, Request *req) {
 	}
 }
 
-void prepareAppResponseCaching(Client *client, Request *req) {
+void
+Controller::prepareAppResponseCaching(Client *client, Request *req) {
 	if (turboCaching.isEnabled() && !req->cacheKey.empty()) {
 		TRACE_POINT();
 		AppResponse *resp = &req->appResponse;
@@ -408,7 +429,7 @@ void prepareAppResponseCaching(Client *client, Request *req) {
 }
 
 void
-onAppResponse100Continue(Client *client, Request *req) {
+Controller::onAppResponse100Continue(Client *client, Request *req) {
 	TRACE_POINT();
 	if (!req->strip100ContinueHeader) {
 		UPDATE_TRACE_POINT();
@@ -445,7 +466,7 @@ onAppResponse100Continue(Client *client, Request *req) {
  * In this case, this method always returns true.
  */
 bool
-constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
+Controller::constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 	unsigned int maxbuffers, unsigned int & restrict_ref nbuffers,
 	unsigned int & restrict_ref dataSize,
 	unsigned int & restrict_ref nCacheableBuffers)
@@ -768,7 +789,7 @@ constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 }
 
 unsigned int
-constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
+Controller::constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
 	char *pos = dateStr;
 	const char *end = dateStr + bufsize - 1;
 	time_t the_time = (time_t) ev_now(getContext()->libev->getLoop());
@@ -781,7 +802,9 @@ constructDateHeaderBuffersForResponse(char *dateStr, unsigned int bufsize) {
 }
 
 bool
-sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten) {
+Controller::sendResponseHeaderWithWritev(Client *client, Request *req,
+	ssize_t &bytesWritten)
+{
 	TRACE_POINT();
 
 	if (OXT_UNLIKELY(benchmarkMode == BM_RESPONSE_BEGIN)) {
@@ -816,7 +839,9 @@ sendResponseHeaderWithWritev(Client *client, Request *req, ssize_t &bytesWritten
 }
 
 void
-sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offset) {
+Controller::sendResponseHeaderWithBuffering(Client *client, Request *req,
+	unsigned int offset)
+{
 	struct iovec *buffers;
 	unsigned int nbuffers, dataSize, nCacheableBuffers;
 	bool ok;
@@ -852,7 +877,7 @@ sendResponseHeaderWithBuffering(Client *client, Request *req, unsigned int offse
 }
 
 void
-logResponseHeaders(Client *client, Request *req, struct iovec *buffers,
+Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffers,
 	unsigned int nbuffers, unsigned int dataSize)
 {
 	if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG3)) {
@@ -873,8 +898,8 @@ logResponseHeaders(Client *client, Request *req, struct iovec *buffers,
 }
 
 void
-markHeaderBuffersForTurboCaching(Client *client, Request *req, struct iovec *buffers,
-	unsigned int nbuffers)
+Controller::markHeaderBuffersForTurboCaching(Client *client, Request *req,
+	struct iovec *buffers, unsigned int nbuffers)
 {
 	if (turboCaching.isEnabled() && !req->cacheKey.empty()) {
 		unsigned int totalSize = 0;
@@ -897,22 +922,23 @@ markHeaderBuffersForTurboCaching(Client *client, Request *req, struct iovec *buf
 	}
 }
 
-static ServerKit::HttpHeaderParser<AppResponse, ServerKit::HttpParseResponse>
-createAppResponseHeaderParser(ServerKit::Context *ctx, Request *req) {
+ServerKit::HttpHeaderParser<AppResponse, ServerKit::HttpParseResponse>
+Controller::createAppResponseHeaderParser(ServerKit::Context *ctx, Request *req) {
 	return ServerKit::HttpHeaderParser<AppResponse, ServerKit::HttpParseResponse>(
 		ctx, req->appResponse.parserState.headerParser,
 		&req->appResponse, req->pool, req->method);
 }
 
-static ServerKit::HttpChunkedBodyParser
-createAppResponseChunkedBodyParser(Request *req) {
+ServerKit::HttpChunkedBodyParser
+Controller::createAppResponseChunkedBodyParser(Request *req) {
 	return ServerKit::HttpChunkedBodyParser(
 		&req->appResponse.parserState.chunkedBodyParser,
 		formatAppResponseChunkedBodyParserLoggingPrefix,
 		req);
 }
 
-static unsigned int formatAppResponseChunkedBodyParserLoggingPrefix(char *buf,
+unsigned int
+Controller::formatAppResponseChunkedBodyParserLoggingPrefix(char *buf,
 	unsigned int bufsize, void *userData)
 {
 	Request *req = static_cast<Request *>(userData);
@@ -921,13 +947,16 @@ static unsigned int formatAppResponseChunkedBodyParserLoggingPrefix(char *buf,
 		static_cast<Client *>(req->client)->number);
 }
 
-void prepareAppResponseChunkedBodyParsing(Client *client, Request *req) {
+void
+Controller::prepareAppResponseChunkedBodyParsing(Client *client, Request *req) {
 	P_ASSERT_EQ(req->appResponse.bodyType, AppResponse::RBT_CHUNKED);
 	createAppResponseChunkedBodyParser(req).initialize();
 }
 
 void
-writeResponseAndMarkForTurboCaching(Client *client, Request *req, const MemoryKit::mbuf &buffer) {
+Controller::writeResponseAndMarkForTurboCaching(Client *client, Request *req,
+	const MemoryKit::mbuf &buffer)
+{
 	if (OXT_LIKELY(benchmarkMode != BM_RESPONSE_BEGIN)) {
 		writeResponse(client, buffer);
 	}
@@ -935,7 +964,9 @@ writeResponseAndMarkForTurboCaching(Client *client, Request *req, const MemoryKi
 }
 
 void
-markResponsePartForTurboCaching(Client *client, Request *req, const MemoryKit::mbuf &buffer) {
+Controller::markResponsePartForTurboCaching(Client *client, Request *req,
+	const MemoryKit::mbuf &buffer)
+{
 	if (!req->ended() && turboCaching.isEnabled() && !req->cacheKey.empty()) {
 		unsigned int totalSize = req->appResponse.bodyCacheBuffer.size + buffer.size();
 		if (totalSize > ResponseCache<Request>::MAX_BODY_SIZE) {
@@ -954,7 +985,7 @@ markResponsePartForTurboCaching(Client *client, Request *req, const MemoryKit::m
 }
 
 void
-maybeThrottleAppSource(Client *client, Request *req) {
+Controller::maybeThrottleAppSource(Client *client, Request *req) {
 	if (!req->ended()) {
 		assert(client->output.getBuffersFlushedCallback() == NULL);
 		assert(client->output.getDataFlushedCallback() == getClientOutputDataFlushedCallback());
@@ -975,20 +1006,20 @@ maybeThrottleAppSource(Client *client, Request *req) {
 	}
 }
 
-static void
-_outputBuffersFlushed(FileBufferedChannel *_channel) {
+void
+Controller::_outputBuffersFlushed(FileBufferedChannel *_channel) {
 	FileBufferedFdSinkChannel *channel = reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
 	Client *client = static_cast<Client *>(static_cast<
 		ServerKit::BaseClient *>(channel->getHooks()->userData));
 	Request *req = static_cast<Request *>(client->currentRequest);
-	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+	Controller *self = static_cast<Controller *>(getServerFromClient(client));
 	if (client->connected() && req != NULL) {
 		self->outputBuffersFlushed(client, req);
 	}
 }
 
 void
-outputBuffersFlushed(Client *client, Request *req) {
+Controller::outputBuffersFlushed(Client *client, Request *req) {
 	if (!req->ended()) {
 		assert(!req->appSource.isStarted());
 		SKC_TRACE(client, 2, "Buffered response data has been written to disk. Resuming application socket");
@@ -997,13 +1028,13 @@ outputBuffersFlushed(Client *client, Request *req) {
 	}
 }
 
-static void
-_outputDataFlushed(FileBufferedChannel *_channel) {
+void
+Controller::_outputDataFlushed(FileBufferedChannel *_channel) {
 	FileBufferedFdSinkChannel *channel = reinterpret_cast<FileBufferedFdSinkChannel *>(_channel);
 	Client *client = static_cast<Client *>(static_cast<
 		ServerKit::BaseClient *>(channel->getHooks()->userData));
 	Request *req = static_cast<Request *>(client->currentRequest);
-	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+	Controller *self = static_cast<Controller *>(getServerFromClient(client));
 
 	getClientOutputDataFlushedCallback()(_channel);
 	if (client->connected() && req != NULL) {
@@ -1012,7 +1043,7 @@ _outputDataFlushed(FileBufferedChannel *_channel) {
 }
 
 void
-outputDataFlushed(Client *client, Request *req) {
+Controller::outputDataFlushed(Client *client, Request *req) {
 	if (!req->ended()) {
 		assert(!req->appSource.isStarted());
 		SKC_TRACE(client, 2, "The client is ready to receive more data. Resuming application socket");
@@ -1022,7 +1053,7 @@ outputDataFlushed(Client *client, Request *req) {
 }
 
 void
-handleAppResponseBodyEnd(Client *client, Request *req) {
+Controller::handleAppResponseBodyEnd(Client *client, Request *req) {
 	keepAliveAppConnection(client, req);
 	storeAppResponseInTurboCache(client, req);
 	finalizeUnionStationWithSuccess(client, req);
@@ -1030,12 +1061,12 @@ handleAppResponseBodyEnd(Client *client, Request *req) {
 }
 
 OXT_FORCE_INLINE void
-keepAliveAppConnection(Client *client, Request *req) {
+Controller::keepAliveAppConnection(Client *client, Request *req) {
 	req->session->close(true, req->appResponse.wantKeepAlive);
 }
 
 void
-storeAppResponseInTurboCache(Client *client, Request *req) {
+Controller::storeAppResponseInTurboCache(Client *client, Request *req) {
 	if (turboCaching.isEnabled() && !req->cacheKey.empty()) {
 		TRACE_POINT();
 		AppResponse *resp = &req->appResponse;
@@ -1072,7 +1103,11 @@ storeAppResponseInTurboCache(Client *client, Request *req) {
 }
 
 void
-finalizeUnionStationWithSuccess(Client *client, Request *req) {
+Controller::finalizeUnionStationWithSuccess(Client *client, Request *req) {
 	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, true);
 	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, true);
 }
+
+
+} // namespace Core
+} // namespace Passenger

@@ -29,9 +29,10 @@
 #include <ev++.h>
 #include <ostream>
 #include <ServerKit/HttpClient.h>
-#include <Core/RequestHandler/Request.h>
+#include <Core/Controller/Request.h>
 
 namespace Passenger {
+namespace Core {
 
 using namespace std;
 using namespace boost;
@@ -48,10 +49,12 @@ public:
 		SERVER_KIT_BASE_HTTP_CLIENT_INIT();
 	}
 
-	DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER(Client, Request);
+	DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER(Passenger::Core::Client,
+		Passenger::Core::Request);
 };
 
 
+} // namespace Client
 } // namespace Passenger
 
 #endif /* _PASSENGER_REQUEST_HANDLER_CLIENT_H_ */

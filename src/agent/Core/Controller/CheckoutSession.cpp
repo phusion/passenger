@@ -23,17 +23,35 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <Core/Controller.h>
 
-// This file is included inside the RequestHandler class.
+/*************************************************************************
+ *
+ * Implements Core::Controller methods pertaining selecting an application
+ * process to handle the current request.
+ *
+ *************************************************************************/
 
-private:
+namespace Passenger {
+namespace Core {
+
+using namespace std;
+using namespace boost;
+
+
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
+
 
 void
-checkoutSession(Client *client, Request *req) {
+Controller::checkoutSession(Client *client, Request *req) {
 	GetCallback callback;
 	Options &options = req->options;
 
-	RH_BENCHMARK_POINT(client, req, BM_BEFORE_CHECKOUT);
+	CC_BENCHMARK_POINT(client, req, BM_BEFORE_CHECKOUT);
 	SKC_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
 	req->state = Request::CHECKING_OUT_SESSION;
 	req->beginStopwatchLog(&req->stopwatchLogs.getFromPool, "get from pool");
@@ -49,11 +67,11 @@ checkoutSession(Client *client, Request *req) {
 	options.currentTime = (unsigned long long) (ev_now(getLoop()) * 1000000);
 
 	refRequest(req, __FILE__, __LINE__);
-	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		req->timeBeforeAccessingApplicationPool = ev_now(getLoop());
 	#endif
 	appPool->asyncGet(options, callback);
-	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		if (!req->timedAppPoolGet) {
 			req->timedAppPoolGet = true;
 			ev_now_update(getLoop());
@@ -63,35 +81,35 @@ checkoutSession(Client *client, Request *req) {
 	#endif
 }
 
-static void
-sessionCheckedOut(const SessionPtr &session, const ExceptionPtr &e,
+void
+Controller::sessionCheckedOut(const SessionPtr &session, const ExceptionPtr &e,
 	void *userData)
 {
 	Request *req = static_cast<Request *>(userData);
 	Client *client = static_cast<Client *>(req->client);
-	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
+	Controller *self = static_cast<Controller *>(getServerFromClient(client));
 
 	if (self->getContext()->libev->onEventLoopThread()) {
 		self->sessionCheckedOutFromEventLoopThread(client, req, session, e);
 		self->unrefRequest(req, __FILE__, __LINE__);
 	} else {
 		self->getContext()->libev->runLater(
-			boost::bind(&RequestHandler::sessionCheckedOutFromAnotherThread,
+			boost::bind(&Controller::sessionCheckedOutFromAnotherThread,
 				self, client, req, session, e));
 	}
 }
 
 void
-sessionCheckedOutFromAnotherThread(Client *client, Request *req,
+Controller::sessionCheckedOutFromAnotherThread(Client *client, Request *req,
 	SessionPtr session, ExceptionPtr e)
 {
-	SKC_LOG_EVENT(RequestHandler, client, "sessionCheckedOutFromAnotherThread");
+	SKC_LOG_EVENT(Controller, client, "sessionCheckedOutFromAnotherThread");
 	sessionCheckedOutFromEventLoopThread(client, req, session, e);
 	unrefRequest(req, __FILE__, __LINE__);
 }
 
 void
-sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
+Controller::sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 	const SessionPtr &session, const ExceptionPtr &e)
 {
 	if (req->ended()) {
@@ -99,9 +117,9 @@ sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 	}
 
 	TRACE_POINT();
-	RH_BENCHMARK_POINT(client, req, BM_AFTER_CHECKOUT);
+	CC_BENCHMARK_POINT(client, req, BM_AFTER_CHECKOUT);
 
-	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		if (!req->timedAppPoolGet) {
 			req->timedAppPoolGet = true;
 			ev_now_update(getLoop());
@@ -126,7 +144,7 @@ sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 }
 
 void
-maybeSend100Continue(Client *client, Request *req) {
+Controller::maybeSend100Continue(Client *client, Request *req) {
 	int httpVersion = req->httpMajor * 1000 + req->httpMinor * 10;
 	if (httpVersion >= 1010 && req->hasBody() && !req->strip100ContinueHeader) {
 		// Apps with the "session" protocol don't respond with 100-Continue,
@@ -150,7 +168,7 @@ maybeSend100Continue(Client *client, Request *req) {
 }
 
 void
-initiateSession(Client *client, Request *req) {
+Controller::initiateSession(Client *client, Request *req) {
 	TRACE_POINT();
 	req->sessionCheckoutTry++;
 	try {
@@ -189,12 +207,12 @@ initiateSession(Client *client, Request *req) {
 	sendHeaderToApp(client, req);
 }
 
-static void
-checkoutSessionLater(Request *req) {
+void
+Controller::checkoutSessionLater(Request *req) {
 	Client *client = static_cast<Client *>(req->client);
-	RequestHandler *self = static_cast<RequestHandler *>(
-		RequestHandler::getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "checkoutSessionLater");
+	Controller *self = static_cast<Controller *>(
+		Controller::getServerFromClient(client));
+	SKC_LOG_EVENT_FROM_STATIC(self, Controller, client, "checkoutSessionLater");
 
 	if (!req->ended()) {
 		self->checkoutSession(client, req);
@@ -203,7 +221,9 @@ checkoutSessionLater(Request *req) {
 }
 
 void
-reportSessionCheckoutError(Client *client, Request *req, const ExceptionPtr &e) {
+Controller::reportSessionCheckoutError(Client *client, Request *req,
+	const ExceptionPtr &e)
+{
 	TRACE_POINT();
 	{
 		boost::shared_ptr<RequestQueueFullException> e2 =
@@ -224,9 +244,12 @@ reportSessionCheckoutError(Client *client, Request *req, const ExceptionPtr &e) 
 }
 
 void
-writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req, const boost::shared_ptr<RequestQueueFullException> &e) {
+Controller::writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req,
+	const boost::shared_ptr<RequestQueueFullException> &e)
+{
 	TRACE_POINT();
-	const LString *value = req->secureHeaders.lookup("!~PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE");
+	const LString *value = req->secureHeaders.lookup(
+		"!~PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE");
 	int requestQueueOverflowStatusCode = 503;
 	if (value != NULL && value->size > 0) {
 		value = psg_lstr_make_contiguous(value, req->pool);
@@ -234,7 +257,8 @@ writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req, const 
 			StaticString(value->start->data, value->size));
 	}
 
-	SKC_WARN(client, "Returning HTTP " << requestQueueOverflowStatusCode << " due to: " << e->what());
+	SKC_WARN(client, "Returning HTTP " << requestQueueOverflowStatusCode <<
+		" due to: " << e->what());
 
 	endRequestWithSimpleResponse(&client, &req,
 		"<h1>This website is under heavy load</h1>"
@@ -244,7 +268,7 @@ writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req, const 
 }
 
 void
-writeSpawnExceptionErrorResponse(Client *client, Request *req,
+Controller::writeSpawnExceptionErrorResponse(Client *client, Request *req,
 	const boost::shared_ptr<SpawnException> &e)
 {
 	TRACE_POINT();
@@ -255,7 +279,7 @@ writeSpawnExceptionErrorResponse(Client *client, Request *req,
 }
 
 void
-writeOtherExceptionErrorResponse(Client *client, Request *req, const ExceptionPtr &e) {
+Controller::writeOtherExceptionErrorResponse(Client *client, Request *req, const ExceptionPtr &e) {
 	TRACE_POINT();
 	string typeName;
 	#ifdef CXX_ABI_API_AVAILABLE
@@ -304,8 +328,8 @@ writeOtherExceptionErrorResponse(Client *client, Request *req, const ExceptionPt
  * `message` will be copied and doesn't need to outlive the request.
  */
 void
-endRequestWithErrorResponse(Client **c, Request **r, const StaticString &message,
-	const SpawnException *e = NULL)
+Controller::endRequestWithErrorResponse(Client **c, Request **r, const StaticString &message,
+	const SpawnException *e)
 {
 	TRACE_POINT();
 	Client *client = *c;
@@ -335,7 +359,7 @@ endRequestWithErrorResponse(Client **c, Request **r, const StaticString &message
 }
 
 bool
-friendlyErrorPagesEnabled(Request *req) {
+Controller::friendlyErrorPagesEnabled(Request *req) {
 	bool defaultValue;
 	string defaultStr = agentsOptions->get("friendly_error_pages");
 	if (defaultStr == "auto") {
@@ -348,3 +372,9 @@ friendlyErrorPagesEnabled(Request *req) {
 }
 
 /***************/
+
+/***************/
+
+
+} // namespace Core
+} // namespace Passenger

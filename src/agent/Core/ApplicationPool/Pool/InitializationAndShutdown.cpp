@@ -91,7 +91,7 @@ Pool::initDebugging() {
  * Should be called right after the agent has received
  * the message to exit gracefully. This will tell processes to
  * abort any long-running connections, e.g. WebSocket connections,
- * because the RequestHandler has to wait until all connections are
+ * because the Core::Controller has to wait until all connections are
  * finished before proceeding with shutdown.
  */
 void
