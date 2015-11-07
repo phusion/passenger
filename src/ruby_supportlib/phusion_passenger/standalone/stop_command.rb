@@ -36,6 +36,7 @@ module PhusionPassenger
       def run
         parse_options
         load_local_config_file
+        load_env_config
         remerge_all_options
 
         find_pid_file
@@ -56,7 +57,7 @@ module PhusionPassenger
     private
       def self.create_option_parser(options)
         OptionParser.new do |opts|
-          defaults = ConfigUtils::DEFAULTS
+          defaults = CONFIG_DEFAULTS
           nl = "\n" + ' ' * 37
           opts.banner = "Usage: passenger stop [OPTIONS] [APP DIR]\n"
           opts.separator "Stops a running #{PROGRAM_NAME} Standalone instance."
@@ -85,9 +86,13 @@ module PhusionPassenger
           load_local_config_file_from_app_dir_param!(@argv)
       end
 
+      def load_env_config
+        @env_options = ConfigUtils.load_env_config!
+      end
+
       def remerge_all_options
         @options = ConfigUtils.remerge_all_config(@global_options,
-          @local_options, @parsed_options)
+          @local_options, @env_options, @parsed_options)
       end
 
       def execution_root
