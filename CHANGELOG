@@ -1,6 +1,7 @@
 Release 5.0.22
 --------------
 
+ * [Standalone] The `passenger status` and `passenger stop` commands now respect Passengerfile.json. Closes GH-1593.
 
 
 Release 5.0.21

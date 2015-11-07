@@ -52,18 +52,6 @@ module PhusionPassenger
   module Standalone
 
     class StartCommand < Command
-      DEFAULT_OPTIONS = {
-        :environment       => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['NODE_ENV'] ||
-          ENV['PASSENGER_APP_ENV'] || 'development',
-        :spawn_method      => Kernel.respond_to?(:fork) ? DEFAULT_SPAWN_METHOD : 'direct',
-        :engine            => "nginx",
-        :nginx_version     => PREFERRED_NGINX_VERSION,
-        :log_level         => DEFAULT_LOG_LEVEL,
-        :auto              => !STDIN.tty? || !STDOUT.tty?,
-        :ctls              => [],
-        :envvars           => {}
-      }.freeze
-
       def run
         parse_options
         load_local_config_file
@@ -121,6 +109,7 @@ module PhusionPassenger
         #   function #build_daemon_controller_options
         # - resources/templates/config/standalone.erb
         OptionParser.new do |opts|
+          defaults = ConfigUtils::DEFAULTS
           nl = "\n" + ' ' * 37
           opts.banner = "Usage: passenger start [DIRECTORY] [OPTIONS]\n"
           opts.separator "Starts #{PROGRAM_NAME} Standalone and serve one or more web applications."
@@ -128,11 +117,11 @@ module PhusionPassenger
 
           opts.separator "Server options:"
           opts.on("-a", "--address HOST", String, "Bind to the given address.#{nl}" +
-            "Default: 0.0.0.0") do |value|
+            "Default: #{defaults[:address]}") do |value|
             options[:address] = value
           end
           opts.on("-p", "--port NUMBER", Integer,
-            "Use the given port number. Default: 3000") do |value|
+            "Use the given port number. Default: #{defaults[:port]}") do |value|
             options[:port] = value
           end
           opts.on("-S", "--socket FILE", String,
@@ -187,7 +176,7 @@ module PhusionPassenger
           opts.separator "Application loading options:"
           opts.on("-e", "--environment ENV", String,
             "Framework environment.#{nl}" +
-            "Default: #{DEFAULT_OPTIONS[:environment]}") do |value|
+            "Default: #{defaults[:environment]}") do |value|
             options[:environment] = value
           end
           opts.on("--ruby FILENAME", String, "Executable to use for Ruby apps#{nl}" +
@@ -219,7 +208,7 @@ module PhusionPassenger
             options[:startup_file] = File.absolute_logical_path(value, logical_pwd)
           end
           opts.on("--spawn-method NAME", String,
-            "The spawn method to use. Default: #{DEFAULT_OPTIONS[:spawn_method]}") do |value|
+            "The spawn method to use. Default: #{defaults[:spawn_method]}") do |value|
             options[:spawn_method] = value
           end
           opts.on("--static-files-dir PATH", String,
@@ -396,37 +385,16 @@ module PhusionPassenger
       end
 
       def load_local_config_file
-        if @argv.empty?
-          app_dir = Dir.logical_pwd
-        elsif @argv.size == 1
-          app_dir = @argv[0]
-        end
-        @local_options = {}
-        if app_dir
-          begin
-            ConfigUtils.load_local_config_file!(app_dir, @local_options)
-          rescue ConfigUtils::ConfigLoadError => e
-            abort "*** ERROR: #{e.message}"
-          end
-        end
+        @local_options = ConfigUtils.
+          load_local_config_file_from_app_dir_param!(@argv)
       end
 
-      # We want the command line options to override the options in the local config
-      # file, but the local config file could only be parsed when the command line
-      # options have been parsed. In this method we remerge all the config options
-      # from different sources so that options are overriden according to the following
-      # order:
-      #
-      # - DEFAULT_OPTIONS
-      # - global config file
-      # - local config file
-      # - command line options
       def remerge_all_options
-        @options = DEFAULT_OPTIONS.
-          merge(@global_options).
-          merge(@local_options).
-          merge(@parsed_options)
-        @options.delete(:config_filename)
+        @options = ConfigUtils.remerge_all_config(@global_options,
+          @local_options, @parsed_options)
+        @options_without_defaults = ConfigUtils.
+          remerge_all_config_without_defaults(@global_options,
+            @local_options, @parsed_options)
       end
 
       def sanity_check_options_and_set_defaults
@@ -437,7 +405,8 @@ module PhusionPassenger
           end
         end
 
-        if (@options[:address] || @options[:port]) && @options[:socket_file]
+        if (@options_without_defaults[:address] || @options_without_defaults[:port]) &&
+            @options_without_defaults[:socket_file]
           abort "You cannot specify both --address/--port and --socket. Please choose either one."
         end
         if @options[:ssl] && !@options[:ssl_certificate]
@@ -448,11 +417,6 @@ module PhusionPassenger
         end
         if @options[:engine] != "builtin" && @options[:engine] != "nginx"
           abort "You've specified an invalid value for --engine. The only values allowed are: builtin, nginx."
-        end
-
-        if !@options[:socket_file]
-          @options[:address] ||= "0.0.0.0"
-          @options[:port] ||= 3000
         end
 
         if @options[:engine] == "builtin"
@@ -563,24 +527,7 @@ module PhusionPassenger
       end
 
       def find_pid_and_log_file(app_finder, options)
-        exec_root = app_finder.execution_root
-        if options[:socket_file]
-          pid_basename = "passenger.pid"
-          log_basename = "passenger.log"
-        else
-          pid_basename = "passenger.#{options[:port]}.pid"
-          log_basename = "passenger.#{options[:port]}.log"
-        end
-        if File.directory?("#{exec_root}/tmp/pids")
-          options[:pid_file] ||= "#{exec_root}/tmp/pids/#{pid_basename}"
-        else
-          options[:pid_file] ||= "#{exec_root}/#{pid_basename}"
-        end
-        if File.directory?("log")
-          options[:log_file] ||= "#{exec_root}/log/#{log_basename}"
-        else
-          options[:log_file] ||= "#{exec_root}/#{log_basename}"
-        end
+        ConfigUtils.find_pid_and_log_file(app_finder.execution_root, options)
       end
 
       def create_working_dir

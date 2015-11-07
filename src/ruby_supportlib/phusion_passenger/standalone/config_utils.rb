@@ -22,6 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 
 module PhusionPassenger
@@ -41,9 +43,40 @@ module PhusionPassenger
       class ConfigLoadError < StandardError
       end
 
+      DEFAULTS = {
+        :address           => '0.0.0.0',
+        :port              => 3000,
+        :environment       => ENV['RAILS_ENV'] || ENV['RACK_ENV'] || ENV['NODE_ENV'] ||
+          ENV['PASSENGER_APP_ENV'] || 'development',
+        :spawn_method      => PlatformInfo.ruby_supports_fork? ? DEFAULT_SPAWN_METHOD : 'direct',
+        :engine            => 'nginx',
+        :nginx_version     => PREFERRED_NGINX_VERSION,
+        :log_level         => DEFAULT_LOG_LEVEL,
+        :auto              => !STDIN.tty? || !STDOUT.tty?,
+        :ctls              => [],
+        :envvars           => {}
+      }.freeze
+
       def global_config_file_path
         @global_config_file_path ||= File.join(PhusionPassenger.home_dir,
           USER_NAMESPACE_DIRNAME, "standalone", "config.json")
+      end
+
+      def load_local_config_file_from_app_dir_param!(argv)
+        if argv.empty?
+          app_dir = Dir.logical_pwd
+        elsif argv.size == 1
+          app_dir = argv[0]
+        end
+        local_options = {}
+        if app_dir
+          begin
+            ConfigUtils.load_local_config_file!(app_dir, local_options)
+          rescue ConfigUtils::ConfigLoadError => e
+            abort "*** ERROR: #{e.message}"
+          end
+        end
+        local_options
       end
 
       def load_local_config_file!(app_dir, options)
@@ -102,6 +135,47 @@ module PhusionPassenger
           if filename = options[key]
             options[key] = File.expand_path(filename, config_file_dir)
           end
+        end
+      end
+
+      # We want the command line options to override the options in the local
+      # config file, but the local config file could only be parsed when the
+      # command line options have been parsed. This method remerges all the
+      # config options from different sources so that options are overriden
+      # according to the following order:
+      #
+      # - ConfigUtils::DEFAULTS
+      # - global config file
+      # - local config file
+      # - command line options
+      def remerge_all_config(global_options, local_options, parsed_options)
+        ConfigUtils::DEFAULTS.merge(remerge_all_config_without_defaults(
+          global_options, local_options, parsed_options))
+      end
+
+      def remerge_all_config_without_defaults(global_options, local_options, parsed_options)
+        global_options.
+          merge(local_options).
+          merge(parsed_options)
+      end
+
+      def find_pid_and_log_file(execution_root, options)
+        if options[:socket_file]
+          pid_basename = 'passenger.pid'
+          log_basename = 'passenger.log'
+        else
+          pid_basename = "passenger.#{options[:port]}.pid"
+          log_basename = "passenger.#{options[:port]}.log"
+        end
+        if File.directory?("#{execution_root}/tmp/pids")
+          options[:pid_file] ||= "#{execution_root}/tmp/pids/#{pid_basename}"
+        else
+          options[:pid_file] ||= "#{execution_root}/#{pid_basename}"
+        end
+        if File.directory?("#{execution_root}/log")
+          options[:log_file] ||= "#{execution_root}/log/#{log_basename}"
+        else
+          options[:log_file] ||= "#{execution_root}/#{log_basename}"
         end
       end
     end
