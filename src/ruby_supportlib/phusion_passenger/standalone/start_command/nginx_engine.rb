@@ -84,7 +84,7 @@ module PhusionPassenger
               end
             end
           end
-        rescue Errno::ECONNREFUSED, Errno::ECONNRESET
+        rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ENOENT
         end
 
 
