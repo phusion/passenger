@@ -6,6 +6,7 @@ Release 5.0.22
  * [Standalone] The `passenger status` and `passenger stop` commands now respect Passengerfile.json. Closes GH-1593.
  * [Standalone] `passenger start` now accepts the `--envvar` command line option for passing environment variables to the application.
  * [Standalone] `passenger start` now accepts the `--memory-limit` configuration option.
+ * [Standalone] `passenger start` now accepts the `--max-request-queue-size` configuration option.
 
 
 Release 5.0.21

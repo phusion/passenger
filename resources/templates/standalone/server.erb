@@ -40,6 +40,7 @@ passenger_enabled on;
 <%= nginx_option(app, :app_type) %>
 <%= nginx_option(app, :startup_file) %>
 <%= nginx_option(app, :min_instances) %>
+<%= nginx_option(app, :max_request_queue_size) %>
 <%= nginx_option(app, :restart_dir) %>
 <%= nginx_option(app, :sticky_sessions) %>
 <%= nginx_option(app, :sticky_sessions_cookie_name) %>

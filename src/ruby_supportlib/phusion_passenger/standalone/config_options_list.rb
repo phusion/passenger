@@ -363,10 +363,10 @@ module PhusionPassenger
                       '(Enterprise only)'
       },
       {
-        :name      => :request_queue_size,
+        :name      => :max_request_queue_size,
         :type      => :integer,
         :min       => 1,
-        :desc      => 'Specify request queue size. Default: 100'
+        :desc      => "Specify request queue size. Default: #{DEFAULT_MAX_REQUEST_QUEUE_SIZE}"
       },
       {
         :name      => :sticky_sessions,

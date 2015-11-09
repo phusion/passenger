@@ -141,6 +141,7 @@ module PhusionPassenger
           add_param(command, :min_instances, "--min-instances")
           add_param(command, :pool_idle_time, "--pool-idle-time")
           add_param(command, :max_preloader_idle_time, "--max-preloader-idle-time")
+          add_param(command, :max_request_queue_size, "--max-request-queue-size")
           add_enterprise_param(command, :concurrency_model, "--concurrency-model")
           add_enterprise_param(command, :thread_count, "--app-thread-count")
           add_enterprise_param(command, :max_request_time, "--max-request-time")

@@ -204,6 +204,7 @@ Controller::fillPoolOptionsFromAgentsOptions(Options &options) {
 	}
 	options.minProcesses = agentsOptions->getInt("min_instances");
 	options.maxPreloaderIdleTime = agentsOptions->getInt("max_preloader_idle_time");
+	options.maxRequestQueueSize = agentsOptions->getInt("max_request_queue_size");
 	options.spawnMethod = agentsOptions->get("spawn_method");
 	options.loadShellEnvvars = agentsOptions->getBool("load_shell_envvars");
 	options.statThrottleRate = statThrottleRate;
