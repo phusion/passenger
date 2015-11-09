@@ -155,9 +155,9 @@ void
 Controller::deinitializeRequest(Client *client, Request *req) {
 	req->session.reset();
 
-	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, false);
 	req->endStopwatchLog(&req->stopwatchLogs.getFromPool, false);
 	req->endStopwatchLog(&req->stopwatchLogs.bufferingRequestBody, false);
+	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, false);
 	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, false);
 
 	req->options.transaction.reset();

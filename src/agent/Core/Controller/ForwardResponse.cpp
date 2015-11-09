@@ -1104,8 +1104,8 @@ Controller::storeAppResponseInTurboCache(Client *client, Request *req) {
 
 void
 Controller::finalizeUnionStationWithSuccess(Client *client, Request *req) {
-	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, true);
 	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, true);
+	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, true);
 }
 
 
