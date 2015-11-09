@@ -44,9 +44,12 @@ passenger_enabled on;
 <%= nginx_option(app, :sticky_sessions) %>
 <%= nginx_option(app, :sticky_sessions_cookie_name) %>
 <%= nginx_option(app, :vary_turbocache_by_cookie) %>
-<%= nginx_option(app, :memory_limit) %>
 <%= nginx_option(app, :meteor_app_settings) %>
 <%= nginx_option(app, :load_shell_envvars) %>
 <%= nginx_option(app, :friendly_error_pages) %>
+
 <%= nginx_option(app, :rolling_restarts) %>
 <%= nginx_option(app, :resist_deployment_errors) %>
+<%= nginx_option(app, :memory_limit) %>
+<%= nginx_option(app, :max_request_time) %>
+<%= nginx_option(app, :debugger) %>
