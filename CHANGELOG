@@ -3,6 +3,7 @@ Release 5.0.22
 
  * [Standalone] The `passenger status` and `passenger stop` commands now respect Passengerfile.json. Closes GH-1593.
  * [Standalone] Passenger Standalone now [accepts configuration options from environment variables](https://www.phusionpassenger.com/library/config/standalone/intro.html). This makes using Passenger Standalone significantly easier on Heroku or on systems that follow the 12-factor principle. Closes GH-1661.
+ * [Standalone] `passenger start` now accepts the `--envvar` command line option for passing environment variables to the application.
 
 
 Release 5.0.21
