@@ -1058,8 +1058,8 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
 	options.setDefaultInt("max_preloader_idle_time", DEFAULT_MAX_PRELOADER_IDLE_TIME);
-	options.setDefaultInt("max_request_queue_size", DEFAULT_MAX_REQUEST_QUEUE_SIZE);
-	options.setDefaultInt("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
+	options.setDefaultUint("max_request_queue_size", DEFAULT_MAX_REQUEST_QUEUE_SIZE);
+	options.setDefaultUint("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
 	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
 	options.setDefaultBool("sticky_sessions", false);
