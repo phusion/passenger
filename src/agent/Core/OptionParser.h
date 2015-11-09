@@ -133,6 +133,8 @@ coreUsage() {
 	printf("                            be idle. A value of 0 means that preloader\n");
 	printf("                            processes never timeout. Default: %d\n", DEFAULT_MAX_PRELOADER_IDLE_TIME);
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
+	printf("      --memory-limit MB     Restart application processes that go over the\n");
+    printf("                            given memory limit (Enterprise only)\n");
 	printf("\n");
 	printf("Request handling options (optional):\n");
 	printf("      --max-request-time    Abort requests that take too much time (Enterprise\n");
@@ -258,6 +260,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
 		options.setInt("min_instances", atoi(argv[i + 1]));
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--memory-limit")) {
+		options.setInt("memory_limit", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'e', "--environment")) {
 		options.set("environment", argv[i + 1]);

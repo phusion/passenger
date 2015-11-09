@@ -1,0 +1,22 @@
+# Rails asset pipeline support.
+location ~ "^/assets/.+-([0-9a-f]{32}|[0-9a-f]{64})\..+" {
+    error_page 490 = @static_asset;
+    error_page 491 = @dynamic_request;
+    recursive_error_pages on;
+
+    if (-f $request_filename) {
+        return 490;
+    }
+    if (!-f $request_filename) {
+        return 491;
+    }
+}
+location @static_asset {
+    gzip_static on;
+    expires max;
+    add_header Cache-Control public;
+    add_header ETag "";
+}
+location @dynamic_request {
+    passenger_enabled on;
+}

@@ -27,8 +27,11 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 
 # This file contains a specification of all supported Passenger Standalone
 # configuration options. The specifications are spread over multiple constants,
-# one for each category. The specification is an array of hashes. The following
-# keys are supported:
+# one for each category. The command line parser for `passenger start` is
+# automatically generated from these specifications. The configuration file
+# parser and the environment variable parser also use these specifications.
+#
+# A specification is an array of hashes. The following keys are supported:
 #
 # - :name
 #   The name of the configuration option. If you omit this option, while
@@ -330,6 +333,13 @@ module PhusionPassenger
                       "only). Default: #{DEFAULT_APP_THREAD_COUNT}"
       },
       {
+        :name      => :memory_limit,
+        :type      => :integer,
+        :type_desc => 'MB',
+        :desc      => "Restart application processes that go over\n" \
+                      "the given memory limit (Enterprise only)"
+      },
+      {
         :name      => :rolling_restarts,
         :type      => :boolean,
         :desc      => "Enable rolling restarts (Enterprise only)"
@@ -351,6 +361,12 @@ module PhusionPassenger
         :min       => 0,
         :desc      => "Abort requests that take too much time\n" \
                       '(Enterprise only)'
+      },
+      {
+        :name      => :request_queue_size,
+        :type      => :integer,
+        :min       => 1,
+        :desc      => 'Specify request queue size. Default: 100'
       },
       {
         :name      => :sticky_sessions,

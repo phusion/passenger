@@ -144,6 +144,7 @@ module PhusionPassenger
           add_enterprise_param(command, :concurrency_model, "--concurrency-model")
           add_enterprise_param(command, :thread_count, "--app-thread-count")
           add_enterprise_param(command, :max_request_time, "--max-request-time")
+          add_enterprise_param(command, :memory_limit, "--memory-limit")
           add_enterprise_flag_param(command, :rolling_restarts, "--rolling-restarts")
           add_enterprise_flag_param(command, :resist_deployment_errors, "--resist-deployment-errors")
           add_enterprise_flag_param(command, :debugger, "--debugger")

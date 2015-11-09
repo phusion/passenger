@@ -1,0 +1,11 @@
+<% if @options[:ssl] %>
+    <% if @options[:ssl_port] %>
+        listen <%= nginx_listen_address %>;
+        listen <%= nginx_listen_address_with_ssl_port %> ssl;
+    <% else %>
+        listen <%= nginx_listen_address %> ssl;
+    <% end %>
+<% else %>
+    listen <%= nginx_listen_address %>;
+<% end %>
+root '<%= PhusionPassenger.resources_dir %>/standalone_default_root';
