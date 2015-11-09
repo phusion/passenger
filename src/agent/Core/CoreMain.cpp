@@ -1157,10 +1157,6 @@ sanityCheckOptions() {
 		#endif
 	}
 	if (options.has("memory_limit")) {
-		if (options.getInt("memory_limit") < 1) {
-			fprintf(stderr, "ERROR: the value passed to --memory-limit must be at least 1.\n");
-			ok = false;
-		}
 		#ifndef PASSENGER_IS_ENTERPRISE
 			fprintf(stderr, "ERROR: the --memory-limit option is only supported in "
 				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
