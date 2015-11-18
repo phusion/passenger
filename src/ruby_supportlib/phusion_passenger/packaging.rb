@@ -95,6 +95,7 @@ module PhusionPassenger
     EXCLUDE_GLOB = [
       '**/.DS_Store',
       '.gitignore',
+      '.gitattributes',
       '.gitmodules',
       '.travis.yml',
       '.settings/*',

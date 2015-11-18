@@ -1,0 +1,7 @@
+Rakefile diff=ruby
+Gemfile diff=ruby
+*.gemspec diff=ruby
+*.rb diff=ruby
+*.ru diff=ruby
+*.py diff=python
+bin/* diff=ruby
