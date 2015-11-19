@@ -252,6 +252,7 @@ module PhusionPassenger
 
         paths.delete(try_realpath(gem_bindir))
         paths.delete(try_realpath(homebrew_bindir))
+        paths.delete(try_realpath(rbenv_shims_dir))
         paths.delete(try_realpath(PhusionPassenger.bin_dir))
         paths.uniq!
 
@@ -619,6 +620,12 @@ module PhusionPassenger
         else
           return nil
         end
+      end
+
+      # Returns the ~/.rbenv/shims directory if it exists.
+      def rbenv_shims_dir
+        home = PhusionPassenger.home_dir
+        "#{home}/.rbenv/shims"
       end
 
       def logn(message)
