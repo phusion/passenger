@@ -689,13 +689,17 @@ apiServerProcessPing(Server *server, Client *client, Request *req) {
 
 template<typename Server, typename Client, typename Request>
 inline void
-apiServerProcessVersion(Server *server, Client *client, Request *req) {
+apiServerProcessInfo(Server *server, Client *client, Request *req,
+	const boost::function<void (Json::Value &response)> &postprocessResponse =
+		boost::function<void (Json::Value &)>())
+{
 	Authorization auth(authorize(server, client, req));
 	if (auth.canReadPool || auth.canInspectState) {
 		ServerKit::HeaderTable headers;
 		headers.insert(req->pool, "Content-Type", "application/json");
 
 		Json::Value response;
+		response["pid"] = (Json::UInt64) getpid();
 		response["program_name"] = PROGRAM_NAME;
 		response["program_version"] = PASSENGER_VERSION;
 		response["api_version"] = PASSENGER_API_VERSION;
@@ -704,6 +708,10 @@ apiServerProcessVersion(Server *server, Client *client, Request *req) {
 		#ifdef PASSENGER_IS_ENTERPRISE
 			response["passenger_enterprise"] = true;
 		#endif
+
+		if (postprocessResponse) {
+			postprocessResponse(response);
+		}
 
 		server->writeSimpleResponse(client, 200, &headers,
 			response.toStyledString());

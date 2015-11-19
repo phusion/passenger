@@ -67,8 +67,11 @@ private:
 			processStatusTxt(client, req);
 		} else if (path == P_STATIC_STRING("/ping.json")) {
 			apiServerProcessPing(this, client, req);
-		} else if (path == P_STATIC_STRING("/version.json")) {
-			apiServerProcessVersion(this, client, req);
+		} else if (path == P_STATIC_STRING("/info.json")
+			// The "/version.json" path is deprecated
+			|| path == P_STATIC_STRING("/version.json"))
+		{
+			apiServerProcessInfo(this, client, req);
 		} else if (path == P_STATIC_STRING("/shutdown.json")) {
 			apiServerProcessShutdown(this, client, req);
 		} else if (path == P_STATIC_STRING("/backtraces.txt")) {
