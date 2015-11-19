@@ -258,6 +258,9 @@ module PhusionPassenger
         elsif response.code.to_i == 401
           if response["pool-empty"] == "true"
             REXML::Document.new('<?xml version="1.0" encoding="iso8859-1"?><info version="3"></info>')
+          elsif @options[:ignore_app_not_running]
+            print_instance_querying_permission_error
+            exit
           else
             print_instance_querying_permission_error
             abort
