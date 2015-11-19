@@ -105,16 +105,18 @@ module PhusionPassenger
         abort
       end
 
-      def list_all_passenger_instances(instances)
-        puts "The following #{PROGRAM_NAME} instances are running:"
-        puts
-        printf "%-25s  %s\n", "Name", "Description"
-        puts "------------------------------------------------------------------"
+      def list_all_passenger_instances(instances, print_preamble = true)
+        if print_preamble
+          puts "The following #{PROGRAM_NAME} instances are running:"
+          puts
+        end
+        printf "%-25s  %-7s  %s\n", "Name", "PID", "Description"
+        puts "--------------------------------------------------------------------------"
         if instances.empty?
-          printf "%-25s  %s\n", "(list empty)", "-"
+          printf "%-25s  %-7s  %s\n", "(list empty)", "-", "-"
         else
           instances.each do |instance|
-            printf "%-25s  %s\n", instance.name, instance.server_software
+            printf "%-25s  %-7s  %s\n", instance.name, instance.watchdog_pid, instance.server_software
           end
         end
       end

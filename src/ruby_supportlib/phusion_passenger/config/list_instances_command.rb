@@ -89,17 +89,13 @@ module PhusionPassenger
       def print_json(instances)
         result = []
         instances.each do |instance|
-          result << instance.properties
+          result << instance.as_json
         end
         puts PhusionPassenger::Utils::JSON.generate(result)
       end
 
       def print_instances(instances)
-        printf "%-25s  %s\n", "Name", "Description"
-        puts "------------------------------------------------------------------"
-        instances.each do |instance|
-          printf "%-25s  %s\n", instance.name, instance.server_software
-        end
+        list_all_passenger_instances(instances, false)
       end
     end
 

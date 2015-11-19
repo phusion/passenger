@@ -109,6 +109,10 @@ module PhusionPassenger
         return response
       end
 
+      def watchdog_pid
+        properties["watchdog_pid"]
+      end
+
       def core_pid
         @core_pid ||= File.read("#{@path}/core.pid").to_i
       end
@@ -119,6 +123,13 @@ module PhusionPassenger
 
       def read_only_admin_password
         @read_only_admin_password ||= File.read("#{@path}/read_only_admin_password.txt")
+      end
+
+      def as_json
+        json = properties
+        json["instance_dir"]["path"] = path
+        json["core_pid"] = core_pid
+        json
       end
 
     private
