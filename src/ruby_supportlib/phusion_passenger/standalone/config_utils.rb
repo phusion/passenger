@@ -304,6 +304,10 @@ module PhusionPassenger
             options[spec_item[:name]] = File.absolute_logical_path(value,
               Dir.logical_pwd)
           end
+        elsif spec_item[:type] == :boolean
+          lambda do |value|
+            options[spec_item[:name]] = true
+          end
         else
           lambda do |value|
             options[spec_item[:name]] = value
