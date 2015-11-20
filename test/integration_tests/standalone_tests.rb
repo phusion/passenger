@@ -103,7 +103,7 @@ describe "Passenger Standalone" do
 
   specify "'passenger --version' displays the version number" do
     output = capture_output("passenger --version")
-    output.should include(" #{PhusionPassenger::VERSION_STRING}\n")
+    output.should =~ /#{Regexp.escape PhusionPassenger::VERSION_STRING}$/
   end
 
   describe "start command" do
