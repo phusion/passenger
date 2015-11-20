@@ -241,7 +241,7 @@ module PhusionPassenger
             # Disallowed by the HTTP spec
             raise "Response object may not contain both Content-Length and Transfer-Encoding"
           end
-        else
+        elsif output_body
           # The app has set neither the Content-Length nor the Transfer-Encoding
           # header. This means we'll have to add one of those headers. We know exactly how
           # big our body will be, so we can keep-alive the connection.
