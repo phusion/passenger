@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion
+ *  Copyright (c) 2011-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +23,31 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <Core/Controller.h>
 
-// This file is included inside the RequestHandler class.
+/*************************************************************************
+ *
+ * Implements Core::Controller methods pertaining buffering the request
+ * body.
+ *
+ *************************************************************************/
 
-private:
+namespace Passenger {
+namespace Core {
+
+using namespace std;
+using namespace boost;
+
+
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
+
 
 void
-beginBufferingBody(Client *client, Request *req) {
+Controller::beginBufferingBody(Client *client, Request *req) {
 	TRACE_POINT();
 	req->state = Request::BUFFERING_REQUEST_BODY;
 	req->bodyChannel.start();
@@ -37,8 +56,8 @@ beginBufferingBody(Client *client, Request *req) {
 	req->beginStopwatchLog(&req->stopwatchLogs.bufferingRequestBody, "buffering request body");
 }
 
-Channel::Result
-whenBufferingBody_onRequestBody(Client *client, Request *req,
+ServerKit::Channel::Result
+Controller::whenBufferingBody_onRequestBody(Client *client, Request *req,
 	const MemoryKit::mbuf &buffer, int errcode)
 {
 	TRACE_POINT();
@@ -96,3 +115,7 @@ whenBufferingBody_onRequestBody(Client *client, Request *req,
 		return Channel::Result(0, true);
 	}
 }
+
+
+} // namespace Core
+} // namespace Passenger

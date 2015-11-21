@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion
+ *  Copyright (c) 2011-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -90,7 +91,7 @@ Pool::initDebugging() {
  * Should be called right after the agent has received
  * the message to exit gracefully. This will tell processes to
  * abort any long-running connections, e.g. WebSocket connections,
- * because the RequestHandler has to wait until all connections are
+ * because the Core::Controller has to wait until all connections are
  * finished before proceeding with shutdown.
  */
 void

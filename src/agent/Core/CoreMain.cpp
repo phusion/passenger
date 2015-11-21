@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion
+ *  Copyright (c) 2010-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -83,7 +84,7 @@
 #include <Utils/MessageIO.h>
 #include <Utils/VariantMap.h>
 #include <Core/OptionParser.h>
-#include <Core/RequestHandler.h>
+#include <Core/Controller.h>
 #include <Core/ApiServer.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/UnionStation/Core.h>
@@ -101,19 +102,19 @@ namespace Core {
 	struct ThreadWorkingObjects {
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
-		RequestHandler *requestHandler;
+		Controller *controller;
 
 		ThreadWorkingObjects()
 			: bgloop(NULL),
 			  serverKitContext(NULL),
-			  requestHandler(NULL)
+			  controller(NULL)
 			{ }
 	};
 
 	struct ApiWorkingObjects {
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
-		ApiServer *apiServer;
+		ApiServer::ApiServer *apiServer;
 
 		ApiWorkingObjects()
 			: bgloop(NULL),
@@ -135,7 +136,7 @@ namespace Core {
 		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr appPool;
 
-		ServerKit::AcceptLoadBalancer<RequestHandler> loadBalancer;
+		ServerKit::AcceptLoadBalancer<Controller> loadBalancer;
 		vector<ThreadWorkingObjects> threadWorkingObjects;
 		struct ev_signal sigintWatcher;
 		struct ev_signal sigtermWatcher;
@@ -166,7 +167,7 @@ namespace Core {
 
 			vector<ThreadWorkingObjects>::iterator it, end = threadWorkingObjects.end();
 			for (it = threadWorkingObjects.begin(); it != end; it++) {
-				delete it->requestHandler;
+				delete it->controller;
 				delete it->serverKitContext;
 				delete it->bgloop;
 			}
@@ -191,8 +192,8 @@ static void waitForExitEvent();
 static void cleanup();
 static void deletePidFile();
 static void abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process);
-static void requestHandlerShutdownFinished(RequestHandler *server);
-static void apiServerShutdownFinished(Core::ApiServer *server);
+static void controllerShutdownFinished(Controller *controller);
+static void apiServerShutdownFinished(Core::ApiServer::ApiServer *server);
 static void printInfoInThread();
 
 static void
@@ -376,13 +377,13 @@ printInfo(EV_P_ struct ev_signal *watcher, int revents) {
 }
 
 static void
-inspectRequestHandlerStateAsJson(RequestHandler *rh, string *result) {
-	*result = rh->inspectStateAsJson().toStyledString();
+inspectControllerStateAsJson(Controller *controller, string *result) {
+	*result = controller->inspectStateAsJson().toStyledString();
 }
 
 static void
-inspectRequestHandlerConfigAsJson(RequestHandler *rh, string *result) {
-	*result = rh->getConfigAsJson().toStyledString();
+inspectControllerConfigAsJson(Controller *controller, string *result) {
+	*result = controller->getConfigAsJson().toStyledString();
 }
 
 static void
@@ -406,8 +407,8 @@ printInfoInThread() {
 		string json;
 
 		cerr << "### Request handler state (thread " << (i + 1) << ")\n";
-		two->bgloop->safe->runSync(boost::bind(inspectRequestHandlerStateAsJson,
-			two->requestHandler, &json));
+		two->bgloop->safe->runSync(boost::bind(inspectControllerStateAsJson,
+			two->controller, &json));
 		cerr << json;
 		cerr << "\n";
 		cerr.flush();
@@ -418,8 +419,8 @@ printInfoInThread() {
 		string json;
 
 		cerr << "### Request handler config (thread " << (i + 1) << ")\n";
-		two->bgloop->safe->runSync(boost::bind(inspectRequestHandlerConfigAsJson,
-			two->requestHandler, &json));
+		two->bgloop->safe->runSync(boost::bind(inspectControllerConfigAsJson,
+			two->controller, &json));
 		cerr << json;
 		cerr << "\n";
 		cerr.flush();
@@ -454,7 +455,7 @@ dumpDiagnosticsOnCrash(void *userData) {
 	for (i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		cerr << "### Request handler state (thread " << (i + 1) << ")\n";
-		cerr << two->requestHandler->inspectStateAsJson();
+		cerr << two->controller->inspectStateAsJson();
 		cerr << "\n";
 		cerr.flush();
 	}
@@ -462,7 +463,7 @@ dumpDiagnosticsOnCrash(void *userData) {
 	for (i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		cerr << "### Request handler config (thread " << (i + 1) << ")\n";
-		cerr << two->requestHandler->getConfigAsJson();
+		cerr << two->controller->getConfigAsJson();
 		cerr << "\n";
 		cerr.flush();
 	}
@@ -599,14 +600,14 @@ initializeNonPrivilegedWorkingObjects() {
 			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
-		two.requestHandler = new RequestHandler(two.serverKitContext, agentsOptions, i + 1);
-		two.requestHandler->minSpareClients = 128;
-		two.requestHandler->clientFreelistLimit = 1024;
-		two.requestHandler->resourceLocator = &wo->resourceLocator;
-		two.requestHandler->appPool = wo->appPool;
-		two.requestHandler->unionStationCore = wo->unionStationCore;
-		two.requestHandler->shutdownFinishCallback = requestHandlerShutdownFinished;
-		two.requestHandler->initialize();
+		two.controller = new Core::Controller(two.serverKitContext, agentsOptions, i + 1);
+		two.controller->minSpareClients = 128;
+		two.controller->clientFreelistLimit = 1024;
+		two.controller->resourceLocator = &wo->resourceLocator;
+		two.controller->appPool = wo->appPool;
+		two.controller->unionStationCore = wo->unionStationCore;
+		two.controller->shutdownFinishCallback = controllerShutdownFinished;
+		two.controller->initialize();
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
 
 		wo->threadWorkingObjects.push_back(two);
@@ -635,11 +636,11 @@ initializeNonPrivilegedWorkingObjects() {
 			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
-		awo->apiServer = new Core::ApiServer(awo->serverKitContext);
-		awo->apiServer->requestHandlers.reserve(wo->threadWorkingObjects.size());
+		awo->apiServer = new Core::ApiServer::ApiServer(awo->serverKitContext);
+		awo->apiServer->controllers.reserve(wo->threadWorkingObjects.size());
 		for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
-			awo->apiServer->requestHandlers.push_back(
-				wo->threadWorkingObjects[i].requestHandler);
+			awo->apiServer->controllers.push_back(
+				wo->threadWorkingObjects[i].controller);
 		}
 		awo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
 		awo->apiServer->appPool = wo->appPool;
@@ -662,20 +663,20 @@ initializeNonPrivilegedWorkingObjects() {
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		if (nthreads == 1) {
 			ThreadWorkingObjects *two = &wo->threadWorkingObjects[0];
-			two->requestHandler->listen(wo->serverFds[i]);
+			two->controller->listen(wo->serverFds[i]);
 		} else {
 			wo->loadBalancer.listen(wo->serverFds[i]);
 		}
 	}
 	for (unsigned int i = 0; i < nthreads; i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
-		two->requestHandler->createSpareClients();
+		two->controller->createSpareClients();
 	}
 	if (nthreads > 1) {
 		wo->loadBalancer.servers.reserve(nthreads);
 		for (unsigned int i = 0; i < nthreads; i++) {
 			ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
-			wo->loadBalancer.servers.push_back(two->requestHandler);
+			wo->loadBalancer.servers.push_back(two->controller);
 		}
 	}
 	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
@@ -779,10 +780,10 @@ mainLoop() {
 }
 
 static void
-abortLongRunningConnectionsOnRequestHandler(RequestHandler *requestHandler,
+abortLongRunningConnectionsOnController(Core::Controller *controller,
 	string gupid)
 {
-	requestHandler->disconnectLongRunningConnections(gupid);
+	controller->disconnectLongRunningConnections(gupid);
 }
 
 static void
@@ -793,15 +794,15 @@ abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process) {
 		process->getPid() << ", application " << process->getGroup()->getName());
 	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		wo->threadWorkingObjects[i].bgloop->safe->runLater(
-			boost::bind(abortLongRunningConnectionsOnRequestHandler,
-				wo->threadWorkingObjects[i].requestHandler,
+			boost::bind(abortLongRunningConnectionsOnController,
+				wo->threadWorkingObjects[i].controller,
 				process->getGupid().toString()));
 	}
 }
 
 static void
-shutdownRequestHandler(ThreadWorkingObjects *two) {
-	two->requestHandler->shutdown();
+shutdownController(ThreadWorkingObjects *two) {
+	two->controller->shutdown();
 }
 
 static void
@@ -819,12 +820,12 @@ serverShutdownFinished() {
 }
 
 static void
-requestHandlerShutdownFinished(RequestHandler *server) {
+controllerShutdownFinished(Core::Controller *controller) {
 	serverShutdownFinished();
 }
 
 static void
-apiServerShutdownFinished(Core::ApiServer *server) {
+apiServerShutdownFinished(Core::ApiServer::ApiServer *server) {
 	serverShutdownFinished();
 }
 
@@ -877,7 +878,7 @@ waitForExitEvent() {
 
 		for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
 			ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
-			two->bgloop->safe->runLater(boost::bind(shutdownRequestHandler, two));
+			two->bgloop->safe->runLater(boost::bind(shutdownController, two));
 		}
 		if (wo->threadWorkingObjects.size() > 1) {
 			wo->loadBalancer.shutdown();
@@ -919,8 +920,8 @@ cleanup() {
 	wo->appPool.reset();
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
-		delete two->requestHandler;
-		two->requestHandler = NULL;
+		delete two->controller;
+		two->controller = NULL;
 	}
 	if (wo->prestarterThread != NULL) {
 		wo->prestarterThread->interrupt_and_join();
@@ -1057,7 +1058,8 @@ setAgentsOptionsDefaults() {
 	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
 	options.setDefaultInt("min_instances", 1);
 	options.setDefaultInt("max_preloader_idle_time", DEFAULT_MAX_PRELOADER_IDLE_TIME);
-	options.setDefaultInt("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
+	options.setDefaultUint("max_request_queue_size", DEFAULT_MAX_REQUEST_QUEUE_SIZE);
+	options.setDefaultUint("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
 	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 	options.setDefaultBool("show_version_in_header", true);
 	options.setDefaultBool("sticky_sessions", false);
@@ -1154,6 +1156,14 @@ sanityCheckOptions() {
 			ok = false;
 		#endif
 	}
+	if (options.has("memory_limit")) {
+		#ifndef PASSENGER_IS_ENTERPRISE
+			fprintf(stderr, "ERROR: the --memory-limit option is only supported in "
+				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
+				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n");
+			ok = false;
+		#endif
+	}
 	if (options.has("max_request_time")) {
 		if (options.getInt("max_request_time", false, 0) < 1) {
 			fprintf(stderr, "ERROR: the value passed to --max-request-time must be at least 1.\n");
@@ -1166,8 +1176,8 @@ sanityCheckOptions() {
 			ok = false;
 		#endif
 	}
-	if (RequestHandler::parseBenchmarkMode(options.get("benchmark_mode", false))
-		== RequestHandler::BM_UNKNOWN)
+	if (Core::Controller::parseBenchmarkMode(options.get("benchmark_mode", false))
+		== Core::Controller::BM_UNKNOWN)
 	{
 		fprintf(stderr, "ERROR: '%s' is not a valid mode for --benchmark.\n",
 			options.get("benchmark_mode", false).c_str());

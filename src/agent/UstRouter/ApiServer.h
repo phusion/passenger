@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2013-2015 Phusion
+ *  Copyright (c) 2013-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -63,8 +64,11 @@ private:
 	void route(Client *client, Request *req, const StaticString &path) {
 		if (path == P_STATIC_STRING("/ping.json")) {
 			apiServerProcessPing(this, client, req);
-		} else if (path == P_STATIC_STRING("/version.json")) {
-			apiServerProcessVersion(this, client, req);
+		} else if (path == P_STATIC_STRING("/info.json")
+			// The "/version.json" path is deprecated
+			|| path == P_STATIC_STRING("/version.json"))
+		{
+			apiServerProcessInfo(this, client, req);
 		} else if (path == P_STATIC_STRING("/shutdown.json")) {
 			apiServerProcessShutdown(this, client, req);
 		} else if (path == P_STATIC_STRING("/backtraces.txt")) {

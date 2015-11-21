@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion
+ *  Copyright (c) 2010-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -267,7 +268,7 @@ private:
 	 * wait and retry for a short period of time until the core has been
 	 * restarted by the watchdog.
 	 */
-	FileDescriptor connectToInternalServer() {
+	FileDescriptor connectToCore() {
 		TRACE_POINT();
 		FileDescriptor conn;
 
@@ -592,7 +593,7 @@ private:
 			bool bodyIsChunked = false;
 
 			string headers = constructRequestHeaders(r, mapper, bodyIsChunked);
-			FileDescriptor conn = connectToInternalServer();
+			FileDescriptor conn = connectToCore();
 			writeExact(conn, headers);
 			headers.clear();
 			if (expectingBody) {
@@ -1512,7 +1513,7 @@ public:
 		RequestNote *note = getRequestNote(r);
 		if (note != 0 && hasModAutoIndex()) {
 			note->handlerBeforeModAutoIndex = r->handler;
-			r->handler = "";
+			r->handler = "passenger-skip-autoindex";
 		}
 		return DECLINED;
 	}

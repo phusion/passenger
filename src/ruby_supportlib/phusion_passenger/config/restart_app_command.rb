@@ -1,7 +1,8 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2015 Phusion
+#  Copyright (c) 2013-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -224,7 +225,7 @@ module PhusionPassenger
           request.content_type = "application/json"
           request.body = PhusionPassenger::Utils::JSON.generate(
             :name => group_name,
-            :method => restart_method)
+            :restart_method => restart_method)
           response = @instance.http_request("agents.s/core_api", request)
           if response.code.to_i / 100 == 2
             response.body
@@ -257,6 +258,9 @@ module PhusionPassenger
         elsif response.code.to_i == 401
           if response["pool-empty"] == "true"
             REXML::Document.new('<?xml version="1.0" encoding="iso8859-1"?><info version="3"></info>')
+          elsif @options[:ignore_app_not_running]
+            print_instance_querying_permission_error
+            exit
           else
             print_instance_querying_permission_error
             abort

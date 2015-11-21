@@ -1,8 +1,9 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2015 Phusion
+#  Copyright (c) 2014-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -251,6 +252,7 @@ module PhusionPassenger
 
         paths.delete(try_realpath(gem_bindir))
         paths.delete(try_realpath(homebrew_bindir))
+        paths.delete(try_realpath(rbenv_shims_dir))
         paths.delete(try_realpath(PhusionPassenger.bin_dir))
         paths.uniq!
 
@@ -620,6 +622,12 @@ module PhusionPassenger
         end
       end
 
+      # Returns the ~/.rbenv/shims directory if it exists.
+      def rbenv_shims_dir
+        home = PhusionPassenger.home_dir
+        "#{home}/.rbenv/shims"
+      end
+
       def logn(message)
         STDOUT.write(@colors.ansi_colorize(message))
         STDOUT.flush
@@ -725,7 +733,7 @@ module PhusionPassenger
         if path
           begin
             Pathname.new(path).realpath.to_s
-          rescue Errno::ENOENT, Errno::EACCES
+          rescue Errno::ENOENT, Errno::EACCES, Errno::ENOTDIR
             path
           end
         else

@@ -1,9 +1,10 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +31,7 @@ PhusionPassenger.require_passenger_lib 'common_library'
 PhusionPassenger.require_passenger_lib 'config/installation_utils'
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/progress_bar'
@@ -40,6 +42,26 @@ module PhusionPassenger
 
     class NginxEngineCompiler < AbstractInstaller
       include InstallationUtils
+
+      def self.configure_script_options
+        extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags}".strip
+        result = "--with-cc-opt=#{Shellwords.escape extra_cflags} "
+
+        extra_ldflags = PlatformInfo.openssl_extra_ldflags
+        if !extra_ldflags.empty?
+          result << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
+        end
+
+        result << "--without-http_fastcgi_module " \
+          "--without-http_scgi_module " \
+          "--without-http_uwsgi_module " \
+          "--with-http_gzip_static_module " \
+          "--with-http_stub_status_module " \
+          "--with-http_ssl_module " \
+          "--with-http_realip_module"
+
+        result
+      end
 
     protected
       def dependencies
@@ -302,7 +324,7 @@ module PhusionPassenger
         # work around the problem by configure Nginx with prefix
         # /tmp.
         command << "#{shell} ./configure --prefix=/tmp " +
-          "#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " +
+          "#{self.class.configure_script_options} " +
           "--add-module=#{Shellwords.escape PhusionPassenger.nginx_module_source_dir}"
         run_command_yield_activity(command) do
           yield

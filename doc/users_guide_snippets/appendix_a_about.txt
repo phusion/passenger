@@ -10,4 +10,4 @@ Phusion Passenger is brought to you by link:http://www.phusion.nl/[Phusion].
 
 image:images/phusion_banner.png[link="http://www.phusion.nl/"]
 
-Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+"Passenger", "Phusion Passenger" and "Union Station" are registered trademarks of Phusion Holding B.V.

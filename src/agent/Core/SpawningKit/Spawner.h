@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion
+ *  Copyright (c) 2011-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -927,6 +928,21 @@ protected:
 			setenv("LOGNAME", info.userSwitching.username.c_str(), 1);
 			setenv("SHELL", info.userSwitching.shell.c_str(), 1);
 			setenv("HOME", info.userSwitching.home.c_str(), 1);
+			// The application root may contain one or more symlinks
+			// in its path. If the application calls getcwd(), it will
+			// get the resolved path.
+			//
+			// It turns out that there is no such thing as a path without
+			// unresolved symlinks. The shell presents a working directory with
+			// unresolved symlinks (which it calls the "logical working directory"),
+			// but that is an illusion provided by the shell. The shell reports
+			// the logical working directory though the PWD environment variable.
+			//
+			// See also:
+			// https://github.com/phusion/passenger/issues/1596#issuecomment-138154045
+			// http://git.savannah.gnu.org/cgit/coreutils.git/tree/src/pwd.c
+			// http://www.opensource.apple.com/source/shell_cmds/shell_cmds-170/pwd/pwd.c
+			setenv("PWD", info.appRoot.c_str(), 1);
 		}
 	}
 

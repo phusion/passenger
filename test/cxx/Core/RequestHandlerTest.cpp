@@ -2,8 +2,8 @@
 // FIXME <Jun 8, 2015] DK> rewrite
 
 #include <TestSupport.h>
-#include <Core/RequestHandler.h>
-//#include <Core/RequestHandler.cpp>
+#include <Core/Controller.h>
+//#include <Core/Controller.cpp>
 //#include <Core/AgentOptions.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <jsoncpp/json.h>

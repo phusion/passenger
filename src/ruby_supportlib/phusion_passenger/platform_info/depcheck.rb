@@ -2,6 +2,8 @@
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/linux'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
+PhusionPassenger.require_passenger_lib 'platform_info/openssl'
+PhusionPassenger.require_passenger_lib 'platform_info/curl'
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 
@@ -258,6 +260,10 @@ module PhusionPassenger
         def gem_install(package_name)
           install_instructions("Please make sure RubyGems is installed, then run " +
             "<b>#{gem_command} install #{package_name}</b>")
+        end
+
+        def brew_install(package_name)
+          install_instructions("Please install it with <b>brew install #{package_name}</b>")
         end
 
         def install_osx_command_line_tools

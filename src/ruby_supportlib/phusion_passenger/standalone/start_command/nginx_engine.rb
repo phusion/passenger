@@ -1,7 +1,8 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -83,7 +84,7 @@ module PhusionPassenger
               end
             end
           end
-        rescue Errno::ECONNREFUSED, Errno::ECONNRESET
+        rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ENOENT
         end
 
 
@@ -112,12 +113,12 @@ module PhusionPassenger
         def write_nginx_config_file(path)
           File.open(path, 'w') do |f|
             f.chmod(0644)
-            erb = ERB.new(File.read(nginx_config_template_filename), nil, "-")
+            erb = ERB.new(File.read(nginx_config_template_filename), nil,
+              "-", next_eoutvar)
             erb.filename = nginx_config_template_filename
-            current_user = Etc.getpwuid(Process.uid).name
 
             # The template requires some helper methods which are defined in start_command.rb.
-            output = erb.result(binding)
+            output = erb.result(get_binding)
             f.write(output)
             puts output if debugging?
           end
@@ -134,6 +135,12 @@ module PhusionPassenger
 
         def debugging?
           return ENV['PASSENGER_DEBUG'] && !ENV['PASSENGER_DEBUG'].empty?
+        end
+
+        def next_eoutvar
+          @next_eoutvar_index ||= 0
+          @next_eoutvar_index += 1
+          "_erbout#{@next_eoutvar_index}"
         end
 
         #### Config file template helpers ####
@@ -160,9 +167,27 @@ module PhusionPassenger
           return group.name
         end
 
-        def nginx_option(nginx_config_name, option_name)
-          if @options.has_key?(option_name)
-            value = @options[option_name]
+        def nginx_http_option(option_name)
+          nginx_option(@options, option_name)
+        end
+
+        def nginx_option(options, option_name, nginx_config_name = nil)
+          if options.is_a?(Symbol)
+            # Support old syntax for backward compatibility:
+            # nginx_option(nginx_config_name, option_name)
+            nginx_config_name = options
+            options = @options
+          end
+
+          if options.key?(option_name)
+            nginx_config_name ||= begin
+              if option_name.to_s =~ /^union_station_/
+                option_name
+              else
+                "passenger_#{option_name}"
+              end
+            end
+            value = options[option_name]
             if value.is_a?(String)
               value = "'#{value}'"
             elsif value == true
@@ -174,14 +199,42 @@ module PhusionPassenger
           end
         end
 
+        # Method exists for backward compatiblity with old Nginx config templates
+        def boolean_config_value(val)
+          val ? "on" : "off"
+        end
+
+        def include_passenger_internal_template(name, indent = 0, fix_existing_indenting = true, the_binding = get_binding)
+          path = "#{PhusionPassenger.resources_dir}/templates/standalone/#{name}"
+          erb = ERB.new(File.read(path), nil, "-", next_eoutvar)
+          erb.filename = path
+          result = erb.result(the_binding)
+
+          if fix_existing_indenting
+            # Remove extraneous indenting by 'if' blocks
+            # and collapse multiple empty newlines
+            result.gsub!(/;[\n ]+/, ";\n")
+          end
+
+          # Set indenting
+          result.gsub!(/^/, " " * indent)
+          result.gsub!(/\A +/, '')
+
+          result
+        end
+
+        def current_user
+          Etc.getpwuid(Process.uid).name
+        end
+
+        def get_binding
+          binding
+        end
+
         def default_group_for(username)
           user = Etc.getpwnam(username)
           group = Etc.getgrgid(user.gid)
           return group.name
-        end
-
-        def boolean_config_value(val)
-          return val ? "on" : "off"
         end
 
         def serialize_strset(*items)

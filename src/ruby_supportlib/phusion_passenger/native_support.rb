@@ -1,7 +1,8 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2014 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -308,10 +309,26 @@ module PhusionPassenger
       options = { :logger => logger }
       begin
         try_directories(target_dirs, options) do |target_dir|
-          result =
-            sh_nonfatal("#{PlatformInfo.ruby_command} #{Shellwords.escape extconf_rb}",
-              options) &&
-            sh_nonfatal("make clean && make", options)
+          result = nil
+          # Perform the actual compilation in a temporary directory to avoid
+          # problems with multiple processes trying to concurrently compile.
+          # https://github.com/phusion/passenger/issues/1570
+          PhusionPassenger::Utils.mktmpdir("passenger-native-support-") do |tmpdir|
+            Dir.chdir(tmpdir) do
+              result =
+                sh_nonfatal("#{PlatformInfo.ruby_command} #{Shellwords.escape extconf_rb}",
+                  options) &&
+                sh_nonfatal("make", options)
+              if result
+                begin
+                  FileUtils.cp_r(".", target_dir)
+                rescue SystemCallError => e
+                  log("Error: #{e}")
+                  result = false
+                end
+              end
+            end
+          end
           if result
             log "Compilation succesful. The logs are here:"
             log logger.path

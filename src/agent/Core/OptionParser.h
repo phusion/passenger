@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion
+ *  Copyright (c) 2010-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -132,10 +133,15 @@ coreUsage() {
 	printf("                            be idle. A value of 0 means that preloader\n");
 	printf("                            processes never timeout. Default: %d\n", DEFAULT_MAX_PRELOADER_IDLE_TIME);
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
+	printf("      --memory-limit MB     Restart application processes that go over the\n");
+    printf("                            given memory limit (Enterprise only)\n");
 	printf("\n");
 	printf("Request handling options (optional):\n");
 	printf("      --max-request-time    Abort requests that take too much time (Enterprise\n");
 	printf("                            only)\n");
+	printf("      --max-request-queue-size NUMBER\n");
+	printf("                            Specify request queue size. Default: %d\n",
+		DEFAULT_MAX_REQUEST_QUEUE_SIZE);
 	printf("      --sticky-sessions     Enable sticky sessions\n");
 	printf("      --sticky-sessions-cookie-name NAME\n");
 	printf("                            Cookie name to use for sticky sessions.\n");
@@ -258,6 +264,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
 		options.setInt("min_instances", atoi(argv[i + 1]));
 		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--memory-limit")) {
+		options.setInt("memory_limit", atoi(argv[i + 1]));
+		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'e', "--environment")) {
 		options.set("environment", argv[i + 1]);
 		i += 2;
@@ -290,6 +299,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-time")) {
 		options.setInt("max_request_time", atoi(argv[i + 1]));
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-queue-size")) {
+		options.setInt("max_request_queue_size", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--sticky-sessions")) {
 		options.setBool("sticky_sessions", true);

@@ -1,7 +1,8 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -33,8 +34,11 @@ module PhusionPassenger
 
     class StatusCommand < Command
       def run
-        @options = { :port => 3000 }
         parse_options
+        load_local_config_file
+        load_env_config
+        remerge_all_options
+
         find_pid_file
         create_controller
         begin
@@ -53,15 +57,16 @@ module PhusionPassenger
     private
       def self.create_option_parser(options)
         OptionParser.new do |opts|
+          defaults = CONFIG_DEFAULTS
           nl = "\n" + ' ' * 37
-          opts.banner = "Usage: passenger status [OPTIONS]\n"
+          opts.banner = "Usage: passenger status [OPTIONS] [APP DIR]\n"
           opts.separator "Shows the status of a running #{PROGRAM_NAME} Standalone instance."
           opts.separator ""
 
           opts.separator "Options:"
           opts.on("-p", "--port NUMBER", Integer,
             "The port number of the #{PROGRAM_NAME}#{nl}" +
-            "instance. Default: 3000") do |value|
+            "instance. Default: #{defaults[:port]}") do |value|
             options[:port] = value
           end
           opts.on("--pid-file FILE", String,
@@ -72,19 +77,34 @@ module PhusionPassenger
         end
       end
 
-      def find_pid_file
-        return if @options[:pid_file]
+      def load_local_config_file
+        @local_options = ConfigUtils.
+          load_local_config_file_from_app_dir_param!(@argv)
+      end
 
-        ["tmp/pids", "."].each do |dir|
-          path = File.absolute_path_no_resolve("#{dir}/passenger.#{@options[:port]}.pid")
-          if File.exist?(path)
-            @options[:pid_file] = path
-            return
+      def load_env_config
+        @env_options = ConfigUtils.load_env_config!
+      end
+
+      def remerge_all_options
+        @options = ConfigUtils.remerge_all_config(@global_options,
+          @local_options, @env_options, @parsed_options)
+      end
+
+      def execution_root
+        @argv[0] || Dir.logical_pwd
+      end
+
+      def find_pid_file
+        ConfigUtils.find_pid_and_log_file(execution_root, @options)
+        if !@options[:pid_file]
+          if @options[:ignore_pid_not_found]
+            exit
+          else
+            Standalone::ControlUtils.warn_pid_file_not_found(@options)
+            exit 1
           end
         end
-
-        Standalone::ControlUtils.warn_pid_file_not_found(@options)
-        exit 1
       end
 
       def create_controller

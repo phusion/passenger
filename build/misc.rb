@@ -1,8 +1,9 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -145,26 +146,6 @@ end
 desc "Update the C++ dependency map"
 task :dependency_map do
   sh "./dev/index_cxx_dependencies.rb > build/cxx_dependency_map.rb"
-end
-
-# Compile the WebHelper binary, used by Homebrew packaging.
-task :webhelper => :nginx do
-  require 'tmpdir'
-  require 'logger'
-  PhusionPassenger.require_passenger_lib 'utils/download'
-  Dir.mktmpdir do |path|
-    Utils::Download.download("http://nginx.org/download/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz",
-      "#{path}/nginx.tar.gz",
-      :connect_timeout => 30,
-      :idle_timeout => 30)
-    sh "cd '#{path}' && tar xzf nginx.tar.gz"
-    sh "cd '#{path}/nginx-#{PREFERRED_NGINX_VERSION}' && " +
-      "./configure --prefix=/tmp " +
-      "#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " +
-      "--add-module='#{Dir.pwd}/src/nginx_module' && " +
-      "make"
-    sh "cp '#{path}/nginx-#{PREFERRED_NGINX_VERSION}/objs/nginx' '#{AGENT_OUTPUT_DIR}nginx-#{PREFERRED_NGINX_VERSION}'"
-  end
 end
 
 dependencies = [

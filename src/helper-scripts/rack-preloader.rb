@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 20132-2014 Phusion
+#  Copyright (c) 20132-2014 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -100,7 +101,9 @@ module PhusionPassenger
       LoaderSharedHelpers.before_loading_app_code_step2(options)
       LoaderSharedHelpers.activate_gem 'rack'
 
-      rackup_file = options["startup_file"] || "config.ru"
+      app_root = options["app_root"]
+      rackup_file = LoaderSharedHelpers.maybe_make_path_relative_to_app_root(
+        app_root, options["startup_file"] || "#{app_root}/config.ru")
       rackup_code = ::File.open(rackup_file, 'rb') do |f|
         f.read
       end

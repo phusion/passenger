@@ -1,7 +1,8 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -59,6 +60,7 @@ module PhusionPassenger
     DEFAULT_STICKY_SESSIONS_COOKIE_NAME = "_passenger_route"
     DEFAULT_APP_THREAD_COUNT = 1
     DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK = 1024 * 1024 * 128
+    DEFAULT_MAX_REQUEST_QUEUE_SIZE = 100
     DEFAULT_STAT_THROTTLE_RATE = 10
     DEFAULT_ANALYTICS_LOG_USER = DEFAULT_WEB_APP_USER
     DEFAULT_ANALYTICS_LOG_GROUP = ""
@@ -83,7 +85,7 @@ module PhusionPassenger
     # Versions
     PASSENGER_VERSION = PhusionPassenger::VERSION_STRING
     PASSENGER_API_VERSION_MAJOR = 0
-    PASSENGER_API_VERSION_MINOR = 2
+    PASSENGER_API_VERSION_MINOR = 3
     PASSENGER_API_VERSION = "#{PASSENGER_API_VERSION_MAJOR}.#{PASSENGER_API_VERSION_MINOR}"
     SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION = 3
     SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION = 0
@@ -109,15 +111,6 @@ module PhusionPassenger
     RPM_DEV_PACKAGE           = "passenger-devel"
     RPM_APACHE_MODULE_PACKAGE = "mod_passenger"
     RPM_NGINX_PACKAGE         = "nginx"
-    STANDALONE_NGINX_CONFIGURE_OPTIONS =
-      "--with-cc-opt='-Wno-error' " <<
-      "--without-http_fastcgi_module " <<
-      "--without-http_scgi_module " <<
-      "--without-http_uwsgi_module " <<
-      "--with-http_gzip_static_module " <<
-      "--with-http_stub_status_module " <<
-      "--with-http_ssl_module " <<
-      "--with-http_realip_module"
   end
 
   SharedConstants.constants.each do |name|

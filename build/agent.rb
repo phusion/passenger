@@ -1,7 +1,8 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +35,8 @@ AGENT_OBJECTS = {
     "src/agent/Core/CoreMain.cpp",
   "#{AGENT_OUTPUT_DIR}CoreApplicationPool.o" =>
     "src/agent/Core/ApplicationPool/Implementation.cpp",
+  "#{AGENT_OUTPUT_DIR}CoreController.o" =>
+    "src/agent/Core/Controller/Implementation.cpp",
   "#{AGENT_OUTPUT_DIR}UstRouterMain.o" =>
     "src/agent/UstRouter/UstRouterMain.cpp",
   "#{AGENT_OUTPUT_DIR}SystemMetricsMain.o" =>

@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2015 Phusion
+ *  Copyright (c) 2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -688,13 +689,17 @@ apiServerProcessPing(Server *server, Client *client, Request *req) {
 
 template<typename Server, typename Client, typename Request>
 inline void
-apiServerProcessVersion(Server *server, Client *client, Request *req) {
+apiServerProcessInfo(Server *server, Client *client, Request *req,
+	const boost::function<void (Json::Value &response)> &postprocessResponse =
+		boost::function<void (Json::Value &)>())
+{
 	Authorization auth(authorize(server, client, req));
 	if (auth.canReadPool || auth.canInspectState) {
 		ServerKit::HeaderTable headers;
 		headers.insert(req->pool, "Content-Type", "application/json");
 
 		Json::Value response;
+		response["pid"] = (Json::UInt64) getpid();
 		response["program_name"] = PROGRAM_NAME;
 		response["program_version"] = PASSENGER_VERSION;
 		response["api_version"] = PASSENGER_API_VERSION;
@@ -703,6 +708,10 @@ apiServerProcessVersion(Server *server, Client *client, Request *req) {
 		#ifdef PASSENGER_IS_ENTERPRISE
 			response["passenger_enterprise"] = true;
 		#endif
+
+		if (postprocessResponse) {
+			postprocessResponse(response);
+		}
 
 		server->writeSimpleResponse(client, 200, &headers,
 			response.toStyledString());

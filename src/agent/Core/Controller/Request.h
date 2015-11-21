@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion
+ *  Copyright (c) 2011-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -37,9 +38,10 @@
 #include <Core/UnionStation/Core.h>
 #include <Core/UnionStation/Transaction.h>
 #include <Core/UnionStation/StopwatchLog.h>
-#include <Core/RequestHandler/AppResponse.h>
+#include <Core/Controller/AppResponse.h>
 
 namespace Passenger {
+namespace Core {
 
 using namespace std;
 using namespace boost;
@@ -93,8 +95,15 @@ public:
 	HashedStaticString cacheKey;
 	LString *cacheControl;
 	LString *varyCookie;
+	// Value of the `!~PASSENGER_ENV_VARS` header. This is different
+	// from `options.environmentVariables`. If `!~PASSENGER_ENV_VARS`
+	// is not set or is empty, then `envvars` is NULL, while
+	// `options.environmentVariables` retains a previous value.
+	//
+	// This value is guaranteed to be contiguous.
+	LString *envvars;
 
-	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		bool timedAppPoolGet;
 		ev_tstamp timeBeforeAccessingApplicationPool;
 		ev_tstamp timeOnRequestHeaderSent;
@@ -149,10 +158,11 @@ public:
 		options.transaction->message(message);
 	}
 
-	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Request);
+	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Core::Request);
 };
 
 
+} // namespace Core
 } // namespace Passenger
 
 #endif /* _PASSENGER_REQUEST_HANDLER_REQUEST_H_ */

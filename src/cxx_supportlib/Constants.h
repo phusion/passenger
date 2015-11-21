@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion
+ *  Copyright (c) 2010-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -68,6 +69,8 @@
 
 	#define DEFAULT_MAX_PRELOADER_IDLE_TIME 300
 
+	#define DEFAULT_MAX_REQUEST_QUEUE_SIZE 100
+
 	#define DEFAULT_MBUF_CHUNK_SIZE 512
 
 	#define DEFAULT_NODEJS "node"
@@ -108,15 +111,15 @@
 
 	#define MESSAGE_SERVER_MAX_USERNAME_SIZE 100
 
-	#define PASSENGER_API_VERSION "0.2"
+	#define PASSENGER_API_VERSION "0.3"
 
 	#define PASSENGER_API_VERSION_MAJOR 0
 
-	#define PASSENGER_API_VERSION_MINOR 2
+	#define PASSENGER_API_VERSION_MINOR 3
 
 	#define PASSENGER_DEFAULT_USER "nobody"
 
-	#define PASSENGER_VERSION "5.0.21"
+	#define PASSENGER_VERSION "5.0.22"
 
 	#define POOL_HELPER_THREAD_STACK_SIZE 262144
 
@@ -145,8 +148,6 @@
 	#define SERVER_TOKEN_NAME "Phusion_Passenger"
 
 	#define SHORT_PROGRAM_NAME "Passenger"
-
-	#define STANDALONE_NGINX_CONFIGURE_OPTIONS "--with-cc-opt='-Wno-error' --without-http_fastcgi_module --without-http_scgi_module --without-http_uwsgi_module --with-http_gzip_static_module --with-http_stub_status_module --with-http_ssl_module --with-http_realip_module"
 
 	#define SUPPORT_URL "https://www.phusionpassenger.com/documentation_and_support"
 

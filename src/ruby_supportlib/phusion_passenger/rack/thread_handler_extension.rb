@@ -1,8 +1,9 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +45,9 @@ module PhusionPassenger
       SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
       REQUEST_METHOD = "REQUEST_METHOD"          # :nodoc:
       TRANSFER_ENCODING_HEADER  = "Transfer-Encoding"   # :nodoc:
+      TRANSFER_ENCODING_HEADERS = ["Transfer-Encoding", "Transfer-encoding", "transfer-encoding"] # :nodoc:
       CONTENT_LENGTH_HEADER     = "Content-Length"      # :nodoc:
+      CONTENT_LENGTH_HEADERS    = ["Content-Length", "Content-length", "content-length"] # :nodoc:
       X_SENDFILE_HEADER         = "X-Sendfile"          # :nodoc:
       X_ACCEL_REDIRECT_HEADER   = "X-Accel-Redirect"    # :nodoc:
       CONTENT_LENGTH_HEADER_AND_SEPARATOR      = "Content-Length: " # :nodoc
@@ -199,12 +202,12 @@ module PhusionPassenger
         # time that the body we write out is guaranteed to match what the headers say.
         # Otherwise we disable keep-alive to prevent the app from being able to mess
         # up the keep-alive connection.
-        if header = headers[CONTENT_LENGTH_HEADER]
+        if header = lookup_header(headers, CONTENT_LENGTH_HEADERS)
           # Easiest case: app has a Content-Length header. The headers
           # need no fixing.
           message_length_type = :content_length
           content_length = header.to_i
-          if headers.has_key?(TRANSFER_ENCODING_HEADER)
+          if lookup_header(headers, TRANSFER_ENCODING_HEADERS)
             # Disallowed by the HTTP spec
             raise "Response object may not contain both Content-Length and Transfer-Encoding"
           end
@@ -224,7 +227,7 @@ module PhusionPassenger
               end
             end
           end
-        elsif headers.has_key?(TRANSFER_ENCODING_HEADER)
+        elsif lookup_header(headers, TRANSFER_ENCODING_HEADERS)
           # App has a Transfer-Encoding header. We assume that the app
           # has already chunked the body. The headers need no fixing.
           message_length_type = :chunked_by_app
@@ -234,11 +237,11 @@ module PhusionPassenger
             # just to be safe.
             @can_keepalive = false
           end
-          if headers.has_key?(CONTENT_LENGTH_HEADER)
+          if lookup_header(headers, CONTENT_LENGTH_HEADERS)
             # Disallowed by the HTTP spec
             raise "Response object may not contain both Content-Length and Transfer-Encoding"
           end
-        else
+        elsif output_body
           # The app has set neither the Content-Length nor the Transfer-Encoding
           # header. This means we'll have to add one of those headers. We know exactly how
           # big our body will be, so we can keep-alive the connection.
@@ -346,6 +349,15 @@ module PhusionPassenger
           end
         end
         return result
+      end
+
+      def lookup_header(haystack, needles)
+        needles.each do |needle|
+          if result = haystack[needle]
+            return result
+          end
+        end
+        nil
       end
 
       def should_output_body?(status, is_head_request)

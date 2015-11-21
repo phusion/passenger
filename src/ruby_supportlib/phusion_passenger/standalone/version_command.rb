@@ -1,7 +1,8 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
-#  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +21,17 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
+
 PhusionPassenger.require_passenger_lib 'standalone/command'
+PhusionPassenger.require_passenger_lib 'config/about_command'
 
 module PhusionPassenger
   module Standalone
 
     class VersionCommand < Command
       def run
-        puts "Phusion Passenger version #{VERSION_STRING}"
-        puts
-        puts '"Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.'
+        command = PhusionPassenger::Config::AboutCommand.new(['version'])
+        command.run
       end
     end
 

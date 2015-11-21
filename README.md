@@ -16,7 +16,11 @@ Please follow [the installation instructions on the website](https://www.phusion
 
 ### Installing the source directly from git
 
-If you mean to install the latest version of Passenger directly from this git repository, then you should run one of the following commands. Installing from the git repository is basically the same as the tarball installation method, as [described in the manual](https://www.phusionpassenger.com/library/install/).
+If you mean to install the latest version of Passenger directly from this git repository, then you should run one of the following commands. Installing from the git repository is basically the same as the tarball installation method, as [described in the manual](https://www.phusionpassenger.com/library/install/), with one exception: you need to clone git submodules:
+
+    git submodule update --init --recursive
+
+After that, run one of the following:
 
     ./bin/passenger-install-apache2-module
 
@@ -44,4 +48,4 @@ Ruby users can also build a gem from the Git repository and install the gem.
 
 ## Legal
 
-Phusion Passenger is a trademark of Hongli Lai & Ninh Bui.
+"Passenger", "Phusion Passenger" and "Union Station" are registered trademarks of Phusion Holding B.V.

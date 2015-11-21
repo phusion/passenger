@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) Nginx, Inc.
- * Copyright (C) 2013-2014 Phusion
+ * Copyright (c) 2013-2014 Phusion Holding B.V.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

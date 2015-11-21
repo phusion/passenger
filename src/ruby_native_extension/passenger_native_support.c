@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion
+ *  Copyright (c) 2010-2014 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -332,13 +333,13 @@ f_generic_writev(VALUE fd, VALUE *array_of_components, unsigned int count) {
 				writev_wrapper_data.iov     = groups[i].io_vectors;
 				writev_wrapper_data.iovcnt  = groups[i].count;
 				#if defined(HAVE_RB_THREAD_CALL_WITHOUT_GVL)
-					ret = (int) rb_thread_call_without_gvl(writev_wrapper,
+					ret = (ssize_t) rb_thread_call_without_gvl(writev_wrapper,
 						&writev_wrapper_data, RUBY_UBF_IO, NULL);
 				#elif defined(HAVE_RB_THREAD_IO_BLOCKING_REGION)
-					ret = (int) rb_thread_io_blocking_region(writev_wrapper,
+					ret = (ssize_t) rb_thread_io_blocking_region(writev_wrapper,
 						&writev_wrapper_data, fd_num);
 				#else
-					ret = (int) rb_thread_blocking_region(writev_wrapper,
+					ret = (ssize_t) rb_thread_blocking_region(writev_wrapper,
 						&writev_wrapper_data, RUBY_UBF_IO, 0);
 				#endif
 			#endif

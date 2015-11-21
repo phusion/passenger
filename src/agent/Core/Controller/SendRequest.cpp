@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion
+ *  Copyright (c) 2011-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +23,68 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
+#include <Core/Controller.h>
 
-// This file is included inside the RequestHandler class.
+// For calculating delta_monotonic (Ruby < 2.1 workaround, otherwise unused)
+#include <uv.h>
 
-private:
+/*************************************************************************
+ *
+ * Implements Core::Controller methods pertaining sending request data
+ * to a selected application process. This happens in parallel to forwarding
+ * application response data to the client.
+ *
+ *************************************************************************/
+
+
+namespace Passenger {
+namespace Core {
+
+using namespace std;
+using namespace boost;
+
+
+/****************************
+ *
+ * Private methods
+ *
+ ****************************/
+
+
+struct Controller::SessionProtocolWorkingState {
+	StaticString path;
+	StaticString queryString;
+	StaticString methodStr;
+	StaticString serverName;
+	StaticString serverPort;
+	const LString *remoteAddr;
+	const LString *remotePort;
+	const LString *remoteUser;
+	const LString *contentType;
+	const LString *contentLength;
+	char *environmentVariablesData;
+	size_t environmentVariablesSize;
+	bool hasBaseURI;
+
+	SessionProtocolWorkingState()
+		: environmentVariablesData(NULL)
+		{ }
+
+	~SessionProtocolWorkingState() {
+		free(environmentVariablesData);
+	}
+};
+
+struct Controller::HttpHeaderConstructionCache {
+	StaticString methodStr;
+	const LString *remoteAddr;
+	const LString *setCookie;
+	bool cached;
+};
+
 
 void
-sendHeaderToApp(Client *client, Request *req) {
+Controller::sendHeaderToApp(Client *client, Request *req) {
 	TRACE_POINT();
 	SKC_TRACE(client, 2, "Sending headers to application with " <<
 		req->session->getProtocol() << " protocol");
@@ -78,32 +134,8 @@ sendHeaderToApp(Client *client, Request *req) {
 	}
 }
 
-struct SessionProtocolWorkingState {
-	StaticString path;
-	StaticString queryString;
-	StaticString methodStr;
-	StaticString serverName;
-	StaticString serverPort;
-	const LString *remoteAddr;
-	const LString *remotePort;
-	const LString *remoteUser;
-	const LString *contentType;
-	const LString *contentLength;
-	char *environmentVariablesData;
-	size_t environmentVariablesSize;
-	bool hasBaseURI;
-
-	SessionProtocolWorkingState()
-		: environmentVariablesData(NULL)
-		{ }
-
-	~SessionProtocolWorkingState() {
-		free(environmentVariablesData);
-	}
-};
-
 void
-sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
+Controller::sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 	TRACE_POINT();
 	SessionProtocolWorkingState state;
 
@@ -142,15 +174,15 @@ sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 	(void) ok; // Shut up compiler warning
 }
 
-static void
-sendBodyToAppWhenAppSinkIdle(Channel *_channel, unsigned int size) {
+void
+Controller::sendBodyToAppWhenAppSinkIdle(Channel *_channel, unsigned int size) {
 	FdSinkChannel *channel = reinterpret_cast<FdSinkChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
-	RequestHandler *self = static_cast<RequestHandler *>(
+	Controller *self = static_cast<Controller *>(
 		getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "sendBodyToAppWhenAppSinkIdle");
+	SKC_LOG_EVENT_FROM_STATIC(self, Controller, client, "sendBodyToAppWhenAppSinkIdle");
 
 	channel->setConsumedCallback(NULL);
 	if (channel->acceptingInput()) {
@@ -172,8 +204,68 @@ sendBodyToAppWhenAppSinkIdle(Channel *_channel, unsigned int size) {
 	}
 }
 
+static void
+httpHeaderToScgiUpperCase(unsigned char *data, unsigned int size) {
+	static const boost::uint8_t toUpperMap[256] = {
+		'\0', 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, '\t',
+		'\n', 0x0b, 0x0c, '\r', 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13,
+		0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
+		0x1e, 0x1f,  ' ',  '!',  '"',  '#',  '$',  '%',  '&', '\'',
+		 '(',  ')',  '*',  '+',  ',',  '_',  '.',  '/',  '0',  '1',
+		 '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  ':',  ';',
+		 '<',  '=',  '>',  '?',  '@',  'A',  'B',  'C',  'D',  'E',
+		 'F',  'G',  'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
+		 'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',
+		 'Z',  '[', '\\',  ']',  '^',  '_',  '`',  'A',  'B',  'C',
+		 'D',  'E',  'F',  'G',  'H',  'I',  'J',  'K',  'L',  'M',
+		 'N',  'O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
+		 'X',  'Y',  'Z',  '{',  '|',  '}',  '~', 0x7f, 0x80, 0x81,
+		0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b,
+		0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95,
+		0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
+		0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9,
+		0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3,
+		0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd,
+		0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
+		0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1,
+		0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb,
+		0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5,
+		0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
+		0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9,
+		0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+	};
+
+	const unsigned char *buf = data;
+	const size_t imax = size / 8;
+	const size_t leftover = size % 8;
+	size_t i;
+
+	for (i = 0; i < imax; i++, data += 8) {
+		data[0] = (unsigned char) toUpperMap[data[0]];
+		data[1] = (unsigned char) toUpperMap[data[1]];
+		data[2] = (unsigned char) toUpperMap[data[2]];
+		data[3] = (unsigned char) toUpperMap[data[3]];
+		data[4] = (unsigned char) toUpperMap[data[4]];
+		data[5] = (unsigned char) toUpperMap[data[5]];
+		data[6] = (unsigned char) toUpperMap[data[6]];
+		data[7] = (unsigned char) toUpperMap[data[7]];
+	}
+
+	i = imax * 8;
+	switch (leftover) {
+	case 7: *data++ = (unsigned char) toUpperMap[buf[i++]];
+	case 6: *data++ = (unsigned char) toUpperMap[buf[i++]];
+	case 5: *data++ = (unsigned char) toUpperMap[buf[i++]];
+	case 4: *data++ = (unsigned char) toUpperMap[buf[i++]];
+	case 3: *data++ = (unsigned char) toUpperMap[buf[i++]];
+	case 2: *data++ = (unsigned char) toUpperMap[buf[i++]];
+	case 1: *data++ = (unsigned char) toUpperMap[buf[i]];
+	case 0: break;
+	}
+}
+
 unsigned int
-determineHeaderSizeForSessionProtocol(Request *req,
+Controller::determineHeaderSizeForSessionProtocol(Request *req,
 	SessionProtocolWorkingState &state, string delta_monotonic)
 {
 	unsigned int dataSize = sizeof(boost::uint32_t);
@@ -198,16 +290,16 @@ determineHeaderSizeForSessionProtocol(Request *req,
 	} else {
 		state.contentLength = NULL;
 	}
-	if (!req->options.environmentVariables.empty()) {
-		size_t len = modp_b64_decode_len(req->options.environmentVariables.size());
+	if (req->envvars != NULL) {
+		size_t len = modp_b64_decode_len(req->envvars->size);
 		state.environmentVariablesData = (char *) malloc(len);
 		if (state.environmentVariablesData == NULL) {
 			throw RuntimeException("Unable to allocate memory for base64 "
 				"decoding of environment variables");
 		}
 		len = modp_b64_decode(state.environmentVariablesData,
-			req->options.environmentVariables.data(),
-			req->options.environmentVariables.size());
+			req->envvars->start->data,
+			req->envvars->size);
 		if (len == (size_t) -1) {
 			throw RuntimeException("Unable to base64 decode environment variables");
 		}
@@ -330,8 +422,8 @@ determineHeaderSizeForSessionProtocol(Request *req,
 }
 
 bool
-constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned int &size,
-	const SessionProtocolWorkingState &state, string delta_monotonic)
+Controller::constructHeaderForSessionProtocol(Request *req, char * restrict buffer,
+	unsigned int &size, const SessionProtocolWorkingState &state, string delta_monotonic)
 {
 	char *pos = buffer;
 	const char *end = buffer + size;
@@ -479,74 +571,7 @@ constructHeaderForSessionProtocol(Request *req, char * restrict buffer, unsigned
 }
 
 void
-httpHeaderToScgiUpperCase(unsigned char *data, unsigned int size) {
-	static const boost::uint8_t toUpperMap[256] = {
-		'\0', 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, '\t',
-		'\n', 0x0b, 0x0c, '\r', 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13,
-		0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
-		0x1e, 0x1f,  ' ',  '!',  '"',  '#',  '$',  '%',  '&', '\'',
-		 '(',  ')',  '*',  '+',  ',',  '_',  '.',  '/',  '0',  '1',
-		 '2',  '3',  '4',  '5',  '6',  '7',  '8',  '9',  ':',  ';',
-		 '<',  '=',  '>',  '?',  '@',  'A',  'B',  'C',  'D',  'E',
-		 'F',  'G',  'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
-		 'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',  'X',  'Y',
-		 'Z',  '[', '\\',  ']',  '^',  '_',  '`',  'A',  'B',  'C',
-		 'D',  'E',  'F',  'G',  'H',  'I',  'J',  'K',  'L',  'M',
-		 'N',  'O',  'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
-		 'X',  'Y',  'Z',  '{',  '|',  '}',  '~', 0x7f, 0x80, 0x81,
-		0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b,
-		0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95,
-		0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
-		0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9,
-		0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3,
-		0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd,
-		0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
-		0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1,
-		0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb,
-		0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5,
-		0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
-		0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9,
-		0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
-	};
-
-	const unsigned char *buf = data;
-	const size_t imax = size / 8;
-	const size_t leftover = size % 8;
-	size_t i;
-
-	for (i = 0; i < imax; i++, data += 8) {
-		data[0] = (unsigned char) toUpperMap[data[0]];
-		data[1] = (unsigned char) toUpperMap[data[1]];
-		data[2] = (unsigned char) toUpperMap[data[2]];
-		data[3] = (unsigned char) toUpperMap[data[3]];
-		data[4] = (unsigned char) toUpperMap[data[4]];
-		data[5] = (unsigned char) toUpperMap[data[5]];
-		data[6] = (unsigned char) toUpperMap[data[6]];
-		data[7] = (unsigned char) toUpperMap[data[7]];
-	}
-
-	i = imax * 8;
-	switch (leftover) {
-	case 7: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 6: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 5: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 4: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 3: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 2: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 1: *data++ = (unsigned char) toUpperMap[buf[i]];
-	case 0: break;
-	}
-}
-
-struct HttpHeaderConstructionCache {
-	StaticString methodStr;
-	const LString *remoteAddr;
-	const LString *setCookie;
-	bool cached;
-};
-
-void
-sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
+Controller::sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 	ssize_t bytesWritten;
 	HttpHeaderConstructionCache cache;
 
@@ -557,7 +582,8 @@ sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 		unsigned int nbuffers, dataSize;
 		bool ok;
 
-		ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0, nbuffers, dataSize, cache);
+		ok = constructHeaderBuffersForHttpProtocol(req, NULL, 0,
+			nbuffers, dataSize, cache);
 		assert(ok);
 
 		buffers = (struct iovec *) psg_palloc(req->pool,
@@ -601,7 +627,7 @@ sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
  * In this case, this method always returns true.
  */
 bool
-constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
+Controller::constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	unsigned int maxbuffers, unsigned int & restrict_ref nbuffers,
 	unsigned int & restrict_ref dataSize, HttpHeaderConstructionCache &cache)
 {
@@ -636,7 +662,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 	if (!cache.cached) {
 		cache.methodStr  = http_method_str(req->method);
 		cache.remoteAddr = req->secureHeaders.lookup(REMOTE_ADDR);
-		cache.setCookie = req->headers.lookup(ServerKit::HTTP_SET_COOKIE);
+		cache.setCookie  = req->headers.lookup(ServerKit::HTTP_SET_COOKIE);
 		cache.cached     = true;
 	}
 
@@ -730,6 +756,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 
 	if (req->https) {
 		PUSH_STATIC_BUFFER("X-Forwarded-Proto: https\r\n");
+		PUSH_STATIC_BUFFER("!~Passenger-Proto: https\r\n");
 	}
 
 	if (cache.remoteAddr != NULL && cache.remoteAddr->size > 0) {
@@ -748,10 +775,38 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 		dataSize += cache.remoteAddr->size;
 
 		PUSH_STATIC_BUFFER("\r\n");
+
+		PUSH_STATIC_BUFFER("!~Passenger-Client-Address: ");
+
+		part = cache.remoteAddr->start;
+		while (part != NULL) {
+			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
+				buffers[i].iov_base = (void *) part->data;
+				buffers[i].iov_len  = part->size;
+			}
+			INC_BUFFER_ITER(i);
+			part = part->next;
+		}
+		dataSize += cache.remoteAddr->size;
+
+		PUSH_STATIC_BUFFER("\r\n");
+	}
+
+	if (req->envvars != NULL) {
+		PUSH_STATIC_BUFFER("!~Passenger-Envvars: ");
+		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
+			buffers[i].iov_base = (void *) req->envvars->start->data;
+			buffers[i].iov_len = req->envvars->size;
+		}
+		INC_BUFFER_ITER(i);
+		dataSize += req->envvars->size;
+		PUSH_STATIC_BUFFER("\r\n");
 	}
 
 	if (req->options.analytics) {
-		PUSH_STATIC_BUFFER("Passenger-Txn-Id: ");
+		PUSH_STATIC_BUFFER("!~Passenger-Txn-Id: ");
 
 		if (buffers != NULL) {
 			BEGIN_PUSH_NEXT_BUFFER();
@@ -775,7 +830,7 @@ constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *buffers,
 }
 
 bool
-sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten,
+Controller::sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten,
 	HttpHeaderConstructionCache &cache)
 {
 	unsigned int maxbuffers = std::min<unsigned int>(
@@ -800,8 +855,8 @@ sendHeaderToAppWithHttpProtocolAndWritev(Request *req, ssize_t &bytesWritten,
 }
 
 void
-sendHeaderToAppWithHttpProtocolWithBuffering(Request *req, unsigned int offset,
-	HttpHeaderConstructionCache &cache)
+Controller::sendHeaderToAppWithHttpProtocolWithBuffering(Request *req,
+	unsigned int offset, HttpHeaderConstructionCache &cache)
 {
 	struct iovec *buffers;
 	unsigned int nbuffers, dataSize;
@@ -834,10 +889,10 @@ sendHeaderToAppWithHttpProtocolWithBuffering(Request *req, unsigned int offset,
 }
 
 void
-sendBodyToApp(Client *client, Request *req) {
+Controller::sendBodyToApp(Client *client, Request *req) {
 	TRACE_POINT();
 	assert(req->appSink.acceptingInput());
-	#ifdef DEBUG_RH_EVENT_LOOP_BLOCKING
+	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		req->timeOnRequestHeaderSent = ev_now(getLoop());
 		reportLargeTimeDiff(client,
 			"ApplicationPool get until headers sent",
@@ -861,7 +916,7 @@ sendBodyToApp(Client *client, Request *req) {
 }
 
 void
-halfCloseAppSink(Client *client, Request *req) {
+Controller::halfCloseAppSink(Client *client, Request *req) {
 	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
 	if (req->halfCloseAppConnection) {
 		SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR");
@@ -869,8 +924,8 @@ halfCloseAppSink(Client *client, Request *req) {
 	}
 }
 
-Channel::Result
-whenSendingRequest_onRequestBody(Client *client, Request *req,
+ServerKit::Channel::Result
+Controller::whenSendingRequest_onRequestBody(Client *client, Request *req,
 	const MemoryKit::mbuf &buffer, int errcode)
 {
 	TRACE_POINT();
@@ -932,14 +987,16 @@ whenSendingRequest_onRequestBody(Client *client, Request *req,
 	}
 }
 
-static void
-resumeRequestBodyChannelWhenAppSinkIdle(Channel *_channel, unsigned int size) {
+void
+Controller::resumeRequestBodyChannelWhenAppSinkIdle(Channel *_channel,
+	unsigned int size)
+{
 	FdSinkChannel *channel = reinterpret_cast<FdSinkChannel *>(_channel);
 	Request *req = static_cast<Request *>(static_cast<
 		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
 	Client *client = static_cast<Client *>(req->client);
-	RequestHandler *self = static_cast<RequestHandler *>(getServerFromClient(client));
-	SKC_LOG_EVENT_FROM_STATIC(self, RequestHandler, client, "resumeRequestBodyChannelWhenAppSinkIdle");
+	Controller *self = static_cast<Controller *>(getServerFromClient(client));
+	SKC_LOG_EVENT_FROM_STATIC(self, Controller, client, "resumeRequestBodyChannelWhenAppSinkIdle");
 
 	P_ASSERT_EQ(req->state, Request::FORWARDING_BODY_TO_APP);
 	req->appSink.setConsumedCallback(NULL);
@@ -960,7 +1017,7 @@ resumeRequestBodyChannelWhenAppSinkIdle(Channel *_channel, unsigned int size) {
 }
 
 void
-startBodyChannel(Client *client, Request *req) {
+Controller::startBodyChannel(Client *client, Request *req) {
 	if (req->requestBodyBuffering) {
 		req->bodyBuffer.start();
 	} else {
@@ -969,7 +1026,7 @@ startBodyChannel(Client *client, Request *req) {
 }
 
 void
-stopBodyChannel(Client *client, Request *req) {
+Controller::stopBodyChannel(Client *client, Request *req) {
 	if (req->requestBodyBuffering) {
 		req->bodyBuffer.stop();
 	} else {
@@ -978,12 +1035,17 @@ stopBodyChannel(Client *client, Request *req) {
 }
 
 void
-logAppSocketWriteError(Client *client, int errcode) {
+Controller::logAppSocketWriteError(Client *client, int errcode) {
 	if (errcode == EPIPE) {
-		SKC_INFO(client, "App socket write error: the application closed the socket prematurely"
+		SKC_INFO(client,
+			"App socket write error: the application closed the socket prematurely"
 			" (Broken pipe; errno=" << errcode << ")");
 	} else {
 		SKC_INFO(client, "App socket write error: " << ServerKit::getErrorDesc(errcode) <<
 			" (errno=" << errcode << ")");
 	}
 }
+
+
+} // namespace Core
+} // namespace Passenger

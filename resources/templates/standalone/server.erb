@@ -1,0 +1,56 @@
+server_name <%= app[:server_names].join(' ') %>;
+<% if app[:ssl] %>
+    <% if app[:ssl_port] %>
+        listen <%= nginx_listen_address(app) %>;
+        listen <%= nginx_listen_address_with_ssl_port(app) %> ssl;
+    <% else %>
+        listen <%= nginx_listen_address(app) %> ssl;
+    <% end %>
+<% else %>
+    listen <%= nginx_listen_address(app) %>;
+<% end %>
+<% if app[:static_files_dir] %>
+    root '<%= app[:static_files_dir] %>';
+<% else %>
+    root '<%= app[:root] %>/public';
+<% end %>
+
+passenger_app_root '<%= app[:root] %>';
+passenger_enabled on;
+<% if app[:ssl] %>
+    ssl_certificate <%= app[:ssl_certificate] %>;
+    ssl_certificate_key <%= app[:ssl_certificate_key] %>;
+<% end %>
+<% if app[:union_station_key] %>
+    union_station_support on;
+    union_station_key <%= app[:union_station_key] %>;
+<% end %>
+<% app[:envvars].each_pair do |name, value| %>
+    passenger_env_var '<%= name %>' '<%= value %>';
+<% end %>
+<% if app[:concurrency_model] && app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>
+    passenger_concurrency_model <%= app[:concurrency_model] %>;
+<% end %>
+<% if app[:thread_count] && app[:thread_count] != DEFAULT_APP_THREAD_COUNT %>
+    passenger_thread_count <%= app[:thread_count] %>;
+<% end %>
+
+<%= nginx_option(app, :environment, :passenger_app_env) %>
+<%= nginx_option(app, :spawn_method) %>
+<%= nginx_option(app, :app_type) %>
+<%= nginx_option(app, :startup_file) %>
+<%= nginx_option(app, :min_instances) %>
+<%= nginx_option(app, :max_request_queue_size) %>
+<%= nginx_option(app, :restart_dir) %>
+<%= nginx_option(app, :sticky_sessions) %>
+<%= nginx_option(app, :sticky_sessions_cookie_name) %>
+<%= nginx_option(app, :vary_turbocache_by_cookie) %>
+<%= nginx_option(app, :meteor_app_settings) %>
+<%= nginx_option(app, :load_shell_envvars) %>
+<%= nginx_option(app, :friendly_error_pages) %>
+
+<%= nginx_option(app, :rolling_restarts) %>
+<%= nginx_option(app, :resist_deployment_errors) %>
+<%= nginx_option(app, :memory_limit) %>
+<%= nginx_option(app, :max_request_time) %>
+<%= nginx_option(app, :debugger) %>

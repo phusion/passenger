@@ -1,8 +1,9 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion
+ *  Copyright (c) 2011-2015 Phusion Holding B.V.
  *
- *  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -28,9 +29,10 @@
 #include <ev++.h>
 #include <ostream>
 #include <ServerKit/HttpClient.h>
-#include <Core/RequestHandler/Request.h>
+#include <Core/Controller/Request.h>
 
 namespace Passenger {
+namespace Core {
 
 using namespace std;
 using namespace boost;
@@ -47,10 +49,12 @@ public:
 		SERVER_KIT_BASE_HTTP_CLIENT_INIT();
 	}
 
-	DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER(Client, Request);
+	DEFINE_SERVER_KIT_BASE_HTTP_CLIENT_FOOTER(Passenger::Core::Client,
+		Passenger::Core::Request);
 };
 
 
+} // namespace Client
 } // namespace Passenger
 
 #endif /* _PASSENGER_REQUEST_HANDLER_CLIENT_H_ */
