@@ -74,9 +74,9 @@ exports.nowTimestamp = function() {
 exports.attachToRequest = function(request, response, callback) {
 	try {
 		log.debug("ustReporter: attachToRequest(" + request.method + " " + request.url + ")");
-		var attachToTxnId = request.headers['passenger-txn-id'];
+		var attachToTxnId = request.headers['!~passenger-txn-id'];
 		if (!attachToTxnId) {
-			log.debug("Dropping Union Station request log due to lack of txnId from Passenger Core (probably a temporary UstRouter failure)");
+			log.warn("Dropping Union Station request log due to lack of txnId from Passenger Core (probably a temporary UstRouter failure)");
 			return callback();
 		}
 
