@@ -427,6 +427,29 @@ module PhusionPassenger
         :name      => :union_station_key,
         :type_desc => 'KEY',
         :desc      => 'Specify Union Station key'
+      },
+      {
+        :name      => :union_station_gateway_cert,
+        :type      => :path,
+        :desc      => "The certificate to use for contacting the\n" \
+                      "Union Station gateway, or '-' to disable\n" \
+                      "certificate checking",
+        :config_value_parser => lambda do |value, base_dir|
+          if value == '-'
+            '-'
+          else
+            File.absolute_logical_path(value.to_s, base_dir)
+          end
+        end,
+        :cli_parser => lambda do |options, value|
+          if value == '-'
+            options[:union_station_gateway_cert] = '-'
+          else
+            options[:union_station_gateway_cert] =
+              File.absolute_logical_path(value,
+                Dir.logical_pwd)
+          end
+        end
       }
     ]
 

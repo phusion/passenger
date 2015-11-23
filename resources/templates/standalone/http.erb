@@ -34,6 +34,7 @@ passenger_user_switching off;
 <%= nginx_http_option(:data_buffer_dir) %>
 <%= nginx_http_option(:union_station_gateway_address) %>
 <%= nginx_http_option(:union_station_gateway_port) %>
+<%= nginx_http_option(:union_station_gateway_cert) %>
 <% @options[:ctls].each do |ctl| %>
     passenger_ctl '<%= ctl.split("=", 2)[0] %>' '<%= ctl.split("=", 2)[1] %>';
 <% end %>

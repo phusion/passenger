@@ -220,6 +220,10 @@ module PhusionPassenger
       end
 
       def parse_config_value(spec_item, value, base_dir)
+        if parser = spec_item[:config_value_parser]
+          return parser.call(value, base_dir)
+        end
+
         case spec_item[:type]
         when :string
           value.to_s
@@ -280,7 +284,7 @@ module PhusionPassenger
 
       def format_cli_switch_description(spec_item)
         desc = spec_item[:desc]
-        return '' if desc.nil?
+        return '(no description)' if desc.nil?
         result = desc.gsub("\n", "\n" + ' ' * 37)
         result.gsub!('%DEFAULT%', (spec_item[:default] || 'N/A').to_s)
         result
