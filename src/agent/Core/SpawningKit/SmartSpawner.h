@@ -520,7 +520,7 @@ private:
 
 		try {
 			string message = details.io.readAll(&details.timeout);
-			SpawnException e("An error occured while starting up the preloader.",
+			SpawnException e("An error occurred while starting up the preloader.",
 				message,
 				attributes["html"] == "true",
 				SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR);
