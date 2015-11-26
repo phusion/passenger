@@ -897,7 +897,8 @@ private:
 		return category == P_STATIC_STRING("requests")
 			|| category == P_STATIC_STRING("processes")
 			|| category == P_STATIC_STRING("exceptions")
-			|| category == P_STATIC_STRING("system_metrics");
+			|| category == P_STATIC_STRING("system_metrics")
+			|| category == P_STATIC_STRING("internal_information");
 	}
 
 	LogSinkPtr openLogFile(Client *client, const StaticString &category) {
