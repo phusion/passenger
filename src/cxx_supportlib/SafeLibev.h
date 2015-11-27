@@ -31,6 +31,7 @@
 #include <list>
 #include <memory>
 #include <boost/thread.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -81,7 +82,7 @@ private:
 	}
 
 	static void timeoutHandler(int revents, void *arg) {
-		auto_ptr<Callback> callback((Callback *) arg);
+		boost::scoped_ptr<Callback> callback((Callback *) arg);
 		(*callback)();
 	}
 
