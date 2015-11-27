@@ -604,7 +604,7 @@ task :fakeroot => [:apache2, :nginx, :doc] do
 
   # Node.js sources
   sh "mkdir -p #{fake_nodelibdir}"
-  sh "cp -R #{PhusionPassenger.node_libdir}/phusion_passenger #{fake_nodelibdir}/"
+  sh "cp -R #{PhusionPassenger.node_libdir}/* #{fake_nodelibdir}/"
 
   # C++ support libraries
   sh "mkdir -p #{fake_libdir}"
