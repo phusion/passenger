@@ -2,7 +2,8 @@ define 'openssl-dev' do
 	name "OpenSSL development headers"
 	website "http://www.openssl.org/"
 	define_checker do
-		check_for_header('openssl/ssl.h')
+		check_for_header('openssl/ssl.h', :c,
+			PlatformInfo.openssl_extra_cflags)
 	end
 
 	on :debian do

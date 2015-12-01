@@ -1,6 +1,7 @@
 Release 4.0.60
 --------------
 
+ * Adds OS X El Capitan support.
  * Fixed the password protection of internal Phusion Passenger processes.
 
    For security reasons, Phusion Passenger limits access to internal processes, by using Unix file permissions and randomly generated passwords that only authorized internal processes know. It turns out that this password wasn't set correctly, which has now been fixed. There was no security vulnerability, because the file permissions already provide sufficient security. The password only serves as an extra layer of security just in case there is a problem with the former.

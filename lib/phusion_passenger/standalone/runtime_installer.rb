@@ -1,7 +1,7 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion
+#  Copyright (c) 2010-2015 Phusion
 #
 #  "Phusion Passenger" is a trademark of Hongli Lai & Ninh Bui.
 #
@@ -30,6 +30,7 @@ PhusionPassenger.require_passenger_lib 'packaging'
 PhusionPassenger.require_passenger_lib 'common_library'
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
+PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
 PhusionPassenger.require_passenger_lib 'standalone/utils'
 PhusionPassenger.require_passenger_lib 'utils/tmpio'
@@ -635,6 +636,8 @@ private
 			nginx_libs = COMMON_LIBRARY.only(*NGINX_LIBS_SELECTOR).
 				set_output_dir(lib_dir).
 				link_objects_as_string
+			extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags}".strip
+			extra_ldflags = PlatformInfo.openssl_extra_ldflags
 			command << "env PASSENGER_INCLUDEDIR='#{PhusionPassenger.include_dir}' " <<
 				"PASSENGER_LIBS='#{nginx_libs} #{lib_dir}/../libboost_oxt.a' "
 			# RPM thinks it's being smart by scanning binaries for
@@ -647,6 +650,8 @@ private
 			# /tmp.
 			command << "#{shell} ./configure --prefix=/tmp " <<
 				"#{STANDALONE_NGINX_CONFIGURE_OPTIONS} " <<
+				"--with-cc-opt=#{Shellwords.escape extra_cflags} " <<
+				"--with-ld-opt=#{Shellwords.escape extra_ldflags} " <<
 				"'--add-module=#{PhusionPassenger.nginx_module_source_dir}'"
 			run_command_with_throbber(command, "Preparing web helper...") do |status_text|
 				yield(0, 1, status_text)
