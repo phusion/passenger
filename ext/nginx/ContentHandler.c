@@ -320,6 +320,18 @@ header_is_transfer_encoding(ngx_str_t *key)
         ngx_strncasecmp(key->data + 1, (u_char *) "ransfer-encodin", sizeof("ransfer-encodin") - 1) == 0;
 }
 
+static int
+header_contains_non_alphanumdash(ngx_str_t *key)
+{
+	unsigned int i;
+	for (i = 0; i < key->len; i++) {
+		u_char c = key->data[i];
+		if (!(c >= 'a' && c <= 'z') && !(c >= 'A' && c <= 'Z') && !(c == '-') && !(c >= '0' && c <= '9')) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 static ngx_int_t
 create_request(ngx_http_request_t *r)
@@ -490,7 +502,7 @@ create_request(ngx_http_request_t *r)
                 i = 0;
             }
 
-            if (!header_is_transfer_encoding(&header[i].key)) {
+            if (!header_is_transfer_encoding(&header[i].key) && !header_contains_non_alphanumdash(&header[i].key)) {
                 len += sizeof("HTTP_") - 1 + header[i].key.len + 1
                     + header[i].value.len + 1;
             }
@@ -672,6 +684,10 @@ create_request(ngx_http_request_t *r)
                 part = part->next;
                 header = part->elts;
                 i = 0;
+            }
+
+            if (header_contains_non_alphanumdash(&header[i].key)) {
+            	continue;
             }
 
             if (header_is_transfer_encoding(&header[i].key)) {
