@@ -2,6 +2,7 @@ Release 4.0.60
 --------------
 
  * Adds OS X El Capitan support.
+ * Updates preferred Nginx version from 1.6.2 to 1.6.3.
  * Fixes a header collision vulnerability (CVE-2015-7519). This vulnerability only affects Ruby and Python applications. Thanks to the SUSE security team for reporting this issue.
  * Fixes the password protection of internal Phusion Passenger processes.
 
