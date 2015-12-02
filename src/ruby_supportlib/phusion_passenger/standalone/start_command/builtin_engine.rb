@@ -26,7 +26,8 @@
 require 'etc'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'standalone/control_utils'
-PhusionPassenger.require_passenger_lib 'utils'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
@@ -43,9 +44,17 @@ module PhusionPassenger
         end
 
         def wait_until_engine_has_exited
-          lock = DaemonController::LockFile.new(read_watchdog_lock_file_path!)
-          lock.shared_lock do
-            # Do nothing
+          read_and_delete_report_file!
+          if PlatformInfo.supports_flock?
+            lock = DaemonController::LockFile.new(@watchdog_lock_file_path)
+            lock.shared_lock do
+              # Do nothing
+            end
+          else
+            pid = @engine.pid
+            while process_is_alive?(pid)
+              sleep 1
+            end
           end
         end
 
@@ -221,14 +230,23 @@ module PhusionPassenger
           @report_file_path ||= "#{@working_dir}/report.json"
         end
 
-        def read_watchdog_lock_file_path!
-          @watchdog_lock_file_path ||= begin
-            report = File.open(report_file_path, "r:utf-8") do |f|
-              Utils::JSON.parse(f.read)
-            end
-            # The report file may contain sensitive information, so delete it.
-            File.unlink(report_file_path)
-            report["instance_dir"] + "/lock"
+        def read_and_delete_report_file!
+          report = File.open(report_file_path, "r:utf-8") do |f|
+            Utils::JSON.parse(f.read)
+          end
+          # The report file may contain sensitive information, so delete it.
+          File.unlink(report_file_path)
+          @watchdog_lock_file_path = report["instance_dir"] + "/lock"
+        end
+
+        def process_is_alive?(pid)
+          begin
+            Process.kill(0, pid)
+            true
+          rescue Errno::ESRCH
+            false
+          rescue SystemCallError => e
+            true
           end
         end
 

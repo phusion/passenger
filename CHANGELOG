@@ -7,6 +7,7 @@ Release 5.0.22
  * [Standalone] The `passenger start` command now performs a sanity check on the internally generated Nginx configuration file and advises you accordingly when there is a problem.
  * [Standalone] The `passenger status` and `passenger stop` commands now respect Passengerfile.json. Closes GH-1593.
  * [Standalone] Passenger Standalone on Solaris now properly tails the application log file.
+ * [Standalone] Fixes a problem with Passenger Standalone's builtin engine exiting at startup when run on Solaris.
  * [Standalone] `passenger start` now accepts the `--envvar` command line option for passing environment variables to the application.
  * [Standalone] `passenger start` now accepts the `--memory-limit` configuration option.
  * [Standalone] `passenger start` now accepts the `--max-request-queue-size` configuration option.
