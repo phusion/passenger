@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014 Phusion Holding B.V.
+#  Copyright (c) 2014-2015 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -24,6 +24,8 @@
 #  THE SOFTWARE.
 
 PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'platform_info'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/json'
 
 module PhusionPassenger
@@ -59,7 +61,7 @@ module PhusionPassenger
       end
 
       def locked?
-        if defined?(File::LOCK_EX)
+        if PlatformInfo.supports_flock?
           begin
             !File.open("#{@path}/lock", "r") do |f|
               f.flock(File::LOCK_EX | File::LOCK_NB)

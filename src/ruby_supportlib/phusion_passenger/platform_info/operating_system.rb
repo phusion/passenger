@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2013 Phusion Holding B.V.
+#  Copyright (c) 2010-2015 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -34,11 +34,13 @@ module PhusionPassenger
     # Identifiers for other operating systems may contain a version number, e.g. "freebsd10".
     def self.os_name
       if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
-        return "macosx"
+        'macosx'
       elsif rb_config['target_os'] =~ /^linux-/
-        return "linux"
+        'linux'
+      elsif rb_config['target_os'] =~ /solaris/
+        'solaris'
       else
-        return rb_config['target_os']
+        rb_config['target_os']
       end
     end
     memoize :os_name
@@ -147,6 +149,11 @@ module PhusionPassenger
       end
     end
     memoize :cpu_architectures, true
+
+    # Returns whether the flock() function is supported on this OS.
+    def self.supports_flock?
+      defined?(File::LOCK_EX) && os_name != 'solaris'
+    end
 
     # Returns whether the OS's main CPU architecture supports the
     # x86/x86_64 sfence instruction.
