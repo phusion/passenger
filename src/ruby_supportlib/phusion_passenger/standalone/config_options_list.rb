@@ -482,6 +482,11 @@ module PhusionPassenger
         :type_desc => 'FILENAME',
         :desc      => "The template to use for generating the\n" \
                       'Nginx config file'
+      },
+      {
+        :name      => :debug_nginx_config,
+        :type      => :boolean,
+        :desc      => 'Print Nginx config template and exit'
       }
     ]
 
