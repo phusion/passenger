@@ -265,8 +265,8 @@ int generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev,
 	
 
 	
-		ngx_conf_merge_value(conf->abort_websockets_on_process_restart,
-			prev->abort_websockets_on_process_restart,
+		ngx_conf_merge_value(conf->abort_websockets_on_process_shutdown,
+			prev->abort_websockets_on_process_shutdown,
 			NGX_CONF_UNSET);
 	
 

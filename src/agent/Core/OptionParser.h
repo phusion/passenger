@@ -150,9 +150,9 @@ coreUsage() {
 	printf("                            Vary the turbocache by the cookie of the given name\n");
 	printf("      --disable-turbocaching\n");
 	printf("                            Disable turbocaching\n");
-	printf("      --no-abort-websockets-on-process-restart\n");
+	printf("      --no-abort-websockets-on-process-shutdown\n");
 	printf("                            Do not abort WebSocket connections on process\n");
-	printf("                            restart\n");
+	printf("                            shutdown or restart\n");
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("      --log-file PATH       Log to the given file.\n");
@@ -318,8 +318,8 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isFlag(argv[i], '\0', "--disable-turbocaching")) {
 		options.setBool("turbocaching", false);
 		i++;
-	} else if (p.isFlag(argv[i], '\0', "--no-abort-websockets-on-process-restart")) {
-		options.setBool("abort_websockets_on_process_restart", false);
+	} else if (p.isFlag(argv[i], '\0', "--no-abort-websockets-on-process-shutdown")) {
+		options.setBool("abort_websockets_on_process_shutdown", false);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ruby")) {
 		options.set("default_ruby", argv[i + 1]);

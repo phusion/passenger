@@ -399,17 +399,17 @@ module PhusionPassenger
         end
       },
       {
-        :name      => :abort_websockets_on_process_restart,
+        :name      => :abort_websockets_on_process_shutdown,
         :type      => :boolean,
         :cli       => nil
       },
       {
         :type      => :boolean,
-        :cli       => '--no-abort-websockets-on-process-restart',
+        :cli       => '--no-abort-websockets-on-process-shutdown',
         :desc      => "Do not abort WebSocket connections on\n" \
                       'process restart',
         :cli_parser => lambda do |options, value|
-          options[:abort_websockets_on_process_restart] = false
+          options[:abort_websockets_on_process_shutdown] = false
         end
       }
     ]

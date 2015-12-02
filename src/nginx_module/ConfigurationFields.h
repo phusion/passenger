@@ -51,7 +51,7 @@
 
 
 
-	ngx_int_t abort_websockets_on_process_restart;
+	ngx_int_t abort_websockets_on_process_shutdown;
 
 	ngx_array_t *base_uris;
 

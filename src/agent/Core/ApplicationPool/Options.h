@@ -308,9 +308,6 @@ public:
 	StaticString ustRouterUsername;
 	StaticString ustRouterPassword;
 
-	/** Whether websocket connections should be aborted on process restart. */
-	bool abortWebsocketsOnProcessRestart;
-
 	/**
 	 * Whether Spawner should raise an internal error when spawning. Used
 	 * during unit tests.
@@ -352,6 +349,12 @@ public:
 	 * A value of 0 means unlimited.
 	 */
 	unsigned int maxRequestQueueSize;
+
+	/**
+	 * Whether websocket connections should be aborted on process shutdown
+	 * or restart.
+	 */
+	bool abortWebsocketsOnProcessShutdown;
 
 	/**
 	 * The Union Station key to use in case analytics logging is enabled.
@@ -468,7 +471,6 @@ public:
 		  loadShellEnvvars(true),
 		  userSwitching(true),
 		  analytics(false),
-		  abortWebsocketsOnProcessRestart(true),
 		  raiseInternalError(false),
 
 		  minProcesses(1),
@@ -476,6 +478,7 @@ public:
 		  maxPreloaderIdleTime(-1),
 		  maxOutOfBandWorkInstances(1),
 		  maxRequestQueueSize(100),
+		  abortWebsocketsOnProcessShutdown(true),
 
 		  stickySessionId(0),
 		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),

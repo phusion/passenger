@@ -307,7 +307,7 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :type   => :string
   },
   {
-    :name   => 'passenger_abort_websockets_on_process_restart',
+    :name   => 'passenger_abort_websockets_on_process_shutdown',
     :type   => :flag
   },
 
