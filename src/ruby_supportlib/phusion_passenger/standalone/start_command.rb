@@ -424,7 +424,11 @@ module PhusionPassenger
           backward = 10
         end
 
-        IO.popen("tail -f -n #{backward} \"#{log_file}\"", "rb") do |f|
+        if PlatformInfo.os_name != 'solaris'
+          backward_arg = "-n #{backward}"
+        end
+
+        IO.popen("tail -f #{backward_arg} \"#{log_file}\"", "rb") do |f|
           begin
             while true
               begin
