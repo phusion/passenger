@@ -51,6 +51,8 @@
 
 
 
+	ngx_int_t abort_websockets_on_process_restart;
+
 	ngx_array_t *base_uris;
 
 	ngx_int_t debugger;

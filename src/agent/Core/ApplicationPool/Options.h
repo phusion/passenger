@@ -308,6 +308,9 @@ public:
 	StaticString ustRouterUsername;
 	StaticString ustRouterPassword;
 
+	/** Whether websocket connections should be aborted on process restart. */
+	bool abortWebsocketsOnProcessRestart;
+
 	/**
 	 * Whether Spawner should raise an internal error when spawning. Used
 	 * during unit tests.
@@ -465,6 +468,7 @@ public:
 		  loadShellEnvvars(true),
 		  userSwitching(true),
 		  analytics(false),
+		  abortWebsocketsOnProcessRestart(true),
 		  raiseInternalError(false),
 
 		  minProcesses(1),

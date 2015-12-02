@@ -303,6 +303,15 @@ int generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
 		}
 	
 
+	
+		if (conf->abort_websockets_on_process_restart != NGX_CONF_UNSET) {
+			len += sizeof("!~PASSENGER_ABORT_WEBSOCKETS_ON_PROCESS_RESTART: ") - 1;
+			len += conf->abort_websockets_on_process_restart
+				? sizeof("t\r\n") - 1
+				: sizeof("f\r\n") - 1;
+		}
+	
+
 
 /* Create string */
 buf = pos = ngx_pnalloc(cf->pool, len);
@@ -663,6 +672,19 @@ if (buf == NULL) {
 				conf->vary_turbocache_by_cookie.data,
 				conf->vary_turbocache_by_cookie.len);
 			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+		}
+	
+
+	
+		if (conf->abort_websockets_on_process_restart != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"!~PASSENGER_ABORT_WEBSOCKETS_ON_PROCESS_RESTART: ",
+				sizeof("!~PASSENGER_ABORT_WEBSOCKETS_ON_PROCESS_RESTART: ") - 1);
+			if (conf->abort_websockets_on_process_restart) {
+				pos = ngx_copy(pos, "t\r\n", sizeof("t\r\n") - 1);
+			} else {
+				pos = ngx_copy(pos, "f\r\n", sizeof("f\r\n") - 1);
+			}
 		}
 	
 

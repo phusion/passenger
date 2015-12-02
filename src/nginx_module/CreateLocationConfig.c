@@ -203,4 +203,8 @@ void generated_set_conf_part(passenger_loc_conf_t  *conf) {
 		conf->vary_turbocache_by_cookie.len  = 0;
 	
 
+	
+		conf->abort_websockets_on_process_restart = NGX_CONF_UNSET;
+	
+
 }

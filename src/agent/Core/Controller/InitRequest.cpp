@@ -207,6 +207,7 @@ Controller::fillPoolOptionsFromAgentsOptions(Options &options) {
 	options.maxRequestQueueSize = agentsOptions->getInt("max_request_queue_size");
 	options.spawnMethod = agentsOptions->get("spawn_method");
 	options.loadShellEnvvars = agentsOptions->getBool("load_shell_envvars");
+	options.abortWebsocketsOnProcessRestart = agentsOptions->getBool("abort_websockets_on_process_restart");
 	options.statThrottleRate = statThrottleRate;
 
 	/******************************/
@@ -363,6 +364,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
+	fillPoolOption(req, options.abortWebsocketsOnProcessRestart, "!~PASSENGER_ABORT_WEBSOCKETS_ON_PROCESS_RESTART");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	/******************/
 

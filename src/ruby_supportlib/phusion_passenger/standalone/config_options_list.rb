@@ -397,6 +397,20 @@ module PhusionPassenger
         :cli_parser => lambda do |options, value|
           options[:turbocaching] = false
         end
+      },
+      {
+        :name      => :abort_websockets_on_process_restart,
+        :type      => :boolean,
+        :cli       => nil
+      },
+      {
+        :type      => :boolean,
+        :cli       => '--no-abort-websockets-on-process-restart',
+        :desc      => "Do not abort WebSocket connections on\n" \
+                      'process restart',
+        :cli_parser => lambda do |options, value|
+          options[:abort_websockets_on_process_restart] = false
+        end
       }
     ]
 

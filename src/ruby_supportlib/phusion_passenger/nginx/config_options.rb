@@ -306,6 +306,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :name   => 'passenger_vary_turbocache_by_cookie',
     :type   => :string
   },
+  {
+    :name   => 'passenger_abort_websockets_on_process_restart',
+    :type   => :flag
+  },
 
   ###### Enterprise features ######
   {

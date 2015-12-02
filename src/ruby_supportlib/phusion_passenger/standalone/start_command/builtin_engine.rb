@@ -136,6 +136,9 @@ module PhusionPassenger
           if @options[:turbocaching] == false
             command << " --disable-turbocaching"
           end
+          if @options[:abort_websockets_on_process_restart] == false
+            command << " --no-abort-websockets-on-process-restart"
+          end
           add_flag_param(command, :load_shell_envvars, "--load-shell-envvars")
           add_param(command, :max_pool_size, "--max-pool-size")
           add_param(command, :min_instances, "--min-instances")

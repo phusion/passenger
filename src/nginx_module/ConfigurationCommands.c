@@ -492,6 +492,16 @@
 
 {
 	
+	ngx_string("passenger_abort_websockets_on_process_restart"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+	ngx_conf_set_flag_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, abort_websockets_on_process_restart),
+	NULL
+},
+
+{
+	
 	ngx_string("passenger_fly_with"),
 	NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
 	passenger_enterprise_only,
