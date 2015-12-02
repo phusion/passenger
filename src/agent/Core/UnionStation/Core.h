@@ -80,14 +80,6 @@ private:
 	 */
 	unsigned long long nextReconnectTime;
 
-	static string determineNodeName(const string &givenNodeName) {
-		if (givenNodeName.empty()) {
-			return getHostName();
-		} else {
-			return givenNodeName;
-		}
-	}
-
 	static bool isNetworkError(int code) {
 		return code == EPIPE || code == ECONNREFUSED || code == ECONNRESET
 			|| code == EHOSTUNREACH || code == ENETDOWN || code == ENETUNREACH
@@ -154,7 +146,11 @@ private:
 
 		// Initialize session.
 		UPDATE_TRACE_POINT();
-		writeArrayMessage(fd, &timeout, "init", nodeName.c_str(), NULL);
+		if (nodeName.empty()) {
+			writeArrayMessage(fd, &timeout, "init", NULL);
+		} else {
+			writeArrayMessage(fd, &timeout, "init", nodeName.c_str(), NULL);
+		}
 		if (!readArrayMessage(fd, args, &timeout)) {
 			throw SystemException("Cannot connect to the UstRouter", ECONNREFUSED);
 		} else if (args.size() < 2 || args[0] != "status") {
@@ -186,7 +182,7 @@ public:
 		: serverAddress(_serverAddress),
 		  username(_username),
 		  password(_password),
-		  nodeName(determineNodeName(_nodeName))
+		  nodeName(_nodeName)
 	{
 		initialize();
 	}

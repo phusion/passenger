@@ -566,6 +566,7 @@ setAgentsOptionsDefaults() {
 	VariantMap &options = *agentsOptions;
 
 	options.setDefault("ust_router_address", DEFAULT_UST_ROUTER_LISTEN_ADDRESS);
+	options.setDefault("ust_router_default_node_name", getHostName());
 }
 
 static void

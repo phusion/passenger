@@ -16,6 +16,7 @@ Release 5.0.22
  * [Enterprise] Fixes compatibility with byebug 7.0. Closes GH-1662.
  * Support Union Station logging for Node.js applications, with Express/MongoDB automatically supported. 
  * The Ruby Union Station hooks no longer abort with a fatal error when the application does not call the Union Station initializer method during startup. The error is now only logged.
+ * The Union Station hooks are now more resilient against environment variable problems.
 
 
 Release 5.0.21

@@ -82,6 +82,7 @@ private:
 	string username;
 	string password;
 	string dumpDir;
+	string defaultNodeName;
 	bool devMode;
 
 	RandomGenerator randomGenerator;
@@ -600,6 +601,8 @@ private:
 	}
 
 	void processInitMessage(Client *client, const vector<StaticString> &args) {
+		StaticString nodeName;
+
 		if (OXT_UNLIKELY(client->type != Client::UNINITIALIZED)) {
 			logErrorAndSendToClient(client, "Already initialized");
 			if (client->connected()) {
@@ -607,11 +610,16 @@ private:
 			}
 			goto done;
 		}
-		if (OXT_UNLIKELY(!expectingArgumentsCount(client, args, 2))) {
+		if (OXT_UNLIKELY(!expectingMinArgumentsCount(client, args, 1))) {
 			goto done;
 		}
 
-		client->nodeName = args[1];
+		nodeName = getStaticString(args, 1);
+		if (nodeName.empty()) {
+			client->nodeName = defaultNodeName;
+		} else {
+			client->nodeName.assign(nodeName.data(), nodeName.size());
+		}
 		client->type = Client::LOGGER;
 		sendOkToClient(client);
 
@@ -829,7 +837,7 @@ private:
 	}
 
 	static StaticString getStaticString(const vector<StaticString> &args,
-		unsigned int index, const StaticString &defaultValue = "")
+		unsigned int index, const StaticString &defaultValue = StaticString())
 	{
 		if (index < args.size()) {
 			return args[index];
@@ -1119,15 +1127,20 @@ public:
 		  username(options.get("ust_router_username", false, "")),
 		  password(options.get("ust_router_password", false, "")),
 		  dumpDir(options.get("ust_router_dump_dir", false, "/tmp")),
+		  defaultNodeName(options.get("ust_router_default_node_name", false, "")),
 		  devMode(options.getBool("ust_router_dev_mode", false, false)),
 		  remoteSender(
 		      options.get("union_station_gateway_address", false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS),
 		      options.getInt("union_station_gateway_port", false, DEFAULT_UNION_STATION_GATEWAY_PORT),
 		      options.get("union_station_gateway_cert", false, ""),
-		      options.get("union_station_proxy_address", false)),
+		      options.get("union_station_proxy_address", false, "")),
 		  gcTimer(getLoop()),
 		  flushTimer(getLoop())
 	{
+		if (defaultNodeName.empty()) {
+			defaultNodeName = getHostName();
+		}
+
 		gcTimer.set<Controller, &Controller::garbageCollect>(this);
 		gcTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
 
@@ -1160,6 +1173,7 @@ public:
 		} else {
 			doc["remote_sender"] = remoteSender.inspectStateAsJson();
 		}
+		doc["default_node_name"] = defaultNodeName;
 		return doc;
 	}
 
