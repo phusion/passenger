@@ -36,7 +36,7 @@
 #include <ResourceLocator.h>
 #include <StaticString.h>
 #include <Utils.h>
-#include <Core/UnionStation/Core.h>
+#include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>
 
 namespace Passenger {

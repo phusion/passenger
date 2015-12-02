@@ -58,10 +58,10 @@ enum ExceptionHandlingMode {
 };
 
 
-class Core;
-typedef boost::shared_ptr<Core> CorePtr;
+class Context;
+typedef boost::shared_ptr<Context> ContextPtr;
 
-inline void _checkinConnection(const CorePtr &core, const ConnectionPtr &connection);
+inline void _checkinConnection(const ContextPtr &ctx, const ConnectionPtr &connection);
 
 
 class Transaction: public boost::noncopyable {
@@ -69,7 +69,7 @@ private:
 	static const int INT64_STR_BUFSIZE = 22; // Long enough for a 64-bit number.
 	static const unsigned long long IO_TIMEOUT = 5000000; // In microseconds.
 
-	const CorePtr core;
+	const ContextPtr context;
 	const ConnectionPtr connection;
 	const string txnId;
 	const string groupName;
@@ -131,14 +131,14 @@ public:
 		: exceptionHandlingMode(PRINT)
 		{ }
 
-	Transaction(const CorePtr &_core,
+	Transaction(const ContextPtr &_context,
 		const ConnectionPtr &_connection,
 		const string &_txnId,
 		const string &_groupName,
 		const string &_category,
 		const string &_unionStationKey,
 		ExceptionHandlingMode _exceptionHandlingMode = PRINT)
-		: core(_core),
+		: context(_context),
 		  connection(_connection),
 		  txnId(_txnId),
 		  groupName(_groupName),
@@ -180,7 +180,7 @@ public:
 				readArrayMessage(connection->fd, &timeout);
 			}
 
-			_checkinConnection(core, connection);
+			_checkinConnection(context, connection);
 			guard.clear();
 		} catch (const SystemException &e) {
 			UPDATE_TRACE_POINT();

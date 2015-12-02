@@ -391,7 +391,7 @@ Controller::initializeUnionStation(Client *client, Request *req, RequestAnalysis
 			filters = psg_lstr_make_contiguous(filters, req->pool);
 		}
 
-		options.transaction = unionStationCore->newTransaction(
+		options.transaction = unionStationContext->newTransaction(
 			options.getAppGroupName(), "requests",
 			string(key->start->data, key->size),
 			(filters != NULL)
@@ -465,7 +465,7 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		analysis.appGroupNameCell = singleAppMode
 			? NULL
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
-		analysis.unionStationSupport = unionStationCore != NULL
+		analysis.unionStationSupport = unionStationContext != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
 			this->stickySessions);

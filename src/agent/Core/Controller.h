@@ -82,7 +82,7 @@
 #include <Core/Controller/Client.h>
 #include <Core/Controller/AppResponse.h>
 #include <Core/Controller/TurboCaching.h>
-#include <Core/UnionStation/Core.h>
+#include <Core/UnionStation/Context.h>
 
 namespace Passenger {
 
@@ -381,7 +381,7 @@ protected:
 public:
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
-	UnionStation::CorePtr unionStationCore;
+	UnionStation::ContextPtr unionStationContext;
 
 
 	/****** Initialization and shutdown ******/

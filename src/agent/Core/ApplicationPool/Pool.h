@@ -405,7 +405,7 @@ public:
 
 	Context *getContext();
 	const SpawningKit::ConfigPtr &getSpawningKitConfig() const;
-	const UnionStation::CorePtr &getUnionStationCore() const;
+	const UnionStation::ContextPtr &getUnionStationContext() const;
 	const RandomGeneratorPtr &getRandomGenerator() const;
 
 
