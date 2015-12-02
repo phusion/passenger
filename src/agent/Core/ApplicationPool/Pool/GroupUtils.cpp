@@ -40,7 +40,8 @@ using namespace boost;
 
 /****************************
  *
- * Private methods
+ * Consider these to be private methods,
+ * they are only marked public for unit testing!
  *
  ****************************/
 

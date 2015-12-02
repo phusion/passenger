@@ -58,6 +58,7 @@
 #include <Utils/VariantMap.h>
 #include <Utils/ProcessMetricsCollector.h>
 #include <Utils/SystemMetricsCollector.h>
+#include <Core/UnionStation/StopwatchLog.h>
 #include <Core/ApplicationPool/Common.h>
 #include <Core/ApplicationPool/Context.h>
 #include <Core/ApplicationPool/Process.h>
@@ -448,7 +449,7 @@ public:
 
 	/****** Miscellaneous ******/
 
-	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true);
+	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true, UnionStation::StopwatchLog **stopwatchLog = NULL);
 	SessionPtr get(const Options &options, Ticket *ticket);
 	void setMax(unsigned int max);
 	void setMaxIdleTime(unsigned long long value);

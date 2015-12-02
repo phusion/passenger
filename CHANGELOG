@@ -3,6 +3,7 @@ Release 5.0.24
 
  * Fix crash when the new `force_max_concurrent_requests_per_process` option (5.0.22) was used for non-Node.js apps (e.g. Ruby). Closes GH-1720.
  * Fixed solaris compilation. This was a regression due to the patch for GH-1643 in 5.0.22. Closes GH-1694, GH-1701.
+ * Logs for [Union Station](https://www.unionstationapp.com) provide more information about request queueing. Closes GH-1633.
  * [Standalone] Fixes the default value of the `load_shell_envvars` option. It's supposed to be disabled by default, but due to a typo it was enabled by default.
 
 
