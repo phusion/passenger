@@ -117,6 +117,10 @@ module PhusionPassenger
         @core_pid ||= File.read("#{@path}/core.pid").to_i
       end
 
+      def web_server_control_process_pid
+        File.read("#{@path}/web_server_control_process.pid").to_i
+      end
+
       def full_admin_password
         @full_admin_password ||= File.read("#{@path}/full_admin_password.txt")
       end
