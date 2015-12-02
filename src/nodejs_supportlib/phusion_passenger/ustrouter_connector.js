@@ -74,14 +74,14 @@ exports.init = function(logger, routerAddress, routerUser, routerPass, gatewayKe
 		log.warn("Trying to init when routerState > 0! (ignoring)");
 		return;
 	}
-	
+
 	routerState = -1;
 	ustRouterAddress = routerAddress;
 	ustRouterUser = routerUser;
 	ustRouterPass = routerPass;
 	ustGatewayKey = gatewayKey;
 	appGroupName = groupName;
-	
+
 	if (ustRouterAddress) {
 		if (ustRouterAddress.indexOf("unix:") == 0) {
 			// createConnection doesn't understand the "unix:" prefix, but it does understand the path that follows.
@@ -92,17 +92,17 @@ exports.init = function(logger, routerAddress, routerUser, routerPass, gatewayKe
 			ustRouterPort = hostAndPort[1];
 		}
 	}
-	log.debug("initialize ustrouter_connector with [routerAddress:" + ustRouterAddress + "] " + 
-		(ustRouterPort ? "[ustRouterPort:" + ustRouterPort + "] " : "") + "[user:" + ustRouterUser + "] [pass:" + 
+	log.debug("initialize ustrouter_connector with [routerAddress:" + ustRouterAddress + "] " +
+		(ustRouterPort ? "[ustRouterPort:" + ustRouterPort + "] " : "") + "[user:" + ustRouterUser + "] [pass:" +
 		ustRouterPass + "] [key:" +	ustGatewayKey + "] [app:" + appGroupName + "]");
 
 	if (!ustRouterAddress || !ustRouterUser || !ustRouterPass || !ustGatewayKey || !appGroupName) {
 		log.verbose("Union Station logging disabled (incomplete configuration).");
 		return;
 	}
-	
+
 	changeState(0, "Init approved");
-	
+
 	beginConnection();
 }
 
@@ -119,7 +119,7 @@ function beginConnection() {
 
 	setWatchdog(connTimeoutMs); // Watchdog for the entire connect-to-ustRouter process.
 
-	if (ustRouterPort) { 
+	if (ustRouterPort) {
 		routerConn = net.createConnection(ustRouterPort, ustRouterAddress);
 	} else {
 		routerConn = net.createConnection(ustRouterAddress);
@@ -173,7 +173,7 @@ function findLastPendingTxnForId(txnId) {
 
 exports.deferIfPendingTxns = function(txnId, deferThis, deferFn, deferArgs) {
 	var txn = findLastPendingTxnForId(txnId);
-	
+
 	if (!txn) {
 		return deferFn.apply(deferThis, deferArgs);
 	} else {
@@ -191,20 +191,20 @@ exports.logToUstTransaction = function(category, lineArray, txnIfContinue) {
 	if (!this.isEnabled()) {
 		return;
 	}
-	
+
 	if (pendingTxnBuf.length < pendingTxnBufMaxLength) {
 		var logTxn = new LogTransaction(category);
-		
+
 		if (txnIfContinue) {
 			logTxn.txnId = txnIfContinue;
 		}
 		logTxn.logBuf = lineArray;
-		
+
 		pendingTxnBuf.push(logTxn);
 	} else {
 		log.debug("Dropping Union Station log due to outgoing buffer limit (" + pendingTxnBufMaxLength + ") reached");
 	}
-	
+
 	pushPendingData();
 }
 
@@ -232,7 +232,7 @@ function pushPendingData() {
 	if (pendingTxnBuf.length == 0) {
 		return; // no pending
 	}
-	
+
 	switch (pendingTxnBuf[0].state) {
 		case 0:
 			// still need to open the txn
@@ -240,19 +240,19 @@ function pushPendingData() {
 			setWatchdog(connTimeoutMs);
 			log.debug("open transaction(" + pendingTxnBuf[0].txnId + ")");
 			pendingTxnBuf[0].state = 1;
-			writeLenArray(routerConn, "openTransaction\0" + pendingTxnBuf[0].txnId + "\0" + appGroupName + "\0" + nodeName + "\0" + 
+			writeLenArray(routerConn, "openTransaction\0" + pendingTxnBuf[0].txnId + "\0" + appGroupName + "\0" + nodeName + "\0" +
 				pendingTxnBuf[0].category +	"\0" + codify.toCode(pendingTxnBuf[0].timestamp) + "\0" + ustGatewayKey + "\0true\0true\0\0");
 			break;
 
 		case 1:
 			// open was sent, still waiting for OK.
 			break;
-			
+
 		case 2:
 			// txn is open, log the data & close
 			log.debug("log & close transaction(" + pendingTxnBuf[0].txnId + ")");
 			txn = pendingTxnBuf.shift();
-			
+
 			if (txn.deferFn) {
 				var moveToTxn = findLastPendingTxnForId(txn.txnId);
 				if (!moveToTxn) {
@@ -276,12 +276,12 @@ function pushPendingData() {
 			writeLenArray(routerConn, "closeTransaction\0" + txn.txnId + "\0" + codify.toCode(getWallclockMicrosec()) + "\0true\0");
 			log.debug("wrote log and close for " + txn.txnId);
 			break;
-		
+
 		default:
 			log.error("Unexpected pendingTxnBuf[0].state " + pendingTxnBuf[0].state + ", discarding it.");
 			pendingTxnBuf.shift();
 			break;
-	}	
+	}
 }
 
 var watchDogId;
@@ -323,18 +323,18 @@ function readLenArray(newData) {
 	}
 	resultStr = readBuf.substring(2, payloadLen + 2);
 	readBuf = readBuf.substring(payloadLen + 2); // keep any bytes read beyond length for next read
-	
+
 	return resultStr.split("\0");
 }
 
 function onData(data) {
 	log.silly("onData [" + data + "] (len = " + data.length + ")");
-	
+
 	rcvString = readLenArray(data);
 	if (!rcvString) {
 		return;
 	}
-	
+
 	log.silly("got: [" + rcvString + "]");
 
 	switch (routerState) {
@@ -397,7 +397,7 @@ function onData(data) {
 function resetState(reason) {
 	changeState(0, reason);
 
-	// When experiencing a mid-transaction failure (pending transaction state is increased once a transaction open has 
+	// When experiencing a mid-transaction failure (pending transaction state is increased once a transaction open has
 	// been sent), we don't really know what the other side remembers about the transaction (e.g. nothing if it crashed).
 	// It's even possible that the transaction itself is causing the problem (e.g. invalid category), so we choose to
 	// drop it and disconnect. The drop avoids getting stuck on invalid txns and the disconnect cleans up remote resources.
@@ -406,13 +406,13 @@ function resetState(reason) {
 		pendingTxnBuf.shift();
 	}
 
-	// ensure connection is finished and we don't get any outdated triggers 
+	// ensure connection is finished and we don't get any outdated triggers
 	resetWatchdog();
 
 	if (routerConn) {
 		routerConn.destroy();
 	}
-	
+
 	setTimeout(function() { pushPendingData(); }, autoRetryAfterMs);
 }
 
@@ -439,10 +439,10 @@ function writeLenArray(c, str) {
 if (process.env.NODE_ENV === 'test') {
 	exports.setDefaults = setDefaults;
 	exports.pushPendingData = pushPendingData;
-	
+
 	exports.getRouterState = function() { return routerState; };
 	exports.setPendingTxnBufMaxLength = function(val) { pendingTxnBufMaxLength = val; };
-	exports.getPendingTxnBuf = function() { return pendingTxnBuf; };	
+	exports.getPendingTxnBuf = function() { return pendingTxnBuf; };
 	exports.setConnTimeoutMs = function(val) { connTimeoutMs = val; };
 	exports.setAutoRetryAfterMs = function(val) { autoRetryAfterMs = val; };
 }
