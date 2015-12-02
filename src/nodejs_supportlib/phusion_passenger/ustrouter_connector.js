@@ -35,7 +35,6 @@ var ustRouterUser;
 var ustRouterPass;
 var ustGatewayKey;
 
-var nodeName;
 var appGroupName;
 
 var routerConn;
@@ -57,7 +56,6 @@ var autoRetryAfterMs;
 
 setDefaults();
 function setDefaults() {
-	nodeName = os.hostname();
 	routerState = -1;
 	pendingTxnBuf = [];
 	pendingTxnBufMaxLength = 5000;
@@ -240,7 +238,7 @@ function pushPendingData() {
 			setWatchdog(connTimeoutMs);
 			log.debug("open transaction(" + pendingTxnBuf[0].txnId + ")");
 			pendingTxnBuf[0].state = 1;
-			writeLenArray(routerConn, "openTransaction\0" + pendingTxnBuf[0].txnId + "\0" + appGroupName + "\0" + nodeName + "\0" +
+			writeLenArray(routerConn, "openTransaction\0" + pendingTxnBuf[0].txnId + "\0" + appGroupName + "\0\0" +
 				pendingTxnBuf[0].category +	"\0" + codify.toCode(pendingTxnBuf[0].timestamp) + "\0" + ustGatewayKey + "\0true\0true\0\0");
 			break;
 
@@ -353,7 +351,7 @@ function onData(data) {
 		case 3:
 			if (verifyOk(rcvString, "UstRouter authentication")) {
 				changeState(4);
-				writeLenArray(routerConn, "init\0" + nodeName + "\0");
+				writeLenArray(routerConn, "init\0");
 			}
 			break;
 
