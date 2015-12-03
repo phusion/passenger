@@ -270,5 +270,11 @@ int generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev,
 			NGX_CONF_UNSET);
 	
 
+	
+		ngx_conf_merge_value(conf->force_max_concurrent_requests_per_process,
+			prev->force_max_concurrent_requests_per_process,
+			NGX_CONF_UNSET);
+	
+
 	return 1;
 }

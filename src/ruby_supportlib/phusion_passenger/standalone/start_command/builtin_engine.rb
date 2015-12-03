@@ -148,6 +148,7 @@ module PhusionPassenger
           if @options[:abort_websockets_on_process_shutdown] == false
             command << " --no-abort-websockets-on-process-shutdown"
           end
+          add_param(command, :force_max_concurrent_requests_per_process, "--force-max-concurrent-requests-per-process")
           add_flag_param(command, :load_shell_envvars, "--load-shell-envvars")
           add_param(command, :max_pool_size, "--max-pool-size")
           add_param(command, :min_instances, "--min-instances")

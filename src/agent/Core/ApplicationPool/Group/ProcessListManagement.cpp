@@ -411,6 +411,10 @@ Group::attach(const ProcessPtr &process,
 	}
 
 	process->initializeStickySessionId(generateStickySessionId());
+	if (options.forceMaxConcurrentRequestsPerProcess != -1) {
+		process->forceMaxConcurrency(options.forceMaxConcurrentRequestsPerProcess);
+	}
+
 	P_DEBUG("Attaching process " << process->inspect());
 	addProcessToList(process, enabledProcesses);
 

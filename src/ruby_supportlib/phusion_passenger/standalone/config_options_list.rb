@@ -319,6 +319,13 @@ module PhusionPassenger
                       "processes never timeout. Default: #{DEFAULT_MAX_PRELOADER_IDLE_TIME}"
       },
       {
+        :name      => :force_max_concurrent_requests_per_process,
+        :type      => :integer,
+        :desc      => "Force #{SHORT_PROGRAM_NAME} to believe that an\n" \
+                      "application process can handle the given\n" \
+                      "number of concurrent requests per process"
+      },
+      {
         :name      => :concurrency_model,
         :type_desc => 'NAME',
         :desc      => "The concurrency model to use, either\n" \

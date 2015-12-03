@@ -226,20 +226,17 @@ public:
 	int busyness() const {
 		/* Different sockets within a Process may have different
 		 * 'concurrency' values. We want:
-		 * - Process.sessionSockets to sort the sockets from least used to most used.
-		 * - to give sockets with concurrency == 0 more priority over sockets
-		 *   with concurrency > 0.
-		 * Therefore, we describe our busyness as a percentage of 'concurrency', with
-		 * the percentage value in [0..INT_MAX] instead of [0..1].
+		 * - the socket with the smallest busyness to be be picked for routing.
+		 * - to give sockets with concurrency == 0 more priority (in general)
+		 *   over sockets with concurrency > 0.
+		 * Therefore, in case of sockets with concurrency > 0, we describe our
+		 * busyness as a percentage of 'concurrency', with the percentage value
+		 * in [0..INT_MAX] instead of [0..1]. That way, the busyness value
+		 * of sockets with concurrency > 0 is usually higher than that of sockets
+		 * with concurrency == 0.
 		 */
 		if (concurrency == 0) {
-			// Allows Process.sessionSockets to give
-			// idle sockets more priority.
-			if (sessions == 0) {
-				return 0;
-			} else {
-				return 1;
-			}
+			return sessions;
 		} else {
 			return (int) (((long long) sessions * INT_MAX) / (double) concurrency);
 		}

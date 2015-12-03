@@ -189,6 +189,8 @@ private:
 	void fillPoolOptionsFromAgentsOptions(Options &options);
 	static void fillPoolOption(Request *req, StaticString &field,
 		const HashedStaticString &name);
+	static void fillPoolOption(Request *req, int &field,
+		const HashedStaticString &name);
 	static void fillPoolOption(Request *req, bool &field,
 		const HashedStaticString &name);
 	static void fillPoolOption(Request *req, unsigned int &field,

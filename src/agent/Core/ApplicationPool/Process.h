@@ -480,6 +480,11 @@ public:
 		info.stickySessionId = value;
 	}
 
+	void forceMaxConcurrency(int value) {
+		assert(value >= 0);
+		concurrency = value;
+	}
+
 	void shutdownNotRequired() {
 		requiresShutdown = false;
 	}

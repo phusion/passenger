@@ -92,6 +92,12 @@ public:
 		: process(_process),
 		  groupInfo(_groupInfo),
 		  pid(getJsonIntField(json, "pid"))
+		  // We initialize this in Process::initializeStickySessionId(),
+		  // called from Group::attach().
+		  // We should probably some day refactor this. The reason we do
+		  // it the way we do right now is because some day we want to be able
+		  // to attach external processes, so the best place to initialize this
+		  // information is in Group::attach().
 		  //stickySessionId(getJsonUintField(json, "sticky_session_id", 0))
 	{
 		StaticString gupid = getJsonStaticStringField(json, "gupid");

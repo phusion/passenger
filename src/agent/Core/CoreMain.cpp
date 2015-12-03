@@ -1053,6 +1053,7 @@ setAgentsOptionsDefaults() {
 	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);
 	options.setDefaultBool("load_shell_envvars", false);
 	options.setDefaultBool("abort_websockets_on_process_shutdown", true);
+	options.setDefaultInt("force_max_concurrent_requests_per_process", -1);
 	options.setDefault("concurrency_model", DEFAULT_CONCURRENCY_MODEL);
 	options.setDefaultInt("app_thread_count", DEFAULT_APP_THREAD_COUNT);
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);

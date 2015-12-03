@@ -281,6 +281,15 @@ public:
 	 */
 	StaticString environmentVariables;
 
+	/**
+	 * If set to a value that isn't -1, makes Passenger ignore the application's
+	 * advertised socket concurrency, and believe that the concurrency should be
+	 * the given value.
+	 *
+	 * Defaults to -1.
+	 */
+	int forceMaxConcurrentRequestsPerProcess;
+
 	/** Whether debugger support should be enabled. */
 	bool debugger;
 
@@ -467,6 +476,7 @@ public:
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
 		  nodejs(DEFAULT_NODEJS, sizeof(DEFAULT_NODEJS) - 1),
+		  forceMaxConcurrentRequestsPerProcess(-1),
 		  debugger(false),
 		  loadShellEnvvars(true),
 		  userSwitching(true),

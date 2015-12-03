@@ -61,6 +61,8 @@
 
 	ngx_array_t *env_vars;
 
+	ngx_int_t force_max_concurrent_requests_per_process;
+
 	ngx_int_t friendly_error_pages;
 
 	ngx_uint_t headers_hash_bucket_size;
