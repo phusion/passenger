@@ -146,6 +146,13 @@
 		"The maximum number of queued requests."),
 
 	
+	AP_INIT_TAKE1("PassengerMaxRequestQueueTime",
+		(Take1Func) cmd_passenger_max_request_queue_time,
+		NULL,
+		OR_ALL,
+		"The maximum time a request remains queued."),
+
+	
 	AP_INIT_TAKE1("PassengerMaxPreloaderIdleTime",
 		(Take1Func) cmd_passenger_max_preloader_idle_time,
 		NULL,

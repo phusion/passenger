@@ -65,6 +65,8 @@ struct GeneratedDirConfigPart {
 	int maxPreloaderIdleTime;
 	/** The maximum number of queued requests. */
 	int maxRequestQueueSize;
+	/** The maximum time a request remains queued. */
+	int maxRequestQueueTime;
 	/** The maximum number of requests that an application instance may process. */
 	int maxRequests;
 	/** The minimum number of application instances to keep when cleaning idle instances. */

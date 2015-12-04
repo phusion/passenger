@@ -369,6 +369,12 @@ module PhusionPassenger
         :desc      => "Specify request queue size. Default: #{DEFAULT_MAX_REQUEST_QUEUE_SIZE}"
       },
       {
+        :name      => :max_request_queue_time,
+        :type      => :integer,
+        :min       => 1,
+        :desc      => "Specify request queue timeout. Default: #{DEFAULT_MAX_REQUEST_QUEUE_TIME}"
+      },
+      {
         :name      => :sticky_sessions,
         :type      => :boolean,
         :desc      => 'Enable sticky sessions'

@@ -351,6 +351,12 @@ public:
 	unsigned int maxRequestQueueSize;
 
 	/**
+	 * The maximum time that requests may live in the Group.getWaitlist queue.
+	 * A value of 0 means unlimited.
+	 */
+	unsigned int maxRequestQueueTime;
+
+	/**
 	 * The Union Station key to use in case analytics logging is enabled.
 	 * It is used by Pool::collectAnalytics() and other administrative
 	 * functions which are called periodically. Because they do not belong
@@ -472,6 +478,7 @@ public:
 		  maxPreloaderIdleTime(-1),
 		  maxOutOfBandWorkInstances(1),
 		  maxRequestQueueSize(100),
+		  maxRequestQueueTime(10),
 
 		  stickySessionId(0),
 		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),

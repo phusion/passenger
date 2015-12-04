@@ -278,6 +278,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :type  => :integer
   },
   {
+    :name  => 'passenger_max_request_queue_time',
+    :type  => :integer
+  },
+  {
     :name  => 'passenger_request_queue_overflow_status_code',
     :type  => :integer
   },

@@ -146,6 +146,13 @@
 	
 
 	
+		config->maxRequestQueueTime =
+			(add->maxRequestQueueTime == UNSET_INT_VALUE) ?
+			base->maxRequestQueueTime :
+			add->maxRequestQueueTime;
+	
+
+	
 		config->maxPreloaderIdleTime =
 			(add->maxPreloaderIdleTime == UNSET_INT_VALUE) ?
 			base->maxPreloaderIdleTime :

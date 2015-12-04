@@ -171,6 +171,10 @@ void generated_set_conf_part(passenger_loc_conf_t  *conf) {
 	
 
 	
+		conf->max_request_queue_time = NGX_CONF_UNSET;
+	
+
+	
 		conf->request_queue_overflow_status_code = NGX_CONF_UNSET;
 	
 

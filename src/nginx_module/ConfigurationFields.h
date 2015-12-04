@@ -75,6 +75,8 @@
 
 	ngx_int_t max_request_queue_size;
 
+	ngx_int_t max_request_queue_time;
+
 	ngx_int_t max_requests;
 
 	ngx_int_t min_instances;
