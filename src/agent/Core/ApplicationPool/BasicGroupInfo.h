@@ -46,7 +46,7 @@ class Group;
  *
  * Since Process and Session sometimes need to look up this basic group
  * information, this struct also serves to ensure that Process and Session do
- * not have a direct dependency on Group, but on GroupImmutableInfo instead.
+ * not have a direct dependency on Group, but on BasicGroupInfo instead.
  */
 class BasicGroupInfo {
 public:

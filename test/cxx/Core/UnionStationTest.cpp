@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <Core/UnionStation/Core.h>
+#include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>
 #include <MessageClient.h>
 #include <UstRouter/Controller.h>
@@ -25,14 +25,14 @@ namespace tut {
 		#define TODAY_TIMESTAMP_STR "cftz90m3k0"
 
 		boost::shared_ptr<BackgroundEventLoop> bg;
-		boost::shared_ptr<ServerKit::Context> context;
+		boost::shared_ptr<ServerKit::Context> skContext;
 		TempDir tmpdir;
 		string socketFilename;
 		string socketAddress;
 		FileDescriptor serverFd;
 		VariantMap controllerOptions;
 		boost::shared_ptr<UstRouter::Controller> controller;
-		CorePtr core, core2, core3, core4;
+		ContextPtr context, context2, context3, context4;
 
 		Core_UnionStationTest()
 			: tmpdir("tmp.union_station")
@@ -46,13 +46,13 @@ namespace tut {
 			controllerOptions.setBool("ust_router_dev_mode", true);
 			controllerOptions.set("ust_router_dump_dir", tmpdir.getPath());
 
-			core = boost::make_shared<Core>(socketAddress, "test", "1234",
+			context = boost::make_shared<Context>(socketAddress, "test", "1234",
 				"localhost");
-			core2 = boost::make_shared<Core>(socketAddress, "test", "1234",
+			context2 = boost::make_shared<Context>(socketAddress, "test", "1234",
 				"localhost");
-			core3 = boost::make_shared<Core>(socketAddress, "test", "1234",
+			context3 = boost::make_shared<Context>(socketAddress, "test", "1234",
 				"localhost");
-			core4 = boost::make_shared<Core>(socketAddress, "test", "1234",
+			context4 = boost::make_shared<Context>(socketAddress, "test", "1234",
 				"localhost");
 		}
 
@@ -66,9 +66,9 @@ namespace tut {
 
 		void init() {
 			bg = boost::make_shared<BackgroundEventLoop>(false, true);
-			context = boost::make_shared<ServerKit::Context>(bg->safe, bg->libuv_loop);
+			skContext = boost::make_shared<ServerKit::Context>(bg->safe, bg->libuv_loop);
 			serverFd.assign(createUnixServer(socketFilename.c_str(), 0, true, __FILE__, __LINE__), NULL, 0);
-			controller = make_shared<UstRouter::Controller>(context.get(), controllerOptions);
+			controller = make_shared<UstRouter::Controller>(skContext.get(), controllerOptions);
 			controller->listen(serverFd);
 			bg->start();
 		}
@@ -82,7 +82,7 @@ namespace tut {
 				controller.reset();
 				bg->stop();
 				bg.reset();
-				context.reset();
+				skContext.reset();
 				serverFd.close();
 			}
 		}
@@ -134,12 +134,12 @@ namespace tut {
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 		log->message("hello");
 		log->message("world");
 		log->flushToDiskAfterClose(true);
 
-		ensure(!core->isNull());
+		ensure(!context->isNull());
 		ensure(!log->isNull());
 
 		log.reset();
@@ -154,11 +154,11 @@ namespace tut {
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 		log->message("message 1");
 		log->flushToDiskAfterClose(true);
 
-		TransactionPtr log2 = core2->continueTransaction(log->getTxnId(),
+		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
 		log2->message("message 2");
 		log2->flushToDiskAfterClose(true);
@@ -176,19 +176,19 @@ namespace tut {
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 		log->message("message 1");
 		SystemTime::forceAll(TODAY);
 		log->message("message 2");
 		log->flushToDiskAfterClose(true);
 
 		SystemTime::forceAll(TOMORROW);
-		TransactionPtr log2 = core2->continueTransaction(log->getTxnId(),
+		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
 		log2->message("message 3");
 		log2->flushToDiskAfterClose(true);
 
-		TransactionPtr log3 = core3->newTransaction("foobar");
+		TransactionPtr log3 = context3->newTransaction("foobar");
 		log3->message("message 4");
 		log3->flushToDiskAfterClose(true);
 
@@ -210,10 +210,10 @@ namespace tut {
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 
 		SystemTime::forceAll(TODAY);
-		TransactionPtr log2 = core2->continueTransaction(log->getTxnId(),
+		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
 		log2->flushToDiskAfterClose(true);
 		log2.reset();
@@ -234,11 +234,11 @@ namespace tut {
 		// reuses the ID.
 		init();
 
-		TransactionPtr log = core->newTransaction("foobar");
-		TransactionPtr log2 = core2->newTransaction("foobar");
-		TransactionPtr log3 = core3->continueTransaction(log->getTxnId(),
+		TransactionPtr log = context->newTransaction("foobar");
+		TransactionPtr log2 = context2->newTransaction("foobar");
+		TransactionPtr log3 = context3->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
-		TransactionPtr log4 = core4->continueTransaction(log2->getTxnId(),
+		TransactionPtr log4 = context4->continueTransaction(log2->getTxnId(),
 			log2->getGroupName(), log2->getCategory());
 
 		ensure_equals(log->getTxnId(), log3->getTxnId());
@@ -257,12 +257,12 @@ namespace tut {
 	}
 
 	TEST_METHOD(7) {
-		// An empty UnionStation::Core doesn't do anything.
-		UnionStation::Core core;
+		// An empty UnionStation::Context doesn't do anything.
+		UnionStation::Context context;
 		init();
-		ensure(core.isNull());
+		ensure(context.isNull());
 
-		TransactionPtr log = core.newTransaction("foo");
+		TransactionPtr log = context.newTransaction("foo");
 		ensure(log->isNull());
 		log->message("hello world");
 		ensure_equals(getFileType(getDumpFilePath()), FT_NONEXISTANT);
@@ -272,18 +272,18 @@ namespace tut {
 		// newTransaction() does not reconnect to the server for a short
 		// period of time if connecting failed
 		init();
-		core->setReconnectTimeout(60 * 1000000);
+		context->setReconnectTimeout(60 * 1000000);
 
 		SystemTime::forceAll(TODAY);
 		shutdown();
-		ensure(core->newTransaction("foobar")->isNull());
+		ensure(context->newTransaction("foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 30 * 1000000);
 		init();
-		ensure(core->newTransaction("foobar")->isNull());
+		ensure(context->newTransaction("foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 61 * 1000000);
-		ensure(!core->newTransaction("foobar")->isNull());
+		ensure(!context->newTransaction("foobar")->isNull());
 	}
 
 	TEST_METHOD(12) {
@@ -296,21 +296,21 @@ namespace tut {
 		SystemTime::forceAll(TODAY);
 		TransactionPtr log, log2;
 
-		log = core->newTransaction("foobar");
-		core2->continueTransaction(log->getTxnId(), "foobar");
+		log = context->newTransaction("foobar");
+		context2->continueTransaction(log->getTxnId(), "foobar");
 		log.reset(); // Check connection back into the pool.
 		shutdown();
 		init();
 
-		log = core->newTransaction("foobar");
+		log = context->newTransaction("foobar");
 		ensure("(1)", log->isNull());
-		log2 = core2->continueTransaction("some-id", "foobar");
+		log2 = context2->continueTransaction("some-id", "foobar");
 		ensure("(2)", log2->isNull());
 
 		SystemTime::forceAll(TODAY + 60000000);
-		log = core->newTransaction("foobar");
+		log = context->newTransaction("foobar");
 		ensure("(3)", !log->isNull());
-		log2 = core2->continueTransaction(log->getTxnId(), "foobar");
+		log2 = context2->continueTransaction(log->getTxnId(), "foobar");
 		ensure("(4)", !log2->isNull());
 		log2->message("hello");
 		log2->flushToDiskAfterClose(true);
@@ -326,22 +326,22 @@ namespace tut {
 		// continueTransaction() does not reconnect to the server for a short
 		// period of time if connecting failed
 		init();
-		core->setReconnectTimeout(60 * 1000000);
-		core2->setReconnectTimeout(60 * 1000000);
+		context->setReconnectTimeout(60 * 1000000);
+		context2->setReconnectTimeout(60 * 1000000);
 
 		SystemTime::forceAll(TODAY);
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 		ensure("(1)", !log->isNull());
-		ensure("(2)", !core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		ensure("(2)", !context2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 		shutdown();
-		ensure("(3)", core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		ensure("(3)", context2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 30 * 1000000);
 		init();
-		ensure("(3)", core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		ensure("(3)", context2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 
 		SystemTime::forceAll(TODAY + 61 * 1000000);
-		ensure("(4)", !core2->continueTransaction(log->getTxnId(), "foobar")->isNull());
+		ensure("(4)", !context2->continueTransaction(log->getTxnId(), "foobar")->isNull());
 	}
 
 	TEST_METHOD(14) {
@@ -543,7 +543,7 @@ namespace tut {
 		// The destructor flushes all data.
 		init();
 
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 		log->message("hello world");
 		log.reset();
 		shutdown();
@@ -558,11 +558,11 @@ namespace tut {
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 		log->message("hello world");
 		log.reset();
 
-		ConnectionPtr connection = core->checkoutConnection();
+		ConnectionPtr connection = context->checkoutConnection();
 		vector<string> args;
 		writeArrayMessage(connection->fd, "flush", NULL);
 		ensure("(1)", readArrayMessage(connection->fd, args));
@@ -582,19 +582,19 @@ namespace tut {
 		SystemTime::forceAll(YESTERDAY);
 		vector<string> args;
 
-		TransactionPtr log = core->newTransaction("foobar");
+		TransactionPtr log = context->newTransaction("foobar");
 		log->message("hello world");
 
-		TransactionPtr log2 = core2->continueTransaction(log->getTxnId(),
+		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
 		log2->message("message 2");
 		log2.reset();
 
-		ConnectionPtr connection = core->checkoutConnection();
+		ConnectionPtr connection = context->checkoutConnection();
 		writeArrayMessage(connection->fd, "flush", NULL);
 		ensure(readArrayMessage(connection->fd, args));
 
-		connection = core2->checkoutConnection();
+		connection = context2->checkoutConnection();
 		writeArrayMessage(connection->fd, "flush", NULL);
 		ensure(readArrayMessage(connection->fd, args));
 
@@ -628,7 +628,7 @@ namespace tut {
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
-		TransactionPtr log = core->newTransaction("foobar", "requests", "-",
+		TransactionPtr log = context->newTransaction("foobar", "requests", "-",
 			"uri == \"/foo\""
 			"\1"
 			"uri != \"/bar\"");
@@ -637,7 +637,7 @@ namespace tut {
 		log->flushToDiskAfterClose(true);
 		log.reset();
 
-		log = core->newTransaction("foobar", "requests", "-",
+		log = context->newTransaction("foobar", "requests", "-",
 			"uri == \"/foo\""
 			"\1"
 			"uri == \"/bar\"");

@@ -205,6 +205,8 @@ Controller::fillPoolOptionsFromAgentsOptions(Options &options) {
 	options.minProcesses = agentsOptions->getInt("min_instances");
 	options.maxPreloaderIdleTime = agentsOptions->getInt("max_preloader_idle_time");
 	options.maxRequestQueueSize = agentsOptions->getInt("max_request_queue_size");
+	options.abortWebsocketsOnProcessShutdown = agentsOptions->getBool("abort_websockets_on_process_shutdown");
+	options.forceMaxConcurrentRequestsPerProcess = agentsOptions->getInt("force_max_concurrent_requests_per_process");
 	options.spawnMethod = agentsOptions->get("spawn_method");
 	options.loadShellEnvvars = agentsOptions->getBool("load_shell_envvars");
 	options.statThrottleRate = statThrottleRate;
@@ -230,6 +232,17 @@ Controller::fillPoolOption(Request *req, bool &field,
 	const LString *value = req->secureHeaders.lookup(name);
 	if (value != NULL && value->size > 0) {
 		field = psg_lstr_first_byte(value) == 't';
+	}
+}
+
+void
+Controller::fillPoolOption(Request *req, int &field,
+	const HashedStaticString &name)
+{
+	const LString *value = req->secureHeaders.lookup(name);
+	if (value != NULL && value->size > 0) {
+		value = psg_lstr_make_contiguous(value, req->pool);
+		field = stringToInt(StaticString(value->start->data, value->size));
 	}
 }
 
@@ -360,6 +373,8 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");
 	fillPoolOption(req, options.maxPreloaderIdleTime, "!~PASSENGER_MAX_PRELOADER_IDLE_TIME");
 	fillPoolOption(req, options.maxRequestQueueSize, "!~PASSENGER_MAX_REQUEST_QUEUE_SIZE");
+	fillPoolOption(req, options.abortWebsocketsOnProcessShutdown, "!~PASSENGER_ABORT_WEBSOCKETS_ON_PROCESS_SHUTDOWN");
+	fillPoolOption(req, options.forceMaxConcurrentRequestsPerProcess, "!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS");
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
@@ -391,7 +406,7 @@ Controller::initializeUnionStation(Client *client, Request *req, RequestAnalysis
 			filters = psg_lstr_make_contiguous(filters, req->pool);
 		}
 
-		options.transaction = unionStationCore->newTransaction(
+		options.transaction = unionStationContext->newTransaction(
 			options.getAppGroupName(), "requests",
 			string(key->start->data, key->size),
 			(filters != NULL)
@@ -465,7 +480,7 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		analysis.appGroupNameCell = singleAppMode
 			? NULL
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
-		analysis.unionStationSupport = unionStationCore != NULL
+		analysis.unionStationSupport = unionStationContext != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
 			this->stickySessions);

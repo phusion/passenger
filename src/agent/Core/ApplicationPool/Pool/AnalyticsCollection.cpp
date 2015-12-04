@@ -112,8 +112,8 @@ void
 Pool::prepareUnionStationProcessStateLogs(vector<UnionStationLogEntry> &logEntries,
 	const GroupPtr &group) const
 {
-	const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
-	if (group->options.analytics && unionStationCore != NULL) {
+	const UnionStation::ContextPtr &unionStationContext = getUnionStationContext();
+	if (group->options.analytics && unionStationContext != NULL) {
 		logEntries.push_back(UnionStationLogEntry());
 		UnionStationLogEntry &entry = logEntries.back();
 		stringstream stream;
@@ -133,8 +133,8 @@ void
 Pool::prepareUnionStationSystemMetricsLogs(vector<UnionStationLogEntry> &logEntries,
 	const GroupPtr &group) const
 {
-	const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
-	if (group->options.analytics && unionStationCore != NULL) {
+	const UnionStation::ContextPtr &unionStationContext = getUnionStationContext();
+	if (group->options.analytics && unionStationContext != NULL) {
 		logEntries.push_back(UnionStationLogEntry());
 		UnionStationLogEntry &entry = logEntries.back();
 		stringstream stream;
@@ -228,12 +228,12 @@ Pool::realCollectAnalytics() {
 		l.unlock();
 		UPDATE_TRACE_POINT();
 		if (!logEntries.empty()) {
-			const UnionStation::CorePtr &unionStationCore = getUnionStationCore();
+			const UnionStation::ContextPtr &unionStationContext = getUnionStationContext();
 			P_DEBUG("Sending process and system metrics to Union Station");
 			while (!logEntries.empty()) {
 				UnionStationLogEntry &entry = logEntries.back();
 				UnionStation::TransactionPtr transaction =
-					unionStationCore->newTransaction(
+					unionStationContext->newTransaction(
 						entry.groupName,
 						entry.category,
 						entry.key);

@@ -51,6 +51,8 @@
 
 
 
+	ngx_int_t abort_websockets_on_process_shutdown;
+
 	ngx_array_t *base_uris;
 
 	ngx_int_t debugger;
@@ -58,6 +60,8 @@
 	ngx_int_t enabled;
 
 	ngx_array_t *env_vars;
+
+	ngx_int_t force_max_concurrent_requests_per_process;
 
 	ngx_int_t friendly_error_pages;
 

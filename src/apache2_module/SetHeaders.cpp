@@ -150,3 +150,8 @@
 			sizeof("!~PASSENGER_APP_GROUP_NAME") - 1), config->appGroupName);
 	
 
+	
+		addHeader(r, result, StaticString("!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS",
+			sizeof("!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS") - 1), config->forceMaxConcurrentRequestsPerProcess);
+	
+

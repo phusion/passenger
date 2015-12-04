@@ -87,7 +87,7 @@
 #include <Core/Controller.h>
 #include <Core/ApiServer.h>
 #include <Core/ApplicationPool/Pool.h>
-#include <Core/UnionStation/Core.h>
+#include <Core/UnionStation/Context.h>
 
 using namespace boost;
 using namespace oxt;
@@ -131,7 +131,7 @@ namespace Core {
 
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
-		UnionStation::CorePtr unionStationCore;
+		UnionStation::ContextPtr unionStationContext;
 		SpawningKit::ConfigPtr spawningKitConfig;
 		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr appPool;
@@ -547,7 +547,7 @@ initializeNonPrivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	if (options.has("ust_router_address")) {
-		wo->unionStationCore = boost::make_shared<UnionStation::Core>(
+		wo->unionStationContext = boost::make_shared<UnionStation::Context>(
 			options.get("ust_router_address"),
 			"logging",
 			options.get("ust_router_password"));
@@ -558,7 +558,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawningKitConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawningKitConfig->agentsOptions = agentsOptions;
 	wo->spawningKitConfig->errorHandler = spawningKitErrorHandler;
-	wo->spawningKitConfig->unionStationCore = wo->unionStationCore;
+	wo->spawningKitConfig->unionStationContext = wo->unionStationContext;
 	wo->spawningKitConfig->randomGenerator = wo->randomGenerator;
 	wo->spawningKitConfig->instanceDir = options.get("instance_dir", false);
 	if (!wo->spawningKitConfig->instanceDir.empty()) {
@@ -605,7 +605,7 @@ initializeNonPrivilegedWorkingObjects() {
 		two.controller->clientFreelistLimit = 1024;
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
-		two.controller->unionStationCore = wo->unionStationCore;
+		two.controller->unionStationContext = wo->unionStationContext;
 		two.controller->shutdownFinishCallback = controllerShutdownFinished;
 		two.controller->initialize();
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
@@ -1052,6 +1052,8 @@ setAgentsOptionsDefaults() {
 	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);
 	options.setDefaultBool("load_shell_envvars", false);
+	options.setDefaultBool("abort_websockets_on_process_shutdown", true);
+	options.setDefaultInt("force_max_concurrent_requests_per_process", -1);
 	options.setDefault("concurrency_model", DEFAULT_CONCURRENCY_MODEL);
 	options.setDefaultInt("app_thread_count", DEFAULT_APP_THREAD_COUNT);
 	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);

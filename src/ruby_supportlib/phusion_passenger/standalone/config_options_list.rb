@@ -319,6 +319,13 @@ module PhusionPassenger
                       "processes never timeout. Default: #{DEFAULT_MAX_PRELOADER_IDLE_TIME}"
       },
       {
+        :name      => :force_max_concurrent_requests_per_process,
+        :type      => :integer,
+        :desc      => "Force #{SHORT_PROGRAM_NAME} to believe that an\n" \
+                      "application process can handle the given\n" \
+                      "number of concurrent requests per process"
+      },
+      {
         :name      => :concurrency_model,
         :type_desc => 'NAME',
         :desc      => "The concurrency model to use, either\n" \
@@ -396,6 +403,20 @@ module PhusionPassenger
         :desc      => 'Disable turbocaching',
         :cli_parser => lambda do |options, value|
           options[:turbocaching] = false
+        end
+      },
+      {
+        :name      => :abort_websockets_on_process_shutdown,
+        :type      => :boolean,
+        :cli       => nil
+      },
+      {
+        :type      => :boolean,
+        :cli       => '--no-abort-websockets-on-process-shutdown',
+        :desc      => "Do not abort WebSocket connections on\n" \
+                      'process restart',
+        :cli_parser => lambda do |options, value|
+          options[:abort_websockets_on_process_shutdown] = false
         end
       }
     ]
@@ -482,6 +503,11 @@ module PhusionPassenger
         :type_desc => 'FILENAME',
         :desc      => "The template to use for generating the\n" \
                       'Nginx config file'
+      },
+      {
+        :name      => :debug_nginx_config,
+        :type      => :boolean,
+        :desc      => 'Print Nginx config template and exit'
       }
     ]
 

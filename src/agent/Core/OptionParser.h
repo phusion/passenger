@@ -132,6 +132,10 @@ coreUsage() {
 	printf("                            Maximum time that preloader processes may be\n");
 	printf("                            be idle. A value of 0 means that preloader\n");
 	printf("                            processes never timeout. Default: %d\n", DEFAULT_MAX_PRELOADER_IDLE_TIME);
+	printf("      --force-max-concurrent-requests-per-process NUMBER\n");
+	printf("                            Force " SHORT_PROGRAM_NAME " to believe that an application\n");
+	printf("                            process can handle the given number of concurrent\n");
+	printf("                            requests per process\n");
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
 	printf("      --memory-limit MB     Restart application processes that go over the\n");
     printf("                            given memory limit (Enterprise only)\n");
@@ -150,6 +154,9 @@ coreUsage() {
 	printf("                            Vary the turbocache by the cookie of the given name\n");
 	printf("      --disable-turbocaching\n");
 	printf("                            Disable turbocaching\n");
+	printf("      --no-abort-websockets-on-process-shutdown\n");
+	printf("                            Do not abort WebSocket connections on process\n");
+	printf("                            shutdown or restart\n");
 	printf("\n");
 	printf("Other options (optional):\n");
 	printf("      --log-file PATH       Log to the given file.\n");
@@ -261,6 +268,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-preloader-idle-time")) {
 		options.setInt("max_preloader_idle_time", atoi(argv[i + 1]));
 		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--force-max-concurrent-requests-per-process")) {
+		options.setInt("force_max_concurrent_requests_per_process", atoi(argv[i + 1]));
+		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
 		options.setInt("min_instances", atoi(argv[i + 1]));
 		i += 2;
@@ -314,6 +324,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--disable-turbocaching")) {
 		options.setBool("turbocaching", false);
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--no-abort-websockets-on-process-shutdown")) {
+		options.setBool("abort_websockets_on_process_shutdown", false);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ruby")) {
 		options.set("default_ruby", argv[i + 1]);

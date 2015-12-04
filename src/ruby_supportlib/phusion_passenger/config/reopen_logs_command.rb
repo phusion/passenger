@@ -72,6 +72,9 @@ module PhusionPassenger
         perform_reopen_logs_on("watchdog", "watchdog_api")
         perform_reinherit_logs_on("core", "core_api")
         perform_reinherit_logs_on("UstRouter", "ust_router_api")
+        if using_standalone_nginx_engine?
+          perform_reopen_logs_on_nginx
+        end
         puts "All done"
       end
 
@@ -113,6 +116,16 @@ module PhusionPassenger
           STDERR.puts response.body
           abort
         end
+      end
+
+      def using_standalone_nginx_engine?
+        @instance.properties["integration_mode"] == "standalone" &&
+          @instance.properties["standalone_engine"] == "nginx"
+      end
+
+      def perform_reopen_logs_on_nginx
+        puts "Reopening logs for Nginx engine"
+        Process.kill('USR1', @instance.web_server_control_process_pid)
       end
 
       def handle_error(name, response)
