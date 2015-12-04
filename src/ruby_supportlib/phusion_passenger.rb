@@ -212,9 +212,8 @@ module PhusionPassenger
   ###### Other resource locations ######
 
   def self.binaries_sites
-    return [
-      { :url => "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release".freeze,
-        :cacert => "#{resources_dir}/oss-binaries.phusionpassenger.com.crt".freeze },
+    [
+      { :url => "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release".freeze },
       { :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release".freeze }
     ]
   end
