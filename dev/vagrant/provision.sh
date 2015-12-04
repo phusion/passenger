@@ -74,7 +74,7 @@ popd
 
 pushd /home/vagrant
 if [[ ! -e nginx ]]; then
-	sudo -u vagrant -H git clone -b nginx-1.6 https://github.com/nginx/nginx.git
+	sudo -u vagrant -H git clone -b branches/stable-1.6 https://github.com/nginx/nginx.git
 fi
 sudo -u vagrant -H mkdir -p nginx/inst/conf
 sudo -u vagrant -H cp /vagrant/dev/vagrant/nginx_start nginx/start
