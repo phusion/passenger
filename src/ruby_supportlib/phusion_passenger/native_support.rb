@@ -44,16 +44,17 @@ module PhusionPassenger
 
     def start
       if ENV['PASSENGER_USE_RUBY_NATIVE_SUPPORT'] == '0'
-        STDERR.puts " --> Continuing without #{library_name}."
-        STDERR.puts "     Because PASSENGER_USE_RUBY_NATIVE_SUPPORT is set to 0."
+        STDERR.puts " [#{library_name}] will not be used (PASSENGER_USE_RUBY_NATIVE_SUPPORT=0)"
+        STDERR.puts "  --> Passenger will still operate normally."
         return false
       elsif try_load
         return true
       elsif compile_and_load || download_binary_and_load
-        STDERR.puts " --> #{library_name} successfully loaded."
+        STDERR.puts " [#{library_name}] successfully loaded."
         return true
       else
-        STDERR.puts " --> Continuing without #{library_name}."
+        STDERR.puts " [#{library_name}] will not be used (can't compile or download) "
+        STDERR.puts "  --> Passenger will still operate normally."
         return false
       end
     end
@@ -124,14 +125,15 @@ module PhusionPassenger
 
     def download_binary_and_load
       if !PhusionPassenger.installed_from_release_package?
+        STDERR.puts " [#{library_name}] not downloading because passenger wasn't installed from a release package"
         return
       end
       if ENV['PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY'] == '0'
-        STDERR.puts " --> Skipping downloading of precompiled #{library_name}"
+        STDERR.puts " [#{library_name}] not downloading because PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY=0"
         return
       end
 
-      STDERR.puts " --> Downloading precompiled #{library_name} for the current Ruby interpreter..."
+      STDERR.puts " [#{library_name}] finding downloads for the current Ruby interpreter..."
       STDERR.puts "     (set PASSENGER_DOWNLOAD_NATIVE_SUPPORT_BINARY=0 to disable)"
 
       require 'logger'
@@ -184,13 +186,13 @@ module PhusionPassenger
 
     def compile_and_load
       if ENV['PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY'] == '0'
-        STDERR.puts " --> Skipping compiling of #{library_name}"
+        STDERR.puts " [#{library_name}] not compiling because PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0"
         return false
       end
 
       if PhusionPassenger.custom_packaged? && !File.exist?(PhusionPassenger.ruby_extension_source_dir)
         PhusionPassenger.require_passenger_lib 'constants'
-        STDERR.puts " --> No #{library_name} found for current Ruby interpreter."
+        STDERR.puts " [#{library_name}] not found for current Ruby interpreter."
         case PhusionPassenger.packaging_method
         when 'deb'
           STDERR.puts "     This library provides various optimized routines that make"
@@ -207,7 +209,7 @@ module PhusionPassenger
         return false
       end
 
-      STDERR.puts " --> Compiling #{library_name} for the current Ruby interpreter..."
+      STDERR.puts " [#{library_name}] trying to compile for the current Ruby interpreter..."
       STDERR.puts "     (set PASSENGER_COMPILE_NATIVE_SUPPORT_BINARY=0 to disable)"
 
       require 'fileutils'
