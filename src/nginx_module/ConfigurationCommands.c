@@ -442,6 +442,16 @@
 
 {
 	
+	ngx_string("passenger_request_queue_timeout_status_code"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+	ngx_conf_set_num_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, request_queue_timeout_status_code),
+	NULL
+},
+
+{
+	
 	ngx_string("passenger_restart_dir"),
 	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
 	ngx_conf_set_str_slot,

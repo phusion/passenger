@@ -235,6 +235,12 @@ int generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev,
 	
 
 	
+		ngx_conf_merge_value(conf->request_queue_timeout_status_code,
+			prev->request_queue_timeout_status_code,
+			NGX_CONF_UNSET);
+	
+
+	
 		ngx_conf_merge_str_value(conf->restart_dir,
 			prev->restart_dir,
 			NULL);

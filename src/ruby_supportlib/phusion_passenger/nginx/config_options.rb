@@ -286,6 +286,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :type  => :integer
   },
   {
+    :name  => 'passenger_request_queue_timeout_status_code',
+    :type  => :integer
+  },
+  {
     :name  => 'passenger_restart_dir',
     :type  => :string
   },

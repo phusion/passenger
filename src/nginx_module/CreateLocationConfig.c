@@ -179,6 +179,10 @@ void generated_set_conf_part(passenger_loc_conf_t  *conf) {
 	
 
 	
+		conf->request_queue_timeout_status_code = NGX_CONF_UNSET;
+	
+
+	
 		conf->restart_dir.data = NULL;
 		conf->restart_dir.len  = 0;
 	
