@@ -2026,4 +2026,39 @@ namespace tut {
 
 
 	/*****************************/
+
+	TEST_METHOD(86) {
+		// If a request is in the getWaitlist for longer than maxRequestQueueTime,
+		// then an exception is returned.
+		Options options = createOptions();
+		options.appGroupName = "test1";
+		options.maxRequestQueueTime = 1;
+		GroupPtr group = pool->findOrCreateGroup(options);
+		spawningKitConfig->concurrency = 1;
+		initPoolDebugging();
+		pool->setMax(1);
+
+                pool->asyncGet(options, callback);
+
+		ensure_equals(number, 0);
+		{
+			LockGuard l(pool->syncher);
+			ensure_equals(group->getWaitlist.size(), 1u);
+		}
+
+		try {
+			pool->get(options, &ticket);
+                        usleep(2000000);
+			fail("Expected RequestQueueTimeoutException");
+		} catch (const RequestQueueTimeoutException &e) {
+			// OK
+		}
+
+		debug->messages->send("Proceed with spawn loop iteration 1");
+		debug->messages->send("Spawn loop done");
+		EVENTUALLY(5,
+		 	result = number == 1;
+		);
+	}
+
 }
