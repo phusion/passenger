@@ -2028,7 +2028,6 @@ namespace tut {
 	/*****************************/
 
 	TEST_METHOD(86) {
-          setLogLevel(LVL_DEBUG3);
 		// If a request is in the getWaitlist for longer than maxRequestQueueTime,
 		// then an exception is returned.
 		Options options = createOptions();

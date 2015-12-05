@@ -186,14 +186,12 @@ struct GetCallback {
 struct GetWaiter {
 	Options options;
 	GetCallback callback;
-	boost::asio::deadline_timer timer;
 
 	GetWaiter(const Options &o, const GetCallback &cb)
 		: options(o),
 		  callback(cb)
 	{
 		options.persist(o);
-		timer(io_service);
 	}
 };
 

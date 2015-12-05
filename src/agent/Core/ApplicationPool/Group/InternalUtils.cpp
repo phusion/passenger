@@ -225,14 +225,6 @@ Group::pushGetWaiter(const Options &newOptions, const GetCallback &callback,
 		getWaitlist.push_back(GetWaiter(
 			newOptions.copyAndPersist().detachFromUnionStationTransaction(),
 			callback));
-                //const_iterator pos = getWaitlist.cend(); do this atomic if getWaitlist is shared across threads...
-		if (testTimeoutRequestQueue()) {
-			GetWaiter &waiter = getWaitlist.back();//can't be const as we modify the timer
-			waiter.timer.expires_from_now(boost::posix_time::seconds(newOptions.maxRequestQueueTime));
-			timer.async_wait(boost::bind(&deque<GetWaiter>::erase, getWaitlist, getWaitlist.cend())); //agent/Core/ApplicationPool/Group.h
-			// or
-			//timer.async_wait(boost::bind(&vector<GetWaiter>::erase, getWaitlist, getWaitlist.cend())); //agent/Core/ApplicationPool/Pool.h
- 		}
 		return true;
 	} else {
 		postLockActions.push_back(boost::bind(GetCallback::call,
@@ -265,7 +257,6 @@ Group::assignSessionsToGetWaitersQuickly(Lock &lock) {
 
 	while (!done && i < getWaitlist.size()) {
 		const GetWaiter &waiter = getWaitlist[i];
-		if (testTimeoutRequestQueue()) { waiter.timer.cancel(); }
 		RouteResult result = route(waiter.options);
 		if (result.process != NULL) {
 			GetAction action;
@@ -296,7 +287,6 @@ Group::assignSessionsToGetWaiters(boost::container::vector<Callback> &postLockAc
 
 	while (!done && i < getWaitlist.size()) {
 		const GetWaiter &waiter = getWaitlist[i];
-		if (testTimeoutRequestQueue()) { waiter.timer.cancel(); }
 		RouteResult result = route(waiter.options);
 		if (result.process != NULL) {
 			postLockActions.push_back(boost::bind(
