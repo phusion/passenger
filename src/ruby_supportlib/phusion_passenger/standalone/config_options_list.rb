@@ -371,7 +371,7 @@ module PhusionPassenger
       {
         :name      => :max_request_queue_time,
         :type      => :integer,
-        :min       => 1,
+        :min       => 0,
         :desc      => "Specify request queue timeout. Default: #{DEFAULT_MAX_REQUEST_QUEUE_TIME}"
       },
       {

@@ -130,9 +130,9 @@ Group::Group(Pool *_pool, const Options &_options)
 	}
 
 	detachedProcessesCheckerActive = false;
-        continueFlag = true;
-        boost::shared_ptr<bool> sharedContinueFlag( &continueFlag );
-        thread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this, sharedContinueFlag));
+	continueFlag = true;
+	boost::shared_ptr<bool> sharedContinueFlag( &continueFlag );
+	thread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this, sharedContinueFlag));
 }
 
 Group::~Group() {

@@ -192,7 +192,7 @@ struct GetWaiter {
 	GetWaiter(const Options &o, const GetCallback &cb)
 		: options(o),
 		  callback(cb),
-                  startTime(boost::posix_time::microsec_clock::local_time())
+		  startTime(boost::posix_time::microsec_clock::local_time())
 	{
 		options.persist(o);
 	}

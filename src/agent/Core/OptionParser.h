@@ -142,7 +142,7 @@ coreUsage() {
 	printf("      --max-request-queue-size NUMBER\n");
 	printf("                            Specify request queue size. Default: %d\n",
 		DEFAULT_MAX_REQUEST_QUEUE_SIZE);
-        printf("      --max-request-queue-time NUMBER\n");
+	printf("      --max-request-queue-time NUMBER\n");
 	printf("                            Specify request queue timeout. Default: %d\n",
 		DEFAULT_MAX_REQUEST_QUEUE_TIME);
 	printf("      --sticky-sessions     Enable sticky sessions\n");
@@ -306,7 +306,7 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-queue-size")) {
 		options.setInt("max_request_queue_size", atoi(argv[i + 1]));
 		i += 2;
-        } else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-queue-time")) {
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-queue-time")) {
 		options.setInt("max_request_queue_time", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--sticky-sessions")) {

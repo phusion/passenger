@@ -478,7 +478,7 @@ public:
 		  maxPreloaderIdleTime(-1),
 		  maxOutOfBandWorkInstances(1),
 		  maxRequestQueueSize(100),
-		  maxRequestQueueTime(10),
+		  maxRequestQueueTime(0),
 
 		  stickySessionId(0),
 		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),

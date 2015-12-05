@@ -339,21 +339,21 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 
 void
 Group::timeoutRequestsCallback(const boost::shared_ptr<bool> &continueFlag) {
-  boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
-  boost::shared_ptr<bool> extraReference = continueFlag;
+	boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
+	boost::shared_ptr<bool> extraReference = continueFlag;
 	while (continueFlag) {
 		sleep(options.maxRequestQueueTime);
 		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
 			const GetWaiter &waiter = *it;
-	                posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
-	                if (!OXT_LIKELY(!testTimeoutRequestQueue()
-	                                && (options.maxRequestQueueTime == 0
-	                                    || diff.total_seconds() < options.maxRequestQueueTime))) {
-                          	waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueSize));
+			posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
+			if (!OXT_LIKELY(!testTimeoutRequestQueue()
+				&& (options.maxRequestQueueTime == 0
+					|| diff.total_seconds() < options.maxRequestQueueTime))) {
+				waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueSize));
 				it = getWaitlist.erase(it);
 			}else{
-                          ++it;
-                        }
+				++it;
+			}
 		}
 	}
 }

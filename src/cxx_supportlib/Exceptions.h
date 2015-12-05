@@ -417,7 +417,7 @@ public:
 };
 
 /**
- * Indicates that a Pool::get() or Pool::asyncGet() request was _____ because
+ * Indicates that a Pool::get() or Pool::asyncGet() request was aborted because
  * the request was in the getWaitlist queue for too long.
  */
 class RequestQueueTimeoutException: public GetAbortedException {
