@@ -349,7 +349,7 @@ Group::timeoutRequestsCallback(const boost::shared_ptr<bool> &continueFlag) {
 	                if (!OXT_LIKELY(!testTimeoutRequestQueue()
 	                                && (options.maxRequestQueueTime == 0
 	                                    || diff.total_seconds() < options.maxRequestQueueTime))) {
-                          	waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueFullException>(options.maxRequestQueueSize));
+                          	waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueSize));
 				it = getWaitlist.erase(it);
 			}else{
                           ++it;

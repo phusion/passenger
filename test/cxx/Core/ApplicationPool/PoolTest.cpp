@@ -2032,20 +2032,23 @@ namespace tut {
 		// then an exception is returned.
 		Options options = createOptions();
 		options.appGroupName = "test1";
-                options.maxRequestQueueSize = 0;
+                options.maxRequestQueueSize = 2;
 		options.maxRequestQueueTime = 1;
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawningKitConfig->concurrency = 3;
+		spawningKitConfig->concurrency = 2;
 		initPoolDebugging();
 		pool->setMax(1);
 
 		try {
-			pool->asyncGet(options, callback);
+                  //pool->asyncGet(options, callback);
+                  pool->get(options, &ticket);
                         usleep(2000000);
 			fail("Expected RequestQueueTimeoutException");
 		} catch (const RequestQueueTimeoutException &e) {
 			// OK
-		}
+		} catch (const RequestQueueFullException &e) {
+                  fail("Expected RequestQueueTimeoutException");
+                }
 	}
 
 }
