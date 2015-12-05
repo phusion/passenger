@@ -274,7 +274,7 @@ public:
 	bool testOverflowRequestQueue() const;
         bool testTimeoutRequestQueue() const;
 	void callAbortLongRunningConnectionsCallback(const ProcessPtr &process);
-        void timeoutRequestsCallback();
+        void timeoutRequestsCallback(const boost::shared_ptr<bool> &continueFlag);
 
 	/****** Correctness verification ******/
 
@@ -287,6 +287,7 @@ public:
 
 	/****** Background worker ******/
 	oxt::thread *thread;
+        bool continueFlag;
 
 public:
 	Options options;

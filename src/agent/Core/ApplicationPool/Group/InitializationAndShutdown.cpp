@@ -130,10 +130,13 @@ Group::Group(Pool *_pool, const Options &_options)
 	}
 
 	detachedProcessesCheckerActive = false;
-        thread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this));
+        continueFlag = true;
+        boost::shared_ptr<bool> sharedContinueFlag( &continueFlag );
+        thread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this, sharedContinueFlag));
 }
 
 Group::~Group() {
+	continueFlag = false;
 	thread->interrupt_and_join();
 	delete thread;
 	LifeStatus lifeStatus = getLifeStatus();
