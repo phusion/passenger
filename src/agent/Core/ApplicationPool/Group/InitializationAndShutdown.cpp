@@ -130,9 +130,12 @@ Group::Group(Pool *_pool, const Options &_options)
 	}
 
 	detachedProcessesCheckerActive = false;
+        thread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this));
 }
 
 Group::~Group() {
+	thread->interrupt_and_join();
+	delete thread;
 	LifeStatus lifeStatus = getLifeStatus();
 	if (OXT_UNLIKELY(lifeStatus == ALIVE)) {
 		P_BUG("You must call Group::shutdown() before destroying a Group.");

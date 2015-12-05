@@ -337,6 +337,25 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 	}
 }
 
+void
+Group::timeoutRequestsCallback(){
+	while (true){
+		sleep(options.maxRequestQueueTime);
+		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
+			const GetWaiter &waiter = *it;
+	                posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
+	                if (!OXT_LIKELY(!testTimeoutRequestQueue()
+	                                && (options.maxRequestQueueTime == 0
+	                                    || diff.total_seconds() < options.maxRequestQueueTime))) {
+                          	waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueFullException>(options.maxRequestQueueSize));
+				it = getWaitlist.erase(it);
+			}else{
+                          ++it;
+                        }
+		}
+	}
+}
+
 
 } // namespace ApplicationPool2
 } // namespace Passenger
