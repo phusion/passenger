@@ -53,6 +53,8 @@
 #  * function - If nil, a setter function will be automatically generated. If
 #               non-nil, must be the name of the setter function.
 
+PhusionPassenger.require_passenger_lib 'constants'
+
 APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
   {
     :name => "PassengerRuby",
@@ -226,6 +228,12 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :name     => "PassengerAppGroupName",
     :type     => :string,
     :desc     => "Application process group name."
+  },
+  {
+    :name     => "PassengerForceMaxConcurrentRequestsPerProcess",
+    :type     => :integer,
+    :desc     => "Force #{SHORT_PROGRAM_NAME} to believe that an application process " \
+                 "can handle the given number of concurrent requests per process"
   },
 
   ##### Aliases #####

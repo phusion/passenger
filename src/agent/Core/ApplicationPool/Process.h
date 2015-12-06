@@ -293,7 +293,7 @@ private:
 			Socket *socket = &(*it);
 			if (socket->protocol == "session" || socket->protocol == "http_session") {
 				if (sessionSocketCount == MAX_SESSION_SOCKETS) {
-					throw RuntimeException("The process has many session sockets. "
+					throw RuntimeException("The process has too many session sockets. "
 						"A maximum of " + toString(MAX_SESSION_SOCKETS) + " is allowed");
 				}
 				sessionSockets[sessionSocketCount] = socket;
@@ -478,6 +478,11 @@ public:
 
 	void initializeStickySessionId(unsigned int value) {
 		info.stickySessionId = value;
+	}
+
+	void forceMaxConcurrency(int value) {
+		assert(value >= 0);
+		concurrency = value;
 	}
 
 	void shutdownNotRequired() {

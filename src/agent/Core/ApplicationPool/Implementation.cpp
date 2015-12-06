@@ -177,10 +177,10 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	char filename[PATH_MAX];
 	stringstream stream;
 
-	if (options.analytics && config->unionStationCore != NULL) {
+	if (options.analytics && config->unionStationContext != NULL) {
 		try {
 			UPDATE_TRACE_POINT();
-			transaction = config->unionStationCore->newTransaction(
+			transaction = config->unionStationContext->newTransaction(
 				options.getAppGroupName(),
 				"exceptions",
 				options.unionStationKey);

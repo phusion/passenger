@@ -894,6 +894,22 @@ Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffe
 		} else {
 			req->logMessage("Status: " + toString(req->appResponse.statusCode));
 		}
+
+		if (req->appResponse.statusCode >= 500 && req->appResponse.statusCode <= 599) {
+			// Log the request headers like Request headers: { header1: values1-concatenated, header2: values2-concatenated } (single line)
+			// Concatenation was already done by HeaderTable.h:insert (using a comma ',' for joining, or a semicolon ';' for Cookie headers
+			ServerKit::HeaderTable::Iterator it(req->headers);
+			Json::Value json;
+			while (*it != NULL) {
+				const LString *hdr = psg_lstr_make_contiguous(&it->header->key, req->pool);
+				const LString *val = psg_lstr_make_contiguous(&it->header->val, req->pool);
+				// Due to the above mentioned concatenation, header keys are unique and we don't need to worry
+				// about encountering multiple of the same key, so we can just assign.
+				json[std::string(hdr->start->data, hdr->size)] = std::string(val->start->data, val->size);
+				it.next();
+			}
+			req->logMessage("Request headers: " + stringifyJson(json));
+		}
 	}
 }
 

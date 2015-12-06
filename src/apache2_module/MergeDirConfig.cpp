@@ -236,3 +236,10 @@
 			add->appGroupName;
 	
 
+	
+		config->forceMaxConcurrentRequestsPerProcess =
+			(add->forceMaxConcurrentRequestsPerProcess == UNSET_INT_VALUE) ?
+			base->forceMaxConcurrentRequestsPerProcess :
+			add->forceMaxConcurrentRequestsPerProcess;
+	
+

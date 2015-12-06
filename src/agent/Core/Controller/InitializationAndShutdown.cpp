@@ -155,8 +155,8 @@ Controller::initialize() {
 	if (appPool == NULL) {
 		throw RuntimeException("AppPool not initialized");
 	}
-	if (unionStationCore == NULL) {
-		unionStationCore = appPool->getUnionStationCore();
+	if (unionStationContext == NULL) {
+		unionStationContext = appPool->getUnionStationContext();
 	}
 }
 

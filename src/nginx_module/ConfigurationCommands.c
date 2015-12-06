@@ -512,6 +512,26 @@
 
 {
 	
+	ngx_string("passenger_abort_websockets_on_process_shutdown"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+	ngx_conf_set_flag_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, abort_websockets_on_process_shutdown),
+	NULL
+},
+
+{
+	
+	ngx_string("passenger_force_max_concurrent_requests_per_process"),
+	NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+	ngx_conf_set_num_slot,
+	NGX_HTTP_LOC_CONF_OFFSET,
+	offsetof(passenger_loc_conf_t, force_max_concurrent_requests_per_process),
+	NULL
+},
+
+{
+	
 	ngx_string("passenger_fly_with"),
 	NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
 	passenger_enterprise_only,

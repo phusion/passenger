@@ -227,9 +227,9 @@ Pool::getSpawningKitConfig() const {
 	return context.getSpawningKitConfig();
 }
 
-const UnionStation::CorePtr &
-Pool::getUnionStationCore() const {
-	return getSpawningKitConfig()->unionStationCore;
+const UnionStation::ContextPtr &
+Pool::getUnionStationContext() const {
+	return getSpawningKitConfig()->unionStationContext;
 }
 
 const RandomGeneratorPtr &

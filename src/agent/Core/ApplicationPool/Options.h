@@ -36,7 +36,7 @@
 #include <ResourceLocator.h>
 #include <StaticString.h>
 #include <Utils.h>
-#include <Core/UnionStation/Core.h>
+#include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>
 
 namespace Passenger {
@@ -281,6 +281,15 @@ public:
 	 */
 	StaticString environmentVariables;
 
+	/**
+	 * If set to a value that isn't -1, makes Passenger ignore the application's
+	 * advertised socket concurrency, and believe that the concurrency should be
+	 * the given value.
+	 *
+	 * Defaults to -1.
+	 */
+	int forceMaxConcurrentRequestsPerProcess;
+
 	/** Whether debugger support should be enabled. */
 	bool debugger;
 
@@ -355,6 +364,12 @@ public:
 	 * A value of 0 means unlimited.
 	 */
 	unsigned int maxRequestQueueTime;
+
+	/*
+	 * Whether websocket connections should be aborted on process shutdown
+	 * or restart.
+	 */
+	bool abortWebsocketsOnProcessShutdown;
 
 	/**
 	 * The Union Station key to use in case analytics logging is enabled.
@@ -467,6 +482,7 @@ public:
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
 		  nodejs(DEFAULT_NODEJS, sizeof(DEFAULT_NODEJS) - 1),
+		  forceMaxConcurrentRequestsPerProcess(-1),
 		  debugger(false),
 		  loadShellEnvvars(true),
 		  userSwitching(true),
@@ -479,6 +495,7 @@ public:
 		  maxOutOfBandWorkInstances(1),
 		  maxRequestQueueSize(100),
 		  maxRequestQueueTime(0),
+		  abortWebsocketsOnProcessShutdown(true),
 
 		  stickySessionId(0),
 		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),
