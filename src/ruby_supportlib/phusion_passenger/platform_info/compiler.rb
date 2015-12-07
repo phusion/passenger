@@ -105,7 +105,7 @@ module PhusionPassenger
         log("Command could not be executed! #{exec_error_reason}".strip)
         return false
       elsif result
-        log("Check suceeded")
+        log("Check succeeded")
         if capture_output
           return { :result => true, :output => output }
         else
