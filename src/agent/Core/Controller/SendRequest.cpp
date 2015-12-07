@@ -204,6 +204,33 @@ Controller::sendBodyToAppWhenAppSinkIdle(Channel *_channel, unsigned int size) {
 	}
 }
 
+static bool
+isAlphaNum(char ch) {
+	return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+}
+
+/**
+ * For CGI, alphanum headers with optional dashes are mapped to UPP3R_CAS3. This
+ * function can be used to reject non-alphanum/dash headers that would end up with
+ * the same mapping (e.g. upp3r_cas3 and upp3r-cas3 would end up the same, and
+ * potentially collide each other in the receiving application). This is
+ * used to fix CVE-2015-7519.
+ */
+static bool
+containsNonAlphaNumDash(const LString &s) {
+	const LString::Part *part = s.start;
+	while (part != NULL) {
+		for (unsigned int i = 0; i < part->size; i++) {
+			const char start = part->data[i];
+			if (start != '-' && !isAlphaNum(start)) {
+				return true;
+			}
+		}
+		part = part->next;
+	}
+	return false;
+}
+
 static void
 httpHeaderToScgiUpperCase(unsigned char *data, unsigned int size) {
 	static const boost::uint8_t toUpperMap[256] = {
@@ -529,12 +556,18 @@ Controller::constructHeaderForSessionProtocol(Request *req, char * restrict buff
 
 	ServerKit::HeaderTable::Iterator it(req->headers);
 	while (*it != NULL) {
-		if ((it->header->hash == HTTP_CONTENT_LENGTH.hash()
-			|| it->header->hash == HTTP_CONTENT_TYPE.hash()
-			|| it->header->hash == HTTP_CONNECTION.hash())
-		 && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
-			|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length"))
-			|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))))
+		// This header-skipping is not accounted for in determineHeaderSizeForSessionProtocol(), but
+		// since we are only reducing the size it just wastes some mem bytes.
+		if ((
+				(it->header->hash == HTTP_CONTENT_LENGTH.hash()
+						|| it->header->hash == HTTP_CONTENT_TYPE.hash()
+						|| it->header->hash == HTTP_CONNECTION.hash()
+				) && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
+						|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length"))
+						|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
+				)
+			) || containsNonAlphaNumDash(it->header->key)
+		   )
 		{
 			it.next();
 			continue;

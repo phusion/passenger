@@ -1,6 +1,7 @@
 Release 5.0.22
 --------------
 
+ * Fixes a header collision vulnerability (CVE-2015-7519, medium severity). Please see our blog for detailed vulnerability description and advisory. Thanks to the SUSE security team for reporting this issue.
  * [Apache] Fixes compatibility with Apache 2.4.17's mod_autoindex. Fix contributed by Eric Covener. Closes GH-1642.
  * [Standalone] Passenger Standalone now [accepts configuration options from environment variables](https://www.phusionpassenger.com/library/config/standalone/intro.html). This makes using Passenger Standalone significantly easier on Heroku or on systems that follow the 12-factor principle. Closes GH-1661.
  * [Standalone] The Nginx configuration template has been cleaned up. It is now significantly easier to edit the Nginx configuration template without breaking compatibility with future versions.
