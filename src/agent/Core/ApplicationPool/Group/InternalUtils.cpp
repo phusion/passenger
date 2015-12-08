@@ -318,8 +318,6 @@ Group::testOverflowRequestQueue() const {
 
 bool
 Group::testTimeoutRequestQueue() const {
-	// This has a performance penalty, although I'm not sure whether the penalty is
-	// any greater than a hash table lookup if I were to implement it in Options.
 	Pool::DebugSupportPtr debug = getPool()->debugSupport;
 	if (debug) {
 		return debug->testTimeoutRequestQueue;
@@ -338,19 +336,26 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 }
 
 void
-Group::timeoutRequestsCallback(const boost::shared_ptr<bool> &continueFlag) {
+Group::timeoutRequestsCallback() {
 	boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
-	boost::shared_ptr<bool> extraReference = continueFlag;
-	while (continueFlag) {
-		sleep(options.maxRequestQueueTime);
+	while (true) {
+		try{
+			oxt::sleep(options.maxRequestQueueTime);
+		}catch(const boost::thread_interrupted &){
+			return;
+		}
 		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
 			const GetWaiter &waiter = *it;
 			posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
 			if (!OXT_LIKELY(!testTimeoutRequestQueue()
 				&& (options.maxRequestQueueTime == 0
 					|| diff.total_seconds() < options.maxRequestQueueTime))) {
+				boost::this_thread::disable_interruption di;
+				boost::this_thread::disable_syscall_interruption dsi;
 				waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueSize));
 				it = getWaitlist.erase(it);
+				boost::this_thread::restore_syscall_interruption rsi(dsi);
+				boost::this_thread::restore_interruption ri(di);
 			}else{
 				++it;
 			}

@@ -287,7 +287,6 @@ public:
 
 	/****** Background worker ******/
 	oxt::thread *thread;
-	bool continueFlag;
 
 public:
 	Options options;
