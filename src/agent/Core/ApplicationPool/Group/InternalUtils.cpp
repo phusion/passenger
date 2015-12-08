@@ -340,7 +340,7 @@ Group::timeoutRequestsCallback() {
 	boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
 	while (true) {
 		try{
-			oxt::sleep(options.maxRequestQueueTime);
+			syscalls::sleep(options.maxRequestQueueTime);
 		}catch(const boost::thread_interrupted &){
 			return;
 		}
