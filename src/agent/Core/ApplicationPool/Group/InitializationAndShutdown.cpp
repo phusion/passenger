@@ -130,7 +130,6 @@ Group::Group(Pool *_pool, const Options &_options)
 	}
 
 	detachedProcessesCheckerActive = false;
-	thread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this));
 }
 
 Group::~Group() {
@@ -158,6 +157,7 @@ Group::initialize() {
 
 	nullProcess = createProcessObject(json);
 	nullProcess->shutdownNotRequired();
+	thread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this));
 	return true;
 }
 

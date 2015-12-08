@@ -338,6 +338,9 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 void
 Group::timeoutRequestsCallback() {
 	boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
+	if (options.maxRequestQueueTime == 0) {
+		return;
+	}
 	while (!this_thread::interruption_requested()) {
 		syscalls::sleep(options.maxRequestQueueTime);
 		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
