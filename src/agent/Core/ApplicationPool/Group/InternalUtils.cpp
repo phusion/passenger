@@ -338,12 +338,8 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 void
 Group::timeoutRequestsCallback() {
 	boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
-	while (true) {
-		try{
-			syscalls::sleep(options.maxRequestQueueTime);
-		}catch(const boost::thread_interrupted &){
-			return;
-		}
+	while (!this_thread::interruption_requested()) {
+		syscalls::sleep(options.maxRequestQueueTime);
 		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
 			const GetWaiter &waiter = *it;
 			posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
