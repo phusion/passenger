@@ -65,7 +65,7 @@ exports.nowTimestamp = function() {
 /**
  * All Activity logs will be dropped unless they are done after this method, from within an execution chain starting with the callback. So it is
  * essential to call this function whenever you intercept a request, before code that might want to log can be reached. The function adds context
- * to the execution chain such that future logs can be correctly appended to the currently open request log, also for modules that don't 
+ * to the execution chain such that future logs can be correctly appended to the currently open request log, also for modules that don't
  * have access to the request object (such as database drivers).
  *
  * @param callback
@@ -84,7 +84,7 @@ exports.attachToRequest = function(request, response, callback) {
 		reqNamespace.bindEmitter(response);
 
 		// The Passenger core has an open transaction associated with the request, to which we can attach info from node instrumentation.
-		// However, logToUstTransaction() communicates async with the ustrouter, and is not guaranteed to deliver before the application response arrives 
+		// However, logToUstTransaction() communicates async with the ustrouter, and is not guaranteed to deliver before the application response arrives
 		// back to the core (at which point the core will close the transaction and later additions will not be taken into account).
 		// That's why we intercept response.end() (from the doc: the method, response.end(), MUST be called on each response), so we can defer it
 		// until we are sure the ustrouter is aware of any attachments generated during the request handling.
@@ -92,7 +92,7 @@ exports.attachToRequest = function(request, response, callback) {
 		response.end = function() {
 			return ustLog.deferIfPendingTxns(attachToTxnId, this, response._passenger_wrapped_end, arguments);
 		};
-	
+
 		// Make request transaction ID available for other instrumentation modules, e.g. mongo doesn't know about requests (which is how the core passes
 		// txn ID).
 		reqNamespace.run(function() {
@@ -145,7 +145,7 @@ function logTimedActivity(activityName, tBegin, tEnd, dataType, dataObj) {
 			log.error("ustReporter: logTimedActivity is missing name or begin/end timestamp, dropping.");
 			return;
 		}
-		
+
 		var attachToTxnId = getCurrentTxnId();
 		if (!attachToTxnId) {
 			log.warn("Dropping Union Station timed action log due to lack of txnId to attach to " +
@@ -170,7 +170,7 @@ function logTimedActivity(activityName, tBegin, tEnd, dataType, dataObj) {
 }
 
 /**
- * For logging intercepted exceptions. If the exception occurred in relation to a request (i.e. within an execution chain from the attachToRequest 
+ * For logging intercepted exceptions. If the exception occurred in relation to a request (i.e. within an execution chain from the attachToRequest
  * callback), the exception will be associated with that request, otherwise it's sent as a standalone.
  *
  * @param name
@@ -184,12 +184,12 @@ exports.logException = function(name, message, trace) {
 	try {
 		log.debug("ustReporter: logException(name: " + name + ", message: " + message + ")");
 		var logBuf = [];
-		
+
 		var requestTxnId = getCurrentTxnId();
 		if (requestTxnId) {
 			logBuf.push("Request transaction ID: " + requestTxnId);
 		}
-		
+
 		logBuf.push("Message: " + new Buffer(message).toString('base64'));
 		logBuf.push("Class: " + name);
 		logBuf.push("Backtrace: " + new Buffer(trace).toString('base64'));

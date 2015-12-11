@@ -33,7 +33,7 @@ var applicationThis;
 exports.initPreLoad = function() {
 	log = ustReporter.getPassengerLogger();
 	var appRoot = ustReporter.getApplicationRoot();
-	
+
 	try {
 		express = require(appRoot + "/node_modules/express");
 	} catch (e) {
@@ -41,7 +41,7 @@ exports.initPreLoad = function() {
 		log.debug("Not instrumenting Express (probably not used): " + e);
 		return;
 	}
-	
+
 	try {
 		log.info("==== Instrumentation [Express] ==== initialize");
 		log.debug("hook application.init, to be the first in the use() line..");
@@ -52,9 +52,9 @@ exports.initPreLoad = function() {
 				var rval = express.application.initOrig.apply(this, arguments);
 
 				this.use(logRequest);
-				
+
 				applicationThis = this; // store for initPostLoad use
-				
+
 				return rval;
 			};
 
@@ -65,9 +65,9 @@ exports.initPreLoad = function() {
 			if (arguments[0].length == 4) {
 				express.application.useOrig.call(this, logException);
 			}
-		
+
 			express.application.useOrig.apply(this, arguments);
-		} 
+		}
 	} catch (e) {
 		log.error("Unable to instrument Express due to error: " + e);
 	}
@@ -97,7 +97,7 @@ function logException(err, req, res, next) {
 	// We may have multiple exception handlers in the routing chain, ensure only the first one actually logs.
 	if (!res.hasLoggedException) {
 		log.verbose("==== Instrumentation [Express] ==== EXCEPTION + TRACE FOR [" + req.url + "]");
-			
+
 		ustReporter.logException(err.name, err.message, err.stack);
 
 		res.hasLoggedException = true;
