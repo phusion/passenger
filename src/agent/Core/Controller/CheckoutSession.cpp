@@ -261,7 +261,7 @@ Controller::writeRequestQueueFullExceptionErrorResponse(Client *client, Request 
 		" due to: " << e->what());
 
 	endRequestWithSimpleResponse(&client, &req,
-		"<h1>This website is under heavy load</h1>"
+		"<h2>This website is under heavy load (queue full)</h2>"
 		"<p>We're sorry, too many people are accessing this website at the same "
 		"time. We're working on this problem. Please try again later.</p>",
 		requestQueueOverflowStatusCode);
@@ -295,9 +295,6 @@ Controller::writeOtherExceptionErrorResponse(Client *client, Request *req, const
 		typeName = typeid(*e).name();
 	#endif
 
-	SKC_WARN(client, "Cannot checkout session (exception type " <<
-		typeName << "): " << e->what());
-
 	const unsigned int exceptionMessageLen = strlen(e->what());
 	string backtrace;
 	boost::shared_ptr<tracable_exception> e3 = dynamic_pointer_cast<tracable_exception>(e);
@@ -305,23 +302,33 @@ Controller::writeOtherExceptionErrorResponse(Client *client, Request *req, const
 		backtrace = e3->backtrace();
 	}
 
-	const unsigned int BUFFER_SIZE = 512 + typeName.size() +
-		exceptionMessageLen + backtrace.size();
-	char *buf = (char *) psg_pnalloc(req->pool, BUFFER_SIZE);
-	char *pos = buf;
-	const char *end = buf + BUFFER_SIZE;
+	SKC_WARN(client, "Cannot checkout session due to " <<
+		typeName << ": " << e->what() << (!backtrace.empty() ? "\n" + backtrace : ""));
 
-	pos = appendData(pos, end, "An internal error occurred while trying to spawn the application.\n");
-	pos = appendData(pos, end, "Exception type: ");
-	pos = appendData(pos, end, typeName);
-	pos = appendData(pos, end, "\nError message: ");
-	pos = appendData(pos, end, e->what(), exceptionMessageLen);
-	if (!backtrace.empty()) {
-		pos = appendData(pos, end, "\nBacktrace:\n");
-		pos = appendData(pos, end, backtrace);
+	if (friendlyErrorPagesEnabled(req)) {
+		const unsigned int BUFFER_SIZE = 512 + typeName.size() +
+			exceptionMessageLen + backtrace.size();
+		char *buf = (char *) psg_pnalloc(req->pool, BUFFER_SIZE);
+		char *pos = buf;
+		const char *end = buf + BUFFER_SIZE;
+
+		pos = appendData(pos, end, "<h2>Internal server error</h2>");
+		pos = appendData(pos, end, "<p>Application could not be started.</p>");
+		pos = appendData(pos, end, "<p>Exception type: ");
+		pos = appendData(pos, end, typeName);
+		pos = appendData(pos, end, "<br>Error message: ");
+		pos = appendData(pos, end, e->what(), exceptionMessageLen);
+		if (!backtrace.empty()) {
+			pos = appendData(pos, end, "<br>Backtrace:<br>");
+			pos = appendData(pos, end, backtrace);
+		}
+		pos = appendData(pos, end, "</p>");
+
+		endRequestWithSimpleResponse(&client, &req, StaticString(buf, pos - buf), 500);
+	} else {
+		endRequestWithSimpleResponse(&client, &req, "<h2>Internal server error</h2>"
+			"Application could not be started. Please try again later.", 500);
 	}
-
-	endRequestWithSimpleResponse(&client, &req, StaticString(buf, pos - buf), 500);
 }
 
 /**
@@ -351,7 +358,7 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r, const StaticStr
 		} catch (const SystemException &e2) {
 			SKC_ERROR(client, "Cannot render an error page: " << e2.what() <<
 				"\n" << e2.backtrace());
-			data = "Internal Server Error";
+			data = "<h2>Internal server error</h2>";
 		}
 	}
 

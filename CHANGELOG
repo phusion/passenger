@@ -4,6 +4,7 @@ Release 5.0.23
  * Fixes the request acceptor error handling timeout. When an error occurs while Passenger is accepting a request (for example, when Passenger has run out of file descriptors), Passenger is supposed to wait for 3 seconds before trying again. Because of a typo, Passenger actually waited 3 milliseconds.
  * [Enterprise] Fixed a regression in the Passenger Standalone Nginx config template that breaks the Mass Deployment feature.
  * Mime type for serving static xhtml files updated (no longer mobile profile, so it is recognized by desktop browsers). Closes GH-1695.
+ * With friendly error pages off Passenger would still show a trace (referencing only Passenger code) for unusual spawn errors. This was changed to a generic error message. Closes GH-1704.
 
 
 Release 5.0.22
