@@ -351,17 +351,14 @@ Group::timeoutRequestsCallback() {
 					|| diff.total_seconds() < options.maxRequestQueueTime))) {
 				boost::this_thread::disable_interruption di;
 				boost::this_thread::disable_syscall_interruption dsi;
-				waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueSize));
+				waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueTime));
 				it = getWaitlist.erase(it);
-				boost::this_thread::restore_syscall_interruption rsi(dsi);
-				boost::this_thread::restore_interruption ri(di);
-			}else{
-				++it;
+			} else {
+				it++;
 			}
 		}
 	}
 }
-
 
 } // namespace ApplicationPool2
 } // namespace Passenger

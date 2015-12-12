@@ -286,7 +286,7 @@ public:
 	#endif
 
 	/****** Background worker ******/
-	oxt::thread *thread;
+	oxt::thread *queueTimeoutThread;
 
 public:
 	Options options;
