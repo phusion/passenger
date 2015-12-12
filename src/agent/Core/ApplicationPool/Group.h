@@ -287,6 +287,7 @@ public:
 
 	/****** Background worker ******/
 	oxt::thread *queueTimeoutThread;
+	boost::condition_variable queueTimeoutCheckerCond;
 
 public:
 	Options options;

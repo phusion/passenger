@@ -218,6 +218,10 @@ bool
 Group::pushGetWaiter(const Options &newOptions, const GetCallback &callback,
 	boost::container::vector<Callback> &postLockActions)
 {
+	if ((options.maxRequestQueueTime == 0)&&(newOptions.maxRequestQueueTime > 0)) {
+		//options.maxRequestQueueTime = newOptions.maxRequestQueueTime;
+		queueTimeoutCheckerCond.notify_one();
+	}
 	if (OXT_LIKELY(!testOverflowRequestQueue()
 		&& (newOptions.maxRequestQueueSize == 0
 		    || getWaitlist.size() < newOptions.maxRequestQueueSize)))
@@ -338,14 +342,16 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 void
 Group::timeoutRequestsCallback() {
 	boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
-	if (options.maxRequestQueueTime == 0) {
-		return;
-	}
 	while (!this_thread::interruption_requested()) {
-		syscalls::sleep(options.maxRequestQueueTime);
-		ScopedLock l;
-		if(pool != NULL){
-			l = ScopedLock(pool->syncher);
+		if (pool == NULL) {
+                  return;
+		}
+		ScopedLock l = ScopedLock(pool->syncher);
+		if (options.maxRequestQueueTime == 0) {
+			queueTimeoutCheckerCond.wait(l);
+		} else {
+			queueTimeoutCheckerCond.timed_wait(l,
+				posix_time::milliseconds(options.maxRequestQueueTime*1000));
 		}
 		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
 			const GetWaiter &waiter = *it;
