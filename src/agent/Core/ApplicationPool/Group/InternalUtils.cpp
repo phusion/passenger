@@ -343,6 +343,10 @@ Group::timeoutRequestsCallback() {
 	}
 	while (!this_thread::interruption_requested()) {
 		syscalls::sleep(options.maxRequestQueueTime);
+		ScopedLock l;
+		if(pool != NULL){
+			l = ScopedLock(pool->syncher);
+		}
 		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
 			const GetWaiter &waiter = *it;
 			posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
