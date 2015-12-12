@@ -2025,8 +2025,6 @@ namespace tut {
 	}
 
 
-	/*****************************/
-
 	TEST_METHOD(86) {
 		// If a request is in the getWaitlist for longer than maxRequestQueueTime,
 		// then an exception is returned.
@@ -2040,15 +2038,15 @@ namespace tut {
 		pool->setMax(1);
 
 		try {
-                  //pool->asyncGet(options, callback);
-                  pool->get(options, &ticket);
-                        usleep(2000000);
+			pool->get(options, &ticket);
 			fail("Expected RequestQueueTimeoutException");
 		} catch (const RequestQueueTimeoutException &e) {
 			// OK
 		} catch (const RequestQueueFullException &e) {
-                  fail("Expected RequestQueueTimeoutException");
-                }
+			fail("Expected RequestQueueTimeoutException");
+		}
 	}
+
+	/*****************************/
 
 }
