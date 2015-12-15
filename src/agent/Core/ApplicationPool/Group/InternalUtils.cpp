@@ -347,7 +347,7 @@ Group::timeoutRequestsCallback(GroupPtr extraReferenceToMe) {
 			queueTimeoutCheckerCond.wait(l);
 		} else {
 			queueTimeoutCheckerCond.timed_wait(l,
-				posix_time::milliseconds(options.maxRequestQueueTime*1000));
+				posix_time::milliseconds(options.maxRequestQueueTime*500));
 		}
 		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
 			const GetWaiter &waiter = *it;
@@ -360,7 +360,7 @@ Group::timeoutRequestsCallback(GroupPtr extraReferenceToMe) {
 				waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueTime));
 				it = getWaitlist.erase(it);
 			} else {
-				it++;
+				break;
 			}
 		}
 	}
