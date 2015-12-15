@@ -225,7 +225,7 @@ class RequestHandler:
 			return socket.socket.makefile(sock, 'rb', 512)
 
 	def process_request(self, env, input_stream, output_stream):
-		# The WSGI speculation says that the input parameter object passed needs to
+		# The WSGI specification says that the input parameter object passed needs to
 		# implement a few file-like methods. This is the reason why we "wrap" the socket._socket
 		# into the _fileobject to solve this.
 		#

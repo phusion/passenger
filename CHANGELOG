@@ -5,6 +5,7 @@ Release 5.0.23
  * [Enterprise] Fixed a regression in the Passenger Standalone Nginx config template that breaks the Mass Deployment feature.
  * Mime type for serving static xhtml files updated (no longer mobile profile, so it is recognized by desktop browsers). Closes GH-1695.
  * Improves error messages about ruby native support to indicate the optional nature (Passenger works normally without).
+ * [Standalone, Nginx] When using the new `abort_websockets_on_process_shutdown`, Passenger waited for the app to close without signaling it that shutdown was in progress. Node.js apps now get a SIGINT. Closes GH-1702.
  * With friendly error pages off Passenger would still show a trace (referencing only Passenger code) for unusual spawn errors. This was changed to a generic error message. Closes GH-1704.
 
 

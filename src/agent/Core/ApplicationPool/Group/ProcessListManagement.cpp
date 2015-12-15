@@ -152,6 +152,13 @@ Group::addProcessToList(const ProcessPtr &process, ProcessList &destination) {
 	} else if (&destination == &detachedProcesses) {
 		assert(process->isAlive());
 		process->enabled = Process::DETACHED;
+
+		if (!this->options.abortWebsocketsOnProcessShutdown && this->options.appType == P_STATIC_STRING("node")) {
+			// When Passenger is not allowed to abort websockets the application needs a way to know graceful shutdown
+			// is in progress. The solution for the most common use (Node.js) is to send a SIGINT. This is the general
+			// termination signal for Node; later versions of pm2 also use it (with a 1.6 sec grace period, Passenger just waits)
+			kill(process->getPid(), SIGINT);
+		}
 		callAbortLongRunningConnectionsCallback(process);
 	} else {
 		P_BUG("Unknown destination list");
