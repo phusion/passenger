@@ -157,7 +157,7 @@ Group::initialize() {
 
 	nullProcess = createProcessObject(json);
 	nullProcess->shutdownNotRequired();
-	queueTimeoutThread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this));
+	queueTimeoutThread = new oxt::thread(boost::bind(&Group::timeoutRequestsCallback, this, shared_from_this()));
 	return true;
 }
 

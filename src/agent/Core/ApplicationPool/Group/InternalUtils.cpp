@@ -340,11 +340,9 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 }
 
 void
-Group::timeoutRequestsCallback() {
-	boost::shared_ptr<Group> extraReferenceToMe = shared_from_this();
-	boost::shared_ptr<Pool> pool(getPool());
+Group::timeoutRequestsCallback(GroupPtr extraReferenceToMe) {
 	while (!this_thread::interruption_requested()) {
-		ScopedLock l = ScopedLock(pool->syncher);
+		ScopedLock l = ScopedLock(getPool()->syncher);
 		if (options.maxRequestQueueTime == 0) {
 			queueTimeoutCheckerCond.wait(l);
 		} else {
