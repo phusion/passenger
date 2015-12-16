@@ -374,7 +374,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");
 	fillPoolOption(req, options.maxPreloaderIdleTime, "!~PASSENGER_MAX_PRELOADER_IDLE_TIME");
 	fillPoolOption(req, options.maxRequestQueueSize, "!~PASSENGER_MAX_REQUEST_QUEUE_SIZE");
-	fillPoolOption(req, options.maxRequestQueueTime, "!~PASSENGER_MAX_REQUEST_QUEUE_TIME");
+	fillPoolOptionSecToMsec(req, options.maxRequestQueueTime, "!~PASSENGER_MAX_REQUEST_QUEUE_TIME");
 	fillPoolOption(req, options.abortWebsocketsOnProcessShutdown, "!~PASSENGER_ABORT_WEBSOCKETS_ON_PROCESS_SHUTDOWN");
 	fillPoolOption(req, options.forceMaxConcurrentRequestsPerProcess, "!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS");
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");

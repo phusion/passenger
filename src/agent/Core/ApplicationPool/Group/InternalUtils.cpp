@@ -291,6 +291,11 @@ Group::assignSessionsToGetWaiters(boost::container::vector<Callback> &postLockAc
 
 	while (!done && i < getWaitlist.size()) {
 		const GetWaiter &waiter = getWaitlist[i];
+		if (requestTimedOut(waiter)) {
+			waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueTime));
+			getWaitlist.erase(getWaitlist.begin() + i);
+			continue;
+		}
 		RouteResult result = route(waiter.options);
 		if (result.process != NULL) {
 			postLockActions.push_back(boost::bind(
@@ -339,6 +344,14 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 	}
 }
 
+bool
+Group::requestTimedOut(const GetWaiter &waiter) {
+	posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
+	return(!OXT_LIKELY(!testTimeoutRequestQueue()
+		&& (options.maxRequestQueueTime == 0
+		|| diff.total_milliseconds() < options.maxRequestQueueTime)));
+}
+
 void
 Group::timeoutRequestsCallback(GroupPtr extraReferenceToMe) {
 	while (!this_thread::interruption_requested()) {
@@ -347,21 +360,20 @@ Group::timeoutRequestsCallback(GroupPtr extraReferenceToMe) {
 			queueTimeoutCheckerCond.wait(l);
 		} else {
 			queueTimeoutCheckerCond.timed_wait(l,
-				posix_time::milliseconds(options.maxRequestQueueTime*500));
+				posix_time::milliseconds(options.maxRequestQueueTime));
 		}
-		for (deque<GetWaiter>::iterator it = getWaitlist.begin(); it != getWaitlist.end();) {
-			const GetWaiter &waiter = *it;
-			posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
-			if (!OXT_LIKELY(!testTimeoutRequestQueue()
-				&& (options.maxRequestQueueTime == 0
-					|| diff.total_seconds() < options.maxRequestQueueTime))) {
-				boost::this_thread::disable_interruption di;
-				boost::this_thread::disable_syscall_interruption dsi;
-				waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueTime));
-				it = getWaitlist.erase(it);
-			} else {
-				break;
-			}
+		if ((getWaitlist.size() > 0) && (requestTimedOut(getWaitlist[0]))) {
+                  for (unsigned int i = 1; i < getWaitlist.size(); i++) {
+			if (!requestTimedOut(getWaitlist[i])) {
+                          int ip = i - 1;
+                          const GetWaiter &waiter = getWaitlist[ip];
+                          boost::this_thread::disable_interruption di;
+                          boost::this_thread::disable_syscall_interruption dsi;
+                          waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueTime));
+                          getWaitlist.erase(getWaitlist.begin(),getWaitlist.begin()+ip);
+                          break;
+                        }
+		}
 		}
 	}
 }
