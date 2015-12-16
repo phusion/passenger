@@ -2032,7 +2032,7 @@ return;
 		Options options = createOptions();
 		options.appGroupName = "test1";
                 options.maxRequestQueueSize = 2;
-		options.maxRequestQueueTime = 1;
+		options.maxRequestQueueTime = 50;
 		GroupPtr group = pool->findOrCreateGroup(options);
 		spawningKitConfig->concurrency = 2;
 		initPoolDebugging();
