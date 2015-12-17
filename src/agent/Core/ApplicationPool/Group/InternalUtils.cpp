@@ -353,7 +353,7 @@ Group::requestTimedOut(const GetWaiter &waiter) {
 }
 
 void
-Group::timeoutRequestsCallback(GroupPtr extraReferenceToMe) {
+Group::timeoutRequestsCallback() {
 	while (!this_thread::interruption_requested()) {
 		ScopedLock l = ScopedLock(getPool()->syncher);
 		if (options.maxRequestQueueTime == 0) {

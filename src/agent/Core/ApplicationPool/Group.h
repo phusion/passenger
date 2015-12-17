@@ -275,7 +275,7 @@ public:
 	bool testTimeoutRequestQueue() const;
 	void callAbortLongRunningConnectionsCallback(const ProcessPtr &process);
 	bool requestTimedOut(const GetWaiter &waiter);
-	void timeoutRequestsCallback(GroupPtr extraReferenceToMe);
+	void timeoutRequestsCallback();
 
 	/****** Correctness verification ******/
 
