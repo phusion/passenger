@@ -2030,7 +2030,7 @@ namespace tut {
 		// then an exception is returned.
 		Options options = createOptions();
 		options.appGroupName = "test1";
-                options.maxRequestQueueSize = 2;
+		options.maxRequestQueueSize = 2;
 		options.maxRequestQueueTime = 50;
 		GroupPtr group = pool->findOrCreateGroup(options);
 		spawningKitConfig->concurrency = 2;
