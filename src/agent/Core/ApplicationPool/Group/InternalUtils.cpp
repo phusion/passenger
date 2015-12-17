@@ -219,7 +219,7 @@ Group::pushGetWaiter(const Options &newOptions, const GetCallback &callback,
 	boost::container::vector<Callback> &postLockActions)
 {
 	if ((options.maxRequestQueueTime == 0)&&(newOptions.maxRequestQueueTime > 0)) {
-		//options.maxRequestQueueTime = newOptions.maxRequestQueueTime;
+		options.maxRequestQueueTime = newOptions.maxRequestQueueTime;
 		queueTimeoutCheckerCond.notify_one();
 	}
 	if (OXT_LIKELY(!testOverflowRequestQueue()
