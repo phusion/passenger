@@ -49,17 +49,7 @@ using namespace boost;
 class StopwatchLog: public noncopyable {
 private:
 	Transaction * const transaction;
-	union {
-		const char *name;
-		struct {
-			const char *endMessage;
-			const char *abortMessage;
-		} granular;
-	} data;
-	enum {
-		NAME,
-		GRANULAR
-	} type: 1;
+	const char *id;
 	bool ok;
 
 	static string timevalToString(struct timeval &tv) {
@@ -78,20 +68,19 @@ public:
 		: transaction(NULL)
 		{ }
 
-	StopwatchLog(const TransactionPtr &_transaction, const char *name)
+	StopwatchLog(const TransactionPtr &_transaction, const char *id, const char *nameAndData)
 		: transaction(_transaction.get())
 	{
-		type = NAME;
-		data.name = name;
+		this->id = id;
 		ok = false;
 
-		char message[150];
+		char message[250];
 		char *pos = message;
 		const char *end = message + sizeof(message);
 		struct rusage usage;
 
 		pos = appendData(pos, end, "BEGIN: ");
-		pos = appendData(pos, end, name);
+		pos = appendData(pos, end, id);
 		pos = appendData(pos, end, " (");
 		pos = appendData(pos, end, usecToString(uv_hrtime() / 1000));
 		pos = appendData(pos, end, ",");
@@ -104,23 +93,16 @@ public:
 		pos = appendData(pos, end, timevalToString(usage.ru_stime));
 		pos = appendData(pos, end, ") ");
 
+		if (nameAndData != NULL) {
+			try {
+				pos = appendData(pos, end, modp::b64_encode(nameAndData));
+			} catch (const std::runtime_error &) {
+				// non-fatal: ignore
+			}
+		}
+
 		if (transaction != NULL) {
 			transaction->message(StaticString(message, pos - message));
-		}
-	}
-
-	StopwatchLog(const TransactionPtr &_transaction,
-		const char *beginMessage,
-		const char *endMessage,
-		const char *abortMessage = NULL)
-		: transaction(_transaction.get())
-	{
-		if (_transaction != NULL) {
-			type = GRANULAR;
-			data.granular.endMessage = endMessage;
-			data.granular.abortMessage = abortMessage;
-			ok = abortMessage == NULL;
-			_transaction->message(beginMessage);
 		}
 	}
 
@@ -128,38 +110,30 @@ public:
 		if (transaction == NULL) {
 			return;
 		}
-		if (type == NAME) {
-			char message[150];
-			char *pos = message;
-			const char *end = message + sizeof(message);
-			struct rusage usage;
+		char message[150];
+		char *pos = message;
+		const char *end = message + sizeof(message);
+		struct rusage usage;
 
-			if (ok) {
-				pos = appendData(pos, end, "END: ");
-			} else {
-				pos = appendData(pos, end, "FAIL: ");
-			}
-			pos = appendData(pos, end, data.name);
-			pos = appendData(pos, end, " (");
-			pos = appendData(pos, end, usecToString(uv_hrtime() / 1000));
-			pos = appendData(pos, end, ",");
-			if (getrusage(RUSAGE_SELF, &usage) == -1) {
-				int e = errno;
-				throw SystemException("getrusage() failed", e);
-			}
-			pos = appendData(pos, end, timevalToString(usage.ru_utime));
-			pos = appendData(pos, end, ",");
-			pos = appendData(pos, end, timevalToString(usage.ru_stime));
-			pos = appendData(pos, end, ")");
-
-			transaction->message(StaticString(message, pos - message));
+		if (ok) {
+			pos = appendData(pos, end, "END: ");
 		} else {
-			if (ok) {
-				transaction->message(data.granular.endMessage);
-			} else {
-				transaction->message(data.granular.abortMessage);
-			}
+			pos = appendData(pos, end, "FAIL: ");
 		}
+		pos = appendData(pos, end, id);
+		pos = appendData(pos, end, " (");
+		pos = appendData(pos, end, usecToString(uv_hrtime() / 1000));
+		pos = appendData(pos, end, ",");
+		if (getrusage(RUSAGE_SELF, &usage) == -1) {
+			int e = errno;
+			throw SystemException("getrusage() failed", e);
+		}
+		pos = appendData(pos, end, timevalToString(usage.ru_utime));
+		pos = appendData(pos, end, ",");
+		pos = appendData(pos, end, timevalToString(usage.ru_stime));
+		pos = appendData(pos, end, ")");
+
+		transaction->message(StaticString(message, pos - message));
 	}
 
 	void success() {

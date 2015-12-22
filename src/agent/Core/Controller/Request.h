@@ -140,9 +140,9 @@ public:
 		return options.transaction != NULL;
 	}
 
-	void beginStopwatchLog(UnionStation::StopwatchLog **stopwatchLog, const char *name) {
+	void beginStopwatchLog(UnionStation::StopwatchLog **stopwatchLog, const char *id, const char *nameAndData = NULL) {
 		if (options.transaction != NULL) {
-			*stopwatchLog = new UnionStation::StopwatchLog(options.transaction, name);
+			*stopwatchLog = new UnionStation::StopwatchLog(options.transaction, id, nameAndData);
 		}
 	}
 
