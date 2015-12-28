@@ -122,7 +122,7 @@ module Signal
   def self.list_trappable
     ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
     case ruby_engine
-    when "jruby"
+    when /jruby/
       result = Signal.list.dup
       result.delete("QUIT")
       result.delete("ILL")
