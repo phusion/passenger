@@ -195,7 +195,7 @@ if [[ "$TEST_USH" = 1 ]]; then
 	run "$PASSENGER_CONFIG" install-standalone-runtime --auto
 
 	pushd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core
-	bundle exec rake spec:travis
+	bundle exec rake spec:travis TRAVIS_WITH_SUDO=1
 	popd
 
 	pushd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails

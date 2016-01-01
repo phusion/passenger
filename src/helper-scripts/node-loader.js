@@ -99,7 +99,7 @@ function passengerToWinstonLogLevel(passengerLogLevel) {
 		default:
 			break;
 	}
-	
+
 	return "none";
 }
 
@@ -107,29 +107,29 @@ function setupEnvironment(options) {
 	PhusionPassenger.options = options;
 	PhusionPassenger.configure = configure;
 	PhusionPassenger._appInstalled = false;
-	
+
 	var logLevel = passengerToWinstonLogLevel(PhusionPassenger.options.log_level);
 	var winston = require("vendor-copy/winston");
 	var logger = new (winston.Logger)({
-  		transports: [ 
+  		transports: [
   			new (winston.transports.Console)({ level: logLevel, debugStdout: true })
   		]
 	});
-	
+
 	process.title = 'Passenger NodeApp: ' + options.app_root;
 	http.Server.prototype.originalListen = http.Server.prototype.listen;
 	http.Server.prototype.listen = installServer;
-	
-	ustLog.init(logger, PhusionPassenger.options.ust_router_address, PhusionPassenger.options.ust_router_username, 
+
+	ustLog.init(logger, PhusionPassenger.options.ust_router_address, PhusionPassenger.options.ust_router_username,
 		PhusionPassenger.options.ust_router_password, PhusionPassenger.options.union_station_key, PhusionPassenger.options.app_group_name);
 
 	if (ustLog.isEnabled()) {
 		// must be first so other modules can use the cls context
 		require('vendor-copy/continuation-local-storage').createNamespace('passenger-request-ctx');
-		
+
 		global.phusion_passenger_ustReporter = require('phusion_passenger/ustreporter');
 		global.phusion_passenger_ustReporter.init(logger, options.app_root, ustLog);
-		
+
 		instrumentModulePaths.forEach(function(modulePath) {
 			var module = require(modulePath);
 			instrumentedModules.push(module);
@@ -143,7 +143,7 @@ function setupEnvironment(options) {
 	process.stdin.resume();
 
 	loadApplication();
-	
+
 	if (ustLog.isEnabled()) {
 		instrumentedModules.forEach(function(module) {
 			module.initPostLoad();

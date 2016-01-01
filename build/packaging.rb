@@ -262,11 +262,7 @@ task 'package:gem' => Packaging::PREGENERATED_FILES do
     if release_file
       File.open(release_file, "w").close
     end
-    command = "gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec"
-    if !boolean_option('SKIP_SIGNING')
-      command << " --sign --key 0x0A212A8C"
-    end
-    sh(command)
+    sh("gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec")
   ensure
     if release_file
       File.unlink(release_file) rescue nil

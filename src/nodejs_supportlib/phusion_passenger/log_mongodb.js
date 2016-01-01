@@ -79,16 +79,16 @@ function collectionFn(origArguments, databaseName, collectionName, functionName,
 	var tEnd = ustReporter.nowTimestamp();
 
 	log.verbose("==== Instrumentation [MongoDB] ==== [" + query + "] (attach to txnId " + ustReporter.getCurrentTxnId() + ")");
-	
+
 	ustReporter.logTimedActivityMongo("mongo: " + query, tBegin, tEnd, query);
-	
+
 	return rval;
 }
 
 exports.initPreLoad = function() {
 	log = ustReporter.getPassengerLogger();
 	var appRoot = ustReporter.getApplicationRoot();
-	
+
 	// See if the mongodb driver is used. It can also be used through mongoskin, in which case older mongoskin
 	// versions will have it as part of their own node_modules.
 	try {
@@ -106,10 +106,10 @@ exports.initPreLoad = function() {
 
 	// The 1.4 mongo driver series uses a callback mechanism that breaks continuation-local-storage.
 	wrapRepairCLSMongo14();
-		
+
 	// Newer mongoskin techniques break continuation-local-storage, so we need to skin the skinner there.
 	wrapRepairCLSMongoskinUtils(appRoot);
-	
+
 	try {
 		for (i = 0; i < collectionMethods.length; i++) {
 			instrumentCollectionMethod(mongodb.Collection.prototype, collectionMethods[i], collectionFn);
@@ -125,7 +125,7 @@ function wrapRepairCLSMongo14() {
 			log.verbose("Not using MongoDB 1.4.x, so don't need MongoDB continuation-local-storage workaround");
 			return;
 		}
-		
+
 		mongodb.Db.prototype._passenger_wrapped__executeQueryCommand = mongodb.Db.prototype._executeQueryCommand;
 		mongodb.Db.prototype._executeQueryCommand = function() {
 			if (arguments.length > 0 && typeof(arguments[arguments.length - 1]) === 'function') {
@@ -173,20 +173,20 @@ function wrapRepairCLSMongoskinUtils(appRoot) {
 		log.verbose("Not using mongoskin continuation-local-storage workaround (either not used, old version, or new unsupported version): " + e);
 		return;
 	}
-	
+
 	try {
 		// makeSkinClass is a factory, so need a double wrap: one to get the run-time factory output (skinClass),
 		// and then one that hooks the actual method in that output.
 		mongoskinUtils._passenger_wrapped_makeSkinClass = mongoskinUtils.makeSkinClass;
 		mongoskinUtils.makeSkinClass = function(NativeClass, useNativeConstructor) {
 			var skinClass = mongoskinUtils._passenger_wrapped_makeSkinClass(NativeClass, useNativeConstructor);
-	
+
 			skinClass.prototype._passenger_wrapped_open = skinClass.prototype.open;
 			skinClass.prototype.open = function(callback) {
 				// Finally we can bind the callback so that when the emitter calls it, the cls is mapped correctly.
 				return skinClass.prototype._passenger_wrapped_open.call(this, ustReporter.getCLSWrappedCallback(callback));
 			}
-	
+
 			return skinClass;
 		}
 		log.verbose("Using mongoskin continuation-local-storage workaround");

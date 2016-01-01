@@ -144,7 +144,7 @@ private:
 				"Stop accepting clients for 3 seconds.");
 			pollers[0].fd = exitPipe[0];
 			pollers[0].events = POLLIN;
-			if (poll(pollers, 1, 3) == 1) {
+			if (poll(pollers, 1, 3000) == 1) {
 				quit = true;
 			} else {
 				P_NOTICE("Resuming accepting new clients");

@@ -56,7 +56,7 @@ http {
     <% if @app_finder.multi_mode? %>
         # Default server entry for mass deployment mode.
         server {
-            <%= include_passenger_internal_template('mass_deployment_default_server.erb', 12) %>;
+            <%= include_passenger_internal_template('mass_deployment_default_server.erb', 12) %>
         }
     <% end %>
 

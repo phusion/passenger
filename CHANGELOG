@@ -1,6 +1,18 @@
+Release 5.0.23
+--------------
+
+ * Fixes the request acceptor error handling timeout. When an error occurs while Passenger is accepting a request (for example, when Passenger has run out of file descriptors), Passenger is supposed to wait for 3 seconds before trying again. Because of a typo, Passenger actually waited 3 milliseconds.
+ * [Enterprise] Fixed a regression in the Passenger Standalone Nginx config template that breaks the Mass Deployment feature.
+ * The mime type for serving static XHTML files is updated. We no longer use the mobile profile, so it is recognized by desktop browsers. Closes GH-1695.
+ * Improves error messages about Ruby native support to indicate the optional nature. Passenger is able to operate even without the native support extension, but that wasn't clear enough to some users, causing them to think of the old messages as errors.
+ * [Standalone, Nginx] When using the new `abort_websockets_on_process_shutdown` configuration option, Passenger waited for the app to close without signaling it that shutdown was in progress. Node.js apps now get a SIGINT. Closes GH-1702.
+ * With friendly error pages off Passenger would still show a trace (referencing only Passenger code) for unusual spawn errors. This has been changed to a generic error message. Closes GH-1704.
+
+
 Release 5.0.22
 --------------
 
+ * Fixes a header collision vulnerability (CVE-2015-7519, medium severity). Please see our blog for detailed vulnerability description and advisory. Thanks to the SUSE security team for reporting this issue.
  * [Apache] Fixes compatibility with Apache 2.4.17's mod_autoindex. Fix contributed by Eric Covener. Closes GH-1642.
  * [Standalone] Passenger Standalone now [accepts configuration options from environment variables](https://www.phusionpassenger.com/library/config/standalone/intro.html). This makes using Passenger Standalone significantly easier on Heroku or on systems that follow the 12-factor principle. Closes GH-1661.
  * [Standalone] The Nginx configuration template has been cleaned up. It is now significantly easier to edit the Nginx configuration template without breaking compatibility with future versions.
@@ -393,7 +405,12 @@ Minor changes:
 Release 4.0.60
 --------------
 
- * Fixed the password protection of internal Phusion Passenger processes.
+Note that 4.0.60 is a source-only maintenance release. There will not be any binaries, Debian or RPM packages for this release.
+
+ * Adds OS X El Capitan support.
+ * Updates preferred Nginx version from 1.6.2 to 1.6.3.
+ * Fixes a header collision vulnerability (CVE-2015-7519, medium severity). Please see our blog for detailed vulnerability description and advisory. Thanks to the SUSE security team for reporting this issue.
+ * Fixes the password protection of internal Phusion Passenger processes.
 
    For security reasons, Phusion Passenger limits access to internal processes, by using Unix file permissions and randomly generated passwords that only authorized internal processes know. It turns out that this password wasn't set correctly, which has now been fixed. There was no security vulnerability, because the file permissions already provide sufficient security. The password only serves as an extra layer of security just in case there is a problem with the former.
 
@@ -2267,4 +2284,4 @@ Release 2.2.5
 
 Older releases
 --------------
-Please consult the blog posts on http://blog.phusion.nl/ for the information about older releases.
+Please consult the blog posts on http://old.blog.phusion.nl/ for the information about older releases.
