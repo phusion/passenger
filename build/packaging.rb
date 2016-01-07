@@ -283,7 +283,7 @@ task 'package:tarball' => Packaging::PREGENERATED_FILES do
   if ENV['OFFICIAL_RELEASE']
     File.open("#{PKG_DIR}/#{basename}/resources/release.txt", "w").close
   end
-  if PlatformInfo.os_name == "macosx"
+  if PlatformInfo.os_name_simple == "macosx"
     sh "cd #{PKG_DIR}/#{basename} && find . -print0 | xargs -0 touch -t '201310270000'"
   else
     sh "cd #{PKG_DIR}/#{basename} && find . -print0 | xargs -0 touch -d '2013-10-27 00:00:00 UTC'"

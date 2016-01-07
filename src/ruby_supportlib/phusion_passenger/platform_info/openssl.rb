@@ -29,7 +29,7 @@ module PhusionPassenger
 
   module PlatformInfo
     def self.openssl_extra_cflags
-      if PlatformInfo.os_name == "macosx"
+      if PlatformInfo.os_name_simple == "macosx"
         if File.exist?("/usr/include/openssl")
           ""
         else
@@ -45,7 +45,7 @@ module PhusionPassenger
     memoize :openssl_extra_cflags
 
     def self.openssl_extra_ldflags
-      if PlatformInfo.os_name == "macosx"
+      if PlatformInfo.os_name_simple == "macosx"
         if File.exist?("/usr/include/openssl")
           ""
         else

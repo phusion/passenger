@@ -220,13 +220,13 @@ module PhusionPassenger
           else
             case platform
             when :linux
-              invoke = true if PlatformInfo.os_name =~ /linux/
+              invoke = true if PlatformInfo.os_name_simple == "linux"
             when :freebsd
-              invoke = true if PlatformInfo.os_name =~ /freebsd/
+              invoke = true if PlatformInfo.os_name_simple == "freebsd"
             when :macosx
-              invoke = true if PlatformInfo.os_name == "macosx"
+              invoke = true if PlatformInfo.os_name_simple == "macosx"
             when :solaris
-              invoke = true if PlatformInfo.os_name =~ /solaris/
+              invoke = true if PlatformInfo.os_name_simple == "solaris"
             when :other_platforms
               invoke = true
             end

@@ -154,7 +154,7 @@ private
 
   def check_selinux_and_suggest_rpm
     return if !PhusionPassenger.originally_packaged? ||
-      PlatformInfo.os_name != "linux" ||
+      PlatformInfo.os_name_simple != "linux" ||
       !(PlatformInfo.linux_distro_tags.include?(:rhel) ||
           PlatformInfo.linux_distro_tags.include?(:centos))
       !PlatformInfo.find_command('sestatus')

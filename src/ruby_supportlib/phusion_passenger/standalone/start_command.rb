@@ -424,7 +424,7 @@ module PhusionPassenger
           backward = 10
         end
 
-        if PlatformInfo.os_name != 'solaris'
+        if PlatformInfo.os_name_simple != 'solaris'
           backward_arg = "-n #{backward}"
         end
 

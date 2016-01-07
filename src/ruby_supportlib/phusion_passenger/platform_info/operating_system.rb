@@ -28,26 +28,39 @@ PhusionPassenger.require_passenger_lib 'platform_info'
 module PhusionPassenger
 
   module PlatformInfo
-    # Returns the operating system's name. This name is in lowercase and contains no spaces,
-    # and thus is suitable to be used in some kind of ID. It may contain a version number.
-    # Linux is always identified as "linux". OS X is always identified as "macosx".
-    # Identifiers for other operating systems may contain a version number, e.g. "freebsd10".
-    def self.os_name
+    # Returns the operating system's name in as simple a form as possible. For example,
+    # Linux is always identified as "linux". OS X is always identified as "macosx" (despite
+    # the actual os name being something like "darwin"). This is useful as a stable indicator
+    # of the os without having to worry about version numbers, etc.
+    # N.B. unrecognized os names will just be returned as-is.
+    def self.os_name_simple
       if rb_config['target_os'] =~ /darwin/ && (sw_vers = find_command('sw_vers'))
         'macosx'
       elsif rb_config['target_os'] =~ /^linux-/
         'linux'
       elsif rb_config['target_os'] =~ /solaris/
         'solaris'
+      elsif rb_config['target_os'] =~ /freebsd/
+        'freebsd'
+      elsif rb_config['target_os'] =~ /aix/
+        'aix'
       else
         rb_config['target_os']
       end
     end
-    memoize :os_name
+    memoize :os_name_simple
+    
+    # Returns the operating system's name exactly as advertised by the system. While it is 
+    # in lowercase and contains no spaces, it can contain things like version number or 
+    # may be less intuitive (e.g. "darwin" for OS X).
+    def self.os_name_full
+      rb_config['target_os']
+    end
+    memoize :os_name_full
 
     # The current platform's shared library extension ('so' on most Unices).
     def self.library_extension
-      if os_name == "macosx"
+      if os_name_simple == "macosx"
         return "bundle"
       else
         return "so"
@@ -100,7 +113,7 @@ module PhusionPassenger
     def self.cpu_architectures
       uname = uname_command
       raise "The 'uname' command cannot be found" if !uname
-      if os_name == "macosx"
+      if os_name_simple == "macosx"
         arch = `#{uname} -p`.strip
         if arch == "i386"
           # Macs have been x86 since around 2007. I think all of them come with
@@ -152,7 +165,7 @@ module PhusionPassenger
 
     # Returns whether the flock() function is supported on this OS.
     def self.supports_flock?
-      defined?(File::LOCK_EX) && os_name != 'solaris'
+      defined?(File::LOCK_EX) && os_name_simple != 'solaris'
     end
 
     # Returns whether the OS's main CPU architecture supports the

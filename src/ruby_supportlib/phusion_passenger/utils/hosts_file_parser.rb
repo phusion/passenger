@@ -31,7 +31,7 @@ module PhusionPassenger
     # A /etc/hosts parser. Also supports writing groups of data to the file.
     class HostsFileParser
       def self.flush_dns_cache!
-        if PlatformInfo.os_name == "macosx"
+        if PlatformInfo.os_name_simple == "macosx"
           system("dscacheutil -flushcache")
         end
       end

@@ -162,7 +162,7 @@ describe "Downloaded Phusion Passenger binaries" do
       File.rename("download_cache.old", "download_cache")
       server.stop
     end
-  end if PlatformInfo.os_name == "linux"
+  end if PlatformInfo.os_name_simple == "linux"
 
   specify "helper-scripts/download_binaries/extconf.rb fails at downloading all necessary binaries if one of them does not exist" do
     FileUtils.mkdir_p("server_root")

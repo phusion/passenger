@@ -89,7 +89,7 @@ task 'test:integration:native_packaging' do
     require 'shellwords'
     command << " -e #{Shellwords.escape(grep)}"
   end
-  case PlatformInfo.os_name
+  case PlatformInfo.os_name_simple
   when "linux"
     if PlatformInfo.linux_distro_tags.include?(:debian)
       rubylibdir = RbConfig::CONFIG["vendordir"]

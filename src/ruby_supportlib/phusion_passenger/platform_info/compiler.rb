@@ -338,14 +338,14 @@ module PhusionPassenger
     end
 
     def self.cc_supports_visibility_flag?
-      return false if os_name =~ /aix/
+      return false if os_name_simple == "aix"
       return try_compile("Checking for C compiler '-fvisibility' support",
         :c, '', '-fvisibility=hidden')
     end
     memoize :cc_supports_visibility_flag?, true
 
     def self.cxx_supports_visibility_flag?
-      return false if os_name =~ /aix/
+      return false if os_name_simple == "aix"
       return try_compile("Checking for C++ compiler '-fvisibility' support",
         :cxx, '', '-fvisibility=hidden')
     end
@@ -422,7 +422,7 @@ module PhusionPassenger
     # http://gcc.gnu.org/ml/gcc-patches/2006-07/msg00861.html
     # Warnings should be suppressed with -Wno-attributes.
     def self.cc_visibility_flag_generates_warnings?
-      if os_name =~ /linux/ && `#{cc} -v 2>&1` =~ /gcc version (.*?)/
+      if os_name_simple == "linux" && `#{cc} -v 2>&1` =~ /gcc version (.*?)/
         return $1 <= "4.1.2"
       else
         return false
@@ -431,7 +431,7 @@ module PhusionPassenger
     memoize :cc_visibility_flag_generates_warnings?, true
 
     def self.cxx_visibility_flag_generates_warnings?
-      if os_name =~ /linux/ && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
+      if os_name_simple == "linux" && `#{cxx} -v 2>&1` =~ /gcc version (.*?)/
         return $1 <= "4.1.2"
       else
         return false
@@ -455,7 +455,7 @@ module PhusionPassenger
     def self.cxx_11_flag
       # C++11 support on FreeBSD 10.0 + Clang seems to be bugged.
       # http://llvm.org/bugs/show_bug.cgi?id=18310
-      return nil if os_name =~ /freebsd/
+      return nil if os_name_simple == "freebsd"
 
       source = %{
         struct Foo {
@@ -517,7 +517,7 @@ module PhusionPassenger
       if !ENV['DMALLOC_LIBS'].to_s.empty?
         return ENV['DMALLOC_LIBS']
       end
-      if os_name == "macosx"
+      if os_name_simple == "macosx"
         ['/opt/local', '/usr/local', '/usr'].each do |prefix|
           filename = "#{prefix}/lib/libdmallocthcxx.a"
           if File.exist?(filename)
@@ -532,7 +532,7 @@ module PhusionPassenger
     memoize :dmalloc_ldflags
 
     def self.electric_fence_ldflags
-      if os_name == "macosx"
+      if os_name_simple == "macosx"
         ['/opt/local', '/usr/local', '/usr'].each do |prefix|
           filename = "#{prefix}/lib/libefence.a"
           if File.exist?(filename)
@@ -547,7 +547,7 @@ module PhusionPassenger
     memoize :electric_fence_ldflags
 
     def self.export_dynamic_flags
-      if os_name == "linux"
+      if os_name_simple == "linux"
         return '-rdynamic'
       else
         return nil
