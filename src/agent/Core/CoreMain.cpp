@@ -790,7 +790,7 @@ static void
 abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process) {
 	// We are inside the ApplicationPool lock. Be very careful here.
 	WorkingObjects *wo = workingObjects;
-	P_NOTICE("Disconnecting long-running connections for process " <<
+	P_NOTICE("Checking whether to disconnect long-running connections for process " <<
 		process->getPid() << ", application " << process->getGroup()->getName());
 	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		wo->threadWorkingObjects[i].bgloop->safe->runLater(
