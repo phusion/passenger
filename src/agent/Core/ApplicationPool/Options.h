@@ -237,6 +237,9 @@ public:
 	/** See class overview. Defaults to the defaultUser's primary group. */
 	StaticString defaultGroup;
 
+	/** User id starting from entering LVE and CageFS are allowed. */
+	unsigned int lveMinUid;
+
 	/**
 	 * The directory which contains restart.txt and always_restart.txt.
 	 * An empty string means that the default directory should be used.
@@ -474,6 +477,7 @@ public:
 		  baseURI("/", 1),
 		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
 		  defaultUser(PASSENGER_DEFAULT_USER, sizeof(PASSENGER_DEFAULT_USER) - 1),
+		  lveMinUid(DEFAULT_LVE_MIN_UID),
 		  integrationMode(DEFAULT_INTEGRATION_MODE, sizeof(DEFAULT_INTEGRATION_MODE) - 1),
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),

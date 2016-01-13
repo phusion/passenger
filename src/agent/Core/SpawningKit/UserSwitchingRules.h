@@ -56,6 +56,9 @@ struct UserSwitchingInfo {
 	gid_t gid;
 	int ngroups;
 	shared_array<gid_t> gidset;
+
+	struct passwd lve_userpwd, *lve_userpwd_complete;
+	shared_array<char> lve_userpwd_strbuf;
 };
 
 inline UserSwitchingInfo
@@ -64,9 +67,10 @@ prepareUserSwitching(const Options &options) {
 	UserSwitchingInfo info;
 
 	if (geteuid() != 0) {
-		struct passwd pwd, *userInfo;
+		struct passwd &pwd = info.lve_userpwd;
+		shared_array<char> &strings = info.lve_userpwd_strbuf;
+		struct passwd *userInfo;
 		long bufSize;
-		shared_array<char> strings;
 
 		// _SC_GETPW_R_SIZE_MAX is not a maximum:
 		// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
@@ -97,11 +101,13 @@ prepareUserSwitching(const Options &options) {
 	string defaultGroup;
 	string startupFile = absolutizePath(options.getStartupFile(),
 		absolutizePath(options.appRoot));
-	struct passwd pwd, *userInfo;
+	struct passwd &pwd = info.lve_userpwd;
+	shared_array<char> &pwdBuf = info.lve_userpwd_strbuf;
+	struct passwd *userInfo;
 	struct group  grp;
 	gid_t  groupId = (gid_t) -1;
 	long pwdBufSize, grpBufSize;
-	shared_array<char> pwdBuf, grpBuf;
+	shared_array<char> grpBuf;
 	int ret;
 
 	// _SC_GETPW_R_SIZE_MAX/_SC_GETGR_R_SIZE_MAX are not maximums:

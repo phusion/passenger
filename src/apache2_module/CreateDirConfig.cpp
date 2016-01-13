@@ -67,4 +67,5 @@
 				config->restartDir = NULL;
 				config->appGroupName = NULL;
 				config->forceMaxConcurrentRequestsPerProcess = UNSET_INT_VALUE;
+				config->lveMinUid = UNSET_INT_VALUE;
 	

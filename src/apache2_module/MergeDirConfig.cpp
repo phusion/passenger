@@ -236,3 +236,10 @@
 			add->forceMaxConcurrentRequestsPerProcess;
 	
 
+	
+		config->lveMinUid =
+			(add->lveMinUid == UNSET_INT_VALUE) ?
+			base->lveMinUid :
+			add->lveMinUid;
+	
+
