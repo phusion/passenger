@@ -261,6 +261,11 @@ module PhusionPassenger
       {
         :name      => :load_shell_envvars,
         :type      => :boolean,
+        # The Standalone mode is primarily used for serving a single app (except
+        # when in mass deployment mode), so load_shell_envvars id disabled by
+        # default. However, it's enabled by default in the Core, so we need to
+        # explicitly set it to disabled here.
+        :default   => false,
         :desc      => "Load shell startup files before loading\n" \
                       'application'
       },
@@ -636,7 +641,7 @@ module PhusionPassenger
           if !spec_item.key?(:cli)
             spec_item[:cli] = make_default_cli_value.call(spec_item)
           end
-          if spec_item[:default]
+          if spec_item.key?(:default)
             CONFIG_DEFAULTS[spec_item[:name]] = spec_item[:default]
           end
           CONFIG_NAME_INDEX[spec_item[:name]] = spec_item
