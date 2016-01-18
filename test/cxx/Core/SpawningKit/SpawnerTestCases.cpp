@@ -98,7 +98,7 @@
 			SpawnerPtr spawner = createSpawner(options);
 			try {
 				spawner->spawn(options);
-				fail("Timeout expected");
+				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				result = e.getErrorKind() == SpawnException::APP_STARTUP_TIMEOUT;
 				if (!result) {
@@ -121,7 +121,7 @@
 		setLogLevel(LVL_CRIT);
 		try {
 			spawner->spawn(options);
-			fail("Exception expected");
+			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getErrorKind(),
 				SpawnException::APP_STARTUP_PROTOCOL_ERROR);
@@ -162,7 +162,7 @@
 			SpawnerPtr spawner = createSpawner(options);
 			try {
 				spawner->spawn(options);
-				fail("Timeout expected");
+				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				result = e.getErrorKind() == SpawnException::APP_STARTUP_TIMEOUT;
 				if (!result) {
@@ -225,7 +225,7 @@
 		setLogLevel(LVL_CRIT);
 		try {
 			spawner->spawn(options);
-			fail("Exception expected");
+			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
 		}
@@ -344,7 +344,7 @@
 				string rootGroup = groupNameForGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.user = "root";
-					options.group = rootGroup.c_str();
+					options.group = rootGroup;
 				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
@@ -417,7 +417,7 @@
 				string rootGroup = groupNameForGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.user = testConfig["normal_user_1"].asCString();
-					options.group = rootGroup.c_str();
+					options.group = rootGroup;
 				);
 				RUN_USER_SWITCHING_TEST();
 				ensure_equals(groupNameForGid(gid), testConfig["default_group"].asString());
@@ -735,7 +735,7 @@
 		);
 		try {
 			RUN_USER_SWITCHING_TEST();
-			fail();
+			fail("RuntimeException expected");
 		} catch (const RuntimeException &e) {
 			ensure(containsSubstring(e.what(), "Cannot determine a user to lower privilege to"));
 		}
@@ -744,14 +744,15 @@
 	TEST_METHOD(68) {
 		// It raises an error if it tries to lower to 'default_group',
 		// but that group doesn't exist.
+		string rootGroup = groupNameForGid(0);
 		SETUP_USER_SWITCHING_TEST(
 			options.user = testConfig["normal_user_1"].asCString();
-			options.group = groupNameForGid(0);
+			options.group = rootGroup;
 			options.defaultGroup = testConfig["nonexistant_group"].asCString();
 		);
 		try {
 			RUN_USER_SWITCHING_TEST();
-			fail();
+			fail("RuntimeException expected");
 		} catch (const RuntimeException &e) {
 			ensure(containsSubstring(e.what(), "Cannot determine a group to lower privilege to"));
 		}
