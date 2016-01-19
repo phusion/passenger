@@ -788,9 +788,10 @@
 	TEST_METHOD(68) {
 		// It raises an error if it tries to lower to 'default_group',
 		// but that group doesn't exist.
+		string rootGroup = groupNameForGid(0);
 		SETUP_USER_SWITCHING_TEST(
 			options.user = testConfig["normal_user_1"].asCString();
-			options.group = groupNameForGid(0);
+			options.group = rootGroup;
 			options.defaultGroup = testConfig["nonexistant_group"].asCString();
 		);
 		try {
