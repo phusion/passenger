@@ -1,3 +1,9 @@
+Release 4.0.61
+--------------
+
+ * The OS X El Capitan support fix was not actually applied in 4.0.60; it is now. Closes GH-1696. 
+
+
 Release 4.0.60
 --------------
 
