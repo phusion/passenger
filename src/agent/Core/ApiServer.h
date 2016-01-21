@@ -435,37 +435,16 @@ private:
 		}
 	}
 
-	static void getControllerConfig(Controller *controller, Json::Value *json) {
-		*json = controller->getConfigAsJson();
-	}
-
 	void processConfig(Client *client, Request *req) {
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
 			}
 
-			HeaderTable headers;
-			string logFile = getLogFile();
-			string fileDescriptorLogFile = getFileDescriptorLogFile();
-
-			headers.insert(req->pool, "Content-Type", "application/json");
-			Json::Value doc;
-			controllers[0]->getContext()->libev->runSync(boost::bind(
-				getControllerConfig, controllers[0], &doc));
-			doc["log_level"] = getLogLevel();
-			if (!logFile.empty()) {
-				doc["log_file"] = logFile;
-			}
-			if (!fileDescriptorLogFile.empty()) {
-				doc["file_descriptor_log_file"] = fileDescriptorLogFile;
-			}
-
-			writeSimpleResponse(client, 200, &headers,
-				psg_pstrdup(req->pool, doc.toStyledString()));
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
+			refRequest(req, __FILE__, __LINE__);
+			controllers[0]->getContext()->libev->runLater(boost::bind(
+				&ApiServer::processConfig_getControllerConfig, this,
+				client, req, controllers[0]));
 		} else if (req->method == HTTP_PUT) {
 			if (!authorizeAdminOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
@@ -476,6 +455,46 @@ private:
 		} else {
 			apiServerRespondWith405(this, client, req);
 		}
+	}
+
+	void processConfig_getControllerConfig(Client *client, Request *req,
+		Controller *controller)
+	{
+		Json::Value config = controller->getConfigAsJson();
+		getContext()->libev->runLater(boost::bind(
+			&ApiServer::processConfig_controllerConfigGathered, this,
+			client, req, controller, config));
+	}
+
+	void processConfig_controllerConfigGathered(Client *client, Request *req,
+		Controller *controller, Json::Value config)
+	{
+		if (req->ended()) {
+			unrefRequest(req, __FILE__, __LINE__);
+			return;
+		}
+
+		HeaderTable headers;
+		string logFile = getLogFile();
+		string fileDescriptorLogFile = getFileDescriptorLogFile();
+
+		headers.insert(req->pool, "Content-Type", "application/json");
+		config["log_level"] = getLogLevel();
+		if (!logFile.empty()) {
+			config["log_file"] = logFile;
+		}
+		if (!fileDescriptorLogFile.empty()) {
+			config["file_descriptor_log_file"] = fileDescriptorLogFile;
+		}
+
+		writeSimpleResponse(client, 200, &headers,
+			psg_pstrdup(req->pool, config.toStyledString()));
+		if (!req->ended()) {
+			Request *req2 = req;
+			endRequest(&client, &req2);
+		}
+
+		unrefRequest(req, __FILE__, __LINE__);
 	}
 
 	static void configureController(Controller *controller, Json::Value json) {
