@@ -109,6 +109,14 @@ module PhusionPassenger
                       'socket'
       },
       {
+        :name      => :socket_backlog,
+        :type      => :integer,
+        :cli       => '--socket-backlog',
+        :default   => DEFAULT_SOCKET_BACKLOG,
+        :desc      => "Override size of the socket backlog.\n" \
+                      "Default: %DEFAULT%"
+      },
+      {
         :name      => :ssl,
         :type      => :boolean,
         :desc      => "Enable SSL support (Nginx\n" \

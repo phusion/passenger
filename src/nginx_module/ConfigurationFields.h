@@ -85,6 +85,8 @@
 
 	ngx_int_t request_queue_overflow_status_code;
 
+	ngx_int_t socket_backlog;
+
 	ngx_int_t start_timeout;
 
 	ngx_int_t sticky_sessions;

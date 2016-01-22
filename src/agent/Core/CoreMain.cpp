@@ -323,7 +323,7 @@ startListening() {
 	#endif
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
-		wo->serverFds[i] = createServer(addresses[i], 0, true,
+		wo->serverFds[i] = createServer(addresses[i], agentsOptions->getInt("socket_backlog"), true,
 			__FILE__, __LINE__);
 		#ifdef USE_SELINUX
 			resetSelinuxSocketContext();
@@ -1048,6 +1048,7 @@ setAgentsOptionsDefaults() {
 			inferDefaultGroup(options.get("default_user")));
 	}
 	options.setDefaultStrSet("core_addresses", defaultAddress);
+	options.setDefaultInt("socket_backlog", DEFAULT_SOCKET_BACKLOG);
 	options.setDefaultBool("multi_app", false);
 	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);

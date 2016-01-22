@@ -43,6 +43,12 @@ int generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev,
 
 
 	
+		ngx_conf_merge_value(conf->socket_backlog,
+			prev->socket_backlog,
+			NGX_CONF_UNSET);
+	
+
+	
 		ngx_conf_merge_value(conf->enabled,
 			prev->enabled,
 			NGX_CONF_UNSET);

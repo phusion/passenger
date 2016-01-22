@@ -83,6 +83,8 @@
 
 	#define DEFAULT_RUBY "ruby"
 
+	#define DEFAULT_SOCKET_BACKLOG 1024
+
 	#define DEFAULT_SPAWN_METHOD "smart"
 
 	#define DEFAULT_START_TIMEOUT 90000

@@ -168,6 +168,9 @@ struct ServerConfig {
 	const char *logFile;
 	const char *fileDescriptorLogFile;
 
+	/** Socket backlog for Passenger Core server socket */
+	unsigned int socketBacklog;
+
 	/** The maximum number of simultaneously alive application
 	 * instances. */
 	unsigned int maxPoolSize;
@@ -210,6 +213,7 @@ struct ServerConfig {
 		logLevel           = DEFAULT_LOG_LEVEL;
 		logFile            = NULL;
 		fileDescriptorLogFile = NULL;
+		socketBacklog      = DEFAULT_SOCKET_BACKLOG;
 		maxPoolSize        = DEFAULT_MAX_POOL_SIZE;
 		poolIdleTime       = DEFAULT_POOL_IDLE_TIME;
 		responseBufferHighWatermark = DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK;

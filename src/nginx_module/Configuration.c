@@ -86,6 +86,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->log_level = (ngx_int_t) NGX_CONF_UNSET;
     conf->log_file.data = NULL;
     conf->log_file.len = 0;
+    conf->socket_backlog = NGX_CONF_UNSET_UINT;
     conf->file_descriptor_log_file.data = NULL;
     conf->file_descriptor_log_file.len = 0;
     conf->data_buffer_dir.data = NULL;
@@ -150,6 +151,10 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
 
     if (conf->file_descriptor_log_file.len == 0) {
         conf->file_descriptor_log_file.data = (u_char *) "";
+    }
+
+    if (conf->socket_backlog == NGX_CONF_UNSET_UINT) {
+        conf->socket_backlog = DEFAULT_SOCKET_BACKLOG;
     }
 
     if (conf->data_buffer_dir.len == 0) {

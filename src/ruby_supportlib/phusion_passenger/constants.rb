@@ -44,6 +44,7 @@ module PhusionPassenger
     # Default config values
     DEFAULT_LOG_LEVEL = 3
     DEFAULT_INTEGRATION_MODE = "standalone"
+    DEFAULT_SOCKET_BACKLOG = 1024
     DEFAULT_RUBY = "ruby"
     DEFAULT_PYTHON = "python"
     DEFAULT_NODEJS = "node"

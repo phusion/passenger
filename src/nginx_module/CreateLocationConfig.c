@@ -42,6 +42,10 @@ void generated_set_conf_part(passenger_loc_conf_t  *conf) {
 
 
 	
+		conf->socket_backlog = NGX_CONF_UNSET;
+	
+
+	
 		conf->enabled = NGX_CONF_UNSET;
 	
 
