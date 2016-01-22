@@ -895,7 +895,7 @@ Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffe
 			req->logMessage("Status: " + toString(req->appResponse.statusCode));
 		}
 
-		if (req->appResponse.statusCode >= 500 && req->appResponse.statusCode <= 599) {
+		if (req->appResponse.statusCode >= 400 && req->appResponse.statusCode <= 599) {
 			// Log the request headers like Request headers: { header1: values1-concatenated, header2: values2-concatenated } (single line)
 			// Concatenation was already done by HeaderTable.h:insert (using a comma ',' for joining, or a semicolon ';' for Cookie headers
 			ServerKit::HeaderTable::Iterator it(req->headers);
