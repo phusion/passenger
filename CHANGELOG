@@ -5,7 +5,8 @@ Release 5.0.24
  * Fixes Solaris compilation. This was a regression due to the patch for GH-1643 in 5.0.22. Closes GH-1694, GH-1701.
  * Logs for [Union Station](https://www.unionstationapp.com) provide more information about request queueing. Closes GH-1633.
  * Also log HTTP headers to Union Station for HTTP 4xx responses (extends the header logging for HTTP 5xx that was added in 5.0.22)
- * Fixes cases where compilation failure of (optional) native utils was not reported. 
+ * Fixes cases where compilation failure of (optional) native utils was not reported.
+ * On Ruby, no longer traps SIGEXIT. This fixes errorneously setting `$ERROR_INFO` in `at_exit` callbacks. Closes GH-1730.
  * [Standalone] Fixes the default value of the `load_shell_envvars` option. It's supposed to be disabled by default, but due to a typo it was enabled by default.
 
 

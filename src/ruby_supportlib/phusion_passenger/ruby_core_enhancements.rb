@@ -130,7 +130,6 @@ module Signal
       result.delete("SEGV")
       result.delete("USR1")
       result.delete("IOT")
-      result.delete("EXIT")
     else
       result = Signal.list.dup
       result.delete("ALRM")
@@ -146,6 +145,7 @@ module Signal
     # Ruby engine.
     result.delete("STOP")
     result.delete("KILL")
+    result.delete("EXIT")
 
     return result
   end
