@@ -2,7 +2,7 @@ Release 5.0.24
 --------------
 
  * Fixes a crash when the new `force_max_concurrent_requests_per_process` option (5.0.22) was used for non-Node.js apps (e.g. Ruby). Closes GH-1720.
- * Fixes solaris compilation. This was a regression due to the patch for GH-1643 in 5.0.22. Closes GH-1694, GH-1701.
+ * Fixes Solaris compilation. This was a regression due to the patch for GH-1643 in 5.0.22. Closes GH-1694, GH-1701.
  * Logs for [Union Station](https://www.unionstationapp.com) provide more information about request queueing. Closes GH-1633.
  * Also log HTTP headers to Union Station for HTTP 4xx responses (extends the header logging for HTTP 5xx that was added in 5.0.22)
  * Fixes cases where compilation failure of (optional) native utils was not reported. 
