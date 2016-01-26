@@ -54,7 +54,7 @@ private:
 
 			do {
 				ret = ::write(watcher.fd, buffer.start, buffer.size());
-			} while (ret == -1 && errno == EAGAIN);
+			} while (ret == -1 && errno == EINTR);
 			if (ret == (ssize_t) buffer.size()) {
 				return Result(ret, false);
 			} else if (ret >= 0) {

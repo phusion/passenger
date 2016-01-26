@@ -1313,7 +1313,7 @@ getHighestFileDescriptor(bool asyncSignalSafe) {
 
 			do {
 				ret = read(p[0], u.data + bytesRead, sizeof(int) - bytesRead);
-			} while (ret == -1 && ret == EINTR);
+			} while (ret == -1 && errno == EINTR);
 			if (ret == -1) {
 				if (errno != EAGAIN) {
 					goto done;
