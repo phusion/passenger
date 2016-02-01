@@ -1,7 +1,7 @@
 Release 5.0.25
 --------------
 
-
+ * Fix a crash that occurs when using Nginx + HTTPS + Sub-requests. Closes GH-1724.
 
 
 Release 5.0.24
