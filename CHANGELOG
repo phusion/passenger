@@ -3,6 +3,7 @@ Release 5.0.25
 
  * Fixes a crash that occurs when using Nginx + HTTPS + Sub-requests. Closes GH-1724.
  * [Standalone] Makes the `--address` option work more reliably if the passed hostname may resolve to multiple addresses. For example, if you pass `--address localhost` then previous versions could fail because Passenger thinks it's an IPv6 address (::1) while Nginx thinks it's an IPv6 address (127.0.0.1). Hostname resolution is now done in a consistent manner.
+ * [Standalone] Adds IPv6 support to the builtin engine.
 
 
 Release 5.0.24
