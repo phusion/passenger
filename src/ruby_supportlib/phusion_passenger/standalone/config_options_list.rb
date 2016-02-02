@@ -41,7 +41,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 # - :type
 #   (default: :string)
 #   The value type. Supported types are: :string, :integer, :boolean, :path,
-#   :array, :map.
+#   :array, :map, :hostname.
 #   This is used for determining a default parser and for checking the value.
 #
 # - :type_desc
@@ -86,6 +86,7 @@ module PhusionPassenger
     SERVER_CONFIG_SPEC = [
       {
         :name      => :address,
+        :type      => :hostname,
         :type_desc => 'HOST',
         :short_cli => '-a',
         :default   => '0.0.0.0',
@@ -632,6 +633,8 @@ module PhusionPassenger
         'ARRAY'
       when :map
         'MAP'
+      when :hostname
+        'HOSTNAME'
       else
         nil
       end

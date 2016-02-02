@@ -24,6 +24,7 @@
 
 require 'optparse'
 require 'thread'
+require 'socket'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'standalone/command'
