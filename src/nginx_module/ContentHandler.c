@@ -742,7 +742,8 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
 
     PUSH_STATIC_STR("!~FLAGS: DC");
     #if (NGX_HTTP_SSL)
-        if (r->http_connection->ssl) {
+        if (r->http_connection != NULL /* happens in sub-requests */
+                && r->http_connection->ssl) {
             PUSH_STATIC_STR("S");
         }
     #endif
