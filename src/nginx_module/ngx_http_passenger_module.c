@@ -148,9 +148,11 @@ save_master_process_pid(ngx_cycle_t *cycle) {
  * This function is called after forking and just before exec()ing the watchdog.
  */
 static void
-starting_watchdog_after_fork(void *arg) {
-    ngx_cycle_t *cycle = (void *) arg;
-    char        *log_filename;
+starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
+    ngx_cycle_t *cycle = (void *) paramCycle;
+    PsgVariantMap *params = (void *) paramParams;
+
+    const char  *log_filename;
     FILE        *log_file;
     ngx_core_conf_t *ccf;
     ngx_uint_t   i;
@@ -161,23 +163,18 @@ starting_watchdog_after_fork(void *arg) {
      * Make sure that they're both redirected to the log file.
      */
     log_file = NULL;
-    if (cycle->new_log.file->name.len > 0) {
-        log_filename = ngx_str_null_terminate(&cycle->new_log.file->name);
-        log_file = fopen((const char *) log_filename, "a");
+    log_filename = (const char *) psg_variant_map_get_optional(params, "log_file");
+    if (log_filename == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
+                "no passenger log file configured, discarding log output");
+    } else {
+        log_file = fopen(log_filename, "a");
         if (log_file == NULL) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not open the error log file for writing");
+                    "could not open the passenger log file for writing, discarding log output");
         }
-        free(log_filename);
-    } else if (cycle->log != NULL && cycle->log->file->name.len > 0) {
-        log_filename = ngx_str_null_terminate(&cycle->log->file->name);
-        log_file = fopen((const char *) log_filename, "a");
-        if (log_file == NULL) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not open the error log file for writing");
-        }
-        free(log_filename);
     }
+
     if (log_file == NULL) {
         /* If the log file cannot be opened then we redirect stdout
          * and stderr to /dev/null, because if the user disconnects
@@ -185,6 +182,10 @@ starting_watchdog_after_fork(void *arg) {
          * any writes to stdout or stderr will result in an EIO error.
          */
         log_file = fopen("/dev/null", "w");
+        if (log_file == NULL) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                    "could not open /dev/null for logs, this will probably cause EIO errors");
+        }
     }
     if (log_file != NULL) {
         dup2(fileno(log_file), 1);
