@@ -343,7 +343,7 @@ module PhusionPassenger
         #
         # Furthermore, `rails server` defaults to setting the hostname to 'localhost'.
         # But the user almost certainly doesn't explicitly want it to resolve to an IPv6
-        # address because most tools work better with IPv6 and because `http://[::1]:3000`
+        # address because most tools work better with IPv4 and because `http://[::1]:3000`
         # just looks weird. So we special case 'localhost' and resolve it to 127.0.0.1.
         if hostname.downcase == 'localhost'
           '127.0.0.1'

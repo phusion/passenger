@@ -151,7 +151,7 @@ parseTcpSocketAddress(const StaticString &address, string &host, unsigned short 
 		));
 
 	} else {
-		// IPv6 address, e.g.:
+		// IPv4 address, e.g.:
 		// 127.0.0.1:3000
 		const char *sep = (const char *) memchr(hostAndPort.data(), ':', hostAndPort.size());
 		if (sep == NULL || hostAndPort.size() <= string::size_type(sep - hostAndPort.data()) + 2) {
