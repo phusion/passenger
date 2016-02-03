@@ -131,7 +131,7 @@ def create_static_library(target, objects)
 end
 
 def create_shared_library(target, objects, options_or_flags = nil)
-  if PlatformInfo.os_name == "macosx"
+  if PlatformInfo.os_name_simple == "macosx"
     shlib_flag = "-flat_namespace -bundle -undefined dynamic_lookup"
   else
     shlib_flag = "-shared"

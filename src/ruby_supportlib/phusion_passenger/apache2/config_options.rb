@@ -73,9 +73,9 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :desc => "The Node.js command to use."
   },
   {
-      :name => "PassengerMeteorAppSettings",
-      :type => :string,
-      :desc => "Settings file for (non-bundled) Meteor apps."
+    :name => "PassengerMeteorAppSettings",
+    :type => :string,
+    :desc => "Settings file for (non-bundled) Meteor apps."
   },
   {
     :name => "PassengerAppEnv",

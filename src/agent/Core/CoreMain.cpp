@@ -323,7 +323,7 @@ startListening() {
 	#endif
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
-		wo->serverFds[i] = createServer(addresses[i], 0, true,
+		wo->serverFds[i] = createServer(addresses[i], agentsOptions->getInt("socket_backlog"), true,
 			__FILE__, __LINE__);
 		#ifdef USE_SELINUX
 			resetSelinuxSocketContext();
@@ -790,7 +790,7 @@ static void
 abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process) {
 	// We are inside the ApplicationPool lock. Be very careful here.
 	WorkingObjects *wo = workingObjects;
-	P_NOTICE("Disconnecting long-running connections for process " <<
+	P_NOTICE("Checking whether to disconnect long-running connections for process " <<
 		process->getPid() << ", application " << process->getGroup()->getName());
 	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		wo->threadWorkingObjects[i].bgloop->safe->runLater(
@@ -1048,6 +1048,7 @@ setAgentsOptionsDefaults() {
 			inferDefaultGroup(options.get("default_user")));
 	}
 	options.setDefaultStrSet("core_addresses", defaultAddress);
+	options.setDefaultInt("socket_backlog", DEFAULT_SOCKET_BACKLOG);
 	options.setDefaultBool("multi_app", false);
 	options.setDefault("environment", DEFAULT_APP_ENV);
 	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);

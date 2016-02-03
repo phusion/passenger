@@ -47,6 +47,18 @@ int generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
 /* Calculate lengths */
 
 	
+		if (conf->socket_backlog != NGX_CONF_UNSET) {
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->socket_backlog);
+			len += sizeof("!~PASSENGER_SOCKET_BACKLOG: ") - 1;
+			len += end - int_buf;
+			len += sizeof("\r\n") - 1;
+		}
+	
+
+	
 		if (conf->ruby.data != NULL) {
 			len += sizeof("!~PASSENGER_RUBY: ") - 1;
 			len += conf->ruby.len;
@@ -355,6 +367,20 @@ if (buf == NULL) {
 	return 0;
 }
 
+
+	
+		if (conf->socket_backlog != NGX_CONF_UNSET) {
+			pos = ngx_copy(pos,
+				"!~PASSENGER_SOCKET_BACKLOG: ",
+				sizeof("!~PASSENGER_SOCKET_BACKLOG: ") - 1);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%d",
+				conf->socket_backlog);
+			pos = ngx_copy(pos, int_buf, end - int_buf);
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+		}
+	
 
 	
 		if (conf->ruby.data != NULL) {

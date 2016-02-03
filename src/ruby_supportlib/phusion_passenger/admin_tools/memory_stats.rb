@@ -118,7 +118,7 @@ module PhusionPassenger
       end
 
       def platform_provides_private_dirty_rss_information?
-        return os_name == "linux"
+        return os_name_simple == "linux"
       end
 
       # Returns whether root privileges are required in order to measure private dirty RSS.
@@ -138,8 +138,8 @@ module PhusionPassenger
       # if the system's RAM usage cannot be determined.
       def system_ram_usage
         @total_system_ram ||= begin
-          case os_name
-          when /linux/
+          case os_name_simple
+          when "linux"
             free_text = `free -k`
 
             free_text =~ %r{Mem:(.+)$}
@@ -151,7 +151,7 @@ module PhusionPassenger
             used = line.split(/ +/).first.to_i
 
             [total, used]
-          when /macosx/
+          when "macosx"
             vm_stat = `vm_stat`
             vm_stat =~ /page size of (\d+) bytes/
             page_size = $1
@@ -202,8 +202,8 @@ module PhusionPassenger
       end
 
     private
-      def os_name
-        return PlatformInfo.os_name
+      def os_name_simple
+        return PlatformInfo.os_name_simple
       end
 
       # Returns a list of Process objects that match the given search criteria.
@@ -219,14 +219,14 @@ module PhusionPassenger
       def list_processes(options)
         if options[:exe]
           name = options[:exe].sub(/.*\/(.*)/, '\1')
-          if os_name =~ /linux/
+          if os_name_simple == "linux"
             ps = "ps -C '#{name}'"
           else
             ps = "ps -A"
             options[:match] = Regexp.new(Regexp.escape(name))
           end
         elsif options[:name]
-          if os_name =~ /linux/
+          if os_name_simple == "linux"
             ps = "ps -C '#{options[:name]}'"
           else
             ps = "ps -A"
@@ -239,11 +239,11 @@ module PhusionPassenger
         end
 
         processes = []
-        case os_name
-        when /solaris/
+        case os_name_simple
+        when "solaris"
           ps_output = `#{ps} -o pid,ppid,nlwp,vsz,rss,pcpu,comm`
           threads_known = true
-        when /macosx/
+        when "macosx"
           ps_output = `#{ps} -w -o pid,ppid,vsz,rss,%cpu,command`
           threads_known = false
         else

@@ -44,7 +44,7 @@ module PhusionPassenger
     # distributions it is likely compatible with.
     # Returns nil if the operating system is not Linux.
     def self.linux_distro_tags
-      if os_name != "linux"
+      if os_name_simple != "linux"
         return nil
       end
       lsb_release = read_file("/etc/lsb-release")

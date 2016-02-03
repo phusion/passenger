@@ -182,7 +182,7 @@ AGENT_LDFLAGS << " -lselinux" if USE_SELINUX
 # Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).
 AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
 # Enable dead symbol elimination on OS X.
-AGENT_LDFLAGS << " -Wl,-dead_strip" if PlatformInfo.os_name == "macosx"
+AGENT_LDFLAGS << " -Wl,-dead_strip" if PlatformInfo.os_name_simple == "macosx"
 AGENT_LDFLAGS.strip!
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.

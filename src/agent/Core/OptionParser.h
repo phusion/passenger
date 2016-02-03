@@ -65,6 +65,8 @@ coreUsage() {
 	printf("      --api-listen ADDRESS  Listen on the given address for API commands.\n");
 	printf("                            The same syntax and limitations as with --listen\n");
 	printf("                            are applicable\n");
+	printf("      --socket-backlog      Override size of the socket backlog.\n");
+	printf("                            Default: %d\n", DEFAULT_SOCKET_BACKLOG);
 	printf("\n");
 	printf("Daemon options (optional):\n");
 	printf("      --pid-file PATH       Store the core's PID in the given file. The file\n");
@@ -252,6 +254,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 
 		authorizations.push_back(argv[i + 1]);
 		options.setStrSet("core_authorizations", authorizations);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--socket-backlog")) {
+		options.setInt("socket_backlog", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--no-user-switching")) {
 		options.setBool("user_switching", false);

@@ -23,6 +23,7 @@ passenger_user_switching off;
     passenger_analytics_log_user <%= current_user %>;
 <% end %>
 
+<%= nginx_http_option(:socket_backlog) %>
 <%= nginx_http_option(:python) %>
 <%= nginx_http_option(:nodejs) %>
 <%= nginx_http_option(:log_level) %>

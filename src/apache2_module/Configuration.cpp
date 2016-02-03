@@ -237,6 +237,7 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_root, root)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_ruby, defaultRuby)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_log_level, logLevel, unsigned int, 0)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_log_file, logFile)
+DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_socket_backlog, socketBacklog, unsigned int, 0)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_file_descriptor_log_file, fileDescriptorLogFile)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_max_pool_size, maxPoolSize, unsigned int, 1)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_passenger_pool_idle_time, poolIdleTime, unsigned int, 0)
@@ -403,6 +404,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Passenger log file."),
+	AP_INIT_TAKE1("PassengerSocketBacklog",
+		(Take1Func) cmd_passenger_socket_backlog,
+		NULL,
+		RSRC_CONF,
+		"Override size of the socket backlog."),
 	AP_INIT_TAKE1("PassengerFileDescriptorLogFile",
 		(Take1Func) cmd_passenger_file_descriptor_log_file,
 		NULL,

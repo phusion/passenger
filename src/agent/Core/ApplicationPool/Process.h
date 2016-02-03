@@ -483,6 +483,9 @@ public:
 	void forceMaxConcurrency(int value) {
 		assert(value >= 0);
 		concurrency = value;
+		for (unsigned i = 0; i < sessionSocketCount; i++) {
+			sessionSockets[i]->concurrency = concurrency;
+		}
 	}
 
 	void shutdownNotRequired() {

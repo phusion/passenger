@@ -166,28 +166,28 @@ module PhusionPassenger
           check_hash_map(flags)
       end
 
-      if os_name =~ /solaris/
+      if os_name_simple == "solaris"
         if send("#{cc_or_cxx}_is_sun_studio?")
           flags << '-mt'
         else
           flags << '-pthreads'
         end
-        if os_name =~ /solaris2\.11/
+        if os_name_full =~ /solaris2\.11/
           # skip the _XOPEN_SOURCE and _XPG4_2 definitions in later versions of Solaris / OpenIndiana
           flags << '-D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
         else
           flags << '-D_XOPEN_SOURCE=500 -D_XPG4_2 -D__EXTENSIONS__ -D__SOLARIS__ -D_FILE_OFFSET_BITS=64'
-          flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if os_name =~ /solaris2\.9/
+          flags << '-D__SOLARIS9__ -DBOOST__STDC_CONSTANT_MACROS_DEFINED' if os_name_full =~ /solaris2\.9/
         end
-        flags << '-DBOOST_HAS_STDINT_H' unless os_name =~ /solaris2\.9/
+        flags << '-DBOOST_HAS_STDINT_H' unless os_name_full =~ /solaris2\.9/
         if send("#{cc_or_cxx}_is_sun_studio?")
           flags << '-xtarget=ultra' if RUBY_PLATFORM =~ /sparc/
         else
           flags << '-mcpu=ultrasparc' if RUBY_PLATFORM =~ /sparc/
         end
-      elsif os_name =~ /openbsd/
+      elsif os_name_simple == "openbsd"
         flags << '-DBOOST_HAS_STDINT_H -D_GLIBCPP__PTHREADS'
-      elsif os_name =~ /aix/
+      elsif os_name_simple == "aix"
         flags << '-pthread'
         flags << '-DOXT_DISABLE_BACKTRACES'
       elsif RUBY_PLATFORM =~ /(sparc-linux|arm-linux|^arm.*-linux|sh4-linux)/
@@ -204,7 +204,7 @@ module PhusionPassenger
     def self.portability_c_or_cxx_ldflags(cc_or_cxx)
       result = ''
       result << cxx_11_flag if cc_or_cxx == :cxx && cxx_11_flag
-      if os_name =~ /solaris/
+      if os_name_simple == "solaris"
         result << ' -lxnet -lsocket -lnsl -lpthread'
       else
         result << ' -lpthread'

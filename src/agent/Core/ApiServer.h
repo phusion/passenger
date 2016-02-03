@@ -61,6 +61,8 @@ public:
 	string body;
 	Json::Value jsonBody;
 	Authorization authorization;
+	unsigned int controllerStatesGathered;
+	vector<Json::Value> controllerStates;
 
 	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Core::ApiServer::Request);
 };
@@ -172,30 +174,56 @@ private:
 		}
 	}
 
-	static void inspectControllerState(Controller *controller, Json::Value *json) {
-		*json = controller->inspectStateAsJson();
+	void gatherControllerState(Client *client, Request *req,
+		Controller *controller, unsigned int i)
+	{
+		Json::Value state = controller->inspectStateAsJson();
+		getContext()->libev->runLater(boost::bind(&ApiServer::controllerStateGathered,
+			this, client, req, i, state));
+	}
+
+	void controllerStateGathered(Client *client, Request *req,
+		unsigned int i, Json::Value state)
+	{
+		if (req->ended()) {
+			unrefRequest(req, __FILE__, __LINE__);
+			return;
+		}
+
+		req->controllerStatesGathered++;
+		req->controllerStates[i] = state;
+
+		if (req->controllerStatesGathered == controllers.size()) {
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+
+			Json::Value response;
+			response["threads"] = (Json::UInt) controllers.size();
+
+			for (unsigned int i = 0; i < controllers.size(); i++) {
+				string key = "thread" + toString(i + 1);
+				response[key] = req->controllerStates[i];
+			}
+
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, response.toStyledString()));
+			if (!req->ended()) {
+				Request *req2 = req;
+				endRequest(&client, &req2);
+			}
+		}
+
+		unrefRequest(req, __FILE__, __LINE__);
 	}
 
 	void processServerStatus(Client *client, Request *req) {
 		if (authorizeStateInspectionOperation(this, client, req)) {
-			HeaderTable headers;
-			headers.insert(req->pool, "Content-Type", "application/json");
-
-			Json::Value doc;
-			doc["threads"] = (Json::UInt) controllers.size();
+			req->controllerStates.resize(controllers.size());
 			for (unsigned int i = 0; i < controllers.size(); i++) {
-				Json::Value json;
-				string key = "thread" + toString(i + 1);
-
-				controllers[i]->getContext()->libev->runSync(boost::bind(
-					inspectControllerState, controllers[i], &json));
-				doc[key] = json;
-			}
-
-			writeSimpleResponse(client, 200, &headers,
-				psg_pstrdup(req->pool, doc.toStyledString()));
-			if (!req->ended()) {
-				endRequest(&client, &req);
+				refRequest(req, __FILE__, __LINE__);
+				controllers[i]->getContext()->libev->runLater(boost::bind(
+					&ApiServer::gatherControllerState, this,
+					client, req, controllers[i], i));
 			}
 		} else {
 			apiServerRespondWith401(this, client, req);
@@ -407,37 +435,16 @@ private:
 		}
 	}
 
-	static void getControllerConfig(Controller *controller, Json::Value *json) {
-		*json = controller->getConfigAsJson();
-	}
-
 	void processConfig(Client *client, Request *req) {
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
 			}
 
-			HeaderTable headers;
-			string logFile = getLogFile();
-			string fileDescriptorLogFile = getFileDescriptorLogFile();
-
-			headers.insert(req->pool, "Content-Type", "application/json");
-			Json::Value doc;
-			controllers[0]->getContext()->libev->runSync(boost::bind(
-				getControllerConfig, controllers[0], &doc));
-			doc["log_level"] = getLogLevel();
-			if (!logFile.empty()) {
-				doc["log_file"] = logFile;
-			}
-			if (!fileDescriptorLogFile.empty()) {
-				doc["file_descriptor_log_file"] = fileDescriptorLogFile;
-			}
-
-			writeSimpleResponse(client, 200, &headers,
-				psg_pstrdup(req->pool, doc.toStyledString()));
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
+			refRequest(req, __FILE__, __LINE__);
+			controllers[0]->getContext()->libev->runLater(boost::bind(
+				&ApiServer::processConfig_getControllerConfig, this,
+				client, req, controllers[0]));
 		} else if (req->method == HTTP_PUT) {
 			if (!authorizeAdminOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
@@ -448,6 +455,46 @@ private:
 		} else {
 			apiServerRespondWith405(this, client, req);
 		}
+	}
+
+	void processConfig_getControllerConfig(Client *client, Request *req,
+		Controller *controller)
+	{
+		Json::Value config = controller->getConfigAsJson();
+		getContext()->libev->runLater(boost::bind(
+			&ApiServer::processConfig_controllerConfigGathered, this,
+			client, req, controller, config));
+	}
+
+	void processConfig_controllerConfigGathered(Client *client, Request *req,
+		Controller *controller, Json::Value config)
+	{
+		if (req->ended()) {
+			unrefRequest(req, __FILE__, __LINE__);
+			return;
+		}
+
+		HeaderTable headers;
+		string logFile = getLogFile();
+		string fileDescriptorLogFile = getFileDescriptorLogFile();
+
+		headers.insert(req->pool, "Content-Type", "application/json");
+		config["log_level"] = getLogLevel();
+		if (!logFile.empty()) {
+			config["log_file"] = logFile;
+		}
+		if (!fileDescriptorLogFile.empty()) {
+			config["file_descriptor_log_file"] = fileDescriptorLogFile;
+		}
+
+		writeSimpleResponse(client, 200, &headers,
+			psg_pstrdup(req->pool, config.toStyledString()));
+		if (!req->ended()) {
+			Request *req2 = req;
+			endRequest(&client, &req2);
+		}
+
+		unrefRequest(req, __FILE__, __LINE__);
 	}
 
 	static void configureController(Controller *controller, Json::Value json) {
@@ -575,12 +622,18 @@ protected:
 		return ServerKit::Channel::Result(buffer.size(), false);
 	}
 
+	virtual void reinitializeRequest(Client *client, Request *req) {
+		ParentClass::reinitializeRequest(client, req);
+		req->controllerStatesGathered = 0;
+	}
+
 	virtual void deinitializeRequest(Client *client, Request *req) {
 		req->body.clear();
 		if (!req->jsonBody.isNull()) {
 			req->jsonBody = Json::Value();
 		}
 		req->authorization = Authorization();
+		req->controllerStates.clear();
 		ParentClass::deinitializeRequest(client, req);
 	}
 

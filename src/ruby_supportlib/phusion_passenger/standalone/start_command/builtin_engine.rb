@@ -130,6 +130,7 @@ module PhusionPassenger
           # so we know @apps always has 1 app.
           command << " --listen #{listen_address(@apps[0])}"
           command << " --no-graceful-exit"
+          add_param(command, :socket_backlog, "--socket-backlog")
           add_param(command, :environment, "--environment")
           add_param(command, :app_type, "--app-type")
           add_param(command, :startup_file, "--startup-file")

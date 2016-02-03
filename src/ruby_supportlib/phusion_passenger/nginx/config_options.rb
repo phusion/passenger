@@ -87,6 +87,12 @@
 
 LOCATION_CONFIGURATION_OPTIONS = [
   {
+    :name      => 'passenger_socket_backlog',
+    :type      => :integer,
+    :context   => [:main],
+    :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
+  },
+  {
     :name     => 'passenger_enabled',
     :context  => [:srv, :loc, :lif],
     :type     => :flag,

@@ -1,6 +1,6 @@
 ServerRoot "<%= @server_root %>"
 Listen 127.0.0.1:<%= @port %>
-<% if PhusionPassenger::PlatformInfo.os_name =~ /freebsd/ %>
+<% if PhusionPassenger::PlatformInfo.os_name_simple == "freebsd" %>
 	Mutex default:/tmp
 	AcceptFilter http none
 	AcceptFilter https none

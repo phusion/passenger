@@ -171,26 +171,39 @@ private:
 		}
 	}
 
-	static void inspectControllerState(Controller *controller, Json::Value *json) {
-		*json = controller->inspectStateAsJson();
+	void gatherControllerState(Client *client, Request *req, Controller *controller) {
+		Json::Value state = controller->inspectStateAsJson();
+		getContext()->libev->runLater(boost::bind(&ApiServer::controllerStateGathered,
+			this, client, req, state));
+	}
+
+	void controllerStateGathered(Client *client, Request *req, Json::Value state) {
+		if (req->ended()) {
+			unrefRequest(req, __FILE__, __LINE__);
+			return;
+		}
+
+		HeaderTable headers;
+		headers.insert(req->pool, "Content-Type", "application/json");
+
+		writeSimpleResponse(client, 200, &headers,
+			psg_pstrdup(req->pool, state.toStyledString()));
+		if (!req->ended()) {
+			Request *req2 = req;
+			endRequest(&client, &req2);
+		}
+
+		unrefRequest(req, __FILE__, __LINE__);
 	}
 
 	void processServerStatus(Client *client, Request *req) {
 		if (req->method != HTTP_GET) {
 			apiServerRespondWith405(this, client, req);
 		} else if (authorizeStateInspectionOperation(this, client, req)) {
-			HeaderTable headers;
-			headers.insert(req->pool, "Content-Type", "text/json");
-
-			Json::Value json;
-			controller->getContext()->libev->runSync(boost::bind(
-				inspectControllerState, controller, &json));
-
-			writeSimpleResponse(client, 200, &headers,
-				psg_pstrdup(req->pool, json.toStyledString()));
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
+			refRequest(req, __FILE__, __LINE__);
+			controller->getContext()->libev->runLater(boost::bind(
+				&ApiServer::gatherControllerState, this,
+				client, req, controller));
 		} else {
 			apiServerRespondWith401(this, client, req);
 		}

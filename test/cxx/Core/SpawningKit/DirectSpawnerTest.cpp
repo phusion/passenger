@@ -70,7 +70,7 @@ namespace tut {
 		EVENTUALLY(5,
 			try {
 				spawner.spawn(options);
-				fail("Timeout expected");
+				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				ensure_equals(e.getErrorKind(),
 					SpawnException::APP_STARTUP_TIMEOUT);

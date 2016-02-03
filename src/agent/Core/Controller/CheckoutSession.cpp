@@ -54,7 +54,7 @@ Controller::checkoutSession(Client *client, Request *req) {
 	CC_BENCHMARK_POINT(client, req, BM_BEFORE_CHECKOUT);
 	SKC_TRACE(client, 2, "Checking out session: appRoot=" << options.appRoot);
 	req->state = Request::CHECKING_OUT_SESSION;
-	req->beginStopwatchLog(&req->stopwatchLogs.getFromPool, "get from pool");
+
 	if (req->requestBodyBuffering) {
 		assert(!req->bodyBuffer.isStarted());
 	} else {
@@ -70,7 +70,7 @@ Controller::checkoutSession(Client *client, Request *req) {
 	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		req->timeBeforeAccessingApplicationPool = ev_now(getLoop());
 	#endif
-	appPool->asyncGet(options, callback);
+	appPool->asyncGet(options, callback, true, req->useUnionStation() ? &req->stopwatchLogs.getFromPool : NULL);
 	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		if (!req->timedAppPoolGet) {
 			req->timedAppPoolGet = true;

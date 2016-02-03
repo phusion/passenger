@@ -83,7 +83,7 @@ module PhusionPassenger
       else
         ruby_arch = cpu_architectures[0]
       end
-      return "#{ruby_engine}-#{ruby_ext_version}-#{ruby_arch}-#{os_name}"
+      return "#{ruby_engine}-#{ruby_ext_version}-#{ruby_arch}-#{os_name_simple}"
     end
     memoize :ruby_extension_binary_compatibility_id
 
@@ -109,7 +109,7 @@ module PhusionPassenger
     #   compiling a binary with the system's C++ compiler with its default
     #   options.
     def self.cxx_binary_compatibility_id
-      if os_name == "macosx"
+      if os_name_simple == "macosx"
         # RUBY_PLATFORM gives us the kernel version, but we want
         # the OS X version.
         os_version_string = `sw_vers -productVersion`.strip
@@ -132,7 +132,7 @@ module PhusionPassenger
         os_runtime = nil
       end
 
-      return [os_arch, os_name, os_runtime].compact.join("-")
+      return [os_arch, os_name_simple, os_runtime].compact.join("-")
     end
     memoize :cxx_binary_compatibility_id
   end

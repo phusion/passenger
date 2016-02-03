@@ -424,7 +424,7 @@ module PhusionPassenger
 
   private
     def self.locate_ruby_tool_by_basename(name)
-      if os_name == "macosx" &&
+      if os_name_simple == "macosx" &&
          ruby_command =~ %r(\A/System/Library/Frameworks/Ruby.framework/Versions/.*?/usr/bin/ruby\Z)
         # On OS X we must look for Ruby binaries in /usr/bin.
         # RubyGems puts executables (e.g. 'rake') in there, not in
