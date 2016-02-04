@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2015 Phusion Holding B.V.
+#  Copyright (c) 2015-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -417,6 +417,20 @@ module PhusionPassenger
         :desc      => 'Disable turbocaching',
         :cli_parser => lambda do |options, value|
           options[:turbocaching] = false
+        end
+      },
+      {
+        :name      => :unlimited_concurrency_paths,
+        :type      => :array,
+        :type_desc => 'URI-PATH',
+        :cli       => '--unlimited-concurrency-path',
+        :desc      => "Specify URI path which supports unlimited\n" \
+                      "concurrency. Specify multiple times for\n" \
+                      "multiple paths",
+        :default   => [],
+        :cli_parser => lambda do |options, value|
+          options[:unlimited_concurrency_paths] ||= []
+          options[:unlimited_concurrency_paths] << value
         end
       },
       {

@@ -56,3 +56,10 @@ passenger_enabled on;
 <%= nginx_option(app, :memory_limit) %>
 <%= nginx_option(app, :max_request_time) %>
 <%= nginx_option(app, :debugger) %>
+
+<% app[:unlimited_concurrency_paths].each do |path| %>
+    location ~ ^<%= path %>(/.*|$) {
+        passenger_app_group_name '<%= app[:root] %>#unlimited_concurrency';
+        passenger_force_max_concurrent_requests_per_process 0;
+    }
+<% end %>
