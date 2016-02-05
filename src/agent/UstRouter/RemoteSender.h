@@ -611,9 +611,9 @@ private:
 
 		if (!downServers.empty()) {
 			if (upServers.empty()) {
-				scheduleNextCheckup(5 * 60);
+				scheduleNextCheckup(1 * 60);
 			} else {
-				scheduleNextCheckup(60 * 60);
+				scheduleNextCheckup(5 * 60);
 			}
 		}
 
