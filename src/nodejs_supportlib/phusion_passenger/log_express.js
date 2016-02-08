@@ -66,7 +66,7 @@ exports.initPreLoad = function() {
 				express.application.useOrig.call(this, logException);
 			}
 
-			express.application.useOrig.apply(this, arguments);
+			return express.application.useOrig.apply(this, arguments);
 		}
 	} catch (e) {
 		log.error("Unable to instrument Express due to error: " + e);
