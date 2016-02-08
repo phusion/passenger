@@ -61,10 +61,10 @@ Pool::asyncGet(const Options &options, const GetCallback &callback, bool lockNow
 			char queueMaxStr[10];
 			int queueMax = existingGroup->options.maxRequestQueueSize;
 			if (queueMax > 0) {
-				snprintf(queueMaxStr, 10, "%d", queueMax);
+				snprintf(queueMaxStr, sizeof(queueMaxStr), "%d", queueMax);
 			}
 			char message[50];
-			snprintf(message, 100, "queue: %zu / %s, spawning: %s", existingGroup->getWaitlist.size(),
+			snprintf(message, sizeof(message), "queue: %zu / %s, spawning: %s", existingGroup->getWaitlist.size(),
 					(queueMax == 0 ? "inf" : queueMaxStr),
 					(existingGroup->processesBeingSpawned == 0 ? "no" : "yes"));
 			data["message"] = message;
