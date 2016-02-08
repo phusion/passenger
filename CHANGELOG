@@ -6,6 +6,7 @@ Release 5.0.25
  * Removes packages for Ubuntu 15.04 Vivid and Debian 6. Ubuntu 15.04 and Debian 6 are still supported, we just don't supply packages for them anymore. If you are an Ubuntu 15.04 or Debian 6 user and you want to use Passenger >= 5.0.25, then please upgrade your distribution, or install Passenger from RubyGems/tarball.
  * Fixes a crash that occurs when using Nginx + HTTPS + Sub-requests. Closes GH-1724.
  * Fixes a crash that occurs when using Nginx + syslog and a logfile for Passenger. Also fixes edge cases where the Nginx logpath would override the Passenger logpath. Closes GH-1514 (again).
+ * [Standalone] Don't reject the value 0 (meaning no limit) for `--max-request-queue-size`. Closes GH-1743.
  * [Standalone] Makes the `--address` option work more reliably if the passed hostname may resolve to multiple addresses. For example, if you pass `--address localhost` then previous versions could fail because Passenger thinks it's an IPv6 address (::1) while Nginx thinks it's an IPv6 address (127.0.0.1). Hostname resolution is now done in a consistent manner.
  * [Standalone] Adds the `--unlimited-concurrency-path` configuration option.
  * [Standalone] Adds IPv6 support to the builtin engine.
