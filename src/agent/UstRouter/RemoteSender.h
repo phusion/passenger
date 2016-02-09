@@ -596,6 +596,7 @@ private:
 		bool done = false;
 		bool accepted = false;
 		bool rejected = false;
+		bool upServersEmpty;
 
 		while (!done && !upServers.empty()) {
 			// Pick first available server and put it on the back of the list
@@ -636,10 +637,15 @@ private:
 		} else {
 			packetsDropped++;
 		}
+
+		upServersEmpty = upServers.empty();
+
 		l.unlock();
 
 		if (!accepted && !rejected) {
-			assert(upServers.empty());
+			assert(upServersEmpty);
+			(void) upServersEmpty; // Avoid compiler warning
+
 			/* If all servers went down then all items in the queue will be
 			 * effectively dropped until after the next checkup has detected
 			 * servers that are up.
