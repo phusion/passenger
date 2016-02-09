@@ -56,6 +56,12 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
+#ifdef PASSENGER_IS_ENTERPRISE
+	#define UST_ROUTER_CLIENT_DESCRIPTION PROGRAM_NAME " Enterprise " PASSENGER_VERSION
+#else
+	#define UST_ROUTER_CLIENT_DESCRIPTION PROGRAM_NAME " " PASSENGER_VERSION
+#endif
+
 
 class RemoteSender {
 private:
@@ -370,6 +376,11 @@ private:
 				CURLFORM_PTRNAME, "category",
 				CURLFORM_PTRCONTENTS, item.category.c_str(),
 				CURLFORM_CONTENTSLENGTH, (long) item.category.size(),
+				CURLFORM_END);
+			curl_formadd(&post, &last,
+				CURLFORM_PTRNAME, "client_description",
+				CURLFORM_PTRCONTENTS, UST_ROUTER_CLIENT_DESCRIPTION,
+				CURLFORM_CONTENTSLENGTH, (long) sizeof(UST_ROUTER_CLIENT_DESCRIPTION),
 				CURLFORM_END);
 			if (item.compressed) {
 				base64_data = modp::b64_encode(item.data);
