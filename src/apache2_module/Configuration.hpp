@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -194,6 +194,7 @@ struct ServerConfig {
 	string dataBufferDir;
 	string instanceRegistryDir;
 
+	bool unionStationSupport;
 	string unionStationGatewayAddress;
 	int unionStationGatewayPort;
 	string unionStationGatewayCert;
@@ -220,6 +221,7 @@ struct ServerConfig {
 		statThrottleRate   = DEFAULT_STAT_THROTTLE_RATE;
 		userSwitching      = true;
 		defaultUser        = DEFAULT_WEB_APP_USER;
+		unionStationSupport        = false;
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
 		unionStationGatewayPort    = DEFAULT_UNION_STATION_GATEWAY_PORT;
 		unionStationGatewayCert    = string();

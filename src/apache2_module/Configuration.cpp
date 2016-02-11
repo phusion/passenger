@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -41,10 +41,11 @@
 #include <Constants.h>
 #include <UnionStationFilterSupport.h>
 
-/* The APR headers must come after the Passenger headers. See Hooks.cpp
+/* The APR/Apache headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
  */
 #include <apr_strings.h>
+#include <http_core.h>
 
 using namespace Passenger;
 
@@ -226,6 +227,54 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_THREEWAY_CONFIG(bufferResponse);
 	/*************************************/
 	return config;
+}
+
+static void
+postprocessDirConfig(server_rec *s, core_dir_config *core_dconf,
+	DirConfig *psg_dconf, bool isTopLevel = false)
+{
+	if (psg_dconf->unionStationSupport == DirConfig::ENABLED) {
+		serverConfig.unionStationSupport = true;
+	}
+}
+
+void
+passenger_postprocess_config(server_rec *s) {
+	core_server_config *sconf;
+	core_dir_config *core_dconf;
+	DirConfig *psg_dconf;
+	int nelts;
+    ap_conf_vector_t **elts;
+    int i;
+
+	serverConfig.finalize();
+
+	for (; s != NULL; s = s->next) {
+		sconf = (core_server_config *) ap_get_core_module_config(s->module_config);
+		core_dconf = (core_dir_config *) ap_get_core_module_config(s->lookup_defaults);
+		psg_dconf = (DirConfig *) ap_get_module_config(s->lookup_defaults, &passenger_module);
+		postprocessDirConfig(s, core_dconf, psg_dconf, true);
+
+		nelts = sconf->sec_dir->nelts;
+		elts  = (ap_conf_vector_t **) sconf->sec_dir->elts;
+		for (i = 0; i < nelts; ++i) {
+			core_dconf = (core_dir_config *) ap_get_core_module_config(elts[i]);
+			psg_dconf = (DirConfig *) ap_get_module_config(elts[i], &passenger_module);
+			if (core_dconf != NULL && psg_dconf != NULL) {
+				postprocessDirConfig(s, core_dconf, psg_dconf);
+			}
+		}
+
+		nelts = sconf->sec_url->nelts;
+		elts  = (ap_conf_vector_t **) sconf->sec_url->elts;
+		for (i = 0; i < nelts; ++i) {
+			core_dconf = (core_dir_config *) ap_get_core_module_config(elts[i]);
+			psg_dconf = (DirConfig *) ap_get_module_config(elts[i], &passenger_module);
+			if (core_dconf != NULL && psg_dconf != NULL) {
+				postprocessDirConfig(s, core_dconf, psg_dconf);
+			}
+		}
+	}
 }
 
 
