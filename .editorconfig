@@ -68,50 +68,40 @@ indent_style = tab
 indent_size = 4
 trim_trailing_whitespace = true
 
-[ext/nginx/*.c]
+[src/nginx_module/*.c]
 indent_style = space
 indent_size = 4
 
-[ext/nginx/*.h]
+[src/nginx_module/*.h]
 indent_style = space
 indent_size = 4
 
-[ext/libev/*.c]
+[src/cxx_supportlib/vendor-modified/libev/*.c]
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = false
 
-[ext/libev/*.h]
+[src/cxx_supportlib/vendor-modified/libev/*.h]
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = false
 
-[ext/libeio/*.c]
+[src/cxx_supportlib/vendor-copy/libuv/src/*.c]
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = false
 
-[ext/libeio/*.h]
+[src/cxx_supportlib/vendor-copy/libuv/src/*.h]
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = false
 
-[ext/libuv/src/*.c]
+[src/cxx_supportlib/vendor-copy/libuv/src/unix/*.c]
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = false
 
-[ext/libuv/src/*.h]
-indent_style = space
-indent_size = 2
-trim_trailing_whitespace = false
-
-[ext/libuv/src/unix/*.c]
-indent_style = space
-indent_size = 2
-trim_trailing_whitespace = false
-
-[ext/libuv/src/unix/*.h]
+[src/cxx_supportlib/vendor-copy/libuv/src/unix/*.h]
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = false

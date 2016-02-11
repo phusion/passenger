@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (c) 2010-2015 Phusion Holding B.V.
+ * Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,6 +55,7 @@ typedef struct {
     ngx_str_t    default_group;
     ngx_str_t    analytics_log_user;
     ngx_str_t    analytics_log_group;
+    ngx_int_t    union_station_support;
     ngx_str_t    union_station_gateway_address;
     ngx_uint_t   union_station_gateway_port;
     ngx_str_t    union_station_gateway_cert;
@@ -69,6 +70,7 @@ void *passenger_create_main_conf(ngx_conf_t *cf);
 char *passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer);
 void *passenger_create_loc_conf(ngx_conf_t *cf);
 char *passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
+ngx_int_t passenger_postprocess_config(ngx_conf_t *cf);
 
 #endif /* _PASSENGER_NGINX_CONFIGURATION_H_ */
 

@@ -42,9 +42,12 @@ typedef enum {
 
 typedef void PsgWatchdogLauncher;
 typedef void PsgVariantMap;
-typedef void (*PsgAfterForkCallback)(void *);
+typedef void (*PsgAfterForkCallback)(void *, void *);
 
 PsgVariantMap *psg_variant_map_new();
+const char *
+psg_variant_map_get_optional(PsgVariantMap *m,
+	const char *name);
 void psg_variant_map_set(PsgVariantMap *m,
 	const char *name,
 	const char *value,

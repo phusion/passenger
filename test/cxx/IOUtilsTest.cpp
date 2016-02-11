@@ -802,9 +802,41 @@ namespace tut {
 		ensure_equals(host, "127.0.0.1");
 		ensure_equals(port, 80);
 
+		parseTcpSocketAddress("tcp://[::1]:80", host, port);
+		ensure_equals(host, "::1");
+		ensure_equals(port, 80);
+
 		try {
 			parseTcpSocketAddress("tcp://", host, port);
-			fail("ArgumentException expected");
+			fail("ArgumentException expected (1)");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
+
+		try {
+			parseTcpSocketAddress("tcp://127.0.0.1", host, port);
+			fail("ArgumentException expected (2)");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
+
+		try {
+			parseTcpSocketAddress("tcp://127.0.0.1:", host, port);
+			fail("ArgumentException expected (3)");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
+
+		try {
+			parseTcpSocketAddress("tcp://[::1]", host, port);
+			fail("ArgumentException expected (4)");
+		} catch (const ArgumentException &e) {
+			// Pass.
+		}
+
+		try {
+			parseTcpSocketAddress("tcp://[::1]:", host, port);
+			fail("ArgumentException expected (5)");
 		} catch (const ArgumentException &e) {
 			// Pass.
 		}

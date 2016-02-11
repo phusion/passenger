@@ -56,6 +56,12 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
+#ifdef PASSENGER_IS_ENTERPRISE
+	#define UST_ROUTER_CLIENT_DESCRIPTION PROGRAM_NAME " Enterprise " PASSENGER_VERSION
+#else
+	#define UST_ROUTER_CLIENT_DESCRIPTION PROGRAM_NAME " " PASSENGER_VERSION
+#endif
+
 
 class RemoteSender {
 private:
@@ -371,6 +377,11 @@ private:
 				CURLFORM_PTRCONTENTS, item.category.c_str(),
 				CURLFORM_CONTENTSLENGTH, (long) item.category.size(),
 				CURLFORM_END);
+			curl_formadd(&post, &last,
+				CURLFORM_PTRNAME, "client_description",
+				CURLFORM_PTRCONTENTS, UST_ROUTER_CLIENT_DESCRIPTION,
+				CURLFORM_CONTENTSLENGTH, (long) sizeof(UST_ROUTER_CLIENT_DESCRIPTION),
+				CURLFORM_END);
 			if (item.compressed) {
 				base64_data = modp::b64_encode(item.data);
 				curl_formadd(&post, &last,
@@ -503,7 +514,7 @@ private:
 			P_ERROR(e.what());
 			// DNS errors tend to be temporary, so retry
 			// after a short timeout.
-			scheduleNextCheckup(60);
+			scheduleNextCheckup(1 * 60);
 			// Take note of the error, but do not change the server
 			// list so that the RemoteSender can keep working with
 			// the last known server list.
@@ -528,12 +539,25 @@ private:
 		}
 		P_INFO(upServers.size() << " Union Station gateway servers are up");
 
-		if (upServers.empty()) {
-			scheduleNextCheckup(5 * 60);
-		} else if (!downServers.empty()) {
-			scheduleNextCheckup(60 * 60);
+		if (downServers.empty()) {
+			if (upServers.empty()) {
+				// The DNS lookup was successful, but returned no results.
+				// This is probably some kind of DNS misconfiguration which
+				// the infrastructure team is working on, so we check back
+				// in a short while. It may not help because DNS queries are
+				// cached, but it's better than not trying.
+				scheduleNextCheckup(1 * 60);
+			} else {
+				// If all gateways are healthy then the list of gateways
+				// is unlikely to change, so schedule the next checkup
+				// in 3 hours.
+				scheduleNextCheckup(3 * 60 * 60);
+			}
 		} else {
-			scheduleNextCheckup(3 * 60 * 60);
+			// If some gateways are down then the infrastructure team
+			// is likely already working on the problem, so we check
+			// back in 1 minute.
+			scheduleNextCheckup(1 * 60);
 		}
 
 		boost::lock_guard<boost::mutex> l(syncher);
@@ -583,6 +607,7 @@ private:
 		bool done = false;
 		bool accepted = false;
 		bool rejected = false;
+		bool upServersEmpty;
 
 		while (!done && !upServers.empty()) {
 			// Pick first available server and put it on the back of the list
@@ -610,11 +635,10 @@ private:
 		}
 
 		if (!downServers.empty()) {
-			if (upServers.empty()) {
-				scheduleNextCheckup(5 * 60);
-			} else {
-				scheduleNextCheckup(60 * 60);
-			}
+			// If some gateways are down then the infrastructure team
+			// is likely already working on the problem, so we check
+			// back in 1 minute.
+			scheduleNextCheckup(1 * 60);
 		}
 
 		if (accepted) {
@@ -624,10 +648,15 @@ private:
 		} else {
 			packetsDropped++;
 		}
+
+		upServersEmpty = upServers.empty();
+
 		l.unlock();
 
 		if (!accepted && !rejected) {
-			assert(upServers.empty());
+			assert(upServersEmpty);
+			(void) upServersEmpty; // Avoid compiler warning
+
 			/* If all servers went down then all items in the queue will be
 			 * effectively dropped until after the next checkup has detected
 			 * servers that are up.

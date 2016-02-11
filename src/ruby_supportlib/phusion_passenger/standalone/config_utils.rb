@@ -216,7 +216,7 @@ module PhusionPassenger
     private
       def config_type_supported_in_envvar?(type)
         type == :string || type == :integer || type == :boolean ||
-          type == :path
+          type == :path || type == :hostname
       end
 
       def parse_config_value(spec_item, value, base_dir)
@@ -251,6 +251,12 @@ module PhusionPassenger
           else
             raise ConfigLoadError, "map expected"
           end
+        when :hostname
+          begin
+            resolve_hostname(value)
+          rescue SocketError => e
+            raise ConfigLoadError, "hostname #{value} cannot be resolved: #{e}"
+          end
         else
           raise ArgumentError, "Unsupported type #{spec_item[:type]}"
         end
@@ -258,7 +264,7 @@ module PhusionPassenger
 
       def make_long_cli_switch(spec_item)
         case spec_item[:type]
-        when :string, :integer, :path, :array, :map
+        when :string, :integer, :path, :array, :map, :hostname
           "#{spec_item[:cli]} #{spec_item[:type_desc]}"
         when :boolean
           spec_item[:cli]
@@ -270,7 +276,7 @@ module PhusionPassenger
 
       def determine_cli_switch_type(spec_item)
         case spec_item[:type]
-        when :string, :path, :array, :map
+        when :string, :path, :array, :map, :hostname
           String
         when :integer
           Integer
@@ -312,10 +318,37 @@ module PhusionPassenger
           lambda do |value|
             options[spec_item[:name]] = true
           end
+        elsif spec_item[:type] == :hostname
+          lambda do |value|
+            begin
+              options[spec_item[:name]] = resolve_hostname(value)
+            rescue SocketError => e
+              abort "*** ERROR: the hostname passed to #{spec_item[:cli]}, #{value}, cannot be resolved: #{e}"
+            end
+          end
         else
           lambda do |value|
             options[spec_item[:name]] = value
           end
+        end
+      end
+
+      def resolve_hostname(hostname)
+        # We resolve the hostname into an IP address during configuration loading
+        # because different components in the system (Nginx, Passenger core) may
+        # resolve hostnames differently. If a hostname resolves to multiple addresses
+        # (for example, to an IPv6 and an IPv4 address) then different components may
+        # pick a different address as 'winner'. By resolving the hostname here, we
+        # guarantee consistent behavior.
+        #
+        # Furthermore, `rails server` defaults to setting the hostname to 'localhost'.
+        # But the user almost certainly doesn't explicitly want it to resolve to an IPv6
+        # address because most tools work better with IPv4 and because `http://[::1]:3000`
+        # just looks weird. So we special case 'localhost' and resolve it to 127.0.0.1.
+        if hostname.downcase == 'localhost'
+          '127.0.0.1'
+        else
+          Socket.getaddrinfo(hostname, nil).first[3]
         end
       end
     end

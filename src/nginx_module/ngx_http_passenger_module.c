@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (c) 2010-2015 Phusion Holding B.V.
+ * Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,34 +55,6 @@ PP_AppTypeDetector       *pp_app_type_detector;
 PsgWatchdogLauncher      *psg_watchdog_launcher = NULL;
 ngx_cycle_t              *pp_current_cycle;
 
-
-/*
-    HISTORIC NOTE:
-    We used to register passenger_content_handler as a default content handler,
-    instead of setting ngx_http_core_loc_conf_t->handler. However, if
-    ngx_http_read_client_request_body (and thus passenger_content_handler)
-    returns NGX_AGAIN, then Nginx will pass the not-fully-receive file upload
-    data to the upstream handler even though it shouldn't. Is this an Nginx
-    bug? In any case, setting ngx_http_core_loc_conf_t->handler fixed the
-    problem.
-
-static ngx_int_t
-register_content_handler(ngx_conf_t *cf)
-{
-    ngx_http_handler_pt        *h;
-    ngx_http_core_main_conf_t  *cmcf;
-
-    cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
-
-    h = ngx_array_push(&cmcf->phases[NGX_HTTP_CONTENT_PHASE].handlers);
-    if (h == NULL) {
-        return NGX_ERROR;
-    }
-    *h = passenger_content_handler;
-
-    return NGX_OK;
-}
-*/
 
 static void
 ignore_sigpipe() {
@@ -148,9 +120,11 @@ save_master_process_pid(ngx_cycle_t *cycle) {
  * This function is called after forking and just before exec()ing the watchdog.
  */
 static void
-starting_watchdog_after_fork(void *arg) {
-    ngx_cycle_t *cycle = (void *) arg;
-    char        *log_filename;
+starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
+    ngx_cycle_t *cycle = (void *) paramCycle;
+    PsgVariantMap *params = (void *) paramParams;
+
+    const char  *log_filename;
     FILE        *log_file;
     ngx_core_conf_t *ccf;
     ngx_uint_t   i;
@@ -161,23 +135,18 @@ starting_watchdog_after_fork(void *arg) {
      * Make sure that they're both redirected to the log file.
      */
     log_file = NULL;
-    if (cycle->new_log.file->name.len > 0) {
-        log_filename = ngx_str_null_terminate(&cycle->new_log.file->name);
-        log_file = fopen((const char *) log_filename, "a");
+    log_filename = (const char *) psg_variant_map_get_optional(params, "log_file");
+    if (log_filename == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
+                "no passenger log file configured, discarding log output");
+    } else {
+        log_file = fopen(log_filename, "a");
         if (log_file == NULL) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not open the error log file for writing");
+                    "could not open the passenger log file for writing, discarding log output");
         }
-        free(log_filename);
-    } else if (cycle->log != NULL && cycle->log->file->name.len > 0) {
-        log_filename = ngx_str_null_terminate(&cycle->log->file->name);
-        log_file = fopen((const char *) log_filename, "a");
-        if (log_file == NULL) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                          "could not open the error log file for writing");
-        }
-        free(log_filename);
     }
+
     if (log_file == NULL) {
         /* If the log file cannot be opened then we redirect stdout
          * and stderr to /dev/null, because if the user disconnects
@@ -185,6 +154,10 @@ starting_watchdog_after_fork(void *arg) {
          * any writes to stdout or stderr will result in an EIO error.
          */
         log_file = fopen("/dev/null", "w");
+        if (log_file == NULL) {
+            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
+                    "could not open /dev/null for logs, this will probably cause EIO errors");
+        }
     }
     if (log_file != NULL) {
         dup2(fileno(log_file), 1);
@@ -299,6 +272,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     psg_variant_map_set_int    (params, "stat_throttle_rate", passenger_main_conf.stat_throttle_rate);
     psg_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
     psg_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
+    psg_variant_map_set_bool   (params, "union_station_support", passenger_main_conf.union_station_support);
     psg_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
     psg_variant_map_set_int    (params, "union_station_gateway_port", passenger_main_conf.union_station_gateway_port);
     psg_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
@@ -484,7 +458,7 @@ exit_master(ngx_cycle_t *cycle) {
 
 static ngx_http_module_t passenger_module_ctx = {
     pre_config_init,                     /* preconfiguration */
-    /* register_content_handler */ NULL, /* postconfiguration */
+    passenger_postprocess_config,        /* postconfiguration */
 
     passenger_create_main_conf,          /* create main configuration */
     passenger_init_main_conf,            /* init main configuration */

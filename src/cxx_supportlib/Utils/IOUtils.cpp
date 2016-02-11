@@ -128,14 +128,41 @@ parseTcpSocketAddress(const StaticString &address, string &host, unsigned short 
 		throw ArgumentException("Not a valid TCP socket address");
 	}
 
-	vector<string> args;
-	string begin(address.c_str() + sizeof("tcp://") - 1, address.size() - sizeof("tcp://") + 1);
-	split(begin, ':', args);
-	if (args.size() != 2) {
+	StaticString hostAndPort(address.data() + sizeof("tcp://") - 1,
+		address.size() - sizeof("tcp://") + 1);
+	if (hostAndPort.empty()) {
 		throw ArgumentException("Not a valid TCP socket address");
+	}
+
+	if (hostAndPort[0] == '[') {
+		// IPv6 address, e.g.:
+		// [::1]:3000
+		const char *hostEnd = (const char *) memchr(hostAndPort.data(), ']',
+			hostAndPort.size());
+		if (hostEnd == NULL || hostAndPort.size() <= string::size_type(hostEnd - hostAndPort.data()) + 3) {
+			throw ArgumentException("Not a valid TCP socket address");
+		}
+
+		const char *sep = hostEnd + 1;
+		host.assign(hostAndPort.data() + 1, hostEnd - hostAndPort.data() - 1);
+		port = stringToUint(StaticString(
+			sep + 1,
+			hostAndPort.data() + hostAndPort.size() - sep - 1
+		));
+
 	} else {
-		host = args[0];
-		port = atoi(args[1].c_str());
+		// IPv4 address, e.g.:
+		// 127.0.0.1:3000
+		const char *sep = (const char *) memchr(hostAndPort.data(), ':', hostAndPort.size());
+		if (sep == NULL || hostAndPort.size() <= string::size_type(sep - hostAndPort.data()) + 2) {
+			throw ArgumentException("Not a valid TCP socket address");
+		}
+
+		host.assign(hostAndPort.data(), sep - hostAndPort.data());
+		port = stringToUint(StaticString(
+			sep + 1,
+			hostAndPort.data() + hostAndPort.size() - sep - 1
+		));
 	}
 }
 
@@ -344,12 +371,22 @@ int
 createTcpServer(const char *address, unsigned short port, unsigned int backlogSize,
 	const char *file, unsigned int line)
 {
-	struct sockaddr_in addr;
+	union {
+		struct sockaddr_in v4;
+		struct sockaddr_in6 v6;
+	} addr;
+	sa_family_t family;
 	int fd, ret, optval;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	ret = inet_pton(AF_INET, address, &addr.sin_addr.s_addr);
+	family = addr.v4.sin_family = AF_INET;
+	ret = inet_pton(AF_INET, address, &addr.v4.sin_addr.s_addr);
+	if (ret == 0) {
+		// Might be an IPv6 address.
+		memset(&addr, 0, sizeof(addr));
+		family = addr.v6.sin6_family = AF_INET6;
+		ret = inet_pton(AF_INET6, address, &addr.v6.sin6_addr.s6_addr);
+	}
 	if (ret < 0) {
 		int e = errno;
 		string message = "Cannot parse the IP address '";
@@ -362,16 +399,25 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 		message.append("'");
 		throw ArgumentException(message);
 	}
-	addr.sin_port = htons(port);
 
-	fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	if (family == AF_INET) {
+		addr.v4.sin_port = htons(port);
+		fd = syscalls::socket(PF_INET, SOCK_STREAM, 0);
+	} else {
+		addr.v6.sin6_port = htons(port);
+		fd = syscalls::socket(PF_INET6, SOCK_STREAM, 0);
+	}
 	if (fd == -1) {
 		int e = errno;
 		throw SystemException("Cannot create a TCP socket file descriptor", e);
 	}
 
 	FdGuard guard(fd, file, line, true);
-	ret = syscalls::bind(fd, (const struct sockaddr *) &addr, sizeof(addr));
+	if (family == AF_INET) {
+		ret = syscalls::bind(fd, (const struct sockaddr *) &addr.v4, sizeof(struct sockaddr_in));
+	} else {
+		ret = syscalls::bind(fd, (const struct sockaddr *) &addr.v6, sizeof(struct sockaddr_in6));
+	}
 	if (ret == -1) {
 		int e = errno;
 		string message = "Cannot bind a TCP socket on address '";
@@ -1196,6 +1242,7 @@ readPeerCredentials(int sock, uid_t *uid, gid_t *gid) {
 		struct sockaddr genericAddress;
 		struct sockaddr_un unixAddress;
 		struct sockaddr_in inetAddress;
+		struct sockaddr_in6 inetAddress6;
 	} addr;
 	socklen_t len = sizeof(addr);
 	int ret;

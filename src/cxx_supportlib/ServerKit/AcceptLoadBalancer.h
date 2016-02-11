@@ -177,6 +177,7 @@ private:
 	int acceptNonBlockingSocket(int serverFd) {
 		union {
 			struct sockaddr_in inaddr;
+			struct sockaddr_in6 inaddr6;
 			struct sockaddr_un unaddr;
 		} u;
 		socklen_t addrlen = sizeof(u);

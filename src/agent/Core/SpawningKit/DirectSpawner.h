@@ -233,12 +233,15 @@ public:
 			details.options = &options;
 			details.debugDir = debugDir;
 
+			UPDATE_TRACE_POINT();
 			Result result;
 			{
 				this_thread::restore_interruption ri(di);
 				this_thread::restore_syscall_interruption rsi(dsi);
 				result = negotiateSpawn(details);
 			}
+
+			UPDATE_TRACE_POINT();
 			detachProcess(result["pid"].asInt());
 			guard.clear();
 			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<

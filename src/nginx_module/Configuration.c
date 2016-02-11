@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (c) 2010-2015 Phusion Holding B.V.
+ * Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,10 +55,29 @@ static ngx_str_t headers_to_hide[] = {
 
 passenger_main_conf_t passenger_main_conf;
 
+typedef struct postprocess_ctx_s postprocess_ctx_t;
+
 static ngx_path_init_t  ngx_http_proxy_temp_path = {
     ngx_string(NGX_HTTP_PROXY_TEMP_PATH), { 1, 2, 0 }
 };
 
+static ngx_int_t postprocess_location_conf(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_core_loc_conf_t *location_conf,
+    int is_toplevel,
+    postprocess_ctx_t *ctx);
+static ngx_int_t traverse_location_confs_nested_in_server_conf(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_core_loc_conf_t *location_conf,
+    postprocess_ctx_t *ctx);
+static ngx_int_t traverse_static_location_tree(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_location_tree_node_t *node,
+    postprocess_ctx_t *ctx);
+static ngx_int_t traverse_regex_locations(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_core_loc_conf_t **regex_locations,
+    postprocess_ctx_t *ctx);
 static ngx_int_t merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf,
     passenger_loc_conf_t *prev);
 static ngx_int_t merge_string_array(ngx_conf_t *cf, ngx_array_t **prev,
@@ -109,6 +128,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->analytics_log_user.len  = 0;
     conf->analytics_log_group.data = NULL;
     conf->analytics_log_group.len  = 0;
+    conf->union_station_support = 0;
     conf->union_station_gateway_address.data = NULL;
     conf->union_station_gateway_address.len = 0;
     conf->union_station_gateway_port = (ngx_uint_t) NGX_CONF_UNSET;
@@ -249,7 +269,7 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->union_station_proxy_address.len == 0) {
         conf->union_station_proxy_address.data = (u_char *) "";
     }
-
+printf("init main conf: %d\n", conf->union_station_support);
     return NGX_CONF_OK;
 }
 
@@ -367,13 +387,13 @@ cache_loc_conf_options(ngx_conf_t *cf, passenger_loc_conf_t *conf)
     u_char        *unencoded_buf;
 
     if (generated_cache_location_part(cf, conf) == 0) {
-    	return NGX_ERROR;
+        return NGX_ERROR;
     }
 
     if (conf->env_vars != NULL) {
-    	size_t len = 0;
-    	u_char *buf;
-    	u_char *pos;
+        size_t len = 0;
+        u_char *buf;
+        u_char *pos;
 
         /* Cache env vars data as base64-serialized string.
          * First, calculate the length of the unencoded data.
@@ -448,7 +468,7 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
 
     if (generated_merge_part(conf, prev, cf) == 0) {
-    	return NGX_CONF_ERROR;
+        return NGX_CONF_ERROR;
     }
 
     if (prev->options_cache.data == NULL) {
@@ -1051,6 +1071,137 @@ merge_string_array(ngx_conf_t *cf, ngx_array_t **prev, ngx_array_t **conf)
                 return NGX_ERROR;
             }
             *elem = prev_elems[i];
+        }
+    }
+
+    return NGX_OK;
+}
+
+struct postprocess_ctx_s {
+    /* Reserved for future use */
+};
+
+ngx_int_t
+passenger_postprocess_config(ngx_conf_t *cf)
+{
+    ngx_http_core_main_conf_t  *cmcf;
+    ngx_http_core_srv_conf_t   **server_confs, *server_conf;
+    ngx_http_core_loc_conf_t    *base_location_conf;
+    ngx_uint_t                  i;
+    ngx_int_t                   result;
+    postprocess_ctx_t           ctx;
+
+    cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
+    server_confs = (ngx_http_core_srv_conf_t **) cmcf->servers.elts;
+
+    ngx_memzero(&ctx, sizeof(ctx));
+
+    for (i = 0; i < cmcf->servers.nelts; i++) {
+        server_conf = server_confs[i];
+        base_location_conf = server_conf->ctx->loc_conf[ngx_http_core_module.ctx_index];
+
+        result = postprocess_location_conf(cf, server_conf, base_location_conf, 1, &ctx);
+        if (result != NGX_OK) {
+            return result;
+        }
+    }
+
+    return NGX_OK;
+}
+
+static ngx_int_t
+postprocess_location_conf(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_core_loc_conf_t *location_conf,
+    int is_toplevel,
+    postprocess_ctx_t *ctx)
+{
+    passenger_loc_conf_t *plconf = server_conf->ctx->loc_conf[
+        ngx_http_passenger_module.ctx_index];
+
+    if (plconf->union_station_support != NGX_CONF_UNSET && plconf->union_station_support) {
+        passenger_main_conf.union_station_support = 1;
+    }
+
+    return traverse_location_confs_nested_in_server_conf(cf, server_conf, location_conf, ctx);
+}
+
+static ngx_int_t
+traverse_location_confs_nested_in_server_conf(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_core_loc_conf_t *location_conf,
+    postprocess_ctx_t *ctx)
+{
+    ngx_int_t result;
+
+    result = traverse_static_location_tree(cf, server_conf,
+        location_conf->static_locations, ctx);
+    if (result != NGX_OK) {
+        return result;
+    }
+
+    return traverse_regex_locations(cf, server_conf,
+        location_conf->regex_locations, ctx);
+}
+
+static ngx_int_t
+traverse_static_location_tree(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_location_tree_node_t *node,
+    postprocess_ctx_t *ctx)
+{
+    ngx_int_t result;
+
+    if (node == NULL) {
+        return NGX_OK;
+    }
+
+    if (node->left != NULL) {
+        result = traverse_static_location_tree(cf, server_conf, node->left, ctx);
+        if (result != NGX_OK) {
+            return result;
+        }
+    }
+
+    if (node->right != NULL) {
+        result = traverse_static_location_tree(cf, server_conf, node->right, ctx);
+        if (result != NGX_OK) {
+            return result;
+        }
+    }
+
+    if (node->exact != NULL) {
+        result = postprocess_location_conf(cf, server_conf,
+            node->exact, 0, ctx);
+    } else {
+        result = postprocess_location_conf(cf, server_conf,
+            node->inclusive, 0, ctx);
+    }
+    if (result != NGX_OK) {
+        return result;
+    }
+
+    return NGX_OK;
+}
+
+static ngx_int_t
+traverse_regex_locations(ngx_conf_t *cf,
+    ngx_http_core_srv_conf_t *server_conf,
+    ngx_http_core_loc_conf_t **regex_locations,
+    postprocess_ctx_t *ctx)
+{
+    ngx_uint_t i;
+    ngx_int_t  result;
+
+    if (regex_locations == NULL) {
+        return NGX_OK;
+    }
+
+    for (i = 0; regex_locations[i] != NULL; i++) {
+        result = postprocess_location_conf(cf, server_conf,
+            regex_locations[i], 0, ctx);
+        if (result != NGX_OK) {
+            return result;
         }
     }
 

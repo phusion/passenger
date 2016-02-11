@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -1251,7 +1251,8 @@ public:
 	    : cstat(1024),
 	      watchdogLauncher(IM_APACHE)
 	{
-		serverConfig.finalize();
+		passenger_postprocess_config(s);
+
 		Passenger::setLogLevel(serverConfig.logLevel);
 		if (serverConfig.logFile != NULL) {
 			int errcode;
@@ -1309,6 +1310,7 @@ public:
 			.setInt ("stat_throttle_rate", serverConfig.statThrottleRate)
 			.set    ("analytics_log_user", serverConfig.analyticsLogUser)
 			.set    ("analytics_log_group", serverConfig.analyticsLogGroup)
+			.setBool("union_station_support", serverConfig.unionStationSupport)
 			.set    ("union_station_gateway_address", serverConfig.unionStationGatewayAddress)
 			.setInt ("union_station_gateway_port", serverConfig.unionStationGatewayPort)
 			.set    ("union_station_gateway_cert", serverConfig.unionStationGatewayCert)
