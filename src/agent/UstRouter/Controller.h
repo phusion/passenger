@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -69,8 +69,6 @@ private:
 		11 +                          // space for a random identifier
 		1;                            // null terminator
 
-	friend inline void UstRouter::Controller_closeLogSink(Controller *controller, const LogSinkPtr &logSink);
-	friend inline FilterSupport::Filter &UstRouter::Controller_compileFilter(Controller *controller, const StaticString &source);
 	friend inline struct ::ev_loop *UstRouter::Controller_getLoop(Controller *controller);
 	friend inline RemoteSender &UstRouter::Controller_getRemoteSender(Controller *controller);
 
@@ -247,8 +245,6 @@ private:
 				processCloseTransactionMessage(client, args);
 			} else if (args[0] == P_STATIC_STRING("init")) {
 				processInitMessage(client, args);
-			} else if (args[0] == P_STATIC_STRING("flush")) {
-				processFlushMessage(client, args);
 			} else if (args[0] == P_STATIC_STRING("info")) {
 				processInfoMessage(client, args);
 			} else if (args[0] == P_STATIC_STRING("ping")) {
@@ -295,7 +291,7 @@ private:
 			goto done;
 		}
 
-		s_it = client->openTransactions.find(transaction->txnId);
+		s_it = client->openTransactions.find(transaction->getTxnId());
 		if (OXT_UNLIKELY(s_it == client->openTransactions.end())) {
 			SKC_ERROR(client, "Cannot log data: transaction not opened in this connection");
 			if (ack) {
@@ -439,24 +435,14 @@ private:
 				goto done;
 			}
 
-			transaction = boost::make_shared<Transaction>(this, ev_now(getLoop()));
-			if (devMode) {
-				transaction->logSink = openLogFile(client, category);
-			} else {
-				transaction->logSink = openRemoteSink(unionStationKey,
-					nodeName, category);
-			}
-			transaction->txnId.assign(txnId.data(), txnId.size());
-			transaction->dataStoreId  = DataStoreId(groupName,
-				nodeName, category);
-			transaction->crashProtect = crashProtect;
-			if (!filters.empty()) {
-				transaction->filters  = filters;
-			}
-			transaction->discarded    = false;
+			transaction = boost::make_shared<Transaction>(
+				txnId, groupName, nodeName, category,
+				ev_now(getLoop()), filters
+			);
+			transaction->enableCrashProtect(crashProtect);
 			transactions.set(txnId, transaction);
 		} else {
-			if (OXT_UNLIKELY(client->openTransactions.find(transaction->txnId) !=
+			if (OXT_UNLIKELY(client->openTransactions.find(transaction->getTxnId()) !=
 				client->openTransactions.end()))
 			{
 				SKC_ERROR(client, "Cannot open transaction: transaction already opened in this connection");
@@ -468,15 +454,15 @@ private:
 				}
 				goto done;
 			}
-			if (OXT_UNLIKELY(transaction->getGroupName() != groupName)) {
+			if (OXT_UNLIKELY(transaction->getUnionStationKey() != groupName)) {
 				SKC_ERROR(client,
 					"Cannot open transaction: transaction already opened with a "
-					"different group name ('" << transaction->getGroupName() <<
+					"different key ('" << transaction->getUnionStationKey() <<
 					"' vs '" << groupName << "')");
 				if (ack) {
 					sendErrorToClient(client,
 						"Cannot open transaction: transaction already opened with a "
-						"different group name ('" + transaction->getGroupName() +
+						"different key ('" + transaction->getUnionStationKey() +
 						"' vs '" + groupName + "')");
 					if (client->connected()) {
 						disconnect(&client);
@@ -513,8 +499,8 @@ private:
 			}
 		}
 
-		client->openTransactions.insert(transaction->txnId);
-		transaction->refcount++;
+		client->openTransactions.insert(transaction->getTxnId());
+		transaction->ref();
 		writeLogEntry(client, transaction, timestamp, P_STATIC_STRING("ATTACH"), ack);
 
 		if (client->connected() && ack) {
@@ -566,7 +552,7 @@ private:
 			}
 			goto done;
 		} else {
-			s_it = client->openTransactions.find(transaction->txnId);
+			s_it = client->openTransactions.find(transaction->getTxnId());
 			if (OXT_UNLIKELY(s_it == client->openTransactions.end())) {
 				SKC_ERROR(client, "Cannot close transaction " << txnId <<
 					": transaction not opened in this connection");
@@ -583,10 +569,10 @@ private:
 
 			client->openTransactions.erase(s_it);
 			writeDetachEntry(client, transaction, timestamp, ack);
-			transaction->refcount--;
-			assert(transaction->refcount >= 0);
-			if (transaction->refcount == 0) {
+			transaction->unref();
+			if (transaction->getRefCount() == 0) {
 				transactions.remove(txnId);
+				closeTransaction(client, transaction);
 			}
 		}
 
@@ -626,22 +612,6 @@ private:
 		done:
 		if (client != NULL && client->connected()) {
 			SKC_DEBUG(client, "Done processing 'init' message");
-		}
-	}
-
-	void processFlushMessage(Client *client, const vector<StaticString> &args) {
-		LogSinkCache::iterator it;
-		LogSinkCache::iterator end = logSinkCache.end();
-
-		for (it = logSinkCache.begin(); it != end; it++) {
-			LogSink *sink = it->second.get();
-			sink->flush();
-		}
-
-		sendOkToClient(client);
-
-		if (client->connected()) {
-			SKC_DEBUG(client, "Done processing 'flush' message");
 		}
 	}
 
@@ -967,13 +937,27 @@ private:
 	}
 
 	/**
+	 * Close the given transaction, potentially flushing its data to a sink.
+	 */
+	void closeTransaction(Client *client, const TransactionPtr &transaction) {
+		if (!transaction->isDiscarded() && passesFilter(transaction)) {
+			LogSinkPtr logSink;
+			if (devMode) {
+				logSink = openLogFile(client, transaction->getCategory());
+			} else {
+				logSink = openRemoteSink(transaction->getUnionStationKey(),
+					transaction->getNodeName(), transaction->getCategory());
+			}
+			logSink->append(transaction);
+			closeLogSink(logSink);
+		}
+	}
+
+	/**
 	 * Decrement the reference count on the given log sink. When the refcount hits 0,
 	 * it's not actually deleted from memory; instead it's cached for later use. A
 	 * garbage collection run periodically cleans up log sinks that have zero
 	 * references.
-	 *
-	 * No need to call this manually. Automatically called by Transaction's
-	 * destructor.
 	 */
 	void closeLogSink(const LogSinkPtr &logSink) {
 		logSink->opened--;
@@ -984,7 +968,7 @@ private:
 	void writeLogEntry(Client *client, const TransactionPtr &transaction,
 		const StaticString &timestamp, const StaticString &data, bool ack)
 	{
-		if (transaction->discarded) {
+		if (transaction->isDiscarded()) {
 			return;
 		}
 		if (OXT_UNLIKELY(!validLogContent(data))) {
@@ -1004,19 +988,7 @@ private:
 			return;
 		}
 
-		char writeCountStr[sizeof(unsigned int) * 2 + 1];
-		unsigned int writeCountStrSize = integerToHexatri(
-			transaction->writeCount, writeCountStr);
-
-		transaction->writeCount++;
-		transaction->data.append(transaction->txnId);
-		transaction->data.append(" ", 1);
-		transaction->data.append(timestamp.data(), timestamp.size());
-		transaction->data.append(" ", 1);
-		transaction->data.append(writeCountStr, writeCountStrSize);
-		transaction->data.append(" ");
-		transaction->data.append(data.data(), data.size());
-		transaction->data.append("\n", 1);
+		transaction->append(timestamp, data);
 	}
 
 	void writeDetachEntry(Client *client, const TransactionPtr &transaction, bool ack) {
@@ -1032,6 +1004,36 @@ private:
 		const StaticString &timestamp, bool ack)
 	{
 		writeLogEntry(client, transaction, timestamp, P_STATIC_STRING("DETACH"), ack);
+	}
+
+	bool passesFilter(const TransactionPtr &transaction) {
+		StaticString filters(transaction->getFilters());
+		if (filters.empty()) {
+			return true;
+		}
+
+		StaticString body   = transaction->getBody();
+		const char *current = filters.data();
+		const char *end     = filters.data() + filters.size();
+		bool result         = true;
+		FilterSupport::ContextFromLog ctx(body);
+
+		// 'filters' may contain multiple filter sources, separated
+		// by '\1' characters. Process each.
+		while (current < end && result) {
+			StaticString tmp(current, end - current);
+			size_t pos = tmp.find('\1');
+			if (pos == string::npos) {
+				pos = tmp.size();
+			}
+
+			StaticString source(current, pos);
+			FilterSupport::Filter &filter = compileFilter(source);
+			result = filter.run(ctx);
+
+			current = tmp.data() + pos + 1;
+		}
+		return result;
 	}
 
 	FilterSupport::Filter &compileFilter(const StaticString &source) {
@@ -1069,15 +1071,15 @@ protected:
 				P_BUG("client->openTransactions is not a subset of this->transactions!");
 			}
 
-			if (transaction->crashProtect) {
+			if (transaction->crashProtectEnabled()) {
 				writeDetachEntry(client, transaction, false);
 			} else {
 				transaction->discard();
 			}
-			transaction->refcount--;
-			assert(transaction->refcount >= 0);
-			if (transaction->refcount == 0) {
-				transactions.remove(transaction->txnId);
+			transaction->unref();
+			if (transaction->getRefCount() == 0) {
+				transactions.remove(transaction->getTxnId());
+				closeTransaction(client, transaction);
 			}
 		}
 		client->openTransactions.clear();
@@ -1216,16 +1218,6 @@ public:
 	}
 };
 
-
-inline void
-Controller_closeLogSink(Controller *controller, const LogSinkPtr &logSink) {
-	controller->closeLogSink(logSink);
-}
-
-inline FilterSupport::Filter &
-Controller_compileFilter(Controller *controller, const StaticString &source) {
-	return controller->compileFilter(source);
-}
 
 inline struct ev_loop *
 Controller_getLoop(Controller *controller) {

@@ -115,64 +115,77 @@ namespace tut {
 			return client;
 		}
 
+		void waitForDumpFile(const string &category = "requests") {
+			EVENTUALLY(5,
+				result = fileExists(getDumpFilePath(category));
+			);
+		}
+
 		string readDumpFile(const string &category = "requests") {
+			waitForDumpFile(category);
 			return readAll(getDumpFilePath(category));
 		}
 
 		string getDumpFilePath(const string &category = "requests") {
 			return tmpdir.getPath() + "/" + category;
 		}
+
+		void ensureSubstringInDumpFile(const string &substr, const string &category = "requests") {
+			EVENTUALLY(5,
+				result = readDumpFile().find(substr) != string::npos;
+			);
+		}
+
+		void ensureSubstringNotInDumpFile(const string &substr, const string &category = "requests") {
+			string path = getDumpFilePath(category);
+			SHOULD_NEVER_HAPPEN(100,
+				result = fileExists(path) && readAll(path).find(substr) != string::npos;
+			);
+		}
 	};
 
 	DEFINE_TEST_GROUP(Core_UnionStationTest);
 
 
-	/*********** Logging interface tests ***********/
+	/***** Basic logging tests *****/
 
 	TEST_METHOD(1) {
-		// Test logging of new transaction.
+		set_test_name("Logging to new transaction");
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
 		TransactionPtr log = context->newTransaction("foobar");
 		log->message("hello");
 		log->message("world");
-		log->flushToDiskAfterClose(true);
-
 		ensure(!context->isNull());
 		ensure(!log->isNull());
-
 		log.reset();
 
-		string data = readDumpFile();
-		ensure(data.find("hello\n") != string::npos);
-		ensure(data.find("world\n") != string::npos);
+		ensureSubstringInDumpFile("hello\n");
+		ensureSubstringInDumpFile("world\n");
 	}
 
 	TEST_METHOD(2) {
-		// Test logging of existing transaction.
+		set_test_name("Logging to continued transaction");
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
 		TransactionPtr log = context->newTransaction("foobar");
 		log->message("message 1");
-		log->flushToDiskAfterClose(true);
 
 		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
 		log2->message("message 2");
-		log2->flushToDiskAfterClose(true);
 
 		log.reset();
 		log2.reset();
 
-		string data = readDumpFile();
-		ensure("(1)", data.find("message 1\n") != string::npos);
-		ensure("(2)", data.find("message 2\n") != string::npos);
+		ensureSubstringInDumpFile("message 1\n");
+		ensureSubstringInDumpFile("message 2\n");
 	}
 
 	TEST_METHOD(3) {
-		// Test logging with different points in time.
+		set_test_name("Logging with different points in time");
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
@@ -180,33 +193,28 @@ namespace tut {
 		log->message("message 1");
 		SystemTime::forceAll(TODAY);
 		log->message("message 2");
-		log->flushToDiskAfterClose(true);
 
 		SystemTime::forceAll(TOMORROW);
 		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
 		log2->message("message 3");
-		log2->flushToDiskAfterClose(true);
 
 		TransactionPtr log3 = context3->newTransaction("foobar");
 		log3->message("message 4");
-		log3->flushToDiskAfterClose(true);
 
 		log.reset();
 		log2.reset();
 		log3.reset();
 
-		string data = readDumpFile();
-		ensure("(1)", data.find(timestampString(YESTERDAY) + " 1 message 1\n") != string::npos);
-		ensure("(2)", data.find(timestampString(TODAY) + " 2 message 2\n") != string::npos);
-		ensure("(3)", data.find(timestampString(TOMORROW) + " 4 message 3\n") != string::npos);
-		ensure("(4)", data.find(timestampString(TOMORROW) + " 1 message 4\n") != string::npos);
+		ensureSubstringInDumpFile(timestampString(YESTERDAY) + " 1 message 1\n");
+		ensureSubstringInDumpFile(timestampString(TODAY) + " 2 message 2\n");
+		ensureSubstringInDumpFile(timestampString(TOMORROW) + " 4 message 3\n");
+		ensureSubstringInDumpFile(timestampString(TOMORROW) + " 1 message 4\n");
 	}
 
 	TEST_METHOD(4) {
-		// newTransaction() and continueTransaction() write an ATTACH message
-		// to the log file, while UnionStation::Transaction writes a DETACH message upon
-		// destruction.
+		set_test_name("newTransaction() and continueTransaction() log an ATTACH message, "
+			"while destroying a Transaction logs a DETACH message");
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
@@ -215,23 +223,20 @@ namespace tut {
 		SystemTime::forceAll(TODAY);
 		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
 			log->getGroupName(), log->getCategory());
-		log2->flushToDiskAfterClose(true);
 		log2.reset();
 
 		SystemTime::forceAll(TOMORROW);
-		log->flushToDiskAfterClose(true);
 		log.reset();
 
-		string data = readDumpFile();
-		ensure("(1)", data.find(timestampString(YESTERDAY) + " 0 ATTACH\n") != string::npos);
-		ensure("(2)", data.find(timestampString(TODAY) + " 1 ATTACH\n") != string::npos);
-		ensure("(3)", data.find(timestampString(TODAY) + " 2 DETACH\n") != string::npos);
-		ensure("(4)", data.find(timestampString(TOMORROW) + " 3 DETACH\n") != string::npos);
+		ensureSubstringInDumpFile(timestampString(YESTERDAY) + " 0 ATTACH\n");
+		ensureSubstringInDumpFile(timestampString(TODAY) + " 1 ATTACH\n");
+		ensureSubstringInDumpFile(timestampString(TODAY) + " 2 DETACH\n");
+		ensureSubstringInDumpFile(timestampString(TOMORROW) + " 3 DETACH\n");
 	}
 
 	TEST_METHOD(5) {
-		// newTransaction() generates a new ID, while continueTransaction()
-		// reuses the ID.
+		set_test_name("newTransaction() generates a new ID, while "
+			"continueTransaction() reuses the ID");
 		init();
 
 		TransactionPtr log = context->newTransaction("foobar");
@@ -247,17 +252,21 @@ namespace tut {
 	}
 
 	TEST_METHOD(6) {
-		// An empty UnionStation::Transaction doesn't do anything.
+		set_test_name("An empty Transaction doesn't do anything");
 		init();
 
-		UnionStation::Transaction log;
-		ensure(log.isNull());
-		log.message("hello world");
-		ensure_equals(getFileType(getDumpFilePath()), FT_NONEXISTANT);
+		{
+			UnionStation::Transaction log;
+			ensure(log.isNull());
+			log.message("hello world");
+		}
+		SHOULD_NEVER_HAPPEN(100,
+			result = fileExists(getDumpFilePath());
+		);
 	}
 
 	TEST_METHOD(7) {
-		// An empty UnionStation::Context doesn't do anything.
+		set_test_name("An empty Context doesn't do anything");
 		UnionStation::Context context;
 		init();
 		ensure(context.isNull());
@@ -265,12 +274,18 @@ namespace tut {
 		TransactionPtr log = context.newTransaction("foo");
 		ensure(log->isNull());
 		log->message("hello world");
-		ensure_equals(getFileType(getDumpFilePath()), FT_NONEXISTANT);
+		log.reset();
+		SHOULD_NEVER_HAPPEN(100,
+			result = fileExists(getDumpFilePath());
+		);
 	}
 
+
+	/***** Connection handling *****/
+
 	TEST_METHOD(11) {
-		// newTransaction() does not reconnect to the server for a short
-		// period of time if connecting failed
+		set_test_name("newTransaction() does not reconnect to the server for a short"
+			" period of time if connecting failed");
 		init();
 		context->setReconnectTimeout(60 * 1000000);
 
@@ -287,11 +302,11 @@ namespace tut {
 	}
 
 	TEST_METHOD(12) {
-		// If the UstRouter crashed and was restarted then
-		// newTransaction() and continueTransaction() print a warning and return
-		// a null log object. One of the next newTransaction()/continueTransaction()
-		// calls will reestablish the connection when the connection timeout
-		// has passed.
+		set_test_name("If the UstRouter crashed and was restarted then"
+			" newTransaction() and continueTransaction() print a warning and return"
+			" a null log object. One of the next newTransaction()/continueTransaction()"
+			" calls will reestablish the connection when the connection timeout"
+			" has passed");
 		init();
 		SystemTime::forceAll(TODAY);
 		TransactionPtr log, log2;
@@ -313,18 +328,15 @@ namespace tut {
 		log2 = context2->continueTransaction(log->getTxnId(), "foobar");
 		ensure("(4)", !log2->isNull());
 		log2->message("hello");
-		log2->flushToDiskAfterClose(true);
 		log.reset();
 		log2.reset();
 
-		EVENTUALLY(3,
-			result = readDumpFile().find("hello\n") != string::npos;
-		);
+		ensureSubstringInDumpFile("hello\n");
 	}
 
 	TEST_METHOD(13) {
-		// continueTransaction() does not reconnect to the server for a short
-		// period of time if connecting failed
+		set_test_name("continueTransaction() does not reconnect to the server for a short"
+			" period of time if connecting failed");
 		init();
 		context->setReconnectTimeout(60 * 1000000);
 		context2->setReconnectTimeout(60 * 1000000);
@@ -345,77 +357,81 @@ namespace tut {
 	}
 
 	TEST_METHOD(14) {
-		// If a client disconnects from the UstRouter then all its
-		// transactions that are no longer referenced and have crash protection enabled
-		// will be closed and written to the sink.
+		set_test_name("If a client disconnects from the UstRouter then all its"
+			" transactions that are no longer referenced and have crash protection enabled"
+			" will be closed and written to the sink");
 		init();
 
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
-		MessageClient client3 = createConnection();
 		vector<string> args;
 
 		SystemTime::forceAll(TODAY);
 
+		// Create a new transaction
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"-", "true", "true", NULL);
 		client1.read(args);
+
+		// Continue previous transaction, log data to it, disconnect without closing it
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"-", "true", NULL);
 		client2.write("log", TODAY_TXN_ID, "1000", NULL);
 		client2.writeScalar("hello world");
-		client2.write("flush", NULL);
+		client2.write("ping", NULL);
 		client2.read(args);
 		client2.disconnect();
+
+		// The transaction still has one reference open, so should not yet be flushed yet
 		SHOULD_NEVER_HAPPEN(100,
-			// Transaction still has references open, so should not yet be written to sink.
-			result = readDumpFile().find("hello world") != string::npos;
+			result = fileExists(getDumpFilePath());
 		);
 
 		client1.disconnect();
-		client3.write("flush", NULL);
-		client3.read(args);
-		EVENTUALLY(5,
-			result = readDumpFile().find("hello world") != string::npos;
-		);
+		ensureSubstringInDumpFile("hello world");
 	}
 
 	TEST_METHOD(15) {
-		// If a client disconnects from the UstRouter then all its
-		// transactions that are no longer referenced and don't have crash
-		// protection enabled will be closed and discarded.
+		set_test_name("If a client disconnects from the UstRouter then all its"
+			" transactions that are no longer referenced and don't have crash"
+			" protection enabled will be closed and discarded");
 		init();
 
 		MessageClient client1 = createConnection();
 		MessageClient client2 = createConnection();
-		MessageClient client3 = createConnection();
 		vector<string> args;
 
 		SystemTime::forceAll(TODAY);
 
+		// Open new transaction with crash protection disabled
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"-", "false", "true", NULL);
 		client1.read(args);
+
+		// Continue previous transaction, then disconnect without closing it
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"-", "false", NULL);
-		client2.write("flush", NULL);
+			"-", "false", "true", NULL);
 		client2.read(args);
 		client2.disconnect();
+
+		// Disconnect client 1 too. Now all references to the transaction are gone
 		client1.disconnect();
-		client3.write("flush", NULL);
-		client3.read(args);
-		SHOULD_NEVER_HAPPEN(500,
-			result = fileExists(getDumpFilePath()) && !readDumpFile().empty();
+
+		SHOULD_NEVER_HAPPEN(100,
+			result = fileExists(getDumpFilePath());
 		);
 	}
 
+
+	/***** Shutdown behavior *****/
+
 	TEST_METHOD(16) {
-		// Upon server shutdown, all transaction that have crash protection enabled
-		// will be closed and written to to the sink.
+		set_test_name("Upon server shutdown, all transaction that have crash protection "
+			" enabled will be closed and written to the sink");
 		init();
 
 		MessageClient client1 = createConnection();
@@ -426,23 +442,28 @@ namespace tut {
 
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"-", "true", "true", NULL);
+			"-", "true", NULL);
+		client1.write("log", TODAY_TXN_ID, "1000", NULL);
+		client1.writeScalar("hello");
+		client1.write("ping", NULL);
 		client1.read(args);
+
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"-", "true", NULL);
-		client2.write("flush", NULL);
+			"-", "true",  NULL);
+		client2.write("log", TODAY_TXN_ID, "1000", NULL);
+		client2.writeScalar("world");
+		client2.write("ping", NULL);
 		client2.read(args);
 
 		shutdown();
-		EVENTUALLY(5,
-			result = fileExists(getDumpFilePath()) && !readDumpFile().empty();
-		);
+		ensureSubstringInDumpFile("hello");
+		ensureSubstringInDumpFile("world");
 	}
 
 	TEST_METHOD(17) {
-		// Upon server shutdown, all transaction that don't have crash protection
-		// enabled will be discarded.
+		set_test_name("Upon server shutdown, all transaction that don't have crash"
+			" protection enabled will be discarded");
 		init();
 
 		MessageClient client1 = createConnection();
@@ -453,131 +474,32 @@ namespace tut {
 
 		client1.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
-			"-", "false", "true", NULL);
+			"-", "false", NULL);
+		client1.write("log", TODAY_TXN_ID, "1000", NULL);
+		client1.writeScalar("hello");
+		client1.write("ping", NULL);
 		client1.read(args);
+
 		client2.write("openTransaction",
 			TODAY_TXN_ID, "foobar", "", "requests", TODAY_TIMESTAMP_STR,
 			"-", "false", NULL);
-		client2.write("flush", NULL);
+		client2.write("log", TODAY_TXN_ID, "1000", NULL);
+		client2.writeScalar("world");
+		client2.write("ping", NULL);
 		client2.read(args);
 
 		shutdown();
-		SHOULD_NEVER_HAPPEN(200,
-			result = fileExists(getDumpFilePath()) && !readDumpFile().empty();
+		SHOULD_NEVER_HAPPEN(100,
+			result = fileExists(getDumpFilePath());
 		);
 	}
 
-	TEST_METHOD(18) {
-		// Test DataStoreId
-		init();
-		{
-			// Empty construction.
-			DataStoreId id;
-			ensure_equals(id.getGroupName(), "");
-			ensure_equals(id.getNodeName(), "");
-			ensure_equals(id.getCategory(), "");
-		}
-		{
-			// Normal construction.
-			DataStoreId id("ab", "cd", "ef");
-			ensure_equals(id.getGroupName(), "ab");
-			ensure_equals(id.getNodeName(), "cd");
-			ensure_equals(id.getCategory(), "ef");
-		}
-		{
-			// Copy constructor.
-			DataStoreId id("ab", "cd", "ef");
-			DataStoreId id2(id);
-			ensure_equals(id2.getGroupName(), "ab");
-			ensure_equals(id2.getNodeName(), "cd");
-			ensure_equals(id2.getCategory(), "ef");
-		}
-		{
-			// Assignment operator.
-			DataStoreId id("ab", "cd", "ef");
-			DataStoreId id2;
-			id2 = id;
-			ensure_equals(id2.getGroupName(), "ab");
-			ensure_equals(id2.getNodeName(), "cd");
-			ensure_equals(id2.getCategory(), "ef");
 
-			DataStoreId id3("gh", "ij", "kl");
-			id3 = id;
-			ensure_equals(id3.getGroupName(), "ab");
-			ensure_equals(id3.getNodeName(), "cd");
-			ensure_equals(id3.getCategory(), "ef");
-		}
-		{
-			// < operator
-			DataStoreId id, id2;
-			ensure(!(id < id2));
+	/***** Miscellaneous *****/
 
-			id = DataStoreId("ab", "cd", "ef");
-			id2 = DataStoreId("ab", "cd", "ef");
-			ensure(!(id < id2));
-
-			id = DataStoreId("ab", "cd", "ef");
-			id2 = DataStoreId("bb", "cd", "ef");
-			ensure(id < id2);
-
-			id = DataStoreId("ab", "cd", "ef");
-			id2 = DataStoreId();
-			ensure(id2 < id);
-
-			id = DataStoreId();
-			id2 = DataStoreId("ab", "cd", "ef");
-			ensure(id < id2);
-		}
-		{
-			// == operator
-			ensure(DataStoreId() == DataStoreId());
-			ensure(DataStoreId("ab", "cd", "ef") == DataStoreId("ab", "cd", "ef"));
-			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId()));
-			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId("ab", "cd", "e")));
-			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId("ab", "c", "ef")));
-			ensure(!(DataStoreId("ab", "cd", "ef") == DataStoreId("a", "cd", "ef")));
-		}
-	}
-
-	TEST_METHOD(22) {
-		// The destructor flushes all data.
-		init();
-
-		TransactionPtr log = context->newTransaction("foobar");
-		log->message("hello world");
-		log.reset();
-		shutdown();
-
-		struct stat buf;
-		ensure_equals(stat(getDumpFilePath().c_str(), &buf), 0);
-		ensure(buf.st_size > 0);
-	}
-
-	TEST_METHOD(23) {
-		// The 'flush' command flushes all data.
-		init();
-		SystemTime::forceAll(YESTERDAY);
-
-		TransactionPtr log = context->newTransaction("foobar");
-		log->message("hello world");
-		log.reset();
-
-		ConnectionPtr connection = context->checkoutConnection();
-		vector<string> args;
-		writeArrayMessage(connection->fd, "flush", NULL);
-		ensure("(1)", readArrayMessage(connection->fd, args));
-		ensure_equals("(2)", args.size(), 2u);
-		ensure_equals("(3)", args[0], "status");
-		ensure_equals("(4)", args[1], "ok");
-
-		struct stat buf;
-		ensure_equals("(5)", stat(getDumpFilePath().c_str(), &buf), 0);
-		ensure("(6)", buf.st_size > 0);
-	}
-
-	TEST_METHOD(24) {
-		// A transaction's data is not written out by the server
-		// until the transaction is fully closed.
+	TEST_METHOD(20) {
+		set_test_name("A transaction's data is not written out by the server"
+			" until the transaction is fully closed");
 		init();
 		SystemTime::forceAll(YESTERDAY);
 		vector<string> args;
@@ -590,21 +512,13 @@ namespace tut {
 		log2->message("message 2");
 		log2.reset();
 
-		ConnectionPtr connection = context->checkoutConnection();
-		writeArrayMessage(connection->fd, "flush", NULL);
-		ensure(readArrayMessage(connection->fd, args));
-
-		connection = context2->checkoutConnection();
-		writeArrayMessage(connection->fd, "flush", NULL);
-		ensure(readArrayMessage(connection->fd, args));
-
-		struct stat buf;
-		ensure_equals(stat(getDumpFilePath().c_str(), &buf), 0);
-		ensure_equals(buf.st_size, (off_t) 0);
+		SHOULD_NEVER_HAPPEN(100,
+			result = fileExists(getDumpFilePath());
+		);
 	}
 
-	TEST_METHOD(29) {
-		// One can supply a custom node name per openTransaction command.
+	TEST_METHOD(21) {
+		set_test_name("One can supply a custom node name per openTransaction command");
 		init();
 		MessageClient client1 = createConnection();
 		vector<string> args;
@@ -615,16 +529,13 @@ namespace tut {
 			TODAY_TXN_ID, "foobar", "remote", "requests", TODAY_TIMESTAMP_STR,
 			"-", "true", NULL);
 		client1.write("closeTransaction", TODAY_TXN_ID, TODAY_TIMESTAMP_STR, NULL);
-		client1.write("flush", NULL);
-		client1.read(args);
 		client1.disconnect();
 
-		ensure(fileExists(getDumpFilePath()));
+		waitForDumpFile();
 	}
 
-	TEST_METHOD(30) {
-		// A transaction is only written to the sink if it passes all given filters.
-		// Test logging of new transaction.
+	TEST_METHOD(22) {
+		set_test_name("A transaction is only written to the sink if it passes all given filters");
 		init();
 		SystemTime::forceAll(YESTERDAY);
 
@@ -634,7 +545,6 @@ namespace tut {
 			"uri != \"/bar\"");
 		log->message("URI: /foo");
 		log->message("transaction 1");
-		log->flushToDiskAfterClose(true);
 		log.reset();
 
 		log = context->newTransaction("foobar", "requests", "-",
@@ -643,12 +553,10 @@ namespace tut {
 			"uri == \"/bar\"");
 		log->message("URI: /foo");
 		log->message("transaction 2");
-		log->flushToDiskAfterClose(true);
 		log.reset();
 
-		string data = readDumpFile();
-		ensure("(1)", data.find("transaction 1\n") != string::npos);
-		ensure("(2)", data.find("transaction 2\n") == string::npos);
+		ensureSubstringInDumpFile("transaction 1\n");
+		ensureSubstringNotInDumpFile("transaction 2\n");
 	}
 
 	/************************************/
