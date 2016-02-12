@@ -113,6 +113,7 @@ void *psg_pcalloc(psg_pool_t *pool, size_t size);
 /** Allocate `size` bytes from the pool, aligned on the given alignment. */
 void *psg_pmemalign(psg_pool_t *pool, size_t size, size_t alignment);
 
+/** Duplicate string by storing it inside the pool. Result is NULL terminated. */
 Passenger::StaticString psg_pstrdup(psg_pool_t *pool, const Passenger::StaticString &str);
 
 /** Attempt to free the given memory, which was allocated from the given pool.
