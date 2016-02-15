@@ -40,6 +40,13 @@
 #include <string.h>
 #include <errno.h>
 
+#define MODP_B64_DONT_INCLUDE_BOOST_ENDIANNESS_HEADERS
+#if NGX_HAVE_LITTLE_ENDIAN
+    #define BOOST_LITTLE_ENDIAN
+#else
+    #define BOOST_BIG_ENDIAN
+#endif
+
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"

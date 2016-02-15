@@ -68,7 +68,7 @@ namespace tut {
 			bg = boost::make_shared<BackgroundEventLoop>(false, true);
 			skContext = boost::make_shared<ServerKit::Context>(bg->safe, bg->libuv_loop);
 			serverFd.assign(createUnixServer(socketFilename.c_str(), 0, true, __FILE__, __LINE__), NULL, 0);
-			controller = make_shared<UstRouter::Controller>(skContext.get(), controllerOptions);
+			controller = boost::make_shared<UstRouter::Controller>(skContext.get(), controllerOptions);
 			controller->listen(serverFd);
 			bg->start();
 		}

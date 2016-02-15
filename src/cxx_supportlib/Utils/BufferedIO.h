@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -30,6 +30,7 @@
 #include <utility>
 #include <algorithm>
 #include <boost/function.hpp>
+#include <boost/bind.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/macros.hpp>
 #include <sys/types.h>
@@ -187,13 +188,23 @@ public:
 	unsigned int read(void *buf, unsigned int size, unsigned long long *timeout = NULL) {
 		unsigned int counter = 0;
 		return readUntil(
-			boost::bind(nReadOrEofReached, _1, _2, buf, size, &counter),
+			boost::bind(nReadOrEofReached,
+				boost::placeholders::_1,
+				boost::placeholders::_2,
+				buf,
+				size,
+				&counter),
 			timeout);
 	}
 
 	string readAll(unsigned long long *timeout = NULL) {
 		string output;
-		readUntil(boost::bind(eofReached, _1, _2, &output), timeout);
+		readUntil(
+			boost::bind(eofReached,
+				boost::placeholders::_1,
+				boost::placeholders::_2,
+				&output),
+			timeout);
 		return output;
 	}
 
@@ -212,7 +223,13 @@ public:
 	 */
 	string readLine(unsigned int max = 1024, unsigned long long *timeout = NULL) {
 		string output;
-		readUntil(boost::bind(newlineFound, _1, _2, &output, max), timeout);
+		readUntil(
+			boost::bind(newlineFound,
+				boost::placeholders::_1,
+				boost::placeholders::_2,
+				&output,
+				max),
+			timeout);
 		return output;
 	}
 
