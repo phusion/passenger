@@ -121,7 +121,7 @@ template class BOOST_REGEX_TEMPLATE_DECL ::boost::BOOST_REGEX_DETAIL_NS::perl_ma
 
 #ifdef __clang__
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wkeyword-macro"
+//#pragma clang diagnostic ignored "-Wkeyword-macro"
 #endif
 
 #  ifndef BOOST_REGEX_INSTANTIATE
