@@ -269,7 +269,7 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->union_station_proxy_address.len == 0) {
         conf->union_station_proxy_address.data = (u_char *) "";
     }
-printf("init main conf: %d\n", conf->union_station_support);
+
     return NGX_CONF_OK;
 }
 
