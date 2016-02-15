@@ -6,7 +6,7 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2008-11-12 11:37:53 -0800 (Wed, 12 Nov 2008) $
+ * $Date$
  */
 
 
@@ -230,7 +230,7 @@ public:
         return int_adapter::neg_infinity();
       }
     }
-    return int_adapter<int_type>(value_ + rhs.as_number());
+    return int_adapter<int_type>(value_ + static_cast<int_type>(rhs.as_number()));
   }
 
   int_adapter operator+(const int_type rhs) const
@@ -279,7 +279,7 @@ public:
         return int_adapter::pos_infinity();
       }
     }
-    return int_adapter<int_type>(value_ - rhs.as_number());
+    return int_adapter<int_type>(value_ - static_cast<int_type>(rhs.as_number()));
   }
   int_adapter operator-(const int_type rhs) const
   {

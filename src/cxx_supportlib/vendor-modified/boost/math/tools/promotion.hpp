@@ -86,13 +86,20 @@ namespace boost
 
         typedef typename mpl::if_<
           typename mpl::and_<is_floating_point<T1P>, is_floating_point<T2P> >::type, // both T1P and T2P are floating-point?
-          typename mpl::if_< typename mpl::or_<is_same<long double, T1P>, is_same<long double, T2P> >::type, // either long double?
-            long double, // then result type is long double.
-            typename mpl::if_< typename mpl::or_<is_same<double, T1P>, is_same<double, T2P> >::type, // either double?
-            double, // result type is double.
-          float // else result type is float.
-          >::type
-          >::type,
+#ifdef BOOST_MATH_USE_FLOAT128
+           typename mpl::if_< typename mpl::or_<is_same<__float128, T1P>, is_same<__float128, T2P> >::type, // either long double?
+            __float128,
+#endif
+             typename mpl::if_< typename mpl::or_<is_same<long double, T1P>, is_same<long double, T2P> >::type, // either long double?
+               long double, // then result type is long double.
+               typename mpl::if_< typename mpl::or_<is_same<double, T1P>, is_same<double, T2P> >::type, // either double?
+                  double, // result type is double.
+                  float // else result type is float.
+             >::type
+#ifdef BOOST_MATH_USE_FLOAT128
+             >::type
+#endif
+             >::type,
           // else one or the other is a user-defined type:
           typename mpl::if_< typename mpl::and_<mpl::not_<is_floating_point<T2P> >, ::boost::is_convertible<T1P, T2P> >, T2P, T1P>::type>::type type;
       }; // promote_arg2
@@ -138,8 +145,33 @@ namespace boost
          //
          // Guard against use of long double if it's not supported:
          //
-         BOOST_STATIC_ASSERT((0 == ::boost::is_same<type, long double>::value));
+         BOOST_STATIC_ASSERT_MSG((0 == ::boost::is_same<type, long double>::value), "Sorry, but this platform does not have sufficient long double support for the special functions to be reliably implemented.");
 #endif
+      };
+
+      //
+      // This struct is the same as above, but has no static assert on long double usage,
+      // it should be used only on functions that can be implemented for long double
+      // even when std lib support is missing or broken for that type.
+      //
+      template <class T1, class T2=float, class T3=float, class T4=float, class T5=float, class T6=float>
+      struct promote_args_permissive
+      {
+         typedef typename promote_args_2<
+            typename remove_cv<T1>::type,
+            typename promote_args_2<
+               typename remove_cv<T2>::type,
+               typename promote_args_2<
+                  typename remove_cv<T3>::type,
+                  typename promote_args_2<
+                     typename remove_cv<T4>::type,
+                     typename promote_args_2<
+                        typename remove_cv<T5>::type, typename remove_cv<T6>::type
+                     >::type
+                  >::type
+               >::type
+            >::type
+         >::type type;
       };
 
     } // namespace tools

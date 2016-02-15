@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
 //
 // (C) Copyright Olaf Krzikalla 2004-2006.
-// (C) Copyright Ion Gaztanaga  2006-2012
+// (C) Copyright Ion Gaztanaga  2006-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -16,13 +16,15 @@
 
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
-#include <boost/pointer_cast.hpp>
-#include <boost/intrusive/detail/utilities.hpp>
+
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/intrusive/slist_hook.hpp>
 #include <boost/intrusive/options.hpp>
-#include <boost/intrusive/pointer_traits.hpp>
 #include <boost/intrusive/detail/generic_hook.hpp>
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 namespace boost {
 namespace intrusive {
@@ -81,9 +83,7 @@ struct unordered_node_traits
    static const bool optimize_multikey = OptimizeMultiKey;
 
    static node_ptr get_next(const const_node_ptr & n)
-   {
-      return pointer_traits<node_ptr>::pointer_to(static_cast<node&>(*n->next_));
-   }
+   {  return pointer_traits<node_ptr>::static_cast_from(n->next_);  }
 
    static void set_next(const node_ptr & n, const node_ptr & next)
    {  n->next_ = next;  }
@@ -120,8 +120,12 @@ struct unordered_algorithms
    : public circular_slist_algorithms<NodeTraits>
 {
    typedef circular_slist_algorithms<NodeTraits>   base_type;
-   typedef unordered_group_adapter<NodeTraits> group_traits;
+   typedef unordered_group_adapter<NodeTraits>     group_traits;
    typedef circular_slist_algorithms<group_traits> group_algorithms;
+   typedef NodeTraits                              node_traits;
+   typedef typename NodeTraits::node               node;
+   typedef typename NodeTraits::node_ptr           node_ptr;
+   typedef typename NodeTraits::const_node_ptr     const_node_ptr;
 
    static void init(typename base_type::node_ptr n)
    {
@@ -142,6 +146,11 @@ struct unordered_algorithms
    }
 };
 
+//Class to avoid defining the same algo as a circular list, as hooks would be ambiguous between them
+template<class Algo>
+struct uset_algo_wrapper : public Algo
+{};
+
 template<class VoidPointer, bool StoreHash, bool OptimizeMultiKey>
 struct get_uset_node_algo
 {
@@ -151,9 +160,9 @@ struct get_uset_node_algo
       , slist_node_traits<VoidPointer>
       >::type node_traits_type;
    typedef typename detail::if_c
-      < OptimizeMultiKey
-      , unordered_algorithms<node_traits_type>
-      , circular_slist_algorithms<node_traits_type>
+                              < OptimizeMultiKey
+                              , unordered_algorithms<node_traits_type>
+                              , uset_algo_wrapper< circular_slist_algorithms<node_traits_type> >
       >::type type;
 };
 /// @endcond
@@ -163,7 +172,7 @@ struct get_uset_node_algo
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
-template<class O1 = none, class O2 = none, class O3 = none, class O4 = none>
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
 #endif
 struct make_unordered_set_base_hook
 {
@@ -177,14 +186,14 @@ struct make_unordered_set_base_hook
          #endif
       >::type packed_options;
 
-   typedef detail::generic_hook
-   < get_uset_node_algo<typename packed_options::void_pointer
-                       , packed_options::store_hash
-                       , packed_options::optimize_multikey
-                       >
+   typedef generic_hook
+   < typename get_uset_node_algo < typename packed_options::void_pointer
+                                 , packed_options::store_hash
+                                 , packed_options::optimize_multikey
+                                 >::type
    , typename packed_options::tag
    , packed_options::link_mode
-   , detail::UsetBaseHook
+   , HashBaseHookId
    > implementation_defined;
    /// @endcond
    typedef implementation_defined type;
@@ -203,7 +212,7 @@ struct make_unordered_set_base_hook
 //! unique tag.
 //!
 //! \c void_pointer<> is the pointer type that will be used internally in the hook
-//! and the the container configured to use this hook.
+//! and the container configured to use this hook.
 //!
 //! \c link_mode<> will specify the linking mode of the hook (\c normal_link,
 //! \c auto_unlink or \c safe_link).
@@ -302,7 +311,7 @@ class unordered_set_base_hook
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
-template<class O1 = none, class O2 = none, class O3 = none, class O4 = none>
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
 #endif
 struct make_unordered_set_member_hook
 {
@@ -316,14 +325,14 @@ struct make_unordered_set_member_hook
          #endif
       >::type packed_options;
 
-   typedef detail::generic_hook
-   < get_uset_node_algo< typename packed_options::void_pointer
-                       , packed_options::store_hash
-                       , packed_options::optimize_multikey
-                       >
+   typedef generic_hook
+   < typename get_uset_node_algo< typename packed_options::void_pointer
+                                , packed_options::store_hash
+                                , packed_options::optimize_multikey
+                                >::type
    , member_tag
    , packed_options::link_mode
-   , detail::NoBaseHook
+   , NoBaseHookId
    > implementation_defined;
    /// @endcond
    typedef implementation_defined type;
@@ -337,7 +346,7 @@ struct make_unordered_set_member_hook
 //! \c link_mode<> and \c store_hash<>.
 //!
 //! \c void_pointer<> is the pointer type that will be used internally in the hook
-//! and the the container configured to use this hook.
+//! and the container configured to use this hook.
 //!
 //! \c link_mode<> will specify the linking mode of the hook (\c normal_link,
 //! \c auto_unlink or \c safe_link).

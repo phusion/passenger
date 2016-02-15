@@ -1,54 +1,75 @@
-#ifndef BOOST_ATOMIC_DETAIL_CONFIG_HPP
-#define BOOST_ATOMIC_DETAIL_CONFIG_HPP
+/*
+ * Distributed under the Boost Software License, Version 1.0.
+ * (See accompanying file LICENSE_1_0.txt or copy at
+ * http://www.boost.org/LICENSE_1_0.txt)
+ *
+ * Copyright (c) 2012 Hartmut Kaiser
+ * Copyright (c) 2014 Andrey Semashev
+ */
+/*!
+ * \file   atomic/detail/config.hpp
+ *
+ * This header defines configuraion macros for Boost.Atomic
+ */
 
-//  Copyright (c) 2012 Hartmut Kaiser
-//
-//  Distributed under the Boost Software License, Version 1.0.
-//  See accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
+#ifndef BOOST_ATOMIC_DETAIL_CONFIG_HPP_INCLUDED_
+#define BOOST_ATOMIC_DETAIL_CONFIG_HPP_INCLUDED_
 
 #include <boost/config.hpp>
 
-#if (defined(_MSC_VER) && (_MSC_VER >= 1020)) || defined(__GNUC__) || defined(BOOST_CLANG) || defined(BOOST_INTEL) || defined(__COMO__) || defined(__DMC__)
-#define BOOST_ATOMIC_HAS_PRAGMA_ONCE
-#endif
-
-#ifdef BOOST_ATOMIC_HAS_PRAGMA_ONCE
+#ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-//  Set up dll import/export options
-#if (defined(BOOST_ATOMIC_DYN_LINK) || defined(BOOST_ALL_DYN_LINK)) && \
-    !defined(BOOST_ATOMIC_STATIC_LINK)
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_memcpy)
+#define BOOST_ATOMIC_DETAIL_HAS_BUILTIN_MEMCPY
+#endif
+#if __has_builtin(__builtin_memcmp)
+#define BOOST_ATOMIC_DETAIL_HAS_BUILTIN_MEMCMP
+#endif
+#elif defined(BOOST_GCC)
+#define BOOST_ATOMIC_DETAIL_HAS_BUILTIN_MEMCPY
+#define BOOST_ATOMIC_DETAIL_HAS_BUILTIN_MEMCMP
+#endif
 
-#if defined(BOOST_ATOMIC_SOURCE)
-#define BOOST_ATOMIC_DECL BOOST_SYMBOL_EXPORT
-#define BOOST_ATOMIC_BUILD_DLL
+#if defined(BOOST_ATOMIC_DETAIL_HAS_BUILTIN_MEMCPY)
+#define BOOST_ATOMIC_DETAIL_MEMCPY __builtin_memcpy
 #else
-#define BOOST_ATOMIC_DECL BOOST_SYMBOL_IMPORT
+#define BOOST_ATOMIC_DETAIL_MEMCPY std::memcpy
 #endif
 
-#endif // building a shared library
-
-#ifndef BOOST_ATOMIC_DECL
-#define BOOST_ATOMIC_DECL
+#if defined(BOOST_ATOMIC_DETAIL_HAS_BUILTIN_MEMCMP)
+#define BOOST_ATOMIC_DETAIL_MEMCMP __builtin_memcmp
+#else
+#define BOOST_ATOMIC_DETAIL_MEMCMP std::memcmp
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-//  Auto library naming
-#if !defined(BOOST_ATOMIC_SOURCE) && !defined(BOOST_ALL_NO_LIB) && \
-    !defined(BOOST_ATOMIC_NO_LIB)
-
-#define BOOST_LIB_NAME boost_atomic
-
-// tell the auto-link code to select a dll when required:
-#if defined(BOOST_ALL_DYN_LINK) || defined(BOOST_ATOMIC_DYN_LINK)
-#define BOOST_DYN_LINK
+#if defined(__CUDACC__)
+// nvcc does not support alternatives in asm statement constraints
+#define BOOST_ATOMIC_DETAIL_NO_ASM_CONSTRAINT_ALTERNATIVES
+// nvcc does not support condition code register ("cc") clobber in asm statements
+#define BOOST_ATOMIC_DETAIL_NO_ASM_CLOBBER_CC
 #endif
 
-#include <boost/config/auto_link.hpp>
-
-#endif  // auto-linking disabled
-
+#if !defined(BOOST_ATOMIC_DETAIL_NO_ASM_CLOBBER_CC)
+#define BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC "cc"
+#define BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC_COMMA "cc",
+#else
+#define BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+#define BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC_COMMA
 #endif
+
+#if (defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)) && (defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) < 403)
+// This macro indicates we're using older binutils that don't support implied zero displacements for memory opereands,
+// making code like this invalid:
+//   movl 4+(%%edx), %%eax
+#define BOOST_ATOMIC_DETAIL_NO_ASM_IMPLIED_ZERO_DISPLACEMENTS
+#endif
+
+#if defined(__clang__) || (defined(BOOST_GCC) && (BOOST_GCC+0) < 40500)
+// This macro indicates that the compiler does not support allocating rax:rdx register pairs ("A") in asm blocks
+#define BOOST_ATOMIC_DETAIL_NO_ASM_RAX_RDX_PAIRS
+#endif
+
+#endif // BOOST_ATOMIC_DETAIL_CONFIG_HPP_INCLUDED_

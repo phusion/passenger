@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2012.
+// (C) Copyright Ion Gaztanaga 2005-2013.
 // (C) Copyright Gennaro Prota 2003 - 2004.
 //
 // Distributed under the Boost Software License, Version 1.0.
@@ -14,14 +14,18 @@
 #ifndef BOOST_CONTAINER_DETAIL_TRANSFORM_ITERATORS_HPP
 #define BOOST_CONTAINER_DETAIL_TRANSFORM_ITERATORS_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
-#include "config_begin.hpp"
+#include <boost/container/detail/config_begin.hpp>
 #include <boost/container/detail/workaround.hpp>
 #include <boost/container/detail/type_traits.hpp>
-#include <iterator>
+#include <boost/container/detail/iterator.hpp>
 
 namespace boost {
 namespace container {
@@ -33,10 +37,10 @@ struct operator_arrow_proxy
       :  m_value(px)
    {}
 
+   typedef PseudoReference element_type;
+
    PseudoReference* operator->() const { return &m_value; }
-   // This function is needed for MWCW and BCC, which won't call operator->
-   // again automatically per 13.3.1.2 para 8
-//   operator T*() const { return &m_value; }
+
    mutable PseudoReference m_value;
 };
 
@@ -47,17 +51,17 @@ struct operator_arrow_proxy<T&>
       :  m_value(px)
    {}
 
+   typedef T element_type;
+
    T* operator->() const { return const_cast<T*>(&m_value); }
-   // This function is needed for MWCW and BCC, which won't call operator->
-   // again automatically per 13.3.1.2 para 8
-//   operator T*() const { return &m_value; }
+
    T &m_value;
 };
 
 template <class Iterator, class UnaryFunction>
 class transform_iterator
    : public UnaryFunction
-   , public std::iterator
+   , public boost::container::iterator
       < typename Iterator::iterator_category
       , typename container_detail::remove_reference<typename UnaryFunction::result_type>::type
       , typename Iterator::difference_type
@@ -155,10 +159,10 @@ class transform_iterator
    { return UnaryFunction::operator()(*m_it); }
 
    void advance(typename Iterator::difference_type n)
-   {  std::advance(m_it, n); }
+   {  boost::container::iterator_advance(m_it, n); }
 
    typename Iterator::difference_type distance_to(const transform_iterator &other)const
-   {  return std::distance(other.m_it, m_it); }
+   {  return boost::container::iterator_distance(other.m_it, m_it); }
 };
 
 template <class Iterator, class UnaryFunc>

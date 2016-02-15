@@ -1,6 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Joaquin M Lopez Munoz  2006-2012
+// (C) Copyright Joaquin M Lopez Munoz  2006-2013
+// (C) Copyright Ion Gaztanaga          2014-2014
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -13,26 +14,205 @@
 #ifndef BOOST_INTRUSIVE_DETAIL_EBO_HOLDER_HPP
 #define BOOST_INTRUSIVE_DETAIL_EBO_HOLDER_HPP
 
-#include <boost/intrusive/detail/config_begin.hpp>
-#include <boost/intrusive/detail/mpl.hpp>
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
+
+#include <boost/move/utility_core.hpp>
 
 namespace boost {
 namespace intrusive {
 namespace detail {
 
-template<typename T, bool IsEmpty = true>
-class ebo_functor_holder_impl
+#if defined(BOOST_MSVC) || defined(__BORLANDC_)
+#define BOOST_INTRUSIVE_TT_DECL __cdecl
+#else
+#define BOOST_INTRUSIVE_TT_DECL
+#endif
+
+#if defined(_MSC_EXTENSIONS) && !defined(__BORLAND__) && !defined(_WIN64) && !defined(_M_ARM) && !defined(UNDER_CE)
+#define BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
+#endif
+
+template <typename T>
+struct is_unary_or_binary_function_impl
+{  static const bool value = false; };
+
+// see boost ticket #4094
+// avoid duplicate definitions of is_unary_or_binary_function_impl
+#ifndef BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
+
+template <typename R>
+struct is_unary_or_binary_function_impl<R (*)()>
+{  static const bool value = true;  };
+
+template <typename R>
+struct is_unary_or_binary_function_impl<R (*)(...)>
+{  static const bool value = true;  };
+
+#else // BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
+
+template <typename R>
+struct is_unary_or_binary_function_impl<R (__stdcall*)()>
+{  static const bool value = true;  };
+
+#ifndef _MANAGED
+
+template <typename R>
+struct is_unary_or_binary_function_impl<R (__fastcall*)()>
+{  static const bool value = true;  };
+
+#endif
+
+template <typename R>
+struct is_unary_or_binary_function_impl<R (__cdecl*)()>
+{  static const bool value = true;  };
+
+template <typename R>
+struct is_unary_or_binary_function_impl<R (__cdecl*)(...)>
+{  static const bool value = true;  };
+
+#endif
+
+// see boost ticket #4094
+// avoid duplicate definitions of is_unary_or_binary_function_impl
+#ifndef BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
+
+template <typename R, class T0>
+struct is_unary_or_binary_function_impl<R (*)(T0)>
+{  static const bool value = true;  };
+
+template <typename R, class T0>
+struct is_unary_or_binary_function_impl<R (*)(T0...)>
+{  static const bool value = true;  };
+
+#else // BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
+
+template <typename R, class T0>
+struct is_unary_or_binary_function_impl<R (__stdcall*)(T0)>
+{  static const bool value = true;  };
+
+#ifndef _MANAGED
+
+template <typename R, class T0>
+struct is_unary_or_binary_function_impl<R (__fastcall*)(T0)>
+{  static const bool value = true;  };
+
+#endif
+
+template <typename R, class T0>
+struct is_unary_or_binary_function_impl<R (__cdecl*)(T0)>
+{  static const bool value = true;  };
+
+template <typename R, class T0>
+struct is_unary_or_binary_function_impl<R (__cdecl*)(T0...)>
+{  static const bool value = true;  };
+
+#endif
+
+// see boost ticket #4094
+// avoid duplicate definitions of is_unary_or_binary_function_impl
+#ifndef BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
+
+template <typename R, class T0, class T1>
+struct is_unary_or_binary_function_impl<R (*)(T0, T1)>
+{  static const bool value = true;  };
+
+template <typename R, class T0, class T1>
+struct is_unary_or_binary_function_impl<R (*)(T0, T1...)>
+{  static const bool value = true;  };
+
+#else // BOOST_INTRUSIVE_TT_TEST_MSC_FUNC_SIGS
+
+template <typename R, class T0, class T1>
+struct is_unary_or_binary_function_impl<R (__stdcall*)(T0, T1)>
+{  static const bool value = true;  };
+
+#ifndef _MANAGED
+
+template <typename R, class T0, class T1>
+struct is_unary_or_binary_function_impl<R (__fastcall*)(T0, T1)>
+{  static const bool value = true;  };
+
+#endif
+
+template <typename R, class T0, class T1>
+struct is_unary_or_binary_function_impl<R (__cdecl*)(T0, T1)>
+{  static const bool value = true;  };
+
+template <typename R, class T0, class T1>
+struct is_unary_or_binary_function_impl<R (__cdecl*)(T0, T1...)>
+{  static const bool value = true;  };
+#endif
+
+template <typename T>
+struct is_unary_or_binary_function_impl<T&>
+{  static const bool value = false; };
+
+template<typename T>
+struct is_unary_or_binary_function : is_unary_or_binary_function_impl<T>
+{};
+
+template<typename T, bool = is_unary_or_binary_function<T>::value>
+class ebo_functor_holder
 {
+   BOOST_COPYABLE_AND_MOVABLE(ebo_functor_holder)
+
    public:
-   ebo_functor_holder_impl()
+   typedef T functor_type;
+
+   ebo_functor_holder()
+      : t_()
    {}
-   ebo_functor_holder_impl(const T& t)
-      :  t_(t)
+
+   explicit ebo_functor_holder(const T &t)
+      : t_(t)
    {}
+
+   explicit ebo_functor_holder(BOOST_RV_REF(T) t)
+      : t_(::boost::move(t))
+   {}
+
    template<class Arg1, class Arg2>
-   ebo_functor_holder_impl(const Arg1& arg1, const Arg2& arg2)
-      :  t_(arg1, arg2)
+   ebo_functor_holder(BOOST_FWD_REF(Arg1) arg1, BOOST_FWD_REF(Arg2) arg2)
+      : t_(::boost::forward<Arg1>(arg1), ::boost::forward<Arg2>(arg2))
    {}
+
+   ebo_functor_holder(const ebo_functor_holder &x)
+      : t_(x)
+   {}
+
+   ebo_functor_holder(BOOST_RV_REF(ebo_functor_holder) x)
+      : t_(x.t_)
+   {}
+
+   ebo_functor_holder& operator=(BOOST_COPY_ASSIGN_REF(ebo_functor_holder) x)
+   {
+      this->get() = x.get();
+      return *this;
+   }
+
+   ebo_functor_holder& operator=(BOOST_RV_REF(ebo_functor_holder) x)
+   {
+      this->get() = ::boost::move(x.get());
+      return *this;
+   }
+
+   ebo_functor_holder& operator=(const T &x)
+   {
+      this->get() = x;
+      return *this;
+   }
+
+   ebo_functor_holder& operator=(BOOST_RV_REF(T) x)
+   {
+      this->get() = ::boost::move(x);
+      return *this;
+   }
 
    T&       get(){return t_;}
    const T& get()const{return t_;}
@@ -42,54 +222,70 @@ class ebo_functor_holder_impl
 };
 
 template<typename T>
-class ebo_functor_holder_impl<T, false>
+class ebo_functor_holder<T, false>
    :  public T
 {
+   BOOST_COPYABLE_AND_MOVABLE(ebo_functor_holder)
+
    public:
-   ebo_functor_holder_impl()
+   typedef T functor_type;
+
+   ebo_functor_holder()
+      : T()
    {}
-   ebo_functor_holder_impl(const T& t)
-      :  T(t)
+
+   explicit ebo_functor_holder(const T &t)
+      : T(t)
    {}
+
+   explicit ebo_functor_holder(BOOST_RV_REF(T) t)
+      : T(::boost::move(t))
+   {}
+
    template<class Arg1, class Arg2>
-   ebo_functor_holder_impl(const Arg1& arg1, const Arg2& arg2)
-      :  T(arg1, arg2)
+   ebo_functor_holder(BOOST_FWD_REF(Arg1) arg1, BOOST_FWD_REF(Arg2) arg2)
+      : T(::boost::forward<Arg1>(arg1), ::boost::forward<Arg2>(arg2))
    {}
+
+   ebo_functor_holder(const ebo_functor_holder &x)
+      : T(static_cast<const T&>(x))
+   {}
+
+   ebo_functor_holder(BOOST_RV_REF(ebo_functor_holder) x)
+      : T(BOOST_MOVE_BASE(T, x))
+   {}
+
+   ebo_functor_holder& operator=(BOOST_COPY_ASSIGN_REF(ebo_functor_holder) x)
+   {
+      const ebo_functor_holder&r = x;
+      this->get() = x.get();
+      return *this;
+   }
+
+   ebo_functor_holder& operator=(BOOST_RV_REF(ebo_functor_holder) x)
+   {
+      this->get() = ::boost::move(x.get());
+      return *this;
+   }
+
+   ebo_functor_holder& operator=(const T &x)
+   {
+      this->get() = x;
+      return *this;
+   }
+
+   ebo_functor_holder& operator=(BOOST_RV_REF(T) x)
+   {
+      this->get() = ::boost::move(x);
+      return *this;
+   }
 
    T&       get(){return *this;}
    const T& get()const{return *this;}
 };
 
-template<typename T>
-class ebo_functor_holder
-   :  public ebo_functor_holder_impl<T, is_unary_or_binary_function<T>::value>
-{
-   private:
-   typedef ebo_functor_holder_impl<T, is_unary_or_binary_function<T>::value> super;
-
-   public:
-   ebo_functor_holder(){}
-   ebo_functor_holder(const T& t)
-      :  super(t)
-   {}
-
-   template<class Arg1, class Arg2>
-   ebo_functor_holder(const Arg1& arg1, const Arg2& arg2)
-      :  super(arg1, arg2)
-   {}
-
-   ebo_functor_holder& operator=(const ebo_functor_holder& x)
-   {
-      this->get()=x.get();
-      return *this;
-   }
-};
-
-
 }  //namespace detail {
 }  //namespace intrusive {
 }  //namespace boost {
-
-#include <boost/intrusive/detail/config_end.hpp>
 
 #endif   //#ifndef BOOST_INTRUSIVE_DETAIL_EBO_HOLDER_HPP

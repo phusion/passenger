@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2007-2012
+// (C) Copyright Ion Gaztanaga 2007-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -15,29 +15,25 @@
 
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
-#include <boost/intrusive/detail/utilities.hpp>
+
 #include <boost/intrusive/detail/avltree_node.hpp>
 #include <boost/intrusive/avltree_algorithms.hpp>
 #include <boost/intrusive/options.hpp>
 #include <boost/intrusive/detail/generic_hook.hpp>
 
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
+
 namespace boost {
 namespace intrusive {
-
-/// @cond
-template<class VoidPointer, bool OptimizeSize = false>
-struct get_avl_set_node_algo
-{
-   typedef avltree_algorithms<avltree_node_traits<VoidPointer, OptimizeSize> > type;
-};
-/// @endcond
 
 //! Helper metafunction to define a \c avl_set_base_hook that yields to the same
 //! type when the same options (either explicitly or implicitly) are used.
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
-template<class O1 = none, class O2 = none, class O3 = none, class O4 = none>
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
 #endif
 struct make_avl_set_base_hook
 {
@@ -50,12 +46,11 @@ struct make_avl_set_base_hook
       #endif
       ::type packed_options;
 
-   typedef detail::generic_hook
-   < get_avl_set_node_algo<typename packed_options::void_pointer
-                      ,packed_options::optimize_size>
+   typedef generic_hook
+   < avltree_algorithms<avltree_node_traits<typename packed_options::void_pointer, packed_options::optimize_size> >
    , typename packed_options::tag
    , packed_options::link_mode
-   , detail::AvlSetBaseHook
+   , AvlTreeBaseHookId
    > implementation_defined;
    /// @endcond
    typedef implementation_defined type;
@@ -74,7 +69,7 @@ struct make_avl_set_base_hook
 //! unique tag.
 //!
 //! \c void_pointer<> is the pointer type that will be used internally in the hook
-//! and the the container configured to use this hook.
+//! and the container configured to use this hook.
 //!
 //! \c link_mode<> will specify the linking mode of the hook (\c normal_link,
 //! \c auto_unlink or \c safe_link).
@@ -168,7 +163,7 @@ class avl_set_base_hook
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
-template<class O1 = none, class O2 = none, class O3 = none, class O4 = none>
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
 #endif
 struct make_avl_set_member_hook
 {
@@ -181,12 +176,11 @@ struct make_avl_set_member_hook
       #endif
       ::type packed_options;
 
-   typedef detail::generic_hook
-   < get_avl_set_node_algo<typename packed_options::void_pointer
-                      ,packed_options::optimize_size>
+   typedef generic_hook
+   < avltree_algorithms<avltree_node_traits<typename packed_options::void_pointer, packed_options::optimize_size> >
    , member_tag
    , packed_options::link_mode
-   , detail::NoBaseHook
+   , NoBaseHookId
    > implementation_defined;
    /// @endcond
    typedef implementation_defined type;
@@ -200,7 +194,7 @@ struct make_avl_set_member_hook
 //! \c link_mode<> and \c optimize_size<>.
 //!
 //! \c void_pointer<> is the pointer type that will be used internally in the hook
-//! and the the container configured to use this hook.
+//! and the container configured to use this hook.
 //!
 //! \c link_mode<> will specify the linking mode of the hook (\c normal_link,
 //! \c auto_unlink or \c safe_link).

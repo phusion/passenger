@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -25,7 +25,7 @@
 
 ESSENTIALS = [
   "boost/detail/{limits,endian}.hpp",
-  "boost/config",
+  "boost/config*",
   "boost/mpl",
   "boost/preprocessor/stringize.hpp",
   "boost/smart_ptr/detail/sp_counted_*",
@@ -36,8 +36,15 @@ ESSENTIALS = [
   "boost/unordered*",
   "boost/thread",
   "boost/intrusive",
-  "boost/heap",
   "boost/container",
+  "boost/predef",
+  "boost/move",
+  "boost/core",
+  "boost/bind",
+  "boost/function",
+  "boost/optional.hpp",
+  "boost/optional",
+  "boost/utility",
   "libs/thread/src",
   "libs/system/src",
   "libs/regex/src",
@@ -47,10 +54,18 @@ ESSENTIALS = [
   "boost/date_time/date_formatting_limited.hpp",
   "boost/type_traits/make_signed.hpp",
   "boost/type_traits/detail/*",
+  "boost/typeof",
+  "boost/date_time",
+  "boost/type_traits",
+  "boost/cstdint.hpp",
+  "boost/*regex*",
   "boost/non_type.hpp",
   "boost/detail/fenv.hpp",
   "boost/foreach.hpp",
-  "boost/*regex*"
+  "boost/none*",
+  "boost/system/detail/error_code.ipp",
+  "boost/detail/reference_content.hpp",
+  "boost/algorithm/string"
 ]
 EXCLUDE = [
   "libs/thread/src/win32/*",
@@ -73,18 +88,21 @@ PROGRAM_SOURCE = %q{
   #include <boost/function.hpp>
   #include <boost/bind.hpp>
   #include <boost/container/vector.hpp>
-  #include <boost/heap/d_ary_heap.hpp>
   #include <boost/date_time/posix_time/posix_time.hpp>
   #include <boost/foreach.hpp>
   #include <boost/unordered_map.hpp>
   #include <boost/cregex.hpp>
   #include <boost/regex.hpp>
   #include <boost/pool/object_pool.hpp>
+  #include <boost/move/core.hpp>
+  #include <boost/move/utility.hpp>
+  #include <boost/atomic.hpp>
+  #include <boost/typeof/typeof.hpp>
 }
 
 require 'fileutils'
 BOOST_DIR = ARGV[0]
-Dir.chdir(File.dirname(__FILE__) + "/../ext")
+Dir.chdir(File.dirname(__FILE__) + "/../src/cxx_supportlib/vendor-modified")
 
 # Run the given command, and abort on error.
 def sh(*command)
@@ -143,6 +161,8 @@ def cleanup
   FileUtils.rm_rf("boost/thread/win32")
   FileUtils.rm_rf("boost/src/win32")
   FileUtils.rm_rf("boost/asio/win32")
+  FileUtils.rm_rf("boost/atomic/detail/caps_windows.hpp")
+  FileUtils.rm_rf("boost/atomic/detail/ops_windows.hpp")
   FileUtils.rm_rf("boost/smart_ptr/detail/spinlock_w32.hpp")
   FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
   FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
@@ -151,10 +171,12 @@ def cleanup
 end
 
 # Compile PROGRAM_SOURCE and copy whatever missing header files the compiler needs.
-def copy_dependencies
+def copy_dependencies(cflags)
   done = false
   while !done
-    missing_headers = `c++ test.cpp -c -I. 2>&1`.
+    compiler_output = `c++ test.cpp -c -I. #{cflags} 2>&1`
+    File.unlink('test.o')
+    missing_headers = compiler_output.
       split("\n").
       grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
       map do |line|
@@ -188,7 +210,8 @@ def start
   begin
     prepare
     copy_essential_files
-    copy_dependencies
+    copy_dependencies("-std=gnu++11")
+    copy_dependencies("")
   ensure
     cleanup
   end

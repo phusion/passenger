@@ -7,7 +7,7 @@
 //  See http://www.boost.org/libs/type_traits for most recent version including documentation.
 
 #include <boost/config.hpp>
-#include <boost/type_traits/ice.hpp>
+#include <boost/type_traits/detail/yes_no_type.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 #include <boost/type_traits/is_const.hpp>
 #include <boost/type_traits/is_fundamental.hpp>
@@ -18,15 +18,15 @@
 #include <boost/type_traits/remove_pointer.hpp>
 #include <boost/type_traits/remove_reference.hpp>
 
-// should be the last #include
-#include <boost/type_traits/detail/bool_trait_def.hpp>
-
 // avoid warnings
-#if defined(__GNUC__) && ((__GNUC__==3 && __GNUC_MINOR__>=1) || (__GNUC__>3))
+#if defined(__GNUC__)
 #   pragma GCC system_header
 #elif defined(BOOST_MSVC)
 #   pragma warning ( push )
-#   pragma warning ( disable : 4244 4913 )
+#   pragma warning ( disable : 4244 4913)
+#   if BOOST_WORKAROUND(BOOST_MSVC_FULL_VER, >= 140050000)
+#       pragma warning ( disable : 6334)
+#   endif
 #endif
 
 namespace boost {
@@ -138,10 +138,10 @@ no_operator operator,(no_operator, has_operator);
 
 template < typename Lhs >
 struct operator_exists {
-   static ::boost::type_traits::yes_type check(has_operator); // this version is preferred when operator exists
-   static ::boost::type_traits::no_type check(no_operator); // this version is used otherwise
+   static ::boost::type_traits::yes_type s_check(has_operator); // this version is preferred when operator exists
+   static ::boost::type_traits::no_type s_check(no_operator); // this version is used otherwise
 
-   BOOST_STATIC_CONSTANT(bool, value = (sizeof(check(((make<Lhs>() BOOST_TT_TRAIT_OP),make<has_operator>())))==sizeof(::boost::type_traits::yes_type)));
+   BOOST_STATIC_CONSTANT(bool, value = (sizeof(s_check(((make<Lhs>() BOOST_TT_TRAIT_OP),make<has_operator>())))==sizeof(::boost::type_traits::yes_type)));
 };
 
 
@@ -163,13 +163,7 @@ struct trait_impl1 < Lhs, Ret, true > {
 template < typename Lhs, typename Ret >
 struct trait_impl1 < Lhs, Ret, false > {
    BOOST_STATIC_CONSTANT(bool,
-      value = (
-         ::boost::type_traits::ice_and<
-            operator_exists < Lhs >::value,
-            operator_returns_Ret < Lhs, Ret, operator_returns_void < Lhs >::value >::value
-         >::value
-      )
-   );
+      value = (operator_exists < Lhs >::value && operator_returns_Ret < Lhs, Ret, operator_returns_void < Lhs >::value >::value));
 };
 
 // specialization needs to be declared for the special void case
@@ -191,12 +185,11 @@ struct trait_impl {
 } // namespace detail
 
 // this is the accessible definition of the trait to end user
-BOOST_TT_AUX_BOOL_TRAIT_DEF2(BOOST_TT_TRAIT_NAME, Lhs, Ret=::boost::detail::BOOST_JOIN(BOOST_TT_TRAIT_NAME,_impl)::dont_care, (::boost::detail::BOOST_JOIN(BOOST_TT_TRAIT_NAME,_impl)::trait_impl< Lhs, Ret >::value))
+template <class Lhs, class Ret=::boost::detail::BOOST_JOIN(BOOST_TT_TRAIT_NAME,_impl)::dont_care>
+struct BOOST_TT_TRAIT_NAME : public integral_constant<bool, (::boost::detail::BOOST_JOIN(BOOST_TT_TRAIT_NAME, _impl)::trait_impl< Lhs, Ret >::value)>{};
 
 } // namespace boost
 
 #if defined(BOOST_MSVC)
 #   pragma warning ( pop )
 #endif
-
-#include <boost/type_traits/detail/bool_trait_undef.hpp>

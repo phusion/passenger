@@ -82,8 +82,10 @@
 #ifndef BOOST_OPERATORS_HPP
 #define BOOST_OPERATORS_HPP
 
+#include <cstddef>
+#include <iterator>
+
 #include <boost/config.hpp>
-#include <boost/iterator.hpp>
 #include <boost/detail/workaround.hpp>
 
 #if defined(__sgi) && !defined(__GNUC__)
@@ -97,14 +99,7 @@
 namespace boost {
 namespace detail {
 
-template <typename T> class empty_base {
-
-// Helmut Zeisel, empty base class optimization bug with GCC 3.0.0
-#if defined(__GNUC__) && __GNUC__==3 && __GNUC_MINOR__==0 && __GNU_PATCHLEVEL__==0
-  bool dummy; 
-#endif
-
-};
+template <typename T> class empty_base {};
 
 } // namespace detail
 } // namespace boost
@@ -711,7 +706,6 @@ struct random_access_iteratable
 // the xxxx, xxxx1, and xxxx2 templates, importing them into boost:: as
 // necessary.
 //
-#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
 
 // is_chained_base<> - a traits class used to distinguish whether an operator
 // template argument is being used for base class chaining, or is specifying a
@@ -809,24 +803,6 @@ BOOST_OPERATOR_TEMPLATE2(template_name##2)                         \
 BOOST_OPERATOR_TEMPLATE1(template_name##1)
 
 
-#else // BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
-
-#  define BOOST_OPERATOR_TEMPLATE4(template_name4) \
-        BOOST_IMPORT_TEMPLATE4(template_name4)
-#  define BOOST_OPERATOR_TEMPLATE3(template_name3) \
-        BOOST_IMPORT_TEMPLATE3(template_name3)
-#  define BOOST_OPERATOR_TEMPLATE2(template_name2) \
-        BOOST_IMPORT_TEMPLATE2(template_name2)
-#  define BOOST_OPERATOR_TEMPLATE1(template_name1) \
-        BOOST_IMPORT_TEMPLATE1(template_name1)
-
-   // In this case we can only assume that template_name<> is equivalent to the
-   // more commonly needed template_name1<> form.
-#  define BOOST_OPERATOR_TEMPLATE(template_name)                   \
-   template <class T, class B = ::boost::detail::empty_base<T> >   \
-   struct template_name : template_name##1<T, B> {};
-
-#endif // BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
 
 namespace boost {
     
@@ -897,14 +873,10 @@ struct operators2
     , bitwise2<T,U
       > > > {};
 
-#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
 template <class T, class U = T>
 struct operators : operators2<T, U> {};
 
 template <class T> struct operators<T, T>
-#else
-template <class T> struct operators
-#endif
     : totally_ordered<T
     , integer_arithmetic<T
     , bitwise<T
@@ -921,13 +893,13 @@ template <class T,
           class R = V const &>
 struct input_iterator_helper
   : input_iteratable<T, P
-  , boost::iterator<std::input_iterator_tag, V, D, P, R
+  , std::iterator<std::input_iterator_tag, V, D, P, R
     > > {};
 
 template<class T>
 struct output_iterator_helper
   : output_iteratable<T
-  , boost::iterator<std::output_iterator_tag, void, void, void, void
+  , std::iterator<std::output_iterator_tag, void, void, void, void
   > >
 {
   T& operator*()  { return static_cast<T&>(*this); }
@@ -941,7 +913,7 @@ template <class T,
           class R = V&>
 struct forward_iterator_helper
   : forward_iteratable<T, P
-  , boost::iterator<std::forward_iterator_tag, V, D, P, R
+  , std::iterator<std::forward_iterator_tag, V, D, P, R
     > > {};
 
 template <class T,
@@ -951,7 +923,7 @@ template <class T,
           class R = V&>
 struct bidirectional_iterator_helper
   : bidirectional_iteratable<T, P
-  , boost::iterator<std::bidirectional_iterator_tag, V, D, P, R
+  , std::iterator<std::bidirectional_iterator_tag, V, D, P, R
     > > {};
 
 template <class T,
@@ -961,7 +933,7 @@ template <class T,
           class R = V&>
 struct random_access_iterator_helper
   : random_access_iteratable<T, P, D, R
-  , boost::iterator<std::random_access_iterator_tag, V, D, P, R
+  , std::iterator<std::random_access_iterator_tag, V, D, P, R
     > >
 {
   friend D requires_difference_operator(const T& x, const T& y) {

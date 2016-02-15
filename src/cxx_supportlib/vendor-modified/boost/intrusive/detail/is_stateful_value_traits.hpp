@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga  2009-2012.
+// (C) Copyright Ion Gaztanaga  2009-2013.
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -13,7 +13,13 @@
 #ifndef BOOST_INTRUSIVE_DETAIL_IS_STATEFUL_VALUE_TRAITS_HPP
 #define BOOST_INTRUSIVE_DETAIL_IS_STATEFUL_VALUE_TRAITS_HPP
 
-#include <boost/intrusive/detail/config_begin.hpp>
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 #if defined(_MSC_VER) && (_MSC_VER <= 1310)
 
@@ -26,7 +32,7 @@ namespace detail {
 template<class ValueTraits>
 struct is_stateful_value_traits
 {
-   static const bool value = !detail::is_empty_class<ValueTraits>::value;
+   static const bool value = !detail::is_empty<ValueTraits>::value;
 };
 
 }}}
@@ -71,7 +77,5 @@ struct is_stateful_value_traits
 }}}
 
 #endif
-
-#include <boost/intrusive/detail/config_end.hpp>
 
 #endif   //@ifndef BOOST_INTRUSIVE_DETAIL_IS_STATEFUL_VALUE_TRAITS_HPP

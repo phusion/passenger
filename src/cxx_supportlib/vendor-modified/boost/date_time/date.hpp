@@ -6,7 +6,7 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2012-09-22 15:33:33 -0700 (Sat, 22 Sep 2012) $
+ * $Date$
  */
 
 #include <boost/operators.hpp>
@@ -159,7 +159,7 @@ namespace date_time {
       {
         return date_type(date_rep_type(days_) - dd.get_rep());
       }
-      return date_type(date_rep_type(days_) - dd.days());
+      return date_type(date_rep_type(days_) - static_cast<date_int_type>(dd.days()));
     }
     date_type operator-=(const duration_type& dd)
     {
@@ -177,7 +177,7 @@ namespace date_time {
       {
         return date_type(date_rep_type(days_) + dd.get_rep());
       }
-      return date_type(date_rep_type(days_) + dd.days());
+      return date_type(date_rep_type(days_) + static_cast<date_int_type>(dd.days()));
     }
     date_type operator+=(const duration_type& dd)
     {
