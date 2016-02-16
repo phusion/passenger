@@ -102,7 +102,7 @@ namespace tut {
 						char *buf = new char[shouldNowRead];
 						ssize_t ret = syscalls::read(fd, buf, shouldNowRead);
 						int e = errno;
-						delete buf;
+						delete[] buf;
 						if (ret == -1) {
 							throw SystemException("read error", e);
 						} else if (ret == 0) {
@@ -754,6 +754,7 @@ namespace tut {
 
 		// We write 200000 bytes.
 		char buf[200000];
+		memset(buf, 0, sizeof(buf));
 		writeExact(p.second, &buf, sizeof(buf), &timeout);
 		ensure("Should have taken at least 20 msec", timeout <= 100000 - 20000);
 		ensure("Should have taken at most 95 msec", timeout >= 100000 - 95000);
@@ -765,6 +766,7 @@ namespace tut {
 		Pipe p = createNonBlockingPipe();
 		unsigned long long timeout = 100000;
 		char buf[1024];
+		memset(buf, 0, sizeof(buf));
 		writeExact(p.second, buf, sizeof(buf), &timeout);
 		ensure("Timeout not modified", timeout >= 95000);
 	}

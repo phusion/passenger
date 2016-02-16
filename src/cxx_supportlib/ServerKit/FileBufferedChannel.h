@@ -760,11 +760,12 @@ private:
 		P_ASSERT_EQ(readerState, RS_READING_FROM_FILE);
 		verifyInvariants();
 		MemoryKit::mbuf buffer(boost::move(readContext->buffer));
+		ssize_t result = readContext->req.result;
 		delete readContext;
 		inFileMode->readRequest = NULL;
 
-		if (readContext->req.result >= 0) {
-			int fd = readContext->req.result;
+		if (result >= 0) {
+			int fd = result;
 			unsigned int generation = this->generation;
 
 			assert(fd <= inFileMode->written);
@@ -791,7 +792,7 @@ private:
 				terminateReaderBecauseOfEOF();
 			}
 		} else {
-			int errcode = -readContext->req.result;
+			int errcode = -result;
 			setError(errcode, __FILE__, __LINE__);
 		}
 	}

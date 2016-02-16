@@ -1205,6 +1205,9 @@ writeFileDescriptor(int fd, int fdToSend, unsigned long long *timeout) {
 	struct cmsghdr *control_header;
 	int ret;
 
+	memset(&msg, 0, sizeof(msg));
+	memset(&control_data, 0, sizeof(control_data));
+
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
 
