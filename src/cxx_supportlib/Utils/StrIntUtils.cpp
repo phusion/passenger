@@ -144,18 +144,18 @@ truncateBeforeTokens(const char *str, const StaticString &tokens, int maxBetween
 }
 
 string
-replaceString(const string &str, const string &toFind, const string &replaceWith) {
+replaceString(const StaticString &str, const StaticString &toFind, const StaticString &replaceWith) {
 	string::size_type pos = str.find(toFind);
 	if (pos == string::npos) {
 		return str;
 	} else {
-		string result(str);
+		string result(str.data(), str.size());
 		return result.replace(pos, toFind.size(), replaceWith);
 	}
 }
 
 string
-replaceAll(const string &str, const string &toFind, const string &replaceWith) {
+replaceAll(const StaticString &str, const StaticString &toFind, const StaticString &replaceWith) {
 	string result = str;
 	while (result.find(toFind) != string::npos) {
 		result = replaceString(result, toFind, replaceWith);

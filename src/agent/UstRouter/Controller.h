@@ -879,6 +879,16 @@ private:
 			|| category == P_STATIC_STRING("internal_information");
 	}
 
+	/**
+	 * Given a logSinkCache key, which may contains NULLs, converts it
+	 * into something that can be represented as a JSON string. It's not
+	 * a perfect representation, but probably good enough for display
+	 * purposes.
+	 */
+	string createJsonKey(const StaticString &key) const {
+		return replaceAll(key, P_STATIC_STRING("\0"), P_STATIC_STRING("__"));
+	}
+
 	LogSinkPtr openLogFile(Client *client, const StaticString &category) {
 		size_t cacheKeySize =
 			(sizeof("file:") - 1) +
@@ -948,6 +958,9 @@ private:
 				logSink = openRemoteSink(transaction->getUnionStationKey(),
 					transaction->getNodeName(), transaction->getCategory());
 			}
+			P_DEBUG("Closing transaction " << transaction->getTxnId() <<
+				": appending " << transaction->getBody().size() << " bytes "
+				"to sink " << logSink->inspect());
 			logSink->append(transaction);
 			closeLogSink(logSink);
 		}
@@ -1201,7 +1214,7 @@ public:
 		LogSinkCache::const_iterator end = logSinkCache.end();
 		for (it = logSinkCache.begin(); it != end; it++) {
 			const LogSinkPtr &logSink = it->second;
-			doc[it->first.toString()] = logSink->inspectStateAsJson();
+			doc[createJsonKey(it->first)] = logSink->inspectStateAsJson();
 		}
 		return doc;
 	}

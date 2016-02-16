@@ -171,12 +171,12 @@ void truncateBeforeTokens(const char *str, const StaticString &tokens, int maxBe
  * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.
  * Only the first occurence of 'toFind' is replaced.
  */
-string replaceString(const string &str, const string &toFind, const string &replaceWith);
+string replaceString(const StaticString &str, const StaticString &toFind, const StaticString &replaceWith);
 
 /**
  * Like replaceString(), but replace all occurrences of `toFind`.
  */
-string replaceAll(const string &str, const string &toFind, const string &replaceWith);
+string replaceAll(const StaticString &str, const StaticString &toFind, const StaticString &replaceWith);
 
 /**
  * Strips leading and trailing whitespaces.
