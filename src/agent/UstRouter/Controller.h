@@ -437,7 +437,7 @@ private:
 
 			transaction = boost::make_shared<Transaction>(
 				txnId, groupName, nodeName, category,
-				ev_now(getLoop()), filters
+				unionStationKey, ev_now(getLoop()), filters
 			);
 			transaction->enableCrashProtect(crashProtect);
 			transactions.set(txnId, transaction);
@@ -454,16 +454,13 @@ private:
 				}
 				goto done;
 			}
-			if (OXT_UNLIKELY(transaction->getUnionStationKey() != groupName)) {
-				SKC_ERROR(client,
-					"Cannot open transaction: transaction already opened with a "
-					"different key ('" << transaction->getUnionStationKey() <<
-					"' vs '" << groupName << "')");
+			if (OXT_UNLIKELY(transaction->getCategory() != category)) {
+				SKC_ERROR(client, "Cannot open transaction: transaction already opened with a different category name (" <<
+						transaction->getCategory() << " vs " << category << ")");
 				if (ack) {
 					sendErrorToClient(client,
-						"Cannot open transaction: transaction already opened with a "
-						"different key ('" + transaction->getUnionStationKey() +
-						"' vs '" + groupName + "')");
+							"Cannot open transaction: transaction already opened with a different category name (" +
+							transaction->getCategory() + " vs " + category + ")");
 					if (client->connected()) {
 						disconnect(&client);
 					}
@@ -484,13 +481,16 @@ private:
 				}
 				goto done;
 			}
-			if (OXT_UNLIKELY(transaction->getCategory() != category)) {
-				SKC_ERROR(client, "Cannot open transaction: transaction already opened with a different category name (" <<
-						transaction->getCategory() << " vs " << category << ")");
+			if (OXT_UNLIKELY(transaction->getUnionStationKey() != unionStationKey)) {
+				SKC_ERROR(client,
+					"Cannot open transaction: transaction already opened with a "
+					"different key ('" << transaction->getUnionStationKey() <<
+					"' vs '" << unionStationKey << "')");
 				if (ack) {
 					sendErrorToClient(client,
-							"Cannot open transaction: transaction already opened with a different category name (" +
-							transaction->getCategory() + " vs " + category + ")");
+						"Cannot open transaction: transaction already opened with a "
+						"different key ('" + transaction->getUnionStationKey() +
+						"' vs '" + unionStationKey + "')");
 					if (client->connected()) {
 						disconnect(&client);
 					}

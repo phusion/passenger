@@ -49,6 +49,9 @@ TEST_CXX_OBJECTS = {
   # "#{TEST_OUTPUT_DIR}cxx/Core/RequestHandlerTest.o" =>
   #   "test/cxx/Core/RequestHandlerTest.cpp",
 
+  "#{TEST_OUTPUT_DIR}cxx/UstRouter/TransactionTest.o" =>
+    "test/cxx/UstRouter/TransactionTest.cpp",
+
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/ChannelTest.o" =>
     "test/cxx/ServerKit/ChannelTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/FileBufferedChannelTest.o" =>
