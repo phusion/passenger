@@ -4,15 +4,16 @@ Release 5.0.25
  * Integrates into the `rails server` command. Please learn more at [the Passenger + Rails integration documentation](https://www.phusionpassenger.com/library/dev/ruby/rails_integration.html).
  * Adds explicit support for Action Cable. Please learn more at the [Passenger Library](https://www.phusionpassenger.com/library/dev/ruby/rails_integration.html#action_cable).
  * Removes packages for Ubuntu 15.04 Vivid and Debian 6. Ubuntu 15.04 and Debian 6 are still supported, we just don't supply packages for them anymore. If you are an Ubuntu 15.04 or Debian 6 user and you want to use Passenger >= 5.0.25, then please upgrade your distribution, or install Passenger from RubyGems/tarball.
- * Fixes some memory corruption bugs.
+ * Fixes a potential crash due to memory corruption in code for `passenger-config reopen-logs`.
+ * Fixes a potential crash in the large (inbound/outbound) file buffering code.
  * Fixes a crash that occurs when using Nginx + HTTPS + Sub-requests. Closes GH-1724.
  * Fixes a crash that occurs when using Nginx + syslog and a logfile for Passenger. Also fixes edge cases where the Nginx logpath would override the Passenger logpath. Closes GH-1514 (again).
- * Fixes a potential crash due to a wrong limit on snprintf (introduced in 5.0.24 by GH-1633). Closes GH-1744.
- * Fixes Union Station Node.js request introspection to allow for application.use method chaining. Closes GH-1745.
- * Fixes some information not being correctly shown in `passenger-status --show=union_station`.
- * When one or more Union Station gateways are suffering from technical difficulties, the Union Station support code now tries more quickly to reestablish the connection.
+ * [Union Station] Fixes a potential crash due to a wrong limit on snprintf (introduced in 5.0.24 by GH-1633). Closes GH-1744.
+ * [Union Station] Fixes Union Station Node.js request introspection to allow for application.use method chaining. Closes GH-1745.
+ * [Union Station] Fixes information about sinks sometimes missing from `passenger-status --show=union_station`.
+ * [Union Station] When one or more Union Station gateways are suffering from technical difficulties, the Union Station support code now tries more quickly to reestablish the connection.
  * [Standalone] Don't reject the value 0 (meaning no limit) for `--max-request-queue-size`. Closes GH-1743.
- * [Standalone] Makes the `--address` option work more reliably if the passed hostname may resolve to multiple addresses. For example, if you pass `--address localhost` then previous versions could fail because Passenger thinks it's an IPv6 address (::1) while Nginx thinks it's an IPv6 address (127.0.0.1). Hostname resolution is now done in a consistent manner.
+ * [Standalone] Makes the `--address` option work more reliably if the passed hostname may resolve to multiple addresses. For example, if you pass `--address localhost` then previous versions could fail because Passenger thinks it's an IPv6 address (::1) while Nginx thinks it's an IPv4 address (127.0.0.1). Hostname resolution is now done in a consistent manner.
  * [Standalone] Adds the `--unlimited-concurrency-path` configuration option.
  * [Standalone] Adds IPv6 support to the builtin engine.
 
