@@ -111,10 +111,9 @@ TEST_CXX_OBJECTS = {
     "test/cxx/TemplateTest.cpp"
 }
 
-def test_cxx_flags
-  @test_cxx_flags ||= begin
+def basic_test_cxx_flags
+  @basic_test_cxx_flags ||= begin
     flags = [
-      "-include test/cxx/TestSupport.h",
       LIBEV_CFLAGS,
       LIBUV_CFLAGS,
       PlatformInfo.curl_flags,
@@ -125,6 +124,20 @@ def test_cxx_flags
     end
     flags
   end
+end
+
+def test_cxx_include_paths
+  @test_cxx_include_paths ||= [
+    "test/cxx",
+    "test/support",
+    "src/agent",
+    *CXX_SUPPORTLIB_INCLUDE_PATHS
+  ]
+end
+
+def test_cxx_flags
+  @test_cxx_flags ||= ["-include test/cxx/TestSupport.h"] +
+    basic_test_cxx_flags
 end
 
 def test_cxx_ldflags
@@ -148,12 +161,7 @@ TEST_CXX_OBJECTS.each_pair do |object, source|
   define_cxx_object_compilation_task(
     object,
     source,
-    :include_paths => [
-      "test/cxx",
-      "test/support",
-      "src/agent",
-      *CXX_SUPPORTLIB_INCLUDE_PATHS
-    ],
+    :include_paths => test_cxx_include_paths,
     :flags => test_cxx_flags,
     :deps => 'test/cxx/TestSupport.h.gch'
   )
@@ -212,11 +220,12 @@ end
 
 file('test/cxx/TestSupport.h.gch' => generate_compilation_task_dependencies('test/cxx/TestSupport.h')) do
   compile_cxx(
-    'test/cxx/TestSupport.h',
     'test/cxx/TestSupport.h.gch',
+    'test/cxx/TestSupport.h',
+    :include_paths => test_cxx_include_paths,
     :flags => [
       "-x c++-header",
-      TEST_CXX_CFLAGS
-    ]
+      basic_test_cxx_flags
+    ].flatten
   )
 end
