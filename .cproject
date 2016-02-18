@@ -65,18 +65,8 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<folderInfo id="cdt.managedbuild.toolchain.gnu.macosx.base.1419316920.1839849565" name="/" resourcePath="src/cxx_supportlib/vendor-copy">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.macosx.base.2036623643" name="MacOSX GCC" superClass="cdt.managedbuild.toolchain.gnu.macosx.base" unusedChildren="">
-							<tool id="cdt.managedbuild.tool.macosx.c.linker.macosx.base.1753029980" name="MacOS X C Linker" superClass="cdt.managedbuild.tool.macosx.c.linker.macosx.base.1149218652"/>
-							<tool id="cdt.managedbuild.tool.macosx.cpp.linker.macosx.base.1137719486" name="MacOS X C++ Linker" superClass="cdt.managedbuild.tool.macosx.cpp.linker.macosx.base.2017452942"/>
-							<tool id="cdt.managedbuild.tool.gnu.assembler.macosx.base.185609539" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.macosx.base.940787385"/>
-							<tool id="cdt.managedbuild.tool.gnu.archiver.macosx.base.1900528125" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.macosx.base.178527825"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.macosx.base.1843822621" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.macosx.base.1953202798"/>
-							<tool id="cdt.managedbuild.tool.gnu.c.compiler.macosx.base.2034674293" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.macosx.base.1022662582"/>
-						</toolChain>
-					</folderInfo>
 					<sourceEntries>
-						<entry excluding="packaging|buildout|node_modules|ext/libuv|ext/ruby|ext/oxt|ext/libev|ext/boost" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="packaging|buildout|node_modules|src/cxx_supportlib/vendor-copy/|src/cxx_supportlib/vendor-modified/" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
