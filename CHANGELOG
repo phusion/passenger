@@ -1,7 +1,7 @@
 Release 5.0.26
 --------------
 
-
+* [Union Station] Fix custom logging time arguments getting overwritten by current time for Ruby apps (so some sub-blocks like "framework request processing" appeared shorter than they were). This could happen since the switch to monotonic clock in 5.0.22.
 
 
 Release 5.0.25
