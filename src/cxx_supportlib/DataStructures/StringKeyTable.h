@@ -26,6 +26,7 @@
 #ifndef _PASSENGER_DATA_STRUCTURES_STRING_KEY_TABLE_H_
 #define _PASSENGER_DATA_STRUCTURES_STRING_KEY_TABLE_H_
 
+#include <boost/move/move.hpp>
 #include <boost/cstdint.hpp>
 #include <limits>
 #include <cstring>
@@ -38,6 +39,11 @@
 namespace Passenger {
 
 using namespace std;
+
+
+struct SKT_EnableMoveSupport { };
+struct SKT_DisableMoveSupport { };
+
 
 /**
  * An optimized hash table that accepts string keys, optimized for the following workload:
@@ -63,7 +69,7 @@ using namespace std;
  * This implementation is based on https://github.com/preshing/CompareIntegerMaps.
  * See also http://preshing.com/20130107/this-hash-table-is-faster-than-a-judy-array
  */
-template<typename T>
+template<typename T, typename MoveSupport = SKT_DisableMoveSupport>
 class StringKeyTable {
 public:
 	#define SKT_FIRST_CELL(hash) (m_cells + ((hash) & (m_arraySize - 1)))
@@ -88,6 +94,16 @@ public:
 		Cell()
 			: keyOffset(EMPTY_CELL_KEY_OFFSET)
 			{ }
+
+		void move(Cell &target) {
+			target.keyOffset = keyOffset;
+			target.keyLength = keyLength;
+			target.hash = hash;
+			target.value = boost::move(value);
+			keyOffset = 0;
+			keyLength = 0;
+			hash = 0;
+		}
 	};
 
 private:
@@ -181,7 +197,7 @@ private:
 				while (true) {
 					if (cellIsEmpty(newCell)) {
 						// Insert here
-						*newCell = *oldCell;
+						copyOrMoveCell(*oldCell, *newCell, MoveSupport());
 						break;
 					} else {
 						newCell = SKT_CIRCULAR_NEXT(newCell);
@@ -194,7 +210,23 @@ private:
 		delete[] oldCells;
 	}
 
-	void copyFrom(const StringKeyTable &other) {
+	void copyOrMoveCell(Cell &source, Cell &target, const SKT_EnableMoveSupport &t) {
+		source.move(target);
+	}
+
+	void copyOrMoveCell(Cell &source, Cell &target, const SKT_DisableMoveSupport &t) {
+		target = source;
+	}
+
+	void copyOrMoveValue(T &source, T &target, const SKT_EnableMoveSupport &t) {
+		target = boost::move(source);
+	}
+
+	void copyOrMoveValue(const T &source, T &target, const SKT_DisableMoveSupport &t) {
+		target = source;
+	}
+
+	void copyTableFrom(const StringKeyTable &other) {
 		m_arraySize  = other.m_arraySize;
 		m_population = other.m_population;
 		m_cells      = new Cell[other.m_arraySize];
@@ -212,13 +244,54 @@ private:
 		}
 	}
 
+	template<typename ValueType, typename LocalMoveSupport>
+	void realInsert(const HashedStaticString &key, ValueType val, bool overwrite) {
+		assert(!key.empty());
+		assert(key.size() <= MAX_KEY_LENGTH);
+		assert(m_population < MAX_ITEMS);
+
+		if (OXT_UNLIKELY(m_cells == NULL)) {
+			init(DEFAULT_SIZE, DEFAULT_STORAGE_SIZE);
+		}
+
+		while (true) {
+			Cell *cell = SKT_FIRST_CELL(key.hash());
+			while (true) {
+				const char *cellKey = lookupCellKey(cell);
+				if (cellKey == NULL) {
+					// Cell is empty. Insert here.
+					if (shouldRepopulateOnInsert()) {
+						// Time to resize
+						repopulate(m_arraySize * 2);
+						break;
+					}
+					m_population++;
+					cell->keyOffset = appendToStorage(key);
+					cell->keyLength = key.size();
+					cell->hash = key.hash();
+					copyOrMoveValue(val, cell->value, LocalMoveSupport());
+					nonEmptyIndex = cell - &m_cells[0];
+					return;
+				} else if (compareKeys(cellKey, cell->keyLength, key)) {
+					// Cell matches.
+					if (overwrite) {
+						copyOrMoveValue(val, cell->value, LocalMoveSupport());
+					}
+					return;
+				} else {
+					cell = SKT_CIRCULAR_NEXT(cell);
+				}
+			}
+		}
+	}
+
 public:
 	StringKeyTable(unsigned int initialSize = DEFAULT_SIZE, unsigned int initialStorageSize = DEFAULT_STORAGE_SIZE) {
 		init(initialSize, initialStorageSize);
 	}
 
 	StringKeyTable(const StringKeyTable &other) {
-		copyFrom(other);
+		copyTableFrom(other);
 	}
 
 	~StringKeyTable() {
@@ -230,7 +303,7 @@ public:
 		if (this != &other) {
 			delete[] m_cells;
 			free(m_storage);
-			copyFrom(other);
+			copyTableFrom(other);
 		}
 		return *this;
 	}
@@ -317,7 +390,7 @@ public:
 
 	OXT_FORCE_INLINE
 	bool lookup(const HashedStaticString &key, T **result) {
-		return static_cast<const StringKeyTable<T> *>(this)->lookup(key,
+		return static_cast<const StringKeyTable<T, MoveSupport> *>(this)->lookup(key,
 			const_cast<const T **>(result));
 	}
 
@@ -358,43 +431,11 @@ public:
 	}
 
 	void insert(const HashedStaticString &key, const T &val, bool overwrite = true) {
-		assert(!key.empty());
-		assert(key.size() <= MAX_KEY_LENGTH);
-		assert(m_population < MAX_ITEMS);
+		realInsert<const T &, SKT_DisableMoveSupport>(key, val, overwrite);
+	}
 
-		if (OXT_UNLIKELY(m_cells == NULL)) {
-			init(DEFAULT_SIZE, DEFAULT_STORAGE_SIZE);
-		}
-
-		while (true) {
-			Cell *cell = SKT_FIRST_CELL(key.hash());
-			while (true) {
-				const char *cellKey = lookupCellKey(cell);
-				if (cellKey == NULL) {
-					// Cell is empty. Insert here.
-					if (shouldRepopulateOnInsert()) {
-						// Time to resize
-						repopulate(m_arraySize * 2);
-						break;
-					}
-					m_population++;
-					cell->keyOffset = appendToStorage(key);
-					cell->keyLength = key.size();
-					cell->hash = key.hash();
-					cell->value = val;
-					nonEmptyIndex = cell - &m_cells[0];
-					return;
-				} else if (compareKeys(cellKey, cell->keyLength, key)) {
-					// Cell matches.
-					if (overwrite) {
-						cell->value = val;
-					}
-					return;
-				} else {
-					cell = SKT_CIRCULAR_NEXT(cell);
-				}
-			}
-		}
+	void insertByMoving(const HashedStaticString &key, BOOST_RV_REF(T) val, bool overwrite = true) {
+		realInsert<BOOST_RV_REF(T), SKT_EnableMoveSupport>(key, boost::move(val), overwrite);
 	}
 
 	void erase(Cell *cell) {
