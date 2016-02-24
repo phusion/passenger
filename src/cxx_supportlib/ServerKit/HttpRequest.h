@@ -139,6 +139,9 @@ public:
 	} aux;
 	boost::uint64_t bodyAlreadyRead;
 
+	ev_tstamp lastDataReceiveTime;
+	ev_tstamp lastDataSendTime;
+
 	/**
 	 * The start index of the '?' character in `path`. -1 when it doesn't exist.
 	 */

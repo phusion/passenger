@@ -202,6 +202,10 @@ jsonString(const Passenger::StaticString &str) {
  */
 inline Json::Value
 timeToJson(unsigned long long timestamp, unsigned long long now = 0) {
+	if (timestamp == 0) {
+		return Json::Value(Json::nullValue);
+	}
+
 	Json::Value doc;
 	time_t time = (time_t) timestamp / 1000000;
 	char buf[32];

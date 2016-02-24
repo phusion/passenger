@@ -678,29 +678,34 @@ protected:
 		assert(client->currentRequest != NULL);
 		Request *req = client->currentRequest;
 		RequestRef ref(req, __FILE__, __LINE__);
+		bool ended = req->ended();
+
+		if (!ended) {
+			req->lastDataReceiveTime = ev_now(this->getLoop());
+		}
 
 		// Moved outside switch() so that the CPU branch predictor can do its work
 		if (req->httpState == Request::PARSING_HEADERS) {
-			assert(!req->ended());
+			assert(!ended);
 			return processClientDataWhenParsingHeaders(client, req, buffer, errcode);
 		} else {
 			switch (req->bodyType) {
 			case Request::RBT_CONTENT_LENGTH:
-				if (req->ended()) {
+				if (ended) {
 					assert(!req->wantKeepAlive);
 					return Channel::Result(buffer.size(), true);
 				} else {
 					return processClientDataWhenParsingBody(client, req, buffer, errcode);
 				}
 			case Request::RBT_CHUNKED:
-				if (req->ended()) {
+				if (ended) {
 					assert(!req->wantKeepAlive);
 					return Channel::Result(buffer.size(), true);
 				} else {
 					return processClientDataWhenParsingChunkedBody(client, req, buffer, errcode);
 				}
 			case Request::RBT_UPGRADE:
-				if (req->ended()) {
+				if (ended) {
 					assert(!req->wantKeepAlive);
 					return Channel::Result(buffer.size(), true);
 				} else {
@@ -801,6 +806,8 @@ protected:
 		req->bodyChannel.reinitialize();
 		req->aux.bodyInfo.contentLength = 0; // Sets the entire union to 0.
 		req->bodyAlreadyRead = 0;
+		req->lastDataReceiveTime = 0;
+		req->lastDataSendTime = 0;
 		req->queryStringIndex = -1;
 	}
 
@@ -928,6 +935,7 @@ public:
 
 	void writeResponse(Client *client, const MemoryKit::mbuf &buffer) {
 		client->currentRequest->responseBegun = true;
+		client->currentRequest->lastDataSendTime = ev_now(this->getLoop());
 		client->output.feedWithoutRefGuard(buffer);
 	}
 
@@ -1149,6 +1157,8 @@ public:
 			doc["request_body_fully_read"] = req->bodyFullyRead();
 			doc["request_body_already_read"] = (Json::Value::UInt64) req->bodyAlreadyRead;
 			doc["response_begun"] = req->responseBegun;
+			doc["last_data_receive_time"] = timeToJson(req->lastDataReceiveTime * 1000000);
+			doc["last_data_send_time"] = timeToJson(req->lastDataSendTime * 1000000);
 			doc["method"] = http_method_str(req->method);
 			if (req->httpState != Request::ERROR) {
 				if (req->bodyType == Request::RBT_CONTENT_LENGTH) {
