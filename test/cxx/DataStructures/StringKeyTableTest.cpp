@@ -196,4 +196,13 @@ namespace tut {
 		ensure(table.erase("a"));
 		ensure(!table.lookupRandom(&key, &value));
 	}
+
+	TEST_METHOD(10) {
+		set_test_name("Initial size 0");
+		StringKeyTable<string> t(0, 0);
+
+		ensure_equals(t.lookupCopy("a"), "");
+		t.insert("a", "b");
+		ensure_equals(t.lookupCopy("a"), "b");
+	}
 }

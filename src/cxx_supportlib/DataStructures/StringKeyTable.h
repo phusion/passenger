@@ -227,14 +227,17 @@ public:
 	}
 
 	StringKeyTable &operator=(const StringKeyTable &other) {
-		delete[] m_cells;
-		free(m_storage);
-		copyFrom(other);
+		if (this != &other) {
+			delete[] m_cells;
+			free(m_storage);
+			copyFrom(other);
+		}
 		return *this;
 	}
 
 	void init(unsigned int initialSize, unsigned int initialStorageSize) {
 		assert((initialSize & (initialSize - 1)) == 0);   // Must be a power of 2
+		assert((initialSize == 0) == (initialStorageSize == 0));
 
 		nonEmptyIndex = NON_EMPTY_INDEX_NONE;
 
@@ -359,6 +362,10 @@ public:
 		assert(key.size() <= MAX_KEY_LENGTH);
 		assert(m_population < MAX_ITEMS);
 
+		if (OXT_UNLIKELY(m_cells == NULL)) {
+			init(DEFAULT_SIZE, DEFAULT_STORAGE_SIZE);
+		}
+
 		while (true) {
 			Cell *cell = SKT_FIRST_CELL(key.hash());
 			while (true) {
@@ -393,6 +400,10 @@ public:
 	void erase(Cell *cell) {
 		assert(cell >= m_cells && cell - m_cells < m_arraySize);
 		assert(!cellIsEmpty(cell));
+
+		if (OXT_UNLIKELY(m_cells == NULL)) {
+			return;
+		}
 
 		// Remove this cell by shuffling neighboring cells so there are no gaps in anyone's probe chain
 		Cell *neighbor = SKT_CIRCULAR_NEXT(cell);
@@ -433,6 +444,10 @@ public:
 
 	/** Does not resize the array. */
 	void clear() {
+		if (OXT_UNLIKELY(m_cells == NULL)) {
+			return;
+		}
+
 		for (unsigned int i = 0; i < m_arraySize; i++) {
 			m_cells[i].keyOffset = EMPTY_CELL_KEY_OFFSET;
 			m_cells[i].value = T();
