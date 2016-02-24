@@ -41,10 +41,12 @@
 #include <ServerKit/HttpRequestRef.h>
 #include <ServerKit/HttpHeaderParser.h>
 #include <ServerKit/HttpChunkedBodyParser.h>
+#include <Algorithms/ExpMovingAverage.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/HttpConstants.h>
 #include <Utils/Hasher.h>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -65,7 +67,9 @@ public:
 
 	FreeRequestList freeRequests;
 	unsigned int freeRequestCount, requestFreelistLimit;
-	unsigned long totalRequestsBegun;
+	unsigned long totalRequestsBegun, lastTotalRequestsBegun;
+	DiscExpMovingAverage<10, 60 * 1000000ull, 1000000> requestBeginSpeed1m;
+	DiscExpMovingAverage<10, 60 * 60 * 1000000ull, 60 * 1000000> requestBeginSpeed1h;
 
 private:
 	/***** Types and nested classes *****/
@@ -781,6 +785,24 @@ protected:
 		}
 	}
 
+	virtual void onUpdateStatistics() {
+		ParentClass::onUpdateStatistics();
+		ev_tstamp now = ev_now(this->getLoop());
+		ev_tstamp duration = now - this->lastStatisticsUpdateTime;
+
+		requestBeginSpeed1m.update(
+			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
+			now * 1000000);
+		requestBeginSpeed1h.update(
+			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
+			now * 1000000);
+	}
+
+	virtual void onFinalizeStatisticsUpdate() {
+		ParentClass::onFinalizeStatisticsUpdate();
+		lastTotalRequestsBegun = totalRequestsBegun;
+	}
+
 	virtual void reinitializeClient(Client *client, int fd) {
 		ParentClass::reinitializeClient(client, fd);
 		client->requestsBegun = 0;
@@ -867,6 +889,9 @@ public:
 		  freeRequestCount(0),
 		  requestFreelistLimit(1024),
 		  totalRequestsBegun(0),
+		  lastTotalRequestsBegun(0),
+		  requestBeginSpeed1m(SystemTime::getUsec()),
+		  requestBeginSpeed1h(SystemTime::getUsec()),
 		  headerParserStatePool(16, 256)
 	{
 		STAILQ_INIT(&freeRequests);
@@ -1125,9 +1150,16 @@ public:
 	}
 
 	virtual Json::Value inspectStateAsJson() const {
+		ev_tstamp now = ev_now(this->getLoop());
 		Json::Value doc = ParentClass::inspectStateAsJson();
 		doc["free_request_count"] = freeRequestCount;
 		doc["total_requests_begun"] = (Json::UInt64) totalRequestsBegun;
+		doc["request_begin_speed"]["1m"] = averageSpeedToJson(
+			capFloatPrecision(requestBeginSpeed1m.average(now) * 60),
+			"minute", "1 minute");
+		doc["request_begin_speed"]["1h"] = averageSpeedToJson(
+			capFloatPrecision(requestBeginSpeed1h.average(now) * 60),
+			"minute", "1 hour");
 		return doc;
 	}
 
