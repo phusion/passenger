@@ -113,9 +113,8 @@ module PhusionPassenger
         :name      => :socket_backlog,
         :type      => :integer,
         :cli       => '--socket-backlog',
-        :default   => DEFAULT_SOCKET_BACKLOG,
         :desc      => "Override size of the socket backlog.\n" \
-                      "Default: %DEFAULT%"
+                      "Default: #{DEFAULT_SOCKET_BACKLOG}"
       },
       {
         :name      => :ssl,
