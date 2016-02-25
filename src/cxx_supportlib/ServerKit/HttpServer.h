@@ -32,6 +32,7 @@
 #include <oxt/macros.hpp>
 #include <algorithm>
 #include <cstdio>
+#include <cmath>
 #include <cassert>
 #include <pthread.h>
 #include <Logging.h>
@@ -41,7 +42,7 @@
 #include <ServerKit/HttpRequestRef.h>
 #include <ServerKit/HttpHeaderParser.h>
 #include <ServerKit/HttpChunkedBodyParser.h>
-#include <Algorithms/ExpMovingAverage.h>
+#include <Algorithms/MovingAverage.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/HttpConstants.h>
@@ -68,8 +69,7 @@ public:
 	FreeRequestList freeRequests;
 	unsigned int freeRequestCount, requestFreelistLimit;
 	unsigned long totalRequestsBegun, lastTotalRequestsBegun;
-	DiscExpMovingAverage<10, 60 * 1000000ull, 1000000> requestBeginSpeed1m;
-	DiscExpMovingAverage<10, 60 * 60 * 1000000ull, 60 * 1000000> requestBeginSpeed1h;
+	double requestBeginSpeed1m, requestBeginSpeed1h;
 
 private:
 	/***** Types and nested classes *****/
@@ -790,12 +790,17 @@ protected:
 		ev_tstamp now = ev_now(this->getLoop());
 		ev_tstamp duration = now - this->lastStatisticsUpdateTime;
 
-		requestBeginSpeed1m.update(
+		// Statistics are updated every 5 seconds, so 12 updates per minute.
+		// We want the old average to decay to 20% after 1 minute and 1
+		// hour, respectively, so:
+		// 1 minute: exp(ln(0.2) / 12) = 0.8744852722211678
+		// 1 hour  : exp(ln(0.2) / (60 * 12)) = 0.9977671660566313
+		requestBeginSpeed1m = expMovingAverage(requestBeginSpeed1m,
 			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
-			now * 1000000);
-		requestBeginSpeed1h.update(
+			0.7790778080544442);
+		requestBeginSpeed1h = expMovingAverage(requestBeginSpeed1h,
 			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
-			now * 1000000);
+			0.9958479046143364);
 	}
 
 	virtual void onFinalizeStatisticsUpdate() {
@@ -890,8 +895,8 @@ public:
 		  requestFreelistLimit(1024),
 		  totalRequestsBegun(0),
 		  lastTotalRequestsBegun(0),
-		  requestBeginSpeed1m(SystemTime::getUsec()),
-		  requestBeginSpeed1h(SystemTime::getUsec()),
+		  requestBeginSpeed1m(-1),
+		  requestBeginSpeed1h(-1),
 		  headerParserStatePool(16, 256)
 	{
 		STAILQ_INIT(&freeRequests);
@@ -1150,16 +1155,15 @@ public:
 	}
 
 	virtual Json::Value inspectStateAsJson() const {
-		ev_tstamp now = ev_now(this->getLoop());
 		Json::Value doc = ParentClass::inspectStateAsJson();
 		doc["free_request_count"] = freeRequestCount;
 		doc["total_requests_begun"] = (Json::UInt64) totalRequestsBegun;
 		doc["request_begin_speed"]["1m"] = averageSpeedToJson(
-			capFloatPrecision(requestBeginSpeed1m.average(now) * 60),
-			"minute", "1 minute");
+			capFloatPrecision(requestBeginSpeed1m * 60),
+			"minute", "1 minute", -1);
 		doc["request_begin_speed"]["1h"] = averageSpeedToJson(
-			capFloatPrecision(requestBeginSpeed1h.average(now) * 60),
-			"minute", "1 hour");
+			capFloatPrecision(requestBeginSpeed1h * 60),
+			"minute", "1 hour", -1);
 		return doc;
 	}
 

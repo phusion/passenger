@@ -265,9 +265,25 @@ capFloatPrecision(double val) {
 }
 
 inline Json::Value
-averageSpeedToJson(double speed, const string &per, const string &averagedOver) {
+speedToJson(double speed, const string &per, double nullValue = -1) {
 	Json::Value doc;
-	doc["value"] = speed;
+	if (speed == nullValue) {
+		doc["value"] = Json::Value(Json::nullValue);
+	} else {
+		doc["value"] = speed;
+	}
+	doc["per"] = per;
+	return doc;
+}
+
+inline Json::Value
+averageSpeedToJson(double speed, const string &per, const string &averagedOver, double nullValue = -1) {
+	Json::Value doc;
+	if (speed == nullValue) {
+		doc["value"] = Json::Value(Json::nullValue);
+	} else {
+		doc["value"] = speed;
+	}
 	doc["per"] = per;
 	doc["averaged_over"] = averagedOver;
 	return doc;

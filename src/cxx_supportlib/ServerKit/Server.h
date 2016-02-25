@@ -56,7 +56,7 @@
 #include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/ClientRef.h>
-#include <Algorithms/ExpMovingAverage.h>
+#include <Algorithms/MovingAverage.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/StrIntUtils.h>
@@ -218,8 +218,7 @@ public:
 	unsigned long totalClientsAccepted, lastTotalClientsAccepted;
 	unsigned long long totalBytesConsumed;
 	ev_tstamp lastStatisticsUpdateTime;
-	DiscExpMovingAverage<10, 60 * 1000000ull, 1000000> clientAcceptSpeed1m;
-	DiscExpMovingAverage<10, 60 * 60 * 1000000ull, 60 * 1000000> clientAcceptSpeed1h;
+	double clientAcceptSpeed1m, clientAcceptSpeed1h;
 
 private:
 	Context *ctx;
@@ -595,12 +594,18 @@ protected:
 		ev_tstamp now = ev_now(this->getLoop());
 		ev_tstamp duration = now - lastStatisticsUpdateTime;
 
-		clientAcceptSpeed1m.update(
+		// Statistics are updated every 5 seconds, so 12 updates per minute.
+		// We want the old average to decay to 20% after 1 minute and 1
+		// hour, respectively, so:
+		// 1 minute: exp(ln(0.2) / 12) = 0.8744852722211678
+		// 1 hour  : exp(ln(0.2) / (60 * 12)) = 0.9977671660566313
+
+		clientAcceptSpeed1m = expMovingAverage(clientAcceptSpeed1m,
 			(totalClientsAccepted - lastTotalClientsAccepted) / duration,
-			now * 1000000);
-		clientAcceptSpeed1h.update(
+			0.7790778080544442);
+		clientAcceptSpeed1h = expMovingAverage(clientAcceptSpeed1h,
 			(totalClientsAccepted - lastTotalClientsAccepted) / duration,
-			now * 1000000);
+			0.9958479046143364);
 	}
 
 	virtual void onFinalizeStatisticsUpdate() {
@@ -641,8 +646,8 @@ public:
 		  totalClientsAccepted(0),
 		  lastTotalClientsAccepted(0),
 		  totalBytesConsumed(0),
-		  clientAcceptSpeed1m(SystemTime::getUsec()),
-		  clientAcceptSpeed1h(SystemTime::getUsec()),
+		  clientAcceptSpeed1m(-1),
+		  clientAcceptSpeed1h(-1),
 		  ctx(context),
 		  nextClientNumber(1),
 		  nEndpoints(0),
@@ -1040,7 +1045,6 @@ public:
 	virtual Json::Value inspectStateAsJson() const {
 		Json::Value doc = ctx->inspectStateAsJson();
 		const Client *client;
-		unsigned long long now = ev_now(this->getLoop()) * 1000000;
 
 		doc["pid"] = (unsigned int) getpid();
 		doc["server_state"] = getServerStateString();
@@ -1051,11 +1055,11 @@ public:
 		doc["disconnected_client_count"] = disconnectedClientCount;
 		doc["peak_active_client_count"] = peakActiveClientCount;
 		doc["client_accept_speed"]["1m"] = averageSpeedToJson(
-			capFloatPrecision(clientAcceptSpeed1m.average(now) * 60),
-			"minute", "1 minute");
+			capFloatPrecision(clientAcceptSpeed1m * 60),
+			"minute", "1 minute", -1);
 		doc["client_accept_speed"]["1h"] = averageSpeedToJson(
-			capFloatPrecision(clientAcceptSpeed1h.average(now) * 60),
-			"minute", "1 hour");
+			capFloatPrecision(clientAcceptSpeed1h * 60),
+			"minute", "1 hour", -1);
 		doc["total_clients_accepted"] = (Json::UInt64) totalClientsAccepted;
 		doc["total_bytes_consumed"] = (Json::UInt64) totalBytesConsumed;
 

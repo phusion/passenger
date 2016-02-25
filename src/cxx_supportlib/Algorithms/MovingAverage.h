@@ -195,9 +195,13 @@ public:
 
 
 /**
- * Calculates a (normal) exponential moving average. This algorithm is not timing sensitive:
- * it doesn't take into account gaps in the data over time, and treats all values
- * equally regardless of when the value was collected. See also DiscExponentialAverage.
+ * Calculates a (normal) exponential moving average. Lower values of alpha
+ * cause the previous average to decay more quickly, higher values cause the
+ * previous average to decay more slowly.
+ *
+ * This algorithm is not timing sensitive: it doesn't take into account gaps in the
+ * data over time, and treats all values equally regardless of when the value was
+ * collected. See also DiscExpMovingAverage.
  *
  * You should initialize the the average value with a value equal to `nullValue`.
  * If `prevAverage` equals `nullValue` then this function simply returns `currentValue`.
@@ -207,7 +211,7 @@ expMovingAverage(double prevAverage, double currentValue, double alpha, double n
 	if (OXT_UNLIKELY(prevAverage == nullValue)) {
 		return currentValue;
 	} else {
-		return alpha * currentValue + (1 - alpha) * prevAverage;
+		return alpha * prevAverage + (1 - alpha) * currentValue;
 	}
 }
 
