@@ -343,8 +343,12 @@ private:
 
 	void onStatisticsUpdateTimeout(ev::timer &timer, int revents) {
 		TRACE_POINT();
+
 		this->onUpdateStatistics();
 		this->onFinalizeStatisticsUpdate();
+
+		timer.repeat = timeToNextMultipleD(5, ev_now(this->getLoop()));
+		timer.again();
 	}
 
 	unsigned int getNextClientNumber() {
@@ -646,6 +650,7 @@ public:
 		  totalClientsAccepted(0),
 		  lastTotalClientsAccepted(0),
 		  totalBytesConsumed(0),
+		  lastStatisticsUpdateTime(ev_time()),
 		  clientAcceptSpeed1m(-1),
 		  clientAcceptSpeed1h(-1),
 		  ctx(context),
@@ -662,16 +667,11 @@ public:
 			BaseServer<DerivedServer, Client>,
 			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
 
-		ev_tstamp now = ev_time();
-		ev_tstamp nextTime = roundUp<unsigned long long>(now, 1);
-
-		lastStatisticsUpdateTime = now;
-
 		statisticsUpdateWatcher.set(context->libev->getLoop());
 		statisticsUpdateWatcher.set<
 			BaseServer<DerivedServer, Client>,
 			&BaseServer<DerivedServer, Client>::onStatisticsUpdateTimeout>(this);
-		statisticsUpdateWatcher.set(nextTime - now, 5);
+		statisticsUpdateWatcher.set(5, 5);
 		statisticsUpdateWatcher.start();
 	}
 

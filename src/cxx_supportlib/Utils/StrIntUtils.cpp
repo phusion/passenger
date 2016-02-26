@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <cmath>
+#include <cassert>
 #include <utf8.h>
 #include <algorithm>
 #include <Exceptions.h>
@@ -565,6 +566,20 @@ distanceOfTimeInWords(time_t fromTime, time_t toTime) {
 	}
 	result << seconds << "s";
 	return result.str();
+}
+
+unsigned long long
+timeToNextMultipleULL(unsigned long long multiple, unsigned long long now) {
+	if (now == 0) {
+		now = SystemTime::getUsec();
+	}
+	return multiple - (now % multiple);
+}
+
+double
+timeToNextMultipleD(unsigned int multiple, double now) {
+	assert(multiple != 0);
+	return multiple - fmod(now, (double) multiple);
 }
 
 char *
