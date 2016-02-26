@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -716,7 +716,7 @@ protected:
 					return processClientDataWhenUpgraded(client, req, buffer, errcode);
 				}
 			default:
-				P_BUG("Invalid request HTTP state " << (int) req->httpState);
+				P_BUG("Invalid request body type " << (int) req->bodyType);
 				// Never reached
 				return Channel::Result(0, false);
 			}
