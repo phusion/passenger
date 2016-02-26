@@ -100,8 +100,9 @@ have=PASSENGER_NGINX_MICRO_VERSION value="$nginx_micro_version"
 . auto/define
 
 
+ngx_addon_name=ngx_http_passenger_module
+
 if test -n "$ngx_module_link"; then
-    ngx_addon_name=ngx_http_passenger_module
     ngx_module_type=HTTP
     ngx_module_name=ngx_http_passenger_module
     ngx_module_incs="$PASSENGER_MODULE_INCS"
