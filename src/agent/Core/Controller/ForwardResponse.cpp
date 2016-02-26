@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -295,6 +295,7 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 			// EOF
 			UPDATE_TRACE_POINT();
 			SKC_TRACE(client, 2, "Application sent EOF");
+			SKC_TRACE(client, 2, "Not keep-aliving application session connection");
 			req->session->close(true, false);
 			endRequest(&client, &req);
 			return Channel::Result(0, false);
@@ -1078,6 +1079,10 @@ Controller::handleAppResponseBodyEnd(Client *client, Request *req) {
 
 OXT_FORCE_INLINE void
 Controller::keepAliveAppConnection(Client *client, Request *req) {
+	SKC_TRACE(client, 2,
+		((req->appResponse.wantKeepAlive)
+		? "Keep-aliving application session connection"
+		: "Not keep-aliving application session connection"));
 	req->session->close(true, req->appResponse.wantKeepAlive);
 }
 
