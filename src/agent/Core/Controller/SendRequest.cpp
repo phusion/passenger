@@ -90,18 +90,13 @@ Controller::sendHeaderToApp(Client *client, Request *req) {
 		req->session->getProtocol() << " protocol");
 	req->state = Request::SENDING_HEADER_TO_APP;
 
-	/**
-	 * HTTP does not formally support half-closing, and Node.js treats a
-	 * half-close as a full close, so we only half-close session sockets, not
-	 * HTTP sockets.
-	 */
+	req->halfCloseAppConnection = req->bodyType != Request::RBT_NO_BODY;
+
 	if (req->session->getProtocol() == "session") {
 		UPDATE_TRACE_POINT();
-		req->halfCloseAppConnection = req->bodyType != Request::RBT_NO_BODY;
 		sendHeaderToAppWithSessionProtocol(client, req);
 	} else {
 		UPDATE_TRACE_POINT();
-		req->halfCloseAppConnection = false;
 		sendHeaderToAppWithHttpProtocol(client, req);
 	}
 
@@ -950,9 +945,28 @@ Controller::sendBodyToApp(Client *client, Request *req) {
 
 void
 Controller::halfCloseAppSink(Client *client, Request *req) {
+	/*
+	 * HTTP does not formally support half-closing. Some apps support
+	 * HTTP with half-closing, others (such as Node.js http.Server with
+	 * default settings) treat a half-close as a full close.
+	 *
+	 * In the past, we only stopped forwarding the input to the app if
+	 * we detect a half-close, in an effort to support half-closing
+	 * clients in combination with apps that don't support half-closing.
+	 * But that way we can't tell the app about WebSocket connections or
+	 * request bodies that have been abruptly aborted. This would cause
+	 * them to wait infinitely; see
+	 * https://groups.google.com/forum/#!msg/phusion-passenger/yYzz7MnAvts/vtseJ7BCniAJ
+	 * for a case study.
+	 *
+	 * We now choose to forward the half-closing event to the application.
+	 * If the client half-closes but the application doesn't support
+	 * it, tough luck to the client/app; we can't do anything about it.
+	 */
 	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
 	if (req->halfCloseAppConnection) {
 		SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR");
+		req->appSinkHalfClosed = true;
 		::shutdown(req->session->fd(), SHUT_WR);
 	}
 }

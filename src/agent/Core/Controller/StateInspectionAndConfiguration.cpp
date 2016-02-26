@@ -105,6 +105,7 @@ Controller::inspectRequestStateAsJson(const Request *req) const {
 	}
 	doc["sticky_session"] = req->stickySession;
 	doc["session_checkout_try"] = req->sessionCheckoutTry;
+	doc["app_sink_half_closed"] = req->appSinkHalfClosed;
 
 	flags["dechunk_response"] = req->dechunkResponse;
 	flags["request_body_buffering"] = req->requestBodyBuffering;

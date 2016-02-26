@@ -70,6 +70,7 @@ public:
 
 	// Range: 0..MAX_SESSION_CHECKOUT_TRY
 	boost::uint8_t sessionCheckoutTry;
+	bool appSinkHalfClosed: 1;
 	bool appResponseInitialized: 1;
 	bool strip100ContinueHeader: 1;
 	bool hasPragmaHeader: 1;
