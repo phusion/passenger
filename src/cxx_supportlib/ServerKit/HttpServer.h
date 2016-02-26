@@ -746,6 +746,29 @@ protected:
 			|| client->currentRequest->upgraded();
 	}
 
+	virtual void onUpdateStatistics() {
+		ParentClass::onUpdateStatistics();
+		ev_tstamp now = ev_now(this->getLoop());
+		ev_tstamp duration = now - this->lastStatisticsUpdateTime;
+
+		// Statistics are updated about every 5 seconds, so about 12 updates
+		// per minute. We want the old average to decay to 5% after 1 minute
+		// and 1 hour, respectively, so:
+		// 1 minute: 1 - exp(ln(0.05) / 12) = 0.22092219194555585
+		// 1 hour  : 1 - exp(ln(0.05) / (60 * 12)) = 0.0041520953856636345
+		requestBeginSpeed1m = expMovingAverage(requestBeginSpeed1m,
+			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
+			0.22092219194555585);
+		requestBeginSpeed1h = expMovingAverage(requestBeginSpeed1h,
+			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
+			0.0041520953856636345);
+	}
+
+	virtual void onFinalizeStatisticsUpdate() {
+		ParentClass::onFinalizeStatisticsUpdate();
+		lastTotalRequestsBegun = totalRequestsBegun;
+	}
+
 
 	/***** New hooks *****/
 
@@ -783,29 +806,6 @@ protected:
 		} else {
 			return LVL_WARN;
 		}
-	}
-
-	virtual void onUpdateStatistics() {
-		ParentClass::onUpdateStatistics();
-		ev_tstamp now = ev_now(this->getLoop());
-		ev_tstamp duration = now - this->lastStatisticsUpdateTime;
-
-		// Statistics are updated about every 5 seconds, so about 12 updates
-		// per minute. We want the old average to decay to 5% after 1 minute
-		// and 1 hour, respectively, so:
-		// 1 minute: 1 - exp(ln(0.05) / 12) = 0.22092219194555585
-		// 1 hour  : 1 - exp(ln(0.05) / (60 * 12)) = 0.0041520953856636345
-		requestBeginSpeed1m = expMovingAverage(requestBeginSpeed1m,
-			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
-			0.22092219194555585);
-		requestBeginSpeed1h = expMovingAverage(requestBeginSpeed1h,
-			(totalRequestsBegun - lastTotalRequestsBegun) / duration,
-			0.0041520953856636345);
-	}
-
-	virtual void onFinalizeStatisticsUpdate() {
-		ParentClass::onFinalizeStatisticsUpdate();
-		lastTotalRequestsBegun = totalRequestsBegun;
 	}
 
 	virtual void reinitializeClient(Client *client, int fd) {
