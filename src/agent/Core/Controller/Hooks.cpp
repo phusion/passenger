@@ -131,7 +131,6 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 	req->stickySession = false;
 	req->halfCloseAppConnection = false;
 	req->sessionCheckoutTry = 0;
-	req->appSinkHalfClosed = false;
 	req->appResponseInitialized = false;
 	req->strip100ContinueHeader = false;
 	req->hasPragmaHeader = false;
