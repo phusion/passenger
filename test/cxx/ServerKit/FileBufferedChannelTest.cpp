@@ -792,7 +792,7 @@ namespace tut {
 		EVENTUALLY(5,
 			LOCK();
 			result = counter == 4
-				&& getChannelState() == Channel::EOF_WAITING;
+				&& getChannelState() == Channel::WAITING_FOR_CALLBACK_WITH_EOF_OR_ERROR;
 		);
 		EVENTUALLY(5,
 			LOCK();

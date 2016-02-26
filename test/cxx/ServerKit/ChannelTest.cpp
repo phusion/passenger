@@ -275,7 +275,7 @@ namespace tut {
 			"and transitions to the EOF state");
 		feedChannel("");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -290,7 +290,7 @@ namespace tut {
 			"and transitions to the EOF state");
 		feedChannelError(EIO);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -351,7 +351,7 @@ namespace tut {
 				"EOF\n");
 		}
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 	}
 
@@ -372,7 +372,7 @@ namespace tut {
 				"Error: " + toString(EIO) + "\n");
 		}
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 	}
 
@@ -420,7 +420,7 @@ namespace tut {
 		setChannelDataCallback(test_21_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -565,7 +565,7 @@ namespace tut {
 		);
 		feedChannel("");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -585,7 +585,7 @@ namespace tut {
 		);
 		feedChannelError(EIO);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -699,7 +699,7 @@ namespace tut {
 
 		bg.safe->runLater(boost::bind(test_34_callback, this));
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -726,7 +726,7 @@ namespace tut {
 
 		bg.safe->runLater(boost::bind(test_35_callback, this));
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -751,7 +751,7 @@ namespace tut {
 		}
 		feedChannel("abc");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -799,7 +799,7 @@ namespace tut {
 		setChannelDataCallback(test_42_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -848,7 +848,7 @@ namespace tut {
 		setChannelDataCallback(test_44_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -872,7 +872,7 @@ namespace tut {
 		setChannelDataCallback(test_45_callback);
 		feedChannel("abc");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -952,7 +952,7 @@ namespace tut {
 		}
 		feedChannel("abc");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -993,7 +993,7 @@ namespace tut {
 		}
 		feedChannel("aaabbb");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -1040,10 +1040,10 @@ namespace tut {
 		}
 		feedChannelError(EIO);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_WAITING;
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK_WITH_EOF_OR_ERROR;
 		);
 		SHOULD_NEVER_HAPPEN(100,
-			result = getChannelState() != Channel::EOF_WAITING;
+			result = getChannelState() != Channel::WAITING_FOR_CALLBACK_WITH_EOF_OR_ERROR;
 		);
 		ensure_equals(getChannelErrcode(), EIO);
 	}
@@ -1063,7 +1063,7 @@ namespace tut {
 
 		channelConsumed(3, true);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -1173,10 +1173,10 @@ namespace tut {
 
 		feedChannelError(EIO);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		SHOULD_NEVER_HAPPEN(100,
-			result = getChannelState() != Channel::EOF_REACHED;
+			result = getChannelState() != Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 	}
 
@@ -1372,7 +1372,7 @@ namespace tut {
 		}
 		feedChannel("");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_WAITING;
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK_WITH_EOF_OR_ERROR;
 		);
 		{
 			LOCK();
@@ -1381,7 +1381,7 @@ namespace tut {
 
 		channelConsumed(0, false);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -1395,7 +1395,7 @@ namespace tut {
 
 		feedChannel("");
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		{
 			LOCK();
@@ -1424,7 +1424,7 @@ namespace tut {
 		}
 		feedChannelError(EIO);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_WAITING;
+			result = getChannelState() == Channel::WAITING_FOR_CALLBACK_WITH_EOF_OR_ERROR;
 		);
 		{
 			LOCK();
@@ -1433,7 +1433,7 @@ namespace tut {
 
 		channelConsumed(0, false);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		ensure_equals(getChannelErrcode(), EIO);
 		{
@@ -1448,7 +1448,7 @@ namespace tut {
 
 		feedChannelError(EIO);
 		EVENTUALLY(5,
-			result = getChannelState() == Channel::EOF_REACHED;
+			result = getChannelState() == Channel::EOF_OR_ERROR_ACKNOWLEDGED;
 		);
 		ensure_equals(getChannelErrcode(), EIO);
 		{
