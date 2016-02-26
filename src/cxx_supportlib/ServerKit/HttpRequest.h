@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -102,6 +102,7 @@ public:
 	http_method method: 5;
 	bool wantKeepAlive: 1;
 	bool responseBegun: 1;
+	bool detectingNextRequestEarlyReadError: 1;
 
 	boost::atomic<int> refcount;
 
@@ -151,6 +152,21 @@ public:
 	 * the error code is temporarily stored here.
 	 */
 	int bodyError;
+
+	/**
+	 * When a request body read error, or a client socket EOF, has been detected
+	 * after the current request body has already fully received, the error code is
+	 * temporarily stored here so that it may be processed at the next request. The
+	 * error is not passed to the bodyChannel immediately because it isn't an error
+	 * part of the current request's body. But users of HttpServer can still query
+	 * this field to see that an error is imminent, and may choose to abort early.
+	 *
+	 * The value is either the body read error code, or EARLY_EOF_DETECTED. The
+	 * latter means that a client socket EOF has been detected.
+	 *
+	 * A value of 0 means that everthing is ok.
+	 */
+	int nextRequestEarlyReadError;
 
 
 	BaseHttpRequest()
