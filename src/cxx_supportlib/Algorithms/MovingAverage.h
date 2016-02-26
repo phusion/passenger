@@ -48,8 +48,9 @@ using namespace std;
  *
  * ### alpha
  *
- * Specifies by what factor data should decay. Its range is [0, 1000]. Lower values
- * cause data to decay more quickly, higher values cause data to decay more slowly.
+ * Specifies by what factor data should decay. Its range is [0, 1000]. Higher values
+ * cause the current value to have more weight (and thus the previous average
+ * to decay more quickly), lower values have the opposite effect.
  *
  * ### alphaTimeUnit
  *
@@ -88,11 +89,11 @@ private:
 	}
 
 	static BOOST_CONSTEXPR double newDataWeightUpperBound() {
-		return 1 - pow(floatingAlpha(), maxAge / (double) alphaTimeUnit);
+		return pow(floatingAlpha(), maxAge / (double) alphaTimeUnit);
 	}
 
 	pair<double, double> internalUpdate(double value, unsigned long long now) {
-		double weightReductionFactor = pow(floatingAlpha(),
+		double weightReductionFactor = pow(1 - floatingAlpha(),
 			(now - prevTime) / (double) alphaTimeUnit);
 		double newDataWeight = std::min(1 - weightReductionFactor,
 			newDataWeightUpperBound());
@@ -195,9 +196,10 @@ public:
 
 
 /**
- * Calculates a (normal) exponential moving average. Lower values of alpha
- * cause the previous average to decay more quickly, higher values cause the
- * previous average to decay more slowly.
+ * Calculates an exponential moving average. `alpha` determines how much weight the
+ * current value has compared to the previous average. Higher values of `alpha`
+ * cause the current value to have more weight (and thus the previous average
+ * to decay more quickly), lower values have the opposite effect.
  *
  * This algorithm is not timing sensitive: it doesn't take into account gaps in the
  * data over time, and treats all values equally regardless of when the value was
@@ -211,7 +213,7 @@ expMovingAverage(double prevAverage, double currentValue, double alpha, double n
 	if (OXT_UNLIKELY(prevAverage == nullValue)) {
 		return currentValue;
 	} else {
-		return alpha * prevAverage + (1 - alpha) * currentValue;
+		return alpha * currentValue + (1 - alpha) * prevAverage;
 	}
 }
 

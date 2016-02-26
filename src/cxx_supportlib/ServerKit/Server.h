@@ -598,18 +598,17 @@ protected:
 		ev_tstamp now = ev_now(this->getLoop());
 		ev_tstamp duration = now - lastStatisticsUpdateTime;
 
-		// Statistics are updated every 5 seconds, so 12 updates per minute.
-		// We want the old average to decay to 20% after 1 minute and 1
-		// hour, respectively, so:
-		// 1 minute: exp(ln(0.2) / 12) = 0.8744852722211678
-		// 1 hour  : exp(ln(0.2) / (60 * 12)) = 0.9977671660566313
-
+		// Statistics are updated about every 5 seconds, so about 12 updates
+		// per minute. We want the old average to decay to 5% after 1 minute
+		// and 1 hour, respectively, so:
+		// 1 minute: 1 - exp(ln(0.05) / 12) = 0.22092219194555585
+		// 1 hour  : 1 - exp(ln(0.05) / (60 * 12)) = 0.0041520953856636345
 		clientAcceptSpeed1m = expMovingAverage(clientAcceptSpeed1m,
 			(totalClientsAccepted - lastTotalClientsAccepted) / duration,
-			0.7790778080544442);
+			0.22092219194555585);
 		clientAcceptSpeed1h = expMovingAverage(clientAcceptSpeed1h,
 			(totalClientsAccepted - lastTotalClientsAccepted) / duration,
-			0.9958479046143364);
+			0.0041520953856636345);
 	}
 
 	virtual void onFinalizeStatisticsUpdate() {
