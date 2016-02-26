@@ -3,6 +3,7 @@ Release 5.0.26
 
  * Passenger now reports TCP half-closing events to Node.js and Meteor applications, which allows them to detect request body and WebSocket closes without having to send data to the client.
  * `passenger-status --show=server` now reports the speed at which new requests are accepted.
+ * [Nginx] Passenger can now be [compiled as an Nginx dynamic module](https://www.phusionpassenger.com/library/install/nginx/install_as_nginx_module.html#dynamic-module). Thanks to Ruslan Ermilov from NGINX Inc for contributing this.
  * [Standalone] Prints a warning when an unsupported configuration option in Passengerfile.json is set.
  * [Union Station] Fixes custom logging time arguments getting overwritten by current time for Ruby apps (so some sub-blocks like "framework request processing" appeared shorter than they were). This could happen since the switch to monotonic clock in 5.0.22.
 
