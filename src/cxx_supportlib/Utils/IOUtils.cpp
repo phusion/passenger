@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -66,6 +66,7 @@
 #endif
 
 #include <Exceptions.h>
+#include <Constants.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
@@ -448,7 +449,7 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 	#endif
 
 	if (backlogSize == 0) {
-		backlogSize = 1024;
+		backlogSize = DEFAULT_SOCKET_BACKLOG;
 	}
 	ret = syscalls::listen(fd, backlogSize);
 	if (ret == -1) {
