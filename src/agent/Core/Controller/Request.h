@@ -82,7 +82,7 @@ public:
 	bool hasPragmaHeader: 1;
 
 	Options options;
-	SessionPtr session;
+	AbstractSessionPtr session;
 	const LString *host;
 
 	ServerKit::FdSinkChannel appSink;

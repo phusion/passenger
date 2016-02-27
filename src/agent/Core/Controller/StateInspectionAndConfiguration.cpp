@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -117,7 +117,7 @@ Controller::inspectRequestStateAsJson(const Request *req) const {
 
 	if (req->session != NULL) {
 		Json::Value &sessionDoc = doc["session"] = Json::Value(Json::objectValue);
-		const Session *session = req->session.get();
+		const AbstractSession *session = req->session.get();
 
 		if (req->session->isClosed()) {
 			sessionDoc["closed"] = true;

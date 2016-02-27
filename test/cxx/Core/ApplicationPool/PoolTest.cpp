@@ -89,10 +89,11 @@ namespace tut {
 			return options;
 		}
 
-		static void _callback(const SessionPtr &session, const ExceptionPtr &e,
+		static void _callback(const AbstractSessionPtr &_session, const ExceptionPtr &e,
 			void *userData)
 		{
 			Core_ApplicationPool_PoolTest *self = (Core_ApplicationPool_PoolTest *) userData;
+			SessionPtr session = static_pointer_cast<Session>(_session);
 			SessionPtr oldSession;
 			{
 				LockGuard l(self->syncher);

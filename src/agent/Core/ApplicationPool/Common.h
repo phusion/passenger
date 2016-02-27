@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -57,6 +57,7 @@ class Pool;
 class Group;
 class Process;
 class Socket;
+class AbstractSession;
 class Session;
 
 /**
@@ -164,6 +165,7 @@ enum RestartMethod {
 typedef boost::shared_ptr<Pool> PoolPtr;
 typedef boost::shared_ptr<Group> GroupPtr;
 typedef boost::intrusive_ptr<Process> ProcessPtr;
+typedef boost::intrusive_ptr<AbstractSession> AbstractSessionPtr;
 typedef boost::intrusive_ptr<Session> SessionPtr;
 typedef boost::shared_ptr<tracable_exception> ExceptionPtr;
 typedef StringKeyTable<GroupPtr> GroupMap;
@@ -171,14 +173,14 @@ typedef boost::function<void (const ProcessPtr &process, DisableResult result)> 
 typedef boost::function<void ()> Callback;
 
 struct GetCallback {
-	void (*func)(const SessionPtr &session, const ExceptionPtr &e, void *userData);
+	void (*func)(const AbstractSessionPtr &session, const ExceptionPtr &e, void *userData);
 	mutable void *userData;
 
-	void operator()(const SessionPtr &session, const ExceptionPtr &e) const {
+	void operator()(const AbstractSessionPtr &session, const ExceptionPtr &e) const {
 		func(session, e, userData);
 	}
 
-	static void call(GetCallback cb, const SessionPtr &session, const ExceptionPtr &e) {
+	static void call(GetCallback cb, const AbstractSessionPtr &session, const ExceptionPtr &e) {
 		cb(session, e);
 	}
 };

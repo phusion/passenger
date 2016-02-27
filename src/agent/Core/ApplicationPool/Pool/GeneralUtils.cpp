@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -196,13 +196,13 @@ Pool::assignExceptionToGetWaiters(Queue &getWaitlist,
 }
 
 void
-Pool::syncGetCallback(const SessionPtr &session, const ExceptionPtr &e,
+Pool::syncGetCallback(const AbstractSessionPtr &session, const ExceptionPtr &e,
 	void *userData)
 {
 	Ticket *ticket = static_cast<Ticket *>(userData);
 	ScopedLock lock(ticket->syncher);
 	if (OXT_LIKELY(session != NULL)) {
-		ticket->session = session;
+		ticket->session = static_pointer_cast<Session>(session);
 	} else {
 		ticket->exception = e;
 	}
