@@ -44,6 +44,8 @@ namespace tut {
 			psg_lstr_init(&req.path);
 			psg_lstr_append(&req.path, req.pool, "/");
 			req.bodyAlreadyRead = 0;
+			req.lastDataReceiveTime = 0;
+			req.lastDataSendTime = 0;
 			req.queryStringIndex = -1;
 			req.bodyError = 0;
 
@@ -55,12 +57,15 @@ namespace tut {
 			req.stickySession = false;
 			req.halfCloseAppConnection = false;
 			req.sessionCheckoutTry = 0;
+			req.appResponseInitialized = false;
 			req.strip100ContinueHeader = false;
 			req.hasPragmaHeader = false;
 			req.host = createHostString();
 			req.bodyBytesBuffered = 0;
+			req.cacheKey = HashedStaticString();
 			req.cacheControl = NULL;
 			req.varyCookie = NULL;
+			req.envvars = NULL;
 
 			req.appResponse.headers.clear();
 			req.appResponse.secureHeaders.clear();
