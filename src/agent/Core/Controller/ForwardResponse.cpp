@@ -1079,11 +1079,24 @@ Controller::handleAppResponseBodyEnd(Client *client, Request *req) {
 
 OXT_FORCE_INLINE void
 Controller::keepAliveAppConnection(Client *client, Request *req) {
-	SKC_TRACE(client, 2,
-		((req->appResponse.wantKeepAlive)
-		? "Keep-aliving application session connection"
-		: "Not keep-aliving application session connection"));
-	req->session->close(true, req->appResponse.wantKeepAlive);
+	if (req->halfClosePolicy == Request::HALF_CLOSE_PERFORMED) {
+		SKC_TRACE(client, 2, "Not keep-aliving application session connection"
+			" because it had been half-closed before");
+		req->session->close(true, false);
+	} else {
+		// halfClosePolicy is initialized in sendHeaderToApp(). That method is
+		// called immediately after checking out a session, before any events
+		// from the appSource channel can be received.
+		assert(req->halfClosePolicy != Request::HALF_CLOSE_POLICY_UNINITIALIZED);
+		if (req->appResponse.wantKeepAlive) {
+			SKC_TRACE(client, 2, "Keep-aliving application session connection");
+			req->session->close(true, true);
+		} else {
+			SKC_TRACE(client, 2, "Not keep-aliving application session connection"
+				" because application did not allow it");
+			req->session->close(true, false);
+		}
+	}
 }
 
 void

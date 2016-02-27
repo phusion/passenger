@@ -37,6 +37,7 @@ namespace tut {
 			req.bodyType  = Request::RBT_NO_BODY;
 			req.method    = HTTP_GET;
 			req.wantKeepAlive = false;
+			req.detectingNextRequestEarlyReadError = false;
 			req.responseBegun = false;
 			req.client    = NULL;
 			req.hooks.impl     = NULL;
@@ -48,6 +49,7 @@ namespace tut {
 			req.lastDataSendTime = 0;
 			req.queryStringIndex = -1;
 			req.bodyError = 0;
+			req.nextRequestEarlyReadError = 0;
 
 			req.startedAt = 0;
 			req.state     = Request::ANALYZING_REQUEST;
@@ -55,8 +57,8 @@ namespace tut {
 			req.requestBodyBuffering = false;
 			req.https     = false;
 			req.stickySession = false;
-			req.halfCloseAppConnection = false;
 			req.sessionCheckoutTry = 0;
+			req.halfClosePolicy = Request::HALF_CLOSE_POLICY_UNINITIALIZED;
 			req.appResponseInitialized = false;
 			req.strip100ContinueHeader = false;
 			req.hasPragmaHeader = false;

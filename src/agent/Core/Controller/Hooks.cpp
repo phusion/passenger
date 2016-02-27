@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -129,8 +129,8 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 	req->requestBodyBuffering = false;
 	req->https = false;
 	req->stickySession = false;
-	req->halfCloseAppConnection = false;
 	req->sessionCheckoutTry = 0;
+	req->halfClosePolicy = Request::HALF_CLOSE_POLICY_UNINITIALIZED;
 	req->appResponseInitialized = false;
 	req->strip100ContinueHeader = false;
 	req->hasPragmaHeader = false;
@@ -255,6 +255,19 @@ Controller::onRequestBody(Client *client, Request *req, const MemoryKit::mbuf &b
 	default:
 		P_BUG("Unknown state " << req->state);
 		return Channel::Result(0, false);
+	}
+}
+
+void
+Controller::onNextRequestEarlyReadError(Client *client, Request *req, int errcode) {
+	ParentClass::onNextRequestEarlyReadError(client, req, errcode);
+	if (req->halfClosePolicy == Request::HALF_CLOSE_UPON_NEXT_REQUEST_EARLY_READ_ERROR) {
+		SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR"
+			" because the next request's early read error has been detected: "
+			<< ServerKit::getErrorDesc(errcode) << " (errno=" << errcode << ")");
+		req->halfClosePolicy = Request::HALF_CLOSE_PERFORMED;
+		assert(req->session != NULL);
+		::shutdown(req->session->fd(), SHUT_WR);
 	}
 }
 

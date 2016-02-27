@@ -119,6 +119,8 @@ private:
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;
 
+	// If you change this value, make sure that Request::sessionCheckoutTry
+	// has enough bits.
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 
 	unsigned int statThrottleRate;
@@ -261,7 +263,7 @@ private:
 	void sendHeaderToAppWithHttpProtocolWithBuffering(Request *req, unsigned int offset,
 		HttpHeaderConstructionCache &cache);
 	void sendBodyToApp(Client *client, Request *req);
-	void halfCloseAppSink(Client *client, Request *req);
+	void maybeHalfCloseAppSinkBecauseRequestBodyEndReached(Client *client, Request *req);
 	Channel::Result whenSendingRequest_onRequestBody(Client *client, Request *req,
 		const MemoryKit::mbuf &buffer, int errcode);
 	static void resumeRequestBodyChannelWhenAppSinkIdle(Channel *_channel,
@@ -376,6 +378,7 @@ protected:
 	void deinitializeAppResponse(Client *client, Request *req);
 	virtual Channel::Result onRequestBody(Client *client, Request *req,
 		const MemoryKit::mbuf &buffer, int errcode);
+	virtual void onNextRequestEarlyReadError(Client *client, Request *req, int errcode);
 	virtual bool shouldDisconnectClientOnShutdown(Client *client);
 	virtual bool supportsUpgrade(Client *client, Request *req);
 
