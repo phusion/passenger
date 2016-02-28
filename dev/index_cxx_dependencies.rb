@@ -191,11 +191,12 @@ end
 
 def generate_full_map(basic_map)
   result = {}
-  basic_map.each_pair do |source_file, deps|
+  basic_map.keys.sort.each do |source_file|
+    deps = basic_map[source_file]
     gather_results = {}
     gather_all_dependencies_recursively(
       source_file, basic_map, gather_results)
-    result[source_file] = gather_results.keys
+    result[source_file] = gather_results.keys.sort
   end
   result
 end
