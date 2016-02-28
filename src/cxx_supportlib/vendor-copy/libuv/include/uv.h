@@ -48,6 +48,7 @@ extern "C" {
 #include "uv-errno.h"
 #include "uv-version.h"
 #include <stddef.h>
+#include <stdio.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1600
 # include "stdint-msvc2008.h"
@@ -244,6 +245,16 @@ typedef enum {
 UV_EXTERN unsigned int uv_version(void);
 UV_EXTERN const char* uv_version_string(void);
 
+typedef void* (*uv_malloc_func)(size_t size);
+typedef void* (*uv_realloc_func)(void* ptr, size_t size);
+typedef void* (*uv_calloc_func)(size_t count, size_t size);
+typedef void (*uv_free_func)(void* ptr);
+
+UV_EXTERN int uv_replace_allocator(uv_malloc_func malloc_func,
+                                   uv_realloc_func realloc_func,
+                                   uv_calloc_func calloc_func,
+                                   uv_free_func free_func);
+
 UV_EXTERN uv_loop_t* uv_default_loop(void);
 UV_EXTERN int uv_loop_init(uv_loop_t* loop);
 UV_EXTERN int uv_loop_close(uv_loop_t* loop);
@@ -396,7 +407,10 @@ struct uv_shutdown_s {
   /* private */                                                               \
   uv_close_cb close_cb;                                                       \
   void* handle_queue[2];                                                      \
-  void* reserved[4];                                                          \
+  union {                                                                     \
+    int fd;                                                                   \
+    void* reserved[4];                                                        \
+  } u;                                                                        \
   UV_HANDLE_PRIVATE_FIELDS                                                    \
 
 /* The abstract base class of all handles. */
@@ -410,6 +424,10 @@ UV_EXTERN size_t uv_req_size(uv_req_type type);
 UV_EXTERN int uv_is_active(const uv_handle_t* handle);
 
 UV_EXTERN void uv_walk(uv_loop_t* loop, uv_walk_cb walk_cb, void* arg);
+
+/* Helpers for ad hoc debugging, no API/ABI stability guaranteed. */
+UV_EXTERN void uv_print_all_handles(uv_loop_t* loop, FILE* stream);
+UV_EXTERN void uv_print_active_handles(uv_loop_t* loop, FILE* stream);
 
 UV_EXTERN void uv_close(uv_handle_t* handle, uv_close_cb close_cb);
 
@@ -494,6 +512,7 @@ struct uv_tcp_s {
 };
 
 UV_EXTERN int uv_tcp_init(uv_loop_t*, uv_tcp_t* handle);
+UV_EXTERN int uv_tcp_init_ex(uv_loop_t*, uv_tcp_t* handle, unsigned int flags);
 UV_EXTERN int uv_tcp_open(uv_tcp_t* handle, uv_os_sock_t sock);
 UV_EXTERN int uv_tcp_nodelay(uv_tcp_t* handle, int enable);
 UV_EXTERN int uv_tcp_keepalive(uv_tcp_t* handle,
@@ -584,6 +603,7 @@ struct uv_udp_send_s {
 };
 
 UV_EXTERN int uv_udp_init(uv_loop_t*, uv_udp_t* handle);
+UV_EXTERN int uv_udp_init_ex(uv_loop_t*, uv_udp_t* handle, unsigned int flags);
 UV_EXTERN int uv_udp_open(uv_udp_t* handle, uv_os_sock_t sock);
 UV_EXTERN int uv_udp_bind(uv_udp_t* handle,
                           const struct sockaddr* addr,
@@ -1028,6 +1048,8 @@ typedef struct {
 
 UV_EXTERN int uv_getrusage(uv_rusage_t* rusage);
 
+UV_EXTERN int uv_os_homedir(char* buffer, size_t* size);
+
 UV_EXTERN int uv_cpu_info(uv_cpu_info_t** cpu_infos, int* count);
 UV_EXTERN void uv_free_cpu_info(uv_cpu_info_t* cpu_infos, int count);
 
@@ -1066,7 +1088,8 @@ typedef enum {
   UV_FS_SYMLINK,
   UV_FS_READLINK,
   UV_FS_CHOWN,
-  UV_FS_FCHOWN
+  UV_FS_FCHOWN,
+  UV_FS_REALPATH
 } uv_fs_type;
 
 /* uv_fs_t is a subclass of uv_req_t. */
@@ -1218,6 +1241,10 @@ UV_EXTERN int uv_fs_readlink(uv_loop_t* loop,
                              uv_fs_t* req,
                              const char* path,
                              uv_fs_cb cb);
+UV_EXTERN int uv_fs_realpath(uv_loop_t* loop,
+                             uv_fs_t* req,
+                             const char* path,
+                             uv_fs_cb cb);
 UV_EXTERN int uv_fs_fchmod(uv_loop_t* loop,
                            uv_fs_t* req,
                            uv_file file,
@@ -1346,7 +1373,7 @@ UV_EXTERN int uv_chdir(const char* dir);
 UV_EXTERN uint64_t uv_get_free_memory(void);
 UV_EXTERN uint64_t uv_get_total_memory(void);
 
-UV_EXTERN extern uint64_t uv_hrtime(void);
+UV_EXTERN uint64_t uv_hrtime(void);
 
 UV_EXTERN void uv_disable_stdio_inheritance(void);
 

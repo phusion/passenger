@@ -4,6 +4,7 @@ Release 5.0.26
  * `passenger-status --show=server` now reports the speed at which new requests are accepted.
  * Passenger now reports TCP half-closing events to Node.js and Meteor applications, which allows them to detect request body and WebSocket closes without having to send data to the client.
  * Fixes outputting Content-Length and Transfer-Encoding headers on HEAD requests for Ruby apps. These headers were omitted in previous versions on HEAD requests.
+ * Upgrades libuv to version 1.8.0.
  * [Nginx] Passenger can now be [compiled as an Nginx dynamic module](https://www.phusionpassenger.com/library/install/nginx/install_as_nginx_module.html#dynamic-module). Thanks to Ruslan Ermilov from NGINX Inc for contributing this.
  * [Standalone] Prints a warning when an unsupported configuration option in Passengerfile.json is set.
  * [Standalone] Fixes "address already in use" errors when using the builtin engine.
