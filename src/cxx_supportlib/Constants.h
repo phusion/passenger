@@ -83,7 +83,7 @@
 
 	#define DEFAULT_RUBY "ruby"
 
-	#define DEFAULT_SOCKET_BACKLOG 1024
+	#define DEFAULT_SOCKET_BACKLOG 2048
 
 	#define DEFAULT_SPAWN_METHOD "smart"
 
