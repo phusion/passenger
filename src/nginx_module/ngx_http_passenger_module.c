@@ -286,6 +286,10 @@ start_watchdog(ngx_cycle_t *cycle) {
     psg_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
     psg_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
 
+    if (passenger_main_conf.core_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
+        psg_variant_map_set_int(params, "core_file_descriptor_ulimit", passenger_main_conf.core_file_descriptor_ulimit);
+    }
+
     if (passenger_main_conf.log_file.len > 0) {
         psg_variant_map_set_ngx_str(params, "log_file", &passenger_main_conf.log_file);
     } else if (cycle->new_log.file == NULL) {

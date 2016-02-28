@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -31,6 +31,7 @@
 #include <oxt/thread.hpp>
 
 #include <sys/types.h>
+#include <sys/resource.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
@@ -186,6 +187,30 @@ initializePrivilegedWorkingObjects() {
 	// Initialize ResourceLocator here in case passenger_root's parent
 	// directory is not executable by the unprivileged user.
 	wo->resourceLocator = new ResourceLocator(options.get("passenger_root"));
+}
+
+static void
+setUlimits() {
+	TRACE_POINT();
+	VariantMap &options = *agentsOptions;
+
+	if (options.has("core_file_descriptor_ulimit")) {
+		unsigned int number = options.getUint("core_file_descriptor_ulimit");
+		struct rlimit limit;
+		int ret;
+
+		limit.rlim_cur = number;
+		limit.rlim_max = number;
+		do {
+			ret = setrlimit(RLIMIT_NOFILE, &limit);
+		} while (ret == -1 && errno == EINTR);
+
+		if (ret == -1) {
+			int e = errno;
+			P_ERROR("Unable to set file descriptor ulimit to " << number
+				<< ": " << strerror(e) << " (errno=" << e << ")");
+		}
+	}
 }
 
 static void
@@ -506,6 +531,7 @@ runUstRouter() {
 	try {
 		UPDATE_TRACE_POINT();
 		initializePrivilegedWorkingObjects();
+		setUlimits();
 		startListening();
 		lowerPrivilege();
 		initializeUnprivilegedWorkingObjects();

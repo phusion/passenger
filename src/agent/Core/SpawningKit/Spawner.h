@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -967,6 +967,28 @@ protected:
 					e);
 				fflush(stderr);
 				_exit(1);
+			}
+		}
+	}
+
+	void setUlimits(const Options &options) {
+fprintf(stderr, "--> ULIMIT: %u\n", options.fileDescriptorUlimit);
+fflush(stderr);
+		if (options.fileDescriptorUlimit != 0) {
+			struct rlimit limit;
+			int ret;
+
+			limit.rlim_cur = options.fileDescriptorUlimit;
+			limit.rlim_max = options.fileDescriptorUlimit;
+			do {
+				ret = setrlimit(RLIMIT_NOFILE, &limit);
+			} while (ret == -1 && errno == EINTR);
+
+			if (ret == -1) {
+				int e = errno;
+				fprintf(stderr, "Unable to set file descriptor ulimit to %u: %s (errno=%d)",
+					options.fileDescriptorUlimit, strerror(e), e);
+				fflush(stderr);
 			}
 		}
 	}

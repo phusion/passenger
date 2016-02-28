@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2015 Phusion Holding B.V.
+#  Copyright (c) 2014-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -173,8 +173,13 @@ module PhusionPassenger
           add_param(command, :python, "--python")
           add_param(command, :nodejs, "--nodejs")
           add_param(command, :meteor_app_settings, "--meteor-app-settings")
+          add_param(command, :core_file_descriptor_ulimit, "--core-file-descriptor-ulimit")
+          add_param(command, :app_file_descriptor_ulimit, "--app-file-descriptor-ulimit")
 
           command << " #{Shellwords.escape(@apps[0][:root])}"
+
+          command << " --EC --BU"
+          add_param(command, :core_file_descriptor_ulimit, "--core-file-descriptor-ulimit")
 
           return {
             :identifier    => "#{AGENT_EXE} watchdog",

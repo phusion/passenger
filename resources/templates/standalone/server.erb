@@ -47,6 +47,7 @@ passenger_enabled on;
 <%= nginx_option(app, :vary_turbocache_by_cookie) %>
 <%= nginx_option(app, :meteor_app_settings) %>
 <%= nginx_option(app, :load_shell_envvars) %>
+<%= nginx_option(app, :app_file_descriptor_ulimit) %>
 <%= nginx_option(app, :friendly_error_pages) %>
 <%= nginx_option(app, :abort_websockets_on_process_shutdown) %>
 <%= nginx_option(app, :force_max_concurrent_requests_per_process) %>

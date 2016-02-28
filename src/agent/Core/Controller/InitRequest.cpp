@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -187,6 +187,9 @@ Controller::fillPoolOptionsFromAgentsOptions(Options &options) {
 	}
 	if (agentsOptions->has("meteor_app_settings")) {
 		options.meteorAppSettings = agentsOptions->get("meteor_app_settings");
+	}
+	if (agentsOptions->has("app_file_descriptor_ulimit")) {
+		options.fileDescriptorUlimit = agentsOptions->getUint("app_file_descriptor_ulimit");
 	}
 
 	options.logLevel = getLogLevel();
@@ -378,6 +381,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
+	fillPoolOption(req, options.fileDescriptorUlimit, "!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	/******************/
 

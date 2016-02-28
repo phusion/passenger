@@ -6,6 +6,7 @@ Release 5.0.26
  * Fixes outputting Content-Length and Transfer-Encoding headers on HEAD requests for Ruby apps. These headers were omitted in previous versions on HEAD requests.
  * Bumps the default socket backlog size from 1024 to 2048.
  * Upgrades libuv to version 1.8.0.
+ * [Nginx, Standalone] Introduces the option `core_file_descriptor_ulimit` and `app_file_descriptor_ulimit`, for setting the file descriptor ulimits of the Passenger core and the application, respectively.
  * [Nginx] Passenger can now be [compiled as an Nginx dynamic module](https://www.phusionpassenger.com/library/install/nginx/install_as_nginx_module.html#dynamic-module). Thanks to Ruslan Ermilov from NGINX Inc for contributing this.
  * [Standalone] Prints a warning when an unsupported configuration option in Passengerfile.json is set.
  * [Standalone] Fixes "address already in use" errors when using the builtin engine.
