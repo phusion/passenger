@@ -143,6 +143,7 @@ Controller::Controller(ServerKit::Context *context, const VariantMap *_agentsOpt
 }
 
 Controller::~Controller() {
+	ev_check_stop(getLoop(), &checkWatcher);
 	psg_destroy_pool(stringPool);
 }
 
