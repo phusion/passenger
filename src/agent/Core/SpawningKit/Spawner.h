@@ -972,8 +972,6 @@ protected:
 	}
 
 	void setUlimits(const Options &options) {
-fprintf(stderr, "--> ULIMIT: %u\n", options.fileDescriptorUlimit);
-fflush(stderr);
 		if (options.fileDescriptorUlimit != 0) {
 			struct rlimit limit;
 			int ret;
