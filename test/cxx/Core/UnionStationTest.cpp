@@ -79,12 +79,17 @@ namespace tut {
 				while (getControllerState() != UstRouter::Controller::FINISHED_SHUTDOWN) {
 					syscalls::usleep(1000000);
 				}
-				controller.reset();
+				bg->safe->runSync(boost::bind(&Core_UnionStationTest::destroyController,
+					this));
 				bg->stop();
 				bg.reset();
 				skContext.reset();
 				serverFd.close();
 			}
+		}
+
+		void destroyController() {
+			controller.reset();
 		}
 
 		UstRouter::Controller::State getControllerState() {

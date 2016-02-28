@@ -45,8 +45,14 @@ namespace tut {
 		}
 
 		~ServerKit_ChannelTest() {
-			channel.deinitialize(); // Cancel any event loop next tick callbacks.
+			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::deinitializeChannel,
+				this));
+			bg.stop();
 			setLogLevel(DEFAULT_LOG_LEVEL);
+		}
+
+		void deinitializeChannel() {
+			channel.deinitialize(); // Cancel any event loop next tick callbacks.
 		}
 
 		static Channel::Result dataCallback(Channel *channel, const mbuf &buffer, int errcode) {

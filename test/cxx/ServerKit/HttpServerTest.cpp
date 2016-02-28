@@ -299,6 +299,8 @@ namespace tut {
 			while (getServerState() != MyServer::FINISHED_SHUTDOWN) {
 				syscalls::usleep(10000);
 			}
+			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::destroyServer,
+				this));
 			safelyClose(serverSocket);
 			unlink("tmp.server");
 			setLogLevel(DEFAULT_LOG_LEVEL);
@@ -309,6 +311,10 @@ namespace tut {
 			if (!bg.isStarted()) {
 				bg.start();
 			}
+		}
+
+		void destroyServer() {
+			server.reset();
 		}
 
 		FileDescriptor &connectToServer() {

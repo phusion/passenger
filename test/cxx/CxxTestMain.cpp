@@ -175,6 +175,8 @@ main(int argc, char *argv[]) {
 		tut::runner.get().run_tests(groupsToRun);
 	}
 	all_ok = reporter.all_ok();
+	delete resourceLocator;
+	oxt::shutdown();
 	if (all_ok) {
 		return 0;
 	} else {
