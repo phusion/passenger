@@ -175,6 +175,46 @@ namespace tut {
 			testSession.closePeerFd();
 		}
 
+		bool tryDrainPeerConnection() {
+			bool drained;
+			SystemException e("", 0);
+
+			setNonBlocking(testSession.peerFd());
+
+			try {
+				readAll(testSession.peerFd());
+				drained = true;
+			} catch (const SystemException &e2) {
+				e = e2;
+				drained = false;
+			}
+
+			setBlocking(testSession.peerFd());
+			if (drained) {
+				return true;
+			} else if (e.code() == EAGAIN) {
+				return false;
+			} else {
+				throw e;
+			}
+		}
+
+		void ensureNeverDrainPeerConnection() {
+			SHOULD_NEVER_HAPPEN(100,
+				result = tryDrainPeerConnection();
+			);
+		}
+
+		void ensureEventuallyDrainPeerConnection() {
+			unsigned long long timeout = 5000000;
+			EVENTUALLY(5,
+				if (!waitUntilReadable(testSession.peerFd(), &timeout)) {
+					fail("Peer connection timed out");
+				}
+				result = tryDrainPeerConnection();
+			);
+		}
+
 		void waitUntilSessionInitiated() {
 			EVENTUALLY(5,
 				result = testSession.fd() != -1;
@@ -443,6 +483,264 @@ namespace tut {
 
 		waitUntilSessionClosed();
 		ensure("(1)", !testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+
+	/***** Passing half-close events to the app *****/
+
+	TEST_METHOD(30) {
+		set_test_name("Session protocol: on requests without body, it passes"
+			" a half-close write event to the app on the next request's"
+			" early read error and does not keep-alive the"
+			" application connection");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+	TEST_METHOD(31) {
+		set_test_name("Session protocol: on requests with fixed body, it passes"
+			" a half-close write event to the app upon reaching the end"
+			" of the request body and does not keep-alive the"
+			" application connection");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Content-Length: 2\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		writeExact(clientConnection, "ok");
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+	TEST_METHOD(32) {
+		set_test_name("Session protocol: on requests with chunked body, it passes"
+			" a half-close write event to the app upon reaching the end"
+			" of the request body and does not keep-alive the"
+			" application connection");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Transfer-Encoding: chunked\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		writeExact(clientConnection, "0\r\n\r\n");
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+	TEST_METHOD(33) {
+		set_test_name("Session protocol: on upgraded requests, it passes"
+			" a half-close write event to the app upon reaching the end"
+			" of the request body and does not keep-alive the"
+			" application connection");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: upgrade\r\n"
+			"Upgrade: text\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		writeExact(clientConnection, "hi");
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+	TEST_METHOD(34) {
+		set_test_name("HTTP protocol: on requests without body, it passes"
+			" a half-close write event to the app on the next request's"
+			" early read error and does not keep-alive the application connection");
+
+		init();
+		useTestSessionObject();
+		testSession.setProtocol("http_session");
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+	TEST_METHOD(35) {
+		set_test_name("HTTP protocol: on requests with fixed body, it passes"
+			" a half-close write event to the app on the next request's"
+			" early read error and does not keep-alive the application connection");
+
+		init();
+		useTestSessionObject();
+		testSession.setProtocol("http_session");
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Content-Length: 2\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		writeExact(clientConnection, "ok");
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+	TEST_METHOD(36) {
+		set_test_name("HTTP protocol: on requests with chunked body, it passes"
+			" a half-close write event to the app on the next request's early read error"
+			" and does not keep-alive the application connection");
+
+		init();
+		useTestSessionObject();
+		testSession.setProtocol("http_session");
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Transfer-Encoding: chunked\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		writeExact(clientConnection, "0\r\n\r\n");
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
+		ensure("(2)", !testSession.wantsKeepAlive());
+	}
+
+	TEST_METHOD(37) {
+		set_test_name("HTTP protocol: on upgraded requests, it passes"
+			" a half-close write event to the app upon reaching the end"
+			" of the request body and does not keep-alive the"
+			" application connection");
+
+		init();
+		useTestSessionObject();
+		testSession.setProtocol("http_session");
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: upgrade\r\n"
+			"Upgrade: text\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		writeExact(clientConnection, "ok");
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		sendPeerResponse(
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		waitUntilSessionClosed();
+		ensure("(1)", testSession.isSuccessful());
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 }
