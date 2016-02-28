@@ -413,6 +413,15 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 		throw SystemException("Cannot create a TCP socket file descriptor", e);
 	}
 
+	optval = 1;
+	if (syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+		&optval, sizeof(optval)) == -1)
+	{
+		int e = errno;
+		fprintf(stderr, "so_reuseaddr failed: %s\n", strerror(e));
+	}
+	// Ignore SO_REUSEADDR error, it's not fatal.
+
 	FdGuard guard(fd, file, line, true);
 	if (family == AF_INET) {
 		ret = syscalls::bind(fd, (const struct sockaddr *) &addr.v4, sizeof(struct sockaddr_in));
@@ -427,26 +436,6 @@ createTcpServer(const char *address, unsigned short port, unsigned int backlogSi
 		message.append(toString(port));
 		throw SystemException(message, e);
 	}
-
-	optval = 1;
-	if (syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-		&optval, sizeof(optval)) == -1)
-	{
-		int e = errno;
-		fprintf(stderr, "so_reuseaddr failed: %s\n", strerror(e));
-	}
-	// Ignore SO_REUSEADDR error, it's not fatal.
-
-	#ifdef SO_REUSEPORT
-		optval = 1;
-		if (syscalls::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT,
-			&optval, sizeof(optval)) == -1)
-		{
-			int e = errno;
-			fprintf(stderr, "so_reuseport failed: %s\n", strerror(e));
-		}
-		// Ignore SO_REUSEPORT error, it's not fatal.
-	#endif
 
 	if (backlogSize == 0) {
 		backlogSize = DEFAULT_SOCKET_BACKLOG;
