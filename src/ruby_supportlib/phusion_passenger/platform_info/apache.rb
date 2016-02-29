@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -607,6 +607,11 @@ module PhusionPassenger
           # is 64-bit. Fix this.
           apxs2_flags.gsub!('-m32 -march=i386 -mtune=generic', '')
         end
+
+        # Some Apache installations include '-pie' in CFLAGS, which
+        # won't work on shared libraries.
+        # https://github.com/phusion/passenger/issues/1756
+        apxs2_flags.gsub!('-pie', '')
 
         apxs2_flags.strip!
         flags << apxs2_flags
