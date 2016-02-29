@@ -2,12 +2,14 @@ Release 5.0.26
 --------------
 
  * `passenger-status --show=server` now reports the speed at which new requests are accepted.
+ * `passenger-status --show=server` now reports `last_data_send_time` and `last_data_receive_time` which can be used to troubleshoot long-running requests (for example, to see if a websocket heartbeat is stuck).
  * Passenger now reports TCP half-closing events to Node.js and Meteor applications, which allows them to detect request body and WebSocket closes without having to send data to the client.
  * Fixes outputting Content-Length and Transfer-Encoding headers on HEAD requests for Ruby apps. These headers were omitted in previous versions on HEAD requests.
  * Bumps the default socket backlog size from 1024 to 2048.
  * Upgrades libuv to version 1.8.0.
  * When using our RPM packages, system SELinux policy upgrades no longer break the Passenger SELinux policy. Closes GH-1663.
  * [Apache] Fixes compilation against Apache installations which include `-pie` in CFLAGS. Closes GH-1756.
+ * [Nginx, Standalone] Bumps default Nginx worker_connections from 1024 to 4096 (effectively 2048 because of internal reverse proxy)
  * [Nginx, Standalone] Introduces the option `core_file_descriptor_ulimit` and `app_file_descriptor_ulimit`, for setting the file descriptor ulimits of the Passenger core and the application, respectively.
  * [Nginx] Passenger can now be [compiled as an Nginx dynamic module](https://www.phusionpassenger.com/library/install/nginx/install_as_nginx_module.html#dynamic-module). Thanks to Ruslan Ermilov from NGINX Inc for contributing this.
  * [Standalone] Prints a warning when an unsupported configuration option in Passengerfile.json is set.
