@@ -59,6 +59,30 @@ int generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
 	
 
 	
+		if (conf->core_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%ui",
+				conf->core_file_descriptor_ulimit);
+			len += sizeof("!~PASSENGER_CORE_FILE_DESCRIPTOR_ULIMIT: ") - 1;
+			len += end - int_buf;
+			len += sizeof("\r\n") - 1;
+		}
+	
+
+	
+		if (conf->app_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%ui",
+				conf->app_file_descriptor_ulimit);
+			len += sizeof("!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT: ") - 1;
+			len += end - int_buf;
+			len += sizeof("\r\n") - 1;
+		}
+	
+
+	
 		if (conf->ruby.data != NULL) {
 			len += sizeof("!~PASSENGER_RUBY: ") - 1;
 			len += conf->ruby.len;
@@ -377,6 +401,34 @@ if (buf == NULL) {
 				sizeof(int_buf) - 1,
 				"%d",
 				conf->socket_backlog);
+			pos = ngx_copy(pos, int_buf, end - int_buf);
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+		}
+	
+
+	
+		if (conf->core_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
+			pos = ngx_copy(pos,
+				"!~PASSENGER_CORE_FILE_DESCRIPTOR_ULIMIT: ",
+				sizeof("!~PASSENGER_CORE_FILE_DESCRIPTOR_ULIMIT: ") - 1);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%ui",
+				conf->core_file_descriptor_ulimit);
+			pos = ngx_copy(pos, int_buf, end - int_buf);
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+		}
+	
+
+	
+		if (conf->app_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
+			pos = ngx_copy(pos,
+				"!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT: ",
+				sizeof("!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT: ") - 1);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%ui",
+				conf->app_file_descriptor_ulimit);
 			pos = ngx_copy(pos, int_buf, end - int_buf);
 			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
 		}

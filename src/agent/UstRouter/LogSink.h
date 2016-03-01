@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,9 +28,9 @@
 
 #include <boost/shared_ptr.hpp>
 #include <cstddef>
+#include <cassert>
 #include <ev++.h>
 #include <jsoncpp/json.h>
-#include <UstRouter/DataStoreId.h>
 #include <Utils/JsonUtils.h>
 
 namespace Passenger {
@@ -100,11 +100,10 @@ public:
 		return false;
 	}
 
-	virtual void append(const DataStoreId &dataStoreId,
-		const StaticString &data)
-	{
+	virtual void append(const TransactionPtr &transaction) {
+		assert(!transaction->isDiscarded());
 		lastWrittenTo = ev_now(Controller_getLoop(controller));
-		totalBytesWritten += data.size();
+		totalBytesWritten += transaction->getBody().size();
 	}
 
 	virtual bool flush() {

@@ -126,7 +126,7 @@ namespace boost
           typedef thread_exception base_type;
     public:
           thread_resource_error()
-          : base_type(system::errc::resource_unavailable_try_again, "boost::thread_resource_error")
+          : base_type(static_cast<int>(system::errc::resource_unavailable_try_again), "boost::thread_resource_error")
           {}
 
           thread_resource_error( int ev )
@@ -154,7 +154,7 @@ namespace boost
           typedef thread_exception base_type;
     public:
           unsupported_thread_option()
-          : base_type(system::errc::invalid_argument, "boost::unsupported_thread_option")
+          : base_type(static_cast<int>(system::errc::invalid_argument), "boost::unsupported_thread_option")
           {}
 
           unsupported_thread_option( int ev )
@@ -178,7 +178,7 @@ namespace boost
           typedef thread_exception base_type;
     public:
         invalid_thread_argument()
-        : base_type(system::errc::invalid_argument, "boost::invalid_thread_argument")
+        : base_type(static_cast<int>(system::errc::invalid_argument), "boost::invalid_thread_argument")
         {}
 
         invalid_thread_argument( int ev )
@@ -202,7 +202,7 @@ namespace boost
           typedef thread_exception base_type;
     public:
           thread_permission_error()
-          : base_type(system::errc::permission_denied, "boost::thread_permission_error")
+          : base_type(static_cast<int>(system::errc::permission_denied), "boost::thread_permission_error")
           {}
 
           thread_permission_error( int ev )

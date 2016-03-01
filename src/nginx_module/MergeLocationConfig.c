@@ -49,6 +49,18 @@ int generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev,
 	
 
 	
+		ngx_conf_merge_uint_value(conf->core_file_descriptor_ulimit,
+			prev->core_file_descriptor_ulimit,
+			NGX_CONF_UNSET_UINT);
+	
+
+	
+		ngx_conf_merge_uint_value(conf->app_file_descriptor_ulimit,
+			prev->app_file_descriptor_ulimit,
+			NGX_CONF_UNSET_UINT);
+	
+
+	
 		ngx_conf_merge_value(conf->enabled,
 			prev->enabled,
 			NGX_CONF_UNSET);

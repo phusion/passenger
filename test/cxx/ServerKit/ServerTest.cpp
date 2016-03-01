@@ -42,6 +42,11 @@ namespace tut {
 				bg.start();
 			}
 			bg.safe->runSync(boost::bind(&Server<Client>::shutdown, server.get(), true));
+			while (getServerState() != Server<Client>::FINISHED_SHUTDOWN) {
+				syscalls::usleep(10000);
+			}
+			bg.safe->runSync(boost::bind(&ServerKit_ServerTest::destroyServer,
+				this));
 			safelyClose(serverSocket1);
 			safelyClose(serverSocket2);
 			unlink("tmp.server1");
@@ -54,12 +59,27 @@ namespace tut {
 			bg.start();
 		}
 
+		void destroyServer() {
+			server.reset();
+		}
+
 		FileDescriptor connectToServer1() {
 			return FileDescriptor(connectToUnixServer("tmp.server1", __FILE__, __LINE__), NULL, 0);
 		}
 
 		FileDescriptor connectToServer2() {
 			return FileDescriptor(connectToUnixServer("tmp.server2", __FILE__, __LINE__), NULL, 0);
+		}
+
+		Server<Client>::State getServerState() {
+			Server<Client>::State result;
+			bg.safe->runSync(boost::bind(&ServerKit_ServerTest::_getServerState,
+				this, &result));
+			return result;
+		}
+
+		void _getServerState(Server<Client>::State *state) {
+			*state = server->serverState;
 		}
 
 		unsigned int getActiveClientCount() {

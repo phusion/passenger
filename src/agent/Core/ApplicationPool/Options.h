@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -281,6 +281,8 @@ public:
 	 */
 	StaticString environmentVariables;
 
+	unsigned int fileDescriptorUlimit;
+
 	/**
 	 * If set to a value that isn't -1, makes Passenger ignore the application's
 	 * advertised socket concurrency, and believe that the concurrency should be
@@ -482,6 +484,7 @@ public:
 		  ruby(DEFAULT_RUBY, sizeof(DEFAULT_RUBY) - 1),
 		  python(DEFAULT_PYTHON, sizeof(DEFAULT_PYTHON) - 1),
 		  nodejs(DEFAULT_NODEJS, sizeof(DEFAULT_NODEJS) - 1),
+		  fileDescriptorUlimit(0),
 		  forceMaxConcurrentRequestsPerProcess(-1),
 		  debugger(false),
 		  loadShellEnvvars(true),

@@ -10,7 +10,7 @@
 #define BOOST_POOL_MUTEX_HPP
 
 #include <boost/config.hpp>  // for workarounds
-#ifdef BOOST_HAS_THREADS
+#if defined (BOOST_HAS_THREADS) && !defined(BOOST_POOL_NO_MT)
 #include <boost/thread/mutex.hpp>
 #endif
 

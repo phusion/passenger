@@ -117,6 +117,7 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->pool_idle_time = NGX_CONF_UNSET_UINT;
     conf->response_buffer_high_watermark = NGX_CONF_UNSET_UINT;
     conf->stat_throttle_rate = NGX_CONF_UNSET_UINT;
+    conf->core_file_descriptor_ulimit = NGX_CONF_UNSET_UINT;
     conf->user_switching = NGX_CONF_UNSET;
     conf->show_version_in_header = NGX_CONF_UNSET;
     conf->turbocaching = NGX_CONF_UNSET;
@@ -269,7 +270,7 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->union_station_proxy_address.len == 0) {
         conf->union_station_proxy_address.data = (u_char *) "";
     }
-printf("init main conf: %d\n", conf->union_station_support);
+
     return NGX_CONF_OK;
 }
 

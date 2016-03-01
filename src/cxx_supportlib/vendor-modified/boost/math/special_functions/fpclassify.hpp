@@ -80,6 +80,14 @@ is used.
 #if defined(_MSC_VER) || defined(__BORLANDC__)
 #include <float.h>
 #endif
+#ifdef BOOST_MATH_USE_FLOAT128
+#ifdef __has_include
+#if  __has_include("quadmath.h")
+#include "quadmath.h"
+#define BOOST_MATH_HAS_QUADMATH_H
+#endif
+#endif
+#endif
 
 #ifdef BOOST_NO_STDC_NAMESPACE
   namespace std{ using ::abs; using ::fabs; }
@@ -121,7 +129,15 @@ inline bool is_nan_helper(T, const boost::false_type&)
 {
    return false;
 }
-
+#if defined(BOOST_MATH_USE_FLOAT128)
+#if defined(BOOST_MATH_HAS_QUADMATH_H)
+inline bool is_nan_helper(__float128 f, const boost::true_type&) { return ::isnanq(f); }
+inline bool is_nan_helper(__float128 f, const boost::false_type&) { return ::isnanq(f); }
+#else
+inline bool is_nan_helper(__float128 f, const boost::true_type&) { return ::isnan(static_cast<double>(f)); }
+inline bool is_nan_helper(__float128 f, const boost::false_type&) { return ::isnan(static_cast<double>(f)); }
+#endif
+#endif
 }
 
 namespace math{
@@ -258,7 +274,7 @@ inline int fpclassify BOOST_NO_MACRO_EXPAND(T t)
 {
    typedef typename detail::fp_traits<T>::type traits;
    typedef typename traits::method method;
-   typedef typename tools::promote_args<T>::type value_type;
+   typedef typename tools::promote_args_permissive<T>::type value_type;
 #ifdef BOOST_NO_LIMITS_COMPILE_TIME_CONSTANTS
    if(std::numeric_limits<T>::is_specialized && detail::is_generic_tag_false(static_cast<method*>(0)))
       return detail::fpclassify_imp(static_cast<value_type>(t), detail::generic_tag<true>());
@@ -309,7 +325,7 @@ namespace detail {
       if(std::numeric_limits<T>::is_specialized)
          return isfinite_impl(x, generic_tag<true>());
 #endif
-       (void)x; // warning supression.
+       (void)x; // warning suppression.
        return true;
     }
 
@@ -338,7 +354,7 @@ inline bool (isfinite)(T x)
    typedef typename detail::fp_traits<T>::type traits;
    typedef typename traits::method method;
    // typedef typename boost::is_floating_point<T>::type fp_tag;
-   typedef typename tools::promote_args<T>::type value_type;
+   typedef typename tools::promote_args_permissive<T>::type value_type;
    return detail::isfinite_impl(static_cast<value_type>(x), method());
 }
 
@@ -348,7 +364,7 @@ inline bool (isfinite)(long double x)
 { //!< \brief return true if floating-point type t is finite.
    typedef detail::fp_traits<long double>::type traits;
    typedef traits::method method;
-   typedef boost::is_floating_point<long double>::type fp_tag;
+   //typedef boost::is_floating_point<long double>::type fp_tag;
    typedef long double value_type;
    return detail::isfinite_impl(static_cast<value_type>(x), method());
 }
@@ -409,7 +425,7 @@ inline bool (isnormal)(T x)
    typedef typename detail::fp_traits<T>::type traits;
    typedef typename traits::method method;
    //typedef typename boost::is_floating_point<T>::type fp_tag;
-   typedef typename tools::promote_args<T>::type value_type;
+   typedef typename tools::promote_args_permissive<T>::type value_type;
    return detail::isnormal_impl(static_cast<value_type>(x), method());
 }
 
@@ -419,7 +435,7 @@ inline bool (isnormal)(long double x)
 {
    typedef detail::fp_traits<long double>::type traits;
    typedef traits::method method;
-   typedef boost::is_floating_point<long double>::type fp_tag;
+   //typedef boost::is_floating_point<long double>::type fp_tag;
    typedef long double value_type;
    return detail::isnormal_impl(static_cast<value_type>(x), method());
 }
@@ -453,7 +469,7 @@ namespace detail {
       if(std::numeric_limits<T>::is_specialized)
          return isinf_impl(x, generic_tag<true>());
 #endif
-        (void)x; // warning supression.
+        (void)x; // warning suppression.
         return false;
     }
 
@@ -498,7 +514,7 @@ inline bool (isinf)(T x)
    typedef typename detail::fp_traits<T>::type traits;
    typedef typename traits::method method;
    // typedef typename boost::is_floating_point<T>::type fp_tag;
-   typedef typename tools::promote_args<T>::type value_type;
+   typedef typename tools::promote_args_permissive<T>::type value_type;
    return detail::isinf_impl(static_cast<value_type>(x), method());
 }
 
@@ -508,9 +524,16 @@ inline bool (isinf)(long double x)
 {
    typedef detail::fp_traits<long double>::type traits;
    typedef traits::method method;
-   typedef boost::is_floating_point<long double>::type fp_tag;
+   //typedef boost::is_floating_point<long double>::type fp_tag;
    typedef long double value_type;
    return detail::isinf_impl(static_cast<value_type>(x), method());
+}
+#endif
+#if defined(BOOST_MATH_USE_FLOAT128) && defined(BOOST_MATH_HAS_QUADMATH_H)
+template<>
+inline bool (isinf)(__float128 x)
+{
+   return ::isinfq(x);
 }
 #endif
 
@@ -541,7 +564,7 @@ namespace detail {
       if(std::numeric_limits<T>::is_specialized)
          return isnan_impl(x, generic_tag<true>());
 #endif
-        (void)x; // warning supression
+        (void)x; // warning suppression
         return false;
     }
 
@@ -594,8 +617,15 @@ inline bool (isnan)(long double x)
 { //!< \brief return true if floating-point type t is NaN (Not A Number).
    typedef detail::fp_traits<long double>::type traits;
    typedef traits::method method;
-   typedef boost::is_floating_point<long double>::type fp_tag;
+   //typedef boost::is_floating_point<long double>::type fp_tag;
    return detail::isnan_impl(x, method());
+}
+#endif
+#if defined(BOOST_MATH_USE_FLOAT128) && defined(BOOST_MATH_HAS_QUADMATH_H)
+template<>
+inline bool (isnan)(__float128 x)
+{
+   return ::isnanq(x);
 }
 #endif
 

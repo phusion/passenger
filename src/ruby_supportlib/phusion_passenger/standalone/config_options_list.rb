@@ -113,9 +113,8 @@ module PhusionPassenger
         :name      => :socket_backlog,
         :type      => :integer,
         :cli       => '--socket-backlog',
-        :default   => DEFAULT_SOCKET_BACKLOG,
         :desc      => "Override size of the socket backlog.\n" \
-                      "Default: %DEFAULT%"
+                      "Default: #{DEFAULT_SOCKET_BACKLOG}"
       },
       {
         :name      => :ssl,
@@ -175,6 +174,12 @@ module PhusionPassenger
         :name      => :data_buffer_dir,
         :type      => :path,
         :desc      => 'Use the given data buffer directory'
+      },
+      {
+        :name      => :core_file_descriptor_ulimit,
+        :type      => :integer,
+        :desc      => "Set custom file descriptor ulimit for the\n" \
+                      "#{SHORT_PROGRAM_NAME} core"
       }
     ]
 
@@ -277,6 +282,12 @@ module PhusionPassenger
         :default   => false,
         :desc      => "Load shell startup files before loading\n" \
                       'application'
+      },
+      {
+        :name      => :app_file_descriptor_ulimit,
+        :type      => :integer,
+        :desc      => "Set custom file descriptor ulimit for the\n" \
+                      "application"
       },
       {
         :name      => :debugger,

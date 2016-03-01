@@ -45,6 +45,8 @@
  * to learn why.
  */
 #include <apr_strings.h>
+// In Apache < 2.4, this macro was necessary for core_dir_config and other structs
+#define CORE_PRIVATE
 #include <http_core.h>
 
 using namespace Passenger;
@@ -237,6 +239,10 @@ postprocessDirConfig(server_rec *s, core_dir_config *core_dconf,
 		serverConfig.unionStationSupport = true;
 	}
 }
+
+#ifndef ap_get_core_module_config
+	#define ap_get_core_module_config(s) ap_get_module_config(s, &core_module)
+#endif
 
 void
 passenger_postprocess_config(server_rec *s) {

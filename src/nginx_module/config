@@ -41,15 +41,8 @@ if test "x$PASSENGER_LIBS" = "x"; then
     PASSENGER_LIBS=`$PASSENGER_CONFIG --nginx-libs`
 fi
 
-ngx_addon_name=ngx_http_passenger_module
-HTTP_MODULES="$HTTP_MODULES ngx_http_passenger_module"
-NGX_ADDON_SRCS="$NGX_ADDON_SRCS \
-    ${ngx_addon_dir}/ngx_http_passenger_module.c \
-    ${ngx_addon_dir}/Configuration.c \
-    ${ngx_addon_dir}/ContentHandler.c \
-    ${ngx_addon_dir}/StaticContentHandler.c"
-NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
-    ${ngx_addon_dir}/Configuration.h \
+PASSENGER_MODULE_INCS="$PASSENGER_INCLUDEDIR"
+PASSENGER_MODULE_DEPS="${ngx_addon_dir}/Configuration.h \
     ${ngx_addon_dir}/ConfigurationCommands.c \
     ${ngx_addon_dir}/CreateLocationConfig.c \
     ${ngx_addon_dir}/MergeLocationConfig.c \
@@ -60,8 +53,12 @@ NGX_ADDON_DEPS="$NGX_ADDON_DEPS \
     ${PASSENGER_INCLUDEDIR}/cxx_supportlib/Constants.h \
     ${PASSENGER_INCLUDEDIR}/cxx_supportlib/WatchdogLauncher.h \
     ${PASSENGER_INCLUDEDIR}/cxx_supportlib/AppTypes.h"
-CORE_INCS="$CORE_INCS $PASSENGER_INCLUDEDIR"
-CORE_LIBS="$CORE_LIBS $PASSENGER_LIBS -lstdc++ -lpthread"
+PASSENGER_MODULE_SRCS="${ngx_addon_dir}/ngx_http_passenger_module.c \
+    ${ngx_addon_dir}/Configuration.c \
+    ${ngx_addon_dir}/ContentHandler.c \
+    ${ngx_addon_dir}/StaticContentHandler.c"
+PASSENGER_MODULE_LIBS="$PASSENGER_LIBS -lstdc++ -lpthread"
+
 
 ngx_feature="Math library"
 ngx_feature_name=
@@ -72,7 +69,7 @@ ngx_feature_libs="-lm"
 ngx_feature_test="pow(1, 2)"
 . auto/feature
 if [ $ngx_found = yes ]; then
-    CORE_LIBS="$CORE_LIBS -lm"
+    PASSENGER_MODULE_LIBS="$PASSENGER_MODULE_LIBS -lm"
 fi
 
 ngx_feature="POSIX realtime library"
@@ -84,8 +81,9 @@ ngx_feature_libs="-lrt"
 ngx_feature_test=
 . auto/feature
 if [ $ngx_found = yes ]; then
-    CORE_LIBS="$CORE_LIBS -lrt"
+    PASSENGER_MODULE_LIBS="$PASSENGER_MODULE_LIBS -lrt"
 fi
+
 
 nginx_version=`grep 'NGINX_VERSION ' src/core/nginx.h | awk '{ print $3 }' | sed 's/"//g' | head -n1`
 
@@ -100,3 +98,23 @@ have=PASSENGER_NGINX_MINOR_VERSION value="$nginx_minor_version"
 nginx_micro_version=`echo "$nginx_version" | cut -d . -f 3`
 have=PASSENGER_NGINX_MICRO_VERSION value="$nginx_micro_version"
 . auto/define
+
+
+ngx_addon_name=ngx_http_passenger_module
+
+if test -n "$ngx_module_link"; then
+    ngx_module_type=HTTP
+    ngx_module_name=ngx_http_passenger_module
+    ngx_module_incs="$PASSENGER_MODULE_INCS"
+    ngx_module_deps="$PASSENGER_MODULE_DEPS"
+    ngx_module_srcs="$PASSENGER_MODULE_SRCS"
+    ngx_module_libs="$PASSENGER_MODULE_LIBS"
+
+    . auto/module
+else
+    HTTP_MODULES="$HTTP_MODULES ngx_http_passenger_module"
+    NGX_ADDON_SRCS="$NGX_ADDON_SRCS $PASSENGER_MODULE_SRCS"
+    NGX_ADDON_DEPS="$NGX_ADDON_DEPS $PASSENGER_MODULE_DEPS"
+    CORE_INCS="$CORE_INCS $PASSENGER_MODULE_INCS"
+    CORE_LIBS="$CORE_LIBS $PASSENGER_MODULE_LIBS"
+fi

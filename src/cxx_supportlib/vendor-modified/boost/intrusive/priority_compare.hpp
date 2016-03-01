@@ -16,23 +16,48 @@
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
 
-#include <functional>
+#include <boost/intrusive/detail/minimal_less_equal_header.hpp>
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 namespace boost {
 namespace intrusive {
 
 template <class T>
 struct priority_compare
-   : public std::binary_function<T, T, bool>
 {
+   //Compatibility with std::binary_function
+   typedef T      first_argument_type;
+   typedef T      second_argument_type;
+   typedef bool   result_type;
+
    bool operator()(const T &val, const T &val2) const
    {
       return priority_order(val, val2);
    }
 };
 
-} //namespace intrusive 
-} //namespace boost 
+/// @cond
+
+template<class Less, class T>
+struct get_prio
+{
+   typedef Less type;
+};
+
+
+template<class T>
+struct get_prio<void, T>
+{
+   typedef ::boost::intrusive::priority_compare<T> type;
+};
+
+/// @endcond
+
+} //namespace intrusive
+} //namespace boost
 
 #include <boost/intrusive/detail/config_end.hpp>
 

@@ -171,12 +171,12 @@ void truncateBeforeTokens(const char *str, const StaticString &tokens, int maxBe
  * Look for 'toFind' inside 'str', replace it with 'replaceWith' and return the result.
  * Only the first occurence of 'toFind' is replaced.
  */
-string replaceString(const string &str, const string &toFind, const string &replaceWith);
+string replaceString(const StaticString &str, const StaticString &toFind, const StaticString &replaceWith);
 
 /**
  * Like replaceString(), but replace all occurrences of `toFind`.
  */
-string replaceAll(const string &str, const string &toFind, const string &replaceWith);
+string replaceAll(const StaticString &str, const StaticString &toFind, const StaticString &replaceWith);
 
 /**
  * Strips leading and trailing whitespaces.
@@ -407,7 +407,8 @@ int atoi(const string &s);
 long atol(const string &s);
 
 /**
- * Round <em>number</em> up to the nearest multiple of <em>multiple</em>.
+ * Round `number` up to the nearest multiple of `multiple`.
+ * This only works for integers!
  */
 template<typename IntegerType>
 IntegerType
@@ -426,6 +427,35 @@ void convertLowerCase(const unsigned char * restrict data, unsigned char * restr
 bool constantTimeCompare(const StaticString &a, const StaticString &b);
 
 string distanceOfTimeInWords(time_t fromTime, time_t toTime = 0);
+
+/**
+ * Returns the amount of time to the next multiple of `multiple`. For example:
+ *
+ *     timeToNextMultipleULL(5, 0);   // => 5
+ *     timeToNextMultipleULL(5, 1);   // => 4
+ *     timeToNextMultipleULL(5, 2);   // => 3
+ *     timeToNextMultipleULL(5, 3);   // => 2
+ *     timeToNextMultipleULL(5, 4);   // => 1
+ *     timeToNextMultipleULL(5, 5);   // => 5
+ *     timeToNextMultipleULL(5, 6);   // => 4
+ *
+ * `multiple` and `now` may be in any unit (seconds, microseconds, hours) as
+ * long as they are both the same unit. The return value is then also in that unit.
+ * `timeToNextMultipleULL` operates on timestamp integers while
+ * `timeToNextMultipleD` operates on timestamp floating point numbers.
+ *
+ * In case of `timeToNextMultipleULL`, if `now` is 0, then it is automatically set to
+ * `SystemTime::getUsec()`.
+ *
+ * This function is mainly useful for repeating a timer while aligning the repeat
+ * time on a certain multiple, which saves power on laptops. For example, when
+ * repeating a libev timer you can call the following in the timeout function:
+ *
+ *     timer->repeat = timeToNextMultipleD(5, ev_now(loop));
+ *     ev_timer_again(loop, timer);
+ */
+unsigned long long timeToNextMultipleULL(unsigned long long multiple, unsigned long long now = 0);
+double timeToNextMultipleD(unsigned int multiple, double now);
 
 /**
  * Append the given data to the address at 'pos', but do not cross 'end'.

@@ -6,7 +6,7 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2008-02-27 12:00:24 -0800 (Wed, 27 Feb 2008) $
+ * $Date$
  */
 
 
@@ -54,7 +54,7 @@ namespace date_time {
         return date_type(time_count_.as_special());
       }
       else {
-        typename calendar_type::date_int_type dc = day_count();
+        typename calendar_type::date_int_type dc = static_cast<typename calendar_type::date_int_type>(day_count());
         //std::cout << "time_rep here:" << dc << std::endl;
         ymd_type ymd = calendar_type::from_day_number(dc);
         return date_type(ymd);

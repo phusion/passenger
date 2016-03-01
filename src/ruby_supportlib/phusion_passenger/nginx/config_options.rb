@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2015 Phusion Holding B.V.
+#  Copyright (c) 2013-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -91,6 +91,16 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :type      => :integer,
     :context   => [:main],
     :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
+  },
+  {
+    :name     => 'passenger_core_file_descriptor_ulimit',
+    :type     => :uinteger,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_app_file_descriptor_ulimit',
+    :type     => :uinteger
   },
   {
     :name     => 'passenger_enabled',

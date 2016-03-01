@@ -85,7 +85,7 @@ def generate_compilation_task_dependencies(source, options = nil)
     result.concat(dependencies)
   end
   if options && options[:deps]
-    result.concat(options[:deps])
+    result.concat([options[:deps]].flatten.compact)
   end
   result
 end
@@ -148,14 +148,14 @@ def create_shared_library(target, objects, options_or_flags = nil)
 end
 
 def define_c_object_compilation_task(object, source, options_or_flags = nil)
-  options = options_or_flags if options.is_a?(Hash)
+  options = options_or_flags if options_or_flags.is_a?(Hash)
   file(object => generate_compilation_task_dependencies(source, options)) do
     compile_c(object, source, options_or_flags)
   end
 end
 
 def define_cxx_object_compilation_task(object, source, options_or_flags = nil)
-  options = options_or_flags if options.is_a?(Hash)
+  options = options_or_flags if options_or_flags.is_a?(Hash)
   file(object => generate_compilation_task_dependencies(source, options)) do
     compile_cxx(object, source, options_or_flags)
   end

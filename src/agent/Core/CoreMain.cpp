@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -40,6 +40,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
+#include <sys/resource.h>
 #include <cstring>
 #include <cassert>
 #include <cerrno>
@@ -257,6 +258,30 @@ initializeSingleAppMode() {
 	P_NOTICE("Serving app     : " << options.get("app_root"));
 	P_NOTICE("App type        : " << options.get("app_type"));
 	P_NOTICE("App startup file: " << options.get("startup_file"));
+}
+
+static void
+setUlimits() {
+	TRACE_POINT();
+	VariantMap &options = *agentsOptions;
+
+	if (options.has("core_file_descriptor_ulimit")) {
+		unsigned int number = options.getUint("core_file_descriptor_ulimit");
+		struct rlimit limit;
+		int ret;
+
+		limit.rlim_cur = number;
+		limit.rlim_max = number;
+		do {
+			ret = setrlimit(RLIMIT_NOFILE, &limit);
+		} while (ret == -1 && errno == EINTR);
+
+		if (ret == -1) {
+			int e = errno;
+			P_ERROR("Unable to set file descriptor ulimit to " << number
+				<< ": " << strerror(e) << " (errno=" << e << ")");
+		}
+	}
 }
 
 static void
@@ -960,6 +985,7 @@ runCore() {
 		UPDATE_TRACE_POINT();
 		initializePrivilegedWorkingObjects();
 		initializeSingleAppMode();
+		setUlimits();
 		startListening();
 		createPidFile();
 		lowerPrivilege();

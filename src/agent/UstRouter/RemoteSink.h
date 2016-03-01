@@ -101,8 +101,9 @@ public:
 		return true;
 	}
 
-	virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
-		LogSink::append(dataStoreId, data);
+	virtual void append(const TransactionPtr &transaction) {
+		StaticString data = transaction->getBody();
+		LogSink::append(transaction);
 		if (bufferSize + data.size() > BUFFER_CAPACITY) {
 			StaticString data2[] = {
 				StaticString(buffer, bufferSize),

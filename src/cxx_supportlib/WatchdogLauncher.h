@@ -235,7 +235,7 @@ private:
 		}
 	}
 
-	void throwEnrichedWatchdogFailReason(const string &simpleReason) {
+	void throwEnrichedWatchdogFailReason(const ResourceLocator &locator, const string &simpleReason) {
 		if (mIntegrationMode == IM_STANDALONE) {
 			throw RuntimeException("Unable to start " PROGRAM_NAME ": " + simpleReason +
 				". This probably means that your " SHORT_PROGRAM_NAME
@@ -243,6 +243,7 @@ private:
 		} else {
 			string passengerRootConfig;
 			string docURL;
+
 			if (mIntegrationMode == IM_APACHE) {
 				passengerRootConfig = "PassengerRoot";
 				docURL = "https://www.phusionpassenger.com/library/config/apache/reference/#passengerroot";
@@ -250,11 +251,19 @@ private:
 				passengerRootConfig = "passenger_root";
 				docURL = "https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_root";
 			}
-			throw RuntimeException("Unable to start " PROGRAM_NAME ": " + simpleReason +
-				". This probably means that your " SHORT_PROGRAM_NAME
-				" installation is broken or incomplete, or that your '" + passengerRootConfig +
-				"' setting contains the wrong value. Please reinstall " SHORT_PROGRAM_NAME
-				" or, or see " + docURL + " to learn how to adjust the setting.");
+
+			string message = "Unable to start " PROGRAM_NAME ": " + simpleReason +
+				". There may be different causes for this:\n\n"
+				" - Your '" + passengerRootConfig + "' setting is set to the wrong value."
+					" Please see " + docURL + " to learn how to fix the value.\n";
+			if (!locator.getBuildSystemDir().empty()) {
+				message.append(" - The " AGENT_EXE " binary is not compiled."
+					" Please run this command to compile it: "
+					+ locator.getBinDir() + "/passenger-config compile-agent\n");
+			}
+			message.append(" - Your " SHORT_PROGRAM_NAME " installation is broken or incomplete."
+				" Please reinstall " SHORT_PROGRAM_NAME ".");
+			throw RuntimeException(message);
 		}
 	}
 
@@ -344,8 +353,7 @@ public:
 		try {
 			agentFilename = locator.findSupportBinary(AGENT_EXE);
 		} catch (const Passenger::RuntimeException &e) {
-			string locatorError = e.what();
-			throwEnrichedWatchdogFailReason(locatorError);
+			throwEnrichedWatchdogFailReason(locator, e.what());
 		}
 		SocketPair fds;
 		int e;
@@ -508,7 +516,7 @@ public:
 				killProcessGroupAndWait(&pid, 5000);
 				guard.clear();
 				if (e == ENOENT) {
-					throwEnrichedWatchdogFailReason("Executable " + agentFilename + " found.");
+					throwEnrichedWatchdogFailReason(locator, "Executable " + agentFilename + " not found.");
 				} else {
 					throw SystemException("Unable to start the " PROGRAM_NAME " watchdog (" +
 						agentFilename + ")", e);

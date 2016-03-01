@@ -60,8 +60,9 @@ public:
 		}
 	}
 
-	virtual void append(const DataStoreId &dataStoreId, const StaticString &data) {
-		LogSink::append(dataStoreId, data);
+	virtual void append(const TransactionPtr &transaction) {
+		StaticString data = transaction->getBody();
+		LogSink::append(transaction);
 		syscalls::write(fd, data.data(), data.size());
 	}
 

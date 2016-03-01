@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -79,6 +79,9 @@ ustRouterUsage() {
 	printf("\n");
 	printf("      --log-file PATH         Log to the given file.\n");
 	printf("      --log-level LEVEL       Logging level. Default: %d\n", DEFAULT_LOG_LEVEL);
+	printf("\n");
+	printf("      --core-file-descriptor-ulimit NUMBER\n");
+	printf("                              Set custom file descriptor ulimit for the core\n");
 	printf("\n");
 	printf("  -h, --help                  Show this help\n");
 	printf("\n");
@@ -161,6 +164,9 @@ parseUstRouterOption(int argc, const char *argv[], int &i, VariantMap &options) 
 		// We do not set debug_log_file because, when this function is called from
 		// the Watchdog, we don't want to affect the Watchdog's own log file.
 		options.set("ust_router_log_file", argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--core-file-descriptor-ulimit")) {
+		options.setUint("core_file_descriptor_ulimit", atoi(argv[i + 1]));
 		i += 2;
 	} else {
 		return false;

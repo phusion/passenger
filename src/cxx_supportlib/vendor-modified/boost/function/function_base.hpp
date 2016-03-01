@@ -25,7 +25,6 @@
 #include <boost/type_traits/is_integral.hpp>
 #include <boost/type_traits/is_volatile.hpp>
 #include <boost/type_traits/composite_traits.hpp>
-#include <boost/type_traits/ice.hpp>
 #include <boost/ref.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/detail/workaround.hpp>
@@ -56,7 +55,7 @@
 // need to use std::type_info::name to compare instead of operator==.
 #if defined( BOOST_NO_TYPEID )
 #  define BOOST_FUNCTION_COMPARE_TYPE_ID(X,Y) ((X)==(Y))
-#elif (defined(__GNUC__) && __GNUC__ >= 3) \
+#elif defined(__GNUC__) \
  || defined(_AIX) \
  || (   defined(__sgi) && defined(__host_mips))
 #  include <cstring>
@@ -66,25 +65,16 @@
 #  define BOOST_FUNCTION_COMPARE_TYPE_ID(X,Y) ((X)==(Y))
 #endif
 
-#if defined(BOOST_MSVC) && BOOST_MSVC <= 1300 || defined(__ICL) && __ICL <= 600 || defined(__MWERKS__) && __MWERKS__ < 0x2406 && !defined(BOOST_STRICT_CONFIG)
+#if defined(__ICL) && __ICL <= 600 || defined(__MWERKS__) && __MWERKS__ < 0x2406 && !defined(BOOST_STRICT_CONFIG)
 #  define BOOST_FUNCTION_TARGET_FIX(x) x
 #else
 #  define BOOST_FUNCTION_TARGET_FIX(x)
-#endif // not MSVC
+#endif // __ICL etc
 
-#if !BOOST_WORKAROUND(__BORLANDC__, < 0x5A0)
 #  define BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL(Functor,Type)              \
-      typename ::boost::enable_if_c<(::boost::type_traits::ice_not<          \
-                            (::boost::is_integral<Functor>::value)>::value), \
+      typename ::boost::enable_if_c<          \
+                           !(::boost::is_integral<Functor>::value), \
                            Type>::type
-#else
-// BCC doesn't recognize this depends on a template argument and complains
-// about the use of 'typename'
-#  define BOOST_FUNCTION_ENABLE_IF_NOT_INTEGRAL(Functor,Type)     \
-      ::boost::enable_if_c<(::boost::type_traits::ice_not<          \
-                   (::boost::is_integral<Functor>::value)>::value), \
-                       Type>::type
-#endif
 
 namespace boost {
   namespace detail {
@@ -294,7 +284,7 @@ namespace boost {
           } else if (op == destroy_functor_tag)
             out_buffer.func_ptr = 0;
           else if (op == check_functor_type_tag) {
-            const detail::sp_typeinfo& check_type 
+            const boost::detail::sp_typeinfo& check_type
               = *out_buffer.type.type;
             if (BOOST_FUNCTION_COMPARE_TYPE_ID(check_type, BOOST_SP_TYPEID(Functor)))
               out_buffer.obj_ptr = &in_buffer.func_ptr;
@@ -661,11 +651,7 @@ public:
     }
 
   template<typename Functor>
-#if defined(BOOST_MSVC) && BOOST_WORKAROUND(BOOST_MSVC, < 1300)
-    const Functor* target( Functor * = 0 ) const
-#else
     const Functor* target() const
-#endif
     {
       if (!vtable) return 0;
 
@@ -683,11 +669,7 @@ public:
   template<typename F>
     bool contains(const F& f) const
     {
-#if defined(BOOST_MSVC) && BOOST_WORKAROUND(BOOST_MSVC, < 1300)
-      if (const F* fp = this->target( (F*)0 ))
-#else
       if (const F* fp = this->template target<F>())
-#endif
       {
         return function_equal(*fp, f);
       } else {

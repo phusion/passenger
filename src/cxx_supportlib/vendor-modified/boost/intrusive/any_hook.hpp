@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga  2006-2012
+// (C) Copyright Ion Gaztanaga  2006-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -15,29 +15,25 @@
 
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
-#include <boost/intrusive/detail/utilities.hpp>
 #include <boost/intrusive/detail/any_node_and_algorithms.hpp>
 #include <boost/intrusive/options.hpp>
 #include <boost/intrusive/detail/generic_hook.hpp>
-#include <boost/intrusive/pointer_traits.hpp>
+#include <boost/intrusive/detail/mpl.hpp>
+#include <boost/intrusive/pointer_rebind.hpp>
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 namespace boost {
 namespace intrusive {
-
-/// @cond
-template<class VoidPointer>
-struct get_any_node_algo
-{
-   typedef any_algorithms<VoidPointer> type;
-};
-/// @endcond
 
 //! Helper metafunction to define a \c \c any_base_hook that yields to the same
 //! type when the same options (either explicitly or implicitly) are used.
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
-template<class O1 = none, class O2 = none, class O3 = none>
+template<class O1 = void, class O2 = void, class O3 = void>
 #endif
 struct make_any_base_hook
 {
@@ -51,11 +47,11 @@ struct make_any_base_hook
       #endif
       >::type packed_options;
 
-   typedef detail::generic_hook
-   < get_any_node_algo<typename packed_options::void_pointer>
+   typedef generic_hook
+   < any_algorithms<typename packed_options::void_pointer>
    , typename packed_options::tag
    , packed_options::link_mode
-   , detail::AnyBaseHook
+   , AnyBaseHookId
    > implementation_defined;
    /// @endcond
    typedef implementation_defined type;
@@ -75,7 +71,7 @@ struct make_any_base_hook
 //! \c link_mode<> will specify the linking mode of the hook (\c normal_link, \c safe_link).
 //!
 //! \c void_pointer<> is the pointer type that will be used internally in the hook
-//! and the the container configured to use this hook.
+//! and the container configured to use this hook.
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
@@ -142,7 +138,7 @@ class any_base_hook
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
-template<class O1 = none, class O2 = none, class O3 = none>
+template<class O1 = void, class O2 = void, class O3 = void>
 #endif
 struct make_any_member_hook
 {
@@ -156,11 +152,11 @@ struct make_any_member_hook
       #endif
       >::type packed_options;
 
-   typedef detail::generic_hook
-   < get_any_node_algo<typename packed_options::void_pointer>
+   typedef generic_hook
+   < any_algorithms<typename packed_options::void_pointer>
    , member_tag
    , packed_options::link_mode
-   , detail::NoBaseHook
+   , NoBaseHookId
    > implementation_defined;
    /// @endcond
    typedef implementation_defined type;
@@ -175,7 +171,7 @@ struct make_any_member_hook
 //! \c link_mode<> will specify the linking mode of the hook (\c normal_link or \c safe_link).
 //!
 //! \c void_pointer<> is the pointer type that will be used internally in the hook
-//! and the the container configured to use this hook.
+//! and the container configured to use this hook.
 #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED) || defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template<class ...Options>
 #else
@@ -241,38 +237,34 @@ class any_member_hook
 
 namespace detail{
 
-template<class ValueTraits>
-struct any_to_get_base_pointer_type
-{
-   typedef typename pointer_traits<typename ValueTraits::boost_intrusive_tags::node_traits::node_ptr>::template
-      rebind_pointer<void>::type type;
-};
-
-template<class ValueTraits>
-struct any_to_get_member_pointer_type
-{
-   typedef typename pointer_traits
-      <typename ValueTraits::node_ptr>::template rebind_pointer<void>::type type;
-};
+BOOST_INTRUSIVE_INTERNAL_STATIC_BOOL_IS_TRUE(old_proto_value_traits_base_hook, hooktags::is_base_hook)
 
 //!This option setter specifies that the container
 //!must use the specified base hook
-template<class BaseHook, template <class> class NodeTraits>
+template<class BasicHook, template <class> class NodeTraits>
 struct any_to_some_hook
 {
-   typedef typename BaseHook::template pack<none>::value_traits old_value_traits;
+   typedef typename BasicHook::template pack<empty>::proto_value_traits old_proto_value_traits;
+
    template<class Base>
    struct pack : public Base
    {
-      struct value_traits : public old_value_traits
+      struct proto_value_traits
       {
+         //proto_value_traits::hooktags::is_base_hook is used by get_value_traits
+         //to detect base hooks, so mark it in case BasicHook has it.
+         struct hooktags
+         {
+            static const bool is_base_hook = old_proto_value_traits_base_hook_bool_is_true
+               <old_proto_value_traits>::value;
+         };
+
+         typedef old_proto_value_traits basic_hook_t;
          static const bool is_any_hook = true;
-         typedef typename detail::eval_if_c
-            < detail::internal_base_hook_bool_is_true<old_value_traits>::value
-            , any_to_get_base_pointer_type<old_value_traits>
-            , any_to_get_member_pointer_type<old_value_traits>
-            >::type void_pointer;
-         typedef NodeTraits<void_pointer> node_traits;
+
+         template<class VoidPtr>
+         struct node_traits_from_voidptr
+         {  typedef NodeTraits<VoidPtr> type;  };
       };
    };
 };
@@ -283,55 +275,55 @@ struct any_to_some_hook
 
 //!This option setter specifies that
 //!any hook should behave as an slist hook
-template<class BaseHook>
+template<class BasicHook>
 struct any_to_slist_hook
 /// @cond
-   :  public detail::any_to_some_hook<BaseHook, any_slist_node_traits>
+   :  public detail::any_to_some_hook<BasicHook, any_slist_node_traits>
 /// @endcond
 {};
 
 //!This option setter specifies that
 //!any hook should behave as an list hook
-template<class BaseHook>
+template<class BasicHook>
 struct any_to_list_hook
 /// @cond
-   :  public detail::any_to_some_hook<BaseHook, any_list_node_traits>
+   :  public detail::any_to_some_hook<BasicHook, any_list_node_traits>
 /// @endcond
 {};
 
 //!This option setter specifies that
 //!any hook should behave as a set hook
-template<class BaseHook>
+template<class BasicHook>
 struct any_to_set_hook
 /// @cond
-   :  public detail::any_to_some_hook<BaseHook, any_rbtree_node_traits>
+   :  public detail::any_to_some_hook<BasicHook, any_rbtree_node_traits>
 /// @endcond
 {};
 
 //!This option setter specifies that
 //!any hook should behave as an avl_set hook
-template<class BaseHook>
+template<class BasicHook>
 struct any_to_avl_set_hook
 /// @cond
-   :  public detail::any_to_some_hook<BaseHook, any_avltree_node_traits>
+   :  public detail::any_to_some_hook<BasicHook, any_avltree_node_traits>
 /// @endcond
 {};
 
 //!This option setter specifies that any
 //!hook should behave as a bs_set hook
-template<class BaseHook>
+template<class BasicHook>
 struct any_to_bs_set_hook
 /// @cond
-   :  public detail::any_to_some_hook<BaseHook, any_tree_node_traits>
+   :  public detail::any_to_some_hook<BasicHook, any_tree_node_traits>
 /// @endcond
 {};
 
 //!This option setter specifies that any hook
 //!should behave as an unordered set hook
-template<class BaseHook>
+template<class BasicHook>
 struct any_to_unordered_set_hook
 /// @cond
-   :  public detail::any_to_some_hook<BaseHook, any_unordered_node_traits>
+   :  public detail::any_to_some_hook<BasicHook, any_unordered_node_traits>
 /// @endcond
 {};
 

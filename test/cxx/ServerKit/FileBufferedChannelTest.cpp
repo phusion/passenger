@@ -44,13 +44,21 @@ namespace tut {
 		}
 
 		~ServerKit_FileBufferedChannelTest() {
+			startLoop();
+			bg.safe->runSync(boost::bind(&ServerKit_FileBufferedChannelTest::deinitializeChannel,
+				this));
 			bg.stop(); // Prevent any runLater callbacks from running.
-			channel.deinitialize(); // Cancel any event loop next tick callbacks.
 			setLogLevel(DEFAULT_LOG_LEVEL);
 		}
 
+		void deinitializeChannel() {
+			channel.deinitialize(); // Cancel any event loop next tick callbacks.
+		}
+
 		void startLoop() {
-			bg.start();
+			if (!bg.isStarted()) {
+				bg.start();
+			}
 		}
 
 		static Channel::Result dataCallback(Channel *_channel, const mbuf &buffer, int errcode)
@@ -792,7 +800,7 @@ namespace tut {
 		EVENTUALLY(5,
 			LOCK();
 			result = counter == 4
-				&& getChannelState() == Channel::EOF_WAITING;
+				&& getChannelState() == Channel::WAITING_FOR_CALLBACK_WITH_EOF_OR_ERROR;
 		);
 		EVENTUALLY(5,
 			LOCK();

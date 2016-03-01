@@ -76,7 +76,6 @@ private:
 	const string category;
 	const string unionStationKey;
 	const ExceptionHandlingMode exceptionHandlingMode;
-	bool shouldFlushToDiskAfterClose;
 
 	/**
 	 * Buffer must be at least txnId.size() + 1 + INT64_STR_BUFSIZE + 1 bytes.
@@ -144,8 +143,7 @@ public:
 		  groupName(_groupName),
 		  category(_category),
 		  unionStationKey(_unionStationKey),
-		  exceptionHandlingMode(_exceptionHandlingMode),
-		  shouldFlushToDiskAfterClose(false)
+		  exceptionHandlingMode(_exceptionHandlingMode)
 		{ }
 
 	~Transaction() {
@@ -171,14 +169,6 @@ public:
 				txnId.c_str(),
 				timestamp,
 				NULL);
-
-			if (shouldFlushToDiskAfterClose) {
-				UPDATE_TRACE_POINT();
-				timeout = IO_TIMEOUT;
-				writeArrayMessage(connection->fd, &timeout,
-					"flush", NULL);
-				readArrayMessage(connection->fd, &timeout);
-			}
 
 			_checkinConnection(context, connection);
 			guard.clear();
@@ -227,10 +217,6 @@ public:
 
 	void abort(const StaticString &text) {
 		message("ABORT");
-	}
-
-	void flushToDiskAfterClose(bool value) {
-		shouldFlushToDiskAfterClose = value;
 	}
 
 	bool isNull() const {

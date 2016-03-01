@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -59,6 +59,13 @@ public:
 		WAITING_FOR_APP_OUTPUT
 	};
 
+	enum HalfClosePolicy {
+		HALF_CLOSE_POLICY_UNINITIALIZED,
+		HALF_CLOSE_UPON_REACHING_REQUEST_BODY_END,
+		HALF_CLOSE_UPON_NEXT_REQUEST_EARLY_READ_ERROR,
+		HALF_CLOSE_PERFORMED
+	};
+
 	ev_tstamp startedAt;
 
 	State state: 3;
@@ -66,16 +73,16 @@ public:
 	bool requestBodyBuffering: 1;
 	bool https: 1;
 	bool stickySession: 1;
-	bool halfCloseAppConnection: 1;
 
 	// Range: 0..MAX_SESSION_CHECKOUT_TRY
-	boost::uint8_t sessionCheckoutTry;
+	boost::uint8_t sessionCheckoutTry: 4;
+	HalfClosePolicy halfClosePolicy: 2;
 	bool appResponseInitialized: 1;
 	bool strip100ContinueHeader: 1;
 	bool hasPragmaHeader: 1;
 
 	Options options;
-	SessionPtr session;
+	AbstractSessionPtr session;
 	const LString *host;
 
 	ServerKit::FdSinkChannel appSink;

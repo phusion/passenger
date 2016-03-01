@@ -23,6 +23,7 @@ namespace tut {
 	class MyRequest: public BaseHttpRequest {
 	public:
 		string body;
+		bool testingHalfClose;
 
 		DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(MyRequest);
 	};
@@ -111,7 +112,7 @@ namespace tut {
 
 		void startAcceptingBody(MyClient *client, MyRequest *req) {
 			req->bodyChannel.start();
-			// Continues on onRequestBody()
+			// Continues in onRequestBody()
 		}
 
 		void testLargeResponse(MyClient *client, MyRequest *req) {
@@ -137,7 +138,27 @@ namespace tut {
 			}
 		}
 
+		void testHalfClose(MyClient *client, MyRequest *req) {
+			req->testingHalfClose = true;
+			// Continues in onRequestEarlyHalfClose()
+		}
+
+		void testEarlyReadErrorDetection(MyClient *client, MyRequest *req) {
+			req->nextRequestEarlyReadError = ENOSPC;
+			writeSimpleResponse(client, 200, NULL, "OK");
+			endRequest(&client, &req);
+		}
+
 	protected:
+		virtual Channel::Result onClientDataReceived(MyClient *client, const MemoryKit::mbuf &buffer,
+			int errcode)
+		{
+			if (errcode != 0) {
+				clientDataErrors++;
+			}
+			return ParentClass::onClientDataReceived(client, buffer, errcode);
+		}
+
 		virtual void onRequestBegin(MyClient *client, MyRequest *req) {
 			ParentClass::onRequestBegin(client, req);
 
@@ -149,6 +170,10 @@ namespace tut {
 				testLargeResponse(client, req);
 			} else if (psg_lstr_cmp(&req->path, "/path_test")) {
 				testPath(client, req);
+			} else if (psg_lstr_cmp(&req->path, "/half_close_test")) {
+				testHalfClose(client, req);
+			} else if (psg_lstr_cmp(&req->path, "/early_read_error_detection_test")) {
+				testEarlyReadErrorDetection(client, req);
 			} else {
 				testRequest(client, req);
 			}
@@ -164,8 +189,10 @@ namespace tut {
 			} else if (errcode == 0) {
 				// EOF
 				req->body.insert(0, toString(req->body.size()) + " bytes: ");
-				writeSimpleResponse(client, 200, NULL, req->body);
-				endRequest(&client, &req);
+				if (!req->testingHalfClose) {
+					writeSimpleResponse(client, 200, NULL, req->body);
+					endRequest(&client, &req);
+				}
 			} else {
 				// Error
 				req->body.insert(0, string("Request body error: ") +
@@ -179,9 +206,20 @@ namespace tut {
 			return Channel::Result(buffer.size(), false);
 		}
 
+		virtual void onNextRequestEarlyReadError(MyClient *client, MyRequest *req, int errcode) {
+			ParentClass::onNextRequestEarlyReadError(client, req, errcode);
+			if (req->testingHalfClose) {
+				if (errcode == EARLY_EOF_DETECTED) {
+					halfCloseDetected++;
+				}
+				endRequest(&client, &req);
+			}
+		}
+
 		virtual void reinitializeRequest(MyClient *client, MyRequest *req) {
 			ParentClass::reinitializeRequest(client, req);
 			req->body.clear();
+			req->testingHalfClose = false;
 		}
 
 		virtual void deinitializeRequest(MyClient *client, MyRequest *req) {
@@ -207,11 +245,15 @@ namespace tut {
 
 		vector<MyRequest *> requestsWaitingToStartAcceptingBody;
 		unsigned int bodyBytesRead;
+		unsigned int halfCloseDetected;
+		unsigned int clientDataErrors;
 
 		MyServer(Context *context)
 			: ParentClass(context),
 			  allowUpgrades(true),
-			  bodyBytesRead(0)
+			  bodyBytesRead(0),
+			  halfCloseDetected(0),
+			  clientDataErrors(0)
 			{ }
 
 		void startAcceptingBody() {
@@ -257,6 +299,8 @@ namespace tut {
 			while (getServerState() != MyServer::FINISHED_SHUTDOWN) {
 				syscalls::usleep(10000);
 			}
+			bg.safe->runSync(boost::bind(&ServerKit_HttpServerTest::destroyServer,
+				this));
 			safelyClose(serverSocket);
 			unlink("tmp.server");
 			setLogLevel(DEFAULT_LOG_LEVEL);
@@ -267,6 +311,10 @@ namespace tut {
 			if (!bg.isStarted()) {
 				bg.start();
 			}
+		}
+
+		void destroyServer() {
+			server.reset();
 		}
 
 		FileDescriptor &connectToServer() {
@@ -359,6 +407,30 @@ namespace tut {
 
 		void _getNumRequestsWaitingToStartAcceptingBody(unsigned int *result) {
 			*result = server->requestsWaitingToStartAcceptingBody.size();
+		}
+
+		unsigned int getHalfCloseDetected() {
+			unsigned int result;
+			bg.safe->runSync(boost::bind(
+				&ServerKit_HttpServerTest::_getHalfCloseDetected,
+				this, &result));
+			return result;
+		}
+
+		void _getHalfCloseDetected(unsigned int *result) {
+			*result = server->halfCloseDetected;
+		}
+
+		unsigned int getClientDataErrors() {
+			unsigned int result;
+			bg.safe->runSync(boost::bind(
+				&ServerKit_HttpServerTest::_getClientDataErrors,
+				this, &result));
+			return result;
+		}
+
+		void _getClientDataErrors(unsigned int *result) {
+			*result = server->clientDataErrors;
 		}
 
 		void startAcceptingBody() {
@@ -1360,123 +1432,86 @@ namespace tut {
 	}
 
 
-	/***** Miscellaneous *****/
+	/***** Early half-close detection *****/
 
 	TEST_METHOD(70) {
-		set_test_name("It responds with the same HTTP version as the request");
+		set_test_name("Detection of half-close after non-empty body fully received");
 
 		connectToServer();
 		sendRequest(
-			"GET / HTTP/1.0\r\n"
-			"Connection: close\r\n"
-			"Host: foo\r\n\r\n");
-		string response = readAll(fd);
-		ensure_equals(response,
-			"HTTP/1.0 200 OK\r\n"
-			"Status: 200 OK\r\n"
-			"Content-Type: text/plain\r\n"
-			"Date: Thu, 11 Sep 2014 12:54:09 GMT\r\n"
-			"Connection: close\r\n"
-			"Content-Length: 7\r\n\r\n"
-			"hello /");
-	}
-
-	TEST_METHOD(71) {
-		set_test_name("For requests without body, keep-alive is possible");
-
-		connectToServer();
-		sendRequest(
-			"GET / HTTP/1.1\r\n"
+			"GET /half_close_test HTTP/1.1\r\n"
 			"Connection: keep-alive\r\n"
-			"Host: foo\r\n\r\n");
-		string header = readResponseHeader();
-		ensure(containsSubstring(header, "Connection: keep-alive"));
-	}
-
-	TEST_METHOD(72) {
-		set_test_name("If the request body is fully read, keep-alive is possible");
-
-		connectToServer();
-		sendRequest(
-			"GET /body_test HTTP/1.1\r\n"
-			"Connection: keep-alive\r\n"
-			"Host: foo\r\n"
 			"Content-Length: 2\r\n\r\n"
-			"ok");
-		string header = readResponseHeader();
-		ensure(containsSubstring(header, "Connection: keep-alive"));
-	}
-
-	TEST_METHOD(73) {
-		set_test_name("If the request body is not fully read, keep-alive is not possible");
-
-		connectToServer();
-		sendRequest(
-			"GET / HTTP/1.1\r\n"
-			"Connection: keep-alive\r\n"
-			"Host: foo\r\n"
-			"Content-Length: 2\r\n\r\n");
-		string header = readResponseHeader();
-		ensure(containsSubstring(header, "Connection: close"));
-	}
-
-	TEST_METHOD(74) {
-		set_test_name("It defaults to not using keep-alive for HTTP <= 1.0 requests");
-
-		connectToServer();
-		sendRequest(
-			"GET / HTTP/1.0\r\n"
-			"Host: foo\r\n\r\n");
-		string header = readResponseHeader();
-		ensure(containsSubstring(header, "Connection: close"));
-	}
-
-	TEST_METHOD(75) {
-		set_test_name("It defaults to using keep-alive for HTTP >= 1.1 requests");
-
-		connectToServer();
-		sendRequest(
-			"GET / HTTP/1.1\r\n"
-			"Host: foo\r\n\r\n");
-		string header = readResponseHeader();
-		ensure(containsSubstring(header, "Connection: keep-alive"));
-	}
-
-	TEST_METHOD(76) {
-		set_test_name("writeSimpleResponse() doesn't output the body for HEAD requests");
-
-		connectToServer();
-		sendRequest(
-			"HEAD / HTTP/1.1\r\n"
-			"Connection: close\r\n"
-			"Host: foo\r\n\r\n");
-		string response = readAll(fd);
-		ensure_equals(response,
-			"HTTP/1.1 200 OK\r\n"
-			"Status: 200 OK\r\n"
-			"Content-Type: text/plain\r\n"
-			"Date: Thu, 11 Sep 2014 12:54:09 GMT\r\n"
-			"Connection: close\r\n"
-			"Content-Length: 7\r\n\r\n");
-	}
-
-	TEST_METHOD(77) {
-		set_test_name("Client socket write error handling");
-
-		setLogLevel(LVL_CRIT);
-		connectToServer();
-		sendRequest(
-			"GET /large_response HTTP/1.1\r\n"
-			"Connection: close\r\n"
-			"Size: 1000000\r\n\r\n");
-		fd.close();
-
+			"hm");
+		shutdown(fd, SHUT_WR);
 		EVENTUALLY(5,
-			result = getActiveClientCount() == 0;
+			result = getHalfCloseDetected() == 1;
 		);
 	}
 
-	TEST_METHOD(78) {
+	TEST_METHOD(71) {
+		set_test_name("Detection of half-close when body is empty");
+
+		connectToServer();
+		sendRequest(
+			"GET /half_close_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n\r\n");
+		shutdown(fd, SHUT_WR);
+		EVENTUALLY(5,
+			result = getHalfCloseDetected() == 1;
+		);
+	}
+
+	TEST_METHOD(72) {
+		set_test_name("Detection of half-close after body fully received");
+
+		connectToServer();
+		sendRequest(
+			"GET /half_close_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"2\r\n"
+			"hm\r\n"
+			"0\r\n\r\n");
+		shutdown(fd, SHUT_WR);
+		EVENTUALLY(5,
+			result = getHalfCloseDetected() == 1;
+		);
+	}
+
+	TEST_METHOD(73) {
+		set_test_name("Normal data is not detected as early half close");
+
+		connectToServer();
+		sendRequest(
+			"GET /half_close_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n\r\n"
+			"hm");
+		SHOULD_NEVER_HAPPEN(100,
+			result = getHalfCloseDetected() > 0;
+		);
+	}
+
+	TEST_METHOD(74) {
+		set_test_name("Request body socket errors that occur after the body"
+			" is fully received are processed at the next request");
+
+		connectToServer();
+		sendRequest(
+			"GET /early_read_error_detection_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n\r\n"
+			"GET / HTTP/1.1\r\n"
+			"Connection: close\r\n\r\n");
+		EVENTUALLY(5,
+			result = getClientDataErrors() == 1;
+		);
+		ensure_equals(getTotalRequestsBegun(), 1u);
+	}
+
+
+	/***** Miscellaneous *****/
+
+	TEST_METHOD(80) {
 		set_test_name("Upon shutting down the server, no requests will be "
 			"eligible for keep-alive");
 
@@ -1496,7 +1531,7 @@ namespace tut {
 		ensure("(3)", !containsSubstring(response, "hello /"));
 	}
 
-	TEST_METHOD(79) {
+	TEST_METHOD(81) {
 		set_test_name("Upon shutting down the server, requests for which the "
 			"headers are being parsed are not disconnected");
 
@@ -1515,7 +1550,7 @@ namespace tut {
 		ensure("(3)", containsSubstring(response, "hello /"));
 	}
 
-	TEST_METHOD(80) {
+	TEST_METHOD(82) {
 		set_test_name("Upon shutting down the server, requests for which the "
 			"headers are being parsed are disconnected when they've been "
 			"identified as upgraded requests");
@@ -1537,7 +1572,7 @@ namespace tut {
 		ensure("(3)", !containsSubstring(response, "Connection: keep-alive"));
 	}
 
-	TEST_METHOD(81) {
+	TEST_METHOD(83) {
 		set_test_name("Upon shutting down the server, normal requests which "
 			"are being processed are not disconnected");
 
@@ -1557,7 +1592,7 @@ namespace tut {
 		ensure("(3)", containsSubstring(response, "2 bytes: ab"));
 	}
 
-	TEST_METHOD(82) {
+	TEST_METHOD(84) {
 		set_test_name("Upon shutting down the server, upgraded requests which "
 			"are being processed are disconnected");
 
@@ -1574,5 +1609,122 @@ namespace tut {
 
 		string response = readAll(fd);
 		ensure_equals(response, "");
+	}
+
+
+	/***** Miscellaneous *****/
+
+	TEST_METHOD(90) {
+		set_test_name("It responds with the same HTTP version as the request");
+
+		connectToServer();
+		sendRequest(
+			"GET / HTTP/1.0\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n\r\n");
+		string response = readAll(fd);
+		ensure_equals(response,
+			"HTTP/1.0 200 OK\r\n"
+			"Status: 200 OK\r\n"
+			"Content-Type: text/plain\r\n"
+			"Date: Thu, 11 Sep 2014 12:54:09 GMT\r\n"
+			"Connection: close\r\n"
+			"Content-Length: 7\r\n\r\n"
+			"hello /");
+	}
+
+	TEST_METHOD(91) {
+		set_test_name("For requests without body, keep-alive is possible");
+
+		connectToServer();
+		sendRequest(
+			"GET / HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Host: foo\r\n\r\n");
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "Connection: keep-alive"));
+	}
+
+	TEST_METHOD(92) {
+		set_test_name("If the request body is fully read, keep-alive is possible");
+
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Host: foo\r\n"
+			"Content-Length: 2\r\n\r\n"
+			"ok");
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "Connection: keep-alive"));
+	}
+
+	TEST_METHOD(93) {
+		set_test_name("If the request body is not fully read, keep-alive is not possible");
+
+		connectToServer();
+		sendRequest(
+			"GET / HTTP/1.1\r\n"
+			"Connection: keep-alive\r\n"
+			"Host: foo\r\n"
+			"Content-Length: 2\r\n\r\n");
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "Connection: close"));
+	}
+
+	TEST_METHOD(94) {
+		set_test_name("It defaults to not using keep-alive for HTTP <= 1.0 requests");
+
+		connectToServer();
+		sendRequest(
+			"GET / HTTP/1.0\r\n"
+			"Host: foo\r\n\r\n");
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "Connection: close"));
+	}
+
+	TEST_METHOD(95) {
+		set_test_name("It defaults to using keep-alive for HTTP >= 1.1 requests");
+
+		connectToServer();
+		sendRequest(
+			"GET / HTTP/1.1\r\n"
+			"Host: foo\r\n\r\n");
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "Connection: keep-alive"));
+	}
+
+	TEST_METHOD(96) {
+		set_test_name("writeSimpleResponse() doesn't output the body for HEAD requests");
+
+		connectToServer();
+		sendRequest(
+			"HEAD / HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Host: foo\r\n\r\n");
+		string response = readAll(fd);
+		ensure_equals(response,
+			"HTTP/1.1 200 OK\r\n"
+			"Status: 200 OK\r\n"
+			"Content-Type: text/plain\r\n"
+			"Date: Thu, 11 Sep 2014 12:54:09 GMT\r\n"
+			"Connection: close\r\n"
+			"Content-Length: 7\r\n\r\n");
+	}
+
+	TEST_METHOD(97) {
+		set_test_name("Client socket write error handling");
+
+		setLogLevel(LVL_CRIT);
+		connectToServer();
+		sendRequest(
+			"GET /large_response HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Size: 1000000\r\n\r\n");
+		fd.close();
+
+		EVENTUALLY(5,
+			result = getActiveClientCount() == 0;
+		);
 	}
 }

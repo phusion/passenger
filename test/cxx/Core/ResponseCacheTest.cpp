@@ -37,6 +37,7 @@ namespace tut {
 			req.bodyType  = Request::RBT_NO_BODY;
 			req.method    = HTTP_GET;
 			req.wantKeepAlive = false;
+			req.detectingNextRequestEarlyReadError = false;
 			req.responseBegun = false;
 			req.client    = NULL;
 			req.hooks.impl     = NULL;
@@ -44,8 +45,11 @@ namespace tut {
 			psg_lstr_init(&req.path);
 			psg_lstr_append(&req.path, req.pool, "/");
 			req.bodyAlreadyRead = 0;
+			req.lastDataReceiveTime = 0;
+			req.lastDataSendTime = 0;
 			req.queryStringIndex = -1;
 			req.bodyError = 0;
+			req.nextRequestEarlyReadError = 0;
 
 			req.startedAt = 0;
 			req.state     = Request::ANALYZING_REQUEST;
@@ -53,14 +57,17 @@ namespace tut {
 			req.requestBodyBuffering = false;
 			req.https     = false;
 			req.stickySession = false;
-			req.halfCloseAppConnection = false;
 			req.sessionCheckoutTry = 0;
+			req.halfClosePolicy = Request::HALF_CLOSE_POLICY_UNINITIALIZED;
+			req.appResponseInitialized = false;
 			req.strip100ContinueHeader = false;
 			req.hasPragmaHeader = false;
 			req.host = createHostString();
 			req.bodyBytesBuffered = 0;
+			req.cacheKey = HashedStaticString();
 			req.cacheControl = NULL;
 			req.varyCookie = NULL;
+			req.envvars = NULL;
 
 			req.appResponse.headers.clear();
 			req.appResponse.secureHeaders.clear();

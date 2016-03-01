@@ -104,12 +104,20 @@
             'src/win/winsock.c',
             'src/win/winsock.h',
           ],
+          'conditions': [
+            ['MSVS_VERSION < "2015"', {
+              'sources': [
+                'src/win/snprintf.c'
+              ]
+            }]
+          ],
           'link_settings': {
             'libraries': [
               '-ladvapi32',
               '-liphlpapi',
               '-lpsapi',
               '-lshell32',
+              '-luserenv',
               '-lws2_32'
             ],
           },
@@ -304,6 +312,7 @@
         'test/test-getnameinfo.c',
         'test/test-getsockname.c',
         'test/test-handle-fileno.c',
+        'test/test-homedir.c',
         'test/test-hrtime.c',
         'test/test-idle.c',
         'test/test-ip6-addr.c',
@@ -324,7 +333,10 @@
         'test/test-ping-pong.c',
         'test/test-pipe-bind-error.c',
         'test/test-pipe-connect-error.c',
+        'test/test-pipe-connect-multiple.c',
+        'test/test-pipe-connect-prepare.c',
         'test/test-pipe-getsockname.c',
+        'test/test-pipe-pending-instances.c',
         'test/test-pipe-sendmsg.c',
         'test/test-pipe-server-close.c',
         'test/test-pipe-close-stdout-read-stdin.c',
@@ -335,6 +347,7 @@
         'test/test-poll-close-doesnt-corrupt-stack.c',
         'test/test-poll-closesocket.c',
         'test/test-process-title.c',
+        'test/test-queue-foreach-delete.c',
         'test/test-ref.c',
         'test/test-run-nowait.c',
         'test/test-run-once.c',
@@ -353,6 +366,7 @@
         'test/test-tcp-close.c',
         'test/test-tcp-close-accept.c',
         'test/test-tcp-close-while-connecting.c',
+        'test/test-tcp-create-socket-early.c',
         'test/test-tcp-connect-error-after-write.c',
         'test/test-tcp-shutdown-after-write.c',
         'test/test-tcp-flags.c',
@@ -381,6 +395,7 @@
         'test/test-timer.c',
         'test/test-tty.c',
         'test/test-udp-bind.c',
+        'test/test-udp-create-socket-early.c',
         'test/test-udp-dgram-too-big.c',
         'test/test-udp-ipv6.c',
         'test/test-udp-open.c',
@@ -423,6 +438,9 @@
             '_ALL_SOURCE',
             '_XOPEN_SOURCE=500',
           ],
+        }],
+        ['uv_library=="shared_library"', {
+          'defines': [ 'USING_UV_SHARED=1' ]
         }],
       ],
       'msvs-settings': {
@@ -475,7 +493,10 @@
             'test/runner-unix.c',
             'test/runner-unix.h',
           ]
-        }]
+        }],
+        ['uv_library=="shared_library"', {
+          'defines': [ 'USING_UV_SHARED=1' ]
+        }],
       ],
       'msvs-settings': {
         'VCLinkerTool': {

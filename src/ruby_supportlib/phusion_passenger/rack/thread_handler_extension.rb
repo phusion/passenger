@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -215,7 +215,7 @@ module PhusionPassenger
             if !body.is_a?(Array) || headers.has_key?(X_SENDFILE_HEADER) ||
                headers.has_key?(X_ACCEL_REDIRECT_HEADER)
               # If X-Sendfile or X-Accel-Redirect is set, don't check the
-              # body size. PassengerAgent's RequestHandler will ignore the
+              # body size. Passenger's Core Controller will ignore the
               # body anyway. See
               # ServerKit::HttpHeaderParser::processParseResult(const HttpParseResponse &)
               @can_keepalive = false
@@ -241,7 +241,10 @@ module PhusionPassenger
             # Disallowed by the HTTP spec
             raise "Response object may not contain both Content-Length and Transfer-Encoding"
           end
-        elsif output_body
+        elsif status_code_allows_body?(status)
+          # This is a response for which a body is allowed, although the request
+          # may be one which does not expect a body (HEAD requests).
+          #
           # The app has set neither the Content-Length nor the Transfer-Encoding
           # header. This means we'll have to add one of those headers. We know exactly how
           # big our body will be, so we can keep-alive the connection.
@@ -270,37 +273,33 @@ module PhusionPassenger
         # If this is a request without body, write out headers without body.
         if !output_body
           connection.writev(headers_output)
-          signal_keep_alive_allowed!
-          return
-        end
-
-        # Otherwise, write out headers and body, then verify at the end whether what
-        # we wrote is matches the message length. Only keep-alive connection if it
-        # is the case.
-        case message_length_type
-        when :content_length
-          if body.is_a?(Array)
-            connection.writev2(headers_output, body)
-          else
+        else
+          # Otherwise, write out headers and body.
+          case message_length_type
+          when :content_length
+            if body.is_a?(Array)
+              connection.writev2(headers_output, body)
+            else
+              connection.writev(headers_output)
+              body.each do |part|
+                connection.write(part.to_s)
+              end
+            end
+          when :chunked_by_app
             connection.writev(headers_output)
             body.each do |part|
               connection.write(part.to_s)
             end
-          end
-        when :chunked_by_app
-          connection.writev(headers_output)
-          body.each do |part|
-            connection.write(part.to_s)
-          end
-        when :needs_chunking
-          connection.writev(headers_output)
-          body.each do |part|
-            size = bytesize(part.to_s)
-            if size != 0
-              connection.writev(chunk_data(part.to_s, size))
+          when :needs_chunking
+            connection.writev(headers_output)
+            body.each do |part|
+              size = bytesize(part.to_s)
+              if size != 0
+                connection.writev(chunk_data(part.to_s, size))
+              end
             end
+            connection.write(TERMINATION_CHUNK)
           end
-          connection.write(TERMINATION_CHUNK)
         end
 
         signal_keep_alive_allowed!
@@ -360,10 +359,12 @@ module PhusionPassenger
         nil
       end
 
+      def status_code_allows_body?(status)
+        status < 100 || (status >= 200 && status != 204 && status != 304)
+      end
+
       def should_output_body?(status, is_head_request)
-        return (status < 100 ||
-          (status >= 200 && status != 204 && status != 304)) &&
-          !is_head_request
+        status_code_allows_body?(status) && !is_head_request
       end
 
       def chunk_data(data, size)

@@ -48,6 +48,7 @@ typedef struct {
     ngx_uint_t   pool_idle_time;
     ngx_uint_t   response_buffer_high_watermark;
     ngx_uint_t   stat_throttle_rate;
+    ngx_uint_t   core_file_descriptor_ulimit;
     ngx_flag_t   turbocaching;
     ngx_flag_t   show_version_in_header;
     ngx_flag_t   user_switching;

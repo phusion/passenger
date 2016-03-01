@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -329,7 +329,7 @@ public:
 	template<typename Queue> static void assignExceptionToGetWaiters(Queue &getWaitlist,
 		const ExceptionPtr &exception,
 		boost::container::vector<Callback> &postLockActions);
-	static void syncGetCallback(const SessionPtr &session, const ExceptionPtr &e,
+	static void syncGetCallback(const AbstractSessionPtr &session, const ExceptionPtr &e,
 		void *userData);
 
 

@@ -13,6 +13,34 @@ namespace tut {
 		DataStructures_StringKeyTableTest() {
 			value = NULL;
 		}
+
+		class Counter {
+			private:
+				BOOST_MOVABLE_BUT_NOT_COPYABLE(Counter)
+
+			public:
+				int value;
+
+				Counter()
+					: value(0)
+					{ }
+
+				Counter(int v)
+					: value(v)
+					{ }
+
+				Counter(BOOST_RV_REF(Counter) other)
+					: value(other.value)
+				{
+					other.value = -1;
+				}
+
+				Counter &operator=(BOOST_RV_REF(Counter) other) {
+					value = other.value;
+					other.value = -1;
+					return *this;
+				}
+			};
 	};
 
 	DEFINE_TEST_GROUP(DataStructures_StringKeyTableTest);
@@ -195,5 +223,40 @@ namespace tut {
 
 		ensure(table.erase("a"));
 		ensure(!table.lookupRandom(&key, &value));
+	}
+
+	TEST_METHOD(10) {
+		set_test_name("Initial size 0");
+		StringKeyTable<string> t(0, 0);
+
+		ensure_equals(t.lookupCopy("a"), "");
+		t.insert("a", "b");
+		ensure_equals(t.lookupCopy("a"), "b");
+	}
+
+	TEST_METHOD(11) {
+		set_test_name("Move support");
+
+		StringKeyTable<Counter, SKT_EnableMoveSupport> t(1);
+		Counter *result;
+
+		ensure_equals("Initial table array size is 1", t.arraySize(), 1u);
+
+		t.insertByMoving("a", Counter(1));
+		ensure("1: a is in the table", t.lookup("a", &result));
+		ensure_equals("1: a's value is 1", result->value, 1);
+
+		Counter f(2);
+		t.insertByMoving("a", boost::move(f));
+		ensure("2: a is in the table", t.lookup("a", &result));
+		ensure_equals("2: a's value is 2", result->value, 2);
+		ensure_equals("2: original variable's value is -1", f.value, -1);
+
+		t.insertByMoving("b", Counter(3));
+		ensure_equals("3: New table array size is 2", t.arraySize(), 4u);
+		ensure("3: a is in the table", t.lookup("a", &result));
+		ensure_equals("3: a's value is 2", result->value, 2);
+		ensure("3: a is in the table", t.lookup("b", &result));
+		ensure_equals("3: b's value is 3", result->value, 3);
 	}
 }

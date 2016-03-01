@@ -31,9 +31,9 @@
 #endif
 
 namespace boost{
-namespace re_detail{
+namespace BOOST_REGEX_DETAIL_NS{
 
-#if defined(BOOST_NO_STD_ITERATOR_TRAITS) || defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
+#if defined(BOOST_NO_STD_ITERATOR_TRAITS)
 
 template <class T>
 struct regex_iterator_traits 
@@ -117,7 +117,7 @@ struct regex_iterator_traits : public std::iterator_traits<T> {};
 
 #endif
 
-} // namespace re_detail
+} // namespace BOOST_REGEX_DETAIL_NS
 } // namespace boost
 
 #ifdef BOOST_MSVC

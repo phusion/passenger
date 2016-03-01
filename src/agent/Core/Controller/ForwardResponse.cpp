@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -295,6 +295,7 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 			// EOF
 			UPDATE_TRACE_POINT();
 			SKC_TRACE(client, 2, "Application sent EOF");
+			SKC_TRACE(client, 2, "Not keep-aliving application session connection");
 			req->session->close(true, false);
 			endRequest(&client, &req);
 			return Channel::Result(0, false);
@@ -1078,7 +1079,24 @@ Controller::handleAppResponseBodyEnd(Client *client, Request *req) {
 
 OXT_FORCE_INLINE void
 Controller::keepAliveAppConnection(Client *client, Request *req) {
-	req->session->close(true, req->appResponse.wantKeepAlive);
+	if (req->halfClosePolicy == Request::HALF_CLOSE_PERFORMED) {
+		SKC_TRACE(client, 2, "Not keep-aliving application session connection"
+			" because it had been half-closed before");
+		req->session->close(true, false);
+	} else {
+		// halfClosePolicy is initialized in sendHeaderToApp(). That method is
+		// called immediately after checking out a session, before any events
+		// from the appSource channel can be received.
+		assert(req->halfClosePolicy != Request::HALF_CLOSE_POLICY_UNINITIALIZED);
+		if (req->appResponse.wantKeepAlive) {
+			SKC_TRACE(client, 2, "Keep-aliving application session connection");
+			req->session->close(true, true);
+		} else {
+			SKC_TRACE(client, 2, "Not keep-aliving application session connection"
+				" because application did not allow it");
+			req->session->close(true, false);
+		}
+	}
 }
 
 void

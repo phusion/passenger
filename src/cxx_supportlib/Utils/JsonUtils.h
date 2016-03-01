@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,6 +28,7 @@
 
 #include <string>
 #include <cstdio>
+#include <cstdlib>
 #include <cstddef>
 #include <jsoncpp/json.h>
 #include <boost/cstdint.hpp>
@@ -202,6 +203,10 @@ jsonString(const Passenger::StaticString &str) {
  */
 inline Json::Value
 timeToJson(unsigned long long timestamp, unsigned long long now = 0) {
+	if (timestamp == 0) {
+		return Json::Value(Json::nullValue);
+	}
+
 	Json::Value doc;
 	time_t time = (time_t) timestamp / 1000000;
 	char buf[32];
@@ -229,11 +234,59 @@ timeToJson(unsigned long long timestamp, unsigned long long now = 0) {
 	return doc;
 }
 
+inline Json::Value
+durationToJson(unsigned long long duration) {
+	Json::Value doc;
+	char buf[64];
+
+	doc["microseconds"] = duration;
+	if (duration >= 10 * 1000000) {
+		snprintf(buf, sizeof(buf), "%.1fs", duration / 1000000.0);
+	} else {
+		snprintf(buf, sizeof(buf), "%.1fms", duration / 1000.0);
+	}
+	doc["human_readable"] = buf;
+
+	return doc;
+}
+
 inline string
 formatFloat(double val) {
 	char buf[64];
 	int size = snprintf(buf, sizeof(buf), "%.1f", val);
 	return string(buf, size);
+}
+
+inline double
+capFloatPrecision(double val) {
+	char buf[64];
+	snprintf(buf, sizeof(buf), "%.2f", val);
+	return atof(buf);
+}
+
+inline Json::Value
+speedToJson(double speed, const string &per, double nullValue = -1) {
+	Json::Value doc;
+	if (speed == nullValue) {
+		doc["value"] = Json::Value(Json::nullValue);
+	} else {
+		doc["value"] = speed;
+	}
+	doc["per"] = per;
+	return doc;
+}
+
+inline Json::Value
+averageSpeedToJson(double speed, const string &per, const string &averagedOver, double nullValue = -1) {
+	Json::Value doc;
+	if (speed == nullValue) {
+		doc["value"] = Json::Value(Json::nullValue);
+	} else {
+		doc["value"] = speed;
+	}
+	doc["per"] = per;
+	doc["averaged_over"] = averagedOver;
+	return doc;
 }
 
 inline Json::Value
@@ -262,6 +315,39 @@ signedByteSizeToJson(long long size) {
 	} else {
 		doc["human_readable"] = formatFloat(size / 1024.0 / 1024.0) + " MB";
 	}
+	return doc;
+}
+
+inline Json::Value
+byteSpeedToJson(double speed, const string &per) {
+	Json::Value doc;
+	if (speed >= 0) {
+		doc = byteSizeToJson(speed);
+	} else {
+		doc = signedByteSizeToJson(speed);
+	}
+	doc["per"] = per;
+	return doc;
+}
+
+inline Json::Value
+byteSpeedToJson(double speed, double nullValue, const string &per) {
+	Json::Value doc;
+	if (speed == nullValue) {
+		doc["bytes"] = Json::Value(Json::nullValue);
+	} else if (speed >= 0) {
+		doc = byteSizeToJson(speed);
+	} else {
+		doc = signedByteSizeToJson(speed);
+	}
+	doc["per"] = per;
+	return doc;
+}
+
+inline Json::Value
+byteSizeAndCountToJson(size_t size, unsigned int count) {
+	Json::Value doc = byteSizeToJson(size);
+	doc["count"] = count;
 	return doc;
 }
 

@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga  2006-2012
+// (C) Copyright Ion Gaztanaga  2006-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -10,8 +10,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_INTRUSIVE_CONFIG_INCLUDED
-#define BOOST_INTRUSIVE_CONFIG_INCLUDED
+#ifndef BOOST_CONFIG_HPP
 #include <boost/config.hpp>
 #endif
 

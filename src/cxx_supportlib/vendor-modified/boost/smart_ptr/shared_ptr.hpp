@@ -16,10 +16,6 @@
 
 #include <boost/config.hpp>   // for broken compiler workarounds
 
-#if defined(BOOST_NO_MEMBER_TEMPLATES) && !defined(BOOST_MSVC6_MEMBER_TEMPLATES)
-#include <boost/smart_ptr/detail/shared_ptr_nmt.hpp>
-#else
-
 // In order to avoid circular dependencies with Boost.TR1
 // we make sure that our include of <memory> doesn't try to
 // pull in the TR1 headers: that's why we use this header 
@@ -33,10 +29,10 @@
 #include <boost/detail/workaround.hpp>
 #include <boost/smart_ptr/detail/sp_convertible.hpp>
 #include <boost/smart_ptr/detail/sp_nullptr_t.hpp>
+#include <boost/smart_ptr/detail/sp_disable_deprecated.hpp>
 
 #if !defined(BOOST_SP_NO_ATOMIC_ACCESS)
 #include <boost/smart_ptr/detail/spinlock_pool.hpp>
-#include <boost/memory_order.hpp>
 #endif
 
 #include <algorithm>            // for std::swap
@@ -52,6 +48,11 @@
 #endif
 #endif
 
+#if defined( BOOST_SP_DISABLE_DEPRECATED )
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 namespace boost
 {
 
@@ -59,6 +60,13 @@ template<class T> class shared_ptr;
 template<class T> class weak_ptr;
 template<class T> class enable_shared_from_this;
 class enable_shared_from_raw;
+
+namespace movelib
+{
+
+    template< class T, class D > class unique_ptr;
+
+} // namespace movelib
 
 namespace detail
 {
@@ -500,6 +508,17 @@ public:
 
 #endif
 
+    template< class Y, class D >
+    shared_ptr( boost::movelib::unique_ptr< Y, D > r ): px( r.get() ), pn()
+    {
+        boost::detail::sp_assert_convertible< Y, T >();
+
+        typename boost::movelib::unique_ptr< Y, D >::pointer tmp = r.get();
+        pn = boost::detail::shared_count( r );
+
+        boost::detail::sp_deleter_construct( this, tmp );
+    }
+
     // assignment
 
     shared_ptr & operator=( shared_ptr const & r ) BOOST_NOEXCEPT
@@ -560,6 +579,27 @@ public:
     }
 
 #endif
+
+    template<class Y, class D>
+    shared_ptr & operator=( boost::movelib::unique_ptr<Y, D> r )
+    {
+        // this_type( static_cast< unique_ptr<Y, D> && >( r ) ).swap( *this );
+
+        boost::detail::sp_assert_convertible< Y, T >();
+
+        typename boost::movelib::unique_ptr< Y, D >::pointer p = r.get();
+
+        shared_ptr tmp;
+
+        tmp.px = p;
+        tmp.pn = boost::detail::shared_count( r );
+
+        boost::detail::sp_deleter_construct( &tmp, p );
+
+        tmp.swap( *this );
+
+        return *this;
+    }
 
 // Move support
 
@@ -660,7 +700,7 @@ public:
         BOOST_ASSERT( px != 0 );
         BOOST_ASSERT( i >= 0 && ( i < boost::detail::sp_extent< T >::value || boost::detail::sp_extent< T >::value == 0 ) );
 
-        return px[ i ];
+        return static_cast< typename boost::detail::sp_array_access< T >::type >( px[ i ] );
     }
 
     element_type * get() const BOOST_NOEXCEPT
@@ -898,7 +938,7 @@ class esft2_deleter_wrapper
 {
 private:
 
-    shared_ptr<void> deleter_;
+    shared_ptr<void const volatile> deleter_;
 
 public:
 
@@ -955,7 +995,7 @@ template<class T> shared_ptr<T> atomic_load( shared_ptr<T> const * p )
     return *p;
 }
 
-template<class T> inline shared_ptr<T> atomic_load_explicit( shared_ptr<T> const * p, memory_order /*mo*/ )
+template<class T> inline shared_ptr<T> atomic_load_explicit( shared_ptr<T> const * p, /*memory_order mo*/ int )
 {
     return atomic_load( p );
 }
@@ -966,7 +1006,7 @@ template<class T> void atomic_store( shared_ptr<T> * p, shared_ptr<T> r )
     p->swap( r );
 }
 
-template<class T> inline void atomic_store_explicit( shared_ptr<T> * p, shared_ptr<T> r, memory_order /*mo*/ )
+template<class T> inline void atomic_store_explicit( shared_ptr<T> * p, shared_ptr<T> r, /*memory_order mo*/ int )
 {
     atomic_store( p, r ); // std::move( r )
 }
@@ -982,7 +1022,7 @@ template<class T> shared_ptr<T> atomic_exchange( shared_ptr<T> * p, shared_ptr<T
     return r; // return std::move( r )
 }
 
-template<class T> shared_ptr<T> atomic_exchange_explicit( shared_ptr<T> * p, shared_ptr<T> r, memory_order /*mo*/ )
+template<class T> shared_ptr<T> atomic_exchange_explicit( shared_ptr<T> * p, shared_ptr<T> r, /*memory_order mo*/ int )
 {
     return atomic_exchange( p, r ); // std::move( r )
 }
@@ -1012,7 +1052,7 @@ template<class T> bool atomic_compare_exchange( shared_ptr<T> * p, shared_ptr<T>
     }
 }
 
-template<class T> inline bool atomic_compare_exchange_explicit( shared_ptr<T> * p, shared_ptr<T> * v, shared_ptr<T> w, memory_order /*success*/, memory_order /*failure*/ )
+template<class T> inline bool atomic_compare_exchange_explicit( shared_ptr<T> * p, shared_ptr<T> * v, shared_ptr<T> w, /*memory_order success*/ int, /*memory_order failure*/ int )
 {
     return atomic_compare_exchange( p, v, w ); // std::move( w )
 }
@@ -1030,6 +1070,8 @@ template< class T > std::size_t hash_value( boost::shared_ptr<T> const & p ) BOO
 
 } // namespace boost
 
-#endif  // #if defined(BOOST_NO_MEMBER_TEMPLATES) && !defined(BOOST_MSVC6_MEMBER_TEMPLATES)
+#if defined( BOOST_SP_DISABLE_DEPRECATED )
+#pragma GCC diagnostic pop
+#endif
 
 #endif  // #ifndef BOOST_SMART_PTR_SHARED_PTR_HPP_INCLUDED

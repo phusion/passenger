@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -119,6 +119,8 @@ private:
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;
 
+	// If you change this value, make sure that Request::sessionCheckoutTry
+	// has enough bits.
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 
 	unsigned int statThrottleRate;
@@ -218,12 +220,12 @@ private:
 	/****** Stage: checkout session ******/
 
 	void checkoutSession(Client *client, Request *req);
-	static void sessionCheckedOut(const SessionPtr &session,
+	static void sessionCheckedOut(const AbstractSessionPtr &session,
 		const ExceptionPtr &e, void *userData);
 	void sessionCheckedOutFromAnotherThread(Client *client, Request *req,
-		SessionPtr session, ExceptionPtr e);
+		AbstractSessionPtr session, ExceptionPtr e);
 	void sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
-		const SessionPtr &session, const ExceptionPtr &e);
+		const AbstractSessionPtr &session, const ExceptionPtr &e);
 	void maybeSend100Continue(Client *client, Request *req);
 	void initiateSession(Client *client, Request *req);
 	static void checkoutSessionLater(Request *req);
@@ -263,7 +265,7 @@ private:
 	void sendHeaderToAppWithHttpProtocolWithBuffering(Request *req, unsigned int offset,
 		HttpHeaderConstructionCache &cache);
 	void sendBodyToApp(Client *client, Request *req);
-	void halfCloseAppSink(Client *client, Request *req);
+	void maybeHalfCloseAppSinkBecauseRequestBodyEndReached(Client *client, Request *req);
 	Channel::Result whenSendingRequest_onRequestBody(Client *client, Request *req,
 		const MemoryKit::mbuf &buffer, int errcode);
 	static void resumeRequestBodyChannelWhenAppSinkIdle(Channel *_channel,
@@ -378,8 +380,15 @@ protected:
 	void deinitializeAppResponse(Client *client, Request *req);
 	virtual Channel::Result onRequestBody(Client *client, Request *req,
 		const MemoryKit::mbuf &buffer, int errcode);
+	virtual void onNextRequestEarlyReadError(Client *client, Request *req, int errcode);
 	virtual bool shouldDisconnectClientOnShutdown(Client *client);
 	virtual bool supportsUpgrade(Client *client, Request *req);
+
+
+	/****** Marked virtual so that unit tests can mock these ******/
+
+	virtual void asyncGetFromApplicationPool(Request *req,
+		ApplicationPool2::GetCallback callback);
 
 
 public:
@@ -392,7 +401,7 @@ public:
 
 	Controller(ServerKit::Context *context, const VariantMap *_agentsOptions,
 		unsigned int _threadNumber = 1);
-	~Controller();
+	virtual ~Controller();
 	void initialize();
 
 

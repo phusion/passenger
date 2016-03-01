@@ -228,6 +228,7 @@ private:
 			dup2(errorPipeCopy, 2);
 			closeAllFileDescriptors(2);
 			setChroot(preparation);
+			setUlimits(options);
 			switchUser(preparation);
 			setWorkingDirectory(preparation);
 			execvp(command[0].c_str(), (char * const *) args.get());

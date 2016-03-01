@@ -40,6 +40,7 @@
 #include <boost/assert.hpp>
 #include <boost/detail/workaround.hpp>
 #include <boost/mpl/if.hpp>
+#include <boost/throw_exception.hpp>
 #if !defined(BOOST_NO_CWCTYPE)
 #include <cwctype>
 #endif
@@ -125,7 +126,7 @@ namespace boost{
     template <typename iterator, typename Token>
     void do_escape(iterator& next,iterator end,Token& tok) {
       if (++next == end)
-        throw escaped_list_error(std::string("cannot end with escape"));
+        BOOST_THROW_EXCEPTION(escaped_list_error(std::string("cannot end with escape")));
       if (Traits::eq(*next,'n')) {
         tok+='\n';
         return;
@@ -143,7 +144,7 @@ namespace boost{
         return;
       }
       else
-        throw escaped_list_error(std::string("unknown escape sequence"));
+        BOOST_THROW_EXCEPTION(escaped_list_error(std::string("unknown escape sequence")));
     }
 
     public:
@@ -278,22 +279,7 @@ namespace boost{
   struct assign_or_plus_equal {
     template<class Iterator, class Token>
     static void assign(Iterator b, Iterator e, Token &t) {
-
-#if BOOST_WORKAROUND(BOOST_MSVC, < 1300) &&\
-    BOOST_WORKAROUND(__SGI_STL_PORT, < 0x500) &&\
-    defined(_STLP_DEBUG) &&\
-    (defined(_STLP_USE_DYNAMIC_LIB) || defined(_DLL))
-    // Problem with string::assign for msvc-stlport in debug mode: the
-    // linker tries to import the templatized version of this memfun,
-    // which is obviously not exported.
-    // See http://www.stlport.com/dcforum/DCForumID6/1763.html for details.
-
-      t = Token();
-      while(b != e) t += *b++;
-#else
       t.assign(b, e);
-#endif
-
     }
 
     template<class Token, class Value>

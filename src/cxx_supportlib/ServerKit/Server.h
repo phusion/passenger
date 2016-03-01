@@ -56,10 +56,12 @@
 #include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/ClientRef.h>
+#include <Algorithms/MovingAverage.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -212,8 +214,11 @@ public:
 	FreeClientList freeClients;
 	ClientList activeClients, disconnectedClients;
 	unsigned int freeClientCount, activeClientCount, disconnectedClientCount;
-	unsigned long totalClientsAccepted;
+	unsigned int peakActiveClientCount;
+	unsigned long totalClientsAccepted, lastTotalClientsAccepted;
 	unsigned long long totalBytesConsumed;
+	ev_tstamp lastStatisticsUpdateTime;
+	double clientAcceptSpeed1m, clientAcceptSpeed1h;
 
 private:
 	Context *ctx;
@@ -221,6 +226,7 @@ private:
 	uint8_t nEndpoints: 3;
 	bool accept4Available: 1;
 	ev::timer acceptResumptionWatcher;
+	ev::timer statisticsUpdateWatcher;
 	ev::io endpoints[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 
 
@@ -335,6 +341,16 @@ private:
 		}
 	}
 
+	void onStatisticsUpdateTimeout(ev::timer &timer, int revents) {
+		TRACE_POINT();
+
+		this->onUpdateStatistics();
+		this->onFinalizeStatisticsUpdate();
+
+		timer.repeat = timeToNextMultipleD(5, ev_now(this->getLoop()));
+		timer.again();
+	}
+
 	unsigned int getNextClientNumber() {
 		return nextClientNumber++;
 	}
@@ -442,6 +458,9 @@ private:
 		TRACE_POINT();
 		compact(LVL_INFO);
 
+		acceptResumptionWatcher.stop();
+		statisticsUpdateWatcher.stop();
+
 		SKS_NOTICE("Shutdown finished");
 		serverState = FINISHED_SHUTDOWN;
 		if (shutdownFinishCallback != NULL) {
@@ -513,6 +532,8 @@ protected:
 	virtual void onClientsAccepted(Client **clients, unsigned int size) {
 		unsigned int i;
 
+		peakActiveClientCount = std::max(peakActiveClientCount, activeClientCount);
+
 		for (i = 0; i < size; i++) {
 			Client *client = clients[i];
 
@@ -572,6 +593,29 @@ protected:
 		return LVL_WARN;
 	}
 
+	virtual void onUpdateStatistics() {
+		SKS_DEBUG("Updating statistics");
+		ev_tstamp now = ev_now(this->getLoop());
+		ev_tstamp duration = now - lastStatisticsUpdateTime;
+
+		// Statistics are updated about every 5 seconds, so about 12 updates
+		// per minute. We want the old average to decay to 5% after 1 minute
+		// and 1 hour, respectively, so:
+		// 1 minute: 1 - exp(ln(0.05) / 12) = 0.22092219194555585
+		// 1 hour  : 1 - exp(ln(0.05) / (60 * 12)) = 0.0041520953856636345
+		clientAcceptSpeed1m = expMovingAverage(clientAcceptSpeed1m,
+			(totalClientsAccepted - lastTotalClientsAccepted) / duration,
+			0.22092219194555585);
+		clientAcceptSpeed1h = expMovingAverage(clientAcceptSpeed1h,
+			(totalClientsAccepted - lastTotalClientsAccepted) / duration,
+			0.0041520953856636345);
+	}
+
+	virtual void onFinalizeStatisticsUpdate() {
+		lastTotalClientsAccepted = totalClientsAccepted;
+		lastStatisticsUpdateTime = ev_now(this->getLoop());
+	}
+
 	virtual void reinitializeClient(Client *client, int fd) {
 		client->setConnState(Client::ACTIVE);
 		SKC_TRACE(client, 2, "Client associated with file descriptor: " << fd);
@@ -601,8 +645,13 @@ public:
 		  freeClientCount(0),
 		  activeClientCount(0),
 		  disconnectedClientCount(0),
+		  peakActiveClientCount(0),
 		  totalClientsAccepted(0),
+		  lastTotalClientsAccepted(0),
 		  totalBytesConsumed(0),
+		  lastStatisticsUpdateTime(ev_time()),
+		  clientAcceptSpeed1m(-1),
+		  clientAcceptSpeed1h(-1),
 		  ctx(context),
 		  nextClientNumber(1),
 		  nEndpoints(0),
@@ -611,10 +660,18 @@ public:
 		STAILQ_INIT(&freeClients);
 		TAILQ_INIT(&activeClients);
 		TAILQ_INIT(&disconnectedClients);
+
 		acceptResumptionWatcher.set(context->libev->getLoop());
 		acceptResumptionWatcher.set<
 			BaseServer<DerivedServer, Client>,
 			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
+
+		statisticsUpdateWatcher.set(context->libev->getLoop());
+		statisticsUpdateWatcher.set<
+			BaseServer<DerivedServer, Client>,
+			&BaseServer<DerivedServer, Client>::onStatisticsUpdateTimeout>(this);
+		statisticsUpdateWatcher.set(5, 5);
+		statisticsUpdateWatcher.start();
 	}
 
 	virtual ~BaseServer() {
@@ -995,6 +1052,13 @@ public:
 		doc["active_client_count"] = activeClientCount;
 		Json::Value &disconnectedClientsDoc = doc["disconnected_clients"] = Json::Value(Json::objectValue);
 		doc["disconnected_client_count"] = disconnectedClientCount;
+		doc["peak_active_client_count"] = peakActiveClientCount;
+		doc["client_accept_speed"]["1m"] = averageSpeedToJson(
+			capFloatPrecision(clientAcceptSpeed1m * 60),
+			"minute", "1 minute", -1);
+		doc["client_accept_speed"]["1h"] = averageSpeedToJson(
+			capFloatPrecision(clientAcceptSpeed1h * 60),
+			"minute", "1 hour", -1);
 		doc["total_clients_accepted"] = (Json::UInt64) totalClientsAccepted;
 		doc["total_bytes_consumed"] = (Json::UInt64) totalBytesConsumed;
 

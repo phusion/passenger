@@ -85,7 +85,7 @@ int generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
 			len += end - int_buf;
 			len += sizeof("\r\n") - 1;
 		}
-	<% elsif option[:type] == :integer %>
+	<% elsif option[:type] == :uinteger %>
 		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET_UINT) {
 			end = ngx_snprintf(int_buf,
 				sizeof(int_buf) - 1,
@@ -132,6 +132,18 @@ if (buf == NULL) {
 			end = ngx_snprintf(int_buf,
 				sizeof(int_buf) - 1,
 				"%d",
+				conf-><%= struct_field_for(option) %>);
+			pos = ngx_copy(pos, int_buf, end - int_buf);
+			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+		}
+	<% elsif option[:type] == :uinteger %>
+		if (conf-><%= struct_field_for(option) %> != NGX_CONF_UNSET_UINT) {
+			pos = ngx_copy(pos,
+				"!~<%= header_name_for(option) %>: ",
+				sizeof("!~<%= header_name_for(option) %>: ") - 1);
+			end = ngx_snprintf(int_buf,
+				sizeof(int_buf) - 1,
+				"%ui",
 				conf-><%= struct_field_for(option) %>);
 			pos = ngx_copy(pos, int_buf, end - int_buf);
 			pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -197,6 +197,11 @@ public:
 	}
 
 	VariantMap &setInt(const string &name, int value) {
+		set(name, toString(value));
+		return *this;
+	}
+
+	VariantMap &setUint(const string &name, unsigned int value) {
 		set(name, toString(value));
 		return *this;
 	}

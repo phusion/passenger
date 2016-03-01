@@ -6,6 +6,7 @@
 // (C) Copyright 2007-9 Anthony Williams
 
 #include <list>
+#include <boost/thread/csbl/memory/unique_ptr.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
@@ -75,7 +76,7 @@ namespace boost
         thread* create_thread(F threadfunc)
         {
             boost::lock_guard<shared_mutex> guard(m);
-            std::auto_ptr<thread> new_thread(new thread(threadfunc));
+            boost::csbl::unique_ptr<thread> new_thread(new thread(threadfunc));
             threads.push_back(new_thread.get());
             return new_thread.release();
         }
@@ -85,7 +86,7 @@ namespace boost
             if(thrd)
             {
                 BOOST_THREAD_ASSERT_PRECONDITION( ! is_thread_in(thrd) ,
-                    thread_resource_error(system::errc::resource_deadlock_would_occur, "boost::thread_group: trying to add a duplicated thread")
+                    thread_resource_error(static_cast<int>(system::errc::resource_deadlock_would_occur), "boost::thread_group: trying to add a duplicated thread")
                 );
 
                 boost::lock_guard<shared_mutex> guard(m);
@@ -106,7 +107,7 @@ namespace boost
         void join_all()
         {
             BOOST_THREAD_ASSERT_PRECONDITION( ! is_this_thread_in() ,
-                thread_resource_error(system::errc::resource_deadlock_would_occur, "boost::thread_group: trying joining itself")
+                thread_resource_error(static_cast<int>(system::errc::resource_deadlock_would_occur), "boost::thread_group: trying joining itself")
             );
             boost::shared_lock<shared_mutex> guard(m);
 

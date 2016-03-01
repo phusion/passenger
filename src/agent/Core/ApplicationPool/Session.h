@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,7 +28,6 @@
 
 #include <sys/types.h>
 #include <boost/atomic.hpp>
-#include <boost/intrusive_ptr.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
@@ -38,6 +37,7 @@
 #include <Core/ApplicationPool/BasicProcessInfo.h>
 #include <Core/ApplicationPool/BasicGroupInfo.h>
 #include <Core/ApplicationPool/Socket.h>
+#include <Core/ApplicationPool/AbstractSession.h>
 #include <Shared/ApplicationPoolApiKey.h>
 
 namespace Passenger {
@@ -62,7 +62,7 @@ using namespace oxt;
  * so in that case you must not destroy Pool before destroying all Session
  * objects.
  */
-class Session {
+class Session: public AbstractSession {
 public:
 	typedef void (*Callback)(Session *session);
 
@@ -151,22 +151,22 @@ public:
 	}
 
 
-	const ApiKey &getApiKey() const {
+	virtual const ApiKey &getApiKey() const {
 		assert(!closed);
 		return processInfo->groupInfo->apiKey;
 	}
 
-	pid_t getPid() const {
+	virtual pid_t getPid() const {
 		assert(!closed);
 		return processInfo->pid;
 	}
 
-	StaticString getGupid() const {
+	virtual StaticString getGupid() const {
 		assert(!closed);
 		return StaticString(processInfo->gupid, processInfo->gupidSize);
 	}
 
-	unsigned int getStickySessionId() const {
+	virtual unsigned int getStickySessionId() const {
 		assert(!closed);
 		return processInfo->stickySessionId;
 	}
@@ -176,12 +176,12 @@ public:
 		return socket;
 	}
 
-	StaticString getProtocol() const {
+	virtual StaticString getProtocol() const {
 		return getSocket()->protocol;
 	}
 
 
-	void initiate(bool blocking = true) {
+	virtual void initiate(bool blocking = true) {
 		assert(!closed);
 		ScopeGuard g(boost::bind(&Session::callOnInitiateFailure, this));
 		Connection connection = socket->checkoutConnection();
@@ -200,8 +200,7 @@ public:
 		return connection.fd != -1;
 	}
 
-	OXT_FORCE_INLINE
-	int fd() const {
+	virtual int fd() const {
 		assert(!closed);
 		return connection.fd;
 	}
@@ -209,7 +208,7 @@ public:
 	/**
 	 * This Session object becomes fully unsable after closing.
 	 */
-	void close(bool success, bool wantKeepAlive = false) {
+	virtual void close(bool success, bool wantKeepAlive = false) {
 		if (OXT_LIKELY(initiated())) {
 			deinitiate(success, wantKeepAlive);
 		}
@@ -220,35 +219,24 @@ public:
 		socket = NULL;
 	}
 
-	bool isClosed() const {
+	virtual bool isClosed() const {
 		return closed;
 	}
 
-	void requestOOBW();
+	virtual void requestOOBW();
 
 
-	void ref() const {
+	virtual void ref() const {
 		refcount.fetch_add(1, boost::memory_order_relaxed);
 	}
 
-	void unref() const {
+	virtual void unref() const {
 		if (refcount.fetch_sub(1, boost::memory_order_release) == 1) {
 			boost::atomic_thread_fence(boost::memory_order_acquire);
 			destroySelf();
 		}
 	}
 };
-
-
-inline void
-intrusive_ptr_add_ref(const Session *session) {
-	session->ref();
-}
-
-inline void
-intrusive_ptr_release(const Session *session) {
-	session->unref();
-}
 
 
 } // namespace ApplicationPool2

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -89,19 +89,38 @@ Controller::sendHeaderToApp(Client *client, Request *req) {
 	SKC_TRACE(client, 2, "Sending headers to application with " <<
 		req->session->getProtocol() << " protocol");
 	req->state = Request::SENDING_HEADER_TO_APP;
+	P_ASSERT_EQ(req->halfClosePolicy, Request::HALF_CLOSE_POLICY_UNINITIALIZED);
 
-	/**
-	 * HTTP does not formally support half-closing, and Node.js treats a
-	 * half-close as a full close, so we only half-close session sockets, not
-	 * HTTP sockets.
-	 */
 	if (req->session->getProtocol() == "session") {
 		UPDATE_TRACE_POINT();
-		req->halfCloseAppConnection = req->bodyType != Request::RBT_NO_BODY;
+		if (req->bodyType == Request::RBT_NO_BODY) {
+			// When there is no request body we will try to keep-alive the
+			// application connection, so half-close the application
+			// connection upon encountering the next request's early error
+			// in order not to break the keep-alive.
+			req->halfClosePolicy = Request::HALF_CLOSE_UPON_NEXT_REQUEST_EARLY_READ_ERROR;
+		} else {
+			// When there is a request body we won't try to keep-alive
+			// the application connection, so it's safe to half-close immediately
+			// upon reaching the end of the request body.
+			req->halfClosePolicy = Request::HALF_CLOSE_UPON_REACHING_REQUEST_BODY_END;
+		}
 		sendHeaderToAppWithSessionProtocol(client, req);
 	} else {
 		UPDATE_TRACE_POINT();
-		req->halfCloseAppConnection = false;
+		if (req->bodyType == Request::RBT_UPGRADE) {
+			req->halfClosePolicy = Request::HALF_CLOSE_UPON_REACHING_REQUEST_BODY_END;
+		} else {
+			// HTTP does not formally support half-closing. Some apps support
+			// HTTP with half-closing, others (such as Node.js http.Server with
+			// default settings) treat a half-close as a full close. Furthermore,
+			// we always try to keep-alive the application connection.
+			//
+			// So we can't half-close immediately upon reaching the end of the
+			// request body. The app might not have yet sent a response by then.
+			// We only half-close upon the next request's early error.
+			req->halfClosePolicy = Request::HALF_CLOSE_UPON_NEXT_REQUEST_EARLY_READ_ERROR;
+		}
 		sendHeaderToAppWithHttpProtocol(client, req);
 	}
 
@@ -944,15 +963,17 @@ Controller::sendBodyToApp(Client *client, Request *req) {
 		// data is forwarded.
 		SKC_TRACE(client, 2, "No body to send to application");
 		req->state = Request::WAITING_FOR_APP_OUTPUT;
-		halfCloseAppSink(client, req);
+		maybeHalfCloseAppSinkBecauseRequestBodyEndReached(client, req);
 	}
 }
 
 void
-Controller::halfCloseAppSink(Client *client, Request *req) {
+Controller::maybeHalfCloseAppSinkBecauseRequestBodyEndReached(Client *client, Request *req) {
 	P_ASSERT_EQ(req->state, Request::WAITING_FOR_APP_OUTPUT);
-	if (req->halfCloseAppConnection) {
-		SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR");
+	if (req->halfClosePolicy == Request::HALF_CLOSE_UPON_REACHING_REQUEST_BODY_END) {
+		SKC_TRACE(client, 3, "Half-closing application socket with SHUT_WR"
+			" because end of request body reached");
+		req->halfClosePolicy = Request::HALF_CLOSE_PERFORMED;
 		::shutdown(req->session->fd(), SHUT_WR);
 	}
 }
@@ -1007,7 +1028,7 @@ Controller::whenSendingRequest_onRequestBody(Client *client, Request *req,
 		// care of ending the request, once all response
 		// data is forwarded.
 		req->state = Request::WAITING_FOR_APP_OUTPUT;
-		halfCloseAppSink(client, req);
+		maybeHalfCloseAppSinkBecauseRequestBodyEndReached(client, req);
 		return Channel::Result(0, true);
 	} else {
 		const unsigned int BUFSIZE = 1024;

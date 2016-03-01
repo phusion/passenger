@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga  2007-2012
+// (C) Copyright Ion Gaztanaga  2007-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -13,8 +13,14 @@
 #ifndef BOOST_INTRUSIVE_POINTER_PLUS_BITS_HPP
 #define BOOST_INTRUSIVE_POINTER_PLUS_BITS_HPP
 
+#include <boost/intrusive/detail/config_begin.hpp>
+#include <boost/intrusive/intrusive_fwd.hpp>
 #include <boost/intrusive/detail/mpl.hpp> //ls_zeros
 #include <boost/intrusive/detail/assert.hpp> //BOOST_INTRUSIVE_INVARIANT_ASSERT
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 namespace boost {
 namespace intrusive {
@@ -58,29 +64,31 @@ struct pointer_plus_bits
 template<class T, std::size_t NumBits>
 struct pointer_plus_bits<T*, NumBits>
 {
-   static const std::size_t Mask = ((std::size_t(1u) << NumBits) - 1);
+   static const uintptr_t Mask = uintptr_t((uintptr_t(1u) << NumBits) - 1);
    typedef T*        pointer;
 
    static pointer get_pointer(pointer n)
-   {  return pointer(std::size_t(n) & ~Mask);  }
+   {  return pointer(uintptr_t(n) & uintptr_t(~Mask));  }
 
    static void set_pointer(pointer &n, pointer p)
    {
-      BOOST_INTRUSIVE_INVARIANT_ASSERT(0 == (std::size_t(p) & Mask));
-      n = pointer(std::size_t(p) | (std::size_t(n) & Mask));
+      BOOST_INTRUSIVE_INVARIANT_ASSERT(0 == (uintptr_t(p) & Mask));
+      n = pointer(uintptr_t(p) | (uintptr_t(n) & Mask));
    }
 
    static std::size_t get_bits(pointer n)
-   {  return (std::size_t(n) & Mask);  }
+   {  return std::size_t(uintptr_t(n) & Mask);  }
 
    static void set_bits(pointer &n, std::size_t c)
    {
-      BOOST_INTRUSIVE_INVARIANT_ASSERT(c <= Mask);
-      n = pointer(std::size_t(get_pointer(n)) | c);
+      BOOST_INTRUSIVE_INVARIANT_ASSERT(uintptr_t(c) <= Mask);
+      n = pointer(uintptr_t((get_pointer)(n)) | uintptr_t(c));
    }
 };
 
 } //namespace intrusive
 } //namespace boost
+
+#include <boost/intrusive/detail/config_end.hpp>
 
 #endif //BOOST_INTRUSIVE_POINTER_PLUS_BITS_HPP

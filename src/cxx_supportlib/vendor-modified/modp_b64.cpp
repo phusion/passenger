@@ -53,7 +53,9 @@
 	typedef uint32_t modp_uint32_t;
 #endif
 
-#include "boost/detail/endian.hpp" /* File is C compatible. */
+#ifndef MODP_B64_DONT_INCLUDE_BOOST_ENDIANNESS_HEADERS
+	#include <boost/detail/endian.hpp>
+#endif
 
 /* public header */
 #include "modp_b64.h"

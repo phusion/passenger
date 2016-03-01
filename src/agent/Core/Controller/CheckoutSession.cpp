@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -70,7 +70,7 @@ Controller::checkoutSession(Client *client, Request *req) {
 	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		req->timeBeforeAccessingApplicationPool = ev_now(getLoop());
 	#endif
-	appPool->asyncGet(options, callback, true, req->useUnionStation() ? &req->stopwatchLogs.getFromPool : NULL);
+	asyncGetFromApplicationPool(req, callback);
 	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		if (!req->timedAppPoolGet) {
 			req->timedAppPoolGet = true;
@@ -82,7 +82,15 @@ Controller::checkoutSession(Client *client, Request *req) {
 }
 
 void
-Controller::sessionCheckedOut(const SessionPtr &session, const ExceptionPtr &e,
+Controller::asyncGetFromApplicationPool(Request *req, ApplicationPool2::GetCallback callback) {
+	appPool->asyncGet(req->options, callback, true,
+		req->useUnionStation()
+		? &req->stopwatchLogs.getFromPool
+		: NULL);
+}
+
+void
+Controller::sessionCheckedOut(const AbstractSessionPtr &session, const ExceptionPtr &e,
 	void *userData)
 {
 	Request *req = static_cast<Request *>(userData);
@@ -101,7 +109,7 @@ Controller::sessionCheckedOut(const SessionPtr &session, const ExceptionPtr &e,
 
 void
 Controller::sessionCheckedOutFromAnotherThread(Client *client, Request *req,
-	SessionPtr session, ExceptionPtr e)
+	AbstractSessionPtr session, ExceptionPtr e)
 {
 	SKC_LOG_EVENT(Controller, client, "sessionCheckedOutFromAnotherThread");
 	sessionCheckedOutFromEventLoopThread(client, req, session, e);
@@ -110,7 +118,7 @@ Controller::sessionCheckedOutFromAnotherThread(Client *client, Request *req,
 
 void
 Controller::sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
-	const SessionPtr &session, const ExceptionPtr &e)
+	const AbstractSessionPtr &session, const ExceptionPtr &e)
 {
 	if (req->ended()) {
 		return;

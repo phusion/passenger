@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga  2010-2012
+// (C) Copyright Ion Gaztanaga  2010-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -9,11 +9,17 @@
 // See http://www.boost.org/libs/intrusive for documentation.
 //
 /////////////////////////////////////////////////////////////////////////////
-#ifndef BOOST_INTRUSIVE_GET_PARENT_FROM_MEMBER_HPP
-#define BOOST_INTRUSIVE_GET_PARENT_FROM_MEMBER_HPP
+#ifndef BOOST_INTRUSIVE_PARENT_FROM_MEMBER_HPP
+#define BOOST_INTRUSIVE_PARENT_FROM_MEMBER_HPP
 
 #include <boost/intrusive/detail/config_begin.hpp>
+#include <boost/intrusive/intrusive_fwd.hpp>
+
 #include <boost/intrusive/detail/parent_from_member.hpp>
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 namespace boost {
 namespace intrusive {
@@ -39,4 +45,4 @@ inline const Parent *get_parent_from_member(const Member *member, const Member P
 
 #include <boost/intrusive/detail/config_end.hpp>
 
-#endif   //#ifndef BOOST_INTRUSIVE_GET_PARENT_FROM_MEMBER_HPP
+#endif   //#ifndef BOOST_INTRUSIVE_PARENT_FROM_MEMBER_HPP

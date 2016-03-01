@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -118,6 +118,8 @@ coreUsage() {
 	printf("      --meteor-app-settings PATH\n");
 	printf("                            File with settings for a Meteor (non-bundled) app.\n");
 	printf("                            (passed to Meteor using --settings)\n");
+	printf("      --app-file-descriptor-ulimit NUMBER\n");
+	printf("                            Set custom file descriptor ulimit for the app\n");
 	printf("      --debugger            Enable Ruby debugger support (Enterprise only)\n");
 	printf("\n");
 	printf("      --rolling-restarts    Enable rolling restarts (Enterprise only)\n");
@@ -188,6 +190,8 @@ coreUsage() {
 	printf("                            Default: number of CPU cores (%d)\n",
 		boost::thread::hardware_concurrency());
 	printf("      --cpu-affine          Enable per-thread CPU affinity (Linux only)\n");
+	printf("      --core-file-descriptor-ulimit NUMBER\n");
+	printf("                            Set custom file descriptor ulimit for the core\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("API account privilege levels (ordered from most to least privileges):\n");
@@ -351,6 +355,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--meteor-app-settings")) {
 		options.set("meteor_app_settings", argv[i + 1]);
 		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-file-descriptor-ulimit")) {
+		options.setUint("app_file_descriptor_ulimit", atoi(argv[i + 1]));
+		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--debugger")) {
 		options.setBool("debugger", true);
 		i++;
@@ -399,6 +406,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isFlag(argv[i], '\0', "--cpu-affine")) {
 		options.setBool("core_cpu_affine", true);
 		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--core-file-descriptor-ulimit")) {
+		options.setUint("core_file_descriptor_ulimit", atoi(argv[i + 1]));
+		i += 2;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {
 			options.set("app_root", argv[i]);

@@ -53,7 +53,11 @@
 
 	ngx_int_t abort_websockets_on_process_shutdown;
 
+	ngx_uint_t app_file_descriptor_ulimit;
+
 	ngx_array_t *base_uris;
+
+	ngx_uint_t core_file_descriptor_ulimit;
 
 	ngx_int_t debugger;
 

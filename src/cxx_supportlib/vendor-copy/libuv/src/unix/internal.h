@@ -143,7 +143,8 @@ enum {
   UV_TCP_NODELAY          = 0x400,  /* Disable Nagle. */
   UV_TCP_KEEPALIVE        = 0x800,  /* Turn on keep-alive. */
   UV_TCP_SINGLE_ACCEPT    = 0x1000, /* Only accept() when idle. */
-  UV_HANDLE_IPV6          = 0x10000 /* Handle is bound to a IPv6 socket. */
+  UV_HANDLE_IPV6          = 0x10000, /* Handle is bound to a IPv6 socket. */
+  UV_UDP_PROCESSING       = 0x20000  /* Handle is running the send callback queue. */
 };
 
 /* loop flags */
@@ -171,6 +172,7 @@ int uv__socket(int domain, int type, int protocol);
 int uv__dup(int fd);
 ssize_t uv__recvmsg(int fd, struct msghdr *msg, int flags);
 void uv__make_close_pending(uv_handle_t* handle);
+int uv__getiovmax(void);
 
 void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd);
 void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events);
