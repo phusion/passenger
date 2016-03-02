@@ -116,7 +116,7 @@ def basic_test_cxx_flags
     flags = [
       LIBEV_CFLAGS,
       LIBUV_CFLAGS,
-      PlatformInfo.curl_flags,
+      libcurl_cflags,
       TEST_COMMON_CFLAGS
     ]
     if USE_ASAN
@@ -145,7 +145,7 @@ def test_cxx_ldflags
     result = "#{EXTRA_PRE_CXX_LDFLAGS} " <<
       "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
       "#{TEST_BOOST_OXT_LIBRARY} #{libev_libs} #{libuv_libs} " <<
-      "#{PlatformInfo.curl_libs} " <<
+      "#{libcurl_libs} " <<
       "#{PlatformInfo.zlib_libs} " <<
       "#{PlatformInfo.portability_cxx_ldflags}"
     result << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
@@ -172,6 +172,7 @@ dependencies = [
   TEST_CXX_OBJECTS.keys,
   LIBEV_TARGET,
   LIBUV_TARGET,
+  LIBCURL_DEPENDENCY_TARGETS,
   TEST_BOOST_OXT_LIBRARY,
   TEST_COMMON_LIBRARY.link_objects,
   AGENT_OBJECTS.keys - [AGENT_MAIN_OBJECT]

@@ -153,7 +153,8 @@ dependencies = [
   COMMON_LIBRARY.link_objects,
   LIBBOOST_OXT,
   LIBEV_TARGET,
-  LIBUV_TARGET
+  LIBUV_TARGET,
+  LIBCURL_DEPENDENCY_TARGETS
 ].flatten.compact
 task :compile_app => dependencies do
   source = ENV['SOURCE'] || ENV['FILE'] || ENV['F']
@@ -176,7 +177,8 @@ task :compile_app => dependencies do
       :flags => [
         "-DSTANDALONE",
         LIBEV_CFLAGS,
-        LIBUV_CFLAGS
+        LIBUV_CFLAGS,
+        libcurl_cflags
       ]
     )
     create_cxx_executable(exe,
@@ -189,6 +191,7 @@ task :compile_app => dependencies do
         LIBBOOST_OXT_LINKARG,
         libev_libs,
         libuv_libs,
+        libcurl_libs,
         PlatformInfo.portability_cxx_ldflags
       ]
     )

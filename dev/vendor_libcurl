@@ -1,0 +1,75 @@
+#!/usr/bin/env ruby
+require 'fileutils'
+
+curl_srcdir = ARGV[0] || abort('Usage: ./dev/vendor_libcurl <CURL SOURCE DIR>')
+curl_srcdir = File.absolute_path(curl_srcdir)
+Dir.chdir(File.dirname(__FILE__) + '/../src/cxx_supportlib/vendor-copy')
+
+# Run the given command, and abort on error.
+def sh(*command)
+  puts command.join(" ")
+  if !system(*command)
+    puts "*** ERROR"
+    exit 1
+  end
+end
+
+def rm_rf_and_empty_automake_files(dir)
+  files = Dir["#{dir}/**/*"].find_all { |path| File.file?(path) }
+  makefiles = Dir["#{dir}/**/*.{in,am}"]
+  FileUtils.rm(files - makefiles, :verbose => true)
+  Dir["#{dir}/**/*.{in,am}"].each do |path|
+    sh "echo > #{path}"
+  end
+  Dir["#{dir}/**/*"].each do |path|
+    if File.directory?(path) && Dir["#{path}/*"].empty?
+      FileUtils.rmdir(path, :verbose => true)
+    end
+  end
+end
+
+puts "cd #{Dir.pwd}"
+sh 'rm -rf libcurl'
+sh 'mkdir libcurl'
+puts 'cd libcurl'
+Dir.chdir('libcurl')
+FileUtils.cp_r(Dir["#{curl_srcdir}/*"], '.', :verbose => true)
+
+sh 'rm -rf CMake CMakeLists.txt m4 winbuild'
+sh 'rm -f configure.ac acinclude.m4 aclocal.m4 MacOSX-Framework maketgz test-driver Makefile'
+sh 'rm -rf lib/*.sh lib/*.vbs lib/*.pl'
+sh 'rm -f CHANGES README RELEASE-NOTES include/README'
+['Makefile.am', '*.cmake', 'CMakeLists.txt'].each do |pattern|
+  FileUtils.rm_rf(Dir["**/#{pattern}"], :verbose => true)
+end
+FileUtils.rm(Dir['src/Makefile.*'] - ['src/Makefile.in'], :verbose => true)
+FileUtils.rm(Dir['lib/Makefile.*'] - ['lib/Makefile.in'], :verbose => true)
+
+rm_rf_and_empty_automake_files('docs')
+rm_rf_and_empty_automake_files('tests')
+rm_rf_and_empty_automake_files('packages')
+rm_rf_and_empty_automake_files('projects')
+rm_rf_and_empty_automake_files('scripts')
+rm_rf_and_empty_automake_files('src')
+
+sh 'echo > lib/config-dos.h'
+sh 'echo > lib/config-win32.h'
+sh 'echo > lib/config-win32ce.h'
+
+# If you add any more files to the following list, be sure to also update the configure
+# options in build/libcurl.rb
+sh 'echo > lib/asyn-ares.c'
+sh 'echo > lib/ftp.c'
+sh 'echo > lib/ftplistparser.c'
+sh 'echo > lib/file.c'
+sh 'echo > lib/gopher.c'
+sh 'echo > lib/ldap.c'
+sh 'echo > lib/rtsp.c'
+sh 'echo > lib/dict.c'
+sh 'echo > lib/telnet.c'
+sh 'echo > lib/tftp.c'
+sh 'echo > lib/pop3.c'
+sh 'echo > lib/imap.c'
+sh 'echo > lib/smb.c'
+sh 'echo > lib/smtp.c'
+sh 'echo > lib/gopher.c'

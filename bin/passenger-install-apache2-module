@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -75,7 +75,7 @@ class Installer < PhusionPassenger::AbstractInstaller
     ids = [
       'cc',
       'c++',
-      'libcurl-dev',
+      'pkg-config',
       'zlib-dev',
       'apache2',
       'apache2-dev',

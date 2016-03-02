@@ -60,7 +60,7 @@ AGENT_OBJECTS.each_pair do |object, source|
       AGENT_CFLAGS,
       LIBEV_CFLAGS,
       LIBUV_CFLAGS,
-      PlatformInfo.curl_flags,
+      libcurl_cflags,
       PlatformInfo.zlib_flags
     ]
   )
@@ -74,7 +74,8 @@ dependencies = AGENT_OBJECTS.keys + [
   LIBBOOST_OXT,
   agent_libs.link_objects,
   LIBEV_TARGET,
-  LIBUV_TARGET
+  LIBUV_TARGET,
+  LIBCURL_DEPENDENCY_TARGETS
 ].flatten.compact
 file(AGENT_TARGET => dependencies) do
   sh "mkdir -p #{AGENT_OUTPUT_DIR}" if !File.directory?(AGENT_OUTPUT_DIR)
@@ -87,7 +88,7 @@ file(AGENT_TARGET => dependencies) do
     :flags => [
       libev_libs,
       libuv_libs,
-      PlatformInfo.curl_libs,
+      libcurl_libs,
       PlatformInfo.zlib_libs,
       PlatformInfo.portability_cxx_ldflags,
       AGENT_LDFLAGS

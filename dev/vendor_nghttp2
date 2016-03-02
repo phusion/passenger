@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+require 'fileutils'
+
+curl_srcdir = ARGV[0] || abort('Usage: ./dev/vendor_nghttp2 <NGHTTP2 SOURCE DIR>')
+curl_srcdir = File.absolute_path(curl_srcdir)
+Dir.chdir(File.dirname(__FILE__) + '/../src/cxx_supportlib/vendor-copy')
+
+# Run the given command, and abort on error.
+def sh(*command)
+  puts command.join(" ")
+  if !system(*command)
+    puts "*** ERROR"
+    exit 1
+  end
+end
+
+def rm_rf_and_empty_automake_files(dir)
+  files = Dir["#{dir}/**/*"].find_all { |path| File.file?(path) }
+  makefiles = Dir["#{dir}/**/*.in"]
+  FileUtils.rm(files - makefiles, :verbose => true)
+  Dir["#{dir}/**/*.in"].each do |path|
+    sh "echo > #{path}"
+  end
+  Dir["#{dir}/**/*"].each do |path|
+    if File.directory?(path) && Dir["#{path}/*"].empty?
+      FileUtils.rmdir(path, :verbose => true)
+    end
+  end
+end
+
+puts "cd #{Dir.pwd}"
+sh 'rm -rf nghttp2'
+sh 'mkdir nghttp2'
+puts 'cd nghttp2'
+Dir.chdir('nghttp2')
+FileUtils.cp_r(Dir["#{curl_srcdir}/*"], '.', :verbose => true)
+
+sh 'rm -f AUTHORS ChangeLog Dockerfile* INSTALL NEWS README* android*'
+sh 'rm -f *.sample  test-driverlib/Makefile.msvc'
+sh 'rm -rf third-party/mruby third-party/neverbleed'
+sh 'echo > aclocal.m4'
+
+rm_rf_and_empty_automake_files('contrib')
+rm_rf_and_empty_automake_files('doc')
+rm_rf_and_empty_automake_files('examples')
+rm_rf_and_empty_automake_files('integration-tests')
+rm_rf_and_empty_automake_files('python')
+rm_rf_and_empty_automake_files('scripts')
+rm_rf_and_empty_automake_files('tests')

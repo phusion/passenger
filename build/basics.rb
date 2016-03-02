@@ -152,6 +152,8 @@ APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "ap
 NGINX_DYNAMIC_OUTPUT_DIR  = string_option('NGINX_DYNAMIC_OUTPUT_DIR', OUTPUT_DIR + "nginx_dynamic") + "/"
 LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libev") + "/"
 LIBUV_OUTPUT_DIR          = string_option('LIBUV_OUTPUT_DIR', OUTPUT_DIR + "libuv") + "/"
+LIBCURL_OUTPUT_DIR        = pathname_option('LIBCURL_OUTPUT_DIR', OUTPUT_DIR + 'libcurl')
+NGHTTP2_OUTPUT_DIR        = pathname_option('NGHTTP2_OUTPUT_DIR', OUTPUT_DIR + 'nghttp2')
 ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id
 RUBY_EXTENSION_OUTPUT_DIR = string_option('RUBY_EXTENSION_OUTPUT_DIR',
   OUTPUT_DIR + "ruby/" + ruby_extension_archdir) + "/"
@@ -163,3 +165,5 @@ TEST_OUTPUT_DIR           = string_option('TEST_OUTPUT_DIR', OUTPUT_DIR + "test"
 USE_VENDORED_LIBEV = boolean_option("USE_VENDORED_LIBEV", true)
 # Whether to use the vendored libuv or the system one.
 USE_VENDORED_LIBUV  = boolean_option("USE_VENDORED_LIBUV", true)
+# Whether to use the vendored libcurl or the system one.
+USE_VENDORED_LIBCURL  = boolean_option("USE_VENDORED_LIBCURL", true)
