@@ -87,6 +87,8 @@ TEST_CXX_OBJECTS = {
     "test/cxx/FilterSupportTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/CachedFileStatTest.o" =>
     "test/cxx/CachedFileStatTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Integrations/CurlLibevIntegrationTest.o" =>
+    "test/cxx/Integrations/CurlLibevIntegrationTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/BufferedIOTest.o" =>
     "test/cxx/BufferedIOTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/MessageIOTest.o" =>
