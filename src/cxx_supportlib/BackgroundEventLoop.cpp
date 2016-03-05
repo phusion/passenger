@@ -271,7 +271,6 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable, bool usesLibuv)
 	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_backend_fd(libev_loop), "libev event loop: backend FD");
 
 	ev_async_init(&priv->exitSignaller, signalLibevExit);
-	ev_async_start(libev_loop, &priv->exitSignaller);
 	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_loop_get_pipe(libev_loop, 0), "libev event loop: async pipe 0");
 	P_LOG_FILE_DESCRIPTOR_OPEN2(ev_loop_get_pipe(libev_loop, 1), "libev event loop: async pipe 1");
 	priv->exitSignaller.data = this;
@@ -281,7 +280,6 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable, bool usesLibuv)
 
 	if (usesLibuv) {
 		ev_async_init(&priv->libuvActivitySignaller, onLibuvActivity);
-		ev_async_start(libev_loop, &priv->libuvActivitySignaller);
 		priv->libuvActivitySignaller.data = this;
 
 		libuv_loop = &priv->libuv_loop;
@@ -312,6 +310,12 @@ BackgroundEventLoop::~BackgroundEventLoop() {
 		P_LOG_FILE_DESCRIPTOR_CLOSE(libuv_loop->signal_pipefd[0]);
 		P_LOG_FILE_DESCRIPTOR_CLOSE(libuv_loop->signal_pipefd[1]);
 		uv_loop_close(libuv_loop);
+		if (ev_is_active(&priv->libuvActivitySignaller)) {
+			ev_async_stop(libev_loop, &priv->libuvActivitySignaller);
+		}
+	}
+	if (ev_is_active(&priv->exitSignaller)) {
+		ev_async_stop(libev_loop, &priv->exitSignaller);
 	}
 	uv_barrier_destroy(&priv->startBarrier);
 	delete priv;
@@ -320,6 +324,10 @@ BackgroundEventLoop::~BackgroundEventLoop() {
 void
 BackgroundEventLoop::start(const string &threadName, unsigned int stackSize) {
 	assert(priv->thr == NULL);
+	ev_async_start(libev_loop, &priv->exitSignaller);
+	if (priv->usesLibuv) {
+		ev_async_start(libev_loop, &priv->libuvActivitySignaller);
+	}
 	priv->thr = new oxt::thread(
 		boost::bind(runBackgroundLoop, this),
 		threadName,
