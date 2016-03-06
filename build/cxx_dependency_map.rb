@@ -6184,6 +6184,11 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/system_calls.hpp",
    "src/cxx_supportlib/oxt/thread.hpp",
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
+ "src/cxx_supportlib/Integrations/LibevJsonUtils.h"=>
+  ["src/cxx_supportlib/Utils/../Exceptions.h",
+   "src/cxx_supportlib/Utils/SystemTime.h",
+   "src/cxx_supportlib/oxt/macros.hpp",
+   "src/cxx_supportlib/oxt/system_calls.hpp"],
  "src/cxx_supportlib/Logging.cpp"=>
   ["src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/Exceptions.h",
