@@ -1595,6 +1595,12 @@ ev_now (EV_P) EV_THROW
 {
   return ev_rt_now;
 }
+
+void
+ev_set_time (EV_P, ev_tstamp t) EV_THROW
+{
+  ev_rt_now = t;
+}
 #endif
 
 void

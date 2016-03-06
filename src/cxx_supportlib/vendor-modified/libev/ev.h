@@ -573,6 +573,8 @@ EV_API_DECL struct ev_loop *ev_loop_new (unsigned int flags EV_CPP (= 0)) EV_THR
 
 EV_API_DECL ev_tstamp ev_now (EV_P) EV_THROW; /* time w.r.t. timers and the eventloop, updated after each poll */
 
+EV_API_DECL void ev_set_time (EV_P, ev_tstamp t) EV_THROW;
+
 #else
 
 EV_API_DECL int ev_default_loop (unsigned int flags EV_CPP (= 0)) EV_THROW; /* returns true when successful */
@@ -583,6 +585,12 @@ EV_INLINE ev_tstamp
 ev_now (void) EV_THROW
 {
   return ev_rt_now;
+}
+
+EV_INLINE void
+ev_set_time (ev_tstamp t) EV_THROW
+{
+  ev_rt_now = t;
 }
 
 /* looks weird, but ev_is_default_loop (EV_A) still works if this exists */
