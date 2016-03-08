@@ -64,7 +64,7 @@ Controller::checkoutSession(Client *client, Request *req) {
 	callback.func = sessionCheckedOut;
 	callback.userData = req;
 
-	options.currentTime = (unsigned long long) (ev_now(getLoop()) * 1000000);
+	options.currentTime = SystemTime::getUsec();
 
 	refRequest(req, __FILE__, __LINE__);
 	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
