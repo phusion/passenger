@@ -62,7 +62,7 @@
 #ifdef HAVE_ALLOCA_H
 	#include <alloca.h>
 #endif
-#if defined(__APPLE__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__)
 	#define HAVE_KQUEUE
 	#include <sys/event.h>
 	#include <sys/time.h>
