@@ -24,6 +24,7 @@
  *  THE SOFTWARE.
  */
 #include <Core/Controller.h>
+#include <Integrations/LibevJsonUtils.h>
 
 /*************************************************************************
  *
@@ -86,7 +87,7 @@ Controller::inspectStateAsJson() const {
 Json::Value
 Controller::inspectClientStateAsJson(const Client *client) const {
 	Json::Value doc = ParentClass::inspectClientStateAsJson(client);
-	doc["connected_at"] = timeToJson(client->connectedAt * 1000000.0);
+	doc["connected_at"] = evTimeToJson(client->connectedAt, ev_now(getLoop()));
 	return doc;
 }
 
@@ -97,7 +98,7 @@ Controller::inspectRequestStateAsJson(const Request *req) const {
 	const AppResponse *resp = &req->appResponse;
 
 	if (req->startedAt != 0) {
-		doc["started_at"] = timeToJson(req->startedAt * 1000000.0);
+		doc["started_at"] = evTimeToJson(req->startedAt, ev_now(getLoop()));
 	}
 	doc["state"] = req->getStateString();
 	if (req->stickySession) {
