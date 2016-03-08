@@ -208,27 +208,29 @@ timeToJson(unsigned long long timestamp, unsigned long long now = 0) {
 	}
 
 	Json::Value doc;
-	time_t time = (time_t) timestamp / 1000000;
-	char buf[32];
+	time_t wallClockTime = (time_t) (timestamp / 1000000ull);
+	char wallClockTimeStr[32];
 	size_t len;
 
 	if (now == 0) {
 		now = SystemTime::getUsec();
 	}
 
-	doc["timestamp"] = timestamp / (double) 1000000;
-
-	ctime_r(&time, buf);
-	len = strlen(buf);
+	ctime_r(&wallClockTime, wallClockTimeStr);
+	len = strlen(wallClockTimeStr);
 	if (len > 0) {
 		// Get rid of trailing newline
-		buf[len - 1] = '\0';
+		wallClockTimeStr[len - 1] = '\0';
 	}
-	doc["local"] = buf;
+
+	doc["timestamp"] = timestamp / 1000000.0;
+	doc["local"] = wallClockTimeStr;
 	if (timestamp > now) {
-		doc["relative"] = distanceOfTimeInWords(time) + " from now";
+		doc["relative_timestamp"] = (timestamp - now) / 1000000.0;
+		doc["relative"] = distanceOfTimeInWords(wallClockTime, now / 1000000ull) + " from now";
 	} else {
-		doc["relative"] = distanceOfTimeInWords(time) + " ago";
+		doc["relative_timestamp"] = (now - timestamp) / -1000000.0;
+		doc["relative"] = distanceOfTimeInWords(wallClockTime, now / 1000000ull) + " ago";
 	}
 
 	return doc;
