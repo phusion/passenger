@@ -198,7 +198,7 @@ task 'test:cxx' => dependencies do
   if boolean_option('GDB')
     command = "gdb --args #{command}"
   elsif boolean_option('VALGRIND')
-    command = "valgrind --dsymutil=yes --db-attach=yes --child-silent-after-fork=yes #{command}"
+    command = "valgrind --dsymutil=yes --vgdb=yes --vgdb-error=0 --child-silent-after-fork=yes #{command}"
   end
   if boolean_option('SUDO')
     command = "#{PlatformInfo.ruby_sudo_command} #{command}"
