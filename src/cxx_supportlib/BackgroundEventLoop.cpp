@@ -302,6 +302,7 @@ BackgroundEventLoop::BackgroundEventLoop(bool scalable, bool usesLibuv)
 BackgroundEventLoop::~BackgroundEventLoop() {
 	stop();
 	if (priv->usesLibuv) {
+		uv_close((uv_handle_t *) &priv->libuv_timer, NULL);
 		while (uv_loop_alive(libuv_loop)) {
 			uv_run(libuv_loop, UV_RUN_NOWAIT);
 			syscalls::usleep(10000);
