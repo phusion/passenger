@@ -840,12 +840,19 @@ describe RequestHandler do
             "REQUEST_METHOD" => "GET",
             "PATH_INFO" => "/")
           @client.close_write
-          @client.read.should ==
+          [
             "HTTP/1.1 200 Whatever\r\n" \
             "Content-Length: 2\r\n" \
             "X-Accel-Redirect: /foo\r\n" \
             "Connection: close\r\n\r\n" \
+            "ok",
+            
+            "HTTP/1.1 200 Whatever\r\n" \
+            "X-Accel-Redirect: /foo\r\n" \
+            "Content-Length: 2\r\n" \
+            "Connection: close\r\n\r\n" \
             "ok"
+          ].should include(@client.read)
         end
       end
     end
