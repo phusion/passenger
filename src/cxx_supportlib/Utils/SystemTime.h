@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,7 +28,8 @@
 
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
-#include "../Exceptions.h"
+#include <uv.h>
+#include <Exceptions.h>
 
 namespace Passenger {
 
@@ -37,8 +38,6 @@ using namespace oxt;
 namespace SystemTimeData {
 	extern bool hasForcedValue;
 	extern time_t forcedValue;
-	extern bool hasForcedMsecValue;
-	extern unsigned long long forcedMsecValue;
 	extern bool hasForcedUsecValue;
 	extern unsigned long long forcedUsecValue;
 }
@@ -49,9 +48,9 @@ namespace SystemTimeData {
  * to be returned, which is useful for testing code that depends on the
  * system time.
  *
- * get() provides seconds resolution while getMsec() provides milliseconds
+ * get() provides seconds resolution while getUsec() provides microseconds
  * resolution. Both clocks can be independently forced to a certain value
- * through force() and forceMsec().
+ * through force() and forceUsec().
  */
 class SystemTime {
 public:
@@ -74,34 +73,6 @@ public:
 					e);
 			}
 			return ret;
-		}
-	}
-
-	/**
-	 * Returns the time since the Epoch, measured in milliseconds. Or, if a
-	 * time was forced with forceMsec(), then the forced time is returned instead.
-	 *
-	 * @param real Whether to get the real time, even if a value was forced.
-	 * @throws TimeRetrievalException Something went wrong while retrieving the time.
-	 * @throws boost::thread_interrupted
-	 */
-	static unsigned long long getMsec(bool real = false) {
-		if (SystemTimeData::hasForcedMsecValue && !real) {
-			return SystemTimeData::forcedMsecValue;
-		} else {
-			struct timeval t;
-			int ret;
-
-			do {
-				ret = gettimeofday(&t, NULL);
-			} while (ret == -1 && errno == EINTR);
-			if (ret == -1) {
-				int e = errno;
-				throw TimeRetrievalException(
-					"Unable to retrieve the system time",
-					e);
-			}
-			return (unsigned long long) t.tv_sec * 1000 + t.tv_usec / 1000;
 		}
 	}
 
@@ -133,19 +104,28 @@ public:
 	}
 
 	/**
+	 * Returns the time since an unspecified point in the last, measured in
+	 * microseconds, using the monotonic clock. Or, if the time was forced
+	 * with forceUsed(), then the forced time is returned instead.
+	 *
+	 * The monotonic clock is not subject to clock drift, even if the user
+	 * changes the wall clock time. It is ideal for measuring time between
+	 * two intervals.
+	 */
+	static unsigned long long getMonotonicUsec() {
+		if (SystemTimeData::hasForcedUsecValue) {
+			return SystemTimeData::hasForcedValue;
+		} else {
+			return uv_hrtime() / 1000;
+		}
+	}
+
+	/**
 	 * Force get() to return the given value.
 	 */
 	static void force(time_t value) {
 		SystemTimeData::hasForcedValue = true;
 		SystemTimeData::forcedValue = value;
-	}
-
-	/**
-	 * Force getMsec() to return the given value.
-	 */
-	static void forceMsec(unsigned long long value) {
-		SystemTimeData::hasForcedMsecValue = true;
-		SystemTimeData::forcedMsecValue = value;
 	}
 
 	/**
@@ -158,7 +138,6 @@ public:
 
 	static void forceAll(unsigned long long usec) {
 		force(usec / 1000000);
-		forceMsec(usec / 1000);
 		forceUsec(usec);
 	}
 
@@ -171,14 +150,6 @@ public:
 	}
 
 	/**
-	 * Release the previously forced msec value, so that getMsec()
-	 * returns the system time once again.
-	 */
-	static void releaseMsec() {
-		SystemTimeData::hasForcedMsecValue = false;
-	}
-
-	/**
 	 * Release the previously forced usec value, so that getUsec()
 	 * returns the system time once again.
 	 */
@@ -187,12 +158,11 @@ public:
 	}
 
 	/**
-	 * Release all previously forced values, so that get(), getMsec()
-	 * and getUsec() return the system time once again.
+	 * Release all previously forced values, so that get() and
+	 * getUsec() return the system time once again.
 	 */
 	static void releaseAll() {
 		SystemTimeData::hasForcedValue = false;
-		SystemTimeData::hasForcedMsecValue = false;
 		SystemTimeData::hasForcedUsecValue = false;
 	}
 };

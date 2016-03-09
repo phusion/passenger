@@ -21,7 +21,7 @@ namespace tut {
 			box->send("ho");
 		}
 	};
-	
+
 	DEFINE_TEST_GROUP(MessagePassingTest);
 
 	TEST_METHOD(1) {
@@ -62,7 +62,7 @@ namespace tut {
 		ensure_equals(box->recv("hi", &timeout), MessagePtr());
 		ensure("(1)", timer.elapsed() >= 19);
 		ensure("(2)", timer.elapsed() < 95);
-		ensure("(3)", timeout >= 19000ull);
+		ensure("(3)", timeout <= 2000ull);
 	}
 
 	TEST_METHOD(5) {

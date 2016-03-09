@@ -207,17 +207,17 @@ namespace tut {
 
 		ScopedLock l(pool->syncher);
 		pool->asyncGet(options, callback, false);
-		ensure_equals(number, 0);
-		ensure(pool->getWaitlist.empty());
-		ensure(!pool->groups.empty());
+		ensure_equals("(1)", number, 0);
+		ensure("(2)", pool->getWaitlist.empty());
+		ensure("(3)", !pool->groups.empty());
 		l.unlock();
 
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 1;
 		);
-		ensure_equals(number, 1);
-		ensure(currentSession != NULL);
-		ensure(currentException == NULL);
+		ensure_equals("(4)", number, 1);
+		ensure("(5)", currentSession != NULL);
+		ensure("(6)", currentException == NULL);
 	}
 
 	TEST_METHOD(3) {

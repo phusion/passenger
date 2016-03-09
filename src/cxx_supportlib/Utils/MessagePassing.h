@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2012-2015 Phusion Holding B.V.
+ *  Copyright (c) 2012-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -183,7 +183,7 @@ class MessageBox: public boost::enable_shared_from_this<MessageBox> {
 	}
 
 	void substractTimePassed(unsigned long long *timeout, unsigned long long beginTime) {
-		unsigned long long now = SystemTime::getMsec();
+		unsigned long long now = SystemTime::getMonotonicUsec();
 		unsigned long long diff;
 		if (now > beginTime) {
 			diff = now - beginTime;
@@ -224,7 +224,7 @@ public:
 		posix_time::ptime deadline;
 		unsigned long long beginTime = 0; // Shut up compiler warning.
 		if (timeout != NULL) {
-			beginTime = SystemTime::getUsec();
+			beginTime = SystemTime::getMonotonicUsec();
 			deadline = posix_time::microsec_clock::local_time() +
 				posix_time::microsec(*timeout);
 		}
@@ -263,7 +263,7 @@ public:
 		posix_time::ptime deadline;
 		unsigned long long beginTime = 0; // Shut up compiler warning.
 		if (timeout != NULL) {
-			beginTime = SystemTime::getUsec();
+			beginTime = SystemTime::getMonotonicUsec();
 			deadline = posix_time::microsec_clock::local_time() +
 				posix_time::microsec(*timeout);
 		}

@@ -153,6 +153,7 @@ private
       :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
       :flags => [
         LIBEV_CFLAGS,
+        LIBUV_CFLAGS,
         optimize,
         extra_compiler_flags
       ]
