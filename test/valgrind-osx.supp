@@ -21,3 +21,19 @@
    ...
    fun:_CFRuntimeBridgeClasses
 }
+{
+   snprintf malloc
+   Memcheck:Leak
+   match-leak-kinds: all
+   fun:malloc
+   ...
+   fun:snprintf
+}
+{
+   dirname() internal storage
+   Memcheck:Leak
+   match-leak-kinds: all
+   fun:malloc
+   ...
+   fun:dirname
+}
