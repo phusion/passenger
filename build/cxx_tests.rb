@@ -198,7 +198,14 @@ task 'test:cxx' => dependencies do
   if boolean_option('GDB')
     command = "gdb --args #{command}"
   elsif boolean_option('VALGRIND')
-    command = "valgrind --dsymutil=yes --vgdb=yes --vgdb-error=1 --child-silent-after-fork=yes #{command}"
+    valgrind_args = "--dsymutil=yes --vgdb=yes --vgdb-error=1 --child-silent-after-fork=yes"
+    if boolean_option('LEAK_CHECK')
+      valgrind_args << " --leak-check=yes"
+    end
+    if RUBY_PLATFORM =~ /darwin/
+      valgrind_args << " --suppressions=valgrind-osx.supp"
+    end
+    command = "valgrind #{valgrind_args} #{command}"
   end
   if boolean_option('SUDO')
     command = "#{PlatformInfo.ruby_sudo_command} #{command}"
