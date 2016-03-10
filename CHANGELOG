@@ -2,6 +2,8 @@ Release 5.0.27
 --------------
 
  * Support Debian GNU/kFreeBSD build. Based on contribution by stevenc99.
+ * Fix incomplete libuv upgrade: some build files were not autoregenerated during the upgrade from 1.5.0 to 1.8.0 in the previous release.
+ * Switch a number of places in the Passenger Core over to using the monotonic clock instead of the wallclock for robustness against clock time-stepping.
 
 
 Release 5.0.26
