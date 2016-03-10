@@ -215,9 +215,11 @@ namespace tut {
 		EVENTUALLY(5,
 			result = pool->getProcessCount() == 1;
 		);
-		ensure_equals("(4)", number, 1);
-		ensure("(5)", currentSession != NULL);
-		ensure("(6)", currentException == NULL);
+		EVENTUALLY(5,
+			result = number == 1;
+		);
+		ensure("(4)", currentSession != NULL);
+		ensure("(5)", currentException == NULL);
 	}
 
 	TEST_METHOD(3) {

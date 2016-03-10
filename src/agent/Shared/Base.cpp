@@ -64,6 +64,7 @@
 #include <Logging.h>
 #include <ResourceLocator.h>
 #include <Utils.h>
+#include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #ifdef __linux__
 	#include <ResourceLocator.h>
@@ -1500,6 +1501,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	if (hasEnvOption("PASSENGER_SIMULATE_SYSCALL_FAILURES")) {
 		initializeSyscallFailureSimulation(processName);
 	}
+	SystemTime::initialize();
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 

@@ -24,13 +24,26 @@
  *  THE SOFTWARE.
  */
 
-#include <time.h>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 	namespace SystemTimeData {
+		bool initialized = false;
 		bool hasForcedValue = false;
 		time_t forcedValue = 0;
 		bool hasForcedUsecValue = false;
 		unsigned long long forcedUsecValue = 0;
+
+		#if BOOST_OS_MACOS
+			mach_timebase_info_data_t timeInfo;
+		#elif defined(SYSTEM_TIME_HAVE_MONOTONIC_CLOCK)
+			#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_COARSE
+				unsigned long long monotonicCoarseResolution = 0;
+			#endif
+			#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_FAST
+				unsigned long long monotonicFastResolution = 0;
+			#endif
+			unsigned long long monotonicResolution;
+		#endif
 	}
 }

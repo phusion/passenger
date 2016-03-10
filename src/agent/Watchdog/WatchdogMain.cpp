@@ -397,7 +397,7 @@ cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &
 		// Child
 		try {
 			vector<AgentWatcherPtr>::const_iterator it;
-			Timer timer(false);
+			Timer<SystemTime::GRAN_10MSEC> timer(false);
 			fd_set fds, fds2;
 			int max, agentProcessesDone;
 			unsigned long long deadline = 30000; // miliseconds

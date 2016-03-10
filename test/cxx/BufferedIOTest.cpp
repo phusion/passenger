@@ -1,7 +1,7 @@
 #include "TestSupport.h"
-#include "Utils/BufferedIO.h"
-#include "Utils/Timer.h"
-#include "Utils/IOUtils.h"
+#include <Utils/BufferedIO.h>
+#include <Utils/Timer.h>
+#include <Utils/IOUtils.h>
 #include <algorithm>
 
 using namespace Passenger;
@@ -119,14 +119,14 @@ namespace tut {
 	TEST_METHOD(5) {
 		// It blocks until the acceptor function says it's done or until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
-		Timer timer1;
+		Timer<> timer1;
 		ensure_equals(io.readUntil(a_twoBytesRead), 2u);
 		ensure_equals(readData, "aa");
 		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
 		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
 
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
-		Timer timer2;
+		Timer<> timer2;
 		ensure_equals(io.readUntil(a_twoBytesRead), 0u);
 		ensure_equals(readData, "aa");
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
@@ -139,7 +139,7 @@ namespace tut {
 		unsigned long long timeout = 50000;
 		io.unread("he");
 		write("llo");
-		Timer timer;
+		Timer<> timer;
 		try {
 			io.readUntil(a_eof, &timeout);
 			fail("TimeoutException expected");
@@ -209,14 +209,14 @@ namespace tut {
 	TEST_METHOD(15) {
 		// It blocks until the given number of bytes are read or until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
-		Timer timer1;
+		Timer<> timer1;
 		ensure_equals(io.read(buf, 2), 2u);
 		ensure_equals(StaticString(buf), "aa");
 		ensure("At least 18 msec elapsed", timer1.elapsed() >= 18);
 		ensure("At most 90 msec elapsed", timer1.elapsed() <= 90);
 
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 20000));
-		Timer timer2;
+		Timer<> timer2;
 		ensure_equals(io.read(buf, sizeof(buf)), 0u);
 		ensure_equals(StaticString(buf), "aa");
 		ensure("At least 18 msec elapsed", timer2.elapsed() >= 18);
@@ -229,7 +229,7 @@ namespace tut {
 		unsigned long long timeout = 50000;
 		io.unread("he");
 		write("llo");
-		Timer timer;
+		Timer<> timer;
 		try {
 			io.read(buf, sizeof(buf), &timeout);
 			fail("TimeoutException expected");
@@ -247,7 +247,7 @@ namespace tut {
 		// It reads everything until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "aa"));
 		TempThread thr2(boost::bind(closeAfterSomeTime, writer, 40000));
-		Timer timer;
+		Timer<> timer;
 		ensure_equals(io.readAll(), "aa");
 		ensure_equals(io.getBuffer(), "");
 		ensure("At least 38 msec elapsed", timer.elapsed() >= 38);
@@ -260,7 +260,7 @@ namespace tut {
 		unsigned long long timeout = 50000;
 		io.unread("he");
 		write("llo");
-		Timer timer;
+		Timer<> timer;
 		try {
 			io.readAll(&timeout);
 			fail("TimeoutException expected");
@@ -328,14 +328,14 @@ namespace tut {
 		// It blocks until a line can be read or until EOF.
 		TempThread thr1(boost::bind(writeAfterSomeTime, writer, 20000, "hello"));
 		TempThread thr2(boost::bind(writeAfterSomeTime, writer, 35000, "\nworld\n."));
-		Timer timer1;
+		Timer<> timer1;
 		ensure_equals(io.readLine(), "hello\n");
 		ensure_equals(io.getBuffer(), "world\n.");
 		ensure("At least 33 msec elapsed", timer1.elapsed() >= 33);
 		ensure("At most 95 msec elapsed", timer1.elapsed() <= 90);
 
 		TempThread thr3(boost::bind(closeAfterSomeTime, writer, 20000));
-		Timer timer2;
+		Timer<> timer2;
 		ensure_equals(io.readLine(), "world\n");
 		ensure_equals(io.getBuffer(), ".");
 		ensure_equals(io.readLine(), ".");
@@ -350,7 +350,7 @@ namespace tut {
 		unsigned long long timeout = 30000;
 		io.unread("he");
 		write("llo");
-		Timer timer;
+		Timer<> timer;
 		try {
 			io.readLine(1024, &timeout);
 			fail("TimeoutException expected");

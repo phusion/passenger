@@ -13,6 +13,7 @@
 
 #include <Shared/Base.h>
 #include <Utils.h>
+#include <Utils/SystemTime.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <jsoncpp/json.h>
@@ -153,6 +154,7 @@ main(int argc, char *argv[]) {
 	unsetenv("TMPDIR");
 	oxt::initialize();
 	oxt::setup_syscall_interruption_support();
+	SystemTime::initialize();
 
 	tut::reporter reporter;
 	tut::runner.get().set_callback(&reporter);

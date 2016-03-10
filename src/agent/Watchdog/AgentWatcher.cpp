@@ -203,7 +203,7 @@ protected:
 	 * <em>timeout</em> miliseconds for the process to exit.
 	 */
 	static int timedWaitPid(pid_t pid, int *status, unsigned long long timeout) {
-		Timer timer;
+		Timer<SystemTime::GRAN_10MSEC> timer;
 		int ret;
 
 		do {

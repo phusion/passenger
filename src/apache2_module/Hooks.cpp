@@ -58,7 +58,7 @@
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/Timer.h>
+#include <Utils/SystemTime.h>
 #include <Utils/HttpConstants.h>
 #include <Utils/ReleaseableScopedPointer.h>
 #include <Logging.h>
@@ -630,7 +630,6 @@ private:
 			 * util_script.c's source. :-(
 			 */
 			char backendData[MAX_STRING_LEN];
-			Timer timer;
 			getsfunc_BRIGADE(backendData, MAX_STRING_LEN, bb);
 
 			// The bucket brigade is an interface to the HTTP response sent by the
@@ -1601,6 +1600,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 */
 	if (hooks == NULL) {
 		oxt::initialize();
+		SystemTime::initialize();
 	} else {
 		P_DEBUG("Restarting Phusion Passenger....");
 		delete hooks;

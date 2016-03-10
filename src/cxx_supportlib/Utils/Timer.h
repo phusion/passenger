@@ -28,7 +28,7 @@
 
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
-#include <uv.h>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 
@@ -48,9 +48,10 @@ using namespace oxt;
  * timer.elapsed();   // => about 10000 (msec)
  * @endcode
  */
+template<SystemTime::Granularity granularity = SystemTime::GRAN_1USEC>
 class Timer {
 private:
-	unsigned long long startTime;
+	MonotonicTimeUsec startTime;
 	mutable boost::mutex lock;
 
 public:
@@ -73,7 +74,7 @@ public:
 	 */
 	void start() {
 		boost::lock_guard<boost::mutex> l(lock);
-		startTime = uv_hrtime();
+		startTime = SystemTime::getMonotonicUsecWithGranularity<granularity>();
 	}
 
 	/**
@@ -93,7 +94,7 @@ public:
 	void reset() {
 		boost::lock_guard<boost::mutex> l(lock);
 		if (startTime != 0) {
-			startTime = uv_hrtime();
+			startTime = SystemTime::getMonotonicUsecWithGranularity<granularity>();
 		}
 	}
 
@@ -106,7 +107,7 @@ public:
 		if (startTime == 0) {
 			return 0;
 		} else {
-			return (uv_hrtime() - startTime) / 1000000;
+			return (SystemTime::getMonotonicUsecWithGranularity<granularity>() - startTime) / 1000;
 		}
 	}
 
@@ -114,12 +115,12 @@ public:
 	 * Returns the amount of time that has elapsed since the timer was last started,
 	 * in microseconds. If the timer is currently stopped, then 0 is returned.
 	 */
-	unsigned long long usecElapsed() const {
+	MonotonicTimeUsec usecElapsed() const {
 		boost::lock_guard<boost::mutex> l(lock);
 		if (startTime == 0) {
 			return 0;
 		} else {
-			return (uv_hrtime() - startTime) / 1000;
+			return SystemTime::getMonotonicUsecWithGranularity<granularity>() - startTime;
 		}
 	}
 

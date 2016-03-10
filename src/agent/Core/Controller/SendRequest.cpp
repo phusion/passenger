@@ -24,9 +24,7 @@
  *  THE SOFTWARE.
  */
 #include <Core/Controller.h>
-
-// For calculating delta_monotonic (Ruby < 2.1 workaround, otherwise unused)
-#include <uv.h>
+#include <Utils/SystemTime.h>
 
 /*************************************************************************
  *
@@ -159,10 +157,18 @@ Controller::sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 	SessionProtocolWorkingState state;
 
 	// Workaround for Ruby < 2.1 support.
-	std::string delta_monotonic = boost::to_string(SystemTime::getUsec() - (uv_hrtime() / 1000));
+	std::string deltaMonotonic;
+	unsigned long long now = SystemTime::getUsec();
+	MonotonicTimeUsec monotonicNow = SystemTime::getMonotonicUsec();
+	if (now > monotonicNow) {
+		deltaMonotonic = boost::to_string(now - monotonicNow);
+	} else {
+		long long diff = monotonicNow - now;
+		deltaMonotonic = boost::to_string(-diff);
+	}
 
 	unsigned int bufferSize = determineHeaderSizeForSessionProtocol(req,
-		state, delta_monotonic);
+		state, deltaMonotonic);
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
 	const unsigned int MBUF_MAX_SIZE = mbuf_pool_data_size(&mbuf_pool);
 	bool ok;
@@ -172,7 +178,7 @@ Controller::sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		bufferSize = MBUF_MAX_SIZE;
 
 		ok = constructHeaderForSessionProtocol(req, buffer.start,
-			bufferSize, state, delta_monotonic);
+			bufferSize, state, deltaMonotonic);
 		assert(ok);
 		buffer = MemoryKit::mbuf(buffer, 0, bufferSize);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
@@ -182,7 +188,7 @@ Controller::sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		char *buffer = (char *) psg_pnalloc(req->pool, bufferSize);
 
 		ok = constructHeaderForSessionProtocol(req, buffer,
-			bufferSize, state, delta_monotonic);
+			bufferSize, state, deltaMonotonic);
 		assert(ok);
 		SKC_TRACE(client, 3, "Header data: \"" << cEscapeString(
 			StaticString(buffer, bufferSize)) << "\"");
