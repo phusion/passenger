@@ -61,32 +61,17 @@ class IO
     end
   else
     def writev(components)
-      return write(components.join(''))
+      return write(components.pack('a*' * components.size))
     end
 
     def writev2(components, components2)
-      data = ''
-      components.each do |component|
-        data << component
-      end
-      components2.each do |component|
-        data << component
-      end
-      return write(data)
+      joined = components + components2
+      return write(joined.pack('a*' * joined.size))
     end
 
     def writev3(components, components2, components3)
-      data = ''
-      components.each do |component|
-        data << component
-      end
-      components2.each do |component|
-        data << component
-      end
-      components3.each do |component|
-        data << component
-      end
-      return write(data)
+      joined = components + components2 + components3
+      return write(joined.pack('a*' * joined.size))
     end
   end
 
