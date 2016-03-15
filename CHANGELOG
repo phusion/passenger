@@ -1,7 +1,9 @@
 Release 5.0.27
 --------------
 
- * Support Debian GNU/kFreeBSD build. Based on contribution by stevenc99.
+ * Supports Debian GNU/kFreeBSD build. Based on contribution by stevenc99.
+ * Improves resistance against clock jumps by using the monotonic clock instead of the wall clock in many places in the code base.
+ * Slightly improves out-of-memory detection in some subroutines.
 
 
 Release 5.0.26
