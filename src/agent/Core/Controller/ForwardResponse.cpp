@@ -822,6 +822,7 @@ Controller::sendResponseHeaderWithWritev(Client *client, Request *req,
 	if (constructHeaderBuffersForResponse(req, buffers,
 		maxbuffers, nbuffers, dataSize, nCacheableBuffers))
 	{
+		UPDATE_TRACE_POINT();
 		SKC_TRACE(client, 2, "Sending response headers using writev()");
 		logResponseHeaders(client, req, buffers, nbuffers, dataSize);
 		markHeaderBuffersForTurboCaching(client, req, buffers, nCacheableBuffers);
@@ -834,6 +835,7 @@ Controller::sendResponseHeaderWithWritev(Client *client, Request *req,
 		req->responseBegun |= ret > 0;
 		return ret == (ssize_t) dataSize;
 	} else {
+		UPDATE_TRACE_POINT();
 		bytesWritten = 0;
 		return false;
 	}
@@ -843,6 +845,7 @@ void
 Controller::sendResponseHeaderWithBuffering(Client *client, Request *req,
 	unsigned int offset)
 {
+	TRACE_POINT();
 	struct iovec *buffers;
 	unsigned int nbuffers, dataSize, nCacheableBuffers;
 	bool ok;
@@ -858,18 +861,21 @@ Controller::sendResponseHeaderWithBuffering(Client *client, Request *req,
 	assert(ok);
 	(void) ok; // Shut up compiler warning
 
+	UPDATE_TRACE_POINT();
 	logResponseHeaders(client, req, buffers, nbuffers, dataSize);
 	markHeaderBuffersForTurboCaching(client, req, buffers, nCacheableBuffers);
 
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
 	const unsigned int MBUF_MAX_SIZE = mbuf_pool_data_size(&mbuf_pool);
 	if (dataSize <= MBUF_MAX_SIZE) {
+		UPDATE_TRACE_POINT();
 		SKC_TRACE(client, 2, "Sending response headers using an mbuf");
 		MemoryKit::mbuf buffer(MemoryKit::mbuf_get(&mbuf_pool));
 		gatherBuffers(buffer.start, MBUF_MAX_SIZE, buffers, nbuffers);
 		buffer = MemoryKit::mbuf(buffer, offset, dataSize - offset);
 		writeResponse(client, buffer);
 	} else {
+		UPDATE_TRACE_POINT();
 		SKC_TRACE(client, 2, "Sending response headers using a psg_pool buffer");
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);
@@ -882,6 +888,7 @@ Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffe
 	unsigned int nbuffers, unsigned int dataSize)
 {
 	if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG3)) {
+		TRACE_POINT();
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);
 		SKC_TRACE(client, 3, "Sending response headers: \"" <<
@@ -889,6 +896,7 @@ Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffe
 	}
 
 	if (req->useUnionStation()) {
+		TRACE_POINT();
 		const char *status = getStatusCodeAndReasonPhrase(req->appResponse.statusCode);
 		if (status != NULL) {
 			req->logMessage("Status: " + StaticString(status));
@@ -899,6 +907,7 @@ Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffe
 		if (req->appResponse.statusCode >= 400 && req->appResponse.statusCode <= 599) {
 			// Log the request headers like Request headers: { header1: values1-concatenated, header2: values2-concatenated } (single line)
 			// Concatenation was already done by HeaderTable.h:insert (using a comma ',' for joining, or a semicolon ';' for Cookie headers
+			UPDATE_TRACE_POINT();
 			ServerKit::HeaderTable::Iterator it(req->headers);
 			Json::Value json;
 			while (*it != NULL) {
