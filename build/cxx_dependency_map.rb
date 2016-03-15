@@ -6050,6 +6050,17 @@ CXX_DEPENDENCY_MAP =
   ["src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/Utils/Hasher.h",
    "src/cxx_supportlib/oxt/macros.hpp"],
+ "src/cxx_supportlib/DataStructures/LString.cpp"=>
+  ["src/cxx_supportlib/DataStructures/LString.h",
+   "src/cxx_supportlib/MemoryKit/mbuf.h",
+   "src/cxx_supportlib/MemoryKit/palloc.h",
+   "src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/Utils/Hasher.h",
+   "src/cxx_supportlib/Utils/StrIntUtils.h",
+   "src/cxx_supportlib/oxt/backtrace.hpp",
+   "src/cxx_supportlib/oxt/detail/backtrace_disabled.hpp",
+   "src/cxx_supportlib/oxt/detail/backtrace_enabled.hpp",
+   "src/cxx_supportlib/oxt/macros.hpp"],
  "src/cxx_supportlib/DataStructures/LString.h"=>
   ["src/cxx_supportlib/MemoryKit/mbuf.h",
    "src/cxx_supportlib/MemoryKit/palloc.h",

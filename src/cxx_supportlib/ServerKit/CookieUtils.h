@@ -59,6 +59,10 @@ findCookie(psg_pool_t *pool, const LString *cookieHeaderValue, const LString *na
 	bool done = part == NULL;
 	LString *result = NULL;
 
+	if (cookieHeaderValue->size == 0) {
+		return NULL;
+	}
+
 	while (!done) {
 		if (findCookieNameValueSeparator(part, index, &separatorPart, &separatorIndex)) {
 			if (!findCookieEnd(separatorPart, separatorIndex, &endPart, &endIndex)) {

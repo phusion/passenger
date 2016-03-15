@@ -50,8 +50,8 @@ using namespace std;
  * we just store the headers non-contiguously using LString. Each LString
  * references the mbuf_block that the HTTP header data comes from.
  *
- * The empty string is repesented by `size == 0 && start == NULL && end == NULL`.
- * Parts may never contain the empty string.
+ * The empty string is represented by `size == 0 && start == &emptyLStringPart && end == &emptyLStringPart`.
+ * Except for emptyLStringPart, parts may never contain the empty string.
  *
  * This struct must be a POD so that we can allocate it with psg_pool_t.
  */
@@ -68,6 +68,8 @@ struct LString {
 	Part *end;
 	unsigned int size;
 };
+
+extern LString::Part emptyLStringPart;
 
 
 namespace {
@@ -89,8 +91,8 @@ inline void psg_lstr_append(LString *str, psg_pool_t *pool, const char *data,
 
 inline void
 psg_lstr_init(LString *str) {
-	str->start = NULL;
-	str->end   = NULL;
+	str->start = &emptyLStringPart;
+	str->end   = &emptyLStringPart;
 	str->size  = 0;
 }
 
@@ -113,7 +115,7 @@ psg_lstr_create(psg_pool_t *pool, const StaticString &str) {
 
 inline void
 psg_lstr_append_part(LString *str, LString::Part *part) {
-	if (str->end == NULL) {
+	if (str->size == 0) {
 		str->start = part;
 		str->end = part;
 	} else {

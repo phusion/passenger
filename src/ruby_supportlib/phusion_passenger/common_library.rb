@@ -315,6 +315,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'ServerKit/Implementation.cpp',
     :category => :other,
     :optimize => true
+  define_component 'DataStructures/LString.o',
+    :source   => 'DataStructures/LString.cpp',
+    :category => :other
 
   define_component 'Utils/Hasher.o',
     :source   => 'Utils/Hasher.cpp',
