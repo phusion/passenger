@@ -743,4 +743,114 @@ namespace tut {
 		ensure("(1)", testSession.isSuccessful());
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
+
+	TEST_METHOD(38) {
+		set_test_name("Session protocol: if the client prematurely"
+			" closes their outbound connection to us, and the"
+			" application decides not to finish the response (close),"
+			" we still try to send a 502 (which shouldn't log warn)");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		close(testSession.peerFd());
+
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "HTTP/1.1 502"));
+	}
+
+	TEST_METHOD(39) {
+		set_test_name("HTTP protocol: if the client prematurely"
+			" closes their outbound connection to us, and the"
+			" application decides not to finish the response (close),"
+			" we still try to send a 502 (which shouldn't log warn)");
+
+		init();
+		useTestSessionObject();
+		testSession.setProtocol("http_session");
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+		shutdown(clientConnection, SHUT_WR);
+		ensureEventuallyDrainPeerConnection();
+
+		close(testSession.peerFd());
+
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "HTTP/1.1 502"));
+	}
+
+	TEST_METHOD(40) {
+		set_test_name("Session protocol: if application decides not to "
+			" finish the response (close), and the client is still there "
+			" we should send a 502 (which should log warn)");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+
+		// We expect logging but hide it to stay in line with not logging from
+		// tests unless something is wrong.
+		setLogLevel(LVL_CRIT);
+		close(testSession.peerFd());
+
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "HTTP/1.1 502"));
+	}
+
+	TEST_METHOD(41) {
+		set_test_name("HTTP protocol: if application decides not to "
+			" finish the response (close), and the client is still there "
+			" we should send a 502 (which should log warn)");
+
+		init();
+		useTestSessionObject();
+		testSession.setProtocol("http_session");
+
+		connectToServer();
+		sendRequest(
+			"GET /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: close\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		ensureNeverDrainPeerConnection();
+
+		// We expect logging but hide it to stay in line with not logging from
+		// tests unless something is wrong.
+		setLogLevel(LVL_CRIT);
+		close(testSession.peerFd());
+
+		string header = readResponseHeader();
+		ensure(containsSubstring(header, "HTTP/1.1 502"));
+	}
 }
