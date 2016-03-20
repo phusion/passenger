@@ -139,7 +139,7 @@ static void
 installAbortHandler() {
 	VariantMap options;
 
-	options.set("passenger_root", resourceLocator->getRoot());
+	options.set("passenger_root", resourceLocator->getInstallSpec());
 
 	initializeAgentOptions("CxxTestMain", options);
 	installAgentAbortHandler();
