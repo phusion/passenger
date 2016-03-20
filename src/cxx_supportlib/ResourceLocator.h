@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -52,7 +52,7 @@ using namespace boost;
  */
 class ResourceLocator {
 private:
-	string root;
+	string installSpec;
 	string binDir;
 	string supportBinariesDir;
 	string helperScriptsDir;
@@ -81,9 +81,11 @@ private:
 public:
 	ResourceLocator() { }
 
-	ResourceLocator(const string &installSpec) {
-		if (getFileType(installSpec) == FT_REGULAR) {
-			const string &file = installSpec;
+	ResourceLocator(const string &_installSpec)
+		: installSpec(_installSpec)
+	{
+		if (getFileType(_installSpec) == FT_REGULAR) {
+			const string &file = _installSpec;
 			IniFileSectionPtr options = IniFile(file).section("locations");
 			binDir              = getOption(file, options, "bin_dir");
 			supportBinariesDir  = getOption(file, options, "support_binaries_dir");
@@ -94,7 +96,7 @@ public:
 			nodeLibDir          = getOption(file, options, "node_libdir");
 			buildSystemDir      = getOptionalSection(file, options, "node_libdir");
 		} else {
-			const string &root = installSpec;
+			const string &root = _installSpec;
 			binDir              = root + "/bin";
 			supportBinariesDir  = root + "/buildout/support-binaries";
 			helperScriptsDir    = root + "/src/helper-scripts";
@@ -106,8 +108,8 @@ public:
 		}
 	}
 
-	const string &getRoot() const {
-		return root;
+	const string &getInstallSpec() const {
+		return installSpec;
 	}
 
 	const string &getBinDir() const {

@@ -344,7 +344,7 @@ private:
 		try {
 			const size_t UNIX_PATH_MAX = sizeof(((struct sockaddr_un *) 0)->sun_path);
 			string data = "You have control 1.0\n"
-				"passenger_root: " + config->resourceLocator->getRoot() + "\n"
+				"passenger_root: " + config->resourceLocator->getInstallSpec() + "\n"
 				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"UNIX_PATH_MAX: " + toString(UNIX_PATH_MAX) + "\n";
