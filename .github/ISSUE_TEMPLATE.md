@@ -36,13 +36,14 @@ Your answer:
 
 **Question 4: Passenger installation method**:
 
-Answer:
+Your answer:
 [ ] RubyGems + Gemfile
 [ ] RubyGems, no Gemfile
 [ ] Phusion APT repo
 [ ] Phusion YUM repo
 [ ] OS X Homebrew
 [ ] source tarball
+[ ] Other, please specify:
 
 **Question 5: Your app's programming language (including any version managers) and framework (including versions)**:
 - For example: Ruby 2.3.0, RVM, Rails 5.0.0; Node.js 4.0.0 with Express 4.13.4
