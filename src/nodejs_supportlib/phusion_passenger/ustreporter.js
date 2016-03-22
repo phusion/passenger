@@ -59,7 +59,7 @@ exports.getApplicationRoot = function() {
  */
 exports.nowTimestamp = function() {
 	var secAndUsec = process.hrtime();
-	return (secAndUsec[0] * 1e6) + (secAndUsec[1] / 1e3);
+	return Math.round((secAndUsec[0] * 1e6) + (secAndUsec[1] / 1e3));
 }
 
 /**
