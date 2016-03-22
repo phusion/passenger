@@ -61,6 +61,4 @@ Your answer:
 
 ---
 
-We strive for quality and appreciate you taking the time to submit a report! Please note that if you want guaranteed response times 
-and priority issue support we encourage you to join our [enterprise customer](https://www.phusionpassenger.com/enterprise) base. They 
-also provide us with the means to continue our high level of open source support!
+We strive for quality and appreciate you taking the time to submit a report! Please note that if you want guaranteed response times and priority issue support we encourage you to join our [enterprise customer](https://www.phusionpassenger.com/enterprise) base. They also provide us with the means to continue our high level of open source support!
