@@ -38,12 +38,12 @@ namespace Passenger {
 			mach_timebase_info_data_t timeInfo;
 		#elif defined(SYSTEM_TIME_HAVE_MONOTONIC_CLOCK)
 			#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_COARSE
-				unsigned long long monotonicCoarseResolution = 0;
+				unsigned long long monotonicCoarseResolutionNs = 0;
 			#endif
 			#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_FAST
-				unsigned long long monotonicFastResolution = 0;
+				unsigned long long monotonicFastResolutionNs = 0;
 			#endif
-			unsigned long long monotonicResolution;
+			unsigned long long monotonicResolutionNs;
 		#endif
 	}
 }

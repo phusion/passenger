@@ -68,12 +68,12 @@ namespace SystemTimeData {
 		extern mach_timebase_info_data_t timeInfo;
 	#elif defined(SYSTEM_TIME_HAVE_MONOTONIC_CLOCK)
 		#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_COARSE
-			extern unsigned long long monotonicCoarseResolution;
+			extern unsigned long long monotonicCoarseResolutionNs;
 		#endif
 		#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_FAST
-			extern unsigned long long monotonicFastResolution;
+			extern unsigned long long monotonicFastResolutionNs;
 		#endif
-		extern unsigned long long monotonicResolution;
+		extern unsigned long long monotonicResolutionNs;
 	#endif
 }
 
@@ -100,10 +100,10 @@ typedef unsigned long long MonotonicTimeUsec;
 class SystemTime {
 public:
 	enum Granularity {
-		GRAN_1SEC   = 1000000,   // 1 millisecond granuarlity
-		GRAN_10MSEC = 10000,     // 10 milliseconds granularity
-		GRAN_1MSEC  = 1000,      // 1 millisecond granularity
-		GRAN_1USEC  = 1          // 1 microsecond granularty
+		GRAN_1SEC   = 1000000000,   // 1 millisecond granularity
+		GRAN_10MSEC = 10000000,     // 10 milliseconds granularity
+		GRAN_1MSEC  = 1000000,      // 1 millisecond granularity
+		GRAN_1USEC  = 1000          // 1 microsecond granularty
 	};
 
 private:
@@ -113,7 +113,7 @@ private:
 		}
 	}
 
-	template<Granularity granularity>
+	template<Granularity granularityNs>
 	static MonotonicTimeUsec _getMonotonicUsec() {
 		if (OXT_UNLIKELY(SystemTimeData::hasForcedUsecValue)) {
 			return SystemTimeData::hasForcedValue;
@@ -169,23 +169,23 @@ private:
 
 			#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_COARSE
 				if (clockId == -1
-				 && SystemTimeData::monotonicCoarseResolution != 0
-				 && SystemTimeData::monotonicCoarseResolution <= granularity)
+				 && SystemTimeData::monotonicCoarseResolutionNs != 0
+				 && SystemTimeData::monotonicCoarseResolutionNs <= granularityNs)
 				{
 					clockId = CLOCK_MONOTONIC_COARSE;
 				}
 			#endif
 			#ifdef SYSTEM_TIME_HAVE_CLOCK_MONOTONIC_FAST
 				if (clockId == -1
-				 && SystemTimeData::monotonicFastResolution != 0
-				 && SystemTimeData::monotonicFastResolution <= granularity)
+				 && SystemTimeData::monotonicFastResolutionNs != 0
+				 && SystemTimeData::monotonicFastResolutionNs <= granularityNs)
 				{
 					clockId = CLOCK_MONOTONIC_FAST;
 				}
 			#endif
 			if (clockId == -1
-			 && SystemTimeData::monotonicResolution != 0
-			 && SystemTimeData::monotonicResolution <= granularity)
+			 && SystemTimeData::monotonicResolutionNs != 0
+			 && SystemTimeData::monotonicResolutionNs <= granularityNs)
 			{
 				clockId = CLOCK_MONOTONIC;
 			}
@@ -222,22 +222,22 @@ public:
 
 			#ifdef CLOCK_MONOTONIC_COARSE
 				if (clock_getres(CLOCK_MONOTONIC_COARSE, &ts) == 0) {
-					SystemTimeData::monotonicCoarseResolution =
-						ts.tv_sec * 1000000ull +
-						ts.tv_nsec / 1000ull;
+					SystemTimeData::monotonicCoarseResolutionNs =
+						ts.tv_sec * 1000000000ull +
+						ts.tv_nsec;
 				}
 			#endif
 			#ifdef CLOCK_MONOTONIC_FAST
 				if (clock_getres(CLOCK_MONOTONIC_FAST, &ts) == 0) {
-					SystemTimeData::monotonicFastResolution =
-						ts.tv_sec * 1000000ull +
-						ts.tv_nsec / 1000ull;
+					SystemTimeData::monotonicFastResolutionNs =
+						ts.tv_sec * 1000000000ull +
+						ts.tv_nsec;
 				}
 			#endif
 			if (clock_getres(CLOCK_MONOTONIC, &ts) == 0) {
-				SystemTimeData::monotonicResolution =
-					ts.tv_sec * 1000000ull +
-					ts.tv_nsec / 1000ull;
+				SystemTimeData::monotonicResolutionNs =
+					ts.tv_sec * 1000000000ull +
+					ts.tv_nsec;
 			}
 		#endif
 	}
@@ -271,7 +271,7 @@ public:
 	 * @throws TimeRetrievalException Something went wrong while retrieving the time.
 	 * @throws boost::thread_interrupted
 	 */
-	static MonotonicTimeUsec getUsec() {
+	static unsigned long long getUsec() {
 		if (OXT_UNLIKELY(SystemTimeData::hasForcedUsecValue)) {
 			return SystemTimeData::forcedUsecValue;
 		} else {
