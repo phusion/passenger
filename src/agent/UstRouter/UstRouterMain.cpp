@@ -666,5 +666,8 @@ ustRouterMain(int argc, char *argv[]) {
 
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
+
+	restoreOomScore(agentsOptions);
+
 	return runUstRouter();
 }

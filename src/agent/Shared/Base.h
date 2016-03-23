@@ -51,6 +51,8 @@ void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
 
 void shutdownAgent(VariantMap *agentOptions);
 
+void restoreOomScore(VariantMap *agentOptions);
+
 }
 
 #endif /* _PASSENGER_AGENT_BASE_H_ */

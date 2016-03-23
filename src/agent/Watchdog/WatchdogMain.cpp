@@ -162,7 +162,7 @@ static void cleanup(const WorkingObjectsPtr &wo);
 /***** Functions *****/
 
 static FILE *
-openOomAdjFile(const char *mode, OomFileType &type) {
+openOomAdjFileGetType(const char *mode, OomFileType &type) {
 	FILE *f = fopen("/proc/self/oom_score_adj", mode);
 	if (f == NULL) {
 		f = fopen("/proc/self/oom_adj", mode);
@@ -175,6 +175,16 @@ openOomAdjFile(const char *mode, OomFileType &type) {
 	} else {
 		type = OOM_SCORE_ADJ;
 		return f;
+	}
+}
+
+static FILE *
+openOomAdjFileForcedType(const char *mode, OomFileType &type) {
+	if (type == OOM_SCORE_ADJ) {
+		return fopen("/proc/self/oom_score_adj", mode);
+	} else {
+		assert(type == OOM_ADJ);
+		return fopen("/proc/self/oom_adj", mode);
 	}
 }
 
@@ -191,14 +201,24 @@ setOomScore(const StaticString &score) {
 
 	FILE *f;
 	OomFileType type;
+	string filteredScore;
 
-	f = openOomAdjFile("w", type);
+	if (score.at(0) == 'l') {
+		filteredScore = score.substr(1);
+		type = OOM_ADJ;
+	} else {
+		filteredScore = score;
+		type = OOM_SCORE_ADJ;
+	}
+	f = openOomAdjFileForcedType("w", type);
 	if (f != NULL) {
-		size_t ret = fwrite(score.data(), 1, score.size(), f);
+		size_t ret = fwrite(filteredScore.data(), 1, filteredScore.size(), f);
 		// We can't do anything about failures, so ignore compiler
 		// warnings about not doing anything with the result.
 		(void) ret;
 		fclose(f);
+	} else {
+		P_WARN("setOomScore(" << filteredScore << ", " << type << ") failed due to error: " << strerror(errno));
 	}
 }
 
@@ -211,9 +231,13 @@ setOomScoreNeverKill() {
 	FILE *f;
 	OomFileType type;
 
-	f = openOomAdjFile("r", type);
+	f = openOomAdjFileGetType("r", type);
 	if (f == NULL) {
 		return "";
+	}
+	// mark if this is a legacy score so we won't try to write it as OOM_SCORE_ADJ
+	if (type == OOM_ADJ) {
+		oldScore.append("l");
 	}
 	char buf[1024];
 	size_t bytesRead;
@@ -230,7 +254,7 @@ setOomScoreNeverKill() {
 	}
 	fclose(f);
 
-	f = openOomAdjFile("w", type);
+	f = openOomAdjFileForcedType("w", type);
 	if (f == NULL) {
 		return "";
 	}
@@ -781,6 +805,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	agentsOptions = new VariantMap();
 	*agentsOptions = initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " watchdog",
 		parseOptions, NULL, 2);
+	agentsOptions->set("original_oom_score", oldOomScore);
 
 	// Start all sub-agents with this environment variable.
 	setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);

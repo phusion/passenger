@@ -308,8 +308,6 @@ public:
 			 * only affects the watchdog but not agents. */
 			setpgid(getpid(), getpid());
 
-			setOomScore(oldOomScore);
-
 			try {
 				execProgram();
 			} catch (...) {

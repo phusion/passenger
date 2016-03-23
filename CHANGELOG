@@ -2,6 +2,7 @@ Release 5.0.27
 --------------
 
  * Fixes encoding issue for Ruby apps that resulted in a 0-byte response body. This occurred when the Ruby native support lib was not used and the app outputted an encoding that doesn't mix with UTF-8 (like UTF-16). Closes GH-1763.
+ * Fixes Passenger Core and application processes staying on the Watchdogs OOM score (unkillable) when user switching is set to off. Closes GH-1631.
  * Supports Debian GNU/kFreeBSD build. Based on contribution by stevenc99.
  * Switches a number of places in the Passenger Core over to using the monotonic clock instead of the wallclock for robustness against clock time-stepping.
  * Slightly improves out-of-memory detection in some subroutines.
