@@ -16,11 +16,11 @@ https://www.phusionpassenger.com/library/admin/
 **Question 1: What is the problem?**
 - What is the expected behavior?
 - What is the actual behavior?
-- How can we reproduce it? The easier you make it for us to reproduce the issue, the better we can help you.
+- How can we reproduce it? Please try to provide a sample application (or Virtual Machine) demonstrating the issue. Otherwise, if we can't reproduce it, we might have to ask you a number of followup questions or run certain commands to try and figure out the problem.
 
-Be as detailed as possible, describe the context, include any logs and stack traces (don't just cut/paste the error, provide some logging before that too).
+Be as detailed as possible in your descriptions, include any logs and stack traces (don't just cut/paste the error, provide some logging before that too).
 
-(if you are requesting a feature instead of reporting an issue, describe here what it is and how it would help you)
+(if you are requesting a feature instead of reporting an issue, describe here what you have in mind and how it would help you)
 
 Your answer:
 
