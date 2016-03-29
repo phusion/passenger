@@ -654,9 +654,13 @@ escapeHTML(const StaticString &input) {
 		if (ch & 128) {
 			// Multibyte UTF-8 character.
 			const char *prev = current;
-			utf8::advance(current, 1, end);
-			result.append(prev, current - prev);
-
+			try {
+				utf8::advance(current, 1, end);
+				result.append(prev, current - prev);
+			} catch (const utf8::invalid_utf8 &e) {
+				result.append("?"); // Oops, not UTF-8 after all, don't parse it.
+				current++;
+			}
 		} else {
 			// ASCII character <= 127.
 			if (ch == '<') {

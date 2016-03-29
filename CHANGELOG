@@ -9,6 +9,7 @@ Release 5.0.27
  * Warnings about 502 responses that are caused by applications aborting their output while the client is no longer connected (e.g. due to half-close event, reported since 5.0.26) are now reduced to debug level.
  * Fixes automatic compilation of Ruby's native_support library in case Passenger was installed through Debian or RPM packages. Closes GH-1778.
  * Fixes memory leak when buffering large request/response bodies to disk (which happens as soon as the 100 KB memory buffer is full).
+ * Fixes crash if an application spawn fails and a non-UTF8 character appears in the spawn output. Closes GH-1601.
  * [Union Station] Fixes a crash that occurs if all of the following conditions are met: 1) Union Station support is enabled, 2) the client sent at least one header containing the empty string, 3) the application responds with a 4xx or 5xx status. Closes GH-1776.
 
 
