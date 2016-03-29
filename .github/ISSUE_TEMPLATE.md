@@ -13,6 +13,8 @@ Please read our troubleshooting and debugging guides first:
 https://www.phusionpassenger.com/library/admin/troubleshooting/
 https://www.phusionpassenger.com/library/admin/
 
+**Please try with the newest version of Passenger to avoid issues that have already been fixed**
+
 **Question 1: What is the problem?**
 - What is the expected behavior?
 - What is the actual behavior?
