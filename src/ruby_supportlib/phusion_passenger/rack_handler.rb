@@ -33,6 +33,9 @@ require 'phusion_passenger'
 ## Magic comment: end bootstrap ##
 
 PhusionPassenger.locate_directories
+# NOTE: Prevents `rails server` breaking due to `config/environment.rb`
+# using the `public_api` module.
+PhusionPassenger.require_passenger_lib('public_api')
 
 require 'rbconfig'
 
