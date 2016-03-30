@@ -235,6 +235,20 @@ module PhusionPassenger
     require("#{ruby_libdir}/phusion_passenger/#{name}")
   end
 
+  # Forward define public_api.rb methods for code that tries to hook 
+  # Passenger events before an app is spawned (such as mongoid)
+  def on_event(name, &block)
+    # The definition in `public_api.rb` will override this implementation when
+    # a Ruby application is spawned.
+    nil
+  end
+  
+  def call_event(name, *args)
+    # The definition in `public_api.rb` will override this implementation when
+    # a Ruby application is spawned.
+    nil
+  end
+
 
 private
   def self.infer_install_spec
