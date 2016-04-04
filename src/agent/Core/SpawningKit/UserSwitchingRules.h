@@ -55,10 +55,10 @@ struct UserSwitchingInfo {
 	uid_t uid;
 	gid_t gid;
 	int ngroups;
-	shared_array<gid_t> gidset;
+	boost::shared_array<gid_t> gidset;
 
-	struct passwd lve_userpwd, *lve_userpwd_complete;
-	shared_array<char> lve_userpwd_strbuf;
+	struct passwd lveUserPwd, *lveUserPwdComplete;
+	boost::shared_array<char> lveUserPwdStrBuf;
 };
 
 inline UserSwitchingInfo
@@ -67,8 +67,8 @@ prepareUserSwitching(const Options &options) {
 	UserSwitchingInfo info;
 
 	if (geteuid() != 0) {
-		struct passwd &pwd = info.lve_userpwd;
-		shared_array<char> &strings = info.lve_userpwd_strbuf;
+		struct passwd &pwd = info.lveUserPwd;
+		boost::shared_array<char> &strings = info.lveUserPwdStrBuf;
 		struct passwd *userInfo;
 		long bufSize;
 
@@ -101,13 +101,13 @@ prepareUserSwitching(const Options &options) {
 	string defaultGroup;
 	string startupFile = absolutizePath(options.getStartupFile(),
 		absolutizePath(options.appRoot));
-	struct passwd &pwd = info.lve_userpwd;
-	shared_array<char> &pwdBuf = info.lve_userpwd_strbuf;
+	struct passwd &pwd = info.lveUserPwd;
+	boost::shared_array<char> &pwdBuf = info.lveUserPwdStrBuf;
 	struct passwd *userInfo;
 	struct group  grp;
 	gid_t  groupId = (gid_t) -1;
 	long pwdBufSize, grpBufSize;
-	shared_array<char> grpBuf;
+	boost::shared_array<char> grpBuf;
 	int ret;
 
 	// _SC_GETPW_R_SIZE_MAX/_SC_GETGR_R_SIZE_MAX are not maximums:
@@ -256,7 +256,7 @@ prepareUserSwitching(const Options &options) {
 			int e = errno;
 			throw SystemException("getgrouplist() failed", e);
 		}
-		info.gidset = shared_array<gid_t>(new gid_t[info.ngroups]);
+		info.gidset = boost::shared_array<gid_t>(new gid_t[info.ngroups]);
 		for (int i = 0; i < info.ngroups; i++) {
 			info.gidset[i] = groups[i];
 		}

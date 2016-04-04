@@ -872,8 +872,7 @@ protected:
 		}
 	}
 
-	void enterLveJail(const struct passwd * pw)
-	{
+	void enterLveJail(const struct passwd * pw) {
 		if (!pw)
 			return;
 
@@ -907,7 +906,7 @@ protected:
 
 	void switchUser(const SpawnPreparationInfo &info) {
 		if (info.userSwitching.enabled) {
-			enterLveJail(&info.userSwitching.lve_userpwd);
+			enterLveJail(&info.userSwitching.lveUserPwd);
 
 			bool setgroupsCalled = false;
 			#ifdef HAVE_GETGROUPLIST

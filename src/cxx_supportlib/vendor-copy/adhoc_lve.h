@@ -110,8 +110,7 @@ typedef int (*jail_function_ptr_t)(const struct passwd *, char*);
 /**
  * Must be used once per app instances
  */
-class LibLve : private boost::noncopyable
-{
+class LibLve : private boost::noncopyable {
 public:
 
 #ifdef LIBLVE_LOAD
@@ -198,11 +197,9 @@ private:
 	std::string                      init_error;
 };
 
-class LveInitSignleton
-{
+class LveInitSignleton {
 public:
-	static LibLve& getInstance(std::string* outInitOneTimeError)
-	{
+	static LibLve& getInstance(std::string* outInitOneTimeError) {
 		if (!instance())
 		{
 			static boost::once_flag flag = BOOST_ONCE_INIT;
@@ -214,14 +211,12 @@ public:
 private:
 	typedef boost::scoped_ptr<LibLve> lvelib_scoped_ptr;
 
-	static lvelib_scoped_ptr& instance()
-	{
+	static lvelib_scoped_ptr& instance() {
 		static lvelib_scoped_ptr lvelib_scoped_ptr;
 		return lvelib_scoped_ptr;
 	}
 
-	static void initOnce(std::string *err_buf)
-	{
+	static void initOnce(std::string *err_buf) {
 		instance().reset(new LibLve);
 
 		if (instance()->is_error() && err_buf)
@@ -229,8 +224,7 @@ private:
 	}
 };
 
-class LveEnter : private boost::noncopyable
-{
+class LveEnter : private boost::noncopyable {
 public:
 	typedef void (*exit_callback_t)(bool entered, const std::string& exit_error);
 
@@ -247,8 +241,7 @@ public:
 		exit();
 	}
 
-	LveEnter& enter(uint32_t uid, uint32_t min_uid)
-	{
+	LveEnter& enter(uint32_t uid, uint32_t min_uid) {
 		bool is_enter_lve_allowed = (min_uid <= uid);
 
 		if (!is_enter_lve_allowed || !ctx.is_lve_ready() || entered)
@@ -266,8 +259,7 @@ public:
 		return *this;
 	}
 
-	LveEnter& exit()
-	{
+	LveEnter& exit() {
 		const bool memento (entered);
 
 		if (entered)
@@ -293,7 +285,7 @@ public:
 	const LibLve& lveInstance() const { return ctx; }
 
 private:
-	LibLve& ctx;
+	LibLve &ctx;
 	uint32_t cookie;
 	bool entered;
 	std::ostringstream enter_exit_error;

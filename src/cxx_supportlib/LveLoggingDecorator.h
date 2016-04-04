@@ -33,13 +33,11 @@
 namespace Passenger {
 
 
-class LveLoggingDecorator
-{
+class LveLoggingDecorator {
 public:
-	static adhoc_lve::LibLve& lveInitOnce()
-	{
+	static adhoc_lve::LibLve& lveInitOnce() {
 		std::string initOneTimeError;
-		adhoc_lve::LibLve& lveLibHandle = adhoc_lve::LveInitSignleton::getInstance(&initOneTimeError);
+		adhoc_lve::LibLve &lveLibHandle = adhoc_lve::LveInitSignleton::getInstance(&initOneTimeError);
 
 		if (!lveLibHandle.is_lve_available())
 		{
@@ -58,8 +56,7 @@ public:
 		return lveLibHandle;
 	}
 
-	static void logLveEnter(const adhoc_lve::LveEnter& lveEnter, uid_t uid, uid_t min_uid)
-	{
+	static void logLveEnter(const adhoc_lve::LveEnter& lveEnter, uid_t uid, uid_t min_uid) {
 		if (lveEnter.lveInstance().is_lve_ready() && lveEnter.is_error())
 		{
 			P_ERROR("LVE enter [pid " << ::getpid() << ", uid "     << uid
@@ -79,8 +76,7 @@ public:
 		}
 	}
 
-	static void lveExitCallback(bool entered, const std::string& exit_error)
-	{
+	static void lveExitCallback(bool entered, const std::string& exit_error) {
 		if (!entered)
 			return;
 
