@@ -444,4 +444,38 @@
 			}
 		}
 	
+	
+		static const char *
+		cmd_passenger_lve_min_uid(cmd_parms *cmd, void *pcfg, const char *arg) {
+			DirConfig *config = (DirConfig *) pcfg;
+			char *end;
+			long result;
+
+			result = strtol(arg, &end, 10);
+			if (*end != '\0') {
+				string message = "Invalid number specified for ";
+				message.append(cmd->directive->directive);
+				message.append(".");
+
+				char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+					message.size() + 1);
+				memcpy(messageStr, message.c_str(), message.size() + 1);
+				return messageStr;
+			
+				} else if (result < 0) {
+					string message = "Value for ";
+					message.append(cmd->directive->directive);
+					message.append(" must be greater than or equal to 0.");
+
+					char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+						message.size() + 1);
+					memcpy(messageStr, message.c_str(), message.size() + 1);
+					return messageStr;
+			
+			} else {
+				config->lveMinUid = (int) result;
+				return NULL;
+			}
+		}
+	
 

@@ -211,6 +211,7 @@ module PhusionPassenger
       end
       result << ' -lrt' if has_rt_library?
       result << ' -lmath' if has_math_library?
+      result << ' -ldl'
       result.strip!
       return result
     end

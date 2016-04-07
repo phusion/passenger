@@ -61,6 +61,8 @@ struct GeneratedDirConfigPart {
 	Threeway stickySessionsCookieName;
 	/** Force Passenger to believe that an application process can handle the given number of concurrent requests per process */
 	int forceMaxConcurrentRequestsPerProcess;
+	/** User id starting from entering LVE and CageFS is allowed. */
+	int lveMinUid;
 	/** The maximum number of simultaneously alive application instances a single application may occupy. */
 	int maxInstancesPerApp;
 	/** The maximum number of seconds that a preloader process may be idle before it is shutdown. */
