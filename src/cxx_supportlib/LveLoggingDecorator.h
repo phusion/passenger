@@ -28,6 +28,8 @@
 
 #include <Logging.h>
 #include <adhoc_lve.h>
+#include <string>
+#include <sys/types.h>
 #include <unistd.h>
 
 namespace Passenger {
@@ -35,65 +37,55 @@ namespace Passenger {
 
 class LveLoggingDecorator {
 public:
-	static adhoc_lve::LibLve& lveInitOnce() {
+	static adhoc_lve::LibLve &lveInitOnce() {
 		std::string initOneTimeError;
 		adhoc_lve::LibLve &lveLibHandle = adhoc_lve::LveInitSignleton::getInstance(&initOneTimeError);
 
-		if (!lveLibHandle.is_lve_available())
-		{
+		if (!lveLibHandle.is_lve_available()) {
 			P_DEBUG("LVE lib is not available");
-		}
-		else if (lveLibHandle.is_error())
-		{
+		} else if (lveLibHandle.is_error()) {
 			if (!initOneTimeError.empty())
 				P_ERROR("LVE init error: " << initOneTimeError);
-		}
-		else
-		{
+		} else {
 			P_DEBUG("LVE get instance (or init) success");
 		}
 
 		return lveLibHandle;
 	}
 
-	static void logLveEnter(const adhoc_lve::LveEnter& lveEnter, uid_t uid, uid_t min_uid) {
-		if (lveEnter.lveInstance().is_lve_ready() && lveEnter.is_error())
-		{
+	static void logLveEnter(const adhoc_lve::LveEnter &lveEnter, uid_t uid, uid_t min_uid) {
+		if (lveEnter.lveInstance().is_lve_ready() && lveEnter.is_error()) {
 			P_ERROR("LVE enter [pid " << ::getpid() << ", uid "     << uid
 			                                        << ", min_uid " << min_uid
 			                                        << "] error: "  << lveEnter.error());
-		}
-		else if (lveEnter.is_entered())
-		{
+		} else if (lveEnter.is_entered()) {
 			P_DEBUG("LVE enter [pid " << ::getpid() << ", uid " << uid
 			                                        << ", min_uid " << min_uid
 			                                        << "] success");
-		}
-		else
-		{
+		} else {
 			P_DEBUG("LVE not in [pid " << ::getpid() << ", uid " << uid
 			                                         << ", min_uid " << min_uid << "]");
 		}
 	}
 
-	static void lveExitCallback(bool entered, const std::string& exit_error) {
-		if (!entered)
+	static void lveExitCallback(bool entered, const std::string &exit_error) {
+		if (!entered) {
 			return;
-
-		try
-		{
-			bool is_error = !exit_error.empty();
-			if (is_error)
-				P_ERROR("LVE exit [pid " << ::getpid() << "] error: " << exit_error);
-			else
-				P_DEBUG("LVE exit [pid " << ::getpid() << "] success");
 		}
-		catch(...)
-		{
+
+		try {
+			bool is_error = !exit_error.empty();
+			if (is_error) {
+				P_ERROR("LVE exit [pid " << ::getpid() << "] error: " << exit_error);
+			} else {
+				P_DEBUG("LVE exit [pid " << ::getpid() << "] success");
+			}
+		} catch(...) {
 			// Can be called from adhoc_lve::LveEnter destructor while stack unwinding.
 		}
 	}
 }; // class LveLoggingDecorator
+
 
 } // namespace Passenger
 

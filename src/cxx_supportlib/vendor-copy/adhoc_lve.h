@@ -26,14 +26,21 @@
 #ifndef _ADHOC_LVE_H_
 #define _ADHOC_LVE_H_
 
+// A library for using CloudLinux's LVE technology.
+// https://www.cloudlinux.com/lve-manage.php
+// http://docs.cloudlinux.com/understanding_lve.html
+
 #include <functional>
 #include <cstdlib>
+#include <cstddef>
 #include <sstream>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/once.hpp>
 
+#include <sys/types.h>
+#include <unistd.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <stdint.h>
