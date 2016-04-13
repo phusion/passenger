@@ -237,7 +237,7 @@ public:
 	/** See class overview. Defaults to the defaultUser's primary group. */
 	StaticString defaultGroup;
 
-	/** User id starting from entering LVE and CageFS are allowed. */
+	/** Minimum user id starting from which entering LVE and CageFS is allowed. */
 	unsigned int lveMinUid;
 
 	/**

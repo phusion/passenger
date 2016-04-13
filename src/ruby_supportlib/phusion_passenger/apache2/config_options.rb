@@ -233,7 +233,7 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :type      => :integer,
     :min_value => 0,
     :context   => ["RSRC_CONF"],
-    :desc      => "User id starting from entering LVE and CageFS is allowed."
+    :desc      => "Minimum user id starting from which entering LVE and CageFS is allowed."
   },
 
 

@@ -241,7 +241,7 @@
 		(Take1Func) cmd_passenger_lve_min_uid,
 		NULL,
 		RSRC_CONF,
-		"User id starting from entering LVE and CageFS is allowed."),
+		"Minimum user id starting from which entering LVE and CageFS is allowed."),
 
 	
 	AP_INIT_TAKE1("RailsEnv",
