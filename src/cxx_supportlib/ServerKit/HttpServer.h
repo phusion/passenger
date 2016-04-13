@@ -161,6 +161,10 @@ private:
 		} else {
 			SKC_TRACE(client, 3, "Request object destroyed; not added to freelist " <<
 				"because it's full (" << freeRequestCount << ")");
+			if (request->pool != NULL) {
+				psg_destroy_pool(request->pool);
+				request->pool = NULL;
+			}
 			delete request;
 		}
 
