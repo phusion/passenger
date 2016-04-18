@@ -20,6 +20,10 @@ if test "x$PASSENGER_LIBS" = "x" && ! $PASSENGER_CONFIG --compiled; then
     if ! cd $ngx_addon_dir; then
         exit 1
     fi
+    if [ "$ngx_module_link" = DYNAMIC ]; then
+        EXTRA_CXXFLAGS="-fPIC"
+        export EXTRA_CXXFLAGS
+    fi
     if test "x$TRACE" = 1; then
         if ! rake --trace nginx CACHING=false; then
             exit 1
