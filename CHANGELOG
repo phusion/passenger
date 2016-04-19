@@ -2,6 +2,7 @@ Release 5.0.28
 --------------
 
  * Finalizes the fix (5.0.26) for the `rails server` command integration to prevent "missing on_event" errors. Closes GH-1768.
+ * Fixes missing -fPIC in Nginx dynamic module compilation (5.0.26) on Linux (rewrite of a patch by Andrei Belov). Closes GH-1793.
  * Fixes memory leak that could occur whenever more than 1024 concurrent requests are handled (more likely since the higher concurrency support options from 5.0.24). Closes GH-1797.
  * Integrates with CloudLinux LVE and CageFS (security checks and a new option PassengerLveMinUid). Thanks to Oleksiy Shchukin from CloudLinux Inc. for contributing this.
  * Fixes the Nginx build when the PCRE library is not available (such as when compiling with `--without-http_rewrite_module`). Closes GH-1796.

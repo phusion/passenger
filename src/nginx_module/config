@@ -12,26 +12,32 @@ PATH="$ngx_addon_dir/../../bin:$PATH"
 export PATH
 
 PASSENGER_CONFIG=${PASSENGER_CONFIG:-passenger-config}
+BUILD_DIRECTIVE="nginx"
+LINK_DIRECTIVE="--nginx-libs"
+COMPILE_CHECK_DIRECTIVE="--compiled"
 
-if test "x$PASSENGER_LIBS" = "x" && ! $PASSENGER_CONFIG --compiled; then
+if [ "$ngx_module_link" = DYNAMIC ]; then
+    BUILD_DIRECTIVE="nginx:as_dynamic_module"
+    LINK_DIRECTIVE="--nginx-dynamic-libs"
+    COMPILE_CHECK_DIRECTIVE="--nginx-dynamic-compiled"
+fi
+
+# N.B. the compile check only looks at whether the common library objects are compiled and it assumes that
+# their presence indicates a good build was performed. If other essential files were manually deleted the
+# rake $BUILD_DIRECTIVE task (or rake clean) can be run manually to repair/reset the build.
+if test "x$PASSENGER_LIBS" = "x" && ! $PASSENGER_CONFIG $COMPILE_CHECK_DIRECTIVE; then
     echo "*** The Phusion Passenger support files are not yet compiled. Compiling them for you... ***"
-    echo "*** Running 'rake nginx CACHING=false' in $ngx_addon_dir... ***"
     old_dir=`pwd`
     if ! cd $ngx_addon_dir; then
         exit 1
     fi
-    if [ "$ngx_module_link" = DYNAMIC ]; then
-        EXTRA_CXXFLAGS="-fPIC"
-        export EXTRA_CXXFLAGS
+    TRACE_DIRECTIVE=""
+    if test "x$TRACE" = "x1"; then
+        TRACE_DIRECTIVE="--trace"
     fi
-    if test "x$TRACE" = 1; then
-        if ! rake --trace nginx CACHING=false; then
-            exit 1
-        fi
-    else
-        if ! rake nginx CACHING=false; then
-            exit 1
-        fi
+    echo "*** Running 'rake $TRACE_DIRECTIVE $BUILD_DIRECTIVE CACHING=false' in $ngx_addon_dir... ***"
+    if ! rake $TRACE_DIRECTIVE $BUILD_DIRECTIVE CACHING=false; then
+        exit 1
     fi
     cd "$old_dir"
     echo "*** Phusion Passenger support files have been successfully compiled. ***"
@@ -42,7 +48,7 @@ if test "x$PASSENGER_INCLUDEDIR" = "x"; then
     PASSENGER_INCLUDEDIR=`$PASSENGER_CONFIG --includedir`
 fi
 if test "x$PASSENGER_LIBS" = "x"; then
-    PASSENGER_LIBS=`$PASSENGER_CONFIG --nginx-libs`
+    PASSENGER_LIBS=`$PASSENGER_CONFIG $LINK_DIRECTIVE`
 fi
 
 PASSENGER_MODULE_INCS="$PASSENGER_INCLUDEDIR"

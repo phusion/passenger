@@ -16,6 +16,8 @@ fi
 
 COMPILE_CONCURRENCY=${COMPILE_CONCURRENCY:-2}
 
+TEST_DYNAMIC_WITH_NGINX_VERSION=1.9.15
+
 export VERBOSE=1
 export TRACE=1
 export DEVDEPS_DEFAULT=no
@@ -213,6 +215,13 @@ if [[ "$TEST_NGINX" = 1 ]]; then
 	install_node_and_modules
 	run ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
 	run bundle exec drake -j$COMPILE_CONCURRENCY test:integration:nginx
+	
+	run wget http://www.nginx.org/download/nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION.tar.gz
+	run tar zxf nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION.tar.gz
+	run cd nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION
+	run ./configure --add-dynamic-module=$(../bin/passenger-config --nginx-addon-dir)
+	run make
+	run cd ..
 fi
 
 if [[ "$TEST_APACHE2" = 1 ]]; then

@@ -215,6 +215,7 @@ EXTRA_CXX_LDFLAGS = compiler_flag_option('EXTRA_LDFLAGS') + " " +
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "support-binaries") + "/"
 COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "common") + "/"
 APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "apache2") + "/"
+NGINX_DYNAMIC_OUTPUT_DIR  = string_option('NGINX_DYNAMIC_OUTPUT_DIR', OUTPUT_DIR + "nginx_dynamic") + "/"
 LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libev") + "/"
 LIBUV_OUTPUT_DIR          = string_option('LIBUV_OUTPUT_DIR', OUTPUT_DIR + "libuv") + "/"
 ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id

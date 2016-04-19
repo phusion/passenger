@@ -53,6 +53,8 @@ module PhusionPassenger
       "includedir",
       "nginx-addon-dir",
       "nginx-libs",
+      "nginx-dynamic-libs",
+      "nginx-dynamic-compiled",
       "compiled",
       "custom-packaged",
       "installed-from-release-package",

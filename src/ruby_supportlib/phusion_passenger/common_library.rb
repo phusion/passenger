@@ -78,7 +78,7 @@ class CommonLibraryBuilder
     result = []
 
     selected_categories.each do |category|
-      object_names = selected_objects_beloging_to_category(category)
+      object_names = selected_objects_belonging_to_category(category)
       result.concat(object_filenames_for(object_names))
     end
 
@@ -231,7 +231,7 @@ private
     return expected == actual
   end
 
-  def selected_objects_beloging_to_category(category)
+  def selected_objects_belonging_to_category(category)
     result = []
     @selected_components.each_pair do |object_name, options|
       if options[:category] == category
