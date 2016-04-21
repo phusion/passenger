@@ -1,6 +1,7 @@
 /*
  * twemproxy - A fast and lightweight proxy for memcached protocol.
  * Copyright (C) 2011 Twitter, Inc.
+ * Copyright (C) 2014-2016 Phusion Holding B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +20,28 @@
 #include <cstring>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
-#include <cstring>
+#include <oxt/backtrace.hpp>
 #include <algorithm>
+#include <ostream>
 #include <MemoryKit/mbuf.h>
+#include <Logging.h>
 
 namespace Passenger {
 namespace MemoryKit {
 
 //#define MBUF_DEBUG
+
+#define ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, expr) \
+	do { \
+		if (OXT_UNLIKELY(!(expr))) { \
+			P_BUG_WITH_FORMATTER_CODE(stream, \
+				stream << "Assertion failed: " #expr "\n"; \
+				mbuf_block_print(mbuf_block, stream); \
+			); \
+		} \
+	} while (false)
+
+static void mbuf_block_print(struct mbuf_block *mbuf_block, std::ostream &stream);
 
 
 static void
@@ -115,7 +130,7 @@ _mbuf_block_get(struct mbuf_pool *pool)
 		pool->nfree_mbuf_blockq--;
 		STAILQ_REMOVE_HEAD(&pool->free_mbuf_blockq, next);
 
-		assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
+		ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->magic == MBUF_BLOCK_MAGIC);
 		_mbuf_block_mark_as_active(pool, mbuf_block);
 		return mbuf_block;
 	}
@@ -143,8 +158,9 @@ mbuf_block_get(struct mbuf_pool *pool)
 	mbuf_block->start = buf;
 	mbuf_block->end = buf + pool->mbuf_block_offset;
 
-	assert(mbuf_block->end - mbuf_block->start == (int)pool->mbuf_block_offset);
-	assert(mbuf_block->start < mbuf_block->end);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block,
+		mbuf_block->end - mbuf_block->start == (int) pool->mbuf_block_offset);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->start < mbuf_block->end);
 
 	#ifdef MBUF_DEBUG
 		printf("[%p] mbuf_block get %p\n", oxt::thread_signature, mbuf_block);
@@ -171,8 +187,10 @@ mbuf_block_new_standalone(struct mbuf_pool *pool, size_t size)
 	mbuf_block->end = buf + size;
 	mbuf_block->offset = block_offset;
 
-	assert(mbuf_block->end - mbuf_block->start == (int)size);
-	assert(mbuf_block->start < mbuf_block->end);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block,
+		mbuf_block->end - mbuf_block->start == (int) size);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block,
+		mbuf_block->start < mbuf_block->end);
 
 	#ifdef MBUF_DEBUG
 		printf("[%p] mbuf_block new standalone %p\n", oxt::thread_signature, mbuf_block);
@@ -190,8 +208,8 @@ mbuf_block_free(struct mbuf_block *mbuf_block)
 		printf("[%p] mbuf_block free %p\n", oxt::thread_signature, mbuf_block);
 	#endif
 
-	assert(STAILQ_NEXT(mbuf_block, next) == NULL);
-	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, STAILQ_NEXT(mbuf_block, next) == NULL);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->magic == MBUF_BLOCK_MAGIC);
 
 	#ifdef MBUF_ENABLE_DEBUGGING
 		TAILQ_REMOVE(&mbuf_block->pool->active_mbuf_blockq, mbuf_block, active_q);
@@ -215,11 +233,11 @@ mbuf_block_put(struct mbuf_block *mbuf_block)
 		printf("[%p] mbuf_block put %p\n", oxt::thread_signature, mbuf_block);
 	#endif
 
-	assert(STAILQ_NEXT(mbuf_block, next) == NULL);
-	assert(mbuf_block->magic == MBUF_BLOCK_MAGIC);
-	assert(mbuf_block->refcount == 0);
-	assert(mbuf_block->pool->nactive_mbuf_blockq > 0);
-	assert(mbuf_block->offset == 0);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, STAILQ_NEXT(mbuf_block, next) == NULL);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->magic == MBUF_BLOCK_MAGIC);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->refcount == 0);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->pool->nactive_mbuf_blockq > 0);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->offset == 0);
 
 	mbuf_block->refcount = 1;
 	mbuf_block->pool->nfree_mbuf_blockq++;
@@ -312,7 +330,7 @@ mbuf_block_unref(struct mbuf_block *mbuf_block)
 			oxt::thread_signature, mbuf_block,
 			mbuf_block->refcount, mbuf_block->refcount - 1);
 	#endif
-	assert(mbuf_block->refcount > 0);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->refcount > 0);
 	mbuf_block->refcount--;
 	if (mbuf_block->refcount == 0) {
 		if (mbuf_block->offset > 0) {
@@ -338,7 +356,7 @@ mbuf_get(struct mbuf_pool *pool)
 		return mbuf();
 	}
 
-	assert(block->refcount == 1);
+	ASSERT_MBUF_BLOCK_PROPERTY(block, block->refcount == 1);
 	block->refcount--;
 	return mbuf(block, 0, block->end - block->start);
 }
@@ -356,9 +374,26 @@ mbuf_get_with_size(struct mbuf_pool *pool, size_t size)
 		return mbuf();
 	}
 
-	assert(block->refcount == 1);
+	ASSERT_MBUF_BLOCK_PROPERTY(block, block->refcount == 1);
 	block->refcount--;
 	return mbuf(block, 0, size);
+}
+
+static void
+mbuf_block_print(struct mbuf_block *mbuf_block, std::ostream &stream)
+{
+	stream << "mbuf_block: " << (void *) mbuf_block << "\n"
+		"mbuf_block.magic: " << mbuf_block->magic << "\n"
+		"mbuf_block.next: " << (void *) STAILQ_NEXT(mbuf_block, next) << "\n"
+		"mbuf_block.start: " << (void *) mbuf_block->start << "\n"
+		"mbuf_block.end: " << (void *) mbuf_block->end << "\n"
+		"mbuf_block.refcount: " << mbuf_block->refcount << "\n"
+		"mbuf_block.offset: " << mbuf_block->offset << "\n"
+		"mbuf_block.pool: " << (void *) mbuf_block->pool << "\n"
+		"mbuf_block.pool.nfree_mbuf_blockq: " << mbuf_block->pool->nfree_mbuf_blockq << "\n"
+		"mbuf_block.pool.nactive_mbuf_blockq: " << mbuf_block->pool->nactive_mbuf_blockq << "\n"
+		"mbuf_block.pool.mbuf_block_chunk_size: " << mbuf_block->pool->mbuf_block_chunk_size << "\n"
+		"mbuf_block.pool.mbuf_block_offset: " << mbuf_block->pool->mbuf_block_offset << "\n";
 }
 
 
