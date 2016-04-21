@@ -137,7 +137,7 @@ namespace tut {
 		ensure_equals("(9)", pool.nactive_mbuf_blockq, 0u);
 	}
 
-	TEST_METHOD(8) {
+	TEST_METHOD(10) {
 		set_test_name("mbuf class copy assignment");
 		mbuf buffer(mbuf_get(&pool));
 
@@ -159,7 +159,20 @@ namespace tut {
 		ensure_equals("(9)", pool.nactive_mbuf_blockq, 0u);
 	}
 
-	TEST_METHOD(9) {
+	TEST_METHOD(11) {
+		set_test_name("mbuf class copy assignment on itself");
+		mbuf buffer(mbuf_get(&pool));
+		struct mbuf_block *orig_mbuf_block = buffer.mbuf_block;
+		const char *orig_start = buffer.start;
+		const char *orig_end = buffer.end;
+
+		buffer = buffer;
+		ensure_equals("(1)", buffer.mbuf_block, orig_mbuf_block);
+		ensure_equals("(2)", buffer.start, orig_start);
+		ensure_equals("(3)", buffer.end, orig_end);
+	}
+
+	TEST_METHOD(12) {
 		set_test_name("mbuf class move assignment");
 		mbuf buffer(mbuf_get(&pool));
 
@@ -178,7 +191,20 @@ namespace tut {
 		ensure_equals("(9)", pool.nactive_mbuf_blockq, 0u);
 	}
 
-	TEST_METHOD(10) {
+	TEST_METHOD(13) {
+		set_test_name("mbuf class move assignment on itself");
+		mbuf buffer(mbuf_get(&pool));
+		struct mbuf_block *orig_mbuf_block = buffer.mbuf_block;
+		const char *orig_start = buffer.start;
+		const char *orig_end = buffer.end;
+
+		buffer = boost::move(buffer);
+		ensure_equals("(1)", buffer.mbuf_block, orig_mbuf_block);
+		ensure_equals("(2)", buffer.start, orig_start);
+		ensure_equals("(3)", buffer.end, orig_end);
+	}
+
+	TEST_METHOD(20) {
 		set_test_name("mbuf class slicing");
 		mbuf buffer(mbuf_get(&pool));
 
@@ -201,7 +227,7 @@ namespace tut {
 		ensure_equals("(11)", pool.nactive_mbuf_blockq, 0u);
 	}
 
-	TEST_METHOD(11) {
+	TEST_METHOD(21) {
 		set_test_name("mbuf class freelist reuse");
 		mbuf buffer(mbuf_get(&pool));
 		mbuf buffer2(mbuf_get(&pool));
@@ -211,7 +237,7 @@ namespace tut {
 		ensure_equals("(2)", pool.nactive_mbuf_blockq, 2u);
 	}
 
-	TEST_METHOD(12) {
+	TEST_METHOD(22) {
 		set_test_name("mbuf_get_with_size (small)");
 		{
 			mbuf buffer(mbuf_get_with_size(&pool, 6));
@@ -225,7 +251,7 @@ namespace tut {
 		ensure_equals("(6)", pool.nactive_mbuf_blockq, 0u);
 	}
 
-	TEST_METHOD(13) {
+	TEST_METHOD(23) {
 		set_test_name("mbuf_get_with_size (large)");
 		{
 			mbuf buffer(mbuf_get_with_size(&pool, mbuf_pool_data_size(&pool) + 10));

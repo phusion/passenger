@@ -1,7 +1,7 @@
 /*
  * twemproxy - A fast and lightweight proxy for memcached protocol.
  * Copyright (C) 2011 Twitter, Inc.
- * Copyright (c) 2014-2015 Phusion Holding B.V.
+ * Copyright (C) 2014-2016 Phusion Holding B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -200,36 +200,39 @@ public:
 
 	// Copy assignment.
 	mbuf &operator=(BOOST_COPY_ASSIGN_REF(mbuf) mbuf) {
-		struct mbuf_block *old_block = mbuf_block;
+		if (&mbuf != this) {
+			struct mbuf_block *old_block = mbuf_block;
 
-		mbuf_block = mbuf.mbuf_block;
-		start      = mbuf.start;
-		end        = mbuf.end;
+			mbuf_block = mbuf.mbuf_block;
+			start      = mbuf.start;
+			end        = mbuf.end;
 
-		if (mbuf.mbuf_block != NULL) {
-			mbuf_block_ref(mbuf.mbuf_block);
-		}
-		if (old_block != NULL) {
-			mbuf_block_unref(old_block);
+			if (mbuf.mbuf_block != NULL) {
+				mbuf_block_ref(mbuf.mbuf_block);
+			}
+			if (old_block != NULL) {
+				mbuf_block_unref(old_block);
+			}
 		}
 		return *this;
 	}
 
 	// Move assignment.
 	mbuf &operator=(BOOST_RV_REF(mbuf) mbuf) {
-		struct mbuf_block *old_block = mbuf_block;
+		if (&mbuf != this) {
+			struct mbuf_block *old_block = mbuf_block;
 
-		mbuf_block = mbuf.mbuf_block;
-		start      = mbuf.start;
-		end        = mbuf.end;
-		mbuf.mbuf_block = NULL;
-		mbuf.start = NULL;
-		mbuf.end   = NULL;
+			mbuf_block = mbuf.mbuf_block;
+			start      = mbuf.start;
+			end        = mbuf.end;
+			mbuf.mbuf_block = NULL;
+			mbuf.start = NULL;
+			mbuf.end   = NULL;
 
-		if (old_block != NULL) {
-			mbuf_block_unref(old_block);
+			if (old_block != NULL) {
+				mbuf_block_unref(old_block);
+			}
 		}
-
 		return *this;
 	}
 
