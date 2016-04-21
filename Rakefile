@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (C) 2008-2015  Phusion Holding B.V.
+#  Copyright (C) 2008-2016  Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -17,9 +17,10 @@
 #  with this program; if not, write to the Free Software Foundation, Inc.,
 #  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-source_root = File.expand_path(File.dirname(__FILE__))
-$LOAD_PATH.unshift(source_root)
-$LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
+require 'pathname'
+SOURCE_ROOT = Pathname.new(File.expand_path(File.dirname(__FILE__)))
+$LOAD_PATH.unshift(SOURCE_ROOT.to_s)
+$LOAD_PATH.unshift("#{SOURCE_ROOT}/src/ruby_supportlib")
 
 # Clean Bundler environment variables, preserve Rake environment variables.
 # Otherwise all Ruby commands will take slightly longer to start, which messes up
@@ -37,7 +38,7 @@ if defined?(Bundler)
   end
 end
 
-require "#{source_root}/config" if File.exist?("#{source_root}/config.rb")
+require("#{SOURCE_ROOT}/config") if File.exist?("#{SOURCE_ROOT}/config.rb")
 require 'build/basics'
 if boolean_option('ONLY_RUBY')
   require 'build/ruby_extension'

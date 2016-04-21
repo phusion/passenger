@@ -82,7 +82,7 @@ module PhusionPassenger
       'package.json',
       'npm-shrinkwrap.json',
       'passenger.gemspec',
-      'build/*',
+      'build/**/*',
       'bin/*',
       'doc/**/*',
       'man/*',
