@@ -540,7 +540,7 @@ def change_shebang(filename, value)
 end
 
 desc "Create a fakeroot, useful for building native packages"
-task :fakeroot => [:apache2, :nginx, :doc] do
+task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   require 'rbconfig'
   require 'fileutils'
   include RbConfig
