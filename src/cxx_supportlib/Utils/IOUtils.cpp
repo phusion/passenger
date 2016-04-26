@@ -772,7 +772,7 @@ waitUntilIOEvent(int fd, short event, unsigned long long *timeout) {
 	pfd.events = event;
 	pfd.revents = 0;
 
-	Timer timer;
+	Timer<> timer;
 	ret = syscalls::poll(&pfd, 1, *timeout / 1000);
 	if (ret == -1) {
 		int e = errno;

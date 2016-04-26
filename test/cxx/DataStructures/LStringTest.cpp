@@ -35,8 +35,15 @@ namespace tut {
 	TEST_METHOD(1) {
 		set_test_name("It is empty upon initialization");
 		ensure_equals(str.size, 0u);
-		ensure_equals<void *>(str.start, NULL);
-		ensure_equals<void *>(str.end, NULL);
+		ensure_equals<void *>(str.start, &emptyLStringPart);
+		ensure_equals<void *>(str.start->next, NULL);
+		ensure_equals<StaticString>(str.start->data, "");
+		ensure_equals(str.start->size, 0u);
+		ensure_equals<void *>(str.end, &emptyLStringPart);
+		ensure_equals<void *>(str.end->next, NULL);
+		ensure_equals<StaticString>(str.end->data, "");
+		ensure_equals(str.end->size, 0u);
+		ensure_equals(StaticString(str.start->data, str.size), "");
 	}
 
 	TEST_METHOD(2) {
@@ -44,17 +51,28 @@ namespace tut {
 
 		psg_lstr_append(&str, pool, "ab");
 		ensure_equals(str.size, 2u);
-		ensure(str.start != NULL);
+		ensure(str.start != &emptyLStringPart);
 		ensure_equals<void *>(str.start, str.end);
 
 		psg_lstr_append(&str, pool, "cde");
 		ensure_equals(str.size, 5u);
-		ensure(str.start != NULL);
+		ensure(str.start != &emptyLStringPart);
 		ensure(str.start != str.end);
 	}
 
 	TEST_METHOD(3) {
 		set_test_name("Appending an empty string does nothing");
+
+		psg_lstr_append(&str, pool, "");
+		ensure_equals(str.size, 0u);
+		ensure_equals<void *>(str.start, &emptyLStringPart);
+		ensure_equals<void *>(str.end, &emptyLStringPart);
+
+		psg_lstr_append(&str, pool, "ab");
+		psg_lstr_append(&str, pool, "");
+		ensure_equals(str.size, 2u);
+		ensure(str.start != &emptyLStringPart);
+		ensure_equals<void *>(str.start, str.end);
 	}
 
 
@@ -261,6 +279,7 @@ namespace tut {
 	/***** psg_lstr_make_contiguous *****/
 
 	TEST_METHOD(40) {
+		set_test_name("psg_lstr_make_contiguous(non-empty string)");
 		const LString *cstr;
 
 		psg_lstr_append(&str, pool, "hey");
@@ -271,5 +290,15 @@ namespace tut {
 		ensure_equals(cstr->size, strlen("heymyworld"));
 		ensure_equals<void *>(cstr->start->next, NULL);
 		ensure_equals(StaticString(cstr->start->data, cstr->size), "heymyworld");
+	}
+
+	TEST_METHOD(41) {
+		set_test_name("psg_lstr_make_contiguous(empty string)");
+		const LString *cstr;
+
+		cstr = psg_lstr_make_contiguous(&str, pool);
+		ensure_equals(cstr->size, 0u);
+		ensure_equals<void *>(cstr->start, &emptyLStringPart);
+		ensure_equals<void *>(cstr->end, &emptyLStringPart);
 	}
 }

@@ -38,7 +38,11 @@ namespace ApplicationPool2 {
 
 using namespace std;
 
-
+/**
+ * The TestSession represents a session between the Core to the Application. There is a
+ * connection between the two, which is represented by a SocketPair having a first (Core side)
+ * and second (Application side) FD. These are also referred to as fd and peerFd.
+ */
 class TestSession: public AbstractSession {
 private:
 	mutable boost::mutex syncher;

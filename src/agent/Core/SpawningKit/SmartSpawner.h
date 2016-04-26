@@ -29,6 +29,9 @@
 #include <Core/SpawningKit/Spawner.h>
 #include <Core/SpawningKit/PipeWatcher.h>
 #include <Constants.h>
+#include <LveLoggingDecorator.h>
+
+#include <adhoc_lve.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -212,9 +215,15 @@ private:
 		Pipe errorPipe = createPipe(__FILE__, __LINE__);
 		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.userSwitching.uid,
 			preparation.userSwitching.gid);
-		pid_t pid;
 
-		pid = syscalls::fork();
+		adhoc_lve::LveEnter scopedLveEnter(LveLoggingDecorator::lveInitOnce(),
+		                                   preparation.userSwitching.uid,
+		                                   options.lveMinUid,
+		                                   LveLoggingDecorator::lveExitCallback);
+		LveLoggingDecorator::logLveEnter(scopedLveEnter,
+		                                 preparation.userSwitching.uid,
+		                                 options.lveMinUid);
+		pid_t pid = syscalls::fork();
 		if (pid == 0) {
 			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
 			purgeStdio(stdout);
@@ -249,6 +258,8 @@ private:
 			throw SystemException("Cannot fork a new process", e);
 
 		} else {
+			scopedLveEnter.exit();
+
 			UPDATE_TRACE_POINT();
 			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.first,
 				"Preloader " << pid << " (" << options.appRoot << ") adminSocket[0]");
@@ -344,7 +355,7 @@ private:
 		try {
 			const size_t UNIX_PATH_MAX = sizeof(((struct sockaddr_un *) 0)->sun_path);
 			string data = "You have control 1.0\n"
-				"passenger_root: " + config->resourceLocator->getRoot() + "\n"
+				"passenger_root: " + config->resourceLocator->getInstallSpec() + "\n"
 				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"UNIX_PATH_MAX: " + toString(UNIX_PATH_MAX) + "\n";

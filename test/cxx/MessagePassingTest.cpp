@@ -21,7 +21,7 @@ namespace tut {
 			box->send("ho");
 		}
 	};
-	
+
 	DEFINE_TEST_GROUP(MessagePassingTest);
 
 	TEST_METHOD(1) {
@@ -49,7 +49,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		// Receive with zero timeout.
 		unsigned long long timeout = 0;
-		Timer timer;
+		Timer<> timer;
 		ensure_equals(box->recv("hi", &timeout), MessagePtr());
 		ensure(timer.elapsed() < 10);
 		ensure_equals(timeout, 0ull);
@@ -58,18 +58,18 @@ namespace tut {
 	TEST_METHOD(4) {
 		// Receive with non-zero timeout.
 		unsigned long long timeout = 20000;
-		Timer timer;
+		Timer<> timer;
 		ensure_equals(box->recv("hi", &timeout), MessagePtr());
 		ensure("(1)", timer.elapsed() >= 19);
 		ensure("(2)", timer.elapsed() < 95);
-		ensure("(3)", timeout >= 19000ull);
+		ensure("(3)", timeout <= 2000ull);
 	}
 
 	TEST_METHOD(5) {
 		// Test waiting with timeout.
 		TempThread thr(boost::bind(&MessagePassingTest::sendMessagesLater, this));
 		unsigned long long timeout = 200000;
-		Timer timer;
+		Timer<> timer;
 		ensure_equals(box->recv("ho", &timeout)->name, "ho");
 		ensure(timer.elapsed() >= 39);
 		ensure(timer.elapsed() < 95);

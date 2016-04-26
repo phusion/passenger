@@ -39,7 +39,12 @@ module PhusionPassenger
         puts "  ruby-libdir              Show #{PROGRAM_NAME}'s Ruby library directory."
         puts "  includedir               Show the Nginx runtime library headers directory."
         puts "  nginx-addon-dir          Show #{PROGRAM_NAME}'s Nginx addon directory."
-        puts "  nginx-libs               Show Nginx runtime library flags."
+        puts "  nginx-libs               Show paths to #{PROGRAM_NAME}'s libraries" 
+        puts "                           for static linking to Nginx runtime."
+        puts "  nginx-dynamic-libs       Show paths to #{PROGRAM_NAME}'s libraries" 
+        puts "                           for dynamic linking to Nginx runtime."
+        puts "  nginx-dynamic-compiled   Check whether runtime libraries for dynamic"
+        puts "                           linking to Nginx are compiled."
         puts "  resourcesdir             Show #{PROGRAM_NAME}'s resources directory."
         puts "  support-binaries-dir     Show #{PROGRAM_NAME}'s support binaries dir."
         puts "  compiled                 Check whether runtime libraries are compiled."
@@ -77,6 +82,8 @@ module PhusionPassenger
           puts PhusionPassenger.nginx_module_source_dir
         when "--nginx-libs"
           puts "#{common_library.link_objects_as_string} #{PhusionPassenger.lib_dir}/common/libboost_oxt.a"
+        when "--nginx-dynamic-libs"
+          puts "#{common_dynamic_library.link_objects_as_string} #{PhusionPassenger.lib_dir}/nginx_dynamic/libboost_oxt.a"
         when "--resourcesdir"
           puts PhusionPassenger.resources_dir
         when "--support-binaries-dir"
@@ -88,6 +95,17 @@ module PhusionPassenger
             end
           end
           if File.exist?("#{PhusionPassenger.lib_dir}/common/libboost_oxt.a")
+            exit 0
+          else
+            exit 1
+          end
+        when "--nginx-dynamic-compiled"
+          common_dynamic_library.link_objects.each do |filename|
+            if !File.exist?(filename)
+              exit 1
+            end
+          end
+          if File.exist?("#{PhusionPassenger.lib_dir}/nginx_dynamic/libboost_oxt.a")
             exit 0
           else
             exit 1
@@ -199,6 +217,13 @@ module PhusionPassenger
         return COMMON_LIBRARY.
           only(*NGINX_LIBS_SELECTOR).
           set_output_dir("#{PhusionPassenger.lib_dir}/common/libpassenger_common")
+      end
+      
+      def common_dynamic_library
+        PhusionPassenger.require_passenger_lib 'common_library'
+        return COMMON_LIBRARY.
+          only(*NGINX_LIBS_SELECTOR).
+          set_output_dir("#{PhusionPassenger.lib_dir}/nginx_dynamic/module_libpassenger_common")
       end
     end
 

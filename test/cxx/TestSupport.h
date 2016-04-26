@@ -16,6 +16,7 @@
 
 #include <oxt/thread.hpp>
 #include <oxt/tracable_exception.hpp>
+#include <uv.h>
 
 #include "../tut/tut.h"
 #include <ResourceLocator.h>
@@ -42,48 +43,48 @@ using namespace Passenger;
 using namespace oxt;
 
 
-#define SHOW_EXCEPTION_BACKTRACE(code)                                \
-	do {                                                          \
-		try {                                                 \
+#define SHOW_EXCEPTION_BACKTRACE(code)                    \
+	do {                                                  \
+		try {                                             \
 			code                                          \
-		} catch (const tracable_exception &e) {               \
+		} catch (const tracable_exception &e) {           \
 			cerr << e.what() << "\n" << e.backtrace();    \
 			throw;                                        \
-		}                                                     \
+		}                                                 \
 	} while (0)
 
-#define EVENTUALLY2(deadlineMsec, sleepTimeMsec, code)					\
-	do {										\
-		unsigned long long deadlineTime = SystemTime::getMsec(true) + deadlineMsec;	\
-		bool result = false;							\
-		while (!result && SystemTime::getMsec(true) < deadlineTime) {		\
-			{										\
-				code								\
-			}										\
-			if (!result) {							\
-				usleep(sleepTimeMsec * 1000);				\
-			}								\
-		}									\
-		if (!result) {								\
-			fail("EVENTUALLY(" #code ") failed");				\
-		}									\
+#define EVENTUALLY2(deadlineMsec, sleepTimeMsec, code)  \
+	do {                                                \
+		unsigned long long deadlineTime = uv_hrtime() + deadlineMsec * 1000000ull; \
+		bool result = false;                            \
+		while (!result && uv_hrtime() < deadlineTime) { \
+			{                                       \
+				code                                \
+			}                                       \
+			if (!result) {                          \
+				usleep(sleepTimeMsec * 1000ull);    \
+			}                                       \
+		}                                           \
+		if (!result) {                              \
+			fail("EVENTUALLY(" #code ") failed");   \
+		}                                           \
 	} while (0)
 
-#define EVENTUALLY(deadlineSec, code) EVENTUALLY2(deadlineSec * 1000, 10, code)
+#define EVENTUALLY(deadlineSec, code) EVENTUALLY2(deadlineSec * 1000ull, 10, code)
 
-#define SHOULD_NEVER_HAPPEN(deadline, code)						\
-	do {										\
-		unsigned long long deadlineTime = SystemTime::getMsec(true) + deadline;	\
-		bool result = false;							\
-		while (!result && SystemTime::getMsec(true) < deadlineTime) {		\
-			code								\
-			if (!result) {							\
-				usleep(10000);						\
-			}								\
-		}									\
-		if (result) {								\
-			fail("SHOULD_NEVER_HAPPEN(" #code ") failed");			\
-		}									\
+#define SHOULD_NEVER_HAPPEN(deadlineMsec, code)             \
+	do {                                                    \
+		unsigned long long deadlineTime = uv_hrtime() + deadlineMsec * 1000000ull; \
+		bool result = false;                                \
+		while (!result && uv_hrtime() < deadlineTime) {     \
+			code                                            \
+			if (!result) {                                  \
+				usleep(10000);                              \
+			}                                               \
+		}                                                   \
+		if (result) {                                       \
+			fail("SHOULD_NEVER_HAPPEN(" #code ") failed");  \
+		}                                                   \
 	} while (0)
 
 // Do not run some tests in the Vagrant development environment because

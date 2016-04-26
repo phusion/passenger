@@ -178,8 +178,8 @@ string canonicalizePath(const string &path);
 string resolveSymlink(const StaticString &path);
 
 /**
- * Given a path, extracts its directory name.
- * <em>path</em> MUST be null-terminated!
+ * Given a path, extracts its directory name. 'path' does not
+ * have to be NULL terminated.
  *
  * @ingroup Support
  */

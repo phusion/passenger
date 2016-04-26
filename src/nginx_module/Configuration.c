@@ -74,10 +74,12 @@ static ngx_int_t traverse_static_location_tree(ngx_conf_t *cf,
     ngx_http_core_srv_conf_t *server_conf,
     ngx_http_location_tree_node_t *node,
     postprocess_ctx_t *ctx);
+#ifdef NGX_PCRE
 static ngx_int_t traverse_regex_locations(ngx_conf_t *cf,
     ngx_http_core_srv_conf_t *server_conf,
     ngx_http_core_loc_conf_t **regex_locations,
     postprocess_ctx_t *ctx);
+#endif
 static ngx_int_t merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf,
     passenger_loc_conf_t *prev);
 static ngx_int_t merge_string_array(ngx_conf_t *cf, ngx_array_t **prev,
@@ -1141,8 +1143,12 @@ traverse_location_confs_nested_in_server_conf(ngx_conf_t *cf,
         return result;
     }
 
+#ifdef NGX_PCRE
     return traverse_regex_locations(cf, server_conf,
         location_conf->regex_locations, ctx);
+#else
+    return result;
+#endif
 }
 
 static ngx_int_t
@@ -1185,6 +1191,7 @@ traverse_static_location_tree(ngx_conf_t *cf,
     return NGX_OK;
 }
 
+#ifdef NGX_PCRE
 static ngx_int_t
 traverse_regex_locations(ngx_conf_t *cf,
     ngx_http_core_srv_conf_t *server_conf,
@@ -1208,6 +1215,7 @@ traverse_regex_locations(ngx_conf_t *cf,
 
     return NGX_OK;
 }
+#endif
 
 static int
 string_keyval_has_key(ngx_array_t *table, ngx_str_t *key)

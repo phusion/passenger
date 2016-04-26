@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -27,6 +27,8 @@
 #define _PASSENGER_DATA_STRUCTURES_LSTRING_H_
 
 #include <boost/cstdint.hpp>
+#include <oxt/backtrace.hpp>
+#include <stdexcept>
 #include <cstring>
 #include <cassert>
 #include <algorithm>
@@ -48,8 +50,8 @@ using namespace std;
  * we just store the headers non-contiguously using LString. Each LString
  * references the mbuf_block that the HTTP header data comes from.
  *
- * The empty string is repesented by `size == 0 && start == NULL && end == NULL`.
- * Parts may never contain the empty string.
+ * The empty string is represented by `size == 0 && start == &emptyLStringPart && end == &emptyLStringPart`.
+ * Except for emptyLStringPart, parts may never contain the empty string.
  *
  * This struct must be a POD so that we can allocate it with psg_pool_t.
  */
@@ -66,6 +68,8 @@ struct LString {
 	Part *end;
 	unsigned int size;
 };
+
+extern LString::Part emptyLStringPart;
 
 
 namespace {
@@ -87,14 +91,18 @@ inline void psg_lstr_append(LString *str, psg_pool_t *pool, const char *data,
 
 inline void
 psg_lstr_init(LString *str) {
-	str->start = NULL;
-	str->end   = NULL;
+	str->start = &emptyLStringPart;
+	str->end   = &emptyLStringPart;
 	str->size  = 0;
 }
 
 inline LString *
 psg_lstr_create(psg_pool_t *pool, const char *data, unsigned int size) {
 	LString *result = (LString *) psg_palloc(pool, sizeof(LString));
+	if (result == NULL) {
+		TRACE_POINT();
+		throw std::bad_alloc();
+	}
 	psg_lstr_init(result);
 	psg_lstr_append(result, pool, data, size);
 	return result;
@@ -107,7 +115,7 @@ psg_lstr_create(psg_pool_t *pool, const StaticString &str) {
 
 inline void
 psg_lstr_append_part(LString *str, LString::Part *part) {
-	if (str->end == NULL) {
+	if (str->size == 0) {
 		str->start = part;
 		str->end = part;
 	} else {
@@ -121,6 +129,10 @@ psg_lstr_append_part(LString *str, LString::Part *part) {
 inline void
 psg_lstr_append_part_from_another_lstr(LString *str, psg_pool_t *pool, const LString::Part *part) {
 	LString::Part *copy = (LString::Part *) psg_palloc(pool, sizeof(LString::Part));
+	if (copy == NULL) {
+		TRACE_POINT();
+		throw std::bad_alloc();
+	}
 	*copy = *part;
 	if (part->mbuf_block != NULL) {
 		mbuf_block_ref(part->mbuf_block);
@@ -136,6 +148,10 @@ psg_lstr_append(LString *str, psg_pool_t *pool, const MemoryKit::mbuf &buffer,
 		return;
 	}
 	LString::Part *part = (LString::Part *) psg_palloc(pool, sizeof(LString::Part));
+	if (part == NULL) {
+		TRACE_POINT();
+		throw std::bad_alloc();
+	}
 	part->mbuf_block = buffer.mbuf_block;
 	part->data = data;
 	part->size = size;
@@ -154,6 +170,10 @@ psg_lstr_append(LString *str, psg_pool_t *pool, const char *data, unsigned int s
 		return;
 	}
 	LString::Part *part = (LString::Part *) psg_palloc(pool, sizeof(LString::Part));
+	if (part == NULL) {
+		TRACE_POINT();
+		throw std::bad_alloc();
+	}
 	part->next = NULL;
 	part->mbuf_block = NULL;
 	part->data = data;
@@ -173,6 +193,11 @@ psg_lstr_null_terminate(const LString *str, psg_pool_t *pool) {
 	char *data, *pos;
 
 	data = (char *) psg_pnalloc(pool, str->size + 1);
+	if (data == NULL) {
+		TRACE_POINT();
+		throw std::bad_alloc();
+	}
+
 	pos = data;
 	part = str->start;
 	while (part != NULL) {
@@ -183,6 +208,10 @@ psg_lstr_null_terminate(const LString *str, psg_pool_t *pool) {
 	*pos = '\0';
 
 	newstr = (LString *) psg_palloc(pool, sizeof(LString));
+	if (newstr == NULL) {
+		TRACE_POINT();
+		throw std::bad_alloc();
+	}
 	psg_lstr_init(newstr);
 	psg_lstr_append(newstr, pool, data, str->size);
 	return newstr;

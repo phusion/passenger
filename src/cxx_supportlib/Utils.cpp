@@ -286,11 +286,10 @@ resolveSymlink(const StaticString &path) {
 
 string
 extractDirName(const StaticString &path) {
-	char *path_copy = strdup(path.c_str());
-	char *result = dirname(path_copy);
-	string result_string(result);
-	free(path_copy);
-	return result_string;
+	DynamicBuffer pathCopy(path.size() + 1);
+	memcpy(pathCopy.data, path.data(), path.size());
+	pathCopy.data[path.size()] = '\0';
+	return string(dirname(pathCopy.data));
 }
 
 StaticString

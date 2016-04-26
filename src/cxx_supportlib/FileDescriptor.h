@@ -139,7 +139,9 @@ public:
 			int e = errno;
 			data = boost::make_shared<SharedData>(fd, autoClose);
 			errno = e;
-			P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line);
+			if (file != NULL) {
+				P_LOG_FILE_DESCRIPTOR_OPEN3(fd, file, line);
+			}
 		}
 	}
 

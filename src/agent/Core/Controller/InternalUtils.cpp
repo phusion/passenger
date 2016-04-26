@@ -102,7 +102,15 @@ Controller::disconnectWithAppSocketWriteError(Client **client, int e) {
 void
 Controller::endRequestWithAppSocketIncompleteResponse(Client **client, Request **req) {
 	if (!(*req)->responseBegun) {
-		SKC_WARN(*client, "Sending 502 response: application did not send a complete response");
+		// The application might have decided to abort the response because it thinks the client
+		// is already gone (Passenger relays socket half-close events from clients), so don't
+		// make a big warning out of that situation.
+		if ((*req)->halfClosePolicy == Request::HALF_CLOSE_PERFORMED) {
+			SKC_DEBUG(*client, "Sending 502 response: application did not send a complete response"
+				" (likely because client half-closed)");
+		} else {
+			SKC_WARN(*client, "Sending 502 response: application did not send a complete response");
+		}
 		endRequestWithSimpleResponse(client, req,
 			"<h2>Incomplete response received from application</h2>", 502);
 	} else {

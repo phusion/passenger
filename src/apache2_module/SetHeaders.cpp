@@ -160,3 +160,8 @@
 			sizeof("!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS") - 1), config->forceMaxConcurrentRequestsPerProcess);
 	
 
+	
+		addHeader(r, result, StaticString("!~PASSENGER_LVE_MIN_UID",
+			sizeof("!~PASSENGER_LVE_MIN_UID") - 1), config->lveMinUid);
+	
+

@@ -5,3 +5,35 @@
    fun:wait4
    fun:_ZN9Passenger13removeDirTreeERKSs
 }
+{
+   CoreFoundation initializer
+   Memcheck:Leak
+   match-leak-kinds: all
+   fun:malloc_zone_*alloc
+   ...
+   fun:__CFInitialize
+}
+{
+   CoreFoundation runtime
+   Memcheck:Leak
+   match-leak-kinds: all
+   fun:malloc_zone_*alloc
+   ...
+   fun:_CFRuntimeBridgeClasses
+}
+{
+   snprintf malloc
+   Memcheck:Leak
+   match-leak-kinds: all
+   fun:malloc
+   ...
+   fun:snprintf
+}
+{
+   dirname() internal storage
+   Memcheck:Leak
+   match-leak-kinds: all
+   fun:malloc
+   ...
+   fun:dirname
+}

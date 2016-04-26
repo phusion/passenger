@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -26,12 +26,12 @@ begin
   require 'rubygems'
 rescue LoadError
 end
-require 'pathname'
 require 'fileutils'
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'packaging'
+PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'platform_info/binary_compatibility'
@@ -45,75 +45,9 @@ PhusionPassenger.require_passenger_lib 'platform_info/cxx_portability'
 include PhusionPassenger
 include PhusionPassenger::PlatformInfo
 
-require 'build/cxx_dependency_map'
-require 'build/cplusplus_support'
-
-#################################################
-
-class TemplateRenderer
-  def initialize(filename)
-    require 'erb' if !defined?(ERB)
-    @erb = ERB.new(File.read(filename), nil, "-")
-    @erb.filename = filename
-  end
-
-  def render
-    return @erb.result(binding)
-  end
-
-  def render_to(filename)
-    puts "Creating #{filename}"
-    text = render
-    # When packaging, some timestamps may be modified. The user may not
-    # have write access to the source root (for example, when Passenger
-    # Standalone is compiling its runtime), so we only write to the file
-    # when necessary.
-    if !File.exist?(filename) || File.writable?(filename) || File.read(filename) != text
-      File.open(filename, 'w') do |f|
-        f.write(text)
-      end
-    end
-  end
-end
-
-def string_option(name, default_value = nil)
-  value = ENV[name]
-  if value.nil? || value.empty?
-    return default_value
-  else
-    return value
-  end
-end
-
-def compiler_flag_option(name)
-  return string_option(name, '').gsub("\n", " ")
-end
-
-def boolean_option(name, default_value = false)
-  value = ENV[name]
-  if value.nil? || value.empty?
-    return default_value
-  else
-    return value == "yes" || value == "on" || value == "true" || value == "1"
-  end
-end
-
-def maybe_wrap_in_ccache(command)
-  if boolean_option('USE_CCACHE', false) && command !~ /^ccache /
-    return "ccache #{command}"
-  else
-    return command
-  end
-end
-
-def ensure_target_directory_exists(target)
-  dir = File.dirname(target)
-  if !File.exist?(dir)
-    sh "mkdir -p #{dir}"
-  end
-end
-
-#################################################
+require 'build/support/cxx_dependency_map'
+require 'build/support/general'
+require 'build/support/cplusplus'
 
 if string_option('OUTPUT_DIR')
   OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
@@ -215,6 +149,7 @@ EXTRA_CXX_LDFLAGS = compiler_flag_option('EXTRA_LDFLAGS') + " " +
 AGENT_OUTPUT_DIR          = string_option('AGENT_OUTPUT_DIR', OUTPUT_DIR + "support-binaries") + "/"
 COMMON_OUTPUT_DIR         = string_option('COMMON_OUTPUT_DIR', OUTPUT_DIR + "common") + "/"
 APACHE2_OUTPUT_DIR        = string_option('APACHE2_OUTPUT_DIR', OUTPUT_DIR + "apache2") + "/"
+NGINX_DYNAMIC_OUTPUT_DIR  = string_option('NGINX_DYNAMIC_OUTPUT_DIR', OUTPUT_DIR + "nginx_dynamic") + "/"
 LIBEV_OUTPUT_DIR          = string_option('LIBEV_OUTPUT_DIR', OUTPUT_DIR + "libev") + "/"
 LIBUV_OUTPUT_DIR          = string_option('LIBUV_OUTPUT_DIR', OUTPUT_DIR + "libuv") + "/"
 ruby_extension_archdir    = PlatformInfo.ruby_extension_binary_compatibility_id

@@ -35,5 +35,11 @@ namespace tut {
 		testTruncate("hello/world\\Main.cpp", "/\\", 1, "h/w\\Main.cpp");
 		testTruncate("hello/world\\Main.cpp", "/", 1, "h/world\\Main.cpp");
 		testTruncate("/he/llo/worl/", "/", 3, "/he/llo/wor/");
+	} TEST_METHOD(4) {
+		set_test_name("should ignore non-UTF characters in escapeHTML");
+		char s[10];
+		snprintf(s, 10, "h\xeallo"); // hêllo
+		string result = escapeHTML(s);
+		ensure_equals(result, "h?llo");
 	}
 }

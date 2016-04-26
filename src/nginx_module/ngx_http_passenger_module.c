@@ -150,7 +150,7 @@ starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
         log_file = fopen(log_filename, "a");
         if (log_file == NULL) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                    "could not open the passenger log file for writing, discarding log output");
+                    "could not open the passenger log file for writing during Nginx startup, some log lines might be lost (will retry from Passenger core)");
         }
     }
 

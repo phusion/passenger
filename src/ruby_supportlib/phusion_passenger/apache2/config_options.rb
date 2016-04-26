@@ -235,6 +235,14 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :desc     => "Force #{SHORT_PROGRAM_NAME} to believe that an application process " \
                  "can handle the given number of concurrent requests per process"
   },
+  {
+    :name      => "PassengerLveMinUid",
+    :type      => :integer,
+    :min_value => 0,
+    :context   => ["RSRC_CONF"],
+    :desc      => "Minimum user id starting from which entering LVE and CageFS is allowed."
+  },
+
 
   ##### Aliases #####
 

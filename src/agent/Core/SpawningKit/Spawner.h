@@ -78,6 +78,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
+#include <adhoc_lve.h>
 #include <modp_b64.h>
 #include <FileDescriptor.h>
 #include <Exceptions.h>
@@ -270,7 +271,7 @@ private:
 		try {
 			const size_t UNIX_PATH_MAX = sizeof(((struct sockaddr_un *) 0)->sun_path);
 			string data = "You have control 1.0\n"
-				"passenger_root: " + config->resourceLocator->getRoot() + "\n"
+				"passenger_root: " + config->resourceLocator->getInstallSpec() + "\n"
 				"passenger_version: " PASSENGER_VERSION "\n"
 				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
 				"gupid: " + details.gupid + "\n"
@@ -461,7 +462,7 @@ protected:
 	 * <em>timeout</em> miliseconds for the process to exit.
 	 */
 	static int timedWaitpid(pid_t pid, int *status, unsigned long long timeout) {
-		Timer timer;
+		Timer<SystemTime::GRAN_10MSEC> timer;
 		int ret;
 
 		do {
@@ -871,8 +872,42 @@ protected:
 		}
 	}
 
+	void enterLveJail(const struct passwd * pw) {
+		if (!pw)
+			return;
+
+		string lve_init_err;
+		adhoc_lve::LibLve& liblve = adhoc_lve::LveInitSignleton::getInstance(&lve_init_err);
+		if (liblve.is_error())
+		{
+			printf("!> Error\n");
+			printf("!> \n");
+			printf("!> Failed to init LVE library%s%s\n",
+			       lve_init_err.empty()? "" : ": ",
+			       lve_init_err.c_str());
+			fflush(stdout);
+			_exit(1);
+		}
+
+		if (!liblve.is_lve_available())
+			return;
+
+		string jail_err;
+		int rc = liblve.jail(pw, jail_err);
+		if (rc < 0)
+		{
+			printf("!> Error\n");
+			printf("!> \n");
+			printf("enterLve() failed: %s\n", jail_err.c_str());
+			fflush(stdout);
+			_exit(1);
+		}
+	}
+
 	void switchUser(const SpawnPreparationInfo &info) {
 		if (info.userSwitching.enabled) {
+			enterLveJail(&info.userSwitching.lveUserPwd);
+
 			bool setgroupsCalled = false;
 			#ifdef HAVE_GETGROUPLIST
 				if (info.userSwitching.ngroups <= NGROUPS_MAX) {

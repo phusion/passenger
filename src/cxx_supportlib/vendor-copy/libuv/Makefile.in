@@ -113,7 +113,7 @@ host_triplet = @host@
 @WINNT_TRUE@               -DWIN32_LEAN_AND_MEAN \
 @WINNT_TRUE@               -D_WIN32_WINNT=0x0600
 
-@WINNT_TRUE@am__append_4 = -lws2_32 -lpsapi -liphlpapi -lshell32
+@WINNT_TRUE@am__append_4 = -lws2_32 -lpsapi -liphlpapi -lshell32 -luserenv
 @WINNT_TRUE@am__append_5 = src/win/async.c \
 @WINNT_TRUE@                    src/win/atomicops-inl.h \
 @WINNT_TRUE@                    src/win/core.c \
@@ -182,40 +182,41 @@ check_PROGRAMS = test/run-tests$(EXEEXT)
 @AIX_TRUE@am__append_11 = -D_ALL_SOURCE -D_XOPEN_SOURCE=500 -D_LINUX_SOURCE_COMPAT
 @SUNOS_TRUE@am__append_12 = -D__EXTENSIONS__ -D_XOPEN_SOURCE=500
 @AIX_TRUE@am__append_13 = -D_ALL_SOURCE -D_XOPEN_SOURCE=500 -D_LINUX_SOURCE_COMPAT
-@AIX_TRUE@am__append_14 = src/unix/aix.c
-@ANDROID_TRUE@am__append_15 = include/android-ifaddrs.h \
+@AIX_TRUE@am__append_14 = include/uv-aix.h
+@AIX_TRUE@am__append_15 = src/unix/aix.c
+@ANDROID_TRUE@am__append_16 = include/android-ifaddrs.h \
 @ANDROID_TRUE@                   include/pthread-fixes.h
 
-@ANDROID_TRUE@am__append_16 = src/unix/android-ifaddrs.c \
+@ANDROID_TRUE@am__append_17 = src/unix/android-ifaddrs.c \
 @ANDROID_TRUE@                    src/unix/pthread-fixes.c
 
-@DARWIN_TRUE@am__append_17 = include/uv-darwin.h
-@DARWIN_TRUE@am__append_18 = -D_DARWIN_USE_64_BIT_INODE=1 \
+@DARWIN_TRUE@am__append_18 = include/uv-darwin.h
+@DARWIN_TRUE@am__append_19 = -D_DARWIN_USE_64_BIT_INODE=1 \
 @DARWIN_TRUE@	-D_DARWIN_UNLIMITED_SELECT=1
-@DARWIN_TRUE@am__append_19 = src/unix/darwin.c \
+@DARWIN_TRUE@am__append_20 = src/unix/darwin.c \
 @DARWIN_TRUE@                    src/unix/darwin-proctitle.c \
 @DARWIN_TRUE@                    src/unix/fsevents.c \
 @DARWIN_TRUE@                    src/unix/kqueue.c \
 @DARWIN_TRUE@                    src/unix/proctitle.c
 
-@DRAGONFLY_TRUE@am__append_20 = include/uv-bsd.h
-@FREEBSD_TRUE@am__append_21 = include/uv-bsd.h
-@FREEBSD_TRUE@am__append_22 = src/unix/freebsd.c src/unix/kqueue.c
-@LINUX_TRUE@am__append_23 = include/uv-linux.h
-@LINUX_TRUE@am__append_24 = -D_GNU_SOURCE
-@LINUX_TRUE@am__append_25 = src/unix/linux-core.c \
+@DRAGONFLY_TRUE@am__append_21 = include/uv-bsd.h
+@FREEBSD_TRUE@am__append_22 = include/uv-bsd.h
+@FREEBSD_TRUE@am__append_23 = src/unix/freebsd.c src/unix/kqueue.c
+@LINUX_TRUE@am__append_24 = include/uv-linux.h
+@LINUX_TRUE@am__append_25 = -D_GNU_SOURCE
+@LINUX_TRUE@am__append_26 = src/unix/linux-core.c \
 @LINUX_TRUE@                    src/unix/linux-inotify.c \
 @LINUX_TRUE@                    src/unix/linux-syscalls.c \
 @LINUX_TRUE@                    src/unix/linux-syscalls.h \
 @LINUX_TRUE@                    src/unix/proctitle.c
 
-@NETBSD_TRUE@am__append_26 = include/uv-bsd.h
-@NETBSD_TRUE@am__append_27 = src/unix/kqueue.c src/unix/netbsd.c
-@OPENBSD_TRUE@am__append_28 = include/uv-bsd.h
-@OPENBSD_TRUE@am__append_29 = src/unix/kqueue.c src/unix/openbsd.c
-@SUNOS_TRUE@am__append_30 = include/uv-sunos.h
-@SUNOS_TRUE@am__append_31 = -D__EXTENSIONS__ -D_XOPEN_SOURCE=500
-@SUNOS_TRUE@am__append_32 = src/unix/sunos.c
+@NETBSD_TRUE@am__append_27 = include/uv-bsd.h
+@NETBSD_TRUE@am__append_28 = src/unix/kqueue.c src/unix/netbsd.c
+@OPENBSD_TRUE@am__append_29 = include/uv-bsd.h
+@OPENBSD_TRUE@am__append_30 = src/unix/kqueue.c src/unix/openbsd.c
+@SUNOS_TRUE@am__append_31 = include/uv-sunos.h
+@SUNOS_TRUE@am__append_32 = -D__EXTENSIONS__ -D_XOPEN_SOURCE=500
+@SUNOS_TRUE@am__append_33 = src/unix/sunos.c
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
@@ -377,24 +378,27 @@ am__test_run_tests_SOURCES_DIST = test/blackhole-server.c \
 	test/test-get-loadavg.c test/test-get-memory.c \
 	test/test-getaddrinfo.c test/test-getnameinfo.c \
 	test/test-getsockname.c test/test-handle-fileno.c \
-	test/test-hrtime.c test/test-idle.c test/test-ip4-addr.c \
-	test/test-ip6-addr.c test/test-ipc-send-recv.c test/test-ipc.c \
-	test/test-list.h test/test-loop-handles.c \
-	test/test-loop-alive.c test/test-loop-close.c \
-	test/test-loop-stop.c test/test-loop-time.c \
-	test/test-loop-configure.c test/test-multiple-listen.c \
-	test/test-mutexes.c test/test-osx-select.c \
-	test/test-pass-always.c test/test-ping-pong.c \
-	test/test-pipe-bind-error.c test/test-pipe-connect-error.c \
-	test/test-pipe-getsockname.c test/test-pipe-sendmsg.c \
+	test/test-homedir.c test/test-hrtime.c test/test-idle.c \
+	test/test-ip4-addr.c test/test-ip6-addr.c \
+	test/test-ipc-send-recv.c test/test-ipc.c test/test-list.h \
+	test/test-loop-handles.c test/test-loop-alive.c \
+	test/test-loop-close.c test/test-loop-stop.c \
+	test/test-loop-time.c test/test-loop-configure.c \
+	test/test-multiple-listen.c test/test-mutexes.c \
+	test/test-osx-select.c test/test-pass-always.c \
+	test/test-ping-pong.c test/test-pipe-bind-error.c \
+	test/test-pipe-connect-error.c \
+	test/test-pipe-connect-multiple.c \
+	test/test-pipe-connect-prepare.c test/test-pipe-getsockname.c \
+	test/test-pipe-pending-instances.c test/test-pipe-sendmsg.c \
 	test/test-pipe-server-close.c \
 	test/test-pipe-close-stdout-read-stdin.c \
 	test/test-pipe-set-non-blocking.c test/test-platform-output.c \
 	test/test-poll-close.c \
 	test/test-poll-close-doesnt-corrupt-stack.c \
 	test/test-poll-closesocket.c test/test-poll.c \
-	test/test-process-title.c test/test-ref.c \
-	test/test-run-nowait.c test/test-run-once.c \
+	test/test-process-title.c test/test-queue-foreach-delete.c \
+	test/test-ref.c test/test-run-nowait.c test/test-run-once.c \
 	test/test-semaphore.c test/test-shutdown-close.c \
 	test/test-shutdown-eof.c test/test-shutdown-twice.c \
 	test/test-signal-multiple-loops.c test/test-signal.c \
@@ -402,6 +406,7 @@ am__test_run_tests_SOURCES_DIST = test/blackhole-server.c \
 	test/test-stdio-over-pipes.c test/test-tcp-bind-error.c \
 	test/test-tcp-bind6-error.c test/test-tcp-close-accept.c \
 	test/test-tcp-close-while-connecting.c test/test-tcp-close.c \
+	test/test-tcp-create-socket-early.c \
 	test/test-tcp-connect-error-after-write.c \
 	test/test-tcp-connect-error.c test/test-tcp-connect-timeout.c \
 	test/test-tcp-connect6-error.c test/test-tcp-flags.c \
@@ -415,8 +420,9 @@ am__test_run_tests_SOURCES_DIST = test/blackhole-server.c \
 	test/test-thread.c test/test-threadpool-cancel.c \
 	test/test-threadpool.c test/test-timer-again.c \
 	test/test-timer-from-check.c test/test-timer.c test/test-tty.c \
-	test/test-udp-bind.c test/test-udp-dgram-too-big.c \
-	test/test-udp-ipv6.c test/test-udp-multicast-interface.c \
+	test/test-udp-bind.c test/test-udp-create-socket-early.c \
+	test/test-udp-dgram-too-big.c test/test-udp-ipv6.c \
+	test/test-udp-multicast-interface.c \
 	test/test-udp-multicast-interface6.c \
 	test/test-udp-multicast-join.c test/test-udp-multicast-join6.c \
 	test/test-udp-multicast-ttl.c test/test-udp-open.c \
@@ -463,6 +469,7 @@ am_test_run_tests_OBJECTS =  \
 	test/test_run_tests-test-getnameinfo.$(OBJEXT) \
 	test/test_run_tests-test-getsockname.$(OBJEXT) \
 	test/test_run_tests-test-handle-fileno.$(OBJEXT) \
+	test/test_run_tests-test-homedir.$(OBJEXT) \
 	test/test_run_tests-test-hrtime.$(OBJEXT) \
 	test/test_run_tests-test-idle.$(OBJEXT) \
 	test/test_run_tests-test-ip4-addr.$(OBJEXT) \
@@ -482,7 +489,10 @@ am_test_run_tests_OBJECTS =  \
 	test/test_run_tests-test-ping-pong.$(OBJEXT) \
 	test/test_run_tests-test-pipe-bind-error.$(OBJEXT) \
 	test/test_run_tests-test-pipe-connect-error.$(OBJEXT) \
+	test/test_run_tests-test-pipe-connect-multiple.$(OBJEXT) \
+	test/test_run_tests-test-pipe-connect-prepare.$(OBJEXT) \
 	test/test_run_tests-test-pipe-getsockname.$(OBJEXT) \
+	test/test_run_tests-test-pipe-pending-instances.$(OBJEXT) \
 	test/test_run_tests-test-pipe-sendmsg.$(OBJEXT) \
 	test/test_run_tests-test-pipe-server-close.$(OBJEXT) \
 	test/test_run_tests-test-pipe-close-stdout-read-stdin.$(OBJEXT) \
@@ -493,6 +503,7 @@ am_test_run_tests_OBJECTS =  \
 	test/test_run_tests-test-poll-closesocket.$(OBJEXT) \
 	test/test_run_tests-test-poll.$(OBJEXT) \
 	test/test_run_tests-test-process-title.$(OBJEXT) \
+	test/test_run_tests-test-queue-foreach-delete.$(OBJEXT) \
 	test/test_run_tests-test-ref.$(OBJEXT) \
 	test/test_run_tests-test-run-nowait.$(OBJEXT) \
 	test/test_run_tests-test-run-once.$(OBJEXT) \
@@ -510,6 +521,7 @@ am_test_run_tests_OBJECTS =  \
 	test/test_run_tests-test-tcp-close-accept.$(OBJEXT) \
 	test/test_run_tests-test-tcp-close-while-connecting.$(OBJEXT) \
 	test/test_run_tests-test-tcp-close.$(OBJEXT) \
+	test/test_run_tests-test-tcp-create-socket-early.$(OBJEXT) \
 	test/test_run_tests-test-tcp-connect-error-after-write.$(OBJEXT) \
 	test/test_run_tests-test-tcp-connect-error.$(OBJEXT) \
 	test/test_run_tests-test-tcp-connect-timeout.$(OBJEXT) \
@@ -535,6 +547,7 @@ am_test_run_tests_OBJECTS =  \
 	test/test_run_tests-test-timer.$(OBJEXT) \
 	test/test_run_tests-test-tty.$(OBJEXT) \
 	test/test_run_tests-test-udp-bind.$(OBJEXT) \
+	test/test_run_tests-test-udp-create-socket-early.$(OBJEXT) \
 	test/test_run_tests-test-udp-dgram-too-big.$(OBJEXT) \
 	test/test_run_tests-test-udp-ipv6.$(OBJEXT) \
 	test/test_run_tests-test-udp-multicast-interface.$(OBJEXT) \
@@ -602,9 +615,10 @@ am__can_run_installinfo = \
 DATA = $(pkgconfig_DATA)
 am__include_HEADERS_DIST = include/uv.h include/uv-errno.h \
 	include/uv-threadpool.h include/uv-version.h include/uv-win.h \
-	include/tree.h include/uv-unix.h include/android-ifaddrs.h \
-	include/pthread-fixes.h include/uv-darwin.h include/uv-bsd.h \
-	include/uv-linux.h include/uv-sunos.h
+	include/tree.h include/uv-unix.h include/uv-aix.h \
+	include/android-ifaddrs.h include/pthread-fixes.h \
+	include/uv-darwin.h include/uv-bsd.h include/uv-linux.h \
+	include/uv-sunos.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -790,20 +804,21 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src \
 	$(am__append_3) $(am__append_7)
 include_HEADERS = include/uv.h include/uv-errno.h \
 	include/uv-threadpool.h include/uv-version.h $(am__append_2) \
-	$(am__append_6) $(am__append_15) $(am__append_17) \
-	$(am__append_20) $(am__append_21) $(am__append_23) \
-	$(am__append_26) $(am__append_28) $(am__append_30)
+	$(am__append_6) $(am__append_14) $(am__append_16) \
+	$(am__append_18) $(am__append_21) $(am__append_22) \
+	$(am__append_24) $(am__append_27) $(am__append_29) \
+	$(am__append_31)
 CLEANFILES = 
 lib_LTLIBRARIES = libuv.la
 libuv_la_CFLAGS = @CFLAGS@ $(am__append_1) $(am__append_13) \
-	$(am__append_18) $(am__append_24) $(am__append_31)
+	$(am__append_19) $(am__append_25) $(am__append_32)
 libuv_la_LDFLAGS = -no-undefined -version-info 1:0:0
 libuv_la_SOURCES = src/fs-poll.c src/heap-inl.h src/inet.c src/queue.h \
 	src/threadpool.c src/uv-common.c src/uv-common.h src/version.c \
-	$(am__append_5) $(am__append_8) $(am__append_14) \
-	$(am__append_16) $(am__append_19) $(am__append_22) \
-	$(am__append_25) $(am__append_27) $(am__append_29) \
-	$(am__append_32)
+	$(am__append_5) $(am__append_8) $(am__append_15) \
+	$(am__append_17) $(am__append_20) $(am__append_23) \
+	$(am__append_26) $(am__append_28) $(am__append_30) \
+	$(am__append_33)
 EXTRA_DIST = test/fixtures/empty_file \
              test/fixtures/load_error.node \
              include \
@@ -838,24 +853,27 @@ test_run_tests_SOURCES = test/blackhole-server.c test/dns-server.c \
 	test/test-get-loadavg.c test/test-get-memory.c \
 	test/test-getaddrinfo.c test/test-getnameinfo.c \
 	test/test-getsockname.c test/test-handle-fileno.c \
-	test/test-hrtime.c test/test-idle.c test/test-ip4-addr.c \
-	test/test-ip6-addr.c test/test-ipc-send-recv.c test/test-ipc.c \
-	test/test-list.h test/test-loop-handles.c \
-	test/test-loop-alive.c test/test-loop-close.c \
-	test/test-loop-stop.c test/test-loop-time.c \
-	test/test-loop-configure.c test/test-multiple-listen.c \
-	test/test-mutexes.c test/test-osx-select.c \
-	test/test-pass-always.c test/test-ping-pong.c \
-	test/test-pipe-bind-error.c test/test-pipe-connect-error.c \
-	test/test-pipe-getsockname.c test/test-pipe-sendmsg.c \
+	test/test-homedir.c test/test-hrtime.c test/test-idle.c \
+	test/test-ip4-addr.c test/test-ip6-addr.c \
+	test/test-ipc-send-recv.c test/test-ipc.c test/test-list.h \
+	test/test-loop-handles.c test/test-loop-alive.c \
+	test/test-loop-close.c test/test-loop-stop.c \
+	test/test-loop-time.c test/test-loop-configure.c \
+	test/test-multiple-listen.c test/test-mutexes.c \
+	test/test-osx-select.c test/test-pass-always.c \
+	test/test-ping-pong.c test/test-pipe-bind-error.c \
+	test/test-pipe-connect-error.c \
+	test/test-pipe-connect-multiple.c \
+	test/test-pipe-connect-prepare.c test/test-pipe-getsockname.c \
+	test/test-pipe-pending-instances.c test/test-pipe-sendmsg.c \
 	test/test-pipe-server-close.c \
 	test/test-pipe-close-stdout-read-stdin.c \
 	test/test-pipe-set-non-blocking.c test/test-platform-output.c \
 	test/test-poll-close.c \
 	test/test-poll-close-doesnt-corrupt-stack.c \
 	test/test-poll-closesocket.c test/test-poll.c \
-	test/test-process-title.c test/test-ref.c \
-	test/test-run-nowait.c test/test-run-once.c \
+	test/test-process-title.c test/test-queue-foreach-delete.c \
+	test/test-ref.c test/test-run-nowait.c test/test-run-once.c \
 	test/test-semaphore.c test/test-shutdown-close.c \
 	test/test-shutdown-eof.c test/test-shutdown-twice.c \
 	test/test-signal-multiple-loops.c test/test-signal.c \
@@ -863,6 +881,7 @@ test_run_tests_SOURCES = test/blackhole-server.c test/dns-server.c \
 	test/test-stdio-over-pipes.c test/test-tcp-bind-error.c \
 	test/test-tcp-bind6-error.c test/test-tcp-close-accept.c \
 	test/test-tcp-close-while-connecting.c test/test-tcp-close.c \
+	test/test-tcp-create-socket-early.c \
 	test/test-tcp-connect-error-after-write.c \
 	test/test-tcp-connect-error.c test/test-tcp-connect-timeout.c \
 	test/test-tcp-connect6-error.c test/test-tcp-flags.c \
@@ -876,8 +895,9 @@ test_run_tests_SOURCES = test/blackhole-server.c test/dns-server.c \
 	test/test-thread.c test/test-threadpool-cancel.c \
 	test/test-threadpool.c test/test-timer-again.c \
 	test/test-timer-from-check.c test/test-timer.c test/test-tty.c \
-	test/test-udp-bind.c test/test-udp-dgram-too-big.c \
-	test/test-udp-ipv6.c test/test-udp-multicast-interface.c \
+	test/test-udp-bind.c test/test-udp-create-socket-early.c \
+	test/test-udp-dgram-too-big.c test/test-udp-ipv6.c \
+	test/test-udp-multicast-interface.c \
 	test/test-udp-multicast-interface6.c \
 	test/test-udp-multicast-join.c test/test-udp-multicast-join6.c \
 	test/test-udp-multicast-ttl.c test/test-udp-open.c \
@@ -1191,6 +1211,8 @@ test/test_run_tests-test-getsockname.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-handle-fileno.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-homedir.$(OBJEXT): test/$(am__dirstamp) \
+	test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-hrtime.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-idle.$(OBJEXT): test/$(am__dirstamp) \
@@ -1229,7 +1251,13 @@ test/test_run_tests-test-pipe-bind-error.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-pipe-connect-error.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-pipe-connect-multiple.$(OBJEXT):  \
+	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-pipe-connect-prepare.$(OBJEXT):  \
+	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-pipe-getsockname.$(OBJEXT):  \
+	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-pipe-pending-instances.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-pipe-sendmsg.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
@@ -1250,6 +1278,8 @@ test/test_run_tests-test-poll-closesocket.$(OBJEXT):  \
 test/test_run_tests-test-poll.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-process-title.$(OBJEXT):  \
+	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-queue-foreach-delete.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-ref.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
@@ -1285,6 +1315,8 @@ test/test_run_tests-test-tcp-close-while-connecting.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-tcp-close.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-tcp-create-socket-early.$(OBJEXT):  \
+	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-tcp-connect-error-after-write.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-tcp-connect-error.$(OBJEXT):  \
@@ -1335,6 +1367,8 @@ test/test_run_tests-test-tty.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-udp-bind.$(OBJEXT): test/$(am__dirstamp) \
 	test/$(DEPDIR)/$(am__dirstamp)
+test/test_run_tests-test-udp-create-socket-early.$(OBJEXT):  \
+	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-udp-dgram-too-big.$(OBJEXT):  \
 	test/$(am__dirstamp) test/$(DEPDIR)/$(am__dirstamp)
 test/test_run_tests-test-udp-ipv6.$(OBJEXT): test/$(am__dirstamp) \
@@ -1485,6 +1519,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-getnameinfo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-getsockname.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-handle-fileno.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-homedir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-hrtime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-idle.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-ip4-addr.Po@am__quote@
@@ -1505,7 +1540,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-bind-error.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-close-stdout-read-stdin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-connect-error.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-connect-multiple.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-connect-prepare.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-getsockname.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-pending-instances.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-sendmsg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-server-close.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-pipe-set-non-blocking.Po@am__quote@
@@ -1515,6 +1553,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-poll-closesocket.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-poll.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-process-title.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-queue-foreach-delete.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-ref.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-run-nowait.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-run-once.Po@am__quote@
@@ -1536,6 +1575,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-connect-error.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-connect-timeout.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-connect6-error.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-create-socket-early.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-flags.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-oob.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tcp-open.Po@am__quote@
@@ -1557,6 +1597,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-timer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-tty.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-udp-bind.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-udp-create-socket-early.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-udp-dgram-too-big.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-udp-ipv6.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/test_run_tests-test-udp-multicast-interface.Po@am__quote@
@@ -2500,6 +2541,20 @@ test/test_run_tests-test-handle-fileno.obj: test/test-handle-fileno.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-handle-fileno.obj `if test -f 'test/test-handle-fileno.c'; then $(CYGPATH_W) 'test/test-handle-fileno.c'; else $(CYGPATH_W) '$(srcdir)/test/test-handle-fileno.c'; fi`
 
+test/test_run_tests-test-homedir.o: test/test-homedir.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-homedir.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-homedir.Tpo -c -o test/test_run_tests-test-homedir.o `test -f 'test/test-homedir.c' || echo '$(srcdir)/'`test/test-homedir.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-homedir.Tpo test/$(DEPDIR)/test_run_tests-test-homedir.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-homedir.c' object='test/test_run_tests-test-homedir.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-homedir.o `test -f 'test/test-homedir.c' || echo '$(srcdir)/'`test/test-homedir.c
+
+test/test_run_tests-test-homedir.obj: test/test-homedir.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-homedir.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-homedir.Tpo -c -o test/test_run_tests-test-homedir.obj `if test -f 'test/test-homedir.c'; then $(CYGPATH_W) 'test/test-homedir.c'; else $(CYGPATH_W) '$(srcdir)/test/test-homedir.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-homedir.Tpo test/$(DEPDIR)/test_run_tests-test-homedir.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-homedir.c' object='test/test_run_tests-test-homedir.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-homedir.obj `if test -f 'test/test-homedir.c'; then $(CYGPATH_W) 'test/test-homedir.c'; else $(CYGPATH_W) '$(srcdir)/test/test-homedir.c'; fi`
+
 test/test_run_tests-test-hrtime.o: test/test-hrtime.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-hrtime.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-hrtime.Tpo -c -o test/test_run_tests-test-hrtime.o `test -f 'test/test-hrtime.c' || echo '$(srcdir)/'`test/test-hrtime.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-hrtime.Tpo test/$(DEPDIR)/test_run_tests-test-hrtime.Po
@@ -2766,6 +2821,34 @@ test/test_run_tests-test-pipe-connect-error.obj: test/test-pipe-connect-error.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-connect-error.obj `if test -f 'test/test-pipe-connect-error.c'; then $(CYGPATH_W) 'test/test-pipe-connect-error.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-connect-error.c'; fi`
 
+test/test_run_tests-test-pipe-connect-multiple.o: test/test-pipe-connect-multiple.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-connect-multiple.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-connect-multiple.Tpo -c -o test/test_run_tests-test-pipe-connect-multiple.o `test -f 'test/test-pipe-connect-multiple.c' || echo '$(srcdir)/'`test/test-pipe-connect-multiple.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-pipe-connect-multiple.Tpo test/$(DEPDIR)/test_run_tests-test-pipe-connect-multiple.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-pipe-connect-multiple.c' object='test/test_run_tests-test-pipe-connect-multiple.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-connect-multiple.o `test -f 'test/test-pipe-connect-multiple.c' || echo '$(srcdir)/'`test/test-pipe-connect-multiple.c
+
+test/test_run_tests-test-pipe-connect-multiple.obj: test/test-pipe-connect-multiple.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-connect-multiple.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-connect-multiple.Tpo -c -o test/test_run_tests-test-pipe-connect-multiple.obj `if test -f 'test/test-pipe-connect-multiple.c'; then $(CYGPATH_W) 'test/test-pipe-connect-multiple.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-connect-multiple.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-pipe-connect-multiple.Tpo test/$(DEPDIR)/test_run_tests-test-pipe-connect-multiple.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-pipe-connect-multiple.c' object='test/test_run_tests-test-pipe-connect-multiple.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-connect-multiple.obj `if test -f 'test/test-pipe-connect-multiple.c'; then $(CYGPATH_W) 'test/test-pipe-connect-multiple.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-connect-multiple.c'; fi`
+
+test/test_run_tests-test-pipe-connect-prepare.o: test/test-pipe-connect-prepare.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-connect-prepare.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-connect-prepare.Tpo -c -o test/test_run_tests-test-pipe-connect-prepare.o `test -f 'test/test-pipe-connect-prepare.c' || echo '$(srcdir)/'`test/test-pipe-connect-prepare.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-pipe-connect-prepare.Tpo test/$(DEPDIR)/test_run_tests-test-pipe-connect-prepare.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-pipe-connect-prepare.c' object='test/test_run_tests-test-pipe-connect-prepare.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-connect-prepare.o `test -f 'test/test-pipe-connect-prepare.c' || echo '$(srcdir)/'`test/test-pipe-connect-prepare.c
+
+test/test_run_tests-test-pipe-connect-prepare.obj: test/test-pipe-connect-prepare.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-connect-prepare.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-connect-prepare.Tpo -c -o test/test_run_tests-test-pipe-connect-prepare.obj `if test -f 'test/test-pipe-connect-prepare.c'; then $(CYGPATH_W) 'test/test-pipe-connect-prepare.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-connect-prepare.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-pipe-connect-prepare.Tpo test/$(DEPDIR)/test_run_tests-test-pipe-connect-prepare.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-pipe-connect-prepare.c' object='test/test_run_tests-test-pipe-connect-prepare.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-connect-prepare.obj `if test -f 'test/test-pipe-connect-prepare.c'; then $(CYGPATH_W) 'test/test-pipe-connect-prepare.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-connect-prepare.c'; fi`
+
 test/test_run_tests-test-pipe-getsockname.o: test/test-pipe-getsockname.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-getsockname.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-getsockname.Tpo -c -o test/test_run_tests-test-pipe-getsockname.o `test -f 'test/test-pipe-getsockname.c' || echo '$(srcdir)/'`test/test-pipe-getsockname.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-pipe-getsockname.Tpo test/$(DEPDIR)/test_run_tests-test-pipe-getsockname.Po
@@ -2779,6 +2862,20 @@ test/test_run_tests-test-pipe-getsockname.obj: test/test-pipe-getsockname.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-pipe-getsockname.c' object='test/test_run_tests-test-pipe-getsockname.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-getsockname.obj `if test -f 'test/test-pipe-getsockname.c'; then $(CYGPATH_W) 'test/test-pipe-getsockname.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-getsockname.c'; fi`
+
+test/test_run_tests-test-pipe-pending-instances.o: test/test-pipe-pending-instances.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-pending-instances.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-pending-instances.Tpo -c -o test/test_run_tests-test-pipe-pending-instances.o `test -f 'test/test-pipe-pending-instances.c' || echo '$(srcdir)/'`test/test-pipe-pending-instances.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-pipe-pending-instances.Tpo test/$(DEPDIR)/test_run_tests-test-pipe-pending-instances.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-pipe-pending-instances.c' object='test/test_run_tests-test-pipe-pending-instances.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-pending-instances.o `test -f 'test/test-pipe-pending-instances.c' || echo '$(srcdir)/'`test/test-pipe-pending-instances.c
+
+test/test_run_tests-test-pipe-pending-instances.obj: test/test-pipe-pending-instances.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-pending-instances.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-pending-instances.Tpo -c -o test/test_run_tests-test-pipe-pending-instances.obj `if test -f 'test/test-pipe-pending-instances.c'; then $(CYGPATH_W) 'test/test-pipe-pending-instances.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-pending-instances.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-pipe-pending-instances.Tpo test/$(DEPDIR)/test_run_tests-test-pipe-pending-instances.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-pipe-pending-instances.c' object='test/test_run_tests-test-pipe-pending-instances.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-pipe-pending-instances.obj `if test -f 'test/test-pipe-pending-instances.c'; then $(CYGPATH_W) 'test/test-pipe-pending-instances.c'; else $(CYGPATH_W) '$(srcdir)/test/test-pipe-pending-instances.c'; fi`
 
 test/test_run_tests-test-pipe-sendmsg.o: test/test-pipe-sendmsg.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-pipe-sendmsg.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-pipe-sendmsg.Tpo -c -o test/test_run_tests-test-pipe-sendmsg.o `test -f 'test/test-pipe-sendmsg.c' || echo '$(srcdir)/'`test/test-pipe-sendmsg.c
@@ -2919,6 +3016,20 @@ test/test_run_tests-test-process-title.obj: test/test-process-title.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-process-title.c' object='test/test_run_tests-test-process-title.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-process-title.obj `if test -f 'test/test-process-title.c'; then $(CYGPATH_W) 'test/test-process-title.c'; else $(CYGPATH_W) '$(srcdir)/test/test-process-title.c'; fi`
+
+test/test_run_tests-test-queue-foreach-delete.o: test/test-queue-foreach-delete.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-queue-foreach-delete.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-queue-foreach-delete.Tpo -c -o test/test_run_tests-test-queue-foreach-delete.o `test -f 'test/test-queue-foreach-delete.c' || echo '$(srcdir)/'`test/test-queue-foreach-delete.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-queue-foreach-delete.Tpo test/$(DEPDIR)/test_run_tests-test-queue-foreach-delete.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-queue-foreach-delete.c' object='test/test_run_tests-test-queue-foreach-delete.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-queue-foreach-delete.o `test -f 'test/test-queue-foreach-delete.c' || echo '$(srcdir)/'`test/test-queue-foreach-delete.c
+
+test/test_run_tests-test-queue-foreach-delete.obj: test/test-queue-foreach-delete.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-queue-foreach-delete.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-queue-foreach-delete.Tpo -c -o test/test_run_tests-test-queue-foreach-delete.obj `if test -f 'test/test-queue-foreach-delete.c'; then $(CYGPATH_W) 'test/test-queue-foreach-delete.c'; else $(CYGPATH_W) '$(srcdir)/test/test-queue-foreach-delete.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-queue-foreach-delete.Tpo test/$(DEPDIR)/test_run_tests-test-queue-foreach-delete.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-queue-foreach-delete.c' object='test/test_run_tests-test-queue-foreach-delete.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-queue-foreach-delete.obj `if test -f 'test/test-queue-foreach-delete.c'; then $(CYGPATH_W) 'test/test-queue-foreach-delete.c'; else $(CYGPATH_W) '$(srcdir)/test/test-queue-foreach-delete.c'; fi`
 
 test/test_run_tests-test-ref.o: test/test-ref.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-ref.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-ref.Tpo -c -o test/test_run_tests-test-ref.o `test -f 'test/test-ref.c' || echo '$(srcdir)/'`test/test-ref.c
@@ -3157,6 +3268,20 @@ test/test_run_tests-test-tcp-close.obj: test/test-tcp-close.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-tcp-close.c' object='test/test_run_tests-test-tcp-close.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-tcp-close.obj `if test -f 'test/test-tcp-close.c'; then $(CYGPATH_W) 'test/test-tcp-close.c'; else $(CYGPATH_W) '$(srcdir)/test/test-tcp-close.c'; fi`
+
+test/test_run_tests-test-tcp-create-socket-early.o: test/test-tcp-create-socket-early.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-tcp-create-socket-early.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-tcp-create-socket-early.Tpo -c -o test/test_run_tests-test-tcp-create-socket-early.o `test -f 'test/test-tcp-create-socket-early.c' || echo '$(srcdir)/'`test/test-tcp-create-socket-early.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-tcp-create-socket-early.Tpo test/$(DEPDIR)/test_run_tests-test-tcp-create-socket-early.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-tcp-create-socket-early.c' object='test/test_run_tests-test-tcp-create-socket-early.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-tcp-create-socket-early.o `test -f 'test/test-tcp-create-socket-early.c' || echo '$(srcdir)/'`test/test-tcp-create-socket-early.c
+
+test/test_run_tests-test-tcp-create-socket-early.obj: test/test-tcp-create-socket-early.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-tcp-create-socket-early.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-tcp-create-socket-early.Tpo -c -o test/test_run_tests-test-tcp-create-socket-early.obj `if test -f 'test/test-tcp-create-socket-early.c'; then $(CYGPATH_W) 'test/test-tcp-create-socket-early.c'; else $(CYGPATH_W) '$(srcdir)/test/test-tcp-create-socket-early.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-tcp-create-socket-early.Tpo test/$(DEPDIR)/test_run_tests-test-tcp-create-socket-early.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-tcp-create-socket-early.c' object='test/test_run_tests-test-tcp-create-socket-early.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-tcp-create-socket-early.obj `if test -f 'test/test-tcp-create-socket-early.c'; then $(CYGPATH_W) 'test/test-tcp-create-socket-early.c'; else $(CYGPATH_W) '$(srcdir)/test/test-tcp-create-socket-early.c'; fi`
 
 test/test_run_tests-test-tcp-connect-error-after-write.o: test/test-tcp-connect-error-after-write.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-tcp-connect-error-after-write.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-tcp-connect-error-after-write.Tpo -c -o test/test_run_tests-test-tcp-connect-error-after-write.o `test -f 'test/test-tcp-connect-error-after-write.c' || echo '$(srcdir)/'`test/test-tcp-connect-error-after-write.c
@@ -3507,6 +3632,20 @@ test/test_run_tests-test-udp-bind.obj: test/test-udp-bind.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-udp-bind.c' object='test/test_run_tests-test-udp-bind.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-udp-bind.obj `if test -f 'test/test-udp-bind.c'; then $(CYGPATH_W) 'test/test-udp-bind.c'; else $(CYGPATH_W) '$(srcdir)/test/test-udp-bind.c'; fi`
+
+test/test_run_tests-test-udp-create-socket-early.o: test/test-udp-create-socket-early.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-udp-create-socket-early.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-udp-create-socket-early.Tpo -c -o test/test_run_tests-test-udp-create-socket-early.o `test -f 'test/test-udp-create-socket-early.c' || echo '$(srcdir)/'`test/test-udp-create-socket-early.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-udp-create-socket-early.Tpo test/$(DEPDIR)/test_run_tests-test-udp-create-socket-early.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-udp-create-socket-early.c' object='test/test_run_tests-test-udp-create-socket-early.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-udp-create-socket-early.o `test -f 'test/test-udp-create-socket-early.c' || echo '$(srcdir)/'`test/test-udp-create-socket-early.c
+
+test/test_run_tests-test-udp-create-socket-early.obj: test/test-udp-create-socket-early.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-udp-create-socket-early.obj -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-udp-create-socket-early.Tpo -c -o test/test_run_tests-test-udp-create-socket-early.obj `if test -f 'test/test-udp-create-socket-early.c'; then $(CYGPATH_W) 'test/test-udp-create-socket-early.c'; else $(CYGPATH_W) '$(srcdir)/test/test-udp-create-socket-early.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/test_run_tests-test-udp-create-socket-early.Tpo test/$(DEPDIR)/test_run_tests-test-udp-create-socket-early.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test/test-udp-create-socket-early.c' object='test/test_run_tests-test-udp-create-socket-early.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -c -o test/test_run_tests-test-udp-create-socket-early.obj `if test -f 'test/test-udp-create-socket-early.c'; then $(CYGPATH_W) 'test/test-udp-create-socket-early.c'; else $(CYGPATH_W) '$(srcdir)/test/test-udp-create-socket-early.c'; fi`
 
 test/test_run_tests-test-udp-dgram-too-big.o: test/test-udp-dgram-too-big.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_run_tests_CFLAGS) $(CFLAGS) -MT test/test_run_tests-test-udp-dgram-too-big.o -MD -MP -MF test/$(DEPDIR)/test_run_tests-test-udp-dgram-too-big.Tpo -c -o test/test_run_tests-test-udp-dgram-too-big.o `test -f 'test/test-udp-dgram-too-big.c' || echo '$(srcdir)/'`test/test-udp-dgram-too-big.c

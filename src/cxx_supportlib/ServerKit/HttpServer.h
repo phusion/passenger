@@ -43,6 +43,7 @@
 #include <ServerKit/HttpHeaderParser.h>
 #include <ServerKit/HttpChunkedBodyParser.h>
 #include <Algorithms/MovingAverage.h>
+#include <Integrations/LibevJsonUtils.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/HttpConstants.h>
@@ -160,6 +161,10 @@ private:
 		} else {
 			SKC_TRACE(client, 3, "Request object destroyed; not added to freelist " <<
 				"because it's full (" << freeRequestCount << ")");
+			if (request->pool != NULL) {
+				psg_destroy_pool(request->pool);
+				request->pool = NULL;
+			}
 			delete request;
 		}
 
@@ -1227,6 +1232,9 @@ public:
 		doc["http_state"] = req->getHttpStateString();
 
 		if (req->begun()) {
+			ev_tstamp evNow = ev_now(this->getLoop());
+			unsigned long long now = SystemTime::getUsec();
+
 			doc["http_major"] = req->httpMajor;
 			doc["http_minor"] = req->httpMinor;
 			doc["want_keep_alive"] = req->wantKeepAlive;
@@ -1234,8 +1242,8 @@ public:
 			doc["request_body_fully_read"] = req->bodyFullyRead();
 			doc["request_body_already_read"] = (Json::Value::UInt64) req->bodyAlreadyRead;
 			doc["response_begun"] = req->responseBegun;
-			doc["last_data_receive_time"] = timeToJson(req->lastDataReceiveTime * 1000000);
-			doc["last_data_send_time"] = timeToJson(req->lastDataSendTime * 1000000);
+			doc["last_data_receive_time"] = evTimeToJson(req->lastDataReceiveTime, evNow, now);
+			doc["last_data_send_time"] = evTimeToJson(req->lastDataSendTime, evNow, now);
 			doc["method"] = http_method_str(req->method);
 			if (req->httpState != Request::ERROR) {
 				if (req->bodyType == Request::RBT_CONTENT_LENGTH) {

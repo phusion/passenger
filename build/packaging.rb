@@ -540,7 +540,7 @@ def change_shebang(filename, value)
 end
 
 desc "Create a fakeroot, useful for building native packages"
-task :fakeroot => [:apache2, :nginx, :doc] do
+task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   require 'rbconfig'
   require 'fileutils'
   include RbConfig
@@ -606,6 +606,8 @@ task :fakeroot => [:apache2, :nginx, :doc] do
   sh "mkdir -p #{fake_libdir}"
   sh "cp -R #{COMMON_OUTPUT_DIR} #{fake_libdir}/"
   sh "rm -rf #{fake_libdir}/common/libboost_oxt"
+  sh "cp -R #{NGINX_DYNAMIC_OUTPUT_DIR} #{fake_libdir}/"
+  sh "rm -rf #{fake_libdir}/nginx_dynamic/libboost_oxt"
 
   # Ruby extension binaries
   sh "mkdir -p #{fake_native_support_dir}"

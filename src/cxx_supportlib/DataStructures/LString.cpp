@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,36 +23,17 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_AGENT_BASE_H_
-#define _PASSENGER_AGENT_BASE_H_
-
-/** Common initialization code for all agents. */
-
-#include <cstddef>
-#include <Utils/VariantMap.h>
+#include <DataStructures/LString.h>
 
 namespace Passenger {
 
-typedef void (*DiagnosticsDumper)(void *userData);
-typedef void (*OptionParserFunc)(int argc, const char **argv, VariantMap &options);
-typedef void (*PreinitializationFunc)(VariantMap &options);
 
-const char *getEnvString(const char *name, const char *defaultValue = NULL);
-bool hasEnvOption(const char *name, bool defaultValue = false);
+LString::Part emptyLStringPart = {
+	NULL,
+	NULL,
+	"",
+	0
+};
 
-bool feedbackFdAvailable();
-VariantMap initializeAgent(int argc, char **argv[], const char *processName,
-	OptionParserFunc optionParser = NULL, PreinitializationFunc preinit = NULL,
-	int argStartIndex = 1);
-void initializeAgentOptions(const char *processName, VariantMap &options,
-	PreinitializationFunc preinit = NULL);
-void installAgentAbortHandler();
-void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
-
-void shutdownAgent(VariantMap *agentOptions);
-
-void restoreOomScore(VariantMap *agentOptions);
 
 }
-
-#endif /* _PASSENGER_AGENT_BASE_H_ */

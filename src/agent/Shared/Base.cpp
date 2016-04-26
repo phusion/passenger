@@ -64,6 +64,7 @@
 #include <Logging.h>
 #include <ResourceLocator.h>
 #include <Utils.h>
+#include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #ifdef __linux__
 	#include <ResourceLocator.h>
@@ -1500,6 +1501,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	if (hasEnvOption("PASSENGER_SIMULATE_SYSCALL_FAILURES")) {
 		initializeSyscallFailureSimulation(processName);
 	}
+	SystemTime::initialize();
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 
@@ -1643,6 +1645,36 @@ void
 shutdownAgent(VariantMap *agentOptions) {
 	delete agentOptions;
 	oxt::shutdown();
+}
+
+void
+restoreOomScore(VariantMap *agentOptions) {
+	TRACE_POINT();
+
+	string score = agentOptions->get("original_oom_score", false);
+	if (score.empty()) {
+		return;
+	}
+
+	FILE *f;
+	bool legacy = false;
+
+	if (score.at(0) == 'l') {
+		legacy = true;
+		score = score.substr(1);
+		f = fopen("/proc/self/oom_adj", "w");
+	} else {
+		f = fopen("/proc/self/oom_score_adj", "w");
+	}
+
+	if (f != NULL) {
+		fprintf(f, "%s\n", score.c_str());
+		fclose(f);
+	} else {
+		P_WARN("Unable to set OOM score to " << score << " (legacy: " << legacy
+				<< ") due to error: " << strerror(errno)
+				<< " (process will remain at inherited OOM score)");
+	}
 }
 
 } // namespace Passenger

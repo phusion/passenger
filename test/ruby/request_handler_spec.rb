@@ -552,6 +552,542 @@ describe RequestHandler do
     end
   end
 
+  describe "when processing Rack responses" do
+    def setup(&app)
+      @options["thread_handler"] = Class.new(RequestHandler::ThreadHandler) do
+        include Rack::ThreadHandlerExtension
+      end
+      @options["app"] = app
+      @options["keepalive"] = true
+
+      @request_handler = RequestHandler.new(@owner_pipe[1], @options)
+      @request_handler.start_main_loop_thread
+      @client = connect
+    end
+
+    after :each do
+      @client.close if @client
+    end
+
+    class NonArrayBody
+      def initialize(array)
+        @array = array
+      end
+
+      def each(&block)
+        @array.each(&block)
+      end
+    end
+
+    context "with Content-Length" do
+      context "and the response status code allows a body" do
+        context "and the request is HEAD" do
+          it "disallows Transfer-Encoding" do
+            setup do |env|
+                [200, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
+                  ["ok"]]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "HEAD",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should == ""
+          end
+
+          it "outputs Content-Length" do
+            setup do |env|
+              [200, { "Content-Length" => "2" }, ["ok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 200 Whatever\r\n" \
+              "Content-Length: 2\r\n\r\n"
+          end
+
+          context "and the body is an Array" do
+            it "does not check whether the body size matches Content-Length" do
+              setup do |env|
+                [200, { "Content-Length" => "2" }, ["okok"]]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "HEAD",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Content-Length: 2\r\n\r\n"
+            end
+
+            it "allows keepalive" do
+              setup do |env|
+                [200, { "Content-Length" => "2" }, ["ok"]]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "HEAD",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Content-Length: 2\r\n\r\n"
+            end
+          end
+
+          context "and the body is not an Array" do
+            it "allows keep-alive" do
+              setup do |env|
+                [200, { "Content-Length" => "2" }, NonArrayBody.new(["ok"])]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "HEAD",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Content-Length: 2\r\n\r\n"
+            end
+          end
+        end
+
+        context "and the request is not HEAD" do
+          it "disallows Transfer-Encoding" do
+            setup do |env|
+                [200, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
+                  ["ok"]]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "GET",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should == ""
+          end
+
+          it "outputs Content-Length" do
+            setup do |env|
+              [200, { "Content-Length" => "2" }, ["ok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 200 Whatever\r\n" \
+              "Content-Length: 2\r\n\r\n" \
+              "ok"
+          end
+
+          context "and the body is an Array" do
+            it "checks whether the body size matches Content-Length" do
+              setup do |env|
+                [200, { "Content-Length" => "2" }, ["okok"]]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "GET",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should == ""
+            end
+
+            it "allows keepalive" do
+              setup do |env|
+                [200, { "Content-Length" => "2" }, ["ok"]]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "GET",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Content-Length: 2\r\n\r\n" \
+                "ok"
+            end
+          end
+
+          context "and the body is not an Array" do
+            it "does not allow keep-alive" do
+              setup do |env|
+                [200, { "Content-Length" => "2" }, NonArrayBody.new(["ok"])]
+              end
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "GET",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Content-Length: 2\r\n" \
+                "Connection: close\r\n\r\n" \
+                "ok"
+            end
+          end
+        end
+      end
+
+      context "and the response status code does not allow a body" do
+        context "and the request is HEAD" do
+          it "disallows Transfer-Encoding" do
+            setup do |env|
+              [204, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
+                ["ok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should == ""
+          end
+
+          it "outputs Content-Length, ignores the body and allows keep-alive" do
+            setup do |env|
+              [204, { "Content-Length" => "2" }, ["ok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n" \
+              "Content-Length: 2\r\n\r\n"
+          end
+
+          it "does not check whether the body size matches Content-Length" do
+            setup do |env|
+              [204, { "Content-Length" => "2" }, ["okok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n" \
+              "Content-Length: 2\r\n\r\n"
+          end
+        end
+
+        context "and the request is not HEAD" do
+          it "disallows Transfer-Encoding" do
+            setup do |env|
+              [204, { "Content-Length" => "2", "Transfer-Encoding" => "chunked" },
+                ["ok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should == ""
+          end
+
+          it "outputs Content-Length, ignores the body and allows keep-alive" do
+            setup do |env|
+              [204, { "Content-Length" => "2" }, ["ok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n" \
+              "Content-Length: 2\r\n\r\n"
+          end
+
+          it "does not check whether the body size matches Content-Length" do
+            setup do |env|
+              [204, { "Content-Length" => "2" }, ["okok"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n" \
+              "Content-Length: 2\r\n\r\n"
+          end
+        end
+      end
+
+      context "with X-Sendfile" do
+        it "outputs the body and disallows keep-alive" do
+          setup do |env|
+            [200, { "Content-Length" => "2", "X-Sendfile" => "/foo" }, ["ok"]]
+          end
+          send_binary_request(@client,
+            "REQUEST_METHOD" => "GET",
+            "PATH_INFO" => "/")
+          @client.close_write
+          [
+            "HTTP/1.1 200 Whatever\r\n" \
+            "Content-Length: 2\r\n" \
+            "X-Sendfile: /foo\r\n" \
+            "Connection: close\r\n\r\n" \
+            "ok",
+
+            "HTTP/1.1 200 Whatever\r\n" \
+            "X-Sendfile: /foo\r\n" \
+            "Content-Length: 2\r\n" \
+            "Connection: close\r\n\r\n" \
+            "ok"
+          ].should include(@client.read)
+        end
+      end
+
+      context "with X-Accel-Redirect" do
+        it "outputs the body and disallows keep-alive" do
+          setup do |env|
+            [200, { "Content-Length" => "2", "X-Accel-Redirect" => "/foo" }, ["ok"]]
+          end
+          send_binary_request(@client,
+            "REQUEST_METHOD" => "GET",
+            "PATH_INFO" => "/")
+          @client.close_write
+          [
+            "HTTP/1.1 200 Whatever\r\n" \
+            "Content-Length: 2\r\n" \
+            "X-Accel-Redirect: /foo\r\n" \
+            "Connection: close\r\n\r\n" \
+            "ok",
+            
+            "HTTP/1.1 200 Whatever\r\n" \
+            "X-Accel-Redirect: /foo\r\n" \
+            "Content-Length: 2\r\n" \
+            "Connection: close\r\n\r\n" \
+            "ok"
+          ].should include(@client.read)
+        end
+      end
+    end
+
+    describe "with Transfer-Encoding" do
+      context "and the response status code allows a body" do
+        context "and the request is HEAD" do
+          it "disallows Content-Length" do
+            setup do |env|
+              [200, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
+                ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should == ""
+          end
+
+          it "outputs Transfer-Encoding, ignores the body and allows keep-alive" do
+            setup do |env|
+              [200, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 200 Whatever\r\n" \
+              "Transfer-Encoding: chunked\r\n\r\n"
+          end
+        end
+
+        context "and the request is not HEAD" do
+          it "disallows Content-Length" do
+            setup do |env|
+              [200, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
+                ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should == ""
+          end
+
+          it "outputs Transfer-Encoding, does not rechunk the body and disallows keep-alive" do
+            setup do |env|
+              [200, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 200 Whatever\r\n" \
+              "Transfer-Encoding: chunked\r\n" \
+              "Connection: close\r\n\r\n" \
+              "2\r\nok\r\n" \
+              "0\r\n\r\n"
+          end
+        end
+      end
+
+      context "and the response status code does not allow a body" do
+        context "and the request is HEAD" do
+          it "disallows Content-Length" do
+            setup do |env|
+              [204, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
+                ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should == ""
+          end
+
+          it "outputs Transfer-Encoding, ignores the body and allows keep-alive" do
+            setup do |env|
+              [204, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n" \
+              "Transfer-Encoding: chunked\r\n\r\n"
+          end
+        end
+
+        context "and the request is not HEAD" do
+          it "disallows Content-Length" do
+            setup do |env|
+              [204, { "Transfer-Encoding" => "chunked", "Content-Length" => "1" },
+                ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should == ""
+          end
+
+          it "outputs Transfer-Encoding, ignores the body and allows keep-alive" do
+            setup do |env|
+              [204, { "Transfer-Encoding" => "chunked" }, ["2\r\nok\r\n", "0\r\n\r\n"]]
+            end
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n" \
+              "Transfer-Encoding: chunked\r\n\r\n"
+          end
+        end
+      end
+    end
+
+    describe "with neither Content-Length nor Transfer-Encoding" do
+      context "and the response status code allows a body" do
+        context "and the request is HEAD" do
+          context "and the body is an Array" do
+            before :each do
+              setup do |env|
+                [200, {}, ["ok"]]
+              end
+            end
+
+            it "adds Content-Length, ignores the body and allows keep-alive" do
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "HEAD",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Content-Length: 2\r\n\r\n"
+            end
+          end
+
+          context "and the body is not an Array" do
+            before :each do
+              setup do |env|
+                [200, {}, NonArrayBody.new(["ok"])]
+              end
+            end
+
+            it "adds Transfer-Encoding, ignores the body and allows keep-alive" do
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "HEAD",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Transfer-Encoding: chunked\r\n\r\n"
+            end
+          end
+        end
+
+        context "and the request is not HEAD" do
+          context "and the body is an Array" do
+            before :each do
+              setup do |env|
+                [200, {}, ["ok"]]
+              end
+            end
+
+            it "adds Content-Length and allows keep-alive" do
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "GET",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Content-Length: 2\r\n\r\n" \
+                "ok"
+            end
+          end
+
+          context "and the body is not an Array" do
+            before :each do
+              setup do |env|
+                [200, {}, NonArrayBody.new(["ok"])]
+              end
+            end
+
+            it "adds Transfer-Encoding, chunk-encodes the body and allows keep-alive" do
+              send_binary_request(@client,
+                "REQUEST_METHOD" => "GET",
+                "PATH_INFO" => "/")
+              @client.close_write
+              @client.read.should ==
+                "HTTP/1.1 200 Whatever\r\n" \
+                "Transfer-Encoding: chunked\r\n\r\n" \
+                "2\r\nok\r\n" \
+                "0\r\n\r\n"
+            end
+          end
+        end
+      end
+
+      context "and the response status code does not allow a body" do
+        before :each do
+          setup do |env|
+            [204, {}, ["ok"]]
+          end
+        end
+
+        context "and the request is HEAD" do
+          it "adds neither Content-Length nor Transfer-Encoding, ignores the body and allows keep-alive" do
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "HEAD",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n\r\n"
+          end
+        end
+
+        context "and the request is not HEAD" do
+          it "adds neither Content-Length nor Transfer-Encoding, ignores the body and allows keep-alive" do
+            send_binary_request(@client,
+              "REQUEST_METHOD" => "GET",
+              "PATH_INFO" => "/")
+            @client.close_write
+            @client.read.should ==
+              "HTTP/1.1 204 Whatever\r\n\r\n"
+          end
+        end
+      end
+    end
+  end
+
   describe "HTTP parsing" do
     before :each do
       @request_handler.start_main_loop_thread

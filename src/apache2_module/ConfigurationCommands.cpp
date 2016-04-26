@@ -244,6 +244,13 @@
 		"Force Passenger to believe that an application process can handle the given number of concurrent requests per process"),
 
 	
+	AP_INIT_TAKE1("PassengerLveMinUid",
+		(Take1Func) cmd_passenger_lve_min_uid,
+		NULL,
+		RSRC_CONF,
+		"Minimum user id starting from which entering LVE and CageFS is allowed."),
+
+	
 	AP_INIT_TAKE1("RailsEnv",
 		(Take1Func) cmd_passenger_app_env,
 		NULL,

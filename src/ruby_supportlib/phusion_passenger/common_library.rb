@@ -78,7 +78,7 @@ class CommonLibraryBuilder
     result = []
 
     selected_categories.each do |category|
-      object_names = selected_objects_beloging_to_category(category)
+      object_names = selected_objects_belonging_to_category(category)
       result.concat(object_filenames_for(object_names))
     end
 
@@ -153,6 +153,7 @@ private
       :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
       :flags => [
         LIBEV_CFLAGS,
+        LIBUV_CFLAGS,
         optimize,
         extra_compiler_flags
       ]
@@ -230,7 +231,7 @@ private
     return expected == actual
   end
 
-  def selected_objects_beloging_to_category(category)
+  def selected_objects_belonging_to_category(category)
     result = []
     @selected_components.each_pair do |object_name, options|
       if options[:category] == category
@@ -314,6 +315,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'ServerKit/Implementation.cpp',
     :category => :other,
     :optimize => true
+  define_component 'DataStructures/LString.o',
+    :source   => 'DataStructures/LString.cpp',
+    :category => :other
 
   define_component 'Utils/Hasher.o',
     :source   => 'Utils/Hasher.cpp',

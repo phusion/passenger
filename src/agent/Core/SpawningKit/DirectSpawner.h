@@ -28,9 +28,11 @@
 
 #include <Core/SpawningKit/Spawner.h>
 #include <Constants.h>
+#include <LveLoggingDecorator.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
 
+#include <adhoc_lve.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -167,6 +169,14 @@ public:
 			preparation.userSwitching.gid);
 		pid_t pid;
 
+		adhoc_lve::LveEnter scopedLveEnter(LveLoggingDecorator::lveInitOnce(),
+		                                   preparation.userSwitching.uid,
+		                                   options.lveMinUid,
+		                                   LveLoggingDecorator::lveExitCallback);
+		LveLoggingDecorator::logLveEnter(scopedLveEnter,
+		                                 preparation.userSwitching.uid,
+		                                 options.lveMinUid);
+
 		pid = syscalls::fork();
 		if (pid == 0) {
 			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
@@ -203,6 +213,8 @@ public:
 
 		} else {
 			UPDATE_TRACE_POINT();
+			scopedLveEnter.exit();
+
 			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.first,
 				"App " << pid << " (" << options.appRoot << ") adminSocket[0]");
 			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.second,

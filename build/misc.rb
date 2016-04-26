@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -146,7 +146,7 @@ end
 
 desc "Update the C++ dependency map"
 task :dependency_map do
-  sh "./dev/index_cxx_dependencies.rb > build/cxx_dependency_map.rb"
+  sh "./dev/index_cxx_dependencies.rb > build/support/cxx_dependency_map.rb"
 end
 
 dependencies = [

@@ -385,6 +385,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
 	fillPoolOption(req, options.fileDescriptorUlimit, "!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
+	fillPoolOption(req, options.lveMinUid, "!~PASSENGER_LVE_MIN_UID");
 	/******************/
 
 	boost::shared_ptr<Options> optionsCopy = boost::make_shared<Options>(options);

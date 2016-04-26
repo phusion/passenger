@@ -271,4 +271,11 @@ namespace tut {
 		ensure("(1)", result != NULL);
 		ensure("(2)", psg_lstr_cmp(result, &value));
 	}
+
+	TEST_METHOD(35) {
+		set_test_name("Empty cookie header");
+
+		result = findCookie(pool, &header, &name);
+		ensure_equals<void *>("(1)", result, NULL);
+	}
 }

@@ -31,7 +31,7 @@ module PhusionPassenger
 
   PACKAGE_NAME = 'passenger'
   # Run 'rake src/cxx_supportlib/Constants.h' after changing this number.
-  VERSION_STRING = '5.0.26'
+  VERSION_STRING = '5.0.28'
 
   PREFERRED_NGINX_VERSION = '1.8.1'
   NGINX_SHA256_CHECKSUM = '8f4b3c630966c044ec72715754334d1fdf741caa1d5795fb4646c27d09f797b7'
@@ -233,6 +233,20 @@ module PhusionPassenger
   #     scan the entire load path.
   def self.require_passenger_lib(name)
     require("#{ruby_libdir}/phusion_passenger/#{name}")
+  end
+
+  # Forward define public_api.rb methods for code that tries to hook
+  # Passenger events before an app is spawned (such as mongoid)
+  def self.on_event(name, &block)
+    # The definition in `public_api.rb` will override this implementation when
+    # a Ruby application is spawned.
+    nil
+  end
+  
+  def self.call_event(name, *args)
+    # The definition in `public_api.rb` will override this implementation when
+    # a Ruby application is spawned.
+    nil
   end
 
 
