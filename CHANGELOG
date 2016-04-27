@@ -7,6 +7,7 @@ Release 5.0.28
  * Integrates with CloudLinux LVE and CageFS (security checks and a new option PassengerLveMinUid). Thanks to Oleksiy Shchukin from CloudLinux Inc. for contributing this.
  * Fixes the Nginx build when the PCRE library is not available (such as when compiling with `--without-http_rewrite_module`). Closes GH-1796.
  * Extends `passenger-memory-stats` filter to show the instance dir toucher too (as well as the core in valgrind debug runs).
+ * [Nginx] The preferred Nginx version is now 1.10.0 (previously 1.8.1).
 
 
 Release 5.0.27
