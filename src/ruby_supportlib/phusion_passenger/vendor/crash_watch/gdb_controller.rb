@@ -328,7 +328,8 @@ module CrashWatch
         end
       elsif result.nil?
         raise GdbNotFound,
-          "*** ERROR ***: 'gdb' isn't installed. Please install it first.\n" +
+          "*** ERROR ***: 'gdb' not found. Please install it (and if using Nginx " + 
+          "ensure that PATH isn't filtered out, see also its \"env\" option).\n" +
           "       Debian/Ubuntu: sudo apt-get install gdb\n" +
           "RedHat/CentOS/Fedora: sudo yum install gdb\n" +
           "            Mac OS X: please install the Developer Tools or XCode\n" +
