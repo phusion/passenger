@@ -378,8 +378,7 @@ Controller::friendlyErrorPagesEnabled(Request *req) {
 	bool defaultValue;
 	string defaultStr = agentsOptions->get("friendly_error_pages");
 	if (defaultStr == "auto") {
-		defaultValue = req->options.environment != "staging"
-			&& req->options.environment != "production";
+		defaultValue = (req->options.environment == "development");
 	} else {
 		defaultValue = defaultStr == "true";
 	}
