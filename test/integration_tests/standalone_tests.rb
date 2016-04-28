@@ -33,7 +33,7 @@ describe "Passenger Standalone" do
   def capture_output(command)
     output = `#{command} 2>&1`.strip
     if $?.exitstatus == 0
-      return output
+      output
     else
       abort "Command #{command} exited with status #{$?.exitstatus}; output:\n#{output}"
     end
@@ -124,7 +124,7 @@ describe "Passenger Standalone" do
           end
           Dir.mkdir("public")
           Dir.mkdir("tmp")
-          sh("#{passenger_command} -p 4000 -d --disable-turbocaching >/dev/null")
+          capture_output("#{passenger_command} -p 4000 -d --disable-turbocaching")
           begin
             open("http://127.0.0.1:4000/") do |f|
               f.read.should == "ok"
@@ -143,7 +143,7 @@ describe "Passenger Standalone" do
           raise "buildout.old exists. Please fix this first."
         end
         if File.exist?("#{@user_dir}.old")
-          raise "#{@user_dir} exists. Please fix this first."
+          raise "#{@user_dir}.old exists. Please fix this first."
         end
         if PhusionPassenger.build_system_dir
           FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout",
@@ -155,13 +155,15 @@ describe "Passenger Standalone" do
       end
 
       after :each do
-        FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
-        FileUtils.rm_rf(@user_dir)
         if PhusionPassenger.build_system_dir
-          FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
-            "#{PhusionPassenger.build_system_dir}/buildout")
+          if File.exist?("#{PhusionPassenger.build_system_dir}/buildout.old")
+            FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
+            FileUtils.mv("#{PhusionPassenger.build_system_dir}/buildout.old",
+              "#{PhusionPassenger.build_system_dir}/buildout")
+          end
         end
         if File.exist?("#{@user_dir}.old")
+          FileUtils.rm_rf(@user_dir)
           FileUtils.mv("#{@user_dir}.old", @user_dir)
         end
       end
