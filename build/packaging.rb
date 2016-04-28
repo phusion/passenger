@@ -206,7 +206,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
           puts "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
         else
           puts "Submitting Homebrew pull request..."
-          sh "cd #{homebrew_dir} && hub pull-request 'Update passenger to version #{version}' -b Homebrew:master"
+          sh "cd #{homebrew_dir} && hub pull-request -m 'Update passenger to version #{version}' -b Homebrew:master"
         end
       end
 
@@ -332,12 +332,13 @@ task 'package:update_homebrew' do
   sha256 = File.open("#{PKG_DIR}/passenger-#{version}.tar.gz", "rb") do |f|
     Digest::SHA256.hexdigest(f.read)
   end
-  sh "rm -rf #{homebrew_dir}"
-  sh "git clone git@github.com:phusion/homebrew.git #{homebrew_dir}"
-  sh "cd #{homebrew_dir} && git remote add Homebrew https://github.com/Homebrew/homebrew.git"
+  if !File.exist?(homebrew_dir)
+    sh "git clone git@github.com:phusion/homebrew-core.git #{homebrew_dir}"
+    sh "cd #{homebrew_dir} && git remote add Homebrew https://github.com/Homebrew/homebrew-core.git"
+  end
   sh "cd #{homebrew_dir} && git fetch Homebrew"
   sh "cd #{homebrew_dir} && git reset --hard Homebrew/master"
-  formula = File.read("/tmp/homebrew/Library/Formula/passenger.rb")
+  formula = File.read("/tmp/homebrew/Formula/passenger.rb")
   formula.gsub!(/passenger-.+?\.tar\.gz/, "passenger-#{version}.tar.gz") ||
     abort("Unable to substitute Homebrew formula tarball filename")
   formula.gsub!(/^  sha256 .*/, "  sha256 \"#{sha256}\"") ||
@@ -348,13 +349,13 @@ task 'package:update_homebrew' do
   necessary_dirs_str = word_wrap(necessary_dirs.inspect).split("\n").join("\n      ")
   formula.sub!(/necessary_files = .*?\]/m, "necessary_files = Dir#{necessary_dirs_str}") ||
     abort("Unable to substitute file whitelist")
-  File.open("/tmp/homebrew/Library/Formula/passenger.rb", "w") do |f|
+  File.open("/tmp/homebrew/Formula/passenger.rb", "w") do |f|
     f.write(formula)
   end
   sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
   sh "cd #{homebrew_dir} && git push -f"
   if boolean_option('HOMEBREW_TEST', true)
-    sh "cp /tmp/homebrew/Library/Formula/passenger.rb /usr/local/Library/Formula/passenger.rb"
+    sh "cp /tmp/homebrew/Formula/passenger.rb /usr/local/Library/Formula/passenger.rb"
     if `brew info passenger` !~ /^Not installed$/
       sh "brew uninstall passenger"
     end
