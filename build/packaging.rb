@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -206,7 +206,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
           puts "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
         else
           puts "Submitting Homebrew pull request..."
-          sh "cd #{homebrew_dir} && hub pull-request -m 'Update passenger to version #{version}' -b Homebrew:master"
+          sh "cd #{homebrew_dir} && hub pull-request -m 'passenger #{version}' -b Homebrew:master"
         end
       end
 
