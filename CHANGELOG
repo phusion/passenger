@@ -1,6 +1,7 @@
 Release 5.0.29
 --------------
 
+ * Fixes the FreeBSD build breaking due to the `-ldl` flag introduced by the LVE integration patch (5.0.28). Closes GH-1805.
 
 
 Release 5.0.28

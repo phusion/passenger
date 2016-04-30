@@ -484,6 +484,12 @@ module PhusionPassenger
     end
     memoize :has_math_library?, true
 
+    def self.has_dl_library?
+      return try_link("Checking for -ldl support",
+        :c, "int main() { return 0; }\n", '-ldl')
+    end
+    memoize :has_dl_library?, true
+    
     def self.has_alloca_h?
       return try_compile("Checking for alloca.h",
         :c, '#include <alloca.h>')
