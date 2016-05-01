@@ -218,6 +218,10 @@ bool
 Group::pushGetWaiter(const Options &newOptions, const GetCallback &callback,
 	boost::container::vector<Callback> &postLockActions)
 {
+	if ((options.maxRequestQueueTime == 0)&&(newOptions.maxRequestQueueTime > 0)) {
+		options.maxRequestQueueTime = newOptions.maxRequestQueueTime;
+		queueTimeoutCheckerCond.notify_one();
+	}
 	if (OXT_LIKELY(!testOverflowRequestQueue()
 		&& (newOptions.maxRequestQueueSize == 0
 		    || getWaitlist.size() < newOptions.maxRequestQueueSize)))
@@ -287,6 +291,11 @@ Group::assignSessionsToGetWaiters(boost::container::vector<Callback> &postLockAc
 
 	while (!done && i < getWaitlist.size()) {
 		const GetWaiter &waiter = getWaitlist[i];
+		if (requestTimedOut(waiter)) {
+			waiter.callback.call(waiter.callback, SessionPtr(), boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueTime));
+			getWaitlist.erase(getWaitlist.begin() + i);
+			continue;
+		}
 		RouteResult result = route(waiter.options);
 		if (result.process != NULL) {
 			postLockActions.push_back(boost::bind(
@@ -316,6 +325,16 @@ Group::testOverflowRequestQueue() const {
 	}
 }
 
+bool
+Group::testTimeoutRequestQueue() const {
+	Pool::DebugSupportPtr debug = getPool()->debugSupport;
+	if (debug) {
+		return debug->testTimeoutRequestQueue;
+	} else {
+		return false;
+	}
+}
+
 void
 Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 	Pool::AbortLongRunningConnectionsCallback callback =
@@ -325,6 +344,38 @@ Group::callAbortLongRunningConnectionsCallback(const ProcessPtr &process) {
 	}
 }
 
+bool
+Group::requestTimedOut(const GetWaiter &waiter) {
+	posix_time::time_duration diff = boost::posix_time::microsec_clock::local_time() - waiter.startTime;
+	return(!OXT_LIKELY(!testTimeoutRequestQueue()
+		&& (options.maxRequestQueueTime == 0
+		|| diff.total_milliseconds() < options.maxRequestQueueTime)));
+}
+
+void
+Group::timeoutRequestsCallback() {
+	while (!this_thread::interruption_requested()) {
+		ScopedLock l = ScopedLock(getPool()->syncher);
+		if (options.maxRequestQueueTime == 0) {
+			queueTimeoutCheckerCond.wait(l);
+		} else {
+			queueTimeoutCheckerCond.timed_wait(l,
+				posix_time::milliseconds(options.maxRequestQueueTime/2));
+		}
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
+		while (0 < getWaitlist.size()) {
+			const GetWaiter &waiter = *getWaitlist.begin();
+			if (!requestTimedOut(waiter)) {
+				break;
+			} else {
+				waiter.callback.call(waiter.callback, SessionPtr(),
+									 boost::make_shared<RequestQueueTimeoutException>(options.maxRequestQueueTime));
+				getWaitlist.erase(getWaitlist.begin());
+			}
+		}
+	}
+}
 
 } // namespace ApplicationPool2
 } // namespace Passenger

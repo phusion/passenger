@@ -208,6 +208,7 @@ Controller::fillPoolOptionsFromAgentsOptions(Options &options) {
 	options.minProcesses = agentsOptions->getInt("min_instances");
 	options.maxPreloaderIdleTime = agentsOptions->getInt("max_preloader_idle_time");
 	options.maxRequestQueueSize = agentsOptions->getInt("max_request_queue_size");
+	options.maxRequestQueueTime = agentsOptions->getInt("max_request_queue_time");
 	options.abortWebsocketsOnProcessShutdown = agentsOptions->getBool("abort_websockets_on_process_shutdown");
 	options.forceMaxConcurrentRequestsPerProcess = agentsOptions->getInt("force_max_concurrent_requests_per_process");
 	options.spawnMethod = agentsOptions->get("spawn_method");
@@ -376,6 +377,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");
 	fillPoolOption(req, options.maxPreloaderIdleTime, "!~PASSENGER_MAX_PRELOADER_IDLE_TIME");
 	fillPoolOption(req, options.maxRequestQueueSize, "!~PASSENGER_MAX_REQUEST_QUEUE_SIZE");
+	fillPoolOptionSecToMsec(req, options.maxRequestQueueTime, "!~PASSENGER_MAX_REQUEST_QUEUE_TIME");
 	fillPoolOption(req, options.abortWebsocketsOnProcessShutdown, "!~PASSENGER_ABORT_WEBSOCKETS_ON_PROCESS_SHUTDOWN");
 	fillPoolOption(req, options.forceMaxConcurrentRequestsPerProcess, "!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS");
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");

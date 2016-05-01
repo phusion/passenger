@@ -93,6 +93,7 @@ copyException(const tracable_exception &e) {
 	TRY_COPY_EXCEPTION(ConfigurationException);
 
 	TRY_COPY_EXCEPTION(RequestQueueFullException);
+	TRY_COPY_EXCEPTION(RequestQueueTimeoutException);
 	TRY_COPY_EXCEPTION(GetAbortedException);
 	TRY_COPY_EXCEPTION(SpawnException);
 
@@ -136,6 +137,7 @@ rethrowException(const ExceptionPtr &e) {
 
 	TRY_RETHROW_EXCEPTION(SpawnException);
 	TRY_RETHROW_EXCEPTION(RequestQueueFullException);
+	TRY_RETHROW_EXCEPTION(RequestQueueTimeoutException);
 	TRY_RETHROW_EXCEPTION(GetAbortedException);
 
 	TRY_RETHROW_EXCEPTION(InvalidModeStringException);

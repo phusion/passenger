@@ -2028,5 +2028,28 @@ namespace tut {
 	}
 
 
+	TEST_METHOD(86) {
+		// If a request is in the getWaitlist for longer than maxRequestQueueTime,
+		// then an exception is returned.
+		Options options = createOptions();
+		options.appGroupName = "test1";
+		options.maxRequestQueueSize = 2;
+		options.maxRequestQueueTime = 50;
+		GroupPtr group = pool->findOrCreateGroup(options);
+		spawningKitConfig->concurrency = 2;
+		initPoolDebugging();
+		pool->setMax(1);
+
+		try {
+			pool->get(options, &ticket);
+			fail("Expected RequestQueueTimeoutException");
+		} catch (const RequestQueueTimeoutException &e) {
+			// OK
+		} catch (const RequestQueueFullException &e) {
+			fail("Expected RequestQueueTimeoutException");
+		}
+	}
+
 	/*****************************/
+
 }

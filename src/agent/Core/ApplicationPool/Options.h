@@ -365,6 +365,12 @@ public:
 	unsigned int maxRequestQueueSize;
 
 	/**
+	 * The maximum time that requests may live in the Group.getWaitlist queue.
+	 * A value of 0 means unlimited.
+	 */
+	unsigned int maxRequestQueueTime;
+
+	/*
 	 * Whether websocket connections should be aborted on process shutdown
 	 * or restart.
 	 */
@@ -495,6 +501,7 @@ public:
 		  maxPreloaderIdleTime(-1),
 		  maxOutOfBandWorkInstances(1),
 		  maxRequestQueueSize(100),
+		  maxRequestQueueTime(0),
 		  abortWebsocketsOnProcessShutdown(true),
 
 		  stickySessionId(0),

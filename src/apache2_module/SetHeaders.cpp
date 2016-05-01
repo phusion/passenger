@@ -101,6 +101,11 @@
 	
 
 	
+		addHeader(r, result, StaticString("!~PASSENGER_MAX_REQUEST_QUEUE_TIME",
+			sizeof("!~PASSENGER_MAX_REQUEST_QUEUE_TIME") - 1), config->maxRequestQueueTime);
+	
+
+	
 		addHeader(r, result, StaticString("!~PASSENGER_MAX_PRELOADER_IDLE_TIME",
 			sizeof("!~PASSENGER_MAX_PRELOADER_IDLE_TIME") - 1), config->maxPreloaderIdleTime);
 	

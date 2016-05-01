@@ -233,6 +233,8 @@ private:
 		const ExceptionPtr &e);
 	void writeRequestQueueFullExceptionErrorResponse(Client *client,
 		Request *req, const boost::shared_ptr<RequestQueueFullException> &e);
+	void writeRequestQueueTimeoutExceptionErrorResponse(Client *client,
+		Request *req, const boost::shared_ptr<RequestQueueTimeoutException> &e);
 	void writeSpawnExceptionErrorResponse(Client *client, Request *req,
 		const boost::shared_ptr<SpawnException> &e);
 	void writeOtherExceptionErrorResponse(Client *client, Request *req,

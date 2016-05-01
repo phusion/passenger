@@ -83,11 +83,15 @@
 
 	ngx_int_t max_request_queue_size;
 
+	ngx_int_t max_request_queue_time;
+
 	ngx_int_t max_requests;
 
 	ngx_int_t min_instances;
 
 	ngx_int_t request_queue_overflow_status_code;
+
+	ngx_int_t request_queue_timeout_status_code;
 
 	ngx_int_t socket_backlog;
 

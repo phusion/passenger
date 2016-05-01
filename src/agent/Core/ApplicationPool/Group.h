@@ -272,7 +272,10 @@ public:
 	template<typename Lock> void assignSessionsToGetWaitersQuickly(Lock &lock);
 	void assignSessionsToGetWaiters(boost::container::vector<Callback> &postLockActions);
 	bool testOverflowRequestQueue() const;
+	bool testTimeoutRequestQueue() const;
 	void callAbortLongRunningConnectionsCallback(const ProcessPtr &process);
+	bool requestTimedOut(const GetWaiter &waiter);
+	void timeoutRequestsCallback();
 
 	/****** Correctness verification ******/
 
@@ -282,6 +285,10 @@ public:
 	#ifndef NDEBUG
 		bool verifyNoRequestsOnGetWaitlistAreRoutable() const;
 	#endif
+
+	/****** Background worker ******/
+	oxt::thread *queueTimeoutThread;
+	boost::condition_variable queueTimeoutCheckerCond;
 
 public:
 	Options options;

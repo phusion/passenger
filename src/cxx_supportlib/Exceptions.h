@@ -417,6 +417,30 @@ public:
 };
 
 /**
+ * Indicates that a Pool::get() or Pool::asyncGet() request was aborted because
+ * the request was in the getWaitlist queue for too long.
+ */
+class RequestQueueTimeoutException: public GetAbortedException {
+private:
+	string msg;
+
+public:
+	RequestQueueTimeoutException(unsigned int maxQueueTime)
+		: GetAbortedException(oxt::tracable_exception::no_backtrace())
+		{
+			stringstream str;
+			str << "Request queue timeout (configured max. time: " << maxQueueTime << ")";
+			msg = str.str();
+		}
+
+	virtual ~RequestQueueTimeoutException() throw() {}
+
+	virtual const char *what() const throw() {
+		return msg.c_str();
+	}
+};
+
+/**
  * Indicates that a specified argument is incorrect or violates a requirement.
  *
  * @ingroup Exceptions

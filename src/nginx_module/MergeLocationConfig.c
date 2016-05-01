@@ -241,8 +241,20 @@ int generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev,
 	
 
 	
+		ngx_conf_merge_value(conf->max_request_queue_time,
+			prev->max_request_queue_time,
+			NGX_CONF_UNSET);
+	
+
+	
 		ngx_conf_merge_value(conf->request_queue_overflow_status_code,
 			prev->request_queue_overflow_status_code,
+			NGX_CONF_UNSET);
+	
+
+	
+		ngx_conf_merge_value(conf->request_queue_timeout_status_code,
+			prev->request_queue_timeout_status_code,
 			NGX_CONF_UNSET);
 	
 

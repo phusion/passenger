@@ -152,6 +152,13 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :desc      => "The maximum number of queued requests."
   },
   {
+    :name      => "PassengerMaxRequestQueueTime",
+    :type      => :integer,
+    :min_value => 0,
+    :context   => ["OR_ALL"],
+    :desc      => "The maximum number of seconds that a request may remain in the queue before it is dropped."
+  },
+  {
     :name      => "PassengerMaxPreloaderIdleTime",
     :type      => :integer,
     :min_value => 0,

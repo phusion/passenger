@@ -30,6 +30,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/function.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/tracable_exception.hpp>
 #include <ResourceLocator.h>
 #include <RandomGenerator.h>
@@ -188,10 +189,12 @@ struct GetCallback {
 struct GetWaiter {
 	Options options;
 	GetCallback callback;
+	boost::posix_time::ptime startTime;
 
 	GetWaiter(const Options &o, const GetCallback &cb)
 		: options(o),
-		  callback(cb)
+		  callback(cb),
+		  startTime(boost::posix_time::microsec_clock::local_time())
 	{
 		options.persist(o);
 	}

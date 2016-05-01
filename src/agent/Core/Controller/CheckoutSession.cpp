@@ -276,6 +276,30 @@ Controller::writeRequestQueueFullExceptionErrorResponse(Client *client, Request 
 }
 
 void
+Controller::writeRequestQueueTimeoutExceptionErrorResponse(Client *client, Request *req,
+	const boost::shared_ptr<RequestQueueTimeoutException> &e)
+{
+	TRACE_POINT();
+	const LString *value = req->secureHeaders.lookup(
+		"!~PASSENGER_REQUEST_QUEUE_TIMEOUT_STATUS_CODE");
+	int requestQueueTimeoutStatusCode = 504;
+	if (value != NULL && value->size > 0) {
+		value = psg_lstr_make_contiguous(value, req->pool);
+		requestQueueTimeoutStatusCode = stringToInt(
+			StaticString(value->start->data, value->size));
+	}
+
+	SKC_WARN(client, "Returning HTTP " << requestQueueTimeoutStatusCode <<
+		" due to: " << e->what());
+
+	endRequestWithSimpleResponse(&client, &req,
+		"<h1>This website is under heavy load</h1>"
+		"<p>We're sorry, too many people are accessing this website at the same "
+		"time. We're working on this problem. Please try again later.</p>",
+		requestQueueTimeoutStatusCode);
+}
+
+void
 Controller::writeSpawnExceptionErrorResponse(Client *client, Request *req,
 	const boost::shared_ptr<SpawnException> &e)
 {
