@@ -258,7 +258,7 @@ module PhusionPassenger
           end
         end
 
-        # Method exists for backward compatiblity with old Nginx config templates
+        # Method exists for backward compatibility with old Nginx config templates
         def boolean_config_value(val)
           val ? "on" : "off"
         end

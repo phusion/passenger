@@ -27,7 +27,7 @@ task :configure do
     " --with-http_ssl_module" +
     " --with-http_gzip_static_module" +
     " --with-http_stub_status_module" +
-    " --with-http_spdy_module" +
+    " --with-http_v2_module" +
     " --with-ipv6" +
     " --with-debug"
   sh "sed", "-E", "-i", 's/ -O[0-9]? / -ggdb /g', "objs/Makefile"
