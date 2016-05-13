@@ -6288,7 +6288,9 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/MemoryKit/mbuf.cpp"=>
   ["src/cxx_supportlib/Logging.h",
    "src/cxx_supportlib/MemoryKit/mbuf.h",
+   "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/Utils/FastStringStream.h",
+   "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/oxt/backtrace.hpp",
    "src/cxx_supportlib/oxt/detail/../spin_lock.hpp",
    "src/cxx_supportlib/oxt/detail/backtrace_disabled.hpp",
