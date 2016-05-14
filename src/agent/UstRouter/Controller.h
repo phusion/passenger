@@ -40,6 +40,7 @@
 #include <StaticString.h>
 #include <Constants.h>
 #include <Logging.h>
+#include <RandomGenerator.h>
 #include <UstRouter/Transaction.h>
 #include <UstRouter/Client.h>
 #include <UstRouter/FileSink.h>

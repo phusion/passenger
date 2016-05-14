@@ -78,7 +78,6 @@
 #include <Utils/JsonUtils.h>
 #include <Utils/HttpConstants.h>
 #include <Utils/Timer.h>
-#include <Core/ApplicationPool/ErrorRenderer.h>
 #include <Core/Controller/Config.h>
 #include <Core/Controller/Client.h>
 #include <Core/Controller/AppResponse.h>
@@ -206,11 +205,11 @@ private:
 	void writeRequestQueueFullExceptionErrorResponse(Client *client,
 		Request *req, const boost::shared_ptr<RequestQueueFullException> &e);
 	void writeSpawnExceptionErrorResponse(Client *client, Request *req,
-		const boost::shared_ptr<SpawnException> &e);
+		const boost::shared_ptr<SpawningKit::SpawnException> &e);
 	void writeOtherExceptionErrorResponse(Client *client, Request *req,
 		const ExceptionPtr &e);
 	void endRequestWithErrorResponse(Client **c, Request **r,
-		const StaticString &message, const SpawnException *e = NULL);
+		const SpawningKit::SpawnException &e);
 	bool friendlyErrorPagesEnabled(Request *req);
 
 

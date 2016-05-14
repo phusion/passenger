@@ -26,13 +26,19 @@
 #ifndef _PASSENGER_SPAWNING_KIT_DIRECT_SPAWNER_H_
 #define _PASSENGER_SPAWNING_KIT_DIRECT_SPAWNER_H_
 
+#include <stdexcept>
+
 #include <Core/SpawningKit/Spawner.h>
+#include <Core/SpawningKit/Handshake/Session.h>
+#include <Core/SpawningKit/Handshake/Prepare.h>
+#include <Core/SpawningKit/Handshake/Perform.h>
 #include <Constants.h>
 #include <Logging.h>
+#include <Utils/IOUtils.h>
+
 #include <LveLoggingDecorator.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
-
 #include <adhoc_lve.h>
 
 namespace Passenger {
@@ -112,159 +118,144 @@ private:
 		startBackgroundThread(detachProcessMain, (void *) (long) pid);
 	}
 
-	vector<string> createCommand(const Options &options, const SpawnPreparationInfo &preparation,
-		shared_array<const char *> &args) const
+	void setConfigFromAppPoolOptions(Config *config, Json::Value &extraArgs,
+		const AppPoolOptions &options)
 	{
-		vector<string> startCommandArgs;
-		string agentFilename = config->resourceLocator->findSupportBinary(AGENT_EXE);
-		vector<string> command;
+		Spawner::setConfigFromAppPoolOptions(config, extraArgs, options);
+		config->spawnMethod = P_STATIC_STRING("direct");
+	}
 
-		split(options.getStartCommand(*config->resourceLocator), '\t', startCommandArgs);
-		if (startCommandArgs.empty()) {
-			throw RuntimeException("No startCommand given");
-		}
+	Result internalSpawn(const AppPoolOptions &options, Config &config,
+		HandshakeSession &session, const Json::Value &extraArgs,
+		JourneyStep &stepToMarkAsErrored)
+	{
+		TRACE_POINT();
+		Pipe stdinChannel = createPipe(__FILE__, __LINE__);
+		Pipe stdoutAndErrChannel = createPipe(__FILE__, __LINE__);
+		adhoc_lve::LveEnter scopedLveEnter(LveLoggingDecorator::lveInitOnce(),
+			session.uid,
+			config.lveMinUid,
+			LveLoggingDecorator::lveExitCallback);
+		LveLoggingDecorator::logLveEnter(scopedLveEnter,
+			session.uid,
+			config.lveMinUid);
+		string agentFilename = context->resourceLocator
+			->findSupportBinary(AGENT_EXE);
 
-		if (shouldLoadShellEnvvars(options, preparation)) {
-			command.push_back(preparation.userSwitching.shell);
-			command.push_back(preparation.userSwitching.shell);
-			if (Passenger::getLogLevel() >= LVL_DEBUG3) {
-				command.push_back("-lxc");
-			} else {
-				command.push_back("-lc");
-			}
-			command.push_back("exec \"$@\"");
-			command.push_back("SpawnPreparerShell");
+		session.journey.setStepPerformed(SPAWNING_KIT_PREPARATION);
+		session.journey.setStepInProgress(SPAWNING_KIT_FORK_SUBPROCESS);
+		session.journey.setStepInProgress(SUBPROCESS_BEFORE_FIRST_EXEC);
+		stepToMarkAsErrored = SPAWNING_KIT_FORK_SUBPROCESS;
+
+		pid_t pid = syscalls::fork();
+		if (pid == 0) {
+			purgeStdio(stdout);
+			purgeStdio(stderr);
+			resetSignalHandlersAndMask();
+			disableMallocDebugging();
+			int stdinCopy = dup2(stdinChannel.first, 3);
+			int stdoutAndErrCopy = dup2(stdoutAndErrChannel.second, 4);
+			dup2(stdinCopy, 0);
+			dup2(stdoutAndErrCopy, 1);
+			dup2(stdoutAndErrCopy, 2);
+			closeAllFileDescriptors(2);
+			execlp(agentFilename.c_str(),
+				agentFilename.c_str(),
+				"spawn-env-setupper",
+				session.workDir->getPath().c_str(),
+				"--before",
+				NULL);
+
+			int e = errno;
+			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
+				agentFilename.c_str(), strerror(e), e);
+			fflush(stderr);
+			_exit(1);
+
+		} else if (pid == -1) {
+			int e = errno;
+			session.journey.setStepErrored(SPAWNING_KIT_FORK_SUBPROCESS);
+			SpawnException ex(OPERATING_SYSTEM_ERROR, session.journey, &config);
+			ex.setSummary(StaticString("Cannot fork a new process: ") + strerror(e)
+				+ " (errno=" + toString(e) + ")");
+			ex.setAdvancedProblemDetails(StaticString("Cannot fork a new process: ")
+				+ strerror(e) + " (errno=" + toString(e) + ")");
+			throw ex.finalize();
+
 		} else {
-			command.push_back(agentFilename);
-		}
-		command.push_back(agentFilename);
-		command.push_back("spawn-preparer");
-		command.push_back(preparation.appRoot);
-		command.push_back(serializeEnvvarsFromPoolOptions(options));
-		command.push_back(startCommandArgs[0]);
-		// Note: do not try to set a process title here.
-		// https://code.google.com/p/phusion-passenger/issues/detail?id=855
-		command.push_back(startCommandArgs[0]);
-		for (unsigned int i = 1; i < startCommandArgs.size(); i++) {
-			command.push_back(startCommandArgs[i]);
-		}
+			UPDATE_TRACE_POINT();
+			session.journey.setStepPerformed(SPAWNING_KIT_FORK_SUBPROCESS);
+			session.journey.setStepInProgress(SPAWNING_KIT_HANDSHAKE_PERFORM);
+			stepToMarkAsErrored = SPAWNING_KIT_HANDSHAKE_PERFORM;
 
-		createCommandArgs(command, args);
-		return command;
+			scopedLveEnter.exit();
+
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(stdinChannel.second,
+				"App " << pid << " (" << options.appRoot << ") stdin");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(stdoutAndErrChannel.first,
+				"App " << pid << " (" << options.appRoot << ") stdoutAndErr");
+
+			UPDATE_TRACE_POINT();
+			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
+			P_DEBUG("Process forked for appRoot=" << options.appRoot << ": PID " << pid);
+			stdinChannel.first.close();
+			stdoutAndErrChannel.second.close();
+
+			HandshakePerform(session, pid, stdinChannel.second,
+				stdoutAndErrChannel.first).execute();
+
+			UPDATE_TRACE_POINT();
+			detachProcess(session.result.pid);
+			guard.clear();
+			session.journey.setStepPerformed(SPAWNING_KIT_HANDSHAKE_PERFORM);
+			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
+				", pid=" << session.result.pid);
+			return session.result;
+		}
 	}
 
 public:
-	DirectSpawner(const ConfigPtr &_config)
-		: Spawner(_config)
+	DirectSpawner(Context *context)
+		: Spawner(context)
 		{ }
 
-	virtual Result spawn(const Options &options) {
+	virtual Result spawn(const AppPoolOptions &options) {
 		TRACE_POINT();
 		boost::this_thread::disable_interruption di;
 		boost::this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
 		possiblyRaiseInternalError(options);
 
-		shared_array<const char *> args;
-		SpawnPreparationInfo preparation = prepareSpawn(options);
-		vector<string> command = createCommand(options, preparation, args);
-		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
-		Pipe errorPipe = createPipe(__FILE__, __LINE__);
-		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.userSwitching.uid,
-			preparation.userSwitching.gid);
-		pid_t pid;
-
-		adhoc_lve::LveEnter scopedLveEnter(LveLoggingDecorator::lveInitOnce(),
-		                                   preparation.userSwitching.uid,
-		                                   options.lveMinUid,
-		                                   LveLoggingDecorator::lveExitCallback);
-		LveLoggingDecorator::logLveEnter(scopedLveEnter,
-		                                 preparation.userSwitching.uid,
-		                                 options.lveMinUid);
-
-		pid = syscalls::fork();
-		if (pid == 0) {
-			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
-			purgeStdio(stdout);
-			purgeStdio(stderr);
-			resetSignalHandlersAndMask();
-			disableMallocDebugging();
-			int adminSocketCopy = dup2(adminSocket.first, 3);
-			int errorPipeCopy = dup2(errorPipe.second, 4);
-			dup2(adminSocketCopy, 0);
-			dup2(adminSocketCopy, 1);
-			dup2(errorPipeCopy, 2);
-			closeAllFileDescriptors(2);
-			setChroot(preparation);
-			setUlimits(options);
-			switchUser(preparation);
-			setWorkingDirectory(preparation);
-			execvp(args[0], (char * const *) args.get());
-
-			int e = errno;
-			printf("!> Error\n");
-			printf("!> \n");
-			printf("Cannot execute \"%s\": %s (errno=%d)\n", command[0].c_str(),
-				strerror(e), e);
-			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
-				command[0].c_str(), strerror(e), e);
-			fflush(stdout);
-			fflush(stderr);
-			_exit(1);
-
-		} else if (pid == -1) {
-			int e = errno;
-			throw SystemException("Cannot fork a new process", e);
-
-		} else {
+		UPDATE_TRACE_POINT();
+		Config config;
+		Json::Value extraArgs;
+		try {
+			setConfigFromAppPoolOptions(&config, extraArgs, options);
+		} catch (const std::exception &originalException) {
 			UPDATE_TRACE_POINT();
-			scopedLveEnter.exit();
+			Journey journey(SPAWN_THROUGH_PRELOADER, true);
+			journey.setStepErrored(SPAWNING_KIT_PREPARATION, true);
+			SpawnException e(originalException, journey, &config);
+			throw e.finalize();
+		}
 
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.first,
-				"App " << pid << " (" << options.appRoot << ") adminSocket[0]");
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.second,
-				"App " << pid << " (" << options.appRoot << ") adminSocket[1]");
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.first,
-				"App " << pid << " (" << options.appRoot << ") errorPipe[0]");
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.second,
-				"App " << pid << " (" << options.appRoot << ") errorPipe[1]");
+		UPDATE_TRACE_POINT();
+		HandshakeSession session(*context, config, SPAWN_DIRECTLY);
+		session.journey.setStepInProgress(SPAWNING_KIT_PREPARATION);
+		HandshakePrepare(session, extraArgs).execute();
+		JourneyStep stepToMarkAsErrored = SPAWNING_KIT_PREPARATION;
 
+		UPDATE_TRACE_POINT();
+		try {
+			return internalSpawn(options, config, session, extraArgs,
+				stepToMarkAsErrored);
+		} catch (const SpawnException &) {
+			throw;
+		} catch (const std::exception &originalException) {
 			UPDATE_TRACE_POINT();
-			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
-			P_DEBUG("Process forked for appRoot=" << options.appRoot << ": PID " << pid);
-			adminSocket.first.close();
-			errorPipe.second.close();
-
-			NegotiationDetails details;
-			details.preparation = &preparation;
-			details.stderrCapturer =
-				boost::make_shared<BackgroundIOCapturer>(
-					errorPipe.first,
-					pid,
-					// The cast works around a compilation problem in Clang.
-					(const char *) "stderr");
-			details.stderrCapturer->start();
-			details.pid = pid;
-			details.adminSocket = adminSocket.second;
-			details.io = BufferedIO(adminSocket.second);
-			details.errorPipe = errorPipe.first;
-			details.options = &options;
-			details.debugDir = debugDir;
-
-			UPDATE_TRACE_POINT();
-			Result result;
-			{
-				boost::this_thread::restore_interruption ri(di);
-				boost::this_thread::restore_syscall_interruption rsi(dsi);
-				result = negotiateSpawn(details);
-			}
-
-			UPDATE_TRACE_POINT();
-			detachProcess(result["pid"].asInt());
-			guard.clear();
-			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-				", pid=" << result["pid"].asInt());
-			return result;
+			session.journey.setStepErrored(stepToMarkAsErrored, true);
+			throw SpawnException(originalException, session.journey,
+				&config).finalize();
 		}
 	}
 };

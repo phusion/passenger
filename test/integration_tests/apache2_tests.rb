@@ -520,7 +520,7 @@ describe "Apache 2 module" do
 
     before :each do
       @server = "http://1.passenger.test:#{@apache2.port}"
-      @error_page_signature = /<div id="content">/
+      @error_page_signature = /window\.spec = /
       @stub.reset
     end
 

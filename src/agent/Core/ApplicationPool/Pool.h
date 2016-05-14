@@ -163,7 +163,7 @@ public:
 	unsigned long long maxIdleTime;
 	bool selfchecking;
 
-	Context context;
+	Context *context;
 
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -224,8 +224,6 @@ public:
 	 *       getWaitlist is empty.
 	 */
 	vector<GetWaiter> getWaitlist;
-
-	const VariantMap *agentsOptions;
 
 // Actually private, but marked public so that unit tests can access the fields.
 public:
@@ -393,8 +391,7 @@ public:
 
 	/****** Initialization and shutdown ******/
 
-	Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
-		const VariantMap *agentsOptions = NULL);
+	Pool(Context *context);
 	~Pool();
 	void initialize();
 	void initDebugging();
@@ -405,7 +402,7 @@ public:
 	/****** General utilities ******/
 
 	Context *getContext();
-	const SpawningKit::ConfigPtr &getSpawningKitConfig() const;
+	SpawningKit::Context *getSpawningKitContext() const;
 	const UnionStation::ContextPtr &getUnionStationContext() const;
 	const RandomGeneratorPtr &getRandomGenerator() const;
 

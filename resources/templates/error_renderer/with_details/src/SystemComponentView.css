@@ -1,0 +1,34 @@
+.system-component-view {
+  text-align: center;
+}
+
+.system-component-view > .icon {
+  font-size: 400%;
+}
+
+.system-component-view > .status-icon {
+  margin-top: 0.5em;
+  font-size: 200%;
+}
+
+.system-component-view > .status-label {
+  font-family: Lato, Arial, sans-serif;
+  font-size: 130%;
+}
+
+.system-component-view.working > .status-icon,
+.system-component-view.working > .status-label,
+.system-component-view.done > .status-icon,
+.system-component-view.done > .status-label {
+  color: #7cb342;
+}
+
+.system-component-view.error > .status-icon,
+.system-component-view.error > .status-label {
+  color: red;
+}
+
+.system-component-view.not_reached > .status-icon,
+.system-component-view.not_reached > .status-label {
+  color: gray;
+}

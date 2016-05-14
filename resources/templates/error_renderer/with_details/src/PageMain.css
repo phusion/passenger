@@ -1,0 +1,57 @@
+body {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+@media (max-width: 991px) {
+  body {
+    margin-top: 1em;
+    margin-bottom: 1em;
+  }
+}
+
+.h1, .h2, .h3,
+h1, h2, h3 {
+  font-family: Lato, Helvetica, Arial, sans-serif;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.h3, h3 {
+  font-size: 120%;
+  color: #444;
+}
+
+.page-title {
+  font-size: 250%;
+  font-weight: 300;
+  color: #999;
+  margin: 0 0 1em 0;
+}
+
+.page-system-components-container {
+  background: #f6f6f6;
+  margin: 0 0 2em 0;
+  padding: 2em;
+}
+
+.page-main-tabs > .nav-tabs > li > a {
+  font-weight: bold;
+}
+
+.page-main-tabs > .tab-content {
+  margin-top: 2em;
+}
+
+pre {
+  color: #526379;
+  border: none;
+  font-size: 12px;
+}
+
+code {
+  background: #e5eef9;
+  color: #333;
+}

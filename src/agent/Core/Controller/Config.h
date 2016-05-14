@@ -33,6 +33,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <MemoryKit/palloc.h>
 #include <ServerKit/HttpServer.h>
+#include <AppTypes.h>
 #include <Constants.h>
 #include <StaticString.h>
 #include <Utils.h>

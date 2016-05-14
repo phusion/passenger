@@ -38,6 +38,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/noncopyable.hpp>
 
 #include <sys/types.h>
 #include <unistd.h>

@@ -54,6 +54,7 @@
 #include <Core/ApplicationPool/Process.h>
 #include <Core/ApplicationPool/Options.h>
 #include <Core/SpawningKit/Factory.h>
+#include <Core/SpawningKit/Result.h>
 #include <Core/SpawningKit/UserSwitchingRules.h>
 #include <Shared/ApplicationPoolApiKey.h>
 
@@ -261,7 +262,8 @@ public:
 	void setupAttachOrDetachHook(const ProcessPtr process, HookScriptOptions &options) const;
 
 	unsigned int generateStickySessionId();
-	ProcessPtr createProcessObject(const Json::Value &json);
+	ProcessPtr createNullProcessObject();
+	ProcessPtr createProcessObject(const SpawningKit::Spawner &spawner, const SpawningKit::Result &spawnResult);
 	bool poolAtFullCapacity() const;
 	ProcessPtr poolForceFreeCapacity(const Group *exclude, boost::container::vector<Callback> &postLockActions);
 	void wakeUpGarbageCollector();

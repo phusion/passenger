@@ -15,8 +15,11 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct Core_ApplicationPool_PoolTest {
-		SpawningKit::ConfigPtr spawningKitConfig;
-		SpawningKit::FactoryPtr spawningKitFactory;
+		SpawningKit::Context::Schema skContextSchema;
+		SpawningKit::Context::DebugSupport skDebugSupport;
+		SpawningKit::Context skContext;
+		SpawningKit::FactoryPtr skFactory;
+		Context context;
 		PoolPtr pool;
 		Pool::DebugSupportPtr debug;
 		Ticket ticket;
@@ -28,13 +31,17 @@ namespace tut {
 		list<SessionPtr> sessions;
 		bool retainSessions;
 
-		Core_ApplicationPool_PoolTest() {
+		Core_ApplicationPool_PoolTest()
+			: skContext(skContextSchema)
+		{
 			retainSessions = false;
-			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
-			spawningKitConfig->resourceLocator = resourceLocator;
-			spawningKitConfig->finalize();
-			spawningKitFactory = boost::make_shared<SpawningKit::Factory>(spawningKitConfig);
-			pool = boost::make_shared<Pool>(spawningKitFactory);
+			skContext.resourceLocator = resourceLocator;
+			skContext.integrationMode = "standalone";
+			skContext.debugSupport = &skDebugSupport;
+			skContext.finalize();
+			context.spawningKitFactory = boost::make_shared<SpawningKit::Factory>(&skContext);
+			context.finalize();
+			pool = boost::make_shared<Pool>(&context);
 			pool->initialize();
 			callback.func = _callback;
 			callback.userData = this;
@@ -388,11 +395,11 @@ namespace tut {
 		// the one with the smallest utilization number.
 
 		// Spawn 2 processes, each with a concurrency of 2.
+		skDebugSupport.dummyConcurrency = 2;
 		Options options = createOptions();
 		options.minProcesses = 2;
 		pool->setMax(2);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawningKitConfig->concurrency = 2;
 		{
 			LockGuard l(pool->syncher);
 			group->spawn();
@@ -403,7 +410,7 @@ namespace tut {
 
 		// asyncGet() selects some process.
 		pool->asyncGet(options, callback);
-		ensure_equals(number, 1);
+		ensure_equals("(1)", number, 1);
 		SessionPtr session1 = currentSession;
 		ProcessPtr process1 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
@@ -411,16 +418,16 @@ namespace tut {
 		// The first process now has 1 session, so next asyncGet() should
 		// select the other process.
 		pool->asyncGet(options, callback);
-		ensure_equals(number, 2);
+		ensure_equals("(2)", number, 2);
 		SessionPtr session2 = currentSession;
 		ProcessPtr process2 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
-		ensure("(1)", process1 != process2);
+		ensure("(3)", process1 != process2);
 
 		// Both processes now have an equal number of sessions. Next asyncGet()
 		// can select either.
 		pool->asyncGet(options, callback);
-		ensure_equals(number, 3);
+		ensure_equals("(4)", number, 3);
 		SessionPtr session3 = currentSession;
 		ProcessPtr process3 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
@@ -428,11 +435,11 @@ namespace tut {
 		// One process now has the lowest number of sessions. Next
 		// asyncGet() should select that one.
 		pool->asyncGet(options, callback);
-		ensure_equals(number, 4);
+		ensure_equals("(5)", number, 4);
 		SessionPtr session4 = currentSession;
 		ProcessPtr process4 = currentSession->getProcess()->shared_from_this();
 		currentSession.reset();
-		ensure(process3 != process4);
+		ensure("(6)", process3 != process4);
 	}
 
 	TEST_METHOD(9) {
@@ -446,7 +453,7 @@ namespace tut {
 		options.appGroupName = "test";
 		options.minProcesses = 2;
 		pool->setMax(2);
-		spawningKitConfig->concurrency = 2;
+		skDebugSupport.dummyConcurrency = 2;
 
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -491,11 +498,11 @@ namespace tut {
 		// Here we test the case where an existing process is earlier.
 
 		// Spawn 2 processes and open 4 sessions.
+		skDebugSupport.dummyConcurrency = 2;
 		Options options = createOptions();
 		options.minProcesses = 2;
 		pool->setMax(3);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawningKitConfig->concurrency = 2;
 
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -514,7 +521,7 @@ namespace tut {
 
 		// The next asyncGet() should spawn a new process and the action should be queued.
 		ScopedLock l(pool->syncher);
-		spawningKitConfig->spawnTime = 5000000;
+		skDebugSupport.dummySpawnDelay = 5000000;
 		pool->asyncGet(options, callback, false);
 		ensure(group->spawning());
 		ensure_equals(group->getWaitlist.size(), 1u);
@@ -537,7 +544,7 @@ namespace tut {
 		options.minProcesses = 2;
 		pool->setMax(3);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawningKitConfig->concurrency = 2;
+		skDebugSupport.dummyConcurrency = 2;
 
 		vector<SessionPtr> sessions;
 		int expectedNumber = 1;
@@ -953,7 +960,7 @@ namespace tut {
 		Options options = createOptions();
 		options.appGroupName = "test";
 		pool->setMax(1);
-		spawningKitConfig->spawnTime = 1000000;
+		skDebugSupport.dummySpawnDelay = 1000000;
 
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
@@ -990,7 +997,7 @@ namespace tut {
 		options.appGroupName = "test";
 		options.minProcesses = 0;
 		pool->setMax(1);
-		spawningKitConfig->spawnTime = 30000;
+		skDebugSupport.dummySpawnDelay = 30000;
 
 		// Begin spawning a process.
 		pool->asyncGet(options, callback);
@@ -1000,7 +1007,7 @@ namespace tut {
 		Options options2 = createOptions();
 		options2.appGroupName = "test2";
 		options2.minProcesses = 0;
-		spawningKitConfig->spawnTime = 90000;
+		skDebugSupport.dummySpawnDelay = 90000;
 		pool->asyncGet(options2, callback);
 		{
 			LockGuard l(pool->syncher);
@@ -1185,7 +1192,7 @@ namespace tut {
 		ensure_equals(pool->getProcessCount(), 1u);
 		ensure(!pool->isSpawning());
 
-		spawningKitConfig->spawnTime = 60000;
+		skDebugSupport.dummySpawnDelay = 60000;
 		AtomicInt code = -1;
 		TempThread thr(boost::bind(&Core_ApplicationPool_PoolTest::disableProcess,
 			this, session->getProcess()->shared_from_this(), &code));
@@ -1196,6 +1203,7 @@ namespace tut {
 			result = pool->getProcessCount() == 2u;
 		);
 		ensure_equals((int) code, -1);
+
 		session.reset();
 		EVENTUALLY(1,
 			result = code == (int) DR_SUCCESS;
@@ -1552,8 +1560,8 @@ namespace tut {
 		);
 
 		ensure(currentException != NULL);
-		boost::shared_ptr<SpawnException> e = dynamic_pointer_cast<SpawnException>(currentException);
-		ensure(e->getErrorPage().find("Something went wrong!") != string::npos);
+		boost::shared_ptr<SpawningKit::SpawnException> e = dynamic_pointer_cast<SpawningKit::SpawnException>(currentException);
+		ensure(e->getProblemDescriptionHTML().find("Something went wrong!") != string::npos);
 	}
 
 	TEST_METHOD(68) {
@@ -1747,7 +1755,7 @@ namespace tut {
 		);
 
 		// Trigger a restart. The creation of the new spawner should take a while.
-		spawningKitConfig->spawnerCreationSleepTime = 20000;
+		skDebugSupport.spawnerCreationSleepTime = 20000;
 		touchFile("tmp.wsgi/tmp/restart.txt");
 		pool->asyncGet(options, callback);
 		GroupPtr group = pool->findOrCreateGroup(options);
@@ -1843,7 +1851,7 @@ namespace tut {
 			setLogLevel(LVL_CRIT);
 			currentSession = pool->get(options, &ticket);
 			fail("SpawnException expected");
-		} catch (const SpawnException &) {
+		} catch (const SpawningKit::SpawnException &) {
 			ensure_equals(pool->getProcessCount(), 2u);
 		}
 	}
@@ -1902,7 +1910,7 @@ namespace tut {
 		options.appGroupName = "test1";
 		options.maxRequestQueueSize = 3;
 		GroupPtr group = pool->findOrCreateGroup(options);
-		spawningKitConfig->concurrency = 3;
+		skDebugSupport.dummyConcurrency = 3;
 		initPoolDebugging();
 		pool->setMax(1);
 

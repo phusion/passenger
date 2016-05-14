@@ -47,6 +47,7 @@
 #include <ctime>
 #include <cerrno>
 #include <csignal>
+#include <StaticString.h>
 #include <Utils/FastStringStream.h>
 
 
@@ -324,7 +325,7 @@ enum PassengerLogLevel {
  * @param channelName "stdout" or "stderr".
  * @param message The message that was received.
  */
-void printAppOutput(pid_t pid, const char *channelName, const char *message, unsigned int size);
+void printAppOutput(pid_t pid, const StaticString &channelName, const char *message, unsigned int size);
 
 /**
  * Controls how messages that are received from applications are printed.

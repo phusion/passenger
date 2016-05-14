@@ -37,7 +37,7 @@ using namespace oxt;
 
 /**
  * A Timer which one can use to check how much time has elapsed since the
- * timer started. This timer support miliseconds-resolution, but the exact
+ * timer started. This timer supports miliseconds-resolution, but the exact
  * resolution depends on the OS and the hardware.
  *
  * This class is thread-safe.

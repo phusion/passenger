@@ -34,61 +34,58 @@ module PhusionPassenger
       @@app
     end
 
-    def self.format_exception(e)
-      result = "#{e} (#{e.class})"
-      if !e.backtrace.empty?
-        if e.respond_to?(:html?) && e.html?
-          require 'erb' if !defined?(ERB)
-          result << "\n<pre>  " << ERB::Util.h(e.backtrace.join("\n  ")) << "</pre>"
-        else
-          result << "\n  " << e.backtrace.join("\n  ")
-        end
-      end
-      result
-    end
-
-    def self.exit_code_for_exception(e)
-      if e.is_a?(SystemExit)
-        e.status
-      else
-        1
-      end
-    end
-
-    def self.handshake_and_read_startup_request
+    def self.init_passenger
       STDOUT.sync = true
       STDERR.sync = true
-      puts "!> I have control 1.0"
-      abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
 
-      @@options = {}
-      while (line = STDIN.readline) != "\n"
-        name, value = line.strip.split(/: */, 2)
-        @@options[name] = value
+      work_dir = ENV['PASSENGER_SPAWN_WORK_DIR'].to_s
+      if work_dir.empty?
+        abort "This program may only be invoked from Passenger (error: $PASSENGER_SPAWN_WORK_DIR not set)."
+      end
+
+      record_journey_step_performed(:step => 'SUBPROCESS_EXEC_WRAPPER', :begin_time => Time.now)
+      step_info = record_journey_step_in_progress('SUBPROCESS_WRAPPER_PREPARATION')
+
+      ruby_libdir = File.read("#{work_dir}/args/ruby_libdir").strip
+      passenger_root = File.read("#{work_dir}/args/passenger_root").strip
+      require "#{ruby_libdir}/phusion_passenger"
+      PhusionPassenger.locate_directories(passenger_root)
+
+      PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
+
+      step_info
+    end
+
+    def self.try_write_file(path, contents)
+      begin
+        File.open(path, 'wb') do |f|
+          f.write(contents)
+        end
+      rescue SystemCallError => e
+        STDERR.puts "Warning: unable to write to #{path}: #{e}"
       end
     end
 
-    def self.init_passenger
-      require "#{options["ruby_libdir"]}/phusion_passenger"
-      PhusionPassenger.locate_directories(options["passenger_root"])
-      PhusionPassenger.require_passenger_lib 'native_support'
-      PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
-      PhusionPassenger.require_passenger_lib 'ruby_core_io_enhancements'
-      PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
-      PhusionPassenger.require_passenger_lib 'request_handler'
-      PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
-      @@options = LoaderSharedHelpers.init(@@options)
-      if defined?(NativeSupport)
-        NativeSupport.disable_stdio_buffering
-      end
-      RequestHandler::ThreadHandler.send(:include, Rack::ThreadHandlerExtension)
-    rescue Exception => e
-      LoaderSharedHelpers.about_to_abort(options, e) if defined?(LoaderSharedHelpers)
-      puts "!> Error"
-      puts "!> html: true" if e.respond_to?(:html?) && e.html?
-      puts "!> "
-      puts format_exception(e)
-      exit exit_code_for_exception(e)
+    def self.record_journey_step_in_progress(step)
+      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      path = "#{dir}/response/steps/#{step.downcase}/state"
+      try_write_file(path, 'STEP_IN_PROGRESS')
+      { :step => step, :begin_time => Time.now }
+    end
+
+    def self.record_journey_step_complete(info, state)
+      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+
+      path = "#{dir}/response/steps/#{info[:step].downcase}/state"
+      try_write_file(path, state)
+
+      path = "#{dir}/response/steps/#{info[:step].downcase}/duration"
+      duration = Time.now - info[:begin_time]
+      try_write_file(path, duration.to_s)
+    end
+
+    def self.record_journey_step_performed(info)
+      record_journey_step_complete(info, 'STEP_PERFORMED')
     end
 
     def self.load_app
@@ -97,9 +94,9 @@ module PhusionPassenger
       LoaderSharedHelpers.before_loading_app_code_step2(options)
       LoaderSharedHelpers.activate_gem 'rack'
 
-      app_root = options["app_root"]
+      app_root = options['app_root']
       rackup_file = LoaderSharedHelpers.maybe_make_path_relative_to_app_root(
-        app_root, options["startup_file"] || "#{app_root}/config.ru")
+        app_root, options['startup_file'] || "#{app_root}/config.ru")
       rackup_code = ::File.open(rackup_file, 'rb') do |f|
         f.read
       end
@@ -108,26 +105,37 @@ module PhusionPassenger
 
       LoaderSharedHelpers.after_loading_app_code(options)
     rescue Exception => e
+      LoaderSharedHelpers.record_and_print_exception(e)
       LoaderSharedHelpers.about_to_abort(options, e)
-      puts "!> Error"
-      puts "!> html: true" if e.respond_to?(:html?) && e.html?
-      puts "!> "
-      puts format_exception(e)
-      exit exit_code_for_exception(e)
+      exit LoaderSharedHelpers.exit_code_for_exception(e)
     end
 
 
     ################## Main code ##################
 
 
-    handshake_and_read_startup_request
-    init_passenger
-    load_app
-    LoaderSharedHelpers.before_handling_requests(false, options)
-    handler = RequestHandler.new(STDIN, options.merge("app" => app))
-    LoaderSharedHelpers.advertise_readiness
-    LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
-    puts "!> "
+    step_info = init_passenger
+    @@options = LoaderSharedHelpers.init(self, step_info)
+    LoaderSharedHelpers.record_journey_step_performed(step_info)
+
+    LoaderSharedHelpers.run_block_and_record_step_progress('SUBPROCESS_APP_LOAD_OR_EXEC') do
+      load_app
+    end
+
+    handler = nil
+    LoaderSharedHelpers.run_block_and_record_step_progress('SUBPROCESS_LISTEN') do
+      begin
+        LoaderSharedHelpers.before_handling_requests(false, options)
+        handler = RequestHandler.new(STDIN, options.merge('app' => app))
+        LoaderSharedHelpers.advertise_sockets(options, handler)
+        LoaderSharedHelpers.advertise_readiness(options)
+      rescue Exception => e
+        LoaderSharedHelpers.record_and_print_exception(e)
+        LoaderSharedHelpers.about_to_abort(options, e)
+        exit LoaderSharedHelpers.exit_code_for_exception(e)
+      end
+    end
+
     handler.main_loop
     handler.cleanup
     LoaderSharedHelpers.after_handling_requests

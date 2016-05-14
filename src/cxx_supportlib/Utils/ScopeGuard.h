@@ -133,14 +133,19 @@ public:
 	}
 
 	~FdGuard() {
-		if (fd != -1) {
-			safelyClose(fd, ignoreErrors);
-			P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
-		}
+		runNow();
 	}
 
 	void clear() {
 		fd = -1;
+	}
+
+	void runNow() {
+		if (fd != -1) {
+			safelyClose(fd, ignoreErrors);
+			P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
+			fd = -1;
+		}
 	}
 };
 

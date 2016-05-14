@@ -385,6 +385,19 @@ void setupNonBlockingSocket(NConnect_State & restrict_ref state,
 bool connectToServer(NConnect_State &state);
 
 /**
+ * Checks whether the given TCP server is connectable. Because this check
+ * can take (in theory) an arbitrary amount of time, you must also supply
+ * a timeout. When the operation is done, the amount of time taken will be
+ * deducted from the `*timeout` value. A timeout of 100000 microseconds is
+ * recommended for most use cases.
+ *
+ * @throws IOException Something went wrong.
+ * @throws SystemException Something went wrong.
+ * @throws boost::thread_interrupted A system call has been interrupted.
+ */
+bool pingTcpServer(const StaticString &host, unsigned int port, unsigned long long *timeout);
+
+/**
  * Creates a Unix domain socket pair.
  *
  * @param file The name of the source file that called this function,

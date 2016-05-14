@@ -96,7 +96,7 @@ Group::getPallocPool() const {
 
 const ResourceLocator &
 Group::getResourceLocator() const {
-	return *getPool()->getSpawningKitConfig()->resourceLocator;
+	return *getPool()->getSpawningKitContext()->resourceLocator;
 }
 
 

@@ -77,13 +77,13 @@ module PhusionPassenger
     MESSAGE_SERVER_MAX_PASSWORD_SIZE = 100
     POOL_HELPER_THREAD_STACK_SIZE = 1024 * 256
     # Small mbuf sizes avoid memory overhead (up to 1 blocksize per request), but
-    # also introduce context switching and smaller transfer writes. The size is picked 
+    # also introduce context switching and smaller transfer writes. The size is picked
     # to balance this out.
     DEFAULT_MBUF_CHUNK_SIZE = 1024 * 4
     # Affects input and output buffering (between app and client). Threshold is picked
     # such that it fits most output (i.e. html page size, not assets), and allows for
-    # high concurrency with low mem overhead. On the upload side there is a penalty 
-    # but there's no real average upload size anyway so we choose mem safety instead. 
+    # high concurrency with low mem overhead. On the upload side there is a penalty
+    # but there's no real average upload size anyway so we choose mem safety instead.
     DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD = 1024 * 128
     SERVER_KIT_MAX_SERVER_ENDPOINTS = 4
 
@@ -106,6 +106,8 @@ module PhusionPassenger
     SHORT_PROGRAM_NAME = "Passenger"
     SERVER_TOKEN_NAME = "Phusion_Passenger"
     FLYING_PASSENGER_NAME = "Flying Passenger"
+    PROGRAM_WEBSITE     = "https://www.phusionpassenger.com"
+    PROGRAM_AUTHOR      = "Phusion"
     SUPPORT_URL         = "https://www.phusionpassenger.com/support"
     ENTERPRISE_URL      = "https://www.phusionpassenger.com/enterprise"
     GLOBAL_NAMESPACE_DIRNAME            = PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME_

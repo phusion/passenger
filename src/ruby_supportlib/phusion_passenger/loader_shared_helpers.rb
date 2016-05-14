@@ -23,12 +23,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-PhusionPassenger.require_passenger_lib 'constants'
-PhusionPassenger.require_passenger_lib 'public_api'
-PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
-PhusionPassenger.require_passenger_lib 'debug_logging'
-PhusionPassenger.require_passenger_lib 'utils/shellwords'
-
 module PhusionPassenger
 
   # Provides shared functions for loader and preloader apps.
@@ -36,13 +30,45 @@ module PhusionPassenger
     extend self
 
     # To be called by the (pre)loader as soon as possible.
-    def init(options)
-      Thread.main[:name] = "Main thread"
+    def init(main_app, step_info)
+      @main_app = main_app
+      options = read_startup_arguments
+
       # We don't dump PATH info because at this point it's
       # unlikely to be changed.
       dump_ruby_environment
       check_rvm_using_wrapper_script(options)
-      return sanitize_spawn_options(options)
+
+      PhusionPassenger.require_passenger_lib 'native_support'
+      if defined?(NativeSupport)
+        NativeSupport.disable_stdio_buffering
+      end
+
+      PhusionPassenger.require_passenger_lib 'constants'
+      PhusionPassenger.require_passenger_lib 'public_api'
+      PhusionPassenger.require_passenger_lib 'debug_logging'
+      PhusionPassenger.require_passenger_lib 'utils/shellwords'
+      PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
+      PhusionPassenger.require_passenger_lib 'ruby_core_io_enhancements'
+      PhusionPassenger.require_passenger_lib 'request_handler'
+
+      PhusionPassenger.require_passenger_lib 'rack/thread_handler_extension'
+      RequestHandler::ThreadHandler.send(:include, Rack::ThreadHandlerExtension)
+      Thread.main[:name] = "Main thread"
+
+      options
+    rescue Exception => e
+      record_journey_step_errored(step_info)
+      record_and_print_exception(e)
+      exit exit_code_for_exception(e)
+    end
+
+    def read_startup_arguments
+      work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      PhusionPassenger.require_passenger_lib 'utils/json'
+      @@options = File.open("#{work_dir}/args.json", 'rb') do |f|
+        PhusionPassenger::Utils::JSON.parse(f.read)
+      end
     end
 
     def check_rvm_using_wrapper_script(options)
@@ -60,146 +86,21 @@ module PhusionPassenger
           passenger_ruby_doc = "https://www.phusionpassenger.com/library/config/standalone/reference/#setting_correct_passenger_ruby_value"
         end
 
-        raise "You've set the `#{passenger_ruby}` option to '#{ruby}'. " +
-          "However, because you are using RVM, this is not allowed: the option must point to " +
-          "an RVM wrapper script, not a raw Ruby binary. This is because RVM is implemented " +
-          "through various environment variables, which are set through the wrapper script.\n" +
-          "\n" +
-          "To find out the correct value for `#{passenger_ruby}`, please read:\n\n" +
-          "  #{passenger_ruby_doc}\n" +
-          "\n-------------------------\n"
+        log_error_to_response_dir(
+          :summary => "#{passenger_ruby} must be set to an RVM wrapper script instead of a raw Ruby binary",
+
+          :problem_description_html =>
+            "You've set the <code>#{h passenger_ruby}</code> option to <code>#{h ruby}</code>. " \
+            'However, because you are using RVM, this is not allowed: the option must point to ' \
+            'an RVM wrapper script, not a raw Ruby binary. This is because RVM is implemented ' \
+            "through various environment variables, which are set through the wrapper script.\n",
+
+          :solution_description_html =>
+            "To find out the correct value for <code>#{h passenger_ruby}</code>, please read " \
+            "<a href=\"#{h passenger_ruby_doc}\">its documentation entry</a>."
+        )
+        abort
       end
-    end
-
-    # To be called whenever the (pre)loader is about to abort with an error.
-    def about_to_abort(options, exception = nil)
-      dump_all_information(options)
-      # https://code.google.com/p/phusion-passenger/issues/detail?id=1039
-      puts
-    end
-
-    def to_boolean(value)
-      return !(value.nil? || value == false || value == "false")
-    end
-
-    def sanitize_spawn_options(options)
-      defaults = {
-        "app_type"         => "rack",
-        "environment"      => "production",
-        "print_exceptions" => true
-      }
-      options = defaults.merge(options)
-      options["app_group_name"]            = options["app_root"] if !options["app_group_name"]
-      options["print_exceptions"]          = to_boolean(options["print_exceptions"])
-      options["analytics"]                 = to_boolean(options["analytics"])
-      options["show_version_in_header"]    = to_boolean(options["show_version_in_header"])
-      options["log_level"]                 = options["log_level"].to_i if options["log_level"]
-      # TODO: smart spawning is not supported when using ruby-debug. We should raise an error
-      # in this case.
-      options["debugger"]     = to_boolean(options["debugger"])
-      options["spawn_method"] = "direct" if options["debugger"]
-
-      return options
-    end
-
-    def dump_all_information(options)
-      dump_ruby_environment
-      dump_envvars
-      dump_system_metrics(options)
-    end
-
-    def dump_ruby_environment
-      if dir = ENV['PASSENGER_DEBUG_DIR']
-        File.open("#{dir}/ruby_info", "w") do |f|
-          f.puts "RUBY_VERSION = #{RUBY_VERSION}"
-          f.puts "RUBY_PLATFORM = #{RUBY_PLATFORM}"
-          f.puts "RUBY_ENGINE = #{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'nil'}"
-        end
-        File.open("#{dir}/load_path", "wb") do |f|
-          $LOAD_PATH.each do |path|
-            f.puts path
-          end
-        end
-        File.open("#{dir}/loaded_libs", "wb") do |f|
-          $LOADED_FEATURES.each do |filename|
-            f.puts filename
-          end
-        end
-
-        # We write to these files last because the 'require' calls can fail.
-        require 'rbconfig' if !defined?(RbConfig::CONFIG)
-        File.open("#{dir}/rbconfig", "wb") do |f|
-          RbConfig::CONFIG.each_pair do |key, value|
-            f.puts "#{key} = #{value}"
-          end
-        end
-        begin
-          require 'rubygems' if !defined?(Gem)
-        rescue LoadError
-        end
-        if defined?(Gem)
-          File.open("#{dir}/ruby_info", "a") do |f|
-            f.puts "RubyGems version = #{Gem::VERSION}"
-            if Gem.respond_to?(:path)
-              f.puts "RubyGems paths = #{Gem.path.inspect}"
-            else
-              f.puts "RubyGems paths = unknown; incompatible RubyGems API"
-            end
-          end
-          File.open("#{dir}/activated_gems", "wb") do |f|
-            if Gem.respond_to?(:loaded_specs)
-              Gem.loaded_specs.each_pair do |name, spec|
-                f.puts "#{name} => #{spec.version}"
-              end
-            else
-              f.puts "Unable to query this information; incompatible RubyGems API."
-            end
-          end
-        end
-      end
-    rescue SystemCallError
-      # Don't care.
-    end
-
-    def dump_envvars
-      if dir = ENV['PASSENGER_DEBUG_DIR']
-        File.open("#{dir}/envvars", "wb") do |f|
-          ENV.each_pair do |key, value|
-            f.puts "#{key} = #{value}"
-          end
-        end
-      end
-    rescue SystemCallError
-      # Don't care.
-    end
-
-    def dump_system_metrics(options)
-      if dir = ENV['PASSENGER_DEBUG_DIR']
-        # When invoked through Passenger Standalone, we want passenger-config
-        # to use the PassengerAgent in the Passsenger Standalone buildout directory,
-        # because the one in the source root may not exist.
-        passenger_config = "#{PhusionPassenger.bin_dir}/passenger-config"
-        if is_ruby_program?(passenger_config)
-          ruby = options["ruby"]
-        else
-          ruby = nil
-        end
-        command = [
-          "env",
-          "PASSENGER_LOCATION_CONFIGURATION_FILE=#{PhusionPassenger.install_spec}",
-          ruby,
-          passenger_config,
-          "system-metrics"
-        ].compact
-        contents = `#{Shellwords.join(command)}`
-        if $? && $?.exitstatus == 0
-          File.open("#{dir}/system_metrics", "wb") do |f|
-            f.write(contents)
-          end
-        end
-      end
-    rescue SystemCallError
-      # Don't care.
     end
 
     def is_ruby_program?(path)
@@ -208,6 +109,14 @@ module PhusionPassenger
       end
     rescue EOFError
       false
+    end
+
+    def exit_code_for_exception(e)
+      if e.is_a?(SystemExit)
+        e.status
+      else
+        1
+      end
     end
 
     # Prepare an application process using rules for the given spawn options.
@@ -223,9 +132,9 @@ module PhusionPassenger
       DebugLogging.log_level = options["log_level"] if options["log_level"]
 
       # We always load the union_station_hooks_* gems and do not check for
-      # `options["analytics"]` here. The gems don't actually initialize (and
+      # `options["analytics_support"]` here. The gems don't actually initialize (and
       # load the bulk of their code) unless they have determined that
-      # `options["analytics"]` is true. Regardless of whether Union Station
+      # `options["analytics_support"]` is true. Regardless of whether Union Station
       # support is enabled in Passenger, the UnionStationHooks namespace must
       # be available so that applications can call it, even though the actual
       # calls don't do anything when Union Station support is disabled.
@@ -335,25 +244,35 @@ module PhusionPassenger
 
     def create_socket_address(protocol, address)
       if protocol == 'unix'
-        return "unix:#{address}"
+        "unix:#{address}"
       elsif protocol == 'tcp'
-        return "tcp://#{address}"
+        "tcp://#{address}"
       else
         raise ArgumentError, "Unknown protocol '#{protocol}'"
       end
     end
 
-    def advertise_readiness
-      # https://code.google.com/p/phusion-passenger/issues/detail?id=1039
-      puts
-
-      puts "!> Ready"
-    end
-
-    def advertise_sockets(output, request_handler)
+    def advertise_sockets(_options, request_handler)
+      json = { :sockets => [] }
       request_handler.server_sockets.each_pair do |name, options|
         concurrency = PhusionPassenger.advertised_concurrency_level || options[:concurrency]
-        output.puts "!> socket: #{name};#{options[:address]};#{options[:protocol]};#{concurrency}"
+        json[:sockets] << {
+          :name => name,
+          :address => options[:address],
+          :protocol => options[:protocol],
+          :concurrency => concurrency,
+          :accept_http_requests => !!options[:accept_http_requests]
+        }
+      end
+
+      File.open(ENV['PASSENGER_SPAWN_WORK_DIR'] + '/response/properties.json', 'w') do |f|
+        f.write(PhusionPassenger::Utils::JSON.generate(json))
+      end
+    end
+
+    def advertise_readiness(options)
+      File.open(ENV['PASSENGER_SPAWN_WORK_DIR'] + '/response/finish', 'w') do |f|
+        f.write('1')
       end
     end
 
@@ -430,6 +349,172 @@ module PhusionPassenger
       require(library_name || gem_name)
     end
 
+
+    ##### Journey recording #####
+
+    def record_journey_step_in_progress(step)
+      @main_app.record_journey_step_in_progress(step)
+    end
+
+    def record_journey_step_complete(info, state)
+      @main_app.record_journey_step_complete(info, state)
+    end
+
+    def record_journey_step_performed(info)
+      @main_app.record_journey_step_performed(info)
+    end
+
+    def record_journey_step_errored(info)
+      record_journey_step_complete(info, 'STEP_ERRORED')
+    end
+
+    def run_block_and_record_step_progress(step)
+      step_info = record_journey_step_in_progress(step)
+      begin
+        yield
+      rescue Exception => e
+        record_journey_step_errored(step_info)
+        raise e
+      end
+      record_journey_step_performed(step_info)
+    end
+
+
+    ##### Error reporting #####
+
+    # To be called whenever the (pre)loader is about to abort with an error.
+    def about_to_abort(options, exception)
+      dump_all_information(options)
+    end
+
+    def record_and_print_exception(e)
+      record_error_category_based_on_exception(e)
+      record_and_print_error_summary(
+        "The application encountered the following error: #{e} (#{e.class})")
+      STDERR.write("    #{e.backtrace.join("\n    ")}\n")
+      record_advanced_problem_details(format_exception(e))
+      if e.respond_to?(:problem_description_html)
+        record_problem_description_html(e.problem_description_html)
+      end
+      if e.respond_to?(:solution_description_html)
+        record_solution_description_html(e.solution_description_html)
+      end
+    end
+
+    def record_error_category(category)
+      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      try_write_file("#{dir}/response/error/category", category)
+    end
+
+    def record_error_category_based_on_exception(e)
+      if e.is_a?(IOError)
+        record_error_category('IO_ERROR')
+      elsif e.is_a?(SystemCallError)
+        record_error_category('OPERATING_SYSTEM_ERROR')
+      else
+        record_error_category('INTERNAL_ERROR')
+      end
+    end
+
+    def record_error_summary(summary)
+      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      try_write_file("#{dir}/response/error/summary", summary)
+    end
+
+    def record_and_print_error_summary(summary)
+      STDERR.puts "Error: #{summary}"
+      record_error_summary(summary)
+    end
+
+    def record_advanced_problem_details(message)
+      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      try_write_file("#{dir}/response/error/advanced_problem_details", message)
+    end
+
+    def record_problem_description_html(html)
+      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      try_write_file("#{dir}/response/error/problem_description.html", html)
+    end
+
+    def record_solution_description_html(html)
+      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+      try_write_file("#{dir}/response/error/solution_description.html", html)
+    end
+
+    def format_exception(e)
+      result = "#{e} (#{e.class})"
+      if !e.backtrace.empty?
+        result << "\n  " << e.backtrace.join("\n  ")
+      end
+      result
+    end
+
+
+    ##### Environment dumping #####
+
+    def dump_all_information(options)
+      dump_ruby_environment
+      dump_envvars
+    end
+
+    def dump_ruby_environment
+      dir = "#{ENV['PASSENGER_SPAWN_WORK_DIR']}/envdump"
+
+      File.open("#{dir}/ruby_info", "w") do |f|
+        f.puts "RUBY_VERSION = #{RUBY_VERSION}"
+        f.puts "RUBY_PLATFORM = #{RUBY_PLATFORM}"
+        f.puts "RUBY_ENGINE = #{defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'nil'}"
+      end
+      File.open("#{dir}/load_path", "wb") do |f|
+        $LOAD_PATH.each do |path|
+          f.puts path
+        end
+      end
+      File.open("#{dir}/loaded_libs", "wb") do |f|
+        $LOADED_FEATURES.each do |filename|
+          f.puts filename
+        end
+      end
+
+      # We write to these files last because the 'require' calls can fail.
+      require 'rbconfig' if !defined?(RbConfig::CONFIG)
+      File.open("#{dir}/rbconfig", "wb") do |f|
+        RbConfig::CONFIG.each_pair do |key, value|
+          f.puts "#{key} = #{value}"
+        end
+      end
+      begin
+        require 'rubygems' if !defined?(Gem)
+      rescue LoadError
+      end
+      if defined?(Gem)
+        File.open("#{dir}/ruby_info", "a") do |f|
+          f.puts "RubyGems version = #{Gem::VERSION}"
+          if Gem.respond_to?(:path)
+            f.puts "RubyGems paths = #{Gem.path.inspect}"
+          else
+            f.puts "RubyGems paths = unknown; incompatible RubyGems API"
+          end
+        end
+        File.open("#{dir}/activated_gems", "wb") do |f|
+          if Gem.respond_to?(:loaded_specs)
+            Gem.loaded_specs.each_pair do |name, spec|
+              f.puts "#{name} => #{spec.version}"
+            end
+          else
+            f.puts "Unable to query this information; incompatible RubyGems API."
+          end
+        end
+      end
+    rescue SystemCallError
+      # Don't care.
+    end
+
+    def dump_envvars
+      dir = "#{ENV['PASSENGER_SPAWN_WORK_DIR']}/envdump"
+      try_write_file("#{dir}/envvars", ENV.to_a.map { |k, v| "#{k} = #{v}" }.join("\n"))
+    end
+
   private
     def running_bundler(options)
       yield
@@ -437,79 +522,176 @@ module PhusionPassenger
       if (defined?(Bundler::GemNotFound) && e.is_a?(Bundler::GemNotFound)) ||
          (defined?(Bundler::GitError) && e.is_a?(Bundler::GitError))
         PhusionPassenger.require_passenger_lib 'platform_info/ruby'
-        comment =
-          "<p>It looks like Bundler could not find a gem. Maybe you didn't install all the " +
-          "gems that this application needs. To install your gems, please run:</p>\n\n" +
-          "  <pre class=\"commands\">bundle install</pre>\n\n"
-        ruby = options["ruby"]
+        ruby = PlatformInfo.ruby_command
+        e_as_str = "#{e}"  # Certain classes like Interrupt don't like #to_s, so we use this
+        if Bundler.respond_to?(:settings) && Bundler.settings.respond_to?(:path)
+          bundle_path = Bundler.settings.path
+        end
+        case options['integration_mode']
+        when 'apache'
+          passenger_ruby = 'PassengerRuby'
+          passenger_ruby_doc = 'https://www.phusionpassenger.com/library/config/apache/reference/#passengerruby'
+          passenger_user = 'PassengerUser'
+          passenger_user_doc = 'https://www.phusionpassenger.com/library/config/apache/reference/#passengeruser'
+        when 'nginx'
+          passenger_ruby = 'passenger_ruby'
+          passenger_ruby_doc = 'https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_ruby'
+          passenger_user = 'passenger_user'
+          passenger_user_doc = 'https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_user'
+        when 'standalone'
+          passenger_ruby = '--ruby'
+          passenger_ruby_doc = 'https://www.phusionpassenger.com/library/config/standalone/reference/#--ruby-ruby'
+        else
+          raise "Unknown integration mode #{options['integration_mode'].inspect}"
+        end
+
+
+        problem_description =
+          "<p>Bundler was unable to find one of the gems defined in the Gemfile. Possible" \
+          " causes for this problem are:</p>" \
+          "<ul>" \
+          "<li>You did not install all the gems that this application needs.</li>" \
+          "<li>The necessary gems are installed, but the Bundler does not have" \
+          " permissions to access them."
+        if bundle_path
+          problem_description << " Bundler tried to load the gems from #{h bundle_path}."
+        end
+        problem_description <<
+          "</li>" \
+          "<li>The application is being run under the wrong Ruby interpreter.</li>"
+        if PlatformInfo.in_rvm?
+          problem_description <<
+            "<li>The application is being run under the wrong RVM gemset.</li>"
+        end
         if ruby =~ %r(^/usr/local/rvm/)
-          comment <<
-            "<p>If that didn't work, then maybe the problem is that your gems are installed " +
-            "to <code>#{h home_dir}/.rvm/gems</code>, while at the same time you set " +
-            "<code>PassengerRuby</code> (Apache) or <code>passenger_ruby</code> (Nginx) to " +
-            "<code>#{h ruby}</code>. Because of the latter, RVM does not load gems from the " +
-            "home directory.</p>\n\n" +
-            "<p>To make RVM load gems from the home directory, you need to set " +
-            "<code>PassengerRuby</code>/<code>passenger_ruby</code> to an RVM wrapper script " +
-            "inside the home directory:</p>\n\n" +
-            "<ol>\n" +
+          problem_description <<
+            "<li>Your gems are installed to <code>#{h home_dir}/.rvm/gems</code>, while at" \
+            " the same time you set <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a>" \
+            " to <code>#{h ruby}</code>. Because of the latter, RVM does not load gems from the " \
+            "home directory.</li>"
+        end
+        if PlatformInfo.in_rvm?
+          problem_description <<
+            "<li>The RVM gemset may be broken.</li>"
+        end
+        problem_description <<
+          "</ul>" \
+          "<h3>Raw Bundler exception</h3>" \
+          "<p>Exception message:</p>" \
+          "<pre>#{h e_as_str} (#{h e.class.to_s})</pre>" \
+          "<p>Backtrace:<p>" \
+          "<pre>#{h e.backtrace.join("\n")}</pre>"
+        attach_problem_description_html_to_exception(e, problem_description)
+
+
+        solution_description =
+          "<div class=\"multiple-solutions\">" \
+          \
+          "<h3>Make sure the gem bundle is installed</h3>" \
+          "<p>Run the following from the application directory:</p>" \
+          "<pre>bundle install</pre>" \
+          \
+          "<h3>Check the application process's execution environment</h3>" \
+          "<p>Is the application running under the expected execution environment?" \
+          " A common problem is that the application runs under a different user than" \
+          " it is supposed to. The application is currently running as the <code>#{h whoami}</code>" \
+          " user &mdash; is this expected? Also, check the 'Details &amp; diagnostics'" \
+          " &raquo; 'Subprocess' tab and double check all information there &mdash; is" \
+          " everything as expected? If not, please fix that.</p>"
+        if passenger_user
+          solution_description <<
+            "<p>If the application is not supposed to run as <code>#{h whoami}</code>," \
+            " then you can configure this via the" \
+            " <a href=\"#{h passenger_user_doc}\">#{h passenger_user}</a>" \
+            " setting.</p>"
+        end
+        solution_description <<
+          "<h3>Check that the application has permissions to access the directory from which Bundler loads gems</h3>" \
+          "<p>Please check whether the application, which is running as the" \
+            " <code>#{h whoami}</code> user, has permissions to access"
+        if bundle_path
+          solution_description <<
+            " <code>#{h bundle_path}</code>."
+        else
+          solution_description <<
+            " the directory that Bundler tries to load gems from. Unfortunately" \
+            " #{SHORT_PROGRAM_NAME} was unable to figure out which directory this"
+            " is because Bundler is too old, so you need to figure out the" \
+            " directory yourself (or you can upgrade Bundler so that #{SHORT_PROGRAM_NAME}" \
+            " can figure out the path for you)."
+        end
+        solution_description <<
+          "</p>" \
+          \
+          "<h3>Check whether the application is being run under the correct Ruby interpreter</h3>" \
+          "<p>Is the application supposed to be run with <code>#{h ruby}</code>?" \
+          " If not, please change the <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a>" \
+          " setting.</p>"
+        if PlatformInfo.in_rvm?
+          solution_description <<
+            "<h3>Check whether the application is being run under the correct RVM gemset</h3>" \
+            "<p>Is the application supposed to run under the <code>#{h PlatformInfo.rvm_ruby_string}</code>" \
+            " gemset? If not, please change the <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a>" \
+            " setting. The documentation for that setting will teach you how to refer" \
+            " to the proper gemset.</p>"
+        end
+        if ruby =~ %r(^/usr/local/rvm/)
+          solution_description <<
+            "<h3>Is your gem bundle installed to the home directory, while at the same" \
+            " time you are using a Ruby that is installed by RVM in a system-wide manner?</h3>" \
+            "<p>Your Ruby interpreter is installed by RVM in a system-wide manner: it is" \
+            " located in #{h ruby}. If Bundler tries to load gems from " \
+            "<code>#{h home_dir}</code>/.rvm/gems, then that won't work.</p>" \
+            "<p>To make Bundler and RVM able to load gems from the home directory, set " \
+            "<a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a> to an RVM wrapper script " \
+            "inside the home directory:</p>\n\n" \
+            "<ol>\n" \
             "  <li>Login as #{h whoami}.</li>\n"
           if PlatformInfo.rvm_installation_mode == :multi
-            comment <<
-              "  <li>Enable RVM mixed mode by running:\n" +
-              "      <pre class=\"commands\">rvm user gemsets</pre></li>\n"
+            solution_description <<
+              "  <li>Enable RVM mixed mode by running:\n" \
+              "      <pre>rvm user gemsets</pre></li>\n"
           end
-          comment <<
-            "  <li>Run this to find out what to set <code>PassengerRuby</code>/<code>passenger_ruby</code> to:\n" +
-            "      <pre class=\"commands\">#{PlatformInfo.ruby_command} \\\n" +
-            "#{PhusionPassenger.bin_dir}/passenger-config --detect-ruby</pre></li>\n" +
-            "</ol>\n\n" +
-            "<p>If that didn't help either, then maybe your application is being run under a " +
-            "different environment than it's supposed to. Please check the following:</p>\n\n"
-        else
-          comment <<
-            "<p>If that didn't work, then the problem is probably caused by your " +
-            "application being run under a different environment than it's supposed to. " +
-            "Please check the following:</p>\n\n"
+          solution_description <<
+            "  <li>Run this to find out what to set" \
+            "      <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a> to:\n" \
+            "      <pre>#{h PlatformInfo.ruby_command} \\\n" \
+            "#{PhusionPassenger.bin_dir}/passenger-config --detect-ruby</pre></li>\n" \
+            "</ol>\n\n"
         end
-        comment << "<ol>\n"
-        comment <<
-          "  <li>Is this app supposed to be run as the <code>#{h whoami}</code> user?</li>\n" +
-          "  <li>Is this app being run on the correct Ruby interpreter? Below you will\n" +
-          "      see which Ruby interpreter Phusion Passenger attempted to use.</li>\n"
         if PlatformInfo.in_rvm?
-          comment <<
-            "  <li>Please check whether the correct RVM gemset is being used.</li>\n" +
-            "  <li>Sometimes, RVM gemsets may be broken.\n" +
-            "      <a href=\"https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets\">Try resetting them.</a></li>\n"
+          solution_description <<
+            "<h3>Reset your RVM gemset</h3>" \
+            "<p>Sometimes, RVM gemsets maybe be broken. " \
+            "<a href=\"https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets\">" \
+            "Try resetting them.</a></p>"
         end
-        comment << "</ol>\n"
-        prepend_exception_html_comment(e, comment)
+        attach_solution_description_html_to_exception(e, solution_description)
       end
       raise e
     end
 
-    def prepend_exception_html_comment(e, comment)
-      # Since Exception doesn't allow changing the message, we monkeypatch
-      # the #message and #to_s methods.
-      separator = "\n<p>-------- The exception is as follows: -------</p>\n"
-      new_message = comment + separator + h(e.message)
-      new_s = comment + separator + h(e.to_s)
+    def attach_problem_description_html_to_exception(e, html)
       metaclass = class << e; self; end
-      metaclass.send(:define_method, :message) do
-        new_message
+      metaclass.send(:define_method, :problem_description_html) do
+        html
       end
-      metaclass.send(:define_method, :to_s) do
-        new_s
+    end
+
+    def attach_solution_description_html_to_exception(e, html)
+      metaclass = class << e; self; end
+      metaclass.send(:define_method, :solution_description_html) do
+        html
       end
-      metaclass.send(:define_method, :html?) do
-        true
-      end
+    end
+
+    def try_write_file(path, contents)
+      @main_app.try_write_file(path, contents)
     end
 
     def h(text)
       require 'erb' if !defined?(ERB)
-      return ERB::Util.h(text)
+      ERB::Util.h(text)
     end
 
     def whoami
@@ -520,14 +702,14 @@ module PhusionPassenger
         user = nil
       end
       if user
-        return user.name
+        user.name
       else
-        return "##{Process.uid}"
+        "##{Process.uid}"
       end
     end
 
     def home_dir
-      return PhusionPassenger.home_dir
+      PhusionPassenger.home_dir
     end
   end
 

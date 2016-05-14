@@ -45,7 +45,6 @@
 #include <Utils/JsonUtils.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/ApplicationPool/Group.h>
-#include <Core/ApplicationPool/ErrorRenderer.h>
 #include <Core/ApplicationPool/Pool/InitializationAndShutdown.cpp>
 #include <Core/ApplicationPool/Pool/AnalyticsCollection.cpp>
 #include <Core/ApplicationPool/Pool/GarbageCollection.cpp>
@@ -64,6 +63,7 @@
 #include <Core/ApplicationPool/Group/InternalUtils.cpp>
 #include <Core/ApplicationPool/Group/StateInspection.cpp>
 #include <Core/ApplicationPool/Group/Verification.cpp>
+#include <Core/SpawningKit/ErrorRenderer.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -94,7 +94,7 @@ copyException(const tracable_exception &e) {
 
 	TRY_COPY_EXCEPTION(RequestQueueFullException);
 	TRY_COPY_EXCEPTION(GetAbortedException);
-	TRY_COPY_EXCEPTION(SpawnException);
+	TRY_COPY_EXCEPTION(SpawningKit::SpawnException);
 
 	TRY_COPY_EXCEPTION(InvalidModeStringException);
 	TRY_COPY_EXCEPTION(ArgumentException);
@@ -134,7 +134,7 @@ rethrowException(const ExceptionPtr &e) {
 
 	TRY_RETHROW_EXCEPTION(ConfigurationException);
 
-	TRY_RETHROW_EXCEPTION(SpawnException);
+	TRY_RETHROW_EXCEPTION(SpawningKit::SpawnException);
 	TRY_RETHROW_EXCEPTION(RequestQueueFullException);
 	TRY_RETHROW_EXCEPTION(GetAbortedException);
 
@@ -164,21 +164,21 @@ rethrowException(const ExceptionPtr &e) {
 	throw tracable_exception(*e);
 }
 
-void processAndLogNewSpawnException(SpawnException &e, const Options &options,
-	const SpawningKit::ConfigPtr &config)
+void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Options &options,
+	const Context *context)
 {
 	TRACE_POINT();
 	UnionStation::TransactionPtr transaction;
-	ErrorRenderer renderer(*config->resourceLocator);
-	string appMessage = e.getErrorPage();
+	SpawningKit::ErrorRenderer renderer(*context->getSpawningKitContext());
 	string errorId;
 	char filename[PATH_MAX];
 	stringstream stream;
+	string errorPage;
 
-	if (options.analytics && config->unionStationContext != NULL) {
+	if (options.analytics && context->unionStationContext != NULL) {
 		try {
 			UPDATE_TRACE_POINT();
-			transaction = config->unionStationContext->newTransaction(
+			transaction = context->unionStationContext->newTransaction(
 				options.getAppGroupName(),
 				"exceptions",
 				options.unionStationKey);
@@ -191,20 +191,16 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	}
 
 	UPDATE_TRACE_POINT();
-	if (appMessage.empty()) {
-		appMessage = "none";
-	}
 	if (errorId.empty()) {
-		errorId = config->randomGenerator->generateHexString(4);
+		errorId = context->getRandomGenerator()->generateHexString(4);
 	}
-	e.set("error_id", errorId);
+	e.setId(errorId);
 
 	try {
 		int fd = -1;
-		string errorPage;
 
 		UPDATE_TRACE_POINT();
-		errorPage = renderer.renderWithDetails(appMessage, options, &e);
+		errorPage = renderer.renderWithDetails(e);
 
 		#if (defined(__linux__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 11))) || defined(__APPLE__) || defined(__FreeBSD__)
 			snprintf(filename, PATH_MAX, "%s/passenger-error-XXXXXX.html",
@@ -236,57 +232,9 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 			transaction->message("Context: spawning");
 			transaction->message("Message: " +
 				jsonString(e.what()));
-			transaction->message("App message: " +
-				jsonString(appMessage));
-
-			const char *kind;
-			switch (e.getErrorKind()) {
-			case SpawnException::PRELOADER_STARTUP_ERROR:
-				kind = "PRELOADER_STARTUP_ERROR";
-				break;
-			case SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR:
-				kind = "PRELOADER_STARTUP_PROTOCOL_ERROR";
-				break;
-			case SpawnException::PRELOADER_STARTUP_TIMEOUT:
-				kind = "PRELOADER_STARTUP_TIMEOUT";
-				break;
-			case SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR:
-				kind = "PRELOADER_STARTUP_EXPLAINABLE_ERROR";
-				break;
-			case SpawnException::APP_STARTUP_ERROR:
-				kind = "APP_STARTUP_ERROR";
-				break;
-			case SpawnException::APP_STARTUP_PROTOCOL_ERROR:
-				kind = "APP_STARTUP_PROTOCOL_ERROR";
-				break;
-			case SpawnException::APP_STARTUP_TIMEOUT:
-				kind = "APP_STARTUP_TIMEOUT";
-				break;
-			case SpawnException::APP_STARTUP_EXPLAINABLE_ERROR:
-				kind = "APP_STARTUP_EXPLAINABLE_ERROR";
-				break;
-			default:
-				kind = "UNDEFINED_ERROR";
-				break;
-			}
-			transaction->message(string("Kind: ") + kind);
-
-			Json::Value details;
-			const map<string, string> &annotations = e.getAnnotations();
-			map<string, string>::const_iterator it, end = annotations.end();
-
-			for (it = annotations.begin(); it != end; it++) {
-				details[it->first] = it->second;
-			}
-
-			// This information is not very useful. Union Station
-			// already collects system metrics.
-			details.removeMember("system_metrics");
-			// Don't include environment variables because they may
-			// contain sensitive information.
-			details.removeMember("envvars");
-
-			transaction->message("Details: " + stringifyJson(details));
+			transaction->message("App message: none");
+			transaction->message("Kind: UNDEFINED_ERROR");
+			transaction->message("Details: {}");
 		} catch (const tracable_exception &e2) {
 			P_WARN("Cannot log to Union Station: " << e2.what() <<
 				"\n  Backtrace:\n" << e2.backtrace());
@@ -300,19 +248,18 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	if (filename[0] != '\0') {
 		stream << "  Error details saved to: " << filename << "\n";
 	}
-	stream << "  Message from application: " << appMessage << "\n";
 	P_ERROR(stream.str());
 
-	if (config->agentsOptions != NULL) {
+	if (context->agentsOptions != NULL) {
 		HookScriptOptions hOptions;
 		hOptions.name = "spawn_failed";
-		hOptions.spec = config->agentsOptions->get("hook_spawn_failed", false);
-		hOptions.agentsOptions = config->agentsOptions;
+		hOptions.spec = context->agentsOptions->get("hook_spawn_failed", false);
+		hOptions.agentsOptions = context->agentsOptions;
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_ROOT", options.appRoot));
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_GROUP_NAME", options.getAppGroupName()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_MESSAGE", e.what()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_ID", errorId));
-		hOptions.environment.push_back(make_pair("PASSENGER_APP_ERROR_MESSAGE", appMessage));
+		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_PAGE", errorPage));
 		oxt::thread(boost::bind(runHookScripts, hOptions),
 			"Hook: spawn_failed", 256 * 1024);
 	}

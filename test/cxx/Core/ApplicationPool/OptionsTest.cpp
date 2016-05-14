@@ -7,8 +7,6 @@ using namespace std;
 
 namespace tut {
 	struct Core_ApplicationPool_OptionsTest {
-		Core_ApplicationPool_OptionsTest() {
-		}
 	};
 
 	DEFINE_TEST_GROUP(Core_ApplicationPool_OptionsTest);

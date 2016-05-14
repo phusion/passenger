@@ -45,7 +45,7 @@ module PhusionPassenger
 
     # For backward compatibility
     def install_framework_extensions!(user_options = {})
-      if PhusionPassenger::App.options["analytics"]
+      if PhusionPassenger::App.options["analytics_support"]
         config = PhusionPassenger::App.options.merge(UnionStationHooks.config)
         user_options.each_pair do |key, value|
           config[key.to_s] = value

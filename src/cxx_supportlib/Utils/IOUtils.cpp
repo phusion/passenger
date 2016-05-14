@@ -733,6 +733,64 @@ connectToServer(NConnect_State &state) {
 	}
 }
 
+bool
+pingTcpServer(const StaticString &host, unsigned int port, unsigned long long *timeout) {
+	TRACE_POINT();
+	NTCP_State state;
+
+	setupNonBlockingTcpSocket(state, host, port, __FILE__, __LINE__);
+
+	try {
+		if (connectToTcpServer(state)) {
+			return true;
+		}
+	} catch (const SystemException &e) {
+		if (e.code() == ECONNREFUSED) {
+			return false;
+		} else {
+			throw e;
+		}
+	}
+
+	// Cannot connect to the port yet, but that may not mean the
+	// port is unavailable. So poll the socket.
+
+	bool connectable;
+	try {
+		connectable = waitUntilWritable(state.fd, timeout);
+	} catch (const SystemException &e) {
+		throw SystemException("Error polling TCP socket "
+			+ host + ":" + toString(port), e.code());
+	}
+	if (!connectable) {
+		// Timed out. Assume port is not available.
+		return false;
+	}
+
+	// Try to connect the socket one last time.
+
+	try {
+		return connectToTcpServer(state);
+	} catch (const SystemException &e) {
+		if (e.code() == ECONNREFUSED) {
+			return false;
+		} else if (e.code() == EISCONN || e.code() == EINVAL) {
+			#ifdef __FreeBSD__
+				// Work around bug in FreeBSD (discovered on
+				// January 20 2013 in daemon_controller)
+				return false;
+			#else
+				throw e;
+			#endif
+
+			// Never reached, shut up compiler warning.
+			return false;
+		} else {
+			throw e;
+		}
+	}
+}
+
 SocketPair
 createUnixSocketPair(const char *file, unsigned int line) {
 	int fds[2];

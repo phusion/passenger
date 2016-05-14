@@ -389,6 +389,48 @@ escapeForXml(const StaticString &input) {
 }
 
 string
+escapeShell(const StaticString &value) {
+	if (value.empty()) {
+		return "''";
+	}
+
+	const char *pos = value.data();
+	const char *end = value.data() + value.size();
+	string result;
+
+	result.reserve(value.size() * 1.5);
+
+	while (pos < end) {
+		char ch = *pos;
+		if (ch == '\n') {
+			// It is not possible to escape a newline with a backslash.
+			// This is because a backslash + newline combination
+			// is treated to mean a line continuation
+			result.append("'\n'", 3);
+		} else {
+			bool allowed =
+				(ch >= 'A' && ch <= 'Z')
+				|| (ch >= 'a' && ch <= 'z')
+				|| (ch >= '0' && ch <= '9')
+				|| ch == '_'
+				|| ch == '-'
+				|| ch == '.'
+				|| ch == ','
+				|| ch == ':'
+				|| ch == '/'
+				|| ch == '@';
+			if (!allowed) {
+				result.append(1, '\\');
+			}
+			result.append(1, ch);
+		}
+		pos++;
+	}
+
+	return result;
+}
+
+string
 getProcessUsername(bool fallback) {
 	struct passwd pwd, *result;
 	long bufSize;

@@ -28,6 +28,7 @@
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/function.hpp>
 #include <boost/foreach.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/system_calls.hpp>
@@ -57,12 +58,14 @@ using namespace std;
  */
 class BackgroundIOCapturer {
 private:
-	FileDescriptor fd;
-	pid_t pid;
-	const char *channelName;
-	boost::mutex dataSyncher;
+	const FileDescriptor fd;
+	const pid_t pid;
+	const StaticString channelName;
+	mutable boost::mutex dataSyncher;
 	string data;
 	oxt::thread *thr;
+	boost::function<void ()> endReachedCallback;
+	bool stopped;
 
 	void capture() {
 		TRACE_POINT();
@@ -97,19 +100,32 @@ private:
 					}
 					split(StaticString(buf, ret), '\n', lines);
 					foreach (const StaticString line, lines) {
-						printAppOutput(pid, channelName, line.data(), line.size());
+						printAppOutput(pid, channelName,
+							line.data(), line.size());
 					}
 				}
 			}
 		}
+
+		{
+			boost::lock_guard<boost::mutex> l(dataSyncher);
+			stopped = true;
+		}
+		if (endReachedCallback != NULL) {
+			endReachedCallback();
+		}
 	}
 
 public:
-	BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid, const char *_channelName)
+	BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid,
+		const StaticString &_channelName = P_STATIC_STRING("output"),
+		const StaticString &_data = StaticString())
 		: fd(_fd),
 		  pid(_pid),
 		  channelName(_channelName),
-		  thr(NULL)
+		  data(_data.data(), _data.size()),
+		  thr(NULL),
+		  stopped(false)
 		{ }
 
 	~BackgroundIOCapturer() {
@@ -133,22 +149,35 @@ public:
 			"Background I/O capturer", 64 * 1024);
 	}
 
-	string stop() {
+	void stop() {
 		TRACE_POINT();
-		assert(thr != NULL);
-		boost::this_thread::disable_interruption di;
-		boost::this_thread::disable_syscall_interruption dsi;
-		thr->interrupt_and_join();
-		delete thr;
-		thr = NULL;
-		boost::lock_guard<boost::mutex> l(dataSyncher);
-		return data;
+		if (thr != NULL) {
+			boost::this_thread::disable_interruption di;
+			boost::this_thread::disable_syscall_interruption dsi;
+			thr->interrupt_and_join();
+			delete thr;
+			thr = NULL;
+		}
+	}
+
+	void setEndReachedCallback(const boost::function<void ()> &callback) {
+		endReachedCallback = callback;
 	}
 
 	void appendToBuffer(const StaticString &dataToAdd) {
 		TRACE_POINT();
 		boost::lock_guard<boost::mutex> l(dataSyncher);
 		data.append(dataToAdd.data(), dataToAdd.size());
+	}
+
+	string getData() const {
+		boost::lock_guard<boost::mutex> l(dataSyncher);
+		return data;
+	}
+
+	bool isStopped() const {
+		boost::lock_guard<boost::mutex> l(dataSyncher);
+		return stopped;
 	}
 };
 

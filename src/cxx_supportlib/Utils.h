@@ -211,6 +211,13 @@ string extractBaseName(const StaticString &path);
 string escapeForXml(const StaticString &input);
 
 /**
+ * Escape the given string into a single value for use in a shell (like Bash).
+ *
+ * @throws std::bad_alloc Something went wrong.
+ */
+string escapeShell(const StaticString &input);
+
+/**
  * Returns the username of the user that the current process is running as.
  * If the user has no associated username, then the behavior depends on the
  * `fallback` argument. When true, "UID xxxx" is returned, where xxxx is the

@@ -84,7 +84,9 @@
 #define POOL_HELPER_THREAD_STACK_SIZE 262144
 #define PROCESS_SHUTDOWN_TIMEOUT 60
 #define PROCESS_SHUTDOWN_TIMEOUT_DISPLAY "1 minute"
+#define PROGRAM_AUTHOR "Phusion"
 #define PROGRAM_NAME "Phusion Passenger"
+#define PROGRAM_WEBSITE "https://www.phusionpassenger.com"
 #define RPM_APACHE_MODULE_PACKAGE "mod_passenger"
 #define RPM_DEV_PACKAGE "passenger-devel"
 #define RPM_MAIN_PACKAGE "passenger"

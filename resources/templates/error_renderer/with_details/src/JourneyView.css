@@ -1,0 +1,33 @@
+.journey th {
+  padding-bottom: 1em;
+}
+
+.journey .duration {
+  font-size: small;
+  opacity: 0.7;
+}
+
+.journey .step-separator {
+  padding-left: 0.25em;
+  color: #aaa;
+}
+
+.journey .process-boundary .arrow-image {
+  margin: 0 2em;
+}
+
+.journey .status-label .glyphicon {
+  margin-right: 1em;
+}
+
+.journey .done {
+  color: #7cb342;
+}
+
+.journey .error {
+  color: red;
+}
+
+.journey .not-started {
+  color: #ccc;
+}

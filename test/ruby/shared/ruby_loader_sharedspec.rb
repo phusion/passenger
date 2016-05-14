@@ -5,9 +5,9 @@ shared_examples_for "a Ruby loader" do
     File.write(@stub.startup_file, %q{
       raise "oh no!"
     })
-    result = start
-    result[:status].should == "Error"
-    result[:body].should include("oh no!")
+    error = start(:quiet => true)
+    expect(error.status).to eq(:premature_exit)
+    expect(error.summary).to include("oh no!")
   end
 
   it "calls the starting_worker_process event after the startup file has been loaded" do
@@ -22,11 +22,11 @@ shared_examples_for "a Ruby loader" do
         f.puts "end of startup file\n"
       end
     })
-    result = start
-    result[:status].should == "Ready"
-    File.read("#{@stub.app_root}/history.txt").should ==
-      "end of startup file\n" +
-      "worker_process_started\n"
+    start
+    expect(@process).to be_an_instance_of(AppProcess)
+    expect(File.read("#{@stub.app_root}/history.txt")).to eq(
+      "end of startup file\n" \
+      "worker_process_started\n")
   end
 
   it "calls the stopping_worker_process event on exit" do
@@ -41,12 +41,12 @@ shared_examples_for "a Ruby loader" do
         f.puts "end of startup file\n"
       end
     })
-    result = start
-    result[:status].should == "Ready"
-    @loader.input.close_write
+    start
+    expect(@process).to be_an_instance_of(AppProcess)
+    @process.input.close
     eventually(3) do
       File.read("#{@stub.app_root}/history.txt") ==
-        "end of startup file\n" +
+        "end of startup file\n" \
         "worker_process_stopped\n"
     end
   end

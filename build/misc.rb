@@ -173,7 +173,10 @@ task :compile_app => dependencies do
   begin
     compile_cxx(object,
       source,
-      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+      :include_paths => [
+        "src/agent",
+        *CXX_SUPPORTLIB_INCLUDE_PATHS
+      ],
       :flags => [
         "-DSTANDALONE",
         LIBEV_CFLAGS,

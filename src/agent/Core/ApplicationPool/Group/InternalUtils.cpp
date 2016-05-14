@@ -97,14 +97,14 @@ Group::mergeOptions(const Options &other) {
  */
 bool
 Group::prepareHookScriptOptions(HookScriptOptions &hsOptions, const char *name) {
-	SpawningKit::ConfigPtr config = getPool()->getSpawningKitConfig();
-	if (config->agentsOptions == NULL) {
+	Context *context = getPool()->getContext();
+	if (context->agentsOptions == NULL) {
 		return false;
 	}
 
 	hsOptions.name = name;
 	string hookName = string("hook_") + name;
-	hsOptions.spec = config->agentsOptions->get(hookName, false);
+	hsOptions.spec = context->agentsOptions->get(hookName, false);
 
 	return true;
 }
@@ -144,7 +144,7 @@ Group::generateStickySessionId() {
 }
 
 ProcessPtr
-Group::createProcessObject(const Json::Value &json) {
+Group::createNullProcessObject() {
 	struct Guard {
 		Context *context;
 		Process *process;
@@ -156,7 +156,7 @@ Group::createProcessObject(const Json::Value &json) {
 
 		~Guard() {
 			if (process != NULL) {
-				context->getProcessObjectPool().free(process);
+				context->processObjectPool.free(process);
 			}
 		}
 
@@ -165,11 +165,56 @@ Group::createProcessObject(const Json::Value &json) {
 		}
 	};
 
+	Json::Value args;
+	args["pid"] = 0;
+	args["gupid"] = "0";
+	args["spawner_creation_time"] = 0;
+	args["spawn_start_time"] = 0;
+	args["dummy"] = true;
+	args["sockets"] = Json::Value(Json::arrayValue);
+
 	Context *context = getContext();
-	LockGuard l(context->getMmSyncher());
-	Process *process = context->getProcessObjectPool().malloc();
+	LockGuard l(context->memoryManagementSyncher);
+	Process *process = context->processObjectPool.malloc();
 	Guard guard(context, process);
-	process = new (process) Process(&info, json);
+	process = new (process) Process(&info, args);
+	process->shutdownNotRequired();
+	guard.clear();
+	return ProcessPtr(process, false);
+}
+
+ProcessPtr
+Group::createProcessObject(const SpawningKit::Spawner &spawner,
+	const SpawningKit::Result &spawnResult)
+{
+	struct Guard {
+		Context *context;
+		Process *process;
+
+		Guard(Context *c, Process *s)
+			: context(c),
+			  process(s)
+			{ }
+
+		~Guard() {
+			if (process != NULL) {
+				context->processObjectPool.free(process);
+			}
+		}
+
+		void clear() {
+			process = NULL;
+		}
+	};
+
+	Json::Value args;
+	args["spawner_creation_time"] = (Json::UInt64) spawner.creationTime;
+
+	Context *context = getContext();
+	LockGuard l(context->memoryManagementSyncher);
+	Process *process = context->processObjectPool.malloc();
+	Guard guard(context, process);
+	process = new (process) Process(&info, spawnResult, args);
 	guard.clear();
 	return ProcessPtr(process, false);
 }

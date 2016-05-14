@@ -79,7 +79,6 @@
 #include <Utils/BufferedIO.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/VariantMap.h>
-#include <Core/ApplicationPool/Pool.h>
 #include <Shared/ApplicationPoolApiKey.h>
 
 namespace Passenger {

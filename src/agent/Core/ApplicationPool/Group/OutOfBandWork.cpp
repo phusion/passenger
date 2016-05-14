@@ -209,7 +209,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 
 		assert(process->oobwStatus == Process::OOBW_IN_PROGRESS);
 		assert(process->sessions == 0);
-		socket = process->findSessionSocketWithLowestBusyness();
+		socket = process->findSocketsAcceptingHttpRequestsAndWithLowestBusyness();
 	}
 
 	UPDATE_TRACE_POINT();

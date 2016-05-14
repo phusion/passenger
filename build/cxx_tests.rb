@@ -37,13 +37,24 @@ TEST_CXX_OBJECTS = {
     "test/cxx/Core/ApplicationPool/ProcessTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ApplicationPool/PoolTest.o" =>
     "test/cxx/Core/ApplicationPool/PoolTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/ConfigTest.o" =>
+    "test/cxx/Core/SpawningKit/ConfigTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/JourneyTest.o" =>
+    "test/cxx/Core/SpawningKit/JourneyTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/HandshakePrepareTest.o" =>
+    "test/cxx/Core/SpawningKit/HandshakePrepareTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/HandshakePerformTest.o" =>
+    "test/cxx/Core/SpawningKit/HandshakePerformTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/UserSwitchingRulesTest.o" =>
+    "test/cxx/Core/SpawningKit/UserSwitchingRulesTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/DirectSpawnerTest.o" =>
     "test/cxx/Core/SpawningKit/DirectSpawnerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/SmartSpawnerTest.o" =>
     "test/cxx/Core/SpawningKit/SmartSpawnerTest.cpp",
 
-  "#{TEST_OUTPUT_DIR}cxx/Core/UnionStationTest.o" =>
-    "test/cxx/Core/UnionStationTest.cpp",
+  # "#{TEST_OUTPUT_DIR}cxx/Core/UnionStationTest.o" =>
+  #   "test/cxx/Core/UnionStationTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ResponseCacheTest.o" =>
     "test/cxx/Core/ResponseCacheTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/SecurityUpdateCheckerTest.o" =>
@@ -53,6 +64,9 @@ TEST_CXX_OBJECTS = {
 
   "#{TEST_OUTPUT_DIR}cxx/UstRouter/TransactionTest.o" =>
     "test/cxx/UstRouter/TransactionTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/SpawnEnvSetupperTest.o" =>
+    "test/cxx/SpawnEnvSetupperTest.cpp",
 
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/ChannelTest.o" =>
     "test/cxx/ServerKit/ChannelTest.cpp",

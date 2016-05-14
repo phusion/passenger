@@ -253,12 +253,14 @@ realPrintAppOutput(char *buf, unsigned int bufSize,
 }
 
 void
-printAppOutput(pid_t pid, const char *channelName, const char *message, unsigned int size) {
+printAppOutput(pid_t pid, const StaticString &channelName, const char *message,
+	unsigned int size)
+{
 	if (printAppOutputAsDebuggingMessages) {
 		P_DEBUG("App " << pid << " " << channelName << ": " << StaticString(message, size));
 	} else {
 		char pidStr[sizeof("4294967295")];
-		unsigned int pidStrLen, channelNameLen, totalLen;
+		unsigned int pidStrLen, totalLen;
 
 		try {
 			pidStrLen = integerToOtherBase<pid_t, 10>(pid, pidStr, sizeof(pidStr));
@@ -268,19 +270,18 @@ printAppOutput(pid_t pid, const char *channelName, const char *message, unsigned
 			pidStrLen = 1;
 		}
 
-		channelNameLen = strlen(channelName);
-		totalLen = (sizeof("App X Y: \n") - 2) + pidStrLen + channelNameLen + size;
+		totalLen = (sizeof("App X Y: \n") - 2) + pidStrLen + channelName.size() + size;
 		if (totalLen < 1024) {
 			char buf[1024];
 			realPrintAppOutput(buf, sizeof(buf),
 				pidStr, pidStrLen,
-				channelName, channelNameLen,
+				channelName.data(), channelName.size(),
 				message, size);
 		} else {
 			DynamicBuffer buf(totalLen);
 			realPrintAppOutput(buf.data, totalLen,
 				pidStr, pidStrLen,
-				channelName, channelNameLen,
+				channelName.data(), channelName.size(),
 				message, size);
 		}
 	}

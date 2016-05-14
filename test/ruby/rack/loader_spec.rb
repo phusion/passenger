@@ -13,7 +13,7 @@ describe "Rack loader" do
 
   def start(options = {})
     @loader = Loader.new(["ruby", "#{PhusionPassenger.helper_scripts_dir}/rack-loader.rb"], @stub.app_root)
-    return @loader.start(options)
+    @process = @loader.spawn(options)
   end
 
   it_should_behave_like "a loader"
@@ -31,11 +31,11 @@ describe "Rack loader" do
         f.puts "end of startup file\n"
       end
     })
-    result = start
-    result[:status].should == "Ready"
-    File.read("#{@stub.app_root}/history.txt").should ==
-      "end of startup file\n" +
-      "worker_process_started: forked=false\n"
+    start
+    expect(@process).to be_an_instance_of(AppProcess)
+    expect(File.read("#{@stub.app_root}/history.txt")).to eq(
+      "end of startup file\n" \
+      "worker_process_started: forked=false\n")
   end
 end
 

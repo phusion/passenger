@@ -24,6 +24,7 @@
  *  THE SOFTWARE.
  */
 #include <Core/Controller.h>
+#include <Core/SpawningKit/ErrorRenderer.h>
 
 /*************************************************************************
  *
@@ -242,7 +243,8 @@ Controller::reportSessionCheckoutError(Client *client, Request *req,
 		}
 	}
 	{
-		boost::shared_ptr<SpawnException> e2 = dynamic_pointer_cast<SpawnException>(e);
+		boost::shared_ptr<SpawningKit::SpawnException> e2 =
+			dynamic_pointer_cast<SpawningKit::SpawnException>(e);
 		if (e2 != NULL) {
 			writeSpawnExceptionErrorResponse(client, req, e2);
 			return;
@@ -277,13 +279,13 @@ Controller::writeRequestQueueFullExceptionErrorResponse(Client *client, Request 
 
 void
 Controller::writeSpawnExceptionErrorResponse(Client *client, Request *req,
-	const boost::shared_ptr<SpawnException> &e)
+	const boost::shared_ptr<SpawningKit::SpawnException> &e)
 {
 	TRACE_POINT();
 	SKC_ERROR(client, "Cannot checkout session because a spawning error occurred. " <<
-		"The identifier of the error is " << e->get("error_id") << ". Please see earlier logs for " <<
+		"The identifier of the error is " << e->getId() << ". Please see earlier logs for " <<
 		"details about the error.");
-	endRequestWithErrorResponse(&client, &req, e->getErrorPage(), e.get());
+	endRequestWithErrorResponse(&client, &req, *e);
 }
 
 void
@@ -340,26 +342,23 @@ Controller::writeOtherExceptionErrorResponse(Client *client, Request *req, const
 	}
 }
 
-/**
- * `message` will be copied and doesn't need to outlive the request.
- */
 void
-Controller::endRequestWithErrorResponse(Client **c, Request **r, const StaticString &message,
-	const SpawnException *e)
+Controller::endRequestWithErrorResponse(Client **c, Request **r,
+	const SpawningKit::SpawnException &e)
 {
 	TRACE_POINT();
 	Client *client = *c;
 	Request *req = *r;
-	ErrorRenderer renderer(*resourceLocator);
+	SpawningKit::ErrorRenderer renderer(*appPool->getSpawningKitContext());
 	string data;
 
 	if (friendlyErrorPagesEnabled(req)) {
 		try {
-			data = renderer.renderWithDetails(message, req->options, e);
+			data = renderer.renderWithDetails(e);
 		} catch (const SystemException &e2) {
 			SKC_ERROR(client, "Cannot render an error page: " << e2.what() <<
 				"\n" << e2.backtrace());
-			data = message;
+			data = e.getSummary();
 		}
 	} else {
 		try {
