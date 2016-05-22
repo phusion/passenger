@@ -31,7 +31,7 @@
 #include <ngx_config.h>
 #include <ngx_http.h>
 
-#include "ConfigurationFields.h"
+#include "LocationConfig.h"
 
 typedef struct {
     ngx_str_t    root_dir;

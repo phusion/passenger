@@ -48,6 +48,37 @@ class TemplateRenderer
   end
 end
 
+class CxxCodeTemplateRenderer
+  def initialize(filename)
+    if !defined?(CxxCodeBuilder)
+      require 'build/support/vendor/cxxcodebuilder/lib/cxxcodebuilder'
+    end
+    code = File.open(filename, 'rb') do |f|
+      f.read
+    end
+    @builder = CxxCodeBuilder::Builder.new
+    @builder.instance_eval(code, filename)
+  end
+
+  def render
+    @builder.to_s
+  end
+
+  def render_to(filename)
+    puts "Creating #{filename}"
+    text = render
+    # When packaging, some timestamps may be modified. The user may not
+    # have write access to the source root (for example, when Passenger
+    # Standalone is compiling its runtime), so we only write to the file
+    # when necessary.
+    if !File.exist?(filename) || File.writable?(filename) || File.read(filename) != text
+      File.open(filename, 'w') do |f|
+        f.write(text)
+      end
+    end
+  end
+end
+
 class Pathname
   if !method_defined?(:/)
     def /(other)
@@ -92,6 +123,14 @@ def maybe_wrap_in_ccache(command)
   else
     command
   end
+end
+
+def copyright_header_for(filename)
+  contents = File.open(filename, 'rb') do |f|
+    f.read
+  end
+  contents =~ /\A(#.+?)\n\n/m
+  $1.gsub(/^# */, '')
 end
 
 def ensure_target_directory_exists(target)

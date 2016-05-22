@@ -108,6 +108,8 @@ module PhusionPassenger
       'Vagrantfile',
       'Passenger.sublime-project',
       'Passenger.xcodeproj/**/*',
+      'build/support/vendor/*/.*',
+      'build/support/vendor/*/spec/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/.*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/hacking/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/spec/**/*',

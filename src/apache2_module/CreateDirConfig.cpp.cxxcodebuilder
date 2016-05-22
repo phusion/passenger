@@ -1,0 +1,81 @@
+#  Phusion Passenger - https://www.phusionpassenger.com/
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
+#
+#  "Passenger", "Phusion Passenger" and "Union Station" are registered
+#  trademarks of Phusion Holding B.V.
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
+# This file uses the cxxcodebuilder API. Learn more at:
+# https://github.com/phusion/passenger/cxxcodebuilder
+
+require 'phusion_passenger/apache2/config_options'
+
+def main
+  comment copyright_header_for(__FILE__)
+
+  separator
+
+  comment %q{
+    CreateDirConfig.cpp is automatically generated from CreateDirConfig.cpp.cxxcodebuilder,
+    using definitions from src/ruby_supportlib/phusion_passenger/apache2/config_options.rb.
+    Edits to CreateDirConfig.cpp will be lost.
+
+    To update CreateDirConfig.cpp:
+      rake apache2
+
+    To force regeneration of CreateDirConfig.cpp:
+      rm -f src/apache2_module/CreateDirConfig.cpp
+      rake src/apache2_module/CreateDirConfig.cpp
+  }
+
+  separator
+
+  filter_eligible_options(APACHE2_DIRECTORY_CONFIGURATION_OPTIONS).each do |option|
+    if option[:type] == :string
+      add_code("config->#{struct_field_for(option)} = NULL;")
+    elsif option[:type] == :integer
+      add_code("config->#{struct_field_for(option)} = UNSET_INT_VALUE;")
+    elsif option[:type] == :flag
+      add_code("config->#{struct_field_for(option)} = DirConfig::UNSET;")
+    else
+      raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
+    end
+  end
+end
+
+def filter_eligible_options(options)
+  options.reject do |option|
+    option[:alias_for] ||
+      option.fetch(:field, true).nil? ||
+      option[:field].to_s =~ /\./
+  end
+end
+
+def struct_field_for(option)
+  if option.has_key?(:field)
+    option[:field]
+  else
+    result = option[:name].sub(/^Passenger/, '')
+    result[0] = result[0..0].downcase
+    result
+  end
+end
+
+main

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -128,11 +128,11 @@ end
 
 def create_apache2_auto_generated_source_task(source)
   dependencies = [
-    "#{source}.erb",
+    "#{source}.cxxcodebuilder",
     'src/ruby_supportlib/phusion_passenger/apache2/config_options.rb'
   ]
   file(source => dependencies) do
-    template = TemplateRenderer.new("#{source}.erb")
+    template = CxxCodeTemplateRenderer.new("#{source}.cxxcodebuilder")
     template.render_to(source)
   end
 end

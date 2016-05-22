@@ -10,3 +10,6 @@
 [submodule "src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails"]
 	path = src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails
 	url = https://github.com/phusion/union_station_hooks_rails.git
+[submodule "build/support/vendor/cxxcodebuilder"]
+	path = build/support/vendor/cxxcodebuilder
+	url = https://github.com/phusion/cxxcodebuilder.git

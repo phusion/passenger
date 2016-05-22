@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -241,12 +241,12 @@ end
 # If you add a new shared definition file, don't forget to update
 # src/ruby_supportlib/phusion_passenger/packaging.rb!
 
-dependencies = ['src/cxx_supportlib/Constants.h.erb',
+dependencies = ['src/cxx_supportlib/Constants.h.cxxcodebuilder',
   'src/ruby_supportlib/phusion_passenger.rb',
   'src/ruby_supportlib/phusion_passenger/constants.rb']
 file 'src/cxx_supportlib/Constants.h' => dependencies do
   PhusionPassenger.require_passenger_lib 'constants'
-  template = TemplateRenderer.new('src/cxx_supportlib/Constants.h.erb')
+  template = CxxCodeTemplateRenderer.new('src/cxx_supportlib/Constants.h.cxxcodebuilder')
   template.render_to('src/cxx_supportlib/Constants.h')
 end
 
