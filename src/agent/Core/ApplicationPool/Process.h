@@ -820,6 +820,33 @@ public:
 		return result.str();
 	}
 
+	Json::Value attachedEventJSON() {
+		Json::Value json;
+		json["event_type"] = "passenger_process_attached";
+		StaticString gupid = getGupid();
+		json["gupid"] = std::string(gupid.data(), gupid.size());
+		json["pid"] = getPid();
+		json["sticky_session_id"] = getStickySessionId();
+		json["spawner_creation_time"] = spawnerCreationTime;
+		json["spawn_start_time"] = spawnStartTime;
+		json["spawn_end_time"] = spawnEndTime;
+		if (!codeRevision.empty()) {
+			json["code_revision"] = std::string(codeRevision.data(), codeRevision.size());
+		}
+		return json;
+	}
+
+	Json::Value detachedEventJSON() {
+		Json::Value json;
+		json["event_type"] = "passenger_process_detached";
+		StaticString gupid = getGupid();
+		json["gupid"] = std::string(gupid.data(), gupid.size());
+		json["pid"] = getPid();
+		json["processed"] = processed;
+		json["last_used"] = lastUsed;
+		return json;
+	}
+
 	template<typename Stream>
 	void inspectXml(Stream &stream, bool includeSockets = true) const {
 		stream << "<pid>" << getPid() << "</pid>";

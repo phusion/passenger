@@ -235,6 +235,7 @@ public:
 
 	void startCheckingDetachedProcesses(bool immediately);
 	void detachedProcessesCheckerMain(GroupPtr self);
+	void sendProcessDetachedLogEvent(const ProcessPtr &process);
 
 	/****** Out-of-band work ******/
 
