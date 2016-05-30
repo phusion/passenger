@@ -6,6 +6,8 @@ server_name <%= app[:server_names].join(' ') %>;
     <% else %>
         listen <%= nginx_listen_address(app) %> ssl;
     <% end %>
+    ssl_certificate <%= app[:ssl_certificate] %>;
+    ssl_certificate_key <%= app[:ssl_certificate_key] %>;
 <% else %>
     listen <%= nginx_listen_address(app) %>;
 <% end %>
@@ -17,10 +19,7 @@ server_name <%= app[:server_names].join(' ') %>;
 
 passenger_app_root '<%= app[:root] %>';
 passenger_enabled on;
-<% if app[:ssl] %>
-    ssl_certificate <%= app[:ssl_certificate] %>;
-    ssl_certificate_key <%= app[:ssl_certificate_key] %>;
-<% end %>
+
 <% if app[:union_station_key] %>
     union_station_support on;
     union_station_key <%= app[:union_station_key] %>;
@@ -36,6 +35,9 @@ passenger_enabled on;
 <% end %>
 
 <%= nginx_option(app, :environment, :passenger_app_env) %>
+<%= nginx_option(app, :ruby) %>
+<%= nginx_option(app, :python) %>
+<%= nginx_option(app, :nodejs) %>
 <%= nginx_option(app, :spawn_method) %>
 <%= nginx_option(app, :app_type) %>
 <%= nginx_option(app, :startup_file) %>
