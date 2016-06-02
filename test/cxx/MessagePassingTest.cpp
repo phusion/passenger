@@ -70,12 +70,12 @@ namespace tut {
 		TempThread thr(boost::bind(&MessagePassingTest::sendMessagesLater, this));
 		unsigned long long timeout = 200000;
 		Timer<> timer;
-		ensure_equals(box->recv("ho", &timeout)->name, "ho");
-		ensure(timer.elapsed() >= 39);
-		ensure(timer.elapsed() < 95);
-		ensure_equals(box->size(), 1u);
-		ensure_equals(box->recv("hi")->name, "hi");
-		ensure_equals(box->size(), 0u);
-		ensure(timeout >= 140000);
+		ensure_equals("(1)", box->recv("ho", &timeout)->name, "ho");
+		ensure("(2)", timer.elapsed() >= 39);
+		ensure("(3)", timer.elapsed() < 95);
+		ensure_equals("(4)", box->size(), 1u);
+		ensure_equals("(5)", box->recv("hi")->name, "hi");
+		ensure_equals("(6)", box->size(), 0u);
+		ensure("(7)", timeout >= 140000);
 	}
 }
