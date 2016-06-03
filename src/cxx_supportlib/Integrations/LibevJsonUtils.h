@@ -28,8 +28,10 @@
 
 #include <ev.h>
 #include <jsoncpp/json.h>
+#include <string>
 #include <cstring>
 #include <ctime>
+#include <Utils/JsonUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/SystemTime.h>
 
@@ -82,6 +84,36 @@ evTimeToJson(ev_tstamp evTime, ev_tstamp evNow, unsigned long long now = 0) {
 		doc["relative"] = distanceOfTimeInWords(evTime, evNow) + " from now";
 	} else {
 		doc["relative"] = distanceOfTimeInWords(evTime, evNow) + " ago";
+	}
+	return doc;
+}
+
+inline Json::Value
+countAndLastActivityEvTimeToJson(unsigned int count, ev_tstamp evTime,
+	ev_tstamp evNow, unsigned long long now = 0)
+{
+	Json::Value doc;
+	doc["count"] = count;
+	doc["last_activity"] = evTimeToJson(evTime, evNow, now);
+	return doc;
+}
+
+inline Json::Value
+byteSizeAndCountAndLastActivityEvTimeToJson(size_t size, unsigned int count,
+	ev_tstamp evTime, ev_tstamp evNow, unsigned long long now = 0)
+{
+	Json::Value doc(byteSizeAndCountToJson(size, count));
+	doc["last_activity"] = evTimeToJson(evTime, evNow, now);
+	return doc;
+}
+
+inline Json::Value
+errorAndOcurrenceEvTimeToJson(const string &message, ev_tstamp evTime,
+	ev_tstamp evNow, unsigned long long now = 0)
+{
+	Json::Value doc(evTimeToJson(evTime, evNow, now));
+	if (!doc.isNull()) {
+		doc["message"] = message;
 	}
 	return doc;
 }

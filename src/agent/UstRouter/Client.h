@@ -67,8 +67,7 @@ public:
 	set<string> openTransactions;
 
 	struct {
-		TransactionPtr transaction;
-		string timestamp;
+		Transaction *transaction;
 		bool ack;
 	} logCommandParams;
 

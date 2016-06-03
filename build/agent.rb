@@ -52,6 +52,7 @@ AGENT_OBJECTS.each_pair do |object, source|
   define_cxx_object_compilation_task(
     object,
     source,
+    :deps => LIBCURL_DEPENDENCY_TARGETS,
     :include_paths => [
       "src/agent",
       *CXX_SUPPORTLIB_INCLUDE_PATHS

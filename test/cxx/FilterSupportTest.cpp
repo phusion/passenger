@@ -391,13 +391,14 @@ namespace tut {
 	TEST_METHOD(50) {
 		// It extracts information from the logs
 		ContextFromLog ctx(
-			"1234-abcd 1234 0 BEGIN: request processing (1235, 10, 10)\n"
-			"1234-abcd 1240 1 URI: /foo\n"
-			"1234-abcd 1241 2 Controller action: HomeController#index\n"
-			"1234-abcd 1242 3 Status: 200 OK\n"
-			"1234-abcd 1243 4 Initial GC time: 1\n"
-			"1234-abcd 1244 5 Final GC time: 10\n"
-			"1234-abcd 2234 10 END: request processing (2234, 10, 10)\n"
+			0,
+			"BEGIN: request processing (1235, 10, 10)\n"
+			"URI: /foo\n"
+			"Controller action: HomeController#index\n"
+			"Status: 200 OK\n"
+			"Initial GC time: 1\n"
+			"Final GC time: 10\n"
+			"END: request processing (2234, 10, 10)\n"
 		);
 		ensure_equals(ctx.getURI(), "/foo");
 		ensure_equals(ctx.getController(), "HomeController");
@@ -410,24 +411,24 @@ namespace tut {
 	TEST_METHOD(51) {
 		// It ignores empty lines and invalid lines
 		ContextFromLog ctx(
+			0,
 			"\n"
 			"\n"
 			"    \n"
-			"1234-abcd 1234 0 URI: /foo\n"
+			"URI: /foo\n"
 			"URI: /bar\n"
 			"\n"
 		);
-		ensure_equals(ctx.getURI(), "/foo");
+		ensure_equals(ctx.getURI(), "/bar");
 	}
 
 	TEST_METHOD(52) {
 		// If the begin or end "request processing" event is not available
 		// then it derives the response time from the entire transaction.
 		ContextFromLog ctx(
-			"1234-abcd 1234 0 ATTACH\n"
-			"1234-abcd 1235 1 BEGIN: request processing (1235, 10, 10)\n"
-			"1234-abcd 1236 2 DETACH\n"
+			2,
+			"BEGIN: request processing (1235, 10, 10)\n"
 		);
-		ensure_equals(ctx.getResponseTime(), 2);
+		ensure_equals(ctx.getResponseTime(), 2000000);
 	}
 }

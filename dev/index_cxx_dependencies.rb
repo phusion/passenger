@@ -43,6 +43,7 @@ EXCLUDE_NAMES = %w{
   deque
   queue
   limits
+  random
   hash_map
   ext/hash_map
   cctype

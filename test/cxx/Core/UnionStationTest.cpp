@@ -103,12 +103,6 @@ namespace tut {
 			*state = controller->serverState;
 		}
 
-		string timestampString(unsigned long long timestamp) {
-			char str[2 * sizeof(unsigned long long) + 1];
-			integerToHexatri<unsigned long long>(timestamp, str);
-			return str;
-		}
-
 		MessageClient createConnection(bool sendInitCommand = true) {
 			MessageClient client;
 			vector<string> args;
@@ -211,32 +205,10 @@ namespace tut {
 		log2.reset();
 		log3.reset();
 
-		ensureSubstringInDumpFile(timestampString(YESTERDAY) + " 1 message 1\n");
-		ensureSubstringInDumpFile(timestampString(TODAY) + " 2 message 2\n");
-		ensureSubstringInDumpFile(timestampString(TOMORROW) + " 4 message 3\n");
-		ensureSubstringInDumpFile(timestampString(TOMORROW) + " 1 message 4\n");
-	}
-
-	TEST_METHOD(4) {
-		set_test_name("newTransaction() and continueTransaction() log an ATTACH message, "
-			"while destroying a Transaction logs a DETACH message");
-		init();
-		SystemTime::forceAll(YESTERDAY);
-
-		TransactionPtr log = context->newTransaction("foobar");
-
-		SystemTime::forceAll(TODAY);
-		TransactionPtr log2 = context2->continueTransaction(log->getTxnId(),
-			log->getGroupName(), log->getCategory());
-		log2.reset();
-
-		SystemTime::forceAll(TOMORROW);
-		log.reset();
-
-		ensureSubstringInDumpFile(timestampString(YESTERDAY) + " 0 ATTACH\n");
-		ensureSubstringInDumpFile(timestampString(TODAY) + " 1 ATTACH\n");
-		ensureSubstringInDumpFile(timestampString(TODAY) + " 2 DETACH\n");
-		ensureSubstringInDumpFile(timestampString(TOMORROW) + " 3 DETACH\n");
+		ensureSubstringInDumpFile("message 1\n");
+		ensureSubstringInDumpFile("message 2\n");
+		ensureSubstringInDumpFile("message 3\n");
+		ensureSubstringInDumpFile("message 4\n");
 	}
 
 	TEST_METHOD(5) {

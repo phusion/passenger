@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,63 +23,56 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_UST_ROUTER_FILE_SINK_H_
-#define _PASSENGER_UST_ROUTER_FILE_SINK_H_
+#ifndef _PASSENGER_UST_ROUTER_REMOTE_SINK_COMMON_H_
+#define _PASSENGER_UST_ROUTER_REMOTE_SINK_COMMON_H_
 
-#include <string>
-#include <ctime>
-#include <oxt/system_calls.hpp>
-#include <Exceptions.h>
-#include <FileDescriptor.h>
-#include <UstRouter/LogSink.h>
-#include <Utils/StrIntUtils.h>
+#include <ev.h>
+#include <curl/curl.h>
+
+#include <Integrations/CurlLibevIntegration.h>
+#include <UstRouter/RemoteSink/Segment.h>
+#include <UstRouter/RemoteSink/Server.h>
 
 namespace Passenger {
 namespace UstRouter {
-
-using namespace std;
-using namespace oxt;
+namespace RemoteSink {
 
 
-class FileSink: public LogSink {
+class Context {
 public:
-	string filename;
-	FileDescriptor fd;
+	struct ev_loop * const loop;
+	CURLM *curlMulti;
+	CurlLibevIntegration curlLibevIntegration;
 
-	FileSink(Controller *controller, const string &_filename)
-		: LogSink(controller),
-		  filename(_filename)
+	Context(struct ev_loop *_loop)
+		: loop(_loop)
 	{
-		fd.assign(syscalls::open(_filename.c_str(),
-			O_CREAT | O_WRONLY | O_APPEND,
-			0600), __FILE__, __LINE__);
-		if (fd == -1) {
-			int e = errno;
-			throw FileSystemException("Cannnot open file '" +
-				filename + "' for appending", e, filename);
-		}
+		curlMulti = curl_multi_init();
+		curl_multi_setopt(curlMulti, CURLMOPT_PIPELINING, (long) CURLPIPE_MULTIPLEX);
+		curlLibevIntegration.initialize(_loop, curlMulti);
 	}
 
-	virtual void append(const TransactionPtr &transaction) {
-		StaticString data = transaction->getBody();
-		LogSink::append(transaction);
-		syscalls::write(fd, data.data(), data.size());
-	}
-
-	virtual Json::Value inspectStateAsJson() const {
-		Json::Value doc = LogSink::inspectStateAsJson();
-		doc["type"] = "file";
-		doc["filename"] = filename;
-		return doc;
-	}
-
-	string inspect() const {
-		return "FileSink(" + filename + ")";
+	~Context() {
+		curlLibevIntegration.destroy();
+		curl_multi_cleanup(curlMulti);
 	}
 };
 
+class SegmentProcessor {
+public:
+	virtual ~SegmentProcessor() { }
+	virtual void schedule(SegmentList &segments) = 0;
+};
 
-} // namespace UstRouter
+class AbstractServerLivelinessChecker {
+public:
+	virtual void registerServers(const Segment::SmallServerList &servers) = 0;
+	~AbstractServerLivelinessChecker() { }
+};
+
+
 } // namespace Passenger
+} // namespace UstRouter
+} // namespace RemoteSink
 
-#endif /* _PASSENGER_UST_ROUTER_FILE_SINK_H_ */
+#endif /* _PASSENGER_UST_ROUTER_REMOTE_SINK_COMMON_H_ */

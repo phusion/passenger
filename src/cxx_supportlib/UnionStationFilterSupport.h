@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -43,6 +43,8 @@
 #include <cstring>
 #include <string.h>
 #include <stdlib.h>
+
+#include <ev++.h>
 
 #include <StaticString.h>
 #include <Exceptions.h>
@@ -494,13 +496,13 @@ public:
 
 	virtual string getURI() const = 0;
 	virtual string getController() const = 0;
-	virtual int getResponseTime() const = 0;
+	virtual long long getResponseTime() const = 0;
 	virtual string getStatus() const = 0;
 	virtual int getStatusCode() const = 0;
-	virtual int getGcTime() const = 0;
+	virtual long long getGcTime() const = 0;
 	virtual bool hasHint(const string &name) const = 0;
 
-	int getResponseTimeWithoutGc() const {
+	long long getResponseTimeWithoutGc() const {
 		return getResponseTime() - getGcTime();
 	}
 
@@ -583,9 +585,9 @@ public:
 	string uri;
 	string controller;
 	string status;
-	int responseTime;
+	long long responseTime;
 	int statusCode;
-	int gcTime;
+	long long gcTime;
 	set<string> hints;
 
 	SimpleContext() {
@@ -602,7 +604,7 @@ public:
 		return controller;
 	}
 
-	virtual int getResponseTime() const {
+	virtual long long getResponseTime() const {
 		return responseTime;
 	}
 
@@ -614,7 +616,7 @@ public:
 		return statusCode;
 	}
 
-	virtual int getGcTime() const {
+	virtual long long getGcTime() const {
 		return gcTime;
 	}
 
@@ -625,20 +627,19 @@ public:
 
 class ContextFromLog: public Context {
 private:
+	long long lifeTimeUsec;
 	StaticString logData;
 	mutable SimpleContext *parsedData;
 
 	struct ParseState {
 		unsigned long long requestProcessingStart;
 		unsigned long long requestProcessingEnd;
-		unsigned long long smallestTimestamp;
-		unsigned long long largestTimestamp;
 		unsigned long long gcTimeStart;
 		unsigned long long gcTimeEnd;
 	};
 
-	static void parseLine(const StaticString &txnId, unsigned long long timestamp,
-		const StaticString &data, SimpleContext &ctx, ParseState &state)
+	static void parseLine(const StaticString &data, SimpleContext &ctx,
+		ParseState &state)
 	{
 		if (startsWith(data, "BEGIN: request processing")) {
 			state.requestProcessingStart = extractEventTimestamp(data);
@@ -664,16 +665,9 @@ private:
 			StaticString value = data.substr(data.find(':') + 2);
 			state.gcTimeEnd = stringToULL(value);
 		}
-
-		if (state.smallestTimestamp == 0 || timestamp < state.smallestTimestamp) {
-			state.smallestTimestamp = timestamp;
-		}
-		if (timestamp > state.largestTimestamp) {
-			state.largestTimestamp = timestamp;
-		}
 	}
 
-	static void reallyParse(const StaticString &data, SimpleContext &ctx) {
+	void reallyParse(const StaticString &data, SimpleContext &ctx) const {
 		const char *current = data.data();
 		const char *end     = data.data() + data.size();
 
@@ -686,60 +680,22 @@ private:
 				const char *endOfLine = findEndOfLine(current, end);
 				StaticString line(current, endOfLine - current);
 				if (!line.empty()) {
-					StaticString txnId;
-					unsigned long long timestamp;
-					unsigned int writeCount;
-					StaticString lineData;
-
-					// If we want to do more complicated analysis we should sort
-					// the lines but for the purposes of ContextFromLog
-					// analyzing the data without sorting is good enough.
-					if (splitLine(line, txnId, timestamp, writeCount, lineData)) {
-						parseLine(txnId, timestamp, lineData, ctx,
-						state);
-					}
+					parseLine(line, ctx, state);
 				}
 				current = endOfLine;
 			}
 		}
 
 		if (state.requestProcessingEnd != 0) {
-			ctx.responseTime = int(state.requestProcessingEnd -
-				state.requestProcessingStart);
-		} else if (state.smallestTimestamp != 0) {
-			ctx.responseTime = state.largestTimestamp - state.smallestTimestamp;
+			ctx.responseTime = state.requestProcessingEnd -
+				state.requestProcessingStart;
+		} else if (lifeTimeUsec != 0) {
+			ctx.responseTime = lifeTimeUsec;
 		}
 
 		if (state.gcTimeEnd != 0) {
 			ctx.gcTime = state.gcTimeEnd - state.gcTimeStart;
 		}
-	}
-
-	static bool splitLine(const StaticString &line, StaticString &txnId,
-		unsigned long long &timestamp, unsigned int &writeCount,
-		StaticString &data)
-	{
-		size_t firstDelim = line.find(' ');
-		if (firstDelim == string::npos) {
-			return false;
-		}
-
-		size_t secondDelim = line.find(' ', firstDelim + 1);
-		if (secondDelim == string::npos) {
-			return false;
-		}
-
-		size_t thirdDelim = line.find(' ', secondDelim + 1);
-		if (thirdDelim == string::npos) {
-			return false;
-		}
-
-		txnId = line.substr(0, firstDelim);
-		timestamp = hexatriToULL(line.substr(firstDelim + 1, secondDelim - firstDelim - 1));
-		writeCount = (unsigned int) hexatriToULL(line.substr(secondDelim + 1,
-			thirdDelim - secondDelim - 1));
-		data = line.substr(thirdDelim + 1);
-		return true;
 	}
 
 	static unsigned long long extractEventTimestamp(const StaticString &data) {
@@ -792,10 +748,11 @@ private:
 	}
 
 public:
-	ContextFromLog(const StaticString &logData) {
-		this->logData = logData;
-		parsedData = NULL;
-	}
+	ContextFromLog(ev_tstamp _lifeTime, const StaticString &_logData)
+		: lifeTimeUsec(_lifeTime * 1000000),
+		  logData(_logData),
+		  parsedData(NULL)
+		{ }
 
 	~ContextFromLog() {
 		delete parsedData;
@@ -809,7 +766,7 @@ public:
 		return parse()->getController();
 	}
 
-	virtual int getResponseTime() const {
+	virtual long long getResponseTime() const {
 		return parse()->getResponseTime();
 	}
 
@@ -821,7 +778,7 @@ public:
 		return parse()->getStatusCode();
 	}
 
-	virtual int getGcTime() const {
+	virtual long long getGcTime() const {
 		return parse()->getGcTime();
 	}
 

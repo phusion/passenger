@@ -387,8 +387,8 @@ struct {                                                                \
 } while (0)
 
 #define STAILQ_SWAP(head1, head2, type) do {                            \
-    struct type *swap_first = STAILQ_FIRST(head1);                      \
-    struct type **swap_last = (head1)->stqh_last;                       \
+    type *swap_first = STAILQ_FIRST(head1);                      \
+    type **swap_last = (head1)->stqh_last;                       \
     STAILQ_FIRST(head1) = STAILQ_FIRST(head2);                          \
     (head1)->stqh_last = (head2)->stqh_last;                            \
     STAILQ_FIRST(head2) = swap_first;                                   \

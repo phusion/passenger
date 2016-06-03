@@ -236,6 +236,59 @@ timeToJson(unsigned long long timestamp, unsigned long long now = 0) {
 	return doc;
 }
 
+/**
+ * Encodes the given monotonic timestamp into a JSON object that
+ * describes it.
+ *
+ *     MonotonicTimeUsec t = SystemTime::getMonotonicUsec();
+ *     monoTimeToJson(t - 10000000, t);
+ *     // {
+ *     //   "timestamp": 1424887842,
+ *     //   "local": "Wed Feb 25 19:10:34 CET 2015",
+ *     //   "relative_timestamp": -10,
+ *     //   "relative": "10s ago"
+ *     // }
+ */
+inline Json::Value
+monoTimeToJson(MonotonicTimeUsec t, MonotonicTimeUsec monoNow, unsigned long long now = 0) {
+	if (t == 0) {
+		return Json::Value(Json::nullValue);
+	}
+
+	if (now == 0) {
+		now = SystemTime::getUsec();
+	}
+
+	unsigned long long wallClockTimeUsec;
+	if (monoNow > t) {
+		wallClockTimeUsec = now - (monoNow - t);
+	} else {
+		wallClockTimeUsec = now + (monoNow - t);
+	}
+
+	time_t wallClockTime = (time_t) (wallClockTimeUsec / 1000000ull);
+	char timeStr[32];
+	size_t len;
+	ctime_r(&wallClockTime, timeStr);
+	len = strlen(timeStr);
+	if (len > 0) {
+		// Get rid of trailing newline
+		timeStr[len - 1] = '\0';
+	}
+
+	Json::Value doc;
+	doc["timestamp"] = wallClockTimeUsec / 1000000.0;
+	doc["local"] = timeStr;
+	if (t > monoNow) {
+		doc["relative_timestamp"] = (t - monoNow) / 1000000.0;
+		doc["relative"] = distanceOfTimeInWords(t / 1000000ull, monoNow / 1000000ull) + " from now";
+	} else {
+		doc["relative_timestamp"] = (monoNow - t) / -1000000.0;
+		doc["relative"] = distanceOfTimeInWords(t / 1000000ull, monoNow / 1000000ull) + " ago";
+	}
+	return doc;
+}
+
 inline Json::Value
 durationToJson(unsigned long long duration) {
 	Json::Value doc;

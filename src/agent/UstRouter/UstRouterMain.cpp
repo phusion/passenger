@@ -44,11 +44,14 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#include <curl/curl.h>
+
 #include <Shared/Base.h>
 #include <Shared/ApiServerUtils.h>
 #include <UstRouter/OptionParser.h>
 #include <UstRouter/Controller.h>
 #include <UstRouter/ApiServer.h>
+#include <UstRouter/RemoteSink/Implementation.cpp>
 
 #include <Exceptions.h>
 #include <FileDescriptor.h>

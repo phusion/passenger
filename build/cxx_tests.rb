@@ -51,6 +51,18 @@ TEST_CXX_OBJECTS = {
 
   "#{TEST_OUTPUT_DIR}cxx/UstRouter/TransactionTest.o" =>
     "test/cxx/UstRouter/TransactionTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/UstRouter/RemoteSink/SegmenterTest.o" =>
+    "test/cxx/UstRouter/RemoteSink/SegmenterTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/UstRouter/RemoteSink/BatchTest.o" =>
+    "test/cxx/UstRouter/RemoteSink/BatchTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/UstRouter/RemoteSink/BatchingAlgorithmTest.o" =>
+    "test/cxx/UstRouter/RemoteSink/BatchingAlgorithmTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/UstRouter/RemoteSink/BatcherTest.o" =>
+    "test/cxx/UstRouter/RemoteSink/BatcherTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/UstRouter/RemoteSink/ServerLivelinessCheckerTest.o" =>
+    "test/cxx/UstRouter/RemoteSink/ServerLivelinessCheckerTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/UstRouter/RemoteSink/SenderTest.o" =>
+    "test/cxx/UstRouter/RemoteSink/SenderTest.cpp",
 
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/ChannelTest.o" =>
     "test/cxx/ServerKit/ChannelTest.cpp",
