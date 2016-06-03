@@ -25,6 +25,7 @@
 #include <ostream>
 #include <MemoryKit/mbuf.h>
 #include <Logging.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 namespace MemoryKit {
@@ -319,6 +320,11 @@ mbuf_block_ref(struct mbuf_block *mbuf_block)
 	#ifdef MBUF_ENABLE_BACKTRACES
 		mbuf_block->backtrace = strdup(oxt::thread::current_backtrace().c_str());
 	#endif
+
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, STAILQ_NEXT(mbuf_block, next) == NULL);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->magic == MBUF_BLOCK_MAGIC);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->pool->nactive_mbuf_blockq > 0);
+
 	mbuf_block->refcount++;
 }
 
@@ -330,7 +336,12 @@ mbuf_block_unref(struct mbuf_block *mbuf_block)
 			oxt::thread_signature, mbuf_block,
 			mbuf_block->refcount, mbuf_block->refcount - 1);
 	#endif
+
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, STAILQ_NEXT(mbuf_block, next) == NULL);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->magic == MBUF_BLOCK_MAGIC);
 	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->refcount > 0);
+	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->pool->nactive_mbuf_blockq > 0);
+
 	mbuf_block->refcount--;
 	if (mbuf_block->refcount == 0) {
 		if (mbuf_block->offset > 0) {
@@ -387,6 +398,8 @@ mbuf_block_print(struct mbuf_block *mbuf_block, std::ostream &stream)
 		"mbuf_block.next: " << (void *) STAILQ_NEXT(mbuf_block, next) << "\n"
 		"mbuf_block.start: " << (void *) mbuf_block->start << "\n"
 		"mbuf_block.end: " << (void *) mbuf_block->end << "\n"
+		"mbuf_block.contents: \"" << cEscapeString(StaticString(mbuf_block->start,
+			mbuf_block->end - mbuf_block->start)) << "\"\n"
 		"mbuf_block.refcount: " << mbuf_block->refcount << "\n"
 		"mbuf_block.offset: " << mbuf_block->offset << "\n"
 		"mbuf_block.pool: " << (void *) mbuf_block->pool << "\n"

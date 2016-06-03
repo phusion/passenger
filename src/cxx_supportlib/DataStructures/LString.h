@@ -28,6 +28,7 @@
 
 #include <boost/cstdint.hpp>
 #include <oxt/backtrace.hpp>
+#include <oxt/macros.hpp>
 #include <stdexcept>
 #include <cstring>
 #include <cassert>
@@ -99,7 +100,7 @@ psg_lstr_init(LString *str) {
 inline LString *
 psg_lstr_create(psg_pool_t *pool, const char *data, unsigned int size) {
 	LString *result = (LString *) psg_palloc(pool, sizeof(LString));
-	if (result == NULL) {
+	if (OXT_UNLIKELY(result == NULL)) {
 		TRACE_POINT();
 		throw std::bad_alloc();
 	}
@@ -129,7 +130,7 @@ psg_lstr_append_part(LString *str, LString::Part *part) {
 inline void
 psg_lstr_append_part_from_another_lstr(LString *str, psg_pool_t *pool, const LString::Part *part) {
 	LString::Part *copy = (LString::Part *) psg_palloc(pool, sizeof(LString::Part));
-	if (copy == NULL) {
+	if (OXT_UNLIKELY(copy == NULL)) {
 		TRACE_POINT();
 		throw std::bad_alloc();
 	}
@@ -147,11 +148,17 @@ psg_lstr_append(LString *str, psg_pool_t *pool, const MemoryKit::mbuf &buffer,
 	if (size == 0) {
 		return;
 	}
+
+	assert(data >= buffer.start);
+	assert(data + size <= buffer.end);
+
 	LString::Part *part = (LString::Part *) psg_palloc(pool, sizeof(LString::Part));
-	if (part == NULL) {
+	if (OXT_UNLIKELY(part == NULL)) {
 		TRACE_POINT();
 		throw std::bad_alloc();
 	}
+
+	// part->next is set to NULL by psg_lstr_append_part()
 	part->mbuf_block = buffer.mbuf_block;
 	part->data = data;
 	part->size = size;
@@ -169,12 +176,14 @@ psg_lstr_append(LString *str, psg_pool_t *pool, const char *data, unsigned int s
 	if (size == 0) {
 		return;
 	}
+
 	LString::Part *part = (LString::Part *) psg_palloc(pool, sizeof(LString::Part));
-	if (part == NULL) {
+	if (OXT_UNLIKELY(part == NULL)) {
 		TRACE_POINT();
 		throw std::bad_alloc();
 	}
-	part->next = NULL;
+
+	// part->next is set to NULL by psg_lstr_append_part()
 	part->mbuf_block = NULL;
 	part->data = data;
 	part->size = size;
@@ -193,7 +202,7 @@ psg_lstr_null_terminate(const LString *str, psg_pool_t *pool) {
 	char *data, *pos;
 
 	data = (char *) psg_pnalloc(pool, str->size + 1);
-	if (data == NULL) {
+	if (OXT_UNLIKELY(data == NULL)) {
 		TRACE_POINT();
 		throw std::bad_alloc();
 	}
@@ -208,10 +217,11 @@ psg_lstr_null_terminate(const LString *str, psg_pool_t *pool) {
 	*pos = '\0';
 
 	newstr = (LString *) psg_palloc(pool, sizeof(LString));
-	if (newstr == NULL) {
+	if (OXT_UNLIKELY(newstr == NULL)) {
 		TRACE_POINT();
 		throw std::bad_alloc();
 	}
+
 	psg_lstr_init(newstr);
 	psg_lstr_append(newstr, pool, data, str->size);
 	return newstr;
