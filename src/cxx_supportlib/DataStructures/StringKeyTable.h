@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -242,6 +242,8 @@ private:
 		} else {
 			m_storage = NULL;
 		}
+
+		nonEmptyIndex = other.nonEmptyIndex;
 	}
 
 	template<typename ValueType, typename LocalMoveSupport>
