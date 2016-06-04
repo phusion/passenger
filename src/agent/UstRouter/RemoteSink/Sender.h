@@ -585,9 +585,8 @@ private:
 		transfer->server->reportRequestDropped(dataSize, now,
 			serverSpecificErrorMessage);
 		assert(!transfer->server->isUp());
-		removeServerFromBalancingList(segment, transfer->server);
 
-		if (segment->balancingList.empty()) {
+		if (allServersAreDown(segment->balancingList)) {
 			P_ERROR("[RemoteSink sender] " << globalErrorMessage);
 			lastDropErrorMessage = globalErrorMessage;
 			lastDropTime = now;
@@ -613,30 +612,16 @@ private:
 		}
 	}
 
-	void removeServerFromBalancingList(Segment *segment, const ServerPtr &server) {
-		bool done = false;
+	bool allServersAreDown(const Segment::SmallServerList &servers) const {
+		Segment::SmallServerList::const_iterator it, end = servers.end();
 
-		while (!done) {
-			Segment::SmallServerList::iterator it, end = segment->balancingList.end();
-
-			for (it = segment->balancingList.begin(); it != end; it++) {
-				if (it->get() == server.get()) {
-					// Match found, continue while loop
-					segment->balancingList.erase(it);
-					break;
-				}
+		for (it = servers.begin(); it != end; it++) {
+			if ((*it)->isUp()) {
+				return false;
 			}
-
-			// No match found, end while loop
-			done = true;
 		}
 
-		if (segment->balancingList.empty()) {
-			segment->nextBalancingIndex = 0;
-		} else {
-			segment->nextBalancingIndex = segment->nextBalancingIndex
-				% segment->balancingList.size();
-		}
+		return true;
 	}
 
 	size_t calculateSegmentListTotalIncomingBatchesSize(const SegmentList &segments) const {

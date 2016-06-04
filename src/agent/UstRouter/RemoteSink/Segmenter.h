@@ -423,6 +423,9 @@ private:
 			if (OXT_UNLIKELY(!doc.isMember("targets") || !doc["targets"].isArray())) {
 				return false;
 			}
+			if (OXT_UNLIKELY(doc["targets"].empty())) {
+				return false;
+			}
 
 			Json::Value::const_iterator it, end = doc["targets"].begin();
 			for (it = doc["targets"].begin(); it != end; it++) {
