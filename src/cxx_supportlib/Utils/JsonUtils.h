@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <jsoncpp/json.h>
 #include <boost/cstdint.hpp>
+#include <boost/math/special_functions/fpclassify.hpp>
 #include <StaticString.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
@@ -322,7 +323,7 @@ capFloatPrecision(double val) {
 inline Json::Value
 speedToJson(double speed, const string &per, double nullValue = -1) {
 	Json::Value doc;
-	if (speed == nullValue) {
+	if (speed == nullValue || boost::math::isnan(speed)) {
 		doc["value"] = Json::Value(Json::nullValue);
 	} else {
 		doc["value"] = speed;
@@ -334,7 +335,7 @@ speedToJson(double speed, const string &per, double nullValue = -1) {
 inline Json::Value
 averageSpeedToJson(double speed, const string &per, const string &averagedOver, double nullValue = -1) {
 	Json::Value doc;
-	if (speed == nullValue) {
+	if (speed == nullValue || boost::math::isnan(speed)) {
 		doc["value"] = Json::Value(Json::nullValue);
 	} else {
 		doc["value"] = speed;
@@ -376,7 +377,9 @@ signedByteSizeToJson(long long size) {
 inline Json::Value
 byteSpeedToJson(double speed, const string &per) {
 	Json::Value doc;
-	if (speed >= 0) {
+	if (boost::math::isnan(speed)) {
+		doc["bytes"] = Json::Value(Json::nullValue);
+	} else if (speed >= 0) {
 		doc = byteSizeToJson(speed);
 	} else {
 		doc = signedByteSizeToJson(speed);
@@ -388,7 +391,7 @@ byteSpeedToJson(double speed, const string &per) {
 inline Json::Value
 byteSpeedToJson(double speed, double nullValue, const string &per) {
 	Json::Value doc;
-	if (speed == nullValue) {
+	if (speed == nullValue || boost::math::isnan(speed)) {
 		doc["bytes"] = Json::Value(Json::nullValue);
 	} else if (speed >= 0) {
 		doc = byteSizeToJson(speed);

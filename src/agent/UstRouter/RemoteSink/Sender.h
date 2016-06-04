@@ -132,7 +132,8 @@ private:
 	unsigned int nRejected;
 	unsigned int nDropped;
 	unsigned int nextTransferNumber;
-	ev_tstamp lastInitiateTime, lastAcceptTime, lastRejectTime, lastDropTime;
+	ev_tstamp lastInitiateTime, lastAcceptTime, lastRejectTime,
+		lastDropTime, lastMemoryLimitDropTime;
 	unsigned int connectTimeout, uploadTimeout, responseTimeout;
 	string lastRejectionErrorMessage, lastDropErrorMessage;
 
@@ -191,7 +192,7 @@ private:
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handleResponseData);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, transfer);
 
-		CURLMcode ret = curl_multi_add_handle(context->curlMulti, curl);
+		CURLMcode ret = curlMultiAddHandle(curl);
 		if (ret != CURLM_OK) {
 			P_ERROR("[RemoteSink sender] Error initiating transfer to gateway"
 				<< transfer->server->getSinkUrlWithoutCompression() << ": " <<
@@ -279,10 +280,10 @@ private:
 		size_t size = segment->balancingList.size();
 
 		for (i = 0; i < size; i++) {
-			unsigned int index = (segment->nextBalancingIndex + 1) % size;
-			segment->nextBalancingIndex = index;
-			if (segment->balancingList[i]->isUp()) {
-				return segment->balancingList[i];
+			unsigned int index = segment->nextBalancingIndex;
+			segment->nextBalancingIndex = (segment->nextBalancingIndex + 1) % size;
+			if (segment->balancingList[index]->isUp()) {
+				return segment->balancingList[index];
 			}
 		}
 
@@ -366,7 +367,7 @@ private:
 		assert(nTransfers > 0);
 
 		processFinishedTransfer(transfer, code, httpCode,
-			transfer->responseData, transfer->errorBuf);
+			body, transfer->errorBuf);
 
 		STAILQ_REMOVE(&transfers, transfer, Transfer, next);
 		bytesTransferring -= transfer->batch.getDataSize();
@@ -584,6 +585,7 @@ private:
 		transfer->server->reportRequestDropped(dataSize, now,
 			serverSpecificErrorMessage);
 		assert(!transfer->server->isUp());
+		removeServerFromBalancingList(segment, transfer->server);
 
 		if (segment->balancingList.empty()) {
 			P_ERROR("[RemoteSink sender] " << globalErrorMessage);
@@ -597,7 +599,7 @@ private:
 		} else {
 			P_INFO("[RemoteSink sender] " << globalErrorMessage);
 			P_INFO("[RemoteSink sender] Retrying by sending the data to a different"
-			" gateway server...");
+				" gateway server...");
 			if (!initiateTransfer(segment, boost::move(transfer->batch))) {
 				assert(!lastDropErrorMessage.empty());
 				P_ASSERT_EQ(lastDropTime, now);
@@ -608,6 +610,32 @@ private:
 				segment->nDroppedBySender++;
 				segment->lastDroppedBySenderTime = now;
 			}
+		}
+	}
+
+	void removeServerFromBalancingList(Segment *segment, const ServerPtr &server) {
+		bool done = false;
+
+		while (!done) {
+			Segment::SmallServerList::iterator it, end = segment->balancingList.end();
+
+			for (it = segment->balancingList.begin(); it != end; it++) {
+				if (it->get() == server.get()) {
+					// Match found, continue while loop
+					segment->balancingList.erase(it);
+					break;
+				}
+			}
+
+			// No match found, end while loop
+			done = true;
+		}
+
+		if (segment->balancingList.empty()) {
+			segment->nextBalancingIndex = 0;
+		} else {
+			segment->nextBalancingIndex = segment->nextBalancingIndex
+				% segment->balancingList.size();
 		}
 	}
 
@@ -625,6 +653,10 @@ private:
 		}
 
 		return result;
+	}
+
+	string getRecommendedMemoryLimit() const {
+		return toString(peakSize * 2 / 1024) + " KB";
 	}
 
 	Json::Value inspectTransfersAsJson(ev_tstamp evNow, unsigned long long now) const {
@@ -713,6 +745,11 @@ private:
 	}
 */
 protected:
+	// Overridable by unit tests.
+	virtual CURLMcode curlMultiAddHandle(CURL *curl) {
+		return curl_multi_add_handle(context->curlMulti, curl);
+	}
+
 	// Only used in unit tests.
 	void transferFinished(unsigned int transferNumber, CURLcode code, long httpCode,
 		const string &body, const char *errorBuf)
@@ -750,6 +787,7 @@ public:
 		  lastAcceptTime(0),
 		  lastRejectTime(0),
 		  lastDropTime(0),
+		  lastMemoryLimitDropTime(0),
 		  connectTimeout(options.getUint("union_station_connect_timeout", false, 0)),
 		  uploadTimeout(options.getUint("union_station_upload_timeout")),
 		  responseTimeout(options.getUint("union_station_response_timeout"))
@@ -775,6 +813,7 @@ public:
 		TRACE_POINT();
 		Segment *segment;
 		SegmentPtr *ourSegment;
+		bool droppedSomeBecauseOfMemoryLimit = false;
 
 		peakSize = std::max(peakSize, bytesTransferring
 			+ calculateSegmentListTotalIncomingBatchesSize(segments));
@@ -801,8 +840,12 @@ public:
 				{
 					ev_tstamp now = ev_now(getLoop());
 
-					assert(!lastDropErrorMessage.empty());
-					P_ASSERT_EQ(lastDropTime, now);
+					if (bytesTransferring >= limit) {
+						droppedSomeBecauseOfMemoryLimit = true;
+					} else {
+						assert(!lastDropErrorMessage.empty());
+						P_ASSERT_EQ(lastDropTime, now);
+					}
 
 					bytesDropped += batch.getDataSize();
 					nDropped++;
@@ -816,6 +859,19 @@ public:
 		}
 
 		STAILQ_INIT(&segments);
+
+		if (droppedSomeBecauseOfMemoryLimit) {
+			ev_tstamp now = ev_now(getLoop());
+			lastDropTime = now;
+			lastDropErrorMessage = "Unable to send data to the Union Station"
+				" gateway servers quickly enough. Some data has been dropped."
+				" Please try increasing the sender memory limit"
+				" (recommended limit: " + getRecommendedMemoryLimit() + ")";
+			if (now - lastMemoryLimitDropTime >= 60) {
+				P_ERROR("[RemoteSink sender] " << lastDropErrorMessage);
+			}
+			lastMemoryLimitDropTime = now;
+		}
 	}
 
 	Json::Value inspectStateAsJson() const {

@@ -265,6 +265,7 @@ public:
 			avgServerProcessingTime);
 		doc["bandwidth_usage"] = inspectBandwidthUsageAsJson();
 		doc["up"] = up;
+		doc["active_requests"] = nActiveRequests;
 		doc["checking_liveliness"] = checkingLiveliness;
 		doc["next_liveliness_check_time"] = evTimeToJson(
 			getNextLivelinessCheckTime(evNow), evNow, now);
