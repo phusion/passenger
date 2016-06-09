@@ -195,6 +195,27 @@ psg_lstr_append(LString *str, psg_pool_t *pool, const char *data) {
 	psg_lstr_append(str, pool, data, strlen(data));
 }
 
+/**
+ * Move the parts in `from` to the end of `to`.
+ */
+inline void
+psg_lstr_move_and_append(LString *from, psg_pool_t *pool, LString *to) {
+	if (OXT_LIKELY(from != to)) {
+		if (from->size == 0) {
+			return;
+		}
+
+		if (to->size == 0) {
+			*to = *from;
+		} else {
+			to->end->next = from->start;
+			to->end = from->end;
+			to->size += from->size;
+		}
+		psg_lstr_init(from);
+	}
+}
+
 inline LString *
 psg_lstr_null_terminate(const LString *str, psg_pool_t *pool) {
 	LString *newstr;

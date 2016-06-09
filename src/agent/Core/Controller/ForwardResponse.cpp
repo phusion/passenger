@@ -332,15 +332,15 @@ Controller::onAppResponseBegin(Client *client, Request *req) {
 	resp->date = resp->headers.lookup(HTTP_DATE);
 	resp->setCookie = resp->headers.lookup(ServerKit::HTTP_SET_COOKIE);
 	if (resp->setCookie != NULL) {
-		// Remove Set-Cookie from resp->headers without deallocating it.
+		// Move the Set-Cookie header from resp->headers to resp->setCookie;
+		// remove Set-Cookie from resp->headers without deallocating it.
 		LString *copy;
 
 		copy = (LString *) psg_palloc(req->pool, sizeof(LString));
-		*copy = *resp->setCookie;
+		psg_lstr_init(copy);
+		psg_lstr_move_and_append(resp->setCookie, req->pool, copy);
 
-		resp->setCookie->start = NULL;
-		resp->setCookie->end = NULL;
-		resp->setCookie->size = 0;
+		P_ASSERT_EQ(resp->setCookie->size, 0);
 		psg_lstr_append(resp->setCookie, req->pool, "x", 1);
 		resp->headers.erase(ServerKit::HTTP_SET_COOKIE);
 

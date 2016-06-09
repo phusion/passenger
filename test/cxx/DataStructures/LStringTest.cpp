@@ -301,4 +301,75 @@ namespace tut {
 		ensure_equals<void *>(cstr->start, &emptyLStringPart);
 		ensure_equals<void *>(cstr->end, &emptyLStringPart);
 	}
+
+
+	/***** psg_lstr_move_and_append *****/
+
+	TEST_METHOD(45) {
+		set_test_name("psg_lstr_move_and_append does nothing if from == to");
+
+		psg_lstr_append(&str, pool, "hello");
+		psg_lstr_append(&str, pool, "world");
+		psg_lstr_move_and_append(&str, pool, &str);
+
+		ensure_equals(str.size, 10u);
+		ensure_equals(StaticString(str.start->data, str.start->size), "hello");
+		ensure_equals(str.start->next, str.end);
+		ensure_equals(StaticString(str.end->data, str.end->size), "world");
+	}
+
+	TEST_METHOD(46) {
+		set_test_name("psg_lstr_move_and_append does nothing if 'from' is empty");
+
+		psg_lstr_append(&str2, pool, "hello");
+		psg_lstr_append(&str2, pool, "world");
+		psg_lstr_move_and_append(&str, pool, &str2);
+
+		ensure_equals(str.size, 0u);
+		ensure_equals(str.start, &emptyLStringPart);
+		ensure_equals(str.end, &emptyLStringPart);
+
+		ensure_equals(str2.size, 10u);
+		ensure_equals(StaticString(str2.start->data, str2.start->size), "hello");
+		ensure_equals(str2.start->next, str2.end);
+		ensure_equals(StaticString(str2.end->data, str2.end->size), "world");
+	}
+
+	TEST_METHOD(47) {
+		set_test_name("psg_lstr_move_and_append when 'to' is empty");
+
+		psg_lstr_append(&str, pool, "hello");
+		psg_lstr_append(&str, pool, "world");
+		psg_lstr_move_and_append(&str, pool, &str2);
+
+		ensure_equals(str.size, 0u);
+		ensure_equals(str.start, &emptyLStringPart);
+		ensure_equals(str.end, &emptyLStringPart);
+
+		ensure_equals(str2.size, 10u);
+		ensure_equals(StaticString(str2.start->data, str2.start->size), "hello");
+		ensure_equals(str2.start->next, str2.end);
+		ensure_equals(StaticString(str2.end->data, str2.end->size), "world");
+	}
+
+	TEST_METHOD(48) {
+		set_test_name("psg_lstr_move_and_append when 'to' is non-empty");
+
+		psg_lstr_append(&str, pool, "hello");
+		psg_lstr_append(&str, pool, "world");
+		psg_lstr_append(&str2, pool, "abcde");
+		psg_lstr_move_and_append(&str, pool, &str2);
+
+		ensure_equals(str.size, 0u);
+		ensure_equals(str.start, &emptyLStringPart);
+		ensure_equals(str.end, &emptyLStringPart);
+
+		ensure_equals(str2.size, 15u);
+		ensure_equals(StaticString(str2.start->data, str2.start->size), "abcde");
+		ensure(str2.start->next != str2.end);
+		ensure(str2.start->next != NULL);
+		ensure_equals(StaticString(str2.start->next->data, str2.start->next->size), "hello");
+		ensure_equals(str2.start->next->next, str2.end);
+		ensure_equals(StaticString(str2.end->data, str2.end->size), "world");
+	}
 }
