@@ -125,6 +125,8 @@ void mbuf_block_put(struct mbuf_block *mbuf_block);
 void mbuf_block_ref(struct mbuf_block *mbuf_block);
 void mbuf_block_unref(struct mbuf_block *mbuf_block);
 
+void _mbuf_block_assert_refcount_at_least_two(struct mbuf_block *mbuf_block);
+
 
 /* A subset of an mbuf_block. */
 class mbuf {
@@ -132,9 +134,12 @@ private:
 	BOOST_COPYABLE_AND_MOVABLE(mbuf)
 
 	void initialize_with_block(unsigned int start, unsigned int len);
-	void initialize_with_mbuf(const mbuf &mbuf, unsigned int start, unsigned int len);
+	void initialize_with_block_just_created(unsigned int start, unsigned int len);
+	void initialize_with_mbuf(const mbuf &other, unsigned int start, unsigned int len);
 
 public:
+	struct just_created_t { };
+
 	struct mbuf_block *mbuf_block; /* container block */
 	char              *start;      /* start of subset (const) */
 	char              *end;        /* end of subset (const) */
@@ -155,6 +160,13 @@ public:
 		: mbuf_block(block)
 	{
 		initialize_with_block(start, len);
+	}
+
+	explicit mbuf(struct mbuf_block *block, unsigned int start, unsigned int len,
+		const just_created_t &t)
+		: mbuf_block(block)
+	{
+		initialize_with_block_just_created(start, len);
 	}
 
 	// Create an mbuf as a dumb wrapper around a memory buffer.
@@ -199,39 +211,52 @@ public:
 	}
 
 	// Copy assignment.
-	mbuf &operator=(BOOST_COPY_ASSIGN_REF(mbuf) mbuf) {
-		if (&mbuf != this) {
-			struct mbuf_block *old_block = mbuf_block;
+	mbuf &operator=(BOOST_COPY_ASSIGN_REF(mbuf) other) {
+		if (&other != this) {
+			#ifndef NDEBUG
+				if (mbuf_block != NULL && mbuf_block == other.mbuf_block) {
+					_mbuf_block_assert_refcount_at_least_two(mbuf_block);
+				}
+			#endif
 
-			mbuf_block = mbuf.mbuf_block;
-			start      = mbuf.start;
-			end        = mbuf.end;
-
-			if (mbuf.mbuf_block != NULL) {
-				mbuf_block_ref(mbuf.mbuf_block);
+			if (mbuf_block != NULL) {
+				mbuf_block_unref(mbuf_block);
 			}
-			if (old_block != NULL) {
-				mbuf_block_unref(old_block);
+
+			mbuf_block = other.mbuf_block;
+			start      = other.start;
+			end        = other.end;
+
+			// We reference 'other.mbuf_block' instead of 'this->mbuf_block' as
+			// a micro-optimization. This should decrease the number of data
+			// dependencies and allow the CPU to reorder the instructions better.
+			if (other.mbuf_block != NULL) {
+				mbuf_block_ref(other.mbuf_block);
 			}
 		}
 		return *this;
 	}
 
 	// Move assignment.
-	mbuf &operator=(BOOST_RV_REF(mbuf) mbuf) {
-		if (&mbuf != this) {
-			struct mbuf_block *old_block = mbuf_block;
+	mbuf &operator=(BOOST_RV_REF(mbuf) other) {
+		if (&other != this) {
+			#ifndef NDEBUG
+				if (mbuf_block != NULL && mbuf_block == other.mbuf_block) {
+					_mbuf_block_assert_refcount_at_least_two(mbuf_block);
+				}
+			#endif
 
-			mbuf_block = mbuf.mbuf_block;
-			start      = mbuf.start;
-			end        = mbuf.end;
-			mbuf.mbuf_block = NULL;
-			mbuf.start = NULL;
-			mbuf.end   = NULL;
-
-			if (old_block != NULL) {
-				mbuf_block_unref(old_block);
+			if (mbuf_block != NULL) {
+				mbuf_block_unref(mbuf_block);
 			}
+
+			mbuf_block = other.mbuf_block;
+			start      = other.start;
+			end        = other.end;
+
+			other.mbuf_block = NULL;
+			other.start = NULL;
+			other.end   = NULL;
 		}
 		return *this;
 	}
