@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -83,6 +83,14 @@ findCookie(psg_pool_t *pool, const LString *cookieHeaderValue, const LString *na
 	return result;
 }
 
+/**
+ * Search an LString, starting from the given part and the given index inside that part,
+ * for the cookie separator character ('='). Will keep iterating to the next parts
+ * until found or until the end of the LString is reached.
+ *
+ * The part in which the separator character is found is written to `*separatorPart`,
+ * and the index inside that part is written to `*separatorIndex`.
+ */
 inline bool
 findCookieNameValueSeparator(const LString::Part *part, size_t index,
 	const LString::Part **separatorPart, size_t *separatorIndex)
@@ -108,6 +116,15 @@ findCookieNameValueSeparator(const LString::Part *part, size_t index,
 	return result;
 }
 
+/**
+ * Given an LString and an offset inside that LString containing a cookie separator
+ * character (as provided by `separatorPart` and `separatorIndex`), search for the
+ * end of that cookie. The end of the cookie is denoted by either the ';' character
+ * or by end-of-string. Will keep iterating to the next parts until the end is found.
+ *
+ * The part in which the end is found is written to `*endPart`,
+ * and the index inside that part is written to `*endIndex`.
+ */
 inline bool
 findCookieEnd(const LString::Part *separatorPart, size_t separatorIndex,
 	const LString::Part **endPart, size_t *endIndex)
@@ -145,6 +162,10 @@ findCookieEnd(const LString::Part *separatorPart, size_t separatorIndex,
 	return result;
 }
 
+/**
+ * Given an LString containing a cookie name, skip all leading whitespace
+ * by modifying the LString in-place.
+ */
 inline void
 _matchCookieName_skipWhitespace(LString *str) {
 	LString::Part *part = str->start;
@@ -152,7 +173,9 @@ _matchCookieName_skipWhitespace(LString *str) {
 	bool done = false;
 
 	while (!done) {
-		while (part->data[pos] == ' ' || part->data[pos] == ';') {
+		while (pos < part->size
+		 && (part->data[pos] == ' ' || part->data[pos] == ';'))
+		{
 			pos++;
 		}
 
@@ -160,10 +183,11 @@ _matchCookieName_skipWhitespace(LString *str) {
 			str->start = part->next;
 			str->size -= part->size;
 			part = part->next;
+			pos = 0;
 			if (part == NULL) {
 				assert(str->size == 0);
 				done = true;
-				str->end = NULL;
+				psg_lstr_init(str);
 			}
 		} else {
 			part->data += pos;
@@ -174,6 +198,13 @@ _matchCookieName_skipWhitespace(LString *str) {
 	}
 }
 
+/**
+ * Checks whether a substring of an LString matches `name`.
+ * The substring is assumed to start in part `part` at index `index`.
+ * The substring is assumed to end in part `separatorPart` at index
+ * `separatorIndex` (which is supposed to contain the cookie name-value
+ * separator character '=').
+ */
 inline bool
 matchCookieName(psg_pool_t *pool, const LString::Part *part, size_t index,
 	const LString::Part *separatorPart, size_t separatorIndex,
@@ -182,6 +213,8 @@ matchCookieName(psg_pool_t *pool, const LString::Part *part, size_t index,
 	LString *str = (LString *) psg_palloc(pool, sizeof(LString));
 	psg_lstr_init(str);
 
+	// Construct the specified substring so that we can use
+	// psg_lstr_cmp() to compare that with `name`.
 	if (part == separatorPart) {
 		assert(index < separatorIndex);
 		psg_lstr_append(str, pool,

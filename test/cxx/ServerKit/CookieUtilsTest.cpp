@@ -278,4 +278,14 @@ namespace tut {
 		result = findCookie(pool, &header, &name);
 		ensure_equals<void *>("(1)", result, NULL);
 	}
+
+	TEST_METHOD(36) {
+		set_test_name("Cookies with leading all-whitespace part");
+		psg_lstr_append(&header, pool, "  ");
+		psg_lstr_append(&header, pool, "foo=bar");
+
+		result = findCookie(pool, &header, &name);
+		ensure("(1)", result != NULL);
+		ensure("(2)", psg_lstr_cmp(result, &value));
+	}
 }
