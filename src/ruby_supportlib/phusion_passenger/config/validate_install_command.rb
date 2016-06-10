@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2015 Phusion Holding B.V.
+#  Copyright (c) 2014-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -100,7 +100,7 @@ module PhusionPassenger
           opts.separator "  The exit codes are as follows:"
           opts.separator "    0 - All checks passed. No errors, no warnings."
           opts.separator "    #{FAIL_EXIT_CODE} - Some checks failed with an error."
-          opts.separator "    #{WARN_EXIT_CODE} - No checks failed with an error, but some failed produced warnings."
+          opts.separator "    #{WARN_EXIT_CODE} - No checks failed with an error, but some produced warnings."
           opts.separator "    #{INTERNAL_ERROR_CODE} - Some internal error occurred."
           opts.separator ""
 
