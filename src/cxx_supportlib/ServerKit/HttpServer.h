@@ -544,15 +544,6 @@ private:
 
 	/***** Miscellaneous *****/
 
-	char *appendLStringData(char *pos, const char *end, const LString *lstr) {
-		const LString::Part *part = lstr->start;
-		while (part != NULL) {
-			pos = appendData(pos, end, part->data, part->size);
-			part = part->next;
-		}
-		return pos;
-	}
-
 	void writeDefault500Response(Client *client, Request *req) {
 		writeSimpleResponse(client, 500, NULL, DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE);
 	}
@@ -1062,7 +1053,7 @@ public:
 			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: text/html; charset=UTF-8\r\n"));
 		} else {
 			pos = appendData(pos, end, P_STATIC_STRING("Content-Type: "));
-			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, value);
 			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
 		}
 
@@ -1074,7 +1065,7 @@ public:
 			gmtime_r(&the_time, &the_tm);
 			pos += strftime(pos, end - pos, "%a, %d %b %Y %H:%M:%S %z", &the_tm);
 		} else {
-			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, value);
 		}
 		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
 
@@ -1087,7 +1078,7 @@ public:
 			}
 		} else {
 			pos = appendData(pos, end, P_STATIC_STRING("Connection: "));
-			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, value);
 			pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
 			if (!psg_lstr_cmp(value, P_STATIC_STRING("Keep-Alive"))
 			 && !psg_lstr_cmp(value, P_STATIC_STRING("keep-alive")))
@@ -1101,7 +1092,7 @@ public:
 		if (value == NULL) {
 			pos += snprintf(pos, end - pos, "%u", (unsigned int) body.size());
 		} else {
-			pos = appendLStringData(pos, end, value);
+			pos = appendData(pos, end, value);
 		}
 		pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
 
@@ -1113,9 +1104,9 @@ public:
 				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
 				 && !psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length")))
 				{
-					pos = appendLStringData(pos, end, &it->header->origKey);
+					pos = appendData(pos, end, &it->header->origKey);
 					pos = appendData(pos, end, P_STATIC_STRING(": "));
-					pos = appendLStringData(pos, end, &it->header->val);
+					pos = appendData(pos, end, &it->header->val);
 					pos = appendData(pos, end, P_STATIC_STRING("\r\n"));
 				}
 				it.next();
