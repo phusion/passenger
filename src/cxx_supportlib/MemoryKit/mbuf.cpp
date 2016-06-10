@@ -31,7 +31,7 @@
 namespace Passenger {
 namespace MemoryKit {
 
-//#define MBUF_DEBUG
+//#define MBUF_DEBUG_REFCOUNTS
 
 #define ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, expr) \
 	do { \
@@ -165,7 +165,7 @@ mbuf_block_get(struct mbuf_pool *pool)
 		mbuf_block->end - mbuf_block->start == (int) pool->mbuf_block_offset);
 	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block, mbuf_block->start < mbuf_block->end);
 
-	#ifdef MBUF_DEBUG
+	#ifdef MBUF_DEBUG_REFCOUNTS
 		printf("[%p] mbuf_block get %p\n", oxt::thread_signature, mbuf_block);
 	#endif
 
@@ -195,7 +195,7 @@ mbuf_block_new_standalone(struct mbuf_pool *pool, size_t size)
 	ASSERT_MBUF_BLOCK_PROPERTY(mbuf_block,
 		mbuf_block->start < mbuf_block->end);
 
-	#ifdef MBUF_DEBUG
+	#ifdef MBUF_DEBUG_REFCOUNTS
 		printf("[%p] mbuf_block new standalone %p\n", oxt::thread_signature, mbuf_block);
 	#endif
 
@@ -207,7 +207,7 @@ mbuf_block_free(struct mbuf_block *mbuf_block)
 {
 	char *buf;
 
-	#ifdef MBUF_DEBUG
+	#ifdef MBUF_DEBUG_REFCOUNTS
 		printf("[%p] mbuf_block free %p\n", oxt::thread_signature, mbuf_block);
 	#endif
 
@@ -232,7 +232,7 @@ mbuf_block_free(struct mbuf_block *mbuf_block)
 void
 mbuf_block_put(struct mbuf_block *mbuf_block)
 {
-	#ifdef MBUF_DEBUG
+	#ifdef MBUF_DEBUG_REFCOUNTS
 		printf("[%p] mbuf_block put %p\n", oxt::thread_signature, mbuf_block);
 	#endif
 
@@ -318,7 +318,7 @@ mbuf_pool_compact(struct mbuf_pool *pool)
 void
 mbuf_block_ref(struct mbuf_block *mbuf_block)
 {
-	#ifdef MBUF_DEBUG
+	#ifdef MBUF_DEBUG_REFCOUNTS
 		printf("[%p] mbuf_block ref %p: %u -> %u\n",
 			oxt::thread_signature, mbuf_block,
 			mbuf_block->refcount, mbuf_block->refcount + 1);
@@ -338,7 +338,7 @@ mbuf_block_ref(struct mbuf_block *mbuf_block)
 void
 mbuf_block_unref(struct mbuf_block *mbuf_block)
 {
-	#ifdef MBUF_DEBUG
+	#ifdef MBUF_DEBUG_REFCOUNTS
 		printf("[%p] mbuf_block unref %p: %u -> %u\n",
 			oxt::thread_signature, mbuf_block,
 			mbuf_block->refcount, mbuf_block->refcount - 1);
