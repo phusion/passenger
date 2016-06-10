@@ -25,6 +25,7 @@
 #include <ostream>
 #include <MemoryKit/mbuf.h>
 #include <Logging.h>
+#include <StaticString.h>
 #include <Utils/StrIntUtils.h>
 
 namespace Passenger {
