@@ -131,7 +131,7 @@ starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
     ngx_cycle_t *cycle = (void *) paramCycle;
     PsgVariantMap *params = (void *) paramParams;
 
-    const char  *log_filename;
+    char        *log_filename;
     FILE        *log_file;
     ngx_core_conf_t *ccf;
     ngx_uint_t   i;
@@ -142,7 +142,7 @@ starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
      * Make sure that they're both redirected to the log file.
      */
     log_file = NULL;
-    log_filename = (const char *) psg_variant_map_get_optional(params, "log_file");
+    log_filename = psg_variant_map_get_optional(params, "log_file");
     if (log_filename == NULL) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
                 "no passenger log file configured, discarding log output");
@@ -152,6 +152,8 @@ starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
                     "could not open the passenger log file for writing during Nginx startup, some log lines might be lost (will retry from Passenger core)");
         }
+        free(log_filename);
+        log_filename = NULL;
     }
 
     if (log_file == NULL) {

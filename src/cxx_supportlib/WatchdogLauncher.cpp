@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -41,16 +41,16 @@ psg_variant_map_new() {
 	return (PsgVariantMap *) new Passenger::VariantMap();
 }
 
-const char *
+char *
 psg_variant_map_get_optional(PsgVariantMap *m,
 	const char *name)
 {
 	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
 	string result = vm->get(name, false, "");
 	if (result.empty()) {
-		return (const char *) NULL;
+		return (char *) NULL;
 	}
-	return result.c_str();
+	return strdup(result.c_str());
 }
 
 void

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -45,8 +45,7 @@ typedef void PsgVariantMap;
 typedef void (*PsgAfterForkCallback)(void *, void *);
 
 PsgVariantMap *psg_variant_map_new();
-const char *
-psg_variant_map_get_optional(PsgVariantMap *m,
+char *psg_variant_map_get_optional(PsgVariantMap *m,
 	const char *name);
 void psg_variant_map_set(PsgVariantMap *m,
 	const char *name,
