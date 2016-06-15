@@ -78,19 +78,19 @@ def main
 end
 
 def filter_eligible_options(options)
-    return options.reject do |option|
-        option[:alias_for] ||
-            option.fetch(:field, true).nil? ||
-            option[:field].to_s =~ /\./
-    end
+  options.reject do |option|
+    option[:alias_for] ||
+      option.fetch(:field, true).nil? ||
+      option[:field].to_s =~ /\./
+  end
 end
 
 def struct_field_for(option)
-    if option.has_key?(:field)
-        return option[:field].to_s
-    else
-        return option[:name].sub(/^passenger_/, '')
-    end
+  if option.has_key?(:field)
+    option[:field].to_s
+  else
+    option[:name].sub(/^passenger_/, '')
+  end
 end
 
 # Returns [definition_source, estimated_size_on_x86_64, field_name]
