@@ -225,7 +225,6 @@ start_watchdog(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
     ngx_uint_t       i;
-    char            *config_file = NULL;
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
     ngx_keyval_t    *ctl = NULL;
@@ -245,11 +244,6 @@ start_watchdog(ngx_cycle_t *cycle) {
     pp_app_type_detector_set_throttle_rate(pp_app_type_detector,
         passenger_main_conf.stat_throttle_rate);
 
-    config_file = ngx_str_null_terminate(&cycle->conf_file);
-    if (config_file == NULL) {
-        goto error_enomem;
-    }
-
     prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
     prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
     for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
@@ -260,7 +254,6 @@ start_watchdog(ngx_cycle_t *cycle) {
     }
 
     psg_variant_map_set_int    (params, "web_server_control_process_pid", getpid());
-    psg_variant_map_set_strset (params, "web_server_config_files", (const char **) &config_file, 1);
     psg_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
     psg_variant_map_set_bool   (params, "multi_app", 1);
     psg_variant_map_set_bool   (params, "load_shell_envvars", 1);
@@ -350,7 +343,6 @@ cleanup:
     psg_variant_map_free(params);
     free(passenger_root);
     free(error_message);
-    free(config_file);
     if (prestart_uris_ary != NULL) {
         for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
             free(prestart_uris_ary[i]);
