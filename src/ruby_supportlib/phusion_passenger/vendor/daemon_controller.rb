@@ -1,5 +1,5 @@
 # daemon_controller, library for robust daemon management
-# Copyright (c) 2010-2015 Phusion
+# Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 require 'tempfile'
 require 'fcntl'
 require 'socket'
+require 'pathname'
 require 'timeout'
 if Process.respond_to?(:spawn)
   require 'rbconfig'
@@ -560,7 +561,7 @@ private
   end
 
   def differences_in_log_file
-    if @original_log_file_stat
+    if @original_log_file_stat && @original_log_file_stat.file?
       File.open(@log_file, 'r') do |f|
         f.seek(@original_log_file_stat.size, IO::SEEK_SET)
         diff = f.read.strip
@@ -596,6 +597,39 @@ private
   end
 
   def run_command(command)
+    if should_capture_output_while_running_command?
+      run_command_while_capturing_output(command)
+    else
+      run_command_without_capturing_output(command)
+    end
+  end
+
+  def should_capture_output_while_running_command?
+    if is_std_channel_chardev?(@log_file)
+      false
+    else
+      begin
+        real_log_file = Pathname.new(@log_file).realpath.to_s
+      rescue SystemCallError
+        real_log_file = nil
+      end
+      if real_log_file
+        !is_std_channel_chardev?(real_log_file)
+      else
+        true
+      end
+    end
+  end
+
+  def is_std_channel_chardev?(path)
+    path == "/dev/stdout" ||
+      path == "/dev/stderr" ||
+      path == "/dev/fd/1" ||
+      path == "/dev/fd/2" ||
+      path =~ %r(\A/proc/([0-9]+|self)/fd/[12]\Z)
+  end
+
+  def run_command_while_capturing_output(command)
     # Create tempfile for storing the command's output.
     tempfile = Tempfile.new('daemon-output')
     tempfile_path = tempfile.path
@@ -689,6 +723,90 @@ private
     end
   ensure
     File.unlink(tempfile_path) rescue nil
+  end
+
+  def run_command_without_capturing_output(command)
+    if self.class.fork_supported? || self.class.spawn_supported?
+      if Process.respond_to?(:spawn)
+        options = {
+          :in  => "/dev/null",
+          :out => :out,
+          :err => :err,
+          :close_others => true
+        }
+        @keep_ios.each do |io|
+          options[io] = io
+        end
+        if @daemonize_for_me
+          pid = Process.spawn(@env, ruby_interpreter, SPAWNER_FILE,
+            command, options)
+        else
+          pid = Process.spawn(@env, command, options)
+        end
+      else
+        pid = safe_fork(@daemonize_for_me) do
+          ObjectSpace.each_object(IO) do |obj|
+            if !@keep_ios.include?(obj)
+              obj.close rescue nil
+            end
+          end
+          STDIN.reopen("/dev/null", "r")
+          ENV.update(@env)
+          exec(command)
+        end
+      end
+
+      # run_command might be running in a timeout block (like
+      # in #start_without_locking).
+      begin
+        interruptable_waitpid(pid)
+      rescue Errno::ECHILD
+        # Maybe a background thread or whatever waitpid()'ed
+        # this child process before we had the chance. There's
+        # no way to obtain the exit status now. Assume that
+        # it started successfully; if it didn't we'll know
+        # that later by checking the PID file and by pinging
+        # it.
+        return
+      rescue Timeout::Error
+        daemonization_timed_out
+
+        # If the daemon doesn't fork into the background
+        # in time, then kill it.
+        begin
+          Process.kill('SIGTERM', pid)
+        rescue SystemCallError
+        end
+        begin
+          Timeout.timeout(5, Timeout::Error) do
+            begin
+              interruptable_waitpid(pid)
+            rescue SystemCallError
+            end
+          end
+        rescue Timeout::Error
+          begin
+            Process.kill('SIGKILL', pid)
+            interruptable_waitpid(pid)
+          rescue SystemCallError
+          end
+        end
+        raise DaemonizationTimeout
+      end
+      if $?.exitstatus != 0
+        raise StartError, "Daemon '#{@identifier}' failed to start."
+      end
+    else
+      if @env && !@env.empty?
+        raise "Setting the :env option is not supported on this Ruby implementation."
+      elsif @daemonize_for_me
+        raise "Setting the :daemonize_for_me option is not supported on this Ruby implementation."
+      end
+
+      if !system(command)
+        raise StartError, "Daemon '#{@identifier}' failed to start."
+      end
+    end
   end
 
   def run_ping_command

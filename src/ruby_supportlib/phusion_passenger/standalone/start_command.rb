@@ -464,7 +464,20 @@ module PhusionPassenger
       end
 
       def should_watch_logs?
-        return !@options[:daemonize] && @options[:log_file] != "/dev/null"
+        if @options[:daemonize]
+          false
+        else
+          begin
+            stat = File.stat(@options[:log_file])
+          rescue Errno::ENOENT
+            stat = nil
+          end
+          if stat
+            stat.file?
+          else
+            true
+          end
+        end
       end
 
       def should_wait_until_engine_has_exited?
