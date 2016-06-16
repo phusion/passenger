@@ -4,6 +4,8 @@ Release 5.0.29
  * Fixes the FreeBSD build breaking due to the `-ldl` flag introduced by the LVE integration patch (5.0.28). Closes GH-1805.
  * Fixes per-application interpreter override (ruby, node, python) being ignored in mass deployment mode. Closes GH-1818.
  * [Nginx] Fixes use of invalid logfile name (memory already released) in backup log redirection code. Possibly related to GH-1774.
+ * [Nginx] The preferred Nginx version is now 1.10.1 (previously 1.10.0).
+ * [Nginx] The preferred PCRE version is now 8.39 (previously 8.34).
 
 
 Release 5.0.28
