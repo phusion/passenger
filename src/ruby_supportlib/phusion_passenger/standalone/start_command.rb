@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -67,7 +67,7 @@ module PhusionPassenger
           touch_temp_dir_in_background
           ########################
           ########################
-          watch_log_files_in_background if should_watch_logs?
+          watch_log_files_in_background if should_watch_one_or_more_log_files?
           wait_until_engine_has_exited if should_wait_until_engine_has_exited?
         rescue Interrupt
           trapsafe_shutdown_and_cleanup(true)
@@ -456,14 +456,20 @@ module PhusionPassenger
           @threads << thread
           @interruptable_threads << thread
         end
-        thread = Utils.create_thread_and_abort_on_exception do
-          watch_log_file(@options[:log_file])
+        if should_watch_main_log_file?
+          thread = Utils.create_thread_and_abort_on_exception do
+            watch_log_file(@options[:log_file])
+          end
+          @threads << thread
+          @interruptable_threads << thread
         end
-        @threads << thread
-        @interruptable_threads << thread
       end
 
-      def should_watch_logs?
+      def should_watch_one_or_more_log_files?
+        !@options[:daemonize]
+      end
+
+      def should_watch_main_log_file?
         if @options[:daemonize]
           false
         else
