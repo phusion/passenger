@@ -8,7 +8,7 @@ Release 5.0.29
  * [Nginx] Fixes use of invalid logfile name (memory already released) in backup log redirection code. Possibly related to GH-1774.
  * [Nginx] The preferred Nginx version is now 1.10.1 (previously 1.10.0).
  * [Nginx] The preferred PCRE version is now 8.39 (previously 8.34).
- * [Standalone] Passenger Standalone now supports /dev/stdout and /dev/stderr as log file path. This is especially useful in Docker containers. In previous versions logging to /dev/stdout and /dev/stderr did not work, resulting in nothing getting logged at all.
+ * [Standalone] Passenger Standalone now supports /dev/stdout and /dev/stderr as log file path (via `--log-file` or Passengerfile.json). This is especially useful in Docker containers. In previous versions logging to those paths did not work, resulting in nothing getting logged at all.
 
 
 Release 5.0.28
