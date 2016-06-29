@@ -1,6 +1,7 @@
 Release 5.0.30
 --------------
 
+ * [Nginx] Fixes PCRE checksum after the preferred version update in 5.0.29 (contributed by: clemensg).
 
 
 Release 5.0.29
