@@ -275,6 +275,10 @@ module PhusionPassenger
         return exception.instance_variable_get(:"@from_unseekable_socket") == @socket.object_id
       end
 
+      def to_hash
+        {socket:"Not JSON Encodable",eof: @simulate_eof}
+      end
+
     private
       def annotate(exception)
         exception.instance_variable_set(:"@from_unseekable_socket", @socket.object_id)
