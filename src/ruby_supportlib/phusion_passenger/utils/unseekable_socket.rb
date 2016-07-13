@@ -276,7 +276,7 @@ module PhusionPassenger
       end
 
       def to_hash
-        {socket:"Not JSON Encodable",eof: @simulate_eof}
+        {:socket => "Not JSON Encodable", :eof => @simulate_eof}
       end
 
     private
