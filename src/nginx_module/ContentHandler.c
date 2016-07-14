@@ -446,6 +446,8 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
         state->content_length.len = ngx_snprintf(state->content_length.data,
             sizeof("4294967295") - 1, "%O", r->headers_in.content_length_n)
             - state->content_length.data;
+    } else {
+        state->content_length.len = 0;
     }
 
     state->core_password.data = (u_char *) psg_watchdog_launcher_get_core_password(
