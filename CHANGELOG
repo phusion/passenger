@@ -2,6 +2,7 @@ Release 5.0.30
 --------------
 
  * [Nginx] Fixes PCRE checksum after the preferred version update in 5.0.29 (contributed by: clemensg).
+ * Fixes potential hang when an UnseekableSocket gets serialized to json. Closes GH-1838.
 
 
 Release 5.0.29
