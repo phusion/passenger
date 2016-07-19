@@ -1,6 +1,7 @@
 Release 5.0.30
 --------------
 
+ * Changes mbuf block size from 512 to 4096 bytes to better fit modern requests and significantly speed up disk buffering.
  * [Nginx] Fixes PCRE checksum after the preferred version update in 5.0.29 (contributed by: clemensg).
  * [Apache] Fixes buffer limit crash on large file upload (when core disk buffer can't keep up with client for some time), and limits per-client buffer memory usage to 130 KB. Closes GH-1620.
  * Fixes potential hang when an UnseekableSocket gets serialized to json. Closes GH-1838.
