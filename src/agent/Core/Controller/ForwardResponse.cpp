@@ -1049,7 +1049,7 @@ Controller::outputBuffersFlushed(Client *client, Request *req) {
 	if (!req->ended()) {
 		assert(!req->appSource.isStarted());
 		SKC_TRACE(client, 2, "Buffered response data has been written to disk. Resuming application socket");
-		client->output.setBuffersFlushedCallback(NULL);
+		client->output.clearBuffersFlushedCallback();
 		req->appSource.start();
 	}
 }

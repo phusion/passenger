@@ -443,7 +443,7 @@ private:
 	 * mode, the reader is responsible for popping buffers. In the in-file mode, the writer
 	 * is responsible for popping buffers (and writing them to the file).
 	 */
-	boost::uint32_t bytesBuffered;
+	boost::uint32_t bytesBuffered; // number of bytes buffered in memory
 	MemoryKit::mbuf firstBuffer;
 	deque<MemoryKit::mbuf> moreBuffers;
 
@@ -1339,12 +1339,18 @@ public:
 	 * buffers. For example, in case of FileBufferedFdSinkChannel, this event does
 	 * not imply that all the in-memory buffers have been written to the sink FD.
 	 * That's what `dataFlushedCallback` is for.
+	 *
+	 * N.B. this class intentionally doesn't manage buffersFlushedCallback in any way,
+	 * the user is responsible for ensuring correctness of the variable's content.
 	 */
 	Callback buffersFlushedCallback;
 	/**
 	 * Called when all buffered data (whether in-memory or on-disk) has been consumed
 	 * by the data callback. In case of FileBufferedFdSinkChannel, this means that all
 	 * buffered data has been written out to the sink FD.
+	 *
+	 * N.B. this class intentionally doesn't manage dataFlushedCallback in any way,
+	 * the user is responsible for ensuring correctness of the variable's content.
 	 */
 	Callback dataFlushedCallback;
 
@@ -1544,6 +1550,11 @@ public:
 	OXT_FORCE_INLINE
 	Callback getBuffersFlushedCallback() const {
 		return buffersFlushedCallback;
+	}
+
+	OXT_FORCE_INLINE
+	void clearBuffersFlushedCallback() {
+		buffersFlushedCallback = NULL;
 	}
 
 	OXT_FORCE_INLINE

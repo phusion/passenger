@@ -56,6 +56,23 @@ Controller::beginBufferingBody(Client *client, Request *req) {
 	req->beginStopwatchLog(&req->stopwatchLogs.bufferingRequestBody, "buffering request body");
 }
 
+/**
+ * Relevant when our body data source (bodyChannel) was throttled (by whenBufferingBody_onRequestBody).
+ * Called when our data sink (bodyBuffer) in-memory part is drained and ready for more data.
+ */
+void
+Controller::_bodyBufferFlushed(FileBufferedChannel *channel) {
+	Request *req = static_cast<Request *>(static_cast<
+		ServerKit::BaseHttpRequest *>(channel->getHooks()->userData));
+
+	req->bodyBuffer.clearBuffersFlushedCallback();
+	req->bodyChannel.start();
+}
+
+/**
+ * Receives data (buffer) originating from the bodyChannel, to be passed on to the bodyBuffer.
+ * Backpressure is applied when the bodyBuffer in-memory part exceeds a threshold.
+ */
 ServerKit::Channel::Result
 Controller::whenBufferingBody_onRequestBody(Client *client, Request *req,
 	const MemoryKit::mbuf &buffer, int errcode)
@@ -70,6 +87,15 @@ Controller::whenBufferingBody_onRequestBody(Client *client, Request *req,
 			cEscapeString(StaticString(buffer.start, buffer.size())) <<
 			"\"; " << req->bodyBytesBuffered << " bytes buffered so far");
 		req->bodyBuffer.feed(buffer);
+
+		if (req->bodyBuffer.passedThreshold()) {
+			// Apply backpressure..
+			req->bodyChannel.stop();
+			// ..until the in-memory part of our bodyBuffer is drained.
+			assert(req->bodyBuffer.getBuffersFlushedCallback() == NULL);
+			req->bodyBuffer.setBuffersFlushedCallback(_bodyBufferFlushed);
+		}
+
 		return Channel::Result(buffer.size(), false);
 	} else if (errcode == 0 || errcode == ECONNRESET) {
 		// EOF

@@ -77,6 +77,10 @@ module PhusionPassenger
     MESSAGE_SERVER_MAX_PASSWORD_SIZE = 100
     POOL_HELPER_THREAD_STACK_SIZE = 1024 * 256
     DEFAULT_MBUF_CHUNK_SIZE = 16 * 32
+    # Affects input and output buffering (between app and client). Threshold is picked
+    # such that it fits most output (i.e. html page size, not assets), and allows for
+    # high concurrency with low mem overhead. On the upload side there is a penalty 
+    # but there's no real average upload size anyway so we choose mem safety instead. 
     DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD = 1024 * 128
     SERVER_KIT_MAX_SERVER_ENDPOINTS = 4
 

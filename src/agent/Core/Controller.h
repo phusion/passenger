@@ -215,6 +215,7 @@ private:
 	void beginBufferingBody(Client *client, Request *req);
 	Channel::Result whenBufferingBody_onRequestBody(Client *client, Request *req,
 		const MemoryKit::mbuf &buffer, int errcode);
+	static void _bodyBufferFlushed(FileBufferedChannel *_channel);
 
 
 	/****** Stage: checkout session ******/

@@ -112,7 +112,7 @@ Controller::onRequestObjectCreated(Client *client, Request *req) {
 void
 Controller::deinitializeClient(Client *client) {
 	ParentClass::deinitializeClient(client);
-	client->output.setBuffersFlushedCallback(NULL);
+	client->output.clearBuffersFlushedCallback();
 	client->output.setDataFlushedCallback(getClientOutputDataFlushedCallback());
 }
 
@@ -165,6 +165,7 @@ Controller::deinitializeRequest(Client *client, Request *req) {
 	req->appSink.setConsumedCallback(NULL);
 	req->appSink.deinitialize();
 	req->appSource.deinitialize();
+	req->bodyBuffer.clearBuffersFlushedCallback();
 	req->bodyBuffer.deinitialize();
 
 	/***************/
