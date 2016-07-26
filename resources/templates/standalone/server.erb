@@ -2,9 +2,9 @@ server_name <%= app[:server_names].join(' ') %>;
 <% if app[:ssl] %>
     <% if app[:ssl_port] %>
         listen <%= nginx_listen_address(app) %>;
-        listen <%= nginx_listen_address_with_ssl_port(app) %> ssl;
+        listen <%= nginx_listen_address_with_ssl_port(app) %> ssl http2;
     <% else %>
-        listen <%= nginx_listen_address(app) %> ssl;
+        listen <%= nginx_listen_address(app) %> ssl http2;
     <% end %>
     ssl_certificate <%= app[:ssl_certificate] %>;
     ssl_certificate_key <%= app[:ssl_certificate_key] %>;
