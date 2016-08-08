@@ -108,7 +108,9 @@ TEST_CXX_OBJECTS = {
   "#{TEST_OUTPUT_DIR}cxx/IOUtilsTest.o" =>
     "test/cxx/IOUtilsTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/TemplateTest.o" =>
-    "test/cxx/TemplateTest.cpp"
+    "test/cxx/TemplateTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Base64DecodingTest.o" =>
+    "test/cxx/Base64DecodingTest.cpp"
 }
 
 def basic_test_cxx_flags

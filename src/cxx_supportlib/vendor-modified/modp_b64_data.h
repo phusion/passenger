@@ -1,3 +1,6 @@
+#ifndef MODP_B64_DATA_H
+#define MODP_B64_DATA_H
+
 #define B64_CHAR62 '+'
 #define B64_CHAR63 '/'
 #define B64_CHARPAD '='
@@ -90,7 +93,7 @@ static const modp_uint8_t e2[256] = {
 
 
 
-#ifdef BOOST_BIG_ENDIAN
+#if !defined(__x86_64__) && !defined(__x86__)
 
 
 /* SPECIAL DECODE TABLES FOR BIG ENDIAN (IBM/MOTOROLA/SUN) CPUS */
@@ -476,4 +479,5 @@ static const modp_uint32_t d3[256] = {
 };
 
 
+#endif
 #endif

@@ -335,6 +335,10 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'vendor-modified/modp_b64.cpp',
     :category => :bas64,
     :optimize => true
+  define_component 'vendor-modified/modp_b64_strict_aliasing.o',
+    :source   => 'vendor-modified/modp_b64_strict_aliasing.cpp',
+    :category => :bas64,
+    :optimize => true
   define_component 'UnionStationFilterSupport.o',
     :source   => 'UnionStationFilterSupport.cpp',
     :category => :union_station_filter
