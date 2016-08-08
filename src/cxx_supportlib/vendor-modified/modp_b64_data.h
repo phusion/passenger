@@ -90,7 +90,7 @@ static const modp_uint8_t e2[256] = {
 
 
 
-#ifdef BOOST_BIG_ENDIAN
+#if !defined(__x86_64__) && !defined(__x86__)
 
 
 /* SPECIAL DECODE TABLES FOR BIG ENDIAN (IBM/MOTOROLA/SUN) CPUS */

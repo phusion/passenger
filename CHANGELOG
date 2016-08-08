@@ -5,7 +5,7 @@ Release 5.0.30
  * [Nginx] Fixes PCRE checksum after the preferred version update in 5.0.29 (contributed by: clemensg).
  * [Apache] Fixes buffer limit crash on large file upload (when core disk buffer can't keep up with client for some time), and limits per-client buffer memory usage to 130 KB. Closes GH-1620.
  * Fixes potential hang when an UnseekableSocket gets serialized to json. Closes GH-1838.
-
+ * Fixes unaligned memory access on non-x86 or x86_64 platforms. Closes GH-1646.
 
 Release 5.0.29
 --------------
