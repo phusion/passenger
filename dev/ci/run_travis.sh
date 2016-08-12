@@ -244,5 +244,5 @@ if [[ "$TEST_SOURCE_PACKAGING" = 1 ]]; then
 	apt_get_update
 	run sudo apt-get install -y --no-install-recommends source-highlight
 	install_test_deps_with_doctools
-	run bundle exec rspec -f s -c test/integration_tests/source_packaging_test.rb
+	run bundle _1.11.2_ exec rspec -f s -c test/integration_tests/source_packaging_test.rb
 fi

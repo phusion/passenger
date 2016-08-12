@@ -9,6 +9,12 @@ env:
   - TEST_APACHE2=1
   - TEST_SOURCE_PACKAGING=1
 
+before_install:
+  - 'gem uninstall bundler bundle rubygems-update --all -x && gem update --system 2.6.1 && gem install bundler && gem uninstall rubygems-update --all -x && gem update --system 2.6.4'
+  - 'gem --version'
+  - 'bundle --version'
+  - 'rvm list'
+
 install: "true"
 script: ./dev/ci/run_travis.sh
 

@@ -57,8 +57,7 @@ task 'test:install_deps' do
   end
 
   if !PlatformInfo.locate_ruby_tool('bundle') || bundler_too_old?
-    # workaround for issue "bluecloth not found" when using 1.12.1
-    sh "#{gem_install} bundler --version 1.11.2"
+    sh "gem uninstall bundler bundle rubygems-update --all -x && gem update --system 2.6.1 && gem install bundler && gem uninstall rubygems-update --all -x && gem update --system 2.6.4"
   end
 
   if install_base_deps && install_doctools
@@ -71,6 +70,13 @@ task 'test:install_deps' do
       sh "bundle install #{bundle_args} --without base"
     end
   end
+  
+  if install_doctools
+    # workaround for issue "bluecloth not found" when using 1.12.x
+    sh "#{gem_install} bundler --version 1.11.2"
+    sh "rvm list"
+  end
+
   if boolean_option('USH_BUNDLES', default)
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
       " && bundle install #{bundle_args} --with travis --without doc notravis"
