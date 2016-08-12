@@ -78,8 +78,7 @@ private:
 					fflush(stderr);
 					_exit(1);
 				}
-
-				setOomScore(oldOomScore);
+				restoreOomScore(agentsOptions);
 
 				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", (char *) 0);
 				e = errno;

@@ -42,6 +42,9 @@
 	#define HAVE_FLOCK
 #endif
 
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -148,9 +151,7 @@ using namespace Passenger::WatchdogAgent;
 
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
-static string oldOomScore;
 
-static void setOomScore(const StaticString &score);
 static void cleanup(const WorkingObjectsPtr &wo);
 
 #include "AgentWatcher.cpp"
@@ -185,40 +186,6 @@ openOomAdjFileForcedType(const char *mode, OomFileType &type) {
 	} else {
 		assert(type == OOM_ADJ);
 		return fopen("/proc/self/oom_adj", mode);
-	}
-}
-
-/**
- * Linux-only way to change OOM killer configuration for
- * current process. Requires root privileges, which we
- * should have.
- */
-static void
-setOomScore(const StaticString &score) {
-	if (score.empty()) {
-		return;
-	}
-
-	FILE *f;
-	OomFileType type;
-	string filteredScore;
-
-	if (score.at(0) == 'l') {
-		filteredScore = score.substr(1);
-		type = OOM_ADJ;
-	} else {
-		filteredScore = score;
-		type = OOM_SCORE_ADJ;
-	}
-	f = openOomAdjFileForcedType("w", type);
-	if (f != NULL) {
-		size_t ret = fwrite(filteredScore.data(), 1, filteredScore.size(), f);
-		// We can't do anything about failures, so ignore compiler
-		// warnings about not doing anything with the result.
-		(void) ret;
-		fclose(f);
-	} else {
-		P_WARN("setOomScore(" << filteredScore << ", " << type << ") failed due to error: " << strerror(errno));
 	}
 }
 
@@ -800,7 +767,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	 * for this watchdog. Note that the OOM score is inherited by child processes
 	 * so we need to restore it after each fork().
 	 */
-	oldOomScore = setOomScoreNeverKill();
+	string oldOomScore = setOomScoreNeverKill();
 
 	agentsOptions = new VariantMap();
 	*agentsOptions = initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " watchdog",
@@ -960,7 +927,9 @@ lowerPrivilege() {
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set user ID to " + toString(pwUser->pw_uid), e);
 		}
-
+#ifdef __linux__
+		prctl(PR_SET_DUMPABLE, 1);
+#endif
 		setenv("USER", pwUser->pw_name, 1);
 		setenv("HOME", pwUser->pw_dir, 1);
 		setenv("UID", toString(gid).c_str(), 1);
