@@ -181,7 +181,7 @@ private:
 	#endif
 
 
-	/****** Stage: initiatelize request ******/
+	/****** Stage: initialize request ******/
 
 	struct RequestAnalysis;
 
@@ -363,7 +363,7 @@ private:
 
 
 protected:
-	/****** Stage: initiatelize request ******/
+	/****** Stage: initialize request ******/
 
 	virtual void onRequestBegin(Client *client, Request *req);
 
