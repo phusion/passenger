@@ -25,7 +25,7 @@ passenger_enabled on;
     union_station_key <%= app[:union_station_key] %>;
 <% end %>
 <% app[:envvars].each_pair do |name, value| %>
-    passenger_env_var '<%= name %>' '<%= value %>';
+    passenger_env_var '<%= name %>' '<%= json_config_value(value) %>';
 <% end %>
 <% if app[:concurrency_model] && app[:concurrency_model] != DEFAULT_CONCURRENCY_MODEL %>
     passenger_concurrency_model <%= app[:concurrency_model] %>;

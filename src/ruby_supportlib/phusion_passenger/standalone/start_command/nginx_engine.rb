@@ -21,7 +21,7 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
-
+require 'json'
 require 'erb'
 require 'etc'
 PhusionPassenger.require_passenger_lib 'constants'
@@ -261,6 +261,10 @@ module PhusionPassenger
         # Method exists for backward compatibility with old Nginx config templates
         def boolean_config_value(val)
           val ? "on" : "off"
+        end
+
+        def json_config_value(value)
+          value.is_a?(Hash) || value.is_a?(Array) ? value.to_json : value
         end
 
         def include_passenger_internal_template(name, indent = 0, fix_existing_indenting = true, the_binding = get_binding)
