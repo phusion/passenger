@@ -401,13 +401,15 @@ module PhusionPassenger
       end
 
       def touch_temp_dir_in_background
-        result = system(@agent_exe,
+        command = [@agent_exe,
           "temp-dir-toucher",
           @working_dir,
           "--cleanup",
           "--daemonize",
           "--pid-file", "#{@working_dir}/temp_dir_toucher.pid",
-          "--log-file", @options[:log_file])
+          "--log-file", @options[:log_file]]
+        command << "--user" << @options[:user] unless @options[:user].nil?
+        result = system(*command)
         if !result
           abort "Cannot start #{@agent_exe} temp-dir-toucher"
         end
