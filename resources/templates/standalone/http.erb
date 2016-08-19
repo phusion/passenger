@@ -8,19 +8,21 @@ passenger_ctl integration_mode standalone;
 passenger_ctl standalone_engine nginx;
 passenger_user_switching off;
 
-<% if @options[:ruby] %>
-    passenger_ruby <%= @options[:ruby] %>;
-<% else %>
-    passenger_ruby <%= PlatformInfo.ruby_command %>;
-<% end %>
-<% if @options[:user] %>
-    passenger_user <%= @options[:user] %>;
-    passenger_default_user <%= @options[:user] %>;
-    passenger_analytics_log_user <%= @options[:user] %>;
-<% else %>
-    passenger_user <%= current_user %>;
-    passenger_default_user <%= current_user %>;
-    passenger_analytics_log_user <%= current_user %>;
+<% if Process.euid == 0 %>
+    <% if @options[:ruby] %>
+        passenger_ruby <%= @options[:ruby] %>;
+    <% else %>
+        passenger_ruby <%= PlatformInfo.ruby_command %>;
+    <% end %>
+    <% if @options[:user] %>
+        passenger_user <%= @options[:user] %>;
+        passenger_default_user <%= @options[:user] %>;
+        passenger_analytics_log_user <%= @options[:user] %>;
+    <% else %>
+        passenger_user <%= current_user %>;
+        passenger_default_user <%= current_user %>;
+        passenger_analytics_log_user <%= current_user %>;
+    <% end %>
 <% end %>
 
 <%= nginx_http_option(:socket_backlog) %>

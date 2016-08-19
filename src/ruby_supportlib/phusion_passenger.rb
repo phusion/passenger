@@ -320,7 +320,12 @@ private
     end
     if home.nil? || home.empty?
       require 'etc' if !defined?(Etc)
-      home = Etc.getpwuid(Process.uid).dir
+      begin
+        home = Etc.getpwuid(Process.uid).dir
+      rescue ArgumentError
+        # Unknown user.
+        home = ENV['HOME']
+      end
     end
     return home
   end
