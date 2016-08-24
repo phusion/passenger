@@ -31,7 +31,7 @@ module PhusionPassenger
 
     class InstanceRegistry
       def initialize(paths = nil)
-        @paths = [paths || default_paths].flatten
+        @paths = [paths || default_paths].flatten.uniq
       end
 
       def list(options = {})

@@ -13,6 +13,7 @@ Next version (not yet released)
  * [Apache] Fixes PassengerShowVersionInHeader option. Thanks to Sebastian Welther for contributing this.
  * Passenger now reports when you try to use Node.js or Meteor clustering, and tries to continue with just a nonfunctional shim in place, so that if your code uses the clustering APIs your app may still work.
  * Updates libev config.sub and config.guess to support newer platforms such as the IBM power 8.
+ * Fixes an issue where passenger-config couldn't restart an app if the TMPDIR variable was set to /tmp
 
 
 Release 5.0.30
