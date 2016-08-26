@@ -123,77 +123,8 @@ size_t modp_b64_encode(char* dest, const char* str, size_t len)
 	*p = '\0';
 	return (size_t)(p - (modp_uint8_t*)dest);
 }
-
-#ifdef BOOST_BIG_ENDIAN   /* BIG ENDIAN -- SUN / IBM / MOTOROLA */
-size_t modp_b64_decode(char* dest, const char* src, size_t len)
-{
-	size_t i;
-	if (len == 0) return 0;
-
-#ifdef B64_DOPAD
-	/* if padding is used, then the message must be at least
-	   4 chars and be a multiple of 4.
-	   there can be at most 2 pad chars at the end */
-	if (len < 4 || (len % 4 != 0)) return -1;
-	if (src[len-1] == B64_CHARPAD) {
-		len--;
-		if (src[len -1] == B64_CHARPAD) {
-			len--;
-		}
-	}
-#endif  /* B64_DOPAD */
-
-	size_t leftover = len % 4;
-	size_t chunks = (leftover == 0) ? len / 4 - 1 : len /4;
-
-	modp_uint8_t* p = (modp_uint8_t*) dest;
-	modp_uint32_t x = 0;
-	modp_uint32_t* destInt = (modp_uint32_t*) p;
-	modp_uint32_t* srcInt = (modp_uint32_t*) src;
-	modp_uint32_t y = *srcInt++;
-	for (i = 0; i < chunks; ++i) {
-		x = d0[y >> 24 & 0xff] | d1[y >> 16 & 0xff] |
-			d2[y >> 8 & 0xff] | d3[y & 0xff];
-
-		if (x >= B64_BADCHAR)  return -1;
-		*destInt = x << 8;
-		p += 3;
-		destInt = (modp_uint32_t*)p;
-		y = *srcInt++;
-	}
-
-	switch (leftover) {
-	case 0:
-		x = d0[y >> 24 & 0xff] | d1[y >> 16 & 0xff] |
-			d2[y >>  8 & 0xff] | d3[y & 0xff];
-		if (x >= B64_BADCHAR)  return -1;
-		*p++ = ((modp_uint8_t*)&x)[1];
-		*p++ = ((modp_uint8_t*)&x)[2];
-		*p = ((modp_uint8_t*)&x)[3];
-		return (chunks+1)*3;
-#ifndef B64_DOPAD
-	case 1:  /* with padding this is an impossible case */
-		x = d3[y >> 24];
-		*p =  (modp_uint8_t)x;
-		break;
-#endif
-	case 2:
-		x = d3[y >> 24] *64 + d3[(y >> 16) & 0xff];
-		*p =  (modp_uint8_t)(x >> 4);
-		break;
-	default:  /* case 3 */
-		x = (d3[y >> 24] *64 + d3[(y >> 16) & 0xff])*64 +
-			d3[(y >> 8) & 0xff];
-		*p++ = (modp_uint8_t) (x >> 10);
-		*p = (modp_uint8_t) (x >> 2);
-		break;
-	}
-
-	if (x >= B64_BADCHAR) return -1;
-	return 3*chunks + (6*leftover)/8;
-}
-
-#else /* LITTLE  ENDIAN -- INTEL AND FRIENDS */
+#if defined(__x86_64__) || defined(__x86__)
+/* LITTLE  ENDIAN -- INTEL AND FRIENDS */
 
 size_t modp_b64_decode(char* dest, const char* src, size_t len)
 {
@@ -289,4 +220,4 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 	return 3*chunks + (6*leftover)/8;
 }
 
-#endif  /* if bigendian / else / endif */
+#endif
