@@ -221,7 +221,7 @@ public:
 	 * @throws SecurityException
 	 * @throws boost::thread_interrupted
 	 */
-	string readLine(unsigned int max = 1024, unsigned long long *timeout = NULL) {
+	string readLine(unsigned int max = 1024 * 8, unsigned long long *timeout = NULL) {
 		string output;
 		readUntil(
 			boost::bind(newlineFound,
