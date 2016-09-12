@@ -48,7 +48,7 @@
 #include <signal.h>
 #include <libgen.h>
 
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__GNU_LIBRARY__)
 	#define LIBC_HAS_BACKTRACE_FUNC
 #endif
 #ifdef LIBC_HAS_BACKTRACE_FUNC
