@@ -1285,6 +1285,8 @@ public:
 			.setInt	("socket_backlog", serverConfig.socketBacklog)
 			.set    ("data_buffer_dir", serverConfig.dataBufferDir)
 			.set    ("instance_registry_dir", serverConfig.instanceRegistryDir)
+			.setBool("disable_security_update_check", serverConfig.disableSecurityUpdateCheck)
+			.set    ("security_update_check_proxy", serverConfig.securityUpdateCheckProxy)
 			.setBool("user_switching", serverConfig.userSwitching)
 			.set    ("default_user", serverConfig.defaultUser)
 			.set    ("default_group", serverConfig.defaultGroup)

@@ -43,6 +43,8 @@ typedef struct {
     ngx_uint_t   socket_backlog;
     ngx_str_t    data_buffer_dir;
     ngx_str_t    instance_registry_dir;
+    ngx_flag_t   disable_security_update_check;
+    ngx_str_t    security_update_check_proxy;
     ngx_flag_t   abort_on_startup_error;
     ngx_uint_t   max_pool_size;
     ngx_uint_t   pool_idle_time;

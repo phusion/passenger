@@ -33,6 +33,7 @@ http {
     passenger_max_pool_size <%= @max_pool_size %>;
     passenger_log_level 7;
     passenger_turbocaching off;
+    passenger_disable_security_update_check on;
     <% if @stat_throttle_rate %>passenger_stat_throttle_rate <%= @stat_throttle_rate %>;<% end %>
 
     <% for server in @servers %>

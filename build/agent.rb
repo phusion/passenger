@@ -89,6 +89,7 @@ file(AGENT_TARGET => dependencies) do
       libuv_libs,
       PlatformInfo.curl_libs,
       PlatformInfo.zlib_libs,
+      PlatformInfo.crypto_libs,
       PlatformInfo.portability_cxx_ldflags,
       AGENT_LDFLAGS
     ]

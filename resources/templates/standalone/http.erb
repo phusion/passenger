@@ -32,6 +32,8 @@ passenger_user_switching off;
 <%= nginx_http_option(:max_preloader_idle_time) %>
 <%= nginx_http_option(:turbocaching) %>
 <%= nginx_http_option(:instance_registry_dir) %>
+<%= nginx_http_option(:disable_security_update_check) %>
+<%= nginx_http_option(:security_update_check_proxy) %>
 <%= nginx_http_option(:data_buffer_dir) %>
 <%= nginx_http_option(:core_file_descriptor_ulimit) %>
 <%= nginx_http_option(:union_station_gateway_address) %>

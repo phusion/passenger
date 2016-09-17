@@ -48,6 +48,12 @@ generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev, ngx
     ngx_conf_merge_uint_value(conf->core_file_descriptor_ulimit,
         prev->core_file_descriptor_ulimit,
         NGX_CONF_UNSET_UINT);
+    ngx_conf_merge_value(conf->disable_security_update_check,
+        prev->disable_security_update_check,
+        NGX_CONF_UNSET);
+    ngx_conf_merge_str_value(conf->security_update_check_proxy,
+        prev->security_update_check_proxy,
+        NULL);
     ngx_conf_merge_uint_value(conf->app_file_descriptor_ulimit,
         prev->app_file_descriptor_ulimit,
         NGX_CONF_UNSET_UINT);

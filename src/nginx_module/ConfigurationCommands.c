@@ -54,6 +54,22 @@
     NULL
 },
 {
+    ngx_string("disable_security_update_check"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
+    ngx_conf_set_flag_slot,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, disable_security_update_check),
+    NULL
+},
+{
+    ngx_string("security_update_check_proxy"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    ngx_conf_set_str_slot,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, security_update_check_proxy),
+    NULL
+},
+{
     ngx_string("passenger_app_file_descriptor_ulimit"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
     ngx_conf_set_num_slot,

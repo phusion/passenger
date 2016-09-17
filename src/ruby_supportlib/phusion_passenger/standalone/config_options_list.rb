@@ -553,6 +553,16 @@ module PhusionPassenger
     # Advanced configuration options
     ADVANCED_CONFIG_SPECS = [
       {
+        :name      => :disable_security_update_check,
+        :type      => :boolean,
+        :desc      => "Disable check for security updates"
+      },
+      {
+        :name      => :security_update_check_proxy,
+        :type_desc => 'NAME',
+        :desc      => "Use http/SOCKS proxy for the security update check"
+      },
+      {
         :name      => :engine,
         :type_desc => 'NAME',
         :default   => 'nginx',

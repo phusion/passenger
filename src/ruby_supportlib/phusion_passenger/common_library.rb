@@ -290,6 +290,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils.o',
     :source   => 'Utils.cpp',
     :category => :base
+  define_component 'Crypto.o',
+    :source   => 'Crypto.cpp',
+    :category => :other
   define_component 'Utils/CachedFileStat.o',
     :source   => 'Utils/CachedFileStat.cpp',
     :category => :other

@@ -87,6 +87,12 @@ coreUsage() {
 	printf("      --default-group NAME  Default group to start apps as, when user\n");
 	printf("                            switching is disabled. Default: the default\n");
 	printf("                            user's primary group\n");
+	printf("      --disable-security-update-check\n");
+	printf("                            Disable the periodic check and notice about\n");
+	printf("                            important security updates\n");
+	printf("      --security-update-check-proxy PROXY\n");
+	printf("                            Use http/SOCKS proxy for the security update check:\n");
+	printf("                            scheme://user:password@proxy_host:proxy_port\n");
 	printf("\n");
 	printf("Application serving options (optional):\n");
 	printf("  -e, --environment NAME    Default framework environment name to use.\n");
@@ -267,6 +273,12 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-group")) {
 		options.set("default_group", argv[i + 1]);
+		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--disable-security-update-check")) {
+		options.setBool("disable_security_update_check", true);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--security-update-check-proxy")) {
+		options.set("security_update_check_proxy", argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
 		options.setInt("max_pool_size", atoi(argv[i + 1]));

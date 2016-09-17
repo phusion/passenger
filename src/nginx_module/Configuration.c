@@ -114,6 +114,9 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->data_buffer_dir.len = 0;
     conf->instance_registry_dir.data = NULL;
     conf->instance_registry_dir.len = 0;
+    conf->disable_security_update_check = NGX_CONF_UNSET;
+    conf->security_update_check_proxy.data = NULL;
+    conf->security_update_check_proxy.len = 0;
     conf->abort_on_startup_error = NGX_CONF_UNSET;
     conf->max_pool_size = NGX_CONF_UNSET_UINT;
     conf->pool_idle_time = NGX_CONF_UNSET_UINT;
@@ -187,6 +190,14 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
     if (conf->instance_registry_dir.len == 0) {
         conf->instance_registry_dir.data = (u_char *) "";
     }
+
+    if (conf->disable_security_update_check == NGX_CONF_UNSET) {
+		conf->disable_security_update_check = 0;
+	}
+
+    if (conf->security_update_check_proxy.len == 0) {
+		conf->security_update_check_proxy.data = (u_char *) "";
+	}
 
     if (conf->abort_on_startup_error == NGX_CONF_UNSET) {
         conf->abort_on_startup_error = 0;
@@ -1493,7 +1504,21 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, prestart_uris),
       NULL },
 
-    { ngx_string("passenger_abort_on_startup_error"),
+    { ngx_string("passenger_disable_security_update_check"),
+      NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(passenger_main_conf_t, disable_security_update_check),
+      NULL },
+
+	{ ngx_string("passenger_security_update_check_proxy"),
+	  NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+	  ngx_conf_set_str_slot,
+	  NGX_HTTP_MAIN_CONF_OFFSET,
+	  offsetof(passenger_main_conf_t, security_update_check_proxy),
+	  NULL },
+
+	{ ngx_string("passenger_abort_on_startup_error"),
       NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,

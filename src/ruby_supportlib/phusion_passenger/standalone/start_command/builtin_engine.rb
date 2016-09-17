@@ -125,6 +125,7 @@ module PhusionPassenger
             command << " --default-user #{Shellwords.escape user}"
           end
 
+          # Arguments for supervised agent are between --BC/--EC and --BU/--EU
           command << " --BC"
           # The builtin engine cannot be used in combination with Mass Deployment,
           # so we know @apps always has 1 app.
@@ -175,6 +176,8 @@ module PhusionPassenger
           add_param(command, :meteor_app_settings, "--meteor-app-settings")
           add_param(command, :core_file_descriptor_ulimit, "--core-file-descriptor-ulimit")
           add_param(command, :app_file_descriptor_ulimit, "--app-file-descriptor-ulimit")
+          add_param(command, :disable_security_update_check, "--disable-security-update-check")
+          add_param(command, :security_update_check_proxy, "--security-update-check-proxy")
 
           command << " #{Shellwords.escape(@apps[0][:root])}"
 

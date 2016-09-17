@@ -303,6 +303,8 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_user, defaultUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_default_group, defaultGroup)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_data_buffer_dir, dataBufferDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_instance_registry_dir, instanceRegistryDir)
+DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_disable_security_update_check, disableSecurityUpdateCheck)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_security_update_check_proxy, securityUpdateCheckProxy)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationGatewayAddress)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
@@ -509,6 +511,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The directory to register the instance to."),
+	AP_INIT_FLAG("PassengerDisableSecurityUpdateCheck",
+		(FlagFunc) cmd_passenger_disable_security_update_check,
+		NULL,
+		RSRC_CONF,
+		"Whether to enable the security update check & notify."),
+	AP_INIT_TAKE1("PassengerSecurityUpdateCheckProxy",
+		(Take1Func) cmd_passenger_security_update_check_proxy,
+		NULL,
+		RSRC_CONF,
+		"Use specified http/SOCKS proxy for the security update check."),
 	AP_INIT_TAKE1("PassengerMaxPreloaderIdleTime",
 		(Take1Func) cmd_passenger_max_preloader_idle_time,
 		NULL,

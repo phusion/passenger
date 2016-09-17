@@ -87,9 +87,9 @@
 
 LOCATION_CONFIGURATION_OPTIONS = [
   {
-    :name      => 'passenger_socket_backlog',
-    :type      => :integer,
-    :context   => [:main],
+    :name     => 'passenger_socket_backlog',
+    :type     => :integer,
+    :context  => [:main],
     :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
   },
   {
@@ -97,6 +97,18 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :type     => :uinteger,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'disable_security_update_check',
+    :type     => :flag,
+    :context  => [:main],
+    :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
+  },
+  {
+    :name     => 'security_update_check_proxy',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
   },
   {
     :name     => 'passenger_app_file_descriptor_ulimit',

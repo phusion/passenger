@@ -70,21 +70,24 @@ struct CurlProxyInfo {
 	long type;
 	bool none;
 	bool httpTunnel;
+	bool valid; // false if an error occurred during address parsing
 
-	CurlProxyInfo()
+	CurlProxyInfo(bool valid = false)
 		: type(0),
 		  none(false),
-		  httpTunnel(false)
+		  httpTunnel(false),
+		  valid(valid)
 		{ }
 };
 
 inline const CurlProxyInfo
 prepareCurlProxy(const string &address) {
 	if (address.empty()) {
-		return CurlProxyInfo();
+		return CurlProxyInfo(true);
 	} else if (address == "none") {
 		CurlProxyInfo result;
 		result.none = true;
+		result.valid = true;
 		return result;
 	} else {
 		CurlProxyInfo result;
@@ -164,23 +167,34 @@ prepareCurlProxy(const string &address) {
 			}
 		}
 
+		result.valid = true;
 		return result;
 	}
 }
 
-inline void
+inline CURLcode
 setCurlProxy(CURL *curl, const CurlProxyInfo &proxyInfo) {
 	if (proxyInfo.hostAndPort.empty()) {
-		return;
+		return CURLE_OK;
 	} else if (proxyInfo.none) {
-		curl_easy_setopt(curl, CURLOPT_PROXY, "");
+		return curl_easy_setopt(curl, CURLOPT_PROXY, "");
 	} else {
-		curl_easy_setopt(curl, CURLOPT_PROXY, proxyInfo.hostAndPort.c_str());
-		curl_easy_setopt(curl, CURLOPT_PROXYTYPE, proxyInfo.type);
-		curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, proxyInfo.credentials.c_str());
-		if (proxyInfo.httpTunnel) {
-			curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1);
+		CURLcode code;
+		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_PROXY, proxyInfo.hostAndPort.c_str()))) {
+			return code;
 		}
+		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_PROXYTYPE, proxyInfo.type))) {
+			return code;
+		}
+		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, proxyInfo.credentials.c_str()))) {
+			return code;
+		}
+		if (proxyInfo.httpTunnel) {
+			if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1))) {
+				return code;
+			}
+		}
+		return CURLE_OK;
 	}
 }
 

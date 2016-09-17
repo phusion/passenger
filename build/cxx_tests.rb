@@ -46,6 +46,8 @@ TEST_CXX_OBJECTS = {
     "test/cxx/Core/UnionStationTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ResponseCacheTest.o" =>
     "test/cxx/Core/ResponseCacheTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SecurityUpdateCheckerTest.o" =>
+      "test/cxx/Core/SecurityUpdateCheckerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ControllerTest.o" =>
     "test/cxx/Core/ControllerTest.cpp",
 
@@ -149,6 +151,7 @@ def test_cxx_ldflags
       "#{TEST_BOOST_OXT_LIBRARY} #{libev_libs} #{libuv_libs} " <<
       "#{PlatformInfo.curl_libs} " <<
       "#{PlatformInfo.zlib_libs} " <<
+      "#{PlatformInfo.crypto_libs} " <<
       "#{PlatformInfo.portability_cxx_ldflags}"
     result << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
     result << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN

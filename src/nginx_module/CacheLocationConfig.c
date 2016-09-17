@@ -68,6 +68,19 @@ generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
         len += sizeof("\r\n") - 1;
     }
 
+    if (conf->disable_security_update_check != NGX_CONF_UNSET) {
+        len += sizeof("!~DISABLE_SECURITY_UPDATE_CHECK: ") - 1;
+        len += conf->disable_security_update_check
+            ? sizeof("t\r\n") - 1
+            : sizeof("f\r\n") - 1;
+    }
+
+    if (conf->security_update_check_proxy.data != NULL) {
+        len += sizeof("!~SECURITY_UPDATE_CHECK_PROXY: ") - 1;
+        len += conf->security_update_check_proxy.len;
+        len += sizeof("\r\n") - 1;
+    }
+
     if (conf->app_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
         end = ngx_snprintf(int_buf,
             sizeof(int_buf) - 1,
@@ -323,6 +336,26 @@ generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
             "%ui",
             conf->core_file_descriptor_ulimit);
         pos = ngx_copy(pos, int_buf, end - int_buf);
+        pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
+    }
+    if (conf->disable_security_update_check != NGX_CONF_UNSET) {
+        pos = ngx_copy(pos,
+            "!~DISABLE_SECURITY_UPDATE_CHECK: ",
+            sizeof("!~DISABLE_SECURITY_UPDATE_CHECK: ") - 1);
+        if (conf->disable_security_update_check) {
+            pos = ngx_copy(pos, "t\r\n", sizeof("t\r\n") - 1);
+        } else {
+            pos = ngx_copy(pos, "f\r\n", sizeof("f\r\n") - 1);
+        }
+    }
+
+    if (conf->security_update_check_proxy.data != NULL) {
+        pos = ngx_copy(pos,
+            "!~SECURITY_UPDATE_CHECK_PROXY: ",
+            sizeof("!~SECURITY_UPDATE_CHECK_PROXY: ") - 1);
+        pos = ngx_copy(pos,
+            conf->security_update_check_proxy.data,
+            conf->security_update_check_proxy.len);
         pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
     }
     if (conf->app_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
