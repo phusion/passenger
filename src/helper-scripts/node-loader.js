@@ -31,6 +31,56 @@ var fs = require('fs');
 var net = require('net');
 var http = require('http');
 
+//Mock out Node Cluster Module
+var Module = require('module');
+var originalRequire = Module.prototype.require;
+Module.prototype.require = function(){
+	if(arguments['0'] == 'cluster'){
+		console.error("You required the cluster module, which is incompatible with Passenger, a non-functional shim was returned and your app may still work. However, please remove the cluster code as soon as possible.");
+		return {
+			disconnect		 : function(){return false;},
+			fork			 : function(){return false;},
+			isMaster		 : false,
+			isWorker		 : true,
+			schedulingPolicy : false,
+			settings		 : false,
+			setupMaster		 : function(){return false;},
+			worker			 : false,
+			workers			 : false,
+		};
+	}else{
+		return originalRequire.apply(this, arguments);
+	}
+};
+
+//Mock out Meteor Cluster Module
+var vm = require('vm');
+var orig_func = vm.runInThisContext;
+vm.runInThisContext = function(){
+    var scriptPath = arguments['1'];
+    if(scriptPath.indexOf('meteorhacks_cluster') != -1){
+        console.error("You are using the Meteorhacks cluster package, which is incompatible with Passenger, a non-functional shim was returned and your app may still work. However, please remove the cluster code as soon as possible.");
+        return (function(){
+            Package['meteorhacks:cluster'] = {
+				Cluster: {
+ 					_publicServices				: {},
+					_registeredServices			: {},
+					_discoveryBackends			: { mongodb: {} },
+					connect						: function(){return false;},
+					allowPublicAccess			: function(){return false;},
+					discoverConnection			: function(){return false;},
+					register					: function(){return false;},
+					_isPublicService			: function(){return false;},
+					registerDiscoveryBackend	: function(){return false;},
+					_blockCallAgain				: function(){return false;}
+				}
+			};
+		});
+    }else{
+        return orig_func.apply(this, arguments);
+    }
+};
+
 var LineReader = require('phusion_passenger/line_reader').LineReader;
 var ustLog = require('phusion_passenger/ustrouter_connector');
 

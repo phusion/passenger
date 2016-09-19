@@ -11,6 +11,7 @@ Next version (not yet released)
  * Fixes compilation on Linux when a non-glibc C library is in use. Closes GH-1870.
  * `passenger-install-nginx-module` and the standalone compiler now add the http v2, realip and addition module flags for Nginx (just like the APT/RPM/autobuilder already had). Closes GH-1788. 
  * [Apache] Fixes PassengerShowVersionInHeader option. Thanks to Sebastian Welther for contributing this.
+ * Passenger now reports when you try to use Node.js or Meteor clustering, and tries to continue with just a nonfunctional shim in place, so that if your code uses the clustering APIs your app may still work.
 
 
 Release 5.0.30
