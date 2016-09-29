@@ -24,7 +24,10 @@
  *  THE SOFTWARE.
  */
 
-// N.B. depends on type and macro definitions in modp_b64.cpp, so always include that one first.
+#include "modp_b64_data.h"
+
+/* public header */
+#include "modp_b64.h"
 
 #if !defined(__x86_64__) && !defined(__x86__)
 

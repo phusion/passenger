@@ -43,43 +43,10 @@
  * </PRE>
  */
 
-#ifdef __cplusplus
-	#include <boost/cstdint.hpp>
-	typedef boost::uint8_t modp_uint8_t;
-	typedef boost::uint32_t modp_uint32_t;
-#else
-	#include <stdint.h>
-	typedef uint8_t modp_uint8_t;
-	typedef uint32_t modp_uint32_t;
-#endif
-
-#ifndef MODP_B64_DONT_INCLUDE_BOOST_ENDIANNESS_HEADERS
-	#include <boost/detail/endian.hpp>
-#endif
+#include "modp_b64_data.h"
 
 /* public header */
 #include "modp_b64.h"
-
-#include "modp_b64_data.h"
-
-#define B64_BADCHAR 0x01FFFFFF
-
-/**
- * you can control if we use padding by commenting out this
- * next line.  However, I highly recommend you use padding and not
- * using it should only be for compatability with a 3rd party.
- * Also, 'no padding' is not tested!
- */
-#define B64_DOPAD 1
-
-/*
- * if we aren't doing padding
- * set the pad character to NULL
- */
-#ifndef B64_DOPAD
-#undef B64_CHARPAD
-#define B64_CHARPAD '\0'
-#endif
 
 size_t modp_b64_encode(char* dest, const char* str, size_t len)
 {
