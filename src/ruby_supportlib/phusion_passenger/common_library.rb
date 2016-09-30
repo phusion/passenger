@@ -337,7 +337,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'vendor-modified/modp_b64.o',
     :source   => 'vendor-modified/modp_b64.cpp',
     :category => :bas64,
-    :optimize => true
+    :optimize => true,
+    :strict_aliasing => false
   define_component 'vendor-modified/modp_b64_strict_aliasing.o',
     :source   => 'vendor-modified/modp_b64_strict_aliasing.cpp',
     :category => :bas64,
