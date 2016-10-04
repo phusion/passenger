@@ -57,7 +57,7 @@ task 'test:install_deps' do
   end
 
   if !PlatformInfo.locate_ruby_tool('bundle') || bundler_too_old?
-    sh "gem uninstall bundler bundle rubygems-update --all -x && gem update --system 2.6.1 && gem install bundler && gem uninstall rubygems-update --all -x && gem update --system 2.6.4"
+    sh "#{gem_install} bundler"
   end
 
   if install_base_deps && install_doctools
