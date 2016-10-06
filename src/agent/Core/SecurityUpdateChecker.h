@@ -71,7 +71,7 @@ private:
 			if (backoffSec > MAX_CHECK_BACKOFF_SEC) {
 				backoffSec = MAX_CHECK_BACKOFF_SEC;
 			}
-			syscalls::usleep(backoffSec * 1000000);
+			boost::this_thread::sleep_for(boost::chrono::seconds(backoffSec));
 		}
 	}
 
