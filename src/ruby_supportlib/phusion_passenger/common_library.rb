@@ -27,6 +27,8 @@
 # executables. It's used by the build system (build/*.rb) and by
 # src/ruby_supportlib/phusion_passenger/config/nginx_engine_compiler.rb
 
+PhusionPassenger.require_passenger_lib 'platform_info/crypto'
+
 class CommonLibraryBuilder
   include Rake::DSL if defined?(Rake::DSL)
 
@@ -146,6 +148,8 @@ private
       # works: http://stackoverflow.com/a/25765338/20816
       optimize.sub!(/-flto/, "")
     end
+
+    extra_compiler_flags = "#{extra_compiler_flags} #{options[:cflags]}".strip
 
     define_c_or_cxx_object_compilation_task(
       object_file,
@@ -292,7 +296,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :category => :base
   define_component 'Crypto.o',
     :source   => 'Crypto.cpp',
-    :category => :other
+    :category => :other,
+    :cflags   => PhusionPassenger::PlatformInfo.crypto_extra_cflags
   define_component 'Utils/CachedFileStat.o',
     :source   => 'Utils/CachedFileStat.cpp',
     :category => :other

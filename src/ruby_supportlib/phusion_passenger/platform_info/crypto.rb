@@ -30,12 +30,21 @@ module PhusionPassenger
   module PlatformInfo
     def self.crypto_libs
       if os_name_simple == "macosx"
-        return ' -framework CoreFoundation -framework Security -Wno-deprecated-declarations'
+        return ' -framework CoreFoundation -framework Security'
       else
         return ' -lcrypto'
       end
     end
     memoize :crypto_libs
+
+    def self.crypto_extra_cflags
+      if os_name_simple == "macosx"
+        return ' -Wno-deprecated-declarations'
+      else
+        return ''
+      end
+    end
+    memoize :crypto_extra_cflags
 
   end
 

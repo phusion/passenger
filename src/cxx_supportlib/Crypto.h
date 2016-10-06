@@ -51,6 +51,15 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
+struct AESEncResult {
+	unsigned char *encrypted;
+	size_t encryptedLen;
+	unsigned char *key;
+	size_t keyLen;
+	unsigned char *iv;
+	size_t ivLen;
+};
+
 class Crypto {
 private:
 	/**
@@ -63,16 +72,23 @@ private:
 	 */
 	void freePubKey(PUBKEY_TYPE);
 
+	void logError(string error);
+
 	/**
 	 * log prefix using P_ERROR, and (library-specific) detail from either additional or global query
 	 */
 #if BOOST_OS_MACOS
 	// (additional needs to be defined as a CFErrorRef, void * won't work)
-	void logErrorExtended(string prefix, CFErrorRef additional = NULL);
+	void logFreeErrorExtended(string prefix, CFErrorRef &additional);
 	CFDictionaryRef createQueryDict(const char *label);
 	SecAccessRef createAccess(const char *cLabel);
 	OSStatus lookupKeychainItem(const char *label, SecIdentityRef *oIdentity);
 	OSStatus copyIdentityFromPKCS12File(const char *cPath, const char *cPassword, const char *cLabel, SecIdentityRef *oIdentity);
+	CFDataRef genIV(size_t iv_size);
+	bool getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len);
+	bool generateRandomChars(unsigned char *rndChars, int rndLen);
+	bool memoryBridge(CFDataRef input, void **target, size_t &len);
+	bool innerMemoryBridge(void *input, void **target, size_t len);
 #else
 	void logErrorExtended(string prefix);
 #endif
@@ -84,7 +100,7 @@ public:
 	/**
 	 * Generates a nonce consisting of a timestamp (usec) and a random (base64) part.
 	 */
-	void generateAndAppendNonce(string &nonce);
+	bool generateAndAppendNonce(string &nonce);
 
 #if BOOST_OS_MACOS
 	/**
@@ -93,6 +109,28 @@ public:
 	void preAuthKey(const char *path, const char *passwd, const char *cLabel);
 	void killKey(const char *cLabel);
 #endif
+
+	/**
+	 * Generate an AES key and encrypt dataChars with it. The resulting encrypted characters, together with the AES key
+	 * and iv that were used appears in AESEncrypted. Memory is allocated for it, and it must be freed with freeAESEncrypted().
+	 *
+	 * N.B. only used in Enterprise (to enable additional services), but open sourced for transparency.
+	 */
+	bool encryptAES256(char *dataChars, size_t dataLen, AESEncResult &aesEnc);
+
+	/**
+	 * Releases resources returned by encryptAES256().
+	 */
+	void freeAESEncrypted(AESEncResult &aesEnc);
+
+	/**
+	 * Encrypt a (short) bit of date with specified public key. Memory is allocated for the result encryptedCharsPtr, which
+	 * must be free()d manually.
+	 *
+	 * N.B. only used in Enterprise (to enable additional services), but open sourced for transparency.
+	 */
+	bool encryptRSA(unsigned char *dataChars, size_t dataLen,
+			string encryptPubKeyPath, unsigned char **encryptedCharsPtr, size_t &encryptedLen);
 
 	/**
 	 * @returns true if specified signature is from the entity known by its (public) key at signaturePubKeyPath,

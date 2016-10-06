@@ -69,8 +69,9 @@ namespace tut {
 			return mockResponseCurlCode;
 		}
 
-		virtual void fillNonce(string &nonce) {
+		virtual bool fillNonce(string &nonce) {
 			nonce.append(mockNonce);
+			return true;
 		}
 
 		int testRaw(CURLcode responseCurlCode, int responseHttpCode, string responseData, string nonce) {

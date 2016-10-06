@@ -31,6 +31,14 @@
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 
+#if BOOST_OS_MACOS
+#else
+#include <openssl/aes.h>
+#endif
+
+#define AES_KEY_BYTESIZE (256/8)
+#define AES_CBC_IV_BYTESIZE (128/8)
+
 namespace Passenger {
 
 using namespace std;
@@ -46,12 +54,12 @@ Crypto::~Crypto() {
 }
 
 CFDictionaryRef Crypto::createQueryDict(const char *label) {
-	if(kSecClassIdentity != NULL) {
+	if (kSecClassIdentity != NULL) {
 		CFTypeRef keys[4];
 		CFTypeRef values[4];
 		CFDictionaryRef queryDict;
 		CFStringRef cfLabel = CFStringCreateWithCString(NULL, label,
-														 kCFStringEncodingUTF8);
+														kCFStringEncodingUTF8);
 
 		/* Set up our search criteria and expected results: */
 		values[0] = kSecClassIdentity; /* we want a certificate and a key */
@@ -63,10 +71,10 @@ CFDictionaryRef Crypto::createQueryDict(const char *label) {
 		/* identity searches need a SecPolicyRef in order to work */
 		values[3] = SecPolicyCreateSSL(false, cfLabel);
 		keys[3] = kSecMatchPolicy;
-		queryDict = CFDictionaryCreate(NULL, (const void **)keys,
-										(const void **)values, 4L,
-										&kCFCopyStringDictionaryKeyCallBacks,
-										&kCFTypeDictionaryValueCallBacks);
+		queryDict = CFDictionaryCreate(NULL, (const void **) keys,
+									   (const void **) values, 4L,
+									   &kCFCopyStringDictionaryKeyCallBacks,
+									   &kCFTypeDictionaryValueCallBacks);
 		CFRelease(values[3]);
 		CFRelease(cfLabel);
 
@@ -81,17 +89,17 @@ OSStatus Crypto::lookupKeychainItem(const char *label, SecIdentityRef *oIdentity
 	CFDictionaryRef queryDict = createQueryDict(label);
 
 	/* Do we have a match? */
-	status = SecItemCopyMatching(queryDict, (CFTypeRef *)oIdentity);
+	status = SecItemCopyMatching(queryDict, (CFTypeRef *) oIdentity);
 	CFRelease(queryDict);
 
 	return status;
 }
 
 SecAccessRef Crypto::createAccess(const char *cLabel) {
-	SecAccessRef access=NULL;
+	SecAccessRef access = NULL;
 	CFStringRef label = CFStringCreateWithCString(NULL, cLabel, kCFStringEncodingUTF8);
-	if (SecAccessCreate(label, NULL, &access)){
-		P_ERROR("SecAccessCreate failed.");
+	if (SecAccessCreate(label, NULL, &access)) {
+		logError("SecAccessCreate failed.");
 		CFRelease(label);
 		return NULL;
 	}
@@ -105,177 +113,428 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 											SecIdentityRef *oIdentity) {
 	OSStatus status = errSecItemNotFound;
 	CFURLRef url = CFURLCreateFromFileSystemRepresentation(NULL,
-																(const UInt8 *)cPath, strlen(cPath), false);
+														   (const UInt8 *) cPath, strlen(cPath), false);
 	CFStringRef password = cPassword ? CFStringCreateWithCString(NULL,
 																 cPassword, kCFStringEncodingUTF8) : NULL;
 
 	CFReadStreamRef cfrs = CFReadStreamCreateWithFile(kCFAllocatorDefault, url);
 	SecTransformRef readTransform = SecTransformCreateReadTransformWithReadStream(cfrs);
 	CFErrorRef error = NULL;
-	CFDataRef pkcsData = (CFDataRef)SecTransformExecute(readTransform, &error);
+	CFDataRef pkcsData = (CFDataRef) SecTransformExecute(readTransform, &error);
 	if (error != NULL) {
-		logErrorExtended("ReadTransform", error);
+		logFreeErrorExtended("ReadTransform", error);
 		return status;
 	}
 
 	SecAccessRef access = createAccess(cLabel);
-	const void *cKeys[] = {kSecImportExportPassphrase,kSecImportExportAccess};
-	const void *cValues[] = {password,access};
-	CFDictionaryRef options = CFDictionaryCreate(NULL, cKeys, cValues,
-												 2L, NULL, NULL);
+	CFTypeRef cKeys[] = {kSecImportExportPassphrase, kSecImportExportAccess};
+	CFTypeRef cValues[] = {password, access};
+	CFDictionaryRef options = CFDictionaryCreate(NULL, cKeys, cValues, 2L, NULL, NULL);
 	CFArrayRef items = NULL;
 
 	/* Here we go: */
 	status = SecPKCS12Import(pkcsData, options, &items);
-	if(status == noErr && items && CFArrayGetCount(items)) {
+	if (status == noErr && items && CFArrayGetCount(items)) {
 		CFDictionaryRef identityAndTrust = (CFDictionaryRef) CFArrayGetValueAtIndex(items, 0L);
-		const void *tempIdentity = CFDictionaryGetValue(identityAndTrust,
-														 kSecImportItemIdentity);
+		SecIdentityRef tempIdentity = (SecIdentityRef) CFDictionaryGetValue(identityAndTrust, kSecImportItemIdentity);
 
 		/* Retain the identity; we don't care about any other data... */
 		CFRetain(tempIdentity);
-		*oIdentity = (SecIdentityRef)tempIdentity;
+		*oIdentity = tempIdentity;
 		CFRelease(identityAndTrust);
 	}
 
-	if(items) {
+	if (items) {
 		CFRelease(items);
 	}
 	CFRelease(options);
 	CFRelease(access);
-	if(pkcsData){
+	if (pkcsData) {
 		CFRelease(pkcsData);
 	}
 	CFRelease(readTransform);
 	CFRelease(cfrs);
-	if(password) {
+	if (password) {
 		CFRelease(password);
 	}
 	CFRelease(url);
 	return status;
 }
 
-void Crypto::killKey(const char *cLabel){
+void Crypto::killKey(const char *cLabel) {
 	SecIdentityRef id = NULL;
-	if (lookupKeychainItem(cLabel,&id) != errSecItemNotFound){
+	if (lookupKeychainItem(cLabel, &id) != errSecItemNotFound) {
 
-		CFArrayRef itemList = CFArrayCreate(NULL, (const void **)&id, 1, NULL);
-		const void *keys2[]   = { kSecClass,  kSecMatchItemList,  kSecMatchLimit };
-		const void *values2[] = { kSecClassIdentity, itemList, kSecMatchLimitAll };
+		CFArrayRef itemList = CFArrayCreate(NULL, (const void **) &id, 1, NULL);
+		CFTypeRef keys[]   = { kSecClass,  kSecMatchItemList,  kSecMatchLimit };
+		CFTypeRef values[] = { kSecClassIdentity, itemList, kSecMatchLimitAll };
 
-		CFDictionaryRef dict = CFDictionaryCreate(NULL, keys2, values2, 3, NULL, NULL);
+		CFDictionaryRef dict = CFDictionaryCreate(NULL, keys, values, 3L, NULL, NULL);
 		OSStatus oserr = SecItemDelete(dict);
 		if (oserr) {
 			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			P_ERROR("Removing Passenger Cert from keychain failed: " << CFStringGetCStringPtr(str,kCFStringEncodingUTF8) << " Please remove the private key from the certificate labeled " << cLabel << " in your keychain.");
+			logError(string("Removing Passenger Cert from keychain failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
+					" Please remove the private key from the certificate labeled " + cLabel + " in your keychain.");
 			CFRelease(str);
 		}
 		CFRelease(dict);
 		CFRelease(itemList);
-
 	}
 }
 
-void Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel){
+void Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel) {
 	SecIdentityRef id = NULL;
-	if(lookupKeychainItem(cLabel,&id) == errSecItemNotFound){
+	if (lookupKeychainItem(cLabel, &id) == errSecItemNotFound) {
 		OSStatus oserr = SecKeychainSetUserInteractionAllowed(false);
 		if (oserr) {
 			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			P_ERROR("Disabling GUI Keychain interaction failed: " << CFStringGetCStringPtr(str,kCFStringEncodingUTF8));
+			logError(string("Disabling GUI Keychain interaction failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
 			CFRelease(str);
 		}
-		copyIdentityFromPKCS12File(path,passwd,cLabel,&id);
-		if(id == NULL){
-			P_ERROR("copyIdentityFromPKCS12File failed.");
-			exit(-1);
+		copyIdentityFromPKCS12File(path, passwd, cLabel, &id);
+		if (id == NULL) {
+			logError("copyIdentityFromPKCS12File failed.");
 		}
 		oserr = SecKeychainSetUserInteractionAllowed(true);
 		if (oserr) {
 			//This is really bad, we should probably ask the user to reboot.
 			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			P_ERROR("Re-enabling GUI Keychain interaction failed with error: " << CFStringGetCStringPtr(str,kCFStringEncodingUTF8) << " Please reboot as soon as possible, thanks.");
+			logError(string("Re-enabling GUI Keychain interaction failed with error: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
+					" Please reboot as soon as possible, thanks.");
 			CFRelease(str);
 		}
-	}else{
-		P_ERROR("Passenger certificate was found in the keychain unexpectedly, you may see keychain popups until you remove the private key from the certificate labeled " << cLabel << " in your keychain.");
+	} else {
+		logError(string("Passenger certificate was found in the keychain unexpectedly, you may see keychain popups until you remove the private key from the certificate labeled ") + cLabel + " in your keychain.");
 	}
-	if(id){
+	if (id) {
 		CFRelease(id);
 	}
 }
 
-void Crypto::generateAndAppendNonce(string &nonce) {
+bool Crypto::generateRandomChars(unsigned char *rndChars, int rndLen) {
+	FILE *fPtr = fopen("/dev/random", "r");
+	if (fPtr == NULL) {
+		CFIndex errNum = errno;
+		char* errMsg = strerror(errno);
+		const UInt8 numKeys = 4;
+		CFTypeRef userInfoKeys[numKeys] = { kCFErrorFilePathKey,
+											kCFErrorLocalizedDescriptionKey,
+											kCFErrorLocalizedFailureReasonKey,
+											kCFErrorLocalizedRecoverySuggestionKey };
+		CFTypeRef userInfoValues[numKeys] = { CFSTR("/dev/random"),
+											  CFSTR("Couldn't open file for reading."),
+											  CFStringCreateWithCStringNoCopy(NULL, errMsg, kCFStringEncodingUTF8, NULL),
+											  CFSTR("Have you tried turning it off and on again?") };
+
+		CFErrorRef error = CFErrorCreateWithUserInfoKeysAndValues(NULL, kCFErrorDomainOSStatus, errNum, userInfoKeys, userInfoValues, numKeys);
+		logFreeErrorExtended("SecVerifyTransformCreate", error);
+		return false;
+	}
+	for (int i = 0; i < rndLen; i++) {
+		rndChars[i] = fgetc(fPtr);
+	}
+	fclose(fPtr);
+
+	return true;
+}
+
+bool Crypto::generateAndAppendNonce(string &nonce) {
 	nonce.append(toString(SystemTime::getUsec()));
 
 	int rndLen = 16;
 	unsigned char rndChars[rndLen];
 
-	FILE *fp = fopen("/dev/random", "r");
-	if(fp == NULL) {
-		CFIndex errNum = errno;
-		char* errMsg = strerror(errno);
-		const UInt8 numKeys = 4;
-		CFStringRef userInfoKeys[numKeys] = { kCFErrorFilePathKey,
-											  kCFErrorLocalizedDescriptionKey,
-											  kCFErrorLocalizedFailureReasonKey,
-											  kCFErrorLocalizedRecoverySuggestionKey };
-		CFStringRef userInfoValues[numKeys] = { CFSTR("/dev/random"),
-												CFSTR("Couldn't open file for reading."),
-												CFStringCreateWithCStringNoCopy(NULL, errMsg, kCFStringEncodingUTF8, NULL),
-												CFSTR("Have you tried turning it off and on again?") };
+	if (generateRandomChars(rndChars, rndLen)) {
+		char rndChars64[rndLen * 2];
+		modp_b64_encode(rndChars64, (const char *) rndChars, rndLen);
 
-		CFErrorRef error = CFErrorCreateWithUserInfoKeysAndValues(NULL, kCFErrorDomainOSStatus, errNum, (const void *const *)userInfoKeys, (const void *const *)userInfoValues, numKeys);
-		logErrorExtended("SecVerifyTransformCreate", error);
+		nonce.append(rndChars64);
+		return true;
+	} else {
+		return false;
 	}
-	for (int i=0; i<rndLen; i++) {
-		rndChars[i] = fgetc(fp);
+}
+
+CFDataRef Crypto::genIV(size_t ivSize) {
+	UInt8 *ivBytesPtr = (UInt8*) malloc(ivSize);//freed when iv is freed
+	if (generateRandomChars(ivBytesPtr, ivSize)) {
+		return CFDataCreateWithBytesNoCopy(NULL, ivBytesPtr, ivSize, kCFAllocatorMalloc);
+	} else {
+		return NULL;
 	}
-	fclose(fp);
+}
 
-	char rndChars64[rndLen * 2];
-	modp_b64_encode(rndChars64, (const char *) rndChars, rndLen);
+bool Crypto::getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len) {
+	const CSSM_KEY *cssmKey;
+	CSSM_WRAP_KEY wrappedKey = {{0}};
 
-	nonce.append(rndChars64);
+	CSSM_CSP_HANDLE cspHandle = 0;
+	CSSM_CC_HANDLE ccHandle = 0;
+
+	const CSSM_ACCESS_CREDENTIALS *creds;
+	CSSM_RETURN error = SecKeyGetCredentials(cryptokey,
+											 CSSM_ACL_AUTHORIZATION_EXPORT_WRAPPED,
+											 kSecCredentialTypeDefault, &creds);
+	if (error != CSSM_OK) { cssmPerror("SecKeyGetCredentials", error); }
+
+	error = SecKeyGetCSSMKey(cryptokey, &cssmKey);
+	if (error != CSSM_OK) { cssmPerror("SecKeyGetCSSMKey", error); }
+
+	error = SecKeyGetCSPHandle(cryptokey, &cspHandle);
+	if (error != CSSM_OK) { cssmPerror("SecKeyGetCSPHandle", error); }
+
+	error = CSSM_CSP_CreateSymmetricContext(cspHandle,
+											CSSM_ALGID_NONE,
+											CSSM_ALGMODE_NONE,
+											creds,
+											NULL,
+											NULL,
+											CSSM_PADDING_NONE,
+											0,
+											&ccHandle);
+	if (error != CSSM_OK) { cssmPerror("CSSM_CSP_CreateSymmetricContext",error); }
+
+	CSSM_WrapKey(ccHandle,
+				 creds,
+				 cssmKey,
+				 NULL,
+				 &wrappedKey);
+	cssmPerror("CSSM_WrapKey", error);
+
+	CSSM_DeleteContext(ccHandle);
+
+	len = wrappedKey.KeyData.Length;
+
+	return innerMemoryBridge(wrappedKey.KeyData.Data,target,wrappedKey.KeyData.Length);
+}
+
+bool Crypto::encryptAES256(char *dataChars, size_t dataLen, AESEncResult &aesEnc) {
+	CFErrorRef error = NULL;
+	bool retVal = false;
+
+	CFNumberRef cfSize = NULL;
+	CFDictionaryRef parameters = NULL;
+	SecKeyRef cryptokey = NULL;
+	CFDataRef iv = NULL;
+	SecTransformRef encrypt = NULL;
+	CFDataRef message = NULL;
+	CFDataRef enc = NULL;
+
+	do {
+		UInt32 size = kSecAES256; // c++ is dumb
+		CFNumberRef cfSize = CFNumberCreate(NULL, kCFNumberSInt32Type, &size);
+		CFTypeRef cKeys[] = {kSecAttrKeyType, kSecAttrKeySizeInBits};
+		CFTypeRef cValues[] = {kSecAttrKeyTypeAES, cfSize};
+		CFDictionaryRef parameters = CFDictionaryCreate(NULL, cKeys, cValues, 2L, NULL, NULL);
+		if (parameters == NULL) {
+			logError("CFDictionaryCreate failed.");
+			retVal = false;
+			break;
+		}
+
+		SecKeyRef cryptokey = SecKeyGenerateSymmetric(parameters, &error);
+		if (error != NULL) {
+			logFreeErrorExtended("SecKeyGenerateSymmetric", error);
+			retVal = false;
+			break;
+		}
+
+		if (!getKeyBytes(cryptokey, (void **) &aesEnc.key, aesEnc.keyLen)) {
+			retVal = false;
+			break;
+		}
+
+		CFDataRef iv = genIV(AES_CBC_IV_BYTESIZE);
+		if (iv == NULL) {
+			logError("genIV failed.");
+			retVal = false;
+			break;
+		} else if (!memoryBridge(iv, (void **) &aesEnc.iv, aesEnc.ivLen)) {
+			retVal = false;
+			break;
+		}
+
+		SecTransformRef encrypt = SecEncryptTransformCreate(cryptokey, &error);
+		if (error != NULL) {
+			logFreeErrorExtended("SecEncryptTransformCreate", error);
+			retVal = false;
+			break;
+		}
+		SecTransformSetAttribute(encrypt, kSecIVKey, iv, &error);
+		if (error != NULL) {
+			logFreeErrorExtended("SecTransformSetAttribute", error);
+			retVal = false;
+			break;
+		}
+		CFDataRef message = CFDataCreateWithBytesNoCopy(NULL,
+														(UInt8*) dataChars,
+														dataLen,
+														kCFAllocatorNull);
+		SecTransformSetAttribute(encrypt, kSecTransformInputAttributeName, message, &error);
+		if (error != NULL) {
+			logFreeErrorExtended("SecTransformSetAttribute", error);
+			retVal = false;
+			break;
+		}
+		CFDataRef enc = (CFDataRef) SecTransformExecute(encrypt, &error);
+		if (error != NULL) {
+			logFreeErrorExtended("SecTransformExecute", error);
+			retVal = false;
+			break;
+		}
+
+		if (!memoryBridge(enc, (void **) &aesEnc.encrypted, aesEnc.encryptedLen)) {
+			retVal = false;
+			break;
+		}
+		retVal = true;
+	} while (false);
+
+	if (enc) { CFRelease(enc); }
+	if (message) { CFRelease(message); }
+	if (encrypt) { CFRelease(encrypt); }
+	if (iv) { CFRelease(iv); }
+	if (cryptokey) { CFRelease(cryptokey); }
+	if (parameters) { CFRelease(parameters); }
+	if (cfSize) { CFRelease(cfSize); }
+
+	return retVal;
+}
+
+void Crypto::freeAESEncrypted(AESEncResult &aesEnc) {
+	if (aesEnc.encrypted != NULL) {
+		free(aesEnc.encrypted);
+		aesEnc.encrypted = NULL;
+	}
+	if (aesEnc.iv != NULL) {
+		free(aesEnc.iv);
+		aesEnc.iv = NULL;
+	}
+	if (aesEnc.key != NULL) {
+		memset(aesEnc.key, 0, aesEnc.keyLen);
+		free(aesEnc.key);
+		aesEnc.key = NULL;
+	}
+}
+
+bool Crypto::encryptRSA(unsigned char *dataChars, size_t dataLen,
+						string encryptPubKeyPath, unsigned char **encryptedCharsPtr, size_t &encryptedLen) {
+	bool retVal = false;
+	CFErrorRef error = NULL;
+	SecKeyRef rsaPubKey = loadPubKey(encryptPubKeyPath.c_str());
+
+	CFDataRef aesKeyData = NULL;
+	SecTransformRef rsaEncryptContext = NULL;
+	CFDataRef encryptedKey = NULL;
+
+	do {
+		if (rsaPubKey == NULL) {
+			logError("loadPubKey failed");
+			retVal = false;
+			break;
+		}
+
+		aesKeyData = CFDataCreateWithBytesNoCopy(NULL, (UInt8*) dataChars, dataLen, kCFAllocatorNull);
+		if (aesKeyData == NULL) {
+			logError("CFDataCreateWithBytesNoCopy failed");
+			retVal = false;
+			break;
+		}
+
+		rsaEncryptContext = SecEncryptTransformCreate(rsaPubKey, &error);
+		if (error) {
+			logFreeErrorExtended("SecEncryptTransformCreate", error);
+			retVal = false;
+			break;
+		}
+		SecTransformSetAttribute(rsaEncryptContext,
+								 kSecPaddingKey,
+								 kSecPaddingOAEPKey,
+								 &error);
+		if (error) {
+			logFreeErrorExtended("SecTransformSetAttribute", error);
+			retVal = false;
+			break;
+		}
+
+		SecTransformSetAttribute(rsaEncryptContext, kSecTransformInputAttributeName, aesKeyData, &error);
+		if (error) {
+			logFreeErrorExtended("SecTransformSetAttribute", error);
+			retVal = false;
+			break;
+		}
+		encryptedKey = (CFDataRef) SecTransformExecute(rsaEncryptContext, &error);
+		if (error) {
+			logFreeErrorExtended("SecTransformExecute", error);
+			retVal = false;
+			break;
+		}
+
+		if (!memoryBridge(encryptedKey, (void **) encryptedCharsPtr, encryptedLen)) {
+			retVal = false;
+			break;
+		}
+		retVal = true;
+	} while (false);
+
+	if (encryptedKey) { CFRelease(encryptedKey); }
+	if (rsaEncryptContext) { CFRelease(rsaEncryptContext); }
+	if (aesKeyData) { CFRelease(aesKeyData); }
+	if (rsaPubKey) { CFRelease(rsaPubKey); }
+
+	return retVal;
+}
+
+bool Crypto::memoryBridge(CFDataRef input, void **target, size_t &len) {
+	len = CFDataGetLength(input);
+	return innerMemoryBridge((void *) CFDataGetBytePtr(input), target, len);
+}
+
+bool Crypto::innerMemoryBridge(void *input, void **target, size_t len){
+	*target = malloc(len);
+	if (*target == NULL) {
+		logError("malloc failed: " + toString(len));
+		return false;
+	}
+	memcpy(*target, input, len);
+	return true;
 }
 
 bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, int signatureLen, string data) {
 	SecKeyRef rsaPubKey = NULL;
 	bool result = false;
 
-	CFErrorRef error = NULL;
 	SecTransformRef verifier = NULL;
 	CFNumberRef cfSize = NULL;
 	do {
 		rsaPubKey = loadPubKey(signaturePubKeyPath.c_str());
 		if (rsaPubKey == NULL) {
-			P_ERROR("Failed to load public key at " << signaturePubKeyPath);
+			logError("Failed to load public key at " + signaturePubKeyPath);
 			break;
 		}
 
-		CFDataRef signatureRef = CFDataCreateWithBytesNoCopy(NULL, (UInt8*)signatureChars, signatureLen, kCFAllocatorNull);
-		//CFDataRef signatureRef = CFDataCreate(NULL, signatureChars, signatureLen);//this is safer but uses a bit more memory
+		CFDataRef signatureRef = CFDataCreateWithBytesNoCopy(NULL, (UInt8*) signatureChars, signatureLen, kCFAllocatorNull);
 
-		CFDataRef dataRef = CFDataCreateWithBytesNoCopy(NULL, (UInt8*)data.c_str(), data.length(), kCFAllocatorNull);
-		//CFDataRef dataRef = CFDataCreate(NULL, (UInt8*)data.c_str(), data.length());
+		CFDataRef dataRef = CFDataCreateWithBytesNoCopy(NULL, (UInt8*) data.c_str(), data.length(), kCFAllocatorNull);
 
+		CFErrorRef error = NULL;
 		verifier = SecVerifyTransformCreate(rsaPubKey, signatureRef, &error);
 		if (error) {
-			logErrorExtended("SecVerifyTransformCreate", error);
+			logFreeErrorExtended("SecVerifyTransformCreate", error);
 			result = -20;
 			break;
 		}
 
 		SecTransformSetAttribute(verifier, kSecTransformInputAttributeName, dataRef, &error);
 		if (error) {
-			logErrorExtended("SecTransformSetAttribute InputName", error);
+			logFreeErrorExtended("SecTransformSetAttribute InputName", error);
 			result = -21;
 			break;
 		}
 
 		SecTransformSetAttribute(verifier, kSecDigestTypeAttribute, kSecDigestSHA2, &error);
 		if (error) {
-			logErrorExtended("SecTransformSetAttribute DigestType", error);
+			logFreeErrorExtended("SecTransformSetAttribute DigestType", error);
 			result = -22;
 			break;
 		}
@@ -284,14 +543,14 @@ bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, i
 		cfSize = CFNumberCreate(NULL, kCFNumberSInt32Type, &size);
 		SecTransformSetAttribute(verifier, kSecDigestLengthAttribute, cfSize, &error);
 		if (error) {
-			logErrorExtended("SecTransformSetAttribute DigestLength", error);
+			logFreeErrorExtended("SecTransformSetAttribute DigestLength", error);
 			result = -23;
 			break;
 		}
 
 		CFTypeRef verifyResult = SecTransformExecute(verifier, &error);
 		if (error) {
-			logErrorExtended("SecTransformExecute", error);
+			logFreeErrorExtended("SecTransformExecute", error);
 			result = -24;
 			break;
 		}
@@ -299,9 +558,6 @@ bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, i
 		result = (verifyResult == kCFBooleanTrue);
 	} while(0);
 
-	if (error) {
-		CFRelease(error);
-	}
 	if (cfSize) {
 		CFRelease(cfSize);
 	}
@@ -319,57 +575,56 @@ PUBKEY_TYPE Crypto::loadPubKey(const char *filename) {
 	CFURLRef url = NULL;
 	CFReadStreamRef cfrs = NULL;
 	SecTransformRef readTransform = NULL;
-	CFErrorRef error = NULL;
 	CFArrayRef temparray = NULL;
 	do {
 		url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-				(UInt8*) filename, strlen(filename), false);
+													  (UInt8*) filename, strlen(filename), false);
 		if (url == NULL) {
-			P_ERROR("CFURLCreateFromFileSystemRepresentation failed.");
+			logError("CFURLCreateFromFileSystemRepresentation failed.");
 			break;
 		}
 
 		cfrs = CFReadStreamCreateWithFile(kCFAllocatorDefault, url);
 		if (cfrs == NULL) {
-			P_ERROR("CFReadStreamCreateWithFile failed");
+			logError("CFReadStreamCreateWithFile failed");
 			break;
 		}
 
 		readTransform = SecTransformCreateReadTransformWithReadStream(cfrs);
 		if (readTransform == NULL) {
-			P_ERROR("SecTransformCreateReadTransformWithReadStream failed");
+			logError("SecTransformCreateReadTransformWithReadStream failed");
 			break;
 		}
-
+		CFErrorRef error = NULL;
 		keyData = (CFDataRef) SecTransformExecute(readTransform, &error);
 		if (keyData == NULL) {
-			P_ERROR("SecTransformExecute failed to get keyData");
+			logError("SecTransformExecute failed to get keyData");
 			break;
 		}
 		if (error) {
-			logErrorExtended("SecTransformExecute", error);
+			logFreeErrorExtended("SecTransformExecute", error);
 			break;
 		}
 
 		SecExternalItemType itemType = kSecItemTypePublicKey;
 		SecExternalFormat externalFormat = kSecFormatPEMSequence;
 		OSStatus oserr = SecItemImport(keyData,
-						   NULL, // filename or extension
-						   &externalFormat, // See SecExternalFormat for details
-						   &itemType, // item type
-						   0, // See SecItemImportExportFlags for details, Note that PEM formatting
-							  // is determined internally via inspection of the incoming data, so
-							  // the kSecItemPemArmour flag is ignored.
-						   NULL, //&params,
-						   NULL, // Don't import into a keychain
-						   &temparray);
+									   NULL, // filename or extension
+									   &externalFormat, // See SecExternalFormat for details
+									   &itemType,
+									   0, // See SecItemImportExportFlags for details, Note that PEM formatting
+									   // is determined internally via inspection of the incoming data, so
+									   // the kSecItemPemArmour flag is ignored.
+									   NULL,
+									   NULL, // Don't import into a keychain
+									   &temparray);
 		if (oserr) {
 			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
-			P_ERROR("SecItemImport: " << CFStringGetCStringPtr(str,kCFStringEncodingUTF8));
+			logError(string("SecItemImport: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
 			CFRelease(str);
 			break;
 		}
-		pubKey = (SecKeyRef)CFArrayGetValueAtIndex(temparray, 0);
+		pubKey = (SecKeyRef) CFArrayGetValueAtIndex(temparray, 0);
 		CFRetain(pubKey); //bump ref count, now we own this and need to release it eventually
 	} while (0);
 
@@ -390,9 +645,6 @@ PUBKEY_TYPE Crypto::loadPubKey(const char *filename) {
 	if (url) {
 		CFRelease(url);
 	}
-	if (error) {
-		CFRelease(error);
-	}
 
 	return pubKey;
 }
@@ -403,22 +655,23 @@ void Crypto::freePubKey(PUBKEY_TYPE pubKey) {
 	}
 }
 
-void Crypto::logErrorExtended(string prefix, CFErrorRef error) {
+void Crypto::logFreeErrorExtended(string prefix, CFErrorRef &error) {
 	if (error) {
-		CFStringRef description = CFErrorCopyDescription((CFErrorRef)error);
-		CFStringRef failureReason = CFErrorCopyFailureReason((CFErrorRef)error);
-		CFStringRef recoverySuggestion = CFErrorCopyRecoverySuggestion((CFErrorRef)error);
+		CFStringRef description = CFErrorCopyDescription((CFErrorRef) error);
+		CFStringRef failureReason = CFErrorCopyFailureReason((CFErrorRef) error);
+		CFStringRef recoverySuggestion = CFErrorCopyRecoverySuggestion((CFErrorRef) error);
 
-		P_ERROR(prefix
-				<< ": "<< CFStringGetCStringPtr(description, kCFStringEncodingUTF8)
-				<< "; "<< CFStringGetCStringPtr(failureReason, kCFStringEncodingUTF8)
-				<< "; "<< CFStringGetCStringPtr(recoverySuggestion, kCFStringEncodingUTF8)
+		logError(prefix +
+				": " + CFStringGetCStringPtr(description, kCFStringEncodingUTF8) +
+				"; " + CFStringGetCStringPtr(failureReason, kCFStringEncodingUTF8) +
+				"; " + CFStringGetCStringPtr(recoverySuggestion, kCFStringEncodingUTF8)
 				);
 
 		CFRelease(recoverySuggestion);
 		CFRelease(failureReason);
 		CFRelease(description);
 		CFRelease(error);
+		error = NULL;
 	}
 }
 
@@ -432,17 +685,191 @@ Crypto::~Crypto() {
 	EVP_cleanup();
 }
 
-void Crypto::generateAndAppendNonce(string &nonce) {
+bool Crypto::generateAndAppendNonce(string &nonce) {
 	nonce.append(toString(SystemTime::getUsec()));
 
 	int rndLen = 16;
 	unsigned char rndChars[rndLen];
-	RAND_bytes(rndChars, rndLen);
+
+	if (1 != RAND_bytes(rndChars, rndLen)) {
+		logErrorExtended("RAND_bytes failed for nonce");
+		return false;
+	}
 
 	char rndChars64[rndLen * 2];
 	modp_b64_encode(rndChars64, (const char *) rndChars, rndLen);
 
 	nonce.append(rndChars64);
+	return true;
+}
+
+bool Crypto::encryptAES256(char *dataChars, size_t dataLen, AESEncResult &aesEnc) {
+	assert(dataLen > 0 && dataChars != NULL);
+
+	aesEnc.encrypted = NULL;
+	aesEnc.key = NULL;
+	aesEnc.iv = NULL;
+
+	bool result = false;
+	EVP_CIPHER_CTX *aesEncryptContext = NULL;
+
+	do {
+		// 1. Generate random key (secret) and init vector to be used for the encryption
+		aesEnc.keyLen = AES_KEY_BYTESIZE;
+		aesEnc.key = (unsigned char*) OPENSSL_malloc(aesEnc.keyLen);
+		if (aesEnc.key == NULL) {
+			logErrorExtended("OPENSSL_malloc failed");
+			break;
+		}
+
+		aesEnc.ivLen = AES_CBC_IV_BYTESIZE;
+		aesEnc.iv = (unsigned char*) malloc(aesEnc.ivLen); // not secret
+		if (aesEnc.iv == NULL) {
+			logError("malloc for IV failed");
+			break;
+		}
+
+		if (1 != RAND_bytes(aesEnc.key, aesEnc.keyLen)) {
+			logErrorExtended("RAND_bytes failed for AES key");
+			break;
+		}
+		if (1 != RAND_bytes(aesEnc.iv, aesEnc.ivLen)) {
+			logErrorExtended("RAND_bytes failed for IV");
+			break;
+		}
+
+		// 2. Get ready to encrypt
+		aesEncryptContext = EVP_CIPHER_CTX_new();
+		if (aesEncryptContext == NULL) {
+			logErrorExtended("EVP_CIPHER_CTX_new failed");
+			break;
+		}
+
+		aesEnc.encrypted = (unsigned char*) malloc(dataLen + AES_BLOCK_SIZE); // not secret
+		if (aesEnc.encrypted == NULL) {
+			logError("malloc for encryptedChars failed " + toString(dataLen + AES_BLOCK_SIZE));
+			break;
+		}
+
+		// 3. Let's go
+		if (1 != EVP_EncryptInit_ex(aesEncryptContext, EVP_aes_256_cbc(), NULL, aesEnc.key, aesEnc.iv)) {
+			logErrorExtended("EVP_EncryptInit_ex failed");
+			break;
+		}
+
+		size_t blockLength = 0;
+		size_t writeIdx = 0;
+		if (1 != EVP_EncryptUpdate(aesEncryptContext, aesEnc.encrypted + writeIdx, (int *) &blockLength, (unsigned char*) dataChars, dataLen)) {
+			logErrorExtended("EVP_EncryptUpdate failed");
+			break;
+		}
+		writeIdx += blockLength;
+
+		if (1 != EVP_EncryptFinal_ex(aesEncryptContext, aesEnc.encrypted + writeIdx, (int *) &blockLength)) {
+			logErrorExtended("EVP_EncryptFinal_ex failed");
+			break;
+		}
+		writeIdx += blockLength;
+		aesEnc.encryptedLen = writeIdx;
+
+		result = true;
+	} while(0);
+
+	if (!result) {
+		// convenience: free the result if it's not valid anyway
+		freeAESEncrypted(aesEnc);
+	}
+
+	if (aesEncryptContext != NULL) {
+		EVP_CIPHER_CTX_free(aesEncryptContext);
+	}
+
+	return result;
+}
+
+void Crypto::freeAESEncrypted(AESEncResult &aesEnc) {
+	if (aesEnc.encrypted != NULL) {
+		free(aesEnc.encrypted);
+		aesEnc.encrypted = NULL;
+	}
+	if (aesEnc.iv != NULL) {
+		free(aesEnc.iv);
+		aesEnc.iv = NULL;
+	}
+
+	// Secret parts were allocated differently
+	if (aesEnc.key != NULL) {
+		OPENSSL_free(aesEnc.key);
+		aesEnc.key = NULL;
+	}
+}
+
+bool Crypto::encryptRSA(unsigned char *dataChars, size_t dataLen,
+		string encryptPubKeyPath, unsigned char **encryptedCharsPtr, size_t &encryptedLen) {
+	RSA *rsaPubKey = NULL;
+	EVP_PKEY *rsaPubKeyEVP = NULL;
+	EVP_PKEY_CTX *ctx;
+	bool result = false;
+
+	do {
+		// 1. Get the RSA public key to encrypt with
+		rsaPubKey = loadPubKey(encryptPubKeyPath.c_str());
+		if (rsaPubKey == NULL) {
+			logError("Failed to load public key at " + encryptPubKeyPath);
+			break;
+		}
+
+		rsaPubKeyEVP = EVP_PKEY_new();
+		if (1 != EVP_PKEY_assign_RSA(rsaPubKeyEVP, rsaPubKey)) {
+			logErrorExtended("EVP_PKEY_assign_RSA");
+			freePubKey(rsaPubKey); // since it's not tied to EVP key yet
+			break;
+		}
+
+		// 2. Prepare for encryption
+		ctx = EVP_PKEY_CTX_new(rsaPubKeyEVP, NULL);
+		if (ctx == NULL) {
+			logErrorExtended("EVP_PKEY_CTX_new");
+			break;
+		}
+		if (1 != EVP_PKEY_encrypt_init(ctx)) {
+			logErrorExtended("EVP_PKEY_encrypt_init");
+			break;
+		}
+		if (1 != EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING)) {
+			logErrorExtended("EVP_PKEY_CTX_set_rsa_padding");
+			break;
+		}
+
+		// 3. First encrypt to get encryptedLen
+		if (1 != EVP_PKEY_encrypt(ctx, NULL, &encryptedLen, (unsigned char *) dataChars, dataLen)) {
+			logErrorExtended("EVP_PKEY_encrypt (first)");
+			break;
+		}
+
+		*encryptedCharsPtr = (unsigned char *) malloc(encryptedLen); // not secret
+		if (*encryptedCharsPtr == NULL) {
+			logError("malloc for encryptedChars failed" + toString(encryptedLen));
+			break;
+		}
+
+		if (1 != EVP_PKEY_encrypt(ctx, (unsigned char *) *encryptedCharsPtr, &encryptedLen,
+				(unsigned char *) dataChars, AES_KEY_BYTESIZE)) {
+			logErrorExtended("EVP_PKEY_encrypt (second)");
+			break;
+		}
+
+		result = true;
+	} while (0);
+
+	if (ctx != NULL) {
+		EVP_PKEY_CTX_free(ctx);
+	}
+	if (rsaPubKeyEVP != NULL) {
+		EVP_PKEY_free(rsaPubKeyEVP); // also frees the rsaPubKey
+	}
+
+	return result;
 }
 
 bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, int signatureLen, string data) {
@@ -454,7 +881,7 @@ bool Crypto::verifySignature(string signaturePubKeyPath, char *signatureChars, i
 	do {
 		rsaPubKey = loadPubKey(signaturePubKeyPath.c_str());
 		if (rsaPubKey == NULL) {
-			P_ERROR("Failed to load public key at " << signaturePubKeyPath);
+			logError("Failed to load public key at " + signaturePubKeyPath);
 			break;
 		}
 
@@ -527,5 +954,9 @@ void Crypto::logErrorExtended(string prefix) {
 }
 
 #endif
+
+void Crypto::logError(string error) {
+	P_ERROR(error);
+}
 
 } // namespace Passenger
