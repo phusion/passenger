@@ -38,7 +38,7 @@ var instrumentModulePaths = [ 'phusion_passenger/log_express', 'phusion_passenge
 var instrumentedModules = [];
 
 module.isApplicationLoader = true; // https://groups.google.com/forum/#!topic/compoundjs/4txxkNtROQg
-GLOBAL.PhusionPassenger = exports.PhusionPassenger = new EventEmitter();
+global.PhusionPassenger = exports.PhusionPassenger = new EventEmitter();
 var stdinReader = new LineReader(process.stdin);
 beginHandshake();
 readInitializationHeader();
