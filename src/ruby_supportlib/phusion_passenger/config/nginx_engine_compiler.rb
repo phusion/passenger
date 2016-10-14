@@ -55,10 +55,12 @@ module PhusionPassenger
         result << "--without-http_fastcgi_module " \
           "--without-http_scgi_module " \
           "--without-http_uwsgi_module " \
+          "--with-http_ssl_module " \
+          "--with-http_v2_module " \
+          "--with-http_realip_module " \
           "--with-http_gzip_static_module " \
           "--with-http_stub_status_module " \
-          "--with-http_ssl_module " \
-          "--with-http_realip_module"
+          "--with-http_addition_module"
 
         result
       end

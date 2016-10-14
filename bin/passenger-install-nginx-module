@@ -547,8 +547,11 @@ private
 
     command = "sh ./configure --prefix='#{prefix}' "
     command << "--with-http_ssl_module "
+    command << "--with-http_v2_module "
+    command << "--with-http_realip_module "
     command << "--with-http_gzip_static_module "
     command << "--with-http_stub_status_module "
+    command << "--with-http_addition_module "
     command << "--with-cc-opt=#{Shellwords.escape extra_cflags} "
     command << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
     if @pcre_source_dir

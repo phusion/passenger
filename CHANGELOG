@@ -8,6 +8,7 @@ Next version (not yet released)
  * Fixes unaligned memory access in base64 decoder on platforms that have strict aliasing requirements (non x86/x86_64). Closes GH-1646.
  * Introduces daily Passenger security update check to warn (error log) if there are newer Passenger versions with important security fixes (describing what was discovered, what is affected, which version has the fix).
  * Fixes compilation on Linux when a non-glibc C library is in use. Closes GH-1870.
+ * `passenger-install-nginx-module` and the standalone compiler now add the http v2, realip and addition module flags for Nginx (just like the APT/RPM/autobuilder already had). Closes GH-1788. 
 
 
 Release 5.0.30
