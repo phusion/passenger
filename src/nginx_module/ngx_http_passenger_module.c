@@ -256,6 +256,7 @@ start_watchdog(ngx_cycle_t *cycle) {
 
     psg_variant_map_set_int    (params, "web_server_control_process_pid", getpid());
     psg_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
+    psg_variant_map_set        (params, "server_version", NGINX_VERSION, strlen(NGINX_VERSION));
     psg_variant_map_set_bool   (params, "multi_app", 1);
     psg_variant_map_set_bool   (params, "load_shell_envvars", 1);
     psg_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);

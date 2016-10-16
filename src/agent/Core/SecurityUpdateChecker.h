@@ -50,6 +50,8 @@ private:
 	string clientCertPath; // client cert (PKCS#12), checked by server
 	string serverPubKeyPath; // for checking signature
 	string proxyAddress;
+	string serverIntegration;
+	string serverVersion;
 	CurlProxyInfo proxyInfo;
 	Crypto *crypto;
 
@@ -259,14 +261,19 @@ public:
 
 	/**
 	 * proxy is optional and should be in the form: scheme://user:password@proxy_host:proxy_port
+	 *
+	 * serverIntegration should be one of { nginx, apache, standalone nginx, standalone builtin }, whereby
+	 * serverVersion is the version of Nginx or Apache, if relevant (otherwise empty)
 	 */
-	SecurityUpdateChecker(ResourceLocator locator, string proxy) {
+	SecurityUpdateChecker(const ResourceLocator &locator, const string &proxy, const string &serverIntegration, const string &serverVersion) {
 		crypto = new Crypto();
 		updateCheckThread = NULL;
 		checkIntervalSec = 0;
 		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.p12";
 		serverPubKeyPath = locator.getResourcesDir() + "/update_check_server_pubkey.pem";
 		proxyAddress = proxy;
+		this->serverIntegration = serverIntegration;
+		this->serverVersion = serverVersion;
 		try {
 			proxyInfo = prepareCurlProxy(proxyAddress);
 		} catch (const ArgumentException &e) {
@@ -360,7 +367,10 @@ public:
 		// 1. Assemble data to send
 		Json::Value bodyJson;
 
-		bodyJson["version"] = PASSENGER_VERSION;
+		bodyJson["passenger_version"] = PASSENGER_VERSION;
+
+		bodyJson["server_integration"] = serverIntegration;
+		bodyJson["server_version"] = serverVersion;
 
 		string nonce;
 		if (!fillNonce(nonce)) {

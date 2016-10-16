@@ -737,7 +737,16 @@ initializeSecurityUpdateChecker() {
 	if (options.getBool("disable_security_update_check", false, false)) {
 		P_NOTICE("Security update check disabled.");
 	} else {
-		workingObjects->securityUpdateChecker = new SecurityUpdateChecker(workingObjects->resourceLocator, options.get("security_update_check_proxy", false));
+		string proxy = options.get("security_update_check_proxy", false);
+
+		string serverIntegration = options.get("integration_mode"); // nginx / apache / standalone
+		string standaloneEngine = options.get("standalone_engine", false); // nginx / builtin
+		if (!standaloneEngine.empty()) {
+			serverIntegration.append(" " + standaloneEngine);
+		}
+		string serverVersion = options.get("server_version", false); // not set in case of standalone / builtin
+
+		workingObjects->securityUpdateChecker = new SecurityUpdateChecker(workingObjects->resourceLocator, proxy, serverIntegration, serverVersion);
 		workingObjects->securityUpdateChecker->start(24 * 60 * 60);
 	}
 }

@@ -1274,10 +1274,18 @@ public:
 			const char *webServerDesc = ap_get_server_version();
 		#endif
 
+		ap_version_t version;
+		ap_get_server_revision(&version);
+		string webServerVersion = toString(version.major) + "." + toString(version.minor) + "." + toString(version.patch);
+		if (version.add_string != NULL) {
+			webServerVersion.append(version.add_string);
+		}
+
 		VariantMap params;
 		params
 			.setPid ("web_server_control_process_pid", getpid())
 			.set    ("server_software", webServerDesc)
+			.set    ("server_version", webServerVersion)
 			.setBool("multi_app", true)
 			.setBool("load_shell_envvars", true)
 			.set    ("file_descriptor_log_file", (serverConfig.fileDescriptorLogFile == NULL)
