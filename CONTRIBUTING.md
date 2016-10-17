@@ -29,7 +29,7 @@ You can contribute in one of the following areas:
  * Community support.
  * Code.
 
-We require contributors to sign our [contributor agreement](http://www.phusion.nl/forms/contributor_agreement) before we can merge their patches.
+We require contributors to sign our [contributor agreement](https://www.phusion.nl/contributor) before we can merge their patches.
 
 Please submit patches in the form of a Github pull request or as a patch on the [bug tracker](https://github.com/phusion/passenger/issues). Pull requests are preferred and generally get more attention because Github has better email notifications and better discussion capabilities.
 
