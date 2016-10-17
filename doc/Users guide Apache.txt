@@ -208,6 +208,10 @@ This documentation has moved. Please visit https://www.phusionpassenger.com/libr
 
 This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengerdefaultgroup
 
+==== PassengerShowVersionInHeader <on|off> ====
+
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passenger_show_version_in_header
+
 [[PassengerFriendlyErrorPages]]
 ==== PassengerFriendlyErrorPages <on|off> ====
 

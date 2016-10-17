@@ -379,6 +379,45 @@ describe "Apache 2 module" do
       get('/').should == "oh hai"
     end
 
+    describe "PassengerShowVersionInHeader" do
+      before :each do
+        @stub3 = RackStub.new('rack')
+        @stub3_url_root = "http://7.passenger.test:#{@apache2.port}"
+        @apache2.set_vhost('7.passenger.test', "#{@stub3.full_app_root}/public") do |vhost|
+          vhost << "PassengerShowVersionInHeader " + option
+        end
+
+        @apache2.start
+        @server = @stub3_url_root
+      end
+
+      after :each do
+        @stub3.destroy
+      end
+
+      context "set to on" do
+        let(:option) { "on" }
+
+        it "adds version to header" do
+          response = get_response('/')
+
+          response["X-Powered-By"].should include("Phusion Passenger")
+          response["X-Powered-By"].should include(PhusionPassenger::VERSION_STRING)
+        end
+      end
+
+      context "set to off" do
+        let(:option) { "off" }
+
+        it "filters version from header" do
+          response = get_response('/')
+
+          response["X-Powered-By"].should include("Phusion Passenger")
+          response["X-Powered-By"].should_not include(PhusionPassenger::VERSION_STRING)
+        end
+      end
+    end
+
     describe "PassengerAppRoot" do
       before :each do
         @server = @stub_url_root

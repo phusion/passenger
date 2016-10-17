@@ -767,7 +767,7 @@ Controller::constructHeaderBuffersForResponse(Request *req, struct iovec *buffer
 		PUSH_STATIC_BUFFER("\r\n");
 	}
 
-	if (showVersionInHeader) {
+	if (req->showVersionInHeader) {
 		#ifdef PASSENGER_IS_ENTERPRISE
 			PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME " Enterprise " PASSENGER_VERSION "\r\n\r\n");
 		#else
