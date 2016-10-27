@@ -43,6 +43,13 @@ define 'apache2-dev' do
     end
   end
 
+  on :ubuntu do
+    if `#{PlatformInfo::uname_command} -a`.include? 'precise'
+      apt_get_install "apache2-threaded-dev"
+    else
+      apt_get_install "apache2-dev"
+    end
+  end
   on :debian do
     apt_get_install "apache2-threaded-dev"
   end
