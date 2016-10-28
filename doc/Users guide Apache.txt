@@ -210,7 +210,7 @@ This documentation has moved. Please visit https://www.phusionpassenger.com/libr
 
 ==== PassengerShowVersionInHeader <on|off> ====
 
-This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passenger_show_version_in_header
+This documentation has moved. Please visit https://www.phusionpassenger.com/library/config/apache/reference/#passengershowversioninheader
 
 [[PassengerFriendlyErrorPages]]
 ==== PassengerFriendlyErrorPages <on|off> ====
