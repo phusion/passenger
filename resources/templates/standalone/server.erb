@@ -53,6 +53,7 @@ passenger_enabled on;
 <%= nginx_option(app, :friendly_error_pages) %>
 <%= nginx_option(app, :abort_websockets_on_process_shutdown) %>
 <%= nginx_option(app, :force_max_concurrent_requests_per_process) %>
+<%= nginx_option(app, :max_requests) %>
 
 <%= nginx_option(app, :rolling_restarts) %>
 <%= nginx_option(app, :resist_deployment_errors) %>

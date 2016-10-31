@@ -148,9 +148,11 @@ coreUsage() {
 	printf("                            requests per process\n");
 	printf("      --min-instances N     Minimum number of application processes. Default: 1\n");
 	printf("      --memory-limit MB     Restart application processes that go over the\n");
-    printf("                            given memory limit (Enterprise only)\n");
+	printf("                            given memory limit (Enterprise only)\n");
 	printf("\n");
 	printf("Request handling options (optional):\n");
+	printf("      --max-requests        Restart application processes that have handled\n");
+	printf("                            the specified maximum number of requests\n");
 	printf("      --max-request-time    Abort requests that take too much time (Enterprise\n");
 	printf("                            only)\n");
 	printf("      --max-request-queue-size NUMBER\n");
@@ -328,6 +330,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 	} else if (p.isFlag(argv[i], '\0', "--disable-friendly-error-pages")) {
 		options.setBool("friendly_error_pages", false);
 		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-requests")) {
+		options.setInt("max_requests", atoi(argv[i + 1]));
+		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-time")) {
 		options.setInt("max_request_time", atoi(argv[i + 1]));
 		i += 2;

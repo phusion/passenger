@@ -1237,6 +1237,12 @@ sanityCheckOptions() {
 			ok = false;
 		#endif
 	}
+	if (options.has("max_requests")) {
+		if (options.getInt("max_requests", false, 0) < 0) {
+			fprintf(stderr, "ERROR: the value passed to --max-requests must be at least 0.\n");
+			ok = false;
+		}
+	}
 	if (options.has("max_request_time")) {
 		if (options.getInt("max_request_time", false, 0) < 1) {
 			fprintf(stderr, "ERROR: the value passed to --max-request-time must be at least 1.\n");

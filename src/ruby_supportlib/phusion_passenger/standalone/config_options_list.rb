@@ -387,6 +387,13 @@ module PhusionPassenger
     # Request handling configuration options
     REQUEST_HANDLING_CONFIG_SPECS = [
       {
+        :name      => :max_requests,
+        :type      => :integer,
+        :min       => 0,
+        :desc      => "Restart application processes that have handled\n" \
+                      "the specified maximum number of requests"
+      },
+      {
         :name      => :max_request_time,
         :type      => :integer,
         :type_desc => 'SECONDS',

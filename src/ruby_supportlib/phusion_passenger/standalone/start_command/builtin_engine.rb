@@ -159,6 +159,7 @@ module PhusionPassenger
           add_param(command, :max_request_queue_size, "--max-request-queue-size")
           add_enterprise_param(command, :concurrency_model, "--concurrency-model")
           add_enterprise_param(command, :thread_count, "--app-thread-count")
+          add_param(command, :max_requests, "--max-requests")
           add_enterprise_param(command, :max_request_time, "--max-request-time")
           add_enterprise_param(command, :memory_limit, "--memory-limit")
           add_enterprise_flag_param(command, :rolling_restarts, "--rolling-restarts")
