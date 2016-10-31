@@ -55,8 +55,9 @@ Crypto::~Crypto() {
 
 CFDictionaryRef Crypto::createQueryDict(const char *label) {
 	if (kSecClassIdentity != NULL) {
-		CFTypeRef keys[4];
-		CFTypeRef values[4];
+		const size_t size = 5L;
+		CFTypeRef keys[size];
+		CFTypeRef values[size];
 		CFDictionaryRef queryDict;
 		CFStringRef cfLabel = CFStringCreateWithCString(NULL, label,
 														kCFStringEncodingUTF8);
@@ -69,10 +70,12 @@ CFDictionaryRef Crypto::createQueryDict(const char *label) {
 		values[2] = kSecMatchLimitOne; /* one is enough, thanks */
 		keys[2] = kSecMatchLimit;
 		/* identity searches need a SecPolicyRef in order to work */
-		values[3] = SecPolicyCreateSSL(false, cfLabel);
+		values[3] = SecPolicyCreateSSL(false, NULL);
 		keys[3] = kSecMatchPolicy;
+		values[4] = cfLabel;
+		keys[4] = kSecMatchSubjectWholeString;
 		queryDict = CFDictionaryCreate(NULL, (const void **) keys,
-									   (const void **) values, 4L,
+									   (const void **) values, size,
 									   &kCFCopyStringDictionaryKeyCallBacks,
 									   &kCFTypeDictionaryValueCallBacks);
 		CFRelease(values[3]);
@@ -87,11 +90,11 @@ OSStatus Crypto::lookupKeychainItem(const char *label, SecIdentityRef *oIdentity
 	OSStatus status = errSecItemNotFound;
 
 	CFDictionaryRef queryDict = createQueryDict(label);
-
-	/* Do we have a match? */
-	status = SecItemCopyMatching(queryDict, (CFTypeRef *) oIdentity);
-	CFRelease(queryDict);
-
+	if (queryDict) {
+		/* Do we have a match? */
+		status = SecItemCopyMatching(queryDict, (CFTypeRef *) oIdentity);
+		CFRelease(queryDict);
+	}
 	return status;
 }
 
@@ -141,7 +144,11 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 		/* Retain the identity; we don't care about any other data... */
 		CFRetain(tempIdentity);
 		*oIdentity = tempIdentity;
-		CFRelease(identityAndTrust);
+		//CFRelease(identityAndTrust);// is released with items array
+	} else {
+		CFStringRef str = SecCopyErrorMessageString(status, NULL);
+		logError(string("Loading Passenger Cert failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) );
+		CFRelease(str);
 	}
 
 	if (items) {
@@ -163,7 +170,8 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 
 void Crypto::killKey(const char *cLabel) {
 	SecIdentityRef id = NULL;
-	if (lookupKeychainItem(cLabel, &id) != errSecItemNotFound) {
+	OSStatus status = lookupKeychainItem(cLabel, &id);
+	if (status != errSecItemNotFound) {
 
 		CFArrayRef itemList = CFArrayCreate(NULL, (const void **) &id, 1, NULL);
 		CFTypeRef keys[]   = { kSecClass,  kSecMatchItemList,  kSecMatchLimit };
@@ -179,6 +187,10 @@ void Crypto::killKey(const char *cLabel) {
 		}
 		CFRelease(dict);
 		CFRelease(itemList);
+	} else {
+		CFStringRef str = SecCopyErrorMessageString(status, NULL);
+		logError(string("Finding Passenger Cert failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) );
+		CFRelease(str);
 	}
 }
 

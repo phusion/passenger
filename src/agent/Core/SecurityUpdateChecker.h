@@ -205,10 +205,7 @@ private:
 		}
 #if BOOST_OS_MACOS
 		crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL);
-		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERT, CLIENT_CERT_LABEL))) {
-			return code;
-		}
-#else
+#endif
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERT, clientCertPath.c_str()))) {
 			return code;
 		}
@@ -218,7 +215,6 @@ private:
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERTPASSWD, CLIENT_CERT_PWD))) {
 		 	return code;
 		}
-#endif
 
 		// These should be on by default, but make sure.
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L))) {

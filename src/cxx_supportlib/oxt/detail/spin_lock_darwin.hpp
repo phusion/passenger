@@ -23,6 +23,8 @@
  * THE SOFTWARE.
  */
 
+#define OSSPINLOCK_DEPRECATED 0
+
 #include <libkern/OSAtomic.h>
 #include <boost/noncopyable.hpp>
 
