@@ -38,11 +38,11 @@ PhusionPassenger.locate_directories
 require 'digest/sha2'
 require 'optparse'
 require 'fileutils'
+require 'tmpdir'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 PhusionPassenger.require_passenger_lib 'abstract_installer'
 PhusionPassenger.require_passenger_lib 'utils/terminal_choice_menu'
-PhusionPassenger.require_passenger_lib 'utils/tmpio'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
 DOWNLOAD_OPTION = {
@@ -566,19 +566,21 @@ private
 
   def pcre_is_installed?
     if @pcre_is_installed.nil?
-      @pcre_is_installed = begin
-        File.open('/tmp/passenger-check.c', 'w') do |f|
-          f.puts("#include <pcre.h>")
+      Dir.mktmpdir do |safe_tmpdir|
+        @pcre_is_installed = begin
+          File.open("#{safe_tmpdir}/passenger-check.c", 'w') do |f|
+            f.puts("#include <pcre.h>")
+          end
+          Dir.chdir("#{safe_tmpdir}") do
+            # Nginx checks for PCRE in multiple places...
+            system("(gcc -I/usr/local/include -I/usr/include/pcre " <<
+              "-I/usr/pkg/include -I/opt/local/include " <<
+              "-c passenger-check.c) >/dev/null 2>/dev/null")
+          end
+        ensure
+          File.unlink("#{safe_tmpdir}/passenger-check.c") rescue nil
+          File.unlink("#{safe_tmpdir}/passenger-check.o") rescue nil
         end
-        Dir.chdir('/tmp') do
-          # Nginx checks for PCRE in multiple places...
-          system("(gcc -I/usr/local/include -I/usr/include/pcre " <<
-            "-I/usr/pkg/include -I/opt/local/include " <<
-            "-c passenger-check.c) >/dev/null 2>/dev/null")
-        end
-      ensure
-        File.unlink('/tmp/passenger-check.c') rescue nil
-        File.unlink('/tmp/passenger-check.o') rescue nil
       end
     end
     return @pcre_is_installed

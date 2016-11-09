@@ -16,6 +16,7 @@ Next version (not yet released)
  * Fixes an issue where passenger-config couldn't restart an app if the TMPDIR variable was set to /tmp
  * `passenger-install-apache-module` now suggests the correct apache package on Ubuntu Xenial. Closes GH-1884.
  * [Standalone] The TempDirToucher will now spend most of its time with reduced privileges, except when it's actively touching files. This allows it to be killed when Passenger is quit in most circumstances. Closes GH-1678.
+ * Fixes a file overwrite vulnerability caused by a predictable temporary file being written by `passenger-install-nginx-module`. Thanks to Jeremy Evans for reporting this.
  * [Standalone] Fixes starting Passenger as a non-extant user. Closes GH-1849.
  * Improved look of the error pages for failing to spawn an application (development & production mode), and Error ID is now also shown in production mode.
  * [Standalone] Enable ipv6 support by default in builtin nginx. Closes GH-1873.
