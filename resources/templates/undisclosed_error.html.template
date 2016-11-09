@@ -1,55 +1,56 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>We're sorry, but something went wrong (500)</title>
-  <style type="text/css">
-    body { background-color: #fff; color: #666; text-align: center; font-family: arial, sans-serif; }
-    .dialog {
-      width: 25em;
-      padding: 0 4em;
-      margin: 4em auto 0 auto;
-      border: 1px solid #ccc;
-      border-right-color: #999;
-      border-bottom-color: #999;
-    }
-    h1 { font-size: 100%; color: #f00; line-height: 1.5em; }
-    #operator_info_panel {
-      width: 27em;
-      margin: 4em auto 0 auto;
-      line-height: 1.2em;
-    }
-    #show_operator_info { text-decoration: none; color: #99f; font-size: smaller; }
-    #show_operator_info:hover { text-decoration: underline; }
-    #operator_info { color: #444; text-align: justify; }
-  </style>
-</head>
-
-<body>
-  <div class="dialog">
-    <h1>We're sorry, but something went wrong.</h1>
-    <p>We've been notified about this issue and we'll take a look at it shortly.</p>
-  </div>
-  <div id="operator_info_panel">
-    <a id="show_operator_info" href="javascript:void(showOperatorInfo())">Information for the administrator of this website</a>
-    <div id="operator_info" style="display: none">
-      <p>The {{PROGRAM_NAME}} application server encountered an error while starting your web application.
-        Because you are running this web application in staging or production mode, the details of the error
-        have been omitted from this web page for security reasons.</p>
-      <p><strong>Please read <a href="https://www.phusionpassenger.com/library/admin/log_file/">the Passenger log file</a> to find the details of the error.</strong></p>
-      <p>Alternatively, you can turn on the "friendly error pages" feature (see below), which will make {{PROGRAM_NAME}} show many details about the error right in the browser.</p>
-      <p>To turn on friendly error pages:</p>
-      <ul>
-        <li><a href="https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_friendly_error_pages">Nginx integration mode</a></li>
-        <li><a href="https://www.phusionpassenger.com/library/config/apache/reference/#passengerfriendlyerrorpages">Apache integration mode</a></li>
-        <li><a href="https://www.phusionpassenger.com/library/config/standalone/reference/#--friendly-error-pages---no-friendly-error-pages-friendly_error_pages">Standalone mode</a></li>
-      </ul>
+  <head>
+    <title>We're sorry, but something went wrong: {{TITLE}}</title>
+    <style type="text/css">
+      {{CSS|raw}}
+    </style>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="generator" content="Phusion Passenger">
+  </head>
+  <body>
+    <header>
+      <div class="column">
+        <svg width="50" height="50" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path d="m731.234002 153.838666v-18.841339c0-4.417534-3.577416-7.997327-7.990382-7.997327h-6.414571c-4.417012 0-7.990383 3.580525-7.990383 7.997327v18.841339h-18.841339c-4.417534 0-7.997327 3.577416-7.997327 7.990383v6.414571c0 4.417011 3.580525 7.990382 7.997327 7.990382h18.841339v18.841339c0 4.417534 3.577416 7.997328 7.990383 7.997328h6.414571c4.417011 0 7.990382-3.580526 7.990382-7.997328v-18.841339h18.841339c4.417534 0 7.997328-3.577416 7.997328-7.990382v-6.414571c0-4.417012-3.580526-7.990383-7.997328-7.990383z" fill="#f87575" transform="matrix(.70710678 -.70710678 .70710678 .70710678 -593.80455139 424.48059756)"/></svg>
+        <h1>We're sorry, but something went wrong.</h1>
+        <p class="subtitle">The issue has been logged for investigation. Please try again later.</p>
+      </div>
+    </header>
+    <div class="column">
+      <a id="show_operator_info" href="#" onclick="showOperatorInfo()">Technical details for the administrator of this website</a>
+      <div id="operator_info">
+        <div class="left">
+          <h3>Error:</h3>
+          <span class="error">{{TITLE}}</span>
+          <h3>Error ID:</h3>
+          <span class="error">{{ERROR_ID}}</span>
+          <h3>Details:</h3>
+          <p>Web application could not be started by the {{PROGRAM_NAME}} application server.</p>
+          <p class="bold">Please read <a href="https://www.phusionpassenger.com/library/admin/log_file/" class="plain">the Passenger log file</a> (search for the Error ID) to find the details of the error.</p>
+          <p>You can also get a detailed report to appear directly on this page, but for security reasons it is only provided if {{PROGRAM_NAME}} is run with <i>environment</i> set to <i>development</i> and/or with the <i>friendly error pages</i> option set to <i>on</i>.</p>
+          <p>For more information about configuring environment and friendly error pages, see:</p>
+          <ul>
+            <li><a href="https://www.phusionpassenger.com/library/config/nginx/reference/#passenger_friendly_error_pages">Nginx integration mode</a></li>
+            <li><a href="https://www.phusionpassenger.com/library/config/apache/reference/#passengerfriendlyerrorpages">Apache integration mode</a></li>
+            <li><a href="https://www.phusionpassenger.com/library/config/standalone/reference/#--friendly-error-pages---no-friendly-error-pages-friendly_error_pages">Standalone mode</a></li>
+          </ul>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <script>
-    function showOperatorInfo() {
-      document.getElementById('operator_info').style.display = 'block';
-    }
-  </script>
-</body>
+    <footer>
+      <!--
+       You are free to modify the footer as you see fit,
+       but we kindly ask of you to preserve the following
+       text. Thank you.
+       -->
+      <div class="column">
+        This website is powered by <b>Passenger</b>&reg;, a rock-solid, feature-rich web application server that integrates with Apache and Nginx.
+      </div>
+    </footer>
+    <script>
+      function showOperatorInfo() {
+        document.getElementById('operator_info').style.display = 'block';
+      }
+    </script>
+  </body>
 </html>

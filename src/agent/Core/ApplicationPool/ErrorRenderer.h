@@ -100,12 +100,26 @@ public:
 		return Template::apply(readAll(errorLayoutFile), params);
 	}
 
-	string renderWithoutDetails() const {
+	string renderWithoutDetails(const SpawnException *e = NULL) const {
 		string templateFile = templatesDir + "/undisclosed_error.html.template";
+		string css = readAll(cssFile);
 		StringMap<StaticString> params;
 
 		params.set("PROGRAM_NAME", PROGRAM_NAME);
+		params.set("CSS", css);
+		params.set("TITLE", "Web application could not be started");
 
+		if (e != NULL) {
+			const map<string, string> &annotations = e->getAnnotations();
+			map<string, string>::const_iterator it = annotations.find("error_id");
+			if (it != annotations.end()) {
+				params.set("ERROR_ID", it->second);
+			} else {
+				params.set("ERROR_ID", "not available");
+			}
+		} else {
+			params.set("ERROR_ID", "not available");
+		}
 		return Template::apply(readAll(templateFile), params);
 	}
 };

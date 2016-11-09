@@ -362,7 +362,7 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r, const StaticStr
 		}
 	} else {
 		try {
-			data = renderer.renderWithoutDetails();
+			data = renderer.renderWithoutDetails(e);
 		} catch (const SystemException &e2) {
 			SKC_ERROR(client, "Cannot render an error page: " << e2.what() <<
 				"\n" << e2.backtrace());

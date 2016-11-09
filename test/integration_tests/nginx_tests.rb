@@ -291,7 +291,7 @@ describe "Phusion Passenger for Nginx" do
 
     before :each do
       @stub.reset
-      @error_page_signature = /<meta name="generator" content="Phusion Passenger">/
+      @error_page_signature = /<div id="content">/
       File.touch("#{@stub.app_root}/tmp/restart.txt", 1 + rand(100000))
     end
 
