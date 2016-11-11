@@ -55,6 +55,7 @@ module PhusionPassenger
         result << "--without-http_fastcgi_module " \
           "--without-http_scgi_module " \
           "--without-http_uwsgi_module " \
+          "--with-ipv6 " \
           "--with-http_ssl_module " \
           "--with-http_v2_module " \
           "--with-http_realip_module " \
