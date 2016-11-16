@@ -1,6 +1,8 @@
 Release 5.2.1 (Not yet released)
 -------------
 
+ * Allow prespawn to start app when address bound to non-localhost ip.
+
 
 Release 5.2.0
 -------------
