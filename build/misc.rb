@@ -189,6 +189,9 @@ task :compile_app => dependencies do
         LIBBOOST_OXT_LINKARG,
         libev_libs,
         libuv_libs,
+        PlatformInfo.curl_libs,
+        PlatformInfo.zlib_libs,
+        PlatformInfo.crypto_libs,
         PlatformInfo.portability_cxx_ldflags
       ]
     )
