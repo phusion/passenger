@@ -290,17 +290,18 @@ void
 Controller::writeOtherExceptionErrorResponse(Client *client, Request *req, const ExceptionPtr &e) {
 	TRACE_POINT();
 	string typeName;
+	const oxt::tracable_exception &eptr = *e;
 	#ifdef CXX_ABI_API_AVAILABLE
 		int status;
-		char *tmp = abi::__cxa_demangle(typeid(*e).name(), 0, 0, &status);
+		char *tmp = abi::__cxa_demangle(typeid(eptr).name(), 0, 0, &status);
 		if (tmp != NULL) {
 			typeName = tmp;
 			free(tmp);
 		} else {
-			typeName = typeid(*e).name();
+			typeName = typeid(eptr).name();
 		}
 	#else
-		typeName = typeid(*e).name();
+		typeName = typeid(eptr).name();
 	#endif
 
 	const unsigned int exceptionMessageLen = strlen(e->what());
