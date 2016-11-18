@@ -23,12 +23,12 @@
 #  THE SOFTWARE.
 
 # This file uses the cxxcodebuilder API. Learn more at:
-# https://github.com/phusion/passenger/cxxcodebuilder
+# https://github.com/phusion/cxxcodebuilder
 
 require 'phusion_passenger/apache2/config_options'
 
 def main
-  comment copyright_header_for(__FILE__)
+  comment copyright_header_for(__FILE__), 1
 
   separator
 

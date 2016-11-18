@@ -23,7 +23,10 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-comment copyright_header_for(__FILE__)
+# This file uses the cxxcodebuilder API. Learn more at:
+# https://github.com/phusion/cxxcodebuilder
+
+comment copyright_header_for(__FILE__), 1
 
 guard_macros '_PASSENGER_CONSTANTS_H_' do
   comment %q{
