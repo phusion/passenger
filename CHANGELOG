@@ -19,6 +19,7 @@ Next version (not yet released)
  * [Standalone] Fixes starting Passenger as a non-extant user. Closes GH-1849.
  * Improved look of the error pages for failing to spawn an application (development & production mode), and Error ID is now also shown in production mode.
  * [Standalone] Enable ipv6 support by default in builtin nginx. Closes GH-1873.
+ * [Nginx] Updates to APT package builder (Debian & Ubuntu) with fix for www-data to root privilege escalation via log file handling (CVE-2016-1247/USN-3114-1).
 
 
 Release 5.0.30
