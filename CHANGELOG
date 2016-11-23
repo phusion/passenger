@@ -21,6 +21,7 @@ Next version (not yet released)
  * [Standalone] Enable ipv6 support by default in builtin nginx. Closes GH-1873.
  * [Nginx] Updates to APT package builder (Debian & Ubuntu) with fix for www-data to root privilege escalation via log file handling (CVE-2016-1247/USN-3114-1).
  * [Nginx] Updates to RPM package builder (CentOS & RHEL) with fix for 1.10.x system nginx package overriding the nginx from the Passenger repo. Closes GH-1895.
+ * [Nginx] The preferred Nginx version is now 1.10.2 (previously 1.10.1).
 
 
 Release 5.0.30
