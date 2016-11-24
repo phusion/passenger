@@ -1,6 +1,6 @@
 # encoding: binary
 #
-# Copyright (c) 2010-2015 Phusion
+# Copyright (c) 2010-2016 Phusion Holding B.V.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -22,11 +22,10 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 require 'rbconfig'
+PhusionPassenger.require_passenger_lib 'vendor/crash_watch/base'
+PhusionPassenger.require_passenger_lib 'vendor/crash_watch/utils'
 
 module CrashWatch
-  class Error < StandardError
-  end
-
   class GdbNotFound < Error
   end
 
@@ -36,28 +35,28 @@ module CrashWatch
   class GdbController
     class ExitInfo
       attr_reader :exit_code, :signal, :backtrace, :snapshot
-      
+
       def initialize(exit_code, signal, backtrace, snapshot)
         @exit_code = exit_code
         @signal = signal
         @backtrace = backtrace
         @snapshot = snapshot
       end
-      
+
       def signaled?
         !!@signal
       end
     end
-    
+
     END_OF_RESPONSE_MARKER = '--------END_OF_RESPONSE--------'
-    
+
     attr_accessor :debug
 
     def initialize
-      @pid, @in, @out = popen_command(find_gdb, "-n", "-q")
+      @pid, @in, @out = Utils.popen_command(find_gdb, "-n", "-q")
       execute("set prompt ")
     end
-    
+
     def execute(command_string, timeout = nil)
       raise "GDB session is already closed" if !@pid
       puts "gdb write #{command_string.inspect}" if @debug
@@ -86,11 +85,11 @@ module CrashWatch
       end
       result
     end
-    
+
     def closed?
       !@pid
     end
-    
+
     def close
       if !closed?
         begin
@@ -106,7 +105,7 @@ module CrashWatch
         end
       end
     end
-    
+
     def close!
       if !closed?
         @in.close
@@ -116,86 +115,48 @@ module CrashWatch
         @pid = nil
       end
     end
-    
+
     def attach(pid)
       pid = pid.to_s.strip
       raise ArgumentError if pid.empty?
       result = execute("attach #{pid}")
       result !~ /(No such process|Unable to access task|Operation not permitted)/
     end
-    
-    def call(code)
-      result = execute("call #{code}")
-      result =~ /= (.*)$/
-      $1
-    end
-    
+
     def program_counter
       execute("p/x $pc").gsub(/.* = /, '')
     end
-    
+
     def current_thread
       execute("thread") =~ /Current thread is (.+?) /
       $1
     end
-    
+
     def current_thread_backtrace
       execute("bt full").strip
     end
-    
+
     def all_threads_backtraces
       execute("thread apply all bt full").strip
     end
-    
-    def ruby_backtrace
-      filename = "/tmp/gdb-capture.#{@pid}.txt"
-      
-      orig_stdout_fd_copy = call("(int) dup(1)")
-      new_stdout = call(%Q{(void *) fopen("#{filename}", "w")})
-      new_stdout_fd = call("(int) fileno(#{new_stdout})")
-      call("(int) dup2(#{new_stdout_fd}, 1)")
-      
-      # Let's hope stdout is set to line buffered or unbuffered mode...
-      call("(void) rb_backtrace()")
-      
-      call("(int) dup2(#{orig_stdout_fd_copy}, 1)")
-      call("(int) fclose(#{new_stdout})")
-      call("(int) close(#{orig_stdout_fd_copy})")
-      
-      if File.exist?(filename)
-        result = File.read(filename)
-        result.strip!
-        if result.empty?
-          nil
-        else
-          result
-        end
-      else
-        nil
-      end
-    ensure
-      if filename
-        File.unlink(filename) rescue nil
-      end
-    end
-    
+
     def wait_until_exit
       execute("break _exit")
-      
+
       signal = nil
       backtraces = nil
       snapshot = nil
-      
+
       while true
         result = execute("continue")
-        if result =~ /^Program received signal (.+?),/
-          signal = $1
+        if result =~ /^(Program|Thread .*) received signal (.+?),/
+          signal = $2
           backtraces = execute("thread apply all bt full").strip
           if backtraces.empty?
             backtraces = execute("bt full").strip
           end
           snapshot = yield(self) if block_given?
-          
+
           # This signal may or may not be immediately fatal; the
           # signal might be ignored by the process, or the process
           # has some clever signal handler that fixes the state,
@@ -204,12 +165,12 @@ module CrashWatch
           # the next machine instruction.
           old_program_counter = program_counter
           result = execute("stepi")
-          if result =~ /^Program received signal .+?,/
+          if result =~ /^(Program|Thread .*) received signal .+?,/
             # Yes, it was fatal. Here we don't care whether the
             # instruction caused a different signal. The last
             # one is probably what we're interested in.
             return ExitInfo.new(nil, signal, backtraces, snapshot)
-          elsif result =~ /^Program (terminated|exited)/ || result =~ /^Breakpoint .*? _exit/
+          elsif result =~ /^Program (terminated|exited)/ || result =~ /^Breakpoint .*? (__GI_)?_exit/
             # Running the next instruction causes the program to terminate.
             # Not sure what's going on but the previous signal and
             # backtrace is probably what we're interested in.
@@ -230,7 +191,8 @@ module CrashWatch
           else
             return ExitInfo.new(nil, signal, nil, snapshot)
           end
-        elsif result =~ /^Breakpoint .*? _exit /
+        elsif result =~ /Breakpoint .*? (__GI_)?_exit (\(status=(\d+)\))?/
+          status_param = $3
           backtraces = execute("thread apply all bt full").strip
           if backtraces.empty?
             backtraces = execute("bt full").strip
@@ -240,53 +202,26 @@ module CrashWatch
           # even though the process exited. Kernel bug? In any case,
           # we put a timeout here so that we don't wait indefinitely.
           result = execute("continue", 10)
-          if result =~ /^Program exited with code (\d+)\.$/
-            return ExitInfo.new($1.to_i, nil, backtraces, snapshot)
-          elsif result =~ /^Program exited normally/
+          if result =~ /^(Program|.*process .*) exited with code (\d+)/
+            return ExitInfo.new($2.to_i, nil, backtraces, snapshot)
+          elsif result =~ /^(Program|.*process .*) exited normally/
             return ExitInfo.new(0, nil, backtraces, snapshot)
-          else
+          elsif status_param.nil? || status_param.empty?
             return ExitInfo.new(nil, nil, backtraces, snapshot)
+          else
+            return ExitInfo.new(status_param.to_i, nil, backtraces, snapshot)
           end
-        elsif result =~ /^Program exited with code (\d+)\.$/
-          return ExitInfo.new($1.to_i, nil, nil, nil)
-        elsif result =~ /^Program exited normally/
+        elsif result =~ /^(Program|.*process .*) exited with code (\d+)\.$/
+          return ExitInfo.new($2.to_i, nil, nil, nil)
+        elsif result =~ /^(Program|.*process .*) exited normally/
           return ExitInfo.new(0, nil, nil, nil)
         else
           return ExitInfo.new(nil, nil, nil, nil)
         end
       end
     end
-    
-  private
-    def popen_command(*command)
-      a, b = IO.pipe
-      c, d = IO.pipe
-      if Process.respond_to?(:spawn)
-        args = command.dup
-        args << {
-          STDIN  => a,
-          STDOUT => d,
-          STDERR => d,
-          :close_others => true
-        }
-        pid = Process.spawn(*args)
-      else
-        pid = fork do
-          STDIN.reopen(a)
-          STDOUT.reopen(d)
-          STDERR.reopen(d)
-          b.close
-          c.close
-          exec(*command)
-        end
-      end
-      a.close
-      d.close
-      b.binmode
-      c.binmode
-      [pid, b, c]
-    end
 
+  private
     def find_gdb
       result = nil
       if ENV['GDB'] && File.executable?(ENV['GDB'])
@@ -328,7 +263,7 @@ module CrashWatch
         end
       elsif result.nil?
         raise GdbNotFound,
-          "*** ERROR ***: 'gdb' not found. Please install it (and if using Nginx " + 
+          "*** ERROR ***: 'gdb' not found. Please install it (and if using Nginx " +
           "ensure that PATH isn't filtered out, see also its \"env\" option).\n" +
           "       Debian/Ubuntu: sudo apt-get install gdb\n" +
           "RedHat/CentOS/Fedora: sudo yum install gdb\n" +

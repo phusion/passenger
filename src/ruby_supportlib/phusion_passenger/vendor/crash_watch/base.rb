@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2016 Phusion Holding B.V.
+# Copyright (c) 2016 Phusion Holding B.V.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -20,5 +20,6 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 module CrashWatch
-  VERSION_STRING = '1.2.0'
+  class Error < StandardError
+  end
 end
