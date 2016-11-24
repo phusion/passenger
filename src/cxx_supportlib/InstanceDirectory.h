@@ -166,7 +166,7 @@ private:
 
 		props["instance_dir"]["major_version"] = SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION;
 		props["instance_dir"]["minor_version"] = SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION;
-		props["instance_dir"]["created_at"] = (long long) time(NULL);
+		props["instance_dir"]["created_at"] = (Json::Int64) time(NULL);
 		props["passenger_version"] = PASSENGER_VERSION;
 		props["watchdog_pid"] = (Json::UInt64) getpid();
 

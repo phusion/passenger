@@ -241,7 +241,7 @@ durationToJson(unsigned long long duration) {
 	Json::Value doc;
 	char buf[64];
 
-	doc["microseconds"] = duration;
+	doc["microseconds"] = (Json::UInt64) duration;
 	if (duration >= 10 * 1000000) {
 		snprintf(buf, sizeof(buf), "%.1fs", duration / 1000000.0);
 	} else {
