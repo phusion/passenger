@@ -1117,6 +1117,10 @@ setAgentsOptionsDefaults() {
 		options.set("default_group",
 			inferDefaultGroup(options.get("default_user")));
 	}
+	options.setDefault("integration_mode", "standalone");
+	if (options.get("integration_mode") == "standalone" && !options.has("standalone_engine")) {
+		options.set("standalone_engine", "builtin");
+	}
 	options.setDefaultStrSet("core_addresses", defaultAddress);
 	options.setDefaultInt("socket_backlog", DEFAULT_SOCKET_BACKLOG);
 	options.setDefaultBool("multi_app", false);
