@@ -39,6 +39,8 @@
 #include <openssl/err.h>
 #endif
 
+#include <StaticString.h>
+
 namespace Passenger {
 
 #if BOOST_OS_MACOS
@@ -72,14 +74,14 @@ private:
 	 */
 	void freePubKey(PUBKEY_TYPE);
 
-	void logError(string error);
+	void logError(const StaticString &error);
 
 	/**
 	 * log prefix using P_ERROR, and (library-specific) detail from either additional or global query
 	 */
 #if BOOST_OS_MACOS
 	// (additional needs to be defined as a CFErrorRef, void * won't work)
-	void logFreeErrorExtended(string prefix, CFErrorRef &additional);
+	void logFreeErrorExtended(const StaticString &prefix, CFErrorRef &additional);
 	CFDictionaryRef createQueryDict(const char *label);
 	SecAccessRef createAccess(const char *cLabel);
 	OSStatus lookupKeychainItem(const char *label, SecIdentityRef *oIdentity);
@@ -90,7 +92,7 @@ private:
 	bool memoryBridge(CFDataRef input, void **target, size_t &len);
 	bool innerMemoryBridge(void *input, void **target, size_t len);
 #else
-	void logErrorExtended(string prefix);
+	void logErrorExtended(const StaticString &prefix);
 #endif
 
 public:
