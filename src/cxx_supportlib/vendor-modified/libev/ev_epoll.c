@@ -179,7 +179,7 @@ epoll_poll (EV_P_ ev_tstamp timeout)
       if (expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32)))
         {
           /* recreate kernel state */
-          postfork = 1;
+          postfork |= 2;
           continue;
         }
 
@@ -203,7 +203,7 @@ epoll_poll (EV_P_ ev_tstamp timeout)
           /* which is fortunately easy to do for us. */
           if (epoll_ctl (backend_fd, want ? EPOLL_CTL_MOD : EPOLL_CTL_DEL, fd, ev))
             {
-              postfork = 1; /* an error occurred, recreate kernel state */
+              postfork |= 2; /* an error occurred, recreate kernel state */
               continue;
             }
         }
@@ -228,11 +228,15 @@ epoll_poll (EV_P_ ev_tstamp timeout)
       if (anfds [fd].emask & EV_EMASK_EPERM && events)
         fd_event (EV_A_ fd, events);
       else
-        epoll_eperms [i] = epoll_eperms [--epoll_epermcnt];
+        {
+          epoll_eperms [i] = epoll_eperms [--epoll_epermcnt];
+          anfds [fd].emask = 0;
+        }
     }
 }
 
-int inline_size
+inline_size
+int
 epoll_init (EV_P_ int flags)
 {
 #ifdef EPOLL_CLOEXEC
@@ -257,14 +261,16 @@ epoll_init (EV_P_ int flags)
   return EVBACKEND_EPOLL;
 }
 
-void inline_size
+inline_size
+void
 epoll_destroy (EV_P)
 {
   ev_free (epoll_events);
   array_free (epoll_eperm, EMPTY);
 }
 
-void inline_size
+inline_size
+void
 epoll_fork (EV_P)
 {
   close (backend_fd);
