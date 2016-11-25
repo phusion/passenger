@@ -613,6 +613,9 @@ EV_API_DECL unsigned int ev_backend (EV_P) EV_THROW; /* backend in use by loop *
 
 EV_API_DECL void ev_now_update (EV_P) EV_THROW; /* update event loop time */
 
+EV_API_DECL int ev_backend_fd (EV_P) EV_THROW;
+EV_API_DECL int ev_loop_get_pipe (EV_P_ unsigned int index) EV_THROW;
+
 #if EV_WALK_ENABLE
 /* walk (almost) all watchers in the loop of a given type, invoking the */
 /* callback on every such watcher. The callback might stop the watcher, */
