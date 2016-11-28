@@ -84,7 +84,7 @@ parsedDateToTimestamp(struct tm &tm, int zone) {
 	// tmUsingLocalTZ now contains tm interpreted as being in our local timezone instead of the intended UTC
 	// Example: 10 UTC interpreted as 10 GMT+1 instead of 11 GMT+1
 
-#if !defined(sun) && !defined(__sun)
+#if !defined(sun) && !defined(__sun) && !defined(BOOST_OS_MACOS)
 	// tm_gmtoff = "seconds east of UTC", so the example 10 GMT+1 would now be corrected to (10+1) GMT+1
 	timeUsingLocalTZ += tm.tm_gmtoff;
 #else

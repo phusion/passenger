@@ -9,7 +9,7 @@ env:
   - TEST_SOURCE_PACKAGING=1
 
 before_install:
-  - 'gem uninstall bundler bundle rubygems-update --all -x && gem update --system 2.6.1 && gem install bundler && gem uninstall rubygems-update --all -x && gem update --system 2.6.4'
+  - 'gem update --system 2.6.4 && gem install bundler'
   - 'gem --version'
   - 'bundle --version'
   - 'rvm list'
@@ -23,3 +23,8 @@ cache:
 
 notifications:
   slack: phusionnl:PH5p7JYXyv2XLDpICHh8Nj6F
+
+os:
+  - osx
+  - linux
+

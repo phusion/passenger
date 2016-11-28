@@ -4,6 +4,8 @@ Listen 127.0.0.1:<%= @port %>
 	Mutex default:/tmp
 	AcceptFilter http none
 	AcceptFilter https none
+<% elsif PhusionPassenger::PlatformInfo.os_name_simple == "macosx" %>
+	Mutex default:/tmp
 <% end %>
 
 <% if @www_user %>

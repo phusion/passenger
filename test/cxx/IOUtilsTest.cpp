@@ -610,7 +610,7 @@ namespace tut {
 		// We read 3 bytes.
 		ensure_equals(readExact(p.first, &buf, sizeof(buf), &timeout), 3u);
 		ensure("Should have taken at least 20 msec", timeout <= 100000 - 20000);
-		#ifdef __FreeBSD__
+        #if defined(__FreeBSD__) || defined(BOOST_OS_MACOS)
 			// Stupid timer resolution on FreeBSD...
 			ensure("Should have taken at most 95 msec", timeout >= 100000 - 95000);
 		#else
