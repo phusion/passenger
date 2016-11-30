@@ -820,7 +820,7 @@ bool Crypto::encryptRSA(unsigned char *dataChars, size_t dataLen,
 		string encryptPubKeyPath, unsigned char **encryptedCharsPtr, size_t &encryptedLen) {
 	RSA *rsaPubKey = NULL;
 	EVP_PKEY *rsaPubKeyEVP = NULL;
-	EVP_PKEY_CTX *ctx;
+	EVP_PKEY_CTX *ctx = NULL;
 	bool result = false;
 
 	do {
