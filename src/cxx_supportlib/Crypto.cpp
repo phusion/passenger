@@ -112,8 +112,7 @@ SecAccessRef Crypto::createAccess(const char *cLabel) {
 
 OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 											const char *cPassword,
-											const char *cLabel,
-											SecIdentityRef *oIdentity) {
+											const char *cLabel) {
 	OSStatus status = errSecItemNotFound;
 	CFURLRef url = CFURLCreateFromFileSystemRepresentation(NULL,
 														   (const UInt8 *) cPath, strlen(cPath), false);
@@ -137,18 +136,13 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 
 	/* Here we go: */
 	status = SecPKCS12Import(pkcsData, options, &items);
-	if (status == noErr && items && CFArrayGetCount(items)) {
-		CFDictionaryRef identityAndTrust = (CFDictionaryRef) CFArrayGetValueAtIndex(items, 0L);
-		SecIdentityRef tempIdentity = (SecIdentityRef) CFDictionaryGetValue(identityAndTrust, kSecImportItemIdentity);
-
-		/* Retain the identity; we don't care about any other data... */
-		CFRetain(tempIdentity);
-		*oIdentity = tempIdentity;
-		//CFRelease(identityAndTrust);// is released with items array
-	} else {
+	if (!(status == noErr && items && CFArrayGetCount(items))) {
 		CFStringRef str = SecCopyErrorMessageString(status, NULL);
-		logError(string("Loading Passenger Cert failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) );
+		logError(string("Loading Passenger Cert failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) + "\nPlease check for a certificate labeled: " + cLabel + " in your keychain, and remove the associated private key. If the certificate is not present, please contact Phusion." );
 		CFRelease(str);
+		if (status == noErr) {
+			status = errSecAuthFailed;
+		}
 	}
 
 	if (items) {
@@ -194,7 +188,7 @@ void Crypto::killKey(const char *cLabel) {
 	}
 }
 
-void Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel) {
+bool Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel) {
 	SecIdentityRef id = NULL;
 	if (lookupKeychainItem(cLabel, &id) == errSecItemNotFound) {
 		OSStatus oserr = SecKeychainSetUserInteractionAllowed(false);
@@ -203,9 +197,12 @@ void Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel
 			logError(string("Disabling GUI Keychain interaction failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
 			CFRelease(str);
 		}
-		copyIdentityFromPKCS12File(path, passwd, cLabel, &id);
-		if (id == NULL) {
-			logError("copyIdentityFromPKCS12File failed.");
+		oserr = copyIdentityFromPKCS12File(path, passwd, cLabel);
+		bool success = (noErr == oserr);
+		if (!success) {
+			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
+			logError(string("Pre authorizing the Passenger client certificate failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
+			CFRelease(str);
 		}
 		oserr = SecKeychainSetUserInteractionAllowed(true);
 		if (oserr) {
@@ -215,11 +212,13 @@ void Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel
 					" Please reboot as soon as possible, thanks.");
 			CFRelease(str);
 		}
+		return success;
 	} else {
-		logError(string("Passenger certificate was found in the keychain unexpectedly, you may see keychain popups until you remove the private key from the certificate labeled ") + cLabel + " in your keychain.");
-	}
-	if (id) {
-		CFRelease(id);
+		logError(string("Passenger client certificate was found in the keychain unexpectedly, you may see keychain popups until you remove the private key from the certificate labeled ") + cLabel + " in your keychain.");
+		if (id) {
+			CFRelease(id);
+		}
+		return false;
 	}
 }
 

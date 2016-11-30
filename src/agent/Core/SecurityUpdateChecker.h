@@ -204,7 +204,9 @@ private:
 			return code;
 		}
 #if BOOST_OS_MACOS
-		crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL);
+		if (!crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
+			return CURLE_SSL_CERTPROBLEM;
+		}
 #endif
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERT, clientCertPath.c_str()))) {
 			return code;

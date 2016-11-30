@@ -85,7 +85,7 @@ private:
 	CFDictionaryRef createQueryDict(const char *label);
 	SecAccessRef createAccess(const char *cLabel);
 	OSStatus lookupKeychainItem(const char *label, SecIdentityRef *oIdentity);
-	OSStatus copyIdentityFromPKCS12File(const char *cPath, const char *cPassword, const char *cLabel, SecIdentityRef *oIdentity);
+	OSStatus copyIdentityFromPKCS12File(const char *cPath, const char *cPassword, const char *cLabel);
 	CFDataRef genIV(size_t iv_size);
 	bool getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len);
 	bool generateRandomChars(unsigned char *rndChars, int rndLen);
@@ -108,7 +108,7 @@ public:
 	/**
 	 * sets the permissions on the certificate so that curl doesn't prompt
 	 */
-	void preAuthKey(const char *path, const char *passwd, const char *cLabel);
+	bool preAuthKey(const char *path, const char *passwd, const char *cLabel);
 	void killKey(const char *cLabel);
 #endif
 
