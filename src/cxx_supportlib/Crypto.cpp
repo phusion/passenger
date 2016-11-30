@@ -137,11 +137,15 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 	/* Here we go: */
 	status = SecPKCS12Import(pkcsData, options, &items);
 	if (!(status == noErr && items && CFArrayGetCount(items))) {
-		CFStringRef str = SecCopyErrorMessageString(status, NULL);
-		logError(string("Loading Passenger Cert failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) + "\nPlease check for a certificate labeled: " + cLabel + " in your keychain, and remove the associated private key. If the certificate is not present, please contact Phusion." );
-		CFRelease(str);
+		string suffix = string("Please check for a certificate labeled: ") + cLabel + " in your keychain, and remove the associated private key. For more help please read: https://www.phusionpassenger.com/library/admin/standalone/mac_keychain_popups.html";
+		string prefix = "Loading Passenger Cert failed";
 		if (status == noErr) {
 			status = errSecAuthFailed;
+			logError( prefix + ". " + suffix );
+		}else{
+			CFStringRef str = SecCopyErrorMessageString(status, NULL);
+			logError( prefix + ": " + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) + "\n" + suffix );
+			CFRelease(str);
 		}
 	}
 
