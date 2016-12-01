@@ -1,3 +1,4 @@
+# coding: utf-8
 require 'socket'
 require 'fileutils'
 
@@ -169,9 +170,16 @@ shared_examples_for "an example web app" do
     cgi_envs.should include("PATH_INFO = /env\n")
   end
 
-  specify "PATH_INFO contains the original escaped URI" do
-    cgi_envs = get('/env/%C3%BC')
-    cgi_envs.downcase.should include("path_info = /env/%c3%bc\n")
+  specify "PATH_INFO contains the properly (un)escaped URI" do
+    if @stub.instance_of?(TestHelper::PythonStub)
+      # cgi_envs = get('/env/%C3%BC')
+      # cgi_envs.downcase.should include("path_info = /env/ü\n")
+      cgi_envs = get('/env/sp%20ce')
+      cgi_envs.downcase.should include("path_info = /env/sp ce\n")
+    else
+      cgi_envs = get('/env/%C3%BC')
+      cgi_envs.downcase.should include("path_info = /env/%c3%bc\n")
+    end
   end
 
   specify "QUERY_STRING contains the query string" do

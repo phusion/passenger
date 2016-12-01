@@ -1,6 +1,8 @@
 Release 5.2.1 (Not yet released)
 -------------
 
+ * Fixes an issue with quoted paths in Python wsgi apps. Closes GH-1828.
+
 
 Release 5.2.0
 -------------
