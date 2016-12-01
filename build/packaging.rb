@@ -129,7 +129,7 @@ task 'package:release' => ['package:set_official', 'package:gem', 'package:tarba
   require 'net/https'
   basename   = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
   version    = PhusionPassenger::VERSION_STRING
-  is_beta        = !!version.split('.')[3]
+  is_beta    = !!version.split('.')[3]
 
   if !`git status --porcelain | grep -Ev '^\\?\\? '`.empty?
     STDERR.puts "-------------------"
@@ -370,7 +370,6 @@ task 'package:initiate_binaries_building' do
   require 'uri'
   require 'net/http'
   require 'net/https'
-  version = VERSION_STRING
   begin
     website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
   rescue Errno::ENOENT
@@ -398,7 +397,7 @@ task 'package:initiate_binaries_building' do
   end
 
   uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
-    "job=Passenger%20#{type}%20binaries%20(release)&tag=#{git_tag}")
+    "job=Passenger%20#{type}%20binaries%20(release)&ref=#{git_tag}&testing=false")
   http = Net::HTTP.new(uri.host, uri.port)
   http.use_ssl = true
   http.verify_mode = OpenSSL::SSL::VERIFY_PEER
@@ -418,7 +417,6 @@ task 'package:initiate_debian_building' do
   require 'uri'
   require 'net/http'
   require 'net/https'
-  version = VERSION_STRING
   begin
     website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
   rescue Errno::ENOENT
@@ -466,7 +464,6 @@ task 'package:initiate_rpm_building' do
   require 'uri'
   require 'net/http'
   require 'net/https'
-  version = VERSION_STRING
   begin
     website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
   rescue Errno::ENOENT
@@ -510,17 +507,8 @@ task 'package:initiate_rpm_building' do
 end
 
 task 'package:build_osx_binaries' do
-  if is_open_source?
-    sh "cd ../passenger_autobuilder && " +
-      "git pull && " +
-      "./autobuild-osx https://github.com/phusion/passenger.git passenger " +
-        "psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{git_tag}"
-  else
-    sh "cd ../passenger_autobuilder && " +
-      "git pull && " +
-      "./autobuild-osx #{enterprise_git_url} passenger-enterprise " +
-      "psg_autobuilder_chroot@juvia-helper.phusion.nl --tag=#{git_tag}"
-  end
+  sh "env ENTERPRISE=#{is_enterprise?} TESTING=false " \
+    "./packaging/binaries/integration/publish/macos.sh"
 end
 
 desc "Remove gem, tarball and signatures"
