@@ -79,9 +79,9 @@ task 'test:install_deps' do
 
   if boolean_option('USH_BUNDLES', default)
     # workaround for Travis CI environment not having 1.8.7 for the submodule tests
-    # | true to avoid missing rvm command triggering a failure on Jenkins CI
-    sh "rvm list | true"
-    sh "rvm install 1.8.7 | true"
+    # || true to avoid missing rvm command triggering a failure on Jenkins CI
+    sh "rvm list || true"
+    sh "rvm install 1.8.7 || true"
     
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
       " && bundle install #{bundle_args} --with travis --without doc notravis"
