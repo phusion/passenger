@@ -150,17 +150,21 @@ run lsb_release -a
 run sudo tee /etc/dpkg/dpkg.cfg.d/02apt-speedup >/dev/null <<<"force-unsafe-io"
 run cp test/config.json.travis test/config.json
 
+run rvm list
+
 # Relax permissions on home directory so that the application root
 # permission checks pass.
 run chmod g+x,o+x $HOME
 
 if [[ "$TEST_RUBY_VERSION" != "" ]]; then
-	echo "$ rvm use $TEST_RUBY_VERSION"
 	if [[ -f ~/.rvm/scripts/rvm ]]; then
 		source ~/.rvm/scripts/rvm
 	else
 		source /usr/local/rvm/scripts/rvm
 	fi
+	echo "$ rvm install $TEST_RUBY_VERSION"
+	rvm install $TEST_RUBY_VERSION
+	echo "$ rvm use $TEST_RUBY_VERSION"
 	rvm use $TEST_RUBY_VERSION
 	if [[ "$TEST_RUBYGEMS_VERSION" = "" ]]; then
 		run gem --version

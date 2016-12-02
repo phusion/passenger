@@ -78,6 +78,8 @@ task 'test:install_deps' do
   end
 
   if boolean_option('USH_BUNDLES', default)
+    sh "rvm list"
+    sh "rvm install 1.8.7"
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
       " && bundle install #{bundle_args} --with travis --without doc notravis"
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
