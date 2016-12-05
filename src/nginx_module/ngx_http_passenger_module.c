@@ -94,7 +94,7 @@ psg_variant_map_set_ngx_str(PsgVariantMap *m,
 
 /**
  * Save the Nginx master process's PID into a file in the instance directory.
- * This PID file isn't currently used, but it might be useful for future tooling.
+ * This PID file is used in the `passenger-config reopen-logs` command.
  *
  * The master process's PID is already passed to the Watchdog through the
  * "web_server_control_process_pid" property, but that isn't enough. The Watchdog
@@ -108,7 +108,7 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     u_char *last;
     FILE *f;
 
-    last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/web_server_control_process.pid",
+    last = ngx_snprintf(filename, sizeof(filename) - 1, "%s/web_server_info/control_process.pid",
                         psg_watchdog_launcher_get_instance_dir(psg_watchdog_launcher, NULL));
     *last = (u_char) '\0';
 
@@ -323,12 +323,12 @@ start_watchdog(ngx_cycle_t *cycle) {
         goto cleanup;
     }
 
-    /* Create the file instance_dir + "/web_server_control_process.pid"
+    /* Create the file instance_dir + "/web_server_info/control_process.pid"
      * and make it writable by the worker processes. This is because
      * save_master_process_pid is run after Nginx has lowered privileges.
      */
     last = ngx_snprintf(filename, sizeof(filename) - 1,
-                        "%s/web_server_control_process.pid",
+                        "%s/web_server_info/control_process.pid",
                         psg_watchdog_launcher_get_instance_dir(psg_watchdog_launcher, NULL));
     *last = (u_char) '\0';
     if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {

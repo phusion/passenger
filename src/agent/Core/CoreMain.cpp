@@ -304,7 +304,9 @@ makeFileWorldReadableAndWritable(const string &path) {
 }
 
 #ifdef USE_SELINUX
-	// Set next socket context to *:system_r:passenger_instance_httpd_socket_t
+	// Set next socket context to *:system_r:passenger_instance_httpd_socket_t.
+	// Note that this only sets the context of the socket file descriptor,
+	// not the socket file on the filesystem. This is why we need selinuxRelabelFile().
 	static void
 	setSelinuxSocketContext() {
 		security_context_t currentCon;
@@ -342,6 +344,40 @@ makeFileWorldReadableAndWritable(const string &path) {
 	resetSelinuxSocketContext() {
 		setsockcreatecon(NULL);
 	}
+
+	static void
+	selinuxRelabelFile(const string &path, const char *newLabel) {
+		security_context_t currentCon;
+		string newCon;
+		int e;
+
+		if (getfilecon(path.c_str(), &currentCon) == -1) {
+			e = errno;
+			P_DEBUG("Unable to obtain SELinux context for file " <<
+				path <<": " << strerror(e) << " (errno=" << e << ")");
+			return;
+		}
+
+		P_DEBUG("SELinux context for " << path << ": " << currentCon);
+
+		if (strstr(currentCon, ":object_r:passenger_instance_content_t:") == NULL) {
+			goto cleanup;
+		}
+		newCon = replaceString(currentCon,
+			":object_r:passenger_instance_content_t:",
+			StaticString(":object_r:") + newLabel + ":");
+		P_DEBUG("Relabeling " << path << " to: " << newCon);
+
+		if (setfilecon(path.c_str(), (security_context_t) newCon.c_str()) == -1) {
+			e = errno;
+			P_WARN("Cannot set SELinux context for " << path <<
+				" to " << newCon << ": " << strerror(e) <<
+				" (errno=" << e << ")");
+		}
+
+		cleanup:
+		freecon(currentCon);
+	}
 #endif
 
 static void
@@ -351,17 +387,22 @@ startListening() {
 	vector<string> addresses = agentsOptions->getStrSet("core_addresses");
 	vector<string> apiAddresses = agentsOptions->getStrSet("core_api_addresses", false);
 
-	#ifdef USE_SELINUX
-		// Set SELinux context on the first socket that we create
-		// so that the web server can access it.
-		setSelinuxSocketContext();
-	#endif
+	// Set SELinux context on the first socket that we create
+	// so that the web server can access it.
+	setSelinuxSocketContext();
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->serverFds[i] = createServer(addresses[i], agentsOptions->getInt("socket_backlog"), true,
 			__FILE__, __LINE__);
 		#ifdef USE_SELINUX
 			resetSelinuxSocketContext();
+			if (i == 0 && getSocketAddressType(addresses[0]) == SAT_UNIX) {
+				// setSelinuxSocketContext() sets the context of the
+				// socket file descriptor but not the file on the filesystem.
+				// So we relabel the socket file here.
+				selinuxRelabelFile(parseUnixSocketAddress(addresses[0]),
+					"passenger_instance_httpd_socket_t");
+			}
 		#endif
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->serverFds[i],
 			"Server address: " << addresses[i]);

@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2015 Phusion Holding B.V.
+#  Copyright (c) 2014-2016 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -120,7 +120,7 @@ module PhusionPassenger
       end
 
       def web_server_control_process_pid
-        File.read("#{@path}/web_server_control_process.pid").to_i
+        File.read("#{@path}/web_server_info/control_process.pid").to_i
       end
 
       def full_admin_password

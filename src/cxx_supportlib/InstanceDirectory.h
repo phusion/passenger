@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014 Phusion Holding B.V.
+ *  Copyright (c) 2014-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -25,6 +25,10 @@
  */
 #ifndef _PASSENGER_INSTANCE_DIRECTORY_H_
 #define _PASSENGER_INSTANCE_DIRECTORY_H_
+
+#ifdef USE_SELINUX
+	#include <selinux/selinux.h>
+#endif
 
 #include <boost/shared_ptr.hpp>
 #include <sys/types.h>
@@ -111,6 +115,7 @@ private:
 
 	void initializeInstanceDirectory(const CreationOptions &options) {
 		createPropertyFile(options);
+		createWebServerInfoSubdir(options);
 		createAgentSocketsSubdir(options);
 		createAppSocketsSubdir(options);
 		createLockFile();
@@ -118,6 +123,54 @@ private:
 
 	bool runningAsRoot(const CreationOptions &options) const {
 		return options.originalUid == 0;
+	}
+
+	#ifdef USE_SELINUX
+		void selinuxRelabel(const string &path, const char *newLabel) {
+			security_context_t currentCon;
+			string newCon;
+			int e;
+
+			if (getfilecon(path.c_str(), &currentCon) == -1) {
+				e = errno;
+				P_DEBUG("Unable to obtain SELinux context for file " <<
+					path <<": " << strerror(e) << " (errno=" << e << ")");
+				return;
+			}
+
+			P_DEBUG("SELinux context for " << path << ": " << currentCon);
+
+			if (strstr(currentCon, ":object_r:passenger_instance_content_t:") == NULL) {
+				goto cleanup;
+			}
+
+			newCon = replaceString(currentCon,
+				":object_r:passenger_instance_content_t:",
+				StaticString(":object_r:") + newLabel + ":");
+			P_DEBUG("Relabeling " << path << " to: " << newCon);
+			if (setfilecon(path.c_str(), (security_context_t) newCon.c_str()) == -1) {
+				e = errno;
+				P_WARN("Cannot set SELinux context for " << path <<
+					" to " << newCon << ": " << strerror(e) <<
+					" (errno=" << e << ")");
+				goto cleanup;
+			}
+
+			cleanup:
+			freecon(currentCon);
+		}
+	#endif
+
+	void createWebServerInfoSubdir(const CreationOptions &options) {
+		makeDirTree(path + "/web_server_info", "u=rwx,g=rx,o=rx");
+		#ifdef USE_SELINUX
+			// We relabel the directory here instead of using setfscreatecon()
+			// for thread-safety. It isn't specified whether InstanceDirectory
+			// should be thread-safe, but let's do it this way to prevent
+			// future problems.
+			selinuxRelabel(path + "/web_server_info",
+				"passenger_instance_httpd_dir_t");
+		#endif
 	}
 
 	void createAgentSocketsSubdir(const CreationOptions &options) {

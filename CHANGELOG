@@ -24,6 +24,7 @@ Next version (not yet released)
  * [Nginx] Updates to RPM package builder (CentOS & RHEL) with fix for 1.10.x system nginx package overriding the nginx from the Passenger repo. Closes GH-1895.
  * [Nginx] The preferred Nginx version is now 1.10.2 (previously 1.10.1).
  * RPM pkg builder fix for breaking SELinux change in RHEL 7.3.
+ * RPM pkg builder fix for RHEL6/CentOS6 incompatibility and replacement in Passenger.
 
 
 Release 5.0.30
