@@ -114,6 +114,13 @@ private:
 						"truststore is valid. If the problem persists, you can also try upgrading or reinstalling " SHORT_PROGRAM_NAME);
 				break;
 
+			case CURLE_SSL_CACERT_BADFILE:
+				error.append(" while connecting to " CHECK_URL_DEFAULT " " +
+						(proxyAddress.empty() ? "" : "using proxy " + proxyAddress) + "; this might happen if the nss backend "
+						"is installed for libcurl instead of gnutls or openssl. If the problem persists, you can also try upgrading "
+						"or reinstalling " SHORT_PROGRAM_NAME);
+				break;
+
 			// Fallthroughs to default:
 			case CURLE_SSL_CONNECT_ERROR:
 				// A problem occurred somewhere in the SSL/TLS handshake. Not sure what's up, but in this case the
@@ -184,6 +191,9 @@ private:
 	 */
 	CURLcode prepareCurlPOST(CURL *curl, string &bodyJsonString, string *responseData, struct curl_slist **chunk) {
 		CURLcode code;
+		
+		// Hint for advanced debugging: curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+		
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1))) {
 			return code;
 		}
@@ -203,19 +213,25 @@ private:
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, *chunk))) {
 			return code;
 		}
+
 #if BOOST_OS_MACOS
 		if (!crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
 			return CURLE_SSL_CERTPROBLEM;
-		}
-#endif
-		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERT, clientCertPath.c_str()))) {
-			return code;
 		}
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "P12"))) {
 			return code;
 		}
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERTPASSWD, CLIENT_CERT_PWD))) {
 		 	return code;
+		}
+#else
+		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM"))) {
+			return code;
+		}
+#endif
+
+		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERT, clientCertPath.c_str()))) {
+			return code;
 		}
 
 		// These should be on by default, but make sure.
@@ -267,7 +283,11 @@ public:
 		crypto = new Crypto();
 		updateCheckThread = NULL;
 		checkIntervalSec = 0;
+#if BOOST_OS_MACOS
 		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.p12";
+#else
+		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.pem";
+#endif
 		serverPubKeyPath = locator.getResourcesDir() + "/update_check_server_pubkey.pem";
 		proxyAddress = proxy;
 		this->serverIntegration = serverIntegration;
