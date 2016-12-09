@@ -387,9 +387,11 @@ startListening() {
 	vector<string> addresses = agentsOptions->getStrSet("core_addresses");
 	vector<string> apiAddresses = agentsOptions->getStrSet("core_api_addresses", false);
 
-	// Set SELinux context on the first socket that we create
-	// so that the web server can access it.
-	setSelinuxSocketContext();
+	#ifdef USE_SELINUX
+		// Set SELinux context on the first socket that we create
+		// so that the web server can access it.
+		setSelinuxSocketContext();
+	#endif
 
 	for (unsigned int i = 0; i < addresses.size(); i++) {
 		wo->serverFds[i] = createServer(addresses[i], agentsOptions->getInt("socket_backlog"), true,
