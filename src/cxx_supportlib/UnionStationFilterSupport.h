@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2016 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -197,8 +197,7 @@ private:
 		case '=':
 			return matchToken(NOT_EQUALS, 2);
 		default:
-			raiseSyntaxError("unrecognized operator '" + data.substr(pos, 2) + "'");
-			return Token(); // Shut up compiler warning.
+			return matchToken(NOT, 1);
 		};
 	}
 
