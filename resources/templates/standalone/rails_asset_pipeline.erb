@@ -16,6 +16,10 @@ location @static_asset {
     expires max;
     add_header Cache-Control public;
     add_header ETag "";
+
+    if ($request_filename ~ "^.+(eot|svg|ttf|otf|woff2|woff)$") {
+      add_header "Access-Control-Allow-Origin" "*";
+    }
 }
 location @dynamic_request {
     passenger_enabled on;
