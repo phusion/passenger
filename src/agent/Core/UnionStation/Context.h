@@ -41,6 +41,7 @@
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Utils.h>
+#include <Utils/JsonUtils.h>
 #include <Utils/MessageIO.h>
 #include <Utils/SystemTime.h>
 #include <Core/UnionStation/Connection.h>
@@ -272,6 +273,12 @@ public:
 		} else {
 			throw e;
 		}
+	}
+
+	void sendEvent(const string &groupName, const string &unionStationKey, Json::Value event) {
+		TransactionPtr tx = newTransaction(groupName, "application_server_events", unionStationKey);
+		string message = stringifyJson(event);
+		tx->message(StaticString(message.data(), message.size()));
 	}
 
 	bool sendRequest(const ConnectionPtr &connection, StaticString argsSend[],

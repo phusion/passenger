@@ -291,6 +291,17 @@ Group::startCheckingDetachedProcesses(bool immediately) {
 }
 
 void
+Group::sendProcessDetachedLogEvent(const ProcessPtr &process) {
+	if (options.analytics && pool->getUnionStationContext() != NULL) {
+		pool->getUnionStationContext()->sendEvent(
+			getName(),
+			options.unionStationKey,
+			process->detachedEventJSON()
+		);
+	}
+}
+
+void
 Group::detachedProcessesCheckerMain(GroupPtr self) {
 	TRACE_POINT();
 	Pool *pool = getPool();
@@ -425,6 +436,14 @@ Group::attach(const ProcessPtr &process,
 	P_DEBUG("Attaching process " << process->inspect());
 	addProcessToList(process, enabledProcesses);
 
+	if (options.analytics && pool->getUnionStationContext() != NULL) {
+		pool->getUnionStationContext()->sendEvent(
+			getName(),
+			options.unionStationKey,
+			process->attachedEventJSON()
+		);
+	}
+
 	/* Now that there are enough resources, relevant processes in
 	 * 'disableWaitlist' can be disabled.
 	 */
@@ -500,6 +519,8 @@ Group::detach(const ProcessPtr &process, boost::container::vector<Callback> &pos
 	startCheckingDetachedProcesses(false);
 
 	postLockActions.push_back(boost::bind(&Group::runDetachHooks, this, process));
+
+	sendProcessDetachedLogEvent(process);
 }
 
 /**
@@ -513,12 +534,15 @@ Group::detachAll(boost::container::vector<Callback> &postLockActions) {
 
 	foreach (ProcessPtr process, enabledProcesses) {
 		addProcessToList(process, detachedProcesses);
+		sendProcessDetachedLogEvent(process);
 	}
 	foreach (ProcessPtr process, disablingProcesses) {
 		addProcessToList(process, detachedProcesses);
+		sendProcessDetachedLogEvent(process);
 	}
 	foreach (ProcessPtr process, disabledProcesses) {
 		addProcessToList(process, detachedProcesses);
+		sendProcessDetachedLogEvent(process);
 	}
 
 	enabledProcesses.clear();
