@@ -197,8 +197,7 @@ private:
 		case '=':
 			return matchToken(NOT_EQUALS, 2);
 		default:
-			raiseSyntaxError("unrecognized operator '" + data.substr(pos, 2) + "'");
-			return Token(); // Shut up compiler warning.
+			return matchToken(NOT, 1);
 		};
 	}
 

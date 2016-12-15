@@ -344,6 +344,10 @@ namespace tut {
 		ensure("(21)", eval("(uri == 'foo' && response_time == 1) || response_time == 10"));
 	}
 
+	TEST_METHOD(33) {
+		ensure("(1)", !eval("!true"));
+	}
+
 
 	/******** Error tests *******/
 
