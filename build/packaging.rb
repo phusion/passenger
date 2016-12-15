@@ -507,7 +507,8 @@ task 'package:initiate_rpm_building' do
 end
 
 task 'package:build_osx_binaries' do
-  sh "env ENTERPRISE=#{is_enterprise?} TESTING=false " \
+  sh "env ENTERPRISE=#{!!is_enterprise?} TESTING=false " \
+    "PASSENGER_ROOT=#{Shellwords.shellescape Dir.pwd} " \
     "./packaging/binaries/integration/publish/macos.sh"
 end
 
