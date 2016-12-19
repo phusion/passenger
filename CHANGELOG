@@ -1,5 +1,8 @@
-Next version (not yet released)
--------------------------------
+Release 5.1.1
+-------------
+
+ * The precompiled version of the PassengerAgent binary (used for e.g. gem installs) now configures (statically linked) libcurl with system keystore, so that the new security update check can successfully validate certs.
+ * Fixes some false positives (logging) from the new Node and Meteor cluster warning system. Closes GH-1905.
 
 
 Release 5.1.0

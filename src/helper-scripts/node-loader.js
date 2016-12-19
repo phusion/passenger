@@ -57,13 +57,11 @@ Module.prototype.require = function() {
 				worker			 : false,
 				workers			 : false,
 			};
-		} else {
-			return originalRequire.apply(this, arguments);
 		}
 	} catch (e) {
 		console.error(errorMockingRequire("Node Cluster module", e));
-		return originalRequire.apply(this, arguments);
 	}
+	return originalRequire.apply(this, arguments);
 };
 
 //Mock out Meteor Cluster Module
@@ -93,13 +91,11 @@ vm.runInThisContext = function() {
 					}
 				};
 			});
-		} else {
-			return orig_func.apply(this, arguments);
 		}
 	} catch (e) {
 		console.error(errorMockingRequire("Meteorhacks Cluster package", e));
-		return orig_func.apply(this, arguments);
 	}
+	return orig_func.apply(this, arguments);
 };
 
 var LineReader = require('phusion_passenger/line_reader').LineReader;
