@@ -792,7 +792,7 @@ initializeSecurityUpdateChecker() {
 		}
 		string serverVersion = options.get("server_version", false); // not set in case of standalone / builtin
 
-		workingObjects->securityUpdateChecker = new SecurityUpdateChecker(workingObjects->resourceLocator, proxy, serverIntegration, serverVersion);
+		workingObjects->securityUpdateChecker = new SecurityUpdateChecker(workingObjects->resourceLocator, proxy, serverIntegration, serverVersion, options.get("instance_dir",false));
 		workingObjects->securityUpdateChecker->start(24 * 60 * 60);
 	}
 }

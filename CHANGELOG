@@ -3,6 +3,7 @@ Next version (not yet released)
 
  * Improve curl check for passenger-install- scripts to catch (very old) curl versions that won't compile against 5.1+.
  * Fixes remaining false positives (logging) from the new Meteor cluster warning system. Closes GH-1905.
+ * Create a private keychain on macOS when the system keychain is defaulted to, this avoids a permissions issue with the system keychain when performing the Security Update Check. This is necessary because the system keychain is the default keychain of daemon users and root on macOS.
 
 
 Release 5.1.1
