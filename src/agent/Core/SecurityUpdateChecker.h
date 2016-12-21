@@ -389,6 +389,7 @@ public:
 
 		bodyJson["server_integration"] = serverIntegration;
 		bodyJson["server_version"] = serverVersion;
+		bodyJson["curl_static"] = isCurlStaticallyLinked();
 
 		string nonce;
 		if (!fillNonce(nonce)) {

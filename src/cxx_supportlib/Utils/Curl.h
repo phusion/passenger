@@ -198,6 +198,15 @@ setCurlProxy(CURL *curl, const CurlProxyInfo &proxyInfo) {
 	}
 }
 
+inline bool
+isCurlStaticallyLinked() {
+	#ifdef CURL_IS_STATICALLY_LINKED
+		return true;
+	#else
+		return false;
+	#endif
+}
+
 inline CURLcode
 setCurlDefaultCaInfo(CURL *curl) {
 	#ifdef CURL_IS_STATICALLY_LINKED
