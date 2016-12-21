@@ -438,6 +438,7 @@ public:
 				break;
 			}
 
+			P_DEBUG("sending: " << bodyJsonString);
 			if (CURLE_OK != (code = sendAndReceive(curl, &responseData, &responseCode))) {
 				logUpdateFailCurl(code);
 				break;
@@ -455,6 +456,7 @@ public:
 				logUpdateFailResponse("json parse", responseData);
 				break;
 			}
+			P_DEBUG("received: " << responseData);
 
 			// 3b. Verify response: signature
 			if (!responseJson.isObject() || !responseJson["data"].isString() || !responseJson["signature"].isString()) {
@@ -497,6 +499,7 @@ public:
 				logUpdateFailResponse("unparseable data", responseData);
 				break;
 			}
+			P_DEBUG("data content (signature OK): " << responseDataJson.toStyledString());
 
 			if (!responseDataJson.isObject() || !responseDataJson["update"].isInt() || !responseDataJson["nonce"].isString()) {
 				logUpdateFailResponse("missing data fields", responseData);
