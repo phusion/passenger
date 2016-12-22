@@ -7,6 +7,7 @@ Release 5.1.1
  * The security update check now reports whether libcurl + SSL backend are statically linked to Passenger, in which case the check also needs to warn about relevant OpenSSL vulnerabilities in the linked library.
  * Increases the allowed line lengths emmited by apps at startup.
  * Adds support for the unary 'not' operator in the Union Station filter language.
+ * Fixes support for Rails 5.0.1 Action Cable. Specifically, we now support the `options` argument in the `write_nonblock` method in hijacked Rack IO sockets.
 
 
 Release 5.1.0
