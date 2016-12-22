@@ -8,6 +8,7 @@ Release 5.1.1
  * Increases the allowed line lengths emmited by apps at startup.
  * Adds support for the unary 'not' operator in the Union Station filter language.
  * Fixes support for Rails 5.0.1 Action Cable. Specifically, we now support the `options` argument in the `write_nonblock` method in hijacked Rack IO sockets.
+ * [Apache] Introduces a small delay to prevent running the Security Update Checker twice at startup.
 
 
 Release 5.1.0

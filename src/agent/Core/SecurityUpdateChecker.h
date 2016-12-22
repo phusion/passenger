@@ -57,6 +57,8 @@ private:
 
 	void threadMain() {
 		TRACE_POINT();
+		// Sleep for a short while to allow interruption during the Apache integration double startup procedure, this prevents running the update check twice
+		boost::this_thread::sleep_for(boost::chrono::seconds(2));
 		while (!this_thread::interruption_requested()) {
 			UPDATE_TRACE_POINT();
 			int backoffMin = 0;
