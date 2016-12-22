@@ -2,7 +2,7 @@ Release 5.1.1
 -------------
 
  * The precompiled version of the PassengerAgent binary (used for e.g. gem installs) now configures (statically linked) libcurl with system keystore, so that the new security update check can successfully validate certs.
- * Fixes some false positives (logging) from the new Node and Meteor cluster warning system. Closes GH-1905.
+ * Fixes some false positives (logging) from the new Node and Meteor cluster warning system. Logging is less repetitive and has extra debug info. Closes GH-1905.
  * Updates the upload-progress module in the Nginx Debian package. The module version that we linked against in 5.1.0 was 0.9.2, but due to a bug in that version the module didn't work.
  * The security update check now reports whether libcurl + SSL backend are statically linked to Passenger, in which case the check also needs to warn about relevant OpenSSL vulnerabilities in the linked library.
  * Increases the allowed line lengths emmited by apps at startup.

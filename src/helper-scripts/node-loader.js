@@ -30,13 +30,29 @@ var os = require('os');
 var fs = require('fs');
 var net = require('net');
 var http = require('http');
+var util = require('util');
+
+var nodeClusterErrCount = 0;
+var meteorClusterErrCount = 0;
 
 function badPackageError(packageName) {
 	return "You required the " + packageName + ", which is incompatible with Passenger, a non-functional shim was returned and your app may still work. However, please remove the related code as soon as possible.";
 }
 
-function errorMockingRequire(packageName, error) {
-	return "Failed to install shim to guard against the " + packageName + ". Error: " + error.message;
+// Logs failure to install shim + extended debug info, but with strict spamming protection.
+function errorMockingRequire(packageName, error, args, count) {
+	if (count > 2) {
+		return; // spam protect against repeated warnings
+	}
+	var msg = "Failed to install shim to guard against the " + packageName + ". Due to: " + error.message + ". Your can safely ignore this warning if you are not using " + packageName;
+	msg += "\n\tNode version: " + process.version + "\tArguments: " + args.length;
+	for (i = 0; i < args.length; i++) {
+		if (i > 9) { // limit the amount of array elements we log
+			break;
+		}
+		msg += "\n\t[" + i + "] " + util.inspect(args[i]).substr(0, 200); // limit the characters per array element
+	};
+	console.error(msg);
 }
 
 //Mock out Node Cluster Module
@@ -45,7 +61,7 @@ var originalRequire = Module.prototype.require;
 Module.prototype.require = function() {
 	try {
 		if (arguments['0'] == 'cluster') {
-			console.error(badPackageError("Node Cluster module"));
+			console.trace(badPackageError("Node Cluster module"));
 			return {
 				disconnect		 : function(){return false;},
 				fork			 : function(){return false;},
@@ -59,7 +75,8 @@ Module.prototype.require = function() {
 			};
 		}
 	} catch (e) {
-		console.error(errorMockingRequire("Node Cluster module", e));
+		nodeClusterErrCount++;
+		errorMockingRequire("Node Cluster module", e, arguments, nodeClusterErrCount);
 	}
 	return originalRequire.apply(this, arguments);
 };
@@ -74,7 +91,7 @@ vm.runInThisContext = function() {
 			scriptPath = scriptPath['filename'];
 		}
 		if (scriptPath.indexOf('meteorhacks_cluster') != -1) {
-			console.error(badPackageError("Meteorhacks cluster package"));
+			console.trace(badPackageError("Meteorhacks cluster package"));
 			return (function() {
 				Package['meteorhacks:cluster'] = {
 					Cluster: {
@@ -93,7 +110,8 @@ vm.runInThisContext = function() {
 			});
 		}
 	} catch (e) {
-		console.error(errorMockingRequire("Meteorhacks Cluster package", e));
+		meteorClusterErrCount++;
+		errorMockingRequire("Meteorhacks Cluster package", e, arguments, meteorClusterErrCount);
 	}
 	return orig_func.apply(this, arguments);
 };
