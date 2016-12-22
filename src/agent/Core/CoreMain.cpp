@@ -787,6 +787,9 @@ initializeSecurityUpdateChecker() {
 		if (!standaloneEngine.empty()) {
 			serverIntegration.append(" " + standaloneEngine);
 		}
+		if (options.get("server_software").find(FLYING_PASSENGER_NAME) != string::npos) {
+			serverIntegration.append(" flying");
+		}
 		string serverVersion = options.get("server_version", false); // not set in case of standalone / builtin
 
 		workingObjects->securityUpdateChecker = new SecurityUpdateChecker(workingObjects->resourceLocator, proxy, serverIntegration, serverVersion);
