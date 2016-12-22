@@ -404,7 +404,7 @@ task 'package:initiate_binaries_building' do
   request = Net::HTTP::Post.new(uri.request_uri)
   request.set_form_data("token" => jenkins_token)
   response = http.request(request)
-  if response.code != 200 && response.body != "Scheduled.\n"
+  if response.code != 201
     abort "*** ERROR: Cannot initiate building of binaries:\n" +
       "Status: #{response.code}\n\n" +
       response.body
@@ -451,7 +451,7 @@ task 'package:initiate_debian_building' do
   request = Net::HTTP::Post.new(uri.request_uri)
   request.set_form_data("token" => jenkins_token)
   response = http.request(request)
-  if response.code != 200 && response.body != "Scheduled.\n"
+  if response.code != 201
     abort "*** ERROR: Cannot initiate building of Debian packages:\n" +
       "Status: #{response.code}\n\n" +
       response.body
@@ -498,7 +498,7 @@ task 'package:initiate_rpm_building' do
   request = Net::HTTP::Post.new(uri.request_uri)
   request.set_form_data("token" => jenkins_token)
   response = http.request(request)
-  if response.code != 200 && response.body != "Scheduled.\n"
+  if response.code != 201
     abort "*** ERROR: Cannot initiate building of RPM packages:\n" +
       "Status: #{response.code}\n\n" +
       response.body
