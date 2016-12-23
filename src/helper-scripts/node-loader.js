@@ -86,28 +86,30 @@ var vm = require('vm');
 var orig_func = vm.runInThisContext;
 vm.runInThisContext = function() {
 	try {
-		var scriptPath = arguments['1'];
-		if (typeof scriptPath == 'object') {
-			scriptPath = scriptPath['filename'];
-		}
-		if (scriptPath.indexOf('meteorhacks_cluster') != -1) {
-			console.trace(badPackageError("Meteorhacks cluster package"));
-			return (function() {
-				Package['meteorhacks:cluster'] = {
-					Cluster: {
- 						_publicServices				: {},
-						_registeredServices			: {},
-						_discoveryBackends			: { mongodb: {} },
-						connect						: function(){return false;},
-						allowPublicAccess			: function(){return false;},
-						discoverConnection			: function(){return false;},
-						register					: function(){return false;},
-						_isPublicService			: function(){return false;},
-						registerDiscoveryBackend	: function(){return false;},
-						_blockCallAgain				: function(){return false;}
-					}
-				};
-			});
+		if (arguments.length > 1) {
+			var scriptPath = arguments['1'];
+			if (typeof scriptPath == 'object') {
+				scriptPath = scriptPath['filename'];
+			}
+			if (scriptPath.indexOf('meteorhacks_cluster') != -1) {
+				console.trace(badPackageError("Meteorhacks cluster package"));
+				return (function() {
+					Package['meteorhacks:cluster'] = {
+						Cluster: {
+ 							_publicServices				: {},
+							_registeredServices			: {},
+							_discoveryBackends			: { mongodb: {} },
+							connect						: function(){return false;},
+							allowPublicAccess			: function(){return false;},
+							discoverConnection			: function(){return false;},
+							register					: function(){return false;},
+							_isPublicService			: function(){return false;},
+							registerDiscoveryBackend	: function(){return false;},
+							_blockCallAgain				: function(){return false;}
+						}
+					};
+				});
+			}
 		}
 	} catch (e) {
 		meteorClusterErrCount++;
