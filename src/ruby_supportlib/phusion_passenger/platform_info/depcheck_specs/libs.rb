@@ -49,7 +49,10 @@ define 'libcurl-dev' do
     source = %Q{
       #include <curl/curl.h>
       int main() {
-        curl_global_init(CURL_GLOBAL_ALL);
+        CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
+        if (result == CURLE_PEER_FAILED_VERIFICATION) { // fails to compile if too old
+          return 1;
+        }
         return 0;
       }
     }
