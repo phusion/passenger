@@ -45,6 +45,7 @@ Release 5.1.0
  * [Nginx] The preferred Nginx version is now 1.10.2 (previously 1.10.1).
  * RPM pkg builder fix for breaking SELinux change in RHEL 7.3.
  * RPM pkg builder fix for RHEL6/CentOS6 incompatibility and replacement in Passenger.
+ * Adds Ubuntu 16.10 "Yakkety" packages.
 
 
 Release 5.0.30
@@ -67,6 +68,7 @@ Release 5.0.29
  * [Nginx] The preferred Nginx version is now 1.10.1 (previously 1.10.0).
  * [Nginx] The preferred PCRE version is now 8.39 (previously 8.34).
  * [Standalone] Passenger Standalone now supports /dev/stdout and /dev/stderr as log file path (via `--log-file` or Passengerfile.json). This is especially useful in Docker containers. In previous versions logging to those paths did not work, resulting in nothing getting logged at all.
+ * Adds Ubuntu 16.04 "Xenial" packages, deprecates Ubuntu 15.10 “Wily” packages (in accordance with LTS support policy).
 
 
 Release 5.0.28
