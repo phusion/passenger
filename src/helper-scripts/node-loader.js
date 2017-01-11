@@ -28,7 +28,6 @@ module.paths.unshift(__dirname + "/../src/nodejs_supportlib");
 var EventEmitter = require('events').EventEmitter;
 var os = require('os');
 var fs = require('fs');
-var net = require('net');
 var http = require('http');
 
 function badPackageError(packageName) {
@@ -80,7 +79,7 @@ vm.runInThisContext = function() {
 			return (function() {
 				Package['meteorhacks:cluster'] = {
 					Cluster: {
- 						_publicServices				: {},
+						_publicServices				: {},
 						_registeredServices			: {},
 						_discoveryBackends			: { mongodb: {} },
 						connect						: function(){return false;},
@@ -182,9 +181,9 @@ function setupEnvironment(options) {
 	var logLevel = passengerToWinstonLogLevel(PhusionPassenger.options.log_level);
 	var winston = require("vendor-copy/winston");
 	var logger = new (winston.Logger)({
-  		transports: [
-  			new (winston.transports.Console)({ level: logLevel, debugStdout: true })
-  		]
+			transports: [
+				new (winston.transports.Console)({ level: logLevel, debugStdout: true })
+			]
 	});
 
 	process.title = 'Passenger NodeApp: ' + options.app_root;
@@ -286,6 +285,37 @@ function addListenerAtBeginning(emitter, event, callback) {
 	}
 }
 
+function doListen(server, listenTries, callback) {
+	function errorHandler(error) {
+		if (error.errno == 'EADDRINUSE') {
+			if (listenTries == 100) {
+				server.emit('error', new Error('Phusion Passenger could not find suitable socket address to bind on'));
+			} else {
+				// Try again with another socket path.
+				listenTries++;
+				doListen(server, listenTries, callback);
+			}
+		} else {
+			server.emit('error', error);
+		}
+	}
+
+	var socketPath = PhusionPassenger.options.socket_path = generateServerSocketPath();
+	server.once('error', errorHandler);
+	server.originalListen(socketPath, function() {
+		server.removeListener('error', errorHandler);
+		doneListening(server, callback);
+		process.nextTick(finalizeStartup);
+	});
+}
+
+function doneListening(server, callback) {
+	if (callback) {
+		server.once('listening', callback);
+	}
+	server.emit('listening');
+}
+
 function installServer() {
 	var server = this;
 	if (!PhusionPassenger._appInstalled) {
@@ -305,39 +335,7 @@ function installServer() {
 		});
 
 		var listenTries = 0;
-		doListen(extractCallback(arguments));
-
-		function doListen(callback) {
-			function errorHandler(error) {
-				if (error.errno == 'EADDRINUSE') {
-					if (listenTries == 100) {
-						server.emit('error', new Error(
-							'Phusion Passenger could not find suitable socket address to bind on'));
-					} else {
-						// Try again with another socket path.
-						listenTries++;
-						doListen(callback);
-					}
-				} else {
-					server.emit('error', error);
-				}
-			}
-
-			var socketPath = PhusionPassenger.options.socket_path = generateServerSocketPath();
-			server.once('error', errorHandler);
-			server.originalListen(socketPath, function() {
-				server.removeListener('error', errorHandler);
-				doneListening(callback);
-				process.nextTick(finalizeStartup);
-			});
-		}
-
-		function doneListening(callback) {
-			if (callback) {
-				server.once('listening', callback);
-			}
-			server.emit('listening');
-		}
+		doListen(server, listenTries, extractCallback(arguments));
 
 		return server;
 	} else {
