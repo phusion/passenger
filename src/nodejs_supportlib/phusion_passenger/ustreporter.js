@@ -45,14 +45,14 @@ var appRoot;
  */
 exports.getPassengerLogger = function() {
 	return log;
-}
+};
 
 /**
  * @return the application root path, needed for instrumenting an application's node modules.
  */
 exports.getApplicationRoot = function() {
 	return appRoot;
-}
+};
 
 /**
  * @return timestamp in microseconds to be used as the start or end timestamp for timed logging (monotonic clock, not wall clock).
@@ -60,7 +60,7 @@ exports.getApplicationRoot = function() {
 exports.nowTimestamp = function() {
 	var secAndUsec = process.hrtime();
 	return Math.round((secAndUsec[0] * 1e6) + (secAndUsec[1] / 1e3));
-}
+};
 
 /**
  * All Activity logs will be dropped unless they are done after this method, from within an execution chain starting with the callback. So it is
@@ -102,28 +102,28 @@ exports.attachToRequest = function(request, response, callback) {
 	} catch (e) {
 		log.error("Dropping Union Station request log due to error:\n" + e.stack);
 	}
-}
+};
 
 /**
  * Log a timed block, described by activityName, with an optional message to display (e.g. in a mouseover).
  */
 exports.logTimedActivityGeneric = function(activityName, tBegin, tEnd, message) {
 	logTimedActivity(activityName, tBegin, tEnd, "generic", message ? { "message": message } : undefined);
-}
+};
 
 /**
  * Log a timed mongo database interaction block, described by activityName, with an optional query to display (e.g. in a mouseover).
  */
 exports.logTimedActivityMongo = function(activityName, tBegin, tEnd, query) {
 	logTimedActivity(activityName, tBegin, tEnd, "mongo", query ? { "query": query } : undefined);
-}
+};
 
 /**
  * Log a timed SQL database interaction block, described by activityName, with an optional query to display (e.g. in a mouseover).
  */
 exports.logTimedActivitySQL = function(activityName, tBegin, tEnd, query) {
 	logTimedActivity(activityName, tBegin, tEnd, "sql", query ? { "query": query } : undefined);
-}
+};
 
 /**
  * Internal, base for the public logTimedActivity...()
@@ -198,7 +198,7 @@ exports.logException = function(name, message, trace) {
 	} catch (e) {
 		log.error("Dropping Union Station exception log due to error:\n" + e.stack);
 	}
-}
+};
 
 /**
  * Get the current request transaction id necessary to append logs to it. This is normally done automatically, but some modules break automatic attachment
@@ -215,7 +215,7 @@ exports.getCurrentTxnId = getCurrentTxnId;
  */
 exports.getCLSWrappedCallback = function(origCallback) {
 	return reqNamespace.bind(origCallback);
-}
+};
 
 /**
  * For internal use. Called by Passenger loader, no need to call from anywhere else.
@@ -224,4 +224,4 @@ exports.init = function(logger, applicationRoot, ustLogger) {
 	log = logger;
 	appRoot = applicationRoot;
 	ustLog = ustLogger;
-}
+};
