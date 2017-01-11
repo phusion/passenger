@@ -62,7 +62,7 @@ function LineReader(stream) {
 	}
 
 	function onData(data) {
-		var index, line, callback;
+		var index, line;
 
 		if (self.buffer == undefined) {
 			// Already closed.
@@ -100,19 +100,19 @@ LineReader.prototype.close = function() {
 	this._pause();
 	this.buffer = undefined;
 	this.lines = undefined;
-}
+};
 
 LineReader.prototype.isClosed = function() {
 	return this.buffer === undefined;
-}
+};
 
 LineReader.prototype.endReached = function() {
 	return this.eof;
-}
+};
 
 LineReader.prototype.lineBufferIsFull = function() {
 	return this.lines.length > 0;
-}
+};
 
 LineReader.prototype.readLine = function(callback) {
 	if (this.lines.length > 0) {
@@ -128,7 +128,7 @@ LineReader.prototype.readLine = function(callback) {
 	} else {
 		this.callbacks.push(callback);
 	}
-}
+};
 
 LineReader.prototype._autoPauseOrResume = function() {
 	if (this.buffer != undefined) {
@@ -138,20 +138,20 @@ LineReader.prototype._autoPauseOrResume = function() {
 			this._resume();
 		}
 	}
-}
+};
 
 LineReader.prototype._pause = function() {
 	if (!this.paused) {
 		this.paused = true;
 		this.stream.pause();
 	}
-}
+};
 
 LineReader.prototype._resume = function() {
 	if (this.paused) {
 		this.paused = false;
 		this.stream.resume();
 	}
-}
+};
 
 exports.LineReader = LineReader;
