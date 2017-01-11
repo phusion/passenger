@@ -65,9 +65,8 @@ function instrumentCollectionMethod(origParent, functionName, newFn) {
 }
 
 function collectionFn(origArguments, databaseName, collectionName, functionName, originalFn) {
-	var friendlyName = databaseName + "." + collectionName + "." + functionName + "(..)";
 	var query = "";
-	for (i = 0; i < origArguments.length; i++) {
+	for (var i = 0; i < origArguments.length; i++) {
 		if (typeof(origArguments[i]) != 'function') { // mongoskin
 			query += (i > 0 ? "," : "") + JSON.stringify(origArguments[i]);
 		}
@@ -111,13 +110,13 @@ exports.initPreLoad = function() {
 	wrapRepairCLSMongoskinUtils(appRoot);
 
 	try {
-		for (i = 0; i < collectionMethods.length; i++) {
+		for (var i = 0; i < collectionMethods.length; i++) {
 			instrumentCollectionMethod(mongodb.Collection.prototype, collectionMethods[i], collectionFn);
 		}
 	} catch (e) {
 		log.error("Unable to instrument MongoDB due to error: " + e);
 	}
-}
+};
 
 function wrapRepairCLSMongo14() {
 	try {
@@ -139,7 +138,7 @@ function wrapRepairCLSMongo14() {
 			} else {
 				this._passenger_wrapped__executeQueryCommand.apply(this, arguments);
 			}
-		}
+		};
 
 		mongodb.Db.prototype._passenger_wrapped__executeInsertCommand = mongodb.Db.prototype._executeInsertCommand;
 		mongodb.Db.prototype._executeInsertCommand = function() {
@@ -154,7 +153,7 @@ function wrapRepairCLSMongo14() {
 			} else {
 				this._passenger_wrapped__executeInsertCommand.apply(this, arguments);
 			}
-		}
+		};
 		log.verbose("Using MongoDB 1.4.x continuation-local-storage workaround");
 	} catch (e) {
 		log.error("Not using MongoDB continuation-local-storage workaround: " + e);
@@ -185,10 +184,10 @@ function wrapRepairCLSMongoskinUtils(appRoot) {
 			skinClass.prototype.open = function(callback) {
 				// Finally we can bind the callback so that when the emitter calls it, the cls is mapped correctly.
 				return skinClass.prototype._passenger_wrapped_open.call(this, ustReporter.getCLSWrappedCallback(callback));
-			}
+			};
 
 			return skinClass;
-		}
+		};
 		log.verbose("Using mongoskin continuation-local-storage workaround");
 	} catch (e) {
 		log.error("Not using mongoskin continuation-local-storage workaround (probably an unsupported version): " + e);
@@ -199,5 +198,5 @@ exports.initPostLoad = function() {
 	//if (!mongodb) {
 	//	return;
 	//}
-}
+};
 
