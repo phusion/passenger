@@ -351,10 +351,6 @@ A good and comprehensive, but rather large source for learning POSIX is the [POS
  * [Coding Tips and Pitfalls](https://github.com/phusion/passenger/blob/master/doc/CodingTipsAndPitfalls.md)
 
 <a name="git_structure"></a>
-### Git structure
+### Pull Requests
 
-The **master** branch is the main development branch, containing the latest and greatest code that was tested and accepted for inclusion into passenger (usually merged in from loose development branches that are deleted afterwards). This branch may not be stable enough yet for production.
-
-Branches like **stable-4.0**, **stable-5.0** are production quality branches (split off from master) for major versions. Each production branch has tags for minor versions, whereby **tag x.0.1** represents the first production-ready version on a branch (there may be some release candidates before that). For example: branch stable-5.0, tagged 5.0.1 is the first release of the 5.0 line that is ready for production.
-
-In general we apply fixes to the respective stable branch and merge these into the master, so it is easiest if you submit pull requests to the stable branches (unless of course you are working with the unstable master). Conversely, new features always go to the master and are then cherrypicked from one or more branches.
+Pull requests should normally be submitted against the latest **stable** branch (e.g. **stable-5.1**), because once tested & accepted, we want users to benefit from the work as soon as possible. The stable branch is constantly tested, contains both bugfix and feature commits, and we periodically tag it to produce a new release. 
