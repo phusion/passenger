@@ -17,7 +17,7 @@
    * [Ruby coding style](#ruby_coding_style)
    * [Systems programming fundamentals](#systems_programming_fundamentals)
    * [Further reading](#further_reading)
- * [Git structure](#git_structure)
+ * [Pull requests](#pull_requests)
 
 Thank you for your interest in Phusion Passenger. Phusion Passenger is open source so your contributions are very welcome. Although we also provide a [commercial version](https://www.phusionpassenger.com/enterprise) and [commercial support](https://www.phusionpassenger.com/commercial_support), the core remains open source and we remain committed to keep it that way. This guide gives you an overview of the ways with which you can contribute, as well as contribution guidelines.
 
@@ -350,7 +350,7 @@ A good and comprehensive, but rather large source for learning POSIX is the [POS
 
  * [Coding Tips and Pitfalls](https://github.com/phusion/passenger/blob/master/doc/CodingTipsAndPitfalls.md)
 
-<a name="git_structure"></a>
-### Pull Requests
+<a name="pull_requests"></a>
+### Pull requests
 
 Pull requests should normally be submitted against the latest **stable** branch (e.g. **stable-5.1**), because once tested & accepted, we want users to benefit from the work as soon as possible. The stable branch is constantly tested, contains both bugfix and feature commits, and we periodically tag it to produce a new release. 
