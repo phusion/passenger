@@ -126,7 +126,12 @@ class TCPPrespawnLocation < PrespawnLocation
   end
 
   def connect
-    TCPSocket.new(@uri.host, request_port)
+    # This only works for Standalone, if nginx or apache is bound to something other than 127.0.0.1 or ::1 then this is not a valid approach.
+    # uri.host is used for the "Host: ..." field in the prestarted HEAD request, which the user might purposely wish to be set to a a load balancer address (the library also specifies it should match the server name of the segment where the app is that you want to prestart). But you do not want to connect to a loadbalancer address for prestarting.
+    # getting the local ip is fallible b/c there may be multiple, and we shouldn't assume that a particular ip is in use, ie just because something accepts on 10.0.1.1:80 doesn't mean that it's a websever serving the app we are trying to prestart
+    # getting all the ips apache/nginx are bound to means we need to know which web server we are working with, and there could be multiple running instances.
+    # properly parsing the webserver config is a huge task and we would need to know which config to read
+    TCPSocket.new(request_host, request_port)
   rescue Errno::ECONNREFUSED
     begin
       TCPSocket.new('127.0.0.1', request_port)
@@ -134,7 +139,7 @@ class TCPPrespawnLocation < PrespawnLocation
       begin
         TCPSocket.new('::1', request_port)
       rescue Errno::ECONNREFUSED => e
-        raise "Attempted to bind to #{@uri.host} on port #{request_port}, with fallbacks: 127.0.0.1 and ::1 but failed each time. #{e}"
+        raise "Attempted to connect to #{request_host} on port #{request_port}, with fallbacks: 127.0.0.1 and ::1 but failed each time. #{e}"
       end
     end
   end
