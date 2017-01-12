@@ -25,7 +25,6 @@
 
 var log;
 var net = require('net');
-var os = require('os');
 var nbo = require('vendor-copy/network-byte-order');
 var codify = require('vendor-copy/codify');
 
@@ -102,15 +101,15 @@ exports.init = function(logger, routerAddress, routerUser, routerPass, gatewayKe
 	changeState(0, "Init approved");
 
 	beginConnection();
-}
+};
 
 exports.finit = function() {
 	resetState("finit()");
-}
+};
 
 exports.isEnabled = function() {
 	return routerState >= 0;
-}
+};
 
 function beginConnection() {
 	changeState(1);
@@ -162,7 +161,7 @@ function LogTransaction(cat) {
 }
 
 function findLastPendingTxnForId(txnId) {
-	for (i = pendingTxnBuf.length - 1; i >= 0; i--) {
+	for (var i = pendingTxnBuf.length - 1; i >= 0; i--) {
 		if (pendingTxnBuf[i].txnId == txnId) {
 			return pendingTxnBuf[i];
 		}
@@ -180,7 +179,7 @@ exports.deferIfPendingTxns = function(txnId, deferThis, deferFn, deferArgs) {
 		txn.deferFn = deferFn;
 		txn.deferArgs = deferArgs;
 	}
-}
+};
 
 // Example categories are "requests", "exceptions". The lineArray is a specific format parsed by Union STation.
 // txnIfContinue is an optional txnId and attaches the log to an existing transaction with the specified txnId.
@@ -204,7 +203,7 @@ exports.logToUstTransaction = function(category, lineArray, txnIfContinue) {
 	}
 
 	pushPendingData();
-}
+};
 
 function verifyOk(rcvString, topic) {
 	if ("status" != rcvString[0] || "ok" != rcvString[1]) {
@@ -249,7 +248,7 @@ function pushPendingData() {
 		case 2:
 			// txn is open, log the data & close
 			log.debug("log & close transaction(" + pendingTxnBuf[0].txnId + ")");
-			txn = pendingTxnBuf.shift();
+			var txn = pendingTxnBuf.shift();
 
 			if (txn.deferFn) {
 				var moveToTxn = findLastPendingTxnForId(txn.txnId);
@@ -264,7 +263,7 @@ function pushPendingData() {
 				}
 			}
 
-			for (i = 0; i < txn.logBuf.length; i++) {
+			for (var i = 0; i < txn.logBuf.length; i++) {
 				writeLenArray(routerConn, "log\0" + txn.txnId + "\0" + codify.toCode(txn.timestamp) + "\0");
 				writeLenString(routerConn, txn.logBuf[i]);
 			}
@@ -309,17 +308,20 @@ function readLenArray(newData) {
 	readBuf += newData;
 	log.silly("read: total len = " + readBuf.length);
 	log.silly(new Buffer(readBuf).toString("hex"));
+
 	if (readBuf.length < 2) {
-	log.silly("need more header data..");
+		log.silly("need more header data..");
 		return null; // expecting at least length bytes
 	}
-	payloadLen = nbo.ntohs(new Buffer(readBuf), 0);
+
+	var payloadLen = nbo.ntohs(new Buffer(readBuf), 0);
 	log.silly("read: payloadLen = " + payloadLen);
+
 	if (readBuf.length < 2 + payloadLen) {
-	log.silly("need more payload data..");
+		log.silly("need more payload data..");
 		return null; // not fully read yet
 	}
-	resultStr = readBuf.substring(2, payloadLen + 2);
+	var resultStr = readBuf.substring(2, payloadLen + 2);
 	readBuf = readBuf.substring(payloadLen + 2); // keep any bytes read beyond length for next read
 
 	return resultStr.split("\0");
@@ -328,7 +330,7 @@ function readLenArray(newData) {
 function onData(data) {
 	log.silly("onData [" + data + "] (len = " + data.length + ")");
 
-	rcvString = readLenArray(data);
+	var rcvString = readLenArray(data);
 	if (!rcvString) {
 		return;
 	}
@@ -365,8 +367,8 @@ function onData(data) {
 
 		case 5:
 			log.warn("unexpected data receive state (5)");
-	 		pushPendingData();
-	 		break;
+			pushPendingData();
+			break;
 
 		case 6:
 			resetWatchdog();
@@ -421,14 +423,14 @@ function changeState(newRouterState, optReason) {
 }
 
 function writeLenString(c, str) {
-	len = new Buffer(4);
+	var len = new Buffer(4);
 	nbo.htonl(len, 0, str.length);
 	c.write(len);
 	c.write(str);
 }
 
 function writeLenArray(c, str) {
-	len = new Buffer(2);
+	var len = new Buffer(2);
 	nbo.htons(len, 0, str.length);
 	c.write(len);
 	c.write(str);

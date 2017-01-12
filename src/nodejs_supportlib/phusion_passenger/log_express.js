@@ -67,11 +67,11 @@ exports.initPreLoad = function() {
 			}
 
 			return express.application.useOrig.apply(this, arguments);
-		}
+		};
 	} catch (e) {
 		log.error("Unable to instrument Express due to error: " + e);
 	}
-}
+};
 
 exports.initPostLoad = function() {
 	if (!express) {
@@ -86,7 +86,7 @@ exports.initPostLoad = function() {
 	} catch (e) {
 		log.error("Unable to instrument Express error flow due to error: " + e);
 	}
-}
+};
 
 function logRequest(req, res, next) {
 	log.verbose("==== Instrumentation [Express] ==== REQUEST [" + req.method + " " + req.url + "] attach");
