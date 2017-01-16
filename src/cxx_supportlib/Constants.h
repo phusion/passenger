@@ -95,7 +95,7 @@
 #define SERVER_KIT_MAX_SERVER_ENDPOINTS 4
 #define SERVER_TOKEN_NAME "Phusion_Passenger"
 #define SHORT_PROGRAM_NAME "Passenger"
-#define SUPPORT_URL "https://www.phusionpassenger.com/documentation_and_support"
+#define SUPPORT_URL "https://www.phusionpassenger.com/support"
 #define USER_NAMESPACE_DIRNAME ".passenger"
 
 #endif /* _PASSENGER_CONSTANTS_H_ */

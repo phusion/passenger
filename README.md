@@ -6,13 +6,13 @@ What makes it so fast and reliable is its **C++** core, its **zero-copy** archit
 
 <a href="http://vimeo.com/phusionnl/review/80475623/c16e940d1f"><img src="http://blog.phusion.nl/wp-content/uploads/2014/01/gameofthrones.jpg" height="300"></a><br><em>Phusion Passenger used in Game of Thrones Ascent</em>
 
-**Learn more:** [Website](https://www.phusionpassenger.com/) | [Documentation](https://www.phusionpassenger.com/documentation_and_support) | [Support resources](https://www.phusionpassenger.com/documentation_and_support) | [Github](https://github.com/phusion/passenger) | [Twitter](https://twitter.com/phusion_nl) | [Blog](http://blog.phusion.nl/)
+**Learn more:** [Website](https://www.phusionpassenger.com/) | [Documentation & Support](https://www.phusionpassenger.com/support) | [Github](https://github.com/phusion/passenger) | [Twitter](https://twitter.com/phusion_nl) | [Blog](http://blog.phusion.nl/)
 
 <a href="https://www.phusionpassenger.com"><center><img src="http://blog.phusion.nl/wp-content/uploads/2012/07/Passenger_chair_256x256.jpg" width="160" height="160" alt="Phusion Passenger"></center></a>
 
 ## Installation
 
-Please follow [the installation instructions on the website](https://www.phusionpassenger.com/download).
+Please follow [the installation instructions on the website](https://www.phusionpassenger.com/get_it_now).
 
 ### Installing the source directly from git
 

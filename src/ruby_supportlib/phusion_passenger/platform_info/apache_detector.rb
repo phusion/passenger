@@ -239,7 +239,7 @@ module PhusionPassenger
         elsif @results.size > 1
           log "<yellow>WARNING: You have multiple Apache installations on your system!</yellow>"
           log "You are strongly recommended to read this section of the documentation:"
-          log "<b>https://www.phusionpassenger.com/install/apache/multiple_apache_installs.html</b>"
+          log "<b>https://www.phusionpassenger.com/library/install/apache/multiple_apache_installs.html</b>"
         end
       end
 
