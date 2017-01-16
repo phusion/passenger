@@ -100,6 +100,11 @@ module PhusionPassenger
             "Nginx version with --nginx-version") do |val|
             options[:nginx_tarball] = val
           end
+          opts.on("--engine ENGINE", String, "Engine to use. " +
+            "Default: Nginx") do |val|
+            options[:engine] = val.downcase
+            options[:compile] = false unless options[:engine] == "nginx"
+          end
           opts.on("--brief", "Report progress in a brief style") do
             options[:brief] = true
             options[:install_agent_args] << "--brief"
@@ -182,12 +187,14 @@ module PhusionPassenger
           end
           result
         end
-        if !@options[:nginx_version]
-          if @options[:nginx_tarball]
-            abort "#{@colors.red}Error: if you specify --nginx-tarball, " +
-              "you must also specify --nginx-version.#{@colors.reset}"
-          else
-            @options[:nginx_version] = PREFERRED_NGINX_VERSION
+        if @options[:engine] == "nginx"
+          if !@options[:nginx_version]
+            if @options[:nginx_tarball]
+              abort "#{@colors.red}Error: if you specify --nginx-tarball, " +
+                "you must also specify --nginx-version.#{@colors.reset}"
+            else
+              @options[:nginx_version] = PREFERRED_NGINX_VERSION
+            end
           end
         end
       end
@@ -221,6 +228,7 @@ module PhusionPassenger
       end
 
       def download_nginx_engine
+        return true if @options[:engine] != "nginx"
         if @options[:nginx_version] != PREFERRED_NGINX_VERSION
           return false
         end
@@ -242,6 +250,10 @@ module PhusionPassenger
       end
 
       def compile_nginx_engine(tmpdir)
+        if @options[:engine] != "nginx"
+          puts "Not compiling Nginx engine, because builtin engine selected."
+          return
+        end
         puts
         puts "---------------------------------------"
         puts

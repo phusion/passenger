@@ -218,10 +218,10 @@ module PhusionPassenger
         else
           nginx_name = "nginx-#{@options[:nginx_version]}"
           @nginx_binary = PhusionPassenger.find_support_binary(nginx_name)
-          if !@agent_exe || !@nginx_binary
+          if !@agent_exe || (@options[:engine] == "nginx" && !@nginx_binary)
             install_runtime
             @agent_exe = PhusionPassenger.find_support_binary(AGENT_EXE)
-            @nginx_binary = PhusionPassenger.find_support_binary(nginx_name)
+            @nginx_binary = PhusionPassenger.find_support_binary(nginx_name) if @options[:engine] == "nginx"
           end
         end
       end
@@ -240,6 +240,7 @@ module PhusionPassenger
           # (as opposed to responding quickly with an error), then the system
           # quickly switches to a mirror.
           "--connect-timeout", "0",
+          "--engine", @options[:engine],
           "--idle-timeout", "0"
         ]
         if @options[:auto]
@@ -249,13 +250,15 @@ module PhusionPassenger
           args << "--url-root"
           args << @options[:binaries_url_root]
         end
-        if @options[:nginx_version]
-          args << "--nginx-version"
-          args << @options[:nginx_version]
-        end
-        if @options[:nginx_tarball]
-          args << "--nginx-tarball"
-          args << @options[:nginx_tarball]
+        if @options[:engine] == "nginx"
+          if @options[:nginx_version]
+            args << "--nginx-version"
+            args << @options[:nginx_version]
+          end
+          if @options[:nginx_tarball]
+            args << "--nginx-tarball"
+            args << @options[:nginx_tarball]
+          end
         end
         if @options[:dont_compile_runtime]
           args << "--no-compile"

@@ -5,6 +5,7 @@ Next version (not yet released)
  * Fixes remaining false positives (logging) from the new Meteor cluster warning system. Closes GH-1905.
  * Create a private keychain on macOS when the system keychain is defaulted to, this avoids a permissions issue with the system keychain when performing the Security Update Check. This is necessary because the system keychain is the default keychain of daemon users and root on macOS.
  * Improve `passenger-memory-stats` to include JRuby processes that fail to rename as expected. Closes GH-1878.
+ * [Standalone] Don't download or compile Nginx when using the builtin engine. Closes GH-1910.
 
 
 Release 5.1.1
