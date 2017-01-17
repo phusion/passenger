@@ -421,7 +421,11 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_context_t *
      * Here we check whether Nginx has rewritten the URI or not. If not,
      * we can use the raw, unparsed URI as sent by the client.
      */
-    if (r->valid_unparsed_uri && r->main) {
+    if (context->app_type == PAT_WSGI) {
+        // wsgi apps don't want escaped URIs
+        state->escaped_uri.len = r->uri.len;
+        state->escaped_uri.data = r->uri.data;
+    } else if (r->valid_unparsed_uri && r->main) {
         state->escaped_uri = r->unparsed_uri;
         const char *pos = memchr((const char *) r->unparsed_uri.data, '?', r->unparsed_uri.len);
         if (pos != NULL) {

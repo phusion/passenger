@@ -25,7 +25,6 @@
  */
 #include <Core/Controller.h>
 #include <Utils/SystemTime.h>
-#include <Utils/Curl.h>
 
 /*************************************************************************
  *
@@ -64,21 +63,13 @@ struct Controller::SessionProtocolWorkingState {
 	char *environmentVariablesData;
 	size_t environmentVariablesSize;
 	bool hasBaseURI;
-	CURL *curl;
 
 	SessionProtocolWorkingState()
-		: environmentVariablesData(NULL),
-		  curl(NULL)
-		{
-			curl = curl_easy_init();
-			if (!curl) {
-				throw RuntimeException("Can't initialize libcurl.");
-			}
-		}
+		: environmentVariablesData(NULL)
+		{ }
 
 	~SessionProtocolWorkingState() {
 		free(environmentVariablesData);
-		curl_easy_cleanup(curl);
 	}
 };
 
@@ -332,22 +323,6 @@ Controller::determineHeaderSizeForSessionProtocol(Request *req,
 	unsigned int dataSize = sizeof(boost::uint32_t);
 
 	state.path        = req->getPathWithoutQueryString();
-	if (req->options.appType == P_STATIC_STRING("wsgi")) {
-		if (state.curl) {
-			int outLength = -1;
-			char *output = curl_easy_unescape(state.curl, state.path.c_str(), state.path.size(), &outLength);
-			if(output && outLength >= 0) {
-				char *buffer = (char *) psg_pnalloc(req->pool, outLength);
-				memcpy(buffer, output, outLength);
-				state.path = StaticString(buffer, outLength);
-				curl_free(output);
-			} else {
-				throw RuntimeException("Failed to unescape url path for wsgi app.");
-			}
-		} else {
-			throw RuntimeException("Failed to unescape url path for wsgi app.");
-		}
-	}
 	state.hasBaseURI  = req->options.baseURI != P_STATIC_STRING("/")
 		&& startsWith(state.path, req->options.baseURI);
 	if (state.hasBaseURI) {
