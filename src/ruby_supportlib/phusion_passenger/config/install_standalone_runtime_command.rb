@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2015 Phusion Holding B.V.
+#  Copyright (c) 2014-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -263,6 +263,14 @@ module PhusionPassenger
           args = @options[:compile_args].dup
           args << "--working-dir"
           args << tmpdir
+          if @options[:nginx_version]
+            args << "--nginx-version"
+            args << @options[:nginx_version]
+          end
+          if @options[:nginx_tarball]
+            args << "--nginx-tarball"
+            args << @options[:nginx_tarball]
+          end
           CompileNginxEngineCommand.new(args).run
         else
           abort "No precompiled Nginx engine could be downloaded. Refusing to compile because --no-compile is given."

@@ -6,6 +6,7 @@ Next version (not yet released)
  * Create a private keychain on macOS when the system keychain is defaulted to, this avoids a permissions issue with the system keychain when performing the Security Update Check. This is necessary because the system keychain is the default keychain of daemon users and root on macOS.
  * Improve `passenger-memory-stats` to include JRuby processes that fail to rename as expected. Closes GH-1878.
  * [Standalone] Don't download or compile Nginx when using the builtin engine. Closes GH-1910.
+ * [Standalone] Fixes `--nginx-tarball` option of `passenger start` and `passenger-config install-standalone-runtime` (wasn't working). Also verifies that `--nginx-version` is explicitly specified as it should be.
 
 
 Release 5.1.1

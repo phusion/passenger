@@ -1,7 +1,7 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -242,12 +242,24 @@ module PhusionPassenger
             abort
           end
         end
-        nginx_sources_name = "nginx-#{@nginx_version}"
 
         puts "Extracting tarball..."
         e_working_dir = Shellwords.escape(@working_dir)
         e_tarball = Shellwords.escape(tarball)
-        system("cd #{e_working_dir} && tar xzf #{e_tarball}")
+        result = system("cd #{e_working_dir} && tar xzf #{e_tarball}")
+        if !result
+          puts
+          if @nginx_tarball
+            new_screen
+            puts "You specified --nginx-tarball, but the file could not be extracted. " +
+              "Please check the path and format (tar.gz), and ensure Passenger can write to " + 
+              PlatformInfo.tmpexedir + "."
+            puts
+          else
+            show_possible_solutions_for_download_and_extraction_problems
+          end
+          abort
+        end
       end
 
       def show_possible_solutions_for_download_and_extraction_problems

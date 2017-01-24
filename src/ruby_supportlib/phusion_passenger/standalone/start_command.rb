@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2016 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -176,6 +176,9 @@ module PhusionPassenger
         end
         if @options[:ssl] && !@options[:ssl_certificate_key]
           abort "You specified --ssl. Please specify --ssl-certificate-key as well."
+        end
+        if @options[:nginx_tarball] && !@options_without_defaults[:nginx_version]
+          abort "You specified --nginx-tarball. Please also specify which Nginx version the tarball contains using --nginx-version."
         end
         if @options[:engine] != "builtin" && @options[:engine] != "nginx"
           abort "You've specified an invalid value for --engine. The only values allowed are: builtin, nginx."
