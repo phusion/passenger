@@ -1,5 +1,5 @@
-Next version (not yet released)
--------------------------------
+Release 5.1.2
+-------------
 
  * Improve curl check for passenger-install- scripts to catch (very old) curl versions that won't compile against 5.1+.
  * Fixes remaining false positives (logging) from the new Meteor cluster warning system. Closes GH-1905.
