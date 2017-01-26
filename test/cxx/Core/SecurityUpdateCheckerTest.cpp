@@ -35,8 +35,8 @@ namespace tut {
 		string lastSuccess;
 		string lastSuccessAdditional;
 
-		TestChecker(ResourceLocator locator, string proxy, string serverIntegration, string serverVersion)
-			: SecurityUpdateChecker(locator, proxy, serverIntegration, serverVersion),
+		TestChecker(ResourceLocator locator, string proxy, string serverIntegration, string serverVersion, string instancePath)
+			: SecurityUpdateChecker(locator, proxy, serverIntegration, serverVersion, instancePath),
 			  mockResponseCurlCode(CURLE_FAILED_INIT),
 			  mockResponseHttpCode(0),
 			  mockResponseData(""),
@@ -104,7 +104,7 @@ namespace tut {
 		}
 
 		void init(string proxyAddress) {
-			checker = boost::make_shared<TestChecker>(*resourceLocator, proxyAddress, "", "");
+			checker = boost::make_shared<TestChecker>(*resourceLocator, proxyAddress, "", "", "");
 		}
 	};
 

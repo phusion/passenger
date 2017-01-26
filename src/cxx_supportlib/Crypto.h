@@ -88,7 +88,6 @@ private:
 	OSStatus copyIdentityFromPKCS12File(const char *cPath, const char *cPassword, const char *cLabel);
 	CFDataRef genIV(size_t iv_size);
 	bool getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len);
-	bool generateRandomChars(unsigned char *rndChars, int rndLen);
 	bool memoryBridge(CFDataRef input, void **target, size_t &len);
 	bool innerMemoryBridge(void *input, void **target, size_t len);
 #else
@@ -110,6 +109,7 @@ public:
 	 */
 	bool preAuthKey(const char *path, const char *passwd, const char *cLabel);
 	void killKey(const char *cLabel);
+	bool generateRandomChars(unsigned char *rndChars, int rndLen);
 #endif
 
 	/**

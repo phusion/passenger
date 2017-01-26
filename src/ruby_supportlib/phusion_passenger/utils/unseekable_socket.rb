@@ -117,8 +117,8 @@ module PhusionPassenger
         raise annotate(e)
       end
 
-      def write_nonblock(string)
-        @socket.write_nonblock(string)
+      def write_nonblock(string, *args)
+        @socket.write_nonblock(string, *args)
       rescue => e
         raise annotate(e)
       end

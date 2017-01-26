@@ -684,12 +684,12 @@ private:
 		}
 		writeExact(fd, "\n", &timeout);
 
-		result = io.readLine(1024, &timeout);
+		result = io.readLine(1024 * 8, &timeout);
 		if (result == "OK\n") {
 			UPDATE_TRACE_POINT();
 			pid_t spawnedPid;
 
-			spawnedPid = atoi(io.readLine(1024, &timeout).c_str());
+			spawnedPid = atoi(io.readLine(1024 * 8, &timeout).c_str());
 			if (spawnedPid <= 0) {
 				BackgroundIOCapturerPtr stderrCapturer;
 				throwPreloaderSpawnException("An error occurred while starting "

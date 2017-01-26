@@ -56,29 +56,15 @@ Crypto::~Crypto() {
 CFDictionaryRef Crypto::createQueryDict(const char *label) {
 	if (kSecClassIdentity != NULL) {
 		const size_t size = 5L;
-		CFTypeRef keys[size];
-		CFTypeRef values[size];
-		CFDictionaryRef queryDict;
-		CFStringRef cfLabel = CFStringCreateWithCString(NULL, label,
-														kCFStringEncodingUTF8);
+		CFStringRef cfLabel = CFStringCreateWithCString(NULL, label, kCFStringEncodingUTF8);
+		SecPolicyRef policy = SecPolicyCreateSSL(false, NULL);
+		CFTypeRef keys[] = {kSecClass, kSecReturnRef, kSecMatchLimit, kSecMatchPolicy, kSecMatchSubjectWholeString};
+		CFTypeRef values[] = {kSecClassIdentity, kCFBooleanTrue, kSecMatchLimitOne, policy, cfLabel};
 
-		/* Set up our search criteria and expected results: */
-		values[0] = kSecClassIdentity; /* we want a certificate and a key */
-		keys[0] = kSecClass;
-		values[1] = kCFBooleanTrue;    /* we need a reference */
-		keys[1] = kSecReturnRef;
-		values[2] = kSecMatchLimitOne; /* one is enough, thanks */
-		keys[2] = kSecMatchLimit;
-		/* identity searches need a SecPolicyRef in order to work */
-		values[3] = SecPolicyCreateSSL(false, NULL);
-		keys[3] = kSecMatchPolicy;
-		values[4] = cfLabel;
-		keys[4] = kSecMatchSubjectWholeString;
-		queryDict = CFDictionaryCreate(NULL, (const void **) keys,
-									   (const void **) values, size,
+		CFDictionaryRef queryDict = CFDictionaryCreate(NULL, keys, values, size,
 									   &kCFCopyStringDictionaryKeyCallBacks,
 									   &kCFTypeDictionaryValueCallBacks);
-		CFRelease(values[3]);
+		CFRelease(policy);
 		CFRelease(cfLabel);
 
 		return queryDict;
@@ -114,6 +100,9 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 											const char *cPassword,
 											const char *cLabel) {
 	OSStatus status = errSecItemNotFound;
+	if (strlen(cPath) == 0) {
+		return errSecMissingValue;
+	}
 	CFURLRef url = CFURLCreateFromFileSystemRepresentation(NULL,
 														   (const UInt8 *) cPath, strlen(cPath), false);
 	CFStringRef password = cPassword ? CFStringCreateWithCString(NULL,
@@ -129,6 +118,9 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 	}
 
 	SecAccessRef access = createAccess(cLabel);
+	if (access == NULL) {
+		return status;
+	}
 	CFTypeRef cKeys[] = {kSecImportExportPassphrase, kSecImportExportAccess};
 	CFTypeRef cValues[] = {password, access};
 	CFDictionaryRef options = CFDictionaryCreate(NULL, cKeys, cValues, 2L, NULL, NULL);
@@ -242,7 +234,7 @@ bool Crypto::generateRandomChars(unsigned char *rndChars, int rndLen) {
 											  CFSTR("Have you tried turning it off and on again?") };
 
 		CFErrorRef error = CFErrorCreateWithUserInfoKeysAndValues(NULL, kCFErrorDomainOSStatus, errNum, userInfoKeys, userInfoValues, numKeys);
-		logFreeErrorExtended("SecVerifyTransformCreate", error);
+		logFreeErrorExtended("generateRandomChars failed", error);
 		return false;
 	}
 	for (int i = 0; i < rndLen; i++) {

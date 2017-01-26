@@ -80,7 +80,7 @@
 #define PASSENGER_API_VERSION_MAJOR 0
 #define PASSENGER_API_VERSION_MINOR 3
 #define PASSENGER_DEFAULT_USER "nobody"
-#define PASSENGER_VERSION "5.1.0"
+#define PASSENGER_VERSION "5.1.2"
 #define POOL_HELPER_THREAD_STACK_SIZE 262144
 #define PROCESS_SHUTDOWN_TIMEOUT 60
 #define PROCESS_SHUTDOWN_TIMEOUT_DISPLAY "1 minute"
@@ -95,7 +95,7 @@
 #define SERVER_KIT_MAX_SERVER_ENDPOINTS 4
 #define SERVER_TOKEN_NAME "Phusion_Passenger"
 #define SHORT_PROGRAM_NAME "Passenger"
-#define SUPPORT_URL "https://www.phusionpassenger.com/documentation_and_support"
+#define SUPPORT_URL "https://www.phusionpassenger.com/support"
 #define USER_NAMESPACE_DIRNAME ".passenger"
 
 #endif /* _PASSENGER_CONSTANTS_H_ */

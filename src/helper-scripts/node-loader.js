@@ -29,13 +29,29 @@ var EventEmitter = require('events').EventEmitter;
 var os = require('os');
 var fs = require('fs');
 var http = require('http');
+var util = require('util');
+
+var nodeClusterErrCount = 0;
+var meteorClusterErrCount = 0;
 
 function badPackageError(packageName) {
 	return "You required the " + packageName + ", which is incompatible with Passenger, a non-functional shim was returned and your app may still work. However, please remove the related code as soon as possible.";
 }
 
-function errorMockingRequire(packageName, error) {
-	return "Failed to install shim to guard against the " + packageName + ". Error: " + error.message;
+// Logs failure to install shim + extended debug info, but with strict spamming protection.
+function errorMockingRequire(packageName, error, args, count) {
+	if (count > 2) {
+		return; // spam protect against repeated warnings
+	}
+	var msg = "Failed to install shim to guard against the " + packageName + ". Due to: " + error.message + ". Your can safely ignore this warning if you are not using " + packageName;
+	msg += "\n\tNode version: " + process.version + "\tArguments: " + args.length;
+	for (i = 0; i < args.length; i++) {
+		if (i > 9) { // limit the amount of array elements we log
+			break;
+		}
+		msg += "\n\t[" + i + "] " + util.inspect(args[i]).substr(0, 200); // limit the characters per array element
+	};
+	console.error(msg);
 }
 
 //Mock out Node Cluster Module
@@ -44,7 +60,7 @@ var originalRequire = Module.prototype.require;
 Module.prototype.require = function() {
 	try {
 		if (arguments['0'] == 'cluster') {
-			console.error(badPackageError("Node Cluster module"));
+			console.trace(badPackageError("Node Cluster module"));
 			return {
 				disconnect		 : function(){return false;},
 				fork			 : function(){return false;},
@@ -56,13 +72,12 @@ Module.prototype.require = function() {
 				worker			 : false,
 				workers			 : false,
 			};
-		} else {
-			return originalRequire.apply(this, arguments);
 		}
 	} catch (e) {
-		console.error(errorMockingRequire("Node Cluster module", e));
-		return originalRequire.apply(this, arguments);
+		nodeClusterErrCount++;
+		errorMockingRequire("Node Cluster module", e, arguments, nodeClusterErrCount);
 	}
+	return originalRequire.apply(this, arguments);
 };
 
 //Mock out Meteor Cluster Module
@@ -70,35 +85,36 @@ var vm = require('vm');
 var orig_func = vm.runInThisContext;
 vm.runInThisContext = function() {
 	try {
-		var scriptPath = arguments['1'];
-		if (typeof scriptPath == 'object') {
-			scriptPath = scriptPath['filename'];
-		}
-		if (scriptPath.indexOf('meteorhacks_cluster') != -1) {
-			console.error(badPackageError("Meteorhacks cluster package"));
-			return (function() {
-				Package['meteorhacks:cluster'] = {
-					Cluster: {
-						_publicServices				: {},
-						_registeredServices			: {},
-						_discoveryBackends			: { mongodb: {} },
-						connect						: function(){return false;},
-						allowPublicAccess			: function(){return false;},
-						discoverConnection			: function(){return false;},
-						register					: function(){return false;},
-						_isPublicService			: function(){return false;},
-						registerDiscoveryBackend	: function(){return false;},
-						_blockCallAgain				: function(){return false;}
-					}
-				};
-			});
-		} else {
-			return orig_func.apply(this, arguments);
+		if (arguments.length > 1) {
+			var scriptPath = arguments['1'];
+			if (typeof scriptPath == 'object') {
+				scriptPath = scriptPath['filename'];
+			}
+			if (scriptPath.indexOf('meteorhacks_cluster') != -1) {
+				console.trace(badPackageError("Meteorhacks cluster package"));
+				return (function() {
+					Package['meteorhacks:cluster'] = {
+						Cluster: {
+							_publicServices				: {},
+							_registeredServices			: {},
+							_discoveryBackends			: { mongodb: {} },
+							connect						: function(){return false;},
+							allowPublicAccess			: function(){return false;},
+							discoverConnection			: function(){return false;},
+							register					: function(){return false;},
+							_isPublicService			: function(){return false;},
+							registerDiscoveryBackend	: function(){return false;},
+							_blockCallAgain				: function(){return false;}
+						}
+					};
+				});
+			}
 		}
 	} catch (e) {
-		console.error(errorMockingRequire("Meteorhacks Cluster package", e));
-		return orig_func.apply(this, arguments);
+		meteorClusterErrCount++;
+		errorMockingRequire("Meteorhacks Cluster package", e, arguments, meteorClusterErrCount);
 	}
+	return orig_func.apply(this, arguments);
 };
 
 var LineReader = require('phusion_passenger/line_reader').LineReader;
@@ -289,7 +305,8 @@ function doListen(server, listenTries, callback) {
 	function errorHandler(error) {
 		if (error.errno == 'EADDRINUSE') {
 			if (listenTries == 100) {
-				server.emit('error', new Error('Phusion Passenger could not find suitable socket address to bind on'));
+				server.emit('error', new Error(
+					'Phusion Passenger could not find suitable socket address to bind on'));
 			} else {
 				// Try again with another socket path.
 				listenTries++;

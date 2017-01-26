@@ -18,6 +18,11 @@
 #include <Utils/Curl.h>
 #include <modp_b64.h>
 
+#if BOOST_OS_MACOS
+#include <sys/syslimits.h>
+#include <unistd.h>
+#endif
+
 namespace Passenger {
 
 using namespace std;
@@ -54,9 +59,16 @@ private:
 	string serverVersion;
 	CurlProxyInfo proxyInfo;
 	Crypto *crypto;
+#if BOOST_OS_MACOS
+	SecKeychainRef defaultKeychain;
+	SecKeychainRef keychain;
+	bool usingPassengerKeychain;
+#endif
 
 	void threadMain() {
 		TRACE_POINT();
+		// Sleep for a short while to allow interruption during the Apache integration double startup procedure, this prevents running the update check twice
+		boost::this_thread::sleep_for(boost::chrono::seconds(2));
 		while (!this_thread::interruption_requested()) {
 			UPDATE_TRACE_POINT();
 			int backoffMin = 0;
@@ -117,7 +129,7 @@ private:
 			case CURLE_SSL_CACERT_BADFILE:
 				error.append(" while connecting to " CHECK_URL_DEFAULT " " +
 						(proxyAddress.empty() ? "" : "using proxy " + proxyAddress) + "; this might happen if the nss backend "
-						"is installed for libcurl instead of gnutls or openssl. If the problem persists, you can also try upgrading "
+						"is installed for libcurl instead of GnuTLS or OpenSSL. If the problem persists, you can also try upgrading "
 						"or reinstalling " SHORT_PROGRAM_NAME);
 				break;
 
@@ -191,9 +203,9 @@ private:
 	 */
 	CURLcode prepareCurlPOST(CURL *curl, string &bodyJsonString, string *responseData, struct curl_slist **chunk) {
 		CURLcode code;
-		
+
 		// Hint for advanced debugging: curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-		
+
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1))) {
 			return code;
 		}
@@ -215,7 +227,8 @@ private:
 		}
 
 #if BOOST_OS_MACOS
-		if (!crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
+		// if not using a private keychain, preauth the security update check key in the user's keychain (this is for libcurl's benefit because they don't bother to authorize themselves to use the keys they import)
+		if (!usingPassengerKeychain && !crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
 			return CURLE_SSL_CERTPROBLEM;
 		}
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "P12"))) {
@@ -279,12 +292,89 @@ public:
 	 * serverIntegration should be one of { nginx, apache, standalone nginx, standalone builtin }, whereby
 	 * serverVersion is the version of Nginx or Apache, if relevant (otherwise empty)
 	 */
-	SecurityUpdateChecker(const ResourceLocator &locator, const string &proxy, const string &serverIntegration, const string &serverVersion) {
+	SecurityUpdateChecker(const ResourceLocator &locator, const string &proxy, const string &serverIntegration, const string &serverVersion, const string &instancePath) {
 		crypto = new Crypto();
 		updateCheckThread = NULL;
 		checkIntervalSec = 0;
 #if BOOST_OS_MACOS
 		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.p12";
+		// Used to keep track of which approach we are using, false means we are preauthing the key in the running user's own keychain; true means we create a private keychain and set it as the default
+		usingPassengerKeychain = false;
+		defaultKeychain = NULL;
+		keychain = NULL;
+		OSStatus status = 0;
+		char pathName [PATH_MAX];
+		UInt32 length = PATH_MAX;
+		memset(pathName, 0, PATH_MAX);
+
+		status = SecKeychainCopyDefault(&defaultKeychain);
+		if (status) {
+			CFStringRef str = SecCopyErrorMessageString(status, NULL);
+			P_ERROR(string("Getting default keychain failed: ") +
+					CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
+					" Passenger will not attempt to create a private keychain.");
+			CFRelease(str);
+		} else {
+			status = SecKeychainGetPath(defaultKeychain, &length, pathName);
+			P_DEBUG(string("username is: ") + getProcessUsername());
+			if (status) {
+				CFStringRef str = SecCopyErrorMessageString(status, NULL);
+				P_ERROR(string("Checking default keychain path failed: ") +
+						CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
+						" Passenger may use system keychain.");
+				CFRelease(str);
+				pathName[0] = 0; // ensure the pathName compares cleanly
+			} else {
+				P_DEBUG(string("Old default keychain is: ") + pathName);
+			}
+		}
+		// we don't care so much about which user we are, what we care about is is they have their own keychain, if the default keychain is the system keychain, then we need to try and create our own to avoid permissions issues
+		if (strcmp(pathName, "/Library/Keychains/System.keychain") == 0) {
+			usingPassengerKeychain = true;
+			const uint size = 512;
+			uint8_t keychainPassword[size];
+			if (!crypto->generateRandomChars(keychainPassword, size)) {
+				P_CRITICAL("Creating password for Passenger default keychain failed.");
+				usingPassengerKeychain = false;
+			} else {
+				string keychainDir = instancePath;
+				if (instancePath.length() == 0) {
+					char currentPath[PATH_MAX];
+					if (!getcwd(currentPath, PATH_MAX)) {
+						P_ERROR(string("Failed to get cwd: ") + strerror(errno) + " Attempting to use relative path '.'");
+						keychainDir = ".";
+					} else {
+						keychainDir = string(currentPath);
+					}
+				}
+				// create keychain with long random password, then discard password after creation. We receive the keychain unlocked, and no-one else needs to access the keychain.
+				status = SecKeychainCreate((keychainDir + "/passenger.keychain").c_str(), size, keychainPassword, false, NULL, &keychain);
+				memset(keychainPassword, 0, size);
+				if (status) {
+					CFStringRef str = SecCopyErrorMessageString(status, NULL);
+					P_ERROR(string("Creating Passenger default keychain failed: ") +
+							CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
+							" Passenger may fail to access system keychain.");
+					CFRelease(str);
+					usingPassengerKeychain = false;
+				} else {
+					// set keychain as default so libcurl uses it.
+					status = SecKeychainSetDefault(keychain);
+					if (status) {
+						CFStringRef str = SecCopyErrorMessageString(status, NULL);
+						P_ERROR(string("Setting Passenger default keychain failed: ") +
+								CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
+								" Passenger may fail to access system keychain.");
+						CFRelease(str);
+						usingPassengerKeychain = false;
+					} else if (!crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
+						P_ERROR("Failed to preauthorize Passenger Client Cert, you may experience popups from the Keychain.");
+				 /* } else {
+						we have loaded the security update check key into the private keychain with the correct permissions, so libcurl should be able to use it. */
+					}
+				}
+			}
+		}
 #else
 		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.pem";
 #endif
@@ -310,6 +400,32 @@ public:
 		if (crypto) {
 			delete crypto;
 		}
+#if BOOST_OS_MACOS
+		// if using a private keychain, cleanup keychain on shutdown
+		if (usingPassengerKeychain) {
+			OSStatus status = 0;
+			if (defaultKeychain) {
+				status = SecKeychainSetDefault(defaultKeychain);
+				if (status) {
+					CFStringRef str = SecCopyErrorMessageString(status, NULL);
+					P_ERROR(string("Restoring default keychain failed: ") +
+							CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
+					CFRelease(str);
+				}
+				CFRelease(defaultKeychain);
+			}
+			if (keychain) {
+				status = SecKeychainDelete(keychain);
+				if (status) {
+					CFStringRef str = SecCopyErrorMessageString(status, NULL);
+					P_ERROR(string("Deleting Passenger private keychain failed: ") +
+							CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
+					CFRelease(str);
+				}
+				CFRelease(keychain);
+			}
+		}
+#endif
 	}
 
 	/**
@@ -389,6 +505,7 @@ public:
 
 		bodyJson["server_integration"] = serverIntegration;
 		bodyJson["server_version"] = serverVersion;
+		bodyJson["curl_static"] = isCurlStaticallyLinked();
 
 		string nonce;
 		if (!fillNonce(nonce)) {
@@ -416,6 +533,12 @@ public:
 				logUpdateFail("File not readable: " + clientCertPath);
 				break;
 			}
+
+			if (CURLE_OK != (code = setCurlDefaultCaInfo(curl))) {
+				logUpdateFailCurl(code);
+				break;
+			}
+
 			// string localApprovedCert = "/your/ca.crt"; // for testing against a local server
 			// curl_easy_setopt(curl, CURLOPT_CAINFO, localApprovedCert.c_str());
 
@@ -431,6 +554,7 @@ public:
 				break;
 			}
 
+			P_DEBUG("sending: " << bodyJsonString);
 			if (CURLE_OK != (code = sendAndReceive(curl, &responseData, &responseCode))) {
 				logUpdateFailCurl(code);
 				break;
@@ -448,6 +572,7 @@ public:
 				logUpdateFailResponse("json parse", responseData);
 				break;
 			}
+			P_DEBUG("received: " << responseData);
 
 			// 3b. Verify response: signature
 			if (!responseJson.isObject() || !responseJson["data"].isString() || !responseJson["signature"].isString()) {
@@ -490,6 +615,7 @@ public:
 				logUpdateFailResponse("unparseable data", responseData);
 				break;
 			}
+			P_DEBUG("data content (signature OK): " << responseDataJson.toStyledString());
 
 			if (!responseDataJson.isObject() || !responseDataJson["update"].isInt() || !responseDataJson["nonce"].isString()) {
 				logUpdateFailResponse("missing data fields", responseData);
@@ -532,7 +658,10 @@ public:
 		} while (0);
 
 #if BOOST_OS_MACOS
-		crypto->killKey(CLIENT_CERT_LABEL);
+		// if not using a private keychain remove the security update check key from the user's keychain so that if we are stopped/crash and are upgraded or reinstalled before restarting we don't have permission problems
+		if (!usingPassengerKeychain) {
+			crypto->killKey(CLIENT_CERT_LABEL);
+		}
 #endif
 
 		if (signatureChars) {

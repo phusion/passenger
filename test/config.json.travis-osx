@@ -1,0 +1,13 @@
+{
+"normal_user_1": "_USER_",
+"normal_user_2": "daemon",
+"default_user": "_sandbox",
+"normal_group_1": "daemon",
+"normal_group_2": "_sandbox",
+"default_group": "daemon",
+"nonexistant_user": "xxxxxxxxxxxxxxxxxxx",
+"nonexistant_group": "xxxxxxxxxxxxxxxxxxx",
+"nonexistant_uid": 9999,
+"nonexistant_gid": 9999,
+"nginx": "/tmp/nginx/sbin/nginx"
+}
