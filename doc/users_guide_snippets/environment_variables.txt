@@ -21,6 +21,8 @@ This documentation has moved. Please visit https://www.phusionpassenger.com/libr
 
 This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#bash
 
+NOTE: Ubuntu doesn't appear to source ~/.bashrc by default so you'll either want to add your environment variables to ~/.profile or ensure you source ~/.bashrc from ~/.profile.
+
 ==== Apache
 
 This documentation has moved. Please visit https://www.phusionpassenger.com/library/indepth/environment_variables.html#apache
