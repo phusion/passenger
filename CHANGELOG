@@ -1,7 +1,8 @@
 Next version (not yet released)
 -------------------------------
 
-
+ * [Standalone] Fixes `install-standalone-runtime` command after regression in 5.1.2.
+ * Removes unnecessary logging of "No Error" from macOS Security Update Checker.
 
 
 Release 5.1.2

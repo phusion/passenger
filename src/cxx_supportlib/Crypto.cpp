@@ -301,12 +301,12 @@ bool Crypto::getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len) {
 											&ccHandle);
 	if (error != CSSM_OK) { cssmPerror("CSSM_CSP_CreateSymmetricContext",error); }
 
-	CSSM_WrapKey(ccHandle,
+	error = CSSM_WrapKey(ccHandle,
 				 creds,
 				 cssmKey,
 				 NULL,
 				 &wrappedKey);
-	cssmPerror("CSSM_WrapKey", error);
+	if (error != CSSM_OK) { cssmPerror("CSSM_WrapKey", error); }
 
 	CSSM_DeleteContext(ccHandle);
 

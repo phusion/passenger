@@ -50,6 +50,7 @@ module PhusionPassenger
             "--no-error-colors",
             "--no-compilation-tip"
           ],
+          :engine => "nginx",
           :compile_args => []
         }
         parse_options
