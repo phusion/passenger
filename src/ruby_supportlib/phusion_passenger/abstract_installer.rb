@@ -140,7 +140,7 @@ module PhusionPassenger
 
       PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
       specs, ids = dependencies
-      runner = PlatformInfo::Depcheck::ConsoleRunner.new
+      runner = PlatformInfo::Depcheck::ConsoleRunner.new(@colors)
 
       specs.each do |spec|
         PlatformInfo::Depcheck.load(spec)

@@ -92,7 +92,7 @@ module PhusionPassenger
         puts colors.ansi_colorize("<banner>Checking for basic prerequities...</banner>")
         puts
 
-        runner = PlatformInfo::Depcheck::ConsoleRunner.new
+        runner = PlatformInfo::Depcheck::ConsoleRunner.new(@colors)
         runner.add('download-tool')
 
         result = runner.check_all

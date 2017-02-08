@@ -302,7 +302,8 @@ module PhusionPassenger
       class ConsoleRunner
         attr_reader :missing_dependencies
 
-        def initialize
+        def initialize(colors)
+          @colors = colors || Utils::AnsiColors.new(:auto)
           @stdout = STDOUT
           @dep_identifiers = []
         end
@@ -366,7 +367,7 @@ module PhusionPassenger
       private
         def puts(text = nil)
           if text
-            @stdout.puts(Utils::AnsiColors.ansi_colorize(text))
+            @stdout.puts(@colors.ansi_colorize(text))
           else
             @stdout.puts
           end
@@ -380,7 +381,7 @@ module PhusionPassenger
         def puts_detail(text)
           puts "      #{text}"
         end
-      end
+      end # class ConsoleRunner
     end # module Depcheck
 
   end # module PlatformInfo
