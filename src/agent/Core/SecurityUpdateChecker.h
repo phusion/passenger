@@ -59,11 +59,6 @@ private:
 	string serverVersion;
 	CurlProxyInfo proxyInfo;
 	Crypto *crypto;
-#if BOOST_OS_MACOS
-	SecKeychainRef defaultKeychain;
-	SecKeychainRef keychain;
-	bool usingPassengerKeychain;
-#endif
 
 	void threadMain() {
 		TRACE_POINT();
@@ -227,8 +222,8 @@ private:
 		}
 
 #if BOOST_OS_MACOS
-		// if not using a private keychain, preauth the security update check key in the user's keychain (this is for libcurl's benefit because they don't bother to authorize themselves to use the keys they import)
-		if (!usingPassengerKeychain && !crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
+		// preauth the security update check key in the user's keychain (this is for libcurl's benefit because they don't bother to authorize themselves to use the keys they import)
+		if (!crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
 			return CURLE_SSL_CERTPROBLEM;
 		}
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "P12"))) {
@@ -298,83 +293,6 @@ public:
 		checkIntervalSec = 0;
 #if BOOST_OS_MACOS
 		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.p12";
-		// Used to keep track of which approach we are using, false means we are preauthing the key in the running user's own keychain; true means we create a private keychain and set it as the default
-		usingPassengerKeychain = false;
-		defaultKeychain = NULL;
-		keychain = NULL;
-		OSStatus status = 0;
-		char pathName [PATH_MAX];
-		UInt32 length = PATH_MAX;
-		memset(pathName, 0, PATH_MAX);
-
-		status = SecKeychainCopyDefault(&defaultKeychain);
-		if (status) {
-			CFStringRef str = SecCopyErrorMessageString(status, NULL);
-			P_ERROR(string("Getting default keychain failed: ") +
-					CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-					" Passenger will not attempt to create a private keychain.");
-			CFRelease(str);
-		} else {
-			status = SecKeychainGetPath(defaultKeychain, &length, pathName);
-			P_DEBUG(string("username is: ") + getProcessUsername());
-			if (status) {
-				CFStringRef str = SecCopyErrorMessageString(status, NULL);
-				P_ERROR(string("Checking default keychain path failed: ") +
-						CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-						" Passenger may use system keychain.");
-				CFRelease(str);
-				pathName[0] = 0; // ensure the pathName compares cleanly
-			} else {
-				P_DEBUG(string("Old default keychain is: ") + pathName);
-			}
-		}
-		// we don't care so much about which user we are, what we care about is is they have their own keychain, if the default keychain is the system keychain, then we need to try and create our own to avoid permissions issues
-		if (strcmp(pathName, "/Library/Keychains/System.keychain") == 0) {
-			usingPassengerKeychain = true;
-			const uint size = 512;
-			uint8_t keychainPassword[size];
-			if (!crypto->generateRandomChars(keychainPassword, size)) {
-				P_CRITICAL("Creating password for Passenger default keychain failed.");
-				usingPassengerKeychain = false;
-			} else {
-				string keychainDir = instancePath;
-				if (instancePath.length() == 0) {
-					char currentPath[PATH_MAX];
-					if (!getcwd(currentPath, PATH_MAX)) {
-						P_ERROR(string("Failed to get cwd: ") + strerror(errno) + " Attempting to use relative path '.'");
-						keychainDir = ".";
-					} else {
-						keychainDir = string(currentPath);
-					}
-				}
-				// create keychain with long random password, then discard password after creation. We receive the keychain unlocked, and no-one else needs to access the keychain.
-				status = SecKeychainCreate((keychainDir + "/passenger.keychain").c_str(), size, keychainPassword, false, NULL, &keychain);
-				memset(keychainPassword, 0, size);
-				if (status) {
-					CFStringRef str = SecCopyErrorMessageString(status, NULL);
-					P_ERROR(string("Creating Passenger default keychain failed: ") +
-							CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-							" Passenger may fail to access system keychain.");
-					CFRelease(str);
-					usingPassengerKeychain = false;
-				} else {
-					// set keychain as default so libcurl uses it.
-					status = SecKeychainSetDefault(keychain);
-					if (status) {
-						CFStringRef str = SecCopyErrorMessageString(status, NULL);
-						P_ERROR(string("Setting Passenger default keychain failed: ") +
-								CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-								" Passenger may fail to access system keychain.");
-						CFRelease(str);
-						usingPassengerKeychain = false;
-					} else if (!crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
-						P_ERROR("Failed to preauthorize Passenger Client Cert, you may experience popups from the Keychain.");
-				 /* } else {
-						we have loaded the security update check key into the private keychain with the correct permissions, so libcurl should be able to use it. */
-					}
-				}
-			}
-		}
 #else
 		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.pem";
 #endif
@@ -400,32 +318,6 @@ public:
 		if (crypto) {
 			delete crypto;
 		}
-#if BOOST_OS_MACOS
-		// if using a private keychain, cleanup keychain on shutdown
-		if (usingPassengerKeychain) {
-			OSStatus status = 0;
-			if (defaultKeychain) {
-				status = SecKeychainSetDefault(defaultKeychain);
-				if (status) {
-					CFStringRef str = SecCopyErrorMessageString(status, NULL);
-					P_ERROR(string("Restoring default keychain failed: ") +
-							CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
-					CFRelease(str);
-				}
-				CFRelease(defaultKeychain);
-			}
-			if (keychain) {
-				status = SecKeychainDelete(keychain);
-				if (status) {
-					CFStringRef str = SecCopyErrorMessageString(status, NULL);
-					P_ERROR(string("Deleting Passenger private keychain failed: ") +
-							CFStringGetCStringPtr(str, kCFStringEncodingUTF8));
-					CFRelease(str);
-				}
-				CFRelease(keychain);
-			}
-		}
-#endif
 	}
 
 	/**
@@ -658,10 +550,8 @@ public:
 		} while (0);
 
 #if BOOST_OS_MACOS
-		// if not using a private keychain remove the security update check key from the user's keychain so that if we are stopped/crash and are upgraded or reinstalled before restarting we don't have permission problems
-		if (!usingPassengerKeychain) {
-			crypto->killKey(CLIENT_CERT_LABEL);
-		}
+		// remove the security update check key from the user's keychain so that if we are stopped/crash and are upgraded or reinstalled before restarting we don't have permission problems
+		crypto->killKey(CLIENT_CERT_LABEL);
 #endif
 
 		if (signatureChars) {

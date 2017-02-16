@@ -8,6 +8,7 @@ Next version (not yet released)
  * [Nginx] The preferred Nginx version is now 1.10.3 (previously 1.10.2).
  * Adds Ubuntu 17.04 "Zesty" packages.
  * Added additional debug level logging for troubleshooting issues with bash scripts. Closes GH-1928.
+ * Revert private keychain use in the Security Update Checker when run as root on macOS, in order to avoid changing the default System Keychain. Closes GH-1922. Remove Cert and Key from keychain separately, to avoid errors when clearing the client certificate.
 
 
 Release 5.1.2
