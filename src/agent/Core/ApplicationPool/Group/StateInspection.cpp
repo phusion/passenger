@@ -77,7 +77,7 @@ Group::processUpperLimitsReached() const {
  */
 bool
 Group::allEnabledProcessesAreTotallyBusy() const {
-	return nEnabledProcessesTotallyBusy == enabledCount;
+	return nEnabledProcessesTotallyBusy == enabledCount && enabledCount > 0;
 }
 
 /**
