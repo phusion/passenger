@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -387,8 +387,8 @@ deletePidFile(const WorkingObjectsPtr &wo) {
 
 static void
 cleanupAgentsInBackground(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watchers, char *argv[]) {
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_interruption di;
+	boost::this_thread::disable_syscall_interruption dsi;
 	pid_t pid;
 	int e;
 
@@ -1330,8 +1330,8 @@ watchdogMain(int argc, char *argv[]) {
 		runHookScriptAndThrowOnError("after_watchdog_initialization");
 
 		UPDATE_TRACE_POINT();
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		bool shouldExitGracefully = waitForStarterProcessOrWatchers(wo, watchers);
 		if (shouldExitGracefully) {
 			/* Fork a child process which cleans up all the agent processes in

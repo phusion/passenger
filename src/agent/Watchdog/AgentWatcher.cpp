@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -37,7 +37,7 @@ private:
 			pid_t pid, ret;
 			int status, e;
 
-			while (!this_thread::interruption_requested()) {
+			while (!boost::this_thread::interruption_requested()) {
 				{
 					boost::lock_guard<boost::mutex> l(lock);
 					pid = this->pid;
@@ -70,8 +70,8 @@ private:
 					this->pid = 0;
 				}
 
-				this_thread::disable_interruption di;
-				this_thread::disable_syscall_interruption dsi;
+				boost::this_thread::disable_interruption di;
+				boost::this_thread::disable_syscall_interruption dsi;
 				if (ret == -1) {
 					P_WARN(name() << " (pid=" << pid << ") crashed or killed for "
 						"an unknown reason (errno = " <<
@@ -178,8 +178,8 @@ protected:
 	 * Does not wait until it has quit.
 	 */
 	static void killAndDontWait(pid_t pid) {
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		syscalls::kill(pid, SIGTERM);
 	}
 
@@ -188,8 +188,8 @@ protected:
 	 * Then wait until it has quit.
 	 */
 	static void killProcessGroupAndWait(pid_t pid) {
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		// If the process is a process group leader then killing the
 		// group will likely kill all its child processes too.
 		if (syscalls::killpg(pid, SIGKILL) == -1) {
@@ -255,8 +255,8 @@ public:
 	 * Starts the agent process. May throw arbitrary exceptions.
 	 */
 	virtual pid_t start() {
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		string exeFilename = getExeFilename();
 		SocketPair fds;
 		int e, ret;
@@ -337,8 +337,8 @@ public:
 			vector<string> args;
 
 			fds[1].close();
-			this_thread::restore_interruption ri(di);
-			this_thread::restore_syscall_interruption rsi(dsi);
+			boost::this_thread::restore_interruption ri(di);
+			boost::this_thread::restore_syscall_interruption rsi(dsi);
 			ScopeGuard failGuard(boost::bind(killProcessGroupAndWait, pid));
 
 			/* Send startup arguments. Ignore EPIPE and ECONNRESET here
@@ -368,8 +368,8 @@ public:
 				}
 			}
 			if (!ret) {
-				this_thread::disable_interruption di2;
-				this_thread::disable_syscall_interruption dsi2;
+				boost::this_thread::disable_interruption di2;
+				boost::this_thread::disable_syscall_interruption dsi2;
 				int status;
 
 				/* The feedback fd was prematurely closed for an unknown reason.

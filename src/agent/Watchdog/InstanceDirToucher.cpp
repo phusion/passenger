@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -36,13 +36,13 @@ private:
 
 	void
 	threadMain() {
-		while (!this_thread::interruption_requested()) {
+		while (!boost::this_thread::interruption_requested()) {
 			syscalls::sleep(60 * 60);
 
 			begin_touch:
 
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
+			boost::this_thread::disable_interruption di;
+			boost::this_thread::disable_syscall_interruption dsi;
 			// Fork a process which touches everything in the server instance dir.
 			pid_t pid = syscalls::fork();
 			if (pid == 0) {
@@ -90,8 +90,8 @@ private:
 				// Error
 				P_WARN("Could not touch the server instance directory because "
 					"fork() failed. Retrying in 2 minutes...");
-				this_thread::restore_interruption si(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
+				boost::this_thread::restore_interruption si(di);
+				boost::this_thread::restore_syscall_interruption rsi(dsi);
 				syscalls::sleep(60 * 2);
 				goto begin_touch;
 			} else {

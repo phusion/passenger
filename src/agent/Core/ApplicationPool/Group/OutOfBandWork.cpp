@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -171,8 +171,8 @@ Group::initiateOobw(const ProcessPtr &process) {
 void
 Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	TRACE_POINT();
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_interruption di;
+	boost::this_thread::disable_syscall_interruption dsi;
 
 	Socket *socket;
 	Connection connection;
@@ -215,8 +215,8 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 	UPDATE_TRACE_POINT();
 	unsigned long long timeout = 1000 * 1000 * 60; // 1 min
 	try {
-		this_thread::restore_interruption ri(di);
-		this_thread::restore_syscall_interruption rsi(dsi);
+		boost::this_thread::restore_interruption ri(di);
+		boost::this_thread::restore_syscall_interruption rsi(dsi);
 
 		// Grab a connection. The connection is marked as fail in order to
 		// ensure it is closed / recycled after this request (otherwise we'd

@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010-2013 Phusion Holding B.V.
+ * Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -727,14 +727,14 @@ syscalls::waitpid(pid_t pid, int *status, int options) {
 	__thread int this_thread::_syscalls_interruptable = 1;
 
 	bool
-	this_thread::syscalls_interruptable() {
+	boost::this_thread::syscalls_interruptable() {
 		return _syscalls_interruptable;
 	}
 #else
-	thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
+	boost::thread_specific_ptr<bool> this_thread::_syscalls_interruptable;
 
 	bool
-	this_thread::syscalls_interruptable() {
+	boost::this_thread::syscalls_interruptable() {
 		return _syscalls_interruptable.get() == NULL || *_syscalls_interruptable;
 	}
 #endif

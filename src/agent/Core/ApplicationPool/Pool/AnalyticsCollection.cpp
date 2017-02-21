@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -51,7 +51,7 @@ void
 Pool::collectAnalytics(PoolPtr self) {
 	TRACE_POINT();
 	syscalls::usleep(3000000);
-	while (!this_thread::interruption_requested()) {
+	while (!boost::this_thread::interruption_requested()) {
 		try {
 			UPDATE_TRACE_POINT();
 			self->realCollectAnalytics();
@@ -149,8 +149,8 @@ Pool::prepareUnionStationSystemMetricsLogs(vector<UnionStationLogEntry> &logEntr
 void
 Pool::realCollectAnalytics() {
 	TRACE_POINT();
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_interruption di;
+	boost::this_thread::disable_syscall_interruption dsi;
 	vector<pid_t> pids;
 	unsigned int max;
 

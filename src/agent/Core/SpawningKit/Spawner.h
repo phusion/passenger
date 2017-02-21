@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -137,8 +137,8 @@ protected:
 					"in the format of '/tmp/passenger-spawn-debug.XXX'", e);
 			} else {
 				path = result;
-				this_thread::disable_interruption di;
-				this_thread::disable_syscall_interruption dsi;
+				boost::this_thread::disable_interruption di;
+				boost::this_thread::disable_syscall_interruption dsi;
 				syscalls::chown(result, uid, gid);
 			}
 		}
@@ -452,7 +452,7 @@ protected:
 	ConfigPtr config;
 
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_syscall_interruption dsi;
 		syscalls::kill(pid, SIGKILL);
 		syscalls::waitpid(pid, NULL, 0);
 	}

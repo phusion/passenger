@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -106,8 +106,8 @@ struct Connection: public boost::noncopyable {
 
 	void disconnect() {
 		if (fd != -1) {
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
+			boost::this_thread::disable_interruption di;
+			boost::this_thread::disable_syscall_interruption dsi;
 			safelyClose(fd);
 			P_LOG_FILE_DESCRIPTOR_CLOSE(fd);
 			fd = -1;
