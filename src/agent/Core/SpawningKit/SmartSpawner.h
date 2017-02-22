@@ -29,6 +29,7 @@
 #include <Core/SpawningKit/Spawner.h>
 #include <Core/SpawningKit/PipeWatcher.h>
 #include <Constants.h>
+#include <Logging.h>
 #include <LveLoggingDecorator.h>
 
 #include <adhoc_lve.h>
@@ -105,7 +106,11 @@ private:
 		if (shouldLoadShellEnvvars(options, preparation)) {
 			command.push_back(preparation.userSwitching.shell);
 			command.push_back(preparation.userSwitching.shell);
-			command.push_back("-lc");
+			if (Passenger::getLogLevel() >= LVL_DEBUG3) {
+				command.push_back("-lxc");
+			} else {
+				command.push_back("-lc");
+			}
 			command.push_back("exec \"$@\"");
 			command.push_back("SpawnPreparerShell");
 		} else {

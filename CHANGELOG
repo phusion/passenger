@@ -7,6 +7,7 @@ Next version (not yet released)
  * Don't output colorized text during dependency check when output isn't a TTY, unless forced. Closes GH-1902.
  * [Nginx] The preferred Nginx version is now 1.10.3 (previously 1.10.2).
  * Adds Ubuntu 17.04 "Zesty" packages.
+ * Added additional debug level logging for troubleshooting issues with bash scripts. Closes GH-1928.
 
 
 Release 5.1.2
