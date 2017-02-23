@@ -6135,7 +6135,8 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/thread.hpp",
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
  "src/cxx_supportlib/Crypto.h"=>
-  [],
+  ["src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/oxt/macros.hpp"],
  "src/cxx_supportlib/DataStructures/HashedStaticString.h"=>
   ["src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/Utils/Hasher.h",
