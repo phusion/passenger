@@ -114,6 +114,9 @@ EXCLUDE_NAME_REGEXP = %r{
     |linux/
     |tr1/
     |curl/
+    |openssl/
+    |CoreFoundation/
+    |Security/
     |ruby
     |apr_
     |ap_
