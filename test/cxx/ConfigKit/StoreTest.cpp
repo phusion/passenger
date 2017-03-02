@@ -55,7 +55,7 @@ namespace tut {
 		doc = Json::Value("hello");
 		config->previewUpdate(doc, errors);
 		ensure_equals(errors.size(), 1u);
-		ensure_equals(errors[0].getFullMessage(), "The JSON document must be an object");
+		ensure_equals(errors[0].getMessage(), "The JSON document must be an object");
 	}
 
 	TEST_METHOD(4) {
@@ -69,8 +69,8 @@ namespace tut {
 		config->previewUpdate(doc, errors);
 		std::sort(errors.begin(), errors.end());
 		ensure_equals(errors.size(), 2u);
-		ensure_equals(errors[0].getFullMessage(), "'bar' must be an integer");
-		ensure_equals(errors[1].getFullMessage(), "'foo' is required");
+		ensure_equals(errors[0].getMessage(), "'bar' must be an integer");
+		ensure_equals(errors[1].getMessage(), "'foo' is required");
 	}
 
 
@@ -88,7 +88,7 @@ namespace tut {
 
 		Json::Value preview = config->previewUpdate(doc, errors);
 		ensure_equals("1 error", errors.size(), 1u);
-		ensure_equals(errors[0].getFullMessage(), "'bar' is required");
+		ensure_equals(errors[0].getMessage(), "'bar' is required");
 		ensure("foo exists", preview.isMember("foo"));
 		ensure("bar exists", preview.isMember("bar"));
 		ensure("baz does not exists", !preview.isMember("baz"));
@@ -108,7 +108,7 @@ namespace tut {
 
 		Json::Value preview = config->previewUpdate(doc, errors);
 		ensure_equals("1 error", errors.size(), 1u);
-		ensure_equals(errors[0].getFullMessage(), "'bar' is required");
+		ensure_equals(errors[0].getMessage(), "'bar' is required");
 
 		config->forceApplyUpdatePreview(preview);
 		ensure_equals("foo is a string", config->get("foo").asString(), "string");

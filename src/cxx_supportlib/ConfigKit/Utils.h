@@ -40,7 +40,7 @@ namespace ConfigKit {
 
 using namespace std;
 
-struct Error;
+class Error;
 
 
 template<typename Component, typename Translator>
@@ -129,7 +129,7 @@ toString(const vector<Error> &errors) {
 		if (it != errors.begin()) {
 			stream << "; ";
 		}
-		stream << it->getFullMessage();
+		stream << it->getMessage();
 	}
 	return string(stream.data(), stream.size());
 }

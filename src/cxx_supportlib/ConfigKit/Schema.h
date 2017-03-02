@@ -191,8 +191,7 @@ public:
 
 		if (value.isNull()) {
 			if (entry->flags & REQUIRED) {
-				error.key = key;
-				error.message = "is required";
+				error = Error("'{{" + key + "}}' is required");
 				return false;
 			} else {
 				return true;
@@ -204,16 +203,14 @@ public:
 			if (value.isConvertibleTo(Json::stringValue)) {
 				return true;
 			} else {
-				error.key = key;
-				error.message = "must be a string";
+				error = Error("'{{" + key + "}}' must be a string");
 				return false;
 			}
 		case INT_TYPE:
 			if (value.isConvertibleTo(Json::intValue)) {
 				return true;
 			} else {
-				error.key = key;
-				error.message = "must be an integer";
+				error = Error("'{{" + key + "}}' must be an integer");
 				return false;
 			}
 		case UINT_TYPE:
@@ -221,29 +218,25 @@ public:
 				if (value.isConvertibleTo(Json::uintValue)) {
 					return true;
 				} else {
-					error.key = key;
-					error.message = "must be greater than 0";
+					error = Error("'{{" + key + "}}' must be greater than 0");
 					return false;
 				}
 			} else {
-				error.key = key;
-				error.message = "must be an integer";
+				error = Error("'{{" + key + "}}' must be an integer");
 				return false;
 			}
 		case FLOAT_TYPE:
 			if (value.isConvertibleTo(Json::realValue)) {
 				return true;
 			} else {
-				error.key = key;
-				error.message = "must be a number";
+				error = Error("'{{" + key + "}}' must be a number");
 				return false;
 			}
 		case BOOL_TYPE:
 			if (value.isConvertibleTo(Json::booleanValue)) {
 				return true;
 			} else {
-				error.key = key;
-				error.message = "must be a boolean";
+				error = Error("'{{" + key + "}}' must be a boolean");
 				return false;
 			}
 		default:

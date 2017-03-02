@@ -26,6 +26,7 @@
 #ifndef _PASSENGER_CONFIG_KIT_TABLE_TRANSLATOR_H_
 #define _PASSENGER_CONFIG_KIT_TABLE_TRANSLATOR_H_
 
+#include <boost/bind.hpp>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -84,21 +85,29 @@ private:
 		return result;
 	}
 
+	static string translateErrorKey(const StringKeyTable<string> *table,
+		const StaticString &key)
+	{
+		const string *entry;
+
+		if (table->lookup(key, &entry)) {
+			return "{{" + *entry + "}}";
+		} else {
+			return "{{" + key + "}}";
+		}
+	}
+
 	static vector<Error> internalTranslate(const StringKeyTable<string> &table,
 		const vector<Error> &errors)
 	{
 		vector<Error> result;
 		vector<Error>::const_iterator it, end = errors.end();
+		Error::KeyProcessor keyProcessor =
+			boost::bind(translateErrorKey, &table, boost::placeholders::_1);
 
 		for (it = errors.begin(); it != end; it++) {
 			const Error &error = *it;
-			const string *entry;
-
-			if (table.lookup(error.key, &entry)) {
-				result.push_back(Error(*entry, error.message));
-			} else {
-				result.push_back(error);
-			}
+			result.push_back(Error(error.getMessage(keyProcessor)));
 		}
 
 		return result;

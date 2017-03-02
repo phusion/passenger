@@ -32,6 +32,8 @@
 
 #include <jsoncpp/json.h>
 
+#include <StaticString.h>
+
 namespace Passenger {
 namespace ConfigKit {
 
@@ -60,29 +62,55 @@ enum Flags {
 };
 
 /** Represents a validation error. */
-struct Error {
-	/** The configuration key on which validation failed. */
-	string key;
-	/** The error message. */
-	string message;
+class Error {
+private:
+	static string dummyKeyProcessor(const StaticString &key) {
+		return key.toString();
+	}
+
+	string rawMessage;
+
+public:
+	typedef boost::function<string (const StaticString &key)> KeyProcessor;
 
 	Error() { }
 
-	Error(const string &_key, const string &_message)
-		: key(_key),
-		  message(_message)
+	Error(const string &_rawMessage)
+		: rawMessage(_rawMessage)
 		{ }
 
-	string getFullMessage() const {
-		if (key.empty()) {
-			return message;
-		} else {
-			return "'" + key + "' " + message;
+	string getMessage() const {
+		return getMessage(dummyKeyProcessor);
+	}
+
+	string getMessage(const KeyProcessor &processor) const {
+		string result = rawMessage;
+		string::size_type searchBegin = 0;
+		bool done = false;
+
+		while (!done) {
+			string::size_type pos = result.find("{{", searchBegin);
+			if (pos == string::npos) {
+				done = true;
+				break;
+			}
+
+			string::size_type endPos = result.find("}}", pos + 2);
+			if (endPos == string::npos) {
+				done = true;
+				break;
+			}
+
+			string key = result.substr(pos + 2, endPos - pos - 2);
+			string replacement = processor(key);
+			result.replace(pos, endPos - pos + 2, replacement);
+			searchBegin = pos + replacement.size();
 		}
+		return result;
 	}
 
 	bool operator<(const Error &other) const {
-		return getFullMessage() < other.getFullMessage();
+		return rawMessage < other.rawMessage;
 	}
 };
 

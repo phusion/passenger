@@ -162,7 +162,7 @@ public:
 	 */
 	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors) const {
 		if (!updates.isNull() && !updates.isObject()) {
-			errors.push_back(Error(string(), "The JSON document must be an object"));
+			errors.push_back(Error("The JSON document must be an object"));
 			return inspect();
 		}
 
