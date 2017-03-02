@@ -113,13 +113,13 @@ private:
 	boost::container::vector<Validator> validators;
 	bool finalized;
 
-	static Json::Value returnJsonValue(const Store *store, Json::Value v) {
+	static Json::Value returnJsonValue(const Store &store, Json::Value v) {
 		return v;
 	}
 
 	template<typename Translator>
 	static Json::Value getValueFromSubSchema(
-		const Store *storeWithMainSchema,
+		const Store &storeWithMainSchema,
 		const Schema *subschema, const Translator *translator,
 		const HashedStaticString &key);
 

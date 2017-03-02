@@ -114,7 +114,7 @@ public:
 	}
 };
 
-typedef boost::function<Json::Value (const Store *store)> ValueGetter;
+typedef boost::function<Json::Value (const Store &store)> ValueGetter;
 typedef boost::function<void (const Json::Value &config, const vector<Error> &errors)> ConfigCallback;
 typedef boost::function<void (const Json::Value &config)> InspectCallback;
 

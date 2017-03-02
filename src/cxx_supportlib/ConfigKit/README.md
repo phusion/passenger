@@ -161,7 +161,7 @@ But ConfigKit also supports *dynamic* default values, by accepting instead of a 
 The main use case for dynamic default values is this: to return something based on another value in the configuration store. For example suppose that your schema defines a `connect_timeout` and a `recv_timeout` option. You want `recv_timeout` to default to two times whatever the effective value of `connect_timeout` is. You can define a default value getter function like this:
 
 ~~~c++
-Json::Value getRecvTimeoutDefaultValue(const ConfigKit::Store * store) {
+Json::Value getRecvTimeoutDefaultValue(const ConfigKit::Store &store) {
     return store->get("connect_timeout").getInt() * 2;
 }
 

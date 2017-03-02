@@ -62,7 +62,7 @@ private:
 			  defaultValueCachePopulated(false)
 			{ }
 
-		Json::Value getDefaultValue(const Store *store) const {
+		Json::Value getDefaultValue(const Store &store) const {
 			if (defaultValueCachePopulated) {
 				return cachedDefaultValue;
 			} else if (schemaEntry->defaultValueGetter) {
@@ -78,7 +78,7 @@ private:
 			}
 		}
 
-		Json::Value getEffectiveValue(const Store *store) const {
+		Json::Value getEffectiveValue(const Store &store) const {
 			if (userValue.isNull()) {
 				return getDefaultValue(store);
 			} else {
@@ -159,7 +159,7 @@ public:
 		const Entry *entry;
 
 		if (entries.lookup(key, &entry)) {
-			return entry->getEffectiveValue(this);
+			return entry->getEffectiveValue(*this);
 		} else {
 			return Json::Value(Json::nullValue);
 		}
@@ -207,7 +207,7 @@ public:
 				subdoc["user_value"] = entry.userValue;
 			}
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = entry.getDefaultValue(this);
+				subdoc["default_value"] = entry.getDefaultValue(*this);
 			}
 
 			const Json::Value &effectiveValue =
@@ -310,9 +310,9 @@ public:
 
 			subdoc["user_value"] = entry.userValue;
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = entry.getDefaultValue(this);
+				subdoc["default_value"] = entry.getDefaultValue(*this);
 			}
-			subdoc["effective_value"] = entry.getEffectiveValue(this);
+			subdoc["effective_value"] = entry.getEffectiveValue(*this);
 			entry.schemaEntry->inspect(subdoc);
 
 			result[it.getKey()] = subdoc;
@@ -327,15 +327,15 @@ public:
 template<typename Translator>
 inline Json::Value
 Schema::getValueFromSubSchema(
-	const Store *store,
+	const Store &store,
 	const Schema *subschema, const Translator *translator,
 	const HashedStaticString &key)
 {
-	Store tempStore = store->extractDataForSubSchema(*subschema, *translator);
+	Store tempStore = store.extractDataForSubSchema(*subschema, *translator);
 	Store::Entry *tempEntry;
 	if (tempStore.entries.lookup(translator->translateOne(key), &tempEntry)) {
 		if (tempEntry->schemaEntry->defaultValueGetter) {
-			return tempEntry->schemaEntry->defaultValueGetter(&tempStore);
+			return tempEntry->schemaEntry->defaultValueGetter(tempStore);
 		} else {
 			return Json::nullValue;
 		}

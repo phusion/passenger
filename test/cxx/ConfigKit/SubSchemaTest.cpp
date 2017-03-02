@@ -62,8 +62,8 @@ namespace tut {
 		ensure_equals(errors[0].getMessage(), "'sub_gender' is required");
 	}
 
-	static Json::Value inferDefaultValueForGender(const ConfigKit::Store *config) {
-		return config->get("default_gender");
+	static Json::Value inferDefaultValueForGender(const ConfigKit::Store &config) {
+		return config["default_gender"];
 	}
 
 	TEST_METHOD(4) {
