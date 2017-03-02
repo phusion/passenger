@@ -108,7 +108,7 @@ There is also `ConfigKit::Store`. This is a class that stores configuration valu
 
 ### Translators
 
-And finally there are "translator" classes: `ConfigKit::TableTranslator` and `ConfigKit::PrefixTranslator`. The role of translators are described in the section "The special problem of conflicting overlapping configuration names and translation".
+And finally there is a "translator" class: `ConfigKit::TableTranslator`. The role of translators are described in the section "The special problem of conflicting overlapping configuration names and translation".
 
 ## Using the schema
 
@@ -140,7 +140,7 @@ struct YourSchema: public ConfigKit::Schema {
         using namespace ConfigKit;
         add("foo", STRING_TYPE, REQUIRED);
         add("bar", FLOAT_TYPE, OPTIONAL);
-        add("baz", INTEGER_TYPE, OPTIONAL, 123);
+        add("baz", INT_TYPE, OPTIONAL, 123);
         finalize();
     }
 };
@@ -164,7 +164,7 @@ Json::Value getRecvTimeoutDefaultValue(const ConfigKit::Store * store) {
     return store->get("connect_timeout").getInt() * 2;
 }
 
-schema.addWithDynamicDefault("recv_timeout", INTEGER_TYPE, OPTIONAL, getRecvTimeoutDefaultValue);
+schema.addWithDynamicDefault("recv_timeout", INT_TYPE, OPTIONAL, getRecvTimeoutDefaultValue);
 ~~~
 
 ### Inspecting the schema
@@ -369,7 +369,7 @@ public:
             using namespace ConfigKit;
             add("db_path", STRING_TYPE, REQUIRED);
             add("url", STRING_TYPE, REQUIRED);
-            add("timeout", INTEGER_TYPE, OPTIONAL, 60);
+            add("timeout", INT_TYPE, OPTIONAL, 60);
             finalize();
         }
     };
@@ -487,7 +487,7 @@ public:
         Schema() {
             using namespace ConfigKit;
             add("url", STRING_TYPE, REQUIRED);
-            add("timeout", INTEGER_TYPE, OPTIONAL, 60);
+            add("timeout", INT_TYPE, OPTIONAL, 60);
             finalize();
         }
     };
@@ -618,7 +618,7 @@ public:
             addSubSchema(dnsQuerier.schema, dnsQuerier.translator);
 
             // Here we define Downloader's own configuration keys.
-            add("download_timeout", INTEGER_TYPE, OPTIONAL, 60);
+            add("download_timeout", INT_TYPE, OPTIONAL, 60);
             finalize();
         }
     };
@@ -727,7 +727,7 @@ static Json::Value getTimeout2xDefaultValue(const ConfigKit::Store * store) {
     return store->get("timeout").asInt() * 2;
 }
 
-addWithDynamicDefault("timeout2x", INTEGER_TYPE, OPTIONAL, getTimeout2xDefaultValue);
+addWithDynamicDefault("timeout2x", INT_TYPE, OPTIONAL, getTimeout2xDefaultValue);
 ~~~
 
 And let's imagine that Downloader translates that option to "security_checker_timeout2x":
