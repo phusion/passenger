@@ -75,6 +75,8 @@ TEST_CXX_OBJECTS = {
     "test/cxx/ConfigKit/ErrorTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/ConfigKit/TranslationTest.o" =>
     "test/cxx/ConfigKit/TranslationTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/ConfigKit/SubSchemaTest.o" =>
+    "test/cxx/ConfigKit/SubSchemaTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/MemoryKit/MbufTest.o" =>
     "test/cxx/MemoryKit/MbufTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/MemoryKit/PallocTest.o" =>

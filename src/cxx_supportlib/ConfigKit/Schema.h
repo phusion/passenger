@@ -94,6 +94,21 @@ public:
 	typedef boost::function<void (const Store &store, vector<Error> &errors)> Validator;
 
 private:
+	class DummyTranslator {
+	public:
+		StaticString translateOne(const StaticString &key) const {
+			return key;
+		}
+
+		StaticString reverseTranslateOne(const StaticString &key) const {
+			return key;
+		}
+
+		vector<Error> reverseTranslate(const vector<Error> &errors) const {
+			return errors;
+		}
+	};
+
 	StringKeyTable<Entry> entries;
 	boost::container::vector<Validator> validators;
 	bool finalized;
@@ -101,6 +116,17 @@ private:
 	static Json::Value returnJsonValue(const Store *store, Json::Value v) {
 		return v;
 	}
+
+	template<typename Translator>
+	static Json::Value getValueFromSubSchema(
+		const Store *storeWithMainSchema,
+		const Schema *subschema, const Translator *translator,
+		const HashedStaticString &key);
+
+	template<typename Translator>
+	static void validateSubSchema(const Store &store, vector<Error> &errors,
+		const Schema *subschema, const Translator *translator,
+		const Validator &origValidator);
 
 public:
 	Schema()
@@ -143,19 +169,44 @@ public:
 		entries.insert(key, entry);
 	}
 
+	void addSubSchema(const Schema &subschema) {
+		addSubSchema(subschema, DummyTranslator());
+	}
+
 	template<typename Translator>
-	void addSubSchema(const Schema &schema, const Translator &translator) {
+	void addSubSchema(const Schema &subschema, const Translator &translator) {
 		assert(!finalized);
-		Schema::ConstIterator it = schema.getIterator();
+		assert(subschema.finalized);
+		Schema::ConstIterator it = subschema.getIterator();
 
 		while (*it != NULL) {
 			const HashedStaticString &key = it.getKey();
 			const Schema::Entry &entry = it.getValue();
+			ValueGetter valueGetter;
+
+			if (entry.defaultValueGetter) {
+				if (entry.flags & _DYNAMIC_DEFAULT_VALUE) {
+					valueGetter = boost::bind<Json::Value>(
+						getValueFromSubSchema<Translator>,
+						boost::placeholders::_1, &subschema, &translator,
+						key);
+				} else {
+					valueGetter = entry.defaultValueGetter;
+				}
+			}
 
 			Entry entry2(entry.type, (Flags) (entry.flags | _FROM_SUBSCHEMA),
-				entry.defaultValueGetter);
+				valueGetter);
 			entries.insert(translator.reverseTranslateOne(key), entry2);
 			it.next();
+		}
+
+		boost::container::vector<Schema::Validator>::const_iterator v_it, v_end
+			= subschema.getValidators().end();
+		for (v_it = subschema.getValidators().begin(); v_it != v_end; v_it++) {
+			validators.push_back(boost::bind(validateSubSchema<Translator>,
+				boost::placeholders::_1, boost::placeholders::_2,
+				&subschema, &translator, *v_it));
 		}
 	}
 
@@ -168,19 +219,6 @@ public:
 		assert(!finalized);
 		entries.compact();
 		finalized = true;
-
-		ConstIterator it(entries);
-		while (*it != NULL) {
-			const Entry &entry = it.getValue();
-			if (entry.flags & _FROM_SUBSCHEMA && entry.flags & _DYNAMIC_DEFAULT_VALUE) {
-				P_BUG("Configuration key '" << it.getKey() << "' comes from a"
-					" subschema and contains a dynamic default value function."
-					" Please read the ConfigKit README, section 'The special"
-					" problem of dynamic default values'");
-			}
-			it.next();
-		}
-
 		validators.shrink_to_fit();
 	}
 

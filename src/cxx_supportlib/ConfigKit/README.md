@@ -31,7 +31,6 @@ ConfigKit is a configuration management system that lets you define configuratio
    - Downloader example: a high-level component that combines subcomponents
      - The special problem of conflicting overlapping configuration names and translation
      - Code example
-     - The special problem of dynamic default values
  * Putting it all together: asynchronous version
 
 ## Motivations
@@ -736,53 +735,6 @@ public:
         return config.inspect();
     }
 };
-~~~
-
-#### The special problem of dynamic default values
-
-When combining subcomponents' schemas like this, one has to be wary of dynamic default values. As explained before, the main use case for dynamic default values is to allow setting a default value that depends on the effective value of another configuration value. But since subcomponents' schemas are included into a high-level component's schema, the default value function objects called against the high-level component's configuration store, not against the low-level component's configuration store. If the high-level component translates any configuration keys, then that default value function object may break as a result of the translation.
-
-For example, imagine that SecurityChecker defines this configuration key:
-
-~~~c++
-// In SecurityChecker
-
-static Json::Value getTimeout2xDefaultValue(const ConfigKit::Store * store) {
-    return store->get("timeout").asInt() * 2;
-}
-
-addWithDynamicDefault("timeout2x", INT_TYPE, OPTIONAL, getTimeout2xDefaultValue);
-~~~
-
-And let's imagine that Downloader translates that option to "security_checker_timeout2x":
-
-~~~c++
-// Still in SecurityChecker
-securityChecker.translator.add("security_checker_timeout2x", "timeout2x");
-~~~
-
-When inside Downloader you call `config.get("security_checker_timeout2x")`, that in turn invokes `getTimeout2xDefaultValue()` with the Downloader's configuration store, not the SecurityChecker's configuration store. So inside `getTimeout2xDefaultValue()` the code `store->get("timeout")` is unable to fetch anything, and the function stops working as intended.
-
-This problem applies to *all* dynamic default values in the entire subcomponent tree, not only the subcomponents that a high-level component directly encapsulates.
-
-You can solve this problem by overriding specific schema entries with your own, providing your own default value functions. So in `Downloader::Schema()`:
-
-~~~c++
-// In Downloader
-Schema() {
-    ...
-    securityChecker.translator.add("security_checker_db_path", "db_path");
-    securityChecker.translator.add("security_checker_timeout", "timeout");
-    securityChecker.translator.add("security_checker_timeout2x", "timeout2x");
-    securityChecker.translator.finalize();
-    addSubSchema(securityChecker.schema, securityChecker.translator);
-    // !!! Add this: !!!
-    addWithDynamicDefault("security_checker_timeout2x", INTEGER_TYPE, OPTIONAL, getTimeout2xDefaultValue);
-}
-
-static Json::Value getTimeout2xDefaultValue(const ConfigKit::Store * store) {
-    return store->get("security_checker_timeout").asInt() * 2;
-}
 ~~~
 
 ### Main function example

@@ -31,6 +31,7 @@
 
 #include <ConfigKit/Common.h>
 #include <ConfigKit/Schema.h>
+#include <ConfigKit/Utils.h>
 #include <jsoncpp/json.h>
 #include <DataStructures/StringKeyTable.h>
 
@@ -43,6 +44,8 @@ using namespace std;
 // See the ConfigKit README for a description.
 class Store {
 private:
+	friend class Schema;
+
 	struct Entry {
 		const Schema::Entry *schemaEntry;
 		Json::Value userValue;
@@ -267,6 +270,30 @@ public:
 		}
 	}
 
+	template<typename Translator>
+	Store extractDataForSubSchema(const Schema &subSchema,
+		const Translator &translator) const
+	{
+		Store result(subSchema);
+		StringKeyTable<Entry>::Iterator it(result.entries);
+
+		while (*it != NULL) {
+			const HashedStaticString &subSchemaKey = it.getKey();
+			Entry &subSchemaEntry = it.getValue();
+			const StaticString mainSchemaKey = translator.reverseTranslateOne(
+				subSchemaKey);
+			const Entry *mainSchemaEntry;
+
+			if (entries.lookup(mainSchemaKey, &mainSchemaEntry)) {
+				subSchemaEntry.userValue = mainSchemaEntry->userValue;
+			}
+
+			it.next();
+		}
+
+		return result;
+	}
+
 	/**
 	 * Inspects the current store's configuration keys and values in a format
 	 * that displays user-supplied and effective values, as well as
@@ -295,6 +322,42 @@ public:
 		return result;
 	}
 };
+
+
+template<typename Translator>
+inline Json::Value
+Schema::getValueFromSubSchema(
+	const Store *store,
+	const Schema *subschema, const Translator *translator,
+	const HashedStaticString &key)
+{
+	Store tempStore = store->extractDataForSubSchema(*subschema, *translator);
+	Store::Entry *tempEntry;
+	if (tempStore.entries.lookup(translator->translateOne(key), &tempEntry)) {
+		if (tempEntry->schemaEntry->defaultValueGetter) {
+			return tempEntry->schemaEntry->defaultValueGetter(&tempStore);
+		} else {
+			return Json::nullValue;
+		}
+	} else {
+		return Json::nullValue;
+	}
+}
+
+template<typename Translator>
+inline void
+Schema::validateSubSchema(const Store &store, vector<Error> &errors,
+	const Schema *subschema, const Translator *translator,
+	const Validator &origValidator)
+{
+	Store tempStore = store.extractDataForSubSchema(*subschema, *translator);
+	vector<Error> tempErrors;
+	origValidator(tempStore, tempErrors);
+	if (!tempErrors.empty()) {
+		tempErrors = translator->reverseTranslate(tempErrors);
+		errors.insert(errors.end(), tempErrors.begin(), tempErrors.end());
+	}
+}
 
 
 } // namespace ConfigKit
