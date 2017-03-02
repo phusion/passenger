@@ -107,13 +107,13 @@ getTypeString(Type type) {
 	switch (type) {
 	case STRING_TYPE:
 		return P_STATIC_STRING("string");
-	case INTEGER_TYPE:
+	case INT_TYPE:
 		return P_STATIC_STRING("integer");
-	case UNSIGNED_INTEGER_TYPE:
+	case UINT_TYPE:
 		return P_STATIC_STRING("unsigned integer");
 	case FLOAT_TYPE:
 		return P_STATIC_STRING("float");
-	case BOOLEAN_TYPE:
+	case BOOL_TYPE:
 		return P_STATIC_STRING("boolean");
 	default:
 		return P_STATIC_STRING("unknown");

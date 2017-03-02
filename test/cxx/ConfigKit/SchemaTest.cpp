@@ -43,10 +43,10 @@ namespace tut {
 		set_test_name("Validating required keys with the right value types");
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("integer", ConfigKit::INTEGER_TYPE, ConfigKit::REQUIRED);
-		schema.add("integer_unsigned", ConfigKit::UNSIGNED_INTEGER_TYPE, ConfigKit::REQUIRED);
+		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
+		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::REQUIRED);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::REQUIRED);
-		schema.add("boolean", ConfigKit::BOOLEAN_TYPE, ConfigKit::REQUIRED);
+		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
 		ensure(schema.validateValue("string", "string", error));
@@ -70,10 +70,10 @@ namespace tut {
 	TEST_METHOD(7) {
 		set_test_name("Validating required keys with the wrong value types");
 
-		schema.add("integer", ConfigKit::INTEGER_TYPE, ConfigKit::REQUIRED);
-		schema.add("integer_unsigned", ConfigKit::UNSIGNED_INTEGER_TYPE, ConfigKit::REQUIRED);
+		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
+		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::REQUIRED);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::REQUIRED);
-		schema.add("boolean", ConfigKit::BOOLEAN_TYPE, ConfigKit::REQUIRED);
+		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));
@@ -104,10 +104,10 @@ namespace tut {
 		set_test_name("Validating optional keys with the right value types");
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL);
-		schema.add("integer", ConfigKit::INTEGER_TYPE, ConfigKit::OPTIONAL);
-		schema.add("integer_unsigned", ConfigKit::UNSIGNED_INTEGER_TYPE, ConfigKit::OPTIONAL);
+		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
+		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
-		schema.add("boolean", ConfigKit::BOOLEAN_TYPE, ConfigKit::OPTIONAL);
+		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
 		ensure(schema.validateValue("string", "string", error));
@@ -131,10 +131,10 @@ namespace tut {
 	TEST_METHOD(12) {
 		set_test_name("Validating optional keys with the wrong value types");
 
-		schema.add("integer", ConfigKit::INTEGER_TYPE, ConfigKit::OPTIONAL);
-		schema.add("integer_unsigned", ConfigKit::UNSIGNED_INTEGER_TYPE, ConfigKit::OPTIONAL);
+		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
+		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
-		schema.add("boolean", ConfigKit::BOOLEAN_TYPE, ConfigKit::OPTIONAL);
+		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));

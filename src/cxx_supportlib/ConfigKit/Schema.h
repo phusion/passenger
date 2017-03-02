@@ -208,7 +208,7 @@ public:
 				error.message = "must be a string";
 				return false;
 			}
-		case INTEGER_TYPE:
+		case INT_TYPE:
 			if (value.isConvertibleTo(Json::intValue)) {
 				return true;
 			} else {
@@ -216,7 +216,7 @@ public:
 				error.message = "must be an integer";
 				return false;
 			}
-		case UNSIGNED_INTEGER_TYPE:
+		case UINT_TYPE:
 			if (value.isConvertibleTo(Json::intValue)) {
 				if (value.isConvertibleTo(Json::uintValue)) {
 					return true;
@@ -238,7 +238,7 @@ public:
 				error.message = "must be a number";
 				return false;
 			}
-		case BOOLEAN_TYPE:
+		case BOOL_TYPE:
 			if (value.isConvertibleTo(Json::booleanValue)) {
 				return true;
 			} else {

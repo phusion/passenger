@@ -62,7 +62,7 @@ namespace tut {
 		set_test_name("Validating values through ConfigKit::Schema");
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("bar", ConfigKit::INTEGER_TYPE, ConfigKit::REQUIRED);
+		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
 		init();
 
 		doc["bar"] = "string";
@@ -80,7 +80,7 @@ namespace tut {
 		set_test_name("previewUpdate()");
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("bar", ConfigKit::INTEGER_TYPE, ConfigKit::REQUIRED);
+		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
 		init();
 
 		doc["foo"] = "string";
@@ -100,7 +100,7 @@ namespace tut {
 		set_test_name("forceApplyUpdatePreview()");
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("bar", ConfigKit::INTEGER_TYPE, ConfigKit::REQUIRED);
+		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
 		init();
 
 		doc["foo"] = "string";
@@ -119,7 +119,7 @@ namespace tut {
 		set_test_name("inspect()");
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("bar", ConfigKit::INTEGER_TYPE, ConfigKit::REQUIRED);
+		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
 		init();
 
 		doc["foo"] = "string";
@@ -138,7 +138,7 @@ namespace tut {
 		set_test_name("Default values");
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL, "string");
-		schema.add("bar", ConfigKit::INTEGER_TYPE, ConfigKit::OPTIONAL, 123);
+		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL, 123);
 		init();
 
 		ensure_equals(config->get("foo").asString(), "string");
@@ -164,10 +164,10 @@ namespace tut {
 		set_test_name("Dynamic default values and caching them");
 		unsigned int nextValue = 0;
 
-		schema.addWithDynamicDefault("foo", ConfigKit::INTEGER_TYPE,
+		schema.addWithDynamicDefault("foo", ConfigKit::INT_TYPE,
 			ConfigKit::OPTIONAL,
 			boost::bind(getNextValueAndBump, &nextValue));
-		schema.addWithDynamicDefault("bar", ConfigKit::INTEGER_TYPE,
+		schema.addWithDynamicDefault("bar", ConfigKit::INT_TYPE,
 			ConfigKit::OPTIONAL | ConfigKit::CACHE_DEFAULT_VALUE,
 			boost::bind(getNextValueAndBump, &nextValue));
 		init();
@@ -181,9 +181,9 @@ namespace tut {
 	TEST_METHOD(15) {
 		set_test_name("Read-only keys can only be written to once");
 
-		schema.add("foo", ConfigKit::INTEGER_TYPE,
+		schema.add("foo", ConfigKit::INT_TYPE,
 			ConfigKit::OPTIONAL | ConfigKit::READ_ONLY);
-		schema.add("foo2", ConfigKit::INTEGER_TYPE,
+		schema.add("foo2", ConfigKit::INT_TYPE,
 			ConfigKit::OPTIONAL | ConfigKit::READ_ONLY);
 		init();
 
