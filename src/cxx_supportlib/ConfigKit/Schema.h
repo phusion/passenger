@@ -80,6 +80,9 @@ public:
 			if (flags & REQUIRED) {
 				doc["required"] = true;
 			}
+			if (flags & READ_ONLY) {
+				doc["read_only"] = true;
+			}
 			if (defaultValueGetter) {
 				doc["has_default_value"] = true;
 			}

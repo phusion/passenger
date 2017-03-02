@@ -177,4 +177,21 @@ namespace tut {
 		ensure_equals("(3)", config->get("bar").asUInt(), 2u);
 		ensure_equals("(4)", config->get("bar").asUInt(), 2u);
 	}
+
+	TEST_METHOD(15) {
+		set_test_name("Read-only keys can only be written to once");
+
+		schema.add("foo", ConfigKit::INTEGER_TYPE,
+			ConfigKit::OPTIONAL | ConfigKit::READ_ONLY);
+		schema.add("foo2", ConfigKit::INTEGER_TYPE,
+			ConfigKit::OPTIONAL | ConfigKit::READ_ONLY);
+		init();
+
+		doc["foo"] = 123;
+		ensure(config->update(doc, errors));
+		doc["foo2"] = 123;
+		ensure(config->update(doc, errors));
+		ensure_equals(config->get("foo").asInt(), 123);
+		ensure(config->get("foo2").isNull());
+	}
 }

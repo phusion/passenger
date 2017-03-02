@@ -86,6 +86,7 @@ private:
 
 	const Schema &schema;
 	StringKeyTable<Entry> entries;
+	bool updatedOnce;
 
 	static Json::Value getEffectiveValue(const Json::Value &userValue,
 		const Json::Value &defaultValue)
@@ -97,9 +98,14 @@ private:
 		}
 	}
 
+	bool isWritable(const Entry &entry) const {
+		return !(entry.schemaEntry->flags & READ_ONLY) || !updatedOnce;
+	}
+
 public:
 	Store(const Schema &_schema)
-		: schema(_schema)
+		: schema(_schema),
+		  updatedOnce(false)
 	{
 		Schema::ConstIterator it = _schema.getIterator();
 
@@ -165,11 +171,12 @@ public:
 		Error error;
 
 		while (*it != NULL) {
+			const HashedStaticString &key = it.getKey();
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
-			if (updates.isMember(it.getKey())) {
-				subdoc["user_value"] = updates[it.getKey()];
+			if (isWritable(entry) && updates.isMember(key)) {
+				subdoc["user_value"] = updates[key];
 			} else {
 				subdoc["user_value"] = entry.userValue;
 			}
@@ -206,9 +213,12 @@ public:
 			Entry &entry = it.getValue();
 			const Json::Value &subdoc =
 				const_cast<const Json::Value &>(preview)[it.getKey()];
-			entry.userValue = subdoc["user_value"];
+			if (isWritable(entry)) {
+				entry.userValue = subdoc["user_value"];
+			}
 			it.next();
 		}
+		updatedOnce = true;
 	}
 
 	/**
