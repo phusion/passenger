@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -113,7 +113,7 @@ private:
 
 		prep.ageValueSize = integerSizeInOtherBase<time_t, 10>(prep.age);
 		prep.contentLengthStrSize = uintSizeAsString(entry.body->httpBodySize);
-		prep.showVersionInHeader = server->showVersionInHeader;
+		prep.showVersionInHeader = req->configCache->showVersionInHeader;
 	}
 
 	template<typename Server>
@@ -192,15 +192,16 @@ private:
 public:
 	ResponseCache<Request> responseCache;
 
-	TurboCaching(State initialState = ENABLED)
-		: state(initialState),
-		  lastTimeout((ev_tstamp) time(NULL)),
-		  nextTimeout((ev_tstamp) time(NULL) + ENABLED_TIMEOUT)
-	{
-		if (initialState != ENABLED && initialState != DISABLED) {
-			throw RuntimeException("The initial turbocaching state may "
-				"only be ENABLED or DISABLED");
-		}
+	TurboCaching()
+		: state(ENABLED),
+		  lastTimeout(0),
+		  nextTimeout(0)
+		{ }
+
+	void initialize(bool initiallyEnabled) {
+		state = initiallyEnabled ? ENABLED : DISABLED;
+		lastTimeout = (ev_tstamp) time(NULL);
+		nextTimeout = (ev_tstamp) time(NULL) + ENABLED_TIMEOUT;
 	}
 
 	bool isEnabled() const {

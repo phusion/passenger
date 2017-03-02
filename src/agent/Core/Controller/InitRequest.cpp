@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -136,7 +136,7 @@ void
 Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 	boost::shared_ptr<Options> *options;
 
-	if (singleAppMode) {
+	if (req->configCache->singleAppMode) {
 		P_ASSERT_EQ(poolOptionsCache.size(), 1);
 		poolOptionsCache.lookupRandom(NULL, &options);
 		req->options = **options;
@@ -177,42 +177,31 @@ Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis 
 }
 
 void
-Controller::fillPoolOptionsFromAgentsOptions(Options &options) {
-	options.ruby = defaultRuby;
-	if (agentsOptions->has("default_nodejs")) {
-		options.nodejs = agentsOptions->get("default_nodejs");
-	}
-	if (agentsOptions->has("default_python")) {
-		options.python = agentsOptions->get("default_python");
-	}
-	if (agentsOptions->has("meteor_app_settings")) {
-		options.meteorAppSettings = agentsOptions->get("meteor_app_settings");
-	}
-	if (agentsOptions->has("app_file_descriptor_ulimit")) {
-		options.fileDescriptorUlimit = agentsOptions->getUint("app_file_descriptor_ulimit");
-	}
+Controller::fillPoolOptionsFromConfigCaches(Options &options,
+	const ControllerRequestConfigCachePtr &requestConfigCache)
+{
+	options.ruby = requestConfigCache->defaultRuby;
+	options.nodejs = requestConfigCache->defaultNodejs;
+	options.python = requestConfigCache->defaultPython;
+	options.meteorAppSettings = requestConfigCache->meteorAppSettings;
+	options.fileDescriptorUlimit = requestConfigCache->fileDescriptorUlimit;
 
 	options.logLevel = getLogLevel();
-	options.integrationMode = agentsOptions->get("integration_mode",
-		false, DEFAULT_INTEGRATION_MODE);
-	options.ustRouterAddress = ustRouterAddress;
+	options.integrationMode = mainConfigCache.integrationMode;
+	options.ustRouterAddress = requestConfigCache->ustRouterAddress;
 	options.ustRouterUsername = P_STATIC_STRING("logging");
-	options.ustRouterPassword = ustRouterPassword;
-	options.userSwitching = agentsOptions->getBool("user_switching");
-	if (agentsOptions->has("default_user")) {
-		options.defaultUser = agentsOptions->get("default_user");
-	}
-	if (agentsOptions->has("default_group")) {
-		options.defaultGroup = agentsOptions->get("default_group");
-	}
-	options.minProcesses = agentsOptions->getInt("min_instances");
-	options.maxPreloaderIdleTime = agentsOptions->getInt("max_preloader_idle_time");
-	options.maxRequestQueueSize = agentsOptions->getInt("max_request_queue_size");
-	options.abortWebsocketsOnProcessShutdown = agentsOptions->getBool("abort_websockets_on_process_shutdown");
-	options.forceMaxConcurrentRequestsPerProcess = agentsOptions->getInt("force_max_concurrent_requests_per_process");
-	options.spawnMethod = agentsOptions->get("spawn_method");
-	options.loadShellEnvvars = agentsOptions->getBool("load_shell_envvars");
-	options.statThrottleRate = statThrottleRate;
+	options.ustRouterPassword = requestConfigCache->ustRouterPassword;
+	options.userSwitching = mainConfigCache.userSwitching;
+	options.defaultUser = requestConfigCache->defaultUser;
+	options.defaultGroup = requestConfigCache->defaultGroup;
+	options.minProcesses = requestConfigCache->minInstances;
+	options.maxPreloaderIdleTime = requestConfigCache->maxPreloaderIdleTime;
+	options.maxRequestQueueSize = requestConfigCache->maxRequestQueueSize;
+	options.abortWebsocketsOnProcessShutdown = requestConfigCache->abortWebsocketsOnProcessShutdown;
+	options.forceMaxConcurrentRequestsPerProcess = requestConfigCache->forceMaxConcurrentRequestsPerProcess;
+	options.spawnMethod = requestConfigCache->spawnMethod;
+	options.loadShellEnvvars = requestConfigCache->loadShellEnvvars;
+	options.statThrottleRate = mainConfigCache.statThrottleRate;
 
 	/******************************/
 }
@@ -344,7 +333,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 		options.baseURI = StaticString(scriptName->start->data, scriptName->size);
 	}
 
-	fillPoolOptionsFromAgentsOptions(options);
+	fillPoolOptionsFromConfigCaches(options, req->configCache);
 
 	const LString *appType = secureHeaders.lookup("!~PASSENGER_APP_TYPE");
 	if (appType == NULL || appType->size == 0) {
@@ -457,7 +446,7 @@ Controller::getStickySessionCookieName(Request *req) {
 	const LString *value = req->headers.lookup(PASSENGER_STICKY_SESSIONS_COOKIE_NAME);
 	if (value == NULL || value->size == 0) {
 		return psg_lstr_create(req->pool,
-			defaultStickySessionsCookieName);
+			req->configCache->defaultStickySessionsCookieName);
 	} else {
 		return value;
 	}
@@ -482,15 +471,15 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		// and localize them as much as possible, for better CPU caching.
 		RequestAnalysis analysis;
 		analysis.flags = req->secureHeaders.lookup(FLAGS);
-		analysis.appGroupNameCell = singleAppMode
+		analysis.appGroupNameCell = req->configCache->singleAppMode
 			? NULL
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
 		analysis.unionStationSupport = unionStationContext != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
-			this->stickySessions);
+			mainConfigCache.stickySessions);
 		req->showVersionInHeader = getBoolOption(req, PASSENGER_SHOW_VERSION_IN_HEADER,
-			this->showVersionInHeader);
+			req->configCache->showVersionInHeader);
 		req->host = req->headers.lookup(HTTP_HOST);
 
 		/***************/

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -56,6 +56,7 @@
 #include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/ClientRef.h>
+#include <ConfigKit/ConfigKit.h>
 #include <Algorithms/MovingAverage.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
@@ -139,6 +140,30 @@ using namespace oxt;
 	TRACE_POINT_WITH_DATA_FUNCTION(klass::_getClientNameFromTracePoint, client); \
 	SKC_TRACE_FROM_STATIC(server, client, 3, "Event: " eventName)
 
+
+class BaseServerSchema: public ConfigKit::Schema {
+private:
+	void initialize() {
+		using namespace ConfigKit;
+
+		add("accept_burst_count", UINT_TYPE, OPTIONAL, 32);
+		add("start_reading_after_accept", BOOL_TYPE, OPTIONAL, true);
+		add("min_spare_clients", UINT_TYPE, OPTIONAL, 0);
+		add("client_freelist_limit", UINT_TYPE, OPTIONAL, 0);
+	}
+
+public:
+	BaseServerSchema() {
+		initialize();
+		finalize();
+	}
+
+	BaseServerSchema(bool _subclassing) {
+		initialize();
+	}
+};
+
+
 /**
  * A highly optimized generic base class for evented socket servers, implementing basic,
  * low-level connection management.
@@ -203,6 +228,7 @@ public:
 	typedef void (*Callback)(DerivedServer *server);
 
 	/***** Configuration *****/
+	ConfigKit::Store config;
 	unsigned int acceptBurstCount: 7;
 	bool startReadingAfterAccept: 1;
 	unsigned int minSpareClients: 12;
@@ -632,11 +658,20 @@ protected:
 		// Do nothing.
 	}
 
+	virtual void onConfigChange(const ConfigKit::Store *oldConfig) {
+		acceptBurstCount = config["accept_burst_count"].asUInt();
+		startReadingAfterAccept = config["start_reading_after_accept"].asBool();
+		minSpareClients = config["min_spare_clients"].asUInt();
+		clientFreelistLimit = config["client_freelist_limit"].asUInt();
+	}
+
 public:
 	/***** Public methods *****/
 
-	BaseServer(Context *context)
-		: acceptBurstCount(32),
+	BaseServer(Context *context, const BaseServerSchema &schema,
+		const Json::Value &initialConfig = Json::Value())
+		: config(schema),
+		  acceptBurstCount(0),
 		  startReadingAfterAccept(true),
 		  minSpareClients(0),
 		  clientFreelistLimit(0),
@@ -657,6 +692,12 @@ public:
 		  nEndpoints(0),
 		  accept4Available(true)
 	{
+		vector<ConfigKit::Error> errors;
+		if (!config.update(initialConfig, errors)) {
+			throw ArgumentException("Invalid initial configuration: " +
+				toString(errors));
+		}
+
 		STAILQ_INIT(&freeClients);
 		TAILQ_INIT(&activeClients);
 		TAILQ_INIT(&disconnectedClients);
@@ -670,8 +711,6 @@ public:
 		statisticsUpdateWatcher.set<
 			BaseServer<DerivedServer, Client>,
 			&BaseServer<DerivedServer, Client>::onStatisticsUpdateTimeout>(this);
-		statisticsUpdateWatcher.set(5, 5);
-		statisticsUpdateWatcher.start();
 	}
 
 	virtual ~BaseServer() {
@@ -680,6 +719,12 @@ public:
 
 
 	/***** Initialization, listening and shutdown *****/
+
+	virtual void initialize() {
+		onConfigChange(NULL);
+		statisticsUpdateWatcher.set(5, 5);
+		statisticsUpdateWatcher.start();
+	}
 
 	// Pre-create multiple client objects so that they get allocated
 	// near each other in memory. Hopefully increases CPU cache locality.
@@ -1017,28 +1062,22 @@ public:
 		return P_STATIC_STRING("Server");
 	}
 
-	virtual void configure(const Json::Value &doc) {
-		if (doc.isMember("accept_burst_count")) {
-			acceptBurstCount = doc["accept_burst_count"].asUInt();
-		}
-		if (doc.isMember("start_reading_after_accept")) {
-			startReadingAfterAccept = doc["start_reading_after_accept"].asBool();
-		}
-		if (doc.isMember("min_spare_clients")) {
-			minSpareClients = doc["min_spare_clients"].asUInt();
-		}
-		if (doc.isMember("client_freelist_limit")) {
-			clientFreelistLimit = doc["client_freelist_limit"].asUInt();
-		}
+	virtual Json::Value previewConfigUpdate(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors)
+	{
+		return config.previewUpdate(updates, errors);
 	}
 
-	virtual Json::Value getConfigAsJson() const {
-		Json::Value doc;
-		doc["accept_burst_count"] = acceptBurstCount;
-		doc["start_reading_after_accept"] = startReadingAfterAccept;
-		doc["min_spare_clients"] = minSpareClients;
-		doc["client_freelist_limit"] = clientFreelistLimit;
-		return doc;
+	virtual bool configure(const Json::Value &updates, vector<ConfigKit::Error> &errors) {
+		ConfigKit::Store oldConfig = config;
+		if (config.update(updates, errors)) {
+			onConfigChange(&oldConfig);
+		}
+		return errors.empty();
+	}
+
+	virtual Json::Value inspectConfig() const {
+		return config.inspect();
 	}
 
 	virtual Json::Value inspectStateAsJson() const {
@@ -1161,8 +1200,9 @@ public:
 template <typename Client = Client>
 class Server: public BaseServer<Server<Client>, Client> {
 public:
-	Server(Context *context)
-		: BaseServer<Server, Client>(context)
+	Server(Context *context, const BaseServerSchema &schema,
+		const Json::Value &initialConfig = Json::Value())
+		: BaseServer<Server, Client>(context, schema, initialConfig)
 		{ }
 };
 

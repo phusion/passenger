@@ -26,15 +26,21 @@ namespace tut {
 			ApplicationPool2::AbstractSessionPtr sessionToReturn;
 			ApplicationPool2::ExceptionPtr exceptionToReturn;
 
-			MyController(ServerKit::Context *context, const VariantMap *agentsOptions)
-				: Core::Controller(context, agentsOptions)
+			MyController(ServerKit::Context *context,
+				const Core::ControllerSchema &schema,
+				const Json::Value &initialConfig)
+				: Core::Controller(context, schema, initialConfig)
 				{ }
 		};
 
 		BackgroundEventLoop bg;
 		ServerKit::Context context;
+		Core::ControllerSchema schema;
 		MyController *controller;
-		VariantMap options;
+		SpawningKit::ConfigPtr spawningKitConfig;
+		SpawningKit::FactoryPtr spawningKitFactory;
+		PoolPtr appPool;
+		Json::Value config;
 		int serverSocket;
 		TestSession testSession;
 		FileDescriptor clientConnection;
@@ -45,33 +51,25 @@ namespace tut {
 			: bg(false, true),
 			  context(bg.safe, bg.libuv_loop)
 		{
-			options.setInt("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
-			options.setInt("response_buffer_high_watermark", DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
-			options.setBool("show_version_in_header", true);
-			options.setBool("sticky_sessions", false);
-			options.setBool("core_graceful_exit", true);
-			options.setBool("multi_app", false);
-			options.set("environment", DEFAULT_APP_ENV);
-			options.set("app_root", "stub/rack");
-			options.set("app_type", "dummy");
-			options.set("startup_file", "none");
-			options.set("default_ruby", DEFAULT_RUBY);
-			options.set("default_server_name", "localhost");
-			options.setInt("default_server_port", 80);
-			options.set("server_software", PROGRAM_NAME);
-			options.set("sticky_sessions_cookie_name", DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
-			options.setBool("user_switching", false);
-			options.setInt("min_instances", 1);
-			options.setInt("max_preloader_idle_time", DEFAULT_MAX_PRELOADER_IDLE_TIME);
-			options.setInt("max_request_queue_size", DEFAULT_MAX_REQUEST_QUEUE_SIZE);
-			options.setBool("abort_websockets_on_process_shutdown", true);
-			options.setInt("force_max_concurrent_requests_per_process", -1);
-			options.set("spawn_method", DEFAULT_SPAWN_METHOD);
-			options.setBool("load_shell_envvars", false);
+			config["thread_number"] = 1;
+			config["multi_app"] = false;
+			config["app_root"] = "stub/rack";
+			config["app_type"] = "rack";
+			config["startup_file"] = "none";
+			config["default_server_name"] = "localhost";
+			config["default_server_port"] = "80";
+			config["user_switching"] = false;
 
 			setLogLevel(LVL_WARN);
 			controller = NULL;
 			serverSocket = createUnixServer("tmp.server");
+
+			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
+			spawningKitConfig->resourceLocator = resourceLocator;
+			spawningKitConfig->finalize();
+			spawningKitFactory = boost::make_shared<SpawningKit::Factory>(spawningKitConfig);
+			appPool = boost::make_shared<Pool>(spawningKitFactory);
+			appPool->initialize();
 		}
 
 		~Core_ControllerTest() {
@@ -103,7 +101,10 @@ namespace tut {
 		}
 
 		void init() {
-			controller = new MyController(&context, &options);
+			controller = new MyController(&context, schema, config);
+			controller->resourceLocator = resourceLocator;
+			controller->appPool = appPool;
+			controller->initialize();
 			controller->listen(serverSocket);
 			startLoop();
 		}

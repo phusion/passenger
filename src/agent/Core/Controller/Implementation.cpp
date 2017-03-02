@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2015 Phusion Holding B.V.
+ *  Copyright (c) 2015-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -34,5 +34,5 @@
 #include <Core/Controller/InitializationAndShutdown.cpp>
 #include <Core/Controller/InternalUtils.cpp>
 #include <Core/Controller/Miscellaneous.cpp>
-#include <Core/Controller/StateInspectionAndConfiguration.cpp>
+#include <Core/Controller/StateInspection.cpp>
 

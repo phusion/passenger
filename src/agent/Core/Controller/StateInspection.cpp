@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2016 Phusion Holding B.V.
+ *  Copyright (c) 2014-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -45,28 +45,6 @@ using namespace boost;
  *
  ****************************/
 
-
-Json::Value
-Controller::getConfigAsJson() const {
-	Json::Value doc = ParentClass::getConfigAsJson();
-	doc["single_app_mode"] = singleAppMode;
-	doc["stat_throttle_rate"] = statThrottleRate;
-	doc["show_version_in_header"] = showVersionInHeader;
-	doc["data_buffer_dir"] = getContext()->defaultFileBufferedChannelConfig.bufferDir;
-	return doc;
-}
-
-void
-Controller::configure(const Json::Value &doc) {
-	ParentClass::configure(doc);
-	if (doc.isMember("show_version_in_header")) {
-		showVersionInHeader = doc["show_version_in_header"].asBool();
-	}
-	if (doc.isMember("data_buffer_dir")) {
-		getContext()->defaultFileBufferedChannelConfig.bufferDir =
-			doc["data_buffer_dir"].asString();
-	}
-}
 
 Json::Value
 Controller::inspectStateAsJson() const {

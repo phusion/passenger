@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -285,8 +285,9 @@ public:
 	EventFd *exitEvent;
 	string fdPassingPassword;
 
-	ApiServer(ServerKit::Context *context)
-		: ParentClass(context),
+	ApiServer(ServerKit::Context *context, const ServerKit::HttpServerSchema &schema,
+		const Json::Value &initialConfig = Json::Value())
+		: ParentClass(context, schema, initialConfig),
 		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)
 		{ }

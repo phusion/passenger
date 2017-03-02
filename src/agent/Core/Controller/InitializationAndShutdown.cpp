@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -45,20 +45,12 @@ using namespace boost;
  ****************************/
 
 
-Controller::Controller(ServerKit::Context *context, const VariantMap *_agentsOptions,
-	unsigned int _threadNumber)
-	: ParentClass(context),
+Controller::Controller(ServerKit::Context *context, const ControllerSchema &schema,
+	const Json::Value &initialConfig)
+	: ParentClass(context, schema, initialConfig),
 
-	  statThrottleRate(_agentsOptions->getInt("stat_throttle_rate")),
-	  responseBufferHighWatermark(_agentsOptions->getInt("response_buffer_high_watermark")),
-	  benchmarkMode(parseBenchmarkMode(_agentsOptions->get("benchmark_mode", false))),
-	  singleAppMode(false),
-	  showVersionInHeader(_agentsOptions->getBool("show_version_in_header")),
-	  stickySessions(_agentsOptions->getBool("sticky_sessions")),
-	  gracefulExit(_agentsOptions->getBool("core_graceful_exit")),
-
-	  agentsOptions(_agentsOptions),
-	  stringPool(psg_create_pool(1024 * 4)),
+	  mainConfigCache(config),
+	  requestConfigCache(new ControllerRequestConfigCache(config)),
 	  poolOptionsCache(4),
 
 	  PASSENGER_APP_GROUP_NAME("!~PASSENGER_APP_GROUP_NAME"),
@@ -83,52 +75,8 @@ Controller::Controller(ServerKit::Context *context, const VariantMap *_agentsOpt
 	  HTTP_STATUS("status"),
 	  HTTP_TRANSFER_ENCODING("transfer-encoding"),
 
-	  threadNumber(_threadNumber),
-	  turboCaching(getTurboCachingInitialState(_agentsOptions))
+	  turboCaching()
 {
-	defaultRuby = psg_pstrdup(stringPool,
-		agentsOptions->get("default_ruby"));
-	ustRouterAddress = psg_pstrdup(stringPool,
-		agentsOptions->get("ust_router_address", false));
-	ustRouterPassword = psg_pstrdup(stringPool,
-		agentsOptions->get("ust_router_password", false));
-	defaultUser = psg_pstrdup(stringPool,
-		agentsOptions->get("default_user", false));
-	defaultGroup = psg_pstrdup(stringPool,
-		agentsOptions->get("default_group", false));
-	defaultServerName = psg_pstrdup(stringPool,
-		agentsOptions->get("default_server_name"));
-	defaultServerPort = psg_pstrdup(stringPool,
-		agentsOptions->get("default_server_port"));
-	serverSoftware = psg_pstrdup(stringPool,
-		agentsOptions->get("server_software"));
-	defaultStickySessionsCookieName = psg_pstrdup(stringPool,
-		agentsOptions->get("sticky_sessions_cookie_name"));
-
-	if (agentsOptions->has("vary_turbocache_by_cookie")) {
-		defaultVaryTurbocacheByCookie = psg_pstrdup(stringPool,
-			agentsOptions->get("vary_turbocache_by_cookie"));
-	}
-
-	generateServerLogName(_threadNumber);
-
-	if (!agentsOptions->getBool("multi_app")) {
-		boost::shared_ptr<Options> options = boost::make_shared<Options>();
-
-		singleAppMode = true;
-		fillPoolOptionsFromAgentsOptions(*options);
-
-		options->appRoot = psg_pstrdup(stringPool,
-			agentsOptions->get("app_root"));
-		options->environment = psg_pstrdup(stringPool,
-			agentsOptions->get("environment"));
-		options->appType = psg_pstrdup(stringPool,
-			agentsOptions->get("app_type"));
-		options->startupFile = psg_pstrdup(stringPool,
-			agentsOptions->get("startup_file"));
-		poolOptionsCache.insert(options->getAppGroupName(), options);
-	}
-
 	ev_check_init(&checkWatcher, onEventLoopCheck);
 	ev_set_priority(&checkWatcher, EV_MAXPRI);
 	ev_check_start(getLoop(), &checkWatcher);
@@ -145,7 +93,6 @@ Controller::Controller(ServerKit::Context *context, const VariantMap *_agentsOpt
 
 Controller::~Controller() {
 	ev_check_stop(getLoop(), &checkWatcher);
-	psg_destroy_pool(stringPool);
 }
 
 void
@@ -159,6 +106,22 @@ Controller::initialize() {
 	}
 	if (unionStationContext == NULL) {
 		unionStationContext = appPool->getUnionStationContext();
+	}
+
+	ParentClass::initialize();
+	turboCaching.initialize(config["turbocaching"].asBool());
+	getContext()->defaultFileBufferedChannelConfig.bufferDir =
+		config["data_buffer_dir"].asString();
+
+	if (requestConfigCache->singleAppMode) {
+		boost::shared_ptr<Options> options = boost::make_shared<Options>();
+		fillPoolOptionsFromConfigCaches(*options, requestConfigCache);
+		options->appRoot = config["app_root"].asString();
+		options->environment = config["environment"].asString();
+		options->appType = config["app_type"].asString();
+		options->startupFile = config["startup_file"].asString();
+		*options = options->copyAndPersist();
+		poolOptionsCache.insert(options->getAppGroupName(), options);
 	}
 }
 

@@ -30,7 +30,8 @@ namespace tut {
 		string socketFilename;
 		string socketAddress;
 		FileDescriptor serverFd;
-		VariantMap controllerOptions;
+		UstRouter::Controller::Schema schema;
+		Json::Value config;
 		boost::shared_ptr<UstRouter::Controller> controller;
 		ContextPtr context, context2, context3, context4;
 
@@ -41,10 +42,10 @@ namespace tut {
 			socketAddress = "unix:" + socketFilename;
 			setLogLevel(LVL_ERROR);
 
-			controllerOptions.set("ust_router_username", "test");
-			controllerOptions.set("ust_router_password", "1234");
-			controllerOptions.setBool("ust_router_dev_mode", true);
-			controllerOptions.set("ust_router_dump_dir", tmpdir.getPath());
+			config["ust_router_username"] = "test";
+			config["ust_router_password"] = "1234";
+			config["ust_router_dev_mode"] = true;
+			config["ust_router_dump_dir"] = tmpdir.getPath();
 
 			context = boost::make_shared<Context>(socketAddress, "test", "1234",
 				"localhost");
@@ -68,7 +69,9 @@ namespace tut {
 			bg = boost::make_shared<BackgroundEventLoop>(false, true);
 			skContext = boost::make_shared<ServerKit::Context>(bg->safe, bg->libuv_loop);
 			serverFd.assign(createUnixServer(socketFilename.c_str(), 0, true, __FILE__, __LINE__), NULL, 0);
-			controller = boost::make_shared<UstRouter::Controller>(skContext.get(), controllerOptions);
+			controller = boost::make_shared<UstRouter::Controller>(
+				skContext.get(), schema, config);
+			controller->initialize();
 			controller->listen(serverFd);
 			bg->start();
 		}

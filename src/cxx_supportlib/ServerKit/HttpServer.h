@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2016 Phusion Holding B.V.
+ *  Copyright (c) 2014-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -58,6 +58,30 @@ using namespace boost;
 
 extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
 extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
+
+
+class HttpServerSchema: public BaseServerSchema {
+private:
+	void initialize() {
+		using namespace ConfigKit;
+
+		add("request_freelist_limit", UINT_TYPE, OPTIONAL, 1024);
+	}
+
+public:
+	HttpServerSchema()
+		: BaseServerSchema(true)
+	{
+		initialize();
+		finalize();
+	}
+
+	HttpServerSchema(bool _subclassing)
+		: BaseServerSchema(true)
+	{
+		initialize();
+	}
+};
 
 
 template< typename DerivedServer, typename Client = HttpClient<HttpRequest> >
@@ -917,6 +941,13 @@ protected:
 		req->bodyChannel.deinitialize();
 	}
 
+	virtual void onConfigChange(const ConfigKit::Store *oldConfig) {
+		ParentClass::onConfigChange(oldConfig);
+		const ConfigKit::Store &config = this->config;
+
+		requestFreelistLimit = config["request_freelist_limit"].asUInt();
+	}
+
 
 	/***** Misc *****/
 
@@ -926,8 +957,9 @@ protected:
 	}
 
 public:
-	HttpServer(Context *context)
-		: ParentClass(context),
+	HttpServer(Context *context, const HttpServerSchema &schema,
+		const Json::Value &initialConfig = Json::Value())
+		: ParentClass(context, schema, initialConfig),
 		  freeRequestCount(0),
 		  requestFreelistLimit(1024),
 		  totalRequestsBegun(0),
@@ -966,7 +998,7 @@ public:
 
 	/***** Request manipulation *****/
 
-		/** Increase request reference count. */
+	/** Increase request reference count. */
 	void refRequest(Request *req, const char *file, unsigned int line) {
 		int oldRefcount = req->refcount.fetch_add(1, boost::memory_order_relaxed);
 		SKC_TRACE_WITH_POS(static_cast<Client *>(req->client), 3, file, line,
@@ -1177,19 +1209,6 @@ public:
 
 
 	/***** Configuration and introspection *****/
-
-	virtual void configure(const Json::Value &doc) {
-		ParentClass::configure(doc);
-		if (doc.isMember("request_freelist_limit")) {
-			requestFreelistLimit = doc["request_freelist_limit"].asUInt();
-		}
-	}
-
-	virtual Json::Value getConfigAsJson() const {
-		Json::Value doc = ParentClass::getConfigAsJson();
-		doc["request_freelist_limit"] = requestFreelistLimit;
-		return doc;
-	}
 
 	virtual Json::Value inspectStateAsJson() const {
 		Json::Value doc = ParentClass::inspectStateAsJson();
