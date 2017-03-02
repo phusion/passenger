@@ -73,6 +73,28 @@ namespace tut {
 		ensure_equals(errors[1].getMessage(), "'foo' is required");
 	}
 
+	static void addErrorValidator(const ConfigKit::Store &store,
+		vector<ConfigKit::Error> &errors)
+	{
+		errors.push_back(ConfigKit::Error("Cannot read '{{foo}}'!"));
+	}
+
+	TEST_METHOD(5) {
+		set_test_name("Custom validators");
+
+		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
+		schema.addValidator(addErrorValidator);
+		schema.addValidator(addErrorValidator);
+		init();
+
+		config->previewUpdate(doc, errors);
+		std::sort(errors.begin(), errors.end());
+		ensure_equals(errors.size(), 3u);
+		ensure_equals(errors[0].getMessage(), "'foo' is required");
+		ensure_equals(errors[1].getMessage(), "Cannot read 'foo'!");
+		ensure_equals(errors[2].getMessage(), "Cannot read 'foo'!");
+	}
+
 
 	/*********** Test other stuff ***********/
 

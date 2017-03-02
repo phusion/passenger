@@ -27,6 +27,7 @@
 #define _PASSENGER_CONFIG_KIT_SCHEMA_H_
 
 #include <boost/bind.hpp>
+#include <boost/container/vector.hpp>
 #include <string>
 #include <cassert>
 
@@ -90,9 +91,11 @@ public:
 	};
 
 	typedef StringKeyTable<Entry>::ConstIterator ConstIterator;
+	typedef boost::function<void (const Store &store, vector<Error> &errors)> Validator;
 
 private:
 	StringKeyTable<Entry> entries;
+	boost::container::vector<Validator> validators;
 	bool finalized;
 
 	static Json::Value returnJsonValue(const Store *store, Json::Value v) {
@@ -156,6 +159,11 @@ public:
 		}
 	}
 
+	void addValidator(const Validator &validator) {
+		assert(!finalized);
+		validators.push_back(validator);
+	}
+
 	void finalize() {
 		assert(!finalized);
 		entries.compact();
@@ -172,6 +180,8 @@ public:
 			}
 			it.next();
 		}
+
+		validators.shrink_to_fit();
 	}
 
 	bool get(const HashedStaticString &key, const Entry **entry) const {
@@ -179,6 +189,13 @@ public:
 		return entries.lookup(key, entry);
 	}
 
+	/**
+	 * Apply standard validation rules -- that do not depend on a particular
+	 * configuration store -- to the given configuration key and value.
+	 * Validators added with `addValidator()` won't be applied.
+	 *
+	 * Returns whether validation passed. If not, then `error` is set.
+	 */
 	bool validateValue(const HashedStaticString &key, const Json::Value &value,
 		Error &error) const
 	{
@@ -243,6 +260,11 @@ public:
 			P_BUG("Unknown type " + Passenger::toString((int) entry->type));
 			return false;
 		};
+	}
+
+	const boost::container::vector<Validator> &getValidators() const {
+		assert(finalized);
+		return validators;
 	}
 
 	ConstIterator getIterator() const {

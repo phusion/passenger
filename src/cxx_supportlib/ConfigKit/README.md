@@ -14,6 +14,8 @@ ConfigKit is a configuration management system that lets you define configuratio
    - Translators
  * Using the schema
    - Defining the schema
+   - Defining default values
+   - Defining custom validators
    - Inspecting the schema
  * Using the store
    - Putting data in the store
@@ -165,6 +167,28 @@ Json::Value getRecvTimeoutDefaultValue(const ConfigKit::Store * store) {
 }
 
 schema.addWithDynamicDefault("recv_timeout", INT_TYPE, OPTIONAL, getRecvTimeoutDefaultValue);
+~~~
+
+### Defining custom validators
+
+ConfigKit::Store validates your data using the type definitions in ConfigKit::Schema. But sometimes you need custom validations of the data in a ConfigKit::Store. For example, "'bar' is required when 'foo' is specified". This sort of logic can be implemented with custom validators.
+
+Custom validators are defined on a ConfigKit::Schema:
+
+~~~c++
+static void myValidator(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+    if (!config["foo"].isNull() && config["bar"].isNull()) {
+        errors.push_back(ConfigKit::Error("'{{bar}}' is required when '{{foo}}' is specified"));
+    }
+}
+
+
+ConfigKit::Schema schema;
+
+schema.add("foo", STRING_TYPE, OPTIONAL);
+schema.add("bar", STRING_TYPE, OPTIONAL);
+schema.addValidator(myValidator);
+schema.finalize();
 ~~~
 
 ### Inspecting the schema

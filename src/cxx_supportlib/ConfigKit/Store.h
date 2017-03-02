@@ -102,6 +102,29 @@ private:
 		return !(entry.schemaEntry->flags & READ_ONLY) || !updatedOnce;
 	}
 
+	void applyCustomValidators(const Json::Value &updates, vector<Error> &errors) const {
+		Store tempStore(schema);
+		StringKeyTable<Entry>::Iterator it(tempStore.entries);
+
+		while (*it != NULL) {
+			const HashedStaticString &key = it.getKey();
+			Entry &entry = it.getValue();
+
+			if (isWritable(entry) && updates.isMember(key)) {
+				entry.userValue = updates[key];
+			}
+
+			it.next();
+		}
+
+		boost::container::vector<Schema::Validator>::const_iterator v_it, v_end
+			= schema.getValidators().end();
+		for (v_it = schema.getValidators().begin(); v_it != v_end; v_it++) {
+			const Schema::Validator &validator = *v_it;
+			validator(tempStore, errors);
+		}
+	}
+
 public:
 	Store(const Schema &_schema)
 		: schema(_schema),
@@ -196,6 +219,10 @@ public:
 
 			result[it.getKey()] = subdoc;
 			it.next();
+		}
+
+		if (!schema.getValidators().empty()) {
+			applyCustomValidators(updates, errors);
 		}
 
 		return result;
