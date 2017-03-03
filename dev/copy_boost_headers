@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2016 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -174,8 +174,8 @@ end
 def copy_dependencies(cflags)
   done = false
   while !done
-    compiler_output = `c++ test.cpp -c -I. #{cflags} 2>&1`
-    File.unlink('test.o')
+    compiler_output = `c++ test.cpp -c -I. -I.. #{cflags} 2>&1`
+    File.unlink('test.o') if File.exist?('test.o')
     missing_headers = compiler_output.
       split("\n").
       grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
