@@ -126,9 +126,13 @@ class TCPPrespawnLocation < PrespawnLocation
   end
 
   def connect
-    TCPSocket.new('127.0.0.1', request_port)
+    TCPSocket.new(@uri.host, request_port)
   rescue Errno::ECONNREFUSED
-    TCPSocket.new('::1', request_port)
+    begin
+      TCPSocket.new('127.0.0.1', request_port)
+    rescue Errno::ECONNREFUSED
+      TCPSocket.new('::1', request_port)
+    end
   end
 end
 
