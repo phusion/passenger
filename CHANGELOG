@@ -3,6 +3,7 @@ Next version (not yet released)
 
  * [Standalone] Fixes `install-standalone-runtime` command after regression in 5.1.2.
  * Removes unnecessary logging of "No Error" from macOS Security Update Checker.
+ * Adds support for compiling against the built-in Apache installation supplied with macOS 10.12 Sierra. Previous versions of Passenger failed because macOS Sierra's Apache installation is incomplete and does not supply the apr-config tool. We now work around this by using hardcoded default values for macOS.
 
 
 Release 5.1.2

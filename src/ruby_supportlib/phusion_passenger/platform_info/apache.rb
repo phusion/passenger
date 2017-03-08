@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2016 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -725,8 +725,8 @@ module PhusionPassenger
       determine_apu_cxx_info[1]
     end
 
-    ################ Miscellaneous information ################
 
+    ################ Miscellaneous information ################
 
     # Returns whether it is necessary to use information outputted by
     # 'apr-config' and 'apu-config' in order to compile an Apache module.
@@ -742,7 +742,13 @@ module PhusionPassenger
   private
     def self.determine_apr_info(language)
       if apr_config.nil?
-        [nil, nil]
+        if os_name_simple == 'macosx' && apxs2 == '/usr/sbin/apxs'
+          # macOS 10.12 Sierra does not supply apr-config, so
+          # we use hardcoded defaults.
+          ['-I/usr/include/apr-1', '-lapr-1']
+        else
+          [nil, nil]
+        end
       else
         flags = `#{apr_config} --cppflags --includes`.strip
         libs = `#{apr_config} --link-ld`.strip
@@ -777,7 +783,13 @@ module PhusionPassenger
 
     def self.determine_apu_info(language)
       if apu_config.nil?
-        [nil, nil]
+        if os_name_simple == 'macosx' && apxs2 == '/usr/sbin/apxs'
+          # macOS 10.12 Sierra does not supply apu-config, so
+          # we use hardcoded defaults.
+          ['-I/usr/include/apr-1', '-laprutil-1']
+        else
+          [nil, nil]
+        end
       else
         flags = `#{apu_config} --includes`.strip
         libs = `#{apu_config} --link-ld`.strip
