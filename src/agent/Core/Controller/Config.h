@@ -281,6 +281,8 @@ public:
 		stickySessions = config["sticky_sessions"].asBool();
 		gracefulExit = config["core_graceful_exit"].asBool();
 		benchmarkMode = parseControllerBenchmarkMode(config["benchmark_mode"].asString());
+
+		/*******************/
 	}
 };
 

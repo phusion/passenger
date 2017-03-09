@@ -75,7 +75,9 @@ Controller::Controller(ServerKit::Context *context, const ControllerSchema &sche
 	  HTTP_STATUS("status"),
 	  HTTP_TRANSFER_ENCODING("transfer-encoding"),
 
-	  turboCaching()
+	  turboCaching(),
+	  resourceLocator(NULL)
+	  /**************************/
 {
 	ev_check_init(&checkWatcher, onEventLoopCheck);
 	ev_set_priority(&checkWatcher, EV_MAXPRI);
