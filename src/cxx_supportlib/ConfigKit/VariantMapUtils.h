@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_
 #define _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <ConfigKit/Schema.h>
 #include <Utils/StrIntUtils.h>

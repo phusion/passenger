@@ -92,7 +92,7 @@
 		options.startCommand = "sleep\t" "60";
 		options.startupFile  = ".";
 		options.startTimeout = 100;
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		EVENTUALLY(5,
 			SpawnerPtr spawner = createSpawner(options);
@@ -118,7 +118,7 @@
 		options.startCommand = "echo\t" "!> hello world";
 		options.startupFile  = ".";
 		SpawnerPtr spawner = createSpawner(options);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		try {
 			spawner->spawn(options);
 			fail("SpawnException expected");
@@ -136,7 +136,7 @@
 		options.startCommand = "perl\t" "start_error.pl";
 		options.startupFile  = "start_error.pl";
 		SpawnerPtr spawner = createSpawner(options);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		try {
 			spawner->spawn(options);
 			fail("SpawnException expected");
@@ -156,7 +156,7 @@
 		options.startCommand = "perl\t" "start_error.pl\t" "freeze";
 		options.startupFile  = "start_error.pl";
 		options.startTimeout = 100;
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		EVENTUALLY(5,
 			SpawnerPtr spawner = createSpawner(options);
@@ -222,7 +222,7 @@
 		options.startupFile  = ".";
 		options.environmentVariables = envvars;
 		SpawnerPtr spawner = createSpawner(options);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		try {
 			spawner->spawn(options);
 			fail("SpawnException expected");
@@ -245,7 +245,7 @@
 		options.appRoot = "tmp.check/a/b/c/d";
 		options.appType = "rack";
 		SpawnerPtr spawner = createSpawner(options);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		if (getuid() != 0) {
 			// TODO: implement this test for root too

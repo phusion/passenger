@@ -887,7 +887,7 @@ void
 Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffers,
 	unsigned int nbuffers, unsigned int dataSize)
 {
-	if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG3)) {
+	if (OXT_UNLIKELY(LoggingKit::getLevel() >= LoggingKit::DEBUG3)) {
 		TRACE_POINT();
 		char *buffer = (char *) psg_pnalloc(req->pool, dataSize);
 		gatherBuffers(buffer, dataSize, buffers, nbuffers);

@@ -56,7 +56,7 @@
 #include <jsoncpp/json.h>
 #include <SmallVector.h>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <SafeLibev.h>
 #include <Constants.h>
 #include <ServerKit/Context.h>
@@ -81,7 +81,7 @@ using namespace oxt;
 
 
 // We use 'this' so that the macros work in derived template classes like HttpServer<>.
-#define SKS_LOG(level, file, line, expr)  P_LOG(level, file, line, "[" << this->getServerName() << "] " << expr)
+#define SKS_LOG(level, file, line, expr)  P_LOG(Passenger::LoggingKit::context, level, file, line, "[" << this->getServerName() << "] " << expr)
 #define SKS_ERROR(expr)  P_ERROR("[" << this->getServerName() << "] " << expr)
 #define SKS_WARN(expr)   P_WARN("[" << this->getServerName() << "] " << expr)
 #define SKS_INFO(expr)   P_INFO("[" << this->getServerName() << "] " << expr)
@@ -105,26 +105,26 @@ using namespace oxt;
 
 #define SKC_LOG_FROM_STATIC(server, client, level, expr) \
 	do { \
-		if (Passenger::getLogLevel() >= level) { \
+		if (Passenger::LoggingKit::getLevel() >= level) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_LOG(level, __FILE__, __LINE__, \
+			P_LOG(LoggingKit::context, level, __FILE__, __LINE__, \
 				"[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
 		} \
 	} while (0)
 #define SKC_ERROR_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_ERROR, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::ERROR, expr)
 #define SKC_WARN_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_WARN, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::WARN, expr)
 #define SKC_NOTICE_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_NOTICE, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::NOTICE, expr)
 #define SKC_INFO_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_INFO, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::INFO, expr)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_DEBUG, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::DEBUG, expr)
 #define SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, file, line, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::getLogLevel() >= LVL_DEBUG)) { \
+		if (OXT_UNLIKELY(Passenger::LoggingKit::getLevel() >= Passenger::LoggingKit::DEBUG)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_DEBUG_WITH_POS(file, line, \
@@ -135,7 +135,7 @@ using namespace oxt;
 	SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, __FILE__, __LINE__, expr)
 #define SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, file, line, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::getLogLevel() >= level)) { \
+		if (OXT_UNLIKELY(Passenger::LoggingKit::getLevel() >= Passenger::LoggingKit::DEBUG + level)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_TRACE_WITH_POS(level, file, line, \
@@ -523,7 +523,7 @@ private:
 
 	void finishShutdown() {
 		TRACE_POINT();
-		compact(LVL_INFO);
+		compact(LoggingKit::INFO);
 
 		acceptResumptionWatcher.stop();
 		statisticsUpdateWatcher.stop();
@@ -654,10 +654,10 @@ protected:
 			getClientOutputErrorDisconnectionLogLevel(client, errcode));
 	}
 
-	virtual PassengerLogLevel getClientOutputErrorDisconnectionLogLevel(
+	virtual LoggingKit::Level getClientOutputErrorDisconnectionLogLevel(
 		Client *client, int errcode) const
 	{
-		return LVL_WARN;
+		return LoggingKit::WARN;
 	}
 
 	virtual void onUpdateStatistics() {
@@ -869,7 +869,7 @@ public:
 
 	/***** Server management *****/
 
-	virtual void compact(int logLevel = LVL_NOTICE) {
+	virtual void compact(LoggingKit::Level logLevel = LoggingKit::NOTICE) {
 		unsigned int count = freeClientCount;
 
 		while (!STAILQ_EMPTY(&freeClients)) {
@@ -1058,7 +1058,7 @@ public:
 	}
 
 	void disconnectWithError(Client **client, const StaticString &message,
-		PassengerLogLevel logLevel = LVL_WARN)
+		LoggingKit::Level logLevel = LoggingKit::WARN)
 	{
 		SKC_LOG(*client, logLevel, "Disconnecting client with error: " << message);
 		disconnect(client);

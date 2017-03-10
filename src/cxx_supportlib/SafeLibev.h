@@ -36,7 +36,7 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <oxt/thread.hpp>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 
 namespace Passenger {
 

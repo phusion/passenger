@@ -63,7 +63,7 @@ Controller::disconnectLongRunningConnections(const StaticString &gupid) {
 			 && req->session != NULL
 			 && req->session->getGupid() == gupid)
 			{
-				if (getLogLevel() >= LVL_INFO) {
+				if (LoggingKit::getLevel() >= LoggingKit::INFO) {
 					char clientName[32];
 					unsigned int size;
 					const LString *host;

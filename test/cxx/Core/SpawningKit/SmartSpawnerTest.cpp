@@ -1,7 +1,8 @@
 #include <TestSupport.h>
 #include <jsoncpp/json.h>
 #include <Core/SpawningKit/SmartSpawner.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
+#include <LoggingKit/Context.h>
 #include <FileDescriptor.h>
 #include <Utils/IOUtils.h>
 #include <unistd.h>
@@ -27,13 +28,33 @@ namespace tut {
 			config->finalize();
 
 			gatherOutput = boost::bind(&Core_SpawningKit_SmartSpawnerTest::_gatherOutput, this, _1, _2);
-			setLogLevel(LVL_WARN);
-			setPrintAppOutputAsDebuggingMessages(true);
+
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = "warn";
+			config["app_output_log_level"] = "debug";
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		~Core_SpawningKit_SmartSpawnerTest() {
-			setLogLevel(DEFAULT_LOG_LEVEL);
-			setPrintAppOutputAsDebuggingMessages(false);
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = DEFAULT_LOG_LEVEL_NAME;
+			config["app_output_log_level"] = DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME;
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
+
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 		}
 
@@ -77,7 +98,7 @@ namespace tut {
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		spawner->spawn(options);
 
 		kill(spawner->getPreloaderPid(), SIGTERM);
@@ -95,7 +116,7 @@ namespace tut {
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby\t" "start.rb";
 		options.startupFile  = "start.rb";
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
 			spawner->spawn(options);
@@ -120,7 +141,7 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2; sleep 60");
 		SmartSpawner spawner(preloaderCommand, options, config);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		try {
 			spawner.spawn(options);
@@ -166,7 +187,7 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
 		SmartSpawner spawner(preloaderCommand, options, config);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		try {
 			spawner.spawn(options);
@@ -194,7 +215,7 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2");
 		SmartSpawner spawner(preloaderCommand, options, config);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		try {
 			spawner.spawn(options);

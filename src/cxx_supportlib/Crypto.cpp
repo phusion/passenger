@@ -26,7 +26,7 @@
 
 #include <Crypto.h>
 #include <modp_b64.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <string>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>

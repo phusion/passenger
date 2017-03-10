@@ -7,7 +7,7 @@
 #include <oxt/system_calls.hpp>
 #include <BackgroundEventLoop.h>
 #include <ServerKit/HttpServer.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <FileDescriptor.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
@@ -286,7 +286,7 @@ namespace tut {
 			: bg(false, true),
 			  context(bg.safe, bg.libuv_loop)
 		{
-			setLogLevel(LVL_WARN);
+			LoggingKit::setLevel(LoggingKit::WARN);
 			serverSocket = createUnixServer("tmp.server");
 			server = boost::make_shared<MyServer>(&context, schema);
 			server->initialize();
@@ -297,7 +297,7 @@ namespace tut {
 			startLoop();
 			fd.close();
 			// Silence error disconnection messages during shutdown.
-			setLogLevel(LVL_CRIT);
+			LoggingKit::setLevel(LoggingKit::CRIT);
 			bg.safe->runSync(boost::bind(&MyServer::shutdown, server.get(), true));
 			while (getServerState() != MyServer::FINISHED_SHUTDOWN) {
 				syscalls::usleep(10000);
@@ -306,7 +306,7 @@ namespace tut {
 				this));
 			safelyClose(serverSocket);
 			unlink("tmp.server");
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 			bg.stop();
 		}
 
@@ -1599,7 +1599,7 @@ namespace tut {
 		set_test_name("Upon shutting down the server, upgraded requests which "
 			"are being processed are disconnected");
 
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		connectToServer();
 		sendRequestAndWait(
 			"GET /body_test HTTP/1.1\r\n"
@@ -1718,7 +1718,7 @@ namespace tut {
 	TEST_METHOD(97) {
 		set_test_name("Client socket write error handling");
 
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		connectToServer();
 		sendRequest(
 			"GET /large_response HTTP/1.1\r\n"

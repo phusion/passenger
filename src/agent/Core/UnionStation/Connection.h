@@ -37,7 +37,7 @@
 
 #include <errno.h>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>

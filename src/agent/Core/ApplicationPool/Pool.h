@@ -48,7 +48,7 @@
 #include <oxt/backtrace.hpp>
 #include <sys/types.h>
 #include <MemoryKit/palloc.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <Hooks.h>
 #include <Utils/Lock.h>

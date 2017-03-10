@@ -35,7 +35,7 @@
 #include <cmath>
 #include <cassert>
 #include <pthread.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/HttpClient.h>
 #include <ServerKit/HttpRequest.h>
@@ -880,13 +880,13 @@ protected:
 		return false;
 	}
 
-	virtual PassengerLogLevel getClientOutputErrorDisconnectionLogLevel(
+	virtual LoggingKit::Level getClientOutputErrorDisconnectionLogLevel(
 		Client *client, int errcode) const
 	{
 		if (errcode == EPIPE || errcode == ECONNRESET) {
-			return LVL_INFO;
+			return LoggingKit::INFO;
 		} else {
-			return LVL_WARN;
+			return LoggingKit::WARN;
 		}
 	}
 
@@ -991,7 +991,7 @@ public:
 
 	/***** Server management *****/
 
-	virtual void compact(int logLevel = LVL_NOTICE) {
+	virtual void compact(LoggingKit::Level logLevel = LoggingKit::NOTICE) {
 		ParentClass::compact();
 		unsigned int count = freeRequestCount;
 

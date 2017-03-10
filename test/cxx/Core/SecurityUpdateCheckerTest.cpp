@@ -96,11 +96,11 @@ namespace tut {
 		boost::shared_ptr<TestChecker> checker;
 
 		Core_SecurityUpdateCheckerTest() {
-			setLogLevel(0);
+			LoggingKit::setLevel(LoggingKit::CRIT);
 		}
 
 		~Core_SecurityUpdateCheckerTest() {
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void init(string proxyAddress) {

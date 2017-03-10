@@ -267,10 +267,10 @@ end
 
 
 COMMON_LIBRARY = CommonLibraryBuilder.new do
-  define_component 'Logging.o',
-    :source   => 'Logging.cpp',
+  define_component 'LoggingKit.o',
+    :source   => 'LoggingKit/Implementation.cpp',
     :category => :base,
-    :optimize => :light
+    :optimize => :very_heavy
   define_component 'Exceptions.o',
     :source   => 'Exceptions.cpp',
     :category => :base
@@ -291,9 +291,18 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'Utils/IOUtils.cpp',
     :optimize => :light,
     :category => :base
+  define_component 'Utils/Hasher.o',
+    :source   => 'Utils/Hasher.cpp',
+    :category => :base,
+    :optimize => :very_heavy
   define_component 'Utils.o',
     :source   => 'Utils.cpp',
     :category => :base
+  define_component 'jsoncpp.o',
+    :source   => 'vendor-modified/jsoncpp/jsoncpp.cpp',
+    :category => :base,
+    :optimize => true
+
   define_component 'Crypto.o',
     :source   => 'Crypto.cpp',
     :category => :other,
@@ -326,19 +335,10 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'DataStructures/LString.o',
     :source   => 'DataStructures/LString.cpp',
     :category => :other
-
-  define_component 'Utils/Hasher.o',
-    :source   => 'Utils/Hasher.cpp',
-    :category => :other,
-    :optimize => :very_heavy
   define_component 'AppTypes.o',
     :source   => 'AppTypes.cpp',
     :category => :other
 
-  define_component 'jsoncpp.o',
-    :source   => 'vendor-modified/jsoncpp/jsoncpp.cpp',
-    :category => :json,
-    :optimize => true
   define_component 'vendor-modified/modp_b64.o',
     :source   => 'vendor-modified/modp_b64.cpp',
     :category => :bas64,

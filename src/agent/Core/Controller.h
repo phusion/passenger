@@ -61,7 +61,7 @@
 #include <cassert>
 #include <cctype>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <MessageReadersWriters.h>
 #include <Constants.h>
 #include <ConfigKit/ConfigKit.h>

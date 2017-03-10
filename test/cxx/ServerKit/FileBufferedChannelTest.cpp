@@ -3,7 +3,7 @@
 #include <string>
 #include <BackgroundEventLoop.h>
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <ServerKit/FileBufferedChannel.h>
 #include <Utils/StrIntUtils.h>
@@ -48,7 +48,7 @@ namespace tut {
 			bg.safe->runSync(boost::bind(&ServerKit_FileBufferedChannelTest::deinitializeChannel,
 				this));
 			bg.stop(); // Prevent any runLater callbacks from running.
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void deinitializeChannel() {

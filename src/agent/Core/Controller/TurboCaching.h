@@ -34,7 +34,7 @@
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/Context.h>
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils/StrIntUtils.h>
 #include <Core/ResponseCache.h>
 

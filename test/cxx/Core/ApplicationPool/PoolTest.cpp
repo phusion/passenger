@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <jsoncpp/json.h>
 #include <Core/ApplicationPool/Pool.h>
+#include <LoggingKit/Context.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <MessageReadersWriters.h>
@@ -38,8 +39,18 @@ namespace tut {
 			pool->initialize();
 			callback.func = _callback;
 			callback.userData = this;
-			setLogLevel(LVL_WARN);
-			setPrintAppOutputAsDebuggingMessages(true);
+
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = "warn";
+			config["app_output_log_level"] = "debug";
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		~Core_ApplicationPool_PoolTest() {
@@ -52,8 +63,19 @@ namespace tut {
 			pool->destroy();
 			UPDATE_TRACE_POINT();
 			pool.reset();
-			setLogLevel(DEFAULT_LOG_LEVEL);
-			setPrintAppOutputAsDebuggingMessages(false);
+
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = DEFAULT_LOG_LEVEL_NAME;
+			config["app_output_log_level"] = DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME;
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
+
 			SystemTime::releaseAll();
 		}
 
@@ -1211,7 +1233,7 @@ namespace tut {
 		vector<ProcessPtr> processes = pool->getProcesses();
 		ensure_equals("(1)", processes.size(), 1u);
 
-		setLogLevel(LVL_ERROR);
+		LoggingKit::setLevel(LoggingKit::ERROR);
 		DisableResult result = pool->disableProcess(processes[0]->getGupid());
 		ensure_equals("(2)", result, DR_ERROR);
 		ensure_equals("(3)", pool->getProcessCount(), 1u);
@@ -1294,7 +1316,7 @@ namespace tut {
 			result = code1 != -1 || code2 != -1;
 		);
 
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		debug->messages->send("Fail spawn loop iteration 3");
 		EVENTUALLY(5,
 			result = code1 == DR_ERROR;
@@ -1545,7 +1567,7 @@ namespace tut {
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
 
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -1584,7 +1606,7 @@ namespace tut {
 			"	sys.stderr.write('Something went wrong!')\n"
 			"	exit(1)\n");
 
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -1794,7 +1816,7 @@ namespace tut {
 			"exit(1)\n");
 
 		retainSessions = true;
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
@@ -1840,7 +1862,7 @@ namespace tut {
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
 		try {
-			setLogLevel(LVL_CRIT);
+			LoggingKit::setLevel(LoggingKit::CRIT);
 			currentSession = pool->get(options, &ticket);
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {

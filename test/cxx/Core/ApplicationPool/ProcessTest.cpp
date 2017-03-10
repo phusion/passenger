@@ -1,5 +1,6 @@
 #include <TestSupport.h>
 #include <Core/ApplicationPool/Process.h>
+#include <LoggingKit/Context.h>
 #include <Utils/IOUtils.h>
 
 using namespace Passenger;
@@ -19,8 +20,6 @@ namespace tut {
 		boost::mutex gatheredOutputSyncher;
 
 		Core_ApplicationPool_ProcessTest() {
-			setPrintAppOutputAsDebuggingMessages(true);
-
 			SpawningKit::ConfigPtr spawningKitConfig = boost::make_shared<SpawningKit::Config>();
 			spawningKitConfig->resourceLocator = resourceLocator;
 			spawningKitConfig->finalize();
@@ -66,11 +65,31 @@ namespace tut {
 			errorPipe = createPipe(__FILE__, __LINE__);
 
 			gatherOutput = boost::bind(&Core_ApplicationPool_ProcessTest::_gatherOutput, this, _1, _2);
+
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["app_output_log_level"] = "debug";
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		~Core_ApplicationPool_ProcessTest() {
-			setLogLevel(DEFAULT_LOG_LEVEL);
-			setPrintAppOutputAsDebuggingMessages(false);
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = DEFAULT_LOG_LEVEL_NAME;
+			config["app_output_log_level"] = DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME;
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		void _gatherOutput(const char *data, unsigned int size) {
@@ -178,7 +197,7 @@ namespace tut {
 		set_test_name("It forwards all adminSocket and errorPipe output, even after the "
 			"Process object has been destroyed");
 		ProcessPtr process = createProcess();
-		setLogLevel(LVL_WARN);
+		LoggingKit::setLevel(LoggingKit::WARN);
 		context.getSpawningKitConfig()->outputHandler = gatherOutput;
 
 		writeExact(adminSocket[1], "adminSocket 1\n");

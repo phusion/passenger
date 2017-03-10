@@ -64,6 +64,7 @@
 #include <sys/types.h>
 #include <string>
 #include <vector>
+#include <stdexcept>
 #include <cstddef>
 #include <cstring>
 #include <jsoncpp/json.h>
@@ -74,6 +75,8 @@
 #include <DataStructures/StringKeyTable.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/HeaderTable.h>
+#include <LoggingKit/LoggingKit.h>
+#include <LoggingKit/Context.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/BufferedIO.h>
@@ -763,12 +766,11 @@ apiServerProcessReopenLogs(Server *server, Client *client, Request *req) {
 	if (req->method != HTTP_POST) {
 		apiServerRespondWith405(server, client, req);
 	} else if (authorizeAdminOperation(server, client, req)) {
-		int e;
 		ServerKit::HeaderTable headers;
 		headers.insert(req->pool, "Content-Type", "application/json");
 
-		string logFile = getLogFile();
-		if (logFile.empty()) {
+		ConfigKit::Store config = LoggingKit::context->getConfig();
+		if (!config["target"].isMember("path")) {
 			server->writeSimpleResponse(client, 500, &headers, "{ \"status\": \"error\", "
 				"\"code\": \"NO_LOG_FILE\", "
 				"\"message\": \"" PROGRAM_NAME " was not configured with a log file.\" }\n");
@@ -778,40 +780,56 @@ apiServerProcessReopenLogs(Server *server, Client *client, Request *req) {
 			return;
 		}
 
-		if (!setLogFile(logFile, &e)) {
-			unsigned int bufsize = 1024;
+		LoggingKit::ConfigChangeRequest configReq;
+		vector<ConfigKit::Error> errors;
+		bool ok;
+		try {
+			ok = LoggingKit::context->prepareConfigChange(Json::objectValue,
+				errors, configReq);
+		} catch (const SystemException &e) {
+			unsigned int bufsize = 2048;
 			char *message = (char *) psg_pnalloc(req->pool, bufsize);
 			snprintf(message, bufsize, "{ \"status\": \"error\", "
-				"\"code\": \"LOG_FILE_OPEN_ERROR\", "
-				"\"message\": \"Cannot reopen log file %s: %s (errno=%d)\" }",
-				logFile.c_str(), strerror(e), e);
+				"\"code\": \"OS_ERROR\", "
+				"\"message\": \"Cannot reopen log files: %s\" }",
+				e.what());
+			server->writeSimpleResponse(client, 500, &headers, message);
+			if (!req->ended()) {
+				server->endRequest(&client, &req);
+			}
+			return;
+		} catch (const std::exception &e) {
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"code\": \"GENERIC_ERROR\", "
+				"\"message\": \"Cannot reopen log files: %s\" }",
+				e.what());
 			server->writeSimpleResponse(client, 500, &headers, message);
 			if (!req->ended()) {
 				server->endRequest(&client, &req);
 			}
 			return;
 		}
-		P_NOTICE("Log file reopened.");
-
-		if (hasFileDescriptorLogFile()) {
-			if (!setFileDescriptorLogFile(getFileDescriptorLogFile(), &e)) {
-				unsigned int bufsize = 1024;
-				char *message = (char *) psg_pnalloc(req->pool, bufsize);
-				snprintf(message, bufsize, "{ \"status\": \"error\", "
-					"\"code\": \"FD_LOG_FILE_OPEN_ERROR\", "
-					"\"message\": \"Cannot reopen file descriptor log file %s: %s (errno=%d)\" }",
-					getFileDescriptorLogFile().c_str(), strerror(e), e);
-				server->writeSimpleResponse(client, 500, &headers, message);
-				if (!req->ended()) {
-					server->endRequest(&client, &req);
-				}
-				return;
+		if (!ok) {
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"code\": \"CONFIG_VALIDATION_ERROR\", "
+				"\"message\": \"Cannot reopen log files:"
+					" invalid logging system configuration: %s\" }",
+				ConfigKit::toString(errors).c_str());
+			server->writeSimpleResponse(client, 500, &headers, message);
+			if (!req->ended()) {
+				server->endRequest(&client, &req);
 			}
-			P_NOTICE("File descriptor log file reopened.");
+			return;
 		}
 
-		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
+		LoggingKit::context->commitConfigChange(configReq);
+		P_NOTICE("All log file(s) reopened.");
 
+		server->writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
 		if (!req->ended()) {
 			server->endRequest(&client, &req);
 		}
@@ -838,8 +856,36 @@ _apiServerProcessReinheritLogsResponseBody(
 	}
 
 	int fd = readFileDescriptorWithNegotiation(io.getFd(), &req.timeout);
-	setLogFileWithFd(logFilePath, fd);
-	safelyClose(fd);
+	FdGuard guard(fd, __FILE__, __LINE__);
+	P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "Reinherited log file handle");
+
+	ConfigKit::Store oldConfig = LoggingKit::context->getConfig();
+	Json::Value config;
+	vector<ConfigKit::Error> errors;
+	LoggingKit::ConfigChangeRequest configReq;
+	bool ok;
+
+	config["target"] = oldConfig["target"];
+	config["target"]["fd"] = fd;
+	try {
+		ok = LoggingKit::context->prepareConfigChange(config,
+			errors, configReq);
+	} catch (const std::exception &e) {
+		resp.status = InternalResponse::ERROR_INTERNAL;
+		resp.errorLogs.append("Error reconfiguring logging system: ");
+		resp.errorLogs.append(e.what());
+		return;
+	}
+	if (!ok) {
+		resp.status = InternalResponse::ERROR_INTERNAL;
+		resp.errorLogs.append("Error reconfiguring logging system: ");
+		resp.errorLogs.append(ConfigKit::toString(errors));
+		return;
+	}
+
+	LoggingKit::context->commitConfigChange(configReq);
+	guard.clear();
+	P_NOTICE("All log file(s) reinherited.");
 }
 
 template<typename Server, typename Client, typename Request>

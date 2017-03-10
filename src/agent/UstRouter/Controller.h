@@ -39,7 +39,7 @@
 #include <ServerKit/Server.h>
 #include <StaticString.h>
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <UstRouter/Transaction.h>
 #include <UstRouter/Client.h>
 #include <UstRouter/FileSink.h>
@@ -374,8 +374,9 @@ private:
 	void processLogMessageBody(Client *client, const StaticString &body) {
 		// In here we process the scalar message that's expected to come
 		// after the "log" command.
+		LoggingKit::Level level = LoggingKit::getLevel();
 
-		if (getLogLevel() == LVL_DEBUG) {
+		if (level == LoggingKit::DEBUG) {
 			string truncatedBody;
 			if (body.size() > 97) {
 				string truncatedBody = body.substr(0, 97);
@@ -386,7 +387,7 @@ private:
 				SKC_DEBUG(client, "Processing message body (" << body.size() <<
 					" bytes): " << body);
 			}
-		} else if (getLogLevel() >= LVL_DEBUG2) {
+		} else if (level >= LoggingKit::DEBUG2) {
 			SKC_TRACE(client, 2, "Processing message body (" << body.size() <<
 				" bytes): " << body);
 		}

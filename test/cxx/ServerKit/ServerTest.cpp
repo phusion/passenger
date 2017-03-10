@@ -7,7 +7,7 @@
 #include <BackgroundEventLoop.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/ClientRef.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <FileDescriptor.h>
 #include <Utils/IOUtils.h>
 
@@ -32,7 +32,7 @@ namespace tut {
 			: bg(false, true),
 			  context(bg.safe, bg.libuv_loop)
 		{
-			setLogLevel(LVL_CRIT);
+			LoggingKit::setLevel(LoggingKit::CRIT);
 			serverSocket1 = createUnixServer("tmp.server1");
 			serverSocket2 = createUnixServer("tmp.server2");
 		}
@@ -53,7 +53,7 @@ namespace tut {
 			safelyClose(serverSocket2);
 			unlink("tmp.server1");
 			unlink("tmp.server2");
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 			bg.stop();
 		}
 

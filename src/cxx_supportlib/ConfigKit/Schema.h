@@ -35,7 +35,7 @@
 #include <jsoncpp/json.h>
 
 #include <Exceptions.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <ConfigKit/Common.h>
 #include <ConfigKit/DummyTranslator.h>
 #include <ConfigKit/Utils.h>

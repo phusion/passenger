@@ -41,7 +41,7 @@
 #include <jsoncpp/json.h>
 #include <modp_b64.h>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <Utils.h>
 #include <Utils/BlockingQueue.h>

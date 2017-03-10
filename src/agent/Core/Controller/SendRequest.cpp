@@ -635,7 +635,7 @@ Controller::sendHeaderToAppWithHttpProtocol(Client *client, Request *req) {
 
 	cache.cached = false;
 
-	if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG3)) {
+	if (OXT_UNLIKELY(LoggingKit::getLevel() >= LoggingKit::DEBUG3)) {
 		struct iovec *buffers;
 		unsigned int nbuffers, dataSize;
 		bool ok;

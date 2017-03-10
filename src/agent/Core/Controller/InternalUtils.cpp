@@ -48,14 +48,14 @@ using namespace boost;
 void
 Controller::disconnectWithClientSocketWriteError(Client **client, int e) {
 	stringstream message;
-	PassengerLogLevel logLevel;
+	LoggingKit::Level logLevel;
 	message << "client socket write error: ";
 	message << ServerKit::getErrorDesc(e);
 	message << " (errno=" << e << ")";
 	if (e == EPIPE || e == ECONNRESET) {
-		logLevel = LVL_INFO;
+		logLevel = LoggingKit::INFO;
 	} else {
-		logLevel = LVL_WARN;
+		logLevel = LoggingKit::WARN;
 	}
 	disconnectWithError(client, message.str(), logLevel);
 }

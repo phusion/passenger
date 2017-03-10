@@ -82,7 +82,7 @@ Controller::initializeFlags(Client *client, Request *req, RequestAnalysis &analy
 			part = part->next;
 		}
 
-		if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG2)) {
+		if (OXT_UNLIKELY(LoggingKit::getLevel() >= LoggingKit::DEBUG2)) {
 			if (req->dechunkResponse) {
 				SKC_TRACE(client, 2, "Dechunk flag detected");
 			}
@@ -186,7 +186,7 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.meteorAppSettings = requestConfig->meteorAppSettings;
 	options.fileDescriptorUlimit = requestConfig->fileDescriptorUlimit;
 
-	options.logLevel = getLogLevel();
+	options.logLevel = int(LoggingKit::getLevel());
 	options.integrationMode = psg_pstrdup(pool, mainConfig.integrationMode);
 	options.ustRouterAddress = requestConfig->ustRouterAddress;
 	options.ustRouterUsername = P_STATIC_STRING("logging");

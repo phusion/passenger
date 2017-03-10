@@ -42,7 +42,7 @@
 #include <poll.h>
 
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 

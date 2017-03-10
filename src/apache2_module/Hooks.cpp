@@ -61,7 +61,7 @@
 #include <Utils/SystemTime.h>
 #include <Utils/HttpConstants.h>
 #include <Utils/ReleaseableScopedPointer.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <WatchdogLauncher.h>
 #include <Constants.h>
 
@@ -1239,20 +1239,33 @@ public:
 	{
 		passenger_postprocess_config(s);
 
-		Passenger::setLogLevel(serverConfig.logLevel);
+		Json::Value loggingConfig;
+		loggingConfig["level"] = LoggingKit::Level(serverConfig.logLevel);
+		loggingConfig["redirect_stderr"] = false;
 		if (serverConfig.logFile != NULL) {
-			int errcode;
-			if (!Passenger::setLogFileWithoutRedirectingStderr(serverConfig.logFile, &errcode)) {
-				fprintf(stderr,
-					"ERROR: cannot open log file %s: %s (errno=%d)\n",
-					serverConfig.logFile,
-					strerror(errcode),
-					errcode);
-			}
+			loggingConfig["target"] = serverConfig.logFile;
 		}
 		if (serverConfig.fileDescriptorLogFile != NULL) {
-			Passenger::setFileDescriptorLogFile(serverConfig.fileDescriptorLogFile);
+			loggingConfig["file_descriptor_log_target"] =
+				serverConfig.fileDescriptorLogFile;
 		}
+
+		vector<ConfigKit::Error> errors;
+		LoggingKit::ConfigChangeRequest req;
+		bool ok;
+		try {
+			ok = LoggingKit::context->prepareConfigChange(loggingConfig,
+				errors, req);
+		} catch (const std::exception &e) {
+			fprintf(stderr, "ERROR: unable to configure logging system: %s\n", e.what());
+		}
+		if (ok) {
+			LoggingKit::context->commitConfigChange(req);
+		} else {
+			fprintf(stderr, "ERROR: unable to configuring logging system: %s\n",
+				ConfigKit::toString(errors).c_str());
+		}
+
 		m_hasModRewrite = UNKNOWN;
 		m_hasModDir = UNKNOWN;
 		m_hasModAutoIndex = UNKNOWN;
@@ -1596,6 +1609,7 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 */
 	if (hooks == NULL) {
 		oxt::initialize();
+		LoggingKit::initialize();
 		SystemTime::initialize();
 	} else {
 		P_DEBUG("Restarting Phusion Passenger....");

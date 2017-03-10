@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include <Shared/Base.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
 #include <Utils/IOUtils.h>
@@ -156,6 +157,7 @@ main(int argc, char *argv[]) {
 	oxt::initialize();
 	oxt::setup_syscall_interruption_support();
 	SystemTime::initialize();
+	LoggingKit::initialize();
 
 	tut::reporter reporter;
 	tut::runner.get().set_callback(&reporter);
