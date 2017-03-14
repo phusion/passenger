@@ -267,7 +267,8 @@ fi
 if [[ "$TEST_APACHE2" = 1 ]]; then
 	if [[ "$TRAVIS_OS_NAME" == 'osx' ]]; then
 		brew_update
-		run brew install pcre openssl
+		run brew upgrade openssl || run brew install openssl
+		run brew upgrade pcre || run brew install pcre
 		if [[ "`sw_vers -productVersion | sed 's/^10\.\(.*\)/\1>=12.0/' | bc -l`" == "1" ]] ; then
 			run brew install apr apr-util
 			run brew link apr apr-util --force
