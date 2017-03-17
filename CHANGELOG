@@ -6,6 +6,7 @@ Next version (not yet released)
  * Adds support for compiling against the built-in Apache installation supplied with macOS 10.12 Sierra. Previous versions of Passenger failed because macOS Sierra's Apache installation is incomplete and does not supply the apr-config tool. We now work around this by using hardcoded default values for macOS.
  * Don't output colorized text during dependency check when output isn't a TTY, unless forced. Closes GH-1902.
  * [Nginx] The preferred Nginx version is now 1.10.3 (previously 1.10.2).
+ * Adds Ubuntu 17.04 "Zesty" packages.
 
 
 Release 5.1.2
