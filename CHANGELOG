@@ -1,4 +1,4 @@
-Next version (not yet released)
+Release 5.1.3
 -------------------------------
 
  * [Standalone] Fixes `install-standalone-runtime` command after regression in 5.1.2.
