@@ -14,6 +14,13 @@ define 'apache2' do
     end
   end
 
+  on :ubuntu do
+    if `#{PlatformInfo::uname_command} -a`.include? 'precise'
+      apt_get_install "apache2-mpm-worker"
+    else
+      apt_get_install "apache2"
+    end
+  end
   on :debian do
     apt_get_install "apache2-mpm-worker"
   end
