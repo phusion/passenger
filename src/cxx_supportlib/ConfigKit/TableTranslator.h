@@ -72,13 +72,14 @@ private:
 		Json::Value::const_iterator it, end = doc.end();
 
 		for (it = doc.begin(); it != end; it++) {
-			const char *key = it.memberName();
+			const char *keyEnd;
+			const char *key = it.memberName(&keyEnd);
 			const string *entry;
 
-			if (table.lookup(key, &entry)) {
+			if (table.lookup(StaticString(key, keyEnd - key), &entry)) {
 				result[*entry] = *it;
 			} else {
-				result[key] = *it;
+				result[JSONCPP_STRING(key, keyEnd - key)] = *it;
 			}
 		}
 
