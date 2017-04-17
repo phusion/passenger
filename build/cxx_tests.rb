@@ -182,7 +182,7 @@ TEST_CXX_OBJECTS.each_pair do |object, source|
   )
 end
 
-# Define compilation task for the agent executable.
+# Define compilation task for the test main executable.
 dependencies = [
   TEST_CXX_OBJECTS.keys,
   LIBEV_TARGET,
