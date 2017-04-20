@@ -7,6 +7,9 @@ Release 5.1.3
  * Don't output colorized text during dependency check when output isn't a TTY, unless forced. Closes GH-1902.
  * [Nginx] The preferred Nginx version is now 1.10.3 (previously 1.10.2).
  * Adds Ubuntu 17.04 "Zesty" packages.
+ * [Enterprise] Fixes `send-cloud-usage` command when Passenger is installed from gem.
+ * [Enterprise] Improves robustness of machine properties reporting for pay-as-you-go cloud-license holders.
+ * [Enterprise] Adds support for reporting available RAM, and CONTAINER_HOST_IDENTIFIER envvar, to support RAM-based pricing model.
  * Added additional debug level logging for troubleshooting issues with bash scripts. Closes GH-1928.
  * Revert private keychain use in the Security Update Checker when run as root on macOS, in order to avoid changing the default System Keychain. Closes GH-1922. Remove Cert and Key from keychain separately, to avoid errors when clearing the client certificate.
  * Fix missing openssl check in `passenger-install-apache2-module` dependency checker. Closes GH-1934.
