@@ -23,6 +23,9 @@
 # This script uses GDB to attach to a process in order to dump the
 # backtraces of all its threads.
 
+STDOUT.sync = true
+STDERR.sync = true
+
 ruby_libdir    = ARGV.shift
 passenger_root = ARGV.shift
 require "#{ruby_libdir}/phusion_passenger"
