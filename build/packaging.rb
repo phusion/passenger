@@ -359,6 +359,12 @@ task 'package:update_homebrew' do
   sh "cd #{homebrew_dir} && git push -f"
   if boolean_option('HOMEBREW_TEST', true)
     sh "cp #{homebrew_dir}/Formula/passenger.rb $(brew --prefix)/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/passenger.rb"
+    if `brew info nginx` !~ /^Not installed$/
+      sh "brew uninstall nginx"
+    end
+    if `brew info nginx-passenger-enterprise` !~ /^Not installed$/
+      sh "brew uninstall nginx-passenger-enterprise"
+    end
     if `brew info passenger` !~ /^Not installed$/
       sh "brew uninstall passenger"
     end
