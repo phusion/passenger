@@ -319,9 +319,9 @@ store.get("baz").asInt();       // => 123
 store.get("unknown").isNull();  // => true
 ~~~
 
-### Dumping all data
+### Inspecting all data
 
-You can fetch an overview of all data in the store using `dump()`.
+You can fetch an overview of all data in the store using `inspect()`.
 This will return a Json::Value in the following format:
 
 ~~~javascript
