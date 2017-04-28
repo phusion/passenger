@@ -354,6 +354,19 @@ Description of the members:
  - `default_value`: the default value as defined in the schema. May be absent.
  - `effective_value`: the effective value, i.e. the value that `get()` will return.
 
+If you want to fetch the effective values only, then use `inspectEffectiveValues()`:
+
+~~~javascript
+// Assuming we are using the store that went through
+// 'Putting data in the store' and 'Updating data'.
+
+{
+  "foo": "strval",
+  "bar": 123.45,
+  "baz": 123
+}
+~~~
+
 ## Putting it all together: synchronous version
 
 Now that you've learned how to use ConfigKit by itself, how does fit in the bigger picture? This section describes good practices and design patterns can that can be used throughout the overall Passenger C++ codebase. At the time of writing (25 Feb 2017), ConfigKit was just introduced, so these practices and patterns aren't yet used everywhere, but the long-term plan is to adopt these practices/patterns throughout the entire codebase.

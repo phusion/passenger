@@ -321,6 +321,25 @@ public:
 
 		return result;
 	}
+
+	/**
+	 * Inspects the current store's configuration keys and effective
+	 * values only. This is like `inspect()` but much less verbose.
+	 * See the README's "Inspecting all data" section to learn more
+	 * about the format.
+	 */
+	Json::Value inspectEffectiveValues() const {
+		Json::Value result(Json::objectValue);
+		StringKeyTable<Entry>::ConstIterator it(entries);
+
+		while (*it != NULL) {
+			const Entry &entry = it.getValue();
+			result[it.getKey()] = entry.getEffectiveValue(*this);
+			it.next();
+		}
+
+		return result;
+	}
 };
 
 
