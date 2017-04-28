@@ -331,14 +331,16 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwAppSpawnException("An error occurred while starting the "
-					"web application: it did not write a startup response in time.",
+					"web application: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::APP_STARTUP_TIMEOUT,
 					details);
 			}
 
 			if (line.empty()) {
 				throwAppSpawnException("An error occurred while starting the "
-					"web application. It unexpected closed the connection while "
+					"web application. It unexpectedly closed the connection while "
 					"sending its startup response.",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 					details);
@@ -1133,7 +1135,9 @@ protected:
 					details);
 			} catch (const TimeoutException &) {
 				throwAppSpawnException("An error occurred while starting the "
-					"web application: it did not write a startup response in time.",
+					"web application: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::APP_STARTUP_TIMEOUT,
 					details);
 			}

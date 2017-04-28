@@ -428,7 +428,9 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time.",
+					"the preloader: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
 					details);
 			}
@@ -500,7 +502,9 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time.",
+					"the preloader: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
 					details);
 			}
@@ -607,7 +611,9 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time.",
+					"the preloader: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
 					details);
 			}
