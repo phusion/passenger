@@ -96,12 +96,19 @@ class Installer < PhusionPassenger::AbstractInstaller
     # apr-config and apu-config are available. If they're not available,
     # then we only register them as required dependency if no Apache
     # module can be compiled without their presence.
-    if (PlatformInfo.apr_config && PlatformInfo.apu_config) ||
-       PlatformInfo.apr_config_needed_for_building_apache_modules?
+    if needs_apr_and_apu
       ids << 'apr-dev'
       ids << 'apu-dev'
     end
     return [specs, ids]
+  end
+
+  def needs_apr_and_apu
+    ((PlatformInfo.apr_config && PlatformInfo.apu_config) ||
+     PlatformInfo.apr_config_needed_for_building_apache_modules?) &&
+      (PlatformInfo.apxs2 == '/usr/sbin/apxs' &&
+       PlatformInfo.os_name_simple != "macosx" ||
+       PlatformInfo.macos_version < 12)
   end
 
   def install_doc_url

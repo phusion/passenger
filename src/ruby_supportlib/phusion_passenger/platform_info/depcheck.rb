@@ -109,6 +109,10 @@ module PhusionPassenger
           end
         end
 
+        def append_install_instructions(value)
+            @install_instructions << "\n#{value}" if value
+        end
+
         def install_comments(value = nil)
           value ? @install_comments = value : @install_comments
         end
@@ -264,6 +268,10 @@ module PhusionPassenger
 
         def brew_install(package_name)
           install_instructions("Please install it with <b>brew install #{package_name}</b>")
+        end
+
+        def brew_link(package_name)
+          append_install_instructions("Please link it with <b>brew link --force #{package_name}</b>")
         end
 
         def install_osx_command_line_tools
