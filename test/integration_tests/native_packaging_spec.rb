@@ -54,7 +54,7 @@ require 'pathname'
 
 
 # Ensure that the natively installed tools are in PATH.
-ENV['PATH'] = "/usr/bin:/usr/sbin:#{ENV['PATH']}"
+ENV['PATH'] = "#{ENV['PATH']}:/usr/bin:/usr/sbin"
 # Force Rake to redirect stderr to stdout so that we can capture all output.
 ENV['STDERR_TO_STDOUT'] = '1'
 
