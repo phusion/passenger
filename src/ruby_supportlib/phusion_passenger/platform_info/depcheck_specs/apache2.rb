@@ -103,6 +103,7 @@ define 'apr-dev' do
     emerge "apr"
   end
   on :macosx do
+    PhusionPassenger.require_passenger_lib 'platform_info/macos'
     if PlatformInfo.macos_version >= 12
       brew_install "apr"
       brew_link "apr"
