@@ -108,8 +108,8 @@ class Installer < PhusionPassenger::AbstractInstaller
     ((PlatformInfo.apr_config && PlatformInfo.apu_config) ||
      PlatformInfo.apr_config_needed_for_building_apache_modules?) &&
       (PlatformInfo.apxs2 == '/usr/sbin/apxs' &&
-       PlatformInfo.os_name_simple != "macosx" ||
-       PlatformInfo.macos_version < 12)
+       (PlatformInfo.os_name_simple != "macosx" ||
+       PlatformInfo.macos_version < 12))
   end
 
   def install_doc_url
