@@ -373,6 +373,7 @@ task 'package:update_homebrew' do
     end
     sh "cp #{PKG_DIR}/passenger-#{version}.tar.gz `brew --cache`/"
     sh "brew install passenger"
+    sh "brew install nginx --with-passenger"
     Rake::Task['test:integration:native_packaging'].invoke
   end
 end
