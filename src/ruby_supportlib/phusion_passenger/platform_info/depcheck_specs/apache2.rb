@@ -139,6 +139,7 @@ define 'apu-dev' do
     yum_install "apr-util-devel"
   end
   on :macosx do
+    PhusionPassenger.require_passenger_lib 'platform_info/macos'
     if PlatformInfo.macos_version >= 12
       brew_install "apr-util"
       brew_link "apr-util"
