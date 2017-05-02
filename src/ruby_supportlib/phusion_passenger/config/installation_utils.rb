@@ -216,11 +216,11 @@ module PhusionPassenger
             :dir => dir,
             :myself => myself
           abort
-        rescue SystemCallError
+        rescue SystemCallError => e
           print_installation_error_header
           render_template 'installation_utils/unexpected_filesystem_problem',
             :dir => dir,
-            :exception => result
+            :exception => e
           abort
         end
       end
