@@ -1,3 +1,14 @@
+Release 5.1.4
+-------------------------------
+
+ * Updated zlib version used in building precompiled binaries (used for e.g. gem installs) to 1.2.11 (was: 1.2.8).
+ * Updated openssl version used in building precompiled binaries (used for e.g. gem installs) to 1.0.2k (was: 1.0.2j).
+ * Updated curl version used in building precompiled binaries (used for e.g. gem installs) to 7.54.0 (was: 7.51.0).
+ * Added support for rbenv when building precompiled binaries (passenger_binary_build_automation submodule).
+ * Fixes issue when building precompiled binaries (used for e.g. gem installs) found in release 5.1.3.
+ * Added Ruby 2.4.1 precompiled native extension.
+
+
 Release 5.1.3
 -------------------------------
 
