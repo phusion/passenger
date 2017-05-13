@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+header2 "Running C++ tests"
+run bundle exec drake "-j$COMPILE_CONCURRENCY" test:cxx
+echo
+
+header2 "Running OXT tests"
+run bundle exec drake "-j$COMPILE_CONCURRENCY" test:oxt

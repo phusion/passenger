@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+retry_run 3 rake test:install_deps BASE_DEPS=yes

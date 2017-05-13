@@ -51,7 +51,7 @@ task 'test:install_deps' do
   install_doctools  = boolean_option('DOCTOOLS', default)
 
   if deps_target = string_option('DEPS_TARGET')
-    bundle_args = "--path #{deps_target} #{ENV['BUNDLE_ARGS']}".strip
+    bundle_args = "--path #{Shellwords.escape deps_target} #{ENV['BUNDLE_ARGS']}".strip
   else
     bundle_args = ENV['BUNDLE_ARGS'].to_s
   end
@@ -70,7 +70,7 @@ task 'test:install_deps' do
       sh "bundle install #{bundle_args} --without base"
     end
   end
-  
+
   if install_doctools
     # workaround for issue "bluecloth not found" when using 1.12.x
     sh "#{gem_install} bundler --version 1.11.2"
@@ -81,7 +81,7 @@ task 'test:install_deps' do
     # see what is available for Submodule tests just in case Travis CI environment changes
     # || true to avoid missing rvm command triggering a failure on Jenkins CI
     sh "rvm list || true"
-    
+
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
       " && bundle install #{bundle_args} --with travis --without doc notravis"
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
