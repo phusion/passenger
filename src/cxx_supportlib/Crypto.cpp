@@ -176,7 +176,7 @@ void Crypto::killKey(const char *cLabel) {
 		if (oserr) {
 			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
 			logError(string("Removing Passenger Cert from keychain failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-					" Please remove the certificate labeled " + cLabel + " in your keychain.");
+					". Please remove the certificate labeled " + cLabel + " in your keychain.");
 			CFRelease(str);
 		}
 		CFRelease(dict);
@@ -190,7 +190,7 @@ void Crypto::killKey(const char *cLabel) {
 			if (oserr) {
 				CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
 				logError(string("Removing Passenger private key from keychain failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-						 " Please remove the private key from the certificate labeled " + cLabel + " in your keychain.");
+						 ". Please remove the private key from the certificate labeled " + cLabel + " in your keychain.");
 				CFRelease(str);
 			}
 			CFRelease(dict);
