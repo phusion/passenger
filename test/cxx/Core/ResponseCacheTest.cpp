@@ -17,10 +17,16 @@ namespace tut {
 	struct Core_ResponseCacheTest {
 		ResponseCacheType responseCache;
 		Request req;
-		StaticString defaultVaryTurbocacheByCookie;
+		Core::ControllerSchema schema;
+		ConfigKit::Store config;
 
-		Core_ResponseCacheTest() {
+		Core_ResponseCacheTest()
+			: config(schema)
+		{
 			req.pool = psg_create_pool(PSG_DEFAULT_POOL_SIZE);
+			config["multi_app"] = false;
+			config["default_server_name"] = "localhost";
+			config["default_server_port"] = "80";
 			reset();
 		}
 
@@ -29,6 +35,7 @@ namespace tut {
 		}
 
 		void reset() {
+			req.configCache.reset(new ControllerRequestConfigCache(config));
 			req.headers.clear();
 			req.secureHeaders.clear();
 			req.httpMajor = 1;

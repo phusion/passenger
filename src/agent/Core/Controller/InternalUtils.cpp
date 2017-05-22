@@ -45,22 +45,6 @@ using namespace boost;
  ****************************/
 
 
-TurboCaching<Request>::State
-Controller::getTurboCachingInitialState(const VariantMap *agentsOptions) {
-	bool enabled = agentsOptions->getBool("turbocaching", false, true);
-	if (enabled) {
-		return TurboCaching<Request>::ENABLED;
-	} else {
-		return TurboCaching<Request>::DISABLED;
-	}
-}
-
-void
-Controller::generateServerLogName(unsigned int number) {
-	string name = "ServerThr." + toString(number);
-	serverLogName = psg_pstrdup(stringPool, name);
-}
-
 void
 Controller::disconnectWithClientSocketWriteError(Client **client, int e) {
 	stringstream message;

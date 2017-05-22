@@ -135,6 +135,7 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 	req->strip100ContinueHeader = false;
 	req->hasPragmaHeader = false;
 	req->host = NULL;
+	req->configCache = requestConfigCache;
 	req->bodyBytesBuffered = 0;
 	req->cacheKey = HashedStaticString();
 	req->cacheControl = NULL;
@@ -154,6 +155,7 @@ Controller::reinitializeRequest(Client *client, Request *req) {
 void
 Controller::deinitializeRequest(Client *client, Request *req) {
 	req->session.reset();
+	req->configCache.reset();
 
 	req->endStopwatchLog(&req->stopwatchLogs.getFromPool, false);
 	req->endStopwatchLog(&req->stopwatchLogs.bufferingRequestBody, false);
@@ -274,12 +276,22 @@ Controller::onNextRequestEarlyReadError(Client *client, Request *req, int errcod
 
 bool
 Controller::shouldDisconnectClientOnShutdown(Client *client) {
-	return ParentClass::shouldDisconnectClientOnShutdown(client) || !gracefulExit;
+	return ParentClass::shouldDisconnectClientOnShutdown(client)
+		|| !mainConfigCache.gracefulExit;
 }
 
 bool
 Controller::supportsUpgrade(Client *client, Request *req) {
 	return true;
+}
+
+void
+Controller::onConfigChange(const ConfigKit::Store *oldConfig) {
+	ParentClass::onConfigChange(oldConfig);
+	mainConfigCache.update(config);
+	requestConfigCache.reset(new ControllerRequestConfigCache(config));
+	getContext()->defaultFileBufferedChannelConfig.bufferDir =
+		config["data_buffer_dir"].asString();
 }
 
 
@@ -296,7 +308,7 @@ Controller::getClientName(const Client *client, char *buf, size_t size) const {
 	const char *end = buf + size - 1;
 	// WARNING: If you change the format, be sure to change
 	// ApiServer::extractThreadNumberFromClientName() too.
-	pos += uintToString(threadNumber, pos, end - pos);
+	pos += uintToString(mainConfigCache.threadNumber, pos, end - pos);
 	pos = appendData(pos, end, "-", 1);
 	pos += uintToString(client->number, pos, end - pos);
 	*pos = '\0';
@@ -305,7 +317,7 @@ Controller::getClientName(const Client *client, char *buf, size_t size) const {
 
 StaticString
 Controller::getServerName() const {
-	return serverLogName;
+	return mainConfigCache.serverLogName;
 }
 
 

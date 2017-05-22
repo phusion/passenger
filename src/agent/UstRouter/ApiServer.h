@@ -271,8 +271,9 @@ public:
 	string fdPassingPassword;
 	EventFd *exitEvent;
 
-	ApiServer(ServerKit::Context *context)
-		: ParentClass(context),
+	ApiServer(ServerKit::Context *context, const ServerKit::HttpServerSchema &schema,
+		const Json::Value &initialConfig = Json::Value())
+		: ParentClass(context, schema, initialConfig),
 		  controller(NULL),
 		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)

@@ -460,7 +460,7 @@ private:
 	void processConfig_getControllerConfig(Client *client, Request *req,
 		Controller *controller)
 	{
-		Json::Value config = controller->getConfigAsJson();
+		Json::Value config = controller->inspectConfig();
 		getContext()->libev->runLater(boost::bind(
 			&ApiServer::processConfig_controllerConfigGathered, this,
 			client, req, controller, config));
@@ -497,8 +497,13 @@ private:
 		unrefRequest(req, __FILE__, __LINE__);
 	}
 
-	static void configureController(Controller *controller, Json::Value json) {
-		controller->configure(json);
+	static void configureController(Controller *controller, Json::Value updates) {
+		vector<ConfigKit::Error> errors;
+		if (!controller->configure(updates, errors)) {
+			P_ERROR("Unable to apply configuration change to Core controller.\n"
+				"Configuration: " << updates.toStyledString() << "\n"
+				"Errors: " << toString(errors));
+		}
 	}
 
 	void processConfigBody(Client *client, Request *req) {
@@ -646,8 +651,9 @@ public:
 	EventFd *exitEvent;
 	vector<Authorization> authorizations;
 
-	ApiServer(ServerKit::Context *context)
-		: ParentClass(context),
+	ApiServer(ServerKit::Context *context, const ServerKit::HttpServerSchema &schema,
+		const Json::Value &initialConfig = Json::Value())
+		: ParentClass(context, schema, initialConfig),
 		  serverConnectionPath("^/server/(.+)\\.json$"),
 		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)

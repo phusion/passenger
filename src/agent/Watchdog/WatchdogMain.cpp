@@ -125,6 +125,7 @@ namespace WatchdogAgent {
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
+		ServerKit::HttpServerSchema apiServerSchema;
 		ApiServer *apiServer;
 
 		WorkingObjects()
@@ -1155,10 +1156,11 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 		absolutizePath(options.get("data_buffer_dir"));
 
 	UPDATE_TRACE_POINT();
-	wo->apiServer = new ApiServer(wo->serverKitContext);
+	wo->apiServer = new ApiServer(wo->serverKitContext, wo->apiServerSchema);
 	wo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
 	wo->apiServer->exitEvent = &wo->exitEvent;
 	wo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password");
+	wo->apiServer->initialize();
 	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
 		wo->apiServer->listen(wo->apiServerFds[i]);
 	}

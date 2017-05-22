@@ -94,23 +94,6 @@ Controller::disconnectLongRunningConnections(const StaticString &gupid) {
 	}
 }
 
-Controller::BenchmarkMode
-Controller::parseBenchmarkMode(const StaticString mode) {
-	if (mode.empty()) {
-		return BM_NONE;
-	} else if (mode == "after_accept") {
-		return BM_AFTER_ACCEPT;
-	} else if (mode == "before_checkout") {
-		return BM_BEFORE_CHECKOUT;
-	} else if (mode == "after_checkout") {
-		return BM_AFTER_CHECKOUT;
-	} else if (mode == "response_begin") {
-		return BM_RESPONSE_BEGIN;
-	} else {
-		return BM_UNKNOWN;
-	}
-}
-
 
 } // namespace Core
 } // namespace Passenger

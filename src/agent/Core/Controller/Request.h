@@ -38,6 +38,7 @@
 #include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>
 #include <Core/UnionStation/StopwatchLog.h>
+#include <Core/Controller/Config.h>
 #include <Core/Controller/AppResponse.h>
 
 namespace Passenger {
@@ -85,6 +86,7 @@ public:
 	Options options;
 	AbstractSessionPtr session;
 	const LString *host;
+	ControllerRequestConfigCachePtr configCache;
 
 	ServerKit::FdSinkChannel appSink;
 	ServerKit::FdSourceChannel appSource;
