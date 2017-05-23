@@ -17,7 +17,7 @@ namespace detail {
 
 #ifdef BOOST_MSVC
 #pragma warning( push )
-#pragma warning( disable : 4584 4250)
+#pragma warning( disable : 4584 4250 4594)
 #elif defined(__GNUC__) && (__GNUC__ >= 4)
 #pragma GCC system_header
 #endif

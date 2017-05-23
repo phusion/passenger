@@ -38,6 +38,8 @@ using flat_multimap = boost::container::flat_multimap<Key, T, Compare, polymorph
 
 #endif
 
+//! A portable metafunction to obtain a flat_map
+//! that uses a polymorphic allocator
 template <class Key
          ,class T
          ,class Compare  = std::less<Key>
@@ -47,6 +49,8 @@ struct flat_map_of
    typedef boost::container::flat_map<Key, T, Compare, polymorphic_allocator<std::pair<Key, T> > > type;
 };
 
+//! A portable metafunction to obtain a flat_multimap
+//! that uses a polymorphic allocator
 template <class Key
          ,class T
          ,class Compare  = std::less<Key>

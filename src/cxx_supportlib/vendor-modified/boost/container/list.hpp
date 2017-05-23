@@ -188,7 +188,7 @@ class list
    //! <b>Throws</b>: If allocator_type's default constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   list()
+   list() BOOST_NOEXCEPT_IF(container_detail::is_nothrow_default_constructible<Allocator>::value)
       : AllocHolder()
    {}
 
@@ -250,7 +250,7 @@ class list
    //! <b>Throws</b>: If allocator_type's copy constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   list(BOOST_RV_REF(list) x)
+   list(BOOST_RV_REF(list) x) BOOST_NOEXCEPT_OR_NOTHROW
       : AllocHolder(BOOST_MOVE_BASE(AllocHolder, x))
    {}
 
@@ -408,7 +408,7 @@ class list
       return this->assign(cvalue_iterator(val, n), cvalue_iterator());
    }
 
-   //! <b>Effects</b>: Assigns the the range [first, last) to *this.
+   //! <b>Effects</b>: Assigns the range [first, last) to *this.
    //!
    //! <b>Throws</b>: If memory allocation throws or
    //!   T's constructor from dereferencing InpIt throws.
@@ -433,7 +433,7 @@ class list
    }
 
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
-   //! <b>Effects</b>: Assigns the the range [il.begin(), il.end()) to *this.
+   //! <b>Effects</b>: Assigns the range [il.begin(), il.end()) to *this.
    //!
    //! <b>Throws</b>: If memory allocation throws or
    //!   T's constructor from dereferencing std::initializer_list iterator throws.
@@ -709,24 +709,28 @@ class list
    //! <b>Effects</b>: Inserts an object of type T constructed with
    //!   std::forward<Args>(args)... in the end of the list.
    //!
+   //! <b>Returns</b>: A reference to the created object.
+   //!
    //! <b>Throws</b>: If memory allocation throws or
    //!   T's in-place constructor throws.
    //!
    //! <b>Complexity</b>: Constant
    template <class... Args>
-   void emplace_back(BOOST_FWD_REF(Args)... args)
-   {  this->emplace(this->cend(), boost::forward<Args>(args)...); }
+   reference emplace_back(BOOST_FWD_REF(Args)... args)
+   {  return *this->emplace(this->cend(), boost::forward<Args>(args)...); }
 
    //! <b>Effects</b>: Inserts an object of type T constructed with
    //!   std::forward<Args>(args)... in the beginning of the list.
    //!
+   //! <b>Returns</b>: A reference to the created object.
+   //!
    //! <b>Throws</b>: If memory allocation throws or
    //!   T's in-place constructor throws.
    //!
    //! <b>Complexity</b>: Constant
    template <class... Args>
-   void emplace_front(BOOST_FWD_REF(Args)... args)
-   {  this->emplace(this->cbegin(), boost::forward<Args>(args)...);  }
+   reference emplace_front(BOOST_FWD_REF(Args)... args)
+   {  return *this->emplace(this->cbegin(), boost::forward<Args>(args)...);  }
 
    //! <b>Effects</b>: Inserts an object of type T constructed with
    //!   std::forward<Args>(args)... before p.
@@ -747,12 +751,12 @@ class list
 
    #define BOOST_CONTAINER_LIST_EMPLACE_CODE(N) \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   void emplace_back(BOOST_MOVE_UREF##N)\
-   {  this->emplace(this->cend() BOOST_MOVE_I##N BOOST_MOVE_FWD##N);  }\
+   reference emplace_back(BOOST_MOVE_UREF##N)\
+   {  return *this->emplace(this->cend() BOOST_MOVE_I##N BOOST_MOVE_FWD##N);  }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   void emplace_front(BOOST_MOVE_UREF##N)\
-   {  this->emplace(this->cbegin() BOOST_MOVE_I##N BOOST_MOVE_FWD##N);}\
+   reference emplace_front(BOOST_MOVE_UREF##N)\
+   {  return *this->emplace(this->cbegin() BOOST_MOVE_I##N BOOST_MOVE_FWD##N);}\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
    iterator emplace(const_iterator position BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
@@ -948,7 +952,7 @@ class list
 
    //! <b>Requires</b>: p must be a valid iterator of *this.
    //!
-   //! <b>Effects</b>: Erases the element at p p.
+   //! <b>Effects</b>: Erases the element at p.
    //!
    //! <b>Throws</b>: Nothing.
    //!
@@ -1045,7 +1049,7 @@ class list
    //!   this' allocator and x's allocator shall compare equal
    //!
    //! <b>Effects</b>: Transfers the value pointed by i, from list x to this list,
-   //!   before the the element pointed by p. No destructors or copy constructors are called.
+   //!   before the element pointed by p. No destructors or copy constructors are called.
    //!   If p == i or p == ++i, this function is a null operation.
    //!
    //! <b>Throws</b>: Nothing
@@ -1066,7 +1070,7 @@ class list
    //!   this' allocator and x's allocator shall compare equal.
    //!
    //! <b>Effects</b>: Transfers the value pointed by i, from list x to this list,
-   //!   before the the element pointed by p. No destructors or copy constructors are called.
+   //!   before the element pointed by p. No destructors or copy constructors are called.
    //!   If p == i or p == ++i, this function is a null operation.
    //!
    //! <b>Throws</b>: Nothing
@@ -1087,7 +1091,7 @@ class list
    //!   this' allocator and x's allocator shall compare equal
    //!
    //! <b>Effects</b>: Transfers the range pointed by first and last from list x to this list,
-   //!   before the the element pointed by p. No destructors or copy constructors are called.
+   //!   before the element pointed by p. No destructors or copy constructors are called.
    //!
    //! <b>Throws</b>: Nothing
    //!
@@ -1109,7 +1113,7 @@ class list
    //!   this' allocator and x's allocator shall compare equal.
    //!
    //! <b>Effects</b>: Transfers the range pointed by first and last from list x to this list,
-   //!   before the the element pointed by p. No destructors or copy constructors are called.
+   //!   before the element pointed by p. No destructors or copy constructors are called.
    //!
    //! <b>Throws</b>: Nothing
    //!
@@ -1129,7 +1133,7 @@ class list
    //!   n == distance(first, last). this' allocator and x's allocator shall compare equal
    //!
    //! <b>Effects</b>: Transfers the range pointed by first and last from list x to this list,
-   //!   before the the element pointed by p. No destructors or copy constructors are called.
+   //!   before the element pointed by p. No destructors or copy constructors are called.
    //!
    //! <b>Throws</b>:  Nothing
    //!
@@ -1150,7 +1154,7 @@ class list
    //!   n == distance(first, last). this' allocator and x's allocator shall compare equal
    //!
    //! <b>Effects</b>: Transfers the range pointed by first and last from list x to this list,
-   //!   before the the element pointed by p. No destructors or copy constructors are called.
+   //!   before the element pointed by p. No destructors or copy constructors are called.
    //!
    //! <b>Throws</b>: Nothing
    //!

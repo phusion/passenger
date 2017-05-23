@@ -289,11 +289,13 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_alt()
          BidiIterator oldposition(position);
          const re_syntax_base* old_pstate = jmp->alt.p;
          pstate = pstate->next.p;
+         bool oldcase = icase;
          m_have_then = false;
          if(!match_all_states())
          {
             pstate = old_pstate;
             position = oldposition;
+            icase = oldcase;
             if(m_have_then)
             {
                m_can_backtrack = true;
@@ -898,10 +900,27 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_recursion()
    {
       recursion_stack.reserve(50);
    }
+   //
+   // See if we've seen this recursion before at this location, if we have then
+   // we need to prevent infinite recursion:
+   //
+   for(typename std::vector<recursion_info<results_type> >::reverse_iterator i = recursion_stack.rbegin(); i != recursion_stack.rend(); ++i)
+   {
+      if(i->idx == static_cast<const re_brace*>(static_cast<const re_jump*>(pstate)->alt.p)->index)
+      {
+         if(i->location_of_start == position)
+            return false;
+         break;
+      }
+   }
+   //
+   // Now get on with it:
+   //
    recursion_stack.push_back(recursion_info<results_type>());
    recursion_stack.back().preturn_address = pstate->next.p;
    recursion_stack.back().results = *m_presult;
    recursion_stack.back().repeater_stack = next_count;
+   recursion_stack.back().location_of_start = position;
    pstate = static_cast<const re_jump*>(pstate)->alt.p;
    recursion_stack.back().idx = static_cast<const re_brace*>(pstate)->index;
 
@@ -977,6 +996,7 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_match()
          recursion_stack.push_back(recursion_info<results_type>());
          recursion_stack.back().preturn_address = saved_state;
          recursion_stack.back().results = *m_presult;
+         recursion_stack.back().location_of_start = position;
          return false;
       }
       return true;
@@ -1035,6 +1055,20 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_then()
    m_have_then = true;
    return false;
 }
+
+template <class BidiIterator, class Allocator, class traits>
+bool perl_matcher<BidiIterator, Allocator, traits>::match_toggle_case()
+{
+   // change our case sensitivity:
+   bool oldcase = this->icase;
+   this->icase = static_cast<const re_case*>(pstate)->icase;
+   pstate = pstate->next.p;
+   bool result = match_all_states();
+   this->icase = oldcase;
+   return result;
+}
+
+
 
 template <class BidiIterator, class Allocator, class traits>
 bool perl_matcher<BidiIterator, Allocator, traits>::skip_until_paren(int index, bool have_match)

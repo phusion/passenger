@@ -535,7 +535,7 @@ class deque : protected deque_base<Allocator>
    //! <b>Throws</b>: If allocator_type's default constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   deque()
+   deque() BOOST_NOEXCEPT_IF(container_detail::is_nothrow_default_constructible<Allocator>::value)
       : Base()
    {}
 
@@ -619,8 +619,18 @@ class deque : protected deque_base<Allocator>
    //!   throws or T's copy constructor throws.
    //!
    //! <b>Complexity</b>: Linear to n.
-   deque(size_type n, const value_type& value,
-         const allocator_type& a = allocator_type())
+   deque(size_type n, const value_type& value)
+      : Base(n, allocator_type())
+   { this->priv_fill_initialize(value); }
+
+   //! <b>Effects</b>: Constructs a deque that will use a copy of allocator a
+   //!   and inserts n copies of value.
+   //!
+   //! <b>Throws</b>: If allocator_type's default constructor
+   //!   throws or T's copy constructor throws.
+   //!
+   //! <b>Complexity</b>: Linear to n.
+   deque(size_type n, const value_type& value, const allocator_type& a)
       : Base(n, a)
    { this->priv_fill_initialize(value); }
 
@@ -632,11 +642,29 @@ class deque : protected deque_base<Allocator>
    //!
    //! <b>Complexity</b>: Linear to the range [first, last).
    template <class InIt>
-   deque(InIt first, InIt last, const allocator_type& a = allocator_type()
+   deque(InIt first, InIt last
       #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
-      , typename container_detail::enable_if_c
-         < !container_detail::is_convertible<InIt, size_type>::value
-         >::type * = 0
+      , typename container_detail::disable_if_convertible
+         <InIt, size_type>::type * = 0
+      #endif
+      )
+      : Base(allocator_type())
+   {
+      this->priv_range_initialize(first, last);
+   }
+
+   //! <b>Effects</b>: Constructs a deque that will use a copy of allocator a
+   //!   and inserts a copy of the range [first, last) in the deque.
+   //!
+   //! <b>Throws</b>: If allocator_type's default constructor
+   //!   throws or T's constructor taking a dereferenced InIt throws.
+   //!
+   //! <b>Complexity</b>: Linear to the range [first, last).
+   template <class InIt>
+   deque(InIt first, InIt last, const allocator_type& a
+      #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+      , typename container_detail::disable_if_convertible
+         <InIt, size_type>::type * = 0
       #endif
       )
       : Base(a)
@@ -679,7 +707,7 @@ class deque : protected deque_base<Allocator>
    //! <b>Throws</b>: If allocator_type's copy constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   deque(BOOST_RV_REF(deque) x)
+   deque(BOOST_RV_REF(deque) x) BOOST_NOEXCEPT_OR_NOTHROW
       :  Base(BOOST_MOVE_BASE(Base, x))
    {  this->swap_members(x);   }
 
@@ -1249,11 +1277,10 @@ class deque : protected deque_base<Allocator>
       return const_iterator(this->cbegin()+n);
    }
 
-   //! <b>Requires</b>: size() >= n.
+   //! <b>Requires</b>: begin() <= p <= end().
    //!
-   //! <b>Effects</b>: Returns an iterator to the nth element
-   //!   from the beginning of the container. Returns end()
-   //!   if n == size().
+   //! <b>Effects</b>: Returns the index of the element pointed by p
+   //!   and size() if p == end().
    //!
    //! <b>Throws</b>: Nothing.
    //!
@@ -1321,44 +1348,52 @@ class deque : protected deque_base<Allocator>
    //! <b>Effects</b>: Inserts an object of type T constructed with
    //!   std::forward<Args>(args)... in the beginning of the deque.
    //!
+   //! <b>Returns</b>: A reference to the created object.
+   //!
    //! <b>Throws</b>: If memory allocation throws or the in-place constructor throws.
    //!
    //! <b>Complexity</b>: Amortized constant time
    template <class... Args>
-   void emplace_front(BOOST_FWD_REF(Args)... args)
+   reference emplace_front(BOOST_FWD_REF(Args)... args)
    {
       if(this->priv_push_front_simple_available()){
+         reference r = *this->priv_push_front_simple_pos();
          allocator_traits_type::construct
             ( this->alloc()
             , this->priv_push_front_simple_pos()
             , boost::forward<Args>(args)...);
          this->priv_push_front_simple_commit();
+         return r;
       }
       else{
          typedef container_detail::insert_nonmovable_emplace_proxy<Allocator, iterator, Args...> type;
-         this->priv_insert_front_aux_impl(1, type(boost::forward<Args>(args)...));
+         return *this->priv_insert_front_aux_impl(1, type(boost::forward<Args>(args)...));
       }
    }
 
    //! <b>Effects</b>: Inserts an object of type T constructed with
    //!   std::forward<Args>(args)... in the end of the deque.
    //!
+   //! <b>Returns</b>: A reference to the created object.
+   //!
    //! <b>Throws</b>: If memory allocation throws or the in-place constructor throws.
    //!
    //! <b>Complexity</b>: Amortized constant time
    template <class... Args>
-   void emplace_back(BOOST_FWD_REF(Args)... args)
+   reference emplace_back(BOOST_FWD_REF(Args)... args)
    {
       if(this->priv_push_back_simple_available()){
+         reference r = *this->priv_push_back_simple_pos();
          allocator_traits_type::construct
             ( this->alloc()
             , this->priv_push_back_simple_pos()
             , boost::forward<Args>(args)...);
          this->priv_push_back_simple_commit();
+         return r;
       }
       else{
          typedef container_detail::insert_nonmovable_emplace_proxy<Allocator, iterator, Args...> type;
-         this->priv_insert_back_aux_impl(1, type(boost::forward<Args>(args)...));
+         return *this->priv_insert_back_aux_impl(1, type(boost::forward<Args>(args)...));
       }
    }
 
@@ -1393,32 +1428,36 @@ class deque : protected deque_base<Allocator>
 
    #define BOOST_CONTAINER_DEQUE_EMPLACE_CODE(N) \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N\
-   void emplace_front(BOOST_MOVE_UREF##N)\
+   reference emplace_front(BOOST_MOVE_UREF##N)\
    {\
       if(priv_push_front_simple_available()){\
+         reference r = *this->priv_push_front_simple_pos();\
          allocator_traits_type::construct\
             ( this->alloc(), this->priv_push_front_simple_pos() BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
          priv_push_front_simple_commit();\
+         return r;\
       }\
       else{\
          typedef container_detail::insert_nonmovable_emplace_proxy##N\
                <Allocator, iterator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
-         priv_insert_front_aux_impl(1, type(BOOST_MOVE_FWD##N));\
+         return *priv_insert_front_aux_impl(1, type(BOOST_MOVE_FWD##N));\
       }\
    }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N\
-   void emplace_back(BOOST_MOVE_UREF##N)\
+   reference emplace_back(BOOST_MOVE_UREF##N)\
    {\
       if(priv_push_back_simple_available()){\
+         reference r = *this->priv_push_back_simple_pos();\
          allocator_traits_type::construct\
             ( this->alloc(), this->priv_push_back_simple_pos() BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
          priv_push_back_simple_commit();\
+         return r;\
       }\
       else{\
          typedef container_detail::insert_nonmovable_emplace_proxy##N\
                <Allocator, iterator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
-         priv_insert_back_aux_impl(1, type(BOOST_MOVE_FWD##N));\
+         return *priv_insert_back_aux_impl(1, type(BOOST_MOVE_FWD##N));\
       }\
    }\
    \
@@ -1684,16 +1723,14 @@ class deque : protected deque_base<Allocator>
          if (elems_before < (this->size() - n) - elems_before) {
             boost::container::move_backward(begin(), first.unconst(), last.unconst());
             iterator new_start = this->members_.m_start + n;
-            if(!Base::traits_t::trivial_dctr_after_move)
-               this->priv_destroy_range(this->members_.m_start, new_start);
+            this->priv_destroy_range(this->members_.m_start, new_start);
             this->priv_destroy_nodes(this->members_.m_start.m_node, new_start.m_node);
             this->members_.m_start = new_start;
          }
          else {
             boost::container::move(last.unconst(), end(), first.unconst());
             iterator new_finish = this->members_.m_finish - n;
-            if(!Base::traits_t::trivial_dctr_after_move)
-               this->priv_destroy_range(new_finish, this->members_.m_finish);
+            this->priv_destroy_range(new_finish, this->members_.m_finish);
             this->priv_destroy_nodes(new_finish.m_node + 1, this->members_.m_finish.m_node + 1);
             this->members_.m_finish = new_finish;
          }
@@ -1800,8 +1837,7 @@ class deque : protected deque_base<Allocator>
       }
       else {
          iterator new_finish = this->members_.m_finish - n;
-         if(!Base::traits_t::trivial_dctr_after_move)
-            this->priv_destroy_range(new_finish, this->members_.m_finish);
+         this->priv_destroy_range(new_finish, this->members_.m_finish);
          this->priv_destroy_nodes(new_finish.m_node + 1, this->members_.m_finish.m_node + 1);
          this->members_.m_finish = new_finish;
       }

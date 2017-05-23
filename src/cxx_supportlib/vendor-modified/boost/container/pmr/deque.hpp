@@ -29,6 +29,8 @@ using deque = boost::container::deque<T, polymorphic_allocator<T>>;
 
 #endif
 
+//! A portable metafunction to obtain a deque
+//! that uses a polymorphic allocator
 template<class T>
 struct deque_of
 {

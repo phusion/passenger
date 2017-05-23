@@ -16,6 +16,7 @@
 #include <boost/checked_delete.hpp>
 #include <boost/smart_ptr/detail/sp_nullptr_t.hpp>
 #include <boost/smart_ptr/detail/sp_disable_deprecated.hpp>
+#include <boost/smart_ptr/detail/sp_noexcept.hpp>
 #include <boost/detail/workaround.hpp>
 
 #ifndef BOOST_NO_AUTO_PTR
@@ -62,7 +63,7 @@ public:
 
     typedef T element_type;
 
-    explicit scoped_ptr( T * p = 0 ): px( p ) // never throws
+    explicit scoped_ptr( T * p = 0 ) BOOST_SP_NOEXCEPT : px( p ) // never throws
     {
 #if defined(BOOST_SP_ENABLE_DEBUG_HOOKS)
         boost::sp_scalar_constructor_hook( px );

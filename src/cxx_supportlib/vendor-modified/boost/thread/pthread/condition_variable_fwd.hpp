@@ -17,6 +17,7 @@
 #if defined BOOST_THREAD_USES_DATETIME
 #include <boost/thread/xtime.hpp>
 #endif
+
 #ifdef BOOST_THREAD_USES_CHRONO
 #include <boost/chrono/system_clocks.hpp>
 #include <boost/chrono/ceil.hpp>
@@ -68,15 +69,29 @@ namespace boost
             unique_lock<mutex>& lock,
             struct timespec const &timeout)
         {
-          return do_wait_until(lock, boost::detail::timespec_plus(timeout, boost::detail::timespec_now()));
+#if ! defined BOOST_THREAD_USEFIXES_TIMESPEC
+            return do_wait_until(lock, boost::detail::timespec_plus(timeout, boost::detail::timespec_now()));
+#elif ! defined BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+            //using namespace chrono;
+            //nanoseconds ns = chrono::system_clock::now().time_since_epoch();
+
+            struct timespec ts = boost::detail::timespec_now_realtime();
+            //ts.tv_sec = static_cast<long>(chrono::duration_cast<chrono::seconds>(ns).count());
+            //ts.tv_nsec = static_cast<long>((ns - chrono::duration_cast<chrono::seconds>(ns)).count());
+            return do_wait_until(lock, boost::detail::timespec_plus(timeout, ts));
+#else
+            // old behavior was fine for monotonic
+            return do_wait_until(lock, boost::detail::timespec_plus(timeout, boost::detail::timespec_now_realtime()));
+#endif
         }
 
     public:
       BOOST_THREAD_NO_COPYABLE(condition_variable)
         condition_variable()
         {
+            int res;
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-            int res=pthread_mutex_init(&internal_mutex,NULL);
+            res=pthread_mutex_init(&internal_mutex,NULL);
             if(res)
             {
                 boost::throw_exception(thread_resource_error(res, "boost::condition_variable::condition_variable() constructor failed in pthread_mutex_init"));

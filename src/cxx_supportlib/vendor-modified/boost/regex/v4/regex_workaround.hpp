@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <iosfwd>
 #include <vector>
+#include <set>
 #include <map>
 #include <boost/limits.hpp>
 #include <boost/assert.hpp>

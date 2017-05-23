@@ -540,7 +540,7 @@ class stable_vector
    //! <b>Throws</b>: If allocator_type's default constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   stable_vector()
+   stable_vector() BOOST_NOEXCEPT_IF(container_detail::is_nothrow_default_constructible<Allocator>::value)
       : internal_data(), index()
    {
       STABLE_VECTOR_CHECK_INVARIANT;
@@ -698,7 +698,7 @@ class stable_vector
    //! <b>Throws</b>: If allocator_type's copy constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   stable_vector(BOOST_RV_REF(stable_vector) x)
+   stable_vector(BOOST_RV_REF(stable_vector) x) BOOST_NOEXCEPT_OR_NOTHROW
       : internal_data(boost::move(x.priv_node_alloc())), index(boost::move(x.index))
    {
       this->priv_swap_members(x);
@@ -1374,16 +1374,18 @@ class stable_vector
    //! <b>Effects</b>: Inserts an object of type T constructed with
    //!   std::forward<Args>(args)... in the end of the stable_vector.
    //!
+   //! <b>Returns</b>: A reference to the created object.
+   //!
    //! <b>Throws</b>: If memory allocation throws or the in-place constructor throws.
    //!
    //! <b>Complexity</b>: Amortized constant time.
    template<class ...Args>
-   void emplace_back(Args &&...args)
+   reference emplace_back(Args &&...args)
    {
       typedef emplace_functor<Args...>         EmplaceFunctor;
       typedef emplace_iterator<value_type, EmplaceFunctor, difference_type> EmplaceIterator;
       EmplaceFunctor &&ef = EmplaceFunctor(boost::forward<Args>(args)...);
-      this->insert(this->cend(), EmplaceIterator(ef), EmplaceIterator());
+      return *this->insert(this->cend(), EmplaceIterator(ef), EmplaceIterator());
    }
 
    //! <b>Requires</b>: p must be a valid iterator of *this.
@@ -1411,13 +1413,13 @@ class stable_vector
 
    #define BOOST_CONTAINER_STABLE_VECTOR_EMPLACE_CODE(N) \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \
-   void emplace_back(BOOST_MOVE_UREF##N)\
+   reference emplace_back(BOOST_MOVE_UREF##N)\
    {\
       typedef emplace_functor##N\
          BOOST_MOVE_LT##N BOOST_MOVE_TARG##N BOOST_MOVE_GT##N EmplaceFunctor;\
       typedef emplace_iterator<value_type, EmplaceFunctor, difference_type>  EmplaceIterator;\
       EmplaceFunctor ef BOOST_MOVE_LP##N BOOST_MOVE_FWD##N BOOST_MOVE_RP##N;\
-      this->insert(this->cend() , EmplaceIterator(ef), EmplaceIterator());\
+      return *this->insert(this->cend() , EmplaceIterator(ef), EmplaceIterator());\
    }\
    \
    BOOST_MOVE_TMPL_LT##N BOOST_MOVE_CLASS##N BOOST_MOVE_GT##N \

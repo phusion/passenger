@@ -30,6 +30,8 @@ using basic_string =
 
 #endif
 
+//! A portable metafunction to obtain a basic_string
+//! that uses a polymorphic allocator
 template <class CharT, class Traits = std::char_traits<CharT> >
 struct basic_string_of
 {
