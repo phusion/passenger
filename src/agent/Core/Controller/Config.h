@@ -346,7 +346,7 @@ public:
 		  minInstances(config["min_instances"].asUInt()),
 		  maxPreloaderIdleTime(config["max_preloader_idle_time"].asUInt()),
 		  maxRequestQueueSize(config["max_request_queue_size"].asUInt()),
-		  forceMaxConcurrentRequestsPerProcess(config["max_request_queue_size"].asInt()),
+		  forceMaxConcurrentRequestsPerProcess(config["force_max_concurrent_requests_per_process"].asInt()),
 		  singleAppMode(!config["multi_app"].asBool()),
 		  showVersionInHeader(config["show_version_in_header"].asBool()),
 		  abortWebsocketsOnProcessShutdown(config["abort_websockets_on_process_shutdown"].asBool()),
