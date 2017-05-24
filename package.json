@@ -7,10 +7,12 @@
   "description": "A fast and robust web server and application server for Ruby, Python and Node.js",
   "main": "index.js",
   "devDependencies": {
+    "express": "^3.4.8",
+    "mocha": "^1.15.1",
+    "preact": "^8.1.0",
     "should": "^2.0.1",
     "sinon": "^1.7.3",
-    "express": "^3.4.8",
-    "mocha": "^1.15.1"
+    "webpack": "^2.6.0"
   },
   "scripts": {
     "test": "rake test:node"
