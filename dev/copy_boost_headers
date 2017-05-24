@@ -204,8 +204,13 @@ def copy_dependencies(cflags)
 end
 
 def start
-  if BOOST_DIR.nil? || BOOST_DIR.empty?
-    puts "Usage: copy_boost_headers.rb <boost source directory>"
+  if BOOST_DIR.nil? || BOOST_DIR.empty? || BOOST_DIR == "--help"
+    puts "Usage:"
+    puts "Remove the src/cxx_supportlib/vendor-modified/boost directory,"
+    puts "then call: copy_boost_headers <boost source directory>"
+    puts "then reapply changes to boost source files,"
+    puts "you can find the commit with these changes with:"
+    puts "git log --all --grep='These changes need to be reapplied after each boost upgrade.'"
     exit 1
   end
   begin
