@@ -6,7 +6,7 @@
   "version": "0.0.0",
   "description": "A fast and robust web server and application server for Ruby, Python and Node.js",
   "main": "index.js",
-  "dependencies": {
+  "devDependencies": {
     "should": "^2.0.1",
     "sinon": "^1.7.3",
     "express": "^3.4.8",

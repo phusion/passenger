@@ -91,7 +91,7 @@ task 'test:install_deps' do
       " BUNDLE_ARGS='#{bundle_args}'"
   end
   if boolean_option('NODE_MODULES', default)
-    sh "npm install"
+    sh "yarn install"
   end
 end
 
