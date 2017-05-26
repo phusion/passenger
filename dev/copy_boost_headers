@@ -208,9 +208,9 @@ def start
     puts "Usage:"
     puts "Remove the src/cxx_supportlib/vendor-modified/boost directory,"
     puts "then call: copy_boost_headers <boost source directory>"
-    puts "then reapply changes to boost source files,"
-    puts "you can find the commit with these changes with:"
-    puts "git log --all --grep='These changes need to be reapplied after each boost upgrade.'"
+    puts "then reapply patches to boost source files,"
+    puts "they are kept in dev/boost-patches and can be applied by:"
+    puts "patch -p1 < dev/boost-patches/000*-Patch-Name.patch"
     exit 1
   end
   begin

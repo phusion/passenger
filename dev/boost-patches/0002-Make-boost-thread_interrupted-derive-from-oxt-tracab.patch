@@ -1,0 +1,33 @@
+From 581af47e251b34f0ae410c29758884c1f033610e Mon Sep 17 00:00:00 2001
+From: "Hongli Lai (Phusion)" <hongli@phusion.nl>
+Date: Mon, 15 Feb 2016 12:22:44 +0100
+Subject: [PATCH] Make boost::thread_interrupted derive from
+ oxt::tracable_exception
+
+---
+ src/cxx_supportlib/vendor-modified/boost/thread/exceptions.hpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/cxx_supportlib/vendor-modified/boost/thread/exceptions.hpp b/src/cxx_supportlib/vendor-modified/boost/thread/exceptions.hpp
+index d97465b75..3f780bfb1 100644
+--- a/src/cxx_supportlib/vendor-modified/boost/thread/exceptions.hpp
++++ b/src/cxx_supportlib/vendor-modified/boost/thread/exceptions.hpp
+@@ -21,6 +21,7 @@
+ #include <stdexcept>
+ #include <boost/system/system_error.hpp>
+ #include <boost/system/error_code.hpp>
++#include <oxt/tracable_exception.hpp>
+ 
+ 
+ #include <boost/config/abi_prefix.hpp>
+@@ -30,6 +31,7 @@ namespace boost
+ 
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+     class BOOST_SYMBOL_VISIBLE thread_interrupted
++      : public oxt::tracable_exception
+     {};
+ #endif
+ 
+-- 
+2.13.0
+
