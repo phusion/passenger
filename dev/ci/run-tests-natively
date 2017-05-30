@@ -17,6 +17,8 @@ if [[ "$OS" != macos ]]; then
 	exit 1
 fi
 
+security unlock-keychain -p `cat ~/.password` ~/Library/Keychains/login.keychain
+
 export CI_COMMAND="./dev/ci/run-tests-natively $*"
 exec "$PASSENGER_ROOT/dev/ci/scripts/debug-console-wrapper.sh" \
 	"$PASSENGER_ROOT/dev/ci/scripts/run-tests-natively-stage2.sh" "$@"
