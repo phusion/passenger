@@ -48,34 +48,34 @@ namespace tut {
 
 	TEST_METHOD(3) {
 		// Receive with zero timeout.
-		unsigned long long timeout = 0;
+		unsigned long long timeoutUSec = 0;
 		Timer<> timer;
-		ensure_equals(box->recv("hi", &timeout), MessagePtr());
+		ensure_equals(box->recv("hi", &timeoutUSec), MessagePtr());
 		ensure(timer.elapsed() < 10);
-		ensure_equals(timeout, 0ull);
+		ensure_equals(timeoutUSec, 0ull);
 	}
 
 	TEST_METHOD(4) {
 		// Receive with non-zero timeout.
-		unsigned long long timeout = 20000;
+		unsigned long long timeoutUSec = 20000;
 		Timer<> timer;
-		ensure_equals(box->recv("hi", &timeout), MessagePtr());
+		ensure_equals(box->recv("hi", &timeoutUSec), MessagePtr());
 		ensure("(1)", timer.elapsed() >= 19);
 		ensure("(2)", timer.elapsed() < 95);
-		ensure("(3)", timeout <= 2000ull);
+		ensure("(3)", timeoutUSec <= 2000ull);
 	}
 
 	TEST_METHOD(5) {
 		// Test waiting with timeout.
 		TempThread thr(boost::bind(&MessagePassingTest::sendMessagesLater, this));
-		unsigned long long timeout = 200000;
+		unsigned long long timeoutUSec = 200000;
 		Timer<> timer;
-		ensure_equals("(1)", box->recv("ho", &timeout)->name, "ho");
+		ensure_equals("(1)", box->recv("ho", &timeoutUSec)->name, "ho");
 		ensure("(2)", timer.elapsed() >= 39);
 		ensure("(3)", timer.elapsed() < 95);
 		ensure_equals("(4)", box->size(), 1u);
 		ensure_equals("(5)", box->recv("hi")->name, "hi");
 		ensure_equals("(6)", box->size(), 0u);
-		ensure("(7)", timeout >= 140000);
+		ensure("(7)", timeoutUSec >= 100000);
 	}
 }
