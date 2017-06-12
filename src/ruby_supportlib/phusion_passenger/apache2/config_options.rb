@@ -220,6 +220,7 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
   {
     :name     => "PassengerAppGroupName",
     :type     => :string,
+    :context  => ["ACCESS_CONF", "RSRC_CONF"],
     :desc     => "Application process group name."
   },
   {
