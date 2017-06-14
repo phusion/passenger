@@ -4,6 +4,7 @@ Unreleased
  * Updated Boost to version 1.64.0, which fixed a compilation issue on certain Gentoo based setups. Closes GH-1942.
  * Improved the error message shown when an app fails to start in time.
  * [Apache] Remove option to configure PassengerAppGroupName from .htaccess because, assuming AllowOverride Options is set, malicious users (having an account on the same server) can sometimes collide app group names of other users and capture their traffic.
+ * Major internal refactoring of settings handling, to prepare for supporting settings change without restart.
 
 
 Release 5.1.4
