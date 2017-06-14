@@ -154,6 +154,10 @@ module PhusionPassenger
             :start_command => "#{Shellwords.escape @nginx_binary} " +
               "-c #{Shellwords.escape nginx_config_path} " +
               "-p #{Shellwords.escape @working_dir}",
+            :stop_command => "#{Shellwords.escape @nginx_binary} " +
+              "-c #{Shellwords.escape nginx_config_path} " +
+              "-p #{Shellwords.escape @working_dir} " +
+              "-s quit",
             :ping_command  => ping_spec,
             :pid_file      => @options[:pid_file],
             :log_file      => @options[:log_file],
