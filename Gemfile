@@ -12,6 +12,5 @@ end
 group :doc do
   # Last version that worked on Ruby 1.8
   gem 'nokogiri', '1.5.9'
-  gem 'mizuho'
   gem 'bluecloth'
 end

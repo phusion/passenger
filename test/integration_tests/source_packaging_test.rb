@@ -78,12 +78,6 @@ shared_examples_for "a proper package" do
     end
     raise "Some files are not in the package" if error
   end
-
-  it "includes documentation HTML files" do
-    File.exist?("#{@pkg_contents_dir}/doc/Users guide Apache.html").should be_true
-    File.exist?("#{@pkg_contents_dir}/doc/Users guide Nginx.html").should be_true
-    File.exist?("#{@pkg_contents_dir}/doc/Users guide Standalone.html").should be_true
-  end
 end
 
 shared_examples_for "a user-generated package" do

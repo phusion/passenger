@@ -25,23 +25,13 @@
 module PhusionPassenger
 
   module Packaging
-    # A list of HTML files that are generated with Asciidoc.
-    ASCII_DOCS = [
-      'doc/Users guide.html',
-      'doc/Users guide Apache.html',
-      'doc/Users guide Nginx.html',
-      'doc/Users guide Standalone.html',
-      'doc/Security of user switching support.html',
-      'doc/Design and Architecture.html'
-    ]
-
     # Files that must be generated before packaging.
     PREGENERATED_FILES = [
       'src/cxx_supportlib/Constants.h',
       'doc/Packaging.html',
       'doc/CloudLicensingConfiguration.html',
       'doc/ServerOptimizationGuide.html'
-    ] + ASCII_DOCS
+    ]
 
     USER_EXECUTABLES = [
       'passenger',
