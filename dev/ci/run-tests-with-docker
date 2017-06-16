@@ -32,7 +32,7 @@ run_exec docker run --rm $TTY_ARGS \
 	-e "TEST_RUBY_VERSION=$TEST_RUBY_VERSION" \
 	-e "COMPILE_CONCURRENCY=$COMPILE_CONCURRENCY" \
 	-e "SUDO=$SUDO" \
-	phusion/passenger-ci-docker-env:1.0.0 \
+	phusion/passenger-ci-docker-env:1.0.1 \
 	/sbin/my_init --skip-runit --skip-startup-files --quiet -- \
 	/passenger/dev/ci/scripts/inituidgid \
 	/sbin/setuser app \
