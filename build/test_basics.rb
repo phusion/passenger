@@ -56,6 +56,8 @@ task 'test:install_deps' do
     bundle_args = ENV['BUNDLE_ARGS'].to_s
   end
 
+  yarn_args = ENV['YARN_ARGS'].to_s
+
   if !PlatformInfo.locate_ruby_tool('bundle') || bundler_too_old?
     sh "#{gem_install} bundler"
   end
@@ -91,7 +93,7 @@ task 'test:install_deps' do
       " BUNDLE_ARGS='#{bundle_args}'"
   end
   if boolean_option('NODE_MODULES', default)
-    sh "yarn install"
+    sh "yarn install #{yarn_args}"
   end
 end
 

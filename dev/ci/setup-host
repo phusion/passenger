@@ -41,6 +41,7 @@ header2 "Creating cache directories"
 run mkdir -p "$CACHE_DIR"
 run mkdir -p "$CACHE_DIR/bundle"
 run mkdir -p "$CACHE_DIR/ccache"
+run mkdir -p "$CACHE_DIR/yarn"
 echo
 
 if [[ "$OS" = macos ]]; then
