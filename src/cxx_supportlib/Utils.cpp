@@ -155,7 +155,7 @@ getFileType(const StaticString &filename, CachedFileStat *cstat, boost::mutex *c
 
 void
 createFile(const string &filename, const StaticString &contents, mode_t permissions, uid_t owner,
-	gid_t group, bool overwrite)
+	gid_t group, bool overwrite, const char *callerFile, unsigned int callerLine)
 {
 	FileDescriptor fd;
 	int ret, e, options;
@@ -166,7 +166,8 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 	}
 	do {
 		fd.assign(open(filename.c_str(), options, permissions),
-			__FILE__, __LINE__);
+			(callerFile == NULL) ? __FILE__ : callerFile,
+			(callerLine == 0) ? __LINE__ : callerLine);
 	} while (fd == -1 && errno == EINTR);
 	if (fd != -1) {
 		FileGuard guard(filename);

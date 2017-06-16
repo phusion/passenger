@@ -148,7 +148,8 @@ FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
 void createFile(const string &filename, const StaticString &contents,
                 mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
                 uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN,
-                bool overwrite = true);
+                bool overwrite = true,
+                const char *callerFile = NULL, unsigned int callerLine = 0);
 
 /**
  * Returns a canonical version of the specified path. All symbolic links
