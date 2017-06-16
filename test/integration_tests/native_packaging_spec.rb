@@ -210,7 +210,7 @@ describe "A natively packaged Phusion Passenger" do
 
   specify "the documentation directory exists" do
     File.directory?(DOCDIR).should be_true
-    File.file?("#{DOCDIR}/Users guide Apache.html").should be_true
+    File.file?("#{DOCDIR}/ServerOptimizationGuide.html").should be_true
   end
 
   specify "the helper-scripts directory exists" do
