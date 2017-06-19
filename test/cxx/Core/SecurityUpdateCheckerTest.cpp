@@ -110,6 +110,9 @@ namespace tut {
 
 	DEFINE_TEST_GROUP(Core_SecurityUpdateCheckerTest);
 
+	/*
+	 * N.B. the signatures need to be calculated with the the key, which is on the server as well as Niels' test environment.
+	 */
 	TEST_METHOD(1) {
 		set_test_name("succeeds with good signature, nonce and data, for update and no update");
 
@@ -131,6 +134,20 @@ namespace tut {
 	}
 
 	TEST_METHOD(2) {
+		set_test_name("long additional info string doesn't crash");
+
+		init("");
+
+		checker->testRaw(CURLE_OK, 200, "{\"data\":\"eyJ1cGRhdGUiOjEsInZlcnNpb24iOiI1LjEuNSIsImxvZyI6Ii0gW0ZpeGVkIGluIDUuMS41XSBJZiBQYXNzZW5nZXIvQXBhY2hlIGlzIHVzZWQsIGFuZCBBbGxvd092ZXJyaWRlIE9wdGlvbnMgaXMgY29uZmlndXJlZCwgdGhlbiBhIFBhc3NlbmdlckFwcEdyb3VwTmFtZSBvZiBjaG9pY2UgY2FuIGJlIHNwZWNpZmllZCBpbiAuaHRhY2Nlc3MuIFRoaXMgaXMgbm90IGEgc2FmZSBjb25maWd1cmF0aW9uIGluIGEgc2hhcmVkIGhvc3RpbmcgdHlwZSBzZXR1cCB0aGF0IGdpdmVzIGVhY2ggdXNlciBhY2Nlc3MgdG8gdGhlaXIgb3duIERpcmVjdG9yeSAodG8gcGxhY2UgdGhlaXIgYXBwIGluKSwgYnV0IG5vdCB0byB0aGUgbWFpbiBQYXNzZW5nZXIgY29uZmlndXJhdGlvbiBub3IgdG8gb3RoZXIgdXNlcnMuIFBhc3NlbmdlciByb3V0ZXMgcmVxdWVzdHMgYmFzZWQgb24gUGFzc2VuZ2VyQXBwR3JvdXBOYW1lIHNvIGlmIHVzZXIgQSBzcGVjaWZpZXMgdXNlciBCJ3MgYXBwIGdyb3VwIG5hbWUsIHRoZW4gQidzIHJlcXVlc3QgbWlnaHQgYmUgcm91dGVkIHRvIEEuIEluIFBhc3NlbmdlciA1LjEuNSwgUGFzc2VuZ2VyQXBwR3JvdXBOYW1lIGlzIG5vIGxvbmdlciBjb25maWd1cmFibGUgaW4gLmh0YWNjZXNzLiBUaGUgc2FmZSBjb25maWd1cmF0aW9uIGluIHByZXZpb3VzIHZlcnNpb25zIGlzIHRvIG5vdCBBbGxvd092ZXJyaWRlIGluIHN1Y2ggYSBzZXR1cC5XaGF0IGlzIGFmZmVjdGVkOjwgNS4xLjUsIEFwYWNoZSBbQWxsb3dPdmVycmlkZSBPcHRpb25zLCBzaGFyZWQgaG9zdGluZyBzZXR1cF0iLCJiYWNrb2ZmIjowLCJub25jZSI6IjE0NzQ5MDQxNTA1OTIzOTNBSndVTHBJRlpGN3d1ci8xVjBzQWRRPT0ifQ==\","
+			"\"signature\":\"WWzqDeCVdk16IU8k6POPgfAud1ERuX4xr/wmPzLFr7YOjmNz4CkTXCaRr7WH16YnVesx5H8b3jVdQynQS5QTaLCk2VWGuUSVIo1TdZBaWgNvVN/8sFmin70dfWTOWdayOT3AXhXukoLGblKqNySCXo5MQKtteOaxx4g1k0fk5iV3WR9QJoJipNIPifnR4m+e+LtJ3Ap3Q1XUxxvViLWK2OBamRIvVh4sdcYoG717Z221990C40ue1jNGh7tptx9vgggUsAHJAQ1sNq21ZzJq1Twuvb+WfSIELXZLj7/ZLqSdTuW+Y92+ZUa7CrzWoVUH4I3UWr3aQe3M7hU9uoEV9WxOskIzc3NfxA46KYXMoIs4RK6CHNcrodkpOaRdRpdPfkqgYDxAazxOIrMgZ78YBs4uU1lnoQbSfZAx3Qo0f6gbAI8PqQeZkgxWfSXPusmMlOzJ12MTAGa5+zFx1Qqx1I/noCKgrDRkoHIY+7v6LWpERUc9s8hG3coYdr6aaHk8fS3Dc/nCsvj9DiYJm/RUHWkw/lvc8hJqX6V8LRgHKWCQ4aQsif3q/KQwrxDoaGs9sxYDT/hY0T7F1xQVwBM/Ze/848gxlgLohCb09kQ9v+4c7yoiZr/bPGOtFIKQADWZ+0Br4N6MRw6uVXULq0B6oJ8RMbGgNeANGmL6Pn6jEb8=\"}",
+			"1474904150592393AJwULpIFZF7wur/1V0sAdQ==");
+
+		ensure_equals(checker->lastError.c_str(), checker->lastError.empty(), true);
+		failNiceWhenSubstringMismatch("shared hosting setup", checker->lastSuccessAdditional);
+
+	}
+
+	TEST_METHOD(3) {
 		set_test_name("correctly reports various signature field errors");
 
 		init("");
@@ -143,7 +160,7 @@ namespace tut {
 		checker->testContentFail("forged signature", CURLE_OK, 200, "invalid_base64", "yyyy", "");
 	}
 
-	TEST_METHOD(3) {
+	TEST_METHOD(4) {
 		set_test_name("catches replay attack (nonce mismatch)");
 
 		init("");
@@ -153,7 +170,7 @@ namespace tut {
 			"non-matching nonce");
 	}
 
-	TEST_METHOD(4) {
+	TEST_METHOD(5) {
 		set_test_name("additional log is logged whether update=0 or 1");
 
 		init("");
@@ -175,7 +192,7 @@ namespace tut {
 		failNiceWhenSubstringMismatch("additionalinfo", checker->lastSuccessAdditional);
 	}
 
-	TEST_METHOD(5) {
+	TEST_METHOD(6) {
 		set_test_name("enriches CURL errors");
 
 		init("");
@@ -185,7 +202,7 @@ namespace tut {
 		checker->testContentFail("truststore", CURLE_PEER_FAILED_VERIFICATION, 0, "", "", "");
 	}
 
-	TEST_METHOD(6) {
+	TEST_METHOD(7) {
 		set_test_name("enriches HTTP errors");
 
 		init("");

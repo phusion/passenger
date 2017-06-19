@@ -476,7 +476,7 @@ public:
 			string data64 = responseJson["data"].asString();
 
 			signatureChars = (char *)malloc(signature64.length() + 1);
-			dataChars = (char *)malloc(signature64.length() + 1);
+			dataChars = (char *)malloc(data64.length() + 1);
 			if (signatureChars == NULL || dataChars == NULL) {
 				logUpdateFailResponse("out of memory", responseData);
 				break;
