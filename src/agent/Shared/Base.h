@@ -46,6 +46,7 @@ VariantMap initializeAgent(int argc, char **argv[], const char *processName,
 	int argStartIndex = 1);
 void initializeAgentOptions(const char *processName, VariantMap &options,
 	PreinitializationFunc preinit = NULL);
+void storeArgvCopy(int argc, char *argv[]);
 void installAgentAbortHandler();
 void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
 

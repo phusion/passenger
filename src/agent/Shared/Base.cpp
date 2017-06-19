@@ -1527,11 +1527,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 		exit(1);
 	}
 
-	// Make a copy of the arguments before changing process title.
-	origArgv = (char **) malloc(argc * sizeof(char *));
-	for (int i = 0; i < argc; i++) {
-		origArgv[i] = strdup((*argv)[i]);
-	}
+	storeArgvCopy(argc, *argv);
 
 	// Change process title.
 	size_t totalArgLen = strlen((*argv)[0]);
@@ -1638,6 +1634,15 @@ initializeAgentOptions(const char *processName, VariantMap &options,
 			"Emergency pipe 2-0");
 		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe2[1], __FILE__, __LINE__,
 			"Emergency pipe 2-1");
+	}
+}
+
+void
+storeArgvCopy(int argc, char *argv[]) {
+	// Make a copy of the arguments before changing process title.
+	origArgv = (char **) malloc(argc * sizeof(char *));
+	for (int i = 0; i < argc; i++) {
+		origArgv[i] = strdup(argv[i]);
 	}
 }
 
