@@ -343,12 +343,14 @@ void disableMallocDebugging();
 int runShellCommand(const StaticString &command);
 
 /**
- * Run a command and capture its stdout output.
+ * Run a command and capture its stdout output. This function
+ * does not care whether the command fails.
  *
- * @param command The argument to pass to execvp();
- * @throws SystemException.
+ * @param command The argument to pass to execvp().
+ * @param status The status of the child process will be stored here, if non-NULL.
+ * @throws SystemException
  */
-string runCommandAndCaptureOutput(const char **command);
+string runCommandAndCaptureOutput(const char **command, int *status = NULL);
 
 /**
  * Async-signal safe way to fork().

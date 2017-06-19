@@ -312,6 +312,9 @@ public:
 		string psOutput = this->psOutput;
 		if (psOutput.empty()) {
 			psOutput = runCommandAndCaptureOutput(command);
+			if (psOutput.empty()) {
+				throw RuntimeException("The 'ps' command failed");
+			}
 		}
 		pidsArg.resize(0);
 		fmtArg.resize(0);

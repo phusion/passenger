@@ -1031,9 +1031,9 @@ runShellCommand(const StaticString &command) {
 }
 
 string
-runCommandAndCaptureOutput(const char **command) {
+runCommandAndCaptureOutput(const char **command, int *status) {
 	pid_t pid;
-	int e;
+	int e, waitRet;
 	Pipe p;
 
 	p = createPipe(__FILE__, __LINE__);
@@ -1087,14 +1087,12 @@ runCommandAndCaptureOutput(const char **command) {
 			result.append(buf, ret);
 		}
 		p[0].close();
-		syscalls::waitpid(pid, NULL, 0);
 
-		if (result.empty()) {
-			throw RuntimeException(string("The '") + command[1] +
-				"' command failed");
-		} else {
-			return result;
+		waitRet = syscalls::waitpid(pid, NULL, 0);
+		if (status != NULL) {
+			*status = waitRet;
 		}
+		return result;
 	}
 }
 
