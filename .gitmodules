@@ -16,3 +16,6 @@
 [submodule "packaging/binaries"]
 	path = packaging/binaries
 	url = https://github.com/phusion/passenger_binary_build_automation.git
+[submodule "build/support/vendor/cxx_hinted_parser"]
+	path = build/support/vendor/cxx_hinted_parser
+	url = git://github.com/phusion/cxx_hinted_parser.git
