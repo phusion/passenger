@@ -475,8 +475,8 @@ public:
 			string signature64 = responseJson["signature"].asString();
 			string data64 = responseJson["data"].asString();
 
-			signatureChars = (char *)malloc(signature64.length() + 1);
-			dataChars = (char *)malloc(data64.length() + 1);
+			signatureChars = (char *)malloc(modp_b64_decode_len(signature64.length()));
+			dataChars = (char *)malloc(modp_b64_decode_len(data64.length()));
 			if (signatureChars == NULL || dataChars == NULL) {
 				logUpdateFailResponse("out of memory", responseData);
 				break;

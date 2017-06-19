@@ -273,7 +273,7 @@ bool Crypto::generateAndAppendNonce(string &nonce) {
 	unsigned char rndChars[rndLen];
 
 	if (generateRandomChars(rndChars, rndLen)) {
-		char rndChars64[rndLen * 2];
+		char rndChars64[modp_b64_encode_len(rndLen)];
 		modp_b64_encode(rndChars64, (const char *) rndChars, rndLen);
 
 		nonce.append(rndChars64);
@@ -724,7 +724,7 @@ bool Crypto::generateAndAppendNonce(string &nonce) {
 		return false;
 	}
 
-	char rndChars64[rndLen * 2];
+	char rndChars64[modp_b64_encode_len(rndLen)];
 	modp_b64_encode(rndChars64, (const char *) rndChars, rndLen);
 
 	nonce.append(rndChars64);
