@@ -988,6 +988,7 @@ public:
 	Json::Value inspectParentProcessDetailsAsJson() const {
 		Json::Value doc;
 
+		doc["backtrace"] = backtrace();
 		doc["envvars"] = getParentProcessEnvvars();
 		doc["user_info"] = getParentProcessUserInfo();
 		doc["ulimits"] = getParentProcessUlimits();

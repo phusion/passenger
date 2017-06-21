@@ -29,6 +29,10 @@ class ProcessDetailsView extends Component {
       result.push(<dt key="stdout-and-err-header">Stdout and stderr output</dt>);
       result.push(<dd key="stdout-and-err-content"><pre>{this.props.spec.stdout_and_err}</pre></dd>);
     }
+    if (this.props.spec.backtrace) {
+      result.push(<dt key="backtrace-header">Backtrace</dt>);
+      result.push(<dd key="backtrace-content"><pre>{this.props.spec.backtrace}</pre></dd>);
+    }
     return result;
   }
 
