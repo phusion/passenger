@@ -70,7 +70,6 @@ module PhusionPassenger
       'INSTALL.md',
       'NEWS',
       'package.json',
-      'npm-shrinkwrap.json',
       'passenger.gemspec',
       'build/**/*',
       'bin/*',
@@ -78,7 +77,8 @@ module PhusionPassenger
       'man/*',
       'dev/**/*',
       'src/**/*',
-      'resources/**/*'
+      'resources/**/*',
+      'resources/templates/error_renderer/.editorconfig'
     ]
 
     # Files that should be excluded from the gem or tarball. Overrides GLOB.
@@ -94,6 +94,7 @@ module PhusionPassenger
       '.project',
       'Gemfile',
       'Gemfile.lock',
+      'yarn.lock',
       'Vagrantfile',
       'Jenkinsfile',
       'Passenger.sublime-project',
