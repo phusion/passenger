@@ -66,7 +66,7 @@ class Apache2Controller
 
   def initialize(options = nil)
     set(options) if options
-    @port = 64506
+    @port ||= 64506
     @vhosts = []
     @extra = []
     @server_root = File.expand_path('tmp.apache2')

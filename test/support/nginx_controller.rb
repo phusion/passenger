@@ -5,7 +5,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 class NginxController
   PlatformInfo = PhusionPassenger::PlatformInfo
   TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
-  PORT = 64507
+  PORT = ENV.fetch('TEST_PORT_BASE', '64507').to_i
 
   def initialize(root_dir)
     root_dir     = File.expand_path(root_dir)

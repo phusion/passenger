@@ -1,5 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'support/nginx_controller'
+require 'tmpdir'
 
 WEB_SERVER_DECHUNKS_REQUESTS = true
 
@@ -13,14 +14,14 @@ describe "Phusion Passenger for Nginx" do
     end
 
     check_hosts_configuration
-    FileUtils.mkdir_p("tmp.nginx")
+    @nginx_root = Dir.mktmpdir('psg-test-', '/tmp')
   end
 
   after :all do
     begin
       @nginx.stop if @nginx
     ensure
-      FileUtils.rm_rf("tmp.nginx")
+      FileUtils.rm_rf(@nginx_root)
     end
   end
 
@@ -47,7 +48,7 @@ describe "Phusion Passenger for Nginx" do
   end
 
   def create_nginx_controller(options = {})
-    @nginx = NginxController.new("tmp.nginx")
+    @nginx = NginxController.new(@nginx_root)
     if Process.uid == 0
       @nginx.set({
         :www_user => CONFIG['normal_user_1'],

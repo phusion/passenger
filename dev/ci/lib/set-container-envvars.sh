@@ -20,6 +20,11 @@ export CCACHE_SLOPPINESS=time_macros
 # which we may not have yet.
 export NOEXEC_DISABLE=1
 
+if [[ "$EXECUTOR_NUMBER" != "" ]]; then
+	(( TEST_PORT_BASE=64000+EXECUTOR_NUMBER*10 ))
+	export TEST_PORT_BASE
+fi
+
 if [[ "$OS" = macos ]]; then
 	# Ensure that Homebrew tools can be found
 	export PATH=$PATH:/usr/local/bin
