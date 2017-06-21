@@ -42,12 +42,14 @@ ESSENTIALS = [
   "boost/core",
   "boost/bind",
   "boost/function",
+  "boost/chrono",
   "boost/optional.hpp",
   "boost/optional",
   "boost/utility",
   "libs/thread/src",
   "libs/system/src",
   "libs/regex/src",
+  "libs/chrono/src",
   "boost/preprocessor",
   "boost/parameter",
   "boost/date_time/gregorian/formatters_limited.hpp",
@@ -168,6 +170,7 @@ def cleanup
   FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
   FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
   FileUtils.rm_rf("boost/config/platform/win32.hpp")
+  FileUtils.rm_rf("boost/chrono/detail/inlined/win")
   File.unlink("test.cpp") rescue nil
 end
 
