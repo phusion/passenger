@@ -1043,7 +1043,7 @@ private:
 	void loadJourneyStateFromResponseDirForSpecificStep(JourneyStep step,
 		const string &stepDir) const
 	{
-		TRACE_POINT_WITH_DATA(stepDir.c_str());
+		TRACE_POINT_WITH_DATA(journeyStepToString(step).data());
 		string summary;
 		string value = strip(readAll(stepDir + "/state"));
 		JourneyStepState state = stringToJourneyStepState(value);
