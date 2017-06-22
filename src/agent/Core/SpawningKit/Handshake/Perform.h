@@ -1022,6 +1022,8 @@ private:
 		JourneyStep lastStep = getLastSubprocessJourneyStep();
 		JourneyStep step;
 
+		P_DEBUG("[App " << pid << " journey] Loading state from " << session.responseDir);
+
 		for (step = firstStep; step < lastStep; step = JourneyStep((int) step + 1)) {
 			if (!session.journey.hasStep(step)) {
 				continue;

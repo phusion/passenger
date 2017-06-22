@@ -72,12 +72,14 @@ module PhusionPassenger
     def self.record_journey_step_begin(step, state)
       dir = ENV['PASSENGER_SPAWN_WORK_DIR']
       step_dir = "#{dir}/response/steps/#{step.downcase}"
+      try_write_file("#{step_dir}/state", state)
       try_write_file("#{step_dir}/begin_time", Time.now.to_f)
     end
 
     def self.record_journey_step_end(step, state)
       dir = ENV['PASSENGER_SPAWN_WORK_DIR']
       step_dir = "#{dir}/response/steps/#{step.downcase}"
+      try_write_file("#{step_dir}/state", state)
       if !File.exist?("#{step_dir}/begin_time") && !File.exist?("#{step_dir}/begin_time_monotonic")
         try_write_file("#{step_dir}/begin_time", Time.now.to_f)
       end
