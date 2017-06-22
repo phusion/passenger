@@ -85,7 +85,7 @@ Using the preforking technique through SpawningKit requires either application c
 
 ### The start command
 
-Regardless of whether SpawningKit is used to spawn an application with or without explicit SpawningKit support, and regardless of whether a wrapper is used and whether the application/wrapper can function as a preloader, SpawningKit asks the caller to supply a "start command" that tells it how to execute the wrapper or the application. SpawningKit then uses the handshaking procedure (see: "Overview of the spawning journey") to to communicate with the wrapper/application whether it should start in preloader mode or not.
+Regardless of whether SpawningKit is used to spawn an application with or without explicit SpawningKit support, and regardless of whether a wrapper is used and whether the application/wrapper can function as a preloader, SpawningKit asks the caller to supply a "start command" that tells it how to execute the wrapper or the application. SpawningKit then uses the handshaking procedure (see: "Overview of the spawning journey") to communicate with the wrapper/application whether it should start in preloader mode or not.
 
 ### Summary with examples
 
@@ -212,7 +212,7 @@ This is implemented in Handshake/Perform.h, in the HandshakePerform class.
 
 ### The SpawnEnvSetupper
 
-The first thing the subprocess does is executing the SpawnEnvSetupper (which is contained inside PassengerAgent and can be invoked through a specific argument). This program performs various basic preparation in the subprocess such as:
+The first thing the subprocess does is execute the SpawnEnvSetupper (which is contained inside PassengerAgent and can be invoked through a specific argument). This program performs various basic preparation in the subprocess such as:
 
  * Changing the current working directory to that of the application.
  * Setting environment variables, ulimits, etc.
