@@ -122,11 +122,11 @@ The journey looks like this when no preloader is used:
           |
         Fork subprocess   --------------> Before first exec
           |                                  |
-        Handshake                         Execute spawn env setupper (--before)
+        Handshake                         Execute SpawnEnvSetupper to setup spawn env (--before)
           |                                  |
         Finish                            Load OS shell (if option enabled)
                                              |
-                                          Execute spawn env setupper (--after)
+                                          Execute SpawnEnvSetupper (--after)
                                              |
                                           Execute wrapper (if applicable)
                                              |
@@ -146,11 +146,11 @@ The journey looks like this when starting a preloader:
            |
         Fork preloader   --------------> Before first exec
            |                                |
-        Handshake                        Execute spawn env setupper (--before)
+        Handshake                        Execute SpawnEnvSetupper to setup spawn env (--before)
            |                                |
         Finish                           Load OS shell (if option enabled)
                                             |
-                                         Execute spawn env setupper (--after)
+                                         Execute SpawnEnvSetupper (--after)
                                             |
                                          Execute wrapper in preloader mode
                                          (if applicable)
