@@ -84,7 +84,6 @@ namespace SpawnEnvSetupper {
 		Mode mode;
 		Json::Value args;
 		SpawningKit::JourneyStep step;
-		MonotonicTimeUsec startTime;
 	};
 
 } // namespace SpawnEnvSetupper
@@ -128,47 +127,29 @@ tryWriteFile(const StaticString &path, const StaticString &value) {
 }
 
 static void
-recordJourneyStepInProgress(const Context &context,
-	SpawningKit::JourneyStep step)
+recordJourneyStepBegin(const Context &context,
+	SpawningKit::JourneyStep step, SpawningKit::JourneyStepState state)
 {
 	string stepString = journeyStepToStringLowerCase(step);
-	string path = context.workDir + "/response/steps/" + stepString;
-	tryWriteFile(path + "/state", SpawningKit::journeyStepStateToString(SpawningKit::STEP_IN_PROGRESS));
+	string stepDir = context.workDir + "/response/steps/" + stepString;
+	tryWriteFile(stepDir + "/state", SpawningKit::journeyStepStateToString(state));
+	tryWriteFile(stepDir + "/begin_time_monotonic", doubleToString(
+		SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_10MSEC>() / 1000000.0));
 }
 
 static void
-recordJourneyStepComplete(const Context &context, SpawningKit::JourneyStep step,
-	SpawningKit::JourneyStepState state, MonotonicTimeUsec startTime)
+recordJourneyStepEnd(const Context &context,
+	SpawningKit::JourneyStep step, SpawningKit::JourneyStepState state)
 {
-	MonotonicTimeUsec now =
-		SystemTime::getMonotonicUsecWithGranularity<
-			SystemTime::GRAN_10MSEC>();
 	string stepString = journeyStepToStringLowerCase(step);
-	string path = context.workDir + "/response/steps/" + stepString;
-
-	try {
-		makeDirTree(path);
-	} catch (const FileSystemException &e) {
-		fprintf(stderr, "Warning: %s\n", e.what());
-		return;
+	string stepDir = context.workDir + "/response/steps/" + stepString;
+	tryWriteFile(stepDir + "/state", SpawningKit::journeyStepStateToString(state));
+	if (!fileExists(stepDir + "/begin_time") && !fileExists(stepDir + "/begin_time_monotonic")) {
+		tryWriteFile(stepDir + "/begin_time_monotonic", doubleToString(
+			SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_10MSEC>() / 1000000.0));
 	}
-
-	if (!tryWriteFile(path + "/state", SpawningKit::journeyStepStateToString(state))) {
-		return;
-	}
-	tryWriteFile(path + "/duration", toString((now - startTime) / 1000000.0));
-}
-
-static void
-recordJourneyStepPerformed(const Context &context) {
-	recordJourneyStepComplete(context, context.step, SpawningKit::STEP_PERFORMED,
-		context.startTime);
-}
-
-static void
-recordJourneyStepErrored(const Context &context) {
-	recordJourneyStepComplete(context, context.step, SpawningKit::STEP_ERRORED,
-		context.startTime);
+	tryWriteFile(stepDir + "/end_time_monotonic", doubleToString(
+		SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_10MSEC>() / 1000000.0));
 }
 
 static void
@@ -340,7 +321,8 @@ lookupUserGroup(const Context &context, uid_t *uid, struct passwd **userInfo,
 				args["user"].asCString(), strerror(e), e);
 			*uid = (uid_t) atoi(args["user"].asString());
 		} else {
-			recordJourneyStepErrored(context);
+			recordJourneyStepEnd(context, context.step,
+				SpawningKit::STEP_ERRORED);
 			recordErrorCategory(context.workDir,
 				SpawningKit::OPERATING_SYSTEM_ERROR);
 			recordAndPrintErrorSummary(context.workDir,
@@ -365,7 +347,8 @@ lookupUserGroup(const Context &context, uid_t *uid, struct passwd **userInfo,
 				args["group"].asCString(), strerror(e), e);
 			*gid = (gid_t) atoi(args["group"].asString());
 		} else {
-			recordJourneyStepErrored(context);
+			recordJourneyStepEnd(context, context.step,
+				SpawningKit::STEP_ERRORED);
 			recordErrorCategory(context.workDir,
 				SpawningKit::OPERATING_SYSTEM_ERROR);
 			recordAndPrintErrorSummary(context.workDir,
@@ -407,7 +390,8 @@ enterLveJail(const Context &context, const struct passwd *userInfo) {
 		if (!lveInitErr.empty()) {
 			lveInitErr = ": " + lveInitErr;
 		}
-		recordJourneyStepErrored(context);
+		recordJourneyStepEnd(context, context.step,
+			SpawningKit::STEP_ERRORED);
 		recordErrorCategory(context.workDir,
 			SpawningKit::INTERNAL_ERROR);
 		recordAndPrintErrorSummary(context.workDir,
@@ -423,7 +407,8 @@ enterLveJail(const Context &context, const struct passwd *userInfo) {
 	string jailErr;
 	int ret = liblve.jail(userInfo, jailErr);
 	if (ret < 0) {
-		recordJourneyStepErrored(context);
+		recordJourneyStepEnd(context, context.step,
+			SpawningKit::STEP_ERRORED);
 		recordErrorCategory(context.workDir,
 			SpawningKit::INTERNAL_ERROR);
 		recordAndPrintErrorSummary(context.workDir,
@@ -452,7 +437,8 @@ switchGroup(const Context &context, uid_t uid, const struct passwd *userInfo, gi
 				groups, &ngroups);
 			if (ret == -1) {
 				int e = errno;
-				recordJourneyStepErrored(context);
+				recordJourneyStepEnd(context, context.step,
+					SpawningKit::STEP_ERRORED);
 				recordErrorCategory(context.workDir,
 					SpawningKit::OPERATING_SYSTEM_ERROR);
 				recordAndPrintErrorSummary(context.workDir,
@@ -468,7 +454,8 @@ switchGroup(const Context &context, uid_t uid, const struct passwd *userInfo, gi
 				gidset.reset(new gid_t[ngroups]);
 				if (setgroups(ngroups, gidset.get()) == -1) {
 					int e = errno;
-					recordJourneyStepErrored(context);
+					recordJourneyStepEnd(context, context.step,
+						SpawningKit::STEP_ERRORED);
 					recordErrorCategory(context.workDir,
 						SpawningKit::OPERATING_SYSTEM_ERROR);
 					recordAndPrintErrorSummary(context.workDir,
@@ -483,7 +470,8 @@ switchGroup(const Context &context, uid_t uid, const struct passwd *userInfo, gi
 
 		if (!setgroupsCalled && initgroups(userInfo->pw_name, gid) == -1) {
 			int e = errno;
-			recordJourneyStepErrored(context);
+			recordJourneyStepEnd(context, context.step,
+				SpawningKit::STEP_ERRORED);
 			recordErrorCategory(context.workDir,
 				SpawningKit::OPERATING_SYSTEM_ERROR);
 			recordAndPrintErrorSummary(context.workDir,
@@ -497,7 +485,8 @@ switchGroup(const Context &context, uid_t uid, const struct passwd *userInfo, gi
 
 	if (setgid(gid) == -1) {
 		int e = errno;
-		recordJourneyStepErrored(context);
+		recordJourneyStepEnd(context, context.step,
+			SpawningKit::STEP_ERRORED);
 		recordErrorCategory(context.workDir,
 			SpawningKit::OPERATING_SYSTEM_ERROR);
 		recordAndPrintErrorSummary(context.workDir,
@@ -512,7 +501,8 @@ static void
 switchUser(const Context &context, uid_t uid, const struct passwd *userInfo) {
 	if (setuid(uid) == -1) {
 		int e = errno;
-		recordJourneyStepErrored(context);
+		recordJourneyStepEnd(context, context.step,
+			SpawningKit::STEP_ERRORED);
 		recordErrorCategory(context.workDir,
 			SpawningKit::OPERATING_SYSTEM_ERROR);
 		recordAndPrintErrorSummary(context.workDir,
@@ -588,7 +578,8 @@ setCurrentWorkingDirectory(const Context &context) {
 			memcpy(parent, it->c_str(), end - it->c_str());
 			parent[end - it->c_str()] = '\0';
 
-			recordJourneyStepErrored(context);
+			recordJourneyStepEnd(context, context.step,
+				SpawningKit::STEP_ERRORED);
 			recordErrorCategory(context.workDir,
 				SpawningKit::OPERATING_SYSTEM_ERROR);
 			recordAndPrintErrorSummary(context.workDir,
@@ -616,7 +607,8 @@ setCurrentWorkingDirectory(const Context &context) {
 			exit(1);
 		} else if (ret == -1) {
 			int e = errno;
-			recordJourneyStepErrored(context);
+			recordJourneyStepEnd(context, context.step,
+				SpawningKit::STEP_ERRORED);
 			recordErrorCategory(context.workDir,
 				SpawningKit::OPERATING_SYSTEM_ERROR);
 			recordAndPrintErrorSummary(context.workDir,
@@ -630,7 +622,8 @@ setCurrentWorkingDirectory(const Context &context) {
 	ret = chdir(appRoot.c_str());
 	if (ret != 0) {
 		int e = errno;
-		recordJourneyStepErrored(context);
+		recordJourneyStepEnd(context, context.step,
+			SpawningKit::STEP_ERRORED);
 		recordErrorCategory(context.workDir,
 			SpawningKit::OPERATING_SYSTEM_ERROR);
 		recordAndPrintErrorSummary(context.workDir,
@@ -805,17 +798,16 @@ execNextCommand(const Context &context, const string &shell)
 	}
 	commandArgs.push_back(NULL);
 
-	MonotonicTimeUsec nextStepStartTime =
-		SystemTime::getMonotonicUsecWithGranularity<
-			SystemTime::GRAN_10MSEC>();
-	recordJourneyStepPerformed(context);
-	recordJourneyStepInProgress(context, nextJourneyStep);
+	recordJourneyStepEnd(context, context.step,
+		SpawningKit::STEP_PERFORMED);
+	recordJourneyStepBegin(context, nextJourneyStep,
+		SpawningKit::STEP_IN_PROGRESS);
 
 	execvp(commandArgs[0], (char * const *) &commandArgs[0]);
 
 	int e = errno;
-	recordJourneyStepComplete(context, nextJourneyStep,
-		SpawningKit::STEP_ERRORED, nextStepStartTime);
+	recordJourneyStepEnd(context, nextJourneyStep,
+		SpawningKit::STEP_ERRORED);
 	recordErrorCategory(context.workDir, SpawningKit::OPERATING_SYSTEM_ERROR);
 	recordAndPrintErrorSummary(context.workDir,
 		"Unable to execute command '" + commandArgsToString(commandArgs)
@@ -847,14 +839,15 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 		(context.mode == BEFORE_MODE)
 		? SpawningKit::SUBPROCESS_SPAWN_ENV_SETUPPER_BEFORE_SHELL
 		: SpawningKit::SUBPROCESS_SPAWN_ENV_SETUPPER_AFTER_SHELL;
-	context.startTime = SystemTime::getMonotonicUsecWithGranularity<
-		SystemTime::GRAN_10MSEC>();
 
 	setenv("IN_PASSENGER", "1", 1);
 	setenv("PASSENGER_SPAWN_WORK_DIR", context.workDir.c_str(), 1);
-	recordJourneyStepComplete(context, SpawningKit::SUBPROCESS_BEFORE_FIRST_EXEC,
-		SpawningKit::STEP_PERFORMED, context.startTime);
-	recordJourneyStepInProgress(context, context.step);
+	if (context.mode == BEFORE_MODE) {
+		recordJourneyStepEnd(context, SpawningKit::SUBPROCESS_BEFORE_FIRST_EXEC,
+			SpawningKit::STEP_PERFORMED);
+	}
+	recordJourneyStepBegin(context, context.step,
+		SpawningKit::STEP_IN_PROGRESS);
 
 	try {
 		context.args = readArgsJson(context.workDir);
@@ -893,8 +886,11 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 				dumpUserInfo(context.workDir);
 			}
 		} else if (executedThroughShell(context)) {
-			recordJourneyStepComplete(context, SpawningKit::SUBPROCESS_OS_SHELL,
-				SpawningKit::STEP_PERFORMED, context.startTime);
+			recordJourneyStepEnd(context, SpawningKit::SUBPROCESS_OS_SHELL,
+				SpawningKit::STEP_PERFORMED);
+		} else {
+			recordJourneyStepEnd(context, SpawningKit::SUBPROCESS_OS_SHELL,
+				SpawningKit::STEP_NOT_STARTED);
 		}
 
 		setCurrentWorkingDirectory(context);
@@ -910,7 +906,8 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 	} catch (const oxt::tracable_exception &e) {
 		fprintf(stderr, "Error: %s\n%s\n",
 			e.what(), e.backtrace().c_str());
-		recordJourneyStepErrored(context);
+		recordJourneyStepEnd(context, context.step,
+			SpawningKit::STEP_ERRORED);
 		recordErrorCategory(context.workDir,
 			SpawningKit::inferErrorCategoryFromAnotherException(
 				e, context.step));
@@ -918,7 +915,8 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 		return 1;
 	} catch (const std::exception &e) {
 		fprintf(stderr, "Error: %s\n", e.what());
-		recordJourneyStepErrored(context);
+		recordJourneyStepEnd(context, context.step,
+			SpawningKit::STEP_ERRORED);
 		recordErrorCategory(context.workDir,
 			SpawningKit::inferErrorCategoryFromAnotherException(
 				e, context.step));
@@ -927,7 +925,8 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 	}
 
 	// Should never be reached
-	recordJourneyStepErrored(context);
+	recordJourneyStepEnd(context, context.step,
+		SpawningKit::STEP_ERRORED);
 	recordAndPrintErrorSummary(context.workDir,
 		"*** BUG IN SpawnEnvSetupper ***: end of main() reached",
 		true);

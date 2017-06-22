@@ -54,27 +54,19 @@ def read_startup_arguments():
 	with open(path, 'r') as f:
 		options = json.load(f)
 
-def record_journey_step_in_progress(step):
+def record_journey_step_begin(step, state):
 	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
-	path = work_dir + '/response/steps/' + step.lower() + '/state'
-	try_write_file(path, 'STEP_IN_PROGRESS')
-	return { 'step': step, 'begin_time': time.time() }
+	step_dir = work_dir + '/response/steps/' + step.lower()
+	try_write_file(step_dir + '/state', state)
+	try_write_file(step_dir + '/begin_time', str(time.time()))
 
-def record_journey_step_complete(info, state):
+def record_journey_step_end(step, state):
 	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
-
-	path = work_dir + '/response/steps/' + info['step'].lower() + '/state'
-	try_write_file(path, state)
-
-	path = work_dir + '/response/steps/' + info['step'].lower() + '/duration'
-	duration = time.time() - info['begin_time']
-	try_write_file(path, str(duration))
-
-def record_journey_step_performed(info):
-	record_journey_step_complete(info, 'STEP_PERFORMED')
-
-def record_journey_step_errored(info):
-	record_journey_step_complete(info, 'STEP_ERRORED')
+	step_dir = work_dir + '/response/steps/' + step.lower()
+	try_write_file(step_dir + '/state', state)
+	if not os.path.exists(step_dir + '/begin_time') and not os.path.exists(step_dir + '/begin_time_monotonic'):
+		try_write_file(step_dir + '/begin_time', str(time.time()))
+	try_write_file(step_dir + '/end_time', str(time.time()))
 
 def load_app():
 	global options
@@ -358,32 +350,40 @@ class RequestHandler:
 
 if __name__ == "__main__":
 	initialize_logging()
-	record_journey_step_performed({ 'step': 'SUBPROCESS_EXEC_WRAPPER', 'begin_time': time.time() })
-	step_info = record_journey_step_in_progress('SUBPROCESS_WRAPPER_PREPARATION')
-	read_startup_arguments()
-	record_journey_step_performed(step_info)
-
-	step_info = record_journey_step_in_progress('SUBPROCESS_APP_LOAD_OR_EXEC')
+	record_journey_step_end('SUBPROCESS_EXEC_WRAPPER', 'STEP_PERFORMED')
+	record_journey_step_begin('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_IN_PROGRESS')
 	try:
-		app_module = load_app()
-	except Exception as e:
-		record_journey_step_errored(step_info)
+		read_startup_arguments()
+	except Exception:
+		record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_ERRORED')
 		raise
 	else:
-		record_journey_step_performed(step_info)
+		record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED')
 
-	step_info = record_journey_step_in_progress('SUBPROCESS_LISTEN')
+
+	record_journey_step_begin('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_IN_PROGRESS')
+	try:
+		app_module = load_app()
+	except Exception:
+		record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_ERRORED')
+		raise
+	else:
+		record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_PERFORMED')
+
+
+	record_journey_step_begin('SUBPROCESS_LISTEN', 'STEP_IN_PROGRESS')
 	try:
 		socket_filename, server_socket = create_server_socket()
 		install_signal_handlers()
 		handler = RequestHandler(server_socket, sys.stdin, app_module.application)
 		advertise_sockets(socket_filename)
 		advertise_readiness()
-	except Exception as e:
-		record_journey_step_errored(step_info)
+	except Exception:
+		record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_ERRORED')
 		raise
 	else:
-		record_journey_step_performed(step_info)
+		record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_PERFORMED')
+
 
 	handler.main_loop()
 	try:

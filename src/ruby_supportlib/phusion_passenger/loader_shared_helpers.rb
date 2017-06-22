@@ -30,7 +30,7 @@ module PhusionPassenger
     extend self
 
     # To be called by the (pre)loader as soon as possible.
-    def init(main_app, step_info)
+    def init(main_app)
       @main_app = main_app
       options = read_startup_arguments
 
@@ -58,7 +58,7 @@ module PhusionPassenger
 
       options
     rescue Exception => e
-      record_journey_step_errored(step_info)
+      record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_ERRORED')
       record_and_print_exception(e)
       exit exit_code_for_exception(e)
     end
@@ -352,31 +352,24 @@ module PhusionPassenger
 
     ##### Journey recording #####
 
-    def record_journey_step_in_progress(step)
-      @main_app.record_journey_step_in_progress(step)
+    def record_journey_step_begin(step, state)
+      @main_app.record_journey_step_begin(step, state)
     end
 
-    def record_journey_step_complete(info, state)
-      @main_app.record_journey_step_complete(info, state)
-    end
-
-    def record_journey_step_performed(info)
-      @main_app.record_journey_step_performed(info)
-    end
-
-    def record_journey_step_errored(info)
-      record_journey_step_complete(info, 'STEP_ERRORED')
+    def record_journey_step_end(step, state)
+      @main_app.record_journey_step_end(step, state)
     end
 
     def run_block_and_record_step_progress(step)
-      step_info = record_journey_step_in_progress(step)
+      record_journey_step_begin(step, 'STEP_IN_PROGRESS')
       begin
         yield
       rescue Exception => e
-        record_journey_step_errored(step_info)
+        record_journey_step_end(step, 'STEP_ERRORED')
         raise e
+      else
+        record_journey_step_end(step, 'STEP_PERFORMED')
       end
-      record_journey_step_performed(step_info)
     end
 
 

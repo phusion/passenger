@@ -206,6 +206,13 @@ toString(const vector<StaticString> &vec) {
 }
 
 string
+doubleToString(double value) {
+	char buf[64];
+	int ret = snprintf(buf, sizeof(buf), "%f", value);
+	return string(buf, std::min<size_t>(ret, sizeof(buf) - 1));
+}
+
+string
 pointerToIntString(void *pointer) {
 	// Use wierd union construction to avoid compiler warnings.
 	if (sizeof(void *) == sizeof(unsigned int)) {

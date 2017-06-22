@@ -45,8 +45,8 @@ module PhusionPassenger
         abort "This program may only be invoked from Passenger (error: $PASSENGER_SPAWN_WORK_DIR not set)."
       end
 
-      record_journey_step_performed(:step => 'SUBPROCESS_EXEC_WRAPPER', :begin_time => Time.now)
-      step_info = record_journey_step_in_progress('SUBPROCESS_WRAPPER_PREPARATION')
+      record_journey_step_end('SUBPROCESS_EXEC_WRAPPER', 'STEP_PERFORMED')
+      record_journey_step_begin('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_IN_PROGRESS')
 
       ruby_libdir = File.read("#{work_dir}/args/ruby_libdir").strip
       passenger_root = File.read("#{work_dir}/args/passenger_root").strip
@@ -57,8 +57,6 @@ module PhusionPassenger
       PhusionPassenger.require_passenger_lib 'preloader_shared_helpers'
       PhusionPassenger.require_passenger_lib 'utils/json'
       require 'socket'
-
-      step_info
     end
 
     def self.try_write_file(path, contents)
@@ -71,26 +69,19 @@ module PhusionPassenger
       end
     end
 
-    def self.record_journey_step_in_progress(step)
+    def self.record_journey_step_begin(step, state)
       dir = ENV['PASSENGER_SPAWN_WORK_DIR']
-      path = "#{dir}/response/steps/#{step.downcase}/state"
-      try_write_file(path, 'STEP_IN_PROGRESS')
-      { :step => step, :begin_time => Time.now }
+      step_dir = "#{dir}/response/steps/#{step.downcase}"
+      try_write_file("#{step_dir}/begin_time", Time.now.to_f)
     end
 
-    def self.record_journey_step_complete(info, state)
+    def self.record_journey_step_end(step, state)
       dir = ENV['PASSENGER_SPAWN_WORK_DIR']
-
-      path = "#{dir}/response/steps/#{info[:step].downcase}/state"
-      try_write_file(path, state)
-
-      path = "#{dir}/response/steps/#{info[:step].downcase}/duration"
-      duration = Time.now - info[:begin_time]
-      try_write_file(path, duration.to_s)
-    end
-
-    def self.record_journey_step_performed(info)
-      record_journey_step_complete(info, 'STEP_PERFORMED')
+      step_dir = "#{dir}/response/steps/#{step.downcase}"
+      if !File.exist?("#{step_dir}/begin_time") && !File.exist?("#{step_dir}/begin_time_monotonic")
+        try_write_file("#{step_dir}/begin_time", Time.now.to_f)
+      end
+      try_write_file("#{step_dir}/end_time", Time.now.to_f)
     end
 
     def self.preload_app
@@ -181,9 +172,10 @@ module PhusionPassenger
     ################## Main code ##################
 
 
-    step_info = init_passenger
-    @@options = PreloaderSharedHelpers.init(self, step_info)
-    LoaderSharedHelpers.record_journey_step_performed(step_info)
+    init_passenger
+    @@options = PreloaderSharedHelpers.init(self)
+    LoaderSharedHelpers.record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION',
+      'STEP_PERFORMED')
 
     LoaderSharedHelpers.run_block_and_record_step_progress('SUBPROCESS_APP_LOAD_OR_EXEC') do
       preload_app

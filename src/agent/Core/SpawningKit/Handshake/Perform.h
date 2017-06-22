@@ -1048,18 +1048,18 @@ private:
 		string value = strip(readAll(stepDir + "/state"));
 		JourneyStepState state = stringToJourneyStepState(value);
 
-		if (session.journey.getStepInfo(step).state == state) {
-			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
-				<< ": state already equal to " << value);
-			return;
-		}
-
 		P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 			<< ": setting state to " << value);
 
 		try {
 			UPDATE_TRACE_POINT();
 			switch (state) {
+			case STEP_NOT_STARTED:
+				// SpawnEnvSetupper explicitly sets the SUBPROCESS_OS_SHELL
+				// step state to STEP_NOT_STARTED if it determines that it
+				// should not execute the next command through the shell.
+				session.journey.setStepNotStarted(step, true);
+				break;
 			case STEP_IN_PROGRESS:
 				session.journey.setStepInProgress(step, true);
 				break;
@@ -1251,15 +1251,57 @@ private:
 		}
 
 		UPDATE_TRACE_POINT();
-		if (fileExists(stepDir + "/duration")) {
-			value = readAll(stepDir + "/duration");
-			unsigned long long usecDuration = atof(value.c_str()) * 1000000;
+		if (fileExists(stepDir + "/begin_time_monotonic")) {
+			value = readAll(stepDir + "/begin_time_monotonic");
+			MonotonicTimeUsec beginTimeMonotonic = atof(value.c_str()) * 1000000;
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
-				<< ": duration is \"" << cEscapeString(value) << "\"");
-			session.journey.setStepExecutionDuration(step, usecDuration);
+				<< ": monotonic begin time is \"" << cEscapeString(value) << "\"");
+			session.journey.setStepBeginTime(step, beginTimeMonotonic);
+		} else if (fileExists(stepDir + "/begin_time")) {
+			value = readAll(stepDir + "/begin_time");
+			unsigned long long beginTime = atof(value.c_str()) * 1000000;
+			MonotonicTimeUsec beginTimeMonotonic = usecTimestampToMonoTime(beginTime);
+			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
+				<< ": begin time is \"" << cEscapeString(value) << "\", monotonic conversion is "
+				<< doubleToString(beginTimeMonotonic / 1000000.0));
+			session.journey.setStepBeginTime(step, beginTimeMonotonic);
 		} else {
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
-				<< ": no duration information known");
+				<< ": no begin time known");
+		}
+
+		UPDATE_TRACE_POINT();
+		if (fileExists(stepDir + "/end_time_monotonic")) {
+			value = readAll(stepDir + "/end_time_monotonic");
+			MonotonicTimeUsec endTimeMonotonic = atof(value.c_str()) * 1000000;
+			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
+				<< ": monotonic end time is \"" << cEscapeString(value) << "\"");
+			session.journey.setStepEndTime(step, endTimeMonotonic);
+		} else if (fileExists(stepDir + "/end_time")) {
+			value = readAll(stepDir + "/end_time");
+			unsigned long long endTime = atof(value.c_str()) * 1000000;
+			MonotonicTimeUsec endTimeMonotonic = usecTimestampToMonoTime(endTime);
+			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
+				<< ": end time is \"" << cEscapeString(value) << "\", monotonic conversion is "
+				<< doubleToString(endTimeMonotonic / 1000000.0));
+			session.journey.setStepEndTime(step, endTimeMonotonic);
+		} else {
+			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
+				<< ": no end time known");
+		}
+	}
+
+	static MonotonicTimeUsec usecTimestampToMonoTime(unsigned long long timestamp) {
+		unsigned long long now = SystemTime::getUsec();
+		MonotonicTimeUsec nowMono = SystemTime::getMonotonicUsec();
+		unsigned long long diff;
+
+		if (now > nowMono) {
+			diff = now - nowMono;
+			return timestamp - diff;
+		} else {
+			diff = nowMono - now;
+			return timestamp + diff;
 		}
 	}
 

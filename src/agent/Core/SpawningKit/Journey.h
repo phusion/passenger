@@ -36,6 +36,8 @@
 
 #include <Logging.h>
 #include <StaticString.h>
+#include <Utils/SystemTime.h>
+#include <Utils/JsonUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/SystemTime.h>
 
@@ -123,30 +125,58 @@ inline OXT_PURE string journeyStepToStringLowerCase(JourneyStep step);
 inline OXT_PURE StaticString journeyStepStateToString(JourneyStepState state);
 inline OXT_PURE JourneyStepState stringToJourneyStepState(const StaticString &value);
 
+inline OXT_PURE JourneyStep getFirstCoreJourneyStep() { return SPAWNING_KIT_PREPARATION; }
+inline OXT_PURE JourneyStep getLastCoreJourneyStep() { return SPAWNING_KIT_FINISH; }
+inline OXT_PURE JourneyStep getFirstPreloaderJourneyStep() { return PRELOADER_PREPARATION; }
+inline OXT_PURE JourneyStep getLastPreloaderJourneyStep() { return PRELOADER_FINISH; }
 inline OXT_PURE JourneyStep getFirstSubprocessJourneyStep() { return SUBPROCESS_BEFORE_FIRST_EXEC; }
 inline OXT_PURE JourneyStep getLastSubprocessJourneyStep() { return SUBPROCESS_FINISH; }
 
 
-struct JourneyStepInfo {
+class JourneyStepInfo {
+private:
+	MonotonicTimeUsec getEndTime(const JourneyStepInfo *nextStepInfo) const {
+		if (nextStepInfo != NULL && nextStepInfo->beginTime != 0) {
+			return nextStepInfo->beginTime;
+		} else {
+			return endTime;
+		}
+	}
+
+public:
+	JourneyStep step, nextStep;
 	JourneyStepState state;
-	MonotonicTimeUsec startTime;
+	MonotonicTimeUsec beginTime;
 	MonotonicTimeUsec endTime;
 
-	JourneyStepInfo(JourneyStepState _state = STEP_NOT_STARTED)
-		: state(_state),
-		  startTime(0),
+	JourneyStepInfo(JourneyStep _step, JourneyStepState _state = STEP_NOT_STARTED)
+		: step(_step),
+		  nextStep(UNKNOWN_JOURNEY_STEP),
+		  state(_state),
+		  beginTime(0),
 		  endTime(0)
 		{ }
 
-	unsigned long long usecDuration() const {
-		return endTime - startTime;
+	unsigned long long usecDuration(const JourneyStepInfo *nextStepInfo) const {
+		if (getEndTime(nextStepInfo) >= beginTime) {
+			return getEndTime(nextStepInfo) - beginTime;
+		} else {
+			return 0;
+		}
 	}
 
-	Json::Value inspectAsJson(JourneyStep step) const {
+	Json::Value inspectAsJson(const JourneyStepInfo *nextStepInfo, MonotonicTimeUsec monoNow,
+		unsigned long long now) const
+	{
 		Json::Value doc;
+
 		doc["state"] = journeyStepStateToString(state).toString();
+		if (beginTime != 0) {
+			doc["begin_time"] = monoTimeToJson(beginTime, monoNow, now);
+		}
 		if (endTime != 0) {
-			doc["duration"] = usecDuration() / 1000000.0;
+			doc["end_time"] = monoTimeToJson(endTime, monoNow, now);
+			doc["duration"] = usecDuration(nextStepInfo) / 1000000.0;
 		}
 		return doc;
 	}
@@ -168,17 +198,23 @@ private:
 	bool usingWrapper;
 	Map steps;
 
-	void insertStep(JourneyStep step) {
-		steps.insert(make_pair(step, JourneyStepInfo()));
+	void insertStep(JourneyStep step, bool first = false) {
+		steps.insert(make_pair(step, JourneyStepInfo(step)));
+		if (!first) {
+			Map::iterator prev = steps.end();
+			prev--;
+			prev--;
+			prev->second.nextStep = step;
+		}
 	}
 
 	void fillInStepsForSpawnDirectlyJourney() {
-		insertStep(SPAWNING_KIT_PREPARATION);
+		insertStep(SPAWNING_KIT_PREPARATION, true);
 		insertStep(SPAWNING_KIT_FORK_SUBPROCESS);
 		insertStep(SPAWNING_KIT_HANDSHAKE_PERFORM);
 		insertStep(SPAWNING_KIT_FINISH);
 
-		insertStep(SUBPROCESS_BEFORE_FIRST_EXEC);
+		insertStep(SUBPROCESS_BEFORE_FIRST_EXEC, true);
 		insertStep(SUBPROCESS_SPAWN_ENV_SETUPPER_BEFORE_SHELL);
 		insertStep(SUBPROCESS_OS_SHELL);
 		insertStep(SUBPROCESS_SPAWN_ENV_SETUPPER_AFTER_SHELL);
@@ -192,12 +228,12 @@ private:
 	}
 
 	void fillInStepsForPreloaderStartJourney() {
-		insertStep(SPAWNING_KIT_PREPARATION);
+		insertStep(SPAWNING_KIT_PREPARATION, true);
 		insertStep(SPAWNING_KIT_FORK_SUBPROCESS);
 		insertStep(SPAWNING_KIT_HANDSHAKE_PERFORM);
 		insertStep(SPAWNING_KIT_FINISH);
 
-		insertStep(SUBPROCESS_BEFORE_FIRST_EXEC);
+		insertStep(SUBPROCESS_BEFORE_FIRST_EXEC, true);
 		insertStep(SUBPROCESS_SPAWN_ENV_SETUPPER_BEFORE_SHELL);
 		insertStep(SUBPROCESS_OS_SHELL);
 		insertStep(SUBPROCESS_SPAWN_ENV_SETUPPER_AFTER_SHELL);
@@ -211,7 +247,7 @@ private:
 	}
 
 	void fillInStepsForSpawnThroughPreloaderJourney() {
-		insertStep(SPAWNING_KIT_PREPARATION);
+		insertStep(SPAWNING_KIT_PREPARATION, true);
 		insertStep(SPAWNING_KIT_CONNECT_TO_PRELOADER);
 		insertStep(SPAWNING_KIT_SEND_COMMAND_TO_PRELOADER);
 		insertStep(SPAWNING_KIT_READ_RESPONSE_FROM_PRELOADER);
@@ -220,12 +256,12 @@ private:
 		insertStep(SPAWNING_KIT_HANDSHAKE_PERFORM);
 		insertStep(SPAWNING_KIT_FINISH);
 
-		insertStep(PRELOADER_PREPARATION);
+		insertStep(PRELOADER_PREPARATION, true);
 		insertStep(PRELOADER_FORK_SUBPROCESS);
 		insertStep(PRELOADER_SEND_RESPONSE);
 		insertStep(PRELOADER_FINISH);
 
-		insertStep(SUBPROCESS_PREPARE_AFTER_FORKING_FROM_PRELOADER);
+		insertStep(SUBPROCESS_PREPARE_AFTER_FORKING_FROM_PRELOADER, true);
 		insertStep(SUBPROCESS_LISTEN);
 		insertStep(SUBPROCESS_FINISH);
 	}
@@ -297,7 +333,8 @@ public:
 		JourneyStepInfo &info = getStepInfoMutable(step);
 		if (info.state == STEP_NOT_STARTED || info.state == STEP_IN_PROGRESS || force) {
 			info.state = STEP_NOT_STARTED;
-			info.startTime = 0;
+			info.beginTime = 0;
+			info.endTime = 0;
 		} else {
 			throw RuntimeException("Unable to change state for journey step "
 				+ journeyStepToString(step) + " because it wasn't already in progress");
@@ -312,7 +349,7 @@ public:
 			info.state = STEP_IN_PROGRESS;
 			// When `force` is true, we don't want to overwrite the previous endTime.
 			if (info.endTime == 0) {
-				info.startTime =
+				info.beginTime =
 					SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_10MSEC>();
 			}
 		} else {
@@ -332,8 +369,8 @@ public:
 			if (info.endTime == 0) {
 				info.endTime =
 					SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_10MSEC>();
-				if (info.startTime == 0) {
-					info.startTime = info.endTime;
+				if (info.beginTime == 0) {
+					info.beginTime = info.endTime;
 				}
 			}
 		} else {
@@ -352,8 +389,8 @@ public:
 			if (info.endTime == 0) {
 				info.endTime =
 					SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_10MSEC>();
-				if (info.startTime == 0) {
-					info.startTime = info.endTime;
+				if (info.beginTime == 0) {
+					info.beginTime = info.endTime;
 				}
 			}
 		} else {
@@ -362,30 +399,42 @@ public:
 		}
 	}
 
-	void setStepExecutionDuration(JourneyStep step, unsigned long long usecDuration) {
+	void setStepBeginTime(JourneyStep step, MonotonicTimeUsec timestamp) {
 		JourneyStepInfo &info = getStepInfoMutable(step);
-		info.startTime = 0;
-		info.endTime = usecDuration;
+		info.beginTime = timestamp;
+	}
+
+	void setStepEndTime(JourneyStep step, MonotonicTimeUsec timestamp) {
+		JourneyStepInfo &info = getStepInfoMutable(step);
+		info.endTime = timestamp;
 	}
 
 	void reset() {
 		Map::iterator it, end = steps.end();
 		for (it = steps.begin(); it != end; it++) {
 			it->second.state = STEP_NOT_STARTED;
-			it->second.startTime = 0;
+			it->second.beginTime = 0;
 			it->second.endTime = 0;
 		}
 	}
 
 	Json::Value inspectAsJson() const {
 		Json::Value doc, steps;
+		MonotonicTimeUsec monoNow = SystemTime::getMonotonicUsec();
+		unsigned long long now = SystemTime::getUsec();
+
 		doc["type"] = journeyTypeToString(type).toString();
 
 		Map::const_iterator it, end = this->steps.end();
 		for (it = this->steps.begin(); it != end; it++) {
 			const JourneyStep step = it->first;
 			const JourneyStepInfo &info = it->second;
-			steps[journeyStepToString(step).toString()] = info.inspectAsJson(step);
+			const JourneyStepInfo *nextStepInfo = NULL;
+			if (info.nextStep != UNKNOWN_JOURNEY_STEP) {
+				nextStepInfo = &this->steps.find(info.nextStep)->second;
+			}
+			steps[journeyStepToString(step).toString()] =
+				info.inspectAsJson(nextStepInfo, monoNow, now);
 		}
 		doc["steps"] = steps;
 

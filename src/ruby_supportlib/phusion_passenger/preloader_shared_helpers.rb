@@ -34,8 +34,8 @@ module PhusionPassenger
   module PreloaderSharedHelpers
     extend self
 
-    def init(main_app, step_info)
-      options = LoaderSharedHelpers.init(main_app, step_info)
+    def init(main_app)
+      options = LoaderSharedHelpers.init(main_app)
 
       $0 = "#{SHORT_PROGRAM_NAME} AppPreloader: #{options['app_root']}"
 

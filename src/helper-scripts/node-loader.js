@@ -128,10 +128,10 @@ module.isApplicationLoader = true; // https://groups.google.com/forum/#!topic/co
 global.PhusionPassenger = exports.PhusionPassenger = new EventEmitter();
 var stdinReader = new LineReader(process.stdin);
 
-recordJourneyStepPerformed({ step: 'SUBPROCESS_EXEC_WRAPPER', beginTime: new Date() });
-var stepInfo = recordJourneyStepInProgress('SUBPROCESS_WRAPPER_PREPARATION');
+recordJourneyStepEnd('SUBPROCESS_EXEC_WRAPPER', 'STEP_PERFORMED');
+recordJourneyStepBegin('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_IN_PROGRESS');
 var options = readStartupArguments();
-setupEnvironment(options, stepInfo);
+setupEnvironment(options);
 
 
 function tryWriteFile(path, contents) {
@@ -142,31 +142,21 @@ function tryWriteFile(path, contents) {
 	}
 }
 
-function recordJourneyStepInProgress(step) {
+function recordJourneyStepBegin(step, state) {
 	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR'];
-	var path = workDir + '/response/steps/' + step.toLowerCase() + '/state';
-	tryWriteFile(path, 'STEP_IN_PROGRESS');
-	return { step: step, beginTime: new Date() };
+	var stepDir = workDir + '/response/steps/' + step.toLowerCase();
+	tryWriteFile(stepDir + '/state', 'STEP_IN_PROGRESS');
+	tryWriteFile(stepDir + '/begin_time', Date.now() / 1000);
 }
 
-function recordJourneyStepComplete(info, state) {
-	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR']
-	var path, duration;
-
-	path = workDir + '/response/steps/' + info.step.toLowerCase() + '/state';
-	tryWriteFile(path, state);
-
-	path = workDir + '/response/steps/' + info.step.toLowerCase() + '/duration';
-	duration = (new Date() - info.beginTime) / 1000;
-	tryWriteFile(path, String(duration));
-}
-
-function recordJourneyStepPerformed(info) {
-	recordJourneyStepComplete(info, 'STEP_PERFORMED');
-}
-
-function record_journey_step_errored(info) {
-	recordJourneyStepComplete(info, 'STEP_ERRORED');
+function recordJourneyStepEnd(step, state) {
+	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR'];
+	var stepDir = workDir + '/response/steps/' + step.toLowerCase();
+	tryWriteFile(stepDir + '/state', 'STEP_IN_PROGRESS');
+	if (!fs.existsSync(stepDir + '/begin_time') && !fs.existsSync(stepDir + '/begin_time_monotonic')) {
+		tryWriteFile(stepDir + '/begin_time', Date.now() / 1000);
+	}
+	tryWriteFile(stepDir + '/end_time', Date.now() / 1000);
 }
 
 function readStartupArguments() {
@@ -198,7 +188,7 @@ function passengerToWinstonLogLevel(passengerLogLevel) {
 	return "none";
 }
 
-function setupEnvironment(options, stepInfo) {
+function setupEnvironment(options) {
 	PhusionPassenger.options = options;
 	PhusionPassenger.configure = configure;
 	PhusionPassenger._appInstalled = false;
@@ -237,8 +227,8 @@ function setupEnvironment(options, stepInfo) {
 	process.stdin.on('end', shutdown);
 	process.stdin.resume();
 
-	recordJourneyStepPerformed(stepInfo);
-	PhusionPassenger.stepInfo = recordJourneyStepInProgress('SUBPROCESS_APP_LOAD_OR_EXEC');
+	recordJourneyStepEnd('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED');
+	recordJourneyStepBegin('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_IN_PROGRESS');
 	loadApplication();
 
 	if (ustLog.isEnabled()) {
@@ -350,9 +340,8 @@ function installServer() {
 		PhusionPassenger._appInstalled = true;
 		PhusionPassenger._server = server;
 
-		// Mark SUBPROCESS_APP_LOAD_OR_EXEC step as finished.
-		recordJourneyStepPerformed(PhusionPassenger.stepInfo);
-		PhusionPassenger.stepInfo = recordJourneyStepInProgress('SUBPROCESS_LISTEN');
+		recordJourneyStepEnd('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_PERFORMED');
+		recordJourneyStepBegin('SUBPROCESS_LISTEN', 'STEP_IN_PROGRESS');
 
 		// Ensure that req.connection.remoteAddress and remotePort return something
 		// instead of undefined. Apps like Etherpad expect it.
@@ -394,9 +383,7 @@ function listenAndMaybeInstall(port) {
 }
 
 function finalizeStartup() {
-	// Mark SUBPROCESS_LISTEN step as finished.
-	recordJourneyStepPerformed(PhusionPassenger.stepInfo);
-	delete PhusionPassenger.stepInfo;
+	recordJourneyStepEnd('SUBPROCESS_LISTEN', 'STEP_PERFORMED');
 
 	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR'];
 

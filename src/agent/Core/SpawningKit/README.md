@@ -191,7 +191,7 @@ A journey consists of a few parallel actors, with each actor having multiple ste
  * Step has already been performed successfully. Will be visualized with a green tick.
  * Step has failed. Will be visualized with a red mark.
 
-Steps that have performed successfully or failed also have an associated duration time.
+Steps that have performed successfully or failed also have an associated begin time. The duration of each step is inferred from the begin time of that step, vs either the end time of that step or (if available) the begin time of the next step.
 
 ### The preparation and the HandshakePrepare class
 
@@ -284,7 +284,13 @@ Work directory
   |           |     |
   |           |     +-- state
   |           |     |
-  |           |     +-- duration
+  |           |     +-- begin_time
+  |           |     |   -OR-
+  |           |     |   begin_time_monotonic
+  |           |     |
+  |           |     +-- end_time
+  |           |         -OR-
+  |           |         end_time_monotonic
   |           |
   |           +-- ...
   |           |
@@ -292,7 +298,13 @@ Work directory
   |                 |
   |                 +-- state
   |                 |
-  |                 +-- duration
+  |                 +-- begin_time
+  |                 |   -OR-
+  |                 |   begin_time_monotonic
+  |                 |
+  |                 +-- end_time
+  |                     -OR-
+  |                     end_time_monotonic
   |
   +-- envdump/            [P]
         |
@@ -328,7 +340,7 @@ The `response/` directory represents the response:
  * If a wrapper is used, or if the application has explicit support for SpawningKit, then one of them may create a `properties.json` in order to communicate back to SpawningKit information about the spawned worker process. For example, if the application process started listening on a random port, then this file can be used to tell SpawningKit which port the process is listening on. See "Application response properties" for more information.
  * `stdin` and `stdout_and_err` are FIFO files. They are only created (by the preloader) when using a preloader to spawn a new worker process. These FIFOs refer to the spawned worker process's stdin, stdout and stderr.
  * If the subprocess fails, then it can communicate back specific error messages through the `error/` directory. See "Error reporting" (especially "Information sources") for more information.
- * The subprocess must regularly update the contents of the `steps/` directory to allow SpawningKit to know which step in the journey the subprocess is executing, and what the state and duration of each step is. See "Subprocess journey logging" for more information.
+ * The subprocess must regularly update the contents of the `steps/` directory to allow SpawningKit to know which step in the journey the subprocess is executing, and what the state and and begin time of each step is. See "Subprocess journey logging" for more information.
 
 The subprocess should dump information about its environment into the `envdump/` directory. Information includes environment variables (`envvars`), ulimits (`ulimits`), UID/GID (`user_info`), and anything else that the subprocess deems relevant (`annotations/`). If spawning fails, then the information reported in this directory will be included in the error report (see "Error reporting").
 
@@ -389,7 +401,16 @@ This is done through the `steps/` subdirectory in the work directory. Subprocess
 Each subdirectory in `steps/` represents a step in the part of the journey that a subprocess is responsible for. The files inside such a subdirectory communicate the state of that step:
 
  * `state` must contain one of `STEP_NOT_STARTED`, `STEP_IN_PROGRESS`, `STEP_PERFORMED` or `STEP_ERRORED`.
- * If `state` is either `STEP_PERFORMED` or `STEP_ERRORED`, then `duration` must contain a number representing the number of seconds that this step took. This number may be a floating point number.
+ * Either `begin_time` or `begin_time_monotonic` (the latter is preferred) must exist.
+
+   `begin_time` must contain a Unix timestamp representing the wall clock time at which this step began. The number may be a floating point number for sub-second precision.
+
+   `begin_time_monotonic` is the same, but must contain a timestamp obtained from the monotonic clock instead of the wall clock. It is recommended that subprocesses create this file, not `begin_time`, because the monotonic clock is not influenced by clock skews (e.g. daylight savings, time zone changes or NTP updates).
+
+   Because not all programming languages allow access to the monotonic clock, SpawningKit allows both mechanisms.
+ * Either `end_time` or `end_time_monotonic` (the latter is preferred) must exist.
+
+   The purpose of these files are anologous to `begin_time`/`begin_time_monotonic`, but instead record the time at which this step ended.
 
 ## Error reporting
 
