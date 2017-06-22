@@ -19,6 +19,10 @@ h1, h2, h3 {
   font-weight: 700;
 }
 
+.h2, h2 {
+  font-size: 190%;
+}
+
 .h3, h3 {
   font-size: 120%;
   color: #444;
