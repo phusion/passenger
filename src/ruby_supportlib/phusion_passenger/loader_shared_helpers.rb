@@ -541,7 +541,7 @@ module PhusionPassenger
 
         problem_description =
           "<h2>Bundler was unable to find one of the gems defined in the Gemfile</h2>" \
-          "<p>Most probably causes are:</p>" \
+          "<p>Most probable causes are:</p>" \
           "<ul>" \
           "<li>You did not install all the gems that this application needs.</li>" \
           "<li>The necessary gems are installed, but the Bundler does not have" \
