@@ -1,5 +1,5 @@
 /** @jsx h */
-import { Component, h } from 'preact';
+import { Component, h, render } from 'preact';
 import Tabs from './Tabs.jsx';
 import Tab from './Tab.jsx';
 import SystemComponentsView from './SystemComponentsView.jsx';
@@ -11,7 +11,16 @@ import DetailsView from './DetailsView.jsx';
 class PageMain extends Component {
   constructor() {
     super();
-    this.state = { activeTab: 'summary' };
+    this.Preact = {
+      Component: Component,
+      h: h,
+      render: render
+    };
+    this.Components = {
+      Tabs: Tabs,
+      Tab: Tab
+    };
+    this._extraTabs = [];
   }
 
   render() {
@@ -37,6 +46,7 @@ class PageMain extends Component {
               <p />
               <SolutionDescriptionView spec={this.props.spec} />
             </Tab>
+            {this._renderExtraTabs()}
             <Tab eventKey="details" title="Deep diagnostics">
               <p />
               <DetailsView spec={this.props.spec} />
@@ -47,14 +57,27 @@ class PageMain extends Component {
     );
   }
 
-  handleProblemDescriptionButtonClick(e) {
-    e.preventDefault();
-    this.tabs.setActiveKey('problem-description');
+  addExtraTab(key, title, component) {
+    this._extraTabs.push({
+      key: key,
+      title: title,
+      component: component
+    });
   }
 
-  handleSolutionDescriptionButtonClick(e) {
-    e.preventDefault();
-    this.tabs.setActiveKey('solution-description');
+  setActiveTab(key) {
+    this.tabs.setActiveKey(key);
+  }
+
+
+  _renderExtraTabs() {
+    return this._extraTabs.map(function(spec) {
+      return (
+        <Tab eventKey={spec.key} title={spec.title}>
+          {spec.component}
+        </Tab>
+      );
+    });
   }
 }
 

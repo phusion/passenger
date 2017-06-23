@@ -14,5 +14,9 @@
     </script>
     <div id="root"></div>
     <script>{{JS|raw}}</script>
+    <script>{{EXTENSION_JS|raw}}</script>
+    <script>
+      window.renderErrorPage();
+    </script>
   </body>
 </html>
