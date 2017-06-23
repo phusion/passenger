@@ -393,6 +393,9 @@
     "navs.less",
     "component-animations.less"
   ],
-  "js": [],
-  "customizerUrl": "http://getbootstrap.com/customize/?id=425b3ddf713f9bdc25d2379e931d6787"
+  "js": [
+    "collapse.js",
+    "transition.js"
+  ],
+  "customizerUrl": "http://getbootstrap.com/customize/?id=e18bae9569f7969c3d0bbc56a809d696"
 }

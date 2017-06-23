@@ -1,7 +1,9 @@
 /** @jsx h */
 import { render, h } from 'preact';
-import PageMain from './PageMain.jsx';
+import 'jquery';
 import './bootstrap/bootstrap.css';
+import './bootstrap/bootstrap.js';
+import PageMain from './PageMain.jsx';
 import './PageMain.css';
 
 window.errorPageExtensions = [];
