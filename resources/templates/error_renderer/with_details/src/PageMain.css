@@ -59,3 +59,30 @@ code {
   background: #e5eef9;
   color: #333;
 }
+
+
+.list-with-extra-spacing > li {
+  margin-top: 0.5em;
+}
+
+
+.problem-causes th {
+  background: #f5f5f5;
+}
+
+.problem-causes .solution-preview {
+  white-space: nowrap;
+}
+
+.problem-causes .solution-description td {
+  padding: 1em;
+  background: #d9edf7;
+}
+
+.problem-causes .solution-description pre {
+  background: white;
+}
+
+.problem-causes .solution-description .multiple-solutions > h3:first-child {
+  margin-top: 0;
+}

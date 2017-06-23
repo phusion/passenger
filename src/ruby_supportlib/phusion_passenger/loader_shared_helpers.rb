@@ -539,41 +539,239 @@ module PhusionPassenger
         end
 
 
-        problem_description =
-          "<h2>Bundler was unable to find one of the gems defined in the Gemfile</h2>" \
-          "<p>Most probable causes are:</p>" \
-          "<ul>" \
-          "<li>You did not install all the gems that this application needs.</li>" \
-          "<li>The necessary gems are installed, but the Bundler does not have" \
-          " permissions to access them."
+        problem_description = %Q{
+          <h2>Bundler was unable to find one of the gems defined in the Gemfile</h2>
+          <table class="table table-bordered table-hover problem-causes">
+            <thead>
+              <tr>
+                <th>Most common causes</th>
+                <th class="solution-preview">Solution finder</th>
+              </tr>
+            </thead>
+            <tbody>
+        }
+
+        problem_description << %Q{
+          <tr class="cause">
+            <td>
+              You may not have installed all the gems that this application needs.
+            </td>
+            <td class="solution-preview">
+              <a
+              href="javascript:void(0)"
+              data-toggle="collapse"
+              data-target="#bundle_install_solution">
+                Read solution
+              </a>
+            </td>
+          </tr>
+          <tr class="collapse solution-description" id="bundle_install_solution">
+            <td colspan="2" class="info">
+              <div class="single-solution">
+                <p>Run the following from the application directory:</p>
+                <pre>bundle install</pre>
+              </div>
+            </td>
+          </tr>
+        }
+
+        problem_description << %Q{
+          <tr class="cause">
+            <td>
+              If the necessary gems are installed, but Bundler may not have
+              permissions to access them.
+        }
         if bundle_path
-          problem_description << " Bundler tried to load the gems from #{h bundle_path}."
+          problem_description << %Q{
+            <br>
+            <small>Bundler tried to load the gems from <code>#{h bundle_path}</code>.</small>
+          }
         end
-        problem_description <<
-          "</li>" \
-          "<li>The application is being run under the wrong Ruby interpreter.</li>"
+        problem_description << %Q{
+            </td>
+            <td class="solution-preview">
+              <a
+              href="javascript:void(0)"
+              data-toggle="collapse"
+              data-target="#check_exec_environment_solution">
+                Read solution
+              </a>
+            </td>
+          </tr>
+          <tr class="collapse solution-description" id="check_exec_environment_solution">
+            <td colspan="2" class="info">
+              <div class="multiple-solutions">
+                #{
+                  check_execution_environment_solution_description(
+                    passenger_user, passenger_user_doc, bundle_path)
+                }
+              </div>
+            </td>
+          </tr>
+        }
+
+        problem_description << %Q{
+          <tr class="cause">
+            <td>
+              The application may be run under the wrong user account or execution
+              environment.
+              <br>
+              <small>It is currently running as <code>#{h whoami}</code>.</small>
+            </td>
+            <td class="solution-preview">
+              <a
+              href="javascript:void(0)"
+              data-toggle="collapse"
+              data-target="#check_exec_environment_solution2">
+                Read solution
+              </a>
+            </td>
+          </tr>
+          <tr class="collapse solution-description" id="check_exec_environment_solution2">
+            <td colspan="2" class="info">
+              <div class="multiple-solutions">
+                #{
+                  check_execution_environment_solution_description(
+                    passenger_user, passenger_user_doc, bundle_path)
+                }
+              </div>
+            </td>
+          </tr>
+        }
+
+        problem_description << %Q{
+          <tr class="cause">
+            <td>
+              The application may be run under the wrong Ruby interpreter.
+              <br>
+              <small>It is currently being run under <code>#{h ruby}</code>.</small>
+            </td>
+            <td class="solution-preview">
+              <a
+              href="javascript:void(0)"
+              data-toggle="collapse"
+              data-target="#change_ruby_solution">
+                Read solution
+              </a>
+            </td>
+          </tr>
+          <tr class="collapse solution-description" id="change_ruby_solution">
+            <td colspan="2" class="info">
+              <div class="single-solution">
+                Use the <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a>
+                setting to change the Ruby interpreter that #{PROGRAM_NAME} uses.
+              </div>
+            </td>
+          </tr>
+        }
+
         if PlatformInfo.in_rvm?
-          problem_description <<
-            "<li>The application is being run under the wrong RVM gemset.</li>"
+          problem_description << %Q{
+            <tr class="cause">
+              <td>
+                The application may be run under the wrong RVM gemset.
+                <br>
+                <small>It is currently running under the
+                <code>#{h PlatformInfo.rvm_ruby_string}</code> gemset.</small>
+              </td>
+              <td class="solution-preview">
+                <a
+                href="javascript:void(0)"
+                data-toggle="collapse"
+                data-target="#change_rvm_gemset_solution">
+                  Read solution
+                </a>
+              </td>
+            </tr>
+            <tr class="collapse solution-description" id="change_rvm_gemset_solution">
+              <td colspan="2" class="info">
+                <div class="single-solution">
+                  Use the <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a>
+                  setting. The documentation for that setting will teach you how to
+                  refer to the proper gemset.
+                </div>
+              </td>
+            </tr>
+          }
         end
+
         if ruby =~ %r(^/usr/local/rvm/)
-          problem_description <<
-            "<li>Your gems are installed to <code>#{h home_dir}/.rvm/gems</code>, while at" \
-            " the same time you set <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a>" \
-            " to <code>#{h ruby}</code>. Because of the latter, RVM does not load gems from the " \
-            "home directory.</li>"
+          problem_description << %Q{
+            <tr class="cause">
+              <td>
+                You are using a system-wide-installed RVM Ruby installation.
+                It is possible that, at the same time, your gems are installed
+                to the home directory (#{h home_dir}/.rvm/gems). If this is the
+                case then RVM will not be able to use those gems.
+                <br>
+                <small>You are currently using this Ruby interpreter: <code>#{h ruby}</code></small>
+              </td>
+              <td class="solution-preview">
+                <a
+                href="javascript:void(0)"
+                data-toggle="collapse"
+                data-target="#use_home_rvm_solution">
+                  Read solution
+                </a>
+              </td>
+            </tr>
+            <tr class="collapse solution-description" id="use_home_rvm_solution">
+              <td colspan="2" class="info">
+                <div class="single-solution">
+                  <p>
+                    To make Bundler and RVM able to load gems from the home directory, set
+                    <a href="#{h passenger_ruby_doc}">#{h passenger_ruby}</a> to an RVM
+                    wrapper script inside the home directory:
+                  </p>
+                  <ol>
+                    <li>Login as #{h whoami}.</li>
+          }
+          if PlatformInfo.rvm_installation_mode == :multi
+            problem_description << %Q{
+                    <li>
+                      Enable RVM mixed mode by running:
+                      <pre>rvm user gemsets</pre>
+                    </li>
+            }
+          end
+          problem_description << %Q{
+                    <li>
+                      Run this to find out what to set
+                      <a href="#{h passenger_ruby_doc}">#{h passenger_ruby}</a> to:
+                      <pre>#{h PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-config --detect-ruby</pre>
+                    </li>
+                  </ol>
+                </div>
+              </td>
+            </tr>
+          }
         end
+
         if PlatformInfo.in_rvm?
-          problem_description <<
-            "<li>The RVM gemset may be broken.</li>"
+          problem_description << %Q{
+            <tr class="cause">
+              <td>
+                The RVM gemset may be broken.
+              </td>
+              <td class="solution-preview">
+                <a href="https://github.com/phusion/passenger/wiki/Resetting-RVM-gemsets" target="_blank">
+                  Read solution
+                </a>
+              </td>
+            </tr>
+          }
         end
-        problem_description <<
-          "</ul>" \
-          "<h3>Raw Bundler exception</h3>" \
-          "<p>Exception message:</p>" \
-          "<pre>#{h e_as_str} (#{h e.class.to_s})</pre>" \
-          "<p>Backtrace:<p>" \
-          "<pre>#{h e.backtrace.join("\n")}</pre>"
+
+        problem_description << %Q{
+            </tbody>
+          </table>
+
+          <h3>Raw Bundler exception</h3>
+          <p>Exception message:</p>
+          <pre>#{h e_as_str} (#{h e.class.to_s})</pre>
+          <p>Backtrace:<p>
+          <pre>#{h e.backtrace.join("\n")}</pre>
+        }
         attach_problem_description_html_to_exception(e, problem_description)
 
 
@@ -662,6 +860,54 @@ module PhusionPassenger
         attach_solution_description_html_to_exception(e, solution_description)
       end
       raise e
+    end
+
+    def check_execution_environment_solution_description(passenger_user, passenger_user_doc, bundle_path)
+      result = ''
+      result << %Q{
+        <h3>Check the application process's execution environment</h3>
+        <p>
+          Is the application running under the expected execution environment?
+          A common problem is that the application runs under a different user than
+          it is supposed to. The application is currently running as the <code>#{h whoami}</code>
+          user &mdash; is this expected? Also, check the 'Deep diagnostics'
+          &raquo; 'Subprocess' tab and double check all information there &mdash; is
+          everything as expected?
+        </p>
+      }
+      if passenger_user
+        result << %Q{
+          <p>
+            If the application is not supposed to run as <code>#{h whoami}</code>,
+            then you can configure this via the
+            <a href="#{h passenger_user_doc}">#{h passenger_user}</a>
+            setting.
+          </p>
+        }
+      end
+      result << %Q{
+        <h3>Check that the application has permissions to access the directory from which Bundler loads gems</h3>
+        <p>
+          Please check whether the application, which is running as the
+          <code>#{h whoami}</code> user, has permissions to access
+      }
+      if bundle_path
+        result << %Q{
+          <code>#{h bundle_path}</code>.
+        }
+      else
+        result << %Q{
+          the directory that Bundler tries to load gems from. Unfortunately
+          #{SHORT_PROGRAM_NAME} was unable to figure out which directory this
+          is because Bundler is too old, so you need to figure out the
+          directory yourself (or you can upgrade Bundler so that #{SHORT_PROGRAM_NAME}
+          can figure out the path for you).
+        }
+      end
+      result << %Q{
+        </p>
+      }
+      result
     end
 
     def attach_problem_description_html_to_exception(e, html)
