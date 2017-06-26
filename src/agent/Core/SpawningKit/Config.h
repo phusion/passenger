@@ -47,6 +47,7 @@ using namespace std;
 //
 // @require_non_empty
 // @pass_during_handshake
+// @non_confidential
 // @only_meaningful_if
 // @only_pass_during_handshake_if
 //
@@ -76,6 +77,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString appRoot;
 
@@ -84,6 +86,7 @@ public:
 	 *
 	 * @hinted_parseable
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	int logLevel;
 
@@ -98,6 +101,7 @@ public:
 	 *
 	 * @hinted_parseable
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	bool genericApp: 1;
 
@@ -111,6 +115,7 @@ public:
 	 * @hinted_parseable
 	 * @only_meaningful_if !config.genericApp
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	bool startsUsingWrapper: 1;
 
@@ -123,6 +128,7 @@ public:
 	 * @hinted_parseable
 	 * @only_meaningful_if !config.genericApp && config.startsUsingWrapper
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	bool wrapperSuppliedByThirdParty: 1;
 
@@ -144,12 +150,14 @@ public:
 	 *
 	 * @hinted_parseable
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	bool loadShellEnvvars: 1;
 
 	/**
 	 * @hinted_parseable
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	bool analyticsSupport: 1;
 
@@ -171,6 +179,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString startCommand;
 
@@ -183,6 +192,7 @@ public:
 	 * @only_meaningful_if !config.genericApp && config.startsUsingWrapper
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString startupFile;
 
@@ -191,6 +201,7 @@ public:
 	 *
 	 * @hinted_parseable
 	 * @pass_during_handshake
+	 * @non_confidential
 	 * @only_pass_during_handshake_if !config.processTitle.empty()
 	 */
 	StaticString processTitle;
@@ -202,6 +213,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString appType;
 
@@ -211,6 +223,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString appEnv;
 
@@ -220,6 +233,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString spawnMethod;
 
@@ -230,6 +244,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake base_uri
+	 * @non_confidential
 	 */
 	StaticString baseURI;
 
@@ -240,6 +255,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString user;
 
@@ -250,6 +266,7 @@ public:
 	 * @hinted_parseable
 	 * @require_non_empty
 	 * @pass_during_handshake
+	 * @non_confidential
 	 */
 	StaticString group;
 
@@ -305,6 +322,7 @@ public:
 	 *
 	 * @hinted_parseable
 	 * @pass_during_handshake
+	 * @non_confidential
 	 * @only_pass_during_handshake_if config.fileDescriptorUlimit > 0
 	 */
 	unsigned int fileDescriptorUlimit;
@@ -339,7 +357,8 @@ public:
 
 	void internStrings();
 	bool validate(vector<StaticString> &errors) const;
-	Json::Value getFieldsToPassToApp() const;
+	Json::Value getConfidentialFieldsToPassToApp() const;
+	Json::Value getNonConfidentialFieldsToPassToApp() const;
 };
 // - end hinted parseable class -
 

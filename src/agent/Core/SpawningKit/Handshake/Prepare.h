@@ -238,7 +238,7 @@ private:
 
 	void prepareArgsFromAppConfig() {
 		TRACE_POINT();
-		const Json::Value appConfigJson = config->getFieldsToPassToApp();
+		const Json::Value appConfigJson = config->getConfidentialFieldsToPassToApp();
 		Json::Value::const_iterator it, end = appConfigJson.end();
 		for (it = appConfigJson.begin(); it != end; it++) {
 			args[it.name()] = *it;

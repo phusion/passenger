@@ -67,6 +67,7 @@ public:
 		Json::Value spec;
 		spec["program_name"] = PROGRAM_NAME;
 		spec["short_program_name"] = SHORT_PROGRAM_NAME;
+		spec["config"] = e.getConfig().getNonConfidentialFieldsToPassToApp();
 		spec["journey"] = e.getJourney().inspectAsJson();
 		spec["error"] = e.inspectBasicInfoAsJson();
 		spec["diagnostics"]["system_wide"] = e.inspectSystemWideDetailsAsJson();

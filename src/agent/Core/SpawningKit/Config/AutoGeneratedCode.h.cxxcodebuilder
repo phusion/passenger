@@ -181,7 +181,7 @@ def main
   end
 
 
-  function 'inline Json::Value Passenger::SpawningKit::Config::getFieldsToPassToApp() const' do
+  function 'inline Json::Value Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const' do
     add_code %q{
       Json::Value doc;
       const Config &config = *this;
@@ -195,6 +195,56 @@ def main
         setter_code = %Q{
           doc["#{key_for(field)}"] = #{value_expression_for(field)};
         }
+        if field.metadata[:only_meaningful_if] || field.metadata[:only_pass_during_handshake_if]
+          conditions = [
+            field.metadata[:only_meaningful_if],
+            field.metadata[:only_pass_during_handshake_if]
+          ].compact
+          add_code %Q[
+            if (#{conditions.join(" && ")}) {
+          ]
+          indent do
+            add_code(setter_code)
+          end
+          add_code %Q[
+            }
+          ]
+        else
+          add_code(setter_code)
+        end
+      else
+        excluded_field_names << field.name
+      end
+    end
+
+    separator
+    comment "Excluded:\n\n#{excluded_field_names.join("\n")}"
+    separator
+    add_code %q{
+      return doc;
+    }
+  end
+
+  function 'inline Json::Value Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const' do
+    add_code %q{
+      Json::Value doc;
+      const Config &config = *this;
+    }
+
+    separator
+
+    excluded_field_names = []
+    fields.each do |field|
+      if field.metadata[:pass_during_handshake]
+        if field.metadata[:non_confidential]
+          setter_code = %Q{
+            doc["#{key_for(field)}"] = #{value_expression_for(field)};
+          }
+        else
+          setter_code = %Q{
+            doc["#{key_for(field)}"] = "<SECRET>";
+          }
+        end
         if field.metadata[:only_meaningful_if] || field.metadata[:only_pass_during_handshake_if]
           conditions = [
             field.metadata[:only_meaningful_if],

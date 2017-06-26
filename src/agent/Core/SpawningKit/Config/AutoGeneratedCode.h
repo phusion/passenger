@@ -254,7 +254,7 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 }
 
 inline Json::Value
-Passenger::SpawningKit::Config::getFieldsToPassToApp() const {
+Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 	Json::Value doc;
 	const Config &config = *this;
 
@@ -291,6 +291,60 @@ Passenger::SpawningKit::Config::getFieldsToPassToApp() const {
 	}
 	if (!config.groupUuid.empty()) {
 		doc["group_uuid"] = groupUuid.toString();
+	}
+	if (config.fileDescriptorUlimit > 0) {
+		doc["file_descriptor_ulimit"] = fileDescriptorUlimit;
+	}
+
+	/*
+	 * Excluded:
+	 *
+	 * findFreePort
+	 * lveMinUid
+	 * startTimeoutMsec
+	 */
+
+	return doc;
+}
+
+inline Json::Value
+Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
+	Json::Value doc;
+	const Config &config = *this;
+
+	doc["app_root"] = appRoot.toString();
+	doc["log_level"] = logLevel;
+	doc["generic_app"] = genericApp;
+	if (!config.genericApp) {
+		doc["starts_using_wrapper"] = startsUsingWrapper;
+	}
+	if (!config.genericApp && config.startsUsingWrapper) {
+		doc["wrapper_supplied_by_third_party"] = wrapperSuppliedByThirdParty;
+	}
+	doc["load_shell_envvars"] = loadShellEnvvars;
+	doc["analytics_support"] = analyticsSupport;
+	doc["start_command"] = startCommand.toString();
+	if (!config.genericApp && config.startsUsingWrapper) {
+		doc["startup_file"] = startupFile.toString();
+	}
+	if (!config.processTitle.empty()) {
+		doc["process_title"] = processTitle.toString();
+	}
+	doc["app_type"] = appType.toString();
+	doc["app_env"] = appEnv.toString();
+	doc["spawn_method"] = spawnMethod.toString();
+	doc["base_uri"] = baseURI.toString();
+	doc["user"] = user.toString();
+	doc["group"] = group.toString();
+	doc["environment_variables"] = "<SECRET>";
+	if (config.analyticsSupport && !config.unionStationKey.empty()) {
+		doc["union_station_key"] = "<SECRET>";
+	}
+	if (!config.apiKey.empty()) {
+		doc["api_key"] = "<SECRET>";
+	}
+	if (!config.groupUuid.empty()) {
+		doc["group_uuid"] = "<SECRET>";
 	}
 	if (config.fileDescriptorUlimit > 0) {
 		doc["file_descriptor_ulimit"] = fileDescriptorUlimit;
