@@ -18,14 +18,18 @@ class JourneyView extends Component {
     const self = this;
 
     function renderWrapperRows() {
-      if (self.props.spec.journey.steps.SUBPROCESS_EXEC_WRAPPER) {
+      if (!self.props.spec.journey.steps.SUBPROCESS_EXEC_WRAPPER) {
+        return [];
+      }
+
+      if (self.props.spec.config.wrapper_supplied_by_third_party) {
         return [
           (
             <tr key="exec-wrapper">
               <td className="server-core"></td>
               <td className="process-boundary"></td>
-              {self.renderCell('subprocess', 'Execute wrapper',
-                ['SUBPROCESS_EXEC_WRAPPER'])}
+              {self.renderCell('subprocess', 'Initialize third-party wrapper',
+                ['SUBPROCESS_EXEC_WRAPPER', 'SUBPROCESS_WRAPPER_PREPARATION'])}
             </tr>
           ),
           (
@@ -34,13 +38,16 @@ class JourneyView extends Component {
               <td className="process-boundary"></td>
               {self.renderStepSeparator('subprocess')}
             </tr>
-          ),
+          )
+        ];
+      } else {
+        return [
           (
-            <tr key="prep-inside-wrapper">
+            <tr key="exec-wrapper">
               <td className="server-core"></td>
               <td className="process-boundary"></td>
-              {self.renderCell('subprocess', 'Preparation work inside wrapper',
-                ['SUBPROCESS_WRAPPER_PREPARATION'])}
+              {self.renderCell('subprocess', 'Initialize language runtime',
+                ['SUBPROCESS_EXEC_WRAPPER', 'SUBPROCESS_WRAPPER_PREPARATION'])}
             </tr>
           ),
           (
@@ -51,8 +58,6 @@ class JourneyView extends Component {
             </tr>
           )
         ];
-      } else {
-        return [];
       }
     }
 
@@ -158,13 +163,17 @@ class JourneyView extends Component {
     const self = this;
 
     function renderWrapperRows() {
-      if (self.props.spec.journey.steps.SUBPROCESS_EXEC_WRAPPER) {
+      if (!self.props.spec.journey.steps.SUBPROCESS_EXEC_WRAPPER) {
+        return [];
+      }
+
+      if (self.props.spec.config.wrapper_supplied_by_third_party) {
         return [
           (
             <tr key="exec-wrapper">
               <td className="server-core"></td>
               <td className="process-boundary"></td>
-              {self.renderCell('subprocess', 'Execute wrapper (in preloader mode)',
+              {self.renderCell('subprocess', 'Initialize language runtime',
                 ['SUBPROCESS_EXEC_WRAPPER'])}
             </tr>
           ),
@@ -179,7 +188,7 @@ class JourneyView extends Component {
             <tr key="prep-inside-wrapper">
               <td className="server-core"></td>
               <td className="process-boundary"></td>
-              {self.renderCell('subprocess', 'Preparation work inside wrapper',
+              {self.renderCell('subprocess', 'Initialize third-party preloading wrapper',
                 ['SUBPROCESS_WRAPPER_PREPARATION'])}
             </tr>
           ),
@@ -192,7 +201,39 @@ class JourneyView extends Component {
           )
         ];
       } else {
-        return [];
+        return [
+          (
+            <tr key="exec-wrapper">
+              <td className="server-core"></td>
+              <td className="process-boundary"></td>
+              {self.renderCell('subprocess', 'Initialize language runtime',
+                ['SUBPROCESS_EXEC_WRAPPER'])}
+            </tr>
+          ),
+          (
+            <tr key="sep1">
+              <td className="server-core"></td>
+              <td className="process-boundary"></td>
+              {self.renderStepSeparator('subprocess')}
+            </tr>
+          ),
+          (
+            <tr key="prep-inside-wrapper">
+              <td className="server-core"></td>
+              <td className="process-boundary"></td>
+              {self.renderCell('subprocess',
+                'Initialize ' + self.props.spec.short_program_name + '-internal preloading wrapper',
+                ['SUBPROCESS_WRAPPER_PREPARATION'])}
+            </tr>
+          ),
+          (
+            <tr key="sep2">
+              <td className="server-core"></td>
+              <td className="process-boundary"></td>
+              {self.renderStepSeparator('subprocess')}
+            </tr>
+          )
+        ];
       }
     }
 
