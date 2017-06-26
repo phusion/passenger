@@ -6,6 +6,7 @@ import SystemComponentsView from './SystemComponentsView.jsx';
 import SummaryView from './SummaryView.jsx';
 import ProblemDescriptionView from './ProblemDescriptionView.jsx';
 import SolutionDescriptionView from './SolutionDescriptionView.jsx';
+import GetHelpView from './GetHelpView.jsx';
 import DetailsView from './DetailsView.jsx';
 
 class PageMain extends Component {
@@ -57,6 +58,10 @@ class PageMain extends Component {
               <SolutionDescriptionView spec={this.props.spec} />
             </Tab>
             {this._renderExtraTabs()}
+            <Tab eventKey="get-help" title="Get help">
+              <p />
+              <GetHelpView spec={this.props.spec} />
+            </Tab>
             <Tab eventKey="details" title="Deep diagnostics">
               <p />
               <DetailsView spec={this.props.spec} />
