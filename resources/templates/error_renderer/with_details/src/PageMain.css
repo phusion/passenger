@@ -36,9 +36,20 @@ h1, h2, h3 {
 }
 
 .page-system-components-container {
+  position: relative;
   background: #f6f6f6;
   margin: 0 0 2em 0;
   padding: 2em;
+}
+
+.page-system-components-container .collapse-button > a {
+  position: absolute;
+  right: 0;
+  top: 0;
+  background: #dcdcdc;
+  font-size: 90%;
+  text-decoration: none;
+  padding: 0.5em;
 }
 
 .page-main-tabs > .nav-tabs > li > a {

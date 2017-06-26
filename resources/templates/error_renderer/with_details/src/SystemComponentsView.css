@@ -1,3 +1,7 @@
+.system-components.collapsed {
+  text-align: center;
+}
+
 .system-components .divider {
   padding-top: 1em;
   font-size: 300%;

@@ -11,6 +11,7 @@ import DetailsView from './DetailsView.jsx';
 class PageMain extends Component {
   constructor() {
     super();
+    this.state = { systemComponentsViewCollapsed: false };
     this.Preact = {
       Component: Component,
       h: h,
@@ -21,6 +22,12 @@ class PageMain extends Component {
       Tab: Tab
     };
     this._extraTabs = [];
+
+    if (window.localStorage) {
+      this.state.systemComponentsViewCollapsed =
+        window.localStorage.getItem('_passenger_error_page_system_components_collapsed')
+        === 'true';
+    }
   }
 
   render() {
@@ -31,8 +38,11 @@ class PageMain extends Component {
         </div>
 
         <div className="page-system-components-container">
+          <div className="collapse-button">
+            {this._renderCollapseButton()}
+          </div>
           <div class="container">
-            <SystemComponentsView spec={this.props.spec} />
+            <SystemComponentsView spec={this.props.spec} collapsed={this.state.systemComponentsViewCollapsed} />
           </div>
         </div>
 
@@ -70,6 +80,18 @@ class PageMain extends Component {
   }
 
 
+  _renderCollapseButton() {
+    if (this.state.systemComponentsViewCollapsed) {
+      return (
+        <a href="javascript:void(0)" onClick={this._handleExpandSystemComponentsView.bind(this)}>Expand</a>
+      );
+    } else {
+      return (
+        <a href="javascript:void(0)" onClick={this._handleCollapseSystemComponentsView.bind(this)}>Collapse</a>
+      );
+    }
+  }
+
   _renderExtraTabs() {
     return this._extraTabs.map(function(spec) {
       return (
@@ -78,6 +100,28 @@ class PageMain extends Component {
         </Tab>
       );
     });
+  }
+
+  _handleExpandSystemComponentsView() {
+    this.setState({ systemComponentsViewCollapsed: false });
+    if (window.localStorage) {
+      try {
+        window.localStorage.setItem('_passenger_error_page_system_components_collapsed', 'false');
+      } catch (e) {
+        // Do nothing
+      }
+    }
+  }
+
+  _handleCollapseSystemComponentsView() {
+    this.setState({ systemComponentsViewCollapsed: true });
+    if (window.localStorage) {
+      try {
+        window.localStorage.setItem('_passenger_error_page_system_components_collapsed', 'true');
+      } catch (e) {
+        // Do nothing
+      }
+    }
   }
 }
 

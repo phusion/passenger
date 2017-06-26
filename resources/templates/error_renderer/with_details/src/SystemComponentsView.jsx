@@ -5,6 +5,22 @@ import './SystemComponentsView.css';
 
 class SystemComponentsView extends Component {
   render() {
+    if (this.props.collapsed) {
+      return this.renderCollapsed();
+    } else {
+      return this.renderExpanded();
+    }
+  }
+
+  renderCollapsed() {
+    return (
+      <div className="system-components collapsed">
+        ...
+      </div>
+    );
+  }
+
+  renderExpanded() {
     return (
       <div className="system-components row">
         <div className="col-sm-3">
