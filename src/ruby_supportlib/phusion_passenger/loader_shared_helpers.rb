@@ -786,7 +786,7 @@ module PhusionPassenger
           "<p>Is the application running under the expected execution environment?" \
           " A common problem is that the application runs under a different user than" \
           " it is supposed to. The application is currently running as the <code>#{h whoami}</code>" \
-          " user &mdash; is this expected? Also, check the 'Deep diagnostics'" \
+          " user &mdash; is this expected? Also, check the 'Detailed diagnostics'" \
           " &raquo; 'Subprocess' tab and double check all information there &mdash; is" \
           " everything as expected? If not, please fix that.</p>"
         if passenger_user
@@ -870,7 +870,7 @@ module PhusionPassenger
           Is the application running under the expected execution environment?
           A common problem is that the application runs under a different user than
           it is supposed to. The application is currently running as the <code>#{h whoami}</code>
-          user &mdash; is this expected? Also, check the 'Deep diagnostics'
+          user &mdash; is this expected? Also, check the 'Detailed diagnostics'
           &raquo; 'Subprocess' tab and double check all information there &mdash; is
           everything as expected?
         </p>

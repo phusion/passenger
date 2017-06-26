@@ -62,7 +62,7 @@ class PageMain extends Component {
               <p />
               <GetHelpView spec={this.props.spec} />
             </Tab>
-            <Tab eventKey="details" title="Deep diagnostics">
+            <Tab eventKey="details" title="Detailed diagnostics">
               <p />
               <DetailsView spec={this.props.spec} />
             </Tab>
