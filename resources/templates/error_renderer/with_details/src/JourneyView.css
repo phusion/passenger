@@ -1,3 +1,9 @@
+.journey.spawn-through-preloader .server-core,
+.journey.spawn-through-preloader .preloader,
+.journey.spawn-through-preloader .subprocess {
+  width: 25%;
+}
+
 .journey th {
   padding-bottom: 1em;
 }
@@ -16,8 +22,14 @@
   margin: 0 2em;
 }
 
-.journey .status-label .glyphicon {
-  margin-right: 1em;
+.journey .status-label {
+  display: inline-block;
+  float: left;
+}
+
+.journey .title {
+  display: block;
+  margin-left: 1.5em;
 }
 
 .journey .done {

@@ -358,7 +358,7 @@ class JourneyView extends Component {
           <tr>
             {this.renderCell('server-core', 'Tell preloader to spawn a subprocess',
               ['SPAWNING_KIT_CONNECT_TO_PRELOADER', 'SPAWNING_KIT_SEND_COMMAND_TO_PRELOADER'])}
-            {this.renderProcessBoundaryArrow()}
+            {this.renderProcessBoundaryArrow('small')}
             {this.renderCell('preloader', 'Preparation work',
               ['PRELOADER_PREPARATION'])}
           </tr>
@@ -375,7 +375,7 @@ class JourneyView extends Component {
             <td className="process-boundary"></td>
             {this.renderCell('preloader', 'Spawn subprocess (fork())',
               ['PRELOADER_FORK_SUBPROCESS'])}
-            {this.renderProcessBoundaryArrow()}
+            {this.renderProcessBoundaryArrow('small')}
             {this.renderCell('subprocess', 'Preparation',
               ['SUBPROCESS_PREPARE_AFTER_FORKING_FROM_PRELOADER'])}
           </tr>
@@ -512,11 +512,17 @@ class JourneyView extends Component {
     );
   }
 
-  renderProcessBoundaryArrow() {
+  renderProcessBoundaryArrow(size) {
+    var width;
+    if (size === 'small') {
+      width = 90;
+    } else {
+      width = 130;
+    }
     return (
       <td className="process-boundary arrow">
         <svg
-         width="130"
+         width={width}
          height="20"
          viewBox="0 0 130 20"
          version="1.1"
