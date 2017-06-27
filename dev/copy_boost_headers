@@ -43,6 +43,8 @@ ESSENTIALS = [
   "boost/bind",
   "boost/function",
   "boost/chrono",
+  "boost/random*",
+  "boost/asio*",
   "boost/optional.hpp",
   "boost/optional",
   "boost/utility",
@@ -76,7 +78,9 @@ EXCLUDE = [
   "libs/regex/src/icu.cpp",
   "libs/regex/src/usinstances.cpp",
   "boost/atomic/detail/windows.hpp",
-  "boost/regex/icu.hpp"
+  "boost/regex/icu.hpp",
+  "boost/asio/detail/win*",
+  "boost/asio/detail/impl/win*"
 ]
 PROGRAM_SOURCE = %q{
   #include <boost/shared_ptr.hpp>
@@ -101,6 +105,7 @@ PROGRAM_SOURCE = %q{
   #include <boost/move/utility.hpp>
   #include <boost/atomic.hpp>
   #include <boost/typeof/typeof.hpp>
+  #include <boost/asio.hpp>
 }
 
 require 'fileutils'
