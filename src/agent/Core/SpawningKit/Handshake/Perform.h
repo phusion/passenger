@@ -1404,16 +1404,46 @@ private:
 		}
 
 		if (allSubprocessJourneyStepsHaveState(STEP_PERFORMED)) {
-			return getLastSubprocessJourneyStep();
+			return getLastSubprocessJourneyStepFrom(session.journey);
 		} else {
 			JourneyStep step = getLastSubprocessJourneyStepWithState(STEP_PERFORMED);
 			if (step == UNKNOWN_JOURNEY_STEP) {
-				return getFirstSubprocessJourneyStep();
+				return getFirstSubprocessJourneyStepFrom(session.journey);
 			} else {
-				assert(step != getLastSubprocessJourneyStep());
+				assert(step != getLastSubprocessJourneyStepFrom(session.journey));
 				return JourneyStep((int) step + 1);
 			}
 		}
+	}
+
+	JourneyStep getFirstSubprocessJourneyStepFrom(const Journey &journey) const {
+		JourneyStep firstStep = getFirstSubprocessJourneyStep();
+		JourneyStep lastStep = getLastSubprocessJourneyStep();
+		JourneyStep step;
+
+		for (step = firstStep; step <= lastStep; step = JourneyStep((int) step + 1)) {
+			if (session.journey.hasStep(step)) {
+				return step;
+			}
+		}
+
+		P_BUG("Never reached");
+		return UNKNOWN_JOURNEY_STEP;
+	}
+
+	JourneyStep getLastSubprocessJourneyStepFrom(const Journey &journey) const {
+		JourneyStep firstStep = getFirstSubprocessJourneyStep();
+		JourneyStep lastStep = getLastSubprocessJourneyStep();
+		JourneyStep result = UNKNOWN_JOURNEY_STEP;
+		JourneyStep step;
+
+		for (step = firstStep; step <= lastStep; step = JourneyStep((int) step + 1)) {
+			if (session.journey.hasStep(step)) {
+				result = step;
+			}
+		}
+
+		return result;
 	}
 
 	bool allSubprocessJourneyStepsHaveState(JourneyStepState state) const {
