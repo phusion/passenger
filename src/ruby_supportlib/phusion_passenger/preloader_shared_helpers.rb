@@ -128,7 +128,6 @@ module PhusionPassenger
 
     def run_main_loop(server, options)
       server_socket, socket_filename = server
-      client = nil
       original_pid = Process.pid
 
       while true
