@@ -16,6 +16,7 @@ Reliability and visibility are core features in SpawningKit. When SpawningKit re
    - Preloaders
    - The start command
    - Summary with examples
+ * API and implementation highlights
  * Overview of the spawning journey
    - When spawning a process without a preloader
    - When starting a preloader
@@ -100,6 +101,81 @@ To help you better understand the concepts, the following table displays an exam
 | modifications      | Meteor, Perl, all      | with modifications    |
 |                    | without modifications  |                       |
 ~~~
+
+## API and implementation highlights
+
+### Context
+
+Before using SpawningKit, one must create a Context object. A Context contains global state, global configuration and references dependencies that SpawningKit needs.
+
+Create a Context object, set some initial configuration, inject some dependencies, then call `finalize()`.
+
+~~~c++
+SpawningKit::Context::Schema schema;
+SpawningKit::Context context(schema);
+
+context.resourceLocator = ...;
+context.integrationMode = "standalone";
+context.finalize();
+~~~
+
+### Spawners
+
+Use Spawners to spawn application processes. There are two main types of Spawners:
+
+ * DirectSpawner, which corresponds to `PassengerSpawnMethod direct`.
+ * SmartSpawner, which corresponds to `PassengerSpawnMethod smart`.
+
+See also [the background documentation on spawn methods](https://www.phusionpassenger.com/library/indepth/ruby/spawn_methods/) and the "Preloaders" section in this README.
+
+You can create Spawners directly, but it's recommended to use a Factory instead. A Factory accepts an ApplicationPool::Options object, and depending on `options.spawnMethod`, creates either a DirectSpawner or a SmartSpawner.
+
+Once you have obtained a Spawner object, call `spawn(options)` which spawns an application process. It returns a `Result` object.
+
+~~~c++
+ApplicationPool::options;
+
+options.appRoot = "/foo/bar/public";
+options.appType = "rack";
+options.spawnMethod = "smart";
+...
+
+SpawningKit::Factory factory(&context);
+SpawningKit::SpawnerPtr spawner = factory->create(options);
+
+SpawningKit::Result result = spawner->spawn(options);
+P_WARN("Application process spawned, PID is " << result.pid);
+~~~
+
+There is also a DummySpawner class, which is only used during unit tests.
+
+### HandshakePrepare and HandshakePerform
+
+Inside SmartSpawner and DirectSpawner, HandshakePrepare and HandshakePerform are used to perform a lot of the heavy lifting. See "Overview of the spawning journey" -- HandshakePrepare and HandshakePerform are responsible for most of the stuff described there.
+
+In fact, DirectSpawner is just a thin wrapper around HandshakePrepare and HandshakePerform. It first runs HandshakePrepare, then forks a subprocess that executes SpawnEnvSetupper, and then (in the parent process) runs HandshakePerform.
+
+SmartSpawner is a bit bigger because it needs to implement the whole preloading mechanism (see section "Preloaders"), but it still uses HandshakePrepare and HandshakePerform to spawn the preloader, and to negotiate with the subprocess created by the preloader.
+
+Here are some simplified interaction diagrams.
+
+### Configuration object
+
+HandshakePrepare and HandshakePerform do not accept an ApplicationPool::Options object, but a SpawningKit::Config object. It contains the configuration that HandshakePrepare/Perform need to perform a single spawn. SmartSpawner and DirectSpawner internally convert an ApplicationPool::Options into a SpawningKit::Config.
+
+You can see this at work in `DirectSpawner::setConfigFromAppPoolOptions()` and `SmartSpawner::setConfigFromAppPoolOptions()`.
+
+### Exception object
+
+If HandshakePrepare, HandshakePerform, or `Spawner::spawn()` fails, then they will throw a SpawningKit::SpawnException object. Learn more about what this exception represents in section "Error reporting".
+
+### Journey
+
+The aforementioned exception object contains a SpawningKit::Journey object which describes how the spawning journey looked like and where in the journey something failed. It can be obtained through `exception.getJourney()`. Learn more about journeys in section "Overview of the spawning journey".
+
+### Error renderer
+
+The ErrorRenderer class helps you render an error page, both one with and one without details. It uses the assets in `resources/templates/error_page`.
 
 ## Overview of the spawning journey
 
@@ -186,7 +262,7 @@ The Journey class represents a journey. It records all the steps taken so far, w
 
 A journey consists of a few parallel actors, with each actor having multiple steps and the ability to invoke another actor. Each step can be in one of three states:
 
- * Step has not started yet. Will be visualized with an empty placeholder.
+ * Step has not started yet. Inside error pages, this will be visualized with an empty placeholder.
  * Step is currently in progress. Will be visualized with a spinner.
  * Step has already been performed successfully. Will be visualized with a green tick.
  * Step has failed. Will be visualized with a red mark.
@@ -199,7 +275,9 @@ Inside the process running SpawningKit, before forking a subprocess (regardless 
 
 Here is a list of the work involved in preparation:
 
- * Creating a temporary directory for the purpose of performing a handshake with the subprocess. This directory is called a "work directory". Learn more in sections "The handshake and the HandshakePerform class" and "The work directory". **Note**: the "work directory" in this context refers to this directory, not to the Unix concept of current working directory (`getpwd()`).
+ * Creating a temporary directory for the purpose of performing a handshake with the subprocess. This directory is called a "work directory". Learn more in sections "The handshake and the HandshakePerform class" and "The work directory".
+
+   **Note**: the "work directory" in this context refers to this directory, not to the Unix concept of current working directory (`getpwd()`). This directory also has got nothing to do with the instance directory that Passenger uses to keep track of running Passenger instances; that is a separate concept and mechanism.
  * If the application is not SpawningKit-enabled, or if the caller explicitly instructed so, HandshakePrepare finds a free port for the worker process to listen on. This port number will be passed to the worker process.
  * Dumping, into the work directory, important information that the subprocess should know of. For example: whether it's going to be started in development or production mode, the process title to assume, etc. This information is called the _spawn arguments_.
  * Calculating which exact arguments need to be passed to the `exec()` call. Because it's unsafe to do this after forking.
