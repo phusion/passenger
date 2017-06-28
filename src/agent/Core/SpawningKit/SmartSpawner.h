@@ -1145,6 +1145,16 @@ private:
 		e.setPreloaderUserInfo(preloaderUserInfo);
 		e.setPreloaderUlimits(preloaderUlimits);
 
+		if (e.getSubprocessEnvvars().empty()) {
+			e.setSubprocessEnvvars(preloaderEnvvars);
+		}
+		if (e.getSubprocessUserInfo().empty()) {
+			e.setSubprocessUserInfo(preloaderUserInfo);
+		}
+		if (e.getSubprocessUlimits().empty()) {
+			e.setSubprocessUlimits(preloaderUlimits);
+		}
+
 		StringKeyTable<string>::ConstIterator it(preloaderAnnotations);
 		while (*it != NULL) {
 			e.setAnnotation(it.getKey(), it.getValue(), false);
