@@ -451,7 +451,7 @@ module PhusionPassenger
     end
 
     def dump_ruby_environment
-      dir = "#{ENV['PASSENGER_SPAWN_WORK_DIR']}/envdump"
+      dir = "#{ENV['PASSENGER_SPAWN_WORK_DIR']}/envdump/annotations"
 
       File.open("#{dir}/ruby_info", "w") do |f|
         f.puts "RUBY_VERSION = #{RUBY_VERSION}"
