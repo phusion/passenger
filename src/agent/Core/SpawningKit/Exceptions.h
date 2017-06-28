@@ -997,11 +997,18 @@ public:
 	}
 
 	Json::Value inspectPreloaderProcessDetailsAsJson() const {
-		Json::Value doc;
+		Json::Value doc, annotations(Json::objectValue);
 
 		doc["envvars"] = getPreloaderEnvvars();
 		doc["user_info"] = getPreloaderUserInfo();
 		doc["ulimits"] = getPreloaderUlimits();
+
+		StringKeyTable<string>::ConstIterator it(this->annotations);
+		while (*it != NULL) {
+			annotations[it.getKey().toString()] = it.getValue();
+			it.next();
+		}
+		doc["annotations"] = annotations;
 
 		return doc;
 	}
