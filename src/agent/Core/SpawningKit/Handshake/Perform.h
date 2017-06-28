@@ -930,20 +930,20 @@ private:
 							"An error occurred while spawning an application process: "
 							"the application wrapper (which is not part of "
 							SHORT_PROGRAM_NAME
-							") reported an invalid progress step state: "
+							") reported an invalid error category: "
 							+ value);
 					} else {
 						e.setSummary(
 							"An error occurred while spawning an application process: "
 							"the application wrapper (which is internal to "
 							SHORT_PROGRAM_NAME
-							") reported an invalid progress step state: "
+							") reported an invalid error category: "
 							+ value);
 					}
 				} else {
 					e.setSummary(
 						"An error occurred while spawning an application process: "
-						"the application reported an invalid progress step state: "
+						"the application reported an invalid error category: "
 						+ value);
 				}
 
@@ -1096,21 +1096,21 @@ private:
 					if (config->wrapperSuppliedByThirdParty) {
 						e.setSummary(
 							"An error occurred while spawning an application process: "
-							"the application wrapper (which is internal to " SHORT_PROGRAM_NAME
-							") reported an invalid progress step state: "
-							+ value);
+							"the application wrapper (which is not part of " SHORT_PROGRAM_NAME
+							") reported an invalid progress step state for step "
+							+ journeyStepToString(step) + ": " + value);
 					} else {
 						e.setSummary(
 							"An error occurred while spawning an application process: "
-							"the application wrapper (which is not part of " SHORT_PROGRAM_NAME
-							") reported an invalid progress step state: "
-							+ value);
+							"the application wrapper (which is internal to " SHORT_PROGRAM_NAME
+							") reported an invalid progress step state for step "
+							+ journeyStepToString(step) + ": " + value);
 					}
 				} else {
 					e.setSummary(
 						"An error occurred while spawning an application process: "
-						"the application reported an invalid progress step state: "
-						+ value);
+						"the application reported an invalid progress step state for step "
+						+ journeyStepToString(step) + ": " + value);
 				}
 
 				if (!config->genericApp && config->startsUsingWrapper) {
@@ -1187,17 +1187,20 @@ private:
 				if (config->wrapperSuppliedByThirdParty) {
 					e.setSummary("An error occurred while spawning an application process: "
 						"the application wrapper (which is not part of " SHORT_PROGRAM_NAME
-						") reported an invalid progress step state: "
+						") reported an invalid progress step state for step "
+						+ journeyStepToString(step) + ": "
 						+ StaticString(originalException.what()));
 				} else {
 					e.setSummary("An error occurred while spawning an application process: "
 						"the application wrapper (which is internal to " SHORT_PROGRAM_NAME
-						") reported an invalid progress step state: "
+						") reported an invalid progress step state for step "
+						+ journeyStepToString(step) + ": "
 						+ StaticString(originalException.what()));
 				}
 			} else {
 				e.setSummary("An error occurred while spawning an application process: "
-					"the application reported an invalid progress step state: "
+					"the application reported an invalid progress step state for step "
+					+ journeyStepToString(step) + ": "
 					+ StaticString(originalException.what()));
 			}
 
