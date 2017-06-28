@@ -31,7 +31,7 @@ echo
 
 header2 "Removing previous build products"
 run rm -rf buildout/*
-run mkdir buildout/artifacts
+run mkdir buildout/testlogs
 run rm -f test/test.log
 run rm -rf /tmp/psg-test-*
 echo

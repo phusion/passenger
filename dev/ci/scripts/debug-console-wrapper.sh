@@ -12,16 +12,6 @@ if ! "$@"; then
 	echo "-----------------------------"
 	echo
 	echo "*** An error occurred ***"
-	echo
-	echo "Preparing artifacts for archival..."
-	run mkdir -p buildout/artifacts
-	if [[ -e test/test.log ]]; then
-		run cp test/test.log buildout/artifacts/
-	fi
-	if ls -Ad /tmp/psg-test-*/passenger-error-*.html >/dev/null 2>/dev/null; then
-		run cp /tmp/psg-test-*/passenger-error-*.html buildout/artifacts/
-	fi
-	echo Done.
 
 	if [[ "$DEBUG_CONSOLE" == 1 ]]; then
 		echo
@@ -33,8 +23,7 @@ if ! "$@"; then
 		header2 "Launching bash"
 		bash -l
 	else
-		echo
-		echo "*** If you want to debug this, run '$CI_COMMAND' with the environment variable DEBUG_CONSOLE=1."
+		echo "If you want to debug this, run '$CI_COMMAND' with the environment variable DEBUG_CONSOLE=1."
 	fi
 	exit 1
 fi

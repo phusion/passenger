@@ -49,7 +49,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker ruby'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/RUBY_LINUX'
+                          sh 'mv buildout/testlogs buildout/RUBY_LINUX'
                           archiveArtifacts artifacts: 'buildout/RUBY_LINUX/**'
                         }
                       }
@@ -71,7 +71,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-natively ruby'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/RUBY_MACOS'
+                          sh 'mv buildout/testlogs buildout/RUBY_MACOS'
                           archiveArtifacts artifacts: 'buildout/RUBY_MACOS/**'
                         }
                       }
@@ -94,7 +94,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker nodejs'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/NODEJS_LINUX'
+                          sh 'mv buildout/testlogs buildout/NODEJS_LINUX'
                           archiveArtifacts artifacts: 'buildout/NODEJS_LINUX/**'
                         }
                       }
@@ -116,7 +116,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-natively nodejs'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/NODEJS_MACOS'
+                          sh 'mv buildout/testlogs buildout/NODEJS_MACOS'
                           archiveArtifacts artifacts: 'buildout/NODEJS_MACOS/**'
                         }
                       }
@@ -139,7 +139,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker cxx'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/CXX_LINUX'
+                          sh 'mv buildout/testlogs buildout/CXX_LINUX'
                           archiveArtifacts artifacts: 'buildout/CXX_LINUX/**'
                         }
                       }
@@ -161,7 +161,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker cxx'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/CXX_LINUX_ROOT'
+                          sh 'mv buildout/testlogs buildout/CXX_LINUX_ROOT'
                           archiveArtifacts artifacts: 'buildout/CXX_LINUX_ROOT/**'
                         }
                       }
@@ -183,7 +183,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-natively cxx'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/CXX_MACOS'
+                          sh 'mv buildout/testlogs buildout/CXX_MACOS'
                           archiveArtifacts artifacts: 'buildout/CXX_MACOS/**'
                         }
                       }
@@ -206,7 +206,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker apache2'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/APACHE2_LINUX'
+                          sh 'mv buildout/testlogs buildout/APACHE2_LINUX'
                           archiveArtifacts artifacts: 'buildout/APACHE2_LINUX/**'
                         }
                       }
@@ -228,7 +228,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-natively apache2'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/APACHE2_MACOS'
+                          sh 'mv buildout/testlogs buildout/APACHE2_MACOS'
                           archiveArtifacts artifacts: 'buildout/APACHE2_MACOS/**'
                         }
                       }
@@ -251,7 +251,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker nginx'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/NGINX_LINUX'
+                          sh 'mv buildout/testlogs buildout/NGINX_LINUX'
                           archiveArtifacts artifacts: 'buildout/NGINX_LINUX/**'
                         }
                       }
@@ -273,7 +273,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-natively nginx'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/NGINX_MACOS'
+                          sh 'mv buildout/testlogs buildout/NGINX_MACOS'
                           archiveArtifacts artifacts: 'buildout/NGINX_MACOS/**'
                         }
                       }
@@ -296,7 +296,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker nginx-dynamic'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/NGINX_DYNAMIC_LINUX'
+                          sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_LINUX'
                           archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_LINUX/**'
                         }
                       }
@@ -318,7 +318,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-natively nginx-dynamic'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/NGINX_DYNAMIC_MACOS'
+                          sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_MACOS'
                           archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_MACOS/**'
                         }
                       }
@@ -341,7 +341,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker standalone'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/STANDALONE_LINUX'
+                          sh 'mv buildout/testlogs buildout/STANDALONE_LINUX'
                           archiveArtifacts artifacts: 'buildout/STANDALONE_LINUX/**'
                         }
                       }
@@ -363,7 +363,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-natively standalone'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/STANDALONE_MACOS'
+                          sh 'mv buildout/testlogs buildout/STANDALONE_MACOS'
                           archiveArtifacts artifacts: 'buildout/STANDALONE_MACOS/**'
                         }
                       }
@@ -386,7 +386,7 @@ pipeline {
                         try {
                           sh './dev/ci/run-tests-with-docker source-packaging'
                         } finally {
-                          sh 'mv buildout/artifacts buildout/SOURCE_PACKAGING'
+                          sh 'mv buildout/testlogs buildout/SOURCE_PACKAGING'
                           archiveArtifacts artifacts: 'buildout/SOURCE_PACKAGING/**'
                         }
                       }

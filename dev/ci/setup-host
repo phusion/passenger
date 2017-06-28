@@ -46,7 +46,7 @@ echo
 
 # Directory must exist so that Jenkinsfile can run archiveArtefacts().
 header2 "Creating buildout directory"
-run mkdir -p buildout buildout/artifacts
+run mkdir -p buildout buildout/testlogs
 echo
 
 if [[ "$OS" = macos ]]; then

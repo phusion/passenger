@@ -1,6 +1,6 @@
 worker_processes  2;
 
-error_log <%= @nginx_root %>/../test.log;
+error_log '<%= @log_file %>';
 pid       <%= @nginx_root %>/nginx.pid;
 
 # Makes integration tests work when run in a CentOS container, with Node.js

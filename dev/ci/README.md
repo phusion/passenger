@@ -43,7 +43,7 @@ Invoke: dev/ci/run-tests-with-docker <test name>
                |     +-- Load: dev/ci/tests/<test name>/run
                |
                +-- (if docker-entrypoint-stage2.sh exited with an error)
-               |    Populate buildout/artifacts
+               |    Populate buildout/testlogs
                |
                +-- (if docker-entrypoint-stage2.sh exited with an error,
                |    and DEBUG_CONSOLE is set to 0)
@@ -89,7 +89,7 @@ Invoke: dev/ci/setup-host <test name>
    |           |           +-- Load: dev/ci/tests/<test name>/setup
    |           |
    |           +-- (if setup-host-natively.sh exited with an error)
-   |           |    Populate buildout/artifacts
+   |           |    Populate buildout/testlogs
    |           |
    |           +-- (if setup-host-natively.sh exited with an error,
    |           |    and DEBUG_CONSOLE is set to 0)
@@ -117,7 +117,7 @@ Invoke: dev/ci/run-tests-natively <test name>
          |     +-- Load: dev/ci/tests/<test name>/run
          |
          +-- (if run-tests-natively-stage2.sh exited with an error)
-         |    Populate buildout/artifacts
+         |    Populate buildout/testlogs
          |
          +-- (if run-tests-natively-stage2.sh exited with an error,
          |    and DEBUG_CONSOLE is set to 0)

@@ -21,6 +21,8 @@ describe "Apache 2 module" do
 
   before :all do
     check_hosts_configuration
+    @log_file = "#{PhusionPassenger.install_spec}/buildout/testlogs/apache2.log"
+    FileUtils.mkdir_p(File.dirname(@log_file))
     @passenger_temp_dir = Dir.mktmpdir('psg-test-', '/tmp')
     FileUtils.chmod_R(0777, @passenger_temp_dir)
     ENV['TMPDIR'] = @passenger_temp_dir
@@ -29,12 +31,14 @@ describe "Apache 2 module" do
 
   after :all do
     @apache2.stop if @apache2
+    FileUtils.cp(Dir["#{@passenger_temp_dir}/passenger-error-*.html"],
+      "#{PhusionPassenger.install_spec}/buildout/testlogs/")
     FileUtils.chmod_R(0777, @passenger_temp_dir)
     FileUtils.rm_rf(@passenger_temp_dir)
   end
 
   before :each do
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       # Make sure that all Apache log output is prepended by the test description
       # so that we know which messages are associated with which tests.
       f.puts "\n#### #{Time.now}: #{example.full_description}"
@@ -46,7 +50,7 @@ describe "Apache 2 module" do
     log "End of test"
     if example.exception
       puts "\t---------------- Begin logs -------------------"
-      File.open("test.log", "rb") do |f|
+      File.open(@log_file, 'rb') do |f|
         f.seek(@test_log_pos)
         puts f.read.split("\n").map{ |line| "\t#{line}" }.join("\n")
       end
@@ -57,7 +61,7 @@ describe "Apache 2 module" do
 
   def create_apache2_controller
     @apache2 = Apache2Controller.new(:port => PORT)
-    @apache2.set(:passenger_temp_dir => @passenger_temp_dir)
+    @apache2.set(:passenger_temp_dir => @passenger_temp_dir, :log_file => @log_file)
     if Process.uid == 0
       @apache2.set(
         :www_user => CONFIG['normal_user_1'],
@@ -67,7 +71,7 @@ describe "Apache 2 module" do
   end
 
   def log(message)
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       f.puts "[#{Time.now}] Spec: #{message}"
     end
   end

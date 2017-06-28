@@ -1,5 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'support/nginx_controller'
+require 'fileutils'
 require 'tmpdir'
 
 WEB_SERVER_DECHUNKS_REQUESTS = true
@@ -15,9 +16,15 @@ describe "Phusion Passenger for Nginx" do
 
     check_hosts_configuration
     @nginx_root = Dir.mktmpdir('psg-test-', '/tmp')
+    @log_file = "#{PhusionPassenger.install_spec}/buildout/testlogs/nginx.log"
+    FileUtils.mkdir_p(File.dirname(@log_file))
+    ENV['TMPDIR'] = @nginx_root
+    ENV['PASSENGER_INSTANCE_REGISTRY_DIR'] = @nginx_root
   end
 
   after :all do
+    FileUtils.cp(Dir["#{@nginx_root}/passenger-error-*.html"],
+      "#{PhusionPassenger.install_spec}/buildout/testlogs/")
     begin
       @nginx.stop if @nginx
     ensure
@@ -26,7 +33,7 @@ describe "Phusion Passenger for Nginx" do
   end
 
   before :each do
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       # Make sure that all Nginx log output is prepended by the test description
       # so that we know which messages are associated with which tests.
       f.puts "\n#### #{Time.now}: #{example.full_description}"
@@ -38,7 +45,7 @@ describe "Phusion Passenger for Nginx" do
     log "End of test"
     if example.exception
       puts "\t---------------- Begin logs -------------------"
-      File.open("test.log", "rb") do |f|
+      File.open(@log_file, 'rb') do |f|
         f.seek(@test_log_pos)
         puts f.read.split("\n").map{ |line| "\t#{line}" }.join("\n")
       end
@@ -58,7 +65,7 @@ describe "Phusion Passenger for Nginx" do
   end
 
   def log(message)
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       f.puts "[#{Time.now}] Spec: #{message}"
     end
   end
