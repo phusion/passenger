@@ -18,8 +18,8 @@ if ! "$@"; then
 	if [[ -e test/test.log ]]; then
 		run cp test/test.log buildout/artifacts/
 	fi
-	if ls -Ad /tmp/psg-test-* >/dev/null 2>/dev/null; then
-		run cp /tmp/psg-test-* buildout/artifacts/
+	if ls -Ad /tmp/psg-test-*/passenger-error-*.html >/dev/null 2>/dev/null; then
+		run cp /tmp/psg-test-*/passenger-error-*.html buildout/artifacts/
 	fi
 
 	if [[ "$DEBUG_CONSOLE" == 1 ]]; then
