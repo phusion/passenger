@@ -69,15 +69,15 @@ module PhusionPassenger
       end
     end
 
-    def self.record_journey_step_begin(step, state)
-      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+    def self.record_journey_step_begin(step, state, work_dir = nil)
+      dir = work_dir || ENV['PASSENGER_SPAWN_WORK_DIR']
       step_dir = "#{dir}/response/steps/#{step.downcase}"
       try_write_file("#{step_dir}/state", state)
       try_write_file("#{step_dir}/begin_time", Time.now.to_f)
     end
 
-    def self.record_journey_step_end(step, state)
-      dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+    def self.record_journey_step_end(step, state, work_dir = nil)
+      dir = work_dir || ENV['PASSENGER_SPAWN_WORK_DIR']
       step_dir = "#{dir}/response/steps/#{step.downcase}"
       try_write_file("#{step_dir}/state", state)
       if !File.exist?("#{step_dir}/begin_time") && !File.exist?("#{step_dir}/begin_time_monotonic")
@@ -155,8 +155,14 @@ module PhusionPassenger
 
         reinitialize_std_channels(work_dir)
 
-        LoaderSharedHelpers.before_handling_requests(true, options)
-        handler = RequestHandler.new(STDIN, options.merge("app" => app))
+        LoaderSharedHelpers.run_block_and_record_step_progress('SUBPROCESS_PREPARE_AFTER_FORKING_FROM_PRELOADER') do
+          LoaderSharedHelpers.before_handling_requests(true, options)
+        end
+
+        handler = nil
+        LoaderSharedHelpers.run_block_and_record_step_progress('SUBPROCESS_LISTEN') do
+          handler = RequestHandler.new(STDIN, options.merge("app" => app))
+        end
 
         LoaderSharedHelpers.dump_all_information(options)
         LoaderSharedHelpers.advertise_sockets(options, handler)

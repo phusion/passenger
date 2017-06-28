@@ -1018,11 +1018,22 @@ private:
 
 	void loadJourneyStateFromResponseDir() {
 		TRACE_POINT();
-		JourneyStep firstStep = getFirstSubprocessJourneyStep();
-		JourneyStep lastStep = getLastSubprocessJourneyStep();
-		JourneyStep step;
 
 		P_DEBUG("[App " << pid << " journey] Loading state from " << session.responseDir);
+
+		loadJourneyStateFromResponseDir(getFirstSubprocessJourneyStep(),
+			getLastSubprocessJourneyStep());
+
+		UPDATE_TRACE_POINT();
+		loadJourneyStateFromResponseDir(getFirstPreloaderJourneyStep(),
+			// Also load state from PRELOADER_FINISH since the
+			// preloader writes there.
+			JourneyStep((int) getLastPreloaderJourneyStep() + 1));
+	}
+
+	void loadJourneyStateFromResponseDir(JourneyStep firstStep, JourneyStep lastStep) {
+		TRACE_POINT();
+		JourneyStep step;
 
 		for (step = firstStep; step < lastStep; step = JourneyStep((int) step + 1)) {
 			if (!session.journey.hasStep(step)) {

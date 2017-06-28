@@ -170,8 +170,15 @@ private:
 			session.gid);
 
 
-		JourneyStep firstStep = getFirstSubprocessJourneyStep();
-		JourneyStep lastStep = getLastSubprocessJourneyStep();
+		createJourneyStepDirs(getFirstSubprocessJourneyStep(),
+			getLastSubprocessJourneyStep());
+		createJourneyStepDirs(getFirstPreloaderJourneyStep(),
+			// Also create directory for PRELOADER_FINISH;
+			// the preloader will want to write there.
+			JourneyStep((int) getLastPreloaderJourneyStep() + 1));
+	}
+
+	void createJourneyStepDirs(JourneyStep firstStep, JourneyStep lastStep) {
 		JourneyStep step;
 
 		for (step = firstStep; step < lastStep; step = JourneyStep((int) step + 1)) {

@@ -352,23 +352,23 @@ module PhusionPassenger
 
     ##### Journey recording #####
 
-    def record_journey_step_begin(step, state)
-      @main_app.record_journey_step_begin(step, state)
+    def record_journey_step_begin(step, state, *args)
+      @main_app.record_journey_step_begin(step, state, *args)
     end
 
-    def record_journey_step_end(step, state)
-      @main_app.record_journey_step_end(step, state)
+    def record_journey_step_end(step, state, *args)
+      @main_app.record_journey_step_end(step, state, *args)
     end
 
-    def run_block_and_record_step_progress(step)
-      record_journey_step_begin(step, 'STEP_IN_PROGRESS')
+    def run_block_and_record_step_progress(step, *args)
+      record_journey_step_begin(step, 'STEP_IN_PROGRESS', *args)
       begin
         yield
       rescue Exception => e
-        record_journey_step_end(step, 'STEP_ERRORED')
+        record_journey_step_end(step, 'STEP_ERRORED', *args)
         raise e
       else
-        record_journey_step_end(step, 'STEP_PERFORMED')
+        record_journey_step_end(step, 'STEP_PERFORMED', *args)
       end
     end
 

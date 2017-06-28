@@ -75,29 +75,14 @@ module PhusionPassenger
       end
 
       if doc['command'] == 'spawn'
-        # Improve copy-on-write friendliness.
-        GC.start
-
-        pid = fork
-        if pid.nil?
-          $0 = "#{$0} (forking...)"
-          client.write(Utils::JSON.generate(
-            :result => 'ok',
-            :pid => Process.pid
-          ))
-          return [:forked, doc['work_dir']]
-        elsif defined?(NativeSupport)
-          NativeSupport.detach_process(pid)
-        else
-          Process.detach(pid)
-        end
+        handle_spawn_command(client, doc)
       else
         client.write(Utils::JSON.generate(
           :result => 'error',
           :message => "Unknown command #{doc['command'].inspect}"
         ))
+        nil
       end
-      nil
     ensure
       if client
         begin
@@ -106,6 +91,49 @@ module PhusionPassenger
           # Work around OS X bug.
           # https://code.google.com/p/phusion-passenger/issues/detail?id=854
         end
+      end
+    end
+
+    def handle_spawn_command(client, doc)
+      work_dir = doc['work_dir']
+      LoaderSharedHelpers.record_journey_step_end('PRELOADER_PREPARATION',
+        'STEP_PERFORMED', work_dir)
+      LoaderSharedHelpers.record_journey_step_begin('PRELOADER_FORK_SUBPROCESS',
+        'STEP_IN_PROGRESS', work_dir)
+
+      # Improve copy-on-write friendliness.
+      GC.start
+
+      begin
+        pid = fork
+      rescue SystemCallError => e
+        LoaderSharedHelpers.record_journey_step_end('PRELOADER_FORK_SUBPROCESS',
+          'STEP_ERRORED', work_dir)
+        raise e
+      end
+
+      if pid.nil?
+        begin
+          $0 = "#{$0} (forking...)"
+          LoaderSharedHelpers.record_journey_step_end('PRELOADER_FORK_SUBPROCESS',
+            'STEP_PERFORMED', work_dir)
+          LoaderSharedHelpers.run_block_and_record_step_progress('PRELOADER_SEND_RESPONSE', work_dir) do
+            client.write(Utils::JSON.generate(
+              :result => 'ok',
+              :pid => Process.pid
+            ))
+          end
+          LoaderSharedHelpers.record_journey_step_end('PRELOADER_FINISH',
+            'STEP_PERFORMED', work_dir)
+          [:forked, work_dir]
+        rescue Exception => e
+          STDERR.puts("Error: #{e}\n#{e.backtrace.join("\n")}")
+          exit!(1)
+        end
+      elsif defined?(NativeSupport)
+        NativeSupport.detach_process(pid)
+      else
+        Process.detach(pid)
       end
     end
 
