@@ -1180,7 +1180,10 @@ public:
 			P_DEBUG("Process forked for appRoot=" << options.appRoot << ": PID " << forkResult.pid);
 
 			UPDATE_TRACE_POINT();
+			session.journey.setStepPerformed(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+			session.journey.setStepInProgress(PRELOADER_PREPARATION);
 			session.journey.setStepInProgress(SPAWNING_KIT_HANDSHAKE_PERFORM);
+			stepToMarkAsErrored = SPAWNING_KIT_HANDSHAKE_PERFORM;
 			HandshakePerform(session, forkResult.pid, forkResult.stdinFd,
 				forkResult.stdoutAndErrFd).execute();
 			guard.clear();
