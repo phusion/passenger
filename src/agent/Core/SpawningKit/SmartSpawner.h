@@ -493,16 +493,19 @@ private:
 		pid_t pid;
 		FileDescriptor stdinFd;
 		FileDescriptor stdoutAndErrFd;
+		string alreadyReadStdoutAndErrData;
 
 		ForkResult()
 			: pid(-1)
 			{ }
 
 		ForkResult(pid_t _pid, const FileDescriptor &_stdinFd,
-			const FileDescriptor &_stdoutAndErrFd)
+			const FileDescriptor &_stdoutAndErrFd,
+			const string &_alreadyReadStdoutAndErrData)
 			: pid(_pid),
 			  stdinFd(_stdinFd),
-			  stdoutAndErrFd(_stdoutAndErrFd)
+			  stdoutAndErrFd(_stdoutAndErrFd),
+			  alreadyReadStdoutAndErrData(_alreadyReadStdoutAndErrData)
 			{ }
 	};
 
@@ -876,12 +879,15 @@ private:
 		}
 
 		UPDATE_TRACE_POINT();
+		string alreadyReadStdoutAndErrData;
 		if (stdChannelsAsyncOpenState->stdoutAndErrCapturer != NULL) {
 			stdChannelsAsyncOpenState->stdoutAndErrCapturer->stop();
+			alreadyReadStdoutAndErrData = stdChannelsAsyncOpenState->stdoutAndErrCapturer->getData();
 		}
 		guard.clear();
 		return ForkResult(spawnedPid, stdChannelsAsyncOpenState->stdinFd,
-			stdChannelsAsyncOpenState->stdoutAndErrFd);
+			stdChannelsAsyncOpenState->stdoutAndErrFd,
+			alreadyReadStdoutAndErrData);
 	}
 
 	ForkResult handleForkCommandResponseError(HandshakeSession &session,
@@ -1239,7 +1245,8 @@ public:
 			session.journey.setStepInProgress(SPAWNING_KIT_HANDSHAKE_PERFORM);
 			stepToMarkAsErrored = SPAWNING_KIT_HANDSHAKE_PERFORM;
 			HandshakePerform(session, forkResult.pid, forkResult.stdinFd,
-				forkResult.stdoutAndErrFd).execute();
+				forkResult.stdoutAndErrFd, forkResult.alreadyReadStdoutAndErrData).
+				execute();
 			guard.clear();
 			session.journey.setStepPerformed(SPAWNING_KIT_HANDSHAKE_PERFORM);
 			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
