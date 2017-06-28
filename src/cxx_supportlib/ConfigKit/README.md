@@ -24,7 +24,7 @@ ConfigKit is a configuration management system that lets you define configuratio
    - Deleting data
    - Fetching data
    - Default values
-   - Dumping all data
+   - Inspecting all data
  * Putting it all together: synchronous version
    - SecurityChecker example: a configurable, low-level component
    - DnsQuerier example: a low-level component with post-configuration application operations
