@@ -825,6 +825,7 @@ private:
 			e.setStdoutAndErrData(getBackgroundIOCapturerData(
 				stdChannelsAsyncOpenState->stdoutAndErrCapturer));
 			e.setProblemDescriptionHTML(
+				"<h2>Application process has unexpected UID</h2>"
 				"<p>The " PROGRAM_NAME " application server tried"
 				" to start the web application by communicating with a"
 				" helper process that we call a \"preloader\". However,"
@@ -832,12 +833,27 @@ private:
 				" belongs to the wrong user. The UID of the web"
 				" application process should be " + toString(session.uid)
 				+ ", but is actually " + toString(session.uid) + ".</p>");
-			e.setSolutionDescriptionHTML(
-				"<p class=\"sole-solution\">"
-				"This is probably a bug in the preloader process. Please "
-				"<a href=\"" SUPPORT_URL "\">"
-				"report this bug</a>."
-				"</p>");
+			if (!session.config->genericApp && session.config->startsUsingWrapper
+				&& session.config->wrapperSuppliedByThirdParty)
+			{
+				e.setSolutionDescriptionHTML(
+					"<h2>Please report this bug</h2>"
+					"<p class=\"sole-solution\">"
+					"This is probably a bug in the preloader process. The preloader "
+					"wrapper program is not written by the " PROGRAM_NAME " authors, "
+					"but by a third party. Please report this bug to the author of "
+					"the preloader wrapper program."
+					"</p>");
+			} else {
+				e.setSolutionDescriptionHTML(
+					"<h2>Please report this bug</h2>"
+					"<p class=\"sole-solution\">"
+					"This is probably a bug in the preloader process. The preloader "
+					"is an internal tool part of " PROGRAM_NAME ". Please "
+					"<a href=\"" SUPPORT_URL "\">"
+					"report this bug</a>."
+					"</p>");
+			}
 			throw e.finalize();
 		}
 
@@ -914,6 +930,7 @@ private:
 	uid_t getProcessUid(HandshakeSession &session, pid_t pid,
 		const BackgroundIOCapturerPtr &stdoutAndErrCapturer)
 	{
+		TRACE_POINT();
 		uid_t uid = (uid_t) -1;
 
 		try {
@@ -929,6 +946,7 @@ private:
 			e.setSummary("Unable to query the UID of spawned application process "
 				+ toString(pid) + ": error parsing 'ps' output");
 			e.setProblemDescriptionHTML(
+				"<h2>Unable to use 'ps' to query PID " + toString(pid) + "</h2>"
 				"<p>The " PROGRAM_NAME " application server tried"
 				" to start the web application. As part of the starting"
 				" sequence, " SHORT_PROGRAM_NAME " also tried to query"
@@ -948,6 +966,7 @@ private:
 				+ toString(pid) + "; error capturing 'ps' output: "
 				+ originalException.what());
 			e.setProblemDescriptionHTML(
+				"<h2>Error capturing 'ps' output for PID " + toString(pid) + "</h2>"
 				"<p>The " PROGRAM_NAME " application server tried"
 				" to start the web application. As part of the starting"
 				" sequence, " SHORT_PROGRAM_NAME " also tried to query"
@@ -963,6 +982,7 @@ private:
 			throw e.finalize();
 		}
 
+		UPDATE_TRACE_POINT();
 		if (uid == (uid_t) -1) {
 			if (osProcessExists(pid)) {
 				session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
@@ -973,6 +993,7 @@ private:
 					+ toString(pid) + ": 'ps' did not report information"
 					" about this process");
 				e.setProblemDescriptionHTML(
+					"<h2>'ps' did not return any information about PID " + toString(pid) + "</h2>"
 					"<p>The " PROGRAM_NAME " application server tried"
 					" to start the web application. As part of the starting"
 					" sequence, " SHORT_PROGRAM_NAME " also tried to query"
@@ -992,6 +1013,7 @@ private:
 					" seems to have exited prematurely");
 				e.setStdoutAndErrData(getBackgroundIOCapturerData(stdoutAndErrCapturer));
 				e.setProblemDescriptionHTML(
+					"<h2>Application process exited prematurely</h2>"
 					"<p>The " PROGRAM_NAME " application server tried"
 					" to start the web application. As part of the starting"
 					" sequence, " SHORT_PROGRAM_NAME " also tried to query"
