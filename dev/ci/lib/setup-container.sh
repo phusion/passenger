@@ -30,7 +30,10 @@ run chmod g+x,o+x "$HOME"
 echo
 
 header2 "Removing previous build products"
-run rm -rf buildout
+run rm -rf buildout/*
+run mkdir buildout/artifacts
+run rm -f test/test.log
+run rm -rf /tmp/psg-test-*
 echo
 
 # shellcheck source=../lib/set-container-envvars.sh

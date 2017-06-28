@@ -14,6 +14,8 @@ Invoke: dev/ci/setup-host
    |           +-- Relax file permissions (if in Jenkins)
    |           |
    |           +-- Create cache directories
+   |           |
+   |           +-- Create buildout directory
    |
 Invoke: dev/ci/run-tests-with-docker <test name>
    |
@@ -40,6 +42,9 @@ Invoke: dev/ci/run-tests-with-docker <test name>
                |     |
                |     +-- Load: dev/ci/tests/<test name>/run
                |
+               +-- (if docker-entrypoint-stage2.sh exited with an error)
+               |    Populate buildout/artifacts
+               |
                +-- (if docker-entrypoint-stage2.sh exited with an error,
                |    and DEBUG_CONSOLE is set to 0)
                |   Print error message and exit
@@ -63,6 +68,8 @@ Invoke: dev/ci/setup-host <test name>
    |      |
    |      +-- Create cache directories
    |      |
+   |      +-- Create buildout directory
+   |      |
    |      +-- Exec: dev/ci/scripts/debug-console-wrapper.sh dev/ci/scripts/setup-host-natively.sh <test name>
    |           |
    |           +-- Invoke: dev/ci/scripts/setup-host-natively.sh
@@ -81,11 +88,14 @@ Invoke: dev/ci/setup-host <test name>
    |           |           |
    |           |           +-- Load: dev/ci/tests/<test name>/setup
    |           |
-   |           +-- (if setup-host exited with an error,
+   |           +-- (if setup-host-natively.sh exited with an error)
+   |           |    Populate buildout/artifacts
+   |           |
+   |           +-- (if setup-host-natively.sh exited with an error,
    |           |    and DEBUG_CONSOLE is set to 0)
    |           |   Print error message and exit
    |           |
-   |           +-- (if setup-host exited with an error,
+   |           +-- (if setup-host-natively.sh exited with an error,
    |                and DEBUG_CONSOLE is set to 1)
    |                 |
    |                 +-- Load: dev/ci/lib/set-container-envvars.sh
@@ -105,6 +115,9 @@ Invoke: dev/ci/run-tests-natively <test name>
          |     |     +-- Set RVM version and various envvars
          |     |
          |     +-- Load: dev/ci/tests/<test name>/run
+         |
+         +-- (if run-tests-natively-stage2.sh exited with an error)
+         |    Populate buildout/artifacts
          |
          +-- (if run-tests-natively-stage2.sh exited with an error,
          |    and DEBUG_CONSOLE is set to 0)

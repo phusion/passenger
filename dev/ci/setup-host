@@ -44,6 +44,11 @@ run mkdir -p "$CACHE_DIR/ccache"
 run mkdir -p "$CACHE_DIR/yarn"
 echo
 
+# Directory must exist so that Jenkinsfile can run archiveArtefacts().
+header2 "Creating buildout directory"
+run mkdir -p buildout buildout/artifacts
+echo
+
 if [[ "$OS" = macos ]]; then
 	export CI_COMMAND="./dev/ci/setup-host $*"
 	exec "$PASSENGER_ROOT/dev/ci/scripts/debug-console-wrapper.sh" \

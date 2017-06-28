@@ -12,7 +12,18 @@ if ! "$@"; then
 	echo "-----------------------------"
 	echo
 	echo "*** An error occurred ***"
+	echo
+	echo "Preparing artifacts for archival..."
+	run mkdir -p buildout/artifacts
+	if [[ -e test/test.log ]]; then
+		run cp test/test.log buildout/artifacts/
+	fi
+	if ls -Ad /tmp/psg-test-* >/dev/null 2>/dev/null; then
+		run cp /tmp/psg-test-* buildout/artifacts/
+	fi
+
 	if [[ "$DEBUG_CONSOLE" == 1 ]]; then
+		echo
 		echo "DEBUG_CONSOLE set to 1, so launching a debugging console..."
 		echo
 		# shellcheck source=../lib/set-container-envvars.sh
