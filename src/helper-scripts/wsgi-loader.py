@@ -377,7 +377,6 @@ if __name__ == "__main__":
 		install_signal_handlers()
 		handler = RequestHandler(server_socket, sys.stdin, app_module.application)
 		advertise_sockets(socket_filename)
-		advertise_readiness()
 	except Exception:
 		record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_ERRORED')
 		raise
@@ -385,6 +384,7 @@ if __name__ == "__main__":
 		record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_PERFORMED')
 
 
+	advertise_readiness()
 	handler.main_loop()
 	try:
 		os.remove(socket_filename)

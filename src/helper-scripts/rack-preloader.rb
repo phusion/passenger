@@ -195,13 +195,14 @@ module PhusionPassenger
         server = create_server(options)
         PreloaderSharedHelpers.advertise_sockets(options, server)
         LoaderSharedHelpers.dump_all_information(options)
-        LoaderSharedHelpers.advertise_readiness(options)
       rescue Exception => e
         LoaderSharedHelpers.record_and_print_exception(e)
         LoaderSharedHelpers.about_to_abort(options, e)
         exit LoaderSharedHelpers.exit_code_for_exception(e)
       end
     end
+
+    LoaderSharedHelpers.advertise_readiness(options)
 
     subprocess_work_dir = PreloaderSharedHelpers.run_main_loop(server, options)
     if subprocess_work_dir

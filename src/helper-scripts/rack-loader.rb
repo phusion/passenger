@@ -122,13 +122,14 @@ module PhusionPassenger
         LoaderSharedHelpers.before_handling_requests(false, options)
         handler = RequestHandler.new(STDIN, options.merge('app' => app))
         LoaderSharedHelpers.advertise_sockets(options, handler)
-        LoaderSharedHelpers.advertise_readiness(options)
       rescue Exception => e
         LoaderSharedHelpers.record_and_print_exception(e)
         LoaderSharedHelpers.about_to_abort(options, e)
         exit LoaderSharedHelpers.exit_code_for_exception(e)
       end
     end
+
+    LoaderSharedHelpers.advertise_readiness(options)
 
     handler.main_loop
     handler.cleanup
