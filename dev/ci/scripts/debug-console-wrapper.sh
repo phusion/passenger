@@ -21,10 +21,11 @@ if ! "$@"; then
 	if ls -Ad /tmp/psg-test-*/passenger-error-*.html >/dev/null 2>/dev/null; then
 		run cp /tmp/psg-test-*/passenger-error-*.html buildout/artifacts/
 	fi
+	echo Done.
 
 	if [[ "$DEBUG_CONSOLE" == 1 ]]; then
 		echo
-		echo "DEBUG_CONSOLE set to 1, so launching a debugging console..."
+		echo "*** DEBUG_CONSOLE set to 1, so launching a debugging console..."
 		echo
 		# shellcheck source=../lib/set-container-envvars.sh
 		set +e
@@ -32,7 +33,8 @@ if ! "$@"; then
 		header2 "Launching bash"
 		bash -l
 	else
-		echo "If you want to debug this, run '$CI_COMMAND' with the environment variable DEBUG_CONSOLE=1."
+		echo
+		echo "*** If you want to debug this, run '$CI_COMMAND' with the environment variable DEBUG_CONSOLE=1."
 	fi
 	exit 1
 fi
