@@ -162,6 +162,15 @@ public:
 	bool analyticsSupport: 1;
 
 	/**
+	 * Set to true if you do not want SpawningKit to remove the
+	 * work directory after a spawning operation, which is useful
+	 * for debugging. Defaults to false.
+	 *
+	 * @hinted_parseable
+	 */
+	bool debugWorkDir: 1;
+
+	/**
 	 * The command to run in order to start the app.
 	 *
 	 * If `genericApp` is true, then the command string must contain '$PORT'.
@@ -347,6 +356,7 @@ public:
 		  findFreePort(false),
 		  loadShellEnvvars(false),
 		  analyticsSupport(false),
+		  debugWorkDir(false),
 		  appEnv(P_STATIC_STRING(DEFAULT_APP_ENV)),
 		  baseURI(P_STATIC_STRING("/")),
 		  lveMinUid(DEFAULT_LVE_MIN_UID),

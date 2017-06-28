@@ -68,11 +68,19 @@ public:
 	}
 
 	~HandshakeWorkDir() {
-		removeDirTree(path);
+		if (!path.empty()) {
+			removeDirTree(path);
+		}
 	}
 
 	const string &getPath() const {
 		return path;
+	}
+
+	string dontRemoveOnDestruction() {
+		string result = path;
+		path.clear();
+		return result;
 	}
 };
 

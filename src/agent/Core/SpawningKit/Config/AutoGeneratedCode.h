@@ -242,6 +242,7 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 	 * findFreePort
 	 * loadShellEnvvars
 	 * analyticsSupport
+	 * debugWorkDir
 	 * processTitle
 	 * environmentVariables
 	 * apiKey
@@ -300,6 +301,7 @@ Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 	 * Excluded:
 	 *
 	 * findFreePort
+	 * debugWorkDir
 	 * lveMinUid
 	 * startTimeoutMsec
 	 */
@@ -354,6 +356,7 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 	 * Excluded:
 	 *
 	 * findFreePort
+	 * debugWorkDir
 	 * lveMinUid
 	 * startTimeoutMsec
 	 */

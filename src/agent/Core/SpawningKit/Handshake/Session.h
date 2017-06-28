@@ -75,6 +75,13 @@ struct HandshakeSession {
 		  timeoutUsec(_config.startTimeoutMsec * 1000),
 		  expectedStartPort(0)
 		{ }
+
+	~HandshakeSession() {
+		if (config->debugWorkDir && workDir != NULL) {
+			string path = workDir->dontRemoveOnDestruction();
+			P_NOTICE("Work directory " << path << " preserved for debugging");
+		}
+	}
 };
 
 
