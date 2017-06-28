@@ -75,6 +75,9 @@ using namespace oxt;
 class SmartSpawner: public Spawner {
 private:
 	const string preloaderCommandString;
+	string preloaderEnvvars;
+	string preloaderUserInfo;
+	string preloaderUlimits;
 	StringKeyTable<string> preloaderAnnotations;
 	AppPoolOptions options;
 
@@ -407,12 +410,24 @@ private:
 
 			HandshakePerform(session, pid, stdinChannel.second,
 				stdoutAndErrChannel.first).execute();
+			string envvars, userInfo, ulimits;
+			// If a new output variable was added to this function,
+			// then don't forget to also update these locations:
+			// - the critical section below
+			// - bottom of stopPreloader()
+			// - addPreloaderEnvDumps()
+			HandshakePerform::loadBasicInfoFromEnvDumpDir(session.envDumpDir,
+				envvars, userInfo, ulimits);
 			string socketAddress = findPreloaderCommandSocketAddress(session);
+
 			{
 				boost::lock_guard<boost::mutex> l(simpleFieldSyncher);
 				this->pid = pid;
 				this->socketAddress = socketAddress;
 				this->preloaderStdin = stdinChannel.second;
+				this->preloaderEnvvars = envvars;
+				this->preloaderUserInfo = userInfo;
+				this->preloaderUlimits = ulimits;
 				this->preloaderAnnotations = loadAnnotationsFromEnvDumpDir(
 					session.envDumpDir);
 			}
@@ -459,6 +474,9 @@ private:
 			boost::lock_guard<boost::mutex> l(simpleFieldSyncher);
 			pid = -1;
 			socketAddress.clear();
+			preloaderEnvvars.clear();
+			preloaderUserInfo.clear();
+			preloaderUlimits.clear();
 			preloaderAnnotations.clear();
 		}
 	}
@@ -686,7 +704,7 @@ private:
 			session.journey.setStepErrored(SPAWNING_KIT_READ_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			e.setSummary("The preloader process sent a response that exceeds the maximum size limit.");
 			e.setProblemDescriptionHTML(
 				"<p>The " PROGRAM_NAME " application server tried"
@@ -713,7 +731,7 @@ private:
 			session.journey.setStepErrored(SPAWNING_KIT_PARSE_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			e.setSummary("The preloader process sent an unparseable response: " + data);
 			e.setProblemDescriptionHTML(
 				"<p>The " PROGRAM_NAME " application server tried"
@@ -737,7 +755,7 @@ private:
 			session.journey.setStepErrored(SPAWNING_KIT_PARSE_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			e.setSummary("The preloader process sent a response that does not"
 				" match the expected structure: " + stringifyJson(doc));
 			e.setProblemDescriptionHTML(
@@ -818,7 +836,7 @@ private:
 			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			e.setSummary("The process that the preloader said it spawned, PID "
 				+ toString(spawnedPid) + ", has UID " + toString(spawnedUid)
 				+ ", but the expected UID is " + toString(session.uid));
@@ -872,7 +890,7 @@ private:
 		session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 		SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-		addPreloaderAnnotations(e);
+		addPreloaderEnvDumps(e);
 		e.setSummary("An error occured while starting the web application: "
 			+ doc["message"].asString());
 		e.setProblemDescriptionHTML(
@@ -942,7 +960,7 @@ private:
 			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			e.setSummary("Unable to query the UID of spawned application process "
 				+ toString(pid) + ": error parsing 'ps' output");
 			e.setProblemDescriptionHTML(
@@ -961,7 +979,7 @@ private:
 			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(OPERATING_SYSTEM_ERROR, session.journey, session.config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			e.setSummary("Unable to query the UID of spawned application process "
 				+ toString(pid) + "; error capturing 'ps' output: "
 				+ originalException.what());
@@ -988,7 +1006,7 @@ private:
 				session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 				SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-				addPreloaderAnnotations(e);
+				addPreloaderEnvDumps(e);
 				e.setSummary("Unable to query the UID of spawned application process "
 					+ toString(pid) + ": 'ps' did not report information"
 					" about this process");
@@ -1008,7 +1026,7 @@ private:
 				session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 				SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-				addPreloaderAnnotations(e);
+				addPreloaderEnvDumps(e);
 				e.setSummary("The application process spawned from the preloader"
 					" seems to have exited prematurely");
 				e.setStdoutAndErrData(getBackgroundIOCapturerData(stdoutAndErrCapturer));
@@ -1122,7 +1140,11 @@ private:
 		return result;
 	}
 
-	void addPreloaderAnnotations(SpawnException &e) const {
+	void addPreloaderEnvDumps(SpawnException &e) const {
+		e.setPreloaderEnvvars(preloaderEnvvars);
+		e.setPreloaderUserInfo(preloaderUserInfo);
+		e.setPreloaderUlimits(preloaderUlimits);
+
 		StringKeyTable<string>::ConstIterator it(preloaderAnnotations);
 		while (*it != NULL) {
 			e.setAnnotation(it.getKey(), it.getValue(), false);
@@ -1179,7 +1201,7 @@ public:
 			Journey journey(SPAWN_THROUGH_PRELOADER, true);
 			journey.setStepErrored(SPAWNING_KIT_PREPARATION, true);
 			SpawnException e(originalException, journey, &config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			throw e.finalize();
 		}
 
@@ -1214,13 +1236,13 @@ public:
 				", pid=" << forkResult.pid);
 			return session.result;
 		} catch (SpawnException &e) {
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			throw e;
 		} catch (const std::exception &originalException) {
 			session.journey.setStepErrored(stepToMarkAsErrored, true);
 			SpawnException e(originalException, session.journey,
 				&config);
-			addPreloaderAnnotations(e);
+			addPreloaderEnvDumps(e);
 			throw e.finalize();
 		}
 	}

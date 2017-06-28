@@ -244,7 +244,7 @@ private:
 				config);
 			e.setSummary("The application process exited prematurely.");
 			e.setStdoutAndErrData(getStdoutErrData());
-			loadSubprocessErrorMessagesAndAnnotations(e);
+			loadSubprocessErrorMessagesAndEnvDump(e);
 			throw e.finalize();
 		}
 
@@ -257,7 +257,7 @@ private:
 
 			SpawnException e(TIMEOUT_ERROR, session.journey, config);
 			e.setStdoutAndErrData(getStdoutErrData());
-			loadSubprocessErrorMessagesAndAnnotations(e);
+			loadSubprocessErrorMessagesAndEnvDump(e);
 			throw e.finalize();
 		}
 
@@ -343,7 +343,7 @@ private:
 			config);
 		e.setSummary("The web application aborted with an error during startup.");
 		e.setStdoutAndErrData(getStdoutErrData());
-		loadSubprocessErrorMessagesAndAnnotations(e);
+		loadSubprocessErrorMessagesAndEnvDump(e);
 		throw e.finalize();
 	}
 
@@ -1318,7 +1318,7 @@ private:
 		}
 	}
 
-	void loadSubprocessErrorMessagesAndAnnotations(SpawnException &e) const {
+	void loadSubprocessErrorMessagesAndEnvDump(SpawnException &e) const {
 		TRACE_POINT();
 		const string &responseDir = session.responseDir;
 		const string &envDumpDir = session.envDumpDir;
@@ -1348,15 +1348,11 @@ private:
 				responseDir + "/error/solution_description.txt"))));
 		}
 
-		if (fileExists(envDumpDir + "/envvars")) {
-			e.setSubprocessEnvvars(readAll(envDumpDir + "/envvars"));
-		}
-		if (fileExists(envDumpDir + "/user_info")) {
-			e.setSubprocessUserInfo(readAll(envDumpDir + "/user_info"));
-		}
-		if (fileExists(envDumpDir + "/ulimits")) {
-			e.setSubprocessUlimits(readAll(envDumpDir + "/ulimits"));
-		}
+		string envvars, userInfo, ulimits;
+		loadBasicInfoFromEnvDumpDir(envDumpDir, envvars, userInfo, ulimits);
+		e.setSubprocessEnvvars(envvars);
+		e.setSubprocessUserInfo(userInfo);
+		e.setSubprocessUlimits(ulimits);
 
 		loadAnnotationsFromEnvDumpDir(e);
 	}
@@ -1595,6 +1591,20 @@ public:
 			SpawnException e(originalException, session.journey, config);
 			e.setStdoutAndErrData(getStdoutErrData());
 			throw e.finalize();
+		}
+	}
+
+	static void loadBasicInfoFromEnvDumpDir(const string &envDumpDir,
+		string &envvars, string &userInfo, string &ulimits)
+	{
+		if (fileExists(envDumpDir + "/envvars")) {
+			envvars = readAll(envDumpDir + "/envvars");
+		}
+		if (fileExists(envDumpDir + "/user_info")) {
+			userInfo = readAll(envDumpDir + "/user_info");
+		}
+		if (fileExists(envDumpDir + "/ulimits")) {
+			ulimits = readAll(envDumpDir + "/ulimits");
 		}
 	}
 };
