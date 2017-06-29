@@ -243,14 +243,26 @@ task 'test:cxx' => dependencies do
     if boolean_option('GDB')
       abort "You cannot set both REPEAT=1 and GDB=1."
     end
-    sh "cd test && while #{command}; do echo -------------------------------------------; done"
+    command = "cd test && while #{command}; do echo -------------------------------------------; done"
   elsif boolean_option('REPEAT_FOREVER')
     if boolean_option('GDB')
       abort "You cannot set both REPEAT_FOREVER=1 and GDB=1."
     end
-    sh "cd test && while true; do #{command}; echo -------------------------------------------; done"
+    command = "cd test && while true; do #{command}; echo -------------------------------------------; done"
   else
-    sh "cd test && exec #{command}"
+    command = "cd test && exec #{command}"
+  end
+
+  begin
+    sh(command)
+  ensure
+    error_pages = Dir['/tmp/passenger-error-*.html']
+    if error_pages.any?
+      puts
+      puts "Saving log files:"
+      FileUtils.mkdir_p("#{OUTPUT_DIR}testlogs", :verbose => true)
+      FileUtils.cp(error_pages, "#{OUTPUT_DIR}testlogs/", :verbose => true)
+    end
   end
 end
 
