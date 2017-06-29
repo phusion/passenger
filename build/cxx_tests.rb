@@ -259,10 +259,12 @@ task 'test:cxx' => dependencies do
     error_pages = Dir['/tmp/passenger-error-*.html']
     if error_pages.any?
       puts
+      puts "---------------------------------"
       puts "Saving log files:"
       FileUtils.mkdir_p("#{OUTPUT_DIR}testlogs", :verbose => true)
       if boolean_option('SUDO')
-        sh "#{PlatformInfo.ruby_sudo_command} cp /tmp/passenger-error-*.html #{OUTPUT_DIR}testlogs/"
+        sh "sudo cp /tmp/passenger-error-*.html #{OUTPUT_DIR}testlogs/"
+        sh "sudo chown $(whoami): #{OUTPUT_DIR}testlogs/passenger-error-*.html"
       else
         error_pages.each do |path|
           if File.readable?(path)
