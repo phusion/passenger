@@ -261,7 +261,17 @@ task 'test:cxx' => dependencies do
       puts
       puts "Saving log files:"
       FileUtils.mkdir_p("#{OUTPUT_DIR}testlogs", :verbose => true)
-      FileUtils.cp(error_pages, "#{OUTPUT_DIR}testlogs/", :verbose => true)
+      if boolean_option('SUDO')
+        sh "#{PlatformInfo.ruby_sudo_command} cp /tmp/passenger-error-*.html #{OUTPUT_DIR}testlogs/"
+      else
+        error_pages.each do |path|
+          if File.readable?(path)
+            FileUtils.cp(path, "#{OUTPUT_DIR}testlogs/", :verbose => true)
+          else
+            puts "Skip copying #{path}: file not readable"
+          end
+        end
+      end
     end
   end
 end
