@@ -1759,16 +1759,16 @@ namespace tut {
 		touchFile("tmp.wsgi/tmp/restart.txt");
 		pool->asyncGet(options, callback);
 		GroupPtr group = pool->findOrCreateGroup(options);
-		ensure_equals(pool->getProcessCount(), 0u);
-		ensure_equals(group->getWaitlist.size(), 1u);
+		ensure_equals("(1)", pool->getProcessCount(), 0u);
+		ensure_equals("(2)", group->getWaitlist.size(), 1u);
 
 		// Now that the restart is in progress, perform a get().
 		pool->asyncGet(options, callback);
-		ensure_equals(group->getWaitlist.size(), 2u);
+		ensure_equals("(3)", group->getWaitlist.size(), 2u);
 		EVENTUALLY(2,
 			result = number == 3;
 		);
-		ensure_equals("The restart function respects minProcesses",
+		ensure_equals("(4)", "The restart function respects minProcesses",
 			pool->getProcessCount(), 2u);
 	}
 
