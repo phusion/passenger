@@ -565,7 +565,7 @@ private:
 					SHORT_PROGRAM_NAME ". " SHORT_PROGRAM_NAME " expected"
 					" the helper tool to report a socket to receive preloader"
 					" commands on, but the helper tool finished its startup"
-					" sequence without reporting such a socket.</p>");
+					" procedure without reporting such a socket.</p>");
 			} else {
 				e.setProblemDescriptionHTML(
 					"<p>The " PROGRAM_NAME " application server tried"
@@ -575,7 +575,7 @@ private:
 					" in this helper tool. " SHORT_PROGRAM_NAME " expected"
 					" the helper tool to report a socket to receive preloader"
 					" commands on, but the helper tool finished its startup"
-					" sequence without reporting such a socket.</p>");
+					" procedure without reporting such a socket.</p>");
 			}
 
 			if (config->wrapperSuppliedByThirdParty) {
@@ -614,7 +614,7 @@ private:
 				" in the application. " SHORT_PROGRAM_NAME " expected"
 				" the application to report a socket to receive preloader"
 				" commands on, but the application finished its startup"
-				" sequence without reporting such a socket.</p>");
+				" procedure without reporting such a socket.</p>");
 			e.setSolutionDescriptionHTML(
 				"<p class=\"sole-solution\">"
 				"Since this is a bug in the web application, please "
@@ -669,7 +669,7 @@ private:
 					" called the \"wrapper\". This helper tool is not part of "
 					SHORT_PROGRAM_NAME ". " SHORT_PROGRAM_NAME " expected"
 					" the helper tool to report a socket to receive requests"
-					" on, but the helper tool finished its startup sequence"
+					" on, but the helper tool finished its startup procedure"
 					" without reporting such a socket.</p>");
 			} else {
 				e.setProblemDescriptionHTML(
@@ -679,7 +679,7 @@ private:
 					" but " SHORT_PROGRAM_NAME " encountered a bug"
 					" in this helper tool. " SHORT_PROGRAM_NAME " expected"
 					" the helper tool to report a socket to receive requests"
-					" on, but the helper tool finished its startup sequence"
+					" on, but the helper tool finished its startup procedure"
 					" without reporting such a socket.</p>");
 			}
 
@@ -728,7 +728,7 @@ private:
 				" to start the web application, but encountered a bug"
 				" in the application. " SHORT_PROGRAM_NAME " expected"
 				" the application to report a socket to receive requests"
-				" on, but the application finished its startup sequence"
+				" on, but the application finished its startup procedure"
 				" without reporting such a socket.</p>");
 			e.setSolutionDescriptionHTML(
 				"<p class=\"sole-solution\">"
@@ -821,7 +821,7 @@ private:
 					" called the \"wrapper\". This helper tool is not part of "
 					SHORT_PROGRAM_NAME ". " SHORT_PROGRAM_NAME " expected"
 					" the helper tool to communicate back various information"
-					" about the application's startup sequence, but the tool"
+					" about the application's startup procedure, but the tool"
 					" did not communicate back correctly."
 					" The errors are as follows:</p>"
 					"<ul>";
@@ -832,7 +832,7 @@ private:
 					" but " SHORT_PROGRAM_NAME " encountered a bug"
 					" in this helper tool. " SHORT_PROGRAM_NAME " expected"
 					" the helper tool to communicate back various information"
-					" about the application's startup sequence, but the tool"
+					" about the application's startup procedure, but the tool"
 					" did not communicate back correctly."
 					" The errors are as follows:</p>"
 					"<ul>";
@@ -880,7 +880,7 @@ private:
 				" to start the web application, but encountered a bug"
 				" in the application. " SHORT_PROGRAM_NAME " expected"
 				" the application to communicate back various information"
-				" about its startup sequence, but the application"
+				" about its startup procedure, but the application"
 				" did not communicate back that correctly."
 				" The errors are as follows:</p>"
 				"<ul>";
