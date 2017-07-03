@@ -25,6 +25,10 @@ class ProcessDetailsView extends Component {
 
   renderBeforeItems() {
     var result = [];
+    if (this.props.spec.pid) {
+      result.push(<dt key="pid-header">PID</dt>);
+      result.push(<dd key="pid-content">{this.props.spec.pid}</dd>);
+    }
     if (this.props.spec.stdout_and_err) {
       result.push(<dt key="stdout-and-err-header">Stdout and stderr output</dt>);
       result.push(<dd key="stdout-and-err-content"><pre>{this.props.spec.stdout_and_err}</pre></dd>);

@@ -65,9 +65,17 @@ class JourneyView extends Component {
       <table className="journey spawn-directly">
         <thead>
           <tr>
-            <th className="server-core">In {this.props.spec.short_program_name} core</th>
+            <th className="server-core">
+              In {this.props.spec.short_program_name} core
+              <br />
+              <small>PID {this.props.spec.diagnostics.core_process.pid}</small>
+            </th>
             <th></th>
-            <th className="subprocess">In subprocess</th>
+            <th className="subprocess">
+              In subprocess
+              <br />
+              <small>PID {this.props.spec.diagnostics.subprocess.pid || 'unknown'}</small>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -241,9 +249,17 @@ class JourneyView extends Component {
       <table className="journey start-preloader">
         <thead>
           <tr>
-            <th className="server-core">In {this.props.spec.short_program_name} core</th>
+            <th className="server-core">
+              In {this.props.spec.short_program_name} core
+              <br />
+              <small>PID {this.props.spec.diagnostics.core_process.pid}</small>
+            </th>
             <th></th>
-            <th className="subprocess">In subprocess</th>
+            <th className="subprocess">
+              In subprocess
+              <br />
+              <small>PID {this.props.spec.diagnostics.subprocess.pid || 'unknown'}</small>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -340,11 +356,23 @@ class JourneyView extends Component {
       <table className="journey spawn-through-preloader">
         <thead>
           <tr>
-            <th className="server-core">In {this.props.spec.short_program_name}</th>
+            <th className="server-core">
+              In {this.props.spec.short_program_name}
+              <br />
+              <small>PID {this.props.spec.diagnostics.core_process.pid}</small>
+            </th>
             <th></th>
-            <th className="preloader">In preloader</th>
+            <th className="preloader">
+              In preloader
+              <br />
+              <small>PID {this.props.spec.diagnostics.preloader_process.pid || 'unknown'}</small>
+            </th>
             <th></th>
-            <th className="subprocess">In subprocess</th>
+            <th className="subprocess">
+              In subprocess
+              <br />
+              <small>PID {this.props.spec.diagnostics.subprocess.pid || 'unknown'}</small>
+            </th>
           </tr>
         </thead>
         <tbody>

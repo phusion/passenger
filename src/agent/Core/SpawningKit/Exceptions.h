@@ -72,9 +72,14 @@ inline ErrorCategory inferErrorCategoryFromAnotherException(const std::exception
 class SpawnException: public oxt::tracable_exception {
 private:
 	struct EnvDump {
+		pid_t pid;
 		string envvars;
 		string userInfo;
 		string ulimits;
+
+		EnvDump()
+			: pid(-1)
+			{ }
 	};
 
 	ErrorCategory category;
@@ -875,6 +880,7 @@ public:
 			solutionDescription = createDefaultSolutionDescription(
 				category, journey, config);
 		}
+		parentProcessEnvDump.pid = getpid();
 		parentProcessEnvDump.envvars = gatherEnvvars();
 		parentProcessEnvDump.userInfo = gatherUserInfo();
 		parentProcessEnvDump.ulimits = gatherUlimits();
@@ -895,6 +901,14 @@ public:
 		return parentProcessEnvDump.ulimits;
 	}
 
+
+	pid_t getPreloaderPid() const {
+		return preloaderEnvDump.pid;
+	}
+
+	void setPreloaderPid(pid_t pid) {
+		preloaderEnvDump.pid = pid;
+	}
 
 	const string &getPreloaderEnvvars() const {
 		return preloaderEnvDump.envvars;
@@ -920,6 +934,14 @@ public:
 		preloaderEnvDump.ulimits = value;
 	}
 
+
+	pid_t getSubprocessPid() const {
+		return subprocessEnvDump.pid;
+	}
+
+	void setSubprocessPid(pid_t pid) {
+		subprocessEnvDump.pid = pid;
+	}
 
 	const string &getSubprocessEnvvars() const {
 		return subprocessEnvDump.envvars;
@@ -989,6 +1011,7 @@ public:
 		Json::Value doc;
 
 		doc["backtrace"] = backtrace();
+		doc["pid"] = (Json::Int) parentProcessEnvDump.pid;
 		doc["envvars"] = getParentProcessEnvvars();
 		doc["user_info"] = getParentProcessUserInfo();
 		doc["ulimits"] = getParentProcessUlimits();
@@ -999,6 +1022,9 @@ public:
 	Json::Value inspectPreloaderProcessDetailsAsJson() const {
 		Json::Value doc, annotations(Json::objectValue);
 
+		if (getPreloaderPid() != (pid_t) -1) {
+			doc["pid"] = getPreloaderPid();
+		}
 		doc["envvars"] = getPreloaderEnvvars();
 		doc["user_info"] = getPreloaderUserInfo();
 		doc["ulimits"] = getPreloaderUlimits();
@@ -1016,6 +1042,9 @@ public:
 	Json::Value inspectSubprocessDetailsAsJson() const {
 		Json::Value doc, annotations(Json::objectValue);
 
+		if (getSubprocessPid() != (pid_t) -1) {
+			doc["pid"] = getSubprocessPid();
+		}
 		doc["envvars"] = getSubprocessEnvvars();
 		doc["user_info"] = getSubprocessUserInfo();
 		doc["ulimits"] = getSubprocessUlimits();

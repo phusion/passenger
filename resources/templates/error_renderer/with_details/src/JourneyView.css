@@ -8,6 +8,11 @@
   padding-bottom: 1em;
 }
 
+.journey th small {
+  font-weight: normal;
+  color: #aaa;
+}
+
 .journey .duration {
   font-size: small;
   opacity: 0.7;

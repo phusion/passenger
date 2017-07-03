@@ -243,6 +243,7 @@ private:
 				session.journey,
 				config);
 			e.setSummary("The application process exited prematurely.");
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			loadSubprocessErrorMessagesAndEnvDump(e);
 			throw e.finalize();
@@ -256,6 +257,7 @@ private:
 			session.journey.setStepErrored(SPAWNING_KIT_HANDSHAKE_PERFORM);
 
 			SpawnException e(TIMEOUT_ERROR, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			loadSubprocessErrorMessagesAndEnvDump(e);
 			throw e.finalize();
@@ -342,6 +344,7 @@ private:
 			session.journey,
 			config);
 		e.setSummary("The web application aborted with an error during startup.");
+		e.setSubprocessPid(pid);
 		e.setStdoutAndErrData(getStdoutErrData());
 		loadSubprocessErrorMessagesAndEnvDump(e);
 		throw e.finalize();
@@ -361,6 +364,7 @@ private:
 		e.setSummary("An internal error occurred while spawning an application process: "
 			+ finishSignalWatcherErrorMessage);
 		e.setAdvancedProblemDetails(finishSignalWatcherErrorMessage);
+		e.setSubprocessPid(pid);
 		e.setStdoutAndErrData(getStdoutErrData());
 		throw e.finalize();
 	}
@@ -547,6 +551,7 @@ private:
 			session.journey.setStepErrored(SUBPROCESS_WRAPPER_PREPARATION, true);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			loadAnnotationsFromEnvDumpDir(e);
 
@@ -607,6 +612,7 @@ private:
 			session.journey.setStepErrored(SUBPROCESS_APP_LOAD_OR_EXEC, true);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			loadAnnotationsFromEnvDumpDir(e);
 
@@ -652,6 +658,7 @@ private:
 			}
 
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			loadAnnotationsFromEnvDumpDir(e);
 
@@ -722,6 +729,7 @@ private:
 			}
 
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			loadAnnotationsFromEnvDumpDir(e);
 
@@ -761,10 +769,8 @@ private:
 			loadJourneyStateFromResponseDir();
 			session.journey.setStepErrored(SPAWNING_KIT_HANDSHAKE_PERFORM, true);
 
-			SpawnException e(
-				INTERNAL_ERROR,
-				session.journey,
-				config);
+			SpawnException e(INTERNAL_ERROR, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			e.setAdvancedProblemDetails(toString(internalFieldErrors));
 
@@ -798,10 +804,8 @@ private:
 			loadJourneyStateFromResponseDir();
 			session.journey.setStepErrored(SUBPROCESS_WRAPPER_PREPARATION, true);
 
-			SpawnException e(
-				INTERNAL_ERROR,
-				session.journey,
-				config);
+			SpawnException e(INTERNAL_ERROR, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			e.setAdvancedProblemDetails(toString(appSuppliedFieldErrors));
 			loadAnnotationsFromEnvDumpDir(e);
@@ -877,6 +881,7 @@ private:
 				" the application's spawn response is invalid: "
 				+ toString(appSuppliedFieldErrors));
 			e.setAdvancedProblemDetails(toString(appSuppliedFieldErrors));
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			loadAnnotationsFromEnvDumpDir(e);
 
@@ -921,11 +926,9 @@ private:
 			ErrorCategory category = stringToErrorCategory(value);
 
 			if (category == UNKNOWN_ERROR_CATEGORY) {
-				SpawnException e(
-					INTERNAL_ERROR,
-					session.journey,
-					config);
+				SpawnException e(INTERNAL_ERROR, session.journey, config);
 				e.setStdoutAndErrData(getStdoutErrData());
+				e.setSubprocessPid(pid);
 				loadAnnotationsFromEnvDumpDir(e);
 
 				if (!config->genericApp && config->startsUsingWrapper) {
@@ -1091,6 +1094,7 @@ private:
 
 				SpawnException e(INTERNAL_ERROR, session.journey, config);
 				e.setStdoutAndErrData(getStdoutErrData(stdoutAndErrCapturer));
+				e.setSubprocessPid(pid);
 				loadAnnotationsFromEnvDumpDir(e, session);
 
 				if (!config->genericApp && config->startsUsingWrapper) {
@@ -1182,6 +1186,7 @@ private:
 
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
 			e.setStdoutAndErrData(getStdoutErrData(stdoutAndErrCapturer));
+			e.setSubprocessPid(pid);
 			loadAnnotationsFromEnvDumpDir(e, session);
 
 			if (!config->genericApp && config->startsUsingWrapper) {
@@ -1575,6 +1580,7 @@ public:
 
 			SpawnException e(originalException, session.journey, config);
 			e.setStdoutAndErrData(getStdoutErrData());
+			e.setSubprocessPid(pid);
 			throw e.finalize();
 		}
 
@@ -1597,6 +1603,7 @@ public:
 			session.journey.setStepErrored(SPAWNING_KIT_HANDSHAKE_PERFORM);
 
 			SpawnException e(originalException, session.journey, config);
+			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			throw e.finalize();
 		}

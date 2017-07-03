@@ -843,6 +843,7 @@ private:
 			e.setSummary("The process that the preloader said it spawned, PID "
 				+ toString(spawnedPid) + ", has UID " + toString(spawnedUid)
 				+ ", but the expected UID is " + toString(session.uid));
+			e.setSubprocessPid(spawnedPid);
 			e.setStdoutAndErrData(getBackgroundIOCapturerData(
 				stdChannelsAsyncOpenState->stdoutAndErrCapturer));
 			e.setProblemDescriptionHTML(
@@ -970,6 +971,7 @@ private:
 			addPreloaderEnvDumps(e);
 			e.setSummary("Unable to query the UID of spawned application process "
 				+ toString(pid) + ": error parsing 'ps' output");
+			e.setSubprocessPid(pid);
 			e.setProblemDescriptionHTML(
 				"<h2>Unable to use 'ps' to query PID " + toString(pid) + "</h2>"
 				"<p>The " PROGRAM_NAME " application server tried"
@@ -991,6 +993,7 @@ private:
 			e.setSummary("Unable to query the UID of spawned application process "
 				+ toString(pid) + "; error capturing 'ps' output: "
 				+ originalException.what());
+			e.setSubprocessPid(pid);
 			e.setProblemDescriptionHTML(
 				"<h2>Error capturing 'ps' output for PID " + toString(pid) + "</h2>"
 				"<p>The " PROGRAM_NAME " application server tried"
@@ -1019,6 +1022,7 @@ private:
 				e.setSummary("Unable to query the UID of spawned application process "
 					+ toString(pid) + ": 'ps' did not report information"
 					" about this process");
+				e.setSubprocessPid(pid);
 				e.setProblemDescriptionHTML(
 					"<h2>'ps' did not return any information about PID " + toString(pid) + "</h2>"
 					"<p>The " PROGRAM_NAME " application server tried"
@@ -1039,6 +1043,7 @@ private:
 				addPreloaderEnvDumps(e);
 				e.setSummary("The application process spawned from the preloader"
 					" seems to have exited prematurely");
+				e.setSubprocessPid(pid);
 				e.setStdoutAndErrData(getBackgroundIOCapturerData(stdoutAndErrCapturer));
 				e.setProblemDescriptionHTML(
 					"<h2>Application process exited prematurely</h2>"
@@ -1151,6 +1156,7 @@ private:
 	}
 
 	void addPreloaderEnvDumps(SpawnException &e) const {
+		e.setPreloaderPid(pid);
 		e.setPreloaderEnvvars(preloaderEnvvars);
 		e.setPreloaderUserInfo(preloaderUserInfo);
 		e.setPreloaderUlimits(preloaderUlimits);
