@@ -26,7 +26,7 @@ require 'build/support/vendor/cxx_hinted_parser/lib/cxx_hinted_parser'
 
 def main
   fields = parse_config_class_fields
-  comment copyright_header_for(__FILE__)
+  comment copyright_header_for(__FILE__), 1
   separator
 
   comment %q{
