@@ -1768,7 +1768,7 @@ namespace tut {
 		EVENTUALLY(2,
 			result = number == 3;
 		);
-		ensure_equals("(4)", "The restart function respects minProcesses",
+		ensure_equals("(4) The restart function respects minProcesses",
 			pool->getProcessCount(), 2u);
 	}
 
