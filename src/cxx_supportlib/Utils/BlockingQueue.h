@@ -107,7 +107,7 @@ public:
 		while (queue.empty() && !timedOut) {
 			posix_time::time_duration diff = deadline -
 				posix_time::microsec_clock::local_time();
-			if (diff.is_negative() < 0) {
+			if (diff.is_negative()) {
 				timedOut = true;
 			} else {
 				timedOut = !added.timed_wait(l,
