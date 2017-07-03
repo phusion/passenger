@@ -520,6 +520,10 @@ private:
 	}
 
 	string getStdoutErrData() const {
+		return getStdoutErrData(stdoutAndErrCapturer);
+	}
+
+	static string getStdoutErrData(const BackgroundIOCapturerPtr &stdoutAndErrCapturer) {
 		if (stdoutAndErrCapturer != NULL) {
 			return stdoutAndErrCapturer->getData();
 		} else {
@@ -1017,21 +1021,13 @@ private:
 	}
 
 	void loadJourneyStateFromResponseDir() {
-		TRACE_POINT();
-
-		P_DEBUG("[App " << pid << " journey] Loading state from " << session.responseDir);
-
-		loadJourneyStateFromResponseDir(getFirstSubprocessJourneyStep(),
-			getLastSubprocessJourneyStep());
-
-		UPDATE_TRACE_POINT();
-		loadJourneyStateFromResponseDir(getFirstPreloaderJourneyStep(),
-			// Also load state from PRELOADER_FINISH since the
-			// preloader writes there.
-			JourneyStep((int) getLastPreloaderJourneyStep() + 1));
+		loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
 	}
 
-	void loadJourneyStateFromResponseDir(JourneyStep firstStep, JourneyStep lastStep) {
+	static void loadJourneyStateFromResponseDir(HandshakeSession &session, pid_t pid,
+		const BackgroundIOCapturerPtr &stdoutAndErrCapturer,
+		JourneyStep firstStep, JourneyStep lastStep)
+	{
 		TRACE_POINT();
 		JourneyStep step;
 
@@ -1049,17 +1045,25 @@ private:
 			}
 
 			loadJourneyStateFromResponseDirForSpecificStep(
-				step, stepDir);
+				session, pid, stdoutAndErrCapturer, step, stepDir);
 		}
 	}
 
-	void loadJourneyStateFromResponseDirForSpecificStep(JourneyStep step,
-		const string &stepDir) const
+	static void loadJourneyStateFromResponseDirForSpecificStep(HandshakeSession &session,
+		pid_t pid, const BackgroundIOCapturerPtr &stdoutAndErrCapturer,
+		JourneyStep step, const string &stepDir)
 	{
 		TRACE_POINT_WITH_DATA(journeyStepToString(step).data());
 		string summary;
 		string value = strip(readAll(stepDir + "/state"));
 		JourneyStepState state = stringToJourneyStepState(value);
+		const Config *config = session.config;
+
+		if (value.empty()) {
+			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
+				<< ": state file is empty");
+			return;
+		}
 
 		P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 			<< ": setting state to " << value);
@@ -1085,12 +1089,9 @@ private:
 			default:
 				session.journey.setStepErrored(step, true);
 
-				SpawnException e(
-					INTERNAL_ERROR,
-					session.journey,
-					config);
-				e.setStdoutAndErrData(getStdoutErrData());
-				loadAnnotationsFromEnvDumpDir(e);
+				SpawnException e(INTERNAL_ERROR, session.journey, config);
+				e.setStdoutAndErrData(getStdoutErrData(stdoutAndErrCapturer));
+				loadAnnotationsFromEnvDumpDir(e, session);
 
 				if (!config->genericApp && config->startsUsingWrapper) {
 					if (config->wrapperSuppliedByThirdParty) {
@@ -1180,8 +1181,8 @@ private:
 			session.journey.setStepErrored(step, true);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
-			e.setStdoutAndErrData(getStdoutErrData());
-			loadAnnotationsFromEnvDumpDir(e);
+			e.setStdoutAndErrData(getStdoutErrData(stdoutAndErrCapturer));
+			loadAnnotationsFromEnvDumpDir(e, session);
 
 			if (!config->genericApp && config->startsUsingWrapper) {
 				if (config->wrapperSuppliedByThirdParty) {
@@ -1365,6 +1366,10 @@ private:
 	}
 
 	void loadAnnotationsFromEnvDumpDir(SpawnException &e) const {
+		loadAnnotationsFromEnvDumpDir(e, session);
+	}
+
+	static void loadAnnotationsFromEnvDumpDir(SpawnException &e, HandshakeSession &session) {
 		TRACE_POINT();
 		string path = session.envDumpDir + "/annotations";
 		DIR *dir = opendir(path.c_str());
@@ -1595,6 +1600,25 @@ public:
 			e.setStdoutAndErrData(getStdoutErrData());
 			throw e.finalize();
 		}
+	}
+
+	static void loadJourneyStateFromResponseDir(HandshakeSession &session, pid_t pid,
+		const BackgroundIOCapturerPtr &stdoutAndErrCapturer)
+	{
+		TRACE_POINT();
+
+		P_DEBUG("[App " << pid << " journey] Loading state from " << session.responseDir);
+
+		loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer,
+			getFirstSubprocessJourneyStep(),
+			getLastSubprocessJourneyStep());
+
+		UPDATE_TRACE_POINT();
+		loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer,
+			getFirstPreloaderJourneyStep(),
+			// Also load state from PRELOADER_FINISH since the
+			// preloader writes there.
+			JourneyStep((int) getLastPreloaderJourneyStep() + 1));
 	}
 
 	static void loadBasicInfoFromEnvDumpDir(const string &envDumpDir,

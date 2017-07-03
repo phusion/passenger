@@ -963,6 +963,7 @@ private:
 			ProcessMetricMap result = ProcessMetricsCollector().collect(pids);
 			uid = result[pid].uid;
 		} catch (const ParseException &) {
+			HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
 			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
@@ -982,6 +983,7 @@ private:
 				createSolutionDescriptionForProcessMetricsCollectionError());
 			throw e.finalize();
 		} catch (const SystemException &originalException) {
+			HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
 			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 			SpawnException e(OPERATING_SYSTEM_ERROR, session.journey, session.config);
@@ -1009,6 +1011,7 @@ private:
 		UPDATE_TRACE_POINT();
 		if (uid == (uid_t) -1) {
 			if (osProcessExists(pid)) {
+				HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
 				session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 				SpawnException e(INTERNAL_ERROR, session.journey, session.config);
@@ -1029,6 +1032,7 @@ private:
 					createSolutionDescriptionForProcessMetricsCollectionError());
 				throw e.finalize();
 			} else {
+				HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
 				session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
 
 				SpawnException e(INTERNAL_ERROR, session.journey, session.config);
