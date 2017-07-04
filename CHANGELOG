@@ -2,6 +2,7 @@
 -------------------------------
 
  * Fixed a typo that causes a looping crash when long security update information is sent by the server. In practice we will keep the messages shorter to avoid triggering this until there has been ample time to upgrade.
+ * Fixes unnecessary process respawn if it was detached and min_instances is set to 0. Closes GH-1735.
 
 
 Release 5.1.5
