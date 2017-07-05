@@ -38,5 +38,11 @@
   // If you want to run the Nginx integration tests, then set the following
   // config option to the full path of the Nginx binary. This Nginx binary *must*
   // be compiled with Phusion Passenger support!
-  "nginx": "/usr/local/sbin/nginx"
+  "nginx": "/usr/local/sbin/nginx",
+  // If Nginx was compiled with dynamic modules support,
+  // then specify the filename to the configuration file that
+  // loads the Passenger module.
+  // "nginx_passenger_dynamic_module_conf_file": "/etc/nginx/modules-enabled/50-mod-http-passenger.conf"
+
+  "__end__": null
 }

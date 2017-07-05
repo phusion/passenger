@@ -1,4 +1,7 @@
 worker_processes  2;
+<% if @passenger_dynamic_module_conf_file %>
+    include <%= @passenger_dynamic_module_conf_file %>;
+<% end %>
 
 error_log <%= @nginx_root %>/../test.log;
 pid       <%= @nginx_root %>/nginx.pid;

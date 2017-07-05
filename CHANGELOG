@@ -1,8 +1,10 @@
-(Not yet released)
+Release 5.1.6
 -------------------------------
 
- * Fixed a typo that causes a looping crash when long security update information is sent by the server. In practice we will keep the messages shorter to avoid triggering this until there has been ample time to upgrade.
+ * Fixes a typo that causes a looping crash when long security update information is sent by the server. In practice we will keep the messages shorter to avoid triggering this until there has been ample time to upgrade.
  * Fixes unnecessary process respawn if it was detached and min_instances is set to 0. Closes GH-1735.
+ * Introduces APT packages for Debian 9 "Stretch", with Passenger built as dynamic module. Closes GH-1960.
+ * Changes APT packages for Ubuntu 17.04 "Zesty" from static to dynamic module.
 
 
 Release 5.1.5

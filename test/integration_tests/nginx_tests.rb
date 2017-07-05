@@ -49,11 +49,16 @@ describe "Phusion Passenger for Nginx" do
   def create_nginx_controller(options = {})
     @nginx = NginxController.new("tmp.nginx")
     if Process.uid == 0
-      @nginx.set({
+      @nginx.set(
         :www_user => CONFIG['normal_user_1'],
         :www_group => Etc.getgrgid(Etc.getpwnam(CONFIG['normal_user_1']).gid).name
-      }.merge(options))
+      )
     end
+    if CONFIG['nginx_passenger_dynamic_module_conf_file']
+      @nginx.set(:passenger_dynamic_module_conf_file =>
+        CONFIG['nginx_passenger_dynamic_module_conf_file'])
+    end
+    @nginx.set(options)
   end
 
   def log(message)
