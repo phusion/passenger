@@ -14,6 +14,7 @@ Release 5.1.6
  * Updated OpenSSL version used in precompiled binaries (used for e.g. gem installs) to 1.0.2l (was: 1.0.2k).
  * Updated GeoIP version used in precompiled binaries (used for e.g. gem installs) to 1.6.11 (was: 1.6.9).
  * Updated PCRE version used in precompiled binaries (used for e.g. gem installs) to 8.40 (was: 8.39).
+ * Adds support for building with MacPorts' OpenSSL. Closes GH-1959.
 
 
 Release 5.1.5
