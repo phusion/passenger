@@ -5,6 +5,7 @@ Release 5.1.6
  * Fixes unnecessary process respawn if it was detached and min_instances is set to 0. Closes GH-1735.
  * Introduces APT packages for Debian 9 "Stretch", with Passenger built as dynamic module. Closes GH-1960.
  * Changes APT packages for Ubuntu 17.04 "Zesty" from static to dynamic module.
+ * [Standalone] Now uses graceful shutdown for the Nginx engine under the hood (requested as part of GH-1598). Thanks to PikachuEXE for contributing this. 
 
 
 Release 5.1.5
