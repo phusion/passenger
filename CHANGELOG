@@ -6,7 +6,7 @@ Release 5.1.6
  * Introduces APT packages for Debian 9 "Stretch", with Passenger built as dynamic module. Closes GH-1960.
  * Changes APT packages for Ubuntu 17.04 "Zesty" from static to dynamic module.
  * [Standalone] Now uses graceful shutdown for the Nginx engine under the hood (requested as part of GH-1598). Thanks to PikachuEXE for contributing this.
- * [Standalone] Fixes a memory corruption in the builtin engine.
+ * [Standalone] Fixes a memory corruption issue in the builtin engine. The issue was introduced in 5.1.5 (settings handling refactoring).
  * Fixes WSGI crash with Python 3 and non-ASCII characters in headers or the URL. Closes GH-1935. Thanks to n4nn31355 for the assistance.
 
 
