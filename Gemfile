@@ -7,7 +7,11 @@ group :base do
   gem 'drake'
   gem 'json'
   gem 'rack'
+end
+
+group :release do
   gem 'highline'
+  gem 'nokogiri', '1.5.9'
 end
 
 group :doc do
