@@ -118,10 +118,16 @@ Controller::initialize() {
 	if (requestConfigCache->singleAppMode) {
 		boost::shared_ptr<Options> options = boost::make_shared<Options>();
 		fillPoolOptionsFromConfigCaches(*options, requestConfigCache);
-		options->appRoot = config["app_root"].asString();
-		options->environment = config["environment"].asString();
-		options->appType = config["app_type"].asString();
-		options->startupFile = config["startup_file"].asString();
+
+		string appRoot = config["app_root"].asString();
+		string environment = config["environment"].asString();
+		string appType = config["app_type"].asString();
+		string startupFile = config["startup_file"].asString();
+
+		options->appRoot = appRoot;
+		options->environment = environment;
+		options->appType = appType;
+		options->startupFile = startupFile;
 		*options = options->copyAndPersist();
 		poolOptionsCache.insert(options->getAppGroupName(), options);
 	}
