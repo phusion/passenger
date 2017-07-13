@@ -7,6 +7,7 @@ group :base do
   gem 'drake'
   gem 'json'
   gem 'rack'
+  gem 'highline'
 end
 
 group :doc do
