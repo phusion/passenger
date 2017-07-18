@@ -54,6 +54,10 @@ module PhusionPassenger
             rescue SystemCallError, IOError
               pid = nil
             end
+            if @can_remove_working_dir
+              FileUtils.remove_entry_secure(@working_dir)
+              @can_remove_working_dir = false
+            end
             if pid
               abort "#{PROGRAM_NAME} Standalone is already running on PID #{pid}."
             else
