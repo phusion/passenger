@@ -8,8 +8,12 @@ Release 5.1.6
  * [Standalone] Now uses graceful shutdown for the Nginx engine under the hood (requested as part of GH-1598). Thanks to PikachuEXE for contributing this.
  * [Standalone] Fixes a memory corruption issue in the builtin engine. The issue was introduced in 5.1.5 (settings handling refactoring).
  * Fixes WSGI crash with Python 3 and non-ASCII characters in headers or the URL. Closes GH-1935. Thanks to n4nn31355 for the assistance.
- * [Nginx] The preferred Nginx version is now 1.12.1 (previously 1.10.3), except for the Phusion Nginx APT package, which is pinned at 1.10.3 until an 1.12.x compatible lua module becomes available. 
- * [Nginx] Fixes CVE-2017-7529, an integer overflow vulnerability in the Nginx range filter module. This is accomplished by upgrading to Nginx 1.12.1, or applying the patch (Phusion Nginx APT package). 
+ * [Nginx] The preferred Nginx version is now 1.12.1 (previously 1.10.3), except for the Phusion Nginx APT package, which is pinned at 1.10.3 until an 1.12.x compatible lua module becomes available.
+ * [Nginx] Fixes CVE-2017-7529, an integer overflow vulnerability in the Nginx range filter module. This is accomplished by upgrading to Nginx 1.12.1, or applying the patch (Phusion Nginx APT package).
+ * Updated libcurl version used in precompiled binaries (used for e.g. gem installs) to 7.54.1 (was: 7.54.0).
+ * Updated OpenSSL version used in precompiled binaries (used for e.g. gem installs) to 1.0.2l (was: 1.0.2k).
+ * Updated GeoIP version used in precompiled binaries (used for e.g. gem installs) to 1.6.11 (was: 1.6.9).
+ * Updated PCRE version used in precompiled binaries (used for e.g. gem installs) to 8.40 (was: 8.39).
 
 
 Release 5.1.5
