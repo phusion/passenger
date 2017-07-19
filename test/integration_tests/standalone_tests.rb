@@ -138,6 +138,11 @@ describe "Passenger Standalone" do
 
     context "if the runtime is not installed" do
       before :each do
+        # Prevent concurrent usage of ~/.passenger
+        lock_path = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}.lock")
+        @lock = File.open(lock_path, 'w')
+        @lock.flock(File::LOCK_EX)
+
         @user_dir = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}")
         if File.exist?("buildout.old")
           raise "buildout.old exists. Please fix this first."
@@ -155,6 +160,7 @@ describe "Passenger Standalone" do
       end
 
       after :each do
+        @lock.close if @lock
         if PhusionPassenger.build_system_dir
           if File.exist?("#{PhusionPassenger.build_system_dir}/buildout.old")
             FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
