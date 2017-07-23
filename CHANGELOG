@@ -1,5 +1,9 @@
-Release 5.1.6
+Next version (not yet released)
 -------------------------------
+
+
+Release 5.1.6
+-------------
 
  * Fixes a typo that causes a looping crash when long security update information is sent by the server. In practice we will keep the messages shorter to avoid triggering this until there has been ample time to upgrade.
  * Fixes unnecessary process respawn if it was detached and min_instances is set to 0. Closes GH-1735.
@@ -19,7 +23,7 @@ Release 5.1.6
 
 
 Release 5.1.5
--------------------------------
+-------------
 
  * Updated Boost to version 1.64.0, which fixed a compilation issue on certain Gentoo based setups. Closes GH-1942.
  * Improved the error message shown when an app fails to start in time.
@@ -28,7 +32,7 @@ Release 5.1.5
 
 
 Release 5.1.4
--------------------------------
+-------------
 
  * Updated zlib version used in building precompiled binaries (used for e.g. gem installs) to 1.2.11 (was: 1.2.8).
  * Updated openssl version used in building precompiled binaries (used for e.g. gem installs) to 1.0.2k (was: 1.0.2j).
@@ -39,7 +43,7 @@ Release 5.1.4
 
 
 Release 5.1.3
--------------------------------
+-------------
 
  * [Standalone] Fixes `install-standalone-runtime` command after regression in 5.1.2.
  * Removes unnecessary logging of "No Error" from macOS Security Update Checker.
