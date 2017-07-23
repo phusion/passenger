@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 20132-2014 Phusion Holding B.V.
+#  Copyright (c) 2013-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -29,11 +29,11 @@ GC.copy_on_write_friendly = true if GC.respond_to?(:copy_on_write_friendly=)
 module PhusionPassenger
   module App
     def self.options
-      return @@options
+      @@options
     end
 
     def self.app
-      return @@app
+      @@app
     end
 
     def self.format_exception(e)
@@ -46,14 +46,14 @@ module PhusionPassenger
           result << "\n  " << e.backtrace.join("\n  ")
         end
       end
-      return result
+      result
     end
 
     def self.exit_code_for_exception(e)
       if e.is_a?(SystemExit)
-        return e.status
+        e.status
       else
-        return 1
+        1
       end
     end
 
@@ -144,7 +144,7 @@ module PhusionPassenger
       LoaderSharedHelpers.advertise_readiness
       LoaderSharedHelpers.advertise_sockets(STDOUT, handler)
       puts "!> "
-      return handler
+      handler
     end
 
 

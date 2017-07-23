@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -377,7 +377,7 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r, const StaticStr
 bool
 Controller::friendlyErrorPagesEnabled(Request *req) {
 	bool defaultValue;
-	string defaultStr = agentsOptions->get("friendly_error_pages");
+	const StaticString &defaultStr = req->configCache->friendlyErrorPages;
 	if (defaultStr == "auto") {
 		defaultValue = (req->options.environment == "development");
 	} else {

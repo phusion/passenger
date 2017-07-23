@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2016 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -83,6 +83,7 @@ PROGRAM_SOURCE = %q{
   #include <boost/make_shared.hpp>
   #include <boost/enable_shared_from_this.hpp>
   #include <boost/intrusive_ptr.hpp>
+  #include <boost/smart_ptr/intrusive_ref_counter.hpp>
   #include <boost/thread.hpp>
   #include <boost/noncopyable.hpp>
   #include <boost/function.hpp>
@@ -174,8 +175,8 @@ end
 def copy_dependencies(cflags)
   done = false
   while !done
-    compiler_output = `c++ test.cpp -c -I. #{cflags} 2>&1`
-    File.unlink('test.o')
+    compiler_output = `c++ test.cpp -c -I. -I.. #{cflags} 2>&1`
+    File.unlink('test.o') if File.exist?('test.o')
     missing_headers = compiler_output.
       split("\n").
       grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
@@ -203,8 +204,13 @@ def copy_dependencies(cflags)
 end
 
 def start
-  if BOOST_DIR.nil? || BOOST_DIR.empty?
-    puts "Usage: copy_boost_headers.rb <boost source directory>"
+  if BOOST_DIR.nil? || BOOST_DIR.empty? || BOOST_DIR == "--help"
+    puts "Usage:"
+    puts "Remove the src/cxx_supportlib/vendor-modified/boost directory,"
+    puts "then call: copy_boost_headers <boost source directory>"
+    puts "then reapply patches to boost source files,"
+    puts "they are kept in dev/boost-patches and can be applied by:"
+    puts "patch -p1 < dev/boost-patches/000*-Patch-Name.patch"
     exit 1
   end
   begin

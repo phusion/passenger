@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -137,8 +137,8 @@ protected:
 					"in the format of '/tmp/passenger-spawn-debug.XXX'", e);
 			} else {
 				path = result;
-				this_thread::disable_interruption di;
-				this_thread::disable_syscall_interruption dsi;
+				boost::this_thread::disable_interruption di;
+				boost::this_thread::disable_syscall_interruption dsi;
 				syscalls::chown(result, uid, gid);
 			}
 		}
@@ -331,14 +331,16 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwAppSpawnException("An error occurred while starting the "
-					"web application: it did not write a startup response in time.",
+					"web application: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::APP_STARTUP_TIMEOUT,
 					details);
 			}
 
 			if (line.empty()) {
 				throwAppSpawnException("An error occurred while starting the "
-					"web application. It unexpected closed the connection while "
+					"web application. It unexpectedly closed the connection while "
 					"sending its startup response.",
 					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
 					details);
@@ -452,7 +454,7 @@ protected:
 	ConfigPtr config;
 
 	static void nonInterruptableKillAndWaitpid(pid_t pid) {
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_syscall_interruption dsi;
 		syscalls::kill(pid, SIGKILL);
 		syscalls::waitpid(pid, NULL, 0);
 	}
@@ -819,8 +821,11 @@ protected:
 	bool shouldLoadShellEnvvars(const Options &options, const SpawnPreparationInfo &preparation) const {
 		if (options.loadShellEnvvars) {
 			string shellName = extractBaseName(preparation.userSwitching.shell);
-			return shellName == "bash" || shellName == "zsh" || shellName == "ksh";
+			bool retVal = shellName == "bash" || shellName == "zsh" || shellName == "ksh";
+			P_DEBUG("shellName = '" << shellName << "' in [bash,zsh,ksh]: " << (retVal ? "true" : "false"));
+			return retVal;
 		} else {
+			P_DEBUG("options.loadShellEnvvars = false");
 			return false;
 		}
 	}
@@ -1130,7 +1135,9 @@ protected:
 					details);
 			} catch (const TimeoutException &) {
 				throwAppSpawnException("An error occurred while starting the "
-					"web application: it did not write a startup response in time.",
+					"web application: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::APP_STARTUP_TIMEOUT,
 					details);
 			}

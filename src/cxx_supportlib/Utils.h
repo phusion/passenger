@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2014 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -148,7 +148,8 @@ FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
 void createFile(const string &filename, const StaticString &contents,
                 mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
                 uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN,
-                bool overwrite = true);
+                bool overwrite = true,
+                const char *callerFile = NULL, unsigned int callerLine = 0);
 
 /**
  * Returns a canonical version of the specified path. All symbolic links
@@ -343,12 +344,14 @@ void disableMallocDebugging();
 int runShellCommand(const StaticString &command);
 
 /**
- * Run a command and capture its stdout output.
+ * Run a command and capture its stdout output. This function
+ * does not care whether the command fails.
  *
- * @param command The argument to pass to execvp();
- * @throws SystemException.
+ * @param command The argument to pass to execvp().
+ * @param status The status of the child process will be stored here, if non-NULL.
+ * @throws SystemException
  */
-string runCommandAndCaptureOutput(const char **command);
+string runCommandAndCaptureOutput(const char **command, int *status = NULL);
 
 /**
  * Async-signal safe way to fork().

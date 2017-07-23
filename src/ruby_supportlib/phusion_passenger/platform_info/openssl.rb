@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2015 Phusion Holding B.V.
+#  Copyright (c) 2015-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -32,11 +32,14 @@ module PhusionPassenger
       if PlatformInfo.os_name_simple == "macosx"
         if File.exist?("/usr/include/openssl")
           ""
-        else
           # OS X >= 10.11 El Capitan no longer include
-          # OpenSSL development headers. Use the one from
-          # Homebrew.
+          # OpenSSL development headers.
+        elsif File.exist?("/usr/local/opt/openssl/include")
+          # Use the one from Homebrew.
           "-I/usr/local/opt/openssl/include"
+        else
+          # Use the one from Macports.
+          "-I/opt/local/include"
         end
       else
         ""
@@ -48,8 +51,10 @@ module PhusionPassenger
       if PlatformInfo.os_name_simple == "macosx"
         if File.exist?("/usr/include/openssl")
           ""
-        else
+        elsif File.exist?("/usr/local/opt/openssl/include")
           "-L/usr/local/opt/openssl/lib"
+        else
+          "-L/opt/local/lib"
         end
       else
         ""

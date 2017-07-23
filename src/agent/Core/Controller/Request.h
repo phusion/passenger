@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -38,6 +38,7 @@
 #include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>
 #include <Core/UnionStation/StopwatchLog.h>
+#include <Core/Controller/Config.h>
 #include <Core/Controller/AppResponse.h>
 
 namespace Passenger {
@@ -85,6 +86,7 @@ public:
 	Options options;
 	AbstractSessionPtr session;
 	const LString *host;
+	ControllerRequestConfigCachePtr configCache;
 
 	ServerKit::FdSinkChannel appSink;
 	ServerKit::FdSourceChannel appSource;

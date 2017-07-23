@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -51,10 +51,12 @@ task 'test:install_deps' do
   install_doctools  = boolean_option('DOCTOOLS', default)
 
   if deps_target = string_option('DEPS_TARGET')
-    bundle_args = "--path #{deps_target} #{ENV['BUNDLE_ARGS']}".strip
+    bundle_args = "--path #{Shellwords.escape deps_target} #{ENV['BUNDLE_ARGS']}".strip
   else
     bundle_args = ENV['BUNDLE_ARGS'].to_s
   end
+
+  yarn_args = ENV['YARN_ARGS'].to_s
 
   if !PlatformInfo.locate_ruby_tool('bundle') || bundler_too_old?
     sh "#{gem_install} bundler"
@@ -64,13 +66,13 @@ task 'test:install_deps' do
     sh "bundle install #{bundle_args} --without="
   else
     if install_base_deps
-      sh "bundle install #{bundle_args} --without doc"
+      sh "bundle install #{bundle_args} --without doc release"
     end
     if install_doctools
       sh "bundle install #{bundle_args} --without base"
     end
   end
-  
+
   if install_doctools
     # workaround for issue "bluecloth not found" when using 1.12.x
     sh "#{gem_install} bundler --version 1.11.2"
@@ -81,7 +83,7 @@ task 'test:install_deps' do
     # see what is available for Submodule tests just in case Travis CI environment changes
     # || true to avoid missing rvm command triggering a failure on Jenkins CI
     sh "rvm list || true"
-    
+
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
       " && bundle install #{bundle_args} --with travis --without doc notravis"
     sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
@@ -91,7 +93,7 @@ task 'test:install_deps' do
       " BUNDLE_ARGS='#{bundle_args}'"
   end
   if boolean_option('NODE_MODULES', default)
-    sh "npm install"
+    sh "yarn install #{yarn_args}"
   end
 end
 

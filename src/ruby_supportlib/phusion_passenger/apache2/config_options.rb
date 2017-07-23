@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2015 Phusion Holding B.V.
+#  Copyright (c) 2014-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -220,6 +220,7 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
   {
     :name     => "PassengerAppGroupName",
     :type     => :string,
+    :context  => ["ACCESS_CONF", "RSRC_CONF"],
     :desc     => "Application process group name."
   },
   {

@@ -29,6 +29,8 @@ using vector = boost::container::vector<T, polymorphic_allocator<T>>;
 
 #endif
 
+//! A portable metafunction to obtain a vector
+//! that uses a polymorphic allocator
 template<class T>
 struct vector_of
 {

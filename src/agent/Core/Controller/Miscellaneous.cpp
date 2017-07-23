@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2015 Phusion Holding B.V.
+ *  Copyright (c) 2014-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -91,23 +91,6 @@ Controller::disconnectLongRunningConnections(const StaticString &gupid) {
 		Client *c = client;
 		disconnect(&client);
 		unrefClient(c, __FILE__, __LINE__);
-	}
-}
-
-Controller::BenchmarkMode
-Controller::parseBenchmarkMode(const StaticString mode) {
-	if (mode.empty()) {
-		return BM_NONE;
-	} else if (mode == "after_accept") {
-		return BM_AFTER_ACCEPT;
-	} else if (mode == "before_checkout") {
-		return BM_BEFORE_CHECKOUT;
-	} else if (mode == "after_checkout") {
-		return BM_AFTER_CHECKOUT;
-	} else if (mode == "response_begin") {
-		return BM_RESPONSE_BEGIN;
-	} else {
-		return BM_UNKNOWN;
 	}
 }
 

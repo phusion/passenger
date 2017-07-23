@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2016 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -47,7 +47,8 @@ using namespace oxt;
 
 #if BOOST_OS_MACOS
 
-Crypto::Crypto() {
+Crypto::Crypto()
+	:id(NULL) {
 }
 
 Crypto::~Crypto() {
@@ -139,6 +140,9 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 			logError( prefix + ": " + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) + "\n" + suffix );
 			CFRelease(str);
 		}
+	}else{
+	  id = (CFDataRef)CFDictionaryGetValue((CFDictionaryRef)CFArrayGetValueAtIndex(items, 0),kSecImportItemKeyID);
+	  CFRetain(id);
 	}
 
 	if (items) {
@@ -165,18 +169,35 @@ void Crypto::killKey(const char *cLabel) {
 
 		CFArrayRef itemList = CFArrayCreate(NULL, (const void **) &id, 1, NULL);
 		CFTypeRef keys[]   = { kSecClass,  kSecMatchItemList,  kSecMatchLimit };
-		CFTypeRef values[] = { kSecClassIdentity, itemList, kSecMatchLimitAll };
+		CFTypeRef values[] = { kSecClassCertificate, itemList, kSecMatchLimitOne };
 
 		CFDictionaryRef dict = CFDictionaryCreate(NULL, keys, values, 3L, NULL, NULL);
 		OSStatus oserr = SecItemDelete(dict);
 		if (oserr) {
 			CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
 			logError(string("Removing Passenger Cert from keychain failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
-					" Please remove the private key from the certificate labeled " + cLabel + " in your keychain.");
+					". Please remove the certificate labeled " + cLabel + " in your keychain.");
 			CFRelease(str);
 		}
 		CFRelease(dict);
 		CFRelease(itemList);
+
+		if(id){
+			CFTypeRef keys2[]   = { kSecClass,  kSecAttrSubjectKeyID,  kSecMatchLimit };
+			CFTypeRef values2[] = { kSecClassKey, id, kSecMatchLimitOne };
+			dict = CFDictionaryCreate(NULL, keys2, values2, 3L, NULL, NULL);
+			oserr = SecItemDelete(dict);
+			if (oserr) {
+				CFStringRef str = SecCopyErrorMessageString(oserr, NULL);
+				logError(string("Removing Passenger private key from keychain failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) +
+						 ". Please remove the private key from the certificate labeled " + cLabel + " in your keychain.");
+				CFRelease(str);
+			}
+			CFRelease(dict);
+			CFRelease(id);
+			id = NULL;
+		}
+
 	} else {
 		CFStringRef str = SecCopyErrorMessageString(status, NULL);
 		logError(string("Finding Passenger Cert failed: ") + CFStringGetCStringPtr(str, kCFStringEncodingUTF8) );
@@ -210,7 +231,7 @@ bool Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel
 		}
 		return success;
 	} else {
-		logError(string("Passenger client certificate was found in the keychain unexpectedly, you may see keychain popups until you remove the private key from the certificate labeled ") + cLabel + " in your keychain.");
+		logError(string("Passenger client certificate was found in the keychain unexpectedly, skipping security update check. Please remove the private key from the certificate labeled ") + cLabel + " in your keychain.");
 		if (id) {
 			CFRelease(id);
 		}
@@ -252,7 +273,7 @@ bool Crypto::generateAndAppendNonce(string &nonce) {
 	unsigned char rndChars[rndLen];
 
 	if (generateRandomChars(rndChars, rndLen)) {
-		char rndChars64[rndLen * 2];
+		char rndChars64[modp_b64_encode_len(rndLen)];
 		modp_b64_encode(rndChars64, (const char *) rndChars, rndLen);
 
 		nonce.append(rndChars64);
@@ -301,12 +322,12 @@ bool Crypto::getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len) {
 											&ccHandle);
 	if (error != CSSM_OK) { cssmPerror("CSSM_CSP_CreateSymmetricContext",error); }
 
-	CSSM_WrapKey(ccHandle,
+	error = CSSM_WrapKey(ccHandle,
 				 creds,
 				 cssmKey,
 				 NULL,
 				 &wrappedKey);
-	cssmPerror("CSSM_WrapKey", error);
+	if (error != CSSM_OK) { cssmPerror("CSSM_WrapKey", error); }
 
 	CSSM_DeleteContext(ccHandle);
 
@@ -703,7 +724,7 @@ bool Crypto::generateAndAppendNonce(string &nonce) {
 		return false;
 	}
 
-	char rndChars64[rndLen * 2];
+	char rndChars64[modp_b64_encode_len(rndLen)];
 	modp_b64_encode(rndChars64, (const char *) rndChars, rndLen);
 
 	nonce.append(rndChars64);

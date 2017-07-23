@@ -29,6 +29,8 @@ using small_vector = boost::container::small_vector<T, N, polymorphic_allocator<
 
 #endif
 
+//! A portable metafunction to obtain a small_vector
+//! that uses a polymorphic allocator
 template<class T, std::size_t N>
 struct small_vector_of
 {

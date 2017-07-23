@@ -36,6 +36,8 @@ using flat_multiset = boost::container::flat_multiset<Key, Compare, polymorphic_
 
 #endif
 
+//! A portable metafunction to obtain a flat_set
+//! that uses a polymorphic allocator
 template <class Key
          ,class Compare = std::less<Key>
          ,class Options = tree_assoc_defaults >
@@ -44,6 +46,8 @@ struct flat_set_of
    typedef boost::container::flat_set<Key, Compare, polymorphic_allocator<Key> > type;
 };
 
+//! A portable metafunction to obtain a flat_multiset
+//! that uses a polymorphic allocator
 template <class Key
          ,class Compare = std::less<Key>
          ,class Options = tree_assoc_defaults >

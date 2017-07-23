@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -32,7 +32,7 @@
 
 #define CC_BENCHMARK_POINT(client, req, value) \
 	do { \
-		if (OXT_UNLIKELY(benchmarkMode == value)) { \
+		if (OXT_UNLIKELY(mainConfigCache.benchmarkMode == value)) { \
 			writeBenchmarkResponse(&client, &req); \
 			return; \
 		} \
@@ -64,6 +64,7 @@
 #include <Logging.h>
 #include <MessageReadersWriters.h>
 #include <Constants.h>
+#include <ConfigKit/ConfigKit.h>
 #include <ServerKit/Errors.h>
 #include <ServerKit/HttpServer.h>
 #include <ServerKit/HttpHeaderParser.h>
@@ -76,9 +77,9 @@
 #include <Utils/IOUtils.h>
 #include <Utils/JsonUtils.h>
 #include <Utils/HttpConstants.h>
-#include <Utils/VariantMap.h>
 #include <Utils/Timer.h>
 #include <Core/ApplicationPool/ErrorRenderer.h>
+#include <Core/Controller/Config.h>
 #include <Core/Controller/Client.h>
 #include <Core/Controller/AppResponse.h>
 #include <Core/Controller/TurboCaching.h>
@@ -101,16 +102,6 @@ namespace Core {
 
 
 class Controller: public ServerKit::HttpServer<Controller, Client> {
-public:
-	enum BenchmarkMode {
-		BM_NONE,
-		BM_AFTER_ACCEPT,
-		BM_BEFORE_CHECKOUT,
-		BM_AFTER_CHECKOUT,
-		BM_RESPONSE_BEGIN,
-		BM_UNKNOWN
-	};
-
 private:
 	typedef ServerKit::HttpServer<Controller, Client> ParentClass;
 	typedef ServerKit::Channel Channel;
@@ -123,28 +114,9 @@ private:
 	// has enough bits.
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 
-	unsigned int statThrottleRate;
-	unsigned int responseBufferHighWatermark;
-	BenchmarkMode benchmarkMode: 3;
-	bool singleAppMode: 1;
-	bool showVersionInHeader: 1;
-	bool stickySessions: 1;
-	bool gracefulExit: 1;
-
-	const VariantMap *agentsOptions;
-	psg_pool_t *stringPool;
+	ControllerMainConfigCache mainConfigCache;
+	ControllerRequestConfigCachePtr requestConfigCache;
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
-
-	StaticString defaultRuby;
-	StaticString ustRouterAddress;
-	StaticString ustRouterPassword;
-	StaticString defaultUser;
-	StaticString defaultGroup;
-	StaticString defaultServerName;
-	StaticString defaultServerPort;
-	StaticString serverSoftware;
-	StaticString defaultStickySessionsCookieName;
-	StaticString defaultVaryTurbocacheByCookie;
 
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
 	HashedStaticString PASSENGER_ENV_VARS;
@@ -168,9 +140,6 @@ private:
 	HashedStaticString HTTP_STATUS;
 	HashedStaticString HTTP_TRANSFER_ENCODING;
 
-	unsigned int threadNumber;
-	StaticString serverLogName;
-
 	friend class TurboCaching<Request>;
 	friend class ResponseCache<Request>;
 	struct ev_check checkWatcher;
@@ -189,7 +158,8 @@ private:
 	void initializeFlags(Client *client, Request *req, RequestAnalysis &analysis);
 	bool respondFromTurboCache(Client *client, Request *req);
 	void initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis);
-	void fillPoolOptionsFromAgentsOptions(Options &options);
+	void fillPoolOptionsFromConfigCaches(Options &options,
+		const ControllerRequestConfigCachePtr &requestConfigCache);
 	static void fillPoolOption(Request *req, StaticString &field,
 		const HashedStaticString &name);
 	static void fillPoolOption(Request *req, int &field,
@@ -332,9 +302,6 @@ private:
 
 	/****** Internal utility functions ******/
 
-	static TurboCaching<Request>::State getTurboCachingInitialState(
-		const VariantMap *agentsOptions);
-	void generateServerLogName(unsigned int number);
 	void disconnectWithClientSocketWriteError(Client **client, int e);
 	void disconnectWithAppSocketIncompleteResponseError(Client **client);
 	void disconnectWithAppSocketReadError(Client **client, int e);
@@ -383,6 +350,7 @@ protected:
 	virtual void onNextRequestEarlyReadError(Client *client, Request *req, int errcode);
 	virtual bool shouldDisconnectClientOnShutdown(Client *client);
 	virtual bool supportsUpgrade(Client *client, Request *req);
+	virtual void onConfigChange(const ConfigKit::Store *oldConfig);
 
 
 	/****** Marked virtual so that unit tests can mock these ******/
@@ -392,6 +360,7 @@ protected:
 
 
 public:
+	// Dependencies
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
 	UnionStation::ContextPtr unionStationContext;
@@ -399,10 +368,10 @@ public:
 
 	/****** Initialization and shutdown ******/
 
-	Controller(ServerKit::Context *context, const VariantMap *_agentsOptions,
-		unsigned int _threadNumber = 1);
+	Controller(ServerKit::Context *context, const ControllerSchema &schema,
+		const Json::Value &initialConfig);
 	virtual ~Controller();
-	void initialize();
+	virtual void initialize();
 
 
 	/****** Hooks ******/
@@ -413,8 +382,6 @@ public:
 
 	/****** State inspection and configuration ******/
 
-	virtual Json::Value getConfigAsJson() const;
-	virtual void configure(const Json::Value &doc);
 	virtual Json::Value inspectStateAsJson() const;
 	virtual Json::Value inspectClientStateAsJson(const Client *client) const;
 	virtual Json::Value inspectRequestStateAsJson(const Request *req) const;
@@ -422,7 +389,6 @@ public:
 
 	/****** Miscellaneous *******/
 
-	static BenchmarkMode parseBenchmarkMode(const StaticString mode);
 	void disconnectLongRunningConnections(const StaticString &gupid);
 };
 

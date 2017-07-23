@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2016 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -55,6 +55,7 @@
 #include <BackgroundEventLoop.h>
 #include <ResourceLocator.h>
 #include <Constants.h>
+#include <ConfigKit/VariantMapUtils.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
@@ -77,10 +78,12 @@ namespace UstRouter {
 
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
+		Controller::Schema controllerSchema;
 		Controller *controller;
 
 		BackgroundEventLoop *apiBgloop;
 		ServerKit::Context *apiServerKitContext;
+		ServerKit::HttpServerSchema apiServerSchema;
 		UstRouter::ApiServer *apiServer;
 		EventFd exitEvent;
 		EventFd allClientsDisconnectedEvent;
@@ -306,7 +309,10 @@ initializeUnprivilegedWorkingObjects() {
 	wo->bgloop = new BackgroundEventLoop(true, true);
 	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
 		wo->bgloop->libuv_loop);
-	wo->controller = new Controller(wo->serverKitContext, options);
+	wo->controller = new Controller(wo->serverKitContext,
+		wo->controllerSchema,
+		ConfigKit::variantMapToJson(wo->controllerSchema, options));
+	wo->controller->initialize();
 	wo->controller->listen(wo->serverSocketFd);
 
 	UPDATE_TRACE_POINT();
@@ -314,13 +320,15 @@ initializeUnprivilegedWorkingObjects() {
 		wo->apiBgloop = new BackgroundEventLoop(true, true);
 		wo->apiServerKitContext = new ServerKit::Context(wo->apiBgloop->safe,
 			wo->apiBgloop->libuv_loop);
-		wo->apiServer = new UstRouter::ApiServer(wo->apiServerKitContext);
+		wo->apiServer = new UstRouter::ApiServer(wo->apiServerKitContext,
+			wo->apiServerSchema);
 		wo->apiServer->controller = wo->controller;
 		wo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
 		wo->apiServer->instanceDir = options.get("instance_dir", false);
 		wo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
 		wo->apiServer->exitEvent = &wo->exitEvent;
 		wo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
+		wo->apiServer->initialize();
 		foreach (fd, wo->apiSockets) {
 			wo->apiServer->listen(fd);
 		}
@@ -456,7 +464,7 @@ apiServerShutdownFinished(UstRouter::ApiServer *server) {
  */
 static void
 waitForExitEvent() {
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_syscall_interruption dsi;
 	WorkingObjects *wo = workingObjects;
 	fd_set fds;
 	int largestFd = -1;

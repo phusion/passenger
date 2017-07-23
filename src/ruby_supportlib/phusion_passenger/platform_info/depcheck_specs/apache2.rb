@@ -14,6 +14,13 @@ define 'apache2' do
     end
   end
 
+  on :ubuntu do
+    if `#{PlatformInfo::uname_command} -a`.include? 'precise'
+      apt_get_install "apache2-mpm-worker"
+    else
+      apt_get_install "apache2"
+    end
+  end
   on :debian do
     apt_get_install "apache2-mpm-worker"
   end
@@ -96,7 +103,13 @@ define 'apr-dev' do
     emerge "apr"
   end
   on :macosx do
-    install_osx_command_line_tools
+    PhusionPassenger.require_passenger_lib 'platform_info/macos'
+    if PlatformInfo.macos_version >= 12
+      brew_install "apr"
+      brew_link "apr"
+    else
+      install_osx_command_line_tools
+    end
   end
 end
 
@@ -126,6 +139,12 @@ define 'apu-dev' do
     yum_install "apr-util-devel"
   end
   on :macosx do
-    install_osx_command_line_tools
+    PhusionPassenger.require_passenger_lib 'platform_info/macos'
+    if PlatformInfo.macos_version >= 12
+      brew_install "apr-util"
+      brew_link "apr-util"
+    else
+      install_osx_command_line_tools
+    end
   end
 end

@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2015 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -140,7 +140,7 @@ module PhusionPassenger
 
       PhusionPassenger.require_passenger_lib 'platform_info/depcheck'
       specs, ids = dependencies
-      runner = PlatformInfo::Depcheck::ConsoleRunner.new
+      runner = PlatformInfo::Depcheck::ConsoleRunner.new(@colors)
 
       specs.each do |spec|
         PlatformInfo::Depcheck.load(spec)

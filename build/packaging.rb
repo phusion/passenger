@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2016 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -108,6 +108,9 @@ def homebrew_dir
   return "/tmp/homebrew"
 end
 
+def homebrew_tap_dir
+  return "/tmp/homebrew_tap"
+end
 
 task :clobber => 'package:clean'
 
@@ -355,12 +358,22 @@ task 'package:update_homebrew' do
   sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
   sh "cd #{homebrew_dir} && git push -f"
   if boolean_option('HOMEBREW_TEST', true)
-    sh "cp /tmp/homebrew/Formula/passenger.rb /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/passenger.rb"
+    sh "cp #{homebrew_dir}/Formula/passenger.rb $(brew --prefix)/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/passenger.rb"
+    if `brew info nginx` !~ /^Not installed$/
+      sh "brew uninstall nginx"
+    end
+    if `brew info nginx-passenger-enterprise` !~ /^Not installed$/
+      sh "brew uninstall nginx-passenger-enterprise"
+    end
     if `brew info passenger` !~ /^Not installed$/
       sh "brew uninstall passenger"
     end
+    if `brew info passenger-enterprise` !~ /^Not installed$/
+      sh "brew uninstall passenger-enterprise"
+    end
     sh "cp #{PKG_DIR}/passenger-#{version}.tar.gz `brew --cache`/"
     sh "brew install passenger"
+    sh "brew install nginx --with-passenger"
     Rake::Task['test:integration:native_packaging'].invoke
   end
 end

@@ -161,9 +161,9 @@ iterator BOOST_REGEX_CALL re_is_set_member(iterator next,
       if(*p == static_cast<charT>(0))
       {
          // treat null string as special case:
-         if(traits_inst.translate(*ptr, icase) != *p)
+         if(traits_inst.translate(*ptr, icase))
          {
-            while(*p == static_cast<charT>(0))++p;
+            ++p;
             continue;
          }
          return set_->isnot ? next : (ptr == next) ? ++next : ptr;
@@ -348,6 +348,7 @@ struct recursion_info
    const re_syntax_base* preturn_address;
    Results results;
    repeater_count<iterator>* repeater_stack;
+   iterator location_of_start;
 };
 
 #ifdef BOOST_MSVC
@@ -537,6 +538,7 @@ private:
    bool unwind_recursion_pop(bool);
    bool unwind_commit(bool);
    bool unwind_then(bool);
+   bool unwind_case(bool);
    void destroy_single_repeat();
    void push_matched_paren(int index, const sub_match<BidiIterator>& sub);
    void push_recursion_stopper();
@@ -547,6 +549,7 @@ private:
    void push_non_greedy_repeat(const re_syntax_base* ps);
    void push_recursion(int idx, const re_syntax_base* p, results_type* presults);
    void push_recursion_pop();
+   void push_case_change(bool);
 
    // pointer to base of stack:
    saved_state* m_stack_base;

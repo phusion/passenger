@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2016 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -170,7 +170,7 @@ AP_INIT_TAKE1("PassengerRestartDir",
 AP_INIT_TAKE1("PassengerAppGroupName",
 	(Take1Func) cmd_passenger_app_group_name,
 	NULL,
-	OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+	ACCESS_CONF | RSRC_CONF,
 	"Application process group name."),
 AP_INIT_TAKE1("PassengerForceMaxConcurrentRequestsPerProcess",
 	(Take1Func) cmd_passenger_force_max_concurrent_requests_per_process,

@@ -114,6 +114,9 @@ EXCLUDE_NAME_REGEXP = %r{
     |linux/
     |tr1/
     |curl/
+    |openssl/
+    |CoreFoundation/
+    |Security/
     |ruby
     |apr_
     |ap_
@@ -126,7 +129,7 @@ def extract_dependencies(source)
   result = []
   File.open(source, "r") do |f|
     f.each do |line|
-      next if line !~ /^[\s\t]*#include (<.+?>|".+?")/
+      next if line !~ /^\s*#include (<.+?>|".+?")/
 
       raw_name = $1
       name = raw_name.gsub(/["<>]/, "")
@@ -192,7 +195,6 @@ end
 def generate_full_map(basic_map)
   result = {}
   basic_map.keys.sort.each do |source_file|
-    deps = basic_map[source_file]
     gather_results = {}
     gather_all_dependencies_recursively(
       source_file, basic_map, gather_results)

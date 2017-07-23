@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2015 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -155,7 +155,7 @@ getFileType(const StaticString &filename, CachedFileStat *cstat, boost::mutex *c
 
 void
 createFile(const string &filename, const StaticString &contents, mode_t permissions, uid_t owner,
-	gid_t group, bool overwrite)
+	gid_t group, bool overwrite, const char *callerFile, unsigned int callerLine)
 {
 	FileDescriptor fd;
 	int ret, e, options;
@@ -166,7 +166,8 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 	}
 	do {
 		fd.assign(open(filename.c_str(), options, permissions),
-			__FILE__, __LINE__);
+			(callerFile == NULL) ? __FILE__ : callerFile,
+			(callerLine == 0) ? __LINE__ : callerLine);
 	} while (fd == -1 && errno == EINTR);
 	if (fd != -1) {
 		FileGuard guard(filename);
@@ -718,8 +719,8 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 
 void
 removeDirTree(const string &path) {
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_interruption di;
+	boost::this_thread::disable_syscall_interruption dsi;
 	const char *c_path = path.c_str();
 	pid_t pid;
 
@@ -741,8 +742,8 @@ removeDirTree(const string &path) {
 		throw SystemException("Cannot fork a new process", e);
 
 	} else {
-		this_thread::restore_interruption ri(di);
-		this_thread::restore_syscall_interruption rsi(dsi);
+		boost::this_thread::restore_interruption ri(di);
+		boost::this_thread::restore_syscall_interruption rsi(dsi);
 		syscalls::waitpid(pid, NULL, 0);
 	}
 
@@ -760,8 +761,8 @@ removeDirTree(const string &path) {
 		throw SystemException("Cannot fork a new process", e);
 
 	} else {
-		this_thread::restore_interruption ri(di);
-		this_thread::restore_syscall_interruption rsi(dsi);
+		boost::this_thread::restore_interruption ri(di);
+		boost::this_thread::restore_syscall_interruption rsi(dsi);
 		int status;
 		if (syscalls::waitpid(pid, &status, 0) == -1 || status != 0) {
 			throw RuntimeException("Cannot remove directory '" + path + "'");
@@ -781,13 +782,13 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 	 */
 	syscalls::sleep(2);
 
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_interruption di;
+	boost::this_thread::disable_syscall_interruption dsi;
 	vector<string>::const_iterator it;
 	string prespawnScript = locator.getHelperScriptsDir() + "/prespawn";
 
 	it = prestartURLs.begin();
-	while (it != prestartURLs.end() && !this_thread::interruption_requested()) {
+	while (it != prestartURLs.end() && !boost::this_thread::interruption_requested()) {
 		if (it->empty()) {
 			it++;
 			continue;
@@ -822,8 +823,8 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 			perror("fork()");
 		} else {
 			try {
-				this_thread::restore_interruption si(di);
-				this_thread::restore_syscall_interruption ssi(dsi);
+				boost::this_thread::restore_interruption si(di);
+				boost::this_thread::restore_syscall_interruption ssi(dsi);
 				syscalls::waitpid(pid, NULL, 0);
 			} catch (const thread_interrupted &) {
 				syscalls::kill(SIGKILL, pid);
@@ -832,8 +833,8 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 			}
 		}
 
-		this_thread::restore_interruption si(di);
-		this_thread::restore_syscall_interruption ssi(dsi);
+		boost::this_thread::restore_interruption si(di);
+		boost::this_thread::restore_syscall_interruption ssi(dsi);
 		syscalls::sleep(1);
 		it++;
 	}
@@ -1031,14 +1032,14 @@ runShellCommand(const StaticString &command) {
 }
 
 string
-runCommandAndCaptureOutput(const char **command) {
+runCommandAndCaptureOutput(const char **command, int *status) {
 	pid_t pid;
-	int e;
+	int e, waitRet;
 	Pipe p;
 
 	p = createPipe(__FILE__, __LINE__);
 
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_syscall_interruption dsi;
 	pid = syscalls::fork();
 	if (pid == 0) {
 		// Make ps nicer, we want to have as little impact on the rest
@@ -1069,7 +1070,7 @@ runCommandAndCaptureOutput(const char **command) {
 			ssize_t ret;
 
 			try {
-				this_thread::restore_syscall_interruption rsi(dsi);
+				boost::this_thread::restore_syscall_interruption rsi(dsi);
 				ret = syscalls::read(p[0], buf, sizeof(buf));
 			} catch (const thread_interrupted &) {
 				syscalls::kill(SIGKILL, pid);
@@ -1087,14 +1088,12 @@ runCommandAndCaptureOutput(const char **command) {
 			result.append(buf, ret);
 		}
 		p[0].close();
-		syscalls::waitpid(pid, NULL, 0);
 
-		if (result.empty()) {
-			throw RuntimeException(string("The '") + command[1] +
-				"' command failed");
-		} else {
-			return result;
+		waitRet = syscalls::waitpid(pid, NULL, 0);
+		if (status != NULL) {
+			*status = waitRet;
 		}
+		return result;
 	}
 }
 

@@ -22,6 +22,7 @@ describe "Apache 2 module" do
     Dir.mkdir(@passenger_temp_dir)
     FileUtils.chmod_R(0777, @passenger_temp_dir)
     ENV['TMPDIR'] = @passenger_temp_dir
+    ENV['PASSENGER_INSTANCE_REGISTRY_DIR'] = @passenger_temp_dir
   end
 
   after :all do

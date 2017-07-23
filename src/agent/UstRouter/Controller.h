@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2016 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -35,6 +35,7 @@
 #include <oxt/backtrace.hpp>
 #include <ev++.h>
 #include <SmallVector.h>
+#include <ConfigKit/ConfigKit.h>
 #include <ServerKit/Server.h>
 #include <StaticString.h>
 #include <Constants.h>
@@ -49,7 +50,6 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/StringMap.h>
 #include <Utils/SystemTime.h>
-#include <Utils/VariantMap.h>
 
 
 namespace Passenger {
@@ -77,12 +77,6 @@ private:
 	typedef StringMap<TransactionPtr> TransactionMap;
 	typedef StringMap<LogSinkPtr> LogSinkCache;
 
-	string username;
-	string password;
-	string dumpDir;
-	string defaultNodeName;
-	bool devMode;
-
 	RandomGenerator randomGenerator;
 	TransactionMap transactions;
 	LogSinkCache logSinkCache;
@@ -91,6 +85,7 @@ private:
 
 	ev::timer gcTimer;
 	ev::timer flushTimer;
+	bool devMode;
 	int sinkFlushInterval;
 
 
@@ -130,7 +125,7 @@ private:
 		}
 
 		StaticString username = client->scalarReader.value();
-		if (!constantTimeCompare(username, this->username)) {
+		if (!constantTimeCompare(username, config["ust_router_username"].asString())) {
 			sendErrorToClient(client, "Invalid username or password");
 			if (client->connected()) {
 				disconnectWithError(&client, "Client sent invalid username");
@@ -167,7 +162,7 @@ private:
 		}
 
 		StaticString password = client->scalarReader.value();
-		if (!constantTimeCompare(password, this->password)) {
+		if (!constantTimeCompare(password, config["ust_router_password"].asString())) {
 			sendErrorToClient(client, "Invalid username or password");
 			if (client->connected()) {
 				disconnectWithError(&client, "Client sent invalid password");
@@ -602,7 +597,7 @@ private:
 
 		nodeName = getStaticString(args, 1);
 		if (nodeName.empty()) {
-			client->nodeName = defaultNodeName;
+			client->nodeName = config["ust_router_default_node_name"].asString();
 		} else {
 			client->nodeName.assign(nodeName.data(), nodeName.size());
 		}
@@ -902,7 +897,7 @@ private:
 
 		LogSinkPtr sink = logSinkCache.get(StaticString(cacheKey, cacheKeySize));
 		if (sink == NULL) {
-			string dumpFile = dumpDir + "/" + category;
+			string dumpFile = config["ust_router_dump_dir"].asString() + "/" + category;
 			SKC_DEBUG(client, "Creating dump file: " << dumpFile);
 			sink = boost::make_shared<FileSink>(this, dumpFile);
 			sink->opened = 1;
@@ -1059,6 +1054,16 @@ private:
 		return *filter;
 	}
 
+	void applyConfigUpdates() {
+		devMode = config["ust_router_dev_mode"].asBool();
+
+		unsigned int sinkFlushTimerInterval =
+			config["analytics_sink_flush_timer_interval"].asUInt();
+		sinkFlushInterval = config["analytics_sink_flush_interval"].asUInt();
+		flushTimer.stop();
+		flushTimer.start(sinkFlushTimerInterval, sinkFlushTimerInterval);
+	}
+
 protected:
 	virtual void reinitializeClient(Client *client, int fd) {
 		ParentClass::reinitializeClient(client, fd);
@@ -1130,6 +1135,11 @@ protected:
 		}
 	}
 
+	virtual void onConfigChange(const ConfigKit::Store *oldConfig) {
+		ParentClass::onConfigChange(oldConfig);
+		applyConfigUpdates();
+	}
+
 	virtual void onShutdown(bool forceDisconnect) {
 		gcTimer.stop();
 		flushTimer.stop();
@@ -1137,32 +1147,56 @@ protected:
 	}
 
 public:
-	Controller(ServerKit::Context *context, const VariantMap &options = VariantMap())
-		: ServerKit::BaseServer<Controller, Client>(context),
-		  username(options.get("ust_router_username", false, "")),
-		  password(options.get("ust_router_password", false, "")),
-		  dumpDir(options.get("ust_router_dump_dir", false, "/tmp")),
-		  defaultNodeName(options.get("ust_router_default_node_name", false, "")),
-		  devMode(options.getBool("ust_router_dev_mode", false, false)),
-		  remoteSender(
-		      options.get("union_station_gateway_address", false, DEFAULT_UNION_STATION_GATEWAY_ADDRESS),
-		      options.getInt("union_station_gateway_port", false, DEFAULT_UNION_STATION_GATEWAY_PORT),
-		      options.get("union_station_gateway_cert", false, ""),
-		      options.get("union_station_proxy_address", false, "")),
-		  gcTimer(getLoop()),
-		  flushTimer(getLoop())
-	{
-		if (defaultNodeName.empty()) {
-			defaultNodeName = getHostName();
+	class Schema: public ServerKit::BaseServerSchema {
+	private:
+		static Json::Value getDefaultValueForDefaultNodeName(const ConfigKit::Store &store) {
+			return getHostName();
 		}
 
+	public:
+		Schema()
+			: ServerKit::BaseServerSchema(false)
+		{
+			using namespace ConfigKit;
+
+			add("ust_router_username", STRING_TYPE, OPTIONAL);
+			add("ust_router_password", STRING_TYPE, OPTIONAL);
+			add("ust_router_dump_dir", STRING_TYPE, OPTIONAL, "/tmp");
+			addWithDynamicDefault(
+				"ust_router_default_node_name",
+				STRING_TYPE, OPTIONAL | CACHE_DEFAULT_VALUE,
+				getDefaultValueForDefaultNodeName);
+			add("ust_router_dev_mode", BOOL_TYPE, OPTIONAL, false);
+			add("union_station_gateway_address", STRING_TYPE, OPTIONAL | READ_ONLY, DEFAULT_UNION_STATION_GATEWAY_ADDRESS);
+			add("union_station_gateway_port", UINT_TYPE, OPTIONAL | READ_ONLY, DEFAULT_UNION_STATION_GATEWAY_PORT);
+			add("union_station_gateway_cert", STRING_TYPE, OPTIONAL | READ_ONLY);
+			add("union_station_proxy_address", STRING_TYPE, OPTIONAL | READ_ONLY);
+			add("analytics_sink_flush_timer_interval", UINT_TYPE, OPTIONAL, 5);
+			add("analytics_sink_flush_interval", UINT_TYPE, OPTIONAL, 0);
+
+			finalize();
+		}
+	};
+
+	Controller(ServerKit::Context *context, const Schema &schema,
+		const Json::Value &initialConfig)
+		: ServerKit::BaseServer<Controller, Client>(context, schema, initialConfig),
+		  remoteSender(
+		      config["union_station_gateway_address"].asString(),
+		      config["union_station_gateway_port"].asUInt(),
+		      config["union_station_gateway_cert"].asString(),
+		      config["union_station_proxy_address"].asString()),
+		  gcTimer(getLoop()),
+		  flushTimer(getLoop()),
+		  devMode(false),
+		  sinkFlushInterval(0)
+	{
 		gcTimer.set<Controller, &Controller::garbageCollect>(this);
 		gcTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
 
-		int sinkFlushTimerInterval = options.getInt("analytics_sink_flush_timer_interval", false, 5);
-		sinkFlushInterval = options.getInt("analytics_sink_flush_interval", false, 0);
 		flushTimer.set<Controller, &Controller::flushSomeSinks>(this);
-		flushTimer.start(sinkFlushTimerInterval, sinkFlushTimerInterval);
+
+		applyConfigUpdates();
 	}
 
 	virtual StaticString getServerName() const {
@@ -1184,11 +1218,11 @@ public:
 		doc["log_sink_cache"] = inspectLogSinkCacheStateAsJson();
 		doc["transactions"] = inspectTransactionsStateAsJson();
 		if (devMode) {
-			doc["dump_dir"] = dumpDir;
+			doc["dump_dir"] = config["ust_router_dump_dir"];
 		} else {
 			doc["remote_sender"] = remoteSender.inspectStateAsJson();
 		}
-		doc["default_node_name"] = defaultNodeName;
+		doc["default_node_name"] = config["ust_router_default_node_name"];
 		return doc;
 	}
 

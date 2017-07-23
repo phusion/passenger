@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+run ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
+run bundle exec drake "-j$COMPILE_CONCURRENCY" test:integration:nginx

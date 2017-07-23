@@ -1,0 +1,51 @@
+#!/bin/bash
+set -eo pipefail
+
+SELFDIR=$(dirname "$0")
+SELFDIR=$(cd "$SELFDIR" && pwd)
+PASSENGER_ROOT=$(cd "$SELFDIR/../.." && pwd)
+# shellcheck source=lib/functions.sh
+source "$SELFDIR/lib/functions.sh"
+cd "$PASSENGER_ROOT"
+
+header "Setting up stuff on the host"
+
+autodetect_environment
+sanity_check_environment
+echo
+
+if [[ "$OS" = macos && "$1" = "" ]]; then
+	echo "Usage: ./dev/ci/setup-host <TEST NAME>" >&2
+	exit 1
+fi
+
+if $IN_JENKINS; then
+	# Relax permissions. Necessary for unit tests which test permissions.
+	header2 "Relaxing file permissions"
+	echo "+ Setting umask"
+	umask u=rwx,g=rx,o=rx
+	run chmod g+rx,o+rx .
+	echo "+ chmodding files"
+	find ./* -type f -print0 | xargs -0 -n 512 chmod g+r,o+r
+	echo "+ chmodding directories"
+	find ./* -type d -print0 | xargs -0 -n 512 chmod g+rx,o+rx
+
+	# Create this file now because otherwise it would be owned by root,
+	# which Jenkins cannot remove.
+	run touch test/test.log
+
+	echo
+fi
+
+header2 "Creating cache directories"
+run mkdir -p "$CACHE_DIR"
+run mkdir -p "$CACHE_DIR/bundle"
+run mkdir -p "$CACHE_DIR/ccache"
+run mkdir -p "$CACHE_DIR/yarn"
+echo
+
+if [[ "$OS" = macos ]]; then
+	export CI_COMMAND="./dev/ci/setup-host $*"
+	exec "$PASSENGER_ROOT/dev/ci/scripts/debug-console-wrapper.sh" \
+		"$PASSENGER_ROOT/dev/ci/scripts/setup-host-natively.sh" "$@"
+fi

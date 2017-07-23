@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -66,14 +66,14 @@ private:
 
 	void capture() {
 		TRACE_POINT();
-		while (!this_thread::interruption_requested()) {
+		while (!boost::this_thread::interruption_requested()) {
 			char buf[1024 * 8];
 			ssize_t ret;
 
 			UPDATE_TRACE_POINT();
 			ret = syscalls::read(fd, buf, sizeof(buf));
 			int e = errno;
-			this_thread::disable_syscall_interruption dsi;
+			boost::this_thread::disable_syscall_interruption dsi;
 			if (ret == 0) {
 				break;
 			} else if (ret == -1) {
@@ -115,8 +115,8 @@ public:
 	~BackgroundIOCapturer() {
 		TRACE_POINT();
 		if (thr != NULL) {
-			this_thread::disable_interruption di;
-			this_thread::disable_syscall_interruption dsi;
+			boost::this_thread::disable_interruption di;
+			boost::this_thread::disable_syscall_interruption dsi;
 			thr->interrupt_and_join();
 			delete thr;
 			thr = NULL;
@@ -136,8 +136,8 @@ public:
 	string stop() {
 		TRACE_POINT();
 		assert(thr != NULL);
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		thr->interrupt_and_join();
 		delete thr;
 		thr = NULL;

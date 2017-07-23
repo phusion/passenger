@@ -1,7 +1,7 @@
 # encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2015 Phusion Holding B.V.
+#  Copyright (c) 2014-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -92,7 +92,7 @@ module PhusionPassenger
         puts colors.ansi_colorize("<banner>Checking for basic prerequities...</banner>")
         puts
 
-        runner = PlatformInfo::Depcheck::ConsoleRunner.new
+        runner = PlatformInfo::Depcheck::ConsoleRunner.new(@colors)
         runner.add('download-tool')
 
         result = runner.check_all
@@ -216,11 +216,11 @@ module PhusionPassenger
             :dir => dir,
             :myself => myself
           abort
-        rescue SystemCallError
+        rescue SystemCallError => e
           print_installation_error_header
           render_template 'installation_utils/unexpected_filesystem_problem',
             :dir => dir,
-            :exception => result
+            :exception => e
           abort
         end
       end

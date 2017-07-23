@@ -121,8 +121,6 @@ class adaptive_pool
    adaptive_pool& operator=
       (const adaptive_pool<T2, Version2, N2, F2>&);
 
-   //!Not assignable from other adaptive_pool
-   adaptive_pool& operator=(const adaptive_pool&);
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
    public:

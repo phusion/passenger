@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2016 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -197,8 +197,8 @@ private:
 	 * then it will set `pid` to -1.
 	 */
 	void inspectWatchdogCrashReason(pid_t &pid) {
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		int ret, status;
 
 		/* Upon noticing that something went wrong, the watchdog
@@ -268,7 +268,7 @@ private:
 
 	static void killProcessGroupAndWait(pid_t *pid, unsigned long long timeout = 0) {
 		if (*pid != -1 && (timeout == 0 || timedWaitPid(*pid, NULL, timeout) <= 0)) {
-			this_thread::disable_syscall_interruption dsi;
+			boost::this_thread::disable_syscall_interruption dsi;
 			syscalls::killpg(*pid, SIGKILL);
 			syscalls::waitpid(*pid, NULL, 0);
 			*pid = -1;
@@ -306,7 +306,7 @@ public:
 
 	~WatchdogLauncher() {
 		if (mPid != 0) {
-			this_thread::disable_syscall_interruption dsi;
+			boost::this_thread::disable_syscall_interruption dsi;
 
 			/* Send a message down the feedback fd to tell the watchdog
 			 * that we're shutting down cleanly. Closing the fd without
@@ -344,8 +344,8 @@ public:
 		const boost::function<void ()> &afterFork = boost::function<void ()>())
 	{
 		TRACE_POINT();
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		ResourceLocator locator(passengerRoot);
 
 		string agentFilename;
@@ -456,8 +456,8 @@ public:
 
 			/****** Read agents information report ******/
 
-			this_thread::restore_interruption ri(di);
-			this_thread::restore_syscall_interruption rsi(dsi);
+			boost::this_thread::restore_interruption ri(di);
+			boost::this_thread::restore_syscall_interruption rsi(dsi);
 			UPDATE_TRACE_POINT();
 
 			try {

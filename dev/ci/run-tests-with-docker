@@ -1,0 +1,42 @@
+#!/bin/bash
+set -eo pipefail
+
+SELFDIR=$(dirname "$0")
+SELFDIR=$(cd "$SELFDIR" && pwd)
+PASSENGER_ROOT=$(cd "$SELFDIR/../.." && pwd)
+# shellcheck source=lib/functions.sh
+source "$SELFDIR/lib/functions.sh"
+cd "$PASSENGER_ROOT"
+
+autodetect_environment
+sanity_check_environment
+echo
+
+if [[ "$OS" != linux ]]; then
+	echo "ERROR: this script can only be run on Linux." >&2
+	exit 1
+fi
+
+if tty -s; then
+	TTY_ARGS='-t -i'
+else
+	TTY_ARGS=
+fi
+
+run_exec docker run --rm $TTY_ARGS \
+	-v "$PASSENGER_ROOT:/passenger" \
+	-v "$CACHE_DIR:/passenger/.ci_cache" \
+	-e "APP_UID=$(id -u)" \
+	-e "APP_GID=$(id -g)" \
+	-e "DEBUG_CONSOLE=$DEBUG_CONSOLE" \
+	-e "TEST_RUBY_VERSION=$TEST_RUBY_VERSION" \
+	-e "COMPILE_CONCURRENCY=$COMPILE_CONCURRENCY" \
+	-e "SUDO=$SUDO" \
+	phusion/passenger-ci-docker-env:1.0.1 \
+	/sbin/my_init --skip-runit --skip-startup-files --quiet -- \
+	/passenger/dev/ci/scripts/inituidgid \
+	/sbin/setuser app \
+	/bin/bash -lc 'cd /passenger && exec "$@"' \
+	./dev/ci/scripts/docker-entrypoint.sh \
+	./dev/ci/scripts/docker-entrypoint.sh \
+	"$@"

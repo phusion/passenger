@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -29,6 +29,7 @@
 #include <Core/SpawningKit/Spawner.h>
 #include <Core/SpawningKit/PipeWatcher.h>
 #include <Constants.h>
+#include <Logging.h>
 #include <LveLoggingDecorator.h>
 
 #include <adhoc_lve.h>
@@ -105,7 +106,11 @@ private:
 		if (shouldLoadShellEnvvars(options, preparation)) {
 			command.push_back(preparation.userSwitching.shell);
 			command.push_back(preparation.userSwitching.shell);
-			command.push_back("-lc");
+			if (Passenger::getLogLevel() >= LVL_DEBUG3) {
+				command.push_back("-lxc");
+			} else {
+				command.push_back("-lc");
+			}
 			command.push_back("exec \"$@\"");
 			command.push_back("SpawnPreparerShell");
 		} else {
@@ -202,8 +207,8 @@ private:
 
 	void startPreloader() {
 		TRACE_POINT();
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		assert(!preloaderStarted());
 		P_DEBUG("Spawning new preloader: appRoot=" << options.appRoot);
 		checkChrootDirectories(options);
@@ -292,8 +297,8 @@ private:
 			details.timeout = options.startTimeout * 1000;
 
 			{
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
+				boost::this_thread::restore_interruption ri(di);
+				boost::this_thread::restore_syscall_interruption rsi(dsi);
 				socketAddress = negotiatePreloaderStartup(details);
 			}
 			this->adminSocket = adminSocket.second;
@@ -324,8 +329,8 @@ private:
 
 	void stopPreloader() {
 		TRACE_POINT();
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 
 		if (!preloaderStarted()) {
 			return;
@@ -423,7 +428,9 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time.",
+					"the preloader: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
 					details);
 			}
@@ -495,7 +502,9 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time.",
+					"the preloader: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
 					details);
 			}
@@ -602,7 +611,9 @@ private:
 					details);
 			} catch (const TimeoutException &) {
 				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time.",
+					"the preloader: it did not write a startup response in time. "
+					"If your app needs more time to start you can increase the "
+					"Passenger start timeout config option.",
 					SpawnException::PRELOADER_STARTUP_TIMEOUT,
 					details);
 			}

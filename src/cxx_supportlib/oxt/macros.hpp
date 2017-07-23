@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010-2013 Phusion Holding B.V.
+ * Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -54,6 +54,8 @@
 	 */
 	#define OXT_FORCE_INLINE __attribute__((always_inline))
 
+	#define OXT_PURE __attribute__((pure))
+
 	#if __GNUC__ >= 4
 		#define OXT_RESTRICT __restrict__
 	#else
@@ -77,6 +79,7 @@
 	#define OXT_LIKELY(expr) expr
 	#define OXT_UNLIKELY(expr) expr
 	#define OXT_FORCE_INLINE
+	#define OXT_PURE
 	#define restrict
 	#define restrict_ref
 #endif

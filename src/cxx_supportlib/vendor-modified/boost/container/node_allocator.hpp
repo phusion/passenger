@@ -109,9 +109,6 @@ class node_allocator
    template<class T2, std::size_t N2>
    node_allocator& operator=
       (const node_allocator<T2, N2>&);
-
-   //!Not assignable from other node_allocator
-   node_allocator& operator=(const node_allocator&);
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
    public:

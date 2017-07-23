@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -808,7 +808,7 @@ Controller::sendResponseHeaderWithWritev(Client *client, Request *req,
 {
 	TRACE_POINT();
 
-	if (OXT_UNLIKELY(benchmarkMode == BM_RESPONSE_BEGIN)) {
+	if (OXT_UNLIKELY(mainConfigCache.benchmarkMode == BM_RESPONSE_BEGIN)) {
 		writeBenchmarkResponse(&client, &req, false);
 		return true;
 	}
@@ -983,7 +983,7 @@ void
 Controller::writeResponseAndMarkForTurboCaching(Client *client, Request *req,
 	const MemoryKit::mbuf &buffer)
 {
-	if (OXT_LIKELY(benchmarkMode != BM_RESPONSE_BEGIN)) {
+	if (OXT_LIKELY(mainConfigCache.benchmarkMode != BM_RESPONSE_BEGIN)) {
 		writeResponse(client, buffer);
 	}
 	markResponsePartForTurboCaching(client, req, buffer);
@@ -1015,8 +1015,8 @@ Controller::maybeThrottleAppSource(Client *client, Request *req) {
 	if (!req->ended()) {
 		assert(client->output.getBuffersFlushedCallback() == NULL);
 		assert(client->output.getDataFlushedCallback() == getClientOutputDataFlushedCallback());
-		if (responseBufferHighWatermark > 0
-		 && client->output.getTotalBytesBuffered() >= responseBufferHighWatermark)
+		if (mainConfigCache.responseBufferHighWatermark > 0
+		 && client->output.getTotalBytesBuffered() >= mainConfigCache.responseBufferHighWatermark)
 		{
 			SKC_TRACE(client, 2, "Application is sending response data quicker than the client "
 				"can keep up with. Throttling application socket");

@@ -136,12 +136,13 @@ loadConfigFile() {
 }
 
 static void
-installAbortHandler() {
+installAbortHandler(int argc, char *argv[]) {
 	VariantMap options;
 
 	options.set("passenger_root", resourceLocator->getInstallSpec());
 
 	initializeAgentOptions("CxxTestMain", options);
+	storeArgvCopy(argc, argv);
 	installAgentAbortHandler();
 }
 
@@ -167,7 +168,7 @@ main(int argc, char *argv[]) {
 
 	loadConfigFile();
 	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true) && !hasEnvOption("GDB", false)) {
-		installAbortHandler();
+		installAbortHandler(argc, argv);
 	}
 
 	bool all_ok = true;

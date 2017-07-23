@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -107,7 +107,7 @@ public:
 		while (queue.empty() && !timedOut) {
 			posix_time::time_duration diff = deadline -
 				posix_time::microsec_clock::local_time();
-			if (diff.is_negative() < 0) {
+			if (diff.is_negative()) {
 				timedOut = true;
 			} else {
 				timedOut = !added.timed_wait(l,

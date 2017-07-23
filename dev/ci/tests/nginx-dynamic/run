@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+TEST_DYNAMIC_WITH_NGINX_VERSION=1.12.1
+NGINX_ADDON_DIR=$(./bin/passenger-config --nginx-addon-dir)
+echo "+ Nginx addon dir: $NGINX_ADDON_DIR"
+echo
+
+header2 "Compliing Passenger"
+run drake "-j$COMPILE_CONCURRENCY" nginx:as_dynamic_module
+echo
+
+header2 "Downloading and compiling Nginx"
+cd buildout
+run curl -sSLO https://www.nginx.org/download/nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION.tar.gz
+run tar -xzf nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION.tar.gz
+echo "+ Entering nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION"
+cd "nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION"
+run ./configure --with-cc='ccache cc' --add-dynamic-module="$NGINX_ADDON_DIR"
+run make "-j$COMPILE_CONCURRENCY"

@@ -1,4 +1,7 @@
 worker_processes  2;
+<% if @passenger_dynamic_module_conf_file %>
+    include <%= @passenger_dynamic_module_conf_file %>;
+<% end %>
 
 error_log <%= @nginx_root %>/../test.log;
 pid       <%= @nginx_root %>/nginx.pid;
@@ -20,6 +23,7 @@ http {
     keepalive_timeout  65;
     server_names_hash_bucket_size 64;
     
+    client_body_temp_path <%= @nginx_root %>;
     log_format  main  '$remote_addr - $remote_user [$time_local] $request '
                       '"$status" $body_bytes_sent "$http_referer" '
                       '"$http_user_agent" "$http_x_forwarded_for"';

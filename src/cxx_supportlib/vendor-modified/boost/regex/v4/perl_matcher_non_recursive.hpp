@@ -131,11 +131,16 @@ template <class Results>
 struct saved_recursion : public saved_state
 {
    saved_recursion(int idx, const re_syntax_base* p, Results* pr) 
-      : saved_state(14), recursion_id(idx), preturn_address(p), results(*pr)
-   {}
+      : saved_state(14), recursion_id(idx), preturn_address(p), results(*pr) {}
    int recursion_id;
    const re_syntax_base* preturn_address;
    Results results;
+};
+
+struct saved_change_case : public saved_state
+{
+   bool icase;
+   saved_change_case(bool c) : saved_state(18), icase(c) {}
 };
 
 template <class BidiIterator, class Allocator, class traits>
@@ -239,6 +244,22 @@ inline void perl_matcher<BidiIterator, Allocator, traits>::push_matched_paren(in
       --pmp;
    }
    (void) new (pmp)saved_matched_paren<BidiIterator>(index, sub);
+   m_backup_state = pmp;
+}
+
+template <class BidiIterator, class Allocator, class traits>
+inline void perl_matcher<BidiIterator, Allocator, traits>::push_case_change(bool c)
+{
+   //BOOST_ASSERT(index);
+   saved_change_case* pmp = static_cast<saved_change_case*>(m_backup_state);
+   --pmp;
+   if(pmp < m_stack_base)
+   {
+      extend_stack();
+      pmp = static_cast<saved_change_case*>(m_backup_state);
+      --pmp;
+   }
+   (void) new (pmp)saved_change_case(c);
    m_backup_state = pmp;
 }
 
@@ -348,6 +369,16 @@ inline void perl_matcher<BidiIterator, Allocator, traits>::push_recursion(int id
 }
 
 template <class BidiIterator, class Allocator, class traits>
+bool perl_matcher<BidiIterator, Allocator, traits>::match_toggle_case()
+{
+   // change our case sensitivity:
+   push_case_change(this->icase);
+   this->icase = static_cast<const re_case*>(pstate)->icase;
+   pstate = pstate->next.p;
+   return true;
+}
+
+template <class BidiIterator, class Allocator, class traits>
 bool perl_matcher<BidiIterator, Allocator, traits>::match_startmark()
 {
    int index = static_cast<const re_brace*>(pstate)->index;
@@ -373,7 +404,11 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_startmark()
          m_independent = true;
          const re_syntax_base* next_pstate = static_cast<const re_jump*>(pstate->next.p)->alt.p->next.p;
          pstate = pstate->next.p->next.p;
-         bool r = match_all_states();
+         bool r = false;
+#if !defined(BOOST_NO_EXCEPTIONS)
+      try{
+#endif
+         r = match_all_states();
          if(!r && !m_independent)
          {
             // Must be unwinding from a COMMIT/SKIP/PRUNE and the independent 
@@ -381,8 +416,20 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_startmark()
             while(unwind(false));
             return false;
          }
+#if !defined(BOOST_NO_EXCEPTIONS)
+      }
+      catch(...)
+      {
          pstate = next_pstate;
-         m_independent = old_independent;
+         // unwind all pushed states, apart from anything else this
+         // ensures that all the states are correctly destructed
+         // not just the memory freed.
+         while(unwind(true)) {}
+         throw;
+      }
+#endif
+      pstate = next_pstate;
+      m_independent = old_independent;
 #ifdef BOOST_REGEX_MATCH_EXTRA
          if(r && (m_match_flags & match_extra))
          {
@@ -396,8 +443,23 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_startmark()
             for(i = 0; i < temp_match.size(); ++i)
                (*m_presult)[i].get_captures().clear();
             // match everything else:
-            r = match_all_states();
-            // now place the stored captures back:
+#if !defined(BOOST_NO_EXCEPTIONS)
+            try{
+#endif
+               r = match_all_states();
+#if !defined(BOOST_NO_EXCEPTIONS)
+            }
+            catch(...)
+            {
+               pstate = next_pstate;
+               // unwind all pushed states, apart from anything else this
+               // ensures that all the states are correctly destructed
+               // not just the memory freed.
+               while(unwind(true)) {}
+               throw;
+            }
+#endif
+         // now place the stored captures back:
             for(i = 0; i < temp_match.size(); ++i)
             {
                typedef typename sub_match<BidiIterator>::capture_sequence_type seq;
@@ -432,14 +494,29 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_startmark()
          BidiIterator saved_position = position;
          const re_syntax_base* next_pstate = static_cast<const re_jump*>(pstate->next.p)->alt.p->next.p;
          pstate = pstate->next.p->next.p;
-         bool r = match_all_states();
-         position = saved_position;
-         if(negated)
-            r = !r;
-         if(r)
+#if !defined(BOOST_NO_EXCEPTIONS)
+         try{
+#endif
+            bool r = match_all_states();
+            position = saved_position;
+            if(negated)
+               r = !r;
+            if(r)
+               pstate = next_pstate;
+            else
+               pstate = alt->alt.p;
+#if !defined(BOOST_NO_EXCEPTIONS)
+         }
+         catch(...)
+         {
             pstate = next_pstate;
-         else
-            pstate = alt->alt.p;
+            // unwind all pushed states, apart from anything else this
+            // ensures that all the states are correctly destructed
+            // not just the memory freed.
+            while(unwind(true)){}
+            throw;
+         }
+#endif
          break;
       }
       }
@@ -921,6 +998,19 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_recursion()
 {
    BOOST_ASSERT(pstate->type == syntax_element_recurse);
    //
+   // See if we've seen this recursion before at this location, if we have then
+   // we need to prevent infinite recursion:
+   //
+   for(typename std::vector<recursion_info<results_type> >::reverse_iterator i = recursion_stack.rbegin(); i != recursion_stack.rend(); ++i)
+   {
+      if(i->idx == static_cast<const re_brace*>(static_cast<const re_jump*>(pstate)->alt.p)->index)
+      {
+         if(i->location_of_start == position)
+            return false;
+         break;
+      }
+   }
+   //
    // Backup call stack:
    //
    push_recursion_pop();
@@ -936,6 +1026,7 @@ bool perl_matcher<BidiIterator, Allocator, traits>::match_recursion()
    recursion_stack.back().results = *m_presult;
    pstate = static_cast<const re_jump*>(pstate)->alt.p;
    recursion_stack.back().idx = static_cast<const re_brace*>(pstate)->index;
+   recursion_stack.back().location_of_start = position;
    //if(static_cast<const re_recurse*>(pstate)->state_id > 0)
    {
       push_repeater_count(-(2 + static_cast<const re_brace*>(pstate)->index), &next_count);
@@ -1142,6 +1233,7 @@ bool perl_matcher<BidiIterator, Allocator, traits>::unwind(bool have_match)
       &perl_matcher<BidiIterator, Allocator, traits>::unwind_recursion_pop,
       &perl_matcher<BidiIterator, Allocator, traits>::unwind_commit,
       &perl_matcher<BidiIterator, Allocator, traits>::unwind_then,
+      &perl_matcher<BidiIterator, Allocator, traits>::unwind_case,
    };
 
    m_recursive_result = have_match;
@@ -1168,6 +1260,16 @@ bool perl_matcher<BidiIterator, Allocator, traits>::unwind_end(bool)
 {
    pstate = 0;   // nothing left to search
    return false; // end of stack nothing more to search
+}
+
+template <class BidiIterator, class Allocator, class traits>
+bool perl_matcher<BidiIterator, Allocator, traits>::unwind_case(bool)
+{
+   saved_change_case* pmp = static_cast<saved_change_case*>(m_backup_state);
+   icase = pmp->icase;
+   boost::BOOST_REGEX_DETAIL_NS::inplace_destroy(pmp++);
+   m_backup_state = pmp;
+   return true;
 }
 
 template <class BidiIterator, class Allocator, class traits>
@@ -1662,6 +1764,7 @@ bool perl_matcher<BidiIterator, Allocator, traits>::unwind_recursion(bool r)
       recursion_stack.back().idx = pmp->recursion_id;
       recursion_stack.back().preturn_address = pmp->preturn_address;
       recursion_stack.back().results = pmp->results;
+      recursion_stack.back().location_of_start = position;
    }
    boost::BOOST_REGEX_DETAIL_NS::inplace_destroy(pmp++);
    m_backup_state = pmp;

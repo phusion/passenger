@@ -109,6 +109,10 @@ module PhusionPassenger
           end
         end
 
+        def append_install_instructions(value)
+            @install_instructions << "\n#{value}" if value
+        end
+
         def install_comments(value = nil)
           value ? @install_comments = value : @install_comments
         end
@@ -266,6 +270,10 @@ module PhusionPassenger
           install_instructions("Please install it with <b>brew install #{package_name}</b>")
         end
 
+        def brew_link(package_name)
+          append_install_instructions("Please link it with <b>brew link --force #{package_name}</b>")
+        end
+
         def install_osx_command_line_tools
           PhusionPassenger.require_passenger_lib 'platform_info/compiler'
           if PlatformInfo.xcode_select_version.to_s >= "2333"
@@ -302,7 +310,8 @@ module PhusionPassenger
       class ConsoleRunner
         attr_reader :missing_dependencies
 
-        def initialize
+        def initialize(colors)
+          @colors = colors || Utils::AnsiColors.new(:auto)
           @stdout = STDOUT
           @dep_identifiers = []
         end
@@ -366,7 +375,7 @@ module PhusionPassenger
       private
         def puts(text = nil)
           if text
-            @stdout.puts(Utils::AnsiColors.ansi_colorize(text))
+            @stdout.puts(@colors.ansi_colorize(text))
           else
             @stdout.puts
           end
@@ -380,7 +389,7 @@ module PhusionPassenger
         def puts_detail(text)
           puts "      #{text}"
         end
-      end
+      end # class ConsoleRunner
     end # module Depcheck
 
   end # module PlatformInfo

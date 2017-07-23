@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,6 +28,7 @@
 
 #include <Core/SpawningKit/Spawner.h>
 #include <Constants.h>
+#include <Logging.h>
 #include <LveLoggingDecorator.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
@@ -101,7 +102,7 @@ private:
 	}
 
 	static void *detachProcessMain(void *arg) {
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_syscall_interruption dsi;
 		pid_t pid = (pid_t) (long) arg;
 		syscalls::waitpid(pid, NULL, 0);
 		return NULL;
@@ -126,7 +127,11 @@ private:
 		if (shouldLoadShellEnvvars(options, preparation)) {
 			command.push_back(preparation.userSwitching.shell);
 			command.push_back(preparation.userSwitching.shell);
-			command.push_back("-lc");
+			if (Passenger::getLogLevel() >= LVL_DEBUG3) {
+				command.push_back("-lxc");
+			} else {
+				command.push_back("-lc");
+			}
 			command.push_back("exec \"$@\"");
 			command.push_back("SpawnPreparerShell");
 		} else {
@@ -155,8 +160,8 @@ public:
 
 	virtual Result spawn(const Options &options) {
 		TRACE_POINT();
-		this_thread::disable_interruption di;
-		this_thread::disable_syscall_interruption dsi;
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
 		possiblyRaiseInternalError(options);
 
@@ -249,8 +254,8 @@ public:
 			UPDATE_TRACE_POINT();
 			Result result;
 			{
-				this_thread::restore_interruption ri(di);
-				this_thread::restore_syscall_interruption rsi(dsi);
+				boost::this_thread::restore_interruption ri(di);
+				boost::this_thread::restore_syscall_interruption rsi(dsi);
 				result = negotiateSpawn(details);
 			}
 

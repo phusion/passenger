@@ -1,0 +1,24 @@
+#!/bin/bash
+set -eo pipefail
+
+SELFDIR=$(dirname "$0")
+SELFDIR=$(cd "$SELFDIR" && pwd)
+PASSENGER_ROOT=$(cd "$SELFDIR/../.." && pwd)
+# shellcheck source=lib/functions.sh
+source "$SELFDIR/lib/functions.sh"
+cd "$PASSENGER_ROOT"
+
+autodetect_environment
+sanity_check_environment
+echo
+
+if [[ "$OS" != macos ]]; then
+	echo "ERROR: this script can only be run on macOS." >&2
+	exit 1
+fi
+
+security unlock-keychain -p `cat ~/.password` ~/Library/Keychains/login.keychain
+
+export CI_COMMAND="./dev/ci/run-tests-natively $*"
+exec "$PASSENGER_ROOT/dev/ci/scripts/debug-console-wrapper.sh" \
+	"$PASSENGER_ROOT/dev/ci/scripts/run-tests-natively-stage2.sh" "$@"

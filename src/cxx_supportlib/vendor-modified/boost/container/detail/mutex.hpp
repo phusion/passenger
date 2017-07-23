@@ -1,14 +1,9 @@
-// Copyright (C) 2000 Stephen Cleary
-//
-// Distributed under the Boost Software License, Version 1.0. (See
-// accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt)
-//
-// See http://www.boost.org for updates, documentation, and revision history.
-
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2007-2013. Distributed under the Boost
+// (C) Copyright Stephen Cleary 2000 
+// (C) Copyright Ion Gaztanaga  2015-2017.
+//
+// Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //

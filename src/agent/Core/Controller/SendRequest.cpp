@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2016 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -393,8 +393,8 @@ Controller::determineHeaderSizeForSessionProtocol(Request *req,
 			}
 		}
 	} else {
-		state.serverName = defaultServerName;
-		state.serverPort = defaultServerPort;
+		state.serverName = req->configCache->defaultServerName;
+		state.serverPort = req->configCache->defaultServerPort;
 	}
 
 	dataSize += sizeof("SERVER_NAME");
@@ -404,7 +404,7 @@ Controller::determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += state.serverPort.size() + 1;
 
 	dataSize += sizeof("SERVER_SOFTWARE");
-	dataSize += serverSoftware.size() + 1;
+	dataSize += req->configCache->serverSoftware.size() + 1;
 
 	dataSize += sizeof("SERVER_PROTOCOL");
 	dataSize += sizeof("HTTP/1.1");
@@ -515,7 +515,7 @@ Controller::constructHeaderForSessionProtocol(Request *req, char * restrict buff
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_SOFTWARE"));
-	pos = appendData(pos, end, serverSoftware);
+	pos = appendData(pos, end, req->configCache->serverSoftware);
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_PROTOCOL"));

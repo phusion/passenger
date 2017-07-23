@@ -1,0 +1,48 @@
+From 6b92660c98818a3f9630492cf8c79b8c610b3cef Mon Sep 17 00:00:00 2001
+From: "Hongli Lai (Phusion)" <hongli@phusion.nl>
+Date: Mon, 15 Feb 2016 12:21:52 +0100
+Subject: [PATCH] Patch boost::thread so that oxt::thread can use it
+
+---
+ src/cxx_supportlib/vendor-modified/boost/thread/detail/thread.hpp | 4 ++--
+ src/cxx_supportlib/vendor-modified/boost/thread/once.hpp          | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/cxx_supportlib/vendor-modified/boost/thread/detail/thread.hpp b/src/cxx_supportlib/vendor-modified/boost/thread/detail/thread.hpp
+index 9e7e8b8f5..fa6edc2b5 100644
+--- a/src/cxx_supportlib/vendor-modified/boost/thread/detail/thread.hpp
++++ b/src/cxx_supportlib/vendor-modified/boost/thread/detail/thread.hpp
+@@ -162,7 +162,7 @@ namespace boost
+       typedef thread_attributes attributes;
+ 
+       BOOST_THREAD_MOVABLE_ONLY(thread)
+-    private:
++    protected:
+ 
+         struct dummy;
+ 
+@@ -170,7 +170,7 @@ namespace boost
+ 
+         detail::thread_data_ptr thread_info;
+ 
+-    private:
++    protected:
+         bool start_thread_noexcept();
+         bool start_thread_noexcept(const attributes& attr);
+         void start_thread()
+diff --git a/src/cxx_supportlib/vendor-modified/boost/thread/once.hpp b/src/cxx_supportlib/vendor-modified/boost/thread/once.hpp
+index 9fcfb5333..9a3e9e55d 100644
+--- a/src/cxx_supportlib/vendor-modified/boost/thread/once.hpp
++++ b/src/cxx_supportlib/vendor-modified/boost/thread/once.hpp
+@@ -32,7 +32,7 @@ namespace boost
+   // template<class Callable, class ...Args> void
+   // call_once(once_flag& flag, Callable&& func, Args&&... args);
+ template<typename Function>
+-inline void call_once(Function func,once_flag& flag)
++inline void call_once(Function func,boost::once_flag& flag)
+ //inline void call_once(void (*func)(),once_flag& flag)
+     {
+         call_once(flag,func);
+-- 
+2.13.0
+

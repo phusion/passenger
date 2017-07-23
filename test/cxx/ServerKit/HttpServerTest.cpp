@@ -248,8 +248,9 @@ namespace tut {
 		unsigned int halfCloseDetected;
 		unsigned int clientDataErrors;
 
-		MyServer(Context *context)
-			: ParentClass(context),
+		MyServer(Context *context, const HttpServerSchema &schema,
+			const Json::Value &initialConfig = Json::Value())
+			: ParentClass(context, schema, initialConfig),
 			  allowUpgrades(true),
 			  bodyBytesRead(0),
 			  halfCloseDetected(0),
@@ -275,6 +276,7 @@ namespace tut {
 
 		BackgroundEventLoop bg;
 		ServerKit::Context context;
+		ServerKit::HttpServerSchema schema;
 		boost::shared_ptr<MyServer> server;
 		int serverSocket;
 		FileDescriptor fd;
@@ -286,7 +288,8 @@ namespace tut {
 		{
 			setLogLevel(LVL_WARN);
 			serverSocket = createUnixServer("tmp.server");
-			server = boost::make_shared<MyServer>(&context);
+			server = boost::make_shared<MyServer>(&context, schema);
+			server->initialize();
 			server->listen(serverSocket);
 		}
 

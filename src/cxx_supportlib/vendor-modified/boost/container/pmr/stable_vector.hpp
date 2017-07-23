@@ -29,6 +29,8 @@ using stable_vector = boost::container::stable_vector<T, polymorphic_allocator<T
 
 #endif
 
+//! A portable metafunction to obtain a stable_vector
+//! that uses a polymorphic allocator
 template<class T>
 struct stable_vector_of
 {

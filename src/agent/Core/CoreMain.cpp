@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2016 Phusion Holding B.V.
+ *  Copyright (c) 2010-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -76,6 +76,7 @@
 #include <Constants.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
+#include <ConfigKit/VariantMapUtils.h>
 #include <MessageReadersWriters.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
@@ -118,6 +119,7 @@ namespace Core {
 	struct ApiWorkingObjects {
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
+		ServerKit::HttpServerSchema apiServerSchema;
 		ApiServer::ApiServer *apiServer;
 
 		ApiWorkingObjects()
@@ -141,6 +143,7 @@ namespace Core {
 		PoolPtr appPool;
 
 		ServerKit::AcceptLoadBalancer<Controller> loadBalancer;
+		ControllerSchema controllerSchema;
 		vector<ThreadWorkingObjects> threadWorkingObjects;
 		struct ev_signal sigintWatcher;
 		struct ev_signal sigtermWatcher;
@@ -461,7 +464,7 @@ inspectControllerStateAsJson(Controller *controller, string *result) {
 
 static void
 inspectControllerConfigAsJson(Controller *controller, string *result) {
-	*result = controller->getConfigAsJson().toStyledString();
+	*result = controller->inspectConfig().toStyledString();
 }
 
 static void
@@ -541,7 +544,7 @@ dumpDiagnosticsOnCrash(void *userData) {
 	for (i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		cerr << "### Request handler config (thread " << (i + 1) << ")\n";
-		cerr << two->controller->getConfigAsJson();
+		cerr << two->controller->inspectConfig();
 		cerr << "\n";
 		cerr.flush();
 	}
@@ -672,6 +675,10 @@ initializeNonPrivilegedWorkingObjects() {
 		UPDATE_TRACE_POINT();
 		ThreadWorkingObjects two;
 
+		Json::Value config = ConfigKit::variantMapToJson(wo->controllerSchema,
+			*agentsOptions);
+		config["thread_number"] = i + 1;
+
 		if (i == 0) {
 			two.bgloop = firstLoop = new BackgroundEventLoop(true, true);
 		} else {
@@ -688,7 +695,8 @@ initializeNonPrivilegedWorkingObjects() {
 			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
-		two.controller = new Core::Controller(two.serverKitContext, agentsOptions, i + 1);
+		two.controller = new Core::Controller(two.serverKitContext,
+			wo->controllerSchema, config);
 		two.controller->minSpareClients = 128;
 		two.controller->clientFreelistLimit = 1024;
 		two.controller->resourceLocator = &wo->resourceLocator;
@@ -724,7 +732,8 @@ initializeNonPrivilegedWorkingObjects() {
 			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
-		awo->apiServer = new Core::ApiServer::ApiServer(awo->serverKitContext);
+		awo->apiServer = new Core::ApiServer::ApiServer(awo->serverKitContext,
+			awo->apiServerSchema);
 		awo->apiServer->controllers.reserve(wo->threadWorkingObjects.size());
 		for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 			awo->apiServer->controllers.push_back(
@@ -736,6 +745,7 @@ initializeNonPrivilegedWorkingObjects() {
 		awo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
 		awo->apiServer->exitEvent = &wo->exitEvent;
 		awo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
+		awo->apiServer->initialize();
 
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
 	}
@@ -947,7 +957,7 @@ apiServerShutdownFinished(Core::ApiServer::ApiServer *server) {
  */
 static void
 waitForExitEvent() {
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_syscall_interruption dsi;
 	WorkingObjects *wo = workingObjects;
 	fd_set fds;
 	int largestFd = -1;
@@ -1305,8 +1315,8 @@ sanityCheckOptions() {
 			ok = false;
 		#endif
 	}
-	if (Core::Controller::parseBenchmarkMode(options.get("benchmark_mode", false))
-		== Core::Controller::BM_UNKNOWN)
+	if (Core::parseControllerBenchmarkMode(options.get("benchmark_mode", false))
+		== Core::BM_UNKNOWN)
 	{
 		fprintf(stderr, "ERROR: '%s' is not a valid mode for --benchmark.\n",
 			options.get("benchmark_mode", false).c_str());

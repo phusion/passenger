@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2016 Phusion Holding B.V.
+#  Copyright (c) 2014-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -67,6 +67,10 @@ module PhusionPassenger
               pid = @engine.pid
             rescue SystemCallError, IOError
               pid = nil
+            end
+            if @can_remove_working_dir
+              FileUtils.remove_entry_secure(@working_dir)
+              @can_remove_working_dir = false
             end
             if pid
               abort "#{PROGRAM_NAME} Standalone is already running on PID #{pid}."

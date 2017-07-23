@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2015 Phusion Holding B.V.
+#  Copyright (c) 2013-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -54,7 +54,7 @@ require 'pathname'
 
 
 # Ensure that the natively installed tools are in PATH.
-ENV['PATH'] = "/usr/bin:/usr/sbin:#{ENV['PATH']}"
+ENV['PATH'] = "#{ENV['PATH']}:/usr/bin:/usr/sbin"
 # Force Rake to redirect stderr to stdout so that we can capture all output.
 ENV['STDERR_TO_STDOUT'] = '1'
 
@@ -210,7 +210,7 @@ describe "A natively packaged Phusion Passenger" do
 
   specify "the documentation directory exists" do
     File.directory?(DOCDIR).should be_true
-    File.file?("#{DOCDIR}/Users guide Apache.html").should be_true
+    File.file?("#{DOCDIR}/ServerOptimizationGuide.html").should be_true
   end
 
   specify "the helper-scripts directory exists" do

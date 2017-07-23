@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -29,6 +29,7 @@ def run_compiler(*command)
   show_command = command.join(' ')
   puts show_command
   if !system(*command)
+    colors = PhusionPassenger::Utils::AnsiColors.new
     if $? && $?.exitstatus == 4
       # This probably means the compiler ran out of memory.
       msg = "<b>" +
@@ -38,7 +39,7 @@ def run_compiler(*command)
             "this problem, try increasing your swap space: " +
             "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" +
             "</b>"
-      fail(PhusionPassenger::Utils::AnsiColors.ansi_colorize(msg))
+      fail(colors.ansi_colorize(msg))
     elsif $? && $?.termsig == 9
       msg = "<b>" +
             "-----------------------------------------------\n" +
@@ -47,7 +48,7 @@ def run_compiler(*command)
             "this problem, try increasing your swap space: " +
             "https://www.digitalocean.com/community/articles/how-to-add-swap-on-ubuntu-12-04" +
             "</b>"
-      fail(PhusionPassenger::Utils::AnsiColors.ansi_colorize(msg))
+      fail(colors.ansi_colorize(msg))
     else
       fail "Command failed with status (#{$? ? $?.exitstatus : 1}): [#{show_command}]"
     end

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+
+run bundle exec rspec -f s -c test/integration_tests/source_packaging_test.rb

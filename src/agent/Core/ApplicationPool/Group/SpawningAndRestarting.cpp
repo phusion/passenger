@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2015 Phusion Holding B.V.
+ *  Copyright (c) 2011-2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -58,8 +58,8 @@ Group::spawnThreadRealMain(const SpawningKit::SpawnerPtr &spawner,
 	const Options &options, unsigned int restartsInitiated)
 {
 	TRACE_POINT();
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_interruption di;
+	boost::this_thread::disable_syscall_interruption dsi;
 
 	Pool *pool = getPool();
 	Pool::DebugSupportPtr debug = pool->debugSupport;
@@ -69,9 +69,9 @@ Group::spawnThreadRealMain(const SpawningKit::SpawnerPtr &spawner,
 		bool shouldFail = false;
 		if (debug != NULL && debug->spawning) {
 			UPDATE_TRACE_POINT();
-			this_thread::restore_interruption ri(di);
-			this_thread::restore_syscall_interruption rsi(dsi);
-			this_thread::interruption_point();
+			boost::this_thread::restore_interruption ri(di);
+			boost::this_thread::restore_syscall_interruption rsi(dsi);
+			boost::this_thread::interruption_point();
 			string iteration;
 			{
 				LockGuard g(debug->syncher);
@@ -93,8 +93,8 @@ Group::spawnThreadRealMain(const SpawningKit::SpawnerPtr &spawner,
 		ExceptionPtr exception;
 		try {
 			UPDATE_TRACE_POINT();
-			this_thread::restore_interruption ri(di);
-			this_thread::restore_syscall_interruption rsi(dsi);
+			boost::this_thread::restore_interruption ri(di);
+			boost::this_thread::restore_syscall_interruption rsi(dsi);
 			if (shouldFail) {
 				SpawnException e("Simulated failure");
 				processAndLogNewSpawnException(e, options, pool->getSpawningKitConfig());
@@ -217,8 +217,8 @@ Group::finalizeRestart(GroupPtr self,
 	Pool::runAllActions(postLockActions);
 	postLockActions.clear();
 
-	this_thread::disable_interruption di;
-	this_thread::disable_syscall_interruption dsi;
+	boost::this_thread::disable_interruption di;
+	boost::this_thread::disable_syscall_interruption dsi;
 
 	// Create a new spawner.
 	Options spawnerOptions = oldOptions;
@@ -231,9 +231,9 @@ Group::finalizeRestart(GroupPtr self,
 
 	Pool::DebugSupportPtr debug = pool->debugSupport;
 	if (debug != NULL && debug->restarting) {
-		this_thread::restore_interruption ri(di);
-		this_thread::restore_syscall_interruption rsi(dsi);
-		this_thread::interruption_point();
+		boost::this_thread::restore_interruption ri(di);
+		boost::this_thread::restore_syscall_interruption rsi(dsi);
+		boost::this_thread::interruption_point();
 		debug->debugger->send("About to end restarting");
 		debug->messages->recv("Finish restarting");
 	}

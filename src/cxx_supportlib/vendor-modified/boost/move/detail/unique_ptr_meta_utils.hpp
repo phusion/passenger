@@ -397,7 +397,7 @@ struct pointer_type_imp
 template <class T, class D>
 struct pointer_type_imp<T, D, false>
 {
-    typedef typename remove_extent<T>::type* type;
+    typedef T* type;
 };
 
 template <class T, class D>

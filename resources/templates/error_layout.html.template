@@ -79,7 +79,7 @@
        text. Thank you.
        -->
       <div class="column">
-        This website is powered by <b>Passenger</b>&reg;, a rock-solid, feature-rich web application server that integrates with Apache and Nginx.
+        This website is powered by <b>Passenger</b>&reg;, a rock-solid, feature-rich web application server that integrates with Apache and Nginx built by <b>Phusion</b>&reg;.
       </div>
     </footer>
   </body>

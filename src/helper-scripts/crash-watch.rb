@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# Copyright (c) 2015 Phusion Holding B.V.
+# Copyright (c) 2015-2017 Phusion Holding B.V.
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -22,6 +22,9 @@
 
 # This script uses GDB to attach to a process in order to dump the
 # backtraces of all its threads.
+
+STDOUT.sync = true
+STDERR.sync = true
 
 ruby_libdir    = ARGV.shift
 passenger_root = ARGV.shift

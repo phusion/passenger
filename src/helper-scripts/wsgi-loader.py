@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2014 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -123,7 +123,7 @@ if sys.version_info[0] >= 3:
 		raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
 
 	def bytes_to_str(b):
-		return b.decode()
+		return b.decode('latin-1')
 
 	def str_to_bytes(s):
 		return s.encode('latin-1')

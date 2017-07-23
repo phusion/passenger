@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2016 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -31,10 +31,15 @@ module PhusionPassenger
 
   PACKAGE_NAME = 'passenger'
   # Run 'rake src/cxx_supportlib/Constants.h' after changing this number.
-  VERSION_STRING = '5.1.2'
+  VERSION_STRING = '5.1.6'
 
-  PREFERRED_NGINX_VERSION = '1.10.2'
-  NGINX_SHA256_CHECKSUM = '1045ac4987a396e2fa5d0011daf8987b612dd2f05181b67507da68cbe7d765c2'
+  PREFERRED_NGINX_VERSION = '1.12.1'
+  NGINX_SHA256_CHECKSUM = '8793bf426485a30f91021b6b945a9fd8a84d87d17b566562c3797aba8fac76fb'
+
+  # Packaging may be locked to an older version due to the specific module configuration being
+  # incompatible with the version we prefer (latest stable).
+  PACKAGING_PREFERRED_NGINX_VERSION = '1.10.3'
+  PACKAGING_NGINX_SHA256_CHECKSUM = '75020f1364cac459cb733c4e1caed2d00376e40ea05588fb8793076a4c69dd90'
 
   PREFERRED_PCRE_VERSION  = '8.39'
   PCRE_SHA256_CHECKSUM = 'ccdf7e788769838f8285b3ee672ed573358202305ee361cfec7a4a4fb005bbc7'

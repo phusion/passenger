@@ -233,7 +233,7 @@ module PhusionPassenger
             options[:idle_timeout] = @idle_timeout
           end
 
-          result = download("http://nginx.org/download/#{basename}",
+          result = download("https://nginx.org/download/#{basename}",
             tarball, options)
 
           if !result

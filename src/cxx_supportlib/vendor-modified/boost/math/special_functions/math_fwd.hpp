@@ -626,6 +626,17 @@ namespace boost
                bessel_maybe_int_tag
             >::type
          >::type optimisation_tag;
+         typedef typename mpl::if_<
+            mpl::or_<
+               mpl::less_equal<precision_type, mpl::int_<0> >,
+               mpl::greater<precision_type, mpl::int_<113> > >,
+            bessel_no_int_tag,
+            typename mpl::if_<
+               is_integral<T1>,
+               bessel_int_tag,
+               bessel_maybe_int_tag
+            >::type
+         >::type optimisation_tag128;
       };
    } // detail
 
