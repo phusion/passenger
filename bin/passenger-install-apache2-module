@@ -77,7 +77,6 @@ class Installer < PhusionPassenger::AbstractInstaller
       'cc',
       'c++',
       'libcurl-dev',
-      'openssl-dev',
       'zlib-dev',
       'apache2',
       'apache2-dev',
@@ -90,6 +89,10 @@ class Installer < PhusionPassenger::AbstractInstaller
         ids << 'ruby-dev'
       end
       ids << 'rack'
+    end
+    # On macOS our Crypto.cpp uses TransportSecurity instead of OpenSSL.
+    if PlatformInfo.os_name_simple != 'macosx'
+      ids << 'openssl-dev'
     end
     # Some broken servers don't have apr-config or apu-config installed.
     # Nevertheless, it is possible to compile Apache modules if Apache
