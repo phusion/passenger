@@ -408,6 +408,23 @@ module PhusionPassenger
       end
       return result
     end
+
+    # Check whether the specified command is in $PATH or in
+    # /sbin:/usr/sbin:/usr/local/sbin (in case these aren't already in $PATH),
+    # and return its absolute filename. Returns nil if the command is not
+    # found.
+    def self.find_system_command(name)
+      result = find_command(name)
+      if result.nil?
+        ['/sbin', '/usr/sbin', '/usr/local/sbin'].each do |dir|
+          path = File.join(dir, name)
+          if File.file?(path) && File.executable?(path)
+            return path
+          end
+        end
+      end
+      result
+    end
   end
 
 end # module PhusionPassenger
