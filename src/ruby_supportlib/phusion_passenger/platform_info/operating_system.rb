@@ -49,14 +49,50 @@ module PhusionPassenger
       end
     end
     memoize :os_name_simple
-    
-    # Returns the operating system's name exactly as advertised by the system. While it is 
-    # in lowercase and contains no spaces, it can contain things like version number or 
+
+    # Returns the operating system's name exactly as advertised by the system. While it is
+    # in lowercase and contains no spaces, it can contain things like version number or
     # may be less intuitive (e.g. "darwin" for OS X).
     def self.os_name_full
       rb_config['target_os']
     end
     memoize :os_name_full
+
+    # Returns the operating system's version number, or nil if unknown.
+    # This includes the patch version, so for example on macOS Sierra
+    # it could return "10.12.5".
+    #
+    # On Debian/Ubuntu, this returns the version number (e.g. "16.04")
+    # as opposed to the codename ("Trusty").
+    def self.os_version
+      case os_name_simple
+      when 'macosx'
+        `/usr/bin/sw_vers -productVersion`.strip.split.last
+
+      when 'linux'
+        # Parse LSB (applicable to e.g. Ubuntu)
+        read_file('/etc/lsb-release') =~ /DISTRIB_RELEASE=(.+)/
+        version = $1.gsub(/["']/, '')
+        return version if version
+
+        # Parse CentOS/RedHat
+        data = read_file('/etc/centos-release')
+        data = read_file('/etc/redhat-release') if data.empty?
+        if !data.empty?
+          data =~ /^(.+?) (Linux )?(release |version )?(.+?)( |$)/i
+          return $4 if $4
+        end
+
+        if File.exist?('/etc/debian_version')
+          return read_file('/etc/debian_version').strip
+        end
+
+        nil
+
+      else
+        nil
+      end
+    end
 
     # The current platform's shared library extension ('so' on most Unices).
     def self.library_extension
