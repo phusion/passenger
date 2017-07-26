@@ -356,6 +356,22 @@ int runShellCommand(const StaticString &command);
 string runCommandAndCaptureOutput(const char **command, int *status = NULL);
 
 /**
+ * Run a Passenger-internal Ruby tool, e.g. passenger-config, and capture its stdout
+ * output. This function does not care whether the command fails.
+ *
+ * @param resourceLocator
+ * @param ruby The Ruby interpreter to attempt to use for running the tool.
+ * @param args The command as an array of strings, e.g. ["passenger-config", "system-properties"].
+ * @param status The status of the child process will be stored here, if non-NULL.
+ *               When unable to waitpid() the child process because of an ECHILD
+ *               or ESRCH, this will be set to -1.
+ * @throws RuntimeException
+ * @throws SystemException
+ */
+string runInternalRubyTool(const ResourceLocator &resourceLocator,
+	const string &ruby, const vector<string> &args, int *status = NULL);
+
+/**
  * Async-signal safe way to fork().
  *
  * On Linux, the fork() glibc wrapper grabs a ptmalloc lock, so
