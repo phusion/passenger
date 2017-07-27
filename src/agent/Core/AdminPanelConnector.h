@@ -66,7 +66,19 @@ private:
 	bool onMessage(WebSocketCommandReverseServer *server,
 		const ConnectionPtr &conn, const MessagePtr &msg)
 	{
-		Json::Value doc = parseAndBasicValidateMessageAsJSON(msg->get_payload());
+		Json::Value doc;
+
+		try {
+			doc = parseAndBasicValidateMessageAsJSON(msg->get_payload());
+		} catch (const RuntimeException &e) {
+			Json::Value reply;
+			reply["result"] = "error";
+			reply["request_id"] = doc["request_id"];
+			reply["data"]["message"] = e.what();
+			sendJsonReply(conn, reply);
+			return true;
+		}
+
 		if (doc["action"] == "get") {
 			return onGetMessage(conn, doc);
 		} else {
@@ -239,11 +251,31 @@ private:
 		Json::Value doc;
 		Json::Reader reader;
 		if (!reader.parse(msg, doc)) {
-			// TODO: implement error handling
-			// reader.getFormattedErrorMessages()
+			throw RuntimeException("Error parsing command JSON document: "
+				+ reader.getFormattedErrorMessages());
 		}
 
-		// TODO: implement validation
+		if (!doc.isObject()) {
+			throw RuntimeException("Invalid command JSON document: must be an object");
+		}
+		if (!doc.isMember("action")) {
+			throw RuntimeException("Invalid command JSON document: missing 'action' key");
+		}
+		if (!doc["action"].isString()) {
+			throw RuntimeException("Invalid command JSON document: the 'action' key must be a string");
+		}
+		if (!doc.isMember("request_id")) {
+			throw RuntimeException("Invalid command JSON document: missing 'request_id' key");
+		}
+		if (!doc.isMember("resource")) {
+			throw RuntimeException("Invalid command JSON document: missing 'resource' key");
+		}
+		if (!doc["resource"].isString()) {
+			throw RuntimeException("Invalid command JSON document: the 'resource' key must be a string");
+		}
+		if (doc.isMember("arguments") && !doc["arguments"].isObject()) {
+			throw RuntimeException("Invalid command JSON document: the 'arguments' key, when present, must be an object");
+		}
 
 		return doc;
 	}
