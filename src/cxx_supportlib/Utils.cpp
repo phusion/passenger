@@ -1033,8 +1033,8 @@ runShellCommand(const StaticString &command) {
 
 string
 runCommandAndCaptureOutput(const char **command, int *status) {
-	pid_t pid;
-	int e, waitRet;
+	pid_t pid, waitRet;
+	int e, waitStatus;
 	Pipe p;
 
 	p = createPipe(__FILE__, __LINE__);
@@ -1089,9 +1089,19 @@ runCommandAndCaptureOutput(const char **command, int *status) {
 		}
 		p[0].close();
 
-		waitRet = syscalls::waitpid(pid, NULL, 0);
-		if (status != NULL) {
-			*status = waitRet;
+		waitRet = syscalls::waitpid(pid, &waitStatus, 0);
+		if (waitRet != -1) {
+			if (status != NULL) {
+				*status = waitStatus;
+			}
+		} else if (errno == ECHILD || errno == ESRCH) {
+			if (status != NULL) {
+				*status = -1;
+			}
+		} else {
+			int e = errno;
+			throw SystemException(string("Error waiting for the '") +
+				command[0] + "' command", e);
 		}
 		return result;
 	}

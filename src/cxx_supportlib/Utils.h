@@ -349,6 +349,8 @@ int runShellCommand(const StaticString &command);
  *
  * @param command The argument to pass to execvp().
  * @param status The status of the child process will be stored here, if non-NULL.
+ *               When unable to waitpid() the child process because of an ECHILD
+ *               or ESRCH, this will be set to -1.
  * @throws SystemException
  */
 string runCommandAndCaptureOutput(const char **command, int *status = NULL);
