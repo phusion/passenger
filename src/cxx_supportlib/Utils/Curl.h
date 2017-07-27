@@ -219,7 +219,7 @@ setCurlDefaultCaInfo(CURL *curl) {
 			"/usr/share/ssl/certs/ca-bundle.crt",
 			// FreeBSD
 			"/usr/local/share/certs/ca-root-nss.crt",
-			// OpenBSD, FreeBSD (symlink)
+			// OpenBSD, FreeBSD (symlink), macOS
 			"/etc/ssl/cert.pem",
 			// SUSE
 			"/etc/ssl/certs"
