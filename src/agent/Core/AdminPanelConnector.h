@@ -30,9 +30,13 @@
 
 #include <boost/bind.hpp>
 
+#include <Constants.h>
 #include <WebSocketCommandReverseServer.h>
+#include <InstanceDirectory.h>
+#include <ConfigKit/ValidationUtils.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/IOUtils.h>
 
 #include <jsoncpp/json.h>
 
@@ -50,7 +54,14 @@ public:
 		{
 			using namespace ConfigKit;
 
+			add("integration_mode", STRING_TYPE, OPTIONAL, DEFAULT_INTEGRATION_MODE);
+			add("standalone_engine", STRING_TYPE, OPTIONAL);
+			add("instance_dir", STRING_TYPE, OPTIONAL | READ_ONLY);
+			add("web_server_module_version", STRING_TYPE, OPTIONAL | READ_ONLY);
 			add("ruby", STRING_TYPE, OPTIONAL, "ruby");
+
+			addValidator(ConfigKit::validateIntegrationMode);
+			addValidator(ConfigKit::validateStandaloneEngine);
 
 			finalize();
 		}
@@ -62,6 +73,7 @@ public:
 private:
 	WebSocketCommandReverseServer server;
 	dynamic_thread_group threads;
+	Json::Value globalPropertiesFromInstanceDir;
 
 	bool onMessage(WebSocketCommandReverseServer *server,
 		const ConnectionPtr &conn, const MessagePtr &msg)
@@ -183,10 +195,25 @@ private:
 	}
 
 	bool onGetGlobalProperties(const ConnectionPtr &conn, const Json::Value &doc) {
-		Json::Value reply;
-		reply["result"] = "error";
+		Json::Value reply, data;
+		reply["result"] = "ok";
 		reply["request_id"] = doc["request_id"];
-		reply["data"]["message"] = "Action not implemented";
+
+		data = globalPropertiesFromInstanceDir;
+		data["version"] = PASSENGER_VERSION;
+		data["core_pid"] = Json::UInt(getpid());
+
+		const ConfigKit::Store &config = server.getConfig();
+		string integrationMode = config["integration_mode"].asString();
+		data["integration_mode"]["name"] = integrationMode;
+		if (!config["web_server_module_version"].isNull()) {
+			data["integration_mode"]["server_module_version"] = config["server_module_version"];
+		}
+		if (integrationMode == "standalone") {
+			data["integration_mode"]["standalone_engine"] = config["standalone_engine"];
+		}
+
+		reply["data"] = data;
 		sendJsonReply(conn, reply);
 		return true;
 	}
@@ -286,6 +313,24 @@ private:
 		conn->send(str);
 	}
 
+	void readInstanceDirProperties(const string &instanceDir) {
+		Json::Value doc;
+		Json::Reader reader;
+
+		if (!reader.parse(readAll(instanceDir + "/properties.json"), doc)) {
+			throw RuntimeException("Cannot parse " + instanceDir + "/properties.json: "
+				+ reader.getFormattedErrorMessages());
+		}
+
+		globalPropertiesFromInstanceDir["instance_id"] = doc["instance_id"];
+		globalPropertiesFromInstanceDir["watchdog_pid"] = doc["watchdog_pid"];
+	}
+
+	void initializePropertiesWithoutInstanceDir() {
+		globalPropertiesFromInstanceDir["instance_id"] =
+			InstanceDirectory::generateInstanceId();
+	}
+
 	string getLogPrefix() const {
 		return server.getConfig()["log_prefix"].asString();
 	}
@@ -308,7 +353,13 @@ public:
 		const Translator &translator = ConfigKit::DummyTranslator())
 		: server(schema, createMessageFunctor(), config, translator),
 		  resourceLocator(NULL)
-		{ }
+	{
+		if (!config["instance_dir"].isNull()) {
+			readInstanceDirProperties(config["instance_dir"].asString());
+		} else {
+			initializePropertiesWithoutInstanceDir();
+		}
+	}
 
 	void initialize() {
 		if (resourceLocator == NULL) {

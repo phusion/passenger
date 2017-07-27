@@ -37,11 +37,13 @@
 #include <fcntl.h>
 #include <cerrno>
 #include <cassert>
+#include <ctime>
 #include <string>
 #include <Constants.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
 #include <Utils.h>
+#include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <jsoncpp/json.h>
 
@@ -222,6 +224,7 @@ private:
 		props["instance_dir"]["created_at"] = (Json::Int64) time(NULL);
 		props["passenger_version"] = PASSENGER_VERSION;
 		props["watchdog_pid"] = (Json::UInt64) getpid();
+		props["instance_id"] = generateInstanceId();
 
 		Json::Value::Members members = options.properties.getMemberNames();
 		Json::Value::Members::const_iterator it, end = members.end();
@@ -285,6 +288,13 @@ public:
 		assert(owner);
 		owner = false;
 		removeDirTree(path);
+	}
+
+	static string generateInstanceId() {
+		RandomGenerator randomGenerator;
+		return integerToHexatri((unsigned long long) time(NULL))
+			+ "-" + randomGenerator.generateAsciiString(6)
+			+ "-" + randomGenerator.generateAsciiString(6);
 	}
 };
 

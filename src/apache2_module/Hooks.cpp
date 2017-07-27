@@ -1297,6 +1297,7 @@ public:
 		VariantMap params;
 		params
 			.setPid ("web_server_control_process_pid", getpid())
+			.set    ("web_server_module_version", PASSENGER_VERSION)
 			.set    ("server_software", webServerDesc)
 			.set    ("server_version", webServerVersion)
 			.setBool("multi_app", true)

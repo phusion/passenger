@@ -836,7 +836,17 @@ initializeAdminPanelConnector() {
 
 	config["url"] = options.get("admin_panel_url");
 	config["log_prefix"] = "AdminPanelConnector: ";
+	config["integration_mode"] = options.get("integration_mode");
 	config["ruby"] = options.get("default_ruby");
+	if (options.has("instance_dir")) {
+		config["instance_dir"] = options.get("instance_dir");
+	}
+	if (options.has("standalone_engine")) {
+		config["standalone_engine"] = options.get("standalone_engine");
+	}
+	if (options.has("web_server_module_version")) {
+		config["web_server_module_version"] = options.get("web_server_module_version");
+	}
 
 	P_NOTICE("Initialize connection with " << PROGRAM_NAME " admin panel at "
 		<< options.get("admin_panel_url"));
