@@ -936,6 +936,7 @@ shutdownApiServer() {
 static void
 serverShutdownFinished() {
 	unsigned int i = workingObjects->shutdownCounter.fetch_sub(1, boost::memory_order_release);
+	P_DEBUG("Shutdown counter = " << (i - 1));
 	if (i == 1) {
 		boost::atomic_thread_fence(boost::memory_order_acquire);
 		workingObjects->allClientsDisconnectedEvent.notify();
@@ -944,11 +945,13 @@ serverShutdownFinished() {
 
 static void
 controllerShutdownFinished(Core::Controller *controller) {
+	P_DEBUG("Controller " << controller->getThreadNumber() << " shutdown finished");
 	serverShutdownFinished();
 }
 
 static void
 apiServerShutdownFinished(Core::ApiServer::ApiServer *server) {
+	P_DEBUG("API server shutdown finished");
 	serverShutdownFinished();
 }
 

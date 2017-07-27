@@ -382,6 +382,7 @@ public:
 
 	/****** State inspection and configuration ******/
 
+	unsigned int getThreadNumber() const; // Thread-safe
 	virtual Json::Value inspectStateAsJson() const;
 	virtual Json::Value inspectClientStateAsJson(const Client *client) const;
 	virtual Json::Value inspectRequestStateAsJson(const Request *req) const;
