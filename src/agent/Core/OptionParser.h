@@ -197,6 +197,9 @@ coreUsage() {
 	printf("      --cpu-affine          Enable per-thread CPU affinity (Linux only)\n");
 	printf("      --core-file-descriptor-ulimit NUMBER\n");
 	printf("                            Set custom file descriptor ulimit for the core\n");
+	printf("      --admin-panel-url URL\n");
+	printf("                            Connect to an admin panel through this service\n");
+	printf("                            connector URL\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("API account privilege levels (ordered from most to least privileges):\n");
@@ -419,6 +422,9 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--core-file-descriptor-ulimit")) {
 		options.setUint("core_file_descriptor_ulimit", atoi(argv[i + 1]));
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--admin-panel-url")) {
+		options.set("admin_panel_url", argv[i + 1]);
 		i += 2;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {

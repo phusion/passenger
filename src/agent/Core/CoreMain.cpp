@@ -93,6 +93,7 @@
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/UnionStation/Context.h>
 #include <Core/SecurityUpdateChecker.h>
+#include <Core/AdminPanelConnector.h>
 
 using namespace boost;
 using namespace oxt;
@@ -158,6 +159,8 @@ namespace Core {
 		oxt::thread *prestarterThread;
 
 		SecurityUpdateChecker *securityUpdateChecker;
+		AdminPanelConnector *adminPanelConnector;
+		oxt::thread *adminPanelConnectorThread;
 
 		WorkingObjects()
 			: exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
@@ -165,7 +168,9 @@ namespace Core {
 			  terminationCount(0),
 			  shutdownCounter(0),
 			  prestarterThread(NULL),
-			  securityUpdateChecker(NULL)
+			  securityUpdateChecker(NULL),
+			  adminPanelConnector(NULL),
+			  adminPanelConnectorThread(NULL)
 		{
 			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
 				serverFds[i] = -1;
@@ -175,6 +180,8 @@ namespace Core {
 
 		~WorkingObjects() {
 			delete prestarterThread;
+			delete adminPanelConnectorThread;
+			delete adminPanelConnector;
 			if (securityUpdateChecker) {
 				delete securityUpdateChecker;
 			}
@@ -206,6 +213,7 @@ static void waitForExitEvent();
 static void cleanup();
 static void deletePidFile();
 static void abortLongRunningConnections(const ApplicationPool2::ProcessPtr &process);
+static void serverShutdownFinished();
 static void controllerShutdownFinished(Controller *controller);
 static void apiServerShutdownFinished(Core::ApiServer::ApiServer *server);
 static void printInfoInThread();
@@ -808,6 +816,43 @@ initializeSecurityUpdateChecker() {
 }
 
 static void
+runAdminPanelConnector(AdminPanelConnector *connector) {
+	connector->run();
+	P_DEBUG("Admin panel connector shutdown finished");
+	serverShutdownFinished();
+}
+
+static void
+initializeAdminPanelConnector() {
+	TRACE_POINT();
+	WorkingObjects &wo = *workingObjects;
+
+	VariantMap &options = *agentsOptions;
+	if (!options.has("admin_panel_url")) {
+		return;
+	}
+
+	Json::Value config;
+
+	config["url"] = options.get("admin_panel_url");
+	config["log_prefix"] = "AdminPanelConnector: ";
+	config["ruby"] = options.get("default_ruby");
+
+	P_NOTICE("Initialize connection with " << PROGRAM_NAME " admin panel at "
+		<< options.get("admin_panel_url"));
+	AdminPanelConnector *connector = new Core::AdminPanelConnector(
+		coreSchema->adminPanelConnector.schema, config);
+	connector->resourceLocator = &wo.resourceLocator;
+	connector->appPool = wo.appPool;
+	connector->initialize();
+	wo.shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
+	wo.adminPanelConnector = connector;
+	wo.adminPanelConnectorThread = new oxt::thread(
+		boost::bind(runAdminPanelConnector, connector),
+		"Admin panel connector main loop", 128 * 1024);
+}
+
+static void
 prestartWebApps() {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
@@ -1012,6 +1057,9 @@ waitForExitEvent() {
 		if (wo->apiWorkingObjects.apiServer != NULL) {
 			wo->apiWorkingObjects.bgloop->safe->runLater(shutdownApiServer);
 		}
+		if (wo->adminPanelConnector != NULL) {
+			wo->adminPanelConnector->asyncShutdown();
+		}
 
 		UPDATE_TRACE_POINT();
 		FD_ZERO(&fds);
@@ -1093,6 +1141,7 @@ runCore() {
 		initializeCurl();
 		initializeNonPrivilegedWorkingObjects();
 		initializeSecurityUpdateChecker();
+		initializeAdminPanelConnector();
 		prestartWebApps();
 
 		UPDATE_TRACE_POINT();
