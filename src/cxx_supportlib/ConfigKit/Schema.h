@@ -37,6 +37,7 @@
 #include <Exceptions.h>
 #include <Logging.h>
 #include <ConfigKit/Common.h>
+#include <ConfigKit/DummyTranslator.h>
 #include <ConfigKit/Utils.h>
 #include <DataStructures/StringKeyTable.h>
 #include <Utils/StrIntUtils.h>
@@ -94,21 +95,6 @@ public:
 	typedef boost::function<void (const Store &store, vector<Error> &errors)> Validator;
 
 private:
-	class DummyTranslator {
-	public:
-		StaticString translateOne(const StaticString &key) const {
-			return key;
-		}
-
-		StaticString reverseTranslateOne(const StaticString &key) const {
-			return key;
-		}
-
-		vector<Error> reverseTranslate(const vector<Error> &errors) const {
-			return errors;
-		}
-	};
-
 	StringKeyTable<Entry> entries;
 	boost::container::vector<Validator> validators;
 	bool finalized;
