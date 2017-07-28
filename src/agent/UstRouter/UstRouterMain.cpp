@@ -83,6 +83,7 @@ namespace UstRouter {
 
 		BackgroundEventLoop *apiBgloop;
 		ServerKit::Context *apiServerKitContext;
+		ServerKit::Schema serverKitSchema;
 		ServerKit::HttpServerSchema apiServerSchema;
 		UstRouter::ApiServer *apiServer;
 		EventFd exitEvent;
@@ -307,8 +308,12 @@ initializeUnprivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	wo->bgloop = new BackgroundEventLoop(true, true);
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
-		wo->bgloop->libuv_loop);
+
+	wo->serverKitContext = new ServerKit::Context(wo->serverKitSchema);
+	wo->serverKitContext->libev = wo->bgloop->safe;
+	wo->serverKitContext->libuv = wo->bgloop->libuv_loop;
+	wo->serverKitContext->initialize();
+
 	wo->controller = new Controller(wo->serverKitContext,
 		wo->controllerSchema,
 		ConfigKit::variantMapToJson(wo->controllerSchema, options));
@@ -318,8 +323,12 @@ initializeUnprivilegedWorkingObjects() {
 	UPDATE_TRACE_POINT();
 	if (!wo->apiSockets.empty()) {
 		wo->apiBgloop = new BackgroundEventLoop(true, true);
-		wo->apiServerKitContext = new ServerKit::Context(wo->apiBgloop->safe,
-			wo->apiBgloop->libuv_loop);
+
+		wo->apiServerKitContext = new ServerKit::Context(wo->serverKitSchema);
+		wo->apiServerKitContext->libev = wo->apiBgloop->safe;
+		wo->apiServerKitContext->libuv = wo->apiBgloop->libuv_loop;
+		wo->apiServerKitContext->initialize();
+
 		wo->apiServer = new UstRouter::ApiServer(wo->apiServerKitContext,
 			wo->apiServerSchema);
 		wo->apiServer->controller = wo->controller;

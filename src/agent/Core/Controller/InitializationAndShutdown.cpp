@@ -112,8 +112,6 @@ Controller::initialize() {
 
 	ParentClass::initialize();
 	turboCaching.initialize(config["turbocaching"].asBool());
-	getContext()->defaultFileBufferedChannelConfig.bufferDir =
-		config["data_buffer_dir"].asString();
 
 	if (requestConfig->singleAppMode) {
 		boost::shared_ptr<Options> options = boost::make_shared<Options>();

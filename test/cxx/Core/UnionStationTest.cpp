@@ -25,6 +25,7 @@ namespace tut {
 		#define TODAY_TIMESTAMP_STR "cftz90m3k0"
 
 		boost::shared_ptr<BackgroundEventLoop> bg;
+		ServerKit::Schema skSchema;
 		boost::shared_ptr<ServerKit::Context> skContext;
 		TempDir tmpdir;
 		string socketFilename;
@@ -67,7 +68,10 @@ namespace tut {
 
 		void init() {
 			bg = boost::make_shared<BackgroundEventLoop>(false, true);
-			skContext = boost::make_shared<ServerKit::Context>(bg->safe, bg->libuv_loop);
+			skContext = boost::make_shared<ServerKit::Context>(skSchema);
+			skContext->libev = bg->safe;
+			skContext->libuv = bg->libuv_loop;
+			skContext->initialize();
 			serverFd.assign(createUnixServer(socketFilename.c_str(), 0, true, __FILE__, __LINE__), NULL, 0);
 			controller = boost::make_shared<UstRouter::Controller>(
 				skContext.get(), schema, config);

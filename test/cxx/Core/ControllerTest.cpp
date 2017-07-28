@@ -34,6 +34,7 @@ namespace tut {
 		};
 
 		BackgroundEventLoop bg;
+		ServerKit::Schema skSchema;
 		ServerKit::Context context;
 		Core::ControllerSchema schema;
 		MyController *controller;
@@ -49,7 +50,7 @@ namespace tut {
 
 		Core_ControllerTest()
 			: bg(false, true),
-			  context(bg.safe, bg.libuv_loop)
+			  context(skSchema)
 		{
 			config["thread_number"] = 1;
 			config["multi_app"] = false;
@@ -63,6 +64,10 @@ namespace tut {
 			LoggingKit::setLevel(LoggingKit::WARN);
 			controller = NULL;
 			serverSocket = createUnixServer("tmp.server");
+
+			context.libev = bg.safe;
+			context.libuv = bg.libuv_loop;
+			context.initialize();
 
 			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
 			spawningKitConfig->resourceLocator = resourceLocator;

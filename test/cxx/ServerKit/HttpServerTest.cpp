@@ -275,6 +275,7 @@ namespace tut {
 		typedef ClientRef<MyServer, MyClient> ClientRefType;
 
 		BackgroundEventLoop bg;
+		ServerKit::Schema skSchema;
 		ServerKit::Context context;
 		ServerKit::HttpServerSchema schema;
 		boost::shared_ptr<MyServer> server;
@@ -284,10 +285,15 @@ namespace tut {
 
 		ServerKit_HttpServerTest()
 			: bg(false, true),
-			  context(bg.safe, bg.libuv_loop)
+			  context(skSchema)
 		{
 			LoggingKit::setLevel(LoggingKit::WARN);
+			context.libev = bg.safe;
+			context.libuv = bg.libuv_loop;
+			context.initialize();
+
 			serverSocket = createUnixServer("tmp.server");
+
 			server = boost::make_shared<MyServer>(&context, schema);
 			server->initialize();
 			server->listen(serverSocket);
@@ -1242,7 +1248,11 @@ namespace tut {
 		set_test_name("If a secure mode password is given in the context, "
 			"it rejects requests that specify the wrong secure mode password");
 
-		context.secureModePassword = "secret";
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		config["secure_mode_password"] = "secret";
+		ensure(context.configure(config, errors));
+
 		connectToServer();
 		sendRequest(
 			"GET / HTTP/1.1\r\n"
@@ -1260,7 +1270,11 @@ namespace tut {
 		set_test_name("If a secure mode password is given in the context, "
 			"it accepts requests that specify the correct secure mode password");
 
-		context.secureModePassword = "secret";
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		config["secure_mode_password"] = "secret";
+		ensure(context.configure(config, errors));
+
 		connectToServer();
 		sendRequest(
 			"GET / HTTP/1.1\r\n"

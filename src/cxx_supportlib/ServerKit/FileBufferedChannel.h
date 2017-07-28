@@ -43,6 +43,7 @@
 #include <deque>
 #include <LoggingKit/LoggingKit.h>
 #include <ServerKit/Context.h>
+#include <ServerKit/Config.h>
 #include <ServerKit/Errors.h>
 #include <ServerKit/Channel.h>
 #include <Utils/JsonUtils.h>
@@ -1370,7 +1371,7 @@ public:
 
 	FileBufferedChannel(Context *context)
 		: Channel(context),
-		  config(&context->defaultFileBufferedChannelConfig),
+		  config(&context->config.fileBufferedChannelConfig),
 		  mode(IN_MEMORY_MODE),
 		  readerState(RS_INACTIVE),
 		  nbuffers(0),
@@ -1394,7 +1395,7 @@ public:
 	void setContext(Context *context) {
 		Channel::setContext(context);
 		if (config == NULL) {
-			config = &context->defaultFileBufferedChannelConfig;
+			config = &context->config.fileBufferedChannelConfig;
 		}
 	}
 

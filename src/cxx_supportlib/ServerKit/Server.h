@@ -299,6 +299,22 @@ private:
 
 	/***** Private methods *****/
 
+	void preinitialize(Context *context) {
+		STAILQ_INIT(&freeClients);
+		TAILQ_INIT(&activeClients);
+		TAILQ_INIT(&disconnectedClients);
+
+		acceptResumptionWatcher.set(context->libev->getLoop());
+		acceptResumptionWatcher.set<
+			BaseServer<DerivedServer, Client>,
+			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
+
+		statisticsUpdateWatcher.set(context->libev->getLoop());
+		statisticsUpdateWatcher.set<
+			BaseServer<DerivedServer, Client>,
+			&BaseServer<DerivedServer, Client>::onStatisticsUpdateTimeout>(this);
+	}
+
 	static void _onAcceptable(EV_P_ ev_io *io, int revents) {
 		static_cast<BaseServer *>(io->data)->onAcceptable(io, revents);
 	}
@@ -723,19 +739,32 @@ public:
 		  nEndpoints(0),
 		  accept4Available(true)
 	{
-		STAILQ_INIT(&freeClients);
-		TAILQ_INIT(&activeClients);
-		TAILQ_INIT(&disconnectedClients);
+		preinitialize(context);
+	}
 
-		acceptResumptionWatcher.set(context->libev->getLoop());
-		acceptResumptionWatcher.set<
-			BaseServer<DerivedServer, Client>,
-			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
-
-		statisticsUpdateWatcher.set(context->libev->getLoop());
-		statisticsUpdateWatcher.set<
-			BaseServer<DerivedServer, Client>,
-			&BaseServer<DerivedServer, Client>::onStatisticsUpdateTimeout>(this);
+	template<typename Translator>
+	BaseServer(Context *context, const BaseServerSchema &schema,
+		const Json::Value &initialConfig, const Translator &translator)
+		: config(schema, initialConfig, translator),
+		  configRlz(config),
+		  shutdownFinishCallback(NULL),
+		  serverState(ACTIVE),
+		  freeClientCount(0),
+		  activeClientCount(0),
+		  disconnectedClientCount(0),
+		  peakActiveClientCount(0),
+		  totalClientsAccepted(0),
+		  lastTotalClientsAccepted(0),
+		  totalBytesConsumed(0),
+		  lastStatisticsUpdateTime(ev_time()),
+		  clientAcceptSpeed1m(-1),
+		  clientAcceptSpeed1h(-1),
+		  ctx(context),
+		  nextClientNumber(1),
+		  nEndpoints(0),
+		  accept4Available(true)
+	{
+		preinitialize(context);
 	}
 
 	virtual ~BaseServer() {

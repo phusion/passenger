@@ -125,6 +125,7 @@ namespace WatchdogAgent {
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
+		ServerKit::Schema serverKitSchema;
 		ServerKit::HttpServerSchema apiServerSchema;
 		ApiServer *apiServer;
 
@@ -1149,11 +1150,16 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 	}
 
 	UPDATE_TRACE_POINT();
-	wo->bgloop = new BackgroundEventLoop(true, true);
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
-		wo->bgloop->libuv_loop);
-	wo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
+	Json::Value contextConfig;
+	contextConfig["file_buffered_channel_buffer_dir"] =
 		absolutizePath(options.get("data_buffer_dir"));
+
+	wo->bgloop = new BackgroundEventLoop(true, true);
+	wo->serverKitContext = new ServerKit::Context(
+		wo->serverKitSchema, contextConfig);
+	wo->serverKitContext->libev = wo->bgloop->safe;
+	wo->serverKitContext->libuv = wo->bgloop->libuv_loop;
+	wo->serverKitContext->initialize();
 
 	UPDATE_TRACE_POINT();
 	wo->apiServer = new ApiServer(wo->serverKitContext, wo->apiServerSchema);

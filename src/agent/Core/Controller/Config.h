@@ -83,7 +83,6 @@ private:
 		add("user_switching", BOOL_TYPE, OPTIONAL, true);
 		add("stat_throttle_rate", UINT_TYPE, OPTIONAL, DEFAULT_STAT_THROTTLE_RATE);
 		add("show_version_in_header", BOOL_TYPE, OPTIONAL, true);
-		add("data_buffer_dir", STRING_TYPE, OPTIONAL, getSystemTempDir());
 		add("response_buffer_high_watermark", UINT_TYPE, OPTIONAL, DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
 		add("sticky_sessions", BOOL_TYPE, OPTIONAL, false);
 		add("graceful_exit", BOOL_TYPE, OPTIONAL, true);

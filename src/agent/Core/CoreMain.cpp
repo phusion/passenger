@@ -144,6 +144,7 @@ namespace Core {
 		PoolPtr appPool;
 
 		ServerKit::AcceptLoadBalancer<Controller> loadBalancer;
+		ServerKit::Schema serverKitSchema;
 		ControllerSchema controllerSchema;
 		vector<ThreadWorkingObjects> threadWorkingObjects;
 		struct ev_signal sigintWatcher;
@@ -629,7 +630,7 @@ initializeNonPrivilegedWorkingObjects() {
 			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
 	}
 	setenv("SERVER_SOFTWARE", options.get("server_software").c_str(), 1);
-	options.set("data_buffer_dir", absolutizePath(options.get("data_buffer_dir")));
+	options.set("data_buffer_dir", options.get("data_buffer_dir"));
 
 	vector<string> addresses = options.getStrSet("core_addresses");
 	vector<string> apiAddresses = options.getStrSet("core_api_addresses", false);
@@ -683,11 +684,18 @@ initializeNonPrivilegedWorkingObjects() {
 		UPDATE_TRACE_POINT();
 		ThreadWorkingObjects two;
 
-		Json::Value config = ConfigKit::variantMapToJson(wo->controllerSchema,
+		Json::Value contextConfig;
+		contextConfig["secure_mode_password"] = wo->password;
+		contextConfig["file_buffered_channel_buffer_dir"] =
+			options.get("data_buffer_dir");
+		contextConfig["file_buffered_channel_threshold"] =
+			options.getUint("file_buffer_threshold");
+
+		Json::Value controllerConfig = ConfigKit::variantMapToJson(wo->controllerSchema,
 			*agentsOptions);
-		config["thread_number"] = i + 1;
-		config["min_spare_clients"] = 128;
-		config["client_freelist_limit"] = 1024;
+		controllerConfig["thread_number"] = i + 1;
+		controllerConfig["min_spare_clients"] = 128;
+		controllerConfig["client_freelist_limit"] = 1024;
 
 		if (i == 0) {
 			two.bgloop = firstLoop = new BackgroundEventLoop(true, true);
@@ -696,17 +704,15 @@ initializeNonPrivilegedWorkingObjects() {
 		}
 
 		UPDATE_TRACE_POINT();
-		two.serverKitContext = new ServerKit::Context(two.bgloop->safe,
-			two.bgloop->libuv_loop);
-		two.serverKitContext->secureModePassword = wo->password;
-		two.serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
-			options.get("data_buffer_dir");
-		two.serverKitContext->defaultFileBufferedChannelConfig.threshold =
-			options.getUint("file_buffer_threshold");
+		two.serverKitContext = new ServerKit::Context(
+			wo->serverKitSchema, contextConfig);
+		two.serverKitContext->libev = two.bgloop->safe;
+		two.serverKitContext->libuv = two.bgloop->libuv_loop;
+		two.serverKitContext->initialize();
 
 		UPDATE_TRACE_POINT();
 		two.controller = new Core::Controller(two.serverKitContext,
-			wo->controllerSchema, config);
+			wo->controllerSchema, controllerConfig);
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
 		two.controller->unionStationContext = wo->unionStationContext;
@@ -730,14 +736,19 @@ initializeNonPrivilegedWorkingObjects() {
 		UPDATE_TRACE_POINT();
 		ApiWorkingObjects *awo = &wo->apiWorkingObjects;
 
-		awo->bgloop = new BackgroundEventLoop(true, true);
-		awo->serverKitContext = new ServerKit::Context(awo->bgloop->safe,
-			awo->bgloop->libuv_loop);
-		awo->serverKitContext->secureModePassword = wo->password;
-		awo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
+		Json::Value contextConfig;
+		contextConfig["secure_mode_password"] = wo->password;
+		contextConfig["file_buffered_channel_buffer_dir"] =
 			options.get("data_buffer_dir");
-		awo->serverKitContext->defaultFileBufferedChannelConfig.threshold =
+		contextConfig["file_buffered_channel_threshold"] =
 			options.getUint("file_buffer_threshold");
+
+		awo->bgloop = new BackgroundEventLoop(true, true);
+		awo->serverKitContext = new ServerKit::Context(
+			wo->serverKitSchema, contextConfig);
+		awo->serverKitContext->libev = awo->bgloop->safe;
+		awo->serverKitContext->libuv = awo->bgloop->libuv_loop;
+		awo->serverKitContext->initialize();
 
 		UPDATE_TRACE_POINT();
 		Json::Value config;

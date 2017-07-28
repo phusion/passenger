@@ -26,14 +26,16 @@
 #ifndef _PASSENGER_SERVER_KIT_CONTEXT_H_
 #define _PASSENGER_SERVER_KIT_CONTEXT_H_
 
-#include <boost/make_shared.hpp>
 #include <string>
-#include <cstddef>
-#include <jsoncpp/json.h>
+#include <boost/config.hpp>
+
+#include <ServerKit/Config.h>
+#include <ConfigKit/ConfigKit.h>
 #include <MemoryKit/mbuf.h>
+#include <LoggingKit/Assert.h>
 #include <SafeLibev.h>
-#include <Constants.h>
-#include <Utils/StrIntUtils.h>
+#include <Exceptions.h>
+#include <Utils.h>
 #include <Utils/JsonUtils.h>
 
 extern "C" {
@@ -43,54 +45,80 @@ extern "C" {
 namespace Passenger {
 namespace ServerKit {
 
+using namespace std;
 
-struct FileBufferedChannelConfig {
-	string bufferDir;
-	unsigned int threshold;
-	unsigned int delayInFileModeSwitching;
-	unsigned int maxDiskChunkReadSize;
-	bool autoTruncateFile;
-	bool autoStartMover;
-
-	FileBufferedChannelConfig()
-		: bufferDir("/tmp"),
-		  threshold(DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD),
-		  delayInFileModeSwitching(0),
-		  maxDiskChunkReadSize(0),
-		  autoTruncateFile(true),
-		  autoStartMover(true)
-		{ }
-};
 
 class Context {
 private:
-	void initialize() {
-		mbuf_pool.mbuf_block_chunk_size = DEFAULT_MBUF_CHUNK_SIZE;
-		MemoryKit::mbuf_pool_init(&mbuf_pool);
-	}
+	ConfigKit::Store configStore;
 
 public:
+	typedef ServerKit::ConfigChangeRequest ConfigChangeRequest;
+
+	// Dependencies
 	SafeLibevPtr libev;
 	struct uv_loop_s *libuv;
+
+	// Others
+	Config config;
 	struct MemoryKit::mbuf_pool mbuf_pool;
-	string secureModePassword;
-	FileBufferedChannelConfig defaultFileBufferedChannelConfig;
 
-	Context(const SafeLibevPtr &_libev, struct uv_loop_s *_libuv)
-		: libev(_libev),
-		  libuv(_libuv)
-	{
-		initialize();
-	}
+	Context(const Schema &schema, const Json::Value &initialConfig = Json::Value())
+		: configStore(schema, initialConfig),
+		  libuv(NULL),
+		  config(configStore)
+		{ }
 
-	Context(struct ev_loop *loop)
-		: libev(boost::make_shared<SafeLibev>(loop))
-	{
-		initialize();
-	}
+	template<typename Translator>
+	Context(const Schema &schema, const Json::Value &initialConfig,
+		const Translator &translator)
+		: configStore(schema, initialConfig, translator),
+		  libuv(NULL),
+		  config(configStore)
+		{ }
 
 	~Context() {
 		MemoryKit::mbuf_pool_deinit(&mbuf_pool);
+	}
+
+	void initialize() {
+		if (libev == NULL) {
+			throw RuntimeException("libev must be non-NULL");
+		}
+		if (libuv == NULL) {
+			throw RuntimeException("libuv must be non-NULL");
+		}
+
+		mbuf_pool.mbuf_block_chunk_size = configStore["mbuf_block_chunk_size"].asUInt();
+		MemoryKit::mbuf_pool_init(&mbuf_pool);
+	}
+
+	bool configure(const Json::Value &updates, vector<ConfigKit::Error> &errors) {
+		ConfigChangeRequest req;
+		bool result = prepareConfigChange(updates, errors, req);
+		if (result) {
+			commitConfigChange(req);
+		}
+		return result;
+	}
+
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, ConfigChangeRequest &req)
+	{
+		req.configStore.reset(new ConfigKit::Store(configStore, updates, errors));
+		if (errors.empty()) {
+			req.config.reset(new Config(*req.configStore));
+		}
+		return errors.empty();
+	}
+
+	void commitConfigChange(ConfigChangeRequest &req) BOOST_NOEXCEPT_OR_NOTHROW {
+		configStore.swap(*req.configStore);
+		config.swap(*req.config);
+	}
+
+	Json::Value inspectConfig() const {
+		return configStore.inspect();
 	}
 
 	Json::Value inspectStateAsJson() const {

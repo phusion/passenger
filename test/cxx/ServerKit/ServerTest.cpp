@@ -23,6 +23,7 @@ namespace tut {
 
 		BackgroundEventLoop bg;
 		Json::Value config;
+		ServerKit::Schema skSchema;
 		ServerKit::Context context;
 		ServerKit::BaseServerSchema schema;
 		boost::shared_ptr< Server<Client> > server;
@@ -30,9 +31,12 @@ namespace tut {
 
 		ServerKit_ServerTest()
 			: bg(false, true),
-			  context(bg.safe, bg.libuv_loop)
+			  context(skSchema)
 		{
 			LoggingKit::setLevel(LoggingKit::CRIT);
+			context.libev = bg.safe;
+			context.libuv = bg.libuv_loop;
+			context.initialize();
 			serverSocket1 = createUnixServer("tmp.server1");
 			serverSocket2 = createUnixServer("tmp.server2");
 		}
