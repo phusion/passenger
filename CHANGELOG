@@ -1,6 +1,8 @@
 Next version (not yet released)
 -------------------------------
 
+* [Enterprise] search for correct CA path to set for usage data reporting connection (when Passenger is installed from gem).
+
 
 Release 5.1.6
 -------------

@@ -336,7 +336,11 @@ private:
 			prepareRequest(pingURL);
 
 			curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
-			if (curl_easy_perform(curl) != 0) {
+			CURLcode code;
+			if (CURLE_OK == (code = setCurlDefaultCaInfo(curl))) {
+				code = curl_easy_perform(curl);
+			}
+			if (code != 0) {
 				setPingError(
 					"Could not ping Union Station gateway server " +
 					ip + ": " + lastCurlErrorMessage);
@@ -406,7 +410,10 @@ private:
 			P_DEBUG("Sending Union Station packet: key=" << item.unionStationKey <<
 				", node=" << item.nodeName << ", category=" << item.category <<
 				", compressedDataSize=" << item.data.size());
-			CURLcode code = curl_easy_perform(curl);
+			CURLcode code;
+			if (CURLE_OK == (code = setCurlDefaultCaInfo(curl))) {
+				code = curl_easy_perform(curl);
+			}
 			curl_formfree(post);
 
 			if (code == CURLE_OK) {
