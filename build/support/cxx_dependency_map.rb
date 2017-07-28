@@ -6416,6 +6416,10 @@ CXX_DEPENDENCY_MAP =
   ["src/cxx_supportlib/ConfigKit/Common.h",
    "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/oxt/macros.hpp"],
+ "src/cxx_supportlib/ConfigKit/PrefixTranslator.h"=>
+  ["src/cxx_supportlib/ConfigKit/Common.h",
+   "src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/oxt/macros.hpp"],
  "src/cxx_supportlib/ConfigKit/Schema.h"=>
   ["src/cxx_supportlib/ConfigKit/Common.h",
    "src/cxx_supportlib/ConfigKit/DummyTranslator.h",
@@ -8227,6 +8231,7 @@ CXX_DEPENDENCY_MAP =
  "test/cxx/ConfigKit/TranslationTest.cpp"=>
   ["src/cxx_supportlib/BackgroundEventLoop.h",
    "src/cxx_supportlib/ConfigKit/Common.h",
+   "src/cxx_supportlib/ConfigKit/PrefixTranslator.h",
    "src/cxx_supportlib/ConfigKit/TableTranslator.h",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/DataStructures/HashedStaticString.h",

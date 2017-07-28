@@ -116,7 +116,7 @@ There is also `ConfigKit::Store`. This is a class that stores configuration valu
 
 ### Translators
 
-And finally there is a "translator" class: `ConfigKit::TableTranslator`. The role of translators are described in the section "The special problem of conflicting overlapping configuration names and translation".
+And finally there are "translator" classes: `ConfigKit::TableTranslator` and `ConfigKit::PrefixTranslator`. The role of translators are described in the section "The special problem of conflicting overlapping configuration names and translation".
 
 ## Using the schema
 
@@ -621,7 +621,7 @@ Whenever Downloader is configured, it configures subcomponents too. But whenever
 There is one special problem that deserves attention: a high-level component may not necessarily want to expose their subcomponents' configuration options using the same names. For example, both `SecurityChecker` and `DnsQuerier` expose a `timeout` option, but they are *different* timeouts, and are even distinct from the Downloader's own download timeout. To solve this special problem of **conflicting overlapping configuration names**, we utilize a **translation system**. We define how the Downloader's configuration keys are to be mapped a specific subcomponent's configuration keys. We obviously can't define the entire mapping, because that would return us to the original problem of having to manually write so much repeated code. There are several ways to deal with this, such as:
 
  - Assuming that most options don't have to be renamed, and only define exceptions to this rule. This is the approach that is demonstrated in this example. The `ConfigKit::TableTranslator` class implements this translation strategy.
- - Prefixing the subcomponents' options. This approach is left as an exercise to the reader.
+ - Prefixing the subcomponents' options. The `ConfigKit::PrefixTranslator` class implements this translation strategy.
 
 #### Code example
 
