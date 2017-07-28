@@ -4,34 +4,39 @@ ConfigKit is a configuration management system that lets you define configuratio
 
 **Table of contents:**
 
- * Motivations
-   - Configuration flow from high-level to low-level with a minimum of repeated code
-   - Unifying configuration management
- * Status inside the Passenger codebase
- * Features and class overview
-   - ConfigKit::Schema
-   - ConfigKit::Store
-   - Translators
- * Using the schema
-   - Defining the schema
-   - Defining default values
-   - Defining custom validators
-   - Inspecting the schema
- * Using the store
-   - Putting data in the store
-   - Updating data
-   - Unregistered keys are ignored
-   - Deleting data
-   - Fetching data
-   - Default values
-   - Inspecting all data
- * Putting it all together: synchronous version
-   - SecurityChecker example: a configurable, low-level component
-   - DnsQuerier example: a low-level component with post-configuration application operations
-   - Downloader example: a high-level component that combines subcomponents
-     - The special problem of conflicting overlapping configuration names and translation
-     - Code example
- * Putting it all together: asynchronous version
+<!-- MarkdownTOC depth=3 autolink="true" bracket="round" -->
+
+- [Motivations](#motivations)
+  - [Configuration flow from high-level to low-level with a minimum of repeated code](#configuration-flow-from-high-level-to-low-level-with-a-minimum-of-repeated-code)
+  - [Unifying configuration management](#unifying-configuration-management)
+- [Status inside the Passenger codebase](#status-inside-the-passenger-codebase)
+- [Features and class overview](#features-and-class-overview)
+  - [ConfigKit::Schema](#configkitschema)
+  - [ConfigKit::Store](#configkitstore)
+  - [Translators](#translators)
+- [Using the schema](#using-the-schema)
+  - [Defining the schema](#defining-the-schema)
+  - [Defining default values](#defining-default-values)
+  - [Defining custom validators](#defining-custom-validators)
+  - [Inspecting the schema](#inspecting-the-schema)
+- [Using the store](#using-the-store)
+  - [Putting data in the store](#putting-data-in-the-store)
+    - [Updating data](#updating-data)
+  - [Unregistered keys are ignored](#unregistered-keys-are-ignored)
+  - [Deleting data](#deleting-data)
+  - [Fetching data](#fetching-data)
+  - [Default values](#default-values)
+  - [Inspecting all data](#inspecting-all-data)
+- [Putting it all together: synchronous version](#putting-it-all-together-synchronous-version)
+  - [SecurityChecker example: a configurable, low-level component](#securitychecker-example-a-configurable-low-level-component)
+  - [DnsQuerier example: a low-level component with post-configuration application operations](#dnsquerier-example-a-low-level-component-with-post-configuration-application-operations)
+  - [Downloader example: a high-level component that combines subcomponents](#downloader-example-a-high-level-component-that-combines-subcomponents)
+    - [The special problem of conflicting overlapping configuration names and translation](#the-special-problem-of-conflicting-overlapping-configuration-names-and-translation)
+    - [Code example](#code-example)
+  - [Main function example](#main-function-example)
+- [Putting it all together: asynchronous version](#putting-it-all-together-asynchronous-version)
+
+<!-- /MarkdownTOC -->
 
 ## Motivations
 
