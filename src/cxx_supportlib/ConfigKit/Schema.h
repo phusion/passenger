@@ -292,6 +292,13 @@ public:
 		add(key, type, flags, defaultValue);
 	}
 
+	void overrideWithDynamicDefault(const HashedStaticString &key, Type type, unsigned int flags,
+		const ValueGetter &defaultValueGetter)
+	{
+		erase(key);
+		addWithDynamicDefault(key, type, flags, defaultValueGetter);
+	}
+
 	void addValidator(const Validator &validator) {
 		assert(!finalized);
 		validators.push_back(validator);

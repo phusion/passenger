@@ -90,6 +90,7 @@
 #include <Core/OptionParser.h>
 #include <Core/Controller.h>
 #include <Core/ApiServer.h>
+#include <Core/Config.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/UnionStation/Context.h>
 #include <Core/SecurityUpdateChecker.h>
@@ -120,7 +121,6 @@ namespace Core {
 	struct ApiWorkingObjects {
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
-		ApiServer::Schema schema;
 		ApiServer::ApiServer *apiServer;
 
 		ApiWorkingObjects()
@@ -144,8 +144,6 @@ namespace Core {
 		PoolPtr appPool;
 
 		ServerKit::AcceptLoadBalancer<Controller> loadBalancer;
-		ServerKit::Schema serverKitSchema;
-		ControllerSchema controllerSchema;
 		vector<ThreadWorkingObjects> threadWorkingObjects;
 		struct ev_signal sigintWatcher;
 		struct ev_signal sigtermWatcher;
@@ -159,7 +157,6 @@ namespace Core {
 		boost::atomic<unsigned int> shutdownCounter;
 		oxt::thread *prestarterThread;
 
-		SecurityUpdateChecker::Schema securityUpdateCheckerSchema;
 		SecurityUpdateChecker *securityUpdateChecker;
 		AdminPanelConnector *adminPanelConnector;
 		oxt::thread *adminPanelConnectorThread;
@@ -204,6 +201,8 @@ namespace Core {
 using namespace Passenger::Core;
 
 static VariantMap *agentsOptions;
+static Schema *coreSchema;
+static ConfigKit::Store *coreConfig;
 static WorkingObjects *workingObjects;
 
 
@@ -221,29 +220,15 @@ static void printInfoInThread();
 static void
 initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
-	const VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects = new WorkingObjects();
 
 	wo->prestarterThread = NULL;
 
-	wo->password = options.get("core_password", false);
-	if (wo->password == "-") {
-		wo->password.clear();
-	} else if (wo->password.empty() && options.has("core_password_file")) {
-		wo->password = strip(readAll(options.get("core_password_file")));
-	}
-
-	vector<string> authorizations = options.getStrSet("core_authorizations",
-		false);
-	string description;
-
-	UPDATE_TRACE_POINT();
-	foreach (description, authorizations) {
-		try {
-			wo->apiAccountDatabase.add(description);
-		} catch (const ArgumentException &e) {
-			throw std::runtime_error(e.what());
-		}
+	Json::Value password = coreConfig->get("password");
+	if (password.isString()) {
+		wo->password = password.asString();
+	} else if (password.isObject()) {
+		wo->password = strip(readAll(password["path"].asString()));
 	}
 }
 
@@ -252,7 +237,7 @@ initializeSingleAppMode() {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
 
-	if (options.getBool("multi_app")) {
+	if (coreConfig->get("multi_app").asBool()) {
 		P_NOTICE(SHORT_PROGRAM_NAME " core running in multi-application mode.");
 		return;
 	}
@@ -284,10 +269,8 @@ initializeSingleAppMode() {
 static void
 setUlimits() {
 	TRACE_POINT();
-	VariantMap &options = *agentsOptions;
-
-	if (options.has("core_file_descriptor_ulimit")) {
-		unsigned int number = options.getUint("core_file_descriptor_ulimit");
+	unsigned int number = coreConfig->get("file_descriptor_ulimit").asUInt();
+	if (number != 0) {
 		struct rlimit limit;
 		int ret;
 
@@ -437,16 +420,18 @@ startListening() {
 static void
 createPidFile() {
 	TRACE_POINT();
-	string pidFile = agentsOptions->get("core_pid_file", false);
-	if (!pidFile.empty()) {
+	Json::Value pidFile = coreConfig->get("pid_file");
+	if (!pidFile.isNull()) {
 		char pidStr[32];
 
 		snprintf(pidStr, sizeof(pidStr), "%lld", (long long) getpid());
 
-		int fd = syscalls::open(pidFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		int fd = syscalls::open(pidFile.asCString(),
+			O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd == -1) {
 			int e = errno;
-			throw FileSystemException("Cannot create PID file " + pidFile, e, pidFile);
+			throw FileSystemException("Cannot create PID file "
+				+ pidFile.asString(), e, pidFile.asString());
 		}
 
 		UPDATE_TRACE_POINT();
@@ -670,31 +655,24 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawningKitFactory = boost::make_shared<SpawningKit::Factory>(wo->spawningKitConfig);
 	wo->appPool = boost::make_shared<Pool>(wo->spawningKitFactory, agentsOptions);
 	wo->appPool->initialize();
-	wo->appPool->setMax(options.getInt("max_pool_size"));
-	wo->appPool->setMaxIdleTime(options.getInt("pool_idle_time") * 1000000ULL);
-	wo->appPool->enableSelfChecking(options.getBool("selfchecks"));
+	wo->appPool->setMax(coreConfig->get("max_pool_size").asInt());
+	wo->appPool->setMaxIdleTime(coreConfig->get("pool_idle_time").asInt() * 1000000ULL);
+	wo->appPool->enableSelfChecking(coreConfig->get("pool_selfchecks").asBool());
 	wo->appPool->abortLongRunningConnectionsCallback = abortLongRunningConnections;
 
 	UPDATE_TRACE_POINT();
-	unsigned int nthreads = options.getInt("core_threads");
+	unsigned int nthreads = coreConfig->get("controller_threads").asUInt();
 	BackgroundEventLoop *firstLoop = NULL; // Avoid compiler warning
 	wo->threadWorkingObjects.reserve(nthreads);
 	for (unsigned int i = 0; i < nthreads; i++) {
 		UPDATE_TRACE_POINT();
 		ThreadWorkingObjects two;
 
-		Json::Value contextConfig;
+		Json::Value contextConfig = coreConfig->inspectEffectiveValues();
 		contextConfig["secure_mode_password"] = wo->password;
-		contextConfig["file_buffered_channel_buffer_dir"] =
-			options.get("data_buffer_dir");
-		contextConfig["file_buffered_channel_threshold"] =
-			options.getUint("file_buffer_threshold");
 
-		Json::Value controllerConfig = ConfigKit::variantMapToJson(wo->controllerSchema,
-			*agentsOptions);
+		Json::Value controllerConfig = coreConfig->inspectEffectiveValues();
 		controllerConfig["thread_number"] = i + 1;
-		controllerConfig["min_spare_clients"] = 128;
-		controllerConfig["client_freelist_limit"] = 1024;
 
 		if (i == 0) {
 			two.bgloop = firstLoop = new BackgroundEventLoop(true, true);
@@ -704,14 +682,17 @@ initializeNonPrivilegedWorkingObjects() {
 
 		UPDATE_TRACE_POINT();
 		two.serverKitContext = new ServerKit::Context(
-			wo->serverKitSchema, contextConfig);
+			coreSchema->controllerServerKit.schema,
+			contextConfig,
+			coreSchema->controllerServerKit.translator);
 		two.serverKitContext->libev = two.bgloop->safe;
 		two.serverKitContext->libuv = two.bgloop->libuv_loop;
 		two.serverKitContext->initialize();
 
 		UPDATE_TRACE_POINT();
 		two.controller = new Core::Controller(two.serverKitContext,
-			wo->controllerSchema, controllerConfig);
+			coreSchema->controller.schema, controllerConfig,
+			coreSchema->controller.translator);
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
 		two.controller->unionStationContext = wo->unionStationContext;
@@ -735,37 +716,27 @@ initializeNonPrivilegedWorkingObjects() {
 		UPDATE_TRACE_POINT();
 		ApiWorkingObjects *awo = &wo->apiWorkingObjects;
 
-		Json::Value contextConfig;
+		Json::Value contextConfig = coreConfig->inspectEffectiveValues();
 		contextConfig["secure_mode_password"] = wo->password;
-		contextConfig["file_buffered_channel_buffer_dir"] =
-			options.get("data_buffer_dir");
-		contextConfig["file_buffered_channel_threshold"] =
-			options.getUint("file_buffer_threshold");
 
 		awo->bgloop = new BackgroundEventLoop(true, true);
 		awo->serverKitContext = new ServerKit::Context(
-			wo->serverKitSchema, contextConfig);
+			coreSchema->apiServerKit.schema,
+			contextConfig,
+			coreSchema->apiServerKit.translator);
 		awo->serverKitContext->libev = awo->bgloop->safe;
 		awo->serverKitContext->libuv = awo->bgloop->libuv_loop;
 		awo->serverKitContext->initialize();
 
 		UPDATE_TRACE_POINT();
-		Json::Value config;
-		if (options.has("instance_dir")) {
-			config["instance_dir"] = options.get("instance_dir");
-		}
-		if (options.has("watchdog_fd_passing_password")) {
-			config["fd_passing_password"] = options.get("watchdog_fd_passing_password");
-		}
-
 		awo->apiServer = new Core::ApiServer::ApiServer(awo->serverKitContext,
-			awo->schema, config);
+			coreSchema->apiServer.schema, coreConfig->inspectEffectiveValues(),
+			coreSchema->apiServer.translator);
 		awo->apiServer->controllers.reserve(wo->threadWorkingObjects.size());
 		for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 			awo->apiServer->controllers.push_back(
 				wo->threadWorkingObjects[i].controller);
 		}
-		awo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
 		awo->apiServer->appPool = wo->appPool;
 		awo->apiServer->exitEvent = &wo->exitEvent;
 		awo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
@@ -809,36 +780,28 @@ initializeNonPrivilegedWorkingObjects() {
 static void
 initializeSecurityUpdateChecker() {
 	TRACE_POINT();
+	Json::Value config = coreConfig->inspectEffectiveValues();
 
-	VariantMap &options = *agentsOptions;
-	if (options.getBool("disable_security_update_check", false, false)) {
-		P_NOTICE("Security update check disabled.");
-	} else {
-		Json::Value config;
-
-		if (options.has("security_update_check_proxy")) {
-			config["proxy_url"] = options.get("security_update_check_proxy");
-		}
-
-		string serverIdentifier = options.get("integration_mode"); // nginx / apache / standalone
-		string standaloneEngine = options.get("standalone_engine", false); // nginx / builtin
-		if (!standaloneEngine.empty()) {
-			serverIdentifier.append(" " + standaloneEngine);
-		}
-		if (options.get("server_software").find(FLYING_PASSENGER_NAME) != string::npos) {
-			serverIdentifier.append(" flying");
-		}
-		config["server_identifier"] = serverIdentifier;
-
-		config["web_server_version"] = options.get("server_version", false); // not set in case of standalone / builtin
-
-		SecurityUpdateChecker *checker = new SecurityUpdateChecker(
-			workingObjects->securityUpdateCheckerSchema, config);
-		workingObjects->securityUpdateChecker = checker;
-		checker->resourceLocator = &workingObjects->resourceLocator;
-		checker->initialize();
-		checker->start();
+	// nginx / apache / standalone
+	string serverIdentifier = coreConfig->get("integration_mode").asString();
+	// nginx / builtin
+	if (!coreConfig->get("standalone_engine").isNull()) {
+		serverIdentifier.append(" ");
+		serverIdentifier.append(coreConfig->get("standalone_engine").asString());
 	}
+	if (coreConfig->get("server_software").asString().find(FLYING_PASSENGER_NAME) != string::npos) {
+		serverIdentifier.append(" flying");
+	}
+	config["server_identifier"] = serverIdentifier;
+
+	SecurityUpdateChecker *checker = new SecurityUpdateChecker(
+		coreSchema->securityUpdateChecker.schema,
+		config,
+		coreSchema->securityUpdateChecker.translator);
+	workingObjects->securityUpdateChecker = checker;
+	checker->resourceLocator = &workingObjects->resourceLocator;
+	checker->initialize();
+	checker->start();
 }
 
 static void
@@ -853,31 +816,18 @@ initializeAdminPanelConnector() {
 	TRACE_POINT();
 	WorkingObjects &wo = *workingObjects;
 
-	VariantMap &options = *agentsOptions;
-	if (!options.has("admin_panel_url")) {
+	if (coreConfig->get("admin_panel_url").isNull()) {
 		return;
 	}
 
-	Json::Value config;
-
-	config["url"] = options.get("admin_panel_url");
+	Json::Value config = coreConfig->inspectEffectiveValues();
 	config["log_prefix"] = "AdminPanelConnector: ";
-	config["integration_mode"] = options.get("integration_mode");
-	config["ruby"] = options.get("default_ruby");
-	if (options.has("instance_dir")) {
-		config["instance_dir"] = options.get("instance_dir");
-	}
-	if (options.has("standalone_engine")) {
-		config["standalone_engine"] = options.get("standalone_engine");
-	}
-	if (options.has("web_server_module_version")) {
-		config["web_server_module_version"] = options.get("web_server_module_version");
-	}
 
 	P_NOTICE("Initialize connection with " << PROGRAM_NAME " admin panel at "
-		<< options.get("admin_panel_url"));
+		<< config["admin_panel_url"].asString());
 	AdminPanelConnector *connector = new Core::AdminPanelConnector(
-		coreSchema->adminPanelConnector.schema, config);
+		coreSchema->adminPanelConnector.schema, config,
+		coreSchema->adminPanelConnector.translator);
 	connector->resourceLocator = &wo.resourceLocator;
 	connector->appPool = wo.appPool;
 	connector->initialize();
@@ -891,13 +841,20 @@ initializeAdminPanelConnector() {
 static void
 prestartWebApps() {
 	TRACE_POINT();
-	VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects;
+	vector<string> prestartURLs;
+	const Json::Value jPrestartURLs = coreConfig->get("prestart_urls");
+	Json::Value::const_iterator it, end = jPrestartURLs.end();
+
+	prestartURLs.reserve(jPrestartURLs.size());
+	for (it = jPrestartURLs.begin(); it != end; it++) {
+		prestartURLs.push_back(it->asString());
+	}
 
 	boost::function<void ()> func = boost::bind(prestartWebApps,
 		wo->resourceLocator,
-		options.get("default_ruby"),
-		options.getStrSet("prestart_urls", false)
+		coreConfig->get("default_ruby").asString(),
+		prestartURLs
 	);
 	wo->prestarterThread = new oxt::thread(
 		boost::bind(runAndPrintExceptions, func, true)
@@ -1155,9 +1112,9 @@ cleanup() {
 static void
 deletePidFile() {
 	TRACE_POINT();
-	string pidFile = agentsOptions->get("core_pid_file", false);
-	if (!pidFile.empty()) {
-		syscalls::unlink(pidFile.c_str());
+	Json::Value pidFile = coreConfig->get("pid_file");
+	if (!pidFile.isNull()) {
+		syscalls::unlink(pidFile.asCString());
 	}
 }
 
@@ -1431,8 +1388,11 @@ coreMain(int argc, char *argv[]) {
 	agentsOptions = new VariantMap();
 	*agentsOptions = initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " core", parseOptions,
 		preinitialize, 2);
+
+	Json::Value coreConfigDoc = prepareCoreConfigFromAgentsOptions(*agentsOptions);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
+	createCoreConfigFromAgentsOptions(*agentsOptions, coreConfigDoc, &coreConfig, &coreSchema);
 
 	restoreOomScore(agentsOptions);
 

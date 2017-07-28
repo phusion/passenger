@@ -106,6 +106,18 @@ struct ApiAccount {
 	bool readonly;
 };
 
+struct ApiAccountDescription: public ApiAccount {
+	string passwordFile;
+
+	StaticString getLevelString() const {
+		if (readonly) {
+			return P_STATIC_STRING("readonly");
+		} else {
+			return P_STATIC_STRING("full");
+		}
+	}
+};
+
 class ApiAccountDatabase {
 private:
 	vector<ApiAccount> database;
@@ -146,21 +158,23 @@ public:
 	 *   readonly    Read-only access
      *   full        Full access (default)
 	 *
-	 * @throws ArgumentException One if the input arguments contain a disallowed value.
+	 * @throws ArgumentException One of the input arguments contain a disallowed value.
 	 */
 	void add(const StaticString &description) {
-		ApiAccount account;
-		vector<string> args;
+		ApiAccountDescription account;
+		vector<StaticString> args;
 
 		split(description, ':', args);
 
 		if (args.size() == 2) {
 			account.username = args[0];
 			account.password = strip(readAll(args[1]));
+			account.passwordFile = args[1];
 			account.readonly = false;
 		} else if (args.size() == 3) {
 			account.username = args[1];
 			account.password = strip(readAll(args[2]));
+			account.passwordFile = args[2];
 			account.readonly = levelDescriptionIsReadOnly(args[0]);
 		} else {
 			throw ArgumentException("Invalid authorization description '" + description + "'");
@@ -169,6 +183,7 @@ public:
 		if (OXT_UNLIKELY(account.username == "api")) {
 			throw ArgumentException("It is not allowed to register an API account with username 'api'");
 		}
+
 		database.push_back(account);
 	}
 
@@ -268,7 +283,7 @@ authorize(ApiServer *server, Client *client, Request *req) {
 		}
 	}
 
-	if (server->apiAccountDatabase->empty()) {
+	if (server->getApiAccountDatabase().empty()) {
 		SKC_INFO_FROM_STATIC(server, client,
 			"Authenticated as administrator because API account database is empty");
 		auth.apiKey = ApplicationPool2::ApiKey::makeSuper();
@@ -289,7 +304,8 @@ authorize(ApiServer *server, Client *client, Request *req) {
 				auth.canModifyPool = true;
 			}
 		} else {
-			const ApiAccount *account = server->apiAccountDatabase->lookup(username);
+			const typename ApiServer::ApiAccount *account =
+				server->getApiAccountDatabase().lookup(username);
 			if (account != NULL && constantTimeCompare(password, account->password)) {
 				SKC_INFO_FROM_STATIC(server, client,
 					"Authenticated with administrator account: " << username);

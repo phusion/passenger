@@ -273,6 +273,8 @@ protected:
 	}
 
 public:
+	typedef Passenger::ApiAccount ApiAccount;
+
 	ApiAccountDatabase *apiAccountDatabase;
 	EventFd *exitEvent;
 	string fdPassingPassword;
@@ -290,6 +292,10 @@ public:
 
 	virtual unsigned int getClientName(const Client *client, char *buf, size_t size) const {
 		return ParentClass::getClientName(client, buf, size);
+	}
+
+	const ApiAccountDatabase &getApiAccountDatabase() const {
+		return *apiAccountDatabase;
 	}
 
 	bool authorizeByUid(uid_t uid) const {

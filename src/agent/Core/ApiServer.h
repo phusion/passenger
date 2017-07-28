@@ -26,6 +26,8 @@
 #ifndef _PASSENGER_CORE_API_SERVER_H_
 #define _PASSENGER_CORE_API_SERVER_H_
 
+#include <boost/config.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <boost/regex.hpp>
 #include <oxt/thread.hpp>
 #include <string>
@@ -39,6 +41,7 @@
 #include <Core/Controller.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Shared/ApiServerUtils.h>
+#include <Shared/ApiAccountUtils.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
 #include <Exceptions.h>
@@ -63,6 +66,7 @@ using namespace std;
  * by 'rake configkit_schemas_inline_comments')
  *
  *   accept_burst_count           unsigned integer   -   default(32)
+ *   authorizations               array              -   default("[FILTERED]"),secret
  *   client_freelist_limit        unsigned integer   -   default(0)
  *   fd_passing_password          string             -   secret
  *   instance_dir                 string             -   -
@@ -72,7 +76,16 @@ using namespace std;
  *
  * END
  */
-struct Schema: public ServerKit::HttpServerSchema {
+class Schema: public ServerKit::HttpServerSchema {
+private:
+	static Json::Value normalizeAuthorizations(const Json::Value &effectiveValues) {
+		Json::Value updates;
+		updates["authorizations"] = ApiAccountUtils::normalizeApiAccountsJson(
+			effectiveValues["authorizations"]);
+		return updates;
+	}
+
+public:
 	Schema()
 		: ServerKit::HttpServerSchema(false)
 	{
@@ -80,9 +93,20 @@ struct Schema: public ServerKit::HttpServerSchema {
 
 		add("instance_dir", STRING_TYPE, OPTIONAL);
 		add("fd_passing_password", STRING_TYPE, OPTIONAL | SECRET);
+		add("authorizations", ARRAY_TYPE, OPTIONAL | SECRET, Json::arrayValue);
+
+		addValidator(boost::bind(ApiAccountUtils::validateAuthorizationsField,
+			"authorizations", boost::placeholders::_1, boost::placeholders::_2));
+
+		addNormalizer(normalizeAuthorizations);
 
 		finalize();
 	}
+};
+
+struct ConfigChangeRequest {
+	ServerKit::HttpServerConfigChangeRequest forParent;
+	boost::scoped_ptr<ApiAccountUtils::ApiAccountDatabase> apiAccountDatabase;
 };
 
 class Request: public ServerKit::BaseHttpRequest {
@@ -97,11 +121,15 @@ public:
 };
 
 class ApiServer: public ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > {
-private:
+public:
 	typedef ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
 
+	typedef Passenger::Core::ApiServer::ConfigChangeRequest ConfigChangeRequest;
+
+private:
+	ApiAccountUtils::ApiAccountDatabase apiAccountDatabase;
 	boost::regex serverConnectionPath;
 
 	bool regex_match(const StaticString &str, const boost::regex &e) const {
@@ -677,24 +705,25 @@ protected:
 	}
 
 public:
+	typedef ApiAccountUtils::ApiAccount ApiAccount;
+
 	// Dependencies
 	vector<Controller *> controllers;
-	ApiAccountDatabase *apiAccountDatabase;
 	ApplicationPool2::PoolPtr appPool;
 	EventFd *exitEvent;
 
+	template<typename Translator>
 	ApiServer(ServerKit::Context *context, const Schema &schema,
-		const Json::Value &initialConfig)
-		: ParentClass(context, schema, initialConfig),
+		const Json::Value &initialConfig, const Translator &translator)
+		: ParentClass(context, schema, initialConfig, translator),
 		  serverConnectionPath("^/server/(.+)\\.json$"),
-		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)
-		{ }
+	{
+		apiAccountDatabase = ApiAccountUtils::ApiAccountDatabase(
+			config["authorizations"]);
+	}
 
 	virtual void initialize() {
-		if (apiAccountDatabase == NULL) {
-			throw RuntimeException("apiAccountDatabase must be non-NULL");
-		}
 		if (appPool == NULL) {
 			throw RuntimeException("appPool must be non-NULL");
 		}
@@ -717,12 +746,32 @@ public:
 		return pos - buf;
 	}
 
+	const ApiAccountUtils::ApiAccountDatabase &getApiAccountDatabase() const {
+		return apiAccountDatabase;
+	}
+
 	bool authorizeByUid(uid_t uid) const {
 		return appPool->authorizeByUid(uid);
 	}
 
 	bool authorizeByApiKey(const ApplicationPool2::ApiKey &apiKey) const {
 		return appPool->authorizeByApiKey(apiKey);
+	}
+
+
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, ConfigChangeRequest &req)
+	{
+		if (ParentClass::prepareConfigChange(updates, errors, req.forParent)) {
+			req.apiAccountDatabase.reset(new ApiAccountUtils::ApiAccountDatabase(
+				req.forParent.forParent.config->get("authorizations")));
+		}
+		return errors.empty();
+	}
+
+	void commitConfigChange(ConfigChangeRequest &req) BOOST_NOEXCEPT_OR_NOTHROW {
+		ParentClass::commitConfigChange(req.forParent);
+		apiAccountDatabase.swap(*req.apiAccountDatabase);
 	}
 };
 

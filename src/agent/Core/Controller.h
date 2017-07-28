@@ -152,6 +152,11 @@ private:
 	#endif
 
 
+	/****** Initialization and shutdown ******/
+
+	void preinitialize();
+
+
 	/****** Stage: initialize request ******/
 
 	struct RequestAnalysis;
@@ -368,8 +373,23 @@ public:
 
 	/****** Initialization and shutdown ******/
 
+	template<typename Translator>
 	Controller(ServerKit::Context *context, const ControllerSchema &schema,
-		const Json::Value &initialConfig);
+		const Json::Value &initialConfig,
+		const Translator &translator = ConfigKit::DummyTranslator())
+		: ParentClass(context, schema, initialConfig, translator),
+
+		  mainConfig(config),
+		  requestConfig(new ControllerRequestConfig(config)),
+		  poolOptionsCache(4),
+
+		  turboCaching(),
+		  resourceLocator(NULL)
+		  /**************************/
+	{
+		preinitialize();
+	}
+
 	virtual ~Controller();
 	virtual void initialize();
 

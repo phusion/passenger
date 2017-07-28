@@ -363,6 +363,17 @@ public:
 		return result;
 	}
 
+	double getDouble(const string &name, bool required = true,
+		double defaultValue = 0) const
+	{
+		double result = defaultValue;
+		const string *str;
+		if (lookup(name, required, &str)) {
+			result = atof(str->c_str());
+		}
+		return result;
+	}
+
 	pid_t getPid(const string &name, bool required = true, pid_t defaultValue = 0) const {
 		pid_t result = defaultValue;
 		const string *str;

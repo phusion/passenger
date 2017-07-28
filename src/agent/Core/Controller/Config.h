@@ -87,7 +87,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   default_python                              string             -          default("python")
  *   default_ruby                                string             -          default("ruby")
  *   default_server_name                         string             required   -
- *   default_server_port                         string             required   -
+ *   default_server_port                         unsigned integer   required   -
  *   default_user                                string             -          default("nobody")
  *   environment                                 string             -          default("production")
  *   force_max_concurrent_requests_per_process   integer            -          default(-1)
@@ -149,7 +149,7 @@ private:
 			"default_group", STRING_TYPE, OPTIONAL | CACHE_DEFAULT_VALUE,
 			inferDefaultValueForDefaultGroup);
 		add("default_server_name", STRING_TYPE, REQUIRED);
-		add("default_server_port", STRING_TYPE, REQUIRED);
+		add("default_server_port", UINT_TYPE, REQUIRED);
 		add("server_software", STRING_TYPE, OPTIONAL, SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 		add("sticky_sessions_cookie_name", STRING_TYPE, OPTIONAL, DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
 		add("vary_turbocache_by_cookie", STRING_TYPE, OPTIONAL);

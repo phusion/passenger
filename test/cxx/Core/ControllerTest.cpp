@@ -58,7 +58,7 @@ namespace tut {
 			config["app_type"] = "rack";
 			config["startup_file"] = "none";
 			config["default_server_name"] = "localhost";
-			config["default_server_port"] = "80";
+			config["default_server_port"] = 80;
 			config["user_switching"] = false;
 
 			LoggingKit::setLevel(LoggingKit::WARN);
