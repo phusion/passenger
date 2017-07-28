@@ -57,6 +57,19 @@ namespace ApiServer {
 using namespace std;
 
 
+struct Schema: public ServerKit::HttpServerSchema {
+	Schema()
+		: ServerKit::HttpServerSchema(false)
+	{
+		using namespace ConfigKit;
+
+		add("instance_dir", STRING_TYPE, OPTIONAL);
+		add("fd_passing_password", STRING_TYPE, OPTIONAL | SECRET);
+
+		finalize();
+	}
+};
+
 class Request: public ServerKit::BaseHttpRequest {
 public:
 	string body;
@@ -127,7 +140,8 @@ private:
 			processConfig(client, req);
 		} else if (path == P_STATIC_STRING("/reinherit_logs.json")) {
 			apiServerProcessReinheritLogs(this, client, req,
-				instanceDir, fdPassingPassword);
+				config["instance_dir"].asString(),
+				config["fd_passing_password"].asString());
 		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
 			apiServerProcessReopenLogs(this, client, req);
 		} else {
@@ -648,16 +662,15 @@ protected:
 	}
 
 public:
+	// Dependencies
 	vector<Controller *> controllers;
 	ApiAccountDatabase *apiAccountDatabase;
 	ApplicationPool2::PoolPtr appPool;
-	string instanceDir;
-	string fdPassingPassword;
 	EventFd *exitEvent;
 	vector<Authorization> authorizations;
 
-	ApiServer(ServerKit::Context *context, const ServerKit::HttpServerSchema &schema,
-		const Json::Value &initialConfig = Json::Value())
+	ApiServer(ServerKit::Context *context, const Schema &schema,
+		const Json::Value &initialConfig)
 		: ParentClass(context, schema, initialConfig),
 		  serverConnectionPath("^/server/(.+)\\.json$"),
 		  apiAccountDatabase(NULL),

@@ -120,7 +120,7 @@ namespace Core {
 	struct ApiWorkingObjects {
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
-		ServerKit::HttpServerSchema apiServerSchema;
+		ApiServer::Schema schema;
 		ApiServer::ApiServer *apiServer;
 
 		ApiWorkingObjects()
@@ -740,8 +740,16 @@ initializeNonPrivilegedWorkingObjects() {
 			options.getUint("file_buffer_threshold");
 
 		UPDATE_TRACE_POINT();
+		Json::Value config;
+		if (options.has("instance_dir")) {
+			config["instance_dir"] = options.get("instance_dir");
+		}
+		if (options.has("watchdog_fd_passing_password")) {
+			config["fd_passing_password"] = options.get("watchdog_fd_passing_password");
+		}
+
 		awo->apiServer = new Core::ApiServer::ApiServer(awo->serverKitContext,
-			awo->apiServerSchema);
+			awo->schema, config);
 		awo->apiServer->controllers.reserve(wo->threadWorkingObjects.size());
 		for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 			awo->apiServer->controllers.push_back(
@@ -749,8 +757,6 @@ initializeNonPrivilegedWorkingObjects() {
 		}
 		awo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
 		awo->apiServer->appPool = wo->appPool;
-		awo->apiServer->instanceDir = options.get("instance_dir", false);
-		awo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password", false);
 		awo->apiServer->exitEvent = &wo->exitEvent;
 		awo->apiServer->shutdownFinishCallback = apiServerShutdownFinished;
 		awo->apiServer->initialize();
