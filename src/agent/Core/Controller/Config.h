@@ -70,6 +70,57 @@ parseControllerBenchmarkMode(const StaticString &mode) {
 	}
 }
 
+/*
+ * BEGIN ConfigKit schema: Passenger::Core::ControllerSchema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   abort_websockets_on_process_shutdown        boolean            -          default(true)
+ *   accept_burst_count                          unsigned integer   -          default(32)
+ *   app_file_descriptor_ulimit                  unsigned integer   -          -
+ *   app_root                                    string             -          -
+ *   app_type                                    string             -          -
+ *   benchmark_mode                              string             -          -
+ *   client_freelist_limit                       unsigned integer   -          default(0)
+ *   default_group                               string             -          default
+ *   default_nodejs                              string             -          default("node")
+ *   default_python                              string             -          default("python")
+ *   default_ruby                                string             -          default("ruby")
+ *   default_server_name                         string             required   -
+ *   default_server_port                         string             required   -
+ *   default_user                                string             -          default("nobody")
+ *   environment                                 string             -          default("production")
+ *   force_max_concurrent_requests_per_process   integer            -          default(-1)
+ *   friendly_error_pages                        string             -          default("auto")
+ *   graceful_exit                               boolean            -          default(true)
+ *   integration_mode                            string             -          default("standalone"),read_only
+ *   load_shell_envvars                          boolean            -          default(false)
+ *   max_preloader_idle_time                     unsigned integer   -          default(300)
+ *   max_request_queue_size                      unsigned integer   -          default(100)
+ *   max_requests                                unsigned integer   -          default(0)
+ *   meteor_app_settings                         string             -          -
+ *   min_instances                               unsigned integer   -          default(1)
+ *   min_spare_clients                           unsigned integer   -          default(0)
+ *   multi_app                                   boolean            -          default(true),read_only
+ *   request_freelist_limit                      unsigned integer   -          default(1024)
+ *   response_buffer_high_watermark              unsigned integer   -          default(134217728)
+ *   server_software                             string             -          default("Phusion_Passenger/5.1.9")
+ *   show_version_in_header                      boolean            -          default(true)
+ *   spawn_method                                string             -          default("smart")
+ *   start_reading_after_accept                  boolean            -          default(true)
+ *   startup_file                                string             -          -
+ *   stat_throttle_rate                          unsigned integer   -          default(10)
+ *   sticky_sessions                             boolean            -          default(false)
+ *   sticky_sessions_cookie_name                 string             -          default("_passenger_route")
+ *   thread_number                               unsigned integer   required   read_only
+ *   turbocaching                                boolean            -          default(true),read_only
+ *   user_switching                              boolean            -          default(true)
+ *   ust_router_address                          string             -          -
+ *   ust_router_password                         string             -          secret
+ *   vary_turbocache_by_cookie                   string             -          -
+ *
+ * END
+ */
 class ControllerSchema: public ServerKit::HttpServerSchema {
 private:
 	void initialize() {

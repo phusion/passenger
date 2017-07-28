@@ -149,6 +149,18 @@ using namespace oxt;
 	SKC_TRACE_FROM_STATIC(server, client, 3, "Event: " eventName)
 
 
+/*
+ * BEGIN ConfigKit schema: Passenger::ServerKit::BaseServerSchema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   accept_burst_count           unsigned integer   -   default(32)
+ *   client_freelist_limit        unsigned integer   -   default(0)
+ *   min_spare_clients            unsigned integer   -   default(0)
+ *   start_reading_after_accept   boolean            -   default(true)
+ *
+ * END
+ */
 class BaseServerSchema: public ConfigKit::Schema {
 private:
 	void initialize() {

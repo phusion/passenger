@@ -28,6 +28,8 @@
 
 #include <sys/wait.h>
 
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread.hpp>
 #include <boost/bind.hpp>
 
 #include <Constants.h>
@@ -48,6 +50,31 @@ using namespace oxt;
 
 class AdminPanelConnector {
 public:
+	/**
+	 * BEGIN ConfigKit schema: Passenger::Core::AdminPanelConnector::Schema
+	 * (do not edit: following text is automatically generated
+	 * by 'rake configkit_schemas_inline_comments')
+	 *
+	 *   close_timeout               float     -          default(10.0)
+	 *   connect_timeout             float     -          default(30.0)
+	 *   data_debug                  boolean   -          default(false)
+	 *   instance_dir                string    -          read_only
+	 *   integration_mode            string    -          default("standalone")
+	 *   log_prefix                  string    -          -
+	 *   ping_interval               float     -          default(30.0)
+	 *   ping_timeout                float     -          default(30.0)
+	 *   proxy_password              string    -          secret
+	 *   proxy_timeout               float     -          default(30.0)
+	 *   proxy_url                   string    -          -
+	 *   proxy_username              string    -          -
+	 *   reconnect_timeout           float     -          default(5.0)
+	 *   ruby                        string    -          default("ruby")
+	 *   standalone_engine           string    -          -
+	 *   url                         string    required   -
+	 *   web_server_module_version   string    -          read_only
+	 *
+	 * END
+	 */
 	struct Schema: public WebSocketCommandReverseServer::Schema {
 		Schema()
 			: WebSocketCommandReverseServer::Schema(false)

@@ -57,6 +57,21 @@ namespace ApiServer {
 using namespace std;
 
 
+/*
+ * BEGIN ConfigKit schema: Passenger::Core::ApiServer::Schema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   accept_burst_count           unsigned integer   -   default(32)
+ *   client_freelist_limit        unsigned integer   -   default(0)
+ *   fd_passing_password          string             -   secret
+ *   instance_dir                 string             -   -
+ *   min_spare_clients            unsigned integer   -   default(0)
+ *   request_freelist_limit       unsigned integer   -   default(1024)
+ *   start_reading_after_accept   boolean            -   default(true)
+ *
+ * END
+ */
 struct Schema: public ServerKit::HttpServerSchema {
 	Schema()
 		: ServerKit::HttpServerSchema(false)

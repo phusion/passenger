@@ -60,6 +60,19 @@ extern const char DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE[];
 extern const unsigned int DEFAULT_INTERNAL_SERVER_ERROR_RESPONSE_SIZE;
 
 
+/*
+ * BEGIN ConfigKit schema: Passenger::ServerKit::HttpServerSchema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   accept_burst_count           unsigned integer   -   default(32)
+ *   client_freelist_limit        unsigned integer   -   default(0)
+ *   min_spare_clients            unsigned integer   -   default(0)
+ *   request_freelist_limit       unsigned integer   -   default(1024)
+ *   start_reading_after_accept   boolean            -   default(true)
+ *
+ * END
+ */
 class HttpServerSchema: public BaseServerSchema {
 private:
 	void initialize() {

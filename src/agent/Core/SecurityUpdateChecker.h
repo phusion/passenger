@@ -71,6 +71,21 @@ using namespace oxt;
  */
 class SecurityUpdateChecker {
 public:
+	/*
+	 * BEGIN ConfigKit schema: Passenger::SecurityUpdateChecker::Schema
+	 * (do not edit: following text is automatically generated
+	 * by 'rake configkit_schemas_inline_comments')
+	 *
+	 *   certificate_path     string             -          -
+	 *   disabled             boolean            -          default(false)
+	 *   interval             unsigned integer   -          default(86400)
+	 *   proxy_url            string             -          -
+	 *   server_identifier    string             required   -
+	 *   url                  string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
+	 *   web_server_version   string             -          -
+	 *
+	 * END
+	 */
 	class Schema: public ConfigKit::Schema {
 	private:
 		static void validateInterval(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {

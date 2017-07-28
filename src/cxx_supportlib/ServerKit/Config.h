@@ -46,6 +46,22 @@ namespace ServerKit {
 using namespace std;
 
 
+/*
+ * BEGIN ConfigKit schema: Passenger::ServerKit::Schema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   file_buffered_channel_auto_start_mover               boolean            -   default(true)
+ *   file_buffered_channel_auto_truncate_file             boolean            -   default(true)
+ *   file_buffered_channel_buffer_dir                     string             -   default
+ *   file_buffered_channel_delay_in_file_mode_switching   unsigned integer   -   default(0)
+ *   file_buffered_channel_max_disk_chunk_read_size       unsigned integer   -   default(0)
+ *   file_buffered_channel_threshold                      unsigned integer   -   default(131072)
+ *   mbuf_block_chunk_size                                unsigned integer   -   default(4096),read_only
+ *   secure_mode_password                                 string             -   secret
+ *
+ * END
+ */
 class Schema: public ConfigKit::Schema {
 private:
 	static Json::Value getDefaultFileBufferedChannelBufferDir(const ConfigKit::Store &config) {

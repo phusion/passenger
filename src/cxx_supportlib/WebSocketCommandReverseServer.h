@@ -111,6 +111,26 @@ using namespace std;
  */
 class WebSocketCommandReverseServer {
 public:
+	/*
+	 * BEGIN ConfigKit schema: Passenger::WebSocketCommandReverseServer::Schema
+	 * (do not edit: following text is automatically generated
+	 * by 'rake configkit_schemas_inline_comments')
+	 *
+	 *   close_timeout       float     -          default(10.0)
+	 *   connect_timeout     float     -          default(30.0)
+	 *   data_debug          boolean   -          default(false)
+	 *   log_prefix          string    -          -
+	 *   ping_interval       float     -          default(30.0)
+	 *   ping_timeout        float     -          default(30.0)
+	 *   proxy_password      string    -          secret
+	 *   proxy_timeout       float     -          default(30.0)
+	 *   proxy_url           string    -          -
+	 *   proxy_username      string    -          -
+	 *   reconnect_timeout   float     -          default(5.0)
+	 *   url                 string    required   -
+	 *
+	 * END
+	 */
 	class Schema: public ConfigKit::Schema {
 	private:
 		void initialize() {
