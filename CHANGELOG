@@ -2,6 +2,7 @@ Next version (not yet released)
 -------------------------------
 
 * [Enterprise] search for correct CA path to set for usage data reporting connection (when Passenger is installed from gem).
+* [Enterprise] Fix a potential use after free bug in the cloud usage tracker, and improve reliability of usage data recording.
 
 
 Release 5.1.6
