@@ -1270,7 +1270,7 @@ setAgentsOptionsDefaults() {
 	options.setDefaultUint("file_buffer_threshold", DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD);
 	options.setDefaultInt("response_buffer_high_watermark", DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
 	options.setDefaultBool("selfchecks", false);
-	options.setDefaultBool("core_graceful_exit", true);
+	options.setDefaultBool("graceful_exit", true);
 	options.setDefaultInt("core_threads", boost::thread::hardware_concurrency());
 	options.setDefaultBool("core_cpu_affine", false);
 	options.setDefault("friendly_error_pages", "auto");

@@ -406,7 +406,7 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		options.setInt("data_buffer_dir", atoi(argv[i + 1]));
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--no-graceful-exit")) {
-		options.setBool("core_graceful_exit", false);
+		options.setBool("graceful_exit", false);
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--benchmark")) {
 		options.set("benchmark_mode", argv[i + 1]);

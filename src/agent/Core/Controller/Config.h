@@ -86,7 +86,7 @@ private:
 		add("data_buffer_dir", STRING_TYPE, OPTIONAL, getSystemTempDir());
 		add("response_buffer_high_watermark", UINT_TYPE, OPTIONAL, DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
 		add("sticky_sessions", BOOL_TYPE, OPTIONAL, false);
-		add("core_graceful_exit", BOOL_TYPE, OPTIONAL, true);
+		add("graceful_exit", BOOL_TYPE, OPTIONAL, true);
 		add("benchmark_mode", STRING_TYPE, OPTIONAL);
 
 		add("default_ruby", STRING_TYPE, OPTIONAL, DEFAULT_RUBY);
@@ -269,7 +269,7 @@ public:
 		  benchmarkMode(parseControllerBenchmarkMode(config["benchmark_mode"].asString())),
 		  userSwitching(config["user_switching"].asBool()),
 		  stickySessions(config["sticky_sessions"].asBool()),
-		  gracefulExit(config["core_graceful_exit"].asBool())
+		  gracefulExit(config["graceful_exit"].asBool())
 
 		  /*******************/
 	{
