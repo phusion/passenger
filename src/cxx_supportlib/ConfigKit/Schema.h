@@ -240,6 +240,17 @@ public:
 		}
 	}
 
+	bool erase(const HashedStaticString &key) {
+		return entries.erase(key);
+	}
+
+	void override(const HashedStaticString &key, Type type, unsigned int flags,
+		const Json::Value &defaultValue = Json::Value(Json::nullValue))
+	{
+		erase(key);
+		add(key, type, flags, defaultValue);
+	}
+
 	void addValidator(const Validator &validator) {
 		assert(!finalized);
 		validators.push_back(validator);
