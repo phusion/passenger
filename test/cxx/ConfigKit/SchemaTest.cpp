@@ -43,6 +43,7 @@ namespace tut {
 		set_test_name("Validating required keys with the right value types");
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
+		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::REQUIRED);
 		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::REQUIRED);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::REQUIRED);
@@ -53,6 +54,10 @@ namespace tut {
 		ensure(schema.validateValue("string", 123, error));
 		ensure(schema.validateValue("string", 123.45, error));
 		ensure(schema.validateValue("string", true, error));
+		ensure(schema.validateValue("password", "password", error));
+		ensure(schema.validateValue("password", 123, error));
+		ensure(schema.validateValue("password", 123.45, error));
+		ensure(schema.validateValue("password", true, error));
 		ensure(schema.validateValue("integer", 123, error));
 		ensure(schema.validateValue("integer", 123.45, error));
 		ensure(schema.validateValue("integer", true, error));
@@ -93,17 +98,18 @@ namespace tut {
 		set_test_name("Validating optional keys with null values");
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL);
-		schema.add("bar", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL);
+		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
 		ensure(schema.validateValue("foo", Json::nullValue, error));
-		ensure(schema.validateValue("foo", Json::nullValue, error));
+		ensure(schema.validateValue("bar", Json::nullValue, error));
 	}
 
 	TEST_METHOD(11) {
 		set_test_name("Validating optional keys with the right value types");
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL);
+		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
 		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
@@ -114,6 +120,10 @@ namespace tut {
 		ensure(schema.validateValue("string", 123, error));
 		ensure(schema.validateValue("string", 123.45, error));
 		ensure(schema.validateValue("string", true, error));
+		ensure(schema.validateValue("password", "password", error));
+		ensure(schema.validateValue("password", 123, error));
+		ensure(schema.validateValue("password", 123.45, error));
+		ensure(schema.validateValue("password", true, error));
 		ensure(schema.validateValue("integer", 123, error));
 		ensure(schema.validateValue("integer", 123.45, error));
 		ensure(schema.validateValue("integer", true, error));

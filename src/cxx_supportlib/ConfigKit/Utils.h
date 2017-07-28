@@ -107,6 +107,8 @@ getTypeString(Type type) {
 	switch (type) {
 	case STRING_TYPE:
 		return P_STATIC_STRING("string");
+	case PASSWORD_TYPE:
+		return P_STATIC_STRING("password");
 	case INT_TYPE:
 		return P_STATIC_STRING("integer");
 	case UINT_TYPE:

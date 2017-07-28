@@ -216,4 +216,30 @@ namespace tut {
 		ensure_equals(config->get("foo").asInt(), 123);
 		ensure(config->get("foo2").isNull());
 	}
+
+	TEST_METHOD(16) {
+		set_test_name("Filtering password values in inspect()");
+
+		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
+		schema.add("password_default", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL, "1234");
+		schema.add("password_null", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
+		init();
+
+		doc["password"] = "foo";
+		ensure(config->update(doc, errors));
+
+		doc = config->inspect();
+
+		ensure_equals(doc["password"]["user_value"], Json::Value("[FILTERED]"));
+		ensure_equals(doc["password"]["default_value"], Json::Value(Json::nullValue));
+		ensure_equals(doc["password"]["effective_value"], Json::Value("[FILTERED]"));
+
+		ensure_equals(doc["password_default"]["user_value"], Json::Value(Json::nullValue));
+		ensure_equals(doc["password_default"]["default_value"], Json::Value("[FILTERED]"));
+		ensure_equals(doc["password_default"]["effective_value"], Json::Value("[FILTERED]"));
+
+		ensure_equals(doc["password_null"]["user_value"], Json::Value(Json::nullValue));
+		ensure_equals(doc["password_null"]["default_value"], Json::Value(Json::nullValue));
+		ensure_equals(doc["password_null"]["effective_value"], Json::Value(Json::nullValue));
+	}
 }

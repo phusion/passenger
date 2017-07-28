@@ -101,6 +101,18 @@ private:
 		}
 	}
 
+	static Json::Value maybeFilterPassword(const Entry &entry, const Json::Value &value) {
+		if (entry.schemaEntry->type == PASSWORD_TYPE) {
+			if (value.isNull()) {
+				return Json::nullValue;
+			} else {
+				return "[FILTERED]";
+			}
+		} else {
+			return value;
+		}
+	}
+
 	bool isWritable(const Entry &entry) const {
 		return !(entry.schemaEntry->flags & READ_ONLY) || !updatedOnce;
 	}
@@ -308,11 +320,11 @@ public:
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
-			subdoc["user_value"] = entry.userValue;
+			subdoc["user_value"] = maybeFilterPassword(entry, entry.userValue);
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = entry.getDefaultValue(*this);
+				subdoc["default_value"] = maybeFilterPassword(entry, entry.getDefaultValue(*this));
 			}
-			subdoc["effective_value"] = entry.getEffectiveValue(*this);
+			subdoc["effective_value"] = maybeFilterPassword(entry, entry.getEffectiveValue(*this));
 			entry.schemaEntry->inspect(subdoc);
 
 			result[it.getKey()] = subdoc;

@@ -255,6 +255,7 @@ public:
 
 		switch (entry->type) {
 		case STRING_TYPE:
+		case PASSWORD_TYPE:
 			if (value.isConvertibleTo(Json::stringValue)) {
 				return true;
 			} else {

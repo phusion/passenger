@@ -44,6 +44,7 @@ class Store;
 
 enum Type {
 	STRING_TYPE,
+	PASSWORD_TYPE, // Like STRING_TYPE, but inspect() won't show its value
 	INT_TYPE,
 	UINT_TYPE,
 	FLOAT_TYPE,
