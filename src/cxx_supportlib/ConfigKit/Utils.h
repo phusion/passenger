@@ -117,6 +117,10 @@ getTypeString(Type type) {
 		return P_STATIC_STRING("float");
 	case BOOL_TYPE:
 		return P_STATIC_STRING("boolean");
+	case ARRAY_TYPE:
+		return P_STATIC_STRING("array");
+	case STRING_ARRAY_TYPE:
+		return P_STATIC_STRING("array of strings");
 	default:
 		return P_STATIC_STRING("unknown");
 	}

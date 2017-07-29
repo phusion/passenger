@@ -281,6 +281,27 @@ public:
 				error = Error("'{{" + key + "}}' must be a boolean");
 				return false;
 			}
+		case ARRAY_TYPE:
+			if (value.isConvertibleTo(Json::arrayValue)) {
+				return true;
+			} else {
+				error = Error("'{{" + key + "}}' must be an array");
+				return false;
+			}
+		case STRING_ARRAY_TYPE:
+			if (value.isConvertibleTo(Json::arrayValue)) {
+				Json::Value::const_iterator it, end = value.end();
+				for (it = value.begin(); it != end; it++) {
+					if (it->type() != Json::stringValue) {
+						error = Error("'{{" + key + "}}' may only contain strings");
+						return false;
+					}
+				}
+				return true;
+			} else {
+				error = Error("'{{" + key + "}}' must be an array");
+				return false;
+			}
 		default:
 			P_BUG("Unknown type " + Passenger::toString((int) entry->type));
 			return false;

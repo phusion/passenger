@@ -63,6 +63,17 @@ variantMapToJson(const Schema &schema, const VariantMap &options) {
 			case BOOL_TYPE:
 				doc[key.toString()] = options.getBool(key);
 				break;
+			case ARRAY_TYPE:
+			case STRING_ARRAY_TYPE: {
+				Json::Value subdoc(Json::arrayValue);
+				vector<string> set = options.getStrSet(key);
+				vector<string>::const_iterator it, end = set.end();
+				for (it = set.begin(); it != end; it++) {
+					subdoc.append(*it);
+				}
+				doc[key.toString()] = subdoc;
+				break;
+			}
 			default:
 				P_BUG("Unknown type " + Passenger::toString((int) entry.type));
 				break;

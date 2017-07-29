@@ -167,6 +167,8 @@ The following types are available:
  * `UINT_TYPE` -- an unsigned integer.
  * `FLOAT_TYPE` -- a floating point number.
  * `BOOL_TYPE` -- a boolean.
+ * `ARRAY_TYPE` -- an generic array. May contain any values.
+ * `STRING_ARRAY_TYPE` -- an array of strings.
 
 #### Flags
 

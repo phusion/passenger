@@ -41,6 +41,7 @@ namespace tut {
 
 	TEST_METHOD(6) {
 		set_test_name("Validating required keys with the right value types");
+		Json::Value doc;
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
 		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::REQUIRED);
@@ -48,6 +49,8 @@ namespace tut {
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::REQUIRED);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::REQUIRED);
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::REQUIRED);
+		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::REQUIRED);
+		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
 		ensure(schema.validateValue("string", "string", error));
@@ -70,15 +73,28 @@ namespace tut {
 		ensure(schema.validateValue("boolean", true, error));
 		ensure(schema.validateValue("boolean", 123, error));
 		ensure(schema.validateValue("boolean", 123.45, error));
+
+		doc = Json::Value(Json::arrayValue);
+		doc.append("string");
+		doc.append(123);
+		ensure(schema.validateValue("array", doc, error));
+
+		doc = Json::Value(Json::arrayValue);
+		doc.append("string");
+		doc.append("string");
+		ensure(schema.validateValue("string_array", doc, error));
 	}
 
 	TEST_METHOD(7) {
 		set_test_name("Validating required keys with the wrong value types");
+		Json::Value doc;
 
 		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::REQUIRED);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::REQUIRED);
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::REQUIRED);
+		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::REQUIRED);
+		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));
@@ -92,6 +108,18 @@ namespace tut {
 
 		ensure(!schema.validateValue("boolean", "string", error));
 		ensure_equals(error.getMessage(), "'boolean' must be a boolean");
+
+		ensure(!schema.validateValue("array", "string", error));
+		ensure_equals(error.getMessage(), "'array' must be an array");
+
+		ensure(!schema.validateValue("string_array", "string", error));
+		ensure_equals(error.getMessage(), "'string_array' must be an array");
+
+		doc = Json::Value(Json::arrayValue);
+		doc.append(123);
+		doc.append("string");
+		ensure(!schema.validateValue("string_array", doc, error));
+		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
 	}
 
 	TEST_METHOD(10) {
@@ -107,6 +135,7 @@ namespace tut {
 
 	TEST_METHOD(11) {
 		set_test_name("Validating optional keys with the right value types");
+		Json::Value doc;
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL);
 		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
@@ -114,6 +143,8 @@ namespace tut {
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::OPTIONAL);
+		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::REQUIRED);
+		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
 		ensure(schema.validateValue("string", "string", error));
@@ -136,15 +167,28 @@ namespace tut {
 		ensure(schema.validateValue("boolean", true, error));
 		ensure(schema.validateValue("boolean", 123, error));
 		ensure(schema.validateValue("boolean", 123.45, error));
+
+		doc = Json::Value(Json::arrayValue);
+		doc.append("string");
+		doc.append(123);
+		ensure(schema.validateValue("array", doc, error));
+
+		doc = Json::Value(Json::arrayValue);
+		doc.append("string");
+		doc.append("string");
+		ensure(schema.validateValue("string_array", doc, error));
 	}
 
 	TEST_METHOD(12) {
 		set_test_name("Validating optional keys with the wrong value types");
+		Json::Value doc;
 
 		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::OPTIONAL);
+		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::OPTIONAL);
+		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));
@@ -158,5 +202,14 @@ namespace tut {
 
 		ensure(!schema.validateValue("boolean", "string", error));
 		ensure_equals(error.getMessage(), "'boolean' must be a boolean");
+
+		ensure(!schema.validateValue("string_array", "string", error));
+		ensure_equals(error.getMessage(), "'string_array' must be an array");
+
+		doc = Json::Value(Json::arrayValue);
+		doc.append(123);
+		doc.append("string");
+		ensure(!schema.validateValue("string_array", doc, error));
+		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
 	}
 }
