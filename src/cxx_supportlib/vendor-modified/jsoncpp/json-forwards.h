@@ -11,12 +11,12 @@ The JsonCpp library's source code, including accompanying documentation,
 tests and demonstration applications, are licensed under the following
 conditions...
 
-The author (Baptiste Lepilleur) explicitly disclaims copyright in all 
+The JsonCpp Authors explicitly disclaim copyright in all 
 jurisdictions which recognize such a disclaimer. In such jurisdictions, 
 this software is released into the Public Domain.
 
 In jurisdictions which do not recognize Public Domain property (e.g. Germany as of
-2010), this software is Copyright (c) 2007-2010 by Baptiste Lepilleur, and is
+2010), this software is Copyright (c) 2007-2010 by The JsonCpp Authors, and is
 released under the terms of the MIT License (see below).
 
 In jurisdictions which recognize Public Domain property, the user of this 
@@ -32,7 +32,7 @@ described in clear, concise terms at:
 The full text of the MIT License follows:
 
 ========================================================================
-Copyright (c) 2007-2010 Baptiste Lepilleur
+Copyright (c) 2007-2010 The JsonCpp Authors
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -168,10 +168,16 @@ license you like.
 // managable and fixes a set of common hard-to-find bugs.
 #if __cplusplus >= 201103L
 # define JSONCPP_OVERRIDE override
-#elif defined(_MSC_VER) && _MSC_VER > 1600
+# define JSONCPP_NOEXCEPT noexcept
+#elif defined(_MSC_VER) && _MSC_VER > 1600 && _MSC_VER < 1900
 # define JSONCPP_OVERRIDE override
+# define JSONCPP_NOEXCEPT throw()
+#elif defined(_MSC_VER) && _MSC_VER >= 1900
+# define JSONCPP_OVERRIDE override
+# define JSONCPP_NOEXCEPT noexcept
 #else
 # define JSONCPP_OVERRIDE
+# define JSONCPP_NOEXCEPT throw()
 #endif
 
 #ifndef JSON_HAS_RVALUE_REFERENCES
