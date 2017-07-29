@@ -34,9 +34,9 @@ namespace tut {
 		schema.finalize();
 
 		ensure(!schema.validateValue("foo", Json::nullValue, error));
-		ensure(error.getMessage(), "'foo' is required");
-		ensure(!schema.validateValue("foo", Json::nullValue, error));
-		ensure(error.getMessage(), "'bar' is required");
+		ensure_equals(error.getMessage(), "'foo' is required");
+		ensure(!schema.validateValue("bar", Json::nullValue, error));
+		ensure_equals(error.getMessage(), "'bar' is required");
 	}
 
 	TEST_METHOD(6) {
@@ -82,16 +82,16 @@ namespace tut {
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));
-		ensure(error.getMessage(), "'integer' must be an integer");
+		ensure_equals(error.getMessage(), "'integer' must be an integer");
 
 		ensure(!schema.validateValue("integer_unsigned", -123, error));
-		ensure(error.getMessage(), "'integer_unsigned' must be greater than 0");
+		ensure_equals(error.getMessage(), "'integer_unsigned' must be greater than 0");
 
 		ensure(!schema.validateValue("float", "string", error));
-		ensure(error.getMessage(), "'float' must be a number");
+		ensure_equals(error.getMessage(), "'float' must be a number");
 
 		ensure(!schema.validateValue("boolean", "string", error));
-		ensure(error.getMessage(), "'boolean' must be a boolean");
+		ensure_equals(error.getMessage(), "'boolean' must be a boolean");
 	}
 
 	TEST_METHOD(10) {
@@ -148,15 +148,15 @@ namespace tut {
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));
-		ensure(error.getMessage(), "'integer' must be an integer");
+		ensure_equals(error.getMessage(), "'integer' must be an integer");
 
 		ensure(!schema.validateValue("integer_unsigned", -123, error));
-		ensure(error.getMessage(), "'integer_unsigned' must be greater than 0");
+		ensure_equals(error.getMessage(), "'integer_unsigned' must be greater than 0");
 
 		ensure(!schema.validateValue("float", "string", error));
-		ensure(error.getMessage(), "'float' must be a number");
+		ensure_equals(error.getMessage(), "'float' must be a number");
 
 		ensure(!schema.validateValue("boolean", "string", error));
-		ensure(error.getMessage(), "'boolean' must be a boolean");
+		ensure_equals(error.getMessage(), "'boolean' must be a boolean");
 	}
 }
