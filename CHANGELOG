@@ -1,8 +1,10 @@
-Next version (not yet released)
--------------------------------
+Release 5.1.7 (not yet released)
+--------------------------------
 
-* [Enterprise] search for correct CA path to set for usage data reporting connection (when Passenger is installed from gem).
-* [Enterprise] Fix a potential use after free bug in the cloud usage tracker, and improve reliability of usage data recording.
+ * Fixes compilation problems on some systems.
+ * Upgrades the JSON parser (json-cpp) to version 1.8.1. This makes parsing slightly faster, adds various security checks and fixes some JSON generation issues.
+ * [Enterprise] Fixes an SSL certificate issue in the license usage data reporter, which only occurs when Passenger Enterprise installed from gem or tarball. The license usage data reporter now searches for the correct system CA path.
+ * [Enterprise] Fixes a potential use-after-free bug when reporting usage data to the Phusion licensing server, and improves reliability of usage data recording.
 
 
 Release 5.1.6
