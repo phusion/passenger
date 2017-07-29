@@ -160,7 +160,6 @@ describe "Passenger Standalone" do
       end
 
       after :each do
-        @lock.close if @lock
         if PhusionPassenger.build_system_dir
           if File.exist?("#{PhusionPassenger.build_system_dir}/buildout.old")
             FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
@@ -172,6 +171,7 @@ describe "Passenger Standalone" do
           FileUtils.rm_rf(@user_dir)
           FileUtils.mv("#{@user_dir}.old", @user_dir)
         end
+        @lock.close if @lock
       end
 
       context "when natively packaged" do
