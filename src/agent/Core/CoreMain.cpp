@@ -159,6 +159,7 @@ namespace Core {
 		boost::atomic<unsigned int> shutdownCounter;
 		oxt::thread *prestarterThread;
 
+		SecurityUpdateChecker::Schema securityUpdateCheckerSchema;
 		SecurityUpdateChecker *securityUpdateChecker;
 		AdminPanelConnector *adminPanelConnector;
 		oxt::thread *adminPanelConnectorThread;
@@ -183,9 +184,7 @@ namespace Core {
 			delete prestarterThread;
 			delete adminPanelConnectorThread;
 			delete adminPanelConnector;
-			if (securityUpdateChecker) {
-				delete securityUpdateChecker;
-			}
+			delete securityUpdateChecker;
 
 			vector<ThreadWorkingObjects>::iterator it, end = threadWorkingObjects.end();
 			for (it = threadWorkingObjects.begin(); it != end; it++) {
@@ -815,20 +814,30 @@ initializeSecurityUpdateChecker() {
 	if (options.getBool("disable_security_update_check", false, false)) {
 		P_NOTICE("Security update check disabled.");
 	} else {
-		string proxy = options.get("security_update_check_proxy", false);
+		Json::Value config;
 
-		string serverIntegration = options.get("integration_mode"); // nginx / apache / standalone
+		if (options.has("security_update_check_proxy")) {
+			config["proxy_url"] = options.get("security_update_check_proxy");
+		}
+
+		string serverIdentifier = options.get("integration_mode"); // nginx / apache / standalone
 		string standaloneEngine = options.get("standalone_engine", false); // nginx / builtin
 		if (!standaloneEngine.empty()) {
-			serverIntegration.append(" " + standaloneEngine);
+			serverIdentifier.append(" " + standaloneEngine);
 		}
 		if (options.get("server_software").find(FLYING_PASSENGER_NAME) != string::npos) {
-			serverIntegration.append(" flying");
+			serverIdentifier.append(" flying");
 		}
-		string serverVersion = options.get("server_version", false); // not set in case of standalone / builtin
+		config["server_identifier"] = serverIdentifier;
 
-		workingObjects->securityUpdateChecker = new SecurityUpdateChecker(workingObjects->resourceLocator, proxy, serverIntegration, serverVersion, options.get("instance_dir",false));
-		workingObjects->securityUpdateChecker->start(24 * 60 * 60);
+		config["web_server_version"] = options.get("server_version", false); // not set in case of standalone / builtin
+
+		SecurityUpdateChecker *checker = new SecurityUpdateChecker(
+			workingObjects->securityUpdateCheckerSchema, config);
+		workingObjects->securityUpdateChecker = checker;
+		checker->resourceLocator = &workingObjects->resourceLocator;
+		checker->initialize();
+		checker->start();
 	}
 }
 
