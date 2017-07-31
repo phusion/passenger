@@ -93,7 +93,7 @@ private:
 		add("default_python", STRING_TYPE, OPTIONAL, DEFAULT_PYTHON);
 		add("default_nodejs", STRING_TYPE, OPTIONAL, DEFAULT_NODEJS);
 		add("ust_router_address", STRING_TYPE, OPTIONAL);
-		add("ust_router_password", STRING_TYPE, OPTIONAL);
+		add("ust_router_password", STRING_TYPE, OPTIONAL | SECRET);
 		add("default_user", STRING_TYPE, OPTIONAL, DEFAULT_WEB_APP_USER);
 		addWithDynamicDefault(
 			"default_group", STRING_TYPE, OPTIONAL | CACHE_DEFAULT_VALUE,
