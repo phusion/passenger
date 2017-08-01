@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include <ConfigKit/ConfigKit.h>
+#include <ConfigKit/ValidationUtils.h>
 #include <MemoryKit/palloc.h>
 #include <ServerKit/HttpServer.h>
 #include <Constants.h>
@@ -128,6 +129,7 @@ private:
 		addValidator(validate);
 		addValidator(validateMultiAppMode);
 		addValidator(validateSingleAppMode);
+		addValidator(ConfigKit::validateIntegrationMode);
 	}
 
 	static Json::Value inferDefaultValueForDefaultGroup(const ConfigKit::Store &config) {
