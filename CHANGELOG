@@ -1,5 +1,9 @@
-Release 5.1.7
+Release 5.1.8 (not yet released)
 --------------------------------
+
+
+Release 5.1.7
+-------------
 
  * Fixes compilation problems on some systems.
  * Upgrades the JSON parser (json-cpp) to version 1.8.1. This makes parsing slightly faster, adds various security checks and fixes some JSON generation issues.
