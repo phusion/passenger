@@ -80,7 +80,7 @@ ConfigKit implements these aspects, and also provides various other useful featu
 
 ### Unifying configuration management
 
-Another challenge pertains having different ways to configure a component. Should components be configured using getters and setters for each option? Or should they have a single method that accepts a struct (or some kind of key-value map) that specifies multiple options? Should components be configurable at all after construction. It would be great if we have a unified answer for all components in Passenger.
+Another challenge pertains having different ways to configure a component. Should components be configured using getters and setters for each option? Or should they have a single method that accepts a struct (or some kind of key-value map) that specifies multiple options? Should components be configurable at all after construction? It would be great if we have a unified answer for all components in Passenger.
 
 ConfigKit provides this unified answer:
 
@@ -106,11 +106,11 @@ At the time of writing (25 Feb 2017), ConfigKit was just introduced, so these pr
 
 ### ConfigKit::Schema
 
-Everything starts with `ConfigKit::Schema`. This is a class that lets you define a schema of supported configuration keys, their types and other properties like default values. Default values may either be static or dynamically calculated. `ConfigKit::Schema` also allows data validation against the schema.
+Everything starts with `ConfigKit::Schema`. This is a class that lets you define a schema of supported configuration keys, their types and other properties like default values. Default values may either be static or dynamically calculated. The type information defined in a `ConfigKit::Schema` allows data validation against the schema.
 
 ### ConfigKit::Store
 
-There is also `ConfigKit::Store`. This is a class that stores configuration values in such a way that it respects a schema.  The values supplied to and stored in `ConfigKit::Store` are JSON values (i.e. of the `Json::Value` type), although Store uses the schema to validate that you are actually putting the right JSON types in the Store.
+`ConfigKit::Store` is a class that stores configuration values in such a way that it respects a schema. The values supplied to and stored in `ConfigKit::Store` are JSON values (i.e. of the `Json::Value` type), although Store uses the schema to validate that you are actually putting the right JSON types in the Store.
 
 `ConfigKit::Store` also keeps track of which values are explicitly supplied and which ones are not.
 
@@ -214,6 +214,11 @@ schema.add("bar", STRING_TYPE, OPTIONAL);
 schema.addValidator(myValidator);
 schema.finalize();
 ~~~
+
+Miscellaneous notes about custom validators:
+
+ - They are always run, even if the normal type validation fails. For example if the caller tries to set the "foo" key to an array value (which is incompatible with the string type), then `myValidator` will still be called.
+ - All registered validators are called. A validator cannot prevent other validators from running.
 
 ### Inspecting the schema
 
@@ -399,7 +404,7 @@ Now that you've learned how to use ConfigKit by itself, how does fit in the bigg
 Let's demonstrate the good practices and design patterns through a number of annotated example classes:
 
  - `SecurityChecker` checks whether the given URL is secure to connect to, by checking a database of vulnerable sites. This example demonstrates basic usage of ConfigKit in a low-level component.
- - `DnsQuerier` looks up DNS information for a given URL, from multiple DNS servers. Because the algorithm that DnsQuerier uses is a performance-critical hot path (or so we claim for the sake of the example), it should cache certain configuration values in a variables instead of looking up the config store over and over, because the latter involve unnecessary hash table lookups. This example demonstrates caching of configuration values. More generally, it demonstrates how to perform arbitrary operations necessary for applying a configuration change.
+ - `DnsQuerier` looks up DNS information for a given URL, from multiple DNS servers. Because the algorithm that DnsQuerier uses is a performance-critical hot path (or so we claim for the sake of the example), it should cache certain configuration values in variables instead of looking up the config store over and over, because the latter involve unnecessary hash table lookups and memory allocations. This example demonstrates caching of configuration values. More generally, it demonstrates how to perform arbitrary operations necessary for applying a configuration change.
  - `Downloader` is a high-level class for downloading a specific URL. Under the hood it utilizes `SecurityChecker` and `DnsQuerier`. This example demonstrates how to combine its own configuration with the configuration of multiple lower-level classes.
 
 ### SecurityChecker example: a configurable, low-level component
@@ -642,7 +647,7 @@ private:
 public:
     // Defines the Downloader's configuration schema. As explained, this schema
     // includes not only options directly pertaining Downloader itself, but also
-    // options the subcomponents.
+    // options pertaining the subcomponents.
     struct Schema: public ConfigKit::Schema {
         // For each subcomponent that Downloader uses, we define a struct member
         // that contains that subcomponent's schema, as well as a translation table
@@ -716,6 +721,7 @@ public:
 
     // In addition to calling previewUpdate() on the internal configuration
     // store, we also perform similar operations on our subcomponents.
+    //
     // We use the `ConfigKit::previewConfigUpdateSubComponent()` utility
     // function to achieve this, passing to it a corresponding translator.
     // This function assumes that the subcomponent implements the
