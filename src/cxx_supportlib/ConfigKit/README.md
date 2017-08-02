@@ -136,6 +136,9 @@ schema.add("bar", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
 // An optional integer key, with default value 123.
 schema.add("baz", ConfigKit::INTEGER_TYPE, ConfigKit::OPTIONAL, 123);
 
+// An optional password key, without default value.
+schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
+
 // Call this when done, otherwise the object cannot be used yet.
 schema.finalize();
 ~~~
@@ -149,6 +152,7 @@ struct YourSchema: public ConfigKit::Schema {
         add("foo", STRING_TYPE, REQUIRED);
         add("bar", FLOAT_TYPE, OPTIONAL);
         add("baz", INT_TYPE, OPTIONAL, 123);
+        add("password", PASSWORD_TYPE, OPTIONAL);
         finalize();
     }
 };
@@ -236,13 +240,16 @@ You can inspect the schema using the `inspect()` method. It returns a Json::Valu
   },
   "baz": {
     "type": "integer"
+  },
+  "password": {
+    "type": "password"
   }
 }
 ~~~
 
 Description of the members:
 
- - `type`: the schema definition's type. Could be one of "string", "integer", "unsigned integer", "float" or "boolean".
+ - `type`: the schema definition's type. Could be one of "string", "password", "integer", "unsigned integer", "float", "boolean", "array" or "array of strings".
  - `required`: whether this key is required.
  - `has_default_value`: whether a default value is defined.
 
@@ -374,6 +381,11 @@ This will return a Json::Value in the following format:
     "default_value": 123,
     "effective_value": 123,
     // ...members from ConfigKit::Schema::inspect() go here...
+  },
+  "password": {
+    "user_value": "[FILTERED]",
+    "effective_value": "[FILTERED]",
+    // ...members from ConfigKit::Schema::inspect() go here...
   }
 }
 ~~~
@@ -383,6 +395,8 @@ Description of the members:
  - `user_value`: the value as explicitly set in the store. If null then it means that the value isn't set.
  - `default_value`: the default value as defined in the schema. May be absent.
  - `effective_value`: the effective value, i.e. the value that `get()` will return.
+
+Note that `inspect()` filters out the values of `PASSWORD_TYPE` fields (by setting the returned value to `"[FILTERED]"`), except for null values.
 
 If you want to fetch the effective values only, then use `inspectEffectiveValues()`:
 

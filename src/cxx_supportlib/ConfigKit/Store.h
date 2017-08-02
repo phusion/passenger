@@ -196,7 +196,8 @@ public:
 	 * Any keys in `updates` that are not registered are omitted from the result.
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 *
-	 * The format returned by this method is the same as that of `dump()`.
+	 * The format returned by this method is the same as that of `inspect()`,
+	 * with the exception that `PASSWORD_TYPE` field values are not filtered.
 	 */
 	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors) const {
 		if (!updates.isNull() && !updates.isObject()) {
