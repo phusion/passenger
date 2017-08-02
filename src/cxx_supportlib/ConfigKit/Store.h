@@ -188,15 +188,12 @@ public:
 	 * and whether it passes validation, without actually updating the
 	 * stored configuration.
 	 *
-	 * You can use the `forceApplyUpdatePreview` method to apply the result, but
-	 * be sure to do that only if validation passes.
-	 *
 	 * If validation fails then any validation errors will be added to `errors`.
 	 *
 	 * Any keys in `updates` that are not registered are omitted from the result.
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 *
-	 * The format returned by this method is the same as that of `dump()`.
+	 * The format returned by this method is the same as that of `inspect()`.
 	 */
 	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors) const {
 		if (!updates.isNull() && !updates.isObject()) {
@@ -230,9 +227,11 @@ public:
 				errors.push_back(error);
 			}
 
-			entry.schemaEntry->inspect(subdoc);
+			if (!(entry.schemaEntry->flags & HIDDEN)) {
+				entry.schemaEntry->inspect(subdoc);
+				result[it.getKey()] = subdoc;
+			}
 
-			result[it.getKey()] = subdoc;
 			it.next();
 		}
 
@@ -241,26 +240,6 @@ public:
 		}
 
 		return result;
-	}
-
-	/**
-	 * Applies the result of `updatePreview()` without performing any
-	 * validation. Be sure to only call this if you've verified that
-	 * `updatePreview()` passes validation, otherwise you will end up
-	 * with invalid data in the store.
-	 */
-	void forceApplyUpdatePreview(const Json::Value &preview) {
-		StringKeyTable<Entry>::Iterator it(entries);
-		while (*it != NULL) {
-			Entry &entry = it.getValue();
-			const Json::Value &subdoc =
-				const_cast<const Json::Value &>(preview)[it.getKey()];
-			if (isWritable(entry)) {
-				entry.userValue = subdoc["user_value"];
-			}
-			it.next();
-		}
-		updatedOnce = true;
 	}
 
 	/**
@@ -275,7 +254,20 @@ public:
 	bool update(const Json::Value &updates, vector<Error> &errors) {
 		Json::Value preview = previewUpdate(updates, errors);
 		if (errors.empty()) {
-			forceApplyUpdatePreview(preview);
+			StringKeyTable<Entry>::Iterator it(entries);
+			while (*it != NULL) {
+				Entry &entry = it.getValue();
+				if (isWritable(entry)) {
+					if (entry.schemaEntry->flags & HIDDEN) {
+						entry.userValue = updates[it.getKey()];
+					} else {
+						const Json::Value &subdoc = const_cast<const Json::Value &>(preview)[it.getKey()];
+						entry.userValue = subdoc["user_value"];
+					}
+				}
+				it.next();
+			}
+			updatedOnce = true;
 			return true;
 		} else {
 			return false;
@@ -318,6 +310,11 @@ public:
 
 		while (*it != NULL) {
 			const Entry &entry = it.getValue();
+			if (entry.schemaEntry->flags & HIDDEN) {
+				it.next();
+				continue;
+			}
+
 			Json::Value subdoc(Json::objectValue);
 
 			subdoc["user_value"] = maybeFilterPassword(entry, entry.userValue);

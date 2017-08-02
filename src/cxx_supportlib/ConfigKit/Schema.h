@@ -324,7 +324,10 @@ public:
 		StringKeyTable<Entry>::ConstIterator it(entries);
 
 		while (*it != NULL) {
-			result[it.getKey()] = it.getValue().inspect();
+			const Entry &entry = it.getValue();
+			if (!(entry.flags & HIDDEN)) {
+				result[it.getKey()] = entry.inspect();
+			}
 			it.next();
 		}
 

@@ -8196,6 +8196,7 @@ CXX_DEPENDENCY_MAP =
   ["src/cxx_supportlib/BackgroundEventLoop.h",
    "src/cxx_supportlib/ConfigKit/Common.h",
    "src/cxx_supportlib/ConfigKit/DummyTranslator.h",
+   "src/cxx_supportlib/ConfigKit/PrefixTranslator.h",
    "src/cxx_supportlib/ConfigKit/Schema.h",
    "src/cxx_supportlib/ConfigKit/Store.h",
    "src/cxx_supportlib/ConfigKit/Utils.h",
