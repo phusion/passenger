@@ -212,20 +212,4 @@ namespace tut {
 		ensure(!schema.validateValue("string_array", doc, error));
 		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
 	}
-
-	TEST_METHOD(13) {
-		set_test_name("inspect() only shows fields without the HIDDEN flag");
-
-		schema.add("foo", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
-		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL | ConfigKit::HIDDEN);
-		schema.finalize();
-
-		Json::Value doc = schema.inspect();
-		const ConfigKit::Schema::Entry *entry;
-
-		ensure(doc.isMember("foo"));
-		ensure(!doc.isMember("bar"));
-		ensure(schema.get("foo", &entry));
-		ensure(schema.get("bar", &entry));
-	}
 }

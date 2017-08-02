@@ -61,7 +61,6 @@ enum Flags {
 	REQUIRED = 1 << 0,
 	CACHE_DEFAULT_VALUE = 1 << 1,
 	READ_ONLY = 1 << 2,
-	HIDDEN = 1 << 3,
 
 	_DYNAMIC_DEFAULT_VALUE = 1 << 30,
 	_FROM_SUBSCHEMA = 1 << 31

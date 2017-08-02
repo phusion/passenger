@@ -176,7 +176,6 @@ The following types are available:
  * `OPTIONAL` -- this field is optional. Mutually exclusive with `REQUIRED`.
  * `CACHE_DEFAULT_VALUE` -- use in combination with [dynamic default values](#defining-default-values). When this flag is set, the value returned by the dynamic value function is cached so that the function won't be called over and over again.
  * `READ_ONLY` -- this field can only be set once. Only the first `ConfigKit::Store::update()` call actually updates the value; subsequent calls won't. Learn more about `update()` in [Using the store -- Putting data in the store](#putting-data-in-the-store).
- * `HIDDEN` -- this field will not show up in `ConfigKit::Schema::inspect()` and `ConfigKit::Store::inspect()` output.
 
 ### Defining default values
 
