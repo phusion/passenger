@@ -1,5 +1,5 @@
-# Rails asset pipeline support.
-location ~ "^/assets/.+-([0-9a-f]{32}|[0-9a-f]{64})\..+" {
+# Rails asset pipeline & webpacker support.
+location ~ "^/(assets|packs)/.+-([0-9a-f]{32}|[0-9a-f]{64}|[0-9a-f]{20})\..+" {
     error_page 490 = @static_asset;
     error_page 491 = @dynamic_request;
     recursive_error_pages on;

@@ -1,6 +1,7 @@
 Release 5.1.8 (not yet released)
 --------------------------------
 
+ * [Standalone] Automatically uses Nginx to serves static asset URLs that conform to the [webpacker](https://github.com/rails/webpacker) gem's format. Closes GH-1966.
  * [Enterprise] Fixes a potential use-after-free bug when reporting usage data to the Phusion licensing server. This bug only occurs when Passenger Enterprise is running inside a container.
 
 
