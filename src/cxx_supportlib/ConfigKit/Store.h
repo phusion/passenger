@@ -101,8 +101,10 @@ private:
 		}
 	}
 
-	static Json::Value maybeFilterPassword(const Entry &entry, const Json::Value &value) {
-		if (entry.schemaEntry->type == PASSWORD_TYPE) {
+	static Json::Value maybeFilterSecret(const Entry &entry, const Json::Value &value,
+		bool shouldFilter)
+	{
+		if (shouldFilter && entry.schemaEntry->flags & SECRET) {
 			if (value.isNull()) {
 				return Json::nullValue;
 			} else {
@@ -194,9 +196,12 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 *
 	 * The format returned by this method is the same as that of `inspect()`,
-	 * with the exception that `PASSWORD_TYPE` field values are not filtered.
+	 * with the exception that -- if `filterSecrets` is set to false, values of fields
+	 * marked with the `SECRET` flag are not filtered.
 	 */
-	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors) const {
+	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors,
+		bool filterSecrets = true) const
+	{
 		if (!updates.isNull() && !updates.isObject()) {
 			errors.push_back(Error("The JSON document must be an object"));
 			return inspect();
@@ -212,18 +217,24 @@ public:
 			Json::Value subdoc(Json::objectValue);
 
 			if (isWritable(entry) && updates.isMember(key)) {
-				subdoc["user_value"] = updates[key];
+				subdoc["user_value"] = maybeFilterSecret(entry,
+					updates[key], filterSecrets);
 			} else {
-				subdoc["user_value"] = entry.userValue;
+				subdoc["user_value"] = maybeFilterSecret(entry,
+					entry.userValue, filterSecrets);
 			}
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = entry.getDefaultValue(*this);
+				subdoc["default_value"] = maybeFilterSecret(entry,
+					entry.getDefaultValue(*this), filterSecrets);
 			}
 
 			const Json::Value &effectiveValue =
 				subdoc["effective_value"] =
-					getEffectiveValue(subdoc["user_value"],
-						subdoc["default_value"]);
+					maybeFilterSecret(
+						entry,
+						getEffectiveValue(subdoc["user_value"],
+							subdoc["default_value"]),
+						filterSecrets);
 			if (!schema.validateValue(it.getKey(), effectiveValue, error)) {
 				errors.push_back(error);
 			}
@@ -251,7 +262,7 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 */
 	bool update(const Json::Value &updates, vector<Error> &errors) {
-		Json::Value preview = previewUpdate(updates, errors);
+		Json::Value preview = previewUpdate(updates, errors, false);
 		if (errors.empty()) {
 			StringKeyTable<Entry>::Iterator it(entries);
 			while (*it != NULL) {
@@ -308,11 +319,13 @@ public:
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
-			subdoc["user_value"] = maybeFilterPassword(entry, entry.userValue);
+			subdoc["user_value"] = maybeFilterSecret(entry, entry.userValue, true);
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = maybeFilterPassword(entry, entry.getDefaultValue(*this));
+				subdoc["default_value"] = maybeFilterSecret(entry,
+					entry.getDefaultValue(*this), true);
 			}
-			subdoc["effective_value"] = maybeFilterPassword(entry, entry.getEffectiveValue(*this));
+			subdoc["effective_value"] = maybeFilterSecret(entry,
+				entry.getEffectiveValue(*this), true);
 			entry.schemaEntry->inspect(subdoc);
 
 			result[it.getKey()] = subdoc;

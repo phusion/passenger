@@ -44,7 +44,6 @@ namespace tut {
 		Json::Value doc;
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::REQUIRED);
 		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::REQUIRED);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::REQUIRED);
@@ -57,10 +56,6 @@ namespace tut {
 		ensure(schema.validateValue("string", 123, error));
 		ensure(schema.validateValue("string", 123.45, error));
 		ensure(schema.validateValue("string", true, error));
-		ensure(schema.validateValue("password", "password", error));
-		ensure(schema.validateValue("password", 123, error));
-		ensure(schema.validateValue("password", 123.45, error));
-		ensure(schema.validateValue("password", true, error));
 		ensure(schema.validateValue("integer", 123, error));
 		ensure(schema.validateValue("integer", 123.45, error));
 		ensure(schema.validateValue("integer", true, error));
@@ -138,7 +133,6 @@ namespace tut {
 		Json::Value doc;
 
 		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL);
-		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
 		schema.add("integer", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
@@ -151,10 +145,6 @@ namespace tut {
 		ensure(schema.validateValue("string", 123, error));
 		ensure(schema.validateValue("string", 123.45, error));
 		ensure(schema.validateValue("string", true, error));
-		ensure(schema.validateValue("password", "password", error));
-		ensure(schema.validateValue("password", 123, error));
-		ensure(schema.validateValue("password", 123.45, error));
-		ensure(schema.validateValue("password", true, error));
 		ensure(schema.validateValue("integer", 123, error));
 		ensure(schema.validateValue("integer", 123.45, error));
 		ensure(schema.validateValue("integer", true, error));
@@ -211,5 +201,18 @@ namespace tut {
 		doc.append("string");
 		ensure(!schema.validateValue("string_array", doc, error));
 		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
+	}
+
+
+	/*********** Test inspect() ***********/
+
+	TEST_METHOD(20) {
+		set_test_name("It marks secret fields as such");
+
+		schema.add("secret", ConfigKit::INT_TYPE, ConfigKit::REQUIRED | ConfigKit::SECRET);
+		schema.finalize();
+
+		Json::Value doc = schema.inspect();
+		ensure(doc["secret"]["secret"].asBool());
 	}
 }

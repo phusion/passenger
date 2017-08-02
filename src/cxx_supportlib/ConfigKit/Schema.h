@@ -85,6 +85,9 @@ public:
 			if (flags & READ_ONLY) {
 				doc["read_only"] = true;
 			}
+			if (flags & SECRET) {
+				doc["secret"] = true;
+			}
 			if (defaultValueGetter) {
 				doc["has_default_value"] = true;
 			}
@@ -241,7 +244,6 @@ public:
 
 		switch (entry->type) {
 		case STRING_TYPE:
-		case PASSWORD_TYPE:
 			if (value.isConvertibleTo(Json::stringValue)) {
 				return true;
 			} else {
