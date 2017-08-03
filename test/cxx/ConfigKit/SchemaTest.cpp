@@ -50,6 +50,8 @@ namespace tut {
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::REQUIRED);
 		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::REQUIRED);
 		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::REQUIRED);
+		schema.add("object", ConfigKit::OBJECT_TYPE, ConfigKit::REQUIRED);
+		schema.add("any", ConfigKit::ANY_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
 		ensure(schema.validateValue("string", "string", error));
@@ -68,6 +70,13 @@ namespace tut {
 		ensure(schema.validateValue("boolean", true, error));
 		ensure(schema.validateValue("boolean", 123, error));
 		ensure(schema.validateValue("boolean", 123.45, error));
+		ensure(schema.validateValue("any", "string", error));
+		ensure(schema.validateValue("any", 123, error));
+		ensure(schema.validateValue("any", 123.45, error));
+		ensure(schema.validateValue("any", -123, error));
+		ensure(schema.validateValue("any", true, error));
+		ensure(schema.validateValue("any", Json::arrayValue, error));
+		ensure(schema.validateValue("any", Json::objectValue, error));
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append("string");
@@ -78,6 +87,11 @@ namespace tut {
 		doc.append("string");
 		doc.append("string");
 		ensure(schema.validateValue("string_array", doc, error));
+
+		doc = Json::Value(Json::objectValue);
+		doc["string"] = "string";
+		doc["int"] = 123;
+		ensure(schema.validateValue("object", doc, error));
 	}
 
 	TEST_METHOD(7) {
@@ -90,6 +104,7 @@ namespace tut {
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::REQUIRED);
 		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::REQUIRED);
 		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::REQUIRED);
+		schema.add("object", ConfigKit::OBJECT_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));
@@ -115,6 +130,9 @@ namespace tut {
 		doc.append("string");
 		ensure(!schema.validateValue("string_array", doc, error));
 		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
+
+		ensure(!schema.validateValue("object", "string", error));
+		ensure_equals(error.getMessage(), "'object' must be a JSON object");
 	}
 
 	TEST_METHOD(10) {
@@ -139,6 +157,8 @@ namespace tut {
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::OPTIONAL);
 		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::OPTIONAL);
 		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::OPTIONAL);
+		schema.add("object", ConfigKit::OBJECT_TYPE, ConfigKit::OPTIONAL);
+		schema.add("any", ConfigKit::ANY_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
 		ensure(schema.validateValue("string", "string", error));
@@ -157,6 +177,13 @@ namespace tut {
 		ensure(schema.validateValue("boolean", true, error));
 		ensure(schema.validateValue("boolean", 123, error));
 		ensure(schema.validateValue("boolean", 123.45, error));
+		ensure(schema.validateValue("any", "string", error));
+		ensure(schema.validateValue("any", 123, error));
+		ensure(schema.validateValue("any", 123.45, error));
+		ensure(schema.validateValue("any", -123, error));
+		ensure(schema.validateValue("any", true, error));
+		ensure(schema.validateValue("any", Json::arrayValue, error));
+		ensure(schema.validateValue("any", Json::objectValue, error));
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append("string");
@@ -167,6 +194,11 @@ namespace tut {
 		doc.append("string");
 		doc.append("string");
 		ensure(schema.validateValue("string_array", doc, error));
+
+		doc = Json::Value(Json::objectValue);
+		doc["string"] = "string";
+		doc["int"] = 123;
+		ensure(schema.validateValue("object", doc, error));
 	}
 
 	TEST_METHOD(12) {
@@ -179,6 +211,7 @@ namespace tut {
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::OPTIONAL);
 		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::OPTIONAL);
 		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::OPTIONAL);
+		schema.add("object", ConfigKit::OBJECT_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
 		ensure(!schema.validateValue("integer", "string", error));
@@ -201,6 +234,9 @@ namespace tut {
 		doc.append("string");
 		ensure(!schema.validateValue("string_array", doc, error));
 		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
+
+		ensure(!schema.validateValue("object", "string", error));
+		ensure_equals(error.getMessage(), "'object' must be a JSON object");
 	}
 
 

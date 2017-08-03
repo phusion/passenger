@@ -304,6 +304,15 @@ public:
 				error = Error("'{{" + key + "}}' must be an array");
 				return false;
 			}
+		case OBJECT_TYPE:
+			if (value.isObject()) {
+				return true;
+			} else {
+				error = Error("'{{" + key + "}}' must be a JSON object");
+				return false;
+			}
+		case ANY_TYPE:
+			return true;
 		default:
 			P_BUG("Unknown type " + Passenger::toString((int) entry->type));
 			return false;

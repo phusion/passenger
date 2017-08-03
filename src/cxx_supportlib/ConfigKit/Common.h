@@ -52,6 +52,10 @@ enum Type {
 	ARRAY_TYPE,
 	STRING_ARRAY_TYPE,
 
+	OBJECT_TYPE,
+
+	ANY_TYPE,
+
 	UNKNOWN_TYPE
 };
 

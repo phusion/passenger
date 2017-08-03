@@ -172,6 +172,8 @@ The following types are available:
  * `BOOL_TYPE` -- a boolean.
  * `ARRAY_TYPE` -- an generic array. May contain any values.
  * `STRING_ARRAY_TYPE` -- an array of strings.
+ * `OBJECT_TYPE` -- a generic JSON object. May contain any values.
+ * `ANY_TYPE` -- any JSON value.
 
 #### Flags
 
@@ -250,7 +252,7 @@ You can inspect the schema using the `inspect()` method. It returns a Json::Valu
 
 Description of the members:
 
- - `type`: the schema definition's type. Could be one of "string", "integer", "unsigned integer", "float", "boolean", "array" or "array of strings".
+ - `type`: the schema definition's type. Could be one of "string", "integer", "unsigned integer", "float", "boolean", "array", "array of strings", "object" or "any".
  - `required`: whether this key is required.
  - `has_default_value`: whether a default value is defined.
 

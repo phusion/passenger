@@ -119,6 +119,10 @@ getTypeString(Type type) {
 		return P_STATIC_STRING("array");
 	case STRING_ARRAY_TYPE:
 		return P_STATIC_STRING("array of strings");
+	case OBJECT_TYPE:
+		return P_STATIC_STRING("object");
+	case ANY_TYPE:
+		return P_STATIC_STRING("any");
 	default:
 		return P_STATIC_STRING("unknown");
 	}
