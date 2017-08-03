@@ -28,6 +28,14 @@
 
 #include <string>
 #include <vector>
+#include <cassert>
+// for std::swap()
+#if __cplusplus >= 201103L
+	#include <utility>
+#else
+	#include <algorithm>
+#endif
+#include <boost/config.hpp>
 
 #include <ConfigKit/Common.h>
 #include <ConfigKit/Schema.h>
@@ -303,6 +311,12 @@ public:
 		}
 
 		return result;
+	}
+
+	void swap(Store &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		std::swap(schema, other.schema);
+		entries.swap(other.entries);
+		std::swap(updatedOnce, other.updatedOnce);
 	}
 
 	/**
