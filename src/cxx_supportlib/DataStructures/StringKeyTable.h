@@ -27,7 +27,14 @@
 #define _PASSENGER_DATA_STRUCTURES_STRING_KEY_TABLE_H_
 
 #include <boost/move/move.hpp>
+#include <boost/config.hpp>
 #include <boost/cstdint.hpp>
+// for std::swap()
+#if __cplusplus >= 201103L
+	#include <utility>
+#else
+	#include <algorithm>
+#endif
 #include <limits>
 #include <cstring>
 #include <cassert>
@@ -526,6 +533,16 @@ public:
 
 	bool empty() const {
 		return m_population == 0;
+	}
+
+	void swap(StringKeyTable<T, MoveSupport> &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		std::swap(m_cells, other.m_cells);
+		std::swap(m_arraySize, other.m_arraySize);
+		std::swap(m_population, other.m_population);
+		std::swap(nonEmptyIndex, other.nonEmptyIndex);
+		std::swap(m_storage, other.m_storage);
+		std::swap(m_storageSize, other.m_storageSize);
+		std::swap(m_storageUsed, other.m_storageUsed);
 	}
 
 
