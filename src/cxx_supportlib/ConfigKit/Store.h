@@ -87,7 +87,7 @@ private:
 		}
 	};
 
-	const Schema &schema;
+	const Schema *schema;
 	StringKeyTable<Entry> entries;
 	bool updatedOnce;
 
@@ -120,7 +120,7 @@ private:
 	}
 
 	void applyCustomValidators(const Json::Value &updates, vector<Error> &errors) const {
-		Store tempStore(schema);
+		Store tempStore(*schema);
 		StringKeyTable<Entry>::Iterator it(tempStore.entries);
 
 		while (*it != NULL) {
@@ -135,8 +135,8 @@ private:
 		}
 
 		boost::container::vector<Schema::Validator>::const_iterator v_it, v_end
-			= schema.getValidators().end();
-		for (v_it = schema.getValidators().begin(); v_it != v_end; v_it++) {
+			= schema->getValidators().end();
+		for (v_it = schema->getValidators().begin(); v_it != v_end; v_it++) {
 			const Schema::Validator &validator = *v_it;
 			validator(tempStore, errors);
 		}
@@ -144,7 +144,7 @@ private:
 
 public:
 	Store(const Schema &_schema)
-		: schema(_schema),
+		: schema(&_schema),
 		  updatedOnce(false)
 	{
 		Schema::ConstIterator it = _schema.getIterator();
@@ -159,7 +159,7 @@ public:
 	}
 
 	const Schema &getSchema() const {
-		return schema;
+		return *schema;
 	}
 
 	/**
@@ -235,7 +235,7 @@ public:
 						getEffectiveValue(subdoc["user_value"],
 							subdoc["default_value"]),
 						filterSecrets);
-			if (!schema.validateValue(it.getKey(), effectiveValue, error)) {
+			if (!schema->validateValue(it.getKey(), effectiveValue, error)) {
 				errors.push_back(error);
 			}
 
@@ -245,7 +245,7 @@ public:
 			it.next();
 		}
 
-		if (!schema.getValidators().empty()) {
+		if (!schema->getValidators().empty()) {
 			applyCustomValidators(updates, errors);
 		}
 
