@@ -137,8 +137,8 @@ namespace tut {
 		schema.add("integer_unsigned", ConfigKit::UINT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::OPTIONAL);
 		schema.add("boolean", ConfigKit::BOOL_TYPE, ConfigKit::OPTIONAL);
-		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::REQUIRED);
-		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::REQUIRED);
+		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::OPTIONAL);
+		schema.add("string_array", ConfigKit::STRING_ARRAY_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
 		ensure(schema.validateValue("string", "string", error));

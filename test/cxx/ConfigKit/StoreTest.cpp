@@ -29,6 +29,7 @@ namespace tut {
 
 	DEFINE_TEST_GROUP(ConfigKit_StoreTest);
 
+
 	/*********** Test validation ***********/
 
 	TEST_METHOD(1) {
