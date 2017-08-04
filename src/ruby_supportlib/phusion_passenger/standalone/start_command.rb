@@ -535,6 +535,7 @@ module PhusionPassenger
             @engine.stop
             STDOUT.puts " done"
             STDOUT.flush
+            File.delete(@options[:socket_file]) if @options[:engine] == "nginx" && @options[:socket_file]
           end
           @engine = nil
         end
