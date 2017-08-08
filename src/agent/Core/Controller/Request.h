@@ -86,7 +86,7 @@ public:
 	Options options;
 	AbstractSessionPtr session;
 	const LString *host;
-	ControllerRequestConfigCachePtr configCache;
+	ControllerRequestConfigPtr config;
 
 	ServerKit::FdSinkChannel appSink;
 	ServerKit::FdSourceChannel appSource;

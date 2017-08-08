@@ -393,8 +393,8 @@ Controller::determineHeaderSizeForSessionProtocol(Request *req,
 			}
 		}
 	} else {
-		state.serverName = req->configCache->defaultServerName;
-		state.serverPort = req->configCache->defaultServerPort;
+		state.serverName = req->config->defaultServerName;
+		state.serverPort = req->config->defaultServerPort;
 	}
 
 	dataSize += sizeof("SERVER_NAME");
@@ -404,7 +404,7 @@ Controller::determineHeaderSizeForSessionProtocol(Request *req,
 	dataSize += state.serverPort.size() + 1;
 
 	dataSize += sizeof("SERVER_SOFTWARE");
-	dataSize += req->configCache->serverSoftware.size() + 1;
+	dataSize += req->config->serverSoftware.size() + 1;
 
 	dataSize += sizeof("SERVER_PROTOCOL");
 	dataSize += sizeof("HTTP/1.1");
@@ -515,7 +515,7 @@ Controller::constructHeaderForSessionProtocol(Request *req, char * restrict buff
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_SOFTWARE"));
-	pos = appendData(pos, end, req->configCache->serverSoftware);
+	pos = appendData(pos, end, req->config->serverSoftware);
 	pos = appendData(pos, end, "", 1);
 
 	pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("SERVER_PROTOCOL"));

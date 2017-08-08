@@ -113,7 +113,7 @@ private:
 
 		prep.ageValueSize = integerSizeInOtherBase<time_t, 10>(prep.age);
 		prep.contentLengthStrSize = uintSizeAsString(entry.body->httpBodySize);
-		prep.showVersionInHeader = req->configCache->showVersionInHeader;
+		prep.showVersionInHeader = req->config->showVersionInHeader;
 	}
 
 	template<typename Server>

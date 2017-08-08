@@ -499,7 +499,11 @@ private:
 
 	static void configureController(Controller *controller, Json::Value updates) {
 		vector<ConfigKit::Error> errors;
-		if (!controller->configure(updates, errors)) {
+		ControllerConfigChangeRequest req;
+
+		if (controller->prepareConfigChange(updates, errors, req)) {
+			controller->commitConfigChange(req);
+		} else {
 			P_ERROR("Unable to apply configuration change to Core controller.\n"
 				"Configuration: " << updates.toStyledString() << "\n"
 				"Errors: " << toString(errors));

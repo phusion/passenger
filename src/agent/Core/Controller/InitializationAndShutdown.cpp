@@ -49,8 +49,8 @@ Controller::Controller(ServerKit::Context *context, const ControllerSchema &sche
 	const Json::Value &initialConfig)
 	: ParentClass(context, schema, initialConfig),
 
-	  mainConfigCache(config),
-	  requestConfigCache(new ControllerRequestConfigCache(config)),
+	  mainConfig(config),
+	  requestConfig(new ControllerRequestConfig(config)),
 	  poolOptionsCache(4),
 
 	  PASSENGER_APP_GROUP_NAME("!~PASSENGER_APP_GROUP_NAME"),
@@ -115,9 +115,9 @@ Controller::initialize() {
 	getContext()->defaultFileBufferedChannelConfig.bufferDir =
 		config["data_buffer_dir"].asString();
 
-	if (requestConfigCache->singleAppMode) {
+	if (requestConfig->singleAppMode) {
 		boost::shared_ptr<Options> options = boost::make_shared<Options>();
-		fillPoolOptionsFromConfigCaches(*options, requestConfigCache);
+		fillPoolOptionsFromConfigCaches(*options, mainConfig.pool, requestConfig);
 
 		string appRoot = config["app_root"].asString();
 		string environment = config["environment"].asString();

@@ -37,11 +37,14 @@
 #endif
 #include <boost/config.hpp>
 
+#include <jsoncpp/json.h>
+
 #include <ConfigKit/Common.h>
 #include <ConfigKit/Schema.h>
 #include <ConfigKit/Utils.h>
-#include <jsoncpp/json.h>
+#include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 namespace ConfigKit {
@@ -123,6 +126,18 @@ private:
 		}
 	}
 
+	void initialize() {
+		Schema::ConstIterator it = schema->getIterator();
+
+		while (*it != NULL) {
+			Entry entry(it.getValue());
+			entries.insert(it.getKey(), entry);
+			it.next();
+		}
+
+		entries.compact();
+	}
+
 	bool isWritable(const Entry &entry) const {
 		return !(entry.schemaEntry->flags & READ_ONLY) || !updatedOnce;
 	}
@@ -151,23 +166,62 @@ private:
 	}
 
 public:
+	Store()
+		: schema(NULL),
+		  entries(0, 0),
+		  updatedOnce(false)
+		{ }
+
 	Store(const Schema &_schema)
 		: schema(&_schema),
 		  updatedOnce(false)
 	{
-		Schema::ConstIterator it = _schema.getIterator();
+		initialize();
+	}
 
-		while (*it != NULL) {
-			Entry entry(it.getValue());
-			entries.insert(it.getKey(), entry);
-			it.next();
+	Store(const Schema &_schema, const Json::Value &initialValues)
+		: schema(&_schema),
+		  updatedOnce(false)
+	{
+		vector<Error> errors;
+		initialize();
+		if (!update(initialValues, errors)) {
+			throw ArgumentException("Invalid initial configuration: "
+				+ toString(errors));
 		}
+	}
 
-		entries.compact();
+	template<typename Translator>
+	Store(const Schema &_schema, const Json::Value &initialValues,
+		const Translator &translator)
+		: schema(&_schema),
+		  updatedOnce(false)
+	{
+		vector<Error> errors;
+		initialize();
+		if (!update(translator.translate(initialValues), errors)) {
+			errors = translator.reverseTranslate(errors);
+			throw ArgumentException("Invalid initial configuration: "
+				+ toString(errors));
+		}
+	}
+
+	Store(const Store &other, const Json::Value &updates, vector<Error> &errors)
+		: schema(other.schema),
+		  updatedOnce(false)
+	{
+		initialize();
+		if (update(other.inspectUserValues(), errors)) {
+			update(updates, errors);
+		}
 	}
 
 	const Schema &getSchema() const {
 		return *schema;
+	}
+
+	bool hasBeenUpdatedAtLeastOnce() const {
+		return updatedOnce;
 	}
 
 	/**
@@ -362,6 +416,24 @@ public:
 		while (*it != NULL) {
 			const Entry &entry = it.getValue();
 			result[it.getKey()] = entry.getEffectiveValue(*this);
+			it.next();
+		}
+
+		return result;
+	}
+
+	/**
+	 * Inspects the current store's configuration keys and user
+	 * values only. This is like `inspect()` but much less verbose.
+	 * Note that values with the SECRET flag are not filtered.
+	 */
+	Json::Value inspectUserValues() const {
+		Json::Value result(Json::objectValue);
+		StringKeyTable<Entry>::ConstIterator it(entries);
+
+		while (*it != NULL) {
+			const Entry &entry = it.getValue();
+			result[it.getKey()] = entry.userValue;
 			it.next();
 		}
 

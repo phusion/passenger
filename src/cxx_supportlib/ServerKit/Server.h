@@ -29,6 +29,8 @@
 #include <psg_sysqueue.h>
 
 #include <boost/cstdint.hpp>
+#include <boost/config.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/macros.hpp>
@@ -36,6 +38,12 @@
 #include <new>
 #include <ev++.h>
 
+// for std::swap()
+#if __cplusplus >= 201103L
+	#include <utility>
+#else
+	#include <algorithm>
+#endif
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -163,6 +171,41 @@ public:
 	}
 };
 
+struct BaseServerConfigRealization {
+	unsigned int acceptBurstCount: 7;
+	bool startReadingAfterAccept: 1;
+	unsigned int minSpareClients: 12;
+	unsigned int clientFreelistLimit: 12;
+
+	BaseServerConfigRealization(const ConfigKit::Store &config)
+		: acceptBurstCount(config["accept_burst_count"].asUInt()),
+		  startReadingAfterAccept(config["start_reading_after_accept"].asBool()),
+		  minSpareClients(config["min_spare_clients"].asUInt()),
+		  clientFreelistLimit(config["client_freelist_limit"].asUInt())
+		{ }
+
+	void swap(BaseServerConfigRealization &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		#define SWAP_BITFIELD(Type, name) \
+			do { \
+				Type tmp = name; \
+				name = other.name; \
+				other.name = tmp; \
+			} while (false)
+
+		SWAP_BITFIELD(unsigned int, acceptBurstCount);
+		SWAP_BITFIELD(bool, startReadingAfterAccept);
+		SWAP_BITFIELD(unsigned int, minSpareClients);
+		SWAP_BITFIELD(unsigned int, clientFreelistLimit);
+
+		#undef SWAP_BITFIELD
+	}
+};
+
+struct BaseServerConfigChangeRequest {
+	boost::scoped_ptr<ConfigKit::Store> config;
+	boost::scoped_ptr<BaseServerConfigRealization> configRlz;
+};
+
 
 /**
  * A highly optimized generic base class for evented socket servers, implementing basic,
@@ -226,13 +269,11 @@ public:
 	static const unsigned int MAX_ACCEPT_BURST_COUNT = 127;
 
 	typedef void (*Callback)(DerivedServer *server);
+	typedef BaseServerConfigChangeRequest ConfigChangeRequest;
 
 	/***** Configuration *****/
 	ConfigKit::Store config;
-	unsigned int acceptBurstCount: 7;
-	bool startReadingAfterAccept: 1;
-	unsigned int minSpareClients: 12;
-	unsigned int clientFreelistLimit: 12;
+	BaseServerConfigRealization configRlz;
 	Callback shutdownFinishCallback;
 
 	/***** Working state and statistics (do not modify) *****/
@@ -273,7 +314,7 @@ private:
 		P_ASSERT_EQ(serverState, ACTIVE);
 		SKS_DEBUG("New clients can be accepted on a server socket");
 
-		for (unsigned int i = 0; i < acceptBurstCount; i++) {
+		for (unsigned int i = 0; i < configRlz.acceptBurstCount; i++) {
 			fd = acceptNonBlockingSocket(io->fd);
 			if (fd == -1) {
 				error = true;
@@ -441,7 +482,7 @@ private:
 	}
 
 	bool addClientToFreelist(Client *client) {
-		if (freeClientCount < clientFreelistLimit) {
+		if (freeClientCount < configRlz.clientFreelistLimit) {
 			STAILQ_INSERT_HEAD(&freeClients, client, nextClient.freeClient);
 			freeClientCount++;
 			client->refcount.store(2, boost::memory_order_relaxed);
@@ -565,7 +606,7 @@ protected:
 
 			onClientAccepted(client);
 			if (client->connected()) {
-				if (startReadingAfterAccept) {
+				if (configRlz.startReadingAfterAccept) {
 					client->input.startReading();
 				} else {
 					client->input.startReadingInNextTick();
@@ -658,23 +699,13 @@ protected:
 		// Do nothing.
 	}
 
-	virtual void onConfigChange(const ConfigKit::Store *oldConfig) {
-		acceptBurstCount = config["accept_burst_count"].asUInt();
-		startReadingAfterAccept = config["start_reading_after_accept"].asBool();
-		minSpareClients = config["min_spare_clients"].asUInt();
-		clientFreelistLimit = config["client_freelist_limit"].asUInt();
-	}
-
 public:
 	/***** Public methods *****/
 
 	BaseServer(Context *context, const BaseServerSchema &schema,
 		const Json::Value &initialConfig = Json::Value())
-		: config(schema),
-		  acceptBurstCount(0),
-		  startReadingAfterAccept(true),
-		  minSpareClients(0),
-		  clientFreelistLimit(0),
+		: config(schema, initialConfig),
+		  configRlz(config),
 		  shutdownFinishCallback(NULL),
 		  serverState(ACTIVE),
 		  freeClientCount(0),
@@ -692,12 +723,6 @@ public:
 		  nEndpoints(0),
 		  accept4Available(true)
 	{
-		vector<ConfigKit::Error> errors;
-		if (!config.update(initialConfig, errors)) {
-			throw ArgumentException("Invalid initial configuration: " +
-				toString(errors));
-		}
-
 		STAILQ_INIT(&freeClients);
 		TAILQ_INIT(&activeClients);
 		TAILQ_INIT(&disconnectedClients);
@@ -721,7 +746,6 @@ public:
 	/***** Initialization, listening and shutdown *****/
 
 	virtual void initialize() {
-		onConfigChange(NULL);
 		statisticsUpdateWatcher.set(5, 5);
 		statisticsUpdateWatcher.start();
 	}
@@ -729,7 +753,7 @@ public:
 	// Pre-create multiple client objects so that they get allocated
 	// near each other in memory. Hopefully increases CPU cache locality.
 	void createSpareClients() {
-		for (unsigned int i = 0; i < minSpareClients; i++) {
+		for (unsigned int i = 0; i < configRlz.minSpareClients; i++) {
 			Client *client = createNewClientObject();
 			client->setConnState(Client::IN_FREELIST);
 			STAILQ_INSERT_HEAD(&freeClients, client, nextClient.freeClient);
@@ -1062,18 +1086,21 @@ public:
 		return P_STATIC_STRING("Server");
 	}
 
-	virtual Json::Value previewConfigUpdate(const Json::Value &updates,
-		vector<ConfigKit::Error> &errors)
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, BaseServerConfigChangeRequest &req)
 	{
-		return config.previewUpdate(updates, errors);
-	}
-
-	virtual bool configure(const Json::Value &updates, vector<ConfigKit::Error> &errors) {
-		ConfigKit::Store oldConfig = config;
-		if (config.update(updates, errors)) {
-			onConfigChange(&oldConfig);
+		req.config.reset(new ConfigKit::Store(config, updates, errors));
+		if (errors.empty()) {
+			req.configRlz.reset(new BaseServerConfigRealization(*req.config));
 		}
 		return errors.empty();
+	}
+
+	void commitConfigChange(BaseServerConfigChangeRequest &req)
+		BOOST_NOEXCEPT_OR_NOTHROW
+	{
+		config.swap(*req.config);
+		configRlz.swap(*req.configRlz);
 	}
 
 	virtual Json::Value inspectConfig() const {

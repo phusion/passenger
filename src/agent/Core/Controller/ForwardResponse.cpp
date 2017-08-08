@@ -808,7 +808,7 @@ Controller::sendResponseHeaderWithWritev(Client *client, Request *req,
 {
 	TRACE_POINT();
 
-	if (OXT_UNLIKELY(mainConfigCache.benchmarkMode == BM_RESPONSE_BEGIN)) {
+	if (OXT_UNLIKELY(mainConfig.benchmarkMode == BM_RESPONSE_BEGIN)) {
 		writeBenchmarkResponse(&client, &req, false);
 		return true;
 	}
@@ -983,7 +983,7 @@ void
 Controller::writeResponseAndMarkForTurboCaching(Client *client, Request *req,
 	const MemoryKit::mbuf &buffer)
 {
-	if (OXT_LIKELY(mainConfigCache.benchmarkMode != BM_RESPONSE_BEGIN)) {
+	if (OXT_LIKELY(mainConfig.benchmarkMode != BM_RESPONSE_BEGIN)) {
 		writeResponse(client, buffer);
 	}
 	markResponsePartForTurboCaching(client, req, buffer);
@@ -1015,8 +1015,8 @@ Controller::maybeThrottleAppSource(Client *client, Request *req) {
 	if (!req->ended()) {
 		assert(client->output.getBuffersFlushedCallback() == NULL);
 		assert(client->output.getDataFlushedCallback() == getClientOutputDataFlushedCallback());
-		if (mainConfigCache.responseBufferHighWatermark > 0
-		 && client->output.getTotalBytesBuffered() >= mainConfigCache.responseBufferHighWatermark)
+		if (mainConfig.responseBufferHighWatermark > 0
+		 && client->output.getTotalBytesBuffered() >= mainConfig.responseBufferHighWatermark)
 		{
 			SKC_TRACE(client, 2, "Application is sending response data quicker than the client "
 				"can keep up with. Throttling application socket");

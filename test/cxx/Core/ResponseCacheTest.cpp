@@ -35,7 +35,7 @@ namespace tut {
 		}
 
 		void reset() {
-			req.configCache.reset(new ControllerRequestConfigCache(config));
+			req.config.reset(new ControllerRequestConfig(config));
 			req.headers.clear();
 			req.secureHeaders.clear();
 			req.httpMajor = 1;

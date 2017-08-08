@@ -26,59 +26,57 @@
 #ifndef _PASSENGER_CONFIG_KIT_UTILS_H_
 #define _PASSENGER_CONFIG_KIT_UTILS_H_
 
-#include <string>
 #include <vector>
-
+#include <boost/function.hpp>
 #include <ConfigKit/Common.h>
-#include <StaticString.h>
-#include <Utils/FastStringStream.h>
 
 namespace Passenger {
 namespace ConfigKit {
 
 using namespace std;
 
-class Error;
+
+template<typename Component>
+struct CallbackTypes {
+	typedef
+		boost::function<void (const vector<Error> &errors, typename Component::ConfigChangeRequest &req)>
+		PrepareConfigChange;
+	typedef
+		boost::function<void (typename Component::ConfigChangeRequest &req)>
+		CommitConfigChange;
+	typedef
+		boost::function<void (const Json::Value &config)>
+		InspectConfig;
+};
 
 
-inline StaticString
-getTypeString(Type type) {
-	switch (type) {
-	case STRING_TYPE:
-		return P_STATIC_STRING("string");
-	case INT_TYPE:
-		return P_STATIC_STRING("integer");
-	case UINT_TYPE:
-		return P_STATIC_STRING("unsigned integer");
-	case FLOAT_TYPE:
-		return P_STATIC_STRING("float");
-	case BOOL_TYPE:
-		return P_STATIC_STRING("boolean");
-	case ARRAY_TYPE:
-		return P_STATIC_STRING("array");
-	case STRING_ARRAY_TYPE:
-		return P_STATIC_STRING("array of strings");
-	case OBJECT_TYPE:
-		return P_STATIC_STRING("object");
-	case ANY_TYPE:
-		return P_STATIC_STRING("any");
-	default:
-		return P_STATIC_STRING("unknown");
-	}
+template<typename Component>
+inline void
+callPrepareConfigChangeAndCallback(Component *component, Json::Value updates,
+	typename Component::ConfigChangeRequest *req,
+	const CallbackTypes<Component>::PrepareConfigChange &callback)
+{
+	vector<Error> errors;
+	component->prepareConfigChange(updates, errors, *req);
+	callback(*req, errors);
 }
 
-inline string
-toString(const vector<Error> &errors) {
-	FastStringStream<> stream;
-	vector<Error>::const_iterator it, end = errors.end();
+template<typename Component>
+inline void
+callCommitConfigChangeAndCallback(Component *component,
+	typename Component::ConfigChangeRequest *req,
+	const CallbackTypes<Component>::CommitConfigChange &callback)
+{
+	component->commitConfigChange(*req);
+	callback(*req);
+}
 
-	for (it = errors.begin(); it != end; it++) {
-		if (it != errors.begin()) {
-			stream << "; ";
-		}
-		stream << it->getMessage();
-	}
-	return string(stream.data(), stream.size());
+template<typename Component>
+inline void
+callInspectConfigAndCallback(Component *component,
+	const CallbackTypes<Component>::InspectConfig &callback)
+{
+	callback(component->inspectConfig());
 }
 
 
