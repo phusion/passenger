@@ -25,6 +25,7 @@
  */
 
 #include <ios>
+#include <algorithm>
 #include <stdexcept>
 #include <cstdio>
 #include <cstddef>
@@ -40,6 +41,7 @@
 #include <boost/cstdint.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/thread.hpp>
+#include <oxt/detail/context.hpp>
 
 #include <Constants.h>
 #include <StaticString.h>
@@ -174,7 +176,14 @@ _shouldLogFileDescriptors(const Context *context, const ConfigRealization **outp
 void
 _prepareLogEntry(FastStringStream<> &sstream, Level level, const char *file, unsigned int line) {
 	struct tm the_tm;
-	char datetime_buf[32], threadIdBuf[2 * sizeof(boost::uintptr_t) + 1];
+	char datetime_buf[32];
+	char threadIdBuf[std::max<unsigned int>(
+		std::max<unsigned int>(
+			2 * sizeof(boost::uintptr_t) + 1,
+			2 * sizeof(unsigned int) + 1
+		),
+		32
+	)];
 	int datetime_size;
 	unsigned int threadIdSize;
 	struct timeval tv;
@@ -197,8 +206,20 @@ _prepareLogEntry(FastStringStream<> &sstream, Level level, const char *file, uns
 		the_tm.tm_hour, the_tm.tm_min, the_tm.tm_sec,
 		(unsigned long long) tv.tv_usec / 100);
 
-	threadIdSize = integerToHexatri((boost::uintptr_t) pthread_self(),
-		threadIdBuf);
+	#ifdef OXT_THREAD_LOCAL_KEYWORD_SUPPORTED
+		// We only use oxt::get_thread_local_context() if it is fast enough.
+		oxt::thread_local_context *ctx = oxt::get_thread_local_context();
+		if (OXT_LIKELY(ctx != NULL)) {
+			threadIdSize = integerToHexatri(ctx->thread_number,
+				threadIdBuf);
+		} else {
+			threadIdSize = integerToHexatri((boost::uintptr_t) pthread_self(),
+				threadIdBuf);
+		}
+	#else
+		threadIdSize = integerToHexatri((boost::uintptr_t) pthread_self(),
+			threadIdBuf);
+	#endif
 
 	sstream <<
 		P_STATIC_STRING("[ ") <<
