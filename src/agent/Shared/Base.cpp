@@ -27,6 +27,7 @@
 	#define _GNU_SOURCE
 #endif
 
+#include <boost/cstdint.hpp>
 #include <oxt/initialize.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
@@ -246,24 +247,7 @@ appendIntegerAsHex(char *buf, IntegerType value) {
 // Must be async signal safe.
 static char *
 appendPointerAsString(char *buf, void *pointer) {
-	// Use wierd union construction to avoid compiler warnings.
-	if (sizeof(void *) == sizeof(unsigned int)) {
-		union {
-			void *pointer;
-			unsigned int value;
-		} u;
-		u.pointer = pointer;
-		return appendIntegerAsHex(appendText(buf, "0x"), u.value);
-	} else if (sizeof(void *) == sizeof(unsigned long long)) {
-		union {
-			void *pointer;
-			unsigned long long value;
-		} u;
-		u.pointer = pointer;
-		return appendIntegerAsHex(appendText(buf, "0x"), u.value);
-	} else {
-		return appendText(buf, "(pointer size unsupported)");
-	}
+	return appendIntegerAsHex(appendText(buf, "0x"), (boost::uintptr_t) pointer);
 }
 
 static char *
