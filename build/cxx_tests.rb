@@ -212,6 +212,8 @@ task 'test:cxx' => dependencies do
   command = "#{File.expand_path(TEST_CXX_TARGET)} #{args.join(' ')}".strip
   if boolean_option('GDB')
     command = "gdb --args #{command}"
+  elsif boolean_option('LLDB')
+    command = "lldb -s ./lldbinit #{command}"
   elsif boolean_option('VALGRIND')
     valgrind_args = "--dsymutil=yes --vgdb=yes --vgdb-error=1 --child-silent-after-fork=yes"
     if boolean_option('LEAK_CHECK')
@@ -228,11 +230,15 @@ task 'test:cxx' => dependencies do
   if boolean_option('REPEAT')
     if boolean_option('GDB')
       abort "You cannot set both REPEAT=1 and GDB=1."
+    elsif boolean_option('LLDB')
+      abort "You cannot set both REPEAT=1 and LLDB=1."
     end
     sh "cd test && while #{command}; do echo -------------------------------------------; done"
   elsif boolean_option('REPEAT_FOREVER')
     if boolean_option('GDB')
       abort "You cannot set both REPEAT_FOREVER=1 and GDB=1."
+    elsif boolean_option('LLDB')
+      abort "You cannot set both REPEAT_FOREVER=1 and LLDB=1."
     end
     sh "cd test && while true; do #{command}; echo -------------------------------------------; done"
   else
