@@ -37,6 +37,7 @@
 #include <time.h>
 #include <pthread.h>
 
+#include <boost/cstdint.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/thread.hpp>
 
@@ -173,8 +174,9 @@ _shouldLogFileDescriptors(const Context *context, const ConfigRealization **outp
 void
 _prepareLogEntry(FastStringStream<> &sstream, Level level, const char *file, unsigned int line) {
 	struct tm the_tm;
-	char datetime_buf[32];
+	char datetime_buf[32], threadIdBuf[2 * sizeof(boost::uintptr_t) + 1];
 	int datetime_size;
+	unsigned int threadIdSize;
 	struct timeval tv;
 	StaticString logLevelMarkers[] = {
 		P_STATIC_STRING("C"),
@@ -194,12 +196,20 @@ _prepareLogEntry(FastStringStream<> &sstream, Level level, const char *file, uns
 		the_tm.tm_year + 1900, the_tm.tm_mon + 1, the_tm.tm_mday,
 		the_tm.tm_hour, the_tm.tm_min, the_tm.tm_sec,
 		(unsigned long long) tv.tv_usec / 100);
+
+	threadIdSize = integerToHexatri((boost::uintptr_t) pthread_self(),
+		threadIdBuf);
+
 	sstream <<
-		"[ " << logLevelMarkers[int(level)] << " " <<
+		P_STATIC_STRING("[ ") <<
+		logLevelMarkers[int(level)] <<
+		P_STATIC_STRING(" ") <<
 		StaticString(datetime_buf, datetime_size) <<
-		" " << std::dec << getpid() << "/" <<
-			std::hex << pthread_self() << std::dec <<
-		" ";
+		P_STATIC_STRING(" ") <<
+		std::dec << getpid() <<
+		P_STATIC_STRING("/T") <<
+		StaticString(threadIdBuf, threadIdSize) <<
+		P_STATIC_STRING(" ");
 
 	if (startsWith(file, P_STATIC_STRING("src/"))) { // special reduncancy filter because most code resides in these paths
 		file += sizeof("src/") - 1;
@@ -214,7 +224,8 @@ _prepareLogEntry(FastStringStream<> &sstream, Level level, const char *file, uns
 		sstream << file;
 	}
 
-	sstream << ":" << line << " ]: ";
+	sstream << P_STATIC_STRING(":") <<
+		line << P_STATIC_STRING(" ]: ");
 }
 
 static void
