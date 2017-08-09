@@ -188,9 +188,6 @@ public:
 	 * and whether it passes validation, without actually updating the
 	 * stored configuration.
 	 *
-	 * You can use the `forceApplyUpdatePreview` method to apply the result, but
-	 * be sure to do that only if validation passes.
-	 *
 	 * If validation fails then any validation errors will be added to `errors`.
 	 *
 	 * Any keys in `updates` that are not registered are omitted from the result.
@@ -245,26 +242,6 @@ public:
 	}
 
 	/**
-	 * Applies the result of `updatePreview()` without performing any
-	 * validation. Be sure to only call this if you've verified that
-	 * `updatePreview()` passes validation, otherwise you will end up
-	 * with invalid data in the store.
-	 */
-	void forceApplyUpdatePreview(const Json::Value &preview) {
-		StringKeyTable<Entry>::Iterator it(entries);
-		while (*it != NULL) {
-			Entry &entry = it.getValue();
-			const Json::Value &subdoc =
-				const_cast<const Json::Value &>(preview)[it.getKey()];
-			if (isWritable(entry)) {
-				entry.userValue = subdoc["user_value"];
-			}
-			it.next();
-		}
-		updatedOnce = true;
-	}
-
-	/**
 	 * Attempts to merge the given configuration updates into this store.
 	 * Only succeeds if the merged result passes validation. Any
 	 * validation errors are stored in `errors`.
@@ -276,7 +253,17 @@ public:
 	bool update(const Json::Value &updates, vector<Error> &errors) {
 		Json::Value preview = previewUpdate(updates, errors);
 		if (errors.empty()) {
-			forceApplyUpdatePreview(preview);
+			StringKeyTable<Entry>::Iterator it(entries);
+			while (*it != NULL) {
+				Entry &entry = it.getValue();
+				if (isWritable(entry)) {
+					const Json::Value &subdoc =
+						const_cast<const Json::Value &>(preview)[it.getKey()];
+					entry.userValue = subdoc["user_value"];
+				}
+				it.next();
+			}
+			updatedOnce = true;
 			return true;
 		} else {
 			return false;

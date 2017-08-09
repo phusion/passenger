@@ -118,25 +118,6 @@ namespace tut {
 		ensure("bar is null", preview["bar"]["user_value"].isNull());
 	}
 
-	TEST_METHOD(11) {
-		set_test_name("forceApplyUpdatePreview()");
-
-		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
-		init();
-
-		doc["foo"] = "string";
-		doc["baz"] = true;
-
-		Json::Value preview = config->previewUpdate(doc, errors);
-		ensure_equals("1 error", errors.size(), 1u);
-		ensure_equals(errors[0].getMessage(), "'bar' is required");
-
-		config->forceApplyUpdatePreview(preview);
-		ensure_equals("foo is a string", config->get("foo").asString(), "string");
-		ensure("bar is null", config->get("bar").isNull());
-	}
-
 	TEST_METHOD(12) {
 		set_test_name("inspect()");
 
