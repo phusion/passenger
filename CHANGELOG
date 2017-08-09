@@ -1,6 +1,8 @@
 Release 5.1.8 (not yet released)
 --------------------------------
 
+ * [Enterprise] Fixes a potential use-after-free bug when reporting usage data to the Phusion licensing server. This bug only occurs when Passenger Enterprise is running inside a container.
+
 
 Release 5.1.7
 -------------
