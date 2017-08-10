@@ -231,7 +231,8 @@ You can inspect the schema using the `inspect()` method. It returns a Json::Valu
   "foo": {
     "type": "string",
     "required": true,
-    "has_default_value": true
+    "has_default_value": "static",
+    "default_value": "hello"
   },
   "bar": {
     "type": "float"
@@ -250,7 +251,8 @@ Description of the members:
 
  - `type`: the schema definition's type. Could be one of "string", "integer", "unsigned integer", "float", "boolean", "array", "array of strings", "object" or "any".
  - `required`: whether this key is required.
- - `has_default_value`: whether a default value is defined.
+ - `has_default_value`: "static" if a static a default value is defined, "dynamic" if a dynamic default value is defined.
+ - `default_value`: the static default value. This field is absent when there is no default value, or if the default value is dynamic.
 
 ## Using the store
 

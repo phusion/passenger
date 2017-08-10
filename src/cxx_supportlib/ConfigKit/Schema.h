@@ -89,7 +89,12 @@ public:
 				doc["secret"] = true;
 			}
 			if (defaultValueGetter) {
-				doc["has_default_value"] = true;
+				if (flags & _DYNAMIC_DEFAULT_VALUE) {
+					doc["has_default_value"] = "dynamic";
+				} else {
+					doc["has_default_value"] = "static";
+					doc["default_value"] = Schema::getStaticDefaultValue(*this);
+				}
 			}
 		}
 	};
@@ -116,6 +121,8 @@ private:
 	static void validateSubSchema(const Store &store, vector<Error> &errors,
 		const Schema *subschema, const Translator *translator,
 		const Validator &origValidator);
+
+	static Json::Value getStaticDefaultValue(const Schema::Entry &entry);
 
 public:
 	Schema()

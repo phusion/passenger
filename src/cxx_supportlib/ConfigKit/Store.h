@@ -387,14 +387,14 @@ public:
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
+			entry.schemaEntry->inspect(subdoc);
 			subdoc["user_value"] = maybeFilterSecret(entry, entry.userValue, true);
-			if (entry.schemaEntry->defaultValueGetter) {
+			subdoc["effective_value"] = maybeFilterSecret(entry,
+				entry.getEffectiveValue(*this), true);
+			if (entry.schemaEntry->defaultValueGetter && entry.schemaEntry->flags & _DYNAMIC_DEFAULT_VALUE) {
 				subdoc["default_value"] = maybeFilterSecret(entry,
 					entry.getDefaultValue(*this), true);
 			}
-			subdoc["effective_value"] = maybeFilterSecret(entry,
-				entry.getEffectiveValue(*this), true);
-			entry.schemaEntry->inspect(subdoc);
 
 			result[it.getKey()] = subdoc;
 			it.next();
@@ -475,6 +475,12 @@ Schema::validateSubSchema(const Store &store, vector<Error> &errors,
 		tempErrors = translator->reverseTranslate(tempErrors);
 		errors.insert(errors.end(), tempErrors.begin(), tempErrors.end());
 	}
+}
+
+inline Json::Value
+Schema::getStaticDefaultValue(const Schema::Entry &entry) {
+	Store::Entry storeEntry(entry);
+	return Store::maybeFilterSecret(storeEntry, storeEntry.getDefaultValue(Store()), true);
 }
 
 
