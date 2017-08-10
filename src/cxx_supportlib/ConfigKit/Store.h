@@ -431,7 +431,8 @@ public:
 				if (isWritable(entry)) {
 					const Json::Value &subdoc =
 						const_cast<const Json::Value &>(preview)[it.getKey()];
-					entry.userValue = subdoc["user_value"];
+					entry.userValue = entry.schemaEntry->typecastValue(
+						subdoc["user_value"]);
 				}
 				it.next();
 			}

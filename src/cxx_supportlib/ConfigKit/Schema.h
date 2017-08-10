@@ -74,6 +74,47 @@ public:
 			  inspectFilter(_inspectFilter)
 			{ }
 
+		Json::Value typecastValue(const Json::Value &val) const {
+			if (val.isNull()) {
+				return Json::nullValue;
+			}
+
+			switch (type) {
+			case STRING_TYPE:
+				if (val.isString()) {
+					return val;
+				} else {
+					return val.asString();
+				}
+			case INT_TYPE:
+				if (val.isInt()) {
+					return val;
+				} else {
+					return val.asInt();
+				}
+			case UINT_TYPE:
+				if (val.isUInt()) {
+					return val;
+				} else {
+					return val.asUInt();
+				}
+			case FLOAT_TYPE:
+				if (val.isDouble()) {
+					return val;
+				} else {
+					return val.asDouble();
+				}
+			case BOOL_TYPE:
+				if (val.isBool()) {
+					return val;
+				} else {
+					return val.asBool();
+				}
+			default:
+				return val;
+			}
+		}
+
 		Json::Value inspect() const {
 			Json::Value result(Json::objectValue);
 			inspect(result);
