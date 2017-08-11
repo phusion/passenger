@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <jsoncpp/json.h>
 #include <Core/SpawningKit/DirectSpawner.h>
+#include <LoggingKit/Context.h>
 #include <FileDescriptor.h>
 #include <Utils/IOUtils.h>
 #include <algorithm>
@@ -23,13 +24,33 @@ namespace tut {
 			config->finalize();
 
 			gatherOutput = boost::bind(&Core_SpawningKit_DirectSpawnerTest::_gatherOutput, this, _1, _2);
-			setLogLevel(LVL_WARN);
-			setPrintAppOutputAsDebuggingMessages(true);
+
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = "warn";
+			config["app_output_log_level"] = "debug";
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		~Core_SpawningKit_DirectSpawnerTest() {
-			setLogLevel(DEFAULT_LOG_LEVEL);
-			setPrintAppOutputAsDebuggingMessages(false);
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = DEFAULT_LOG_LEVEL_NAME;
+			config["app_output_log_level"] = DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME;
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
+
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 		}
 
@@ -65,7 +86,7 @@ namespace tut {
 		options.startTimeout = 100;
 
 		DirectSpawner spawner(config);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		EVENTUALLY(5,
 			try {
@@ -95,7 +116,7 @@ namespace tut {
 		options.startupFile  = ".";
 
 		DirectSpawner spawner(config);
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		try {
 			spawner.spawn(options);

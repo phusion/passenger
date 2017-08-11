@@ -678,6 +678,8 @@ initializeNonPrivilegedWorkingObjects() {
 		Json::Value config = ConfigKit::variantMapToJson(wo->controllerSchema,
 			*agentsOptions);
 		config["thread_number"] = i + 1;
+		config["min_spare_clients"] = 128;
+		config["client_freelist_limit"] = 1024;
 
 		if (i == 0) {
 			two.bgloop = firstLoop = new BackgroundEventLoop(true, true);
@@ -697,8 +699,6 @@ initializeNonPrivilegedWorkingObjects() {
 		UPDATE_TRACE_POINT();
 		two.controller = new Core::Controller(two.serverKitContext,
 			wo->controllerSchema, config);
-		two.controller->minSpareClients = 128;
-		two.controller->clientFreelistLimit = 1024;
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
 		two.controller->unionStationContext = wo->unionStationContext;

@@ -82,7 +82,7 @@ Controller::initializeFlags(Client *client, Request *req, RequestAnalysis &analy
 			part = part->next;
 		}
 
-		if (OXT_UNLIKELY(getLogLevel() >= LVL_DEBUG2)) {
+		if (OXT_UNLIKELY(LoggingKit::getLevel() >= LoggingKit::DEBUG2)) {
 			if (req->dechunkResponse) {
 				SKC_TRACE(client, 2, "Dechunk flag detected");
 			}
@@ -136,7 +136,7 @@ void
 Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 	boost::shared_ptr<Options> *options;
 
-	if (req->configCache->singleAppMode) {
+	if (req->config->singleAppMode) {
 		P_ASSERT_EQ(poolOptionsCache.size(), 1);
 		poolOptionsCache.lookupRandom(NULL, &options);
 		req->options = **options;
@@ -178,30 +178,30 @@ Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis 
 
 void
 Controller::fillPoolOptionsFromConfigCaches(Options &options,
-	const ControllerRequestConfigCachePtr &requestConfigCache)
+	psg_pool_t *pool, const ControllerRequestConfigPtr &requestConfig)
 {
-	options.ruby = requestConfigCache->defaultRuby;
-	options.nodejs = requestConfigCache->defaultNodejs;
-	options.python = requestConfigCache->defaultPython;
-	options.meteorAppSettings = requestConfigCache->meteorAppSettings;
-	options.fileDescriptorUlimit = requestConfigCache->fileDescriptorUlimit;
+	options.ruby = requestConfig->defaultRuby;
+	options.nodejs = requestConfig->defaultNodejs;
+	options.python = requestConfig->defaultPython;
+	options.meteorAppSettings = requestConfig->meteorAppSettings;
+	options.fileDescriptorUlimit = requestConfig->fileDescriptorUlimit;
 
-	options.logLevel = getLogLevel();
-	options.integrationMode = mainConfigCache.integrationMode;
-	options.ustRouterAddress = requestConfigCache->ustRouterAddress;
+	options.logLevel = int(LoggingKit::getLevel());
+	options.integrationMode = psg_pstrdup(pool, mainConfig.integrationMode);
+	options.ustRouterAddress = requestConfig->ustRouterAddress;
 	options.ustRouterUsername = P_STATIC_STRING("logging");
-	options.ustRouterPassword = requestConfigCache->ustRouterPassword;
-	options.userSwitching = mainConfigCache.userSwitching;
-	options.defaultUser = requestConfigCache->defaultUser;
-	options.defaultGroup = requestConfigCache->defaultGroup;
-	options.minProcesses = requestConfigCache->minInstances;
-	options.maxPreloaderIdleTime = requestConfigCache->maxPreloaderIdleTime;
-	options.maxRequestQueueSize = requestConfigCache->maxRequestQueueSize;
-	options.abortWebsocketsOnProcessShutdown = requestConfigCache->abortWebsocketsOnProcessShutdown;
-	options.forceMaxConcurrentRequestsPerProcess = requestConfigCache->forceMaxConcurrentRequestsPerProcess;
-	options.spawnMethod = requestConfigCache->spawnMethod;
-	options.loadShellEnvvars = requestConfigCache->loadShellEnvvars;
-	options.statThrottleRate = mainConfigCache.statThrottleRate;
+	options.ustRouterPassword = requestConfig->ustRouterPassword;
+	options.userSwitching = mainConfig.userSwitching;
+	options.defaultUser = requestConfig->defaultUser;
+	options.defaultGroup = requestConfig->defaultGroup;
+	options.minProcesses = requestConfig->minInstances;
+	options.maxPreloaderIdleTime = requestConfig->maxPreloaderIdleTime;
+	options.maxRequestQueueSize = requestConfig->maxRequestQueueSize;
+	options.abortWebsocketsOnProcessShutdown = requestConfig->abortWebsocketsOnProcessShutdown;
+	options.forceMaxConcurrentRequestsPerProcess = requestConfig->forceMaxConcurrentRequestsPerProcess;
+	options.spawnMethod = requestConfig->spawnMethod;
+	options.loadShellEnvvars = requestConfig->loadShellEnvvars;
+	options.statThrottleRate = mainConfig.statThrottleRate;
 
 	/******************************/
 }
@@ -333,7 +333,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 		options.baseURI = StaticString(scriptName->start->data, scriptName->size);
 	}
 
-	fillPoolOptionsFromConfigCaches(options, req->configCache);
+	fillPoolOptionsFromConfigCaches(options, req->pool, req->config);
 
 	const LString *appType = secureHeaders.lookup("!~PASSENGER_APP_TYPE");
 	if (appType == NULL || appType->size == 0) {
@@ -446,7 +446,7 @@ Controller::getStickySessionCookieName(Request *req) {
 	const LString *value = req->headers.lookup(PASSENGER_STICKY_SESSIONS_COOKIE_NAME);
 	if (value == NULL || value->size == 0) {
 		return psg_lstr_create(req->pool,
-			req->configCache->defaultStickySessionsCookieName);
+			req->config->defaultStickySessionsCookieName);
 	} else {
 		return value;
 	}
@@ -471,15 +471,15 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		// and localize them as much as possible, for better CPU caching.
 		RequestAnalysis analysis;
 		analysis.flags = req->secureHeaders.lookup(FLAGS);
-		analysis.appGroupNameCell = req->configCache->singleAppMode
+		analysis.appGroupNameCell = req->config->singleAppMode
 			? NULL
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
 		analysis.unionStationSupport = unionStationContext != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
-			mainConfigCache.stickySessions);
+			mainConfig.stickySessions);
 		req->showVersionInHeader = getBoolOption(req, PASSENGER_SHOW_VERSION_IN_HEADER,
-			req->configCache->showVersionInHeader);
+			req->config->showVersionInHeader);
 		req->host = req->headers.lookup(HTTP_HOST);
 
 		/***************/

@@ -34,5 +34,5 @@
 #include <Core/Controller/InitializationAndShutdown.cpp>
 #include <Core/Controller/InternalUtils.cpp>
 #include <Core/Controller/Miscellaneous.cpp>
+#include <Core/Controller/Config.cpp>
 #include <Core/Controller/StateInspection.cpp>
-

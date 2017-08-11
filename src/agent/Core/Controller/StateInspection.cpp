@@ -48,7 +48,7 @@ using namespace boost;
 
 unsigned int
 Controller::getThreadNumber() const {
-	return mainConfigCache.threadNumber;
+	return mainConfig.threadNumber;
 }
 
 Json::Value

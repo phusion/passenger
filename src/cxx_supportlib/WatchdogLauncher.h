@@ -104,7 +104,8 @@ void        psg_watchdog_launcher_free(PsgWatchdogLauncher *launcher);
 #include <MessageClient.h>
 #include <Exceptions.h>
 #include <ResourceLocator.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
+#include <LoggingKit/Context.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
@@ -364,7 +365,7 @@ public:
 			.set    ("web_server_passenger_version", PASSENGER_VERSION)
 			.set    ("integration_mode", getIntegrationModeString())
 			.set    ("passenger_root",  passengerRoot)
-			.setInt ("log_level",       getLogLevel());
+			.setInt ("log_level",       (int) LoggingKit::getLevel());
 		extraParams.addTo(params);
 
 		if (!params.getBool("user_switching", false, true)

@@ -36,7 +36,7 @@
 #include <cstdio>
 #include <cassert>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Utils/IOUtils.h>

@@ -72,7 +72,7 @@
 #include <FileDescriptor.h>
 #include <RandomGenerator.h>
 #include <BackgroundEventLoop.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Hooks.h>

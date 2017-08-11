@@ -29,8 +29,6 @@
 #include <string>
 #include <vector>
 
-#include <jsoncpp/json.h>
-
 #include <ConfigKit/Common.h>
 #include <StaticString.h>
 #include <Utils/FastStringStream.h>
@@ -43,72 +41,11 @@ using namespace std;
 class Error;
 
 
-template<typename Component, typename Translator>
-inline bool
-previewConfigUpdateSubComponent(Component &component,
-	const Json::Value &updates, const Translator &translator,
-	vector<Error> &errors)
-{
-	vector<Error> tempErrors;
-
-	component.previewConfigUpdate(translator.translate(updates),
-		tempErrors);
-	tempErrors = translator.reverseTranslate(tempErrors);
-	errors.insert(errors.end(), tempErrors.begin(), tempErrors.end());
-	return errors.empty();
-}
-
-template<typename Component, typename Translator>
-inline void
-configureSubComponent(Component &component,
-	const Json::Value &updates, const Translator &translator,
-	vector<ConfigKit::Error> &errors)
-{
-	vector<ConfigKit::Error> tempErrors;
-
-	component.configure(translator.translate(updates), tempErrors);
-	tempErrors = translator.reverseTranslate(tempErrors);
-	errors.insert(errors.end(), tempErrors.begin(), tempErrors.end());
-}
-
-template<typename Component>
-inline void
-callPreviewConfigUpdateAndCallback(Component *component, Json::Value updates,
-	ConfigKit::ConfigCallback callback)
-{
-	vector<ConfigKit::Error> errors;
-	Json::Value config = component->previewConfigUpdate(updates, errors);
-	callback(config, errors);
-}
-
-template<typename Component>
-inline void
-callConfigureAndCallback(Component *component, Json::Value updates,
-	ConfigKit::ConfigCallback callback)
-{
-	vector<ConfigKit::Error> errors;
-	if (component->configure(updates, errors)) {
-		callback(component->inspectConfig(), errors);
-	} else {
-		callback(Json::nullValue, errors);
-	}
-}
-
-template<typename Component>
-inline void
-callInspectConfigAndCallback(Component *component,
-	ConfigKit::InspectCallback callback)
-{
-	callback(component->inspectConfig());
-}
-
 inline StaticString
 getTypeString(Type type) {
 	switch (type) {
 	case STRING_TYPE:
 		return P_STATIC_STRING("string");
-	case PASSWORD_TYPE:
-		return P_STATIC_STRING("password");
 	case INT_TYPE:
 		return P_STATIC_STRING("integer");
 	case UINT_TYPE:
@@ -121,6 +58,10 @@ getTypeString(Type type) {
 		return P_STATIC_STRING("array");
 	case STRING_ARRAY_TYPE:
 		return P_STATIC_STRING("array of strings");
+	case OBJECT_TYPE:
+		return P_STATIC_STRING("object");
+	case ANY_TYPE:
+		return P_STATIC_STRING("any");
 	default:
 		return P_STATIC_STRING("unknown");
 	}

@@ -40,7 +40,7 @@ namespace tut {
 		{
 			socketFilename = tmpdir.getPath() + "/socket";
 			socketAddress = "unix:" + socketFilename;
-			setLogLevel(LVL_ERROR);
+			LoggingKit::setLevel(LoggingKit::ERROR);
 
 			config["ust_router_username"] = "test";
 			config["ust_router_password"] = "1234";
@@ -59,10 +59,10 @@ namespace tut {
 
 		~Core_UnionStationTest() {
 			// Silence error disconnection messages during shutdown.
-			setLogLevel(LVL_CRIT);
+			LoggingKit::setLevel(LoggingKit::CRIT);
 			shutdown();
 			SystemTime::releaseAll();
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void init() {

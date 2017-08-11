@@ -44,7 +44,6 @@ class Store;
 
 enum Type {
 	STRING_TYPE,
-	PASSWORD_TYPE, // Like STRING_TYPE, but inspect() won't show its value
 	INT_TYPE,
 	UINT_TYPE,
 	FLOAT_TYPE,
@@ -52,6 +51,10 @@ enum Type {
 
 	ARRAY_TYPE,
 	STRING_ARRAY_TYPE,
+
+	OBJECT_TYPE,
+
+	ANY_TYPE,
 
 	UNKNOWN_TYPE
 };
@@ -61,7 +64,7 @@ enum Flags {
 	REQUIRED = 1 << 0,
 	CACHE_DEFAULT_VALUE = 1 << 1,
 	READ_ONLY = 1 << 2,
-	HIDDEN = 1 << 3,
+	SECRET = 1 << 3,
 
 	_DYNAMIC_DEFAULT_VALUE = 1 << 30,
 	_FROM_SUBSCHEMA = 1 << 31
@@ -121,8 +124,6 @@ public:
 };
 
 typedef boost::function<Json::Value (const Store &store)> ValueGetter;
-typedef boost::function<void (const Json::Value &config, const vector<Error> &errors)> ConfigCallback;
-typedef boost::function<void (const Json::Value &config)> InspectCallback;
 
 
 } // namespace ConfigKit

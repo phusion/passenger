@@ -35,7 +35,7 @@
 #include <jsoncpp/json.h>
 
 #include <Exceptions.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <ConfigKit/Common.h>
 #include <ConfigKit/DummyTranslator.h>
 #include <ConfigKit/Utils.h>
@@ -84,6 +84,9 @@ public:
 			}
 			if (flags & READ_ONLY) {
 				doc["read_only"] = true;
+			}
+			if (flags & SECRET) {
+				doc["secret"] = true;
 			}
 			if (defaultValueGetter) {
 				doc["has_default_value"] = true;
@@ -241,7 +244,6 @@ public:
 
 		switch (entry->type) {
 		case STRING_TYPE:
-		case PASSWORD_TYPE:
 			if (value.isConvertibleTo(Json::stringValue)) {
 				return true;
 			} else {
@@ -302,6 +304,15 @@ public:
 				error = Error("'{{" + key + "}}' must be an array");
 				return false;
 			}
+		case OBJECT_TYPE:
+			if (value.isObject()) {
+				return true;
+			} else {
+				error = Error("'{{" + key + "}}' must be a JSON object");
+				return false;
+			}
+		case ANY_TYPE:
+			return true;
 		default:
 			P_BUG("Unknown type " + Passenger::toString((int) entry->type));
 			return false;
@@ -324,10 +335,7 @@ public:
 		StringKeyTable<Entry>::ConstIterator it(entries);
 
 		while (*it != NULL) {
-			const Entry &entry = it.getValue();
-			if (!(entry.flags & HIDDEN)) {
-				result[it.getKey()] = entry.inspect();
-			}
+			result[it.getKey()] = it.getValue().inspect();
 			it.next();
 		}
 

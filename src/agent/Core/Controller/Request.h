@@ -33,7 +33,7 @@
 #include <ServerKit/HttpRequest.h>
 #include <ServerKit/FdSinkChannel.h>
 #include <ServerKit/FdSourceChannel.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>
@@ -86,7 +86,7 @@ public:
 	Options options;
 	AbstractSessionPtr session;
 	const LString *host;
-	ControllerRequestConfigCachePtr configCache;
+	ControllerRequestConfigPtr config;
 
 	ServerKit::FdSinkChannel appSink;
 	ServerKit::FdSourceChannel appSource;

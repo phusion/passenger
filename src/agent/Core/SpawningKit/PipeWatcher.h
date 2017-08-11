@@ -40,7 +40,7 @@
 
 #include <FileDescriptor.h>
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Core/SpawningKit/Config.h>
@@ -97,7 +97,7 @@ private:
 				}
 			} else if (ret == 1 && buf[0] == '\n') {
 				UPDATE_TRACE_POINT();
-				printAppOutput(pid, name, "", 0);
+				LoggingKit::logAppOutput(pid, name, "", 0);
 			} else {
 				UPDATE_TRACE_POINT();
 				vector<StaticString> lines;
@@ -107,7 +107,7 @@ private:
 				}
 				split(StaticString(buf, ret2), '\n', lines);
 				foreach (const StaticString line, lines) {
-					printAppOutput(pid, name, line.data(), line.size());
+					LoggingKit::logAppOutput(pid, name, line.data(), line.size());
 				}
 			}
 

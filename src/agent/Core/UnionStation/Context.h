@@ -37,7 +37,7 @@
 #include <vector>
 #include <stdexcept>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Utils.h>

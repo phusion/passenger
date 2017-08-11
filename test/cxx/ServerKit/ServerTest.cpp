@@ -7,7 +7,7 @@
 #include <BackgroundEventLoop.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/ClientRef.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <FileDescriptor.h>
 #include <Utils/IOUtils.h>
 
@@ -22,6 +22,7 @@ namespace tut {
 		typedef ClientRef<Server<Client>, Client> ClientRefType;
 
 		BackgroundEventLoop bg;
+		Json::Value config;
 		ServerKit::Context context;
 		ServerKit::BaseServerSchema schema;
 		boost::shared_ptr< Server<Client> > server;
@@ -31,21 +32,20 @@ namespace tut {
 			: bg(false, true),
 			  context(bg.safe, bg.libuv_loop)
 		{
-			setLogLevel(LVL_CRIT);
+			LoggingKit::setLevel(LoggingKit::CRIT);
 			serverSocket1 = createUnixServer("tmp.server1");
 			serverSocket2 = createUnixServer("tmp.server2");
-			server = boost::make_shared< Server<Client> >(&context, schema);
-			server->initialize();
-			server->listen(serverSocket1);
 		}
 
 		~ServerKit_ServerTest() {
 			if (!bg.isStarted()) {
 				bg.start();
 			}
-			bg.safe->runSync(boost::bind(&Server<Client>::shutdown, server.get(), true));
-			while (getServerState() != Server<Client>::FINISHED_SHUTDOWN) {
-				syscalls::usleep(10000);
+			if (server != NULL) {
+				bg.safe->runSync(boost::bind(&Server<Client>::shutdown, server.get(), true));
+				while (getServerState() != Server<Client>::FINISHED_SHUTDOWN) {
+					syscalls::usleep(10000);
+				}
 			}
 			bg.safe->runSync(boost::bind(&ServerKit_ServerTest::destroyServer,
 				this));
@@ -53,8 +53,21 @@ namespace tut {
 			safelyClose(serverSocket2);
 			unlink("tmp.server1");
 			unlink("tmp.server2");
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 			bg.stop();
+		}
+
+		void init() {
+			server = boost::make_shared< Server<Client> >(&context, schema, config);
+			server->initialize();
+			server->listen(serverSocket1);
+		}
+
+		template<typename ServerClass>
+		void initWithServerClass() {
+			server = boost::make_shared<ServerClass>(&context, schema, config);
+			server->initialize();
+			server->listen(serverSocket1);
 		}
 
 		void startServer() {
@@ -142,17 +155,12 @@ namespace tut {
 
 	DEFINE_TEST_GROUP(ServerKit_ServerTest);
 
-	#define USE_CUSTOM_SERVER_CLASS(Klass) \
-		server->shutdown(); \
-		server = boost::make_shared< Klass >(&context, schema); \
-		server->initialize(); \
-		server->listen(serverSocket1)
-
 
 	/***** Initial state *****/
 
 	TEST_METHOD(1) {
 		set_test_name("It has no clients at startup");
+		init();
 		ensure_equals(server->activeClientCount, 0u);
 		ensure_equals(server->disconnectedClientCount, 0u);
 		ensure_equals(server->freeClientCount, 0u);
@@ -164,6 +172,7 @@ namespace tut {
 	TEST_METHOD(5) {
 		set_test_name("Accepting a new client works");
 
+		init();
 		startServer();
 		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
@@ -175,7 +184,8 @@ namespace tut {
 		set_test_name("When a client is accepted, and the freelist is non-empty, "
 			"the object is checked out from the freelist");
 
-		server->minSpareClients = 1;
+		config["min_spare_clients"] = 1;
+		init();
 		server->createSpareClients();
 		startServer();
 
@@ -195,6 +205,7 @@ namespace tut {
 		set_test_name("When a client is accepted, and the freelist is empty, "
 			"the object is allocated");
 
+		init();
 		startServer();
 		FileDescriptor fd(connectToServer1());
 		EVENTUALLY(5,
@@ -208,7 +219,8 @@ namespace tut {
 		set_test_name("Once a client has been disconnected, and the freelist has not "
 			"yet reached the limit, the client object is put on the freelist");
 
-		server->clientFreelistLimit = 10;
+		config["client_freelist_limit"] = 10;
+		init();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());
@@ -227,7 +239,8 @@ namespace tut {
 		set_test_name("Once a client has been disconnected, and the freelist has "
 			"reached the limit, the client object is destroyed");
 
-		server->clientFreelistLimit = 0;
+		config["client_freelist_limit"] = 0;
+		init();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());
@@ -248,7 +261,8 @@ namespace tut {
 			"put in the disconnecting list, then in the freelist when the last references disappear");
 
 		vector<ClientRefType> clients;
-		server->clientFreelistLimit = 10;
+		config["client_freelist_limit"] = 10;
+		init();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());
@@ -278,7 +292,8 @@ namespace tut {
 			"disconnecting list, then destroyed when the last references disappear");
 
 		vector<ClientRefType> clients;
-		server->clientFreelistLimit = 0;
+		config["client_freelist_limit"] = 0;
+		init();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());
@@ -308,6 +323,7 @@ namespace tut {
 	TEST_METHOD(20) {
 		set_test_name("It can listen on multiple endpoints");
 
+		init();
 		server->listen(serverSocket2);
 		startServer();
 
@@ -339,15 +355,16 @@ namespace tut {
 		boost::mutex syncher;
 		string data;
 
-		Test25Server(Context *ctx, const ServerKit::BaseServerSchema &schema)
-			: Server<Client>(ctx, schema)
+		Test25Server(Context *ctx, const ServerKit::BaseServerSchema &schema,
+			const Json::Value &initialConfig)
+			: Server<Client>(ctx, schema, initialConfig)
 			{ }
 	};
 
 	TEST_METHOD(25) {
 		set_test_name("Input is made available through client->input");
 
-		USE_CUSTOM_SERVER_CLASS(Test25Server);
+		initWithServerClass<Test25Server>();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());
@@ -374,15 +391,16 @@ namespace tut {
 		}
 
 	public:
-		Test26Server(Context *ctx, const ServerKit::BaseServerSchema &schema)
-			: Server<Client>(ctx, schema)
+		Test26Server(Context *ctx, const ServerKit::BaseServerSchema &schema,
+			const Json::Value &initialConfig)
+			: Server<Client>(ctx, schema, initialConfig)
 			{ }
 	};
 
 	TEST_METHOD(26) {
 		set_test_name("Output is made available through client->output");
 
-		USE_CUSTOM_SERVER_CLASS(Test26Server);
+		initWithServerClass<Test26Server>();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());
@@ -394,6 +412,7 @@ namespace tut {
 	TEST_METHOD(27) {
 		set_test_name("The file descriptor can be obtained through client->getFd()");
 
+		init();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());
@@ -412,6 +431,7 @@ namespace tut {
 	TEST_METHOD(28) {
 		set_test_name("When a client is disconnected, client->connected() becomes false");
 
+		init();
 		startServer();
 
 		FileDescriptor fd(connectToServer1());

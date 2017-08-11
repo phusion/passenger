@@ -26,8 +26,8 @@
 #ifndef _PASSENGER_WATCHDOG_AGENT_API_SERVER_H_
 #define _PASSENGER_WATCHDOG_AGENT_API_SERVER_H_
 
-#include <sstream>
 #include <string>
+#include <exception>
 #include <cstring>
 #include <jsoncpp/json.h>
 #include <modp_b64.h>
@@ -37,7 +37,7 @@
 #include <DataStructures/LString.h>
 #include <Exceptions.h>
 #include <StaticString.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Constants.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/MessageIO.h>
@@ -109,19 +109,8 @@ private:
 			}
 
 			HeaderTable headers;
-			Json::Value doc;
-			string logFile = getLogFile();
-			string fileDescriptorLogFile = getFileDescriptorLogFile();
-
+			Json::Value doc = LoggingKit::context->getConfig().inspect();
 			headers.insert(req->pool, "Content-Type", "application/json");
-			doc["log_level"] = getLogLevel();
-			if (!logFile.empty()) {
-				doc["log_file"] = logFile;
-			}
-			if (!fileDescriptorLogFile.empty()) {
-				doc["file_descriptor_log_file"] = fileDescriptorLogFile;
-			}
-
 			writeSimpleResponse(client, 200, &headers, doc.toStyledString());
 			if (!req->ended()) {
 				endRequest(&client, &req);
@@ -140,46 +129,43 @@ private:
 
 	void processConfigBody(Client *client, Request *req) {
 		HeaderTable headers;
-		Json::Value &json = req->jsonBody;
+		LoggingKit::ConfigChangeRequest configReq;
+		const Json::Value &json = req->jsonBody;
+		vector<ConfigKit::Error> errors;
+		bool ok;
 
 		headers.insert(req->pool, "Content-Type", "application/json");
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 
-		if (json.isMember("log_level")) {
-			setLogLevel(json["log_level"].asInt());
+		try {
+			ok = LoggingKit::context->prepareConfigChange(json,
+				errors, configReq);
+		} catch (const std::exception &e) {
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"message\": \"Error reconfiguring logging system: %s\" }",
+				e.what());
+			writeSimpleResponse(client, 500, &headers, message);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+			return;
 		}
-		if (json.isMember("log_file")) {
-			string logFile = json["log_file"].asString();
-			try {
-				logFile = absolutizePath(logFile);
-			} catch (const SystemException &e) {
-				unsigned int bufsize = 1024;
-				char *message = (char *) psg_pnalloc(req->pool, bufsize);
-				snprintf(message, bufsize, "{ \"status\": \"error\", "
-					"\"message\": \"Cannot absolutize log file filename: %s\" }",
-					e.what());
-				writeSimpleResponse(client, 500, &headers, message);
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
+		if (!ok) {
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"message\": \"Error reconfiguring logging system: %s\" }",
+				ConfigKit::toString(errors).c_str());
+			writeSimpleResponse(client, 500, &headers, message);
+			if (!req->ended()) {
+				endRequest(&client, &req);
 			}
-
-			int e;
-			if (!setLogFile(logFile, &e)) {
-				unsigned int bufsize = 1024;
-				char *message = (char *) psg_pnalloc(req->pool, bufsize);
-				snprintf(message, bufsize, "{ \"status\": \"error\", "
-					"\"message\": \"Cannot open log file: %s (errno=%d)\" }",
-					strerror(e), e);
-				writeSimpleResponse(client, 500, &headers, message);
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
-			}
-			P_NOTICE("Log file opened.");
+			return;
 		}
 
+		LoggingKit::context->commitConfigChange(configReq);
 		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
 		if (!req->ended()) {
 			endRequest(&client, &req);
@@ -201,10 +187,14 @@ private:
 		if (req->method != HTTP_GET) {
 			apiServerRespondWith405(this, client, req);
 		} else if (authorizeFdPassingOperation(client, req)) {
+			ConfigKit::Store config = LoggingKit::context->getConfig();
 			HeaderTable headers;
 			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 			headers.insert(req->pool, "Content-Type", "text/plain");
-			headers.insert(req->pool, "Filename", getLogFile());
+			if (config["target"].isMember("path")) {
+				headers.insert(req->pool, "Filename",
+					psg_pstrdup(req->pool, config["target"]["path"].asString()));
+			}
 			req->wantKeepAlive = false;
 			writeSimpleResponse(client, 200, &headers, "");
 			if (req->ended()) {
@@ -213,9 +203,11 @@ private:
 
 			unsigned long long timeout = 1000000;
 			setBlocking(client->getFd());
-			writeFileDescriptorWithNegotiation(client->getFd(), STDERR_FILENO,
+			ScopeGuard guard(boost::bind(setNonBlocking, client->getFd()));
+			writeFileDescriptorWithNegotiation(client->getFd(),
+				LoggingKit::context->getConfigRealization()->targetFd,
 				&timeout);
-			setNonBlocking(client->getFd());
+			guard.runNow();
 
 			if (!req->ended()) {
 				endRequest(&client, &req);

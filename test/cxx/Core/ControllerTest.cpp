@@ -60,7 +60,7 @@ namespace tut {
 			config["default_server_port"] = "80";
 			config["user_switching"] = false;
 
-			setLogLevel(LVL_WARN);
+			LoggingKit::setLevel(LoggingKit::WARN);
 			controller = NULL;
 			serverSocket = createUnixServer("tmp.server");
 
@@ -75,7 +75,7 @@ namespace tut {
 		~Core_ControllerTest() {
 			startLoop();
 			// Silence error disconnection messages during shutdown.
-			setLogLevel(LVL_CRIT);
+			LoggingKit::setLevel(LoggingKit::CRIT);
 			clientConnection.close();
 			if (controller != NULL) {
 				bg.safe->runSync(boost::bind(&MyController::shutdown, controller, true));
@@ -86,7 +86,7 @@ namespace tut {
 			}
 			safelyClose(serverSocket);
 			unlink("tmp.server");
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 			bg.stop();
 		}
 
@@ -479,7 +479,7 @@ namespace tut {
 		waitUntilSessionInitiated();
 
 		readPeerRequestHeader();
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		sendPeerResponse("invalid response");
 
 		waitUntilSessionClosed();
@@ -820,7 +820,7 @@ namespace tut {
 
 		// We expect logging but hide it to stay in line with not logging from
 		// tests unless something is wrong.
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		close(testSession.peerFd());
 
 		string header = readResponseHeader();
@@ -848,7 +848,7 @@ namespace tut {
 
 		// We expect logging but hide it to stay in line with not logging from
 		// tests unless something is wrong.
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		close(testSession.peerFd());
 
 		string header = readResponseHeader();

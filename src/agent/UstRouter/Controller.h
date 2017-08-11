@@ -39,7 +39,7 @@
 #include <ServerKit/Server.h>
 #include <StaticString.h>
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <UstRouter/Transaction.h>
 #include <UstRouter/Client.h>
 #include <UstRouter/FileSink.h>
@@ -61,6 +61,61 @@ using namespace oxt;
 
 
 class Controller: public ServerKit::BaseServer<Controller, Client> {
+public:
+	class Schema: public ServerKit::BaseServerSchema {
+	private:
+		static Json::Value getDefaultValueForDefaultNodeName(const ConfigKit::Store &store) {
+			return getHostName();
+		}
+
+	public:
+		Schema()
+			: ServerKit::BaseServerSchema(false)
+		{
+			using namespace ConfigKit;
+
+			add("ust_router_username", STRING_TYPE, OPTIONAL);
+			add("ust_router_password", STRING_TYPE, OPTIONAL);
+			add("ust_router_dump_dir", STRING_TYPE, OPTIONAL, "/tmp");
+			addWithDynamicDefault(
+				"ust_router_default_node_name",
+				STRING_TYPE, OPTIONAL | CACHE_DEFAULT_VALUE,
+				getDefaultValueForDefaultNodeName);
+			add("ust_router_dev_mode", BOOL_TYPE, OPTIONAL, false);
+			add("union_station_gateway_address", STRING_TYPE, OPTIONAL | READ_ONLY, DEFAULT_UNION_STATION_GATEWAY_ADDRESS);
+			add("union_station_gateway_port", UINT_TYPE, OPTIONAL | READ_ONLY, DEFAULT_UNION_STATION_GATEWAY_PORT);
+			add("union_station_gateway_cert", STRING_TYPE, OPTIONAL | READ_ONLY);
+			add("union_station_proxy_address", STRING_TYPE, OPTIONAL | READ_ONLY);
+			add("analytics_sink_flush_timer_interval", UINT_TYPE, OPTIONAL, 5);
+			add("analytics_sink_flush_interval", UINT_TYPE, OPTIONAL, 0);
+
+			finalize();
+		}
+	};
+
+	struct ConfigRealization {
+		bool devMode;
+		unsigned int sinkFlushTimerInterval;
+		unsigned int sinkFlushInterval;
+
+		ConfigRealization(const ConfigKit::Store &config)
+			: devMode(config["ust_router_dev_mode"].asBool()),
+			  sinkFlushTimerInterval(config["analytics_sink_flush_timer_interval"].asUInt()),
+			  sinkFlushInterval(config["analytics_sink_flush_interval"].asUInt())
+			{ }
+
+		void swap(ConfigRealization &other) BOOST_NOEXCEPT_OR_NOTHROW {
+			std::swap(devMode, other.devMode);
+			std::swap(sinkFlushTimerInterval, other.sinkFlushTimerInterval);
+			std::swap(sinkFlushInterval, other.sinkFlushInterval);
+		}
+	};
+
+	struct ConfigChangeRequest {
+		ServerKit::BaseServerConfigChangeRequest forParent;
+		boost::scoped_ptr<ConfigRealization> configRlz;
+	};
+
 private:
 	static const unsigned int GARBAGE_COLLECTION_TIMEOUT = 60; // 1 minute
 	static const unsigned int LOG_SINK_MAX_IDLE_TIME = 5 * 60; // 5 minutes
@@ -77,6 +132,7 @@ private:
 	typedef StringMap<TransactionPtr> TransactionMap;
 	typedef StringMap<LogSinkPtr> LogSinkCache;
 
+	ConfigRealization configRlz;
 	RandomGenerator randomGenerator;
 	TransactionMap transactions;
 	LogSinkCache logSinkCache;
@@ -85,8 +141,6 @@ private:
 
 	ev::timer gcTimer;
 	ev::timer flushTimer;
-	bool devMode;
-	int sinkFlushInterval;
 
 
 	/****** Handshake and authentication ******/
@@ -320,8 +374,9 @@ private:
 	void processLogMessageBody(Client *client, const StaticString &body) {
 		// In here we process the scalar message that's expected to come
 		// after the "log" command.
+		LoggingKit::Level level = LoggingKit::getLevel();
 
-		if (getLogLevel() == LVL_DEBUG) {
+		if (level == LoggingKit::DEBUG) {
 			string truncatedBody;
 			if (body.size() > 97) {
 				string truncatedBody = body.substr(0, 97);
@@ -332,7 +387,7 @@ private:
 				SKC_DEBUG(client, "Processing message body (" << body.size() <<
 					" bytes): " << body);
 			}
-		} else if (getLogLevel() >= LVL_DEBUG2) {
+		} else if (level >= LoggingKit::DEBUG2) {
 			SKC_TRACE(client, 2, "Processing message body (" << body.size() <<
 				" bytes): " << body);
 		}
@@ -687,7 +742,7 @@ private:
 
 		LogSinkCache::iterator it;
 		LogSinkCache::iterator end = logSinkCache.end();
-		ev_tstamp threshold = ev_now(getLoop()) - sinkFlushInterval;
+		ev_tstamp threshold = ev_now(getLoop()) - configRlz.sinkFlushInterval;
 
 		for (it = logSinkCache.begin(); it != end; it++) {
 			const LogSinkPtr &sink = it->second;
@@ -947,7 +1002,7 @@ private:
 	void closeTransaction(Client *client, const TransactionPtr &transaction) {
 		if (!transaction->isDiscarded() && passesFilter(transaction)) {
 			LogSinkPtr logSink;
-			if (devMode) {
+			if (configRlz.devMode) {
 				logSink = openLogFile(client, transaction->getCategory());
 			} else {
 				logSink = openRemoteSink(transaction->getUnionStationKey(),
@@ -1054,16 +1109,6 @@ private:
 		return *filter;
 	}
 
-	void applyConfigUpdates() {
-		devMode = config["ust_router_dev_mode"].asBool();
-
-		unsigned int sinkFlushTimerInterval =
-			config["analytics_sink_flush_timer_interval"].asUInt();
-		sinkFlushInterval = config["analytics_sink_flush_interval"].asUInt();
-		flushTimer.stop();
-		flushTimer.start(sinkFlushTimerInterval, sinkFlushTimerInterval);
-	}
-
 protected:
 	virtual void reinitializeClient(Client *client, int fd) {
 		ParentClass::reinitializeClient(client, fd);
@@ -1135,11 +1180,6 @@ protected:
 		}
 	}
 
-	virtual void onConfigChange(const ConfigKit::Store *oldConfig) {
-		ParentClass::onConfigChange(oldConfig);
-		applyConfigUpdates();
-	}
-
 	virtual void onShutdown(bool forceDisconnect) {
 		gcTimer.stop();
 		flushTimer.stop();
@@ -1147,56 +1187,22 @@ protected:
 	}
 
 public:
-	class Schema: public ServerKit::BaseServerSchema {
-	private:
-		static Json::Value getDefaultValueForDefaultNodeName(const ConfigKit::Store &store) {
-			return getHostName();
-		}
-
-	public:
-		Schema()
-			: ServerKit::BaseServerSchema(false)
-		{
-			using namespace ConfigKit;
-
-			add("ust_router_username", STRING_TYPE, OPTIONAL);
-			add("ust_router_password", STRING_TYPE, OPTIONAL);
-			add("ust_router_dump_dir", STRING_TYPE, OPTIONAL, "/tmp");
-			addWithDynamicDefault(
-				"ust_router_default_node_name",
-				STRING_TYPE, OPTIONAL | CACHE_DEFAULT_VALUE,
-				getDefaultValueForDefaultNodeName);
-			add("ust_router_dev_mode", BOOL_TYPE, OPTIONAL, false);
-			add("union_station_gateway_address", STRING_TYPE, OPTIONAL | READ_ONLY, DEFAULT_UNION_STATION_GATEWAY_ADDRESS);
-			add("union_station_gateway_port", UINT_TYPE, OPTIONAL | READ_ONLY, DEFAULT_UNION_STATION_GATEWAY_PORT);
-			add("union_station_gateway_cert", STRING_TYPE, OPTIONAL | READ_ONLY);
-			add("union_station_proxy_address", STRING_TYPE, OPTIONAL | READ_ONLY);
-			add("analytics_sink_flush_timer_interval", UINT_TYPE, OPTIONAL, 5);
-			add("analytics_sink_flush_interval", UINT_TYPE, OPTIONAL, 0);
-
-			finalize();
-		}
-	};
-
 	Controller(ServerKit::Context *context, const Schema &schema,
 		const Json::Value &initialConfig)
 		: ServerKit::BaseServer<Controller, Client>(context, schema, initialConfig),
+		  configRlz(config),
 		  remoteSender(
 		      config["union_station_gateway_address"].asString(),
 		      config["union_station_gateway_port"].asUInt(),
 		      config["union_station_gateway_cert"].asString(),
 		      config["union_station_proxy_address"].asString()),
 		  gcTimer(getLoop()),
-		  flushTimer(getLoop()),
-		  devMode(false),
-		  sinkFlushInterval(0)
+		  flushTimer(getLoop())
 	{
 		gcTimer.set<Controller, &Controller::garbageCollect>(this);
 		gcTimer.start(GARBAGE_COLLECTION_TIMEOUT, GARBAGE_COLLECTION_TIMEOUT);
 
 		flushTimer.set<Controller, &Controller::flushSomeSinks>(this);
-
-		applyConfigUpdates();
 	}
 
 	virtual StaticString getServerName() const {
@@ -1212,12 +1218,32 @@ public:
 		return pos - buf;
 	}
 
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, ConfigChangeRequest &req)
+	{
+		if (ParentClass::prepareConfigChange(updates, errors, req.forParent)) {
+			req.configRlz.reset(new ConfigRealization(*req.forParent.config));
+		}
+		return errors.empty();
+	}
+
+	void commitConfigChange(ConfigChangeRequest &req)
+		BOOST_NOEXCEPT_OR_NOTHROW
+	{
+		ParentClass::commitConfigChange(req.forParent);
+		configRlz.swap(*req.configRlz);
+
+		flushTimer.stop();
+		flushTimer.start(configRlz.sinkFlushTimerInterval,
+			configRlz.sinkFlushTimerInterval);
+	}
+
 	virtual Json::Value inspectStateAsJson() const {
 		Json::Value doc = ParentClass::inspectStateAsJson();
-		doc["dev_mode"] = devMode;
+		doc["dev_mode"] = configRlz.devMode;
 		doc["log_sink_cache"] = inspectLogSinkCacheStateAsJson();
 		doc["transactions"] = inspectTransactionsStateAsJson();
-		if (devMode) {
+		if (configRlz.devMode) {
 			doc["dump_dir"] = config["ust_router_dump_dir"];
 		} else {
 			doc["remote_sender"] = remoteSender.inspectStateAsJson();

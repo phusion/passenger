@@ -42,7 +42,7 @@
 #include <cstring>
 #include <Constants.h>
 #include <FileDescriptor.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/Lock.h>

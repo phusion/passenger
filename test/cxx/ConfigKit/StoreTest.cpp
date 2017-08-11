@@ -1,6 +1,5 @@
 #include <TestSupport.h>
 #include <ConfigKit/Store.h>
-#include <ConfigKit/PrefixTranslator.h>
 #include <boost/bind.hpp>
 #include <algorithm>
 
@@ -29,6 +28,7 @@ namespace tut {
 	};
 
 	DEFINE_TEST_GROUP(ConfigKit_StoreTest);
+
 
 	/*********** Test validation ***********/
 
@@ -104,10 +104,14 @@ namespace tut {
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
 		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
+		schema.add("secret", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED | ConfigKit::SECRET);
+		schema.add("secret_default", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET, "default");
+		schema.add("secret_null", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET);
 		init();
 
 		doc["foo"] = "string";
 		doc["baz"] = true;
+		doc["secret"] = "my secret";
 
 		Json::Value preview = config->previewUpdate(doc, errors);
 		ensure_equals("1 error", errors.size(), 1u);
@@ -117,6 +121,27 @@ namespace tut {
 		ensure("baz does not exists", !preview.isMember("baz"));
 		ensure_equals("foo is a string", preview["foo"]["user_value"].asString(), "string");
 		ensure("bar is null", preview["bar"]["user_value"].isNull());
+
+		ensure_equals("secret user value is filtered",
+			preview["secret"]["user_value"].asString(), "[FILTERED]");
+		ensure("secret default value is null",
+			preview["secret"]["default_value"].isNull());
+		ensure_equals("secret effective value is filtered",
+			preview["secret"]["effective_value"].asString(), "[FILTERED]");
+
+		ensure("secret_default user value is null",
+			preview["secret_default"]["user_value"].isNull());
+		ensure_equals("secret_default default value is filtered",
+			preview["secret_default"]["default_value"].asString(), "[FILTERED]");
+		ensure_equals("secret_default effective value is filtered",
+			preview["secret_default"]["effective_value"].asString(), "[FILTERED]");
+
+		ensure("secret_null user value is null",
+			preview["secret_null"]["user_value"].isNull());
+		ensure("secret_null has no default value",
+			preview["secret_null"]["default_value"].isNull());
+		ensure("secret_null effective value is null",
+			preview["secret_null"]["effective_value"].isNull());
 	}
 
 	TEST_METHOD(12) {
@@ -124,18 +149,43 @@ namespace tut {
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
 		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
+		schema.add("secret", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED | ConfigKit::SECRET);
+		schema.add("secret_default", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET, "default");
+		schema.add("secret_null", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET);
 		init();
 
 		doc["foo"] = "string";
 		doc["bar"] = 123;
-		ensure(config->update(doc, errors));
-		ensure(errors.empty());
+		doc["secret"] = "my secret";
+		ensure("update succeeds", config->update(doc, errors));
+		ensure("no errors", errors.empty());
 
 		Json::Value dump = config->inspect();
 		ensure_equals("foo user value", dump["foo"]["user_value"].asString(), "string");
 		ensure_equals("foo effective value", dump["foo"]["effective_value"].asString(), "string");
 		ensure_equals("bar user value", dump["bar"]["user_value"].asInt(), 123);
 		ensure_equals("bar effective value", dump["bar"]["effective_value"].asInt(), 123);
+
+		ensure_equals("secret user value is filtered",
+			dump["secret"]["user_value"].asString(), "[FILTERED]");
+		ensure("secret default value is null",
+			dump["secret"]["default_value"].isNull());
+		ensure_equals("secret effective value is filtered",
+			dump["secret"]["effective_value"].asString(), "[FILTERED]");
+
+		ensure("secret_default user value is null",
+			dump["secret_default"]["user_value"].isNull());
+		ensure_equals("secret_default default value is filtered",
+			dump["secret_default"]["default_value"].asString(), "[FILTERED]");
+		ensure_equals("secret_default effective value is filtered",
+			dump["secret_default"]["effective_value"].asString(), "[FILTERED]");
+
+		ensure("secret_null user value is null",
+			dump["secret_null"]["user_value"].isNull());
+		ensure("secret_null has no default value",
+			dump["secret_null"]["default_value"].isNull());
+		ensure("secret_null effective value is null",
+			dump["secret_null"]["effective_value"].isNull());
 	}
 
 	TEST_METHOD(13) {
@@ -197,115 +247,5 @@ namespace tut {
 		ensure(config->update(doc, errors));
 		ensure_equals(config->get("foo").asInt(), 123);
 		ensure(config->get("foo2").isNull());
-	}
-
-	TEST_METHOD(16) {
-		set_test_name("Filtering password values in inspect()");
-
-		schema.add("password", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
-		schema.add("password_default", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL, "1234");
-		schema.add("password_null", ConfigKit::PASSWORD_TYPE, ConfigKit::OPTIONAL);
-		init();
-
-		doc["password"] = "foo";
-		ensure(config->update(doc, errors));
-
-		doc = config->inspect();
-
-		ensure_equals(doc["password"]["user_value"], Json::Value("[FILTERED]"));
-		ensure_equals(doc["password"]["default_value"], Json::Value(Json::nullValue));
-		ensure_equals(doc["password"]["effective_value"], Json::Value("[FILTERED]"));
-
-		ensure_equals(doc["password_default"]["user_value"], Json::Value(Json::nullValue));
-		ensure_equals(doc["password_default"]["default_value"], Json::Value("[FILTERED]"));
-		ensure_equals(doc["password_default"]["effective_value"], Json::Value("[FILTERED]"));
-
-		ensure_equals(doc["password_null"]["user_value"], Json::Value(Json::nullValue));
-		ensure_equals(doc["password_null"]["default_value"], Json::Value(Json::nullValue));
-		ensure_equals(doc["password_null"]["effective_value"], Json::Value(Json::nullValue));
-	}
-
-	TEST_METHOD(17) {
-		set_test_name("It properly stores values for fields with the HIDDEN flag");
-
-		schema.add("foo", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
-		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL | ConfigKit::HIDDEN);
-		init();
-
-		doc["foo"] = 1;
-		doc["bar"] = 2;
-
-		ensure(config->update(doc, errors));
-		ensure_equals(config->get("foo").asInt(), 1);
-		ensure_equals(config->get("bar").asInt(), 2);
-	}
-
-	TEST_METHOD(18) {
-		set_test_name("Fields with the HIDDEN flag do not show up in inspect()");
-		Json::Value preview;
-
-		schema.add("foo", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
-		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL | ConfigKit::HIDDEN);
-		init();
-
-		doc["foo"] = 1;
-		doc["bar"] = 2;
-
-		preview = config->previewUpdate(doc, errors);
-		ensure("(1)", errors.empty());
-		ensure("(2)", preview.isMember("foo"));
-		ensure("(3)", !preview.isMember("bar"));
-
-		ensure("(4)", config->update(doc, errors));
-
-		doc = config->inspect();
-		ensure("(5)", doc.isMember("foo"));
-		ensure("(6)", !doc.isMember("bar"));
-	}
-
-	TEST_METHOD(19) {
-		set_test_name("It properly stores values for subschema fields with the HIDDEN flag");
-		ConfigKit::Schema subSchema;
-		ConfigKit::PrefixTranslator translator("main_");
-
-		subSchema.add("foo", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
-		subSchema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL | ConfigKit::HIDDEN);
-		subSchema.finalize();
-		schema.addSubSchema(subSchema, translator);
-		init();
-
-		doc["main_foo"] = 1;
-		doc["main_bar"] = 2;
-
-		ensure(config->update(doc, errors));
-		ensure_equals(config->get("main_foo").asInt(), 1);
-		ensure_equals(config->get("main_bar").asInt(), 2);
-	}
-
-	TEST_METHOD(20) {
-		set_test_name("Subschema fields with the HIDDEN flag do not show up in inspect()");
-		Json::Value preview;
-		ConfigKit::Schema subSchema;
-		ConfigKit::PrefixTranslator translator("main_");
-
-		subSchema.add("foo", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
-		subSchema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL | ConfigKit::HIDDEN);
-		subSchema.finalize();
-		schema.addSubSchema(subSchema, translator);
-		init();
-
-		doc["main_foo"] = 1;
-		doc["main_bar"] = 2;
-
-		preview = config->previewUpdate(doc, errors);
-		ensure(errors.empty());
-		ensure(preview.isMember("main_foo"));
-		ensure(!preview.isMember("main_bar"));
-
-		ensure(config->update(doc, errors));
-
-		doc = config->inspect();
-		ensure(doc.isMember("main_foo"));
-		ensure(!doc.isMember("main_bar"));
 	}
 }

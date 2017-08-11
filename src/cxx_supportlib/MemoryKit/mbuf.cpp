@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <ostream>
 #include <MemoryKit/mbuf.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <Utils/StrIntUtils.h>
 

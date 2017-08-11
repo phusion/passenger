@@ -43,6 +43,9 @@ module PhusionPassenger
   module SharedConstants
     # Default config values
     DEFAULT_LOG_LEVEL = 3
+    DEFAULT_LOG_LEVEL_NAME = "notice"
+    DEFAULT_APP_OUTPUT_LOG_LEVEL = 3
+    DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME = "notice"
     DEFAULT_INTEGRATION_MODE = "standalone"
     DEFAULT_SOCKET_BACKLOG = 2048
     DEFAULT_RUBY = "ruby"
@@ -77,13 +80,13 @@ module PhusionPassenger
     MESSAGE_SERVER_MAX_PASSWORD_SIZE = 100
     POOL_HELPER_THREAD_STACK_SIZE = 1024 * 256
     # Small mbuf sizes avoid memory overhead (up to 1 blocksize per request), but
-    # also introduce context switching and smaller transfer writes. The size is picked 
+    # also introduce context switching and smaller transfer writes. The size is picked
     # to balance this out.
     DEFAULT_MBUF_CHUNK_SIZE = 1024 * 4
     # Affects input and output buffering (between app and client). Threshold is picked
     # such that it fits most output (i.e. html page size, not assets), and allows for
-    # high concurrency with low mem overhead. On the upload side there is a penalty 
-    # but there's no real average upload size anyway so we choose mem safety instead. 
+    # high concurrency with low mem overhead. On the upload side there is a penalty
+    # but there's no real average upload size anyway so we choose mem safety instead.
     DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD = 1024 * 128
     SERVER_KIT_MAX_SERVER_ENDPOINTS = 4
 

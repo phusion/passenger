@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_
 #define _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <ConfigKit/Schema.h>
 #include <Utils/StrIntUtils.h>
@@ -48,7 +48,6 @@ variantMapToJson(const Schema &schema, const VariantMap &options) {
 		if (options.has(key)) {
 			switch (entry.type) {
 			case STRING_TYPE:
-			case PASSWORD_TYPE:
 				doc[key.toString()] = options.get(key);
 				break;
 			case INT_TYPE:

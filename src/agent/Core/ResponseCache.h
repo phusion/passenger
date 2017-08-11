@@ -492,12 +492,12 @@ public:
 		}
 
 		LString *varyCookieName = req->secureHeaders.lookup(PASSENGER_VARY_TURBOCACHE_BY_COOKIE);
-		if (varyCookieName == NULL && !req->configCache->defaultVaryTurbocacheByCookie.empty()) {
+		if (varyCookieName == NULL && !req->config->defaultVaryTurbocacheByCookie.empty()) {
 			varyCookieName = (LString *) psg_palloc(req->pool, sizeof(LString));
 			psg_lstr_init(varyCookieName);
 			psg_lstr_append(varyCookieName, req->pool,
-				req->configCache->defaultVaryTurbocacheByCookie.data(),
-				req->configCache->defaultVaryTurbocacheByCookie.size());
+				req->config->defaultVaryTurbocacheByCookie.data(),
+				req->config->defaultVaryTurbocacheByCookie.size());
 		}
 		if (varyCookieName != NULL) {
 			LString *cookieHeader = req->headers.lookup(COOKIE);

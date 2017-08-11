@@ -37,7 +37,7 @@
 #include <ServerKit/HttpHeaderParserState.h>
 #include <DataStructures/LString.h>
 #include <DataStructures/HashedStaticString.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/Hasher.h>
 
