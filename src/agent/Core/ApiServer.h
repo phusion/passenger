@@ -682,7 +682,6 @@ public:
 	ApiAccountDatabase *apiAccountDatabase;
 	ApplicationPool2::PoolPtr appPool;
 	EventFd *exitEvent;
-	vector<Authorization> authorizations;
 
 	ApiServer(ServerKit::Context *context, const Schema &schema,
 		const Json::Value &initialConfig)
@@ -691,6 +690,19 @@ public:
 		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)
 		{ }
+
+	virtual void initialize() {
+		if (apiAccountDatabase == NULL) {
+			throw RuntimeException("apiAccountDatabase must be non-NULL");
+		}
+		if (appPool == NULL) {
+			throw RuntimeException("appPool must be non-NULL");
+		}
+		if (exitEvent == NULL) {
+			throw RuntimeException("exitEvent must be non-NULL");
+		}
+		ParentClass::initialize();
+	}
 
 	virtual StaticString getServerName() const {
 		return P_STATIC_STRING("ApiServer");
