@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <Core/SpawningKit/Handshake/Prepare.h>
 #include <Core/SpawningKit/Handshake/Perform.h>
+#include <LoggingKit/Context.h>
 #include <boost/bind.hpp>
 #include <cstdio>
 #include <Utils/IOUtils.h>
@@ -41,7 +42,17 @@ namespace tut {
 		}
 
 		~Core_SpawningKit_HandshakePerformTest() {
-			setPrintAppOutputAsDebuggingMessages(false);
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = DEFAULT_LOG_LEVEL_NAME;
+			config["app_output_log_level"] = DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME;
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		void init(JourneyType type) {
@@ -251,7 +262,16 @@ namespace tut {
 		HandshakePerform performer(*session, pid, FileDescriptor(), p.first);
 		performer.debugSupport = &debugSupport;
 
-		setPrintAppOutputAsDebuggingMessages(true);
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		LoggingKit::ConfigChangeRequest req;
+		config["app_output_log_level"] = "debug";
+		if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+			LoggingKit::context->commitConfigChange(req);
+		} else {
+			P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+		}
+
 		writeExact(p.second, "hi\n");
 
 		try {
@@ -564,7 +584,16 @@ namespace tut {
 	TEST_METHOD(53) {
 		set_test_name("The exception contains the subprocess' output");
 
-		setPrintAppOutputAsDebuggingMessages(true);
+		Json::Value config;
+		vector<ConfigKit::Error> errors;
+		LoggingKit::ConfigChangeRequest req;
+		config["app_output_log_level"] = "debug";
+		if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+			LoggingKit::context->commitConfigChange(req);
+		} else {
+			P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+		}
+
 		init(SPAWN_DIRECTLY);
 		stdoutAndErr = createPipe(__FILE__, __LINE__);
 		writeExact(stdoutAndErr.second, "oh no");

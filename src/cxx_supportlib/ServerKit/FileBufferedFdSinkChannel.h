@@ -29,7 +29,7 @@
 #include <oxt/macros.hpp>
 #include <sys/types.h>
 #include <unistd.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <MemoryKit/mbuf.h>
 #include <ServerKit/FileBufferedChannel.h>
 

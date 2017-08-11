@@ -32,7 +32,7 @@
 #include <boost/shared_ptr.hpp>
 #include <oxt/system_calls.hpp>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <Exceptions.h>
 #include <Utils/StrIntUtils.h>

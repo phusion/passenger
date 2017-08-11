@@ -24,6 +24,7 @@
  *  THE SOFTWARE.
  */
 
+#include <boost/cstdint.hpp>
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
@@ -214,25 +215,7 @@ doubleToString(double value) {
 
 string
 pointerToIntString(void *pointer) {
-	// Use wierd union construction to avoid compiler warnings.
-	if (sizeof(void *) == sizeof(unsigned int)) {
-		union {
-			void *pointer;
-			unsigned int value;
-		} u;
-		u.pointer = pointer;
-		return toString(u.value);
-	} else if (sizeof(void *) == sizeof(unsigned long long)) {
-		union {
-			void *pointer;
-			unsigned long long value;
-		} u;
-		u.pointer = pointer;
-		return toString(u.value);
-	} else {
-		fprintf(stderr, "Pointer size unsupported...\n");
-		abort();
-	}
+	return toString((boost::uintptr_t) pointer);
 }
 
 template<typename Numeric>

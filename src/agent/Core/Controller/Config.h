@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include <ConfigKit/ConfigKit.h>
+#include <ConfigKit/ValidationUtils.h>
 #include <MemoryKit/palloc.h>
 #include <ServerKit/HttpServer.h>
 #include <AppTypes.h>
@@ -129,6 +130,7 @@ private:
 		addValidator(validate);
 		addValidator(validateMultiAppMode);
 		addValidator(validateSingleAppMode);
+		addValidator(ConfigKit::validateIntegrationMode);
 	}
 
 	static Json::Value inferDefaultValueForDefaultGroup(const ConfigKit::Store &config) {
@@ -229,7 +231,13 @@ public:
 	}
 };
 
-class ControllerMainConfigCache {
+class ControllerMainConfig {
+private:
+	StaticString createServerLogName() {
+		string name = "ServerThr." + toString(threadNumber);
+		return psg_pstrdup(pool, name);
+	}
+
 public:
 	psg_pool_t *pool;
 
@@ -246,49 +254,55 @@ public:
 	/*******************/
 	/*******************/
 
-	ControllerMainConfigCache(const ConfigKit::Store &initialConfig)
+	ControllerMainConfig(const ConfigKit::Store &config)
 		: pool(psg_create_pool(1024)),
 
-		  threadNumber(0),
-		  statThrottleRate(0),
-		  responseBufferHighWatermark(0),
-		  benchmarkMode(BM_UNKNOWN),
-		  userSwitching(false),
-		  stickySessions(false),
-		  gracefulExit(0)
+		  threadNumber(config["thread_number"].asUInt()),
+		  statThrottleRate(config["stat_throttle_rate"].asUInt()),
+		  responseBufferHighWatermark(config["response_buffer_high_watermark"].asUInt()),
+		  integrationMode(psg_pstrdup(pool, config["integration_mode"].asString())),
+		  serverLogName(createServerLogName()),
+		  benchmarkMode(parseControllerBenchmarkMode(config["benchmark_mode"].asString())),
+		  userSwitching(config["user_switching"].asBool()),
+		  stickySessions(config["sticky_sessions"].asBool()),
+		  gracefulExit(config["core_graceful_exit"].asBool())
 
 		  /*******************/
 	{
-		update(initialConfig);
-
-		integrationMode = psg_pstrdup(pool, initialConfig["integration_mode"].asString());
-
-		string name = "ServerThr." + toString(threadNumber);
-		serverLogName = psg_pstrdup(pool, name);
-
 		/*******************/
 	}
 
-	~ControllerMainConfigCache() {
+	~ControllerMainConfig() {
 		psg_destroy_pool(pool);
 	}
 
-	void update(const ConfigKit::Store &config) {
-		threadNumber = config["thread_number"].asUInt();
+	void swap(ControllerMainConfig &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		#define SWAP_BITFIELD(Type, name) \
+			do { \
+				Type tmp = name; \
+				name = other.name; \
+				other.name = tmp; \
+			} while (false)
 
-		userSwitching = config["user_switching"].asBool();
-		statThrottleRate = config["stat_throttle_rate"].asUInt();
-		responseBufferHighWatermark = config["response_buffer_high_watermark"].asUInt();
-		stickySessions = config["sticky_sessions"].asBool();
-		gracefulExit = config["core_graceful_exit"].asBool();
-		benchmarkMode = parseControllerBenchmarkMode(config["benchmark_mode"].asString());
+		std::swap(pool, other.pool);
+		std::swap(threadNumber, other.threadNumber);
+		std::swap(statThrottleRate, other.statThrottleRate);
+		std::swap(responseBufferHighWatermark, other.responseBufferHighWatermark);
+		std::swap(integrationMode, other.integrationMode);
+		std::swap(serverLogName, other.serverLogName);
+		SWAP_BITFIELD(ControllerBenchmarkMode, benchmarkMode);
+		SWAP_BITFIELD(bool, userSwitching);
+		SWAP_BITFIELD(bool, stickySessions);
+		SWAP_BITFIELD(bool, gracefulExit);
 
 		/*******************/
+
+		#undef SWAP_BITFIELD
 	}
 };
 
-class ControllerRequestConfigCache:
-	public boost::intrusive_ref_counter<ControllerRequestConfigCache,
+class ControllerRequestConfig:
+	public boost::intrusive_ref_counter<ControllerRequestConfig,
 		boost::thread_unsafe_counter>
 {
 public:
@@ -324,7 +338,7 @@ public:
 	/*******************/
 
 
-	ControllerRequestConfigCache(const ConfigKit::Store &config)
+	ControllerRequestConfig(const ConfigKit::Store &config)
 		: pool(psg_create_pool(1024 * 4)),
 
 		  defaultRuby(psg_pstrdup(pool, config["default_ruby"].asString())),
@@ -356,12 +370,19 @@ public:
 		  /*******************/
 		{ }
 
-	~ControllerRequestConfigCache() {
+	~ControllerRequestConfig() {
 		psg_destroy_pool(pool);
 	}
 };
 
-typedef boost::intrusive_ptr<ControllerRequestConfigCache> ControllerRequestConfigCachePtr;
+typedef boost::intrusive_ptr<ControllerRequestConfig> ControllerRequestConfigPtr;
+
+
+struct ControllerConfigChangeRequest {
+	ServerKit::HttpServerConfigChangeRequest forParent;
+	boost::scoped_ptr<ControllerMainConfig> mainConfig;
+	ControllerRequestConfigPtr requestConfig;
+};
 
 
 } // namespace Core

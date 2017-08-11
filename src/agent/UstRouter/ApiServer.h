@@ -27,11 +27,14 @@
 #define _PASSENGER_UST_ROUTER_API_SERVER_H_
 
 #include <string>
+#include <exception>
 #include <jsoncpp/json.h>
 #include <modp_b64.h>
 
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
+#include <LoggingKit/LoggingKit.h>
+#include <LoggingKit/Context.h>
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Utils/StrIntUtils.h>
@@ -94,19 +97,8 @@ private:
 			}
 
 			HeaderTable headers;
-			Json::Value doc;
-			string logFile = getLogFile();
-			string fileDescriptorLogFile = getFileDescriptorLogFile();
-
+			Json::Value doc = LoggingKit::context->getConfig().inspect();
 			headers.insert(req->pool, "Content-Type", "application/json");
-			doc["log_level"] = getLogLevel();
-			if (!logFile.empty()) {
-				doc["log_file"] = logFile;
-			}
-			if (!fileDescriptorLogFile.empty()) {
-				doc["file_descriptor_log_file"] = fileDescriptorLogFile;
-			}
-
 			writeSimpleResponse(client, 200, &headers, doc.toStyledString());
 			if (!req->ended()) {
 				endRequest(&client, &req);
@@ -125,46 +117,43 @@ private:
 
 	void processConfigBody(Client *client, Request *req) {
 		HeaderTable headers;
-		Json::Value &json = req->jsonBody;
+		LoggingKit::ConfigChangeRequest configReq;
+		const Json::Value &json = req->jsonBody;
+		vector<ConfigKit::Error> errors;
+		bool ok;
 
 		headers.insert(req->pool, "Content-Type", "application/json");
+		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
 
-		if (json.isMember("log_level")) {
-			setLogLevel(json["log_level"].asInt());
+		try {
+			ok = LoggingKit::context->prepareConfigChange(json,
+				errors, configReq);
+		} catch (const std::exception &e) {
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"message\": \"Error reconfiguring logging system: %s\" }",
+				e.what());
+			writeSimpleResponse(client, 500, &headers, message);
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+			return;
 		}
-		if (json.isMember("log_file")) {
-			string logFile = json["log_file"].asString();
-			try {
-				logFile = absolutizePath(logFile);
-			} catch (const SystemException &e) {
-				unsigned int bufsize = 1024;
-				char *message = (char *) psg_pnalloc(req->pool, bufsize);
-				snprintf(message, bufsize, "{ \"status\": \"error\", "
-					"\"message\": \"Cannot absolutize log file filename: %s\" }",
-					e.what());
-				writeSimpleResponse(client, 500, &headers, message);
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
+		if (!ok) {
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"message\": \"Error reconfiguring logging system: %s\" }",
+				ConfigKit::toString(errors).c_str());
+			writeSimpleResponse(client, 500, &headers, message);
+			if (!req->ended()) {
+				endRequest(&client, &req);
 			}
-
-			int e;
-			if (!setLogFile(logFile, &e)) {
-				unsigned int bufsize = 1024;
-				char *message = (char *) psg_pnalloc(req->pool, bufsize);
-				snprintf(message, bufsize, "{ \"status\": \"error\", "
-					"\"message\": \"Cannot open log file: %s (errno=%d)\" }",
-					strerror(e), e);
-				writeSimpleResponse(client, 500, &headers, message);
-				if (!req->ended()) {
-					endRequest(&client, &req);
-				}
-				return;
-			}
-			P_NOTICE("Log file opened.");
+			return;
 		}
 
+		LoggingKit::context->commitConfigChange(configReq);
 		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }\n");
 		if (!req->ended()) {
 			endRequest(&client, &req);

@@ -33,10 +33,10 @@
 #include <Core/SpawningKit/Handshake/Prepare.h>
 #include <Core/SpawningKit/Handshake/Perform.h>
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
+#include <LveLoggingDecorator.h>
 #include <Utils/IOUtils.h>
 
-#include <LveLoggingDecorator.h>
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
 #include <adhoc_lve.h>

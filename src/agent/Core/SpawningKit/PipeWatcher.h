@@ -41,7 +41,7 @@
 
 #include <FileDescriptor.h>
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 
@@ -55,7 +55,7 @@ using namespace boost;
 class PipeWatcher: public boost::enable_shared_from_this<PipeWatcher> {
 private:
 	FileDescriptor fd;
-	const char *name;
+	StaticString name;
 	pid_t pid;
 	bool started;
 	string logFile;
@@ -87,7 +87,7 @@ private:
 		}
 
 		UPDATE_TRACE_POINT();
-		while (!this_thread::interruption_requested()) {
+		while (!boost::this_thread::interruption_requested()) {
 			char buf[1024 * 8];
 			ssize_t ret;
 
@@ -129,7 +129,7 @@ private:
 
 	void printOrLogAppOutput(FILE *f, const StaticString &line) {
 		if (f == NULL) {
-			printAppOutput(pid, name, line.data(), line.size());
+			LoggingKit::logAppOutput(pid, name, line.data(), line.size());
 		} else {
 			fwrite(line.data(), 1, line.size(), f);
 			fwrite("\n", 1, 2, f);
@@ -138,7 +138,7 @@ private:
 	}
 
 public:
-	PipeWatcher(const FileDescriptor &_fd, const char *_name, pid_t _pid)
+	PipeWatcher(const FileDescriptor &_fd, const StaticString _name, pid_t _pid)
 		: fd(_fd),
 		  name(_name),
 		  pid(_pid),

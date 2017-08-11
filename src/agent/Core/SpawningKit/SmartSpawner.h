@@ -45,7 +45,7 @@
 
 #include <adhoc_lve.h>
 
-#include <Logging.h>
+#include <LoggingKit/Logging.h>
 #include <Constants.h>
 #include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>

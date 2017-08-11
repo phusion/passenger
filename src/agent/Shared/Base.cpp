@@ -27,6 +27,7 @@
 	#define _GNU_SOURCE
 #endif
 
+#include <boost/cstdint.hpp>
 #include <oxt/initialize.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
@@ -61,7 +62,8 @@
 #include <Shared/Base.h>
 #include <Constants.h>
 #include <Exceptions.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
+#include <LoggingKit/Context.h>
 #include <ResourceLocator.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
@@ -69,6 +71,8 @@
 #ifdef __linux__
 	#include <ResourceLocator.h>
 #endif
+
+#include <jsoncpp/json.h>
 
 namespace Passenger {
 
@@ -246,24 +250,7 @@ appendIntegerAsHex(char *buf, IntegerType value) {
 // Must be async signal safe.
 static char *
 appendPointerAsString(char *buf, void *pointer) {
-	// Use wierd union construction to avoid compiler warnings.
-	if (sizeof(void *) == sizeof(unsigned int)) {
-		union {
-			void *pointer;
-			unsigned int value;
-		} u;
-		u.pointer = pointer;
-		return appendIntegerAsHex(appendText(buf, "0x"), u.value);
-	} else if (sizeof(void *) == sizeof(unsigned long long)) {
-		union {
-			void *pointer;
-			unsigned long long value;
-		} u;
-		u.pointer = pointer;
-		return appendIntegerAsHex(appendText(buf, "0x"), u.value);
-	} else {
-		return appendText(buf, "(pointer size unsupported)");
-	}
+	return appendIntegerAsHex(appendText(buf, "0x"), (boost::uintptr_t) pointer);
 }
 
 static char *
@@ -704,21 +691,21 @@ dumpDiagnostics(AbortHandlerState &state) {
 	end = appendText(end, " ] " PROGRAM_NAME " version: " PASSENGER_VERSION "\n");
 	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 
-	if (lastAssertionFailure.filename != NULL) {
+	if (LoggingKit::lastAssertionFailure.filename != NULL) {
 		end = messageBuf;
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] Last assertion failure: (");
-		end = appendText(end, lastAssertionFailure.expression);
+		end = appendText(end, LoggingKit::lastAssertionFailure.expression);
 		end = appendText(end, "), ");
-		if (lastAssertionFailure.function != NULL) {
+		if (LoggingKit::lastAssertionFailure.function != NULL) {
 			end = appendText(end, "function ");
-			end = appendText(end, lastAssertionFailure.function);
+			end = appendText(end, LoggingKit::lastAssertionFailure.function);
 			end = appendText(end, ", ");
 		}
 		end = appendText(end, "file ");
-		end = appendText(end, lastAssertionFailure.filename);
+		end = appendText(end, LoggingKit::lastAssertionFailure.filename);
 		end = appendText(end, ", line ");
-		end = appendULL(end, lastAssertionFailure.line);
+		end = appendULL(end, LoggingKit::lastAssertionFailure.line);
 		end = appendText(end, ".\n");
 		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
 	}
@@ -1031,10 +1018,10 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	__assert_fail(__const char *__assertion, __const char *__file,
 		unsigned int __line, __const char *__function)
 	{
-		lastAssertionFailure.filename = __file;
-		lastAssertionFailure.line = __line;
-		lastAssertionFailure.function = __function;
-		lastAssertionFailure.expression = __assertion;
+		LoggingKit::lastAssertionFailure.filename = __file;
+		LoggingKit::lastAssertionFailure.line = __line;
+		LoggingKit::lastAssertionFailure.function = __function;
+		LoggingKit::lastAssertionFailure.expression = __assertion;
 		fprintf(stderr, "Assertion failed! %s:%u: %s: %s\n", __file, __line, __function, __assertion);
 		fflush(stderr);
 		abort();
@@ -1056,10 +1043,10 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 	extern "C" void
 	__assert_rtn(const char *func, const char *file, int line, const char *expr) {
-		lastAssertionFailure.filename = file;
-		lastAssertionFailure.line = line;
-		lastAssertionFailure.function = func;
-		lastAssertionFailure.expression = expr;
+		LoggingKit::lastAssertionFailure.filename = file;
+		LoggingKit::lastAssertionFailure.line = line;
+		LoggingKit::lastAssertionFailure.function = func;
+		LoggingKit::lastAssertionFailure.expression = expr;
 		if (func) {
 			fprintf(stderr, "Assertion failed: (%s), function %s, file %s, line %d.\n",
 				expr, func, file, line);
@@ -1470,6 +1457,46 @@ extraArgumentsPassed(int argc, char *argv[], int argStartIndex) {
 		|| (argc == argStartIndex + 1 && !isBlank(argv[argStartIndex]));
 }
 
+static void
+initializeLoggingKit(const char *processName, VariantMap &options) {
+	Json::Value config(Json::objectValue);
+
+	options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
+	config["level"] = options.get("log_level");
+
+	if (options.has("log_file")) {
+		config["target"] = options.get("log_file");
+	} else if (options.has("debug_log_file")) {
+		config["target"] = options.get("debug_log_file");
+	}
+
+	if (options.has("file_descriptor_log_file")) {
+		config["file_descriptor_log_target"] =
+			options.get("file_descriptor_log_file");
+	}
+
+	LoggingKit::initialize(config);
+
+	if (options.has("file_descriptor_log_file")) {
+		// This information helps ./dev/parse_file_descriptor_log.
+		FastStringStream<> stream;
+		LoggingKit::_prepareLogEntry(stream, LoggingKit::CRIT, __FILE__, __LINE__);
+		stream << "Starting agent: " << processName << "\n";
+		_writeFileDescriptorLogEntry(LoggingKit::context->getConfigRealization(),
+			stream.data(), stream.size());
+
+		config = LoggingKit::context->getConfig().inspect();
+		P_LOG_FILE_DESCRIPTOR_OPEN4(
+			LoggingKit::context->getConfigRealization()->fileDescriptorLogTargetFd,
+			__FILE__, __LINE__,
+			"file descriptor log file "
+			<< config["file_descriptor_log_target"]["effective_value"]["path"].asString());
+	} else {
+		// This information helps ./dev/parse_file_descriptor_log.
+		P_DEBUG("Starting agent: " << processName);
+	}
+}
+
 VariantMap
 initializeAgent(int argc, char **argv[], const char *processName,
 	OptionParserFunc optionParser, PreinitializationFunc preinit,
@@ -1581,46 +1608,7 @@ initializeAgentOptions(const char *processName, VariantMap &options,
 		preinit(options);
 	}
 
-	options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
-	setLogLevel(options.getInt("log_level"));
-	string logFile;
-	if (options.has("log_file")) {
-		logFile = options.get("log_file");
-	} else if (options.has("debug_log_file")) {
-		logFile = options.get("debug_log_file");
-	}
-	if (!logFile.empty()) {
-		try {
-			logFile = absolutizePath(logFile);
-		} catch (const SystemException &e) {
-			P_WARN("Cannot absolutize filename '" << logFile
-				<< "': " << e.what());
-		}
-		setLogFile(logFile);
-	}
-
-	if (options.has("file_descriptor_log_file")) {
-		logFile = options.get("file_descriptor_log_file");
-		try {
-			logFile = absolutizePath(logFile);
-		} catch (const SystemException &e) {
-			P_WARN("Cannot absolutize filename '" << logFile
-				<< "': " << e.what());
-		}
-		setFileDescriptorLogFile(logFile);
-
-		// This information helps dev/parse_file_descriptor_log.
-		FastStringStream<> stream;
-		_prepareLogEntry(stream, __FILE__, __LINE__);
-		stream << "Starting agent: " << processName << "\n";
-		_writeFileDescriptorLogEntry(stream.data(), stream.size());
-
-		P_LOG_FILE_DESCRIPTOR_OPEN4(getFileDescriptorLogFileFd(), __FILE__, __LINE__,
-			"file descriptor log file " << options.get("file_descriptor_log_file"));
-	} else {
-		// This information helps dev/parse_file_descriptor_log.
-		P_DEBUG("Starting agent: " << processName);
-	}
+	initializeLoggingKit(processName, options);
 
 	if (hasEnvOption("PASSENGER_USE_FEEDBACK_FD")) {
 		P_LOG_FILE_DESCRIPTOR_OPEN2(FEEDBACK_FD, "feedback FD");

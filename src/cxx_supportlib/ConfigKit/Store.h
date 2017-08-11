@@ -28,12 +28,23 @@
 
 #include <string>
 #include <vector>
+#include <cassert>
+// for std::swap()
+#if __cplusplus >= 201103L
+	#include <utility>
+#else
+	#include <algorithm>
+#endif
+#include <boost/config.hpp>
+
+#include <jsoncpp/json.h>
 
 #include <ConfigKit/Common.h>
 #include <ConfigKit/Schema.h>
 #include <ConfigKit/Utils.h>
-#include <jsoncpp/json.h>
+#include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 namespace ConfigKit {
@@ -87,7 +98,7 @@ private:
 		}
 	};
 
-	const Schema &schema;
+	const Schema *schema;
 	StringKeyTable<Entry> entries;
 	bool updatedOnce;
 
@@ -101,12 +112,38 @@ private:
 		}
 	}
 
+	static Json::Value maybeFilterSecret(const Entry &entry, const Json::Value &value,
+		bool shouldFilter)
+	{
+		if (shouldFilter && entry.schemaEntry->flags & SECRET) {
+			if (value.isNull()) {
+				return Json::nullValue;
+			} else {
+				return "[FILTERED]";
+			}
+		} else {
+			return value;
+		}
+	}
+
+	void initialize() {
+		Schema::ConstIterator it = schema->getIterator();
+
+		while (*it != NULL) {
+			Entry entry(it.getValue());
+			entries.insert(it.getKey(), entry);
+			it.next();
+		}
+
+		entries.compact();
+	}
+
 	bool isWritable(const Entry &entry) const {
 		return !(entry.schemaEntry->flags & READ_ONLY) || !updatedOnce;
 	}
 
 	void applyCustomValidators(const Json::Value &updates, vector<Error> &errors) const {
-		Store tempStore(schema);
+		Store tempStore(*schema);
 		StringKeyTable<Entry>::Iterator it(tempStore.entries);
 
 		while (*it != NULL) {
@@ -121,31 +158,70 @@ private:
 		}
 
 		boost::container::vector<Schema::Validator>::const_iterator v_it, v_end
-			= schema.getValidators().end();
-		for (v_it = schema.getValidators().begin(); v_it != v_end; v_it++) {
+			= schema->getValidators().end();
+		for (v_it = schema->getValidators().begin(); v_it != v_end; v_it++) {
 			const Schema::Validator &validator = *v_it;
 			validator(tempStore, errors);
 		}
 	}
 
 public:
+	Store()
+		: schema(NULL),
+		  entries(0, 0),
+		  updatedOnce(false)
+		{ }
+
 	Store(const Schema &_schema)
-		: schema(_schema),
+		: schema(&_schema),
 		  updatedOnce(false)
 	{
-		Schema::ConstIterator it = _schema.getIterator();
+		initialize();
+	}
 
-		while (*it != NULL) {
-			Entry entry(it.getValue());
-			entries.insert(it.getKey(), entry);
-			it.next();
+	Store(const Schema &_schema, const Json::Value &initialValues)
+		: schema(&_schema),
+		  updatedOnce(false)
+	{
+		vector<Error> errors;
+		initialize();
+		if (!update(initialValues, errors)) {
+			throw ArgumentException("Invalid initial configuration: "
+				+ toString(errors));
 		}
+	}
 
-		entries.compact();
+	template<typename Translator>
+	Store(const Schema &_schema, const Json::Value &initialValues,
+		const Translator &translator)
+		: schema(&_schema),
+		  updatedOnce(false)
+	{
+		vector<Error> errors;
+		initialize();
+		if (!update(translator.translate(initialValues), errors)) {
+			errors = translator.reverseTranslate(errors);
+			throw ArgumentException("Invalid initial configuration: "
+				+ toString(errors));
+		}
+	}
+
+	Store(const Store &other, const Json::Value &updates, vector<Error> &errors)
+		: schema(other.schema),
+		  updatedOnce(false)
+	{
+		initialize();
+		if (update(other.inspectUserValues(), errors)) {
+			update(updates, errors);
+		}
 	}
 
 	const Schema &getSchema() const {
-		return schema;
+		return *schema;
+	}
+
+	bool hasBeenUpdatedAtLeastOnce() const {
+		return updatedOnce;
 	}
 
 	/**
@@ -176,17 +252,18 @@ public:
 	 * and whether it passes validation, without actually updating the
 	 * stored configuration.
 	 *
-	 * You can use the `forceApplyUpdatePreview` method to apply the result, but
-	 * be sure to do that only if validation passes.
-	 *
 	 * If validation fails then any validation errors will be added to `errors`.
 	 *
 	 * Any keys in `updates` that are not registered are omitted from the result.
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 *
-	 * The format returned by this method is the same as that of `dump()`.
+	 * The format returned by this method is the same as that of `inspect()`,
+	 * with the exception that -- if `filterSecrets` is set to false, values of fields
+	 * marked with the `SECRET` flag are not filtered.
 	 */
-	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors) const {
+	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors,
+		bool filterSecrets = true) const
+	{
 		if (!updates.isNull() && !updates.isObject()) {
 			errors.push_back(Error("The JSON document must be an object"));
 			return inspect();
@@ -202,19 +279,25 @@ public:
 			Json::Value subdoc(Json::objectValue);
 
 			if (isWritable(entry) && updates.isMember(key)) {
-				subdoc["user_value"] = updates[key];
+				subdoc["user_value"] = maybeFilterSecret(entry,
+					updates[key], filterSecrets);
 			} else {
-				subdoc["user_value"] = entry.userValue;
+				subdoc["user_value"] = maybeFilterSecret(entry,
+					entry.userValue, filterSecrets);
 			}
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = entry.getDefaultValue(*this);
+				subdoc["default_value"] = maybeFilterSecret(entry,
+					entry.getDefaultValue(*this), filterSecrets);
 			}
 
 			const Json::Value &effectiveValue =
 				subdoc["effective_value"] =
-					getEffectiveValue(subdoc["user_value"],
-						subdoc["default_value"]);
-			if (!schema.validateValue(it.getKey(), effectiveValue, error)) {
+					maybeFilterSecret(
+						entry,
+						getEffectiveValue(subdoc["user_value"],
+							subdoc["default_value"]),
+						filterSecrets);
+			if (!schema->validateValue(it.getKey(), effectiveValue, error)) {
 				errors.push_back(error);
 			}
 
@@ -224,31 +307,11 @@ public:
 			it.next();
 		}
 
-		if (!schema.getValidators().empty()) {
+		if (!schema->getValidators().empty()) {
 			applyCustomValidators(updates, errors);
 		}
 
 		return result;
-	}
-
-	/**
-	 * Applies the result of `updatePreview()` without performing any
-	 * validation. Be sure to only call this if you've verified that
-	 * `updatePreview()` passes validation, otherwise you will end up
-	 * with invalid data in the store.
-	 */
-	void forceApplyUpdatePreview(const Json::Value &preview) {
-		StringKeyTable<Entry>::Iterator it(entries);
-		while (*it != NULL) {
-			Entry &entry = it.getValue();
-			const Json::Value &subdoc =
-				const_cast<const Json::Value &>(preview)[it.getKey()];
-			if (isWritable(entry)) {
-				entry.userValue = subdoc["user_value"];
-			}
-			it.next();
-		}
-		updatedOnce = true;
 	}
 
 	/**
@@ -261,9 +324,19 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 */
 	bool update(const Json::Value &updates, vector<Error> &errors) {
-		Json::Value preview = previewUpdate(updates, errors);
+		Json::Value preview = previewUpdate(updates, errors, false);
 		if (errors.empty()) {
-			forceApplyUpdatePreview(preview);
+			StringKeyTable<Entry>::Iterator it(entries);
+			while (*it != NULL) {
+				Entry &entry = it.getValue();
+				if (isWritable(entry)) {
+					const Json::Value &subdoc =
+						const_cast<const Json::Value &>(preview)[it.getKey()];
+					entry.userValue = subdoc["user_value"];
+				}
+				it.next();
+			}
+			updatedOnce = true;
 			return true;
 		} else {
 			return false;
@@ -294,6 +367,12 @@ public:
 		return result;
 	}
 
+	void swap(Store &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		std::swap(schema, other.schema);
+		entries.swap(other.entries);
+		std::swap(updatedOnce, other.updatedOnce);
+	}
+
 	/**
 	 * Inspects the current store's configuration keys and values in a format
 	 * that displays user-supplied and effective values, as well as
@@ -308,11 +387,13 @@ public:
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
-			subdoc["user_value"] = entry.userValue;
+			subdoc["user_value"] = maybeFilterSecret(entry, entry.userValue, true);
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = entry.getDefaultValue(*this);
+				subdoc["default_value"] = maybeFilterSecret(entry,
+					entry.getDefaultValue(*this), true);
 			}
-			subdoc["effective_value"] = entry.getEffectiveValue(*this);
+			subdoc["effective_value"] = maybeFilterSecret(entry,
+				entry.getEffectiveValue(*this), true);
 			entry.schemaEntry->inspect(subdoc);
 
 			result[it.getKey()] = subdoc;
@@ -335,6 +416,24 @@ public:
 		while (*it != NULL) {
 			const Entry &entry = it.getValue();
 			result[it.getKey()] = entry.getEffectiveValue(*this);
+			it.next();
+		}
+
+		return result;
+	}
+
+	/**
+	 * Inspects the current store's configuration keys and user
+	 * values only. This is like `inspect()` but much less verbose.
+	 * Note that values with the SECRET flag are not filtered.
+	 */
+	Json::Value inspectUserValues() const {
+		Json::Value result(Json::objectValue);
+		StringKeyTable<Entry>::ConstIterator it(entries);
+
+		while (*it != NULL) {
+			const Entry &entry = it.getValue();
+			result[it.getKey()] = entry.userValue;
 			it.next();
 		}
 

@@ -35,8 +35,9 @@
 #include <jsoncpp/json.h>
 
 #include <Exceptions.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <ConfigKit/Common.h>
+#include <ConfigKit/DummyTranslator.h>
 #include <ConfigKit/Utils.h>
 #include <DataStructures/StringKeyTable.h>
 #include <Utils/StrIntUtils.h>
@@ -84,6 +85,9 @@ public:
 			if (flags & READ_ONLY) {
 				doc["read_only"] = true;
 			}
+			if (flags & SECRET) {
+				doc["secret"] = true;
+			}
 			if (defaultValueGetter) {
 				doc["has_default_value"] = true;
 			}
@@ -94,21 +98,6 @@ public:
 	typedef boost::function<void (const Store &store, vector<Error> &errors)> Validator;
 
 private:
-	class DummyTranslator {
-	public:
-		StaticString translateOne(const StaticString &key) const {
-			return key;
-		}
-
-		StaticString reverseTranslateOne(const StaticString &key) const {
-			return key;
-		}
-
-		vector<Error> reverseTranslate(const vector<Error> &errors) const {
-			return errors;
-		}
-	};
-
 	StringKeyTable<Entry> entries;
 	boost::container::vector<Validator> validators;
 	bool finalized;
@@ -294,6 +283,36 @@ public:
 				error = Error("'{{" + key + "}}' must be a boolean");
 				return false;
 			}
+		case ARRAY_TYPE:
+			if (value.isConvertibleTo(Json::arrayValue)) {
+				return true;
+			} else {
+				error = Error("'{{" + key + "}}' must be an array");
+				return false;
+			}
+		case STRING_ARRAY_TYPE:
+			if (value.isConvertibleTo(Json::arrayValue)) {
+				Json::Value::const_iterator it, end = value.end();
+				for (it = value.begin(); it != end; it++) {
+					if (it->type() != Json::stringValue) {
+						error = Error("'{{" + key + "}}' may only contain strings");
+						return false;
+					}
+				}
+				return true;
+			} else {
+				error = Error("'{{" + key + "}}' must be an array");
+				return false;
+			}
+		case OBJECT_TYPE:
+			if (value.isObject()) {
+				return true;
+			} else {
+				error = Error("'{{" + key + "}}' must be a JSON object");
+				return false;
+			}
+		case ANY_TYPE:
+			return true;
 		default:
 			P_BUG("Unknown type " + Passenger::toString((int) entry->type));
 			return false;

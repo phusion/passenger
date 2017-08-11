@@ -2,6 +2,7 @@
 #include <jsoncpp/json.h>
 #include <Core/ApplicationPool/Options.h>
 #include <Core/SpawningKit/DirectSpawner.h>
+#include <LoggingKit/Context.h>
 #include <FileDescriptor.h>
 #include <Utils/IOUtils.h>
 #include <algorithm>
@@ -23,13 +24,32 @@ namespace tut {
 			context.integrationMode = "standalone";
 			context.finalize();
 
-			setLogLevel(LVL_WARN);
-			setPrintAppOutputAsDebuggingMessages(true);
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = "warn";
+			config["app_output_log_level"] = "debug";
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		~Core_SpawningKit_DirectSpawnerTest() {
-			setLogLevel(DEFAULT_LOG_LEVEL);
-			setPrintAppOutputAsDebuggingMessages(false);
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = DEFAULT_LOG_LEVEL_NAME;
+			config["app_output_log_level"] = DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME;
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
+
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 		}
 

@@ -36,7 +36,7 @@
 #include <ev.h>
 #include <uv.h>
 #include <BackgroundEventLoop.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <SafeLibev.h>
 

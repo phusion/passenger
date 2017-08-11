@@ -29,6 +29,8 @@
 #include <psg_sysqueue.h>
 
 #include <boost/cstdint.hpp>
+#include <boost/config.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/macros.hpp>
@@ -36,6 +38,12 @@
 #include <new>
 #include <ev++.h>
 
+// for std::swap()
+#if __cplusplus >= 201103L
+	#include <utility>
+#else
+	#include <algorithm>
+#endif
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -48,7 +56,7 @@
 #include <jsoncpp/json.h>
 #include <SmallVector.h>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <SafeLibev.h>
 #include <Constants.h>
 #include <ServerKit/Context.h>
@@ -73,7 +81,7 @@ using namespace oxt;
 
 
 // We use 'this' so that the macros work in derived template classes like HttpServer<>.
-#define SKS_LOG(level, file, line, expr)  P_LOG(level, file, line, "[" << this->getServerName() << "] " << expr)
+#define SKS_LOG(level, file, line, expr)  P_LOG(Passenger::LoggingKit::context, level, file, line, "[" << this->getServerName() << "] " << expr)
 #define SKS_ERROR(expr)  P_ERROR("[" << this->getServerName() << "] " << expr)
 #define SKS_WARN(expr)   P_WARN("[" << this->getServerName() << "] " << expr)
 #define SKS_INFO(expr)   P_INFO("[" << this->getServerName() << "] " << expr)
@@ -97,26 +105,26 @@ using namespace oxt;
 
 #define SKC_LOG_FROM_STATIC(server, client, level, expr) \
 	do { \
-		if (Passenger::getLogLevel() >= level) { \
+		if (Passenger::LoggingKit::getLevel() >= level) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
-			P_LOG(level, __FILE__, __LINE__, \
+			P_LOG(LoggingKit::context, level, __FILE__, __LINE__, \
 				"[Client " << StaticString(_clientName, _clientNameSize) << "] " << expr); \
 		} \
 	} while (0)
 #define SKC_ERROR_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_ERROR, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::ERROR, expr)
 #define SKC_WARN_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_WARN, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::WARN, expr)
 #define SKC_NOTICE_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_NOTICE, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::NOTICE, expr)
 #define SKC_INFO_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_INFO, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::INFO, expr)
 #define SKC_DEBUG_FROM_STATIC(server, client, expr) \
-	SKC_LOG_FROM_STATIC(server, client, LVL_DEBUG, expr)
+	SKC_LOG_FROM_STATIC(server, client, Passenger::LoggingKit::DEBUG, expr)
 #define SKC_DEBUG_FROM_STATIC_WITH_POS(server, client, file, line, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::getLogLevel() >= LVL_DEBUG)) { \
+		if (OXT_UNLIKELY(Passenger::LoggingKit::getLevel() >= Passenger::LoggingKit::DEBUG)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_DEBUG_WITH_POS(file, line, \
@@ -127,7 +135,7 @@ using namespace oxt;
 	SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, __FILE__, __LINE__, expr)
 #define SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, file, line, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::getLogLevel() >= level)) { \
+		if (OXT_UNLIKELY(Passenger::LoggingKit::getLevel() >= Passenger::LoggingKit::DEBUG + level)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_TRACE_WITH_POS(level, file, line, \
@@ -161,6 +169,41 @@ public:
 	BaseServerSchema(bool _subclassing) {
 		initialize();
 	}
+};
+
+struct BaseServerConfigRealization {
+	unsigned int acceptBurstCount: 7;
+	bool startReadingAfterAccept: 1;
+	unsigned int minSpareClients: 12;
+	unsigned int clientFreelistLimit: 12;
+
+	BaseServerConfigRealization(const ConfigKit::Store &config)
+		: acceptBurstCount(config["accept_burst_count"].asUInt()),
+		  startReadingAfterAccept(config["start_reading_after_accept"].asBool()),
+		  minSpareClients(config["min_spare_clients"].asUInt()),
+		  clientFreelistLimit(config["client_freelist_limit"].asUInt())
+		{ }
+
+	void swap(BaseServerConfigRealization &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		#define SWAP_BITFIELD(Type, name) \
+			do { \
+				Type tmp = name; \
+				name = other.name; \
+				other.name = tmp; \
+			} while (false)
+
+		SWAP_BITFIELD(unsigned int, acceptBurstCount);
+		SWAP_BITFIELD(bool, startReadingAfterAccept);
+		SWAP_BITFIELD(unsigned int, minSpareClients);
+		SWAP_BITFIELD(unsigned int, clientFreelistLimit);
+
+		#undef SWAP_BITFIELD
+	}
+};
+
+struct BaseServerConfigChangeRequest {
+	boost::scoped_ptr<ConfigKit::Store> config;
+	boost::scoped_ptr<BaseServerConfigRealization> configRlz;
 };
 
 
@@ -226,13 +269,11 @@ public:
 	static const unsigned int MAX_ACCEPT_BURST_COUNT = 127;
 
 	typedef void (*Callback)(DerivedServer *server);
+	typedef BaseServerConfigChangeRequest ConfigChangeRequest;
 
 	/***** Configuration *****/
 	ConfigKit::Store config;
-	unsigned int acceptBurstCount: 7;
-	bool startReadingAfterAccept: 1;
-	unsigned int minSpareClients: 12;
-	unsigned int clientFreelistLimit: 12;
+	BaseServerConfigRealization configRlz;
 	Callback shutdownFinishCallback;
 
 	/***** Working state and statistics (do not modify) *****/
@@ -273,7 +314,7 @@ private:
 		P_ASSERT_EQ(serverState, ACTIVE);
 		SKS_DEBUG("New clients can be accepted on a server socket");
 
-		for (unsigned int i = 0; i < acceptBurstCount; i++) {
+		for (unsigned int i = 0; i < configRlz.acceptBurstCount; i++) {
 			fd = acceptNonBlockingSocket(io->fd);
 			if (fd == -1) {
 				error = true;
@@ -441,7 +482,7 @@ private:
 	}
 
 	bool addClientToFreelist(Client *client) {
-		if (freeClientCount < clientFreelistLimit) {
+		if (freeClientCount < configRlz.clientFreelistLimit) {
 			STAILQ_INSERT_HEAD(&freeClients, client, nextClient.freeClient);
 			freeClientCount++;
 			client->refcount.store(2, boost::memory_order_relaxed);
@@ -482,7 +523,7 @@ private:
 
 	void finishShutdown() {
 		TRACE_POINT();
-		compact(LVL_INFO);
+		compact(LoggingKit::INFO);
 
 		acceptResumptionWatcher.stop();
 		statisticsUpdateWatcher.stop();
@@ -565,7 +606,7 @@ protected:
 
 			onClientAccepted(client);
 			if (client->connected()) {
-				if (startReadingAfterAccept) {
+				if (configRlz.startReadingAfterAccept) {
 					client->input.startReading();
 				} else {
 					client->input.startReadingInNextTick();
@@ -613,10 +654,10 @@ protected:
 			getClientOutputErrorDisconnectionLogLevel(client, errcode));
 	}
 
-	virtual PassengerLogLevel getClientOutputErrorDisconnectionLogLevel(
+	virtual LoggingKit::Level getClientOutputErrorDisconnectionLogLevel(
 		Client *client, int errcode) const
 	{
-		return LVL_WARN;
+		return LoggingKit::WARN;
 	}
 
 	virtual void onUpdateStatistics() {
@@ -658,23 +699,13 @@ protected:
 		// Do nothing.
 	}
 
-	virtual void onConfigChange(const ConfigKit::Store *oldConfig) {
-		acceptBurstCount = config["accept_burst_count"].asUInt();
-		startReadingAfterAccept = config["start_reading_after_accept"].asBool();
-		minSpareClients = config["min_spare_clients"].asUInt();
-		clientFreelistLimit = config["client_freelist_limit"].asUInt();
-	}
-
 public:
 	/***** Public methods *****/
 
 	BaseServer(Context *context, const BaseServerSchema &schema,
 		const Json::Value &initialConfig = Json::Value())
-		: config(schema),
-		  acceptBurstCount(0),
-		  startReadingAfterAccept(true),
-		  minSpareClients(0),
-		  clientFreelistLimit(0),
+		: config(schema, initialConfig),
+		  configRlz(config),
 		  shutdownFinishCallback(NULL),
 		  serverState(ACTIVE),
 		  freeClientCount(0),
@@ -692,12 +723,6 @@ public:
 		  nEndpoints(0),
 		  accept4Available(true)
 	{
-		vector<ConfigKit::Error> errors;
-		if (!config.update(initialConfig, errors)) {
-			throw ArgumentException("Invalid initial configuration: " +
-				toString(errors));
-		}
-
 		STAILQ_INIT(&freeClients);
 		TAILQ_INIT(&activeClients);
 		TAILQ_INIT(&disconnectedClients);
@@ -721,7 +746,6 @@ public:
 	/***** Initialization, listening and shutdown *****/
 
 	virtual void initialize() {
-		onConfigChange(NULL);
 		statisticsUpdateWatcher.set(5, 5);
 		statisticsUpdateWatcher.start();
 	}
@@ -729,7 +753,7 @@ public:
 	// Pre-create multiple client objects so that they get allocated
 	// near each other in memory. Hopefully increases CPU cache locality.
 	void createSpareClients() {
-		for (unsigned int i = 0; i < minSpareClients; i++) {
+		for (unsigned int i = 0; i < configRlz.minSpareClients; i++) {
 			Client *client = createNewClientObject();
 			client->setConnState(Client::IN_FREELIST);
 			STAILQ_INSERT_HEAD(&freeClients, client, nextClient.freeClient);
@@ -845,7 +869,7 @@ public:
 
 	/***** Server management *****/
 
-	virtual void compact(int logLevel = LVL_NOTICE) {
+	virtual void compact(LoggingKit::Level logLevel = LoggingKit::NOTICE) {
 		unsigned int count = freeClientCount;
 
 		while (!STAILQ_EMPTY(&freeClients)) {
@@ -1034,7 +1058,7 @@ public:
 	}
 
 	void disconnectWithError(Client **client, const StaticString &message,
-		PassengerLogLevel logLevel = LVL_WARN)
+		LoggingKit::Level logLevel = LoggingKit::WARN)
 	{
 		SKC_LOG(*client, logLevel, "Disconnecting client with error: " << message);
 		disconnect(client);
@@ -1062,18 +1086,21 @@ public:
 		return P_STATIC_STRING("Server");
 	}
 
-	virtual Json::Value previewConfigUpdate(const Json::Value &updates,
-		vector<ConfigKit::Error> &errors)
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, BaseServerConfigChangeRequest &req)
 	{
-		return config.previewUpdate(updates, errors);
-	}
-
-	virtual bool configure(const Json::Value &updates, vector<ConfigKit::Error> &errors) {
-		ConfigKit::Store oldConfig = config;
-		if (config.update(updates, errors)) {
-			onConfigChange(&oldConfig);
+		req.config.reset(new ConfigKit::Store(config, updates, errors));
+		if (errors.empty()) {
+			req.configRlz.reset(new BaseServerConfigRealization(*req.config));
 		}
 		return errors.empty();
+	}
+
+	void commitConfigChange(BaseServerConfigChangeRequest &req)
+		BOOST_NOEXCEPT_OR_NOTHROW
+	{
+		config.swap(*req.config);
+		configRlz.swap(*req.configRlz);
 	}
 
 	virtual Json::Value inspectConfig() const {

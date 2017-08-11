@@ -1,11 +1,41 @@
-(Not yet released)
--------------------------------
+Release 5.1.8 (not yet released)
+--------------------------------
 
- * Fixed a typo that causes a looping crash when long security update information is sent by the server. In practice we will keep the messages shorter to avoid triggering this until there has been ample time to upgrade.
+ * [Standalone] Automatically uses Nginx to serves static asset URLs that conform to the [webpacker](https://github.com/rails/webpacker) gem's format. Closes GH-1966.
+ * [Enterprise] Fixes a potential use-after-free bug when reporting usage data to the Phusion licensing server. This bug only occurs when Passenger Enterprise is running inside a container.
+
+
+Release 5.1.7
+-------------
+
+ * Fixes compilation problems on some systems.
+ * Upgrades the JSON parser (json-cpp) to version 1.8.1. This makes parsing slightly faster, adds various security checks and fixes some JSON generation issues.
+ * [Enterprise] Fixes an SSL certificate issue in the license usage data reporter, which only occurs when Passenger Enterprise installed from gem or tarball. The license usage data reporter now searches for the correct system CA path.
+ * [Enterprise] Fixes a potential use-after-free bug when reporting usage data to the Phusion licensing server, and improves reliability of usage data recording.
+
+
+Release 5.1.6
+-------------
+
+ * Fixes a typo that causes a looping crash when long security update information is sent by the server. In practice we will keep the messages shorter to avoid triggering this until there has been ample time to upgrade.
+ * Fixes unnecessary process respawn if it was detached and min_instances is set to 0. Closes GH-1735.
+ * Introduces APT packages for Debian 9 "Stretch", with Passenger built as dynamic module. Closes GH-1960.
+ * Changes APT packages for Ubuntu 17.04 "Zesty" from static to dynamic module.
+ * [Standalone] Now uses graceful shutdown for the Nginx engine under the hood (requested as part of GH-1598). Thanks to PikachuEXE for contributing this.
+ * [Standalone] Fixes a memory corruption issue in the builtin engine. The issue was introduced in 5.1.5 (settings handling refactoring).
+ * [Standalone] Cleanup the temp dir before aborting when startup cannot continue, e.g. when Passenger is already running. Closes GH-1953.
+ * Fixes WSGI crash with Python 3 and non-ASCII characters in headers or the URL. Closes GH-1935. Thanks to n4nn31355 for the assistance.
+ * [Nginx] The preferred Nginx version is now 1.12.1 (previously 1.10.3), except for the Phusion Nginx APT package, which is pinned at 1.10.3 until an 1.12.x compatible lua module becomes available.
+ * [Nginx] Fixes CVE-2017-7529, an integer overflow vulnerability in the Nginx range filter module. This is accomplished by upgrading to Nginx 1.12.1, or applying the patch (Phusion Nginx APT package).
+ * Updated libcurl version used in precompiled binaries (used for e.g. gem installs) to 7.54.1 (was: 7.54.0).
+ * Updated OpenSSL version used in precompiled binaries (used for e.g. gem installs) to 1.0.2l (was: 1.0.2k).
+ * Updated GeoIP version used in precompiled binaries (used for e.g. gem installs) to 1.6.11 (was: 1.6.9).
+ * Updated PCRE version used in precompiled binaries (used for e.g. gem installs) to 8.40 (was: 8.39).
+ * Adds support for building with MacPorts' OpenSSL. Closes GH-1959.
 
 
 Release 5.1.5
--------------------------------
+-------------
 
  * Updated Boost to version 1.64.0, which fixed a compilation issue on certain Gentoo based setups. Closes GH-1942.
  * Improved the error message shown when an app fails to start in time.
@@ -14,7 +44,7 @@ Release 5.1.5
 
 
 Release 5.1.4
--------------------------------
+-------------
 
  * Updated zlib version used in building precompiled binaries (used for e.g. gem installs) to 1.2.11 (was: 1.2.8).
  * Updated openssl version used in building precompiled binaries (used for e.g. gem installs) to 1.0.2k (was: 1.0.2j).
@@ -25,7 +55,7 @@ Release 5.1.4
 
 
 Release 5.1.3
--------------------------------
+-------------
 
  * [Standalone] Fixes `install-standalone-runtime` command after regression in 5.1.2.
  * Removes unnecessary logging of "No Error" from macOS Security Update Checker.

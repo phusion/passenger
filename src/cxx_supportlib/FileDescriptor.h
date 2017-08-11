@@ -35,7 +35,7 @@
 #include <unistd.h>
 #include <cerrno>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 
 namespace Passenger {

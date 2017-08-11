@@ -156,7 +156,7 @@ if sys.version_info[0] >= 3:
 		raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
 
 	def bytes_to_str(b):
-		return b.decode()
+		return b.decode('latin-1')
 
 	def str_to_bytes(s):
 		return s.encode('latin-1')

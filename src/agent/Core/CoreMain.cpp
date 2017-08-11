@@ -678,6 +678,8 @@ initializeNonPrivilegedWorkingObjects() {
 		Json::Value config = ConfigKit::variantMapToJson(wo->controllerSchema,
 			*agentsOptions);
 		config["thread_number"] = i + 1;
+		config["min_spare_clients"] = 128;
+		config["client_freelist_limit"] = 1024;
 
 		if (i == 0) {
 			two.bgloop = firstLoop = new BackgroundEventLoop(true, true);
@@ -697,8 +699,6 @@ initializeNonPrivilegedWorkingObjects() {
 		UPDATE_TRACE_POINT();
 		two.controller = new Core::Controller(two.serverKitContext,
 			wo->controllerSchema, config);
-		two.controller->minSpareClients = 128;
-		two.controller->clientFreelistLimit = 1024;
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
 		two.controller->unionStationContext = wo->unionStationContext;
@@ -936,6 +936,7 @@ shutdownApiServer() {
 static void
 serverShutdownFinished() {
 	unsigned int i = workingObjects->shutdownCounter.fetch_sub(1, boost::memory_order_release);
+	P_DEBUG("Shutdown counter = " << (i - 1));
 	if (i == 1) {
 		boost::atomic_thread_fence(boost::memory_order_acquire);
 		workingObjects->allClientsDisconnectedEvent.notify();
@@ -944,11 +945,13 @@ serverShutdownFinished() {
 
 static void
 controllerShutdownFinished(Core::Controller *controller) {
+	P_DEBUG("Controller " << controller->getThreadNumber() << " shutdown finished");
 	serverShutdownFinished();
 }
 
 static void
 apiServerShutdownFinished(Core::ApiServer::ApiServer *server) {
+	P_DEBUG("API server shutdown finished");
 	serverShutdownFinished();
 }
 

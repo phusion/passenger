@@ -46,6 +46,11 @@ using namespace boost;
  ****************************/
 
 
+unsigned int
+Controller::getThreadNumber() const {
+	return mainConfig.threadNumber;
+}
+
 Json::Value
 Controller::inspectStateAsJson() const {
 	Json::Value doc = ParentClass::inspectStateAsJson();

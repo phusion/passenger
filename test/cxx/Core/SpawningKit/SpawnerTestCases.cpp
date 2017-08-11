@@ -25,7 +25,7 @@
 		options.startCommand = "sleep 60";
 		options.startupFile  = ".";
 		options.startTimeout = 100;
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		EVENTUALLY(5,
 			SpawnerPtr spawner = createSpawner(options);
@@ -34,6 +34,12 @@
 				fail("SpawnException expected");
 			} catch (const SpawnException &e) {
 				result = e.getErrorCategory() == SpawningKit::TIMEOUT_ERROR;
+				if (!result) {
+					// It didn't work, maybe because the server is too busy.
+					// Try again with higher timeout.
+					options.startTimeout = std::min<unsigned int>(
+						options.startTimeout * 2, 1000);
+				}
 				if (!result) {
 					// It didn't work, maybe because the server is too busy.
 					// Try again with higher timeout.

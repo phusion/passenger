@@ -49,7 +49,7 @@
 #include <jsoncpp/json.h>
 
 #include <Constants.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <Exceptions.h>
 #include <Utils.h>

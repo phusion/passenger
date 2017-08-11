@@ -32,7 +32,7 @@
 
 #define CC_BENCHMARK_POINT(client, req, value) \
 	do { \
-		if (OXT_UNLIKELY(mainConfigCache.benchmarkMode == value)) { \
+		if (OXT_UNLIKELY(mainConfig.benchmarkMode == value)) { \
 			writeBenchmarkResponse(&client, &req); \
 			return; \
 		} \
@@ -61,7 +61,7 @@
 #include <cassert>
 #include <cctype>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <MessageReadersWriters.h>
 #include <Constants.h>
 #include <ConfigKit/ConfigKit.h>
@@ -108,13 +108,14 @@ private:
 	typedef ServerKit::FdSourceChannel FdSourceChannel;
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;
+	typedef ControllerConfigChangeRequest ConfigChangeRequest;
 
 	// If you change this value, make sure that Request::sessionCheckoutTry
 	// has enough bits.
 	static const unsigned int MAX_SESSION_CHECKOUT_TRY = 10;
 
-	ControllerMainConfigCache mainConfigCache;
-	ControllerRequestConfigCachePtr requestConfigCache;
+	ControllerMainConfig mainConfig;
+	ControllerRequestConfigPtr requestConfig;
 	StringKeyTable< boost::shared_ptr<Options> > poolOptionsCache;
 
 	HashedStaticString PASSENGER_APP_GROUP_NAME;
@@ -157,8 +158,8 @@ private:
 	void initializeFlags(Client *client, Request *req, RequestAnalysis &analysis);
 	bool respondFromTurboCache(Client *client, Request *req);
 	void initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis);
-	void fillPoolOptionsFromConfigCaches(Options &options,
-		const ControllerRequestConfigCachePtr &requestConfigCache);
+	void fillPoolOptionsFromConfigCaches(Options &options, psg_pool_t *pool,
+		const ControllerRequestConfigPtr &requestConfigCache);
 	static void fillPoolOption(Request *req, StaticString &field,
 		const HashedStaticString &name);
 	static void fillPoolOption(Request *req, int &field,
@@ -349,7 +350,6 @@ protected:
 	virtual void onNextRequestEarlyReadError(Client *client, Request *req, int errcode);
 	virtual bool shouldDisconnectClientOnShutdown(Client *client);
 	virtual bool supportsUpgrade(Client *client, Request *req);
-	virtual void onConfigChange(const ConfigKit::Store *oldConfig);
 
 
 	/****** Marked virtual so that unit tests can mock these ******/
@@ -379,8 +379,17 @@ public:
 	virtual StaticString getServerName() const;
 
 
-	/****** State inspection and configuration ******/
+	/****** Configuration handling ******/
 
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, ControllerConfigChangeRequest &req);
+	void commitConfigChange(ControllerConfigChangeRequest &req)
+		BOOST_NOEXCEPT_OR_NOTHROW;
+
+
+	/****** State and configuration ******/
+
+	unsigned int getThreadNumber() const; // Thread-safe
 	virtual Json::Value inspectStateAsJson() const;
 	virtual Json::Value inspectClientStateAsJson(const Client *client) const;
 	virtual Json::Value inspectRequestStateAsJson(const Request *req) const;

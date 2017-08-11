@@ -42,7 +42,7 @@ using namespace std;
 
 #define CBP_DEBUG(expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::getLogLevel() >= LVL_DEBUG3)) { \
+		if (OXT_UNLIKELY(Passenger::LoggingKit::getLevel() >= Passenger::LoggingKit::DEBUG3)) { \
 			char _buf[256]; \
 			unsigned int size = loggingPrefixFormatter(_buf, sizeof(_buf), userData); \
 			P_TRACE(3, StaticString(_buf, size) << expr); \

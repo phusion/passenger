@@ -26,6 +26,13 @@
 #ifndef _PASSENGER_STATIC_STRING_H_
 #define _PASSENGER_STATIC_STRING_H_
 
+// for std::swap()
+#if __cplusplus >= 201103L
+	#include <utility>
+#else
+	#include <algorithm>
+#endif
+#include <boost/config.hpp>
 #include <oxt/macros.hpp>
 #include <sys/types.h>
 #include <string>
@@ -246,6 +253,11 @@ public:
 			}
 			return StaticString(content + pos, n);
 		}
+	}
+
+	void swap(StaticString &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		std::swap(content, other.content);
+		std::swap(len, other.len);
 	}
 
 	bool operator==(const StaticString &other) const {

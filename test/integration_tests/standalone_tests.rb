@@ -138,6 +138,11 @@ describe "Passenger Standalone" do
 
     context "if the runtime is not installed" do
       before :each do
+        # Prevent concurrent usage of ~/.passenger
+        lock_path = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}.lock")
+        @lock = File.open(lock_path, 'w')
+        @lock.flock(File::LOCK_EX)
+
         @user_dir = File.expand_path("~/#{USER_NAMESPACE_DIRNAME}")
         if File.exist?("buildout.old")
           raise "buildout.old exists. Please fix this first."
@@ -166,6 +171,7 @@ describe "Passenger Standalone" do
           FileUtils.rm_rf(@user_dir)
           FileUtils.mv("#{@user_dir}.old", @user_dir)
         end
+        @lock.close if @lock
       end
 
       context "when natively packaged" do

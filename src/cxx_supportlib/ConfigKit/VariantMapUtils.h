@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_
 #define _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Exceptions.h>
 #include <ConfigKit/Schema.h>
 #include <Utils/StrIntUtils.h>
@@ -62,6 +62,17 @@ variantMapToJson(const Schema &schema, const VariantMap &options) {
 			case BOOL_TYPE:
 				doc[key.toString()] = options.getBool(key);
 				break;
+			case ARRAY_TYPE:
+			case STRING_ARRAY_TYPE: {
+				Json::Value subdoc(Json::arrayValue);
+				vector<string> set = options.getStrSet(key);
+				vector<string>::const_iterator it, end = set.end();
+				for (it = set.begin(); it != end; it++) {
+					subdoc.append(*it);
+				}
+				doc[key.toString()] = subdoc;
+				break;
+			}
 			default:
 				P_BUG("Unknown type " + Passenger::toString((int) entry.type));
 				break;

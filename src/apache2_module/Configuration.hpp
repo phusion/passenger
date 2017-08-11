@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_CONFIGURATION_HPP_
 #define _PASSENGER_CONFIGURATION_HPP_
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Constants.h>
 #include <Utils.h>
 #include <Utils/VariantMap.h>

@@ -54,6 +54,10 @@ module PhusionPassenger
             rescue SystemCallError, IOError
               pid = nil
             end
+            if @can_remove_working_dir
+              FileUtils.remove_entry_secure(@working_dir)
+              @can_remove_working_dir = false
+            end
             if pid
               abort "#{PROGRAM_NAME} Standalone is already running on PID #{pid}."
             else
@@ -154,6 +158,10 @@ module PhusionPassenger
             :start_command => "#{Shellwords.escape @nginx_binary} " +
               "-c #{Shellwords.escape nginx_config_path} " +
               "-p #{Shellwords.escape @working_dir}",
+            :stop_command => "#{Shellwords.escape @nginx_binary} " +
+              "-c #{Shellwords.escape nginx_config_path} " +
+              "-p #{Shellwords.escape @working_dir} " +
+              "-s quit",
             :ping_command  => ping_spec,
             :pid_file      => @options[:pid_file],
             :log_file      => @options[:log_file],

@@ -30,7 +30,7 @@ namespace tut {
 		}
 
 		~SpawnEnvSetupperTest() {
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void init(JourneyType type, const Json::Value &extraArgs = Json::Value()) {
@@ -328,7 +328,7 @@ namespace tut {
 		string cwd = getcwd(buffer, sizeof(buffer));
 
 		config.appRoot = "tmp.check/a/b/c/d";
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
@@ -388,7 +388,7 @@ namespace tut {
 		string cwd = getcwd(buffer, sizeof(buffer));
 
 		config.appRoot = "tmp.check/a/b/c/d";
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
@@ -417,7 +417,7 @@ namespace tut {
 		string cwd = getcwd(buffer, sizeof(buffer));
 
 		config.appRoot = "tmp.check/a/b/c/d";
-		setLogLevel(LVL_CRIT);
+		LoggingKit::setLevel(LoggingKit::CRIT);
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 

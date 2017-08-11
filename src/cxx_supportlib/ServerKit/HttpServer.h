@@ -35,7 +35,7 @@
 #include <cmath>
 #include <cassert>
 #include <pthread.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/HttpClient.h>
 #include <ServerKit/HttpRequest.h>
@@ -83,6 +83,23 @@ public:
 	}
 };
 
+struct HttpServerConfigRealization {
+	unsigned int requestFreelistLimit;
+
+	HttpServerConfigRealization(const ConfigKit::Store &config)
+		: requestFreelistLimit(config["request_freelist_limit"].asUInt())
+		{ }
+
+	void swap(HttpServerConfigRealization &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		std::swap(requestFreelistLimit, other.requestFreelistLimit);
+	}
+};
+
+struct HttpServerConfigChangeRequest {
+	BaseServerConfigChangeRequest forParent;
+	boost::scoped_ptr<HttpServerConfigRealization> configRlz;
+};
+
 
 template< typename DerivedServer, typename Client = HttpClient<HttpRequest> >
 class HttpServer: public BaseServer<DerivedServer, Client> {
@@ -91,8 +108,10 @@ public:
 	typedef HttpRequestRef<DerivedServer, Request> RequestRef;
 	STAILQ_HEAD(FreeRequestList, Request);
 
+	typedef HttpServerConfigChangeRequest ConfigChangeRequest;
+
 	FreeRequestList freeRequests;
-	unsigned int freeRequestCount, requestFreelistLimit;
+	unsigned int freeRequestCount;
 	unsigned long totalRequestsBegun, lastTotalRequestsBegun;
 	double requestBeginSpeed1m, requestBeginSpeed1h;
 
@@ -124,6 +143,11 @@ private:
 	};
 
 	friend class RequestHooksImpl;
+
+
+	/***** Configuration *****/
+
+	HttpServerConfigRealization configRlz;
 
 
 	/***** Working state *****/
@@ -196,7 +220,7 @@ private:
 	}
 
 	bool addRequestToFreelist(Request *request) {
-		if (freeRequestCount < requestFreelistLimit) {
+		if (freeRequestCount < configRlz.requestFreelistLimit) {
 			STAILQ_INSERT_HEAD(&freeRequests, request, nextRequest.freeRequest);
 			freeRequestCount++;
 			request->refcount.store(1, boost::memory_order_relaxed);
@@ -856,13 +880,13 @@ protected:
 		return false;
 	}
 
-	virtual PassengerLogLevel getClientOutputErrorDisconnectionLogLevel(
+	virtual LoggingKit::Level getClientOutputErrorDisconnectionLogLevel(
 		Client *client, int errcode) const
 	{
 		if (errcode == EPIPE || errcode == ECONNRESET) {
-			return LVL_INFO;
+			return LoggingKit::INFO;
 		} else {
-			return LVL_WARN;
+			return LoggingKit::WARN;
 		}
 	}
 
@@ -941,13 +965,6 @@ protected:
 		req->bodyChannel.deinitialize();
 	}
 
-	virtual void onConfigChange(const ConfigKit::Store *oldConfig) {
-		ParentClass::onConfigChange(oldConfig);
-		const ConfigKit::Store &config = this->config;
-
-		requestFreelistLimit = config["request_freelist_limit"].asUInt();
-	}
-
 
 	/***** Misc *****/
 
@@ -961,11 +978,11 @@ public:
 		const Json::Value &initialConfig = Json::Value())
 		: ParentClass(context, schema, initialConfig),
 		  freeRequestCount(0),
-		  requestFreelistLimit(1024),
 		  totalRequestsBegun(0),
 		  lastTotalRequestsBegun(0),
 		  requestBeginSpeed1m(-1),
 		  requestBeginSpeed1h(-1),
+		  configRlz(ParentClass::config),
 		  headerParserStatePool(16, 256)
 	{
 		STAILQ_INIT(&freeRequests);
@@ -974,7 +991,7 @@ public:
 
 	/***** Server management *****/
 
-	virtual void compact(int logLevel = LVL_NOTICE) {
+	virtual void compact(LoggingKit::Level logLevel = LoggingKit::NOTICE) {
 		ParentClass::compact();
 		unsigned int count = freeRequestCount;
 
@@ -1209,6 +1226,22 @@ public:
 
 
 	/***** Configuration and introspection *****/
+
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, HttpServerConfigChangeRequest &req)
+	{
+		if (ParentClass::prepareConfigChange(updates, errors, req.forParent)) {
+			req.configRlz.reset(new HttpServerConfigRealization(*req.forParent.config));
+		}
+		return errors.empty();
+	}
+
+	void commitConfigChange(HttpServerConfigChangeRequest &req)
+		BOOST_NOEXCEPT_OR_NOTHROW
+	{
+		ParentClass::commitConfigChange(req.forParent);
+		configRlz.swap(*req.configRlz);
+	}
 
 	virtual Json::Value inspectStateAsJson() const {
 		Json::Value doc = ParentClass::inspectStateAsJson();

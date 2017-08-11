@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-TEST_DYNAMIC_WITH_NGINX_VERSION=1.9.15
+TEST_DYNAMIC_WITH_NGINX_VERSION=1.12.1
 NGINX_ADDON_DIR=$(./bin/passenger-config --nginx-addon-dir)
 echo "+ Nginx addon dir: $NGINX_ADDON_DIR"
 echo

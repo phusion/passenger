@@ -48,7 +48,7 @@ namespace tut {
 			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::deinitializeChannel,
 				this));
 			bg.stop();
-			setLogLevel(DEFAULT_LOG_LEVEL);
+			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void deinitializeChannel() {

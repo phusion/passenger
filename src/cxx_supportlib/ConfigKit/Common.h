@@ -48,6 +48,14 @@ enum Type {
 	UINT_TYPE,
 	FLOAT_TYPE,
 	BOOL_TYPE,
+
+	ARRAY_TYPE,
+	STRING_ARRAY_TYPE,
+
+	OBJECT_TYPE,
+
+	ANY_TYPE,
+
 	UNKNOWN_TYPE
 };
 
@@ -56,6 +64,7 @@ enum Flags {
 	REQUIRED = 1 << 0,
 	CACHE_DEFAULT_VALUE = 1 << 1,
 	READ_ONLY = 1 << 2,
+	SECRET = 1 << 3,
 
 	_DYNAMIC_DEFAULT_VALUE = 1 << 30,
 	_FROM_SUBSCHEMA = 1 << 31
@@ -115,8 +124,6 @@ public:
 };
 
 typedef boost::function<Json::Value (const Store &store)> ValueGetter;
-typedef boost::function<void (const Json::Value &config, const vector<Error> &errors)> ConfigCallback;
-typedef boost::function<void (const Json::Value &config)> InspectCallback;
 
 
 } // namespace ConfigKit

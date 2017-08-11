@@ -57,7 +57,7 @@
 #include <jsoncpp/json.h>
 #include <adhoc_lve.h>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
@@ -111,7 +111,7 @@ readArgsJson(const string &workDir) {
 static void
 initializeLogLevel(const Json::Value &args) {
 	if (args.isMember("log_level")) {
-		setLogLevel(args["log_level"].asInt());
+		LoggingKit::setLevel(LoggingKit::Level(args["log_level"].asInt()));
 	}
 }
 
@@ -761,7 +761,7 @@ execNextCommand(const Context &context, const string &shell)
 		if (shouldLoadShellEnvvars(context.args, shell)) {
 			nextJourneyStep = SpawningKit::SUBPROCESS_OS_SHELL;
 			commandArgs.push_back(shell.c_str());
-			if (getLogLevel() >= LVL_DEBUG3) {
+			if (LoggingKit::getLevel() >= LoggingKit::DEBUG3) {
 				commandArgs.push_back("-x");
 			}
 			commandArgs.push_back("-lc");
@@ -828,6 +828,8 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 
 	oxt::initialize();
 	oxt::setup_syscall_interruption_support();
+	LoggingKit::initialize();
+	SystemTime::initialize();
 
 	Context context;
 	context.workDir = argv[2];

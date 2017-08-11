@@ -66,7 +66,7 @@ task 'test:install_deps' do
     sh "bundle install #{bundle_args} --without="
   else
     if install_base_deps
-      sh "bundle install #{bundle_args} --without doc"
+      sh "bundle install #{bundle_args} --without doc release"
     end
     if install_doctools
       sh "bundle install #{bundle_args} --without base"

@@ -29,6 +29,7 @@ namespace tut {
 
 	DEFINE_TEST_GROUP(ConfigKit_StoreTest);
 
+
 	/*********** Test validation ***********/
 
 	TEST_METHOD(1) {
@@ -103,10 +104,14 @@ namespace tut {
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
 		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
+		schema.add("secret", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED | ConfigKit::SECRET);
+		schema.add("secret_default", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET, "default");
+		schema.add("secret_null", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET);
 		init();
 
 		doc["foo"] = "string";
 		doc["baz"] = true;
+		doc["secret"] = "my secret";
 
 		Json::Value preview = config->previewUpdate(doc, errors);
 		ensure_equals("1 error", errors.size(), 1u);
@@ -116,25 +121,27 @@ namespace tut {
 		ensure("baz does not exists", !preview.isMember("baz"));
 		ensure_equals("foo is a string", preview["foo"]["user_value"].asString(), "string");
 		ensure("bar is null", preview["bar"]["user_value"].isNull());
-	}
 
-	TEST_METHOD(11) {
-		set_test_name("forceApplyUpdatePreview()");
+		ensure_equals("secret user value is filtered",
+			preview["secret"]["user_value"].asString(), "[FILTERED]");
+		ensure("secret default value is null",
+			preview["secret"]["default_value"].isNull());
+		ensure_equals("secret effective value is filtered",
+			preview["secret"]["effective_value"].asString(), "[FILTERED]");
 
-		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
-		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
-		init();
+		ensure("secret_default user value is null",
+			preview["secret_default"]["user_value"].isNull());
+		ensure_equals("secret_default default value is filtered",
+			preview["secret_default"]["default_value"].asString(), "[FILTERED]");
+		ensure_equals("secret_default effective value is filtered",
+			preview["secret_default"]["effective_value"].asString(), "[FILTERED]");
 
-		doc["foo"] = "string";
-		doc["baz"] = true;
-
-		Json::Value preview = config->previewUpdate(doc, errors);
-		ensure_equals("1 error", errors.size(), 1u);
-		ensure_equals(errors[0].getMessage(), "'bar' is required");
-
-		config->forceApplyUpdatePreview(preview);
-		ensure_equals("foo is a string", config->get("foo").asString(), "string");
-		ensure("bar is null", config->get("bar").isNull());
+		ensure("secret_null user value is null",
+			preview["secret_null"]["user_value"].isNull());
+		ensure("secret_null has no default value",
+			preview["secret_null"]["default_value"].isNull());
+		ensure("secret_null effective value is null",
+			preview["secret_null"]["effective_value"].isNull());
 	}
 
 	TEST_METHOD(12) {
@@ -142,18 +149,43 @@ namespace tut {
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
 		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
+		schema.add("secret", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED | ConfigKit::SECRET);
+		schema.add("secret_default", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET, "default");
+		schema.add("secret_null", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL | ConfigKit::SECRET);
 		init();
 
 		doc["foo"] = "string";
 		doc["bar"] = 123;
-		ensure(config->update(doc, errors));
-		ensure(errors.empty());
+		doc["secret"] = "my secret";
+		ensure("update succeeds", config->update(doc, errors));
+		ensure("no errors", errors.empty());
 
 		Json::Value dump = config->inspect();
 		ensure_equals("foo user value", dump["foo"]["user_value"].asString(), "string");
 		ensure_equals("foo effective value", dump["foo"]["effective_value"].asString(), "string");
 		ensure_equals("bar user value", dump["bar"]["user_value"].asInt(), 123);
 		ensure_equals("bar effective value", dump["bar"]["effective_value"].asInt(), 123);
+
+		ensure_equals("secret user value is filtered",
+			dump["secret"]["user_value"].asString(), "[FILTERED]");
+		ensure("secret default value is null",
+			dump["secret"]["default_value"].isNull());
+		ensure_equals("secret effective value is filtered",
+			dump["secret"]["effective_value"].asString(), "[FILTERED]");
+
+		ensure("secret_default user value is null",
+			dump["secret_default"]["user_value"].isNull());
+		ensure_equals("secret_default default value is filtered",
+			dump["secret_default"]["default_value"].asString(), "[FILTERED]");
+		ensure_equals("secret_default effective value is filtered",
+			dump["secret_default"]["effective_value"].asString(), "[FILTERED]");
+
+		ensure("secret_null user value is null",
+			dump["secret_null"]["user_value"].isNull());
+		ensure("secret_null has no default value",
+			dump["secret_null"]["default_value"].isNull());
+		ensure("secret_null effective value is null",
+			dump["secret_null"]["effective_value"].isNull());
 	}
 
 	TEST_METHOD(13) {

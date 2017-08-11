@@ -31,7 +31,7 @@
 
 #include <modp_b64.h>
 
-#include <Logging.h>
+#include <LoggingKit/Logging.h>
 #include <Utils/SystemTime.h>
 #include <Core/SpawningKit/Context.h>
 #include <Core/SpawningKit/Result.h>

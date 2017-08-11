@@ -38,7 +38,7 @@
 
 #include <sys/types.h>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <FileDescriptor.h>
 #include <StaticString.h>
 #include <Utils.h>
@@ -92,7 +92,7 @@ private:
 				}
 				UPDATE_TRACE_POINT();
 				if (ret == 1 && buf[0] == '\n') {
-					printAppOutput(pid, channelName, "", 0);
+					LoggingKit::logAppOutput(pid, channelName, "", 0);
 				} else {
 					vector<StaticString> lines;
 					if (ret > 0 && buf[ret - 1] == '\n') {
@@ -100,8 +100,7 @@ private:
 					}
 					split(StaticString(buf, ret), '\n', lines);
 					foreach (const StaticString line, lines) {
-						printAppOutput(pid, channelName,
-							line.data(), line.size());
+						LoggingKit::logAppOutput(pid, channelName, line.data(), line.size());
 					}
 				}
 			}

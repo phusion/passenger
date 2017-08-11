@@ -32,7 +32,7 @@
 
 #include <Constants.h>
 #include <Exceptions.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <DataStructures/StringKeyTable.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>

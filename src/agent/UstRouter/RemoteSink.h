@@ -30,7 +30,7 @@
 #include <cstring>
 #include <ctime>
 #include <ev++.h>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <UstRouter/LogSink.h>
 #include <UstRouter/RemoteSender.h>
 

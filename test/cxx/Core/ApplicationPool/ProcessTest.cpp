@@ -1,5 +1,6 @@
 #include <TestSupport.h>
 #include <Core/ApplicationPool/Process.h>
+#include <LoggingKit/Context.h>
 #include <Utils/IOUtils.h>
 
 using namespace Passenger;
@@ -19,8 +20,6 @@ namespace tut {
 		Core_ApplicationPool_ProcessTest()
 			: skContext(skContextSchema)
 		{
-			setPrintAppOutputAsDebuggingMessages(true);
-
 			skContext.resourceLocator = resourceLocator;
 			skContext.integrationMode = "standalone";
 			skContext.finalize();
@@ -64,11 +63,31 @@ namespace tut {
 
 			stdinFd = createPipe(__FILE__, __LINE__);
 			stdoutAndErrFd = createPipe(__FILE__, __LINE__);
+
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["app_output_log_level"] = "debug";
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		~Core_ApplicationPool_ProcessTest() {
-			setLogLevel(DEFAULT_LOG_LEVEL);
-			setPrintAppOutputAsDebuggingMessages(false);
+			Json::Value config;
+			vector<ConfigKit::Error> errors;
+			LoggingKit::ConfigChangeRequest req;
+			config["level"] = DEFAULT_LOG_LEVEL_NAME;
+			config["app_output_log_level"] = DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME;
+
+			if (LoggingKit::context->prepareConfigChange(config, errors, req)) {
+				LoggingKit::context->commitConfigChange(req);
+			} else {
+				P_BUG("Error configuring LoggingKit: " << ConfigKit::toString(errors));
+			}
 		}
 
 		ProcessPtr createProcess(const Json::Value &extraArgs = Json::Value()) {
@@ -190,7 +209,7 @@ namespace tut {
 		fclose(fopen("tmp.log/file", "w"));
 
 		ProcessPtr process = createProcess(extraArgs);
-		setLogLevel(LVL_WARN);
+		LoggingKit::setLevel(LoggingKit::WARN);
 
 		writeExact(stdoutAndErrFd[1], "stdout and err 1\n");
 		writeExact(stdoutAndErrFd[1], "stdout and err 2\n");

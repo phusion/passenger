@@ -43,6 +43,9 @@ module PhusionPassenger
   module SharedConstants
     # Default config values
     DEFAULT_LOG_LEVEL = 3
+    DEFAULT_LOG_LEVEL_NAME = "notice"
+    DEFAULT_APP_OUTPUT_LOG_LEVEL = 3
+    DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME = "notice"
     DEFAULT_INTEGRATION_MODE = "standalone"
     DEFAULT_SOCKET_BACKLOG = 2048
     DEFAULT_RUBY = "ruby"

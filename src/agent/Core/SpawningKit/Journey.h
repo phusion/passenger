@@ -34,7 +34,7 @@
 
 #include <jsoncpp/json.h>
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <Utils/SystemTime.h>
 #include <Utils/JsonUtils.h>

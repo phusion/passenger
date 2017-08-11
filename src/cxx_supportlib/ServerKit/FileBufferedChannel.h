@@ -41,7 +41,7 @@
 #include <utility>
 #include <string>
 #include <deque>
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/Errors.h>
 #include <ServerKit/Channel.h>

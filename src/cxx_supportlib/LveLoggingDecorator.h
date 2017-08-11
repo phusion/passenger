@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_LVE_LOGGING_DECORATOR_H_
 #define _PASSENGER_LVE_LOGGING_DECORATOR_H_
 
-#include <Logging.h>
+#include <LoggingKit/LoggingKit.h>
 #include <adhoc_lve.h>
 #include <string>
 #include <sys/types.h>

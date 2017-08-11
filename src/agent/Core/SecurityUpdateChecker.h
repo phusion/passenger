@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_UPDATE_CHECKER_H_
-#define _PASSENGER_UPDATE_CHECKER_H_
+#ifndef _PASSENGER_SECURITY_UPDATE_CHECKER_H_
+#define _PASSENGER_SECURITY_UPDATE_CHECKER_H_
 
 #include <string>
 #include <oxt/thread.hpp>
@@ -35,8 +35,8 @@
 #include <modp_b64.h>
 
 #if BOOST_OS_MACOS
-#include <sys/syslimits.h>
-#include <unistd.h>
+	#include <sys/syslimits.h>
+	#include <unistd.h>
 #endif
 
 namespace Passenger {
@@ -44,11 +44,12 @@ namespace Passenger {
 using namespace std;
 using namespace oxt;
 
+
 #define CHECK_HOST_DEFAULT "securitycheck.phusionpassenger.com"
 
 #define CHECK_URL_DEFAULT "https://" CHECK_HOST_DEFAULT ":443/v1/check.json"
-#define MIN_CHECK_BACKOFF_SEC 12 * 60 * 60
-#define MAX_CHECK_BACKOFF_SEC 7 * 24 * 60 * 60
+#define MIN_CHECK_BACKOFF_SEC (12 * 60 * 60)
+#define MAX_CHECK_BACKOFF_SEC (7 * 24 * 60 * 60)
 
 // Password for the .p12 client certificate (because .p12 is required to be pwd protected on some
 // implementations). We're OK with hardcoding because the certs are not secret anyway, and they're not used
@@ -57,6 +58,7 @@ using namespace oxt;
 #define CLIENT_CERT_LABEL "Phusion Passenger Open Source"
 
 #define POSSIBLE_MITM_RESOLUTION "(if this error persists check your connection security or try upgrading " SHORT_PROGRAM_NAME ")"
+
 /**
  * If started, this class periodically (default: daily, immediate start) checks whether there are any important
  * security updates available (updates that don't fix security issues are not reported). The result is logged
@@ -80,7 +82,7 @@ private:
 		TRACE_POINT();
 		// Sleep for a short while to allow interruption during the Apache integration double startup procedure, this prevents running the update check twice
 		boost::this_thread::sleep_for(boost::chrono::seconds(2));
-		while (!this_thread::interruption_requested()) {
+		while (!boost::this_thread::interruption_requested()) {
 			UPDATE_TRACE_POINT();
 			int backoffMin = 0;
 			try {
@@ -589,6 +591,7 @@ public:
 	}
 
 };
-}
 
-#endif /* _PASSENGER_UPDATE_CHECKER_H_ */
+} // namespace Passenger
+
+#endif /* _PASSENGER_SECURITY_UPDATE_CHECKER_H_ */
