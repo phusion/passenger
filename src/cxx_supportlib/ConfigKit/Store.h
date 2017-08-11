@@ -408,6 +408,7 @@ public:
 	 * values only. This is like `inspect()` but much less verbose.
 	 * See the README's "Inspecting all data" section to learn more
 	 * about the format.
+	 * Note that values with the SECRET flag are not filtered.
 	 */
 	Json::Value inspectEffectiveValues() const {
 		Json::Value result(Json::objectValue);
