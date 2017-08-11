@@ -90,17 +90,12 @@ Regardless of whether SpawningKit is used to spawn an application with or withou
 
 ### Summary with examples
 
-To help you better understand the concepts, the following table displays an example of some of the above concepts map to hypothetically supportable languages.
+To help you better understand the concepts, the following summarizes some of the above concepts and how they map to supportable languages.
 
-~~~
-| Generic apps (no   | SpawningKit-enabled,   | SpawningKit-enabled,  |
-| explicit Passenger | wrapper available      | no wrapper available  |
-| support)           |                        |                       |
-| ------------------ | ---------------------- | --------------------- |
-| Go app without     | Ruby, Python, Node.js, | Go, Ruby, Perl, all   |
-| modifications      | Meteor, Perl, all      | with modifications    |
-|                    | without modifications  |                       |
-~~~
+SpawningKit-enabled wrappers are included in Passenger for these languages: Ruby, Python, Node.js, Meteor, and Perl.
+
+Any existing app that accepts http requests can be used by writing a wrapper, and any new app can be written with SpawningKit compatibility to avoid the need for a wrapper.
+
 
 ## API and implementation highlights
 

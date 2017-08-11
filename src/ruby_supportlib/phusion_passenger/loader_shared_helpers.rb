@@ -738,7 +738,7 @@ module PhusionPassenger
                     <li>
                       Run this to find out what to set
                       <a href="#{h passenger_ruby_doc}">#{h passenger_ruby}</a> to:
-                      <pre>#{h PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-config --detect-ruby</pre>
+                      <pre>#{h PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-config about ruby-command</pre>
                     </li>
                   </ol>
                 </div>
@@ -847,7 +847,7 @@ module PhusionPassenger
             "  <li>Run this to find out what to set" \
             "      <a href=\"#{h passenger_ruby_doc}\">#{h passenger_ruby}</a> to:\n" \
             "      <pre>#{h PlatformInfo.ruby_command} \\\n" \
-            "#{PhusionPassenger.bin_dir}/passenger-config --detect-ruby</pre></li>\n" \
+            "#{PhusionPassenger.bin_dir}/passenger-config about ruby-command</pre></li>\n" \
             "</ol>\n\n"
         end
         if PlatformInfo.in_rvm?
