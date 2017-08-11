@@ -22,32 +22,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-class TemplateRenderer
-  def initialize(filename)
-    require 'erb' if !defined?(ERB)
-    @erb = ERB.new(File.read(filename), nil, "-")
-    @erb.filename = filename
-  end
-
-  def render
-    return @erb.result(binding)
-  end
-
-  def render_to(filename)
-    puts "Creating #{filename}"
-    text = render
-    # When packaging, some timestamps may be modified. The user may not
-    # have write access to the source root (for example, when Passenger
-    # Standalone is compiling its runtime), so we only write to the file
-    # when necessary.
-    if !File.exist?(filename) || File.writable?(filename) || File.read(filename) != text
-      File.open(filename, 'w') do |f|
-        f.write(text)
-      end
-    end
-  end
-end
-
 class CxxCodeTemplateRenderer
   def initialize(filename)
     if !defined?(CxxCodeBuilder)
