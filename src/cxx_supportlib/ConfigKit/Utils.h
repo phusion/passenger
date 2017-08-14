@@ -31,6 +31,7 @@
 
 #include <ConfigKit/Common.h>
 #include <StaticString.h>
+#include <DataStructures/StringKeyTable.h>
 #include <Utils/FastStringStream.h>
 
 namespace Passenger {
@@ -65,6 +66,25 @@ getTypeString(Type type) {
 	default:
 		return P_STATIC_STRING("unknown");
 	}
+}
+
+inline vector<ConfigKit::Error>
+deduplicateErrors(const vector<ConfigKit::Error> &errors) {
+	StringKeyTable<bool> messagesSeen;
+	vector<ConfigKit::Error>::const_iterator it, end = errors.end();
+	vector<ConfigKit::Error> result;
+
+	for (it = errors.begin(); it != end; it++) {
+		bool *tmp;
+		string message = it->getMessage();
+
+		if (!messagesSeen.lookup(message, &tmp)) {
+			messagesSeen.insert(message, true);
+			result.push_back(*it);
+		}
+	}
+
+	return result;
 }
 
 inline string
