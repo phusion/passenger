@@ -395,35 +395,12 @@ normalizeConfig(const Json::Value &effectiveValues) {
 	return updates;
 }
 
-static void
-postNormalizeConfig(ConfigKit::Store &config) {
-	Json::Value updates(Json::objectValue);
-
-	if (config["target"].isMember("fd")) {
-		updates["target"] = config["target"];
-		updates.removeMember("fd");
-	}
-	if (config["file_descriptor_log_target"].isMember("fd")) {
-		updates["file_descriptor_log_target"] = config["file_descriptor_log_target"];
-		updates.removeMember("fd");
-	}
-
-	if (!updates.empty()) {
-		vector<ConfigKit::Error> errors;
-		if (!config.update(updates, errors)) {
-			P_BUG("Error post-normalizing LoggingKit config: "
-				<< ConfigKit::toString(errors));
-		}
-	}
-}
-
 
 Context::Context(const Json::Value &initialConfig)
 	: config(schema, initialConfig)
 {
 	configRlz.store(new ConfigRealization(config));
 	configRlz.load()->apply(config, NULL);
-	postNormalizeConfig(config);
 	configRlz.load()->finalize();
 }
 
@@ -446,7 +423,6 @@ Context::prepareConfigChange(const Json::Value &updates,
 	}
 
 	req.configRlz = new ConfigRealization(*req.config);
-	postNormalizeConfig(*req.config);
 	return true;
 }
 
@@ -537,12 +513,21 @@ Schema::validateTarget(const string &key, const ConfigKit::Store &store,
 	}
 }
 
+static Json::Value
+filterTargetFd(const Json::Value &value) {
+	Json::Value result = value;
+	result.removeMember("fd");
+	return result;
+}
+
 Schema::Schema() {
 	using namespace ConfigKit;
 
 	add("level", STRING_TYPE, OPTIONAL, DEFAULT_LOG_LEVEL_NAME);
-	add("target", ANY_TYPE, OPTIONAL, createStderrTarget());
-	add("file_descriptor_log_target", ANY_TYPE, OPTIONAL);
+	add("target", ANY_TYPE, OPTIONAL, createStderrTarget())
+		.setInspectFilter(filterTargetFd);
+	add("file_descriptor_log_target", ANY_TYPE, OPTIONAL)
+		.setInspectFilter(filterTargetFd);
 	add("redirect_stderr", BOOL_TYPE, OPTIONAL, true);
 	add("app_output_log_level", STRING_TYPE, OPTIONAL, DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME);
 
