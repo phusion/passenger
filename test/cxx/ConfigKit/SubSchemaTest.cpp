@@ -156,4 +156,30 @@ namespace tut {
 		ensure(config["sub_target"].isObject());
 		ensure_equals(config["sub_target"]["path"].asString(), "/path");
 	}
+
+	static Json::Value addExclamationFilter(const Json::Value &val) {
+		return val.asString() + "!";
+	}
+
+	TEST_METHOD(13) {
+		set_test_name("Inspect filters");
+
+		subschema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED)
+			.setInspectFilter(addExclamationFilter);
+		subschema.finalize();
+
+		translator.add("sub_foo", "foo");
+		translator.finalize();
+		schema.addSubSchema(subschema, translator);
+		schema.finalize();
+
+		ConfigKit::Store config(schema);
+		doc["sub_foo"] = "hello";
+		ensure(config.update(doc, errors));
+		doc = config.inspect();
+
+		ensure_equals("(2)", config["sub_foo"].asString(), "hello");
+		ensure_equals("(3)", doc["sub_foo"]["user_value"].asString(), "hello!");
+		ensure_equals("(4)", doc["sub_foo"]["effective_value"].asString(), "hello!");
+	}
 }

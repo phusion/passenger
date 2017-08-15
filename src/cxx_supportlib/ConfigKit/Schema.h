@@ -59,16 +59,19 @@ public:
 		Type type;
 		Flags flags;
 		ValueGetter defaultValueGetter;
+		ValueFilter inspectFilter;
 
 		Entry()
 			: type(UNKNOWN_TYPE),
 			  flags(OPTIONAL)
 			{ }
 
-		Entry(Type _type, Flags _flags, const ValueGetter &_defaultValueGetter)
+		Entry(Type _type, Flags _flags, const ValueGetter &_defaultValueGetter,
+			const ValueFilter &_inspectFilter)
 			: type(_type),
 			  flags(_flags),
-			  defaultValueGetter(_defaultValueGetter)
+			  defaultValueGetter(_defaultValueGetter),
+			  inspectFilter(_inspectFilter)
 			{ }
 
 		Json::Value inspect() const {
@@ -96,6 +99,21 @@ public:
 					doc["default_value"] = Schema::getStaticDefaultValue(*this);
 				}
 			}
+		}
+	};
+
+	class EntryBuilder {
+	private:
+		Entry *entry;
+
+	public:
+		EntryBuilder(Entry &_entry)
+			: entry(&_entry)
+			{ }
+
+		EntryBuilder &setInspectFilter(const ValueFilter &filter) {
+			entry->inspectFilter = filter;
+			return *this;
 		}
 	};
 
@@ -139,28 +157,29 @@ public:
 	/**
 	 * Register a new schema entry, possibly with a static default value.
 	 */
-	void add(const HashedStaticString &key, Type type, unsigned int flags,
+	EntryBuilder add(const HashedStaticString &key, Type type, unsigned int flags,
 		const Json::Value &defaultValue = Json::Value(Json::nullValue))
 	{
 		assert(!finalized);
 		if (defaultValue.isNull()) {
-			Entry entry(type, (Flags) flags, ValueGetter());
-			entries.insert(key, entry);
+			Entry entry(type, (Flags) flags, ValueGetter(), ValueFilter());
+			return EntryBuilder(entries.insert(key, entry)->value);
 		} else {
 			if (flags & REQUIRED) {
 				throw ArgumentException(
 					"A key cannot be required and have a default value at the same time");
 			}
 			Entry entry(type, (Flags) flags,
-				boost::bind(returnJsonValue, boost::placeholders::_1, defaultValue));
-			entries.insert(key, entry);
+				boost::bind(returnJsonValue, boost::placeholders::_1, defaultValue),
+				ValueFilter());
+			return EntryBuilder(entries.insert(key, entry)->value);
 		}
 	}
 
 	/**
 	 * Register a new schema entry with a dynamic default value.
 	 */
-	void addWithDynamicDefault(const HashedStaticString &key, Type type, unsigned int flags,
+	EntryBuilder addWithDynamicDefault(const HashedStaticString &key, Type type, unsigned int flags,
 		const ValueGetter &defaultValueGetter)
 	{
 		if (flags & REQUIRED) {
@@ -168,8 +187,9 @@ public:
 				"A key cannot be required and have a default value at the same time");
 		}
 		assert(!finalized);
-		Entry entry(type, (Flags) (flags | _DYNAMIC_DEFAULT_VALUE), defaultValueGetter);
-		entries.insert(key, entry);
+		Entry entry(type, (Flags) (flags | _DYNAMIC_DEFAULT_VALUE), defaultValueGetter,
+			ValueFilter());
+		return EntryBuilder(entries.insert(key, entry)->value);
 	}
 
 	void addSubSchema(const Schema &subschema) {
@@ -199,7 +219,7 @@ public:
 			}
 
 			Entry entry2(entry.type, (Flags) (entry.flags | _FROM_SUBSCHEMA),
-				valueGetter);
+				valueGetter, entry.inspectFilter);
 			entries.insert(translator.reverseTranslateOne(key), entry2);
 			it.next();
 		}

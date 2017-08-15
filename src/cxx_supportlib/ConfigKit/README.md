@@ -29,6 +29,7 @@ ConfigKit is a configuration management system that lets you define configuratio
   - [Fetching data](#fetching-data)
   - [Default values](#default-values)
   - [Inspecting all data](#inspecting-all-data)
+  - [Inspection filters](#inspection-filters)
 - [Normalizing data](#normalizing-data)
   - [Normalization example 1](#normalization-example-1)
   - [Normalization example 2](#normalization-example-2)
@@ -363,8 +364,9 @@ store.get("unknown").isNull();  // => true
 
 ### Inspecting all data
 
-You can fetch an overview of all data in the store using `inspect()`.
-This will return a Json::Value in the following format:
+You can fetch an overview of all data in the store using `inspect()`. This function is normally used to allow users of a component to inspect the configuration options set for that component, without allowing them direct access to the embedded store.
+
+This function will return a Json::Value in the following format:
 
 ~~~javascript
 // Assuming we are using the store that went through
@@ -415,6 +417,39 @@ If you want to fetch the effective values only, then use `inspectEffectiveValues
   "baz": 123
 }
 ~~~
+
+### Inspection filters
+
+Since `inspect()` is usually used to allow users of a component to inspect that component's configuration, you may run into situations where you want the inspected return value to be different from its actual value. Inspection filters allow you to transform `inspect()` results.
+
+A typical use case for inspection filters can be found in LoggingKit. One can configure LoggingKit to log to a specific file descriptor of an open log file. The format is like this:
+
+~~~json
+{
+  "path": "/foo.log",
+  "fd": 12
+}
+~~~
+
+LoggingKit will internally take over ownership of the file descriptor and will perform a bunch of actions on the fd, such as redirecting stderr to that fd and closing the original fd. Because of this, the fd value is only valid at the time of configuration; it makes no sense to output the fd value in `inspect()`. Inspect filters allows LoggingKit to filter out the "fd" field when `store.inspect()` is called, but the "fd" field can still be accessed internally by LoggingKit by calling `store["target"]["fd"]`.
+
+An inspect filter is a function takes a value and returns a transformed value. It is installed by calling `setInspectFilter()` on the object returned by `schema.add()`, like this:
+
+~~~c++
+static Json::Value filterTargetFd(const Json::Value &value) {
+  Json::Value result = value;
+  result.removeMember("fd");
+  return result;
+}
+
+ConfigKit::Schema schema;
+
+schema.add("target", ANY_TYPE, OPTIONAL).
+  setInspectFilter(filterTargetFd);
+schema.finalize();
+~~~
+
+Note that inspect filter is called *after* [normalizers](#normalizing-data), so `value` refers to a normalized value.
 
 ## Normalizing data
 

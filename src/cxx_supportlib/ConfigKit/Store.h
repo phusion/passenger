@@ -202,6 +202,33 @@ private:
 		}
 	}
 
+	void applyInspectFilters(Json::Value &doc) const {
+		StringKeyTable<Entry>::ConstIterator it(entries);
+		while (*it != NULL) {
+			const Entry &entry = it.getValue();
+			if (entry.schemaEntry->inspectFilter == NULL) {
+				it.next();
+				continue;
+			}
+
+			const HashedStaticString &key = it.getKey();
+			Json::Value &subdoc = doc[key];
+
+			Json::Value &userValue = subdoc["user_value"];
+			userValue = entry.schemaEntry->inspectFilter(userValue);
+
+			if (subdoc.isMember("default_value")) {
+				Json::Value &defaultValue = subdoc["default_value"];
+				defaultValue = entry.schemaEntry->inspectFilter(defaultValue);
+			}
+
+			Json::Value &effectiveValue = subdoc["effective_value"];
+			effectiveValue = entry.schemaEntry->inspectFilter(effectiveValue);
+
+			it.next();
+		}
+	}
+
 	void doFilterSecrets(Json::Value &doc) const {
 		StringKeyTable<Entry>::ConstIterator it(entries);
 		while (*it != NULL) {
@@ -317,11 +344,15 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 *
 	 * The format returned by this method is the same as that of `inspect()`,
-	 * with the exception that -- if `filterSecrets` is set to false, values of fields
-	 * marked with the `SECRET` flag are not filtered.
+	 * with the following exceptions:
+	 *
+	 *  - If `filterSecrets` is set to false, values of fields
+	 *    marked with the `SECRET` flag are not filtered.
+	 *  - If `shouldApplyInspectFilters` is set to false, values of fields
+	 *    are not passed through inspect filters.
 	 */
 	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors,
-		bool filterSecrets = true) const
+		bool filterSecrets = true, bool shouldApplyInspectFilters = true) const
 	{
 		if (!updates.isNull() && !updates.isObject()) {
 			errors.push_back(Error("The JSON document must be an object"));
@@ -369,6 +400,10 @@ public:
 			applyNormalizers(result);
 		}
 
+		if (shouldApplyInspectFilters) {
+			applyInspectFilters(result);
+		}
+
 		if (filterSecrets) {
 			doFilterSecrets(result);
 		}
@@ -388,7 +423,7 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 */
 	bool update(const Json::Value &updates, vector<Error> &errors) {
-		Json::Value preview = previewUpdate(updates, errors, false);
+		Json::Value preview = previewUpdate(updates, errors, false, false);
 		if (errors.empty()) {
 			StringKeyTable<Entry>::Iterator it(entries);
 			while (*it != NULL) {
@@ -452,17 +487,18 @@ public:
 			Json::Value subdoc(Json::objectValue);
 
 			entry.schemaEntry->inspect(subdoc);
-			subdoc["user_value"] = maybeFilterSecret(entry, entry.userValue);
-			subdoc["effective_value"] = maybeFilterSecret(entry,
-				entry.getEffectiveValue(*this));
+			subdoc["user_value"] = entry.userValue;
+			subdoc["effective_value"] = entry.getEffectiveValue(*this);
 			if (entry.schemaEntry->defaultValueGetter && entry.schemaEntry->flags & _DYNAMIC_DEFAULT_VALUE) {
-				subdoc["default_value"] = maybeFilterSecret(entry,
-					entry.getDefaultValue(*this));
+				subdoc["default_value"] = entry.getDefaultValue(*this);
 			}
 
 			result[it.getKey()] = subdoc;
 			it.next();
 		}
+
+		applyInspectFilters(result);
+		doFilterSecrets(result);
 
 		return result;
 	}

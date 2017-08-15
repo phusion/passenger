@@ -304,4 +304,24 @@ namespace tut {
 		ensure_equals("(15)", config->get("level").asString(), "L1");
 		ensure_equals("(16)", doc["level"]["user_value"].asString(), "L1");
 	}
+
+	static Json::Value addExclamationFilter(const Json::Value &val) {
+		return val.asString() + "!";
+	}
+
+	TEST_METHOD(19) {
+		set_test_name("Inspect filters");
+
+		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED)
+			.setInspectFilter(addExclamationFilter);
+		init();
+
+		doc["foo"] = "hello";
+		ensure("(1)", config->update(doc, errors));
+		doc = config->inspect();
+
+		ensure_equals("(2)", config->get("foo").asString(), "hello");
+		ensure_equals("(3)", doc["foo"]["user_value"].asString(), "hello!");
+		ensure_equals("(4)", doc["foo"]["effective_value"].asString(), "hello!");
+	}
 }
