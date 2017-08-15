@@ -6857,7 +6857,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/detail/tracable_exception_enabled.hpp",
    "src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
- "src/cxx_supportlib/ConfigKit/SubComponentsUtils.h"=>
+ "src/cxx_supportlib/ConfigKit/SubComponentUtils.h"=>
   ["src/cxx_supportlib/ConfigKit/Common.h",
    "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/oxt/macros.hpp"],

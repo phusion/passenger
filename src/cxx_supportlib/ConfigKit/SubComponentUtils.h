@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CONFIG_KIT_SUB_COMPONENTS_UTILS_H_
-#define _PASSENGER_CONFIG_KIT_SUB_COMPONENTS_UTILS_H_
+#ifndef _PASSENGER_CONFIG_KIT_SUB_COMPONENT_UTILS_H_
+#define _PASSENGER_CONFIG_KIT_SUB_COMPONENT_UTILS_H_
 
 #include <string>
 #include <vector>
@@ -56,4 +56,4 @@ prepareConfigChangeForSubComponent(Component &component, const Translator &trans
 } // ConfigKit
 } // Passenger
 
-#endif /* _PASSENGER_CONFIG_KIT_SUB_COMPONENTS_UTILS_H_ */
+#endif /* _PASSENGER_CONFIG_KIT_SUB_COMPONENT_UTILS_H_ */

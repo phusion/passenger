@@ -659,7 +659,7 @@ In this Downloader example, we will demonstrate TableTranslator only.
 
 ~~~c++
  #include <ConfigKit/ConfigKit.h>
- #include <ConfigKit/SubComponentsUtils.h>
+ #include <ConfigKit/SubComponentUtils.h>
 
 class Downloader {
 public:
