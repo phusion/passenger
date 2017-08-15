@@ -355,7 +355,7 @@ public:
 		while (*it != NULL) {
 			const HashedStaticString &subSchemaKey = it.getKey();
 			Entry &subSchemaEntry = it.getValue();
-			const StaticString mainSchemaKey = translator.reverseTranslateOne(
+			const string mainSchemaKey = translator.reverseTranslateOne(
 				subSchemaKey);
 			const Entry *mainSchemaEntry;
 
