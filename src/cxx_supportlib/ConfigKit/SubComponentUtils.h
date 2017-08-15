@@ -53,7 +53,7 @@ prepareConfigChangeForSubComponent(Component &component, const Translator &trans
 }
 
 
-} // ConfigKit
-} // Passenger
+} // namespace ConfigKit
+} // namespace Passenger
 
 #endif /* _PASSENGER_CONFIG_KIT_SUB_COMPONENT_UTILS_H_ */

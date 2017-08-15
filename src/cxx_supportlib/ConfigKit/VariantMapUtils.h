@@ -86,7 +86,7 @@ variantMapToJson(const Schema &schema, const VariantMap &options) {
 }
 
 
-} // ConfigKit
-} // Passenger
+} // namespace ConfigKit
+} // namespace Passenger
 
 #endif /* _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_ */

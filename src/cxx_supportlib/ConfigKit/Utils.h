@@ -102,7 +102,7 @@ toString(const vector<Error> &errors) {
 }
 
 
-} // ConfigKit
-} // Passenger
+} // namespace ConfigKit
+} // namespace Passenger
 
 #endif /* _PASSENGER_CONFIG_KIT_UTILS_H_ */

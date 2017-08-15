@@ -80,7 +80,7 @@ callInspectConfigAndCallback(Component *component,
 }
 
 
-} // ConfigKit
-} // Passenger
+} // namespace ConfigKit
+} // namespace Passenger
 
 #endif /* _PASSENGER_CONFIG_KIT_ASYNC_UTILS_H_ */
