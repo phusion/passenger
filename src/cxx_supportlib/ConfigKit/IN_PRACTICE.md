@@ -727,40 +727,50 @@ public:
         boost::scoped_ptr<ConfigKit::Store> config;
     };
 
-private:
-    // The subcomponents used by Downloader.
-    SecurityChecker securityChecker;
-    HappyDnsQuerier happyDnsQuerier;
 
 protected:
     // The internal configuration store. As explained, this also contains (a
     // copy of) the configuration options pertaining SecurityChecker and the
     // DnsQuerier.
+    //
+    // This MUST be declared before the subcomponents because
+    // the construction of subcomponents depends on this object.
     ConfigKit::Store config;
 
+private:
+    // The subcomponents used by Downloader.
+    SecurityChecker securityChecker;
+    HappyDnsQuerier happyDnsQuerier;
+
 public:
-    // The constructor creates subcomponents, passing to them translated
-    // versions of the initial configuration passed.
+    // The constructor creates subcomponents, passing to them the effective
+    // configuration values from our internal configuration store,
+    // as well as corresponding translators.
+    //
+    // Why do we pass effective values instead of `initialConfig()`?
+    // It is because the parent component may define different default
+    // values than subcomponents. By passing effective values,
+    // such default value overrides are respected.
     Downloader(const Schema &schema, const Json::Value &initialConfig)
-        : securityChecker(schema.securityChecker.schema,
-              initialConfig,
+        : config(schema, initialConfig),
+          securityChecker(schema.securityChecker.schema,
+              config.inspectEffectiveValues(),
               schema.securityChecker.translator),
           happyDnsQuerier(schema.happyDnsQuerier.schema,
-              initialConfig,
-              schema.happyDnsQuerier.translator),
-          config(schema, initialConfig)
+              config.inspectEffectiveValues(),
+              schema.happyDnsQuerier.translator)
         { }
 
     template<typename Translator>
     Downloader(const Schema &schema, const Json::Value &initialConfig,
         const Translator &translator)
-        : securityChecker(schema.securityChecker.schema,
-              initialConfig,
+        : config(schema, initialConfig, translator),
+          securityChecker(schema.securityChecker.schema,
+              config.inspectEffectiveValues(),
               schema.securityChecker.translator),
           happyDnsQuerier(schema.happyDnsQuerier.schema,
-              initialConfig,
-              schema.happyDnsQuerier.translator),
-          config(schema, initialConfig, translator)
+              config.inspectEffectiveValues(),
+              schema.happyDnsQuerier.translator)
         { }
 
     bool prepareConfigChange(const Json::Value &updates,
@@ -768,7 +778,11 @@ public:
     {
         const Schema &schema = static_cast<const Schema &>(config.getSchema());
 
-        // We need to call prepareConfigChange() on our subcomponents.
+        // We first merge updates into Downloader's own new config store.
+        req.config.reset(new ConfigKit::Store(config, updates, errors));
+
+        // Next, we call prepareConfigChange() on our subcomponents,
+        // passing it the effective values from Downloader's config store.
         // ConfigKit provides a utility method for doing that.
         //
         // This utility method takes a translator and takes care of
@@ -778,14 +792,12 @@ public:
         // the ConfigChangeRequest type.
         ConfigKit::prepareConfigChangeForSubComponent(
             securityChecker, schema.securityChecker.translator,
-            updates, errors, req.forSecurityChecker);
+            req.config->inspectEffectiveValues(),
+            errors, req.forSecurityChecker);
         ConfigKit::prepareConfigChangeForSubComponent(
             happyDnsQuerier, schema.happyDnsQuerier.translator,
-            updates, errors, req.forHappyDnsQuerier);
-
-        // We also need to merge updates into Downloader's own
-        // new config store.
-        req.config.reset(new ConfigKit::Store(config, updates, errors));
+            req.config->inspectEffectiveValues(),
+            errors, req.forHappyDnsQuerier);
 
         // Because Downloader's schema also contains subcomponents'
         // schemas, some validations may be performed multiple times,
@@ -798,12 +810,12 @@ public:
     }
 
     void commitConfigChange(ConfigChangeRequest &req) BOOST_NOEXCEPT_OR_NOTHROW {
+        // This call here is similar to SecurityChecker and (Happy)DnsQuerier.
+        config.swap(*req.config);
+
         // We also need to call commitConfigChange() on our subcomponents.
         securityChecker.commitConfigChange(req.forSecurityChecker);
         happyDnsQuerier.commitConfigChange(req.forHappyDnsQuerier);
-
-        // This call here is similar to SecurityChecker and (Happy)DnsQuerier.
-        config.swap(*req.config);
     }
 
     // As explained, simply returning our internal configuration store
