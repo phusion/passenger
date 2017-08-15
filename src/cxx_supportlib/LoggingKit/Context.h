@@ -27,6 +27,8 @@
 #define _PASSENGER_LOGGING_KIT_CONTEXT_H_
 
 #include <oxt/macros.hpp>
+#include <boost/thread.hpp>
+#include <boost/atomic.hpp>
 #include <ConfigKit/ConfigKit.h>
 #include <LoggingKit/Forward.h>
 #include <LoggingKit/Config.h>
