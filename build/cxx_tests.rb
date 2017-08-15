@@ -213,7 +213,7 @@ task 'test:cxx' => dependencies do
   if boolean_option('GDB')
     command = "gdb --args #{command}"
   elsif boolean_option('LLDB')
-    command = "lldb -s ./lldbinit #{command}"
+    command = "lldb -s ./lldbinit -- #{command}"
   elsif boolean_option('VALGRIND')
     valgrind_args = "--dsymutil=yes --vgdb=yes --vgdb-error=1 --child-silent-after-fork=yes"
     if boolean_option('LEAK_CHECK')
