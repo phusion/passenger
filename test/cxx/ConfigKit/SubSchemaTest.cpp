@@ -127,4 +127,33 @@ namespace tut {
 		ensure_equals(errors.size(), 1u);
 		ensure_equals(errors[0].getMessage(), "sub_gender must be male or female");
 	}
+
+	static Json::Value normalizeTargetAndLevel(const Json::Value &values) {
+		Json::Value updates(Json::objectValue);
+
+		if (values["target"].isString()) {
+			updates["target"]["path"] = values["target"];
+		}
+
+		return updates;
+	}
+
+	TEST_METHOD(12) {
+		set_test_name("The subschema's normalizers are compatible with translations");
+
+		subschema.add("target", ConfigKit::ANY_TYPE, ConfigKit::REQUIRED);
+		subschema.addNormalizer(normalizeTargetAndLevel);
+		subschema.finalize();
+
+		translator.add("sub_target", "target");
+		translator.finalize();
+		schema.addSubSchema(subschema, translator);
+		schema.finalize();
+
+		ConfigKit::Store config(schema);
+		doc["sub_target"] = "/path";
+		ensure(config.update(doc, errors));
+		ensure(config["sub_target"].isObject());
+		ensure_equals(config["sub_target"]["path"].asString(), "/path");
+	}
 }

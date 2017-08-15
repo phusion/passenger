@@ -29,6 +29,10 @@ ConfigKit is a configuration management system that lets you define configuratio
   - [Fetching data](#fetching-data)
   - [Default values](#default-values)
   - [Inspecting all data](#inspecting-all-data)
+- [Normalizing data](#normalizing-data)
+  - [Normalization example 1](#normalization-example-1)
+  - [Normalization example 2](#normalization-example-2)
+  - [Normalizers and validation](#normalizers-and-validation)
 - [ConfigKit in practice & design patterns](#configkit-in-practice--design-patterns)
 
 <!-- /MarkdownTOC -->
@@ -411,6 +415,85 @@ If you want to fetch the effective values only, then use `inspectEffectiveValues
   "baz": 123
 }
 ~~~
+
+## Normalizing data
+
+You sometimes may want to allow users to supply data in multiple formats. Normalizers allow you to transform user-supplied data in a canonical format, so that your configuration value handling code only has to deal with data in the canonical format instead of all possibly allowed formats.
+
+The examples below demonstrate two possible use cases and how to implement them.
+
+### Normalization example 1
+
+Suppose that you have a "target" config option, which can be in one of these formats:
+
+ 1. `"/filename"`
+ 2. `{ "path": "/filename" }` (semantics equivalent to 1)
+ 3. `{ "stderr": true }`
+
+You can write a normalizer that transforms format 1 into format 2. That way, no matter whether the user has actually supplied format 1, 2 or 3, your config handling code only has to deal with format 2 and 3.
+
+A normalizer is a function that accepts a JSON document of effective values (in the format outputted by `ConfigKit::Store::inspectEffectiveValues()`). It is expected to return either Json::nullValue (indicating that no normalization work needs to be done), or a JSON object containing proposed normalization changes.
+
+Normalizers are added to the corresponding schema.
+
+~~~c++
+static Json::Value myNormalizer(const Json::Value &effectiveValues) {
+    Json::Value updates(Json::objectValue);
+
+    if (effectiveValues["target"].isString()) {
+        updates["target"]["path"] = effectiveValues["target"];
+    }
+
+    return updates;
+}
+
+
+ConfigKit::Schema schema;
+
+schema.add("target", ANY_TYPE, OPTIONAL);
+schema.addValidator(validateThatTargetIsStringOrObject);
+schema.addNormalizer(myNormalizer);
+schema.finalize();
+~~~
+
+### Normalization example 2
+
+Suppose that you have a "security" config option that accepts this format:
+
+~~~json
+{
+  "username": "a string",          // required
+  "password": "a string",          // required
+  "level": "full" | "readonly"     // optional; default value: "full"
+}
+~~~
+
+If the user did not specify "level", then will want to automatically insert "level: full".
+
+~~~c++
+static Json::Value myNormalizer(const Json::Value &effectiveValues) {
+    Json::Value updates(Json::objectValue);
+
+    if (effectiveValues["security"]["level"].isNull()) {
+        updates["security"] = effectiveValues["security"];
+        updates["security"]["level"] = "full";
+    }
+
+    return updates;
+}
+
+
+ConfigKit::Schema schema;
+
+schema.add("security", OBJECT_TYPE, OPTIONAL);
+schema.addValidator(validateSecurity);
+schema.addNormalizer(myNormalizer);
+schema.finalize();
+~~~
+
+### Normalizers and validation
+
+Normalizers are only run when validation passes! That way normalizers don't have to worry about validation problems.
 
 ## ConfigKit in practice & design patterns
 

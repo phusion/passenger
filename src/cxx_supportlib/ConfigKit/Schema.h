@@ -101,10 +101,12 @@ public:
 
 	typedef StringKeyTable<Entry>::ConstIterator ConstIterator;
 	typedef boost::function<void (const Store &store, vector<Error> &errors)> Validator;
+	typedef boost::function<Json::Value (const Json::Value &effectiveValues)> Normalizer;
 
 private:
 	StringKeyTable<Entry> entries;
 	boost::container::vector<Validator> validators;
+	boost::container::vector<Normalizer> normalizers;
 	bool finalized;
 
 	static Json::Value returnJsonValue(const Store &store, Json::Value v) {
@@ -121,6 +123,11 @@ private:
 	static void validateSubSchema(const Store &store, vector<Error> &errors,
 		const Schema *subschema, const Translator *translator,
 		const Validator &origValidator);
+
+	template<typename Translator>
+	static Json::Value normalizeSubSchema(const Json::Value &effectiveValues,
+		const Schema *mainSchema, const Schema *subschema,
+		const Translator *translator, const Normalizer &origNormalizer);
 
 	static Json::Value getStaticDefaultValue(const Schema::Entry &entry);
 
@@ -197,12 +204,19 @@ public:
 			it.next();
 		}
 
-		boost::container::vector<Schema::Validator>::const_iterator v_it, v_end
+		boost::container::vector<Validator>::const_iterator v_it, v_end
 			= subschema.getValidators().end();
 		for (v_it = subschema.getValidators().begin(); v_it != v_end; v_it++) {
 			validators.push_back(boost::bind(validateSubSchema<Translator>,
 				boost::placeholders::_1, boost::placeholders::_2,
 				&subschema, &translator, *v_it));
+		}
+
+		boost::container::vector<Normalizer>::const_iterator n_it, n_end
+			= subschema.getNormalizers().end();
+		for (n_it = subschema.getNormalizers().begin(); n_it != n_end; n_it++) {
+			normalizers.push_back(boost::bind(normalizeSubSchema<Translator>,
+				boost::placeholders::_1, this, &subschema, &translator, *n_it));
 		}
 	}
 
@@ -211,11 +225,17 @@ public:
 		validators.push_back(validator);
 	}
 
+	void addNormalizer(const Normalizer &normalizer) {
+		assert(!finalized);
+		normalizers.push_back(normalizer);
+	}
+
 	void finalize() {
 		assert(!finalized);
 		entries.compact();
 		finalized = true;
 		validators.shrink_to_fit();
+		normalizers.shrink_to_fit();
 	}
 
 	bool get(const HashedStaticString &key, const Entry **entry) const {
@@ -329,6 +349,11 @@ public:
 	const boost::container::vector<Validator> &getValidators() const {
 		assert(finalized);
 		return validators;
+	}
+
+	const boost::container::vector<Normalizer> &getNormalizers() const {
+		assert(finalized);
+		return normalizers;
 	}
 
 	ConstIterator getIterator() const {
