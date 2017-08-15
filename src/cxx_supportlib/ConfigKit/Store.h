@@ -278,6 +278,8 @@ public:
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
+			entry.schemaEntry->inspect(subdoc);
+
 			if (isWritable(entry) && updates.isMember(key)) {
 				subdoc["user_value"] = maybeFilterSecret(entry,
 					updates[key], filterSecrets);
