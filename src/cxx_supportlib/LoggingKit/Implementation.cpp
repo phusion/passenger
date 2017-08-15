@@ -365,38 +365,34 @@ logAppOutput(pid_t pid, const char *channelName, const char *message, unsigned i
 }
 
 
-static void
-preNormalizeConfig(ConfigKit::Store &config) {
+static Json::Value
+normalizeConfig(const Json::Value &effectiveValues) {
 	Json::Value updates(Json::objectValue);
 
 	updates["level"] = levelToString(parseLevel(
-		config["level"].asString())).toString();
+		effectiveValues["level"].asString())).toString();
 	updates["app_output_log_level"] = levelToString(parseLevel(
-		config["app_output_log_level"].asString())).toString();
+		effectiveValues["app_output_log_level"].asString())).toString();
 
-	if (config["target"].isString()) {
-		updates["target"]["path"] = absolutizePath(config["target"].asString());
-	} else if (!config["target"]["path"].isNull()) {
-		updates["target"] = config["target"];
-		updates["target"]["path"] = absolutizePath(config["target"]["path"].asString());
+	if (effectiveValues["target"].isString()) {
+		updates["target"]["path"] = absolutizePath(effectiveValues["target"].asString());
+	} else if (!effectiveValues["target"]["path"].isNull()) {
+		updates["target"] = effectiveValues["target"];
+		updates["target"]["path"] = absolutizePath(effectiveValues["target"]["path"].asString());
 	}
 
-	if (config["file_descriptor_log_target"].isString()) {
+	if (effectiveValues["file_descriptor_log_target"].isString()) {
 		updates["file_descriptor_log_target"]["path"] =
-			absolutizePath(config["file_descriptor_log_target"].asString());
-	} else if (config["file_descriptor_log_target"].isObject()
-		&& !config["file_descriptor_log_target"]["path"].isNull())
+			absolutizePath(effectiveValues["file_descriptor_log_target"].asString());
+	} else if (effectiveValues["file_descriptor_log_target"].isObject()
+		&& !effectiveValues["file_descriptor_log_target"]["path"].isNull())
 	{
-		updates["file_descriptor_log_target"] = config["file_descriptor_log_target"];
+		updates["file_descriptor_log_target"] = effectiveValues["file_descriptor_log_target"];
 		updates["file_descriptor_log_target"]["path"] =
-			absolutizePath(config["file_descriptor_log_target"]["path"].asString());
+			absolutizePath(effectiveValues["file_descriptor_log_target"]["path"].asString());
 	}
 
-	vector<ConfigKit::Error> errors;
-	if (!config.update(updates, errors)) {
-		P_BUG("Error pre-normalizing LoggingKit config: "
-			<< ConfigKit::toString(errors));
-	}
+	return updates;
 }
 
 static void
@@ -425,7 +421,6 @@ postNormalizeConfig(ConfigKit::Store &config) {
 Context::Context(const Json::Value &initialConfig)
 	: config(schema, initialConfig)
 {
-	preNormalizeConfig(config);
 	configRlz.store(new ConfigRealization(config));
 	configRlz.load()->apply(config, NULL);
 	postNormalizeConfig(config);
@@ -450,7 +445,6 @@ Context::prepareConfigChange(const Json::Value &updates,
 		return false;
 	}
 
-	preNormalizeConfig(*req.config);
 	req.configRlz = new ConfigRealization(*req.config);
 	postNormalizeConfig(*req.config);
 	return true;
@@ -560,6 +554,8 @@ Schema::Schema() {
 		boost::placeholders::_1, boost::placeholders::_2));
 	addValidator(boost::bind(validateTarget, "file_descriptor_log_target",
 		boost::placeholders::_1, boost::placeholders::_2));
+
+	addNormalizer(normalizeConfig);
 
 	finalize();
 }
