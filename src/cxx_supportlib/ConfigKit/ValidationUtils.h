@@ -54,11 +54,11 @@ validateStandaloneEngine(const Store &config, vector<Error> &errors) {
 	}
 	string standaloneEngine = config["standalone_engine"].asString();
 	if (standaloneEngine.empty()) {
-		errors.push_back(Error("'{standalone_engine}' is required when '{{integration_mode}}' is 'standalone'"));
+		errors.push_back(Error("'{{standalone_engine}}' is required when '{{integration_mode}}' is 'standalone'"));
 		return;
 	}
 	if (standaloneEngine != "nginx" && standaloneEngine != "builtin") {
-		errors.push_back(Error("'{standalone_engine}' is must be either 'nginx' or 'builtin'"));
+		errors.push_back(Error("'{{standalone_engine}}' is must be either 'nginx' or 'builtin'"));
 	}
 }
 
