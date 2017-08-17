@@ -374,12 +374,12 @@ public:
 		  minInstances(config["min_instances"].asUInt()),
 		  maxPreloaderIdleTime(config["max_preloader_idle_time"].asUInt()),
 		  maxRequestQueueSize(config["max_request_queue_size"].asUInt()),
+		  maxRequests(config["max_requests"].asUInt()),
 		  forceMaxConcurrentRequestsPerProcess(config["force_max_concurrent_requests_per_process"].asInt()),
 		  singleAppMode(!config["multi_app"].asBool()),
 		  showVersionInHeader(config["show_version_in_header"].asBool()),
 		  abortWebsocketsOnProcessShutdown(config["abort_websockets_on_process_shutdown"].asBool()),
-		  loadShellEnvvars(config["load_shell_envvars"].asBool()),
-		  maxRequests(config["max_requests"].asUInt())
+		  loadShellEnvvars(config["load_shell_envvars"].asBool())
 
 		  /*******************/
 		{ }
