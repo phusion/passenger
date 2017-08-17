@@ -114,6 +114,7 @@ private:
 		add("force_max_concurrent_requests_per_process", INT_TYPE, OPTIONAL, -1);
 		add("abort_websockets_on_process_shutdown", BOOL_TYPE, OPTIONAL, true);
 		add("load_shell_envvars", BOOL_TYPE, OPTIONAL, false);
+		add("max_requests", UINT_TYPE, OPTIONAL, 0);
 
 		// Single app mode options
 		add("app_root", STRING_TYPE, OPTIONAL);
@@ -230,6 +231,10 @@ public:
 	}
 };
 
+/**
+ * A structure that caches controller configuration which is allowed to
+ * change at any time, even during the middle of a request.
+ */
 class ControllerMainConfig {
 private:
 	StaticString createServerLogName() {
@@ -300,6 +305,14 @@ public:
 	}
 };
 
+/**
+ * A structure that caches controller configuration that must stay the
+ * same for the entire duration of a request.
+ *
+ * Note that this structure has got nothing to do with per-request config
+ * options: options which may be configured by the web server on a
+ * per-request basis. That is an orthogonal concept.
+ */
 class ControllerRequestConfig:
 	public boost::intrusive_ref_counter<ControllerRequestConfig,
 		boost::thread_unsafe_counter>
@@ -327,6 +340,7 @@ public:
 	unsigned int minInstances;
 	unsigned int maxPreloaderIdleTime;
 	unsigned int maxRequestQueueSize;
+	unsigned int maxRequests;
 	int forceMaxConcurrentRequestsPerProcess;
 	bool singleAppMode: 1;
 	bool showVersionInHeader: 1;
@@ -364,7 +378,8 @@ public:
 		  singleAppMode(!config["multi_app"].asBool()),
 		  showVersionInHeader(config["show_version_in_header"].asBool()),
 		  abortWebsocketsOnProcessShutdown(config["abort_websockets_on_process_shutdown"].asBool()),
-		  loadShellEnvvars(config["load_shell_envvars"].asBool())
+		  loadShellEnvvars(config["load_shell_envvars"].asBool()),
+		  maxRequests(config["max_requests"].asUInt())
 
 		  /*******************/
 		{ }
