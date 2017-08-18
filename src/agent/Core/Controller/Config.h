@@ -180,15 +180,15 @@ private:
 		}
 
 		if (config["app_root"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is set"
+			errors.push_back(Error("If '{{multi_app}}' is not set"
 				" then '{{app_root}}' is required"));
 		}
 		if (config["app_type"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is set"
+			errors.push_back(Error("If '{{multi_app}}' is not set"
 				" then '{{app_type}}' is required"));
 		}
 		if (config["startup_file"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is set"
+			errors.push_back(Error("If '{{multi_app}}' is not set"
 				" then '{{startup_file}}' is required"));
 		}
 
