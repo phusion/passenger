@@ -47,9 +47,16 @@
  * don't do anything.
  */
 
+// for std::swap()
+#if __cplusplus >= 201103L
+	#include <utility>
+#else
+	#include <algorithm>
+#endif
 #include <string>
 #include <cstring>
 #include <curl/curl.h>
+#include <boost/config.hpp>
 #include <boost/foreach.hpp>
 #include <Exceptions.h>
 #include <Utils.h>
@@ -78,6 +85,15 @@ struct CurlProxyInfo {
 		  httpTunnel(false),
 		  valid(valid)
 		{ }
+
+	void swap(CurlProxyInfo &other) BOOST_NOEXCEPT_OR_NOTHROW {
+		hostAndPort.swap(other.hostAndPort);
+		credentials.swap(other.credentials);
+		std::swap(type, other.type);
+		std::swap(none, other.none);
+		std::swap(httpTunnel, other.httpTunnel);
+		std::swap(valid, other.valid);
+	}
 };
 
 inline const CurlProxyInfo
