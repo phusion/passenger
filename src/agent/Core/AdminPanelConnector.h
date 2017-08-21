@@ -96,6 +96,7 @@ public:
 
 	typedef WebSocketCommandReverseServer::ConnectionPtr ConnectionPtr;
 	typedef WebSocketCommandReverseServer::MessagePtr MessagePtr;
+	typedef boost::function<Json::Value (void)> ConfigGetter;
 
 private:
 	WebSocketCommandReverseServer server;
@@ -246,12 +247,53 @@ private:
 	}
 
 	bool onGetGlobalConfiguration(const ConnectionPtr &conn, const Json::Value &doc) {
-		Json::Value reply;
-		reply["result"] = "error";
-		reply["request_id"] = doc["request_id"];
-		reply["data"]["message"] = "Action not implemented";
+		threads.create_thread(
+			boost::bind(&AdminPanelConnector::onGetGlobalConfigurationBgJob, this,
+				conn, doc),
+			"AdminPanelCommandServer: get_global_config background job",
+			128 * 1024);
+		return false;
+	}
+
+	void onGetGlobalConfigurationBgJob(const ConnectionPtr &conn, const Json::Value &input) {
+		server.getIoService().post(boost::bind(
+			&AdminPanelConnector::onGetGlobalConfigDone, this,
+			conn, input, configGetter()
+		));
+	}
+
+	void onGetGlobalConfigDone(const ConnectionPtr &conn, const Json::Value &input,
+		const Json::Value config)
+	{
+		Json::Value reply, options(Json::objectValue);
+		Json::Value::const_iterator it, end = config.end();
+
+		for (it = config.begin(); it != end; it++) {
+			const Json::Value &subconfig = *it;
+			Json::Value valueHierarchy(Json::arrayValue);
+
+			if (!subconfig["user_value"].isNull()) {
+				Json::Value valueEntry;
+				valueEntry["value"] = subconfig["user_value"];
+				valueEntry["source"]["type"] = "ephemeral";
+				valueHierarchy.append(valueEntry);
+			}
+			if (!subconfig["default_value"].isNull()) {
+				Json::Value valueEntry;
+				valueEntry["value"] = subconfig["default_value"];
+				valueEntry["source"]["type"] = "default";
+				valueHierarchy.append(valueEntry);
+			}
+
+			options[it.name()] = valueHierarchy;
+		}
+
+		reply["status"] = "ok";
+		reply["request_id"] = input["request_id"];
+		reply["data"]["options"] = options;
+
 		sendJsonReply(conn, reply);
-		return true;
+		server.doneReplying(conn);
 	}
 
 	bool onGetGlobalStatistics(const ConnectionPtr &conn, const Json::Value &doc) {
@@ -373,6 +415,7 @@ public:
 
 	ResourceLocator *resourceLocator;
 	ApplicationPool2::PoolPtr appPool;
+	ConfigGetter configGetter;
 
 
 	template<typename Translator = ConfigKit::DummyTranslator>
@@ -394,6 +437,9 @@ public:
 		}
 		if (appPool == NULL) {
 			throw RuntimeException("appPool must be non-NULL");
+		}
+		if (configGetter == NULL) {
+			throw RuntimeException("configGetter must be non-NULL");
 		}
 		server.initialize();
 	}

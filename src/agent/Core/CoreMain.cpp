@@ -136,6 +136,8 @@ namespace Core {
 		string password;
 		ApiAccountDatabase apiAccountDatabase;
 
+		boost::mutex configSyncher;
+
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
 		UnionStation::ContextPtr unionStationContext;
@@ -591,6 +593,11 @@ spawningKitErrorHandler(const SpawningKit::ConfigPtr &config, SpawnException &e,
 	ApplicationPool2::processAndLogNewSpawnException(e, options, config);
 }
 
+static Json::Value inspectConfig() {
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
+	return coreConfig->inspect();
+}
+
 static void
 initializeCurl() {
 	TRACE_POINT();
@@ -830,6 +837,7 @@ initializeAdminPanelConnector() {
 		coreSchema->adminPanelConnector.translator);
 	connector->resourceLocator = &wo.resourceLocator;
 	connector->appPool = wo.appPool;
+	connector->configGetter = inspectConfig;
 	connector->initialize();
 	wo.shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
 	wo.adminPanelConnector = connector;
