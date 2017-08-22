@@ -190,14 +190,12 @@ public:
 	StaticString startCommand;
 
 	/** Filename of the application's startup file. Only actually used for
-	 * determining user switching info. Only used during spawning and only
-	 * if appType.empty(). */
+	 * determining user switching info. Only used during spawning. */
 	StaticString startupFile;
 
 	/** The process title to assign to the application process. Only used
 	 * during spawning. May be empty in which case no particular process
-	 * title is assigned. Only used during spawning and only if
-	 * appType.empty(). */
+	 * title is assigned. Only used during spawning. */
 	StaticString processTitle;
 
 	/**
@@ -472,7 +470,7 @@ public:
 	 */
 	Options()
 		: logLevel(DEFAULT_LOG_LEVEL),
-		  startTimeout(90 * 1000),
+		  startTimeout(DEFAULT_START_TIMEOUT),
 		  environment(DEFAULT_APP_ENV, sizeof(DEFAULT_APP_ENV) - 1),
 		  baseURI("/", 1),
 		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
@@ -494,7 +492,7 @@ public:
 		  maxProcesses(0),
 		  maxPreloaderIdleTime(-1),
 		  maxOutOfBandWorkInstances(1),
-		  maxRequestQueueSize(100),
+		  maxRequestQueueSize(DEFAULT_MAX_REQUEST_QUEUE_SIZE),
 		  abortWebsocketsOnProcessShutdown(true),
 
 		  stickySessionId(0),

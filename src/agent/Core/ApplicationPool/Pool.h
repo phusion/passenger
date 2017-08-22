@@ -49,6 +49,7 @@
 #include <sys/types.h>
 #include <MemoryKit/palloc.h>
 #include <LoggingKit/LoggingKit.h>
+#include <ConfigKit/ConfigKit.h>
 #include <Exceptions.h>
 #include <Hooks.h>
 #include <Utils/Lock.h>
@@ -126,6 +127,11 @@ public:
 			  verbose(options.getBool("verbose", false, false))
 			{ }
 
+		InspectOptions(const Json::Value &options)
+			: colorize(options.get("colorize", false).asBool()),
+			  verbose(options.get("verbose", false).asBool())
+			{ }
+
 		static InspectOptions makeAuthorized() {
 			InspectOptions options;
 			options.apiKey = ApiKey::makeSuper();
@@ -146,6 +152,48 @@ public:
 
 		static ToXmlOptions makeAuthorized() {
 			ToXmlOptions options;
+			options.apiKey = ApiKey::makeSuper();
+			return options;
+		}
+	};
+
+	struct ToJsonOptions: public AuthenticationOptions {
+		bool hasApplicationIdsFilter;
+		StringKeyTable<bool> applicationIdsFilter;
+
+		ToJsonOptions()
+			: hasApplicationIdsFilter(false),
+			  applicationIdsFilter(0, 0)
+			{ }
+
+		void set(const Json::Value &_options) {
+			ConfigKit::Schema schema = createSchema();
+			ConfigKit::Store options(schema, _options);
+
+			if (!options["application_ids"].isNull()) {
+				hasApplicationIdsFilter = true;
+				applicationIdsFilter = StringKeyTable<bool>();
+
+				const Json::Value subdoc = options["application_ids"];
+				Json::Value::const_iterator it, end = subdoc.end();
+				for (it = subdoc.begin(); it != end; it++) {
+					applicationIdsFilter.insert(it->asString(), true);
+				}
+			}
+		}
+
+		static ConfigKit::Schema createSchema() {
+			using namespace ConfigKit;
+			ConfigKit::Schema schema;
+
+			schema.add("application_ids", STRING_ARRAY_TYPE, OPTIONAL);
+
+			schema.finalize();
+			return schema;
+		}
+
+		static ToJsonOptions makeAuthorized() {
+			ToJsonOptions options;
 			options.apiKey = ApiKey::makeSuper();
 			return options;
 		}
@@ -381,6 +429,12 @@ public:
 
 	/****** State inspection ******/
 
+	static Json::Value makeSingleValueJsonConfigFormat(const Json::Value &v,
+		const Json::Value &defaultValue = Json::Value());
+	static Json::Value makeSingleStrValueJsonConfigFormat(const StaticString &val);
+	static Json::Value makeSingleStrValueJsonConfigFormat(const StaticString &val,
+		const StaticString &defaultValue);
+	static Json::Value makeSingleNonEmptyStrValueJsonConfigFormat(const StaticString &val);
 	unsigned int capacityUsedUnlocked() const;
 	bool atFullCapacityUnlocked() const;
 	void inspectProcessList(const InspectOptions &options, stringstream &result,
@@ -445,6 +499,7 @@ public:
 		bool lock = true) const;
 	string toXml(const ToXmlOptions &options = ToXmlOptions::makeAuthorized(),
 		bool lock = true) const;
+	Json::Value inspectConfigInAdminPanelFormat(const ToJsonOptions &options = ToJsonOptions::makeAuthorized()) const;
 
 
 	/****** Miscellaneous ******/
