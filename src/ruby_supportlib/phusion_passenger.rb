@@ -38,8 +38,8 @@ module PhusionPassenger
 
   # Packaging may be locked to an older version due to the specific module configuration being
   # incompatible with the version we prefer (latest stable).
-  PACKAGING_PREFERRED_NGINX_VERSION = '1.10.3'
-  PACKAGING_NGINX_SHA256_CHECKSUM = '75020f1364cac459cb733c4e1caed2d00376e40ea05588fb8793076a4c69dd90'
+  PACKAGING_PREFERRED_NGINX_VERSION = '1.12.1'
+  PACKAGING_NGINX_SHA256_CHECKSUM = '8793bf426485a30f91021b6b945a9fd8a84d87d17b566562c3797aba8fac76fb'
 
   PREFERRED_PCRE_VERSION  = '8.39'
   PCRE_SHA256_CHECKSUM = 'ccdf7e788769838f8285b3ee672ed573358202305ee361cfec7a4a4fb005bbc7'
