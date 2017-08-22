@@ -135,7 +135,7 @@ using namespace oxt;
 	SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, __FILE__, __LINE__, expr)
 #define SKC_TRACE_FROM_STATIC_WITH_POS(server, client, level, file, line, expr) \
 	do { \
-		if (OXT_UNLIKELY(Passenger::LoggingKit::getLevel() >= Passenger::LoggingKit::DEBUG + level)) { \
+		if (OXT_UNLIKELY(Passenger::LoggingKit::getLevel() >= Passenger::LoggingKit::INFO + level)) { \
 			char _clientName[16]; \
 			int _clientNameSize = server->getClientName((client), _clientName, sizeof(_clientName)); \
 			P_TRACE_WITH_POS(level, file, line, \
