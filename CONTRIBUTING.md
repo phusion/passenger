@@ -78,7 +78,7 @@ Here are some of the things that you should look for:
 <a name="contrib_support"></a>
 ## Contributing community support
 
-You can contribute by answering support questions on the [community discussion forum](http://groups.google.com/group/phusion-passenger) or on [Stack Overflow](http://stackoverflow.com/search?q=passenger).
+You can contribute by answering support questions on [Stack Overflow](http://stackoverflow.com/search?q=passenger).
 
 <a name="contrib_code"></a>
 ## Contributing code
