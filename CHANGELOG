@@ -1,5 +1,5 @@
-Release 5.1.8 (not yet released)
---------------------------------
+Release 5.1.8
+-------------
 
  * Introduces a shorter and more informative log format. The new format significantly shortens the thread ID, and includes the message's log level (critical, error, warning, notice, etc) so that users can more easily filter out uninteresting messages.
  * [Nginx] The Phusion Nginx APT package is upgraded to Nginx version 1.12.1 (previously pinned at 1.10.3 while waiting for a compatible lua module release).
