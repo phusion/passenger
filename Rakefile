@@ -48,7 +48,6 @@ if boolean_option('ONLY_RUBY')
   require_build_system_file 'ruby_extension'
 else
   require_build_system_file 'ruby_extension'
-  require_build_system_file 'ruby_extension'
   require_build_system_file 'common_library'
   require_build_system_file 'agent'
   require_build_system_file 'apache2'

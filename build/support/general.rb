@@ -25,7 +25,7 @@
 class CxxCodeTemplateRenderer
   def initialize(filename)
     if !defined?(CxxCodeBuilder)
-      require 'build/support/vendor/cxxcodebuilder/lib/cxxcodebuilder'
+      require_build_system_file('support/vendor/cxxcodebuilder/lib/cxxcodebuilder')
     end
     code = File.open(filename, 'rb') do |f|
       f.read
