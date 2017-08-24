@@ -149,18 +149,18 @@ private
       optimize.sub!(/-flto/, "")
     end
 
-    extra_compiler_flags = "#{extra_compiler_flags} #{options[:cflags]}".strip
-
     define_c_or_cxx_object_compilation_task(
       object_file,
       source_file,
-      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
-      :flags => [
-        LIBEV_CFLAGS,
-        LIBUV_CFLAGS,
-        optimize,
-        extra_compiler_flags
-      ]
+      lambda { {
+        :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+        :flags => [
+          libev_cflags,
+          libuv_cflags,
+          optimize,
+          "#{maybe_eval_lambda(extra_compiler_flags)} #{options[:cflags]}".strip
+        ]
+      } }
     )
   end
 

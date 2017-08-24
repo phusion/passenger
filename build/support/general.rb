@@ -117,3 +117,25 @@ end
 def shesc(path)
   Shellwords.escape(path)
 end
+
+LET_CACHE = {}
+
+def let(name)
+  name = name.to_sym
+  define_method(name) do
+    if LET_CACHE.key?(name)
+      LET_CACHE[name]
+    else
+      LET_CACHE[name] = yield
+    end
+  end
+end
+
+def maybe_eval_lambda(lambda_or_value)
+  if lambda_or_value.respond_to?(:call)
+    lambda_or_value.call
+  else
+    lambda_or_value
+  end
+end
+

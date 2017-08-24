@@ -125,49 +125,44 @@ TEST_CXX_OBJECTS = {
     "test/cxx/Base64DecodingTest.cpp"
 }
 
-def basic_test_cxx_flags
-  @basic_test_cxx_flags ||= begin
-    flags = [
-      LIBEV_CFLAGS,
-      LIBUV_CFLAGS,
-      PlatformInfo.curl_flags,
-      TEST_COMMON_CFLAGS
-    ]
-    if USE_ASAN
-      flags << PlatformInfo.adress_sanitizer_flag
-    end
-    flags
+let(:basic_test_cxx_flags) do
+  flags = [
+    libev_cflags,
+    libuv_cflags,
+    PlatformInfo.curl_flags,
+    TEST_COMMON_CFLAGS
+  ]
+  if USE_ASAN
+    flags << PlatformInfo.adress_sanitizer_flag
   end
+  flags
 end
 
-def test_cxx_include_paths
-  @test_cxx_include_paths ||= [
-    "test/cxx",
-    "test/support",
-    "src/agent",
+let(:test_cxx_include_paths) do
+  [
+    'test/cxx',
+    'test/support',
+    'src/agent',
     *CXX_SUPPORTLIB_INCLUDE_PATHS
   ]
 end
 
-def test_cxx_flags
-  @test_cxx_flags ||= ["-include test/cxx/TestSupport.h"] +
-    basic_test_cxx_flags
+let(:test_cxx_flags) do
+  ['-include test/cxx/TestSupport.h'] + basic_test_cxx_flags
 end
 
-def test_cxx_ldflags
-  @test_cxx_ldflags ||= begin
-    result = "#{EXTRA_PRE_CXX_LDFLAGS} " <<
-      "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
-      "#{TEST_BOOST_OXT_LIBRARY} #{libev_libs} #{libuv_libs} " <<
-      "#{PlatformInfo.curl_libs} " <<
-      "#{PlatformInfo.zlib_libs} " <<
-      "#{PlatformInfo.crypto_libs} " <<
-      "#{PlatformInfo.portability_cxx_ldflags}"
-    result << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
-    result << " #{EXTRA_CXX_LDFLAGS}"
-    result.strip!
-    result
-  end
+let(:test_cxx_ldflags) do
+  result = "#{EXTRA_PRE_CXX_LDFLAGS} " <<
+    "#{TEST_COMMON_LIBRARY.link_objects_as_string} " <<
+    "#{TEST_BOOST_OXT_LIBRARY} #{libev_libs} #{libuv_libs} " <<
+    "#{PlatformInfo.curl_libs} " <<
+    "#{PlatformInfo.zlib_libs} " <<
+    "#{PlatformInfo.crypto_libs} " <<
+    "#{PlatformInfo.portability_cxx_ldflags}"
+  result << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
+  result << " #{EXTRA_CXX_LDFLAGS}"
+  result.strip!
+  result
 end
 
 # Define compilation tasks for object files.
@@ -175,9 +170,11 @@ TEST_CXX_OBJECTS.each_pair do |object, source|
   define_cxx_object_compilation_task(
     object,
     source,
-    :include_paths => test_cxx_include_paths,
-    :flags => test_cxx_flags,
-    :deps => 'test/cxx/TestSupport.h.gch'
+    lambda { {
+      :include_paths => test_cxx_include_paths,
+      :flags => test_cxx_flags,
+      :deps => 'test/cxx/TestSupport.h.gch'
+    } }
   )
 end
 

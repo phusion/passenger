@@ -56,21 +56,25 @@ APACHE2_OBJECTS.each_pair do |object, source|
     define_c_object_compilation_task(
       object,
       source,
-      :include_paths => [
-        "src/agent",
-        *CXX_SUPPORTLIB_INCLUDE_PATHS
-      ],
-      :flags => PlatformInfo.apache2_module_cflags
+      lambda { {
+        :include_paths => [
+          "src/agent",
+          *CXX_SUPPORTLIB_INCLUDE_PATHS
+        ],
+        :flags => PlatformInfo.apache2_module_cflags
+      } }
     )
   else
     define_cxx_object_compilation_task(
       object,
       source,
-      :include_paths => [
-        "src/agent",
-        *CXX_SUPPORTLIB_INCLUDE_PATHS
-      ],
-      :flags => PlatformInfo.apache2_module_cxxflags
+      lambda { {
+        :include_paths => [
+          "src/agent",
+          *CXX_SUPPORTLIB_INCLUDE_PATHS
+        ],
+        :flags => PlatformInfo.apache2_module_cxxflags
+      } }
     )
   end
 end
@@ -79,12 +83,12 @@ end
 APACHE2_MODULE_BOOST_OXT_LIBRARY, APACHE2_MODULE_BOOST_OXT_LINKARG =
   define_libboost_oxt_task("apache2",
     APACHE2_OUTPUT_DIR + "module_libboost_oxt",
-    PlatformInfo.apache2_module_cflags)
+    lambda { PlatformInfo.apache2_module_cflags })
 APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
   only(:base, :bas64, 'AppTypes.o').
   set_namespace("apache2").
   set_output_dir(APACHE2_OUTPUT_DIR + "module_libpassenger_common").
-  define_tasks(PlatformInfo.apache2_module_cflags).
+  define_tasks(lambda { PlatformInfo.apache2_module_cflags }).
   link_objects
 dependencies = [
   APACHE2_MODULE_COMMON_LIBRARIES,

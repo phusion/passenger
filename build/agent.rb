@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-AGENT_TARGET = "#{AGENT_OUTPUT_DIR}#{AGENT_EXE}"
+AGENT_TARGET = "#{AGENT_OUTPUT_DIR}#{PhusionPassenger::AGENT_EXE}"
 AGENT_MAIN_OBJECT = "#{AGENT_OUTPUT_DIR}AgentMain.o"
 AGENT_OBJECTS = {
   AGENT_MAIN_OBJECT =>
@@ -47,22 +47,48 @@ AGENT_OBJECTS = {
     "src/agent/SpawnPreparer/SpawnPreparerMain.cpp"
 }
 
+# Agent-specific compiler flags.
+let(:agent_cflags) do
+  result = []
+  result << '-O' if OPTIMIZE
+  result << '-DUSE_SELINUX' if USE_SELINUX
+  result << '-flto' if LTO
+  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
+  result.join(' ')
+end
+
+# Agent-specific linker flags.
+let(:agent_ldflags) do
+  result = []
+  result << '-O' if OPTIMIZE
+  result << '-flto' if LTO
+  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
+  result << '-lselinux' if USE_SELINUX
+  # Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).
+  result << PlatformInfo.export_dynamic_flags
+  # Enable dead symbol elimination on OS X.
+  result << '-Wl,-dead_strip' if PlatformInfo.os_name_simple == 'macosx'
+  result.join(' ')
+end
+
 # Define compilation tasks for object files.
 AGENT_OBJECTS.each_pair do |object, source|
   define_cxx_object_compilation_task(
     object,
     source,
-    :include_paths => [
-      "src/agent",
-      *CXX_SUPPORTLIB_INCLUDE_PATHS
-    ],
-    :flags => [
-      AGENT_CFLAGS,
-      LIBEV_CFLAGS,
-      LIBUV_CFLAGS,
-      PlatformInfo.curl_flags,
-      PlatformInfo.zlib_flags
-    ]
+    lambda { {
+      :include_paths => [
+        "src/agent",
+        *CXX_SUPPORTLIB_INCLUDE_PATHS
+      ],
+      :flags => [
+        agent_cflags,
+        libev_cflags,
+        libuv_cflags,
+        PlatformInfo.curl_flags,
+        PlatformInfo.zlib_flags
+      ]
+    } }
   )
 end
 
@@ -91,10 +117,13 @@ file(AGENT_TARGET => dependencies) do
       PlatformInfo.zlib_libs,
       PlatformInfo.crypto_libs,
       PlatformInfo.portability_cxx_ldflags,
-      AGENT_LDFLAGS
+      agent_ldflags
     ]
   )
 end
+
+desc 'Build the agent'
+task :agent => AGENT_TARGET
 
 task 'common:clean' do
   sh "rm -rf #{AGENT_OUTPUT_DIR}"

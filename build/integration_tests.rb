@@ -44,8 +44,7 @@ task 'test:integration:apache2' => dependencies do
     command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
   end
   if grep = string_option('E')
-    require 'shellwords'
-    command << " -e #{Shellwords.escape(grep)}"
+    command << " -e #{shesc grep}"
   end
   sh "cd test && exec #{command}"
 end
@@ -58,8 +57,7 @@ task 'test:integration:nginx' => dependencies do
     command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
   end
   if grep = string_option('E')
-    require 'shellwords'
-    command << " -e #{Shellwords.escape(grep)}"
+    command << " -e #{shesc grep}"
   end
   repeat = true
   while repeat
@@ -73,8 +71,7 @@ desc "Run Passenger Standalone integration tests"
 task 'test:integration:standalone' => dependencies do
   command = "bundle exec rspec -c -f s --tty integration_tests/standalone_tests.rb"
   if grep = string_option('E')
-    require 'shellwords'
-    command << " -e #{Shellwords.escape(grep)}"
+    command << " -e #{shesc grep}"
   end
   sh "cd test && exec #{command}"
 end
@@ -86,8 +83,7 @@ task 'test:integration:native_packaging' do
     command = "#{PlatformInfo.ruby_sudo_command} -E #{command}"
   end
   if grep = string_option('E')
-    require 'shellwords'
-    command << " -e #{Shellwords.escape(grep)}"
+    command << " -e #{shesc grep}"
   end
   case PlatformInfo.os_name_simple
   when "linux"
@@ -124,7 +120,6 @@ end
 dependencies = integration_test_dependencies(:_apache2)
 desc "Run the 'apache2' integration test infinitely, and abort if/when it fails"
 task 'test:restart' => dependencies do
-  require 'shellwords'
   color_code_start = "\e[33m\e[44m\e[1m"
   color_code_end = "\e[0m"
   i = 1
@@ -132,7 +127,7 @@ task 'test:restart' => dependencies do
     puts "#{color_code_start}Test run #{i} (press Ctrl-C multiple times to abort)#{color_code_end}"
     command = "bundle exec rspec -c -f s --tty integration_tests/apache2_tests.rb"
     if grep = string_option('E')
-      command << " -e #{Shellwords.escape(grep)}"
+      command << " -e #{shesc grep}"
     end
     sh "cd test && exec #{command}"
     i += 1

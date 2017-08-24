@@ -62,7 +62,7 @@ task 'package:set_official' do
   ENV.delete('USE_CCACHE')
 end
 
-task 'package:gem' => Packaging::PREGENERATED_FILES do
+task 'package:gem' => PhusionPassenger::Packaging::PREGENERATED_FILES do
   if ENV['OFFICIAL_RELEASE']
     release_file = "#{PhusionPassenger.resources_dir}/release.txt"
     File.unlink(release_file) rescue nil
@@ -81,7 +81,7 @@ task 'package:gem' => Packaging::PREGENERATED_FILES do
   sh "mv #{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}.gem #{PKG_DIR}/"
 end
 
-task 'package:tarball' => Packaging::PREGENERATED_FILES do
+task 'package:tarball' => PhusionPassenger::Packaging::PREGENERATED_FILES do
   basename = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
   sh "rm -rf #{PKG_DIR}/#{basename}"
   sh "mkdir -p #{PKG_DIR}/#{basename}"
@@ -187,7 +187,7 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   sh "mkdir -p #{fake_native_support_dir}"
   native_support_archdir = PlatformInfo.ruby_extension_binary_compatibility_id
   sh "mkdir -p #{fake_native_support_dir}"
-  sh "cp -R buildout/ruby/#{native_support_archdir}/*.#{LIBEXT} #{fake_native_support_dir}/"
+  sh "cp -R buildout/ruby/#{native_support_archdir}/*.#{libext} #{fake_native_support_dir}/"
 
   # Support binaries
   sh "mkdir -p #{fake_support_binaries_dir}"
@@ -240,9 +240,9 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
 
   # User binaries
   sh "mkdir -p #{fake_bindir}"
-  Packaging::USER_EXECUTABLES.each do |exe|
+  PhusionPassenger::Packaging::USER_EXECUTABLES.each do |exe|
     sh "cp bin/#{exe} #{fake_bindir}/"
-    if Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
+    if PhusionPassenger::Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
       shebang = psg_free_ruby
     else
       shebang = psg_ruby
@@ -252,9 +252,9 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
 
   # Superuser binaries
   sh "mkdir -p #{fake_sbindir}"
-  Packaging::SUPER_USER_EXECUTABLES.each do |exe|
+  PhusionPassenger::Packaging::SUPER_USER_EXECUTABLES.each do |exe|
     sh "cp bin/#{exe} #{fake_sbindir}/"
-    if Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
+    if PhusionPassenger::Packaging::EXECUTABLES_WITH_FREE_RUBY.include?(exe)
       shebang = psg_free_ruby
     else
       shebang = psg_ruby

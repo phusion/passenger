@@ -50,7 +50,7 @@ task 'test:install_deps' do
   install_base_deps = boolean_option('BASE_DEPS', default)
 
   if deps_target = string_option('DEPS_TARGET')
-    bundle_args = "--path #{Shellwords.escape deps_target} #{ENV['BUNDLE_ARGS']}".strip
+    bundle_args = "--path #{shesc deps_target} #{ENV['BUNDLE_ARGS']}".strip
   else
     bundle_args = ENV['BUNDLE_ARGS'].to_s
   end

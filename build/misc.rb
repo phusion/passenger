@@ -77,7 +77,7 @@ end
 desc "Convert the Changelog items for the latest release to HTML"
 task :changelog_as_html do
   require 'cgi'
-  contents, items = extract_latest_news_contents_and_items
+  _, items = extract_latest_news_contents_and_items
 
   puts "<ul>"
   items.each do |item|
@@ -109,7 +109,7 @@ end
 
 desc "Convert the Changelog items for the latest release to Markdown"
 task :changelog_as_markdown do
-  contents, items = extract_latest_news_contents_and_items
+  contents, _ = extract_latest_news_contents_and_items
 
   # Auto-link to issue tracker.
   contents.gsub!(/(bug #|issue #|GH-)(\d+)/i) do
@@ -176,16 +176,16 @@ task :compile_app => dependencies do
       :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
       :flags => [
         "-DSTANDALONE",
-        LIBEV_CFLAGS,
-        LIBUV_CFLAGS
+        libev_cflags,
+        libuv_cflags
       ]
     )
     create_cxx_executable(exe,
       object,
       :flags => [
         "-DSTANDALONE",
-        LIBEV_CFLAGS,
-        LIBUV_CFLAGS,
+        libev_cflags,
+        libuv_cflags,
         COMMON_LIBRARY.link_objects_as_string,
         LIBBOOST_OXT_LINKARG,
         libev_libs,
