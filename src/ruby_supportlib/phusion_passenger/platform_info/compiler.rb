@@ -489,7 +489,7 @@ module PhusionPassenger
         :c, "int main() { return 0; }\n", '-ldl')
     end
     memoize :has_dl_library?, true
-    
+
     def self.has_alloca_h?
       return try_compile("Checking for alloca.h",
         :c, '#include <alloca.h>')
@@ -518,39 +518,6 @@ module PhusionPassenger
         return '-g'
       end
     end
-
-    def self.dmalloc_ldflags
-      if !ENV['DMALLOC_LIBS'].to_s.empty?
-        return ENV['DMALLOC_LIBS']
-      end
-      if os_name_simple == "macosx"
-        ['/opt/local', '/usr/local', '/usr'].each do |prefix|
-          filename = "#{prefix}/lib/libdmallocthcxx.a"
-          if File.exist?(filename)
-            return filename
-          end
-        end
-        return nil
-      else
-        return "-ldmallocthcxx"
-      end
-    end
-    memoize :dmalloc_ldflags
-
-    def self.electric_fence_ldflags
-      if os_name_simple == "macosx"
-        ['/opt/local', '/usr/local', '/usr'].each do |prefix|
-          filename = "#{prefix}/lib/libefence.a"
-          if File.exist?(filename)
-            return filename
-          end
-        end
-        return nil
-      else
-        return "-lefence"
-      end
-    end
-    memoize :electric_fence_ldflags
 
     def self.export_dynamic_flags
       if os_name_simple == "linux"

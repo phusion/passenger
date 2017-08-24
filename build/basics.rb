@@ -85,8 +85,6 @@ MAINTAINER_EMAIL = "info@phusion.nl"
 CC       = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cc)
 CXX      = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cxx)
 LIBEXT   = PlatformInfo.library_extension
-USE_DMALLOC = boolean_option('USE_DMALLOC')
-USE_EFENCE  = boolean_option('USE_EFENCE')
 USE_ASAN    = boolean_option('USE_ASAN')
 USE_SELINUX = boolean_option('USE_SELINUX')
 OPTIMIZE    = boolean_option('OPTIMIZE')
@@ -110,8 +108,6 @@ AGENT_CFLAGS.strip!
 AGENT_LDFLAGS = ""
 AGENT_LDFLAGS << " -O" if OPTIMIZE
 AGENT_LDFLAGS << " -flto" if LTO
-AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
-AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
 AGENT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
 AGENT_LDFLAGS << " -lselinux" if USE_SELINUX
 # Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).

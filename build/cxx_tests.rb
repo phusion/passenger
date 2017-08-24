@@ -163,7 +163,6 @@ def test_cxx_ldflags
       "#{PlatformInfo.zlib_libs} " <<
       "#{PlatformInfo.crypto_libs} " <<
       "#{PlatformInfo.portability_cxx_ldflags}"
-    result << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
     result << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
     result << " #{EXTRA_CXX_LDFLAGS}"
     result.strip!
