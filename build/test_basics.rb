@@ -67,20 +67,6 @@ task 'test:install_deps' do
     sh "bundle install #{bundle_args} --without base"
   end
 
-  if boolean_option('USH_BUNDLES', default)
-    # see what is available for Submodule tests just in case Travis CI environment changes
-    # || true to avoid missing rvm command triggering a failure on Jenkins CI
-    sh "rvm list || true"
-
-    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
-      " && bundle install #{bundle_args} --with travis --without doc notravis"
-    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
-      " && bundle install #{bundle_args} --without doc notravis"
-    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
-      " && bundle exec rake install_test_app_bundles" \
-      " BUNDLE_ARGS='#{bundle_args}'"
-  end
-
   if boolean_option('NODE_MODULES', default)
     sh "yarn install #{yarn_args}"
   end
