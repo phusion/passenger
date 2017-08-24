@@ -122,7 +122,7 @@ LET_CACHE = {}
 
 def let(name)
   name = name.to_sym
-  define_method(name) do
+  Kernel.send(:define_method, name) do
     if LET_CACHE.key?(name)
       LET_CACHE[name]
     else
