@@ -8,14 +8,3 @@ group :base do
   gem 'json'
   gem 'rack'
 end
-
-group :release do
-  gem 'highline'
-  gem 'nokogiri', '1.5.9'
-end
-
-group :doc do
-  # Last version that worked on Ruby 1.8
-  gem 'nokogiri', '1.5.9'
-  gem 'bluecloth'
-end

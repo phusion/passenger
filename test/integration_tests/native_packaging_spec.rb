@@ -208,11 +208,6 @@ describe "A natively packaged Phusion Passenger" do
     File.file?("#{NGINX_ADDON_DIR}/ngx_http_passenger_module.c")
   end
 
-  specify "the documentation directory exists" do
-    File.directory?(DOCDIR).should be_true
-    File.file?("#{DOCDIR}/ServerOptimizationGuide.html").should be_true
-  end
-
   specify "the helper-scripts directory exists" do
     File.directory?(HELPER_SCRIPTS_DIR).should be_true
     File.file?("#{HELPER_SCRIPTS_DIR}/rack-loader.rb").should be_true

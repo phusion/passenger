@@ -1,9 +1,0 @@
-* link:http://groups.google.com/group/phusion-passenger[Community discussion forum] - post a
-  message here if you're experiencing problems. Support on this forum is provided by the community on a best-effort basis, so a (timely) response is not guaranteed.
-* link:https://github.com/phusion/passenger/issues[Issue tracker] - report
-  bugs here.
-* Email support@phusion.nl if you are a link:https://www.phusionpassenger.com/enterprise[Phusion Passenger Enterprise] customer. Please mention your order reference. If you are not an Enterprise customer, we kindly redirect you to the community discussion forum instead.
-* link:https://www.phusionpassenger.com/commercial_support[Commercial support contracts] are also available.
-* Report security vulnerabilities to security@phusion.nl. We will do our best to respond to you as quickly as we can, so please do not disclose the vulnerability until then.
-
-Please consult link:https://www.phusionpassenger.com/support[the Phusion Passenger website] for a full list of support resources.

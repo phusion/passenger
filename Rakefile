@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (C) 2008-2016  Phusion Holding B.V.
+#  Copyright (C) 2008-2017  Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -48,7 +48,6 @@ else
   require 'build/agent'
   require 'build/apache2'
   require 'build/nginx'
-  require 'build/documentation'
   require 'build/packaging'
   require 'build/test_basics'
   require 'build/oxt_tests'

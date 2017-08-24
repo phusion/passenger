@@ -20,7 +20,6 @@ xcuserdata
 /config.rb
 /buildout
 build/cache
-doc/*.html
 src/helper-scripts/download_binaries/Makefile
 test/.gdbinit
 test/test.log
