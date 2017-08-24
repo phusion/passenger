@@ -22,8 +22,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-ORIG_TARBALL_FILES = lambda { PhusionPassenger::Packaging.files }
-
 def recursive_copy_files(files, destination_dir, preprocess = false, variables = {})
   require 'fileutils' if !defined?(FileUtils)
   if !STDOUT.tty?
@@ -54,64 +52,6 @@ def recursive_copy_files(files, destination_dir, preprocess = false, variables =
   end
 end
 
-def word_wrap(text, max = 72)
-  while index = (lines = text.split("\n")).find_index{ |line| line.size > max }
-    line = lines[index]
-    pos = max
-    while pos >= 0 && line[pos..pos] != " "
-      pos -= 1
-    end
-    if pos < 0
-      raise "Cannot wrap line: #{line}"
-    else
-      lines[index] = line[0 .. pos - 1]
-      lines.insert(index + 1, line[pos + 1 .. -1])
-      text = lines.join("\n")
-    end
-  end
-  return text
-end
-
-def is_open_source?
-  return !is_enterprise?
-end
-
-def is_enterprise?
-  return PACKAGE_NAME =~ /enterprise/
-end
-
-def enterprise_git_url
-  return "TODO"
-end
-
-def git_tag_prefix
-  if is_open_source?
-    return "release"
-  else
-    return "enterprise"
-  end
-end
-
-def git_tag
-  return "#{git_tag_prefix}-#{VERSION_STRING}"
-end
-
-def apt_repo_name
-  if is_open_source?
-    "passenger"
-  else
-    "passenger-enterprise"
-  end
-end
-
-def homebrew_dir
-  return "/tmp/homebrew"
-end
-
-def homebrew_tap_dir
-  return "/tmp/homebrew_tap"
-end
-
 task :clobber => 'package:clean'
 
 task 'package:set_official' do
@@ -123,140 +63,7 @@ task 'package:set_official' do
   ENV.delete('USE_CCACHE')
 end
 
-desc "Build, sign & upload gem & tarball"
-task 'package:release' => ['package:set_official', 'package:gem', 'package:tarball', 'package:sign'] do
-  PhusionPassenger.require_passenger_lib 'platform_info'
-  require 'yaml'
-  require 'uri'
-  require 'net/http'
-  require 'net/https'
-  basename   = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
-  version    = PhusionPassenger::VERSION_STRING
-  is_beta    = !!version.split('.')[3]
-
-  if !`git status --porcelain | grep -Ev '^\\?\\? '`.empty?
-    STDERR.puts "-------------------"
-    abort "*** ERROR: There are uncommitted files. See 'git status'"
-  end
-
-  begin
-    website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
-  rescue Errno::ENOENT
-    STDERR.puts "-------------------"
-    abort "*** ERROR: Please put the Phusion Passenger website admin " +
-      "password in ~/.passenger_website.yml:\n" +
-      "admin_password: ..."
-  end
-
-  if !PhusionPassenger::PlatformInfo.find_command("hub")
-    STDERR.puts "-------------------"
-    abort "*** ERROR: Please 'brew install hub' first"
-  end
-
-  if is_open_source?
-    if boolean_option('HOMEBREW_UPDATE', true) && !is_beta
-      puts "Updating Homebrew formula..."
-      Rake::Task['package:update_homebrew'].invoke
-    else
-      puts "HOMEBREW_UPDATE set to false, not updating Homebrew formula."
-    end
-  end
-
-  sh "git tag -s #{git_tag} -u 0A212A8C -m 'Release #{version}'"
-
-  puts "Proceed with pushing tag to remote Git repo and uploading the gem and signatures? [y/n]"
-  if STDIN.readline == "y\n"
-    sh "git push origin #{git_tag}"
-
-    if is_open_source?
-      sh "s3cmd -P put #{PKG_DIR}/passenger-#{version}.{gem,tar.gz,gem.asc,tar.gz.asc} s3://phusion-passenger/releases/"
-      sh "gem push #{PKG_DIR}/passenger-#{version}.gem"
-
-      puts "Updating version number on website..."
-      if is_beta
-        uri = URI.parse("https://www.phusionpassenger.com/latest_beta_version")
-      else
-        uri = URI.parse("https://www.phusionpassenger.com/latest_stable_version")
-      end
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      request = Net::HTTP::Post.new(uri.request_uri)
-      request.basic_auth("admin", website_config["admin_password"])
-      request.set_form_data("version" => version)
-      response = http.request(request)
-      if response.code != 200 && response.body != "ok"
-        abort "*** ERROR: Cannot update version number on www.phusionpassenger.com:\n" +
-          "Status: #{response.code}\n\n" +
-          response.body
-      end
-
-      puts "Initiating building of binaries"
-      Rake::Task['package:initiate_binaries_building'].invoke
-
-      if !is_beta
-        puts "Initiating building of Debian packages"
-        Rake::Task['package:initiate_debian_building'].invoke
-        puts "Initiating building of RPM packages"
-        Rake::Task['package:initiate_rpm_building'].invoke
-      end
-
-      puts "Building OS X binaries..."
-      Rake::Task['package:build_osx_binaries'].invoke
-
-      if !is_beta && boolean_option('HOMEBREW_UPDATE', true)
-        if boolean_option('HOMEBREW_DRY_RUN', false)
-          puts "HOMEBREW_DRY_RUN set, not submitting pull request. Please find the repo in /tmp/homebrew."
-        else
-          puts "Submitting Homebrew pull request..."
-          sh "cd #{homebrew_dir} && hub pull-request -m 'passenger #{version}' -b Homebrew:master"
-        end
-      end
-
-      puts "--------------"
-      puts "All done."
-    else
-      dir = "/u/apps/passenger_website/shared"
-      subdir = string_option('NAME', version)
-
-      sh "scp #{PKG_DIR}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} app@shell.phusion.nl:#{dir}/"
-      sh "ssh app@shell.phusion.nl 'mkdir -p \"#{dir}/assets/#{subdir}\" && mv #{dir}/#{basename}.{gem,tar.gz,gem.asc,tar.gz.asc} \"#{dir}/assets/#{subdir}/\"'"
-      command = "curl -F file=@#{PKG_DIR}/#{basename}.gem --user admin:'#{website_config['admin_password']}' " +
-        "--output /dev/stderr --write-out '%{http_code}' --silent " +
-        "https://www.phusionpassenger.com/enterprise_gems/upload"
-      puts command
-      result = `#{command}`
-      if result != "200"
-        abort "Gem upload failed. HTTP status code: #{result.inspect}"
-      else
-        # The response body does not contain a newline,
-        # so fix terminal output.
-        puts
-      end
-
-      puts "Initiating building of binaries"
-      Rake::Task['package:initiate_binaries_building'].invoke
-
-      if !is_beta
-        puts "Initiating building of Debian packages"
-        Rake::Task['package:initiate_debian_building'].invoke
-        puts "Initiating building of RPM packages"
-        Rake::Task['package:initiate_rpm_building'].invoke
-      end
-
-      puts "Building OS X binaries..."
-      Rake::Task['package:build_osx_binaries'].invoke
-
-      puts "--------------"
-      puts "All done."
-    end
-  else
-    puts "Did not upload anything."
-  end
-end
-
 task 'package:gem' => Packaging::PREGENERATED_FILES do
-  require 'phusion_passenger'
   if ENV['OFFICIAL_RELEASE']
     release_file = "#{PhusionPassenger.resources_dir}/release.txt"
     File.unlink(release_file) rescue nil
@@ -276,13 +83,12 @@ task 'package:gem' => Packaging::PREGENERATED_FILES do
 end
 
 task 'package:tarball' => Packaging::PREGENERATED_FILES do
-  require 'phusion_passenger'
   require 'fileutils'
 
   basename = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
   sh "rm -rf #{PKG_DIR}/#{basename}"
   sh "mkdir -p #{PKG_DIR}/#{basename}"
-  recursive_copy_files(ORIG_TARBALL_FILES.call, "#{PKG_DIR}/#{basename}")
+  recursive_copy_files(PhusionPassenger::Packaging.files, "#{PKG_DIR}/#{basename}")
   if ENV['OFFICIAL_RELEASE']
     File.open("#{PKG_DIR}/#{basename}/resources/release.txt", "w").close
   end
@@ -295,241 +101,10 @@ task 'package:tarball' => Packaging::PREGENERATED_FILES do
   sh "rm -rf #{PKG_DIR}/#{basename}"
 end
 
-task 'package:sign' do
-  if File.exist?(File.expand_path("~/.gnupg/gpg-agent.conf")) || ENV['GPG_AGENT_INFO']
-    puts "It looks like you're using gpg-agent, so skipping automatically password caching."
-  else
-    begin
-      require 'highline'
-    rescue LoadError
-      abort "Please run `gem install highline` first."
-    end
-    h = HighLine.new
-    password = h.ask("Password for software-signing@phusion.nl GPG key: ") { |q| q.echo = false }
-    passphrase_opt = "--passphrase-file .gpg-password"
-  end
-
-  begin
-    if password
-      File.open(".gpg-password", "w", 0600) do |f|
-        f.write(password)
-      end
-    end
-    version = PhusionPassenger::VERSION_STRING
-    ["passenger-#{version}.gem",
-     "passenger-#{version}.tar.gz",
-     "passenger-enterprise-server-#{version}.gem",
-     "passenger-enterprise-server-#{version}.tar.gz"].each do |name|
-      if File.exist?("pkg/#{name}")
-        sh "gpg --sign --detach-sign #{passphrase_opt} --local-user software-signing@phusion.nl --armor pkg/#{name}"
-      end
-    end
-  ensure
-    File.unlink('.gpg-password') if File.exist?('.gpg-password')
-  end
-end
-
-task 'package:update_homebrew' do
-  require 'digest/sha2'
-  version = VERSION_STRING
-  sha256 = File.open("#{PKG_DIR}/passenger-#{version}.tar.gz", "rb") do |f|
-    Digest::SHA256.hexdigest(f.read)
-  end
-  if !File.exist?(homebrew_dir)
-    sh "git clone git@github.com:phusion/homebrew-core.git #{homebrew_dir}"
-    sh "cd #{homebrew_dir} && git remote add Homebrew https://github.com/Homebrew/homebrew-core.git"
-  end
-  sh "cd #{homebrew_dir} && git fetch Homebrew"
-  sh "cd #{homebrew_dir} && git reset --hard Homebrew/master"
-  formula = File.read("/tmp/homebrew/Formula/passenger.rb")
-  formula.gsub!(/passenger-.+?\.tar\.gz/, "passenger-#{version}.tar.gz") ||
-    abort("Unable to substitute Homebrew formula tarball filename")
-  formula.gsub!(/^  sha256 .*/, "  sha256 \"#{sha256}\"") ||
-    abort("Unable to substitute Homebrew formula SHA-256")
-  necessary_dirs = ORIG_TARBALL_FILES.call.map{ |filename| filename.split("/").first }.uniq
-  necessary_dirs -= Packaging::HOMEBREW_EXCLUDE
-  necessary_dirs += ["buildout"]
-  necessary_dirs_str = word_wrap(necessary_dirs.inspect).split("\n").join("\n      ")
-  formula.sub!(/necessary_files = .*?\]/m, "necessary_files = Dir#{necessary_dirs_str}") ||
-    abort("Unable to substitute file whitelist")
-  File.open("/tmp/homebrew/Formula/passenger.rb", "w") do |f|
-    f.write(formula)
-  end
-  sh "cd #{homebrew_dir} && git commit -a -m 'passenger #{version}'"
-  sh "cd #{homebrew_dir} && git push -f"
-  if boolean_option('HOMEBREW_TEST', true)
-    sh "cp #{homebrew_dir}/Formula/passenger.rb $(brew --prefix)/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/passenger.rb"
-    if `brew info nginx` !~ /^Not installed$/
-      sh "brew uninstall nginx"
-    end
-    if `brew info nginx-passenger-enterprise` !~ /^Not installed$/
-      sh "brew uninstall nginx-passenger-enterprise"
-    end
-    if `brew info passenger` !~ /^Not installed$/
-      sh "brew uninstall passenger"
-    end
-    if `brew info passenger-enterprise` !~ /^Not installed$/
-      sh "brew uninstall passenger-enterprise"
-    end
-    sh "cp #{PKG_DIR}/passenger-#{version}.tar.gz `brew --cache`/"
-    sh "brew install passenger"
-    sh "brew install nginx --with-passenger"
-    Rake::Task['test:integration:native_packaging'].invoke
-  end
-end
-
-task 'package:initiate_binaries_building' do
-  require 'yaml'
-  require 'uri'
-  require 'net/http'
-  require 'net/https'
-  begin
-    website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
-  rescue Errno::ENOENT
-    STDERR.puts "-------------------"
-    abort "*** ERROR: Please put the Phusion Passenger website admin " +
-      "password in ~/.passenger_website.yml:\n" +
-      "admin_password: ..."
-  end
-  if is_open_source?
-    type = "open%20source"
-    jenkins_token = website_config["jenkins_token"]
-    if !jenkins_token
-      abort "*** ERROR: Please put the Passenger open source Jenkins " +
-        "authentication token in ~/.passenger_website.yml, under " +
-        "the 'jenkins_token' key."
-    end
-  else
-    type = "Enterprise"
-    jenkins_token = website_config["jenkins_enterprise_token"]
-    if !jenkins_token
-      abort "*** ERROR: Please put the Passenger Enterprise Jenkins " +
-        "authentication token in ~/.passenger_website.yml, under " +
-        "the 'jenkins_enterprise_token' key."
-    end
-  end
-
-  uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
-    "job=Passenger%20#{type}%20binaries%20(release)&ref=#{git_tag}&testing=false")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-  request = Net::HTTP::Post.new(uri.request_uri)
-  request.set_form_data("token" => jenkins_token)
-  response = http.request(request)
-  if response.code != '201'
-    abort "*** ERROR: Cannot initiate building of binaries:\n" +
-      "Status: #{response.code}\n\n" +
-      response.body
-  end
-  puts "Initiated building of binaries."
-end
-
-task 'package:initiate_debian_building' do
-  require 'yaml'
-  require 'uri'
-  require 'net/http'
-  require 'net/https'
-  begin
-    website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
-  rescue Errno::ENOENT
-    STDERR.puts "-------------------"
-    abort "*** ERROR: Please put the Phusion Passenger website admin " +
-      "password in ~/.passenger_website.yml:\n" +
-      "admin_password: ..."
-  end
-  if is_open_source?
-    type = "open%20source"
-    jenkins_token = website_config["jenkins_token"]
-    if !jenkins_token
-      abort "*** ERROR: Please put the Passenger open source Jenkins " +
-        "authentication token in ~/.passenger_website.yml, under " +
-        "the 'jenkins_token' key."
-    end
-  else
-    type = "Enterprise"
-    jenkins_token = website_config["jenkins_enterprise_token"]
-    if !jenkins_token
-      abort "*** ERROR: Please put the Passenger Enterprise Jenkins " +
-        "authentication token in ~/.passenger_website.yml, under " +
-        "the 'jenkins_enterprise_token' key."
-    end
-  end
-
-  uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
-    "job=Passenger%20#{type}%20Debian%20packages%20(release)&ref=#{git_tag}&repo=#{apt_repo_name}")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-  request = Net::HTTP::Post.new(uri.request_uri)
-  request.set_form_data("token" => jenkins_token)
-  response = http.request(request)
-  if response.code != '201'
-    abort "*** ERROR: Cannot initiate building of Debian packages:\n" +
-      "Status: #{response.code}\n\n" +
-      response.body
-  end
-  puts "Initiated building of Debian packages."
-end
-
-task 'package:initiate_rpm_building' do
-  require 'yaml'
-  require 'uri'
-  require 'net/http'
-  require 'net/https'
-  begin
-    website_config = YAML.load_file(File.expand_path("~/.passenger_website.yml"))
-  rescue Errno::ENOENT
-    STDERR.puts "-------------------"
-    abort "*** ERROR: Please put the Phusion Passenger website admin " +
-      "password in ~/.passenger_website.yml:\n" +
-      "admin_password: ..."
-  end
-  if is_open_source?
-    type = "open%20source"
-    jenkins_token = website_config["jenkins_token"]
-    if !jenkins_token
-      abort "*** ERROR: Please put the Passenger open source Jenkins " +
-        "authentication token in ~/.passenger_website.yml, under " +
-        "the 'jenkins_token' key."
-    end
-  else
-    type = "Enterprise"
-    jenkins_token = website_config["jenkins_enterprise_token"]
-    if !jenkins_token
-      abort "*** ERROR: Please put the Passenger Enterprise Jenkins " +
-        "authentication token in ~/.passenger_website.yml, under " +
-        "the 'jenkins_enterprise_token' key."
-    end
-  end
-
-  uri = URI.parse("https://oss-jenkins.phusion.nl/buildByToken/buildWithParameters?" +
-    "job=Passenger%20#{type}%20RPM%20packages%20(release)&ref=#{git_tag}&repo=#{apt_repo_name}")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-  request = Net::HTTP::Post.new(uri.request_uri)
-  request.set_form_data("token" => jenkins_token)
-  response = http.request(request)
-  if response.code != '201'
-    abort "*** ERROR: Cannot initiate building of RPM packages:\n" +
-      "Status: #{response.code}\n\n" +
-      response.body
-  end
-  puts "Initiated building of RPM packages."
-end
-
-task 'package:build_osx_binaries' do
-  sh "env ENTERPRISE=#{!!is_enterprise?} TESTING=false " \
-    "PASSENGER_ROOT=#{Shellwords.shellescape Dir.pwd} " \
-    "./packaging/binaries/integration/publish/macos.sh"
-end
-
-desc "Remove gem, tarball and signatures"
+desc "Remove gem and tarball"
 task 'package:clean' do
-  require 'phusion_passenger'
   basename = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
-  sh "rm -f pkg/#{basename}.{gem,gem.asc,tar.gz,tar.gz.asc}"
+  sh "rm -f #{PKG_DIR}/#{basename}.{gem,gem.asc,tar.gz,tar.gz.asc}"
 end
 
 def change_shebang(filename, value)
@@ -575,7 +150,7 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   psg_ruby       = ENV['RUBY'] || "#{fs_bindir}/ruby"
   psg_free_ruby  = ENV['FREE_RUBY'] || "/usr/bin/env ruby"
 
-  fakeroot = "pkg/fakeroot"
+  fakeroot = "#{PKG_DIR}/fakeroot"
   fake_rubylibdir = "#{fakeroot}#{psg_rubylibdir}"
   fake_nodelibdir = "#{fakeroot}#{psg_nodelibdir}"
   fake_libdir     = "#{fakeroot}#{psg_libdir}"
