@@ -23,7 +23,6 @@
 #  THE SOFTWARE.
 
 def recursive_copy_files(files, destination_dir, preprocess = false, variables = {})
-  require 'fileutils' if !defined?(FileUtils)
   if !STDOUT.tty?
     puts "Copying files..."
   end
@@ -83,8 +82,6 @@ task 'package:gem' => Packaging::PREGENERATED_FILES do
 end
 
 task 'package:tarball' => Packaging::PREGENERATED_FILES do
-  require 'fileutils'
-
   basename = "#{PhusionPassenger::PACKAGE_NAME}-#{PhusionPassenger::VERSION_STRING}"
   sh "rm -rf #{PKG_DIR}/#{basename}"
   sh "mkdir -p #{PKG_DIR}/#{basename}"
@@ -120,7 +117,6 @@ end
 desc "Create a fakeroot, useful for building native packages"
 task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   require 'rbconfig'
-  require 'fileutils'
   include RbConfig
 
   fs_prefix  = ENV['FS_PREFIX']  || "/usr"
