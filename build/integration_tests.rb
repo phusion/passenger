@@ -138,3 +138,8 @@ task 'test:restart' => dependencies do
     i += 1
   end
 end
+
+desc "Run source packaging tests"
+task 'test:source_packaging' do
+  sh 'bundle exec rspec -f s -c test/integration_tests/source_packaging_test.rb'
+end
