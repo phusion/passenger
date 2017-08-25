@@ -57,6 +57,7 @@ namespace Core {
  * (do not edit: following text is automatically generated
  * by 'rake configkit_schemas_inline_comments')
  *
+ *   admin_panel_authentication                                      object             -          secret
  *   admin_panel_close_timeout                                       float              -          default(10.0)
  *   admin_panel_connect_timeout                                     float              -          default(30.0)
  *   admin_panel_data_debug                                          boolean            -          default(false)
@@ -456,11 +457,18 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 				config[configName] = options.getBool(optionName); \
 			} \
 		} while (false)
+	#define SET_JSON_OBJECT_CONFIG2(configName, optionName) \
+		do { \
+			if (options.has(optionName)) { \
+				config[configName] = options.getJsonObject(optionName); \
+			} \
+		} while (false)
 	#define SET_STR_CONFIG(name) SET_STR_CONFIG2(name, name)
 	#define SET_INT_CONFIG(name) SET_INT_CONFIG2(name, name)
 	#define SET_UINT_CONFIG(name) SET_UINT_CONFIG2(name, name)
 	#define SET_DOUBLE_CONFIG(name) SET_DOUBLE_CONFIG2(name, name)
 	#define SET_BOOL_CONFIG(name) SET_BOOL_CONFIG2(name, name)
+	#define SET_JSON_OBJECT_CONFIG(name) SET_JSON_OBJECT_CONFIG2(name, name)
 
 	Json::Value config;
 
@@ -517,6 +525,7 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	SET_BOOL_CONFIG2("security_update_checker_disabled", "disable_security_update_check");
 	SET_STR_CONFIG2("security_update_checker_proxy_url", "security_update_check_proxy");
 	SET_STR_CONFIG2("security_update_checker_web_server_version", "server_version");
+	SET_JSON_OBJECT_CONFIG("admin_panel_authentication");
 	SET_DOUBLE_CONFIG("admin_panel_close_timeout");
 	SET_DOUBLE_CONFIG("admin_panel_connect_timeout");
 	SET_BOOL_CONFIG("admin_panel_data_debug");

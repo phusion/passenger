@@ -37,10 +37,15 @@
 #include <vector>
 
 #include <jsoncpp/json.h>
+#include <modp_b64.h>
 
 #include <LoggingKit/Logging.h>
 #include <ConfigKit/ConfigKit.h>
 #include <ConfigKit/AsyncUtils.h>
+#include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/StrIntUtils.h>
+#include <Utils/IOUtils.h>
 
 namespace Passenger {
 
@@ -116,6 +121,7 @@ public:
 	 * (do not edit: following text is automatically generated
 	 * by 'rake configkit_schemas_inline_comments')
 	 *
+	 *   authentication      object    -          secret
 	 *   close_timeout       float     -          default(10.0)
 	 *   connect_timeout     float     -          default(30.0)
 	 *   data_debug          boolean   -          default(false)
@@ -139,6 +145,7 @@ public:
 			add("url", STRING_TYPE, REQUIRED);
 			add("log_prefix", STRING_TYPE, OPTIONAL);
 			add("data_debug", BOOL_TYPE, OPTIONAL, false);
+			add("authentication", OBJECT_TYPE, OPTIONAL | SECRET);
 			add("proxy_url", STRING_TYPE, OPTIONAL);
 			add("proxy_username", STRING_TYPE, OPTIONAL);
 			add("proxy_password", STRING_TYPE, OPTIONAL | SECRET);
@@ -148,6 +155,67 @@ public:
 			add("ping_timeout", FLOAT_TYPE, OPTIONAL, 30.0);
 			add("close_timeout", FLOAT_TYPE, OPTIONAL, 10.0);
 			add("reconnect_timeout", FLOAT_TYPE, OPTIONAL, 5.0);
+
+			addValidator(validateAuthentication);
+			addNormalizer(normalizeAuthentication);
+		}
+
+		static void validateAuthentication(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+			typedef ConfigKit::Error Error;
+
+			if (config["authentication"].isNull()) {
+				return;
+			}
+			if (!config["authentication"].isObject()) {
+				errors.push_back(Error("'{{authentication}}' must be an object"));
+				return;
+			}
+
+			if (!config["authentication"]["type"].isNull()) {
+				if (config["authentication"]["type"] != "basic") {
+					errors.push_back(Error("When '{{authentication}}' is given,"
+						" its 'type' key may only be set to 'basic'"));
+				}
+			}
+			if (!config["authentication"]["username"].isString()) {
+				errors.push_back(Error("When '{{authentication}}' is given,"
+					" its 'username' key must be a string"));
+			}
+			if (config["authentication"].isMember("password_file")) {
+				if (!config["authentication"]["password_file"].isString()) {
+					errors.push_back(Error("When '{{authentication}}' is given,"
+						" its 'password_file' key must be a string"));
+				}
+				if (config["authentication"].isMember("password")) {
+					errors.push_back(Error("When '{{authentication}}' is given,"
+						" it may not contain both a 'password_file' and a 'password' key"));
+				}
+			} else if (config["authentication"].isMember("password")) {
+				if (!config["authentication"]["password"].isString()) {
+					errors.push_back(Error("When '{{authentication}}' is given,"
+						" its 'password' key must be a string"));
+				}
+			} else {
+				errors.push_back(Error("When '{{authentication}}' is given,"
+					" it must have a 'password_file' or 'password' key"));
+			}
+		}
+
+		static Json::Value normalizeAuthentication(const Json::Value &effectiveValues) {
+			Json::Value auth = effectiveValues["authentication"];
+			if (auth.isNull()) {
+				return Json::nullValue;
+			}
+
+			Json::Value updates;
+			if (auth["type"].isNull()) {
+				auth["type"] = "basic";
+			}
+			if (auth.isMember("password_file")) {
+				auth["password_file"] = absolutizePath(auth["password_file"].asString());
+			}
+			updates["authentication"] = auth;
+			return updates;
 		}
 
 	public:
@@ -313,6 +381,21 @@ private:
 		using websocketpp::lib::placeholders::_1;
 		using websocketpp::lib::placeholders::_2;
 
+		if (!config["authentication"].isNull()) {
+			try {
+				addBasicAuthHeader(conn);
+			} catch (const std::exception &e) {
+				P_ERROR(logPrefix << "Error setting up basic authentication: "
+					<< e.what());
+				{
+					boost::lock_guard<boost::mutex> l(stateSyncher);
+					state = NOT_CONNECTED;
+				}
+				scheduleReconnect();
+				return;
+			}
+		}
+
 		conn->set_socket_init_handler(websocketpp::lib::bind(
 			&WebSocketCommandReverseServer::onSocketInit,
 			this,
@@ -347,6 +430,18 @@ private:
 			_2));
 
 		endpoint.connect(conn);
+	}
+
+	void addBasicAuthHeader(ConnectionPtr &conn) {
+		string username = config["authentication"]["username"].asString();
+		string password;
+		if (config["authentication"].isMember("password_file")) {
+			password = strip(readAll(config["authentication"]["password_file"].asString()));
+		} else {
+			password = config["authentication"]["password"].asString();
+		}
+		string data = modp::b64_encode(username + ":" + password);
+		conn->append_header("Authorization", "Basic " + data);
 	}
 
 	bool applyConnectionConfig(ConnectionPtr &conn) {

@@ -55,6 +55,7 @@ public:
 	 * (do not edit: following text is automatically generated
 	 * by 'rake configkit_schemas_inline_comments')
 	 *
+	 *   authentication              object    -          secret
 	 *   close_timeout               float     -          default(10.0)
 	 *   connect_timeout             float     -          default(30.0)
 	 *   data_debug                  boolean   -          default(false)

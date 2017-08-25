@@ -1,5 +1,9 @@
 {
    "Passenger::Core::AdminPanelConnector::Schema" : {
+      "authentication" : {
+         "secret" : true,
+         "type" : "object"
+      },
       "close_timeout" : {
          "default_value" : 10.0,
          "has_default_value" : "static",
@@ -323,6 +327,10 @@
       }
    },
    "Passenger::Core::Schema" : {
+      "admin_panel_authentication" : {
+         "secret" : true,
+         "type" : "object"
+      },
       "admin_panel_close_timeout" : {
          "default_value" : 10.0,
          "has_default_value" : "static",
@@ -940,6 +948,10 @@
       }
    },
    "Passenger::WebSocketCommandReverseServer::Schema" : {
+      "authentication" : {
+         "secret" : true,
+         "type" : "object"
+      },
       "close_timeout" : {
          "default_value" : 10.0,
          "has_default_value" : "static",
