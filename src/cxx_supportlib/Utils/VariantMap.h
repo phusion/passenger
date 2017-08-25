@@ -33,6 +33,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <jsoncpp/json.h>
 #include <modp_b64.h>
 #include <Exceptions.h>
 #include <Utils/StrIntUtils.h>
@@ -418,6 +419,25 @@ public:
 		if (lookup(name, required, &str)) {
 			result.clear();
 			split(modp::b64_decode(*str), '\0', result);
+		}
+		return result;
+	}
+
+	Json::Value getJsonObject(const string &name, bool required = true,
+		const Json::Value &defaultValue = Json::Value()) const
+	{
+		Json::Value result = defaultValue;
+		const string *str;
+		if (lookup(name, required, &str)) {
+			result.clear();
+			Json::Reader reader;
+			if (!reader.parse(*str, result)) {
+				throw RuntimeException("Cannot parse '" + name + "' key as JSON data: "
+					+ reader.getFormattedErrorMessages());
+			}
+			if (!result.isObject()) {
+				throw RuntimeException("'" + name + "' is valid JSON but is not an object");
+			}
 		}
 		return result;
 	}
