@@ -144,6 +144,7 @@ namespace Core {
 		SpawningKit::ConfigPtr spawningKitConfig;
 		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr appPool;
+		Json::Value singleAppModeConfig;
 
 		ServerKit::AcceptLoadBalancer<Controller> loadBalancer;
 		vector<ThreadWorkingObjects> threadWorkingObjects;
@@ -237,35 +238,55 @@ initializePrivilegedWorkingObjects() {
 static void
 initializeSingleAppMode() {
 	TRACE_POINT();
-	VariantMap &options = *agentsOptions;
 
 	if (coreConfig->get("multi_app").asBool()) {
 		P_NOTICE(SHORT_PROGRAM_NAME " core running in multi-application mode.");
 		return;
 	}
 
-	if (!options.has("app_type")) {
+	WorkingObjects *wo = workingObjects;
+	string appType, startupFile;
+	string appRoot = coreConfig->get("single_app_mode_app_root").asString();
+
+	if (coreConfig->get("single_app_mode_app_type").isNull()) {
 		P_DEBUG("Autodetecting application type...");
 		AppTypeDetector detector(NULL, 0);
-		PassengerAppType appType = detector.checkAppRoot(options.get("app_root"));
-		if (appType == PAT_NONE || appType == PAT_ERROR) {
+		PassengerAppType appTypeEnum = detector.checkAppRoot(appRoot);
+		if (appTypeEnum == PAT_NONE || appTypeEnum == PAT_ERROR) {
 			fprintf(stderr, "ERROR: unable to autodetect what kind of application "
 				"lives in %s. Please specify information about the app using "
 				"--app-type and --startup-file, or specify a correct location to "
 				"the application you want to serve.\n"
 				"Type '" SHORT_PROGRAM_NAME " core --help' for more information.\n",
-				options.get("app_root").c_str());
+				appRoot.c_str());
 			exit(1);
 		}
 
-		options.set("app_type", getAppTypeName(appType));
-		options.set("startup_file", options.get("app_root") + "/" + getAppTypeStartupFile(appType));
+		appType = getAppTypeName(appTypeEnum);
+	} else {
+		appType = coreConfig->get("single_app_mode_app_type").asString();
 	}
 
+	if (coreConfig->get("single_app_mode_startup_file").isNull()) {
+		startupFile = appRoot + "/" + getAppTypeStartupFile(getAppType(appType));
+	} else {
+		startupFile = coreConfig->get("single_app_mode_startup_file").asString();
+	}
+	if (!fileExists(startupFile)) {
+		fprintf(stderr, "ERROR: unable to find expected startup file %s."
+			" Please specify its correct path with --startup-file.\n",
+			startupFile.c_str());
+		exit(1);
+	}
+
+	wo->singleAppModeConfig["app_root"] = appRoot;
+	wo->singleAppModeConfig["app_type"] = appType;
+	wo->singleAppModeConfig["startup_file"] = startupFile;
+
 	P_NOTICE(SHORT_PROGRAM_NAME " core running in single-application mode.");
-	P_NOTICE("Serving app     : " << options.get("app_root"));
-	P_NOTICE("App type        : " << options.get("app_type"));
-	P_NOTICE("App startup file: " << options.get("startup_file"));
+	P_NOTICE("Serving app     : " << appRoot);
+	P_NOTICE("App type        : " << appType);
+	P_NOTICE("App startup file: " << startupFile);
 }
 
 static void
@@ -698,8 +719,12 @@ initializeNonPrivilegedWorkingObjects() {
 
 		UPDATE_TRACE_POINT();
 		two.controller = new Core::Controller(two.serverKitContext,
-			coreSchema->controller.schema, controllerConfig,
-			coreSchema->controller.translator);
+			coreSchema->controller.schema,
+			controllerConfig,
+			coreSchema->controller.translator,
+			&coreSchema->controllerSingleAppMode.schema,
+			&wo->singleAppModeConfig,
+			coreSchema->controllerSingleAppMode.translator);
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
 		two.controller->unionStationContext = wo->unionStationContext;
@@ -829,6 +854,7 @@ initializeAdminPanelConnector() {
 
 	Json::Value config = coreConfig->inspectEffectiveValues();
 	config["log_prefix"] = "AdminPanelConnector: ";
+	config["ruby"] = config["default_ruby"];
 
 	P_NOTICE("Initialize connection with " << PROGRAM_NAME " admin panel at "
 		<< config["admin_panel_url"].asString());
@@ -1309,11 +1335,6 @@ sanityCheckOptions() {
 				definition++;
 			}
 			fprintf(stderr, "\n");
-			ok = false;
-		}
-
-		if (!options.has("startup_file")) {
-			fprintf(stderr, "ERROR: if you've passed --app-type, then you must also pass --startup-file.\n");
 			ok = false;
 		}
 	}

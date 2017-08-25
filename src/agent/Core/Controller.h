@@ -145,6 +145,7 @@ private:
 	friend class ResponseCache<Request>;
 	struct ev_check checkWatcher;
 	TurboCaching<Request> turboCaching;
+	ConfigKit::Store *singleAppModeConfig;
 
 	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		struct ev_prepare prepareWatcher;
@@ -373,20 +374,34 @@ public:
 
 	/****** Initialization and shutdown ******/
 
-	template<typename Translator>
-	Controller(ServerKit::Context *context, const ControllerSchema &schema,
+	template<
+		typename Translator1 = ConfigKit::DummyTranslator,
+		typename Translator2 = ConfigKit::DummyTranslator
+	>
+	Controller(ServerKit::Context *context,
+		const ControllerSchema &schema,
 		const Json::Value &initialConfig,
-		const Translator &translator = ConfigKit::DummyTranslator())
-		: ParentClass(context, schema, initialConfig, translator),
+		const Translator1 &translator1 = ConfigKit::DummyTranslator(),
+		const ControllerSingleAppModeSchema *singleAppModeSchema = NULL,
+		const Json::Value *_singleAppModeConfig = NULL,
+		const Translator2 &translator2 = ConfigKit::DummyTranslator()
+		)
+		: ParentClass(context, schema, initialConfig, translator1),
 
 		  mainConfig(config),
 		  requestConfig(new ControllerRequestConfig(config)),
 		  poolOptionsCache(4),
 
 		  turboCaching(),
+		  singleAppModeConfig(NULL),
 		  resourceLocator(NULL)
 		  /**************************/
 	{
+		if (mainConfig.singleAppMode) {
+			singleAppModeConfig = new ConfigKit::Store(*singleAppModeSchema,
+				*_singleAppModeConfig, translator2);
+		}
+
 		preinitialize();
 	}
 

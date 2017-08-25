@@ -46,6 +46,7 @@ using namespace boost;
 
 Controller::~Controller() {
 	ev_check_stop(getLoop(), &checkWatcher);
+	delete singleAppModeConfig;
 }
 
 void
@@ -104,14 +105,14 @@ Controller::initialize() {
 	ParentClass::initialize();
 	turboCaching.initialize(config["turbocaching"].asBool());
 
-	if (requestConfig->singleAppMode) {
+	if (mainConfig.singleAppMode) {
 		boost::shared_ptr<Options> options = boost::make_shared<Options>();
 		fillPoolOptionsFromConfigCaches(*options, mainConfig.pool, requestConfig);
 
-		string appRoot = config["app_root"].asString();
-		string environment = config["environment"].asString();
-		string appType = config["app_type"].asString();
-		string startupFile = config["startup_file"].asString();
+		string appRoot = singleAppModeConfig->get("app_root").asString();
+		string environment = config["default_environment"].asString();
+		string appType = singleAppModeConfig->get("app_type").asString();
+		string startupFile = singleAppModeConfig->get("startup_file").asString();
 
 		options->appRoot = appRoot;
 		options->environment = environment;

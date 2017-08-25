@@ -59,6 +59,7 @@ main(int argc, char *argv[]) {
 	doc["Passenger::Core::AdminPanelConnector::Schema"] = Passenger::Core::AdminPanelConnector::Schema().inspect();
 	doc["Passenger::Core::ApiServer::Schema"] = Passenger::Core::ApiServer::Schema().inspect();
 	doc["Passenger::Core::ControllerSchema"] = Passenger::Core::ControllerSchema().inspect();
+	doc["Passenger::Core::ControllerSingleAppModeSchema"] = Passenger::Core::ControllerSingleAppModeSchema().inspect();
 	doc["Passenger::Core::Schema"] = Passenger::Core::Schema().inspect();
 	doc["Passenger::LoggingKit::Schema"] = Passenger::LoggingKit::Schema().inspect();
 	doc["Passenger::SecurityUpdateChecker::Schema"] = Passenger::SecurityUpdateChecker::Schema().inspect();

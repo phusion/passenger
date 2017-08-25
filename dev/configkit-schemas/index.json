@@ -115,24 +115,10 @@
       }
    },
    "Passenger::Core::ControllerSchema" : {
-      "abort_websockets_on_process_shutdown" : {
-         "default_value" : true,
-         "has_default_value" : "static",
-         "type" : "boolean"
-      },
       "accept_burst_count" : {
          "default_value" : 32,
          "has_default_value" : "static",
          "type" : "unsigned integer"
-      },
-      "app_file_descriptor_ulimit" : {
-         "type" : "unsigned integer"
-      },
-      "app_root" : {
-         "type" : "string"
-      },
-      "app_type" : {
-         "type" : "string"
       },
       "benchmark_mode" : {
          "type" : "string"
@@ -142,9 +128,60 @@
          "has_default_value" : "static",
          "type" : "unsigned integer"
       },
+      "default_abort_websockets_on_process_shutdown" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_app_file_descriptor_ulimit" : {
+         "type" : "unsigned integer"
+      },
+      "default_environment" : {
+         "default_value" : "production",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_force_max_concurrent_requests_per_process" : {
+         "default_value" : -1,
+         "has_default_value" : "static",
+         "type" : "integer"
+      },
+      "default_friendly_error_pages" : {
+         "default_value" : "auto",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
       "default_group" : {
          "has_default_value" : "dynamic",
          "type" : "string"
+      },
+      "default_load_shell_envvars" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_max_preloader_idle_time" : {
+         "default_value" : 300,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_request_queue_size" : {
+         "default_value" : 100,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_requests" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_meteor_app_settings" : {
+         "type" : "string"
+      },
+      "default_min_instances" : {
+         "default_value" : 1,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
       },
       "default_nodejs" : {
          "default_value" : "node",
@@ -169,23 +206,23 @@
          "required" : true,
          "type" : "unsigned integer"
       },
+      "default_spawn_method" : {
+         "default_value" : "smart",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_sticky_sessions" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_sticky_sessions_cookie_name" : {
+         "default_value" : "_passenger_route",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
       "default_user" : {
          "default_value" : "nobody",
-         "has_default_value" : "static",
-         "type" : "string"
-      },
-      "environment" : {
-         "default_value" : "production",
-         "has_default_value" : "static",
-         "type" : "string"
-      },
-      "force_max_concurrent_requests_per_process" : {
-         "default_value" : -1,
-         "has_default_value" : "static",
-         "type" : "integer"
-      },
-      "friendly_error_pages" : {
-         "default_value" : "auto",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -199,34 +236,6 @@
          "has_default_value" : "static",
          "read_only" : true,
          "type" : "string"
-      },
-      "load_shell_envvars" : {
-         "default_value" : false,
-         "has_default_value" : "static",
-         "type" : "boolean"
-      },
-      "max_preloader_idle_time" : {
-         "default_value" : 300,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
-      },
-      "max_request_queue_size" : {
-         "default_value" : 100,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
-      },
-      "max_requests" : {
-         "default_value" : 0,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
-      },
-      "meteor_app_settings" : {
-         "type" : "string"
-      },
-      "min_instances" : {
-         "default_value" : 1,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
       },
       "min_spare_clients" : {
          "default_value" : 0,
@@ -259,33 +268,15 @@
          "has_default_value" : "static",
          "type" : "boolean"
       },
-      "spawn_method" : {
-         "default_value" : "smart",
-         "has_default_value" : "static",
-         "type" : "string"
-      },
       "start_reading_after_accept" : {
          "default_value" : true,
          "has_default_value" : "static",
          "type" : "boolean"
       },
-      "startup_file" : {
-         "type" : "string"
-      },
       "stat_throttle_rate" : {
          "default_value" : 10,
          "has_default_value" : "static",
          "type" : "unsigned integer"
-      },
-      "sticky_sessions" : {
-         "default_value" : false,
-         "has_default_value" : "static",
-         "type" : "boolean"
-      },
-      "sticky_sessions_cookie_name" : {
-         "default_value" : "_passenger_route",
-         "has_default_value" : "static",
-         "type" : "string"
       },
       "thread_number" : {
          "read_only" : true,
@@ -314,12 +305,24 @@
          "type" : "string"
       }
    },
-   "Passenger::Core::Schema" : {
-      "abort_websockets_on_process_shutdown" : {
-         "default_value" : true,
-         "has_default_value" : "static",
-         "type" : "boolean"
+   "Passenger::Core::ControllerSingleAppModeSchema" : {
+      "app_root" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
       },
+      "app_type" : {
+         "read_only" : true,
+         "required" : true,
+         "type" : "string"
+      },
+      "startup_file" : {
+         "read_only" : true,
+         "required" : true,
+         "type" : "string"
+      }
+   },
+   "Passenger::Core::Schema" : {
       "admin_panel_close_timeout" : {
          "default_value" : 10.0,
          "has_default_value" : "static",
@@ -433,18 +436,9 @@
          "has_default_value" : "static",
          "type" : "boolean"
       },
-      "app_file_descriptor_ulimit" : {
-         "type" : "unsigned integer"
-      },
       "app_output_log_level" : {
          "default_value" : "notice",
          "has_default_value" : "static",
-         "type" : "string"
-      },
-      "app_root" : {
-         "type" : "string"
-      },
-      "app_type" : {
          "type" : "string"
       },
       "authorizations" : {
@@ -536,9 +530,60 @@
          "read_only" : true,
          "type" : "unsigned integer"
       },
+      "default_abort_websockets_on_process_shutdown" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_app_file_descriptor_ulimit" : {
+         "type" : "unsigned integer"
+      },
+      "default_environment" : {
+         "default_value" : "production",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_force_max_concurrent_requests_per_process" : {
+         "default_value" : -1,
+         "has_default_value" : "static",
+         "type" : "integer"
+      },
+      "default_friendly_error_pages" : {
+         "default_value" : "auto",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
       "default_group" : {
          "has_default_value" : "dynamic",
          "type" : "string"
+      },
+      "default_load_shell_envvars" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_max_preloader_idle_time" : {
+         "default_value" : 300,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_request_queue_size" : {
+         "default_value" : 100,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_requests" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_meteor_app_settings" : {
+         "type" : "string"
+      },
+      "default_min_instances" : {
+         "default_value" : 1,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
       },
       "default_nodejs" : {
          "default_value" : "node",
@@ -563,13 +608,23 @@
          "has_default_value" : "dynamic",
          "type" : "unsigned integer"
       },
-      "default_user" : {
-         "default_value" : "nobody",
+      "default_spawn_method" : {
+         "default_value" : "smart",
          "has_default_value" : "static",
          "type" : "string"
       },
-      "environment" : {
-         "default_value" : "production",
+      "default_sticky_sessions" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_sticky_sessions_cookie_name" : {
+         "default_value" : "_passenger_route",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_user" : {
+         "default_value" : "nobody",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -580,16 +635,6 @@
          "default_value" : 0,
          "has_default_value" : "static",
          "type" : "unsigned integer"
-      },
-      "force_max_concurrent_requests_per_process" : {
-         "default_value" : -1,
-         "has_default_value" : "static",
-         "type" : "integer"
-      },
-      "friendly_error_pages" : {
-         "default_value" : "auto",
-         "has_default_value" : "static",
-         "type" : "string"
       },
       "graceful_exit" : {
          "default_value" : true,
@@ -604,11 +649,6 @@
          "default_value" : "standalone",
          "has_default_value" : "static",
          "type" : "string"
-      },
-      "load_shell_envvars" : {
-         "default_value" : false,
-         "has_default_value" : "static",
-         "type" : "boolean"
       },
       "log_level" : {
          "default_value" : "notice",
@@ -627,31 +667,8 @@
          "has_default_value" : "static",
          "type" : "integer"
       },
-      "max_preloader_idle_time" : {
-         "default_value" : 300,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
-      },
-      "max_request_queue_size" : {
-         "default_value" : 100,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
-      },
-      "max_requests" : {
-         "default_value" : 0,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
-      },
-      "meteor_app_settings" : {
-         "type" : "string"
-      },
-      "min_instances" : {
-         "default_value" : 1,
-         "has_default_value" : "static",
-         "type" : "unsigned integer"
-      },
       "multi_app" : {
-         "default_value" : true,
+         "default_value" : false,
          "has_default_value" : "static",
          "read_only" : true,
          "type" : "boolean"
@@ -689,11 +706,6 @@
          "has_default_value" : "static",
          "type" : "unsigned integer"
       },
-      "ruby" : {
-         "default_value" : "ruby",
-         "has_default_value" : "static",
-         "type" : "string"
-      },
       "security_update_checker_certificate_path" : {
          "type" : "string"
       },
@@ -728,32 +740,27 @@
          "has_default_value" : "static",
          "type" : "boolean"
       },
-      "spawn_method" : {
-         "default_value" : "smart",
-         "has_default_value" : "static",
+      "single_app_mode_app_root" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_app_type" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_startup_file" : {
+         "read_only" : true,
          "type" : "string"
       },
       "standalone_engine" : {
          "has_default_value" : "dynamic",
          "type" : "string"
       },
-      "startup_file" : {
-         "type" : "string"
-      },
       "stat_throttle_rate" : {
          "default_value" : 10,
          "has_default_value" : "static",
          "type" : "unsigned integer"
-      },
-      "sticky_sessions" : {
-         "default_value" : false,
-         "has_default_value" : "static",
-         "type" : "boolean"
-      },
-      "sticky_sessions_cookie_name" : {
-         "default_value" : "_passenger_route",
-         "has_default_value" : "static",
-         "type" : "string"
       },
       "turbocaching" : {
          "default_value" : true,
