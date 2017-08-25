@@ -241,6 +241,11 @@ private:
 			data["integration_mode"]["standalone_engine"] = config["standalone_engine"];
 		}
 
+		data["originally_packaged"] = resourceLocator->isOriginallyPackaged();
+		if (!resourceLocator->isOriginallyPackaged()) {
+			data["packaging_method"] = resourceLocator->getPackagingMethod();
+		}
+
 		reply["data"] = data;
 		sendJsonReply(conn, reply);
 		return true;

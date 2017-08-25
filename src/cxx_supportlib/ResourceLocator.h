@@ -53,6 +53,7 @@ using namespace boost;
 class ResourceLocator {
 private:
 	string installSpec;
+	string packagingMethod;
 	string binDir;
 	string supportBinariesDir;
 	string helperScriptsDir;
@@ -61,6 +62,7 @@ private:
 	string rubyLibDir;
 	string nodeLibDir;
 	string buildSystemDir;
+	bool originallyPackaged;
 
 	static string getOption(const string &file, const IniFileSectionPtr &section, const string &key) {
 		if (section->hasKey(key)) {
@@ -86,7 +88,9 @@ public:
 	{
 		if (getFileType(_installSpec) == FT_REGULAR) {
 			const string &file = _installSpec;
+			originallyPackaged = false;
 			IniFileSectionPtr options = IniFile(file).section("locations");
+			packagingMethod     = getOption(file, options, "packaging_method");
 			binDir              = getOption(file, options, "bin_dir");
 			supportBinariesDir  = getOption(file, options, "support_binaries_dir");
 			helperScriptsDir    = getOption(file, options, "helper_scripts_dir");
@@ -97,6 +101,8 @@ public:
 			buildSystemDir      = getOptionalSection(file, options, "node_libdir");
 		} else {
 			const string &root = _installSpec;
+			originallyPackaged  = true;
+			packagingMethod     = "unknown";
 			binDir              = root + "/bin";
 			supportBinariesDir  = root + "/buildout/support-binaries";
 			helperScriptsDir    = root + "/src/helper-scripts";
@@ -108,8 +114,16 @@ public:
 		}
 	}
 
+	bool isOriginallyPackaged() const {
+		return originallyPackaged;
+	}
+
 	const string &getInstallSpec() const {
 		return installSpec;
+	}
+
+	const string &getPackagingMethod() const {
+		return packagingMethod;
 	}
 
 	const string &getBinDir() const {
