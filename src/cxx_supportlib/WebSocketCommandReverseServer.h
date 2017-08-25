@@ -35,6 +35,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 
 #include <jsoncpp/json.h>
 #include <modp_b64.h>
@@ -264,6 +265,7 @@ private:
 	Callback shutdownCallback;
 	mutable boost::mutex stateSyncher;
 	State state;
+	deque<MessagePtr> buffer;
 	bool reconnectAfterReply;
 	bool shuttingDown;
 
@@ -309,6 +311,7 @@ private:
 	void internalInspectState(const InspectCallback callback) {
 		Json::Value doc(Json::objectValue);
 		doc["state"] = getStateString();
+		doc["buffer"]["message_count"] = (Json::UInt) buffer.size();
 		if (reconnectAfterReply) {
 			doc["reconnect_planned"] = true;
 		}
@@ -521,6 +524,7 @@ private:
 		reconnectAfterReply = false;
 		timer->cancel();
 		conn->close(code, reason, ec);
+		conn.reset();
 
 		if (ec) {
 			P_WARN(logPrefix << "Error closing connection: " << ec.message());
@@ -558,6 +562,7 @@ private:
 			boost::lock_guard<boost::mutex> l(stateSyncher);
 			state = WAITING_FOR_REQUEST;
 		}
+		buffer.clear();
 		P_DEBUG(logPrefix << "Scheduling next ping in " <<
 			config["ping_interval"].asDouble() << " seconds");
 		restartTimer(config["ping_interval"].asDouble() * 1000);
@@ -689,6 +694,16 @@ private:
 			// Ignore any incoming messages while closing.
 			P_DEBUG(logPrefix << "onMessage: ignoring CLOSING state");
 			break;
+		case REPLYING:
+			// Even if we call conn->pause_reading(), WebSocket++
+			// may already have received further messages in its buffer,
+			// which it will still pass to us. Don't process these
+			// and just buffer them.
+			P_DEBUG(logPrefix << "onMessage: got frame of " <<
+				msg->get_payload().size() << " bytes (pushed to buffer -> "
+				<< (buffer.size() + 1) << " entries)");
+			buffer.push_back(msg);
+			break;
 		default:
 			P_BUG("Unsupported state " + toString(state));
 		}
@@ -814,6 +829,8 @@ public:
 	 * May only be called from the event loop's thread.
 	 */
 	void doneReplying(const ConnectionPtr &wconn) {
+		begin:
+
 		if (!isCurrentConnection(conn)) {
 			P_DEBUG(logPrefix << "doneReplying: not current connection");
 			return;
@@ -821,14 +838,32 @@ public:
 
 		P_DEBUG(logPrefix << "Done replying");
 		P_ASSERT_EQ(state, REPLYING);
+
 		{
 			boost::lock_guard<boost::mutex> l(stateSyncher);
 			state = WAITING_FOR_REQUEST;
 		}
-		conn->resume_reading();
 		if (reconnectAfterReply) {
 			reconnectAfterReply = false;
 			internalReconnect();
+			return;
+		}
+
+		if (buffer.empty()) {
+			conn->resume_reading();
+		} else {
+			MessagePtr msg = buffer.front();
+			P_DEBUG(logPrefix << "Process next message in buffer ("
+				<< buffer.size() << " entries): " <<
+				msg->get_payload().size() << " bytes");
+			buffer.pop_front();
+			{
+				boost::lock_guard<boost::mutex> l(stateSyncher);
+				state = REPLYING;
+			}
+			if (messageHandler(this, conn, msg)) {
+				goto begin;
+			}
 		}
 	}
 };
