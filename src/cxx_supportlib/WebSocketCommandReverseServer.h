@@ -285,6 +285,29 @@ private:
 		return conn && endpoint.get_con_from_hdl(wconn).get() == conn.get();
 	}
 
+	static bool connectionIsConnected(const ConnectionPtr &c) {
+		websocketpp::session::state::value state = c->get_state();
+		return state == websocketpp::session::state::connecting
+			|| state == websocketpp::session::state::open;
+	}
+
+	bool isConnected(const ConnectionPtr &c) {
+		return isCurrentConnection(c) && connectionIsConnected(c);
+	}
+
+	bool isConnected(const ConnectionWeakPtr &wconn) {
+		if (OXT_UNLIKELY(!conn)) {
+			return false;
+		}
+
+		ConnectionPtr c = endpoint.get_con_from_hdl(wconn);
+		if (OXT_UNLIKELY(c.get() != conn.get())) {
+			return false;
+		}
+
+		return connectionIsConnected(c);
+	}
+
 	void activateConfigUpdates(const ConfigKit::Store *oldConfig) {
 		logPrefix = config["log_prefix"].asString();
 
@@ -552,8 +575,8 @@ private:
 	}
 
 	void onConnected(ConnectionWeakPtr wconn) {
-		if (!isCurrentConnection(wconn)) {
-			P_DEBUG(logPrefix << "onConnected: not current connection");
+		if (!isConnected(wconn)) {
+			P_DEBUG(logPrefix << "onConnected: stale connection");
 			return;
 		}
 
@@ -660,8 +683,8 @@ private:
 	}
 
 	void onPong(ConnectionWeakPtr wconn, const string &payload) {
-		if (!isCurrentConnection(wconn)) {
-			P_DEBUG(logPrefix << "onPong: not current connection");
+		if (!isConnected(wconn)) {
+			P_DEBUG(logPrefix << "onPong: stale connection");
 			return;
 		}
 
@@ -671,8 +694,8 @@ private:
 	}
 
 	void onMessage(ConnectionWeakPtr wconn, MessagePtr msg) {
-		if (!isCurrentConnection(wconn)) {
-			P_DEBUG(logPrefix << "onMessage: not current connection");
+		if (!isConnected(wconn)) {
+			P_DEBUG(logPrefix << "onMessage: stale connection");
 			return;
 		}
 
@@ -828,11 +851,11 @@ public:
 	 * May only be called when the server is in the REPLYING state.
 	 * May only be called from the event loop's thread.
 	 */
-	void doneReplying(const ConnectionPtr &wconn) {
+	void doneReplying(const ConnectionPtr &conn) {
 		begin:
 
-		if (!isCurrentConnection(conn)) {
-			P_DEBUG(logPrefix << "doneReplying: not current connection");
+		if (!isConnected(conn)) {
+			P_DEBUG(logPrefix << "doneReplying: stale connection");
 			return;
 		}
 
