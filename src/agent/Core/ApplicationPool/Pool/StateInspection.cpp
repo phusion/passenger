@@ -259,6 +259,47 @@ Pool::toXml(const ToXmlOptions &options, bool lock) const {
 }
 
 Json::Value
+Pool::inspectPropertiesInAdminPanelFormat(const ToJsonOptions &options) const {
+	ScopedLock l(syncher);
+	Json::Value result(Json::objectValue);
+	GroupMap::ConstIterator g_it(groups);
+	ProcessList::const_iterator p_it;
+
+	if (!authorizeByUid(options.uid, false)
+	 && !authorizeByApiKey(options.apiKey, false))
+	{
+		throw SecurityException("Operation unauthorized");
+	}
+
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
+
+		if (options.hasApplicationIdsFilter) {
+			const bool *tmp;
+			if (!options.applicationIdsFilter.lookup(group->info.name, &tmp)) {
+				g_it.next();
+				continue;
+			}
+		}
+
+		if (!group->authorizeByUid(options.uid)
+		 && !group->authorizeByApiKey(options.apiKey))
+		{
+			g_it.next();
+			continue;
+		}
+
+		Json::Value groupDoc(Json::objectValue);
+		group->inspectPropertiesInAdminPanelFormat(groupDoc);
+		result[group->info.name] = groupDoc;
+
+		g_it.next();
+	}
+
+	return result;
+}
+
+Json::Value
 Pool::inspectConfigInAdminPanelFormat(const ToJsonOptions &options) const {
 	ScopedLock l(syncher);
 	Json::Value result(Json::objectValue);

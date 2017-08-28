@@ -312,10 +312,32 @@ private:
 	}
 
 	bool onGetApplicationProperties(const ConnectionPtr &conn, const Json::Value &doc) {
-		Json::Value reply;
-		reply["result"] = "error";
+		ConfigKit::Schema argumentsSchema =
+			ApplicationPool2::Pool::ToJsonOptions::createSchema();
+		Json::Value args(Json::objectValue), reply;
+		ApplicationPool2::Pool::ToJsonOptions inspectOptions =
+			ApplicationPool2::Pool::ToJsonOptions::makeAuthorized();
+
+		if (doc.isMember("arguments")) {
+			ConfigKit::Store store(argumentsSchema);
+			vector<ConfigKit::Error> errors;
+
+			if (store.update(doc["arguments"], errors)) {
+				inspectOptions.set(store.inspectEffectiveValues());
+			} else {
+				reply["result"] = "error";
+				reply["request_id"] = doc["request_id"];
+				reply["data"]["message"] = "Invalid arguments: " +
+					ConfigKit::toString(errors);
+				sendJsonReply(conn, reply);
+				return true;
+			}
+		}
+
+		reply["result"] = "ok";
 		reply["request_id"] = doc["request_id"];
-		reply["data"]["message"] = "Action not implemented";
+		reply["data"]["applications"] = appPool->inspectPropertiesInAdminPanelFormat(
+			inspectOptions);
 		sendJsonReply(conn, reply);
 		return true;
 	}

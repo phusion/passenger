@@ -499,6 +499,7 @@ public:
 		bool lock = true) const;
 	string toXml(const ToXmlOptions &options = ToXmlOptions::makeAuthorized(),
 		bool lock = true) const;
+	Json::Value inspectPropertiesInAdminPanelFormat(const ToJsonOptions &options = ToJsonOptions::makeAuthorized()) const;
 	Json::Value inspectConfigInAdminPanelFormat(const ToJsonOptions &options = ToJsonOptions::makeAuthorized()) const;
 
 
