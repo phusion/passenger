@@ -46,6 +46,7 @@
 #include <Core/ApiServer.h>
 #include <Core/AdminPanelConnector.h>
 #include <Shared/ApiAccountUtils.h>
+#include <Constants.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 
@@ -98,7 +99,7 @@ namespace Core {
  *   controller_mbuf_block_chunk_size                                unsigned integer   -          default(4096),read_only
  *   controller_min_spare_clients                                    unsigned integer   -          default(0)
  *   controller_request_freelist_limit                               unsigned integer   -          default(1024)
- *   controller_socket_backlog                                       unsigned integer   -          default(0)
+ *   controller_socket_backlog                                       unsigned integer   -          default(2048)
  *   controller_start_reading_after_accept                           boolean            -          default(true)
  *   controller_threads                                              unsigned integer   -          default,read_only
  *   default_abort_websockets_on_process_shutdown                    boolean            -          default(true)
@@ -275,6 +276,22 @@ private:
 		}
 	}
 
+	static void validateAddresses(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+		typedef ConfigKit::Error Error;
+
+		if (config["controller_addresses"].empty()) {
+			errors.push_back(Error("'{{controller_addresses}}' must contain at least 1 item"));
+		} else if (config["controller_addresses"].size() > SERVER_KIT_MAX_SERVER_ENDPOINTS) {
+			errors.push_back(Error("'{{controller_addresses}}' may contain at most "
+				+ toString(SERVER_KIT_MAX_SERVER_ENDPOINTS) + " items"));
+		}
+
+		if (config["api_server_addresses"].size() > SERVER_KIT_MAX_SERVER_ENDPOINTS) {
+			errors.push_back(Error("'{{api_server_addresses}}' may contain at most "
+				+ toString(SERVER_KIT_MAX_SERVER_ENDPOINTS) + " items"));
+		}
+	}
+
 	static Json::Value normalizeSingleAppMode(const Json::Value &effectiveValues) {
 		if (effectiveValues["multi_app"].asBool()) {
 			return Json::Value();
@@ -287,6 +304,19 @@ private:
 			updates["single_app_mode_startup_file"] = absolutizePath(
 				effectiveValues["single_app_mode_startup_file"].asString());
 		}
+		return updates;
+	}
+
+	static Json::Value normalizeServerSoftware(const Json::Value &effectiveValues) {
+		string serverSoftware = effectiveValues["server_software"].asString();
+		if (serverSoftware.find(SERVER_TOKEN_NAME) == string::npos
+		 && serverSoftware.find(FLYING_PASSENGER_NAME) == string::npos)
+		{
+			serverSoftware.append(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
+		}
+
+		Json::Value updates;
+		updates["server_software"] = serverSoftware;
 		return updates;
 	}
 
@@ -394,7 +424,7 @@ public:
 		add("pool_idle_time", UINT_TYPE, OPTIONAL, Json::UInt(DEFAULT_POOL_IDLE_TIME));
 		add("pool_selfchecks", BOOL_TYPE, OPTIONAL, false);
 		add("prestart_urls", STRING_ARRAY_TYPE, OPTIONAL, Json::arrayValue);
-		add("controller_socket_backlog", UINT_TYPE, OPTIONAL, 0);
+		add("controller_socket_backlog", UINT_TYPE, OPTIONAL, DEFAULT_SOCKET_BACKLOG);
 		add("controller_addresses", STRING_ARRAY_TYPE, OPTIONAL, getDefaultControllerAddresses());
 		add("api_server_addresses", STRING_ARRAY_TYPE, OPTIONAL, Json::arrayValue);
 		add("controller_cpu_affine", BOOL_TYPE, OPTIONAL, false);
@@ -403,15 +433,10 @@ public:
 		addValidator(validateMultiAppMode);
 		addValidator(validateSingleAppMode);
 		addValidator(validatePassword);
+		addValidator(validateAddresses);
 		addNormalizer(normalizeSingleAppMode);
+		addNormalizer(normalizeServerSoftware);
 
-		//core_threads -> controller_threads DONE
-		//core_file_descriptor_ulimit -> file_descriptor_ulimit DONE
-		//core_addresses -> controller_addresses
-		//core_api_addresses -> api_server_addreses
-		//socket_backlog -> controller_socket_backlog
-		//core_cpu_affine -> controller_cpu_affine
-		//
 		//concurrency_model
 		//app_thread_count
 		//rolling_restarts
@@ -482,6 +507,8 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	SET_UINT_CONFIG("pool_idle_time");
 	SET_BOOL_CONFIG2("pool_selfchecks", "selfchecks");
 	SET_UINT_CONFIG2("controller_threads", "core_threads");
+	SET_UINT_CONFIG2("controller_socket_backlog", "socket_backlog");
+	SET_BOOL_CONFIG2("controller_cpu_affine", "core_cpu_affine");
 	SET_STR_CONFIG("web_server_module_version");
 
 	SET_BOOL_CONFIG2("default_abort_websockets_on_process_shutdown", "abort_websockets_on_process_shutdown");
@@ -549,6 +576,24 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	} else if (options.has("core_password_file")) {
 		config["password"]["path"] = absolutizePath(
 			options.get("core_password_file"));
+	}
+
+	if (options.has("core_addresses")) {
+		Json::Value addresses(Json::arrayValue);
+		vector<string> addresses2 = options.getStrSet("core_addresses");
+		foreach (string address, addresses2) {
+			addresses.append(address);
+		}
+		config["controller_addresses"] = addresses;
+	}
+
+	if (options.has("core_api_addresses")) {
+		Json::Value addresses(Json::arrayValue);
+		vector<string> addresses2 = options.getStrSet("core_api_addresses");
+		foreach (string address, addresses2) {
+			addresses.append(address);
+		}
+		config["api_server_addresses"] = addresses;
 	}
 
 	if (options.has("core_authorizations")) {

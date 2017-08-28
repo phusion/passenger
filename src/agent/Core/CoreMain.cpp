@@ -225,8 +225,6 @@ initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects = new WorkingObjects();
 
-	wo->prestarterThread = NULL;
-
 	Json::Value password = coreConfig->get("password");
 	if (password.isString()) {
 		wo->password = password.asString();
@@ -401,8 +399,10 @@ static void
 startListening() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
-	vector<string> addresses = agentsOptions->getStrSet("core_addresses");
-	vector<string> apiAddresses = agentsOptions->getStrSet("core_api_addresses", false);
+	const Json::Value addresses = coreConfig->get("controller_addresses");
+	const Json::Value apiAddresses = coreConfig->get("api_server_addresses");
+	Json::Value::const_iterator it;
+	unsigned int i;
 
 	#ifdef USE_SELINUX
 		// Set SELinux context on the first socket that we create
@@ -410,32 +410,33 @@ startListening() {
 		setSelinuxSocketContext();
 	#endif
 
-	for (unsigned int i = 0; i < addresses.size(); i++) {
-		wo->serverFds[i] = createServer(addresses[i], agentsOptions->getInt("socket_backlog"), true,
+	for (it = addresses.begin(), i = 0; it != addresses.end(); it++, i++) {
+		wo->serverFds[i] = createServer(it->asString(),
+			coreConfig->get("controller_socket_backlog").asUInt(), true,
 			__FILE__, __LINE__);
 		#ifdef USE_SELINUX
 			resetSelinuxSocketContext();
-			if (i == 0 && getSocketAddressType(addresses[0]) == SAT_UNIX) {
+			if (i == 0 && getSocketAddressType(it->asString()) == SAT_UNIX) {
 				// setSelinuxSocketContext() sets the context of the
 				// socket file descriptor but not the file on the filesystem.
 				// So we relabel the socket file here.
-				selinuxRelabelFile(parseUnixSocketAddress(addresses[0]),
+				selinuxRelabelFile(parseUnixSocketAddress(it->asString()),
 					"passenger_instance_httpd_socket_t");
 			}
 		#endif
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->serverFds[i],
-			"Server address: " << addresses[i]);
-		if (getSocketAddressType(addresses[i]) == SAT_UNIX) {
-			makeFileWorldReadableAndWritable(parseUnixSocketAddress(addresses[i]));
+			"Server address: " << it->asString());
+		if (getSocketAddressType(it->asString()) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(it->asString()));
 		}
 	}
-	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
-		wo->apiServerFds[i] = createServer(apiAddresses[i], 0, true,
+	for (it = apiAddresses.begin(), i = 0; it != apiAddresses.end(); it++, i++) {
+		wo->apiServerFds[i] = createServer(it->asString(), 0, true,
 			__FILE__, __LINE__);
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(wo->apiServerFds[i],
-			"ApiServer address: " << apiAddresses[i]);
-		if (getSocketAddressType(apiAddresses[i]) == SAT_UNIX) {
-			makeFileWorldReadableAndWritable(parseUnixSocketAddress(apiAddresses[i]));
+			"ApiServer address: " << it->asString());
+		if (getSocketAddressType(it->asString()) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(it->asString()));
 		}
 	}
 }
@@ -632,22 +633,14 @@ initializeCurl() {
 static void
 initializeNonPrivilegedWorkingObjects() {
 	TRACE_POINT();
-	VariantMap &options = *agentsOptions;
 	WorkingObjects *wo = workingObjects;
 
-	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos
-	 && options.get("server_software").find(FLYING_PASSENGER_NAME) == string::npos)
-	{
-		options.set("server_software", options.get("server_software") +
-			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
-	}
-	setenv("SERVER_SOFTWARE", options.get("server_software").c_str(), 1);
-	options.set("data_buffer_dir", options.get("data_buffer_dir"));
+	const Json::Value addresses = coreConfig->get("controller_addresses");
+	const Json::Value apiAddresses = coreConfig->get("api_server_addresses");
 
-	vector<string> addresses = options.getStrSet("core_addresses");
-	vector<string> apiAddresses = options.getStrSet("core_api_addresses", false);
+	setenv("SERVER_SOFTWARE", coreConfig->get("server_software").asCString(), 1);
 
-	wo->resourceLocator = ResourceLocator(options.get("passenger_root"));
+	wo->resourceLocator = ResourceLocator(coreConfig->get("passenger_root").asString());
 
 	wo->randomGenerator = boost::make_shared<RandomGenerator>();
 	// Check whether /dev/urandom is actually random.
@@ -658,11 +651,11 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
-	if (options.has("ust_router_address")) {
+	if (!coreConfig->get("ust_router_address").isNull()) {
 		wo->unionStationContext = boost::make_shared<UnionStation::Context>(
-			options.get("ust_router_address"),
+			coreConfig->get("ust_router_address").asString(),
 			"logging",
-			options.get("ust_router_password"));
+			coreConfig->get("ust_router_password").asString());
 	}
 
 	UPDATE_TRACE_POINT();
@@ -672,7 +665,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawningKitConfig->errorHandler = spawningKitErrorHandler;
 	wo->spawningKitConfig->unionStationContext = wo->unionStationContext;
 	wo->spawningKitConfig->randomGenerator = wo->randomGenerator;
-	wo->spawningKitConfig->instanceDir = options.get("instance_dir", false);
+	wo->spawningKitConfig->instanceDir = coreConfig->get("instance_dir").asString();
 	if (!wo->spawningKitConfig->instanceDir.empty()) {
 		wo->spawningKitConfig->instanceDir = absolutizePath(
 			wo->spawningKitConfig->instanceDir);
@@ -904,13 +897,14 @@ reportInitializationInfo() {
 			"initialized",
 			NULL);
 	} else {
-		vector<string> addresses = agentsOptions->getStrSet("core_addresses");
-		vector<string> apiAddresses = agentsOptions->getStrSet("core_api_addresses", false);
-		string address;
+		const Json::Value addresses = coreConfig->get("controller_addresses");
+		const Json::Value apiAddresses = coreConfig->get("api_server_addresses");
+		Json::Value::const_iterator it;
 
 		P_NOTICE(SHORT_PROGRAM_NAME " core online, PID " << getpid() <<
 			", listening on " << addresses.size() << " socket(s):");
-		foreach (address, addresses) {
+		for (it = addresses.begin(); it != addresses.end(); it++) {
+			string address = it->asString();
 			if (startsWith(address, "tcp://")) {
 				address.erase(0, sizeof("tcp://") - 1);
 				address.insert(0, "http://");
@@ -921,7 +915,8 @@ reportInitializationInfo() {
 
 		if (!apiAddresses.empty()) {
 			P_NOTICE("API server listening on " << apiAddresses.size() << " socket(s):");
-			foreach (address, apiAddresses) {
+			for (it = apiAddresses.begin(); it != apiAddresses.end(); it++) {
+				string address = it->asString();
 				if (startsWith(address, "tcp://")) {
 					address.erase(0, sizeof("tcp://") - 1);
 					address.insert(0, "http://");
@@ -939,7 +934,7 @@ mainLoop() {
 	WorkingObjects *wo = workingObjects;
 	#ifdef SUPPORTS_PER_THREAD_CPU_AFFINITY
 		unsigned int maxCpus = boost::thread::hardware_concurrency();
-		bool cpuAffine = agentsOptions->getBool("core_cpu_affine")
+		bool cpuAffine = coreConfig->get("controller_cpu_affine").asBool()
 			&& maxCpus <= CPU_SETSIZE;
 	#endif
 

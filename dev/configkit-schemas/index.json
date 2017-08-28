@@ -524,7 +524,7 @@
          "type" : "unsigned integer"
       },
       "controller_socket_backlog" : {
-         "default_value" : 0,
+         "default_value" : 2048,
          "has_default_value" : "static",
          "type" : "unsigned integer"
       },
