@@ -173,6 +173,7 @@ namespace Core {
 			  securityUpdateChecker(NULL),
 			  adminPanelConnector(NULL),
 			  adminPanelConnectorThread(NULL)
+			  /*******************/
 		{
 			for (unsigned int i = 0; i < SERVER_KIT_MAX_SERVER_ENDPOINTS; i++) {
 				serverFds[i] = -1;
@@ -185,6 +186,9 @@ namespace Core {
 			delete adminPanelConnectorThread;
 			delete adminPanelConnector;
 			delete securityUpdateChecker;
+
+			/*******************/
+			/*******************/
 
 			vector<ThreadWorkingObjects>::iterator it, end = threadWorkingObjects.end();
 			for (it = threadWorkingObjects.begin(); it != end; it++) {

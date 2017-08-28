@@ -292,6 +292,9 @@ private:
 		}
 	}
 
+	/*****************/
+	/*****************/
+
 	static Json::Value normalizeSingleAppMode(const Json::Value &effectiveValues) {
 		if (effectiveValues["multi_app"].asBool()) {
 			return Json::Value();
@@ -437,14 +440,8 @@ public:
 		addNormalizer(normalizeSingleAppMode);
 		addNormalizer(normalizeServerSoftware);
 
-		//concurrency_model
-		//app_thread_count
-		//rolling_restarts
-		//memory_limit
-		//max_request_time
-		//max_instances
-		//resist_deployment_errors
-		//debugger
+		/*******************/
+		/*******************/
 
 		finalize();
 	}
@@ -640,6 +637,9 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 		config["api_server_start_reading_after_accept"] = options.getBool("start_reading_after_accept");
 		config["controller_start_reading_after_accept"] = options.getBool("start_reading_after_accept");
 	}
+
+	/*****************/
+	/*****************/
 
 	P_DEBUG("Core config JSON: " << config.toStyledString());
 	return config;
