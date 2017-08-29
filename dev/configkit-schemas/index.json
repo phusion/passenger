@@ -673,7 +673,7 @@
       "max_pool_size" : {
          "default_value" : 6,
          "has_default_value" : "static",
-         "type" : "integer"
+         "type" : "unsigned integer"
       },
       "multi_app" : {
          "default_value" : false,

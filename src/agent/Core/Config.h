@@ -130,7 +130,7 @@ namespace Core {
  *   integration_mode                                                string             -          default("standalone")
  *   log_level                                                       string             -          default("notice")
  *   log_target                                                      any                -          default({"stderr": true})
- *   max_pool_size                                                   integer            -          default(6)
+ *   max_pool_size                                                   unsigned integer   -          default(6)
  *   multi_app                                                       boolean            -          default(false),read_only
  *   passenger_root                                                  string             required   read_only
  *   password                                                        any                -          secret
@@ -273,6 +273,25 @@ private:
 			} else if (!password["path"].isString()) {
 				errors.push_back(Error("If '{{password}}' is an object, then its 'path' option must be a string"));
 			}
+		}
+	}
+
+	static void validateApplicationPool(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+		typedef ConfigKit::Error Error;
+
+		if (config["max_pool_size"].asUInt() < 1) {
+			errors.push_back(Error("'{{max_pool_size}}' must be at least 1"));
+		}
+		if (config["pool_idle_time"].asUInt() < 1) {
+			errors.push_back(Error("'{{pool_idle_time}}' must be at least 1"));
+		}
+	}
+
+	static void validateController(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+		typedef ConfigKit::Error Error;
+
+		if (config["controller_threads"].asUInt() < 1) {
+			errors.push_back(Error("'{{controller_threads}}' must be at least 1"));
 		}
 	}
 
@@ -423,7 +442,7 @@ public:
 		add("pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
 		add("password", ANY_TYPE, OPTIONAL | SECRET);
 		addWithDynamicDefault("controller_threads", UINT_TYPE, OPTIONAL | READ_ONLY, getDefaultThreads);
-		add("max_pool_size", INT_TYPE, OPTIONAL, DEFAULT_MAX_POOL_SIZE);
+		add("max_pool_size", UINT_TYPE, OPTIONAL, DEFAULT_MAX_POOL_SIZE);
 		add("pool_idle_time", UINT_TYPE, OPTIONAL, Json::UInt(DEFAULT_POOL_IDLE_TIME));
 		add("pool_selfchecks", BOOL_TYPE, OPTIONAL, false);
 		add("prestart_urls", STRING_ARRAY_TYPE, OPTIONAL, Json::arrayValue);
@@ -436,6 +455,8 @@ public:
 		addValidator(validateMultiAppMode);
 		addValidator(validateSingleAppMode);
 		addValidator(validatePassword);
+		addValidator(validateApplicationPool);
+		addValidator(validateController);
 		addValidator(validateAddresses);
 		addNormalizer(normalizeSingleAppMode);
 		addNormalizer(normalizeServerSoftware);
