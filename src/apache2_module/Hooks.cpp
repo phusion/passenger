@@ -1576,6 +1576,8 @@ destroy_hooks(void *arg) {
 		boost::this_thread::disable_interruption di;
 		boost::this_thread::disable_syscall_interruption dsi;
 		P_DEBUG("Shutting down Phusion Passenger...");
+		LoggingKit::shutdown();
+		oxt::shutdown();
 		delete hooks;
 		hooks = NULL;
 	} catch (const thread_interrupted &) {
@@ -1609,8 +1611,8 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 */
 	if (hooks == NULL) {
 		oxt::initialize();
-		LoggingKit::initialize();
 		SystemTime::initialize();
+		LoggingKit::initialize();
 	} else {
 		P_DEBUG("Restarting Phusion Passenger....");
 		delete hooks;

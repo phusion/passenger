@@ -1637,6 +1637,7 @@ storeArgvCopy(int argc, char *argv[]) {
 void
 shutdownAgent(VariantMap *agentOptions) {
 	delete agentOptions;
+	LoggingKit::shutdown();
 	oxt::shutdown();
 }
 

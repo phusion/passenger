@@ -75,6 +75,7 @@ extern Context *context;
 
 
 void initialize(const Json::Value &initialConfig = Json::Value());
+void shutdown();
 
 const char *_strdupFastStringStream(const FastStringStream<> &stream);
 bool _passesLogLevel(const Context *context, Level level, const ConfigRealization **outputConfigRlz);
