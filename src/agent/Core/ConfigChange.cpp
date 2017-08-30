@@ -40,8 +40,6 @@ using namespace std;
 
 
 struct ConfigChangeRequest {
-	boost::mutex syncher;
-
 	Json::Value updates;
 	PrepareConfigChangeCallback prepareCallback;
 	CommitConfigChangeCallback commitCallback;
@@ -116,7 +114,7 @@ asyncPrepareConfigChangeForController(unsigned int i, const Json::Value &updates
 		req->config->inspectEffectiveValues(),
 		errors2, *req->forController[i]);
 
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 	P_DEBUG("asyncPrepareConfigChangeForController(" << i << "): counter "
 		<< req->counter << " -> " << (req->counter - 1));
 	req->errors.insert(req->errors.begin(), errors1.begin(), errors1.end());
@@ -139,7 +137,7 @@ asyncPrepareConfigChangeForApiServer(const Json::Value &updates, ConfigChangeReq
 		req->config->inspectEffectiveValues(),
 		errors2, req->forApiServer);
 
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 	P_DEBUG("asyncPrepareConfigChangeForApiServer: counter "
 		<< req->counter << " -> " << (req->counter - 1));
 	req->errors.insert(req->errors.begin(), errors1.begin(), errors1.end());
@@ -152,7 +150,7 @@ asyncPrepareConfigChangeForAdminPanelConnectorDone(const vector<ConfigKit::Error
 	AdminPanelConnector::ConfigChangeRequest &_, ConfigChangeRequest *req)
 {
 	vector<ConfigKit::Error> translatedErrors = coreSchema->adminPanelConnector.translator.reverseTranslate(errors);
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 	P_DEBUG("asyncPrepareConfigChangeForAdminPanelConnectorDone: counter "
 		<< req->counter << " -> " << (req->counter - 1));
 	req->errors.insert(req->errors.begin(), translatedErrors.begin(), translatedErrors.end());
@@ -168,7 +166,7 @@ asyncPrepareConfigChange(const Json::Value &updates, ConfigChangeRequest *req,
 {
 	P_DEBUG("Preparing configuration change: " << updates.toStyledString());
 	WorkingObjects *wo = workingObjects;
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 
 	req->updates = updates;
 	req->prepareCallback = callback;
@@ -242,7 +240,7 @@ asyncCommitConfigChangeForController(unsigned int i, ConfigChangeRequest *req) {
 	two->serverKitContext->commitConfigChange(*req->forControllerServerKit[i]);
 	two->controller->commitConfigChange(*req->forController[i]);
 
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 	P_DEBUG("asyncCommitConfigChangeForController(" << i << "): counter "
 		<< req->counter << " -> " << (req->counter - 1));
 	asyncCommitConfigChangeCompletedOne(req);
@@ -255,7 +253,7 @@ asyncCommitConfigChangeForApiServer(ConfigChangeRequest *req) {
 	awo->serverKitContext->commitConfigChange(req->forApiServerKit);
 	awo->apiServer->commitConfigChange(req->forApiServer);
 
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 	P_DEBUG("asyncCommitConfigChangeForApiServer: counter "
 		<< req->counter << " -> " << (req->counter - 1));
 	asyncCommitConfigChangeCompletedOne(req);
@@ -265,7 +263,7 @@ static void
 asyncCommitConfigChangeForAdminPanelConnectorDone(AdminPanelConnector::ConfigChangeRequest &_,
 	ConfigChangeRequest *req)
 {
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 	P_DEBUG("asyncCommitConfigChangeForAdminPanelConnectorDone: counter "
 		<< req->counter << " -> " << (req->counter - 1));
 	asyncCommitConfigChangeCompletedOne(req);
@@ -279,7 +277,7 @@ asyncCommitConfigChange(ConfigChangeRequest *req, const CommitConfigChangeCallba
 	BOOST_NOEXCEPT_OR_NOTHROW
 {
 	WorkingObjects *wo = workingObjects;
-	boost::lock_guard<boost::mutex> l(req->syncher);
+	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 
 	req->commitCallback = callback;
 	req->counter++;
