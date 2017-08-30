@@ -71,9 +71,10 @@ module PhusionPassenger
 
       when 'linux'
         # Parse LSB (applicable to e.g. Ubuntu)
-        read_file('/etc/lsb-release') =~ /DISTRIB_RELEASE=(.+)/
-        version = $1.gsub(/["']/, '')
-        return version if version
+        if read_file('/etc/lsb-release') =~ /DISTRIB_RELEASE=(.+)/
+          version = $1.gsub(/["']/, '')
+          return version if !version.empty?
+        end
 
         # Parse CentOS/RedHat
         data = read_file('/etc/centos-release')
