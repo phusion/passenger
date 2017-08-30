@@ -296,10 +296,21 @@ public:
 		: schema(other.schema),
 		  updatedOnce(false)
 	{
-		initialize();
-		if (update(other.inspectUserValues(), errors)) {
-			update(updates, errors);
+		Json::Value result(Json::objectValue);
+		StringKeyTable<Entry>::ConstIterator it(other.entries);
+
+		while (*it != NULL) {
+			const Entry &entry = it.getValue();
+			if (updates.isMember(it.getKey())) {
+				result[it.getKey()] = updates[it.getKey()];
+			} else if (!entry.userValue.isNull()) {
+				result[it.getKey()] = entry.userValue;
+			}
+			it.next();
 		}
+
+		initialize();
+		update(result, errors);
 	}
 
 	const Schema &getSchema() const {
