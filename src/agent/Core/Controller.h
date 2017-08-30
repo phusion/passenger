@@ -109,7 +109,6 @@ private:
 	typedef ServerKit::FdSourceChannel FdSourceChannel;
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;
-	typedef ControllerConfigChangeRequest ConfigChangeRequest;
 
 	// If you change this value, make sure that Request::sessionCheckoutTry
 	// has enough bits.
@@ -366,6 +365,8 @@ protected:
 
 
 public:
+	typedef ControllerConfigChangeRequest ConfigChangeRequest;
+
 	// Dependencies
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;

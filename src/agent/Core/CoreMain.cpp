@@ -36,6 +36,8 @@
 	#include <selinux/selinux.h>
 #endif
 
+#include <boost/config.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -74,6 +76,8 @@
 #include <Shared/Base.h>
 #include <Shared/ApiServerUtils.h>
 #include <Constants.h>
+#include <LoggingKit/Context.h>
+#include <ConfigKit/SubComponentUtils.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
 #include <ConfigKit/VariantMapUtils.h>
@@ -91,6 +95,7 @@
 #include <Core/Controller.h>
 #include <Core/ApiServer.h>
 #include <Core/Config.h>
+#include <Core/ConfigChange.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/UnionStation/Context.h>
 #include <Core/SecurityUpdateChecker.h>
@@ -211,6 +216,8 @@ static VariantMap *agentsOptions;
 static Schema *coreSchema;
 static ConfigKit::Store *coreConfig;
 static WorkingObjects *workingObjects;
+
+#include <Core/ConfigChange.cpp>
 
 
 /***** Core stuff *****/
@@ -619,10 +626,6 @@ spawningKitErrorHandler(const SpawningKit::ConfigPtr &config, SpawnException &e,
 	ApplicationPool2::processAndLogNewSpawnException(e, options, config);
 }
 
-static Json::Value inspectConfig() {
-	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
-	return coreConfig->inspect();
-}
 
 static void
 initializeCurl() {

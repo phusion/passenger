@@ -377,6 +377,7 @@
          "type" : "float"
       },
       "admin_panel_url" : {
+         "read_only" : true,
          "type" : "string"
       },
       "api_server_accept_burst_count" : {
@@ -387,6 +388,7 @@
       "api_server_addresses" : {
          "default_value" : [],
          "has_default_value" : "static",
+         "read_only" : true,
          "type" : "array of strings"
       },
       "api_server_client_freelist_limit" : {
@@ -466,6 +468,7 @@
       "controller_addresses" : {
          "default_value" : [ "tcp://127.0.0.1:3000" ],
          "has_default_value" : "static",
+         "read_only" : true,
          "type" : "array of strings"
       },
       "controller_client_freelist_limit" : {
@@ -476,6 +479,7 @@
       "controller_cpu_affine" : {
          "default_value" : false,
          "has_default_value" : "static",
+         "read_only" : true,
          "type" : "boolean"
       },
       "controller_file_buffered_channel_auto_start_mover" : {
@@ -526,6 +530,7 @@
       "controller_socket_backlog" : {
          "default_value" : 2048,
          "has_default_value" : "static",
+         "read_only" : true,
          "type" : "unsigned integer"
       },
       "controller_start_reading_after_accept" : {
@@ -642,6 +647,7 @@
       "file_descriptor_ulimit" : {
          "default_value" : 0,
          "has_default_value" : "static",
+         "read_only" : true,
          "type" : "unsigned integer"
       },
       "graceful_exit" : {
@@ -707,6 +713,7 @@
       "prestart_urls" : {
          "default_value" : [],
          "has_default_value" : "static",
+         "read_only" : true,
          "type" : "array of strings"
       },
       "response_buffer_high_watermark" : {

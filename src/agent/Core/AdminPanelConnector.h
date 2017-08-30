@@ -95,6 +95,8 @@ public:
 		}
 	};
 
+	typedef WebSocketCommandReverseServer::ConfigChangeRequest ConfigChangeRequest;
+
 	typedef WebSocketCommandReverseServer::ConnectionPtr ConnectionPtr;
 	typedef WebSocketCommandReverseServer::MessagePtr MessagePtr;
 	typedef boost::function<Json::Value (void)> ConfigGetter;
@@ -496,6 +498,20 @@ public:
 
 	void run() {
 		server.run();
+	}
+
+	void asyncPrepareConfigChange(const Json::Value &updates,
+		ConfigChangeRequest &req,
+		const ConfigKit::CallbackTypes<WebSocketCommandReverseServer>::PrepareConfigChange &callback)
+	{
+		server.asyncPrepareConfigChange(updates, req, callback);
+	}
+
+	void asyncCommitConfigChange(ConfigChangeRequest &req,
+		const ConfigKit::CallbackTypes<WebSocketCommandReverseServer>::CommitConfigChange &callback)
+		BOOST_NOEXCEPT_OR_NOTHROW
+	{
+		server.asyncCommitConfigChange(req, callback);
 	}
 
 	void asyncShutdown(const WebSocketCommandReverseServer::Callback &callback

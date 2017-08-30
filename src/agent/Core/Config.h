@@ -53,6 +53,9 @@
 namespace Passenger {
 namespace Core {
 
+using namespace std;
+
+
 /*
  * BEGIN ConfigKit schema: Passenger::Core::Schema
  * (do not edit: following text is automatically generated
@@ -69,9 +72,9 @@ namespace Core {
  *   admin_panel_proxy_url                                           string             -          -
  *   admin_panel_proxy_username                                      string             -          -
  *   admin_panel_reconnect_timeout                                   float              -          default(5.0)
- *   admin_panel_url                                                 string             -          -
+ *   admin_panel_url                                                 string             -          read_only
  *   api_server_accept_burst_count                                   unsigned integer   -          default(32)
- *   api_server_addresses                                            array of strings   -          default([])
+ *   api_server_addresses                                            array of strings   -          default([]),read_only
  *   api_server_client_freelist_limit                                unsigned integer   -          default(0)
  *   api_server_file_buffered_channel_auto_start_mover               boolean            -          default(true)
  *   api_server_file_buffered_channel_auto_truncate_file             boolean            -          default(true)
@@ -87,9 +90,9 @@ namespace Core {
  *   authorizations                                                  array              -          default("[FILTERED]"),secret
  *   benchmark_mode                                                  string             -          -
  *   controller_accept_burst_count                                   unsigned integer   -          default(32)
- *   controller_addresses                                            array of strings   -          default(["tcp://127.0.0.1:3000"])
+ *   controller_addresses                                            array of strings   -          default(["tcp://127.0.0.1:3000"]),read_only
  *   controller_client_freelist_limit                                unsigned integer   -          default(0)
- *   controller_cpu_affine                                           boolean            -          default(false)
+ *   controller_cpu_affine                                           boolean            -          default(false),read_only
  *   controller_file_buffered_channel_auto_start_mover               boolean            -          default(true)
  *   controller_file_buffered_channel_auto_truncate_file             boolean            -          default(true)
  *   controller_file_buffered_channel_buffer_dir                     string             -          default
@@ -99,7 +102,7 @@ namespace Core {
  *   controller_mbuf_block_chunk_size                                unsigned integer   -          default(4096),read_only
  *   controller_min_spare_clients                                    unsigned integer   -          default(0)
  *   controller_request_freelist_limit                               unsigned integer   -          default(1024)
- *   controller_socket_backlog                                       unsigned integer   -          default(2048)
+ *   controller_socket_backlog                                       unsigned integer   -          default(2048),read_only
  *   controller_start_reading_after_accept                           boolean            -          default(true)
  *   controller_threads                                              unsigned integer   -          default,read_only
  *   default_abort_websockets_on_process_shutdown                    boolean            -          default(true)
@@ -124,7 +127,7 @@ namespace Core {
  *   default_sticky_sessions_cookie_name                             string             -          default("_passenger_route")
  *   default_user                                                    string             -          default("nobody")
  *   file_descriptor_log_target                                      any                -          -
- *   file_descriptor_ulimit                                          unsigned integer   -          default(0)
+ *   file_descriptor_ulimit                                          unsigned integer   -          default(0),read_only
  *   graceful_exit                                                   boolean            -          default(true)
  *   instance_dir                                                    string             -          read_only
  *   integration_mode                                                string             -          default("standalone")
@@ -137,7 +140,7 @@ namespace Core {
  *   pid_file                                                        string             -          read_only
  *   pool_idle_time                                                  unsigned integer   -          default(300)
  *   pool_selfchecks                                                 boolean            -          default(false)
- *   prestart_urls                                                   array of strings   -          default([])
+ *   prestart_urls                                                   array of strings   -          default([]),read_only
  *   response_buffer_high_watermark                                  unsigned integer   -          default(134217728)
  *   security_update_checker_certificate_path                        string             -          -
  *   security_update_checker_disabled                                boolean            -          default(false)
@@ -431,7 +434,7 @@ public:
 		erase("admin_panel_log_prefix");
 		erase("ruby");
 
-		override("admin_panel_url", STRING_TYPE, OPTIONAL);
+		override("admin_panel_url", STRING_TYPE, OPTIONAL | READ_ONLY);
 		override("instance_dir", STRING_TYPE, OPTIONAL | READ_ONLY);
 		override("multi_app", BOOL_TYPE, OPTIONAL | READ_ONLY, false);
 		overrideWithDynamicDefault("standalone_engine", STRING_TYPE, OPTIONAL, getDefaultStandaloneEngine);
@@ -445,12 +448,12 @@ public:
 		add("max_pool_size", UINT_TYPE, OPTIONAL, DEFAULT_MAX_POOL_SIZE);
 		add("pool_idle_time", UINT_TYPE, OPTIONAL, Json::UInt(DEFAULT_POOL_IDLE_TIME));
 		add("pool_selfchecks", BOOL_TYPE, OPTIONAL, false);
-		add("prestart_urls", STRING_ARRAY_TYPE, OPTIONAL, Json::arrayValue);
-		add("controller_socket_backlog", UINT_TYPE, OPTIONAL, DEFAULT_SOCKET_BACKLOG);
-		add("controller_addresses", STRING_ARRAY_TYPE, OPTIONAL, getDefaultControllerAddresses());
-		add("api_server_addresses", STRING_ARRAY_TYPE, OPTIONAL, Json::arrayValue);
-		add("controller_cpu_affine", BOOL_TYPE, OPTIONAL, false);
-		add("file_descriptor_ulimit", UINT_TYPE, OPTIONAL, 0);
+		add("prestart_urls", STRING_ARRAY_TYPE, OPTIONAL | READ_ONLY, Json::arrayValue);
+		add("controller_socket_backlog", UINT_TYPE, OPTIONAL | READ_ONLY, DEFAULT_SOCKET_BACKLOG);
+		add("controller_addresses", STRING_ARRAY_TYPE, OPTIONAL | READ_ONLY, getDefaultControllerAddresses());
+		add("api_server_addresses", STRING_ARRAY_TYPE, OPTIONAL | READ_ONLY, Json::arrayValue);
+		add("controller_cpu_affine", BOOL_TYPE, OPTIONAL | READ_ONLY, false);
+		add("file_descriptor_ulimit", UINT_TYPE, OPTIONAL | READ_ONLY, 0);
 
 		addValidator(validateMultiAppMode);
 		addValidator(validateSingleAppMode);

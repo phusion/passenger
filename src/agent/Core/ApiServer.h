@@ -39,6 +39,7 @@
 #include <modp_b64.h>
 
 #include <Core/Controller.h>
+#include <Core/ConfigChange.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Shared/ApiServerUtils.h>
 #include <Shared/ApiAccountUtils.h>
@@ -497,12 +498,16 @@ private:
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
+				return;
 			}
 
-			refRequest(req, __FILE__, __LINE__);
-			controllers[0]->getContext()->libev->runLater(boost::bind(
-				&ApiServer::processConfig_getControllerConfig, this,
-				client, req, controllers[0]));
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, Core::inspectConfig().toStyledString()));
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		} else if (req->method == HTTP_PUT) {
 			if (!authorizeAdminOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
@@ -515,110 +520,78 @@ private:
 		}
 	}
 
-	void processConfig_getControllerConfig(Client *client, Request *req,
-		Controller *controller)
-	{
-		Json::Value config = controller->inspectConfig();
-		getContext()->libev->runLater(boost::bind(
-			&ApiServer::processConfig_controllerConfigGathered, this,
-			client, req, controller, config));
+	void processConfigBody(Client *client, Request *req) {
+		Core::ConfigChangeRequest *changeReq = Core::createConfigChangeRequest();
+		refRequest(req, __FILE__, __LINE__);
+		Core::asyncPrepareConfigChange(req->jsonBody, changeReq,
+			boost::bind(&ApiServer::processConfigBody_prepareDone, this, client, req,
+				boost::placeholders::_1, boost::placeholders::_2));
 	}
 
-	void processConfig_controllerConfigGathered(Client *client, Request *req,
-		Controller *controller, Json::Value config)
+	void processConfigBody_prepareDone(Client *client, Request *req,
+		const vector<ConfigKit::Error> &errors, Core::ConfigChangeRequest *changeReq)
+	{
+		getContext()->libev->runLater(boost::bind(&ApiServer::processConfigBody_prepareDoneInEventLoop,
+			this, client, req, errors, changeReq));
+	}
+
+	void processConfigBody_prepareDoneInEventLoop(Client *client, Request *req,
+		const vector<ConfigKit::Error> &errors, Core::ConfigChangeRequest *changeReq)
 	{
 		if (req->ended()) {
+			Core::freeConfigChangeRequest(changeReq);
 			unrefRequest(req, __FILE__, __LINE__);
 			return;
 		}
 
-		HeaderTable headers;
-		ConfigKit::Store loggingConfig = LoggingKit::context->getConfig();
-
-		headers.insert(req->pool, "Content-Type", "application/json");
-		config["log_level"] = (int) LoggingKit::parseLevel(loggingConfig["level"].asString());
-		if (loggingConfig["target"].isMember("path")) {
-			config["log_file"] = loggingConfig["target"]["path"].asString();
-		}
-		if (!loggingConfig["file_descriptor_log_target"].isNull()
-			&& loggingConfig["file_descriptor_log_target"].isMember("path"))
-		{
-			config["file_descriptor_log_file"] =
-				loggingConfig["file_descriptor_log_target"]["path"].asString();
-		}
-
-		writeSimpleResponse(client, 200, &headers,
-			psg_pstrdup(req->pool, config.toStyledString()));
-		if (!req->ended()) {
-			Request *req2 = req;
-			endRequest(&client, &req2);
-		}
-
-		unrefRequest(req, __FILE__, __LINE__);
-	}
-
-	static void configureController(Controller *controller, Json::Value updates) {
-		vector<ConfigKit::Error> errors;
-		ControllerConfigChangeRequest req;
-
-		if (controller->prepareConfigChange(updates, errors, req)) {
-			controller->commitConfigChange(req);
+		if (errors.empty()) {
+			Core::asyncCommitConfigChange(changeReq,
+				boost::bind(&ApiServer::processConfigBody_commitDone, this, client, req,
+					boost::placeholders::_1));
 		} else {
-			P_ERROR("Unable to apply configuration change to Core controller.\n"
-				"Configuration: " << updates.toStyledString() << "\n"
-				"Errors: " << toString(errors));
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"message\": \"Error reconfiguring: %s\" }",
+				ConfigKit::toString(errors).c_str());
+
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			writeSimpleResponse(client, 500, &headers, message);
+
+			if (!req->ended()) {
+				Request *req2 = req;
+				endRequest(&client, &req2);
+			}
+
+			Core::freeConfigChangeRequest(changeReq);
+			unrefRequest(req, __FILE__, __LINE__);
 		}
 	}
 
-	void processConfigBody(Client *client, Request *req) {
-		HeaderTable headers;
-		LoggingKit::ConfigChangeRequest configReq;
-		const Json::Value &json = req->jsonBody;
-		vector<ConfigKit::Error> errors;
-		bool ok;
+	void processConfigBody_commitDone(Client *client, Request *req,
+		Core::ConfigChangeRequest *changeReq)
+	{
+		getContext()->libev->runLater(boost::bind(&ApiServer::processConfigBody_commitDoneInEventLoop,
+			this, client, req, changeReq));
+	}
 
-		headers.insert(req->pool, "Content-Type", "application/json");
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-
-		try {
-			ok = LoggingKit::context->prepareConfigChange(json,
-				errors, configReq);
-		} catch (const std::exception &e) {
-			unsigned int bufsize = 2048;
-			char *message = (char *) psg_pnalloc(req->pool, bufsize);
-			snprintf(message, bufsize, "{ \"status\": \"error\", "
-				"\"message\": \"Error reconfiguring logging system: %s\" }",
-				e.what());
-			writeSimpleResponse(client, 500, &headers, message);
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-			return;
-		}
-		if (!ok) {
-			unsigned int bufsize = 2048;
-			char *message = (char *) psg_pnalloc(req->pool, bufsize);
-			snprintf(message, bufsize, "{ \"status\": \"error\", "
-				"\"message\": \"Error reconfiguring logging system: %s\" }",
-				ConfigKit::toString(errors).c_str());
-			writeSimpleResponse(client, 500, &headers, message);
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-			return;
-		}
-
-		LoggingKit::context->commitConfigChange(configReq);
-
-		for (unsigned int i = 0; i < controllers.size(); i++) {
-			controllers[i]->getContext()->libev->runLater(boost::bind(
-				configureController, controllers[i], json));
-		}
-
-		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+	void processConfigBody_commitDoneInEventLoop(Client *client, Request *req,
+		Core::ConfigChangeRequest *changeReq)
+	{
 		if (!req->ended()) {
-			endRequest(&client, &req);
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+			if (!req->ended()) {
+				Request *req2 = req;
+				endRequest(&client, &req2);
+			}
 		}
+		Core::freeConfigChangeRequest(changeReq);
+		unrefRequest(req, __FILE__, __LINE__);
 	}
 
 	bool requestBodyExceedsLimit(Client *client, Request *req, unsigned int limit = 1024 * 128) {
