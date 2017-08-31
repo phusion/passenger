@@ -36,6 +36,7 @@
 #include <string>
 #include <vector>
 #include <deque>
+#include <cstring>
 
 #include <jsoncpp/json.h>
 #include <modp_b64.h>
@@ -597,8 +598,21 @@ private:
 			return;
 		}
 
-		P_NOTICE(logPrefix << "Unable to establish connection: " <<
-			conn->get_ec().message());
+		if (LoggingKit::getLevel() >= LoggingKit::ERROR) {
+			string message;
+			if (strcmp(conn->get_ec().category().name(), "websocketpp.processor") == 0
+				&& conn->get_ec().value() == websocketpp::processor::error::invalid_http_status)
+			{
+				if (conn->get_response_code() == websocketpp::http::status_code::unauthorized) {
+					message = "server authentication error";
+				} else {
+					message = conn->get_ec().message();
+				}
+			} else {
+				message = conn->get_ec().message();
+			}
+			P_ERROR(logPrefix << "Unable to establish connection: " << message);
+		}
 		{
 			boost::lock_guard<boost::mutex> l(stateSyncher);
 			state = NOT_CONNECTED;
