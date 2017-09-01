@@ -107,14 +107,14 @@ EXTRA_PRE_CXXFLAGS = compiler_flag_option('EXTRA_PRE_CXXFLAGS')
 let(:extra_cflags) do
   result = PlatformInfo.default_extra_cflags.dup
   result << " " << compiler_flag_option('EXTRA_CFLAGS') if !compiler_flag_option('EXTRA_CFLAGS').empty?
-  result << " -fno-omit-frame-pointers" if USE_ASAN
+  result << " -fno-omit-frame-pointer" if USE_ASAN
   result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
   result
 end
 let(:extra_cxxflags) do
   result = PlatformInfo.default_extra_cxxflags.dup
   result << " " << compiler_flag_option('EXTRA_CXXFLAGS') if !compiler_flag_option('EXTRA_CXXFLAGS').empty?
-  result << " -fno-omit-frame-pointers" if USE_ASAN
+  result << " -fno-omit-frame-pointer" if USE_ASAN
   result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
   result
 end
