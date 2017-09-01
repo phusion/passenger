@@ -210,7 +210,7 @@ public:
 		unsigned int i = 0;
 
 		// We make a copy so that the handles aren't destroyed prematurely.
-		threads.reserve(nthreads);
+		threads.resize(nthreads);
 		thread_handles_copy = thread_handles;
 		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
 			handle = *it;
@@ -235,7 +235,7 @@ public:
 		unsigned int i = 0;
 
 		// We make a copy so that the handles aren't destroyed prematurely.
-		threads.reserve(nthreads);
+		threads.resize(nthreads);
 		thread_handles_copy = thread_handles;
 		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
 			handle = *it;

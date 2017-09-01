@@ -181,6 +181,7 @@ main(int argc, char *argv[]) {
 	}
 	all_ok = reporter.all_ok();
 	delete resourceLocator;
+	LoggingKit::shutdown();
 	oxt::shutdown();
 	if (all_ok) {
 		return 0;

@@ -32,8 +32,10 @@
 #include <cstring>
 #include <cerrno>
 #include <cassert>
+#include <queue>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <utility>
 #include <unistd.h>
 #include <time.h>
 #include <pthread.h>
@@ -53,6 +55,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 namespace LoggingKit {
@@ -71,6 +74,11 @@ initialize(const Json::Value &initialConfig) {
 	context = new Context(initialConfig);
 }
 
+void
+shutdown() {
+	delete context;
+	context = NULL;
+}
 
 Level getLevel() {
 	if (OXT_LIKELY(context != NULL)) {
@@ -397,11 +405,28 @@ normalizeConfig(const Json::Value &effectiveValues) {
 
 
 Context::Context(const Json::Value &initialConfig)
-	: config(schema, initialConfig)
+	: config(schema, initialConfig),
+	  gcThread(NULL),
+	  shuttingDown(false)
 {
 	configRlz.store(new ConfigRealization(config));
 	configRlz.load()->apply(config, NULL);
 	configRlz.load()->finalize();
+}
+
+Context::~Context() {
+	boost::unique_lock<boost::mutex> l(gcSyncher);
+
+	// If a gc thread exists, tell it to shut down and
+	// wait until it has done so.
+	shuttingDown = true;
+	gcShuttingDownCond.notify_one();
+	while (gcThread != NULL) {
+		gcHasShutDownCond.wait(l);
+	}
+
+	killGcThread();
+	gcLockless(false, l);
 }
 
 ConfigKit::Store
@@ -442,6 +467,82 @@ Context::commitConfigChange(LoggingKit::ConfigChangeRequest &req) BOOST_NOEXCEPT
 	newConfigRlz->finalize();
 }
 
+pair<ConfigRealization*,MonotonicTimeUsec>
+Context::peekOldConfig() {
+	return oldConfigs.front();
+}
+
+void
+Context::popOldConfig(ConfigRealization *oldConfig) {
+	delete oldConfig;
+	oldConfigs.pop();
+}
+
+void
+Context::createGcThread() {
+	if (gcThread == NULL) {
+		try {
+			gcThread = new oxt::thread(boost::bind(&Context::gcThreadMain, this),
+				"LoggingKit config garbage collector thread",
+				128 * 1024);
+		} catch (const std::exception &e) {
+			P_ERROR("Error spawning background thread to garbage collect"
+				" old LoggingKit configuration: " << e.what());
+		}
+	}
+}
+
+void
+Context::pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow) {
+	// Garbage collect old config realization in 5 minutes.
+	// There is no way to cheaply find out whether oldConfigRlz
+	// is still being used (we don't want to resort to more atomic
+	// operations, or conservative garbage collection) but
+	// waiting 5 minutes should be good enough.
+	MonotonicTimeUsec gcTime = monotonicNow + 5llu * 60llu * 1000000llu;
+	boost::unique_lock<boost::mutex> l(gcSyncher);
+	oldConfigs.push(make_pair(oldConfigRlz, gcTime));
+	createGcThread();
+}
+
+bool
+Context::oldConfigsExist() {
+	return !oldConfigs.empty();
+}
+
+void
+Context::gcThreadMain() {
+	boost::unique_lock<boost::mutex> l(gcSyncher);
+	gcLockless(true, l);
+}
+
+void
+Context::gcLockless(bool wait, boost::unique_lock<boost::mutex> &lock) {
+	while (!shuttingDown && oldConfigsExist()) {
+		pair<ConfigRealization *, MonotonicTimeUsec> p = peekOldConfig();
+		for (MonotonicTimeUsec now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
+			 !shuttingDown && wait && now < p.second;
+			 now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>())
+		{
+			// Wait until it's time to GC this config object,
+			// or until the destructor tells us that we're shutting down.
+			gcShuttingDownCond.timed_wait(lock, boost::posix_time::microseconds(p.second - now));
+		}
+		if (!shuttingDown) {
+			popOldConfig(p.first);
+		}
+	}
+	killGcThread();
+}
+
+void
+Context::killGcThread() {
+	if (gcThread != NULL) {
+		delete gcThread;
+		gcThread = NULL;
+	}
+	gcHasShutDownCond.notify_one();
+}
 
 Json::Value
 Schema::createStderrTarget() {
@@ -636,14 +737,6 @@ ConfigRealization::~ConfigRealization() {
 	}
 }
 
-static void
-garbageCollectConfigRealization(ConfigRealization *configRlz) {
-	boost::this_thread::disable_interruption di;
-	boost::this_thread::disable_syscall_interruption dsi;
-	syscalls::sleep(30);
-	delete configRlz;
-}
-
 void
 ConfigRealization::apply(const ConfigKit::Store &config, ConfigRealization *oldConfigRlz)
 	BOOST_NOEXCEPT_OR_NOTHROW
@@ -658,19 +751,8 @@ ConfigRealization::apply(const ConfigKit::Store &config, ConfigRealization *oldC
 	}
 
 	if (oldConfigRlz != NULL) {
-		// Garbage collect old config realization in 30 seconds.
-		// There is no way to cheaply find out whether oldConfigRlz
-		// is still being used (we don't want to resort to more atomic
-		// operations, or conservative garbage collection) but
-		// waiting 30 seconds should be good enough.
-		try {
-			oxt::thread(boost::bind(garbageCollectConfigRealization, oldConfigRlz),
-				"LoggingKit config garbage collector " + toString(oldConfigRlz),
-				128 * 1024);
-		} catch (const std::exception &e) {
-			P_ERROR("Error spawning background thread to garbage collect"
-				" old LoggingKit configuration: " << e.what());
-		}
+		MonotonicTimeUsec monotonicNow = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
+		context->pushOldConfigAndCreateGcThread(oldConfigRlz, monotonicNow);
 	}
 }
 

@@ -26,12 +26,16 @@
 #ifndef _PASSENGER_LOGGING_KIT_CONTEXT_H_
 #define _PASSENGER_LOGGING_KIT_CONTEXT_H_
 
+#include <queue>
+
 #include <oxt/macros.hpp>
+#include <oxt/thread.hpp>
 #include <boost/thread.hpp>
 #include <boost/atomic.hpp>
 #include <ConfigKit/ConfigKit.h>
 #include <LoggingKit/Forward.h>
 #include <LoggingKit/Config.h>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 namespace LoggingKit {
@@ -68,8 +72,15 @@ private:
 	ConfigKit::Store config;
 	boost::atomic<ConfigRealization *> configRlz;
 
+	mutable boost::mutex gcSyncher;
+	oxt::thread *gcThread;
+	boost::condition_variable gcShuttingDownCond, gcHasShutDownCond;
+	queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
+	bool shuttingDown;
+
 public:
 	Context(const Json::Value &initialConfig = Json::Value());
+	~Context();
 	ConfigKit::Store getConfig() const;
 
 	bool prepareConfigChange(const Json::Value &updates,
@@ -82,6 +93,17 @@ public:
 	const ConfigRealization *getConfigRealization() const {
 		return configRlz.load(boost::memory_order_acquire);
 	}
+
+	void pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow);
+	void gcThreadMain();
+
+private:
+	pair<ConfigRealization*,MonotonicTimeUsec> peekOldConfig();
+	void popOldConfig(ConfigRealization *oldConfig);
+	bool oldConfigsExist();
+	void createGcThread();
+	void killGcThread();
+	void gcLockless(bool wait, boost::unique_lock<boost::mutex> &lock);
 };
 
 
