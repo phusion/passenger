@@ -73,6 +73,7 @@ public:
 	 *   standalone_engine           string    -          -
 	 *   url                         string    required   -
 	 *   web_server_module_version   string    -          read_only
+	 *   websocketpp_debug           boolean   -          default(false)
 	 *
 	 * END
 	 */
@@ -431,6 +432,7 @@ private:
 	void sendJsonReply(const ConnectionPtr &conn, const Json::Value &doc) {
 		Json::FastWriter writer;
 		string str = writer.write(doc);
+		WCRS_DEBUG_FRAME(&server, "Replying with:", str);
 		conn->send(str);
 	}
 

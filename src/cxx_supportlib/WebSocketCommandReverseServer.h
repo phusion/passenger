@@ -32,6 +32,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/function.hpp>
 #include <oxt/backtrace.hpp>
+#include <oxt/macros.hpp>
 
 #include <string>
 #include <vector>
@@ -52,6 +53,14 @@
 namespace Passenger {
 
 using namespace std;
+
+
+#define WCRS_DEBUG_FRAME(self, expr1, expr2) \
+	P_LOG_UNLIKELY(Passenger::LoggingKit::context, \
+		(self)->_getDataDebugLevel(), \
+		__FILE__, __LINE__, \
+		(self)->_getLogPrefix() << expr1 << " \"" \
+			<< cEscapeString(expr2) << "\"")
 
 
 /**
@@ -136,6 +145,7 @@ public:
 	 *   proxy_username      string    -          -
 	 *   reconnect_timeout   float     -          default(5.0)
 	 *   url                 string    required   -
+	 *   websocketpp_debug   boolean   -          default(false)
 	 *
 	 * END
 	 */
@@ -146,6 +156,7 @@ public:
 
 			add("url", STRING_TYPE, REQUIRED);
 			add("log_prefix", STRING_TYPE, OPTIONAL);
+			add("websocketpp_debug", BOOL_TYPE, OPTIONAL, false);
 			add("data_debug", BOOL_TYPE, OPTIONAL, false);
 			add("authentication", OBJECT_TYPE, OPTIONAL | SECRET);
 			add("proxy_url", STRING_TYPE, OPTIONAL);
@@ -231,8 +242,24 @@ public:
 		}
 	};
 
+	struct ConfigRealization {
+		string logPrefix;
+		bool dataDebug;
+
+		ConfigRealization(const ConfigKit::Store &config)
+			: logPrefix(config["log_prefix"].asString()),
+			  dataDebug(config["data_debug"].asBool())
+			{ }
+
+		void swap(ConfigRealization &other) BOOST_NOEXCEPT_OR_NOTHROW {
+			logPrefix.swap(other.logPrefix);
+			std::swap(dataDebug, other.dataDebug);
+		}
+	};
+
 	struct ConfigChangeRequest {
 		boost::scoped_ptr<ConfigKit::Store> config;
+		boost::scoped_ptr<ConfigRealization> configRlz;
 	};
 
 	typedef websocketpp::client<websocketpp::config::asio_client> Endpoint;
@@ -257,7 +284,7 @@ public:
 
 private:
 	ConfigKit::Store config;
-	string logPrefix;
+	ConfigRealization configRlz;
 
 	Endpoint endpoint;
 	ConnectionPtr conn;
@@ -309,10 +336,12 @@ private:
 		return connectionIsConnected(c);
 	}
 
-	void activateConfigUpdates(const ConfigKit::Store *oldConfig) {
-		logPrefix = config["log_prefix"].asString();
+	const string &getLogPrefix() const {
+		return configRlz.logPrefix;
+	}
 
-		if (config["data_debug"].asBool()) {
+	void activateConfigUpdates(const ConfigKit::Store *oldConfig) {
+		if (config["websocketpp_debug"].asBool()) {
 			endpoint.set_access_channels(websocketpp::log::alevel::all);
 			endpoint.set_error_channels(websocketpp::log::elevel::all);
 		} else {
@@ -326,7 +355,8 @@ private:
 		bool shouldReconnect =
 			oldConfig->get("url").asString() != config["url"].asString() ||
 			oldConfig->get("proxy_url").asString() != config["proxy_url"].asString() ||
-			oldConfig->get("data_debug").asBool() != config["data_debug"].asBool();
+			oldConfig->get("data_debug").asBool() != config["data_debug"].asBool() ||
+			oldConfig->get("websocketpp_debug").asBool() != config["websocketpp_debug"].asBool();
 		if (shouldReconnect) {
 			internalReconnect();
 		}
@@ -382,10 +412,10 @@ private:
 			state = CONNECTING;
 		}
 
-		P_NOTICE(logPrefix << "Connecting to " << config["url"].asString());
+		P_NOTICE(getLogPrefix() << "Connecting to " << config["url"].asString());
 		conn = endpoint.get_connection(config["url"].asString(), ec);
 		if (ec) {
-			P_ERROR(logPrefix << "Error setting up a socket to "
+			P_ERROR(getLogPrefix() << "Error setting up a socket to "
 				<< config["url"].asString() << ": " << ec.message());
 			{
 				boost::lock_guard<boost::mutex> l(stateSyncher);
@@ -412,7 +442,7 @@ private:
 			try {
 				addBasicAuthHeader(conn);
 			} catch (const std::exception &e) {
-				P_ERROR(logPrefix << "Error setting up basic authentication: "
+				P_ERROR(getLogPrefix() << "Error setting up basic authentication: "
 					<< e.what());
 				{
 					boost::lock_guard<boost::mutex> l(stateSyncher);
@@ -477,7 +507,8 @@ private:
 		if (!config["proxy_url"].isNull()) {
 			conn->set_proxy(config["proxy_url"].asString(), ec);
 			if (ec) {
-				P_ERROR(logPrefix << "Error setting proxy URL to "
+				P_ERROR(getLogPrefix()
+					<< "Error setting proxy URL to "
 					<< config["proxy_url"].asString() << ": "
 					<< ec.message());
 				return false;
@@ -487,7 +518,8 @@ private:
 				conn->set_proxy_basic_auth(config["proxy_username"].asString(),
 					config["proxy_password"].asString(), ec);
 				if (ec) {
-					P_ERROR(logPrefix << "Error setting proxy authentication credentials to "
+					P_ERROR(getLogPrefix()
+						<< "Error setting proxy authentication credentials to "
 						<< config["proxy_username"].asString() << ":<password omitted>:"
 						<< ec.message());
 					return false;
@@ -496,7 +528,8 @@ private:
 
 			conn->set_proxy_timeout(config["proxy_timeout"].asDouble() * 1000, ec);
 			if (ec) {
-				P_ERROR(logPrefix << "Error setting proxy timeout to "
+				P_ERROR(getLogPrefix()
+					<< "Error setting proxy timeout to "
 					<< config["proxy_timeout"].asDouble() << " seconds: "
 					<< ec.message());
 				return false;
@@ -529,7 +562,7 @@ private:
 	}
 
 	void scheduleReconnect() {
-		P_NOTICE(logPrefix << "Reestablishing connection in " <<
+		P_NOTICE(getLogPrefix() << "Reestablishing connection in " <<
 			config["reconnect_timeout"].asDouble() << " seconds");
 		restartTimer(config["reconnect_timeout"].asDouble() * 1000);
 	}
@@ -544,14 +577,14 @@ private:
 			state = CLOSING;
 		}
 
-		P_NOTICE(logPrefix << "Closing connection: " << reason);
+		P_NOTICE(getLogPrefix() << "Closing connection: " << reason);
 		reconnectAfterReply = false;
 		timer->cancel();
 		conn->close(code, reason, ec);
 		conn.reset();
 
 		if (ec) {
-			P_WARN(logPrefix << "Error closing connection: " << ec.message());
+			P_WARN(getLogPrefix() << "Error closing connection: " << ec.message());
 			{
 				boost::lock_guard<boost::mutex> l(stateSyncher);
 				state = NOT_CONNECTED;
@@ -577,24 +610,24 @@ private:
 
 	void onConnected(ConnectionWeakPtr wconn) {
 		if (!isConnected(wconn)) {
-			P_DEBUG(logPrefix << "onConnected: stale connection");
+			P_DEBUG(getLogPrefix() << "onConnected: stale connection");
 			return;
 		}
 
-		P_NOTICE(logPrefix << "Connection established");
+		P_NOTICE(getLogPrefix() << "Connection established");
 		{
 			boost::lock_guard<boost::mutex> l(stateSyncher);
 			state = WAITING_FOR_REQUEST;
 		}
 		buffer.clear();
-		P_DEBUG(logPrefix << "Scheduling next ping in " <<
+		P_DEBUG(getLogPrefix() << "Scheduling next ping in " <<
 			config["ping_interval"].asDouble() << " seconds");
 		restartTimer(config["ping_interval"].asDouble() * 1000);
 	}
 
 	void onConnectFailed(ConnectionWeakPtr wconn) {
 		if (!isCurrentConnection(wconn)) {
-			P_DEBUG(logPrefix << "onConnectFailed: not current connection");
+			P_DEBUG(getLogPrefix() << "onConnectFailed: not current connection");
 			return;
 		}
 
@@ -611,7 +644,7 @@ private:
 			} else {
 				message = conn->get_ec().message();
 			}
-			P_ERROR(logPrefix << "Unable to establish connection: " << message);
+			P_ERROR(getLogPrefix() << "Unable to establish connection: " << message);
 		}
 		{
 			boost::lock_guard<boost::mutex> l(stateSyncher);
@@ -622,11 +655,11 @@ private:
 
 	void onConnectionClosed(ConnectionWeakPtr wconn) {
 		if (!isCurrentConnection(wconn)) {
-			P_DEBUG(logPrefix << "onConnectionClosed: not current connection");
+			P_DEBUG(getLogPrefix() << "onConnectionClosed: not current connection");
 			return;
 		}
 
-		P_NOTICE(logPrefix << "Connection closed (server close reason: " <<
+		P_NOTICE(getLogPrefix() << "Connection closed (server close reason: " <<
 			conn->get_remote_close_code() << ": " <<
 			conn->get_remote_close_reason() << ")");
 		{
@@ -644,11 +677,11 @@ private:
 
 	void onTimeout(const boost::system::error_code &e) {
 		if (e.value() == boost::system::errc::operation_canceled) {
-			P_DEBUG(logPrefix << "onTimeout: operation cancelled");
+			P_DEBUG(getLogPrefix() << "onTimeout: operation cancelled");
 			return;
 		}
 		if (e) {
-			P_ERROR(logPrefix << "Error in timer: " << e.message());
+			P_ERROR(getLogPrefix() << "Error in timer: " << e.message());
 			return;
 		}
 
@@ -660,7 +693,7 @@ private:
 			break;
 		case WAITING_FOR_REQUEST:
 		case REPLYING:
-			P_DEBUG(logPrefix << "Sending ping");
+			P_DEBUG(getLogPrefix() << "Sending ping");
 			conn->ping("ping", ec);
 			if (ec) {
 				closeConnection(websocketpp::close::status::normal,
@@ -678,7 +711,7 @@ private:
 
 	void onPongTimeout(ConnectionWeakPtr wconn, const string &payload) {
 		if (!isCurrentConnection(wconn)) {
-			P_DEBUG(logPrefix << "onPongTimeout: not current connection");
+			P_DEBUG(getLogPrefix() << "onPongTimeout: not current connection");
 			return;
 		}
 
@@ -686,10 +719,10 @@ private:
 		case REPLYING:
 			// Ignore pong timeouts while replying because
 			// reading is paused while replying.
-			P_DEBUG(logPrefix << "onPongTimeout: ignoring REPLYING state");
+			P_DEBUG(getLogPrefix() << "onPongTimeout: ignoring REPLYING state");
 			break;
 		default:
-			P_DEBUG(logPrefix << "onPongTimeout: closing connection");
+			P_DEBUG(getLogPrefix() << "onPongTimeout: closing connection");
 			closeConnection(websocketpp::close::status::normal,
 				"reconnecting because of pong timeout");
 			break;
@@ -698,25 +731,26 @@ private:
 
 	void onPong(ConnectionWeakPtr wconn, const string &payload) {
 		if (!isConnected(wconn)) {
-			P_DEBUG(logPrefix << "onPong: stale connection");
+			P_DEBUG(getLogPrefix() << "onPong: stale connection");
 			return;
 		}
 
-		P_DEBUG(logPrefix << "Pong received. Scheduling next ping in " <<
+		P_DEBUG(getLogPrefix() << "Pong received. Scheduling next ping in " <<
 			config["ping_interval"].asDouble() << " seconds");
 		restartTimer(config["ping_interval"].asDouble() * 1000);
 	}
 
 	void onMessage(ConnectionWeakPtr wconn, MessagePtr msg) {
 		if (!isConnected(wconn)) {
-			P_DEBUG(logPrefix << "onMessage: stale connection");
+			P_DEBUG(getLogPrefix() << "onMessage: stale connection");
 			return;
 		}
 
 		switch (state) {
 		case WAITING_FOR_REQUEST:
-			P_DEBUG(logPrefix << "onMessage: got frame of " <<
+			P_DEBUG(getLogPrefix() << "onMessage: got frame of " <<
 				msg->get_payload().size() << " bytes");
+			WCRS_DEBUG_FRAME(this, "Received message's frame data:", msg->get_payload());
 			{
 				boost::lock_guard<boost::mutex> l(stateSyncher);
 				state = REPLYING;
@@ -729,16 +763,17 @@ private:
 			break;
 		case CLOSING:
 			// Ignore any incoming messages while closing.
-			P_DEBUG(logPrefix << "onMessage: ignoring CLOSING state");
+			P_DEBUG(getLogPrefix() << "onMessage: ignoring CLOSING state");
 			break;
 		case REPLYING:
 			// Even if we call conn->pause_reading(), WebSocket++
 			// may already have received further messages in its buffer,
 			// which it will still pass to us. Don't process these
 			// and just buffer them.
-			P_DEBUG(logPrefix << "onMessage: got frame of " <<
+			P_DEBUG(getLogPrefix() << "onMessage: got frame of " <<
 				msg->get_payload().size() << " bytes (pushed to buffer -> "
 				<< (buffer.size() + 1) << " entries)");
+			WCRS_DEBUG_FRAME(this, "Received message's frame data:", msg->get_payload());
 			buffer.push_back(msg);
 			break;
 		default:
@@ -747,11 +782,12 @@ private:
 	}
 
 public:
-	template<typename Translator>
+	template<typename Translator = ConfigKit::DummyTranslator>
 	WebSocketCommandReverseServer(const Schema &schema, const MessageHandler &_messageHandler,
 		const Json::Value &initialConfig,
 		const Translator &translator = ConfigKit::DummyTranslator())
 		: config(schema, initialConfig, translator),
+		  configRlz(config),
 		  messageHandler(_messageHandler),
 		  state(UNINITIALIZED),
 		  reconnectAfterReply(false),
@@ -799,11 +835,15 @@ public:
 		vector<ConfigKit::Error> &errors, ConfigChangeRequest &req)
 	{
 		req.config.reset(new ConfigKit::Store(config, updates, errors));
+		if (errors.empty()) {
+			req.configRlz.reset(new ConfigRealization(*req.config));
+		}
 		return errors.empty();
 	}
 
 	void commitConfigChange(ConfigChangeRequest &req) BOOST_NOEXCEPT_OR_NOTHROW {
 		config.swap(*req.config);
+		configRlz.swap(*req.configRlz);
 		activateConfigUpdates(req.config.get());
 	}
 
@@ -869,11 +909,11 @@ public:
 		begin:
 
 		if (!isConnected(conn)) {
-			P_DEBUG(logPrefix << "doneReplying: stale connection");
+			P_DEBUG(getLogPrefix() << "doneReplying: stale connection");
 			return;
 		}
 
-		P_DEBUG(logPrefix << "Done replying");
+		P_DEBUG(getLogPrefix() << "Done replying");
 		P_ASSERT_EQ(state, REPLYING);
 
 		{
@@ -890,9 +930,10 @@ public:
 			conn->resume_reading();
 		} else {
 			MessagePtr msg = buffer.front();
-			P_DEBUG(logPrefix << "Process next message in buffer ("
+			P_DEBUG(getLogPrefix() << "Process next message in buffer ("
 				<< buffer.size() << " entries): " <<
 				msg->get_payload().size() << " bytes");
+			WCRS_DEBUG_FRAME(this, "Buffered message's frame data:", msg->get_payload());
 			buffer.pop_front();
 			{
 				boost::lock_guard<boost::mutex> l(stateSyncher);
@@ -901,6 +942,19 @@ public:
 			if (messageHandler(this, conn, msg)) {
 				goto begin;
 			}
+		}
+	}
+
+
+	const string &_getLogPrefix() const {
+		return getLogPrefix();
+	}
+
+	LoggingKit::Level _getDataDebugLevel() const {
+		if (OXT_UNLIKELY(configRlz.dataDebug)) {
+			return LoggingKit::NOTICE;
+		} else {
+			return LoggingKit::DEBUG2;
 		}
 	}
 };

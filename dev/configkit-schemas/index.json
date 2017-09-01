@@ -76,6 +76,11 @@
       "web_server_module_version" : {
          "read_only" : true,
          "type" : "string"
+      },
+      "websocketpp_debug" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
       }
    },
    "Passenger::Core::ApiServer::Schema" : {
@@ -379,6 +384,11 @@
       "admin_panel_url" : {
          "read_only" : true,
          "type" : "string"
+      },
+      "admin_panel_websocketpp_debug" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
       },
       "api_server_accept_burst_count" : {
          "default_value" : 32,
@@ -1010,6 +1020,11 @@
       "url" : {
          "required" : true,
          "type" : "string"
+      },
+      "websocketpp_debug" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
       }
    }
 }
