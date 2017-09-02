@@ -29,6 +29,7 @@
 #include <boost/thread.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <Constants.h>
 #include <Utils.h>
 #include <Utils/VariantMap.h>
@@ -200,6 +201,7 @@ coreUsage() {
 	printf("      --admin-panel-url URL\n");
 	printf("                            Connect to an admin panel through this service\n");
 	printf("                            connector URL\n");
+	printf("      --ctl NAME=VALUE      Set low-level config option directly\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("API account privilege levels (ordered from most to least privileges):\n");
@@ -281,7 +283,7 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--disable-security-update-check")) {
 		options.setBool("disable_security_update_check", true);
-		i += 2;
+		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--security-update-check-proxy")) {
 		options.set("security_update_check_proxy", argv[i + 1]);
 		i += 2;
@@ -425,6 +427,16 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--admin-panel-url")) {
 		options.set("admin_panel_url", argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ctl")) {
+		const char *sep = strchr(argv[i + 1], '=');
+		if (sep == NULL) {
+			fprintf(stderr, "ERROR: invalid --ctl format: %s\n", argv[i + 1]);
+			exit(1);
+		}
+		string name(argv[i + 1], sep - argv[i + 1]);
+		string value(sep + 1);
+		options.set(name, value);
 		i += 2;
 	} else if (!startsWith(argv[i], "-")) {
 		if (!options.has("app_root")) {
