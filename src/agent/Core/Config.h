@@ -73,7 +73,8 @@ using namespace std;
  *   admin_panel_proxy_username                                      string             -          -
  *   admin_panel_reconnect_timeout                                   float              -          default(5.0)
  *   admin_panel_url                                                 string             -          read_only
- *   admin_panel_websocketpp_debug                                   boolean            -          default(false)
+ *   admin_panel_websocketpp_debug_access                            boolean            -          default(false)
+ *   admin_panel_websocketpp_debug_error                             boolean            -          default(false)
  *   api_server_accept_burst_count                                   unsigned integer   -          default(32)
  *   api_server_addresses                                            array of strings   -          default([]),read_only
  *   api_server_client_freelist_limit                                unsigned integer   -          default(0)
@@ -578,7 +579,8 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	SET_DOUBLE_CONFIG("admin_panel_close_timeout");
 	SET_DOUBLE_CONFIG("admin_panel_connect_timeout");
 	SET_BOOL_CONFIG("admin_panel_data_debug");
-	SET_BOOL_CONFIG("admin_panel_websocketpp_debug");
+	SET_BOOL_CONFIG("admin_panel_websocketpp_debug_access");
+	SET_BOOL_CONFIG("admin_panel_websocketpp_debug_error");
 	SET_DOUBLE_CONFIG("admin_panel_ping_interval");
 	SET_DOUBLE_CONFIG("admin_panel_ping_timeout");
 	SET_STR_CONFIG("admin_panel_proxy_password");

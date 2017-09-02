@@ -77,7 +77,12 @@
          "read_only" : true,
          "type" : "string"
       },
-      "websocketpp_debug" : {
+      "websocketpp_debug_access" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "websocketpp_debug_error" : {
          "default_value" : false,
          "has_default_value" : "static",
          "type" : "boolean"
@@ -385,7 +390,12 @@
          "read_only" : true,
          "type" : "string"
       },
-      "admin_panel_websocketpp_debug" : {
+      "admin_panel_websocketpp_debug_access" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "admin_panel_websocketpp_debug_error" : {
          "default_value" : false,
          "has_default_value" : "static",
          "type" : "boolean"
@@ -1021,7 +1031,12 @@
          "required" : true,
          "type" : "string"
       },
-      "websocketpp_debug" : {
+      "websocketpp_debug_access" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "websocketpp_debug_error" : {
          "default_value" : false,
          "has_default_value" : "static",
          "type" : "boolean"

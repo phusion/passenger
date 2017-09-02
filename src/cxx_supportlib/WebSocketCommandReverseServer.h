@@ -132,20 +132,21 @@ public:
 	 * (do not edit: following text is automatically generated
 	 * by 'rake configkit_schemas_inline_comments')
 	 *
-	 *   authentication      object    -          secret
-	 *   close_timeout       float     -          default(10.0)
-	 *   connect_timeout     float     -          default(30.0)
-	 *   data_debug          boolean   -          default(false)
-	 *   log_prefix          string    -          -
-	 *   ping_interval       float     -          default(30.0)
-	 *   ping_timeout        float     -          default(30.0)
-	 *   proxy_password      string    -          secret
-	 *   proxy_timeout       float     -          default(30.0)
-	 *   proxy_url           string    -          -
-	 *   proxy_username      string    -          -
-	 *   reconnect_timeout   float     -          default(5.0)
-	 *   url                 string    required   -
-	 *   websocketpp_debug   boolean   -          default(false)
+	 *   authentication             object    -          secret
+	 *   close_timeout              float     -          default(10.0)
+	 *   connect_timeout            float     -          default(30.0)
+	 *   data_debug                 boolean   -          default(false)
+	 *   log_prefix                 string    -          -
+	 *   ping_interval              float     -          default(30.0)
+	 *   ping_timeout               float     -          default(30.0)
+	 *   proxy_password             string    -          secret
+	 *   proxy_timeout              float     -          default(30.0)
+	 *   proxy_url                  string    -          -
+	 *   proxy_username             string    -          -
+	 *   reconnect_timeout          float     -          default(5.0)
+	 *   url                        string    required   -
+	 *   websocketpp_debug_access   boolean   -          default(false)
+	 *   websocketpp_debug_error    boolean   -          default(false)
 	 *
 	 * END
 	 */
@@ -156,7 +157,8 @@ public:
 
 			add("url", STRING_TYPE, REQUIRED);
 			add("log_prefix", STRING_TYPE, OPTIONAL);
-			add("websocketpp_debug", BOOL_TYPE, OPTIONAL, false);
+			add("websocketpp_debug_access", BOOL_TYPE, OPTIONAL, false);
+			add("websocketpp_debug_error", BOOL_TYPE, OPTIONAL, false);
 			add("data_debug", BOOL_TYPE, OPTIONAL, false);
 			add("authentication", OBJECT_TYPE, OPTIONAL | SECRET);
 			add("proxy_url", STRING_TYPE, OPTIONAL);
@@ -341,11 +343,14 @@ private:
 	}
 
 	void activateConfigUpdates(const ConfigKit::Store *oldConfig) {
-		if (config["websocketpp_debug"].asBool()) {
+		if (config["websocketpp_debug_access"].asBool()) {
 			endpoint.set_access_channels(websocketpp::log::alevel::all);
-			endpoint.set_error_channels(websocketpp::log::elevel::all);
 		} else {
 			endpoint.clear_access_channels(websocketpp::log::alevel::all);
+		}
+		if (config["websocketpp_debug_error"].asBool()) {
+			endpoint.set_error_channels(websocketpp::log::elevel::all);
+		} else {
 			endpoint.clear_error_channels(websocketpp::log::elevel::all);
 		}
 
@@ -356,7 +361,8 @@ private:
 			oldConfig->get("url").asString() != config["url"].asString() ||
 			oldConfig->get("proxy_url").asString() != config["proxy_url"].asString() ||
 			oldConfig->get("data_debug").asBool() != config["data_debug"].asBool() ||
-			oldConfig->get("websocketpp_debug").asBool() != config["websocketpp_debug"].asBool();
+			oldConfig->get("websocketpp_debug_access").asBool() != config["websocketpp_debug_access"].asBool() ||
+			oldConfig->get("websocketpp_debug_error").asBool() != config["websocketpp_debug_error"].asBool();
 		if (shouldReconnect) {
 			internalReconnect();
 		}

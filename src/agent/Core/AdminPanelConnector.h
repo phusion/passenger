@@ -73,7 +73,8 @@ public:
 	 *   standalone_engine           string    -          -
 	 *   url                         string    required   -
 	 *   web_server_module_version   string    -          read_only
-	 *   websocketpp_debug           boolean   -          default(false)
+	 *   websocketpp_debug_access    boolean   -          default(false)
+	 *   websocketpp_debug_error     boolean   -          default(false)
 	 *
 	 * END
 	 */
