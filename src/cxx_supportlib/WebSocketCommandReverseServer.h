@@ -596,16 +596,16 @@ private:
 		timer->cancel();
 		conn->close(code, reason, ec);
 		conn.reset();
-
 		if (ec) {
 			P_WARN(getLogPrefix() << "Error closing connection: " << ec.message());
-			{
-				boost::lock_guard<boost::mutex> l(stateSyncher);
-				state = NOT_CONNECTED;
-			}
-			if (!shuttingDown) {
-				scheduleReconnect();
-			}
+		}
+
+		{
+			boost::lock_guard<boost::mutex> l(stateSyncher);
+			state = NOT_CONNECTED;
+		}
+		if (!shuttingDown) {
+			scheduleReconnect();
 		}
 	}
 
