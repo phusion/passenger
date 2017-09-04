@@ -282,10 +282,7 @@ asyncCommitConfigChange(ConfigChangeRequest *req, const CommitConfigChangeCallba
 	req->commitCallback = callback;
 	req->counter++;
 
-	{
-		boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
-		coreConfig->swap(*req->config);
-	}
+	coreConfig->swap(*req->config);
 	LoggingKit::context->commitConfigChange(req->forLoggingKit);
 	workingObjects->securityUpdateChecker->commitConfigChange(
 		req->forSecurityUpdateChecker);
