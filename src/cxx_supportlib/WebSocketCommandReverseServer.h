@@ -117,13 +117,21 @@ using namespace std;
  * ## About flow control and backpressure
  *
  * We purposefully do not implement any flow control/backpressure on the
- * WebSocket's writing side. That is, if we send a large amount of data to
+ * WebSocket's _writing_ side. That is, if we send a large amount of data to
  * the remote, then we do not wait until all that data has actually been
  * sent out before proceeding to read the next message. Unfortunately the
- * WebSocket++ API does not allow us to efficiently implement that.
- * Fortunately, the server knows this and is responsible for not sending
- * another request until it has read the previous request, so in practice
- * we do not run into any problem.
+ * WebSocket++ API does not allow us to efficiently implement that:
+ * https://github.com/zaphoyd/websocketpp/issues/477
+ *
+ * As of 4 September 2017 (Boost 1.64.0, WebSocket++ 0.7.0),
+ * we also do not implement any flow control/backpressure
+ * on the WebSocket's _reading_ side. If the server floods us with requests
+ * then all of them will be buffered. We are unable to implement flow control
+ * on the reading side because of a bug in either WebSocket++ or ASIO: if you
+ * pause/resume the WebSocket then it results in data loss or data corruption.
+ *
+ * So the server is responsible for ensuring that it does not overload the
+ * WebSocketCommandReverseServer.
  */
 class WebSocketCommandReverseServer {
 public:
@@ -764,7 +772,10 @@ private:
 			if (messageHandler(this, conn, msg)) {
 				doneReplying(conn);
 			} else {
-				conn->pause_reading();
+				// We do not pause the connection here because of what appears
+				// to be an ASIO bug.
+				// See class header comments, "About flow control and backpressure".
+				//conn->pause_reading();
 			}
 			break;
 		case CLOSING:
@@ -933,7 +944,10 @@ public:
 		}
 
 		if (buffer.empty()) {
-			conn->resume_reading();
+			// We do not resume the connection here because of what appears
+			// to be an ASIO bug.
+			// See class header comments, "About flow control and backpressure".
+			//conn->resume_reading();
 		} else {
 			MessagePtr msg = buffer.front();
 			P_DEBUG(getLogPrefix() << "Process next message in buffer ("
