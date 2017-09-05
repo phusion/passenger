@@ -240,7 +240,7 @@ private:
 		string integrationMode = config["integration_mode"].asString();
 		data["integration_mode"]["name"] = integrationMode;
 		if (!config["web_server_module_version"].isNull()) {
-			data["integration_mode"]["server_module_version"] = config["server_module_version"];
+			data["integration_mode"]["server_module_version"] = config["web_server_module_version"];
 		}
 		if (integrationMode == "standalone") {
 			data["integration_mode"]["standalone_engine"] = config["standalone_engine"];
