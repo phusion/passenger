@@ -149,7 +149,6 @@ using namespace std;
  *   security_update_checker_interval                                unsigned integer   -          default(86400)
  *   security_update_checker_proxy_url                               string             -          -
  *   security_update_checker_url                                     string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
- *   security_update_checker_web_server_version                      string             -          -
  *   server_software                                                 string             -          default("Phusion_Passenger/5.1.9")
  *   show_version_in_header                                          boolean            -          default(true)
  *   single_app_mode_app_root                                        string             -          default,read_only
@@ -164,6 +163,7 @@ using namespace std;
  *   vary_turbocache_by_cookie                                       string             -          -
  *   watchdog_fd_passing_password                                    string             -          secret
  *   web_server_module_version                                       string             -          read_only
+ *   web_server_version                                              string             -          read_only
  *
  * END
  */
@@ -415,6 +415,7 @@ public:
 		securityUpdateChecker.translator.setPrefixAndFinalize("security_update_checker_");
 		addSubSchema(securityUpdateChecker.schema, securityUpdateChecker.translator);
 		erase("security_update_checker_server_identifier");
+		erase("security_update_checker_web_server_version");
 
 		// Add subschema: apiServer
 		apiServer.translator.add("watchdog_fd_passing_password", "fd_passing_password");
@@ -446,6 +447,7 @@ public:
 		add("passenger_root", STRING_TYPE, REQUIRED | READ_ONLY);
 		add("pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
 		add("password", ANY_TYPE, OPTIONAL | SECRET);
+		add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);
 		addWithDynamicDefault("controller_threads", UINT_TYPE, OPTIONAL | READ_ONLY, getDefaultThreads);
 		add("max_pool_size", UINT_TYPE, OPTIONAL, DEFAULT_MAX_POOL_SIZE);
 		add("pool_idle_time", UINT_TYPE, OPTIONAL, Json::UInt(DEFAULT_POOL_IDLE_TIME));
@@ -533,6 +535,7 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	SET_UINT_CONFIG2("controller_socket_backlog", "socket_backlog");
 	SET_BOOL_CONFIG2("controller_cpu_affine", "core_cpu_affine");
 	SET_STR_CONFIG("web_server_module_version");
+	SET_STR_CONFIG2("web_server_version", "server_version");
 
 	SET_BOOL_CONFIG2("default_abort_websockets_on_process_shutdown", "abort_websockets_on_process_shutdown");
 	SET_UINT_CONFIG2("default_app_file_descriptor_ulimit", "app_file_descriptor_ulimit");
@@ -574,7 +577,6 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	SET_UINT_CONFIG2("file_descriptor_ulimit", "core_file_descriptor_ulimit");
 	SET_BOOL_CONFIG2("security_update_checker_disabled", "disable_security_update_check");
 	SET_STR_CONFIG2("security_update_checker_proxy_url", "security_update_check_proxy");
-	SET_STR_CONFIG2("security_update_checker_web_server_version", "server_version");
 	SET_JSON_OBJECT_CONFIG("admin_panel_authentication");
 	SET_DOUBLE_CONFIG("admin_panel_close_timeout");
 	SET_DOUBLE_CONFIG("admin_panel_connect_timeout");

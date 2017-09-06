@@ -77,6 +77,10 @@
          "read_only" : true,
          "type" : "string"
       },
+      "web_server_version" : {
+         "read_only" : true,
+         "type" : "string"
+      },
       "websocketpp_debug_access" : {
          "default_value" : false,
          "has_default_value" : "static",
@@ -762,9 +766,6 @@
          "has_default_value" : "static",
          "type" : "string"
       },
-      "security_update_checker_web_server_version" : {
-         "type" : "string"
-      },
       "server_software" : {
          "default_value" : "Phusion_Passenger/5.1.9",
          "has_default_value" : "static",
@@ -823,6 +824,10 @@
          "type" : "string"
       },
       "web_server_module_version" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "web_server_version" : {
          "read_only" : true,
          "type" : "string"
       }

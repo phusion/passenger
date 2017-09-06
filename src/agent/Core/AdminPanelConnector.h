@@ -73,6 +73,7 @@ public:
 	 *   standalone_engine           string    -          -
 	 *   url                         string    required   -
 	 *   web_server_module_version   string    -          read_only
+	 *   web_server_version          string    -          read_only
 	 *   websocketpp_debug_access    boolean   -          default(false)
 	 *   websocketpp_debug_error     boolean   -          default(false)
 	 *
@@ -87,6 +88,7 @@ public:
 			add("integration_mode", STRING_TYPE, OPTIONAL, DEFAULT_INTEGRATION_MODE);
 			add("standalone_engine", STRING_TYPE, OPTIONAL);
 			add("instance_dir", STRING_TYPE, OPTIONAL | READ_ONLY);
+			add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);
 			add("web_server_module_version", STRING_TYPE, OPTIONAL | READ_ONLY);
 			add("ruby", STRING_TYPE, OPTIONAL, "ruby");
 
@@ -228,6 +230,7 @@ private:
 	}
 
 	bool onGetGlobalProperties(const ConnectionPtr &conn, const Json::Value &doc) {
+		const ConfigKit::Store &config = server.getConfig();
 		Json::Value reply, data;
 		reply["result"] = "ok";
 		reply["request_id"] = doc["request_id"];
@@ -236,7 +239,6 @@ private:
 		data["version"] = PASSENGER_VERSION;
 		data["core_pid"] = Json::UInt(getpid());
 
-		const ConfigKit::Store &config = server.getConfig();
 		string integrationMode = config["integration_mode"].asString();
 		data["integration_mode"]["name"] = integrationMode;
 		if (!config["web_server_module_version"].isNull()) {
@@ -244,6 +246,9 @@ private:
 		}
 		if (integrationMode == "standalone") {
 			data["integration_mode"]["standalone_engine"] = config["standalone_engine"];
+		}
+		if (!config["web_server_version"].isNull()) {
+			data["integration_mode"]["web_server_version"] = config["web_server_version"];
 		}
 
 		data["originally_packaged"] = resourceLocator->isOriginallyPackaged();
