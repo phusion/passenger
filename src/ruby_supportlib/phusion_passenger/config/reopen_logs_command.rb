@@ -71,7 +71,6 @@ module PhusionPassenger
       def perform_reopen_logs
         perform_reopen_logs_on("watchdog", "watchdog_api")
         perform_reinherit_logs_on("core", "core_api")
-        perform_reinherit_logs_on("UstRouter", "ust_router_api")
         if using_standalone_nginx_engine?
           perform_reopen_logs_on_nginx
         end

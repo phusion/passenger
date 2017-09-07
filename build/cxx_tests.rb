@@ -42,17 +42,12 @@ TEST_CXX_OBJECTS = {
   "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/SmartSpawnerTest.o" =>
     "test/cxx/Core/SpawningKit/SmartSpawnerTest.cpp",
 
-  "#{TEST_OUTPUT_DIR}cxx/Core/UnionStationTest.o" =>
-    "test/cxx/Core/UnionStationTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ResponseCacheTest.o" =>
     "test/cxx/Core/ResponseCacheTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/SecurityUpdateCheckerTest.o" =>
       "test/cxx/Core/SecurityUpdateCheckerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ControllerTest.o" =>
     "test/cxx/Core/ControllerTest.cpp",
-
-  "#{TEST_OUTPUT_DIR}cxx/UstRouter/TransactionTest.o" =>
-    "test/cxx/UstRouter/TransactionTest.cpp",
 
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/ChannelTest.o" =>
     "test/cxx/ServerKit/ChannelTest.cpp",

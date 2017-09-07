@@ -71,7 +71,6 @@
 #define DEFAULT_STICKY_SESSIONS_COOKIE_NAME "_passenger_route"
 #define DEFAULT_UNION_STATION_GATEWAY_ADDRESS "gateway.unionstationapp.com"
 #define DEFAULT_UNION_STATION_GATEWAY_PORT 443
-#define DEFAULT_UST_ROUTER_LISTEN_ADDRESS "tcp://127.0.0.1:9344"
 #define DEFAULT_WEB_APP_USER "nobody"
 #define ENTERPRISE_URL "https://www.phusionpassenger.com/enterprise"
 #define FEEDBACK_FD 3
