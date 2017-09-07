@@ -536,6 +536,8 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	SET_BOOL_CONFIG2("controller_cpu_affine", "core_cpu_affine");
 	SET_STR_CONFIG("web_server_module_version");
 	SET_STR_CONFIG2("web_server_version", "server_version");
+	SET_STR_CONFIG("instance_dir");
+	SET_STR_CONFIG("watchdog_fd_passing_password");
 
 	SET_BOOL_CONFIG2("default_abort_websockets_on_process_shutdown", "abort_websockets_on_process_shutdown");
 	SET_UINT_CONFIG2("default_app_file_descriptor_ulimit", "app_file_descriptor_ulimit");
