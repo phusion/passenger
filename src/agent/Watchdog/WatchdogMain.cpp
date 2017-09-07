@@ -65,6 +65,7 @@
 #include <Shared/Base.h>
 #include <Shared/ApiServerUtils.h>
 #include <Core/OptionParser.h>
+#include <Watchdog/Config.h>
 #include <Watchdog/ApiServer.h>
 #include <Constants.h>
 #include <InstanceDirectory.h>
@@ -150,6 +151,8 @@ namespace Watchdog {
 using namespace Passenger::Watchdog;
 
 static VariantMap *agentsOptions;
+static Schema *watchdogSchema;
+static ConfigKit::Store *watchdogConfig;
 static WorkingObjects *workingObjects;
 
 static void cleanup(const WorkingObjectsPtr &wo);
@@ -1259,8 +1262,10 @@ watchdogMain(int argc, char *argv[]) {
 	WorkingObjectsPtr wo;
 
 	initializeBareEssentials(argc, argv, wo);
+	Json::Value watchdogConfigDoc = prepareWatchdogConfigFromAgentsOptions(*agentsOptions);
 	setAgentsOptionsDefaults();
 	sanityCheckOptions();
+	createWatchdogConfigFromAgentsOptions(*agentsOptions, watchdogConfigDoc, &watchdogConfig, &watchdogSchema);
 	P_NOTICE("Starting " SHORT_PROGRAM_NAME " watchdog...");
 	P_DEBUG("Watchdog options: " << agentsOptions->inspect());
 	InstanceDirToucherPtr instanceDirToucher;
