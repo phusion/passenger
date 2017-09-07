@@ -94,7 +94,7 @@ module PhusionPassenger
           opts.on("-a", "--agent NAME", String, "The name of the socket to send the command#{nl}" +
             "to. This specifies which agent the request#{nl}" +
             "is sent to. Choices: watchdog_api,#{nl}" +
-            "core_api, ust_router_api.#{nl}" +
+            "core_api.#{nl}" +
             "Default: core_api") do |val|
             options[:agent_name] = val
           end
