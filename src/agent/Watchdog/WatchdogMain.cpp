@@ -120,6 +120,12 @@ namespace Watchdog {
 		vector<string> cleanupPidfiles;
 		bool pidsCleanedUp;
 		bool pidFileCleanedUp;
+		string corePidFile;
+		string fdPassingPassword;
+		string controllerSecureHeadersPassword;
+		Json::Value controllerAddresses;
+		Json::Value coreApiServerAddresses;
+		Json::Value coreApiServerAuthorizations;
 
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		BackgroundEventLoop *bgloop;
@@ -134,6 +140,9 @@ namespace Watchdog {
 			  startupReportFile(-1),
 			  pidsCleanedUp(false),
 			  pidFileCleanedUp(false),
+			  controllerAddresses(Json::arrayValue),
+			  coreApiServerAddresses(Json::arrayValue),
+			  coreApiServerAuthorizations(Json::arrayValue),
 			  bgloop(NULL),
 			  serverKitContext(NULL),
 			  apiServer(NULL)
@@ -980,43 +989,50 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 	}
 }
 
+static vector<string>
+jsonToStrSet(const Json::Value &doc) {
+	vector<string> result;
+	Json::Value::const_iterator it, end = doc.end();
+	for (it = doc.begin(); it != end; it++) {
+		result.push_back(it->asString());
+	}
+	return result;
+}
+
 static void
 initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceDirToucher,
 	uid_t uidBeforeLoweringPrivilege)
 {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
-	vector<string> strset;
+	Json::Value doc;
+	Json::Value::iterator it, end;
 
-	options.set("instance_registry_dir",
-		absolutizePath(options.get("instance_registry_dir")));
-	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos
-	 && options.get("server_software").find(FLYING_PASSENGER_NAME) == string::npos)
-	{
-		options.set("server_software", options.get("server_software") +
-			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
-	}
-
-	wo->resourceLocator = boost::make_shared<ResourceLocator>(agentsOptions->get("passenger_root"));
+	wo->resourceLocator = boost::make_shared<ResourceLocator>(
+		watchdogConfig->get("passenger_root").asString());
 
 	UPDATE_TRACE_POINT();
 	lookupDefaultUidGid(wo->defaultUid, wo->defaultGid);
-	wo->cleanupPidfiles = options.getStrSet("cleanup_pidfiles", false);
+
+	doc = watchdogConfig->get("pidfiles_to_delete_on_exit");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->cleanupPidfiles.push_back(it->asString());
+	}
 
 	UPDATE_TRACE_POINT();
 	InstanceDirectory::CreationOptions instanceOptions;
-	instanceOptions.userSwitching = options.getBool("user_switching");
+	instanceOptions.userSwitching = watchdogConfig->get("user_switching").asBool();
 	instanceOptions.originalUid = uidBeforeLoweringPrivilege;
 	instanceOptions.defaultUid = wo->defaultUid;
 	instanceOptions.defaultGid = wo->defaultGid;
 	instanceOptions.properties["name"] = wo->randomGenerator.generateAsciiString(8);
-	instanceOptions.properties["integration_mode"] = options.get("integration_mode");
-	instanceOptions.properties["server_software"] = options.get("server_software");
-	if (options.get("integration_mode") == "standalone") {
-		instanceOptions.properties["standalone_engine"] = options.get("standalone_engine");
+	instanceOptions.properties["integration_mode"] = watchdogConfig->get("integration_mode").asString();
+	instanceOptions.properties["server_software"] = watchdogConfig->get("server_software").asString();
+	if (watchdogConfig->get("integration_mode").asString() == "standalone") {
+		instanceOptions.properties["standalone_engine"] = watchdogConfig->get("standalone_engine").asString();
 	}
 	wo->instanceDir = boost::make_shared<InstanceDirectory>(instanceOptions,
-		options.get("instance_registry_dir"));
+		watchdogConfig->get("instance_registry_dir").asString());
 	options.set("instance_dir", wo->instanceDir->getPath());
 	instanceDirToucher = boost::make_shared<InstanceDirToucher>(wo);
 
@@ -1035,7 +1051,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	UPDATE_TRACE_POINT();
 	string readOnlyAdminPassword = wo->randomGenerator.generateAsciiString(24);
 	string fullAdminPassword = wo->randomGenerator.generateAsciiString(24);
-	if (geteuid() == 0 && !options.getBool("user_switching")) {
+	if (geteuid() == 0 && !watchdogConfig->get("user_switching").asBool()) {
 		createFile(wo->instanceDir->getPath() + "/read_only_admin_password.txt",
 			readOnlyAdminPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
 		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
@@ -1046,31 +1062,45 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
 			fullAdminPassword, S_IRUSR | S_IWUSR);
 	}
-	options.setDefault("core_pid_file", wo->instanceDir->getPath() + "/core.pid");
-	options.set("watchdog_fd_passing_password", wo->randomGenerator.generateAsciiString(24));
+
+	if (watchdogConfig->get("core_pid_file").isNull()) {
+		wo->corePidFile = wo->instanceDir->getPath() + "/core.pid";
+	} else {
+		wo->corePidFile = watchdogConfig->get("core_pid_file").asString();
+	}
+	options.set("core_pid_file", wo->corePidFile);
+	wo->fdPassingPassword = wo->randomGenerator.generateAsciiString(24);
 
 	UPDATE_TRACE_POINT();
-	strset = options.getStrSet("core_addresses", false);
-	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/core");
-	options.setStrSet("core_addresses", strset);
-	options.setDefault("core_password",
-		wo->randomGenerator.generateAsciiString(24));
+	wo->controllerAddresses.append("unix:" + wo->instanceDir->getPath() + "/agents.s/core");
+	doc = watchdogConfig->get("controller_addresses");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->controllerAddresses.append(*it);
+	}
+	options.setStrSet("core_addresses", jsonToStrSet(wo->controllerAddresses));
 
-	strset = options.getStrSet("core_api_addresses", false);
-	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/core_api");
-	options.setStrSet("core_api_addresses", strset);
+	wo->controllerSecureHeadersPassword = wo->randomGenerator.generateAsciiString(24);
+	options.set("core_password", wo->controllerSecureHeadersPassword);
+
+	wo->coreApiServerAddresses.append("unix:" + wo->instanceDir->getPath() + "/agents.s/core_api");
+	doc = watchdogConfig->get("core_api_server_addresses");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->coreApiServerAddresses.append(*it);
+	}
+	options.setStrSet("core_api_addresses", jsonToStrSet(wo->coreApiServerAddresses));
 
 	UPDATE_TRACE_POINT();
-	strset = options.getStrSet("core_authorizations", false);
-	strset.insert(strset.begin(),
+	wo->coreApiServerAuthorizations.append(
 		"readonly:ro_admin:" + wo->instanceDir->getPath() +
 		"/read_only_admin_password.txt");
-	strset.insert(strset.begin(),
+	wo->coreApiServerAuthorizations.append(
 		"full:admin:" + wo->instanceDir->getPath() +
 		"/full_admin_password.txt");
-	options.setStrSet("core_authorizations", strset);
+	doc = watchdogConfig->get("core_api_server_authorizations");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->coreApiServerAuthorizations.append(*it);
+	}
+	options.setStrSet("core_authorizations", jsonToStrSet(wo->coreApiServerAuthorizations));
 }
 
 static void
@@ -1139,7 +1169,7 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 
 	UPDATE_TRACE_POINT();
 	Json::Value apiServerConfig;
-	apiServerConfig["fd_passing_password"] = options.get("watchdog_fd_passing_password");
+	apiServerConfig["fd_passing_password"] = wo->fdPassingPassword;
 	apiServerConfig["authorizations"] = authorizationsJson;
 	wo->apiServer = new ApiServer::ApiServer(wo->serverKitContext, wo->apiServerSchema,
 		apiServerConfig, ConfigKit::DummyTranslator());
