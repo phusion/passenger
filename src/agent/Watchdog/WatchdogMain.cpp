@@ -115,7 +115,7 @@ namespace Watchdog {
 		uid_t defaultUid;
 		gid_t defaultGid;
 		InstanceDirectoryPtr instanceDir;
-		int reportFile;
+		int startupReportFile;
 		int lockFile;
 		vector<string> cleanupPidfiles;
 		bool pidsCleanedUp;
@@ -131,7 +131,7 @@ namespace Watchdog {
 		WorkingObjects()
 			: errorEvent(__FILE__, __LINE__, "WorkingObjects: errorEvent"),
 			  exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
-			  reportFile(-1),
+			  startupReportFile(-1),
 			  pidsCleanedUp(false),
 			  pidFileCleanedUp(false),
 			  bgloop(NULL),
@@ -380,9 +380,9 @@ killCleanupPids(const WorkingObjectsPtr &wo) {
 
 static void
 deletePidFile(const WorkingObjectsPtr &wo) {
-	string pidFile = agentsOptions->get("pid_file", false);
-	if (!pidFile.empty() && !wo->pidFileCleanedUp && agentsOptions->getBool("delete_pid_file")) {
-		syscalls::unlink(pidFile.c_str());
+	Json::Value pidFile = watchdogConfig->get("watchdog_pid_file");
+	if (!pidFile.isNull() && !wo->pidFileCleanedUp && watchdogConfig->get("watchdog_pid_file_autodelete").asBool()) {
+		syscalls::unlink(pidFile.asCString());
 		wo->pidFileCleanedUp = true;
 	}
 }
@@ -888,18 +888,19 @@ createPidFile() {
 }
 
 static void
-openReportFile(const WorkingObjectsPtr &wo) {
+openStartupReportFile(const WorkingObjectsPtr &wo) {
 	TRACE_POINT();
-	string reportFile = agentsOptions->get("report_file", false);
-	if (!reportFile.empty()) {
-		int fd = syscalls::open(reportFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	Json::Value path = watchdogConfig->get("startup_report_file");
+	if (!path.isNull()) {
+		int fd = syscalls::open(path.asCString(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
 		if (fd == -1) {
 			int e = errno;
-			throw FileSystemException("Cannot open report file " + reportFile, e, reportFile);
+			throw FileSystemException("Cannot open report file " + path.asString(),
+				e, path.asString());
 		}
 
-		P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, "WorkingObjects: reportFile");
-		wo->reportFile = fd;
+		P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, "WorkingObjects: startupReportFile");
+		wo->startupReportFile = fd;
 	}
 }
 
@@ -1213,7 +1214,7 @@ reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPt
 		report.writeToFd(FEEDBACK_FD, "Agents information");
 	}
 
-	if (wo->reportFile != -1) {
+	if (wo->startupReportFile != -1) {
 		Json::Value doc;
 		VariantMap::ConstIterator it;
 		string str;
@@ -1223,10 +1224,10 @@ reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPt
 		}
 		str = doc.toStyledString();
 
-		writeExact(wo->reportFile, str.data(), str.size());
-		close(wo->reportFile);
-		P_LOG_FILE_DESCRIPTOR_CLOSE(wo->reportFile);
-		wo->reportFile = -1;
+		writeExact(wo->startupReportFile, str.data(), str.size());
+		close(wo->startupReportFile);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(wo->startupReportFile);
+		wo->startupReportFile = -1;
 	}
 }
 
@@ -1277,7 +1278,7 @@ watchdogMain(int argc, char *argv[]) {
 		maybeSetsid();
 		maybeDaemonize();
 		createPidFile();
-		openReportFile(wo);
+		openStartupReportFile(wo);
 		chdirToTmpDir();
 		lowerPrivilege();
 		initializeWorkingObjects(wo, instanceDirToucher, uidBeforeLoweringPrivilege);
