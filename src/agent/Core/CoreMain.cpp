@@ -139,7 +139,6 @@ namespace Core {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		string controllerSecureHeadersPassword;
-		ApiAccountDatabase apiAccountDatabase;
 
 		boost::mutex configSyncher;
 
