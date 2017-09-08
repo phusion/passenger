@@ -77,6 +77,7 @@ using namespace std;
  *   admin_panel_websocketpp_debug_error                             boolean            -          default(false)
  *   api_server_accept_burst_count                                   unsigned integer   -          default(32)
  *   api_server_addresses                                            array of strings   -          default([]),read_only
+ *   api_server_authorizations                                       array              -          default("[FILTERED]"),secret
  *   api_server_client_freelist_limit                                unsigned integer   -          default(0)
  *   api_server_file_buffered_channel_auto_start_mover               boolean            -          default(true)
  *   api_server_file_buffered_channel_auto_truncate_file             boolean            -          default(true)
@@ -89,7 +90,6 @@ using namespace std;
  *   api_server_request_freelist_limit                               unsigned integer   -          default(1024)
  *   api_server_start_reading_after_accept                           boolean            -          default(true)
  *   app_output_log_level                                            string             -          default("notice")
- *   authorizations                                                  array              -          default("[FILTERED]"),secret
  *   benchmark_mode                                                  string             -          -
  *   controller_accept_burst_count                                   unsigned integer   -          default(32)
  *   controller_addresses                                            array of strings   -          default(["tcp://127.0.0.1:3000"]),read_only
@@ -104,6 +104,7 @@ using namespace std;
  *   controller_mbuf_block_chunk_size                                unsigned integer   -          default(4096),read_only
  *   controller_min_spare_clients                                    unsigned integer   -          default(0)
  *   controller_request_freelist_limit                               unsigned integer   -          default(1024)
+ *   controller_secure_headers_password                              any                -          secret
  *   controller_socket_backlog                                       unsigned integer   -          default(2048),read_only
  *   controller_start_reading_after_accept                           boolean            -          default(true)
  *   controller_threads                                              unsigned integer   -          default,read_only
@@ -138,7 +139,6 @@ using namespace std;
  *   max_pool_size                                                   unsigned integer   -          default(6)
  *   multi_app                                                       boolean            -          default(false),read_only
  *   passenger_root                                                  string             required   read_only
- *   password                                                        any                -          secret
  *   pid_file                                                        string             -          read_only
  *   pool_idle_time                                                  unsigned integer   -          default(300)
  *   pool_selfchecks                                                 boolean            -          default(false)
@@ -259,24 +259,24 @@ private:
 		ControllerSingleAppModeSchema::validateAppType("single_app_mode_app_type", config, errors);
 	}
 
-	static void validatePassword(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+	static void validateControllerSecureHeadersPassword(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
 		typedef ConfigKit::Error Error;
 
-		Json::Value password = config["password"];
+		Json::Value password = config["controller_secure_headers_password"];
 		if (password.isNull()) {
 			return;
 		}
 
 		if (!password.isString() && !password.isObject()) {
-			errors.push_back(Error("'{{password}}' must be a string or an object"));
+			errors.push_back(Error("'{{controller_secure_headers_password}}' must be a string or an object"));
 			return;
 		}
 
 		if (password.isObject()) {
 			if (!password.isMember("path")) {
-				errors.push_back(Error("If '{{password}}' is an object, then it must contain a 'path' option"));
+				errors.push_back(Error("If '{{controller_secure_headers_password}}' is an object, then it must contain a 'path' option"));
 			} else if (!password["path"].isString()) {
-				errors.push_back(Error("If '{{password}}' is an object, then its 'path' option must be a string"));
+				errors.push_back(Error("If '{{controller_secure_headers_password}}' is an object, then its 'path' option must be a string"));
 			}
 		}
 	}
@@ -418,7 +418,7 @@ public:
 		erase("security_update_checker_web_server_version");
 
 		// Add subschema: apiServer
-		apiServer.translator.add("watchdog_fd_passing_password", "fd_passing_password");
+		apiServer.translator.add("api_server_authorizations", "authorizations");
 		addSubSchemaPrefixTranslations<ServerKit::HttpServerSchema>(
 			apiServer.translator, "api_server_");
 		apiServer.translator.finalize();
@@ -446,13 +446,13 @@ public:
 
 		add("passenger_root", STRING_TYPE, REQUIRED | READ_ONLY);
 		add("pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
-		add("password", ANY_TYPE, OPTIONAL | SECRET);
 		add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);
 		addWithDynamicDefault("controller_threads", UINT_TYPE, OPTIONAL | READ_ONLY, getDefaultThreads);
 		add("max_pool_size", UINT_TYPE, OPTIONAL, DEFAULT_MAX_POOL_SIZE);
 		add("pool_idle_time", UINT_TYPE, OPTIONAL, Json::UInt(DEFAULT_POOL_IDLE_TIME));
 		add("pool_selfchecks", BOOL_TYPE, OPTIONAL, false);
 		add("prestart_urls", STRING_ARRAY_TYPE, OPTIONAL | READ_ONLY, Json::arrayValue);
+		add("controller_secure_headers_password", ANY_TYPE, OPTIONAL | SECRET);
 		add("controller_socket_backlog", UINT_TYPE, OPTIONAL | READ_ONLY, DEFAULT_SOCKET_BACKLOG);
 		add("controller_addresses", STRING_ARRAY_TYPE, OPTIONAL | READ_ONLY, getDefaultControllerAddresses());
 		add("api_server_addresses", STRING_ARRAY_TYPE, OPTIONAL | READ_ONLY, Json::arrayValue);
@@ -461,7 +461,7 @@ public:
 
 		addValidator(validateMultiAppMode);
 		addValidator(validateSingleAppMode);
-		addValidator(validatePassword);
+		addValidator(validateControllerSecureHeadersPassword);
 		addValidator(validateApplicationPool);
 		addValidator(validateController);
 		addValidator(validateAddresses);
@@ -600,10 +600,10 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 
 	if (options.has("core_password")) {
 		if (options.get("core_password") != "-") {
-			config["password"] = options.get("core_password");
+			config["controller_secure_headers_password"] = options.get("core_password");
 		}
 	} else if (options.has("core_password_file")) {
-		config["password"]["path"] = absolutizePath(
+		config["controller_secure_headers_password"]["path"] = absolutizePath(
 			options.get("core_password_file"));
 	}
 
@@ -628,7 +628,7 @@ prepareCoreConfigFromAgentsOptions(const VariantMap &options) {
 	if (options.has("core_authorizations")) {
 		vector<string> authorizations = options.getStrSet("core_authorizations");
 		foreach (string description, authorizations) {
-			config["authorizations"].append(ApiAccountUtils::parseApiAccountDescription(
+			config["api_server_authorizations"].append(ApiAccountUtils::parseApiAccountDescription(
 				description));
 		}
 	}

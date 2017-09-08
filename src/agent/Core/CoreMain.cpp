@@ -138,7 +138,7 @@ namespace Core {
 	struct WorkingObjects {
 		int serverFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
-		string password;
+		string controllerSecureHeadersPassword;
 		ApiAccountDatabase apiAccountDatabase;
 
 		boost::mutex configSyncher;
@@ -236,11 +236,11 @@ initializePrivilegedWorkingObjects() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects = new WorkingObjects();
 
-	Json::Value password = coreConfig->get("password");
+	Json::Value password = coreConfig->get("controller_secure_headers_password");
 	if (password.isString()) {
-		wo->password = password.asString();
+		wo->controllerSecureHeadersPassword = password.asString();
 	} else if (password.isObject()) {
-		wo->password = strip(readAll(password["path"].asString()));
+		wo->controllerSecureHeadersPassword = strip(readAll(password["path"].asString()));
 	}
 }
 
@@ -697,7 +697,7 @@ initializeNonPrivilegedWorkingObjects() {
 		ThreadWorkingObjects two;
 
 		Json::Value contextConfig = coreConfig->inspectEffectiveValues();
-		contextConfig["secure_mode_password"] = wo->password;
+		contextConfig["secure_mode_password"] = wo->controllerSecureHeadersPassword;
 
 		Json::Value controllerConfig = coreConfig->inspectEffectiveValues();
 		controllerConfig["thread_number"] = i + 1;
@@ -749,7 +749,6 @@ initializeNonPrivilegedWorkingObjects() {
 		ApiWorkingObjects *awo = &wo->apiWorkingObjects;
 
 		Json::Value contextConfig = coreConfig->inspectEffectiveValues();
-		contextConfig["secure_mode_password"] = wo->password;
 
 		awo->bgloop = new BackgroundEventLoop(true, true);
 		awo->serverKitContext = new ServerKit::Context(

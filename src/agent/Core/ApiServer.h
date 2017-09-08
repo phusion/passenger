@@ -66,14 +66,14 @@ using namespace std;
  * (do not edit: following text is automatically generated
  * by 'rake configkit_schemas_inline_comments')
  *
- *   accept_burst_count           unsigned integer   -   default(32)
- *   authorizations               array              -   default("[FILTERED]"),secret
- *   client_freelist_limit        unsigned integer   -   default(0)
- *   fd_passing_password          string             -   secret
- *   instance_dir                 string             -   -
- *   min_spare_clients            unsigned integer   -   default(0)
- *   request_freelist_limit       unsigned integer   -   default(1024)
- *   start_reading_after_accept   boolean            -   default(true)
+ *   accept_burst_count             unsigned integer   -   default(32)
+ *   authorizations                 array              -   default("[FILTERED]"),secret
+ *   client_freelist_limit          unsigned integer   -   default(0)
+ *   instance_dir                   string             -   -
+ *   min_spare_clients              unsigned integer   -   default(0)
+ *   request_freelist_limit         unsigned integer   -   default(1024)
+ *   start_reading_after_accept     boolean            -   default(true)
+ *   watchdog_fd_passing_password   string             -   secret
  *
  * END
  */
@@ -93,7 +93,7 @@ public:
 		using namespace ConfigKit;
 
 		add("instance_dir", STRING_TYPE, OPTIONAL);
-		add("fd_passing_password", STRING_TYPE, OPTIONAL | SECRET);
+		add("watchdog_fd_passing_password", STRING_TYPE, OPTIONAL | SECRET);
 		add("authorizations", ARRAY_TYPE, OPTIONAL | SECRET, Json::arrayValue);
 
 		addValidator(boost::bind(ApiAccountUtils::validateAuthorizationsField,
@@ -185,7 +185,7 @@ private:
 		} else if (path == P_STATIC_STRING("/reinherit_logs.json")) {
 			apiServerProcessReinheritLogs(this, client, req,
 				config["instance_dir"].asString(),
-				config["fd_passing_password"].asString());
+				config["watchdog_fd_passing_password"].asString());
 		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
 			apiServerProcessReopenLogs(this, client, req);
 		} else {

@@ -109,10 +109,6 @@
          "has_default_value" : "static",
          "type" : "unsigned integer"
       },
-      "fd_passing_password" : {
-         "secret" : true,
-         "type" : "string"
-      },
       "instance_dir" : {
          "type" : "string"
       },
@@ -130,6 +126,10 @@
          "default_value" : true,
          "has_default_value" : "static",
          "type" : "boolean"
+      },
+      "watchdog_fd_passing_password" : {
+         "secret" : true,
+         "type" : "string"
       }
    },
    "Passenger::Core::ControllerSchema" : {
@@ -415,6 +415,12 @@
          "read_only" : true,
          "type" : "array of strings"
       },
+      "api_server_authorizations" : {
+         "default_value" : "[FILTERED]",
+         "has_default_value" : "static",
+         "secret" : true,
+         "type" : "array"
+      },
       "api_server_client_freelist_limit" : {
          "default_value" : 0,
          "has_default_value" : "static",
@@ -474,12 +480,6 @@
          "default_value" : "notice",
          "has_default_value" : "static",
          "type" : "string"
-      },
-      "authorizations" : {
-         "default_value" : "[FILTERED]",
-         "has_default_value" : "static",
-         "secret" : true,
-         "type" : "array"
       },
       "benchmark_mode" : {
          "type" : "string"
@@ -550,6 +550,10 @@
          "default_value" : 1024,
          "has_default_value" : "static",
          "type" : "unsigned integer"
+      },
+      "controller_secure_headers_password" : {
+         "secret" : true,
+         "type" : "any"
       },
       "controller_socket_backlog" : {
          "default_value" : 2048,
@@ -715,10 +719,6 @@
          "read_only" : true,
          "required" : true,
          "type" : "string"
-      },
-      "password" : {
-         "secret" : true,
-         "type" : "any"
       },
       "pid_file" : {
          "read_only" : true,
@@ -977,6 +977,44 @@
       "secure_mode_password" : {
          "secret" : true,
          "type" : "string"
+      }
+   },
+   "Passenger::Watchdog::ApiServer::Schema" : {
+      "accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "authorizations" : {
+         "default_value" : "[FILTERED]",
+         "has_default_value" : "static",
+         "secret" : true,
+         "type" : "array"
+      },
+      "client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "fd_passing_password" : {
+         "required" : true,
+         "secret" : true,
+         "type" : "string"
+      },
+      "min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
       }
    },
    "Passenger::WebSocketCommandReverseServer::Schema" : {
