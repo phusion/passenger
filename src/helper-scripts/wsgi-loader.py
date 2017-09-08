@@ -23,7 +23,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-import sys, os, re, imp, threading, signal, traceback, socket, select, struct, logging, errno
+import sys, os, re, imp, threading, signal, traceback, socket, select, struct, logging, errno, types
 import tempfile
 
 options = {}
@@ -219,10 +219,16 @@ class RequestHandler:
 	
 	if hasattr(socket, '_fileobject'):
 		def wrap_input_socket(self, sock):
-			return socket._fileobject(sock, 'rb', 512)
+			socket = socket._fileobject(sock, 'rb', 512)
+			socket._reuse = types.MethodType( sock._reuse, sock )
+			socket._drop  = types.MethodType( sock._drop, sock )
+			return socket
 	else:
 		def wrap_input_socket(self, sock):
-			return socket.socket.makefile(sock, 'rb', 512)
+			socket = socket.socket.makefile(sock, 'rb', 512)
+			socket._reuse = types.MethodType( sock._reuse, sock )
+			socket._drop  = types.MethodType( sock._drop, sock )
+			return socket
 
 	def process_request(self, env, input_stream, output_stream):
 		# The WSGI specification says that the input parameter object passed needs to
