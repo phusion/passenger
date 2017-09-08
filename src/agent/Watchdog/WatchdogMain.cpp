@@ -126,12 +126,13 @@ namespace Watchdog {
 		Json::Value controllerAddresses;
 		Json::Value coreApiServerAddresses;
 		Json::Value coreApiServerAuthorizations;
+		Json::Value watchdogApiServerAddresses;
+		Json::Value watchdogApiServerAuthorizations;
 
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
 		ServerKit::Schema serverKitSchema;
-		ApiServer::Schema apiServerSchema;
 		ApiServer::ApiServer *apiServer;
 
 		WorkingObjects()
@@ -143,6 +144,8 @@ namespace Watchdog {
 			  controllerAddresses(Json::arrayValue),
 			  coreApiServerAddresses(Json::arrayValue),
 			  coreApiServerAuthorizations(Json::arrayValue),
+			  watchdogApiServerAddresses(Json::arrayValue),
+			  watchdogApiServerAuthorizations(Json::arrayValue),
 			  bgloop(NULL),
 			  serverKitContext(NULL),
 			  apiServer(NULL)
@@ -1122,60 +1125,68 @@ static void
 initializeApiServer(const WorkingObjectsPtr &wo) {
 	TRACE_POINT();
 	VariantMap &options = *agentsOptions;
-	vector<string> authorizations = options.getStrSet("watchdog_authorizations", false);
+	Json::Value doc;
+	Json::Value::iterator it;
 	vector<string> apiAddresses = options.getStrSet("watchdog_api_addresses", false);
-	Json::Value authorizationsJson(Json::arrayValue);
 	string description;
 
 	UPDATE_TRACE_POINT();
-	authorizations.insert(authorizations.begin(),
+	wo->watchdogApiServerAuthorizations.append(
 		"readonly:ro_admin:" + wo->instanceDir->getPath() +
 		"/read_only_admin_password.txt");
-	authorizations.insert(authorizations.begin(),
+	wo->watchdogApiServerAuthorizations.append(
 		"full:admin:" + wo->instanceDir->getPath() +
 		"/full_admin_password.txt");
-	options.setStrSet("watchdog_authorizations", authorizations);
-
-	foreach (description, authorizations) {
-		authorizationsJson.append(description);
+	doc = watchdogConfig->get("watchdog_api_server_authorizations");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->watchdogApiServerAuthorizations.append(*it);
 	}
+	options.setStrSet("watchdog_authorizations", jsonToStrSet(wo->watchdogApiServerAuthorizations));
 
 	UPDATE_TRACE_POINT();
-	apiAddresses.insert(apiAddresses.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/watchdog_api");
-	options.setStrSet("watchdog_api_addresses", apiAddresses);
+	wo->watchdogApiServerAddresses.append(
+		"unix:" + wo->instanceDir->getPath() +
+		"/agents.s/watchdog_api");
+	doc = watchdogConfig->get("watchdog_api_server_addresses");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->watchdogApiServerAddresses.append(*it);
+	}
+	options.setStrSet("watchdog_api_addresses", jsonToStrSet(wo->watchdogApiServerAddresses));
 
 	UPDATE_TRACE_POINT();
-	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
-		P_DEBUG("API server will listen on " << apiAddresses[i]);
-		wo->apiServerFds[i] = createServer(apiAddresses[i], 0, true,
+	for (unsigned int i = 0; i < wo->watchdogApiServerAddresses.size(); i++) {
+		string address = wo->watchdogApiServerAddresses[i].asString();
+		P_DEBUG("API server will listen on " << address);
+		wo->apiServerFds[i] = createServer(address, 0, true,
 			__FILE__, __LINE__);
-		if (getSocketAddressType(apiAddresses[i]) == SAT_UNIX) {
-			makeFileWorldReadableAndWritable(parseUnixSocketAddress(apiAddresses[i]));
+		if (getSocketAddressType(address) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 		}
 	}
 
 	UPDATE_TRACE_POINT();
-	Json::Value contextConfig;
-	contextConfig["file_buffered_channel_buffer_dir"] =
-		absolutizePath(options.get("data_buffer_dir"));
-
+	Json::Value contextConfig = watchdogConfig->inspectEffectiveValues();
 	wo->bgloop = new BackgroundEventLoop(true, true);
 	wo->serverKitContext = new ServerKit::Context(
-		wo->serverKitSchema, contextConfig);
+		watchdogSchema->apiServerKit.schema,
+		contextConfig,
+		watchdogSchema->apiServerKit.translator);
 	wo->serverKitContext->libev = wo->bgloop->safe;
 	wo->serverKitContext->libuv = wo->bgloop->libuv_loop;
 	wo->serverKitContext->initialize();
 
 	UPDATE_TRACE_POINT();
-	Json::Value apiServerConfig;
+	Json::Value apiServerConfig = watchdogConfig->inspectEffectiveValues();
 	apiServerConfig["fd_passing_password"] = wo->fdPassingPassword;
-	apiServerConfig["authorizations"] = authorizationsJson;
-	wo->apiServer = new ApiServer::ApiServer(wo->serverKitContext, wo->apiServerSchema,
-		apiServerConfig, ConfigKit::DummyTranslator());
+	apiServerConfig["authorizations"] = wo->watchdogApiServerAuthorizations;
+	wo->apiServer = new ApiServer::ApiServer(
+		wo->serverKitContext,
+		watchdogSchema->apiServer.schema,
+		apiServerConfig,
+		watchdogSchema->apiServer.translator);
 	wo->apiServer->exitEvent = &wo->exitEvent;
 	wo->apiServer->initialize();
-	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
+	for (unsigned int i = 0; i < wo->watchdogApiServerAddresses.size(); i++) {
 		wo->apiServer->listen(wo->apiServerFds[i]);
 	}
 }
