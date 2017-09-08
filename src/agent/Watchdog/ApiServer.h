@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_WATCHDOG_AGENT_API_SERVER_H_
-#define _PASSENGER_WATCHDOG_AGENT_API_SERVER_H_
+#ifndef _PASSENGER_WATCHDOG_API_SERVER_H_
+#define _PASSENGER_WATCHDOG_API_SERVER_H_
 
 #include <string>
 #include <exception>
@@ -33,6 +33,7 @@
 #include <modp_b64.h>
 
 #include <Shared/ApiServerUtils.h>
+#include <Shared/ApiAccountUtils.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
 #include <Exceptions.h>
@@ -43,10 +44,58 @@
 #include <Utils/MessageIO.h>
 
 namespace Passenger {
-namespace WatchdogAgent {
+namespace Watchdog {
+namespace ApiServer {
 
 using namespace std;
 
+
+/*
+ * BEGIN ConfigKit schema: Passenger::Watchdog::ApiServer::Schema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   accept_burst_count           unsigned integer   -          default(32)
+ *   authorizations               array              -          default("[FILTERED]"),secret
+ *   client_freelist_limit        unsigned integer   -          default(0)
+ *   fd_passing_password          string             required   secret
+ *   min_spare_clients            unsigned integer   -          default(0)
+ *   request_freelist_limit       unsigned integer   -          default(1024)
+ *   start_reading_after_accept   boolean            -          default(true)
+ *
+ * END
+ */
+class Schema: public ServerKit::HttpServerSchema {
+private:
+	static Json::Value normalizeAuthorizations(const Json::Value &effectiveValues) {
+		Json::Value updates;
+		updates["authorizations"] = ApiAccountUtils::normalizeApiAccountsJson(
+			effectiveValues["authorizations"]);
+		return updates;
+	}
+
+public:
+	Schema()
+		: ServerKit::HttpServerSchema(false)
+	{
+		using namespace ConfigKit;
+
+		add("fd_passing_password", STRING_TYPE, REQUIRED | SECRET);
+		add("authorizations", ARRAY_TYPE, OPTIONAL | SECRET, Json::arrayValue);
+
+		addValidator(boost::bind(ApiAccountUtils::validateAuthorizationsField,
+			"authorizations", boost::placeholders::_1, boost::placeholders::_2));
+
+		addNormalizer(normalizeAuthorizations);
+
+		finalize();
+	}
+};
+
+struct ConfigChangeRequest {
+	ServerKit::HttpServerConfigChangeRequest forParent;
+	boost::scoped_ptr<ApiAccountUtils::ApiAccountDatabase> apiAccountDatabase;
+};
 
 class Request: public ServerKit::BaseHttpRequest {
 public:
@@ -57,10 +106,15 @@ public:
 };
 
 class ApiServer: public ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > {
-private:
+public:
 	typedef ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
+
+	typedef Passenger::Watchdog::ApiServer::ConfigChangeRequest ConfigChangeRequest;
+
+private:
+	ApiAccountUtils::ApiAccountDatabase apiAccountDatabase;
 
 	void route(Client *client, Request *req, const StaticString &path) {
 		if (path == P_STATIC_STRING("/status.txt")) {
@@ -180,7 +234,7 @@ private:
 
 		password = psg_lstr_make_contiguous(password, req->pool);
 		return constantTimeCompare(StaticString(password->start->data, password->size),
-			fdPassingPassword);
+			config["fd_passing_password"].asString());
 	}
 
 	void processConfigLogFileFd(Client *client, Request *req) {
@@ -273,18 +327,27 @@ protected:
 	}
 
 public:
-	typedef Passenger::ApiAccount ApiAccount;
+	typedef ApiAccountUtils::ApiAccount ApiAccount;
 
-	ApiAccountDatabase *apiAccountDatabase;
+	// Dependencies
 	EventFd *exitEvent;
-	string fdPassingPassword;
 
-	ApiServer(ServerKit::Context *context, const ServerKit::HttpServerSchema &schema,
-		const Json::Value &initialConfig = Json::Value())
-		: ParentClass(context, schema, initialConfig),
-		  apiAccountDatabase(NULL),
+	template<typename Translator>
+	ApiServer(ServerKit::Context *context, const Schema &schema,
+		const Json::Value &initialConfig, const Translator &translator)
+		: ParentClass(context, schema, initialConfig, translator),
 		  exitEvent(NULL)
-		{ }
+	{
+		apiAccountDatabase = ApiAccountUtils::ApiAccountDatabase(
+			config["authorizations"]);
+	}
+
+	virtual void initialize() {
+		if (exitEvent == NULL) {
+			throw RuntimeException("exitEvent must be non-NULL");
+		}
+		ParentClass::initialize();
+	}
 
 	virtual StaticString getServerName() const {
 		return P_STATIC_STRING("WatchdogApiServer");
@@ -294,8 +357,8 @@ public:
 		return ParentClass::getClientName(client, buf, size);
 	}
 
-	const ApiAccountDatabase &getApiAccountDatabase() const {
-		return *apiAccountDatabase;
+	const ApiAccountUtils::ApiAccountDatabase &getApiAccountDatabase() const {
+		return apiAccountDatabase;
 	}
 
 	bool authorizeByUid(uid_t uid) const {
@@ -305,10 +368,27 @@ public:
 	bool authorizeByApiKey(const ApplicationPool2::ApiKey &apiKey) const {
 		return apiKey.isSuper();
 	}
+
+
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, ConfigChangeRequest &req)
+	{
+		if (ParentClass::prepareConfigChange(updates, errors, req.forParent)) {
+			req.apiAccountDatabase.reset(new ApiAccountUtils::ApiAccountDatabase(
+				req.forParent.forParent.config->get("authorizations")));
+		}
+		return errors.empty();
+	}
+
+	void commitConfigChange(ConfigChangeRequest &req) BOOST_NOEXCEPT_OR_NOTHROW {
+		ParentClass::commitConfigChange(req.forParent);
+		apiAccountDatabase.swap(*req.apiAccountDatabase);
+	}
 };
 
 
-} // namespace WatchdogAgent
+} // namespace ApiServer
+} // namespace Watchdog
 } // namespace Passenger
 
-#endif /* _PASSENGER_WATCHDOG_AGENT_API_SERVER_H_ */
+#endif /* _PASSENGER_WATCHDOG_API_SERVER_H_ */

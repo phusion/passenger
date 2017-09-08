@@ -105,7 +105,7 @@ class AgentWatcher;
 /***** Working objects *****/
 
 namespace Passenger {
-namespace WatchdogAgent {
+namespace Watchdog {
 	struct WorkingObjects {
 		RandomGenerator randomGenerator;
 		EventFd errorEvent;
@@ -120,13 +120,12 @@ namespace WatchdogAgent {
 		bool pidsCleanedUp;
 		bool pidFileCleanedUp;
 
-		ApiAccountDatabase apiAccountDatabase;
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
 		ServerKit::Schema serverKitSchema;
-		ServerKit::HttpServerSchema apiServerSchema;
-		ApiServer *apiServer;
+		ApiServer::Schema apiServerSchema;
+		ApiServer::ApiServer *apiServer;
 
 		WorkingObjects()
 			: errorEvent(__FILE__, __LINE__, "WorkingObjects: errorEvent"),
@@ -145,10 +144,10 @@ namespace WatchdogAgent {
 	};
 
 	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
-} // namespace WatchdogAgent
+} // namespace Watchdog
 } // namespace Passenger
 
-using namespace Passenger::WatchdogAgent;
+using namespace Passenger::Watchdog;
 
 static VariantMap *agentsOptions;
 static WorkingObjects *workingObjects;
@@ -1092,6 +1091,7 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 	VariantMap &options = *agentsOptions;
 	vector<string> authorizations = options.getStrSet("watchdog_authorizations", false);
 	vector<string> apiAddresses = options.getStrSet("watchdog_api_addresses", false);
+	Json::Value authorizationsJson(Json::arrayValue);
 	string description;
 
 	UPDATE_TRACE_POINT();
@@ -1104,11 +1104,7 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 	options.setStrSet("watchdog_authorizations", authorizations);
 
 	foreach (description, authorizations) {
-		try {
-			wo->apiAccountDatabase.add(description);
-		} catch (const ArgumentException &e) {
-			throw std::runtime_error(e.what());
-		}
+		authorizationsJson.append(description);
 	}
 
 	UPDATE_TRACE_POINT();
@@ -1139,10 +1135,12 @@ initializeApiServer(const WorkingObjectsPtr &wo) {
 	wo->serverKitContext->initialize();
 
 	UPDATE_TRACE_POINT();
-	wo->apiServer = new ApiServer(wo->serverKitContext, wo->apiServerSchema);
-	wo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
+	Json::Value apiServerConfig;
+	apiServerConfig["fd_passing_password"] = options.get("watchdog_fd_passing_password");
+	apiServerConfig["authorizations"] = authorizationsJson;
+	wo->apiServer = new ApiServer::ApiServer(wo->serverKitContext, wo->apiServerSchema,
+		apiServerConfig, ConfigKit::DummyTranslator());
 	wo->apiServer->exitEvent = &wo->exitEvent;
-	wo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password");
 	wo->apiServer->initialize();
 	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
 		wo->apiServer->listen(wo->apiServerFds[i]);

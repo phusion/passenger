@@ -46,6 +46,7 @@
 #include <Core/Config.h>
 #include <Core/Controller/Config.h>
 #include <Core/SecurityUpdateChecker.h>
+#include <Watchdog/ApiServer.h>
 #include <LoggingKit/Config.h>
 #include <ServerKit/Config.h>
 #include <ServerKit/HttpServer.h>
@@ -66,6 +67,7 @@ main(int argc, char *argv[]) {
 	doc["Passenger::ServerKit::BaseServerSchema"] = Passenger::ServerKit::BaseServerSchema().inspect();
 	doc["Passenger::ServerKit::HttpServerSchema"] = Passenger::ServerKit::HttpServerSchema().inspect();
 	doc["Passenger::ServerKit::Schema"] = Passenger::ServerKit::Schema().inspect();
+	doc["Passenger::Watchdog::ApiServer::Schema"] = Passenger::Watchdog::ApiServer::Schema().inspect();
 	doc["Passenger::WebSocketCommandReverseServer::Schema"] = Passenger::WebSocketCommandReverseServer::Schema().inspect();
 
 	std::cout << doc.toStyledString() << std::endl;
