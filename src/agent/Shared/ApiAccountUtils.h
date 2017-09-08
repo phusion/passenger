@@ -186,14 +186,18 @@ validateAuthorizationsField(const string &key, const ConfigKit::Store &config,
  */
 inline Json::Value
 normalizeApiAccountJson(const Json::Value &json) {
-	Json::Value doc = json;
-	if (json.isMember("password_file")) {
-		doc["password_file"] = absolutizePath(json["password_file"].asString());
+	if (json.isString()) {
+		return parseApiAccountDescription(json.asString());
+	} else {
+		Json::Value doc = json;
+		if (json.isMember("password_file")) {
+			doc["password_file"] = absolutizePath(json["password_file"].asString());
+		}
+		if (!json.isMember("level")) {
+			doc["level"] = "full";
+		}
+		return doc;
 	}
-	if (!json.isMember("level")) {
-		doc["level"] = "full";
-	}
-	return doc;
 }
 
 inline Json::Value
