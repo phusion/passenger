@@ -351,6 +351,10 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'UnionStationFilterSupport.o',
     :source   => 'UnionStationFilterSupport.cpp',
     :category => :union_station_filter
+
+  define_component 'JsonTools/CBindings.o',
+    :source   => 'JsonTools/CBindings.cpp',
+    :category => :json_tools
 end
 
 # A subset of the objects are linked to the Nginx binary. This defines

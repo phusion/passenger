@@ -7390,6 +7390,13 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/JsonTools/Autocast.h"=>
   ["src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/oxt/macros.hpp"],
+ "src/cxx_supportlib/JsonTools/CBindings.cpp"=>
+  ["src/cxx_supportlib/JsonTools/Autocast.h",
+   "src/cxx_supportlib/JsonTools/CBindings.h",
+   "src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/oxt/macros.hpp"],
+ "src/cxx_supportlib/JsonTools/CBindings.h"=>
+  [],
  "src/cxx_supportlib/LoggingKit/Assert.h"=>
   ["src/cxx_supportlib/LoggingKit/Forward.h",
    "src/cxx_supportlib/LoggingKit/Logging.h",
