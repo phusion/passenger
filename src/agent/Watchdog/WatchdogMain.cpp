@@ -833,7 +833,7 @@ maybeSetsid() {
 	 * WatchdogLauncher.h already calls setsid() before exec()ing
 	 * the Watchdog, but Flying Passenger does not.
 	 */
-	if (agentsOptions->getBool("setsid", false)) {
+	if (watchdogConfig->get("setsid").asBool()) {
 		setsid();
 	}
 }
@@ -852,7 +852,7 @@ maybeDaemonize() {
 	pid_t pid;
 	int e;
 
-	if (agentsOptions->getBool("daemonize", false)) {
+	if (watchdogConfig->get("daemonize").asBool()) {
 		pid = fork();
 		if (pid == 0) {
 			setsid();
@@ -869,16 +869,17 @@ maybeDaemonize() {
 static void
 createPidFile() {
 	TRACE_POINT();
-	string pidFile = agentsOptions->get("pid_file", false);
-	if (!pidFile.empty()) {
+	Json::Value pidFile = watchdogConfig->get("watchdog_pid_file");
+	if (!pidFile.isNull()) {
 		char pidStr[32];
 
 		snprintf(pidStr, sizeof(pidStr), "%lld", (long long) getpid());
 
-		int fd = syscalls::open(pidFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		int fd = syscalls::open(pidFile.asCString(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd == -1) {
 			int e = errno;
-			throw FileSystemException("Cannot create PID file " + pidFile, e, pidFile);
+			throw FileSystemException("Cannot create PID file " + pidFile.asString(),
+				e, pidFile.asString());
 		}
 
 		UPDATE_TRACE_POINT();
