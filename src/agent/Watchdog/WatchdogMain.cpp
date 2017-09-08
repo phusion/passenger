@@ -1240,30 +1240,23 @@ beginWatchingAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watche
 }
 
 static void
-reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPtr> &watchers) {
+reportStartupResult(const WorkingObjectsPtr &wo, const vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
-	VariantMap report;
+	Json::Value report;
 
-	report.set("instance_dir", wo->instanceDir->getPath());
+	report["instance_dir"] = wo->instanceDir->getPath();
 
 	foreach (AgentWatcherPtr watcher, watchers) {
-		watcher->reportAgentsInformation(report);
+		watcher->reportAgentStartupResult(report);
 	}
 
 	if (feedbackFdAvailable()) {
-		report.writeToFd(FEEDBACK_FD, "Agents information");
+		writeArrayMessage(FEEDBACK_FD, "Agents information", NULL);
+		writeScalarMessage(FEEDBACK_FD, report.toStyledString());
 	}
 
 	if (wo->startupReportFile != -1) {
-		Json::Value doc;
-		VariantMap::ConstIterator it;
-		string str;
-
-		for (it = report.begin(); it != report.end(); it++) {
-			doc[it->first] = it->second;
-		}
-		str = doc.toStyledString();
-
+		string str = report.toStyledString();
 		writeExact(wo->startupReportFile, str.data(), str.size());
 		close(wo->startupReportFile);
 		P_LOG_FILE_DESCRIPTOR_CLOSE(wo->startupReportFile);
@@ -1352,7 +1345,7 @@ watchdogMain(int argc, char *argv[]) {
 		TRACE_POINT();
 		startAgents(wo, watchers);
 		beginWatchingAgents(wo, watchers);
-		reportAgentsInformation(wo, watchers);
+		reportStartupResult(wo, watchers);
 		finalizeInstanceDir(wo);
 		P_INFO("All " PROGRAM_NAME " agents started!");
 		UPDATE_TRACE_POINT();

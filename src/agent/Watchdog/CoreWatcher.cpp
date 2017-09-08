@@ -66,14 +66,8 @@ public:
 		agentFilename = wo->resourceLocator->findSupportBinary(AGENT_EXE);
 	}
 
-	virtual void reportAgentsInformation(VariantMap &report) {
-		const VariantMap &options = *agentsOptions;
-		vector<string> addresses = options.getStrSet("core_addresses");
-		report.set("core_address", addresses.front());
-		report.set("core_password", options.get("core_password"));
-
-		// For backwards compatibility:
-		report.set("server_address", addresses.front());
-		report.set("server_password", options.get("core_password"));
+	virtual void reportAgentStartupResult(Json::Value &report) {
+		report["core_address"] = wo->controllerAddresses[0].asString();
+		report["core_password"] = wo->controllerSecureHeadersPassword;
 	}
 };

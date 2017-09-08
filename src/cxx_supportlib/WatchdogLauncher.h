@@ -471,24 +471,47 @@ public:
 			}
 
 			if (args[0] == "Agents information") {
-				if ((args.size() - 1) % 2 != 0) {
-					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog "
-						"because it sent an invalid startup information report (the number "
-						"of items is not an even number)");
+				UPDATE_TRACE_POINT();
+
+				if (args.size() != 1) {
+					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog: "
+						"it belongs to an incompatible version of " SHORT_PROGRAM_NAME
+						". Please fully upgrade " SHORT_PROGRAM_NAME ".");
 				}
 
-				VariantMap info;
-				for (unsigned i = 1; i < args.size(); i += 2) {
-					const string &key = args[i];
-					const string &value = args[i + 1];
-					info.set(key, value);
+				string jsonData;
+				try {
+					result = readScalarMessage(feedbackFd, jsonData);
+				} catch (const SystemException &ex) {
+					if (ex.code() == ECONNRESET) {
+						inspectWatchdogCrashReason(pid);
+					} else {
+						killProcessGroupAndWait(&pid, 5000);
+						guard.clear();
+						throw SystemException("Unable to start the " PROGRAM_NAME " watchdog: "
+							"unable to read its startup information report",
+							ex.code());
+					}
+				}
+				if (!result) {
+					UPDATE_TRACE_POINT();
+					inspectWatchdogCrashReason(pid);
+				}
+
+				Json::Value doc;
+				Json::Reader reader;
+				if (!reader.parse(jsonData, doc)) {
+					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog: "
+						"unable to parse its startup information report as valid JSON: "
+						+ reader.getFormatedErrorMessages() + "\n"
+						"Raw data: \"" + cEscapeString(jsonData) + "\"");
 				}
 
 				mPid               = pid;
 				this->feedbackFd   = feedbackFd;
-				mCoreAddress       = info.get("core_address");
-				mCorePassword      = info.get("core_password");
-				mInstanceDir       = info.get("instance_dir");
+				mCoreAddress       = doc["core_address"].asString();
+				mCorePassword      = doc["core_password"].asString();
+				mInstanceDir       = doc["instance_dir"].asString();
 				guard.clear();
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);
