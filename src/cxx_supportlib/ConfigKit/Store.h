@@ -252,6 +252,16 @@ private:
 	}
 
 public:
+	struct PreviewOptions {
+		bool filterSecrets;
+		bool shouldApplyInspectFilters;
+
+		PreviewOptions()
+			: filterSecrets(true),
+			  shouldApplyInspectFilters()
+			{ }
+	};
+
 	Store()
 		: schema(NULL),
 		  entries(0, 0),
@@ -352,7 +362,7 @@ public:
 	 *    are not passed through inspect filters.
 	 */
 	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors,
-		bool filterSecrets = true, bool shouldApplyInspectFilters = true) const
+		const PreviewOptions &options = PreviewOptions()) const
 	{
 		if (!updates.isNull() && !updates.isObject()) {
 			errors.push_back(Error("The JSON document must be an object"));
@@ -360,9 +370,22 @@ public:
 		}
 
 		Json::Value result(Json::objectValue);
+		Store storeWithPreviewData(*this);
+		StringKeyTable<Entry>::Iterator p_it(storeWithPreviewData.entries);
 		StringKeyTable<Entry>::ConstIterator it(entries);
 		vector<Error> tmpErrors;
 		Error error;
+
+		while (*p_it != NULL) {
+			const HashedStaticString &key = p_it.getKey();
+			Entry &entry = p_it.getValue();
+
+			if (isWritable(entry) && updates.isMember(key)) {
+				entry.userValue = updates[key];
+			}
+
+			p_it.next();
+		}
 
 		while (*it != NULL) {
 			const HashedStaticString &key = it.getKey();
@@ -376,8 +399,9 @@ public:
 			} else {
 				subdoc["user_value"] = entry.userValue;
 			}
+
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = entry.getDefaultValue(*this);
+				subdoc["default_value"] = entry.getDefaultValue(storeWithPreviewData);
 			}
 
 			const Json::Value &effectiveValue =
@@ -400,11 +424,11 @@ public:
 			applyNormalizers(result);
 		}
 
-		if (shouldApplyInspectFilters) {
+		if (options.shouldApplyInspectFilters) {
 			applyInspectFilters(result);
 		}
 
-		if (filterSecrets) {
+		if (options.filterSecrets) {
 			doFilterSecrets(result);
 		}
 
@@ -423,7 +447,10 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 */
 	bool update(const Json::Value &updates, vector<Error> &errors) {
-		Json::Value preview = previewUpdate(updates, errors, false, false);
+		PreviewOptions options;
+		options.filterSecrets = false;
+		options.shouldApplyInspectFilters = false;
+		Json::Value preview = previewUpdate(updates, errors, options);
 		if (errors.empty()) {
 			StringKeyTable<Entry>::Iterator it(entries);
 			while (*it != NULL) {

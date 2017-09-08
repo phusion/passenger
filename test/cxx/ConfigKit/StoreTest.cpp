@@ -324,4 +324,34 @@ namespace tut {
 		ensure_equals("(3)", doc["foo"]["user_value"].asString(), "hello!");
 		ensure_equals("(4)", doc["foo"]["effective_value"].asString(), "hello!");
 	}
+
+	static Json::Value getTest20Default(const ConfigKit::Store &store) {
+		return store["a1"].asInt() +
+			store["a2"].asInt() +
+			store["a4"].asInt() +
+			store["a5"].asInt();
+	}
+
+	TEST_METHOD(20) {
+		set_test_name("Cached dynamic default values that depend on other values");
+		using namespace ConfigKit;
+
+		schema.add("a1", INT_TYPE, REQUIRED);
+		schema.add("a2", INT_TYPE, REQUIRED);
+		schema.addWithDynamicDefault("a3", INT_TYPE,
+			OPTIONAL | CACHE_DEFAULT_VALUE, getTest20Default);
+		schema.add("a4", INT_TYPE, REQUIRED);
+		schema.add("a5", INT_TYPE, REQUIRED);
+		init();
+
+		doc["a1"] = 1;
+		doc["a2"] = 10;
+		doc["a4"] = 100;
+		doc["a5"] = 1000;
+
+		ensure("(1)", config->update(doc, errors));
+		doc = config->inspect();
+
+		ensure_equals("(2)", config->get("a3").asInt(), 1111);
+	}
 }
