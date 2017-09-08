@@ -907,9 +907,9 @@ openStartupReportFile(const WorkingObjectsPtr &wo) {
 
 static void
 chdirToTmpDir() {
-	vector<string> pidfiles = agentsOptions->getStrSet("cleanup_pidfiles", false);
-	if (pidfiles.size() > 0) {
-		string str = pidfiles.front();
+	const Json::Value pidfiles = watchdogConfig->get("pidfiles_to_delete_on_exit");
+	if (!pidfiles.empty()) {
+		string str = pidfiles[0].asString();
 		string dir = str.substr(0,str.find_last_of('/'));
 		if (dir != "" && chdir(dir.c_str()) == -1) {
 			throw RuntimeException("Cannot change working directory to " + dir);
@@ -920,8 +920,7 @@ chdirToTmpDir() {
 static void
 lowerPrivilege() {
 	TRACE_POINT();
-	const VariantMap &options = *agentsOptions;
-	string userName = options.get("user", false);
+	string userName = watchdogConfig->get("user").asString();
 
 	if (geteuid() == 0 && !userName.empty()) {
 		struct passwd *pwUser = getpwnam(userName.c_str());
@@ -963,9 +962,8 @@ lowerPrivilege() {
 
 static void
 lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
-	VariantMap &options = *agentsOptions;
-	const string &defaultUser = options.get("default_user");
-	const string &defaultGroup = options.get("default_group");
+	const string defaultUser = watchdogConfig->get("default_user").asString();
+	const string defaultGroup = watchdogConfig->get("default_group").asString();
 	struct passwd *userEntry;
 
 	userEntry = getpwnam(defaultUser.c_str());
