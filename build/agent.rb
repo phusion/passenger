@@ -27,8 +27,8 @@ AGENT_MAIN_OBJECT = "#{AGENT_OUTPUT_DIR}AgentMain.o"
 AGENT_OBJECTS = {
   AGENT_MAIN_OBJECT =>
     "src/agent/AgentMain.cpp",
-  "#{AGENT_OUTPUT_DIR}AgentBase.o" =>
-    "src/agent/Shared/Base.cpp",
+  "#{AGENT_OUTPUT_DIR}AgentFundamentals.o" =>
+    "src/agent/Shared/Fundamentals/Implementation.cpp",
   "#{AGENT_OUTPUT_DIR}WatchdogMain.o" =>
     "src/agent/Watchdog/WatchdogMain.cpp",
   "#{AGENT_OUTPUT_DIR}CoreMain.o" =>

@@ -23,23 +23,16 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _GNU_SOURCE
-	#define _GNU_SOURCE
-#endif
+
+#include <Shared/Fundamentals/AbortHandler.h>
 
 #include <boost/cstdint.hpp>
-#include <oxt/initialize.hpp>
-#include <oxt/system_calls.hpp>
-#include <oxt/backtrace.hpp>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/select.h>
-#ifdef __linux__
-	#include <sys/syscall.h>
-	#include <features.h>
-#endif
 #include <cstdio>
 #include <cstdlib>
+#include <cstddef>
 #include <cstring>
 #include <cerrno>
 #include <cassert>
@@ -49,6 +42,10 @@
 #include <signal.h>
 #include <libgen.h>
 
+#ifdef __linux__
+	#include <sys/syscall.h>
+	#include <features.h>
+#endif
 #if defined(__APPLE__) || defined(__GNU_LIBRARY__)
 	#define LIBC_HAS_BACKTRACE_FUNC
 #endif
@@ -56,31 +53,38 @@
 	#include <execinfo.h>
 #endif
 
-#include <string>
-#include <vector>
-
-#include <Shared/Base.h>
+#include <Shared/Fundamentals/AbortHandler.h>
+#include <Shared/Fundamentals/Utils.h>
 #include <Constants.h>
-#include <Exceptions.h>
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
 #include <ResourceLocator.h>
 #include <Utils.h>
-#include <Utils/SystemTime.h>
-#include <Utils/StrIntUtils.h>
-#ifdef __linux__
-	#include <ResourceLocator.h>
-#endif
-
-#include <jsoncpp/json.h>
 
 namespace Passenger {
-
+namespace Agent {
+namespace Fundamentals {
 
 using namespace std;
 
 
-struct AbortHandlerState {
+struct AbortHandlerContext {
+	const AbortHandlerConfig *config;
+	char *installSpec;
+	char *rubyLibDir;
+	char *crashWatchCommand;
+	char *backtraceSanitizerCommand;
+	bool backtraceSanitizerPassProgramInfo;
+
+	int emergencyPipe1[2];
+	int emergencyPipe2[2];
+
+	char *alternativeStack;
+
+	volatile sig_atomic_t callCount;
+};
+
+struct AbortHandlerWorkingState {
 	pid_t pid;
 	int signo;
 	siginfo_t *info;
@@ -88,7 +92,7 @@ struct AbortHandlerState {
 	char messageBuf[1024];
 };
 
-typedef void (*Callback)(AbortHandlerState &state, void *userData);
+typedef void (*Callback)(AbortHandlerWorkingState &state, void *userData);
 
 
 #define IGNORE_SYSCALL_RESULT(code) \
@@ -98,72 +102,10 @@ typedef void (*Callback)(AbortHandlerState &state, void *userData);
 	} while (false)
 
 
-static bool _feedbackFdAvailable = false;
-static const char digits[] = {
-	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
-};
+static AbortHandlerContext *ctx = NULL;
+static const char digits[] = "0123456789";
 static const char hex_chars[] = "0123456789abcdef";
 
-static bool shouldDumpWithCrashWatch = true;
-static bool beepOnAbort = false;
-static bool stopOnAbort = false;
-
-// Pre-allocate an alternative stack for use in signal handlers in case
-// the normal stack isn't usable.
-static char *alternativeStack;
-static unsigned int alternativeStackSize;
-
-static volatile unsigned int abortHandlerCalled = 0;
-static unsigned int randomSeed = 0;
-static char **origArgv = NULL;
-static const char *rubyLibDir = NULL;
-static const char *passengerRoot = NULL;
-static const char *defaultRuby = DEFAULT_RUBY;
-static const char *backtraceSanitizerCommand = NULL;
-static bool backtraceSanitizerPassProgramInfo = true;
-static const char *crashWatch = NULL;
-static DiagnosticsDumper customDiagnosticsDumper = NULL;
-static void *customDiagnosticsDumperUserData;
-
-// We preallocate a few pipes during startup which we will close in the
-// crash handler. This way we can be sure that when the crash handler
-// calls pipe() it won't fail with "Too many files".
-static int emergencyPipe1[2] = { -1, -1 };
-static int emergencyPipe2[2] = { -1, -1 };
-
-
-static void
-ignoreSigpipe() {
-	struct sigaction action;
-	action.sa_handler = SIG_IGN;
-	action.sa_flags   = 0;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGPIPE, &action, NULL);
-}
-
-const char *
-getEnvString(const char *name, const char *defaultValue) {
-	const char *value = getenv(name);
-	if (value != NULL && *value != '\0') {
-		return value;
-	} else {
-		return defaultValue;
-	}
-}
-
-bool
-hasEnvOption(const char *name, bool defaultValue) {
-	const char *value = getEnvString(name);
-	if (value != NULL) {
-		return strcmp(value, "yes") == 0
-			|| strcmp(value, "y") == 0
-			|| strcmp(value, "1") == 0
-			|| strcmp(value, "on") == 0
-			|| strcmp(value, "true") == 0;
-	} else {
-		return defaultValue;
-	}
-}
 
 // When we're in a crash handler, there's nothing we can do if we fail to
 // write to stderr, so we ignore its return value and we ignore compiler
@@ -365,7 +307,7 @@ appendSignalReason(char *buf, siginfo_t *info) {
 }
 
 static int
-runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *userData, int timeLimit) {
+runInSubprocessWithTimeLimit(AbortHandlerWorkingState &state, Callback callback, void *userData, int timeLimit) {
 	char *end;
 	pid_t child;
 	int p[2], e;
@@ -422,7 +364,7 @@ runInSubprocessWithTimeLimit(AbortHandlerState &state, Callback callback, void *
 }
 
 static void
-dumpFileDescriptorInfoWithLsof(AbortHandlerState &state, void *userData) {
+dumpFileDescriptorInfoWithLsof(AbortHandlerWorkingState &state, void *userData) {
 	char *end;
 
 	end = state.messageBuf;
@@ -442,7 +384,7 @@ dumpFileDescriptorInfoWithLsof(AbortHandlerState &state, void *userData) {
 }
 
 static void
-dumpFileDescriptorInfoWithLs(AbortHandlerState &state, char *end) {
+dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state, char *end) {
 	pid_t pid;
 	int status;
 
@@ -460,7 +402,7 @@ dumpFileDescriptorInfoWithLs(AbortHandlerState &state, char *end) {
 }
 
 static void
-dumpFileDescriptorInfo(AbortHandlerState &state) {
+dumpFileDescriptorInfo(AbortHandlerWorkingState &state) {
 	char *messageBuf = state.messageBuf;
 	char *end;
 	struct stat buf;
@@ -499,7 +441,7 @@ dumpFileDescriptorInfo(AbortHandlerState &state) {
 }
 
 static void
-dumpWithCrashWatch(AbortHandlerState &state) {
+dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 	char *messageBuf = state.messageBuf;
 	const char *pidStr = messageBuf;
 	char *end = messageBuf;
@@ -509,8 +451,8 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 	pid_t child = asyncFork();
 	if (child == 0) {
 		closeAllFileDescriptors(2, true);
-		execlp(defaultRuby, defaultRuby, crashWatch, rubyLibDir,
-			passengerRoot, "--dump", pidStr, (char * const) 0);
+		execlp(ctx->config->ruby, ctx->config->ruby, ctx->crashWatchCommand,
+			ctx->rubyLibDir, ctx->installSpec, "--dump", pidStr, (char * const) 0);
 		int e = errno;
 		end = messageBuf;
 		end = appendText(end, "crash-watch is could not be executed! ");
@@ -535,7 +477,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 #ifdef LIBC_HAS_BACKTRACE_FUNC
 	static void
-	dumpBacktrace(AbortHandlerState &state, void *userData) {
+	dumpBacktrace(AbortHandlerWorkingState &state, void *userData) {
 		void *backtraceStore[512];
 		int frames = backtrace(backtraceStore, sizeof(backtraceStore) / sizeof(void *));
 		char *end = state.messageBuf;
@@ -547,7 +489,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 		end = appendText(end, " frames:\n");
 		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
-		if (backtraceSanitizerCommand != NULL) {
+		if (ctx->backtraceSanitizerCommand != NULL) {
 			int p[2];
 			if (pipe(p) == -1) {
 				int e = errno;
@@ -574,10 +516,10 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 				char *command = end;
 				end = appendText(end, "exec ");
-				end = appendText(end, backtraceSanitizerCommand);
-				if (backtraceSanitizerPassProgramInfo) {
+				end = appendText(end, ctx->backtraceSanitizerCommand);
+				if (ctx->backtraceSanitizerPassProgramInfo) {
 					end = appendText(end, " \"");
-					end = appendText(end, origArgv[0]);
+					end = appendText(end, ctx->config->origArgv[0]);
 					end = appendText(end, "\" ");
 					end = appendText(end, pidStr);
 				}
@@ -587,7 +529,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 
 				end = state.messageBuf;
 				end = appendText(end, "ERROR: cannot execute '");
-				end = appendText(end, backtraceSanitizerCommand);
+				end = appendText(end, ctx->backtraceSanitizerCommand);
 				end = appendText(end, "' for sanitizing the backtrace, trying 'cat'...\n");
 				write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 				execlp("cat", "cat", (const char * const) 0);
@@ -617,7 +559,7 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 				if (waitpid(pid, &status, 0) == -1 || status != 0) {
 					end = state.messageBuf;
 					end = appendText(end, "ERROR: cannot execute '");
-					end = appendText(end, backtraceSanitizerCommand);
+					end = appendText(end, ctx->backtraceSanitizerCommand);
 					end = appendText(end, "' for sanitizing the backtrace, writing to stderr directly...\n");
 					write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 					backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
@@ -631,13 +573,13 @@ dumpWithCrashWatch(AbortHandlerState &state) {
 #endif
 
 static void
-runCustomDiagnosticsDumper(AbortHandlerState &state, void *userData) {
-	customDiagnosticsDumper(customDiagnosticsDumperUserData);
+runCustomDiagnosticsDumper(AbortHandlerWorkingState &state, void *userData) {
+	ctx->config->diagnosticsDumper(ctx->config->diagnosticsDumperUserData);
 }
 
 // This function is performed in a child process.
 static void
-dumpDiagnostics(AbortHandlerState &state) {
+dumpDiagnostics(AbortHandlerWorkingState &state) {
 	char *messageBuf = state.messageBuf;
 	char *end;
 	pid_t pid;
@@ -728,7 +670,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 
 	safePrintErr("--------------------------------------\n");
 
-	if (customDiagnosticsDumper != NULL) {
+	if (ctx->config->diagnosticsDumper != NULL) {
 		end = messageBuf;
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] Dumping additional diagnostical information...\n");
@@ -741,7 +683,7 @@ dumpDiagnostics(AbortHandlerState &state) {
 	dumpFileDescriptorInfo(state);
 	safePrintErr("--------------------------------------\n");
 
-	if (shouldDumpWithCrashWatch) {
+	if (ctx->config->dumpWithCrashWatch && ctx->crashWatchCommand != NULL) {
 		end = messageBuf;
 		end = appendText(end, state.messagePrefix);
 		#ifdef LIBC_HAS_BACKTRACE_FUNC
@@ -813,8 +755,27 @@ forkAndRedirectToTee(char *filename) {
 }
 
 static void
-abortHandler(int signo, siginfo_t *info, void *ctx) {
-	AbortHandlerState state;
+closeEmergencyPipes() {
+	if (ctx->emergencyPipe1[0] != -1) {
+		close(ctx->emergencyPipe1[0]);
+	}
+	if (ctx->emergencyPipe1[1] != -1) {
+		close(ctx->emergencyPipe1[1]);
+	}
+	if (ctx->emergencyPipe2[0] != -1) {
+		close(ctx->emergencyPipe2[0]);
+	}
+	if (ctx->emergencyPipe2[1] != -1) {
+		close(ctx->emergencyPipe2[1]);
+	}
+	ctx->emergencyPipe1[0] = ctx->emergencyPipe1[1] = -1;
+	ctx->emergencyPipe2[0] = ctx->emergencyPipe2[1] = -1;
+}
+
+static void
+abortHandler(int signo, siginfo_t *info, void *_unused) {
+	AbortHandlerWorkingState state;
+
 	state.pid = getpid();
 	state.signo = signo;
 	state.info = info;
@@ -822,8 +783,8 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	time_t t = time(NULL);
 	char crashLogFile[256];
 
-	abortHandlerCalled++;
-	if (abortHandlerCalled > 1) {
+	ctx->callCount++;
+	if (ctx->callCount > 1) {
 		// The abort handler itself crashed!
 		char *end = state.messageBuf;
 		end = appendText(end, "[ origpid=");
@@ -832,7 +793,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		end = appendULL(end, (unsigned long long) getpid());
 		end = appendText(end, ", timestamp=");
 		end = appendULL(end, (unsigned long long) t);
-		if (abortHandlerCalled == 2) {
+		if (ctx->callCount == 2) {
 			// This is the first time it crashed.
 			end = appendText(end, " ] Abort handler crashed! signo=");
 			end = appendSignalName(end, state.signo);
@@ -856,20 +817,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		return;
 	}
 
-	if (emergencyPipe1[0] != -1) {
-		close(emergencyPipe1[0]);
-	}
-	if (emergencyPipe1[1] != -1) {
-		close(emergencyPipe1[1]);
-	}
-	if (emergencyPipe2[0] != -1) {
-		close(emergencyPipe2[0]);
-	}
-	if (emergencyPipe2[1] != -1) {
-		close(emergencyPipe2[1]);
-	}
-	emergencyPipe1[0] = emergencyPipe1[1] = -1;
-	emergencyPipe2[0] = emergencyPipe2[1] = -1;
+	closeEmergencyPipes();
 
 	/* We want to dump the entire crash log to both stderr and a log file.
 	 * We use 'tee' for this.
@@ -892,7 +840,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	end = appendText(end, ", reason=");
 	end = appendSignalReason(end, state.info);
 	end = appendText(end, ", randomSeed=");
-	end = appendULL(end, (unsigned long long) randomSeed);
+	end = appendULL(end, (unsigned long long) ctx->config->randomSeed);
 	end = appendText(end, "\n");
 	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
@@ -908,7 +856,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	}
 	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
 
-	if (beepOnAbort) {
+	if (ctx->config->beep) {
 		end = state.messageBuf;
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] PASSENGER_BEEP_ON_ABORT on, executing beep...\n");
@@ -937,7 +885,7 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		}
 	}
 
-	if (stopOnAbort) {
+	if (ctx->config->stopProcess) {
 		end = state.messageBuf;
 		end = appendText(end, state.messagePrefix);
 		end = appendText(end, " ] PASSENGER_STOP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
@@ -1007,6 +955,151 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	raise(signo);
 }
 
+void
+installAbortHandler(const AbortHandlerConfig *config) {
+	ctx = new AbortHandlerContext();
+	memset(ctx, 0, sizeof(AbortHandlerContext));
+
+	ctx->config = config;
+	ctx->backtraceSanitizerPassProgramInfo = true;
+	ctx->emergencyPipe1[0] = -1;
+	ctx->emergencyPipe1[1] = -1;
+	ctx->emergencyPipe2[0] = -1;
+	ctx->emergencyPipe2[1] = -1;
+
+	abortHandlerConfigChanged();
+
+	IGNORE_SYSCALL_RESULT(pipe(ctx->emergencyPipe1));
+	IGNORE_SYSCALL_RESULT(pipe(ctx->emergencyPipe2));
+
+	size_t alternativeStackSize = MINSIGSTKSZ + 128 * 1024;
+	ctx->alternativeStack = (char *) malloc(alternativeStackSize);
+	if (ctx->alternativeStack == NULL) {
+		fprintf(stderr, "Cannot allocate an alternative stack with a size of %lu bytes!\n",
+			(unsigned long) alternativeStackSize);
+		fflush(stderr);
+		abort();
+	}
+
+	stack_t stack;
+	stack.ss_sp = ctx->alternativeStack;
+	stack.ss_size = alternativeStackSize;
+	stack.ss_flags = 0;
+	if (sigaltstack(&stack, NULL) != 0) {
+		int e = errno;
+		fprintf(stderr, "Cannot install an alternative stack for use in signal handlers: %s (%d)\n",
+			strerror(e), e);
+		fflush(stderr);
+		abort();
+	}
+
+	struct sigaction action;
+	action.sa_sigaction = abortHandler;
+	action.sa_flags = SA_RESETHAND | SA_SIGINFO;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGABRT, &action, NULL);
+	sigaction(SIGSEGV, &action, NULL);
+	sigaction(SIGBUS, &action, NULL);
+	sigaction(SIGFPE, &action, NULL);
+	sigaction(SIGILL, &action, NULL);
+}
+
+bool
+abortHandlerInstalled() {
+	return ctx != NULL;
+}
+
+void
+abortHandlerLogFds() {
+	if (ctx->emergencyPipe1[0] != -1) {
+		P_LOG_FILE_DESCRIPTOR_OPEN4(ctx->emergencyPipe1[0], __FILE__, __LINE__,
+			"Emergency pipe 1-0");
+		P_LOG_FILE_DESCRIPTOR_OPEN4(ctx->emergencyPipe1[1], __FILE__, __LINE__,
+			"Emergency pipe 1-1");
+	}
+	if (ctx->emergencyPipe2[0] != -1) {
+		P_LOG_FILE_DESCRIPTOR_OPEN4(ctx->emergencyPipe2[0], __FILE__, __LINE__,
+			"Emergency pipe 2-0");
+		P_LOG_FILE_DESCRIPTOR_OPEN4(ctx->emergencyPipe2[1], __FILE__, __LINE__,
+			"Emergency pipe 2-1");
+	}
+}
+
+static void
+useCxxFiltAsBacktraceSanitizer() {
+	ctx->backtraceSanitizerCommand = strdup("c++filt -n");
+	ctx->backtraceSanitizerPassProgramInfo = false;
+}
+
+void
+abortHandlerConfigChanged() {
+	const AbortHandlerConfig *config = ctx->config;
+	char *oldInstallSpec = ctx->installSpec;
+	char *oldRubyLibDir = ctx->rubyLibDir;
+	char *oldCrashWatchCommand = ctx->crashWatchCommand;
+	char *oldBacktraceSanitizerCommand = ctx->backtraceSanitizerCommand;
+
+	if (config->resourceLocator != NULL) {
+		string path;
+		const ResourceLocator *locator = config->resourceLocator;
+
+		ctx->installSpec = strdup(locator->getInstallSpec().c_str());
+		ctx->rubyLibDir = strdup(locator->getRubyLibDir().c_str());
+
+		path = locator->getHelperScriptsDir() + "/crash-watch.rb";
+		ctx->crashWatchCommand = strdup(path.c_str());
+
+		if (ctx->installSpec == NULL || ctx->rubyLibDir == NULL || ctx->crashWatchCommand == NULL) {
+			fprintf(stderr, "Cannot allocate memory for abort handler!\n");
+			fflush(stderr);
+			abort();
+		}
+
+		#ifdef __linux__
+			path = StaticString(config->ruby) + " \""
+				+ locator->getHelperScriptsDir() +
+				"/backtrace-sanitizer.rb\"";
+			ctx->backtraceSanitizerCommand = strdup(path.c_str());
+			ctx->backtraceSanitizerPassProgramInfo = true;
+			if (ctx->backtraceSanitizerCommand == NULL) {
+				fprintf(stderr, "Cannot allocate memory for abort handler!\n");
+				fflush(stderr);
+				abort();
+			}
+		#else
+			useCxxFiltAsBacktraceSanitizer();
+		#endif
+	} else {
+		ctx->installSpec = NULL;
+		ctx->rubyLibDir = NULL;
+		ctx->crashWatchCommand = NULL;
+		useCxxFiltAsBacktraceSanitizer();
+	}
+
+	free(oldInstallSpec);
+	free(oldRubyLibDir);
+	free(oldCrashWatchCommand);
+	free(oldBacktraceSanitizerCommand);
+}
+
+void
+shutdownAbortHandler() {
+	free(ctx->installSpec);
+	free(ctx->rubyLibDir);
+	free(ctx->crashWatchCommand);
+	free(ctx->backtraceSanitizerCommand);
+	free(ctx->alternativeStack);
+	closeEmergencyPipes();
+	delete ctx;
+	ctx = NULL;
+}
+
+
+} // namespace Fundamentals
+} // namespace Agent
+} // namespace Passenger
+
+
 /*
  * Override assert() to add more features and to fix bugs. We save the information
  * of the last assertion failure in a global variable so that we can print it
@@ -1018,6 +1111,8 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 	__assert_fail(__const char *__assertion, __const char *__file,
 		unsigned int __line, __const char *__function)
 	{
+		using namespace Passenger;
+
 		LoggingKit::lastAssertionFailure.filename = __file;
 		LoggingKit::lastAssertionFailure.line = __line;
 		LoggingKit::lastAssertionFailure.function = __function;
@@ -1043,6 +1138,8 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 
 	extern "C" void
 	__assert_rtn(const char *func, const char *file, int line, const char *expr) {
+		using namespace Passenger;
+
 		LoggingKit::lastAssertionFailure.filename = file;
 		LoggingKit::lastAssertionFailure.line = line;
 		LoggingKit::lastAssertionFailure.function = func;
@@ -1069,611 +1166,3 @@ abortHandler(int signo, siginfo_t *info, void *ctx) {
 		__builtin_trap();
 	}
 #endif /* __APPLE__ */
-
-void
-installAgentAbortHandler() {
-	alternativeStackSize = MINSIGSTKSZ + 128 * 1024;
-	alternativeStack = (char *) malloc(alternativeStackSize);
-	if (alternativeStack == NULL) {
-		fprintf(stderr, "Cannot allocate an alternative with a size of %u bytes!\n",
-			alternativeStackSize);
-		fflush(stderr);
-		abort();
-	}
-
-	stack_t stack;
-	stack.ss_sp = alternativeStack;
-	stack.ss_size = alternativeStackSize;
-	stack.ss_flags = 0;
-	if (sigaltstack(&stack, NULL) != 0) {
-		int e = errno;
-		fprintf(stderr, "Cannot install an alternative stack for use in signal handlers: %s (%d)\n",
-			strerror(e), e);
-		fflush(stderr);
-		abort();
-	}
-
-	struct sigaction action;
-	action.sa_sigaction = abortHandler;
-	action.sa_flags = SA_RESETHAND | SA_SIGINFO;
-	sigemptyset(&action.sa_mask);
-	sigaction(SIGABRT, &action, NULL);
-	sigaction(SIGSEGV, &action, NULL);
-	sigaction(SIGBUS, &action, NULL);
-	sigaction(SIGFPE, &action, NULL);
-	sigaction(SIGILL, &action, NULL);
-}
-
-void
-installDiagnosticsDumper(DiagnosticsDumper func, void *userData) {
-	customDiagnosticsDumper = func;
-	customDiagnosticsDumperUserData = userData;
-}
-
-bool
-feedbackFdAvailable() {
-	return _feedbackFdAvailable;
-}
-
-static int
-lookupErrno(const char *name) {
-	struct Entry {
-		int errorCode;
-		const char * const name;
-	};
-	static const Entry entries[] = {
-		{ EPERM, "EPERM" },
-		{ ENOENT, "ENOENT" },
-		{ ESRCH, "ESRCH" },
-		{ EINTR, "EINTR" },
-		{ EBADF, "EBADF" },
-		{ ENOMEM, "ENOMEM" },
-		{ EACCES, "EACCES" },
-		{ EBUSY, "EBUSY" },
-		{ EEXIST, "EEXIST" },
-		{ ENOTDIR, "ENOTDIR" },
-		{ EISDIR, "EISDIR" },
-		{ EINVAL, "EINVAL" },
-		{ ENFILE, "ENFILE" },
-		{ EMFILE, "EMFILE" },
-		{ ENOTTY, "ENOTTY" },
-		{ ETXTBSY, "ETXTBSY" },
-		{ ENOSPC, "ENOSPC" },
-		{ ESPIPE, "ESPIPE" },
-		{ EMLINK, "EMLINK" },
-		{ EPIPE, "EPIPE" },
-		{ EAGAIN, "EAGAIN" },
-		{ EWOULDBLOCK, "EWOULDBLOCK" },
-		{ EINPROGRESS, "EINPROGRESS" },
-		{ EADDRINUSE, "EADDRINUSE" },
-		{ EADDRNOTAVAIL, "EADDRNOTAVAIL" },
-		{ ENETUNREACH, "ENETUNREACH" },
-		{ ECONNABORTED, "ECONNABORTED" },
-		{ ECONNRESET, "ECONNRESET" },
-		{ EISCONN, "EISCONN" },
-		{ ENOTCONN, "ENOTCONN" },
-		{ ETIMEDOUT, "ETIMEDOUT" },
-		{ ECONNREFUSED, "ECONNREFUSED" },
-		{ EHOSTDOWN, "EHOSTDOWN" },
-		{ EHOSTUNREACH, "EHOSTUNREACH" },
-		#ifdef EIO
-			{ EIO, "EIO" },
-		#endif
-		#ifdef ENXIO
-			{ ENXIO, "ENXIO" },
-		#endif
-		#ifdef E2BIG
-			{ E2BIG, "E2BIG" },
-		#endif
-		#ifdef ENOEXEC
-			{ ENOEXEC, "ENOEXEC" },
-		#endif
-		#ifdef ECHILD
-			{ ECHILD, "ECHILD" },
-		#endif
-		#ifdef EDEADLK
-			{ EDEADLK, "EDEADLK" },
-		#endif
-		#ifdef EFAULT
-			{ EFAULT, "EFAULT" },
-		#endif
-		#ifdef ENOTBLK
-			{ ENOTBLK, "ENOTBLK" },
-		#endif
-		#ifdef EXDEV
-			{ EXDEV, "EXDEV" },
-		#endif
-		#ifdef ENODEV
-			{ ENODEV, "ENODEV" },
-		#endif
-		#ifdef EFBIG
-			{ EFBIG, "EFBIG" },
-		#endif
-		#ifdef EROFS
-			{ EROFS, "EROFS" },
-		#endif
-		#ifdef EDOM
-			{ EDOM, "EDOM" },
-		#endif
-		#ifdef ERANGE
-			{ ERANGE, "ERANGE" },
-		#endif
-		#ifdef EALREADY
-			{ EALREADY, "EALREADY" },
-		#endif
-		#ifdef ENOTSOCK
-			{ ENOTSOCK, "ENOTSOCK" },
-		#endif
-		#ifdef EDESTADDRREQ
-			{ EDESTADDRREQ, "EDESTADDRREQ" },
-		#endif
-		#ifdef EMSGSIZE
-			{ EMSGSIZE, "EMSGSIZE" },
-		#endif
-		#ifdef EPROTOTYPE
-			{ EPROTOTYPE, "EPROTOTYPE" },
-		#endif
-		#ifdef ENOPROTOOPT
-			{ ENOPROTOOPT, "ENOPROTOOPT" },
-		#endif
-		#ifdef EPROTONOSUPPORT
-			{ EPROTONOSUPPORT, "EPROTONOSUPPORT" },
-		#endif
-		#ifdef ESOCKTNOSUPPORT
-			{ ESOCKTNOSUPPORT, "ESOCKTNOSUPPORT" },
-		#endif
-		#ifdef ENOTSUP
-			{ ENOTSUP, "ENOTSUP" },
-		#endif
-		#ifdef EOPNOTSUPP
-			{ EOPNOTSUPP, "EOPNOTSUPP" },
-		#endif
-		#ifdef EPFNOSUPPORT
-			{ EPFNOSUPPORT, "EPFNOSUPPORT" },
-		#endif
-		#ifdef EAFNOSUPPORT
-			{ EAFNOSUPPORT, "EAFNOSUPPORT" },
-		#endif
-		#ifdef ENETDOWN
-			{ ENETDOWN, "ENETDOWN" },
-		#endif
-		#ifdef ENETRESET
-			{ ENETRESET, "ENETRESET" },
-		#endif
-		#ifdef ENOBUFS
-			{ ENOBUFS, "ENOBUFS" },
-		#endif
-		#ifdef ESHUTDOWN
-			{ ESHUTDOWN, "ESHUTDOWN" },
-		#endif
-		#ifdef ETOOMANYREFS
-			{ ETOOMANYREFS, "ETOOMANYREFS" },
-		#endif
-		#ifdef ELOOP
-			{ ELOOP, "ELOOP" },
-		#endif
-		#ifdef ENAMETOOLONG
-			{ ENAMETOOLONG, "ENAMETOOLONG" },
-		#endif
-		#ifdef ENOTEMPTY
-			{ ENOTEMPTY, "ENOTEMPTY" },
-		#endif
-		#ifdef EPROCLIM
-			{ EPROCLIM, "EPROCLIM" },
-		#endif
-		#ifdef EUSERS
-			{ EUSERS, "EUSERS" },
-		#endif
-		#ifdef EDQUOT
-			{ EDQUOT, "EDQUOT" },
-		#endif
-		#ifdef ESTALE
-			{ ESTALE, "ESTALE" },
-		#endif
-		#ifdef EREMOTE
-			{ EREMOTE, "EREMOTE" },
-		#endif
-		#ifdef EBADRPC
-			{ EBADRPC, "EBADRPC" },
-		#endif
-		#ifdef ERPCMISMATCH
-			{ ERPCMISMATCH, "ERPCMISMATCH" },
-		#endif
-		#ifdef EPROGUNAVAIL
-			{ EPROGUNAVAIL, "EPROGUNAVAIL" },
-		#endif
-		#ifdef EPROGMISMATCH
-			{ EPROGMISMATCH, "EPROGMISMATCH" },
-		#endif
-		#ifdef EPROCUNAVAIL
-			{ EPROCUNAVAIL, "EPROCUNAVAIL" },
-		#endif
-		#ifdef ENOLCK
-			{ ENOLCK, "ENOLCK" },
-		#endif
-		#ifdef ENOSYS
-			{ ENOSYS, "ENOSYS" },
-		#endif
-		#ifdef EFTYPE
-			{ EFTYPE, "EFTYPE" },
-		#endif
-		#ifdef EAUTH
-			{ EAUTH, "EAUTH" },
-		#endif
-		#ifdef ENEEDAUTH
-			{ ENEEDAUTH, "ENEEDAUTH" },
-		#endif
-		#ifdef EPWROFF
-			{ EPWROFF, "EPWROFF" },
-		#endif
-		#ifdef EDEVERR
-			{ EDEVERR, "EDEVERR" },
-		#endif
-		#ifdef EOVERFLOW
-			{ EOVERFLOW, "EOVERFLOW" },
-		#endif
-		#ifdef EBADEXEC
-			{ EBADEXEC, "EBADEXEC" },
-		#endif
-		#ifdef EBADARCH
-			{ EBADARCH, "EBADARCH" },
-		#endif
-		#ifdef ESHLIBVERS
-			{ ESHLIBVERS, "ESHLIBVERS" },
-		#endif
-		#ifdef EBADMACHO
-			{ EBADMACHO, "EBADMACHO" },
-		#endif
-		#ifdef ECANCELED
-			{ ECANCELED, "ECANCELED" },
-		#endif
-		#ifdef EIDRM
-			{ EIDRM, "EIDRM" },
-		#endif
-		#ifdef ENOMSG
-			{ ENOMSG, "ENOMSG" },
-		#endif
-		#ifdef EILSEQ
-			{ EILSEQ, "EILSEQ" },
-		#endif
-		#ifdef ENOATTR
-			{ ENOATTR, "ENOATTR" },
-		#endif
-		#ifdef EBADMSG
-			{ EBADMSG, "EBADMSG" },
-		#endif
-		#ifdef EMULTIHOP
-			{ EMULTIHOP, "EMULTIHOP" },
-		#endif
-		#ifdef ENODATA
-			{ ENODATA, "ENODATA" },
-		#endif
-		#ifdef ENOLINK
-			{ ENOLINK, "ENOLINK" },
-		#endif
-		#ifdef ENOSR
-			{ ENOSR, "ENOSR" },
-		#endif
-		#ifdef ENOSTR
-			{ ENOSTR, "ENOSTR" },
-		#endif
-		#ifdef EPROTO
-			{ EPROTO, "EPROTO" },
-		#endif
-		#ifdef ETIME
-			{ ETIME, "ETIME" },
-		#endif
-		#ifdef EOPNOTSUPP
-			{ EOPNOTSUPP, "EOPNOTSUPP" },
-		#endif
-		#ifdef ENOPOLICY
-			{ ENOPOLICY, "ENOPOLICY" },
-		#endif
-		#ifdef ENOTRECOVERABLE
-			{ ENOTRECOVERABLE, "ENOTRECOVERABLE" },
-		#endif
-		#ifdef EOWNERDEAD
-			{ EOWNERDEAD, "EOWNERDEAD" },
-		#endif
-	};
-
-	for (unsigned int i = 0; i < sizeof(entries) / sizeof(Entry); i++) {
-		if (strcmp(entries[i].name, name) == 0) {
-			return entries[i].errorCode;
-		}
-	}
-	return -1;
-}
-
-static void
-initializeSyscallFailureSimulation(const char *processName) {
-	// Format:
-	// PassengerAgent watchdog=EMFILE:0.1,ECONNREFUSED:0.25;PassengerAgent core=ESPIPE=0.4
-	const char *spec = getenv("PASSENGER_SIMULATE_SYSCALL_FAILURES");
-	string prefix = string(processName) + "=";
-	vector<string> components;
-	unsigned int i;
-
-	// Lookup this process in the specification string.
-	split(spec, ';', components);
-	for (i = 0; i < components.size(); i++) {
-		if (startsWith(components[i], prefix)) {
-			// Found!
-			string value = components[i].substr(prefix.size());
-			split(value, ',', components);
-			vector<string> keyAndValue;
-			vector<ErrorChance> chances;
-
-			// Process each errorCode:chance pair.
-			for (i = 0; i < components.size(); i++) {
-				split(components[i], ':', keyAndValue);
-				if (keyAndValue.size() != 2) {
-					fprintf(stderr, "%s: invalid syntax in PASSENGER_SIMULATE_SYSCALL_FAILURES: '%s'\n",
-						processName, components[i].c_str());
-					continue;
-				}
-
-				int e = lookupErrno(keyAndValue[0].c_str());
-				if (e == -1) {
-					fprintf(stderr, "%s: invalid error code in PASSENGER_SIMULATE_SYSCALL_FAILURES: '%s'\n",
-						processName, components[i].c_str());
-					continue;
-				}
-
-				ErrorChance chance;
-				chance.chance = atof(keyAndValue[1].c_str());
-				if (chance.chance < 0 || chance.chance > 1) {
-					fprintf(stderr, "%s: invalid chance PASSENGER_SIMULATE_SYSCALL_FAILURES: '%s' - chance must be between 0 and 1\n",
-						processName, components[i].c_str());
-					continue;
-				}
-				chance.errorCode = e;
-				chances.push_back(chance);
-			}
-
-			// Install the chances.
-			setup_random_failure_simulation(&chances[0], chances.size());
-			return;
-		}
-	}
-}
-
-static bool isBlank(const char *str) {
-	while (*str != '\0') {
-		if (*str != ' ') {
-			return false;
-		}
-		str++;
-	}
-	return true;
-}
-
-static bool
-extraArgumentsPassed(int argc, char *argv[], int argStartIndex) {
-	assert(argc >= argStartIndex);
-	return argc > argStartIndex + 1
-		// Allow the Watchdog to pass an all-whitespace argument. This
-		// argument provides the memory space for us to change the process title.
-		|| (argc == argStartIndex + 1 && !isBlank(argv[argStartIndex]));
-}
-
-static void
-initializeLoggingKit(const char *processName, VariantMap &options) {
-	Json::Value config(Json::objectValue);
-
-	options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
-	config["level"] = options.get("log_level");
-
-	if (options.has("log_file")) {
-		config["target"] = options.get("log_file");
-	} else if (options.has("debug_log_file")) {
-		config["target"] = options.get("debug_log_file");
-	}
-
-	if (options.has("file_descriptor_log_file")) {
-		config["file_descriptor_log_target"] =
-			options.get("file_descriptor_log_file");
-	}
-
-	LoggingKit::initialize(config);
-
-	if (options.has("file_descriptor_log_file")) {
-		// This information helps ./dev/parse_file_descriptor_log.
-		FastStringStream<> stream;
-		LoggingKit::_prepareLogEntry(stream, LoggingKit::CRIT, __FILE__, __LINE__);
-		stream << "Starting agent: " << processName << "\n";
-		_writeFileDescriptorLogEntry(LoggingKit::context->getConfigRealization(),
-			stream.data(), stream.size());
-
-		config = LoggingKit::context->getConfig().inspect();
-		P_LOG_FILE_DESCRIPTOR_OPEN4(
-			LoggingKit::context->getConfigRealization()->fileDescriptorLogTargetFd,
-			__FILE__, __LINE__,
-			"file descriptor log file "
-			<< config["file_descriptor_log_target"]["effective_value"]["path"].asString());
-	} else {
-		// This information helps ./dev/parse_file_descriptor_log.
-		P_DEBUG("Starting agent: " << processName);
-	}
-}
-
-VariantMap
-initializeAgent(int argc, char **argv[], const char *processName,
-	OptionParserFunc optionParser, PreinitializationFunc preinit,
-	int argStartIndex)
-{
-	VariantMap options;
-	const char *seedStr;
-
-	seedStr = getEnvString("PASSENGER_RANDOM_SEED");
-	if (seedStr == NULL) {
-		randomSeed = (unsigned int) time(NULL);
-	} else {
-		randomSeed = (unsigned int) atoll(seedStr);
-	}
-	srand(randomSeed);
-	srandom(randomSeed);
-
-	ignoreSigpipe();
-	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true)) {
-		shouldDumpWithCrashWatch = hasEnvOption("PASSENGER_DUMP_WITH_CRASH_WATCH", true);
-		beepOnAbort = hasEnvOption("PASSENGER_BEEP_ON_ABORT");
-		stopOnAbort = hasEnvOption("PASSENGER_STOP_ON_ABORT");
-		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe1));
-		IGNORE_SYSCALL_RESULT(pipe(emergencyPipe2));
-		installAgentAbortHandler();
-	}
-	oxt::initialize();
-	setup_syscall_interruption_support();
-	if (hasEnvOption("PASSENGER_SIMULATE_SYSCALL_FAILURES")) {
-		initializeSyscallFailureSimulation(processName);
-	}
-	SystemTime::initialize();
-	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(stderr, NULL, _IONBF, 0);
-
-	TRACE_POINT();
-	try {
-		if (hasEnvOption("PASSENGER_USE_FEEDBACK_FD")) {
-			if (extraArgumentsPassed(argc, *argv, argStartIndex)) {
-				fprintf(stderr, "No arguments may be passed when using the feedback FD.\n");
-				exit(1);
-			}
-			_feedbackFdAvailable = true;
-			options.readFrom(FEEDBACK_FD);
-		} else if (optionParser != NULL) {
-			optionParser(argc, (const char **) *argv, options);
-		} else {
-			options.readFrom((const char **) *argv + argStartIndex,
-				argc - argStartIndex);
-		}
-
-		initializeAgentOptions(processName, options, preinit);
-	} catch (const tracable_exception &e) {
-		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
-		exit(1);
-	}
-
-	storeArgvCopy(argc, *argv);
-
-	// Change process title.
-	size_t totalArgLen = strlen((*argv)[0]);
-	for (int i = 1; i < argc; i++) {
-		size_t len = strlen((*argv)[i]);
-		totalArgLen += len + 1;
-		memset((*argv)[i], '\0', len);
-	}
-	strncpy((*argv)[0], processName, totalArgLen);
-	*argv = origArgv;
-
-	P_DEBUG("Random seed: " << randomSeed);
-
-	return options;
-}
-
-void
-initializeAgentOptions(const char *processName, VariantMap &options,
-	PreinitializationFunc preinit)
-{
-	ResourceLocator locator;
-	string ruby;
-
-	if (options.has("passenger_root")) {
-		string path;
-		locator = ResourceLocator(options.get("passenger_root", true));
-		ruby = options.get("default_ruby", false, DEFAULT_RUBY);
-
-		rubyLibDir    = strdup(locator.getRubyLibDir().c_str());
-		passengerRoot = strdup(options.get("passenger_root", true).c_str());
-		defaultRuby   = strdup(ruby.c_str());
-
-		#ifdef __linux__
-			path = ruby + " \"" + locator.getHelperScriptsDir() +
-				"/backtrace-sanitizer.rb\"";
-			backtraceSanitizerCommand = strdup(path.c_str());
-		#endif
-
-		path = locator.getHelperScriptsDir() + "/crash-watch.rb";
-		crashWatch = strdup(path.c_str());
-	} else {
-		shouldDumpWithCrashWatch = false;
-	}
-
-	if (backtraceSanitizerCommand == NULL) {
-		backtraceSanitizerCommand = "c++filt -n";
-		backtraceSanitizerPassProgramInfo = false;
-	}
-
-	if (preinit != NULL) {
-		preinit(options);
-	}
-
-	initializeLoggingKit(processName, options);
-
-	if (hasEnvOption("PASSENGER_USE_FEEDBACK_FD")) {
-		P_LOG_FILE_DESCRIPTOR_OPEN2(FEEDBACK_FD, "feedback FD");
-	}
-	if (emergencyPipe1[0] != -1) {
-		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe1[0], __FILE__, __LINE__,
-			"Emergency pipe 1-0");
-		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe1[1], __FILE__, __LINE__,
-			"Emergency pipe 1-1");
-		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe2[0], __FILE__, __LINE__,
-			"Emergency pipe 2-0");
-		P_LOG_FILE_DESCRIPTOR_OPEN4(emergencyPipe2[1], __FILE__, __LINE__,
-			"Emergency pipe 2-1");
-	}
-}
-
-void
-storeArgvCopy(int argc, char *argv[]) {
-	// Make a copy of the arguments before changing process title.
-	origArgv = (char **) malloc(argc * sizeof(char *));
-	for (int i = 0; i < argc; i++) {
-		origArgv[i] = strdup(argv[i]);
-	}
-}
-
-void
-shutdownAgent(VariantMap *agentOptions) {
-	delete agentOptions;
-	LoggingKit::shutdown();
-	oxt::shutdown();
-}
-
-/**
- * Linux-only way to change OOM killer configuration for
- * current process. Requires root privileges, which we
- * should have.
- */
-void
-restoreOomScore(VariantMap *agentOptions) {
-	TRACE_POINT();
-
-	string score = agentOptions->get("original_oom_score", false);
-	if (score.empty()) {
-		return;
-	}
-
-	FILE *f;
-	bool legacy = false;
-
-	if (score.at(0) == 'l') {
-		legacy = true;
-		score = score.substr(1);
-		f = fopen("/proc/self/oom_adj", "w");
-	} else {
-		f = fopen("/proc/self/oom_score_adj", "w");
-	}
-
-	if (f != NULL) {
-		fprintf(f, "%s\n", score.c_str());
-		fclose(f);
-	} else {
-		P_WARN("Unable to set OOM score to " << score << " (legacy: " << legacy
-				<< ") due to error: " << strerror(errno)
-				<< " (process will remain at inherited OOM score)");
-	}
-}
-
-} // namespace Passenger
