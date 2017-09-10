@@ -731,32 +731,8 @@ public:
 	/***** Public methods *****/
 
 	BaseServer(Context *context, const BaseServerSchema &schema,
-		const Json::Value &initialConfig = Json::Value())
-		: config(schema, initialConfig),
-		  configRlz(config),
-		  shutdownFinishCallback(NULL),
-		  serverState(ACTIVE),
-		  freeClientCount(0),
-		  activeClientCount(0),
-		  disconnectedClientCount(0),
-		  peakActiveClientCount(0),
-		  totalClientsAccepted(0),
-		  lastTotalClientsAccepted(0),
-		  totalBytesConsumed(0),
-		  lastStatisticsUpdateTime(ev_time()),
-		  clientAcceptSpeed1m(-1),
-		  clientAcceptSpeed1h(-1),
-		  ctx(context),
-		  nextClientNumber(1),
-		  nEndpoints(0),
-		  accept4Available(true)
-	{
-		preinitialize(context);
-	}
-
-	template<typename Translator>
-	BaseServer(Context *context, const BaseServerSchema &schema,
-		const Json::Value &initialConfig, const Translator &translator)
+		const Json::Value &initialConfig = Json::Value(),
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
 		: config(schema, initialConfig, translator),
 		  configRlz(config),
 		  shutdownFinishCallback(NULL),

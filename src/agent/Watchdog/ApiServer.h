@@ -332,9 +332,9 @@ public:
 	// Dependencies
 	EventFd *exitEvent;
 
-	template<typename Translator>
 	ApiServer(ServerKit::Context *context, const Schema &schema,
-		const Json::Value &initialConfig, const Translator &translator)
+		const Json::Value &initialConfig,
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
 		: ParentClass(context, schema, initialConfig, translator),
 		  exitEvent(NULL)
 	{

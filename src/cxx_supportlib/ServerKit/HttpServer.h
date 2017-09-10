@@ -988,22 +988,8 @@ protected:
 
 public:
 	HttpServer(Context *context, const HttpServerSchema &schema,
-		const Json::Value &initialConfig = Json::Value())
-		: ParentClass(context, schema, initialConfig),
-		  freeRequestCount(0),
-		  totalRequestsBegun(0),
-		  lastTotalRequestsBegun(0),
-		  requestBeginSpeed1m(-1),
-		  requestBeginSpeed1h(-1),
-		  configRlz(ParentClass::config),
-		  headerParserStatePool(16, 256)
-	{
-		STAILQ_INIT(&freeRequests);
-	}
-
-	template<typename Translator>
-	HttpServer(Context *context, const HttpServerSchema &schema,
-		const Json::Value &initialConfig, const Translator &translator)
+		const Json::Value &initialConfig = Json::Value(),
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
 		: ParentClass(context, schema, initialConfig, translator),
 		  freeRequestCount(0),
 		  totalRequestsBegun(0),

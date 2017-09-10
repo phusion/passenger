@@ -172,18 +172,15 @@ private:
 		return v;
 	}
 
-	template<typename Translator>
 	static Json::Value getValueFromSubSchema(
 		const Store &storeWithMainSchema,
 		const Schema *subschema, const Translator *translator,
 		const HashedStaticString &key);
 
-	template<typename Translator>
 	static void validateSubSchema(const Store &store, vector<Error> &errors,
 		const Schema *subschema, const Translator *translator,
 		const Validator &origValidator);
 
-	template<typename Translator>
 	static Json::Value normalizeSubSchema(const Json::Value &effectiveValues,
 		const Schema *mainSchema, const Schema *subschema,
 		const Translator *translator, const Normalizer &origNormalizer);
@@ -233,11 +230,6 @@ public:
 		return EntryBuilder(entries.insert(key, entry)->value);
 	}
 
-	void addSubSchema(const Schema &subschema) {
-		addSubSchema(subschema, DummyTranslator());
-	}
-
-	template<typename Translator>
 	void addSubSchema(const Schema &subschema, const Translator &translator) {
 		assert(!finalized);
 		assert(subschema.finalized);
@@ -251,7 +243,7 @@ public:
 			if (entry.defaultValueGetter) {
 				if (entry.flags & _DYNAMIC_DEFAULT_VALUE) {
 					valueGetter = boost::bind<Json::Value>(
-						getValueFromSubSchema<Translator>,
+						getValueFromSubSchema,
 						boost::placeholders::_1, &subschema, &translator,
 						key);
 				} else {
@@ -268,7 +260,7 @@ public:
 		boost::container::vector<Validator>::const_iterator v_it, v_end
 			= subschema.getValidators().end();
 		for (v_it = subschema.getValidators().begin(); v_it != v_end; v_it++) {
-			validators.push_back(boost::bind(validateSubSchema<Translator>,
+			validators.push_back(boost::bind(validateSubSchema,
 				boost::placeholders::_1, boost::placeholders::_2,
 				&subschema, &translator, *v_it));
 		}
@@ -276,7 +268,7 @@ public:
 		boost::container::vector<Normalizer>::const_iterator n_it, n_end
 			= subschema.getNormalizers().end();
 		for (n_it = subschema.getNormalizers().begin(); n_it != n_end; n_it++) {
-			normalizers.push_back(boost::bind(normalizeSubSchema<Translator>,
+			normalizers.push_back(boost::bind(normalizeSubSchema,
 				boost::placeholders::_1, this, &subschema, &translator, *n_it));
 		}
 	}

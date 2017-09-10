@@ -42,6 +42,7 @@
 #include <ConfigKit/Common.h>
 #include <ConfigKit/Schema.h>
 #include <ConfigKit/Utils.h>
+#include <ConfigKit/Translator.h>
 #include <LoggingKit/Assert.h>
 #include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
@@ -287,7 +288,6 @@ public:
 		}
 	}
 
-	template<typename Translator>
 	Store(const Schema &_schema, const Json::Value &initialValues,
 		const Translator &translator)
 		: schema(&_schema),
@@ -481,7 +481,6 @@ public:
 		}
 	}
 
-	template<typename Translator>
 	Store extractDataForSubSchema(const Schema &subSchema,
 		const Translator &translator) const
 	{
@@ -582,7 +581,6 @@ public:
 };
 
 
-template<typename Translator>
 inline Json::Value
 Schema::getValueFromSubSchema(
 	const Store &store,
@@ -602,7 +600,6 @@ Schema::getValueFromSubSchema(
 	}
 }
 
-template<typename Translator>
 inline void
 Schema::validateSubSchema(const Store &store, vector<Error> &errors,
 	const Schema *subschema, const Translator *translator,
@@ -617,7 +614,6 @@ Schema::validateSubSchema(const Store &store, vector<Error> &errors,
 	}
 }
 
-template<typename Translator>
 inline Json::Value
 Schema::normalizeSubSchema(const Json::Value &effectiveValues,
 	const Schema *mainSchema, const Schema *subschema,

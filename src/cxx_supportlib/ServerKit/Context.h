@@ -63,15 +63,8 @@ public:
 	Config config;
 	struct MemoryKit::mbuf_pool mbuf_pool;
 
-	Context(const Schema &schema, const Json::Value &initialConfig = Json::Value())
-		: configStore(schema, initialConfig),
-		  libuv(NULL),
-		  config(configStore)
-		{ }
-
-	template<typename Translator>
-	Context(const Schema &schema, const Json::Value &initialConfig,
-		const Translator &translator)
+	Context(const Schema &schema, const Json::Value &initialConfig = Json::Value(),
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
 		: configStore(schema, initialConfig, translator),
 		  libuv(NULL),
 		  config(configStore)

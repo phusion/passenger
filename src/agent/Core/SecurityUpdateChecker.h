@@ -439,16 +439,8 @@ public:
 	// Dependencies
 	ResourceLocator *resourceLocator;
 
-	SecurityUpdateChecker(const Schema &schema, const Json::Value &initialConfig)
-		: config(schema, initialConfig),
-		  configRlz(config),
-		  updateCheckThread(NULL),
-		  resourceLocator(NULL)
-		{ }
-
-	template<typename Translator>
 	SecurityUpdateChecker(const Schema &schema, const Json::Value &initialConfig,
-		const Translator &translator)
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
 		: config(schema, initialConfig, translator),
 		  configRlz(config),
 		  updateCheckThread(NULL),
