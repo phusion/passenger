@@ -23,37 +23,45 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_AGENT_BASE_H_
-#define _PASSENGER_AGENT_BASE_H_
+#ifndef _PASSENGER_AGENT_FUNDAMENTALS_CONFIG_H_
+#define _PASSENGER_AGENT_FUNDAMENTALS_CONFIG_H_
 
-/** Common initialization code for all agents. */
-
-#include <cstddef>
-#include <Utils/VariantMap.h>
+#include <ConfigKit/ConfigKit.h>
+#include <ConfigKit/TableTranslator.h>
+#include <LoggingKit/Context.h>
 
 namespace Passenger {
+namespace Agent {
+namespace Fundamentals {
 
-typedef void (*DiagnosticsDumper)(void *userData);
-typedef void (*OptionParserFunc)(int argc, const char **argv, VariantMap &options);
-typedef void (*PreinitializationFunc)(VariantMap &options);
 
-const char *getEnvString(const char *name, const char *defaultValue = NULL);
-bool hasEnvOption(const char *name, bool defaultValue = false);
+class Schema: public ConfigKit::Schema {
+private:
+	static Json::Value getDefaultAbortHandler(const ConfigKit::Store &config);
 
-bool feedbackFdAvailable();
-VariantMap initializeAgent(int argc, char **argv[], const char *processName,
-	OptionParserFunc optionParser = NULL, PreinitializationFunc preinit = NULL,
-	int argStartIndex = 1);
-void initializeAgentOptions(const char *processName, VariantMap &options,
-	PreinitializationFunc preinit = NULL);
-void storeArgvCopy(int argc, char *argv[]);
-void installAgentAbortHandler();
-void installDiagnosticsDumper(DiagnosticsDumper func, void *userData);
+public:
+	struct {
+		LoggingKit::Schema schema;
+		ConfigKit::TableTranslator translator;
+	} loggingKit;
 
-void shutdownAgent(VariantMap *agentOptions);
+	Schema();
+};
 
-void restoreOomScore(VariantMap *agentOptions);
+struct ConfigRealization {
+	struct {
+		bool enabled;
+		bool dumpWithCrashWatch;
+		bool beep;
+		bool stopProcess;
+	} abortHandler;
 
-}
+	ConfigRealization(const ConfigKit::Store &config);
+};
 
-#endif /* _PASSENGER_AGENT_BASE_H_ */
+
+} // namespace Fundamentals
+} // namespace Agent
+} // namespace Passenger
+
+#endif /* _PASSENGER_AGENT_FUNDAMENTALS_CONFIG_H_ */

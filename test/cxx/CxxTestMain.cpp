@@ -11,7 +11,9 @@
 #include <cstring>
 #include <unistd.h>
 
-#include <Shared/Base.h>
+#include <Shared/Fundamentals/Initialization.h>
+#include <Shared/Fundamentals/AbortHandler.h>
+#include <Shared/Fundamentals/Utils.h>
 #include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
@@ -91,7 +93,11 @@ parseGroupSpec(const char *spec, string &groupName, vector<int> &testNumbers) {
 }
 
 static void
-parseOptions(int argc, char *argv[]) {
+parseOptions(int argc, const char *argv[], VariantMap &options) {
+	char path[PATH_MAX + 1];
+	getcwd(path, PATH_MAX);
+	options.set("passenger_root", extractDirName(path));
+
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
 			usage(0);
@@ -136,42 +142,27 @@ loadConfigFile() {
 	}
 }
 
-static void
-installAbortHandler(int argc, char *argv[]) {
-	VariantMap options;
-
-	options.set("passenger_root", resourceLocator->getInstallSpec());
-
-	initializeAgentOptions("CxxTestMain", options);
-	storeArgvCopy(argc, argv);
-	installAgentAbortHandler();
-}
-
 int
 main(int argc, char *argv[]) {
-	signal(SIGPIPE, SIG_IGN);
+	using namespace Agent::Fundamentals;
+
 	setenv("RAILS_ENV", "production", 1);
 	setenv("TESTING_PASSENGER", "1", 1);
 	setenv("PYTHONDONTWRITEBYTECODE", "1", 1);
+	unsetenv("PASSENGER_USE_FEEDBACK_FD");
 	unsetenv("TMPDIR");
-	oxt::initialize();
-	oxt::setup_syscall_interruption_support();
-	SystemTime::initialize();
-	LoggingKit::initialize();
+	if (getEnvBool("GDB", false) || getEnvBool("LLDB", false)) {
+		setenv("PASSENGER_ABORT_HANDLER", "false", 1);
+	}
 
 	tut::reporter reporter;
 	tut::runner.get().set_callback(&reporter);
 	allGroups = tut::runner.get().list_groups();
-	parseOptions(argc, argv);
 
-	char path[PATH_MAX + 1];
-	getcwd(path, PATH_MAX);
-	resourceLocator = new ResourceLocator(extractDirName(path));
-
+	VariantMap *options = new VariantMap();
+	*options = initializeAgent(argc, &argv, "CxxTestMain", parseOptions);
+	resourceLocator = Agent::Fundamentals::context->resourceLocator;
 	loadConfigFile();
-	if (hasEnvOption("PASSENGER_ABORT_HANDLER", true) && !hasEnvOption("GDB", false)) {
-		installAbortHandler(argc, argv);
-	}
 
 	bool all_ok = true;
 	if (runMode == RUN_ALL_GROUPS) {
@@ -180,9 +171,8 @@ main(int argc, char *argv[]) {
 		tut::runner.get().run_tests(groupsToRun);
 	}
 	all_ok = reporter.all_ok();
-	delete resourceLocator;
-	LoggingKit::shutdown();
-	oxt::shutdown();
+
+	shutdownAgent(options);
 	if (all_ok) {
 		return 0;
 	} else {

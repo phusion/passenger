@@ -427,6 +427,8 @@ Context::~Context() {
 
 	killGcThread();
 	gcLockless(false, l);
+
+	delete configRlz.load();
 }
 
 ConfigKit::Store

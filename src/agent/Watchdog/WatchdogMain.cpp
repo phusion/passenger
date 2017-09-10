@@ -62,7 +62,7 @@
 #include <cerrno>
 
 #include <jsoncpp/json.h>
-#include <Shared/Base.h>
+#include <Shared/Fundamentals/Initialization.h>
 #include <Shared/ApiServerUtils.h>
 #include <Core/OptionParser.h>
 #include <Watchdog/Config.h>
@@ -90,6 +90,7 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 using namespace Passenger;
+using namespace Passenger::Agent::Fundamentals;
 
 
 enum OomFileType {
