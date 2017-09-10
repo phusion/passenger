@@ -49,7 +49,11 @@ PhusionPassenger::SharedConstants.constants.each do |name|
   Kernel.const_set(name, PhusionPassenger::SharedConstants.const_get(name))
 end
 
-require_build_system_file 'support/cxx_dependency_map'
+if File.exist?("#{SOURCE_ROOT}/build/support/cxx_dependency_map.rb")
+  require_build_system_file 'support/cxx_dependency_map'
+else
+  CXX_DEPENDENCY_MAP = {}
+end
 require_build_system_file 'support/general'
 require_build_system_file 'support/cplusplus'
 
