@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_AGENT_BASE_H_
-#define _PASSENGER_AGENT_BASE_H_
+#ifndef _PASSENGER_AGENT_FUNDAMENTALS_INITIALIZATION_H_
+#define _PASSENGER_AGENT_FUNDAMENTALS_INITIALIZATION_H_
 
 /** Common initialization code for all agents. */
 
@@ -65,4 +65,4 @@ void restoreOomScore(VariantMap *agentOptions);
 } // namespace Agent
 } // namespace Passenger
 
-#endif /* _PASSENGER_AGENT_BASE_H_ */
+#endif /* _PASSENGER_AGENT_FUNDAMENTALS_INITIALIZATION_H_ */

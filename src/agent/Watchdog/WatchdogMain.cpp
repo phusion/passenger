@@ -43,7 +43,7 @@
 #endif
 
 #ifdef __linux__
-#include <sys/prctl.h>
+	#include <sys/prctl.h>
 #endif
 #include <sys/select.h>
 #include <sys/types.h>
@@ -964,9 +964,15 @@ lowerPrivilege() {
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set user ID to " + toString(pwUser->pw_uid), e);
 		}
-#ifdef __linux__
-		prctl(PR_SET_DUMPABLE, 1);
-#endif
+		#ifdef __linux__
+			// When we change the uid, /proc/self/pid contents don't change owner,
+			// causing us to lose access to our own /proc/self/pid files.
+			// This prctl call changes those files' ownership.
+			// References:
+			// https://stackoverflow.com/questions/8337846/files-ownergroup-doesnt-change-at-location-proc-pid-after-setuid
+			// http://man7.org/linux/man-pages/man5/proc.5.html (search for "dumpable")
+			prctl(PR_SET_DUMPABLE, 1);
+		#endif
 		setenv("USER", pwUser->pw_name, 1);
 		setenv("HOME", pwUser->pw_dir, 1);
 		setenv("UID", toString(gid).c_str(), 1);
