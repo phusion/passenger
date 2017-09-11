@@ -303,7 +303,7 @@ private:
 			options[it.name()] = valueHierarchy;
 		}
 
-		reply["status"] = "ok";
+		reply["result"] = "ok";
 		reply["request_id"] = input["request_id"];
 		reply["data"]["options"] = options;
 
