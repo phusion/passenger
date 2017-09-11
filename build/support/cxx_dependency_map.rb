@@ -7387,6 +7387,9 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/oxt/system_calls.hpp",
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
+ "src/cxx_supportlib/JsonTools/Autocast.h"=>
+  ["src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/oxt/macros.hpp"],
  "src/cxx_supportlib/LoggingKit/Assert.h"=>
   ["src/cxx_supportlib/LoggingKit/Forward.h",
    "src/cxx_supportlib/LoggingKit/Logging.h",
