@@ -148,7 +148,7 @@ private:
 			return onGetGlobalStatistics(conn, doc);
 		} else if (resource == "application_properties") {
 			return onGetApplicationProperties(conn, doc);
-		} else if (resource == "application_config") {
+		} else if (resource == "application_configuration") {
 			return onGetApplicationConfig(conn, doc);
 		} else {
 			return onUnknownResource(conn, doc);
