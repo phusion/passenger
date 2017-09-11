@@ -186,11 +186,7 @@ public:
 		static void validateAuthentication(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
 			typedef ConfigKit::Error Error;
 
-			if (config["authentication"].isNull()) {
-				return;
-			}
-			if (!config["authentication"].isObject()) {
-				errors.push_back(Error("'{{authentication}}' must be an object"));
+			if (config["authentication"].isNull() || !config["authentication"].isObject()) {
 				return;
 			}
 
