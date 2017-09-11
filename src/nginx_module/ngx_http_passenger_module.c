@@ -84,12 +84,67 @@ ngx_str_null_terminate(ngx_str_t *str) {
     return result;
 }
 
-static void
-psg_variant_map_set_ngx_str(PsgVariantMap *m,
-    const char *name,
+static PsgJsonValue *
+psg_json_value_set_str_ne(PsgJsonValue *doc, const char *name,
+    const char *val, size_t size)
+{
+    if (size > 0) {
+        return psg_json_value_set_str(doc, name, val, size);
+    } else {
+        return NULL;
+    }
+}
+
+static PsgJsonValue *
+psg_json_value_set_ngx_str_ne(PsgJsonValue *doc, const char *name,
     ngx_str_t *value)
 {
-    psg_variant_map_set(m, name, (const char *) value->data, value->len);
+    return psg_json_value_set_str_ne(doc, name,
+        (const char *) value->data, value->len);
+}
+
+static PsgJsonValue *
+psg_json_value_set_strset(PsgJsonValue *doc, const char *name,
+    const ngx_str_t *ary, size_t count)
+{
+    PsgJsonValue *subdoc = psg_json_value_new_with_type(PSG_JSON_VALUE_TYPE_ARRAY);
+    PsgJsonValue *elem;
+
+    for (size_t i = 0; i < count; i++) {
+        elem = psg_json_value_new_str((const char *) ary[i].data, ary[i].len);
+        psg_json_value_append_val(subdoc, elem);
+        psg_json_value_free(elem);
+    }
+
+    elem = psg_json_value_set_value(doc, name, subdoc);
+    psg_json_value_free(subdoc);
+    return elem;
+}
+
+static PsgJsonValue *
+psg_json_value_set_with_autodetected_data_type(PsgJsonValue *doc,
+    const char *name, size_t name_len,
+    const char *val, size_t val_len,
+    char **error)
+{
+    ngx_str_t str;
+    PsgJsonValue *j_val, *result;
+    char *name_nt;
+
+    j_val = psg_autocast_value_to_json(val, val_len, error);
+    if (j_val == NULL) {
+        return NULL;
+    }
+
+    str.data = (u_char *) name;
+    str.len = name_len;
+    name_nt = ngx_str_null_terminate(&str);
+
+    result = psg_json_value_set_value(doc, name_nt, j_val);
+    free(name_nt);
+    psg_json_value_free(j_val);
+
+    return result;
 }
 
 /**
@@ -128,11 +183,11 @@ save_master_process_pid(ngx_cycle_t *cycle) {
  * This function is called after forking and just before exec()ing the watchdog.
  */
 static void
-starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
+starting_watchdog_after_fork(void *paramCycle, void *paramWatchdogConfig) {
     ngx_cycle_t *cycle = (void *) paramCycle;
-    PsgVariantMap *params = (void *) paramParams;
+    PsgJsonValue *w_config = (void *) paramWatchdogConfig;
 
-    char        *log_filename;
+    const PsgJsonValue *log_target;
     FILE        *log_file;
     ngx_core_conf_t *ccf;
     ngx_uint_t   i;
@@ -143,18 +198,18 @@ starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
      * Make sure that they're both redirected to the log file.
      */
     log_file = NULL;
-    log_filename = psg_variant_map_get_optional(params, "log_file");
-    if (log_filename == NULL) {
+    log_target = psg_json_value_get(w_config, "log_target", (size_t) -1);
+    if (psg_json_value_is_null(log_target)) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
-                "no passenger log file configured, discarding log output");
+                "no " PROGRAM_NAME " log file configured, discarding log output");
     } else {
-        log_file = fopen(log_filename, "a");
+        log_file = fopen(psg_json_value_as_cstr(log_target), "a");
         if (log_file == NULL) {
             ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                    "could not open the passenger log file for writing during Nginx startup, some log lines might be lost (will retry from Passenger core)");
+                    "could not open the " PROGRAM_NAME " log file for writing during Nginx startup, "
+                    "some log lines might be lost (will retry from " SHORT_PROGRAM_NAME " core)");
         }
-        free(log_filename);
-        log_filename = NULL;
+        log_target = NULL;
     }
 
     if (log_file == NULL) {
@@ -226,17 +281,16 @@ start_watchdog(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
     ngx_uint_t       i;
-    ngx_str_t       *prestart_uris;
-    char           **prestart_uris_ary = NULL;
     ngx_keyval_t    *ctl = NULL;
-    PsgVariantMap   *params = NULL;
+    ngx_str_t        str;
+    PsgJsonValue    *w_config = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
     char   *passenger_root = NULL;
     char   *error_message = NULL;
 
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
-    params    = psg_variant_map_new();
+    w_config  = psg_json_value_new_with_type(PSG_JSON_VALUE_TYPE_OBJECT);
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     if (passenger_root == NULL) {
         goto error_enomem;
@@ -245,53 +299,38 @@ start_watchdog(ngx_cycle_t *cycle) {
     pp_app_type_detector_set_throttle_rate(pp_app_type_detector,
         passenger_main_conf.stat_throttle_rate);
 
-    prestart_uris = (ngx_str_t *) passenger_main_conf.prestart_uris->elts;
-    prestart_uris_ary = calloc(sizeof(char *), passenger_main_conf.prestart_uris->nelts);
-    for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
-        prestart_uris_ary[i] = ngx_str_null_terminate(&prestart_uris[i]);
-        if (prestart_uris_ary[i] == NULL) {
-            goto error_enomem;
-        }
-    }
-
-    psg_variant_map_set_int    (params, "web_server_control_process_pid", getpid());
-    psg_variant_map_set        (params, "web_server_module_version", PASSENGER_VERSION, strlen(PASSENGER_VERSION));
-    psg_variant_map_set        (params, "server_software", NGINX_VER, strlen(NGINX_VER));
-    psg_variant_map_set        (params, "server_version", NGINX_VERSION, strlen(NGINX_VERSION));
-    psg_variant_map_set_bool   (params, "multi_app", 1);
-    psg_variant_map_set_bool   (params, "load_shell_envvars", 1);
-    psg_variant_map_set_int    (params, "log_level", passenger_main_conf.log_level);
-    psg_variant_map_set_ngx_str(params, "file_descriptor_log_file", &passenger_main_conf.file_descriptor_log_file);
-    psg_variant_map_set_int    (params, "socket_backlog", passenger_main_conf.socket_backlog);
-    psg_variant_map_set_ngx_str(params, "data_buffer_dir", &passenger_main_conf.data_buffer_dir);
-    psg_variant_map_set_ngx_str(params, "instance_registry_dir", &passenger_main_conf.instance_registry_dir);
-    psg_variant_map_set_bool   (params, "disable_security_update_check", passenger_main_conf.disable_security_update_check);
-    psg_variant_map_set_ngx_str(params, "security_update_check_proxy", &passenger_main_conf.security_update_check_proxy);
-    psg_variant_map_set_bool   (params, "user_switching", passenger_main_conf.user_switching);
-    psg_variant_map_set_bool   (params, "show_version_in_header", passenger_main_conf.show_version_in_header);
-    psg_variant_map_set_bool   (params, "turbocaching", passenger_main_conf.turbocaching);
-    psg_variant_map_set_ngx_str(params, "default_user", &passenger_main_conf.default_user);
-    psg_variant_map_set_ngx_str(params, "default_group", &passenger_main_conf.default_group);
-    psg_variant_map_set_ngx_str(params, "default_ruby", &passenger_main_conf.default_ruby);
-    psg_variant_map_set_int    (params, "max_pool_size", passenger_main_conf.max_pool_size);
-    psg_variant_map_set_int    (params, "pool_idle_time", passenger_main_conf.pool_idle_time);
-    psg_variant_map_set_int    (params, "response_buffer_high_watermark", passenger_main_conf.response_buffer_high_watermark);
-    psg_variant_map_set_int    (params, "stat_throttle_rate", passenger_main_conf.stat_throttle_rate);
-    psg_variant_map_set_ngx_str(params, "analytics_log_user", &passenger_main_conf.analytics_log_user);
-    psg_variant_map_set_ngx_str(params, "analytics_log_group", &passenger_main_conf.analytics_log_group);
-    psg_variant_map_set_bool   (params, "union_station_support", passenger_main_conf.union_station_support);
-    psg_variant_map_set_ngx_str(params, "union_station_gateway_address", &passenger_main_conf.union_station_gateway_address);
-    psg_variant_map_set_int    (params, "union_station_gateway_port", passenger_main_conf.union_station_gateway_port);
-    psg_variant_map_set_ngx_str(params, "union_station_gateway_cert", &passenger_main_conf.union_station_gateway_cert);
-    psg_variant_map_set_ngx_str(params, "union_station_proxy_address", &passenger_main_conf.union_station_proxy_address);
-    psg_variant_map_set_strset (params, "prestart_urls", (const char **) prestart_uris_ary, passenger_main_conf.prestart_uris->nelts);
+    /* Note: WatchdogLauncher::start() sets a number of default values. */
+    psg_json_value_set_str_ne    (w_config, "web_server_module_version", PASSENGER_VERSION, strlen(PASSENGER_VERSION));
+    psg_json_value_set_str_ne    (w_config, "web_server_version", NGINX_VERSION, strlen(NGINX_VERSION));
+    psg_json_value_set_str_ne    (w_config, "server_software", NGINX_VER, strlen(NGINX_VER));
+    psg_json_value_set_bool      (w_config, "multi_app", 1);
+    psg_json_value_set_bool      (w_config, "default_load_shell_envvars", 1);
+    psg_json_value_set_int       (w_config, "log_level", passenger_main_conf.log_level);
+    psg_json_value_set_ngx_str_ne(w_config, "file_descriptor_log_target", &passenger_main_conf.file_descriptor_log_file);
+    psg_json_value_set_int       (w_config, "controller_socket_backlog", passenger_main_conf.socket_backlog);
+    psg_json_value_set_ngx_str_ne(w_config, "controller_file_buffered_channel_buffer_dir", &passenger_main_conf.data_buffer_dir);
+    psg_json_value_set_ngx_str_ne(w_config, "instance_registry_dir", &passenger_main_conf.instance_registry_dir);
+    psg_json_value_set_bool      (w_config, "security_update_checker_disabled", passenger_main_conf.disable_security_update_check);
+    psg_json_value_set_ngx_str_ne(w_config, "security_update_checker_proxy_url", &passenger_main_conf.security_update_check_proxy);
+    psg_json_value_set_bool      (w_config, "user_switching", passenger_main_conf.user_switching);
+    psg_json_value_set_bool      (w_config, "show_version_in_header", passenger_main_conf.show_version_in_header);
+    psg_json_value_set_bool      (w_config, "turbocaching", passenger_main_conf.turbocaching);
+    psg_json_value_set_ngx_str_ne(w_config, "default_user", &passenger_main_conf.default_user);
+    psg_json_value_set_ngx_str_ne(w_config, "default_group", &passenger_main_conf.default_group);
+    psg_json_value_set_ngx_str_ne(w_config, "default_ruby", &passenger_main_conf.default_ruby);
+    psg_json_value_set_int       (w_config, "max_pool_size", passenger_main_conf.max_pool_size);
+    psg_json_value_set_int       (w_config, "pool_idle_time", passenger_main_conf.pool_idle_time);
+    psg_json_value_set_int       (w_config, "response_buffer_high_watermark", passenger_main_conf.response_buffer_high_watermark);
+    psg_json_value_set_int       (w_config, "stat_throttle_rate", passenger_main_conf.stat_throttle_rate);
+    psg_json_value_set_strset    (w_config, "prestart_urls", (ngx_str_t *) passenger_main_conf.prestart_uris->elts,
+        passenger_main_conf.prestart_uris->nelts);
 
     if (passenger_main_conf.core_file_descriptor_ulimit != NGX_CONF_UNSET_UINT) {
-        psg_variant_map_set_int(params, "core_file_descriptor_ulimit", passenger_main_conf.core_file_descriptor_ulimit);
+        psg_json_value_set_int(w_config, "core_file_descriptor_ulimit", passenger_main_conf.core_file_descriptor_ulimit);
     }
 
     if (passenger_main_conf.log_file.len > 0) {
-        psg_variant_map_set_ngx_str(params, "log_file", &passenger_main_conf.log_file);
+        psg_json_value_set_ngx_str_ne(w_config, "log_target", &passenger_main_conf.log_file);
     } else if (cycle->new_log.file == NULL) {
         ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "Cannot initialize " PROGRAM_NAME
             " because Nginx is not configured with an error log file."
@@ -300,21 +339,31 @@ start_watchdog(ngx_cycle_t *cycle) {
         result = NGX_ERROR;
         goto cleanup;
     } else if (cycle->new_log.file->name.len > 0) {
-        psg_variant_map_set_ngx_str(params, "log_file", &cycle->new_log.file->name);
+        psg_json_value_set_ngx_str_ne(w_config, "log_target", &cycle->new_log.file->name);
     } else if (cycle->log->file->name.len > 0) {
-        psg_variant_map_set_ngx_str(params, "log_file", &cycle->log->file->name);
+        psg_json_value_set_ngx_str_ne(w_config, "log_target", &cycle->log->file->name);
     }
 
     ctl = (ngx_keyval_t *) passenger_main_conf.ctl->elts;
     for (i = 0; i < passenger_main_conf.ctl->nelts; i++) {
-        psg_variant_map_set2(params,
+        psg_json_value_set_with_autodetected_data_type(w_config,
             (const char *) ctl[i].key.data, ctl[i].key.len - 1,
-            (const char *) ctl[i].value.data, ctl[i].value.len - 1);
+            (const char *) ctl[i].value.data, ctl[i].value.len - 1,
+            &error_message);
+        if (error_message != NULL) {
+            str.data = ctl[i].key.data;
+            str.len = ctl[i].key.len - 1;
+            ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
+                "Error parsing ctl %V as JSON data: %s",
+                &str, error_message);
+            result = NGX_ERROR;
+            goto cleanup;
+        }
     }
 
     ret = psg_watchdog_launcher_start(psg_watchdog_launcher,
         passenger_root,
-        params,
+        w_config,
         starting_watchdog_after_fork,
         cycle,
         &error_message);
@@ -345,15 +394,9 @@ start_watchdog(ngx_cycle_t *cycle) {
     }
 
 cleanup:
-    psg_variant_map_free(params);
+    psg_json_value_free(w_config);
     free(passenger_root);
     free(error_message);
-    if (prestart_uris_ary != NULL) {
-        for (i = 0; i < passenger_main_conf.prestart_uris->nelts; i++) {
-            free(prestart_uris_ary[i]);
-        }
-        free(prestart_uris_ary);
-    }
 
     if (result == NGX_ERROR && passenger_main_conf.abort_on_startup_error) {
         exit(1);

@@ -414,6 +414,43 @@ extraArgumentsPassed(int argc, char *argv[], int argStartIndex) {
 }
 
 static void
+parseAndCommitConfig(ConfigKit::Store &config, const StaticString &jsonData) {
+	Json::Reader reader;
+	Json::Value doc;
+	if (reader.parse(jsonData, doc)) {
+		vector<ConfigKit::Error> errors;
+		if (!config.update(doc, errors)) {
+			vector<ConfigKit::Error>::const_iterator it, end = errors.end();
+			fprintf(stderr, "ERROR: invalid configuration:\n");
+			for (it = errors.begin(); it != end; it++) {
+				fprintf(stderr, "- %s\n", it->getMessage().c_str());
+			}
+			fprintf(stderr, "Raw configuration: %s\n", doc.toStyledString().c_str());
+			exit(1);
+		}
+	} else {
+		fprintf(stderr, "ERROR: JSON configuration parse error: %s\n",
+			reader.getFormattedErrorMessages().c_str());
+		fprintf(stderr, "Raw JSON data: %s\n", jsonData.toString().c_str());
+		exit(1);
+	}
+}
+
+static void
+readConfigFromFd(int fd, ConfigKit::Store &config) {
+	parseAndCommitConfig(config, readScalarMessage(fd));
+}
+
+static void
+readConfigFromJsonPassedToArgs(int argc, char **argv[], int argStartIndex, ConfigKit::Store &config) {
+	if (argc <= argStartIndex) {
+		return;
+	}
+
+	parseAndCommitConfig(config, (*argv)[argStartIndex]);
+}
+
+static void
 maybeInitializeAbortHandler() {
 	if (!getEnvBool("PASSENGER_ABORT_HANDLER", true)) {
 		return;
@@ -438,26 +475,13 @@ maybeInitializeSyscallFailureSimulation(const char *processName) {
 }
 
 static void
-initializeLoggingKit(const char *processName, VariantMap &options) {
-	Json::Value config(Json::objectValue);
+initializeLoggingKit(const char *processName, ConfigKit::Store &config,
+	const ConfigKit::Translator &loggingKitTranslator)
+{
+	LoggingKit::initialize(config.inspectEffectiveValues(), loggingKitTranslator);
+	Json::Value dump = LoggingKit::context->inspectConfig();
 
-	options.setDefaultInt("log_level", DEFAULT_LOG_LEVEL);
-	config["level"] = options.get("log_level");
-
-	if (options.has("log_file")) {
-		config["target"] = options.get("log_file");
-	} else if (options.has("debug_log_file")) {
-		config["target"] = options.get("debug_log_file");
-	}
-
-	if (options.has("file_descriptor_log_file")) {
-		config["file_descriptor_log_target"] =
-			options.get("file_descriptor_log_file");
-	}
-
-	LoggingKit::initialize(config);
-
-	if (options.has("file_descriptor_log_file")) {
+	if (!dump["file_descriptor_log_target"]["effective_value"].isNull()) {
 		// This information helps ./dev/parse_file_descriptor_log.
 		FastStringStream<> stream;
 		LoggingKit::_prepareLogEntry(stream, LoggingKit::CRIT, __FILE__, __LINE__);
@@ -465,12 +489,11 @@ initializeLoggingKit(const char *processName, VariantMap &options) {
 		_writeFileDescriptorLogEntry(LoggingKit::context->getConfigRealization(),
 			stream.data(), stream.size());
 
-		config = LoggingKit::context->getConfig().inspect();
 		P_LOG_FILE_DESCRIPTOR_OPEN4(
 			LoggingKit::context->getConfigRealization()->fileDescriptorLogTargetFd,
 			__FILE__, __LINE__,
 			"file descriptor log file "
-			<< config["file_descriptor_log_target"]["effective_value"]["path"].asString());
+			<< dump["file_descriptor_log_target"]["effective_value"]["path"].asString());
 	} else {
 		// This information helps ./dev/parse_file_descriptor_log.
 		P_DEBUG("Starting agent: " << processName);
@@ -506,12 +529,12 @@ changeProcessTitle(int argc, char **argv[], const char *processName) {
 	*argv = context->origArgv;
 }
 
-VariantMap
+void
 initializeAgent(int argc, char **argv[], const char *processName,
-	OptionParserFunc optionParser, PreinitializationFunc preinit,
-	int argStartIndex)
+	ConfigKit::Store &config, const ConfigKit::Translator &loggingKitTranslator,
+	OptionParserFunc optionParser,
+	PreinitializationFunc preinit, int argStartIndex)
 {
-	VariantMap options;
 	const char *seedStr;
 
 	context = new Context();
@@ -543,28 +566,31 @@ initializeAgent(int argc, char **argv[], const char *processName,
 				exit(1);
 			}
 			context->feedbackFdAvailable = true;
-			options.readFrom(FEEDBACK_FD);
+			readConfigFromFd(FEEDBACK_FD, config);
 		} else if (optionParser != NULL) {
-			optionParser(argc, (const char **) *argv, options);
+			optionParser(argc, (const char **) *argv, config);
 		} else {
-			options.readFrom((const char **) *argv + argStartIndex,
-				argc - argStartIndex);
+			readConfigFromJsonPassedToArgs(argc, argv, argStartIndex, config);
 		}
 
-		if (options.has("passenger_root")) {
-			context->resourceLocator = new ResourceLocator(options.get("passenger_root", true));
+		if (!config["passenger_root"].isNull()) {
+			context->resourceLocator = new ResourceLocator(config["passenger_root"].asString());
 			if (abortHandlerInstalled()) {
-				context->abortHandlerConfig.ruby = strdup(options.get("default_ruby", false, DEFAULT_RUBY).c_str());
+				string defaultRuby = config["default_ruby"].asString();
+				if (defaultRuby.empty()) {
+					defaultRuby = DEFAULT_RUBY;
+				}
+				context->abortHandlerConfig.ruby = strdup(defaultRuby.c_str());
 				context->abortHandlerConfig.resourceLocator = context->resourceLocator;
 				abortHandlerConfigChanged();
 			}
 		}
 
 		if (preinit != NULL) {
-			preinit(options);
+			preinit(config);
 		}
 
-		initializeLoggingKit(processName, options);
+		initializeLoggingKit(processName, config, loggingKitTranslator);
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		exit(1);
@@ -573,14 +599,12 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	storeArgvCopy(argc, *argv);
 	changeProcessTitle(argc, argv, processName);
 
-	P_DEBUG("Random seed: " << context->randomSeed);
-
-	return options;
+	P_DEBUG(processName << " config: " << config.inspectEffectiveValues().toStyledString());
+	P_DEBUG(processName << " random seed: " << context->randomSeed);
 }
 
 void
-shutdownAgent(VariantMap *agentOptions) {
-	delete agentOptions;
+shutdownAgent(ConfigKit::Schema *schema, ConfigKit::Store *config) {
 	LoggingKit::shutdown();
 	oxt::shutdown();
 	if (abortHandlerInstalled()) {
@@ -594,6 +618,8 @@ shutdownAgent(VariantMap *agentOptions) {
 	delete context->resourceLocator;
 	delete context;
 	context = NULL;
+	delete config;
+	delete schema;
 }
 
 /**
@@ -602,10 +628,10 @@ shutdownAgent(VariantMap *agentOptions) {
  * should have.
  */
 void
-restoreOomScore(VariantMap *agentOptions) {
+restoreOomScore(const string &scoreString) {
 	TRACE_POINT();
+	string score = scoreString;
 
-	string score = agentOptions->get("original_oom_score", false);
 	if (score.empty()) {
 		return;
 	}

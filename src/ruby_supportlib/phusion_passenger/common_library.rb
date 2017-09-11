@@ -360,4 +360,5 @@ end
 # A subset of the objects are linked to the Nginx binary. This defines
 # what those objects are.
 NGINX_LIBS_SELECTOR = [:base, 'WatchdogLauncher.o', 'AppTypes.o',
-  'Utils/CachedFileStat.o', 'UnionStationFilterSupport.o']
+  'Utils/CachedFileStat.o', 'UnionStationFilterSupport.o',
+  'JsonTools/CBindings.o']

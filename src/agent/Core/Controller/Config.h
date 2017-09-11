@@ -35,7 +35,7 @@
 #include <cerrno>
 
 #include <ConfigKit/ConfigKit.h>
-#include <ConfigKit/ValidationUtils.h>
+#include <ConfigKit/SchemaUtils.h>
 #include <MemoryKit/palloc.h>
 #include <ServerKit/HttpServer.h>
 #include <AppTypes.h>

@@ -290,6 +290,12 @@ asyncCommitConfigChange(ConfigChangeRequest *req, const CommitConfigChangeCallba
 	wo->appPool->setMax(coreConfig->get("max_pool_size").asInt());
 	wo->appPool->setMaxIdleTime(coreConfig->get("pool_idle_time").asInt() * 1000000ULL);
 	wo->appPool->enableSelfChecking(coreConfig->get("pool_selfchecks").asBool());
+	wo->appPool->setAgentConfig(coreConfig->inspectEffectiveValues());
+
+	{
+		boost::lock_guard<boost::mutex> l(wo->spawningKitConfig->agentConfigSyncher);
+		wo->spawningKitConfig->agentConfig = coreConfig->inspectEffectiveValues();
+	}
 
 	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];

@@ -273,7 +273,7 @@ public:
 	 */
 	vector<GetWaiter> getWaitlist;
 
-	const VariantMap *agentsOptions;
+	Json::Value agentConfig;
 
 // Actually private, but marked public so that unit tests can access the fields.
 public:
@@ -448,7 +448,7 @@ public:
 	/****** Initialization and shutdown ******/
 
 	Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
-		const VariantMap *agentsOptions = NULL);
+		const Json::Value &agentConfig = Json::Value());
 	~Pool();
 	void initialize();
 	void initDebugging();
@@ -510,6 +510,7 @@ public:
 	void setMax(unsigned int max);
 	void setMaxIdleTime(unsigned long long value);
 	void enableSelfChecking(bool enabled);
+	void setAgentConfig(const Json::Value &agentConfig);
 	bool isSpawning(bool lock = true) const;
 	bool authorizeByApiKey(const ApiKey &key, bool lock = true) const;
 	bool authorizeByUid(uid_t uid, bool lock = true) const;

@@ -37,6 +37,7 @@
 #undef AP_HAVE_DESIGNATED_INITIALIZER
 
 #include "Configuration.hpp"
+#include <JsonTools/Autocast.h>
 #include <Utils.h>
 #include <Constants.h>
 #include <UnionStationFilterSupport.h>
@@ -315,8 +316,12 @@ DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_turbocaching, turbocaching)
 
 static const char *
 cmd_passenger_ctl(cmd_parms *cmd, void *dummy, const char *name, const char *value) {
-	serverConfig.ctl.set(name, value);
-	return NULL;
+	try {
+		serverConfig.ctl[name] = autocastValueToJson(value);
+		return NULL;
+	} catch (const Json::Reader &) {
+		return "Error parsing value as JSON";
+	}
 }
 
 static const char *

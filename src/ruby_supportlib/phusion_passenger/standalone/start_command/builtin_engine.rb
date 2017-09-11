@@ -104,7 +104,7 @@ module PhusionPassenger
           command << " --no-delete-pid-file"
           command << " --cleanup-pidfile #{Shellwords.escape @working_dir}/temp_dir_toucher.pid"
           command << " --report-file #{Shellwords.escape @working_dir}/report.json"
-          command << " --ctl prestart_urls=#{Shellwords.escape prestart_urls_base64}"
+          command << " --ctl prestart_urls=#{Shellwords.escape prestart_urls_json}"
           add_param(command, :user, "--user")
           add_param(command, :log_file, "--log-file")
           add_param(command, :pid_file, "--pid-file")
@@ -207,8 +207,8 @@ module PhusionPassenger
           end
         end
 
-        def prestart_urls_base64
-          Utils.base64(listen_url(@apps[0]))
+        def prestart_urls_json
+          PhusionPassenger::Utils::JSON.generate([listen_url(@apps[0])])
         end
 
         def add_param(command, option_name, param_name)

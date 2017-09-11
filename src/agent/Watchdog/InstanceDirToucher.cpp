@@ -78,7 +78,7 @@ private:
 					fflush(stderr);
 					_exit(1);
 				}
-				restoreOomScore(agentsOptions);
+				restoreOomScore(wo->extraConfigToPassToSubAgents["oom_score"].asString());
 
 				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", (char *) 0);
 				e = errno;

@@ -62,6 +62,7 @@
 #include <Utils/HttpConstants.h>
 #include <Utils/ReleaseableScopedPointer.h>
 #include <LoggingKit/LoggingKit.h>
+#include <LoggingKit/Context.h>
 #include <WatchdogLauncher.h>
 #include <Constants.h>
 
@@ -226,6 +227,31 @@ private:
 	CachedFileStat cstat;
 	WatchdogLauncher watchdogLauncher;
 	boost::mutex cstatMutex;
+
+	static Json::Value strsetToJson(const set<string> &input) {
+		Json::Value result(Json::arrayValue);
+		set<string>::const_iterator it, end = input.end();
+		for (it = input.begin(); it != end; it++) {
+			result.append(*it);
+		}
+		return result;
+	}
+
+	static Json::Value nonEmptyString(const char *str) {
+		if (str != NULL && *str != '\0') {
+			return str;
+		} else {
+			return Json::Value();
+		}
+	}
+
+	static Json::Value nonEmptyString(const string &str) {
+		if (str.empty()) {
+			return Json::Value();
+		} else {
+			return str;
+		}
+	}
 
 	inline DirConfig *getDirConfig(request_rec *r) {
 		return (DirConfig *) ap_get_module_config(r->per_dir_config, &passenger_module);
@@ -1294,41 +1320,32 @@ public:
 			webServerVersion.append(version.add_string);
 		}
 
-		VariantMap params;
-		params
-			.setPid ("web_server_control_process_pid", getpid())
-			.set    ("web_server_module_version", PASSENGER_VERSION)
-			.set    ("server_software", webServerDesc)
-			.set    ("server_version", webServerVersion)
-			.setBool("multi_app", true)
-			.setBool("load_shell_envvars", true)
-			.set    ("file_descriptor_log_file", (serverConfig.fileDescriptorLogFile == NULL)
-				? "" : serverConfig.fileDescriptorLogFile)
-			.setInt	("socket_backlog", serverConfig.socketBacklog)
-			.set    ("data_buffer_dir", serverConfig.dataBufferDir)
-			.set    ("instance_registry_dir", serverConfig.instanceRegistryDir)
-			.setBool("disable_security_update_check", serverConfig.disableSecurityUpdateCheck)
-			.set    ("security_update_check_proxy", serverConfig.securityUpdateCheckProxy)
-			.setBool("user_switching", serverConfig.userSwitching)
-			.set    ("default_user", serverConfig.defaultUser)
-			.set    ("default_group", serverConfig.defaultGroup)
-			.set    ("default_ruby", serverConfig.defaultRuby)
-			.setInt ("max_pool_size", serverConfig.maxPoolSize)
-			.setInt ("pool_idle_time", serverConfig.poolIdleTime)
-			.setInt ("response_buffer_high_watermark", serverConfig.responseBufferHighWatermark)
-			.setInt ("stat_throttle_rate", serverConfig.statThrottleRate)
-			.set    ("analytics_log_user", serverConfig.analyticsLogUser)
-			.set    ("analytics_log_group", serverConfig.analyticsLogGroup)
-			.setBool("union_station_support", serverConfig.unionStationSupport)
-			.set    ("union_station_gateway_address", serverConfig.unionStationGatewayAddress)
-			.setInt ("union_station_gateway_port", serverConfig.unionStationGatewayPort)
-			.set    ("union_station_gateway_cert", serverConfig.unionStationGatewayCert)
-			.set    ("union_station_proxy_address", serverConfig.unionStationProxyAddress)
-			.setBool("turbocaching", serverConfig.turbocaching)
-			.setStrSet("prestart_urls", serverConfig.prestartURLs);
+		// Note: WatchdogLauncher::start() sets a number of default values.
+		Json::Value config;
+		config["web_server_module_version"] = PASSENGER_VERSION;
+		config["web_server_version"] = webServerVersion;
+		config["server_software"] = webServerDesc;
+		config["multi_app"] = true;
+		config["default_load_shell_envvars"] = true;
+		config["file_descriptor_log_target"] = nonEmptyString(serverConfig.fileDescriptorLogFile);
+		config["controller_socket_backlog"] = serverConfig.socketBacklog;
+		config["controller_file_buffered_channel_buffer_dir"] = nonEmptyString(serverConfig.dataBufferDir);
+		config["instance_registry_dir"] = nonEmptyString(serverConfig.instanceRegistryDir);
+		config["security_update_checker_disabled"] = serverConfig.disableSecurityUpdateCheck;
+		config["security_update_checker_proxy_url"] = nonEmptyString(serverConfig.securityUpdateCheckProxy);
+		config["user_switching"] = serverConfig.userSwitching;
+		config["default_user"] = serverConfig.defaultUser;
+		config["default_group"] = serverConfig.defaultGroup;
+		config["default_ruby"] = serverConfig.defaultRuby;
+		config["max_pool_size"] = serverConfig.maxPoolSize;
+		config["pool_idle_time"] = serverConfig.poolIdleTime;
+		config["response_buffer_high_watermark"] = serverConfig.responseBufferHighWatermark;
+		config["stat_throttle_rate"] = serverConfig.statThrottleRate;
+		config["turbocaching"] = serverConfig.turbocaching;
+		config["prestart_urls"] = strsetToJson(serverConfig.prestartURLs);
 
 		if (serverConfig.logFile != NULL) {
-			params.set("log_file", serverConfig.logFile);
+			config["log_target"] = serverConfig.logFile;
 		} else if (s->error_fname == NULL) {
 			throw ConfigurationException("Cannot initialize " PROGRAM_NAME
 				" because Apache is not configured with an error log file."
@@ -1346,12 +1363,15 @@ public:
 				" support logging to syslog. Please configure " SHORT_PROGRAM_NAME
 				" with an explicit log file using the `PassengerLogFile` directive.");
 		} else {
-			params.set("log_file", ap_server_root_relative(pconf, s->error_fname));
+			config["log_target"] = ap_server_root_relative(pconf, s->error_fname);
 		}
 
-		serverConfig.ctl.addTo(params);
+		Json::Value::iterator it, end = serverConfig.ctl.end();
+		for (it = serverConfig.ctl.begin(); it != end; it++) {
+			config[it.name()] = *it;
+		}
 
-		watchdogLauncher.start(serverConfig.root, params);
+		watchdogLauncher.start(serverConfig.root, config);
 	}
 
 	void childInit(apr_pool_t *pchild, server_rec *s) {

@@ -35,7 +35,7 @@
 #include <Constants.h>
 #include <WebSocketCommandReverseServer.h>
 #include <InstanceDirectory.h>
-#include <ConfigKit/ValidationUtils.h>
+#include <ConfigKit/SchemaUtils.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
@@ -86,7 +86,8 @@ public:
 			using namespace ConfigKit;
 
 			add("integration_mode", STRING_TYPE, OPTIONAL, DEFAULT_INTEGRATION_MODE);
-			add("standalone_engine", STRING_TYPE, OPTIONAL);
+			addWithDynamicDefault("standalone_engine", STRING_TYPE, OPTIONAL,
+				ConfigKit::getDefaultStandaloneEngine);
 			add("instance_dir", STRING_TYPE, OPTIONAL | READ_ONLY);
 			add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);
 			add("web_server_module_version", STRING_TYPE, OPTIONAL | READ_ONLY);

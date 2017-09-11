@@ -156,7 +156,7 @@ struct ServerConfig {
 	/** The Passenger root folder. */
 	const char *root;
 
-	VariantMap ctl;
+	Json::Value ctl;
 
 	/** The default Ruby interpreter to use. */
 	const char *defaultRuby;

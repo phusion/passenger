@@ -212,7 +212,6 @@ namespace Core {
 
 using namespace Passenger::Core;
 
-static VariantMap *agentsOptions;
 static Schema *coreSchema;
 static ConfigKit::Store *coreConfig;
 static WorkingObjects *workingObjects;
@@ -668,7 +667,7 @@ initializeNonPrivilegedWorkingObjects() {
 	UPDATE_TRACE_POINT();
 	wo->spawningKitConfig = boost::make_shared<SpawningKit::Config>();
 	wo->spawningKitConfig->resourceLocator = &wo->resourceLocator;
-	wo->spawningKitConfig->agentsOptions = agentsOptions;
+	wo->spawningKitConfig->agentConfig = coreConfig->inspectEffectiveValues();
 	wo->spawningKitConfig->errorHandler = spawningKitErrorHandler;
 	wo->spawningKitConfig->unionStationContext = wo->unionStationContext;
 	wo->spawningKitConfig->randomGenerator = wo->randomGenerator;
@@ -681,7 +680,7 @@ initializeNonPrivilegedWorkingObjects() {
 
 	UPDATE_TRACE_POINT();
 	wo->spawningKitFactory = boost::make_shared<SpawningKit::Factory>(wo->spawningKitConfig);
-	wo->appPool = boost::make_shared<Pool>(wo->spawningKitFactory, agentsOptions);
+	wo->appPool = boost::make_shared<Pool>(wo->spawningKitFactory, coreConfig->inspectEffectiveValues());
 	wo->appPool->initialize();
 	wo->appPool->setMax(coreConfig->get("max_pool_size").asInt());
 	wo->appPool->setMaxIdleTime(coreConfig->get("pool_idle_time").asInt() * 1000000ULL);
@@ -1204,12 +1203,13 @@ runCore() {
 /***** Entry point and command line argument parsing *****/
 
 static void
-parseOptions(int argc, const char *argv[], VariantMap &options) {
+parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 	OptionParser p(coreUsage);
+	Json::Value updates(Json::objectValue);
 	int i = 2;
 
 	while (i < argc) {
-		if (parseCoreOption(argc, argv, i, options)) {
+		if (parseCoreOption(argc, argv, i, updates)) {
 			continue;
 		} else if (p.isFlag(argv[i], 'h', "--help")) {
 			coreUsage();
@@ -1220,201 +1220,14 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			exit(1);
 		}
 	}
-}
 
-static void
-preinitialize(VariantMap &options) {
-	// Set log_level here so that initializeAgent() calls setLogLevel()
-	// and setLogFile() with the right value.
-	if (options.has("core_log_level")) {
-		options.setInt("log_level", options.getInt("core_log_level"));
-	}
-	if (options.has("core_log_file")) {
-		options.set("log_file", options.get("core_log_file"));
-	}
-	if (options.has("core_file_descriptor_log_file")) {
-		options.set("file_descriptor_log_file", options.get("core_file_descriptor_log_file"));
-	}
-}
-
-static string
-inferDefaultGroup(const string &defaultUser) {
-	struct passwd *userEntry = getpwnam(defaultUser.c_str());
-	if (userEntry == NULL) {
-		throw ConfigurationException(
-			string("The user that PassengerDefaultUser refers to, '") +
-			defaultUser + "', does not exist.");
-	}
-	return getGroupName(userEntry->pw_gid);
-}
-
-static void
-setAgentsOptionsDefaults() {
-	VariantMap &options = *agentsOptions;
-	set<string> defaultAddress;
-	defaultAddress.insert(DEFAULT_HTTP_SERVER_LISTEN_ADDRESS);
-
-	options.setDefaultBool("user_switching", true);
-	options.setDefault("default_user", DEFAULT_WEB_APP_USER);
-	if (!options.has("default_group")) {
-		options.set("default_group",
-			inferDefaultGroup(options.get("default_user")));
-	}
-	options.setDefault("integration_mode", "standalone");
-	if (options.get("integration_mode") == "standalone" && !options.has("standalone_engine")) {
-		options.set("standalone_engine", "builtin");
-	}
-	options.setDefaultStrSet("core_addresses", defaultAddress);
-	options.setDefaultInt("socket_backlog", DEFAULT_SOCKET_BACKLOG);
-	options.setDefaultBool("multi_app", false);
-	options.setDefault("environment", DEFAULT_APP_ENV);
-	options.setDefault("spawn_method", DEFAULT_SPAWN_METHOD);
-	options.setDefaultBool("load_shell_envvars", false);
-	options.setDefaultBool("abort_websockets_on_process_shutdown", true);
-	options.setDefaultInt("force_max_concurrent_requests_per_process", -1);
-	options.setDefault("concurrency_model", DEFAULT_CONCURRENCY_MODEL);
-	options.setDefaultInt("app_thread_count", DEFAULT_APP_THREAD_COUNT);
-	options.setDefaultInt("max_pool_size", DEFAULT_MAX_POOL_SIZE);
-	options.setDefaultInt("pool_idle_time", DEFAULT_POOL_IDLE_TIME);
-	options.setDefaultInt("min_instances", 1);
-	options.setDefaultInt("max_preloader_idle_time", DEFAULT_MAX_PRELOADER_IDLE_TIME);
-	options.setDefaultUint("max_request_queue_size", DEFAULT_MAX_REQUEST_QUEUE_SIZE);
-	options.setDefaultUint("stat_throttle_rate", DEFAULT_STAT_THROTTLE_RATE);
-	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
-	options.setDefaultBool("show_version_in_header", true);
-	options.setDefaultBool("sticky_sessions", false);
-	options.setDefault("sticky_sessions_cookie_name", DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
-	options.setDefaultBool("turbocaching", true);
-	options.setDefault("data_buffer_dir", getSystemTempDir());
-	options.setDefaultUint("file_buffer_threshold", DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD);
-	options.setDefaultInt("response_buffer_high_watermark", DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
-	options.setDefaultBool("selfchecks", false);
-	options.setDefaultBool("graceful_exit", true);
-	options.setDefaultInt("core_threads", boost::thread::hardware_concurrency());
-	options.setDefaultBool("core_cpu_affine", false);
-	options.setDefault("friendly_error_pages", "auto");
-	options.setDefaultBool("rolling_restarts", false);
-	options.setDefaultBool("resist_deployment_errors", false);
-
-	string firstAddress = options.getStrSet("core_addresses")[0];
-	if (getSocketAddressType(firstAddress) == SAT_TCP) {
-		string host;
-		unsigned short port;
-
-		parseTcpSocketAddress(firstAddress, host, port);
-		options.setDefault("default_server_name", host);
-		options.setDefaultInt("default_server_port", port);
-	} else {
-		options.setDefault("default_server_name", "localhost");
-		options.setDefaultInt("default_server_port", 80);
-	}
-
-	options.setDefault("default_ruby", DEFAULT_RUBY);
-	options.setDefaultBool("debugger", false);
-	if (!options.getBool("multi_app") && !options.has("app_root")) {
-		char *pwd = getcwd(NULL, 0);
-		options.set("app_root", pwd);
-		free(pwd);
-	}
-}
-
-static void
-sanityCheckOptions() {
-	VariantMap &options = *agentsOptions;
-	bool ok = true;
-
-	if (!options.has("passenger_root")) {
-		fprintf(stderr, "ERROR: please set the --passenger-root argument.\n");
-		ok = false;
-	}
-	if (options.getBool("multi_app") && options.has("app_root")) {
-		fprintf(stderr, "ERROR: you may not specify an application directory "
-			"when in multi-app mode.\n");
-		ok = false;
-	}
-	if (!options.getBool("multi_app") && options.has("app_type")) {
-		PassengerAppType appType = getAppType(options.get("app_type"));
-		if (appType == PAT_NONE || appType == PAT_ERROR) {
-			fprintf(stderr, "ERROR: '%s' is not a valid application type. Supported app types are:",
-				options.get("app_type").c_str());
-			const AppTypeDefinition *definition = &appTypeDefinitions[0];
-			while (definition->type != PAT_NONE) {
-				fprintf(stderr, " %s", definition->name);
-				definition++;
-			}
-			fprintf(stderr, "\n");
-			ok = false;
+	if (!updates.empty()) {
+		vector<ConfigKit::Error> errors;
+		if (!config.update(updates, errors)) {
+			P_BUG("Unable to set initial configuration: " <<
+				ConfigKit::toString(errors) << "\n"
+				"Raw initial configuration: " << updates.toStyledString());
 		}
-	}
-	if (options.get("concurrency_model") != "process" && options.get("concurrency_model") != "thread") {
-		fprintf(stderr, "ERROR: '%s' is not a valid concurrency model. Supported concurrency "
-			"models are: process, thread.\n",
-			options.get("concurrency_model").c_str());
-		ok = false;
-	} else if (options.get("concurrency_model") != "process") {
-		#ifndef PASSENGER_IS_ENTERPRISE
-			fprintf(stderr, "ERROR: the '%s' concurrency model is only supported in "
-				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
-				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n",
-				options.get("concurrency_model").c_str());
-			ok = false;
-		#endif
-	}
-	if (options.getInt("app_thread_count") < 1) {
-		fprintf(stderr, "ERROR: the value passed to --app-thread-count must be at least 1.\n");
-		ok = false;
-	} else if (options.getInt("app_thread_count") > 1) {
-		#ifndef PASSENGER_IS_ENTERPRISE
-			fprintf(stderr, "ERROR: the --app-thread-count option is only supported in "
-				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
-				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n");
-			ok = false;
-		#endif
-	}
-	if (options.has("memory_limit")) {
-		#ifndef PASSENGER_IS_ENTERPRISE
-			fprintf(stderr, "ERROR: the --memory-limit option is only supported in "
-				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
-				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n");
-			ok = false;
-		#endif
-	}
-	if (options.has("max_requests")) {
-		if (options.getInt("max_requests", false, 0) < 0) {
-			fprintf(stderr, "ERROR: the value passed to --max-requests must be at least 0.\n");
-			ok = false;
-		}
-	}
-	if (options.has("max_request_time")) {
-		if (options.getInt("max_request_time", false, 0) < 1) {
-			fprintf(stderr, "ERROR: the value passed to --max-request-time must be at least 1.\n");
-			ok = false;
-		}
-		#ifndef PASSENGER_IS_ENTERPRISE
-			fprintf(stderr, "ERROR: the --max-request-time option is only supported in "
-				PROGRAM_NAME " Enterprise.\nYou are currently using the open source "
-				PROGRAM_NAME ". Buy " PROGRAM_NAME " Enterprise here: https://www.phusionpassenger.com/enterprise\n");
-			ok = false;
-		#endif
-	}
-	if (Core::parseControllerBenchmarkMode(options.get("benchmark_mode", false))
-		== Core::BM_UNKNOWN)
-	{
-		fprintf(stderr, "ERROR: '%s' is not a valid mode for --benchmark.\n",
-			options.get("benchmark_mode", false).c_str());
-		ok = false;
-	}
-	if (options.getInt("core_threads") < 1) {
-		fprintf(stderr, "ERROR: you may only specify for --threads a number greater than or equal to 1.\n");
-		ok = false;
-	}
-	if (options.getInt("max_pool_size") < 1) {
-		fprintf(stderr, "ERROR: you may only specify for --max-pool-size a number greater than or equal to 1.\n");
-		ok = false;
-	}
-
-	if (!ok) {
-		exit(1);
 	}
 }
 
@@ -1422,18 +1235,15 @@ int
 coreMain(int argc, char *argv[]) {
 	int ret;
 
-	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " core", parseOptions,
-		preinitialize, 2);
+	coreSchema = new Schema();
+	coreConfig = new ConfigKit::Store(*coreSchema);
+	initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " core",
+		*coreConfig, coreSchema->loggingKit.translator,
+		parseOptions, NULL, 2);
 
-	Json::Value coreConfigDoc = prepareCoreConfigFromAgentsOptions(*agentsOptions);
-	setAgentsOptionsDefaults();
-	sanityCheckOptions();
-	createCoreConfigFromAgentsOptions(*agentsOptions, coreConfigDoc, &coreConfig, &coreSchema);
-
-	restoreOomScore(agentsOptions);
+	restoreOomScore(coreConfig->get("oom_score").asString());
 
 	ret = runCore();
-	shutdownAgent(agentsOptions);
+	shutdownAgent(coreSchema, coreConfig);
 	return ret;
 }

@@ -29,12 +29,15 @@
 /** Common initialization code for all agents. */
 
 #include <cstddef>
-#include <Utils/VariantMap.h>
+#include <string>
+#include <ConfigKit/Store.h>
 #include <Shared/Fundamentals/AbortHandler.h>
 
 namespace Passenger {
 namespace Agent {
 namespace Fundamentals {
+
+using namespace std;
 
 
 struct Context {
@@ -46,19 +49,21 @@ struct Context {
 	AbortHandlerConfig abortHandlerConfig;
 };
 
-typedef void (*OptionParserFunc)(int argc, const char **argv, VariantMap &options);
-typedef void (*PreinitializationFunc)(VariantMap &options);
+typedef void (*OptionParserFunc)(int argc, const char **argv, ConfigKit::Store &config);
+typedef void (*PreinitializationFunc)(ConfigKit::Store &config);
 
 extern Context *context;
 
 
-VariantMap initializeAgent(int argc, char **argv[], const char *processName,
-	OptionParserFunc optionParser = NULL, PreinitializationFunc preinit = NULL,
+void initializeAgent(int argc, char **argv[], const char *processName,
+	ConfigKit::Store &config, const ConfigKit::Translator &loggingKitTranslator,
+	OptionParserFunc optionParser = NULL,
+	PreinitializationFunc preinit = NULL,
 	int argStartIndex = 1);
-void shutdownAgent(VariantMap *agentOptions);
+void shutdownAgent(ConfigKit::Schema *schema, ConfigKit::Store *config);
 
 bool feedbackFdAvailable();
-void restoreOomScore(VariantMap *agentOptions);
+void restoreOomScore(const string &score);
 
 
 } // namespace Fundamentals

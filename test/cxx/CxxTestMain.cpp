@@ -14,6 +14,7 @@
 #include <Shared/Fundamentals/Initialization.h>
 #include <Shared/Fundamentals/AbortHandler.h>
 #include <Shared/Fundamentals/Utils.h>
+#include <ConfigKit/ConfigKit.h>
 #include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
@@ -42,6 +43,17 @@ static enum { RUN_ALL_GROUPS, RUN_SPECIFIED_GROUPS } runMode = RUN_ALL_GROUPS;
  */
 static map< string, vector<int> > groupsToRun;
 
+
+static ConfigKit::Schema *
+createSchema() {
+	using namespace ConfigKit;
+
+	ConfigKit::Schema *schema = new ConfigKit::Schema();
+	schema->add("passenger_root", STRING_TYPE, REQUIRED);
+	schema->finalize();
+
+	return schema;
+}
 
 static void
 usage(int exitCode) {
@@ -93,10 +105,11 @@ parseGroupSpec(const char *spec, string &groupName, vector<int> &testNumbers) {
 }
 
 static void
-parseOptions(int argc, const char *argv[], VariantMap &options) {
+parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
+	Json::Value updates;
 	char path[PATH_MAX + 1];
 	getcwd(path, PATH_MAX);
-	options.set("passenger_root", extractDirName(path));
+	updates["passenger_root"] = extractDirName(path);
 
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
@@ -130,6 +143,12 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			exit(1);
 		}
 	}
+
+	vector<ConfigKit::Error> errors;
+	if (!config.update(updates, errors)) {
+		P_BUG("Unable to set initial configuration: " <<
+			ConfigKit::toString(errors));
+	}
 }
 
 static void
@@ -159,8 +178,10 @@ main(int argc, char *argv[]) {
 	tut::runner.get().set_callback(&reporter);
 	allGroups = tut::runner.get().list_groups();
 
-	VariantMap *options = new VariantMap();
-	*options = initializeAgent(argc, &argv, "CxxTestMain", parseOptions);
+	ConfigKit::Schema *schema = createSchema();
+	ConfigKit::Store *config = new ConfigKit::Store(*schema);
+	initializeAgent(argc, &argv, "CxxTestMain", *config,
+		ConfigKit::DummyTranslator(), parseOptions);
 	resourceLocator = Agent::Fundamentals::context->resourceLocator;
 	loadConfigFile();
 
@@ -172,7 +193,7 @@ main(int argc, char *argv[]) {
 	}
 	all_ok = reporter.all_ok();
 
-	shutdownAgent(options);
+	shutdownAgent(schema, config);
 	if (all_ok) {
 		return 0;
 	} else {

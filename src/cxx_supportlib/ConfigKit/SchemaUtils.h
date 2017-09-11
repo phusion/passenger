@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CONFIG_KIT_VALIDATION_UTILS_H_
-#define _PASSENGER_CONFIG_KIT_VALIDATION_UTILS_H_
+#ifndef _PASSENGER_CONFIG_KIT_SCHEMA_UTILS_H_
+#define _PASSENGER_CONFIG_KIT_SCHEMA_UTILS_H_
 
 #include <ConfigKit/Store.h>
 #include <string>
@@ -35,6 +35,15 @@ namespace ConfigKit {
 
 using namespace std;
 
+
+inline Json::Value
+getDefaultStandaloneEngine(const Store &store) {
+	if (store["integration_mode"].asString() == "standalone") {
+		return "builtin";
+	} else {
+		return Json::nullValue;
+	}
+}
 
 inline void
 validateIntegrationMode(const Store &config, vector<Error> &errors) {
@@ -66,4 +75,4 @@ validateStandaloneEngine(const Store &config, vector<Error> &errors) {
 } // namespace ConfigKit
 } // namespace Passenger
 
-#endif /* _PASSENGER_CONFIG_KIT_VALIDATION_UTILS_H_ */
+#endif /* _PASSENGER_CONFIG_KIT_SCHEMA_UTILS_H_ */

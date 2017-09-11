@@ -74,7 +74,6 @@ enum TargetType {
 extern Context *context;
 
 
-void initialize(const Json::Value &initialConfig = Json::Value());
 void shutdown();
 
 const char *_strdupFastStringStream(const FastStringStream<> &stream);

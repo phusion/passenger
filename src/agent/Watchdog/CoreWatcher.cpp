@@ -25,6 +25,7 @@
  */
 
 #include <Shared/Fundamentals/Utils.h>
+#include <Utils/MessageIO.h>
 
 class CoreWatcher: public AgentWatcher {
 protected:
@@ -52,9 +53,23 @@ protected:
 	}
 
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
-		VariantMap options = *agentsOptions;
-		options.erase("ust_router_authorizations");
-		options.writeToFd(fd);
+		Json::Value config = watchdogSchema->core.translator.translate(
+			watchdogConfig->inspectEffectiveValues());
+
+		Json::Value::iterator it, end = wo->extraConfigToPassToSubAgents.end();
+		for (it = wo->extraConfigToPassToSubAgents.begin(); it != end; it++) {
+			config[it.name()] = *it;
+		}
+
+		config["pid_file"] = wo->instanceDir->getPath() + "/core.pid";
+		config["watchdog_fd_passing_password"] = wo->fdPassingPassword;
+		config["controller_secure_headers_password"] = wo->controllerSecureHeadersPassword;
+		config["controller_addresses"] = wo->controllerAddresses;
+		config["api_server_addresses"] = wo->coreApiServerAddresses;
+		config["api_server_authorizations"] = wo->coreApiServerAuthorizations;
+
+		ConfigKit::Store filteredConfig(watchdogSchema->core.schema, config);
+		writeScalarMessage(fd, filteredConfig.inspectEffectiveValues().toStyledString());
 	}
 
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
@@ -65,7 +80,8 @@ public:
 	CoreWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
 	{
-		agentFilename = wo->resourceLocator->findSupportBinary(AGENT_EXE);
+		agentFilename = Agent::Fundamentals::context->
+			resourceLocator->findSupportBinary(AGENT_EXE);
 	}
 
 	virtual void reportAgentStartupResult(Json::Value &report) {
