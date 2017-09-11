@@ -503,7 +503,7 @@ public:
 				if (!reader.parse(jsonData, doc)) {
 					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog: "
 						"unable to parse its startup information report as valid JSON: "
-						+ reader.getFormatedErrorMessages() + "\n"
+						+ reader.getFormattedErrorMessages() + "\n"
 						"Raw data: \"" + cEscapeString(jsonData) + "\"");
 				}
 
