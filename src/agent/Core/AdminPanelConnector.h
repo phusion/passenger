@@ -479,9 +479,8 @@ public:
 	ConfigGetter configGetter;
 
 
-	template<typename Translator = ConfigKit::DummyTranslator>
 	AdminPanelConnector(const Schema &schema, const Json::Value &config,
-		const Translator &translator = ConfigKit::DummyTranslator())
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
 		: server(schema, createMessageFunctor(), config, translator),
 		  resourceLocator(NULL)
 	{

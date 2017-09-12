@@ -375,17 +375,13 @@ public:
 
 	/****** Initialization and shutdown ******/
 
-	template<
-		typename Translator1 = ConfigKit::DummyTranslator,
-		typename Translator2 = ConfigKit::DummyTranslator
-	>
 	Controller(ServerKit::Context *context,
 		const ControllerSchema &schema,
 		const Json::Value &initialConfig,
-		const Translator1 &translator1 = ConfigKit::DummyTranslator(),
+		const ConfigKit::Translator &translator1 = ConfigKit::DummyTranslator(),
 		const ControllerSingleAppModeSchema *singleAppModeSchema = NULL,
 		const Json::Value *_singleAppModeConfig = NULL,
-		const Translator2 &translator2 = ConfigKit::DummyTranslator()
+		const ConfigKit::Translator &translator2 = ConfigKit::DummyTranslator()
 		)
 		: ParentClass(context, schema, initialConfig, translator1),
 

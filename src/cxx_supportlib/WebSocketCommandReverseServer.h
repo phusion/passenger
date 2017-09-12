@@ -795,10 +795,9 @@ private:
 	}
 
 public:
-	template<typename Translator = ConfigKit::DummyTranslator>
 	WebSocketCommandReverseServer(const Schema &schema, const MessageHandler &_messageHandler,
 		const Json::Value &initialConfig,
-		const Translator &translator = ConfigKit::DummyTranslator())
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
 		: config(schema, initialConfig, translator),
 		  configRlz(config),
 		  messageHandler(_messageHandler),
