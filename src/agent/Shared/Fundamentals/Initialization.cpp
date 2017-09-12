@@ -417,6 +417,11 @@ static void
 parseAndCommitConfig(ConfigKit::Store &config, const StaticString &jsonData) {
 	Json::Reader reader;
 	Json::Value doc;
+
+	if (getEnvBool("PASSENGER_DEBUG_INITIAL_CONFIG", false)) {
+		P_NOTICE("Initial raw configuration: " << jsonData);
+	}
+
 	if (reader.parse(jsonData, doc)) {
 		vector<ConfigKit::Error> errors;
 		if (!config.update(doc, errors)) {
