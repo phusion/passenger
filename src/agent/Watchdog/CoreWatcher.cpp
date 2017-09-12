@@ -63,10 +63,14 @@ protected:
 
 		config["pid_file"] = wo->instanceDir->getPath() + "/core.pid";
 		config["watchdog_fd_passing_password"] = wo->fdPassingPassword;
-		config["controller_secure_headers_password"] = wo->controllerSecureHeadersPassword;
 		config["controller_addresses"] = wo->controllerAddresses;
 		config["api_server_addresses"] = wo->coreApiServerAddresses;
 		config["api_server_authorizations"] = wo->coreApiServerAuthorizations;
+
+		// The special value "-" means "don't set a controller secure headers password".
+		if (config["controller_secure_headers_password"].asString() == "-") {
+			config.removeMember("controller_secure_headers_password");
+		}
 
 		ConfigKit::Store filteredConfig(watchdogSchema->core.schema, config);
 		writeScalarMessage(fd, filteredConfig.inspectEffectiveValues().toStyledString());
@@ -86,6 +90,6 @@ public:
 
 	virtual void reportAgentStartupResult(Json::Value &report) {
 		report["core_address"] = wo->controllerAddresses[0].asString();
-		report["core_password"] = wo->controllerSecureHeadersPassword;
+		report["core_password"] = watchdogConfig->get("controller_secure_headers_password").asString();
 	}
 };

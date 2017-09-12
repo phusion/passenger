@@ -122,7 +122,6 @@ namespace Watchdog {
 		bool pidFileCleanedUp;
 		string corePidFile;
 		string fdPassingPassword;
-		string controllerSecureHeadersPassword;
 		Json::Value extraConfigToPassToSubAgents;
 		Json::Value controllerAddresses;
 		Json::Value coreApiServerAddresses;
@@ -1044,8 +1043,6 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	for (it = doc.begin(); it != doc.end(); it++) {
 		wo->controllerAddresses.append(*it);
 	}
-
-	wo->controllerSecureHeadersPassword = wo->randomGenerator.generateAsciiString(24);
 
 	wo->coreApiServerAddresses.append("unix:" + wo->instanceDir->getPath() + "/agents.s/core_api");
 	doc = watchdogConfig->get("core_api_server_addresses");

@@ -1161,6 +1161,11 @@
          "has_default_value" : "static",
          "type" : "unsigned integer"
       },
+      "controller_secure_headers_password" : {
+         "has_default_value" : "dynamic",
+         "secret" : true,
+         "type" : "string"
+      },
       "controller_socket_backlog" : {
          "default_value" : 2048,
          "has_default_value" : "static",

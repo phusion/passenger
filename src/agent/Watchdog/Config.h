@@ -76,6 +76,7 @@ using namespace std;
  *   controller_min_spare_clients                                             unsigned integer   -          default(0)
  *   controller_pid_file                                                      string             -          default,read_only
  *   controller_request_freelist_limit                                        unsigned integer   -          default(1024)
+ *   controller_secure_headers_password                                       string             -          default,secret
  *   controller_socket_backlog                                                unsigned integer   -          default(2048),read_only
  *   controller_start_reading_after_accept                                    boolean            -          default(true)
  *   controller_threads                                                       unsigned integer   -          default,read_only
@@ -214,6 +215,10 @@ private:
 		return Json::Value();
 	}
 
+	static Json::Value getDefaultControllerSecureHeadersPassword(const ConfigKit::Store &store) {
+		return RandomGenerator().generateAsciiString(24);
+	}
+
 	static Json::Value getDefaultUser(const ConfigKit::Store &store) {
 		if (store["user_switching"].asBool()) {
 			return Json::nullValue;
@@ -269,7 +274,6 @@ public:
 		core.translator.add("core_pid_file", "pid_file");
 		core.translator.finalize();
 		addSubSchema(core.schema, core.translator);
-		erase("controller_secure_headers_password");
 		erase("instance_dir");
 		erase("watchdog_fd_passing_password");
 		/***********/
@@ -294,6 +298,8 @@ public:
 		overrideWithDynamicDefault("controller_pid_file", STRING_TYPE,
 			OPTIONAL | READ_ONLY, dummyDefaultValueGetter);
 
+		overrideWithDynamicDefault("controller_secure_headers_password", STRING_TYPE,
+			OPTIONAL | SECRET | CACHE_DEFAULT_VALUE, getDefaultControllerSecureHeadersPassword);
 		add("watchdog_pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
 		add("watchdog_pid_file_autodelete", BOOL_TYPE, OPTIONAL, true);
 		add("watchdog_api_server_addresses", STRING_ARRAY_TYPE, OPTIONAL | READ_ONLY, Json::arrayValue);
@@ -305,8 +311,6 @@ public:
 			OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE, getDefaultUser);
 		addWithDynamicDefault("instance_registry_dir", STRING_TYPE,
 			OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE, getDefaultInstanceRegistryDir);
-
-		// TODO: do something with secure mode password?
 
 		add("hook_before_watchdog_initialization", STRING_TYPE, OPTIONAL);
 		add("hook_after_watchdog_initialization", STRING_TYPE, OPTIONAL);
