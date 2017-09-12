@@ -297,9 +297,6 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
 		updates["default_min_instances"] = atoi(argv[i + 1]);
 		i += 2;
-	//} else if (p.isValueFlag(argc, i, argv[i], '\0', "--memory-limit")) {
-	//	options.setInt("memory_limit", atoi(argv[i + 1]));
-	//	i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'e', "--environment")) {
 		updates["default_environment"] = argv[i + 1];
 		i += 2;
@@ -315,12 +312,6 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 	} else if (p.isFlag(argv[i], '\0', "--load-shell-envvars")) {
 		updates["default_load_shell_envvars"] = true;
 		i++;
-	//} else if (p.isValueFlag(argc, i, argv[i], '\0', "--concurrency-model")) {
-	//	options.set("concurrency_model", argv[i + 1]);
-	//	i += 2;
-	//} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-thread-count")) {
-	//	options.setInt("app_thread_count", atoi(argv[i + 1]));
-	//	i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--multi-app")) {
 		updates["multi_app"] = true;
 		i++;
@@ -333,9 +324,6 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-requests")) {
 		updates["default_max_requests"] = atoi(argv[i + 1]);
 		i += 2;
-	//} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-time")) {
-	//	options.setInt("max_request_time", atoi(argv[i + 1]));
-	//	i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-queue-size")) {
 		updates["default_max_request_queue_size"] = atoi(argv[i + 1]);
 		i += 2;
@@ -369,15 +357,6 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-file-descriptor-ulimit")) {
 		updates["default_app_file_descriptor_ulimit"] = atoi(argv[i + 1]);
 		i += 2;
-	//} else if (p.isFlag(argv[i], '\0', "--debugger")) {
-	//	options.setBool("debugger", true);
-	//	i++;
-	//} else if (p.isFlag(argv[i], '\0', "--rolling-restarts")) {
-	//	options.setBool("rolling_restarts", true);
-	//	i++;
-	//} else if (p.isFlag(argv[i], '\0', "--resist-deployment-errors")) {
-	//	options.setBool("resist_deployment_errors", true);
-	//	i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
 		updates["log_level"] = atoi(argv[i + 1]);
 		i += 2;
