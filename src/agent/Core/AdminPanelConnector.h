@@ -70,7 +70,7 @@ public:
 	 *   proxy_username              string    -          -
 	 *   reconnect_timeout           float     -          default(5.0)
 	 *   ruby                        string    -          default("ruby")
-	 *   standalone_engine           string    -          -
+	 *   standalone_engine           string    -          default
 	 *   url                         string    required   -
 	 *   web_server_module_version   string    -          read_only
 	 *   web_server_version          string    -          read_only

@@ -67,6 +67,7 @@
          "type" : "string"
       },
       "standalone_engine" : {
+         "has_default_value" : "dynamic",
          "type" : "string"
       },
       "url" : {
