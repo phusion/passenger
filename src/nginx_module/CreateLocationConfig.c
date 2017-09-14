@@ -39,11 +39,6 @@
 
 void
 generated_set_conf_part(passenger_loc_conf_t  *conf) {
-    conf->socket_backlog = NGX_CONF_UNSET;
-    conf->core_file_descriptor_ulimit = NGX_CONF_UNSET_UINT;
-    conf->disable_security_update_check = NGX_CONF_UNSET;
-    conf->security_update_check_proxy.data = NULL;
-    conf->security_update_check_proxy.len  = 0;
     conf->app_file_descriptor_ulimit = NGX_CONF_UNSET_UINT;
     conf->enabled = NGX_CONF_UNSET;
     conf->ruby.data = NULL;

@@ -195,6 +195,7 @@ def filter_eligible_options(options)
     option[:alias_for] ||
       option.fetch(:field, true).nil? ||
       option[:field].to_s =~ /\./ ||
+      option[:struct] == 'NGX_HTTP_MAIN_CONF_OFFSET' ||
       !option.fetch(:header, true)
   end
 end
