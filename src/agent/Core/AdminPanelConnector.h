@@ -278,11 +278,48 @@ private:
 		));
 	}
 
+	static void modifyLogTarget(Json::Value &subconfig, const char *key) {
+		if (!subconfig.isMember(key) || subconfig[key].isNull()) {
+			return;
+		}
+		if (subconfig[key].isMember("stderr")) {
+			subconfig[key] = "/dev/stderr";
+		} else {
+			subconfig[key] = subconfig[key]["path"];
+		}
+	}
+
+	static void modifyPrestartUrls(Json::Value &subconfig, const char *key) {
+		if (!subconfig.isMember(key) || subconfig[key].isNull()) {
+			return;
+		}
+		subconfig[key] = subconfig[key].toStyledString();
+	}
+
+	static void modifyMaxInstancesPerApp(Json::Value &subconfig, const char *key) {
+		if (!subconfig.isMember(key) || subconfig[key].isNull()) {
+			return;
+		}
+		subconfig[key] = 0;
+	}
+
 	void onGetGlobalConfigDone(const ConnectionPtr &conn, const Json::Value &input,
-		const Json::Value config)
+		Json::Value config)
 	{
 		Json::Value reply, options(Json::objectValue);
-		Json::Value::const_iterator it, end = config.end();
+		Json::Value::iterator it, end = config.end();
+
+		// We modify the format of the data a little bit so the admin panel can handle it.
+		// The admin panel currently does not support object and array values.
+		modifyLogTarget(config["log_target"], "user_value");
+		modifyLogTarget(config["log_target"], "default_value");
+		modifyLogTarget(config["log_target"], "effective_value");
+		modifyPrestartUrls(config["prestart_urls"], "user_value");
+		modifyPrestartUrls(config["prestart_urls"], "default_value");
+		modifyPrestartUrls(config["prestart_urls"], "effective_value");
+		modifyMaxInstancesPerApp(config["max_instances_per_app"], "user_value");
+		modifyMaxInstancesPerApp(config["max_instances_per_app"], "default_value");
+		modifyMaxInstancesPerApp(config["max_instances_per_app"], "effective_value");
 
 		for (it = config.begin(); it != end; it++) {
 			const Json::Value &subconfig = *it;
@@ -352,6 +389,14 @@ private:
 		return true;
 	}
 
+	static void modifyEnvironmentVariables(Json::Value &option) {
+		Json::Value::iterator it;
+		for (it = option.begin(); it != option.end(); it++) {
+			Json::Value &suboption = *it;
+			suboption["value"] = suboption["value"].toStyledString();
+		}
+	}
+
 	bool onGetApplicationConfig(const ConnectionPtr &conn, const Json::Value &doc) {
 		ConfigKit::Schema argumentsSchema =
 			ApplicationPool2::Pool::ToJsonOptions::createSchema();
@@ -375,10 +420,20 @@ private:
 			}
 		}
 
+		Json::Value resultOptions = appPool->inspectConfigInAdminPanelFormat(
+			inspectOptions);
+		// We modify the format of the data a little bit so the admin panel can handle it.
+		// The admin panel currently does not support object and array values.
+		Json::Value::iterator it;
+		for (it = resultOptions.begin(); it != resultOptions.end(); it++) {
+			Json::Value &appConfig = *it;
+			modifyEnvironmentVariables(appConfig["environment_variables"]);
+		}
+
 		reply["result"] = "ok";
 		reply["request_id"] = doc["request_id"];
-		reply["data"]["options"] = appPool->inspectConfigInAdminPanelFormat(
-			inspectOptions);
+		reply["data"]["options"] = resultOptions;
+
 		sendJsonReply(conn, reply);
 		return true;
 	}

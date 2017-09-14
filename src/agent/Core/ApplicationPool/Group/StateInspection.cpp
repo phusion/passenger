@@ -228,6 +228,12 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 	#define SVAL Pool::makeSingleStrValueJsonConfigFormat
 	#define NON_EMPTY_SVAL Pool::makeSingleNonEmptyStrValueJsonConfigFormat
 
+	result["app_root"] = NON_EMPTY_SVAL(absolutizePath(options.appRoot));
+	result["app_group_name"] = NON_EMPTY_SVAL(info.name);
+	result["default_user"] = NON_EMPTY_SVAL(options.defaultUser);
+	result["default_group"] = NON_EMPTY_SVAL(options.defaultGroup);
+	result["enabled"] = VAL(true, false);
+
 	result["type"] = NON_EMPTY_SVAL(options.appType);
 	result["startup_file"] = NON_EMPTY_SVAL(options.startupFile);
 	result["start_command"] = NON_EMPTY_SVAL(replaceAll(options.startCommand,
@@ -246,8 +252,8 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 	result["max_out_of_band_work_instances"] = VAL(options.maxOutOfBandWorkInstances,
 		(Json::UInt) 1);
 	result["base_uri"] = SVAL(options.baseURI, P_STATIC_STRING("/"));
-	result["user"] = NON_EMPTY_SVAL(options.user);
-	result["group"] = NON_EMPTY_SVAL(options.group);
+	result["user"] = SVAL(options.user, options.defaultUser);
+	result["group"] = SVAL(options.group, options.defaultGroup);
 	result["user_switching"] = VAL(options.userSwitching); // TODO: default value depends on integration mode and euid
 	result["file_descriptor_ulimit"] = VAL(options.fileDescriptorUlimit, 0u);
 	result["load_shell_envvars"] = VAL(options.loadShellEnvvars); // TODO: default value depends on integration mode
