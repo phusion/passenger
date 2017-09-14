@@ -9294,6 +9294,7 @@ CXX_DEPENDENCY_MAP =
    "src/nginx_module/CacheLocationConfig.c",
    "src/nginx_module/Configuration.h",
    "src/nginx_module/ConfigurationCommands.c",
+   "src/nginx_module/ConfigurationSetters.c",
    "src/nginx_module/ContentHandler.h",
    "src/nginx_module/CreateLocationConfig.c",
    "src/nginx_module/LocationConfig.h",
@@ -9301,6 +9302,8 @@ CXX_DEPENDENCY_MAP =
  "src/nginx_module/Configuration.h"=>
   ["src/nginx_module/LocationConfig.h"],
  "src/nginx_module/ConfigurationCommands.c"=>
+  [],
+ "src/nginx_module/ConfigurationSetters.c"=>
   [],
  "src/nginx_module/ContentHandler.c"=>
   ["src/cxx_supportlib/AppTypes.h",

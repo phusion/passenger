@@ -104,22 +104,8 @@ end
 def setter_function_for(option)
   return option[:function] if option[:function]
 
-  case option[:type]
-  when :string
-    "ngx_conf_set_str_slot"
-  when :integer, :uinteger
-    "ngx_conf_set_num_slot"
-  when :flag
-    "ngx_conf_set_flag_slot"
-  when :string_array
-    "ngx_conf_set_str_array_slot"
-  when :string_keyval
-    "ngx_conf_set_keyval_slot"
-  when :path
-    "ngx_conf_set_path_slot"
-  else
-    raise "Unknown type #{option[:type].inspect} for option #{option[:name]}"
-  end
+  field_name = option[:name].sub(/^passenger_/, '')
+  "passenger_conf_set_#{field_name}"
 end
 
 def struct_for(option)

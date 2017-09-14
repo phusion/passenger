@@ -37,6 +37,7 @@
 #include "ngx_http_passenger_module.h"
 #include "Configuration.h"
 #include "ContentHandler.h"
+#include "ConfigurationSetters.c"
 #include "cxx_supportlib/Constants.h"
 #include "cxx_supportlib/UnionStationFilterSupport.h"
 #include "cxx_supportlib/vendor-modified/modp_b64.h"
@@ -1291,6 +1292,11 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_http_core_loc_conf_t    *clcf;
     ngx_str_t                   *value;
     ngx_url_t                    upstream_url;
+
+    passenger_conf->enabled_explicitly_set = 1;
+    record_loc_conf_source_location(cf, passenger_conf,
+        &passenger_conf->enabled_source_file,
+        &passenger_conf->enabled_source_line);
 
     value = cf->args->elts;
     if (ngx_strcasecmp(value[1].data, (u_char *) "on") == 0) {

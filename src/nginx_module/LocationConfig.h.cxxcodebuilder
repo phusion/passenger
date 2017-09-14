@@ -63,8 +63,26 @@ def main
 
     separator
 
-    definitions.each do |definition|
+    value_definitions.each do |definition|
       field(definition[0])
+    end
+
+    separator
+
+    source_location_definitions.each do |definition|
+      field("ngx_str_t #{definition}_source_file")
+    end
+
+    separator
+
+    source_location_definitions.each do |definition|
+      field("ngx_uint_t #{definition}_source_line")
+    end
+
+    separator
+
+    source_location_definitions.each do |definition|
+      field("ngx_int_t #{definition}_explicitly_set")
     end
 
     separator
@@ -77,7 +95,7 @@ def main
   end
 end
 
-def filter_eligible_options(options)
+def filter_options_eligible_for_value_definitions(options)
   options.reject do |option|
     option[:alias_for] ||
       option.fetch(:field, true).nil? ||
@@ -86,7 +104,15 @@ def filter_eligible_options(options)
   end
 end
 
-def struct_field_for(option)
+def filter_options_eligible_for_source_location_definitions(options)
+  options.reject do |option|
+    option[:alias_for] ||
+      option.fetch(:field, true).nil? ||
+      option[:struct] == 'NGX_HTTP_MAIN_CONF_OFFSET'
+  end
+end
+
+def value_struct_field_for(option)
   if option.has_key?(:field)
     option[:field].to_s
   else
@@ -94,9 +120,14 @@ def struct_field_for(option)
   end
 end
 
+def source_location_struct_field_for(option)
+  result = value_struct_field_for(option)
+  result.gsub('.', '_')
+end
+
 # Returns [definition_source, estimated_size_on_x86_64, field_name]
 def definition_for(option)
-    field = struct_field_for(option)
+    field = value_struct_field_for(option)
     case option[:type]
     when :string
         return ["ngx_str_t #{field}", 8 + 4, field]
@@ -111,9 +142,9 @@ def definition_for(option)
     end
 end
 
-def definitions
-  @definitions ||= begin
-    eligible_options = filter_eligible_options(LOCATION_CONFIGURATION_OPTIONS)
+def value_definitions
+  @value_definitions ||= begin
+    eligible_options = filter_options_eligible_for_value_definitions(LOCATION_CONFIGURATION_OPTIONS)
     definitions = eligible_options.map { |o| definition_for(o) }
     # Sort the definitions by size in order to make the struct smaller.
     # It's possible to make it even smaller with a smarter algorithm but for now
@@ -126,6 +157,16 @@ def definitions
             d1[1] <=> d2[1]
         end
     end
+  end
+end
+
+def source_location_definitions
+  @source_location_definitions ||= begin
+    eligible_options = filter_options_eligible_for_source_location_definitions(LOCATION_CONFIGURATION_OPTIONS)
+    definitions = eligible_options.map do |o|
+      source_location_struct_field_for(o)
+    end
+    definitions.sort!
   end
 end
 
