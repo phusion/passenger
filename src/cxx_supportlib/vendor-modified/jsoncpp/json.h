@@ -264,6 +264,7 @@ license you like.
 
 #endif // if !defined(JSON_IS_AMALGAMATION)
 
+namespace Passenger {
 namespace Json {
 typedef int Int;
 typedef unsigned int UInt;
@@ -298,6 +299,7 @@ typedef UInt64 LargestUInt;
 #define JSONCPP_ISTREAM       std::istream
 #endif // if JSONCPP_USING_SECURE_MEMORY
 } // end namespace Json
+} // end namespace Passenger
 
 #endif // JSON_CONFIG_H_INCLUDED
 
@@ -326,6 +328,7 @@ typedef UInt64 LargestUInt;
 #include "config.h"
 #endif // if !defined(JSON_IS_AMALGAMATION)
 
+namespace Passenger {
 namespace Json {
 
 // writer.h
@@ -349,6 +352,7 @@ class ValueIterator;
 class ValueConstIterator;
 
 } // namespace Json
+} // namespace Passenger
 
 #endif // JSON_FORWARDS_H_INCLUDED
 
@@ -379,6 +383,7 @@ class ValueConstIterator;
 
 #pragma pack(push, 8)
 
+namespace Passenger {
 namespace Json {
 
 /** \brief Configuration passed to reader and writer.
@@ -422,6 +427,7 @@ public:
 };
 
 } // namespace Json
+} // namespace Passenger
 
 #pragma pack(pop)
 
@@ -488,6 +494,7 @@ public:
 
 /** \brief JSON (JavaScript Object Notation).
  */
+namespace Passenger {
 namespace Json {
 
 /** Base class for all exceptions we throw.
@@ -1295,12 +1302,13 @@ public:
 };
 
 } // namespace Json
+} // namespace Passenger
 
 
 namespace std {
 /// Specialize std::swap() for Json::Value.
 template<>
-inline void swap(Json::Value& a, Json::Value& b) { a.swap(b); }
+inline void swap(Passenger::Json::Value& a, Passenger::Json::Value& b) { a.swap(b); }
 }
 
 #pragma pack(pop)
@@ -1351,6 +1359,7 @@ inline void swap(Json::Value& a, Json::Value& b) { a.swap(b); }
 
 #pragma pack(push, 8)
 
+namespace Passenger {
 namespace Json {
 
 /** \brief Unserialize a <a HREF="http://www.json.org">JSON</a> document into a
@@ -1610,6 +1619,7 @@ public:
 
 Usage:
 \code
+  using namespace Passenger;
   using namespace Json;
   CharReaderBuilder builder;
   builder["collectComments"] = false;
@@ -1724,6 +1734,7 @@ bool JSON_API parseFromStream(
 JSON_API JSONCPP_ISTREAM& operator>>(JSONCPP_ISTREAM&, Value&);
 
 } // namespace Json
+} // namespace Passenger
 
 #pragma pack(pop)
 
@@ -1770,6 +1781,7 @@ JSON_API JSONCPP_ISTREAM& operator>>(JSONCPP_ISTREAM&, Value&);
 
 #pragma pack(push, 8)
 
+namespace Passenger {
 namespace Json {
 
 class Value;
@@ -1778,6 +1790,7 @@ class Value;
 
 Usage:
 \code
+  using namespace Passenger;
   using namespace Json;
   void writeToStdout(StreamWriter::Factory const& factory, Value const& value) {
     std::unique_ptr<StreamWriter> const writer(
@@ -1823,6 +1836,7 @@ JSONCPP_STRING JSON_API writeString(StreamWriter::Factory const& factory, Value 
 
 Usage:
 \code
+  using namespace Passenger;
   using namespace Json;
   Value value = ...;
   StreamWriterBuilder builder;
@@ -2073,6 +2087,7 @@ JSONCPP_STRING JSON_API valueToQuotedString(const char* value);
 JSON_API JSONCPP_OSTREAM& operator<<(JSONCPP_OSTREAM&, const Value& root);
 
 } // namespace Json
+} // namespace Passenger
 
 #pragma pack(pop)
 
