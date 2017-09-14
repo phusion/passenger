@@ -3,6 +3,7 @@
 .rbx
 .vagrant
 .noexec.yaml
+.vscode/c_cpp_properties.json
 autom4te.cache
 *.bundle
 *.pyc
