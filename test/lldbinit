@@ -1,3 +1,4 @@
+settings set target.x86-disassembly-flavor intel
 breakpoint set -F main
 b malloc_error_break
 b Passenger::breakpoint
