@@ -233,6 +233,7 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 	result["default_user"] = NON_EMPTY_SVAL(options.defaultUser);
 	result["default_group"] = NON_EMPTY_SVAL(options.defaultGroup);
 	result["enabled"] = VAL(true, false);
+	result["lve_min_uid"] = VAL(options.lveMinUid, DEFAULT_LVE_MIN_UID);
 
 	result["type"] = NON_EMPTY_SVAL(options.appType);
 	result["startup_file"] = NON_EMPTY_SVAL(options.startupFile);
