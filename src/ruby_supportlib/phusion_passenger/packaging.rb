@@ -87,6 +87,7 @@ module PhusionPassenger
       '.github/*',
       '.settings/*',
       '.externalToolBuilders/*',
+      '.vscode/*',
       '.cproject',
       '.project',
       'Gemfile',

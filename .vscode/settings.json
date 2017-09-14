@@ -1,0 +1,6 @@
+{
+    "search.exclude": {
+        "play": true,
+        "node_modules": true
+    }
+}

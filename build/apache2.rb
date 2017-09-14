@@ -85,7 +85,7 @@ APACHE2_MODULE_BOOST_OXT_LIBRARY, APACHE2_MODULE_BOOST_OXT_LINKARG =
     APACHE2_OUTPUT_DIR + "module_libboost_oxt",
     lambda { PlatformInfo.apache2_module_cflags })
 APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
-  only(:base, :bas64, 'AppTypes.o').
+  only(:base, :base64, 'AppTypes.o').
   set_namespace("apache2").
   set_output_dir(APACHE2_OUTPUT_DIR + "module_libpassenger_common").
   define_tasks(lambda { PlatformInfo.apache2_module_cflags }).
