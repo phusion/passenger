@@ -110,9 +110,44 @@ psg_json_value_free(PsgJsonValue *val) {
 
 
 PsgJsonValue *
-psg_json_value_set_value(PsgJsonValue *doc, const char *name, const PsgJsonValue *val) {
+psg_json_value_get_or_create_null(PsgJsonValue *doc, const char *name, size_t size) {
 	Json::Value &cxxdoc = *static_cast<Json::Value *>(doc);
-	Json::Value &newVal = cxxdoc[name];
+	if (size == (size_t) -1) {
+		size = strlen(name);
+	}
+	return &cxxdoc[string(name, size)];
+}
+
+PsgJsonValue *
+psg_json_value_get(PsgJsonValue *doc, const char *name, size_t size) {
+	Json::Value &cxxdoc = *static_cast<Json::Value *>(doc);
+	if (size == (size_t) -1) {
+		size = strlen(name);
+	}
+	if (cxxdoc.isMember(name, name + size)) {
+		return &cxxdoc[string(name, size)];
+	} else {
+		return NULL;
+	}
+}
+
+int
+psg_json_value_is_member(const PsgJsonValue *doc, const char *name, size_t size) {
+	const Json::Value &cxxdoc = *static_cast<const Json::Value *>(doc);
+	if (size == (size_t) -1) {
+		size = strlen(name);
+	}
+	return cxxdoc.isMember(name, name + size);
+}
+
+
+PsgJsonValue *
+psg_json_value_set_value(PsgJsonValue *doc, const char *name, size_t name_size, const PsgJsonValue *val) {
+	Json::Value &cxxdoc = *static_cast<Json::Value *>(doc);
+	if (name_size == (size_t) -1) {
+		name_size = strlen(name);
+	}
+	Json::Value &newVal = cxxdoc[string(name, name_size)];
 	newVal = *static_cast<const Json::Value *>(val);
 	return &newVal;
 }
@@ -121,6 +156,9 @@ PsgJsonValue *
 psg_json_value_set_str(PsgJsonValue *doc, const char *name, const char *val, size_t size) {
 	Json::Value &cxxdoc = *static_cast<Json::Value *>(doc);
 	Json::Value &newVal = cxxdoc[name];
+	if (size == (size_t) -1) {
+		size = strlen(val);
+	}
 	newVal = Json::Value(val, val + size);
 	return &newVal;
 }
@@ -171,25 +209,83 @@ psg_json_value_is_null(const PsgJsonValue *doc) {
 	return cxxdoc.isNull();
 }
 
-const PsgJsonValue *
-psg_json_value_get(const PsgJsonValue *doc, const char *name, size_t size) {
-	const Json::Value &cxxdoc = *static_cast<const Json::Value *>(doc);
-	if (size == (size_t) -1) {
-		size = strlen(name);
-	}
-	return cxxdoc.find(name, name + size);
-}
-
 const char *
 psg_json_value_as_cstr(const PsgJsonValue *doc) {
 	const Json::Value &cxxdoc = *static_cast<const Json::Value *>(doc);
 	return cxxdoc.asCString();
 }
 
+const char *
+psg_json_value_get_str(const PsgJsonValue *doc, size_t *size) {
+	const Json::Value &cxxdoc = *static_cast<const Json::Value *>(doc);
+	const char *data, *end;
+	if (cxxdoc.getString(&data, &end)) {
+		if (size != NULL) {
+			*size = end - data;
+		}
+		return data;
+	} else {
+		return NULL;
+	}
+}
+
+
+void
+psg_json_value_begin(PsgJsonValue *doc, PsgJsonValueIterator *it) {
+	Json::Value &cxxdoc = *static_cast<Json::Value *>(doc);
+	Json::Value::iterator &cxxit = *static_cast<Json::Value::iterator *>(it);
+	cxxit = cxxdoc.begin();
+}
+
+void
+psg_json_value_end(PsgJsonValue *doc, PsgJsonValueIterator *it) {
+	Json::Value &cxxdoc = *static_cast<Json::Value *>(doc);
+	Json::Value::iterator &cxxit = *static_cast<Json::Value::iterator *>(it);
+	cxxit = cxxdoc.end();
+}
+
+
+char *
+psg_json_value_to_styled_string(const PsgJsonValue *doc) {
+	const Json::Value &cxxdoc = *static_cast<const Json::Value *>(doc);
+	return strdup(cxxdoc.toStyledString().c_str());
+}
+
 
 PsgJsonValue *
 psg_autocast_value_to_json(const char *data, size_t size, char **error) {
 	return new Json::Value(autocastValueToJson(StaticString(data, size)));
+}
+
+
+PsgJsonValueIterator *
+psg_json_value_iterator_new() {
+	return new Json::Value::iterator();
+}
+
+void
+psg_json_value_iterator_free(PsgJsonValueIterator *it) {
+	Json::Value::iterator &cxxit = *static_cast<Json::Value::iterator *>(it);
+	delete &cxxit;
+}
+
+void
+psg_json_value_iterator_advance(PsgJsonValueIterator *it) {
+	Json::Value::iterator &cxxit = *static_cast<Json::Value::iterator *>(it);
+	cxxit++;
+}
+
+int
+psg_json_value_iterator_eq(PsgJsonValueIterator *it, PsgJsonValueIterator *other) {
+	Json::Value::iterator &cxxit = *static_cast<Json::Value::iterator *>(it);
+	Json::Value::iterator &cxxOther = *static_cast<Json::Value::iterator *>(other);
+	return cxxit == cxxOther;
+}
+
+PsgJsonValue *
+psg_json_value_iterator_get_value(PsgJsonValueIterator *it) {
+	Json::Value::iterator &cxxit = *static_cast<Json::Value::iterator *>(it);
+	return &(*cxxit);
 }
 
 

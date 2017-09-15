@@ -117,7 +117,7 @@ psg_json_value_set_strset(PsgJsonValue *doc, const char *name,
         psg_json_value_free(elem);
     }
 
-    elem = psg_json_value_set_value(doc, name, subdoc);
+    elem = psg_json_value_set_value(doc, name, -1, subdoc);
     psg_json_value_free(subdoc);
     return elem;
 }
@@ -128,21 +128,14 @@ psg_json_value_set_with_autodetected_data_type(PsgJsonValue *doc,
     const char *val, size_t val_len,
     char **error)
 {
-    ngx_str_t str;
     PsgJsonValue *j_val, *result;
-    char *name_nt;
 
     j_val = psg_autocast_value_to_json(val, val_len, error);
     if (j_val == NULL) {
         return NULL;
     }
 
-    str.data = (u_char *) name;
-    str.len = name_len;
-    name_nt = ngx_str_null_terminate(&str);
-
-    result = psg_json_value_set_value(doc, name_nt, j_val);
-    free(name_nt);
+    result = psg_json_value_set_value(doc, name, name_len, j_val);
     psg_json_value_free(j_val);
 
     return result;

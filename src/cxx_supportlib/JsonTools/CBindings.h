@@ -45,6 +45,7 @@ typedef enum {
 } PsgJsonValueType;
 
 typedef void PsgJsonValue;
+typedef void PsgJsonValueIterator;
 
 PsgJsonValue *psg_json_value_new_null();
 PsgJsonValue *psg_json_value_new_with_type(PsgJsonValueType type);
@@ -55,7 +56,11 @@ PsgJsonValue *psg_json_value_new_real(double val);
 PsgJsonValue *psg_json_value_new_bool(int val);
 void psg_json_value_free(PsgJsonValue *val);
 
-PsgJsonValue *psg_json_value_set_value(PsgJsonValue *doc, const char *name, const PsgJsonValue *val);
+PsgJsonValue *psg_json_value_get_or_create_null(PsgJsonValue *doc, const char *name, size_t size);
+PsgJsonValue *psg_json_value_get(PsgJsonValue *doc, const char *name, size_t size);
+int psg_json_value_is_member(const PsgJsonValue *doc, const char *name, size_t size);
+
+PsgJsonValue *psg_json_value_set_value(PsgJsonValue *doc, const char *name, size_t name_size, const PsgJsonValue *val);
 PsgJsonValue *psg_json_value_set_str(PsgJsonValue *doc, const char *name, const char *val, size_t size);
 PsgJsonValue *psg_json_value_set_int(PsgJsonValue *doc, const char *name, int val);
 PsgJsonValue *psg_json_value_set_uint(PsgJsonValue *doc, const char *name, unsigned int val);
@@ -65,10 +70,21 @@ PsgJsonValue *psg_json_value_set_bool(PsgJsonValue *doc, const char *name, int v
 PsgJsonValue *psg_json_value_append_val(PsgJsonValue *doc, const PsgJsonValue *val);
 
 int psg_json_value_is_null(const PsgJsonValue *doc);
-const PsgJsonValue *psg_json_value_get(const PsgJsonValue *doc, const char *name, size_t size);
 const char *psg_json_value_as_cstr(const PsgJsonValue *doc);
+const char *psg_json_value_get_str(const PsgJsonValue *doc, size_t *size);
+
+void psg_json_value_begin(PsgJsonValue *doc, PsgJsonValueIterator *it);
+void psg_json_value_end(PsgJsonValue *doc, PsgJsonValueIterator *it);
+
+char *psg_json_value_to_styled_string(const PsgJsonValue *doc);
 
 PsgJsonValue *psg_autocast_value_to_json(const char *data, size_t size, char **error);
+
+PsgJsonValueIterator *psg_json_value_iterator_new();
+void psg_json_value_iterator_free(PsgJsonValueIterator *it);
+void psg_json_value_iterator_advance(PsgJsonValueIterator *it);
+int psg_json_value_iterator_eq(PsgJsonValueIterator *it, PsgJsonValueIterator *other);
+PsgJsonValue *psg_json_value_iterator_get_value(PsgJsonValueIterator *it);
 
 
 #ifdef __cplusplus
