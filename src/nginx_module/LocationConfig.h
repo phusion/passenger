@@ -38,6 +38,12 @@
  */
 
 typedef struct {
+    ngx_array_t children;
+    ngx_http_core_srv_conf_t *cscf;
+    ngx_http_core_loc_conf_t *clcf;
+    ngx_str_t context_source_file;
+    ngx_uint_t context_source_line;
+
     ngx_http_upstream_conf_t upstream_config;
     ngx_array_t *flushes;
     ngx_array_t *headers_set_len;

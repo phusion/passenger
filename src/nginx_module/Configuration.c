@@ -315,6 +315,29 @@ passenger_create_loc_conf(ngx_conf_t *cf)
      *     conf->upstream_config.store_values = NULL;
      */
 
+    if (ngx_array_init(&conf->children, cf->pool, 8,
+                       sizeof(passenger_loc_conf_t *))
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
+
+    if (cf->conf_file == NULL) {
+        conf->context_source_file.data = (u_char *) NULL;
+        conf->context_source_file.len = 0;
+        conf->context_source_line = 0;
+    } else if (cf->conf_file->file.fd == NGX_INVALID_FILE) {
+        conf->context_source_file.data = (u_char *) "(command line)";
+        conf->context_source_file.len = sizeof("(command line)") - 1;
+        conf->context_source_line = 0;
+    } else {
+        conf->context_source_file = cf->conf_file->file.name;
+        conf->context_source_line = cf->conf_file->line;
+    }
+
+    conf->cscf = NULL;
+    conf->clcf = NULL;
+
     generated_set_conf_part(conf);
 
     /******************************/
@@ -475,16 +498,33 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
     passenger_loc_conf_t         *prev = parent;
     passenger_loc_conf_t         *conf = child;
+    passenger_loc_conf_t         **children_elem;
     ngx_http_core_loc_conf_t     *clcf;
 
     size_t                        size;
     ngx_hash_init_t               hash;
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
+    /* The following works for all contexts within the http{} block, but does
+     * not work for the http{} block itself. To obtain the ngx_http_core_(loc|srv)_conf_t
+     * associated with the http{} block itself, we also set conf->(cscf|clcf)
+     * from record_loc_conf_source_location(), which is called from the various
+     * configuration setter functions.
+     */
+     conf->cscf = ngx_http_conf_get_module_srv_conf(cf, ngx_http_core_module);
+     conf->clcf = clcf;
 
     if (generated_merge_part(conf, prev, cf) == 0) {
         return NGX_CONF_ERROR;
     }
+
+    children_elem = ngx_array_push(&prev->children);
+    if (children_elem == NULL) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, ngx_errno,
+            "cannot allocate memory");
+        return NGX_CONF_ERROR;
+    }
+    *children_elem = conf;
 
     if (prev->options_cache.data == NULL) {
         if (cache_loc_conf_options(cf, prev) != NGX_OK) {

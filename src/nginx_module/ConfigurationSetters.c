@@ -39,6 +39,8 @@
 
 static void
 record_loc_conf_source_location(ngx_conf_t *cf, passenger_loc_conf_t *pl_conf, ngx_str_t *file, ngx_uint_t *line) {
+    pl_conf->cscf = ngx_http_conf_get_module_srv_conf(cf, ngx_http_core_module);
+    pl_conf->clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
     if (cf->conf_file == NULL) {
         file->data = (u_char *) NULL;
         file->len = 0;
