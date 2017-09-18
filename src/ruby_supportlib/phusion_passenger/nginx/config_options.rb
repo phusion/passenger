@@ -41,11 +41,21 @@
 # Options:
 #
 #  * name - The configuration option name. Required.
+#  * scope - The scope that applies to this configuration. Required. One of:
+#            :global, :application, :location
 #  * context - The context in which this configuration option is valid.
 #              Defaults to [:main, :srv, :loc, :lif]
 #  * type - This configuration option's value type. Allowed types:
 #           :string, :integer, :uinteger, :flag, :string_array, :string_keyval,
 #           :path, :msec
+#  * default - A static default value. Set during configuration merging,
+#              and reported in the tracking code that generates the
+#              configuration manifest.
+#  * dynamic_default - If this option has a default, but it's dynamically inferred
+#              (and not a static value) then set this option to a human-readable
+#              description that explains how the default is dynamically inferred.
+#              Reported in the tracking code that generates the configuration
+#              manifest.
 #  * take - Tells Nginx how many parameters and what kind of parameter
 #           this configuration option takes. It should be set to a string
 #           such as "NGX_CONF_FLAG".
@@ -77,18 +87,28 @@
 #             will disable auto-generation of CGI header generation code. You are
 #             then responsible for writing CGI header passing code yourself in
 #             ContentHandler.c.
+#  * auto_generate_nginx_create_code - Whether configuration initialization
+#            code should be automatically generated. Defaults to true. If you set
+#            this to false then you are responsible for writing initialization code
+#            yourself in Configuration.c.
 #  * auto_generate_nginx_merge_code - Whether configuration merging
 #            code should be automatically generated. Defaults to true. If you set
 #            this to false then you are responsible for writing merging code
 #            yourself in Configuration.c.
+#  * auto_generate_nginx_tracking_code - Whether configuration hierarchy
+#            tracking code should be automatically generated. Defaults to true.
+#            If you set this to false then you are responsible for writing
+#            configuration tracking code yourself in Configuration.c.
 #  * alias_for - Set this if this configuration option is an alias for another
 #                option. Alias definitions must only have the `name` and `alias_for`
 #                fields, nothing else.
 
+PhusionPassenger.require_passenger_lib 'constants'
 
 NGINX_CONFIGURATION_OPTIONS = [
   {
     :name     => 'passenger_root',
+    :scope    => :global,
     :type     => :string,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET',
@@ -96,66 +116,84 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'passenger_ctl',
+    :scope    => :global,
     :type     => :string_keyval,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_abort_on_startup_error',
+    :scope    => :global,
     :type     => :flag,
+    :default  => false,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_log_level',
+    :scope    => :global,
     :type     => :uinteger,
+    :default  => DEFAULT_LOG_LEVEL,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_log_file',
+    :scope    => :global,
     :type     => :string,
+    :dynamic_default => "Nginx's global error log",
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_file_descriptor_log_file',
+    :scope    => :global,
     :type     => :string,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_data_buffer_dir',
+    :scope    => :global,
     :type     => :string,
+    :dynamic_default => '$TMPDIR, or if not given, /tmp',
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_socket_backlog',
+    :scope    => :global,
     :type     => :uinteger,
+    :default  => DEFAULT_SOCKET_BACKLOG,
     :context  => [:main],
     :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
   },
   {
     :name     => 'passenger_core_file_descriptor_ulimit',
+    :scope    => :global,
     :type     => :uinteger,
+    :dynamic_default => 'The ulimits environment under which Nginx was started',
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_disable_security_update_check',
+    :scope    => :global,
     :type     => :flag,
+    :default  => false,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_security_update_check_proxy',
+    :scope    => :global,
     :type     => :string,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_pre_start',
+    :scope    => :global,
     :type     => :string_array,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET',
@@ -163,288 +201,393 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'passenger_instance_registry_dir',
+    :scope    => :global,
     :type     => :string,
+    :dynamic_default => 'Either /var/run/passenger-instreg, $TMPDIR, or /tmp (see docs)',
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_turbocaching',
+    :scope    => :global,
     :type     => :flag,
+    :default  => true,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_user_switching',
+    :scope    => :global,
     :type     => :flag,
+    :default  => true,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_default_user',
+    :scope    => :global,
     :type     => :string,
+    :default  => PASSENGER_DEFAULT_USER,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_default_group',
+    :scope    => :global,
     :type     => :string,
+    :dynamic_default => 'The primary group of passenger_default_user',
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_max_pool_size',
+    :scope    => :global,
     :type     => :uinteger,
+    :default  => DEFAULT_MAX_POOL_SIZE,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_pool_idle_time',
+    :scope    => :global,
     :type     => :uinteger,
+    :default  => DEFAULT_POOL_IDLE_TIME,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_response_buffer_high_watermark',
+    :scope    => :global,
     :type     => :uinteger,
+    :default  => DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_stat_throttle_rate',
+    :scope    => :global,
     :type     => :uinteger,
+    :default  => DEFAULT_STAT_THROTTLE_RATE,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_show_version_in_header',
+    :scope    => :global,
     :type     => :flag,
+    :default  => true,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_app_file_descriptor_ulimit',
-    :type     => :uinteger
+    :scope    => :global,
+    :type     => :uinteger,
+    :dynamic_default => 'passenger_core_file_descriptor_ulimit'
   },
   {
     :name     => 'passenger_enabled',
+    :scope    => :location,
     :type     => :flag,
+    :default  => false,
     :function => 'passenger_enabled',
     :field    => 'enabled',
     :header   => nil
   },
   {
-    :name    => 'passenger_ruby',
-    :type    => :string
+    :name     => 'passenger_ruby',
+    :scope    => :application,
+    :type     => :string,
+    :default  => DEFAULT_RUBY
   },
   {
-    :name  => 'passenger_python',
-    :type  => :string
+    :name     => 'passenger_python',
+    :scope    => :application,
+    :type     => :string,
+    :default  => DEFAULT_PYTHON
   },
   {
-    :name  => 'passenger_nodejs',
-    :type  => :string
+    :name     => 'passenger_nodejs',
+    :scope    => :application,
+    :type     => :string,
+    :default  => DEFAULT_NODEJS
   },
   {
-    :name  => 'passenger_meteor_app_settings',
-    :type  => :string
+    :name     => 'passenger_meteor_app_settings',
+    :scope    => :application,
+    :type     => :string
   },
   {
-    :name  => 'passenger_app_env',
-    :type  => :string,
-    :field => 'environment'
+    :name     => 'passenger_app_env',
+    :scope    => :application,
+    :type     => :string,
+    :default  => 'production',
+    :field    => 'environment'
   },
   {
-    :name  => 'passenger_friendly_error_pages',
-    :type  => :flag
+    :name     => 'passenger_friendly_error_pages',
+    :scope    => :application,
+    :type     => :flag,
+    :dynamic_default => 'On if passenger_app_env is development, off otherwise'
   },
   {
-    :name   => 'passenger_min_instances',
-    :type   => :integer,
-    :header => 'PASSENGER_MIN_PROCESSES'
+    :name     => 'passenger_min_instances',
+    :scope    => :application,
+    :type     => :uinteger,
+    :default  => 1,
+    :header   => 'PASSENGER_MIN_PROCESSES'
   },
   {
     :name     => 'passenger_max_instances_per_app',
+    :scope    => :global,
     :context  => [:main],
-    :type     => :integer,
+    :type     => :uinteger,
+    :default  => 0,
     :header   => 'PASSENGER_MAX_PROCESSES'
   },
   {
-    :name  => 'passenger_max_requests',
-    :type  => :integer
+    :name     => 'passenger_max_requests',
+    :scope    => :location,
+    :type     => :uinteger,
+    :default  => 0
   },
   {
-    :name  => 'passenger_start_timeout',
-    :type  => :integer
+    :name     => 'passenger_start_timeout',
+    :scope    => :application,
+    :type     => :integer,
+    :default  => DEFAULT_START_TIMEOUT / 1000
   },
   {
-    :name   => 'passenger_base_uri',
-    :type   => :string_array,
-    :field  => 'base_uris',
-    :header => nil
+    :name     => 'passenger_base_uri',
+    :scope    => :location,
+    :type     => :string_array,
+    :field    => 'base_uris',
+    :header   => nil
   },
   {
-    :name   => 'passenger_document_root',
-    :type   => :string,
-    :header => nil
+    :name     => 'passenger_document_root',
+    :scope    => :location,
+    :type     => :string,
+    :header   => nil
   },
   {
-    :name  => 'passenger_user',
-    :type  => :string
+    :name     => 'passenger_user',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => 'See the user account sandboxing rules'
   },
   {
-    :name  => 'passenger_group',
-    :type  => :string
+    :name     => 'passenger_group',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => 'See the user account sandboxing rules'
   },
   {
-    :name  => 'passenger_app_group_name',
-    :type  => :string
+    :name     => 'passenger_app_group_name',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => 'passenger_app_root plus passenger_app_env'
   },
   {
-    :name  => 'passenger_app_root',
-    :type  => :string
+    :name     => 'passenger_app_root',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => "Parent directory of the associated Nginx virtual host's root directory"
   },
   {
-    :name => 'passenger_app_rights',
-    :type => :string
+    :name     => 'passenger_app_rights',
+    :scope    => :application,
+    :type     => :string
   },
   {
-    :name  => 'passenger_debugger',
-    :type  => :flag
+    :name     => 'passenger_debugger',
+    :scope    => :application,
+    :type     => :flag,
+    :default  => false
   },
   {
-    :name  => 'passenger_max_preloader_idle_time',
-    :type  => :integer
+    :name     => 'passenger_max_preloader_idle_time',
+    :scope    => :application,
+    :type     => :integer,
+    :default  => DEFAULT_MAX_PRELOADER_IDLE_TIME
   },
   {
     :name     => 'passenger_ignore_headers',
+    :scope    => :location,
     :take     => 'NGX_CONF_1MORE',
     :function => 'ngx_conf_set_bitmask_slot',
     :field    => 'upstream_config.ignore_headers',
-    :post     => '&ngx_http_upstream_ignore_headers_masks'
+    :post     => '&ngx_http_upstream_ignore_headers_masks',
+    :auto_generate_nginx_tracking_code => false
   },
   {
-    :name   => 'passenger_env_var',
-    :type   => :string_keyval,
-    :field  => 'env_vars',
-    :header => nil
+    :name     => 'passenger_env_var',
+    :scope    => :application,
+    :type     => :string_keyval,
+    :field    => 'env_vars',
+    :header   => nil
   },
   {
-    :name   => 'passenger_set_header',
-    :type   => :string_keyval,
-    :field  => 'headers_source',
-    :header => nil,
+    :name     => 'passenger_set_header',
+    :scope    => :location,
+    :type     => :string_keyval,
+    :field    => 'headers_source',
+    :header   => nil,
     :auto_generate_nginx_create_code => false,
     :auto_generate_nginx_merge_code  => false
   },
   {
-    :name  => 'passenger_pass_header',
-    :type  => :string_array,
-    :field => 'upstream_config.pass_headers'
+    :name     => 'passenger_pass_header',
+    :scope    => :location,
+    :type     => :string_array,
+    :field    => 'upstream_config.pass_headers'
   },
   {
-    :name    => 'passenger_headers_hash_max_size',
-    :type    => :uinteger,
-    :header  => nil,
-    :default => 512
+    :name     => 'passenger_headers_hash_max_size',
+    :scope    => :location,
+    :type     => :uinteger,
+    :header   => nil,
+    :default  => 512
   },
   {
-    :name    => 'passenger_headers_hash_bucket_size',
-    :type    => :uinteger,
-    :header  => nil,
-    :default => 64
+    :name     => 'passenger_headers_hash_bucket_size',
+    :scope    => :location,
+    :type     => :uinteger,
+    :header   => nil,
+    :default  => 64
   },
   {
-    :name  => 'passenger_ignore_client_abort',
-    :type  => :flag,
-    :field => 'upstream_config.ignore_client_abort'
+    :name     => 'passenger_ignore_client_abort',
+    :scope    => :location,
+    :type     => :flag,
+    :default  => false,
+    :field    => 'upstream_config.ignore_client_abort'
   },
   {
-    :name  => 'passenger_read_timeout',
-    :type  => :msec,
-    :field => 'upstream_config.read_timeout'
+    :name     => 'passenger_read_timeout',
+    :scope    => :location,
+    :type     => :msec,
+    :field    => 'upstream_config.read_timeout'
   },
   {
-    :name  => 'passenger_buffer_response',
-    :type  => :flag,
-    :field => 'upstream_config.buffering'
+    :name     => 'passenger_buffer_response',
+    :scope    => :location,
+    :type     => :flag,
+    :default  => false,
+    :field    => 'upstream_config.buffering'
   },
   {
     :name     => 'passenger_buffer_size',
+    :scope    => :location,
+    :dynamic_default => '4k|8k',
     :take     => 'NGX_CONF_TAKE1',
     :function => 'ngx_conf_set_size_slot',
-    :field    => 'upstream_config.buffer_size'
+    :field    => 'upstream_config.buffer_size',
+    :auto_generate_nginx_tracking_code => false
   },
   {
     :name     => 'passenger_buffers',
+    :scope    => :location,
+    :dynamic_default => '8 4k|8k',
     :take     => 'NGX_CONF_TAKE2',
     :function => 'ngx_conf_set_bufs_slot',
-    :field    => 'upstream_config.bufs'
+    :field    => 'upstream_config.bufs',
+    :auto_generate_nginx_tracking_code => false
   },
   {
     :name     => 'passenger_busy_buffers_size',
+    :scope    => :location,
+    :dynamic_default => '8k|16k',
     :take     => 'NGX_CONF_TAKE1',
     :function => 'ngx_conf_set_size_slot',
-    :field    => 'upstream_config.busy_buffers_size_conf'
+    :field    => 'upstream_config.busy_buffers_size_conf',
+    :auto_generate_nginx_tracking_code => false
   },
   {
     :name     => 'passenger_intercept_errors',
+    :scope    => :location,
     :type     => :flag,
+    :default  => false,
     :field    => 'upstream_config.intercept_errors'
   },
   {
-    :name  => 'passenger_spawn_method',
-    :type  => :string
+    :name     => 'passenger_spawn_method',
+    :scope    => :application,
+    :dynamic_default => "'smart' for Ruby apps, 'direct' for all other apps",
+    :type     => :string
   },
   {
-    :name  => 'passenger_load_shell_envvars',
-    :type  => :flag
+    :name     => 'passenger_load_shell_envvars',
+    :scope    => :application,
+    :type     => :flag,
+    :default  => true
   },
   {
-    :name  => 'passenger_max_request_queue_size',
-    :type  => :integer
+    :name     => 'passenger_max_request_queue_size',
+    :scope    => :application,
+    :type     => :uinteger,
+    :default  => DEFAULT_MAX_REQUEST_QUEUE_SIZE
   },
   {
-    :name  => 'passenger_request_queue_overflow_status_code',
-    :type  => :integer
+    :name     => 'passenger_request_queue_overflow_status_code',
+    :scope    => :location,
+    :type     => :integer,
+    :default  => 503
   },
   {
-    :name  => 'passenger_restart_dir',
-    :type  => :string
+    :name     => 'passenger_restart_dir',
+    :scope    => :application,
+    :type     => :string,
+    :default  => 'tmp'
   },
   {
-    :name   => 'passenger_app_type',
-    :type   => :string,
-    :header => nil
+    :name     => 'passenger_app_type',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => 'Autodetected',
+    :header   => nil
   },
   {
-    :name   => 'passenger_startup_file',
-    :type   => :string
+    :name     => 'passenger_startup_file',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => 'Autodetected'
   },
   {
-    :name   => 'passenger_sticky_sessions',
-    :type   => :flag
+    :name     => 'passenger_sticky_sessions',
+    :scope    => :location,
+    :type     => :flag,
+    :default  => false
   },
   {
-    :name   => 'passenger_sticky_sessions_cookie_name',
-    :type   => :string
+    :name     => 'passenger_sticky_sessions_cookie_name',
+    :scope    => :location,
+    :type     => :string,
+    :default  => DEFAULT_STICKY_SESSIONS_COOKIE_NAME
   },
   {
-    :name   => 'passenger_vary_turbocache_by_cookie',
-    :type   => :string
+    :name     => 'passenger_vary_turbocache_by_cookie',
+    :scope    => :location,
+    :type     => :string
   },
   {
-    :name   => 'passenger_abort_websockets_on_process_shutdown',
-    :type   => :flag
+    :name     => 'passenger_abort_websockets_on_process_shutdown',
+    :scope    => :application,
+    :type     => :flag,
+    :default  => true
   },
   {
-    :name   => 'passenger_force_max_concurrent_requests_per_process',
-    :type   => :integer
+    :name     => 'passenger_force_max_concurrent_requests_per_process',
+    :scope    => :application,
+    :type     => :integer,
+    :default  => -1
   },
 
   ###### Enterprise features ######
   {
     :context  => [:main],
     :name     => 'passenger_fly_with',
+    :scope    => :global,
     :type     => :string,
     :struct   => "NGX_HTTP_MAIN_CONF_OFFSET",
     :function => 'passenger_enterprise_only',
@@ -452,42 +595,49 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'passenger_max_instances',
+    :scope    => :application,
     :type     => :integer,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
   {
     :name     => 'passenger_max_request_time',
+    :scope    => :location,
     :type     => :integer,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
   {
     :name     => 'passenger_memory_limit',
+    :scope    => :application,
     :type     => :integer,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
   {
     :name     => 'passenger_concurrency_model',
+    :scope    => :application,
     :type     => :string,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
   {
     :name     => 'passenger_thread_count',
+    :scope    => :application,
     :type     => :integer,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
   {
     :name     => 'passenger_rolling_restarts',
+    :scope    => :application,
     :type     => :flag,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
   {
     :name     => 'passenger_resist_deployment_errors',
+    :scope    => :application,
     :type     => :flag,
     :function => 'passenger_enterprise_only',
     :field    => nil
@@ -518,18 +668,21 @@ NGINX_CONFIGURATION_OPTIONS = [
   ###### Obsolete options ######
   {
     :name     => 'rails_framework_spawner_idle_time',
+    :scope    => :application,
     :take     => 'NGX_CONF_TAKE1',
     :function => 'rails_framework_spawner_idle_time',
     :field    => nil
   },
   {
     :name     => 'passenger_use_global_queue',
+    :scope    => :global,
     :take     => 'NGX_CONF_FLAG',
     :function => 'passenger_use_global_queue',
     :field    => nil
   },
   {
     :name     => 'passenger_analytics_log_user',
+    :scope    => :global,
     :context  => [:main],
     :type     => :string,
     :function => 'passenger_obsolete_directive',
@@ -537,6 +690,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'passenger_analytics_log_group',
+    :scope    => :global,
     :context  => [:main],
     :type     => :string,
     :function => 'passenger_obsolete_directive',
@@ -544,6 +698,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'union_station_gateway_address',
+    :scope    => :global,
     :context  => [:main],
     :type     => :string,
     :function => 'passenger_obsolete_directive',
@@ -551,6 +706,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'union_station_gateway_port',
+    :scope    => :global,
     :context  => [:main],
     :type     => :integer,
     :function => 'passenger_obsolete_directive',
@@ -558,6 +714,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'union_station_gateway_cert',
+    :scope    => :global,
     :context  => [:main],
     :type     => :string,
     :function => 'passenger_obsolete_directive',
@@ -565,6 +722,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'union_station_proxy_address',
+    :scope    => :global,
     :context  => [:main],
     :type     => :string,
     :function => 'passenger_obsolete_directive',
@@ -572,18 +730,21 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'union_station_key',
+    :scope    => :application,
     :type     => :string,
     :function => 'passenger_obsolete_directive',
     :field    => nil
   },
   {
     :name     => 'union_station_support',
+    :scope    => :application,
     :type     => :flag,
     :function => 'passenger_obsolete_directive',
     :field    => nil
   },
   {
     :name     => 'union_station_filter',
+    :scope    => :application,
     :take     => 'NGX_CONF_TAKE1',
     :type     => :string_array,
     :function => 'passenger_obsolete_directive',

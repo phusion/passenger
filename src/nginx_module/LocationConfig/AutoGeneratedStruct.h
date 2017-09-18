@@ -51,11 +51,11 @@ typedef struct {
     ngx_uint_t headers_hash_max_size;
     ngx_array_t *headers_source;
     ngx_flag_t load_shell_envvars;
-    ngx_int_t max_instances_per_app;
+    ngx_uint_t max_instances_per_app;
     ngx_int_t max_preloader_idle_time;
-    ngx_int_t max_request_queue_size;
-    ngx_int_t max_requests;
-    ngx_int_t min_instances;
+    ngx_uint_t max_request_queue_size;
+    ngx_uint_t max_requests;
+    ngx_uint_t min_instances;
     ngx_int_t request_queue_overflow_status_code;
     ngx_int_t start_timeout;
     ngx_flag_t sticky_sessions;
