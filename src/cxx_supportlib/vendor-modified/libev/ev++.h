@@ -552,12 +552,12 @@ namespace ev {
     return ev_embeddable_backends ();
   }
 
-  inline void set_allocator (void *(*cb)(void *ptr, long size) throw ()) throw ()
+  inline void set_allocator (void *(*cb)(void *ptr, long size)) throw ()
   {
     ev_set_allocator (cb);
   }
 
-  inline void set_syserr_cb (void (*cb)(const char *msg) throw ()) throw ()
+  inline void set_syserr_cb (void (*cb)(const char *msg)) throw ()
   {
     ev_set_syserr_cb (cb);
   }
