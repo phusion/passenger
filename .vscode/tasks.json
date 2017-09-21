@@ -9,7 +9,7 @@
             "command": "drake",
             "args": [
                 "-j3",
-                "agent"
+                "nginx"
             ],
             "group": {
                 "kind": "build",

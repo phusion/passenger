@@ -2,5 +2,10 @@
     "search.exclude": {
         "play": true,
         "node_modules": true
+    },
+    "files.associations": {
+        "*.cxxcodebuilder": "ruby",
+        "__locale": "cpp",
+        "functional": "cpp"
     }
 }
