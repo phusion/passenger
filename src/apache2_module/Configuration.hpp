@@ -88,15 +88,6 @@ struct DirConfig : GeneratedDirConfigPart {
 	 */
 	Threeway allowEncodedSlashes;
 
-	string unionStationKey;
-
-	vector<string> unionStationFilters;
-
-	/**
-	 * Whether analytics logging should be enabled.
-	 */
-	Threeway unionStationSupport;
-
 	/**
 	 * Whether response buffering support is enabled.
 	 */
@@ -117,29 +108,8 @@ struct DirConfig : GeneratedDirConfigPart {
 		return allowEncodedSlashes == ENABLED;
 	}
 
-	bool useUnionStation() const {
-		return unionStationSupport == ENABLED;
-	}
-
 	bool getBufferResponse() const {
 		return bufferResponse == ENABLED;
-	}
-
-	string getUnionStationFilterString() const {
-		if (unionStationFilters.empty()) {
-			return string();
-		} else {
-			string result;
-			vector<string>::const_iterator it;
-
-			for (it = unionStationFilters.begin(); it != unionStationFilters.end(); it++) {
-				if (it != unionStationFilters.begin()) {
-					result.append(1, '\1');
-				}
-				result.append(*it);
-			}
-			return result;
-		}
 	}
 
 	/*************************************/
@@ -197,16 +167,6 @@ struct ServerConfig {
 	bool disableSecurityUpdateCheck;
 	string securityUpdateCheckProxy;
 
-	bool unionStationSupport;
-	string unionStationGatewayAddress;
-	int unionStationGatewayPort;
-	string unionStationGatewayCert;
-	string unionStationProxyAddress;
-
-	/** Directory in which analytics logs should be saved. */
-	string analyticsLogUser;
-	string analyticsLogGroup;
-
 	bool turbocaching;
 
 	set<string> prestartURLs;
@@ -226,13 +186,6 @@ struct ServerConfig {
 		disableSecurityUpdateCheck = false;
 		securityUpdateCheckProxy = string();
 		defaultUser        = DEFAULT_WEB_APP_USER;
-		unionStationSupport        = false;
-		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
-		unionStationGatewayPort    = DEFAULT_UNION_STATION_GATEWAY_PORT;
-		unionStationGatewayCert    = string();
-		unionStationProxyAddress   = string();
-		analyticsLogUser   = DEFAULT_ANALYTICS_LOG_USER;
-		analyticsLogGroup  = DEFAULT_ANALYTICS_LOG_GROUP;
 		turbocaching       = true;
 	}
 

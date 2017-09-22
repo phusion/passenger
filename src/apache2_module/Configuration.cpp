@@ -40,7 +40,6 @@
 #include <JsonTools/Autocast.h>
 #include <Utils.h>
 #include <Constants.h>
-#include <UnionStationFilterSupport.h>
 
 /* The APR/Apache headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
@@ -197,7 +196,6 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->appRoot = NULL;
 	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
 	config->allowEncodedSlashes = DirConfig::UNSET;
-	config->unionStationSupport = DirConfig::UNSET;
 	config->bufferResponse = DirConfig::UNSET;
 	/*************************************/
 	return config;
@@ -217,16 +215,8 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	}
 
 	MERGE_STR_CONFIG(appRoot);
-	MERGE_STRING_CONFIG(unionStationKey);
-	config->unionStationFilters = base->unionStationFilters;
-	for (vector<string>::const_iterator it = add->unionStationFilters.begin(); it != add->unionStationFilters.end(); it++) {
-		if (!contains(config->unionStationFilters, *it)) {
-			config->unionStationFilters.push_back(*it);
-		}
-	}
 	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
 	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
-	MERGE_THREEWAY_CONFIG(unionStationSupport);
 	MERGE_THREEWAY_CONFIG(bufferResponse);
 	/*************************************/
 	return config;
@@ -236,9 +226,7 @@ static void
 postprocessDirConfig(server_rec *s, core_dir_config *core_dconf,
 	DirConfig *psg_dconf, bool isTopLevel = false)
 {
-	if (psg_dconf->unionStationSupport == DirConfig::ENABLED) {
-		serverConfig.unionStationSupport = true;
-	}
+	// Do nothing
 }
 
 #ifndef ap_get_core_module_config
@@ -306,12 +294,6 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_data_buffer_dir, dataBufferDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_instance_registry_dir, instanceRegistryDir)
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_disable_security_update_check, disableSecurityUpdateCheck)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_security_update_check_proxy, securityUpdateCheckProxy)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationGatewayAddress)
-DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_address, unionStationProxyAddress)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
-DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
 DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(cmd_passenger_turbocaching, turbocaching)
 
 static const char *
@@ -333,10 +315,8 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 #include "ConfigurationSetters.cpp"
 
 DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_union_station_key, unionStationKey)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_union_station_support, unionStationSupport)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
 
 #ifndef PASSENGER_IS_ENTERPRISE
@@ -376,24 +356,6 @@ cmd_passenger_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-static const char *
-cmd_union_station_filter(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	if (strlen(arg) == 0) {
-		return "UnionStationFilter may not be set to the empty string";
-	} else {
-		try {
-			FilterSupport::Filter f(arg);
-			config->unionStationFilters.push_back(arg);
-			return NULL;
-		} catch (const SyntaxError &e) {
-			string message = "Syntax error in Union Station filter: ";
-			message.append(e.what());
-			return strdup(message.c_str());
-		}
-	}
-}
-
 
 /*************************************************
  * Obsolete settings
@@ -430,6 +392,15 @@ cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
 	fprintf(stderr, "WARNING: The 'PassengerUseGlobalQueue' option is obsolete: "
 		"global queueing is now always turned on. "
 		"Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_passenger_obsolete_option(cmd_parms *cmd, void *pcfg, int arg) {
+	fprintf(stderr, "WARNING: The '%s' option is obsolete. "
+		"Please remove this option from your configuration file.\n",
+		cmd->cmd->name);
 	fflush(stderr);
 	return NULL;
 }
@@ -536,36 +507,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Limit the number of stat calls to once per given seconds."),
-	AP_INIT_TAKE1("UnionStationGatewayAddress",
-		(Take1Func) cmd_union_station_gateway_address,
-		NULL,
-		RSRC_CONF,
-		"The Union Station Gateway host name."),
-	AP_INIT_TAKE1("UnionStationGatewayPort",
-		(Take1Func) cmd_union_station_gateway_port,
-		NULL,
-		RSRC_CONF,
-		"The Union Station Gateway port number."),
-	AP_INIT_TAKE1("UnionStationGatewayCert",
-		(Take1Func) cmd_union_station_gateway_cert,
-		NULL,
-		RSRC_CONF,
-		"The Union Station Gateway certificate."),
-	AP_INIT_TAKE1("UnionStationProxyAddress",
-		(Take1Func) cmd_union_station_proxy_address,
-		NULL,
-		RSRC_CONF,
-		"The address of the proxy that should be used for sending data to Union Station."),
-	AP_INIT_TAKE1("PassengerAnalyticsLogUser",
-		(Take1Func) cmd_passenger_analytics_log_user,
-		NULL,
-		RSRC_CONF,
-		"The owner of analytics files."),
-	AP_INIT_TAKE1("PassengerAnalyticsLogGroup",
-		(Take1Func) cmd_passenger_analytics_log_group,
-		NULL,
-		RSRC_CONF,
-		"The group of analytics files."),
 	AP_INIT_TAKE1("PassengerPreStart",
 		(Take1Func) cmd_passenger_pre_start,
 		NULL,
@@ -584,16 +525,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"The application's root directory."),
-	AP_INIT_TAKE1("UnionStationKey",
-		(Take1Func) cmd_union_station_key,
-		NULL,
-		OR_ALL,
-		"The Union Station key."),
-	AP_INIT_TAKE1("UnionStationFilter",
-		(Take1Func) cmd_union_station_filter,
-		NULL,
-		OR_ALL,
-		"A filter for Union Station data."),
 	AP_INIT_FLAG("PassengerBufferResponse",
 		(FlagFunc) cmd_passenger_buffer_response,
 		NULL,
@@ -614,11 +545,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Declare the given base URI as belonging to an application."),
-	AP_INIT_FLAG("UnionStationSupport",
-		(Take1Func) cmd_union_station_support,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Whether to enable logging through Union Station."),
 
 	/*****************************/
 	AP_INIT_TAKE1("PassengerMemoryLimit",
@@ -732,6 +658,51 @@ const command_rec passenger_commands[] = {
 		"Obsolete option."),
 	AP_INIT_FLAG("PassengerUseGlobalQueue",
 		(FlagFunc) cmd_passenger_use_global_queue,
+		NULL,
+		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_TAKE1("UnionStationGatewayAddress",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_TAKE1("UnionStationGatewayPort",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_TAKE1("UnionStationGatewayCert",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_TAKE1("UnionStationProxyAddress",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogUser",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_TAKE1("PassengerAnalyticsLogGroup",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		RSRC_CONF,
+		"Obsolete option."),
+	AP_INIT_TAKE1("UnionStationKey",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		OR_ALL,
+		"Obsolete option."),
+	AP_INIT_TAKE1("UnionStationFilter",
+		(Take1Func) cmd_passenger_obsolete_option,
+		NULL,
+		OR_ALL,
+		"Obsolete option."),
+	AP_INIT_FLAG("UnionStationSupport",
+		(Take1Func) cmd_passenger_obsolete_option,
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Obsolete option."),
