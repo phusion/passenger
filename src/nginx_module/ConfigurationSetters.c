@@ -293,18 +293,6 @@ passenger_conf_set_app_rights(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
 }
 
 char *
-passenger_conf_set_union_station_support(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
-    passenger_loc_conf_t *passenger_conf = conf;
-
-    passenger_conf->union_station_support_explicitly_set = 1;
-    record_loc_conf_source_location(cf, passenger_conf,
-        &passenger_conf->union_station_support_source_file,
-        &passenger_conf->union_station_support_source_line);
-
-    return ngx_conf_set_flag_slot(cf, cmd, conf);
-}
-
-char *
 passenger_conf_set_debugger(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
     passenger_loc_conf_t *passenger_conf = conf;
 
@@ -446,18 +434,6 @@ passenger_conf_set_load_shell_envvars(ngx_conf_t *cf, ngx_command_t *cmd, void *
         &passenger_conf->load_shell_envvars_source_line);
 
     return ngx_conf_set_flag_slot(cf, cmd, conf);
-}
-
-char *
-passenger_conf_set_union_station_key(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
-    passenger_loc_conf_t *passenger_conf = conf;
-
-    passenger_conf->union_station_key_explicitly_set = 1;
-    record_loc_conf_source_location(cf, passenger_conf,
-        &passenger_conf->union_station_key_source_file,
-        &passenger_conf->union_station_key_source_line);
-
-    return ngx_conf_set_str_slot(cf, cmd, conf);
 }
 
 char *

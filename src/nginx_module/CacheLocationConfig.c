@@ -165,13 +165,6 @@ generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
         len += sizeof("\r\n") - 1;
     }
 
-    if (conf->union_station_support != NGX_CONF_UNSET) {
-        len += sizeof("!~UNION_STATION_SUPPORT: ") - 1;
-        len += conf->union_station_support
-            ? sizeof("t\r\n") - 1
-            : sizeof("f\r\n") - 1;
-    }
-
     if (conf->debugger != NGX_CONF_UNSET) {
         len += sizeof("!~PASSENGER_DEBUGGER: ") - 1;
         len += conf->debugger
@@ -200,12 +193,6 @@ generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
         len += conf->load_shell_envvars
             ? sizeof("t\r\n") - 1
             : sizeof("f\r\n") - 1;
-    }
-
-    if (conf->union_station_key.data != NULL) {
-        len += sizeof("!~UNION_STATION_KEY: ") - 1;
-        len += conf->union_station_key.len;
-        len += sizeof("\r\n") - 1;
     }
 
     if (conf->max_request_queue_size != NGX_CONF_UNSET) {
@@ -439,17 +426,6 @@ generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
             conf->app_rights.len);
         pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
     }
-    if (conf->union_station_support != NGX_CONF_UNSET) {
-        pos = ngx_copy(pos,
-            "!~UNION_STATION_SUPPORT: ",
-            sizeof("!~UNION_STATION_SUPPORT: ") - 1);
-        if (conf->union_station_support) {
-            pos = ngx_copy(pos, "t\r\n", sizeof("t\r\n") - 1);
-        } else {
-            pos = ngx_copy(pos, "f\r\n", sizeof("f\r\n") - 1);
-        }
-    }
-
     if (conf->debugger != NGX_CONF_UNSET) {
         pos = ngx_copy(pos,
             "!~PASSENGER_DEBUGGER: ",
@@ -492,15 +468,6 @@ generated_cache_location_part(ngx_conf_t *cf, passenger_loc_conf_t *conf) {
         }
     }
 
-    if (conf->union_station_key.data != NULL) {
-        pos = ngx_copy(pos,
-            "!~UNION_STATION_KEY: ",
-            sizeof("!~UNION_STATION_KEY: ") - 1);
-        pos = ngx_copy(pos,
-            conf->union_station_key.data,
-            conf->union_station_key.len);
-        pos = ngx_copy(pos, (const u_char *) "\r\n", sizeof("\r\n") - 1);
-    }
     if (conf->max_request_queue_size != NGX_CONF_UNSET) {
         pos = ngx_copy(pos,
             "!~PASSENGER_MAX_REQUEST_QUEUE_SIZE: ",

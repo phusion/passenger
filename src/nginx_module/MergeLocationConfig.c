@@ -101,14 +101,6 @@ generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev, ngx
     ngx_conf_merge_str_value(conf->app_rights,
         prev->app_rights,
         NULL);
-    ngx_conf_merge_value(conf->union_station_support,
-        prev->union_station_support,
-        NGX_CONF_UNSET);
-    if (merge_string_array(cf, &prev->union_station_filters, &conf->union_station_filters) != NGX_OK) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-            "cannot merge \"union_station_filter\" configurations");
-        return 0;
-    }
     ngx_conf_merge_value(conf->debugger,
         prev->debugger,
         NGX_CONF_UNSET);
@@ -132,9 +124,6 @@ generated_merge_part(passenger_loc_conf_t *conf, passenger_loc_conf_t *prev, ngx
     ngx_conf_merge_value(conf->load_shell_envvars,
         prev->load_shell_envvars,
         NGX_CONF_UNSET);
-    ngx_conf_merge_str_value(conf->union_station_key,
-        prev->union_station_key,
-        NULL);
     ngx_conf_merge_value(conf->max_request_queue_size,
         prev->max_request_queue_size,
         NGX_CONF_UNSET);

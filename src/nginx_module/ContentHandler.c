@@ -501,7 +501,6 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         } while (0)
 
     ngx_uint_t       total_size = 0;
-    ngx_str_t       *union_station_filters;
     ngx_uint_t       i;
     ngx_list_part_t *part;
     ngx_table_elt_t *header;
@@ -704,21 +703,6 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
     }
     total_size += state->app_type.len;
     PUSH_STATIC_STR("\r\n");
-
-    if (slcf->union_station_filters != NGX_CONF_UNSET_PTR
-     && slcf->union_station_filters->nelts > 0)
-    {
-        union_station_filters = (ngx_str_t *) slcf->union_station_filters->elts;
-        for (i = 0; i < slcf->union_station_filters->nelts; i++) {
-            PUSH_STATIC_STR("!~UNION_STATION_FILTERS: ");
-            if (b != NULL) {
-                b->last = ngx_copy(b->last, union_station_filters[i].data,
-                    union_station_filters[i].len);
-            }
-            total_size += union_station_filters[i].len;
-            PUSH_STATIC_STR("\r\n");
-        }
-    }
 
     if (b != NULL) {
         b->last = ngx_copy(b->last, slcf->options_cache.data, slcf->options_cache.len);

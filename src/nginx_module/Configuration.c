@@ -39,7 +39,6 @@
 #include "ContentHandler.h"
 #include "ConfigurationSetters.c"
 #include "cxx_supportlib/Constants.h"
-#include "cxx_supportlib/UnionStationFilterSupport.h"
 #include "cxx_supportlib/vendor-modified/modp_b64.h"
 
 
@@ -131,18 +130,6 @@ passenger_create_main_conf(ngx_conf_t *cf)
     conf->default_user.len  = 0;
     conf->default_group.data = NULL;
     conf->default_group.len  = 0;
-    conf->analytics_log_user.data = NULL;
-    conf->analytics_log_user.len  = 0;
-    conf->analytics_log_group.data = NULL;
-    conf->analytics_log_group.len  = 0;
-    conf->union_station_support = 0;
-    conf->union_station_gateway_address.data = NULL;
-    conf->union_station_gateway_address.len = 0;
-    conf->union_station_gateway_port = (ngx_uint_t) NGX_CONF_UNSET;
-    conf->union_station_gateway_cert.data = NULL;
-    conf->union_station_gateway_cert.len = 0;
-    conf->union_station_proxy_address.data = NULL;
-    conf->union_station_proxy_address.len = 0;
 
     conf->prestart_uris = ngx_array_create(cf->pool, 1, sizeof(ngx_str_t));
     if (conf->prestart_uris == NULL) {
@@ -256,33 +243,6 @@ passenger_init_main_conf(ngx_conf_t *cf, void *conf_pointer)
         if (group_entry == NULL) {
             return "The group specified by the 'default_group' option does not exist.";
         }
-    }
-
-    if (conf->analytics_log_user.len == 0) {
-        conf->analytics_log_user.len  = sizeof(DEFAULT_ANALYTICS_LOG_USER) - 1;
-        conf->analytics_log_user.data = (u_char *) DEFAULT_ANALYTICS_LOG_USER;
-    }
-
-    if (conf->analytics_log_group.len == 0) {
-        conf->analytics_log_group.len  = sizeof(DEFAULT_ANALYTICS_LOG_GROUP) - 1;
-        conf->analytics_log_group.data = (u_char *) DEFAULT_ANALYTICS_LOG_GROUP;
-    }
-
-    if (conf->union_station_gateway_address.len == 0) {
-        conf->union_station_gateway_address.len = sizeof(DEFAULT_UNION_STATION_GATEWAY_ADDRESS) - 1;
-        conf->union_station_gateway_address.data = (u_char *) DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
-    }
-
-    if (conf->union_station_gateway_port == (ngx_uint_t) NGX_CONF_UNSET) {
-        conf->union_station_gateway_port = DEFAULT_UNION_STATION_GATEWAY_PORT;
-    }
-
-    if (conf->union_station_gateway_cert.len == 0) {
-        conf->union_station_gateway_cert.data = (u_char *) "";
-    }
-
-    if (conf->union_station_proxy_address.len == 0) {
-        conf->union_station_proxy_address.data = (u_char *) "";
     }
 
     return NGX_CONF_OK;
@@ -1174,10 +1134,6 @@ postprocess_location_conf(ngx_conf_t *cf,
     passenger_loc_conf_t *plconf = server_conf->ctx->loc_conf[
         ngx_http_passenger_module.ctx_index];
 
-    if (plconf->union_station_support != NGX_CONF_UNSET && plconf->union_station_support) {
-        passenger_main_conf.union_station_support = 1;
-    }
-
     return traverse_location_confs_nested_in_server_conf(cf, server_conf, location_conf, ctx);
 }
 
@@ -1375,51 +1331,6 @@ passenger_enabled(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
-char *
-union_station_filter(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
-{
-    char  *p = conf;
-
-    ngx_str_t         *value, *s;
-    ngx_array_t      **a;
-    ngx_conf_post_t   *post;
-    char              *message;
-
-    a = (ngx_array_t **) (p + cmd->offset);
-
-    if (*a == NGX_CONF_UNSET_PTR) {
-        *a = ngx_array_create(cf->pool, 4, sizeof(ngx_str_t));
-        if (*a == NULL) {
-            return NGX_CONF_ERROR;
-        }
-    }
-
-    s = ngx_array_push(*a);
-    if (s == NULL) {
-        return NGX_CONF_ERROR;
-    }
-
-    value = cf->args->elts;
-
-    *s = value[1];
-
-    if (cmd->post) {
-        post = cmd->post;
-        return post->post_handler(cf, post, s);
-    }
-
-    message = passenger_filter_validate((const char *) value[1].data, value[1].len);
-    if (message != NULL) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-            "Union Station filter syntax error: %s; ",
-            message);
-        free(message);
-        return NGX_CONF_ERROR;
-    }
-
-    return NGX_CONF_OK;
-}
-
 static char *
 rails_framework_spawner_idle_time(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -1434,6 +1345,14 @@ passenger_use_global_queue(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_conf_log_error(NGX_LOG_ALERT, cf, 0, "The 'passenger_use_global_queue' "
         "directive is obsolete and doesn't do anything anymore. Global queuing "
         "is now always enabled. Please remove this configuration directive.");
+    return NGX_CONF_OK;
+}
+
+static char *
+passenger_obsolete_directive(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_conf_log_error(NGX_LOG_ALERT, cf, 0, "The '%V' directive is obsolete "
+        "and doesn't do anything anymore.", &cmd->name);
     return NGX_CONF_OK;
 }
 
@@ -1634,53 +1553,11 @@ const ngx_command_t passenger_commands[] = {
       offsetof(passenger_main_conf_t, default_group),
       NULL },
 
-    { ngx_string("passenger_analytics_log_user"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, analytics_log_user),
-      NULL },
-
-    { ngx_string("passenger_analytics_log_group"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, analytics_log_group),
-      NULL },
-
     { ngx_string("passenger_read_timeout"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_msec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(passenger_loc_conf_t, upstream_config.read_timeout),
-      NULL },
-
-    { ngx_string("union_station_gateway_address"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, union_station_gateway_address),
-      NULL },
-
-    { ngx_string("union_station_gateway_port"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_num_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, union_station_gateway_port),
-      NULL },
-
-    { ngx_string("union_station_gateway_cert"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, union_station_gateway_cert),
-      NULL },
-
-    { ngx_string("union_station_proxy_address"),
-      NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
-      NGX_HTTP_MAIN_CONF_OFFSET,
-      offsetof(passenger_main_conf_t, union_station_proxy_address),
       NULL },
 
     /******** Per-location config ********/

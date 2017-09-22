@@ -69,8 +69,6 @@ generated_set_conf_part(passenger_loc_conf_t  *conf) {
     conf->app_root.len  = 0;
     conf->app_rights.data = NULL;
     conf->app_rights.len  = 0;
-    conf->union_station_support = NGX_CONF_UNSET;
-    conf->union_station_filters = NGX_CONF_UNSET_PTR;
     conf->debugger = NGX_CONF_UNSET;
     conf->max_preloader_idle_time = NGX_CONF_UNSET;
     conf->env_vars = NULL;
@@ -79,8 +77,6 @@ generated_set_conf_part(passenger_loc_conf_t  *conf) {
     conf->spawn_method.data = NULL;
     conf->spawn_method.len  = 0;
     conf->load_shell_envvars = NGX_CONF_UNSET;
-    conf->union_station_key.data = NULL;
-    conf->union_station_key.len  = 0;
     conf->max_request_queue_size = NGX_CONF_UNSET;
     conf->request_queue_overflow_status_code = NGX_CONF_UNSET;
     conf->restart_dir.data = NULL;
@@ -173,14 +169,6 @@ generated_set_conf_part(passenger_loc_conf_t  *conf) {
     conf->app_rights_source_file.len = 0;
     conf->app_rights_source_line = 0;
     conf->app_rights_explicitly_set = 0;
-    conf->union_station_support_source_file.data = NULL;
-    conf->union_station_support_source_file.len = 0;
-    conf->union_station_support_source_line = 0;
-    conf->union_station_support_explicitly_set = 0;
-    conf->union_station_filters_source_file.data = NULL;
-    conf->union_station_filters_source_file.len = 0;
-    conf->union_station_filters_source_line = 0;
-    conf->union_station_filters_explicitly_set = 0;
     conf->debugger_source_file.data = NULL;
     conf->debugger_source_file.len = 0;
     conf->debugger_source_line = 0;
@@ -245,10 +233,6 @@ generated_set_conf_part(passenger_loc_conf_t  *conf) {
     conf->load_shell_envvars_source_file.len = 0;
     conf->load_shell_envvars_source_line = 0;
     conf->load_shell_envvars_explicitly_set = 0;
-    conf->union_station_key_source_file.data = NULL;
-    conf->union_station_key_source_file.len = 0;
-    conf->union_station_key_source_line = 0;
-    conf->union_station_key_explicitly_set = 0;
     conf->max_request_queue_size_source_file.data = NULL;
     conf->max_request_queue_size_source_file.len = 0;
     conf->max_request_queue_size_source_line = 0;

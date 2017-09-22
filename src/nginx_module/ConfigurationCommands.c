@@ -222,22 +222,6 @@
     NULL
 },
 {
-    ngx_string("union_station_support"),
-    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
-    passenger_conf_set_union_station_support,
-    NGX_HTTP_LOC_CONF_OFFSET,
-    offsetof(passenger_loc_conf_t, union_station_support),
-    NULL
-},
-{
-    ngx_string("union_station_filter"),
-    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-    union_station_filter,
-    NGX_HTTP_LOC_CONF_OFFSET,
-    offsetof(passenger_loc_conf_t, union_station_filters),
-    NULL
-},
-{
     ngx_string("passenger_debugger"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
     passenger_conf_set_debugger,
@@ -363,14 +347,6 @@
     passenger_conf_set_load_shell_envvars,
     NGX_HTTP_LOC_CONF_OFFSET,
     offsetof(passenger_loc_conf_t, load_shell_envvars),
-    NULL
-},
-{
-    ngx_string("union_station_key"),
-    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-    passenger_conf_set_union_station_key,
-    NGX_HTTP_LOC_CONF_OFFSET,
-    offsetof(passenger_loc_conf_t, union_station_key),
     NULL
 },
 {
@@ -561,6 +537,78 @@
     ngx_string("passenger_use_global_queue"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
     passenger_use_global_queue,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("passenger_analytics_log_user"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("passenger_analytics_log_group"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("union_station_gateway_address"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("union_station_gateway_port"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("union_station_gateway_cert"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("union_station_proxy_address"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("union_station_key"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("union_station_support"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+    passenger_obsolete_directive,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("union_station_filter"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+    passenger_obsolete_directive,
     NGX_HTTP_LOC_CONF_OFFSET,
     0,
     NULL

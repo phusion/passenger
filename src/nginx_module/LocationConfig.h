@@ -74,8 +74,6 @@ typedef struct {
     ngx_int_t request_queue_overflow_status_code;
     ngx_int_t start_timeout;
     ngx_int_t sticky_sessions;
-    ngx_array_t *union_station_filters;
-    ngx_int_t union_station_support;
     ngx_str_t app_group_name;
     ngx_str_t app_rights;
     ngx_str_t app_root;
@@ -91,7 +89,6 @@ typedef struct {
     ngx_str_t spawn_method;
     ngx_str_t startup_file;
     ngx_str_t sticky_sessions_cookie_name;
-    ngx_str_t union_station_key;
     ngx_str_t user;
     ngx_str_t vary_turbocache_by_cookie;
 
@@ -130,9 +127,6 @@ typedef struct {
     ngx_str_t startup_file_source_file;
     ngx_str_t sticky_sessions_source_file;
     ngx_str_t sticky_sessions_cookie_name_source_file;
-    ngx_str_t union_station_filters_source_file;
-    ngx_str_t union_station_key_source_file;
-    ngx_str_t union_station_support_source_file;
     ngx_str_t upstream_config_buffer_size_source_file;
     ngx_str_t upstream_config_buffering_source_file;
     ngx_str_t upstream_config_bufs_source_file;
@@ -179,9 +173,6 @@ typedef struct {
     ngx_uint_t startup_file_source_line;
     ngx_uint_t sticky_sessions_source_line;
     ngx_uint_t sticky_sessions_cookie_name_source_line;
-    ngx_uint_t union_station_filters_source_line;
-    ngx_uint_t union_station_key_source_line;
-    ngx_uint_t union_station_support_source_line;
     ngx_uint_t upstream_config_buffer_size_source_line;
     ngx_uint_t upstream_config_buffering_source_line;
     ngx_uint_t upstream_config_bufs_source_line;
@@ -228,9 +219,6 @@ typedef struct {
     ngx_int_t startup_file_explicitly_set;
     ngx_int_t sticky_sessions_explicitly_set;
     ngx_int_t sticky_sessions_cookie_name_explicitly_set;
-    ngx_int_t union_station_filters_explicitly_set;
-    ngx_int_t union_station_key_explicitly_set;
-    ngx_int_t union_station_support_explicitly_set;
     ngx_int_t upstream_config_buffer_size_explicitly_set;
     ngx_int_t upstream_config_buffering_explicitly_set;
     ngx_int_t upstream_config_bufs_explicitly_set;

@@ -56,13 +56,6 @@ typedef struct {
     ngx_flag_t   user_switching;
     ngx_str_t    default_user;
     ngx_str_t    default_group;
-    ngx_str_t    analytics_log_user;
-    ngx_str_t    analytics_log_group;
-    ngx_int_t    union_station_support;
-    ngx_str_t    union_station_gateway_address;
-    ngx_uint_t   union_station_gateway_port;
-    ngx_str_t    union_station_gateway_cert;
-    ngx_str_t    union_station_proxy_address;
     ngx_array_t *prestart_uris;
 } passenger_main_conf_t;
 

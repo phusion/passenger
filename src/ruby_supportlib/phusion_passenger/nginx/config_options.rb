@@ -198,18 +198,6 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :type => :string
   },
   {
-    :name  => 'union_station_support',
-    :type  => :flag
-  },
-  {
-    :name     => 'union_station_filter',
-    :take     => 'NGX_CONF_TAKE1',
-    :type     => :string_array,
-    :function => 'union_station_filter',
-    :field    => 'union_station_filters',
-    :header   => nil
-  },
-  {
     :name  => 'passenger_debugger',
     :type  => :flag
   },
@@ -295,10 +283,6 @@ LOCATION_CONFIGURATION_OPTIONS = [
   {
     :name  => 'passenger_load_shell_envvars',
     :type  => :flag
-  },
-  {
-    :name  => 'union_station_key',
-    :type  => :string
   },
   {
     :name  => 'passenger_max_request_queue_size',
@@ -424,5 +408,66 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :take     => 'NGX_CONF_FLAG',
     :function => 'passenger_use_global_queue',
     :field    => nil
-  }
+  },
+  {
+    :name     => 'passenger_analytics_log_user',
+    :context  => [:main],
+    :type     => :string,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_analytics_log_group',
+    :context  => [:main],
+    :type     => :string,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'union_station_gateway_address',
+    :context  => [:main],
+    :type     => :string,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'union_station_gateway_port',
+    :context  => [:main],
+    :type     => :integer,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'union_station_gateway_cert',
+    :context  => [:main],
+    :type     => :string,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'union_station_proxy_address',
+    :context  => [:main],
+    :type     => :string,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'union_station_key',
+    :type     => :string,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'union_station_support',
+    :type     => :flag,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
+  {
+    :name     => 'union_station_filter',
+    :take     => 'NGX_CONF_TAKE1',
+    :type     => :string_array,
+    :function => 'passenger_obsolete_directive',
+    :field    => nil
+  },
 ]
