@@ -235,7 +235,6 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
 
   # Documentation
   sh "mkdir -p #{fake_docdir}"
-  sh "cp doc/*.html #{fake_docdir}/"
   sh "cp -R doc/images #{fake_docdir}/"
 
   # User binaries
