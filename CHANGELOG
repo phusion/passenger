@@ -1,7 +1,7 @@
 Release 5.1.9 (Not yet released)
 --------------------------------
 
- * [Apache] Fixes a segfault on startup, caused by a race between thread creation and apache module double-loading. This primarily affected macOS hosts. Closes GH-1973.
+ * [Apache] Fixes a race condition (segfault) on startup, which primarily affected macOS hosts (regression in 5.1.8 due to the logging improvements). Closes GH-1973.
  * [Nginx] It is now allowed to specify `passenger_enabled` in the `http` context as well.
  * Adds support for Bundler 2.0's new `gems.rb` and `gems.locked`. Learn more about these in [Gemfile's new clothes](https://depfu.com/blog/2017/09/06/gemfiles-new-clothes). Closes GH-1982.
  * Fixes compilation warnings on macOS + Clang 9.0.
