@@ -81,7 +81,8 @@ def filter_eligible_options(options)
   options.reject do |option|
     option[:alias_for] ||
       option.fetch(:field, true).nil? ||
-      option[:field].to_s =~ /\./
+      option[:field].to_s =~ /\./ ||
+      option[:struct] == 'NGX_HTTP_MAIN_CONF_OFFSET'
   end
 end
 
