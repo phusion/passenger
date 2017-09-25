@@ -9293,10 +9293,13 @@ CXX_DEPENDENCY_MAP =
    "src/nginx_module/ConfigurationSetters.c",
    "src/nginx_module/ContentHandler.h",
    "src/nginx_module/CreateLocationConfig.c",
+   "src/nginx_module/CreateMainConfig.c",
    "src/nginx_module/LocationConfig.h",
+   "src/nginx_module/MainConfig.h",
    "src/nginx_module/MergeLocationConfig.c"],
  "src/nginx_module/Configuration.h"=>
-  ["src/nginx_module/LocationConfig.h"],
+  ["src/nginx_module/LocationConfig.h",
+   "src/nginx_module/MainConfig.h"],
  "src/nginx_module/ConfigurationCommands.c"=>
   [],
  "src/nginx_module/ConfigurationSetters.c"=>
@@ -9330,6 +9333,7 @@ CXX_DEPENDENCY_MAP =
    "src/nginx_module/Configuration.h",
    "src/nginx_module/ContentHandler.h",
    "src/nginx_module/LocationConfig.h",
+   "src/nginx_module/MainConfig.h",
    "src/nginx_module/StaticContentHandler.h"],
  "src/nginx_module/ContentHandler.h"=>
   ["src/cxx_supportlib/AppTypes.h",
@@ -9358,7 +9362,11 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
  "src/nginx_module/CreateLocationConfig.c"=>
   [],
+ "src/nginx_module/CreateMainConfig.c"=>
+  [],
  "src/nginx_module/LocationConfig.h"=>
+  [],
+ "src/nginx_module/MainConfig.h"=>
   [],
  "src/nginx_module/MergeLocationConfig.c"=>
   [],
@@ -9394,7 +9402,8 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/tracable_exception.hpp",
    "src/nginx_module/Configuration.h",
    "src/nginx_module/ContentHandler.h",
-   "src/nginx_module/LocationConfig.h"],
+   "src/nginx_module/LocationConfig.h",
+   "src/nginx_module/MainConfig.h"],
  "src/nginx_module/ngx_http_passenger_module.h"=>
   ["src/cxx_supportlib/AppTypes.h",
    "src/cxx_supportlib/ConfigKit/Common.h",

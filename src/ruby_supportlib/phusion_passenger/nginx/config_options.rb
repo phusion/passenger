@@ -32,9 +32,9 @@
 # The following boilerplate code is generated:
 #
 #  * ngx_command_t array members (ConfigurationCommands.c.cxxcodebuilder)
-#  * Configuration structure definition (LocationConfig.h.cxxcodebuilder)
-#  * Location configuration structure initialization (CreateLocationConfig.c.cxxcodebuilder)
-#  * Location configuration merging (MergeLocationConfig.c.cxxcodebuilder)
+#  * Configuration structure definition (MainConfig.h.cxxcodebuilder, LocationConfig.h.cxxcodebuilder)
+#  * Configuration structure initialization (CreateMainConfig.c.cxxcodebuilder, CreateLocationConfig.c.cxxcodebuilder)
+#  * Configuration merging (MergeLocationConfig.c.cxxcodebuilder)
 #  * Conversion of configuration options to CGI headers (CacheLocationConfig.c.cxxcodebuilder)
 #
 # Options:
@@ -62,7 +62,7 @@
 #  * struct - The type of the struct that the field is contained in. Something like
 #             "NGX_HTTP_LOC_CONF_OFFSET" (which is also the default).
 #  * field - The name that should be used for the auto-generated field in
-#            the location configuration structure. Defaults to the configuration
+#            the configuration structure. Defaults to the configuration
 #            name without the 'passenger_' prefix. Set this to nil if you do not
 #            want a structure field to be auto-generated. If the field name contains
 #            a dot (.e.g `upstream_config.pass_headers`) then the structure field will
@@ -76,7 +76,7 @@
 #             will disable auto-generation of CGI header generation code. You are
 #             then responsible for writing CGI header passing code yourself in
 #             ContentHandler.c.
-#  * auto_generate_nginx_merge_code - Whether location configuration merging
+#  * auto_generate_nginx_merge_code - Whether configuration merging
 #            code should be automatically generated. Defaults to true. If you set
 #            this to false then you are responsible for writing merging code
 #            yourself in Configuration.c.
@@ -95,8 +95,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'passenger_ctl',
-    :take     => 'NGX_CONF_TAKE2',
-    :function => 'set_null_terminated_keyval_slot',
+    :type     => :string_keyval,
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
