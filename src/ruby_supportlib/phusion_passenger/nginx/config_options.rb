@@ -22,7 +22,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-# This file defines all supported Nginx per-location configuration options. The
+# This file defines all supported Nginx configuration options. The
 # build system automatically generates the corresponding Nginx module boilerplate
 # code from the definitions in this file.
 #
@@ -31,11 +31,11 @@
 #
 # The following boilerplate code is generated:
 #
-#  * ngx_command_t array members (ConfigurationCommands.c.erb)
-#  * Location configuration structure definition (ConfigurationFields.h.erb)
-#  * Location configuration structure initialization (CreateLocationConfig.c.erb)
-#  * Location configuration merging (MergeLocationConfig.c.erb)
-#  * Conversion of configuration options to CGI headers (CacheLocationConfig.c.erb)
+#  * ngx_command_t array members (ConfigurationCommands.c.cxxcodebuilder)
+#  * Configuration structure definition (LocationConfig.h.cxxcodebuilder)
+#  * Location configuration structure initialization (CreateLocationConfig.c.cxxcodebuilder)
+#  * Location configuration merging (MergeLocationConfig.c.cxxcodebuilder)
+#  * Conversion of configuration options to CGI headers (CacheLocationConfig.c.cxxcodebuilder)
 #
 # Options:
 #
@@ -44,12 +44,12 @@
 #              Defaults to [:main, :srv, :loc, :lif]
 #  * type - This configuration option's value type. Allowed types:
 #           :string, :integer, :uinteger, :flag, :string_array, :string_keyval,
-#           :path
+#           :path, :msec
 #  * take - Tells Nginx how many parameters and what kind of parameter
 #           this configuration option takes. It should be set to a string
 #           such as "NGX_CONF_FLAG".
 #           By default this is automatically inferred from `type`: for
-#           example if `type` is :string then ConfigurationCommands.c.erb
+#           example if `type` is :string then ConfigurationCommands.cxxcodebuilder.erb
 #           will infer that `NGX_CONF_TAKE1` should be used.
 #  * function - The name of the function that should be used to store the
 #               configuration value into the corresponding structure. This function
@@ -85,10 +85,54 @@
 #                fields, nothing else.
 
 
-LOCATION_CONFIGURATION_OPTIONS = [
+NGINX_CONFIGURATION_OPTIONS = [
+  {
+    :name     => 'passenger_root',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET',
+    :field    => 'root_dir'
+  },
+  {
+    :name     => 'passenger_ctl',
+    :take     => 'NGX_CONF_TAKE2',
+    :function => 'set_null_terminated_keyval_slot',
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_abort_on_startup_error',
+    :type     => :flag,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_log_level',
+    :type     => :uinteger,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_log_file',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_file_descriptor_log_file',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_data_buffer_dir',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
   {
     :name     => 'passenger_socket_backlog',
-    :type     => :integer,
+    :type     => :uinteger,
     :context  => [:main],
     :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
   },
@@ -99,16 +143,83 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
-    :name     => 'disable_security_update_check',
+    :name     => 'passenger_disable_security_update_check',
     :type     => :flag,
     :context  => [:main],
-    :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
-    :name     => 'security_update_check_proxy',
+    :name     => 'passenger_security_update_check_proxy',
     :type     => :string,
     :context  => [:main],
-    :struct   => "NGX_HTTP_MAIN_CONF_OFFSET"
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_pre_start',
+    :type     => :string_array,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET',
+    :field    => 'prestart_uris'
+  },
+  {
+    :name     => 'passenger_instance_registry_dir',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_turbocaching',
+    :type     => :flag,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_user_switching',
+    :type     => :flag,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_default_user',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_default_group',
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_max_pool_size',
+    :type     => :uinteger,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_pool_idle_time',
+    :type     => :uinteger,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_response_buffer_high_watermark',
+    :type     => :uinteger,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_stat_throttle_rate',
+    :type     => :uinteger,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_show_version_in_header',
+    :type     => :flag,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_app_file_descriptor_ulimit',
@@ -249,6 +360,11 @@ LOCATION_CONFIGURATION_OPTIONS = [
     :field => 'upstream_config.ignore_client_abort'
   },
   {
+    :name  => 'passenger_read_timeout',
+    :type  => :msec,
+    :field => 'upstream_config.read_timeout'
+  },
+  {
     :name  => 'passenger_buffer_response',
     :type  => :flag,
     :field => 'upstream_config.buffering'
@@ -379,6 +495,10 @@ LOCATION_CONFIGURATION_OPTIONS = [
   },
 
   ###### Aliases for backwards compatibility ######
+  {
+    :name      => 'passenger_debug_log_file',
+    :alias_for => 'passenger_log_file'
+  },
   {
     :name      => 'rails_spawn_method',
     :alias_for => 'passenger_spawn_method'

@@ -135,6 +135,7 @@ typedef struct {
     ngx_str_t upstream_config_ignore_headers_source_file;
     ngx_str_t upstream_config_intercept_errors_source_file;
     ngx_str_t upstream_config_pass_headers_source_file;
+    ngx_str_t upstream_config_read_timeout_source_file;
     ngx_str_t user_source_file;
     ngx_str_t vary_turbocache_by_cookie_source_file;
 
@@ -181,6 +182,7 @@ typedef struct {
     ngx_uint_t upstream_config_ignore_headers_source_line;
     ngx_uint_t upstream_config_intercept_errors_source_line;
     ngx_uint_t upstream_config_pass_headers_source_line;
+    ngx_uint_t upstream_config_read_timeout_source_line;
     ngx_uint_t user_source_line;
     ngx_uint_t vary_turbocache_by_cookie_source_line;
 
@@ -227,6 +229,7 @@ typedef struct {
     ngx_int_t upstream_config_ignore_headers_explicitly_set;
     ngx_int_t upstream_config_intercept_errors_explicitly_set;
     ngx_int_t upstream_config_pass_headers_explicitly_set;
+    ngx_int_t upstream_config_read_timeout_explicitly_set;
     ngx_int_t user_explicitly_set;
     ngx_int_t vary_turbocache_by_cookie_explicitly_set;
 

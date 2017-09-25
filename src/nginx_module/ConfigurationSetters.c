@@ -57,6 +57,36 @@ record_loc_conf_source_location(ngx_conf_t *cf, passenger_loc_conf_t *pl_conf, n
 
 
 char *
+passenger_conf_set_root(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_abort_on_startup_error(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_flag_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_log_level(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_num_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_log_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_file_descriptor_log_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_data_buffer_dir(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
 passenger_conf_set_socket_backlog(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
     return ngx_conf_set_num_slot(cf, cmd, conf);
 }
@@ -74,6 +104,61 @@ passenger_conf_set_disable_security_update_check(ngx_conf_t *cf, ngx_command_t *
 char *
 passenger_conf_set_security_update_check_proxy(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
     return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_pre_start(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_array_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_instance_registry_dir(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_turbocaching(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_flag_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_user_switching(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_flag_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_default_user(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_default_group(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_str_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_max_pool_size(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_num_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_pool_idle_time(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_num_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_response_buffer_high_watermark(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_num_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_stat_throttle_rate(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_num_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_show_version_in_header(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    return ngx_conf_set_flag_slot(cf, cmd, conf);
 }
 
 char *
@@ -386,6 +471,18 @@ passenger_conf_set_ignore_client_abort(ngx_conf_t *cf, ngx_command_t *cmd, void 
         &passenger_conf->upstream_config_ignore_client_abort_source_line);
 
     return ngx_conf_set_flag_slot(cf, cmd, conf);
+}
+
+char *
+passenger_conf_set_read_timeout(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+    passenger_loc_conf_t *passenger_conf = conf;
+
+    passenger_conf->upstream_config_read_timeout_explicitly_set = 1;
+    record_loc_conf_source_location(cf, passenger_conf,
+        &passenger_conf->upstream_config_read_timeout_source_file,
+        &passenger_conf->upstream_config_read_timeout_source_line);
+
+    return ngx_conf_set_msec_slot(cf, cmd, conf);
 }
 
 char *

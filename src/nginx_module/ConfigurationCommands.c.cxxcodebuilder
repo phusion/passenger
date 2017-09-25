@@ -49,7 +49,7 @@ def main
   separator
 
   ctx = self
-  LOCATION_CONFIGURATION_OPTIONS.each do |option|
+  NGINX_CONFIGURATION_OPTIONS.each do |option|
     option = resolve_possible_alias(option)
 
     struct_initializer do
@@ -67,7 +67,7 @@ end
 
 def resolve_possible_alias(option)
   if option[:alias_for]
-    the_alias = LOCATION_CONFIGURATION_OPTIONS.find do |o|
+    the_alias = NGINX_CONFIGURATION_OPTIONS.find do |o|
       o[:name] == option[:alias_for]
     end.dup
     the_alias[:aliased_for] = option[:name]
@@ -90,7 +90,7 @@ def take_type_for(option)
   return option[:take] if option[:take]
 
   case option[:type]
-  when :string, :integer, :uinteger, :string_array
+  when :string, :integer, :uinteger, :string_array, :path, :msec
     "NGX_CONF_TAKE1"
   when :flag
     "NGX_CONF_FLAG"

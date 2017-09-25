@@ -205,6 +205,10 @@ generated_set_conf_part(passenger_loc_conf_t  *conf) {
     conf->upstream_config_ignore_client_abort_source_file.len = 0;
     conf->upstream_config_ignore_client_abort_source_line = 0;
     conf->upstream_config_ignore_client_abort_explicitly_set = 0;
+    conf->upstream_config_read_timeout_source_file.data = NULL;
+    conf->upstream_config_read_timeout_source_file.len = 0;
+    conf->upstream_config_read_timeout_source_line = 0;
+    conf->upstream_config_read_timeout_explicitly_set = 0;
     conf->upstream_config_buffering_source_file.data = NULL;
     conf->upstream_config_buffering_source_file.len = 0;
     conf->upstream_config_buffering_source_line = 0;

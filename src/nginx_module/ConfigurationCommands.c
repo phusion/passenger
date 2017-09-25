@@ -38,6 +38,62 @@
  */
 
 {
+    ngx_string("passenger_root"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_root,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, root_dir),
+    NULL
+},
+{
+    ngx_string("passenger_ctl"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE2,
+    set_null_terminated_keyval_slot,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, ctl),
+    NULL
+},
+{
+    ngx_string("passenger_abort_on_startup_error"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
+    passenger_conf_set_abort_on_startup_error,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, abort_on_startup_error),
+    NULL
+},
+{
+    ngx_string("passenger_log_level"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_log_level,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, log_level),
+    NULL
+},
+{
+    ngx_string("passenger_log_file"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_log_file,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, log_file),
+    NULL
+},
+{
+    ngx_string("passenger_file_descriptor_log_file"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_file_descriptor_log_file,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, file_descriptor_log_file),
+    NULL
+},
+{
+    ngx_string("passenger_data_buffer_dir"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_data_buffer_dir,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, data_buffer_dir),
+    NULL
+},
+{
     ngx_string("passenger_socket_backlog"),
     NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
     passenger_conf_set_socket_backlog,
@@ -54,7 +110,7 @@
     NULL
 },
 {
-    ngx_string("disable_security_update_check"),
+    ngx_string("passenger_disable_security_update_check"),
     NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
     passenger_conf_set_disable_security_update_check,
     NGX_HTTP_MAIN_CONF_OFFSET,
@@ -62,11 +118,99 @@
     NULL
 },
 {
-    ngx_string("security_update_check_proxy"),
+    ngx_string("passenger_security_update_check_proxy"),
     NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
     passenger_conf_set_security_update_check_proxy,
     NGX_HTTP_MAIN_CONF_OFFSET,
     offsetof(passenger_main_conf_t, security_update_check_proxy),
+    NULL
+},
+{
+    ngx_string("passenger_pre_start"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_pre_start,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, prestart_uris),
+    NULL
+},
+{
+    ngx_string("passenger_instance_registry_dir"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_instance_registry_dir,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, instance_registry_dir),
+    NULL
+},
+{
+    ngx_string("passenger_turbocaching"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
+    passenger_conf_set_turbocaching,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, turbocaching),
+    NULL
+},
+{
+    ngx_string("passenger_user_switching"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
+    passenger_conf_set_user_switching,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, user_switching),
+    NULL
+},
+{
+    ngx_string("passenger_default_user"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_default_user,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, default_user),
+    NULL
+},
+{
+    ngx_string("passenger_default_group"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_default_group,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, default_group),
+    NULL
+},
+{
+    ngx_string("passenger_max_pool_size"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_max_pool_size,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, max_pool_size),
+    NULL
+},
+{
+    ngx_string("passenger_pool_idle_time"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_pool_idle_time,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, pool_idle_time),
+    NULL
+},
+{
+    ngx_string("passenger_response_buffer_high_watermark"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_response_buffer_high_watermark,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, response_buffer_high_watermark),
+    NULL
+},
+{
+    ngx_string("passenger_stat_throttle_rate"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_stat_throttle_rate,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, stat_throttle_rate),
+    NULL
+},
+{
+    ngx_string("passenger_show_version_in_header"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_FLAG,
+    passenger_conf_set_show_version_in_header,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, show_version_in_header),
     NULL
 },
 {
@@ -294,6 +438,14 @@
     NULL
 },
 {
+    ngx_string("passenger_read_timeout"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_read_timeout,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    offsetof(passenger_loc_conf_t, upstream_config.read_timeout),
+    NULL
+},
+{
     ngx_string("passenger_buffer_response"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
     passenger_conf_set_buffer_response,
@@ -491,6 +643,14 @@
     passenger_enterprise_only,
     NGX_HTTP_LOC_CONF_OFFSET,
     0,
+    NULL
+},
+{
+    ngx_string("passenger_debug_log_file"),
+    NGX_HTTP_MAIN_CONF | NGX_CONF_TAKE1,
+    passenger_conf_set_log_file,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(passenger_main_conf_t, log_file),
     NULL
 },
 {

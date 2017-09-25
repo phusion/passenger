@@ -152,7 +152,7 @@ end
 
 def value_definitions
   @value_definitions ||= begin
-    eligible_options = filter_options_eligible_for_value_definitions(LOCATION_CONFIGURATION_OPTIONS)
+    eligible_options = filter_options_eligible_for_value_definitions(NGINX_CONFIGURATION_OPTIONS)
     definitions = eligible_options.map { |o| definition_for(o) }
     # Sort the definitions by size in order to make the struct smaller.
     # It's possible to make it even smaller with a smarter algorithm but for now
@@ -170,7 +170,7 @@ end
 
 def source_location_definitions
   @source_location_definitions ||= begin
-    eligible_options = filter_options_eligible_for_source_location_definitions(LOCATION_CONFIGURATION_OPTIONS)
+    eligible_options = filter_options_eligible_for_source_location_definitions(NGINX_CONFIGURATION_OPTIONS)
     definitions = eligible_options.map do |o|
       source_location_struct_field_for(o)
     end

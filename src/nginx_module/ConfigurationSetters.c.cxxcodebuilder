@@ -68,7 +68,7 @@ def main
   separator
 
   ctx = self
-  LOCATION_CONFIGURATION_OPTIONS.each do |option|
+  NGINX_CONFIGURATION_OPTIONS.each do |option|
     next if option[:alias_for] || option[:function]
 
     function(setter_function_declaration_for(option)) do
@@ -96,6 +96,8 @@ def setter_function_body_for(option)
     raw_setter = "ngx_conf_set_keyval_slot"
   when :path
     raw_setter = "ngx_conf_set_path_slot"
+  when :msec
+    raw_setter = "ngx_conf_set_msec_slot"
   else
     raise "Unknown type #{option[:type].inspect} for option #{option[:name]}"
   end
