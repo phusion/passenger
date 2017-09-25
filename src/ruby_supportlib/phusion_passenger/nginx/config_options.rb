@@ -116,7 +116,6 @@ LOCATION_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'passenger_enabled',
-    :context  => [:srv, :loc, :lif],
     :type     => :flag,
     :function => 'passenger_enabled',
     :field    => 'enabled',
