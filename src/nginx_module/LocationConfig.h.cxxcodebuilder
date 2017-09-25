@@ -133,19 +133,21 @@ end
 
 # Returns [definition_source, estimated_size_on_x86_64, field_name]
 def definition_for(option)
-    field = value_struct_field_for(option)
-    case option[:type]
-    when :string
-        return ["ngx_str_t #{field}", 8 + 4, field]
-    when :integer, :flag
-        return ["ngx_int_t #{field}", 8, field]
-    when :uinteger
-        return ["ngx_uint_t #{field}", 8, field]
-    when :string_array, :string_keyval
-        return ["ngx_array_t *#{field}", 8, field];
-    else
-        raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
-    end
+  field = value_struct_field_for(option)
+  case option[:type]
+  when :string
+    return ["ngx_str_t #{field}", 8 + 4, field]
+  when :integer
+    return ["ngx_int_t #{field}", 8, field]
+  when :uinteger
+    return ["ngx_uint_t #{field}", 8, field]
+  when :flag
+    return ["ngx_flag_t #{field}", 8, field]
+  when :string_array, :string_keyval
+    return ["ngx_array_t *#{field}", 8, field];
+  else
+    raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
+  end
 end
 
 def value_definitions
@@ -156,12 +158,12 @@ def value_definitions
     # It's possible to make it even smaller with a smarter algorithm but for now
     # I don't bother.
     definitions.sort! do |d1, d2|
-        if d1[1] == d2[1]
-            # After sorting on size, sort alphabetically.
-            d1[2] <=> d2[2]
-        else
-            d1[1] <=> d2[1]
-        end
+      if d1[1] == d2[1]
+        # After sorting on size, sort alphabetically.
+        d1[2] <=> d2[2]
+      else
+        d1[1] <=> d2[1]
+      end
     end
   end
 end

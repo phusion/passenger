@@ -54,18 +54,18 @@ typedef struct {
     ngx_str_t    options_cache;
     ngx_str_t    env_vars_cache;
 
-    ngx_int_t abort_websockets_on_process_shutdown;
+    ngx_flag_t abort_websockets_on_process_shutdown;
     ngx_uint_t app_file_descriptor_ulimit;
     ngx_array_t *base_uris;
-    ngx_int_t debugger;
-    ngx_int_t enabled;
+    ngx_flag_t debugger;
+    ngx_flag_t enabled;
     ngx_array_t *env_vars;
     ngx_int_t force_max_concurrent_requests_per_process;
-    ngx_int_t friendly_error_pages;
+    ngx_flag_t friendly_error_pages;
     ngx_uint_t headers_hash_bucket_size;
     ngx_uint_t headers_hash_max_size;
     ngx_array_t *headers_source;
-    ngx_int_t load_shell_envvars;
+    ngx_flag_t load_shell_envvars;
     ngx_int_t max_instances_per_app;
     ngx_int_t max_preloader_idle_time;
     ngx_int_t max_request_queue_size;
@@ -73,7 +73,7 @@ typedef struct {
     ngx_int_t min_instances;
     ngx_int_t request_queue_overflow_status_code;
     ngx_int_t start_timeout;
-    ngx_int_t sticky_sessions;
+    ngx_flag_t sticky_sessions;
     ngx_str_t app_group_name;
     ngx_str_t app_rights;
     ngx_str_t app_root;
