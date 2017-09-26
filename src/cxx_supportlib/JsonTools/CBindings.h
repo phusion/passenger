@@ -58,7 +58,11 @@ void psg_json_value_free(PsgJsonValue *val);
 
 PsgJsonValue *psg_json_value_get_or_create_null(PsgJsonValue *doc, const char *name, size_t size);
 PsgJsonValue *psg_json_value_get(PsgJsonValue *doc, const char *name, size_t size);
+PsgJsonValue *psg_json_value_get_at_index(PsgJsonValue *doc, unsigned int index);
+PsgJsonValueType psg_json_value_type(const PsgJsonValue *doc);
+int psg_json_value_eq(const PsgJsonValue *doc, const PsgJsonValue *doc2);
 int psg_json_value_is_member(const PsgJsonValue *doc, const char *name, size_t size);
+unsigned int psg_json_value_size(const PsgJsonValue *doc);
 
 PsgJsonValue *psg_json_value_set_value(PsgJsonValue *doc, const char *name, size_t name_size, const PsgJsonValue *val);
 PsgJsonValue *psg_json_value_set_str(PsgJsonValue *doc, const char *name, const char *val, size_t size);
@@ -68,6 +72,7 @@ PsgJsonValue *psg_json_value_set_real(PsgJsonValue *doc, const char *name, doubl
 PsgJsonValue *psg_json_value_set_bool(PsgJsonValue *doc, const char *name, int val);
 
 PsgJsonValue *psg_json_value_append_val(PsgJsonValue *doc, const PsgJsonValue *val);
+void psg_json_value_swap(PsgJsonValue *doc, PsgJsonValue *doc2);
 
 int psg_json_value_is_null(const PsgJsonValue *doc);
 const char *psg_json_value_as_cstr(const PsgJsonValue *doc);
@@ -84,6 +89,7 @@ PsgJsonValueIterator *psg_json_value_iterator_new();
 void psg_json_value_iterator_free(PsgJsonValueIterator *it);
 void psg_json_value_iterator_advance(PsgJsonValueIterator *it);
 int psg_json_value_iterator_eq(PsgJsonValueIterator *it, PsgJsonValueIterator *other);
+const char *psg_json_value_iterator_get_name(PsgJsonValueIterator *it, size_t *size);
 PsgJsonValue *psg_json_value_iterator_get_value(PsgJsonValueIterator *it);
 
 
