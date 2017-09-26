@@ -233,7 +233,6 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name    => 'passenger_ruby',
-    :context => [:srv, :loc, :lif],
     :type    => :string
   },
   {
