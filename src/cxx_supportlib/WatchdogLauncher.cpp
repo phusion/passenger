@@ -60,7 +60,7 @@ psg_watchdog_launcher_start(PsgWatchdogLauncher *l,
 			afterForkFunctionObject = boost::bind(afterFork, callbackArgument, extraConfig);
 		}
 		launcher->start(passengerRoot,
-			*static_cast<Json::Value *>(extraConfig),
+			*static_cast<Passenger::Json::Value *>(extraConfig),
 			afterForkFunctionObject);
 		return 1;
 	} catch (const Passenger::SystemException &e) {
