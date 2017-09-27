@@ -1,9 +1,9 @@
 <% if @options[:ssl] %>
     <% if @options[:ssl_port] %>
         listen <%= nginx_listen_address %>;
-        listen <%= nginx_listen_address_with_ssl_port %> ssl;
+        listen <%= nginx_listen_address_with_ssl_port %> ssl http2;
     <% else %>
-        listen <%= nginx_listen_address %> ssl;
+        listen <%= nginx_listen_address %> ssl http2;
     <% end %>
 <% else %>
     listen <%= nginx_listen_address %>;
