@@ -33,6 +33,8 @@ namespace Passenger {
 
 using namespace std;
 
+// All functions in this file allow non-NULL-terminated StaticStrings.
+
 
 /**
  * Returns a canonical version of the specified path. All symbolic links
@@ -61,29 +63,25 @@ string absolutizePath(const StaticString &path, const StaticString &workingDir =
  * If `path` doesn't refer to a symlink then this method will return
  * `path<`.
  *
- * `path` MUST be null-terminated!
- *
  * @throws FileSystemException Something went wrong.
  */
  string resolveSymlink(const StaticString &path);
 
 /**
- * Given a path, extracts its directory name. 'path' does not
- * have to be NULL terminated.
+ * Given a path, extracts its directory name.
  */
 string extractDirName(const StaticString &path);
 
 /**
  * Given a path, extracts its directory name. This version does not use
- * any dynamically allocated storage and does not require `path` to be
- * NULL-terminated. It returns a StaticString that points either to
+ * any dynamically allocated storage.
+ * It returns a StaticString that points either to
  * an immutable constant string, or to a substring of `path`.
  */
 StaticString extractDirNameStatic(const StaticString &path);
 
 /**
  * Given a path, extracts its base name.
- * `path` MUST be null-terminated!
  */
 string extractBaseName(const StaticString &path);
 

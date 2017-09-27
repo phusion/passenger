@@ -141,32 +141,33 @@ absolutizePath(const StaticString &path, const StaticString &workingDir) {
 
 string
 resolveSymlink(const StaticString &path) {
+	string pathNt(path.data(), path.size());
 	char buf[PATH_MAX];
 	ssize_t size;
 
-	size = readlink(path.c_str(), buf, sizeof(buf) - 1);
+	size = readlink(pathNt.c_str(), buf, sizeof(buf) - 1);
 	if (size == -1) {
 		if (errno == EINVAL) {
-			return path;
+			return pathNt;
 		} else {
 			int e = errno;
 			string message = "Cannot resolve possible symlink '";
-			message.append(path.c_str(), path.size());
+			message.append(path.data(), path.size());
 			message.append("'");
-			throw FileSystemException(message, e, path);
+			throw FileSystemException(message, e, pathNt);
 		}
 	} else {
 		buf[size] = '\0';
 		if (buf[0] == '\0') {
 			string message = "The file '";
-			message.append(path.c_str(), path.size());
+			message.append(path.data(), path.size());
 			message.append("' is a symlink, and it refers to an empty filename. This is not allowed.");
-			throw FileSystemException(message, ENOENT, path);
+			throw FileSystemException(message, ENOENT, pathNt);
 		} else if (buf[0] == '/') {
 			// Symlink points to an absolute path.
 			return buf;
 		} else {
-			return extractDirName(path) + "/" + buf;
+			return extractDirNameStatic(path) + "/" + buf;
 		}
 	}
 }
@@ -228,10 +229,11 @@ extractDirNameStatic(const StaticString &path) {
 
 string
 extractBaseName(const StaticString &path) {
-	char *path_copy = strdup(path.c_str());
-	string result_string = basename(path_copy);
-	free(path_copy);
-	return result_string;
+	DynamicBuffer pathNt(path.size() + 1);
+	memcpy(pathNt.data, path.data(), path.size());
+	pathNt.data[path.size()] = '\0';
+	string result = basename(pathNt.data);
+	return result;
 }
 
 
