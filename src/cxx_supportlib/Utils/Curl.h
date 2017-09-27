@@ -59,6 +59,7 @@
 #include <boost/config.hpp>
 #include <boost/foreach.hpp>
 #include <Exceptions.h>
+#include <FileTools/FileManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 

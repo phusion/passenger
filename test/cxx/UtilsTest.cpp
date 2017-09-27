@@ -3,6 +3,7 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/MemZeroGuard.h>
 #include <FileTools/PathManip.h>
+#include <FileTools/FileManip.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>

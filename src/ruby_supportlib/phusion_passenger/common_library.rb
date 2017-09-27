@@ -277,6 +277,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'FileTools/PathManip.o',
     :source   => 'FileTools/PathManip.cpp',
     :category => :base
+  define_component 'FileTools/FileManip.o',
+    :source   => 'FileTools/FileManip.cpp',
+    :category => :base
   define_component 'Utils/SystemTime.o',
     :source   => 'Utils/SystemTime.cpp',
     :category => :base

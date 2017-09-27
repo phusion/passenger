@@ -42,6 +42,7 @@
 #include <Constants.h>
 #include <Exceptions.h>
 #include <RandomGenerator.h>
+#include <FileTools/FileManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>

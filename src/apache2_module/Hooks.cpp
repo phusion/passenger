@@ -55,6 +55,8 @@
 #include "Configuration.hpp"
 #include "DirectoryMapper.h"
 #include <modp_b64.h>
+#include <FileTools/FileManip.h>
+#include <FileTools/FileManip.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>

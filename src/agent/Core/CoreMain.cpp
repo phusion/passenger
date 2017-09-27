@@ -85,6 +85,7 @@
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
 #include <BackgroundEventLoop.cpp>
+#include <FileTools/FileManip.h>
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/Timer.h>

@@ -35,6 +35,7 @@
 #include <pwd.h>
 #include <Constants.h>
 #include <Exceptions.h>
+#include <FileTools/FileManip.h>
 #include <Utils.h>
 #include <Utils/IniFile.h>
 
