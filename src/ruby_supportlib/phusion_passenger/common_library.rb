@@ -361,6 +361,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'JsonTools/CBindings.o',
     :source   => 'JsonTools/CBindings.cpp',
     :category => :json_tools
+  define_component 'FileTools/PathManipCBindings.o',
+    :source   => 'FileTools/PathManipCBindings.cpp',
+    :category => :file_tools_path_manip_cbindings
 end
 
 # A subset of the objects are linked to the Nginx binary. This defines

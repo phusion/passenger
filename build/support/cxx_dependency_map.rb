@@ -7443,6 +7443,13 @@ CXX_DEPENDENCY_MAP =
  "src/cxx_supportlib/FileTools/PathManip.h"=>
   ["src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/oxt/macros.hpp"],
+ "src/cxx_supportlib/FileTools/PathManipCBindings.cpp"=>
+  ["src/cxx_supportlib/FileTools/PathManip.h",
+   "src/cxx_supportlib/FileTools/PathManipCBindings.h",
+   "src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/oxt/macros.hpp"],
+ "src/cxx_supportlib/FileTools/PathManipCBindings.h"=>
+  [],
  "src/cxx_supportlib/Hooks.h"=>
   ["src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/LoggingKit/Assert.h",
