@@ -88,7 +88,7 @@ APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
   only(:base, :base64, 'AppTypes.o').
   set_namespace("apache2").
   set_output_dir(APACHE2_OUTPUT_DIR + "module_libpassenger_common").
-  define_tasks(lambda { PlatformInfo.apache2_module_cflags }).
+  define_tasks(lambda { PlatformInfo.apache2_module_cxxflags }).
   link_objects
 dependencies = [
   APACHE2_MODULE_COMMON_LIBRARIES,
@@ -96,7 +96,6 @@ dependencies = [
   APACHE2_OBJECTS.keys
 ].flatten
 file(APACHE2_TARGET => dependencies) do
-  PlatformInfo.apxs2.nil?      and raise "Could not find 'apxs' or 'apxs2'."
   PlatformInfo.apache2ctl.nil? and raise "Could not find 'apachectl' or 'apache2ctl'."
   PlatformInfo.httpd.nil?      and raise "Could not find the Apache web server binary."
 
