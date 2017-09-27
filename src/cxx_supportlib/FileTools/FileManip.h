@@ -41,6 +41,8 @@ namespace Passenger {
 
 using namespace std;
 
+// All functions in this file allow non-NULL-terminated StaticStrings.
+
 
 class CachedFileStat;
 

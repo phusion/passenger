@@ -92,7 +92,7 @@ getFileType(const StaticString &filename, CachedFileStat *cstat, boost::mutex *c
 		}
 		ret = cstat->stat(filename, &buf, throttleRate);
 	} else {
-		ret = stat(filename.c_str(), &buf);
+		ret = stat(string(filename.data(), filename.size()).c_str(), &buf);
 	}
 	if (ret == 0) {
 		if (S_ISREG(buf.st_mode)) {
@@ -108,7 +108,7 @@ getFileType(const StaticString &filename, CachedFileStat *cstat, boost::mutex *c
 		} else {
 			int e = errno;
 			string message("Cannot stat '");
-			message.append(filename);
+			message.append(filename.data(), filename.size());
 			message.append("'");
 			throw FileSystemException(message, e, filename);
 		}
