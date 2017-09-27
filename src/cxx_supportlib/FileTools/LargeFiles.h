@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_UTILS_LARGE_FILES_H_
-#define _PASSENGER_UTILS_LARGE_FILES_H_
+#ifndef _PASSENGER_FILE_TOOLS_LARGE_FILES_H_
+#define _PASSENGER_FILE_TOOLS_LARGE_FILES_H_
 
 #include <stdio.h>
 
@@ -32,10 +32,12 @@
 
 namespace Passenger {
 
-FILE *lfs_fopen(const char *filename, const char *mode);
-FILE *lfs_fdopen(int filedes, const char *mode);
+
+::FILE *lfs_fopen(const char *filename, const char *mode);
+::FILE *lfs_fdopen(int filedes, const char *mode);
 int lfs_mkstemp(char *templ);
+
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_UTILS_LARGE_FILES_H_ */
+#endif /* _PASSENGER_FILE_TOOLS_LARGE_FILES_H_ */

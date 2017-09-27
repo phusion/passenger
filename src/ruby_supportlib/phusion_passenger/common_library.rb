@@ -316,8 +316,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils/CachedFileStat.o',
     :source   => 'Utils/CachedFileStat.cpp',
     :category => :other
-  define_component 'Utils/LargeFiles.o',
-    :source   => 'Utils/LargeFiles.cpp',
+  define_component 'FileTools/LargeFiles.o',
+    :source   => 'FileTools/LargeFiles.cpp',
     :category => :other
   define_component 'WatchdogLauncher.o',
     :source   => 'WatchdogLauncher.cpp',

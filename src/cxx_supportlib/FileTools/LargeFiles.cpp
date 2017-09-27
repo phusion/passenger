@@ -11,17 +11,19 @@
 	#define _LARGEFILE64_SOURCE
 #endif
 
-#include <Utils/LargeFiles.h>
+#include <FileTools/LargeFiles.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 namespace Passenger {
 
-FILE *
+
+::FILE *
 lfs_fopen(const char *filename, const char *mode) {
 	return fopen(filename, mode);
 }
 
-FILE *
+::FILE *
 lfs_fdopen(int filedes, const char *mode) {
 	return fdopen(filedes, mode);
 }
@@ -34,5 +36,6 @@ lfs_mkstemp(char *templ) {
 		return mkstemp(templ);
 	#endif
 }
+
 
 } // namespace Passenger

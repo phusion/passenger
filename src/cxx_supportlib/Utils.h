@@ -43,7 +43,6 @@
 #include <unistd.h>
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <Utils/LargeFiles.h>
 
 namespace Passenger {
 
