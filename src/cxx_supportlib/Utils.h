@@ -152,57 +152,6 @@ void createFile(const string &filename, const StaticString &contents,
                 const char *callerFile = NULL, unsigned int callerLine = 0);
 
 /**
- * Returns a canonical version of the specified path. All symbolic links
- * and relative path elements are resolved.
- *
- * @throws FileSystemException Something went wrong.
- * @ingroup Support
- */
-string canonicalizePath(const string &path);
-
-/**
- * If <em>path</em> refers to a symlink, then this function resolves the
- * symlink for 1 level. That is, if the symlink points to another symlink,
- * then the other symlink will not be resolved. The resolved path is returned.
- *
- * If the symlink doesn't point to an absolute path, then this function will
- * prepend <em>path</em>'s directory to the result.
- *
- * If <em>path</em> doesn't refer to a symlink then this method will return
- * <em>path</em>.
- *
- * <em>path</em> MUST be null-terminated!
- *
- * @throws FileSystemException Something went wrong.
- * @ingroup Support
- */
-string resolveSymlink(const StaticString &path);
-
-/**
- * Given a path, extracts its directory name. 'path' does not
- * have to be NULL terminated.
- *
- * @ingroup Support
- */
-string extractDirName(const StaticString &path);
-
-/**
- * Given a path, extracts its directory name. This version does not use
- * any dynamically allocated storage and does not require `path` to be
- * NULL-terminated. It returns a StaticString that points either to static
- * storage, or to a substring of `path`.
- */
-StaticString extractDirNameStatic(const StaticString &path);
-
-/**
- * Given a path, extracts its base name.
- * <em>path</em> MUST be null-terminated!
- *
- * @ingroup Support
- */
-string extractBaseName(const StaticString &path);
-
-/**
  * Escape the given raw string into an XML value.
  *
  * @throws std::bad_alloc Something went wrong.
@@ -253,14 +202,6 @@ gid_t lookupGid(const string &groupName);
  * @throws InvalidModeStringException The mode string cannot be parsed.
  */
 mode_t parseModeString(const StaticString &mode);
-
-/**
- * Turns the given path into an absolute path. Unlike realpath(), this function does
- * not resolve symlinks.
- *
- * @throws SystemException
- */
-string absolutizePath(const StaticString &path, const StaticString &workingDir = StaticString());
 
 /**
  * Return the path name for the directory in which the system stores general

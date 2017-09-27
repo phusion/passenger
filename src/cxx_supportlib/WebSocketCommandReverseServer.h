@@ -46,6 +46,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <ConfigKit/AsyncUtils.h>
 #include <Exceptions.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>

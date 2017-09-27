@@ -274,6 +274,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Exceptions.o',
     :source   => 'Exceptions.cpp',
     :category => :base
+  define_component 'FileTools/PathManip.o',
+    :source   => 'FileTools/PathManip.cpp',
+    :category => :base
   define_component 'Utils/SystemTime.o',
     :source   => 'Utils/SystemTime.cpp',
     :category => :base

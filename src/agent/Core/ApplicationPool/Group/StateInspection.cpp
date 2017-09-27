@@ -24,6 +24,7 @@
  *  THE SOFTWARE.
  */
 #include <Core/ApplicationPool/Group.h>
+#include <FileTools/PathManip.h>
 #include <cassert>
 #include <modp_b64.h>
 

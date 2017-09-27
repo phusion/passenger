@@ -16,6 +16,7 @@
 #include <Shared/Fundamentals/Utils.h>
 #include <ConfigKit/ConfigKit.h>
 #include <LoggingKit/LoggingKit.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
 #include <Utils/IOUtils.h>

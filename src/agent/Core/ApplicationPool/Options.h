@@ -35,6 +35,7 @@
 #include <Constants.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>

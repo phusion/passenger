@@ -36,6 +36,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <Exceptions.h>
 #include <StaticString.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 

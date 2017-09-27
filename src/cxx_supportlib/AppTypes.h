@@ -79,6 +79,7 @@ PassengerAppType pp_get_app_type2(const char *name, unsigned int len);
 #include <string>
 #include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/CachedFileStat.hpp>

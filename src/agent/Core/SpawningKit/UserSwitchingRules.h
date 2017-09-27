@@ -36,6 +36,7 @@
 #include <oxt/system_calls.hpp>
 #include <Exceptions.h>
 #include <Utils.h>
+#include <FileTools/PathManip.h>
 #include <Core/SpawningKit/Options.h>
 
 namespace Passenger {

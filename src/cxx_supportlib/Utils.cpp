@@ -56,6 +56,7 @@
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
 #include <Exceptions.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/StrIntUtils.h>
@@ -216,137 +217,6 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 				e, filename);
 		}
 	}
-}
-
-string
-canonicalizePath(const string &path) {
-	#ifdef __GLIBC__
-		// We're using a GNU extension here. See the 'BUGS'
-		// section of the realpath(3) Linux manpage for
-		// rationale.
-		char *tmp = realpath(path.c_str(), NULL);
-		if (tmp == NULL) {
-			int e = errno;
-			string message;
-
-			message = "Cannot resolve the path '";
-			message.append(path);
-			message.append("'");
-			throw FileSystemException(message, e, path);
-		} else {
-			string result(tmp);
-			free(tmp);
-			return result;
-		}
-	#else
-		char tmp[PATH_MAX];
-		if (realpath(path.c_str(), tmp) == NULL) {
-			int e = errno;
-			string message;
-
-			message = "Cannot resolve the path '";
-			message.append(path);
-			message.append("'");
-			throw FileSystemException(message, e, path);
-		} else {
-			return tmp;
-		}
-	#endif
-}
-
-string
-resolveSymlink(const StaticString &path) {
-	char buf[PATH_MAX];
-	ssize_t size;
-
-	size = readlink(path.c_str(), buf, sizeof(buf) - 1);
-	if (size == -1) {
-		if (errno == EINVAL) {
-			return path;
-		} else {
-			int e = errno;
-			string message = "Cannot resolve possible symlink '";
-			message.append(path.c_str(), path.size());
-			message.append("'");
-			throw FileSystemException(message, e, path);
-		}
-	} else {
-		buf[size] = '\0';
-		if (buf[0] == '\0') {
-			string message = "The file '";
-			message.append(path.c_str(), path.size());
-			message.append("' is a symlink, and it refers to an empty filename. This is not allowed.");
-			throw FileSystemException(message, ENOENT, path);
-		} else if (buf[0] == '/') {
-			// Symlink points to an absolute path.
-			return buf;
-		} else {
-			return extractDirName(path) + "/" + buf;
-		}
-	}
-}
-
-string
-extractDirName(const StaticString &path) {
-	DynamicBuffer pathCopy(path.size() + 1);
-	memcpy(pathCopy.data, path.data(), path.size());
-	pathCopy.data[path.size()] = '\0';
-	return string(dirname(pathCopy.data));
-}
-
-StaticString
-extractDirNameStatic(const StaticString &path) {
-	if (path.empty()) {
-		return StaticString(".", 1);
-	}
-
-	const char *data = path.data();
-	const char *end = path.data() + path.size();
-
-	// Ignore trailing '/' characters.
-	while (end > data && end[-1] == '/') {
-		end--;
-	}
-	if (end == data) {
-		// Apparently the entire path consists of slashes.
-		return StaticString("/", 1);
-	}
-
-	// Find last '/'.
-	end--;
-	while (end > data && *end != '/') {
-		end--;
-	}
-	if (end == data) {
-		if (*data == '/') {
-			// '/' found, but it's the first character in the path.
-			return StaticString("/", 1);
-		} else {
-			// No '/' found in path.
-			return StaticString(".", 1);
-		}
-	} else {
-		// '/' found and it's not the first character in path.
-		// 'end' points to that '/' character.
-		// Skip to first non-'/' character.
-		while (end >= data && *end == '/') {
-			end--;
-		}
-		if (end < data) {
-			// The entire path consists of '/' characters.
-			return StaticString("/", 1);
-		} else {
-			return StaticString(data, end - data + 1);
-		}
-	}
-}
-
-string
-extractBaseName(const StaticString &path) {
-	char *path_copy = strdup(path.c_str());
-	string result_string = basename(path_copy);
-	free(path_copy);
-	return result_string;
 }
 
 string
@@ -572,66 +442,6 @@ parseModeString(const StaticString &mode) {
 	}
 
 	return modeBits;
-}
-
-string
-absolutizePath(const StaticString &path, const StaticString &workingDir) {
-	vector<string> components;
-	if (!startsWith(path, "/")) {
-		if (workingDir.empty()) {
-			char buffer[PATH_MAX];
-			if (getcwd(buffer, sizeof(buffer)) == NULL) {
-				int e = errno;
-				throw SystemException("Unable to query current working directory", e);
-			}
-			split(buffer + 1, '/', components);
-		} else {
-			string absoluteWorkingDir = absolutizePath(workingDir);
-			split(StaticString(absoluteWorkingDir.data() + 1, absoluteWorkingDir.size() - 1),
-				'/', components);
-		}
-	}
-
-	const char *begin = path.data();
-	const char *end = path.data() + path.size();
-
-	// Skip leading slashes.
-	while (begin < end && *begin == '/') {
-		begin++;
-	}
-
-	while (begin < end) {
-		const char *next = (const char *) memchr(begin, '/', end - begin);
-		if (next == NULL) {
-			next = end;
-		}
-
-		StaticString component(begin, next - begin);
-		if (component == "..") {
-			if (!components.empty()) {
-				components.pop_back();
-			}
-		} else if (component != ".") {
-			components.push_back(component);
-		}
-
-		// Skip slashes until beginning of next path component.
-		begin = next + 1;
-		while (begin < end && *begin == '/') {
-			begin++;
-		}
-	}
-
-	string result;
-	vector<string>::const_iterator c_it, c_end = components.end();
-	for (c_it = components.begin(); c_it != c_end; c_it++) {
-		result.append("/");
-		result.append(*c_it);
-	}
-	if (result.empty()) {
-		result = "/";
-	}
-	return result;
 }
 
 const char *

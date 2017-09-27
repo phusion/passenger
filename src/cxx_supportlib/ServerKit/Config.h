@@ -37,6 +37,7 @@
 #include <boost/scoped_ptr.hpp>
 
 #include <ConfigKit/ConfigKit.h>
+#include <FileTools/PathManip.h>
 #include <Constants.h>
 #include <Utils.h>
 

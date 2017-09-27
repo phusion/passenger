@@ -53,6 +53,7 @@
 #include <LoggingKit/Config.h>
 #include <LoggingKit/Context.h>
 #include <ConfigKit/ConfigKit.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/SystemTime.h>
