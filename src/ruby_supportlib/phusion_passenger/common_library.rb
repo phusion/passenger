@@ -316,9 +316,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils/CachedFileStat.o',
     :source   => 'Utils/CachedFileStat.cpp',
     :category => :other
-  define_component 'FileTools/LargeFiles.o',
-    :source   => 'FileTools/LargeFiles.cpp',
-    :category => :other
   define_component 'WatchdogLauncher.o',
     :source   => 'WatchdogLauncher.cpp',
     :category => :other
@@ -361,6 +358,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'JsonTools/CBindings.o',
     :source   => 'JsonTools/CBindings.cpp',
     :category => :json_tools
+  define_component 'FileTools/LargeFiles.o',
+    :source   => 'FileTools/LargeFiles.cpp',
+    :category => :file_tools_large_files
   define_component 'FileTools/PathManipCBindings.o',
     :source   => 'FileTools/PathManipCBindings.cpp',
     :category => :file_tools_path_manip_cbindings
