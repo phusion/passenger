@@ -1652,4 +1652,3 @@ const ngx_command_t passenger_commands[] = {
 
     ngx_null_command
 };
-
