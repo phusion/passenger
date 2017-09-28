@@ -2,6 +2,7 @@ Release 5.1.9 (Not yet released)
 --------------------------------
 
  * [Apache] Fixes a race condition (segfault) on startup, which primarily affected macOS hosts (regression in 5.1.8 due to the logging improvements). Closes GH-1973.
+ * [Apache] Fixes compilation on macOS 10.13 High Sierra.
  * [Nginx] It is now allowed to specify `passenger_enabled` in the `http` context as well.
  * [Nginx] Namespaced Jsoncpp under the Passenger namespace to avoid collisions with Google Pagespeed's copy when linked into Nginx.
  * Adds support for Bundler 2.0's new `gems.rb` and `gems.locked`. Learn more about these in [Gemfile's new clothes](https://depfu.com/blog/2017/09/06/gemfiles-new-clothes). Closes GH-1982.

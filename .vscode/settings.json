@@ -6,6 +6,19 @@
     "files.associations": {
         "*.cxxcodebuilder": "ruby",
         "__locale": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "atomic": "cpp",
+        "locale": "cpp",
+        "memory": "cpp",
+        "random": "cpp",
+        "regex": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "array": "cpp",
+        "utility": "cpp",
+        "chrono": "cpp",
+        "typeindex": "cpp",
+        "typeinfo": "cpp"
     }
 }

@@ -48,7 +48,17 @@ module PhusionPassenger
     # The absolute path to the 'apxs' or 'apxs2' executable, or nil if not found.
     def self.apxs2
       if env_defined?("APXS2")
-        return ENV["APXS2"]
+        if ENV['APXS2'] == 'none'
+          # This is a special value indicating that we should pretend as if
+          # apxs2 is not found. It is applicable when the user is running
+          # macOS >= 10.13 High Sierra, where apxs2 is not included in the OS.
+          # When the user runs 'passenger-config about detect-apache2',
+          # that command will tell the way to install against this specific
+          # Apache is to run passenger-install-apache2-module --apxs2-path='none'
+          return nil
+        else
+          return ENV["APXS2"]
+        end
       end
       ['apxs2', 'apxs'].each do |name|
         command = find_command(name)
@@ -70,7 +80,7 @@ module PhusionPassenger
     # The absolute path to the Apache binary (that is, 'httpd', 'httpd2', 'apache'
     # or 'apache2'), or nil if not found.
     def self.httpd(options = {})
-      apxs2 = options[:apxs2] || self.apxs2
+      apxs2 = options.fetch(:apxs2, self.apxs2)
       if env_defined?('HTTPD')
         return ENV['HTTPD']
       elsif apxs2.nil?
@@ -401,36 +411,42 @@ module PhusionPassenger
 
     # The absolute path to the 'a2enmod' executable.
     def self.a2enmod(options = {})
-      apxs2 = options[:apxs2] || self.apxs2
-      dir = File.dirname(apxs2)
+      apxs2 = options.fetch(:apxs2, self.apxs2)
+      dir = File.dirname(apxs2) if apxs2
       # a2enmod is supposed to be a Debian extension that only works
       # on the APT-installed Apache, so only return non-nil if we're
       # working against the APT-installed Apache.
       if dir == "/usr/bin" || dir == "/usr/sbin"
         if env_defined?('A2ENMOD')
+          log "Using $A2ENMOD (= #{ENV['A2ENMOD']})"
           return ENV['A2ENMOD']
         else
           return find_apache2_executable("a2enmod", options)
         end
       else
-        return nil
+        log "Not applicable"
+        nil
       end
     end
     memoize :a2enmod
 
     # The absolute path to the 'a2enmod' executable.
     def self.a2dismod(options = {})
-      apxs2 = options[:apxs2] || self.apxs2
-      dir = File.dirname(apxs2)
+      apxs2 = options.fetch(:apxs2, self.apxs2)
+      dir = File.dirname(apxs2) if apxs2
       # a2dismod is supposed to be a Debian extension that only works
       # on the APT-installed Apache, so only return non-nil if we're
       # working against the APT-installed Apache.
       if dir == "/usr/bin" || dir == "/usr/sbin"
         if env_defined?('A2DISMOD')
+          log "Using $A2DISMOD (= #{ENV['A2DISMOD']})"
           return ENV['A2DISMOD']
         else
           return find_apache2_executable("a2dismod", options)
         end
+      else
+        log "Not applicable"
+        nil
       end
     end
     memoize :a2dismod
@@ -527,9 +543,16 @@ module PhusionPassenger
 
     # The absolute path to the Apache 2 'bin' directory, or nil if unknown.
     def self.apache2_bindir(options = {})
-      apxs2 = options[:apxs2] || self.apxs2
+      apxs2 = options.fetch(:apxs2, self.apxs2)
       if apxs2.nil?
-        return nil
+        # macOS >= 10.13 High Sierra no longer ships apxs2, so we'll use
+        # a hardcoded default.
+        if os_name_simple == 'macosx' && os_version >= '10.13' \
+          && httpd(:apxs2 => apxs2) == '/usr/sbin/httpd'
+          '/usr/bin'
+        else
+          nil
+        end
       else
         return `#{apxs2} -q BINDIR 2>/dev/null`.strip
       end
@@ -538,9 +561,16 @@ module PhusionPassenger
 
     # The absolute path to the Apache 2 'sbin' directory, or nil if unknown.
     def self.apache2_sbindir(options = {})
-      apxs2 = options[:apxs2] || self.apxs2
+      apxs2 = options.fetch(:apxs2, self.apxs2)
       if apxs2.nil?
-        return nil
+        # macOS >= 10.13 High Sierra no longer ships apxs2, so we'll use
+        # a hardcoded default.
+        if os_name_simple == 'macosx' && os_version >= '10.13' \
+          && httpd(:apxs2 => apxs2) == '/usr/sbin/httpd'
+          '/usr/sbin'
+        else
+          nil
+        end
       else
         return `#{apxs2} -q SBINDIR`.strip
       end
@@ -578,7 +608,14 @@ module PhusionPassenger
           flags << apu_cxxflags
         end
       end
-      if !apxs2.nil?
+      if apxs2.nil?
+        # macOS >= 10.13 High Sierra no longer includes apxs2
+        # so we'll use hardcoded paths here.
+        if os_name_simple == 'macosx' && os_version >= '10.13' && httpd == '/usr/sbin/httpd'
+          xcode_prefix = `/usr/bin/xcode-select -p`.strip
+          flags << "-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apache2"
+        end
+      else
         apxs2_flags = `#{apxs2} -q CFLAGS`.strip << " -I" << `#{apxs2} -q INCLUDEDIR`.strip
         apxs2_flags.gsub!(/-O\d? /, '')
 
@@ -612,6 +649,12 @@ module PhusionPassenger
         # won't work on shared libraries.
         # https://github.com/phusion/passenger/issues/1756
         apxs2_flags.gsub!('-pie', '')
+
+        # macOS >= 10.12 Sierra no longer includes apr-config
+        # so we'll use a hardcoded path here.
+        if os_name_simple == 'macosx' && os_version >= '10.12' && httpd == '/usr/sbin/httpd'
+          apxs2_flags << ' -I/usr/include/apr-1'
+        end
 
         apxs2_flags.strip!
         flags << apxs2_flags
@@ -728,24 +771,54 @@ module PhusionPassenger
 
     ################ Miscellaneous information ################
 
+    # Returns whether it is necessary to use information outputted by 'apxs2'
+    # in order to compile an Apache module.
+    #
+    # Since macOS 10.13 High Sierra apxs2 is no longer included in the
+    # operating system, so we return false in that case. We'll fallback
+    # to hardcoded paths.
+    def self.apxs2_needed_for_building_apache_modules?
+      !(os_name_simple == 'macosx' &&
+        os_version >= '10.13' &&
+        httpd == '/usr/sbin/httpd')
+    end
+
     # Returns whether it is necessary to use information outputted by
     # 'apr-config' and 'apu-config' in order to compile an Apache module.
+    #
     # When Apache is installed with --with-included-apr, the APR/APU
     # headers are placed into the same directory as the Apache headers,
     # and so 'apr-config' and 'apu-config' won't be necessary in that case.
+    #
+    # Also, since macOS 10.12 Sierra apr-config is no longer included
+    # in the operating system, so we also return false in that case.
+    # We'll fallback to hardcoded paths.
     def self.apr_config_needed_for_building_apache_modules?
-      return !try_compile("whether APR is needed for building Apache modules",
-        :c, "#include <apr.h>\n", apache2_module_cflags(false))
+      !(
+        os_name_simple == 'macosx' &&
+        os_version >= '10.13' &&
+        httpd == '/usr/sbin/httpd'
+      ) &&
+        !try_compile("whether APR is needed for building Apache modules",
+          :c, "#include <apr.h>\n", apache2_module_cflags(false))
     end
     memoize :apr_config_needed_for_building_apache_modules?, true
 
   private
     def self.determine_apr_info(language)
       if apr_config.nil?
-        if os_name_simple == 'macosx' && apxs2 == '/usr/sbin/apxs'
-          # macOS 10.12 Sierra does not supply apr-config, so
+        if os_name_simple == 'macosx' && httpd == '/usr/sbin/httpd'
+          # macOS >= 10.12 Sierra does not supply apr-config, so
           # we use hardcoded defaults.
-          ['-I/usr/include/apr-1', '-lapr-1']
+          if os_version >= '10.13'
+            # On macOS >= 10.13 High Sierra /usr/include no longer
+            # exists.
+            xcode_prefix = `/usr/bin/xcode-select -p`.strip
+            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1",
+              '-lapr-1']
+          else
+            ['-I/usr/include/apr-1', '-lapr-1']
+          end
         else
           [nil, nil]
         end
@@ -783,10 +856,18 @@ module PhusionPassenger
 
     def self.determine_apu_info(language)
       if apu_config.nil?
-        if os_name_simple == 'macosx' && apxs2 == '/usr/sbin/apxs'
-          # macOS 10.12 Sierra does not supply apu-config, so
+        if os_name_simple == 'macosx' && httpd == '/usr/sbin/httpd'
+          # macOS >= 10.12 Sierra does not supply apu-config, so
           # we use hardcoded defaults.
-          ['-I/usr/include/apr-1', '-laprutil-1']
+          if os_version >= '10.13'
+            # On macOS >= 10.13 High Sierra /usr/include no longer
+            # exists.
+            xcode_prefix = `/usr/bin/xcode-select -p`.strip
+            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1",
+              '-laprutil-1']
+          else
+            ['-I/usr/include/apr-1', '-laprutil-1']
+          end
         else
           [nil, nil]
         end

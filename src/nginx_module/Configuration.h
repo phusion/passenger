@@ -76,4 +76,3 @@ char *passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 ngx_int_t passenger_postprocess_config(ngx_conf_t *cf);
 
 #endif /* _PASSENGER_NGINX_CONFIGURATION_H_ */
-

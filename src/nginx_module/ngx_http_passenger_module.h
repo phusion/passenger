@@ -62,4 +62,3 @@ extern PsgWatchdogLauncher      *psg_watchdog_launcher;
 extern ngx_cycle_t              *pp_current_cycle;
 
 #endif /* _PASSENGER_NGINX_MODULE_H_ */
-
