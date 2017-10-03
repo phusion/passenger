@@ -59,6 +59,7 @@
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
 #include <ResourceLocator.h>
+#include <ProcessManagement/Utils.h>
 #include <Utils.h>
 
 namespace Passenger {

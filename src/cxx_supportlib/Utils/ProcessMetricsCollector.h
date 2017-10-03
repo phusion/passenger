@@ -60,8 +60,8 @@
 
 #include <StaticString.h>
 #include <Exceptions.h>
+#include <ProcessManagement/Spawn.h>
 #include <FileTools/FileManip.h>
-#include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StringScanning.h>
@@ -250,6 +250,17 @@ private:
 		return result;
 	}
 
+	static void afterFork() {
+		// Make ps nicer, we want to have as little impact on the rest
+		// of the system as possible while collecting the metrics.
+		int prio = getpriority(PRIO_PROCESS, getpid());
+		prio++;
+		if (prio > 20) {
+			prio = 20;
+		}
+		setpriority(PRIO_PROCESS, getpid(), prio);
+	}
+
 public:
 	ProcessMetricsCollector() {
 		#ifdef __APPLE__
@@ -312,7 +323,8 @@ public:
 
 		string psOutput = this->psOutput;
 		if (psOutput.empty()) {
-			psOutput = runCommandAndCaptureOutput(command);
+			SubprocessInfo info;
+			runCommandAndCaptureOutput(command, info, psOutput, true, afterFork);
 			if (psOutput.empty()) {
 				throw RuntimeException("The 'ps' command failed");
 			}

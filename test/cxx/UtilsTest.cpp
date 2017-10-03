@@ -4,6 +4,7 @@
 #include <Utils/MemZeroGuard.h>
 #include <FileTools/PathManip.h>
 #include <FileTools/FileManip.h>
+#include <ProcessManagement/Spawn.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>

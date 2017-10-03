@@ -39,7 +39,8 @@
 #include <FileDescriptor.h>
 #include <Exceptions.h>
 #include <FileTools/PathManip.h>
-#include <Utils.h> // resetSignalHandlersAndMask, disableMallocDebugging, closeAllFileDescriptors, parseModeString
+#include <ProcessManagement/Utils.h>
+#include <Utils.h> // parseModeString
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/IOUtils.h>
 

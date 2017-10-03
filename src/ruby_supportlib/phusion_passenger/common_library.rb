@@ -280,6 +280,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'FileTools/FileManip.o',
     :source   => 'FileTools/FileManip.cpp',
     :category => :base
+  define_component 'ProcessManagement/Spawn.o',
+    :source   => 'ProcessManagement/Spawn.cpp',
+    :category => :base
+  define_component 'ProcessManagement/Utils.o',
+    :source   => 'ProcessManagement/Utils.cpp',
+    :category => :base
   define_component 'Utils/SystemTime.o',
     :source   => 'Utils/SystemTime.cpp',
     :category => :base
@@ -364,6 +370,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'FileTools/PathManipCBindings.o',
     :source   => 'FileTools/PathManipCBindings.cpp',
     :category => :file_tools_path_manip_cbindings
+  define_component 'ProcessManagement/Ruby.o',
+    :source   => 'ProcessManagement/Ruby.cpp',
+    :category => :process_management_ruby
 end
 
 # A subset of the objects are linked to the Nginx binary. This defines

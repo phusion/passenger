@@ -133,11 +133,14 @@ end
 describe "A natively packaged Phusion Passenger" do
   def capture_output(command)
     output = `#{command}`.strip
+    if output.respond_to?(:force_encoding)
+      output.force_encoding('utf-8')
+    end
     if $?.exitstatus == 0
       return output
     else
       filename = `mktemp /tmp/output.XXXXXX`.strip
-      File.open(filename, "w") do |f|
+      File.open(filename, "w:utf-8") do |f|
         f.write(output)
       end
       STDERR.puts "Command #{command} exited with status #{$?.exitstatus}. Output written to #{filename}"

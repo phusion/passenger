@@ -37,6 +37,7 @@
 #include <InstanceDirectory.h>
 #include <ConfigKit/SchemaUtils.h>
 #include <Core/ApplicationPool/Pool.h>
+#include <ProcessManagement/Ruby.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 
@@ -174,7 +175,7 @@ private:
 		int status = 0;
 		string output;
 		try {
-			output = runInternalRubyTool(*resourceLocator, ruby, args, &status);
+			runInternalRubyTool(*resourceLocator, ruby, args, &status, &output);
 		} catch (const std::exception &e) {
 			server.getIoService().post(boost::bind(
 				&AdminPanelConnector::onGetServerPropertiesDone, this,

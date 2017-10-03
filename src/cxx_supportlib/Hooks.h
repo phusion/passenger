@@ -45,6 +45,7 @@
 #include <jsoncpp/json.h>
 
 #include <LoggingKit/LoggingKit.h>
+#include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 
