@@ -60,6 +60,7 @@
 
 #include <StaticString.h>
 #include <Exceptions.h>
+#include <ProcessManagement/Spawn.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/IOUtils.h>

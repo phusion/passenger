@@ -92,7 +92,7 @@ end
 
 # Define compilation task for the agent executable.
 agent_libs = COMMON_LIBRARY.
-  only(:base, :base64, :union_station_filter, :other).
+  only(:base, :base64, :union_station_filter, :process_management_ruby, :other).
   exclude('WatchdogLauncher.o')
 dependencies = AGENT_OBJECTS.keys + [
   LIBBOOST_OXT,
