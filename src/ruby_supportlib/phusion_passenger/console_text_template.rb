@@ -33,7 +33,9 @@ module PhusionPassenger
       @buffer = ''
       if input[:file]
         filename = "#{PhusionPassenger.resources_dir}/templates/#{input[:file]}.txt.erb"
-        data = File.read(filename)
+        data = File.open(filename, 'r:utf-8') do |f|
+          f.read
+        end
       else
         data = input[:text]
       end
