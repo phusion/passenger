@@ -396,4 +396,3 @@ void breakpoint();
 } // namespace Passenger
 
 #endif /* _PASSENGER_UTILS_H_ */
-
