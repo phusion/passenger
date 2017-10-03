@@ -26,6 +26,8 @@
 #ifndef _PASSENGER_PROCESS_MANAGEMENT_SPAWN_H_
 #define _PASSENGER_PROCESS_MANAGEMENT_SPAWN_H_
 
+#include <sys/types.h>
+#include <boost/function.hpp>
 #include <string>
 #include <StaticString.h>
 
@@ -33,30 +35,108 @@ namespace Passenger {
 
 using namespace std;
 
+struct SubprocessInfo {
+	/**
+	 * The PID of the subprocess. This is set to -1 on
+	 * object creation. If fork fails or is interrupted,
+	 * then this field is unmodified.
+	 *
+	 * Attention: if you called `runCommand()` with `wait = true`,
+	 * or if you called `runCommandAndCaptureOutput()`,
+	 * then when that function returns, this PID no longer
+	 * exists.
+	 */
+	pid_t pid;
+
+	/**
+	 * The status of the subprocess, as returned by waitpid().
+	 * This is set to -1 on object creation.
+	 *
+	 * Only if `runCommand()` is done waiting for the subprocess
+	 * will this field be set. So if you call `runCommand()` with
+	 * `wait = false` then this field will never be modified.
+	 *
+	 * When unable to waitpid() the subprocess because of
+	 * an ECHILD or ESRCH, then this field is set to -1.
+	 */
+	int status;
+
+	SubprocessInfo()
+		: pid(-1),
+		  status(-1)
+		{ }
+};
+
 
 /**
  * Like system(), but properly resets the signal handler mask,
  * disables malloc debugging and closes file descriptors > 2.
- * _command_ must be null-terminated.
+ *
+ * This is like `runCommand()` but runs something through the shell.
+ *
+ * @throws SystemException
+ * @throws boost::thread_interrupted
  */
 int runShellCommand(const StaticString &command);
 
 /**
- * Run a command and capture its stdout output. This function
- * does not care whether the command fails.
+ * Run a command and (if so configured) wait for it. You can see this function
+ * as a more flexible version of system(): it accepts a command array
+ * instead of a shell command string, and you can choose whether to wait
+ * for the subprocess or not.
  *
- * If something goes wrong or when interrupted while capturing the
- * output, then the child process is killed with SIGKILL before this
- * function returns.
+ * In addition, this function also properly resets the signal handler mask,
+ * disables malloc debugging and closes file descriptors > 2.
  *
- * @param command The argument to pass to execvp(). Must be null-terminated.
- * @param status The status of the child process will be stored here, if non-NULL.
- *               When unable to waitpid() the child process because of an ECHILD
- *               or ESRCH, this will be set to -1.
+ * Information about the subprocess is stored inside `info`. See the comments
+ * for the `SubprocessInfo` structure to learn more about it.
+ *
+ * If this function encounters an error or is interrupted, then it ensures
+ * that as much information as possible about the current state of things
+ * is stored in `info` so that the caller can clean things up appropriately.
+ *
+ * @param command The argument array to pass to execvp(). Must be null-terminated.
+ * @param info
+ * @param wait Whether to wait for the subprocess before returning.
+ * @param killSubprocessOnInterruption Whether to automatically kill the subprocess
+ *   when this function is interrupted.
+ * @param afterFork A function object to be called right after forking.
  * @throws SystemException
  * @throws boost::thread_interrupted
  */
-string runCommandAndCaptureOutput(const char **command, int *status = NULL);
+void runCommand(const char **command, SubprocessInfo &info,
+	bool wait = true, bool killSubprocessOnInterruption = true,
+	const boost::function<void ()> &afterFork = boost::function<void ()>());
+
+/**
+ * Run a command, wait for it, and capture its stdout output.
+ * This function does not care whether the command fails.
+ *
+ * In addition (like `runCommand()`), this function also properly
+ * resets the signal handler mask, disables malloc debugging and
+ * closes file descriptors > 2.
+ *
+ * If something goes wrong or when interrupted while capturing the
+ * output, then `output` contains the output captured so far.
+ *
+ * Information about the subprocess is stored inside `info`. See the comments
+ * for the `SubprocessInfo` structure to learn more about it.
+ *
+ * If this function encounters an error or is interrupted, then it ensures
+ * that as much information as possible about the current state of things
+ * is stored in `info` so that the caller can clean things up appropriately.
+ *
+ * @param command The argument array to pass to execvp(). Must be null-terminated.
+ * @param info
+ * @param killSubprocessOnInterruption Whether to automatically kill the subprocess
+ *   when this function is interrupted.
+ * @param afterFork A function object to be called right after forking.
+ * @throws SystemException
+ * @throws boost::thread_interrupted
+ */
+void runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
+	string &output, bool killSubprocessOnInterruption = true,
+	const boost::function<void ()> &afterFork = boost::function<void ()>());
 
 
 } // namespace Passenger

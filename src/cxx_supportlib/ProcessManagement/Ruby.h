@@ -28,6 +28,7 @@
 
 #include <string>
 #include <vector>
+#include <cstddef>
 
 namespace Passenger {
 
@@ -37,8 +38,8 @@ class ResourceLocator;
 
 
 /**
- * Run a Passenger-internal Ruby tool, e.g. passenger-config, and capture its stdout
- * output. This function does not care whether the command fails.
+ * Run a Passenger-internal Ruby tool, e.g. passenger-config, and optionally capture
+ * its stdout output. This function does not care whether the command fails.
  *
  * @param resourceLocator
  * @param ruby The Ruby interpreter to attempt to use for running the tool.
@@ -46,11 +47,13 @@ class ResourceLocator;
  * @param status The status of the child process will be stored here, if non-NULL.
  *               When unable to waitpid() the child process because of an ECHILD
  *               or ESRCH, this will be set to -1.
+ * @param output The output of the child process will be stored here, if non-NULL.
  * @throws RuntimeException
  * @throws SystemException
  */
-string runInternalRubyTool(const ResourceLocator &resourceLocator,
-	const string &ruby, const vector<string> &args, int *status = NULL);
+void runInternalRubyTool(const ResourceLocator &resourceLocator,
+	const string &ruby, const vector<string> &args,
+	int *status = NULL, string *output = NULL);
 
 
 } // namespace Passenger

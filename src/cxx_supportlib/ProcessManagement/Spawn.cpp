@@ -24,7 +24,6 @@
  *  THE SOFTWARE.
  */
 
-#include <sys/resource.h> // get/setpriority
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -49,57 +48,91 @@ using namespace std;
 
 int
 runShellCommand(const StaticString &command) {
-	pid_t pid = fork();
-	if (pid == 0) {
+	string commandNt = command;
+	const char *argv[] = {
+		"/bin/sh",
+		"-c",
+		commandNt.c_str(),
+		NULL
+	};
+	SubprocessInfo info;
+	runCommand(argv, info);
+	return info.status;
+}
+
+void
+runCommand(const char **command, SubprocessInfo &info, bool wait, bool killSubprocessOnInterruption,
+	const boost::function<void ()> &afterFork)
+{
+	int e, waitStatus;
+	pid_t waitRet;
+
+	info.pid = syscalls::fork();
+	if (info.pid == 0) {
 		resetSignalHandlersAndMask();
 		disableMallocDebugging();
 		closeAllFileDescriptors(2);
-		execlp("/bin/sh", "/bin/sh", "-c", command.data(), (char * const) 0);
+		if (afterFork) {
+			afterFork();
+		}
+		execvp(command[0], (char * const *) command);
 		_exit(1);
-	} else if (pid == -1) {
-		return -1;
-	} else {
-		int status;
-		if (waitpid(pid, &status, 0) == -1) {
-			return -1;
+	} else if (info.pid == -1) {
+		e = errno;
+		throw SystemException("Cannot fork() a new process", e);
+	} else if (wait) {
+		try {
+			waitRet = syscalls::waitpid(info.pid, &waitStatus, 0);
+		} catch (const boost::thread_interrupted &) {
+			if (killSubprocessOnInterruption) {
+				boost::this_thread::disable_syscall_interruption dsi;
+				syscalls::kill(SIGKILL, info.pid);
+				syscalls::waitpid(info.pid, NULL, 0);
+			}
+			throw;
+		}
+
+		if (waitRet != -1) {
+			info.status = waitStatus;
+		} else if (errno == ECHILD || errno == ESRCH) {
+			info.status = -1;
 		} else {
-			return status;
+			int e = errno;
+			throw SystemException(string("Error waiting for the '") +
+				command[0] + "' command", e);
 		}
 	}
 }
 
-string
-runCommandAndCaptureOutput(const char **command, int *status) {
-	pid_t pid, waitRet;
+void
+runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
+	string &output, bool killSubprocessOnInterruption,
+	const boost::function<void ()> &afterFork)
+{
+	pid_t waitRet;
 	int e, waitStatus;
 	Pipe p;
 
 	p = createPipe(__FILE__, __LINE__);
 
-	boost::this_thread::disable_syscall_interruption dsi;
-	pid = syscalls::fork();
-	if (pid == 0) {
-		// Make ps nicer, we want to have as little impact on the rest
-		// of the system as possible while collecting the metrics.
-		int prio = getpriority(PRIO_PROCESS, getpid());
-		prio++;
-		if (prio > 20) {
-			prio = 20;
-		}
-		setpriority(PRIO_PROCESS, getpid(), prio);
-
+	info.pid = syscalls::fork();
+	if (info.pid == 0) {
 		dup2(p[1], 1);
 		close(p[0]);
 		close(p[1]);
+		resetSignalHandlersAndMask();
+		disableMallocDebugging();
 		closeAllFileDescriptors(2);
+		if (afterFork) {
+			afterFork();
+		}
 		execvp(command[0], (char * const *) command);
 		_exit(1);
-	} else if (pid == -1) {
+	} else if (info.pid == -1) {
 		e = errno;
 		throw SystemException("Cannot fork() a new process", e);
 	} else {
 		bool done = false;
-		string result;
 
 		p[1].close();
 		while (!done) {
@@ -107,40 +140,50 @@ runCommandAndCaptureOutput(const char **command, int *status) {
 			ssize_t ret;
 
 			try {
-				boost::this_thread::restore_syscall_interruption rsi(dsi);
 				ret = syscalls::read(p[0], buf, sizeof(buf));
-			} catch (const thread_interrupted &) {
-				syscalls::kill(SIGKILL, pid);
-				syscalls::waitpid(pid, NULL, 0);
+			} catch (const boost::thread_interrupted &) {
+				if (killSubprocessOnInterruption) {
+					boost::this_thread::disable_syscall_interruption dsi;
+					syscalls::kill(SIGKILL, info.pid);
+					syscalls::waitpid(info.pid, NULL, 0);
+				}
 				throw;
 			}
 			if (ret == -1) {
 				e = errno;
-				syscalls::kill(SIGKILL, pid);
-				syscalls::waitpid(pid, NULL, 0);
+				if (killSubprocessOnInterruption) {
+					boost::this_thread::disable_syscall_interruption dsi;
+					syscalls::kill(SIGKILL, info.pid);
+					syscalls::waitpid(info.pid, NULL, 0);
+				}
 				throw SystemException(string("Cannot read output from the '") +
 					command[0] + "' command", e);
 			}
 			done = ret == 0;
-			result.append(buf, ret);
+			output.append(buf, ret);
 		}
 		p[0].close();
 
-		waitRet = syscalls::waitpid(pid, &waitStatus, 0);
+		try {
+			waitRet = syscalls::waitpid(info.pid, &waitStatus, 0);
+		} catch (const boost::thread_interrupted &) {
+			if (killSubprocessOnInterruption) {
+				boost::this_thread::disable_syscall_interruption dsi;
+				syscalls::kill(SIGKILL, info.pid);
+				syscalls::waitpid(info.pid, NULL, 0);
+			}
+			throw;
+		}
+
 		if (waitRet != -1) {
-			if (status != NULL) {
-				*status = waitStatus;
-			}
+			info.status = waitStatus;
 		} else if (errno == ECHILD || errno == ESRCH) {
-			if (status != NULL) {
-				*status = -1;
-			}
+			info.status = -1;
 		} else {
 			int e = errno;
 			throw SystemException(string("Error waiting for the '") +
 				command[0] + "' command", e);
 		}
-		return result;
 	}
 }
 

@@ -39,9 +39,10 @@ namespace Passenger {
 using namespace std;
 
 
-string
+void
 runInternalRubyTool(const ResourceLocator &resourceLocator,
-	const string &ruby, const vector<string> &args, int *status)
+	const string &ruby, const vector<string> &args, int *status,
+	string *output)
 {
 	string locationConfigFileEnv = "PASSENGER_LOCATION_CONFIGURATION_FILE="
 		+ resourceLocator.getInstallSpec();
@@ -90,7 +91,15 @@ runInternalRubyTool(const ResourceLocator &resourceLocator,
 	}
 	command[i++] = NULL;
 
-	return runCommandAndCaptureOutput(command, status);
+	SubprocessInfo info;
+	if (output == NULL) {
+		runCommand(command, info);
+	} else {
+		runCommandAndCaptureOutput(command, info, *output);
+	}
+	if (status != NULL) {
+		*status = info.status;
+	}
 }
 
 
