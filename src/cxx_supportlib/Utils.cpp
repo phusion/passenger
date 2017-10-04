@@ -74,8 +74,6 @@
 
 namespace Passenger {
 
-static string passengerTempDir;
-
 namespace {
 	/**
 	 * Given a filename, FileGuard will unlink the file in its destructor, unless
