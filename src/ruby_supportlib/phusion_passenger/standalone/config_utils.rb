@@ -195,7 +195,7 @@ module PhusionPassenger
       end
 
       def find_pid_and_log_file(execution_root, options)
-        if options[:socket_file]
+        if !options[:socket_file].nil?
           pid_basename = 'passenger.pid'
           log_basename = 'passenger.log'
         else

@@ -40,8 +40,8 @@ module PhusionPassenger
       private
         def start_engine_real
           write_nginx_config_file(nginx_config_path)
-          maybe_debug_nginx_config
-          test_nginx_config
+          maybe_debug_nginx_config(nginx_config_path)
+          test_nginx_config(nginx_config_path, 'nginx.conf')
 
           Standalone::ControlUtils.require_daemon_controller
           @engine = DaemonController.new(build_daemon_controller_options)
@@ -97,45 +97,45 @@ module PhusionPassenger
         end
 
 
-        def maybe_debug_nginx_config
+        def maybe_debug_nginx_config(path)
           if @options[:debug_nginx_config]
-            File.open(nginx_config_path, 'rb') do |f|
+            File.open(path, 'rb') do |f|
               puts(f.read)
             end
             exit
           end
         end
 
-        def test_nginx_config
+        def test_nginx_config(path, file)
           command = "#{Shellwords.escape @nginx_binary}" \
-            " -c #{Shellwords.escape nginx_config_path}" \
+            " -c #{Shellwords.escape path}" \
             " -p #{Shellwords.escape @working_dir}" \
             " -t"
           output = `#{command} 2>&1`
           if $? && $?.exitstatus != 0
-            output.gsub!(nginx_config_path, 'nginx.conf')
+            output.gsub!(path, file)
             output = PlatformInfo.send(:reindent, output, 4)
 
             message = "*** ERROR: the Nginx configuration that #{PROGRAM_NAME}" \
               " Standalone generated internally contains problems. The error " \
               "message returned by the Nginx engine is:\n\n" \
               "#{output}\n\n"
-            if @options[:nginx_config_template]
+            debug_log_file = Utils::TmpIO.new('passenger-standalone',
+              :suffix => '.log', :binary => true, :unlink_immediately => false)
+            begin
+              File.open(path, 'rb') do |f|
+                debug_log_file.write(f.read)
+              end
+            ensure
+              debug_log_file.close
+            end
+            if @options[:nginx_config_template] && file == 'nginx.conf'
               message << "This probably means that you have a problem in your " \
                 "Nginx configuration template. Please fix your template.\n\n" \
                 "Tip: to debug your template, re-run #{SHORT_PROGRAM_NAME} " \
                 "Standalone with the `--debug-nginx-config` option. This " \
                 "allows you to see how the final Nginx config file looks like."
             else
-              debug_log_file = Utils::TmpIO.new('passenger-standalone',
-                :suffix => '.log', :binary => true, :unlink_immediately => false)
-              begin
-                File.open(nginx_config_path, 'rb') do |f|
-                  debug_log_file.write(f.read)
-                end
-              ensure
-                debug_log_file.close
-              end
               message << "This probably means that you have found a bug in " \
                 "#{PROGRAM_NAME} Standalone. Please report this bug to our " \
                 "Github issue tracker: https://github.com/phusion/passenger/issues\n\n" \
