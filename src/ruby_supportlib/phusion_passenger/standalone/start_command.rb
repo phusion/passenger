@@ -286,7 +286,7 @@ module PhusionPassenger
 
       def find_apps
         PhusionPassenger.require_passenger_lib 'standalone/app_finder'
-        @app_finder = AppFinder.new(@argv, @options)
+        @app_finder = AppFinder.new(@argv, @options, @local_options)
         @apps = @app_finder.scan
         if @app_finder.multi_mode? && @options[:engine] != 'nginx'
           puts "Mass deployment enabled, so forcing engine to 'nginx'."

@@ -44,23 +44,14 @@ module PhusionPassenger
       attr_reader :apps
       attr_reader :execution_root
 
-      def self.looks_like_app_directory?(dir, options = {})
-        options = options.dup
-        ConfigUtils.load_local_config_file!(dir, options)
-        return options[:app_type] ||
-          STARTUP_FILES.any? do |file|
-            File.exist?("#{dir}/#{file}")
-          end
-      end
-
       def self.supports_multi?
         false
       end
 
-      def initialize(dirs, options = {})
+      def initialize(dirs, options = {}, local_options = {})
         @dirs = dirs
         @options = options.dup
-        determine_mode_and_execution_root(options)
+        determine_mode_and_execution_root(options, local_options)
       end
 
       def scan
@@ -150,8 +141,18 @@ module PhusionPassenger
         end
       end
 
-      def looks_like_app_directory?(dir, options = {})
-        return AppFinder.looks_like_app_directory?(dir, options)
+      # Only pass `local_options` if the directory that you're checking is
+      # the directory that should be used in single mode.
+      #
+      # `local_options` must be the the value obtained from
+      # `ConfigUtils.load_local_config_file_from_app_dir_param!`.
+      def looks_like_app_directory?(dir, options = {}, local_options = {})
+        options = options.dup
+        ConfigUtils.load_local_config_file!(dir, options)
+        options[:app_type] ||
+          STARTUP_FILES.any? do |file|
+            File.exist?("#{dir}/#{file}")
+          end
       end
 
       def filename_to_server_names(filename)
@@ -170,7 +171,7 @@ module PhusionPassenger
         return !!select([io], nil, nil, timeout)
       end
 
-      def determine_mode_and_execution_root(options)
+      def determine_mode_and_execution_root(options, local_options)
         @mode = :single
         if @dirs.empty?
           @execution_root = Dir.logical_pwd
