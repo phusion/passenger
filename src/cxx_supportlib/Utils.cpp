@@ -74,7 +74,6 @@
 
 namespace Passenger {
 
-static string passengerTempDir;
 
 string
 escapeForXml(const StaticString &input) {

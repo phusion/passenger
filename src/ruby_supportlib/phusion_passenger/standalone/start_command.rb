@@ -98,7 +98,7 @@ module PhusionPassenger
         # If you add or change an option, make sure to update the following places too:
         # - src/ruby_supportlib/phusion_passenger/standalone/start_command/builtin_engine.rb,
         #   function #build_daemon_controller_options
-        # - resources/templates/config/standalone.erb
+        # - resources/templates/standalone/config.erb
         OptionParser.new do |opts|
           defaults = CONFIG_DEFAULTS
           nl = "\n" + ' ' * 37

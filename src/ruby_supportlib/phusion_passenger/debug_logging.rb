@@ -112,7 +112,7 @@ module PhusionPassenger
           output = @@stderr_evaluator.call
         end
         location = caller[nesting_level].sub(/.*phusion_passenger\//, '')
-        location.sub!(/(.*):.*/, '\1')
+        location.sub!(/(.*?):.*/, '\1')
         now = Time.now
         time_str = now.strftime("%Y-%m-%d %H:%M:%S.")
         time_str << sprintf("%04d", now.usec / 100)
