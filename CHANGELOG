@@ -5,10 +5,10 @@ Release 5.1.9 (Not yet released)
  * [Apache] Fixes compilation on macOS 10.13 High Sierra.
  * [Nginx] It is now allowed to specify `passenger_enabled` in the `http` context as well.
  * [Nginx] Namespaced Jsoncpp under the Passenger namespace to avoid collisions with Google Pagespeed's copy when linked into Nginx.
- * Adds support for Bundler 2.0's new `gems.rb` and `gems.locked`. Learn more about these in [Gemfile's new clothes](https://depfu.com/blog/2017/09/06/gemfiles-new-clothes). Closes GH-1982.
- * Removes Debian packages for Ubuntu 12.04 Precise.
  * [Standalone] Enables HTTP/2 support in the Nginx template. Support is only active if SSL is used, to avoid potential issues with HTTP/2 on HTTP ports. Closes GH-1945.
  * [Enterprise, Standalone] Adds a new feature that is especially useful on Heroku: deferred port binding. When `--defer-port-binding` is set, Passenger does not listen on the given port until the application has finished spawning. If the application starts slowly then this mechanism can prevent the Heroku boot timeout from killing the dyno.
+ * Adds support for Bundler 2.0's new `gems.rb` and `gems.locked`. Learn more about these in [Gemfile's new clothes](https://depfu.com/blog/2017/09/06/gemfiles-new-clothes). Closes GH-1982.
+ * Removes Debian packages for Ubuntu 12.04 Precise.
  * Fixes compilation warnings on macOS + Clang 9.0.
 
 
