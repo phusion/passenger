@@ -441,7 +441,9 @@ module PhusionPassenger
             You are about to validate #{PROGRAM_NAME} against the following
             Apache installation:
 
-               apxs2: #{PlatformInfo.apxs2}
+               apxs2     : #{PlatformInfo.apxs2 || 'OS-provided installation'}
+               Executable: #{PlatformInfo.httpd || 'unknown'}
+               Version   : #{PlatformInfo.httpd_version || 'unknown'}
 
             However, this Apache installation appears to be broken, so this program
             cannot continue. To find out why this program thinks the above Apache
