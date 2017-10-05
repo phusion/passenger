@@ -1257,6 +1257,7 @@ public:
 			ok = LoggingKit::context->prepareConfigChange(loggingConfig,
 				errors, req);
 		} catch (const std::exception &e) {
+			ok = false;
 			fprintf(stderr, "ERROR: unable to configure logging system: %s\n", e.what());
 		}
 		if (ok) {
