@@ -33,7 +33,9 @@ pipeline {
       steps {
         script {
           if (env.JOB_NAME.indexOf('Enterprise') != -1) {
-            env.ENTERPRISE = 'true'
+            env.ENTERPRISE = '1'
+          } else {
+            env.ENTERPRISE = '0'
           }
 
           // For debugging purposes
