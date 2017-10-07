@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (C) 2008-2016  Phusion Holding B.V.
+#  Copyright (C) 2008-2017  Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -38,25 +38,28 @@ if defined?(Bundler)
   end
 end
 
+def require_build_system_file(name)
+  require "#{SOURCE_ROOT}/build/#{name}"
+end
+
 require("#{SOURCE_ROOT}/config") if File.exist?("#{SOURCE_ROOT}/config.rb")
-require 'build/basics'
+require_build_system_file 'basics'
 if boolean_option('ONLY_RUBY')
-  require 'build/ruby_extension'
+  require_build_system_file 'ruby_extension'
 else
-  require 'build/ruby_extension'
-  require 'build/common_library'
-  require 'build/agent'
-  require 'build/apache2'
-  require 'build/nginx'
-  require 'build/documentation'
-  require 'build/packaging'
-  require 'build/test_basics'
-  require 'build/oxt_tests'
-  require 'build/cxx_tests'
-  require 'build/ruby_tests'
-  require 'build/node_tests'
-  require 'build/integration_tests'
-  require 'build/misc'
+  require_build_system_file 'ruby_extension'
+  require_build_system_file 'common_library'
+  require_build_system_file 'agent'
+  require_build_system_file 'apache2'
+  require_build_system_file 'nginx'
+  require_build_system_file 'packaging'
+  require_build_system_file 'test_basics'
+  require_build_system_file 'oxt_tests'
+  require_build_system_file 'cxx_tests'
+  require_build_system_file 'ruby_tests'
+  require_build_system_file 'node_tests'
+  require_build_system_file 'integration_tests'
+  require_build_system_file 'misc'
 end
 
 #### Default tasks

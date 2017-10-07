@@ -344,6 +344,13 @@ module PhusionPassenger
     end
     memoize :cc_supports_visibility_flag?, true
 
+    def self.cc_supports_fno_limit_debug_info_flag?
+      try_compile_with_warning_flag(
+        "Checking for C compiler '-fno-limit-debug-info' support",
+        :c, '', '-fno-limit-debug-info')
+    end
+    memoize :cc_supports_fno_limit_debug_info_flag?
+
     def self.cxx_supports_visibility_flag?
       return false if os_name_simple == "aix"
       return try_compile("Checking for C++ compiler '-fvisibility' support",
@@ -385,6 +392,13 @@ module PhusionPassenger
         :cxx, '', '-Wno-unused-local-typedefs')
     end
     memoize :cxx_supports_wno_unused_local_typedefs_flag?, true
+
+    def self.cxx_supports_fno_limit_debug_info_flag?
+      try_compile_with_warning_flag(
+        "Checking for C++ compiler '-fno-limit-debug-info' support",
+        :cxx, '', '-fno-limit-debug-info')
+    end
+    memoize :cxx_supports_fno_limit_debug_info_flag?
 
     def self.cc_supports_no_tls_direct_seg_refs_option?
       return try_compile("Checking for C compiler '-mno-tls-direct-seg-refs' support",
@@ -489,7 +503,7 @@ module PhusionPassenger
         :c, "int main() { return 0; }\n", '-ldl')
     end
     memoize :has_dl_library?, true
-    
+
     def self.has_alloca_h?
       return try_compile("Checking for alloca.h",
         :c, '#include <alloca.h>')
@@ -513,44 +527,33 @@ module PhusionPassenger
       #
       # In any case we'll always want to use -ggdb for better GDB debugging.
       if cc_is_gcc?
-        return '-ggdb'
+        result = '-ggdb'
       else
-        return '-g'
+        result = '-g'
       end
+      if cc_supports_fno_limit_debug_info_flag?
+        result << ' -fno-limit-debug-info'
+      end
+      result
     end
 
-    def self.dmalloc_ldflags
-      if !ENV['DMALLOC_LIBS'].to_s.empty?
-        return ENV['DMALLOC_LIBS']
-      end
-      if os_name_simple == "macosx"
-        ['/opt/local', '/usr/local', '/usr'].each do |prefix|
-          filename = "#{prefix}/lib/libdmallocthcxx.a"
-          if File.exist?(filename)
-            return filename
-          end
-        end
-        return nil
+    # C++ compiler flags that should be passed in order to enable debugging information.
+    def self.debugging_cxxflags
+      # According to OpenBSD's pthreads man page, pthreads do not work
+      # correctly when an app is compiled with -g. It recommends using
+      # -ggdb instead.
+      #
+      # In any case we'll always want to use -ggdb for better GDB debugging.
+      if cc_is_gcc?
+        result = '-ggdb'
       else
-        return "-ldmallocthcxx"
+        result = '-g'
       end
-    end
-    memoize :dmalloc_ldflags
-
-    def self.electric_fence_ldflags
-      if os_name_simple == "macosx"
-        ['/opt/local', '/usr/local', '/usr'].each do |prefix|
-          filename = "#{prefix}/lib/libefence.a"
-          if File.exist?(filename)
-            return filename
-          end
-        end
-        return nil
-      else
-        return "-lefence"
+      if cxx_supports_fno_limit_debug_info_flag?
+        result << ' -fno-limit-debug-info'
       end
+      result
     end
-    memoize :electric_fence_ldflags
 
     def self.export_dynamic_flags
       if os_name_simple == "linux"

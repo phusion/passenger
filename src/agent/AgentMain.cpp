@@ -32,7 +32,6 @@ using namespace std;
 
 int watchdogMain(int argc, char *argv[]);
 int coreMain(int argc, char *argv[]);
-int ustRouterMain(int argc, char *argv[]);
 int systemMetricsMain(int argc, char *argv[]);
 int tempDirToucherMain(int argc, char *argv[]);
 int spawnEnvSetupperMain(int argc, char *argv[]);
@@ -54,7 +53,6 @@ usage(int argc, char *argv[]) {
 	printf("Daemon subcommands:\n");
 	printf("  core\n");
 	printf("  watchdog\n");
-	printf("  ust-router\n");
 	printf("\n");
 	printf("Utility subcommands:\n");
 	printf("  system-metrics\n");
@@ -82,8 +80,6 @@ dispatchSubcommand(int argc, char *argv[]) {
 		exit(watchdogMain(argc, argv));
 	} else if (strcmp(argv[1], "core") == 0) {
 		exit(coreMain(argc, argv));
-	} else if (strcmp(argv[1], "ust-router") == 0) {
-		exit(ustRouterMain(argc, argv));
 	} else if (strcmp(argv[1], "system-metrics") == 0) {
 		exit(systemMetricsMain(argc, argv));
 	} else if (strcmp(argv[1], "temp-dir-toucher") == 0) {

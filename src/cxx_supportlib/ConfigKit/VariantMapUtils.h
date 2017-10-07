@@ -48,6 +48,7 @@ variantMapToJson(const Schema &schema, const VariantMap &options) {
 		if (options.has(key)) {
 			switch (entry.type) {
 			case STRING_TYPE:
+			case ANY_TYPE:
 				doc[key.toString()] = options.get(key);
 				break;
 			case INT_TYPE:
@@ -73,6 +74,9 @@ variantMapToJson(const Schema &schema, const VariantMap &options) {
 				doc[key.toString()] = subdoc;
 				break;
 			}
+			case OBJECT_TYPE:
+				// Not supported
+				break;
 			default:
 				P_BUG("Unknown type " + Passenger::toString((int) entry.type));
 				break;
@@ -86,7 +90,7 @@ variantMapToJson(const Schema &schema, const VariantMap &options) {
 }
 
 
-} // ConfigKit
-} // Passenger
+} // namespace ConfigKit
+} // namespace Passenger
 
 #endif /* _PASSENGER_CONFIG_KIT_VARIANT_MAP_UTILS_H_ */

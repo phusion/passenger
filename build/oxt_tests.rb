@@ -38,11 +38,13 @@ TEST_OXT_OBJECTS.each_pair do |object, source|
   define_cxx_object_compilation_task(
     object,
     source,
-    :include_paths => [
-      "test/support",
-      *CXX_SUPPORTLIB_INCLUDE_PATHS
-    ],
-    :flags => TEST_COMMON_CFLAGS
+    lambda { {
+      :include_paths => [
+        "test/support",
+        *CXX_SUPPORTLIB_INCLUDE_PATHS
+      ],
+      :flags => TEST_COMMON_CFLAGS
+    } }
   )
 end
 

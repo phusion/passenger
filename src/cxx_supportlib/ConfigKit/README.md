@@ -29,6 +29,11 @@ ConfigKit is a configuration management system that lets you define configuratio
   - [Fetching data](#fetching-data)
   - [Default values](#default-values)
   - [Inspecting all data](#inspecting-all-data)
+  - [Inspection filters](#inspection-filters)
+- [Normalizing data](#normalizing-data)
+  - [Normalization example 1](#normalization-example-1)
+  - [Normalization example 2](#normalization-example-2)
+  - [Normalizers and validation](#normalizers-and-validation)
 - [ConfigKit in practice & design patterns](#configkit-in-practice--design-patterns)
 
 <!-- /MarkdownTOC -->
@@ -231,7 +236,8 @@ You can inspect the schema using the `inspect()` method. It returns a Json::Valu
   "foo": {
     "type": "string",
     "required": true,
-    "has_default_value": true
+    "has_default_value": "static",
+    "default_value": "hello"
   },
   "bar": {
     "type": "float"
@@ -250,7 +256,8 @@ Description of the members:
 
  - `type`: the schema definition's type. Could be one of "string", "integer", "unsigned integer", "float", "boolean", "array", "array of strings", "object" or "any".
  - `required`: whether this key is required.
- - `has_default_value`: whether a default value is defined.
+ - `has_default_value`: "static" if a static a default value is defined, "dynamic" if a dynamic default value is defined.
+ - `default_value`: the static default value. This field is absent when there is no default value, or if the default value is dynamic.
 
 ## Using the store
 
@@ -357,8 +364,9 @@ store.get("unknown").isNull();  // => true
 
 ### Inspecting all data
 
-You can fetch an overview of all data in the store using `inspect()`.
-This will return a Json::Value in the following format:
+You can fetch an overview of all data in the store using `inspect()`. This function is normally used to allow users of a component to inspect the configuration options set for that component, without allowing them direct access to the embedded store.
+
+This function will return a Json::Value in the following format:
 
 ~~~javascript
 // Assuming we are using the store that went through
@@ -409,6 +417,118 @@ If you want to fetch the effective values only, then use `inspectEffectiveValues
   "baz": 123
 }
 ~~~
+
+### Inspection filters
+
+Since `inspect()` is usually used to allow users of a component to inspect that component's configuration, you may run into situations where you want the inspected return value to be different from its actual value. Inspection filters allow you to transform `inspect()` results.
+
+A typical use case for inspection filters can be found in LoggingKit. One can configure LoggingKit to log to a specific file descriptor of an open log file. The format is like this:
+
+~~~json
+{
+  "path": "/foo.log",
+  "fd": 12
+}
+~~~
+
+LoggingKit will internally take over ownership of the file descriptor and will perform a bunch of actions on the fd, such as redirecting stderr to that fd and closing the original fd. Because of this, the fd value is only valid at the time of configuration; it makes no sense to output the fd value in `inspect()`. Inspect filters allows LoggingKit to filter out the "fd" field when `store.inspect()` is called, but the "fd" field can still be accessed internally by LoggingKit by calling `store["target"]["fd"]`.
+
+An inspect filter is a function takes a value and returns a transformed value. It is installed by calling `setInspectFilter()` on the object returned by `schema.add()`, like this:
+
+~~~c++
+static Json::Value filterTargetFd(const Json::Value &value) {
+  Json::Value result = value;
+  result.removeMember("fd");
+  return result;
+}
+
+ConfigKit::Schema schema;
+
+schema.add("target", ANY_TYPE, OPTIONAL).
+  setInspectFilter(filterTargetFd);
+schema.finalize();
+~~~
+
+Note that inspect filter is called *after* [normalizers](#normalizing-data), so `value` refers to a normalized value.
+
+## Normalizing data
+
+You sometimes may want to allow users to supply data in multiple formats. Normalizers allow you to transform user-supplied data in a canonical format, so that your configuration value handling code only has to deal with data in the canonical format instead of all possibly allowed formats.
+
+The examples below demonstrate two possible use cases and how to implement them.
+
+### Normalization example 1
+
+Suppose that you have a "target" config option, which can be in one of these formats:
+
+ 1. `"/filename"`
+ 2. `{ "path": "/filename" }` (semantics equivalent to 1)
+ 3. `{ "stderr": true }`
+
+You can write a normalizer that transforms format 1 into format 2. That way, no matter whether the user has actually supplied format 1, 2 or 3, your config handling code only has to deal with format 2 and 3.
+
+A normalizer is a function that accepts a JSON document of effective values (in the format outputted by `ConfigKit::Store::inspectEffectiveValues()`). It is expected to return either Json::nullValue (indicating that no normalization work needs to be done), or a JSON object containing proposed normalization changes.
+
+Normalizers are added to the corresponding schema.
+
+~~~c++
+static Json::Value myNormalizer(const Json::Value &effectiveValues) {
+    Json::Value updates(Json::objectValue);
+
+    if (effectiveValues["target"].isString()) {
+        updates["target"]["path"] = effectiveValues["target"];
+    }
+
+    return updates;
+}
+
+
+ConfigKit::Schema schema;
+
+schema.add("target", ANY_TYPE, OPTIONAL);
+schema.addValidator(validateThatTargetIsStringOrObject);
+schema.addNormalizer(myNormalizer);
+schema.finalize();
+~~~
+
+### Normalization example 2
+
+Suppose that you have a "security" config option that accepts this format:
+
+~~~json
+{
+  "username": "a string",          // required
+  "password": "a string",          // required
+  "level": "full" | "readonly"     // optional; default value: "full"
+}
+~~~
+
+If the user did not specify "level", then will want to automatically insert "level: full".
+
+~~~c++
+static Json::Value myNormalizer(const Json::Value &effectiveValues) {
+    Json::Value updates(Json::objectValue);
+
+    if (effectiveValues["security"]["level"].isNull()) {
+        updates["security"] = effectiveValues["security"];
+        updates["security"]["level"] = "full";
+    }
+
+    return updates;
+}
+
+
+ConfigKit::Schema schema;
+
+schema.add("security", OBJECT_TYPE, OPTIONAL);
+schema.addValidator(validateSecurity);
+schema.addNormalizer(myNormalizer);
+schema.finalize();
+~~~
+
+### Normalizers and validation
+
+Normalizers are only run when validation passes! That way normalizers don't have to worry about validation problems.
 
 ## ConfigKit in practice & design patterns
 

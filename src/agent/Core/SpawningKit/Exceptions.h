@@ -34,7 +34,7 @@
 #include <Exceptions.h>
 #include <LoggingKit/LoggingKit.h>
 #include <DataStructures/StringKeyTable.h>
-#include <Utils.h>
+#include <ProcessManagement/Spawn.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/SystemMetricsCollector.h>
 #include <Core/SpawningKit/Config.h>
@@ -735,7 +735,9 @@ private:
 		// On Linux, ulimit is a shell builtin and not a command.
 		const char *command[] = { "/bin/sh", "-c", "ulimit -a", NULL };
 		try {
-			string result = runCommandAndCaptureOutput(command);
+			SubprocessInfo info;
+			string result;
+			runCommandAndCaptureOutput(command, info, result);
 			if (result.empty()) {
 				result.assign("Error: command 'ulimit -a' failed");
 			}
@@ -748,7 +750,9 @@ private:
 	static string gatherUserInfo() {
 		const char *command[] = { "id", "-a", NULL };
 		try {
-			string result = runCommandAndCaptureOutput(command);
+			SubprocessInfo info;
+			string result;
+			runCommandAndCaptureOutput(command, info, result);
 			if (result.empty()) {
 				result.assign("Error: command 'id -a' failed");
 			}

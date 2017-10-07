@@ -379,7 +379,12 @@ module PhusionPassenger
         checking "whether Apache is installed"
 
         if PlatformInfo.httpd
-          if PlatformInfo.apxs2
+          # macOS >= 10.13 High Sierra no longer includes apxs2, but that's
+          # okay because we know Apache is installed
+          if PlatformInfo.apxs2 ||
+            (PlatformInfo.os_name_simple == 'macosx' &&
+             PlatformInfo.os_version >= '10.13' &&
+             PlatformInfo.httpd == '/usr/sbin/httpd')
             check_ok
             true
           else
@@ -436,7 +441,9 @@ module PhusionPassenger
             You are about to validate #{PROGRAM_NAME} against the following
             Apache installation:
 
-               apxs2: #{PlatformInfo.apxs2}
+               apxs2     : #{PlatformInfo.apxs2 || 'OS-provided installation'}
+               Executable: #{PlatformInfo.httpd || 'unknown'}
+               Version   : #{PlatformInfo.httpd_version || 'unknown'}
 
             However, this Apache installation appears to be broken, so this program
             cannot continue. To find out why this program thinks the above Apache
@@ -567,7 +574,7 @@ module PhusionPassenger
               for Apache is not installed or not active. Please run the
               #{PROGRAM_NAME} Apache module installer:
 
-                 #{ruby_command} #{installer_command} --apxs2=#{PlatformInfo.apxs2}
+                 #{ruby_command} #{installer_command} --apxs2=#{PlatformInfo.apxs2 || 'none'}
             }
           end
         else

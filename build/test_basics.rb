@@ -48,10 +48,9 @@ task 'test:install_deps' do
   gem_install = "#{PlatformInfo.ruby_sudo_command} #{gem_install}" if boolean_option('SUDO')
   default = boolean_option('DEVDEPS_DEFAULT', true)
   install_base_deps = boolean_option('BASE_DEPS', default)
-  install_doctools  = boolean_option('DOCTOOLS', default)
 
   if deps_target = string_option('DEPS_TARGET')
-    bundle_args = "--path #{Shellwords.escape deps_target} #{ENV['BUNDLE_ARGS']}".strip
+    bundle_args = "--path #{shesc deps_target} #{ENV['BUNDLE_ARGS']}".strip
   else
     bundle_args = ENV['BUNDLE_ARGS'].to_s
   end
@@ -62,36 +61,12 @@ task 'test:install_deps' do
     sh "#{gem_install} bundler"
   end
 
-  if install_base_deps && install_doctools
+  if install_base_deps
     sh "bundle install #{bundle_args} --without="
   else
-    if install_base_deps
-      sh "bundle install #{bundle_args} --without doc release"
-    end
-    if install_doctools
-      sh "bundle install #{bundle_args} --without base"
-    end
+    sh "bundle install #{bundle_args} --without base"
   end
 
-  if install_doctools
-    # workaround for issue "bluecloth not found" when using 1.12.x
-    sh "#{gem_install} bundler --version 1.11.2"
-    sh "rvm list"
-  end
-
-  if boolean_option('USH_BUNDLES', default)
-    # see what is available for Submodule tests just in case Travis CI environment changes
-    # || true to avoid missing rvm command triggering a failure on Jenkins CI
-    sh "rvm list || true"
-
-    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core" \
-      " && bundle install #{bundle_args} --with travis --without doc notravis"
-    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
-      " && bundle install #{bundle_args} --without doc notravis"
-    sh "cd src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails" \
-      " && bundle exec rake install_test_app_bundles" \
-      " BUNDLE_ARGS='#{bundle_args}'"
-  end
   if boolean_option('NODE_MODULES', default)
     sh "yarn install #{yarn_args}"
   end

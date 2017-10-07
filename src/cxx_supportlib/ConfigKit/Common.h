@@ -124,6 +124,7 @@ public:
 };
 
 typedef boost::function<Json::Value (const Store &store)> ValueGetter;
+typedef boost::function<Json::Value (const Json::Value &value)> ValueFilter;
 
 
 } // namespace ConfigKit

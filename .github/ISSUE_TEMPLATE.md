@@ -1,6 +1,6 @@
 Please follow the steps below if you have found an **issue with Passenger**, or would like to request a feature.
 
-Post to the [support forum](http://groups.google.com/group/phusion-passenger) instead if you are not sure, or have a question about your configuration.
+Post to [Stack Overflow](https://stackoverflow.com/questions/tagged/passenger) instead if you are not sure, or if you have a question about your configuration.
 
 ---
 

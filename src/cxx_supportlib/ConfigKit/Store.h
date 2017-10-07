@@ -42,6 +42,7 @@
 #include <ConfigKit/Common.h>
 #include <ConfigKit/Schema.h>
 #include <ConfigKit/Utils.h>
+#include <LoggingKit/Assert.h>
 #include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
 #include <Utils/StrIntUtils.h>
@@ -112,10 +113,8 @@ private:
 		}
 	}
 
-	static Json::Value maybeFilterSecret(const Entry &entry, const Json::Value &value,
-		bool shouldFilter)
-	{
-		if (shouldFilter && entry.schemaEntry->flags & SECRET) {
+	static Json::Value maybeFilterSecret(const Entry &entry, const Json::Value &value) {
+		if (entry.schemaEntry->flags & SECRET) {
 			if (value.isNull()) {
 				return Json::nullValue;
 			} else {
@@ -165,7 +164,104 @@ private:
 		}
 	}
 
+	void applyNormalizers(Json::Value &doc) const {
+		boost::container::vector<Schema::Normalizer>::const_iterator n_it, n_end;
+
+		n_it = schema->getNormalizers().begin();
+		n_end = schema->getNormalizers().end();
+		for (; n_it != n_end; n_it++) {
+			const Schema::Normalizer &normalizer = *n_it;
+			Json::Value effectiveValues(Json::objectValue);
+			Json::Value::iterator it, end = doc.end();
+
+			for (it = doc.begin(); it != end; it++) {
+				string name = it.name();
+				effectiveValues[name] = doc[name]["effective_value"];
+			}
+
+			Json::Value updates = normalizer(effectiveValues);
+			if (OXT_UNLIKELY(!updates.isNull() && !updates.isObject())) {
+				P_BUG("ConfigKit normalizers may only return null or object values");
+			}
+			if (updates.isNull() || updates.empty()) {
+				continue;
+			}
+
+			end = updates.end();
+			for (it = updates.begin(); it != end; it++) {
+				string name = it.name();
+				if (doc.isMember(name)) {
+					Json::Value &subdoc = doc[name];
+					subdoc["user_value"] = *it;
+					subdoc["effective_value"] = *it;
+				} else {
+					P_BUG("A ConfigKit normalizer returned a key that is not part of the schema: "
+						<< name);
+				}
+			}
+		}
+	}
+
+	void applyInspectFilters(Json::Value &doc) const {
+		StringKeyTable<Entry>::ConstIterator it(entries);
+		while (*it != NULL) {
+			const Entry &entry = it.getValue();
+			if (entry.schemaEntry->inspectFilter == NULL) {
+				it.next();
+				continue;
+			}
+
+			const HashedStaticString &key = it.getKey();
+			Json::Value &subdoc = doc[key];
+
+			Json::Value &userValue = subdoc["user_value"];
+			userValue = entry.schemaEntry->inspectFilter(userValue);
+
+			if (subdoc.isMember("default_value")) {
+				Json::Value &defaultValue = subdoc["default_value"];
+				defaultValue = entry.schemaEntry->inspectFilter(defaultValue);
+			}
+
+			Json::Value &effectiveValue = subdoc["effective_value"];
+			effectiveValue = entry.schemaEntry->inspectFilter(effectiveValue);
+
+			it.next();
+		}
+	}
+
+	void doFilterSecrets(Json::Value &doc) const {
+		StringKeyTable<Entry>::ConstIterator it(entries);
+		while (*it != NULL) {
+			const HashedStaticString &key = it.getKey();
+			const Entry &entry = it.getValue();
+			Json::Value &subdoc = doc[key];
+
+			Json::Value &userValue = subdoc["user_value"];
+			userValue = maybeFilterSecret(entry, userValue);
+
+			if (subdoc.isMember("default_value")) {
+				Json::Value &defaultValue = subdoc["default_value"];
+				defaultValue = maybeFilterSecret(entry, defaultValue);
+			}
+
+			Json::Value &effectiveValue = subdoc["effective_value"];
+			effectiveValue = maybeFilterSecret(entry, effectiveValue);
+
+			it.next();
+		}
+	}
+
 public:
+	struct PreviewOptions {
+		bool filterSecrets;
+		bool shouldApplyInspectFilters;
+
+		PreviewOptions()
+			: filterSecrets(true),
+			  shouldApplyInspectFilters()
+			{ }
+	};
+
 	Store()
 		: schema(NULL),
 		  entries(0, 0),
@@ -258,11 +354,15 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 *
 	 * The format returned by this method is the same as that of `inspect()`,
-	 * with the exception that -- if `filterSecrets` is set to false, values of fields
-	 * marked with the `SECRET` flag are not filtered.
+	 * with the following exceptions:
+	 *
+	 *  - If `filterSecrets` is set to false, values of fields
+	 *    marked with the `SECRET` flag are not filtered.
+	 *  - If `shouldApplyInspectFilters` is set to false, values of fields
+	 *    are not passed through inspect filters.
 	 */
 	Json::Value previewUpdate(const Json::Value &updates, vector<Error> &errors,
-		bool filterSecrets = true) const
+		const PreviewOptions &options = PreviewOptions()) const
 	{
 		if (!updates.isNull() && !updates.isObject()) {
 			errors.push_back(Error("The JSON document must be an object"));
@@ -270,46 +370,69 @@ public:
 		}
 
 		Json::Value result(Json::objectValue);
+		Store storeWithPreviewData(*this);
+		StringKeyTable<Entry>::Iterator p_it(storeWithPreviewData.entries);
 		StringKeyTable<Entry>::ConstIterator it(entries);
+		vector<Error> tmpErrors;
 		Error error;
+
+		while (*p_it != NULL) {
+			const HashedStaticString &key = p_it.getKey();
+			Entry &entry = p_it.getValue();
+
+			if (isWritable(entry) && updates.isMember(key)) {
+				entry.userValue = updates[key];
+			}
+
+			p_it.next();
+		}
 
 		while (*it != NULL) {
 			const HashedStaticString &key = it.getKey();
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
+			entry.schemaEntry->inspect(subdoc);
+
 			if (isWritable(entry) && updates.isMember(key)) {
-				subdoc["user_value"] = maybeFilterSecret(entry,
-					updates[key], filterSecrets);
+				subdoc["user_value"] = updates[key];
 			} else {
-				subdoc["user_value"] = maybeFilterSecret(entry,
-					entry.userValue, filterSecrets);
+				subdoc["user_value"] = entry.userValue;
 			}
+
 			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = maybeFilterSecret(entry,
-					entry.getDefaultValue(*this), filterSecrets);
+				subdoc["default_value"] = entry.getDefaultValue(storeWithPreviewData);
 			}
 
 			const Json::Value &effectiveValue =
 				subdoc["effective_value"] =
-					maybeFilterSecret(
-						entry,
-						getEffectiveValue(subdoc["user_value"],
-							subdoc["default_value"]),
-						filterSecrets);
+					getEffectiveValue(subdoc["user_value"],
+						subdoc["default_value"]);
 			if (!schema->validateValue(it.getKey(), effectiveValue, error)) {
-				errors.push_back(error);
+				tmpErrors.push_back(error);
 			}
-
-			entry.schemaEntry->inspect(subdoc);
 
 			result[it.getKey()] = subdoc;
 			it.next();
 		}
 
 		if (!schema->getValidators().empty()) {
-			applyCustomValidators(updates, errors);
+			applyCustomValidators(updates, tmpErrors);
 		}
+
+		if (tmpErrors.empty()) {
+			applyNormalizers(result);
+		}
+
+		if (options.shouldApplyInspectFilters) {
+			applyInspectFilters(result);
+		}
+
+		if (options.filterSecrets) {
+			doFilterSecrets(result);
+		}
+
+		errors.insert(errors.end(), tmpErrors.begin(), tmpErrors.end());
 
 		return result;
 	}
@@ -324,7 +447,10 @@ public:
 	 * Any keys not in `updates` do not affect existing values stored in the store.
 	 */
 	bool update(const Json::Value &updates, vector<Error> &errors) {
-		Json::Value preview = previewUpdate(updates, errors, false);
+		PreviewOptions options;
+		options.filterSecrets = false;
+		options.shouldApplyInspectFilters = false;
+		Json::Value preview = previewUpdate(updates, errors, options);
 		if (errors.empty()) {
 			StringKeyTable<Entry>::Iterator it(entries);
 			while (*it != NULL) {
@@ -353,7 +479,7 @@ public:
 		while (*it != NULL) {
 			const HashedStaticString &subSchemaKey = it.getKey();
 			Entry &subSchemaEntry = it.getValue();
-			const StaticString mainSchemaKey = translator.reverseTranslateOne(
+			const string mainSchemaKey = translator.reverseTranslateOne(
 				subSchemaKey);
 			const Entry *mainSchemaEntry;
 
@@ -387,18 +513,19 @@ public:
 			const Entry &entry = it.getValue();
 			Json::Value subdoc(Json::objectValue);
 
-			subdoc["user_value"] = maybeFilterSecret(entry, entry.userValue, true);
-			if (entry.schemaEntry->defaultValueGetter) {
-				subdoc["default_value"] = maybeFilterSecret(entry,
-					entry.getDefaultValue(*this), true);
-			}
-			subdoc["effective_value"] = maybeFilterSecret(entry,
-				entry.getEffectiveValue(*this), true);
 			entry.schemaEntry->inspect(subdoc);
+			subdoc["user_value"] = entry.userValue;
+			subdoc["effective_value"] = entry.getEffectiveValue(*this);
+			if (entry.schemaEntry->defaultValueGetter && entry.schemaEntry->flags & _DYNAMIC_DEFAULT_VALUE) {
+				subdoc["default_value"] = entry.getDefaultValue(*this);
+			}
 
 			result[it.getKey()] = subdoc;
 			it.next();
 		}
+
+		applyInspectFilters(result);
+		doFilterSecrets(result);
 
 		return result;
 	}
@@ -408,6 +535,7 @@ public:
 	 * values only. This is like `inspect()` but much less verbose.
 	 * See the README's "Inspecting all data" section to learn more
 	 * about the format.
+	 * Note that values with the SECRET flag are not filtered.
 	 */
 	Json::Value inspectEffectiveValues() const {
 		Json::Value result(Json::objectValue);
@@ -475,6 +603,37 @@ Schema::validateSubSchema(const Store &store, vector<Error> &errors,
 		tempErrors = translator->reverseTranslate(tempErrors);
 		errors.insert(errors.end(), tempErrors.begin(), tempErrors.end());
 	}
+}
+
+template<typename Translator>
+inline Json::Value
+Schema::normalizeSubSchema(const Json::Value &effectiveValues,
+	const Schema *mainSchema, const Schema *subschema,
+	const Translator *translator, const Normalizer &origNormalizer)
+{
+	Json::Value translatedEffectiveValues(Json::objectValue);
+	StringKeyTable<Entry>::ConstIterator it(subschema->entries);
+
+	while (*it != NULL) {
+		const HashedStaticString &subSchemaKey = it.getKey();
+		const string mainSchemaKey = translator->reverseTranslateOne(
+			subSchemaKey);
+		const Entry *mainSchemaEntry;
+
+		if (mainSchema->entries.lookup(mainSchemaKey, &mainSchemaEntry)) {
+			translatedEffectiveValues[subSchemaKey] = effectiveValues[mainSchemaKey];
+		}
+
+		it.next();
+	}
+
+	return translator->reverseTranslate(origNormalizer(translatedEffectiveValues));
+}
+
+inline Json::Value
+Schema::getStaticDefaultValue(const Schema::Entry &entry) {
+	Store::Entry storeEntry(entry);
+	return Store::maybeFilterSecret(storeEntry, storeEntry.getDefaultValue(Store()));
 }
 
 

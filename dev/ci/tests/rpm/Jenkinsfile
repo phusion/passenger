@@ -1,0 +1,68 @@
+def setupTest(enablerFlag, distribution, architecture, block) {
+  if (enablerFlag) {
+    node('linux') {
+      withEnv([
+        "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME}/${distribution}-${architecture}",
+        "DISTRIBUTION=${distribution}",
+        "ARCHITECTURE=${architecture}"
+      ], block)
+    }
+  } else {
+    echo 'Test skipped.'
+  }
+}
+
+pipeline {
+  agent any
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    timeout(time: 45, unit: 'MINUTES')
+    disableConcurrentBuilds()
+    timestamps()
+    ansiColor('xterm')
+  }
+
+  parameters {
+    booleanParam(name: 'EL6', defaultValue: true, description: 'RHEL 6 tests')
+    booleanParam(name: 'EL7', defaultValue: true, description: 'RHEL 7 tests')
+  }
+
+  stages {
+    stage('Initialize') {
+      steps {
+        script {
+          if (env.JOB_NAME.indexOf('Enterprise') != -1) {
+            env.ENTERPRISE = '1'
+          } else {
+            env.ENTERPRISE = '0'
+          }
+
+          // For debugging purposes
+          sh 'env | sort'
+        }
+      }
+    }
+
+    stage('Test') {
+      steps {
+        script {
+          parallel(
+            'el6 x86_64': {
+              setupTest(params.EL6, 'el6', 'x86_64') {
+                checkout scm
+                sh './dev/ci/tests/rpm/run'
+              }
+            },
+            'el7 x86_64': {
+              setupTest(params.EL7, 'el7', 'x86_64') {
+                checkout scm
+                sh './dev/ci/tests/rpm/run'
+              }
+            }
+          )
+        }
+      }
+    }
+  }
+}

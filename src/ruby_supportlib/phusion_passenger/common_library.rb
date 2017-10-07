@@ -149,18 +149,18 @@ private
       optimize.sub!(/-flto/, "")
     end
 
-    extra_compiler_flags = "#{extra_compiler_flags} #{options[:cflags]}".strip
-
     define_c_or_cxx_object_compilation_task(
       object_file,
       source_file,
-      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
-      :flags => [
-        LIBEV_CFLAGS,
-        LIBUV_CFLAGS,
-        optimize,
-        extra_compiler_flags
-      ]
+      lambda { {
+        :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+        :flags => [
+          libev_cflags,
+          libuv_cflags,
+          optimize,
+          "#{maybe_eval_lambda(extra_compiler_flags)} #{options[:cflags]}".strip
+        ]
+      } }
     )
   end
 
@@ -274,6 +274,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Exceptions.o',
     :source   => 'Exceptions.cpp',
     :category => :base
+  define_component 'ProcessManagement/Spawn.o',
+    :source   => 'ProcessManagement/Spawn.cpp',
+    :category => :base
+  define_component 'ProcessManagement/Utils.o',
+    :source   => 'ProcessManagement/Utils.cpp',
+    :category => :base
   define_component 'Utils/SystemTime.o',
     :source   => 'Utils/SystemTime.cpp',
     :category => :base
@@ -341,16 +347,19 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
 
   define_component 'vendor-modified/modp_b64.o',
     :source   => 'vendor-modified/modp_b64.cpp',
-    :category => :bas64,
+    :category => :base64,
     :optimize => true,
     :strict_aliasing => false
   define_component 'vendor-modified/modp_b64_strict_aliasing.o',
     :source   => 'vendor-modified/modp_b64_strict_aliasing.cpp',
-    :category => :bas64,
+    :category => :base64,
     :optimize => true
   define_component 'UnionStationFilterSupport.o',
     :source   => 'UnionStationFilterSupport.cpp',
     :category => :union_station_filter
+  define_component 'ProcessManagement/Ruby.o',
+    :source   => 'ProcessManagement/Ruby.cpp',
+    :category => :process_management_ruby
 end
 
 # A subset of the objects are linked to the Nginx binary. This defines

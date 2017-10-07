@@ -43,12 +43,19 @@ PhusionPassenger.require_passenger_lib 'platform_info/crypto'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 PhusionPassenger.require_passenger_lib 'platform_info/cxx_portability'
 
-include PhusionPassenger
-include PhusionPassenger::PlatformInfo
+PlatformInfo = PhusionPassenger::PlatformInfo
+SHORT_PROGRAM_NAME = PhusionPassenger::SHORT_PROGRAM_NAME
+PhusionPassenger::SharedConstants.constants.each do |name|
+  Kernel.const_set(name, PhusionPassenger::SharedConstants.const_get(name))
+end
 
-require 'build/support/cxx_dependency_map'
-require 'build/support/general'
-require 'build/support/cplusplus'
+if File.exist?("#{SOURCE_ROOT}/build/support/cxx_dependency_map.rb")
+  require_build_system_file 'support/cxx_dependency_map'
+else
+  CXX_DEPENDENCY_MAP = {}
+end
+require_build_system_file 'support/general'
+require_build_system_file 'support/cplusplus'
 
 if string_option('OUTPUT_DIR')
   OUTPUT_DIR = string_option('OUTPUT_DIR') + "/"
@@ -56,7 +63,6 @@ else
   OUTPUT_DIR = "buildout/"
 end
 
-verbose true if !boolean_option('REALLY_QUIET')
 if boolean_option('STDERR_TO_STDOUT')
   # Just redirecting the file descriptor isn't enough because
   # data written to STDERR might arrive in an unexpected order
@@ -82,11 +88,10 @@ PACKAGE_VERSION = PhusionPassenger::VERSION_STRING
 MAINTAINER_NAME  = "Phusion"
 MAINTAINER_EMAIL = "info@phusion.nl"
 
-CC       = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cc)
-CXX      = maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cxx)
-LIBEXT   = PlatformInfo.library_extension
-USE_DMALLOC = boolean_option('USE_DMALLOC')
-USE_EFENCE  = boolean_option('USE_EFENCE')
+let(:cc) { maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cc) }
+let(:cxx) { maybe_wrap_in_ccache(PhusionPassenger::PlatformInfo.cxx) }
+let(:libext) { PlatformInfo.library_extension }
+
 USE_ASAN    = boolean_option('USE_ASAN')
 USE_SELINUX = boolean_option('USE_SELINUX')
 OPTIMIZE    = boolean_option('OPTIMIZE')
@@ -98,40 +103,24 @@ CXX_SUPPORTLIB_INCLUDE_PATHS = [
   "src/cxx_supportlib/vendor-modified"
 ]
 
-# Agent-specific compiler flags.
-AGENT_CFLAGS  = ""
-AGENT_CFLAGS << " -O" if OPTIMIZE
-AGENT_CFLAGS << " -DUSE_SELINUX" if USE_SELINUX
-AGENT_CFLAGS << " -flto" if LTO
-AGENT_CFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
-AGENT_CFLAGS.strip!
-
-# Agent-specific linker flags.
-AGENT_LDFLAGS = ""
-AGENT_LDFLAGS << " -O" if OPTIMIZE
-AGENT_LDFLAGS << " -flto" if LTO
-AGENT_LDFLAGS << " #{PlatformInfo.dmalloc_ldflags}" if USE_DMALLOC
-AGENT_LDFLAGS << " #{PlatformInfo.electric_fence_ldflags}" if USE_EFENCE
-AGENT_LDFLAGS << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
-AGENT_LDFLAGS << " -lselinux" if USE_SELINUX
-# Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).
-AGENT_LDFLAGS << " #{PlatformInfo.export_dynamic_flags}"
-# Enable dead symbol elimination on OS X.
-AGENT_LDFLAGS << " -Wl,-dead_strip" if PlatformInfo.os_name_simple == "macosx"
-AGENT_LDFLAGS.strip!
-
 # Extra compiler flags that should always be passed to the C/C++ compiler.
 # These should be included first in the command string, before anything else.
 EXTRA_PRE_CFLAGS = compiler_flag_option('EXTRA_PRE_CFLAGS')
 EXTRA_PRE_CXXFLAGS = compiler_flag_option('EXTRA_PRE_CXXFLAGS')
 # These should be included last in the command string.
-EXTRA_CFLAGS = PlatformInfo.default_extra_cflags.dup
-EXTRA_CFLAGS << " " << compiler_flag_option('EXTRA_CFLAGS') if !compiler_flag_option('EXTRA_CFLAGS').empty?
-EXTRA_CXXFLAGS = PlatformInfo.default_extra_cxxflags.dup
-EXTRA_CXXFLAGS << " " << compiler_flag_option('EXTRA_CXXFLAGS') if !compiler_flag_option('EXTRA_CXXFLAGS').empty?
-[EXTRA_CFLAGS, EXTRA_CXXFLAGS].each do |flags|
-  flags << " -fno-omit-frame-pointers" if USE_ASAN
-  flags << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
+let(:extra_cflags) do
+  result = PlatformInfo.default_extra_cflags.dup
+  result << " " << compiler_flag_option('EXTRA_CFLAGS') if !compiler_flag_option('EXTRA_CFLAGS').empty?
+  result << " -fno-omit-frame-pointer" if USE_ASAN
+  result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
+  result
+end
+let(:extra_cxxflags) do
+  result = PlatformInfo.default_extra_cxxflags.dup
+  result << " " << compiler_flag_option('EXTRA_CXXFLAGS') if !compiler_flag_option('EXTRA_CXXFLAGS').empty?
+  result << " -fno-omit-frame-pointer" if USE_ASAN
+  result << " -DPASSENGER_DISABLE_THREAD_LOCAL_STORAGE" if !boolean_option('PASSENGER_THREAD_LOCAL_STORAGE', true)
+  result
 end
 
 # Extra linker flags that should always be passed to the linker.

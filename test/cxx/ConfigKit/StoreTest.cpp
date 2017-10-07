@@ -80,20 +80,30 @@ namespace tut {
 		errors.push_back(ConfigKit::Error("Cannot read '{{foo}}'!"));
 	}
 
+	static void logSecretValidator(const ConfigKit::Store &store,
+		vector<ConfigKit::Error> &errors)
+	{
+		errors.push_back(ConfigKit::Error("'{{secret}}' is " + store["secret"].asString()));
+	}
+
 	TEST_METHOD(5) {
 		set_test_name("Custom validators");
 
 		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
+		schema.add("secret", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED | ConfigKit::SECRET);
 		schema.addValidator(addErrorValidator);
 		schema.addValidator(addErrorValidator);
+		schema.addValidator(logSecretValidator);
 		init();
 
+		doc["secret"] = "42";
 		config->previewUpdate(doc, errors);
 		std::sort(errors.begin(), errors.end());
-		ensure_equals(errors.size(), 3u);
+		ensure_equals(errors.size(), 4u);
 		ensure_equals(errors[0].getMessage(), "'foo' is required");
-		ensure_equals(errors[1].getMessage(), "Cannot read 'foo'!");
+		ensure_equals(errors[1].getMessage(), "'secret' is 42");
 		ensure_equals(errors[2].getMessage(), "Cannot read 'foo'!");
+		ensure_equals(errors[3].getMessage(), "Cannot read 'foo'!");
 	}
 
 
@@ -247,5 +257,101 @@ namespace tut {
 		ensure(config->update(doc, errors));
 		ensure_equals(config->get("foo").asInt(), 123);
 		ensure(config->get("foo2").isNull());
+	}
+
+	static Json::Value normalizeTargetAndLevel(const Json::Value &values) {
+		Json::Value updates(Json::objectValue);
+
+		if (values["target"].isString()) {
+			updates["target"]["path"] = values["target"];
+		}
+		if (!startsWith(values["level"].asString(), "L")) {
+			updates["level"] = "L" + values["level"].asString();
+		}
+
+		return updates;
+	}
+
+	TEST_METHOD(17) {
+		set_test_name("Normalizers");
+
+		schema.add("target", ConfigKit::ANY_TYPE, ConfigKit::REQUIRED);
+		schema.add("level", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED | ConfigKit::READ_ONLY);
+		schema.addNormalizer(normalizeTargetAndLevel);
+		init();
+
+		doc["target"] = "/path";
+		doc["level"] = "1";
+		ensure("(1)", config->update(doc, errors));
+		doc = config->inspect();
+
+		ensure("(2)", config->get("target").isObject());
+		ensure_equals("(3)", config->get("target")["path"].asString(), "/path");
+		ensure("(4)", doc["target"]["user_value"].isObject());
+		ensure_equals("(5)", doc["target"]["user_value"]["path"].asString(), "/path");
+		ensure_equals("(6)", config->get("level").asString(), "L1");
+		ensure_equals("(7)", doc["level"]["user_value"].asString(), "L1");
+
+		doc = Json::objectValue;
+		doc["level"] = "2";
+		ensure("(10)", config->update(doc, errors));
+		doc = config->inspect();
+
+		ensure("(11)", config->get("target").isObject());
+		ensure_equals("(12)", config->get("target")["path"].asString(), "/path");
+		ensure("(13)", doc["target"]["user_value"].isObject());
+		ensure_equals("(14)", doc["target"]["user_value"]["path"].asString(), "/path");
+		ensure_equals("(15)", config->get("level").asString(), "L1");
+		ensure_equals("(16)", doc["level"]["user_value"].asString(), "L1");
+	}
+
+	static Json::Value addExclamationFilter(const Json::Value &val) {
+		return val.asString() + "!";
+	}
+
+	TEST_METHOD(19) {
+		set_test_name("Inspect filters");
+
+		schema.add("foo", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED)
+			.setInspectFilter(addExclamationFilter);
+		init();
+
+		doc["foo"] = "hello";
+		ensure("(1)", config->update(doc, errors));
+		doc = config->inspect();
+
+		ensure_equals("(2)", config->get("foo").asString(), "hello");
+		ensure_equals("(3)", doc["foo"]["user_value"].asString(), "hello!");
+		ensure_equals("(4)", doc["foo"]["effective_value"].asString(), "hello!");
+	}
+
+	static Json::Value getTest20Default(const ConfigKit::Store &store) {
+		return store["a1"].asInt() +
+			store["a2"].asInt() +
+			store["a4"].asInt() +
+			store["a5"].asInt();
+	}
+
+	TEST_METHOD(20) {
+		set_test_name("Cached dynamic default values that depend on other values");
+		using namespace ConfigKit;
+
+		schema.add("a1", INT_TYPE, REQUIRED);
+		schema.add("a2", INT_TYPE, REQUIRED);
+		schema.addWithDynamicDefault("a3", INT_TYPE,
+			OPTIONAL | CACHE_DEFAULT_VALUE, getTest20Default);
+		schema.add("a4", INT_TYPE, REQUIRED);
+		schema.add("a5", INT_TYPE, REQUIRED);
+		init();
+
+		doc["a1"] = 1;
+		doc["a2"] = 10;
+		doc["a4"] = 100;
+		doc["a5"] = 1000;
+
+		ensure("(1)", config->update(doc, errors));
+		doc = config->inspect();
+
+		ensure_equals("(2)", config->get("a3").asInt(), 1111);
 	}
 }

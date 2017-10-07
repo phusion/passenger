@@ -24,6 +24,8 @@
  *  THE SOFTWARE.
  */
 
+#include <Shared/Fundamentals/Utils.h>
+
 class CoreWatcher: public AgentWatcher {
 protected:
 	string agentFilename;
@@ -37,7 +39,7 @@ protected:
 	}
 
 	virtual void execProgram() const {
-		if (hasEnvOption("PASSENGER_RUN_CORE_IN_VALGRIND", false)) {
+		if (getEnvBool("PASSENGER_RUN_CORE_IN_VALGRIND", false)) {
 			execlp("valgrind", "valgrind", "--dsymutil=yes", "--track-origins=yes", "--leak-check=full",
 				agentFilename.c_str(), "core",
 				// Some extra space to allow the child process to change its process title.

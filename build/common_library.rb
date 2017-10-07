@@ -36,8 +36,6 @@ PhusionPassenger.require_passenger_lib 'common_library'
 # Defines tasks for compiling a static library containing Boost and OXT.
 def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
   output_file = "#{output_dir}.a"
-  flags = "-Isrc/cxx_supportlib -Isrc/cxx_supportlib/vendor-copy -Isrc/cxx_supportlib/vendor-modified " +
-    "#{extra_compiler_flags} #{EXTRA_CXXFLAGS}"
 
   if OPTIMIZE
     optimize = "-O2"
@@ -57,8 +55,10 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
     define_cxx_object_compilation_task(
       object_file,
       source_file,
-      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
-      :flags => [optimize, extra_compiler_flags]
+      lambda { {
+        :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+        :flags => [optimize, maybe_eval_lambda(extra_compiler_flags)]
+      } }
     )
   end
 
@@ -73,8 +73,10 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
     define_cxx_object_compilation_task(
       object_file,
       source_file,
-      :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
-      :flags => [optimize, extra_compiler_flags]
+      lambda { {
+        :include_paths => CXX_SUPPORTLIB_INCLUDE_PATHS,
+        :flags => [optimize, maybe_eval_lambda(extra_compiler_flags)]
+      } }
     )
   end
 
@@ -102,8 +104,22 @@ end
 
 if USE_VENDORED_LIBEV
   LIBEV_SOURCE_DIR = File.expand_path("../src/cxx_supportlib/vendor-modified/libev", File.dirname(__FILE__)) + "/"
-  LIBEV_CFLAGS = "-Isrc/cxx_supportlib/vendor-modified/libev"
   LIBEV_TARGET = LIBEV_OUTPUT_DIR + ".libs/libev.a"
+
+  let(:libev_cflags) do
+    result = '-Isrc/cxx_supportlib/vendor-modified/libev'
+    # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
+    result << ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
+    result
+  end
+
+  let(:libev_libs) do
+    la_contents = File.open(LIBEV_OUTPUT_DIR + ".libs/libev.la", "r") do |f|
+      f.read
+    end
+    la_contents =~ /dependency_libs='(.+)'/
+    "#{LIBEV_OUTPUT_DIR}.libs/libev.a #{$1}".strip
+  end
 
   task :libev => LIBEV_TARGET
 
@@ -113,20 +129,20 @@ if USE_VENDORED_LIBEV
     "src/cxx_supportlib/vendor-modified/libev/Makefile.am"
   ]
   file LIBEV_OUTPUT_DIR + "Makefile" => dependencies do
-    cc = CC
-    cxx = CXX
+    cc_command = cc
+    cxx_command = cxx
     if OPTIMIZE && LTO
-      cc = "#{cc} -flto"
-      cxx = "#{cxx} -flto"
+      cc_command = "#{cc_command} -flto"
+      cxx_command = "#{cxx_command} -flto"
     end
     # Disable all warnings: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
-    cflags = "#{EXTRA_CFLAGS} -w"
+    cflags = "#{extra_cflags} -w"
     sh "mkdir -p #{LIBEV_OUTPUT_DIR}" if !File.directory?(LIBEV_OUTPUT_DIR)
     sh "cd #{LIBEV_OUTPUT_DIR} && sh #{LIBEV_SOURCE_DIR}configure " +
       "--disable-shared --enable-static " +
       # libev's configure script may select a different default compiler than we
       # do, so we force our compiler choice.
-      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}' orig_CFLAGS=1"
+      "CC='#{cc_command}' CXX='#{cxx_command}' CFLAGS='#{cflags}' orig_CFLAGS=1"
   end
 
   libev_sources = Dir["src/cxx_supportlib/vendor-modified/libev/{*.c,*.h}"]
@@ -144,34 +160,37 @@ if USE_VENDORED_LIBEV
   end
 
   task :clean => 'libev:clean'
-
-  def libev_libs
-    la_contents = File.open(LIBEV_OUTPUT_DIR + ".libs/libev.la", "r") do |f|
-      f.read
-    end
-    la_contents =~ /dependency_libs='(.+)'/
-    "#{LIBEV_OUTPUT_DIR}.libs/libev.a #{$1}".strip
-  end
 else
-  LIBEV_CFLAGS = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
   LIBEV_TARGET = nil
-  task :libev  # do nothing
 
-  def libev_libs
-    string_option('LIBEV_LIBS', '-lev')
+  let(:libev_cflags) do
+    result = string_option('LIBEV_CFLAGS', '-I/usr/include/libev')
+    # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
+    result << ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
+    result
   end
-end
 
-# Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
-LIBEV_CFLAGS << " -Wno-ambiguous-member-template" if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
+  let(:libev_libs) { string_option('LIBEV_LIBS', '-lev') }
+
+  task :libev  # do nothing
+end
 
 
 ########## libuv ##########
 
 if USE_VENDORED_LIBUV
   LIBUV_SOURCE_DIR = File.expand_path("../src/cxx_supportlib/vendor-copy/libuv", File.dirname(__FILE__)) + "/"
-  LIBUV_CFLAGS = "-Isrc/cxx_supportlib/vendor-copy/libuv/include"
   LIBUV_TARGET = LIBUV_OUTPUT_DIR + ".libs/libuv.a"
+
+  let(:libuv_cflags) { '-Isrc/cxx_supportlib/vendor-copy/libuv/include' }
+
+  let(:libuv_libs) do
+    la_contents = File.open(LIBUV_OUTPUT_DIR + ".libs/libuv.la", "r") do |f|
+      f.read
+    end
+    la_contents =~ /dependency_libs='(.+)'/
+    "#{LIBUV_OUTPUT_DIR}.libs/libuv.a #{$1}".strip
+  end
 
   task :libuv => LIBUV_TARGET
 
@@ -180,15 +199,15 @@ if USE_VENDORED_LIBUV
     "src/cxx_supportlib/vendor-copy/libuv/Makefile.am"
   ]
   file LIBUV_OUTPUT_DIR + "Makefile" => dependencies do
-    cc = CC
-    cxx = CXX
+    cc_command = cc
+    cxx_command = cxx
     if OPTIMIZE && LTO
-      cc = "#{cc} -flto"
-      cxx = "#{cxx} -flto"
+      cc_command = "#{cc_command} -flto"
+      cxx_command = "#{cxx_command} -flto"
     end
     # Disable all warnings. The author has a clear standpoint on that:
     # http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#COMPILER_WARNINGS
-    cflags = "#{EXTRA_CFLAGS} -w"
+    cflags = "#{extra_cflags} -w"
     sh "mkdir -p #{LIBUV_OUTPUT_DIR}" if !File.directory?(LIBUV_OUTPUT_DIR)
     # Prevent 'make' from regenerating autotools files
     sh "cd #{LIBUV_SOURCE_DIR} && (touch aclocal.m4 configure Makefile.in || true)"
@@ -196,7 +215,7 @@ if USE_VENDORED_LIBUV
       "--disable-shared --enable-static " +
       # libuv's configure script may select a different default compiler than we
       # do, so we force our compiler choice.
-      "CC='#{cc}' CXX='#{cxx}' CFLAGS='#{cflags}'"
+      "CC='#{cc_command}' CXX='#{cxx_command}' CFLAGS='#{cflags}'"
   end
 
   libuv_sources = Dir["src/cxx_supportlib/vendor-copy/libuv/**/{*.c,*.h}"]
@@ -214,22 +233,13 @@ if USE_VENDORED_LIBUV
   end
 
   task :clean => 'libuv:clean'
-
-  def libuv_libs
-    la_contents = File.open(LIBUV_OUTPUT_DIR + ".libs/libuv.la", "r") do |f|
-      f.read
-    end
-    la_contents =~ /dependency_libs='(.+)'/
-    "#{LIBUV_OUTPUT_DIR}.libs/libuv.a #{$1}".strip
-  end
 else
-  LIBUV_CFLAGS = string_option('LIBUV_CFLAGS', '-I/usr/include/libuv')
   LIBUV_TARGET = nil
-  task :libuv  # do nothing
 
-  def libuv_libs
-    string_option('LIBUV_LIBS', '-luv')
-  end
+  let(:libuv_cflags) { string_option('LIBUV_CFLAGS', '-I/usr/include/libuv') }
+  let(:libuv_libs) { string_option('LIBUV_LIBS', '-luv') }
+
+  task :libuv  # do nothing
 end
 
 
@@ -254,10 +264,16 @@ end
 ##############################
 
 
-libboost_oxt_cflags = ""
-libboost_oxt_cflags << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
-libboost_oxt_cflags.strip!
-LIBBOOST_OXT, LIBBOOST_OXT_LINKARG =
-  define_libboost_oxt_task("common", COMMON_OUTPUT_DIR + "libboost_oxt", libboost_oxt_cflags)
+let(:libboost_oxt_cflags) do
+  result = []
+  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
+  result.join(' ')
+end
+
+LIBBOOST_OXT, LIBBOOST_OXT_LINKARG = define_libboost_oxt_task(
+  'common',
+  "#{COMMON_OUTPUT_DIR}libboost_oxt",
+  method(:libboost_oxt_cflags)
+)
 COMMON_LIBRARY.enable_optimizations!(LTO) if OPTIMIZE
-COMMON_LIBRARY.define_tasks(libboost_oxt_cflags)
+COMMON_LIBRARY.define_tasks(method(:libboost_oxt_cflags))

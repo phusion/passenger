@@ -176,8 +176,8 @@ module PhusionPassenger
         require File.expand_path('config/setup_load_paths')
 
       # Older versions of Bundler use .bundle/environment.rb as the Bundler
-      # environment lock file. This has been replaced by Gemfile.lock in later
-      # versions, but we still support the older mechanism.
+      # environment lock file. This has been replaced by Gemfile.lock/gems.locked
+      # in later versions, but we still support the older mechanism.
       # If the Bundler environment lock file exists then load that. If it
       # exists then there's a 99.9% chance that loading it is the correct
       # thing to do.
@@ -193,9 +193,9 @@ module PhusionPassenger
       #    or the gems are not locked. In either case, we're supposed to call
       #    Bundler.setup.
       #
-      # The existence of Gemfile indicates whether (2) is true:
-      elsif File.exist?('Gemfile')
-        # In case of Rails 3, config/boot.rb already calls Bundler.setup.
+      # The existence of Gemfile/gems.rb indicates whether (2) is true:
+      elsif File.exist?('Gemfile') || File.exist?('gems.rb')
+        # In case of Rails 3+, config/boot.rb already calls Bundler.setup.
         # However older versions of Rails may not so loading boot.rb might
         # not be the correct thing to do. To be on the safe side we
         # call Bundler.setup ourselves; calling Bundler.setup twice is

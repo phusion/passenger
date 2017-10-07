@@ -79,7 +79,7 @@
 },
 {
     ngx_string("passenger_enabled"),
-    NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
     passenger_enabled,
     NGX_HTTP_LOC_CONF_OFFSET,
     offsetof(passenger_loc_conf_t, enabled),

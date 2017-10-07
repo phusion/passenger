@@ -27,10 +27,7 @@ module PhusionPassenger
   module Packaging
     # Files that must be generated before packaging.
     PREGENERATED_FILES = [
-      'src/cxx_supportlib/Constants.h',
-      'doc/Packaging.html',
-      'doc/CloudLicensingConfiguration.html',
-      'doc/ServerOptimizationGuide.html'
+      'src/cxx_supportlib/Constants.h'
     ]
 
     USER_EXECUTABLES = [
@@ -90,6 +87,7 @@ module PhusionPassenger
       '.github/*',
       '.settings/*',
       '.externalToolBuilders/*',
+      '.vscode/*',
       '.cproject',
       '.project',
       'Gemfile',

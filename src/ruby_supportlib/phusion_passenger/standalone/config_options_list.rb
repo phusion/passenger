@@ -246,7 +246,7 @@ module PhusionPassenger
         :name      => :spawn_method,
         :type_desc => 'NAME',
         :default   => PlatformInfo.ruby_supports_fork? ? DEFAULT_SPAWN_METHOD : 'direct',
-        :desc      => 'The spawn method to use. Default: %DEFAULT%'
+        :desc      => 'The spawn method to use. Default: see docs'
       },
       {
         :name      => :static_files_dir,

@@ -23,6 +23,7 @@
 #include <InstanceDirectory.h>
 #include <BackgroundEventLoop.h>
 #include <Exceptions.h>
+#include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
 #include <jsoncpp/json-forwards.h>

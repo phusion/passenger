@@ -3,6 +3,7 @@
 .rbx
 .vagrant
 .noexec.yaml
+.vscode/c_cpp_properties.json
 autom4te.cache
 *.bundle
 *.pyc
@@ -20,7 +21,6 @@ xcuserdata
 /config.rb
 /buildout
 build/cache
-doc/*.html
 src/helper-scripts/download_binaries/Makefile
 test/.gdbinit
 test/test.log

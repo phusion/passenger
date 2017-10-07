@@ -542,13 +542,13 @@ EV_API_DECL void ev_sleep (ev_tstamp delay) EV_THROW; /* sleep for a while */
  * or take some potentially destructive action.
  * The default is your system realloc function.
  */
-EV_API_DECL void ev_set_allocator (void *(*cb)(void *ptr, long size) EV_THROW) EV_THROW;
+EV_API_DECL void ev_set_allocator (void *(*cb)(void *ptr, long size)) EV_THROW;
 
 /* set the callback function to call on a
  * retryable syscall error
  * (such as failed select, poll, epoll_wait)
  */
-EV_API_DECL void ev_set_syserr_cb (void (*cb)(const char *msg) EV_THROW) EV_THROW;
+EV_API_DECL void ev_set_syserr_cb (void (*cb)(const char *msg)) EV_THROW;
 
 #if EV_MULTIPLICITY
 
@@ -670,7 +670,7 @@ EV_API_DECL void *ev_userdata (EV_P) EV_THROW;
 typedef void (*ev_loop_callback)(EV_P);
 EV_API_DECL void ev_set_invoke_pending_cb (EV_P_ ev_loop_callback invoke_pending_cb) EV_THROW;
 /* C++ doesn't allow the use of the ev_loop_callback typedef here, so we need to spell it out */
-EV_API_DECL void ev_set_loop_release_cb (EV_P_ void (*release)(EV_P) EV_THROW, void (*acquire)(EV_P) EV_THROW) EV_THROW;
+EV_API_DECL void ev_set_loop_release_cb (EV_P_ void (*release)(EV_P), void (*acquire)(EV_P)) EV_THROW;
 
 EV_API_DECL unsigned int ev_pending_count (EV_P) EV_THROW; /* number of pending events, if any */
 EV_API_DECL void ev_invoke_pending (EV_P); /* invoke all pending watchers */

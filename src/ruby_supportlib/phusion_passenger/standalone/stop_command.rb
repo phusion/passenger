@@ -48,6 +48,7 @@ module PhusionPassenger
         end
         if running
           @controller.stop
+          File.delete(@options[:socket_file]) if @options[:engine] == "nginx" && @options[:socket_file]
         else
           Standalone::ControlUtils.warn_pid_file_not_found(@options)
           exit 1

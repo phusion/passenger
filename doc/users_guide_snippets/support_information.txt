@@ -1,8 +1,0 @@
-=== Supported operating systems and languages ===
-
-This documentation has moved. https://www.phusionpassenger.com/library/install/supported_operating_systems_and_languages.html
-
-[[where_to_get_support]]
-=== Where to get support ===
-
-include::where_to_get_support.txt[]

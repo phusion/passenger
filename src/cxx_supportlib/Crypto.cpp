@@ -294,7 +294,7 @@ CFDataRef Crypto::genIV(size_t ivSize) {
 
 bool Crypto::getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len) {
 	const CSSM_KEY *cssmKey;
-	CSSM_WRAP_KEY wrappedKey = {{0}};
+	CSSM_WRAP_KEY wrappedKey;
 
 	CSSM_CSP_HANDLE cspHandle = 0;
 	CSSM_CC_HANDLE ccHandle = 0;
@@ -322,6 +322,7 @@ bool Crypto::getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len) {
 											&ccHandle);
 	if (error != CSSM_OK) { cssmPerror("CSSM_CSP_CreateSymmetricContext",error); }
 
+	memset(&wrappedKey, 0, sizeof(wrappedKey));
 	error = CSSM_WrapKey(ccHandle,
 				 creds,
 				 cssmKey,

@@ -106,6 +106,7 @@ void        psg_watchdog_launcher_free(PsgWatchdogLauncher *launcher);
 #include <ResourceLocator.h>
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
+#include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
@@ -147,15 +148,6 @@ class WatchdogLauncher {
 	 */
 	P_RO_PROPERTY_CONST_REF(private, string, CoreAddress);
 	P_RO_PROPERTY_CONST_REF(private, string, CorePassword);
-
-	/**
-	 * The address on which the Passenger UstRouter listens, and the
-	 * corresponding password.
-	 *
-	 * Only valid when `getPid() != 0`.
-	 */
-	P_RO_PROPERTY_CONST_REF(private, string, UstRouterAddress);
-	P_RO_PROPERTY_CONST_REF(private, string, UstRouterPassword);
 
 	/**
 	 * The path to the instance directory that the Watchdog has created.
@@ -498,8 +490,6 @@ public:
 				mCoreAddress       = info.get("core_address");
 				mCorePassword      = info.get("core_password");
 				mInstanceDir       = info.get("instance_dir");
-				mUstRouterAddress  = info.get("ust_router_address");
-				mUstRouterPassword = info.get("ust_router_password");
 				guard.clear();
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);

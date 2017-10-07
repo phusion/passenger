@@ -1492,4 +1492,3 @@ passenger_content_handler(ngx_http_request_t *r)
 
     return NGX_DONE;
 }
-

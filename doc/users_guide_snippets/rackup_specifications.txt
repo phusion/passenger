@@ -1,1 +1,0 @@
-This documentation has moved. Please visit https://www.phusionpassenger.com/library/deploy/config_ru.html

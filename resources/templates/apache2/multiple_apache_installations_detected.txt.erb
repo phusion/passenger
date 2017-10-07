@@ -4,12 +4,12 @@ You are about to install <%= PhusionPassenger::PROGRAM_NAME %> against the follo
 Apache installation:
 
   <b>Apache <%= @current.version %></b>
-  apxs2     : <%= @current.apxs2 %>
+  apxs2     : <%= @current.apxs2 || 'N/A (OS-provided install)' %>
   Executable: <%= @current.httpd %>
 
 However, <%= @other_installs.size %> other Apache installation(s) have been found on your system:
 <% @other_installs.each do |result| %>
   * Apache <%= result.version %>
-    apxs2     : <%= result.apxs2 %>
+    apxs2     : <%= result.apxs2 || 'N/A (OS-provided install)' %>
     Executable: <%= result.httpd %>
 <% end %>

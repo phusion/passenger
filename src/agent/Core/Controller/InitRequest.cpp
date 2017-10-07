@@ -172,6 +172,7 @@ Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis 
 				req->envvars->size);
 		}
 
+		// Allow certain options to be overriden on a per-request basis
 		fillPoolOption(req, req->options.maxRequests, PASSENGER_MAX_REQUESTS);
 	}
 }
@@ -202,6 +203,7 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.spawnMethod = requestConfig->spawnMethod;
 	options.loadShellEnvvars = requestConfig->loadShellEnvvars;
 	options.statThrottleRate = mainConfig.statThrottleRate;
+	options.maxRequests = requestConfig->maxRequests;
 
 	/******************************/
 }

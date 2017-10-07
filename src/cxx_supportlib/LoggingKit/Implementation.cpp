@@ -32,8 +32,10 @@
 #include <cstring>
 #include <cerrno>
 #include <cassert>
+#include <queue>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <utility>
 #include <unistd.h>
 #include <time.h>
 #include <pthread.h>
@@ -53,6 +55,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
+#include <Utils/SystemTime.h>
 
 namespace Passenger {
 namespace LoggingKit {
@@ -71,6 +74,11 @@ initialize(const Json::Value &initialConfig) {
 	context = new Context(initialConfig);
 }
 
+void
+shutdown() {
+	delete context;
+	context = NULL;
+}
 
 Level getLevel() {
 	if (OXT_LIKELY(context != NULL)) {
@@ -364,71 +372,62 @@ logAppOutput(pid_t pid, const StaticString &channelName, const char *message, un
 }
 
 
-static void
-preNormalizeConfig(ConfigKit::Store &config) {
+static Json::Value
+normalizeConfig(const Json::Value &effectiveValues) {
 	Json::Value updates(Json::objectValue);
 
 	updates["level"] = levelToString(parseLevel(
-		config["level"].asString())).toString();
+		effectiveValues["level"].asString())).toString();
 	updates["app_output_log_level"] = levelToString(parseLevel(
-		config["app_output_log_level"].asString())).toString();
+		effectiveValues["app_output_log_level"].asString())).toString();
 
-	if (config["target"].isString()) {
-		updates["target"]["path"] = absolutizePath(config["target"].asString());
-	} else if (!config["target"]["path"].isNull()) {
-		updates["target"] = config["target"];
-		updates["target"]["path"] = absolutizePath(config["target"]["path"].asString());
+	if (effectiveValues["target"].isString()) {
+		updates["target"]["path"] = absolutizePath(effectiveValues["target"].asString());
+	} else if (!effectiveValues["target"]["path"].isNull()) {
+		updates["target"] = effectiveValues["target"];
+		updates["target"]["path"] = absolutizePath(effectiveValues["target"]["path"].asString());
 	}
 
-	if (config["file_descriptor_log_target"].isString()) {
+	if (effectiveValues["file_descriptor_log_target"].isString()) {
 		updates["file_descriptor_log_target"]["path"] =
-			absolutizePath(config["file_descriptor_log_target"].asString());
-	} else if (config["file_descriptor_log_target"].isObject()
-		&& !config["file_descriptor_log_target"]["path"].isNull())
+			absolutizePath(effectiveValues["file_descriptor_log_target"].asString());
+	} else if (effectiveValues["file_descriptor_log_target"].isObject()
+		&& !effectiveValues["file_descriptor_log_target"]["path"].isNull())
 	{
-		updates["file_descriptor_log_target"] = config["file_descriptor_log_target"];
+		updates["file_descriptor_log_target"] = effectiveValues["file_descriptor_log_target"];
 		updates["file_descriptor_log_target"]["path"] =
-			absolutizePath(config["file_descriptor_log_target"]["path"].asString());
+			absolutizePath(effectiveValues["file_descriptor_log_target"]["path"].asString());
 	}
 
-	vector<ConfigKit::Error> errors;
-	if (!config.update(updates, errors)) {
-		P_BUG("Error pre-normalizing LoggingKit config: "
-			<< ConfigKit::toString(errors));
-	}
-}
-
-static void
-postNormalizeConfig(ConfigKit::Store &config) {
-	Json::Value updates(Json::objectValue);
-
-	if (config["target"].isMember("fd")) {
-		updates["target"] = config["target"];
-		updates.removeMember("fd");
-	}
-	if (config["file_descriptor_log_target"].isMember("fd")) {
-		updates["file_descriptor_log_target"] = config["file_descriptor_log_target"];
-		updates.removeMember("fd");
-	}
-
-	if (!updates.empty()) {
-		vector<ConfigKit::Error> errors;
-		if (!config.update(updates, errors)) {
-			P_BUG("Error post-normalizing LoggingKit config: "
-				<< ConfigKit::toString(errors));
-		}
-	}
+	return updates;
 }
 
 
 Context::Context(const Json::Value &initialConfig)
-	: config(schema, initialConfig)
+	: config(schema, initialConfig),
+	  gcThread(NULL),
+	  shuttingDown(false)
 {
-	preNormalizeConfig(config);
 	configRlz.store(new ConfigRealization(config));
 	configRlz.load()->apply(config, NULL);
-	postNormalizeConfig(config);
 	configRlz.load()->finalize();
+}
+
+Context::~Context() {
+	boost::unique_lock<boost::mutex> l(gcSyncher);
+
+	// If a gc thread exists, tell it to shut down and
+	// wait until it has done so.
+	shuttingDown = true;
+	gcShuttingDownCond.notify_one();
+	while (gcThread != NULL) {
+		gcHasShutDownCond.wait(l);
+	}
+
+	killGcThread();
+	gcLockless(false, l);
+
+	delete configRlz.load();
 }
 
 ConfigKit::Store
@@ -449,9 +448,7 @@ Context::prepareConfigChange(const Json::Value &updates,
 		return false;
 	}
 
-	preNormalizeConfig(*req.config);
 	req.configRlz = new ConfigRealization(*req.config);
-	postNormalizeConfig(*req.config);
 	return true;
 }
 
@@ -471,6 +468,82 @@ Context::commitConfigChange(LoggingKit::ConfigChangeRequest &req) BOOST_NOEXCEPT
 	newConfigRlz->finalize();
 }
 
+pair<ConfigRealization*,MonotonicTimeUsec>
+Context::peekOldConfig() {
+	return oldConfigs.front();
+}
+
+void
+Context::popOldConfig(ConfigRealization *oldConfig) {
+	delete oldConfig;
+	oldConfigs.pop();
+}
+
+void
+Context::createGcThread() {
+	if (gcThread == NULL) {
+		try {
+			gcThread = new oxt::thread(boost::bind(&Context::gcThreadMain, this),
+				"LoggingKit config garbage collector thread",
+				128 * 1024);
+		} catch (const std::exception &e) {
+			P_ERROR("Error spawning background thread to garbage collect"
+				" old LoggingKit configuration: " << e.what());
+		}
+	}
+}
+
+void
+Context::pushOldConfigAndCreateGcThread(ConfigRealization *oldConfigRlz, MonotonicTimeUsec monotonicNow) {
+	// Garbage collect old config realization in 5 minutes.
+	// There is no way to cheaply find out whether oldConfigRlz
+	// is still being used (we don't want to resort to more atomic
+	// operations, or conservative garbage collection) but
+	// waiting 5 minutes should be good enough.
+	MonotonicTimeUsec gcTime = monotonicNow + 5llu * 60llu * 1000000llu;
+	boost::unique_lock<boost::mutex> l(gcSyncher);
+	oldConfigs.push(make_pair(oldConfigRlz, gcTime));
+	createGcThread();
+}
+
+bool
+Context::oldConfigsExist() {
+	return !oldConfigs.empty();
+}
+
+void
+Context::gcThreadMain() {
+	boost::unique_lock<boost::mutex> l(gcSyncher);
+	gcLockless(true, l);
+}
+
+void
+Context::gcLockless(bool wait, boost::unique_lock<boost::mutex> &lock) {
+	while (!shuttingDown && oldConfigsExist()) {
+		pair<ConfigRealization *, MonotonicTimeUsec> p = peekOldConfig();
+		for (MonotonicTimeUsec now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
+			 !shuttingDown && wait && now < p.second;
+			 now = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>())
+		{
+			// Wait until it's time to GC this config object,
+			// or until the destructor tells us that we're shutting down.
+			gcShuttingDownCond.timed_wait(lock, boost::posix_time::microseconds(p.second - now));
+		}
+		if (!shuttingDown) {
+			popOldConfig(p.first);
+		}
+	}
+	killGcThread();
+}
+
+void
+Context::killGcThread() {
+	if (gcThread != NULL) {
+		delete gcThread;
+		gcThread = NULL;
+	}
+	gcHasShutDownCond.notify_one();
+}
 
 Json::Value
 Schema::createStderrTarget() {
@@ -542,12 +615,21 @@ Schema::validateTarget(const string &key, const ConfigKit::Store &store,
 	}
 }
 
+static Json::Value
+filterTargetFd(const Json::Value &value) {
+	Json::Value result = value;
+	result.removeMember("fd");
+	return result;
+}
+
 Schema::Schema() {
 	using namespace ConfigKit;
 
 	add("level", STRING_TYPE, OPTIONAL, DEFAULT_LOG_LEVEL_NAME);
-	add("target", ANY_TYPE, OPTIONAL, createStderrTarget());
-	add("file_descriptor_log_target", ANY_TYPE, OPTIONAL);
+	add("target", ANY_TYPE, OPTIONAL, createStderrTarget())
+		.setInspectFilter(filterTargetFd);
+	add("file_descriptor_log_target", ANY_TYPE, OPTIONAL)
+		.setInspectFilter(filterTargetFd);
 	add("redirect_stderr", BOOL_TYPE, OPTIONAL, true);
 	add("app_output_log_level", STRING_TYPE, OPTIONAL, DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME);
 
@@ -559,6 +641,8 @@ Schema::Schema() {
 		boost::placeholders::_1, boost::placeholders::_2));
 	addValidator(boost::bind(validateTarget, "file_descriptor_log_target",
 		boost::placeholders::_1, boost::placeholders::_2));
+
+	addNormalizer(normalizeConfig);
 
 	finalize();
 }
@@ -654,14 +738,6 @@ ConfigRealization::~ConfigRealization() {
 	}
 }
 
-static void
-garbageCollectConfigRealization(ConfigRealization *configRlz) {
-	boost::this_thread::disable_interruption di;
-	boost::this_thread::disable_syscall_interruption dsi;
-	syscalls::sleep(30);
-	delete configRlz;
-}
-
 void
 ConfigRealization::apply(const ConfigKit::Store &config, ConfigRealization *oldConfigRlz)
 	BOOST_NOEXCEPT_OR_NOTHROW
@@ -676,19 +752,8 @@ ConfigRealization::apply(const ConfigKit::Store &config, ConfigRealization *oldC
 	}
 
 	if (oldConfigRlz != NULL) {
-		// Garbage collect old config realization in 30 seconds.
-		// There is no way to cheaply find out whether oldConfigRlz
-		// is still being used (we don't want to resort to more atomic
-		// operations, or conservative garbage collection) but
-		// waiting 30 seconds should be good enough.
-		try {
-			oxt::thread(boost::bind(garbageCollectConfigRealization, oldConfigRlz),
-				"LoggingKit config garbage collector " + toString(oldConfigRlz),
-				128 * 1024);
-		} catch (const std::exception &e) {
-			P_ERROR("Error spawning background thread to garbage collect"
-				" old LoggingKit configuration: " << e.what());
-		}
+		MonotonicTimeUsec monotonicNow = SystemTime::getMonotonicUsecWithGranularity<SystemTime::GRAN_1SEC>();
+		context->pushOldConfigAndCreateGcThread(oldConfigRlz, monotonicNow);
 	}
 }
 

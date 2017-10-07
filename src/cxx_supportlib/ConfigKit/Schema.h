@@ -59,16 +59,19 @@ public:
 		Type type;
 		Flags flags;
 		ValueGetter defaultValueGetter;
+		ValueFilter inspectFilter;
 
 		Entry()
 			: type(UNKNOWN_TYPE),
 			  flags(OPTIONAL)
 			{ }
 
-		Entry(Type _type, Flags _flags, const ValueGetter &_defaultValueGetter)
+		Entry(Type _type, Flags _flags, const ValueGetter &_defaultValueGetter,
+			const ValueFilter &_inspectFilter)
 			: type(_type),
 			  flags(_flags),
-			  defaultValueGetter(_defaultValueGetter)
+			  defaultValueGetter(_defaultValueGetter),
+			  inspectFilter(_inspectFilter)
 			{ }
 
 		Json::Value inspect() const {
@@ -89,17 +92,39 @@ public:
 				doc["secret"] = true;
 			}
 			if (defaultValueGetter) {
-				doc["has_default_value"] = true;
+				if (flags & _DYNAMIC_DEFAULT_VALUE) {
+					doc["has_default_value"] = "dynamic";
+				} else {
+					doc["has_default_value"] = "static";
+					doc["default_value"] = Schema::getStaticDefaultValue(*this);
+				}
 			}
+		}
+	};
+
+	class EntryBuilder {
+	private:
+		Entry *entry;
+
+	public:
+		EntryBuilder(Entry &_entry)
+			: entry(&_entry)
+			{ }
+
+		EntryBuilder &setInspectFilter(const ValueFilter &filter) {
+			entry->inspectFilter = filter;
+			return *this;
 		}
 	};
 
 	typedef StringKeyTable<Entry>::ConstIterator ConstIterator;
 	typedef boost::function<void (const Store &store, vector<Error> &errors)> Validator;
+	typedef boost::function<Json::Value (const Json::Value &effectiveValues)> Normalizer;
 
 private:
 	StringKeyTable<Entry> entries;
 	boost::container::vector<Validator> validators;
+	boost::container::vector<Normalizer> normalizers;
 	bool finalized;
 
 	static Json::Value returnJsonValue(const Store &store, Json::Value v) {
@@ -117,6 +142,13 @@ private:
 		const Schema *subschema, const Translator *translator,
 		const Validator &origValidator);
 
+	template<typename Translator>
+	static Json::Value normalizeSubSchema(const Json::Value &effectiveValues,
+		const Schema *mainSchema, const Schema *subschema,
+		const Translator *translator, const Normalizer &origNormalizer);
+
+	static Json::Value getStaticDefaultValue(const Schema::Entry &entry);
+
 public:
 	Schema()
 		: finalized(false)
@@ -125,28 +157,29 @@ public:
 	/**
 	 * Register a new schema entry, possibly with a static default value.
 	 */
-	void add(const HashedStaticString &key, Type type, unsigned int flags,
+	EntryBuilder add(const HashedStaticString &key, Type type, unsigned int flags,
 		const Json::Value &defaultValue = Json::Value(Json::nullValue))
 	{
 		assert(!finalized);
 		if (defaultValue.isNull()) {
-			Entry entry(type, (Flags) flags, ValueGetter());
-			entries.insert(key, entry);
+			Entry entry(type, (Flags) flags, ValueGetter(), ValueFilter());
+			return EntryBuilder(entries.insert(key, entry)->value);
 		} else {
 			if (flags & REQUIRED) {
 				throw ArgumentException(
 					"A key cannot be required and have a default value at the same time");
 			}
 			Entry entry(type, (Flags) flags,
-				boost::bind(returnJsonValue, boost::placeholders::_1, defaultValue));
-			entries.insert(key, entry);
+				boost::bind(returnJsonValue, boost::placeholders::_1, defaultValue),
+				ValueFilter());
+			return EntryBuilder(entries.insert(key, entry)->value);
 		}
 	}
 
 	/**
 	 * Register a new schema entry with a dynamic default value.
 	 */
-	void addWithDynamicDefault(const HashedStaticString &key, Type type, unsigned int flags,
+	EntryBuilder addWithDynamicDefault(const HashedStaticString &key, Type type, unsigned int flags,
 		const ValueGetter &defaultValueGetter)
 	{
 		if (flags & REQUIRED) {
@@ -154,8 +187,9 @@ public:
 				"A key cannot be required and have a default value at the same time");
 		}
 		assert(!finalized);
-		Entry entry(type, (Flags) (flags | _DYNAMIC_DEFAULT_VALUE), defaultValueGetter);
-		entries.insert(key, entry);
+		Entry entry(type, (Flags) (flags | _DYNAMIC_DEFAULT_VALUE), defaultValueGetter,
+			ValueFilter());
+		return EntryBuilder(entries.insert(key, entry)->value);
 	}
 
 	void addSubSchema(const Schema &subschema) {
@@ -185,17 +219,24 @@ public:
 			}
 
 			Entry entry2(entry.type, (Flags) (entry.flags | _FROM_SUBSCHEMA),
-				valueGetter);
+				valueGetter, entry.inspectFilter);
 			entries.insert(translator.reverseTranslateOne(key), entry2);
 			it.next();
 		}
 
-		boost::container::vector<Schema::Validator>::const_iterator v_it, v_end
+		boost::container::vector<Validator>::const_iterator v_it, v_end
 			= subschema.getValidators().end();
 		for (v_it = subschema.getValidators().begin(); v_it != v_end; v_it++) {
 			validators.push_back(boost::bind(validateSubSchema<Translator>,
 				boost::placeholders::_1, boost::placeholders::_2,
 				&subschema, &translator, *v_it));
+		}
+
+		boost::container::vector<Normalizer>::const_iterator n_it, n_end
+			= subschema.getNormalizers().end();
+		for (n_it = subschema.getNormalizers().begin(); n_it != n_end; n_it++) {
+			normalizers.push_back(boost::bind(normalizeSubSchema<Translator>,
+				boost::placeholders::_1, this, &subschema, &translator, *n_it));
 		}
 	}
 
@@ -204,11 +245,17 @@ public:
 		validators.push_back(validator);
 	}
 
+	void addNormalizer(const Normalizer &normalizer) {
+		assert(!finalized);
+		normalizers.push_back(normalizer);
+	}
+
 	void finalize() {
 		assert(!finalized);
 		entries.compact();
 		finalized = true;
 		validators.shrink_to_fit();
+		normalizers.shrink_to_fit();
 	}
 
 	bool get(const HashedStaticString &key, const Entry **entry) const {
@@ -322,6 +369,11 @@ public:
 	const boost::container::vector<Validator> &getValidators() const {
 		assert(finalized);
 		return validators;
+	}
+
+	const boost::container::vector<Normalizer> &getNormalizers() const {
+		assert(finalized);
+		return normalizers;
 	}
 
 	ConstIterator getIterator() const {

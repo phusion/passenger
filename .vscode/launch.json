@@ -1,0 +1,32 @@
+{
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "(lldb) Attach to PassengerAgent",
+                "type": "cppdbg",
+                "request": "attach",
+                "program": "${workspaceRoot}/buildout/support-binaries/PassengerAgent",
+                "processId": "${command:pickProcess}",
+                "osx": {
+                    "MIMode": "lldb",
+                    "setupCommands": [
+                        { "text": "settings set target.x86-disassembly-flavor intel" },
+                        { "text": "b malloc_error_break" },
+                        { "text": "b Passenger::breakpoint" },
+                        { "text": "process handle -n false -p true -s false SIGPIPE" },
+                        { "text": "process handle -n false -p true -s false SIGUSR1" }
+                    ]
+                },
+                "linux": {
+                    "MIMode": "gdb",
+                    "setupCommands": [
+                        { "text": "set print thread-events off" },
+                        { "text": "set disassembly-flavor intel" },
+                        { "text": "break Passenger::breakpoint" },
+                        { "text": "handle SIGUSR1 noprint pass" },
+                        { "text": "handle SIGPIPE noprint pass" }
+                    ]
+                }
+            }
+        ]
+    }

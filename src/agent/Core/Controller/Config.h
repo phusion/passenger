@@ -115,6 +115,7 @@ private:
 		add("force_max_concurrent_requests_per_process", INT_TYPE, OPTIONAL, -1);
 		add("abort_websockets_on_process_shutdown", BOOL_TYPE, OPTIONAL, true);
 		add("load_shell_envvars", BOOL_TYPE, OPTIONAL, false);
+		add("max_requests", UINT_TYPE, OPTIONAL, 0);
 
 		// Single app mode options
 		add("app_root", STRING_TYPE, OPTIONAL);
@@ -180,15 +181,15 @@ private:
 		}
 
 		if (config["app_root"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is set"
+			errors.push_back(Error("If '{{multi_app}}' is not set"
 				" then '{{app_root}}' is required"));
 		}
 		if (config["app_type"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is set"
+			errors.push_back(Error("If '{{multi_app}}' is not set"
 				" then '{{app_type}}' is required"));
 		}
 		if (config["startup_file"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is set"
+			errors.push_back(Error("If '{{multi_app}}' is not set"
 				" then '{{startup_file}}' is required"));
 		}
 
@@ -231,6 +232,10 @@ public:
 	}
 };
 
+/**
+ * A structure that caches controller configuration which is allowed to
+ * change at any time, even during the middle of a request.
+ */
 class ControllerMainConfig {
 private:
 	StaticString createServerLogName() {
@@ -301,6 +306,14 @@ public:
 	}
 };
 
+/**
+ * A structure that caches controller configuration that must stay the
+ * same for the entire duration of a request.
+ *
+ * Note that this structure has got nothing to do with per-request config
+ * options: options which may be configured by the web server on a
+ * per-request basis. That is an orthogonal concept.
+ */
 class ControllerRequestConfig:
 	public boost::intrusive_ref_counter<ControllerRequestConfig,
 		boost::thread_unsafe_counter>
@@ -328,6 +341,7 @@ public:
 	unsigned int minInstances;
 	unsigned int maxPreloaderIdleTime;
 	unsigned int maxRequestQueueSize;
+	unsigned int maxRequests;
 	int forceMaxConcurrentRequestsPerProcess;
 	bool singleAppMode: 1;
 	bool showVersionInHeader: 1;
@@ -361,6 +375,7 @@ public:
 		  minInstances(config["min_instances"].asUInt()),
 		  maxPreloaderIdleTime(config["max_preloader_idle_time"].asUInt()),
 		  maxRequestQueueSize(config["max_request_queue_size"].asUInt()),
+		  maxRequests(config["max_requests"].asUInt()),
 		  forceMaxConcurrentRequestsPerProcess(config["force_max_concurrent_requests_per_process"].asInt()),
 		  singleAppMode(!config["multi_app"].asBool()),
 		  showVersionInHeader(config["show_version_in_header"].asBool()),

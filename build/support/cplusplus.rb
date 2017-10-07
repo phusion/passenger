@@ -85,6 +85,7 @@ def generate_compilation_task_dependencies(source, options = nil)
   if dependencies = CXX_DEPENDENCY_MAP[source]
     result.concat(dependencies)
   end
+  options = maybe_eval_lambda(options)
   if options && options[:deps]
     result.concat([options[:deps]].flatten.compact)
   end
@@ -94,27 +95,27 @@ end
 def compile_c(object, source, options_or_flags = nil)
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(object)
-  run_compiler("#{CC} -o #{object} #{EXTRA_PRE_CFLAGS} #{flags} #{EXTRA_CFLAGS} -c #{source}")
+  run_compiler("#{cc} -o #{object} #{EXTRA_PRE_CFLAGS} #{flags} #{extra_cflags} -c #{source}")
 end
 
 def compile_cxx(object, source, options_or_flags = nil)
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(object)
-  run_compiler("#{CXX} -o #{object} #{EXTRA_PRE_CXXFLAGS} #{flags} #{EXTRA_CXXFLAGS} -c #{source}")
+  run_compiler("#{cxx} -o #{object} #{EXTRA_PRE_CXXFLAGS} #{flags} #{extra_cxxflags} -c #{source}")
 end
 
 def create_c_executable(target, objects, options_or_flags = nil)
   objects = [objects].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{CC} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{EXTRA_C_LDFLAGS}")
+  run_compiler("#{cc} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{EXTRA_C_LDFLAGS}")
 end
 
 def create_cxx_executable(target, objects, options_or_flags = nil)
   objects = [objects].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{CXX} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{EXTRA_CXX_LDFLAGS}")
+  run_compiler("#{cxx} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{EXTRA_CXX_LDFLAGS}")
 end
 
 def create_static_library(target, objects)
@@ -145,7 +146,7 @@ def create_shared_library(target, objects, options_or_flags = nil)
   objects = [objects].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{CXX} #{shlib_flag} #{objects} #{fPIC} -o #{target} #{flags}")
+  run_compiler("#{cxx} #{shlib_flag} #{objects} #{fPIC} -o #{target} #{flags}")
 end
 
 def define_c_object_compilation_task(object, source, options_or_flags = nil)

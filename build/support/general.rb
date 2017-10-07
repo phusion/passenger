@@ -22,36 +22,10 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-class TemplateRenderer
-  def initialize(filename)
-    require 'erb' if !defined?(ERB)
-    @erb = ERB.new(File.read(filename), nil, "-")
-    @erb.filename = filename
-  end
-
-  def render
-    return @erb.result(binding)
-  end
-
-  def render_to(filename)
-    puts "Creating #{filename}"
-    text = render
-    # When packaging, some timestamps may be modified. The user may not
-    # have write access to the source root (for example, when Passenger
-    # Standalone is compiling its runtime), so we only write to the file
-    # when necessary.
-    if !File.exist?(filename) || File.writable?(filename) || File.read(filename) != text
-      File.open(filename, 'w') do |f|
-        f.write(text)
-      end
-    end
-  end
-end
-
 class CxxCodeTemplateRenderer
   def initialize(filename)
     if !defined?(CxxCodeBuilder)
-      require 'build/support/vendor/cxxcodebuilder/lib/cxxcodebuilder'
+      require_build_system_file('support/vendor/cxxcodebuilder/lib/cxxcodebuilder')
     end
     code = File.open(filename, 'rb') do |f|
       f.read
@@ -143,3 +117,25 @@ end
 def shesc(path)
   Shellwords.escape(path)
 end
+
+LET_CACHE = {}
+
+def let(name)
+  name = name.to_sym
+  Kernel.send(:define_method, name) do
+    if LET_CACHE.key?(name)
+      LET_CACHE[name]
+    else
+      LET_CACHE[name] = yield
+    end
+  end
+end
+
+def maybe_eval_lambda(lambda_or_value)
+  if lambda_or_value.respond_to?(:call)
+    lambda_or_value.call
+  else
+    lambda_or_value
+  end
+end
+

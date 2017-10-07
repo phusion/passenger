@@ -63,7 +63,7 @@ module PhusionPassenger
         def report
           log " <b>* Found Apache #{version}!</b>"
           log "   Information:"
-          log "      apxs2          : #{apxs2}"
+          log "      apxs2          : #{apxs2 || 'N/A'}"
           log "      Main executable: #{httpd}"
           log "      Control command: #{ctl}"
           log "      Config file    : #{config_file || 'unknown'}"
@@ -76,7 +76,7 @@ module PhusionPassenger
           end
           log ""
           log "   To install #{PROGRAM_NAME} against this specific Apache version:"
-          log "      #{PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-install-apache2-module --apxs2-path='#{apxs2}'"
+          log "      #{PlatformInfo.ruby_command} #{PhusionPassenger.bin_dir}/passenger-install-apache2-module --apxs2-path='#{apxs2 || 'none'}'"
           log ""
           log "   To start, stop or restart this specific Apache version:"
           log "      #{ctl} start"
@@ -121,7 +121,7 @@ module PhusionPassenger
         log "<banner>Looking for possible Apache installations...</banner>"
         apxses = PlatformInfo.find_all_commands("apxs2") +
           PlatformInfo.find_all_commands("apxs")
-        if !apxses.include?(PlatformInfo.apxs2)
+        if PlatformInfo.apxs2 && !apxses.include?(PlatformInfo.apxs2)
           PlatformInfo.send(:log, "Looking for #{PlatformInfo.apxs2}: found")
           apxses << PlatformInfo.apxs2
         end
@@ -130,10 +130,17 @@ module PhusionPassenger
         apxses.each do |apxs2|
           detect_one(apxs2)
         end
+        # macOS >= 10.13 High Sierra no longer ships apxs2, but we'll want to perform
+        # an autodetection run against the OS-provided Apache installation anyway.
+        if PlatformInfo.os_name_simple == 'macosx' && PlatformInfo.os_version >= '10.13'
+          detect_one(nil)
+        end
       end
 
       def detect_one(apxs2)
-        log "<banner>Analyzing #{apxs2}...</banner>"
+        # Note: apxs2 is nil on macOS 10.13 High Sierra. See comment in #detect_all.
+        apxs2_description = apxs2 || 'OS-default Apache installation'
+        log "<banner>Analyzing #{apxs2_description}...</banner>"
         add_result do |result|
           result.apxs2 = apxs2
           log "Detecting main Apache executable..."
@@ -154,7 +161,9 @@ module PhusionPassenger
           end
           if result.httpd
             log "Detecting configuration file location..."
-            result.config_file = PlatformInfo.httpd_default_config_file(:httpd => result.httpd)
+            result.config_file = PlatformInfo.httpd_default_config_file(
+              :httpd => result.httpd,
+              :apache2ctl => result.ctl)
             if result.config_file
               log " --> #{result.config_file}"
             else
@@ -163,7 +172,9 @@ module PhusionPassenger
           end
           if result.httpd
             log "Detecting error log file..."
-            result.error_log = PlatformInfo.httpd_actual_error_log(:httpd => result.httpd)
+            result.error_log = PlatformInfo.httpd_actual_error_log(
+              :httpd => result.httpd,
+              :apache2ctl => result.ctl)
             if result.error_log
               log " --> #{result.error_log}"
             else
@@ -176,13 +187,14 @@ module PhusionPassenger
             result.a2dismod = PlatformInfo.a2dismod(:apxs2 => apxs2)
           end
           if result.httpd
-            result.config_file_broken = PlatformInfo.apache2ctl_V(:apxs2 => apxs2).nil?
+            result.config_file_broken = PlatformInfo.apache2ctl_V(:apxs2 => apxs2,
+              :apache2ctl => result.ctl).nil?
           end
           if result.httpd
-            log "<green>Found a usable Apache installation using #{apxs2}.</green>"
+            log "<green>Found a usable Apache installation using #{apxs2_description}.</green>"
             true
           else
-            log "<yellow>Cannot find a usable Apache installation using #{apxs2}.</yellow>"
+            log "<yellow>Cannot find a usable Apache installation using #{apxs2_description}.</yellow>"
             false
           end
         end

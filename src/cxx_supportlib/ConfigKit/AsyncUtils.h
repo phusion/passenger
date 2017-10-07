@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CONFIG_KIT_UTILS_H_
-#define _PASSENGER_CONFIG_KIT_UTILS_H_
+#ifndef _PASSENGER_CONFIG_KIT_ASYNC_UTILS_H_
+#define _PASSENGER_CONFIG_KIT_ASYNC_UTILS_H_
 
 #include <vector>
 #include <boost/function.hpp>
@@ -54,18 +54,18 @@ template<typename Component>
 inline void
 callPrepareConfigChangeAndCallback(Component *component, Json::Value updates,
 	typename Component::ConfigChangeRequest *req,
-	const CallbackTypes<Component>::PrepareConfigChange &callback)
+	const typename CallbackTypes<Component>::PrepareConfigChange &callback)
 {
 	vector<Error> errors;
 	component->prepareConfigChange(updates, errors, *req);
-	callback(*req, errors);
+	callback(errors, *req);
 }
 
 template<typename Component>
 inline void
 callCommitConfigChangeAndCallback(Component *component,
 	typename Component::ConfigChangeRequest *req,
-	const CallbackTypes<Component>::CommitConfigChange &callback)
+	const typename CallbackTypes<Component>::CommitConfigChange &callback)
 {
 	component->commitConfigChange(*req);
 	callback(*req);
@@ -74,13 +74,13 @@ callCommitConfigChangeAndCallback(Component *component,
 template<typename Component>
 inline void
 callInspectConfigAndCallback(Component *component,
-	const CallbackTypes<Component>::InspectConfig &callback)
+	const typename CallbackTypes<Component>::InspectConfig &callback)
 {
 	callback(component->inspectConfig());
 }
 
 
-} // ConfigKit
-} // Passenger
+} // namespace ConfigKit
+} // namespace Passenger
 
-#endif /* _PASSENGER_CONFIG_KIT_UTILS_H_ */
+#endif /* _PASSENGER_CONFIG_KIT_ASYNC_UTILS_H_ */

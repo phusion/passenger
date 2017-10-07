@@ -144,7 +144,6 @@ module PhusionPassenger
         end
       end
 
-      flags << debugging_cflags
       flags << '-DHAS_ALLOCA_H' if has_alloca_h?
       flags << '-DHAVE_ACCEPT4' if has_accept4?
       flags << '-DHAS_SFENCE' if supports_sfence_instruction?
@@ -152,6 +151,7 @@ module PhusionPassenger
       flags << "-DPASSENGER_DEBUG -DBOOST_DISABLE_ASSERTS"
 
       if cc_or_cxx == :cxx
+        flags << debugging_cxxflags
         flags << cxx_11_flag if cxx_11_flag
 
         if cxx_supports_wno_unused_local_typedefs_flag?
@@ -164,6 +164,8 @@ module PhusionPassenger
         check_unordered_map(flags, "std::unordered_map", "unordered_map", "HAS_UNORDERED_MAP") ||
           check_unordered_map(flags, "std::tr1::unordered_map", "unordered_map", "HAS_TR1_UNORDERED_MAP") ||
           check_hash_map(flags)
+      else
+        flags << debugging_cflags
       end
 
       if os_name_simple == "solaris"

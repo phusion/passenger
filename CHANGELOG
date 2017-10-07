@@ -1,7 +1,27 @@
-Release 5.1.8 (not yet released)
+Release 5.1.9 (Not yet released)
 --------------------------------
 
+ * [Apache] Fixes a race condition (segfault) on startup, which primarily affected macOS hosts (regression in 5.1.8 due to the logging improvements). Closes GH-1973.
+ * [Apache] Fixes compilation on macOS 10.13 High Sierra.
+ * [Nginx] It is now allowed to specify `passenger_enabled` in the `http` context as well.
+ * [Nginx] Namespaced Jsoncpp under the Passenger namespace to avoid collisions with Google Pagespeed's copy when linked into Nginx.
+ * [Standalone] Enables HTTP/2 support in the Nginx template. Support is only active if SSL is used, to avoid potential issues with HTTP/2 on HTTP ports. Closes GH-1945.
+ * [Enterprise, Standalone] Adds a new feature that is especially useful on Heroku: deferred port binding. When `--defer-port-binding` is set, Passenger does not listen on the given port until the application has finished spawning. If the application starts slowly then this mechanism can prevent the Heroku request timeout from killing the dyno (the boot timeout still applies).
+ * [Enterprise, Standalone] Fixes duplicate warnings when Passengerfile.json contains errors.
+ * Adds support for Bundler 2.0's new `gems.rb` and `gems.locked`. Learn more about these in [Gemfile's new clothes](https://depfu.com/blog/2017/09/06/gemfiles-new-clothes). Closes GH-1982.
+ * Removes Debian packages for Ubuntu 12.04 Precise.
+ * Fixes compilation warnings on macOS + Clang 9.0.
+ * [Standalone] `passenger start` now accepts the `--start-timeout` configuration option.
+
+
+Release 5.1.8
+-------------
+
+ * Introduces a shorter and more informative log format. The new format significantly shortens the thread ID, and includes the message's log level (critical, error, warning, notice, etc) so that users can more easily filter out uninteresting messages.
+ * [Nginx] The Phusion Nginx APT package is upgraded to Nginx version 1.12.1 (previously pinned at 1.10.3 while waiting for a compatible lua module release).
  * [Standalone] Automatically uses Nginx to serves static asset URLs that conform to the [webpacker](https://github.com/rails/webpacker) gem's format. Closes GH-1966.
+ * [Standalone] If configured to listen on a Unix domain socket, properly cleans up this socket on Nginx shutdown. Fixes a regression from 5.1.6. Closes GH-1969.
+ * [Standalone] Fixes the `--max-requests` option when using the builtin engine. Fixes a regression from 5.1.4.
  * [Enterprise] Fixes a potential use-after-free bug when reporting usage data to the Phusion licensing server. This bug only occurs when Passenger Enterprise is running inside a container.
 
 

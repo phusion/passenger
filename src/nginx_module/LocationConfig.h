@@ -51,9 +51,7 @@ typedef struct {
     ngx_int_t abort_websockets_on_process_shutdown;
     ngx_uint_t app_file_descriptor_ulimit;
     ngx_array_t *base_uris;
-    ngx_uint_t core_file_descriptor_ulimit;
     ngx_int_t debugger;
-    ngx_int_t disable_security_update_check;
     ngx_int_t enabled;
     ngx_array_t *env_vars;
     ngx_int_t force_max_concurrent_requests_per_process;
@@ -68,7 +66,6 @@ typedef struct {
     ngx_int_t max_requests;
     ngx_int_t min_instances;
     ngx_int_t request_queue_overflow_status_code;
-    ngx_int_t socket_backlog;
     ngx_int_t start_timeout;
     ngx_int_t sticky_sessions;
     ngx_array_t *union_station_filters;
@@ -85,7 +82,6 @@ typedef struct {
     ngx_str_t python;
     ngx_str_t restart_dir;
     ngx_str_t ruby;
-    ngx_str_t security_update_check_proxy;
     ngx_str_t spawn_method;
     ngx_str_t startup_file;
     ngx_str_t sticky_sessions_cookie_name;

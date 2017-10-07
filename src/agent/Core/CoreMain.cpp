@@ -71,7 +71,7 @@
 #include <ev++.h>
 #include <jsoncpp/json.h>
 
-#include <Shared/Base.h>
+#include <Shared/Fundamentals/Initialization.h>
 #include <Shared/ApiServerUtils.h>
 #include <Constants.h>
 #include <ServerKit/Server.h>
@@ -97,6 +97,7 @@
 using namespace boost;
 using namespace oxt;
 using namespace Passenger;
+using namespace Passenger::Agent::Fundamentals;
 using namespace Passenger::ApplicationPool2;
 
 
@@ -871,7 +872,9 @@ mainLoop() {
 			&& maxCpus <= CPU_SETSIZE;
 	#endif
 
-	installDiagnosticsDumper(dumpDiagnosticsOnCrash, NULL);
+	Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = dumpDiagnosticsOnCrash;
+	Agent::Fundamentals::abortHandlerConfigChanged();
+
 	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		two->bgloop->start("Main event loop: thread " + toString(i + 1), 0);
@@ -976,7 +979,8 @@ waitForExitEvent() {
 	TRACE_POINT();
 	if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
 		int e = errno;
-		installDiagnosticsDumper(NULL, NULL);
+		Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = NULL;
+		Agent::Fundamentals::abortHandlerConfigChanged();
 		throw SystemException("select() failed", e);
 	}
 
@@ -1020,7 +1024,8 @@ waitForExitEvent() {
 			&fds, NULL, NULL, NULL) == -1)
 		{
 			int e = errno;
-			installDiagnosticsDumper(NULL, NULL);
+			Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = NULL;
+			Agent::Fundamentals::abortHandlerConfigChanged();
 			throw SystemException("select() failed", e);
 		}
 
@@ -1035,7 +1040,10 @@ cleanup() {
 
 	P_DEBUG("Shutting down " SHORT_PROGRAM_NAME " core...");
 	wo->appPool->destroy();
-	installDiagnosticsDumper(NULL, NULL);
+
+	Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = dumpDiagnosticsOnCrash;
+	Agent::Fundamentals::abortHandlerConfigChanged();
+
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
 		two->bgloop->stop();

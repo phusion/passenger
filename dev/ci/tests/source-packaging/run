@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-run bundle exec rspec -f s -c test/integration_tests/source_packaging_test.rb
+run bundle exec drake "-j$COMPILE_CONCURRENCY" test:source_packaging

@@ -4,12 +4,26 @@ def LINUX_ENV = ["TEST_RUBY_VERSION=${DEFAULT_RUBY_VERSION}", "COMPILE_CONCURREN
 def MACOS_COMPILE_CONCURRENCY = 2
 def MACOS_ENV = ["TEST_RUBY_VERSION=${DEFAULT_RUBY_VERSION}", "COMPILE_CONCURRENCY=${MACOS_COMPILE_CONCURRENCY}"]
 
+def setupTest(enablerFlag, nodeLabel, environment, block) {
+  if (enablerFlag) {
+    node(nodeLabel) {
+      withEnv(environment) {
+        block()
+      }
+    }
+  } else {
+    echo 'Test skipped.'
+  }
+}
+
 pipeline {
   agent any
 
   options {
     buildDiscarder(logRotator(numToKeepStr: '15'))
     timeout(time: 30, unit: 'MINUTES')
+    timestamps()
+    ansiColor('xterm')
   }
 
   parameters {
@@ -39,361 +53,201 @@ pipeline {
         script {
           parallel(
             'Ruby unit tests on Linux': {
-              if (params.RUBY_LINUX) {
-                node('linux') {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker ruby'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/RUBY_LINUX'
-                          archiveArtifacts artifacts: 'buildout/RUBY_LINUX/**'
-                        }
-                      }
-                    }
-                  }
+              setupTest(params.RUBY_LINUX, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker ruby'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/RUBY_LINUX'
+                  archiveArtifacts artifacts: 'buildout/RUBY_LINUX/**'
                 }
-              } else {
-                echo 'Test skipped.'
               }
             },
             'Ruby unit tests on macOS': {
-              if (params.RUBY_MACOS) {
-                node('macos') {
-                  timestamps() {
-                    withEnv(MACOS_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host ruby'
-                        try {
-                          sh './dev/ci/run-tests-natively ruby'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/RUBY_MACOS'
-                          archiveArtifacts artifacts: 'buildout/RUBY_MACOS/**'
-                        }
-                      }
-                    }
-                  }
+              setupTest(params.RUBY_MACOS, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host ruby'
+                try {
+                  sh './dev/ci/run-tests-natively ruby'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/RUBY_MACOS'
+                  archiveArtifacts artifacts: 'buildout/RUBY_MACOS/**'
                 }
-              } else {
-                echo 'Test skipped.'
               }
             },
 
             'Node.js unit tests on Linux': {
-              node('linux') {
-                if (params.NODEJS_LINUX) {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker nodejs'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/NODEJS_LINUX'
-                          archiveArtifacts artifacts: 'buildout/NODEJS_LINUX/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.NODEJS_LINUX, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker nodejs'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NODEJS_LINUX'
+                  archiveArtifacts artifacts: 'buildout/NODEJS_LINUX/**'
                 }
               }
             },
             'Node.js unit tests on macOS': {
-              node('macos') {
-                if (params.NODEJS_MACOS) {
-                  timestamps() {
-                    withEnv(MACOS_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host nodejs'
-                        try {
-                          sh './dev/ci/run-tests-natively nodejs'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/NODEJS_MACOS'
-                          archiveArtifacts artifacts: 'buildout/NODEJS_MACOS/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.NODEJS_MACOS, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host nodejs'
+                try {
+                  sh './dev/ci/run-tests-natively nodejs'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NODEJS_MACOS'
+                  archiveArtifacts artifacts: 'buildout/NODEJS_MACOS/**'
                 }
               }
             },
 
             'C++ unit tests on Linux, normal user': {
-              node('linux') {
-                if (params.CXX_LINUX) {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker cxx'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/CXX_LINUX'
-                          archiveArtifacts artifacts: 'buildout/CXX_LINUX/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.CXX_LINUX, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker cxx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/CXX_LINUX'
+                  archiveArtifacts artifacts: 'buildout/CXX_LINUX/**'
                 }
               }
             },
             'C++ unit tests on Linux, as root': {
-              node('linux') {
-                if (params.CXX_LINUX_ROOT) {
-                  timestamps() {
-                    withEnv(LINUX_ENV + ['SUDO=1']) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker cxx'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/CXX_LINUX_ROOT'
-                          archiveArtifacts artifacts: 'buildout/CXX_LINUX_ROOT/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.CXX_LINUX_ROOT, 'linux', LINUX_ENV + ['SUDO=1']) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker cxx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/CXX_LINUX_ROOT'
+                  archiveArtifacts artifacts: 'buildout/CXX_LINUX_ROOT/**'
                 }
               }
             },
             'C++ unit tests on macOS': {
-              node('macos') {
-                if (params.CXX_MACOS) {
-                  timestamps() {
-                    withEnv(MACOS_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host cxx'
-                        try {
-                          sh './dev/ci/run-tests-natively cxx'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/CXX_MACOS'
-                          archiveArtifacts artifacts: 'buildout/CXX_MACOS/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.CXX_MACOS, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host cxx'
+                try {
+                  sh './dev/ci/run-tests-natively cxx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/CXX_MACOS'
+                  archiveArtifacts artifacts: 'buildout/CXX_MACOS/**'
                 }
               }
             },
 
             'Apache integration tests on Linux': {
-              node('linux') {
-                if (params.APACHE2_LINUX) {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker apache2'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/APACHE2_LINUX'
-                          archiveArtifacts artifacts: 'buildout/APACHE2_LINUX/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.APACHE2_LINUX, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker apache2'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/APACHE2_LINUX'
+                  archiveArtifacts artifacts: 'buildout/APACHE2_LINUX/**'
                 }
               }
             },
             'Apache integration tests on macOS': {
-              node('macos') {
-                if (params.APACHE2_MACOS) {
-                  timestamps() {
-                    withEnv(MACOS_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host apache2'
-                        try {
-                          sh './dev/ci/run-tests-natively apache2'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/APACHE2_MACOS'
-                          archiveArtifacts artifacts: 'buildout/APACHE2_MACOS/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.APACHE2_MACOS, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host apache2'
+                try {
+                  sh './dev/ci/run-tests-natively apache2'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/APACHE2_MACOS'
+                  archiveArtifacts artifacts: 'buildout/APACHE2_MACOS/**'
                 }
               }
             },
 
             'Nginx integration tests on Linux': {
-              node('linux') {
-                if (params.NGINX_LINUX) {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker nginx'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/NGINX_LINUX'
-                          archiveArtifacts artifacts: 'buildout/NGINX_LINUX/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.NGINX_LINUX, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker nginx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_LINUX'
+                  archiveArtifacts artifacts: 'buildout/NGINX_LINUX/**'
                 }
               }
             },
             'Nginx integration tests on macOS': {
-              node('macos') {
-                if (params.NGINX_MACOS) {
-                  timestamps() {
-                    withEnv(MACOS_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host nginx'
-                        try {
-                          sh './dev/ci/run-tests-natively nginx'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/NGINX_MACOS'
-                          archiveArtifacts artifacts: 'buildout/NGINX_MACOS/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.NGINX_MACOS, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host nginx'
+                try {
+                  sh './dev/ci/run-tests-natively nginx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_MACOS'
+                  archiveArtifacts artifacts: 'buildout/NGINX_MACOS/**'
                 }
               }
             },
 
             'Nginx dynamic module compatibility test on Linux': {
-              node('linux') {
-                if (params.NGINX_DYNAMIC_LINUX) {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker nginx-dynamic'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_LINUX'
-                          archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_LINUX/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.NGINX_DYNAMIC_LINUX, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker nginx-dynamic'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_LINUX'
+                  archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_LINUX/**'
                 }
               }
             },
             'Nginx dynamic module compatibility test on macOS': {
-              node('macos') {
-                if (params.NGINX_DYNAMIC_MACOS) {
-                  timestamps() {
-                    withEnv(MACOS_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host nginx-dynamic'
-                        try {
-                          sh './dev/ci/run-tests-natively nginx-dynamic'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_MACOS'
-                          archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_MACOS/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.NGINX_DYNAMIC_MACOS, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host nginx-dynamic'
+                try {
+                  sh './dev/ci/run-tests-natively nginx-dynamic'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_MACOS'
+                  archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_MACOS/**'
                 }
               }
             },
 
             'Passenger Standalone integration tests on Linux': {
-              node('linux') {
-                if (params.STANDALONE_LINUX) {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker standalone'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/STANDALONE_LINUX'
-                          archiveArtifacts artifacts: 'buildout/STANDALONE_LINUX/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.STANDALONE_LINUX, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker standalone'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/STANDALONE_LINUX'
+                  archiveArtifacts artifacts: 'buildout/STANDALONE_LINUX/**'
                 }
               }
             },
             'Passenger Standalone integration tests on macOS': {
-              node('macos') {
-                if (params.STANDALONE_MACOS) {
-                  timestamps() {
-                    withEnv(MACOS_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host standalone'
-                        try {
-                          sh './dev/ci/run-tests-natively standalone'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/STANDALONE_MACOS'
-                          archiveArtifacts artifacts: 'buildout/STANDALONE_MACOS/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.STANDALONE_MACOS, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host standalone'
+                try {
+                  sh './dev/ci/run-tests-natively standalone'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/STANDALONE_MACOS'
+                  archiveArtifacts artifacts: 'buildout/STANDALONE_MACOS/**'
                 }
               }
             },
 
             'Source packaging unit tests': {
-              node('') {
-                if (params.SOURCE_PACKAGING) {
-                  timestamps() {
-                    withEnv(LINUX_ENV) {
-                      checkout scm
-                      ansiColor('xterm') {
-                        sh './dev/ci/setup-host'
-                        try {
-                          sh './dev/ci/run-tests-with-docker source-packaging'
-                        } finally {
-                          sh 'mv buildout/testlogs buildout/SOURCE_PACKAGING'
-                          archiveArtifacts artifacts: 'buildout/SOURCE_PACKAGING/**'
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  echo 'Test skipped.'
+              setupTest(params.SOURCE_PACKAGING, 'linux', LINUX_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host'
+                try {
+                  sh './dev/ci/run-tests-with-docker source-packaging'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/SOURCE_PACKAGING'
+                  archiveArtifacts artifacts: 'buildout/SOURCE_PACKAGING/**'
                 }
               }
             }
