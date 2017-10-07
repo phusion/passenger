@@ -352,7 +352,7 @@ namespace ev {
   struct dynamic_loop : loop_ref
   {
 
-    dynamic_loop (unsigned int flags = AUTO) throw (bad_loop)
+    dynamic_loop (unsigned int flags = AUTO)
     : loop_ref (ev_loop_new (flags))
     {
       if (!EV_AX)
@@ -376,7 +376,7 @@ namespace ev {
 
   struct default_loop : loop_ref
   {
-    default_loop (unsigned int flags = AUTO) throw (bad_loop)
+    default_loop (unsigned int flags = AUTO)
 #if EV_MULTIPLICITY
     : loop_ref (ev_default_loop (flags))
 #endif
