@@ -492,10 +492,20 @@ class JourneyView extends Component {
             totalDurationSec = 0;
           }
           totalDurationSec += journey.steps[step].duration;
+        } else if (journey.steps[step].begin_time !== undefined) {
+          if (totalDurationSec === undefined) {
+            totalDurationSec = 0;
+          }
+          // relative_timestamp is negative
+          totalDurationSec -= journey.steps[step].begin_time.relative_timestamp;
         }
       }
       if (totalDurationSec !== undefined) {
-        return (<span className="duration">&mdash; {totalDurationSec.toFixed(1)}s</span>);
+        if (allStepsNotStarted()) {
+          return (<span className="duration">&mdash; skipped</span>);
+        } else {
+          return (<span className="duration">&mdash; {totalDurationSec.toFixed(1)}s</span>);
+        }
       }
     }
 
