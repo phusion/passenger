@@ -50,6 +50,7 @@
 #include <cerrno>
 
 #include <ProcessManagement/Utils.h>
+#include <Utils/AsyncSignalSafeUtils.h>
 
 #if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__sun)
 	// Introduced in Solaris 9. Let's hope nobody actually uses
@@ -429,6 +430,29 @@ closeAllFileDescriptors(int lastToKeepOpen, bool asyncSignalSafe) {
 			ret = close(i);
 		} while (ret == -1 && errno == EINTR);
 	}
+}
+
+void
+printExecError(const char **command, int errcode) {
+	char buf[1024];
+	printExecError2(command, errcode, buf, sizeof(buf));
+}
+
+void
+printExecError2(const char **command, int errcode, char *buf, size_t size) {
+	char *pos = buf;
+	const char *end = buf + size;
+
+	pos = AsyncSignalSafeUtils::appendData(pos, end, "*** ERROR: cannot execute ");
+	pos = AsyncSignalSafeUtils::appendData(pos, end, command[0]);
+	pos = AsyncSignalSafeUtils::appendData(pos, end, ": ");
+	pos = AsyncSignalSafeUtils::appendData(pos, end,
+		AsyncSignalSafeUtils::limitedStrerror(errcode));
+	pos = AsyncSignalSafeUtils::appendData(pos, end, " (errno=");
+	pos = AsyncSignalSafeUtils::appendInteger<int, 10>(pos, end, errcode);
+	pos = AsyncSignalSafeUtils::appendData(pos, end, ")\n");
+
+	AsyncSignalSafeUtils::printError(buf, end - pos);
 }
 
 

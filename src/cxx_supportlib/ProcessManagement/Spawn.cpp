@@ -62,20 +62,24 @@ runShellCommand(const StaticString &command) {
 
 void
 runCommand(const char **command, SubprocessInfo &info, bool wait, bool killSubprocessOnInterruption,
-	const boost::function<void ()> &afterFork)
+	const boost::function<void ()> &afterFork,
+	const boost::function<void (const char **, int errcode)> &onExecFail)
 {
 	int e, waitStatus;
 	pid_t waitRet;
 
-	info.pid = syscalls::fork();
+	info.pid = asyncFork();
 	if (info.pid == 0) {
 		resetSignalHandlersAndMask();
 		disableMallocDebugging();
-		closeAllFileDescriptors(2);
+		closeAllFileDescriptors(2, true);
 		if (afterFork) {
 			afterFork();
 		}
 		execvp(command[0], (char * const *) command);
+		if (onExecFail) {
+			onExecFail(command, errno);
+		}
 		_exit(1);
 	} else if (info.pid == -1) {
 		e = errno;
@@ -95,7 +99,7 @@ runCommand(const char **command, SubprocessInfo &info, bool wait, bool killSubpr
 		if (waitRet != -1) {
 			info.status = waitStatus;
 		} else if (errno == ECHILD || errno == ESRCH) {
-			info.status = -1;
+			info.status = -2;
 		} else {
 			int e = errno;
 			throw SystemException(string("Error waiting for the '") +
@@ -107,7 +111,8 @@ runCommand(const char **command, SubprocessInfo &info, bool wait, bool killSubpr
 void
 runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 	string &output, bool killSubprocessOnInterruption,
-	const boost::function<void ()> &afterFork)
+	const boost::function<void ()> &afterFork,
+	const boost::function<void (const char **command, int errcode)> &onExecFail)
 {
 	pid_t waitRet;
 	int e, waitStatus;
@@ -115,18 +120,21 @@ runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 
 	p = createPipe(__FILE__, __LINE__);
 
-	info.pid = syscalls::fork();
+	info.pid = asyncFork();
 	if (info.pid == 0) {
 		dup2(p[1], 1);
 		close(p[0]);
 		close(p[1]);
 		resetSignalHandlersAndMask();
 		disableMallocDebugging();
-		closeAllFileDescriptors(2);
+		closeAllFileDescriptors(2, true);
 		if (afterFork) {
 			afterFork();
 		}
 		execvp(command[0], (char * const *) command);
+		if (onExecFail) {
+			onExecFail(command, errno);
+		}
 		_exit(1);
 	} else if (info.pid == -1) {
 		e = errno;
@@ -178,7 +186,7 @@ runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 		if (waitRet != -1) {
 			info.status = waitStatus;
 		} else if (errno == ECHILD || errno == ESRCH) {
-			info.status = -1;
+			info.status = -2;
 		} else {
 			int e = errno;
 			throw SystemException(string("Error waiting for the '") +

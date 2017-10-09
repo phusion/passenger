@@ -34,7 +34,7 @@ using namespace std;
 
 
 /**
- * Async-signal safe way to fork().
+ * Thread-safe and async-signal safe way to fork().
  *
  * On Linux, the fork() glibc wrapper grabs a ptmalloc lock, so
  * if malloc causes a segfault then we can't fork.
@@ -48,7 +48,16 @@ using namespace std;
  * some POSIX functions to mysteriously fail. See
  * https://code.google.com/p/phusion-passenger/issues/detail?id=1094
  * You should therefore not use asyncFork() unless you're in a signal
- * handler.
+ * handler or if you only perform async-signal-safe stuff in the child.
+ *
+ * On 2017 October 9 with macOS 10.11 El Capitan, we also confirmed
+ * a case in which the child process can get stuck indefinitely with 0% CPU.
+ * If we we create a thread which performs memory allocation, and shortly
+ * after thread creation we fork, then the child process gets stuck because
+ * one of its pthread_atfork() handlers tries to allocate memory, which tries
+ * to grab a lock which was already locked. This means that on macOS
+ * we pretty much can never use regular fork() at all in a multithreaded
+ * environment.
  */
 pid_t asyncFork();
 
@@ -80,6 +89,17 @@ void disableMallocDebugging();
  * should be.
  */
 void closeAllFileDescriptors(int lastToKeepOpen, bool asyncSignalSafe = false);
+
+/**
+ * Given a failed exec() syscall and its resulting errno
+ * value, print an appropriate error message to STDERR.
+ *
+ * This function is async signal-safe. Its main intended use is to be the
+ * default value for the `onExecFail` parameter for the
+ * `runCommand()` and `runCommandAndCaptureOutput()` functions.
+ */
+void printExecError(const char **command, int errcode);
+void printExecError2(const char **command, int errcode, char *buf, size_t size);
 
 
 } // namespace Passenger

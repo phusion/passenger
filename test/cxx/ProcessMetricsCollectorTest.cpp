@@ -1,9 +1,9 @@
 #include <sys/wait.h>
 #include <signal.h>
-#include <unistd.h>
 #include <cstdio>
 #include <cerrno>
 #include <TestSupport.h>
+#include <ProcessManagement/Spawn.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/ProcessMetricsCollector.h>
 
@@ -27,21 +27,14 @@ namespace tut {
 
 		pid_t spawnChild(int memory) {
 			string memoryStr = toString(memory);
-			pid_t pid = fork();
-			if (pid == 0) {
-				execlp("../buildout/test/allocate_memory",
-					"../buildout/test/allocate_memory",
-					memoryStr.c_str(),
-					(char *) 0);
-
-				int e = errno;
-				fprintf(stderr, "Cannot execute ../buildout/test/allocate_memory: %s\n",
-					strerror(e));
-				fflush(stderr);
-				_exit(1);
-			} else {
-				return pid;
-			}
+			const char *command[] = {
+				"../buildout/test/allocate_memory",
+				memoryStr.c_str(),
+				NULL
+			};
+			SubprocessInfo info;
+			runCommand(command, info, false);
+			return info.pid;
 		}
 	};
 

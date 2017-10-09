@@ -33,16 +33,14 @@
 #include <boost/foreach.hpp>
 #include <oxt/backtrace.hpp>
 
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <cstdio>
 #include <cerrno>
 #include <cstring>
 #include <cctype>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include <LoggingKit/LoggingKit.h>
+#include <ProcessManagement/Spawn.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
@@ -127,44 +125,24 @@ runSingleHookScript(HookScriptOptions &options, const string &command,
 	const vector< pair<string, string> > &envvars)
 {
 	TRACE_POINT_WITH_DATA(command.c_str());
-	pid_t pid;
-	int e, status;
+	const char *commandArray[] = {
+		command.c_str(),
+		NULL
+	};
+	SubprocessInfo info;
 
 	P_INFO("Running " << options.name << " hook script: " << command);
-
-	pid = fork();
-	if (pid == 0) {
-		resetSignalHandlersAndMask();
-		disableMallocDebugging();
-		closeAllFileDescriptors(2);
-		setEnvVarsFromVector(envvars);
-
-		execlp(command.c_str(), command.c_str(), (const char * const) 0);
-		e = errno;
-		fprintf(stderr, "*** ERROR: Cannot execute %s hook script %s: %s (errno=%d)\n",
-			options.name.c_str(), command.c_str(), strerror(e), e);
-		fflush(stderr);
-		_exit(1);
-		return true; // Never reached.
-
-	} else if (pid == -1) {
-		e = errno;
-		P_ERROR("Cannot fork a process for hook script " << command <<
-			": " << strerror(e) << " (errno=" << e << ")");
+	try {
+		runCommand(commandArray, info, true, true, boost::bind(setEnvVarsFromVector, envvars));
+	} catch (const SystemException &e) {
+		P_ERROR("Error running hook script " << command << ": " << e.what());
 		return false;
-
-	} else if (waitpid(pid, &status, 0) == -1) {
-		e = errno;
-		P_ERROR("Unable to wait for hook script " << command <<
-			" (PID " << pid << "): " << strerror(e) << " (errno=" <<
-			e << ")");
-		return false;
-
-	} else {
-		P_INFO("Hook script " << command << " (PID " << pid <<
-			") exited with status " << WEXITSTATUS(status));
-		return WEXITSTATUS(status) == 0;
 	}
+	if (info.status != 0 && info.status != -2) {
+		P_INFO("Hook script " << command << " (PID " << info.pid <<
+			") exited with status " << WEXITSTATUS(info.status));
+	}
+	return info.status == 0 || info.status == -2;
 }
 
 inline bool

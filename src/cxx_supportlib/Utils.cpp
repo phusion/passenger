@@ -56,6 +56,7 @@
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
 #include <Exceptions.h>
+#include <ProcessManagement/Spawn.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
@@ -712,54 +713,38 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 	}
 }
 
+static void
+redirectStderrToDevNull() {
+	int devnull = open("/dev/null", O_RDONLY);
+	if (devnull > 2) {
+		dup2(devnull, 2);
+		close(devnull);
+	}
+}
+
 void
 removeDirTree(const string &path) {
-	boost::this_thread::disable_interruption di;
-	boost::this_thread::disable_syscall_interruption dsi;
-	const char *c_path = path.c_str();
-	pid_t pid;
-
-	pid = syscalls::fork();
-	if (pid == 0) {
-		resetSignalHandlersAndMask();
-		disableMallocDebugging();
-		int devnull = open("/dev/null", O_RDONLY);
-		if (devnull != -1) {
-			dup2(devnull, 2);
-		}
-		closeAllFileDescriptors(2);
-		execlp("chmod", "chmod", "-R", "u+rwx", c_path, (char * const) 0);
-		perror("Cannot execute chmod");
-		_exit(1);
-
-	} else if (pid == -1) {
-		int e = errno;
-		throw SystemException("Cannot fork a new process", e);
-
-	} else {
-		boost::this_thread::restore_interruption ri(di);
-		boost::this_thread::restore_syscall_interruption rsi(dsi);
-		syscalls::waitpid(pid, NULL, 0);
+	{
+		const char *command[] = {
+			"chmod",
+			"-R",
+			"u+rwx",
+			path.c_str(),
+			NULL
+		};
+		SubprocessInfo info;
+		runCommand(command, info, true, true, redirectStderrToDevNull);
 	}
-
-	pid = syscalls::fork();
-	if (pid == 0) {
-		resetSignalHandlersAndMask();
-		disableMallocDebugging();
-		closeAllFileDescriptors(2);
-		execlp("rm", "rm", "-rf", c_path, (char * const) 0);
-		perror("Cannot execute rm");
-		_exit(1);
-
-	} else if (pid == -1) {
-		int e = errno;
-		throw SystemException("Cannot fork a new process", e);
-
-	} else {
-		boost::this_thread::restore_interruption ri(di);
-		boost::this_thread::restore_syscall_interruption rsi(dsi);
-		int status;
-		if (syscalls::waitpid(pid, &status, 0) == -1 || status != 0) {
+	{
+		const char *command[] = {
+			"rm",
+			"-rf",
+			path.c_str(),
+			NULL
+		};
+		SubprocessInfo info;
+		runCommand(command, info, true, true, redirectStderrToDevNull);
+		if (info.status != 0 && info.status != -2) {
 			throw RuntimeException("Cannot remove directory '" + path + "'");
 		}
 	}
@@ -777,8 +762,6 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 	 */
 	syscalls::sleep(2);
 
-	boost::this_thread::disable_interruption di;
-	boost::this_thread::disable_syscall_interruption dsi;
 	vector<string>::const_iterator it;
 	string prespawnScript = locator.getHelperScriptsDir() + "/prespawn";
 
@@ -789,47 +772,15 @@ prestartWebApps(const ResourceLocator &locator, const string &ruby,
 			continue;
 		}
 
-		pid_t pid;
+		const char *command[] = {
+			ruby.c_str(),
+			prespawnScript.c_str(),
+			it->c_str(),
+			NULL
+		};
+		SubprocessInfo info;
+		runCommand(command, info);
 
-		pid = fork();
-		if (pid == 0) {
-			long max_fds, i;
-			int e;
-
-			// Close all unnecessary file descriptors.
-			max_fds = sysconf(_SC_OPEN_MAX);
-			for (i = 3; i < max_fds; i++) {
-				syscalls::close(i);
-			}
-
-			execlp(ruby.c_str(),
-				ruby.c_str(),
-				prespawnScript.c_str(),
-				it->c_str(),
-				(char *) 0);
-			e = errno;
-			fprintf(stderr, "Cannot execute '%s %s %s': %s (%d)\n",
-				ruby.c_str(),
-				prespawnScript.c_str(), it->c_str(),
-				strerror(e), e);
-			fflush(stderr);
-			_exit(1);
-		} else if (pid == -1) {
-			perror("fork()");
-		} else {
-			try {
-				boost::this_thread::restore_interruption si(di);
-				boost::this_thread::restore_syscall_interruption ssi(dsi);
-				syscalls::waitpid(pid, NULL, 0);
-			} catch (const thread_interrupted &) {
-				syscalls::kill(SIGKILL, pid);
-				syscalls::waitpid(pid, NULL, 0);
-				throw;
-			}
-		}
-
-		boost::this_thread::restore_interruption si(di);
-		boost::this_thread::restore_syscall_interruption ssi(dsi);
 		syscalls::sleep(1);
 		it++;
 	}
