@@ -58,6 +58,7 @@
 #include <adhoc_lve.h>
 
 #include <LoggingKit/LoggingKit.h>
+#include <ProcessManagement/Spawn.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
@@ -196,6 +197,11 @@ recordSolutionDescriptionHTML(const string &workDir, const string &message) {
 }
 
 static void
+reopenStdout(int fd) {
+	dup2(fd, STDOUT_FILENO);
+}
+
+static void
 dumpEnvvars(const string &workDir) {
 	FILE *f = fopen((workDir + "/envdump/envvars").c_str(), "w");
 	if (f == NULL) {
@@ -204,18 +210,13 @@ dumpEnvvars(const string &workDir) {
 		return;
 	}
 
-	pid_t pid = fork();
-	if (pid == 0) {
-		dup2(fileno(f), 1);
-		execlp("env", "env", (char *) 0);
-		_exit(1);
-	} else if (pid == -1) {
-		int e = errno;
-		fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
-			strerror(e), e);
-	} else {
-		waitpid(pid, NULL, 0);
-	}
+	const char *command[] = {
+		"env",
+		NULL
+	};
+	SubprocessInfo info;
+	runCommand(command, info, true, true,
+		boost::bind(reopenStdout, fileno(f)));
 	fclose(f);
 }
 
@@ -228,18 +229,13 @@ dumpUserInfo(const string &workDir) {
 		return;
 	}
 
-	pid_t pid = fork();
-	if (pid == 0) {
-		dup2(fileno(f), 1);
-		execlp("id", "id", (char *) 0);
-		_exit(1);
-	} else if (pid == -1) {
-		int e = errno;
-		fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
-			strerror(e), e);
-	} else {
-		waitpid(pid, NULL, 0);
-	}
+	const char *command[] = {
+		"id",
+		NULL
+	};
+	SubprocessInfo info;
+	runCommand(command, info, true, true,
+		boost::bind(reopenStdout, fileno(f)));
 	fclose(f);
 }
 
@@ -252,19 +248,16 @@ dumpUlimits(const string &workDir) {
 		return;
 	}
 
-	pid_t pid = fork();
-	if (pid == 0) {
-		dup2(fileno(f), 1);
-		// On Linux, ulimit is a shell builtin and not a command.
-		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (char *) 0);
-		_exit(1);
-	} else if (pid == -1) {
-		int e = errno;
-		fprintf(stderr, "Error: cannot fork a new process: %s (errno=%d)\n",
-		strerror(e), e);
-	} else {
-		waitpid(pid, NULL, 0);
-	}
+	// On Linux, ulimit is a shell builtin and not a command.
+	const char *command[] = {
+		"/bin/sh",
+		"-c",
+		"ulimit -a",
+		NULL
+	};
+	SubprocessInfo info;
+	runCommand(command, info, true, true,
+		boost::bind(reopenStdout, fileno(f)));
 	fclose(f);
 }
 

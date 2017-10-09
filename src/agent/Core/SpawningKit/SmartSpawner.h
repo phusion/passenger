@@ -49,6 +49,7 @@
 #include <Constants.h>
 #include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
+#include <ProcessManagement/Utils.h>
 #include <Utils/SystemTime.h>
 #include <Utils/IOUtils.h>
 #include <Utils/BufferedIO.h>
@@ -364,7 +365,7 @@ private:
 			dup2(stdinCopy, 0);
 			dup2(stdoutAndErrCopy, 1);
 			dup2(stdoutAndErrCopy, 2);
-			closeAllFileDescriptors(2);
+			closeAllFileDescriptors(2, true);
 			execlp(agentFilename.c_str(),
 				agentFilename.c_str(),
 				"spawn-env-setupper",
