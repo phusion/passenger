@@ -61,12 +61,14 @@
 #include <ResourceLocator.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
+#include <Utils/AsyncSignalSafeUtils.h>
 
 namespace Passenger {
 namespace Agent {
 namespace Fundamentals {
 
 using namespace std;
+namespace ASSU = AsyncSignalSafeUtils;
 
 
 struct AbortHandlerContext {
@@ -108,129 +110,46 @@ static const char digits[] = "0123456789";
 static const char hex_chars[] = "0123456789abcdef";
 
 
-// When we're in a crash handler, there's nothing we can do if we fail to
-// write to stderr, so we ignore its return value and we ignore compiler
-// warnings about ignoring that.
 static void
 write_nowarn(int fd, const void *buf, size_t n) {
-	ssize_t ret = write(fd, buf, n);
-	(void) ret;
-}
-
-// No idea whether strlen() is async signal safe, but let's not risk it
-// and write our own version instead that's guaranteed to be safe.
-static size_t
-safeStrlen(const char *str) {
-	size_t size = 0;
-	while (*str != '\0') {
-		str++;
-		size++;
-	}
-	return size;
-}
-
-// Async-signal safe way to print to stderr.
-static void
-safePrintErr(const char *message) {
-	write_nowarn(STDERR_FILENO, message, strlen(message));
-}
-
-// Must be async signal safe.
-static char *
-appendText(char *buf, const char *text) {
-	size_t len = safeStrlen(text);
-	strcpy(buf, text);
-	return buf + len;
-}
-
-// Must be async signal safe.
-static void
-reverse(char *str, size_t len) {
-	char *p1, *p2;
-	if (*str == '\0') {
-		return;
-	}
-	for (p1 = str, p2 = str + len - 1; p2 > p1; ++p1, --p2) {
-		*p1 ^= *p2;
-		*p2 ^= *p1;
-		*p1 ^= *p2;
-	}
-}
-
-// Must be async signal safe.
-static char *
-appendULL(char *buf, unsigned long long value) {
-	unsigned long long remainder = value;
-	unsigned int size = 0;
-
-	do {
-		buf[size] = digits[remainder % 10];
-		remainder = remainder / 10;
-		size++;
-	} while (remainder != 0);
-
-	reverse(buf, size);
-	return buf + size;
-}
-
-// Must be async signal safe.
-template<typename IntegerType>
-static char *
-appendIntegerAsHex(char *buf, IntegerType value) {
-	IntegerType remainder = value;
-	unsigned int size = 0;
-
-	do {
-		buf[size] = hex_chars[remainder % 16];
-		remainder = remainder / 16;
-		size++;
-	} while (remainder != 0);
-
-	reverse(buf, size);
-	return buf + size;
-}
-
-// Must be async signal safe.
-static char *
-appendPointerAsString(char *buf, void *pointer) {
-	return appendIntegerAsHex(appendText(buf, "0x"), (boost::uintptr_t) pointer);
+	ASSU::writeNoWarn(fd, buf, n);
 }
 
 static char *
-appendSignalName(char *buf, int signo) {
+appendSignalName(char *pos, const char *end, int signo) {
 	switch (signo) {
 	case SIGABRT:
-		buf = appendText(buf, "SIGABRT");
+		pos = ASSU::appendData(pos, end, "SIGABRT");
 		break;
 	case SIGSEGV:
-		buf = appendText(buf, "SIGSEGV");
+		pos = ASSU::appendData(pos, end, "SIGSEGV");
 		break;
 	case SIGBUS:
-		buf = appendText(buf, "SIGBUS");
+		pos = ASSU::appendData(pos, end, "SIGBUS");
 		break;
 	case SIGFPE:
-		buf = appendText(buf, "SIGFPE");
+		pos = ASSU::appendData(pos, end, "SIGFPE");
 		break;
 	case SIGILL:
-		buf = appendText(buf, "SIGILL");
+		pos = ASSU::appendData(pos, end, "SIGILL");
 		break;
 	default:
-		return appendULL(buf, (unsigned long long) signo);
+		return ASSU::appendInteger<int, 10>(pos, end, signo);
 	}
-	buf = appendText(buf, "(");
-	buf = appendULL(buf, (unsigned long long) signo);
-	buf = appendText(buf, ")");
-	return buf;
+	pos = ASSU::appendData(pos, end, "(");
+	pos = ASSU::appendInteger<int, 10>(pos, end, signo);
+	pos = ASSU::appendData(pos, end, ")");
+	return pos;
 }
 
 #define SI_CODE_HANDLER(name) \
 	case name: \
-		buf = appendText(buf, #name); \
+		buf = ASSU::appendData(buf, end, #name); \
 		break
 
 // Must be async signal safe.
 static char *
-appendSignalReason(char *buf, siginfo_t *info) {
+appendSignalReason(char *buf, const char *end, siginfo_t *info) {
 	bool handled = true;
 
 	switch (info->si_code) {
@@ -288,38 +207,41 @@ appendSignalReason(char *buf, siginfo_t *info) {
 			break;
 		}
 		if (!handled) {
-			buf = appendText(buf, "#");
-			buf = appendULL(buf, (unsigned long long) info->si_code);
+			buf = ASSU::appendData(buf, end, "#");
+			buf = ASSU::appendInteger<int, 10>(buf, end, info->si_code);
 		}
 		break;
 	}
 
 	if (info->si_code <= 0) {
-		buf = appendText(buf, ", signal sent by PID ");
-		buf = appendULL(buf, (unsigned long long) info->si_pid);
-		buf = appendText(buf, " with UID ");
-		buf = appendULL(buf, (unsigned long long) info->si_uid);
+		buf = ASSU::appendData(buf, end, ", signal sent by PID ");
+		buf = ASSU::appendInteger<pid_t, 10>(buf, end, info->si_pid);
+		buf = ASSU::appendData(buf, end, " with UID ");
+		buf = ASSU::appendInteger<uid_t, 10>(buf, end, info->si_uid);
 	}
 
-	buf = appendText(buf, ", si_addr=");
-	buf = appendPointerAsString(buf, info->si_addr);
+	buf = ASSU::appendData(buf, end, ", si_addr=0x");
+	buf = ASSU::appendInteger<boost::uintptr_t, 16>(buf, end, (boost::uintptr_t) info->si_addr);
 
 	return buf;
 }
 
 static int
 runInSubprocessWithTimeLimit(AbortHandlerWorkingState &state, Callback callback, void *userData, int timeLimit) {
-	char *end;
+	char *pos;
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
 	pid_t child;
 	int p[2], e;
 
 	if (pipe(p) == -1) {
 		e = errno;
-		end = state.messageBuf;
-		end = appendText(end, "Could not create subprocess: pipe() failed with errno=");
-		end = appendULL(end, e);
-		end = appendText(end, "\n");
-		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, "Could not create subprocess: pipe() failed: ");
+		pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+		pos = ASSU::appendData(pos, end, " (errno=");
+		pos = ASSU::appendInteger<int, 10>(pos, end, e);
+		pos = ASSU::appendData(pos, end, ")\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 		return -1;
 	}
 
@@ -334,11 +256,13 @@ runInSubprocessWithTimeLimit(AbortHandlerWorkingState &state, Callback callback,
 		e = errno;
 		close(p[0]);
 		close(p[1]);
-		end = state.messageBuf;
-		end = appendText(end, "Could not create subprocess: fork() failed with errno=");
-		end = appendULL(end, e);
-		end = appendText(end, "\n");
-		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, "Could not create subprocess: fork() failed: ");
+		pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+		pos = ASSU::appendData(pos, end, " (errno=");
+		pos = ASSU::appendInteger<int, 10>(pos, end, e);
+		pos = ASSU::appendData(pos, end, ")\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 		return -1;
 
 	} else {
@@ -353,7 +277,7 @@ runInSubprocessWithTimeLimit(AbortHandlerWorkingState &state, Callback callback,
 		fd.events = POLLIN | POLLHUP | POLLERR;
 		if (poll(&fd, 1, timeLimit) <= 0) {
 			kill(child, SIGKILL);
-			safePrintErr("Could not run child process: it did not exit in time\n");
+			ASSU::printError("Could not run child process: it did not exit in time\n");
 		}
 		close(p[0]);
 		if (waitpid(child, &status, 0) == child) {
@@ -366,26 +290,22 @@ runInSubprocessWithTimeLimit(AbortHandlerWorkingState &state, Callback callback,
 
 static void
 dumpFileDescriptorInfoWithLsof(AbortHandlerWorkingState &state, void *userData) {
-	char *end;
-
-	end = state.messageBuf;
-	end = appendULL(end, state.pid);
-	*end = '\0';
+	char *pos = state.messageBuf;
+	const char *end = state.messageBuf + sizeof(state.messageBuf) - 1;
+	pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
+	*pos = '\0';
 
 	closeAllFileDescriptors(2, true);
 
 	execlp("lsof", "lsof", "-p", state.messageBuf, "-nP", (const char * const) 0);
 
-	end = state.messageBuf;
-	end = appendText(end, "ERROR: cannot execute command 'lsof': errno=");
-	end = appendULL(end, errno);
-	end = appendText(end, "\n");
-	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+	const char *command[] = { "lsof", NULL };
+	printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
 	_exit(1);
 }
 
 static void
-dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state, char *end) {
+dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state) {
 	pid_t pid;
 	int status;
 
@@ -394,48 +314,52 @@ dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state, char *end) {
 		closeAllFileDescriptors(2, true);
 		// The '-v' is for natural sorting on Linux. On BSD -v means something else but it's harmless.
 		execlp("ls", "ls", "-lv", state.messageBuf, (const char * const) 0);
+
+		const char *command[] = { "ls", NULL };
+		printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
 		_exit(1);
 	} else if (pid == -1) {
-		safePrintErr("ERROR: Could not fork a process to dump file descriptor information!\n");
+		ASSU::printError("ERROR: Could not fork a process to dump file descriptor information!\n");
 	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
-		safePrintErr("ERROR: Could not run 'ls' to dump file descriptor information!\n");
+		ASSU::printError("ERROR: Could not run 'ls' to dump file descriptor information!\n");
 	}
 }
 
 static void
 dumpFileDescriptorInfo(AbortHandlerWorkingState &state) {
 	char *messageBuf = state.messageBuf;
-	char *end;
+	char *pos;
+	const char *end = state.messageBuf + sizeof(state.messageBuf) - 1;
 	struct stat buf;
 	int status;
 
-	end = messageBuf;
-	end = appendText(end, state.messagePrefix);
-	end = appendText(end, " ] Open files and file descriptors:\n");
-	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+	pos = messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
+	pos = ASSU::appendData(pos, end, " ] Open files and file descriptors:\n");
+	write_nowarn(STDERR_FILENO, messageBuf, pos - messageBuf);
 
 	status = runInSubprocessWithTimeLimit(state, dumpFileDescriptorInfoWithLsof, NULL, 4000);
 
 	if (status != 0) {
-		safePrintErr("Falling back to another mechanism for dumping file descriptors.\n");
+		ASSU::printError("Falling back to another mechanism for dumping file descriptors.\n");
 
-		end = messageBuf;
-		end = appendText(end, "/proc/");
-		end = appendULL(end, state.pid);
-		end = appendText(end, "/fd");
-		*end = '\0';
+		pos = messageBuf;
+		pos = ASSU::appendData(pos, end, "/proc/");
+		pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
+		pos = ASSU::appendData(pos, end, "/fd");
+		*pos = '\0';
 		if (stat(messageBuf, &buf) == 0) {
-			dumpFileDescriptorInfoWithLs(state, end + 1);
+			dumpFileDescriptorInfoWithLs(state);
 		} else {
-			end = messageBuf;
-			end = appendText(end, "/dev/fd");
-			*end = '\0';
+			pos = messageBuf;
+			pos = ASSU::appendData(pos, end, "/dev/fd");
+			*pos = '\0';
 			if (stat(messageBuf, &buf) == 0) {
-				dumpFileDescriptorInfoWithLs(state, end + 1);
+				dumpFileDescriptorInfoWithLs(state);
 			} else {
-				end = messageBuf;
-				end = appendText(end, "ERROR: No other file descriptor dumping mechanism on current platform detected.\n");
-				write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+				pos = messageBuf;
+				pos = ASSU::appendData(pos, end, "ERROR: No other file descriptor dumping mechanism on current platform detected.\n");
+				write_nowarn(STDERR_FILENO, messageBuf, pos - messageBuf);
 			}
 		}
 	}
@@ -443,33 +367,34 @@ dumpFileDescriptorInfo(AbortHandlerWorkingState &state) {
 
 static void
 dumpWithCrashWatch(AbortHandlerWorkingState &state) {
-	char *messageBuf = state.messageBuf;
-	const char *pidStr = messageBuf;
-	char *end = messageBuf;
-	end = appendULL(end, (unsigned long long) state.pid);
-	*end = '\0';
+	char *pos;
+	const char *end = state.messageBuf + sizeof(state.messageBuf) - 1;
+
+	pos = state.messageBuf;
+	pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
+	*pos = '\0';
 
 	pid_t child = asyncFork();
 	if (child == 0) {
 		closeAllFileDescriptors(2, true);
 		execlp(ctx->config->ruby, ctx->config->ruby, ctx->crashWatchCommand,
-			ctx->rubyLibDir, ctx->installSpec, "--dump", pidStr, (char * const) 0);
-		int e = errno;
-		end = messageBuf;
-		end = appendText(end, "crash-watch is could not be executed! ");
-		end = appendText(end, "(execlp() returned errno=");
-		end = appendULL(end, e);
-		end = appendText(end, ") Please check your file permissions or something.\n");
-		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+			ctx->rubyLibDir, ctx->installSpec, "--dump",
+			state.messageBuf, // PID string
+			(char * const) 0);
+
+		const char *command[] = { "crash-watch", NULL };
+		printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
 		_exit(1);
 
 	} else if (child == -1) {
 		int e = errno;
-		end = messageBuf;
-		end = appendText(end, "Could not execute crash-watch: fork() failed with errno=");
-		end = appendULL(end, e);
-		end = appendText(end, "\n");
-		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, "Could not execute crash-watch: fork() failed: ");
+		pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+		pos = ASSU::appendData(pos, end, " (errno=");
+		pos = ASSU::appendInteger<int, 10>(pos, end, e);
+		pos = ASSU::appendData(pos, end, ")\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	} else {
 		waitpid(child, NULL, 0);
@@ -481,74 +406,81 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 	dumpBacktrace(AbortHandlerWorkingState &state, void *userData) {
 		void *backtraceStore[512];
 		int frames = backtrace(backtraceStore, sizeof(backtraceStore) / sizeof(void *));
-		char *end = state.messageBuf;
-		end = appendText(end, "--------------------------------------\n");
-		end = appendText(end, "[ pid=");
-		end = appendULL(end, (unsigned long long) state.pid);
-		end = appendText(end, " ] Backtrace with ");
-		end = appendULL(end, (unsigned long long) frames);
-		end = appendText(end, " frames:\n");
-		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		char *pos;
+		const char *end = state.messageBuf + sizeof(state.messageBuf) - 1;
+
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, "--------------------------------------\n");
+		pos = ASSU::appendData(pos, end, "[ pid=");
+		pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
+		pos = ASSU::appendData(pos, end, " ] Backtrace with ");
+		pos = ASSU::appendInteger<int, 10>(pos, end, frames);
+		pos = ASSU::appendData(pos, end, " frames:\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 		if (ctx->backtraceSanitizerCommand != NULL) {
 			int p[2];
 			if (pipe(p) == -1) {
 				int e = errno;
-				end = state.messageBuf;
-				end = appendText(end, "Could not dump diagnostics through backtrace sanitizer: pipe() failed with errno=");
-				end = appendULL(end, e);
-				end = appendText(end, "\n");
-				end = appendText(end, "Falling back to writing to stderr directly...\n");
-				write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				pos = state.messageBuf;
+				pos = ASSU::appendData(pos, end, "Could not dump diagnostics through backtrace sanitizer: pipe() failed with errno=");
+				pos = ASSU::appendInteger<int, 10>(pos, end, e);
+				pos = ASSU::appendData(pos, end, "\n");
+				pos = ASSU::appendData(pos, end, "Falling back to writing to stderr directly...\n");
+				write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 				return;
 			}
 
 			pid_t pid = asyncFork();
 			if (pid == 0) {
-				const char *pidStr = end = state.messageBuf;
-				end = appendULL(end, (unsigned long long) state.pid);
-				*end = '\0';
-				end++;
+				const char *pidStr = pos = state.messageBuf;
+				pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
+				*pos = '\0';
+				pos++;
 
 				close(p[1]);
 				dup2(p[0], STDIN_FILENO);
 				closeAllFileDescriptors(2, true);
 
-				char *command = end;
-				end = appendText(end, "exec ");
-				end = appendText(end, ctx->backtraceSanitizerCommand);
+				const char *command = pos;
+				pos = ASSU::appendData(pos, end, "exec ");
+				pos = ASSU::appendData(pos, end, ctx->backtraceSanitizerCommand);
 				if (ctx->backtraceSanitizerPassProgramInfo) {
-					end = appendText(end, " \"");
-					end = appendText(end, ctx->config->origArgv[0]);
-					end = appendText(end, "\" ");
-					end = appendText(end, pidStr);
+					pos = ASSU::appendData(pos, end, " \"");
+					pos = ASSU::appendData(pos, end, ctx->config->origArgv[0]);
+					pos = ASSU::appendData(pos, end, "\" ");
+					pos = ASSU::appendData(pos, end, pidStr);
 				}
-				*end = '\0';
-				end++;
+				*pos = '\0';
+				pos++;
 				execlp("/bin/sh", "/bin/sh", "-c", command, (const char * const) 0);
 
-				end = state.messageBuf;
-				end = appendText(end, "ERROR: cannot execute '");
-				end = appendText(end, ctx->backtraceSanitizerCommand);
-				end = appendText(end, "' for sanitizing the backtrace, trying 'cat'...\n");
-				write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				pos = state.messageBuf;
+				pos = ASSU::appendData(pos, end, "ERROR: cannot execute '");
+				pos = ASSU::appendData(pos, end, ctx->backtraceSanitizerCommand);
+				pos = ASSU::appendData(pos, end, "' for sanitizing the backtrace, trying 'cat'...\n");
+				write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 				execlp("cat", "cat", (const char * const) 0);
 				execlp("/bin/cat", "cat", (const char * const) 0);
 				execlp("/usr/bin/cat", "cat", (const char * const) 0);
-				safePrintErr("ERROR: cannot execute 'cat'\n");
+
+				const char *commandArray[] = { "cat", NULL };
+				printExecError2(commandArray, errno, state.messageBuf, sizeof(state.messageBuf));
 				_exit(1);
 
 			} else if (pid == -1) {
 				close(p[0]);
 				close(p[1]);
 				int e = errno;
-				end = state.messageBuf;
-				end = appendText(end, "Could not dump diagnostics through backtrace sanitizer: fork() failed with errno=");
-				end = appendULL(end, e);
-				end = appendText(end, "\n");
-				end = appendText(end, "Falling back to writing to stderr directly...\n");
-				write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+				pos = state.messageBuf;
+				pos = ASSU::appendData(pos, end, "Could not dump diagnostics through backtrace sanitizer: fork() failed: ");
+				pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+				pos = ASSU::appendData(pos, end, " (errno=");
+				pos = ASSU::appendInteger<int, 10>(pos, end, e);
+				pos = ASSU::appendData(pos, end, ")\n");
+				pos = ASSU::appendData(pos, end, "Falling back to writing to stderr directly...\n");
+				write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 				backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 
 			} else {
@@ -558,11 +490,11 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 				backtrace_symbols_fd(backtraceStore, frames, p[1]);
 				close(p[1]);
 				if (waitpid(pid, &status, 0) == -1 || status != 0) {
-					end = state.messageBuf;
-					end = appendText(end, "ERROR: cannot execute '");
-					end = appendText(end, ctx->backtraceSanitizerCommand);
-					end = appendText(end, "' for sanitizing the backtrace, writing to stderr directly...\n");
-					write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+					pos = state.messageBuf;
+					pos = ASSU::appendData(pos, end, "ERROR: cannot execute '");
+					pos = ASSU::appendData(pos, end, ctx->backtraceSanitizerCommand);
+					pos = ASSU::appendData(pos, end, "' for sanitizing the backtrace, writing to stderr directly...\n");
+					write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 					backtrace_symbols_fd(backtraceStore, frames, STDERR_FILENO);
 				}
 			}
@@ -581,15 +513,15 @@ runCustomDiagnosticsDumper(AbortHandlerWorkingState &state, void *userData) {
 // This function is performed in a child process.
 static void
 dumpDiagnostics(AbortHandlerWorkingState &state) {
-	char *messageBuf = state.messageBuf;
-	char *end;
+	char *pos;
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
 	pid_t pid;
 	int status;
 
-	end = messageBuf;
-	end = appendText(end, state.messagePrefix);
-	end = appendText(end, " ] Date, uname and ulimits:\n");
-	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+	pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
+	pos = ASSU::appendData(pos, end, " ] Date, uname and ulimits:\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	// Dump human-readable time string and string.
 	pid = asyncFork();
@@ -598,9 +530,9 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 		execlp("date", "date", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
-		safePrintErr("ERROR: Could not fork a process to dump the time!\n");
+		ASSU::printError("ERROR: Could not fork a process to dump the time!\n");
 	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
-		safePrintErr("ERROR: Could not run 'date'!\n");
+		ASSU::printError("ERROR: Could not run 'date'!\n");
 	}
 
 	// Dump system uname.
@@ -610,9 +542,9 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 		execlp("uname", "uname", "-mprsv", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
-		safePrintErr("ERROR: Could not fork a process to dump the uname!\n");
+		ASSU::printError("ERROR: Could not fork a process to dump the uname!\n");
 	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
-		safePrintErr("ERROR: Could not run 'uname -mprsv'!\n");
+		ASSU::printError("ERROR: Could not run 'uname -mprsv'!\n");
 	}
 
 	// Dump ulimit.
@@ -624,75 +556,75 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (const char * const) 0);
 		_exit(1);
 	} else if (pid == -1) {
-		safePrintErr("ERROR: Could not fork a process to dump the ulimit!\n");
+		ASSU::printError("ERROR: Could not fork a process to dump the ulimit!\n");
 	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
-		safePrintErr("ERROR: Could not run 'ulimit -a'!\n");
+		ASSU::printError("ERROR: Could not run 'ulimit -a'!\n");
 	}
 
-	end = messageBuf;
-	end = appendText(end, state.messagePrefix);
-	end = appendText(end, " ] " PROGRAM_NAME " version: " PASSENGER_VERSION "\n");
-	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+	pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
+	pos = ASSU::appendData(pos, end, " ] " PROGRAM_NAME " version: " PASSENGER_VERSION "\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	if (LoggingKit::lastAssertionFailure.filename != NULL) {
-		end = messageBuf;
-		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] Last assertion failure: (");
-		end = appendText(end, LoggingKit::lastAssertionFailure.expression);
-		end = appendText(end, "), ");
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Last assertion failure: (");
+		pos = ASSU::appendData(pos, end, LoggingKit::lastAssertionFailure.expression);
+		pos = ASSU::appendData(pos, end, "), ");
 		if (LoggingKit::lastAssertionFailure.function != NULL) {
-			end = appendText(end, "function ");
-			end = appendText(end, LoggingKit::lastAssertionFailure.function);
-			end = appendText(end, ", ");
+			pos = ASSU::appendData(pos, end, "function ");
+			pos = ASSU::appendData(pos, end, LoggingKit::lastAssertionFailure.function);
+			pos = ASSU::appendData(pos, end, ", ");
 		}
-		end = appendText(end, "file ");
-		end = appendText(end, LoggingKit::lastAssertionFailure.filename);
-		end = appendText(end, ", line ");
-		end = appendULL(end, LoggingKit::lastAssertionFailure.line);
-		end = appendText(end, ".\n");
-		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+		pos = ASSU::appendData(pos, end, "file ");
+		pos = ASSU::appendData(pos, end, LoggingKit::lastAssertionFailure.filename);
+		pos = ASSU::appendData(pos, end, ", line ");
+		pos = ASSU::appendInteger<unsigned int, 10>(pos, end, LoggingKit::lastAssertionFailure.line);
+		pos = ASSU::appendData(pos, end, ".\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 	}
 
 	// It is important that writing the message and the backtrace are two
 	// seperate operations because it's not entirely clear whether the
 	// latter is async signal safe and thus can crash.
-	end = messageBuf;
-	end = appendText(end, state.messagePrefix);
+	pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
-		end = appendText(end, " ] libc backtrace available!\n");
+		pos = ASSU::appendData(pos, end, " ] libc backtrace available!\n");
 	#else
-		end = appendText(end, " ] libc backtrace not available.\n");
+		pos = ASSU::appendData(pos, end, " ] libc backtrace not available.\n");
 	#endif
-	write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	#ifdef LIBC_HAS_BACKTRACE_FUNC
 		runInSubprocessWithTimeLimit(state, dumpBacktrace, NULL, 4000);
 	#endif
 
-	safePrintErr("--------------------------------------\n");
+	ASSU::printError("--------------------------------------\n");
 
 	if (ctx->config->diagnosticsDumper != NULL) {
-		end = messageBuf;
-		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] Dumping additional diagnostical information...\n");
-		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
-		safePrintErr("--------------------------------------\n");
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Dumping additional diagnostical information...\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+		ASSU::printError("--------------------------------------\n");
 		runInSubprocessWithTimeLimit(state, runCustomDiagnosticsDumper, NULL, 2000);
-		safePrintErr("--------------------------------------\n");
+		ASSU::printError("--------------------------------------\n");
 	}
 
 	dumpFileDescriptorInfo(state);
-	safePrintErr("--------------------------------------\n");
+	ASSU::printError("--------------------------------------\n");
 
 	if (ctx->config->dumpWithCrashWatch && ctx->crashWatchCommand != NULL) {
-		end = messageBuf;
-		end = appendText(end, state.messagePrefix);
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
 		#ifdef LIBC_HAS_BACKTRACE_FUNC
-			end = appendText(end, " ] Dumping a more detailed backtrace with crash-watch...\n");
+			pos = ASSU::appendData(pos, end, " ] Dumping a more detailed backtrace with crash-watch...\n");
 		#else
-			end = appendText(end, " ] Dumping a backtrace with crash-watch...\n");
+			pos = ASSU::appendData(pos, end, " ] Dumping a backtrace with crash-watch...\n");
 		#endif
-		write_nowarn(STDERR_FILENO, messageBuf, end - messageBuf);
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 		dumpWithCrashWatch(state);
 	} else {
 		write_nowarn(STDERR_FILENO, "\n", 1);
@@ -700,18 +632,19 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 }
 
 static bool
-createCrashLogFile(char *filename, time_t t) {
-	char *end = filename;
-	end = appendText(end, "/var/tmp/passenger-crash-log.");
-	end = appendULL(end, (unsigned long long) t);
-	*end = '\0';
+createCrashLogFile(char *filename, size_t bufSize, time_t t) {
+	char *pos = filename;
+	const char *end = filename + bufSize - 1;
+	pos = ASSU::appendData(pos, end, "/var/tmp/passenger-crash-log.");
+	pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
+	*pos = '\0';
 
 	int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1) {
-		end = filename;
-		end = appendText(end, "/tmp/passenger-crash-log.");
-		end = appendULL(end, (unsigned long long) t);
-		*end = '\0';
+		pos = filename;
+		pos = ASSU::appendData(pos, end, "/tmp/passenger-crash-log.");
+		pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
+		*pos = '\0';
 		fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	}
 	if (fd == -1) {
@@ -743,10 +676,10 @@ forkAndRedirectToTee(char *filename) {
 		execlp("cat", "cat", (const char * const) 0);
 		execlp("/bin/cat", "cat", (const char * const) 0);
 		execlp("/usr/bin/cat", "cat", (const char * const) 0);
-		safePrintErr("ERROR: cannot execute 'tee' or 'cat'; crash log will be lost!\n");
+		ASSU::printError("ERROR: cannot execute 'tee' or 'cat'; crash log will be lost!\n");
 		_exit(1);
 	} else if (pid == -1) {
-		safePrintErr("ERROR: cannot fork a process for executing 'tee'\n");
+		ASSU::printError("ERROR: cannot fork a process for executing 'tee'\n");
 		*filename = '\0';
 	} else {
 		close(p[0]);
@@ -787,32 +720,33 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 	ctx->callCount++;
 	if (ctx->callCount > 1) {
 		// The abort handler itself crashed!
-		char *end = state.messageBuf;
-		end = appendText(end, "[ origpid=");
-		end = appendULL(end, (unsigned long long) state.pid);
-		end = appendText(end, ", pid=");
-		end = appendULL(end, (unsigned long long) getpid());
-		end = appendText(end, ", timestamp=");
-		end = appendULL(end, (unsigned long long) t);
+		const char *end = state.messageBuf + sizeof(state.messageBuf);
+		char *pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, "[ origpid=");
+		pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
+		pos = ASSU::appendData(pos, end, ", pid=");
+		pos = ASSU::appendInteger<pid_t, 10>(pos, end, getpid());
+		pos = ASSU::appendData(pos, end, ", timestamp=");
+		pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
 		if (ctx->callCount == 2) {
 			// This is the first time it crashed.
-			end = appendText(end, " ] Abort handler crashed! signo=");
-			end = appendSignalName(end, state.signo);
-			end = appendText(end, ", reason=");
-			end = appendSignalReason(end, state.info);
-			end = appendText(end, "\n");
-			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			pos = ASSU::appendData(pos, end, " ] Abort handler crashed! signo=");
+			pos = appendSignalName(pos, end, state.signo);
+			pos = ASSU::appendData(pos, end, ", reason=");
+			pos = appendSignalReason(pos, end, state.info);
+			pos = ASSU::appendData(pos, end, "\n");
+			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 			// Run default signal handler.
 			raise(signo);
 		} else {
 			// This is the second time it crashed, meaning it failed to
 			// invoke the default signal handler to abort the process!
-			end = appendText(end, " ] Abort handler crashed again! Force exiting this time. signo=");
-			end = appendSignalName(end, state.signo);
-			end = appendText(end, ", reason=");
-			end = appendSignalReason(end, state.info);
-			end = appendText(end, "\n");
-			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			pos = ASSU::appendData(pos, end, " ] Abort handler crashed again! Force exiting this time. signo=");
+			pos = appendSignalName(pos, end, state.signo);
+			pos = ASSU::appendData(pos, end, ", reason=");
+			pos = appendSignalReason(pos, end, state.info);
+			pos = ASSU::appendData(pos, end, "\n");
+			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 			_exit(1);
 		}
 		return;
@@ -823,74 +757,80 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 	/* We want to dump the entire crash log to both stderr and a log file.
 	 * We use 'tee' for this.
 	 */
-	if (createCrashLogFile(crashLogFile, t)) {
+	if (createCrashLogFile(crashLogFile, sizeof(crashLogFile), t)) {
 		forkAndRedirectToTee(crashLogFile);
 	}
 
-	char *end = state.messagePrefix;
-	end = appendText(end, "[ pid=");
-	end = appendULL(end, (unsigned long long) state.pid);
-	*end = '\0';
-
-	end = state.messageBuf;
-	end = appendText(end, state.messagePrefix);
-	end = appendText(end, ", timestamp=");
-	end = appendULL(end, (unsigned long long) t);
-	end = appendText(end, " ] Process aborted! signo=");
-	end = appendSignalName(end, state.signo);
-	end = appendText(end, ", reason=");
-	end = appendSignalReason(end, state.info);
-	end = appendText(end, ", randomSeed=");
-	end = appendULL(end, (unsigned long long) ctx->config->randomSeed);
-	end = appendText(end, "\n");
-	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
-
-	end = state.messageBuf;
-	if (*crashLogFile != '\0') {
-		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] Crash log dumped to ");
-		end = appendText(end, crashLogFile);
-		end = appendText(end, "\n");
-	} else {
-		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] Could not create crash log file, so dumping to stderr only.\n");
+	{
+		const char *end = state.messagePrefix + sizeof(state.messagePrefix);
+		char *pos = state.messagePrefix;
+		pos = ASSU::appendData(pos, end, "[ pid=");
+		pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
+		*pos = '\0';
 	}
-	write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
+	char *pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
+	pos = ASSU::appendData(pos, end, ", timestamp=");
+	pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
+	pos = ASSU::appendData(pos, end, " ] Process aborted! signo=");
+	pos = appendSignalName(pos, end, state.signo);
+	pos = ASSU::appendData(pos, end, ", reason=");
+	pos = appendSignalReason(pos, end, state.info);
+	pos = ASSU::appendData(pos, end, ", randomSeed=");
+	pos = ASSU::appendInteger<unsigned int, 10>(pos, end, ctx->config->randomSeed);
+	pos = ASSU::appendData(pos, end, "\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
+	pos = state.messageBuf;
+	if (*crashLogFile != '\0') {
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Crash log dumped to ");
+		pos = ASSU::appendData(pos, end, crashLogFile);
+		pos = ASSU::appendData(pos, end, "\n");
+	} else {
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Could not create crash log file, so dumping to stderr only.\n");
+	}
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	if (ctx->config->beep) {
-		end = state.messageBuf;
-		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] PASSENGER_BEEP_ON_ABORT on, executing beep...\n");
-		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] PASSENGER_BEEP_ON_ABORT on, executing beep...\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 		child = asyncFork();
 		if (child == 0) {
 			closeAllFileDescriptors(2, true);
 			#ifdef __APPLE__
+				const char *command[] = { "osascript", NULL };
 				execlp("osascript", "osascript", "-e", "beep 2", (const char * const) 0);
-				safePrintErr("Cannot execute 'osascript' command\n");
+				printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
 			#else
+				const char *command[] = { "beep", NULL };
 				execlp("beep", "beep", (const char * const) 0);
-				safePrintErr("Cannot execute 'beep' command\n");
+				printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
 			#endif
 			_exit(1);
 
 		} else if (child == -1) {
 			int e = errno;
-			end = state.messageBuf;
-			end = appendText(end, state.messagePrefix);
-			end = appendText(end, " ] Could fork a child process for invoking a beep: fork() failed with errno=");
-			end = appendULL(end, e);
-			end = appendText(end, "\n");
-			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			pos = state.messageBuf;
+			pos = ASSU::appendData(pos, end, state.messagePrefix);
+			pos = ASSU::appendData(pos, end, " ] Could fork a child process for invoking a beep: fork() failed with errno=");
+			pos = ASSU::appendInteger<int, 10>(pos, end, e);
+			pos = ASSU::appendData(pos, end, "\n");
+			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 		}
 	}
 
 	if (ctx->config->stopProcess) {
-		end = state.messageBuf;
-		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] PASSENGER_STOP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
-		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] PASSENGER_STOP_ON_ABORT on, so process stopped. Send SIGCONT when you want to continue.\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 		raise(SIGSTOP);
 	}
 
@@ -925,12 +865,12 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 
 		} else if (child == -1) {
 			int e = errno;
-			end = state.messageBuf;
-			end = appendText(end, state.messagePrefix);
-			end = appendText(end, "] Could fork a child process for dumping diagnostics: fork() failed with errno=");
-			end = appendULL(end, e);
-			end = appendText(end, "\n");
-			write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+			pos = state.messageBuf;
+			pos = ASSU::appendData(pos, end, state.messagePrefix);
+			pos = ASSU::appendData(pos, end, "] Could fork a child process for dumping diagnostics: fork() failed with errno=");
+			pos = ASSU::appendInteger<int, 10>(pos, end, e);
+			pos = ASSU::appendData(pos, end, "\n");
+			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 			_exit(1);
 
 		} else {
@@ -940,12 +880,12 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 
 	} else if (child == -1) {
 		int e = errno;
-		end = state.messageBuf;
-		end = appendText(end, state.messagePrefix);
-		end = appendText(end, " ] Could fork a child process for dumping diagnostics: fork() failed with errno=");
-		end = appendULL(end, e);
-		end = appendText(end, "\n");
-		write_nowarn(STDERR_FILENO, state.messageBuf, end - state.messageBuf);
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Could fork a child process for dumping diagnostics: fork() failed with errno=");
+		pos = ASSU::appendInteger<int, 10>(pos, end, e);
+		pos = ASSU::appendData(pos, end, "\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	} else {
 		raise(SIGSTOP);

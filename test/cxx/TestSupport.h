@@ -23,6 +23,7 @@
 #include <InstanceDirectory.h>
 #include <BackgroundEventLoop.h>
 #include <Exceptions.h>
+#include <ProcessManagement/Spawn.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
@@ -210,19 +211,7 @@ public:
 		char command[1024];
 		snprintf(command, sizeof(command), "cp -pR \"%s\" \"%s\"",
 			source.c_str(), dest.c_str());
-		pid_t pid = fork();
-		if (pid == 0) {
-			resetSignalHandlersAndMask();
-			disableMallocDebugging();
-			closeAllFileDescriptors(2);
-			execlp("/bin/sh", "/bin/sh", "-c", command, (char * const) 0);
-			_exit(1);
-		} else if (pid == -1) {
-			int e = errno;
-			throw SystemException("Cannot fork()", e);
-		} else {
-			waitpid(pid, NULL, 0);
-		}
+		runShellCommand(command);
 	}
 
 	~TempDirCopy() {

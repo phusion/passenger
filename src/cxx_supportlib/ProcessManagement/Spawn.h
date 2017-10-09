@@ -57,7 +57,7 @@ struct SubprocessInfo {
 	 * `wait = false` then this field will never be modified.
 	 *
 	 * When unable to waitpid() the subprocess because of
-	 * an ECHILD or ESRCH, then this field is set to -1.
+	 * an ECHILD or ESRCH, then this field is set to -2.
 	 */
 	int status;
 
@@ -67,6 +67,9 @@ struct SubprocessInfo {
 		{ }
 };
 
+
+// See ProcessManagement/Utils.h for definition
+void printExecError(const char **command, int errcode);
 
 /**
  * Like system(), but properly resets the signal handler mask,
@@ -106,7 +109,8 @@ int runShellCommand(const StaticString &command);
  */
 void runCommand(const char **command, SubprocessInfo &info,
 	bool wait = true, bool killSubprocessOnInterruption = true,
-	const boost::function<void ()> &afterFork = boost::function<void ()>());
+	const boost::function<void ()> &afterFork = boost::function<void ()>(),
+	const boost::function<void (const char **command, int errcode)> &onExecFail = printExecError);
 
 /**
  * Run a command, wait for it, and capture its stdout output.
@@ -131,12 +135,14 @@ void runCommand(const char **command, SubprocessInfo &info,
  * @param killSubprocessOnInterruption Whether to automatically kill the subprocess
  *   when this function is interrupted.
  * @param afterFork A function object to be called right after forking.
+ * @param onExecFail A function object to be called if exec fails.
  * @throws SystemException
  * @throws boost::thread_interrupted
  */
 void runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 	string &output, bool killSubprocessOnInterruption = true,
-	const boost::function<void ()> &afterFork = boost::function<void ()>());
+	const boost::function<void ()> &afterFork = boost::function<void ()>(),
+	const boost::function<void (const char **command, int errcode)> &onExecFail = printExecError);
 
 
 } // namespace Passenger

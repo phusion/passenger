@@ -596,38 +596,15 @@ shutdownAgent(VariantMap *agentOptions) {
 	context = NULL;
 }
 
-/**
- * Linux-only way to change OOM killer configuration for
- * current process. Requires root privileges, which we
- * should have.
- */
 void
 restoreOomScore(VariantMap *agentOptions) {
-	TRACE_POINT();
-
 	string score = agentOptions->get("original_oom_score", false);
-	if (score.empty()) {
-		return;
-	}
-
-	FILE *f;
-	bool legacy = false;
-
-	if (score.at(0) == 'l') {
-		legacy = true;
-		score = score.substr(1);
-		f = fopen("/proc/self/oom_adj", "w");
-	} else {
-		f = fopen("/proc/self/oom_score_adj", "w");
-	}
-
-	if (f != NULL) {
-		fprintf(f, "%s\n", score.c_str());
-		fclose(f);
-	} else {
-		P_WARN("Unable to set OOM score to " << score << " (legacy: " << legacy
-				<< ") due to error: " << strerror(errno)
-				<< " (process will remain at inherited OOM score)");
+	bool isLegacy;
+	int ret = tryRestoreOomScore(score, isLegacy);
+	if (ret != 0) {
+		P_WARN("Unable to set OOM score to " << score << " (legacy: " << isLegacy
+			<< ") due to error: " << strerror(ret)
+			<< " (process will remain at inherited OOM score)");
 	}
 }
 
