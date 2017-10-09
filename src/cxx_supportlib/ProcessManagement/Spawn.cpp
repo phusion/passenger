@@ -72,10 +72,10 @@ runCommand(const char **command, SubprocessInfo &info, bool wait, bool killSubpr
 	if (info.pid == 0) {
 		resetSignalHandlersAndMask();
 		disableMallocDebugging();
-		closeAllFileDescriptors(2, true);
 		if (afterFork) {
 			afterFork();
 		}
+		closeAllFileDescriptors(2, true);
 		execvp(command[0], (char * const *) command);
 		if (onExecFail) {
 			onExecFail(command, errno);
@@ -127,10 +127,10 @@ runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 		close(p[1]);
 		resetSignalHandlersAndMask();
 		disableMallocDebugging();
-		closeAllFileDescriptors(2, true);
 		if (afterFork) {
 			afterFork();
 		}
+		closeAllFileDescriptors(2, true);
 		execvp(command[0], (char * const *) command);
 		if (onExecFail) {
 			onExecFail(command, errno);
