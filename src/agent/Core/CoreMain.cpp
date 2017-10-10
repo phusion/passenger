@@ -824,6 +824,80 @@ prestartWebApps() {
 	);
 }
 
+/**
+ * See warnIfPassengerRootVulnerable()
+ */
+static void
+warnIfPathVulnerable(const char *path, string &warnings) {
+	struct stat pathStat;
+
+	if (stat(path, &pathStat) == -1) {
+		P_DEBUG("Vulnerability check skipped: stat error on " << path << " (errno: " << errno << ")");
+		return; // fatal: we need that stat for both checks below
+	}
+
+	// Non-root ownership
+	struct passwd pathOwner;
+	struct passwd *pwdResult;
+
+	boost::shared_array<char> strings;
+	long stringsBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
+	strings.reset(new char[stringsBufSize]);
+	errno = 0;
+	if (getpwuid_r(pathStat.st_uid, &pathOwner, strings.get(), stringsBufSize, &pwdResult) == -1) {
+		P_DEBUG("Vulnerability check (owner) skipped: getpwuid_r error on " << path << " (owner UID: " <<
+				pathStat.st_uid << ", errno: " << errno << ")");
+	} else if (pwdResult == NULL) {
+		P_DEBUG("Vulnerability check (owner) skipped: getpwuid_r empty on " << path << " (owner UID: " <<
+				pathStat.st_uid << ", errno: " << errno << ")");
+	} else if (pathOwner.pw_uid != 0) {
+		warnings.append("\nThe path \"");
+		warnings.append(path);
+		warnings.append("\" can be modified by user \"");
+		warnings.append(pathOwner.pw_name);
+		warnings.append("\" (or applications running as that user). Change the owner of the path to root, or avoid running Passenger as root.");
+	}
+
+	// World writeable access rights
+	if ((pathStat.st_mode & S_IWOTH) != 0) {
+		warnings.append("\nThe path \"");
+		warnings.append(path);
+		warnings.append("\" is writeable by any user (or application). Limit write access on the path to only the root user/group.");
+	}
+}
+
+/*
+ * Emit a warning (log) if the Passenger root dir (and/or its parents) can be modified by non-root users
+ * while Passenger was run as root (because non-root users can then tamper with something running as root).
+ * It's just a convenience warning, so check failures are only logged at the debug level.
+ *
+ * N.B. we limit our checking to use cases that can easily (gotcha) lead to this vulnerable setup, such as
+ * installing Passenger via gem or tarball in a user dir, and then running it as root (for example by installing
+ * it as nginx or apache module). We do not check the entire installation file/dir structure for whether users have
+ * changed owner or access rights.
+ */
+static void
+warnIfPassengerRootVulnerable(const string &passengerRoot) {
+	TRACE_POINT();
+
+	if (geteuid() != 0) {
+		return; // Passenger is not root, so no escalation.
+	}
+
+	string checkPath = absolutizePath(passengerRoot);
+	// Check the Passenger root and all dirs above it for ownership and world-writeability
+	string warnings;
+	while (!checkPath.empty() && checkPath != "/") {
+		warnIfPathVulnerable(checkPath.c_str(), warnings);
+
+		checkPath = extractDirName(checkPath);
+	}
+	if (!warnings.empty()) {
+		P_WARN("WARNING: potential privilege escalation vulnerability. Passenger is running as root, and part(s) of the passenger root path (" <<
+				passengerRoot << ") can be changed by non-root user(s):" << warnings);
+	}
+}
+
 static void
 reportInitializationInfo() {
 	TRACE_POINT();
@@ -1104,6 +1178,7 @@ runCore() {
 		prestartWebApps();
 
 		UPDATE_TRACE_POINT();
+		warnIfPassengerRootVulnerable(agentsOptions->get("passenger_root"));
 		reportInitializationInfo();
 		mainLoop();
 
