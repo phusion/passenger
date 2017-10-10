@@ -93,10 +93,12 @@ module PhusionPassenger
         rescue LoadError
           return
         end
-        begin
-          Fiddle.dlopen '/System/Library/Frameworks/Foundation.framework/Foundation'
-        rescue Fiddle::DLError => e
-          STDERR.puts "WARNING: #{e}"
+        if Fiddle.respond_to?(:dlopen)
+          begin
+            Fiddle.dlopen '/System/Library/Frameworks/Foundation.framework/Foundation'
+          rescue Fiddle::DLError => e
+            STDERR.puts "WARNING: #{e}"
+          end
         end
       end
     end
