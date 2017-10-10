@@ -26,6 +26,8 @@
 #ifndef _PASSENGER_AGENT_FUNDAMENTALS_UTILS_H_
 #define _PASSENGER_AGENT_FUNDAMENTALS_UTILS_H_
 
+#include <StaticString.h>
+
 namespace Passenger {
 namespace Agent {
 namespace Fundamentals {
@@ -34,6 +36,7 @@ namespace Fundamentals {
 const char *getEnvString(const char *name, const char *defaultValue = NULL);
 bool getEnvBool(const char *name, bool defaultValue = false);
 void ignoreSigpipe();
+int tryRestoreOomScore(const StaticString &score, bool &isLegacy);
 
 
 } // namespace Fundamentals

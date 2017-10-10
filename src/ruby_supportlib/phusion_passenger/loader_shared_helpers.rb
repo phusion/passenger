@@ -27,6 +27,7 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'public_api'
 PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
 PhusionPassenger.require_passenger_lib 'debug_logging'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 
 module PhusionPassenger
@@ -42,7 +43,8 @@ module PhusionPassenger
       # unlikely to be changed.
       dump_ruby_environment
       check_rvm_using_wrapper_script(options)
-      return sanitize_spawn_options(options)
+      load_macos_foundation
+      sanitize_spawn_options(options)
     end
 
     def check_rvm_using_wrapper_script(options)
@@ -76,6 +78,27 @@ module PhusionPassenger
       dump_all_information(options)
       # https://code.google.com/p/phusion-passenger/issues/detail?id=1039
       puts
+    end
+
+    def load_macos_foundation
+      # Apple added an assertion in 10.13 that prevents anything Obj-C related
+      # from occuring between fork and exec. This workaround prevents the assertion.
+      # http://www.sealiesoftware.com/blog/archive/2017/6/5/Objective-C_and_fork_in_macOS_1013.html
+      # https://github.com/puma/puma/issues/1421
+      if PlatformInfo.os_name_simple == "macosx"
+        # Eager-load Foundation.framework, to ensure the Objective-C runtime
+        # exists well before any forking happens
+        begin
+          require 'fiddle'
+        rescue LoadError
+          return
+        end
+        begin
+          Fiddle.dlopen '/System/Library/Frameworks/Foundation.framework/Foundation'
+        rescue Fiddle::DLError => e
+          STDERR.puts "WARNING: #{e}"
+        end
+      end
     end
 
     def to_boolean(value)

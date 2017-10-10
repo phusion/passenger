@@ -24,6 +24,10 @@
  *  THE SOFTWARE.
  */
 
+#include <boost/bind.hpp>
+#include <Shared/Fundamentals/Utils.h>
+#include <Utils/AsyncSignalSafeUtils.h>
+
 /**
  * Touch all files in the server instance dir every 6 hours in order to prevent /tmp
  * cleaners from weaking havoc:
@@ -34,68 +38,101 @@ private:
 	WorkingObjectsPtr wo;
 	oxt::thread *thr;
 
+	static void afterFork(const StaticString &originalOomScore, const char *workingDir) {
+		namespace ASSU = AsyncSignalSafeUtils;
+		int prio, ret, e;
+
+		// Make process nicer.
+		do {
+			prio = getpriority(PRIO_PROCESS, getpid());
+		} while (prio == -1 && errno == EINTR);
+		if (prio != -1) {
+			prio++;
+			if (prio > 20) {
+				prio = 20;
+			}
+			do {
+				ret = setpriority(PRIO_PROCESS, getpid(), prio);
+			} while (ret == -1 && errno == EINTR);
+		} else {
+			char buf[1024];
+			char *pos = buf;
+			const char *end = buf + sizeof(buf);
+
+			e = errno;
+			pos = ASSU::appendData(pos, end, "getpriority() failed: ");
+			pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+			pos = ASSU::appendData(pos, end, " (errno=");
+			pos = ASSU::appendInteger<int, 10>(pos, end, e);
+			pos = ASSU::appendData(pos, end, ")");
+			ASSU::printError(buf, pos - buf);
+		}
+
+		do {
+			ret = chdir(workingDir);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			char buf[1024];
+			char *pos = buf;
+			const char *end = buf + sizeof(buf);
+
+			e = errno;
+			pos = ASSU::appendData(pos, end, "chdir(\"");
+			pos = ASSU::appendData(pos, end, workingDir);
+			pos = ASSU::appendData(pos, end, "\") failed: ");
+			pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+			pos = ASSU::appendData(pos, end, " (errno=");
+			pos = ASSU::appendInteger<int, 10>(pos, end, e);
+			pos = ASSU::appendData(pos, end, ")");
+			ASSU::printError(buf, pos - buf);
+			_exit(1);
+		}
+
+		bool isLegacy;
+		ret = tryRestoreOomScore(originalOomScore, isLegacy);
+		if (ret != 0) {
+			char buf[1024];
+			char *pos = buf;
+			const char *end = buf + sizeof(buf);
+
+			pos = ASSU::appendData(pos, end, "Unable to set OOM score to ");
+			pos = ASSU::appendData(pos, end, originalOomScore.data(), originalOomScore.size());
+			pos = ASSU::appendData(pos, end, " (legacy: ");
+			pos = ASSU::appendData(pos, end, isLegacy ? "true" : "false");
+			pos = ASSU::appendData(pos, end, ") due to error: ");
+			pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(ret));
+			pos = ASSU::appendData(pos, end, " (errno=");
+			pos = ASSU::appendInteger<int, 10>(pos, end, ret);
+			pos = ASSU::appendData(pos, end, "). Process will remain at inherited OOM score.");
+			ASSU::printError(buf, pos - buf);
+		}
+	}
+
 	void
 	threadMain() {
+		string originalOomScore = wo->extraConfigToPassToSubAgents["oom_score"].asString();
+		string workingDir = wo->instanceDir->getPath().c_str();
+
 		while (!boost::this_thread::interruption_requested()) {
 			syscalls::sleep(60 * 60);
 
 			begin_touch:
 
-			boost::this_thread::disable_interruption di;
-			boost::this_thread::disable_syscall_interruption dsi;
-			// Fork a process which touches everything in the server instance dir.
-			pid_t pid = syscalls::fork();
-			if (pid == 0) {
-				// Child
-				int prio, ret, e;
-
-				closeAllFileDescriptors(2);
-
-				// Make process nicer.
-				do {
-					prio = getpriority(PRIO_PROCESS, getpid());
-				} while (prio == -1 && errno == EINTR);
-				if (prio != -1) {
-					prio++;
-					if (prio > 20) {
-						prio = 20;
-					}
-					do {
-						ret = setpriority(PRIO_PROCESS, getpid(), prio);
-					} while (ret == -1 && errno == EINTR);
-				} else {
-					perror("getpriority");
-				}
-
-				do {
-					ret = chdir(wo->instanceDir->getPath().c_str());
-				} while (ret == -1 && errno == EINTR);
-				if (ret == -1) {
-					e = errno;
-					fprintf(stderr, "chdir(\"%s\") failed: %s (%d)\n",
-						wo->instanceDir->getPath().c_str(),
-						strerror(e), e);
-					fflush(stderr);
-					_exit(1);
-				}
-				restoreOomScore(wo->extraConfigToPassToSubAgents["oom_score"].asString());
-
-				execlp("/bin/sh", "/bin/sh", "-c", "find . | xargs touch", (char *) 0);
-				e = errno;
-				fprintf(stderr, "Cannot execute 'find . | xargs touch': %s (%d)\n",
-					strerror(e), e);
-				fflush(stderr);
-				_exit(1);
-			} else if (pid == -1) {
-				// Error
-				P_WARN("Could not touch the server instance directory because "
-					"fork() failed. Retrying in 2 minutes...");
-				boost::this_thread::restore_interruption si(di);
-				boost::this_thread::restore_syscall_interruption rsi(dsi);
+			try {
+				const char *command[] = {
+					"/bin/sh",
+					"-c",
+					"find . | xargs touch",
+					NULL
+				};
+				SubprocessInfo info;
+				runCommand(command, info, true, true,
+					boost::bind(afterFork, originalOomScore, workingDir.c_str()));
+			} catch (const SystemException &e) {
+				P_WARN("Could not touch the " PROGRAM_NAME " instance directory ("
+					<< e.what() << "). Retrying in 2 minutes...");
 				syscalls::sleep(60 * 2);
 				goto begin_touch;
-			} else {
-				syscalls::waitpid(pid, NULL, 0);
 			}
 		}
 	}

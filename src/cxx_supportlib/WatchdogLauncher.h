@@ -362,7 +362,7 @@ public:
 
 			// Make sure the feedback fd is 3 and close all file descriptors
 			// except stdin, stdout, stderr and 3.
-			syscalls::close(fds[0]);
+			close(fds[0]);
 			installFeedbackFd(fds[1]);
 			closeAllFileDescriptors(FEEDBACK_FD);
 
