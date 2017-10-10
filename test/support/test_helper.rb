@@ -136,7 +136,10 @@ module TestHelper
 
     def copy_stub_contents
       super
-      if PhusionPassenger.build_system_dir
+      if !ENV['PASSENGER_TEST_NODE_MODULES_DIR'].to_s.empty?
+        FileUtils.ln_s(ENV['PASSENGER_TEST_NODE_MODULES_DIR'],
+          "#{@full_app_root}/node_modules")
+      elsif PhusionPassenger.build_system_dir
         FileUtils.ln_s("#{PhusionPassenger.build_system_dir}/node_modules",
           "#{@full_app_root}/node_modules")
       end

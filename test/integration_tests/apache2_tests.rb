@@ -21,20 +21,30 @@ describe "Apache 2 module" do
 
   before :all do
     check_hosts_configuration
-    @log_file = "#{PhusionPassenger.install_spec}/buildout/testlogs/apache2.log"
-    FileUtils.mkdir_p(File.dirname(@log_file))
+
     @passenger_temp_dir = Dir.mktmpdir('psg-test-', '/tmp')
     FileUtils.chmod_R(0777, @passenger_temp_dir)
     ENV['TMPDIR'] = @passenger_temp_dir
     ENV['PASSENGER_INSTANCE_REGISTRY_DIR'] = @passenger_temp_dir
+
+    if File.directory?(PhusionPassenger.install_spec)
+      @log_dir = "#{PhusionPassenger.install_spec}/buildout/testlogs"
+    else
+      @log_dir = "#{@passenger_temp_dir}/testlogs"
+    end
+    @log_file = "#{@log_dir}/apache2.log"
+    FileUtils.mkdir_p(@log_dir)
   end
 
   after :all do
-    @apache2.stop if @apache2
-    FileUtils.cp(Dir["#{@passenger_temp_dir}/passenger-error-*.html"],
-      "#{PhusionPassenger.install_spec}/buildout/testlogs/")
-    FileUtils.chmod_R(0777, @passenger_temp_dir)
-    FileUtils.rm_rf(@passenger_temp_dir)
+    begin
+      @apache2.stop if @apache2
+      FileUtils.cp(Dir["#{@passenger_temp_dir}/passenger-error-*.html"],
+        "#{@log_dir}/")
+    ensure
+      FileUtils.chmod_R(0777, @passenger_temp_dir)
+      FileUtils.rm_rf(@passenger_temp_dir)
+    end
   end
 
   before :each do

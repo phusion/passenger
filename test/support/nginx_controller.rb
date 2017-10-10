@@ -7,14 +7,14 @@ class NginxController
   TEMPLATE_DIR = File.expand_path(File.dirname(__FILE__) + "/../stub/nginx")
   PORT = ENV.fetch('TEST_PORT_BASE', '64507').to_i
 
-  def initialize(root_dir)
+  def initialize(root_dir, log_file)
     root_dir     = File.expand_path(root_dir)
     @passenger_root = PhusionPassenger.install_spec
     @nginx_root  = root_dir
     @port        = PORT
     @config_file = "#{root_dir}/nginx.conf"
     @pid_file    = "#{root_dir}/nginx.pid"
-    @log_file    = "#{@passenger_root}/buildout/testlogs/nginx.log"
+    @log_file    = log_file
     @controller  = PhusionPassenger::DaemonController.new(
       :identifier    => 'Nginx',
       :start_command => "#{CONFIG['nginx']} -p #{root_dir} -c '#{@config_file}'",

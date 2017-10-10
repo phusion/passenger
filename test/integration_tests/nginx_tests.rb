@@ -15,18 +15,28 @@ describe "Phusion Passenger for Nginx" do
     end
 
     check_hosts_configuration
+
     @nginx_root = Dir.mktmpdir('psg-test-', '/tmp')
-    @log_file = "#{PhusionPassenger.install_spec}/buildout/testlogs/nginx.log"
-    FileUtils.mkdir_p(File.dirname(@log_file))
     ENV['TMPDIR'] = @nginx_root
     ENV['PASSENGER_INSTANCE_REGISTRY_DIR'] = @nginx_root
+
+    if File.directory?(PhusionPassenger.install_spec)
+      @log_dir = "#{PhusionPassenger.install_spec}/buildout/testlogs"
+    else
+      @log_dir = "#{@nginx_root}/testlogs"
+    end
+    @log_file = "#{@log_dir}/nginx.log"
+    FileUtils.mkdir_p(@log_dir)
   end
 
   after :all do
-    FileUtils.cp(Dir["#{@nginx_root}/passenger-error-*.html"],
-      "#{PhusionPassenger.install_spec}/buildout/testlogs/")
     begin
-      @nginx.stop if @nginx
+      begin
+        @nginx.stop if @nginx
+      ensure
+        FileUtils.cp(Dir["#{@nginx_root}/passenger-error-*.html"],
+          "#{@log_dir}/")
+      end
     ensure
       FileUtils.rm_rf(@nginx_root)
     end
@@ -55,7 +65,7 @@ describe "Phusion Passenger for Nginx" do
   end
 
   def create_nginx_controller(options = {})
-    @nginx = NginxController.new(@nginx_root)
+    @nginx = NginxController.new(@nginx_root, @log_file)
     if Process.uid == 0
       @nginx.set(
         :www_user => CONFIG['normal_user_1'],
