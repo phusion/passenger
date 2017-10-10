@@ -484,7 +484,11 @@ private
   end
 
   def read_pid_file
-    pid = File.read(@pid_file).strip
+    begin
+      pid = File.read(@pid_file).strip
+    rescue Errno::ENOENT
+      return nil
+    end
     if pid =~ /\A\d+\Z/
       pid.to_i
     else
