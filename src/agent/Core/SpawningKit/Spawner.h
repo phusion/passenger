@@ -721,7 +721,6 @@ protected:
 		prepareChroot(info, options);
 		info.userSwitching = prepareUserSwitching(options);
 		prepareSwitchingWorkingDirectory(info, options);
-		inferApplicationInfo(info);
 		return info;
 	}
 
@@ -775,6 +774,7 @@ protected:
 		assert(info.appRootPathsInsideChroot.back() == info.appRootInsideChroot);
 	}
 
+#ifdef false
 	void inferApplicationInfo(SpawnPreparationInfo &info) const {
 		info.codeRevision = readFromRevisionFile(info);
 		if (info.codeRevision.empty()) {
@@ -817,6 +817,7 @@ protected:
 			return string();
 		}
 	}
+#endif
 
 	bool shouldLoadShellEnvvars(const Options &options, const SpawnPreparationInfo &preparation) const {
 		if (options.loadShellEnvvars) {
