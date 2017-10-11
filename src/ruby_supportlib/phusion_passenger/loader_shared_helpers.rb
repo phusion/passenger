@@ -85,7 +85,7 @@ module PhusionPassenger
       # from occuring between fork and exec. This workaround prevents the assertion.
       # http://www.sealiesoftware.com/blog/archive/2017/6/5/Objective-C_and_fork_in_macOS_1013.html
       # https://github.com/puma/puma/issues/1421
-      if PlatformInfo.os_name_simple == "macosx"
+      if RUBY_ENGINE == 'ruby' && PlatformInfo.os_name_simple == "macosx"
         # Eager-load Foundation.framework, to ensure the Objective-C runtime
         # exists well before any forking happens
         begin
