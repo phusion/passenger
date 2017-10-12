@@ -1,6 +1,7 @@
-Release 5.1.9 (Not yet released)
---------------------------------
+Release 5.1.9
+-------------
 
+ * This was an Enterprise-only hotfix release (no changes in Passenger Open Source).
 
 
 Release 5.1.8
