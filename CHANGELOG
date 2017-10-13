@@ -1,4 +1,4 @@
-Release 5.1.9 (Not yet released)
+Release 5.1.11 (Not yet released)
 --------------------------------
 
  * [Apache] Fixes a race condition (segfault) on startup, which primarily affected macOS hosts (regression in 5.1.8 due to the logging improvements). Closes GH-1973.
@@ -12,6 +12,18 @@ Release 5.1.9 (Not yet released)
  * Removes Debian packages for Ubuntu 12.04 Precise.
  * Fixes compilation warnings on macOS + Clang 9.0.
  * [Standalone] `passenger start` now accepts the `--start-timeout` configuration option.
+
+
+Release 5.1.10
+--------------
+
+ * This was an Enterprise-only hotfix release (no changes in Passenger Open Source).
+
+
+Release 5.1.9
+-------------
+
+ * This was an Enterprise-only hotfix release (no changes in Passenger Open Source).
 
 
 Release 5.1.8
