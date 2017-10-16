@@ -109,8 +109,9 @@ psg_json_value_set_strset(PsgJsonValue *doc, const char *name,
 {
     PsgJsonValue *subdoc = psg_json_value_new_with_type(PSG_JSON_VALUE_TYPE_ARRAY);
     PsgJsonValue *elem;
+    size_t i;
 
-    for (size_t i = 0; i < count; i++) {
+    for (i = 0; i < count; i++) {
         elem = psg_json_value_new_str((const char *) ary[i].data, ary[i].len);
         psg_json_value_append_val(subdoc, elem);
         psg_json_value_free(elem);
