@@ -217,6 +217,7 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   # the above code
   headers.concat([
     ["src/cxx_supportlib/Exceptions.h", "cxx_supportlib/Exceptions.h"],
+    ["src/cxx_supportlib/JsonTools/CBindings.h", "cxx_supportlib/JsonTools/CBindings.h"],
     ["src/cxx_supportlib/vendor-modified/modp_b64.h", "cxx_supportlib/vendor-modified/modp_b64.h"],
     ["src/cxx_supportlib/vendor-modified/modp_b64_data.h", "cxx_supportlib/vendor-modified/modp_b64_data.h"]
   ])
