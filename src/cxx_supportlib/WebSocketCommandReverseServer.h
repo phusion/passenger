@@ -812,7 +812,7 @@ public:
 	void initialize() {
 		endpoint.init_asio();
 		state = NOT_CONNECTED;
-		timer = boost::make_shared<boost::asio::deadline_timer>(
+		timer = boost::make_shared<boost::asio::deadline_timer, boost::asio::io_service &>(
 			endpoint.get_io_service());
 		startConnect();
 	}
