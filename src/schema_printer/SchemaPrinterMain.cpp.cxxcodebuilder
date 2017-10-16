@@ -63,7 +63,7 @@ def main
 
   function 'int main(int argc, char *argv[])' do
     add_code %Q{
-      Json::Value doc(Json::objectValue);
+      Passenger::Json::Value doc(Passenger::Json::objectValue);
     }
 
     separator

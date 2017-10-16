@@ -283,7 +283,7 @@
 			spawner->spawn(options); // Should not throw.
 		}
 	}
-
+#if 0
 	TEST_METHOD(11) {
 		set_test_name("It infers the code revision from the REVISION file");
 		TempDirCopy dir("stub/rack", "tmp.rack");
@@ -315,7 +315,7 @@
 
 		ensure_equals(result["code_revision"].asString(), "today");
 	}
-
+#endif
 	/******* User switching tests *******/
 
 	// If 'user' is set

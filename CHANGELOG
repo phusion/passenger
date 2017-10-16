@@ -1,5 +1,10 @@
-Release 5.1.9 (Not yet released)
---------------------------------
+Release 5.1.12 (Not yet released)
+---------------------------------
+
+
+
+Release 5.1.11
+--------------
 
  * [Apache] Fixes a race condition (segfault) on startup, which primarily affected macOS hosts (regression in 5.1.8 due to the logging improvements). Closes GH-1973.
  * [Apache] Fixes compilation on macOS 10.13 High Sierra.
@@ -8,10 +13,24 @@ Release 5.1.9 (Not yet released)
  * [Standalone] Enables HTTP/2 support in the Nginx template. Support is only active if SSL is used, to avoid potential issues with HTTP/2 on HTTP ports. Closes GH-1945.
  * [Enterprise, Standalone] Adds a new feature that is especially useful on Heroku: deferred port binding. When `--defer-port-binding` is set, Passenger does not listen on the given port until the application has finished spawning. If the application starts slowly then this mechanism can prevent the Heroku request timeout from killing the dyno (the boot timeout still applies).
  * [Enterprise, Standalone] Fixes duplicate warnings when Passengerfile.json contains errors.
+ * [Standalone] `passenger start` now accepts the `--start-timeout` configuration option.
  * Adds support for Bundler 2.0's new `gems.rb` and `gems.locked`. Learn more about these in [Gemfile's new clothes](https://depfu.com/blog/2017/09/06/gemfiles-new-clothes). Closes GH-1982.
  * Removes Debian packages for Ubuntu 12.04 Precise.
  * Fixes compilation warnings on macOS + Clang 9.0.
- * [Standalone] `passenger start` now accepts the `--start-timeout` configuration option.
+ * Introduces a new check that logs a vulnerability warning if Passenger is run with root permissions while the directory permissions of (parts of) its root dir allow modifications by non-root users.
+ * Fixes an arbitrary file read vulnerability (if Passenger is running as root and the attacker has access to a user account that hosts an application).
+
+
+Release 5.1.10
+--------------
+
+ * This was an Enterprise-only hotfix release (no changes in Passenger Open Source).
+
+
+Release 5.1.9
+-------------
+
+ * This was an Enterprise-only hotfix release (no changes in Passenger Open Source).
 
 
 Release 5.1.8
