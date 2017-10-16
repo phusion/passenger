@@ -947,14 +947,15 @@ warnIfPathVulnerable(const char *path, string &warnings) {
  * changed owner or access rights.
  */
 static void
-warnIfPassengerRootVulnerable(const string &passengerRoot) {
+warnIfPassengerRootVulnerable() {
 	TRACE_POINT();
 
 	if (geteuid() != 0) {
 		return; // Passenger is not root, so no escalation.
 	}
 
-	string checkPath = absolutizePath(passengerRoot);
+	string root = workingObjects->resourceLocator.getInstallSpec();
+	string checkPath = absolutizePath(root);
 	// Check the Passenger root and all dirs above it for ownership and world-writeability
 	string warnings;
 	while (!checkPath.empty() && checkPath != "/") {
@@ -963,8 +964,9 @@ warnIfPassengerRootVulnerable(const string &passengerRoot) {
 		checkPath = extractDirName(checkPath);
 	}
 	if (!warnings.empty()) {
-		P_WARN("WARNING: potential privilege escalation vulnerability. Passenger is running as root, and part(s) of the passenger root path (" <<
-				passengerRoot << ") can be changed by non-root user(s):" << warnings);
+		P_WARN("WARNING: potential privilege escalation vulnerability. "
+			PROGRAM_NAME " is running as root, and part(s) of the passenger root path ("
+			<< root << ") can be changed by non-root user(s):" << warnings);
 	}
 }
 
@@ -1254,7 +1256,7 @@ runCore() {
 		prestartWebApps();
 
 		UPDATE_TRACE_POINT();
-		warnIfPassengerRootVulnerable(agentsOptions->get("passenger_root"));
+		warnIfPassengerRootVulnerable();
 		reportInitializationInfo();
 		mainLoop();
 
