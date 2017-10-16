@@ -1,5 +1,5 @@
-Release 5.1.11 (Not yet released)
---------------------------------
+Release 5.1.11
+--------------
 
  * [Apache] Fixes a race condition (segfault) on startup, which primarily affected macOS hosts (regression in 5.1.8 due to the logging improvements). Closes GH-1973.
  * [Apache] Fixes compilation on macOS 10.13 High Sierra.
@@ -13,6 +13,7 @@ Release 5.1.11 (Not yet released)
  * Removes Debian packages for Ubuntu 12.04 Precise.
  * Fixes compilation warnings on macOS + Clang 9.0.
  * Introduces a new check that logs a vulnerability warning if Passenger is run with root permissions while the directory permissions of (parts of) its root dir allow modifications by non-root users.
+ * Fixes an arbitrary file read vulnerability (if Passenger is running as root and the attacker has access to a user account that hosts an application).
 
 
 Release 5.1.10
