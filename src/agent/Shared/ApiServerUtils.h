@@ -784,7 +784,12 @@ apiServerProcessReopenLogs(Server *server, Client *client, Request *req) {
 		vector<ConfigKit::Error> errors;
 		bool ok;
 		try {
-			ok = LoggingKit::context->prepareConfigChange(Json::objectValue,
+			// We deliberately ignore the target.stderr key.
+			// If the log file was equal to stderr then we'll want
+			// to reopen the log file anyway.
+			Json::Value updates;
+			updates["target"] = config["target"]["path"];
+			ok = LoggingKit::context->prepareConfigChange(updates,
 				errors, configReq);
 		} catch (const SystemException &e) {
 			unsigned int bufsize = 2048;
@@ -867,6 +872,7 @@ _apiServerProcessReinheritLogsResponseBody(
 
 	config["target"] = oldConfig["target"];
 	config["target"]["fd"] = fd;
+	config["target"].removeMember("stderr");
 	try {
 		ok = LoggingKit::context->prepareConfigChange(config,
 			errors, configReq);

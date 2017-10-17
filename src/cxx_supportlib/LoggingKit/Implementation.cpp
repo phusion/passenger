@@ -577,18 +577,24 @@ Schema::validateTarget(const string &key, const ConfigKit::Store &store,
 		return;
 	}
 
+	// Allowed formats:
+	// "/path-to-file"
+	// { "stderr": true }
+	// { "path": "/path" }
+	// { "path": "/path", "fd": 123 }
+	// { "path": "/path", "stderr": true }
+
 	if (value.isObject()) {
 		if (value.isMember("stderr")) {
-			if (value.size() > 1) {
-				errors.push_back(Error("When " + keyQuote
-					+ " is an object containing the 'stderr' key,"
-					" it may not contain any other keys"));
-			} else if (!value["stderr"].asBool()) {
+			if (!value["stderr"].isBool() || !value["stderr"].asBool()) {
 				errors.push_back(Error("When " + keyQuote
 					+ " is an object containing the 'stderr' key,"
 					" it must have the 'true' value"));
+				return;
 			}
-		} else if (value.isMember("path")) {
+		}
+
+		if (value.isMember("path")) {
 			if (!value["path"].isString()) {
 				errors.push_back(Error("When " + keyQuote
 					+ " is an object containing the 'path' key,"
@@ -604,6 +610,21 @@ Schema::validateTarget(const string &key, const ConfigKit::Store &store,
 						+ " is an object containing the 'fd' key,"
 						" it must be 0 or greater"));
 				}
+			}
+			if (value.isMember("fd") && value.isMember("stderr")) {
+				errors.push_back(Error(keyQuote
+					+ " may contain either the 'fd' or the"
+					" 'stderr' key, but not both"));
+			}
+		} else if (value.isMember("stderr")) {
+			if (value.size() > 1) {
+				errors.push_back(Error("When " + keyQuote
+					+ " is an object containing the 'stderr' key,"
+					" it may not contain any other keys"));
+			} else if (!value["stderr"].asBool()) {
+				errors.push_back(Error("When " + keyQuote
+					+ " is an object containing the 'stderr' key,"
+					" it must have the 'true' value"));
 			}
 		} else {
 			errors.push_back(Error("When " + keyQuote
@@ -661,15 +682,20 @@ ConfigRealization::ConfigRealization(const ConfigKit::Store &store)
 	} else if (store["target"]["fd"].isNull()) {
 		string path = store["target"]["path"].asString();
 		targetType = FILE_TARGET;
-		targetFd = syscalls::open(path.c_str(),
-			O_WRONLY | O_APPEND | O_CREAT, 0644);
-		if (targetFd == -1) {
-			int e = errno;
-			throw FileSystemException(
-				"Cannot open " + path + " for writing",
-				e, path);
+		if (store["target"]["stderr"].asBool()) {
+			targetFd = STDERR_FILENO;
+			targetFdClosePolicy = NEVER_CLOSE;
+		} else {
+			targetFd = syscalls::open(path.c_str(),
+				O_WRONLY | O_APPEND | O_CREAT, 0644);
+			if (targetFd == -1) {
+				int e = errno;
+				throw FileSystemException(
+					"Cannot open " + path + " for writing",
+					e, path);
+			}
+			targetFdClosePolicy = ALWAYS_CLOSE;
 		}
-		targetFdClosePolicy = ALWAYS_CLOSE;
 	} else {
 		targetType = FILE_TARGET;
 		targetFd = store["target"]["fd"].asInt();
@@ -690,15 +716,20 @@ ConfigRealization::ConfigRealization(const ConfigKit::Store &store)
 	} else if (store["file_descriptor_log_target"]["fd"].isNull()) {
 		string path = store["file_descriptor_log_target"]["path"].asString();
 		fileDescriptorLogTargetType = FILE_TARGET;
-		fileDescriptorLogTargetFd = syscalls::open(path.c_str(),
-			O_WRONLY | O_APPEND | O_CREAT, 0644);
-		if (fileDescriptorLogTargetFd == -1) {
-			int e = errno;
-			throw FileSystemException(
-				"Cannot open " + path + " for writing",
-				e, path);
+		if (store["file_descriptor_log_target"]["stderr"].asBool()) {
+			fileDescriptorLogTargetFd = STDERR_FILENO;
+			fileDescriptorLogTargetFdClosePolicy = NEVER_CLOSE;
+		} else {
+			fileDescriptorLogTargetFd = syscalls::open(path.c_str(),
+				O_WRONLY | O_APPEND | O_CREAT, 0644);
+			if (fileDescriptorLogTargetFd == -1) {
+				int e = errno;
+				throw FileSystemException(
+					"Cannot open " + path + " for writing",
+					e, path);
+			}
+			fileDescriptorLogTargetFdClosePolicy = ALWAYS_CLOSE;
 		}
-		fileDescriptorLogTargetFdClosePolicy = ALWAYS_CLOSE;
 	} else {
 		fileDescriptorLogTargetType = FILE_TARGET;
 		fileDescriptorLogTargetFd = store["file_descriptor_log_target"]["fd"].asInt();

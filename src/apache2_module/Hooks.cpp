@@ -42,8 +42,10 @@
 
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <exception>
 #include <cstdio>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <oxt/initialize.hpp>
@@ -356,6 +358,27 @@ private:
 			}
 		}
 		return m_hasModXsendfile == YES;
+	}
+
+	static bool stderrEqualsFile(const char *path) {
+		struct stat s1, s2;
+
+		if (fstat(STDERR_FILENO, &s1) == -1) {
+			return false;
+		}
+
+		// No O_CREAT: we don't care if the file does not exist.
+		int fd = open(path, O_WRONLY | O_APPEND, 0600);
+		if (fd == -1) {
+			return false;
+		}
+		if (fstat(fd, &s2) == -1) {
+			close(fd);
+			return false;
+		}
+		close(fd);
+
+		return s1.st_dev == s2.st_dev && s1.st_ino == s2.st_ino && s1.st_rdev == s2.st_rdev;
 	}
 
 	int reportBusyException(request_rec *r) {
@@ -1347,6 +1370,8 @@ public:
 				" with an explicit log file using the `PassengerLogFile` directive.");
 		} else {
 			params.set("log_file", ap_server_root_relative(pconf, s->error_fname));
+			params.setBool("log_file_is_stderr", stderrEqualsFile(
+				ap_server_root_relative(pconf, s->error_fname)));
 		}
 
 		serverConfig.ctl.addTo(params);

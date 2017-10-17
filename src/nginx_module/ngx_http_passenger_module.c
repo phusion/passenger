@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <time.h>
 #include <signal.h>
 #include <string.h>
@@ -124,16 +125,18 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     return NGX_OK;
 }
 
+typedef struct {
+    ngx_cycle_t *cycle;
+    int log_fd;
+    int stderr_equals_log_file;
+} AfterForkData;
+
 /**
  * This function is called after forking and just before exec()ing the watchdog.
  */
 static void
-starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
-    ngx_cycle_t *cycle = (void *) paramCycle;
-    PsgVariantMap *params = (void *) paramParams;
-
-    char        *log_filename;
-    FILE        *log_file;
+starting_watchdog_after_fork(void *_data, void *_params) {
+    AfterForkData   *data = (AfterForkData *) _data;
     ngx_core_conf_t *ccf;
     ngx_uint_t   i;
     ngx_str_t   *envs;
@@ -142,41 +145,14 @@ starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
     /* At this point, stdout and stderr may still point to the console.
      * Make sure that they're both redirected to the log file.
      */
-    log_file = NULL;
-    log_filename = psg_variant_map_get_optional(params, "log_file");
-    if (log_filename == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
-                "no passenger log file configured, discarding log output");
-    } else {
-        log_file = fopen(log_filename, "a");
-        if (log_file == NULL) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                    "could not open the passenger log file for writing during Nginx startup, some log lines might be lost (will retry from Passenger core)");
-        }
-        free(log_filename);
-        log_filename = NULL;
-    }
-
-    if (log_file == NULL) {
-        /* If the log file cannot be opened then we redirect stdout
-         * and stderr to /dev/null, because if the user disconnects
-         * from the console on which Nginx is started, then on Linux
-         * any writes to stdout or stderr will result in an EIO error.
-         */
-        log_file = fopen("/dev/null", "w");
-        if (log_file == NULL) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                    "could not open /dev/null for logs, this will probably cause EIO errors");
-        }
-    }
-    if (log_file != NULL) {
-        dup2(fileno(log_file), 1);
-        dup2(fileno(log_file), 2);
-        fclose(log_file);
+    if (data->log_fd != -1) {
+        dup2(data->log_fd, 1);
+        dup2(data->log_fd, 2);
+        close(data->log_fd);
     }
 
     /* Set environment variables in Nginx config file. */
-    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+    ccf = (ngx_core_conf_t *) ngx_get_conf(data->cycle->conf_ctx, ngx_core_module);
     envs = ccf->env.elts;
     for (i = 0; i < ccf->env.nelts; i++) {
         env = (const char *) envs[i].data;
@@ -184,6 +160,59 @@ starting_watchdog_after_fork(void *paramCycle, void *paramParams) {
             putenv(strdup(env));
         }
     }
+}
+
+/**
+ * This function provides a file descriptor that will be used
+ * to redirect stderr to after the upcoming fork. This prevents
+ * EIO errors on Linux if the user disconnects from the console
+ * on which Nginx is started.
+ *
+ * The fd will point to the log file, or to /dev/null if that
+ * fails (or -1 if that fails too).
+ */
+static void
+open_log_file_for_after_forking(AfterForkData *data, PsgVariantMap *params) {
+    char *log_filename;
+    int   fd;
+
+    log_filename = psg_variant_map_get_optional(params, "log_file");
+    if (log_filename == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, data->cycle->log, 0,
+            "no " PROGRAM_NAME " log file configured, discarding log output");
+        fd = -1;
+    } else {
+        fd = open(log_filename, O_WRONLY | O_APPEND | O_CREAT, 0644);
+        if (fd == -1) {
+            ngx_log_error(NGX_LOG_ALERT, data->cycle->log, ngx_errno,
+                "could not open the " PROGRAM_NAME " log file for writing during Nginx startup,"
+                " some log lines might be lost (will retry from " SHORT_PROGRAM_NAME " core)");
+        }
+        free(log_filename);
+        log_filename = NULL;
+    }
+
+    if (fd == -1) {
+        fd = open("/dev/null", O_WRONLY | O_APPEND);
+        if (fd == -1) {
+            ngx_log_error(NGX_LOG_ALERT, data->cycle->log, ngx_errno,
+                "could not open /dev/null for logs, this will probably cause EIO errors");
+        }
+        /**
+         * The log file open failed, so the after fork isn't going to be able to redirect
+         * stderr to it.
+         */
+        data->stderr_equals_log_file = 0;
+    } else {
+    	/**
+    	 * Technically not true until after the fork when starting_watchdog_after_fork does
+    	 * the redirection (dup2), but that never seems to fail and we need to know here
+    	 * already.
+    	 */
+        data->stderr_equals_log_file = 1;
+    }
+
+    data->log_fd = fd;
 }
 
 static ngx_int_t
@@ -228,6 +257,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     ngx_uint_t       i;
     ngx_str_t       *prestart_uris;
     char           **prestart_uris_ary = NULL;
+    AfterForkData    after_fork_data;
     ngx_keyval_t    *ctl = NULL;
     PsgVariantMap   *params = NULL;
     u_char  filename[NGX_MAX_PATH], *last;
@@ -237,6 +267,8 @@ start_watchdog(ngx_cycle_t *cycle) {
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
     params    = psg_variant_map_new();
+    after_fork_data.cycle = cycle;
+    after_fork_data.log_fd = -1;
     passenger_root = ngx_str_null_terminate(&passenger_main_conf.root_dir);
     if (passenger_root == NULL) {
         goto error_enomem;
@@ -304,6 +336,10 @@ start_watchdog(ngx_cycle_t *cycle) {
         psg_variant_map_set_ngx_str(params, "log_file", &cycle->log->file->name);
     }
 
+    open_log_file_for_after_forking(&after_fork_data, params);
+    psg_variant_map_set_bool(params, "log_file_is_stderr",
+        after_fork_data.stderr_equals_log_file);
+
     ctl = (ngx_keyval_t *) passenger_main_conf.ctl->elts;
     for (i = 0; i < passenger_main_conf.ctl->nelts; i++) {
         psg_variant_map_set2(params,
@@ -315,7 +351,7 @@ start_watchdog(ngx_cycle_t *cycle) {
         passenger_root,
         params,
         starting_watchdog_after_fork,
-        cycle,
+        &after_fork_data,
         &error_message);
     if (!ret) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno, "%s", error_message);
@@ -352,6 +388,10 @@ cleanup:
             free(prestart_uris_ary[i]);
         }
         free(prestart_uris_ary);
+    }
+
+    if (after_fork_data.log_fd != -1) {
+        close(after_fork_data.log_fd);
     }
 
     if (result == NGX_ERROR && passenger_main_conf.abort_on_startup_error) {

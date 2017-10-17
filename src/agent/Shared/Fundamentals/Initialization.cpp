@@ -445,9 +445,12 @@ initializeLoggingKit(const char *processName, VariantMap &options) {
 	config["level"] = options.get("log_level");
 
 	if (options.has("log_file")) {
-		config["target"] = options.get("log_file");
+		config["target"]["path"] = options.get("log_file");
 	} else if (options.has("debug_log_file")) {
-		config["target"] = options.get("debug_log_file");
+		config["target"]["path"] = options.get("debug_log_file");
+	}
+	if (options.getBool("log_file_is_stderr", false, false)) {
+		config["target"]["stderr"] = true;
 	}
 
 	if (options.has("file_descriptor_log_file")) {
