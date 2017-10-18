@@ -172,7 +172,7 @@ Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis 
 				req->envvars->size);
 		}
 
-		// Allow certain options to be overriden on a per-request basis
+		// Allow certain options to be overridden on a per-request basis
 		fillPoolOption(req, req->options.maxRequests, PASSENGER_MAX_REQUESTS);
 	}
 }

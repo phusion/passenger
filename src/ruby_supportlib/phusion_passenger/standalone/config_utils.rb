@@ -174,7 +174,7 @@ module PhusionPassenger
       # We want the command line options to override the options in the local
       # config file, but the local config file could only be parsed when the
       # command line options have been parsed. This method remerges all the
-      # config options from different sources so that options are overriden
+      # config options from different sources so that options are overridden
       # according to the following order:
       #
       # - CONFIG_DEFAULTS

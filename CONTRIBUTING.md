@@ -54,7 +54,7 @@ When filing a bug report, please ensure that you include the following informati
 <a name="contrib_docs"></a>
 ## Contributing documentation
 
-All good software should have good documentation, and we take this very seriously. However writing and maintaing quality documentation is not an easy task. If you are not skilled in C++ or programming, then writing documentation is the easiest way to contribute.
+All good software should have good documentation, and we take this very seriously. However writing and maintaining quality documentation is not an easy task. If you are not skilled in C++ or programming, then writing documentation is the easiest way to contribute.
 
 Most documentation can be located in the `doc` directory, and are either written in Markdown or in Asciidoc format. They can be compiled to HTML with `rake doc`. You need [Mizuho](https://github.com/FooBarWidget/mizuho) to compile Asciidoc and [BlueCloth](http://deveiate.org/projects/BlueCloth) to compile Markdown. Both gems are automatically installed as part of the Phusion Passenger developer tools.
 
@@ -278,7 +278,7 @@ Less important directories:
 
         foo (1, 2, 3);
 
- * Seperate arguments and parts of expressions by spaces:
+ * Separate arguments and parts of expressions by spaces:
 
         foo(1, 2, foo == bar, 5 + 6);
         if (foo && bar) {
