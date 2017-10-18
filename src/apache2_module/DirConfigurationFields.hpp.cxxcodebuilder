@@ -33,16 +33,16 @@ def main
   separator
 
   comment %q{
-    ConfigurationFields.hpp is automatically generated from ConfigurationFields.hpp.cxxcodebuilder,
+    DirConfigurationFields.hpp is automatically generated from DirConfigurationFields.hpp.cxxcodebuilder,
     using definitions from src/ruby_supportlib/phusion_passenger/apache2/config_options.rb.
-    Edits to ConfigurationFields.hpp will be lost.
+    Edits to DirConfigurationFields.hpp will be lost.
 
-    To update ConfigurationFields.hpp:
+    To update DirConfigurationFields.hpp:
       rake apache2
 
-    To force regeneration of ConfigurationFields.hpp:
-      rm -f src/apache2_module/ConfigurationFields.hpp
-      rake src/apache2_module/ConfigurationFields.hpp
+    To force regeneration of DirConfigurationFields.hpp:
+      rm -f src/apache2_module/DirConfigurationFields.hpp
+      rake src/apache2_module/DirConfigurationFields.hpp
   }
 
   separator

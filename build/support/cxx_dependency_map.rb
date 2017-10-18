@@ -7020,9 +7020,9 @@ CXX_DEPENDENCY_MAP =
   ["src/apache2_module/Configuration.h",
    "src/apache2_module/Configuration.hpp",
    "src/apache2_module/ConfigurationCommands.cpp",
-   "src/apache2_module/ConfigurationFields.hpp",
    "src/apache2_module/ConfigurationSetters.cpp",
    "src/apache2_module/CreateDirConfig.cpp",
+   "src/apache2_module/DirConfigurationFields.hpp",
    "src/apache2_module/MergeDirConfig.cpp",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/Exceptions.h",
@@ -7053,7 +7053,7 @@ CXX_DEPENDENCY_MAP =
   [],
  "src/apache2_module/Configuration.hpp"=>
   ["src/apache2_module/Configuration.h",
-   "src/apache2_module/ConfigurationFields.hpp",
+   "src/apache2_module/DirConfigurationFields.hpp",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/FileDescriptor.h",
@@ -7080,16 +7080,16 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
  "src/apache2_module/ConfigurationCommands.cpp"=>
   [],
- "src/apache2_module/ConfigurationFields.hpp"=>
-  [],
  "src/apache2_module/ConfigurationSetters.cpp"=>
   [],
  "src/apache2_module/CreateDirConfig.cpp"=>
   [],
+ "src/apache2_module/DirConfigurationFields.hpp"=>
+  [],
  "src/apache2_module/DirectoryMapper.h"=>
   ["src/apache2_module/Configuration.h",
    "src/apache2_module/Configuration.hpp",
-   "src/apache2_module/ConfigurationFields.hpp",
+   "src/apache2_module/DirConfigurationFields.hpp",
    "src/cxx_supportlib/AppTypes.h",
    "src/cxx_supportlib/Constants.h",
    "src/cxx_supportlib/Exceptions.h",
@@ -7125,7 +7125,7 @@ CXX_DEPENDENCY_MAP =
   ["src/apache2_module/Bucket.h",
    "src/apache2_module/Configuration.h",
    "src/apache2_module/Configuration.hpp",
-   "src/apache2_module/ConfigurationFields.hpp",
+   "src/apache2_module/DirConfigurationFields.hpp",
    "src/apache2_module/DirectoryMapper.h",
    "src/apache2_module/Hooks.h",
    "src/apache2_module/SetHeaders.cpp",

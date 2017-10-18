@@ -62,7 +62,7 @@ using namespace std;
  * Use the getter methods to query information, because those will return
  * the default value if the value is not specified.
  */
-#include "ConfigurationFields.hpp"
+#include "DirConfigurationFields.hpp"
 
 struct DirConfig : GeneratedDirConfigPart {
 
