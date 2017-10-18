@@ -1112,7 +1112,7 @@ private:
     test_result run_test_(const tests_iterator& ti, safe_holder<object>& obj)
     {
         std::string current_test_name;
-        int number = ti->first; // In a variable so we can easily inspect wih gdb.
+        int number = ti->first; // In a variable so we can easily inspect with gdb.
         try
         {
             if (run_test_seh_(ti->second,obj, current_test_name) == false)
