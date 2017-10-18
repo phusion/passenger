@@ -66,8 +66,6 @@ using namespace std;
 
 struct DirConfig : GeneratedDirConfigPart {
 
-	std::set<std::string> baseURIs;
-
 	/*************************************/
 	/*************************************/
 

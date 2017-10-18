@@ -44,7 +44,14 @@
 #  * context - The context in which this configuration option is valid.
 #              Defaults to ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"]
 #  * type - This configuration option's value type. Allowed types:
-#           :string, :integer, :flag
+#           :string, :integer, :flag, :string_array, :string_keyval, :string_set
+#  * struct - Whether the corresponding struct field should be placed in the
+#             server-global struct (:main) or the per-dir struct (:dir).
+#             The default is :dir.
+#  * field - The name that should be used for the auto-generated field in
+#            the configuration structure. Defaults to the configuration
+#            name without the 'Passenger' prefix, and in camel case. Set this
+#            to nil if you do not want a structure field to be auto-generated.
 #  * min_value - If `type` is :integer, then this specifies the minimum
 #                allowed value. When nil (the default), there is no minimum.
 #  * desc - A description for this configuration option. Required.
@@ -64,7 +71,156 @@
 
 PhusionPassenger.require_passenger_lib 'constants'
 
-APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
+APACHE2_CONFIGURATION_OPTIONS = [
+  {
+    :name      => "PassengerRoot",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "The #{PROGRAM_NAME} root folder."
+  },
+  {
+    :name      => "PassengerCtl",
+    :type      => :string_keyval,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :field     => nil,
+    :function  => 'cmd_passenger_ctl',
+    :desc      => "Set advanced #{PROGRAM_NAME} options."
+  },
+  {
+    :name      => "PassengerDefaultRuby",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "#{PROGRAM_NAME}'s default Ruby interpreter to use."
+  },
+  {
+    :name      => "PassengerLogLevel",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :min_value => 0,
+    :struct    => :main,
+    :desc      => "The #{PROGRAM_NAME} log verbosity."
+  },
+  {
+    :name      => "PassengerLogFile",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "The #{PROGRAM_NAME} log file."
+  },
+  {
+    :name      => "PassengerSocketBacklog",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :min_value => 0,
+    :struct    => :main,
+    :desc      => "The #{PROGRAM_NAME} socket backlog."
+  },
+  {
+    :name      => "PassengerFileDescriptorLogFile",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "The #{PROGRAM_NAME} file descriptor log file."
+  },
+  {
+    :name      => "PassengerMaxPoolSize",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :min_value => 1,
+    :struct    => :main,
+    :desc      => "The maximum number of simultaneously alive application processes."
+  },
+  {
+    :name      => "PassengerPoolIdleTime",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :min_value => 0,
+    :struct    => :main,
+    :desc      => "The maximum number of seconds that an application may be idle before it gets terminated."
+  },
+  {
+    :name      => "PassengerResponseBufferHighWatermark",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :min_value => 0,
+    :struct    => :main,
+    :desc      => "The maximum size of the #{PROGRAM_NAME} response buffer."
+  },
+  {
+    :name      => "PassengerUserSwitching",
+    :type      => :flag,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "Whether to enable user switching support in #{PROGRAM_NAME}."
+  },
+  {
+    :name      => "PassengerDefaultUser",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "The user that #{PROGRAM_NAME} applications must run as when user switching fails or is disabled."
+  },
+  {
+    :name      => "PassengerDefaultGroup",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "The group that #{PROGRAM_NAME} applications must run as when user switching fails or is disabled."
+  },
+  {
+    :name      => "PassengerDataBufferDir",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "The directory that #{PROGRAM_NAME} data buffers should be stored into."
+  },
+  {
+    :name      => "PassengerInstanceRegistryDir",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "The directory to register the #{PROGRAM_NAME} instance to."
+  },
+  {
+    :name      => "PassengerDisableSecurityUpdateCheck",
+    :type      => :flag,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "Whether to disable the #{PROGRAM_NAME} security update check & notification."
+  },
+  {
+    :name      => "PassengerSecurityUpdateCheckProxy",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "Use specified HTTP/SOCKS proxy for the #{PROGRAM_NAME} security update check."
+  },
+  {
+    :name      => "PassengerStatThrottleRate",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "Limit the number of stat calls to once per given seconds."
+  },
+  {
+    :name      => "PassengerPreStart",
+    :type      => :string_set,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :field     => 'prestartURLs',
+    :desc      => "Prestart the given web applications during startup."
+  },
+  {
+    :name      => "PassengerTurbocaching",
+    :type      => :flag,
+    :context   => ["RSRC_CONF"],
+    :struct    => :main,
+    :desc      => "Whether to enable turbocaching in #{PROGRAM_NAME}."
+  },
+
   {
     :name => "PassengerRuby",
     :type => :string,
@@ -85,6 +241,14 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :name => "PassengerMeteorAppSettings",
     :type => :string,
     :desc => "Settings file for (non-bundled) Meteor apps."
+  },
+  {
+    :name      => "PassengerBaseURI",
+    :type      => :string_set,
+    :function  => 'cmd_passenger_base_uri',
+    :field     => 'baseURIs',
+    :desc      => "Declare the given base URI as belonging to a web application.",
+    :header    => nil
   },
   {
     :name => "PassengerAppEnv",
@@ -276,21 +440,51 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
 
   {
     :name      => "RailsEnv",
-    :type      => :string,
-    :desc      => "The environment under which applications are run.",
     :alias_for => "PassengerAppEnv"
   },
   {
     :name      => "RackEnv",
-    :type      => :string,
-    :desc      => "The environment under which applications are run.",
     :alias_for => "PassengerAppEnv"
   },
   {
     :name      => "RailsRuby",
-    :type      => :string,
-    :desc      => "Deprecated option.",
     :alias_for => "PassengerRuby"
+  },
+  {
+    :name      => "PassengerDebugLogFile",
+    :alias_for => "PassengerLogFile"
+  },
+  {
+    :name      => "RailsMaxPoolSize",
+    :alias_for => "PassengerMaxPoolSize"
+  },
+  {
+    :name      => "RailsMaxInstancesPerApp",
+    :alias_for => "PassengerMaxInstancesPerApp"
+  },
+  {
+    :name      => "RailsPoolIdleTime",
+    :alias_for => "PassengerPoolIdleTime"
+  },
+  {
+    :name      => "RailsUserSwitching",
+    :alias_for => "PassengerUserSwitching"
+  },
+  {
+    :name      => "RailsDefaultUser",
+    :alias_for => "PassengerDefaultUser"
+  },
+  {
+    :name      => "RailsAppSpawnerIdleTime",
+    :alias_for => "PassengerMaxPreloaderIdleTime"
+  },
+  {
+    :name      => "RailsBaseURI",
+    :alias_for => "PassengerBaseURI"
+  },
+  {
+    :name      => "RackBaseURI",
+    :alias_for => "PassengerBaseURI"
   },
 
   ##### Deprecated options #####

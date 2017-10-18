@@ -47,27 +47,34 @@ def main
 
   separator
 
-  filter_eligible_options(APACHE2_DIRECTORY_CONFIGURATION_OPTIONS).each do |option|
+  filter_eligible_options(APACHE2_CONFIGURATION_OPTIONS).each do |option|
+    field_def = struct_field_for(option)
+
     if option[:type] == :string
       add_code %Q{
-        config->#{struct_field_for(option)} =
-          (add->#{struct_field_for(option)} == NULL) ?
-          base->#{struct_field_for(option)} :
-          add->#{struct_field_for(option)};
+        config->#{field_def} =
+          (add->#{field_def} == NULL) ?
+          base->#{field_def} :
+          add->#{field_def};
       }
     elsif option[:type] == :integer
       add_code %Q{
-        config->#{struct_field_for(option)} =
-          (add->#{struct_field_for(option)} == UNSET_INT_VALUE) ?
-          base->#{struct_field_for(option)} :
-          add->#{struct_field_for(option)};
+        config->#{field_def} =
+          (add->#{field_def} == UNSET_INT_VALUE) ?
+          base->#{field_def} :
+          add->#{field_def};
       }
     elsif option[:type] == :flag
       add_code %Q{
-        config->#{struct_field_for(option)} =
-          (add->#{struct_field_for(option)} == DirConfig::UNSET) ?
-          base->#{struct_field_for(option)} :
-          add->#{struct_field_for(option)};
+        config->#{field_def} =
+          (add->#{field_def} == DirConfig::UNSET) ?
+          base->#{field_def} :
+          add->#{field_def};
+      }
+    elsif option[:type] == :string_set
+      add_code %Q{
+        config->#{field_def} = base->#{field_def};
+        config->#{field_def}.insert(add->#{field_def}.begin(), add->#{field_def}.end());
       }
     else
       raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
@@ -79,6 +86,7 @@ def filter_eligible_options(options)
   options.reject do |option|
     option[:alias_for] ||
       option[:obsolete] ||
+      option.fetch(:struct, :dir) != :dir ||
       option.fetch(:field, true).nil? ||
       option[:field].to_s =~ /\./ ||
       !option.fetch(:auto_generate_nginx_merge_code, true)

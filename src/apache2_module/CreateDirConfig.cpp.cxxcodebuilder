@@ -47,13 +47,15 @@ def main
 
   separator
 
-  filter_eligible_options(APACHE2_DIRECTORY_CONFIGURATION_OPTIONS).each do |option|
+  filter_eligible_options(APACHE2_CONFIGURATION_OPTIONS).each do |option|
     if option[:type] == :string
       add_code("config->#{struct_field_for(option)} = NULL;")
     elsif option[:type] == :integer
       add_code("config->#{struct_field_for(option)} = UNSET_INT_VALUE;")
     elsif option[:type] == :flag
       add_code("config->#{struct_field_for(option)} = DirConfig::UNSET;")
+    elsif option[:type] == :string_set
+      # Do nothing
     else
       raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
     end
@@ -64,13 +66,14 @@ def filter_eligible_options(options)
   options.reject do |option|
     option[:alias_for] ||
       option[:obsolete] ||
+      option.fetch(:struct, :dir) != :dir ||
       option.fetch(:field, true).nil? ||
       option[:field].to_s =~ /\./
   end
 end
 
 def struct_field_for(option)
-  if option.has_key?(:field)
+  if option.key?(:field)
     option[:field]
   else
     result = option[:name].sub(/^Passenger/, '')

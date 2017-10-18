@@ -47,75 +47,9 @@ def main
 
   separator
 
-  filter_eligible_options(APACHE2_DIRECTORY_CONFIGURATION_OPTIONS).each do |option|
-    func_name = function_name_for(option)
-
-    if option[:obsolete]
-      obsoletion_message = option[:obsoletion_message] ||
-        "The '#{option[:name]}' option is obsolete. Please remove this option from your configuration file."
-      obsoletion_message = "WARNING: #{obsoletion_message}\n"
-      function("static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)", %Q{
-        fprintf(stderr, #{obsoletion_message.inspect});
-        fflush(stderr);
-        return NULL;
-      })
-    elsif option[:type] == :string
-      function("static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)", %Q{
-        DirConfig *config = (DirConfig *) pcfg;
-        config->#{struct_field_for(option)} = arg;
-        return NULL;
-      })
-    elsif option[:type] == :integer
-      function "static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)" do
-        add_code %q[
-          DirConfig *config = (DirConfig *) pcfg;
-          char *end;
-          long result;
-
-          result = strtol(arg, &end, 10);
-          if (*end != '\0') {
-            string message = "Invalid number specified for ";
-            message.append(cmd->directive->directive);
-            message.append(".");
-
-            char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-              message.size() + 1);
-            memcpy(messageStr, message.c_str(), message.size() + 1);
-            return messageStr;
-        ]
-
-        if option[:min_value]
-          add_code %Q[
-            } else if (result < #{option[:min_value]}) {
-              string message = "Value for ";
-              message.append(cmd->directive->directive);
-              message.append(" must be greater than or equal to #{option[:min_value]}.");
-
-              char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-                message.size() + 1);
-              memcpy(messageStr, message.c_str(), message.size() + 1);
-              return messageStr;
-          ]
-        end
-
-        add_code %Q[
-          } else {
-            config->#{struct_field_for(option)} = (int) result;
-            return NULL;
-          }
-        ]
-      end
-    elsif option[:type] == :flag
-      function("static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)", %Q{
-        DirConfig *config = (DirConfig *) pcfg;
-        config->#{struct_field_for(option)} =
-          arg ?
-          DirConfig::ENABLED :
-          DirConfig::DISABLED;
-        return NULL;
-      })
-    else
-      raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
+  filter_eligible_options(APACHE2_CONFIGURATION_OPTIONS).each do |option|
+    function(setter_function_declaration_for(option)) do
+      setter_function_body_for(option)
     end
   end
 end
@@ -148,6 +82,94 @@ def function_name_for(option)
     "_" + letter[0..0].downcase
   end
   "cmd#{function_name}"
+end
+
+def setter_function_declaration_for(option)
+  func_name = function_name_for(option)
+  "static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)"
+end
+
+def setter_function_body_for(option)
+  if option[:obsolete]
+    obsoletion_message = option[:obsoletion_message] ||
+      "The '#{option[:name]}' option is obsolete. Please remove this option from your configuration file."
+    obsoletion_message = "WARNING: #{obsoletion_message}\n"
+    add_code %Q{
+      fprintf(stderr, #{obsoletion_message.inspect});
+      fflush(stderr);
+      return NULL;
+    }
+    return
+  end
+
+  field_reference = struct_field_for(option)
+  if option.fetch(:struct, :dir) == :dir
+    add_code %Q{
+      DirConfig *config = (DirConfig *) pcfg;
+    }
+    field_reference = "config->#{field_reference}"
+  else
+    field_reference = "serverConfig.#{field_reference}"
+  end
+
+  if option[:type] == :string
+    add_code %Q{
+      #{field_reference} = arg;
+      return NULL;
+    }
+  elsif option[:type] == :integer
+    add_code %q[
+      char *end;
+      long result;
+
+      result = strtol(arg, &end, 10);
+      if (*end != '\0') {
+        string message = "Invalid number specified for ";
+        message.append(cmd->directive->directive);
+        message.append(".");
+
+        char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+          message.size() + 1);
+        memcpy(messageStr, message.c_str(), message.size() + 1);
+        return messageStr;
+    ]
+
+    if option[:min_value]
+      add_code %Q[
+        } else if (result < #{option[:min_value]}) {
+          string message = "Value for ";
+          message.append(cmd->directive->directive);
+          message.append(" must be greater than or equal to #{option[:min_value]}.");
+
+          char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+            message.size() + 1);
+          memcpy(messageStr, message.c_str(), message.size() + 1);
+          return messageStr;
+      ]
+    end
+
+    add_code %Q[
+      } else {
+        #{field_reference} = (int) result;
+        return NULL;
+      }
+    ]
+  elsif option[:type] == :flag
+    add_code %Q{
+      #{field_reference} =
+        arg ?
+        DirConfig::ENABLED :
+        DirConfig::DISABLED;
+      return NULL;
+    }
+  elsif option[:type] == :string_set
+    add_code %Q{
+      #{field_reference}.insert(arg);
+      return NULL;
+    }
+  else
+    raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
+  end
 end
 
 main

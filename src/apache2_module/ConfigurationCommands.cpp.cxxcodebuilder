@@ -47,7 +47,7 @@ def main
 
   separator
 
-  APACHE2_DIRECTORY_CONFIGURATION_OPTIONS.each do |option|
+  APACHE2_CONFIGURATION_OPTIONS.each do |option|
     option = resolve_possible_alias(option)
     format =
       "%s(%s,\n" \
@@ -68,7 +68,7 @@ end
 
 def resolve_possible_alias(option)
   if option[:alias_for]
-    the_alias = APACHE2_DIRECTORY_CONFIGURATION_OPTIONS.find do |o|
+    the_alias = APACHE2_CONFIGURATION_OPTIONS.find do |o|
       o[:name] == option[:alias_for]
     end.dup
     the_alias[:aliased_for] = option[:name]
@@ -80,8 +80,10 @@ end
 
 def macro_for(option)
   case option[:type]
-  when :string, :integer
+  when :string, :integer, :string_array, :string_set
     "AP_INIT_TAKE1"
+  when :string_keyval
+    "AP_INIT_TAKE2"
   when :flag
     "AP_INIT_FLAG"
   else
@@ -95,8 +97,10 @@ end
 
 def function_type_for(option)
   case option[:type]
-  when :string, :integer
+  when :string, :integer, :string_array, :string_set
     "Take1Func"
+  when :string_keyval
+    "Take2Func"
   when :flag
     "FlagFunc"
   else

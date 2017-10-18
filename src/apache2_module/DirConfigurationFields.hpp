@@ -204,4 +204,9 @@ struct GeneratedDirConfigPart {
 	 * The user that Ruby applications must run as.
 	 */
 	const char *user;
+
+	/*
+	 * Declare the given base URI as belonging to a web application.
+	 */
+	std::set<std::string> baseURIs;
 };

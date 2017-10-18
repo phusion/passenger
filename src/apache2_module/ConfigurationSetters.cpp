@@ -38,6 +38,264 @@
  */
 
 static const char *
+cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.root = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_default_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.defaultRuby = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
+	char *end;
+	long result;
+
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		string message = "Invalid number specified for ";
+		message.append(cmd->directive->directive);
+		message.append(".");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else if (result < 0) {
+		string message = "Value for ";
+		message.append(cmd->directive->directive);
+		message.append(" must be greater than or equal to 0.");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else {
+		serverConfig.logLevel = (int) result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_log_file(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.logFile = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_socket_backlog(cmd_parms *cmd, void *pcfg, const char *arg) {
+	char *end;
+	long result;
+
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		string message = "Invalid number specified for ";
+		message.append(cmd->directive->directive);
+		message.append(".");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else if (result < 0) {
+		string message = "Value for ";
+		message.append(cmd->directive->directive);
+		message.append(" must be greater than or equal to 0.");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else {
+		serverConfig.socketBacklog = (int) result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_file_descriptor_log_file(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.fileDescriptorLogFile = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
+	char *end;
+	long result;
+
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		string message = "Invalid number specified for ";
+		message.append(cmd->directive->directive);
+		message.append(".");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else if (result < 1) {
+		string message = "Value for ";
+		message.append(cmd->directive->directive);
+		message.append(" must be greater than or equal to 1.");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else {
+		serverConfig.maxPoolSize = (int) result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	char *end;
+	long result;
+
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		string message = "Invalid number specified for ";
+		message.append(cmd->directive->directive);
+		message.append(".");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else if (result < 0) {
+		string message = "Value for ";
+		message.append(cmd->directive->directive);
+		message.append(" must be greater than or equal to 0.");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else {
+		serverConfig.poolIdleTime = (int) result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_response_buffer_high_watermark(cmd_parms *cmd, void *pcfg, const char *arg) {
+	char *end;
+	long result;
+
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		string message = "Invalid number specified for ";
+		message.append(cmd->directive->directive);
+		message.append(".");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else if (result < 0) {
+		string message = "Value for ";
+		message.append(cmd->directive->directive);
+		message.append(" must be greater than or equal to 0.");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else {
+		serverConfig.responseBufferHighWatermark = (int) result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.userSwitching =
+		arg ?
+		DirConfig::ENABLED :
+		DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_default_user(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.defaultUser = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_default_group(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.defaultGroup = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_data_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.dataBufferDir = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_instance_registry_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.instanceRegistryDir = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.disableSecurityUpdateCheck =
+		arg ?
+		DirConfig::ENABLED :
+		DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_security_update_check_proxy(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.securityUpdateCheckProxy = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
+	char *end;
+	long result;
+
+	result = strtol(arg, &end, 10);
+	if (*end != '\0') {
+		string message = "Invalid number specified for ";
+		message.append(cmd->directive->directive);
+		message.append(".");
+
+		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
+			message.size() + 1);
+		memcpy(messageStr, message.c_str(), message.size() + 1);
+		return messageStr;
+	} else {
+		serverConfig.statThrottleRate = (int) result;
+		return NULL;
+	}
+}
+
+static const char *
+cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.prestartURLs.insert(arg);
+	return NULL;
+}
+
+static const char *
+cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.turbocaching =
+		arg ?
+		DirConfig::ENABLED :
+		DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->ruby = arg;

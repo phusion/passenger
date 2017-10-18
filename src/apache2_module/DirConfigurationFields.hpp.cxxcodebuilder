@@ -62,13 +62,14 @@ def filter_eligible_options(options)
   options.reject do |option|
     option[:alias_for] ||
       option[:obsolete] ||
+      option.fetch(:struct, :dir) != :dir ||
       option.fetch(:field, true).nil? ||
       option[:field].to_s =~ /\./
   end
 end
 
 def struct_field_for(option)
-  if option.has_key?(:field)
+  if option.key?(:field)
     option[:field]
   else
     result = option[:name].sub(/^Passenger/, '')
@@ -87,6 +88,8 @@ def definition_for(option)
     result = ["int #{field}", 4, field, option[:desc]]
   when :flag
     result = ["Threeway #{field}", 1, field, option[:desc]]
+  when :string_set
+    result = ["std::set<std::string> #{field}", 24, field, option[:desc]]
   else
     raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
   end
@@ -95,7 +98,7 @@ end
 
 def definitions
   @definitions ||= begin
-    eligible_options = filter_eligible_options(APACHE2_DIRECTORY_CONFIGURATION_OPTIONS)
+    eligible_options = filter_eligible_options(APACHE2_CONFIGURATION_OPTIONS)
     definitions = eligible_options.map { |o| definition_for(o) }
     # Sort the definitions by size in order to make the struct smaller.
     # It's possible to make it even smaller with a smarter algorithm but for now

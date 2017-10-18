@@ -53,6 +53,8 @@ config->meteorAppSettings =
 	(add->meteorAppSettings == NULL) ?
 	base->meteorAppSettings :
 	add->meteorAppSettings;
+config->baseURIs = base->baseURIs;
+config->baseURIs.insert(add->baseURIs.begin(), add->baseURIs.end());
 config->appEnv =
 	(add->appEnv == NULL) ?
 	base->appEnv :
