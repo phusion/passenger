@@ -150,7 +150,7 @@ private:
 		if (config->appType == NULL) {
 			if (config->appRoot == NULL) {
 				appType = detector.checkDocumentRoot(publicDir,
-					baseURI != NULL || config->resolveSymlinksInDocRoot == DirConfig::ENABLED,
+					baseURI != NULL || config->resolveSymlinksInDocumentRoot == DirConfig::ENABLED,
 					&appRoot);
 			} else {
 				appRoot = config->appRoot;

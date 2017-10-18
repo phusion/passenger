@@ -63,6 +63,7 @@ end
 def filter_eligible_options(options)
   options.reject do |option|
     option[:alias_for] ||
+      option[:obsolete] ||
       option.fetch(:field, true).nil? ||
       option[:field].to_s =~ /\./
   end

@@ -434,3 +434,131 @@ cmd_passenger_lve_min_uid(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
+static const char *
+cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->appRoot = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->bufferResponse =
+		arg ?
+		DirConfig::ENABLED :
+		DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->resolveSymlinksInDocumentRoot =
+		arg ?
+		DirConfig::ENABLED :
+		DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg) {
+	DirConfig *config = (DirConfig *) pcfg;
+	config->allowEncodedSlashes =
+		arg ?
+		DirConfig::ENABLED :
+		DirConfig::DISABLED;
+	return NULL;
+}
+
+static const char *
+cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'RailsSpawnServer' option is obsolete. Please specify 'PassengerRoot' instead. The correct value was given to you by 'passenger-install-apache2-module'.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'RailsAllowModRewrite' option is obsolete: Phusion Passenger now fully supports mod_rewrite. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'RailsFrameworkSpawnerIdleTime' option is obsolete. Please use 'PassengerMaxPreloaderIdleTime' instead.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'PassengerUseGlobalQueue' option is obsolete: global queueing is now always turned on. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_union_station_gateway_address(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'UnionStationGatewayAddress' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_union_station_gateway_port(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'UnionStationGatewayPort' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_union_station_gateway_cert(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'UnionStationGatewayCert' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_union_station_proxy_address(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'UnionStationProxyAddress' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_passenger_analytics_log_user(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'PassengerAnalyticsLogUser' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_passenger_analytics_log_group(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'PassengerAnalyticsLogGroup' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_union_station_key(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'UnionStationKey' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_union_station_filter(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'UnionStationFilter' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+
+static const char *
+cmd_union_station_support(cmd_parms *cmd, void *pcfg, const char *arg) {
+	fprintf(stderr, "WARNING: The 'UnionStationSupport' option is obsolete. Please remove this option from your configuration file.\n");
+	fflush(stderr);
+	return NULL;
+}
+

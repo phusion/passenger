@@ -153,3 +153,19 @@ config->lveMinUid =
 	(add->lveMinUid == UNSET_INT_VALUE) ?
 	base->lveMinUid :
 	add->lveMinUid;
+config->appRoot =
+	(add->appRoot == NULL) ?
+	base->appRoot :
+	add->appRoot;
+config->bufferResponse =
+	(add->bufferResponse == DirConfig::UNSET) ?
+	base->bufferResponse :
+	add->bufferResponse;
+config->resolveSymlinksInDocumentRoot =
+	(add->resolveSymlinksInDocumentRoot == DirConfig::UNSET) ?
+	base->resolveSymlinksInDocumentRoot :
+	add->resolveSymlinksInDocumentRoot;
+config->allowEncodedSlashes =
+	(add->allowEncodedSlashes == DirConfig::UNSET) ?
+	base->allowEncodedSlashes :
+	add->allowEncodedSlashes;

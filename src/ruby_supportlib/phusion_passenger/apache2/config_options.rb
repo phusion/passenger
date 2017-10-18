@@ -31,7 +31,12 @@
 #
 # The following boilerplate code is generated:
 #
-#  * command_rec array members (ConfigurationCommands.cpp.erb)
+#  * command_rec array members (ConfigurationCommands.cpp.cxxcodebuilder)
+#  * Struct fields (ConfigurationFields.hpp.cxxcodebuilder)
+#  * Struct fields initialization code (CreateDirConfig.cpp.cxxcodebuilder)
+#  * Struct fields merging code (MergeDirConfig.cpp.cxxcodebuilder)
+#  * Struct field setter functions (ConfigurationSetters.cpp.cxxcodebuilder)
+#  * CGI headers serialization code (SetHeaders.cpp.cxxcodebuilder)
 #
 # Options:
 #
@@ -52,6 +57,10 @@
 #  * header_expression - The expression to be passed to `addHeader()`.
 #  * function - If nil, a setter function will be automatically generated. If
 #               non-nil, must be the name of the setter function.
+#  * obsolete - Whether this is an obsolete option. Defaults to false.
+#  * obsoletion_message - If the `obsolete` option is true, then
+#               specify the obsoletion warning message here. This is optional:
+#               there is a default obsoletion message.
 
 PhusionPassenger.require_passenger_lib 'constants'
 
@@ -236,21 +245,52 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :context   => ["RSRC_CONF"],
     :desc      => "Minimum user id starting from which entering LVE and CageFS is allowed."
   },
+  {
+    :name      => "PassengerAppRoot",
+    :type      => :string,
+    :desc      => "The application's root directory.",
+    :header    => nil
+  },
+  {
+    :name      => "PassengerBufferResponse",
+    :type      => :flag,
+    :context   => ["OR_ALL"],
+    :desc      => "Whether to enable buffering response.",
+    :header    => nil
+  },
+  {
+    :name      => "PassengerResolveSymlinksInDocumentRoot",
+    :type      => :flag,
+    :desc      => "Whether to resolve symlinks in the DocumentRoot path",
+    :header    => nil
+  },
+  {
+    :name      => "PassengerAllowEncodedSlashes",
+    :type      => :flag,
+    :desc      => "Whether to support encoded slashes in the URL",
+    :header    => nil
+  },
 
 
-  ##### Aliases #####
+  ##### Aliases and backwards compatibility options #####
 
   {
-    :name => "RailsEnv",
-    :type => :string,
-    :desc => "The environment under which applications are run.",
+    :name      => "RailsEnv",
+    :type      => :string,
+    :desc      => "The environment under which applications are run.",
     :alias_for => "PassengerAppEnv"
   },
   {
-    :name => "RackEnv",
-    :type => :string,
-    :desc => "The environment under which applications are run.",
+    :name      => "RackEnv",
+    :type      => :string,
+    :desc      => "The environment under which applications are run.",
     :alias_for => "PassengerAppEnv"
+  },
+  {
+    :name      => "RailsRuby",
+    :type      => :string,
+    :desc      => "Deprecated option.",
+    :alias_for => "PassengerRuby"
   },
 
   ##### Deprecated options #####
@@ -261,5 +301,105 @@ APACHE2_DIRECTORY_CONFIGURATION_OPTIONS = [
     :context   => ["RSRC_CONF"],
     :desc      => "Deprecated option.",
     :alias_for => "PassengerSpawnMethod"
+  },
+  {
+    :name      => "RailsSpawnServer",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :obsoletion_message => "The 'RailsSpawnServer' option is obsolete. " \
+      "Please specify 'PassengerRoot' instead. The correct value was " \
+      "given to you by 'passenger-install-apache2-module'.",
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "RailsAllowModRewrite",
+    :type      => :flag,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :obsoletion_message => "The 'RailsAllowModRewrite' option is obsolete: " \
+      "#{PROGRAM_NAME} now fully supports mod_rewrite. " \
+      "Please remove this option from your configuration file.",
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "RailsFrameworkSpawnerIdleTime",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :obsoletion_message => "The 'RailsFrameworkSpawnerIdleTime' option is obsolete. " \
+      "Please use 'PassengerMaxPreloaderIdleTime' instead.",
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "PassengerUseGlobalQueue",
+    :type      => :flag,
+    :obsolete  => true,
+    :obsoletion_message => "The 'PassengerUseGlobalQueue' option is obsolete: " \
+      "global queueing is now always turned on. " \
+      "Please remove this option from your configuration file.",
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "UnionStationGatewayAddress",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "UnionStationGatewayPort",
+    :type      => :integer,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "UnionStationGatewayCert",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "UnionStationProxyAddress",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "PassengerAnalyticsLogUser",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "PassengerAnalyticsLogGroup",
+    :type      => :string,
+    :context   => ["RSRC_CONF"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "UnionStationKey",
+    :type      => :string,
+    :context   => ["OR_ALL"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "UnionStationFilter",
+    :type      => :string,
+    :context   => ["OR_ALL"],
+    :obsolete  => true,
+    :desc      => "Obsolete option."
+  },
+  {
+    :name      => "UnionStationSupport",
+    :type      => :flag,
+    :obsolete  => true,
+    :desc      => "Obsolete option."
   }
 ]

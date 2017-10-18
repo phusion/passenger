@@ -41,6 +41,16 @@ struct GeneratedDirConfigPart {
 	enum Threeway { ENABLED, DISABLED, UNSET };
 
 	/*
+	 * Whether to support encoded slashes in the URL
+	 */
+	Threeway allowEncodedSlashes;
+
+	/*
+	 * Whether to enable buffering response.
+	 */
+	Threeway bufferResponse;
+
+	/*
 	 * Whether to buffer file uploads.
 	 */
 	Threeway bufferUpload;
@@ -69,6 +79,11 @@ struct GeneratedDirConfigPart {
 	 * Whether to load environment variables from the shell before running the application.
 	 */
 	Threeway loadShellEnvvars;
+
+	/*
+	 * Whether to resolve symlinks in the DocumentRoot path
+	 */
+	Threeway resolveSymlinksInDocumentRoot;
 
 	/*
 	 * Whether to show the Phusion Passenger version number in the X-Powered-By header.
@@ -134,6 +149,11 @@ struct GeneratedDirConfigPart {
 	 * Application process group name.
 	 */
 	const char *appGroupName;
+
+	/*
+	 * The application's root directory.
+	 */
+	const char *appRoot;
 
 	/*
 	 * Force specific application type.

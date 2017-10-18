@@ -193,10 +193,6 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 
 	#include "CreateDirConfig.cpp"
 
-	config->appRoot = NULL;
-	config->resolveSymlinksInDocRoot = DirConfig::UNSET;
-	config->allowEncodedSlashes = DirConfig::UNSET;
-	config->bufferResponse = DirConfig::UNSET;
 	/*************************************/
 	return config;
 }
@@ -214,10 +210,6 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 		config->baseURIs.insert(*it);
 	}
 
-	MERGE_STR_CONFIG(appRoot);
-	MERGE_THREEWAY_CONFIG(resolveSymlinksInDocRoot);
-	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
-	MERGE_THREEWAY_CONFIG(bufferResponse);
 	/*************************************/
 	return config;
 }
@@ -314,11 +306,6 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 #include "ConfigurationSetters.cpp"
 
-DEFINE_DIR_STR_CONFIG_SETTER(cmd_passenger_app_root, appRoot)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_root, resolveSymlinksInDocRoot)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
-DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
-
 #ifndef PASSENGER_IS_ENTERPRISE
 static const char *
 cmd_passenger_enterprise_only(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -354,55 +341,6 @@ cmd_passenger_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 		config->baseURIs.insert(arg);
 		return NULL;
 	}
-}
-
-
-/*************************************************
- * Obsolete settings
- *************************************************/
-
-static const char *
-cmd_rails_spawn_server(cmd_parms *cmd, void *pcfg, const char *arg) {
-	fprintf(stderr, "WARNING: The 'RailsSpawnServer' option is obsolete. "
-		"Please specify 'PassengerRoot' instead. The correct value was "
-		"given to you by 'passenger-install-apache2-module'.\n");
-	fflush(stderr);
-	return NULL;
-}
-
-static const char *
-cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, int arg) {
-	fprintf(stderr, "WARNING: The 'RailsAllowModRewrite' option is obsolete: "
-		"Phusion Passenger now fully supports mod_rewrite. "
-		"Please remove this option from your configuration file.\n");
-	fflush(stderr);
-	return NULL;
-}
-
-static const char *
-cmd_rails_framework_spawner_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
-	fprintf(stderr, "WARNING: The 'RailsFrameworkSpawnerIdleTime' option is obsolete. "
-		"Please use 'PassengerMaxPreloaderIdleTime' instead.\n");
-	fflush(stderr);
-	return NULL;
-}
-
-static const char *
-cmd_passenger_use_global_queue(cmd_parms *cmd, void *pcfg, int arg) {
-	fprintf(stderr, "WARNING: The 'PassengerUseGlobalQueue' option is obsolete: "
-		"global queueing is now always turned on. "
-		"Please remove this option from your configuration file.\n");
-	fflush(stderr);
-	return NULL;
-}
-
-static const char *
-cmd_passenger_obsolete_option(cmd_parms *cmd, void *pcfg, int arg) {
-	fprintf(stderr, "WARNING: The '%s' option is obsolete. "
-		"Please remove this option from your configuration file.\n",
-		cmd->cmd->name);
-	fflush(stderr);
-	return NULL;
 }
 
 
@@ -520,26 +458,6 @@ const command_rec passenger_commands[] = {
 
 	#include "ConfigurationCommands.cpp"
 
-	AP_INIT_TAKE1("PassengerAppRoot",
-		(Take1Func) cmd_passenger_app_root,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"The application's root directory."),
-	AP_INIT_FLAG("PassengerBufferResponse",
-		(FlagFunc) cmd_passenger_buffer_response,
-		NULL,
-		OR_ALL,
-		"Whether to enable buffering response."),
-	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
-		(FlagFunc) cmd_passenger_resolve_symlinks_in_document_root,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Whether to resolve symlinks in the DocumentRoot path"),
-	AP_INIT_FLAG("PassengerAllowEncodedSlashes",
-		(FlagFunc) cmd_passenger_allow_encoded_slashes,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Whether to support encoded slashes in the URL"),
 	AP_INIT_TAKE1("PassengerBaseURI",
 		(Take1Func) cmd_passenger_base_uri,
 		NULL,
@@ -594,11 +512,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"Passenger log file."),
-	AP_INIT_TAKE1("RailsRuby",
-		(Take1Func) cmd_passenger_ruby,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Deprecated option."),
 	AP_INIT_TAKE1("RailsMaxPoolSize",
 		(Take1Func) cmd_passenger_max_pool_size,
 		NULL,
@@ -639,73 +552,6 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
 		"Deprecated option."),
-
-	// Obsolete options.
-	AP_INIT_TAKE1("RailsSpawnServer",
-		(Take1Func) cmd_rails_spawn_server,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_FLAG("RailsAllowModRewrite",
-		(FlagFunc) cmd_rails_allow_mod_rewrite,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("RailsFrameworkSpawnerIdleTime",
-		(Take1Func) cmd_rails_framework_spawner_idle_time,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_FLAG("PassengerUseGlobalQueue",
-		(FlagFunc) cmd_passenger_use_global_queue,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("UnionStationGatewayAddress",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("UnionStationGatewayPort",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("UnionStationGatewayCert",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("UnionStationProxyAddress",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("PassengerAnalyticsLogUser",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("PassengerAnalyticsLogGroup",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		RSRC_CONF,
-		"Obsolete option."),
-	AP_INIT_TAKE1("UnionStationKey",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		OR_ALL,
-		"Obsolete option."),
-	AP_INIT_TAKE1("UnionStationFilter",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		OR_ALL,
-		"Obsolete option."),
-	AP_INIT_FLAG("UnionStationSupport",
-		(Take1Func) cmd_passenger_obsolete_option,
-		NULL,
-		OR_OPTIONS | ACCESS_CONF | RSRC_CONF,
-		"Obsolete option."),
 
 	{ NULL }
 };

@@ -68,31 +68,6 @@ struct DirConfig : GeneratedDirConfigPart {
 
 	std::set<std::string> baseURIs;
 
-	/** The path to the application's root (for example: RAILS_ROOT
-	 * for Rails applications, directory containing 'config.ru'
-	 * for Rack applications). If this value is NULL, the default
-	 * autodetected path will be used.
-	 */
-	const char *appRoot;
-
-	/** Whether symlinks in the document root path should be resolved.
-	 * The implication of this is documented at
-	 * https://www.phusionpassenger.com/library/indepth/ruby/app_autodetection/apache/.
-	 */
-	Threeway resolveSymlinksInDocRoot;
-
-	/**
-	 * Whether encoded slashes in URLs should be supported. This however conflicts
-	 * with mod_rewrite support because of a bug/limitation in Apache, so it's one
-	 * or the other.
-	 */
-	Threeway allowEncodedSlashes;
-
-	/**
-	 * Whether response buffering support is enabled.
-	 */
-	Threeway bufferResponse;
-
 	/*************************************/
 	/*************************************/
 

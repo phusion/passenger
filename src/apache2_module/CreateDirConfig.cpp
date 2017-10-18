@@ -66,3 +66,7 @@ config->restartDir = NULL;
 config->appGroupName = NULL;
 config->forceMaxConcurrentRequestsPerProcess = UNSET_INT_VALUE;
 config->lveMinUid = UNSET_INT_VALUE;
+config->appRoot = NULL;
+config->bufferResponse = DirConfig::UNSET;
+config->resolveSymlinksInDocumentRoot = DirConfig::UNSET;
+config->allowEncodedSlashes = DirConfig::UNSET;

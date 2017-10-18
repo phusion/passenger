@@ -50,7 +50,16 @@ def main
   filter_eligible_options(APACHE2_DIRECTORY_CONFIGURATION_OPTIONS).each do |option|
     func_name = function_name_for(option)
 
-    if option[:type] == :string
+    if option[:obsolete]
+      obsoletion_message = option[:obsoletion_message] ||
+        "The '#{option[:name]}' option is obsolete. Please remove this option from your configuration file."
+      obsoletion_message = "WARNING: #{obsoletion_message}\n"
+      function("static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)", %Q{
+        fprintf(stderr, #{obsoletion_message.inspect});
+        fflush(stderr);
+        return NULL;
+      })
+    elsif option[:type] == :string
       function("static const char *#{func_name}(cmd_parms *cmd, void *pcfg, const char *arg)", %Q{
         DirConfig *config = (DirConfig *) pcfg;
         config->#{struct_field_for(option)} = arg;
