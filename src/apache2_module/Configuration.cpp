@@ -132,7 +132,7 @@ passenger_postprocess_config(server_rec *s) {
     ap_conf_vector_t **elts;
     int i;
 
-	serverConfig.finalize();
+	serverConfig.finalize(s->process->pconf);
 
 	for (; s != NULL; s = s->next) {
 		sconf = (core_server_config *) ap_get_core_module_config(s->module_config);

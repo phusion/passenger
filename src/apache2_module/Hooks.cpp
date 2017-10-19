@@ -1262,12 +1262,12 @@ public:
 		Json::Value loggingConfig;
 		loggingConfig["level"] = LoggingKit::Level(serverConfig.logLevel);
 		loggingConfig["redirect_stderr"] = false;
-		if (serverConfig.logFile != NULL) {
-			loggingConfig["target"] = serverConfig.logFile;
+		if (!serverConfig.logFile.empty()) {
+			loggingConfig["target"] = serverConfig.logFile.toString();
 		}
-		if (serverConfig.fileDescriptorLogFile != NULL) {
+		if (!serverConfig.fileDescriptorLogFile.empty()) {
 			loggingConfig["file_descriptor_log_target"] =
-				serverConfig.fileDescriptorLogFile;
+				serverConfig.fileDescriptorLogFile.toString();
 		}
 
 		vector<ConfigKit::Error> errors;
@@ -1295,7 +1295,7 @@ public:
 		P_DEBUG("Initializing Phusion Passenger...");
 		ap_add_version_component(pconf, SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 
-		if (serverConfig.root == NULL) {
+		if (serverConfig.root.empty()) {
 			throw ConfigurationException("The 'PassengerRoot' configuration option "
 				"is not specified. This option is required, so please specify it. "
 				"TIP: The correct value for this option was given to you by "
@@ -1329,9 +1329,9 @@ public:
 		config["security_update_checker_disabled"] = serverConfig.disableSecurityUpdateCheck;
 		config["security_update_checker_proxy_url"] = nonEmptyString(serverConfig.securityUpdateCheckProxy);
 		config["user_switching"] = serverConfig.userSwitching;
-		config["default_user"] = serverConfig.defaultUser;
-		config["default_group"] = serverConfig.defaultGroup;
-		config["default_ruby"] = serverConfig.defaultRuby;
+		config["default_user"] = serverConfig.defaultUser.toString();
+		config["default_group"] = serverConfig.defaultGroup.toString();
+		config["default_ruby"] = serverConfig.defaultRuby.toString();
 		config["max_pool_size"] = serverConfig.maxPoolSize;
 		config["pool_idle_time"] = serverConfig.poolIdleTime;
 		config["response_buffer_high_watermark"] = serverConfig.responseBufferHighWatermark;
@@ -1339,8 +1339,8 @@ public:
 		config["turbocaching"] = serverConfig.turbocaching;
 		config["prestart_urls"] = strsetToJson(serverConfig.prestartURLs);
 
-		if (serverConfig.logFile != NULL) {
-			config["log_target"] = serverConfig.logFile;
+		if (!serverConfig.logFile.empty()) {
+			config["log_target"] = serverConfig.logFile.toString();
 		} else if (s->error_fname == NULL) {
 			throw ConfigurationException("Cannot initialize " PROGRAM_NAME
 				" because Apache is not configured with an error log file."

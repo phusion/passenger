@@ -54,6 +54,14 @@
 #            to nil if you do not want a structure field to be auto-generated.
 #  * min_value - If `type` is :integer, then this specifies the minimum
 #                allowed value. When nil (the default), there is no minimum.
+#  * default - A static default value. Set during configuration merging,
+#              and reported in the tracking code that generates the
+#              configuration manifest.
+#  * dynamic_default - If this option has a default, but it's dynamically inferred
+#              (and not a static value) then set this option to a human-readable
+#              description that explains how the default is dynamically inferred.
+#              Reported in the tracking code that generates the configuration
+#              manifest.
 #  * desc - A description for this configuration option. Required.
 #  * header - The name of the corresponding CGI header. By default CGI header
 #             generation code is automatically generated, using the configuration
@@ -93,6 +101,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :type      => :string,
     :context   => ["RSRC_CONF"],
     :struct    => :main,
+    :default   => DEFAULT_RUBY,
+    :default_expr => 'DEFAULT_RUBY',
     :desc      => "#{PROGRAM_NAME}'s default Ruby interpreter to use."
   },
   {
@@ -100,6 +110,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :type      => :integer,
     :context   => ["RSRC_CONF"],
     :min_value => 0,
+    :default   => DEFAULT_LOG_LEVEL,
+    :default_expr => 'DEFAULT_LOG_LEVEL',
     :struct    => :main,
     :desc      => "The #{PROGRAM_NAME} log verbosity."
   },
@@ -107,6 +119,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerLogFile",
     :type      => :string,
     :context   => ["RSRC_CONF"],
+    :dynamic_default => "Nginx's global error log",
     :struct    => :main,
     :desc      => "The #{PROGRAM_NAME} log file."
   },
@@ -115,6 +128,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :type      => :integer,
     :context   => ["RSRC_CONF"],
     :min_value => 0,
+    :default   => DEFAULT_SOCKET_BACKLOG,
+    :default_expr => 'DEFAULT_SOCKET_BACKLOG',
     :struct    => :main,
     :desc      => "The #{PROGRAM_NAME} socket backlog."
   },
@@ -130,6 +145,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :type      => :integer,
     :context   => ["RSRC_CONF"],
     :min_value => 1,
+    :default   => DEFAULT_MAX_POOL_SIZE,
+    :default_expr => 'DEFAULT_MAX_POOL_SIZE',
     :struct    => :main,
     :desc      => "The maximum number of simultaneously alive application processes."
   },
@@ -138,6 +155,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :type      => :integer,
     :context   => ["RSRC_CONF"],
     :min_value => 0,
+    :default   => DEFAULT_POOL_IDLE_TIME,
+    :default_expr => 'DEFAULT_POOL_IDLE_TIME',
     :struct    => :main,
     :desc      => "The maximum number of seconds that an application may be idle before it gets terminated."
   },
@@ -146,6 +165,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :type      => :integer,
     :context   => ["RSRC_CONF"],
     :min_value => 0,
+    :default   => DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK,
+    :default_expr => 'DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK',
     :struct    => :main,
     :desc      => "The maximum size of the #{PROGRAM_NAME} response buffer."
   },
@@ -153,6 +174,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerUserSwitching",
     :type      => :flag,
     :context   => ["RSRC_CONF"],
+    :default   => true,
     :struct    => :main,
     :desc      => "Whether to enable user switching support in #{PROGRAM_NAME}."
   },
@@ -160,6 +182,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerDefaultUser",
     :type      => :string,
     :context   => ["RSRC_CONF"],
+    :default   => PASSENGER_DEFAULT_USER,
+    :default_expr => 'PASSENGER_DEFAULT_USER',
     :struct    => :main,
     :desc      => "The user that #{PROGRAM_NAME} applications must run as when user switching fails or is disabled."
   },
@@ -167,6 +191,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerDefaultGroup",
     :type      => :string,
     :context   => ["RSRC_CONF"],
+    :dynamic_default => 'The primary group of PassengerDefaultUser',
     :struct    => :main,
     :desc      => "The group that #{PROGRAM_NAME} applications must run as when user switching fails or is disabled."
   },
@@ -174,6 +199,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerDataBufferDir",
     :type      => :string,
     :context   => ["RSRC_CONF"],
+    :dynamic_default => '$TMPDIR, or if not given, /tmp',
     :struct    => :main,
     :desc      => "The directory that #{PROGRAM_NAME} data buffers should be stored into."
   },
@@ -181,6 +207,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerInstanceRegistryDir",
     :type      => :string,
     :context   => ["RSRC_CONF"],
+    :dynamic_default => 'Either /var/run/passenger-instreg, $TMPDIR, or /tmp (see docs)',
     :struct    => :main,
     :desc      => "The directory to register the #{PROGRAM_NAME} instance to."
   },
@@ -188,6 +215,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerDisableSecurityUpdateCheck",
     :type      => :flag,
     :context   => ["RSRC_CONF"],
+    :default   => false,
     :struct    => :main,
     :desc      => "Whether to disable the #{PROGRAM_NAME} security update check & notification."
   },
@@ -202,6 +230,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerStatThrottleRate",
     :type      => :integer,
     :context   => ["RSRC_CONF"],
+    :default   => DEFAULT_STAT_THROTTLE_RATE,
+    :default_expr => 'DEFAULT_STAT_THROTTLE_RATE',
     :struct    => :main,
     :desc      => "Limit the number of stat calls to once per given seconds."
   },
@@ -217,6 +247,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerTurbocaching",
     :type      => :flag,
     :context   => ["RSRC_CONF"],
+    :default   => true,
     :struct    => :main,
     :desc      => "Whether to enable turbocaching in #{PROGRAM_NAME}."
   },
@@ -406,6 +437,8 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerLveMinUid",
     :type      => :integer,
     :min_value => 0,
+    :default   => DEFAULT_LVE_MIN_UID,
+    :default_expr => 'DEFAULT_LVE_MIN_UID',
     :context   => ["RSRC_CONF"],
     :desc      => "Minimum user id starting from which entering LVE and CageFS is allowed."
   },
