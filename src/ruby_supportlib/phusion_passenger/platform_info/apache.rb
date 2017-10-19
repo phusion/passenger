@@ -612,8 +612,13 @@ module PhusionPassenger
         # macOS >= 10.13 High Sierra no longer includes apxs2
         # so we'll use hardcoded paths here.
         if os_name_simple == 'macosx' && os_version >= '10.13' && httpd == '/usr/sbin/httpd'
+          # High Sierra doesn't have a consistent location for the Apache header
+          # files. On Hongli's and Camden's systems it's inside the Xcode directory,
+          # while on https://github.com/phusion/passenger/issues/1986 it's inside
+          # /Library/Developer/CommandLineTools.
           xcode_prefix = `/usr/bin/xcode-select -p`.strip
           flags << "-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apache2"
+          flags << "-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/apache2"
         end
       else
         apxs2_flags = `#{apxs2} -q CFLAGS`.strip << " -I" << `#{apxs2} -q INCLUDEDIR`.strip
@@ -813,8 +818,13 @@ module PhusionPassenger
           if os_version >= '10.13'
             # On macOS >= 10.13 High Sierra /usr/include no longer
             # exists.
+            # High Sierra doesn't have a consistent location for the Apache header
+            # files. On Hongli's and Camden's systems it's inside the Xcode directory,
+            # while on https://github.com/phusion/passenger/issues/1986 it's inside
+            # /Library/Developer/CommandLineTools.
             xcode_prefix = `/usr/bin/xcode-select -p`.strip
-            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1",
+            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1 " \
+             "-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/apache2",
               '-lapr-1']
           else
             ['-I/usr/include/apr-1', '-lapr-1']
