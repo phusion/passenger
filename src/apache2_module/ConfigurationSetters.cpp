@@ -215,8 +215,8 @@ static const char *
 cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.userSwitching =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -248,8 +248,8 @@ static const char *
 cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.disableSecurityUpdateCheck =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -290,8 +290,8 @@ static const char *
 cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.turbocaching =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -402,8 +402,8 @@ cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->errorOverride =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -474,8 +474,8 @@ cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->highPerformance =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -484,8 +484,8 @@ cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->enabled =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -556,8 +556,8 @@ cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->loadShellEnvvars =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -566,8 +566,8 @@ cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->bufferUpload =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -590,8 +590,8 @@ cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->stickySessions =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -600,8 +600,8 @@ cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char
 	DirConfig *config = (DirConfig *) pcfg;
 	config->stickySessionsCookieName =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -610,8 +610,8 @@ cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg
 	DirConfig *config = (DirConfig *) pcfg;
 	config->showVersionInHeader =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -620,8 +620,8 @@ cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) 
 	DirConfig *config = (DirConfig *) pcfg;
 	config->friendlyErrorPages =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -704,8 +704,8 @@ cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->bufferResponse =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -714,8 +714,8 @@ cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, cons
 	DirConfig *config = (DirConfig *) pcfg;
 	config->resolveSymlinksInDocumentRoot =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 
@@ -724,8 +724,8 @@ cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg)
 	DirConfig *config = (DirConfig *) pcfg;
 	config->allowEncodedSlashes =
 		arg ?
-		DirConfig::ENABLED :
-		DirConfig::DISABLED;
+		ENABLED :
+		DISABLED;
 	return NULL;
 }
 

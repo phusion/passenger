@@ -630,7 +630,7 @@ private:
 
 			bucketState = boost::make_shared<PassengerBucketState>(conn);
 			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc,
-				config->getBufferResponse());
+				config->bufferResponse == ENABLED);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
@@ -685,7 +685,7 @@ private:
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 
 				UPDATE_TRACE_POINT();
-				if (config->errorOverride == DirConfig::ENABLED
+				if (config->errorOverride == Passenger::ENABLED
 				 && ap_is_HTTP_ERROR(r->status))
 				{
 					/* Send ErrorDocument.
@@ -854,11 +854,11 @@ private:
 		}
 	}
 
-	void addHeader(string &headers, const StaticString &name, DirConfig::Threeway value) {
-		if (value != DirConfig::UNSET) {
+	void addHeader(string &headers, const StaticString &name, Passenger::Threeway value) {
+		if (value != Passenger::UNSET) {
 			headers.append(name.data(), name.size());
 			headers.append(": ", 2);
-			if (value == DirConfig::ENABLED) {
+			if (value == Passenger::ENABLED) {
 				headers.append("t", 1);
 			} else {
 				headers.append("f", 1);
@@ -880,7 +880,7 @@ private:
 		result.append(r->method);
 		result.append(" ", 1);
 
-		if (config->allowsEncodedSlashes()) {
+		if (config->allowEncodedSlashes == ENABLED) {
 			/*
 			 * Apache decodes encoded slashes in r->uri, so we must use r->unparsed_uri
 			 * if we are to support encoded slashes. However mod_rewrite doesn't change
@@ -980,11 +980,11 @@ private:
 		addHeader(result, P_STATIC_STRING("!~REMOTE_USER"), r->user);
 
 		// App group name.
-		if (config->appGroupName == NULL) {
+		if (config->appGroupName.empty()) {
 			result.append("!~PASSENGER_APP_GROUP_NAME: ",
 				sizeof("!~PASSENGER_APP_GROUP_NAME: ") - 1);
 			result.append(mapper.getAppRoot());
-			if (config->appEnv != NULL) {
+			if (!config->appEnv.empty()) {
 				result.append(" (", 2);
 				result.append(config->appEnv);
 				result.append(")", 1);
@@ -1048,7 +1048,7 @@ private:
 		// S = SSL
 
 		result.append("!~FLAGS: CD", sizeof("!~FLAGS: CD") - 1);
-		if (config->bufferUpload != DirConfig::DISABLED) {
+		if (config->bufferUpload != Passenger::DISABLED) {
 			result.append("B", 1);
 		}
 		if (lookupEnv(r, "HTTPS") != NULL) {
@@ -1257,7 +1257,7 @@ public:
 	    : cstat(1024),
 	      watchdogLauncher(IM_APACHE)
 	{
-		passenger_postprocess_config(s);
+		passenger_postprocess_config(s, pconf);
 
 		Json::Value loggingConfig;
 		loggingConfig["level"] = LoggingKit::Level(serverConfig.logLevel);
@@ -1375,7 +1375,7 @@ public:
 
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->isEnabled() && config->highPerformanceMode()) {
+		if (config->enabled == ENABLED && config->highPerformance == ENABLED) {
 			if (prepareRequest(r, config, r->filename, true)) {
 				return OK;
 			} else {
@@ -1416,8 +1416,8 @@ public:
 
 	int prepareRequestWhenNotInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->isEnabled()) {
-			if (config->highPerformanceMode()) {
+		if (config->enabled == ENABLED) {
+			if (config->highPerformance == ENABLED) {
 				/* Preparations have already been done in the map_to_storage hook.
 				 * Prevent other modules' fixups hooks from being run.
 				 */
@@ -1556,7 +1556,7 @@ public:
 
 	int handleRequestWhenInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->highPerformanceMode()) {
+		if (config->highPerformance == ENABLED) {
 			return handleRequest(r);
 		} else {
 			return DECLINED;
@@ -1565,7 +1565,7 @@ public:
 
 	int handleRequestWhenNotInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->highPerformanceMode()) {
+		if (config->highPerformance == ENABLED) {
 			return DECLINED;
 		} else {
 			return handleRequest(r);
@@ -1607,6 +1607,15 @@ destroy_hooks(void *arg) {
 }
 
 static int
+preinit_module(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp) {
+	// When reloading Apache, global variables may be left at stale values,
+	// so here we reinitialize them.
+	hooks = NULL;
+	serverConfig = ServerConfig();
+	return OK;
+}
+
+static int
 init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s) {
 	/*
 	 * HISTORICAL NOTE:
@@ -1625,15 +1634,9 @@ init_module(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *
 	 * universal, i.e. it works for some people but not for others. So we got rid of the
 	 * hacks, and now we always initialize in the post_config hook.
 	 */
-	if (hooks == NULL) {
-		oxt::initialize();
-		SystemTime::initialize();
-		LoggingKit::initialize();
-	} else {
-		P_DEBUG("Restarting Phusion Passenger....");
-		delete hooks;
-		hooks = NULL;
-	}
+	oxt::initialize();
+	SystemTime::initialize();
+	LoggingKit::initialize();
 	try {
 		hooks = new Hooks(pconf, plog, ptemp, s);
 		apr_pool_cleanup_register(pconf, NULL,
@@ -1741,6 +1744,7 @@ passenger_register_hooks(apr_pool_t *p) {
 	static const char * const dir_module[] = { "mod_dir.c", NULL };
 	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
 
+	ap_hook_pre_config(preinit_module, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_post_config(init_module, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_child_init(child_init, NULL, NULL, APR_HOOK_MIDDLE);
 

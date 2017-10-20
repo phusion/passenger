@@ -158,8 +158,8 @@ def setter_function_body_for(option)
     add_code %Q{
       #{field_reference} =
         arg ?
-        DirConfig::ENABLED :
-        DirConfig::DISABLED;
+        ENABLED :
+        DISABLED;
       return NULL;
     }
   elsif option[:type] == :string_set

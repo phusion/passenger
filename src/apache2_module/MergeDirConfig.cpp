@@ -37,137 +37,54 @@
  *   rake src/apache2_module/MergeDirConfig.cpp
  */
 
-config->ruby =
-	(add->ruby == NULL) ?
-	base->ruby :
-	add->ruby;
-config->python =
-	(add->python == NULL) ?
-	base->python :
-	add->python;
-config->nodejs =
-	(add->nodejs == NULL) ?
-	base->nodejs :
-	add->nodejs;
-config->meteorAppSettings =
-	(add->meteorAppSettings == NULL) ?
-	base->meteorAppSettings :
-	add->meteorAppSettings;
-config->baseURIs = base->baseURIs;
-config->baseURIs.insert(add->baseURIs.begin(), add->baseURIs.end());
-config->appEnv =
-	(add->appEnv == NULL) ?
-	base->appEnv :
-	add->appEnv;
-config->minInstances =
-	(add->minInstances == UNSET_INT_VALUE) ?
-	base->minInstances :
-	add->minInstances;
-config->maxInstancesPerApp =
-	(add->maxInstancesPerApp == UNSET_INT_VALUE) ?
-	base->maxInstancesPerApp :
-	add->maxInstancesPerApp;
-config->user =
-	(add->user == NULL) ?
-	base->user :
-	add->user;
-config->group =
-	(add->group == NULL) ?
-	base->group :
-	add->group;
-config->errorOverride =
-	(add->errorOverride == DirConfig::UNSET) ?
-	base->errorOverride :
-	add->errorOverride;
-config->maxRequests =
-	(add->maxRequests == UNSET_INT_VALUE) ?
-	base->maxRequests :
-	add->maxRequests;
-config->startTimeout =
-	(add->startTimeout == UNSET_INT_VALUE) ?
-	base->startTimeout :
-	add->startTimeout;
-config->highPerformance =
-	(add->highPerformance == DirConfig::UNSET) ?
-	base->highPerformance :
-	add->highPerformance;
-config->enabled =
-	(add->enabled == DirConfig::UNSET) ?
-	base->enabled :
-	add->enabled;
-config->maxRequestQueueSize =
-	(add->maxRequestQueueSize == UNSET_INT_VALUE) ?
-	base->maxRequestQueueSize :
-	add->maxRequestQueueSize;
-config->maxPreloaderIdleTime =
-	(add->maxPreloaderIdleTime == UNSET_INT_VALUE) ?
-	base->maxPreloaderIdleTime :
-	add->maxPreloaderIdleTime;
-config->loadShellEnvvars =
-	(add->loadShellEnvvars == DirConfig::UNSET) ?
-	base->loadShellEnvvars :
-	add->loadShellEnvvars;
-config->bufferUpload =
-	(add->bufferUpload == DirConfig::UNSET) ?
-	base->bufferUpload :
-	add->bufferUpload;
-config->appType =
-	(add->appType == NULL) ?
-	base->appType :
-	add->appType;
-config->startupFile =
-	(add->startupFile == NULL) ?
-	base->startupFile :
-	add->startupFile;
-config->stickySessions =
-	(add->stickySessions == DirConfig::UNSET) ?
-	base->stickySessions :
-	add->stickySessions;
-config->stickySessionsCookieName =
-	(add->stickySessionsCookieName == DirConfig::UNSET) ?
-	base->stickySessionsCookieName :
-	add->stickySessionsCookieName;
-config->spawnMethod =
-	(add->spawnMethod == NULL) ?
-	base->spawnMethod :
-	add->spawnMethod;
-config->showVersionInHeader =
-	(add->showVersionInHeader == DirConfig::UNSET) ?
-	base->showVersionInHeader :
-	add->showVersionInHeader;
-config->friendlyErrorPages =
-	(add->friendlyErrorPages == DirConfig::UNSET) ?
-	base->friendlyErrorPages :
-	add->friendlyErrorPages;
-config->restartDir =
-	(add->restartDir == NULL) ?
-	base->restartDir :
-	add->restartDir;
-config->appGroupName =
-	(add->appGroupName == NULL) ?
-	base->appGroupName :
-	add->appGroupName;
-config->forceMaxConcurrentRequestsPerProcess =
-	(add->forceMaxConcurrentRequestsPerProcess == UNSET_INT_VALUE) ?
-	base->forceMaxConcurrentRequestsPerProcess :
-	add->forceMaxConcurrentRequestsPerProcess;
-config->lveMinUid =
-	(add->lveMinUid == UNSET_INT_VALUE) ?
-	base->lveMinUid :
-	add->lveMinUid;
-config->appRoot =
-	(add->appRoot == NULL) ?
-	base->appRoot :
-	add->appRoot;
-config->bufferResponse =
-	(add->bufferResponse == DirConfig::UNSET) ?
-	base->bufferResponse :
-	add->bufferResponse;
-config->resolveSymlinksInDocumentRoot =
-	(add->resolveSymlinksInDocumentRoot == DirConfig::UNSET) ?
-	base->resolveSymlinksInDocumentRoot :
-	add->resolveSymlinksInDocumentRoot;
-config->allowEncodedSlashes =
-	(add->allowEncodedSlashes == DirConfig::UNSET) ?
-	base->allowEncodedSlashes :
-	add->allowEncodedSlashes;
+config->ruby = mergeStrValue(add->ruby, base->ruby,
+	StaticString());
+config->python = mergeStrValue(add->python, base->python,
+	DEFAULT_PYTHON);
+config->nodejs = mergeStrValue(add->nodejs, base->nodejs,
+	DEFAULT_NODEJS);
+config->meteorAppSettings = mergeStrValue(add->meteorAppSettings, base->meteorAppSettings);
+config->baseURIs = mergeStrSetValue(add->baseURIs, base->baseURIs);
+config->appEnv = mergeStrValue(add->appEnv, base->appEnv,
+	"production");
+config->minInstances = mergeIntValue(add->minInstances, base->minInstances,
+	1);
+config->maxInstancesPerApp = mergeIntValue(add->maxInstancesPerApp, base->maxInstancesPerApp);
+config->user = mergeStrValue(add->user, base->user);
+config->group = mergeStrValue(add->group, base->group);
+config->errorOverride = mergeBoolValue(add->errorOverride, base->errorOverride);
+config->maxRequests = mergeIntValue(add->maxRequests, base->maxRequests,
+	0);
+config->startTimeout = mergeIntValue(add->startTimeout, base->startTimeout,
+	DEFAULT_START_TIMEOUT / 1000);
+config->highPerformance = mergeBoolValue(add->highPerformance, base->highPerformance);
+config->enabled = mergeBoolValue(add->enabled, base->enabled,
+	true);
+config->maxRequestQueueSize = mergeIntValue(add->maxRequestQueueSize, base->maxRequestQueueSize,
+	DEFAULT_MAX_REQUEST_QUEUE_SIZE);
+config->maxPreloaderIdleTime = mergeIntValue(add->maxPreloaderIdleTime, base->maxPreloaderIdleTime,
+	DEFAULT_MAX_PRELOADER_IDLE_TIME);
+config->loadShellEnvvars = mergeBoolValue(add->loadShellEnvvars, base->loadShellEnvvars,
+	true);
+config->bufferUpload = mergeBoolValue(add->bufferUpload, base->bufferUpload,
+	true);
+config->appType = mergeStrValue(add->appType, base->appType);
+config->startupFile = mergeStrValue(add->startupFile, base->startupFile);
+config->stickySessions = mergeBoolValue(add->stickySessions, base->stickySessions);
+config->stickySessionsCookieName = mergeBoolValue(add->stickySessionsCookieName, base->stickySessionsCookieName,
+	DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
+config->spawnMethod = mergeStrValue(add->spawnMethod, base->spawnMethod);
+config->showVersionInHeader = mergeBoolValue(add->showVersionInHeader, base->showVersionInHeader,
+	true);
+config->friendlyErrorPages = mergeBoolValue(add->friendlyErrorPages, base->friendlyErrorPages);
+config->restartDir = mergeStrValue(add->restartDir, base->restartDir,
+	"tmp");
+config->appGroupName = mergeStrValue(add->appGroupName, base->appGroupName);
+config->forceMaxConcurrentRequestsPerProcess = mergeIntValue(add->forceMaxConcurrentRequestsPerProcess, base->forceMaxConcurrentRequestsPerProcess,
+	-1);
+config->lveMinUid = mergeIntValue(add->lveMinUid, base->lveMinUid,
+	DEFAULT_LVE_MIN_UID);
+config->appRoot = mergeStrValue(add->appRoot, base->appRoot);
+config->bufferResponse = mergeBoolValue(add->bufferResponse, base->bufferResponse);
+config->resolveSymlinksInDocumentRoot = mergeBoolValue(add->resolveSymlinksInDocumentRoot, base->resolveSymlinksInDocumentRoot);
+config->allowEncodedSlashes = mergeBoolValue(add->allowEncodedSlashes, base->allowEncodedSlashes);

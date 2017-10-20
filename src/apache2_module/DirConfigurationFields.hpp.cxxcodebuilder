@@ -48,8 +48,6 @@ def main
   separator
 
   struct 'GeneratedDirConfigPart' do
-    add_code 'enum Threeway { ENABLED, DISABLED, UNSET };'
-
     definitions.each do |definition|
       separator
       comment(definition[3])
@@ -78,22 +76,22 @@ def struct_field_for(option)
   end
 end
 
-# Returns [definition_source, estimated_size_on_x86_64, description]
+# Returns [definition_source, estimated_size_on_x86_64, name, description]
 def definition_for(option)
   field = struct_field_for(option)
   case option[:type]
   when :string
-    result = ["const char *#{field}", 8 + 4, field, option[:desc]]
+    result = ["StaticString #{field}", 8 + 4]
   when :integer
-    result = ["int #{field}", 4, field, option[:desc]]
+    result = ["int #{field}", 4]
   when :flag
-    result = ["Threeway #{field}", 1, field, option[:desc]]
+    result = ["Threeway #{field}", 1]
   when :string_set
-    result = ["std::set<std::string> #{field}", 24, field, option[:desc]]
+    result = ["std::set<std::string> #{field}", 24]
   else
     raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
   end
-  result + [option[:desc]]
+  result + [field, option[:desc]]
 end
 
 def definitions

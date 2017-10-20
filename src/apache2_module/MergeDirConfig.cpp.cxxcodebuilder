@@ -48,37 +48,7 @@ def main
   separator
 
   filter_eligible_options(APACHE2_CONFIGURATION_OPTIONS).each do |option|
-    field_def = struct_field_for(option)
-
-    if option[:type] == :string
-      add_code %Q{
-        config->#{field_def} =
-          (add->#{field_def} == NULL) ?
-          base->#{field_def} :
-          add->#{field_def};
-      }
-    elsif option[:type] == :integer
-      add_code %Q{
-        config->#{field_def} =
-          (add->#{field_def} == UNSET_INT_VALUE) ?
-          base->#{field_def} :
-          add->#{field_def};
-      }
-    elsif option[:type] == :flag
-      add_code %Q{
-        config->#{field_def} =
-          (add->#{field_def} == DirConfig::UNSET) ?
-          base->#{field_def} :
-          add->#{field_def};
-      }
-    elsif option[:type] == :string_set
-      add_code %Q{
-        config->#{field_def} = base->#{field_def};
-        config->#{field_def}.insert(add->#{field_def}.begin(), add->#{field_def}.end());
-      }
-    else
-      raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
-    end
+    add_merge_code(option)
   end
 end
 
@@ -100,6 +70,39 @@ def struct_field_for(option)
     result = option[:name].sub(/^Passenger/, '')
     result[0] = result[0..0].downcase
     result
+  end
+end
+
+def add_merge_code(option)
+  field_def = struct_field_for(option)
+
+  case option[:type]
+  when :string
+    merge_func = 'mergeStrValue'
+  when :integer
+    merge_func = 'mergeIntValue'
+  when :flag
+    merge_func = 'mergeBoolValue'
+  when :string_set
+    merge_func = 'mergeStrSetValue'
+  else
+    raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
+  end
+
+  if option[:default_expr]
+    add_code %Q{
+      config->#{field_def} = #{merge_func}(add->#{field_def}, base->#{field_def},
+        #{option[:default_expr]});
+    }
+  elsif option[:default]
+    add_code %Q{
+      config->#{field_def} = #{merge_func}(add->#{field_def}, base->#{field_def},
+        #{option[:default].inspect});
+    }
+  else
+    add_code %Q{
+      config->#{field_def} = #{merge_func}(add->#{field_def}, base->#{field_def});
+    }
   end
 end
 

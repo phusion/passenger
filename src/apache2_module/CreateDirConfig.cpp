@@ -37,36 +37,65 @@
  *   rake src/apache2_module/CreateDirConfig.cpp
  */
 
-config->ruby = NULL;
-config->python = NULL;
-config->nodejs = NULL;
-config->meteorAppSettings = NULL;
-config->appEnv = NULL;
+/*
+ * config->ruby: default initialized
+ */
+/*
+ * config->python: default initialized
+ */
+/*
+ * config->nodejs: default initialized
+ */
+/*
+ * config->meteorAppSettings: default initialized
+ */
+/*
+ * config->baseURIs: default initialized
+ */
+/*
+ * config->appEnv: default initialized
+ */
 config->minInstances = UNSET_INT_VALUE;
 config->maxInstancesPerApp = UNSET_INT_VALUE;
-config->user = NULL;
-config->group = NULL;
-config->errorOverride = DirConfig::UNSET;
+/*
+ * config->user: default initialized
+ */
+/*
+ * config->group: default initialized
+ */
+config->errorOverride = Passenger::UNSET;
 config->maxRequests = UNSET_INT_VALUE;
 config->startTimeout = UNSET_INT_VALUE;
-config->highPerformance = DirConfig::UNSET;
-config->enabled = DirConfig::UNSET;
+config->highPerformance = Passenger::UNSET;
+config->enabled = Passenger::UNSET;
 config->maxRequestQueueSize = UNSET_INT_VALUE;
 config->maxPreloaderIdleTime = UNSET_INT_VALUE;
-config->loadShellEnvvars = DirConfig::UNSET;
-config->bufferUpload = DirConfig::UNSET;
-config->appType = NULL;
-config->startupFile = NULL;
-config->stickySessions = DirConfig::UNSET;
-config->stickySessionsCookieName = DirConfig::UNSET;
-config->spawnMethod = NULL;
-config->showVersionInHeader = DirConfig::UNSET;
-config->friendlyErrorPages = DirConfig::UNSET;
-config->restartDir = NULL;
-config->appGroupName = NULL;
+config->loadShellEnvvars = Passenger::UNSET;
+config->bufferUpload = Passenger::UNSET;
+/*
+ * config->appType: default initialized
+ */
+/*
+ * config->startupFile: default initialized
+ */
+config->stickySessions = Passenger::UNSET;
+config->stickySessionsCookieName = Passenger::UNSET;
+/*
+ * config->spawnMethod: default initialized
+ */
+config->showVersionInHeader = Passenger::UNSET;
+config->friendlyErrorPages = Passenger::UNSET;
+/*
+ * config->restartDir: default initialized
+ */
+/*
+ * config->appGroupName: default initialized
+ */
 config->forceMaxConcurrentRequestsPerProcess = UNSET_INT_VALUE;
 config->lveMinUid = UNSET_INT_VALUE;
-config->appRoot = NULL;
-config->bufferResponse = DirConfig::UNSET;
-config->resolveSymlinksInDocumentRoot = DirConfig::UNSET;
-config->allowEncodedSlashes = DirConfig::UNSET;
+/*
+ * config->appRoot: default initialized
+ */
+config->bufferResponse = Passenger::UNSET;
+config->resolveSymlinksInDocumentRoot = Passenger::UNSET;
+config->allowEncodedSlashes = Passenger::UNSET;

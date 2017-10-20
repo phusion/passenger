@@ -39,7 +39,7 @@
 
 addHeader(result, StaticString("!~PASSENGER_RUBY",
 		sizeof("!~PASSENGER_RUBY") - 1),
-	config->ruby ? config->ruby : serverConfig.defaultRuby);
+	config->ruby.empty() ? serverConfig.defaultRuby : config->ruby);
 addHeader(result, StaticString("!~PASSENGER_PYTHON",
 		sizeof("!~PASSENGER_PYTHON") - 1),
 	config->python);
@@ -100,9 +100,6 @@ addHeader(result, StaticString("!~PASSENGER_FRIENDLY_ERROR_PAGES",
 addHeader(result, StaticString("!~PASSENGER_RESTART_DIR",
 		sizeof("!~PASSENGER_RESTART_DIR") - 1),
 	config->restartDir);
-addHeader(result, StaticString("!~PASSENGER_APP_GROUP_NAME",
-		sizeof("!~PASSENGER_APP_GROUP_NAME") - 1),
-	config->appGroupName);
 addHeader(r, result, StaticString("!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS",
 		sizeof("!~PASSENGER_FORCE_MAX_CONCURRENT_REQUESTS_PER_PROCESS") - 1),
 	config->forceMaxConcurrentRequestsPerProcess);

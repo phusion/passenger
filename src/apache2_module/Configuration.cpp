@@ -80,6 +80,69 @@ contains(const Collection &coll, const T &item) {
 	return false;
 }
 
+static StaticString
+mergeStrValue(const StaticString &current, const StaticString &prev,
+	const StaticString &defaultValue = StaticString())
+{
+	if (current.empty()) {
+		if (prev.empty()) {
+			return defaultValue;
+		} else {
+			return prev;
+		}
+	} else {
+		return current;
+	}
+}
+
+static int
+mergeIntValue(int current, int prev, int defaultValue = UNSET_INT_VALUE) {
+	if (current == UNSET_INT_VALUE) {
+		if (prev == UNSET_INT_VALUE) {
+			return defaultValue;
+		} else {
+			return prev;
+		}
+	} else {
+		return current;
+	}
+}
+
+static Threeway
+mergeBoolValue(Threeway current, Threeway prev) {
+	if (current == UNSET) {
+		return prev;
+	} else {
+		return current;
+	}
+}
+
+static Threeway
+mergeBoolValue(Threeway current, Threeway prev, bool defaultValue) {
+	if (current == UNSET) {
+		if (prev == UNSET) {
+			if (defaultValue) {
+				return ENABLED;
+			} else {
+				return DISABLED;
+			}
+		} else {
+			return prev;
+		}
+	} else {
+		return current;
+	}
+}
+
+static set<string>
+mergeStrSetValue(const set<string> current, const set<string> prev,
+	const set<string> defaultValue = set<string>())
+{
+	set<string> result = prev;
+	result.insert(current.begin(), current.end());
+	return result;
+}
+
 
 extern "C" {
 
@@ -116,7 +179,14 @@ static void
 postprocessDirConfig(server_rec *s, core_dir_config *core_dconf,
 	DirConfig *psg_dconf, bool isTopLevel = false)
 {
-	// Do nothing
+	// Invoke the merge function on toplevel dir configs
+	// in order to set defaults.
+	if (isTopLevel) {
+		*psg_dconf = *((DirConfig *) passenger_config_merge_dir(
+			s->process->pconf,
+			passenger_config_create_dir(s->process->pconf, NULL),
+			psg_dconf));
+	}
 }
 
 #ifndef ap_get_core_module_config
@@ -124,7 +194,7 @@ postprocessDirConfig(server_rec *s, core_dir_config *core_dconf,
 #endif
 
 void
-passenger_postprocess_config(server_rec *s) {
+passenger_postprocess_config(server_rec *s, apr_pool_t *pool) {
 	core_server_config *sconf;
 	core_dir_config *core_dconf;
 	DirConfig *psg_dconf;
@@ -132,7 +202,7 @@ passenger_postprocess_config(server_rec *s) {
     ap_conf_vector_t **elts;
     int i;
 
-	serverConfig.finalize(s->process->pconf);
+	serverConfig.finalize(pool);
 
 	for (; s != NULL; s = s->next) {
 		sconf = (core_server_config *) ap_get_core_module_config(s->module_config);

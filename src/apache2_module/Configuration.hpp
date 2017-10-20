@@ -55,8 +55,13 @@ namespace Passenger {
 
 using namespace std;
 
-#define UNSET_INT_VALUE INT_MIN
+enum Threeway {
+	UNSET = -1,
+	DISABLED = 0,
+	ENABLED = 1
+};
 
+#define UNSET_INT_VALUE INT_MIN
 
 /**
  * Per-directory configuration information.
@@ -66,26 +71,10 @@ using namespace std;
  */
 #include "DirConfigurationFields.hpp"
 
-struct DirConfig : GeneratedDirConfigPart {
+struct DirConfig: public GeneratedDirConfigPart {
 
 	/*************************************/
 	/*************************************/
-
-	bool isEnabled() const {
-		return enabled != DISABLED;
-	}
-
-	bool highPerformanceMode() const {
-		return highPerformance == ENABLED;
-	}
-
-	bool allowsEncodedSlashes() const {
-		return allowEncodedSlashes == ENABLED;
-	}
-
-	bool getBufferResponse() const {
-		return bufferResponse == ENABLED;
-	}
 
 	/*************************************/
 };

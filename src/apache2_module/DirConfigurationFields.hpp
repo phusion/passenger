@@ -38,7 +38,6 @@
  */
 
 struct GeneratedDirConfigPart {
-	enum Threeway { ENABLED, DISABLED, UNSET };
 
 	/*
 	 * Whether to support encoded slashes in the URL
@@ -46,7 +45,7 @@ struct GeneratedDirConfigPart {
 	Threeway allowEncodedSlashes;
 
 	/*
-	 * Whether to enable buffering response.
+	 * Whether to enable extra response buffering inside Apache.
 	 */
 	Threeway bufferResponse;
 
@@ -143,67 +142,67 @@ struct GeneratedDirConfigPart {
 	/*
 	 * The environment under which applications are run.
 	 */
-	const char *appEnv;
+	StaticString appEnv;
 
 	/*
 	 * Application process group name.
 	 */
-	const char *appGroupName;
+	StaticString appGroupName;
 
 	/*
 	 * The application's root directory.
 	 */
-	const char *appRoot;
+	StaticString appRoot;
 
 	/*
 	 * Force specific application type.
 	 */
-	const char *appType;
+	StaticString appType;
 
 	/*
 	 * The group that Ruby applications must run as.
 	 */
-	const char *group;
+	StaticString group;
 
 	/*
 	 * Settings file for (non-bundled) Meteor apps.
 	 */
-	const char *meteorAppSettings;
+	StaticString meteorAppSettings;
 
 	/*
 	 * The Node.js command to use.
 	 */
-	const char *nodejs;
+	StaticString nodejs;
 
 	/*
 	 * The Python interpreter to use.
 	 */
-	const char *python;
+	StaticString python;
 
 	/*
 	 * The directory in which Passenger should look for restart.txt.
 	 */
-	const char *restartDir;
+	StaticString restartDir;
 
 	/*
 	 * The Ruby interpreter to use.
 	 */
-	const char *ruby;
+	StaticString ruby;
 
 	/*
 	 * The spawn method to use.
 	 */
-	const char *spawnMethod;
+	StaticString spawnMethod;
 
 	/*
 	 * Force specific startup file.
 	 */
-	const char *startupFile;
+	StaticString startupFile;
 
 	/*
 	 * The user that Ruby applications must run as.
 	 */
-	const char *user;
+	StaticString user;
 
 	/*
 	 * Declare the given base URI as belonging to a web application.
