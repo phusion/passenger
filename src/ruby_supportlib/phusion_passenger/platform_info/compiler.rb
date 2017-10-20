@@ -189,12 +189,12 @@ module PhusionPassenger
     memoize :cxx_is_gcc?
 
     def self.cc_is_clang?
-      `#{cc} --version 2>&1` =~ /clang version/
+      `#{cc} --version 2>&1` =~ /clang( version|-)/
     end
     memoize :cc_is_clang?
 
     def self.cxx_is_clang?
-      `#{cxx} --version 2>&1` =~ /clang version/
+      `#{cxx} --version 2>&1` =~ /clang( version|-)/
     end
     memoize :cxx_is_clang?
 
