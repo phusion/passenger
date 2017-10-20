@@ -1,0 +1,60 @@
+#!/bin/bash
+# This script is from the "Passenger Debian packaging test" Jenkins job. It builds
+# packages for a specific distribution and architecture and runs tests on the resulting packages.
+#
+# Required environment variables:
+#
+#   WORKSPACE
+#   DISTRIBUTION
+#   ARCHITECTURE
+#
+# Optional environment variables:
+#
+#   PASSENGER_ROOT (defaults to $WORKSPACE)
+#   CACHE_DIR (defaults to $WORKSPACE/cache)
+#   ENTERPRISE
+#   DEBUG_CONSOLE
+#
+# Sample invocation in Vagrant dev environment:
+#
+#   env WORKSPACE=$HOME DISTRIBUTION=el7 ARCHITECTURE=x86_64 PASSENGER_ROOT=/passenger ./dev/ci/debian/run
+
+set -e
+SELFDIR=$(dirname "$0")
+cd "$SELFDIR/../../../../packaging/debian"
+# shellcheck source=../../../../packaging/debian/internal/lib/library.sh
+source "./internal/lib/library.sh"
+
+require_envvar WORKSPACE "$WORKSPACE"
+require_envvar DISTRIBUTION "$DISTRIBUTION"
+require_envvar ARCHITECTURE "$ARCHITECTURE"
+
+PASSENGER_ROOT="${PASSENGER_ROOT:-$WORKSPACE}"
+CACHE_DIR="${CACHE_DIR:-$WORKSPACE/cache}"
+
+if [[ "$DEBUG_CONSOLE" = true ]]; then
+	EXTRA_TEST_PARAMS=-D
+else
+	EXTRA_TEST_PARAMS=
+fi
+if [[ "$ENTERPRISE" = 1 ]]; then
+	EXTRA_TEST_PARAMS="$EXTRA_TEST_PARAMS -e /etc/passenger-enterprise-license"
+fi
+
+run mkdir -p "$CACHE_DIR"
+run ./build \
+	-w "$WORKSPACE/work" \
+	-c "$CACHE_DIR" \
+	-o "$WORKSPACE/output" \
+	-p "$PASSENGER_ROOT" \
+	-d "$DISTRIBUTION" \
+	-a "$ARCHITECTURE" \
+	-R \
+	pkg:all
+run ./test \
+	-p "$PASSENGER_ROOT" \
+	-d "$WORKSPACE/output/$DISTRIBUTION" \
+	-c "$CACHE_DIR" \
+	-x "$DISTRIBUTION" \
+	-j \
+	$EXTRA_TEST_PARAMS
