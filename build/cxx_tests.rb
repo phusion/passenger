@@ -121,16 +121,12 @@ TEST_CXX_OBJECTS = {
 }
 
 let(:basic_test_cxx_flags) do
-  flags = [
+  [
     libev_cflags,
     libuv_cflags,
     PlatformInfo.curl_flags,
     TEST_COMMON_CFLAGS
   ]
-  if USE_ASAN
-    flags << PlatformInfo.address_sanitizer_flag
-  end
-  flags
 end
 
 let(:test_cxx_include_paths) do
@@ -154,8 +150,7 @@ let(:test_cxx_ldflags) do
     "#{PlatformInfo.zlib_libs} " <<
     "#{PlatformInfo.crypto_libs} " <<
     "#{PlatformInfo.portability_cxx_ldflags}"
-  result << " #{PlatformInfo.address_sanitizer_flag}" if USE_ASAN
-  result << " #{EXTRA_CXX_LDFLAGS}"
+  result << " #{extra_cxx_ldflags}"
   result.strip!
   result
 end

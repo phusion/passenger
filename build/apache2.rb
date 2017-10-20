@@ -96,7 +96,7 @@ end
 APACHE2_MODULE_BOOST_OXT_LIBRARY, APACHE2_MODULE_BOOST_OXT_LINKARG =
   define_libboost_oxt_task("apache2",
     APACHE2_OUTPUT_DIR + "module_libboost_oxt",
-    lambda { PlatformInfo.apache2_module_cflags })
+    lambda { PlatformInfo.apache2_module_cxxflags })
 APACHE2_MODULE_COMMON_LIBRARIES  = COMMON_LIBRARY.
   only(:base, :base64, 'AppTypes.o').
   set_namespace("apache2").
@@ -120,7 +120,8 @@ file(APACHE2_TARGET => dependencies) do
       APACHE2_MODULE_BOOST_OXT_LINKARG,
       PlatformInfo.apache2_module_cxx_ldflags,
       PlatformInfo.portability_cxx_ldflags,
-      OPTIMIZE ? '-O' : nil
+      OPTIMIZE ? '-O' : nil,
+      USE_ASAN ? "-shared-libasan" : nil
     ].compact
   )
 end

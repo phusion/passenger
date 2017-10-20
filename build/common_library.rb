@@ -271,9 +271,7 @@ end
 
 
 let(:libboost_oxt_cflags) do
-  result = []
-  result << PlatformInfo.address_sanitizer_flag if USE_ASAN
-  result.join(' ')
+  "" # Method reserved for future use
 end
 
 LIBBOOST_OXT, LIBBOOST_OXT_LINKARG = define_libboost_oxt_task(
