@@ -272,7 +272,7 @@ end
 
 let(:libboost_oxt_cflags) do
   result = []
-  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
+  result << PlatformInfo.address_sanitizer_flag if USE_ASAN
   result.join(' ')
 end
 

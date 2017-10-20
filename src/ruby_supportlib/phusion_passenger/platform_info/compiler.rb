@@ -453,18 +453,18 @@ module PhusionPassenger
     end
     memoize :cxx_visibility_flag_generates_warnings?, true
 
-    def self.adress_sanitizer_flag
+    def self.address_sanitizer_flag
       if cc_is_clang?
         if `#{cc} --help` =~ /-fsanitize=/
-          return "-fsanitize=address"
+          "-fsanitize=address"
         else
-          return "-faddress-sanitizer"
+          "-faddress-sanitizer"
         end
       else
-        return nil
+        nil
       end
     end
-    memoize :adress_sanitizer_flag
+    memoize :address_sanitizer_flag
 
     def self.cxx_11_flag
       # C++11 support on FreeBSD 10.0 + Clang seems to be bugged.

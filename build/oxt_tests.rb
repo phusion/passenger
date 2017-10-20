@@ -56,7 +56,7 @@ file(TEST_OXT_TARGET => dependencies) do
     PlatformInfo.portability_cxx_ldflags
   ]
   if USE_ASAN
-    flags << PlatformInfo.adress_sanitizer_flag
+    flags << PlatformInfo.address_sanitizer_flag
   end
   create_cxx_executable(
     TEST_OXT_TARGET,

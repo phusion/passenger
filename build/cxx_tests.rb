@@ -128,7 +128,7 @@ let(:basic_test_cxx_flags) do
     TEST_COMMON_CFLAGS
   ]
   if USE_ASAN
-    flags << PlatformInfo.adress_sanitizer_flag
+    flags << PlatformInfo.address_sanitizer_flag
   end
   flags
 end
@@ -154,7 +154,7 @@ let(:test_cxx_ldflags) do
     "#{PlatformInfo.zlib_libs} " <<
     "#{PlatformInfo.crypto_libs} " <<
     "#{PlatformInfo.portability_cxx_ldflags}"
-  result << " #{PlatformInfo.adress_sanitizer_flag}" if USE_ASAN
+  result << " #{PlatformInfo.address_sanitizer_flag}" if USE_ASAN
   result << " #{EXTRA_CXX_LDFLAGS}"
   result.strip!
   result

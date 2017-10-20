@@ -51,7 +51,7 @@ let(:agent_cflags) do
   result << '-O' if OPTIMIZE
   result << '-DUSE_SELINUX' if USE_SELINUX
   result << '-flto' if LTO
-  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
+  result << PlatformInfo.address_sanitizer_flag if USE_ASAN
   result.join(' ')
 end
 
@@ -60,7 +60,7 @@ let(:agent_ldflags) do
   result = []
   result << '-O' if OPTIMIZE
   result << '-flto' if LTO
-  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
+  result << PlatformInfo.address_sanitizer_flag if USE_ASAN
   result << '-lselinux' if USE_SELINUX
   # Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).
   result << PlatformInfo.export_dynamic_flags
