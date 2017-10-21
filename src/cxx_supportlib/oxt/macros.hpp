@@ -113,4 +113,13 @@
 	#endif
 #endif
 
+#if defined(__has_feature)
+	#if __has_feature(address_sanitizer)
+		#define OXT_NO_SANITIZE(args) __attribute__((no_sanitize(args)))
+	#endif
+#endif
+#ifndef OXT_NO_SANITIZE
+	#define OXT_NO_SANITIZE(args)
+#endif
+
 #endif /* _OXT_MACROS_HPP_ */
