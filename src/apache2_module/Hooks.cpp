@@ -50,7 +50,6 @@
 #include <oxt/macros.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/detail/context.hpp>
-#include "Hooks.h"
 #include "Bucket.h"
 #include "Configuration.hpp"
 #include "DirectoryMapper.h"
@@ -85,8 +84,6 @@
 #include <apr_lib.h>
 #include <unixd.h>
 
-using namespace std;
-using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
@@ -105,11 +102,12 @@ extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 #endif
 
 
-/**
- * Apache hook functions, wrapped in a class.
- *
- * @ingroup Core
- */
+namespace Passenger {
+namespace Apache2Module {
+
+using namespace std;
+
+
 class Hooks {
 private:
 	class ErrorReport {
@@ -630,7 +628,7 @@ private:
 
 			bucketState = boost::make_shared<PassengerBucketState>(conn);
 			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc,
-				config->bufferResponse == ENABLED);
+				config->bufferResponse == Apache2Module::ENABLED);
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
@@ -685,7 +683,7 @@ private:
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 
 				UPDATE_TRACE_POINT();
-				if (config->errorOverride == Passenger::ENABLED
+				if (config->errorOverride == Apache2Module::ENABLED
 				 && ap_is_HTTP_ERROR(r->status))
 				{
 					/* Send ErrorDocument.
@@ -854,11 +852,11 @@ private:
 		}
 	}
 
-	void addHeader(string &headers, const StaticString &name, Passenger::Threeway value) {
-		if (value != Passenger::UNSET) {
+	void addHeader(string &headers, const StaticString &name, Apache2Module::Threeway value) {
+		if (value != Apache2Module::UNSET) {
 			headers.append(name.data(), name.size());
 			headers.append(": ", 2);
-			if (value == Passenger::ENABLED) {
+			if (value == Apache2Module::ENABLED) {
 				headers.append("t", 1);
 			} else {
 				headers.append("f", 1);
@@ -880,7 +878,7 @@ private:
 		result.append(r->method);
 		result.append(" ", 1);
 
-		if (config->allowEncodedSlashes == ENABLED) {
+		if (config->allowEncodedSlashes == Apache2Module::ENABLED) {
 			/*
 			 * Apache decodes encoded slashes in r->uri, so we must use r->unparsed_uri
 			 * if we are to support encoded slashes. However mod_rewrite doesn't change
@@ -1048,7 +1046,7 @@ private:
 		// S = SSL
 
 		result.append("!~FLAGS: CD", sizeof("!~FLAGS: CD") - 1);
-		if (config->bufferUpload != Passenger::DISABLED) {
+		if (config->bufferUpload != Apache2Module::DISABLED) {
 			result.append("B", 1);
 		}
 		if (lookupEnv(r, "HTTPS") != NULL) {
@@ -1257,7 +1255,7 @@ public:
 	    : cstat(1024),
 	      watchdogLauncher(IM_APACHE)
 	{
-		passenger_postprocess_config(s, pconf);
+		postprocessConfig(s, pconf);
 
 		Json::Value loggingConfig;
 		loggingConfig["level"] = LoggingKit::Level(serverConfig.logLevel);
@@ -1375,7 +1373,9 @@ public:
 
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->enabled == ENABLED && config->highPerformance == ENABLED) {
+		if (config->enabled == Apache2Module::ENABLED
+			&& config->highPerformance == Apache2Module::ENABLED)
+		{
 			if (prepareRequest(r, config, r->filename, true)) {
 				return OK;
 			} else {
@@ -1416,8 +1416,8 @@ public:
 
 	int prepareRequestWhenNotInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->enabled == ENABLED) {
-			if (config->highPerformance == ENABLED) {
+		if (config->enabled == Apache2Module::ENABLED) {
+			if (config->highPerformance == Apache2Module::ENABLED) {
 				/* Preparations have already been done in the map_to_storage hook.
 				 * Prevent other modules' fixups hooks from being run.
 				 */
@@ -1556,7 +1556,7 @@ public:
 
 	int handleRequestWhenInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->highPerformance == ENABLED) {
+		if (config->highPerformance == Apache2Module::ENABLED) {
 			return handleRequest(r);
 		} else {
 			return DECLINED;
@@ -1565,7 +1565,7 @@ public:
 
 	int handleRequestWhenNotInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->highPerformance == ENABLED) {
+		if (config->highPerformance == Apache2Module::ENABLED) {
 			return DECLINED;
 		} else {
 			return handleRequest(r);
@@ -1578,11 +1578,6 @@ public:
 /******************************************************************
  * Below follows lightweight C wrappers around the C++ Hook class.
  ******************************************************************/
-
-/**
- * @ingroup Hooks
- * @{
- */
 
 static Hooks *hooks = NULL;
 
@@ -1713,13 +1708,13 @@ child_init(apr_pool_t *pchild, server_rec *s) {
 	}
 }
 
-#define DEFINE_REQUEST_HOOK(c_name, cpp_name)        \
-	static int c_name(request_rec *r) {          \
-		if (OXT_LIKELY(hooks != NULL)) {     \
-			return hooks->cpp_name(r);   \
-		} else {                             \
-			return DECLINED;             \
-		}                                    \
+#define DEFINE_REQUEST_HOOK(c_name, cpp_name) \
+	static int c_name(request_rec *r) { \
+		if (OXT_LIKELY(hooks != NULL)) { \
+			return hooks->cpp_name(r); \
+		} else { \
+			return DECLINED; \
+		} \
 	}
 
 DEFINE_REQUEST_HOOK(prepare_request_when_in_high_performance_mode, prepareRequestWhenInHighPerformanceMode)
@@ -1739,7 +1734,7 @@ DEFINE_REQUEST_HOOK(handle_request_when_not_in_high_performance_mode, handleRequ
  * Apache hook registration function.
  */
 void
-passenger_register_hooks(apr_pool_t *p) {
+registerHooks(apr_pool_t *p) {
 	static const char * const rewrite_module[] = { "mod_rewrite.c", NULL };
 	static const char * const dir_module[] = { "mod_dir.c", NULL };
 	static const char * const autoindex_module[] = { "mod_autoindex.c", NULL };
@@ -1765,6 +1760,6 @@ passenger_register_hooks(apr_pool_t *p) {
 	ap_hook_handler(handle_request_when_not_in_high_performance_mode, NULL, NULL, APR_HOOK_LAST);
 }
 
-/**
- * @}
- */
+
+} // namespace Apache2Module
+} // namespace Passenger

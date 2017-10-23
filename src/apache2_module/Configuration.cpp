@@ -41,30 +41,34 @@
 #include <Utils.h>
 #include <Constants.h>
 
-/* The APR/Apache headers must come after the Passenger headers. See Hooks.cpp
- * to learn why.
- */
+// The APR headers must come after the Passenger headers.
+// See Hooks.cpp to learn why.
 #include <apr_strings.h>
 // In Apache < 2.4, this macro was necessary for core_dir_config and other structs
 #define CORE_PRIVATE
 #include <http_core.h>
 
-using namespace Passenger;
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
 
-namespace Passenger { ServerConfig serverConfig; }
+#ifndef ap_get_core_module_config
+	#define ap_get_core_module_config(s) ap_get_module_config(s, &core_module)
+#endif
 
-#define DEFINE_SERVER_BOOLEAN_CONFIG_SETTER(functionName, fieldName)             \
-	static const char *                                                      \
-	functionName(cmd_parms *cmd, void *dummy, int arg) {                     \
-		serverConfig.fieldName = arg;                                    \
-		return NULL;                                                     \
-	}
+
+namespace Passenger {
+namespace Apache2Module {
+
+
+typedef const char * (*Take1Func)();
+typedef const char * (*Take2Func)();
+typedef const char * (*FlagFunc)();
+
+ServerConfig serverConfig;
 
 
 template<typename T> static apr_status_t
-destroy_config_struct(void *x) {
+destroyConfigStruct(void *x) {
 	delete (T *) x;
 	return APR_SUCCESS;
 }
@@ -143,19 +147,16 @@ mergeStrSetValue(const set<string> current, const set<string> prev,
 	return result;
 }
 
-
-extern "C" {
-
 static DirConfig *
-create_dir_config_struct(apr_pool_t *pool) {
+createDirConfigStruct(apr_pool_t *pool) {
 	DirConfig *config = new DirConfig();
-	apr_pool_cleanup_register(pool, config, destroy_config_struct<DirConfig>, apr_pool_cleanup_null);
+	apr_pool_cleanup_register(pool, config, destroyConfigStruct<DirConfig>, apr_pool_cleanup_null);
 	return config;
 }
 
 void *
-passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
-	DirConfig *config = create_dir_config_struct(p);
+createDirConfig(apr_pool_t *p, char *dirspec) {
+	DirConfig *config = createDirConfigStruct(p);
 
 	#include "CreateDirConfig.cpp"
 
@@ -164,8 +165,8 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 }
 
 void *
-passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
-	DirConfig *config = create_dir_config_struct(p);
+mergeDirConfig(apr_pool_t *p, void *basev, void *addv) {
+	DirConfig *config = createDirConfigStruct(p);
 	DirConfig *base = (DirConfig *) basev;
 	DirConfig *add = (DirConfig *) addv;
 
@@ -182,19 +183,15 @@ postprocessDirConfig(server_rec *s, core_dir_config *core_dconf,
 	// Invoke the merge function on toplevel dir configs
 	// in order to set defaults.
 	if (isTopLevel) {
-		*psg_dconf = *((DirConfig *) passenger_config_merge_dir(
+		*psg_dconf = *((DirConfig *) mergeDirConfig(
 			s->process->pconf,
-			passenger_config_create_dir(s->process->pconf, NULL),
+			createDirConfig(s->process->pconf, NULL),
 			psg_dconf));
 	}
 }
 
-#ifndef ap_get_core_module_config
-	#define ap_get_core_module_config(s) ap_get_module_config(s, &core_module)
-#endif
-
 void
-passenger_postprocess_config(server_rec *s, apr_pool_t *pool) {
+postprocessConfig(server_rec *s, apr_pool_t *pool) {
 	core_server_config *sconf;
 	core_dir_config *core_dconf;
 	DirConfig *psg_dconf;
@@ -277,17 +274,11 @@ cmd_passenger_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	}
 }
 
-
-typedef const char * (*Take1Func)();
-typedef const char * (*Take2Func)();
-typedef const char * (*FlagFunc)();
-
-const command_rec passenger_commands[] = {
-	// Passenger settings.
-
+extern "C" const command_rec passenger_commands[] = {
 	#include "ConfigurationCommands.cpp"
-
 	{ NULL }
 };
 
-} // extern "C"
+
+} // namespace Apache2Module
+} // namespace Passenger

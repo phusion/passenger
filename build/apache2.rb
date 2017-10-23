@@ -34,6 +34,8 @@ APACHE2_TARGET = "#{APACHE2_OUTPUT_DIR}mod_passenger.so"
 APACHE2_OBJECTS = {
   "#{APACHE2_OUTPUT_DIR}mod_passenger.o" =>
     "src/apache2_module/mod_passenger.c",
+  "#{APACHE2_OUTPUT_DIR}CBindings.o" =>
+    "src/apache2_module/CBindings.cpp",
   "#{APACHE2_OUTPUT_DIR}Configuration.o" =>
     "src/apache2_module/Configuration.cpp",
   "#{APACHE2_OUTPUT_DIR}Bucket.o" =>

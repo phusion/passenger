@@ -53,7 +53,7 @@ def main
     when :integer
       add_code("config->#{field_name} = UNSET_INT_VALUE;")
     when :flag
-      add_code("config->#{field_name} = Passenger::UNSET;")
+      add_code("config->#{field_name} = Apache2Module::UNSET;")
     when :string, :string_keyval, :string_array, :string_set
       comment("config->#{field_name}: default initialized")
     else

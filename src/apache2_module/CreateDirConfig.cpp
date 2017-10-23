@@ -63,28 +63,28 @@ config->maxInstancesPerApp = UNSET_INT_VALUE;
 /*
  * config->group: default initialized
  */
-config->errorOverride = Passenger::UNSET;
+config->errorOverride = Apache2Module::UNSET;
 config->maxRequests = UNSET_INT_VALUE;
 config->startTimeout = UNSET_INT_VALUE;
-config->highPerformance = Passenger::UNSET;
-config->enabled = Passenger::UNSET;
+config->highPerformance = Apache2Module::UNSET;
+config->enabled = Apache2Module::UNSET;
 config->maxRequestQueueSize = UNSET_INT_VALUE;
 config->maxPreloaderIdleTime = UNSET_INT_VALUE;
-config->loadShellEnvvars = Passenger::UNSET;
-config->bufferUpload = Passenger::UNSET;
+config->loadShellEnvvars = Apache2Module::UNSET;
+config->bufferUpload = Apache2Module::UNSET;
 /*
  * config->appType: default initialized
  */
 /*
  * config->startupFile: default initialized
  */
-config->stickySessions = Passenger::UNSET;
-config->stickySessionsCookieName = Passenger::UNSET;
+config->stickySessions = Apache2Module::UNSET;
+config->stickySessionsCookieName = Apache2Module::UNSET;
 /*
  * config->spawnMethod: default initialized
  */
-config->showVersionInHeader = Passenger::UNSET;
-config->friendlyErrorPages = Passenger::UNSET;
+config->showVersionInHeader = Apache2Module::UNSET;
+config->friendlyErrorPages = Apache2Module::UNSET;
 /*
  * config->restartDir: default initialized
  */
@@ -96,6 +96,6 @@ config->lveMinUid = UNSET_INT_VALUE;
 /*
  * config->appRoot: default initialized
  */
-config->bufferResponse = Passenger::UNSET;
-config->resolveSymlinksInDocumentRoot = Passenger::UNSET;
-config->allowEncodedSlashes = Passenger::UNSET;
+config->bufferResponse = Apache2Module::UNSET;
+config->resolveSymlinksInDocumentRoot = Apache2Module::UNSET;
+config->allowEncodedSlashes = Apache2Module::UNSET;

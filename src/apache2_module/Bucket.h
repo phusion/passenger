@@ -23,16 +23,18 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_BUCKET_H_
-#define _PASSENGER_BUCKET_H_
+#ifndef _PASSENGER_APACHE2_MODULE_BUCKET_H_
+#define _PASSENGER_APACHE2_MODULE_BUCKET_H_
 
 #include <boost/shared_ptr.hpp>
 #include <apr_buckets.h>
 #include <FileDescriptor.h>
 
 namespace Passenger {
+namespace Apache2Module {
 
 using namespace boost;
+
 
 struct PassengerBucketState {
 	/** The number of bytes that this PassengerBucket has read so far. */
@@ -87,6 +89,8 @@ apr_bucket *passenger_bucket_create(const PassengerBucketStatePtr &state,
                                     apr_bucket_alloc_t *list,
                                     bool bufferResponse);
 
+
+} // namespace Apache2Module
 } // namespace Passenger
 
-#endif /* _PASSENGER_BUCKET_H_ */
+#endif /* _PASSENGER_APACHE2_MODULE_BUCKET_H_ */

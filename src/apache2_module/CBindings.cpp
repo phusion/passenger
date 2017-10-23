@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2017 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,32 +23,27 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CONFIGURATION_H_
-#define _PASSENGER_CONFIGURATION_H_
 
-#include <apr_pools.h>
+#include "Hooks.h"
+#include "Configuration.hpp"
 #include <httpd.h>
 #include <http_config.h>
 
-#ifdef __cplusplus
-	extern "C" {
-#endif
+
+using namespace Passenger;
 
 
-/** Configuration hook for per-directory configuration structure creation. */
-void *passenger_config_create_dir(apr_pool_t *p, char *dirspec);
+extern "C" void *
+passenger_create_dir_config(apr_pool_t *p, char *dirspec) {
+	return Apache2Module::createDirConfig(p, dirspec);
+}
 
-/** Configuration hook for per-directory configuration structure merging. */
-void *passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv);
+extern "C" void *
+passenger_merge_dir_config(apr_pool_t *p, void *basev, void *addv) {
+	return Apache2Module::mergeDirConfig(p, basev, addv);
+}
 
-void passenger_postprocess_config(server_rec *s, apr_pool_t *pool);
-
-/** Apache module commands array. */
-extern const command_rec passenger_commands[];
-
-
-#ifdef __cplusplus
-	}
-#endif
-
-#endif /* _PASSENGER_CONFIGURATION_H_ */
+extern "C" void
+passenger_register_hooks(apr_pool_t *p) {
+	Apache2Module::registerHooks(p);
+}

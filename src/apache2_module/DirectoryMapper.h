@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_DIRECTORY_MAPPER_H_
-#define _PASSENGER_DIRECTORY_MAPPER_H_
+#ifndef _PASSENGER_APACHE2_DIRECTORY_MAPPER_H_
+#define _PASSENGER_APACHE2_DIRECTORY_MAPPER_H_
 
 #include <string>
 #include <set>
@@ -33,17 +33,19 @@
 #include <oxt/backtrace.hpp>
 #include <boost/thread.hpp>
 
-#include "Configuration.hpp"
 #include <AppTypes.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
 
-// The Apache/APR headers *must* come after the Boost headers, otherwise
-// compilation will fail on OpenBSD.
+// The APR headers must come after the Passenger headers.
+// See Hooks.cpp to learn why.
 #include <httpd.h>
 #include <http_core.h>
+#include "Configuration.hpp"
+
 
 namespace Passenger {
+namespace Apache2Module {
 
 using namespace std;
 using namespace oxt;
@@ -150,7 +152,7 @@ private:
 		if (config->appType.empty()) {
 			if (config->appRoot.empty()) {
 				appType = detector.checkDocumentRoot(publicDir,
-					baseURI != NULL || config->resolveSymlinksInDocumentRoot == Passenger::ENABLED,
+					baseURI != NULL || config->resolveSymlinksInDocumentRoot == Apache2Module::ENABLED,
 					&appRoot);
 			} else {
 				appRoot = config->appRoot;
@@ -268,7 +270,8 @@ public:
 	}
 };
 
+
+} // namespace Apache2Module
 } // namespace Passenger
 
-#endif /* _PASSENGER_DIRECTORY_MAPPER_H_ */
-
+#endif /* _PASSENGER_APACHE2_DIRECTORY_MAPPER_H_ */
