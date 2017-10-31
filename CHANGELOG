@@ -1,6 +1,7 @@
 Release 5.1.12 (Not yet released)
 ---------------------------------
 
+ * [Enterprise] Uses libuv to detect total system RAM, allows for compilation on pre-10.11 macOS.
 
 
 Release 5.1.11
