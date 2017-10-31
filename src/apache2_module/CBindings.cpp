@@ -25,7 +25,7 @@
  */
 
 #include "Hooks.h"
-#include "Configuration.hpp"
+#include "Config.h"
 #include <httpd.h>
 #include <http_config.h>
 

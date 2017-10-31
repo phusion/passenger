@@ -41,7 +41,7 @@
 // See Hooks.cpp to learn why.
 #include <httpd.h>
 #include <http_core.h>
-#include "Configuration.hpp"
+#include "Config.h"
 
 
 namespace Passenger {
