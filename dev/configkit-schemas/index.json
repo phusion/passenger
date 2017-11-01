@@ -1254,6 +1254,12 @@
          "has_default_value" : "static",
          "type" : "boolean"
       },
+      "core_file_descriptor_ulimit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
       "core_pid_file" : {
          "read_only" : true,
          "type" : "string"
@@ -1363,12 +1369,6 @@
       },
       "file_descriptor_log_target" : {
          "type" : "any"
-      },
-      "file_descriptor_ulimit" : {
-         "default_value" : 0,
-         "has_default_value" : "static",
-         "read_only" : true,
-         "type" : "unsigned integer"
       },
       "graceful_exit" : {
          "default_value" : true,

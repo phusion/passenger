@@ -94,6 +94,7 @@ using namespace std;
  *   core_api_server_min_spare_clients                                        unsigned integer   -          default(0)
  *   core_api_server_request_freelist_limit                                   unsigned integer   -          default(1024)
  *   core_api_server_start_reading_after_accept                               boolean            -          default(true)
+ *   core_file_descriptor_ulimit                                              unsigned integer   -          default(0),read_only
  *   core_pid_file                                                            string             -          read_only
  *   daemonize                                                                boolean            -          default(false)
  *   default_abort_websockets_on_process_shutdown                             boolean            -          default(true)
@@ -118,7 +119,6 @@ using namespace std;
  *   default_sticky_sessions_cookie_name                                      string             -          default("_passenger_route")
  *   default_user                                                             string             -          default("nobody")
  *   file_descriptor_log_target                                               any                -          -
- *   file_descriptor_ulimit                                                   unsigned integer   -          default(0),read_only
  *   graceful_exit                                                            boolean            -          default(true)
  *   hook_after_watchdog_initialization                                       string             -          -
  *   hook_after_watchdog_shutdown                                             string             -          -
@@ -272,6 +272,7 @@ public:
 		core.translator.add("core_authorizations", "authorizations");
 		core.translator.add("core_password", "password");
 		core.translator.add("core_pid_file", "pid_file");
+		core.translator.add("core_file_descriptor_ulimit", "file_descriptor_ulimit");
 		core.translator.finalize();
 		addSubSchema(core.schema, core.translator);
 		erase("instance_dir");
