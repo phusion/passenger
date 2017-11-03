@@ -208,7 +208,7 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
   sh "mkdir -p #{fake_include_dir}"
   # Infer headers that the Nginx module needs
   headers = []
-  Dir["src/nginx_module/*.[ch]"].each do |filename|
+  Dir["src/nginx_module/**/*.[ch]"].each do |filename|
     File.read(filename).split("\n").grep(%r{#include "cxx_supportlib/(.+)"}) do |match|
       headers << ["src/cxx_supportlib/#{$1}", "cxx_supportlib/#{$1}"]
     end
@@ -232,7 +232,7 @@ task :fakeroot => [:apache2, :nginx, 'nginx:as_dynamic_module', :doc] do
 
   # Nginx module sources
   sh "mkdir -p #{fake_nginx_module_source_dir}"
-  sh "cp src/nginx_module/* #{fake_nginx_module_source_dir}/"
+  sh "cp -R src/nginx_module/* #{fake_nginx_module_source_dir}/"
 
   # Documentation
   sh "mkdir -p #{fake_docdir}"
