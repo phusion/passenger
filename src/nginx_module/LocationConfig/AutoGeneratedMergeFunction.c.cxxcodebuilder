@@ -58,13 +58,13 @@ def main
         add_code %Q{
           ngx_conf_merge_str_value(conf->#{struct_field_for(option)},
             prev->#{struct_field_for(option)},
-            NULL);
+            #{default_value_for(option) || "NULL"});
         }
       elsif option[:type] == :integer || option[:type] == :flag
         add_code %Q{
           ngx_conf_merge_value(conf->#{struct_field_for(option)},
             prev->#{struct_field_for(option)},
-            NGX_CONF_UNSET);
+            #{default_value_for(option) || "NGX_CONF_UNSET"});
         }
       elsif option[:type] == :uinteger
         add_code %Q{
