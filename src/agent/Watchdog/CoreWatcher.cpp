@@ -61,7 +61,7 @@ protected:
 			config[it.name()] = *it;
 		}
 
-		config["pid_file"] = wo->instanceDir->getPath() + "/core.pid";
+		config["pid_file"] = wo->corePidFile;
 		config["watchdog_fd_passing_password"] = wo->fdPassingPassword;
 		config["controller_addresses"] = wo->controllerAddresses;
 		config["api_server_addresses"] = wo->coreApiServerAddresses;
