@@ -1,6 +1,8 @@
 Release 5.1.12 (Not yet released)
 ---------------------------------
 
+ * [Enterprise] Uses libuv to detect total system RAM, allows for compilation on pre-10.11 macOS.
+ * [Enterprise] Added a max request queue time option, to limit time requests spend in the request queue. Closes GH-1688.
 
 
 Release 5.1.11

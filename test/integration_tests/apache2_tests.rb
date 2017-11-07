@@ -566,6 +566,18 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
+    def get_newest_instance
+      # Because Apache reloads once during startup, we want to select
+      # the newest Passenger instance.
+      instances = AdminTools::InstanceRegistry.new.list
+      instances.sort! do |a, b|
+        x = a.properties['instance_dir']['created_at_monotonic_usec']
+        y = b.properties['instance_dir']['created_at_monotonic_usec']
+        x <=> y
+      end
+      instances.last
+    end
+
     it "is restarted if it crashes" do
       # Make sure that all Apache worker processes have connected to
       # the Passenger core.
@@ -575,8 +587,7 @@ describe "Apache 2 module" do
       end
 
       # Now kill the Passenger core.
-      instance = AdminTools::InstanceRegistry.new.list.first
-      Process.kill('SIGKILL', instance.core_pid)
+      Process.kill('SIGKILL', get_newest_instance.core_pid)
       sleep 0.02 # Give the signal a small amount of time to take effect.
 
       # Each worker process should detect that the old
@@ -590,7 +601,7 @@ describe "Apache 2 module" do
     it "exposes the application pool for passenger-status" do
       File.touch("#{@stub.app_root}/tmp/restart.txt", 1)  # Get rid of all previous app processes.
       get('/').should == "front page"
-      instance = AdminTools::InstanceRegistry.new.list.first
+      instance = get_newest_instance
 
       # Wait until the server has processed the session close event.
       sleep 0.1

@@ -46,6 +46,7 @@
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
+#include <Utils/SystemTime.h>
 #include <jsoncpp/json.h>
 
 namespace Passenger {
@@ -223,6 +224,7 @@ private:
 		props["instance_dir"]["major_version"] = SERVER_INSTANCE_DIR_STRUCTURE_MAJOR_VERSION;
 		props["instance_dir"]["minor_version"] = SERVER_INSTANCE_DIR_STRUCTURE_MINOR_VERSION;
 		props["instance_dir"]["created_at"] = (Json::Int64) time(NULL);
+		props["instance_dir"]["created_at_monotonic_usec"] = (Json::UInt64) SystemTime::getMonotonicUsec();
 		props["passenger_version"] = PASSENGER_VERSION;
 		props["watchdog_pid"] = (Json::UInt64) getpid();
 		props["instance_id"] = generateInstanceId();

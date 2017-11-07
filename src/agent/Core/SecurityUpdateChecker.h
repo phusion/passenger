@@ -274,7 +274,7 @@ private:
 				// A problem occurred somewhere in the SSL/TLS handshake. Not sure what's up, but in this case the
 				// error buffer (printed in DEBUG) should pinpoint the problem slightly more.
 			case CURLE_OPERATION_TIMEDOUT:
-				// This is not a normal connect timeout, there are some refs to it occuring while downloading large
+				// This is not a normal connect timeout, there are some refs to it occurring while downloading large
 				// files, but we don't do that so fall through to default.
 			default:
 				error.append(" while connecting to " + sessionState.configRlz.url + " ");
