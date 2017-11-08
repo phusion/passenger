@@ -63,7 +63,7 @@ end
 
 # Define compilation task for the SchemaPrinter executable.
 schema_printer_libs = COMMON_LIBRARY.
-  only(:base, :bas64, :union_station_filter, :other).
+  only(:base, :base64, :union_station_filter, :other).
   exclude('WatchdogLauncher.o')
 dependencies = SCHEMA_PRINTER_OBJECTS.keys + [
   LIBBOOST_OXT,
