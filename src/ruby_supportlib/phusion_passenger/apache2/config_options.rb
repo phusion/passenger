@@ -463,7 +463,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :type      => :string,
     :context   => ["ACCESS_CONF", "RSRC_CONF"],
     :dynamic_default => 'PassengerAppRoot plus PassengerAppEnv',
-    :header    => nil,
     :desc      => "Application process group name."
   },
   {
