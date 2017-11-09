@@ -54,10 +54,12 @@ addHeader(string &headers, const StaticString &name, const char *value) {
 
 inline void
 addHeader(string &headers, const StaticString &name, const StaticString &value) {
-	headers.append(name.data(), name.size());
-	headers.append(": ", 2);
-	headers.append(value.data(), value.size());
-	headers.append("\r\n", 2);
+	if (!value.empty()) {
+		headers.append(name.data(), name.size());
+		headers.append(": ", 2);
+		headers.append(value.data(), value.size());
+		headers.append("\r\n", 2);
+	}
 }
 
 inline void
