@@ -481,8 +481,6 @@ Controller::onRequestBegin(Client *client, Request *req) {
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
 			mainConfig.defaultStickySessions);
-		req->showVersionInHeader = getBoolOption(req, PASSENGER_SHOW_VERSION_IN_HEADER,
-			req->config->showVersionInHeader);
 		req->host = req->headers.lookup(HTTP_HOST);
 
 		/***************/

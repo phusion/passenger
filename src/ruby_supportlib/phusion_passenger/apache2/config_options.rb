@@ -443,8 +443,10 @@ APACHE2_CONFIGURATION_OPTIONS = [
   {
     :name      => "PassengerShowVersionInHeader",
     :type      => :flag,
+    :context   => ['RSRC_CONF'],
+    :struct    => :main,
     :default   => true,
-    :desc      => "Whether to show the Phusion Passenger version number in the X-Powered-By header."
+    :desc      => "Whether to show the #{PROGRAM_NAME} version number in the X-Powered-By header."
   },
   {
     :name      => "PassengerFriendlyErrorPages",

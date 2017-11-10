@@ -608,8 +608,7 @@ cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char
 
 static const char *
 cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg) {
-	DirConfig *config = (DirConfig *) pcfg;
-	config->showVersionInHeader =
+	serverConfig.showVersionInHeader =
 		arg ?
 		ENABLED :
 		DISABLED;

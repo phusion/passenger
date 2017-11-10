@@ -1295,6 +1295,7 @@ public:
 		config["default_user"] = serverConfig.defaultUser.toString();
 		config["default_group"] = serverConfig.defaultGroup.toString();
 		config["default_ruby"] = serverConfig.defaultRuby.toString();
+		config["show_version_in_header"] = serverConfig.showVersionInHeader;
 		config["max_pool_size"] = serverConfig.maxPoolSize;
 		config["pool_idle_time"] = serverConfig.poolIdleTime;
 		config["response_buffer_high_watermark"] = serverConfig.responseBufferHighWatermark;
