@@ -156,13 +156,20 @@ def setter_function_body_for(option)
       }
     ]
   elsif option[:type] == :flag
-    add_code %Q{
-      #{field_reference} =
-        arg ?
-        ENABLED :
-        DISABLED;
-      return NULL;
-    }
+    if option[:struct] == :main
+      add_code %Q{
+        #{field_reference} = arg != NULL;
+        return NULL;
+      }
+    else
+      add_code %Q{
+        #{field_reference} =
+          (arg != NULL) ?
+          ENABLED :
+          DISABLED;
+        return NULL;
+      }
+    end
   elsif option[:type] == :string_set
     add_code %Q{
       #{field_reference}.insert(arg);
