@@ -119,42 +119,15 @@ def setter_function_body_for(option)
       return NULL;
     }
   elsif option[:type] == :integer
-    add_code %q[
-      char *end;
-      long result;
-
-      result = strtol(arg, &end, 10);
-      if (*end != '\0') {
-        string message = "Invalid number specified for ";
-        message.append(cmd->directive->directive);
-        message.append(".");
-
-        char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-          message.size() + 1);
-        memcpy(messageStr, message.c_str(), message.size() + 1);
-        return messageStr;
-    ]
-
     if option[:min_value]
-      add_code %Q[
-        } else if (result < #{option[:min_value]}) {
-          string message = "Value for ";
-          message.append(cmd->directive->directive);
-          message.append(" must be greater than or equal to #{option[:min_value]}.");
-
-          char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-            message.size() + 1);
-          memcpy(messageStr, message.c_str(), message.size() + 1);
-          return messageStr;
-      ]
-    end
-
-    add_code %Q[
-      } else {
-        #{field_reference} = (int) result;
-        return NULL;
+      add_code %Q{
+        return setIntConfig(cmd, arg, #{field_reference}, #{option[:min_value]});
       }
-    ]
+    else
+      add_code %Q{
+        return setIntConfig(cmd, arg, #{field_reference});
+      }
+    end
   elsif option[:type] == :flag
     if option[:struct] == :main
       add_code %Q{

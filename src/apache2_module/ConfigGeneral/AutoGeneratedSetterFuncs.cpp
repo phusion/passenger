@@ -52,32 +52,7 @@ cmd_passenger_default_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		serverConfig.logLevel = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, serverConfig.logLevel, 0);
 }
 
 static const char *
@@ -88,32 +63,7 @@ cmd_passenger_log_file(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_passenger_socket_backlog(cmd_parms *cmd, void *pcfg, const char *arg) {
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		serverConfig.socketBacklog = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, serverConfig.socketBacklog, 0);
 }
 
 static const char *
@@ -124,92 +74,17 @@ cmd_passenger_file_descriptor_log_file(cmd_parms *cmd, void *pcfg, const char *a
 
 static const char *
 cmd_passenger_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 1) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 1.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		serverConfig.maxPoolSize = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, serverConfig.maxPoolSize, 1);
 }
 
 static const char *
 cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		serverConfig.poolIdleTime = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, serverConfig.poolIdleTime, 0);
 }
 
 static const char *
 cmd_passenger_response_buffer_high_watermark(cmd_parms *cmd, void *pcfg, const char *arg) {
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		serverConfig.responseBufferHighWatermark = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, serverConfig.responseBufferHighWatermark, 0);
 }
 
 static const char *
@@ -256,23 +131,7 @@ cmd_passenger_security_update_check_proxy(cmd_parms *cmd, void *pcfg, const char
 
 static const char *
 cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		serverConfig.statThrottleRate = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, serverConfig.statThrottleRate);
 }
 
 static const char *
@@ -325,54 +184,13 @@ cmd_passenger_app_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->minInstances = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->minInstances, 0);
 }
 
 static const char *
 cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->maxInstancesPerApp = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->maxInstancesPerApp);
 }
 
 static const char *
@@ -402,63 +220,13 @@ cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->maxRequests = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->maxRequests, 0);
 }
 
 static const char *
 cmd_passenger_start_timeout(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 1) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 1.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->startTimeout = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->startTimeout, 1);
 }
 
 static const char *
@@ -484,63 +252,13 @@ cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_max_request_queue_size(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->maxRequestQueueSize = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->maxRequestQueueSize, 0);
 }
 
 static const char *
 cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->maxPreloaderIdleTime = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->maxPreloaderIdleTime, 0);
 }
 
 static const char *
@@ -630,54 +348,13 @@ cmd_passenger_app_group_name(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_force_max_concurrent_requests_per_process(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->forceMaxConcurrentRequestsPerProcess = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->forceMaxConcurrentRequestsPerProcess);
 }
 
 static const char *
 cmd_passenger_lve_min_uid(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	char *end;
-	long result;
-
-	result = strtol(arg, &end, 10);
-	if (*end != '\0') {
-		string message = "Invalid number specified for ";
-		message.append(cmd->directive->directive);
-		message.append(".");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else if (result < 0) {
-		string message = "Value for ";
-		message.append(cmd->directive->directive);
-		message.append(" must be greater than or equal to 0.");
-
-		char *messageStr = (char *) apr_palloc(cmd->temp_pool,
-			message.size() + 1);
-		memcpy(messageStr, message.c_str(), message.size() + 1);
-		return messageStr;
-	} else {
-		config->lveMinUid = (int) result;
-		return NULL;
-	}
+	return setIntConfig(cmd, arg, config->lveMinUid, 0);
 }
 
 static const char *
