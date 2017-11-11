@@ -192,6 +192,8 @@ public:
 		: finalized(false)
 		{ }
 
+	virtual ~Schema() { }
+
 	/**
 	 * Register a new schema entry, possibly with a static default value.
 	 */
