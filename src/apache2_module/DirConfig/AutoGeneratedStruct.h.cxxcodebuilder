@@ -58,6 +58,25 @@ def main
     separator
 
     definitions.each do |definition|
+      field("StaticString #{definition[2]}SourceFile")
+    end
+
+    separator
+
+    definitions.each do |definition|
+      field("unsigned int #{definition[2]}SourceLine")
+    end
+
+    separator
+
+    definitions.each do |definition|
+      field("bool #{definition[2]}ExplicitlySet: 1")
+    end
+
+    separator
+    separator
+
+    definitions.each do |definition|
       add_getter_function(definition)
     end
   end

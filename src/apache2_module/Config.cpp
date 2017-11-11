@@ -130,6 +130,9 @@ postprocessConfig(server_rec *s, apr_pool_t *pool) {
 
 static const char *
 cmd_passenger_ctl(cmd_parms *cmd, void *dummy, const char *name, const char *value) {
+	serverConfig.ctlSourceFile = cmd->directive->filename;
+	serverConfig.ctlSourceLine = cmd->directive->line_num;
+	serverConfig.ctlExplicitlySet = true;
 	try {
 		serverConfig.ctl[name] = autocastValueToJson(value);
 		return NULL;
@@ -141,6 +144,9 @@ cmd_passenger_ctl(cmd_parms *cmd, void *dummy, const char *name, const char *val
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mSpawnMethodSourceFile = cmd->directive->filename;
+	config->mSpawnMethodSourceLine = cmd->directive->line_num;
+	config->mSpawnMethodExplicitlySet = true;
 	if (strcmp(arg, "smart") == 0 || strcmp(arg, "smart-lv2") == 0) {
 		config->mSpawnMethod = "smart";
 	} else if (strcmp(arg, "conservative") == 0 || strcmp(arg, "direct") == 0) {
@@ -154,6 +160,9 @@ cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mBaseURIsSourceFile = cmd->directive->filename;
+	config->mBaseURIsSourceLine = cmd->directive->line_num;
+	config->mBaseURIsExplicitlySet = true;
 	if (strlen(arg) == 0) {
 		return "PassengerBaseURI may not be set to the empty string";
 	} else if (arg[0] != '/') {

@@ -40,108 +40,165 @@
 
 static const char *
 cmd_passenger_root(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.rootSourceFile = cmd->directive->filename;
+	serverConfig.rootSourceLine = cmd->directive->line_num;
+	serverConfig.rootExplicitlySet = true;
 	serverConfig.root = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_default_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.defaultRubySourceFile = cmd->directive->filename;
+	serverConfig.defaultRubySourceLine = cmd->directive->line_num;
+	serverConfig.defaultRubyExplicitlySet = true;
 	serverConfig.defaultRuby = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.logLevelSourceFile = cmd->directive->filename;
+	serverConfig.logLevelSourceLine = cmd->directive->line_num;
+	serverConfig.logLevelExplicitlySet = true;
 	return setIntConfig(cmd, arg, serverConfig.logLevel, 0);
 }
 
 static const char *
 cmd_passenger_log_file(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.logFileSourceFile = cmd->directive->filename;
+	serverConfig.logFileSourceLine = cmd->directive->line_num;
+	serverConfig.logFileExplicitlySet = true;
 	serverConfig.logFile = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_socket_backlog(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.socketBacklogSourceFile = cmd->directive->filename;
+	serverConfig.socketBacklogSourceLine = cmd->directive->line_num;
+	serverConfig.socketBacklogExplicitlySet = true;
 	return setIntConfig(cmd, arg, serverConfig.socketBacklog, 0);
 }
 
 static const char *
 cmd_passenger_file_descriptor_log_file(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.fileDescriptorLogFileSourceFile = cmd->directive->filename;
+	serverConfig.fileDescriptorLogFileSourceLine = cmd->directive->line_num;
+	serverConfig.fileDescriptorLogFileExplicitlySet = true;
 	serverConfig.fileDescriptorLogFile = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_max_pool_size(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.maxPoolSizeSourceFile = cmd->directive->filename;
+	serverConfig.maxPoolSizeSourceLine = cmd->directive->line_num;
+	serverConfig.maxPoolSizeExplicitlySet = true;
 	return setIntConfig(cmd, arg, serverConfig.maxPoolSize, 1);
 }
 
 static const char *
 cmd_passenger_pool_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.poolIdleTimeSourceFile = cmd->directive->filename;
+	serverConfig.poolIdleTimeSourceLine = cmd->directive->line_num;
+	serverConfig.poolIdleTimeExplicitlySet = true;
 	return setIntConfig(cmd, arg, serverConfig.poolIdleTime, 0);
 }
 
 static const char *
 cmd_passenger_response_buffer_high_watermark(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.responseBufferHighWatermarkSourceFile = cmd->directive->filename;
+	serverConfig.responseBufferHighWatermarkSourceLine = cmd->directive->line_num;
+	serverConfig.responseBufferHighWatermarkExplicitlySet = true;
 	return setIntConfig(cmd, arg, serverConfig.responseBufferHighWatermark, 0);
 }
 
 static const char *
 cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.userSwitchingSourceFile = cmd->directive->filename;
+	serverConfig.userSwitchingSourceLine = cmd->directive->line_num;
+	serverConfig.userSwitchingExplicitlySet = true;
 	serverConfig.userSwitching = arg != NULL;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_default_user(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.defaultUserSourceFile = cmd->directive->filename;
+	serverConfig.defaultUserSourceLine = cmd->directive->line_num;
+	serverConfig.defaultUserExplicitlySet = true;
 	serverConfig.defaultUser = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_default_group(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.defaultGroupSourceFile = cmd->directive->filename;
+	serverConfig.defaultGroupSourceLine = cmd->directive->line_num;
+	serverConfig.defaultGroupExplicitlySet = true;
 	serverConfig.defaultGroup = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_data_buffer_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.dataBufferDirSourceFile = cmd->directive->filename;
+	serverConfig.dataBufferDirSourceLine = cmd->directive->line_num;
+	serverConfig.dataBufferDirExplicitlySet = true;
 	serverConfig.dataBufferDir = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_instance_registry_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.instanceRegistryDirSourceFile = cmd->directive->filename;
+	serverConfig.instanceRegistryDirSourceLine = cmd->directive->line_num;
+	serverConfig.instanceRegistryDirExplicitlySet = true;
 	serverConfig.instanceRegistryDir = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.disableSecurityUpdateCheckSourceFile = cmd->directive->filename;
+	serverConfig.disableSecurityUpdateCheckSourceLine = cmd->directive->line_num;
+	serverConfig.disableSecurityUpdateCheckExplicitlySet = true;
 	serverConfig.disableSecurityUpdateCheck = arg != NULL;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_security_update_check_proxy(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.securityUpdateCheckProxySourceFile = cmd->directive->filename;
+	serverConfig.securityUpdateCheckProxySourceLine = cmd->directive->line_num;
+	serverConfig.securityUpdateCheckProxyExplicitlySet = true;
 	serverConfig.securityUpdateCheckProxy = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_stat_throttle_rate(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.statThrottleRateSourceFile = cmd->directive->filename;
+	serverConfig.statThrottleRateSourceLine = cmd->directive->line_num;
+	serverConfig.statThrottleRateExplicitlySet = true;
 	return setIntConfig(cmd, arg, serverConfig.statThrottleRate);
 }
 
 static const char *
 cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.prestartURLsSourceFile = cmd->directive->filename;
+	serverConfig.prestartURLsSourceLine = cmd->directive->line_num;
+	serverConfig.prestartURLsExplicitlySet = true;
 	serverConfig.prestartURLs.insert(arg);
 	return NULL;
 }
 
 static const char *
 cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.turbocachingSourceFile = cmd->directive->filename;
+	serverConfig.turbocachingSourceLine = cmd->directive->line_num;
+	serverConfig.turbocachingExplicitlySet = true;
 	serverConfig.turbocaching = arg != NULL;
 	return NULL;
 }
@@ -149,6 +206,9 @@ cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mRubySourceFile = cmd->directive->filename;
+	config->mRubySourceLine = cmd->directive->line_num;
+	config->mRubyExplicitlySet = true;
 	config->mRuby = arg;
 	return NULL;
 }
@@ -156,6 +216,9 @@ cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_python(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mPythonSourceFile = cmd->directive->filename;
+	config->mPythonSourceLine = cmd->directive->line_num;
+	config->mPythonExplicitlySet = true;
 	config->mPython = arg;
 	return NULL;
 }
@@ -163,6 +226,9 @@ cmd_passenger_python(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_nodejs(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mNodejsSourceFile = cmd->directive->filename;
+	config->mNodejsSourceLine = cmd->directive->line_num;
+	config->mNodejsExplicitlySet = true;
 	config->mNodejs = arg;
 	return NULL;
 }
@@ -170,6 +236,9 @@ cmd_passenger_nodejs(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_meteor_app_settings(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mMeteorAppSettingsSourceFile = cmd->directive->filename;
+	config->mMeteorAppSettingsSourceLine = cmd->directive->line_num;
+	config->mMeteorAppSettingsExplicitlySet = true;
 	config->mMeteorAppSettings = arg;
 	return NULL;
 }
@@ -177,6 +246,9 @@ cmd_passenger_meteor_app_settings(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_app_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mAppEnvSourceFile = cmd->directive->filename;
+	config->mAppEnvSourceLine = cmd->directive->line_num;
+	config->mAppEnvExplicitlySet = true;
 	config->mAppEnv = arg;
 	return NULL;
 }
@@ -184,18 +256,27 @@ cmd_passenger_app_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mMinInstancesSourceFile = cmd->directive->filename;
+	config->mMinInstancesSourceLine = cmd->directive->line_num;
+	config->mMinInstancesExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mMinInstances, 0);
 }
 
 static const char *
 cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mMaxInstancesPerAppSourceFile = cmd->directive->filename;
+	config->mMaxInstancesPerAppSourceLine = cmd->directive->line_num;
+	config->mMaxInstancesPerAppExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mMaxInstancesPerApp);
 }
 
 static const char *
 cmd_passenger_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mUserSourceFile = cmd->directive->filename;
+	config->mUserSourceLine = cmd->directive->line_num;
+	config->mUserExplicitlySet = true;
 	config->mUser = arg;
 	return NULL;
 }
@@ -203,6 +284,9 @@ cmd_passenger_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_group(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mGroupSourceFile = cmd->directive->filename;
+	config->mGroupSourceLine = cmd->directive->line_num;
+	config->mGroupExplicitlySet = true;
 	config->mGroup = arg;
 	return NULL;
 }
@@ -210,6 +294,9 @@ cmd_passenger_group(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mErrorOverrideSourceFile = cmd->directive->filename;
+	config->mErrorOverrideSourceLine = cmd->directive->line_num;
+	config->mErrorOverrideExplicitlySet = true;
 	config->mErrorOverride =
 		(arg != NULL) ?
 		ENABLED :
@@ -220,18 +307,27 @@ cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mMaxRequestsSourceFile = cmd->directive->filename;
+	config->mMaxRequestsSourceLine = cmd->directive->line_num;
+	config->mMaxRequestsExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mMaxRequests, 0);
 }
 
 static const char *
 cmd_passenger_start_timeout(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mStartTimeoutSourceFile = cmd->directive->filename;
+	config->mStartTimeoutSourceLine = cmd->directive->line_num;
+	config->mStartTimeoutExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mStartTimeout, 1);
 }
 
 static const char *
 cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mHighPerformanceSourceFile = cmd->directive->filename;
+	config->mHighPerformanceSourceLine = cmd->directive->line_num;
+	config->mHighPerformanceExplicitlySet = true;
 	config->mHighPerformance =
 		(arg != NULL) ?
 		ENABLED :
@@ -242,6 +338,9 @@ cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mEnabledSourceFile = cmd->directive->filename;
+	config->mEnabledSourceLine = cmd->directive->line_num;
+	config->mEnabledExplicitlySet = true;
 	config->mEnabled =
 		(arg != NULL) ?
 		ENABLED :
@@ -252,18 +351,27 @@ cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_max_request_queue_size(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mMaxRequestQueueSizeSourceFile = cmd->directive->filename;
+	config->mMaxRequestQueueSizeSourceLine = cmd->directive->line_num;
+	config->mMaxRequestQueueSizeExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mMaxRequestQueueSize, 0);
 }
 
 static const char *
 cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mMaxPreloaderIdleTimeSourceFile = cmd->directive->filename;
+	config->mMaxPreloaderIdleTimeSourceLine = cmd->directive->line_num;
+	config->mMaxPreloaderIdleTimeExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mMaxPreloaderIdleTime, 0);
 }
 
 static const char *
 cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mLoadShellEnvvarsSourceFile = cmd->directive->filename;
+	config->mLoadShellEnvvarsSourceLine = cmd->directive->line_num;
+	config->mLoadShellEnvvarsExplicitlySet = true;
 	config->mLoadShellEnvvars =
 		(arg != NULL) ?
 		ENABLED :
@@ -274,6 +382,9 @@ cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mBufferUploadSourceFile = cmd->directive->filename;
+	config->mBufferUploadSourceLine = cmd->directive->line_num;
+	config->mBufferUploadExplicitlySet = true;
 	config->mBufferUpload =
 		(arg != NULL) ?
 		ENABLED :
@@ -284,6 +395,9 @@ cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_app_type(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mAppTypeSourceFile = cmd->directive->filename;
+	config->mAppTypeSourceLine = cmd->directive->line_num;
+	config->mAppTypeExplicitlySet = true;
 	config->mAppType = arg;
 	return NULL;
 }
@@ -291,6 +405,9 @@ cmd_passenger_app_type(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_startup_file(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mStartupFileSourceFile = cmd->directive->filename;
+	config->mStartupFileSourceLine = cmd->directive->line_num;
+	config->mStartupFileExplicitlySet = true;
 	config->mStartupFile = arg;
 	return NULL;
 }
@@ -298,6 +415,9 @@ cmd_passenger_startup_file(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mStickySessionsSourceFile = cmd->directive->filename;
+	config->mStickySessionsSourceLine = cmd->directive->line_num;
+	config->mStickySessionsExplicitlySet = true;
 	config->mStickySessions =
 		(arg != NULL) ?
 		ENABLED :
@@ -308,6 +428,9 @@ cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mStickySessionsCookieNameSourceFile = cmd->directive->filename;
+	config->mStickySessionsCookieNameSourceLine = cmd->directive->line_num;
+	config->mStickySessionsCookieNameExplicitlySet = true;
 	config->mStickySessionsCookieName =
 		(arg != NULL) ?
 		ENABLED :
@@ -317,6 +440,9 @@ cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char
 
 static const char *
 cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg) {
+	serverConfig.showVersionInHeaderSourceFile = cmd->directive->filename;
+	serverConfig.showVersionInHeaderSourceLine = cmd->directive->line_num;
+	serverConfig.showVersionInHeaderExplicitlySet = true;
 	serverConfig.showVersionInHeader = arg != NULL;
 	return NULL;
 }
@@ -324,6 +450,9 @@ cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg
 static const char *
 cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mFriendlyErrorPagesSourceFile = cmd->directive->filename;
+	config->mFriendlyErrorPagesSourceLine = cmd->directive->line_num;
+	config->mFriendlyErrorPagesExplicitlySet = true;
 	config->mFriendlyErrorPages =
 		(arg != NULL) ?
 		ENABLED :
@@ -334,6 +463,9 @@ cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) 
 static const char *
 cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mRestartDirSourceFile = cmd->directive->filename;
+	config->mRestartDirSourceLine = cmd->directive->line_num;
+	config->mRestartDirExplicitlySet = true;
 	config->mRestartDir = arg;
 	return NULL;
 }
@@ -341,6 +473,9 @@ cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_app_group_name(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mAppGroupNameSourceFile = cmd->directive->filename;
+	config->mAppGroupNameSourceLine = cmd->directive->line_num;
+	config->mAppGroupNameExplicitlySet = true;
 	config->mAppGroupName = arg;
 	return NULL;
 }
@@ -348,18 +483,27 @@ cmd_passenger_app_group_name(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_force_max_concurrent_requests_per_process(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mForceMaxConcurrentRequestsPerProcessSourceFile = cmd->directive->filename;
+	config->mForceMaxConcurrentRequestsPerProcessSourceLine = cmd->directive->line_num;
+	config->mForceMaxConcurrentRequestsPerProcessExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mForceMaxConcurrentRequestsPerProcess);
 }
 
 static const char *
 cmd_passenger_lve_min_uid(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mLveMinUidSourceFile = cmd->directive->filename;
+	config->mLveMinUidSourceLine = cmd->directive->line_num;
+	config->mLveMinUidExplicitlySet = true;
 	return setIntConfig(cmd, arg, config->mLveMinUid, 0);
 }
 
 static const char *
 cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mAppRootSourceFile = cmd->directive->filename;
+	config->mAppRootSourceLine = cmd->directive->line_num;
+	config->mAppRootExplicitlySet = true;
 	config->mAppRoot = arg;
 	return NULL;
 }
@@ -367,6 +511,9 @@ cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mBufferResponseSourceFile = cmd->directive->filename;
+	config->mBufferResponseSourceLine = cmd->directive->line_num;
+	config->mBufferResponseExplicitlySet = true;
 	config->mBufferResponse =
 		(arg != NULL) ?
 		ENABLED :
@@ -377,6 +524,9 @@ cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mResolveSymlinksInDocumentRootSourceFile = cmd->directive->filename;
+	config->mResolveSymlinksInDocumentRootSourceLine = cmd->directive->line_num;
+	config->mResolveSymlinksInDocumentRootExplicitlySet = true;
 	config->mResolveSymlinksInDocumentRoot =
 		(arg != NULL) ?
 		ENABLED :
@@ -387,6 +537,9 @@ cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, cons
 static const char *
 cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
+	config->mAllowEncodedSlashesSourceFile = cmd->directive->filename;
+	config->mAllowEncodedSlashesSourceLine = cmd->directive->line_num;
+	config->mAllowEncodedSlashesExplicitlySet = true;
 	config->mAllowEncodedSlashes =
 		(arg != NULL) ?
 		ENABLED :

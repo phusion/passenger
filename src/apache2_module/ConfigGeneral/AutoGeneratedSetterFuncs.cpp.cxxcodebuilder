@@ -117,6 +117,12 @@ def setter_function_body_for(option)
     field_reference = "serverConfig.#{field_reference}"
   end
 
+  add_code %Q{
+    #{field_reference}SourceFile = cmd->directive->filename;
+    #{field_reference}SourceLine = cmd->directive->line_num;
+    #{field_reference}ExplicitlySet = true;
+  }
+
   if option[:type] == :string
     add_code %Q{
       #{field_reference} = arg;
