@@ -90,6 +90,14 @@ indent_size = 4
 indent_style = space
 indent_size = 4
 
+[src/nginx_module/*/*.c]
+indent_style = space
+indent_size = 4
+
+[src/nginx_module/*/*.h]
+indent_style = space
+indent_size = 4
+
 [src/cxx_supportlib/vendor-modified/libev/*.c]
 indent_style = space
 indent_size = 2
