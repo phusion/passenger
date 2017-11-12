@@ -126,7 +126,7 @@ def default_value_for(option)
     else
       "NULL"
     end
-  when :integer, :flag
+  when :integer
     if option[:default]
       option[:default]
     else
@@ -137,6 +137,12 @@ def default_value_for(option)
       option[:default]
     else
       "NGX_CONF_UNSET_UINT"
+    end
+  when :flag
+    if option.key?(:default)
+      option[:default] ? '1' : '0'
+    else
+        "NGX_CONF_UNSET"
     end
   else
     raise "Unknown type #{option[:type].inspect} for option #{option[:name]}"
