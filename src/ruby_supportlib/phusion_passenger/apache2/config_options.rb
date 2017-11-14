@@ -471,7 +471,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
   },
   {
     :name      => 'PassengerStickySessionsCookieName',
-    :type      => :flag,
+    :type      => :string,
     :context   => :location,
     :htaccess_context => ['OR_ALL'],
     :default   => DEFAULT_STICKY_SESSIONS_COOKIE_NAME,

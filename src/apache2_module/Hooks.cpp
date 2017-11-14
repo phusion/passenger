@@ -38,6 +38,9 @@
  * prepareRequest() and handleRequest() can be comfortably run.
  */
 
+// In Apache < 2.4, this macro was necessary for core_dir_config and other structs
+#define CORE_PRIVATE
+
 #include <boost/thread.hpp>
 
 #include <sys/time.h>
@@ -1244,7 +1247,7 @@ public:
 	    : cstat(1024),
 	      watchdogLauncher(IM_APACHE)
 	{
-		postprocessConfig(s, pconf);
+		postprocessConfig(s, pconf, ptemp);
 
 		Json::Value loggingConfig;
 		loggingConfig["level"] = LoggingKit::Level(serverConfig.logLevel);
@@ -1309,6 +1312,7 @@ public:
 		config["server_software"] = webServerDesc;
 		config["multi_app"] = true;
 		config["default_load_shell_envvars"] = true;
+		config["config_manifest"] = serverConfig.manifest;
 		config["file_descriptor_log_target"] = nonEmptyString(serverConfig.fileDescriptorLogFile);
 		config["controller_socket_backlog"] = serverConfig.socketBacklog;
 		config["controller_file_buffered_channel_buffer_dir"] = nonEmptyString(serverConfig.dataBufferDir);

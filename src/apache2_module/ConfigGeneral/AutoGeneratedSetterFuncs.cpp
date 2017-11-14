@@ -726,10 +726,7 @@ cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char
 	config->mStickySessionsCookieNameSourceFile = cmd->directive->filename;
 	config->mStickySessionsCookieNameSourceLine = cmd->directive->line_num;
 	config->mStickySessionsCookieNameExplicitlySet = true;
-	config->mStickySessionsCookieName =
-		(arg != NULL) ?
-		ENABLED :
-		DISABLED;
+	config->mStickySessionsCookieName = arg;
 	return NULL;
 }
 
