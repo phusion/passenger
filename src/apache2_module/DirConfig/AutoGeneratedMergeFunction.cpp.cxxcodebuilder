@@ -84,8 +84,7 @@ def struct_field_for(option)
     option[:field]
   else
     result = option[:name].sub(/^Passenger/, '')
-    result[0] = result[0..0].downcase
-    result
+    "m#{result}"
   end
 end
 
@@ -93,32 +92,29 @@ def add_merge_code(option)
   field_def = struct_field_for(option)
 
   case option[:type]
-  when :string
-    merge_func = 'mergeStrValue'
+  when :string, :string_set
+    add_code %Q{
+      config->#{field_def} =
+        (!add->#{field_def}.empty())
+        ? add->#{field_def}
+        : base->#{field_def};
+    }
   when :integer
-    merge_func = 'mergeIntValue'
+    add_code %Q{
+      config->#{field_def} =
+        (add->#{field_def} != UNSET_INT_VALUE)
+        ? add->#{field_def}
+        : base->#{field_def};
+    }
   when :flag
-    merge_func = 'mergeBoolValue'
-  when :string_set
-    merge_func = 'mergeStrSetValue'
+    add_code %Q{
+      config->#{field_def} =
+        (add->#{field_def} != Apache2Module::UNSET)
+        ? add->#{field_def}
+        : base->#{field_def};
+    }
   else
     raise "Unknown option type #{option[:type].inspect} for option #{option[:name]}"
-  end
-
-  if option[:default_expr]
-    add_code %Q{
-      config->#{field_def} = #{merge_func}(add->#{field_def}, base->#{field_def},
-        #{option[:default_expr]});
-    }
-  elsif option[:default]
-    add_code %Q{
-      config->#{field_def} = #{merge_func}(add->#{field_def}, base->#{field_def},
-        #{option[:default].inspect});
-    }
-  else
-    add_code %Q{
-      config->#{field_def} = #{merge_func}(add->#{field_def}, base->#{field_def});
-    }
   end
 end
 

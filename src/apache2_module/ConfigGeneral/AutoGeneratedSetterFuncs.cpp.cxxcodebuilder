@@ -69,8 +69,12 @@ def struct_field_for(option)
     option[:field]
   else
     result = option[:name].sub(/^Passenger/, '')
-    result[0] = result[0..0].downcase
-    result
+    if option.fetch(:struct, :dir) == :dir
+      "m#{result}"
+    else
+      result[0] = result[0..0].downcase
+      result
+    end
   end
 end
 

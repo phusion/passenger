@@ -149,68 +149,68 @@ cmd_passenger_turbocaching(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_ruby(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->ruby = arg;
+	config->mRuby = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_python(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->python = arg;
+	config->mPython = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_nodejs(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->nodejs = arg;
+	config->mNodejs = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_meteor_app_settings(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->meteorAppSettings = arg;
+	config->mMeteorAppSettings = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_app_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->appEnv = arg;
+	config->mAppEnv = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->minInstances, 0);
+	return setIntConfig(cmd, arg, config->mMinInstances, 0);
 }
 
 static const char *
 cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->maxInstancesPerApp);
+	return setIntConfig(cmd, arg, config->mMaxInstancesPerApp);
 }
 
 static const char *
 cmd_passenger_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->user = arg;
+	config->mUser = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_group(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->group = arg;
+	config->mGroup = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->errorOverride =
+	config->mErrorOverride =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -220,19 +220,19 @@ cmd_passenger_error_override(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_max_requests(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->maxRequests, 0);
+	return setIntConfig(cmd, arg, config->mMaxRequests, 0);
 }
 
 static const char *
 cmd_passenger_start_timeout(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->startTimeout, 1);
+	return setIntConfig(cmd, arg, config->mStartTimeout, 1);
 }
 
 static const char *
 cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->highPerformance =
+	config->mHighPerformance =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -242,7 +242,7 @@ cmd_passenger_high_performance(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->enabled =
+	config->mEnabled =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -252,19 +252,19 @@ cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_max_request_queue_size(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->maxRequestQueueSize, 0);
+	return setIntConfig(cmd, arg, config->mMaxRequestQueueSize, 0);
 }
 
 static const char *
 cmd_passenger_max_preloader_idle_time(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->maxPreloaderIdleTime, 0);
+	return setIntConfig(cmd, arg, config->mMaxPreloaderIdleTime, 0);
 }
 
 static const char *
 cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->loadShellEnvvars =
+	config->mLoadShellEnvvars =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -274,7 +274,7 @@ cmd_passenger_load_shell_envvars(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->bufferUpload =
+	config->mBufferUpload =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -284,21 +284,21 @@ cmd_passenger_buffer_upload(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_app_type(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->appType = arg;
+	config->mAppType = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_startup_file(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->startupFile = arg;
+	config->mStartupFile = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->stickySessions =
+	config->mStickySessions =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -308,7 +308,7 @@ cmd_passenger_sticky_sessions(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_sticky_sessions_cookie_name(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->stickySessionsCookieName =
+	config->mStickySessionsCookieName =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -324,7 +324,7 @@ cmd_passenger_show_version_in_header(cmd_parms *cmd, void *pcfg, const char *arg
 static const char *
 cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->friendlyErrorPages =
+	config->mFriendlyErrorPages =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -334,40 +334,40 @@ cmd_passenger_friendly_error_pages(cmd_parms *cmd, void *pcfg, const char *arg) 
 static const char *
 cmd_passenger_restart_dir(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->restartDir = arg;
+	config->mRestartDir = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_app_group_name(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->appGroupName = arg;
+	config->mAppGroupName = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_force_max_concurrent_requests_per_process(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->forceMaxConcurrentRequestsPerProcess);
+	return setIntConfig(cmd, arg, config->mForceMaxConcurrentRequestsPerProcess);
 }
 
 static const char *
 cmd_passenger_lve_min_uid(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	return setIntConfig(cmd, arg, config->lveMinUid, 0);
+	return setIntConfig(cmd, arg, config->mLveMinUid, 0);
 }
 
 static const char *
 cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->appRoot = arg;
+	config->mAppRoot = arg;
 	return NULL;
 }
 
 static const char *
 cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->bufferResponse =
+	config->mBufferResponse =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -377,7 +377,7 @@ cmd_passenger_buffer_response(cmd_parms *cmd, void *pcfg, const char *arg) {
 static const char *
 cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->resolveSymlinksInDocumentRoot =
+	config->mResolveSymlinksInDocumentRoot =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;
@@ -387,7 +387,7 @@ cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, cons
 static const char *
 cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
-	config->allowEncodedSlashes =
+	config->mAllowEncodedSlashes =
 		(arg != NULL) ?
 		ENABLED :
 		DISABLED;

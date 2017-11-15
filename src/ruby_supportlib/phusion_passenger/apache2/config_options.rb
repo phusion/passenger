@@ -264,7 +264,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :default   => DEFAULT_RUBY,
     :default_expr => 'StaticString()',
     :desc      => "The Ruby interpreter to use.",
-    :header_expression => "config->ruby.empty() ? serverConfig.defaultRuby : config->ruby"
+    :header_expression => "config->mRuby.empty() ? serverConfig.defaultRuby : config->mRuby"
   },
   {
     :name      => "PassengerPython",
@@ -289,7 +289,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :name      => "PassengerBaseURI",
     :type      => :string_set,
     :function  => 'cmd_passenger_base_uri',
-    :field     => 'baseURIs',
+    :field     => 'mBaseURIs',
     :desc      => "Declare the given base URI as belonging to a web application.",
     :header    => nil
   },

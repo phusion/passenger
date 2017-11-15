@@ -408,7 +408,7 @@ private:
 	 *   handler shouldn't be run.
 	 * - If D is not true, then the handler should be run.
 	 *
-	 * @pre config->isEnabled()
+	 * @pre config->getEnabled()
 	 * @param coreModuleWillBeRun Whether the core.c map_to_storage hook might be called after this.
 	 * @return Whether the Phusion Passenger handler hook method should be run.
 	 *         When true, this method will save a request note object so that future hooks
@@ -631,7 +631,7 @@ private:
 
 			bucketState = boost::make_shared<PassengerBucketState>(conn);
 			b = passenger_bucket_create(bucketState, r->connection->bucket_alloc,
-				config->bufferResponse == Apache2Module::ENABLED);
+				config->getBufferResponse());
 			APR_BRIGADE_INSERT_TAIL(bb, b);
 
 			b = apr_bucket_eos_create(r->connection->bucket_alloc);
@@ -686,7 +686,7 @@ private:
 				apr_table_setn(r->headers_out, "Status", r->status_line);
 
 				UPDATE_TRACE_POINT();
-				if (config->errorOverride == Apache2Module::ENABLED
+				if (config->getErrorOverride()
 				 && ap_is_HTTP_ERROR(r->status))
 				{
 					/* Send ErrorDocument.
@@ -843,7 +843,7 @@ private:
 		result.append(r->method);
 		result.append(" ", 1);
 
-		if (config->allowEncodedSlashes == Apache2Module::ENABLED) {
+		if (config->getAllowEncodedSlashes()) {
 			/*
 			 * Apache decodes encoded slashes in r->uri, so we must use r->unparsed_uri
 			 * if we are to support encoded slashes. However mod_rewrite doesn't change
@@ -943,13 +943,14 @@ private:
 		addHeader(result, P_STATIC_STRING("!~REMOTE_USER"), r->user);
 
 		// App group name.
-		if (config->appGroupName.empty()) {
+		if (config->getAppGroupName().empty()) {
 			result.append("!~PASSENGER_APP_GROUP_NAME: ",
 				sizeof("!~PASSENGER_APP_GROUP_NAME: ") - 1);
 			result.append(mapper.getAppRoot());
-			if (!config->appEnv.empty()) {
+			if (!config->getAppEnv().empty()) {
 				result.append(" (", 2);
-				result.append(config->appEnv);
+				result.append(config->getAppEnv().data(),
+					config->getAppEnv().size());
 				result.append(")", 1);
 			}
 			result.append("\r\n", 2);
@@ -1011,7 +1012,7 @@ private:
 		// S = SSL
 
 		result.append("!~FLAGS: CD", sizeof("!~FLAGS: CD") - 1);
-		if (config->bufferUpload != Apache2Module::DISABLED) {
+		if (config->getBufferUpload()) {
 			result.append("B", 1);
 		}
 		if (lookupEnv(r, "HTTPS") != NULL) {
@@ -1339,8 +1340,8 @@ public:
 
 	int prepareRequestWhenInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->enabled == Apache2Module::ENABLED
-			&& config->highPerformance == Apache2Module::ENABLED)
+		if (config->getEnabled()
+			&& config->getHighPerformance())
 		{
 			if (prepareRequest(r, config, r->filename, true)) {
 				return OK;
@@ -1382,8 +1383,8 @@ public:
 
 	int prepareRequestWhenNotInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->enabled == Apache2Module::ENABLED) {
-			if (config->highPerformance == Apache2Module::ENABLED) {
+		if (config->getEnabled()) {
+			if (config->getHighPerformance()) {
 				/* Preparations have already been done in the map_to_storage hook.
 				 * Prevent other modules' fixups hooks from being run.
 				 */
@@ -1522,7 +1523,7 @@ public:
 
 	int handleRequestWhenInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->highPerformance == Apache2Module::ENABLED) {
+		if (config->getHighPerformance()) {
 			return handleRequest(r);
 		} else {
 			return DECLINED;
@@ -1531,7 +1532,7 @@ public:
 
 	int handleRequestWhenNotInHighPerformanceMode(request_rec *r) {
 		DirConfig *config = getDirConfig(r);
-		if (config->highPerformance == Apache2Module::ENABLED) {
+		if (config->getHighPerformance()) {
 			return DECLINED;
 		} else {
 			return handleRequest(r);

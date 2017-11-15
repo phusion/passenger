@@ -92,8 +92,7 @@ def struct_field_for(option)
     option[:field]
   else
     result = option[:name].sub(/^Passenger/, '')
-    result[0] = result[0..0].downcase
-    result
+    "m#{result}"
   end
 end
 
