@@ -116,57 +116,9 @@ mergeDirConfig(apr_pool_t *p, void *basev, void *addv) {
 	return config;
 }
 
-static void
-postprocessDirConfig(server_rec *s, core_dir_config *core_dconf,
-	DirConfig *psg_dconf, bool isTopLevel = false)
-{
-	// Invoke the merge function on toplevel dir configs
-	// in order to set defaults.
-	if (isTopLevel) {
-		*psg_dconf = *((DirConfig *) mergeDirConfig(
-			s->process->pconf,
-			createDirConfig(s->process->pconf, NULL),
-			psg_dconf));
-	}
-}
-
 void
 postprocessConfig(server_rec *s, apr_pool_t *pool) {
-	core_server_config *sconf;
-	core_dir_config *core_dconf;
-	DirConfig *psg_dconf;
-	int nelts;
-    ap_conf_vector_t **elts;
-    int i;
-
 	serverConfig.finalize(pool);
-
-	for (; s != NULL; s = s->next) {
-		sconf = (core_server_config *) ap_get_core_module_config(s->module_config);
-		core_dconf = (core_dir_config *) ap_get_core_module_config(s->lookup_defaults);
-		psg_dconf = (DirConfig *) ap_get_module_config(s->lookup_defaults, &passenger_module);
-		postprocessDirConfig(s, core_dconf, psg_dconf, true);
-
-		nelts = sconf->sec_dir->nelts;
-		elts  = (ap_conf_vector_t **) sconf->sec_dir->elts;
-		for (i = 0; i < nelts; ++i) {
-			core_dconf = (core_dir_config *) ap_get_core_module_config(elts[i]);
-			psg_dconf = (DirConfig *) ap_get_module_config(elts[i], &passenger_module);
-			if (core_dconf != NULL && psg_dconf != NULL) {
-				postprocessDirConfig(s, core_dconf, psg_dconf);
-			}
-		}
-
-		nelts = sconf->sec_url->nelts;
-		elts  = (ap_conf_vector_t **) sconf->sec_url->elts;
-		for (i = 0; i < nelts; ++i) {
-			core_dconf = (core_dir_config *) ap_get_core_module_config(elts[i]);
-			psg_dconf = (DirConfig *) ap_get_module_config(elts[i], &passenger_module);
-			if (core_dconf != NULL && psg_dconf != NULL) {
-				postprocessDirConfig(s, core_dconf, psg_dconf);
-			}
-		}
-	}
 }
 
 
