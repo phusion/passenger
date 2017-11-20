@@ -47,5 +47,16 @@ psg_absolutize_path(const char *path, size_t path_len,
 	return strdup(result.c_str());
 }
 
+const char *
+psg_extract_dir_name_static(const char *path,
+	size_t path_len, size_t *result_len)
+{
+	StaticString result = extractDirNameStatic(StaticString(path, path_len));
+	if (result_len != NULL) {
+		*result_len = result.size();
+	}
+	return result.data();
+}
+
 
 } // extern "C"

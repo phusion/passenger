@@ -36,6 +36,8 @@ extern "C" {
 char *psg_absolutize_path(const char *path, size_t path_len,
 	const char *working_dir, size_t working_dir_len,
 	size_t *result_len);
+const char *psg_extract_dir_name_static(const char *path,
+	size_t path_len, size_t *result_len);
 
 
 #ifdef __cplusplus

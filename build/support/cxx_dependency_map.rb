@@ -9312,6 +9312,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/Exceptions.h",
    "src/cxx_supportlib/FileTools/FileManip.h",
    "src/cxx_supportlib/FileTools/PathManip.h",
+   "src/cxx_supportlib/FileTools/PathManipCBindings.h",
    "src/cxx_supportlib/LoggingKit/Assert.h",
    "src/cxx_supportlib/LoggingKit/Forward.h",
    "src/cxx_supportlib/LoggingKit/Logging.h",
