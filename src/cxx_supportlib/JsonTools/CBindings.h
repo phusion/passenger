@@ -75,6 +75,7 @@ PsgJsonValue *psg_json_value_append_val(PsgJsonValue *doc, const PsgJsonValue *v
 void psg_json_value_swap(PsgJsonValue *doc, PsgJsonValue *doc2);
 
 int psg_json_value_is_null(const PsgJsonValue *doc);
+int psg_json_value_empty(const PsgJsonValue *doc);
 const char *psg_json_value_as_cstr(const PsgJsonValue *doc);
 const char *psg_json_value_get_str(const PsgJsonValue *doc, size_t *size);
 

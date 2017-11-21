@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <time.h>
 #include <signal.h>
 #include <string.h>
@@ -191,16 +192,18 @@ save_master_process_pid(ngx_cycle_t *cycle) {
     return NGX_OK;
 }
 
+typedef struct {
+    ngx_cycle_t *cycle;
+    int log_fd;
+    int stderr_equals_log_file;
+} AfterForkData;
+
 /**
  * This function is called after forking and just before exec()ing the watchdog.
  */
 static void
-starting_watchdog_after_fork(void *paramCycle, void *paramWatchdogConfig) {
-    ngx_cycle_t *cycle = (void *) paramCycle;
-    PsgJsonValue *w_config = (void *) paramWatchdogConfig;
-
-    const PsgJsonValue *log_target;
-    FILE        *log_file;
+starting_watchdog_after_fork(void *_data, void *_params) {
+    AfterForkData   *data = (AfterForkData *) _data;
     ngx_core_conf_t *ccf;
     ngx_uint_t   i;
     ngx_str_t   *envs;
@@ -209,41 +212,14 @@ starting_watchdog_after_fork(void *paramCycle, void *paramWatchdogConfig) {
     /* At this point, stdout and stderr may still point to the console.
      * Make sure that they're both redirected to the log file.
      */
-    log_file = NULL;
-    log_target = psg_json_value_get(w_config, "log_target", (size_t) -1);
-    if (psg_json_value_is_null(log_target)) {
-        ngx_log_error(NGX_LOG_ALERT, cycle->log, 0,
-                "no " PROGRAM_NAME " log file configured, discarding log output");
-    } else {
-        log_file = fopen(psg_json_value_as_cstr(log_target), "a");
-        if (log_file == NULL) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                    "could not open the " PROGRAM_NAME " log file for writing during Nginx startup, "
-                    "some log lines might be lost (will retry from " SHORT_PROGRAM_NAME " core)");
-        }
-        log_target = NULL;
-    }
-
-    if (log_file == NULL) {
-        /* If the log file cannot be opened then we redirect stdout
-         * and stderr to /dev/null, because if the user disconnects
-         * from the console on which Nginx is started, then on Linux
-         * any writes to stdout or stderr will result in an EIO error.
-         */
-        log_file = fopen("/dev/null", "w");
-        if (log_file == NULL) {
-            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                    "could not open /dev/null for logs, this will probably cause EIO errors");
-        }
-    }
-    if (log_file != NULL) {
-        dup2(fileno(log_file), 1);
-        dup2(fileno(log_file), 2);
-        fclose(log_file);
+    if (data->log_fd != -1) {
+        dup2(data->log_fd, 1);
+        dup2(data->log_fd, 2);
+        close(data->log_fd);
     }
 
     /* Set environment variables in Nginx config file. */
-    ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
+    ccf = (ngx_core_conf_t *) ngx_get_conf(data->cycle->conf_ctx, ngx_core_module);
     envs = ccf->env.elts;
     for (i = 0; i < ccf->env.nelts; i++) {
         env = (const char *) envs[i].data;
@@ -251,6 +227,59 @@ starting_watchdog_after_fork(void *paramCycle, void *paramWatchdogConfig) {
             putenv(strdup(env));
         }
     }
+}
+
+/**
+ * This function provides a file descriptor that will be used
+ * to redirect stderr to after the upcoming fork. This prevents
+ * EIO errors on Linux if the user disconnects from the console
+ * on which Nginx is started.
+ *
+ * The fd will point to the log file, or to /dev/null if that
+ * fails (or -1 if that fails too).
+ */
+static void
+open_log_file_for_after_forking(AfterForkData *data, PsgJsonValue *log_target) {
+    const PsgJsonValue *log_target_path;
+    int                 fd;
+
+    log_target_path = psg_json_value_get(log_target, "path", (size_t) -1);
+    if (log_target_path == NULL) {
+        ngx_log_error(NGX_LOG_ALERT, data->cycle->log, 0,
+            "no " PROGRAM_NAME " log file configured, discarding log output");
+        fd = -1;
+    } else {
+        fd = open(psg_json_value_as_cstr(log_target_path),
+            O_WRONLY | O_APPEND | O_CREAT, 0644);
+        if (fd == -1) {
+            ngx_log_error(NGX_LOG_ALERT, data->cycle->log, ngx_errno,
+                "could not open the " PROGRAM_NAME " log file for writing during Nginx startup,"
+                " some log lines might be lost (will retry from " SHORT_PROGRAM_NAME " core)");
+        }
+        log_target_path = NULL;
+    }
+
+    if (fd == -1) {
+        fd = open("/dev/null", O_WRONLY | O_APPEND);
+        if (fd == -1) {
+            ngx_log_error(NGX_LOG_ALERT, data->cycle->log, ngx_errno,
+                "could not open /dev/null for logs, this will probably cause EIO errors");
+        }
+        /**
+         * The log file open failed, so the after fork isn't going to be able to redirect
+         * stderr to it.
+         */
+        data->stderr_equals_log_file = 0;
+    } else {
+    	/**
+    	 * Technically not true until after the fork when starting_watchdog_after_fork does
+    	 * the redirection (dup2), but that never seems to fail and we need to know here
+    	 * already.
+    	 */
+        data->stderr_equals_log_file = 1;
+    }
+
+    data->log_fd = fd;
 }
 
 static ngx_int_t
@@ -293,17 +322,23 @@ start_watchdog(ngx_cycle_t *cycle) {
     ngx_core_conf_t *core_conf;
     ngx_int_t        ret, result;
     ngx_uint_t       i;
+    AfterForkData    after_fork_data;
     ngx_keyval_t    *ctl = NULL;
     ngx_str_t        str;
-    passenger_autogenerated_main_conf_t *autogenerated_main_conf = &passenger_main_conf.autogenerated;
     PsgJsonValue    *w_config = NULL;
+    PsgJsonValue    *j_log_target;
     u_char  filename[NGX_MAX_PATH], *last;
     char   *passenger_root = NULL;
     char   *error_message = NULL;
+    passenger_autogenerated_main_conf_t *autogenerated_main_conf =
+        &passenger_main_conf.autogenerated;
 
     core_conf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
     result    = NGX_OK;
     w_config  = psg_json_value_new_with_type(PSG_JSON_VALUE_TYPE_OBJECT);
+    j_log_target = psg_json_value_new_with_type(PSG_JSON_VALUE_TYPE_OBJECT);
+    after_fork_data.cycle = cycle;
+    after_fork_data.log_fd = -1;
     passenger_root = ngx_str_null_terminate(&autogenerated_main_conf->root_dir);
     if (passenger_root == NULL) {
         goto error_enomem;
@@ -345,7 +380,7 @@ start_watchdog(ngx_cycle_t *cycle) {
     }
 
     if (autogenerated_main_conf->log_file.len > 0) {
-        psg_json_value_set_ngx_str_ne(w_config, "log_target", &autogenerated_main_conf->log_file);
+        psg_json_value_set_ngx_str_ne(j_log_target, "path", &autogenerated_main_conf->log_file);
     } else if (cycle->new_log.file == NULL) {
         ngx_log_error(NGX_LOG_EMERG, cycle->log, 0, "Cannot initialize " PROGRAM_NAME
             " because Nginx is not configured with an error log file."
@@ -354,9 +389,9 @@ start_watchdog(ngx_cycle_t *cycle) {
         result = NGX_ERROR;
         goto cleanup;
     } else if (cycle->new_log.file->name.len > 0) {
-        psg_json_value_set_ngx_str_ne(w_config, "log_target", &cycle->new_log.file->name);
+        psg_json_value_set_ngx_str_ne(j_log_target, "path", &cycle->new_log.file->name);
     } else if (cycle->log->file->name.len > 0) {
-        psg_json_value_set_ngx_str_ne(w_config, "log_target", &cycle->log->file->name);
+        psg_json_value_set_ngx_str_ne(j_log_target, "path", &cycle->log->file->name);
     }
 
     if (autogenerated_main_conf->ctl != NULL) {
@@ -378,11 +413,19 @@ start_watchdog(ngx_cycle_t *cycle) {
         }
     }
 
+    open_log_file_for_after_forking(&after_fork_data, j_log_target);
+    if (after_fork_data.stderr_equals_log_file) {
+        psg_json_value_set_bool(j_log_target, "stderr", 1);
+    }
+    if (!psg_json_value_empty(j_log_target)) {
+        psg_json_value_set_value(w_config, "log_target", -1, j_log_target);
+    }
+
     ret = psg_watchdog_launcher_start(psg_watchdog_launcher,
         passenger_root,
         w_config,
         starting_watchdog_after_fork,
-        cycle,
+        &after_fork_data,
         &error_message);
     if (!ret) {
         ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno, "%s", error_message);
@@ -412,8 +455,13 @@ start_watchdog(ngx_cycle_t *cycle) {
 
 cleanup:
     psg_json_value_free(w_config);
+    psg_json_value_free(j_log_target);
     free(passenger_root);
     free(error_message);
+
+    if (after_fork_data.log_fd != -1) {
+        close(after_fork_data.log_fd);
+    }
 
     if (result == NGX_ERROR && autogenerated_main_conf->abort_on_startup_error) {
         exit(1);

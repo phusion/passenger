@@ -364,13 +364,14 @@ public:
 			// except stdin, stdout, stderr and 3.
 			close(fds[0]);
 			installFeedbackFd(fds[1]);
-			closeAllFileDescriptors(FEEDBACK_FD);
 
 			setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 
 			if (afterFork) {
 				afterFork();
 			}
+
+			closeAllFileDescriptors(FEEDBACK_FD, true);
 
 			execl(agentFilename.c_str(), AGENT_EXE, "watchdog",
 				// Some extra space to allow the child process to change its process title.

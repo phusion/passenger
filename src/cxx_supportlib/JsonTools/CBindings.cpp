@@ -266,6 +266,12 @@ psg_json_value_is_null(const PsgJsonValue *doc) {
 	return cxxdoc.isNull();
 }
 
+int
+psg_json_value_empty(const PsgJsonValue *doc) {
+	const Json::Value &cxxdoc = *static_cast<const Json::Value *>(doc);
+	return cxxdoc.empty();
+}
+
 const char *
 psg_json_value_as_cstr(const PsgJsonValue *doc) {
 	const Json::Value &cxxdoc = *static_cast<const Json::Value *>(doc);
