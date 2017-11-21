@@ -1,6 +1,3 @@
-#include <boost/regex.hpp>
-#include <jsoncpp/json.h>
-
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
  *  Copyright (c) 2017 Phusion Holding B.V.
@@ -28,6 +25,9 @@
  */
 #ifndef _PASSENGER_JSON_TOOLS_AUTOCAST_H_
 #define _PASSENGER_JSON_TOOLS_AUTOCAST_H_
+
+#include <boost/regex.hpp>
+#include <jsoncpp/json.h>
 
 #include <cstdlib>
 #include <string>
