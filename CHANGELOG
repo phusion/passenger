@@ -12,7 +12,7 @@ Release 5.1.12
  * Updated libcurl version used in precompiled binaries (used for e.g. gem installs) to 7.56.1 (was: 7.54.1).
  * Updated OpenSSL version used in precompiled binaries (used for e.g. gem installs) to 1.0.2m (was: 1.0.2l).
  * Updated PCRE version used in precompiled binaries (used for e.g. gem installs) to 8.41 (was: 8.40).
- * Updated Ruby versions used in precompiled binaries (used for e.g. gem installs) to include 2.1.10 (removed: 2.1.9).
+ * Updated Ruby versions used in precompiled binaries (used for e.g. gem installs) to include 2.1.10, 2.2.8, 2.3.5, and 2.4.2 (removed: 2.1.9, 2.2.7, 2.3.4, and 2.4.1).
 
 
 Release 5.1.11
