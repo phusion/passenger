@@ -1,5 +1,10 @@
-Release 5.1.12
+Release 5.1.13 (Not yet released)
 ---------------------------------
+
+
+
+Release 5.1.12
+--------------
 
  * Changes the Debian/Ubuntu install script to completely restart Apache upon upgrade. This prevents issues due to a "half upgraded" state (old Passenger Apache module + new Passenger core). Closes GH-2000.
  * Adds Ubuntu 17.10 "Artful" packages.
