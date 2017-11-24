@@ -53,6 +53,7 @@
 #include <LoggingKit/Config.h>
 #include <LoggingKit/Context.h>
 #include <ConfigKit/ConfigKit.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/SystemTime.h>
@@ -70,8 +71,8 @@ AssertionFailureInfo lastAssertionFailure;
 
 
 void
-initialize(const Json::Value &initialConfig) {
-	context = new Context(initialConfig);
+initialize(const Json::Value &initialConfig, const ConfigKit::Translator &translator) {
+	context = new Context(initialConfig, translator);
 }
 
 void
@@ -404,8 +405,9 @@ normalizeConfig(const Json::Value &effectiveValues) {
 }
 
 
-Context::Context(const Json::Value &initialConfig)
-	: config(schema, initialConfig),
+Context::Context(const Json::Value &initialConfig,
+	const ConfigKit::Translator &translator)
+	: config(schema, initialConfig, translator),
 	  gcThread(NULL),
 	  shuttingDown(false)
 {
@@ -467,6 +469,12 @@ Context::commitConfigChange(LoggingKit::ConfigChangeRequest &req) BOOST_NOEXCEPT
 	req.configRlz = NULL; // oldConfigRlz will be garbage collected by apply()
 
 	newConfigRlz->finalize();
+}
+
+Json::Value
+Context::inspectConfig() const {
+	boost::lock_guard<boost::mutex> l(syncher);
+	return config.inspect();
 }
 
 pair<ConfigRealization*,MonotonicTimeUsec>

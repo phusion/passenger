@@ -189,12 +189,12 @@ module PhusionPassenger
     memoize :cxx_is_gcc?
 
     def self.cc_is_clang?
-      `#{cc} --version 2>&1` =~ /clang version/
+      `#{cc} --version 2>&1` =~ /clang( version|-)/
     end
     memoize :cc_is_clang?
 
     def self.cxx_is_clang?
-      `#{cxx} --version 2>&1` =~ /clang version/
+      `#{cxx} --version 2>&1` =~ /clang( version|-)/
     end
     memoize :cxx_is_clang?
 
@@ -453,18 +453,18 @@ module PhusionPassenger
     end
     memoize :cxx_visibility_flag_generates_warnings?, true
 
-    def self.adress_sanitizer_flag
+    def self.address_sanitizer_flag
       if cc_is_clang?
         if `#{cc} --help` =~ /-fsanitize=/
-          return "-fsanitize=address"
+          "-fsanitize=address"
         else
-          return "-faddress-sanitizer"
+          "-faddress-sanitizer"
         end
       else
-        return nil
+        nil
       end
     end
-    memoize :adress_sanitizer_flag
+    memoize :address_sanitizer_flag
 
     def self.cxx_11_flag
       # C++11 support on FreeBSD 10.0 + Clang seems to be bugged.

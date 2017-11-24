@@ -26,15 +26,21 @@
 #ifndef _PASSENGER_CORE_CONTROLLER_CONFIG_H_
 #define _PASSENGER_CORE_CONTROLLER_CONFIG_H_
 
+#include <boost/bind.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <string.h>
+#include <unistd.h>
+#include <sys/param.h>
+#include <cerrno>
 
 #include <ConfigKit/ConfigKit.h>
-#include <ConfigKit/ValidationUtils.h>
+#include <ConfigKit/SchemaUtils.h>
 #include <MemoryKit/palloc.h>
 #include <ServerKit/HttpServer.h>
+#include <AppTypes.h>
 #include <Constants.h>
+#include <Exceptions.h>
 #include <StaticString.h>
 #include <Utils.h>
 
@@ -70,6 +76,54 @@ parseControllerBenchmarkMode(const StaticString &mode) {
 	}
 }
 
+/*
+ * BEGIN ConfigKit schema: Passenger::Core::ControllerSchema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   accept_burst_count                                  unsigned integer   -          default(32)
+ *   benchmark_mode                                      string             -          -
+ *   client_freelist_limit                               unsigned integer   -          default(0)
+ *   default_abort_websockets_on_process_shutdown        boolean            -          default(true)
+ *   default_app_file_descriptor_ulimit                  unsigned integer   -          -
+ *   default_environment                                 string             -          default("production")
+ *   default_force_max_concurrent_requests_per_process   integer            -          default(-1)
+ *   default_friendly_error_pages                        string             -          default("auto")
+ *   default_group                                       string             -          default
+ *   default_load_shell_envvars                          boolean            -          default(false)
+ *   default_max_preloader_idle_time                     unsigned integer   -          default(300)
+ *   default_max_request_queue_size                      unsigned integer   -          default(100)
+ *   default_max_requests                                unsigned integer   -          default(0)
+ *   default_meteor_app_settings                         string             -          -
+ *   default_min_instances                               unsigned integer   -          default(1)
+ *   default_nodejs                                      string             -          default("node")
+ *   default_python                                      string             -          default("python")
+ *   default_ruby                                        string             -          default("ruby")
+ *   default_server_name                                 string             required   -
+ *   default_server_port                                 unsigned integer   required   -
+ *   default_spawn_method                                string             -          default("smart")
+ *   default_sticky_sessions                             boolean            -          default(false)
+ *   default_sticky_sessions_cookie_name                 string             -          default("_passenger_route")
+ *   default_user                                        string             -          default("nobody")
+ *   graceful_exit                                       boolean            -          default(true)
+ *   integration_mode                                    string             -          default("standalone"),read_only
+ *   min_spare_clients                                   unsigned integer   -          default(0)
+ *   multi_app                                           boolean            -          default(true),read_only
+ *   request_freelist_limit                              unsigned integer   -          default(1024)
+ *   response_buffer_high_watermark                      unsigned integer   -          default(134217728)
+ *   server_software                                     string             -          default("Phusion_Passenger/5.1.12")
+ *   show_version_in_header                              boolean            -          default(true)
+ *   start_reading_after_accept                          boolean            -          default(true)
+ *   stat_throttle_rate                                  unsigned integer   -          default(10)
+ *   thread_number                                       unsigned integer   required   read_only
+ *   turbocaching                                        boolean            -          default(true),read_only
+ *   user_switching                                      boolean            -          default(true)
+ *   ust_router_address                                  string             -          -
+ *   ust_router_password                                 string             -          secret
+ *   vary_turbocache_by_cookie                           string             -          -
+ *
+ * END
+ */
 class ControllerSchema: public ServerKit::HttpServerSchema {
 private:
 	void initialize() {
@@ -83,44 +137,38 @@ private:
 		add("user_switching", BOOL_TYPE, OPTIONAL, true);
 		add("stat_throttle_rate", UINT_TYPE, OPTIONAL, DEFAULT_STAT_THROTTLE_RATE);
 		add("show_version_in_header", BOOL_TYPE, OPTIONAL, true);
-		add("data_buffer_dir", STRING_TYPE, OPTIONAL, getSystemTempDir());
 		add("response_buffer_high_watermark", UINT_TYPE, OPTIONAL, DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK);
-		add("sticky_sessions", BOOL_TYPE, OPTIONAL, false);
-		add("core_graceful_exit", BOOL_TYPE, OPTIONAL, true);
+		add("graceful_exit", BOOL_TYPE, OPTIONAL, true);
 		add("benchmark_mode", STRING_TYPE, OPTIONAL);
 
 		add("default_ruby", STRING_TYPE, OPTIONAL, DEFAULT_RUBY);
 		add("default_python", STRING_TYPE, OPTIONAL, DEFAULT_PYTHON);
 		add("default_nodejs", STRING_TYPE, OPTIONAL, DEFAULT_NODEJS);
 		add("ust_router_address", STRING_TYPE, OPTIONAL);
-		add("ust_router_password", STRING_TYPE, OPTIONAL);
+		add("ust_router_password", STRING_TYPE, OPTIONAL | SECRET);
 		add("default_user", STRING_TYPE, OPTIONAL, DEFAULT_WEB_APP_USER);
 		addWithDynamicDefault(
 			"default_group", STRING_TYPE, OPTIONAL | CACHE_DEFAULT_VALUE,
 			inferDefaultValueForDefaultGroup);
 		add("default_server_name", STRING_TYPE, REQUIRED);
-		add("default_server_port", STRING_TYPE, REQUIRED);
+		add("default_server_port", UINT_TYPE, REQUIRED);
+		add("default_sticky_sessions", BOOL_TYPE, OPTIONAL, false);
+		add("default_sticky_sessions_cookie_name", STRING_TYPE, OPTIONAL, DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
 		add("server_software", STRING_TYPE, OPTIONAL, SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
-		add("sticky_sessions_cookie_name", STRING_TYPE, OPTIONAL, DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
 		add("vary_turbocache_by_cookie", STRING_TYPE, OPTIONAL);
 
-		add("friendly_error_pages", STRING_TYPE, OPTIONAL, "auto");
-		add("spawn_method", STRING_TYPE, OPTIONAL, DEFAULT_SPAWN_METHOD);
-		add("meteor_app_settings", STRING_TYPE, OPTIONAL);
-		add("app_file_descriptor_ulimit", UINT_TYPE, OPTIONAL);
-		add("min_instances", UINT_TYPE, OPTIONAL, 1);
-		add("max_preloader_idle_time", UINT_TYPE, OPTIONAL, DEFAULT_MAX_PRELOADER_IDLE_TIME);
-		add("max_request_queue_size", UINT_TYPE, OPTIONAL, DEFAULT_MAX_REQUEST_QUEUE_SIZE);
-		add("force_max_concurrent_requests_per_process", INT_TYPE, OPTIONAL, -1);
-		add("abort_websockets_on_process_shutdown", BOOL_TYPE, OPTIONAL, true);
-		add("load_shell_envvars", BOOL_TYPE, OPTIONAL, false);
-		add("max_requests", UINT_TYPE, OPTIONAL, 0);
-
-		// Single app mode options
-		add("app_root", STRING_TYPE, OPTIONAL);
-		add("environment", STRING_TYPE, OPTIONAL, DEFAULT_APP_ENV);
-		add("app_type", STRING_TYPE, OPTIONAL);
-		add("startup_file", STRING_TYPE, OPTIONAL);
+		add("default_friendly_error_pages", STRING_TYPE, OPTIONAL, "auto");
+		add("default_environment", STRING_TYPE, OPTIONAL, DEFAULT_APP_ENV);
+		add("default_spawn_method", STRING_TYPE, OPTIONAL, DEFAULT_SPAWN_METHOD);
+		add("default_load_shell_envvars", BOOL_TYPE, OPTIONAL, false);
+		add("default_meteor_app_settings", STRING_TYPE, OPTIONAL);
+		add("default_app_file_descriptor_ulimit", UINT_TYPE, OPTIONAL);
+		add("default_min_instances", UINT_TYPE, OPTIONAL, 1);
+		add("default_max_preloader_idle_time", UINT_TYPE, OPTIONAL, DEFAULT_MAX_PRELOADER_IDLE_TIME);
+		add("default_max_request_queue_size", UINT_TYPE, OPTIONAL, DEFAULT_MAX_REQUEST_QUEUE_SIZE);
+		add("default_force_max_concurrent_requests_per_process", INT_TYPE, OPTIONAL, -1);
+		add("default_abort_websockets_on_process_shutdown", BOOL_TYPE, OPTIONAL, true);
+		add("default_max_requests", UINT_TYPE, OPTIONAL, 0);
 
 
 		/*******************/
@@ -128,8 +176,6 @@ private:
 
 
 		addValidator(validate);
-		addValidator(validateMultiAppMode);
-		addValidator(validateSingleAppMode);
 		addValidator(ConfigKit::validateIntegrationMode);
 	}
 
@@ -153,65 +199,6 @@ private:
 		if (mode == BM_UNKNOWN) {
 			errors.push_back(Error("'{{benchmark_mode}}' is not set to a valid value"));
 		}
-	}
-
-	static void validateMultiAppMode(const ConfigKit::Store &config,
-		vector<ConfigKit::Error> &errors)
-	{
-		using namespace ConfigKit;
-
-		if (!config["multi_app"].asBool()) {
-			return;
-		}
-
-		if (!config["app_root"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is set"
-				" then '{{app_root}}' may not be set"));
-		}
-	}
-
-	static void validateSingleAppMode(const ConfigKit::Store &config,
-		vector<ConfigKit::Error> &errors)
-	{
-		using namespace ConfigKit;
-
-		if (config["multi_app"].asBool()) {
-			return;
-		}
-
-		if (config["app_root"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is not set"
-				" then '{{app_root}}' is required"));
-		}
-		if (config["app_type"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is not set"
-				" then '{{app_type}}' is required"));
-		}
-		if (config["startup_file"].isNull()) {
-			errors.push_back(Error("If '{{multi_app}}' is not set"
-				" then '{{startup_file}}' is required"));
-		}
-
-		if (!config["app_type"].isNull()) {
-			PassengerAppType appType = getAppType(config["app_type"].asString());
-			if (appType == PAT_NONE || appType == PAT_ERROR) {
-				string message = "'{{app_type}}' is set to '"
-					+ config["app_type"].asString() + "', which is not a"
-					" valid application type. Supported app types are:";
-				const AppTypeDefinition *definition = &appTypeDefinitions[0];
-				while (definition->type != PAT_NONE) {
-					message.append(1, ' ');
-					message.append(definition->name);
-					definition++;
-				}
-				errors.push_back(Error(message));
-			}
-
-			if (config["startup_file"].isNull()) {
-				errors.push_back(Error("If '{{app_type}}' is set"
-					" then '{{startup_file}}' is required"));
-			}
-		}
 
 		/*******************/
 	}
@@ -228,6 +215,80 @@ public:
 		: ServerKit::HttpServerSchema(false)
 	{
 		initialize();
+	}
+};
+
+/*
+ * BEGIN ConfigKit schema: Passenger::Core::ControllerSingleAppModeSchema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   app_root       string   -          default,read_only
+ *   app_type       string   required   read_only
+ *   startup_file   string   required   read_only
+ *
+ * END
+ */
+struct ControllerSingleAppModeSchema: public ConfigKit::Schema {
+	ControllerSingleAppModeSchema() {
+		using namespace ConfigKit;
+
+		addWithDynamicDefault("app_root", STRING_TYPE, OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE,
+			getDefaultAppRoot);
+		add("app_type", STRING_TYPE, REQUIRED | READ_ONLY);
+		add("startup_file", STRING_TYPE, REQUIRED | READ_ONLY);
+
+		addValidator(boost::bind(validateAppType, "app_type",
+			boost::placeholders::_1, boost::placeholders::_2));
+		addNormalizer(normalizeAppRoot);
+		addNormalizer(normalizeStartupFile);
+
+		finalize();
+	}
+
+	static Json::Value getDefaultAppRoot(const ConfigKit::Store &config) {
+		char buf[MAXPATHLEN];
+		const char *path = getcwd(buf, sizeof(buf));
+		if (path == NULL) {
+			int e = errno;
+			throw SystemException("Unable to obtain current working directory", e);
+		}
+		string result = path;
+		return result;
+	}
+
+	static void validateAppType(const string &appTypeKey,
+		const ConfigKit::Store &config, vector<ConfigKit::Error> &errors)
+	{
+		typedef ConfigKit::Error Error;
+
+		if (!config[appTypeKey].isNull()) {
+			PassengerAppType appType = getAppType(config[appTypeKey].asString());
+			if (appType == PAT_NONE || appType == PAT_ERROR) {
+				string message = "'{{" + appTypeKey + "}}' is set to '"
+					+ config[appTypeKey].asString() + "', which is not a"
+					" valid application type. Supported app types are:";
+				const AppTypeDefinition *definition = &appTypeDefinitions[0];
+				while (definition->type != PAT_NONE) {
+					message.append(1, ' ');
+					message.append(definition->name);
+					definition++;
+				}
+				errors.push_back(Error(message));
+			}
+		}
+	}
+
+	static Json::Value normalizeAppRoot(const Json::Value &effectiveValues) {
+		Json::Value updates;
+		updates["app_root"] = absolutizePath(effectiveValues["app_root"].asString());
+		return updates;
+	}
+
+	static Json::Value normalizeStartupFile(const Json::Value &effectiveValues) {
+		Json::Value updates;
+		updates["startup_file"] = absolutizePath(effectiveValues["startup_file"].asString());
+		return updates;
 	}
 };
 
@@ -251,8 +312,9 @@ public:
 	StaticString integrationMode;
 	StaticString serverLogName;
 	ControllerBenchmarkMode benchmarkMode: 3;
+	bool singleAppMode: 1;
 	bool userSwitching: 1;
-	bool stickySessions: 1;
+	bool defaultStickySessions: 1;
 	bool gracefulExit: 1;
 
 	/*******************/
@@ -267,9 +329,10 @@ public:
 		  integrationMode(psg_pstrdup(pool, config["integration_mode"].asString())),
 		  serverLogName(createServerLogName()),
 		  benchmarkMode(parseControllerBenchmarkMode(config["benchmark_mode"].asString())),
+		  singleAppMode(!config["multi_app"].asBool()),
 		  userSwitching(config["user_switching"].asBool()),
-		  stickySessions(config["sticky_sessions"].asBool()),
-		  gracefulExit(config["core_graceful_exit"].asBool())
+		  defaultStickySessions(config["default_sticky_sessions"].asBool()),
+		  gracefulExit(config["graceful_exit"].asBool())
 
 		  /*******************/
 	{
@@ -295,8 +358,9 @@ public:
 		std::swap(integrationMode, other.integrationMode);
 		std::swap(serverLogName, other.serverLogName);
 		SWAP_BITFIELD(ControllerBenchmarkMode, benchmarkMode);
+		SWAP_BITFIELD(bool, singleAppMode);
 		SWAP_BITFIELD(bool, userSwitching);
-		SWAP_BITFIELD(bool, stickySessions);
+		SWAP_BITFIELD(bool, defaultStickySessions);
 		SWAP_BITFIELD(bool, gracefulExit);
 
 		/*******************/
@@ -333,19 +397,19 @@ public:
 	StaticString defaultStickySessionsCookieName;
 	StaticString defaultVaryTurbocacheByCookie;
 
-	StaticString friendlyErrorPages;
-	StaticString spawnMethod;
-	StaticString meteorAppSettings;
-	unsigned int fileDescriptorUlimit;
-	unsigned int minInstances;
-	unsigned int maxPreloaderIdleTime;
-	unsigned int maxRequestQueueSize;
-	unsigned int maxRequests;
-	int forceMaxConcurrentRequestsPerProcess;
-	bool singleAppMode: 1;
+	StaticString defaultFriendlyErrorPages;
+	StaticString defaultEnvironment;
+	StaticString defaultSpawnMethod;
+	StaticString defaultMeteorAppSettings;
+	unsigned int defaultAppFileDescriptorUlimit;
+	unsigned int defaultMinInstances;
+	unsigned int defaultMaxPreloaderIdleTime;
+	unsigned int defaultMaxRequestQueueSize;
+	unsigned int defaultMaxRequests;
+	int defaultForceMaxConcurrentRequestsPerProcess;
 	bool showVersionInHeader: 1;
-	bool abortWebsocketsOnProcessShutdown;
-	bool loadShellEnvvars;
+	bool defaultAbortWebsocketsOnProcessShutdown;
+	bool defaultLoadShellEnvvars;
 
 	/*******************/
 	/*******************/
@@ -364,22 +428,22 @@ public:
 		  defaultServerName(psg_pstrdup(pool, config["default_server_name"].asString())),
 		  defaultServerPort(psg_pstrdup(pool, config["default_server_port"].asString())),
 		  serverSoftware(psg_pstrdup(pool, config["server_software"].asString())),
-		  defaultStickySessionsCookieName(psg_pstrdup(pool, config["sticky_sessions_cookie_name"].asString())),
+		  defaultStickySessionsCookieName(psg_pstrdup(pool, config["default_sticky_sessions_cookie_name"].asString())),
 		  defaultVaryTurbocacheByCookie(psg_pstrdup(pool, config["vary_turbocache_by_cookie"].asString())),
 
-		  friendlyErrorPages(psg_pstrdup(pool, config["friendly_error_pages"].asString())),
-		  spawnMethod(psg_pstrdup(pool, config["spawn_method"].asString())),
-		  meteorAppSettings(psg_pstrdup(pool, config["meteor_app_settings"].asString())),
-		  fileDescriptorUlimit(config["app_file_descriptor_ulimit"].asUInt()),
-		  minInstances(config["min_instances"].asUInt()),
-		  maxPreloaderIdleTime(config["max_preloader_idle_time"].asUInt()),
-		  maxRequestQueueSize(config["max_request_queue_size"].asUInt()),
-		  maxRequests(config["max_requests"].asUInt()),
-		  forceMaxConcurrentRequestsPerProcess(config["force_max_concurrent_requests_per_process"].asInt()),
-		  singleAppMode(!config["multi_app"].asBool()),
+		  defaultFriendlyErrorPages(psg_pstrdup(pool, config["default_friendly_error_pages"].asString())),
+		  defaultEnvironment(psg_pstrdup(pool, config["default_environment"].asString())),
+		  defaultSpawnMethod(psg_pstrdup(pool, config["default_spawn_method"].asString())),
+		  defaultMeteorAppSettings(psg_pstrdup(pool, config["default_meteor_app_settings"].asString())),
+		  defaultAppFileDescriptorUlimit(config["default_app_file_descriptor_ulimit"].asUInt()),
+		  defaultMinInstances(config["default_min_instances"].asUInt()),
+		  defaultMaxPreloaderIdleTime(config["default_max_preloader_idle_time"].asUInt()),
+		  defaultMaxRequestQueueSize(config["default_max_request_queue_size"].asUInt()),
+		  defaultMaxRequests(config["default_max_requests"].asUInt()),
+		  defaultForceMaxConcurrentRequestsPerProcess(config["default_force_max_concurrent_requests_per_process"].asInt()),
 		  showVersionInHeader(config["show_version_in_header"].asBool()),
-		  abortWebsocketsOnProcessShutdown(config["abort_websockets_on_process_shutdown"].asBool()),
-		  loadShellEnvvars(config["load_shell_envvars"].asBool())
+		  defaultAbortWebsocketsOnProcessShutdown(config["default_abort_websockets_on_process_shutdown"].asBool()),
+		  defaultLoadShellEnvvars(config["default_load_shell_envvars"].asBool())
 
 		  /*******************/
 		{ }

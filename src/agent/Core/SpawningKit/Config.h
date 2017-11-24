@@ -28,8 +28,11 @@
 
 #include <boost/function.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/thread.hpp>
 #include <string>
 #include <cstddef>
+
+#include <jsoncpp/json.h>
 
 #include <ResourceLocator.h>
 #include <RandomGenerator.h>
@@ -59,8 +62,10 @@ typedef boost::function<void (const char *data, unsigned int size)> OutputHandle
 struct Config {
 	// Used by error pages and hooks.
 	ResourceLocator *resourceLocator;
-	const VariantMap *agentsOptions;
 	ErrorHandler errorHandler;
+
+	boost::mutex agentConfigSyncher;
+	Json::Value agentConfig;
 
 	// Used for Union Station logging.
 	UnionStation::ContextPtr unionStationContext;
@@ -82,7 +87,6 @@ struct Config {
 
 	Config()
 		: resourceLocator(NULL),
-		  agentsOptions(NULL),
 		  errorHandler(NULL),
 		  concurrency(1),
 		  spawnerCreationSleepTime(0),

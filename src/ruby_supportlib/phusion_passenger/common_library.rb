@@ -274,6 +274,12 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Exceptions.o',
     :source   => 'Exceptions.cpp',
     :category => :base
+  define_component 'FileTools/PathManip.o',
+    :source   => 'FileTools/PathManip.cpp',
+    :category => :base
+  define_component 'FileTools/FileManip.o',
+    :source   => 'FileTools/FileManip.cpp',
+    :category => :base
   define_component 'ProcessManagement/Spawn.o',
     :source   => 'ProcessManagement/Spawn.cpp',
     :category => :base
@@ -316,9 +322,6 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils/CachedFileStat.o',
     :source   => 'Utils/CachedFileStat.cpp',
     :category => :other
-  define_component 'Utils/LargeFiles.o',
-    :source   => 'Utils/LargeFiles.cpp',
-    :category => :other
   define_component 'WatchdogLauncher.o',
     :source   => 'WatchdogLauncher.cpp',
     :category => :other
@@ -357,6 +360,16 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'UnionStationFilterSupport.o',
     :source   => 'UnionStationFilterSupport.cpp',
     :category => :union_station_filter
+
+  define_component 'JsonTools/CBindings.o',
+    :source   => 'JsonTools/CBindings.cpp',
+    :category => :json_tools
+  define_component 'FileTools/LargeFiles.o',
+    :source   => 'FileTools/LargeFiles.cpp',
+    :category => :file_tools_large_files
+  define_component 'FileTools/PathManipCBindings.o',
+    :source   => 'FileTools/PathManipCBindings.cpp',
+    :category => :file_tools_path_manip_cbindings
   define_component 'ProcessManagement/Ruby.o',
     :source   => 'ProcessManagement/Ruby.cpp',
     :category => :process_management_ruby
@@ -365,4 +378,5 @@ end
 # A subset of the objects are linked to the Nginx binary. This defines
 # what those objects are.
 NGINX_LIBS_SELECTOR = [:base, 'WatchdogLauncher.o', 'AppTypes.o',
-  'Utils/CachedFileStat.o', 'UnionStationFilterSupport.o']
+  'Utils/CachedFileStat.o', 'JsonTools/CBindings.o',
+  'FileTools/PathManipCBindings.o']

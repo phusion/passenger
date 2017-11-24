@@ -26,6 +26,8 @@
 #ifndef _PASSENGER_CORE_API_SERVER_H_
 #define _PASSENGER_CORE_API_SERVER_H_
 
+#include <boost/config.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <boost/regex.hpp>
 #include <oxt/thread.hpp>
 #include <string>
@@ -37,8 +39,10 @@
 #include <modp_b64.h>
 
 #include <Core/Controller.h>
+#include <Core/ConfigChange.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Shared/ApiServerUtils.h>
+#include <Shared/ApiAccountUtils.h>
 #include <ServerKit/HttpServer.h>
 #include <DataStructures/LString.h>
 #include <Exceptions.h>
@@ -57,6 +61,55 @@ namespace ApiServer {
 using namespace std;
 
 
+/*
+ * BEGIN ConfigKit schema: Passenger::Core::ApiServer::Schema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   accept_burst_count             unsigned integer   -   default(32)
+ *   authorizations                 array              -   default("[FILTERED]"),secret
+ *   client_freelist_limit          unsigned integer   -   default(0)
+ *   instance_dir                   string             -   -
+ *   min_spare_clients              unsigned integer   -   default(0)
+ *   request_freelist_limit         unsigned integer   -   default(1024)
+ *   start_reading_after_accept     boolean            -   default(true)
+ *   watchdog_fd_passing_password   string             -   secret
+ *
+ * END
+ */
+class Schema: public ServerKit::HttpServerSchema {
+private:
+	static Json::Value normalizeAuthorizations(const Json::Value &effectiveValues) {
+		Json::Value updates;
+		updates["authorizations"] = ApiAccountUtils::normalizeApiAccountsJson(
+			effectiveValues["authorizations"]);
+		return updates;
+	}
+
+public:
+	Schema()
+		: ServerKit::HttpServerSchema(false)
+	{
+		using namespace ConfigKit;
+
+		add("instance_dir", STRING_TYPE, OPTIONAL);
+		add("watchdog_fd_passing_password", STRING_TYPE, OPTIONAL | SECRET);
+		add("authorizations", ARRAY_TYPE, OPTIONAL | SECRET, Json::arrayValue);
+
+		addValidator(boost::bind(ApiAccountUtils::validateAuthorizationsField,
+			"authorizations", boost::placeholders::_1, boost::placeholders::_2));
+
+		addNormalizer(normalizeAuthorizations);
+
+		finalize();
+	}
+};
+
+struct ConfigChangeRequest {
+	ServerKit::HttpServerConfigChangeRequest forParent;
+	boost::scoped_ptr<ApiAccountUtils::ApiAccountDatabase> apiAccountDatabase;
+};
+
 class Request: public ServerKit::BaseHttpRequest {
 public:
 	string body;
@@ -69,11 +122,15 @@ public:
 };
 
 class ApiServer: public ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > {
-private:
+public:
 	typedef ServerKit::HttpServer<ApiServer, ServerKit::HttpClient<Request> > ParentClass;
 	typedef ServerKit::HttpClient<Request> Client;
 	typedef ServerKit::HeaderTable HeaderTable;
 
+	typedef Passenger::Core::ApiServer::ConfigChangeRequest ConfigChangeRequest;
+
+private:
+	ApiAccountUtils::ApiAccountDatabase apiAccountDatabase;
 	boost::regex serverConnectionPath;
 
 	bool regex_match(const StaticString &str, const boost::regex &e) const {
@@ -127,7 +184,8 @@ private:
 			processConfig(client, req);
 		} else if (path == P_STATIC_STRING("/reinherit_logs.json")) {
 			apiServerProcessReinheritLogs(this, client, req,
-				instanceDir, fdPassingPassword);
+				config["instance_dir"].asString(),
+				config["watchdog_fd_passing_password"].asString());
 		} else if (path == P_STATIC_STRING("/reopen_logs.json")) {
 			apiServerProcessReopenLogs(this, client, req);
 		} else {
@@ -440,12 +498,16 @@ private:
 		if (req->method == HTTP_GET) {
 			if (!authorizeStateInspectionOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
+				return;
 			}
 
-			refRequest(req, __FILE__, __LINE__);
-			controllers[0]->getContext()->libev->runLater(boost::bind(
-				&ApiServer::processConfig_getControllerConfig, this,
-				client, req, controllers[0]));
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, Core::inspectConfig().toStyledString()));
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
 		} else if (req->method == HTTP_PUT) {
 			if (!authorizeAdminOperation(this, client, req)) {
 				apiServerRespondWith401(this, client, req);
@@ -458,110 +520,78 @@ private:
 		}
 	}
 
-	void processConfig_getControllerConfig(Client *client, Request *req,
-		Controller *controller)
-	{
-		Json::Value config = controller->inspectConfig();
-		getContext()->libev->runLater(boost::bind(
-			&ApiServer::processConfig_controllerConfigGathered, this,
-			client, req, controller, config));
+	void processConfigBody(Client *client, Request *req) {
+		Core::ConfigChangeRequest *changeReq = Core::createConfigChangeRequest();
+		refRequest(req, __FILE__, __LINE__);
+		Core::asyncPrepareConfigChange(req->jsonBody, changeReq,
+			boost::bind(&ApiServer::processConfigBody_prepareDone, this, client, req,
+				boost::placeholders::_1, boost::placeholders::_2));
 	}
 
-	void processConfig_controllerConfigGathered(Client *client, Request *req,
-		Controller *controller, Json::Value config)
+	void processConfigBody_prepareDone(Client *client, Request *req,
+		const vector<ConfigKit::Error> &errors, Core::ConfigChangeRequest *changeReq)
+	{
+		getContext()->libev->runLater(boost::bind(&ApiServer::processConfigBody_prepareDoneInEventLoop,
+			this, client, req, errors, changeReq));
+	}
+
+	void processConfigBody_prepareDoneInEventLoop(Client *client, Request *req,
+		const vector<ConfigKit::Error> &errors, Core::ConfigChangeRequest *changeReq)
 	{
 		if (req->ended()) {
+			Core::freeConfigChangeRequest(changeReq);
 			unrefRequest(req, __FILE__, __LINE__);
 			return;
 		}
 
-		HeaderTable headers;
-		ConfigKit::Store loggingConfig = LoggingKit::context->getConfig();
-
-		headers.insert(req->pool, "Content-Type", "application/json");
-		config["log_level"] = (int) LoggingKit::parseLevel(loggingConfig["level"].asString());
-		if (loggingConfig["target"].isMember("path")) {
-			config["log_file"] = loggingConfig["target"]["path"].asString();
-		}
-		if (!loggingConfig["file_descriptor_log_target"].isNull()
-			&& loggingConfig["file_descriptor_log_target"].isMember("path"))
-		{
-			config["file_descriptor_log_file"] =
-				loggingConfig["file_descriptor_log_target"]["path"].asString();
-		}
-
-		writeSimpleResponse(client, 200, &headers,
-			psg_pstrdup(req->pool, config.toStyledString()));
-		if (!req->ended()) {
-			Request *req2 = req;
-			endRequest(&client, &req2);
-		}
-
-		unrefRequest(req, __FILE__, __LINE__);
-	}
-
-	static void configureController(Controller *controller, Json::Value updates) {
-		vector<ConfigKit::Error> errors;
-		ControllerConfigChangeRequest req;
-
-		if (controller->prepareConfigChange(updates, errors, req)) {
-			controller->commitConfigChange(req);
+		if (errors.empty()) {
+			Core::asyncCommitConfigChange(changeReq,
+				boost::bind(&ApiServer::processConfigBody_commitDone, this, client, req,
+					boost::placeholders::_1));
 		} else {
-			P_ERROR("Unable to apply configuration change to Core controller.\n"
-				"Configuration: " << updates.toStyledString() << "\n"
-				"Errors: " << toString(errors));
+			unsigned int bufsize = 2048;
+			char *message = (char *) psg_pnalloc(req->pool, bufsize);
+			snprintf(message, bufsize, "{ \"status\": \"error\", "
+				"\"message\": \"Error reconfiguring: %s\" }",
+				ConfigKit::toString(errors).c_str());
+
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			writeSimpleResponse(client, 500, &headers, message);
+
+			if (!req->ended()) {
+				Request *req2 = req;
+				endRequest(&client, &req2);
+			}
+
+			Core::freeConfigChangeRequest(changeReq);
+			unrefRequest(req, __FILE__, __LINE__);
 		}
 	}
 
-	void processConfigBody(Client *client, Request *req) {
-		HeaderTable headers;
-		LoggingKit::ConfigChangeRequest configReq;
-		const Json::Value &json = req->jsonBody;
-		vector<ConfigKit::Error> errors;
-		bool ok;
+	void processConfigBody_commitDone(Client *client, Request *req,
+		Core::ConfigChangeRequest *changeReq)
+	{
+		getContext()->libev->runLater(boost::bind(&ApiServer::processConfigBody_commitDoneInEventLoop,
+			this, client, req, changeReq));
+	}
 
-		headers.insert(req->pool, "Content-Type", "application/json");
-		headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
-
-		try {
-			ok = LoggingKit::context->prepareConfigChange(json,
-				errors, configReq);
-		} catch (const std::exception &e) {
-			unsigned int bufsize = 2048;
-			char *message = (char *) psg_pnalloc(req->pool, bufsize);
-			snprintf(message, bufsize, "{ \"status\": \"error\", "
-				"\"message\": \"Error reconfiguring logging system: %s\" }",
-				e.what());
-			writeSimpleResponse(client, 500, &headers, message);
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-			return;
-		}
-		if (!ok) {
-			unsigned int bufsize = 2048;
-			char *message = (char *) psg_pnalloc(req->pool, bufsize);
-			snprintf(message, bufsize, "{ \"status\": \"error\", "
-				"\"message\": \"Error reconfiguring logging system: %s\" }",
-				ConfigKit::toString(errors).c_str());
-			writeSimpleResponse(client, 500, &headers, message);
-			if (!req->ended()) {
-				endRequest(&client, &req);
-			}
-			return;
-		}
-
-		LoggingKit::context->commitConfigChange(configReq);
-
-		for (unsigned int i = 0; i < controllers.size(); i++) {
-			controllers[i]->getContext()->libev->runLater(boost::bind(
-				configureController, controllers[i], json));
-		}
-
-		writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+	void processConfigBody_commitDoneInEventLoop(Client *client, Request *req,
+		Core::ConfigChangeRequest *changeReq)
+	{
 		if (!req->ended()) {
-			endRequest(&client, &req);
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			writeSimpleResponse(client, 200, &headers, "{ \"status\": \"ok\" }");
+			if (!req->ended()) {
+				Request *req2 = req;
+				endRequest(&client, &req2);
+			}
 		}
+		Core::freeConfigChangeRequest(changeReq);
+		unrefRequest(req, __FILE__, __LINE__);
 	}
 
 	bool requestBodyExceedsLimit(Client *client, Request *req, unsigned int limit = 1024 * 128) {
@@ -648,21 +678,33 @@ protected:
 	}
 
 public:
-	vector<Controller *> controllers;
-	ApiAccountDatabase *apiAccountDatabase;
-	ApplicationPool2::PoolPtr appPool;
-	string instanceDir;
-	string fdPassingPassword;
-	EventFd *exitEvent;
-	vector<Authorization> authorizations;
+	typedef ApiAccountUtils::ApiAccount ApiAccount;
 
-	ApiServer(ServerKit::Context *context, const ServerKit::HttpServerSchema &schema,
-		const Json::Value &initialConfig = Json::Value())
-		: ParentClass(context, schema, initialConfig),
+	// Dependencies
+	vector<Controller *> controllers;
+	ApplicationPool2::PoolPtr appPool;
+	EventFd *exitEvent;
+
+	ApiServer(ServerKit::Context *context, const Schema &schema,
+		const Json::Value &initialConfig,
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
+		: ParentClass(context, schema, initialConfig, translator),
 		  serverConnectionPath("^/server/(.+)\\.json$"),
-		  apiAccountDatabase(NULL),
 		  exitEvent(NULL)
-		{ }
+	{
+		apiAccountDatabase = ApiAccountUtils::ApiAccountDatabase(
+			config["authorizations"]);
+	}
+
+	virtual void initialize() {
+		if (appPool == NULL) {
+			throw RuntimeException("appPool must be non-NULL");
+		}
+		if (exitEvent == NULL) {
+			throw RuntimeException("exitEvent must be non-NULL");
+		}
+		ParentClass::initialize();
+	}
 
 	virtual StaticString getServerName() const {
 		return P_STATIC_STRING("ApiServer");
@@ -677,12 +719,32 @@ public:
 		return pos - buf;
 	}
 
+	const ApiAccountUtils::ApiAccountDatabase &getApiAccountDatabase() const {
+		return apiAccountDatabase;
+	}
+
 	bool authorizeByUid(uid_t uid) const {
 		return appPool->authorizeByUid(uid);
 	}
 
 	bool authorizeByApiKey(const ApplicationPool2::ApiKey &apiKey) const {
 		return appPool->authorizeByApiKey(apiKey);
+	}
+
+
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, ConfigChangeRequest &req)
+	{
+		if (ParentClass::prepareConfigChange(updates, errors, req.forParent)) {
+			req.apiAccountDatabase.reset(new ApiAccountUtils::ApiAccountDatabase(
+				req.forParent.forParent.config->get("authorizations")));
+		}
+		return errors.empty();
+	}
+
+	void commitConfigChange(ConfigChangeRequest &req) BOOST_NOEXCEPT_OR_NOTHROW {
+		ParentClass::commitConfigChange(req.forParent);
+		apiAccountDatabase.swap(*req.apiAccountDatabase);
 	}
 };
 

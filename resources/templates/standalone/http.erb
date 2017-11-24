@@ -3,7 +3,7 @@ include '<%= PhusionPassenger.resources_dir %>/mime.types';
 
 passenger_root '<%= PhusionPassenger.install_spec %>';
 passenger_abort_on_startup_error on;
-passenger_ctl cleanup_pidfiles <%= serialize_strset("#{@working_dir}/temp_dir_toucher.pid") %>;
+passenger_ctl pidfiles_to_delete_on_exit '["<%= "#{@working_dir}/temp_dir_toucher.pid" %>"]';
 passenger_ctl integration_mode standalone;
 passenger_ctl standalone_engine nginx;
 passenger_user_switching off;
@@ -17,11 +17,9 @@ passenger_user_switching off;
     <% if @options[:user] %>
         passenger_user <%= @options[:user] %>;
         passenger_default_user <%= @options[:user] %>;
-        passenger_analytics_log_user <%= @options[:user] %>;
     <% else %>
         passenger_user <%= current_user %>;
         passenger_default_user <%= current_user %>;
-        passenger_analytics_log_user <%= current_user %>;
     <% end %>
 <% end %>
 
@@ -38,9 +36,6 @@ passenger_user_switching off;
 <%= nginx_http_option(:security_update_check_proxy) %>
 <%= nginx_http_option(:data_buffer_dir) %>
 <%= nginx_http_option(:core_file_descriptor_ulimit) %>
-<%= nginx_http_option(:union_station_gateway_address) %>
-<%= nginx_http_option(:union_station_gateway_port) %>
-<%= nginx_http_option(:union_station_gateway_cert) %>
 <% @options[:ctls].each do |ctl| %>
     passenger_ctl '<%= ctl.split("=", 2)[0] %>' '<%= ctl.split("=", 2)[1] %>';
 <% end %>

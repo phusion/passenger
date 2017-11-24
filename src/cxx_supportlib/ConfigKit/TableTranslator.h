@@ -26,15 +26,7 @@
 #ifndef _PASSENGER_CONFIG_KIT_TABLE_TRANSLATOR_H_
 #define _PASSENGER_CONFIG_KIT_TABLE_TRANSLATOR_H_
 
-#include <boost/bind.hpp>
-#include <string>
-#include <vector>
-#include <cassert>
-
-#include <jsoncpp/json.h>
-
-#include <ConfigKit/Common.h>
-#include <StaticString.h>
+#include <ConfigKit/Translator.h>
 #include <DataStructures/StringKeyTable.h>
 
 namespace Passenger {
@@ -60,61 +52,12 @@ using namespace std;
  * You can learn more about translators in the ConfigKit README, section
  * "The special problem of overlapping configuration names and translation".
  */
-class TableTranslator {
+class TableTranslator: public Translator {
 private:
 	StringKeyTable<string> table, reverseTable;
 	bool finalized;
 
-	static Json::Value internalTranslate(const StringKeyTable<string> &table,
-		const Json::Value &doc)
-	{
-		Json::Value result(Json::objectValue);
-		Json::Value::const_iterator it, end = doc.end();
-
-		for (it = doc.begin(); it != end; it++) {
-			const char *keyEnd;
-			const char *key = it.memberName(&keyEnd);
-			const string *entry;
-
-			if (table.lookup(StaticString(key, keyEnd - key), &entry)) {
-				result[*entry] = *it;
-			} else {
-				result[JSONCPP_STRING(key, keyEnd - key)] = *it;
-			}
-		}
-
-		return result;
-	}
-
-	static string translateErrorKey(const StringKeyTable<string> *table,
-		const StaticString &key)
-	{
-		const string *entry;
-
-		if (table->lookup(key, &entry)) {
-			return "{{" + *entry + "}}";
-		} else {
-			return "{{" + key + "}}";
-		}
-	}
-
-	static vector<Error> internalTranslate(const StringKeyTable<string> &table,
-		const vector<Error> &errors)
-	{
-		vector<Error> result;
-		vector<Error>::const_iterator it, end = errors.end();
-		Error::KeyProcessor keyProcessor =
-			boost::bind(translateErrorKey, &table, boost::placeholders::_1);
-
-		for (it = errors.begin(); it != end; it++) {
-			const Error &error = *it;
-			result.push_back(Error(error.getMessage(keyProcessor)));
-		}
-
-		return result;
-	}
-
-	static StaticString internalTranslateOne(const StringKeyTable<string> &table,
+	static string internalTranslateOne(const StringKeyTable<string> &table,
 		const StaticString &key)
 	{
 		const string *entry;
@@ -148,32 +91,32 @@ public:
 		return finalized;
 	}
 
-	Json::Value translate(const Json::Value &doc) const {
+	virtual Json::Value translate(const Json::Value &doc) const {
 		assert(finalized);
-		return internalTranslate(table, doc);
+		return Translator::translate(doc);
 	}
 
-	Json::Value reverseTranslate(const Json::Value &doc) const {
+	virtual Json::Value reverseTranslate(const Json::Value &doc) const {
 		assert(finalized);
-		return internalTranslate(reverseTable, doc);
+		return Translator::reverseTranslate(doc);
 	}
 
-	vector<Error> translate(const vector<Error> &errors) const {
+	virtual vector<Error> translate(const vector<Error> &errors) const {
 		assert(finalized);
-		return internalTranslate(table, errors);
+		return Translator::translate(errors);
 	}
 
-	vector<Error> reverseTranslate(const vector<Error> &errors) const {
+	virtual vector<Error> reverseTranslate(const vector<Error> &errors) const {
 		assert(finalized);
-		return internalTranslate(reverseTable, errors);
+		return Translator::reverseTranslate(errors);
 	}
 
-	StaticString translateOne(const StaticString &key) const {
+	virtual string translateOne(const StaticString &key) const {
 		assert(finalized);
 		return internalTranslateOne(table, key);
 	}
 
-	StaticString reverseTranslateOne(const StaticString &key) const {
+	virtual string reverseTranslateOne(const StaticString &key) const {
 		return internalTranslateOne(reverseTable, key);
 	}
 };

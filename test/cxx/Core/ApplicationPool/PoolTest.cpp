@@ -2,6 +2,7 @@
 #include <jsoncpp/json.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <LoggingKit/Context.h>
+#include <FileTools/FileManip.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <MessageReadersWriters.h>

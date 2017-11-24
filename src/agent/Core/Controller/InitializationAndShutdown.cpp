@@ -44,41 +44,13 @@ using namespace boost;
  *
  ****************************/
 
+Controller::~Controller() {
+	ev_check_stop(getLoop(), &checkWatcher);
+	delete singleAppModeConfig;
+}
 
-Controller::Controller(ServerKit::Context *context, const ControllerSchema &schema,
-	const Json::Value &initialConfig)
-	: ParentClass(context, schema, initialConfig),
-
-	  mainConfig(config),
-	  requestConfig(new ControllerRequestConfig(config)),
-	  poolOptionsCache(4),
-
-	  PASSENGER_APP_GROUP_NAME("!~PASSENGER_APP_GROUP_NAME"),
-	  PASSENGER_ENV_VARS("!~PASSENGER_ENV_VARS"),
-	  PASSENGER_MAX_REQUESTS("!~PASSENGER_MAX_REQUESTS"),
-	  PASSENGER_SHOW_VERSION_IN_HEADER("!~PASSENGER_SHOW_VERSION_IN_HEADER"),
-	  PASSENGER_STICKY_SESSIONS("!~PASSENGER_STICKY_SESSIONS"),
-	  PASSENGER_STICKY_SESSIONS_COOKIE_NAME("!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME"),
-	  PASSENGER_REQUEST_OOB_WORK("!~Request-OOB-Work"),
-	  UNION_STATION_SUPPORT("!~UNION_STATION_SUPPORT"),
-	  REMOTE_ADDR("!~REMOTE_ADDR"),
-	  REMOTE_PORT("!~REMOTE_PORT"),
-	  REMOTE_USER("!~REMOTE_USER"),
-	  FLAGS("!~FLAGS"),
-	  HTTP_COOKIE("cookie"),
-	  HTTP_DATE("date"),
-	  HTTP_HOST("host"),
-	  HTTP_CONTENT_LENGTH("content-length"),
-	  HTTP_CONTENT_TYPE("content-type"),
-	  HTTP_EXPECT("expect"),
-	  HTTP_CONNECTION("connection"),
-	  HTTP_STATUS("status"),
-	  HTTP_TRANSFER_ENCODING("transfer-encoding"),
-
-	  turboCaching(),
-	  resourceLocator(NULL)
-	  /**************************/
-{
+void
+Controller::preinitialize() {
 	ev_check_init(&checkWatcher, onEventLoopCheck);
 	ev_set_priority(&checkWatcher, EV_MAXPRI);
 	ev_check_start(getLoop(), &checkWatcher);
@@ -91,10 +63,30 @@ Controller::Controller(ServerKit::Context *context, const ControllerSchema &sche
 
 		timeBeforeBlocking = 0;
 	#endif
-}
 
-Controller::~Controller() {
-	ev_check_stop(getLoop(), &checkWatcher);
+	PASSENGER_APP_GROUP_NAME = "!~PASSENGER_APP_GROUP_NAME";
+	PASSENGER_ENV_VARS = "!~PASSENGER_ENV_VARS";
+	PASSENGER_MAX_REQUESTS = "!~PASSENGER_MAX_REQUESTS";
+	PASSENGER_SHOW_VERSION_IN_HEADER = "!~PASSENGER_SHOW_VERSION_IN_HEADER";
+	PASSENGER_STICKY_SESSIONS = "!~PASSENGER_STICKY_SESSIONS";
+	PASSENGER_STICKY_SESSIONS_COOKIE_NAME = "!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME";
+	PASSENGER_REQUEST_OOB_WORK = "!~Request-OOB-Work";
+	UNION_STATION_SUPPORT = "!~UNION_STATION_SUPPORT";
+	REMOTE_ADDR = "!~REMOTE_ADDR";
+	REMOTE_PORT = "!~REMOTE_PORT";
+	REMOTE_USER = "!~REMOTE_USER";
+	FLAGS = "!~FLAGS";
+	HTTP_COOKIE = "cookie";
+	HTTP_DATE = "date";
+	HTTP_HOST = "host";
+	HTTP_CONTENT_LENGTH = "content-length";
+	HTTP_CONTENT_TYPE = "content-type";
+	HTTP_EXPECT = "expect";
+	HTTP_CONNECTION = "connection";
+	HTTP_STATUS = "status";
+	HTTP_TRANSFER_ENCODING = "transfer-encoding";
+
+	/**************************/
 }
 
 void
@@ -112,17 +104,15 @@ Controller::initialize() {
 
 	ParentClass::initialize();
 	turboCaching.initialize(config["turbocaching"].asBool());
-	getContext()->defaultFileBufferedChannelConfig.bufferDir =
-		config["data_buffer_dir"].asString();
 
-	if (requestConfig->singleAppMode) {
+	if (mainConfig.singleAppMode) {
 		boost::shared_ptr<Options> options = boost::make_shared<Options>();
 		fillPoolOptionsFromConfigCaches(*options, mainConfig.pool, requestConfig);
 
-		string appRoot = config["app_root"].asString();
-		string environment = config["environment"].asString();
-		string appType = config["app_type"].asString();
-		string startupFile = config["startup_file"].asString();
+		string appRoot = singleAppModeConfig->get("app_root").asString();
+		string environment = config["default_environment"].asString();
+		string appType = singleAppModeConfig->get("app_type").asString();
+		string startupFile = singleAppModeConfig->get("startup_file").asString();
 
 		options->appRoot = appRoot;
 		options->environment = environment;

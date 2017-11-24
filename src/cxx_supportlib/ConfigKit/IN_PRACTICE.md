@@ -229,18 +229,10 @@ public:
     // You might wonder, how about instead of taking a Schema as a parameter,
     // we define the Schema as a global variable? Well, that would interfere
     // with subclassing; see the HappyDnsQuerier example.
-    SecurityChecker(const Schema &schema, const Json::Value &initialConfig)
-        : config(schema, initialConfig)
-        { }
-
-    // A component should also provide a constructor accepts a translator
-    // object. The translator is then simply passed to the ConfigKit::Store
-    // constructor.
     //
-    // This variant of the component constructor is necessary to allow parent
+    // This constructor accepts a translator: it is necessary to allow parent
     // components to compose child components. You will see the usage
     // of this constructor in the Downloader example.
-    template<typename Translator>
     SecurityChecker(const Schema &schema, const Json::Value &initialConfig,
         const Translator &translator)
         : config(schema, initialConfig, translator)
@@ -447,16 +439,8 @@ private:
 public:
     // Same as with SecurityChecker, but also initializes
     // the config realization object.
-    DnsQuerier(const Schema &schema, const Json::Value &initialConfig)
-        : config(schema, initialConfig),
-          configRlz(config)
-        { }
-
-    // Same as with SecurityChecker, but also initializes
-    // the config realization object.
-    template<typename Translator>
     DnsQuerier(const Schema &schema, const Json::Value &initialConfig,
-        const Translator &translator)
+        const Translator &translator = ConfigKit::DummyTranslator())
         : config(schema, initialConfig, translator),
           configRlz(config)
         { }
@@ -591,16 +575,8 @@ private:
 public:
     // Same as with DnsQuerier, but also initializes our own
     // private config realization object.
-    HappyDnsQuerier(const Schema &schema, const Json::Value &initialConfig)
-        : DnsQuerier(schema, initialConfig),
-          configRlz(config)
-        { }
-
-    // Same as with DnsQuerier, but also initializes our own
-    // private config realization object.
-    template<typename Translator>
     HappyDnsQuerier(const Schema &schema, const Json::Value &initialConfig,
-        const Translator &translator)
+        const Translator &translator = ConfigKit::DummyTranslator())
         : DnsQuerier(schema, initialConfig, translator),
           configRlz(config)
         { }
@@ -659,6 +635,7 @@ In this Downloader example, we will demonstrate TableTranslator only.
 
 ~~~c++
  #include <ConfigKit/ConfigKit.h>
+ #include <ConfigKit/TableTranslator.h>
  #include <ConfigKit/SubComponentUtils.h>
 
 class Downloader {
@@ -751,19 +728,8 @@ public:
     // It is because the parent component may define different default
     // values than subcomponents. By passing effective values,
     // such default value overrides are respected.
-    Downloader(const Schema &schema, const Json::Value &initialConfig)
-        : config(schema, initialConfig),
-          securityChecker(schema.securityChecker.schema,
-              config.inspectEffectiveValues(),
-              schema.securityChecker.translator),
-          happyDnsQuerier(schema.happyDnsQuerier.schema,
-              config.inspectEffectiveValues(),
-              schema.happyDnsQuerier.translator)
-        { }
-
-    template<typename Translator>
     Downloader(const Schema &schema, const Json::Value &initialConfig,
-        const Translator &translator)
+        const Translator &translator = ConfigKit::DummyTranslator())
         : config(schema, initialConfig, translator),
           securityChecker(schema.securityChecker.schema,
               config.inspectEffectiveValues(),
@@ -941,9 +907,9 @@ public:
           config(schema, initialConfig)
         { }
 
-    template<typename Translator>
     SecurityChecker(const Schema &schema, const Json::Value &initialConfig,
-        const EventLoopType &_eventLoop, const Translator &translator)
+        const EventLoopType &_eventLoop,
+        const Translator &translator = ConfigKit::DummyTranslator())
         : eventLoop(eventLoop),
           config(schema, initialConfig, translator)
         { }

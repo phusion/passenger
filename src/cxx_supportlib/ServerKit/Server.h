@@ -149,6 +149,18 @@ using namespace oxt;
 	SKC_TRACE_FROM_STATIC(server, client, 3, "Event: " eventName)
 
 
+/*
+ * BEGIN ConfigKit schema: Passenger::ServerKit::BaseServerSchema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   accept_burst_count           unsigned integer   -   default(32)
+ *   client_freelist_limit        unsigned integer   -   default(0)
+ *   min_spare_clients            unsigned integer   -   default(0)
+ *   start_reading_after_accept   boolean            -   default(true)
+ *
+ * END
+ */
 class BaseServerSchema: public ConfigKit::Schema {
 private:
 	void initialize() {
@@ -298,6 +310,22 @@ private:
 
 
 	/***** Private methods *****/
+
+	void preinitialize(Context *context) {
+		STAILQ_INIT(&freeClients);
+		TAILQ_INIT(&activeClients);
+		TAILQ_INIT(&disconnectedClients);
+
+		acceptResumptionWatcher.set(context->libev->getLoop());
+		acceptResumptionWatcher.set<
+			BaseServer<DerivedServer, Client>,
+			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
+
+		statisticsUpdateWatcher.set(context->libev->getLoop());
+		statisticsUpdateWatcher.set<
+			BaseServer<DerivedServer, Client>,
+			&BaseServer<DerivedServer, Client>::onStatisticsUpdateTimeout>(this);
+	}
 
 	static void _onAcceptable(EV_P_ ev_io *io, int revents) {
 		static_cast<BaseServer *>(io->data)->onAcceptable(io, revents);
@@ -703,8 +731,9 @@ public:
 	/***** Public methods *****/
 
 	BaseServer(Context *context, const BaseServerSchema &schema,
-		const Json::Value &initialConfig = Json::Value())
-		: config(schema, initialConfig),
+		const Json::Value &initialConfig = Json::Value(),
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
+		: config(schema, initialConfig, translator),
 		  configRlz(config),
 		  shutdownFinishCallback(NULL),
 		  serverState(ACTIVE),
@@ -723,19 +752,7 @@ public:
 		  nEndpoints(0),
 		  accept4Available(true)
 	{
-		STAILQ_INIT(&freeClients);
-		TAILQ_INIT(&activeClients);
-		TAILQ_INIT(&disconnectedClients);
-
-		acceptResumptionWatcher.set(context->libev->getLoop());
-		acceptResumptionWatcher.set<
-			BaseServer<DerivedServer, Client>,
-			&BaseServer<DerivedServer, Client>::onAcceptResumeTimeout>(this);
-
-		statisticsUpdateWatcher.set(context->libev->getLoop());
-		statisticsUpdateWatcher.set<
-			BaseServer<DerivedServer, Client>,
-			&BaseServer<DerivedServer, Client>::onStatisticsUpdateTimeout>(this);
+		preinitialize(context);
 	}
 
 	virtual ~BaseServer() {

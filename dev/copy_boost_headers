@@ -42,12 +42,19 @@ ESSENTIALS = [
   "boost/core",
   "boost/bind",
   "boost/function",
+  "boost/ratio*",
+  "boost/integer*",
+  "boost/chrono*",
+  "boost/random*",
+  "boost/asio*",
   "boost/optional.hpp",
   "boost/optional",
   "boost/utility",
   "libs/thread/src",
   "libs/system/src",
   "libs/regex/src",
+  "libs/chrono/src",
+  "libs/random/src",
   "boost/preprocessor",
   "boost/parameter",
   "boost/date_time/gregorian/formatters_limited.hpp",
@@ -74,7 +81,9 @@ EXCLUDE = [
   "libs/regex/src/icu.cpp",
   "libs/regex/src/usinstances.cpp",
   "boost/atomic/detail/windows.hpp",
-  "boost/regex/icu.hpp"
+  "boost/regex/icu.hpp",
+  "boost/asio/detail/win*",
+  "boost/asio/detail/impl/win*"
 ]
 PROGRAM_SOURCE = %q{
   #include <boost/shared_ptr.hpp>
@@ -99,6 +108,8 @@ PROGRAM_SOURCE = %q{
   #include <boost/move/utility.hpp>
   #include <boost/atomic.hpp>
   #include <boost/typeof/typeof.hpp>
+  #include <boost/asio.hpp>
+  #include <boost/pointer_cast.hpp>
 }
 
 require 'fileutils'
@@ -168,6 +179,7 @@ def cleanup
   FileUtils.rm_rf("boost/smart_ptr/detail/sp_counted_base_w32.hpp")
   FileUtils.rm_rf("boost/smart_ptr/detail/atomic_count_win32.hpp")
   FileUtils.rm_rf("boost/config/platform/win32.hpp")
+  FileUtils.rm_rf("boost/chrono/detail/inlined/win")
   File.unlink("test.cpp") rescue nil
 end
 

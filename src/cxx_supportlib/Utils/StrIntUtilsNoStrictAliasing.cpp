@@ -26,6 +26,7 @@
 
 #include <boost/cstdint.hpp>
 #include <cstddef>
+#include <oxt/macros.hpp>
 #include <Utils/StrIntUtils.h>
 
 namespace Passenger {
@@ -37,6 +38,7 @@ using namespace std;
 // in order to gain more performance.
 
 #if defined(__x86_64__) || defined(__x86__)
+OXT_NO_SANITIZE("undefined")
 void
 convertLowerCase(const unsigned char * restrict data,
 	unsigned char * restrict output,

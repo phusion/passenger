@@ -1,6 +1,7 @@
 Release 5.1.13 (Not yet released)
 ---------------------------------
 
+ * [Nginx] Fixes the default for the `passenger_app_group_name` to start with the `passenger_app_root` rather than the document root (the end remains the same: `passenger_app_env`).
 
 
 Release 5.1.12

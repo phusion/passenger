@@ -98,13 +98,14 @@ Group::mergeOptions(const Options &other) {
 bool
 Group::prepareHookScriptOptions(HookScriptOptions &hsOptions, const char *name) {
 	SpawningKit::ConfigPtr config = getPool()->getSpawningKitConfig();
-	if (config->agentsOptions == NULL) {
+	LockGuard l(config->agentConfigSyncher);
+	if (config->agentConfig.isNull()) {
 		return false;
 	}
 
 	hsOptions.name = name;
 	string hookName = string("hook_") + name;
-	hsOptions.spec = config->agentsOptions->get(hookName, false);
+	hsOptions.spec = config->agentConfig.get(hookName, Json::Value()).asString();
 
 	return true;
 }

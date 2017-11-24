@@ -303,11 +303,13 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	stream << "  Message from application: " << appMessage << "\n";
 	P_ERROR(stream.str());
 
-	if (config->agentsOptions != NULL) {
+	ScopedLock l(config->agentConfigSyncher);
+	if (!config->agentConfig.isNull()) {
 		HookScriptOptions hOptions;
 		hOptions.name = "spawn_failed";
-		hOptions.spec = config->agentsOptions->get("hook_spawn_failed", false);
-		hOptions.agentsOptions = config->agentsOptions;
+		hOptions.spec = config->agentConfig.get("hook_spawn_failed", Json::Value()).asString();
+		hOptions.agentConfig = config->agentConfig;
+		l.unlock();
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_ROOT", options.appRoot));
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_GROUP_NAME", options.getAppGroupName()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_MESSAGE", e.what()));

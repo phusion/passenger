@@ -90,9 +90,20 @@ size_t modp_b64_encode(char* dest, const char* str, size_t len)
 	*p = '\0';
 	return (size_t)(p - (modp_uint8_t*)dest);
 }
+
 #if defined(__x86_64__) || defined(__x86__)
 /* INTEL & AMD */
 
+#if defined(__has_feature)
+	#if __has_feature(address_sanitizer)
+		#define MODP_NO_SANITIZE(args) __attribute__((no_sanitize(args)))
+	#endif
+#endif
+#ifndef MODP_NO_SANITIZE
+	#define MODP_NO_SANITIZE(args)
+#endif
+
+MODP_NO_SANITIZE("undefined")
 size_t modp_b64_decode(char* dest, const char* src, size_t len)
 {
 	size_t i;

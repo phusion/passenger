@@ -1,0 +1,1700 @@
+{
+   "Passenger::Core::AdminPanelConnector::Schema" : {
+      "authentication" : {
+         "secret" : true,
+         "type" : "object"
+      },
+      "close_timeout" : {
+         "default_value" : 10.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "connect_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "data_debug" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "instance_dir" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "integration_mode" : {
+         "default_value" : "standalone",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "log_prefix" : {
+         "type" : "string"
+      },
+      "ping_interval" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "ping_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "proxy_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "proxy_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "proxy_url" : {
+         "type" : "string"
+      },
+      "proxy_username" : {
+         "type" : "string"
+      },
+      "reconnect_timeout" : {
+         "default_value" : 5.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "ruby" : {
+         "default_value" : "ruby",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "standalone_engine" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "url" : {
+         "required" : true,
+         "type" : "string"
+      },
+      "web_server_module_version" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "web_server_version" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "websocketpp_debug_access" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "websocketpp_debug_error" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      }
+   },
+   "Passenger::Core::ApiServer::Schema" : {
+      "accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "authorizations" : {
+         "default_value" : "[FILTERED]",
+         "has_default_value" : "static",
+         "secret" : true,
+         "type" : "array"
+      },
+      "client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "instance_dir" : {
+         "type" : "string"
+      },
+      "min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "watchdog_fd_passing_password" : {
+         "secret" : true,
+         "type" : "string"
+      }
+   },
+   "Passenger::Core::ControllerSchema" : {
+      "accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "benchmark_mode" : {
+         "type" : "string"
+      },
+      "client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_abort_websockets_on_process_shutdown" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_app_file_descriptor_ulimit" : {
+         "type" : "unsigned integer"
+      },
+      "default_environment" : {
+         "default_value" : "production",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_force_max_concurrent_requests_per_process" : {
+         "default_value" : -1,
+         "has_default_value" : "static",
+         "type" : "integer"
+      },
+      "default_friendly_error_pages" : {
+         "default_value" : "auto",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_group" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "default_load_shell_envvars" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_max_preloader_idle_time" : {
+         "default_value" : 300,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_request_queue_size" : {
+         "default_value" : 100,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_requests" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_meteor_app_settings" : {
+         "type" : "string"
+      },
+      "default_min_instances" : {
+         "default_value" : 1,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_nodejs" : {
+         "default_value" : "node",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_python" : {
+         "default_value" : "python",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_ruby" : {
+         "default_value" : "ruby",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_server_name" : {
+         "required" : true,
+         "type" : "string"
+      },
+      "default_server_port" : {
+         "required" : true,
+         "type" : "unsigned integer"
+      },
+      "default_spawn_method" : {
+         "default_value" : "smart",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_sticky_sessions" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_sticky_sessions_cookie_name" : {
+         "default_value" : "_passenger_route",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_user" : {
+         "default_value" : "nobody",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "graceful_exit" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "integration_mode" : {
+         "default_value" : "standalone",
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "multi_app" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "response_buffer_high_watermark" : {
+         "default_value" : 134217728,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "server_software" : {
+         "default_value" : "Phusion_Passenger/5.1.12",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "show_version_in_header" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "stat_throttle_rate" : {
+         "default_value" : 10,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "thread_number" : {
+         "read_only" : true,
+         "required" : true,
+         "type" : "unsigned integer"
+      },
+      "turbocaching" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "user_switching" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "ust_router_address" : {
+         "type" : "string"
+      },
+      "ust_router_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "vary_turbocache_by_cookie" : {
+         "type" : "string"
+      }
+   },
+   "Passenger::Core::ControllerSingleAppModeSchema" : {
+      "app_root" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "app_type" : {
+         "read_only" : true,
+         "required" : true,
+         "type" : "string"
+      },
+      "startup_file" : {
+         "read_only" : true,
+         "required" : true,
+         "type" : "string"
+      }
+   },
+   "Passenger::Core::Schema" : {
+      "admin_panel_authentication" : {
+         "secret" : true,
+         "type" : "object"
+      },
+      "admin_panel_close_timeout" : {
+         "default_value" : 10.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_connect_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_data_debug" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "admin_panel_ping_interval" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_ping_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_proxy_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "admin_panel_proxy_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_proxy_url" : {
+         "type" : "string"
+      },
+      "admin_panel_proxy_username" : {
+         "type" : "string"
+      },
+      "admin_panel_reconnect_timeout" : {
+         "default_value" : 5.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_url" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "admin_panel_websocketpp_debug_access" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "admin_panel_websocketpp_debug_error" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "api_server_accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "api_server_addresses" : {
+         "default_value" : [],
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "array of strings"
+      },
+      "api_server_authorizations" : {
+         "default_value" : "[FILTERED]",
+         "has_default_value" : "static",
+         "secret" : true,
+         "type" : "array"
+      },
+      "api_server_client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "api_server_file_buffered_channel_auto_start_mover" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "api_server_file_buffered_channel_auto_truncate_file" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "api_server_file_buffered_channel_buffer_dir" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "api_server_file_buffered_channel_delay_in_file_mode_switching" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "api_server_file_buffered_channel_max_disk_chunk_read_size" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "api_server_file_buffered_channel_threshold" : {
+         "default_value" : 131072,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "api_server_mbuf_block_chunk_size" : {
+         "default_value" : 4096,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "api_server_min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "api_server_request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "api_server_start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "app_output_log_level" : {
+         "default_value" : "notice",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "benchmark_mode" : {
+         "type" : "string"
+      },
+      "controller_accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_addresses" : {
+         "default_value" : [ "tcp://127.0.0.1:3000" ],
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "array of strings"
+      },
+      "controller_client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_cpu_affine" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "controller_file_buffered_channel_auto_start_mover" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "controller_file_buffered_channel_auto_truncate_file" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "controller_file_buffered_channel_buffer_dir" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "controller_file_buffered_channel_delay_in_file_mode_switching" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_file_buffered_channel_max_disk_chunk_read_size" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_file_buffered_channel_threshold" : {
+         "default_value" : 131072,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_mbuf_block_chunk_size" : {
+         "default_value" : 4096,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "controller_min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_secure_headers_password" : {
+         "secret" : true,
+         "type" : "any"
+      },
+      "controller_socket_backlog" : {
+         "default_value" : 2048,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "controller_start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "controller_threads" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "default_abort_websockets_on_process_shutdown" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_app_file_descriptor_ulimit" : {
+         "type" : "unsigned integer"
+      },
+      "default_environment" : {
+         "default_value" : "production",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_force_max_concurrent_requests_per_process" : {
+         "default_value" : -1,
+         "has_default_value" : "static",
+         "type" : "integer"
+      },
+      "default_friendly_error_pages" : {
+         "default_value" : "auto",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_group" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "default_load_shell_envvars" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_max_preloader_idle_time" : {
+         "default_value" : 300,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_request_queue_size" : {
+         "default_value" : 100,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_requests" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_meteor_app_settings" : {
+         "type" : "string"
+      },
+      "default_min_instances" : {
+         "default_value" : 1,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_nodejs" : {
+         "default_value" : "node",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_python" : {
+         "default_value" : "python",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_ruby" : {
+         "default_value" : "ruby",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_server_name" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "default_server_port" : {
+         "has_default_value" : "dynamic",
+         "type" : "unsigned integer"
+      },
+      "default_spawn_method" : {
+         "default_value" : "smart",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_sticky_sessions" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_sticky_sessions_cookie_name" : {
+         "default_value" : "_passenger_route",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_user" : {
+         "default_value" : "nobody",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "file_descriptor_log_target" : {
+         "type" : "any"
+      },
+      "file_descriptor_ulimit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "graceful_exit" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "instance_dir" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "integration_mode" : {
+         "default_value" : "standalone",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "log_level" : {
+         "default_value" : "notice",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "log_target" : {
+         "default_value" : {
+            "stderr" : true
+         },
+         "has_default_value" : "static",
+         "type" : "any"
+      },
+      "max_pool_size" : {
+         "default_value" : 6,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "multi_app" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "passenger_root" : {
+         "read_only" : true,
+         "required" : true,
+         "type" : "string"
+      },
+      "pid_file" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "pool_idle_time" : {
+         "default_value" : 300,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "pool_selfchecks" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "prestart_urls" : {
+         "default_value" : [],
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "array of strings"
+      },
+      "response_buffer_high_watermark" : {
+         "default_value" : 134217728,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "security_update_checker_certificate_path" : {
+         "type" : "string"
+      },
+      "security_update_checker_disabled" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "security_update_checker_interval" : {
+         "default_value" : 86400,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "security_update_checker_proxy_url" : {
+         "type" : "string"
+      },
+      "security_update_checker_url" : {
+         "default_value" : "https://securitycheck.phusionpassenger.com/v1/check.json",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "server_software" : {
+         "default_value" : "Phusion_Passenger/5.1.12",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "show_version_in_header" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "single_app_mode_app_root" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_app_type" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_startup_file" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "standalone_engine" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "stat_throttle_rate" : {
+         "default_value" : 10,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "turbocaching" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "user_switching" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "ust_router_address" : {
+         "type" : "string"
+      },
+      "ust_router_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "vary_turbocache_by_cookie" : {
+         "type" : "string"
+      },
+      "watchdog_fd_passing_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "web_server_module_version" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "web_server_version" : {
+         "read_only" : true,
+         "type" : "string"
+      }
+   },
+   "Passenger::LoggingKit::Schema" : {
+      "app_output_log_level" : {
+         "default_value" : "notice",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "file_descriptor_log_target" : {
+         "type" : "any"
+      },
+      "level" : {
+         "default_value" : "notice",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "redirect_stderr" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "target" : {
+         "default_value" : {
+            "stderr" : true
+         },
+         "has_default_value" : "static",
+         "type" : "any"
+      }
+   },
+   "Passenger::SecurityUpdateChecker::Schema" : {
+      "certificate_path" : {
+         "type" : "string"
+      },
+      "disabled" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "interval" : {
+         "default_value" : 86400,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "proxy_url" : {
+         "type" : "string"
+      },
+      "server_identifier" : {
+         "required" : true,
+         "type" : "string"
+      },
+      "url" : {
+         "default_value" : "https://securitycheck.phusionpassenger.com/v1/check.json",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "web_server_version" : {
+         "type" : "string"
+      }
+   },
+   "Passenger::ServerKit::BaseServerSchema" : {
+      "accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      }
+   },
+   "Passenger::ServerKit::HttpServerSchema" : {
+      "accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      }
+   },
+   "Passenger::ServerKit::Schema" : {
+      "file_buffered_channel_auto_start_mover" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "file_buffered_channel_auto_truncate_file" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "file_buffered_channel_buffer_dir" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "file_buffered_channel_delay_in_file_mode_switching" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "file_buffered_channel_max_disk_chunk_read_size" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "file_buffered_channel_threshold" : {
+         "default_value" : 131072,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "mbuf_block_chunk_size" : {
+         "default_value" : 4096,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "secure_mode_password" : {
+         "secret" : true,
+         "type" : "string"
+      }
+   },
+   "Passenger::Watchdog::ApiServer::Schema" : {
+      "accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "authorizations" : {
+         "default_value" : "[FILTERED]",
+         "has_default_value" : "static",
+         "secret" : true,
+         "type" : "array"
+      },
+      "client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "fd_passing_password" : {
+         "required" : true,
+         "secret" : true,
+         "type" : "string"
+      },
+      "min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      }
+   },
+   "Passenger::Watchdog::Schema" : {
+      "admin_panel_authentication" : {
+         "secret" : true,
+         "type" : "object"
+      },
+      "admin_panel_close_timeout" : {
+         "default_value" : 10.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_connect_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_data_debug" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "admin_panel_ping_interval" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_ping_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_proxy_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "admin_panel_proxy_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_proxy_url" : {
+         "type" : "string"
+      },
+      "admin_panel_proxy_username" : {
+         "type" : "string"
+      },
+      "admin_panel_reconnect_timeout" : {
+         "default_value" : 5.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "admin_panel_url" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "admin_panel_websocketpp_debug_access" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "admin_panel_websocketpp_debug_error" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "app_output_log_level" : {
+         "default_value" : "notice",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "benchmark_mode" : {
+         "type" : "string"
+      },
+      "controller_accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_addresses" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "array of strings"
+      },
+      "controller_client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_cpu_affine" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "controller_file_buffered_channel_auto_start_mover" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "controller_file_buffered_channel_auto_truncate_file" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "controller_file_buffered_channel_buffer_dir" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "controller_file_buffered_channel_delay_in_file_mode_switching" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_file_buffered_channel_max_disk_chunk_read_size" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_file_buffered_channel_threshold" : {
+         "default_value" : 131072,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_mbuf_block_chunk_size" : {
+         "default_value" : 4096,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "controller_min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_pid_file" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "controller_request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "controller_secure_headers_password" : {
+         "has_default_value" : "dynamic",
+         "secret" : true,
+         "type" : "string"
+      },
+      "controller_socket_backlog" : {
+         "default_value" : 2048,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "controller_start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "controller_threads" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "core_api_server_accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "core_api_server_addresses" : {
+         "default_value" : [],
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "array of strings"
+      },
+      "core_api_server_authorizations" : {
+         "default_value" : "[FILTERED]",
+         "has_default_value" : "static",
+         "secret" : true,
+         "type" : "array"
+      },
+      "core_api_server_client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "core_api_server_file_buffered_channel_auto_start_mover" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "core_api_server_file_buffered_channel_auto_truncate_file" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "core_api_server_file_buffered_channel_buffer_dir" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "core_api_server_file_buffered_channel_delay_in_file_mode_switching" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "core_api_server_file_buffered_channel_max_disk_chunk_read_size" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "core_api_server_file_buffered_channel_threshold" : {
+         "default_value" : 131072,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "core_api_server_mbuf_block_chunk_size" : {
+         "default_value" : 4096,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "core_api_server_min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "core_api_server_request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "core_api_server_start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "core_file_descriptor_ulimit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "core_pid_file" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "daemonize" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_abort_websockets_on_process_shutdown" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_app_file_descriptor_ulimit" : {
+         "type" : "unsigned integer"
+      },
+      "default_environment" : {
+         "default_value" : "production",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_force_max_concurrent_requests_per_process" : {
+         "default_value" : -1,
+         "has_default_value" : "static",
+         "type" : "integer"
+      },
+      "default_friendly_error_pages" : {
+         "default_value" : "auto",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_group" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "default_load_shell_envvars" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_max_preloader_idle_time" : {
+         "default_value" : 300,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_request_queue_size" : {
+         "default_value" : 100,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_max_requests" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_meteor_app_settings" : {
+         "type" : "string"
+      },
+      "default_min_instances" : {
+         "default_value" : 1,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "default_nodejs" : {
+         "default_value" : "node",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_python" : {
+         "default_value" : "python",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_ruby" : {
+         "default_value" : "ruby",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_server_name" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "default_server_port" : {
+         "has_default_value" : "dynamic",
+         "type" : "unsigned integer"
+      },
+      "default_spawn_method" : {
+         "default_value" : "smart",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_sticky_sessions" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "default_sticky_sessions_cookie_name" : {
+         "default_value" : "_passenger_route",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "default_user" : {
+         "default_value" : "nobody",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "file_descriptor_log_target" : {
+         "type" : "any"
+      },
+      "graceful_exit" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "hook_after_watchdog_initialization" : {
+         "type" : "string"
+      },
+      "hook_after_watchdog_shutdown" : {
+         "type" : "string"
+      },
+      "hook_before_watchdog_initialization" : {
+         "type" : "string"
+      },
+      "hook_before_watchdog_shutdown" : {
+         "type" : "string"
+      },
+      "instance_registry_dir" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "integration_mode" : {
+         "default_value" : "standalone",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "log_level" : {
+         "default_value" : "notice",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "log_target" : {
+         "default_value" : {
+            "stderr" : true
+         },
+         "has_default_value" : "static",
+         "type" : "any"
+      },
+      "max_pool_size" : {
+         "default_value" : 6,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "multi_app" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "passenger_root" : {
+         "read_only" : true,
+         "required" : true,
+         "type" : "string"
+      },
+      "pidfiles_to_delete_on_exit" : {
+         "default_value" : [],
+         "has_default_value" : "static",
+         "type" : "array of strings"
+      },
+      "pool_idle_time" : {
+         "default_value" : 300,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "pool_selfchecks" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "prestart_urls" : {
+         "default_value" : [],
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "array of strings"
+      },
+      "response_buffer_high_watermark" : {
+         "default_value" : 134217728,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "security_update_checker_certificate_path" : {
+         "type" : "string"
+      },
+      "security_update_checker_disabled" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "security_update_checker_interval" : {
+         "default_value" : 86400,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "security_update_checker_proxy_url" : {
+         "type" : "string"
+      },
+      "security_update_checker_url" : {
+         "default_value" : "https://securitycheck.phusionpassenger.com/v1/check.json",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "server_software" : {
+         "default_value" : "Phusion_Passenger/5.1.12",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "setsid" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "show_version_in_header" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "single_app_mode_app_root" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_app_type" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_startup_file" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "standalone_engine" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "startup_report_file" : {
+         "type" : "string"
+      },
+      "stat_throttle_rate" : {
+         "default_value" : 10,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "turbocaching" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "boolean"
+      },
+      "user" : {
+         "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "user_switching" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "ust_router_address" : {
+         "type" : "string"
+      },
+      "ust_router_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "vary_turbocache_by_cookie" : {
+         "type" : "string"
+      },
+      "watchdog_api_server_accept_burst_count" : {
+         "default_value" : 32,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_addresses" : {
+         "default_value" : [],
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "array of strings"
+      },
+      "watchdog_api_server_authorizations" : {
+         "default_value" : "[FILTERED]",
+         "has_default_value" : "static",
+         "secret" : true,
+         "type" : "array"
+      },
+      "watchdog_api_server_client_freelist_limit" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_file_buffered_channel_auto_start_mover" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "watchdog_api_server_file_buffered_channel_auto_truncate_file" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "watchdog_api_server_file_buffered_channel_buffer_dir" : {
+         "has_default_value" : "dynamic",
+         "type" : "string"
+      },
+      "watchdog_api_server_file_buffered_channel_delay_in_file_mode_switching" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_file_buffered_channel_max_disk_chunk_read_size" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_file_buffered_channel_threshold" : {
+         "default_value" : 131072,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_mbuf_block_chunk_size" : {
+         "default_value" : 4096,
+         "has_default_value" : "static",
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_min_spare_clients" : {
+         "default_value" : 0,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_request_freelist_limit" : {
+         "default_value" : 1024,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "watchdog_api_server_start_reading_after_accept" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "watchdog_pid_file" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "watchdog_pid_file_autodelete" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "web_server_module_version" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "web_server_version" : {
+         "read_only" : true,
+         "type" : "string"
+      }
+   },
+   "Passenger::WebSocketCommandReverseServer::Schema" : {
+      "authentication" : {
+         "secret" : true,
+         "type" : "object"
+      },
+      "close_timeout" : {
+         "default_value" : 10.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "connect_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "data_debug" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "log_prefix" : {
+         "type" : "string"
+      },
+      "ping_interval" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "ping_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "proxy_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "proxy_timeout" : {
+         "default_value" : 30.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "proxy_url" : {
+         "type" : "string"
+      },
+      "proxy_username" : {
+         "type" : "string"
+      },
+      "reconnect_timeout" : {
+         "default_value" : 5.0,
+         "has_default_value" : "static",
+         "type" : "float"
+      },
+      "url" : {
+         "required" : true,
+         "type" : "string"
+      },
+      "websocketpp_debug_access" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "websocketpp_debug_error" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      }
+   }
+}
+

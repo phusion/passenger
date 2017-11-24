@@ -35,82 +35,7 @@ using namespace std;
 using namespace boost;
 using namespace oxt;
 
-
-PsgVariantMap *
-psg_variant_map_new() {
-	return (PsgVariantMap *) new Passenger::VariantMap();
-}
-
-char *
-psg_variant_map_get_optional(PsgVariantMap *m,
-	const char *name)
-{
-	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
-	string result = vm->get(name, false, "");
-	if (result.empty()) {
-		return (char *) NULL;
-	}
-	return strdup(result.c_str());
-}
-
-void
-psg_variant_map_set(PsgVariantMap *m,
-	const char *name,
-	const char *value,
-	unsigned int value_len)
-{
-	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
-	vm->set(name, string(value, value_len));
-}
-
-void
-psg_variant_map_set2(PsgVariantMap *m,
-	const char *name,
-	unsigned int name_len,
-	const char *value,
-	unsigned int value_len)
-{
-	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
-	vm->set(string(name, name_len), string(value, value_len));
-}
-
-void
-psg_variant_map_set_int(PsgVariantMap *m,
-	const char *name,
-	int value)
-{
-	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
-	vm->setInt(name, value);
-}
-
-void
-psg_variant_map_set_bool(PsgVariantMap *m,
-	const char *name,
-	int value)
-{
-	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
-	vm->setBool(name, value);
-}
-
-void
-psg_variant_map_set_strset(PsgVariantMap *m,
-	const char *name,
-	const char **strs,
-	unsigned int count)
-{
-	Passenger::VariantMap *vm = (Passenger::VariantMap *) m;
-	std::set<string> the_set;
-
-	for (unsigned int i = 0; i < count; i++) {
-		the_set.insert(strs[i]);
-	}
-	vm->setStrSet(name, the_set);
-}
-
-void
-psg_variant_map_free(PsgVariantMap *m) {
-	delete (Passenger::VariantMap *) m;
-}
+extern "C" {
 
 
 PsgWatchdogLauncher *
@@ -121,7 +46,7 @@ psg_watchdog_launcher_new(PsgIntegrationMode mode, char **error_message) {
 int
 psg_watchdog_launcher_start(PsgWatchdogLauncher *l,
 	const char *passengerRoot,
-	PsgVariantMap *extraParams,
+	PsgJsonValue *extraConfig,
 	const PsgAfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage)
@@ -132,10 +57,10 @@ psg_watchdog_launcher_start(PsgWatchdogLauncher *l,
 		boost::function<void ()> afterForkFunctionObject;
 
 		if (afterFork != NULL) {
-			afterForkFunctionObject = boost::bind(afterFork, callbackArgument, extraParams);
+			afterForkFunctionObject = boost::bind(afterFork, callbackArgument, extraConfig);
 		}
 		launcher->start(passengerRoot,
-			*((Passenger::VariantMap *) extraParams),
+			*static_cast<Passenger::Json::Value *>(extraConfig),
 			afterForkFunctionObject);
 		return 1;
 	} catch (const Passenger::SystemException &e) {
@@ -193,3 +118,6 @@ psg_watchdog_launcher_free(PsgWatchdogLauncher *l) {
 	Passenger::WatchdogLauncher *launcher = (Passenger::WatchdogLauncher *) l;
 	delete launcher;
 }
+
+
+} // extern "C"

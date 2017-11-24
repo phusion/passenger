@@ -28,19 +28,24 @@ namespace tut {
 
 			MyController(ServerKit::Context *context,
 				const Core::ControllerSchema &schema,
-				const Json::Value &initialConfig)
-				: Core::Controller(context, schema, initialConfig)
+				const Json::Value &initialConfig,
+				const Core::ControllerSingleAppModeSchema &singleAppModeSchema,
+				const Json::Value &singleAppModeConfig)
+				: Core::Controller(context, schema, initialConfig, ConfigKit::DummyTranslator(),
+					&singleAppModeSchema, &singleAppModeConfig, ConfigKit::DummyTranslator())
 				{ }
 		};
 
 		BackgroundEventLoop bg;
+		ServerKit::Schema skSchema;
 		ServerKit::Context context;
 		Core::ControllerSchema schema;
+		Core::ControllerSingleAppModeSchema singleAppModeSchema;
 		MyController *controller;
 		SpawningKit::ConfigPtr spawningKitConfig;
 		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr appPool;
-		Json::Value config;
+		Json::Value config, singleAppModeConfig;
 		int serverSocket;
 		TestSession testSession;
 		FileDescriptor clientConnection;
@@ -49,20 +54,25 @@ namespace tut {
 
 		Core_ControllerTest()
 			: bg(false, true),
-			  context(bg.safe, bg.libuv_loop)
+			  context(skSchema)
 		{
 			config["thread_number"] = 1;
 			config["multi_app"] = false;
-			config["app_root"] = "stub/rack";
-			config["app_type"] = "rack";
-			config["startup_file"] = "none";
 			config["default_server_name"] = "localhost";
-			config["default_server_port"] = "80";
+			config["default_server_port"] = 80;
 			config["user_switching"] = false;
+
+			singleAppModeConfig["app_root"] = "stub/rack";
+			singleAppModeConfig["app_type"] = "rack";
+			singleAppModeConfig["startup_file"] = "none";
 
 			LoggingKit::setLevel(LoggingKit::WARN);
 			controller = NULL;
 			serverSocket = createUnixServer("tmp.server");
+
+			context.libev = bg.safe;
+			context.libuv = bg.libuv_loop;
+			context.initialize();
 
 			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
 			spawningKitConfig->resourceLocator = resourceLocator;
@@ -101,7 +111,8 @@ namespace tut {
 		}
 
 		void init() {
-			controller = new MyController(&context, schema, config);
+			controller = new MyController(&context, schema, config,
+				singleAppModeSchema, singleAppModeConfig);
 			controller->resourceLocator = resourceLocator;
 			controller->appPool = appPool;
 			controller->initialize();

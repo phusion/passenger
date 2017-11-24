@@ -74,6 +74,47 @@ public:
 			  inspectFilter(_inspectFilter)
 			{ }
 
+		Json::Value typecastValue(const Json::Value &val) const {
+			if (val.isNull()) {
+				return Json::nullValue;
+			}
+
+			switch (type) {
+			case STRING_TYPE:
+				if (val.isString()) {
+					return val;
+				} else {
+					return val.asString();
+				}
+			case INT_TYPE:
+				if (val.isInt()) {
+					return val;
+				} else {
+					return val.asInt();
+				}
+			case UINT_TYPE:
+				if (val.isUInt()) {
+					return val;
+				} else {
+					return val.asUInt();
+				}
+			case FLOAT_TYPE:
+				if (val.isDouble()) {
+					return val;
+				} else {
+					return val.asDouble();
+				}
+			case BOOL_TYPE:
+				if (val.isBool()) {
+					return val;
+				} else {
+					return val.asBool();
+				}
+			default:
+				return val;
+			}
+		}
+
 		Json::Value inspect() const {
 			Json::Value result(Json::objectValue);
 			inspect(result);
@@ -131,18 +172,15 @@ private:
 		return v;
 	}
 
-	template<typename Translator>
 	static Json::Value getValueFromSubSchema(
 		const Store &storeWithMainSchema,
 		const Schema *subschema, const Translator *translator,
 		const HashedStaticString &key);
 
-	template<typename Translator>
 	static void validateSubSchema(const Store &store, vector<Error> &errors,
 		const Schema *subschema, const Translator *translator,
 		const Validator &origValidator);
 
-	template<typename Translator>
 	static Json::Value normalizeSubSchema(const Json::Value &effectiveValues,
 		const Schema *mainSchema, const Schema *subschema,
 		const Translator *translator, const Normalizer &origNormalizer);
@@ -194,11 +232,6 @@ public:
 		return EntryBuilder(entries.insert(key, entry)->value);
 	}
 
-	void addSubSchema(const Schema &subschema) {
-		addSubSchema(subschema, DummyTranslator());
-	}
-
-	template<typename Translator>
 	void addSubSchema(const Schema &subschema, const Translator &translator) {
 		assert(!finalized);
 		assert(subschema.finalized);
@@ -212,7 +245,7 @@ public:
 			if (entry.defaultValueGetter) {
 				if (entry.flags & _DYNAMIC_DEFAULT_VALUE) {
 					valueGetter = boost::bind<Json::Value>(
-						getValueFromSubSchema<Translator>,
+						getValueFromSubSchema,
 						boost::placeholders::_1, &subschema, &translator,
 						key);
 				} else {
@@ -229,7 +262,7 @@ public:
 		boost::container::vector<Validator>::const_iterator v_it, v_end
 			= subschema.getValidators().end();
 		for (v_it = subschema.getValidators().begin(); v_it != v_end; v_it++) {
-			validators.push_back(boost::bind(validateSubSchema<Translator>,
+			validators.push_back(boost::bind(validateSubSchema,
 				boost::placeholders::_1, boost::placeholders::_2,
 				&subschema, &translator, *v_it));
 		}
@@ -237,9 +270,27 @@ public:
 		boost::container::vector<Normalizer>::const_iterator n_it, n_end
 			= subschema.getNormalizers().end();
 		for (n_it = subschema.getNormalizers().begin(); n_it != n_end; n_it++) {
-			normalizers.push_back(boost::bind(normalizeSubSchema<Translator>,
+			normalizers.push_back(boost::bind(normalizeSubSchema,
 				boost::placeholders::_1, this, &subschema, &translator, *n_it));
 		}
+	}
+
+	bool erase(const HashedStaticString &key) {
+		return entries.erase(key);
+	}
+
+	void override(const HashedStaticString &key, Type type, unsigned int flags,
+		const Json::Value &defaultValue = Json::Value(Json::nullValue))
+	{
+		erase(key);
+		add(key, type, flags, defaultValue);
+	}
+
+	void overrideWithDynamicDefault(const HashedStaticString &key, Type type, unsigned int flags,
+		const ValueGetter &defaultValueGetter)
+	{
+		erase(key);
+		addWithDynamicDefault(key, type, flags, defaultValueGetter);
 	}
 
 	void addValidator(const Validator &validator) {

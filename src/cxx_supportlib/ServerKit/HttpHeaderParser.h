@@ -71,8 +71,8 @@ private:
 				if (header->key.size == 2) {
 					// Security password. Check whether it hasn't been
 					// given before and whether it is correct.
-					if (ctx->secureModePassword.empty()
-					 || psg_lstr_cmp(&header->val, ctx->secureModePassword))
+					if (ctx->config.secureModePassword.empty()
+					 || psg_lstr_cmp(&header->val, ctx->config.secureModePassword))
 					{
 						state->secureMode = true;
 						return true;

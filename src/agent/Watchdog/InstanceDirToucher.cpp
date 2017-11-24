@@ -110,7 +110,7 @@ private:
 
 	void
 	threadMain() {
-		string originalOomScore = agentsOptions->get("original_oom_score", false);
+		string originalOomScore = wo->extraConfigToPassToSubAgents["oom_score"].asString();
 		string workingDir = wo->instanceDir->getPath().c_str();
 
 		while (!boost::this_thread::interruption_requested()) {

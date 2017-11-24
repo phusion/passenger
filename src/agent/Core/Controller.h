@@ -109,7 +109,6 @@ private:
 	typedef ServerKit::FdSourceChannel FdSourceChannel;
 	typedef ServerKit::FileBufferedChannel FileBufferedChannel;
 	typedef ServerKit::FileBufferedFdSinkChannel FileBufferedFdSinkChannel;
-	typedef ControllerConfigChangeRequest ConfigChangeRequest;
 
 	// If you change this value, make sure that Request::sessionCheckoutTry
 	// has enough bits.
@@ -145,11 +144,17 @@ private:
 	friend class ResponseCache<Request>;
 	struct ev_check checkWatcher;
 	TurboCaching<Request> turboCaching;
+	ConfigKit::Store *singleAppModeConfig;
 
 	#ifdef DEBUG_CC_EVENT_LOOP_BLOCKING
 		struct ev_prepare prepareWatcher;
 		ev_tstamp timeBeforeBlocking;
 	#endif
+
+
+	/****** Initialization and shutdown ******/
+
+	void preinitialize();
 
 
 	/****** Stage: initialize request ******/
@@ -360,6 +365,8 @@ protected:
 
 
 public:
+	typedef ControllerConfigChangeRequest ConfigChangeRequest;
+
 	// Dependencies
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
@@ -368,8 +375,33 @@ public:
 
 	/****** Initialization and shutdown ******/
 
-	Controller(ServerKit::Context *context, const ControllerSchema &schema,
-		const Json::Value &initialConfig);
+	Controller(ServerKit::Context *context,
+		const ControllerSchema &schema,
+		const Json::Value &initialConfig,
+		const ConfigKit::Translator &translator1 = ConfigKit::DummyTranslator(),
+		const ControllerSingleAppModeSchema *singleAppModeSchema = NULL,
+		const Json::Value *_singleAppModeConfig = NULL,
+		const ConfigKit::Translator &translator2 = ConfigKit::DummyTranslator()
+		)
+		: ParentClass(context, schema, initialConfig, translator1),
+
+		  mainConfig(config),
+		  requestConfig(new ControllerRequestConfig(config)),
+		  poolOptionsCache(4),
+
+		  turboCaching(),
+		  singleAppModeConfig(NULL),
+		  resourceLocator(NULL)
+		  /**************************/
+	{
+		if (mainConfig.singleAppMode) {
+			singleAppModeConfig = new ConfigKit::Store(*singleAppModeSchema,
+				*_singleAppModeConfig, translator2);
+		}
+
+		preinitialize();
+	}
+
 	virtual ~Controller();
 	virtual void initialize();
 

@@ -51,7 +51,6 @@ let(:agent_cflags) do
   result << '-O' if OPTIMIZE
   result << '-DUSE_SELINUX' if USE_SELINUX
   result << '-flto' if LTO
-  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
   result.join(' ')
 end
 
@@ -60,7 +59,6 @@ let(:agent_ldflags) do
   result = []
   result << '-O' if OPTIMIZE
   result << '-flto' if LTO
-  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
   result << '-lselinux' if USE_SELINUX
   # Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).
   result << PlatformInfo.export_dynamic_flags
@@ -83,6 +81,7 @@ AGENT_OBJECTS.each_pair do |object, source|
         agent_cflags,
         libev_cflags,
         libuv_cflags,
+        websocketpp_cflags,
         PlatformInfo.curl_flags,
         PlatformInfo.zlib_flags
       ]
@@ -111,6 +110,7 @@ file(AGENT_TARGET => dependencies) do
     :flags => [
       libev_libs,
       libuv_libs,
+      websocketpp_libs,
       PlatformInfo.curl_libs,
       PlatformInfo.zlib_libs,
       PlatformInfo.crypto_libs,

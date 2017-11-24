@@ -1,5 +1,7 @@
 #include <TestSupport.h>
 #include <ConfigKit/ConfigKit.h>
+#include <ConfigKit/TableTranslator.h>
+#include <ConfigKit/DummyTranslator.h>
 
 using namespace Passenger;
 using namespace std;
@@ -9,6 +11,7 @@ namespace tut {
 		ConfigKit::Schema schema;
 		ConfigKit::Schema subschema;
 		ConfigKit::TableTranslator translator;
+		ConfigKit::DummyTranslator dummyTranslator;
 		Json::Value doc;
 		vector<ConfigKit::Error> errors;
 	};
@@ -22,7 +25,7 @@ namespace tut {
 		subschema.finalize();
 
 		schema.add("name", ConfigKit::STRING_TYPE, ConfigKit::OPTIONAL);
-		schema.addSubSchema(subschema);
+		schema.addSubSchema(subschema, dummyTranslator);
 		schema.finalize();
 
 		Json::Value desc = schema.inspect();
@@ -99,7 +102,7 @@ namespace tut {
 		subschema.addValidator(validateSubschema);
 		subschema.finalize();
 
-		schema.addSubSchema(subschema);
+		schema.addSubSchema(subschema, dummyTranslator);
 		schema.finalize();
 
 		ConfigKit::Store config(schema);

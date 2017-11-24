@@ -39,13 +39,13 @@ using namespace boost;
 
 
 Pool::Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
-	const VariantMap *agentsOptions)
+	const Json::Value &agentConfig)
 	: abortLongRunningConnectionsCallback(NULL)
 {
 	context.setSpawningKitFactory(spawningKitFactory);
 	context.finalize();
 
-	this->agentsOptions = agentsOptions;
+	this->agentConfig = agentConfig;
 
 	try {
 		systemMetricsCollector.collect(systemMetrics);

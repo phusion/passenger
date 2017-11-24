@@ -49,6 +49,7 @@
 #include <sys/types.h>
 #include <MemoryKit/palloc.h>
 #include <LoggingKit/LoggingKit.h>
+#include <ConfigKit/ConfigKit.h>
 #include <Exceptions.h>
 #include <Hooks.h>
 #include <Utils/Lock.h>
@@ -126,6 +127,11 @@ public:
 			  verbose(options.getBool("verbose", false, false))
 			{ }
 
+		InspectOptions(const Json::Value &options)
+			: colorize(options.get("colorize", false).asBool()),
+			  verbose(options.get("verbose", false).asBool())
+			{ }
+
 		static InspectOptions makeAuthorized() {
 			InspectOptions options;
 			options.apiKey = ApiKey::makeSuper();
@@ -146,6 +152,48 @@ public:
 
 		static ToXmlOptions makeAuthorized() {
 			ToXmlOptions options;
+			options.apiKey = ApiKey::makeSuper();
+			return options;
+		}
+	};
+
+	struct ToJsonOptions: public AuthenticationOptions {
+		bool hasApplicationIdsFilter;
+		StringKeyTable<bool> applicationIdsFilter;
+
+		ToJsonOptions()
+			: hasApplicationIdsFilter(false),
+			  applicationIdsFilter(0, 0)
+			{ }
+
+		void set(const Json::Value &_options) {
+			ConfigKit::Schema schema = createSchema();
+			ConfigKit::Store options(schema, _options);
+
+			if (!options["application_ids"].isNull()) {
+				hasApplicationIdsFilter = true;
+				applicationIdsFilter = StringKeyTable<bool>();
+
+				const Json::Value subdoc = options["application_ids"];
+				Json::Value::const_iterator it, end = subdoc.end();
+				for (it = subdoc.begin(); it != end; it++) {
+					applicationIdsFilter.insert(it->asString(), true);
+				}
+			}
+		}
+
+		static ConfigKit::Schema createSchema() {
+			using namespace ConfigKit;
+			ConfigKit::Schema schema;
+
+			schema.add("application_ids", STRING_ARRAY_TYPE, OPTIONAL);
+
+			schema.finalize();
+			return schema;
+		}
+
+		static ToJsonOptions makeAuthorized() {
+			ToJsonOptions options;
 			options.apiKey = ApiKey::makeSuper();
 			return options;
 		}
@@ -225,7 +273,7 @@ public:
 	 */
 	vector<GetWaiter> getWaitlist;
 
-	const VariantMap *agentsOptions;
+	Json::Value agentConfig;
 
 // Actually private, but marked public so that unit tests can access the fields.
 public:
@@ -381,6 +429,12 @@ public:
 
 	/****** State inspection ******/
 
+	static Json::Value makeSingleValueJsonConfigFormat(const Json::Value &v,
+		const Json::Value &defaultValue = Json::Value());
+	static Json::Value makeSingleStrValueJsonConfigFormat(const StaticString &val);
+	static Json::Value makeSingleStrValueJsonConfigFormat(const StaticString &val,
+		const StaticString &defaultValue);
+	static Json::Value makeSingleNonEmptyStrValueJsonConfigFormat(const StaticString &val);
 	unsigned int capacityUsedUnlocked() const;
 	bool atFullCapacityUnlocked() const;
 	void inspectProcessList(const InspectOptions &options, stringstream &result,
@@ -394,7 +448,7 @@ public:
 	/****** Initialization and shutdown ******/
 
 	Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
-		const VariantMap *agentsOptions = NULL);
+		const Json::Value &agentConfig = Json::Value());
 	~Pool();
 	void initialize();
 	void initDebugging();
@@ -445,6 +499,8 @@ public:
 		bool lock = true) const;
 	string toXml(const ToXmlOptions &options = ToXmlOptions::makeAuthorized(),
 		bool lock = true) const;
+	Json::Value inspectPropertiesInAdminPanelFormat(const ToJsonOptions &options = ToJsonOptions::makeAuthorized()) const;
+	Json::Value inspectConfigInAdminPanelFormat(const ToJsonOptions &options = ToJsonOptions::makeAuthorized()) const;
 
 
 	/****** Miscellaneous ******/
@@ -454,6 +510,7 @@ public:
 	void setMax(unsigned int max);
 	void setMaxIdleTime(unsigned long long value);
 	void enableSelfChecking(bool enabled);
+	void setAgentConfig(const Json::Value &agentConfig);
 	bool isSpawning(bool lock = true) const;
 	bool authorizeByApiKey(const ApiKey &key, bool lock = true) const;
 	bool authorizeByUid(uid_t uid, bool lock = true) const;

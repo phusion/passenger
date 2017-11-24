@@ -103,6 +103,7 @@ module PhusionPassenger
       'src/ruby_supportlib/phusion_passenger/vendor/*/hacking/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/spec/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails/rails_test_apps/**/*',
+      'src/cxx_supportlib/vendor-copy/*/.*',
       'packaging/**/*',
       'test/**/*'
     ]

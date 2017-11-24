@@ -50,6 +50,7 @@ else
   require_build_system_file 'ruby_extension'
   require_build_system_file 'common_library'
   require_build_system_file 'agent'
+  require_build_system_file 'schema_printer'
   require_build_system_file 'apache2'
   require_build_system_file 'nginx'
   require_build_system_file 'packaging'

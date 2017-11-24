@@ -79,7 +79,8 @@ private:
 	bool shuttingDown;
 
 public:
-	Context(const Json::Value &initialConfig = Json::Value());
+	Context(const Json::Value &initialConfig = Json::Value(),
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator());
 	~Context();
 	ConfigKit::Store getConfig() const;
 
@@ -88,6 +89,7 @@ public:
 		LoggingKit::ConfigChangeRequest &req);
 	void commitConfigChange(LoggingKit::ConfigChangeRequest &req)
 		BOOST_NOEXCEPT_OR_NOTHROW;
+	Json::Value inspectConfig() const;
 
 	OXT_FORCE_INLINE
 	const ConfigRealization *getConfigRealization() const {
@@ -107,7 +109,8 @@ private:
 };
 
 
-void initialize(const Json::Value &initialConfig);
+void initialize(const Json::Value &initialConfig = Json::Value(),
+	const ConfigKit::Translator &translator = ConfigKit::DummyTranslator());
 
 
 } // namespace LoggingKit
