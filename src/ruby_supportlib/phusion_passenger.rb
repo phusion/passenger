@@ -31,18 +31,18 @@ module PhusionPassenger
 
   PACKAGE_NAME = 'passenger'
   # Run 'rake src/cxx_supportlib/Constants.h configkit_schemas_inline_comments' after changing this number.
-  VERSION_STRING = '5.1.12'
+  VERSION_STRING = '5.1.13'
 
-  PREFERRED_NGINX_VERSION = '1.12.1'
-  NGINX_SHA256_CHECKSUM = '8793bf426485a30f91021b6b945a9fd8a84d87d17b566562c3797aba8fac76fb'
+  PREFERRED_NGINX_VERSION = '1.12.2'
+  NGINX_SHA256_CHECKSUM = '305f379da1d5fb5aefa79e45c829852ca6983c7cd2a79328f8e084a324cf0416'
 
   # Packaging may be locked to an older version due to the specific module configuration being
   # incompatible with the version we prefer (latest stable).
-  PACKAGING_PREFERRED_NGINX_VERSION = '1.12.1'
-  PACKAGING_NGINX_SHA256_CHECKSUM = '8793bf426485a30f91021b6b945a9fd8a84d87d17b566562c3797aba8fac76fb'
+  PACKAGING_PREFERRED_NGINX_VERSION = '1.12.2'
+  PACKAGING_NGINX_SHA256_CHECKSUM = '305f379da1d5fb5aefa79e45c829852ca6983c7cd2a79328f8e084a324cf0416'
 
-  PREFERRED_PCRE_VERSION  = '8.39'
-  PCRE_SHA256_CHECKSUM = 'ccdf7e788769838f8285b3ee672ed573358202305ee361cfec7a4a4fb005bbc7'
+  PREFERRED_PCRE_VERSION  = '8.41'
+  PCRE_SHA256_CHECKSUM = '244838e1f1d14f7e2fa7681b857b3a8566b74215f28133f14a8f5e59241b682c'
 
   STANDALONE_INTERFACE_VERSION  = 1
 

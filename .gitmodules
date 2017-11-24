@@ -1,18 +1,18 @@
 [submodule "packaging/rpm"]
 	path = packaging/rpm
-	url = https://github.com/phusion/passenger_rpm_automation.git
+	url = git@github.com:phusion/passenger_rpm_automation.git
 [submodule "packaging/debian"]
 	path = packaging/debian
-	url = https://github.com/phusion/passenger_apt_automation.git
+	url = git@github.com:phusion/passenger_apt_automation.git
 [submodule "src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core"]
 	path = src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_core
-	url = https://github.com/phusion/union_station_hooks_core.git
+	url = git@github.com:phusion/union_station_hooks_core.git
 [submodule "src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails"]
 	path = src/ruby_supportlib/phusion_passenger/vendor/union_station_hooks_rails
-	url = https://github.com/phusion/union_station_hooks_rails.git
+	url = git@github.com:phusion/union_station_hooks_rails.git
 [submodule "build/support/vendor/cxxcodebuilder"]
 	path = build/support/vendor/cxxcodebuilder
-	url = https://github.com/phusion/cxxcodebuilder.git
+	url = git@github.com:phusion/cxxcodebuilder.git
 [submodule "packaging/binaries"]
 	path = packaging/binaries
-	url = https://github.com/phusion/passenger_binary_build_automation.git
+	url = git@github.com:phusion/passenger_binary_build_automation.git
