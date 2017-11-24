@@ -283,10 +283,12 @@ private:
 		if (!subconfig.isMember(key) || subconfig[key].isNull()) {
 			return;
 		}
-		if (subconfig[key].isMember("stderr")) {
-			subconfig[key] = "/dev/stderr";
-		} else {
+		if (subconfig[key].isMember("path")) {
 			subconfig[key] = subconfig[key]["path"];
+		} else {
+			assert(subconfig[key].isMember("stderr"));
+			assert(subconfig[key]["stderr"].asBool());
+			subconfig[key] = "/dev/stderr";
 		}
 	}
 
