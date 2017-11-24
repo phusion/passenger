@@ -361,10 +361,10 @@ readCleanupPids(const WorkingObjectsPtr &wo) {
 				buf[ret] = '\0';
 				result.push_back(atoi(buf));
 			} else {
-				P_WARN("Cannot read cleanup PID file " << filename);
+				P_WARN("Cannot read cleanup PID file " << relative(filename).c_str() << " (" << filename << ")");
 			}
 		} else {
-			P_WARN("Cannot open cleanup PID file " << filename);
+			P_WARN("Cannot open cleanup PID file " << relative(filename).c_str() << " (" << filename << ")");
 		}
 	}
 
