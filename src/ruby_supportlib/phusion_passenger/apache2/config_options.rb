@@ -84,6 +84,7 @@
 #               there is a default obsoletion message.
 
 PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'apache2/config_utils'
 
 APACHE2_CONFIGURATION_OPTIONS = [
   {
@@ -675,3 +676,5 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => "Obsolete option."
   }
 ]
+
+PhusionPassenger::Apache2::ConfigUtils.initialize!(APACHE2_CONFIGURATION_OPTIONS)
