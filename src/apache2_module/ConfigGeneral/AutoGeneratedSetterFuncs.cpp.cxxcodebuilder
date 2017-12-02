@@ -69,7 +69,7 @@ def struct_field_for(option)
     option[:field]
   else
     result = option[:name].sub(/^Passenger/, '')
-    if option.fetch(:struct, :dir) == :dir
+    if option[:context] != :global
       "m#{result}"
     else
       result[0] = result[0..0].downcase
@@ -108,7 +108,7 @@ def setter_function_body_for(option)
   end
 
   field_reference = struct_field_for(option)
-  if option.fetch(:struct, :dir) == :dir
+  if option[:context] != :global
     add_code %Q{
       DirConfig *config = (DirConfig *) pcfg;
     }
@@ -139,7 +139,7 @@ def setter_function_body_for(option)
       }
     end
   elsif option[:type] == :flag
-    if option[:struct] == :main
+    if option[:context] == :global
       add_code %Q{
         #{field_reference} = arg != NULL;
         return NULL;

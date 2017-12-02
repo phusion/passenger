@@ -43,12 +43,16 @@
 #
 #  * name - The configuration option name. Required.
 #  * context - The context in which this configuration option is valid.
-#              Defaults to ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"]
+#              Allowed values:
+#              :global -- Global configuration
+#              :application -- Per-application configuration (default)
+#              :location -- Per-location/per-request configuration
+#  * htaccess_context - If `context` is set to :location, then this
+#              defines whether -- and in which -- .htaccess contexts it is allowed.
+#              This is an array of `OR_` macro names.
+#              Default: ['OR_OPTIONS']
 #  * type - This configuration option's value type. Allowed types:
 #           :string, :integer, :flag, :string_array, :string_keyval, :string_set
-#  * struct - Whether the corresponding struct field should be placed in the
-#             server-global struct (:main) or the per-dir struct (:dir).
-#             The default is :dir.
 #  * field - The name that should be used for the auto-generated field in
 #            the configuration structure. Defaults to the configuration
 #            name without the 'Passenger' prefix, and in camel case. Set this
@@ -87,428 +91,413 @@ PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'apache2/config_utils'
 
 APACHE2_CONFIGURATION_OPTIONS = [
+  ###### Global configuration ######
+
   {
-    :name      => "PassengerRoot",
+    :name      => 'PassengerRoot',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
-    :struct    => :main,
+    :context   => :global,
     :desc      => "The #{PROGRAM_NAME} root folder."
   },
   {
-    :name      => "PassengerCtl",
+    :name      => 'PassengerCtl',
     :type      => :string_keyval,
-    :context   => ["RSRC_CONF"],
-    :struct    => :main,
+    :context   => :global,
     :field     => nil,
     :function  => 'cmd_passenger_ctl',
     :desc      => "Set advanced #{PROGRAM_NAME} options."
   },
   {
-    :name      => "PassengerDefaultRuby",
+    :name      => 'PassengerDefaultRuby',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
-    :struct    => :main,
+    :context   => :global,
     :default   => DEFAULT_RUBY,
     :default_expr => 'DEFAULT_RUBY',
     :desc      => "#{PROGRAM_NAME}'s default Ruby interpreter to use."
   },
   {
-    :name      => "PassengerLogLevel",
+    :name      => 'PassengerLogLevel',
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :min_value => 0,
     :default   => DEFAULT_LOG_LEVEL,
     :default_expr => 'DEFAULT_LOG_LEVEL',
-    :struct    => :main,
     :desc      => "The #{PROGRAM_NAME} log verbosity."
   },
   {
-    :name      => "PassengerLogFile",
+    :name      => 'PassengerLogFile',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
-    :dynamic_default => "Nginx's global error log",
-    :struct    => :main,
+    :context   => :global,
+    :dynamic_default => "Apache's global error log",
     :desc      => "The #{PROGRAM_NAME} log file."
   },
   {
-    :name      => "PassengerSocketBacklog",
+    :name      => 'PassengerSocketBacklog',
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :min_value => 0,
     :default   => DEFAULT_SOCKET_BACKLOG,
     :default_expr => 'DEFAULT_SOCKET_BACKLOG',
-    :struct    => :main,
     :desc      => "The #{PROGRAM_NAME} socket backlog."
   },
   {
-    :name      => "PassengerFileDescriptorLogFile",
+    :name      => 'PassengerFileDescriptorLogFile',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
-    :struct    => :main,
+    :context   => :global,
     :desc      => "The #{PROGRAM_NAME} file descriptor log file."
   },
   {
-    :name      => "PassengerMaxPoolSize",
+    :name      => 'PassengerMaxPoolSize',
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :min_value => 1,
     :default   => DEFAULT_MAX_POOL_SIZE,
     :default_expr => 'DEFAULT_MAX_POOL_SIZE',
-    :struct    => :main,
     :desc      => "The maximum number of simultaneously alive application processes."
   },
   {
-    :name      => "PassengerPoolIdleTime",
+    :name      => 'PassengerPoolIdleTime',
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :min_value => 0,
     :default   => DEFAULT_POOL_IDLE_TIME,
     :default_expr => 'DEFAULT_POOL_IDLE_TIME',
-    :struct    => :main,
-    :desc      => "The maximum number of seconds that an application may be idle before it gets terminated."
+    :desc      => 'The maximum number of seconds that an application may be idle before it gets terminated.'
   },
   {
-    :name      => "PassengerResponseBufferHighWatermark",
+    :name      => 'PassengerResponseBufferHighWatermark',
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :min_value => 0,
     :default   => DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK,
     :default_expr => 'DEFAULT_RESPONSE_BUFFER_HIGH_WATERMARK',
-    :struct    => :main,
     :desc      => "The maximum size of the #{PROGRAM_NAME} response buffer."
   },
   {
-    :name      => "PassengerUserSwitching",
+    :name      => 'PassengerUserSwitching',
     :type      => :flag,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :default   => true,
-    :struct    => :main,
     :desc      => "Whether to enable user switching support in #{PROGRAM_NAME}."
   },
   {
-    :name      => "PassengerDefaultUser",
+    :name      => 'PassengerDefaultUser',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :default   => PASSENGER_DEFAULT_USER,
     :default_expr => 'PASSENGER_DEFAULT_USER',
-    :struct    => :main,
     :desc      => "The user that #{PROGRAM_NAME} applications must run as when user switching fails or is disabled."
   },
   {
-    :name      => "PassengerDefaultGroup",
+    :name      => 'PassengerDefaultGroup',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :dynamic_default => 'The primary group of PassengerDefaultUser',
-    :struct    => :main,
     :desc      => "The group that #{PROGRAM_NAME} applications must run as when user switching fails or is disabled."
   },
   {
-    :name      => "PassengerDataBufferDir",
+    :name      => 'PassengerDataBufferDir',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :dynamic_default => '$TMPDIR, or if not given, /tmp',
-    :struct    => :main,
     :desc      => "The directory that #{PROGRAM_NAME} data buffers should be stored into."
   },
   {
-    :name      => "PassengerInstanceRegistryDir",
+    :name      => 'PassengerInstanceRegistryDir',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :dynamic_default => 'Either /var/run/passenger-instreg, $TMPDIR, or /tmp (see docs)',
-    :struct    => :main,
     :desc      => "The directory to register the #{PROGRAM_NAME} instance to."
   },
   {
-    :name      => "PassengerDisableSecurityUpdateCheck",
+    :name      => 'PassengerDisableSecurityUpdateCheck',
     :type      => :flag,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :default   => false,
-    :struct    => :main,
     :desc      => "Whether to disable the #{PROGRAM_NAME} security update check & notification."
   },
   {
-    :name      => "PassengerSecurityUpdateCheckProxy",
+    :name      => 'PassengerSecurityUpdateCheckProxy',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
-    :struct    => :main,
+    :context   => :global,
     :desc      => "Use specified HTTP/SOCKS proxy for the #{PROGRAM_NAME} security update check."
   },
   {
-    :name      => "PassengerStatThrottleRate",
+    :name      => 'PassengerStatThrottleRate',
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :default   => DEFAULT_STAT_THROTTLE_RATE,
     :default_expr => 'DEFAULT_STAT_THROTTLE_RATE',
-    :struct    => :main,
-    :desc      => "Limit the number of stat calls to once per given seconds."
+    :desc      => 'Limit the number of stat calls to once per given seconds.'
   },
   {
-    :name      => "PassengerPreStart",
+    :name      => 'PassengerPreStart',
     :type      => :string_set,
-    :context   => ["RSRC_CONF"],
-    :struct    => :main,
+    :context   => :global,
     :field     => 'prestartURLs',
-    :desc      => "Prestart the given web applications during startup."
+    :desc      => 'Prestart the given web applications during startup.'
   },
   {
-    :name      => "PassengerTurbocaching",
+    :name      => 'PassengerTurbocaching',
     :type      => :flag,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :default   => true,
-    :struct    => :main,
     :desc      => "Whether to enable turbocaching in #{PROGRAM_NAME}."
   },
+  {
+    :name      => 'PassengerShowVersionInHeader',
+    :type      => :flag,
+    :context   => :global,
+    :default   => true,
+    :desc      => "Whether to show the #{PROGRAM_NAME} version number in the X-Powered-By header."
+  },
+
+
+  ###### Per-application configuration ######
 
   {
-    :name      => "PassengerRuby",
+    :name      => 'PassengerRuby',
     :type      => :string,
     :default   => DEFAULT_RUBY,
     :default_expr => 'StaticString()',
-    :desc      => "The Ruby interpreter to use.",
-    :header_expression => "config->mRuby.empty() ? serverConfig.defaultRuby : config->mRuby"
+    :desc      => 'The Ruby interpreter to use.',
+    :header_expression => 'config->mRuby.empty() ? serverConfig.defaultRuby : config->mRuby'
   },
   {
-    :name      => "PassengerPython",
+    :name      => 'PassengerPython',
     :type      => :string,
     :default   => DEFAULT_PYTHON,
     :default_expr => 'DEFAULT_PYTHON',
-    :desc      => "The Python interpreter to use."
+    :desc      => 'The Python interpreter to use.'
   },
   {
-    :name      => "PassengerNodejs",
+    :name      => 'PassengerNodejs',
     :type      => :string,
     :default   => DEFAULT_NODEJS,
     :default_expr => 'DEFAULT_NODEJS',
-    :desc      => "The Node.js command to use."
+    :desc      => 'The Node.js command to use.'
   },
   {
-    :name => "PassengerMeteorAppSettings",
-    :type => :string,
-    :desc => "Settings file for (non-bundled) Meteor apps."
+    :name      => 'PassengerMeteorAppSettings',
+    :type      => :string,
+    :desc      => 'Settings file for (non-bundled) Meteor apps.'
   },
   {
-    :name      => "PassengerBaseURI",
+    :name      => 'PassengerBaseURI',
     :type      => :string_set,
     :function  => 'cmd_passenger_base_uri',
     :field     => 'mBaseURIs',
-    :desc      => "Declare the given base URI as belonging to a web application.",
+    :desc      => 'Declare the given base URI as belonging to a web application.',
     :header    => nil
   },
   {
-    :name      => "PassengerAppEnv",
+    :name      => 'PassengerAppEnv',
     :type      => :string,
     :default   => 'production',
-    :desc      => "The environment under which applications are run."
-  },
-  {
-    :name      => "PassengerMinInstances",
-    :type      => :integer,
-    :context   => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],
-    :min_value => 0,
-    :default   => 1,
-    :header    => "PASSENGER_MIN_PROCESSES",
-    :desc      => "The minimum number of application instances to keep when cleaning idle instances."
-  },
-  {
-    :name => "PassengerMaxInstancesPerApp",
-    :type => :integer,
-    :context => ["RSRC_CONF"],
-    :header  => "PASSENGER_MAX_PROCESSES",
-    :desc => "The maximum number of simultaneously alive application instances a single application may occupy."
-  },
-  {
-    :name      => "PassengerUser",
-    :type      => :string,
-    :context   => ["ACCESS_CONF", "RSRC_CONF"],
-    :dynamic_default => 'See the user account sandboxing rules',
-    :desc      => "The user that Ruby applications must run as."
-  },
-  {
-    :name      => "PassengerGroup",
-    :type      => :string,
-    :context   => ["ACCESS_CONF", "RSRC_CONF"],
-    :dynamic_default => 'See the user account sandboxing rules',
-    :desc      => "The group that Ruby applications must run as."
-  },
-  {
-    :name      => "PassengerErrorOverride",
-    :type      => :flag,
-    :context   => ["OR_ALL"],
-    :default   => false,
-    :desc      => "Allow Apache to handle error response.",
-    :header    => nil
-  },
-  {
-    :name      => "PassengerMaxRequests",
-    :type      => :integer,
-    :context   => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],
-    :min_value => 0,
-    :default   => 0,
-    :desc      => "The maximum number of requests that an application instance may process."
-  },
-  {
-    :name      => "PassengerStartTimeout",
-    :type      => :integer,
-    :context   => ["OR_LIMIT", "ACCESS_CONF", "RSRC_CONF"],
-    :min_value => 1,
-    :default   => DEFAULT_START_TIMEOUT / 1000,
-    :default_expr => 'DEFAULT_START_TIMEOUT / 1000',
-    :desc      => "A timeout for application startup."
-  },
-  {
-    :name      => "PassengerHighPerformance",
-    :type      => :flag,
-    :context   => ["OR_ALL"],
-    :default   => false,
-    :desc      => "Enable or disable Passenger's high performance mode.",
-    :header    => nil
-  },
-  {
-    :name      => "PassengerEnabled",
-    :type      => :flag,
-    :context   => ["OR_ALL"],
-    :default   => true,
-    :desc      => "Enable or disable Phusion Passenger.",
-    :header    => nil
-  },
-  {
-    :name      => "PassengerMaxRequestQueueSize",
-    :type      => :integer,
-    :min_value => 0,
-    :default   => DEFAULT_MAX_REQUEST_QUEUE_SIZE,
-    :default_expr => 'DEFAULT_MAX_REQUEST_QUEUE_SIZE',
-    :context   => ["OR_ALL"],
-    :desc      => "The maximum number of queued requests."
-  },
-  {
-    :name      => "PassengerMaxPreloaderIdleTime",
-    :type      => :integer,
-    :min_value => 0,
-    :default   => DEFAULT_MAX_PRELOADER_IDLE_TIME,
-    :default_expr => 'DEFAULT_MAX_PRELOADER_IDLE_TIME',
-    :context   => ["RSRC_CONF"],
-    :desc      => "The maximum number of seconds that a preloader process may be idle before it is shutdown."
-  },
-  {
-    :name      => "PassengerLoadShellEnvvars",
-    :type      => :flag,
-    :default   => true,
-    :desc      => "Whether to load environment variables from the shell before running the application."
-  },
-  {
-    :name      => "PassengerBufferUpload",
-    :type      => :flag,
-    :context   => ["OR_ALL"],
-    :default   => true,
-    :desc      => "Whether to buffer file uploads.",
-    :header    => nil
+    :desc      => 'The environment under which applications are run.'
   },
   {
     :name      => 'PassengerAppType',
     :type      => :string,
-    :context   => ["OR_ALL"],
     :dynamic_default => 'Autodetected',
-    :desc      => "Force specific application type.",
+    :desc      => 'Force specific application type.',
     :header    => nil
   },
   {
     :name      => 'PassengerStartupFile',
     :type      => :string,
-    :context   => ["OR_ALL"],
     :dynamic_default => 'Autodetected',
-    :desc      => "Force specific startup file."
+    :desc      => 'Force specific startup file.'
   },
   {
-    :name      => 'PassengerStickySessions',
-    :type      => :flag,
-    :context   => ["OR_ALL"],
-    :default   => false,
-    :desc      => "Whether to enable sticky sessions."
+    :name      => 'PassengerMinInstances',
+    :type      => :integer,
+    :min_value => 0,
+    :default   => 1,
+    :header    => 'PASSENGER_MIN_PROCESSES',
+    :desc      => 'The minimum number of application instances to keep when cleaning idle instances.'
   },
   {
-    :name      => 'PassengerStickySessionsCookieName',
-    :type      => :flag,
-    :context   => ["OR_ALL"],
-    :default   => DEFAULT_STICKY_SESSIONS_COOKIE_NAME,
-    :default_expr => 'DEFAULT_STICKY_SESSIONS_COOKIE_NAME',
-    :desc      => "The cookie name to use for sticky sessions."
+    :name      => 'PassengerMaxInstancesPerApp',
+    :type      => :integer,
+    :min_value => 0,
+    :default   => 0,
+    :header    => 'PASSENGER_MAX_PROCESSES',
+    :desc      => 'The maximum number of simultaneously alive application instances a single application may occupy.'
   },
   {
-    :name      => "PassengerSpawnMethod",
+    :name      => 'PassengerUser',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
-    :dynamic_default => "'smart' for Ruby apps, 'direct' for all other apps",
-    :desc      => "The spawn method to use.",
-    :function  => "cmd_passenger_spawn_method"
+    :dynamic_default => 'See the user account sandboxing rules',
+    :desc      => 'The user that Ruby applications must run as.'
   },
   {
-    :name      => "PassengerShowVersionInHeader",
+    :name      => 'PassengerGroup',
+    :type      => :string,
+    :dynamic_default => 'See the user account sandboxing rules',
+    :desc      => 'The group that Ruby applications must run as.'
+  },
+  {
+    :name      => 'PassengerMaxRequests',
+    :type      => :integer,
+    :min_value => 0,
+    :default   => 0,
+    :desc      => 'The maximum number of requests that an application instance may process.'
+  },
+  {
+    :name      => "PassengerStartTimeout",
+    :type      => :integer,
+    :min_value => 1,
+    :default   => DEFAULT_START_TIMEOUT / 1000,
+    :default_expr => 'DEFAULT_START_TIMEOUT / 1000',
+    :desc      => 'A timeout for application startup.'
+  },
+  {
+    :name      => 'PassengerMaxRequestQueueSize',
+    :type      => :integer,
+    :min_value => 0,
+    :default   => DEFAULT_MAX_REQUEST_QUEUE_SIZE,
+    :default_expr => 'DEFAULT_MAX_REQUEST_QUEUE_SIZE',
+    :desc      => 'The maximum number of queued requests.'
+  },
+  {
+    :name      => 'PassengerMaxPreloaderIdleTime',
+    :type      => :integer,
+    :min_value => 0,
+    :default   => DEFAULT_MAX_PRELOADER_IDLE_TIME,
+    :default_expr => 'DEFAULT_MAX_PRELOADER_IDLE_TIME',
+    :desc      => 'The maximum number of seconds that a preloader process may be idle before it is shutdown.'
+  },
+  {
+    :name      => 'PassengerLoadShellEnvvars',
     :type      => :flag,
-    :context   => ['RSRC_CONF'],
-    :struct    => :main,
     :default   => true,
-    :desc      => "Whether to show the #{PROGRAM_NAME} version number in the X-Powered-By header."
+    :desc      => 'Whether to load environment variables from the shell before running the application.'
   },
   {
-    :name      => "PassengerFriendlyErrorPages",
+    :name      => 'PassengerSpawnMethod',
+    :type      => :string,
+    :dynamic_default => "'smart' for Ruby apps, 'direct' for all other apps",
+    :desc      => 'The spawn method to use.',
+    :function  => 'cmd_passenger_spawn_method'
+  },
+  {
+    :name      => 'PassengerFriendlyErrorPages',
     :type      => :flag,
     :dynamic_default => 'On if PassengerAppEnv is development, off otherwise',
-    :desc      => "Whether to display friendly error pages when something goes wrong."
+    :desc      => 'Whether to display friendly error pages when something goes wrong.'
   },
   {
-    :name      => "PassengerRestartDir",
+    :name      => 'PassengerRestartDir',
     :type      => :string,
     :default   => 'tmp',
-    :desc      => "The directory in which Passenger should look for restart.txt."
+    :desc      => "The directory in which #{PROGRAM_NAME} should look for restart.txt."
   },
   {
-    :name      => "PassengerAppGroupName",
+    :name      => 'PassengerAppGroupName',
     :type      => :string,
-    :context   => ["ACCESS_CONF", "RSRC_CONF"],
     :dynamic_default => 'PassengerAppRoot plus PassengerAppEnv',
-    :desc      => "Application process group name."
+    :desc      => 'Application process group name.'
   },
   {
-    :name      => "PassengerForceMaxConcurrentRequestsPerProcess",
+    :name      => 'PassengerForceMaxConcurrentRequestsPerProcess',
     :type      => :integer,
     :default   => -1,
     :desc      => "Force #{SHORT_PROGRAM_NAME} to believe that an application process " \
                  "can handle the given number of concurrent requests per process"
   },
   {
-    :name      => "PassengerLveMinUid",
+    :name      => 'PassengerLveMinUid',
     :type      => :integer,
     :min_value => 0,
     :default   => DEFAULT_LVE_MIN_UID,
     :default_expr => 'DEFAULT_LVE_MIN_UID',
-    :context   => ["RSRC_CONF"],
-    :desc      => "Minimum user id starting from which entering LVE and CageFS is allowed."
+    :desc      => 'Minimum user ID starting from which entering LVE and CageFS is allowed.'
   },
   {
-    :name      => "PassengerAppRoot",
+    :name      => 'PassengerAppRoot',
     :type      => :string,
     :dynamic_default => "Parent directory of the associated Apache virtual host's root directory",
     :desc      => "The application's root directory.",
     :header    => nil
   },
   {
-    :name      => "PassengerBufferResponse",
+    :name      => 'PassengerResolveSymlinksInDocumentRoot',
     :type      => :flag,
-    :context   => ["OR_ALL"],
     :default   => false,
-    :desc      => "Whether to enable extra response buffering inside Apache.",
+    :desc      => 'Whether to resolve symlinks in the DocumentRoot path',
+    :header    => nil
+  },
+
+
+  ###### Per-location/per-request configuration ######
+
+  {
+    :name      => 'PassengerErrorOverride',
+    :type      => :flag,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :default   => false,
+    :desc      => 'Allow Apache to handle error response.',
     :header    => nil
   },
   {
-    :name      => "PassengerResolveSymlinksInDocumentRoot",
+    :name      => 'PassengerHighPerformance',
     :type      => :flag,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
     :default   => false,
-    :desc      => "Whether to resolve symlinks in the DocumentRoot path",
+    :desc      => "Enable or disable Passenger's high performance mode.",
     :header    => nil
   },
   {
-    :name      => "PassengerAllowEncodedSlashes",
+    :name      => 'PassengerEnabled',
     :type      => :flag,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :default   => true,
+    :desc      => "Enable or disable #{PROGRAM_NAME}.",
+    :header    => nil
+  },
+  {
+    :name      => 'PassengerBufferUpload',
+    :type      => :flag,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :default   => true,
+    :desc      => 'Whether to buffer file uploads.',
+    :header    => nil
+  },
+  {
+    :name      => 'PassengerStickySessions',
+    :type      => :flag,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :default   => false,
+    :desc      => 'Whether to enable sticky sessions.'
+  },
+  {
+    :name      => 'PassengerStickySessionsCookieName',
+    :type      => :flag,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :default   => DEFAULT_STICKY_SESSIONS_COOKIE_NAME,
+    :default_expr => 'DEFAULT_STICKY_SESSIONS_COOKIE_NAME',
+    :desc      => 'The cookie name to use for sticky sessions.'
+  },
+  {
+    :name      => 'PassengerBufferResponse',
+    :type      => :flag,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :default   => false,
+    :desc      => 'Whether to enable extra response buffering inside Apache.',
+    :header    => nil
+  },
+  {
+    :name      => 'PassengerAllowEncodedSlashes',
+    :type      => :flag,
+    :context   => :location,
     :default   => false,
     :desc      => "Whether to support encoded slashes in the URL",
     :header    => nil
@@ -518,162 +507,159 @@ APACHE2_CONFIGURATION_OPTIONS = [
   ##### Aliases and backwards compatibility options #####
 
   {
-    :name      => "RailsEnv",
-    :alias_for => "PassengerAppEnv"
+    :name      => 'RailsEnv',
+    :alias_for => 'PassengerAppEnv'
   },
   {
-    :name      => "RackEnv",
-    :alias_for => "PassengerAppEnv"
+    :name      => 'RackEnv',
+    :alias_for => 'PassengerAppEnv'
   },
   {
-    :name      => "RailsRuby",
-    :alias_for => "PassengerRuby"
+    :name      => 'RailsRuby',
+    :alias_for => 'PassengerRuby'
   },
   {
-    :name      => "PassengerDebugLogFile",
-    :alias_for => "PassengerLogFile"
+    :name      => 'PassengerDebugLogFile',
+    :alias_for => 'PassengerLogFile'
   },
   {
-    :name      => "RailsMaxPoolSize",
-    :alias_for => "PassengerMaxPoolSize"
+    :name      => 'RailsMaxPoolSize',
+    :alias_for => 'PassengerMaxPoolSize'
   },
   {
-    :name      => "RailsMaxInstancesPerApp",
-    :alias_for => "PassengerMaxInstancesPerApp"
+    :name      => 'RailsMaxInstancesPerApp',
+    :alias_for => 'PassengerMaxInstancesPerApp'
   },
   {
-    :name      => "RailsPoolIdleTime",
-    :alias_for => "PassengerPoolIdleTime"
+    :name      => 'RailsPoolIdleTime',
+    :alias_for => 'PassengerPoolIdleTime'
   },
   {
-    :name      => "RailsUserSwitching",
-    :alias_for => "PassengerUserSwitching"
+    :name      => 'RailsUserSwitching',
+    :alias_for => 'PassengerUserSwitching'
   },
   {
-    :name      => "RailsDefaultUser",
-    :alias_for => "PassengerDefaultUser"
+    :name      => 'RailsDefaultUser',
+    :alias_for => 'PassengerDefaultUser'
   },
   {
-    :name      => "RailsAppSpawnerIdleTime",
-    :alias_for => "PassengerMaxPreloaderIdleTime"
+    :name      => 'RailsAppSpawnerIdleTime',
+    :alias_for => 'PassengerMaxPreloaderIdleTime'
   },
   {
-    :name      => "RailsBaseURI",
-    :alias_for => "PassengerBaseURI"
+    :name      => 'RailsBaseURI',
+    :alias_for => 'PassengerBaseURI'
   },
   {
-    :name      => "RackBaseURI",
-    :alias_for => "PassengerBaseURI"
+    :name      => 'RackBaseURI',
+    :alias_for => 'PassengerBaseURI'
   },
-
-  ##### Deprecated options #####
-
   {
-    :name      => "RailsSpawnMethod",
-    :type      => :string,
-    :context   => ["RSRC_CONF"],
-    :desc      => "Deprecated option.",
+    :name      => 'RailsSpawnMethod',
     :alias_for => "PassengerSpawnMethod"
   },
+
+
+  ##### Deprecated/obsolete options #####
+
   {
-    :name      => "RailsSpawnServer",
+    :name      => 'RailsSpawnServer',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
     :obsoletion_message => "The 'RailsSpawnServer' option is obsolete. " \
       "Please specify 'PassengerRoot' instead. The correct value was " \
       "given to you by 'passenger-install-apache2-module'.",
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
     :name      => "RailsAllowModRewrite",
     :type      => :flag,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
     :obsoletion_message => "The 'RailsAllowModRewrite' option is obsolete: " \
       "#{PROGRAM_NAME} now fully supports mod_rewrite. " \
       "Please remove this option from your configuration file.",
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
     :name      => "RailsFrameworkSpawnerIdleTime",
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
     :obsoletion_message => "The 'RailsFrameworkSpawnerIdleTime' option is obsolete. " \
       "Please use 'PassengerMaxPreloaderIdleTime' instead.",
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "PassengerUseGlobalQueue",
+    :name      => 'PassengerUseGlobalQueue',
     :type      => :flag,
     :obsolete  => true,
     :obsoletion_message => "The 'PassengerUseGlobalQueue' option is obsolete: " \
-      "global queueing is now always turned on. " \
-      "Please remove this option from your configuration file.",
-    :desc      => "Obsolete option."
+      'global queueing is now always turned on. ' \
+      'Please remove this option from your configuration file.',
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "UnionStationGatewayAddress",
+    :name      => 'UnionStationGatewayAddress',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "UnionStationGatewayPort",
+    :name      => 'UnionStationGatewayPort',
     :type      => :integer,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "UnionStationGatewayCert",
+    :name      => 'UnionStationGatewayCert',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "UnionStationProxyAddress",
+    :name      => 'UnionStationProxyAddress',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "PassengerAnalyticsLogUser",
+    :name      => 'PassengerAnalyticsLogUser',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "PassengerAnalyticsLogGroup",
+    :name      => 'PassengerAnalyticsLogGroup',
     :type      => :string,
-    :context   => ["RSRC_CONF"],
+    :context   => :global,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "UnionStationKey",
+    :name      => 'UnionStationKey',
     :type      => :string,
-    :context   => ["OR_ALL"],
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "UnionStationFilter",
+    :name      => 'UnionStationFilter',
     :type      => :string,
-    :context   => ["OR_ALL"],
+    :context   => :location,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   },
   {
-    :name      => "UnionStationSupport",
+    :name      => 'UnionStationSupport',
     :type      => :flag,
     :obsolete  => true,
-    :desc      => "Obsolete option."
+    :desc      => 'Obsolete option.'
   }
 ]
 

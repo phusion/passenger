@@ -310,7 +310,7 @@ cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg)
 	config->mMaxInstancesPerAppSourceFile = cmd->directive->filename;
 	config->mMaxInstancesPerAppSourceLine = cmd->directive->line_num;
 	config->mMaxInstancesPerAppExplicitlySet = true;
-	return setIntConfig(cmd, arg, config->mMaxInstancesPerApp);
+	return setIntConfig(cmd, arg, config->mMaxInstancesPerApp, 0);
 }
 
 static const char *

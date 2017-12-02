@@ -28,12 +28,22 @@ module PhusionPassenger
       class << self
         def initialize!(options)
           sort(options)
+          set_field_defaults(options)
         end
 
       private
         def sort(options)
           options.sort! do |a, b|
             a[:name] <=> b[:name]
+          end
+        end
+
+        def set_field_defaults(options)
+          options.each do |option|
+            option[:context] ||= :application
+            if option[:context] == :location
+              option[:htaccess_context] ||= ['OR_OPTIONS']
+            end
           end
         end
       end

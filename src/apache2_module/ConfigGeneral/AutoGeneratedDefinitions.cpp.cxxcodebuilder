@@ -61,7 +61,7 @@ def main
       name_for(option),
       function_type_for(option),
       function_for(option),
-      context_for(option),
+      definition_context_for(option),
       description_for(option))
     add_code(code)
   end
@@ -120,9 +120,18 @@ def function_for(option)
   end
 end
 
-def context_for(option)
-  context = option[:context] || ["OR_OPTIONS", "ACCESS_CONF", "RSRC_CONF"]
-  context.join(" | ")
+def definition_context_for(option)
+  case option[:context]
+  when :global
+    'RSRC_CONF'
+  when :application
+    'RSRC_CONF | ACCESS_CONF'
+  when :location
+    result = ['RSRC_CONF', 'ACCESS_CONF', option[:htaccess_context]]
+    result.flatten.join(' | ')
+  else
+    raise "Unknown context #{option[:context].inspect}"
+  end
 end
 
 def description_for(option)
