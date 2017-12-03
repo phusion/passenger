@@ -382,18 +382,10 @@ describe "Apache 2 module" do
 
     describe "PassengerShowVersionInHeader" do
       before :each do
-        @stub3 = RackStub.new('rack')
-        @stub3_url_root = "http://7.passenger.test:#{@apache2.port}"
-        @apache2.set_vhost('7.passenger.test', "#{@stub3.full_app_root}/public") do |vhost|
-          vhost << "PassengerShowVersionInHeader " + option
-        end
-
+        @apache2 << "PassengerShowVersionInHeader " + option
+        @apache2.stop
         @apache2.start
-        @server = @stub3_url_root
-      end
-
-      after :each do
-        @stub3.destroy
+        @server = @stub_url_root
       end
 
       context "set to on" do

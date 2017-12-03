@@ -107,6 +107,28 @@ def setter_function_body_for(option)
     return
   end
 
+  case option[:context]
+  when :global
+    # We only warn here instead of returning an error because this issue
+    # is not fatal: we still handle this case correctly.
+    add_code %Q{
+      const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+      if (err != NULL) {
+        ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+          "WARNING: %s", err);
+      }
+    }
+    separator
+  when :application
+    add_code %Q{
+      const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+      if (err != NULL) {
+        return err;
+      }
+    }
+    separator
+  end
+
   field_reference = struct_field_for(option)
   if option[:context] != :global
     add_code %Q{

@@ -50,9 +50,15 @@
 // In Apache < 2.4, this macro was necessary for core_dir_config and other structs
 #define CORE_PRIVATE
 #include <http_core.h>
+#include <http_config.h>
+#include <http_log.h>
 
 
 extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
+
+#ifdef APLOG_USE_MODULE
+	APLOG_USE_MODULE(passenger);
+#endif
 
 #ifndef ap_get_core_module_config
 	#define ap_get_core_module_config(s) ap_get_module_config(s, &core_module)
@@ -130,6 +136,12 @@ postprocessConfig(server_rec *s, apr_pool_t *pool) {
 
 static const char *
 cmd_passenger_ctl(cmd_parms *cmd, void *dummy, const char *name, const char *value) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
 	serverConfig.ctlSourceFile = cmd->directive->filename;
 	serverConfig.ctlSourceLine = cmd->directive->line_num;
 	serverConfig.ctlExplicitlySet = true;
@@ -143,6 +155,11 @@ cmd_passenger_ctl(cmd_parms *cmd, void *dummy, const char *name, const char *val
 
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	if (err != NULL) {
+		return err;
+	}
+
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mSpawnMethodSourceFile = cmd->directive->filename;
 	config->mSpawnMethodSourceLine = cmd->directive->line_num;
@@ -159,6 +176,11 @@ cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_passenger_base_uri(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	if (err != NULL) {
+		return err;
+	}
+
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mBaseURIsSourceFile = cmd->directive->filename;
 	config->mBaseURIsSourceLine = cmd->directive->line_num;
