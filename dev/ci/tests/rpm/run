@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script is from the "Passenger RPM packaging test" Jenkins job. It builds
 # packages for a specific distribution and architecture and runs tests on the resulting packages.
 #

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 chown -R "$APP_UID:$APP_GID" /home/app

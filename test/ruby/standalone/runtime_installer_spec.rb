@@ -58,7 +58,7 @@ describe RuntimeInstaller do
   def create_dummy_support_binaries
     Dir.mkdir("support-binaries")
     File.open("support-binaries/#{AGENT_EXE}", "w") do |f|
-      f.puts "#!/bin/bash"
+      f.puts "#!/usr/bin/env bash"
       f.puts "echo PASS"
     end
     File.chmod(0755, "support-binaries/#{AGENT_EXE}")
@@ -66,7 +66,7 @@ describe RuntimeInstaller do
 
   def create_dummy_nginx_binary
     File.open("PassengerWebHelper", "w") do |f|
-      f.puts "#!/bin/bash"
+      f.puts "#!/usr/bin/env bash"
       f.puts "echo nginx version: 1.0.0"
     end
     File.chmod(0755, "PassengerWebHelper")
@@ -377,7 +377,7 @@ describe RuntimeInstaller do
         create_tarball(output) do
           Dir.mkdir("nginx-#{nginx_version}")
           File.open("nginx-#{nginx_version}/configure", "w") do |f|
-            f.puts("#!/bin/bash")
+            f.puts("#!/usr/bin/env bash")
             f.puts("echo error")
             f.puts("exit 1")
           end

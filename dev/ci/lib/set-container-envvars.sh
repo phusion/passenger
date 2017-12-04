@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Do not `set -e` here because debug-console-wrapper.sh
 # relies on this fact.
 
