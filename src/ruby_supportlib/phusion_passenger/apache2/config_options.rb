@@ -421,13 +421,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => "The application's root directory.",
     :header    => nil
   },
-  {
-    :name      => 'PassengerResolveSymlinksInDocumentRoot',
-    :type      => :flag,
-    :default   => false,
-    :desc      => 'Whether to resolve symlinks in the DocumentRoot path',
-    :header    => nil
-  },
 
 
   ###### Per-location/per-request configuration ######

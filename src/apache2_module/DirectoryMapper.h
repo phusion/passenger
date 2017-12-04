@@ -152,7 +152,7 @@ private:
 		if (config->getAppType().empty()) {
 			if (config->getAppRoot().empty()) {
 				appType = detector.checkDocumentRoot(publicDir,
-					baseURI != NULL || config->getResolveSymlinksInDocumentRoot(),
+					baseURI != NULL,
 					&appRoot);
 			} else {
 				appRoot = config->getAppRoot();

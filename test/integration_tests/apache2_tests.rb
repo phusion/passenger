@@ -434,21 +434,6 @@ describe "Apache 2 module" do
       end
     end
 
-    it "resolves symlinks in the document root if PassengerResolveSymlinksInDocumentRoot is set" do
-      orig_app_root = @stub.app_root
-      @stub.move(File.expand_path('tmp.mycook.symlinktest'))
-      FileUtils.mkdir_p(orig_app_root)
-      File.symlink("#{@stub.app_root}/public", "#{orig_app_root}/public")
-      begin
-        File.write("#{@stub.app_root}/public/.htaccess", "PassengerResolveSymlinksInDocumentRoot on")
-        @server = @stub_url_root
-        get('/').should == "front page"
-      ensure
-        FileUtils.rm_rf(orig_app_root)
-        @stub.move(orig_app_root)
-      end
-    end
-
     it "supports encoded slashes in the URL if AllowEncodedSlashes is turned on" do
       @server = @stub_url_root
       get('/env/foo%2fbar').should =~ %r{PATH_INFO = /env/foo/bar\n}

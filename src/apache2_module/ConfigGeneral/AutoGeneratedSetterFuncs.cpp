@@ -562,24 +562,6 @@ cmd_passenger_python(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
-cmd_passenger_resolve_symlinks_in_document_root(cmd_parms *cmd, void *pcfg, const char *arg) {
-	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
-	if (err != NULL) {
-		return err;
-	}
-
-	DirConfig *config = (DirConfig *) pcfg;
-	config->mResolveSymlinksInDocumentRootSourceFile = cmd->directive->filename;
-	config->mResolveSymlinksInDocumentRootSourceLine = cmd->directive->line_num;
-	config->mResolveSymlinksInDocumentRootExplicitlySet = true;
-	config->mResolveSymlinksInDocumentRoot =
-		(arg != NULL) ?
-		ENABLED :
-		DISABLED;
-	return NULL;
-}
-
-static const char *
 cmd_passenger_response_buffer_high_watermark(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {

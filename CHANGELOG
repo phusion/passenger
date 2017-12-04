@@ -1,3 +1,10 @@
+admin_panel_connector_perfect key changes
+-----------------------------------------
+
+ * [Apache] PassengerResolveSymlinksInDocumentRoot has been removed
+ * [Apache] Per-application config options (which in itself is a new concept) are no longer allowed in .htaccess, nor in <Files>, <FilesMatch> and <If>. Global config options are no longer allowed in <VirtualHost> (still works but will print warning).
+
+
 Release 5.1.13 (Not yet released)
 ---------------------------------
 
