@@ -62,6 +62,7 @@ using namespace std;
  *   admin_panel_websocketpp_debug_error                                      boolean            -          default(false)
  *   app_output_log_level                                                     string             -          default("notice")
  *   benchmark_mode                                                           string             -          -
+ *   config_manifest                                                          object             -          read_only
  *   controller_accept_burst_count                                            unsigned integer   -          default(32)
  *   controller_addresses                                                     array of strings   -          default,read_only
  *   controller_client_freelist_limit                                         unsigned integer   -          default(0)

@@ -534,6 +534,16 @@ changeProcessTitle(int argc, char **argv[], const char *processName) {
 	*argv = context->origArgv;
 }
 
+static string
+dumpConfigForDebugging(const ConfigKit::Store &config) {
+	Json::Value result = config.inspectEffectiveValues();
+	if (!result["config_manifest"].isNull()) {
+		// The config manifest is too large so we omit it from the debug output.
+		result["config_manifest"] = "[OMITTED]";
+	}
+	return result.toStyledString();
+}
+
 void
 initializeAgent(int argc, char **argv[], const char *processName,
 	ConfigKit::Store &config, const ConfigKit::Translator &loggingKitTranslator,
@@ -604,7 +614,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	storeArgvCopy(argc, *argv);
 	changeProcessTitle(argc, argv, processName);
 
-	P_DEBUG(processName << " config: " << config.inspectEffectiveValues().toStyledString());
+	P_DEBUG(processName << " config: " << dumpConfigForDebugging(config));
 	P_DEBUG(processName << " random seed: " << context->randomSeed);
 }
 

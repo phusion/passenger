@@ -485,6 +485,10 @@
       "benchmark_mode" : {
          "type" : "string"
       },
+      "config_manifest" : {
+         "read_only" : true,
+         "type" : "object"
+      },
       "controller_accept_burst_count" : {
          "default_value" : 32,
          "has_default_value" : "static",
@@ -1089,6 +1093,10 @@
       },
       "benchmark_mode" : {
          "type" : "string"
+      },
+      "config_manifest" : {
+         "read_only" : true,
+         "type" : "object"
       },
       "controller_accept_burst_count" : {
          "default_value" : 32,

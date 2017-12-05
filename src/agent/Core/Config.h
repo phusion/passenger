@@ -91,6 +91,7 @@ using namespace std;
  *   api_server_start_reading_after_accept                           boolean            -          default(true)
  *   app_output_log_level                                            string             -          default("notice")
  *   benchmark_mode                                                  string             -          -
+ *   config_manifest                                                 object             -          read_only
  *   controller_accept_burst_count                                   unsigned integer   -          default(32)
  *   controller_addresses                                            array of strings   -          default(["tcp://127.0.0.1:3000"]),read_only
  *   controller_client_freelist_limit                                unsigned integer   -          default(0)
@@ -436,6 +437,7 @@ public:
 		overrideWithDynamicDefault("default_server_port", UINT_TYPE, OPTIONAL, getDefaultServerPort);
 
 		add("passenger_root", STRING_TYPE, REQUIRED | READ_ONLY);
+		add("config_manifest", OBJECT_TYPE, OPTIONAL | READ_ONLY);
 		add("pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
 		add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);
 		addWithDynamicDefault("controller_threads", UINT_TYPE, OPTIONAL | READ_ONLY, getDefaultThreads);

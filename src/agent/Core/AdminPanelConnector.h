@@ -273,80 +273,21 @@ private:
 	}
 
 	void onGetGlobalConfigurationBgJob(const ConnectionPtr &conn, const Json::Value &input) {
+		Json::Value globalConfig = configGetter()["config_manifest"]["effective_value"]["global_configuration"];
 		server.getIoService().post(boost::bind(
 			&AdminPanelConnector::onGetGlobalConfigDone, this,
-			conn, input, configGetter()
+			conn, input, globalConfig
 		));
-	}
-
-	static void modifyLogTarget(Json::Value &subconfig, const char *key) {
-		if (!subconfig.isMember(key) || subconfig[key].isNull()) {
-			return;
-		}
-		if (subconfig[key].isMember("path")) {
-			subconfig[key] = subconfig[key]["path"];
-		} else {
-			assert(subconfig[key].isMember("stderr"));
-			assert(subconfig[key]["stderr"].asBool());
-			subconfig[key] = "/dev/stderr";
-		}
-	}
-
-	static void modifyPrestartUrls(Json::Value &subconfig, const char *key) {
-		if (!subconfig.isMember(key) || subconfig[key].isNull()) {
-			return;
-		}
-		subconfig[key] = subconfig[key].toStyledString();
-	}
-
-	static void modifyMaxInstancesPerApp(Json::Value &subconfig, const char *key) {
-		if (!subconfig.isMember(key) || subconfig[key].isNull()) {
-			return;
-		}
-		subconfig[key] = 0;
 	}
 
 	void onGetGlobalConfigDone(const ConnectionPtr &conn, const Json::Value &input,
 		Json::Value config)
 	{
-		Json::Value reply, options(Json::objectValue);
-		Json::Value::iterator it, end = config.end();
-
-		// We modify the format of the data a little bit so the admin panel can handle it.
-		// The admin panel currently does not support object and array values.
-		modifyLogTarget(config["log_target"], "user_value");
-		modifyLogTarget(config["log_target"], "default_value");
-		modifyLogTarget(config["log_target"], "effective_value");
-		modifyPrestartUrls(config["prestart_urls"], "user_value");
-		modifyPrestartUrls(config["prestart_urls"], "default_value");
-		modifyPrestartUrls(config["prestart_urls"], "effective_value");
-		modifyMaxInstancesPerApp(config["max_instances_per_app"], "user_value");
-		modifyMaxInstancesPerApp(config["max_instances_per_app"], "default_value");
-		modifyMaxInstancesPerApp(config["max_instances_per_app"], "effective_value");
-
-		for (it = config.begin(); it != end; it++) {
-			const Json::Value &subconfig = *it;
-			Json::Value valueHierarchy(Json::arrayValue);
-
-			if (!subconfig["user_value"].isNull()) {
-				Json::Value valueEntry;
-				valueEntry["value"] = subconfig["user_value"];
-				valueEntry["source"]["type"] = "ephemeral";
-				valueHierarchy.append(valueEntry);
-			}
-			if (!subconfig["default_value"].isNull()) {
-				Json::Value valueEntry;
-				valueEntry["value"] = subconfig["default_value"];
-				valueEntry["source"]["type"] = "default";
-				valueHierarchy.append(valueEntry);
-			}
-
-			options[it.name()] = valueHierarchy;
-		}
+		Json::Value reply;
 
 		reply["result"] = "ok";
 		reply["request_id"] = input["request_id"];
-		reply["data"]["options"] = options;
+		reply["data"]["options"] = config;
 
 		sendJsonReply(conn, reply);
 		server.doneReplying(conn);
@@ -401,19 +342,18 @@ private:
 	}
 
 	bool onGetApplicationConfig(const ConnectionPtr &conn, const Json::Value &doc) {
-		ConfigKit::Schema argumentsSchema =
-			ApplicationPool2::Pool::ToJsonOptions::createSchema();
+		Json::Value appConfigsContainer = configGetter()["config_manifest"]
+			["effective_value"]["application_configurations"];
+		Json::Value appConfigsContainerOutput;
 		Json::Value args(Json::objectValue), reply;
-		ApplicationPool2::Pool::ToJsonOptions inspectOptions =
-			ApplicationPool2::Pool::ToJsonOptions::makeAuthorized();
 
 		if (doc.isMember("arguments")) {
+			ConfigKit::Schema argumentsSchema =
+				ApplicationPool2::Pool::ToJsonOptions::createSchema();
 			ConfigKit::Store store(argumentsSchema);
 			vector<ConfigKit::Error> errors;
 
-			if (store.update(doc["arguments"], errors)) {
-				inspectOptions.set(store.inspectEffectiveValues());
-			} else {
+			if (!store.update(doc["arguments"], errors)) {
 				reply["result"] = "error";
 				reply["request_id"] = doc["request_id"];
 				reply["data"]["message"] = "Invalid arguments: " +
@@ -421,21 +361,23 @@ private:
 				sendJsonReply(conn, reply);
 				return true;
 			}
-		}
 
-		Json::Value resultOptions = appPool->inspectConfigInAdminPanelFormat(
-			inspectOptions);
-		// We modify the format of the data a little bit so the admin panel can handle it.
-		// The admin panel currently does not support object and array values.
-		Json::Value::iterator it;
-		for (it = resultOptions.begin(); it != resultOptions.end(); it++) {
-			Json::Value &appConfig = *it;
-			modifyEnvironmentVariables(appConfig["environment_variables"]);
+			Json::Value allowedApplicationIds =
+				store.inspectEffectiveValues()["application_ids"];
+			if (allowedApplicationIds.isNull()) {
+				appConfigsContainerOutput = appConfigsContainer;
+			} else {
+				appConfigsContainerOutput = filterJsonObject(
+					appConfigsContainer,
+					allowedApplicationIds);
+			}
+		} else {
+			appConfigsContainerOutput = appConfigsContainer;
 		}
 
 		reply["result"] = "ok";
 		reply["request_id"] = doc["request_id"];
-		reply["data"]["options"] = resultOptions;
+		reply["data"]["options"] = appConfigsContainerOutput;
 
 		sendJsonReply(conn, reply);
 		return true;
@@ -512,6 +454,21 @@ private:
 
 		globalPropertiesFromInstanceDir["instance_id"] = doc["instance_id"];
 		globalPropertiesFromInstanceDir["watchdog_pid"] = doc["watchdog_pid"];
+	}
+
+	Json::Value filterJsonObject(const Json::Value &object,
+		const Json::Value &allowedKeys) const
+	{
+		Json::Value::const_iterator it, end = allowedKeys.end();
+		Json::Value result(Json::objectValue);
+
+		for (it = allowedKeys.begin(); it != end; it++) {
+			if (object.isMember(it->asString())) {
+				result[it->asString()] = object[it->asString()];
+			}
+		}
+
+		return result;
 	}
 
 	void initializePropertiesWithoutInstanceDir() {
