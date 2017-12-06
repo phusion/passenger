@@ -1609,13 +1609,13 @@ namespace tut {
 
 		LoggingKit::setLevel(LoggingKit::CRIT);
 		pool->asyncGet(options, callback);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = number == 1;
 		);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = pool->getProcessCount() == 2;
 		);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = !pool->isSpawning();
 		);
 		SHOULD_NEVER_HAPPEN(500,
