@@ -4,6 +4,7 @@ Release 5.1.13 (Not yet released)
  * [Apache] Fixes additional (vs. 5.1.11) compilation issues on some systems with macOS 10.13 High Sierra.
  * [Nginx] Fixes the default for the `passenger_app_group_name` to start with the `passenger_app_root` rather than the document root (the end remains the same: `passenger_app_env`).
  * [Standalone] Adds command line support for `start_timeout` in Passenger Standalone (also removes unnecessary warning when using it in `Passengerfile.json`).
+ * Deprecated options for Union Station.
 
 
 Release 5.1.12

@@ -69,8 +69,6 @@
 #define DEFAULT_START_TIMEOUT 90000
 #define DEFAULT_STAT_THROTTLE_RATE 10
 #define DEFAULT_STICKY_SESSIONS_COOKIE_NAME "_passenger_route"
-#define DEFAULT_UNION_STATION_GATEWAY_ADDRESS "gateway.unionstationapp.com"
-#define DEFAULT_UNION_STATION_GATEWAY_PORT 443
 #define DEFAULT_WEB_APP_USER "nobody"
 #define ENTERPRISE_URL "https://www.phusionpassenger.com/enterprise"
 #define FEEDBACK_FD 3

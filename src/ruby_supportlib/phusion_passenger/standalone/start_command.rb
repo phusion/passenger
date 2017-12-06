@@ -126,11 +126,6 @@ module PhusionPassenger
             REQUEST_HANDLING_CONFIG_SPECS, options)
 
           opts.separator ""
-          opts.separator "Union Station options:"
-          ConfigUtils.add_option_parser_options_from_config_spec(opts,
-            UNION_STATION_CONFIG_SPECS, options)
-
-          opts.separator ""
           opts.separator "Nginx engine options:"
           ConfigUtils.add_option_parser_options_from_config_spec(opts,
             NGINX_ENGINE_CONFIG_SPECS, options)
