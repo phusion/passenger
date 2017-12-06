@@ -351,6 +351,14 @@ module PhusionPassenger
                       "number of concurrent requests per process"
       },
       {
+        :name      => :start_timeout,
+        :type      => :integer,
+        :type_desc => 'SECONDS',
+        :desc      => "The maximum time an application process may\n" \
+                      "take to start up, after which it will be killed\n" \
+                      "with SIGKILL, and logged with an error.\nDefault: #{DEFAULT_START_TIMEOUT / 1000}"
+      },
+      {
         :name      => :concurrency_model,
         :type_desc => 'NAME',
         :desc      => "The concurrency model to use, either\n" \
