@@ -38,7 +38,7 @@ module PhusionPassenger
 
     def self.format_exception(e)
       result = "#{e} (#{e.class})"
-      if !e.backtrace.empty?
+      if !(e.backtrace.nil? || e.backtrace.empty?)
         if e.respond_to?(:html?) && e.html?
           require 'erb' if !defined?(ERB)
           result << "\n<pre>  " << ERB::Util.h(e.backtrace.join("\n  ")) << "</pre>"

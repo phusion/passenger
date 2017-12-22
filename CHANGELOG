@@ -5,6 +5,7 @@ Release 5.1.13 (Not yet released)
  * [Nginx] Fixes the default for the `passenger_app_group_name` to start with the `passenger_app_root` rather than the document root (the end remains the same: `passenger_app_env`).
  * [Standalone] Adds command line support for `start_timeout` in Passenger Standalone (also removes unnecessary warning when using it in `Passengerfile.json`).
  * Deprecated options for Union Station.
+ * Handle case where an exception's backtrace may be nil. Closes GH-2011.
 
 
 Release 5.1.12
