@@ -391,30 +391,30 @@ cmd_passenger_log_level(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_passenger_lve_min_uid(cmd_parms *cmd, void *pcfg, const char *arg) {
-	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
-		return err;
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
 	}
 
-	DirConfig *config = (DirConfig *) pcfg;
-	config->mLveMinUidSourceFile = cmd->directive->filename;
-	config->mLveMinUidSourceLine = cmd->directive->line_num;
-	config->mLveMinUidExplicitlySet = true;
-	return setIntConfig(cmd, arg, config->mLveMinUid, 0);
+	serverConfig.lveMinUidSourceFile = cmd->directive->filename;
+	serverConfig.lveMinUidSourceLine = cmd->directive->line_num;
+	serverConfig.lveMinUidExplicitlySet = true;
+	return setIntConfig(cmd, arg, serverConfig.lveMinUid, 0);
 }
 
 static const char *
 cmd_passenger_max_instances_per_app(cmd_parms *cmd, void *pcfg, const char *arg) {
-	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {
-		return err;
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
 	}
 
-	DirConfig *config = (DirConfig *) pcfg;
-	config->mMaxInstancesPerAppSourceFile = cmd->directive->filename;
-	config->mMaxInstancesPerAppSourceLine = cmd->directive->line_num;
-	config->mMaxInstancesPerAppExplicitlySet = true;
-	return setIntConfig(cmd, arg, config->mMaxInstancesPerApp, 0);
+	serverConfig.maxInstancesPerAppSourceFile = cmd->directive->filename;
+	serverConfig.maxInstancesPerAppSourceLine = cmd->directive->line_num;
+	serverConfig.maxInstancesPerAppExplicitlySet = true;
+	return setIntConfig(cmd, arg, serverConfig.maxInstancesPerApp, 0);
 }
 
 static const char *

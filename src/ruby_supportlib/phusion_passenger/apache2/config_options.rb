@@ -251,7 +251,24 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :default   => true,
     :desc      => "Whether to show the #{PROGRAM_NAME} version number in the X-Powered-By header."
   },
-
+  {
+    :name      => 'PassengerMaxInstancesPerApp',
+    :type      => :integer,
+    :context   => :global,
+    :min_value => 0,
+    :default   => 0,
+    :header    => 'PASSENGER_MAX_PROCESSES',
+    :desc      => 'The maximum number of simultaneously alive application instances a single application may occupy.'
+  },
+  {
+    :name      => 'PassengerLveMinUid',
+    :type      => :integer,
+    :context   => :global,
+    :min_value => 0,
+    :default   => DEFAULT_LVE_MIN_UID,
+    :default_expr => 'DEFAULT_LVE_MIN_UID',
+    :desc      => 'Minimum user ID starting from which entering LVE and CageFS is allowed.'
+  },
 
   ###### Per-application configuration ######
 
@@ -316,14 +333,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :default   => 1,
     :header    => 'PASSENGER_MIN_PROCESSES',
     :desc      => 'The minimum number of application instances to keep when cleaning idle instances.'
-  },
-  {
-    :name      => 'PassengerMaxInstancesPerApp',
-    :type      => :integer,
-    :min_value => 0,
-    :default   => 0,
-    :header    => 'PASSENGER_MAX_PROCESSES',
-    :desc      => 'The maximum number of simultaneously alive application instances a single application may occupy.'
   },
   {
     :name      => 'PassengerUser',
@@ -405,14 +414,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :default   => -1,
     :desc      => "Force #{SHORT_PROGRAM_NAME} to believe that an application process " \
                  "can handle the given number of concurrent requests per process"
-  },
-  {
-    :name      => 'PassengerLveMinUid',
-    :type      => :integer,
-    :min_value => 0,
-    :default   => DEFAULT_LVE_MIN_UID,
-    :default_expr => 'DEFAULT_LVE_MIN_UID',
-    :desc      => 'Minimum user ID starting from which entering LVE and CageFS is allowed.'
   },
   {
     :name      => 'PassengerAppRoot',

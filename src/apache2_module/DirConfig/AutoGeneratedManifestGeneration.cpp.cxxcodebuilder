@@ -144,9 +144,13 @@ def add_tracking_value_serialization_code(option)
         pdconf->#{value_struct_field}.data(),
         pdconf->#{value_struct_field}.data() + pdconf->#{value_struct_field}.size());
     }
-  when :integer, :flag
+  when :flag
     add_code %Q{
       hierarchyMember["value"] = pdconf->#{value_struct_field} == Apache2Module::ENABLED;
+    }
+  when :integer
+    add_code %Q{
+      hierarchyMember["value"] = pdconf->#{value_struct_field};
     }
   when :string_set
     add_code %Q{
