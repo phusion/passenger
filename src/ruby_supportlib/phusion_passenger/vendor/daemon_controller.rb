@@ -301,7 +301,7 @@ class DaemonController
     @lock_file.exclusive_lock do
       begin
         Timeout.timeout(@stop_timeout, Timeout::Error) do
-          kill_daemon
+          kill_daemon if daemon_is_running?
           wait_until do
             !daemon_is_running?
           end

@@ -410,6 +410,7 @@ module PhusionPassenger
           "--pid-file", "#{@working_dir}/temp_dir_toucher.pid",
           "--log-file", @options[:log_file]]
         command << "--user" << @options[:user] unless @options[:user].nil?
+        command << "--nginx-pid" << @engine.pid.to_s if @options[:engine] == 'nginx'
         result = system(*command)
         if !result
           abort "Cannot start #{@agent_exe} temp-dir-toucher"
