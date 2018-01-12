@@ -152,12 +152,7 @@ namespace tut {
 			if (e.getErrorPage().find("hello world\n") == string::npos) {
 				// This might be caused by the machine being too slow.
 				// Try again with a higher timeout.
-				options.startTimeout = 1000;
-#if defined(BOOST_OS_MACOS)
-		if (getenv("TRAVIS_RUBY_VERSION") != NULL) {
-			options.startTimeout = 15000;
-		}
-#endif
+				options.startTimeout = 10000;
 				SmartSpawner spawner2(preloaderCommand, options, config);
 				try {
 					spawner2.spawn(options);
