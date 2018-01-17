@@ -187,7 +187,7 @@ module PhusionPassenger
       end
 
       first_line = output.split("\n").first
-      elems = first_line.split
+      elems = (first_line || '').split
       if elems[0] == address
         first_line =~ / dev (.+?) /
         $1
