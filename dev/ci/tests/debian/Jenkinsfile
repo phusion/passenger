@@ -40,7 +40,6 @@ pipeline {
   parameters {
     booleanParam(name: 'trusty', defaultValue: true, description: 'Test Ubuntu 14.04 packages')
     booleanParam(name: 'xenial', defaultValue: true, description: 'Test Ubuntu 16.04 packages')
-    booleanParam(name: 'zesty', defaultValue: true, description: 'Test Ubuntu 17.04 packages')
     booleanParam(name: 'artful', defaultValue: true, description: 'Test Ubuntu 17.10 packages')
 
     booleanParam(name: 'wheezy', defaultValue: true, description: 'Test Debian 7 packages')
