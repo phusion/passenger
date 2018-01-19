@@ -8,6 +8,7 @@ Release 5.1.13 (Not yet released)
  * [Standalone, Nginx] Wait for Nginx to exit before cleaning up temp dir (started happening more since the switch to Nginx graceful shutdown in 5.1.6). Closes GH-1970.
  * Deprecated options for Union Station.
  * Handle case where an exception's backtrace may be nil. Closes GH-2011.
+ * Adds JSON mime type for static file serving. Closes GH-2018.
  * Removes packages for Ubuntu 17.04 "Zesty" (EOL 13-jan-2018).
 
 
