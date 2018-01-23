@@ -1,20 +1,16 @@
-admin_panel_connector_perfect key changes
------------------------------------------
+Release 5.2.0
+-------------
 
- * [Apache] PassengerResolveSymlinksInDocumentRoot has been removed
- * [Apache] Per-application config options (which in itself is a new concept) are no longer allowed in .htaccess, nor in <Files>, <FilesMatch> and <If>. Global config options are no longer allowed in <VirtualHost> (still works but will print warning).
-
-
-Release 5.1.13 (Not yet released)
----------------------------------
-
- * [Apache] Fixes additional (vs. 5.1.11) compilation issues on some systems with macOS 10.13 High Sierra.
+ * [Apache] Breaking change: to avoid configuration ambiguity, options that act on a per-process level (rather than per-request level) can no longer be used in .htaccess. See the Passenger Library -> configuration -> intro for more info (https://www.phusionpassenger.com/library/config/apache/intro.html#global-per-application-and-per-request-options).
+ * [Apache] Breaking change: the option PassengerResolveSymlinksInDocumentRoot has been removed (old Passenger 2 compatibility option, see PassengerAppRoot for new method).
+ * [Apache] Option handling has been refactored to avoid silent conflicts and errors: warnings are now generated for global config options in <VirtualHost> (they conflict between VHosts) and per-application options in <Files>, <FilesMatch> and <If> (silently failed before).
+ * [Apache] Fixes compilation issues on some systems with macOS 10.13 High Sierra (in addition to the fixes from 5.1.11).
  * [Enterprise] Fixes two unnecessary warnings about failure to contact the licensing server, one occurring since version 5.1.8 ("3 days out of contact"), the other since 5.1.11 + Apache ("failure to contact").
  * [Nginx] Fixes the default for the `passenger_app_group_name` to start with the `passenger_app_root` rather than the document root (the end remains the same: `passenger_app_env`).
  * [Standalone] Adds command line support for `start_timeout` in Passenger Standalone (also removes unnecessary warning when using it in `Passengerfile.json`).
- * [Standalone, Nginx] Wait for Nginx to exit before cleaning up temp dir (started happening more since the switch to Nginx graceful shutdown in 5.1.6). Closes GH-1970.
+ * [Standalone, Nginx] Waits for Nginx to exit before cleaning up temp dir (started happening more since the switch to Nginx graceful shutdown in 5.1.6). Closes GH-1970.
  * Deprecated options for Union Station.
- * Handle case where an exception's backtrace may be nil. Closes GH-2011.
+ * Ruby 2.5 compatibility: handle case where an exception's backtrace may be nil. Closes GH-2011.
  * Adds JSON mime type for static file serving. Closes GH-2018.
  * Removes packages for Ubuntu 17.04 "Zesty" (EOL 13-jan-2018).
 
