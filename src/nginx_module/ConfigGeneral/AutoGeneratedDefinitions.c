@@ -599,14 +599,6 @@
     NULL
 },
 {
-    ngx_string("passenger_max_request_time"),
-    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
-    passenger_enterprise_only,
-    NGX_HTTP_LOC_CONF_OFFSET,
-    0,
-    NULL
-},
-{
     ngx_string("passenger_memory_limit"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
     passenger_enterprise_only,
@@ -641,6 +633,22 @@
 {
     ngx_string("passenger_resist_deployment_errors"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+    passenger_enterprise_only,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("passenger_max_request_time"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+    passenger_enterprise_only,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    0,
+    NULL
+},
+{
+    ngx_string("passenger_max_request_queue_time"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
     passenger_enterprise_only,
     NGX_HTTP_LOC_CONF_OFFSET,
     0,

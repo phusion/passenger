@@ -583,7 +583,7 @@ NGINX_CONFIGURATION_OPTIONS = [
     :default  => -1
   },
 
-  ###### Enterprise features ######
+  ###### Enterprise features (placeholders in OSS) ######
   {
     :context  => [:main],
     :name     => 'passenger_fly_with',
@@ -596,13 +596,6 @@ NGINX_CONFIGURATION_OPTIONS = [
   {
     :name     => 'passenger_max_instances',
     :scope    => :application,
-    :type     => :integer,
-    :function => 'passenger_enterprise_only',
-    :field    => nil
-  },
-  {
-    :name     => 'passenger_max_request_time',
-    :scope    => :location,
     :type     => :integer,
     :function => 'passenger_enterprise_only',
     :field    => nil
@@ -639,6 +632,20 @@ NGINX_CONFIGURATION_OPTIONS = [
     :name     => 'passenger_resist_deployment_errors',
     :scope    => :application,
     :type     => :flag,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_max_request_time',
+    :scope    => :location,
+    :type     => :integer,
+    :function => 'passenger_enterprise_only',
+    :field    => nil
+  },
+  {
+    :name     => 'passenger_max_request_queue_time',
+    :type     => :integer,
+    :scope    => :location,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
