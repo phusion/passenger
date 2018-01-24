@@ -498,6 +498,94 @@ APACHE2_CONFIGURATION_OPTIONS = [
   },
 
 
+  ##### Enterprise options (placeholders in OSS) #####
+
+  {
+    :name      => 'PassengerFlyWith',
+    :type      => :string,
+    :context   => :global,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => "Use Flying #{SHORT_PROGRAM_NAME}"
+  },
+  {
+    :name      => 'PassengerMemoryLimit',
+    :type      => :integer,
+    :htaccess_context => ['OR_LIMIT'],
+    :min_value => 0,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => 'The maximum amount of memory in MB that an application instance may use.'
+  },
+  {
+    :name      => 'PassengerMaxInstances',
+    :type      => :integer,
+    :htaccess_context => ['OR_LIMIT'],
+    :min_value => 0,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => "The maximum number of instances for the current application that #{PROGRAM_NAME} may spawn."
+  },
+  {
+    :name      => 'PassengerRollingRestarts',
+    :type      => :flag,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => "Whether to turn on rolling restarts."
+  },
+  {
+    :name      => 'PassengerResistDeploymentErrors',
+    :type      => :flag,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => 'Whether to turn on deployment error resistance.'
+  },
+  {
+    :name      => 'PassengerDebugger',
+    :type      => :flag,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => 'Whether to turn on debugger support'
+  },
+  {
+    :name      => 'PassengerConcurrencyModel',
+    :type      => :string,
+    :htaccess_context => ['OR_ALL'],
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => 'The concurrency model that should be used for applications.'
+  },
+  {
+    :name      => 'PassengerThreadCount',
+    :type      => :integer,
+    :htaccess_context => ['OR_ALL'],
+    :min_value => 0,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => "The number of threads that #{PROGRAM_NAME} should spawn per application."
+  },
+  {
+    :name      => 'PassengerMaxRequestTime',
+    :type      => :integer,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :min_value => 0,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => 'The maximum time (in seconds) that the current application may spend on a request.'
+  },
+  {
+    :name      => 'PassengerMaxRequestQueueTime',
+    :type      => :integer,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :min_value => 0,
+    :function  => 'cmd_passenger_enterprise_only',
+    :field     => nil,
+    :desc      => 'The maximum number of seconds that a request may remain in the queue before it is dropped.'
+  },
+
+
   ##### Aliases and backwards compatibility options #####
 
   {
