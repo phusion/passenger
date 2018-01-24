@@ -644,8 +644,8 @@ NGINX_CONFIGURATION_OPTIONS = [
   },
   {
     :name     => 'passenger_max_request_queue_time',
-    :type     => :integer,
     :scope    => :location,
+    :type     => :integer,
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
