@@ -260,15 +260,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :header    => 'PASSENGER_MAX_PROCESSES',
     :desc      => 'The maximum number of simultaneously alive application instances a single application may occupy.'
   },
-  {
-    :name      => 'PassengerLveMinUid',
-    :type      => :integer,
-    :context   => :global,
-    :min_value => 0,
-    :default   => DEFAULT_LVE_MIN_UID,
-    :default_expr => 'DEFAULT_LVE_MIN_UID',
-    :desc      => 'Minimum user ID starting from which entering LVE and CageFS is allowed.'
-  },
 
   ###### Per-application configuration ######
 
@@ -421,6 +412,14 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :dynamic_default => "Parent directory of the associated Apache virtual host's root directory",
     :desc      => "The application's root directory.",
     :header    => nil
+  },
+  {
+    :name      => 'PassengerLveMinUid',
+    :type      => :integer,
+    :min_value => 0,
+    :default   => DEFAULT_LVE_MIN_UID,
+    :default_expr => 'DEFAULT_LVE_MIN_UID',
+    :desc      => 'Minimum user ID starting from which entering LVE and CageFS is allowed.'
   },
 
 
