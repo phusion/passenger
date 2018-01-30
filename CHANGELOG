@@ -1,3 +1,67 @@
+Release 5.2.0
+-------------
+
+ * [Apache] Breaking change: to avoid configuration ambiguity, options that act on a per-process level (rather than per-request level) can no longer be used in .htaccess. See the Passenger Library -> configuration -> intro for more info (https://www.phusionpassenger.com/library/config/apache/intro.html#global-per-application-and-per-request-options).
+ * [Apache] Breaking change: the option PassengerResolveSymlinksInDocumentRoot has been removed (old Passenger 2 compatibility option, see PassengerAppRoot for new method).
+ * [Apache] Option handling has been refactored to avoid silent conflicts and errors: warnings are now generated for global config options in <VirtualHost> (they conflict between VHosts) and per-application options in <Files>, <FilesMatch> and <If> (silently failed before).
+ * [Apache] Fixes compilation issues on some systems with macOS 10.13 High Sierra (in addition to the fixes from 5.1.11).
+ * [Enterprise] Fixes two unnecessary warnings about failure to contact the licensing server, one occurring since version 5.1.8 ("3 days out of contact"), the other since 5.1.11 + Apache ("failure to contact").
+ * [Nginx] Fixes the default for the `passenger_app_group_name` to start with the `passenger_app_root` rather than the document root (the end remains the same: `passenger_app_env`).
+ * [Standalone] Adds command line support for `start_timeout` in Passenger Standalone (also removes unnecessary warning when using it in `Passengerfile.json`).
+ * [Standalone, Nginx] Waits for Nginx to exit before cleaning up temp dir (started happening more since the switch to Nginx graceful shutdown in 5.1.6). Closes GH-1970.
+ * Deprecated options for Union Station.
+ * Ruby 2.5 compatibility: handle case where an exception's backtrace may be nil. Closes GH-2011.
+ * Adds JSON mime type for static file serving. Closes GH-2018.
+ * Removes packages for Ubuntu 17.04 "Zesty" (EOL 13-jan-2018).
+
+
+Release 5.1.12
+--------------
+
+ * Changes the Debian/Ubuntu install script to completely restart Apache upon upgrade. This prevents issues due to a "half upgraded" state (old Passenger Apache module + new Passenger core). Closes GH-2000.
+ * Adds Ubuntu 17.10 "Artful" packages.
+ * Fixes a case in which -- when Passenger is configured with user switching turned off -- it is unable to open the web server log file and aborts during startup. This regression was introduced in 5.1.8. Closes GH-1990.
+ * [Nginx] The preferred Nginx version is now 1.12.2
+ * [Nginx] The preferred PCRE version is now 8.41 (previously 8.39).
+ * [Standalone] Adds support for using `start_timeout` in Passengerfile.json.
+ * [Enterprise] Uses libuv to detect total system RAM, allows for compilation on pre-10.11 macOS.
+ * [Enterprise] Added a max request queue time option, to limit time requests spend in the request queue. Closes GH-1688.
+ * Updated libcurl version used in precompiled binaries (used for e.g. gem installs) to 7.56.1 (was: 7.54.1).
+ * Updated OpenSSL version used in precompiled binaries (used for e.g. gem installs) to 1.0.2m (was: 1.0.2l).
+ * Updated PCRE version used in precompiled binaries (used for e.g. gem installs) to 8.41 (was: 8.40).
+ * Updated Ruby versions used in precompiled binaries (used for e.g. gem installs) to include 2.1.10, 2.2.8, 2.3.5, and 2.4.2 (removed: 2.1.9, 2.2.7, 2.3.4, and 2.4.1).
+
+
+Release 5.1.11
+--------------
+
+ * [Apache] Fixes a race condition (segfault) on startup, which primarily affected macOS hosts (regression in 5.1.8 due to the logging improvements). Closes GH-1973.
+ * [Apache] Fixes compilation on macOS 10.13 High Sierra.
+ * [Nginx] It is now allowed to specify `passenger_enabled` in the `http` context as well.
+ * [Nginx] Namespaced Jsoncpp under the Passenger namespace to avoid collisions with Google Pagespeed's copy when linked into Nginx.
+ * [Standalone] Enables HTTP/2 support in the Nginx template. Support is only active if SSL is used, to avoid potential issues with HTTP/2 on HTTP ports. Closes GH-1945.
+ * [Enterprise, Standalone] Adds a new feature that is especially useful on Heroku: deferred port binding. When `--defer-port-binding` is set, Passenger does not listen on the given port until the application has finished spawning. If the application starts slowly then this mechanism can prevent the Heroku request timeout from killing the dyno (the boot timeout still applies).
+ * [Enterprise, Standalone] Fixes duplicate warnings when Passengerfile.json contains errors.
+ * [Standalone] `passenger start` now accepts the `--start-timeout` configuration option.
+ * Adds support for Bundler 2.0's new `gems.rb` and `gems.locked`. Learn more about these in [Gemfile's new clothes](https://depfu.com/blog/2017/09/06/gemfiles-new-clothes). Closes GH-1982.
+ * Removes Debian packages for Ubuntu 12.04 Precise.
+ * Fixes compilation warnings on macOS + Clang 9.0.
+ * Introduces a new check that logs a vulnerability warning if Passenger is run with root permissions while the directory permissions of (parts of) its root dir allow modifications by non-root users.
+ * Fixes an arbitrary file read vulnerability (if Passenger is running as root and the attacker has access to a user account that hosts an application).
+
+
+Release 5.1.10
+--------------
+
+ * This was an Enterprise-only hotfix release (no changes in Passenger Open Source).
+
+
+Release 5.1.9
+-------------
+
+ * This was an Enterprise-only hotfix release (no changes in Passenger Open Source).
+
+
 Release 5.1.8
 -------------
 
