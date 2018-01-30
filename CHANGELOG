@@ -1,7 +1,8 @@
 Release 5.2.1 (Not yet released)
 -------------
 
- * Fixed a regression from 5.1.11 that prevented Passenger from compiling on FreeBSD in some cases. Closes GH-2031.
+ * Fixes a regression from 5.1.11 that prevented Passenger from compiling on FreeBSD in some cases. Closes GH-2031.
+ * Fixes a regression from 5.2.0 which prevented setting the max pool idle time to 0. Closes GH-2020.
 
 
 Release 5.2.0

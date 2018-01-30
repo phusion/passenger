@@ -280,9 +280,6 @@ private:
 		if (config["max_pool_size"].asUInt() < 1) {
 			errors.push_back(Error("'{{max_pool_size}}' must be at least 1"));
 		}
-		if (config["pool_idle_time"].asUInt() < 1) {
-			errors.push_back(Error("'{{pool_idle_time}}' must be at least 1"));
-		}
 	}
 
 	static void validateController(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
