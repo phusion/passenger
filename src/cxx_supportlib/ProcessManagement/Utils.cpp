@@ -422,7 +422,7 @@ closeAllFileDescriptors(int lastToKeepOpen, bool asyncSignalSafe) {
 	for (int i = getHighestFileDescriptor(asyncSignalSafe); i > lastToKeepOpen; i--) {
 		/* Even though we normally shouldn't retry on EINTR
 		 * (http://news.ycombinator.com/item?id=3363819)
-		 * it's okay to do that here because because this function
+		 * it's okay to do that here because this function
 		 * may only be called in a single-threaded environment.
 		 */
 		int ret;
@@ -434,7 +434,7 @@ closeAllFileDescriptors(int lastToKeepOpen, bool asyncSignalSafe) {
 
 void
 printExecError(const char **command, int errcode) {
-	char buf[1024];
+	char buf[1024] = { };
 	printExecError2(command, errcode, buf, sizeof(buf));
 }
 
@@ -452,7 +452,7 @@ printExecError2(const char **command, int errcode, char *buf, size_t size) {
 	pos = AsyncSignalSafeUtils::appendInteger<int, 10>(pos, end, errcode);
 	pos = AsyncSignalSafeUtils::appendData(pos, end, ")\n");
 
-	AsyncSignalSafeUtils::printError(buf, end - pos);
+	AsyncSignalSafeUtils::printError(buf, pos - buf);
 }
 
 
