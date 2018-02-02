@@ -585,7 +585,7 @@ Group::disable(const ProcessPtr &process, const DisableCallback &callback) {
 				/* All processes are going to be disabled, so in order
 				 * to avoid blocking requests we first spawn a new process
 				 * and disable this process after the other one is done
-				 * spawning. We do this irregardless of resource limits
+				 * spawning. We do this irrespective of resource limits
 				 * because this is an exceptional situation.
 				 */
 				P_DEBUG("Spawning a new process to avoid the disable action from blocking requests");
