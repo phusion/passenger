@@ -198,7 +198,11 @@ private:
 		server_rec *serverRec, core_dir_config *cdconf, DirConfig *pdconf)
 	{
 		Json::Value vhostDoc;
-		vhostDoc["server_names"].append(serverRec->defn_name);
+		if (serverRec->defn_name) {
+			vhostDoc["server_names"].append(serverRec->defn_name);
+		} else {
+			vhostDoc["server_names"].append("NOT_RECEIVED");
+		}
 
 		Json::Value locationMatcherDoc;
 		locationMatcherDoc["value"] = cdconf->d;
