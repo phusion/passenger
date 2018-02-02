@@ -1,14 +1,27 @@
-# Phusion Passenger: a fast and robust web server and application server for Ruby, Python and Node.js
+# <img src="images/passenger_logo.svg" alt="passenger logo" style="margin-bottom: -.2em; width: 1.4em"> Phusion Passenger
+<h3>SuperCharge your Ruby, Node.js and Python apps</h3>
 
-[Phusion Passenger™](https://www.phusionpassenger.com/) is a web server and application server, designed to be fast, robust and lightweight. It takes a lot of complexity out of deploying web apps, adds powerful enterprise-grade features that are useful in production, and makes administration much easier and less complex. Phusion Passenger supports Ruby, Python, Node.js and Meteor, and is being used by high-profile companies such as **Apple, Pixar, New York Times, AirBnB, Juniper** etc as well as [over 350.000 websites](http://trends.builtwith.com/Web-Server/Phusion-Passenger).
+<video id="video" class="video" preload="metadata" controls height="400" style="margin-bottom: 2em">
+    <source src="https://player.vimeo.com/external/224923750.hd.mp4?s=6931550c8a2bedabba0822a6ec7966c45ee1fbc4&profile_id=174" type="video/mp4">
+</video>
 
-What makes it so fast and reliable is its **C++** core, its **zero-copy** architecture, its **watchdog** system and its **hybrid** evented, multi-threaded and multi-process design.
+[Phusion Passenger™](https://www.phusionpassenger.com/) is a web server and application server, designed to be fast, robust and lightweight. It takes a lot of complexity out of deploying web apps, adds powerful enterprise-grade features that are useful in production, and makes administration much easier and less complex. Phusion Passenger supports Ruby, Python, Node.js and Meteor, and is being used by high-profile companies such as **Apple, Pixar, New York Times, AirBnB, Juniper** etc as well as [over 650.000 websites](http://trends.builtwith.com/Web-Server/Phusion-Passenger).
 
-<a href="http://vimeo.com/phusionnl/review/80475623/c16e940d1f"><img src="http://blog.phusion.nl/wp-content/uploads/2014/01/gameofthrones.jpg" height="300"></a><br><em>Phusion Passenger used in Game of Thrones Ascent</em>
+<div style="display: flex; margin-bottom: 2em
 
-**Learn more:** [Website](https://www.phusionpassenger.com/) | [Documentation & Support](https://www.phusionpassenger.com/support) | [Github](https://github.com/phusion/passenger) | [Twitter](https://twitter.com/phusion_nl) | [Blog](http://blog.phusion.nl/)
-
-<a href="https://www.phusionpassenger.com"><center><img src="http://blog.phusion.nl/wp-content/uploads/2012/07/Passenger_chair_256x256.jpg" width="160" height="160" alt="Phusion Passenger"></center></a>
+">
+	<img src="images/spark.png" alt="spark" width="30%" style="align-self: flex-start; margin-top: 2em">
+	<div style="margin-left: 5em">
+		<p>What makes it so fast and reliable is its <strong>C++</strong> core, its <strong>zero-copy</strong> architecture, its <strong>watchdog</strong> system and its <strong>hybrid</strong> evented, multi-threaded and multi-process design.</p>
+		<h3>Learn more:</h3>
+		<ul>
+			<li><a href="https://www.phusionpassenger.com/">Website</a></li>
+			<li><a href="https://www.phusionpassenger.com/support">Documentation &amp; Support</a></li>
+			<li><a href="https://twitter.com/phusion_nl">Twitter</a></li>
+			<li><a href="http://blog.phusion.nl/">Blog</a></li>
+		</ul>
+	</div>
+</div>
 
 ## Installation
 
