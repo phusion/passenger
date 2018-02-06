@@ -863,6 +863,10 @@ initializeAdminPanelConnector() {
 	connector->resourceLocator = &wo.resourceLocator;
 	connector->appPool = wo.appPool;
 	connector->configGetter = inspectConfig;
+	for (unsigned int i = 0; i < wo.threadWorkingObjects.size(); i++) {
+		ThreadWorkingObjects *two = &wo.threadWorkingObjects[i];
+		connector->controllers.push_back(two->controller);
+	}
 	connector->initialize();
 	wo.shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
 	wo.adminPanelConnector = connector;

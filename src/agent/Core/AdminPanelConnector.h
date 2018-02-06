@@ -37,6 +37,7 @@
 #include <InstanceDirectory.h>
 #include <ConfigKit/SchemaUtils.h>
 #include <Core/ApplicationPool/Pool.h>
+#include <Core/Controller.h>
 #include <ProcessManagement/Ruby.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
@@ -106,6 +107,7 @@ public:
 	typedef WebSocketCommandReverseServer::ConnectionPtr ConnectionPtr;
 	typedef WebSocketCommandReverseServer::MessagePtr MessagePtr;
 	typedef boost::function<Json::Value (void)> ConfigGetter;
+	typedef vector<Controller*> Controllers;
 
 private:
 	WebSocketCommandReverseServer server;
@@ -295,9 +297,14 @@ private:
 
 	bool onGetGlobalStatistics(const ConnectionPtr &conn, const Json::Value &doc) {
 		Json::Value reply;
-		reply["result"] = "error";
+		reply["result"] = "ok";
 		reply["request_id"] = doc["request_id"];
-		reply["data"]["message"] = "Action not implemented";
+		reply["data"]["message"] = Json::arrayValue;
+
+		for (unsigned int i = 0; i < controllers.size(); i++) {
+			reply["data"]["message"].append(controllers[i]->inspectStateAsJson());
+		}
+
 		sendJsonReply(conn, reply);
 		return true;
 	}
@@ -492,6 +499,7 @@ public:
 	ResourceLocator *resourceLocator;
 	ApplicationPool2::PoolPtr appPool;
 	ConfigGetter configGetter;
+	Controllers controllers;
 
 
 	AdminPanelConnector(const Schema &schema, const Json::Value &config,
