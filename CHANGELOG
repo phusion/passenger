@@ -1,6 +1,8 @@
 Release 5.2.1 (Not yet released)
 -------------
 
+ * Fixed a regression from 5.1.11 that prevented Passenger from compiling on FreeBSD in some cases. Closes GH-2031.
+
 
 Release 5.2.0
 -------------

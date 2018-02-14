@@ -38,6 +38,7 @@
 #include <cstring>
 #include <cctype>
 #include <stdlib.h>
+#include <sys/wait.h>
 
 #include <jsoncpp/json.h>
 
