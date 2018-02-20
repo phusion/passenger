@@ -1154,7 +1154,7 @@ private:
 				&count);
 			if (status == KERN_SUCCESS) {
 				metrics.ramUsed = ((ssize_t) vmStat.active_count + vmStat.wire_count);
-				#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+				#if __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_9
 					metrics.ramUsed += vmStat.compressor_page_count;
 				#endif
 				metrics.ramUsed = metrics.ramUsed * (pageSize / 1024);

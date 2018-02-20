@@ -1,11 +1,12 @@
 Release 5.2.1 (Not yet released)
 -------------
 
- * Fixes warning on macOS about /proc/self access (excluded some code that was intended only for Linux).
- * Warns if using an incompatible compiler on macOS < 10.13. Closes GH-2017.
  * Fixes a regression from 5.1.11 that prevented Passenger from compiling on FreeBSD in some cases. Closes GH-2031.
  * Fixes a bounds issue in printing an error message that could occur in some cases when spawning a child process fails. Issue was present from 5.1.11.
  * Fixes a regression from 5.2.0 which prevented setting the max pool idle time to 0. Closes GH-2020.
+ * Warns if using an incompatible compiler on macOS < 10.13. Closes GH-2017.
+ * No longer uses Security Framework on macOS 10.13+. This will prevent further keychain warnings from appropriately compiled Passengers.
+ * Fixes warning on macOS about /proc/self access (excluded some code that was intended only for Linux).
  * `passenger-install-nginx-module` now downloads the preferred Nginx version via https. Thanks to smiba for pointing this out.
  * [Apache] Fixes a regression from 5.2.0 that caused a crash on startup when no top-level ServerName is set. Closes GH-2029.
  * [Enterprise] Adds support for using RAM-based pricing on Heroku.

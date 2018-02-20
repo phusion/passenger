@@ -62,8 +62,14 @@ let(:agent_ldflags) do
   result << '-lselinux' if USE_SELINUX
   # Extra linker flags for backtrace_symbols() to generate useful output (see agent/Base.cpp).
   result << PlatformInfo.export_dynamic_flags
-  # Enable dead symbol elimination on OS X.
-  result << '-Wl,-dead_strip' if PlatformInfo.os_name_simple == 'macosx'
+  if PlatformInfo.os_name_simple == 'macosx'
+    # Enable dead symbol elimination on OS X.
+    result << '-Wl,-dead_strip'
+    if PlatformInfo.os_version >= '10.13'
+      result << PlatformInfo.openssl_extra_ldflags
+      result << '-lcrypto'
+    end
+  end
   result.join(' ')
 end
 
@@ -83,6 +89,7 @@ AGENT_OBJECTS.each_pair do |object, source|
         libuv_cflags,
         websocketpp_cflags,
         PlatformInfo.curl_flags,
+        PlatformInfo.openssl_extra_cflags,
         PlatformInfo.zlib_flags
       ]
     } }

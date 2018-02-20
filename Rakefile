@@ -44,6 +44,11 @@ end
 
 require("#{SOURCE_ROOT}/config") if File.exist?("#{SOURCE_ROOT}/config.rb")
 require_build_system_file 'basics'
+
+if PlatformInfo.os_name_simple == 'macosx'
+  ENV["MACOSX_DEPLOYMENT_TARGET"] ||= PlatformInfo.os_version
+end
+
 if boolean_option('ONLY_RUBY')
   require_build_system_file 'ruby_extension'
 else

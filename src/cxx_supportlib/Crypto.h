@@ -31,8 +31,13 @@
 #include <modp_b64.h>
 
 #if BOOST_OS_MACOS
+#include <Availability.h>
+#ifndef __MAC_10_13
+#define __MAC_10_13 101300
+#endif
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
+#define PRE_HIGH_SIERRA (__MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_13)
 #else
 #include <openssl/pem.h>
 #include <openssl/rand.h>
@@ -105,11 +110,13 @@ public:
 	bool generateAndAppendNonce(string &nonce);
 
 #if BOOST_OS_MACOS
+#if PRE_HIGH_SIERRA
 	/**
 	 * sets the permissions on the certificate so that curl doesn't prompt
 	 */
 	bool preAuthKey(const char *path, const char *passwd, const char *cLabel);
 	void killKey(const char *cLabel);
+#endif
 	bool generateRandomChars(unsigned char *rndChars, int rndLen);
 #endif
 

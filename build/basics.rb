@@ -40,6 +40,7 @@ PhusionPassenger.require_passenger_lib 'platform_info/apache'
 PhusionPassenger.require_passenger_lib 'platform_info/curl'
 PhusionPassenger.require_passenger_lib 'platform_info/zlib'
 PhusionPassenger.require_passenger_lib 'platform_info/crypto'
+PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 PhusionPassenger.require_passenger_lib 'platform_info/cxx_portability'
 
