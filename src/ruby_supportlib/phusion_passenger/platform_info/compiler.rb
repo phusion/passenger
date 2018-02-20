@@ -141,6 +141,15 @@ module PhusionPassenger
     end
     private_class_method :cc_or_cxx_supports_feliminate_unused_debug?
 
+    def self.cc_or_cxx_supports_blocks?(language)
+      ext = detect_language_extension(language)
+      compiler_type_name = detect_compiler_type_name(language)
+      command = create_compiler_command(language,"-E -dM",'- </dev/null')
+      result = `#{command}`
+      return result.include? "__BLOCKS__"
+    end
+    private_class_method :cc_or_cxx_supports_blocks?
+
   public
     def self.cc
       return string_env('CC', default_cc)
@@ -428,6 +437,16 @@ module PhusionPassenger
       return cc_or_cxx_supports_feliminate_unused_debug?(:cxx)
     end
     memoize :cxx_supports_feliminate_unused_debug?, true
+
+    def self.cc_block_support_ok?
+      return (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:c) || os_version >= "10.13" )
+    end
+    memoize :cc_block_support_ok?, true
+
+    def self.cxx_block_support_ok?
+      return (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:cxx) || os_version >= "10.13" )
+    end
+    memoize :cxx_block_support_ok?, true
 
     # Returns whether compiling C++ with -fvisibility=hidden might result
     # in tons of useless warnings, like this:
