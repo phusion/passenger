@@ -88,6 +88,7 @@ private:
 			_exit(1);
 		}
 
+#if !BOOST_OS_MACOS
 		bool isLegacy;
 		ret = tryRestoreOomScore(originalOomScore, isLegacy);
 		if (ret != 0) {
@@ -106,6 +107,7 @@ private:
 			pos = ASSU::appendData(pos, end, "). Process will remain at inherited OOM score.");
 			ASSU::printError(buf, pos - buf);
 		}
+#endif
 	}
 
 	void

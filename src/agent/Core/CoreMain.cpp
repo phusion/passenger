@@ -1319,7 +1319,9 @@ coreMain(int argc, char *argv[]) {
 		*coreConfig, coreSchema->loggingKit.translator,
 		parseOptions, NULL, 2);
 
+#if !BOOST_OS_MACOS
 	restoreOomScore(coreConfig->get("oom_score").asString());
+#endif
 
 	ret = runCore();
 	shutdownAgent(coreSchema, coreConfig);
