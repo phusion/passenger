@@ -55,6 +55,7 @@ SCHEMA_PRINTER_OBJECTS.each_pair do |object, source|
         libuv_cflags,
         websocketpp_cflags,
         PlatformInfo.curl_flags,
+        PlatformInfo.openssl_extra_cflags,
         PlatformInfo.zlib_flags
       ]
     } }
