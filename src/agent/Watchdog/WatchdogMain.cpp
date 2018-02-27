@@ -176,6 +176,7 @@ static void cleanup(const WorkingObjectsPtr &wo);
 
 /***** Functions *****/
 
+#if !BOOST_OS_MACOS
 static FILE *
 openOomAdjFileGetType(const char *mode, OomFileType &type) {
 	FILE *f = fopen("/proc/self/oom_score_adj", mode);
@@ -249,6 +250,7 @@ setOomScoreNeverKill() {
 
 	return oldScore;
 }
+#endif
 
 static void
 terminationHandler(int signo) {
