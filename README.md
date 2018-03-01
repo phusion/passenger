@@ -1,5 +1,5 @@
 # <img src="images/passenger_logo.svg" alt="passenger logo" style="margin-bottom: -.2em; width: 1.4em"> Phusion Passenger
-<h3>SuperCharge your Ruby, Node.js and Python apps</h3>
+<h3>Supercharge your Ruby, Node.js and Python apps</h3>
 
 <video id="video" class="video" preload="metadata" controls height="400" style="margin-bottom: 2em">
     <source src="https://player.vimeo.com/external/224923750.hd.mp4?s=6931550c8a2bedabba0822a6ec7966c45ee1fbc4&profile_id=174" type="video/mp4">
@@ -57,8 +57,9 @@ Ruby users can also build a gem from the Git repository and install the gem.
 
  * The `doc/` directory.
  * [Contributors Guide](https://github.com/phusion/passenger/blob/master/CONTRIBUTING.md)
- * https://www.phusionpassenger.com/support
+ * [Phusion Passenger support page](https://www.phusionpassenger.com/support)
+ * [Phusion Passenger release notes](https://blog.phusion.nl/tag/passenger-releases/)
 
 ## Legal
 
-"Passenger", "Phusion Passenger" and "Union Station" are registered trademarks of Phusion Holding B.V.
+"Passenger" and "Phusion Passenger" are registered trademarks of Phusion Holding B.V.
