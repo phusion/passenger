@@ -25,7 +25,7 @@
 
 ## Installation
 
-Please follow [the installation instructions on the website](https://www.phusionpassenger.com/get_it_now).
+Please follow [the installation instructions on the website](https://www.phusionpassenger.com/library/install/).
 
 ### Installing the source directly from git
 
