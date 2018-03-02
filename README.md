@@ -7,13 +7,15 @@
 
 What makes it so fast and reliable is its <strong>C++</strong> core, its <strong>zero-copy</strong> architecture, its <strong>watchdog</strong> system and its <strong>hybrid</strong> evented, multi-threaded and multi-process design.</p>
 
-<img src="https://github.com/phusion/passenger/blob/updated_readme/images/spark.png" width="130" align=left>
+<img src="https://github.com/phusion/passenger/blob/updated_readme/images/spark.png" align="left" width="300">
 
 ### Learn more:
 - [Website](https://www.phusionpassenger.com/)
 - [Documentation &amp; Support](https://www.phusionpassenger.com/support)
 - [Twitter](https://twitter.com/phusion_nl)
 - [Blog](http://blog.phusion.nl/)
+
+<br/><br/><br/><br/><br/>
 
 ## Installation
 
