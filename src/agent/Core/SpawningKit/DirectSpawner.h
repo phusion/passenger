@@ -242,7 +242,8 @@ public:
 					errorPipe.first,
 					pid,
 					// The cast works around a compilation problem in Clang.
-					(const char *) "stderr");
+					(const char *) "stderr",
+					options.getAppGroupName());
 			details.stderrCapturer->start();
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;

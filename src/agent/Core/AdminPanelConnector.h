@@ -153,6 +153,8 @@ private:
 			return onGetApplicationProperties(conn, doc);
 		} else if (resource == "application_configuration") {
 			return onGetApplicationConfig(conn, doc);
+		} else if (resource == "application_logs") {
+			return onGetApplicationLogs(conn, doc);
 		} else {
 			return onUnknownResource(conn, doc);
 		}
@@ -352,7 +354,7 @@ private:
 		Json::Value appConfigsContainer = configGetter()["config_manifest"]
 			["effective_value"]["application_configurations"];
 		Json::Value appConfigsContainerOutput;
-		Json::Value args(Json::objectValue), reply;
+		Json::Value reply;
 
 		if (doc.isMember("arguments")) {
 			ConfigKit::Schema argumentsSchema =
@@ -390,6 +392,14 @@ private:
 		return true;
 	}
 
+	bool onGetApplicationLogs(const ConnectionPtr &conn, const Json::Value &doc) {
+		Json::Value reply;
+		reply["result"] = "ok";
+		reply["request_id"] = doc["request_id"];
+		reply["data"]["logs"] = LoggingKit::context->convertLog();
+		sendJsonReply(conn, reply);
+		return true;
+	}
 
 	bool onUnknownResource(const ConnectionPtr &conn, const Json::Value &doc) {
 		Json::Value reply;

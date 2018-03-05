@@ -73,7 +73,6 @@ enum TargetType {
 
 extern Context *context;
 
-
 void shutdown();
 
 const char *_strdupFastStringStream(const FastStringStream<> &stream);

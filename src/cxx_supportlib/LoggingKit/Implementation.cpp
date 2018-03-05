@@ -41,7 +41,6 @@
 #include <pthread.h>
 
 #include <boost/cstdint.hpp>
-#include <oxt/system_calls.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/detail/context.hpp>
 
@@ -68,7 +67,6 @@ using namespace std;
 
 Context *context = NULL;
 AssertionFailureInfo lastAssertionFailure;
-
 
 void
 initialize(const Json::Value &initialConfig, const ConfigKit::Translator &translator) {
@@ -309,8 +307,47 @@ _writeFileDescriptorLogEntry(const ConfigRealization *configRealization,
 	writeExactWithoutOXT(configRealization->fileDescriptorLogTargetFd, str, size);
 }
 
+void
+Context::saveLog(HashedStaticString groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen){
+	boost::lock_guard<boost::mutex> l(syncher); //lock
+
+	if(!logBuffer.contains(groupName)) {
+		vector<pair<string,string>> v;
+		v.reserve(1024);
+		logBuffer.insert(groupName, v);
+	}
+	string pid(pidStr,pidStrLen);
+	string line(message, messageLen);
+	logBuffer.lookupCell(groupName)->value.push_back(pair<string,string>(pid,line));
+	//unlock
+}
+
+Json::Value
+Context::convertLog(){
+	boost::lock_guard<boost::mutex> l(syncher); //lock
+	Json::Value reply = Json::objectValue;
+
+	if (!logBuffer.empty()) {
+		Context::LogBuffer::ConstIterator it(logBuffer);
+		while (*it != NULL) {
+			reply[it.getKey()] = Json::arrayValue;
+			for (auto j : it.getValue()) {
+				Json::Value pair = Json::objectValue;
+				pair["pid"] = j.first;
+				pair["line"] = j.second;
+				reply[it.getKey()].append(pair);
+			}
+			it.next();
+		}
+		logBuffer.clear();// does appminton cache this enough?
+	}
+
+	return reply;
+	//unlock
+}
+
 static void
-realLogAppOutput(int targetFd, char *buf, unsigned int bufSize,
+realLogAppOutput(HashedStaticString groupName, int targetFd, char *buf, unsigned int bufSize,
 	const char *pidStr, unsigned int pidStrLen,
 	const char *channelName, unsigned int channelNameLen,
 	const char *message, unsigned int messageLen)
@@ -325,11 +362,16 @@ realLogAppOutput(int targetFd, char *buf, unsigned int bufSize,
 	pos = appendData(pos, end, ": ");
 	pos = appendData(pos, end, message, messageLen);
 	pos = appendData(pos, end, "\n");
+
+	if (OXT_LIKELY(context != NULL)) {
+		context->saveLog(groupName, pidStr, pidStrLen, message, messageLen);
+	}
+
 	writeExactWithoutOXT(targetFd, buf, pos - buf);
 }
 
 void
-logAppOutput(pid_t pid, const char *channelName, const char *message, unsigned int size) {
+logAppOutput(HashedStaticString groupName, pid_t pid, const char *channelName, const char *message, unsigned int size) {
 	int targetFd;
 
 	if (OXT_LIKELY(context != NULL)) {
@@ -358,14 +400,14 @@ logAppOutput(pid_t pid, const char *channelName, const char *message, unsigned i
 	totalLen = (sizeof("App X Y: \n") - 2) + pidStrLen + channelNameLen + size;
 	if (totalLen < 1024) {
 		char buf[1024];
-		realLogAppOutput(targetFd,
+		realLogAppOutput(groupName, targetFd,
 			buf, sizeof(buf),
 			pidStr, pidStrLen,
 			channelName, channelNameLen,
 			message, size);
 	} else {
 		DynamicBuffer buf(totalLen);
-		realLogAppOutput(targetFd,
+		realLogAppOutput(groupName, targetFd,
 			buf.data, totalLen,
 			pidStr, pidStrLen,
 			channelName, channelNameLen,

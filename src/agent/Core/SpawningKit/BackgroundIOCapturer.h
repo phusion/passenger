@@ -63,6 +63,7 @@ private:
 	boost::mutex dataSyncher;
 	string data;
 	oxt::thread *thr;
+	const HashedStaticString &appGroupName;
 
 	void capture() {
 		TRACE_POINT();
@@ -89,7 +90,7 @@ private:
 				}
 				UPDATE_TRACE_POINT();
 				if (ret == 1 && buf[0] == '\n') {
-					LoggingKit::logAppOutput(pid, channelName, "", 0);
+					LoggingKit::logAppOutput(appGroupName, pid, channelName, "", 0);
 				} else {
 					vector<StaticString> lines;
 					if (ret > 0 && buf[ret - 1] == '\n') {
@@ -97,7 +98,7 @@ private:
 					}
 					split(StaticString(buf, ret), '\n', lines);
 					foreach (const StaticString line, lines) {
-						LoggingKit::logAppOutput(pid, channelName, line.data(), line.size());
+						LoggingKit::logAppOutput(appGroupName, pid, channelName, line.data(), line.size());
 					}
 				}
 			}
@@ -105,11 +106,12 @@ private:
 	}
 
 public:
-	BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid, const char *_channelName)
+	BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid, const char *_channelName, const HashedStaticString &_appGroupName)
 		: fd(_fd),
 		  pid(_pid),
 		  channelName(_channelName),
-		  thr(NULL)
+		  thr(NULL),
+		  appGroupName(_appGroupName)
 		{ }
 
 	~BackgroundIOCapturer() {

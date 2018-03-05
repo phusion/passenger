@@ -28,6 +28,7 @@
 
 #include <queue>
 
+#include <jsoncpp/json.h>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
 #include <boost/thread.hpp>
@@ -36,6 +37,7 @@
 #include <LoggingKit/Forward.h>
 #include <LoggingKit/Config.h>
 #include <Utils/SystemTime.h>
+#include <DataStructures/StringKeyTable.h>
 
 namespace Passenger {
 namespace LoggingKit {
@@ -65,6 +67,8 @@ using namespace oxt;
 class Context {
 public:
 	typedef LoggingKit::ConfigChangeRequest ConfigChangeRequest;
+	typedef StringKeyTable<vector<pair<string,string>>> LogBuffer;
+	LogBuffer logBuffer;
 
 private:
 	Schema schema;
@@ -83,6 +87,9 @@ public:
 		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator());
 	~Context();
 	ConfigKit::Store getConfig() const;
+
+	void saveLog(HashedStaticString groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen);
+	Json::Value convertLog();
 
 	bool prepareConfigChange(const Json::Value &updates,
 		vector<ConfigKit::Error> &errors,

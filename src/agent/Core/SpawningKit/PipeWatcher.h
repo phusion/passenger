@@ -61,6 +61,7 @@ private:
 	bool started;
 	boost::mutex startSyncher;
 	boost::condition_variable startCond;
+	const HashedStaticString &appGroupName;
 
 	static void threadMain(boost::shared_ptr<PipeWatcher> self) {
 		TRACE_POINT();
@@ -97,7 +98,7 @@ private:
 				}
 			} else if (ret == 1 && buf[0] == '\n') {
 				UPDATE_TRACE_POINT();
-				LoggingKit::logAppOutput(pid, name, "", 0);
+				LoggingKit::logAppOutput(appGroupName, pid, name, "", 0);
 			} else {
 				UPDATE_TRACE_POINT();
 				vector<StaticString> lines;
@@ -107,7 +108,7 @@ private:
 				}
 				split(StaticString(buf, ret2), '\n', lines);
 				foreach (const StaticString line, lines) {
-					LoggingKit::logAppOutput(pid, name, line.data(), line.size());
+					LoggingKit::logAppOutput(appGroupName, pid, name, line.data(), line.size());
 				}
 			}
 
@@ -119,12 +120,13 @@ private:
 
 public:
 	PipeWatcher(const ConfigPtr &_config, const FileDescriptor &_fd,
-		const char *_name, pid_t _pid)
+				const char *_name, pid_t _pid, const HashedStaticString &_appGroupName)
 		: config(_config),
 		  fd(_fd),
 		  name(_name),
 		  pid(_pid),
-		  started(false)
+		  started(false),
+		  appGroupName(_appGroupName)
 		{ }
 
 	void initialize() {

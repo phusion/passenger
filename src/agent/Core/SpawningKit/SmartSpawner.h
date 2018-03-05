@@ -290,7 +290,8 @@ private:
 					errorPipe.first,
 					pid,
 					// The cast works around a compilation problem in Clang.
-					(const char *) "stderr");
+					(const char *) "stderr",
+					options.getAppGroupName());
 			details.stderrCapturer->start();
 			details.debugDir = debugDir;
 			details.options = &options;
@@ -310,12 +311,12 @@ private:
 			PipeWatcherPtr watcher;
 
 			watcher = boost::make_shared<PipeWatcher>(config,
-				adminSocket.second, "stdout", pid);
+				adminSocket.second, "stdout", pid, options.getAppGroupName());
 			watcher->initialize();
 			watcher->start();
 
 			watcher = boost::make_shared<PipeWatcher>(config,
-				errorPipe.first, "stderr", pid);
+				errorPipe.first, "stderr", pid, options.getAppGroupName());
 			watcher->initialize();
 			watcher->start();
 

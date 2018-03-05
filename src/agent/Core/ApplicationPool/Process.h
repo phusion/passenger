@@ -353,6 +353,8 @@ private:
 		return result;
 	}
 
+	SpawningKit::PipeWatcherPtr makePipeWatcher(const SpawningKit::ConfigPtr &config, FileDescriptor socket, const char *channel, pid_t pid, const BasicGroupInfo *groupInfo);
+
 public:
 	/*************************************************************
 	 * Information used by Pool. Do not write to these from
@@ -454,17 +456,11 @@ public:
 			errorPipe = skResult->errorPipe;
 
 			if (adminSocket != -1) {
-				SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-					getContext()->getSpawningKitConfig(), adminSocket, "stdout", info.pid);
-				watcher->initialize();
-				watcher->start();
+				SpawningKit::PipeWatcherPtr watcher = makePipeWatcher(getContext()->getSpawningKitConfig(), adminSocket, "stdout", info.pid, groupInfo);
 			}
 
 			if (errorPipe != -1) {
-				SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-					getContext()->getSpawningKitConfig(), errorPipe, "stderr", info.pid);
-				watcher->initialize();
-				watcher->start();
+				SpawningKit::PipeWatcherPtr watcher = makePipeWatcher(getContext()->getSpawningKitConfig(), errorPipe, "stderr", info.pid, groupInfo);
 			}
 		}
 	}

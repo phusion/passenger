@@ -45,6 +45,7 @@
 #include <Utils/JsonUtils.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/ApplicationPool/Group.h>
+#include <Core/ApplicationPool/Process.cpp>
 #include <Core/ApplicationPool/ErrorRenderer.h>
 #include <Core/ApplicationPool/Pool/InitializationAndShutdown.cpp>
 #include <Core/ApplicationPool/Pool/AnalyticsCollection.cpp>
