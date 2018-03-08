@@ -85,6 +85,7 @@ private:
 
 		result.push_back(&options.appRoot);
 		result.push_back(&options.appGroupName);
+		result.push_back(&options.appLogFile);
 		result.push_back(&options.appType);
 		result.push_back(&options.startCommand);
 		result.push_back(&options.startupFile);
@@ -176,6 +177,11 @@ public:
 	 * If left empty, then the app root is used as the app group name.
 	 */
 	HashedStaticString appGroupName;
+
+	/** The application's log file, where Passenger sends the logs from
+	 *	the application.
+	 */
+	StaticString appLogFile;
 
 	/** The application's type, used for determining the command to invoke to
 	 * spawn an application process as well as determining the startup file's
@@ -598,6 +604,7 @@ public:
 			appendKeyValue (vec, "app_root",           appRoot);
 			appendKeyValue (vec, "app_group_name",     getAppGroupName());
 			appendKeyValue (vec, "app_type",           appType);
+			appendKeyValue (vec, "app_log_file",       appLogFile);
 			appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
 			appendKeyValue (vec, "startup_file",       absolutizePath(getStartupFile(), absolutizePath(appRoot)));
 			appendKeyValue (vec, "process_title",      getProcessTitle());
@@ -716,4 +723,3 @@ public:
 } // namespace Passenger
 
 #endif /* _PASSENGER_APPLICATION_POOL2_OPTIONS_H_ */
-

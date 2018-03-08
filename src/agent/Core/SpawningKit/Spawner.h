@@ -710,7 +710,7 @@ protected:
 				if (details.stderrCapturer != NULL) {
 					details.stderrCapturer->appendToBuffer(result);
 				}
-				LoggingKit::logAppOutput(details.options->getAppGroupName(), details.pid, "stdout", line.data(), line.size());
+				LoggingKit::logAppOutput(details.options->getAppGroupName(), details.pid, "stdout", line.data(), line.size(), details.options->appLogFile);
 			}
 		}
 	}

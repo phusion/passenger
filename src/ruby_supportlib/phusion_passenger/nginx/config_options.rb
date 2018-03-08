@@ -396,6 +396,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :dynamic_default => 'passenger_app_root plus passenger_app_env'
   },
   {
+    :name     => 'passenger_monitor_log_file',
+    :scope    => :application,
+    :type     => :string_array,
+    :header   => nil
+  },
+  {
     :name     => 'passenger_app_root',
     :scope    => :application,
     :type     => :string,

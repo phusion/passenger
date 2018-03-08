@@ -243,7 +243,8 @@ public:
 					pid,
 					// The cast works around a compilation problem in Clang.
 					(const char *) "stderr",
-					options.getAppGroupName());
+					options.getAppGroupName(),
+					options.appLogFile);
 			details.stderrCapturer->start();
 			details.pid = pid;
 			details.adminSocket = adminSocket.second;

@@ -350,7 +350,7 @@ static void
 realLogAppOutput(HashedStaticString groupName, int targetFd, char *buf, unsigned int bufSize,
 	const char *pidStr, unsigned int pidStrLen,
 	const char *channelName, unsigned int channelNameLen,
-	const char *message, unsigned int messageLen)
+	const char *message, unsigned int messageLen, int appLogFile)
 {
 	char *pos = buf;
 	char *end = buf + bufSize;
@@ -366,12 +366,14 @@ realLogAppOutput(HashedStaticString groupName, int targetFd, char *buf, unsigned
 	if (OXT_LIKELY(context != NULL)) {
 		context->saveLog(groupName, pidStr, pidStrLen, message, messageLen);
 	}
-
+	if (appLogFile > -1) {
+		writeExactWithoutOXT(appLogFile, buf, pos - buf);
+	}
 	writeExactWithoutOXT(targetFd, buf, pos - buf);
 }
 
 void
-logAppOutput(HashedStaticString groupName, pid_t pid, const char *channelName, const char *message, unsigned int size) {
+logAppOutput(HashedStaticString groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile) {
 	int targetFd;
 
 	if (OXT_LIKELY(context != NULL)) {
@@ -385,6 +387,13 @@ logAppOutput(HashedStaticString groupName, pid_t pid, const char *channelName, c
 		targetFd = STDERR_FILENO;
 	}
 
+	int fd = -1;
+	if (!appLogFile.empty()) {
+		fd = open(appLogFile.data(), O_WRONLY | O_APPEND | O_CREAT, 0660);
+		if (fd == -1) {
+			P_ERROR("opening file: " << appLogFile << " for logging " << groupName << " failed. Error: " << strerror(errno));
+		}
+	}
 	char pidStr[sizeof("4294967295")];
 	unsigned int pidStrLen, channelNameLen, totalLen;
 
@@ -404,15 +413,16 @@ logAppOutput(HashedStaticString groupName, pid_t pid, const char *channelName, c
 			buf, sizeof(buf),
 			pidStr, pidStrLen,
 			channelName, channelNameLen,
-			message, size);
+			message, size, fd);
 	} else {
 		DynamicBuffer buf(totalLen);
 		realLogAppOutput(groupName, targetFd,
 			buf.data, totalLen,
 			pidStr, pidStrLen,
 			channelName, channelNameLen,
-			message, size);
+			message, size, fd);
 	}
+	if(fd > -1){close(fd);}
 }
 
 

@@ -64,6 +64,7 @@ private:
 	string data;
 	oxt::thread *thr;
 	const HashedStaticString &appGroupName;
+	const StaticString &appLogFile;
 
 	void capture() {
 		TRACE_POINT();
@@ -90,7 +91,7 @@ private:
 				}
 				UPDATE_TRACE_POINT();
 				if (ret == 1 && buf[0] == '\n') {
-					LoggingKit::logAppOutput(appGroupName, pid, channelName, "", 0);
+					LoggingKit::logAppOutput(appGroupName, pid, channelName, "", 0, appLogFile);
 				} else {
 					vector<StaticString> lines;
 					if (ret > 0 && buf[ret - 1] == '\n') {
@@ -98,7 +99,7 @@ private:
 					}
 					split(StaticString(buf, ret), '\n', lines);
 					foreach (const StaticString line, lines) {
-						LoggingKit::logAppOutput(appGroupName, pid, channelName, line.data(), line.size());
+						LoggingKit::logAppOutput(appGroupName, pid, channelName, line.data(), line.size(), appLogFile);
 					}
 				}
 			}
@@ -106,12 +107,13 @@ private:
 	}
 
 public:
-	BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid, const char *_channelName, const HashedStaticString &_appGroupName)
+	BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid, const char *_channelName, const HashedStaticString &_appGroupName, const StaticString &_appLogFile)
 		: fd(_fd),
 		  pid(_pid),
 		  channelName(_channelName),
 		  thr(NULL),
-		  appGroupName(_appGroupName)
+		  appGroupName(_appGroupName),
+		  appLogFile(_appLogFile)
 		{ }
 
 	~BackgroundIOCapturer() {

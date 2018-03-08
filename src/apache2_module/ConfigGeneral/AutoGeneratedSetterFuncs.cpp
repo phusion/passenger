@@ -503,6 +503,21 @@ cmd_passenger_min_instances(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_monitor_log_file(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	if (err != NULL) {
+		return err;
+	}
+
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mMonitorLogFileSourceFile = cmd->directive->filename;
+	config->mMonitorLogFileSourceLine = cmd->directive->line_num;
+	config->mMonitorLogFileExplicitlySet = true;
+	config->mMonitorLogFile.insert(arg);
+	return NULL;
+}
+
+static const char *
 cmd_passenger_nodejs(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
 	if (err != NULL) {

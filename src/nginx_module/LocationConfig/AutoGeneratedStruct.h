@@ -56,6 +56,7 @@ typedef struct {
     ngx_uint_t max_request_queue_size;
     ngx_uint_t max_requests;
     ngx_uint_t min_instances;
+    ngx_array_t *monitor_log_file;
     ngx_int_t request_queue_overflow_status_code;
     ngx_int_t start_timeout;
     ngx_flag_t sticky_sessions;
@@ -102,6 +103,7 @@ typedef struct {
     ngx_str_t max_requests_source_file;
     ngx_str_t meteor_app_settings_source_file;
     ngx_str_t min_instances_source_file;
+    ngx_str_t monitor_log_file_source_file;
     ngx_str_t nodejs_source_file;
     ngx_str_t python_source_file;
     ngx_str_t request_queue_overflow_status_code_source_file;
@@ -149,6 +151,7 @@ typedef struct {
     ngx_uint_t max_requests_source_line;
     ngx_uint_t meteor_app_settings_source_line;
     ngx_uint_t min_instances_source_line;
+    ngx_uint_t monitor_log_file_source_line;
     ngx_uint_t nodejs_source_line;
     ngx_uint_t python_source_line;
     ngx_uint_t request_queue_overflow_status_code_source_line;
@@ -196,6 +199,7 @@ typedef struct {
     ngx_int_t max_requests_explicitly_set;
     ngx_int_t meteor_app_settings_explicitly_set;
     ngx_int_t min_instances_explicitly_set;
+    ngx_int_t monitor_log_file_explicitly_set;
     ngx_int_t nodejs_explicitly_set;
     ngx_int_t python_explicitly_set;
     ngx_int_t request_queue_overflow_status_code_explicitly_set;

@@ -35,7 +35,7 @@ using namespace boost;
 
 SpawningKit::PipeWatcherPtr Process::makePipeWatcher(const SpawningKit::ConfigPtr &config, FileDescriptor socket, const char *channel, pid_t pid, const BasicGroupInfo *groupInfo) {
 	SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-		config, socket, channel, pid, groupInfo->group->options.getAppGroupName()
+		config, socket, channel, pid, groupInfo->group->options.getAppGroupName(), groupInfo->group->options.appLogFile
 	);
 	watcher->initialize();
 	watcher->start();

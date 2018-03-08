@@ -353,6 +353,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 
 	options.appGroupName = appGroupName;
 
+	fillPoolOption(req, options.appLogFile, "!~PASSENGER_APP_LOG_FILE");
 	fillPoolOption(req, options.environment, "!~PASSENGER_APP_ENV");
 	fillPoolOption(req, options.ruby, "!~PASSENGER_RUBY");
 	fillPoolOption(req, options.python, "!~PASSENGER_PYTHON");
