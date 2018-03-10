@@ -402,6 +402,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :header   => nil
   },
   {
+    :name     => 'passenger_monitor_log_file',
+    :scope    => :application,
+    :type     => :string_array,
+    :header   => nil
+  },
+  {
     :name     => 'passenger_app_root',
     :scope    => :application,
     :type     => :string,

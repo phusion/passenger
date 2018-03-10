@@ -406,6 +406,12 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => 'Log file path to monitor.'
   },
   {
+    :name      => 'PassengerMonitorLogFile',
+    :type      => :string_set,
+    :header    => nil,
+    :desc      => 'Log file path to monitor.'
+  },
+  {
     :name      => 'PassengerForceMaxConcurrentRequestsPerProcess',
     :type      => :integer,
     :default   => -1,

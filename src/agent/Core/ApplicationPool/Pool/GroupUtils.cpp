@@ -45,6 +45,17 @@ using namespace boost;
  *
  ****************************/
 
+const pair<uid_t, gid_t>
+Pool::getGroupRunUidAndGids(const StaticString &appGroupName) {
+	LockGuard l(syncher);
+	GroupPtr *group;
+	if (!groups.lookup(appGroupName.c_str(), &group)) {
+		throw RuntimeException(string("Could not find group: ") + appGroupName);
+	} else {
+		SpawningKit::UserSwitchingInfo info = SpawningKit::prepareUserSwitching((*group)->options);
+		return pair<uid_t, gid_t>(info.uid,info.gid);
+	}
+}
 
 const GroupPtr
 Pool::getGroup(const char *name) {

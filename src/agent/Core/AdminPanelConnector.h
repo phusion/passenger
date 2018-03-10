@@ -27,6 +27,8 @@
 #define _PASSENGER_ADMIN_PANEL_CONNECTOR_H_
 
 #include <sys/wait.h>
+#include <sstream>
+#include <unistd.h>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
@@ -392,10 +394,100 @@ private:
 		return true;
 	}
 
+	void addWatchedFiles() {
+		Json::Value appConfigs = configGetter()["config_manifest"]["effective_value"]["application_configurations"];
+		for (HashedStaticString key : appConfigs.getMemberNames()) {
+			Json::Value files = appConfigs[key]["options"]["PassengerMonitorLogFile"]["value_hierarchy"][0]["value"];
+			string appRoot = appConfigs[key]["options"]["PassengerAppRoot"]["value_hierarchy"][0]["value"].asString();
+			pair<uid_t, gid_t> ids;
+			try {
+				ids = appPool->getGroupRunUidAndGids(key);
+			} catch(RuntimeException e) {
+				files = Json::nullValue;
+			}
+			if (!files.isNull()) {
+				for (Json::Value file : files) {
+					string f = file.asString();
+
+					int link[2];
+					pipe(link); // Create the pipes
+					pid_t pid = syscalls::fork();
+
+					if (pid == -1) {
+						int e = errno;
+						throw SystemException("Cannot fork a new process", e);
+					} else if (pid == 0) {
+						chdir(appRoot.c_str());
+						if (geteuid() == 0) {
+								struct passwd *pwUser = getpwuid(ids.first);
+								struct group *grGroup = getgrgid(ids.second);
+
+								if (pwUser == NULL) {
+									throw RuntimeException("Cannot lookup user information for uid " + toString(ids.first));
+								}
+								if (grGroup == NULL) {
+									throw RuntimeException("Cannot lookup group information for group " + toString(ids.second));
+								}
+
+								if (initgroups(pwUser->pw_name, ids.second) != 0) {
+									int e = errno;
+									throw SystemException(string("Unable to lower privileges to that of user '") + pwUser->pw_name + "' and group '" + grGroup->gr_name +
+														  "' for the purposes of watching log files: cannot set supplementary groups", e);
+								}
+								if (setgid(ids.second) != 0) {
+									int e = errno;
+									throw SystemException(string("Unable to lower privileges to that of user '") + pwUser->pw_name + "' and group '" + grGroup->gr_name +
+														  "' for the purposes of watching log files: cannot set group ID to " + toString(ids.second), e);
+								}
+								if (setuid(ids.first) != 0) {
+									int e = errno;
+									throw SystemException(string("Unable to lower privileges to that of user '") + pwUser->pw_name + "' and group '" + grGroup->gr_name +
+														  "' for the purposes of watching log files: cannot set user ID to " + toString(ids.first), e);
+								}
+#ifdef __linux__
+								// When we change the uid, /proc/self/pid contents don't change owner,
+								// causing us to lose access to our own /proc/self/pid files.
+								// This prctl call changes those files' ownership.
+								// References:
+								// https://stackoverflow.com/questions/8337846/files-ownergroup-doesnt-change-at-location-proc-pid-after-setuid
+								// http://man7.org/linux/man-pages/man5/proc.5.html (search for "dumpable")
+								prctl(PR_SET_DUMPABLE, 1);
+#endif
+								setenv("USER", pwUser->pw_name, 1);
+								setenv("HOME", pwUser->pw_dir, 1);
+								setenv("UID", toString(ids.first).c_str(), 1);
+						}
+
+						dup2(link[1], STDOUT_FILENO);
+						close(link[0]);
+						close(link[1]);
+						execl("/usr/bin/tail", "tail", "-n", "100", f.c_str(), NULL);
+
+						int e = errno;
+						P_ERROR(string("Cannot execute \"tail -n 100 ") << f << "\": " << strerror(e) << " (errno=" << e << ")\n");
+						_exit(1);
+					} else {
+						close(link[1]);
+						string out = readAll(link[0]);
+						close(link[0]);
+						istringstream iss(out);
+						string line;
+						while (getline(iss, line)) {
+							LoggingKit::context->saveLog(key, f.c_str(), f.size(), line.c_str(), line.size());
+						}
+					}
+				}
+			}
+        }
+	}
+
 	bool onGetApplicationLogs(const ConnectionPtr &conn, const Json::Value &doc) {
 		Json::Value reply;
 		reply["result"] = "ok";
 		reply["request_id"] = doc["request_id"];
+
+		addWatchedFiles();
+
 		reply["data"]["logs"] = LoggingKit::context->convertLog();
 		sendJsonReply(conn, reply);
 		return true;

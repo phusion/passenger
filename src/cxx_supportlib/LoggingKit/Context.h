@@ -31,6 +31,7 @@
 #include <jsoncpp/json.h>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
+#include <boost/circular_buffer.hpp>
 #include <boost/thread.hpp>
 #include <boost/atomic.hpp>
 #include <ConfigKit/ConfigKit.h>
@@ -67,7 +68,9 @@ using namespace oxt;
 class Context {
 public:
 	typedef LoggingKit::ConfigChangeRequest ConfigChangeRequest;
-	typedef StringKeyTable<vector<pair<string,string>>> LogBuffer;
+	typedef boost::circular_buffer<string> Logs;
+	typedef StringKeyTable<Logs> LogRecord;
+	typedef StringKeyTable<LogRecord> LogBuffer;
 	LogBuffer logBuffer;
 
 private:

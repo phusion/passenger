@@ -392,6 +392,7 @@ public:
 	};
 
 	const GroupPtr getGroup(const char *name);
+	const pair<uid_t, gid_t> getGroupRunUidAndGids(const StaticString &appGroupName);
 	Group *findMatchingGroup(const Options &options);
 	GroupPtr createGroup(const Options &options);
 	GroupPtr createGroupAndAsyncGetFromIt(const Options &options,

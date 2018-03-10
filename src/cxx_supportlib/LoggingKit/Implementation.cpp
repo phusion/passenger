@@ -41,6 +41,7 @@
 #include <pthread.h>
 
 #include <boost/cstdint.hpp>
+#include <boost/circular_buffer.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/detail/context.hpp>
 
@@ -312,13 +313,17 @@ Context::saveLog(HashedStaticString groupName, const char *pidStr, unsigned int 
 	boost::lock_guard<boost::mutex> l(syncher); //lock
 
 	if(!logBuffer.contains(groupName)) {
-		vector<pair<string,string>> v;
-		v.reserve(1024);
-		logBuffer.insert(groupName, v);
+		Context::LogRecord t;
+		logBuffer.insert(groupName, t);
 	}
+	Context::LogRecord &rec = logBuffer.lookupCell(groupName)->value;
+
 	string pid(pidStr,pidStrLen);
-	string line(message, messageLen);
-	logBuffer.lookupCell(groupName)->value.push_back(pair<string,string>(pid,line));
+	if(!rec.contains(pid)) {
+		Context::Logs v(100);
+		rec.insert(pid, v);
+	}
+	rec.lookupCell(pid)->value.push_back(string(message, messageLen));
 	//unlock
 }
 
@@ -330,16 +335,20 @@ Context::convertLog(){
 	if (!logBuffer.empty()) {
 		Context::LogBuffer::ConstIterator it(logBuffer);
 		while (*it != NULL) {
-			reply[it.getKey()] = Json::arrayValue;
-			for (auto j : it.getValue()) {
-				Json::Value pair = Json::objectValue;
-				pair["pid"] = j.first;
-				pair["line"] = j.second;
-				reply[it.getKey()].append(pair);
+			reply[it.getKey()] = Json::objectValue;
+			Context::LogRecord::ConstIterator itit(it->value);
+			while (*itit != NULL) {
+				if(!reply[it.getKey()].isMember(itit.getKey())){
+					reply[it.getKey()][itit.getKey()] = Json::arrayValue;
+				}
+				for (string line : itit->value) {
+					reply[it.getKey()][itit.getKey()].append(line);
+				}
+				itit.next();
 			}
+
 			it.next();
 		}
-		logBuffer.clear();// does appminton cache this enough?
 	}
 
 	return reply;
