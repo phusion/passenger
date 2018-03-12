@@ -1,7 +1,7 @@
 Release 5.2.2 (Not yet released)
 -------------
 
- * 
+ * [Nginx] Adds option `passenger_dump_config_manifest`. This option is mostly useful for Passenger developers, and when set dumps the Nginx module config manifest to the given file.
 
 
 Release 5.2.1
