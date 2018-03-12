@@ -929,14 +929,16 @@ warnIfPathVulnerable(const char *path, string &warnings) {
 		warnings.append(path);
 		warnings.append("\" can be modified by user \"");
 		warnings.append(pathOwner.pw_name);
-		warnings.append("\" (or applications running as that user). Change the owner of the path to root, or avoid running Passenger as root.");
+		warnings.append("\" (or applications running as that user)."
+			" Change the owner of the path to root, or avoid running " SHORT_PROGRAM_NAME " as root.");
 	}
 
 	// World writeable access rights
 	if ((pathStat.st_mode & S_IWOTH) != 0) {
 		warnings.append("\nThe path \"");
 		warnings.append(path);
-		warnings.append("\" is writeable by any user (or application). Limit write access on the path to only the root user/group.");
+		warnings.append("\" is writeable by any user (or application)."
+			" Limit write access on the path to only the root user/group.");
 	}
 }
 
@@ -969,8 +971,9 @@ warnIfPassengerRootVulnerable() {
 	}
 	if (!warnings.empty()) {
 		P_WARN("WARNING: potential privilege escalation vulnerability. "
-			PROGRAM_NAME " is running as root, and part(s) of the passenger root path ("
-			<< root << ") can be changed by non-root user(s):" << warnings);
+			PROGRAM_NAME " is running as root, and part(s) of the "
+			SHORT_PROGRAM_NAME " root path (" << root
+			<< ") can be changed by non-root user(s):" << warnings);
 	}
 }
 
