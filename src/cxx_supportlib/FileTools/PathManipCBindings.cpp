@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -26,7 +26,9 @@
 
 #include <FileTools/PathManipCBindings.h>
 #include <FileTools/PathManip.h>
+#include <Exceptions.h>
 #include <cstring>
+#include <cerrno>
 
 using namespace std;
 using namespace Passenger;
@@ -45,6 +47,25 @@ psg_absolutize_path(const char *path, size_t path_len,
 		*result_len = result.size();
 	}
 	return strdup(result.c_str());
+}
+
+char *
+psg_resolve_symlink(const char *path, size_t path_len,
+	size_t *result_len)
+{
+	try {
+		string result = resolveSymlink(StaticString(path, path_len));
+		if (result_len != NULL) {
+			*result_len = result.size();
+		}
+		return strdup(result.c_str());
+	} catch (const SystemException &e) {
+		errno = e.code();
+		return NULL;
+	} catch (const std::bad_alloc &) {
+		errno = ENOMEM;
+		return NULL;
+	}
 }
 
 const char *
