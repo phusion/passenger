@@ -130,6 +130,13 @@ NGINX_CONFIGURATION_OPTIONS = [
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
+    :name     => 'passenger_dump_config_manifest',
+    :scope    => :global,
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
     :name     => 'passenger_log_level',
     :scope    => :global,
     :type     => :uinteger,

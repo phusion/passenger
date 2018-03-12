@@ -56,6 +56,7 @@ typedef struct {
     ngx_str_t data_buffer_dir;
     ngx_str_t default_group;
     ngx_str_t default_user;
+    ngx_str_t dump_config_manifest;
     ngx_str_t file_descriptor_log_file;
     ngx_str_t instance_registry_dir;
     ngx_str_t log_file;
@@ -69,6 +70,7 @@ typedef struct {
     ngx_str_t default_group_source_file;
     ngx_str_t default_user_source_file;
     ngx_str_t disable_security_update_check_source_file;
+    ngx_str_t dump_config_manifest_source_file;
     ngx_str_t file_descriptor_log_file_source_file;
     ngx_str_t instance_registry_dir_source_file;
     ngx_str_t log_file_source_file;
@@ -92,6 +94,7 @@ typedef struct {
     ngx_uint_t default_group_source_line;
     ngx_uint_t default_user_source_line;
     ngx_uint_t disable_security_update_check_source_line;
+    ngx_uint_t dump_config_manifest_source_line;
     ngx_uint_t file_descriptor_log_file_source_line;
     ngx_uint_t instance_registry_dir_source_line;
     ngx_uint_t log_file_source_line;
@@ -115,6 +118,7 @@ typedef struct {
     ngx_int_t default_group_explicitly_set;
     ngx_int_t default_user_explicitly_set;
     ngx_int_t disable_security_update_check_explicitly_set;
+    ngx_int_t dump_config_manifest_explicitly_set;
     ngx_int_t file_descriptor_log_file_explicitly_set;
     ngx_int_t instance_registry_dir_explicitly_set;
     ngx_int_t log_file_explicitly_set;
