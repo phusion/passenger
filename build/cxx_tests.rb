@@ -124,6 +124,7 @@ let(:basic_test_cxx_flags) do
   [
     libev_cflags,
     libuv_cflags,
+    PlatformInfo.crypto_extra_cflags,
     PlatformInfo.curl_flags,
     TEST_COMMON_CFLAGS
   ]

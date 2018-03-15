@@ -29,17 +29,27 @@ module PhusionPassenger
 
   module PlatformInfo
     def self.crypto_libs
+      prefix = ' -framework CoreFoundation -framework Security'
+      suffix = ' -lcrypto'
       if os_name_simple == "macosx"
-        return ' -framework CoreFoundation -framework Security'
+        if os_version < '10.13'
+          return prefix
+        else
+          return "#{prefix} #{openssl_extra_ldflags} #{suffix}"
+        end
       else
-        return ' -lcrypto'
+        return suffix
       end
     end
     memoize :crypto_libs
 
     def self.crypto_extra_cflags
       if os_name_simple == "macosx"
-        return ' -Wno-deprecated-declarations'
+        if os_version < '10.13'
+          return ' -Wno-deprecated-declarations'
+        else
+          return " -Wno-deprecated-declarations #{openssl_extra_cflags}"
+        end
       else
         return ''
       end
