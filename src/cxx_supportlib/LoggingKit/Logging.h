@@ -198,7 +198,7 @@ namespace LoggingKit {
  * @param message The message that was received.
  * @param appLogFile an app specific file to log to.
  */
-void logAppOutput(HashedStaticString groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile);
+void logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile);
 
 } // namespace LoggingKit
 } // namespace Passenger

@@ -61,8 +61,8 @@ private:
 	bool started;
 	boost::mutex startSyncher;
 	boost::condition_variable startCond;
-	const HashedStaticString &appGroupName;
-	const StaticString &appLogFile;
+	const HashedStaticString appGroupName;
+	const StaticString appLogFile;
 
 	static void threadMain(boost::shared_ptr<PipeWatcher> self) {
 		TRACE_POINT();

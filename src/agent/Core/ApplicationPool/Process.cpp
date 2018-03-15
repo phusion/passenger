@@ -34,8 +34,14 @@ using namespace std;
 using namespace boost;
 
 SpawningKit::PipeWatcherPtr Process::makePipeWatcher(const SpawningKit::ConfigPtr &config, FileDescriptor socket, const char *channel, pid_t pid, const BasicGroupInfo *groupInfo) {
+	StaticString appLogFile;
+	HashedStaticString appGroupName;
+	if (groupInfo->group != NULL) {
+		appLogFile = groupInfo->group->options.appLogFile;
+		appGroupName = groupInfo->group->options.getAppGroupName();
+	}
 	SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-		config, socket, channel, pid, groupInfo->group->options.getAppGroupName(), groupInfo->group->options.appLogFile
+		config, socket, channel, pid, appGroupName, appLogFile
 	);
 	watcher->initialize();
 	watcher->start();

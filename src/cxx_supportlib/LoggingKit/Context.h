@@ -91,7 +91,7 @@ public:
 	~Context();
 	ConfigKit::Store getConfig() const;
 
-	void saveLog(HashedStaticString groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen);
+	void saveLog(const HashedStaticString &groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen);
 	Json::Value convertLog();
 
 	bool prepareConfigChange(const Json::Value &updates,

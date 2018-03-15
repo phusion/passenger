@@ -309,7 +309,7 @@ _writeFileDescriptorLogEntry(const ConfigRealization *configRealization,
 }
 
 void
-Context::saveLog(HashedStaticString groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen){
+Context::saveLog(const HashedStaticString &groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen){
 	boost::lock_guard<boost::mutex> l(syncher); //lock
 
 	if(!logBuffer.contains(groupName)) {
@@ -356,7 +356,7 @@ Context::convertLog(){
 }
 
 static void
-realLogAppOutput(HashedStaticString groupName, int targetFd, char *buf, unsigned int bufSize,
+realLogAppOutput(const HashedStaticString &groupName, int targetFd, char *buf, unsigned int bufSize,
 	const char *pidStr, unsigned int pidStrLen,
 	const char *channelName, unsigned int channelNameLen,
 	const char *message, unsigned int messageLen, int appLogFile)
@@ -382,7 +382,7 @@ realLogAppOutput(HashedStaticString groupName, int targetFd, char *buf, unsigned
 }
 
 void
-logAppOutput(HashedStaticString groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile) {
+logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile) {
 	int targetFd;
 
 	if (OXT_LIKELY(context != NULL)) {
