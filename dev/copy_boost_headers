@@ -110,6 +110,7 @@ PROGRAM_SOURCE = %q{
   #include <boost/typeof/typeof.hpp>
   #include <boost/asio.hpp>
   #include <boost/pointer_cast.hpp>
+  #include <boost/circular_buffer.hpp>
 }
 
 require 'fileutils'
