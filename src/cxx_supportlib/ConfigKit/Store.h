@@ -385,7 +385,6 @@ public:
 		StringKeyTable<Entry>::Iterator p_it(storeWithPreviewData.entries);
 		StringKeyTable<Entry>::ConstIterator it(entries);
 		vector<Error> tmpErrors;
-		Error error;
 
 		while (*p_it != NULL) {
 			const HashedStaticString &key = p_it.getKey();
@@ -419,9 +418,7 @@ public:
 				subdoc["effective_value"] =
 					getEffectiveValue(subdoc["user_value"],
 						subdoc["default_value"]);
-			if (!schema->validateValue(it.getKey(), effectiveValue, error)) {
-				tmpErrors.push_back(error);
-			}
+			schema->validateValue(it.getKey(), effectiveValue, tmpErrors);
 
 			result[it.getKey()] = subdoc;
 			it.next();

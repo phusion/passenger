@@ -321,10 +321,11 @@ public:
 	 * configuration store -- to the given configuration key and value.
 	 * Validators added with `addValidator()` won't be applied.
 	 *
-	 * Returns whether validation passed. If not, then `error` is set.
+	 * Returns whether validation passed. If not, then an Error is appended
+	 * to `errors`.
 	 */
 	bool validateValue(const HashedStaticString &key, const Json::Value &value,
-		Error &error) const
+		vector<Error> &errors) const
 	{
 		const Entry *entry;
 
@@ -335,7 +336,7 @@ public:
 
 		if (value.isNull()) {
 			if (entry->flags & REQUIRED) {
-				error = Error("'{{" + key + "}}' is required");
+				errors.push_back(Error("'{{" + key + "}}' is required"));
 				return false;
 			} else {
 				return true;
@@ -347,14 +348,14 @@ public:
 			if (value.isConvertibleTo(Json::stringValue)) {
 				return true;
 			} else {
-				error = Error("'{{" + key + "}}' must be a string");
+				errors.push_back(Error("'{{" + key + "}}' must be a string"));
 				return false;
 			}
 		case INT_TYPE:
 			if (value.isConvertibleTo(Json::intValue)) {
 				return true;
 			} else {
-				error = Error("'{{" + key + "}}' must be an integer");
+				errors.push_back(Error("'{{" + key + "}}' must be an integer"));
 				return false;
 			}
 		case UINT_TYPE:
@@ -362,32 +363,32 @@ public:
 				if (value.isConvertibleTo(Json::uintValue)) {
 					return true;
 				} else {
-					error = Error("'{{" + key + "}}' must be greater than 0");
+					errors.push_back(Error("'{{" + key + "}}' must be greater than 0"));
 					return false;
 				}
 			} else {
-				error = Error("'{{" + key + "}}' must be an integer");
+				errors.push_back(Error("'{{" + key + "}}' must be an integer"));
 				return false;
 			}
 		case FLOAT_TYPE:
 			if (value.isConvertibleTo(Json::realValue)) {
 				return true;
 			} else {
-				error = Error("'{{" + key + "}}' must be a number");
+				errors.push_back(Error("'{{" + key + "}}' must be a number"));
 				return false;
 			}
 		case BOOL_TYPE:
 			if (value.isConvertibleTo(Json::booleanValue)) {
 				return true;
 			} else {
-				error = Error("'{{" + key + "}}' must be a boolean");
+				errors.push_back(Error("'{{" + key + "}}' must be a boolean"));
 				return false;
 			}
 		case ARRAY_TYPE:
 			if (value.isConvertibleTo(Json::arrayValue)) {
 				return true;
 			} else {
-				error = Error("'{{" + key + "}}' must be an array");
+				errors.push_back(Error("'{{" + key + "}}' must be an array"));
 				return false;
 			}
 		case STRING_ARRAY_TYPE:
@@ -395,20 +396,20 @@ public:
 				Json::Value::const_iterator it, end = value.end();
 				for (it = value.begin(); it != end; it++) {
 					if (it->type() != Json::stringValue) {
-						error = Error("'{{" + key + "}}' may only contain strings");
+						errors.push_back(Error("'{{" + key + "}}' may only contain strings"));
 						return false;
 					}
 				}
 				return true;
 			} else {
-				error = Error("'{{" + key + "}}' must be an array");
+				errors.push_back(Error("'{{" + key + "}}' must be an array"));
 				return false;
 			}
 		case OBJECT_TYPE:
 			if (value.isObject()) {
 				return true;
 			} else {
-				error = Error("'{{" + key + "}}' must be a JSON object");
+				errors.push_back(Error("'{{" + key + "}}' must be a JSON object"));
 				return false;
 			}
 		case ANY_TYPE:
