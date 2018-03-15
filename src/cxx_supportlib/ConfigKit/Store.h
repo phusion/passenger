@@ -391,7 +391,11 @@ public:
 			Entry &entry = p_it.getValue();
 
 			if (isWritable(entry) && updates.isMember(key)) {
-				entry.userValue = updates[key];
+				bool ok = entry.schemaEntry->tryTypecastValue(
+					updates[key], entry.userValue);
+				if (!ok) {
+					entry.userValue = updates[key];
+				}
 			}
 
 			p_it.next();
@@ -405,7 +409,11 @@ public:
 			entry.schemaEntry->inspect(subdoc);
 
 			if (isWritable(entry) && updates.isMember(key)) {
-				subdoc["user_value"] = updates[key];
+				bool ok = entry.schemaEntry->tryTypecastValue(updates[key],
+					subdoc["user_value"]);
+				if (!ok) {
+					subdoc["user_value"] = updates[key];
+				}
 			} else {
 				subdoc["user_value"] = entry.userValue;
 			}
@@ -466,8 +474,7 @@ public:
 				if (isWritable(entry)) {
 					const Json::Value &subdoc =
 						const_cast<const Json::Value &>(preview)[it.getKey()];
-					entry.userValue = entry.schemaEntry->typecastValue(
-						subdoc["user_value"]);
+					entry.userValue = subdoc["user_value"];
 				}
 				it.next();
 			}

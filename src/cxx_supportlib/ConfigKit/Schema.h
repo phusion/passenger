@@ -74,44 +74,65 @@ public:
 			  inspectFilter(_inspectFilter)
 			{ }
 
-		Json::Value typecastValue(const Json::Value &val) const {
+		bool tryTypecastValue(const Json::Value &val, Json::Value &result) const {
 			if (val.isNull()) {
-				return Json::nullValue;
+				result = Json::nullValue;
+				return true;
 			}
 
 			switch (type) {
 			case STRING_TYPE:
-				if (val.isString()) {
-					return val;
+				if (val.isConvertibleTo(Json::stringValue)) {
+					result = val.asString();
+					return true;
 				} else {
-					return val.asString();
+					return false;
 				}
 			case INT_TYPE:
-				if (val.isInt()) {
-					return val;
+				if (val.isConvertibleTo(Json::intValue)) {
+					result = val.asInt();
+					return true;
 				} else {
-					return val.asInt();
+					return false;
 				}
 			case UINT_TYPE:
-				if (val.isUInt()) {
-					return val;
+				if (val.isConvertibleTo(Json::uintValue)) {
+					result = val.asUInt();
+					return true;
 				} else {
-					return val.asUInt();
+					return false;
 				}
 			case FLOAT_TYPE:
-				if (val.isDouble()) {
-					return val;
+				if (val.isConvertibleTo(Json::realValue)) {
+					result = val.asDouble();
+					return true;
 				} else {
-					return val.asDouble();
+					return false;
 				}
 			case BOOL_TYPE:
-				if (val.isBool()) {
-					return val;
+				if (val.isConvertibleTo(Json::booleanValue)) {
+					result = val.asBool();
+					return true;
 				} else {
-					return val.asBool();
+					return false;
+				}
+			case ARRAY_TYPE:
+				if (val.isConvertibleTo(Json::arrayValue)) {
+					result = val;
+					return true;
+				} else {
+					return false;
+				}
+			case OBJECT_TYPE:
+				if (val.isConvertibleTo(Json::objectValue)) {
+					result = val;
+					return true;
+				} else {
+					return false;
 				}
 			default:
-				return val;
+				result = val;
+				return true;
 			}
 		}
 
