@@ -43,6 +43,7 @@
 #include <ProcessManagement/Ruby.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
+#include <Utils/AsyncSignalSafeUtils.h>
 
 #include <jsoncpp/json.h>
 
@@ -51,6 +52,7 @@ namespace Core {
 
 using namespace std;
 using namespace oxt;
+namespace ASSU = AsyncSignalSafeUtils;
 
 class AdminPanelConnector {
 public:
@@ -406,11 +408,15 @@ private:
 				files = Json::nullValue;
 			}
 			if (!files.isNull()) {
+				struct passwd *pwUser = getpwuid(ids.first);
+
 				for (Json::Value file : files) {
 					string f = file.asString();
 
-					int link[2];
-					pipe(link); // Create the pipes
+					Pipe pipe = createPipe(__FILE__, __LINE__);
+
+					string command = "/usr/bin/tail -n 100 " + f;
+
 					pid_t pid = syscalls::fork();
 
 					if (pid == -1) {
@@ -418,63 +424,41 @@ private:
 						throw SystemException("Cannot fork a new process", e);
 					} else if (pid == 0) {
 						chdir(appRoot.c_str());
+
+						dup2(pipe.second, STDOUT_FILENO);
+						pipe.first.close();
+						pipe.second.close();
+
 						if (geteuid() == 0) {
-								struct passwd *pwUser = getpwuid(ids.first);
-								struct group *grGroup = getgrgid(ids.second);
-
-								if (pwUser == NULL) {
-									throw RuntimeException("Cannot lookup user information for uid " + toString(ids.first));
-								}
-								if (grGroup == NULL) {
-									throw RuntimeException("Cannot lookup group information for group " + toString(ids.second));
-								}
-
-								if (initgroups(pwUser->pw_name, ids.second) != 0) {
-									int e = errno;
-									throw SystemException(string("Unable to lower privileges to that of user '") + pwUser->pw_name + "' and group '" + grGroup->gr_name +
-														  "' for the purposes of watching log files: cannot set supplementary groups", e);
-								}
-								if (setgid(ids.second) != 0) {
-									int e = errno;
-									throw SystemException(string("Unable to lower privileges to that of user '") + pwUser->pw_name + "' and group '" + grGroup->gr_name +
-														  "' for the purposes of watching log files: cannot set group ID to " + toString(ids.second), e);
-								}
-								if (setuid(ids.first) != 0) {
-									int e = errno;
-									throw SystemException(string("Unable to lower privileges to that of user '") + pwUser->pw_name + "' and group '" + grGroup->gr_name +
-														  "' for the purposes of watching log files: cannot set user ID to " + toString(ids.first), e);
-								}
-#ifdef __linux__
-								// When we change the uid, /proc/self/pid contents don't change owner,
-								// causing us to lose access to our own /proc/self/pid files.
-								// This prctl call changes those files' ownership.
-								// References:
-								// https://stackoverflow.com/questions/8337846/files-ownergroup-doesnt-change-at-location-proc-pid-after-setuid
-								// http://man7.org/linux/man-pages/man5/proc.5.html (search for "dumpable")
-								prctl(PR_SET_DUMPABLE, 1);
-#endif
-								setenv("USER", pwUser->pw_name, 1);
-								setenv("HOME", pwUser->pw_dir, 1);
-								setenv("UID", toString(ids.first).c_str(), 1);
+							execl("/usr/bin/su", "su", pwUser->pw_name, "-c", command.c_str(), NULL);
+						}else {
+							execl("/usr/bin/tail", "tail", "-n", "100", f.c_str(), NULL);
 						}
 
-						dup2(link[1], STDOUT_FILENO);
-						close(link[0]);
-						close(link[1]);
-						execl("/usr/bin/tail", "tail", "-n", "100", f.c_str(), NULL);
-
 						int e = errno;
-						P_ERROR(string("Cannot execute \"tail -n 100 ") << f << "\": " << strerror(e) << " (errno=" << e << ")\n");
+						char buf[256];
+						char *pos= buf;
+						const char *end = pos + 256;
+
+						pos = ASSU::appendData(pos, end, "Cannot execute \"tail -n 100 ");
+						pos = ASSU::appendData(pos, end, f.c_str());
+						pos = ASSU::appendData(pos, end, "\": ");
+						pos = ASSU::appendData(pos, end, strerror(e));
+						pos = ASSU::appendData(pos, end, " (errno=");
+						pos = ASSU::appendInteger<int, 10>(pos, end, e);
+						pos = ASSU::appendData(pos, end, ")\n");
+						ASSU::writeNoWarn(STDERR_FILENO, buf, pos - buf);
 						_exit(1);
 					} else {
-						close(link[1]);
-						string out = readAll(link[0]);
-						close(link[0]);
+						pipe.second.close();
+						string out = readAll(pipe.first);
+						pipe.first.close();
 						istringstream iss(out);
 						string line;
 						while (getline(iss, line)) {
 							LoggingKit::context->saveLog(key, f.c_str(), f.size(), line.c_str(), line.size());
 						}
+						syscalls::waitpid(pid, NULL, 0);
 					}
 				}
 			}

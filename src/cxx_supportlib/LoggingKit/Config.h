@@ -82,6 +82,7 @@ struct ConfigRealization {
 	TargetType targetType;
 	TargetType fileDescriptorLogTargetType;
 	int targetFd;
+	bool saveLog;
 	int fileDescriptorLogTargetFd;
 	FdClosePolicy targetFdClosePolicy;
 	FdClosePolicy fileDescriptorLogTargetFdClosePolicy;

@@ -68,10 +68,6 @@ using namespace oxt;
 class Context {
 public:
 	typedef LoggingKit::ConfigChangeRequest ConfigChangeRequest;
-	typedef boost::circular_buffer<string> Logs;
-	typedef StringKeyTable<Logs> LogRecord;
-	typedef StringKeyTable<LogRecord> LogBuffer;
-	LogBuffer logBuffer;
 
 private:
 	Schema schema;
@@ -84,6 +80,11 @@ private:
 	boost::condition_variable gcShuttingDownCond, gcHasShutDownCond;
 	queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
 	bool shuttingDown;
+
+	typedef boost::circular_buffer<string> Logs;
+	typedef StringKeyTable<Logs> LogRecord;
+	typedef StringKeyTable<LogRecord> LogBuffer;
+	LogBuffer logBuffer;
 
 public:
 	Context(const Json::Value &initialConfig = Json::Value(),

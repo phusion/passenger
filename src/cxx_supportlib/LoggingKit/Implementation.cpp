@@ -312,15 +312,16 @@ void
 Context::saveLog(const HashedStaticString &groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen){
 	boost::lock_guard<boost::mutex> l(syncher); //lock
 
-	if(!logBuffer.contains(groupName)) {
-		Context::LogRecord t;
-		logBuffer.insert(groupName, t);
+	LogBuffer::Cell *c = logBuffer.lookupCell(groupName);
+	if(c == NULL) {
+		LogRecord t;
+		c = logBuffer.insert(groupName, t);
 	}
-	Context::LogRecord &rec = logBuffer.lookupCell(groupName)->value;
+	LogRecord &rec = c->value;
 
-	string pid(pidStr,pidStrLen);
+	HashedStaticString pid(pidStr,pidStrLen);
 	if(!rec.contains(pid)) {
-		Context::Logs v(100);
+		Logs v(100);
 		rec.insert(pid, v);
 	}
 	rec.lookupCell(pid)->value.push_back(string(message, messageLen));
@@ -356,7 +357,8 @@ Context::convertLog(){
 }
 
 static void
-realLogAppOutput(const HashedStaticString &groupName, int targetFd, char *buf, unsigned int bufSize,
+realLogAppOutput(const HashedStaticString &groupName, int targetFd,
+    char *buf, unsigned int bufSize,
 	const char *pidStr, unsigned int pidStrLen,
 	const char *channelName, unsigned int channelNameLen,
 	const char *message, unsigned int messageLen, int appLogFile)
@@ -372,7 +374,7 @@ realLogAppOutput(const HashedStaticString &groupName, int targetFd, char *buf, u
 	pos = appendData(pos, end, message, messageLen);
 	pos = appendData(pos, end, "\n");
 
-	if (OXT_LIKELY(context != NULL)) {
+	if (OXT_UNLIKELY(context != NULL && false)) {
 		context->saveLog(groupName, pidStr, pidStrLen, message, messageLen);
 	}
 	if (appLogFile > -1) {
@@ -398,9 +400,10 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channel
 
 	int fd = -1;
 	if (!appLogFile.empty()) {
-		fd = open(appLogFile.data(), O_WRONLY | O_APPEND | O_CREAT, 0660);
+		fd = open(appLogFile.data(), O_WRONLY | O_APPEND | O_CREAT, 0640);
 		if (fd == -1) {
-			P_ERROR("opening file: " << appLogFile << " for logging " << groupName << " failed. Error: " << strerror(errno));
+			int e = errno;
+			P_ERROR("opening file: " << appLogFile << " for logging " << groupName << " failed. Error: " << strerror(e));
 		}
 	}
 	char pidStr[sizeof("4294967295")];
