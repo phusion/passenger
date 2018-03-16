@@ -1316,6 +1316,12 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 	}
 }
 
+static void
+loggingKitPreInitFunc(Json::Value &loggingKitInitialConfig) {
+	loggingKitInitialConfig["buffer_logs"] =
+		!coreConfig->get("admin_panel_url").isNull();
+}
+
 int
 coreMain(int argc, char *argv[]) {
 	int ret;
@@ -1324,7 +1330,7 @@ coreMain(int argc, char *argv[]) {
 	coreConfig = new ConfigKit::Store(*coreSchema);
 	initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " core",
 		*coreConfig, coreSchema->loggingKit.translator,
-		parseOptions, 2);
+		parseOptions, loggingKitPreInitFunc, 2);
 
 #if !BOOST_OS_MACOS
 	restoreOomScore(coreConfig->get("oom_score").asString());

@@ -50,6 +50,7 @@ struct Context {
 };
 
 typedef void (*OptionParserFunc)(int argc, const char **argv, ConfigKit::Store &config);
+typedef void (*LoggingKitPreInitFunc)(Json::Value &config);
 
 extern Context *context;
 
@@ -57,6 +58,7 @@ extern Context *context;
 void initializeAgent(int argc, char **argv[], const char *processName,
 	ConfigKit::Store &config, const ConfigKit::Translator &loggingKitTranslator,
 	OptionParserFunc optionParser = NULL,
+	const LoggingKitPreInitFunc &loggingKitPreInitFunc = NULL,
 	int argStartIndex = 1);
 void shutdownAgent(ConfigKit::Schema *schema, ConfigKit::Store *config);
 

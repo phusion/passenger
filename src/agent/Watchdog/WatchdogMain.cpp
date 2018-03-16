@@ -801,7 +801,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	watchdogConfig = new ConfigKit::Store(*watchdogSchema);
 	initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " watchdog",
 		*watchdogConfig, watchdogSchema->core.schema.loggingKit.translator,
-		parseOptions, 2);
+		parseOptions, NULL, 2);
 
 	// Start all sub-agents with this environment variable.
 	setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);

@@ -481,9 +481,14 @@ maybeInitializeSyscallFailureSimulation(const char *processName) {
 
 static void
 initializeLoggingKit(const char *processName, ConfigKit::Store &config,
-	const ConfigKit::Translator &loggingKitTranslator)
+	const ConfigKit::Translator &loggingKitTranslator,
+	const LoggingKitPreInitFunc &loggingKitPreInitFunc)
 {
-	LoggingKit::initialize(config.inspectEffectiveValues(), loggingKitTranslator);
+	Json::Value initialConfig = config.inspectEffectiveValues();
+	if (loggingKitPreInitFunc != NULL) {
+		loggingKitPreInitFunc(initialConfig);
+	}
+	LoggingKit::initialize(initialConfig, loggingKitTranslator);
 	Json::Value dump = LoggingKit::context->inspectConfig();
 
 	if (!dump["file_descriptor_log_target"]["effective_value"].isNull()) {
@@ -548,7 +553,8 @@ void
 initializeAgent(int argc, char **argv[], const char *processName,
 	ConfigKit::Store &config, const ConfigKit::Translator &loggingKitTranslator,
 	OptionParserFunc optionParser,
-	PreinitializationFunc preinit, int argStartIndex)
+	const LoggingKitPreInitFunc &loggingKitPreInitFunc,
+	int argStartIndex)
 {
 	const char *seedStr;
 
@@ -601,7 +607,8 @@ initializeAgent(int argc, char **argv[], const char *processName,
 			}
 		}
 
-		initializeLoggingKit(processName, config, loggingKitTranslator);
+		initializeLoggingKit(processName, config, loggingKitTranslator,
+			loggingKitPreInitFunc);
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());
 		exit(1);
