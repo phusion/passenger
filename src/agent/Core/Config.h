@@ -380,6 +380,7 @@ public:
 		loggingKit.translator.finalize();
 		addSubSchema(loggingKit.schema, loggingKit.translator);
 		erase("redirect_stderr");
+		erase("buffer_logs");
 
 		// Add subschema: controller
 		addSubSchemaPrefixTranslations<ServerKit::HttpServerSchema>(

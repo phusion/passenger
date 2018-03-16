@@ -361,7 +361,8 @@ realLogAppOutput(const HashedStaticString &groupName, int targetFd,
     char *buf, unsigned int bufSize,
 	const char *pidStr, unsigned int pidStrLen,
 	const char *channelName, unsigned int channelNameLen,
-	const char *message, unsigned int messageLen, int appLogFile)
+	const char *message, unsigned int messageLen, int appLogFile,
+	bool saveLog)
 {
 	char *pos = buf;
 	char *end = buf + bufSize;
@@ -374,7 +375,7 @@ realLogAppOutput(const HashedStaticString &groupName, int targetFd,
 	pos = appendData(pos, end, message, messageLen);
 	pos = appendData(pos, end, "\n");
 
-	if (OXT_UNLIKELY(context != NULL && false)) {
+	if (OXT_UNLIKELY(context != NULL && saveLog)) {
 		context->saveLog(groupName, pidStr, pidStrLen, message, messageLen);
 	}
 	if (appLogFile > -1) {
@@ -386,6 +387,7 @@ realLogAppOutput(const HashedStaticString &groupName, int targetFd,
 void
 logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile) {
 	int targetFd;
+	bool saveLog = false;
 
 	if (OXT_LIKELY(context != NULL)) {
 		const ConfigRealization *configRealization = context->getConfigRealization();
@@ -394,6 +396,7 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channel
 		}
 
 		targetFd = configRealization->targetFd;
+		saveLog = configRealization->saveLog;
 	} else {
 		targetFd = STDERR_FILENO;
 	}
@@ -425,14 +428,14 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channel
 			buf, sizeof(buf),
 			pidStr, pidStrLen,
 			channelName, channelNameLen,
-			message, size, fd);
+			message, size, fd, saveLog);
 	} else {
 		DynamicBuffer buf(totalLen);
 		realLogAppOutput(groupName, targetFd,
 			buf.data, totalLen,
 			pidStr, pidStrLen,
 			channelName, channelNameLen,
-			message, size, fd);
+			message, size, fd, saveLog);
 	}
 	if(fd > -1){close(fd);}
 }
@@ -726,6 +729,7 @@ Schema::Schema() {
 		.setInspectFilter(filterTargetFd);
 	add("redirect_stderr", BOOL_TYPE, OPTIONAL, true);
 	add("app_output_log_level", STRING_TYPE, OPTIONAL, DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME);
+	add("buffer_logs", BOOL_TYPE, OPTIONAL, false);
 
 	addValidator(boost::bind(validateLogLevel, "level",
 		boost::placeholders::_1, boost::placeholders::_2));
@@ -745,6 +749,7 @@ Schema::Schema() {
 ConfigRealization::ConfigRealization(const ConfigKit::Store &store)
 	: level(parseLevel(store["level"].asString())),
 	  appOutputLogLevel(parseLevel(store["app_output_log_level"].asString())),
+	  saveLog(store["buffer_logs"].asBool()),
 	  finalized(false)
 {
 	if (store["target"].isMember("stderr")) {

@@ -843,6 +843,11 @@
          "has_default_value" : "static",
          "type" : "string"
       },
+      "buffer_logs" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "file_descriptor_log_target" : {
          "type" : "any"
       },

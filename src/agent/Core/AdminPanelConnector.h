@@ -44,6 +44,7 @@
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/AsyncSignalSafeUtils.h>
+#include <LoggingKit/Context.h>
 
 #include <jsoncpp/json.h>
 

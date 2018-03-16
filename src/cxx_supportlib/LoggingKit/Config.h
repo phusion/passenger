@@ -50,6 +50,7 @@ using namespace std;
  * by 'rake configkit_schemas_inline_comments')
  *
  *   app_output_log_level         string    -   default("notice")
+ *   buffer_logs                  boolean   -   default(false)
  *   file_descriptor_log_target   any       -   -
  *   level                        string    -   default("notice")
  *   redirect_stderr              boolean   -   default(true)
