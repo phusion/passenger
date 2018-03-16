@@ -601,10 +601,6 @@ initializeAgent(int argc, char **argv[], const char *processName,
 			}
 		}
 
-		if (preinit != NULL) {
-			preinit(config);
-		}
-
 		initializeLoggingKit(processName, config, loggingKitTranslator);
 	} catch (const tracable_exception &e) {
 		P_ERROR("*** ERROR: " << e.what() << "\n" << e.backtrace());

@@ -1324,7 +1324,7 @@ coreMain(int argc, char *argv[]) {
 	coreConfig = new ConfigKit::Store(*coreSchema);
 	initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " core",
 		*coreConfig, coreSchema->loggingKit.translator,
-		parseOptions, NULL, 2);
+		parseOptions, 2);
 
 #if !BOOST_OS_MACOS
 	restoreOomScore(coreConfig->get("oom_score").asString());
