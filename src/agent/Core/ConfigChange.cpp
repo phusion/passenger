@@ -180,7 +180,8 @@ asyncPrepareConfigChange(const Json::Value &updates, ConfigChangeRequest *req,
 
 	ConfigKit::prepareConfigChangeForSubComponent(
 		*LoggingKit::context, coreSchema->loggingKit.translator,
-		req->config->inspectEffectiveValues(),
+		manipulateLoggingKitConfig(*req->config,
+			req->config->inspectEffectiveValues()),
 		req->errors, req->forLoggingKit);
 	ConfigKit::prepareConfigChangeForSubComponent(
 		*workingObjects->securityUpdateChecker,
@@ -342,6 +343,16 @@ Json::Value
 inspectConfig() {
 	boost::lock_guard<boost::mutex> l(workingObjects->configSyncher);
 	return coreConfig->inspect();
+}
+
+
+Json::Value
+manipulateLoggingKitConfig(const ConfigKit::Store &coreConfig,
+	const Json::Value &loggingKitConfig)
+{
+	Json::Value result = loggingKitConfig;
+	result["buffer_logs"] = !coreConfig["admin_panel_url"].isNull();
+	return result;
 }
 
 

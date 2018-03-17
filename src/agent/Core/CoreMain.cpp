@@ -1318,8 +1318,8 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 
 static void
 loggingKitPreInitFunc(Json::Value &loggingKitInitialConfig) {
-	loggingKitInitialConfig["buffer_logs"] =
-		!coreConfig->get("admin_panel_url").isNull();
+	loggingKitInitialConfig = manipulateLoggingKitConfig(*coreConfig,
+		loggingKitInitialConfig);
 }
 
 int

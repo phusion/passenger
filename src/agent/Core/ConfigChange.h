@@ -47,6 +47,9 @@ void asyncPrepareConfigChange(const Json::Value &updates, ConfigChangeRequest *r
 void asyncCommitConfigChange(ConfigChangeRequest *req, const CommitConfigChangeCallback &callback) BOOST_NOEXCEPT_OR_NOTHROW;
 Json::Value inspectConfig();
 
+Json::Value manipulateLoggingKitConfig(const ConfigKit::Store &coreConfig,
+	const Json::Value &loggingKitConfig);
+
 
 } // namespace Core
 } // namespace Passenger
