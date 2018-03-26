@@ -42,7 +42,9 @@ AGENT_OBJECTS = {
   "#{AGENT_OUTPUT_DIR}TempDirToucherMain.o" =>
     "src/agent/TempDirToucher/TempDirToucherMain.cpp",
   "#{AGENT_OUTPUT_DIR}SpawnPreparerMain.o" =>
-    "src/agent/SpawnPreparer/SpawnPreparerMain.cpp"
+    "src/agent/SpawnPreparer/SpawnPreparerMain.cpp",
+  "#{AGENT_OUTPUT_DIR}ExecHelperMain.o" =>
+    "src/agent/ExecHelper/ExecHelperMain.cpp"
 }
 
 # Agent-specific compiler flags.

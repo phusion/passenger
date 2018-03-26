@@ -6218,6 +6218,13 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/macros.hpp",
    "src/cxx_supportlib/oxt/system_calls.hpp",
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
+ "src/agent/ExecHelper/ExecHelperMain.cpp"=>
+  ["src/cxx_supportlib/Constants.h",
+   "src/cxx_supportlib/ProcessManagement/Utils.h",
+   "src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/Utils/OptionParsing.h",
+   "src/cxx_supportlib/Utils/StrIntUtils.h",
+   "src/cxx_supportlib/oxt/macros.hpp"],
  "src/agent/Shared/ApiAccountUtils.h"=>
   ["src/cxx_supportlib/ConfigKit/Common.h",
    "src/cxx_supportlib/ConfigKit/ConfigKit.h",
