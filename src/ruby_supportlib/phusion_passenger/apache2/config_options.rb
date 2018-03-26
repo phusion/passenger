@@ -108,6 +108,12 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => "Set advanced #{PROGRAM_NAME} options."
   },
   {
+    :name      => 'PassengerDumpConfigManifest',
+    :type      => :string,
+    :context   => :global,
+    :desc      => "Dump the #{SHORT_PROGRAM_NAME} config manifest to the given file, for debugging purposes."
+  },
+  {
     :name      => 'PassengerDefaultRuby',
     :type      => :string,
     :context   => :global,

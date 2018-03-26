@@ -227,6 +227,21 @@ cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, const ch
 }
 
 static const char *
+cmd_passenger_dump_config_manifest(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.dumpConfigManifestSourceFile = cmd->directive->filename;
+	serverConfig.dumpConfigManifestSourceLine = cmd->directive->line_num;
+	serverConfig.dumpConfigManifestExplicitlySet = true;
+	serverConfig.dumpConfigManifest = arg;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_enabled(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mEnabledSourceFile = cmd->directive->filename;

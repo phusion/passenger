@@ -153,6 +153,19 @@ postprocessConfig(server_rec *s, apr_pool_t *pool, apr_pool_t *temp_pool) {
 	}
 
 	serverConfig.manifest = ConfigManifestGenerator(s, temp_pool).execute();
+
+	if (!serverConfig.dumpConfigManifest.empty()) {
+		FILE *f = fopen(serverConfig.dumpConfigManifest.c_str(), "w");
+		if (f == NULL) {
+			fprintf(stderr, "Error opening %s for writing\n",
+				serverConfig.dumpConfigManifest.c_str());
+		} else {
+			string dumpContent = serverConfig.manifest.toStyledString();
+			size_t ret = fwrite(dumpContent.data(), 1, dumpContent.size(), f);
+			(void) ret; // Ignore compilation warning.
+			fclose(f);
+		}
+	}
 }
 
 

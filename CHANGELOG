@@ -1,8 +1,8 @@
 Release 5.2.2 (Not yet released)
 -------------
 
+ * Adds an option for dumping the web server config manifest to a given file: `PassengerDumpConfigManifest` (Apache) / `passenger_dump_config_manifest` (Nginx). This option is mostly useful for Passenger developers.
  * [Nginx] Fixes support for configurations that have two `passenger_base_uri` options in a single virtual host, without corresponding `passenger_app_group_name` and `passenger_app_root` directives. Closes GH-2043.
- * [Nginx] Adds option `passenger_dump_config_manifest`. This option is mostly useful for Passenger developers, and when set dumps the Nginx module config manifest to the given file.
  * [Enterprise] Improved support for RAM-based pricing on Heroku (now using officially recommended memory limit reporting via CGROUP).
 
 
