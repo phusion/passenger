@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2017 Phusion Holding B.V.
+ *  Copyright (c) 2017-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -34,6 +34,9 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
+
+#include <string>
+#include <vector>
 
 #include <Constants.h>
 #include <WebSocketCommandReverseServer.h>
@@ -432,10 +435,21 @@ private:
 
 				foreach (Json::Value file, files) {
 					string f = file.asString();
-
 					Pipe pipe = createPipe(__FILE__, __LINE__);
+					string agentExe = resourceLocator->findSupportBinary(AGENT_EXE);
+					vector<const char *> execArgs;
 
-					string command = "/usr/bin/tail -n 100 " + f;
+					execArgs.push_back(agentExe.c_str());
+					execArgs.push_back("exec-helper");
+					if (geteuid() == 0) {
+						execArgs.push_back("--user");
+						execArgs.push_back(pwUser->pw_name);
+					}
+					execArgs.push_back("tail");
+					execArgs.push_back("-n");
+					execArgs.push_back("100");
+					execArgs.push_back(f.c_str());
+					execArgs.push_back(NULL);
 
 					pid_t pid = syscalls::fork();
 
@@ -449,19 +463,15 @@ private:
 						pipe.first.close();
 						pipe.second.close();
 
-						if (geteuid() == 0) {
-							execl("/usr/bin/su", "su", pwUser->pw_name, "-c", command.c_str(), NULL);
-						} else {
-							execl("/usr/bin/tail", "tail", "-n", "100", f.c_str(), NULL);
-						}
+						execvp(execArgs[0], (char * const *) &execArgs[0]);
 
 						int e = errno;
 						char buf[256];
 						char *pos = buf;
 						const char *end = pos + 256;
 
-						pos = ASSU::appendData(pos, end, "Cannot execute \"tail -n 100 ");
-						pos = ASSU::appendData(pos, end, f.c_str());
+						pos = ASSU::appendData(pos, end, "Cannot execute \"");
+						pos = ASSU::appendData(pos, end, agentExe.c_str());
 						pos = ASSU::appendData(pos, end, "\": ");
 						pos = ASSU::appendData(pos, end, strerror(e));
 						pos = ASSU::appendData(pos, end, " (errno=");
