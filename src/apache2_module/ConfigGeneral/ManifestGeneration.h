@@ -261,7 +261,7 @@ private:
 		Json::Value &appConfigsContainer = manifest["application_configurations"];
 		Json::Value::iterator it, end = appConfigsContainer.end();
 
-		reverseValueHierarchiesInOptionsContainer(manifest["global_config"]);
+		reverseValueHierarchiesInOptionsContainer(manifest["global_configuration"]);
 		reverseValueHierarchiesInOptionsContainer(manifest["application_configurations"]);
 		reverseValueHierarchiesInOptionsContainer(manifest["default_location_configuration"]);
 
