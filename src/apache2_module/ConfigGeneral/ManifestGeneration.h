@@ -278,7 +278,7 @@ private:
 		Json::Value::iterator it, end = appConfigsContainer.end();
 
 		reverseValueHierarchiesInOptionsContainer(manifest["global_configuration"]);
-		reverseValueHierarchiesInOptionsContainer(manifest["application_configurations"]);
+		reverseValueHierarchiesInOptionsContainer(manifest["default_application_configuration"]);
 		reverseValueHierarchiesInOptionsContainer(manifest["default_location_configuration"]);
 
 		for (it = appConfigsContainer.begin(); it != end; it++) {
