@@ -146,6 +146,19 @@ infer_loc_conf_app_group_name(manifest_gen_ctx_t *ctx, passenger_loc_conf_t *plc
     return 1;
 }
 
+static u_char *
+infer_default_app_root(manifest_gen_ctx_t *ctx, ngx_http_core_loc_conf_t *clcf,
+    size_t *len)
+{
+    u_char *path, *end;
+
+    path = ngx_pnalloc(ctx->cf->temp_pool, clcf->root.len + 3);
+    end = ngx_snprintf(path, clcf->root.len + 3,
+        "%V/..", &clcf->root);
+    return (u_char *) psg_absolutize_path((const char *) path,
+        end - path, NULL, 0, len);
+}
+
 static PsgJsonValue *
 find_or_create_manifest_app_config_container(manifest_gen_ctx_t *ctx,
     ngx_str_t *app_group_name)
@@ -390,6 +403,7 @@ find_or_create_manifest_app_and_loc_options_containers(manifest_gen_ctx_t *ctx,
 {
     ngx_str_t app_group_name;
     PsgJsonValue *app_config_container, *loc_config_container;
+    ngx_str_t default_app_root;
 
     if (*app_options_container != NULL && *loc_options_container != NULL) {
         return;
@@ -405,6 +419,24 @@ find_or_create_manifest_app_and_loc_options_containers(manifest_gen_ctx_t *ctx,
         app_config_container = find_or_create_manifest_app_config_container(ctx, &app_group_name);
         *app_options_container = psg_json_value_get(app_config_container, "options", -1);
         *loc_options_container = psg_json_value_get(app_config_container, "default_location_configuration", -1);
+
+        /* Create a default value for passenger_app_root
+         * if we just created this config container
+         */
+        if (psg_json_value_size(*app_options_container) == 0) {
+            add_manifest_options_container_static_default_str(ctx,
+                *app_options_container,
+                "passenger_app_group_name", -1,
+                (const char *) app_group_name.data, app_group_name.len);
+
+            default_app_root.data = infer_default_app_root(
+                ctx, clcf, &default_app_root.len);
+            add_manifest_options_container_static_default_str(ctx,
+                *app_options_container,
+                "passenger_app_root", -1,
+                (const char *) default_app_root.data, default_app_root.len);
+            free(default_app_root.data);
+        }
     } else {
         /* We are in a location/if block */
         infer_loc_conf_app_group_name(ctx, plcf, clcf, &app_group_name);

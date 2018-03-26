@@ -28,6 +28,7 @@
 
 #include <string>
 #include <cstddef>
+#include <string>
 #include <boost/function.hpp>
 #include <jsoncpp/json.h>
 
@@ -98,6 +99,17 @@ private:
 			Json::Value &appConfigContainer = findOrCreateAppConfigContainer(appGroupName);
 			*appOptionsContainer = &appConfigContainer["options"];
 			*locOptionsContainer = &appConfigContainer["default_location_configuration"];
+
+			// Create a default value for passenger_app_root
+			// if we just created this config container
+			if ((*appOptionsContainer)->empty()) {
+				addOptionsContainerStaticDefaultStr(**appOptionsContainer,
+					"PassengerAppGroupName",
+					appGroupName);
+				addOptionsContainerStaticDefaultStr(**appOptionsContainer,
+					"PassengerAppRoot",
+					inferDefaultAppRoot(csconf));
+			}
 		} else {
 			// We are inside a <Directory> or <Location>
 			string appGroupName = inferLocConfAppGroupName(csconf, pdconf);
@@ -133,6 +145,10 @@ private:
 		} else {
 			return pdconf->getAppGroupName();
 		}
+	}
+
+	string inferDefaultAppRoot(core_server_config *csconf) {
+		return absolutizePath(csconf->ap_document_root + P_STATIC_STRING("/.."));
 	}
 
 	Json::Value	&findOrCreateAppConfigContainer(const string &appGroupName) {

@@ -4,6 +4,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
+#include "cxx_supportlib/FileTools/PathManipCBindings.h"
 #include "cxx_supportlib/JsonTools/CBindings.h"
 
 #ifndef _PASSENGER_NGINX_MODULE_CONF_STRUCT_TYPEDEFS_H_
@@ -40,6 +41,8 @@ static void recursively_generate_config_manifest_for_loc_conf(manifest_gen_ctx_t
 	passenger_loc_conf_t *plcf);
 static int infer_loc_conf_app_group_name(manifest_gen_ctx_t *ctx,
 	passenger_loc_conf_t *plcf, ngx_http_core_loc_conf_t *clcf, ngx_str_t *result);
+static u_char *infer_default_app_root(manifest_gen_ctx_t *ctx,
+    ngx_http_core_loc_conf_t *clcf, size_t *len);
 static void generate_config_manifest_for_loc_conf(manifest_gen_ctx_t *ctx,
 	passenger_loc_conf_t *plcf, ngx_http_core_srv_conf_t *cscf,
 	ngx_http_core_loc_conf_t *clcf);
