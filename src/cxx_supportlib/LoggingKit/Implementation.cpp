@@ -42,6 +42,7 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/foreach.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/detail/context.hpp>
 
@@ -339,10 +340,10 @@ Context::convertLog(){
 			reply[it.getKey()] = Json::objectValue;
 			Context::LogRecord::ConstIterator itit(it->value);
 			while (*itit != NULL) {
-				if(!reply[it.getKey()].isMember(itit.getKey())){
+				if (!reply[it.getKey()].isMember(itit.getKey())){
 					reply[it.getKey()][itit.getKey()] = Json::arrayValue;
 				}
-				for (string line : itit->value) {
+				foreach (string line, itit->value) {
 					reply[it.getKey()][itit.getKey()].append(line);
 				}
 				itit.next();

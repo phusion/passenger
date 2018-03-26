@@ -33,6 +33,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
 
 #include <Constants.h>
 #include <WebSocketCommandReverseServer.h>
@@ -41,6 +42,7 @@
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/Controller.h>
 #include <ProcessManagement/Ruby.h>
+#include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/AsyncSignalSafeUtils.h>
@@ -415,7 +417,7 @@ private:
 			// TODO: this probably doesn't give any results with the builtin engine (not supported in other places either)
 		}
 
-		for (HashedStaticString key : appConfigs.getMemberNames()) {
+		foreach (HashedStaticString key, appConfigs.getMemberNames()) {
 			Json::Value files = appConfigs[key]["options"][passengerMonitorLogFile]["value_hierarchy"][0]["value"];
 			string appRoot = appConfigs[key]["options"][passengerAppRoot]["value_hierarchy"][0]["value"].asString();
 
@@ -428,7 +430,7 @@ private:
 			if (!files.isNull()) {
 				struct passwd *pwUser = getpwuid(ids.first);
 
-				for (Json::Value file : files) {
+				foreach (Json::Value file, files) {
 					string f = file.asString();
 
 					Pipe pipe = createPipe(__FILE__, __LINE__);
