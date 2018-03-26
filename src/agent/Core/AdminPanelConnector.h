@@ -399,13 +399,30 @@ private:
 
 	void addWatchedFiles() {
 		Json::Value appConfigs = configGetter()["config_manifest"]["effective_value"]["application_configurations"];
+
+		// As a hack, we look up the watched files config (passenger monitor log file) in the manifest. The manifest
+		// is meant for users, which means that key names depend on the integration mode. In the future when
+		// component configuration more routed through ConfigKit we can get rid of the hack.
+		string integrationMode = server.getConfig()["integration_mode"].asString();
+		string passengerMonitorLogFile;
+		string passengerAppRoot; // TODO: get from somewhere else, in Apache mode this contains a placeholder string
+		if (integrationMode == "apache") {
+			passengerMonitorLogFile = "PassengerMonitorLogFile";
+			passengerAppRoot = "PassengerAppRoot";
+		} else {
+			passengerMonitorLogFile = "passenger_monitor_log_file";
+			passengerAppRoot = "passenger_app_root";
+			// TODO: this probably doesn't give any results with the builtin engine (not supported in other places either)
+		}
+
 		for (HashedStaticString key : appConfigs.getMemberNames()) {
-			Json::Value files = appConfigs[key]["options"]["PassengerMonitorLogFile"]["value_hierarchy"][0]["value"];
-			string appRoot = appConfigs[key]["options"]["PassengerAppRoot"]["value_hierarchy"][0]["value"].asString();
+			Json::Value files = appConfigs[key]["options"][passengerMonitorLogFile]["value_hierarchy"][0]["value"];
+			string appRoot = appConfigs[key]["options"][passengerAppRoot]["value_hierarchy"][0]["value"].asString();
+
 			pair<uid_t, gid_t> ids;
 			try {
 				ids = appPool->getGroupRunUidAndGids(key);
-			} catch(RuntimeException e) {
+			} catch (RuntimeException e) {
 				files = Json::nullValue;
 			}
 			if (!files.isNull()) {
@@ -432,13 +449,13 @@ private:
 
 						if (geteuid() == 0) {
 							execl("/usr/bin/su", "su", pwUser->pw_name, "-c", command.c_str(), NULL);
-						}else {
+						} else {
 							execl("/usr/bin/tail", "tail", "-n", "100", f.c_str(), NULL);
 						}
 
 						int e = errno;
 						char buf[256];
-						char *pos= buf;
+						char *pos = buf;
 						const char *end = pos + 256;
 
 						pos = ASSU::appendData(pos, end, "Cannot execute \"tail -n 100 ");
@@ -463,7 +480,7 @@ private:
 					}
 				}
 			}
-        }
+		}
 	}
 
 	bool onGetApplicationLogs(const ConnectionPtr &conn, const Json::Value &doc) {
