@@ -141,11 +141,13 @@ public:
 	 * (do not edit: following text is automatically generated
 	 * by 'rake configkit_schemas_inline_comments')
 	 *
-	 *   authentication             object    -          secret
+	 *   auth_type                  string    -          default("basic")
 	 *   close_timeout              float     -          default(10.0)
 	 *   connect_timeout            float     -          default(30.0)
 	 *   data_debug                 boolean   -          default(false)
 	 *   log_prefix                 string    -          -
+	 *   password                   string    -          secret
+	 *   password_file              string    -          -
 	 *   ping_interval              float     -          default(30.0)
 	 *   ping_timeout               float     -          default(30.0)
 	 *   proxy_password             string    -          secret
@@ -154,6 +156,7 @@ public:
 	 *   proxy_username             string    -          -
 	 *   reconnect_timeout          float     -          default(5.0)
 	 *   url                        string    required   -
+	 *   username                   string    -          -
 	 *   websocketpp_debug_access   boolean   -          default(false)
 	 *   websocketpp_debug_error    boolean   -          default(false)
 	 *
@@ -169,7 +172,10 @@ public:
 			add("websocketpp_debug_access", BOOL_TYPE, OPTIONAL, false);
 			add("websocketpp_debug_error", BOOL_TYPE, OPTIONAL, false);
 			add("data_debug", BOOL_TYPE, OPTIONAL, false);
-			add("authentication", OBJECT_TYPE, OPTIONAL | SECRET);
+			add("auth_type", STRING_TYPE, OPTIONAL, "basic");
+			add("username", STRING_TYPE, OPTIONAL);
+			add("password", STRING_TYPE, OPTIONAL | SECRET);
+			add("password_file", STRING_TYPE, OPTIONAL);
 			add("proxy_url", STRING_TYPE, OPTIONAL);
 			add("proxy_username", STRING_TYPE, OPTIONAL);
 			add("proxy_password", STRING_TYPE, OPTIONAL | SECRET);
@@ -187,54 +193,39 @@ public:
 		static void validateAuthentication(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
 			typedef ConfigKit::Error Error;
 
-			if (config["authentication"].isNull() || !config["authentication"].isObject()) {
+			// url is required, but Core::Schema overrides it to be optional.
+			if (config["url"].isNull() || config["auth_type"].asString() == "none") {
 				return;
 			}
 
-			if (!config["authentication"]["type"].isNull()) {
-				if (config["authentication"]["type"] != "basic") {
-					errors.push_back(Error("When '{{authentication}}' is given,"
-						" its 'type' key may only be set to 'basic'"));
-				}
+			if (config["auth_type"].asString() != "basic") {
+				errors.push_back(Error("Unsupported '{{auth_type}}' value"
+					" (only 'none' and 'basic' are supported)"));
 			}
-			if (!config["authentication"]["username"].isString()) {
-				errors.push_back(Error("When '{{authentication}}' is given,"
-					" its 'username' key must be a string"));
-			}
-			if (config["authentication"].isMember("password_file")) {
-				if (!config["authentication"]["password_file"].isString()) {
-					errors.push_back(Error("When '{{authentication}}' is given,"
-						" its 'password_file' key must be a string"));
+
+			if (config["auth_type"].asString() == "basic") {
+				if (config["username"].isNull()) {
+					errors.push_back(Error(
+						"When '{{auth_type}}' is set to 'basic', '{{username}}' must also be set"));
 				}
-				if (config["authentication"].isMember("password")) {
-					errors.push_back(Error("When '{{authentication}}' is given,"
-						" it may not contain both a 'password_file' and a 'password' key"));
+
+				if (config["password"].isNull() && config["password_file"].isNull()) {
+					errors.push_back(Error(
+						"When '{{auth_type}}' is set to 'basic',"
+						" then either '{{password}}' or '{{password_file}}' must also be set"));
+				} else if (!config["password"].isNull() && !config["password_file"].isNull()) {
+					errors.push_back(Error(
+						"Only one of '{{password}}' or '{{password_file}}' may be set, but not both"));
 				}
-			} else if (config["authentication"].isMember("password")) {
-				if (!config["authentication"]["password"].isString()) {
-					errors.push_back(Error("When '{{authentication}}' is given,"
-						" its 'password' key must be a string"));
-				}
-			} else {
-				errors.push_back(Error("When '{{authentication}}' is given,"
-					" it must have a 'password_file' or 'password' key"));
 			}
 		}
 
 		static Json::Value normalizeAuthentication(const Json::Value &effectiveValues) {
-			Json::Value auth = effectiveValues["authentication"];
-			if (auth.isNull()) {
-				return Json::nullValue;
-			}
-
 			Json::Value updates;
-			if (auth["type"].isNull()) {
-				auth["type"] = "basic";
+			if (!effectiveValues["password_file"].isNull()) {
+				updates["password_file"] = absolutizePath(
+					effectiveValues["password_file"].asString());
 			}
-			if (auth.isMember("password_file")) {
-				auth["password_file"] = absolutizePath(auth["password_file"].asString());
-			}
-			updates["authentication"] = auth;
 			return updates;
 		}
 
@@ -449,7 +440,7 @@ private:
 		using websocketpp::lib::placeholders::_1;
 		using websocketpp::lib::placeholders::_2;
 
-		if (!config["authentication"].isNull()) {
+		if (config["auth_type"].asString() == "basic") {
 			try {
 				addBasicAuthHeader(conn);
 			} catch (const std::exception &e) {
@@ -501,12 +492,12 @@ private:
 	}
 
 	void addBasicAuthHeader(ConnectionPtr &conn) {
-		string username = config["authentication"]["username"].asString();
+		string username = config["username"].asString();
 		string password;
-		if (config["authentication"].isMember("password_file")) {
-			password = strip(readAll(config["authentication"]["password_file"].asString()));
+		if (config["password_file"].isNull()) {
+			password = config["password"].asString();
 		} else {
-			password = config["authentication"]["password"].asString();
+			password = strip(readAll(config["password_file"].asString()));
 		}
 		string data = modp::b64_encode(username + ":" + password);
 		conn->append_header("Authorization", "Basic " + data);

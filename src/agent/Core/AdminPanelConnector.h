@@ -67,13 +67,15 @@ public:
 	 * (do not edit: following text is automatically generated
 	 * by 'rake configkit_schemas_inline_comments')
 	 *
-	 *   authentication              object    -          secret
+	 *   auth_type                   string    -          default("basic")
 	 *   close_timeout               float     -          default(10.0)
 	 *   connect_timeout             float     -          default(30.0)
 	 *   data_debug                  boolean   -          default(false)
 	 *   instance_dir                string    -          read_only
 	 *   integration_mode            string    -          default("standalone")
 	 *   log_prefix                  string    -          -
+	 *   password                    string    -          secret
+	 *   password_file               string    -          -
 	 *   ping_interval               float     -          default(30.0)
 	 *   ping_timeout                float     -          default(30.0)
 	 *   proxy_password              string    -          secret
@@ -84,6 +86,7 @@ public:
 	 *   ruby                        string    -          default("ruby")
 	 *   standalone_engine           string    -          default
 	 *   url                         string    required   -
+	 *   username                    string    -          -
 	 *   web_server_module_version   string    -          read_only
 	 *   web_server_version          string    -          read_only
 	 *   websocketpp_debug_access    boolean   -          default(false)

@@ -36,6 +36,10 @@ passenger_user_switching off;
 <%= nginx_http_option(:security_update_check_proxy) %>
 <%= nginx_http_option(:data_buffer_dir) %>
 <%= nginx_http_option(:core_file_descriptor_ulimit) %>
+<%= nginx_http_option(:admin_panel_url) %>
+<%= nginx_http_option(:admin_panel_auth_type) %>
+<%= nginx_http_option(:admin_panel_username) %>
+<%= nginx_http_option(:admin_panel_password) %>
 <% @options[:ctls].each do |ctl| %>
     passenger_ctl '<%= ctl.split("=", 2)[0] %>' '<%= ctl.split("=", 2)[1] %>';
 <% end %>

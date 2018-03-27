@@ -293,6 +293,34 @@ NGINX_CONFIGURATION_OPTIONS = [
     :dynamic_default => 'passenger_core_file_descriptor_ulimit'
   },
   {
+    :name     => 'passenger_admin_panel_url',
+    :scope    => :global,
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_admin_panel_auth_type',
+    :scope    => :global,
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_admin_panel_username',
+    :scope    => :global,
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_admin_panel_password',
+    :scope    => :global,
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
     :name     => 'passenger_enabled',
     :scope    => :location,
     :type     => :flag,

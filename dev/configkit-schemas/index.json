@@ -1,8 +1,9 @@
 {
    "Passenger::Core::AdminPanelConnector::Schema" : {
-      "authentication" : {
-         "secret" : true,
-         "type" : "object"
+      "auth_type" : {
+         "default_value" : "basic",
+         "has_default_value" : "static",
+         "type" : "string"
       },
       "close_timeout" : {
          "default_value" : 10.0,
@@ -29,6 +30,13 @@
          "type" : "string"
       },
       "log_prefix" : {
+         "type" : "string"
+      },
+      "password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "password_file" : {
          "type" : "string"
       },
       "ping_interval" : {
@@ -72,6 +80,9 @@
       },
       "url" : {
          "required" : true,
+         "type" : "string"
+      },
+      "username" : {
          "type" : "string"
       },
       "web_server_module_version" : {
@@ -342,9 +353,10 @@
       }
    },
    "Passenger::Core::Schema" : {
-      "admin_panel_authentication" : {
-         "secret" : true,
-         "type" : "object"
+      "admin_panel_auth_type" : {
+         "default_value" : "basic",
+         "has_default_value" : "static",
+         "type" : "string"
       },
       "admin_panel_close_timeout" : {
          "default_value" : 10.0,
@@ -360,6 +372,13 @@
          "default_value" : false,
          "has_default_value" : "static",
          "type" : "boolean"
+      },
+      "admin_panel_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "admin_panel_password_file" : {
+         "type" : "string"
       },
       "admin_panel_ping_interval" : {
          "default_value" : 30.0,
@@ -393,6 +412,9 @@
       },
       "admin_panel_url" : {
          "read_only" : true,
+         "type" : "string"
+      },
+      "admin_panel_username" : {
          "type" : "string"
       },
       "admin_panel_websocketpp_debug_access" : {
@@ -1028,9 +1050,10 @@
       }
    },
    "Passenger::Watchdog::Schema" : {
-      "admin_panel_authentication" : {
-         "secret" : true,
-         "type" : "object"
+      "admin_panel_auth_type" : {
+         "default_value" : "basic",
+         "has_default_value" : "static",
+         "type" : "string"
       },
       "admin_panel_close_timeout" : {
          "default_value" : 10.0,
@@ -1046,6 +1069,13 @@
          "default_value" : false,
          "has_default_value" : "static",
          "type" : "boolean"
+      },
+      "admin_panel_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "admin_panel_password_file" : {
+         "type" : "string"
       },
       "admin_panel_ping_interval" : {
          "default_value" : 30.0,
@@ -1079,6 +1109,9 @@
       },
       "admin_panel_url" : {
          "read_only" : true,
+         "type" : "string"
+      },
+      "admin_panel_username" : {
          "type" : "string"
       },
       "admin_panel_websocketpp_debug_access" : {
@@ -1642,9 +1675,10 @@
       }
    },
    "Passenger::WebSocketCommandReverseServer::Schema" : {
-      "authentication" : {
-         "secret" : true,
-         "type" : "object"
+      "auth_type" : {
+         "default_value" : "basic",
+         "has_default_value" : "static",
+         "type" : "string"
       },
       "close_timeout" : {
          "default_value" : 10.0,
@@ -1662,6 +1696,13 @@
          "type" : "boolean"
       },
       "log_prefix" : {
+         "type" : "string"
+      },
+      "password" : {
+         "secret" : true,
+         "type" : "string"
+      },
+      "password_file" : {
          "type" : "string"
       },
       "ping_interval" : {
@@ -1696,6 +1737,9 @@
       },
       "url" : {
          "required" : true,
+         "type" : "string"
+      },
+      "username" : {
          "type" : "string"
       },
       "websocketpp_debug_access" : {

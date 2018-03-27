@@ -1330,6 +1330,10 @@ public:
 		config["stat_throttle_rate"] = serverConfig.statThrottleRate;
 		config["turbocaching"] = serverConfig.turbocaching;
 		config["prestart_urls"] = strsetToJson(serverConfig.prestartURLs);
+		config["admin_panel_url"] = nonEmptyString(serverConfig.adminPanelUrl);
+		config["admin_panel_auth_type"] = nonEmptyString(serverConfig.adminPanelAuthType);
+		config["admin_panel_username"] = nonEmptyString(serverConfig.adminPanelUsername);
+		config["admin_panel_password"] = nonEmptyString(serverConfig.adminPanelPassword);
 
 		if (!serverConfig.logFile.empty()) {
 			config["log_target"] = serverConfig.logFile.toString();

@@ -39,6 +39,66 @@
  */
 
 static const char *
+cmd_passenger_admin_panel_auth_type(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.adminPanelAuthTypeSourceFile = cmd->directive->filename;
+	serverConfig.adminPanelAuthTypeSourceLine = cmd->directive->line_num;
+	serverConfig.adminPanelAuthTypeExplicitlySet = true;
+	serverConfig.adminPanelAuthType = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_admin_panel_password(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.adminPanelPasswordSourceFile = cmd->directive->filename;
+	serverConfig.adminPanelPasswordSourceLine = cmd->directive->line_num;
+	serverConfig.adminPanelPasswordExplicitlySet = true;
+	serverConfig.adminPanelPassword = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_admin_panel_url(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.adminPanelUrlSourceFile = cmd->directive->filename;
+	serverConfig.adminPanelUrlSourceLine = cmd->directive->line_num;
+	serverConfig.adminPanelUrlExplicitlySet = true;
+	serverConfig.adminPanelUrl = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_admin_panel_username(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.adminPanelUsernameSourceFile = cmd->directive->filename;
+	serverConfig.adminPanelUsernameSourceLine = cmd->directive->line_num;
+	serverConfig.adminPanelUsernameExplicitlySet = true;
+	serverConfig.adminPanelUsername = arg;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_allow_encoded_slashes(cmd_parms *cmd, void *pcfg, const char *arg) {
 	DirConfig *config = (DirConfig *) pcfg;
 	config->mAllowEncodedSlashesSourceFile = cmd->directive->filename;

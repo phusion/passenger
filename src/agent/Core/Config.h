@@ -61,10 +61,12 @@ using namespace std;
  * (do not edit: following text is automatically generated
  * by 'rake configkit_schemas_inline_comments')
  *
- *   admin_panel_authentication                                      object             -          secret
+ *   admin_panel_auth_type                                           string             -          default("basic")
  *   admin_panel_close_timeout                                       float              -          default(10.0)
  *   admin_panel_connect_timeout                                     float              -          default(30.0)
  *   admin_panel_data_debug                                          boolean            -          default(false)
+ *   admin_panel_password                                            string             -          secret
+ *   admin_panel_password_file                                       string             -          -
  *   admin_panel_ping_interval                                       float              -          default(30.0)
  *   admin_panel_ping_timeout                                        float              -          default(30.0)
  *   admin_panel_proxy_password                                      string             -          secret
@@ -73,6 +75,7 @@ using namespace std;
  *   admin_panel_proxy_username                                      string             -          -
  *   admin_panel_reconnect_timeout                                   float              -          default(5.0)
  *   admin_panel_url                                                 string             -          read_only
+ *   admin_panel_username                                            string             -          -
  *   admin_panel_websocketpp_debug_access                            boolean            -          default(false)
  *   admin_panel_websocketpp_debug_error                             boolean            -          default(false)
  *   api_server_accept_burst_count                                   unsigned integer   -          default(32)

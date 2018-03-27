@@ -538,6 +538,26 @@ module PhusionPassenger
         :desc      => "Log level to use. Default: #{DEFAULT_LOG_LEVEL}"
       },
       {
+        :name      => :admin_panel_url,
+        :type      => :string,
+        :desc      => 'Connect to an admin panel at the given connector URL'
+      },
+      {
+        :name      => :admin_panel_auth_type,
+        :type      => :string,
+        :desc      => 'Authentication type to use when connecting to the admin panel'
+      },
+      {
+        :name      => :admin_panel_username,
+        :type      => :string,
+        :desc      => 'Username to use when authenticating with the admin panel'
+      },
+      {
+        :name      => :admin_panel_password,
+        :type      => :string,
+        :desc      => 'Password to use when authenticating with the admin panel'
+      },
+      {
         :name      => :auto,
         :type      => :boolean,
         :default   => !STDIN.tty? || !STDOUT.tty?,
