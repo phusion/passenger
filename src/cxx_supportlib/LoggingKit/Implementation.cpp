@@ -322,7 +322,7 @@ Context::saveLog(const HashedStaticString &groupName, const char *pidStr, unsign
 
 	HashedStaticString pid(pidStr,pidStrLen);
 	if(!rec.contains(pid)) {
-		Logs v(100);
+		Logs v(LOG_MONITORING_MAX_LINES);
 		rec.insert(pid, v);
 	}
 	rec.lookupCell(pid)->value.push_back(string(message, messageLen));

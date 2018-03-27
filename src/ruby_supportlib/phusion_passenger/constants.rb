@@ -86,6 +86,7 @@ module PhusionPassenger
     # but there's no real average upload size anyway so we choose mem safety instead.
     DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD = 1024 * 128
     SERVER_KIT_MAX_SERVER_ENDPOINTS = 4
+    LOG_MONITORING_MAX_LINES = 200
 
     # Time limits
     PROCESS_SHUTDOWN_TIMEOUT = 60 # In seconds

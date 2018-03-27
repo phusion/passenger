@@ -435,6 +435,7 @@ private:
 
 				foreach (Json::Value file, files) {
 					string f = file.asString();
+					string maxLines = toString(LOG_MONITORING_MAX_LINES);
 					Pipe pipe = createPipe(__FILE__, __LINE__);
 					string agentExe = resourceLocator->findSupportBinary(AGENT_EXE);
 					vector<const char *> execArgs;
@@ -447,7 +448,7 @@ private:
 					}
 					execArgs.push_back("tail");
 					execArgs.push_back("-n");
-					execArgs.push_back("100");
+					execArgs.push_back(maxLines.c_str());
 					execArgs.push_back(f.c_str());
 					execArgs.push_back(NULL);
 
