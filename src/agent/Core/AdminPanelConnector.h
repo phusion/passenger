@@ -413,7 +413,7 @@ private:
 		// component configuration more routed through ConfigKit we can get rid of the hack.
 		string integrationMode = server.getConfig()["integration_mode"].asString();
 		string passengerMonitorLogFile;
-		string passengerAppRoot; // TODO: get from somewhere else, in Apache mode this contains a placeholder string
+		string passengerAppRoot;
 		if (integrationMode == "apache") {
 			passengerMonitorLogFile = "PassengerMonitorLogFile";
 			passengerAppRoot = "PassengerAppRoot";
@@ -490,7 +490,7 @@ private:
 						istringstream iss(out);
 						string line;
 						while (getline(iss, line)) {
-							LoggingKit::context->saveLog(key, f.c_str(), f.size(), line.c_str(), line.size());
+							LoggingKit::context->updateLog(key, f.c_str(), f.size(), line.c_str(), line.size());
 						}
 						syscalls::waitpid(pid, NULL, 0);
 					}

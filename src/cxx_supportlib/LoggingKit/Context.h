@@ -81,10 +81,23 @@ private:
 	queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
 	bool shuttingDown;
 
-	typedef boost::circular_buffer<string> Logs;
-	typedef StringKeyTable<Logs> LogRecord;
-	typedef StringKeyTable<LogRecord> LogBuffer;
-	LogBuffer logBuffer;
+	struct TimestampedLog {
+		// time at which time the log entered the core, which is unfortunately somewhat
+		// arbitrarily later than that it was logged in the user program
+		unsigned long long timestamp;
+		string sourceId;
+		string lineText;
+	};
+	typedef boost::circular_buffer<TimestampedLog> TimestampedLogBuffer;
+
+	typedef boost::circular_buffer<string> SimpleLogBuffer;
+	typedef StringKeyTable<SimpleLogBuffer> SimpleLogMap;
+	struct AppGroupLog {
+		TimestampedLogBuffer pidLog; // combined logs from PIDs
+		SimpleLogMap watchFileLog; // a separate log buffer per (watched file name)
+	};
+	typedef StringKeyTable<AppGroupLog> LogStore;
+	LogStore logStore;
 
 public:
 	Context(const Json::Value &initialConfig = Json::Value(),
@@ -92,7 +105,11 @@ public:
 	~Context();
 	ConfigKit::Store getConfig() const;
 
-	void saveLog(const HashedStaticString &groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen);
+	// specifically for logging output from application processes
+	void saveNewLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen);
+	// the message might already have been logged (e.g. because the source is a `tail -n`)
+	void updateLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen);
+	// snapshot logStore to a JSON structure for external relay
 	Json::Value convertLog();
 
 	bool prepareConfigChange(const Json::Value &updates,

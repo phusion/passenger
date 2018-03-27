@@ -310,22 +310,45 @@ _writeFileDescriptorLogEntry(const ConfigRealization *configRealization,
 }
 
 void
-Context::saveLog(const HashedStaticString &groupName, const char *pidStr, unsigned int pidStrLen, const char *message, unsigned int messageLen){
+Context::saveNewLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen) {
 	boost::lock_guard<boost::mutex> l(syncher); //lock
 
-	LogBuffer::Cell *c = logBuffer.lookupCell(groupName);
-	if(c == NULL) {
-		LogRecord t;
-		c = logBuffer.insert(groupName, t);
-	}
-	LogRecord &rec = c->value;
+	unsigned long long timestamp = SystemTime::getUsec();
 
-	HashedStaticString pid(pidStr,pidStrLen);
-	if(!rec.contains(pid)) {
-		Logs v(LOG_MONITORING_MAX_LINES);
-		rec.insert(pid, v);
+	LogStore::Cell *c = logStore.lookupCell(groupName);
+	if (c == NULL) {
+		AppGroupLog appGroupLog;
+		appGroupLog.pidLog = TimestampedLogBuffer(LOG_MONITORING_MAX_LINES * 5);
+		c = logStore.insert(groupName, appGroupLog);
 	}
-	rec.lookupCell(pid)->value.push_back(string(message, messageLen));
+	AppGroupLog &rec = c->value;
+
+	TimestampedLog ll;
+	ll.timestamp = timestamp;
+	ll.sourceId = string(sourceStr, sourceStrLen);
+	ll.lineText = string(message, messageLen);
+	rec.pidLog.push_back(ll);
+	//unlock
+}
+
+void
+Context::updateLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen) {
+	boost::lock_guard<boost::mutex> l(syncher); //lock
+
+	LogStore::Cell *c = logStore.lookupCell(groupName);
+	if (c == NULL) {
+		AppGroupLog appGroupLog;
+		appGroupLog.pidLog = TimestampedLogBuffer(LOG_MONITORING_MAX_LINES * 5);
+		c = logStore.insert(groupName, appGroupLog);
+	}
+	AppGroupLog &rec = c->value;
+
+	HashedStaticString source(sourceStr, sourceStrLen);
+	if (!rec.watchFileLog.contains(source)) {
+		SimpleLogBuffer logBuffer(LOG_MONITORING_MAX_LINES);
+		rec.watchFileLog.insert(source, logBuffer);
+	}
+	rec.watchFileLog.lookupCell(source)->value.push_back(string(message, messageLen));
 	//unlock
 }
 
@@ -334,22 +357,32 @@ Context::convertLog(){
 	boost::lock_guard<boost::mutex> l(syncher); //lock
 	Json::Value reply = Json::objectValue;
 
-	if (!logBuffer.empty()) {
-		Context::LogBuffer::ConstIterator it(logBuffer);
-		while (*it != NULL) {
-			reply[it.getKey()] = Json::objectValue;
-			Context::LogRecord::ConstIterator itit(it->value);
-			while (*itit != NULL) {
-				if (!reply[it.getKey()].isMember(itit.getKey())){
-					reply[it.getKey()][itit.getKey()] = Json::arrayValue;
-				}
-				foreach (string line, itit->value) {
-					reply[it.getKey()][itit.getKey()].append(line);
-				}
-				itit.next();
+	if (!logStore.empty()) {
+		Context::LogStore::ConstIterator appGroupIter(logStore);
+		while (*appGroupIter != NULL) {
+			reply[appGroupIter.getKey()] = Json::objectValue;
+
+			Json::Value &processLog = reply[appGroupIter.getKey()]["Application process log (combined)"];
+			foreach (TimestampedLog logLine, appGroupIter->value.pidLog) {
+				Json::Value logLineJson = Json::objectValue;
+				logLineJson["source_id"] = logLine.sourceId;
+				logLineJson["timestamp"] = (Json::UInt64) logLine.timestamp;
+				logLineJson["line"] = logLine.lineText;
+				processLog.append(logLineJson);
 			}
 
-			it.next();
+			Context::SimpleLogMap::ConstIterator watchFileLogIter(appGroupIter->value.watchFileLog);
+			while (*watchFileLogIter != NULL) {
+				if (!reply[appGroupIter.getKey()].isMember(watchFileLogIter.getKey())){
+					reply[appGroupIter.getKey()][watchFileLogIter.getKey()] = Json::arrayValue;
+				}
+				foreach (string line, watchFileLogIter->value) {
+					reply[appGroupIter.getKey()][watchFileLogIter.getKey()].append(line);
+				}
+				watchFileLogIter.next();
+			}
+
+			appGroupIter.next();
 		}
 	}
 
@@ -377,7 +410,7 @@ realLogAppOutput(const HashedStaticString &groupName, int targetFd,
 	pos = appendData(pos, end, "\n");
 
 	if (OXT_UNLIKELY(context != NULL && saveLog)) {
-		context->saveLog(groupName, pidStr, pidStrLen, message, messageLen);
+		context->saveNewLog(groupName, pidStr, pidStrLen, message, messageLen);
 	}
 	if (appLogFile > -1) {
 		writeExactWithoutOXT(appLogFile, buf, pos - buf);
