@@ -1,4 +1,4 @@
-Release 5.2.2 (Not yet released)
+Release 5.2.2
 -------------
 
  * Adds an option for dumping the web server config manifest to a given file: `PassengerDumpConfigManifest` (Apache) / `passenger_dump_config_manifest` (Nginx). This option is mostly useful for Passenger developers.
