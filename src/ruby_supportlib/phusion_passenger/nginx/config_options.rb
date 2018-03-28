@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2013-2017 Phusion Holding B.V.
+#  Copyright (c) 2013-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -422,12 +422,6 @@ NGINX_CONFIGURATION_OPTIONS = [
     :scope    => :application,
     :type     => :string,
     :dynamic_default => 'passenger_app_root plus passenger_app_env'
-  },
-  {
-    :name     => 'passenger_monitor_log_file',
-    :scope    => :application,
-    :type     => :string_array,
-    :header   => nil
   },
   {
     :name     => 'passenger_monitor_log_file',
