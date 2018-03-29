@@ -40,8 +40,10 @@ module PhusionPassenger
       RACK_URL_SCHEME    = "rack.url_scheme"     # :nodoc:
       RACK_HIJACK_P      = "rack.hijack?"        # :nodoc:
       RACK_HIJACK        = "rack.hijack"         # :nodoc:
+      RACK_EARLY_HINTS   = "rack.early_hints"    # :nodoc:
       HTTP_VERSION       = "HTTP_VERSION"        # :nodoc:
       HTTP_1_1           = "HTTP/1.1"            # :nodoc:
+      HTTP_103           = "HTTP/1.1 103 Early Hints\r\n" # :nodoc:
       SCRIPT_NAME        = "SCRIPT_NAME"         # :nodoc:
       REQUEST_METHOD = "REQUEST_METHOD"          # :nodoc:
       TRANSFER_ENCODING_HEADER  = "Transfer-Encoding"   # :nodoc:
@@ -88,6 +90,22 @@ module PhusionPassenger
             end
           end
           env[HTTP_VERSION] = HTTP_1_1
+
+          env[RACK_EARLY_HINTS] = lambda { |headers|
+            connection.write(HTTP_103)
+
+            headers.each_pair do |k, vs|
+              if vs.respond_to?(:to_s) && !vs.to_s.empty?
+                vs.to_s.split(NEWLINE).each do |v|
+                  connection.write("#{k}#{NAME_VALUE_SEPARATOR}#{v}#{CRLF}")
+                end
+              else
+                connection.write("#{k}#{NAME_VALUE_SEPARATOR}#{vs}#{CRLF}")
+              end
+            end
+
+            connection.flush
+          }
 
           # Rails somehow modifies env['REQUEST_METHOD'], so we perform the comparison
           # before the Rack application object is called.
