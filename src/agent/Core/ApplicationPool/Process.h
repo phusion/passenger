@@ -377,6 +377,9 @@ private:
 		return result;
 	}
 
+	string getAppGroupName(const BasicGroupInfo *info) const;
+	string getAppLogFile(const BasicGroupInfo *info) const;
+
 public:
 	/*************************************************************
 	 * Information used by Pool. Do not write to these from
@@ -502,7 +505,8 @@ public:
 
 		if (outputPipe != -1) {
 			SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-				outputPipe, "output", skResult.pid);
+				outputPipe, "output", getAppGroupName(groupInfo),
+				getAppLogFile(groupInfo), skResult.pid);
 			if (!args["log_file"].isNull()) {
 				watcher->setLogFile(args["log_file"].asString());
 			}

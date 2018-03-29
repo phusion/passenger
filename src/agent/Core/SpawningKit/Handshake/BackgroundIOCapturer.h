@@ -60,6 +60,8 @@ class BackgroundIOCapturer {
 private:
 	const FileDescriptor fd;
 	const pid_t pid;
+	const string appGroupName;
+	const string appLogFile;
 	const StaticString channelName;
 	mutable boost::mutex dataSyncher;
 	string data;
@@ -92,7 +94,7 @@ private:
 				}
 				UPDATE_TRACE_POINT();
 				if (ret == 1 && buf[0] == '\n') {
-					LoggingKit::logAppOutput(pid, channelName, "", 0);
+					LoggingKit::logAppOutput(appGroupName, pid, channelName, "", 0, appLogFile);
 				} else {
 					vector<StaticString> lines;
 					if (ret > 0 && buf[ret - 1] == '\n') {
@@ -100,7 +102,7 @@ private:
 					}
 					split(StaticString(buf, ret), '\n', lines);
 					foreach (const StaticString line, lines) {
-						LoggingKit::logAppOutput(pid, channelName, line.data(), line.size());
+						LoggingKit::logAppOutput(appGroupName, pid, channelName, line.data(), line.size(), appLogFile);
 					}
 				}
 			}
@@ -117,10 +119,14 @@ private:
 
 public:
 	BackgroundIOCapturer(const FileDescriptor &_fd, pid_t _pid,
+		const string &_appGroupName,
+		const string &_appLogFile,
 		const StaticString &_channelName = P_STATIC_STRING("output"),
 		const StaticString &_data = StaticString())
 		: fd(_fd),
 		  pid(_pid),
+		  appGroupName(_appGroupName),
+		  appLogFile(_appLogFile),
 		  channelName(_channelName),
 		  data(_data.data(), _data.size()),
 		  thr(NULL),

@@ -351,6 +351,14 @@ module PhusionPassenger
                       "number of concurrent requests per process"
       },
       {
+        :name      => :start_timeout,
+        :type      => :integer,
+        :type_desc => 'SECONDS',
+        :desc      => "The maximum time an application process may\n" \
+                      "take to start up, after which it will be killed\n" \
+                      "with SIGKILL, and logged with an error.\nDefault: #{DEFAULT_START_TIMEOUT / 1000}"
+      },
+      {
         :name      => :concurrency_model,
         :type_desc => 'NAME',
         :desc      => "The concurrency model to use, either\n" \
@@ -467,59 +475,6 @@ module PhusionPassenger
       }
     ]
 
-    # Union Station configuration options
-    UNION_STATION_CONFIG_SPECS = [
-      {
-        :name      => :union_station_gateway_address,
-        :cli       => nil
-      },
-      {
-        :name      => :union_station_gateway_port,
-        :type      => :integer,
-        :cli       => nil
-      },
-      {
-        :type_desc => 'HOST:PORT',
-        :cli       => '--union-station-gateway',
-        :cli_parser => lambda do |options, value|
-          host, port = value.split(":", 2)
-          port = port.to_i
-          port = 443 if port == 0
-          options[:union_station_gateway_address] = host
-          options[:union_station_gateway_port] = port.to_i
-        end,
-        :desc      => 'Specify Union Station Gateway host and port'
-      },
-      {
-        :name      => :union_station_key,
-        :type_desc => 'KEY',
-        :desc      => 'Specify Union Station key'
-      },
-      {
-        :name      => :union_station_gateway_cert,
-        :type      => :path,
-        :desc      => "The certificate to use for contacting the\n" \
-                      "Union Station gateway, or '-' to disable\n" \
-                      "certificate checking",
-        :config_value_parser => lambda do |value, base_dir|
-          if value == '-'
-            '-'
-          else
-            File.absolute_logical_path(value.to_s, base_dir)
-          end
-        end,
-        :cli_parser => lambda do |options, value|
-          if value == '-'
-            options[:union_station_gateway_cert] = '-'
-          else
-            options[:union_station_gateway_cert] =
-              File.absolute_logical_path(value,
-                Dir.logical_pwd)
-          end
-        end
-      }
-    ]
-
     # Nginx engine configuration options
     NGINX_ENGINE_CONFIG_SPECS = [
       {
@@ -583,6 +538,26 @@ module PhusionPassenger
         :desc      => "Log level to use. Default: #{DEFAULT_LOG_LEVEL}"
       },
       {
+        :name      => :admin_panel_url,
+        :type      => :string,
+        :desc      => 'Connect to an admin panel at the given connector URL'
+      },
+      {
+        :name      => :admin_panel_auth_type,
+        :type      => :string,
+        :desc      => 'Authentication type to use when connecting to the admin panel'
+      },
+      {
+        :name      => :admin_panel_username,
+        :type      => :string,
+        :desc      => 'Username to use when authenticating with the admin panel'
+      },
+      {
+        :name      => :admin_panel_password,
+        :type      => :string,
+        :desc      => 'Password to use when authenticating with the admin panel'
+      },
+      {
         :name      => :auto,
         :type      => :boolean,
         :default   => !STDIN.tty? || !STDOUT.tty?,
@@ -635,7 +610,6 @@ module PhusionPassenger
       APPLICATION_LOADING_CONFIG_SPECS,
       PROCESS_MANAGEMENT_CONFIG_SPECS,
       REQUEST_HANDLING_CONFIG_SPECS,
-      UNION_STATION_CONFIG_SPECS,
       NGINX_ENGINE_CONFIG_SPECS,
       ADVANCED_CONFIG_SPECS
     ]

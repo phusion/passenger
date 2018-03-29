@@ -7,7 +7,7 @@ using namespace std;
 namespace tut {
 	struct ConfigKit_SchemaTest {
 		ConfigKit::Schema schema;
-		ConfigKit::Error error;
+		vector<ConfigKit::Error> errors;
 	};
 
 	DEFINE_TEST_GROUP(ConfigKit_SchemaTest);
@@ -19,7 +19,7 @@ namespace tut {
 
 		schema.finalize();
 		try {
-			schema.validateValue("foo", "str", error);
+			schema.validateValue("foo", "str", errors);
 			fail();
 		} catch (const ArgumentException &) {
 			// pass
@@ -33,10 +33,10 @@ namespace tut {
 		schema.add("bar", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
-		ensure(!schema.validateValue("foo", Json::nullValue, error));
-		ensure_equals(error.getMessage(), "'foo' is required");
-		ensure(!schema.validateValue("bar", Json::nullValue, error));
-		ensure_equals(error.getMessage(), "'bar' is required");
+		ensure(!schema.validateValue("foo", Json::nullValue, errors));
+		ensure_equals(errors.back().getMessage(), "'foo' is required");
+		ensure(!schema.validateValue("bar", Json::nullValue, errors));
+		ensure_equals(errors.back().getMessage(), "'bar' is required");
 	}
 
 	TEST_METHOD(6) {
@@ -54,44 +54,44 @@ namespace tut {
 		schema.add("any", ConfigKit::ANY_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
-		ensure(schema.validateValue("string", "string", error));
-		ensure(schema.validateValue("string", 123, error));
-		ensure(schema.validateValue("string", 123.45, error));
-		ensure(schema.validateValue("string", true, error));
-		ensure(schema.validateValue("integer", 123, error));
-		ensure(schema.validateValue("integer", 123.45, error));
-		ensure(schema.validateValue("integer", true, error));
-		ensure(schema.validateValue("integer", -123, error));
-		ensure(schema.validateValue("integer_unsigned", 123, error));
-		ensure(schema.validateValue("integer_unsigned", 123.45, error));
-		ensure(schema.validateValue("integer_unsigned", true, error));
-		ensure(schema.validateValue("float", 123, error));
-		ensure(schema.validateValue("float", 123.45, error));
-		ensure(schema.validateValue("boolean", true, error));
-		ensure(schema.validateValue("boolean", 123, error));
-		ensure(schema.validateValue("boolean", 123.45, error));
-		ensure(schema.validateValue("any", "string", error));
-		ensure(schema.validateValue("any", 123, error));
-		ensure(schema.validateValue("any", 123.45, error));
-		ensure(schema.validateValue("any", -123, error));
-		ensure(schema.validateValue("any", true, error));
-		ensure(schema.validateValue("any", Json::arrayValue, error));
-		ensure(schema.validateValue("any", Json::objectValue, error));
+		ensure(schema.validateValue("string", "string", errors));
+		ensure(schema.validateValue("string", 123, errors));
+		ensure(schema.validateValue("string", 123.45, errors));
+		ensure(schema.validateValue("string", true, errors));
+		ensure(schema.validateValue("integer", 123, errors));
+		ensure(schema.validateValue("integer", 123.45, errors));
+		ensure(schema.validateValue("integer", true, errors));
+		ensure(schema.validateValue("integer", -123, errors));
+		ensure(schema.validateValue("integer_unsigned", 123, errors));
+		ensure(schema.validateValue("integer_unsigned", 123.45, errors));
+		ensure(schema.validateValue("integer_unsigned", true, errors));
+		ensure(schema.validateValue("float", 123, errors));
+		ensure(schema.validateValue("float", 123.45, errors));
+		ensure(schema.validateValue("boolean", true, errors));
+		ensure(schema.validateValue("boolean", 123, errors));
+		ensure(schema.validateValue("boolean", 123.45, errors));
+		ensure(schema.validateValue("any", "string", errors));
+		ensure(schema.validateValue("any", 123, errors));
+		ensure(schema.validateValue("any", 123.45, errors));
+		ensure(schema.validateValue("any", -123, errors));
+		ensure(schema.validateValue("any", true, errors));
+		ensure(schema.validateValue("any", Json::arrayValue, errors));
+		ensure(schema.validateValue("any", Json::objectValue, errors));
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append("string");
 		doc.append(123);
-		ensure(schema.validateValue("array", doc, error));
+		ensure(schema.validateValue("array", doc, errors));
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append("string");
 		doc.append("string");
-		ensure(schema.validateValue("string_array", doc, error));
+		ensure(schema.validateValue("string_array", doc, errors));
 
 		doc = Json::Value(Json::objectValue);
 		doc["string"] = "string";
 		doc["int"] = 123;
-		ensure(schema.validateValue("object", doc, error));
+		ensure(schema.validateValue("object", doc, errors));
 	}
 
 	TEST_METHOD(7) {
@@ -107,32 +107,32 @@ namespace tut {
 		schema.add("object", ConfigKit::OBJECT_TYPE, ConfigKit::REQUIRED);
 		schema.finalize();
 
-		ensure(!schema.validateValue("integer", "string", error));
-		ensure_equals(error.getMessage(), "'integer' must be an integer");
+		ensure(!schema.validateValue("integer", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'integer' must be an integer");
 
-		ensure(!schema.validateValue("integer_unsigned", -123, error));
-		ensure_equals(error.getMessage(), "'integer_unsigned' must be greater than 0");
+		ensure(!schema.validateValue("integer_unsigned", -123, errors));
+		ensure_equals(errors.back().getMessage(), "'integer_unsigned' must be greater than 0");
 
-		ensure(!schema.validateValue("float", "string", error));
-		ensure_equals(error.getMessage(), "'float' must be a number");
+		ensure(!schema.validateValue("float", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'float' must be a number");
 
-		ensure(!schema.validateValue("boolean", "string", error));
-		ensure_equals(error.getMessage(), "'boolean' must be a boolean");
+		ensure(!schema.validateValue("boolean", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'boolean' must be a boolean");
 
-		ensure(!schema.validateValue("array", "string", error));
-		ensure_equals(error.getMessage(), "'array' must be an array");
+		ensure(!schema.validateValue("array", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'array' must be an array");
 
-		ensure(!schema.validateValue("string_array", "string", error));
-		ensure_equals(error.getMessage(), "'string_array' must be an array");
+		ensure(!schema.validateValue("string_array", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'string_array' must be an array");
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append(123);
 		doc.append("string");
-		ensure(!schema.validateValue("string_array", doc, error));
-		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
+		ensure(!schema.validateValue("string_array", doc, errors));
+		ensure_equals(errors.back().getMessage(), "'string_array' may only contain strings");
 
-		ensure(!schema.validateValue("object", "string", error));
-		ensure_equals(error.getMessage(), "'object' must be a JSON object");
+		ensure(!schema.validateValue("object", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'object' must be a JSON object");
 	}
 
 	TEST_METHOD(10) {
@@ -142,8 +142,8 @@ namespace tut {
 		schema.add("bar", ConfigKit::INT_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
-		ensure(schema.validateValue("foo", Json::nullValue, error));
-		ensure(schema.validateValue("bar", Json::nullValue, error));
+		ensure(schema.validateValue("foo", Json::nullValue, errors));
+		ensure(schema.validateValue("bar", Json::nullValue, errors));
 	}
 
 	TEST_METHOD(11) {
@@ -161,44 +161,44 @@ namespace tut {
 		schema.add("any", ConfigKit::ANY_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
-		ensure(schema.validateValue("string", "string", error));
-		ensure(schema.validateValue("string", 123, error));
-		ensure(schema.validateValue("string", 123.45, error));
-		ensure(schema.validateValue("string", true, error));
-		ensure(schema.validateValue("integer", 123, error));
-		ensure(schema.validateValue("integer", 123.45, error));
-		ensure(schema.validateValue("integer", true, error));
-		ensure(schema.validateValue("integer", -123, error));
-		ensure(schema.validateValue("integer_unsigned", 123, error));
-		ensure(schema.validateValue("integer_unsigned", 123.45, error));
-		ensure(schema.validateValue("integer_unsigned", true, error));
-		ensure(schema.validateValue("float", 123, error));
-		ensure(schema.validateValue("float", 123.45, error));
-		ensure(schema.validateValue("boolean", true, error));
-		ensure(schema.validateValue("boolean", 123, error));
-		ensure(schema.validateValue("boolean", 123.45, error));
-		ensure(schema.validateValue("any", "string", error));
-		ensure(schema.validateValue("any", 123, error));
-		ensure(schema.validateValue("any", 123.45, error));
-		ensure(schema.validateValue("any", -123, error));
-		ensure(schema.validateValue("any", true, error));
-		ensure(schema.validateValue("any", Json::arrayValue, error));
-		ensure(schema.validateValue("any", Json::objectValue, error));
+		ensure(schema.validateValue("string", "string", errors));
+		ensure(schema.validateValue("string", 123, errors));
+		ensure(schema.validateValue("string", 123.45, errors));
+		ensure(schema.validateValue("string", true, errors));
+		ensure(schema.validateValue("integer", 123, errors));
+		ensure(schema.validateValue("integer", 123.45, errors));
+		ensure(schema.validateValue("integer", true, errors));
+		ensure(schema.validateValue("integer", -123, errors));
+		ensure(schema.validateValue("integer_unsigned", 123, errors));
+		ensure(schema.validateValue("integer_unsigned", 123.45, errors));
+		ensure(schema.validateValue("integer_unsigned", true, errors));
+		ensure(schema.validateValue("float", 123, errors));
+		ensure(schema.validateValue("float", 123.45, errors));
+		ensure(schema.validateValue("boolean", true, errors));
+		ensure(schema.validateValue("boolean", 123, errors));
+		ensure(schema.validateValue("boolean", 123.45, errors));
+		ensure(schema.validateValue("any", "string", errors));
+		ensure(schema.validateValue("any", 123, errors));
+		ensure(schema.validateValue("any", 123.45, errors));
+		ensure(schema.validateValue("any", -123, errors));
+		ensure(schema.validateValue("any", true, errors));
+		ensure(schema.validateValue("any", Json::arrayValue, errors));
+		ensure(schema.validateValue("any", Json::objectValue, errors));
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append("string");
 		doc.append(123);
-		ensure(schema.validateValue("array", doc, error));
+		ensure(schema.validateValue("array", doc, errors));
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append("string");
 		doc.append("string");
-		ensure(schema.validateValue("string_array", doc, error));
+		ensure(schema.validateValue("string_array", doc, errors));
 
 		doc = Json::Value(Json::objectValue);
 		doc["string"] = "string";
 		doc["int"] = 123;
-		ensure(schema.validateValue("object", doc, error));
+		ensure(schema.validateValue("object", doc, errors));
 	}
 
 	TEST_METHOD(12) {
@@ -214,29 +214,29 @@ namespace tut {
 		schema.add("object", ConfigKit::OBJECT_TYPE, ConfigKit::OPTIONAL);
 		schema.finalize();
 
-		ensure(!schema.validateValue("integer", "string", error));
-		ensure_equals(error.getMessage(), "'integer' must be an integer");
+		ensure(!schema.validateValue("integer", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'integer' must be an integer");
 
-		ensure(!schema.validateValue("integer_unsigned", -123, error));
-		ensure_equals(error.getMessage(), "'integer_unsigned' must be greater than 0");
+		ensure(!schema.validateValue("integer_unsigned", -123, errors));
+		ensure_equals(errors.back().getMessage(), "'integer_unsigned' must be greater than 0");
 
-		ensure(!schema.validateValue("float", "string", error));
-		ensure_equals(error.getMessage(), "'float' must be a number");
+		ensure(!schema.validateValue("float", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'float' must be a number");
 
-		ensure(!schema.validateValue("boolean", "string", error));
-		ensure_equals(error.getMessage(), "'boolean' must be a boolean");
+		ensure(!schema.validateValue("boolean", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'boolean' must be a boolean");
 
-		ensure(!schema.validateValue("string_array", "string", error));
-		ensure_equals(error.getMessage(), "'string_array' must be an array");
+		ensure(!schema.validateValue("string_array", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'string_array' must be an array");
 
 		doc = Json::Value(Json::arrayValue);
 		doc.append(123);
 		doc.append("string");
-		ensure(!schema.validateValue("string_array", doc, error));
-		ensure_equals(error.getMessage(), "'string_array' may only contain strings");
+		ensure(!schema.validateValue("string_array", doc, errors));
+		ensure_equals(errors.back().getMessage(), "'string_array' may only contain strings");
 
-		ensure(!schema.validateValue("object", "string", error));
-		ensure_equals(error.getMessage(), "'object' must be a JSON object");
+		ensure(!schema.validateValue("object", "string", errors));
+		ensure_equals(errors.back().getMessage(), "'object' must be a JSON object");
 	}
 
 

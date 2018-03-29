@@ -52,7 +52,8 @@
 #include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <Utils.h>
+#include <FileTools/FileManip.h>
+#include <FileTools/PathManip.h>
 #include <Utils/SystemTime.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
@@ -324,6 +325,7 @@ private:
 		}
 	}
 
+	#if 0
 	void inferApplicationInfo() const {
 		TRACE_POINT();
 		session.result.codeRevision = readFromRevisionFile();
@@ -370,6 +372,7 @@ private:
 			return string();
 		}
 	}
+	#endif
 
 	void findFreePortOrSocketFile() {
 		TRACE_POINT();
@@ -545,7 +548,8 @@ public:
 			initializeResult();
 
 			UPDATE_TRACE_POINT();
-			inferApplicationInfo();
+			// Disabled to fix CVE-2017-16355
+			//inferApplicationInfo();
 			if (config->genericApp || config->findFreePort) {
 				findFreePortOrSocketFile();
 			}

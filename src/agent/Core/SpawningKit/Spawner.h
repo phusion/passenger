@@ -90,6 +90,7 @@ protected:
 			envvarsData.clear();
 		}
 
+		config->appGroupName = options.getAppGroupName();
 		config->appRoot = options.appRoot;
 		config->logLevel = options.logLevel;
 		config->genericApp = false;
@@ -105,6 +106,7 @@ protected:
 		config->baseURI = options.baseURI;
 		config->environmentVariables = decodeEnvironmentVariables(
 			envvarsData);
+		config->logFile = options.appLogFile;
 		config->unionStationKey = options.unionStationKey;
 		config->apiKey = options.apiKey;
 		config->groupUuid = options.groupUuid;
@@ -116,9 +118,6 @@ protected:
 		config->user = info.username;
 		config->group = info.groupname;
 
-		if (!options.appGroupName.empty()) {
-			extraArgs["app_group_name"] = options.appGroupName.toString();
-		}
 		extraArgs["spawn_method"] = options.spawnMethod.toString();
 		extraArgs["ust_router_address"] = options.ustRouterAddress.toString();
 		extraArgs["ust_router_username"] = options.ustRouterUsername.toString();

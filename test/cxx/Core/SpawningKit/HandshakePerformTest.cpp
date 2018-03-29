@@ -31,6 +31,7 @@ namespace tut {
 			context.integrationMode = "standalone";
 			context.finalize();
 
+			config.appGroupName = "appgroup";
 			config.appRoot = "/tmp/myapp";
 			config.startCommand = "echo hi";
 			config.startupFile = "/tmp/myapp/app.py";

@@ -108,14 +108,14 @@ def create_c_executable(target, objects, options_or_flags = nil)
   objects = [objects].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{cc} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{EXTRA_C_LDFLAGS}")
+  run_compiler("#{cc} -o #{target} #{objects} #{EXTRA_PRE_C_LDFLAGS} #{flags} #{extra_c_ldflags}")
 end
 
 def create_cxx_executable(target, objects, options_or_flags = nil)
   objects = [objects].flatten.join(" ")
   flags = build_compiler_flags_from_options_or_flags(options_or_flags)
   ensure_target_directory_exists(target)
-  run_compiler("#{cxx} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{EXTRA_CXX_LDFLAGS}")
+  run_compiler("#{cxx} -o #{target} #{objects} #{EXTRA_PRE_CXX_LDFLAGS} #{flags} #{extra_cxx_ldflags}")
 end
 
 def create_static_library(target, objects)

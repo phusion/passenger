@@ -47,6 +47,7 @@ module PhusionPassenger
       PhusionPassenger.require_passenger_lib 'constants'
       PhusionPassenger.require_passenger_lib 'public_api'
       PhusionPassenger.require_passenger_lib 'debug_logging'
+      PhusionPassenger.require_passenger_lib 'platform_info/ruby'
       PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
       PhusionPassenger.require_passenger_lib 'utils/shellwords'
       PhusionPassenger.require_passenger_lib 'ruby_core_enhancements'
@@ -127,7 +128,7 @@ module PhusionPassenger
       # from occuring between fork and exec. This workaround prevents the assertion.
       # http://www.sealiesoftware.com/blog/archive/2017/6/5/Objective-C_and_fork_in_macOS_1013.html
       # https://github.com/puma/puma/issues/1421
-      if PlatformInfo.os_name_simple == "macosx"
+      if PlatformInfo::RUBY_ENGINE == 'ruby' && PlatformInfo.os_name_simple == "macosx"
         # Eager-load Foundation.framework, to ensure the Objective-C runtime
         # exists well before any forking happens
         begin
@@ -135,10 +136,12 @@ module PhusionPassenger
         rescue LoadError
           return
         end
-        begin
-          Fiddle.dlopen '/System/Library/Frameworks/Foundation.framework/Foundation'
-        rescue Fiddle::DLError => e
-          STDERR.puts "WARNING: #{e}"
+        if Fiddle.respond_to?(:dlopen)
+          begin
+            Fiddle.dlopen '/System/Library/Frameworks/Foundation.framework/Foundation'
+          rescue Fiddle::DLError => e
+            STDERR.puts "WARNING: #{e}"
+          end
         end
       end
     end
@@ -538,7 +541,6 @@ module PhusionPassenger
     rescue Exception => e
       if (defined?(Bundler::GemNotFound) && e.is_a?(Bundler::GemNotFound)) ||
          (defined?(Bundler::GitError) && e.is_a?(Bundler::GitError))
-        PhusionPassenger.require_passenger_lib 'platform_info/ruby'
         ruby = PlatformInfo.ruby_command
         e_as_str = "#{e}"  # Certain classes like Interrupt don't like #to_s, so we use this
         if Bundler.respond_to?(:settings) && Bundler.settings.respond_to?(:path)

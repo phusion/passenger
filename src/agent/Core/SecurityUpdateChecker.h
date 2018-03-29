@@ -27,16 +27,31 @@
 #define _PASSENGER_SECURITY_UPDATE_CHECKER_H_
 
 #include <string>
+#include <cassert>
+#include <boost/config.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/backtrace.hpp>
 
 #include <Crypto.h>
+#include <ResourceLocator.h>
+#include <Exceptions.h>
+#include <StaticString.h>
+#include <ConfigKit/ConfigKit.h>
 #include <Utils/Curl.h>
 #include <modp_b64.h>
 
 #if BOOST_OS_MACOS
 	#include <sys/syslimits.h>
 	#include <unistd.h>
+	#include <Availability.h>
+	#ifndef __MAC_10_13
+		#define __MAC_10_13 101300
+	#endif
+	#define PRE_HIGH_SIERRA (__MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_13)
+	#if !PRE_HIGH_SIERRA
+		#include <openssl/err.h>
+	#endif
 #endif
 
 namespace Passenger {
@@ -45,17 +60,16 @@ using namespace std;
 using namespace oxt;
 
 
-#define CHECK_HOST_DEFAULT "securitycheck.phusionpassenger.com"
-
-#define CHECK_URL_DEFAULT "https://" CHECK_HOST_DEFAULT ":443/v1/check.json"
 #define MIN_CHECK_BACKOFF_SEC (12 * 60 * 60)
 #define MAX_CHECK_BACKOFF_SEC (7 * 24 * 60 * 60)
 
+#if PRE_HIGH_SIERRA
 // Password for the .p12 client certificate (because .p12 is required to be pwd protected on some
 // implementations). We're OK with hardcoding because the certs are not secret anyway, and they're not used
 // for client id/auth (just to easily deflect unrelated probes from the server endpoint).
 #define CLIENT_CERT_PWD "p6PBhK8KtorrhMxHnH855MvF"
 #define CLIENT_CERT_LABEL "Phusion Passenger Open Source"
+#endif
 
 #define POSSIBLE_MITM_RESOLUTION "(if this error persists check your connection security or try upgrading " SHORT_PROGRAM_NAME ")"
 
@@ -66,21 +80,126 @@ using namespace oxt;
  * no auto-update mechanism).
  */
 class SecurityUpdateChecker {
+public:
+	/*
+	 * BEGIN ConfigKit schema: Passenger::SecurityUpdateChecker::Schema
+	 * (do not edit: following text is automatically generated
+	 * by 'rake configkit_schemas_inline_comments')
+	 *
+	 *   certificate_path     string             -          -
+	 *   disabled             boolean            -          default(false)
+	 *   interval             unsigned integer   -          default(86400)
+	 *   proxy_url            string             -          -
+	 *   server_identifier    string             required   -
+	 *   url                  string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
+	 *   web_server_version   string             -          -
+	 *
+	 * END
+	 */
+	class Schema: public ConfigKit::Schema {
+	private:
+		static void validateInterval(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+			unsigned int interval = config["interval"].asUInt();
+			if (interval < MIN_CHECK_BACKOFF_SEC || interval > MAX_CHECK_BACKOFF_SEC) {
+				errors.push_back(ConfigKit::Error("'{{interval}}' must be between " +
+					toString(MIN_CHECK_BACKOFF_SEC) + " and " + toString(MAX_CHECK_BACKOFF_SEC)));
+			}
+		}
+
+		static void validateProxyUrl(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+			if (config["proxy_url"].isNull()) {
+				return;
+			}
+			if (config["proxy_url"].asString().empty()) {
+				errors.push_back(ConfigKit::Error("'{{proxy_url}}', if specified, may not be empty"));
+				return;
+			}
+
+			try {
+				prepareCurlProxy(config["proxy_url"].asString());
+			} catch (const ArgumentException &e) {
+				errors.push_back(ConfigKit::Error(
+					P_STATIC_STRING("'{{proxy_url}}': ")
+					+ e.what()));
+			}
+		}
+
+	public:
+		Schema() {
+			using namespace ConfigKit;
+
+			add("disabled", BOOL_TYPE, OPTIONAL, false);
+			add("url", STRING_TYPE, OPTIONAL, "https://securitycheck.phusionpassenger.com/v1/check.json");
+			// Should be in the form: scheme://user:password@proxy_host:proxy_port
+			add("proxy_url", STRING_TYPE, OPTIONAL);
+			add("certificate_path", STRING_TYPE, OPTIONAL);
+			add("interval", UINT_TYPE, OPTIONAL, 24 * 60 * 60);
+			// Should be one of { nginx, apache, standalone nginx, standalone builtin }
+			add("server_identifier", STRING_TYPE, REQUIRED);
+			// The version of Nginx or Apache, if relevant (otherwise empty)
+			add("web_server_version", STRING_TYPE, OPTIONAL);
+
+			addValidator(validateInterval);
+			addValidator(validateProxyUrl);
+
+			finalize();
+		}
+	};
+
+	struct ConfigRealization {
+		CurlProxyInfo proxyInfo;
+		string url;
+		string certificatePath;
+
+		ConfigRealization(const ConfigKit::Store &config)
+			: proxyInfo(prepareCurlProxy(config["proxy_url"].asString())),
+			  url(config["url"].asString()),
+			  certificatePath(config["certificate_path"].asString())
+			{ }
+
+		void swap(ConfigRealization &other) BOOST_NOEXCEPT_OR_NOTHROW {
+			proxyInfo.swap(other.proxyInfo);
+			url.swap(other.url);
+			certificatePath.swap(other.certificatePath);
+		}
+	};
+
+	struct ConfigChangeRequest {
+		boost::scoped_ptr<ConfigKit::Store> config;
+		boost::scoped_ptr<ConfigRealization> configRlz;
+	};
 
 private:
+	/*
+	 * Since the security update checker runs in a separate thread,
+	 * and the configuration can change while the checker is active,
+	 * we make a copy of the current configuration at the beginning
+	 * of each check.
+	 */
+	struct SessionState {
+		ConfigKit::Store config;
+		ConfigRealization configRlz;
+
+		SessionState(const ConfigKit::Store &currentConfig,
+			const ConfigRealization &currentConfigRlz)
+			: config(currentConfig),
+			  configRlz(currentConfigRlz)
+			{ }
+	};
+
+	mutable boost::mutex configSyncher;
+	ConfigKit::Store config;
+	ConfigRealization configRlz;
+
 	oxt::thread *updateCheckThread;
-	long checkIntervalSec;
 	string clientCertPath; // client cert (PKCS#12), checked by server
 	string serverPubKeyPath; // for checking signature
-	string proxyAddress;
-	string serverIntegration;
-	string serverVersion;
-	CurlProxyInfo proxyInfo;
-	Crypto *crypto;
+	Crypto crypto;
 
 	void threadMain() {
 		TRACE_POINT();
-		// Sleep for a short while to allow interruption during the Apache integration double startup procedure, this prevents running the update check twice
+		// Sleep for a short while to allow interruption during the Apache integration
+		// double startup procedure, this prevents running the update check twice
 		boost::this_thread::sleep_for(boost::chrono::seconds(2));
 		while (!boost::this_thread::interruption_requested()) {
 			UPDATE_TRACE_POINT();
@@ -90,7 +209,13 @@ private:
 			} catch (const tracable_exception &e) {
 				P_ERROR(e.what() << "\n" << e.backtrace());
 			}
+
 			UPDATE_TRACE_POINT();
+			unsigned int checkIntervalSec;
+			{
+				boost::lock_guard<boost::mutex> l(configSyncher);
+				checkIntervalSec = config["interval"].asUInt();
+			}
 			long backoffSec = checkIntervalSec + (backoffMin * 60);
 			if (backoffSec < MIN_CHECK_BACKOFF_SEC) {
 				backoffSec = MIN_CHECK_BACKOFF_SEC;
@@ -103,7 +228,7 @@ private:
 	}
 
 
-	void logUpdateFailCurl(CURLcode code) {
+	void logUpdateFailCurl(const SessionState &sessionState, CURLcode code) {
 		// At this point anything could be wrong, from unloadable certificates to server not found, etc.
 		// Let's try to enrich the log message in case there are known solutions or workarounds (e.g. "use proxy").
 		string error = curl_easy_strerror(code);
@@ -114,20 +239,21 @@ private:
 				break;
 
 			case CURLE_COULDNT_RESOLVE_HOST:
-				error.append(" while connecting to " CHECK_HOST_DEFAULT " (check your DNS)");
+				error.append(" while connecting to " + sessionState.configRlz.url + " (check your DNS)");
 				break;
 
 			case CURLE_COULDNT_CONNECT:
-				if (proxyAddress.empty()) {
-					error.append(" for " CHECK_URL_DEFAULT " " POSSIBLE_MITM_RESOLUTION);
+				if (sessionState.config["proxy_url"].isNull()) {
+					error.append(" for " + sessionState.configRlz.url + " " POSSIBLE_MITM_RESOLUTION);
 				} else {
-					error.append(" for " CHECK_URL_DEFAULT " using proxy " + proxyAddress +
+					error.append(" for " + sessionState.configRlz.url + " using proxy "
+						+ sessionState.config["proxy_url"].asString() +
 						" (if this error persists check your firewall and/or proxy settings)");
 				}
 				break;
 
 			case CURLE_COULDNT_RESOLVE_PROXY:
-				error.append(" for proxy address " + proxyAddress);
+				error.append(" for proxy address " + sessionState.config["proxy_url"].asString());
 				break;
 
 			case CURLE_SSL_CACERT:
@@ -135,15 +261,22 @@ private:
 				// for MITM but could also be a truststore issue.
 			case CURLE_PEER_FAILED_VERIFICATION:
 				// The remote server's SSL certificate or SSH md5 fingerprint was deemed not OK.
-				error.append(" while connecting to " CHECK_HOST_DEFAULT "; check that your connection is secure and that the "
-						"truststore is valid. If the problem persists, you can also try upgrading or reinstalling " SHORT_PROGRAM_NAME);
+				error.append(" while connecting to " + sessionState.configRlz.url
+					+ "; check that your connection is secure and that the"
+					" truststore is valid. If the problem persists, you can also try upgrading"
+					" or reinstalling " PROGRAM_NAME);
 				break;
 
 			case CURLE_SSL_CACERT_BADFILE:
-				error.append(" while connecting to " CHECK_URL_DEFAULT " " +
-						(proxyAddress.empty() ? "" : "using proxy " + proxyAddress) + "; this might happen if the nss backend "
-						"is installed for libcurl instead of GnuTLS or OpenSSL. If the problem persists, you can also try upgrading "
-						"or reinstalling " SHORT_PROGRAM_NAME);
+				error.append(" while connecting to " + sessionState.configRlz.url + " ");
+				if (!sessionState.config["proxy_url"].isNull()) {
+					error.append("using proxy ");
+					error.append(sessionState.config["proxy_url"].asString());
+					error.append(" ");
+				}
+				error.append("; this might happen if the nss backend is installed for"
+					" libcurl instead of GnuTLS or OpenSSL. If the problem persists, you can also try upgrading"
+					" or reinstalling " PROGRAM_NAME);
 				break;
 
 			// Fallthroughs to default:
@@ -151,34 +284,40 @@ private:
 				// A problem occurred somewhere in the SSL/TLS handshake. Not sure what's up, but in this case the
 				// error buffer (printed in DEBUG) should pinpoint the problem slightly more.
 			case CURLE_OPERATION_TIMEDOUT:
-				// This is not a normal connect timeout, there are some refs to it occuring while downloading large
+				// This is not a normal connect timeout, there are some refs to it occurring while downloading large
 				// files, but we don't do that so fall through to default.
 			default:
-				error.append(" while connecting to " CHECK_URL_DEFAULT " " +
-						(proxyAddress.empty() ? "" : "using proxy " + proxyAddress) + " " POSSIBLE_MITM_RESOLUTION);
+				error.append(" while connecting to " + sessionState.configRlz.url + " ");
+				if (!sessionState.config["proxy_url"].isNull()) {
+					error.append("using proxy ");
+					error.append(sessionState.config["proxy_url"].asString());
+					error.append(" ");
+				}
+				error.append(POSSIBLE_MITM_RESOLUTION);
 				break;
 		}
 
 		logUpdateFail(error);
 
-#if !BOOST_OS_MACOS
+#if !(BOOST_OS_MACOS && PRE_HIGH_SIERRA)
 		unsigned long cryptoErrorCode = ERR_get_error();
 		if (cryptoErrorCode == 0) {
-			logUpdateFailAdditional("CURLcode" + to_string(code));
+			logUpdateFailAdditional("CURLcode" + toString(code));
 		} else {
 			char buf[500];
 			ERR_error_string(cryptoErrorCode, buf);
-			logUpdateFailAdditional("CURLcode: " + to_string(code) + ", Crypto: " + to_string(cryptoErrorCode) + " " + buf);
+			logUpdateFailAdditional("CURLcode: " + toString(code) + ", Crypto: " + toString(cryptoErrorCode)
+				+ " " + buf);
 		}
 #endif
 	}
 
-	void logUpdateFailHttp(int httpCode) {
+	void logUpdateFailHttp(const SessionState &sessionState, int httpCode) {
 		string error;
 
 		switch (httpCode) {
 			case 404:
-				error.append("url not found: " CHECK_URL_DEFAULT " " POSSIBLE_MITM_RESOLUTION);
+				error.append("url not found: " + sessionState.configRlz.url + " " POSSIBLE_MITM_RESOLUTION);
 				break;
 			case 403:
 				error.append("connection denied by server " POSSIBLE_MITM_RESOLUTION);
@@ -196,7 +335,8 @@ private:
 				error.append("request content was corrupted or not understood " POSSIBLE_MITM_RESOLUTION);
 				break;
 			default:
-				error = "HTTP " + to_string(httpCode) + " while connecting to " CHECK_URL_DEFAULT " " POSSIBLE_MITM_RESOLUTION;
+				error = "HTTP " + toString(httpCode) + " while connecting to " + sessionState.configRlz.url
+					+ " " POSSIBLE_MITM_RESOLUTION;
 			break;
 		}
 		logUpdateFail(error);
@@ -214,7 +354,9 @@ private:
 	 *
 	 * May allocate chunk data for setting Content-Type, receiver should deallocate with curl_slist_free_all().
 	 */
-	CURLcode prepareCurlPOST(CURL *curl, string &bodyJsonString, string *responseData, struct curl_slist **chunk) {
+	CURLcode prepareCurlPOST(CURL *curl, SessionState &sessionState, const string &bodyJsonString,
+		string *responseData, struct curl_slist **chunk)
+	{
 		CURLcode code;
 
 		// Hint for advanced debugging: curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -222,7 +364,7 @@ private:
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1))) {
 			return code;
 		}
-		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_URL, CHECK_URL_DEFAULT))) {
+		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_URL, sessionState.configRlz.url.c_str()))) {
 			return code;
 		}
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_HTTPGET, 0))) {
@@ -239,9 +381,9 @@ private:
 			return code;
 		}
 
-#if BOOST_OS_MACOS
+#if BOOST_OS_MACOS && PRE_HIGH_SIERRA
 		// preauth the security update check key in the user's keychain (this is for libcurl's benefit because they don't bother to authorize themselves to use the keys they import)
-		if (!crypto->preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
+		if (!crypto.preAuthKey(clientCertPath.c_str(), CLIENT_CERT_PWD, CLIENT_CERT_LABEL)) {
 			return CURLE_SSL_CERTPROBLEM;
 		}
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "P12"))) {
@@ -278,7 +420,7 @@ private:
 		if (CURLE_OK != (code = curl_easy_setopt(curl, CURLOPT_WRITEDATA, responseData))) {
 			return code;
 		}
-		if (CURLE_OK != (code = setCurlProxy(curl, proxyInfo))) {
+		if (CURLE_OK != (code = setCurlProxy(curl, sessionState.configRlz.proxyInfo))) {
 			return code;
 		}
 
@@ -297,69 +439,70 @@ private:
 		return true;
 	}
 
-public:
-
-	/**
-	 * proxy is optional and should be in the form: scheme://user:password@proxy_host:proxy_port
-	 *
-	 * serverIntegration should be one of { nginx, apache, standalone nginx, standalone builtin }, whereby
-	 * serverVersion is the version of Nginx or Apache, if relevant (otherwise empty)
-	 */
-	SecurityUpdateChecker(const ResourceLocator &locator, const string &proxy, const string &serverIntegration, const string &serverVersion, const string &instancePath) {
-		crypto = new Crypto();
-		updateCheckThread = NULL;
-		checkIntervalSec = 0;
-#if BOOST_OS_MACOS
-		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.p12";
-#else
-		clientCertPath = locator.getResourcesDir() + "/update_check_client_cert.pem";
-#endif
-		serverPubKeyPath = locator.getResourcesDir() + "/update_check_server_pubkey.pem";
-		proxyAddress = proxy;
-		this->serverIntegration = serverIntegration;
-		this->serverVersion = serverVersion;
-		try {
-			proxyInfo = prepareCurlProxy(proxyAddress);
-		} catch (const ArgumentException &e) {
-			assert(!proxyInfo.valid);
-			proxyAddress = "Invalid proxy address for security update check: \"" +
-					proxyAddress + "\": " + e.what();
-		}
+	static size_t receiveResponseBytes(void *buffer, size_t size, size_t nmemb, void *userData) {
+		string *responseData = (string *) userData;
+		responseData->append((const char *) buffer, size * nmemb);
+		return size * nmemb;
 	}
+
+public:
+	// Dependencies
+	ResourceLocator *resourceLocator;
+
+	SecurityUpdateChecker(const Schema &schema, const Json::Value &initialConfig,
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator())
+		: config(schema, initialConfig, translator),
+		  configRlz(config),
+		  updateCheckThread(NULL),
+		  resourceLocator(NULL)
+		{ }
 
 	virtual ~SecurityUpdateChecker() {
 		if (updateCheckThread != NULL) {
 			updateCheckThread->interrupt_and_join();
 			delete updateCheckThread;
-			updateCheckThread = NULL;
-		}
-		if (crypto) {
-			delete crypto;
 		}
 	}
 
+	void initialize() {
+		if (resourceLocator == NULL) {
+			throw RuntimeException("resourceLocator must be non-NULL");
+		}
+
+		#if BOOST_OS_MACOS && PRE_HIGH_SIERRA
+			clientCertPath = resourceLocator->getResourcesDir() + "/update_check_client_cert.p12";
+		#else
+			clientCertPath = resourceLocator->getResourcesDir() + "/update_check_client_cert.pem";
+		#endif
+		serverPubKeyPath = resourceLocator->getResourcesDir() + "/update_check_server_pubkey.pem";
+	}
+
 	/**
-	 * Starts a periodic check at every checkIntervalSec. For each check, the server may increase/decrease
-	 * (within limits) the period until the next check (using the backoff parameter in the response).
+	 * Starts a periodic check, as dictated by the "interval" config option. For each check, the
+	 * server may increase/decrease (within limits) the period until the next check (using the
+	 * backoff parameter in the response).
 	 *
 	 * Assumes curl_global_init() was already performed.
 	 */
-	void start(long checkIntervalSec) {
-		this->checkIntervalSec = checkIntervalSec;
-
-		assert(checkIntervalSec >= MIN_CHECK_BACKOFF_SEC && checkIntervalSec <= MAX_CHECK_BACKOFF_SEC);
+	void start() {
 		updateCheckThread = new oxt::thread(
-				boost::bind(&SecurityUpdateChecker::threadMain, this),
-				"Security update checker",
-				1024 * 512
-			);
+			boost::bind(&SecurityUpdateChecker::threadMain, this),
+			"Security update checker",
+			1024 * 512
+		);
 	}
 
 	/**
 	 * All error log methods eventually lead here, except for the additional below.
 	 */
 	virtual void logUpdateFail(string error) {
-		P_ERROR("Security update check failed: " << error << " (next check in " << (checkIntervalSec / (60*60)) << " hours)");
+		unsigned int checkIntervalSec;
+		{
+			boost::lock_guard<boost::mutex> l(configSyncher);
+			checkIntervalSec = config["interval"].asUInt();
+		}
+		P_ERROR("Security update check failed: " << error << " (next check in "
+			<< (checkIntervalSec / (60*60)) << " hours)");
 	}
 
 	/**
@@ -390,11 +533,11 @@ public:
 	}
 
 	virtual bool fillNonce(string &nonce) {
-		return crypto->generateAndAppendNonce(nonce);
+		return crypto.generateAndAppendNonce(nonce);
 	}
 
 	/**
-	 * Sends POST to CHECK_URL_DEFAULT (via SSL, with client cert) containing:
+	 * Sends POST to the configured URL (via SSL, with client cert) containing:
 	 * {"version":"<passenger version>", "nonce":"<random nonce>"}
 	 * The response will be:
 	 * {"data":base64(data), "signature":base64(signature)}, where:
@@ -408,13 +551,23 @@ public:
 	int checkAndLogSecurityUpdate() {
 		int backoffMin = 0;
 
+		// 0. Copy current configuration
+		boost::unique_lock<boost::mutex> l(configSyncher);
+		SessionState sessionState(config, configRlz);
+		l.unlock();
+
+		if (sessionState.config["disabled"].asBool()) {
+			P_INFO("Security update checking disabled; skipping check");
+			return backoffMin;
+		}
+
 		// 1. Assemble data to send
 		Json::Value bodyJson;
 
 		bodyJson["passenger_version"] = PASSENGER_VERSION;
 
-		bodyJson["server_integration"] = serverIntegration;
-		bodyJson["server_version"] = serverVersion;
+		bodyJson["server_integration"] = sessionState.config["server_identifier"];
+		bodyJson["server_version"] = sessionState.config["web_server_version"];
 		bodyJson["curl_static"] = isCurlStaticallyLinked();
 
 		string nonce;
@@ -445,34 +598,31 @@ public:
 			}
 
 			if (CURLE_OK != (code = setCurlDefaultCaInfo(curl))) {
-				logUpdateFailCurl(code);
+				logUpdateFailCurl(sessionState, code);
 				break;
 			}
 
-			// string localApprovedCert = "/your/ca.crt"; // for testing against a local server
-			// curl_easy_setopt(curl, CURLOPT_CAINFO, localApprovedCert.c_str());
-
-			if (!proxyInfo.valid) {
-				// special case: delayed error in proxyAddress
-				logUpdateFail(proxyAddress);
-				break;
+			if (!sessionState.configRlz.certificatePath.empty()) {
+				curl_easy_setopt(curl, CURLOPT_CAINFO, sessionState.configRlz.certificatePath.c_str());
 			}
 
 			string bodyJsonString = bodyJson.toStyledString();
-			if (CURLE_OK != (code = prepareCurlPOST(curl, bodyJsonString, &responseData, &chunk))) {
-				logUpdateFailCurl(code);
+			if (CURLE_OK != (code = prepareCurlPOST(curl, sessionState, bodyJsonString,
+				&responseData, &chunk)))
+			{
+				logUpdateFailCurl(sessionState, code);
 				break;
 			}
 
 			P_DEBUG("sending: " << bodyJsonString);
 			if (CURLE_OK != (code = sendAndReceive(curl, &responseData, &responseCode))) {
-				logUpdateFailCurl(code);
+				logUpdateFailCurl(sessionState, code);
 				break;
 			}
 
 			// 3a. Verify response: HTTP code
 			if (responseCode != 200) {
-				logUpdateFailHttp((int) responseCode);
+				logUpdateFailHttp(sessionState, (int) responseCode);
 				break;
 			}
 
@@ -506,7 +656,7 @@ public:
 				break;
 			}
 
-			if (!crypto->verifySignature(serverPubKeyPath, signatureChars, signatureLen, data64)) {
+			if (!crypto.verifySignature(serverPubKeyPath, signatureChars, signatureLen, data64)) {
 				logUpdateFailResponse("untrusted or forged signature", responseData);
 				break;
 			}
@@ -550,10 +700,16 @@ public:
 			}
 
 			if (update == 0) {
-				logUpdateSuccess(update, "Security update check: no update found (next check in " + toString(checkIntervalSec / (60*60)) + " hours)");
+				unsigned int checkIntervalSec;
+				{
+					boost::lock_guard<boost::mutex> l(configSyncher);
+					checkIntervalSec = config["interval"].asUInt();
+				}
+				logUpdateSuccess(update, "Security update check: no update found (next check in "
+					+ toString(checkIntervalSec / (60*60)) + " hours)");
 			} else {
 				logUpdateSuccess(update, "A security update is available for your version (" PASSENGER_VERSION
-					") of Passenger, we strongly recommend upgrading to version " +
+					") of " PROGRAM_NAME ". We strongly recommend upgrading to version " +
 					responseDataJson["version"].asString() + ".");
 			}
 
@@ -562,14 +718,14 @@ public:
 			if (responseDataJson["log"].isString()) {
 				string additional = responseDataJson["log"].asString();
 				if (additional.length() > 0) {
-					logUpdateSuccessAdditional(" Additional information: " + additional);
+					logUpdateSuccessAdditional("Additional security update check information: " + additional);
 				}
 			}
-		} while (0);
+		} while (false);
 
-#if BOOST_OS_MACOS
+#if BOOST_OS_MACOS && PRE_HIGH_SIERRA
 		// remove the security update check key from the user's keychain so that if we are stopped/crash and are upgraded or reinstalled before restarting we don't have permission problems
-		crypto->killKey(CLIENT_CERT_LABEL);
+		crypto.killKey(CLIENT_CERT_LABEL);
 #endif
 
 		if (signatureChars) {
@@ -584,12 +740,29 @@ public:
 		return backoffMin;
 	}
 
-	static size_t receiveResponseBytes(void *buffer, size_t size, size_t nmemb, void *userData) {
-		string *responseData = (string *) userData;
-		responseData->append((const char *) buffer, size * nmemb);
-		return size * nmemb;
+	bool prepareConfigChange(const Json::Value &updates,
+		vector<ConfigKit::Error> &errors, ConfigChangeRequest &req)
+	{
+		{
+			boost::lock_guard<boost::mutex> l(configSyncher);
+			req.config.reset(new ConfigKit::Store(config, updates, errors));
+		}
+		if (errors.empty()) {
+			req.configRlz.reset(new ConfigRealization(*req.config));
+		}
+		return errors.empty();
 	}
 
+	void commitConfigChange(ConfigChangeRequest &req) BOOST_NOEXCEPT_OR_NOTHROW {
+		boost::lock_guard<boost::mutex> l(configSyncher);
+		config.swap(*req.config);
+		configRlz.swap(*req.configRlz);
+	}
+
+	Json::Value inspectConfig() const {
+		boost::lock_guard<boost::mutex> l(configSyncher);
+		return config.inspect();
+	}
 };
 
 } // namespace Passenger

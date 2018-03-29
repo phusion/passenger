@@ -29,6 +29,7 @@
 
 #include <sys/types.h>
 #include <unistd.h>
+#include "JsonTools/CBindings.h"
 
 #ifdef __cplusplus
 	extern "C" {
@@ -41,38 +42,14 @@ typedef enum {
 } PsgIntegrationMode;
 
 typedef void PsgWatchdogLauncher;
-typedef void PsgVariantMap;
 typedef void (*PsgAfterForkCallback)(void *, void *);
 
-PsgVariantMap *psg_variant_map_new();
-char *psg_variant_map_get_optional(PsgVariantMap *m,
-	const char *name);
-void psg_variant_map_set(PsgVariantMap *m,
-	const char *name,
-	const char *value,
-	unsigned int value_len);
-void psg_variant_map_set2(PsgVariantMap *m,
-	const char *name,
-	unsigned int name_len,
-	const char *value,
-	unsigned int value_len);
-void psg_variant_map_set_int(PsgVariantMap *m,
-	const char *name,
-	int value);
-void psg_variant_map_set_bool(PsgVariantMap *m,
-	const char *name,
-	int value);
-void psg_variant_map_set_strset(PsgVariantMap *m,
-	const char *name,
-	const char **strs,
-	unsigned int count);
-void psg_variant_map_free(PsgVariantMap *m);
 
 PsgWatchdogLauncher *psg_watchdog_launcher_new(PsgIntegrationMode mode,
 	char **error_message);
 int psg_watchdog_launcher_start(PsgWatchdogLauncher *launcher,
 	const char *passengerRoot,
-	PsgVariantMap *params,
+	PsgJsonValue *config,
 	const PsgAfterForkCallback afterFork,
 	void *callbackArgument,
 	char **errorMessage);
@@ -99,6 +76,8 @@ void        psg_watchdog_launcher_free(PsgWatchdogLauncher *launcher);
 
 #include <signal.h>
 
+#include <jsoncpp/json.h>
+
 #include <Constants.h>
 #include <FileDescriptor.h>
 #include <MessageClient.h>
@@ -112,7 +91,6 @@ void        psg_watchdog_launcher_free(PsgWatchdogLauncher *launcher);
 #include <Utils/MessageIO.h>
 #include <Utils/Timer.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/VariantMap.h>
 #include <Utils/ClassUtils.h>
 
 namespace Passenger {
@@ -333,7 +311,7 @@ public:
 	 * @throws RuntimeException Something went wrong.
 	 */
 	void start(const string &passengerRoot,
-		const VariantMap &extraParams = VariantMap(),
+		const Json::Value &extraConfig = Json::Value(),
 		const boost::function<void ()> &afterFork = boost::function<void ()>())
 	{
 		TRACE_POINT();
@@ -350,20 +328,16 @@ public:
 		SocketPair fds;
 		int e;
 		pid_t pid;
+		Json::Value::const_iterator it;
 
-		VariantMap params;
-		params
-			.setPid ("web_server_control_process_pid",  getpid())
-			.set    ("web_server_passenger_version", PASSENGER_VERSION)
-			.set    ("integration_mode", getIntegrationModeString())
-			.set    ("passenger_root",  passengerRoot)
-			.setInt ("log_level",       (int) LoggingKit::getLevel());
-		extraParams.addTo(params);
+		Json::Value config;
+		config["web_server_control_process_pid"] = getpid();
+		config["integration_mode"] = getIntegrationModeString();
+		config["passenger_root"] = passengerRoot;
+		config["log_level"] = (int) LoggingKit::getLevel();
 
-		if (!params.getBool("user_switching", false, true)
-		 && !params.has("user"))
-		{
-			params.set("user", params.get("default_user", false, PASSENGER_DEFAULT_USER));
+		for (it = extraConfig.begin(); it != extraConfig.end(); it++) {
+			config[it.name()] = *it;
 		}
 
 		fds = createUnixSocketPair(__FILE__, __LINE__);
@@ -390,13 +364,14 @@ public:
 			// except stdin, stdout, stderr and 3.
 			close(fds[0]);
 			installFeedbackFd(fds[1]);
-			closeAllFileDescriptors(FEEDBACK_FD);
 
 			setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 
 			if (afterFork) {
 				afterFork();
 			}
+
+			closeAllFileDescriptors(FEEDBACK_FD, true);
 
 			execl(agentFilename.c_str(), AGENT_EXE, "watchdog",
 				// Some extra space to allow the child process to change its process title.
@@ -439,7 +414,7 @@ public:
 			 * reading the arguments. We'll notice that later.
 			 */
 			try {
-				params.writeToFd(feedbackFd);
+				writeScalarMessage(feedbackFd, config.toStyledString());
 			} catch (const SystemException &e) {
 				if (e.code() != EPIPE && e.code() != ECONNRESET) {
 					inspectWatchdogCrashReason(pid);
@@ -472,24 +447,47 @@ public:
 			}
 
 			if (args[0] == "Agents information") {
-				if ((args.size() - 1) % 2 != 0) {
-					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog "
-						"because it sent an invalid startup information report (the number "
-						"of items is not an even number)");
+				UPDATE_TRACE_POINT();
+
+				if (args.size() != 1) {
+					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog: "
+						"it belongs to an incompatible version of " SHORT_PROGRAM_NAME
+						". Please fully upgrade " SHORT_PROGRAM_NAME ".");
 				}
 
-				VariantMap info;
-				for (unsigned i = 1; i < args.size(); i += 2) {
-					const string &key = args[i];
-					const string &value = args[i + 1];
-					info.set(key, value);
+				string jsonData;
+				try {
+					result = readScalarMessage(feedbackFd, jsonData);
+				} catch (const SystemException &ex) {
+					if (ex.code() == ECONNRESET) {
+						inspectWatchdogCrashReason(pid);
+					} else {
+						killProcessGroupAndWait(&pid, 5000);
+						guard.clear();
+						throw SystemException("Unable to start the " PROGRAM_NAME " watchdog: "
+							"unable to read its startup information report",
+							ex.code());
+					}
+				}
+				if (!result) {
+					UPDATE_TRACE_POINT();
+					inspectWatchdogCrashReason(pid);
+				}
+
+				Json::Value doc;
+				Json::Reader reader;
+				if (!reader.parse(jsonData, doc)) {
+					throw RuntimeException("Unable to start the " PROGRAM_NAME " watchdog: "
+						"unable to parse its startup information report as valid JSON: "
+						+ reader.getFormattedErrorMessages() + "\n"
+						"Raw data: \"" + cEscapeString(jsonData) + "\"");
 				}
 
 				mPid               = pid;
 				this->feedbackFd   = feedbackFd;
-				mCoreAddress       = info.get("core_address");
-				mCorePassword      = info.get("core_password");
-				mInstanceDir       = info.get("instance_dir");
+				mCoreAddress       = doc["core_address"].asString();
+				mCorePassword      = doc["core_password"].asString();
+				mInstanceDir       = doc["instance_dir"].asString();
 				guard.clear();
 			} else if (args[0] == "Watchdog startup error") {
 				killProcessGroupAndWait(&pid, 5000);

@@ -26,14 +26,8 @@
 #ifndef _PASSENGER_CONFIG_KIT_PREFIX_TRANSLATOR_H_
 #define _PASSENGER_CONFIG_KIT_PREFIX_TRANSLATOR_H_
 
-#include <boost/bind.hpp>
+#include <ConfigKit/Translator.h>
 #include <cassert>
-#include <string>
-#include <vector>
-#include <jsoncpp/json.h>
-
-#include <ConfigKit/Common.h>
-#include <StaticString.h>
 
 namespace Passenger {
 namespace ConfigKit {
@@ -47,18 +41,10 @@ using namespace std;
  * You can learn more about translators in the ConfigKit README, section
  * "The special problem of overlapping configuration names and translation".
  */
-class PrefixTranslator {
+class PrefixTranslator: public Translator {
 private:
 	string prefix;
 	bool finalized;
-
-	string translateErrorKey(const StaticString &key) const {
-		return "{{" + translateOne(key) + "}}";
-	}
-
-	string reverseTranslateErrorKey(const StaticString &key) const {
-		return "{{" + reverseTranslateOne(key) + "}}";
-	}
 
 public:
 	PrefixTranslator()
@@ -80,67 +66,27 @@ public:
 		return finalized;
 	}
 
-	Json::Value translate(const Json::Value &doc) const {
+	virtual Json::Value translate(const Json::Value &doc) const {
 		assert(finalized);
-		Json::Value result(Json::objectValue);
-		Json::Value::const_iterator it, end = doc.end();
-
-		for (it = doc.begin(); it != end; it++) {
-			const char *keyEnd;
-			const char *key = it.memberName(&keyEnd);
-			result[translateOne(StaticString(key, keyEnd - key))] = *it;
-		}
-
-		return result;
+		return Translator::translate(doc);
 	}
 
-	Json::Value reverseTranslate(const Json::Value &doc) const {
+	virtual Json::Value reverseTranslate(const Json::Value &doc) const {
 		assert(finalized);
-		Json::Value result(Json::objectValue);
-		Json::Value::const_iterator it, end = doc.end();
-
-		for (it = doc.begin(); it != end; it++) {
-			const char *keyEnd;
-			const char *key = it.memberName(&keyEnd);
-			result[reverseTranslateOne(StaticString(key, keyEnd - key))] = *it;
-		}
-
-		return result;
+		return Translator::reverseTranslate(doc);
 	}
 
-	vector<Error> translate(const vector<Error> &errors) const {
+	virtual vector<Error> translate(const vector<Error> &errors) const {
 		assert(finalized);
-		vector<Error> result;
-		vector<Error>::const_iterator it, end = errors.end();
-		Error::KeyProcessor keyProcessor =
-			boost::bind(&PrefixTranslator::translateErrorKey, this,
-				boost::placeholders::_1);
-
-		for (it = errors.begin(); it != end; it++) {
-			const Error &error = *it;
-			result.push_back(Error(error.getMessage(keyProcessor)));
-		}
-
-		return result;
+		return Translator::translate(errors);
 	}
 
-	vector<Error> reverseTranslate(const vector<Error> &errors) const {
+	virtual vector<Error> reverseTranslate(const vector<Error> &errors) const {
 		assert(finalized);
-		vector<Error> result;
-		vector<Error>::const_iterator it, end = errors.end();
-		Error::KeyProcessor keyProcessor =
-			boost::bind(&PrefixTranslator::reverseTranslateErrorKey, this,
-				boost::placeholders::_1);
-
-		for (it = errors.begin(); it != end; it++) {
-			const Error &error = *it;
-			result.push_back(Error(error.getMessage(keyProcessor)));
-		}
-
-		return result;
+		return Translator::reverseTranslate(errors);
 	}
 
-	string translateOne(const StaticString &key) const {
+	virtual string translateOne(const StaticString &key) const {
 		assert(finalized);
 		if (key.substr(0, prefix.size()) == prefix) {
 			return key.substr(prefix.size());
@@ -149,7 +95,7 @@ public:
 		}
 	}
 
-	string reverseTranslateOne(const StaticString &key) const {
+	virtual string reverseTranslateOne(const StaticString &key) const {
 		assert(finalized);
 		if (key.substr(0, prefix.size()) != prefix) {
 			return prefix + key;

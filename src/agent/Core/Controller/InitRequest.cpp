@@ -136,7 +136,7 @@ void
 Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis &analysis) {
 	boost::shared_ptr<Options> *options;
 
-	if (req->config->singleAppMode) {
+	if (mainConfig.singleAppMode) {
 		P_ASSERT_EQ(poolOptionsCache.size(), 1);
 		poolOptionsCache.lookupRandom(NULL, &options);
 		req->options = **options;
@@ -172,7 +172,7 @@ Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis 
 				req->envvars->size);
 		}
 
-		// Allow certain options to be overriden on a per-request basis
+		// Allow certain options to be overridden on a per-request basis
 		fillPoolOption(req, req->options.maxRequests, PASSENGER_MAX_REQUESTS);
 	}
 }
@@ -184,8 +184,8 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.ruby = requestConfig->defaultRuby;
 	options.nodejs = requestConfig->defaultNodejs;
 	options.python = requestConfig->defaultPython;
-	options.meteorAppSettings = requestConfig->meteorAppSettings;
-	options.fileDescriptorUlimit = requestConfig->fileDescriptorUlimit;
+	options.meteorAppSettings = requestConfig->defaultMeteorAppSettings;
+	options.fileDescriptorUlimit = requestConfig->defaultAppFileDescriptorUlimit;
 
 	options.logLevel = int(LoggingKit::getLevel());
 	options.integrationMode = psg_pstrdup(pool, mainConfig.integrationMode);
@@ -195,15 +195,16 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.userSwitching = mainConfig.userSwitching;
 	options.defaultUser = requestConfig->defaultUser;
 	options.defaultGroup = requestConfig->defaultGroup;
-	options.minProcesses = requestConfig->minInstances;
-	options.maxPreloaderIdleTime = requestConfig->maxPreloaderIdleTime;
-	options.maxRequestQueueSize = requestConfig->maxRequestQueueSize;
-	options.abortWebsocketsOnProcessShutdown = requestConfig->abortWebsocketsOnProcessShutdown;
-	options.forceMaxConcurrentRequestsPerProcess = requestConfig->forceMaxConcurrentRequestsPerProcess;
-	options.spawnMethod = requestConfig->spawnMethod;
-	options.loadShellEnvvars = requestConfig->loadShellEnvvars;
+	options.minProcesses = requestConfig->defaultMinInstances;
+	options.maxPreloaderIdleTime = requestConfig->defaultMaxPreloaderIdleTime;
+	options.maxRequestQueueSize = requestConfig->defaultMaxRequestQueueSize;
+	options.abortWebsocketsOnProcessShutdown = requestConfig->defaultAbortWebsocketsOnProcessShutdown;
+	options.forceMaxConcurrentRequestsPerProcess = requestConfig->defaultForceMaxConcurrentRequestsPerProcess;
+	options.environment = requestConfig->defaultEnvironment;
+	options.spawnMethod = requestConfig->defaultSpawnMethod;
+	options.loadShellEnvvars = requestConfig->defaultLoadShellEnvvars;
 	options.statThrottleRate = mainConfig.statThrottleRate;
-	options.maxRequests = requestConfig->maxRequests;
+	options.maxRequests = requestConfig->defaultMaxRequests;
 
 	/******************************/
 }
@@ -352,7 +353,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 
 	options.appGroupName = appGroupName;
 
-	fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
+	fillPoolOption(req, options.appLogFile, "!~PASSENGER_APP_LOG_FILE");
 	fillPoolOption(req, options.environment, "!~PASSENGER_APP_ENV");
 	fillPoolOption(req, options.ruby, "!~PASSENGER_RUBY");
 	fillPoolOption(req, options.python, "!~PASSENGER_PYTHON");
@@ -473,15 +474,13 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		// and localize them as much as possible, for better CPU caching.
 		RequestAnalysis analysis;
 		analysis.flags = req->secureHeaders.lookup(FLAGS);
-		analysis.appGroupNameCell = req->config->singleAppMode
+		analysis.appGroupNameCell = mainConfig.singleAppMode
 			? NULL
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
 		analysis.unionStationSupport = unionStationContext != NULL
 			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
-			mainConfig.stickySessions);
-		req->showVersionInHeader = getBoolOption(req, PASSENGER_SHOW_VERSION_IN_HEADER,
-			req->config->showVersionInHeader);
+			mainConfig.defaultStickySessions);
 		req->host = req->headers.lookup(HTTP_HOST);
 
 		/***************/

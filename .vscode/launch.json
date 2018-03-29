@@ -2,6 +2,30 @@
         "version": "0.2.0",
         "configurations": [
             {
+                "name": "(lldb) Launch CxxTestMain",
+                "type": "cppdbg",
+                "request": "launch",
+                "program": "${workspaceFolder}/buildout/test/cxx/main",
+                // Pass -g here if you want to run a specific test, for example:
+                // "args": ["-g", "ConfigKit_NestedSchemaTest:10"],
+                "args": [],
+                "stopAtEntry": true,
+                "cwd": "${workspaceFolder}/test",
+                "environment": [],
+                "externalConsole": true,
+                "MIMode": "lldb",
+                "osx": {
+                    "MIMode": "lldb",
+                    "setupCommands": [
+                        { "text": "settings set target.x86-disassembly-flavor intel" },
+                        { "text": "b malloc_error_break" },
+                        { "text": "b Passenger::breakpoint" },
+                        { "text": "process handle -n false -p true -s false SIGPIPE" },
+                        { "text": "process handle -n false -p true -s false SIGUSR1" }
+                    ]
+                }
+            },
+            {
                 "name": "(lldb) Attach to PassengerAgent",
                 "type": "cppdbg",
                 "request": "attach",

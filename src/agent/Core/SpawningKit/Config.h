@@ -70,6 +70,18 @@ private:
 
 public:
 	/**
+	 * The app group name that the spawned process shall belong to. SpawningKit does
+	 * not use this information directly: it is passed to LoggingKit when logging
+	 * app output.
+	 *
+	 * @hinted_parseable
+	 * @require_non_empty
+	 * @pass_during_handshake
+	 * @non_confidential
+	 */
+	StaticString appGroupName;
+
+	/**
 	 * The root directory of the application to spawn. For example, for Ruby apps, this
 	 * is the directory containing config.ru. The startCommand will be invoked from
 	 * this directory.
@@ -288,6 +300,15 @@ public:
 	 * @pass_during_handshake
 	 */
 	StringKeyTable<StaticString> environmentVariables;
+
+	/**
+	 * Specifies that the app's stdout/stderr output should be written
+	 * to the given log file.
+	 *
+	 * @hinted_parseable
+	 * @pass_during_handshake
+	 */
+	StaticString logFile;
 
 	/**
 	 * @hinted_parseable

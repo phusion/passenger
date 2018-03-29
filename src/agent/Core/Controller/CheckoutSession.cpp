@@ -376,7 +376,7 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r,
 bool
 Controller::friendlyErrorPagesEnabled(Request *req) {
 	bool defaultValue;
-	const StaticString &defaultStr = req->config->friendlyErrorPages;
+	const StaticString &defaultStr = req->config->defaultFriendlyErrorPages;
 	if (defaultStr == "auto") {
 		defaultValue = (req->options.environment == "development");
 	} else {

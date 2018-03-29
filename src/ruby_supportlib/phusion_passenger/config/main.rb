@@ -45,6 +45,7 @@ module PhusionPassenger
       ["compile-nginx-engine", "CompileNginxEngineCommand"],
 
       ["system-metrics", "SystemMetricsCommand"],
+      ["system-properties", "SystemPropertiesCommand"],
       ["about", "AboutCommand"]
     ]
 
@@ -118,6 +119,7 @@ module PhusionPassenger
       puts
       puts "Miscellaneous commands:"
       puts "  system-metrics        Display system metrics"
+      puts "  system-properties     Display system properties"
       puts
       puts "Run 'passenger-config <COMMAND> --help' for more information about each"
       puts "command."

@@ -60,19 +60,19 @@ public:
 	boost::mutex memoryManagementSyncher;
 	boost::object_pool<Session> sessionObjectPool;
 	boost::object_pool<Process> processObjectPool;
+	mutable boost::mutex agentConfigSyncher;
 
 
 	/****** Dependencies ******/
 
 	SpawningKit::FactoryPtr spawningKitFactory;
 	UnionStation::ContextPtr unionStationContext;
-	VariantMap *agentsOptions;
+	Json::Value agentConfig;
 
 
 	Context()
 		: sessionObjectPool(64, 1024),
-		  processObjectPool(4, 64),
-		  agentsOptions(NULL)
+		  processObjectPool(4, 64)
 		{ }
 
 	void finalize() {

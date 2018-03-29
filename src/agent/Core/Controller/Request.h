@@ -73,7 +73,6 @@ public:
 	bool dechunkResponse: 1;
 	bool requestBodyBuffering: 1;
 	bool https: 1;
-	bool showVersionInHeader: 1;
 	bool stickySession: 1;
 
 	// Range: 0..MAX_SESSION_CHECKOUT_TRY

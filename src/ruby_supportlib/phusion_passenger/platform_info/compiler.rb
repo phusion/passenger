@@ -141,6 +141,15 @@ module PhusionPassenger
     end
     private_class_method :cc_or_cxx_supports_feliminate_unused_debug?
 
+    def self.cc_or_cxx_supports_blocks?(language)
+      ext = detect_language_extension(language)
+      compiler_type_name = detect_compiler_type_name(language)
+      command = create_compiler_command(language,"-E -dM",'- </dev/null')
+      result = `#{command}`
+      return result.include? "__BLOCKS__"
+    end
+    private_class_method :cc_or_cxx_supports_blocks?
+
   public
     def self.cc
       return string_env('CC', default_cc)
@@ -189,12 +198,12 @@ module PhusionPassenger
     memoize :cxx_is_gcc?
 
     def self.cc_is_clang?
-      `#{cc} --version 2>&1` =~ /clang version/
+      `#{cc} --version 2>&1` =~ /clang( version|-)/
     end
     memoize :cc_is_clang?
 
     def self.cxx_is_clang?
-      `#{cxx} --version 2>&1` =~ /clang version/
+      `#{cxx} --version 2>&1` =~ /clang( version|-)/
     end
     memoize :cxx_is_clang?
 
@@ -429,6 +438,16 @@ module PhusionPassenger
     end
     memoize :cxx_supports_feliminate_unused_debug?, true
 
+    def self.cc_block_support_ok?
+      return (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:c) || os_version >= "10.13" )
+    end
+    memoize :cc_block_support_ok?, true
+
+    def self.cxx_block_support_ok?
+      return (os_name_simple != 'macosx' || cc_or_cxx_supports_blocks?(:cxx) || os_version >= "10.13" )
+    end
+    memoize :cxx_block_support_ok?, true
+
     # Returns whether compiling C++ with -fvisibility=hidden might result
     # in tons of useless warnings, like this:
     # http://code.google.com/p/phusion-passenger/issues/detail?id=526
@@ -453,18 +472,18 @@ module PhusionPassenger
     end
     memoize :cxx_visibility_flag_generates_warnings?, true
 
-    def self.adress_sanitizer_flag
+    def self.address_sanitizer_flag
       if cc_is_clang?
         if `#{cc} --help` =~ /-fsanitize=/
-          return "-fsanitize=address"
+          "-fsanitize=address"
         else
-          return "-faddress-sanitizer"
+          "-faddress-sanitizer"
         end
       else
-        return nil
+        nil
       end
     end
-    memoize :adress_sanitizer_flag
+    memoize :address_sanitizer_flag
 
     def self.cxx_11_flag
       # C++11 support on FreeBSD 10.0 + Clang seems to be bugged.

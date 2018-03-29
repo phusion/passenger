@@ -287,6 +287,6 @@ typedef boost::shared_ptr<SocketList> SocketListPtr;
 
 
 } // namespace ApplicationPool2
-} // namespace Pasenger
+} // namespace Passenger
 
 #endif /* _PASSENGER_APPLICATION_POOL2_SOCKET_H_ */

@@ -206,7 +206,7 @@ public:
 	}
 
 	/**
-	 * This Session object becomes fully unsable after closing.
+	 * This Session object becomes fully unusable after closing.
 	 */
 	virtual void close(bool success, bool wantKeepAlive = false) {
 		if (OXT_LIKELY(initiated())) {

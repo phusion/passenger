@@ -1,0 +1,89 @@
+def getDefaultDistros() {
+    def distroInfo = readFile("packaging/debian/internal/lib/distro_info.sh")
+    def matcher = distroInfo =~ /DEFAULT_DISTROS="(.+?)"/
+    if (matcher.find()) {
+        matcher.group(1).split().sort()
+    } else {
+        error("Unable to parse packaging/debian/internal/lib/distro_info.sh")
+    }
+}
+
+def testDebianPackages(distro, params) {
+  if ((!distro in params) || params[distro]) {
+    node('linux') {
+      def env = [
+        "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME}/${distro}",
+        "DISTRIBUTION=${distro}",
+        "ARCHITECTURE=amd64"
+      ]
+      withEnv(env) {
+        checkout scm
+        sh './dev/ci/tests/debian/run'
+      }
+    }
+  } else {
+    echo 'Test skipped.'
+  }
+}
+
+pipeline {
+  agent any
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    timeout(time: 45, unit: 'MINUTES')
+    disableConcurrentBuilds()
+    timestamps()
+    ansiColor('xterm')
+  }
+
+  parameters {
+    booleanParam(name: 'trusty', defaultValue: true, description: 'Test Ubuntu 14.04 packages')
+    booleanParam(name: 'xenial', defaultValue: true, description: 'Test Ubuntu 16.04 packages')
+    booleanParam(name: 'artful', defaultValue: true, description: 'Test Ubuntu 17.10 packages')
+
+    booleanParam(name: 'wheezy', defaultValue: true, description: 'Test Debian 7 packages')
+    booleanParam(name: 'jessie', defaultValue: true, description: 'Test Debian 8 packages')
+    booleanParam(name: 'stretch', defaultValue: true, description: 'Test Debian 9 packages')
+  }
+
+  stages {
+    stage('Initialize') {
+      steps {
+        script {
+          if (env.JOB_NAME.indexOf('Enterprise') != -1) {
+            env.ENTERPRISE = '1'
+          } else {
+            env.ENTERPRISE = '0'
+          }
+
+          // For debugging purposes
+          sh 'env | sort'
+        }
+      }
+    }
+
+
+
+    stage('Test') {
+      steps {
+        script {
+          def defaultDistros = getDefaultDistros()
+          def i
+          def parallelSteps = [:]
+
+          // We use a plain loop over .each because of this bug:
+          // https://issues.jenkins-ci.org/browse/JENKINS-27421
+          for (i = 0; i < defaultDistros.length; i++) {
+            def distro = defaultDistros[i]
+            parallelSteps[distro] = {
+              testDebianPackages(distro, params)
+            }
+          }
+
+          parallel(parallelSteps)
+        }
+      }
+    }
+  }
+}

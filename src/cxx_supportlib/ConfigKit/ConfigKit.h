@@ -29,6 +29,6 @@
 #include <ConfigKit/Schema.h>
 #include <ConfigKit/Store.h>
 #include <ConfigKit/Utils.h>
-#include <ConfigKit/TableTranslator.h>
+#include <ConfigKit/DummyTranslator.h>
 
 #endif /* _PASSENGER_CONFIG_KIT_H_ */

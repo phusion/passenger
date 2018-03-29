@@ -29,11 +29,14 @@
 #include <boost/thread.hpp>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <Constants.h>
+#include <JsonTools/Autocast.h>
 #include <Utils.h>
-#include <Utils/VariantMap.h>
 #include <Utils/OptionParsing.h>
 #include <Utils/StrIntUtils.h>
+
+#include <jsoncpp/json.h>
 
 namespace Passenger {
 
@@ -197,6 +200,10 @@ coreUsage() {
 	printf("      --cpu-affine          Enable per-thread CPU affinity (Linux only)\n");
 	printf("      --core-file-descriptor-ulimit NUMBER\n");
 	printf("                            Set custom file descriptor ulimit for the core\n");
+	printf("      --admin-panel-url URL\n");
+	printf("                            Connect to an admin panel through this service\n");
+	printf("                            connector URL\n");
+	printf("      --ctl NAME=VALUE      Set low-level config option directly\n");
 	printf("  -h, --help                Show this help\n");
 	printf("\n");
 	printf("API account privilege levels (ordered from most to least privileges):\n");
@@ -205,22 +212,21 @@ coreUsage() {
 }
 
 inline bool
-parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
+parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 	OptionParser p(coreUsage);
 
 	if (p.isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
-		options.set("passenger_root", argv[i + 1]);
+		updates["passenger_root"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'l', "--listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("core_addresses", false);
+			Json::Value &addresses = updates["controller_addresses"];
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
 				fprintf(stderr, "ERROR: you may specify up to %u --listen addresses.\n",
 					SERVER_KIT_MAX_SERVER_ENDPOINTS);
 				exit(1);
 			}
-			addresses.push_back(argv[i + 1]);
-			options.setStrSet("core_addresses", addresses);
+			addresses.append(argv[i + 1]);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --listen. The address "
@@ -230,15 +236,13 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 		}
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--api-listen")) {
 		if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-			vector<string> addresses = options.getStrSet("core_api_addresses",
-				false);
+			Json::Value &addresses = updates["api_server_addresses"];
 			if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS) {
 				fprintf(stderr, "ERROR: you may specify up to %u --api-listen addresses.\n",
 					SERVER_KIT_MAX_SERVER_ENDPOINTS);
 				exit(1);
 			}
-			addresses.push_back(argv[i + 1]);
-			options.setStrSet("core_api_addresses", addresses);
+			addresses.append(argv[i + 1]);
 			i += 2;
 		} else {
 			fprintf(stderr, "ERROR: invalid address format for --api-listen. The address "
@@ -247,13 +251,10 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 			exit(1);
 		}
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--pid-file")) {
-		options.set("core_pid_file", argv[i + 1]);
+		updates["pid_file"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
 		vector<string> args;
-		vector<string> authorizations = options.getStrSet("core_authorizations",
-				false);
-
 		split(argv[i + 1], ':', args);
 		if (args.size() < 2 || args.size() > 3) {
 			fprintf(stderr, "ERROR: invalid format for --authorize. The syntax "
@@ -261,168 +262,153 @@ parseCoreOption(int argc, const char *argv[], int &i, VariantMap &options) {
 			exit(1);
 		}
 
-		authorizations.push_back(argv[i + 1]);
-		options.setStrSet("core_authorizations", authorizations);
+		updates["api_server_authorizations"].append(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--socket-backlog")) {
-		options.setInt("socket_backlog", atoi(argv[i + 1]));
+		updates["controller_socket_backlog"] = argv[i + 1];
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--no-user-switching")) {
-		options.setBool("user_switching", false);
+		updates["user_switching"] = false;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-user")) {
-		options.set("default_user", argv[i + 1]);
+		updates["default_user"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-group")) {
-		options.set("default_group", argv[i + 1]);
+		updates["default_group"] = argv[i + 1];
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--disable-security-update-check")) {
-		options.setBool("disable_security_update_check", true);
-		i += 2;
+		updates["security_update_checker_disabled"] = true;
+		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--security-update-check-proxy")) {
-		options.set("security_update_check_proxy", argv[i + 1]);
+		updates["security_update_checker_proxy_url"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
-		options.setInt("max_pool_size", atoi(argv[i + 1]));
+		updates["max_pool_size"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--pool-idle-time")) {
-		options.setInt("pool_idle_time", atoi(argv[i + 1]));
+		updates["pool_idle_time"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-preloader-idle-time")) {
-		options.setInt("max_preloader_idle_time", atoi(argv[i + 1]));
+		updates["default_max_preloader_idle_time"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--force-max-concurrent-requests-per-process")) {
-		options.setInt("force_max_concurrent_requests_per_process", atoi(argv[i + 1]));
+		updates["default_force_max_concurrent_requests_per_process"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--min-instances")) {
-		options.setInt("min_instances", atoi(argv[i + 1]));
-		i += 2;
-	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--memory-limit")) {
-		options.setInt("memory_limit", atoi(argv[i + 1]));
+		updates["default_min_instances"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], 'e', "--environment")) {
-		options.set("environment", argv[i + 1]);
+		updates["default_environment"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-type")) {
-		options.set("app_type", argv[i + 1]);
+		updates["single_app_mode_app_type"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--startup-file")) {
-		options.set("startup_file", argv[i + 1]);
+		updates["single_app_mode_startup_file"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--spawn-method")) {
-		options.set("spawn_method", argv[i + 1]);
+		updates["default_spawn_method"] = argv[i + 1];
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--load-shell-envvars")) {
-		options.setBool("load_shell_envvars", true);
+		updates["default_load_shell_envvars"] = true;
 		i++;
-	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--concurrency-model")) {
-		options.set("concurrency_model", argv[i + 1]);
-		i += 2;
-	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-thread-count")) {
-		options.setInt("app_thread_count", atoi(argv[i + 1]));
-		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--multi-app")) {
-		options.setBool("multi_app", true);
+		updates["multi_app"] = true;
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--force-friendly-error-pages")) {
-		options.setBool("friendly_error_pages", true);
+		updates["default_friendly_error_pages"] = true;
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--disable-friendly-error-pages")) {
-		options.setBool("friendly_error_pages", false);
+		updates["default_friendly_error_pages"] = false;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-requests")) {
-		options.setInt("max_requests", atoi(argv[i + 1]));
-		i += 2;
-	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-time")) {
-		options.setInt("max_request_time", atoi(argv[i + 1]));
+		updates["default_max_requests"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-request-queue-size")) {
-		options.setInt("max_request_queue_size", atoi(argv[i + 1]));
+		updates["default_max_request_queue_size"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--sticky-sessions")) {
-		options.setBool("sticky_sessions", true);
+		updates["default_sticky_sessions"] = true;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--sticky-sessions-cookie-name")) {
-		options.set("sticky_sessions_cookie_name", argv[i + 1]);
+		updates["default_sticky_sessions_cookie_name"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--vary-turbocache-by-cookie")) {
-		options.set("vary_turbocache_by_cookie", argv[i + 1]);
+		updates["vary_turbocache_by_cookie"] = argv[i + 1];
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--disable-turbocaching")) {
-		options.setBool("turbocaching", false);
+		updates["turbocaching"] = false;
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--no-abort-websockets-on-process-shutdown")) {
-		options.setBool("abort_websockets_on_process_shutdown", false);
+		updates["default_abort_websockets_on_process_shutdown"] = false;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ruby")) {
-		options.set("default_ruby", argv[i + 1]);
+		updates["default_ruby"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--nodejs")) {
-		options.set("default_nodejs", argv[i + 1]);
+		updates["default_nodejs"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--python")) {
-		options.set("default_python", argv[i + 1]);
+		updates["default_python"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--meteor-app-settings")) {
-		options.set("meteor_app_settings", argv[i + 1]);
+		updates["default_meteor_app_settings"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-file-descriptor-ulimit")) {
-		options.setUint("app_file_descriptor_ulimit", atoi(argv[i + 1]));
+		updates["default_app_file_descriptor_ulimit"] = atoi(argv[i + 1]);
 		i += 2;
-	} else if (p.isFlag(argv[i], '\0', "--debugger")) {
-		options.setBool("debugger", true);
-		i++;
-	} else if (p.isFlag(argv[i], '\0', "--rolling-restarts")) {
-		options.setBool("rolling_restarts", true);
-		i++;
-	} else if (p.isFlag(argv[i], '\0', "--resist-deployment-errors")) {
-		options.setBool("resist_deployment_errors", true);
-		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
-		// We do not set log_level because, when this function is called from
-		// the Watchdog, we don't want to affect the Watchdog's own log level.
-		options.setInt("core_log_level", atoi(argv[i + 1]));
+		updates["log_level"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
-		// We do not set log_file because, when this function is called from
-		// the Watchdog, we don't want to affect the Watchdog's own log file.
-		options.set("core_log_file", argv[i + 1]);
+		updates["log_target"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--fd-log-file")) {
-		// We do not set file_descriptor_log_file because, when this function is called from
-		// the Watchdog, we don't want to affect the Watchdog's own log file.
-		options.set("core_file_descriptor_log_file", argv[i + 1]);
+		updates["file_descriptor_log_target"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--stat-throttle-rate")) {
-		options.setInt("stat_throttle_rate", atoi(argv[i + 1]));
+		updates["stat_throttle_rate"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--no-show-version-in-header")) {
-		options.setBool("show_version_in_header", false);
+		updates["show_version_in_header"] = false;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--data-buffer-dir")) {
-		options.setInt("data_buffer_dir", atoi(argv[i + 1]));
+		updates["controller_file_buffered_channel_buffer_dir"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--no-graceful-exit")) {
-		options.setBool("core_graceful_exit", false);
+		updates["graceful_exit"] = false;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--benchmark")) {
-		options.set("benchmark_mode", argv[i + 1]);
+		updates["benchmark_mode"] = argv[i + 1];
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--disable-selfchecks")) {
-		options.setBool("selfchecks", false);
+		updates["pool_selfchecks"] = false;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--threads")) {
-		options.setInt("core_threads", atoi(argv[i + 1]));
+		updates["controller_threads"] = atoi(argv[i + 1]);
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--cpu-affine")) {
-		options.setBool("core_cpu_affine", true);
+		updates["controller_cpu_affine"] = true;
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--core-file-descriptor-ulimit")) {
-		options.setUint("core_file_descriptor_ulimit", atoi(argv[i + 1]));
+		updates["file_descriptor_ulimit"] = atoi(argv[i + 1]);
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--admin-panel-url")) {
+		updates["admin_panel_url"] = argv[i + 1];
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ctl")) {
+		const char *sep = strchr(argv[i + 1], '=');
+		if (sep == NULL) {
+			fprintf(stderr, "ERROR: invalid --ctl format: %s\n", argv[i + 1]);
+			exit(1);
+		}
+		string name(argv[i + 1], sep - argv[i + 1]);
+		string value(sep + 1);
+		updates[name] = autocastValueToJson(value);
 		i += 2;
 	} else if (!startsWith(argv[i], "-")) {
-		if (!options.has("app_root")) {
-			options.set("app_root", argv[i]);
+		if (!updates.isMember("single_app_mode_app_root")) {
+			updates["single_app_mode_app_root"] = argv[i];
 			i++;
 		} else {
 			fprintf(stderr, "ERROR: you may not pass multiple application directories. "

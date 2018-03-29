@@ -2,6 +2,7 @@
 #include <jsoncpp/json.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <LoggingKit/Context.h>
+#include <FileTools/FileManip.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <MessageReadersWriters.h>
@@ -1616,13 +1617,13 @@ namespace tut {
 
 		LoggingKit::setLevel(LoggingKit::CRIT);
 		pool->asyncGet(options, callback);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = number == 1;
 		);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = pool->getProcessCount() == 2;
 		);
-		EVENTUALLY(5,
+		EVENTUALLY(10,
 			result = !pool->isSpawning();
 		);
 		SHOULD_NEVER_HAPPEN(500,

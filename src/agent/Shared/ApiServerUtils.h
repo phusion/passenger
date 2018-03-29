@@ -33,12 +33,6 @@
  *
  * This file consists of the following items.
  *
- * ## API accounts
- *
- * API servers can be password protected. They support multiple accounts,
- * each with its own privilege level. These accounts are represented by
- * ApiAccount, stored in ApiAccountDatabase objects.
- *
  * ## Authorization
  *
  * The authorizeXXX() family of functions implement authorization checking on a
@@ -91,102 +85,6 @@ using namespace std;
 
 // Forward declarations
 inline string truncateApiKey(const StaticString &apiKey);
-
-
-/*******************************
- *
- * API accounts
- *
- *******************************/
-
-struct ApiAccount {
-	string username;
-	string password;
-	bool readonly;
-};
-
-class ApiAccountDatabase {
-private:
-	vector<ApiAccount> database;
-
-	bool levelDescriptionIsReadOnly(const StaticString &level) const {
-		if (level == "readonly") {
-			return true;
-		} else if (level == "full") {
-			return false;
-		} else {
-			throw ArgumentException("Invalid privilege level " + level);
-		}
-	}
-
-public:
-	/**
-	 * Add an account to the database with the given parameters.
-	 *
-	 * @throws ArgumentException One if the input arguments contain a disallowed value.
-	 */
-	void add(const string &username, const string &password, bool readonly) {
-		if (OXT_UNLIKELY(username == "api")) {
-			throw ArgumentException("It is not allowed to register an API account with username 'api'");
-		}
-
-		ApiAccount account;
-		account.username = username;
-		account.password = password;
-		account.readonly = readonly;
-		database.push_back(account);
-	}
-
-	/**
-	 * Add an account to the database. The account parameters are determined
-	 * by a description string in the form of [LEVEL]:USERNAME:PASSWORDFILE.
-	 * LEVEL is one of:
-	 *
-	 *   readonly    Read-only access
-     *   full        Full access (default)
-	 *
-	 * @throws ArgumentException One if the input arguments contain a disallowed value.
-	 */
-	void add(const StaticString &description) {
-		ApiAccount account;
-		vector<string> args;
-
-		split(description, ':', args);
-
-		if (args.size() == 2) {
-			account.username = args[0];
-			account.password = strip(readAll(args[1]));
-			account.readonly = false;
-		} else if (args.size() == 3) {
-			account.username = args[1];
-			account.password = strip(readAll(args[2]));
-			account.readonly = levelDescriptionIsReadOnly(args[0]);
-		} else {
-			throw ArgumentException("Invalid authorization description '" + description + "'");
-		}
-
-		if (OXT_UNLIKELY(account.username == "api")) {
-			throw ArgumentException("It is not allowed to register an API account with username 'api'");
-		}
-		database.push_back(account);
-	}
-
-	bool empty() const {
-		return database.empty();
-	}
-
-	const ApiAccount *lookup(const StaticString &username) const {
-		vector<ApiAccount>::const_iterator it, end = database.end();
-
-		for (it = database.begin(); it != end; it++) {
-			if (it->username == username) {
-				return &(*it);
-			}
-		}
-
-		return NULL;
-	}
-};
 
 
 /*******************************
@@ -267,7 +165,7 @@ authorize(ApiServer *server, Client *client, Request *req) {
 		}
 	}
 
-	if (server->apiAccountDatabase->empty()) {
+	if (server->getApiAccountDatabase().empty()) {
 		SKC_INFO_FROM_STATIC(server, client,
 			"Authenticated as administrator because API account database is empty");
 		auth.apiKey = ApplicationPool2::ApiKey::makeSuper();
@@ -288,7 +186,8 @@ authorize(ApiServer *server, Client *client, Request *req) {
 				auth.canModifyPool = true;
 			}
 		} else {
-			const ApiAccount *account = server->apiAccountDatabase->lookup(username);
+			const typename ApiServer::ApiAccount *account =
+				server->getApiAccountDatabase().lookup(username);
 			if (account != NULL && constantTimeCompare(password, account->password)) {
 				SKC_INFO_FROM_STATIC(server, client,
 					"Authenticated with administrator account: " << username);
@@ -783,7 +682,12 @@ apiServerProcessReopenLogs(Server *server, Client *client, Request *req) {
 		vector<ConfigKit::Error> errors;
 		bool ok;
 		try {
-			ok = LoggingKit::context->prepareConfigChange(Json::objectValue,
+			// We deliberately ignore the target.stderr key.
+			// If the log file was equal to stderr then we'll want
+			// to reopen the log file anyway.
+			Json::Value updates;
+			updates["target"] = config["target"]["path"];
+			ok = LoggingKit::context->prepareConfigChange(updates,
 				errors, configReq);
 		} catch (const SystemException &e) {
 			unsigned int bufsize = 2048;
@@ -866,6 +770,7 @@ _apiServerProcessReinheritLogsResponseBody(
 
 	config["target"] = oldConfig["target"];
 	config["target"]["fd"] = fd;
+	config["target"].removeMember("stderr");
 	try {
 		ok = LoggingKit::context->prepareConfigChange(config,
 			errors, configReq);

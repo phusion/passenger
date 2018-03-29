@@ -162,6 +162,7 @@ OSStatus Crypto::copyIdentityFromPKCS12File(const char *cPath,
 	return status;
 }
 
+#if PRE_HIGH_SIERRA
 void Crypto::killKey(const char *cLabel) {
 	SecIdentityRef id = NULL;
 	OSStatus status = lookupKeychainItem(cLabel, &id);
@@ -238,6 +239,7 @@ bool Crypto::preAuthKey(const char *path, const char *passwd, const char *cLabel
 		return false;
 	}
 }
+#endif
 
 bool Crypto::generateRandomChars(unsigned char *rndChars, int rndLen) {
 	FILE *fPtr = fopen("/dev/random", "r");

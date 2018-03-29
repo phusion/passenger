@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_DIRECTORY_MAPPER_H_
-#define _PASSENGER_DIRECTORY_MAPPER_H_
+#ifndef _PASSENGER_APACHE2_DIRECTORY_MAPPER_H_
+#define _PASSENGER_APACHE2_DIRECTORY_MAPPER_H_
 
 #include <string>
 #include <set>
@@ -33,17 +33,19 @@
 #include <oxt/backtrace.hpp>
 #include <boost/thread.hpp>
 
-#include "Configuration.hpp"
 #include <AppTypes.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
 
-// The Apache/APR headers *must* come after the Boost headers, otherwise
-// compilation will fail on OpenBSD.
+// The APR headers must come after the Passenger headers.
+// See Hooks.cpp to learn why.
 #include <httpd.h>
 #include <http_core.h>
+#include "Config.h"
+
 
 namespace Passenger {
+namespace Apache2Module {
 
 using namespace std;
 using namespace oxt;
@@ -82,11 +84,11 @@ private:
 	bool autoDetectionDone: 1;
 
 	const char *findBaseURI() const {
-		set<string>::const_iterator it, end = config->baseURIs.end();
+		set<string>::const_iterator it, end = config->getBaseURIs().end();
 		const char *uri = r->uri;
 		size_t uri_len = strlen(uri);
 
-		for (it = config->baseURIs.begin(); it != end; it++) {
+		for (it = config->getBaseURIs().begin(); it != end; it++) {
 			const string &base = *it;
 
 			if (base == "/") {
@@ -147,21 +149,21 @@ private:
 		AppTypeDetector detector(cstat, cstatMutex, throttleRate);
 		PassengerAppType appType;
 		string appRoot;
-		if (config->appType == NULL) {
-			if (config->appRoot == NULL) {
+		if (config->getAppType().empty()) {
+			if (config->getAppRoot().empty()) {
 				appType = detector.checkDocumentRoot(publicDir,
-					baseURI != NULL || config->resolveSymlinksInDocRoot == DirConfig::ENABLED,
+					baseURI != NULL,
 					&appRoot);
 			} else {
-				appRoot = config->appRoot;
+				appRoot = config->getAppRoot();
 				appType = detector.checkAppRoot(appRoot);
 			}
 		} else {
-			if (config->appRoot == NULL) {
+			if (config->getAppRoot().empty()) {
 				appType = PAT_NONE;
 			} else {
-				appRoot = config->appRoot;
-				appType = getAppType(config->appType);
+				appRoot = config->getAppRoot().toString();
+				appType = getAppType(config->getAppType());
 			}
 		}
 
@@ -268,7 +270,8 @@ public:
 	}
 };
 
+
+} // namespace Apache2Module
 } // namespace Passenger
 
-#endif /* _PASSENGER_DIRECTORY_MAPPER_H_ */
-
+#endif /* _PASSENGER_APACHE2_DIRECTORY_MAPPER_H_ */

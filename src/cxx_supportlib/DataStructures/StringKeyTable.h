@@ -386,6 +386,10 @@ public:
 		}
 	}
 
+	bool contains(const HashedStaticString &key) const {
+		return (lookupCell(key) != NULL);
+	}
+
 	bool lookup(const HashedStaticString &key, const T **result) const {
 		const Cell * const cell = lookupCell(key);
 		if (cell != NULL) {

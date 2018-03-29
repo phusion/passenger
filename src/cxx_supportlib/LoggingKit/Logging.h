@@ -30,6 +30,7 @@
 #include <LoggingKit/Forward.h>
 #include <StaticString.h>
 #include <Utils/FastStringStream.h>
+#include <DataStructures/HashedStaticString.h>
 
 namespace Passenger {
 namespace LoggingKit {
@@ -192,12 +193,14 @@ namespace LoggingKit {
 /**
  * Logs a message that was received from an application's stdout/stderr.
  *
+ * @param groupName The application's Group's name.
  * @param pid The application's PID.
  * @param channelName "stdout" or "stderr".
  * @param message The message that was received.
+ * @param appLogFile an app specific file to log to.
  */
-void logAppOutput(pid_t pid, const StaticString &channelName, const char *message, unsigned int size);
-
+void logAppOutput(const HashedStaticString &groupName, pid_t pid, const StaticString &channelName,
+	const char *message, unsigned int size, const StaticString &appLogFile);
 
 } // namespace LoggingKit
 } // namespace Passenger

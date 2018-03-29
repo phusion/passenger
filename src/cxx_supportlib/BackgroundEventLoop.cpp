@@ -167,7 +167,7 @@ pollLibuv(BackgroundEventLoop *bg) {
 
 	fd = uv_backend_fd(&bg->priv->libuv_loop);
 
-	while (!this_thread::interruption_requested()) {
+	while (!boost::this_thread::interruption_requested()) {
 		timeout = uv_backend_timeout(&bg->priv->libuv_loop);
 
 		ctx->syscall_interruption_lock.unlock();
@@ -203,13 +203,13 @@ pollLibuv(BackgroundEventLoop *bg) {
 		} while (ret == -1
 			&& lastErrno == EINTR
 			&& (!boost::this_thread::syscalls_interruptable()
-				|| !(intrRequested = this_thread::interruption_requested())));
+				|| !(intrRequested = boost::this_thread::interruption_requested())));
 
 		ctx->syscall_interruption_lock.lock();
 
 		if (ret == -1
 			&& lastErrno == EINTR
-			&& this_thread::syscalls_interruptable()
+			&& boost::this_thread::syscalls_interruptable()
 			&& intrRequested)
 		{
 			throw boost::thread_interrupted();

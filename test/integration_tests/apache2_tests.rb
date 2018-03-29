@@ -398,18 +398,10 @@ describe "Apache 2 module" do
 
     describe "PassengerShowVersionInHeader" do
       before :each do
-        @stub3 = RackStub.new('rack')
-        @stub3_url_root = "http://7.passenger.test:#{@apache2.port}"
-        @apache2.set_vhost('7.passenger.test', "#{@stub3.full_app_root}/public") do |vhost|
-          vhost << "PassengerShowVersionInHeader " + option
-        end
-
+        @apache2 << "PassengerShowVersionInHeader " + option
+        @apache2.stop
         @apache2.start
-        @server = @stub3_url_root
-      end
-
-      after :each do
-        @stub3.destroy
+        @server = @stub_url_root
       end
 
       context "set to on" do
@@ -455,21 +447,6 @@ describe "Apache 2 module" do
         result = get('/parameters?first=one&second=Green+Bananas')
         result.should =~ %r{First: one\n}
         result.should =~ %r{Second: Green Bananas\n}
-      end
-    end
-
-    it "resolves symlinks in the document root if PassengerResolveSymlinksInDocumentRoot is set" do
-      orig_app_root = @stub.app_root
-      @stub.move(File.expand_path("/tmp/mycook.symlinktest.#{PORT}"))
-      FileUtils.mkdir_p(orig_app_root)
-      File.symlink("#{@stub.app_root}/public", "#{orig_app_root}/public")
-      begin
-        File.write("#{@stub.app_root}/public/.htaccess", "PassengerResolveSymlinksInDocumentRoot on")
-        @server = @stub_url_root
-        get('/').should == "front page"
-      ensure
-        FileUtils.rm_rf(orig_app_root)
-        @stub.move(orig_app_root)
       end
     end
 
@@ -580,6 +557,18 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
+    def get_newest_instance
+      # Because Apache reloads once during startup, we want to select
+      # the newest Passenger instance.
+      instances = AdminTools::InstanceRegistry.new.list
+      instances.sort! do |a, b|
+        x = a.properties['instance_dir']['created_at_monotonic_usec']
+        y = b.properties['instance_dir']['created_at_monotonic_usec']
+        x <=> y
+      end
+      instances.last
+    end
+
     it "is restarted if it crashes" do
       # Make sure that all Apache worker processes have connected to
       # the Passenger core.
@@ -589,8 +578,7 @@ describe "Apache 2 module" do
       end
 
       # Now kill the Passenger core.
-      instance = AdminTools::InstanceRegistry.new.list.first
-      Process.kill('SIGKILL', instance.core_pid)
+      Process.kill('SIGKILL', get_newest_instance.core_pid)
       sleep 0.02 # Give the signal a small amount of time to take effect.
 
       # Each worker process should detect that the old
@@ -604,7 +592,7 @@ describe "Apache 2 module" do
     it "exposes the application pool for passenger-status" do
       File.touch("#{@stub.app_root}/tmp/restart.txt", 1)  # Get rid of all previous app processes.
       get('/').should == "front page"
-      instance = AdminTools::InstanceRegistry.new.list.first
+      instance = get_newest_instance
 
       # Wait until the server has processed the session close event.
       sleep 0.1

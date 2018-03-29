@@ -2,6 +2,8 @@
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/MemZeroGuard.h>
+#include <FileTools/PathManip.h>
+#include <FileTools/FileManip.h>
 #include <ProcessManagement/Spawn.h>
 #include <sys/types.h>
 #include <sys/stat.h>

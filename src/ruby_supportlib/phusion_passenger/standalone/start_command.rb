@@ -126,11 +126,6 @@ module PhusionPassenger
             REQUEST_HANDLING_CONFIG_SPECS, options)
 
           opts.separator ""
-          opts.separator "Union Station options:"
-          ConfigUtils.add_option_parser_options_from_config_spec(opts,
-            UNION_STATION_CONFIG_SPECS, options)
-
-          opts.separator ""
           opts.separator "Nginx engine options:"
           ConfigUtils.add_option_parser_options_from_config_spec(opts,
             NGINX_ENGINE_CONFIG_SPECS, options)
@@ -415,6 +410,7 @@ module PhusionPassenger
           "--pid-file", "#{@working_dir}/temp_dir_toucher.pid",
           "--log-file", @options[:log_file]]
         command << "--user" << @options[:user] unless @options[:user].nil?
+        command << "--nginx-pid" << @engine.pid.to_s if @options[:engine] == 'nginx'
         result = system(*command)
         if !result
           abort "Cannot start #{@agent_exe} temp-dir-toucher"
@@ -535,7 +531,12 @@ module PhusionPassenger
             @engine.stop
             STDOUT.puts " done"
             STDOUT.flush
-            File.delete(@options[:socket_file]) if @options[:engine] == "nginx" && @options[:socket_file]
+            if @options[:engine] == "nginx" && @options[:socket_file]
+              begin
+                File.delete(@options[:socket_file])
+              rescue Errno::ENOENT
+              end
+            end
           end
           @engine = nil
         end

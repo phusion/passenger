@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if ! grep -q passenger.test /etc/hosts; then
 	header2 "Updating /etc/hosts"

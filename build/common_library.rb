@@ -243,6 +243,12 @@ else
 end
 
 
+########## WebSocket++ ##########
+
+let(:websocketpp_cflags) { '-Isrc/cxx_supportlib/vendor-copy/websocketpp' }
+let(:websocketpp_libs) { nil }
+
+
 ########## Shared definitions ##########
 # Shared definition files should be in source control so that they don't
 # have to be built by users. Users may not have write access to the source
@@ -265,9 +271,7 @@ end
 
 
 let(:libboost_oxt_cflags) do
-  result = []
-  result << PlatformInfo.adress_sanitizer_flag if USE_ASAN
-  result.join(' ')
+  "" # Method reserved for future use
 end
 
 LIBBOOST_OXT, LIBBOOST_OXT_LINKARG = define_libboost_oxt_task(

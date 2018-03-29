@@ -244,10 +244,10 @@ Controller::resolveSymlink(const StaticString &path, psg_pool_t *pool) {
 			char *pos  = data;
 			char *end  = data + resultlen;
 
-			pos = appendData(pos, end, linkbuf, linkbuflen);
+			pos = appendData(pos, end, workingDir);
 			*pos = '/';
 			pos++;
-			pos = appendData(pos, end, workingDir);
+			pos = appendData(pos, end, linkbuf, linkbuflen);
 
 			return psg_lstr_create(pool, data, resultlen);
 		}

@@ -98,13 +98,14 @@ Group::mergeOptions(const Options &other) {
 bool
 Group::prepareHookScriptOptions(HookScriptOptions &hsOptions, const char *name) {
 	Context *context = getPool()->getContext();
-	if (context->agentsOptions == NULL) {
+	LockGuard l(context->agentConfigSyncher);
+	if (context->agentConfig.isNull()) {
 		return false;
 	}
 
 	hsOptions.name = name;
 	string hookName = string("hook_") + name;
-	hsOptions.spec = context->agentsOptions->get(hookName, false);
+	hsOptions.spec = context->agentConfig.get(hookName, Json::Value()).asString();
 
 	return true;
 }

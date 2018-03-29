@@ -25,6 +25,7 @@
  */
 
 #include <Shared/Fundamentals/Utils.h>
+#include <Utils/MessageIO.h>
 
 class CoreWatcher: public AgentWatcher {
 protected:
@@ -52,9 +53,27 @@ protected:
 	}
 
 	virtual void sendStartupArguments(pid_t pid, FileDescriptor &fd) {
-		VariantMap options = *agentsOptions;
-		options.erase("ust_router_authorizations");
-		options.writeToFd(fd);
+		Json::Value config = watchdogSchema->core.translator.translate(
+			watchdogConfig->inspectEffectiveValues());
+
+		Json::Value::iterator it, end = wo->extraConfigToPassToSubAgents.end();
+		for (it = wo->extraConfigToPassToSubAgents.begin(); it != end; it++) {
+			config[it.name()] = *it;
+		}
+
+		config["pid_file"] = wo->corePidFile;
+		config["watchdog_fd_passing_password"] = wo->fdPassingPassword;
+		config["controller_addresses"] = wo->controllerAddresses;
+		config["api_server_addresses"] = wo->coreApiServerAddresses;
+		config["api_server_authorizations"] = wo->coreApiServerAuthorizations;
+
+		// The special value "-" means "don't set a controller secure headers password".
+		if (config["controller_secure_headers_password"].asString() == "-") {
+			config.removeMember("controller_secure_headers_password");
+		}
+
+		ConfigKit::Store filteredConfig(watchdogSchema->core.schema, config);
+		writeScalarMessage(fd, filteredConfig.inspectEffectiveValues().toStyledString());
 	}
 
 	virtual bool processStartupInfo(pid_t pid, FileDescriptor &fd, const vector<string> &args) {
@@ -65,17 +84,12 @@ public:
 	CoreWatcher(const WorkingObjectsPtr &wo)
 		: AgentWatcher(wo)
 	{
-		agentFilename = wo->resourceLocator->findSupportBinary(AGENT_EXE);
+		agentFilename = Agent::Fundamentals::context->
+			resourceLocator->findSupportBinary(AGENT_EXE);
 	}
 
-	virtual void reportAgentsInformation(VariantMap &report) {
-		const VariantMap &options = *agentsOptions;
-		vector<string> addresses = options.getStrSet("core_addresses");
-		report.set("core_address", addresses.front());
-		report.set("core_password", options.get("core_password"));
-
-		// For backwards compatibility:
-		report.set("server_address", addresses.front());
-		report.set("server_password", options.get("core_password"));
+	virtual void reportAgentStartupResult(Json::Value &report) {
+		report["core_address"] = wo->controllerAddresses[0].asString();
+		report["core_password"] = watchdogConfig->get("controller_secure_headers_password").asString();
 	}
 };

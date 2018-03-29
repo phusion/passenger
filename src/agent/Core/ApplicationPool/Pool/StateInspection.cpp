@@ -258,6 +258,135 @@ Pool::toXml(const ToXmlOptions &options, bool lock) const {
 	return result.str();
 }
 
+Json::Value
+Pool::inspectPropertiesInAdminPanelFormat(const ToJsonOptions &options) const {
+	ScopedLock l(syncher);
+	Json::Value result(Json::objectValue);
+	GroupMap::ConstIterator g_it(groups);
+	ProcessList::const_iterator p_it;
+
+	if (!authorizeByUid(options.uid, false)
+	 && !authorizeByApiKey(options.apiKey, false))
+	{
+		throw SecurityException("Operation unauthorized");
+	}
+
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
+
+		if (options.hasApplicationIdsFilter) {
+			const bool *tmp;
+			if (!options.applicationIdsFilter.lookup(group->info.name, &tmp)) {
+				g_it.next();
+				continue;
+			}
+		}
+
+		if (!group->authorizeByUid(options.uid)
+		 && !group->authorizeByApiKey(options.apiKey))
+		{
+			g_it.next();
+			continue;
+		}
+
+		Json::Value groupDoc(Json::objectValue);
+		group->inspectPropertiesInAdminPanelFormat(groupDoc);
+		result[group->info.name] = groupDoc;
+
+		g_it.next();
+	}
+
+	return result;
+}
+
+Json::Value
+Pool::inspectConfigInAdminPanelFormat(const ToJsonOptions &options) const {
+	ScopedLock l(syncher);
+	Json::Value result(Json::objectValue);
+	GroupMap::ConstIterator g_it(groups);
+	ProcessList::const_iterator p_it;
+
+	if (!authorizeByUid(options.uid, false)
+	 && !authorizeByApiKey(options.apiKey, false))
+	{
+		throw SecurityException("Operation unauthorized");
+	}
+
+	while (*g_it != NULL) {
+		const GroupPtr &group = g_it.getValue();
+
+		if (options.hasApplicationIdsFilter) {
+			const bool *tmp;
+			if (!options.applicationIdsFilter.lookup(group->info.name, &tmp)) {
+				g_it.next();
+				continue;
+			}
+		}
+
+		if (!group->authorizeByUid(options.uid)
+		 && !group->authorizeByApiKey(options.apiKey))
+		{
+			g_it.next();
+			continue;
+		}
+
+		Json::Value groupDoc(Json::objectValue);
+		group->inspectConfigInAdminPanelFormat(groupDoc);
+		result[group->info.name] = groupDoc;
+
+		g_it.next();
+	}
+
+	return result;
+}
+
+
+Json::Value
+Pool::makeSingleValueJsonConfigFormat(const Json::Value &val, const Json::Value &defaultValue) {
+	Json::Value ary(Json::arrayValue);
+
+	if (val != defaultValue) {
+		Json::Value entry;
+
+		entry["value"] = val;
+		entry["source"]["type"] = "ephemeral";
+
+		ary.append(entry);
+	}
+
+	if (!defaultValue.isNull()) {
+		Json::Value entry;
+
+		entry["value"] = defaultValue;
+		entry["source"]["type"] = "default";
+
+		ary.append(entry);
+	}
+
+	return ary;
+}
+
+Json::Value
+Pool::makeSingleStrValueJsonConfigFormat(const StaticString &val) {
+	return makeSingleValueJsonConfigFormat(
+		Json::Value(val.data(), val.data() + val.size()));
+}
+
+Json::Value
+Pool::makeSingleStrValueJsonConfigFormat(const StaticString &val, const StaticString &defaultValue) {
+	return makeSingleValueJsonConfigFormat(
+		Json::Value(val.data(), val.data() + val.size()),
+		Json::Value(defaultValue.data(), defaultValue.data() + defaultValue.size()));
+}
+
+Json::Value
+Pool::makeSingleNonEmptyStrValueJsonConfigFormat(const StaticString &val) {
+	if (val.empty()) {
+		return Json::arrayValue;
+	} else {
+		return makeSingleStrValueJsonConfigFormat(val);
+	}
+}
 
 unsigned int
 Pool::capacityUsed() const {

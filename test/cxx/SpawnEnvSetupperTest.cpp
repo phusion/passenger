@@ -20,6 +20,7 @@ namespace tut {
 			context.finalize();
 
 			config.startCommand = "true";
+			config.appGroupName = "appgroup";
 			config.appRoot = "tmp.wsgi";
 			config.startupFile = "tmp.wsgi/passenger_wsgi.py";
 			config.appType = "wsgi";

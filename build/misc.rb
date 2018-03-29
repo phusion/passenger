@@ -180,7 +180,8 @@ task :compile_app => dependencies do
       :flags => [
         "-DSTANDALONE",
         libev_cflags,
-        libuv_cflags
+        libuv_cflags,
+        websocketpp_cflags
       ]
     )
     create_cxx_executable(exe,
@@ -193,6 +194,7 @@ task :compile_app => dependencies do
         LIBBOOST_OXT_LINKARG,
         libev_libs,
         libuv_libs,
+        websocketpp_libs,
         PlatformInfo.curl_libs,
         PlatformInfo.zlib_libs,
         PlatformInfo.crypto_libs,

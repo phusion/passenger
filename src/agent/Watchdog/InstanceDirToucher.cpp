@@ -88,6 +88,7 @@ private:
 			_exit(1);
 		}
 
+#if !BOOST_OS_MACOS
 		bool isLegacy;
 		ret = tryRestoreOomScore(originalOomScore, isLegacy);
 		if (ret != 0) {
@@ -106,11 +107,12 @@ private:
 			pos = ASSU::appendData(pos, end, "). Process will remain at inherited OOM score.");
 			ASSU::printError(buf, pos - buf);
 		}
+#endif
 	}
 
 	void
 	threadMain() {
-		string originalOomScore = agentsOptions->get("original_oom_score", false);
+		string originalOomScore = wo->extraConfigToPassToSubAgents["oom_score"].asString();
 		string workingDir = wo->instanceDir->getPath().c_str();
 
 		while (!boost::this_thread::interruption_requested()) {

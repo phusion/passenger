@@ -28,14 +28,17 @@
 
 #include <queue>
 
+#include <jsoncpp/json.h>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
+#include <boost/circular_buffer.hpp>
 #include <boost/thread.hpp>
 #include <boost/atomic.hpp>
 #include <ConfigKit/ConfigKit.h>
 #include <LoggingKit/Forward.h>
 #include <LoggingKit/Config.h>
 #include <Utils/SystemTime.h>
+#include <DataStructures/StringKeyTable.h>
 
 namespace Passenger {
 namespace LoggingKit {
@@ -78,16 +81,44 @@ private:
 	queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
 	bool shuttingDown;
 
+	struct TimestampedLog {
+		// time at which time the log entered the core, which is unfortunately somewhat
+		// arbitrarily later than that it was logged in the user program
+		unsigned long long timestamp;
+		string sourceId;
+		string lineText;
+	};
+	typedef boost::circular_buffer<TimestampedLog> TimestampedLogBuffer;
+
+	typedef boost::circular_buffer<string> SimpleLogBuffer;
+	typedef StringKeyTable<SimpleLogBuffer> SimpleLogMap;
+	struct AppGroupLog {
+		TimestampedLogBuffer pidLog; // combined logs from PIDs
+		SimpleLogMap watchFileLog; // a separate log buffer per (watched file name)
+	};
+	typedef StringKeyTable<AppGroupLog> LogStore;
+	LogStore logStore;
+
 public:
-	Context(const Json::Value &initialConfig = Json::Value());
+	Context(const Json::Value &initialConfig = Json::Value(),
+		const ConfigKit::Translator &translator = ConfigKit::DummyTranslator());
 	~Context();
 	ConfigKit::Store getConfig() const;
+
+	// specifically for logging output from application processes
+	void saveNewLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen);
+	void saveMonitoredFileLog(const HashedStaticString &groupName,
+		const char *sourceStr, unsigned int sourceStrLen,
+		const char *content, unsigned int contentLen);
+	// snapshot logStore to a JSON structure for external relay
+	Json::Value convertLog();
 
 	bool prepareConfigChange(const Json::Value &updates,
 		vector<ConfigKit::Error> &errors,
 		LoggingKit::ConfigChangeRequest &req);
 	void commitConfigChange(LoggingKit::ConfigChangeRequest &req)
 		BOOST_NOEXCEPT_OR_NOTHROW;
+	Json::Value inspectConfig() const;
 
 	OXT_FORCE_INLINE
 	const ConfigRealization *getConfigRealization() const {
@@ -107,7 +138,8 @@ private:
 };
 
 
-void initialize(const Json::Value &initialConfig);
+void initialize(const Json::Value &initialConfig = Json::Value(),
+	const ConfigKit::Translator &translator = ConfigKit::DummyTranslator());
 
 
 } // namespace LoggingKit

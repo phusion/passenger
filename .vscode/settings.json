@@ -19,6 +19,9 @@
         "utility": "cpp",
         "chrono": "cpp",
         "typeindex": "cpp",
-        "typeinfo": "cpp"
-    }
+        "typeinfo": "cpp",
+        "complex": "cpp"
+    },
+    "C_Cpp.intelliSenseEngine": "Default",
+    "C_Cpp.intelliSenseEngineFallback": "Enabled"
 }

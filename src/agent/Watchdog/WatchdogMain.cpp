@@ -65,7 +65,9 @@
 #include <Shared/Fundamentals/Initialization.h>
 #include <Shared/ApiServerUtils.h>
 #include <Core/OptionParser.h>
+#include <Watchdog/Config.h>
 #include <Watchdog/ApiServer.h>
+#include <JsonTools/Autocast.h>
 #include <Constants.h>
 #include <InstanceDirectory.h>
 #include <FileDescriptor.h>
@@ -75,7 +77,6 @@
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Hooks.h>
-#include <ResourceLocator.h>
 #include <Utils.h>
 #include <Utils/Timer.h>
 #include <Utils/ScopeGuard.h>
@@ -106,34 +107,46 @@ class AgentWatcher;
 /***** Working objects *****/
 
 namespace Passenger {
-namespace WatchdogAgent {
+namespace Watchdog {
 	struct WorkingObjects {
 		RandomGenerator randomGenerator;
 		EventFd errorEvent;
 		EventFd exitEvent;
-		ResourceLocatorPtr resourceLocator;
 		uid_t defaultUid;
 		gid_t defaultGid;
 		InstanceDirectoryPtr instanceDir;
-		int reportFile;
+		int startupReportFile;
 		int lockFile;
 		vector<string> cleanupPidfiles;
 		bool pidsCleanedUp;
 		bool pidFileCleanedUp;
+		string corePidFile;
+		string fdPassingPassword;
+		Json::Value extraConfigToPassToSubAgents;
+		Json::Value controllerAddresses;
+		Json::Value coreApiServerAddresses;
+		Json::Value coreApiServerAuthorizations;
+		Json::Value watchdogApiServerAddresses;
+		Json::Value watchdogApiServerAuthorizations;
 
-		ApiAccountDatabase apiAccountDatabase;
 		int apiServerFds[SERVER_KIT_MAX_SERVER_ENDPOINTS];
 		BackgroundEventLoop *bgloop;
 		ServerKit::Context *serverKitContext;
-		ServerKit::HttpServerSchema apiServerSchema;
-		ApiServer *apiServer;
+		ServerKit::Schema serverKitSchema;
+		ApiServer::ApiServer *apiServer;
 
 		WorkingObjects()
 			: errorEvent(__FILE__, __LINE__, "WorkingObjects: errorEvent"),
 			  exitEvent(__FILE__, __LINE__, "WorkingObjects: exitEvent"),
-			  reportFile(-1),
+			  startupReportFile(-1),
 			  pidsCleanedUp(false),
 			  pidFileCleanedUp(false),
+			  extraConfigToPassToSubAgents(Json::objectValue),
+			  controllerAddresses(Json::arrayValue),
+			  coreApiServerAddresses(Json::arrayValue),
+			  coreApiServerAuthorizations(Json::arrayValue),
+			  watchdogApiServerAddresses(Json::arrayValue),
+			  watchdogApiServerAuthorizations(Json::arrayValue),
 			  bgloop(NULL),
 			  serverKitContext(NULL),
 			  apiServer(NULL)
@@ -145,12 +158,13 @@ namespace WatchdogAgent {
 	};
 
 	typedef boost::shared_ptr<WorkingObjects> WorkingObjectsPtr;
-} // namespace WatchdogAgent
+} // namespace Watchdog
 } // namespace Passenger
 
-using namespace Passenger::WatchdogAgent;
+using namespace Passenger::Watchdog;
 
-static VariantMap *agentsOptions;
+static Schema *watchdogSchema;
+static ConfigKit::Store *watchdogConfig;
 static WorkingObjects *workingObjects;
 
 static void cleanup(const WorkingObjectsPtr &wo);
@@ -162,6 +176,7 @@ static void cleanup(const WorkingObjectsPtr &wo);
 
 /***** Functions *****/
 
+#if !BOOST_OS_MACOS
 static FILE *
 openOomAdjFileGetType(const char *mode, OomFileType &type) {
 	FILE *f = fopen("/proc/self/oom_score_adj", mode);
@@ -235,6 +250,7 @@ setOomScoreNeverKill() {
 
 	return oldScore;
 }
+#endif
 
 static void
 terminationHandler(int signo) {
@@ -347,10 +363,10 @@ readCleanupPids(const WorkingObjectsPtr &wo) {
 				buf[ret] = '\0';
 				result.push_back(atoi(buf));
 			} else {
-				P_WARN("Cannot read cleanup PID file " << filename);
+				P_WARN("Cannot read cleanup PID file " << relative(filename).c_str() << " (" << filename << ")");
 			}
 		} else {
-			P_WARN("Cannot open cleanup PID file " << filename);
+			P_WARN("Cannot open cleanup PID file " << relative(filename).c_str() << " (" << filename << ")");
 		}
 	}
 
@@ -378,9 +394,9 @@ killCleanupPids(const WorkingObjectsPtr &wo) {
 
 static void
 deletePidFile(const WorkingObjectsPtr &wo) {
-	string pidFile = agentsOptions->get("pid_file", false);
-	if (!pidFile.empty() && !wo->pidFileCleanedUp && agentsOptions->getBool("delete_pid_file")) {
-		syscalls::unlink(pidFile.c_str());
+	Json::Value pidFile = watchdogConfig->get("watchdog_pid_file");
+	if (!pidFile.isNull() && !wo->pidFileCleanedUp && watchdogConfig->get("watchdog_pid_file_autodelete").asBool()) {
+		syscalls::unlink(pidFile.asCString());
 		wo->pidFileCleanedUp = true;
 	}
 }
@@ -499,25 +515,14 @@ forceAllAgentsShutdown(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &wat
 	}
 }
 
-static string
-inferDefaultGroup(const string &defaultUser) {
-	struct passwd *userEntry = getpwnam(defaultUser.c_str());
-	if (userEntry == NULL) {
-		throw ConfigurationException(
-			string("The user that PassengerDefaultUser refers to, '") +
-			defaultUser + "', does not exist.");
-	}
-	return getGroupName(userEntry->pw_gid);
-}
-
 static void
 runHookScriptAndThrowOnError(const char *name) {
 	TRACE_POINT();
 	HookScriptOptions options;
 
 	options.name = name;
-	options.spec = agentsOptions->get(string("hook_") + name, false);
-	options.agentsOptions = agentsOptions;
+	options.spec = watchdogConfig->get(string("hook_") + name).asString();
+	options.agentConfig = watchdogConfig->inspectEffectiveValues();
 
 	if (!runHookScripts(options)) {
 		throw RuntimeException(string("Hook script ") + name + " failed");
@@ -611,13 +616,14 @@ usage() {
 }
 
 static void
-parseOptions(int argc, const char *argv[], VariantMap &options) {
+parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 	OptionParser p(usage);
+	Json::Value updates(Json::objectValue);
 	int i = 2;
 
 	while (i < argc) {
 		if (p.isValueFlag(argc, i, argv[i], '\0', "--passenger-root")) {
-			options.set("passenger_root", argv[i + 1]);
+			updates["passenger_root"] = argv[i + 1];
 			i += 2;
 		} else if (p.isFlag(argv[i], '\0', "--BC")
 			|| p.isFlag(argv[i], '\0', "--begin-core-args"))
@@ -633,10 +639,20 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 				 || p.isFlag(argv[i], '\0', "--begin-ust-router-args"))
 				{
 					break;
-				} else if (!parseCoreOption(argc, argv, i, options)) {
-					fprintf(stderr, "ERROR: unrecognized core argument %s. Please "
-						"type '%s core --help' for usage.\n", argv[i], argv[0]);
-					exit(1);
+				} else {
+					Json::Value coreUpdates(Json::objectValue);
+					if (!parseCoreOption(argc, argv, i, coreUpdates)) {
+						fprintf(stderr, "ERROR: unrecognized core argument %s. Please "
+							"type '%s core --help' for usage.\n", argv[i], argv[0]);
+						exit(1);
+					}
+
+					Json::Value::iterator it, end = coreUpdates.end();
+					for (it = coreUpdates.begin(); it != end; it++) {
+						string translatedName = watchdogSchema->core.translator.
+							reverseTranslateOne(it.name());
+						updates[translatedName] = *it;
+					}
 				}
 			}
 		} else if (p.isFlag(argv[i], '\0', "--BU")
@@ -661,15 +677,13 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			}
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--api-listen")) {
 			if (getSocketAddressType(argv[i + 1]) != SAT_UNKNOWN) {
-				vector<string> addresses = options.getStrSet("watchdog_api_addresses",
-					false);
+				Json::Value &addresses = updates["watchdog_api_server_addresses"];
 				if (addresses.size() == SERVER_KIT_MAX_SERVER_ENDPOINTS - 1) {
 					fprintf(stderr, "ERROR: you may specify up to %u --api-listen addresses.\n",
 						SERVER_KIT_MAX_SERVER_ENDPOINTS - 1);
 					exit(1);
 				}
-				addresses.push_back(argv[i + 1]);
-				options.setStrSet("watchdog_api_addresses", addresses);
+				addresses.append(argv[i + 1]);
 				i += 2;
 			} else {
 				fprintf(stderr, "ERROR: invalid address format for --api-listen. The address "
@@ -679,9 +693,6 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			}
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--authorize")) {
 			vector<string> args;
-			vector<string> authorizations = options.getStrSet("watchdog_authorizations",
-				false);
-
 			split(argv[i + 1], ':', args);
 			if (args.size() < 2 || args.size() > 3) {
 				fprintf(stderr, "ERROR: invalid format for --authorize. The syntax "
@@ -689,46 +700,43 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 				exit(1);
 			}
 
-			authorizations.push_back(argv[i + 1]);
-			options.setStrSet("watchdog_authorizations", authorizations);
+			updates["watchdog_api_server_authorizations"].append(argv[i + 1]);
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--instance-registry-dir")) {
-			options.set("instance_registry_dir", argv[i + 1]);
+			updates["instance_registry_dir"] = argv[i + 1];
 			i += 2;
 		} else if (p.isFlag(argv[i], '\0', "--no-user-switching")) {
-			options.setBool("user_switching", false);
+			updates["user_switching"] = false;
 			i++;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-user")) {
-			options.set("default_user", argv[i + 1]);
+			updates["default_user"] = argv[i + 1];
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--default-group")) {
-			options.set("default_group", argv[i + 1]);
+			updates["default_group"] = argv[i + 1];
 			i += 2;
 		} else if (p.isFlag(argv[i], '\0', "--daemonize")) {
-			options.setBool("daemonize", true);
+			updates["daemonize"] = true;
 			i++;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--user")) {
-			options.set("user", argv[i + 1]);
+			updates["user"] = argv[i + 1];
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--pid-file")) {
-			options.set("pid_file", argv[i + 1]);
+			updates["watchdog_pid_file"] = argv[i + 1];
 			i += 2;
 		} else if (p.isFlag(argv[i], '\0', "--no-delete-pid-file")) {
-			options.setBool("delete_pid_file", false);
+			updates["watchdog_pid_file_autodelete"] = false;
 			i++;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-level")) {
-			options.setInt("log_level", atoi(argv[i + 1]));
+			updates["log_level"] = argv[i + 1];
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--report-file")) {
-			options.set("report_file", argv[i + 1]);
+			updates["startup_report_file"] = argv[i + 1];
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--cleanup-pidfile")) {
-			vector<string> pidfiles = options.getStrSet("cleanup_pidfiles", false);
-			pidfiles.push_back(argv[i + 1]);
-			options.setStrSet("cleanup_pidfiles", pidfiles);
+			updates["pidfiles_to_delete_on_exit"].append(argv[i + 1]);
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
-			options.set("debug_log_file", argv[i + 1]);
+			updates["log_target"] = argv[i + 1];
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ctl")) {
 			const char *value = strchr(argv[i + 1], '=');
@@ -744,7 +752,7 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 					"The value must be non-empty.\n", argv[i + 1]);
 				exit(1);
 			}
-			options.set(name, value);
+			updates[name] = autocastValueToJson(value);
 			i += 2;
 		} else if (p.isFlag(argv[i], 'h', "--help")) {
 			usage();
@@ -753,6 +761,15 @@ parseOptions(int argc, const char *argv[], VariantMap &options) {
 			fprintf(stderr, "ERROR: unrecognized argument %s. Please type "
 				"'%s watchdog --help' for usage.\n", argv[i], argv[0]);
 			exit(1);
+		}
+	}
+
+	if (!updates.empty()) {
+		vector<ConfigKit::Error> errors;
+		if (!config.update(updates, errors)) {
+			P_BUG("Unable to set initial configuration: " <<
+				ConfigKit::toString(errors) << "\n"
+				"Raw initial configuration: " << updates.toStyledString());
 		}
 	}
 }
@@ -776,49 +793,24 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	 * for this watchdog. Note that the OOM score is inherited by child processes
 	 * so we need to restore it after each fork().
 	 */
+#if !BOOST_OS_MACOS
 	string oldOomScore = setOomScoreNeverKill();
+#endif
 
-	agentsOptions = new VariantMap();
-	*agentsOptions = initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " watchdog",
+	watchdogSchema = new Schema();
+	watchdogConfig = new ConfigKit::Store(*watchdogSchema);
+	initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " watchdog",
+		*watchdogConfig, watchdogSchema->core.schema.loggingKit.translator,
 		parseOptions, NULL, 2);
-	agentsOptions->set("original_oom_score", oldOomScore);
 
 	// Start all sub-agents with this environment variable.
 	setenv("PASSENGER_USE_FEEDBACK_FD", "true", 1);
 
 	wo = boost::make_shared<WorkingObjects>();
 	workingObjects = wo.get();
-}
-
-static void
-setAgentsOptionsDefaults() {
-	VariantMap &options = *agentsOptions;
-
-	options.setDefault("instance_registry_dir", getSystemTempDir());
-	options.setDefaultBool("user_switching", true);
-	options.setDefault("default_user", DEFAULT_WEB_APP_USER);
-	if (!options.has("default_group")) {
-		options.set("default_group",
-			inferDefaultGroup(options.get("default_user")));
-	}
-	options.setDefault("integration_mode", DEFAULT_INTEGRATION_MODE);
-	if (options.get("integration_mode") == "standalone") {
-		options.setDefault("standalone_engine", "builtin");
-	}
-	options.setDefault("server_software", SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
-	options.setDefaultStrSet("cleanup_pidfiles", vector<string>());
-	options.setDefault("data_buffer_dir", getSystemTempDir());
-	options.setDefaultBool("delete_pid_file", true);
-}
-
-static void
-sanityCheckOptions() {
-	VariantMap &options = *agentsOptions;
-
-	if (!options.has("passenger_root")) {
-		fprintf(stderr, "ERROR: please set the --passenger-root argument.\n");
-		exit(1);
-	}
+#if !BOOST_OS_MACOS
+	wo->extraConfigToPassToSubAgents["oom_score"] = oldOomScore;
+#endif
 }
 
 static void
@@ -831,7 +823,7 @@ maybeSetsid() {
 	 * WatchdogLauncher.h already calls setsid() before exec()ing
 	 * the Watchdog, but Flying Passenger does not.
 	 */
-	if (agentsOptions->getBool("setsid", false)) {
+	if (watchdogConfig->get("setsid").asBool()) {
 		setsid();
 	}
 }
@@ -850,7 +842,7 @@ maybeDaemonize() {
 	pid_t pid;
 	int e;
 
-	if (agentsOptions->getBool("daemonize", false)) {
+	if (watchdogConfig->get("daemonize").asBool()) {
 		pid = fork();
 		if (pid == 0) {
 			setsid();
@@ -867,16 +859,17 @@ maybeDaemonize() {
 static void
 createPidFile() {
 	TRACE_POINT();
-	string pidFile = agentsOptions->get("pid_file", false);
-	if (!pidFile.empty()) {
+	Json::Value pidFile = watchdogConfig->get("watchdog_pid_file");
+	if (!pidFile.isNull()) {
 		char pidStr[32];
 
 		snprintf(pidStr, sizeof(pidStr), "%lld", (long long) getpid());
 
-		int fd = syscalls::open(pidFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		int fd = syscalls::open(pidFile.asCString(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd == -1) {
 			int e = errno;
-			throw FileSystemException("Cannot create PID file " + pidFile, e, pidFile);
+			throw FileSystemException("Cannot create PID file " + pidFile.asString(),
+				e, pidFile.asString());
 		}
 
 		UPDATE_TRACE_POINT();
@@ -886,26 +879,27 @@ createPidFile() {
 }
 
 static void
-openReportFile(const WorkingObjectsPtr &wo) {
+openStartupReportFile(const WorkingObjectsPtr &wo) {
 	TRACE_POINT();
-	string reportFile = agentsOptions->get("report_file", false);
-	if (!reportFile.empty()) {
-		int fd = syscalls::open(reportFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	Json::Value path = watchdogConfig->get("startup_report_file");
+	if (!path.isNull()) {
+		int fd = syscalls::open(path.asCString(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
 		if (fd == -1) {
 			int e = errno;
-			throw FileSystemException("Cannot open report file " + reportFile, e, reportFile);
+			throw FileSystemException("Cannot open report file " + path.asString(),
+				e, path.asString());
 		}
 
-		P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, "WorkingObjects: reportFile");
-		wo->reportFile = fd;
+		P_LOG_FILE_DESCRIPTOR_OPEN4(fd, __FILE__, __LINE__, "WorkingObjects: startupReportFile");
+		wo->startupReportFile = fd;
 	}
 }
 
 static void
 chdirToTmpDir() {
-	vector<string> pidfiles = agentsOptions->getStrSet("cleanup_pidfiles", false);
-	if (pidfiles.size() > 0) {
-		string str = pidfiles.front();
+	const Json::Value pidfiles = watchdogConfig->get("pidfiles_to_delete_on_exit");
+	if (!pidfiles.empty()) {
+		string str = pidfiles[0].asString();
 		string dir = str.substr(0,str.find_last_of('/'));
 		if (dir != "" && chdir(dir.c_str()) == -1) {
 			throw RuntimeException("Cannot change working directory to " + dir);
@@ -916,8 +910,7 @@ chdirToTmpDir() {
 static void
 lowerPrivilege() {
 	TRACE_POINT();
-	const VariantMap &options = *agentsOptions;
-	string userName = options.get("user", false);
+	string userName = watchdogConfig->get("user").asString();
 
 	if (geteuid() == 0 && !userName.empty()) {
 		struct passwd *pwUser = getpwnam(userName.c_str());
@@ -965,9 +958,8 @@ lowerPrivilege() {
 
 static void
 lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
-	VariantMap &options = *agentsOptions;
-	const string &defaultUser = options.get("default_user");
-	const string &defaultGroup = options.get("default_group");
+	const string defaultUser = watchdogConfig->get("default_user").asString();
+	const string defaultGroup = watchdogConfig->get("default_group").asString();
 	struct passwd *userEntry;
 
 	userEntry = getpwnam(defaultUser.c_str());
@@ -989,39 +981,32 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	uid_t uidBeforeLoweringPrivilege)
 {
 	TRACE_POINT();
-	VariantMap &options = *agentsOptions;
-	vector<string> strset;
-
-	options.set("instance_registry_dir",
-		absolutizePath(options.get("instance_registry_dir")));
-	if (options.get("server_software").find(SERVER_TOKEN_NAME) == string::npos
-	 && options.get("server_software").find(FLYING_PASSENGER_NAME) == string::npos)
-	{
-		options.set("server_software", options.get("server_software") +
-			(" " SERVER_TOKEN_NAME "/" PASSENGER_VERSION));
-	}
-
-	wo->resourceLocator = boost::make_shared<ResourceLocator>(agentsOptions->get("passenger_root"));
+	Json::Value doc;
+	Json::Value::iterator it, end;
 
 	UPDATE_TRACE_POINT();
 	lookupDefaultUidGid(wo->defaultUid, wo->defaultGid);
-	wo->cleanupPidfiles = options.getStrSet("cleanup_pidfiles", false);
+
+	doc = watchdogConfig->get("pidfiles_to_delete_on_exit");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->cleanupPidfiles.push_back(it->asString());
+	}
 
 	UPDATE_TRACE_POINT();
 	InstanceDirectory::CreationOptions instanceOptions;
-	instanceOptions.userSwitching = options.getBool("user_switching");
+	instanceOptions.userSwitching = watchdogConfig->get("user_switching").asBool();
 	instanceOptions.originalUid = uidBeforeLoweringPrivilege;
 	instanceOptions.defaultUid = wo->defaultUid;
 	instanceOptions.defaultGid = wo->defaultGid;
 	instanceOptions.properties["name"] = wo->randomGenerator.generateAsciiString(8);
-	instanceOptions.properties["integration_mode"] = options.get("integration_mode");
-	instanceOptions.properties["server_software"] = options.get("server_software");
-	if (options.get("integration_mode") == "standalone") {
-		instanceOptions.properties["standalone_engine"] = options.get("standalone_engine");
+	instanceOptions.properties["integration_mode"] = watchdogConfig->get("integration_mode").asString();
+	instanceOptions.properties["server_software"] = watchdogConfig->get("server_software").asString();
+	if (watchdogConfig->get("integration_mode").asString() == "standalone") {
+		instanceOptions.properties["standalone_engine"] = watchdogConfig->get("standalone_engine").asString();
 	}
 	wo->instanceDir = boost::make_shared<InstanceDirectory>(instanceOptions,
-		options.get("instance_registry_dir"));
-	options.set("instance_dir", wo->instanceDir->getPath());
+		watchdogConfig->get("instance_registry_dir").asString());
+	wo->extraConfigToPassToSubAgents["instance_dir"] = wo->instanceDir->getPath();
 	instanceDirToucher = boost::make_shared<InstanceDirToucher>(wo);
 
 	UPDATE_TRACE_POINT();
@@ -1039,7 +1024,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	UPDATE_TRACE_POINT();
 	string readOnlyAdminPassword = wo->randomGenerator.generateAsciiString(24);
 	string fullAdminPassword = wo->randomGenerator.generateAsciiString(24);
-	if (geteuid() == 0 && !options.getBool("user_switching")) {
+	if (geteuid() == 0 && !watchdogConfig->get("user_switching").asBool()) {
 		createFile(wo->instanceDir->getPath() + "/read_only_admin_password.txt",
 			readOnlyAdminPassword, S_IRUSR, wo->defaultUid, wo->defaultGid);
 		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
@@ -1050,31 +1035,38 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 		createFile(wo->instanceDir->getPath() + "/full_admin_password.txt",
 			fullAdminPassword, S_IRUSR | S_IWUSR);
 	}
-	options.setDefault("core_pid_file", wo->instanceDir->getPath() + "/core.pid");
-	options.set("watchdog_fd_passing_password", wo->randomGenerator.generateAsciiString(24));
+
+	if (watchdogConfig->get("core_pid_file").isNull()) {
+		wo->corePidFile = wo->instanceDir->getPath() + "/core.pid";
+	} else {
+		wo->corePidFile = watchdogConfig->get("core_pid_file").asString();
+	}
+	wo->fdPassingPassword = wo->randomGenerator.generateAsciiString(24);
 
 	UPDATE_TRACE_POINT();
-	strset = options.getStrSet("core_addresses", false);
-	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/core");
-	options.setStrSet("core_addresses", strset);
-	options.setDefault("core_password",
-		wo->randomGenerator.generateAsciiString(24));
+	wo->controllerAddresses.append("unix:" + wo->instanceDir->getPath() + "/agents.s/core");
+	doc = watchdogConfig->get("controller_addresses");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->controllerAddresses.append(*it);
+	}
 
-	strset = options.getStrSet("core_api_addresses", false);
-	strset.insert(strset.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/core_api");
-	options.setStrSet("core_api_addresses", strset);
+	wo->coreApiServerAddresses.append("unix:" + wo->instanceDir->getPath() + "/agents.s/core_api");
+	doc = watchdogConfig->get("core_api_server_addresses");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->coreApiServerAddresses.append(*it);
+	}
 
 	UPDATE_TRACE_POINT();
-	strset = options.getStrSet("core_authorizations", false);
-	strset.insert(strset.begin(),
+	wo->coreApiServerAuthorizations.append(
 		"readonly:ro_admin:" + wo->instanceDir->getPath() +
 		"/read_only_admin_password.txt");
-	strset.insert(strset.begin(),
+	wo->coreApiServerAuthorizations.append(
 		"full:admin:" + wo->instanceDir->getPath() +
 		"/full_admin_password.txt");
-	options.setStrSet("core_authorizations", strset);
+	doc = watchdogConfig->get("core_api_server_authorizations");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->coreApiServerAuthorizations.append(*it);
+	}
 }
 
 static void
@@ -1095,57 +1087,65 @@ makeFileWorldReadableAndWritable(const string &path) {
 static void
 initializeApiServer(const WorkingObjectsPtr &wo) {
 	TRACE_POINT();
-	VariantMap &options = *agentsOptions;
-	vector<string> authorizations = options.getStrSet("watchdog_authorizations", false);
-	vector<string> apiAddresses = options.getStrSet("watchdog_api_addresses", false);
+	Json::Value doc;
+	Json::Value::iterator it;
 	string description;
 
 	UPDATE_TRACE_POINT();
-	authorizations.insert(authorizations.begin(),
+	wo->watchdogApiServerAuthorizations.append(
 		"readonly:ro_admin:" + wo->instanceDir->getPath() +
 		"/read_only_admin_password.txt");
-	authorizations.insert(authorizations.begin(),
+	wo->watchdogApiServerAuthorizations.append(
 		"full:admin:" + wo->instanceDir->getPath() +
 		"/full_admin_password.txt");
-	options.setStrSet("watchdog_authorizations", authorizations);
-
-	foreach (description, authorizations) {
-		try {
-			wo->apiAccountDatabase.add(description);
-		} catch (const ArgumentException &e) {
-			throw std::runtime_error(e.what());
-		}
+	doc = watchdogConfig->get("watchdog_api_server_authorizations");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->watchdogApiServerAuthorizations.append(*it);
 	}
 
 	UPDATE_TRACE_POINT();
-	apiAddresses.insert(apiAddresses.begin(),
-		"unix:" + wo->instanceDir->getPath() + "/agents.s/watchdog_api");
-	options.setStrSet("watchdog_api_addresses", apiAddresses);
+	wo->watchdogApiServerAddresses.append(
+		"unix:" + wo->instanceDir->getPath() +
+		"/agents.s/watchdog_api");
+	doc = watchdogConfig->get("watchdog_api_server_addresses");
+	for (it = doc.begin(); it != doc.end(); it++) {
+		wo->watchdogApiServerAddresses.append(*it);
+	}
 
 	UPDATE_TRACE_POINT();
-	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
-		P_DEBUG("API server will listen on " << apiAddresses[i]);
-		wo->apiServerFds[i] = createServer(apiAddresses[i], 0, true,
+	for (unsigned int i = 0; i < wo->watchdogApiServerAddresses.size(); i++) {
+		string address = wo->watchdogApiServerAddresses[i].asString();
+		P_DEBUG("API server will listen on " << address);
+		wo->apiServerFds[i] = createServer(address, 0, true,
 			__FILE__, __LINE__);
-		if (getSocketAddressType(apiAddresses[i]) == SAT_UNIX) {
-			makeFileWorldReadableAndWritable(parseUnixSocketAddress(apiAddresses[i]));
+		if (getSocketAddressType(address) == SAT_UNIX) {
+			makeFileWorldReadableAndWritable(parseUnixSocketAddress(address));
 		}
 	}
 
 	UPDATE_TRACE_POINT();
+	Json::Value contextConfig = watchdogConfig->inspectEffectiveValues();
 	wo->bgloop = new BackgroundEventLoop(true, true);
-	wo->serverKitContext = new ServerKit::Context(wo->bgloop->safe,
-		wo->bgloop->libuv_loop);
-	wo->serverKitContext->defaultFileBufferedChannelConfig.bufferDir =
-		absolutizePath(options.get("data_buffer_dir"));
+	wo->serverKitContext = new ServerKit::Context(
+		watchdogSchema->apiServerKit.schema,
+		contextConfig,
+		watchdogSchema->apiServerKit.translator);
+	wo->serverKitContext->libev = wo->bgloop->safe;
+	wo->serverKitContext->libuv = wo->bgloop->libuv_loop;
+	wo->serverKitContext->initialize();
 
 	UPDATE_TRACE_POINT();
-	wo->apiServer = new ApiServer(wo->serverKitContext, wo->apiServerSchema);
-	wo->apiServer->apiAccountDatabase = &wo->apiAccountDatabase;
+	Json::Value apiServerConfig = watchdogConfig->inspectEffectiveValues();
+	apiServerConfig["fd_passing_password"] = wo->fdPassingPassword;
+	apiServerConfig["authorizations"] = wo->watchdogApiServerAuthorizations;
+	wo->apiServer = new ApiServer::ApiServer(
+		wo->serverKitContext,
+		watchdogSchema->apiServer.schema,
+		apiServerConfig,
+		watchdogSchema->apiServer.translator);
 	wo->apiServer->exitEvent = &wo->exitEvent;
-	wo->apiServer->fdPassingPassword = options.get("watchdog_fd_passing_password");
 	wo->apiServer->initialize();
-	for (unsigned int i = 0; i < apiAddresses.size(); i++) {
+	for (unsigned int i = 0; i < wo->watchdogApiServerAddresses.size(); i++) {
 		wo->apiServer->listen(wo->apiServerFds[i]);
 	}
 }
@@ -1199,34 +1199,27 @@ beginWatchingAgents(const WorkingObjectsPtr &wo, vector<AgentWatcherPtr> &watche
 }
 
 static void
-reportAgentsInformation(const WorkingObjectsPtr &wo, const vector<AgentWatcherPtr> &watchers) {
+reportStartupResult(const WorkingObjectsPtr &wo, const vector<AgentWatcherPtr> &watchers) {
 	TRACE_POINT();
-	VariantMap report;
+	Json::Value report;
 
-	report.set("instance_dir", wo->instanceDir->getPath());
+	report["instance_dir"] = wo->instanceDir->getPath();
 
 	foreach (AgentWatcherPtr watcher, watchers) {
-		watcher->reportAgentsInformation(report);
+		watcher->reportAgentStartupResult(report);
 	}
 
 	if (feedbackFdAvailable()) {
-		report.writeToFd(FEEDBACK_FD, "Agents information");
+		writeArrayMessage(FEEDBACK_FD, "Agents information", NULL);
+		writeScalarMessage(FEEDBACK_FD, report.toStyledString());
 	}
 
-	if (wo->reportFile != -1) {
-		Json::Value doc;
-		VariantMap::ConstIterator it;
-		string str;
-
-		for (it = report.begin(); it != report.end(); it++) {
-			doc[it->first] = it->second;
-		}
-		str = doc.toStyledString();
-
-		writeExact(wo->reportFile, str.data(), str.size());
-		close(wo->reportFile);
-		P_LOG_FILE_DESCRIPTOR_CLOSE(wo->reportFile);
-		wo->reportFile = -1;
+	if (wo->startupReportFile != -1) {
+		string str = report.toStyledString();
+		writeExact(wo->startupReportFile, str.data(), str.size());
+		close(wo->startupReportFile);
+		P_LOG_FILE_DESCRIPTOR_CLOSE(wo->startupReportFile);
+		wo->startupReportFile = -1;
 	}
 }
 
@@ -1262,10 +1255,7 @@ watchdogMain(int argc, char *argv[]) {
 	WorkingObjectsPtr wo;
 
 	initializeBareEssentials(argc, argv, wo);
-	setAgentsOptionsDefaults();
-	sanityCheckOptions();
 	P_NOTICE("Starting " SHORT_PROGRAM_NAME " watchdog...");
-	P_DEBUG("Watchdog options: " << agentsOptions->inspect());
 	InstanceDirToucherPtr instanceDirToucher;
 	vector<AgentWatcherPtr> watchers;
 	uid_t uidBeforeLoweringPrivilege = geteuid();
@@ -1275,7 +1265,7 @@ watchdogMain(int argc, char *argv[]) {
 		maybeSetsid();
 		maybeDaemonize();
 		createPidFile();
-		openReportFile(wo);
+		openStartupReportFile(wo);
 		chdirToTmpDir();
 		lowerPrivilege();
 		initializeWorkingObjects(wo, instanceDirToucher, uidBeforeLoweringPrivilege);
@@ -1309,7 +1299,7 @@ watchdogMain(int argc, char *argv[]) {
 		TRACE_POINT();
 		startAgents(wo, watchers);
 		beginWatchingAgents(wo, watchers);
-		reportAgentsInformation(wo, watchers);
+		reportStartupResult(wo, watchers);
 		finalizeInstanceDir(wo);
 		P_INFO("All " PROGRAM_NAME " agents started!");
 		UPDATE_TRACE_POINT();

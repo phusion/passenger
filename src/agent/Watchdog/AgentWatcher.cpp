@@ -246,7 +246,7 @@ public:
 	 *
 	 * @pre start() has been called and succeeded.
 	 */
-	virtual void reportAgentsInformation(VariantMap &report) = 0;
+	virtual void reportAgentStartupResult(Json::Value &report) = 0;
 
 	/** Returns the name of the agent that this class is watching. */
 	virtual const char *name() const = 0;

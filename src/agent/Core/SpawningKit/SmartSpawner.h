@@ -271,7 +271,8 @@ private:
 			}
 
 			state->stdoutAndErrCapturer = boost::make_shared<BackgroundIOCapturer>(
-				state->stdoutAndErrFd, pid);
+				state->stdoutAndErrFd, pid, session.config->appGroupName,
+				session.config->logFile);
 			state->stdoutAndErrCapturer->start();
 		} catch (const boost::system::system_error &e) {
 			throw SystemException(e.what(), e.code().value());
@@ -434,7 +435,8 @@ private:
 			}
 
 			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(
-				stdoutAndErrChannel.first, "output", pid);
+				stdoutAndErrChannel.first, "output", config.appGroupName,
+				config.logFile, pid);
 			watcher->initialize();
 			watcher->start();
 

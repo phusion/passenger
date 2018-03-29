@@ -44,6 +44,20 @@ namespace LoggingKit {
 using namespace std;
 
 
+/*
+ * BEGIN ConfigKit schema: Passenger::LoggingKit::Schema
+ * (do not edit: following text is automatically generated
+ * by 'rake configkit_schemas_inline_comments')
+ *
+ *   app_output_log_level         string    -   default("notice")
+ *   buffer_logs                  boolean   -   default(false)
+ *   file_descriptor_log_target   any       -   -
+ *   level                        string    -   default("notice")
+ *   redirect_stderr              boolean   -   default(true)
+ *   target                       any       -   default({"stderr": true})
+ *
+ * END
+ */
 class Schema: public ConfigKit::Schema {
 private:
 	static Json::Value createStderrTarget();
@@ -69,6 +83,7 @@ struct ConfigRealization {
 	TargetType targetType;
 	TargetType fileDescriptorLogTargetType;
 	int targetFd;
+	bool saveLog;
 	int fileDescriptorLogTargetFd;
 	FdClosePolicy targetFdClosePolicy;
 	FdClosePolicy fileDescriptorLogTargetFdClosePolicy;

@@ -146,7 +146,7 @@ namespace tut {
 			if (e.getStdoutAndErrData().find("hello world\n") == string::npos) {
 				// This might be caused by the machine being too slow.
 				// Try again with a higher timeout.
-				options.startTimeout = 1000;
+				options.startTimeout = 10000;
 
 				SmartSpawner spawner2(&context, preloaderCommand, options);
 				try {

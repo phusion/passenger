@@ -59,8 +59,6 @@ Controller::commitConfigChange(ControllerConfigChangeRequest &req)
 	ParentClass::commitConfigChange(req.forParent);
 	mainConfig.swap(*req.mainConfig);
 	requestConfig.swap(req.requestConfig);
-	getContext()->defaultFileBufferedChannelConfig.bufferDir =
-		config["data_buffer_dir"].asString();
 }
 
 

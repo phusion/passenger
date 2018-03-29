@@ -38,13 +38,15 @@
 #include <cstring>
 #include <cctype>
 #include <stdlib.h>
+#include <sys/wait.h>
+
+#include <jsoncpp/json.h>
 
 #include <LoggingKit/LoggingKit.h>
 #include <ProcessManagement/Spawn.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/VariantMap.h>
 
 namespace Passenger {
 
@@ -58,31 +60,35 @@ struct HookScriptOptions {
 	string spec;
 
 	// Optional.
-	const VariantMap *agentsOptions;
+	Json::Value agentConfig;
 	vector< pair<string, string> > environment;
-
-	HookScriptOptions()
-		: agentsOptions(NULL)
-		{ }
 };
 
 namespace {
 	inline vector< pair<string, string> >
-	agentsOptionsToEnvVars(const VariantMap &agentsOptions) {
+	agentConfigToEnvVars(const Json::Value &config) {
 		vector< pair<string, string> > result;
-		VariantMap::ConstIterator it, end = agentsOptions.end();
+		Json::Value::const_iterator it, end = config.end();
 
-		result.reserve(agentsOptions.size());
-		for (it = agentsOptions.begin(); it != end; it++) {
+		result.reserve(config.size());
+		for (it = config.begin(); it != end; it++) {
 			string key = "PASSENGER_";
-			const char *data = it->first.data();
-			const char *end = it->first.data() + it->first.size();
+			const char *end;
+			const char *data = it.memberName(&end);
 
 			while (data < end) {
 				key.append(1, toupper(*data));
 				data++;
 			}
-			result.push_back(make_pair(key, it->second));
+			switch (it->type()) {
+			case Json::nullValue:
+			case Json::stringValue:
+				result.push_back(make_pair(key, it->asString()));
+				break;
+			default:
+				result.push_back(make_pair(key, it->toStyledString()));
+				break;
+			}
 		}
 
 		return result;
@@ -100,9 +106,7 @@ namespace {
 	inline void
 	createHookScriptEnvironment(const HookScriptOptions &options, vector< pair<string, string> > &envvars) {
 		vector< pair<string, string> >::const_iterator it, end = options.environment.end();
-		if (options.agentsOptions) {
-			envvars = agentsOptionsToEnvVars(*options.agentsOptions);
-		}
+		envvars = agentConfigToEnvVars(options.agentConfig);
 		for (it = options.environment.begin(); it != end; it++) {
 			envvars.push_back(*it);
 		}

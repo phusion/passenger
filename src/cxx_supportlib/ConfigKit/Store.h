@@ -42,6 +42,7 @@
 #include <ConfigKit/Common.h>
 #include <ConfigKit/Schema.h>
 #include <ConfigKit/Utils.h>
+#include <ConfigKit/Translator.h>
 #include <LoggingKit/Assert.h>
 #include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
@@ -287,7 +288,6 @@ public:
 		}
 	}
 
-	template<typename Translator>
 	Store(const Schema &_schema, const Json::Value &initialValues,
 		const Translator &translator)
 		: schema(&_schema),
@@ -306,10 +306,21 @@ public:
 		: schema(other.schema),
 		  updatedOnce(false)
 	{
-		initialize();
-		if (update(other.inspectUserValues(), errors)) {
-			update(updates, errors);
+		Json::Value result(Json::objectValue);
+		StringKeyTable<Entry>::ConstIterator it(other.entries);
+
+		while (*it != NULL) {
+			const Entry &entry = it.getValue();
+			if (updates.isMember(it.getKey())) {
+				result[it.getKey()] = updates[it.getKey()];
+			} else if (!entry.userValue.isNull()) {
+				result[it.getKey()] = entry.userValue;
+			}
+			it.next();
 		}
+
+		initialize();
+		update(result, errors);
 	}
 
 	const Schema &getSchema() const {
@@ -374,14 +385,17 @@ public:
 		StringKeyTable<Entry>::Iterator p_it(storeWithPreviewData.entries);
 		StringKeyTable<Entry>::ConstIterator it(entries);
 		vector<Error> tmpErrors;
-		Error error;
 
 		while (*p_it != NULL) {
 			const HashedStaticString &key = p_it.getKey();
 			Entry &entry = p_it.getValue();
 
 			if (isWritable(entry) && updates.isMember(key)) {
-				entry.userValue = updates[key];
+				bool ok = entry.schemaEntry->tryTypecastValue(
+					updates[key], entry.userValue);
+				if (!ok) {
+					entry.userValue = updates[key];
+				}
 			}
 
 			p_it.next();
@@ -395,7 +409,11 @@ public:
 			entry.schemaEntry->inspect(subdoc);
 
 			if (isWritable(entry) && updates.isMember(key)) {
-				subdoc["user_value"] = updates[key];
+				bool ok = entry.schemaEntry->tryTypecastValue(updates[key],
+					subdoc["user_value"]);
+				if (!ok) {
+					subdoc["user_value"] = updates[key];
+				}
 			} else {
 				subdoc["user_value"] = entry.userValue;
 			}
@@ -408,9 +426,7 @@ public:
 				subdoc["effective_value"] =
 					getEffectiveValue(subdoc["user_value"],
 						subdoc["default_value"]);
-			if (!schema->validateValue(it.getKey(), effectiveValue, error)) {
-				tmpErrors.push_back(error);
-			}
+			schema->validateValue(it.getKey(), effectiveValue, tmpErrors);
 
 			result[it.getKey()] = subdoc;
 			it.next();
@@ -469,7 +485,6 @@ public:
 		}
 	}
 
-	template<typename Translator>
 	Store extractDataForSubSchema(const Schema &subSchema,
 		const Translator &translator) const
 	{
@@ -570,7 +585,6 @@ public:
 };
 
 
-template<typename Translator>
 inline Json::Value
 Schema::getValueFromSubSchema(
 	const Store &store,
@@ -590,7 +604,6 @@ Schema::getValueFromSubSchema(
 	}
 }
 
-template<typename Translator>
 inline void
 Schema::validateSubSchema(const Store &store, vector<Error> &errors,
 	const Schema *subschema, const Translator *translator,
@@ -605,7 +618,6 @@ Schema::validateSubSchema(const Store &store, vector<Error> &errors,
 	}
 }
 
-template<typename Translator>
 inline Json::Value
 Schema::normalizeSubSchema(const Json::Value &effectiveValues,
 	const Schema *mainSchema, const Schema *subschema,

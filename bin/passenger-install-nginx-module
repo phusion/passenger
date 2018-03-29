@@ -306,7 +306,7 @@ private
     new_screen
     puts "<banner>Downloading Nginx...</banner>"
 
-    url = "http://www.nginx.org/download/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
+    url = "https://nginx.org/download/nginx-#{PREFERRED_NGINX_VERSION}.tar.gz"
     dirname = "nginx-#{PREFERRED_NGINX_VERSION}"
     tarball = "#{@working_dir}/nginx.tar.gz"
 

@@ -15,6 +15,7 @@ namespace tut {
 
 	struct ServerKit_ChannelTest: public ServerKit::Hooks {
 		BackgroundEventLoop bg;
+		ServerKit::Schema skSchema;
 		ServerKit::Context context;
 		Channel channel;
 		boost::mutex syncher;
@@ -26,9 +27,12 @@ namespace tut {
 
 		ServerKit_ChannelTest()
 			: bg(false, true),
-			  context(bg.safe, bg.libuv_loop),
+			  context(skSchema),
 			  channel(&context)
 		{
+			context.libev = bg.safe;
+			context.libuv = bg.libuv_loop;
+			context.initialize();
 			channel.dataCallback = dataCallback;
 			channel.consumedCallback = consumedCallback;
 			channel.hooks = this;

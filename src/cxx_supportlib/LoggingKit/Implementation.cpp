@@ -41,7 +41,8 @@
 #include <pthread.h>
 
 #include <boost/cstdint.hpp>
-#include <oxt/system_calls.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/foreach.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/detail/context.hpp>
 
@@ -53,6 +54,7 @@
 #include <LoggingKit/Config.h>
 #include <LoggingKit/Context.h>
 #include <ConfigKit/ConfigKit.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/SystemTime.h>
@@ -68,10 +70,9 @@ using namespace std;
 Context *context = NULL;
 AssertionFailureInfo lastAssertionFailure;
 
-
 void
-initialize(const Json::Value &initialConfig) {
-	context = new Context(initialConfig);
+initialize(const Json::Value &initialConfig, const ConfigKit::Translator &translator) {
+	context = new Context(initialConfig, translator);
 }
 
 void
@@ -308,11 +309,104 @@ _writeFileDescriptorLogEntry(const ConfigRealization *configRealization,
 	writeExactWithoutOXT(configRealization->fileDescriptorLogTargetFd, str, size);
 }
 
+void
+Context::saveNewLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen) {
+	boost::lock_guard<boost::mutex> l(syncher); //lock
+
+	unsigned long long timestamp = SystemTime::getUsec();
+
+	LogStore::Cell *c = logStore.lookupCell(groupName);
+	if (c == NULL) {
+		AppGroupLog appGroupLog;
+		appGroupLog.pidLog = TimestampedLogBuffer(LOG_MONITORING_MAX_LINES * 5);
+		c = logStore.insert(groupName, appGroupLog);
+	}
+	AppGroupLog &rec = c->value;
+
+	TimestampedLog ll;
+	ll.timestamp = timestamp;
+	ll.sourceId = string(sourceStr, sourceStrLen);
+	ll.lineText = string(message, messageLen);
+	rec.pidLog.push_back(ll);
+	//unlock
+}
+
+void
+Context::saveMonitoredFileLog(const HashedStaticString &groupName,
+	const char *sourceStr, unsigned int sourceStrLen,
+	const char *content, unsigned int contentLen)
+{
+	vector<StaticString> lines;
+	split(StaticString(content, contentLen), '\n', lines);
+
+	boost::lock_guard<boost::mutex> l(syncher); //lock
+
+	LogStore::Cell *c = logStore.lookupCell(groupName);
+	if (c == NULL) {
+		AppGroupLog appGroupLog;
+		appGroupLog.pidLog = TimestampedLogBuffer(LOG_MONITORING_MAX_LINES * 5);
+		c = logStore.insert(groupName, appGroupLog);
+	}
+	AppGroupLog &rec = c->value;
+
+	HashedStaticString source(sourceStr, sourceStrLen);
+	SimpleLogMap::Cell *c2 = rec.watchFileLog.lookupCell(source);
+	if (c2 == NULL) {
+		SimpleLogBuffer logBuffer(LOG_MONITORING_MAX_LINES);
+		c2 = rec.watchFileLog.insert(source, logBuffer);
+	}
+	c2->value.clear();
+	foreach (StaticString line, lines) {
+		c2->value.push_back(string(line.data(), line.size()));
+	}
+	//unlock
+}
+
+Json::Value
+Context::convertLog(){
+	boost::lock_guard<boost::mutex> l(syncher); //lock
+	Json::Value reply = Json::objectValue;
+
+	if (!logStore.empty()) {
+		Context::LogStore::ConstIterator appGroupIter(logStore);
+		while (*appGroupIter != NULL) {
+			reply[appGroupIter.getKey()] = Json::objectValue;
+
+			Json::Value &processLog = reply[appGroupIter.getKey()]["Application process log (combined)"];
+			foreach (TimestampedLog logLine, appGroupIter->value.pidLog) {
+				Json::Value logLineJson = Json::objectValue;
+				logLineJson["source_id"] = logLine.sourceId;
+				logLineJson["timestamp"] = (Json::UInt64) logLine.timestamp;
+				logLineJson["line"] = logLine.lineText;
+				processLog.append(logLineJson);
+			}
+
+			Context::SimpleLogMap::ConstIterator watchFileLogIter(appGroupIter->value.watchFileLog);
+			while (*watchFileLogIter != NULL) {
+				if (!reply[appGroupIter.getKey()].isMember(watchFileLogIter.getKey())){
+					reply[appGroupIter.getKey()][watchFileLogIter.getKey()] = Json::arrayValue;
+				}
+				foreach (string line, watchFileLogIter->value) {
+					reply[appGroupIter.getKey()][watchFileLogIter.getKey()].append(line);
+				}
+				watchFileLogIter.next();
+			}
+
+			appGroupIter.next();
+		}
+	}
+
+	return reply;
+	//unlock
+}
+
 static void
-realLogAppOutput(int targetFd, char *buf, unsigned int bufSize,
+realLogAppOutput(const HashedStaticString &groupName, int targetFd,
+    char *buf, unsigned int bufSize,
 	const char *pidStr, unsigned int pidStrLen,
 	const char *channelName, unsigned int channelNameLen,
-	const char *message, unsigned int messageLen)
+	const char *message, unsigned int messageLen, int appLogFile,
+	bool saveLog)
 {
 	char *pos = buf;
 	char *end = buf + bufSize;
@@ -324,12 +418,22 @@ realLogAppOutput(int targetFd, char *buf, unsigned int bufSize,
 	pos = appendData(pos, end, ": ");
 	pos = appendData(pos, end, message, messageLen);
 	pos = appendData(pos, end, "\n");
+
+	if (OXT_UNLIKELY(context != NULL && saveLog)) {
+		context->saveNewLog(groupName, pidStr, pidStrLen, message, messageLen);
+	}
+	if (appLogFile > -1) {
+		writeExactWithoutOXT(appLogFile, buf, pos - buf);
+	}
 	writeExactWithoutOXT(targetFd, buf, pos - buf);
 }
 
 void
-logAppOutput(pid_t pid, const StaticString &channelName, const char *message, unsigned int size) {
+logAppOutput(const HashedStaticString &groupName, pid_t pid, const StaticString &channelName,
+	const char *message, unsigned int size, const StaticString &appLogFile)
+{
 	int targetFd;
+	bool saveLog = false;
 
 	if (OXT_LIKELY(context != NULL)) {
 		const ConfigRealization *configRealization = context->getConfigRealization();
@@ -338,10 +442,19 @@ logAppOutput(pid_t pid, const StaticString &channelName, const char *message, un
 		}
 
 		targetFd = configRealization->targetFd;
+		saveLog = configRealization->saveLog;
 	} else {
 		targetFd = STDERR_FILENO;
 	}
 
+	int fd = -1;
+	if (!appLogFile.empty()) {
+		fd = open(appLogFile.data(), O_WRONLY | O_APPEND | O_CREAT, 0640);
+		if (fd == -1) {
+			int e = errno;
+			P_ERROR("opening file: " << appLogFile << " for logging " << groupName << " failed. Error: " << strerror(e));
+		}
+	}
 	char pidStr[sizeof("4294967295")];
 	unsigned int pidStrLen, totalLen;
 
@@ -356,19 +469,20 @@ logAppOutput(pid_t pid, const StaticString &channelName, const char *message, un
 	totalLen = (sizeof("App X Y: \n") - 2) + pidStrLen + channelName.size() + size;
 	if (totalLen < 1024) {
 		char buf[1024];
-		realLogAppOutput(targetFd,
+		realLogAppOutput(groupName, targetFd,
 			buf, sizeof(buf),
 			pidStr, pidStrLen,
 			channelName.data(), channelName.size(),
-			message, size);
+			message, size, fd, saveLog);
 	} else {
 		DynamicBuffer buf(totalLen);
-		realLogAppOutput(targetFd,
+		realLogAppOutput(groupName, targetFd,
 			buf.data, totalLen,
 			pidStr, pidStrLen,
 			channelName.data(), channelName.size(),
-			message, size);
+			message, size, fd, saveLog);
 	}
+	if(fd > -1){close(fd);}
 }
 
 
@@ -403,8 +517,9 @@ normalizeConfig(const Json::Value &effectiveValues) {
 }
 
 
-Context::Context(const Json::Value &initialConfig)
-	: config(schema, initialConfig),
+Context::Context(const Json::Value &initialConfig,
+	const ConfigKit::Translator &translator)
+	: config(schema, initialConfig, translator),
 	  gcThread(NULL),
 	  shuttingDown(false)
 {
@@ -466,6 +581,12 @@ Context::commitConfigChange(LoggingKit::ConfigChangeRequest &req) BOOST_NOEXCEPT
 	req.configRlz = NULL; // oldConfigRlz will be garbage collected by apply()
 
 	newConfigRlz->finalize();
+}
+
+Json::Value
+Context::inspectConfig() const {
+	boost::lock_guard<boost::mutex> l(syncher);
+	return config.inspect();
 }
 
 pair<ConfigRealization*,MonotonicTimeUsec>
@@ -576,18 +697,24 @@ Schema::validateTarget(const string &key, const ConfigKit::Store &store,
 		return;
 	}
 
+	// Allowed formats:
+	// "/path-to-file"
+	// { "stderr": true }
+	// { "path": "/path" }
+	// { "path": "/path", "fd": 123 }
+	// { "path": "/path", "stderr": true }
+
 	if (value.isObject()) {
 		if (value.isMember("stderr")) {
-			if (value.size() > 1) {
-				errors.push_back(Error("When " + keyQuote
-					+ " is an object containing the 'stderr' key,"
-					" it may not contain any other keys"));
-			} else if (!value["stderr"].asBool()) {
+			if (!value["stderr"].isBool() || !value["stderr"].asBool()) {
 				errors.push_back(Error("When " + keyQuote
 					+ " is an object containing the 'stderr' key,"
 					" it must have the 'true' value"));
+				return;
 			}
-		} else if (value.isMember("path")) {
+		}
+
+		if (value.isMember("path")) {
 			if (!value["path"].isString()) {
 				errors.push_back(Error("When " + keyQuote
 					+ " is an object containing the 'path' key,"
@@ -603,6 +730,21 @@ Schema::validateTarget(const string &key, const ConfigKit::Store &store,
 						+ " is an object containing the 'fd' key,"
 						" it must be 0 or greater"));
 				}
+			}
+			if (value.isMember("fd") && value.isMember("stderr")) {
+				errors.push_back(Error(keyQuote
+					+ " may contain either the 'fd' or the"
+					" 'stderr' key, but not both"));
+			}
+		} else if (value.isMember("stderr")) {
+			if (value.size() > 1) {
+				errors.push_back(Error("When " + keyQuote
+					+ " is an object containing the 'stderr' key,"
+					" it may not contain any other keys"));
+			} else if (!value["stderr"].asBool()) {
+				errors.push_back(Error("When " + keyQuote
+					+ " is an object containing the 'stderr' key,"
+					" it must have the 'true' value"));
 			}
 		} else {
 			errors.push_back(Error("When " + keyQuote
@@ -632,6 +774,7 @@ Schema::Schema() {
 		.setInspectFilter(filterTargetFd);
 	add("redirect_stderr", BOOL_TYPE, OPTIONAL, true);
 	add("app_output_log_level", STRING_TYPE, OPTIONAL, DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME);
+	add("buffer_logs", BOOL_TYPE, OPTIONAL, false);
 
 	addValidator(boost::bind(validateLogLevel, "level",
 		boost::placeholders::_1, boost::placeholders::_2));
@@ -651,6 +794,7 @@ Schema::Schema() {
 ConfigRealization::ConfigRealization(const ConfigKit::Store &store)
 	: level(parseLevel(store["level"].asString())),
 	  appOutputLogLevel(parseLevel(store["app_output_log_level"].asString())),
+	  saveLog(store["buffer_logs"].asBool()),
 	  finalized(false)
 {
 	if (store["target"].isMember("stderr")) {
@@ -660,15 +804,20 @@ ConfigRealization::ConfigRealization(const ConfigKit::Store &store)
 	} else if (store["target"]["fd"].isNull()) {
 		string path = store["target"]["path"].asString();
 		targetType = FILE_TARGET;
-		targetFd = syscalls::open(path.c_str(),
-			O_WRONLY | O_APPEND | O_CREAT, 0644);
-		if (targetFd == -1) {
-			int e = errno;
-			throw FileSystemException(
-				"Cannot open " + path + " for writing",
-				e, path);
+		if (store["target"]["stderr"].asBool()) {
+			targetFd = STDERR_FILENO;
+			targetFdClosePolicy = NEVER_CLOSE;
+		} else {
+			targetFd = syscalls::open(path.c_str(),
+				O_WRONLY | O_APPEND | O_CREAT, 0644);
+			if (targetFd == -1) {
+				int e = errno;
+				throw FileSystemException(
+					"Cannot open " + path + " for writing",
+					e, path);
+			}
+			targetFdClosePolicy = ALWAYS_CLOSE;
 		}
-		targetFdClosePolicy = ALWAYS_CLOSE;
 	} else {
 		targetType = FILE_TARGET;
 		targetFd = store["target"]["fd"].asInt();
@@ -689,15 +838,20 @@ ConfigRealization::ConfigRealization(const ConfigKit::Store &store)
 	} else if (store["file_descriptor_log_target"]["fd"].isNull()) {
 		string path = store["file_descriptor_log_target"]["path"].asString();
 		fileDescriptorLogTargetType = FILE_TARGET;
-		fileDescriptorLogTargetFd = syscalls::open(path.c_str(),
-			O_WRONLY | O_APPEND | O_CREAT, 0644);
-		if (fileDescriptorLogTargetFd == -1) {
-			int e = errno;
-			throw FileSystemException(
-				"Cannot open " + path + " for writing",
-				e, path);
+		if (store["file_descriptor_log_target"]["stderr"].asBool()) {
+			fileDescriptorLogTargetFd = STDERR_FILENO;
+			fileDescriptorLogTargetFdClosePolicy = NEVER_CLOSE;
+		} else {
+			fileDescriptorLogTargetFd = syscalls::open(path.c_str(),
+				O_WRONLY | O_APPEND | O_CREAT, 0644);
+			if (fileDescriptorLogTargetFd == -1) {
+				int e = errno;
+				throw FileSystemException(
+					"Cannot open " + path + " for writing",
+					e, path);
+			}
+			fileDescriptorLogTargetFdClosePolicy = ALWAYS_CLOSE;
 		}
-		fileDescriptorLogTargetFdClosePolicy = ALWAYS_CLOSE;
 	} else {
 		fileDescriptorLogTargetType = FILE_TARGET;
 		fileDescriptorLogTargetFd = store["file_descriptor_log_target"]["fd"].asInt();

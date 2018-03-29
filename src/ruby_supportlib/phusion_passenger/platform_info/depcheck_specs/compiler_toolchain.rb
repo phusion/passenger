@@ -3,7 +3,7 @@ define 'cc' do
   website "http://gcc.gnu.org/"
   define_checker do
     PhusionPassenger.require_passenger_lib 'platform_info/compiler'
-    check_for_command(PlatformInfo.cc, false)
+    PlatformInfo.cc_block_support_ok? && check_for_command(PlatformInfo.cc, false)
   end
 
   on :debian do
@@ -20,6 +20,7 @@ define 'cc' do
   end
   on :macosx do
     install_osx_command_line_tools
+    append_install_instructions("   You must use an Apple compiler, with BLOCKS support.") unless PlatformInfo.cc_block_support_ok?
   end
 end
 
@@ -28,7 +29,7 @@ define 'c++' do
   website "http://gcc.gnu.org/"
   define_checker do
     PhusionPassenger.require_passenger_lib 'platform_info/compiler'
-    check_for_command(PlatformInfo.cxx, false)
+    PlatformInfo.cxx_block_support_ok? && check_for_command(PlatformInfo.cxx, false)
   end
 
   on :debian do
@@ -45,6 +46,7 @@ define 'c++' do
   end
   on :macosx do
     install_osx_command_line_tools
+    append_install_instructions("   You must use an Apple compiler, with BLOCKS support.") unless PlatformInfo.cxx_block_support_ok?
   end
 end
 

@@ -38,6 +38,7 @@
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Core/SpawningKit/Context.h>
+#include <FileTools/PathManip.h>
 
 namespace Passenger {
 namespace SpawningKit {

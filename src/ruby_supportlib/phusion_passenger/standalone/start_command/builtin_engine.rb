@@ -104,7 +104,7 @@ module PhusionPassenger
           command << " --no-delete-pid-file"
           command << " --cleanup-pidfile #{Shellwords.escape @working_dir}/temp_dir_toucher.pid"
           command << " --report-file #{Shellwords.escape @working_dir}/report.json"
-          command << " --ctl prestart_urls=#{Shellwords.escape prestart_urls_base64}"
+          command << " --ctl prestart_urls=#{Shellwords.escape prestart_urls_json}"
           add_param(command, :user, "--user")
           add_param(command, :log_file, "--log-file")
           add_param(command, :pid_file, "--pid-file")
@@ -172,16 +172,13 @@ module PhusionPassenger
           add_flag_param(command, :sticky_sessions, "--sticky-sessions")
           add_param(command, :vary_turbocache_by_cookie, "--vary-turbocache-by-cookie")
           add_param(command, :sticky_sessions_cookie_name, "--sticky-sessions-cookie-name")
-          add_param(command, :union_station_gateway_address, "--union-station-gateway-address")
-          add_param(command, :union_station_gateway_port, "--union-station-gateway-port")
-          add_param(command, :union_station_key, "--union-station-key")
           add_param(command, :ruby, "--ruby")
           add_param(command, :python, "--python")
           add_param(command, :nodejs, "--nodejs")
           add_param(command, :meteor_app_settings, "--meteor-app-settings")
           add_param(command, :core_file_descriptor_ulimit, "--core-file-descriptor-ulimit")
           add_param(command, :app_file_descriptor_ulimit, "--app-file-descriptor-ulimit")
-          add_param(command, :disable_security_update_check, "--disable-security-update-check")
+          add_flag_param(command, :disable_security_update_check, "--disable-security-update-check")
           add_param(command, :security_update_check_proxy, "--security-update-check-proxy")
 
           command << " #{Shellwords.escape(@apps[0][:root])}"
@@ -207,8 +204,8 @@ module PhusionPassenger
           end
         end
 
-        def prestart_urls_base64
-          Utils.base64(listen_url(@apps[0]))
+        def prestart_urls_json
+          PhusionPassenger::Utils::JSON.generate([listen_url(@apps[0])])
         end
 
         def add_param(command, option_name, param_name)

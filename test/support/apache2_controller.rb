@@ -99,7 +99,13 @@ class Apache2Controller
     write_config_file
     FileUtils.cp("#{STUB_DIR}/mime.types", @server_root)
 
-    if !system(PlatformInfo.httpd, "-f", "#{@server_root}/httpd.conf", "-k", "start")
+    command = [PlatformInfo.httpd, "-f", "#{@server_root}/httpd.conf", "-k", "start"]
+    if boolean_option('VALGRIND')
+      command = ['valgrind', '--dsymutil=yes', '--vgdb=yes',
+        '--vgdb-error=1', '--trace-children=no'] + command
+    end
+
+    if !system(*command)
       raise "Could not start an Apache server."
     end
 
@@ -254,5 +260,14 @@ private
 
   def we_are_root?
     return Process.uid == 0
+  end
+
+  def boolean_option(name, default_value = false)
+    value = ENV[name]
+    if value.nil? || value.empty?
+      default_value
+    else
+      value == "yes" || value == "on" || value == "true" || value == "1"
+    end
   end
 end

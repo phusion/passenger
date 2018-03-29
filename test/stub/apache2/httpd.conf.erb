@@ -1,11 +1,15 @@
 ServerRoot "<%= @server_root %>"
 Listen 127.0.0.1:<%= @port %>
+<% if (PhusionPassenger::PlatformInfo.os_name_simple == "freebsd" \
+		|| PhusionPassenger::PlatformInfo.os_name_simple == "macosx") \
+	&& PhusionPassenger::PlatformInfo.httpd_version >= '2.4'
+%>
+	Mutex default:/tmp
+<% end %>
 <% if PhusionPassenger::PlatformInfo.os_name_simple == "freebsd" %>
 	Mutex default:/tmp
 	AcceptFilter http none
 	AcceptFilter https none
-<% elsif PhusionPassenger::PlatformInfo.os_name_simple == "macosx" %>
-	Mutex default:/tmp
 <% end %>
 
 <% if @www_user %>

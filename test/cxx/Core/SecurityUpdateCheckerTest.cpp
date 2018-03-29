@@ -23,7 +23,6 @@ namespace tut {
 	}
 
 	class TestChecker: public SecurityUpdateChecker {
-
 	private:
 		CURLcode mockResponseCurlCode;
 		int mockResponseHttpCode;
@@ -35,17 +34,11 @@ namespace tut {
 		string lastSuccess;
 		string lastSuccessAdditional;
 
-		TestChecker(ResourceLocator locator, string proxy, string serverIntegration, string serverVersion, string instancePath)
-			: SecurityUpdateChecker(locator, proxy, serverIntegration, serverVersion, instancePath),
+		TestChecker(const SecurityUpdateChecker::Schema &schema, const Json::Value &initialConfig)
+			: SecurityUpdateChecker(schema, initialConfig),
 			  mockResponseCurlCode(CURLE_FAILED_INIT),
-			  mockResponseHttpCode(0),
-			  mockResponseData(""),
-			  mockNonce(""),
-			  lastSuccessAdditional("")
-			  { }
-
-		virtual ~TestChecker() {
-		}
+			  mockResponseHttpCode(0)
+			{ }
 
 		virtual void logUpdateFail(string error) {
 			lastError = error; // store for checking
@@ -75,9 +68,9 @@ namespace tut {
 		}
 
 		int testRaw(CURLcode responseCurlCode, int responseHttpCode, string responseData, string nonce) {
-			lastError = "";
-			lastSuccess = "";
-			lastSuccessAdditional = "";
+			lastError.clear();
+			lastSuccess.clear();
+			lastSuccessAdditional.clear();
 			mockResponseCurlCode = responseCurlCode;
 			mockResponseHttpCode = responseHttpCode;
 			mockResponseData = responseData;
@@ -93,6 +86,7 @@ namespace tut {
 	};
 
 	struct Core_SecurityUpdateCheckerTest {
+		SecurityUpdateChecker::Schema schema;
 		boost::shared_ptr<TestChecker> checker;
 
 		Core_SecurityUpdateCheckerTest() {
@@ -103,8 +97,12 @@ namespace tut {
 			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
-		void init(string proxyAddress) {
-			checker = boost::make_shared<TestChecker>(*resourceLocator, proxyAddress, "", "", "");
+		void init() {
+			Json::Value config;
+			config["server_identifier"] = "testing";
+			checker = boost::make_shared<TestChecker>(schema, config);
+			checker->resourceLocator = resourceLocator;
+			checker->initialize();
 		}
 	};
 
@@ -116,7 +114,7 @@ namespace tut {
 	TEST_METHOD(1) {
 		set_test_name("succeeds with good signature, nonce and data, for update and no update");
 
-		init("");
+		init();
 
 		checker->testRaw(CURLE_OK, 200, "{\"data\":\"eyJ1cGRhdGUiOjAsImxvZyI6IiIsImJhY2tvZmYiOjAsIm5vbmNlIjoiMTQ3NDkwMDg4MTY3OTQzNDVHc2dOZXJxMU04akdPak9Pd05pTGc9PSJ9\","
 				"\"signature\":\"FopgXeV0cfvf4ekwR4e9EqOMxqAyQXC7kErf6Lz3sn0GhFG0FEauKtpiElEBvSyoeXi+UeGWhCXHbT449aOdfA0LIH7Bp4clBrF5P+CNUI1HK7C5Y8X2hjEsBi56OkfHF1uT0R8Z7SF/dYgW8LNKLo09hBfzP7RHX7HDrFGhbBuEAOxo+fYpmKmbHduk0FOciNeElJTTyusqtMcN5/QvSalIbRPR04Au61awG9R3ArWK7ocIkKBkyDfPAnmOjnRrEjS7byo/Yw3GBAhQQ+24pzwwMytn0WbZXekk89mgXs/B4OUCTp+TfkVcDJSMA76YMv1wqfQEO9hvlIUCNrUyR1lHRqRP3ZgAXmdX5e6lg+fTiIx35vpS8l4GQ90wk0wzJJLETDURKk97gmATb61Opn8J7kZxtN4itdphqZa9zx8IhpdtRluLBXrlsYj9oolyOL/vOpMD///Gx9hmcShLxJ/qq+taGhpEoqadWnZsQljkSnlfopX9Q1cxQf/Grte+YNOe7FItVguoJBrfg6g8NISFODdMpnigHsFUtsWLtC1HfL0fN7GmOc4F+fhJbmDY0kCcXEIb/N1z65eQDs/MzeoMlzp/9Qsih2i5HtXtaAuV50UGRd4LguOgWSkXENIcRQPB37etOHchC/Q0lDS44merm99q8VCU197SJpDP+Fw=\"}",
@@ -130,13 +128,13 @@ namespace tut {
 						"1474904150592393AJwULpIFZF7wur/1V0sAdQ==");
 
 		ensure_equals(checker->lastError.c_str(), checker->lastError.empty(), true);
-		failNiceWhenSubstringMismatch("we strongly recommend upgrading", checker->lastSuccess);
+		failNiceWhenSubstringMismatch("We strongly recommend upgrading", checker->lastSuccess);
 	}
 
 	TEST_METHOD(2) {
 		set_test_name("long additional info string doesn't crash");
 
-		init("");
+		init();
 
 		checker->testRaw(CURLE_OK, 200, "{\"data\":\"eyJ1cGRhdGUiOjEsInZlcnNpb24iOiI1LjEuNSIsImxvZyI6Ii0gW0ZpeGVkIGluIDUuMS41XSBJZiBQYXNzZW5nZXIvQXBhY2hlIGlzIHVzZWQsIGFuZCBBbGxvd092ZXJyaWRlIE9wdGlvbnMgaXMgY29uZmlndXJlZCwgdGhlbiBhIFBhc3NlbmdlckFwcEdyb3VwTmFtZSBvZiBjaG9pY2UgY2FuIGJlIHNwZWNpZmllZCBpbiAuaHRhY2Nlc3MuIFRoaXMgaXMgbm90IGEgc2FmZSBjb25maWd1cmF0aW9uIGluIGEgc2hhcmVkIGhvc3RpbmcgdHlwZSBzZXR1cCB0aGF0IGdpdmVzIGVhY2ggdXNlciBhY2Nlc3MgdG8gdGhlaXIgb3duIERpcmVjdG9yeSAodG8gcGxhY2UgdGhlaXIgYXBwIGluKSwgYnV0IG5vdCB0byB0aGUgbWFpbiBQYXNzZW5nZXIgY29uZmlndXJhdGlvbiBub3IgdG8gb3RoZXIgdXNlcnMuIFBhc3NlbmdlciByb3V0ZXMgcmVxdWVzdHMgYmFzZWQgb24gUGFzc2VuZ2VyQXBwR3JvdXBOYW1lIHNvIGlmIHVzZXIgQSBzcGVjaWZpZXMgdXNlciBCJ3MgYXBwIGdyb3VwIG5hbWUsIHRoZW4gQidzIHJlcXVlc3QgbWlnaHQgYmUgcm91dGVkIHRvIEEuIEluIFBhc3NlbmdlciA1LjEuNSwgUGFzc2VuZ2VyQXBwR3JvdXBOYW1lIGlzIG5vIGxvbmdlciBjb25maWd1cmFibGUgaW4gLmh0YWNjZXNzLiBUaGUgc2FmZSBjb25maWd1cmF0aW9uIGluIHByZXZpb3VzIHZlcnNpb25zIGlzIHRvIG5vdCBBbGxvd092ZXJyaWRlIGluIHN1Y2ggYSBzZXR1cC5XaGF0IGlzIGFmZmVjdGVkOjwgNS4xLjUsIEFwYWNoZSBbQWxsb3dPdmVycmlkZSBPcHRpb25zLCBzaGFyZWQgaG9zdGluZyBzZXR1cF0iLCJiYWNrb2ZmIjowLCJub25jZSI6IjE0NzQ5MDQxNTA1OTIzOTNBSndVTHBJRlpGN3d1ci8xVjBzQWRRPT0ifQ==\","
 			"\"signature\":\"WWzqDeCVdk16IU8k6POPgfAud1ERuX4xr/wmPzLFr7YOjmNz4CkTXCaRr7WH16YnVesx5H8b3jVdQynQS5QTaLCk2VWGuUSVIo1TdZBaWgNvVN/8sFmin70dfWTOWdayOT3AXhXukoLGblKqNySCXo5MQKtteOaxx4g1k0fk5iV3WR9QJoJipNIPifnR4m+e+LtJ3Ap3Q1XUxxvViLWK2OBamRIvVh4sdcYoG717Z221990C40ue1jNGh7tptx9vgggUsAHJAQ1sNq21ZzJq1Twuvb+WfSIELXZLj7/ZLqSdTuW+Y92+ZUa7CrzWoVUH4I3UWr3aQe3M7hU9uoEV9WxOskIzc3NfxA46KYXMoIs4RK6CHNcrodkpOaRdRpdPfkqgYDxAazxOIrMgZ78YBs4uU1lnoQbSfZAx3Qo0f6gbAI8PqQeZkgxWfSXPusmMlOzJ12MTAGa5+zFx1Qqx1I/noCKgrDRkoHIY+7v6LWpERUc9s8hG3coYdr6aaHk8fS3Dc/nCsvj9DiYJm/RUHWkw/lvc8hJqX6V8LRgHKWCQ4aQsif3q/KQwrxDoaGs9sxYDT/hY0T7F1xQVwBM/Ze/848gxlgLohCb09kQ9v+4c7yoiZr/bPGOtFIKQADWZ+0Br4N6MRw6uVXULq0B6oJ8RMbGgNeANGmL6Pn6jEb8=\"}",
@@ -150,7 +148,7 @@ namespace tut {
 	TEST_METHOD(3) {
 		set_test_name("correctly reports various signature field errors");
 
-		init("");
+		init();
 
 		checker->testRaw(CURLE_OK, 200, "{\"data\":\"invalid_base64\"}", "");
 		failNiceWhenSubstringMismatch("missing response fields", checker->lastError);
@@ -163,7 +161,7 @@ namespace tut {
 	TEST_METHOD(4) {
 		set_test_name("catches replay attack (nonce mismatch)");
 
-		init("");
+		init();
 
 		checker->testContentFail("replay attack", CURLE_OK, 200, "eyJ1cGRhdGUiOjAsImxvZyI6IiIsImJhY2tvZmYiOjAsIm5vbmNlIjoiMTQ3NDkwMDg4MTY3OTQzNDVHc2dOZXJxMU04akdPak9Pd05pTGc9PSJ9",
 			"FopgXeV0cfvf4ekwR4e9EqOMxqAyQXC7kErf6Lz3sn0GhFG0FEauKtpiElEBvSyoeXi+UeGWhCXHbT449aOdfA0LIH7Bp4clBrF5P+CNUI1HK7C5Y8X2hjEsBi56OkfHF1uT0R8Z7SF/dYgW8LNKLo09hBfzP7RHX7HDrFGhbBuEAOxo+fYpmKmbHduk0FOciNeElJTTyusqtMcN5/QvSalIbRPR04Au61awG9R3ArWK7ocIkKBkyDfPAnmOjnRrEjS7byo/Yw3GBAhQQ+24pzwwMytn0WbZXekk89mgXs/B4OUCTp+TfkVcDJSMA76YMv1wqfQEO9hvlIUCNrUyR1lHRqRP3ZgAXmdX5e6lg+fTiIx35vpS8l4GQ90wk0wzJJLETDURKk97gmATb61Opn8J7kZxtN4itdphqZa9zx8IhpdtRluLBXrlsYj9oolyOL/vOpMD///Gx9hmcShLxJ/qq+taGhpEoqadWnZsQljkSnlfopX9Q1cxQf/Grte+YNOe7FItVguoJBrfg6g8NISFODdMpnigHsFUtsWLtC1HfL0fN7GmOc4F+fhJbmDY0kCcXEIb/N1z65eQDs/MzeoMlzp/9Qsih2i5HtXtaAuV50UGRd4LguOgWSkXENIcRQPB37etOHchC/Q0lDS44merm99q8VCU197SJpDP+Fw=",
@@ -173,7 +171,7 @@ namespace tut {
 	TEST_METHOD(5) {
 		set_test_name("additional log is logged whether update=0 or 1");
 
-		init("");
+		init();
 
 		// update = 0
 		checker->testRaw(CURLE_OK, 200, "{\"data\":\"eyJ1cGRhdGUiOjAsImxvZyI6ImFkZGl0aW9uYWxpbmZvIiwiYmFja29mZiI6MCwibm9uY2UiOiIxNDc0OTA1MTkzNDg4Mjc3Y2c4ZmNMdDJDOWZ3dDAweDc3enYvdz09In0=\","
@@ -195,7 +193,7 @@ namespace tut {
 	TEST_METHOD(6) {
 		set_test_name("enriches CURL errors");
 
-		init("");
+		init();
 
 		checker->testContentFail("check your connection security", CURLE_COULDNT_CONNECT, 0, "", "", "");
 		checker->testContentFail("try upgrading or reinstalling", CURLE_SSL_CERTPROBLEM, 0, "", "", "");
@@ -205,7 +203,7 @@ namespace tut {
 	TEST_METHOD(7) {
 		set_test_name("enriches HTTP errors");
 
-		init("");
+		init();
 
 		checker->testContentFail("not found", CURLE_OK, 404, "", "", "");
 		checker->testContentFail("rate limit", CURLE_OK, 429, "", "", "");

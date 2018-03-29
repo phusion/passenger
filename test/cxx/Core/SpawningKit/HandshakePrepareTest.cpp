@@ -20,6 +20,7 @@ namespace tut {
 			context.integrationMode = "standalone";
 			context.finalize();
 
+			config.appGroupName = "appgroup";
 			config.appRoot = "/tmp/myapp";
 			config.startCommand = "echo hi";
 			config.startupFile = "/tmp/myapp/app.py";
@@ -89,6 +90,7 @@ namespace tut {
 		ensure_equals(getFileType(session->workDir->getPath() + "/response"), FT_DIRECTORY);
 	}
 
+	#if 0
 	TEST_METHOD(6) {
 		set_test_name("It infers the application code revision from a REVISION file");
 
@@ -112,6 +114,7 @@ namespace tut {
 
 		ensure_equals(session->result.codeRevision, "myversion");
 	}
+	#endif
 
 	TEST_METHOD(10) {
 		set_test_name("In case of a generic app, it finds a free port for the app to listen on");

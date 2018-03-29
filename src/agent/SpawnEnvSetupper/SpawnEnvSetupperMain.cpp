@@ -58,7 +58,10 @@
 #include <adhoc_lve.h>
 
 #include <LoggingKit/LoggingKit.h>
+#include <LoggingKit/Context.h>
 #include <ProcessManagement/Spawn.h>
+#include <FileTools/FileManip.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>

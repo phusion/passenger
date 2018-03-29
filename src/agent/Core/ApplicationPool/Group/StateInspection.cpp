@@ -24,6 +24,9 @@
  *  THE SOFTWARE.
  */
 #include <Core/ApplicationPool/Group.h>
+#include <FileTools/PathManip.h>
+#include <cassert>
+#include <modp_b64.h>
 
 /*************************************************************************
  *
@@ -191,6 +194,112 @@ Group::inspectXml(std::ostream &stream, bool includeSecrets) const {
 	}
 
 	stream << "</processes>";
+}
+
+void
+Group::inspectPropertiesInAdminPanelFormat(Json::Value &result) const {
+	result["path"] = absolutizePath(options.appRoot);
+	result["startup_file"] = absolutizePath(options.getStartupFile(), absolutizePath(options.appRoot));
+	result["start_command"] = options.getStartCommand(getResourceLocator());
+
+	if (options.appType == "rack") {
+		result["type"] = "ruby";
+	} else if (options.appType == "wsgi") {
+		result["type"] = "python";
+	} else if (options.appType == "node") {
+		result["type"] = "nodejs";
+	} else if (options.appType == "meteor") {
+		result["type"] = "meteor";
+	} else {
+		result["type"] = "generic";
+	}
+
+	SpawningKit::UserSwitchingInfo usInfo(SpawningKit::prepareUserSwitching(options));
+	result["user"]["username"] = usInfo.username;
+	result["user"]["uid"] = (Json::Int) usInfo.uid;
+	result["group"]["groupname"] = usInfo.groupname;
+	result["group"]["gid"] = (Json::Int) usInfo.gid;
+
+	/******************/
+}
+
+void
+Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
+	#define VAL Pool::makeSingleValueJsonConfigFormat
+	#define SVAL Pool::makeSingleStrValueJsonConfigFormat
+	#define NON_EMPTY_SVAL Pool::makeSingleNonEmptyStrValueJsonConfigFormat
+
+	result["app_root"] = NON_EMPTY_SVAL(absolutizePath(options.appRoot));
+	result["app_group_name"] = NON_EMPTY_SVAL(info.name);
+	result["default_user"] = NON_EMPTY_SVAL(options.defaultUser);
+	result["default_group"] = NON_EMPTY_SVAL(options.defaultGroup);
+	result["enabled"] = VAL(true, false);
+	result["lve_min_uid"] = VAL(options.lveMinUid, DEFAULT_LVE_MIN_UID);
+
+	result["type"] = NON_EMPTY_SVAL(options.appType);
+	result["startup_file"] = NON_EMPTY_SVAL(options.startupFile);
+	result["start_command"] = NON_EMPTY_SVAL(replaceAll(options.startCommand,
+		P_STATIC_STRING("\t"), P_STATIC_STRING(" ")));
+	result["ruby"] = SVAL(options.ruby, DEFAULT_RUBY);
+	result["python"] = SVAL(options.python, DEFAULT_PYTHON);
+	result["nodejs"] = SVAL(options.nodejs, DEFAULT_NODEJS);
+	result["meteor_app_settings"] = NON_EMPTY_SVAL(options.meteorAppSettings);
+	result["min_processes"] = VAL(options.minProcesses, 1u);
+	result["max_processes"] = VAL(options.maxProcesses, 0u);
+	result["environment"] = SVAL(options.environment); // TODO: default value depends on integration mode
+	result["spawn_method"] = SVAL(options.spawnMethod, DEFAULT_SPAWN_METHOD);
+	result["start_timeout"] = VAL(options.startTimeout / 1000.0, DEFAULT_START_TIMEOUT / 1000.0);
+	result["max_preloader_idle_time"] = VAL((Json::UInt) options.maxPreloaderIdleTime,
+		(Json::UInt) DEFAULT_MAX_PRELOADER_IDLE_TIME);
+	result["max_out_of_band_work_instances"] = VAL(options.maxOutOfBandWorkInstances,
+		(Json::UInt) 1);
+	result["base_uri"] = SVAL(options.baseURI, P_STATIC_STRING("/"));
+	result["user"] = SVAL(options.user, options.defaultUser);
+	result["group"] = SVAL(options.group, options.defaultGroup);
+	result["user_switching"] = VAL(options.userSwitching); // TODO: default value depends on integration mode and euid
+	result["file_descriptor_ulimit"] = VAL(options.fileDescriptorUlimit, 0u);
+	result["load_shell_envvars"] = VAL(options.loadShellEnvvars); // TODO: default value depends on integration mode
+	result["max_request_queue_size"] = VAL(options.maxRequestQueueSize,
+		(Json::UInt) DEFAULT_MAX_REQUEST_QUEUE_SIZE);
+	result["max_requests"] = VAL((Json::UInt) options.maxRequests, 0u);
+	result["abort_websockets_on_process_shutdown"] = VAL(options.abortWebsocketsOnProcessShutdown);
+	result["force_max_concurrent_requests_per_process"] = VAL(options.forceMaxConcurrentRequestsPerProcess, -1);
+	result["restart_dir"] = NON_EMPTY_SVAL(options.restartDir);
+
+	if (!options.environmentVariables.empty()) {
+		DynamicBuffer envvarsData(options.environmentVariables.size() * 3 / 4);
+		size_t envvarsDataSize = modp_b64_decode(envvarsData.data,
+			options.environmentVariables.data(), options.environmentVariables.size());
+		if (envvarsDataSize == (size_t) -1) {
+			P_WARN("Unable to decode environment variable data");
+		} else {
+			Json::Value envvars(Json::objectValue);
+			vector<string> envvarsAry;
+			unsigned int i;
+
+			split(StaticString(envvarsData.data, envvarsDataSize), '\0', envvarsAry);
+			if (!envvarsAry.empty() && envvarsAry.back().empty()) {
+				envvarsAry.pop_back();
+			}
+			assert(envvars.size() % 2 == 0);
+
+			for (i = 0; i < envvarsAry.size(); i += 2) {
+				envvars[envvarsAry[i]] = envvarsAry[i + 1];
+			}
+
+			result["environment_variables"] = VAL(envvars, Json::objectValue);
+		}
+	} else {
+		result["environment_variables"] = VAL(Json::objectValue, Json::objectValue);
+	}
+
+	// Missing: sticky_sessions, sticky_session_cookie_name, friendly_error_pages
+
+	/******************/
+
+	#undef VAL
+	#undef SVAL
+	#undef NON_EMPTY_SVAL
 }
 
 

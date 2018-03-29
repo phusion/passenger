@@ -35,6 +35,7 @@ int coreMain(int argc, char *argv[]);
 int systemMetricsMain(int argc, char *argv[]);
 int tempDirToucherMain(int argc, char *argv[]);
 int spawnEnvSetupperMain(int argc, char *argv[]);
+int execHelperMain(int argc, char *argv[]);
 
 static bool
 isHelp(const char *arg) {
@@ -56,6 +57,7 @@ usage(int argc, char *argv[]) {
 	printf("\n");
 	printf("Utility subcommands:\n");
 	printf("  system-metrics\n");
+	printf("  exec-helper\n");
 }
 
 static bool
@@ -86,6 +88,8 @@ dispatchSubcommand(int argc, char *argv[]) {
 		exit(tempDirToucherMain(argc, argv));
 	} else if (strcmp(argv[1], "spawn-env-setupper") == 0) {
 		exit(spawnEnvSetupperMain(argc, argv));
+	} else if (strcmp(argv[1], "exec-helper") == 0) {
+		exit(execHelperMain(argc, argv));
 	} else if (strcmp(argv[1], "test-binary") == 0) {
 		printf("PASS\n");
 		exit(0);

@@ -63,6 +63,7 @@
 #include <Core/ApplicationPool/Group/InternalUtils.cpp>
 #include <Core/ApplicationPool/Group/StateInspection.cpp>
 #include <Core/ApplicationPool/Group/Verification.cpp>
+#include <Core/ApplicationPool/Process.cpp>
 #include <Core/SpawningKit/ErrorRenderer.h>
 
 namespace Passenger {
@@ -250,11 +251,13 @@ void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Option
 	}
 	P_ERROR(stream.str());
 
-	if (context->agentsOptions != NULL) {
+	ScopedLock l(context->agentConfigSyncher);
+	if (!context->agentConfig.isNull()) {
 		HookScriptOptions hOptions;
 		hOptions.name = "spawn_failed";
-		hOptions.spec = context->agentsOptions->get("hook_spawn_failed", false);
-		hOptions.agentsOptions = context->agentsOptions;
+		hOptions.spec = context->agentConfig.get("hook_spawn_failed", Json::Value()).asString();
+		hOptions.agentConfig = context->agentConfig;
+		l.unlock();
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_ROOT", options.appRoot));
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_GROUP_NAME", options.getAppGroupName()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_MESSAGE", e.what()));

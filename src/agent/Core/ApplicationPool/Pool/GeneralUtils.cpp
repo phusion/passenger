@@ -80,12 +80,14 @@ bool
 Pool::runHookScripts(const char *name,
 	const boost::function<void (HookScriptOptions &)> &setup) const
 {
-	if (context->agentsOptions != NULL) {
+	ScopedLock l(context->agentConfigSyncher);
+	if (!context->agentConfig.isNull()) {
 		string hookName = string("hook_") + name;
-		string spec = context->agentsOptions->get(hookName, false);
+		string spec = context->agentConfig.get(hookName, Json::Value()).asString();
 		if (!spec.empty()) {
 			HookScriptOptions options;
-			options.agentsOptions = context->agentsOptions;
+			options.agentConfig = context->agentConfig;
+			l.unlock();
 			options.name = name;
 			options.spec = spec;
 			setup(options);

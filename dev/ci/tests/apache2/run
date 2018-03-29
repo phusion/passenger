@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 run ./bin/passenger-install-apache2-module --auto

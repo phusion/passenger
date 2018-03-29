@@ -305,6 +305,63 @@ namespace tut {
 		ensure_equals("(16)", doc["level"]["user_value"].asString(), "L1");
 	}
 
+	TEST_METHOD(18) {
+		set_test_name("Typecasting");
+
+		schema.add("string", ConfigKit::STRING_TYPE, ConfigKit::REQUIRED);
+		schema.add("int", ConfigKit::INT_TYPE, ConfigKit::REQUIRED);
+		schema.add("uint", ConfigKit::UINT_TYPE, ConfigKit::REQUIRED);
+		schema.add("float", ConfigKit::FLOAT_TYPE, ConfigKit::REQUIRED);
+		schema.add("bool", ConfigKit::BOOL_TYPE, ConfigKit::REQUIRED);
+		schema.add("array", ConfigKit::ARRAY_TYPE, ConfigKit::REQUIRED);
+		schema.add("object", ConfigKit::OBJECT_TYPE, ConfigKit::REQUIRED);
+		schema.add("any", ConfigKit::ANY_TYPE, ConfigKit::REQUIRED);
+		init();
+
+		doc["string"] = 123;
+		doc["int"] = -456.78;
+		doc["uint"] = 456.78;
+		doc["float"] = 123;
+		doc["bool"] = 1;
+		doc["array"] = Json::arrayValue;
+		doc["object"] = Json::objectValue;
+		doc["any"] = Json::objectValue;
+
+		Json::Value preview = config->previewUpdate(doc, errors);
+		ensure_equals("Validation passes (1)", errors.size(), 0u);
+		ensure("Validation passes", config->update(doc, errors));
+
+		ensure(preview["string"]["user_value"].isString());
+		ensure(preview["int"]["user_value"].isInt());
+		ensure(preview["uint"]["user_value"].isUInt());
+		ensure(preview["float"]["user_value"].isDouble());
+		ensure(preview["bool"]["user_value"].isBool());
+		ensure(preview["array"]["user_value"].isArray());
+		ensure(preview["object"]["user_value"].isObject());
+		ensure(preview["any"]["user_value"].isObject());
+
+		ensure(config->get("string").isString());
+		ensure(config->get("int").isInt());
+		ensure(config->get("uint").isUInt());
+		ensure(config->get("float").isDouble());
+		ensure(config->get("bool").isBool());
+		ensure(config->get("array").isArray());
+		ensure(config->get("object").isObject());
+		ensure(config->get("any").isObject());
+
+		ensure_equals(preview["string"]["user_value"].asString(), "123");
+		ensure_equals(preview["int"]["user_value"].asInt(), -456);
+		ensure_equals(preview["uint"]["user_value"].asUInt(), 456u);
+		ensure_equals(preview["float"]["user_value"].asDouble(), 123);
+		ensure_equals(preview["bool"]["user_value"].asBool(), true);
+
+		ensure_equals(config->get("string").asString(), "123");
+		ensure_equals(config->get("int").asInt(), -456);
+		ensure_equals(config->get("uint").asUInt(), 456u);
+		ensure_equals(config->get("float").asDouble(), 123);
+		ensure_equals(config->get("bool").asBool(), true);
+	}
+
 	static Json::Value addExclamationFilter(const Json::Value &val) {
 		return val.asString() + "!";
 	}

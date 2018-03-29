@@ -43,7 +43,6 @@
 #include <unistd.h>
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <Utils/LargeFiles.h>
 
 namespace Passenger {
 
@@ -53,23 +52,7 @@ using namespace boost;
 #define foreach         BOOST_FOREACH
 #define reverse_foreach BOOST_REVERSE_FOREACH
 
-static const uid_t USER_NOT_GIVEN = (uid_t) -1;
-static const gid_t GROUP_NOT_GIVEN = (gid_t) -1;
-
-class CachedFileStat;
 class ResourceLocator;
-
-/** Enumeration which indicates what kind of file a file is. */
-typedef enum {
-	/** The file doesn't exist. */
-	FT_NONEXISTANT,
-	/** A regular file or a symlink to a regular file. */
-	FT_REGULAR,
-	/** A directory. */
-	FT_DIRECTORY,
-	/** Something else, e.g. a pipe or a socket. */
-	FT_OTHER
-} FileType;
 
 /**
  * Convenience shortcut for creating a <tt>shared_ptr</tt>.
@@ -93,114 +76,6 @@ template<typename T> boost::shared_ptr<T>
 ptr(T *pointer) {
 	return boost::shared_ptr<T>(pointer);
 }
-
-/**
- * Check whether the specified file exists.
- *
- * @param filename The filename to check.
- * @param cstat A CachedFileStat object, if you want to use cached statting.
- * @param cstatMutex A mutex for locking cstat while this function uses it.
- *                   Makes this function thread-safe. May be NULL.
- * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
- * @return Whether the file exists.
- * @throws FileSystemException Unable to check because of a filesystem error.
- * @throws TimeRetrievalException
- * @throws boost::thread_interrupted
- * @ingroup Support
- */
-bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
-                boost::mutex *cstatMutex = NULL, unsigned int throttleRate = 0);
-
-/**
- * Check whether 'filename' exists and what kind of file it is.
- *
- * @param filename The filename to check. It MUST be NULL-terminated.
- * @param cstat A CachedFileStat object, if you want to use cached statting.
- * @param cstatMutex A mutex for locking cstat while this function uses it.
- *                   Makes this function thread-safe. May be NULL.
- * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
- * @return The file type.
- * @throws FileSystemException Unable to check because of a filesystem error.
- * @throws TimeRetrievalException
- * @throws boost::thread_interrupted
- * @ingroup Support
- */
-FileType getFileType(const StaticString &filename, CachedFileStat *cstat = 0,
-                     boost::mutex *cstatMutex = NULL, unsigned int throttleRate = 0);
-
-/**
- * Create the given file with the given contents, permissions and ownership.
- * This function does not leave behind junk files: if the ownership cannot be set
- * or if not all data can be written then then the file will be deleted.
- *
- * @param filename The file to create.
- * @param contents The contents to write to the file.
- * @param permissions The desired file permissions.
- * @param owner The desired file owner. Specify USER_NOT_GIVEN if you want to use the current
- *              process's owner as the file owner.
- * @param group The desired file group. Specify GROUP_NOT_GIVEN if you want to use the current
- *              process's group as the file group.
- * @param overwrite Whether to overwrite the file if it exists. If set to false
- *                  and the file exists then nothing will happen.
- * @throws FileSystemException Something went wrong.
- * @ingroup Support
- */
-void createFile(const string &filename, const StaticString &contents,
-                mode_t permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
-                uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN,
-                bool overwrite = true,
-                const char *callerFile = NULL, unsigned int callerLine = 0);
-
-/**
- * Returns a canonical version of the specified path. All symbolic links
- * and relative path elements are resolved.
- *
- * @throws FileSystemException Something went wrong.
- * @ingroup Support
- */
-string canonicalizePath(const string &path);
-
-/**
- * If <em>path</em> refers to a symlink, then this function resolves the
- * symlink for 1 level. That is, if the symlink points to another symlink,
- * then the other symlink will not be resolved. The resolved path is returned.
- *
- * If the symlink doesn't point to an absolute path, then this function will
- * prepend <em>path</em>'s directory to the result.
- *
- * If <em>path</em> doesn't refer to a symlink then this method will return
- * <em>path</em>.
- *
- * <em>path</em> MUST be null-terminated!
- *
- * @throws FileSystemException Something went wrong.
- * @ingroup Support
- */
-string resolveSymlink(const StaticString &path);
-
-/**
- * Given a path, extracts its directory name. 'path' does not
- * have to be NULL terminated.
- *
- * @ingroup Support
- */
-string extractDirName(const StaticString &path);
-
-/**
- * Given a path, extracts its directory name. This version does not use
- * any dynamically allocated storage and does not require `path` to be
- * NULL-terminated. It returns a StaticString that points either to static
- * storage, or to a substring of `path`.
- */
-StaticString extractDirNameStatic(const StaticString &path);
-
-/**
- * Given a path, extracts its base name.
- * <em>path</em> MUST be null-terminated!
- *
- * @ingroup Support
- */
-string extractBaseName(const StaticString &path);
 
 /**
  * Escape the given raw string into an XML value.
@@ -262,14 +137,6 @@ gid_t lookupGid(const string &groupName);
 mode_t parseModeString(const StaticString &mode);
 
 /**
- * Turns the given path into an absolute path. Unlike realpath(), this function does
- * not resolve symlinks.
- *
- * @throws SystemException
- */
-string absolutizePath(const StaticString &path, const StaticString &workingDir = StaticString());
-
-/**
  * Return the path name for the directory in which the system stores general
  * temporary files. This is usually "/tmp", but might be something else depending
  * on some environment variables.
@@ -278,31 +145,6 @@ string absolutizePath(const StaticString &path, const StaticString &workingDir =
  * @ingroup Support
  */
 const char *getSystemTempDir();
-
-/**
- * Create the directory at the given path, creating intermediate directories
- * if necessary. The created directories' permissions are exactly as specified
- * by the 'mode' parameter (i.e. the umask will be ignored). You can specify
- * this directory's owner and group through the 'owner' and 'group' parameters.
- * A value of USER_NOT_GIVEN for 'owner' and/or GROUP_NOT_GIVEN 'group' means
- * that the owner/group should not be changed.
- *
- * If 'path' already exists, then nothing will happen.
- *
- * @param mode A mode string, as supported by parseModeString().
- * @throws FileSystemException Something went wrong.
- * @throws InvalidModeStringException The mode string cannot be parsed.
- */
-void makeDirTree(const string &path, const StaticString &mode = "u=rwx,g=,o=",
-	uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN);
-
-/**
- * Remove an entire directory tree recursively. If the directory doesn't exist then this
- * function does nothing.
- *
- * @throws RuntimeException Something went wrong.
- */
-void removeDirTree(const string &path);
 
 void prestartWebApps(const ResourceLocator &locator, const string &ruby,
 	const vector<string> &prestartURLs);

@@ -56,6 +56,8 @@ class PipeWatcher: public boost::enable_shared_from_this<PipeWatcher> {
 private:
 	FileDescriptor fd;
 	StaticString name;
+	string appGroupName;
+	string appLogFile;
 	pid_t pid;
 	bool started;
 	string logFile;
@@ -129,7 +131,7 @@ private:
 
 	void printOrLogAppOutput(FILE *f, const StaticString &line) {
 		if (f == NULL) {
-			LoggingKit::logAppOutput(pid, name, line.data(), line.size());
+			LoggingKit::logAppOutput(appGroupName, pid, name, line.data(), line.size(), appLogFile);
 		} else {
 			fwrite(line.data(), 1, line.size(), f);
 			fwrite("\n", 1, 2, f);
@@ -138,9 +140,13 @@ private:
 	}
 
 public:
-	PipeWatcher(const FileDescriptor &_fd, const StaticString _name, pid_t _pid)
+	PipeWatcher(const FileDescriptor &_fd, const StaticString &_name,
+		const string &_appGroupName, const string &_appLogFile,
+		pid_t _pid)
 		: fd(_fd),
 		  name(_name),
+		  appGroupName(_appGroupName),
+		  appLogFile(_appLogFile),
 		  pid(_pid),
 		  started(false)
 		{ }

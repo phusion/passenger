@@ -69,8 +69,6 @@ module PhusionPassenger
     DEFAULT_ANALYTICS_LOG_USER = DEFAULT_WEB_APP_USER
     DEFAULT_ANALYTICS_LOG_GROUP = ""
     DEFAULT_ANALYTICS_LOG_PERMISSIONS = "u=rwx,g=rx,o=rx"
-    DEFAULT_UNION_STATION_GATEWAY_ADDRESS = "gateway.unionstationapp.com"
-    DEFAULT_UNION_STATION_GATEWAY_PORT = 443
     DEFAULT_HTTP_SERVER_LISTEN_ADDRESS = "tcp://127.0.0.1:3000"
     DEFAULT_LVE_MIN_UID = 500
 
@@ -88,6 +86,7 @@ module PhusionPassenger
     # but there's no real average upload size anyway so we choose mem safety instead.
     DEFAULT_FILE_BUFFERED_CHANNEL_THRESHOLD = 1024 * 128
     SERVER_KIT_MAX_SERVER_ENDPOINTS = 4
+    LOG_MONITORING_MAX_LINES = 200
 
     # Time limits
     PROCESS_SHUTDOWN_TIMEOUT = 60 # In seconds

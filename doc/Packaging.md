@@ -216,7 +216,7 @@ a list of all possible assets and asset directories.
    A directory that contains the Phusion Passenger Ruby library files. Note that
    the Phusion Passenger administration tools still locate phusion_passenger.rb
    as described in the section "The Phusion Passenger Ruby libraries",
-   irregardless of the value of this key in the location configuration file.
+   irrespective of the value of this key in the location configuration file.
    The value is only useful to non-Ruby Phusion Passenger code.
 
    Value when originally packaged: `<SOURCE_ROOT>/src/ruby_supportlib`.

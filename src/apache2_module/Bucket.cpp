@@ -28,6 +28,8 @@
 #include "Bucket.h"
 
 namespace Passenger {
+namespace Apache2Module {
+
 
 static void bucket_destroy(void *data);
 static apr_status_t bucket_read(apr_bucket *a, const char **str, apr_size_t *len, apr_read_type_e block);
@@ -173,4 +175,6 @@ passenger_bucket_create(const PassengerBucketStatePtr &state, apr_bucket_alloc_t
 	return passenger_bucket_make(bucket, state, bufferResponse);
 }
 
+
+} // namespace Apache2Module
 } // namespace Passenger

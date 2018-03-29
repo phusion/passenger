@@ -32,6 +32,7 @@
 
 #include <jsoncpp/json.h>
 #include <ConfigKit/Common.h>
+#include <ConfigKit/Translator.h>
 
 namespace Passenger {
 namespace ConfigKit {
@@ -39,7 +40,7 @@ namespace ConfigKit {
 using namespace std;
 
 
-template<typename Component, typename Translator>
+template<typename Component>
 inline void
 prepareConfigChangeForSubComponent(Component &component, const Translator &translator,
 	const Json::Value &updates, vector<ConfigKit::Error> &errors,

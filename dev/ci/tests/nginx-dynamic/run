@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 TEST_DYNAMIC_WITH_NGINX_VERSION=1.12.1

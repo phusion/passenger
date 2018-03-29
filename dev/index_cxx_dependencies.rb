@@ -6,6 +6,7 @@ SEARCH_PATHS = [
   "src/agent",
   "src/cxx_supportlib",
   "src/cxx_supportlib/vendor-copy",
+  "src/cxx_supportlib/vendor-copy/websocketpp",
   "src/cxx_supportlib/vendor-modified",
   "test/cxx"
 ]
@@ -153,6 +154,8 @@ def extract_dependencies(source)
       end
     end
   end
+  result.sort!
+  result.uniq!
   result
 end
 
@@ -164,7 +167,9 @@ def search_include_file(name, first_search_path = nil)
   end
   search_paths.each do |path|
     if File.exist?("#{path}/#{name}")
-      return "#{path}/#{name}"
+      result = File.expand_path("#{path}/#{name}")
+      result.sub!(/\A#{Regexp.escape(Dir.pwd)}\//, '')
+      return result
     end
   end
   nil
@@ -186,19 +191,27 @@ def gather_all_dependencies_recursively(source_file, basic_map, result)
   deps = basic_map[source_file]
   if deps
     deps.each do |dep|
-      result[dep] = true
-      gather_all_dependencies_recursively(dep, basic_map, result)
+      if !result[dep]
+        result[dep] = true
+        gather_all_dependencies_recursively(dep, basic_map, result)
+      end
     end
   end
+end
+
+def generate_full_map_for(source_file, basic_map)
+  gather_results = {}
+  gather_all_dependencies_recursively(
+    source_file, basic_map, gather_results)
+  result = gather_results.keys
+  result.sort!
+  result
 end
 
 def generate_full_map(basic_map)
   result = {}
   basic_map.keys.sort.each do |source_file|
-    gather_results = {}
-    gather_all_dependencies_recursively(
-      source_file, basic_map, gather_results)
-    result[source_file] = gather_results.keys.sort
+    result[source_file] = generate_full_map_for(source_file, basic_map)
   end
   result
 end

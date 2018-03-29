@@ -35,6 +35,7 @@
 #include <Constants.h>
 #include <ResourceLocator.h>
 #include <StaticString.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Core/UnionStation/Context.h>
 #include <Core/UnionStation/Transaction.h>
@@ -84,6 +85,7 @@ private:
 
 		result.push_back(&options.appRoot);
 		result.push_back(&options.appGroupName);
+		result.push_back(&options.appLogFile);
 		result.push_back(&options.appType);
 		result.push_back(&options.startCommand);
 		result.push_back(&options.startupFile);
@@ -176,6 +178,11 @@ public:
 	 */
 	HashedStaticString appGroupName;
 
+	/** The application's log file, where Passenger sends the logs from
+	 *	the application.
+	 */
+	StaticString appLogFile;
+
 	/** The application's type, used for determining the command to invoke to
 	 * spawn an application process as well as determining the startup file's
 	 * filename. It can be one of the app type names in AppType.cpp, or the
@@ -190,14 +197,12 @@ public:
 	StaticString startCommand;
 
 	/** Filename of the application's startup file. Only actually used for
-	 * determining user switching info. Only used during spawning and only
-	 * if appType.empty(). */
+	 * determining user switching info. Only used during spawning. */
 	StaticString startupFile;
 
 	/** The process title to assign to the application process. Only used
 	 * during spawning. May be empty in which case no particular process
-	 * title is assigned. Only used during spawning and only if
-	 * appType.empty(). */
+	 * title is assigned. Only used during spawning. */
 	StaticString processTitle;
 
 	/**
@@ -472,7 +477,7 @@ public:
 	 */
 	Options()
 		: logLevel(DEFAULT_LOG_LEVEL),
-		  startTimeout(90 * 1000),
+		  startTimeout(DEFAULT_START_TIMEOUT),
 		  environment(DEFAULT_APP_ENV, sizeof(DEFAULT_APP_ENV) - 1),
 		  baseURI("/", 1),
 		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
@@ -494,7 +499,7 @@ public:
 		  maxProcesses(0),
 		  maxPreloaderIdleTime(-1),
 		  maxOutOfBandWorkInstances(1),
-		  maxRequestQueueSize(100),
+		  maxRequestQueueSize(DEFAULT_MAX_REQUEST_QUEUE_SIZE),
 		  abortWebsocketsOnProcessShutdown(true),
 
 		  stickySessionId(0),
@@ -599,6 +604,7 @@ public:
 			appendKeyValue (vec, "app_root",           appRoot);
 			appendKeyValue (vec, "app_group_name",     getAppGroupName());
 			appendKeyValue (vec, "app_type",           appType);
+			appendKeyValue (vec, "app_log_file",       appLogFile);
 			appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
 			appendKeyValue (vec, "startup_file",       absolutizePath(getStartupFile(), absolutizePath(appRoot)));
 			appendKeyValue (vec, "process_title",      getProcessTitle());
@@ -721,4 +727,3 @@ public:
 } // namespace Passenger
 
 #endif /* _PASSENGER_APPLICATION_POOL2_OPTIONS_H_ */
-

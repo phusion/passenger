@@ -43,6 +43,7 @@ Passenger::SpawningKit::Config::internStrings() {
 	/*
 	 * Calculated required storage size
 	 */
+	totalSize += appGroupName.size() + 1;
 	totalSize += appRoot.size() + 1;
 	totalSize += startCommand.size() + 1;
 	totalSize += startupFile.size() + 1;
@@ -60,6 +61,7 @@ Passenger::SpawningKit::Config::internStrings() {
 			it.next();
 		}
 	}
+	totalSize += logFile.size() + 1;
 	totalSize += unionStationKey.size() + 1;
 	totalSize += apiKey.size() + 1;
 	totalSize += groupUuid.size() + 1;
@@ -73,6 +75,8 @@ Passenger::SpawningKit::Config::internStrings() {
 	/*
 	 * Fill new storage
 	 */
+	pos = appendData(pos, end, appGroupName);
+	pos = appendData(pos, end, "\0", 1);
 	pos = appendData(pos, end, appRoot);
 	pos = appendData(pos, end, "\0", 1);
 	pos = appendData(pos, end, startCommand);
@@ -101,6 +105,8 @@ Passenger::SpawningKit::Config::internStrings() {
 			it.next();
 		}
 	}
+	pos = appendData(pos, end, logFile);
+	pos = appendData(pos, end, "\0", 1);
 	pos = appendData(pos, end, unionStationKey);
 	pos = appendData(pos, end, "\0", 1);
 	pos = appendData(pos, end, apiKey);
@@ -112,6 +118,10 @@ Passenger::SpawningKit::Config::internStrings() {
 	 * Move over pointers to new storage
 	 */
 	pos = newStorage;
+	tmpSize = appGroupName.size();
+	appGroupName = StaticString(pos, tmpSize);
+	pos += tmpSize + 1;
+
 	tmpSize = appRoot.size();
 	appRoot = StaticString(pos, tmpSize);
 	pos += tmpSize + 1;
@@ -162,6 +172,10 @@ Passenger::SpawningKit::Config::internStrings() {
 		}
 	}
 
+	tmpSize = logFile.size();
+	logFile = StaticString(pos, tmpSize);
+	pos += tmpSize + 1;
+
 	tmpSize = unionStationKey.size();
 	unionStationKey = StaticString(pos, tmpSize);
 	pos += tmpSize + 1;
@@ -186,6 +200,10 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 	bool ok = true;
 	const Config &config = *this;
 
+	if (OXT_UNLIKELY(appGroupName.empty())) {
+		ok = false;
+		errors.push_back(P_STATIC_STRING("app_group_name may not be empty"));
+	}
 	if (OXT_UNLIKELY(appRoot.empty())) {
 		ok = false;
 		errors.push_back(P_STATIC_STRING("app_root may not be empty"));
@@ -245,6 +263,7 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 	 * debugWorkDir
 	 * processTitle
 	 * environmentVariables
+	 * logFile
 	 * apiKey
 	 * groupUuid
 	 * lveMinUid
@@ -259,6 +278,7 @@ Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 	Json::Value doc;
 	const Config &config = *this;
 
+	doc["app_group_name"] = appGroupName.toString();
 	doc["app_root"] = appRoot.toString();
 	doc["log_level"] = logLevel;
 	doc["generic_app"] = genericApp;
@@ -284,6 +304,7 @@ Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 	doc["user"] = user.toString();
 	doc["group"] = group.toString();
 	doc["environment_variables"] = tableToJson(environmentVariables);
+	doc["log_file"] = logFile.toString();
 	if (config.analyticsSupport && !config.unionStationKey.empty()) {
 		doc["union_station_key"] = unionStationKey.toString();
 	}
@@ -314,6 +335,7 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 	Json::Value doc;
 	const Config &config = *this;
 
+	doc["app_group_name"] = appGroupName.toString();
 	doc["app_root"] = appRoot.toString();
 	doc["log_level"] = logLevel;
 	doc["generic_app"] = genericApp;
@@ -339,6 +361,7 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 	doc["user"] = user.toString();
 	doc["group"] = group.toString();
 	doc["environment_variables"] = "<SECRET>";
+	doc["log_file"] = "<SECRET>";
 	if (config.analyticsSupport && !config.unionStationKey.empty()) {
 		doc["union_station_key"] = "<SECRET>";
 	}
