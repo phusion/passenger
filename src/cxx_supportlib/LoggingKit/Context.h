@@ -107,8 +107,9 @@ public:
 
 	// specifically for logging output from application processes
 	void saveNewLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen);
-	// the message might already have been logged (e.g. because the source is a `tail -n`)
-	void updateLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen);
+	void saveMonitoredFileLog(const HashedStaticString &groupName,
+		const char *sourceStr, unsigned int sourceStrLen,
+		const char *content, unsigned int contentLen);
 	// snapshot logStore to a JSON structure for external relay
 	Json::Value convertLog();
 

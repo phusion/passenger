@@ -332,7 +332,13 @@ Context::saveNewLog(const HashedStaticString &groupName, const char *sourceStr, 
 }
 
 void
-Context::updateLog(const HashedStaticString &groupName, const char *sourceStr, unsigned int sourceStrLen, const char *message, unsigned int messageLen) {
+Context::saveMonitoredFileLog(const HashedStaticString &groupName,
+	const char *sourceStr, unsigned int sourceStrLen,
+	const char *content, unsigned int contentLen)
+{
+	vector<StaticString> lines;
+	split(StaticString(content, contentLen), '\n', lines);
+
 	boost::lock_guard<boost::mutex> l(syncher); //lock
 
 	LogStore::Cell *c = logStore.lookupCell(groupName);
@@ -344,11 +350,15 @@ Context::updateLog(const HashedStaticString &groupName, const char *sourceStr, u
 	AppGroupLog &rec = c->value;
 
 	HashedStaticString source(sourceStr, sourceStrLen);
-	if (!rec.watchFileLog.contains(source)) {
+	SimpleLogMap::Cell *c2 = rec.watchFileLog.lookupCell(source);
+	if (c2 == NULL) {
 		SimpleLogBuffer logBuffer(LOG_MONITORING_MAX_LINES);
-		rec.watchFileLog.insert(source, logBuffer);
+		c2 = rec.watchFileLog.insert(source, logBuffer);
 	}
-	rec.watchFileLog.lookupCell(source)->value.push_back(string(message, messageLen));
+	c2->value.clear();
+	foreach (StaticString line, lines) {
+		c2->value.push_back(string(line.data(), line.size()));
+	}
 	//unlock
 }
 

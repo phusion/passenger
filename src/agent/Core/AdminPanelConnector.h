@@ -486,12 +486,9 @@ private:
 					} else {
 						pipe.second.close();
 						string out = readAll(pipe.first);
+						LoggingKit::context->saveMonitoredFileLog(key, f.c_str(), f.size(),
+							out.data(), out.size());
 						pipe.first.close();
-						istringstream iss(out);
-						string line;
-						while (getline(iss, line)) {
-							LoggingKit::context->updateLog(key, f.c_str(), f.size(), line.c_str(), line.size());
-						}
 						syscalls::waitpid(pid, NULL, 0);
 					}
 				}
