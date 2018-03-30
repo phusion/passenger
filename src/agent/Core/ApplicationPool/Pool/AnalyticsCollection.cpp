@@ -106,47 +106,6 @@ Pool::updateProcessMetrics(const ProcessList &processes,
 }
 
 void
-Pool::prepareUnionStationProcessStateLogs(vector<UnionStationLogEntry> &logEntries,
-	const GroupPtr &group) const
-{
-	const UnionStation::ContextPtr &unionStationContext = getUnionStationContext();
-	if (group->options.analytics && unionStationContext != NULL) {
-		logEntries.push_back(UnionStationLogEntry());
-		UnionStationLogEntry &entry = logEntries.back();
-		stringstream stream;
-
-		stream << "Group: <group>";
-		group->inspectXml(stream, false);
-		stream << "</group>";
-
-		entry.groupName = group->options.getAppGroupName();
-		entry.category  = "processes";
-		entry.key       = group->options.unionStationKey;
-		entry.data      = stream.str();
-	}
-}
-
-void
-Pool::prepareUnionStationSystemMetricsLogs(vector<UnionStationLogEntry> &logEntries,
-	const GroupPtr &group) const
-{
-	const UnionStation::ContextPtr &unionStationContext = getUnionStationContext();
-	if (group->options.analytics && unionStationContext != NULL) {
-		logEntries.push_back(UnionStationLogEntry());
-		UnionStationLogEntry &entry = logEntries.back();
-		stringstream stream;
-
-		stream << "System metrics: ";
-		systemMetrics.toXml(stream);
-
-		entry.groupName = group->options.getAppGroupName();
-		entry.category  = "system_metrics";
-		entry.key       = group->options.unionStationKey;
-		entry.data      = stream.str();
-	}
-}
-
-void
 Pool::realCollectAnalytics() {
 	TRACE_POINT();
 	boost::this_thread::disable_interruption di;
@@ -177,7 +136,7 @@ Pool::realCollectAnalytics() {
 	}
 
 	// Collect process metrics and system and store them in the
-	// data structures. Later, we log them to Union Station.
+	// data structures.
 	ProcessMetricMap processMetrics;
 	try {
 		UPDATE_TRACE_POINT();
@@ -198,7 +157,6 @@ Pool::realCollectAnalytics() {
 
 	{
 		UPDATE_TRACE_POINT();
-		vector<UnionStationLogEntry> logEntries;
 		vector<ProcessPtr> processesToDetach;
 		boost::container::vector<Callback> actions;
 		ScopedLock l(syncher);
@@ -210,8 +168,6 @@ Pool::realCollectAnalytics() {
 			updateProcessMetrics(group->enabledProcesses, processMetrics, processesToDetach);
 			updateProcessMetrics(group->disablingProcesses, processMetrics, processesToDetach);
 			updateProcessMetrics(group->disabledProcesses, processMetrics, processesToDetach);
-			prepareUnionStationProcessStateLogs(logEntries, group);
-			prepareUnionStationSystemMetricsLogs(logEntries, group);
 			g_it.next();
 		}
 
@@ -223,21 +179,6 @@ Pool::realCollectAnalytics() {
 		processesToDetach.clear();
 
 		l.unlock();
-		UPDATE_TRACE_POINT();
-		if (!logEntries.empty()) {
-			const UnionStation::ContextPtr &unionStationContext = getUnionStationContext();
-			P_DEBUG("Sending process and system metrics to Union Station");
-			while (!logEntries.empty()) {
-				UnionStationLogEntry &entry = logEntries.back();
-				UnionStation::TransactionPtr transaction =
-					unionStationContext->newTransaction(
-						entry.groupName,
-						entry.category,
-						entry.key);
-				transaction->message(entry.data);
-				logEntries.pop_back();
-			}
-		}
 
 		UPDATE_TRACE_POINT();
 		runAllActions(actions);

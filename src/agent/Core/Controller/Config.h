@@ -144,8 +144,6 @@ private:
 		add("default_ruby", STRING_TYPE, OPTIONAL, DEFAULT_RUBY);
 		add("default_python", STRING_TYPE, OPTIONAL, DEFAULT_PYTHON);
 		add("default_nodejs", STRING_TYPE, OPTIONAL, DEFAULT_NODEJS);
-		add("ust_router_address", STRING_TYPE, OPTIONAL);
-		add("ust_router_password", STRING_TYPE, OPTIONAL | SECRET);
 		add("default_user", STRING_TYPE, OPTIONAL, DEFAULT_WEB_APP_USER);
 		addWithDynamicDefault(
 			"default_group", STRING_TYPE, OPTIONAL | CACHE_DEFAULT_VALUE,
@@ -387,8 +385,6 @@ public:
 	StaticString defaultRuby;
 	StaticString defaultPython;
 	StaticString defaultNodejs;
-	StaticString ustRouterAddress;
-	StaticString ustRouterPassword;
 	StaticString defaultUser;
 	StaticString defaultGroup;
 	StaticString defaultServerName;
@@ -421,8 +417,6 @@ public:
 		  defaultRuby(psg_pstrdup(pool, config["default_ruby"].asString())),
 		  defaultPython(psg_pstrdup(pool, config["default_python"].asString())),
 		  defaultNodejs(psg_pstrdup(pool, config["default_nodejs"].asString())),
-		  ustRouterAddress(psg_pstrdup(pool, config["ust_router_address"].asString())),
-		  ustRouterPassword(psg_pstrdup(pool, config["ust_router_password"].asString())),
 		  defaultUser(psg_pstrdup(pool, config["default_user"].asString())),
 		  defaultGroup(psg_pstrdup(pool, config["default_group"].asString())),
 		  defaultServerName(psg_pstrdup(pool, config["default_server_name"].asString())),

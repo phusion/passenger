@@ -6,9 +6,8 @@ This directory contains the source code of the Passenger agent. The Passenger ag
 
 The most important parts are:
 
- * The Watchdog is the main Passenger process. It starts the Passenger Core and the UstRouter, and restarts them when they crash. It also cleans everything up upon shut down.
+ * The Watchdog is the main Passenger process. It starts the Passenger Core, and restarts them when it crashes. It also cleans everything up upon shut down.
  * The Core performs most of the heavy lifting. It parses requests, spawns application processes, forwards requests to the correct process and forwards application responses back to the web server.
- * The UstRouter processes Union Station data and sends them to the Union Station server.
 
 ## Minor parts
 

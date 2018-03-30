@@ -224,7 +224,7 @@ Group::pushGetWaiter(const Options &newOptions, const GetCallback &callback,
 		    || getWaitlist.size() < newOptions.maxRequestQueueSize)))
 	{
 		getWaitlist.push_back(GetWaiter(
-			newOptions.copyAndPersist().detachFromUnionStationTransaction(),
+			newOptions.copyAndPersist(),
 			callback));
 		return true;
 	} else {
