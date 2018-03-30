@@ -294,7 +294,7 @@ class RequestHandler:
 						output_stream.sendall(str_to_bytes('%s: %s\r\n' % header))
 					output_stream.sendall(b'\r\n')
 				if not is_head:
-					output_stream.sendall(data)
+					output_stream.sendall(str_to_bytes(data))
 			except IOError:
 				# Mark this exception as coming from the Phusion Passenger
 				# socket and not some other socket.
