@@ -159,7 +159,10 @@ if sys.version_info[0] >= 3:
 		return b.decode('latin-1')
 
 	def str_to_bytes(s):
-		return s.encode('latin-1')
+		if isinstance(s, bytes):
+			return s
+		else:
+			return s.encode('latin-1')
 else:
 	def reraise_exception(exc_info):
 		exec("raise exc_info[0], exc_info[1], exc_info[2]")
