@@ -62,7 +62,6 @@ Passenger::SpawningKit::Config::internStrings() {
 		}
 	}
 	totalSize += logFile.size() + 1;
-	totalSize += unionStationKey.size() + 1;
 	totalSize += apiKey.size() + 1;
 	totalSize += groupUuid.size() + 1;
 
@@ -106,8 +105,6 @@ Passenger::SpawningKit::Config::internStrings() {
 		}
 	}
 	pos = appendData(pos, end, logFile);
-	pos = appendData(pos, end, "\0", 1);
-	pos = appendData(pos, end, unionStationKey);
 	pos = appendData(pos, end, "\0", 1);
 	pos = appendData(pos, end, apiKey);
 	pos = appendData(pos, end, "\0", 1);
@@ -176,10 +173,6 @@ Passenger::SpawningKit::Config::internStrings() {
 	logFile = StaticString(pos, tmpSize);
 	pos += tmpSize + 1;
 
-	tmpSize = unionStationKey.size();
-	unionStationKey = StaticString(pos, tmpSize);
-	pos += tmpSize + 1;
-
 	tmpSize = apiKey.size();
 	apiKey = StaticString(pos, tmpSize);
 	pos += tmpSize + 1;
@@ -240,10 +233,6 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 		ok = false;
 		errors.push_back(P_STATIC_STRING("group may not be empty"));
 	}
-	if (config.analyticsSupport && OXT_UNLIKELY(unionStationKey.empty())) {
-		ok = false;
-		errors.push_back(P_STATIC_STRING("union_station_key may not be empty"));
-	}
 	if (OXT_UNLIKELY(!(config.startTimeoutMsec > 0))) {
 		ok = false;
 		errors.push_back(P_STATIC_STRING("start_timeout_msec does not satisfy requirement: "
@@ -259,7 +248,6 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 	 * wrapperSuppliedByThirdParty
 	 * findFreePort
 	 * loadShellEnvvars
-	 * analyticsSupport
 	 * debugWorkDir
 	 * processTitle
 	 * environmentVariables
@@ -289,7 +277,6 @@ Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 		doc["wrapper_supplied_by_third_party"] = wrapperSuppliedByThirdParty;
 	}
 	doc["load_shell_envvars"] = loadShellEnvvars;
-	doc["analytics_support"] = analyticsSupport;
 	doc["start_command"] = startCommand.toString();
 	if (!config.genericApp && config.startsUsingWrapper) {
 		doc["startup_file"] = startupFile.toString();
@@ -305,9 +292,6 @@ Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 	doc["group"] = group.toString();
 	doc["environment_variables"] = tableToJson(environmentVariables);
 	doc["log_file"] = logFile.toString();
-	if (config.analyticsSupport && !config.unionStationKey.empty()) {
-		doc["union_station_key"] = unionStationKey.toString();
-	}
 	if (!config.apiKey.empty()) {
 		doc["api_key"] = apiKey.toString();
 	}
@@ -346,7 +330,6 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 		doc["wrapper_supplied_by_third_party"] = wrapperSuppliedByThirdParty;
 	}
 	doc["load_shell_envvars"] = loadShellEnvvars;
-	doc["analytics_support"] = analyticsSupport;
 	doc["start_command"] = startCommand.toString();
 	if (!config.genericApp && config.startsUsingWrapper) {
 		doc["startup_file"] = startupFile.toString();
@@ -362,9 +345,6 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 	doc["group"] = group.toString();
 	doc["environment_variables"] = "<SECRET>";
 	doc["log_file"] = "<SECRET>";
-	if (config.analyticsSupport && !config.unionStationKey.empty()) {
-		doc["union_station_key"] = "<SECRET>";
-	}
 	if (!config.apiKey.empty()) {
 		doc["api_key"] = "<SECRET>";
 	}

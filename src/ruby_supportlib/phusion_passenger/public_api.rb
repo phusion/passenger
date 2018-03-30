@@ -31,7 +31,6 @@ module PhusionPassenger
     @@event_after_installing_signal_handlers = []
     @@event_oob_work = []
     @@advertised_concurrency_level = nil
-    @@union_station_key = nil
 
     def on_event(name, &block)
       callback_list_for_event(name) << block
@@ -45,14 +44,6 @@ module PhusionPassenger
 
     # For backward compatibility
     def install_framework_extensions!(user_options = {})
-      if PhusionPassenger::App.options["analytics_support"]
-        config = PhusionPassenger::App.options.merge(UnionStationHooks.config)
-        user_options.each_pair do |key, value|
-          config[key.to_s] = value
-        end
-        UnionStationHooks.config.update(config)
-        UnionStationHooks.initialize!
-      end
     end
 
     def advertised_concurrency_level
@@ -61,14 +52,6 @@ module PhusionPassenger
 
     def advertised_concurrency_level=(value)
       @@advertised_concurrency_level = value
-    end
-
-    def union_station_key
-      @@union_station_key
-    end
-
-    def union_station_key=(value)
-      @@union_station_key = value
     end
 
   private

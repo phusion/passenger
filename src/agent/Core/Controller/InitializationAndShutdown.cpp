@@ -71,7 +71,6 @@ Controller::preinitialize() {
 	PASSENGER_STICKY_SESSIONS = "!~PASSENGER_STICKY_SESSIONS";
 	PASSENGER_STICKY_SESSIONS_COOKIE_NAME = "!~PASSENGER_STICKY_SESSIONS_COOKIE_NAME";
 	PASSENGER_REQUEST_OOB_WORK = "!~Request-OOB-Work";
-	UNION_STATION_SUPPORT = "!~UNION_STATION_SUPPORT";
 	REMOTE_ADDR = "!~REMOTE_ADDR";
 	REMOTE_PORT = "!~REMOTE_PORT";
 	REMOTE_USER = "!~REMOTE_USER";
@@ -97,9 +96,6 @@ Controller::initialize() {
 	}
 	if (appPool == NULL) {
 		throw RuntimeException("AppPool not initialized");
-	}
-	if (unionStationContext == NULL) {
-		unionStationContext = appPool->getUnionStationContext();
 	}
 
 	ParentClass::initialize();

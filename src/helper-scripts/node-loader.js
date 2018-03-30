@@ -119,7 +119,6 @@ vm.runInThisContext = function() {
 
 
 var LineReader = require('phusion_passenger/line_reader').LineReader;
-var ustLog = require('phusion_passenger/ustrouter_connector');
 
 var instrumentModulePaths = [ 'phusion_passenger/log_express', 'phusion_passenger/log_mongodb'];
 var instrumentedModules = [];
@@ -205,23 +204,6 @@ function setupEnvironment(options) {
 	http.Server.prototype.originalListen = http.Server.prototype.listen;
 	http.Server.prototype.listen = installServer;
 
-	ustLog.init(logger, PhusionPassenger.options.ust_router_address, PhusionPassenger.options.ust_router_username,
-		PhusionPassenger.options.ust_router_password, PhusionPassenger.options.union_station_key, PhusionPassenger.options.app_group_name);
-
-	if (ustLog.isEnabled()) {
-		// must be first so other modules can use the cls context
-		require('vendor-copy/continuation-local-storage').createNamespace('passenger-request-ctx');
-
-		global.phusion_passenger_ustReporter = require('phusion_passenger/ustreporter');
-		global.phusion_passenger_ustReporter.init(logger, options.app_root, ustLog);
-
-		instrumentModulePaths.forEach(function(modulePath) {
-			var module = require(modulePath);
-			instrumentedModules.push(module);
-			module.initPreLoad(logger, options.app_root, ustLog);
-		});
-	}
-
 	stdinReader.close();
 	stdinReader = undefined;
 	process.stdin.on('end', shutdown);
@@ -230,12 +212,6 @@ function setupEnvironment(options) {
 	recordJourneyStepEnd('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED');
 	recordJourneyStepBegin('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_IN_PROGRESS');
 	loadApplication();
-
-	if (ustLog.isEnabled()) {
-		instrumentedModules.forEach(function(module) {
-			module.initPostLoad();
-		});
-	}
 }
 
 /**

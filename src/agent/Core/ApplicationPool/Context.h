@@ -66,7 +66,6 @@ public:
 	/****** Dependencies ******/
 
 	SpawningKit::FactoryPtr spawningKitFactory;
-	UnionStation::ContextPtr unionStationContext;
 	Json::Value agentConfig;
 
 

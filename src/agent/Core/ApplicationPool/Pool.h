@@ -59,7 +59,6 @@
 #include <Utils/VariantMap.h>
 #include <Utils/ProcessMetricsCollector.h>
 #include <Utils/SystemMetricsCollector.h>
-#include <Core/UnionStation/StopwatchLog.h>
 #include <Core/ApplicationPool/Common.h>
 #include <Core/ApplicationPool/Context.h>
 #include <Core/ApplicationPool/Process.h>
@@ -313,13 +312,6 @@ public:
 
 	/****** Analytics collection ******/
 
-	struct UnionStationLogEntry {
-		string groupName;
-		const char *category;
-		string key;
-		string data;
-	};
-
 	SystemMetricsCollector systemMetricsCollector;
 	SystemMetrics systemMetrics;
 
@@ -329,10 +321,6 @@ public:
 	static void updateProcessMetrics(const ProcessList &processes,
 		const ProcessMetricMap &allMetrics,
 		vector<ProcessPtr> &processesToDetach);
-	void prepareUnionStationProcessStateLogs(vector<UnionStationLogEntry> &logEntries,
-		const GroupPtr &group) const;
-	void prepareUnionStationSystemMetricsLogs(vector<UnionStationLogEntry> &logEntries,
-		const GroupPtr &group) const;
 	void realCollectAnalytics();
 
 
@@ -458,7 +446,6 @@ public:
 
 	Context *getContext();
 	SpawningKit::Context *getSpawningKitContext() const;
-	const UnionStation::ContextPtr &getUnionStationContext() const;
 	const RandomGeneratorPtr &getRandomGenerator() const;
 
 
@@ -503,7 +490,7 @@ public:
 
 	/****** Miscellaneous ******/
 
-	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true, UnionStation::StopwatchLog **stopwatchLog = NULL);
+	void asyncGet(const Options &options, const GetCallback &callback, bool lockNow = true);
 	SessionPtr get(const Options &options, Ticket *ticket);
 	void setMax(unsigned int max);
 	void setMaxIdleTime(unsigned long long value);

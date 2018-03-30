@@ -39,7 +39,6 @@
 #include <Utils/JsonUtils.h>
 #include <Utils/VariantMap.h>
 #include <ConfigKit/Store.h>
-#include <Core/UnionStation/Context.h>
 
 namespace Passenger {
 	namespace ApplicationPool2 {

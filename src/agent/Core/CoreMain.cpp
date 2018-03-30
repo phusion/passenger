@@ -98,7 +98,6 @@
 #include <Core/Config.h>
 #include <Core/ConfigChange.h>
 #include <Core/ApplicationPool/Pool.h>
-#include <Core/UnionStation/Context.h>
 #include <Core/SecurityUpdateChecker.h>
 #include <Core/AdminPanelConnector.h>
 
@@ -146,7 +145,6 @@ namespace Core {
 
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
-		UnionStation::ContextPtr unionStationContext;
 		SpawningKit::Context::Schema spawningKitContextSchema;
 		SpawningKit::ContextPtr spawningKitContext;
 		ApplicationPool2::ContextPtr appPoolContext;
@@ -653,14 +651,6 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
-	if (!coreConfig->get("ust_router_address").isNull()) {
-		wo->unionStationContext = boost::make_shared<UnionStation::Context>(
-			coreConfig->get("ust_router_address").asString(),
-			"logging",
-			coreConfig->get("ust_router_password").asString());
-	}
-
-	UPDATE_TRACE_POINT();
 	wo->spawningKitContext = boost::make_shared<SpawningKit::Context>(
 		wo->spawningKitContextSchema);
 	wo->spawningKitContext->resourceLocator = &wo->resourceLocator;
@@ -677,7 +667,6 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->appPoolContext = boost::make_shared<ApplicationPool2::Context>();
 	wo->appPoolContext->spawningKitFactory = boost::make_shared<SpawningKit::Factory>(
 		wo->spawningKitContext.get());
-	wo->appPoolContext->unionStationContext = wo->unionStationContext;
 	wo->appPoolContext->agentConfig = coreConfig->inspectEffectiveValues();
 	wo->appPoolContext->finalize();
 	wo->appPool = boost::make_shared<Pool>(wo->appPoolContext.get());
@@ -726,7 +715,6 @@ initializeNonPrivilegedWorkingObjects() {
 			coreSchema->controllerSingleAppMode.translator);
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
-		two.controller->unionStationContext = wo->unionStationContext;
 		two.controller->shutdownFinishCallback = controllerShutdownFinished;
 		two.controller->initialize();
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);

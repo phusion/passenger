@@ -167,13 +167,6 @@ public:
 	bool loadShellEnvvars: 1;
 
 	/**
-	 * @hinted_parseable
-	 * @pass_during_handshake
-	 * @non_confidential
-	 */
-	bool analyticsSupport: 1;
-
-	/**
 	 * Set to true if you do not want SpawningKit to remove the
 	 * work directory after a spawning operation, which is useful
 	 * for debugging. Defaults to false.
@@ -311,15 +304,6 @@ public:
 	StaticString logFile;
 
 	/**
-	 * @hinted_parseable
-	 * @only_meaningful_if config.analyticsSupport
-	 * @require_non_empty
-	 * @pass_during_handshake
-	 * @only_pass_during_handshake_if !config.unionStationKey.empty()
-	 */
-	StaticString unionStationKey;
-
-	/**
 	 * The API key of the pool group that the spawned process is to belong to.
 	 *
 	 * @hinted_parseable
@@ -376,7 +360,6 @@ public:
 		  wrapperSuppliedByThirdParty(false),
 		  findFreePort(false),
 		  loadShellEnvvars(false),
-		  analyticsSupport(false),
 		  debugWorkDir(false),
 		  appEnv(P_STATIC_STRING(DEFAULT_APP_ENV)),
 		  baseURI(P_STATIC_STRING("/")),

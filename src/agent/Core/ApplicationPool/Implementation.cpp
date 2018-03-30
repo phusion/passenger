@@ -169,27 +169,11 @@ void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Option
 	const Context *context)
 {
 	TRACE_POINT();
-	UnionStation::TransactionPtr transaction;
 	SpawningKit::ErrorRenderer renderer(*context->getSpawningKitContext());
 	string errorId;
 	char filename[PATH_MAX];
 	stringstream stream;
 	string errorPage;
-
-	if (options.analytics && context->unionStationContext != NULL) {
-		try {
-			UPDATE_TRACE_POINT();
-			transaction = context->unionStationContext->newTransaction(
-				options.getAppGroupName(),
-				"exceptions",
-				options.unionStationKey);
-			errorId = transaction->getTxnId();
-		} catch (const tracable_exception &e2) {
-			transaction.reset();
-			P_WARN("Cannot log to Union Station: " << e2.what() <<
-				"\n  Backtrace:\n" << e2.backtrace());
-		}
-	}
 
 	UPDATE_TRACE_POINT();
 	if (errorId.empty()) {
@@ -225,21 +209,6 @@ void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Option
 		filename[0] = '\0';
 		P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
 			e2.backtrace());
-	}
-
-	if (transaction != NULL) {
-		try {
-			UPDATE_TRACE_POINT();
-			transaction->message("Context: spawning");
-			transaction->message("Message: " +
-				jsonString(e.what()));
-			transaction->message("App message: none");
-			transaction->message("Kind: UNDEFINED_ERROR");
-			transaction->message("Details: {}");
-		} catch (const tracable_exception &e2) {
-			P_WARN("Cannot log to Union Station: " << e2.what() <<
-				"\n  Backtrace:\n" << e2.backtrace());
-		}
 	}
 
 	UPDATE_TRACE_POINT();

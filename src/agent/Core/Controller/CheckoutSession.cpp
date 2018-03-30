@@ -84,10 +84,7 @@ Controller::checkoutSession(Client *client, Request *req) {
 
 void
 Controller::asyncGetFromApplicationPool(Request *req, ApplicationPool2::GetCallback callback) {
-	appPool->asyncGet(req->options, callback, true,
-		req->useUnionStation()
-		? &req->stopwatchLogs.getFromPool
-		: NULL);
+	appPool->asyncGet(req->options, callback, true);
 }
 
 void
@@ -147,7 +144,6 @@ Controller::sessionCheckedOutFromEventLoopThread(Client *client, Request *req,
 		initiateSession(client, req);
 	} else {
 		UPDATE_TRACE_POINT();
-		req->endStopwatchLog(&req->stopwatchLogs.getFromPool, false);
 		reportSessionCheckoutError(client, req, e);
 	}
 }
@@ -198,13 +194,6 @@ Controller::initiateSession(Client *client, Request *req) {
 	}
 
 	UPDATE_TRACE_POINT();
-	if (req->useUnionStation()) {
-		req->endStopwatchLog(&req->stopwatchLogs.getFromPool);
-		req->logMessage("Application PID: " +
-			toString(req->session->getPid()) +
-			" (GUPID: " + req->session->getGupid() + ")");
-		req->beginStopwatchLog(&req->stopwatchLogs.requestProxying, "request proxying");
-	}
 
 	UPDATE_TRACE_POINT();
 	SKC_DEBUG(client, "Session initiated: fd=" << req->session->fd());

@@ -41,7 +41,7 @@ using namespace boost;
 // 'lockNow == false' may only be used during unit tests. Normally we
 // should never call the callback while holding the lock.
 void
-Pool::asyncGet(const Options &options, const GetCallback &callback, bool lockNow, UnionStation::StopwatchLog **stopwatchLog) {
+Pool::asyncGet(const Options &options, const GetCallback &callback, bool lockNow) {
 	DynamicScopedLock lock(syncher, lockNow);
 
 	assert(lifeStatus == ALIVE || lifeStatus == PREPARED_FOR_SHUTDOWN);
@@ -50,32 +50,6 @@ Pool::asyncGet(const Options &options, const GetCallback &callback, bool lockNow
 	boost::container::vector<Callback> actions;
 
 	Group *existingGroup = findMatchingGroup(options);
-	if (stopwatchLog != NULL) {
-		// Log some essentials stats about what this request is facing in its upcoming journey through the queue:
-		// 1) position in the queue upon entry, and 2) whether spawning activity is occurring (which takes cycles
-		// but also indicates the server has headroom to handle the load).
-		Json::Value data;
-		if (!existingGroup) {
-			data["message"] = "spawning.."; // the first of this group, so keep it simple (also: we don't know maxQ yet)
-		} else {
-			char queueMaxStr[10];
-			int queueMax = existingGroup->options.maxRequestQueueSize;
-			if (queueMax > 0) {
-				snprintf(queueMaxStr, sizeof(queueMaxStr), "%d", queueMax);
-			}
-			char message[50];
-			snprintf(message, sizeof(message), "queue: %zu / %s, spawning: %s", existingGroup->getWaitlist.size(),
-					(queueMax == 0 ? "inf" : queueMaxStr),
-					(existingGroup->processesBeingSpawned == 0 ? "no" : "yes"));
-			data["message"] = message;
-		}
-		Json::Value json;
-		json["data"] = data;
-		json["data_type"] = "generic";
-		json["name"] = "Await available process";
-
-		*stopwatchLog = new UnionStation::StopwatchLog(options.transaction, "Pool::asyncGet", stringifyJson(json).c_str());
-	}
 
 	if (OXT_LIKELY(existingGroup != NULL)) {
 		/* Best case: the app group is already in the pool. Let's use it. */
@@ -119,7 +93,7 @@ Pool::asyncGet(const Options &options, const GetCallback &callback, bool lockNow
 			 */
 			P_DEBUG("Could not free a process; putting request to top-level getWaitlist");
 			getWaitlist.push_back(GetWaiter(
-				options.copyAndPersist().detachFromUnionStationTransaction(),
+				options.copyAndPersist(),
 				callback));
 		} else {
 			/* Now that a process has been trashed we can create

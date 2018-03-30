@@ -98,7 +98,6 @@ protected:
 		config->wrapperSuppliedByThirdParty = false;
 		config->findFreePort = false;
 		config->loadShellEnvvars = options.loadShellEnvvars;
-		config->analyticsSupport = options.analytics;
 		config->startCommand = startCommand;
 		config->startupFile = options.getStartupFile();
 		config->appType = options.appType;
@@ -107,7 +106,6 @@ protected:
 		config->environmentVariables = decodeEnvironmentVariables(
 			envvarsData);
 		config->logFile = options.appLogFile;
-		config->unionStationKey = options.unionStationKey;
 		config->apiKey = options.apiKey;
 		config->groupUuid = options.groupUuid;
 		config->lveMinUid = options.lveMinUid;
@@ -119,9 +117,6 @@ protected:
 		config->group = info.groupname;
 
 		extraArgs["spawn_method"] = options.spawnMethod.toString();
-		extraArgs["ust_router_address"] = options.ustRouterAddress.toString();
-		extraArgs["ust_router_username"] = options.ustRouterUsername.toString();
-		extraArgs["ust_router_password"] = options.ustRouterPassword.toString();
 
 		/******************/
 		/******************/

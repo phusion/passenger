@@ -1192,7 +1192,7 @@ public:
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
 		}
 
-		options    = _options.copyAndPersist().detachFromUnionStationTransaction();
+		options    = _options.copyAndPersist();
 		pid        = -1;
 		m_lastUsed = SystemTime::getUsec();
 	}

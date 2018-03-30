@@ -162,8 +162,6 @@ using namespace std;
  *   stat_throttle_rate                                              unsigned integer   -          default(10)
  *   turbocaching                                                    boolean            -          default(true),read_only
  *   user_switching                                                  boolean            -          default(true)
- *   ust_router_address                                              string             -          -
- *   ust_router_password                                             string             -          secret
  *   vary_turbocache_by_cookie                                       string             -          -
  *   watchdog_fd_passing_password                                    string             -          secret
  *   web_server_module_version                                       string             -          read_only
