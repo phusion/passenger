@@ -12,7 +12,13 @@ if sys.version_info[0] >= 3:
 		return b.decode()
 
 	def str_to_bytes(s):
-		return s.encode('latin-1')
+		if isinstance(s, bytes):
+			return s
+		else:
+			return s.encode('latin-1')
+
+	def iteritems(d):
+		return d.items()
 else:
 	def bytes_to_str(b):
 		return b
@@ -20,25 +26,28 @@ else:
 	def str_to_bytes(s):
 		return s
 
+	def iteritems(d):
+		return d.iteritems()
+
 def application(env, start_response):
 	status = '200 OK'
 	body   = None
-	
+
 	method = env.get('REQUEST_METHOD')
 	if method == 'OOBW':
 		time.sleep(1)
 		start_response(status, [('Content-Type', 'text/html')])
 		return [str('oobw ok')]
-	
+
 	filename = env.get('HTTP_X_WAIT_FOR_FILE')
 	if filename is not None:
 		while not file_exist(filename):
 			time.sleep(0.01)
-	
+
 	path = env['PATH_INFO']
 	if path == '/':
 		if file_exist("front_page.txt"):
-			with file("front_page.txt", "r") as f:
+			with open("front_page.txt", "r") as f:
 				body = f.read()
 		else:
 			body = "front page"
@@ -66,22 +75,21 @@ def application(env, start_response):
 					if filename is not None:
 						f = open(filename, "w")
 						try:
-							f.write(str(status))
+							f.write(str_to_bytes(str(status)))
 						finally:
 							f.close()
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
 		return body()
 	elif path == '/pid':
-		body = os.getpid()
+		body = str(os.getpid())
 	elif path.startswith('/env'):
 		body = ''
-		for pair in env.iteritems():
+		for pair in iteritems(env):
 			body += pair[0] + ' = ' + str(pair[1]) + "\n"
-		body = body
 	elif path == '/touch_file':
 		params = cgi.parse(env['wsgi.input'], env)
 		filename = params["file"][0]
-		file(filename, 'w').close()
+		open(filename, 'w').close()
 		body = "ok"
 	elif path == '/extra_header':
 		start_response(status, [('Content-Type', 'text/html'), ('X-Foo', 'Bar')])
@@ -90,20 +98,19 @@ def application(env, start_response):
 		body = "This is the uncached version of /cached"
 	elif path == '/upload_with_params':
 		params = cgi.FieldStorage(fp = env['wsgi.input'], environ = env)
-		name1 = params["name1"].value
-		name2 = params["name2"].value
-		data  = params["data"].value
-		format = \
-			b"name 1 = %s\n" + \
-			b"name 2 = %s\n" + \
-			b"data = %s"
-		body = format % (name1, name2, data)
+		name1 = str_to_bytes(params["name1"].value)
+		name2 = str_to_bytes(params["name2"].value)
+		data  = str_to_bytes(params["data"].value)
+		body = \
+			b"name 1 = " + name1 + b"\n" \
+			b"name 2 = " + name2 + b"\n" \
+			b"data = " + data
 	elif path == '/raw_upload_to_file':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 0))
-		f = open(env['HTTP_X_OUTPUT'], 'w')
+		f = open(env['HTTP_X_OUTPUT'], 'wb')
 		try:
 			line = env['wsgi.input'].readline()
-			while line != "":
+			while len(line) > 0:
 				f.write(line)
 				f.flush()
 				line = env['wsgi.input'].readline()
@@ -172,7 +179,7 @@ def application(env, start_response):
 					if filename is not None:
 						f = open(filename, "w")
 						try:
-							f.write(str(status))
+							f.write(str_to_bytes(str(status)))
 						finally:
 							f.close()
 		start_response(status, headers)
@@ -197,8 +204,8 @@ def application(env, start_response):
 				b"\r\n")
 			io.flush()
 			line = io.readline()
-			while line != "":
-				io.write("Echo: " + line)
+			while len(line) > 0:
+				io.write(str_to_bytes("Echo: " + line))
 				io.flush()
 				line = io.readline()
 		finally:
@@ -206,7 +213,6 @@ def application(env, start_response):
 	else:
 		status = "404 Not Found"
 		body = "Unknown URI"
-	
-	body = str(body)
+
 	start_response(status, [('Content-Type', 'text/plain'), ('Content-Length', len(body))])
 	return [body]
