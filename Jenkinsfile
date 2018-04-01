@@ -81,24 +81,14 @@ pipeline {
               setupTest(params.NODEJS_LINUX, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                try {
-                  sh './dev/ci/run-tests-with-docker nodejs'
-                } finally {
-                  sh 'mv buildout/testlogs buildout/NODEJS_LINUX'
-                  archiveArtifacts artifacts: 'buildout/NODEJS_LINUX/**'
-                }
+                sh './dev/ci/run-tests-with-docker nodejs'
               }
             },
             'Node.js unit tests on macOS': {
               setupTest(params.NODEJS_MACOS, 'macos', MACOS_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host nodejs'
-                try {
-                  sh './dev/ci/run-tests-natively nodejs'
-                } finally {
-                  sh 'mv buildout/testlogs buildout/NODEJS_MACOS'
-                  archiveArtifacts artifacts: 'buildout/NODEJS_MACOS/**'
-                }
+                sh './dev/ci/run-tests-natively nodejs'
               }
             },
 
@@ -243,12 +233,7 @@ pipeline {
               setupTest(params.SOURCE_PACKAGING, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                try {
-                  sh './dev/ci/run-tests-with-docker source-packaging'
-                } finally {
-                  sh 'mv buildout/testlogs buildout/SOURCE_PACKAGING'
-                  archiveArtifacts artifacts: 'buildout/SOURCE_PACKAGING/**'
-                }
+                sh './dev/ci/run-tests-with-docker source-packaging'
               }
             }
           )
