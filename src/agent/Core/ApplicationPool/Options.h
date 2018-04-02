@@ -111,6 +111,7 @@ private:
 
 		result.push_back(&options.environmentVariables);
 		result.push_back(&options.apiKey);
+		result.push_back(&options.groupUuid);
 		result.push_back(&options.hostName);
 		result.push_back(&options.uri);
 
