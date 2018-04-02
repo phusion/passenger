@@ -2,6 +2,7 @@ Release 5.3.0 (Not released yet)
 -------------
 
  * Python app support: fixes a Python 3 compatibility issue w.r.t. writing data over the socket.
+ * Fixes a small memory corruption issue (dangling pointer) in the ApplicationPool subsystem.
 
 
 Release 5.2.2

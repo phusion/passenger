@@ -317,6 +317,7 @@ Group::restart(const Options &options, RestartMethod method) {
 	m_spawning   = false;
 	m_restarting = true;
 	uuid         = generateUuid(pool);
+	this->options.groupUuid = uuid;
 	detachAll(actions);
 	getPool()->interruptableThreads.create_thread(
 		boost::bind(&Group::finalizeRestart, this, shared_from_this(),
