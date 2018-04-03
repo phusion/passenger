@@ -11,6 +11,7 @@ Release 5.2.2
  * Adds an option for dumping the web server config manifest to a given file: `PassengerDumpConfigManifest` (Apache) / `passenger_dump_config_manifest` (Nginx). This option is mostly useful for Passenger developers.
  * [Nginx] Fixes support for configurations that have two `passenger_base_uri` options in a single virtual host, without corresponding `passenger_app_group_name` and `passenger_app_root` directives. Closes GH-2043.
  * [Enterprise] Improved support for RAM-based pricing on Heroku (now using officially recommended memory limit reporting via CGROUP).
+ * (added in CHANGELOG after release) Four new options to connect to the new Fuse Panel: admin_panel_url, admin_panel_auth_type, admin_panel_username, admin_panel_password
 
 
 Release 5.2.1
