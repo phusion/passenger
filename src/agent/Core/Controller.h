@@ -256,6 +256,7 @@ private:
 	void onAppResponseBegin(Client *client, Request *req);
 	void prepareAppResponseCaching(Client *client, Request *req);
 	void onAppResponse100Continue(Client *client, Request *req);
+	void onAppResponse103EarlyHints(Client *client, Request *req);
 	bool constructHeaderBuffersForResponse(Request *req, struct iovec *buffers,
 		unsigned int maxbuffers, unsigned int & restrict_ref nbuffers,
 		unsigned int & restrict_ref dataSize,

@@ -65,6 +65,13 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 	AppResponse *resp = &req->appResponse;
 
 	switch (resp->httpState) {
+	case AppResponse::ONEHUNDREDANDTHREE_EARLY_HINTS:
+		UPDATE_TRACE_POINT();
+		SKC_TRACE(client, 2, "Application sent 103 Early Hints status");
+		onAppResponse103EarlyHints(client, req);
+		// Not yet done parsing.
+		return Channel::Result(buffer.size(), false);
+
 	case AppResponse::PARSING_HEADERS:
 		if (buffer.size() > 0) {
 			// Data
@@ -115,6 +122,10 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 			case AppResponse::ONEHUNDRED_CONTINUE:
 				SKC_TRACE(client, 2, "Application sent 100-Continue status");
 				onAppResponse100Continue(client, req);
+				return Channel::Result(ret, false);
+			case AppResponse::ONEHUNDREDANDTHREE_EARLY_HINTS:
+				SKC_TRACE(client, 2, "Application sent 103 Early Hints status");
+				onAppResponse103EarlyHints(client, req);
 				return Channel::Result(ret, false);
 			case AppResponse::ERROR:
 				SKC_ERROR(client, "Error parsing application response header: " <<
@@ -448,6 +459,17 @@ Controller::onAppResponse100Continue(Client *client, Request *req) {
 		// Allow sending more response headers.
 		req->responseBegun = false;
 	}
+}
+
+void
+Controller::onAppResponse103EarlyHints(Client *client, Request *req) {
+	TRACE_POINT();
+	UPDATE_TRACE_POINT();
+	const unsigned int BUFSIZE = 32;
+	char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
+	int size = snprintf(buf, BUFSIZE, "HTTP/%d.%d 103 Early Hints\r\n",
+		(int) req->httpMajor, (int) req->httpMinor);
+	writeResponse(client, buf, size);
 }
 
 /**

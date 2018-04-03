@@ -38,6 +38,8 @@ getStatusCodeAndReasonPhrase(int statusCode) {
 		return "101 Switching Protocols";
 	case 102:
 		return "102 Processing";
+	case 103:
+		return "103 Early Hints";
 	case 200:
 		return "200 OK";
 	case 201:
