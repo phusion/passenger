@@ -6,7 +6,7 @@ Release 5.2.3 (Not released yet)
  * macOS support: fixes a crash in the `passenger-config compile-nginx-engine` command which only occurs on macOS >= 10.13. This crash was caused by a missing `require` call in our code, and affects users who compile Passenger from source, e.g. users of the Passenger Enterprise Homebrew formula.
  * Fixes a small memory corruption issue (dangling pointer) in the ApplicationPool subsystem.
  * Improves support for the $TMPDIR environment variable by removing leftover hardcoded references to /tmp. Closes GH-2052.
- * Updated PCRE version used in precompiled binaries (used for e.g. gem installs) to 8.42 (was: 8.41).
+ * Updated PCRE version to 8.42 (was: 8.41) across the board.
 
 
 Release 5.2.2
