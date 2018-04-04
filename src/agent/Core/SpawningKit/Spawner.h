@@ -129,12 +129,19 @@ protected:
 
 	public:
 		DebugDir(uid_t uid, gid_t gid) {
-			char buf[PATH_MAX] = "/tmp/passenger.spawn-debug.XXXXXXXXXX";
+			char buf[PATH_MAX];
+			char *pos = buf;
+			const char *end = buf + PATH_MAX;
+
+			pos = appendData(pos, end, getSystemTempDir());
+			pos = appendData(pos, end, "/passenger.spawn-debug.XXXXXXXXXX");
+			*pos = '\0';
+
 			const char *result = mkdtemp(buf);
 			if (result == NULL) {
 				int e = errno;
 				throw SystemException("Cannot create a temporary directory "
-					"in the format of '/tmp/passenger-spawn-debug.XXX'", e);
+					"in the format of '" + StaticString(buf) + "'", e);
 			} else {
 				path = result;
 				boost::this_thread::disable_interruption di;
