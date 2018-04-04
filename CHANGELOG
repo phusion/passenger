@@ -1,4 +1,4 @@
-Release 5.3.0 (Not released yet)
+Release 5.2.3 (Not released yet)
 -------------
 
  * Fuse Panel support: fixes a few bugs with handling small log files and with apps that don't output any messages.
