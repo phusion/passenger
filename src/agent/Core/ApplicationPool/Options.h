@@ -37,6 +37,8 @@
 #include <StaticString.h>
 #include <FileTools/PathManip.h>
 #include <Utils.h>
+#include <Core/UnionStation/Context.h>
+#include <Core/UnionStation/Transaction.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -110,10 +112,14 @@ private:
 		result.push_back(&options.meteorAppSettings);
 
 		result.push_back(&options.environmentVariables);
+		result.push_back(&options.ustRouterAddress);
+		result.push_back(&options.ustRouterUsername);
+		result.push_back(&options.ustRouterPassword);
 		result.push_back(&options.apiKey);
 		result.push_back(&options.groupUuid);
 		result.push_back(&options.hostName);
 		result.push_back(&options.uri);
+		result.push_back(&options.unionStationKey);
 
 		return result;
 	}
@@ -305,6 +311,23 @@ public:
 
 	bool userSwitching;
 
+	/** Whether Union Station logging should be enabled. Enabling this option will
+	 * result in:
+	 *
+	 *  - The application enabling its Union Station support.
+	 *  - Periodic tasks such as `collectAnalytics()` to log things to Union Station.
+	 *
+	 * It does *not* necessarily result in a request logging data to Union Station.
+	 * That depends on whether the `transaction` member is set.
+	 *
+	 * If this is set to true, then 'ustRouterAddress', 'ustRouterUsername'
+	 * and 'ustRouterPassword' must be non-empty.
+	 */
+	bool analytics;
+	StaticString ustRouterAddress;
+	StaticString ustRouterUsername;
+	StaticString ustRouterPassword;
+
 	/**
 	 * Whether Spawner should raise an internal error when spawning. Used
 	 * during unit tests.
@@ -353,6 +376,19 @@ public:
 	 */
 	bool abortWebsocketsOnProcessShutdown;
 
+	/**
+	 * The Union Station key to use in case analytics logging is enabled.
+	 * It is used by Pool::collectAnalytics() and other administrative
+	 * functions which are called periodically. Because they do not belong
+	 * to any request, and they may still want to log to Union Station,
+	 * this key is stored in the per-group options structure.
+	 *
+	 * It is not used on a per-request basis. Per-request analytics logging
+	 * (and Union Station logging) uses the logger object in the `logger` field
+	 * instead.
+	 */
+	StaticString unionStationKey;
+
 	/*-----------------*/
 
 
@@ -367,6 +403,18 @@ public:
 
 	/** Current request URI. */
 	StaticString uri;
+
+	/**
+	 * The Union Station log transaction that this request belongs to.
+	 * May be the null pointer, in which case Union Station logging is
+	 * disabled for this request.
+	 *
+	 * When an Options object is passed to another thread (either direct or through
+	 * a copy), the caller should call `detachFromUnionStationTransaction()`.
+	 * Each Union Station transaction object is only supposed to be used in the same
+	 * thread.
+	 */
+	UnionStation::TransactionPtr transaction;
 
 	/**
 	 * A sticky session ID for routing to a specific process.
@@ -445,6 +493,7 @@ public:
 		  debugger(false),
 		  loadShellEnvvars(true),
 		  userSwitching(true),
+		  analytics(false),
 		  raiseInternalError(false),
 
 		  minProcesses(1),
@@ -530,6 +579,11 @@ public:
 		stickySessionId = 0;
 		currentTime     = 0;
 		noop     = false;
+		return detachFromUnionStationTransaction();
+	}
+
+	Options &detachFromUnionStationTransaction() {
+		transaction.reset();
 		return *this;
 	}
 
@@ -572,7 +626,11 @@ public:
 			appendKeyValue (vec, "python",             python);
 			appendKeyValue (vec, "nodejs",             nodejs);
 			appendKeyValue (vec, "meteor_app_settings", meteorAppSettings);
+			appendKeyValue (vec, "ust_router_address",  ustRouterAddress);
+			appendKeyValue (vec, "ust_router_username", ustRouterUsername);
+			appendKeyValue (vec, "ust_router_password", ustRouterPassword);
 			appendKeyValue4(vec, "debugger",           debugger);
+			appendKeyValue4(vec, "analytics",          analytics);
 			appendKeyValue (vec, "api_key",            apiKey);
 
 			/*********************************/
@@ -582,6 +640,9 @@ public:
 			appendKeyValue3(vec, "max_processes",       maxProcesses);
 			appendKeyValue2(vec, "max_preloader_idle_time", maxPreloaderIdleTime);
 			appendKeyValue3(vec, "max_out_of_band_work_instances", maxOutOfBandWorkInstances);
+		}
+		if ((fields & SPAWN_OPTIONS) || (fields & PER_GROUP_POOL_OPTIONS)) {
+			appendKeyValue (vec, "union_station_key",   unionStationKey);
 		}
 
 		/*********************************/

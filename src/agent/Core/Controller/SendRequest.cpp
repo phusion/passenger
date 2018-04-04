@@ -446,6 +446,14 @@ Controller::determineHeaderSizeForSessionProtocol(Request *req,
 		dataSize += sizeof("on");
 	}
 
+	if (req->options.analytics) {
+		dataSize += sizeof("PASSENGER_TXN_ID");
+		dataSize += req->options.transaction->getTxnId().size() + 1;
+
+		dataSize += sizeof("PASSENGER_DELTA_MONOTONIC");
+		dataSize += delta_monotonic.size() + 1;
+	}
+
 	if (req->upgraded()) {
 		dataSize += sizeof("HTTP_CONNECTION");
 		dataSize += sizeof("upgrade");
@@ -554,6 +562,16 @@ Controller::constructHeaderForSessionProtocol(Request *req, char * restrict buff
 	if (req->https) {
 		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("HTTPS"));
 		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("on"));
+	}
+
+	if (req->options.analytics) {
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_TXN_ID"));
+		pos = appendData(pos, end, req->options.transaction->getTxnId());
+		pos = appendData(pos, end, "", 1);
+
+		pos = appendData(pos, end, P_STATIC_STRING_WITH_NULL("PASSENGER_DELTA_MONOTONIC"));
+		pos = appendData(pos, end, delta_monotonic);
+		pos = appendData(pos, end, "", 1);
 	}
 
 	if (req->upgraded()) {
@@ -842,6 +860,20 @@ Controller::constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *bu
 		}
 		INC_BUFFER_ITER(i);
 		dataSize += req->envvars->size;
+		PUSH_STATIC_BUFFER("\r\n");
+	}
+
+	if (req->options.analytics) {
+		PUSH_STATIC_BUFFER("!~Passenger-Txn-Id: ");
+
+		if (buffers != NULL) {
+			BEGIN_PUSH_NEXT_BUFFER();
+			buffers[i].iov_base = (void *) req->options.transaction->getTxnId().data();
+			buffers[i].iov_len  = req->options.transaction->getTxnId().size();
+		}
+		INC_BUFFER_ITER(i);
+		dataSize += req->options.transaction->getTxnId().size();
+
 		PUSH_STATIC_BUFFER("\r\n");
 	}
 

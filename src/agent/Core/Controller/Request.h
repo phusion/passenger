@@ -35,6 +35,9 @@
 #include <ServerKit/FdSourceChannel.h>
 #include <LoggingKit/LoggingKit.h>
 #include <Core/ApplicationPool/Pool.h>
+#include <Core/UnionStation/Context.h>
+#include <Core/UnionStation/Transaction.h>
+#include <Core/UnionStation/StopwatchLog.h>
 #include <Core/Controller/Config.h>
 #include <Core/Controller/AppResponse.h>
 
@@ -91,6 +94,13 @@ public:
 	ServerKit::FileBufferedChannel bodyBuffer;
 	boost::uint64_t bodyBytesBuffered; // After dechunking
 
+	struct {
+		UnionStation::StopwatchLog *requestProcessing;
+		UnionStation::StopwatchLog *bufferingRequestBody;
+		UnionStation::StopwatchLog *getFromPool;
+		UnionStation::StopwatchLog *requestProxying;
+	} stopwatchLogs;
+
 	HashedStaticString cacheKey;
 	LString *cacheControl;
 	LString *varyCookie;
@@ -112,7 +122,9 @@ public:
 
 	Request()
 		: BaseHttpRequest()
-		{ }
+	{
+		memset(&stopwatchLogs, 0, sizeof(stopwatchLogs));
+	}
 
 	const char *getStateString() const {
 		switch (state) {
@@ -131,6 +143,28 @@ public:
 		default:
 			return "UNKNOWN";
 		}
+	}
+
+	bool useUnionStation() const {
+		return options.transaction != NULL;
+	}
+
+	void beginStopwatchLog(UnionStation::StopwatchLog **stopwatchLog, const char *id, const char *nameAndData = NULL) {
+		if (options.transaction != NULL) {
+			*stopwatchLog = new UnionStation::StopwatchLog(options.transaction, id, nameAndData);
+		}
+	}
+
+	void endStopwatchLog(UnionStation::StopwatchLog **stopwatchLog, bool success = true) {
+		if (success && *stopwatchLog != NULL) {
+			(*stopwatchLog)->success();
+		}
+		delete *stopwatchLog;
+		*stopwatchLog = NULL;
+	}
+
+	void logMessage(const StaticString &message) {
+		options.transaction->message(message);
 	}
 
 	DEFINE_SERVER_KIT_BASE_HTTP_REQUEST_FOOTER(Passenger::Core::Request);

@@ -315,6 +315,43 @@ module TestHelper
     end
   end
 
+  def spawn_ust_router(tmpdir, password)
+    socket_filename = "#{tmpdir}/ust_router.socket"
+    password_filename = "#{tmpdir}/password"
+    File.write(password_filename, password)
+    pid = spawn_process("#{PhusionPassenger.support_binaries_dir}/#{PhusionPassenger::AGENT_EXE}",
+      "ust-router",
+      "--passenger-root", PhusionPassenger.install_spec,
+      "--log-level", PhusionPassenger::DebugLogging.log_level,
+      "--dev-mode",
+      "--dump-dir", tmpdir,
+      "--user",  CONFIG['normal_user_1'],
+      "--group", CONFIG['normal_group_1'],
+      "--listen", "unix:#{socket_filename}",
+      "--password-file", password_filename)
+    eventually do
+      File.exist?(socket_filename)
+    end
+    return [pid, socket_filename, "unix:#{socket_filename}"]
+  rescue Exception => e
+    if pid
+      Process.kill('KILL', pid)
+      Process.waitpid(pid)
+    end
+    raise e
+  end
+
+  def flush_ust_router(password, socket_address)
+    PhusionPassenger.require_passenger_lib 'message_client' if !defined?(PhusionPassenger::MessageClient)
+    client = PhusionPassenger::MessageClient.new("logging", password, socket_address)
+    begin
+      client.write("flush")
+      client.read
+    ensure
+      client.close
+    end
+  end
+
   def inspect_server(name)
     instance = PhusionPassenger::AdminTools::ServerInstance.list.first
     if name

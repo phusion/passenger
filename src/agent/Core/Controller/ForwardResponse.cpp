@@ -894,6 +894,33 @@ Controller::logResponseHeaders(Client *client, Request *req, struct iovec *buffe
 		SKC_TRACE(client, 3, "Sending response headers: \"" <<
 			cEscapeString(StaticString(buffer, dataSize)) << "\"");
 	}
+
+	if (req->useUnionStation()) {
+		TRACE_POINT();
+		const char *status = getStatusCodeAndReasonPhrase(req->appResponse.statusCode);
+		if (status != NULL) {
+			req->logMessage("Status: " + StaticString(status));
+		} else {
+			req->logMessage("Status: " + toString(req->appResponse.statusCode));
+		}
+
+		if (req->appResponse.statusCode >= 400 && req->appResponse.statusCode <= 599) {
+			// Log the request headers like Request headers: { header1: values1-concatenated, header2: values2-concatenated } (single line)
+			// Concatenation was already done by HeaderTable.h:insert (using a comma ',' for joining, or a semicolon ';' for Cookie headers
+			UPDATE_TRACE_POINT();
+			ServerKit::HeaderTable::Iterator it(req->headers);
+			Json::Value json;
+			while (*it != NULL) {
+				const LString *hdr = psg_lstr_make_contiguous(&it->header->key, req->pool);
+				const LString *val = psg_lstr_make_contiguous(&it->header->val, req->pool);
+				// Due to the above mentioned concatenation, header keys are unique and we don't need to worry
+				// about encountering multiple of the same key, so we can just assign.
+				json[std::string(hdr->start->data, hdr->size)] = std::string(val->start->data, val->size);
+				it.next();
+			}
+			req->logMessage("Request headers: " + stringifyJson(json));
+		}
+	}
 }
 
 void
@@ -1055,6 +1082,7 @@ void
 Controller::handleAppResponseBodyEnd(Client *client, Request *req) {
 	keepAliveAppConnection(client, req);
 	storeAppResponseInTurboCache(client, req);
+	finalizeUnionStationWithSuccess(client, req);
 	assert(!req->ended());
 }
 
@@ -1115,6 +1143,12 @@ Controller::storeAppResponseInTurboCache(Client *client, Request *req) {
 			SKC_DEBUG(client, "Could not store app response for turbocaching");
 		}
 	}
+}
+
+void
+Controller::finalizeUnionStationWithSuccess(Client *client, Request *req) {
+	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, true);
+	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, true);
 }
 
 

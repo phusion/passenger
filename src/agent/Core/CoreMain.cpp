@@ -98,6 +98,7 @@
 #include <Core/Config.h>
 #include <Core/ConfigChange.h>
 #include <Core/ApplicationPool/Pool.h>
+#include <Core/UnionStation/Context.h>
 #include <Core/SecurityUpdateChecker.h>
 #include <Core/AdminPanelConnector.h>
 
@@ -145,6 +146,7 @@ namespace Core {
 
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
+		UnionStation::ContextPtr unionStationContext;
 		SpawningKit::ConfigPtr spawningKitConfig;
 		SpawningKit::FactoryPtr spawningKitFactory;
 		PoolPtr appPool;
@@ -656,12 +658,19 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
+	if (!coreConfig->get("ust_router_address").isNull()) {
+		wo->unionStationContext = boost::make_shared<UnionStation::Context>(
+			coreConfig->get("ust_router_address").asString(),
+			"logging",
+			coreConfig->get("ust_router_password").asString());
+	}
 
 	UPDATE_TRACE_POINT();
 	wo->spawningKitConfig = boost::make_shared<SpawningKit::Config>();
 	wo->spawningKitConfig->resourceLocator = &wo->resourceLocator;
 	wo->spawningKitConfig->agentConfig = coreConfig->inspectEffectiveValues();
 	wo->spawningKitConfig->errorHandler = spawningKitErrorHandler;
+	wo->spawningKitConfig->unionStationContext = wo->unionStationContext;
 	wo->spawningKitConfig->randomGenerator = wo->randomGenerator;
 	wo->spawningKitConfig->instanceDir = coreConfig->get("instance_dir").asString();
 	if (!wo->spawningKitConfig->instanceDir.empty()) {
@@ -718,6 +727,7 @@ initializeNonPrivilegedWorkingObjects() {
 			coreSchema->controllerSingleAppMode.translator);
 		two.controller->resourceLocator = &wo->resourceLocator;
 		two.controller->appPool = wo->appPool;
+		two.controller->unionStationContext = wo->unionStationContext;
 		two.controller->shutdownFinishCallback = controllerShutdownFinished;
 		two.controller->initialize();
 		wo->shutdownCounter.fetch_add(1, boost::memory_order_relaxed);

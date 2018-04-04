@@ -49,6 +49,7 @@ using namespace boost;
 struct Controller::RequestAnalysis {
 	const LString *flags;
 	ServerKit::HeaderTable::Cell *appGroupNameCell;
+	bool unionStationSupport;
 };
 
 
@@ -188,6 +189,9 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 
 	options.logLevel = int(LoggingKit::getLevel());
 	options.integrationMode = psg_pstrdup(pool, mainConfig.integrationMode);
+	options.ustRouterAddress = requestConfig->ustRouterAddress;
+	options.ustRouterUsername = P_STATIC_STRING("logging");
+	options.ustRouterPassword = requestConfig->ustRouterPassword;
 	options.userSwitching = mainConfig.userSwitching;
 	options.defaultUser = requestConfig->defaultUser;
 	options.defaultGroup = requestConfig->defaultGroup;
@@ -377,7 +381,43 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	boost::shared_ptr<Options> optionsCopy = boost::make_shared<Options>(options);
 	optionsCopy->persist(options);
 	optionsCopy->clearPerRequestFields();
+	optionsCopy->detachFromUnionStationTransaction();
 	poolOptionsCache.insert(options.getAppGroupName(), optionsCopy);
+}
+
+void
+Controller::initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis) {
+	if (analysis.unionStationSupport) {
+		Options &options = req->options;
+		ServerKit::HeaderTable &headers = req->secureHeaders;
+
+		const LString *key = headers.lookup("!~UNION_STATION_KEY");
+		if (key == NULL || key->size == 0) {
+			disconnectWithError(&client, "header !~UNION_STATION_KEY must be set.");
+			return;
+		}
+		key = psg_lstr_make_contiguous(key, req->pool);
+
+		const LString *filters = headers.lookup("!~UNION_STATION_FILTERS");
+		if (filters != NULL) {
+			filters = psg_lstr_make_contiguous(filters, req->pool);
+		}
+
+		options.transaction = unionStationContext->newTransaction(
+			options.getAppGroupName(), "requests",
+			string(key->start->data, key->size),
+			(filters != NULL)
+				? string(filters->start->data, filters->size)
+				: string());
+		if (!options.transaction->isNull()) {
+			options.analytics = true;
+			options.unionStationKey = StaticString(key->start->data, key->size);
+		}
+
+		req->beginStopwatchLog(&req->stopwatchLogs.requestProcessing, "request processing");
+		req->logMessage(string("Request method: ") + http_method_str(req->method));
+		req->logMessage("URI: " + StaticString(req->path.start->data, req->path.size));
+	}
 }
 
 void
@@ -437,6 +477,8 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		analysis.appGroupNameCell = mainConfig.singleAppMode
 			? NULL
 			: req->secureHeaders.lookupCell(PASSENGER_APP_GROUP_NAME);
+		analysis.unionStationSupport = unionStationContext != NULL
+			&& getBoolOption(req, UNION_STATION_SUPPORT, false);
 		req->stickySession = getBoolOption(req, PASSENGER_STICKY_SESSIONS,
 			mainConfig.defaultStickySessions);
 		req->host = req->headers.lookup(HTTP_HOST);
@@ -456,6 +498,7 @@ Controller::onRequestBegin(Client *client, Request *req) {
 		if (req->ended()) {
 			return;
 		}
+		initializeUnionStation(client, req, analysis);
 		if (req->ended()) {
 			return;
 		}

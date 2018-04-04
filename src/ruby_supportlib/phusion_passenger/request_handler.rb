@@ -80,7 +80,8 @@ module PhusionPassenger
       install_options_as_ivars(self, options,
         "app",
         "app_group_name",
-        "connect_password"
+        "connect_password",
+        "union_station_core"
       )
 
       @keepalive = options.fetch("keepalive", true).to_s == "true"
@@ -367,6 +368,7 @@ module PhusionPassenger
         :app              => @app,
         :app_group_name   => @app_group_name,
         :connect_password => @connect_password,
+        :union_station_core => @union_station_core,
         :keepalive_enabled  => @keepalive
       }
       main_socket_options = common_options.merge(
