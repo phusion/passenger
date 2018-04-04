@@ -1,6 +1,7 @@
 Release 5.3.0 (Not released yet)
 -------------
 
+ * Fuse Panel support: fixes a few bugs with handling small log files and with apps that don't output any messages.
  * Python app support: fixes a Python 3 compatibility issue w.r.t. writing data over the socket.
  * Fixes a small memory corruption issue (dangling pointer) in the ApplicationPool subsystem.
 
