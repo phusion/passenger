@@ -3,6 +3,7 @@ Release 5.2.3 (Not released yet)
 
  * Fuse Panel support: fixes a few bugs with handling small log files and with apps that don't output any messages.
  * Python app support: fixes a Python 3 compatibility issue w.r.t. writing data over the socket.
+ * macOS support: fixes a crash in the `passenger-config compile-nginx-engine` command which only occurs on macOS >= 10.13. This crash was caused by a missing `require` call in our code, and affects users who compile Passenger from source, e.g. users of the Passenger Enterprise Homebrew formula.
  * Fixes a small memory corruption issue (dangling pointer) in the ApplicationPool subsystem.
 
 
