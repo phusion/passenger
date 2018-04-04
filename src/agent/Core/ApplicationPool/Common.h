@@ -39,8 +39,6 @@
 #include <Utils/VariantMap.h>
 #include <Core/ApplicationPool/Options.h>
 #include <Core/SpawningKit/Config.h>
-#include <Core/UnionStation/Context.h>
-#include <Core/UnionStation/Transaction.h>
 
 namespace tut {
 	struct ApplicationPool2_PoolTest;

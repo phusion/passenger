@@ -38,7 +38,6 @@
 #include <RandomGenerator.h>
 #include <Exceptions.h>
 #include <Utils/VariantMap.h>
-#include <Core/UnionStation/Context.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -66,9 +65,6 @@ struct Config {
 
 	boost::mutex agentConfigSyncher;
 	Json::Value agentConfig;
-
-	// Used for Union Station logging.
-	UnionStation::ContextPtr unionStationContext;
 
 	// Used by SmartSpawner and DirectSpawner.
 	RandomGeneratorPtr randomGenerator;
