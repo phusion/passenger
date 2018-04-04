@@ -153,7 +153,7 @@ using namespace std;
  *   security_update_checker_interval                                unsigned integer   -          default(86400)
  *   security_update_checker_proxy_url                               string             -          -
  *   security_update_checker_url                                     string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
- *   server_software                                                 string             -          default("Phusion_Passenger/5.3.0")
+ *   server_software                                                 string             -          default("Phusion_Passenger/5.2.3")
  *   show_version_in_header                                          boolean            -          default(true)
  *   single_app_mode_app_root                                        string             -          default,read_only
  *   single_app_mode_app_type                                        string             -          read_only
@@ -162,8 +162,6 @@ using namespace std;
  *   stat_throttle_rate                                              unsigned integer   -          default(10)
  *   turbocaching                                                    boolean            -          default(true),read_only
  *   user_switching                                                  boolean            -          default(true)
- *   ust_router_address                                              string             -          -
- *   ust_router_password                                             string             -          secret
  *   vary_turbocache_by_cookie                                       string             -          -
  *   watchdog_fd_passing_password                                    string             -          secret
  *   web_server_module_version                                       string             -          read_only

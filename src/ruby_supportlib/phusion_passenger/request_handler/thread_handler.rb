@@ -69,7 +69,6 @@ module PhusionPassenger
         @app_group_name    = Utils.require_option(options, :app_group_name)
         Utils.install_options_as_ivars(self, options,
           :app,
-          :union_station_core,
           :connect_password,
           :keepalive_enabled
         )
@@ -104,8 +103,6 @@ module PhusionPassenger
         channel        = MessageChannel.new
         buffer         = ''
         buffer.force_encoding('binary') if buffer.respond_to?(:force_encoding)
-
-        @union_station_hooks_defined = defined?(UnionStationHooks)
 
         begin
           finish_callback.call
@@ -184,9 +181,6 @@ module PhusionPassenger
             print_exception("Passenger RequestHandler's client socket", e)
           end
         else
-          if headers
-            log_exception_to_union_station(headers, e)
-          end
           # should_reraise_error? returns true except in unit tests,
           # so we normally stop the request handler upon encountering
           # non-EPIPE errors. We do this because process_request is already
@@ -321,10 +315,6 @@ module PhusionPassenger
           connection.simulate_eof!
         end
 
-        if @union_station_hooks_defined
-          @ush_reporter = UnionStationHooks.begin_rack_request(headers)
-        end
-
         #################
       end
 
@@ -333,24 +323,12 @@ module PhusionPassenger
           connection.stop_simulating_eof!
         end
 
-        if @union_station_hooks_defined
-          UnionStationHooks.end_rack_request(headers, has_error)
-          @ush_reporter = nil
-        end
-
         if !has_error && @keepalive_performed && connection
           trace(3, "Keep-aliving connection.")
           @last_connection = connection
         end
 
         #################
-      end
-
-      def log_exception_to_union_station(env, exception)
-        reporter = env['union_station_hooks']
-        if reporter
-          reporter.log_exception(exception)
-        end
       end
 
       def should_reraise_error?(e)

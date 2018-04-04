@@ -83,7 +83,6 @@
 #include <Core/Controller/Client.h>
 #include <Core/Controller/AppResponse.h>
 #include <Core/Controller/TurboCaching.h>
-#include <Core/UnionStation/Context.h>
 
 namespace Passenger {
 
@@ -125,7 +124,6 @@ private:
 	HashedStaticString PASSENGER_STICKY_SESSIONS;
 	HashedStaticString PASSENGER_STICKY_SESSIONS_COOKIE_NAME;
 	HashedStaticString PASSENGER_REQUEST_OOB_WORK;
-	HashedStaticString UNION_STATION_SUPPORT;
 	HashedStaticString REMOTE_ADDR;
 	HashedStaticString REMOTE_PORT;
 	HashedStaticString REMOTE_USER;
@@ -182,7 +180,6 @@ private:
 		const HashedStaticString &name);
 	void createNewPoolOptions(Client *client, Request *req,
 		const HashedStaticString &appGroupName);
-	void initializeUnionStation(Client *client, Request *req, RequestAnalysis &analysis);
 	void setStickySessionId(Client *client, Request *req);
 	const LString *getStickySessionCookieName(Request *req);
 
@@ -293,7 +290,6 @@ private:
 	void handleAppResponseBodyEnd(Client *client, Request *req);
 	OXT_FORCE_INLINE void keepAliveAppConnection(Client *client, Request *req);
 	void storeAppResponseInTurboCache(Client *client, Request *req);
-	void finalizeUnionStationWithSuccess(Client *client, Request *req);
 
 
 	/***** Hooks ******/
@@ -370,7 +366,6 @@ public:
 	// Dependencies
 	ResourceLocator *resourceLocator;
 	PoolPtr appPool;
-	UnionStation::ContextPtr unionStationContext;
 
 
 	/****** Initialization and shutdown ******/

@@ -535,7 +535,8 @@ usage() {
 	printf("Usage: " AGENT_EXE " watchdog <OPTIONS...>\n");
 	printf("Runs the " PROGRAM_NAME " watchdog.\n\n");
 	printf("The watchdog runs and supervises various " PROGRAM_NAME " agent processes,\n");
-	printf("namely the core and the UstRouter. Arguments marked with \"[A]\", e.g.\n");
+	printf("at this moment only the core (there was also a process called UstRouter but\n");
+	printf("it no longer exists). Arguments marked with \"[A]\", e.g.\n");
 	printf("--passenger-root and --log-level, are automatically passed to all supervised\n");
 	printf("agents, unless you explicitly override them by passing extra arguments to a\n");
 	printf("supervised agent specifically. You can pass arguments to a supervised agent by\n");

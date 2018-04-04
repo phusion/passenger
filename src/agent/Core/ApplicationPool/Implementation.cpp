@@ -169,27 +169,11 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	const SpawningKit::ConfigPtr &config)
 {
 	TRACE_POINT();
-	UnionStation::TransactionPtr transaction;
 	ErrorRenderer renderer(*config->resourceLocator);
 	string appMessage = e.getErrorPage();
 	string errorId;
 	char filename[PATH_MAX];
 	stringstream stream;
-
-	if (options.analytics && config->unionStationContext != NULL) {
-		try {
-			UPDATE_TRACE_POINT();
-			transaction = config->unionStationContext->newTransaction(
-				options.getAppGroupName(),
-				"exceptions",
-				options.unionStationKey);
-			errorId = transaction->getTxnId();
-		} catch (const tracable_exception &e2) {
-			transaction.reset();
-			P_WARN("Cannot log to Union Station: " << e2.what() <<
-				"\n  Backtrace:\n" << e2.backtrace());
-		}
-	}
 
 	UPDATE_TRACE_POINT();
 	if (appMessage.empty()) {
@@ -229,69 +213,6 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 		filename[0] = '\0';
 		P_ERROR("Cannot render an error page: " << e2.what() << "\n" <<
 			e2.backtrace());
-	}
-
-	if (transaction != NULL) {
-		try {
-			UPDATE_TRACE_POINT();
-			transaction->message("Context: spawning");
-			transaction->message("Message: " +
-				jsonString(e.what()));
-			transaction->message("App message: " +
-				jsonString(appMessage));
-
-			const char *kind;
-			switch (e.getErrorKind()) {
-			case SpawnException::PRELOADER_STARTUP_ERROR:
-				kind = "PRELOADER_STARTUP_ERROR";
-				break;
-			case SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR:
-				kind = "PRELOADER_STARTUP_PROTOCOL_ERROR";
-				break;
-			case SpawnException::PRELOADER_STARTUP_TIMEOUT:
-				kind = "PRELOADER_STARTUP_TIMEOUT";
-				break;
-			case SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR:
-				kind = "PRELOADER_STARTUP_EXPLAINABLE_ERROR";
-				break;
-			case SpawnException::APP_STARTUP_ERROR:
-				kind = "APP_STARTUP_ERROR";
-				break;
-			case SpawnException::APP_STARTUP_PROTOCOL_ERROR:
-				kind = "APP_STARTUP_PROTOCOL_ERROR";
-				break;
-			case SpawnException::APP_STARTUP_TIMEOUT:
-				kind = "APP_STARTUP_TIMEOUT";
-				break;
-			case SpawnException::APP_STARTUP_EXPLAINABLE_ERROR:
-				kind = "APP_STARTUP_EXPLAINABLE_ERROR";
-				break;
-			default:
-				kind = "UNDEFINED_ERROR";
-				break;
-			}
-			transaction->message(string("Kind: ") + kind);
-
-			Json::Value details;
-			const map<string, string> &annotations = e.getAnnotations();
-			map<string, string>::const_iterator it, end = annotations.end();
-
-			for (it = annotations.begin(); it != end; it++) {
-				details[it->first] = it->second;
-			}
-
-			// This information is not very useful. Union Station
-			// already collects system metrics.
-			details.removeMember("system_metrics");
-			// Don't include environment variables because they may
-			// contain sensitive information.
-			details.removeMember("envvars");
-
-			transaction->message("Details: " + stringifyJson(details));
-		} catch (const tracable_exception &e2) {
-			P_WARN("Cannot log to Union Station: " << e2.what() <<
-				"\n  Backtrace:\n" << e2.backtrace());
-		}
 	}
 
 	UPDATE_TRACE_POINT();

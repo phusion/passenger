@@ -24,6 +24,7 @@
 
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
+PhusionPassenger.require_passenger_lib 'platform_info/openssl'
 
 module PhusionPassenger
 

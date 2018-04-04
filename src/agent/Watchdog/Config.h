@@ -145,7 +145,7 @@ using namespace std;
  *   security_update_checker_interval                                         unsigned integer   -          default(86400)
  *   security_update_checker_proxy_url                                        string             -          -
  *   security_update_checker_url                                              string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
- *   server_software                                                          string             -          default("Phusion_Passenger/5.3.0")
+ *   server_software                                                          string             -          default("Phusion_Passenger/5.2.3")
  *   setsid                                                                   boolean            -          default(false)
  *   show_version_in_header                                                   boolean            -          default(true)
  *   single_app_mode_app_root                                                 string             -          default,read_only
@@ -157,8 +157,6 @@ using namespace std;
  *   turbocaching                                                             boolean            -          default(true),read_only
  *   user                                                                     string             -          default,read_only
  *   user_switching                                                           boolean            -          default(true)
- *   ust_router_address                                                       string             -          -
- *   ust_router_password                                                      string             -          secret
  *   vary_turbocache_by_cookie                                                string             -          -
  *   watchdog_api_server_accept_burst_count                                   unsigned integer   -          default(32)
  *   watchdog_api_server_addresses                                            array of strings   -          default([]),read_only

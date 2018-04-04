@@ -1,3 +1,4 @@
+[![Gem Version](https://badge.fury.io/rb/passenger.svg)](https://badge.fury.io/rb/passenger)
 # <img src="images/passenger_logo.svg" alt="passenger logo" style="margin-bottom: -.2em; width: 1.4em"> Phusion Passenger
 <h3>Supercharge your Ruby, Node.js and Python apps</h3>
 

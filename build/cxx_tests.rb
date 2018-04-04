@@ -90,8 +90,6 @@ TEST_CXX_OBJECTS = {
     "test/cxx/FileDescriptorTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/SystemTimeTest.o" =>
     "test/cxx/SystemTimeTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/FilterSupportTest.o" =>
-    "test/cxx/FilterSupportTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/CachedFileStatTest.o" =>
     "test/cxx/CachedFileStatTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/BufferedIOTest.o" =>

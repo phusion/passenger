@@ -157,13 +157,6 @@ Controller::deinitializeRequest(Client *client, Request *req) {
 	req->session.reset();
 	req->config.reset();
 
-	req->endStopwatchLog(&req->stopwatchLogs.getFromPool, false);
-	req->endStopwatchLog(&req->stopwatchLogs.bufferingRequestBody, false);
-	req->endStopwatchLog(&req->stopwatchLogs.requestProxying, false);
-	req->endStopwatchLog(&req->stopwatchLogs.requestProcessing, false);
-
-	req->options.transaction.reset();
-
 	req->appSink.setConsumedCallback(NULL);
 	req->appSink.deinitialize();
 	req->appSource.deinitialize();
