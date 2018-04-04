@@ -324,6 +324,13 @@
          "has_default_value" : "static",
          "type" : "boolean"
       },
+      "ust_router_address" : {
+         "type" : "string"
+      },
+      "ust_router_password" : {
+         "secret" : true,
+         "type" : "string"
+      },
       "vary_turbocache_by_cookie" : {
          "type" : "string"
       }
@@ -828,6 +835,13 @@
          "default_value" : true,
          "has_default_value" : "static",
          "type" : "boolean"
+      },
+      "ust_router_address" : {
+         "type" : "string"
+      },
+      "ust_router_password" : {
+         "secret" : true,
+         "type" : "string"
       },
       "vary_turbocache_by_cookie" : {
          "type" : "string"
@@ -1559,6 +1573,13 @@
          "default_value" : true,
          "has_default_value" : "static",
          "type" : "boolean"
+      },
+      "ust_router_address" : {
+         "type" : "string"
+      },
+      "ust_router_password" : {
+         "secret" : true,
+         "type" : "string"
       },
       "vary_turbocache_by_cookie" : {
          "type" : "string"

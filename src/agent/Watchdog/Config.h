@@ -157,6 +157,8 @@ using namespace std;
  *   turbocaching                                                             boolean            -          default(true),read_only
  *   user                                                                     string             -          default,read_only
  *   user_switching                                                           boolean            -          default(true)
+ *   ust_router_address                                                       string             -          -
+ *   ust_router_password                                                      string             -          secret
  *   vary_turbocache_by_cookie                                                string             -          -
  *   watchdog_api_server_accept_burst_count                                   unsigned integer   -          default(32)
  *   watchdog_api_server_addresses                                            array of strings   -          default([]),read_only

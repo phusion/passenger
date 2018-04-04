@@ -118,6 +118,8 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   thread_number                                       unsigned integer   required   read_only
  *   turbocaching                                        boolean            -          default(true),read_only
  *   user_switching                                      boolean            -          default(true)
+ *   ust_router_address                                  string             -          -
+ *   ust_router_password                                 string             -          secret
  *   vary_turbocache_by_cookie                           string             -          -
  *
  * END
