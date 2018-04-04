@@ -6,6 +6,7 @@ Release 5.2.3 (Not released yet)
  * macOS support: fixes a crash in the `passenger-config compile-nginx-engine` command which only occurs on macOS >= 10.13. This crash was caused by a missing `require` call in our code, and affects users who compile Passenger from source, e.g. users of the Passenger Enterprise Homebrew formula.
  * Fixes a small memory corruption issue (dangling pointer) in the ApplicationPool subsystem.
  * Improves support for the $TMPDIR environment variable by removing leftover hardcoded references to /tmp. Closes GH-2052.
+ * Updated PCRE version used in precompiled binaries (used for e.g. gem installs) to 8.42 (was: 8.41).
 
 
 Release 5.2.2
@@ -15,6 +16,7 @@ Release 5.2.2
  * [Nginx] Fixes support for configurations that have two `passenger_base_uri` options in a single virtual host, without corresponding `passenger_app_group_name` and `passenger_app_root` directives. Closes GH-2043.
  * [Enterprise] Improved support for RAM-based pricing on Heroku (now using officially recommended memory limit reporting via CGROUP).
  * (added in CHANGELOG after release) Four new options to connect to the new Fuse Panel: admin_panel_url, admin_panel_auth_type, admin_panel_username, admin_panel_password
+ * (added in CHANGELOG after release) Updated OpenSSL version used in precompiled binaries (used for e.g. gem installs) to 1.0.2o (was: 1.0.2m).
 
 
 Release 5.2.1
