@@ -466,6 +466,7 @@ private:
 						dup2(pipe.second, STDOUT_FILENO);
 						pipe.first.close();
 						pipe.second.close();
+						closeAllFileDescriptors(2, true);
 
 						execvp(execArgs[0], (char * const *) &execArgs[0]);
 
