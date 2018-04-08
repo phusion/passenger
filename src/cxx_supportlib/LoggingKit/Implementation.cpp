@@ -373,6 +373,9 @@ Context::convertLog(){
 			reply[appGroupIter.getKey()] = Json::objectValue;
 
 			Json::Value &processLog = reply[appGroupIter.getKey()]["Application process log (combined)"];
+			if (processLog.isNull()) {
+				processLog = Json::arrayValue;
+			}
 			foreach (TimestampedLog logLine, appGroupIter->value.pidLog) {
 				Json::Value logLineJson = Json::objectValue;
 				logLineJson["source_id"] = logLine.sourceId;

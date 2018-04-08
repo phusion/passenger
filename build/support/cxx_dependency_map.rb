@@ -6496,6 +6496,9 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/oxt/tracable_exception.hpp"],
  "src/agent/Core/SpawningKit/Handshake/WorkDir.h"=>
   ["src/cxx_supportlib/Exceptions.h",
+   "src/cxx_supportlib/StaticString.h",
+   "src/cxx_supportlib/Utils.h",
+   "src/cxx_supportlib/Utils/StrIntUtils.h",
    "src/cxx_supportlib/oxt/detail/tracable_exception_disabled.hpp",
    "src/cxx_supportlib/oxt/detail/tracable_exception_enabled.hpp",
    "src/cxx_supportlib/oxt/macros.hpp",

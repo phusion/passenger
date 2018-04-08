@@ -75,6 +75,7 @@ struct AbortHandlerContext {
 	const AbortHandlerConfig *config;
 	char *installSpec;
 	char *rubyLibDir;
+	char *tmpDir;
 	char *crashWatchCommand;
 	char *backtraceSanitizerCommand;
 	bool backtraceSanitizerPassProgramInfo;
@@ -642,7 +643,8 @@ createCrashLogFile(char *filename, size_t bufSize, time_t t) {
 	int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1) {
 		pos = filename;
-		pos = ASSU::appendData(pos, end, "/tmp/passenger-crash-log.");
+		pos = ASSU::appendData(pos, end, ctx->tmpDir);
+		pos = ASSU::appendData(pos, end, "/passenger-crash-log.");
 		pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
 		*pos = '\0';
 		fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
@@ -977,6 +979,7 @@ abortHandlerConfigChanged() {
 	const AbortHandlerConfig *config = ctx->config;
 	char *oldInstallSpec = ctx->installSpec;
 	char *oldRubyLibDir = ctx->rubyLibDir;
+	char *oldTmpDir = ctx->tmpDir;
 	char *oldCrashWatchCommand = ctx->crashWatchCommand;
 	char *oldBacktraceSanitizerCommand = ctx->backtraceSanitizerCommand;
 
@@ -986,11 +989,14 @@ abortHandlerConfigChanged() {
 
 		ctx->installSpec = strdup(locator->getInstallSpec().c_str());
 		ctx->rubyLibDir = strdup(locator->getRubyLibDir().c_str());
+		ctx->tmpDir = strdup(getSystemTempDir());
 
 		path = locator->getHelperScriptsDir() + "/crash-watch.rb";
 		ctx->crashWatchCommand = strdup(path.c_str());
 
-		if (ctx->installSpec == NULL || ctx->rubyLibDir == NULL || ctx->crashWatchCommand == NULL) {
+		if (ctx->installSpec == NULL || ctx->rubyLibDir == NULL
+			|| ctx->tmpDir == NULL || ctx->crashWatchCommand == NULL)
+		{
 			fprintf(stderr, "Cannot allocate memory for abort handler!\n");
 			fflush(stderr);
 			abort();
@@ -1013,12 +1019,14 @@ abortHandlerConfigChanged() {
 	} else {
 		ctx->installSpec = NULL;
 		ctx->rubyLibDir = NULL;
+		ctx->tmpDir = NULL;
 		ctx->crashWatchCommand = NULL;
 		useCxxFiltAsBacktraceSanitizer();
 	}
 
 	free(oldInstallSpec);
 	free(oldRubyLibDir);
+	free(oldTmpDir);
 	free(oldCrashWatchCommand);
 	free(oldBacktraceSanitizerCommand);
 }
@@ -1027,6 +1035,7 @@ void
 shutdownAbortHandler() {
 	free(ctx->installSpec);
 	free(ctx->rubyLibDir);
+	free(ctx->tmpDir);
 	free(ctx->crashWatchCommand);
 	free(ctx->backtraceSanitizerCommand);
 	free(ctx->alternativeStack);

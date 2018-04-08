@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# This script is from the "Passenger binaries test" Jenkins job. It builds
+# generic Linux binaries for a specific architecture.
+#
+# Required environment variables:
+#
+#   WORKSPACE
+#   ARCHITECTURE
+#
+# Optional environment variables:
+#
+#   PASSENGER_ROOT (defaults to $WORKSPACE)
+#   OUTPUT_DIR (defaults to $WORKSPACE/output)
+#   CACHE_DIR (defaults to $WORKSPACE/cache)
+
+set -e
+SELFDIR=$(dirname "$0")
+cd "$SELFDIR/../../../../packaging/binaries"
+# shellcheck source=../../../../packaging/binaries/shared/lib/library.sh
+source "./shared/lib/library.sh"
+
+require_envvar WORKSPACE "$WORKSPACE"
+require_envvar ARCHITECTURE "$ARCHITECTURE"
+
+PASSENGER_ROOT="${PASSENGER_ROOT:-$WORKSPACE}"
+OUTPUT_DIR="${OUTPUT_DIR:-$WORKSPACE/output}"
+CACHE_DIR="${CACHE_DIR:-$WORKSPACE/cache}"
+
+run mkdir -p "$OUTPUT_DIR"
+run mkdir -p "$CACHE_DIR"
+
+run ./linux/build \
+	-p "$PASSENGER_ROOT" \
+	-c "$CACHE_DIR" \
+	-o "$OUTPUT_DIR" \
+	-a "$ARCHITECTURE" \
+	-j 1 \
+	passenger nginx

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# This script is from the "Passenger binaries test" Jenkins job. It builds
+# generic macOS binaries.
+#
+# Required environment variables:
+#
+#   WORKSPACE
+#
+# Optional environment variables:
+#
+#   PASSENGER_ROOT (defaults to $WORKSPACE)
+#   OUTPUT_DIR (defaults to $WORKSPACE/output)
+#   CACHE_DIR (defaults to $WORKSPACE/cache)
+#   RUNTIME_DIR (defaults to $CACHE_DIR/runtime)
+
+set -e
+SELFDIR=$(dirname "$0")
+cd "$SELFDIR/../../../../packaging/binaries"
+# shellcheck source=../../../../packaging/binaries/shared/lib/library.sh
+source "./shared/lib/library.sh"
+
+require_envvar WORKSPACE "$WORKSPACE"
+
+PASSENGER_ROOT="${PASSENGER_ROOT:-$WORKSPACE}"
+OUTPUT_DIR="${OUTPUT_DIR:-$WORKSPACE/output}"
+CACHE_DIR="${CACHE_DIR:-$WORKSPACE/cache}"
+RUNTIME_DIR="${RUNTIME_DIR:-$CACHE_DIR/runtime}"
+
+RUNTIME_VERSION=$(cat shared/definitions/macos_runtime_version)
+
+run mkdir -p "$OUTPUT_DIR"
+run mkdir -p "$CACHE_DIR"
+
+run ./macos/build \
+	-p "$PASSENGER_ROOT" \
+	-r "$RUNTIME_DIR/$RUNTIME_VERSION" \
+	-c "$CACHE_DIR" \
+	-o "$OUTPUT_DIR" \
+	-j 1 \
+	passenger nginx

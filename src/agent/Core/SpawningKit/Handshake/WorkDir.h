@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -35,6 +35,8 @@
 #include <unistd.h>
 
 #include <Exceptions.h>
+#include <Utils.h>
+#include <Utils/StrIntUtils.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -53,12 +55,19 @@ private:
 
 public:
 	HandshakeWorkDir(uid_t uid, gid_t gid) {
-		char buf[PATH_MAX] = "/tmp/passenger.spawn.XXXXXXXXXX";
+		char buf[PATH_MAX + 1];
+		char *pos = buf;
+		const char *end = buf + PATH_MAX;
+
+		pos = appendData(pos, end, getSystemTempDir());
+		pos = appendData(pos, end, "/passenger.spawn.XXXXXXXXXX");
+		*pos = '\0';
+
 		const char *result = mkdtemp(buf);
 		if (result == NULL) {
 			int e = errno;
 			throw SystemException("Cannot create a temporary directory "
-				"in the format of '/tmp/passenger.spawn.XXX'", e);
+				"in the format of '" + StaticString(buf) + "'", e);
 		} else {
 			path = result;
 			boost::this_thread::disable_interruption di;

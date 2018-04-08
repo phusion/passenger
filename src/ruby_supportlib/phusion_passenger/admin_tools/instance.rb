@@ -115,8 +115,21 @@ module PhusionPassenger
         properties["watchdog_pid"]
       end
 
+      # Returns the Core's PID, or nil if it is not running
+      # or isn't finished initializing.
       def core_pid
-        @core_pid ||= File.read("#{@path}/core.pid").to_i
+        @core_pid ||= begin
+          begin
+            data = File.read("#{@path}/core.pid")
+            if data.empty?
+              nil
+            else
+              data.to_i
+            end
+          rescue Errno::ENOENT
+            nil
+          end
+        end
       end
 
       def web_server_control_process_pid
