@@ -27,7 +27,7 @@ def testDebianPackages(distro, params) {
 }
 
 pipeline {
-  agent any
+  agent { node { label 'master-pipeline' } }
 
   options {
     buildDiscarder(logRotator(numToKeepStr: '10'))
