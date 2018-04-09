@@ -291,6 +291,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => 'The password to use when connecting to the admin panel using basic authentication'
   },
 
+
   ###### Per-application configuration ######
 
   {

@@ -106,6 +106,8 @@
 PhusionPassenger.require_passenger_lib 'constants'
 
 NGINX_CONFIGURATION_OPTIONS = [
+  ###### Global configuration ######
+
   {
     :name     => 'passenger_root',
     :scope    => :global,
@@ -293,6 +295,14 @@ NGINX_CONFIGURATION_OPTIONS = [
     :dynamic_default => 'passenger_core_file_descriptor_ulimit'
   },
   {
+    :name     => 'passenger_max_instances_per_app',
+    :scope    => :global,
+    :context  => [:main],
+    :type     => :uinteger,
+    :default  => 0,
+    :header   => 'PASSENGER_MAX_PROCESSES'
+  },
+  {
     :name     => 'passenger_admin_panel_url',
     :scope    => :global,
     :type     => :string,
@@ -320,15 +330,10 @@ NGINX_CONFIGURATION_OPTIONS = [
     :context  => [:main],
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
-  {
-    :name     => 'passenger_enabled',
-    :scope    => :location,
-    :type     => :flag,
-    :default  => false,
-    :function => 'passenger_enabled',
-    :field    => 'enabled',
-    :header   => nil
-  },
+
+
+  ###### Per-application configuration ######
+
   {
     :name     => 'passenger_ruby',
     :scope    => :application,
@@ -373,37 +378,10 @@ NGINX_CONFIGURATION_OPTIONS = [
     :header   => 'PASSENGER_MIN_PROCESSES'
   },
   {
-    :name     => 'passenger_max_instances_per_app',
-    :scope    => :global,
-    :context  => [:main],
-    :type     => :uinteger,
-    :default  => 0,
-    :header   => 'PASSENGER_MAX_PROCESSES'
-  },
-  {
-    :name     => 'passenger_max_requests',
-    :scope    => :location,
-    :type     => :uinteger,
-    :default  => 0
-  },
-  {
     :name     => 'passenger_start_timeout',
     :scope    => :application,
     :type     => :integer,
     :default  => DEFAULT_START_TIMEOUT / 1000
-  },
-  {
-    :name     => 'passenger_base_uri',
-    :scope    => :location,
-    :type     => :string_array,
-    :field    => 'base_uris',
-    :header   => nil
-  },
-  {
-    :name     => 'passenger_document_root',
-    :scope    => :location,
-    :type     => :string,
-    :header   => nil
   },
   {
     :name     => 'passenger_user',
@@ -453,6 +431,93 @@ NGINX_CONFIGURATION_OPTIONS = [
     :default  => DEFAULT_MAX_PRELOADER_IDLE_TIME
   },
   {
+    :name     => 'passenger_env_var',
+    :scope    => :application,
+    :type     => :string_keyval,
+    :field    => 'env_vars',
+    :header   => nil
+  },
+  {
+    :name     => 'passenger_spawn_method',
+    :scope    => :application,
+    :dynamic_default => "'smart' for Ruby apps, 'direct' for all other apps",
+    :type     => :string
+  },
+  {
+    :name     => 'passenger_load_shell_envvars',
+    :scope    => :application,
+    :type     => :flag,
+    :default  => true
+  },
+  {
+    :name     => 'passenger_max_request_queue_size',
+    :scope    => :application,
+    :type     => :uinteger,
+    :default  => DEFAULT_MAX_REQUEST_QUEUE_SIZE
+  },
+  {
+    :name     => 'passenger_app_type',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => 'Autodetected',
+    :header   => nil
+  },
+  {
+    :name     => 'passenger_startup_file',
+    :scope    => :application,
+    :type     => :string,
+    :dynamic_default => 'Autodetected'
+  },
+  {
+    :name     => 'passenger_restart_dir',
+    :scope    => :application,
+    :type     => :string,
+    :default  => 'tmp'
+  },
+  {
+    :name     => 'passenger_abort_websockets_on_process_shutdown',
+    :scope    => :application,
+    :type     => :flag,
+    :default  => true
+  },
+  {
+    :name     => 'passenger_force_max_concurrent_requests_per_process',
+    :scope    => :application,
+    :type     => :integer,
+    :default  => -1
+  },
+
+  ###### Per-location/per-request configuration ######
+
+  {
+    :name     => 'passenger_enabled',
+    :scope    => :location,
+    :type     => :flag,
+    :default  => false,
+    :function => 'passenger_enabled',
+    :field    => 'enabled',
+    :header   => nil
+  },
+  {
+    :name     => 'passenger_max_requests',
+    :scope    => :location,
+    :type     => :uinteger,
+    :default  => 0
+  },
+  {
+    :name     => 'passenger_base_uri',
+    :scope    => :location,
+    :type     => :string_array,
+    :field    => 'base_uris',
+    :header   => nil
+  },
+  {
+    :name     => 'passenger_document_root',
+    :scope    => :location,
+    :type     => :string,
+    :header   => nil
+  },
+  {
     :name     => 'passenger_ignore_headers',
     :scope    => :location,
     :take     => 'NGX_CONF_1MORE',
@@ -460,13 +525,6 @@ NGINX_CONFIGURATION_OPTIONS = [
     :field    => 'upstream_config.ignore_headers',
     :post     => '&ngx_http_upstream_ignore_headers_masks',
     :auto_generate_nginx_tracking_code => false
-  },
-  {
-    :name     => 'passenger_env_var',
-    :scope    => :application,
-    :type     => :string_keyval,
-    :field    => 'env_vars',
-    :header   => nil
   },
   {
     :name     => 'passenger_set_header',
@@ -552,47 +610,10 @@ NGINX_CONFIGURATION_OPTIONS = [
     :field    => 'upstream_config.intercept_errors'
   },
   {
-    :name     => 'passenger_spawn_method',
-    :scope    => :application,
-    :dynamic_default => "'smart' for Ruby apps, 'direct' for all other apps",
-    :type     => :string
-  },
-  {
-    :name     => 'passenger_load_shell_envvars',
-    :scope    => :application,
-    :type     => :flag,
-    :default  => true
-  },
-  {
-    :name     => 'passenger_max_request_queue_size',
-    :scope    => :application,
-    :type     => :uinteger,
-    :default  => DEFAULT_MAX_REQUEST_QUEUE_SIZE
-  },
-  {
     :name     => 'passenger_request_queue_overflow_status_code',
     :scope    => :location,
     :type     => :integer,
     :default  => 503
-  },
-  {
-    :name     => 'passenger_restart_dir',
-    :scope    => :application,
-    :type     => :string,
-    :default  => 'tmp'
-  },
-  {
-    :name     => 'passenger_app_type',
-    :scope    => :application,
-    :type     => :string,
-    :dynamic_default => 'Autodetected',
-    :header   => nil
-  },
-  {
-    :name     => 'passenger_startup_file',
-    :scope    => :application,
-    :type     => :string,
-    :dynamic_default => 'Autodetected'
   },
   {
     :name     => 'passenger_sticky_sessions',
@@ -611,20 +632,10 @@ NGINX_CONFIGURATION_OPTIONS = [
     :scope    => :location,
     :type     => :string
   },
-  {
-    :name     => 'passenger_abort_websockets_on_process_shutdown',
-    :scope    => :application,
-    :type     => :flag,
-    :default  => true
-  },
-  {
-    :name     => 'passenger_force_max_concurrent_requests_per_process',
-    :scope    => :application,
-    :type     => :integer,
-    :default  => -1
-  },
+
 
   ###### Enterprise features (placeholders in OSS) ######
+
   {
     :context  => [:main],
     :name     => 'passenger_fly_with',
@@ -691,7 +702,9 @@ NGINX_CONFIGURATION_OPTIONS = [
     :field    => nil
   },
 
-  ###### Aliases for backwards compatibility ######
+
+  ###### Aliases and backwards compatibility options ######
+
   {
     :name      => 'passenger_debug_log_file',
     :alias_for => 'passenger_log_file'
@@ -713,7 +726,9 @@ NGINX_CONFIGURATION_OPTIONS = [
     :alias_for => 'passenger_max_preloader_idle_time'
   },
 
-  ###### Obsolete options ######
+
+  ###### Deprecated/obsolete options ######
+
   {
     :name     => 'rails_framework_spawner_idle_time',
     :scope    => :application,
