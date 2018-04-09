@@ -58,7 +58,7 @@ typedef struct {
     ngx_uint_t min_instances;
     ngx_array_t *monitor_log_file;
     ngx_int_t request_queue_overflow_status_code;
-    ngx_int_t start_timeout;
+    ngx_uint_t start_timeout;
     ngx_flag_t sticky_sessions;
     ngx_str_t app_group_name;
     ngx_str_t app_rights;

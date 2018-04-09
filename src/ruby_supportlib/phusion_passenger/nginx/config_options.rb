@@ -380,7 +380,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   {
     :name     => 'passenger_start_timeout',
     :scope    => :application,
-    :type     => :integer,
+    :type     => :uinteger,
     :default  => DEFAULT_START_TIMEOUT / 1000
   },
   {
