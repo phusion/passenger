@@ -582,10 +582,12 @@ private:
 		P_NOTICE(getLogPrefix() << "Closing connection: " << reason);
 		reconnectAfterReply = false;
 		timer->cancel();
-		conn->close(code, reason, ec);
-		conn.reset();
-		if (ec) {
-			P_WARN(getLogPrefix() << "Error closing connection: " << ec.message());
+		if (conn != NULL) {
+			conn->close(code, reason, ec);
+			conn.reset();
+			if (ec) {
+				P_WARN(getLogPrefix() << "Error closing connection: " << ec.message());
+			}
 		}
 
 		{
