@@ -88,6 +88,9 @@ static void add_manifest_options_container_static_default_uint(manifest_gen_ctx_
 static void add_manifest_options_container_static_default_bool(manifest_gen_ctx_t *ctx,
     PsgJsonValue *options_container, const char *option_name, size_t option_name_len,
     int value);
+static void add_manifest_options_container_inferred_default_str(manifest_gen_ctx_t *ctx,
+    PsgJsonValue *options_container, const char *option_name, size_t option_name_len,
+    const char *value, size_t value_len);
 
 static void manifest_inherit_application_value_hierarchies(manifest_gen_ctx_t *ctx);
 static void manifest_inherit_location_value_hierarchies(manifest_gen_ctx_t *ctx);

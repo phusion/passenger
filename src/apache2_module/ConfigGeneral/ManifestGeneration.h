@@ -100,13 +100,13 @@ private:
 			*appOptionsContainer = &appConfigContainer["options"];
 			*locOptionsContainer = &appConfigContainer["default_location_configuration"];
 
-			// Create a default value for passenger_app_root
-			// if we just created this config container
+			// Create a default value for PassengerAppGroupName and
+			// PassengerAppRoot if we just created this config container
 			if ((*appOptionsContainer)->empty()) {
-				addOptionsContainerStaticDefaultStr(**appOptionsContainer,
+				addOptionsContainerInferredDefaultStr(**appOptionsContainer,
 					"PassengerAppGroupName",
 					appGroupName);
-				addOptionsContainerStaticDefaultStr(**appOptionsContainer,
+				addOptionsContainerInferredDefaultStr(**appOptionsContainer,
 					"PassengerAppRoot",
 					inferDefaultAppRoot(csconf));
 			}
@@ -531,8 +531,8 @@ private:
 		optionContainer["value_hierarchy"].append(hierarchyMember);
 	}
 
-	Json::Value &addOptionsContainerStaticDefault(Json::Value &optionsContainer,
-		const char *optionName)
+	Json::Value &addOptionsContainerDefault(Json::Value &optionsContainer,
+		const char *defaultType, const char *optionName)
 	{
 		Json::Value &optionContainer = optionsContainer[optionName];
 		if (optionContainer.isNull()) {
@@ -540,7 +540,7 @@ private:
 		}
 
 		Json::Value hierarchyMember;
-		hierarchyMember["source"]["type"] = "default";
+		hierarchyMember["source"]["type"] = defaultType;
 
 		return optionContainer["value_hierarchy"].append(hierarchyMember);
 	}
@@ -548,8 +548,8 @@ private:
 	void addOptionsContainerStaticDefaultStr(Json::Value &optionsContainer,
 		const char *optionName, const StaticString &value)
 	{
-		Json::Value &hierarchyMember = addOptionsContainerStaticDefault(
-			optionsContainer, optionName);
+		Json::Value &hierarchyMember = addOptionsContainerDefault(
+			optionsContainer, "default", optionName);
 		hierarchyMember["value"] = Json::Value(value.data(),
 			value.data() + value.size());
 	}
@@ -557,17 +557,26 @@ private:
 	void addOptionsContainerStaticDefaultInt(Json::Value &optionsContainer,
 		const char *optionName, int value)
 	{
-		Json::Value &hierarchyMember = addOptionsContainerStaticDefault(
-			optionsContainer, optionName);
+		Json::Value &hierarchyMember = addOptionsContainerDefault(
+			optionsContainer, "default", optionName);
 		hierarchyMember["value"] = value;
 	}
 
 	void addOptionsContainerStaticDefaultBool(Json::Value &optionsContainer,
 		const char *optionName, bool value)
 	{
-		Json::Value &hierarchyMember = addOptionsContainerStaticDefault(
-			optionsContainer, optionName);
+		Json::Value &hierarchyMember = addOptionsContainerDefault(
+			optionsContainer, "default", optionName);
 		hierarchyMember["value"] = value;
+	}
+
+	void addOptionsContainerInferredDefaultStr(Json::Value &optionsContainer,
+		const char *optionName, const StaticString &value)
+	{
+		Json::Value &hierarchyMember = addOptionsContainerDefault(
+			optionsContainer, "inferred-default", optionName);
+		hierarchyMember["value"] = Json::Value(value.data(),
+			value.data() + value.size());
 	}
 
 	void jsonAppendValues(Json::Value &doc, const Json::Value &doc2) {

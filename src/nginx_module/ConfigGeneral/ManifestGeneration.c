@@ -420,18 +420,18 @@ find_or_create_manifest_app_and_loc_options_containers(manifest_gen_ctx_t *ctx,
         *app_options_container = psg_json_value_get(app_config_container, "options", -1);
         *loc_options_container = psg_json_value_get(app_config_container, "default_location_configuration", -1);
 
-        /* Create a default value for passenger_app_root
-         * if we just created this config container
+        /* Create a default value for passenger_app_group_name and
+         * passenger_app_root if we just created this config container
          */
         if (psg_json_value_size(*app_options_container) == 0) {
-            add_manifest_options_container_static_default_str(ctx,
+            add_manifest_options_container_inferred_default_str(ctx,
                 *app_options_container,
                 "passenger_app_group_name", -1,
                 (const char *) app_group_name.data, app_group_name.len);
 
             default_app_root.data = infer_default_app_root(
                 ctx, clcf, &default_app_root.len);
-            add_manifest_options_container_static_default_str(ctx,
+            add_manifest_options_container_inferred_default_str(ctx,
                 *app_options_container,
                 "passenger_app_root", -1,
                 (const char *) default_app_root.data, default_app_root.len);
@@ -551,8 +551,9 @@ add_manifest_options_container_dynamic_default(manifest_gen_ctx_t *ctx,
 }
 
 static PsgJsonValue *
-add_manifest_options_container_static_default(manifest_gen_ctx_t *ctx,
-    PsgJsonValue *options_container, const char *option_name, size_t option_name_len)
+add_manifest_options_container_default(manifest_gen_ctx_t *ctx,
+    PsgJsonValue *options_container, const char *default_type,
+    const char *option_name, size_t option_name_len)
 {
     PsgJsonValue *option_container, *hierarchy, *hierarchy_member, *source, *result;
 
@@ -563,7 +564,7 @@ add_manifest_options_container_static_default(manifest_gen_ctx_t *ctx,
     hierarchy = psg_json_value_get(option_container, "value_hierarchy", -1);
 
     source = psg_json_value_new_with_type(PSG_JSON_VALUE_TYPE_OBJECT);
-    psg_json_value_set_str(source, "type", "default", -1);
+    psg_json_value_set_str(source, "type", default_type, -1);
 
     hierarchy_member = psg_json_value_new_with_type(PSG_JSON_VALUE_TYPE_OBJECT);
     psg_json_value_set_value(hierarchy_member, "source", -1, source);
@@ -581,8 +582,8 @@ add_manifest_options_container_static_default_str(manifest_gen_ctx_t *ctx,
     PsgJsonValue *options_container, const char *option_name, size_t option_name_len,
     const char *value, size_t value_len)
 {
-    PsgJsonValue *hierarchy_member = add_manifest_options_container_static_default(
-        ctx, options_container, option_name, option_name_len);
+    PsgJsonValue *hierarchy_member = add_manifest_options_container_default(
+        ctx, options_container, "default", option_name, option_name_len);
     psg_json_value_set_str(hierarchy_member, "value", value, value_len);
 }
 
@@ -591,8 +592,8 @@ add_manifest_options_container_static_default_int(manifest_gen_ctx_t *ctx,
     PsgJsonValue *options_container, const char *option_name, size_t option_name_len,
     int value)
 {
-    PsgJsonValue *hierarchy_member = add_manifest_options_container_static_default(
-        ctx, options_container, option_name, option_name_len);
+    PsgJsonValue *hierarchy_member = add_manifest_options_container_default(
+        ctx, options_container, "default", option_name, option_name_len);
     psg_json_value_set_int(hierarchy_member, "value", value);
 }
 
@@ -601,8 +602,8 @@ add_manifest_options_container_static_default_uint(manifest_gen_ctx_t *ctx,
     PsgJsonValue *options_container, const char *option_name, size_t option_name_len,
     unsigned int value)
 {
-    PsgJsonValue *hierarchy_member = add_manifest_options_container_static_default(
-        ctx, options_container, option_name, option_name_len);
+    PsgJsonValue *hierarchy_member = add_manifest_options_container_default(
+        ctx, options_container, "default", option_name, option_name_len);
     psg_json_value_set_uint(hierarchy_member, "value", value);
 }
 
@@ -611,9 +612,19 @@ add_manifest_options_container_static_default_bool(manifest_gen_ctx_t *ctx,
     PsgJsonValue *options_container, const char *option_name, size_t option_name_len,
     int value)
 {
-    PsgJsonValue *hierarchy_member = add_manifest_options_container_static_default(
-        ctx, options_container, option_name, option_name_len);
+    PsgJsonValue *hierarchy_member = add_manifest_options_container_default(
+        ctx, options_container, "default", option_name, option_name_len);
     psg_json_value_set_bool(hierarchy_member, "value", value);
+}
+
+static void
+add_manifest_options_container_inferred_default_str(manifest_gen_ctx_t *ctx,
+    PsgJsonValue *options_container, const char *option_name, size_t option_name_len,
+    const char *value, size_t value_len)
+{
+    PsgJsonValue *hierarchy_member = add_manifest_options_container_default(
+        ctx, options_container, "inferred-default", option_name, option_name_len);
+    psg_json_value_set_str(hierarchy_member, "value", value, value_len);
 }
 
 static void
