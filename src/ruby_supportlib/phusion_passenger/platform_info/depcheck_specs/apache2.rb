@@ -58,7 +58,11 @@ define 'apache2-dev' do
     end
   end
   on :debian do
-    apt_get_install "apache2-threaded-dev"
+    if PlatformInfo::os_version >= '9.4'
+      apt_get_install "apache2-dev"
+    else
+      apt_get_install "apache2-threaded-dev"
+    end
   end
   on :mandriva do
     urpmi "apache-devel"
