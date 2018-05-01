@@ -42,8 +42,10 @@ namespace tut {
 		Core::ControllerSchema schema;
 		Core::ControllerSingleAppModeSchema singleAppModeSchema;
 		MyController *controller;
-		SpawningKit::ConfigPtr spawningKitConfig;
+		SpawningKit::Context::Schema skContextSchema;
+		SpawningKit::Context skContext;
 		SpawningKit::FactoryPtr spawningKitFactory;
+		ApplicationPool2::Context apContext;
 		PoolPtr appPool;
 		Json::Value config, singleAppModeConfig;
 		int serverSocket;
@@ -54,7 +56,8 @@ namespace tut {
 
 		Core_ControllerTest()
 			: bg(false, true),
-			  context(skSchema)
+			  context(skSchema),
+			  skContext(skContextSchema)
 		{
 			config["thread_number"] = 1;
 			config["multi_app"] = false;
@@ -74,11 +77,15 @@ namespace tut {
 			context.libuv = bg.libuv_loop;
 			context.initialize();
 
-			spawningKitConfig = boost::make_shared<SpawningKit::Config>();
-			spawningKitConfig->resourceLocator = resourceLocator;
-			spawningKitConfig->finalize();
-			spawningKitFactory = boost::make_shared<SpawningKit::Factory>(spawningKitConfig);
-			appPool = boost::make_shared<Pool>(spawningKitFactory);
+			skContext.resourceLocator = resourceLocator;
+			skContext.integrationMode = "standalone";
+			skContext.finalize();
+
+			spawningKitFactory = boost::make_shared<SpawningKit::Factory>(&skContext);
+			apContext.spawningKitFactory = spawningKitFactory;
+			apContext.finalize();
+
+			appPool = boost::make_shared<Pool>(&apContext);
 			appPool->initialize();
 		}
 

@@ -23,8 +23,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-require 'socket'
 require 'tmpdir'
+PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'utils'
 PhusionPassenger.require_passenger_lib 'native_support'
 
@@ -34,58 +34,57 @@ module PhusionPassenger
   module PreloaderSharedHelpers
     extend self
 
-    def init(options)
+    def init(main_app)
+      options = LoaderSharedHelpers.init(main_app)
+
+      $0 = "#{SHORT_PROGRAM_NAME} AppPreloader: #{options['app_root']}"
+
       if !Kernel.respond_to?(:fork)
         message = "Smart spawning is not available on this Ruby " +
           "implementation because it does not support `Kernel.fork`. "
-        if ENV['SERVER_SOFTWARE'].to_s =~ /nginx/i
+        case options['integration_mode']
+        when 'nginx'
           message << "Please set `passenger_spawn_method` to `direct`."
-        else
+        when 'apache'
           message << "Please set `PassengerSpawnMethod` to `direct`."
+        else
+          message << "Please set `spawn_method` to `direct`."
         end
         raise(message)
       end
-      return options
+
+      options
     end
 
     def accept_and_process_next_client(server_socket)
-      original_pid = Process.pid
       client = server_socket.accept
       client.binmode
       begin
-        command = client.readline
+        line = client.readline
       rescue EOFError
         return nil
       end
-      if command !~ /\n\Z/
-        STDERR.puts "Command must end with a newline"
-      elsif command == "spawn\n"
-        while client.readline != "\n"
-          # Do nothing.
-        end
 
-        # Improve copy-on-write friendliness.
-        GC.start
-
-        pid = fork
-        if pid.nil?
-          $0 = "#{$0} (forking...)"
-          client.puts "OK"
-          client.puts Process.pid
-          client.flush
-          client.sync = true
-          return [:forked, client]
-        elsif defined?(NativeSupport)
-          NativeSupport.detach_process(pid)
-        else
-          Process.detach(pid)
-        end
-      else
-        STDERR.puts "Unknown command '#{command.inspect}'"
+      begin
+        doc = Utils::JSON.parse(line)
+      rescue RuntimeError => e
+        client.write(Utils::JSON.generate(
+          :result => 'error',
+          :message => "JSON parse error: #{e}"
+        ))
       end
-      return nil
+
+      if doc['command'] == 'spawn'
+        handle_spawn_command(client, doc)
+      else
+        client.write(Utils::JSON.generate(
+          :result => 'error',
+          :message => "Unknown command #{doc['command'].inspect}"
+        ))
+        nil
+      end
     ensure
-      if client && Process.pid == original_pid
+      if client
         begin
           client.close
         rescue Errno::EINVAL
@@ -95,55 +94,79 @@ module PhusionPassenger
       end
     end
 
-    def run_main_loop(options)
-      $0 = "Passenger AppPreloader: #{options['app_root']}"
-      client = nil
+    def handle_spawn_command(client, doc)
+      work_dir = doc['work_dir']
+      LoaderSharedHelpers.record_journey_step_end('PRELOADER_PREPARATION',
+        'STEP_PERFORMED', work_dir)
+      LoaderSharedHelpers.record_journey_step_begin('PRELOADER_FORK_SUBPROCESS',
+        'STEP_IN_PROGRESS', work_dir)
+
+      # Improve copy-on-write friendliness.
+      GC.start
+
+      begin
+        pid = fork
+      rescue SystemCallError => e
+        LoaderSharedHelpers.record_journey_step_end('PRELOADER_FORK_SUBPROCESS',
+          'STEP_ERRORED', work_dir)
+        raise e
+      end
+
+      if pid.nil?
+        begin
+          $0 = "#{$0} (forking...)"
+          LoaderSharedHelpers.record_journey_step_end('PRELOADER_FORK_SUBPROCESS',
+            'STEP_PERFORMED', work_dir)
+          LoaderSharedHelpers.run_block_and_record_step_progress('PRELOADER_SEND_RESPONSE', work_dir) do
+            client.write(Utils::JSON.generate(
+              :result => 'ok',
+              :pid => Process.pid
+            ))
+          end
+          LoaderSharedHelpers.record_journey_step_end('PRELOADER_FINISH',
+            'STEP_PERFORMED', work_dir)
+          [:forked, work_dir]
+        rescue Exception => e
+          STDERR.puts("Error: #{e}\n#{e.backtrace.join("\n")}")
+          exit!(1)
+        end
+      elsif defined?(NativeSupport)
+        NativeSupport.detach_process(pid)
+      else
+        Process.detach(pid)
+      end
+    end
+
+    def advertise_sockets(_options, server)
+      json = {
+        :sockets => [
+          {
+            :name => 'main',
+            :address => "unix:#{server[1]}",
+            :protocol => 'preloader',
+            :concurrency => 1
+          }
+        ]
+      }
+
+      File.open(ENV['PASSENGER_SPAWN_WORK_DIR'] + '/response/properties.json', 'w') do |f|
+        f.write(PhusionPassenger::Utils::JSON.generate(json))
+      end
+    end
+
+    def run_main_loop(server, options)
+      server_socket, socket_filename = server
       original_pid = Process.pid
-
-      if defined?(NativeSupport)
-        unix_path_max = NativeSupport::UNIX_PATH_MAX
-      else
-        unix_path_max = options.fetch('UNIX_PATH_MAX', 100).to_i
-      end
-      if options['socket_dir']
-        socket_dir = options['socket_dir']
-        socket_prefix = "preloader"
-      else
-        socket_dir = Dir.tmpdir
-        socket_prefix = "PsgPreloader"
-      end
-
-      socket_filename = nil
-      server = nil
-      Utils.retry_at_most(128, Errno::EADDRINUSE) do
-        socket_filename = "#{socket_dir}/#{socket_prefix}.#{rand(0xFFFFFFFF).to_s(36)}"
-        socket_filename = socket_filename.slice(0, unix_path_max - 10)
-        server = UNIXServer.new(socket_filename)
-      end
-      server.close_on_exec!
-      File.chmod(0600, socket_filename)
-
-      # Update the dump information just before telling the preloader that we're
-      # ready because the Passenger core will read and memorize this information.
-      LoaderSharedHelpers.dump_all_information(options)
-
-      puts "!> Ready"
-      puts "!> socket: unix:#{socket_filename}"
-      puts "!> "
 
       while true
         # We call ::select just in case someone overwrites the global select()
         # function by including ActionView::Helpers in the wrong place.
         # https://code.google.com/p/phusion-passenger/issues/detail?id=915
-        ios = Kernel.select([server, STDIN])[0]
-        if ios.include?(server)
-          result, client = accept_and_process_next_client(server)
+        ios = Kernel.select([server_socket, STDIN])[0]
+        if ios.include?(server_socket)
+          result, subprocess_work_dir = accept_and_process_next_client(server_socket)
           if result == :forked
-            STDIN.reopen(client)
-            STDOUT.reopen(client)
-            STDOUT.sync = true
-            client.close
-            return :forked
+            return subprocess_work_dir
           end
         end
         if ios.include?(STDIN)
@@ -158,9 +181,9 @@ module PhusionPassenger
           break
         end
       end
-      return nil
+      nil
     ensure
-      server.close if server
+      server_socket.close if server_socket
       if original_pid == Process.pid
         File.unlink(socket_filename) rescue nil
       end

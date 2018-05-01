@@ -145,8 +145,9 @@ namespace Core {
 
 		ResourceLocator resourceLocator;
 		RandomGeneratorPtr randomGenerator;
-		SpawningKit::ConfigPtr spawningKitConfig;
-		SpawningKit::FactoryPtr spawningKitFactory;
+		SpawningKit::Context::Schema spawningKitContextSchema;
+		SpawningKit::ContextPtr spawningKitContext;
+		ApplicationPool2::ContextPtr appPoolContext;
 		PoolPtr appPool;
 		Json::Value singleAppModeConfig;
 
@@ -620,12 +621,6 @@ onTerminationSignal(EV_P_ struct ev_signal *watcher, int revents) {
 }
 
 static void
-spawningKitErrorHandler(const SpawningKit::ConfigPtr &config, SpawnException &e, const Options &options) {
-	ApplicationPool2::processAndLogNewSpawnException(e, options, config);
-}
-
-
-static void
 initializeCurl() {
 	TRACE_POINT();
 	CURLcode code = curl_global_init(CURL_GLOBAL_ALL); // Initializes underlying TLS stack
@@ -656,23 +651,25 @@ initializeNonPrivilegedWorkingObjects() {
 	}
 
 	UPDATE_TRACE_POINT();
-
-	UPDATE_TRACE_POINT();
-	wo->spawningKitConfig = boost::make_shared<SpawningKit::Config>();
-	wo->spawningKitConfig->resourceLocator = &wo->resourceLocator;
-	wo->spawningKitConfig->agentConfig = coreConfig->inspectEffectiveValues();
-	wo->spawningKitConfig->errorHandler = spawningKitErrorHandler;
-	wo->spawningKitConfig->randomGenerator = wo->randomGenerator;
-	wo->spawningKitConfig->instanceDir = coreConfig->get("instance_dir").asString();
-	if (!wo->spawningKitConfig->instanceDir.empty()) {
-		wo->spawningKitConfig->instanceDir = absolutizePath(
-			wo->spawningKitConfig->instanceDir);
+	wo->spawningKitContext = boost::make_shared<SpawningKit::Context>(
+		wo->spawningKitContextSchema);
+	wo->spawningKitContext->resourceLocator = &wo->resourceLocator;
+	wo->spawningKitContext->randomGenerator = wo->randomGenerator;
+	wo->spawningKitContext->integrationMode = coreConfig->get("integration_mode").asString();
+	wo->spawningKitContext->instanceDir = coreConfig->get("instance_dir").asString();
+	if (!wo->spawningKitContext->instanceDir.empty()) {
+		wo->spawningKitContext->instanceDir = absolutizePath(
+			wo->spawningKitContext->instanceDir);
 	}
-	wo->spawningKitConfig->finalize();
+	wo->spawningKitContext->finalize();
 
 	UPDATE_TRACE_POINT();
-	wo->spawningKitFactory = boost::make_shared<SpawningKit::Factory>(wo->spawningKitConfig);
-	wo->appPool = boost::make_shared<Pool>(wo->spawningKitFactory, coreConfig->inspectEffectiveValues());
+	wo->appPoolContext = boost::make_shared<ApplicationPool2::Context>();
+	wo->appPoolContext->spawningKitFactory = boost::make_shared<SpawningKit::Factory>(
+		wo->spawningKitContext.get());
+	wo->appPoolContext->agentConfig = coreConfig->inspectEffectiveValues();
+	wo->appPoolContext->finalize();
+	wo->appPool = boost::make_shared<Pool>(wo->appPoolContext.get());
 	wo->appPool->initialize();
 	wo->appPool->setMax(coreConfig->get("max_pool_size").asInt());
 	wo->appPool->setMaxIdleTime(coreConfig->get("pool_idle_time").asInt() * 1000000ULL);

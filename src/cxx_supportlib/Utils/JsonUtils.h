@@ -70,45 +70,81 @@ getJsonField(Json::Value &json, const char *key) {
 	}
 }
 
+
 inline int
 getJsonIntField(const Json::Value &json, const char *key) {
-	Json::StaticString theKey(key);
-	if (json.isMember(theKey)) {
-		return json[theKey].asInt();
+	if (json.isMember(key)) {
+		return json[key].asInt();
 	} else {
 		throw VariantMap::MissingKeyException(key);
 	}
 }
 
 inline int
-getJsonIntField(const Json::Value &json, const char *key, int defaultValue) {
-	Json::StaticString theKey(key);
-	if (json.isMember(theKey)) {
-		return json[theKey].asInt();
+getJsonIntField(const Json::Value &json, const Json::StaticString &key) {
+	if (json.isMember(key)) {
+		return json[key].asInt();
+	} else {
+		throw VariantMap::MissingKeyException(key.c_str());
+	}
+}
+
+inline int
+getJsonIntField(const Json::Value &json, const Json::StaticString &key, int defaultValue) {
+	if (json.isMember(key)) {
+		return json[key].asInt();
 	} else {
 		return defaultValue;
 	}
 }
 
+inline void
+getJsonIntField(const Json::Value &json, const Json::StaticString &key, int *result) {
+	if (json.isMember(key)) {
+		*result = json[key].asInt();
+	}
+}
+
+inline void
+getJsonIntField(const Json::Value &json, const string &key, int *result) {
+	if (json.isMember(key)) {
+		*result = json[key].asInt();
+	}
+}
+
+
 inline unsigned int
-getJsonUintField(const Json::Value &json, const char *key) {
-	Json::StaticString theKey(key);
-	if (json.isMember(theKey)) {
-		return json[theKey].asUInt();
+getJsonUintField(const Json::Value &json, const Json::StaticString &key) {
+	if (json.isMember(key)) {
+		return json[key].asUInt();
 	} else {
-		throw VariantMap::MissingKeyException(key);
+		throw VariantMap::MissingKeyException(key.c_str());
 	}
 }
 
 inline unsigned int
-getJsonUintField(const Json::Value &json, const char *key, unsigned int defaultValue) {
-	Json::StaticString theKey(key);
-	if (json.isMember(theKey)) {
-		return json[theKey].asUInt();
+getJsonUintField(const Json::Value &json, const Json::StaticString &key, unsigned int defaultValue) {
+	if (json.isMember(key)) {
+		return json[key].asUInt();
 	} else {
 		return defaultValue;
 	}
 }
+
+inline void
+getJsonUintField(const Json::Value &json, const Json::StaticString &key, unsigned int *result) {
+	if (json.isMember(key)) {
+		*result = json[key].asUInt();
+	}
+}
+
+inline void
+getJsonUintField(const Json::Value &json, const string &key, unsigned int *result) {
+	if (json.isMember(key)) {
+		*result = json[key].asUInt();
+	}
+}
+
 
 inline boost::uint64_t
 getJsonUint64Field(const Json::Value &json, const char *key) {
@@ -130,23 +166,41 @@ getJsonUint64Field(const Json::Value &json, const char *key, unsigned int defaul
 	}
 }
 
+
+inline bool
+getJsonBoolField(const Json::Value &json, const char *key) {
+	if (json.isMember(key)) {
+		return json[key].asBool();
+	} else {
+		throw VariantMap::MissingKeyException(key);
+	}
+}
+
+
 inline StaticString
 getJsonStaticStringField(const Json::Value &json, const char *key) {
-	Json::StaticString theKey(key);
-	if (json.isMember(theKey)) {
-		return json[theKey].asCString();
+	if (json.isMember(key)) {
+		return json[key].asCString();
 	} else {
 		throw VariantMap::MissingKeyException(key);
 	}
 }
 
 inline StaticString
-getJsonStaticStringField(const Json::Value &json, const char *key,
+getJsonStaticStringField(const Json::Value &json, const Json::StaticString &key) {
+	if (json.isMember(key)) {
+		return json[key].asCString();
+	} else {
+		throw VariantMap::MissingKeyException(key.c_str());
+	}
+}
+
+inline StaticString
+getJsonStaticStringField(const Json::Value &json, const Json::StaticString &key,
 	const StaticString &defaultValue)
 {
-	Json::StaticString theKey(key);
-	if (json.isMember(theKey)) {
-		return json[theKey].asCString();
+	if (json.isMember(key)) {
+		return json[key].asCString();
 	} else {
 		return defaultValue;
 	}
@@ -233,6 +287,59 @@ timeToJson(unsigned long long timestamp, unsigned long long now = 0) {
 		doc["relative"] = distanceOfTimeInWords(wallClockTime, now / 1000000ull) + " ago";
 	}
 
+	return doc;
+}
+
+/**
+ * Encodes the given monotonic timestamp into a JSON object that
+ * describes it.
+ *
+ *     MonotonicTimeUsec t = SystemTime::getMonotonicUsec();
+ *     monoTimeToJson(t - 10000000, t);
+ *     // {
+ *     //   "timestamp": 1424887842,
+ *     //   "local": "Wed Feb 25 19:10:34 CET 2015",
+ *     //   "relative_timestamp": -10,
+ *     //   "relative": "10s ago"
+ *     // }
+ */
+inline Json::Value
+monoTimeToJson(MonotonicTimeUsec t, MonotonicTimeUsec monoNow, unsigned long long now = 0) {
+	if (t == 0) {
+		return Json::Value(Json::nullValue);
+	}
+
+	if (now == 0) {
+		now = SystemTime::getUsec();
+	}
+
+	unsigned long long wallClockTimeUsec;
+	if (monoNow > t) {
+		wallClockTimeUsec = now - (monoNow - t);
+	} else {
+		wallClockTimeUsec = now + (monoNow - t);
+	}
+
+	time_t wallClockTime = (time_t) (wallClockTimeUsec / 1000000ull);
+	char timeStr[32];
+	size_t len;
+	ctime_r(&wallClockTime, timeStr);
+	len = strlen(timeStr);
+	if (len > 0) {
+		// Get rid of trailing newline
+		timeStr[len - 1] = '\0';
+	}
+
+	Json::Value doc;
+	doc["timestamp"] = wallClockTimeUsec / 1000000.0;
+	doc["local"] = timeStr;
+	if (t > monoNow) {
+		doc["relative_timestamp"] = (t - monoNow) / 1000000.0;
+		doc["relative"] = distanceOfTimeInWords(t / 1000000ull, monoNow / 1000000ull) + " from now";
+	} else {
+		doc["relative_timestamp"] = (monoNow - t) / -1000000.0;
+		doc["relative"] = distanceOfTimeInWords(t / 1000000ull, monoNow / 1000000ull) + " ago";
+	}
 	return doc;
 }
 

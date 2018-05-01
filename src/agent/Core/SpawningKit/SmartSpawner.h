@@ -26,13 +26,44 @@
 #ifndef _PASSENGER_SPAWNING_KIT_SMART_SPAWNER_H_
 #define _PASSENGER_SPAWNING_KIT_SMART_SPAWNER_H_
 
-#include <Core/SpawningKit/Spawner.h>
-#include <Core/SpawningKit/PipeWatcher.h>
-#include <Constants.h>
-#include <LoggingKit/LoggingKit.h>
-#include <LveLoggingDecorator.h>
+#include <oxt/thread.hpp>
+#include <oxt/system_calls.hpp>
+#include <boost/bind.hpp>
+#include <boost/make_shared.hpp>
+#include <string>
+#include <vector>
+#include <map>
+#include <stdexcept>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <signal.h>
+#include <cstdio>
+#include <cstring>
+#include <cassert>
 
 #include <adhoc_lve.h>
+
+#include <LoggingKit/Logging.h>
+#include <Constants.h>
+#include <Exceptions.h>
+#include <DataStructures/StringKeyTable.h>
+#include <ProcessManagement/Utils.h>
+#include <Utils/SystemTime.h>
+#include <Utils/IOUtils.h>
+#include <Utils/BufferedIO.h>
+#include <Utils/JsonUtils.h>
+#include <Utils/ScopeGuard.h>
+#include <Utils/ProcessMetricsCollector.h>
+#include <LveLoggingDecorator.h>
+#include <Core/SpawningKit/Spawner.h>
+#include <Core/SpawningKit/Exceptions.h>
+#include <Core/SpawningKit/PipeWatcher.h>
+#include <Core/SpawningKit/Handshake/Session.h>
+#include <Core/SpawningKit/Handshake/Prepare.h>
+#include <Core/SpawningKit/Handshake/Perform.h>
+#include <Core/SpawningKit/Handshake/BackgroundIOCapturer.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -42,33 +73,14 @@ using namespace boost;
 using namespace oxt;
 
 
-class SmartSpawner: public Spawner, public boost::enable_shared_from_this<SmartSpawner> {
+class SmartSpawner: public Spawner {
 private:
-	/**
-	 * Structure containing arguments and working state for negotiating
-	 * the preloader startup protocol.
-	 */
-	struct StartupDetails {
-		/****** Arguments ******/
-		pid_t pid;
-		FileDescriptor adminSocket;
-		BufferedIO io;
-		BackgroundIOCapturerPtr stderrCapturer;
-		DebugDirPtr debugDir;
-		const Options *options;
-
-		/****** Working state ******/
-		unsigned long long timeout;
-
-		StartupDetails() {
-			options = NULL;
-			timeout = 0;
-		}
-	};
-
-	const vector<string> preloaderCommand;
-	map<string, string> preloaderAnnotations;
-	Options options;
+	const string preloaderCommandString;
+	string preloaderEnvvars;
+	string preloaderUserInfo;
+	string preloaderUlimits;
+	StringKeyTable<string> preloaderAnnotations;
+	AppPoolOptions options;
 
 	// Protects m_lastUsed and pid.
 	mutable boost::mutex simpleFieldSyncher;
@@ -77,128 +89,212 @@ private:
 
 	// Preloader information.
 	pid_t pid;
-	FileDescriptor adminSocket;
+	FileDescriptor preloaderStdin;
 	string socketAddress;
 	unsigned long long m_lastUsed;
-	// Upon starting the preloader, its preparation info is stored here
-	// for future reference.
-	SpawnPreparationInfo preparation;
 
-	string getPreloaderCommandString() const {
-		string result;
-		unsigned int i;
 
-		for (i = 0; i < preloaderCommand.size(); i++) {
-			if (i != 0) {
-				result.append(1, '\0');
+	/**
+	 * Behaves like <tt>waitpid(pid, status, WNOHANG)</tt>, but waits at most
+	 * <em>timeout</em> miliseconds for the process to exit.
+	 */
+	static int timedWaitpid(pid_t pid, int *status, unsigned long long timeout) {
+		Timer<SystemTime::GRAN_10MSEC> timer;
+		int ret;
+
+		do {
+			ret = syscalls::waitpid(pid, status, WNOHANG);
+			if (ret > 0 || ret == -1) {
+				return ret;
+			} else {
+				syscalls::usleep(10000);
 			}
-			result.append(preloaderCommand[i]);
+		} while (timer.elapsed() < timeout);
+		return 0; // timed out
+	}
+
+	static bool osProcessExists(pid_t pid) {
+		if (syscalls::kill(pid, 0) == 0) {
+			/* On some environments, e.g. Heroku, the init process does
+			 * not properly reap adopted zombie processes, which can interfere
+			 * with our process existance check. To work around this, we
+			 * explicitly check whether or not the process has become a zombie.
+			 */
+			return !isZombie(pid);
+		} else {
+			return errno != ESRCH;
 		}
+	}
+
+	static bool isZombie(pid_t pid) {
+		string filename = "/proc/" + toString(pid) + "/status";
+		FILE *f = fopen(filename.c_str(), "r");
+		if (f == NULL) {
+			// Don't know.
+			return false;
+		}
+
+		bool result = false;
+		while (!feof(f)) {
+			char buf[512];
+			const char *line;
+
+			line = fgets(buf, sizeof(buf), f);
+			if (line == NULL) {
+				break;
+			}
+			if (strcmp(line, "State:	Z (zombie)\n") == 0) {
+				// Is a zombie.
+				result = true;
+				break;
+			}
+		}
+		fclose(f);
 		return result;
 	}
 
-	vector<string> createRealPreloaderCommand(const Options &options,
-		shared_array<const char *> &args)
-	{
-		string agentFilename = config->resourceLocator->findSupportBinary(AGENT_EXE);
-		vector<string> command;
+	static string createCommandString(const vector<string> &command) {
+		string result;
+		vector<string>::const_iterator it;
+		vector<string>::const_iterator begin = command.begin();
+		vector<string>::const_iterator end = command.end();
 
-		if (shouldLoadShellEnvvars(options, preparation)) {
-			command.push_back(preparation.userSwitching.shell);
-			command.push_back(preparation.userSwitching.shell);
-			if (LoggingKit::getLevel() >= LoggingKit::DEBUG3) {
-				command.push_back("-lxc");
-			} else {
-				command.push_back("-lc");
+		for (it = begin; it != end; it++) {
+			if (it != begin) {
+				result.append(1, ' ');
 			}
-			command.push_back("exec \"$@\"");
-			command.push_back("SpawnPreparerShell");
-		} else {
-			command.push_back(agentFilename);
-		}
-		command.push_back(agentFilename);
-		command.push_back("spawn-preparer");
-		command.push_back(preparation.appRoot);
-		command.push_back(serializeEnvvarsFromPoolOptions(options));
-		command.push_back(preloaderCommand[0]);
-		// Note: do not try to set a process title here.
-		// https://code.google.com/p/phusion-passenger/issues/detail?id=855
-		command.push_back(preloaderCommand[0]);
-		for (unsigned int i = 1; i < preloaderCommand.size(); i++) {
-			command.push_back(preloaderCommand[i]);
+			result.append(escapeShell(*it));
 		}
 
-		createCommandArgs(command, args);
-		return command;
+		return result;
 	}
 
-	void throwPreloaderSpawnException(const string &msg,
-		SpawnException::ErrorKind errorKind,
-		StartupDetails &details)
+	void setConfigFromAppPoolOptions(Config *config, Json::Value &extraArgs,
+		const AppPoolOptions &options)
 	{
-		throwPreloaderSpawnException(msg, errorKind, details.stderrCapturer,
-			*details.options, details.debugDir);
+		Spawner::setConfigFromAppPoolOptions(config, extraArgs, options);
+		config->spawnMethod = P_STATIC_STRING("smart");
 	}
 
-	void throwPreloaderSpawnException(const string &msg,
-		SpawnException::ErrorKind errorKind,
-		BackgroundIOCapturerPtr &stderrCapturer,
-		const Options &options,
-		const DebugDirPtr &debugDir)
+	struct StdChannelsAsyncOpenState {
+		oxt::thread *stdinOpenThread;
+		FileDescriptor stdinFd;
+		int stdinOpenErrno;
+
+		oxt::thread *stdoutAndErrOpenThread;
+		FileDescriptor stdoutAndErrFd;
+		int stdoutAndErrOpenErrno;
+
+		BackgroundIOCapturerPtr stdoutAndErrCapturer;
+
+		StdChannelsAsyncOpenState()
+			: stdinOpenThread(NULL),
+			  stdoutAndErrOpenThread(NULL)
+			{ }
+
+		~StdChannelsAsyncOpenState() {
+			boost::this_thread::disable_interruption di;
+			boost::this_thread::disable_syscall_interruption dsi;
+			if (stdinOpenThread != NULL) {
+				stdinOpenThread->interrupt_and_join();
+				delete stdinOpenThread;
+			}
+			if (stdoutAndErrOpenThread != NULL) {
+				stdoutAndErrOpenThread->interrupt_and_join();
+				delete stdoutAndErrOpenThread;
+			}
+		}
+	};
+
+	typedef boost::shared_ptr<StdChannelsAsyncOpenState> StdChannelsAsyncOpenStatePtr;
+
+	StdChannelsAsyncOpenStatePtr openStdChannelsFifosAsynchronously(
+		HandshakeSession &session)
+	{
+		StdChannelsAsyncOpenStatePtr state = boost::make_shared<StdChannelsAsyncOpenState>();
+		state->stdinOpenThread = new oxt::thread(boost::bind(
+			openStdinChannel, state, session.workDir->getPath()),
+			"FIFO opener: " + session.workDir->getPath() + "/stdin", 1024 * 128);
+		state->stdoutAndErrOpenThread = new oxt::thread(boost::bind(
+			openStdoutAndErrChannel, state, session.workDir->getPath()),
+			"FIFO opener: " + session.workDir->getPath() + "/stdout_and_err", 1024 * 128);
+		return state;
+	}
+
+	void waitForStdChannelFifosToBeOpenedByPeer(const StdChannelsAsyncOpenStatePtr &state,
+		HandshakeSession &session, pid_t pid)
 	{
 		TRACE_POINT();
-		// Stop the stderr capturing thread and get the captured stderr
-		// output so far.
-		string stderrOutput;
-		if (stderrCapturer != NULL) {
-			stderrOutput = stderrCapturer->stop();
-		}
+		MonotonicTimeUsec startTime = SystemTime::getMonotonicUsec();
+		ScopeGuard guard(boost::bind(adjustTimeout, startTime, &session.timeoutUsec));
 
-		// If the exception wasn't due to a timeout, try to capture the
-		// remaining stderr output for at most 2 seconds.
-		if (errorKind != SpawnException::PRELOADER_STARTUP_TIMEOUT
-		 && errorKind != SpawnException::APP_STARTUP_TIMEOUT
-		 && stderrCapturer != NULL)
-		{
-			bool done = false;
-			unsigned long long timeout = 2000;
-			while (!done) {
-				char buf[1024 * 32];
-				unsigned int ret;
-
-				try {
-					ret = readExact(stderrCapturer->getFd(), buf,
-						sizeof(buf), &timeout);
-					if (ret == 0) {
-						done = true;
-					} else {
-						stderrOutput.append(buf, ret);
-					}
-				} catch (const SystemException &e) {
-					P_WARN("Stderr I/O capture error: " << e.what());
-					done = true;
-				} catch (const TimeoutException &) {
-					done = true;
+		try {
+			if (state->stdinOpenThread->try_join_for(
+				boost::chrono::microseconds(session.timeoutUsec)))
+			{
+				delete state->stdinOpenThread;
+				state->stdinOpenThread = NULL;
+				if (state->stdinFd == -1) {
+					throw SystemException("Error opening FIFO "
+						+ session.workDir->getPath() + "/stdin",
+						state->stdinOpenErrno);
+				} else {
+					P_LOG_FILE_DESCRIPTOR_PURPOSE(state->stdinFd,
+						"App " << pid << " (" << options.appRoot
+						<< ") stdin");
+					adjustTimeout(startTime, &session.timeoutUsec);
+					startTime = SystemTime::getMonotonicUsec();
 				}
+			} else {
+				throw TimeoutException("Timeout opening FIFO "
+					+ session.workDir->getPath() + "/stdin");
 			}
-		}
-		stderrCapturer.reset();
 
-		// Now throw SpawnException with the captured stderr output
-		// as error response.
-		SpawnException e(msg,
-			createErrorPageFromStderrOutput(msg, errorKind, stderrOutput),
-			true,
-			errorKind);
-		e.setPreloaderCommand(getPreloaderCommandString());
-		annotatePreloaderException(e, debugDir);
-		throwSpawnException(e, options);
+			UPDATE_TRACE_POINT();
+			if (state->stdoutAndErrOpenThread->try_join_for(
+				boost::chrono::microseconds(session.timeoutUsec)))
+			{
+				delete state->stdoutAndErrOpenThread;
+				state->stdoutAndErrOpenThread = NULL;
+				if (state->stdoutAndErrFd == -1) {
+					throw SystemException("Error opening FIFO "
+						+ session.workDir->getPath() + "/stdout_and_err",
+						state->stdoutAndErrOpenErrno);
+				} else {
+					P_LOG_FILE_DESCRIPTOR_PURPOSE(state->stdoutAndErrFd,
+						"App " << pid << " (" << options.appRoot
+						<< ") stdoutAndErr");
+				}
+			} else {
+				throw TimeoutException("Timeout opening FIFO "
+					+ session.workDir->getPath() + "/stdout_and_err");
+			}
+
+			state->stdoutAndErrCapturer = boost::make_shared<BackgroundIOCapturer>(
+				state->stdoutAndErrFd, pid, session.config->appGroupName,
+				session.config->logFile);
+			state->stdoutAndErrCapturer->start();
+		} catch (const boost::system::system_error &e) {
+			throw SystemException(e.what(), e.code().value());
+		}
 	}
 
-	void annotatePreloaderException(SpawnException &e, const DebugDirPtr &debugDir) {
-		if (debugDir != NULL) {
-			e.addAnnotations(debugDir->readAll());
-		}
+	static void openStdinChannel(StdChannelsAsyncOpenStatePtr state,
+		const string &workDir)
+	{
+		int fd = syscalls::open((workDir + "/stdin").c_str(), O_WRONLY | O_APPEND);
+		int e = errno;
+		state->stdinFd.assign(fd, __FILE__, __LINE__);
+		state->stdinOpenErrno = e;
+	}
+
+	static void openStdoutAndErrChannel(StdChannelsAsyncOpenStatePtr state,
+		const string &workDir)
+	{
+		int fd = syscalls::open((workDir + "/stdout_and_err").c_str(), O_RDONLY);
+		int e = errno;
+		state->stdoutAndErrFd.assign(fd, __FILE__, __LINE__);
+		state->stdoutAndErrOpenErrno = e;
 	}
 
 	bool preloaderStarted() const {
@@ -211,121 +307,145 @@ private:
 		boost::this_thread::disable_syscall_interruption dsi;
 		assert(!preloaderStarted());
 		P_DEBUG("Spawning new preloader: appRoot=" << options.appRoot);
-		checkChrootDirectories(options);
 
-		shared_array<const char *> args;
-		preparation = prepareSpawn(options);
-		vector<string> command = createRealPreloaderCommand(options, args);
-		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
-		Pipe errorPipe = createPipe(__FILE__, __LINE__);
-		DebugDirPtr debugDir = boost::make_shared<DebugDir>(preparation.userSwitching.uid,
-			preparation.userSwitching.gid);
+		Config config;
+		Json::Value extraArgs;
+		try {
+			setConfigFromAppPoolOptions(&config, extraArgs, options);
+			config.startCommand = preloaderCommandString;
+		} catch (const std::exception &originalException) {
+			Journey journey(SPAWN_THROUGH_PRELOADER, true);
+			journey.setStepErrored(SPAWNING_KIT_PREPARATION, true);
+			throw SpawnException(originalException, journey,
+				&config).finalize();
+		}
 
+		HandshakeSession session(*context, config, START_PRELOADER);
+		session.journey.setStepInProgress(SPAWNING_KIT_PREPARATION);
+
+		try {
+			internalStartPreloader(config, session, extraArgs);
+		} catch (const SpawnException &) {
+			throw;
+		} catch (const std::exception &originalException) {
+			session.journey.setStepErrored(SPAWNING_KIT_PREPARATION);
+			throw SpawnException(originalException, session.journey,
+				&config).finalize();
+		}
+	}
+
+	void internalStartPreloader(Config &config, HandshakeSession &session,
+		const Json::Value &extraArgs)
+	{
+		TRACE_POINT();
+		HandshakePrepare(session, extraArgs).execute();
+		Pipe stdinChannel = createPipe(__FILE__, __LINE__);
+		Pipe stdoutAndErrChannel = createPipe(__FILE__, __LINE__);
 		adhoc_lve::LveEnter scopedLveEnter(LveLoggingDecorator::lveInitOnce(),
-		                                   preparation.userSwitching.uid,
-		                                   options.lveMinUid,
-		                                   LveLoggingDecorator::lveExitCallback);
+			session.uid,
+			config.lveMinUid,
+			LveLoggingDecorator::lveExitCallback);
 		LveLoggingDecorator::logLveEnter(scopedLveEnter,
-		                                 preparation.userSwitching.uid,
-		                                 options.lveMinUid);
+			session.uid,
+			config.lveMinUid);
+		string agentFilename = context->resourceLocator
+			->findSupportBinary(AGENT_EXE);
+
+		session.journey.setStepPerformed(SPAWNING_KIT_PREPARATION);
+		session.journey.setStepInProgress(SPAWNING_KIT_FORK_SUBPROCESS);
+		session.journey.setStepInProgress(SUBPROCESS_BEFORE_FIRST_EXEC);
+
 		pid_t pid = syscalls::fork();
 		if (pid == 0) {
-			setenv("PASSENGER_DEBUG_DIR", debugDir->getPath().c_str(), 1);
 			purgeStdio(stdout);
 			purgeStdio(stderr);
 			resetSignalHandlersAndMask();
 			disableMallocDebugging();
-			int adminSocketCopy = dup2(adminSocket.first, 3);
-			int errorPipeCopy = dup2(errorPipe.second, 4);
-			dup2(adminSocketCopy, 0);
-			dup2(adminSocketCopy, 1);
-			dup2(errorPipeCopy, 2);
-			closeAllFileDescriptors(2);
-			setChroot(preparation);
-			setUlimits(options);
-			switchUser(preparation);
-			setWorkingDirectory(preparation);
-			execvp(command[0].c_str(), (char * const *) args.get());
+			int stdinCopy = dup2(stdinChannel.first, 3);
+			int stdoutAndErrCopy = dup2(stdoutAndErrChannel.second, 4);
+			dup2(stdinCopy, 0);
+			dup2(stdoutAndErrCopy, 1);
+			dup2(stdoutAndErrCopy, 2);
+			closeAllFileDescriptors(2, true);
+			execlp(agentFilename.c_str(),
+				agentFilename.c_str(),
+				"spawn-env-setupper",
+				session.workDir->getPath().c_str(),
+				"--before",
+				NULL);
 
 			int e = errno;
-			printf("!> Error\n");
-			printf("!> \n");
-			printf("Cannot execute \"%s\": %s (errno=%d)\n", command[0].c_str(),
-				strerror(e), e);
 			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
-				command[0].c_str(), strerror(e), e);
-			fflush(stdout);
+				agentFilename.c_str(), strerror(e), e);
 			fflush(stderr);
 			_exit(1);
 
 		} else if (pid == -1) {
 			int e = errno;
-			throw SystemException("Cannot fork a new process", e);
+			UPDATE_TRACE_POINT();
+			session.journey.setStepErrored(SPAWNING_KIT_FORK_SUBPROCESS);
+			SpawnException ex(OPERATING_SYSTEM_ERROR, session.journey, &config);
+			ex.setSummary(StaticString("Cannot fork a new process: ") + strerror(e)
+				+ " (errno=" + toString(e) + ")");
+			ex.setAdvancedProblemDetails(StaticString("Cannot fork a new process: ")
+				+ strerror(e) + " (errno=" + toString(e) + ")");
+			throw ex.finalize();
 
 		} else {
+			UPDATE_TRACE_POINT();
+			session.journey.setStepPerformed(SPAWNING_KIT_FORK_SUBPROCESS);
+			session.journey.setStepInProgress(SPAWNING_KIT_HANDSHAKE_PERFORM);
+
 			scopedLveEnter.exit();
 
-			UPDATE_TRACE_POINT();
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.first,
-				"Preloader " << pid << " (" << options.appRoot << ") adminSocket[0]");
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(adminSocket.second,
-				"Preloader " << pid << " (" << options.appRoot << ") adminSocket[1]");
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.first,
-				"Preloader " << pid << " (" << options.appRoot << ") errorPipe[0]");
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(errorPipe.second,
-				"Preloader " << pid << " (" << options.appRoot << ") errorPipe[1]");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(stdinChannel.second,
+				"Preloader " << pid << " (" << options.appRoot << ") stdin");
+			P_LOG_FILE_DESCRIPTOR_PURPOSE(stdoutAndErrChannel.first,
+				"Preloader " << pid << " (" << options.appRoot << ") stdoutAndErr");
 
 			UPDATE_TRACE_POINT();
 			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, pid));
-			P_DEBUG("Preloader process forked for appRoot=" << options.appRoot << ": PID " << pid);
-			adminSocket.first.close();
-			errorPipe.second.close();
+			P_DEBUG("Preloader process forked for appRoot=" << options.appRoot
+				<< ": PID " << pid);
+			stdinChannel.first.close();
+			stdoutAndErrChannel.second.close();
 
-			StartupDetails details;
-			details.pid = pid;
-			details.adminSocket = adminSocket.second;
-			details.io = BufferedIO(adminSocket.second);
-			details.stderrCapturer =
-				boost::make_shared<BackgroundIOCapturer>(
-					errorPipe.first,
-					pid,
-					// The cast works around a compilation problem in Clang.
-					(const char *) "stderr",
-					options.getAppGroupName(),
-					options.appLogFile);
-			details.stderrCapturer->start();
-			details.debugDir = debugDir;
-			details.options = &options;
-			details.timeout = options.startTimeout * 1000;
+			HandshakePerform(session, pid, stdinChannel.second,
+				stdoutAndErrChannel.first).execute();
+			string envvars, userInfo, ulimits;
+			// If a new output variable was added to this function,
+			// then don't forget to also update these locations:
+			// - the critical section below
+			// - bottom of stopPreloader()
+			// - addPreloaderEnvDumps()
+			HandshakePerform::loadBasicInfoFromEnvDumpDir(session.envDumpDir,
+				envvars, userInfo, ulimits);
+			string socketAddress = findPreloaderCommandSocketAddress(session);
 
-			{
-				boost::this_thread::restore_interruption ri(di);
-				boost::this_thread::restore_syscall_interruption rsi(dsi);
-				socketAddress = negotiatePreloaderStartup(details);
-			}
-			this->adminSocket = adminSocket.second;
 			{
 				boost::lock_guard<boost::mutex> l(simpleFieldSyncher);
 				this->pid = pid;
+				this->socketAddress = socketAddress;
+				this->preloaderStdin = stdinChannel.second;
+				this->preloaderEnvvars = envvars;
+				this->preloaderUserInfo = userInfo;
+				this->preloaderUlimits = ulimits;
+				this->preloaderAnnotations = loadAnnotationsFromEnvDumpDir(
+					session.envDumpDir);
 			}
 
-			PipeWatcherPtr watcher;
-
-			watcher = boost::make_shared<PipeWatcher>(config,
-				adminSocket.second, "stdout", pid, options.getAppGroupName(), options.appLogFile);
+			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(
+				stdoutAndErrChannel.first, "output", config.appGroupName,
+				config.logFile, pid);
 			watcher->initialize();
 			watcher->start();
 
-			watcher = boost::make_shared<PipeWatcher>(config,
-				errorPipe.first, "stderr", pid, options.getAppGroupName(), options.appLogFile);
-			watcher->initialize();
-			watcher->start();
-
-			preloaderAnnotations = debugDir->readAll();
+			UPDATE_TRACE_POINT();
+			guard.clear();
+			session.journey.setStepPerformed(SPAWNING_KIT_HANDSHAKE_PERFORM);
 			P_INFO("Preloader for " << options.appRoot <<
 				" started on PID " << pid <<
 				", listening on " << socketAddress);
-			guard.clear();
 		}
 	}
 
@@ -337,439 +457,736 @@ private:
 		if (!preloaderStarted()) {
 			return;
 		}
-		syscalls::shutdown(adminSocket, SHUT_WR);
+
+		preloaderStdin.close(false);
+
 		if (timedWaitpid(pid, NULL, 5000) == 0) {
-			P_TRACE(2, "Spawn server did not exit in time, killing it...");
+			P_DEBUG("Preloader did not exit in time, killing it...");
 			syscalls::kill(pid, SIGKILL);
 			syscalls::waitpid(pid, NULL, 0);
 		}
+
 		// Delete socket after the process has exited so that it
 		// doesn't crash upon deleting a nonexistant file.
 		if (getSocketAddressType(socketAddress) == SAT_UNIX) {
 			string filename = parseUnixSocketAddress(socketAddress);
 			syscalls::unlink(filename.c_str());
 		}
+
 		{
 			boost::lock_guard<boost::mutex> l(simpleFieldSyncher);
 			pid = -1;
+			socketAddress.clear();
+			preloaderEnvvars.clear();
+			preloaderUserInfo.clear();
+			preloaderUlimits.clear();
+			preloaderAnnotations.clear();
 		}
-		socketAddress.clear();
-		preparation = SpawnPreparationInfo();
 	}
 
-	void sendStartupRequest(StartupDetails &details) {
+	FileDescriptor connectToPreloader(HandshakeSession &session) {
 		TRACE_POINT();
-		try {
-			const size_t UNIX_PATH_MAX = sizeof(((struct sockaddr_un *) 0)->sun_path);
-			string data = "You have control 1.0\n"
-				"passenger_root: " + config->resourceLocator->getInstallSpec() + "\n"
-				"ruby_libdir: " + config->resourceLocator->getRubyLibDir() + "\n"
-				"passenger_version: " PASSENGER_VERSION "\n"
-				"UNIX_PATH_MAX: " + toString(UNIX_PATH_MAX) + "\n";
-			if (!details.options->apiKey.empty()) {
-				data.append("connect_password: " + details.options->apiKey + "\n");
-			}
-			if (!config->instanceDir.empty()) {
-				data.append("instance_dir: " + config->instanceDir + "\n");
-				data.append("socket_dir: " + config->instanceDir + "/apps.s\n");
-			}
-
-			vector<string> args;
-			vector<string>::const_iterator it, end;
-			details.options->toVector(args, *config->resourceLocator, Options::SPAWN_OPTIONS);
-			for (it = args.begin(); it != args.end(); it++) {
-				const string &key = *it;
-				it++;
-				const string &value = *it;
-				data.append(key + ": " + value + "\n");
-			}
-
-			vector<StaticString> lines;
-			split(data, '\n', lines);
-			foreach (const StaticString line, lines) {
-				P_DEBUG("[App " << details.pid << " stdin >>] " << line);
-			}
-			writeExact(details.adminSocket, data, &details.timeout);
-			writeExact(details.adminSocket, "\n", &details.timeout);
-		} catch (const SystemException &e) {
-			if (e.code() == EPIPE) {
-				/* Ignore this. Process might have written an
-				 * error response before reading the arguments,
-				 * in which case we'll want to show that instead.
-				 */
-			} else {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. There was an I/O error while "
-					"sending the startup request message to it: " +
-					e.sys(),
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			}
-		} catch (const TimeoutException &) {
-			throwPreloaderSpawnException("An error occurred while starting up the "
-				"preloader: it did not read the startup request message in time.",
-				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				details);
-		}
-	}
-
-	string handleStartupResponse(StartupDetails &details) {
-		TRACE_POINT();
-		string socketAddress;
-
-		while (true) {
-			string line;
-
-			try {
-				line = readMessageLine(details);
-			} catch (const SystemException &e) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. There was an I/O error while reading its "
-					"startup response: " + e.sys(),
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			} catch (const TimeoutException &) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time. "
-					"If your app needs more time to start you can increase the "
-					"Passenger start timeout config option.",
-					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					details);
-			}
-
-			if (line.empty()) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. It unexpected closed the connection while "
-					"sending its startup response.",
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			} else if (line[line.size() - 1] != '\n') {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. It sent a line without a newline character "
-					"in its startup response.",
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			} else if (line == "\n") {
-				break;
-			}
-
-			string::size_type pos = line.find(": ");
-			if (pos == string::npos) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. It sent a startup response line without "
-					"separator.",
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			}
-
-			string key = line.substr(0, pos);
-			string value = line.substr(pos + 2, line.size() - pos - 3);
-			if (key == "socket") {
-				// TODO: validate socket address here
-				socketAddress = fixupSocketAddress(options, value);
-			} else {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. It sent an unknown startup response line "
-					"called '" + key + "'.",
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			}
-		}
-
-		if (socketAddress.empty()) {
-			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader. It did not report a socket address in its "
-				"startup response.",
-				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				details);
-		}
-
-		return socketAddress;
-	}
-
-	void handleErrorResponse(StartupDetails &details) {
-		TRACE_POINT();
-		map<string, string> attributes;
-
-		while (true) {
-			string line;
-
-			try {
-				line = readMessageLine(details);
-			} catch (const SystemException &e) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. There was an I/O error while reading its "
-					"startup response: " + e.sys(),
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			} catch (const TimeoutException &) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time. "
-					"If your app needs more time to start you can increase the "
-					"Passenger start timeout config option.",
-					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					details);
-			}
-
-			if (line.empty()) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. It unexpected closed the connection while "
-					"sending its startup response.",
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			} else if (line[line.size() - 1] != '\n') {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. It sent a line without a newline character "
-					"in its startup response.",
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			} else if (line == "\n") {
-				break;
-			}
-
-			string::size_type pos = line.find(": ");
-			if (pos == string::npos) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. It sent a startup response line without "
-					"separator.",
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			}
-
-			string key = line.substr(0, pos);
-			string value = line.substr(pos + 2, line.size() - pos - 3);
-			attributes[key] = value;
-		}
-
-		try {
-			string message = details.io.readAll(&details.timeout);
-			SpawnException e("An error occurred while starting up the preloader.",
-				message,
-				attributes["html"] == "true",
-				SpawnException::PRELOADER_STARTUP_EXPLAINABLE_ERROR);
-			e.setPreloaderCommand(getPreloaderCommandString());
-			annotatePreloaderException(e, details.debugDir);
-			throwSpawnException(e, *details.options);
-		} catch (const SystemException &e) {
-			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader. It tried to report an error message, but "
-				"an I/O error occurred while reading this error message: " +
-				e.sys(),
-				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				details);
-		} catch (const TimeoutException &) {
-			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader. It tried to report an error message, but "
-				"it took too much time doing that.",
-				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				details);
-		}
-	}
-
-	void handleInvalidResponseType(StartupDetails &details, const string &line) {
-		if (line.empty()) {
-			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader. It exited before signalling successful "
-				"startup back to " PROGRAM_NAME ".",
-				SpawnException::PRELOADER_STARTUP_ERROR,
-				details);
-		} else {
-			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader. It sent an unknown response type \"" +
-				cEscapeString(line) + "\".",
-				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				details);
-		}
-	}
-
-	string negotiatePreloaderStartup(StartupDetails &details) {
-		TRACE_POINT();
-		string result;
-		try {
-			result = readMessageLine(details);
-		} catch (const SystemException &e) {
-			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader. There was an I/O error while reading its "
-				"handshake message: " + e.sys(),
-				SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-				details);
-		} catch (const TimeoutException &) {
-			throwPreloaderSpawnException("An error occurred while starting up "
-				"the preloader: it did not write a handshake message in time.",
-				SpawnException::PRELOADER_STARTUP_TIMEOUT,
-				details);
-		}
-
-		if (result == "I have control 1.0\n") {
-			UPDATE_TRACE_POINT();
-			sendStartupRequest(details);
-			try {
-				result = readMessageLine(details);
-			} catch (const SystemException &e) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader. There was an I/O error while reading its "
-					"startup response: " + e.sys(),
-					SpawnException::PRELOADER_STARTUP_PROTOCOL_ERROR,
-					details);
-			} catch (const TimeoutException &) {
-				throwPreloaderSpawnException("An error occurred while starting up "
-					"the preloader: it did not write a startup response in time. "
-					"If your app needs more time to start you can increase the "
-					"Passenger start timeout config option.",
-					SpawnException::PRELOADER_STARTUP_TIMEOUT,
-					details);
-			}
-			if (result == "Ready\n") {
-				return handleStartupResponse(details);
-			} else if (result == "Error\n") {
-				handleErrorResponse(details);
-			} else {
-				handleInvalidResponseType(details, result);
-			}
-		} else {
-			UPDATE_TRACE_POINT();
-			if (result == "Error\n") {
-				handleErrorResponse(details);
-			} else {
-				handleInvalidResponseType(details, result);
-			}
-		}
-
-		// Never reached, shut up compiler warning.
-		abort();
-		return "";
-	}
-
-	NegotiationDetails sendSpawnCommandAndGetNegotiationDetails(const Options &options) {
-		TRACE_POINT();
-		NegotiationDetails details;
-
-		details.preparation = &preparation;
-		details.options = &options;
-
-		try {
-			sendSpawnCommand(details);
-		} catch (const SystemException &e) {
-			sendSpawnCommandAgain(e, details);
-		} catch (const IOException &e) {
-			sendSpawnCommandAgain(e, details);
-		} catch (const SpawnException &e) {
-			sendSpawnCommandAgain(e, details);
-		}
-
-		return details;
-	}
-
-	void sendSpawnCommand(NegotiationDetails &details) {
-		TRACE_POINT();
-		const Options &options = *details.options;
-		FileDescriptor fd;
-
-		try {
-			fd.assign(connectToServer(socketAddress, __FILE__, __LINE__), NULL, 0);
-		} catch (const SystemException &e) {
-			BackgroundIOCapturerPtr stderrCapturer;
-			throwPreloaderSpawnException("An error occurred while starting "
-				"the application. Unable to connect to the preloader's "
-				"socket: " + string(e.what()),
-				SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-				stderrCapturer,
-				options,
-				DebugDirPtr());
-		}
+		FileDescriptor fd(connectToServer(socketAddress, __FILE__, __LINE__), NULL, 0);
 		P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "Preloader " << pid
-			<< " (" << options.appRoot << ") connection");
+			<< " (" << session.config->appRoot << ") connection");
+		return fd;
+	}
+
+	struct ForkResult {
+		pid_t pid;
+		FileDescriptor stdinFd;
+		FileDescriptor stdoutAndErrFd;
+		string alreadyReadStdoutAndErrData;
+
+		ForkResult()
+			: pid(-1)
+			{ }
+
+		ForkResult(pid_t _pid, const FileDescriptor &_stdinFd,
+			const FileDescriptor &_stdoutAndErrFd,
+			const string &_alreadyReadStdoutAndErrData)
+			: pid(_pid),
+			  stdinFd(_stdinFd),
+			  stdoutAndErrFd(_stdoutAndErrFd),
+			  alreadyReadStdoutAndErrData(_alreadyReadStdoutAndErrData)
+			{ }
+	};
+
+	struct PreloaderCrashed {
+		SystemException *systemException;
+		IOException *ioException;
+
+		PreloaderCrashed(const SystemException &e)
+			: systemException(new SystemException(e)),
+			  ioException(NULL)
+			{ }
+
+		PreloaderCrashed(const IOException &e)
+			: systemException(NULL),
+			  ioException(new IOException(e))
+			{ }
+
+		~PreloaderCrashed() {
+			delete systemException;
+			delete ioException;
+		}
+
+		const oxt::tracable_exception &getException() const {
+			if (systemException != NULL) {
+				return *systemException;
+			} else {
+				return *ioException;
+			}
+		}
+	};
+
+	ForkResult invokeForkCommand(HandshakeSession &session, JourneyStep &stepToMarkAsErrored) {
+		TRACE_POINT();
+
+		P_ASSERT_EQ(session.journey.getStepInfo(SPAWNING_KIT_PREPARATION).state,
+			STEP_PERFORMED);
+
+		try {
+			StdChannelsAsyncOpenStatePtr stdChannelsAsyncOpenState =
+				openStdChannelsFifosAsynchronously(session);
+			return internalInvokeForkCommand(session, stdChannelsAsyncOpenState,
+				stepToMarkAsErrored);
+		} catch (const PreloaderCrashed &crashException1) {
+			UPDATE_TRACE_POINT();
+			P_WARN("An error occurred while spawning an application process: "
+				<< crashException1.getException().what());
+			P_WARN("The application preloader seems to have crashed,"
+				" restarting it and trying again...");
+
+			session.journey.reset();
+
+			try {
+				stopPreloader();
+			} catch (const SpawnException &) {
+				throw;
+			} catch (const std::exception &originalException) {
+				session.journey.setStepErrored(SPAWNING_KIT_PREPARATION, true);
+
+				SpawnException e(originalException, session.journey, session.config);
+				e.setSummary(StaticString("Error stopping a crashed preloader: ")
+					+ originalException.what());
+				e.setProblemDescriptionHTML(
+					"<p>The " PROGRAM_NAME " application server tried"
+					" to start the web application by communicating with a"
+					" helper process that we call a \"preloader\". However,"
+					" this helper process crashed unexpectedly. "
+					SHORT_PROGRAM_NAME " then tried to restart it, but"
+					" encountered the following error while trying to"
+					" stop the preloader:</p>"
+					"<pre>" + escapeHTML(originalException.what()) + "</pre>");
+				throw e.finalize();
+			}
+
+			UPDATE_TRACE_POINT();
+			startPreloader();
+			session.journey.reset();
+			session.journey.setStepPerformed(SPAWNING_KIT_PREPARATION, true);
+
+			UPDATE_TRACE_POINT();
+			try {
+				StdChannelsAsyncOpenStatePtr stdChannelsAsyncOpenState =
+					openStdChannelsFifosAsynchronously(session);
+				return internalInvokeForkCommand(session, stdChannelsAsyncOpenState,
+					stepToMarkAsErrored);
+			} catch (const PreloaderCrashed &crashException2) {
+				UPDATE_TRACE_POINT();
+
+				session.journey.reset();
+				session.journey.setStepErrored(SPAWNING_KIT_PREPARATION, true);
+
+				try {
+					stopPreloader();
+				} catch (const SpawnException &) {
+					throw;
+				} catch (const std::exception &originalException) {
+					SpawnException e(originalException, session.journey, session.config);
+					e.setSummary(StaticString("Error stopping a crashed preloader: ")
+						+ originalException.what());
+					e.setProblemDescriptionHTML(
+						"<p>The " PROGRAM_NAME " application server tried"
+						" to start the web application by communicating with a"
+						" helper process that we call a \"preloader\". However,"
+						" this helper process crashed unexpectedly. "
+						SHORT_PROGRAM_NAME " then tried to restart it, but"
+						" encountered the following error while trying to"
+						" stop the preloader:</p>"
+						"<pre>" + escapeHTML(originalException.what()) + "</pre>");
+					throw e.finalize();
+				}
+
+				SpawnException e(crashException2.getException(),
+					session.journey, session.config);
+				e.setSummary(StaticString("An application preloader crashed: ") +
+					crashException2.getException().what());
+				e.setProblemDescriptionHTML(
+					"<p>The " PROGRAM_NAME " application server tried"
+					" to start the web application by communicating with a"
+					" helper process that we call a \"preloader\". However,"
+					" this helper process crashed unexpectedly:</p>"
+					"<pre>" + escapeHTML(crashException2.getException().what())
+					+ "</pre>");
+				throw e.finalize();
+			}
+		}
+	}
+
+	ForkResult internalInvokeForkCommand(HandshakeSession &session,
+		const StdChannelsAsyncOpenStatePtr &stdChannelsAsyncOpenState,
+		JourneyStep &stepToMarkAsErrored)
+	{
+		TRACE_POINT();
+
+		P_ASSERT_EQ(session.journey.getStepInfo(SPAWNING_KIT_PREPARATION).state,
+			STEP_PERFORMED);
+
+		session.journey.setStepInProgress(SPAWNING_KIT_CONNECT_TO_PRELOADER);
+		stepToMarkAsErrored = SPAWNING_KIT_CONNECT_TO_PRELOADER;
+		FileDescriptor fd;
+		string line;
+		Json::Value doc;
+		try {
+			fd = connectToPreloader(session);
+		} catch (const SystemException &e) {
+			throw PreloaderCrashed(e);
+		} catch (const IOException &e) {
+			throw PreloaderCrashed(e);
+		}
+
+		session.journey.setStepPerformed(SPAWNING_KIT_CONNECT_TO_PRELOADER);
+		session.journey.setStepInProgress(SPAWNING_KIT_SEND_COMMAND_TO_PRELOADER);
+		stepToMarkAsErrored = SPAWNING_KIT_SEND_COMMAND_TO_PRELOADER;
+		try {
+			sendForkCommand(session, fd);
+		} catch (const SystemException &e) {
+			throw PreloaderCrashed(e);
+		} catch (const IOException &e) {
+			throw PreloaderCrashed(e);
+		}
+
+		session.journey.setStepPerformed(SPAWNING_KIT_SEND_COMMAND_TO_PRELOADER);
+		session.journey.setStepInProgress(SPAWNING_KIT_READ_RESPONSE_FROM_PRELOADER);
+		stepToMarkAsErrored = SPAWNING_KIT_READ_RESPONSE_FROM_PRELOADER;
+		try {
+			line = readForkCommandResponse(session, fd);
+		} catch (const SystemException &e) {
+			throw PreloaderCrashed(e);
+		} catch (const IOException &e) {
+			throw PreloaderCrashed(e);
+		}
+
+		session.journey.setStepPerformed(SPAWNING_KIT_READ_RESPONSE_FROM_PRELOADER);
+		session.journey.setStepInProgress(SPAWNING_KIT_PARSE_RESPONSE_FROM_PRELOADER);
+		stepToMarkAsErrored = SPAWNING_KIT_PARSE_RESPONSE_FROM_PRELOADER;
+		doc = parseForkCommandResponse(session, line);
+
+		session.journey.setStepPerformed(SPAWNING_KIT_PARSE_RESPONSE_FROM_PRELOADER);
+		session.journey.setStepInProgress(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+		stepToMarkAsErrored = SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER;
+		return handleForkCommandResponse(session, stdChannelsAsyncOpenState, doc);
+	}
+
+	void sendForkCommand(HandshakeSession &session, const FileDescriptor &fd) {
+		TRACE_POINT();
+		Json::Value doc;
+
+		doc["command"] = "spawn";
+		doc["work_dir"] = session.workDir->getPath();
+
+		writeExact(fd, Json::FastWriter().write(doc), &session.timeoutUsec);
+	}
+
+	string readForkCommandResponse(HandshakeSession &session, const FileDescriptor &fd) {
+		TRACE_POINT();
+		BufferedIO io(fd);
+
+		try {
+			return io.readLine(10240, &session.timeoutUsec);
+		} catch (const SecurityException &) {
+			session.journey.setStepErrored(SPAWNING_KIT_READ_RESPONSE_FROM_PRELOADER);
+
+			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+			addPreloaderEnvDumps(e);
+			e.setSummary("The preloader process sent a response that exceeds the maximum size limit.");
+			e.setProblemDescriptionHTML(
+				"<p>The " PROGRAM_NAME " application server tried"
+				" to start the web application by communicating with a"
+				" helper process that we call a \"preloader\". However,"
+				" this helper process sent a response that exceeded the"
+				" internally-defined maximum size limit.</p>");
+			e.setSolutionDescriptionHTML(
+				"<p class=\"sole-solution\">"
+				"This is probably a bug in the preloader process. Please "
+				"<a href=\"" SUPPORT_URL "\">"
+				"report this bug</a>."
+				"</p>");
+			throw e.finalize();
+		}
+	}
+
+	Json::Value parseForkCommandResponse(HandshakeSession &session, const string &data) {
+		TRACE_POINT();
+		Json::Value doc;
+		Json::Reader reader;
+
+		if (!reader.parse(data, doc)) {
+			session.journey.setStepErrored(SPAWNING_KIT_PARSE_RESPONSE_FROM_PRELOADER);
+
+			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+			addPreloaderEnvDumps(e);
+			e.setSummary("The preloader process sent an unparseable response: " + data);
+			e.setProblemDescriptionHTML(
+				"<p>The " PROGRAM_NAME " application server tried"
+				" to start the web application by communicating with a"
+				" helper process that we call a \"preloader\". However,"
+				" this helper process sent a response that looks like"
+				" gibberish.</p>"
+				"<p>The response is as follows:</p>"
+				"<pre>" + escapeHTML(data) + "</pre>");
+			e.setSolutionDescriptionHTML(
+				"<p class=\"sole-solution\">"
+				"This is probably a bug in the preloader process. Please "
+				"<a href=\"" SUPPORT_URL "\">"
+				"report this bug</a>."
+				"</p>");
+			throw e.finalize();
+		}
 
 		UPDATE_TRACE_POINT();
-		BufferedIO io(fd);
-		unsigned long long timeout = options.startTimeout * 1000;
-		string result;
-		vector<string> args;
-		vector<string>::const_iterator it;
+		if (!validateForkCommandResponse(doc)) {
+			session.journey.setStepErrored(SPAWNING_KIT_PARSE_RESPONSE_FROM_PRELOADER);
 
-		writeExact(fd, "spawn\n", &timeout);
-		options.toVector(args, *config->resourceLocator, Options::SPAWN_OPTIONS);
-		for (it = args.begin(); it != args.end(); it++) {
-			const string &key = *it;
-			it++;
-			const string &value = *it;
-			writeExact(fd, key + ": " + value + "\n", &timeout);
+			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+			addPreloaderEnvDumps(e);
+			e.setSummary("The preloader process sent a response that does not"
+				" match the expected structure: " + stringifyJson(doc));
+			e.setProblemDescriptionHTML(
+				"<p>The " PROGRAM_NAME " application server tried"
+				" to start the web application by communicating with a"
+				" helper process that we call a \"preloader\". However,"
+				" this helper process sent a response that does not match"
+				" the structure that " SHORT_PROGRAM_NAME " expects.</p>"
+				"<p>The response is as follows:</p>"
+				"<pre>" + escapeHTML(doc.toStyledString()) + "</pre>");
+			e.setSolutionDescriptionHTML(
+				"<p class=\"sole-solution\">"
+				"This is probably a bug in the preloader process. Please "
+				"<a href=\"" SUPPORT_URL "\">"
+				"report this bug</a>."
+				"</p>");
+			throw e.finalize();
 		}
-		writeExact(fd, "\n", &timeout);
 
-		result = io.readLine(1024 * 8, &timeout);
-		if (result == "OK\n") {
-			UPDATE_TRACE_POINT();
-			pid_t spawnedPid;
+		return doc;
+	}
 
-			spawnedPid = atoi(io.readLine(1024 * 8, &timeout).c_str());
-			if (spawnedPid <= 0) {
-				BackgroundIOCapturerPtr stderrCapturer;
-				throwPreloaderSpawnException("An error occurred while starting "
-					"the web application. Its preloader responded to the "
-					"'spawn' command with an invalid PID: '" +
-					toString(spawnedPid) + "'",
-					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					options,
-					DebugDirPtr());
+	bool validateForkCommandResponse(const Json::Value &doc) const {
+		if (!doc.isObject()) {
+			return false;
+		}
+		if (!doc.isMember("result") || !doc["result"].isString()) {
+			return false;
+		}
+		if (doc["result"].asString() == "ok") {
+			if (!doc.isMember("pid") || !doc["pid"].isInt()) {
+				return false;
 			}
-			// TODO: we really should be checking UID.
-			// FIXME: for Passenger 4 we *must* check the UID otherwise this is a gaping security hole.
-			if (getsid(spawnedPid) != getsid(pid)) {
-				BackgroundIOCapturerPtr stderrCapturer;
-				throwPreloaderSpawnException("An error occurred while starting "
-					"the web application. Its preloader responded to the "
-					"'spawn' command with a PID that doesn't belong to "
-					"the same session: '" + toString(spawnedPid) + "'",
-					SpawnException::APP_STARTUP_PROTOCOL_ERROR,
-					stderrCapturer,
-					options,
-					DebugDirPtr());
+			return true;
+		} else if (doc["result"].asString() == "error") {
+			if (!doc.isMember("message") || !doc["message"].isString()) {
+				return false;
 			}
-
-			P_LOG_FILE_DESCRIPTOR_PURPOSE(fd, "App " << spawnedPid
-				<< " (" << options.appRoot << ") adminSocket[1]");
-			details.pid = spawnedPid;
-			details.adminSocket = fd;
-			details.io = io;
-
-		} else if (result == "Error\n") {
-			UPDATE_TRACE_POINT();
-			details.io = io;
-			details.timeout = timeout;
-			handleSpawnErrorResponse(details);
-
+			return true;
 		} else {
-			UPDATE_TRACE_POINT();
-			handleInvalidSpawnResponseType(result, details);
+			return false;
 		}
 	}
 
-	template<typename Exception>
-	void sendSpawnCommandAgain(const Exception &e, NegotiationDetails &details) {
+	ForkResult handleForkCommandResponse(HandshakeSession &session,
+		const StdChannelsAsyncOpenStatePtr &stdChannelsAsyncOpenState,
+		const Json::Value &doc)
+	{
 		TRACE_POINT();
-		P_WARN("An error occurred while spawning a process: " << e.what());
-		P_WARN("The application preloader seems to have crashed, restarting it and trying again...");
-		stopPreloader();
-		startPreloader();
-		ScopeGuard guard(boost::bind(&SmartSpawner::stopPreloader, this));
-		sendSpawnCommand(details);
-		guard.clear();
+		if (doc["result"].asString() == "ok") {
+			return handleForkCommandResponseSuccess(session, stdChannelsAsyncOpenState,
+				doc);
+		} else {
+			P_ASSERT_EQ(doc["result"].asString(), "error");
+			return handleForkCommandResponseError(session, doc);
+		}
 	}
 
-protected:
-	virtual void annotateAppSpawnException(SpawnException &e, NegotiationDetails &details) {
-		Spawner::annotateAppSpawnException(e, details);
-		e.addAnnotations(preloaderAnnotations);
+	ForkResult handleForkCommandResponseSuccess(HandshakeSession &session,
+		const StdChannelsAsyncOpenStatePtr &stdChannelsAsyncOpenState, const Json::Value &doc)
+	{
+		TRACE_POINT();
+		pid_t spawnedPid = doc["pid"].asInt();
+		ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, spawnedPid));
+
+		UPDATE_TRACE_POINT();
+		waitForStdChannelFifosToBeOpenedByPeer(stdChannelsAsyncOpenState,
+			session, spawnedPid);
+
+		UPDATE_TRACE_POINT();
+		// How do we know the preloader actually forked a process
+		// instead of reporting the PID of a random other existing process?
+		// For security reasons we perform a UID check.
+		uid_t spawnedUid = getProcessUid(session, spawnedPid,
+			stdChannelsAsyncOpenState->stdoutAndErrCapturer);
+		if (spawnedUid != session.uid) {
+			UPDATE_TRACE_POINT();
+			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+
+			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+			addPreloaderEnvDumps(e);
+			e.setSummary("The process that the preloader said it spawned, PID "
+				+ toString(spawnedPid) + ", has UID " + toString(spawnedUid)
+				+ ", but the expected UID is " + toString(session.uid));
+			e.setSubprocessPid(spawnedPid);
+			e.setStdoutAndErrData(getBackgroundIOCapturerData(
+				stdChannelsAsyncOpenState->stdoutAndErrCapturer));
+			e.setProblemDescriptionHTML(
+				"<h2>Application process has unexpected UID</h2>"
+				"<p>The " PROGRAM_NAME " application server tried"
+				" to start the web application by communicating with a"
+				" helper process that we call a \"preloader\". However,"
+				" the web application process that the preloader started"
+				" belongs to the wrong user. The UID of the web"
+				" application process should be " + toString(session.uid)
+				+ ", but is actually " + toString(session.uid) + ".</p>");
+			if (!session.config->genericApp && session.config->startsUsingWrapper
+				&& session.config->wrapperSuppliedByThirdParty)
+			{
+				e.setSolutionDescriptionHTML(
+					"<h2>Please report this bug</h2>"
+					"<p class=\"sole-solution\">"
+					"This is probably a bug in the preloader process. The preloader "
+					"wrapper program is not written by the " PROGRAM_NAME " authors, "
+					"but by a third party. Please report this bug to the author of "
+					"the preloader wrapper program."
+					"</p>");
+			} else {
+				e.setSolutionDescriptionHTML(
+					"<h2>Please report this bug</h2>"
+					"<p class=\"sole-solution\">"
+					"This is probably a bug in the preloader process. The preloader "
+					"is an internal tool part of " PROGRAM_NAME ". Please "
+					"<a href=\"" SUPPORT_URL "\">"
+					"report this bug</a>."
+					"</p>");
+			}
+			throw e.finalize();
+		}
+
+		UPDATE_TRACE_POINT();
+		string alreadyReadStdoutAndErrData;
+		if (stdChannelsAsyncOpenState->stdoutAndErrCapturer != NULL) {
+			stdChannelsAsyncOpenState->stdoutAndErrCapturer->stop();
+			alreadyReadStdoutAndErrData = stdChannelsAsyncOpenState->stdoutAndErrCapturer->getData();
+		}
+		guard.clear();
+		return ForkResult(spawnedPid, stdChannelsAsyncOpenState->stdinFd,
+			stdChannelsAsyncOpenState->stdoutAndErrFd,
+			alreadyReadStdoutAndErrData);
+	}
+
+	ForkResult handleForkCommandResponseError(HandshakeSession &session,
+		const Json::Value &doc)
+	{
+		session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+
+		SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+		addPreloaderEnvDumps(e);
+		e.setSummary("An error occured while starting the web application: "
+			+ doc["message"].asString());
+		e.setProblemDescriptionHTML(
+			"<p>The " PROGRAM_NAME " application server tried to"
+			" start the web application by communicating with a"
+			" helper process that we call a \"preloader\". However, "
+			" this helper process reported an error:</p>"
+			"<pre>" + escapeHTML(doc["message"].asString()) + "</pre>");
+		e.setSolutionDescriptionHTML(
+			"<p class=\"sole-solution\">"
+			"Please try troubleshooting the problem by studying the"
+			" <strong>error message</strong> and the"
+			" <strong>diagnostics</strong> reports. You can also"
+			" consult <a href=\"" SUPPORT_URL "\">the " SHORT_PROGRAM_NAME
+			" support resources</a> for help.</p>");
+		throw e.finalize();
+	}
+
+	void createStdChannelFifos(const HandshakeSession &session) {
+		const string &workDir = session.workDir->getPath();
+		createFifo(session, workDir + "/stdin");
+		createFifo(session, workDir + "/stdout_and_err");
+	}
+
+	void createFifo(const HandshakeSession &session, const string &path) {
+		int ret;
+
+		do {
+			ret = mkfifo(path.c_str(), 0600);
+		} while (ret == -1 && errno == EAGAIN);
+		if (ret == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot create FIFO file " + path,
+				e, path);
+		}
+
+		ret = syscalls::chown(path.c_str(), session.uid, session.gid);
+		if (ret == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot change owner and group on FIFO file " + path,
+				e, path);
+		}
+	}
+
+	string getBackgroundIOCapturerData(const BackgroundIOCapturerPtr &capturer) const {
+		if (capturer != NULL) {
+			// Sleep shortly to allow the child process to finish writing logs.
+			syscalls::usleep(50000);
+			return capturer->getData();
+		} else {
+			return string();
+		}
+	}
+
+	uid_t getProcessUid(HandshakeSession &session, pid_t pid,
+		const BackgroundIOCapturerPtr &stdoutAndErrCapturer)
+	{
+		TRACE_POINT();
+		uid_t uid = (uid_t) -1;
+
+		try {
+			vector<pid_t> pids;
+			pids.push_back(pid);
+			ProcessMetricMap result = ProcessMetricsCollector().collect(pids);
+			uid = result[pid].uid;
+		} catch (const ParseException &) {
+			HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
+			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+
+			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+			addPreloaderEnvDumps(e);
+			e.setSummary("Unable to query the UID of spawned application process "
+				+ toString(pid) + ": error parsing 'ps' output");
+			e.setSubprocessPid(pid);
+			e.setProblemDescriptionHTML(
+				"<h2>Unable to use 'ps' to query PID " + toString(pid) + "</h2>"
+				"<p>The " PROGRAM_NAME " application server tried"
+				" to start the web application. As part of the starting"
+				" procedure, " SHORT_PROGRAM_NAME " also tried to query"
+				" the system user ID of the web application process"
+				" using the operating system's \"ps\" tool. However,"
+				" this tool returned output that " SHORT_PROGRAM_NAME
+				" could not understand.</p>");
+			e.setSolutionDescriptionHTML(
+				createSolutionDescriptionForProcessMetricsCollectionError());
+			throw e.finalize();
+		} catch (const SystemException &originalException) {
+			HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
+			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+
+			SpawnException e(OPERATING_SYSTEM_ERROR, session.journey, session.config);
+			addPreloaderEnvDumps(e);
+			e.setSummary("Unable to query the UID of spawned application process "
+				+ toString(pid) + "; error capturing 'ps' output: "
+				+ originalException.what());
+			e.setSubprocessPid(pid);
+			e.setProblemDescriptionHTML(
+				"<h2>Error capturing 'ps' output for PID " + toString(pid) + "</h2>"
+				"<p>The " PROGRAM_NAME " application server tried"
+				" to start the web application. As part of the starting"
+				" procedure, " SHORT_PROGRAM_NAME " also tried to query"
+				" the system user ID of the web application process."
+				" This is done by using the operating system's \"ps\""
+				" tool and by querying operating system APIs and special"
+				" files. However, an error was encountered while doing"
+				" one of those things.</p>"
+				"<p>The error returned by the operating system is as follows:</p>"
+				"<pre>" + escapeHTML(originalException.what()) + "</pre>");
+			e.setSolutionDescriptionHTML(
+				createSolutionDescriptionForProcessMetricsCollectionError());
+			throw e.finalize();
+		}
+
+		UPDATE_TRACE_POINT();
+		if (uid == (uid_t) -1) {
+			if (osProcessExists(pid)) {
+				HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
+				session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+
+				SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+				addPreloaderEnvDumps(e);
+				e.setSummary("Unable to query the UID of spawned application process "
+					+ toString(pid) + ": 'ps' did not report information"
+					" about this process");
+				e.setSubprocessPid(pid);
+				e.setProblemDescriptionHTML(
+					"<h2>'ps' did not return any information about PID " + toString(pid) + "</h2>"
+					"<p>The " PROGRAM_NAME " application server tried"
+					" to start the web application. As part of the starting"
+					" procedure, " SHORT_PROGRAM_NAME " also tried to query"
+					" the system user ID of the web application process"
+					" using the operating system's \"ps\" tool. However,"
+					" this tool did not return any information about"
+					" the web application process.</p>");
+				e.setSolutionDescriptionHTML(
+					createSolutionDescriptionForProcessMetricsCollectionError());
+				throw e.finalize();
+			} else {
+				HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
+				session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+
+				SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+				addPreloaderEnvDumps(e);
+				e.setSummary("The application process spawned from the preloader"
+					" seems to have exited prematurely");
+				e.setSubprocessPid(pid);
+				e.setStdoutAndErrData(getBackgroundIOCapturerData(stdoutAndErrCapturer));
+				e.setProblemDescriptionHTML(
+					"<h2>Application process exited prematurely</h2>"
+					"<p>The " PROGRAM_NAME " application server tried"
+					" to start the web application. As part of the starting"
+					" procedure, " SHORT_PROGRAM_NAME " also tried to query"
+					" the system user ID of the web application process"
+					" using the operating system's \"ps\" tool. However,"
+					" this tool did not return any information about"
+					" the web application process.</p>");
+				e.setSolutionDescriptionHTML(
+					createSolutionDescriptionForProcessMetricsCollectionError());
+				throw e.finalize();
+			}
+		} else {
+			return uid;
+		}
+	}
+
+	static string createSolutionDescriptionForProcessMetricsCollectionError() {
+		const char *path = getenv("PATH");
+		if (path == NULL || path[0] == '\0') {
+			path = "(empty)";
+		}
+		return "<div class=\"multiple-solutions\">"
+
+			"<h3>Check whether the \"ps\" tool is installed and accessible by "
+			SHORT_PROGRAM_NAME "</h3>"
+			"<p>Maybe \"ps\" is not installed. Or maybe it is installed, but "
+			SHORT_PROGRAM_NAME " cannot find it inside its PATH. Or"
+			" maybe filesystem permissions disallow " SHORT_PROGRAM_NAME
+			" from accessing \"ps\". Please check all these factors and"
+			" fix them if necessary.</p>"
+			"<p>" SHORT_PROGRAM_NAME "'s PATH is:</p>"
+			"<pre>" + escapeHTML(path) + "</pre>"
+
+			"<h3>Check whether the server is low on resources</h3>"
+			"<p>Maybe the server is currently low on resources. This would"
+			" cause the \"ps\" tool to encounter errors. Please study the"
+			" <em>error message</em> and the <em>diagnostics reports</em> to"
+			" verify whether this is the case. Key things to check for:</p>"
+			"<ul>"
+			"<li>Excessive CPU usage</li>"
+			"<li>Memory and swap</li>"
+			"<li>Ulimits</li>"
+			"</ul>"
+			"<p>If the server is indeed low on resources, find a way to"
+			" free up some resources.</p>"
+
+			"<h3>Check whether /proc is mounted</h3>"
+			"<p>On many operating systems including Linux and FreeBSD, \"ps\""
+			" only works if /proc is mounted. Please check this.</p>"
+
+			"<h3>Still no luck?</h3>"
+			"<p>Please try troubleshooting the problem by studying the"
+			" <em>diagnostics</em> reports.</p>"
+
+			"</div>";
+	}
+
+	static void adjustTimeout(MonotonicTimeUsec startTime, unsigned long long *timeout) {
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
+		MonotonicTimeUsec now = SystemTime::getMonotonicUsec();
+		assert(now >= startTime);
+		MonotonicTimeUsec diff = now - startTime;
+		if (*timeout >= diff) {
+			*timeout -= diff;
+		} else {
+			*timeout = 0;
+		}
+	}
+
+	static void doClosedir(DIR *dir) {
+		closedir(dir);
+	}
+
+	static string findPreloaderCommandSocketAddress(const HandshakeSession &session) {
+		const vector<Result::Socket> &sockets = session.result.sockets;
+		vector<Result::Socket>::const_iterator it, end = sockets.end();
+		for (it = sockets.begin(); it != end; it++) {
+			if (it->protocol == "preloader") {
+				return it->address;
+			}
+		}
+		return string();
+	}
+
+	static StringKeyTable<string> loadAnnotationsFromEnvDumpDir(const string &envDumpDir) {
+		string path = envDumpDir + "/annotations";
+		DIR *dir = opendir(path.c_str());
+		if (dir == NULL) {
+			return StringKeyTable<string>();
+		}
+
+		ScopeGuard guard(boost::bind(doClosedir, dir));
+		StringKeyTable<string> result;
+		struct dirent *ent;
+		while ((ent = readdir(dir)) != NULL) {
+			if (ent->d_name[0] != '.') {
+				result.insert(ent->d_name, strip(
+					Passenger::readAll(path + "/" + ent->d_name)),
+					true);
+			}
+		}
+
+		result.compact();
+
+		return result;
+	}
+
+	void addPreloaderEnvDumps(SpawnException &e) const {
+		e.setPreloaderPid(pid);
+		e.setPreloaderEnvvars(preloaderEnvvars);
+		e.setPreloaderUserInfo(preloaderUserInfo);
+		e.setPreloaderUlimits(preloaderUlimits);
+
+		if (e.getSubprocessEnvvars().empty()) {
+			e.setSubprocessEnvvars(preloaderEnvvars);
+		}
+		if (e.getSubprocessUserInfo().empty()) {
+			e.setSubprocessUserInfo(preloaderUserInfo);
+		}
+		if (e.getSubprocessUlimits().empty()) {
+			e.setSubprocessUlimits(preloaderUlimits);
+		}
+
+		StringKeyTable<string>::ConstIterator it(preloaderAnnotations);
+		while (*it != NULL) {
+			e.setAnnotation(it.getKey(), it.getValue(), false);
+			it.next();
+		}
 	}
 
 public:
-	SmartSpawner(const vector<string> &_preloaderCommand,
-		const Options &_options,
-		const ConfigPtr &_config)
-		: Spawner(_config),
-		  preloaderCommand(_preloaderCommand)
+	SmartSpawner(Context *context,
+		const vector<string> &preloaderCommand,
+		const AppPoolOptions &_options)
+		: Spawner(context),
+		  preloaderCommandString(createCommandString(preloaderCommand))
 	{
 		if (preloaderCommand.size() < 2) {
 			throw ArgumentException("preloaderCommand must have at least 2 elements");
@@ -785,10 +1202,10 @@ public:
 		stopPreloader();
 	}
 
-	virtual Result spawn(const Options &options) {
+	virtual Result spawn(const AppPoolOptions &options) {
 		TRACE_POINT();
-		assert(options.appType == this->options.appType);
-		assert(options.appRoot == this->options.appRoot);
+		P_ASSERT_EQ(options.appType, this->options.appType);
+		P_ASSERT_EQ(options.appRoot, this->options.appRoot);
 
 		P_DEBUG("Spawning new process: appRoot=" << options.appRoot);
 		possiblyRaiseInternalError(options);
@@ -805,11 +1222,59 @@ public:
 		}
 
 		UPDATE_TRACE_POINT();
-		NegotiationDetails details = sendSpawnCommandAndGetNegotiationDetails(options);
-		Result result = negotiateSpawn(details);
-		P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
-			", pid=" << result["pid"].asInt());
-		return result;
+		Config config;
+		Json::Value extraArgs;
+		try {
+			setConfigFromAppPoolOptions(&config, extraArgs, options);
+		} catch (const std::exception &originalException) {
+			Journey journey(SPAWN_THROUGH_PRELOADER, true);
+			journey.setStepErrored(SPAWNING_KIT_PREPARATION, true);
+			SpawnException e(originalException, journey, &config);
+			addPreloaderEnvDumps(e);
+			throw e.finalize();
+		}
+
+		UPDATE_TRACE_POINT();
+		HandshakeSession session(*context, config, SPAWN_THROUGH_PRELOADER);
+		session.journey.setStepInProgress(SPAWNING_KIT_PREPARATION);
+		JourneyStep stepToMarkAsErrored = SPAWNING_KIT_PREPARATION;
+
+		try {
+			UPDATE_TRACE_POINT();
+			HandshakePrepare(session, extraArgs).execute();
+			createStdChannelFifos(session);
+			session.journey.setStepPerformed(SPAWNING_KIT_PREPARATION, true);
+
+			UPDATE_TRACE_POINT();
+			ForkResult forkResult = invokeForkCommand(session, stepToMarkAsErrored);
+
+			UPDATE_TRACE_POINT();
+			ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, forkResult.pid));
+			P_DEBUG("Process forked for appRoot=" << options.appRoot << ": PID " << forkResult.pid);
+
+			UPDATE_TRACE_POINT();
+			session.journey.setStepPerformed(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+			session.journey.setStepInProgress(PRELOADER_PREPARATION);
+			session.journey.setStepInProgress(SPAWNING_KIT_HANDSHAKE_PERFORM);
+			stepToMarkAsErrored = SPAWNING_KIT_HANDSHAKE_PERFORM;
+			HandshakePerform(session, forkResult.pid, forkResult.stdinFd,
+				forkResult.stdoutAndErrFd, forkResult.alreadyReadStdoutAndErrData).
+				execute();
+			guard.clear();
+			session.journey.setStepPerformed(SPAWNING_KIT_HANDSHAKE_PERFORM);
+			P_DEBUG("Process spawning done: appRoot=" << options.appRoot <<
+				", pid=" << forkResult.pid);
+			return session.result;
+		} catch (SpawnException &e) {
+			addPreloaderEnvDumps(e);
+			throw e;
+		} catch (const std::exception &originalException) {
+			session.journey.setStepErrored(stepToMarkAsErrored, true);
+			SpawnException e(originalException, session.journey,
+				&config);
+			addPreloaderEnvDumps(e);
+			throw e.finalize();
+		}
 	}
 
 	virtual bool cleanable() const {

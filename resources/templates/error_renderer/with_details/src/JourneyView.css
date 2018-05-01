@@ -1,0 +1,50 @@
+.journey.spawn-through-preloader .server-core,
+.journey.spawn-through-preloader .preloader,
+.journey.spawn-through-preloader .subprocess {
+  width: 25%;
+}
+
+.journey th {
+  padding-bottom: 1em;
+}
+
+.journey th small {
+  font-weight: normal;
+  color: #aaa;
+}
+
+.journey .duration {
+  font-size: small;
+  opacity: 0.7;
+}
+
+.journey .step-separator {
+  padding-left: 0.25em;
+  color: #aaa;
+}
+
+.journey .process-boundary .arrow-image {
+  margin: 0 2em;
+}
+
+.journey .status-label {
+  display: inline-block;
+  float: left;
+}
+
+.journey .title {
+  display: block;
+  margin-left: 1.5em;
+}
+
+.journey .done {
+  color: #7cb342;
+}
+
+.journey .error {
+  color: red;
+}
+
+.journey .not-started {
+  color: #ccc;
+}

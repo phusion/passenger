@@ -107,6 +107,8 @@ module PhusionPassenger
     SHORT_PROGRAM_NAME = "Passenger"
     SERVER_TOKEN_NAME = "Phusion_Passenger"
     FLYING_PASSENGER_NAME = "Flying Passenger"
+    PROGRAM_WEBSITE     = "https://www.phusionpassenger.com"
+    PROGRAM_AUTHOR      = "Phusion"
     SUPPORT_URL         = "https://www.phusionpassenger.com/support"
     ENTERPRISE_URL      = "https://www.phusionpassenger.com/enterprise"
     GLOBAL_NAMESPACE_DIRNAME            = PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME_

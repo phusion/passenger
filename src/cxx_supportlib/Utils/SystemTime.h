@@ -100,7 +100,7 @@ typedef unsigned long long MonotonicTimeUsec;
 class SystemTime {
 public:
 	enum Granularity {
-		GRAN_1SEC   = 1000000000,   // 1 millisecond granularity
+		GRAN_1SEC   = 1000000000,   // 1 second granularity
 		GRAN_10MSEC = 10000000,     // 10 milliseconds granularity
 		GRAN_1MSEC  = 1000000,      // 1 millisecond granularity
 		GRAN_1USEC  = 1000          // 1 microsecond granularty

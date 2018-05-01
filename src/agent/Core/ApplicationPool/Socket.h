@@ -98,11 +98,17 @@ private:
 
 public:
 	// Socket properties. Read-only.
-	StaticString name;
 	StaticString address;
 	StaticString protocol;
+	StaticString description;
 	pid_t pid;
+	/**
+	 * Special values:
+	 * 0 = unlimited concurrency
+	 * -1 = unknown
+	 */
 	int concurrency;
+	bool acceptHttpRequests;
 
 	// Private. In public section as alignment optimization.
 	int totalConnections;
@@ -113,16 +119,18 @@ public:
 
 	Socket()
 		: pid(-1),
-		  concurrency(0)
+		  concurrency(-1),
+		  acceptHttpRequests(0)
 		{ }
 
-	Socket(pid_t _pid, const StaticString &_name, const StaticString &_address,
-		const StaticString &_protocol, int _concurrency)
-		: name(_name),
-		  address(_address),
+	Socket(pid_t _pid, const StaticString &_address, const StaticString &_protocol,
+		const StaticString &_description, int _concurrency, bool _acceptHttpRequests)
+		: address(_address),
 		  protocol(_protocol),
+		  description(_description),
 		  pid(_pid),
 		  concurrency(_concurrency),
+		  acceptHttpRequests(_acceptHttpRequests),
 		  totalConnections(0),
 		  totalIdleConnections(0),
 		  sessions(0)
@@ -130,11 +138,12 @@ public:
 
 	Socket(const Socket &other)
 		: idleConnections(other.idleConnections),
-		  name(other.name),
 		  address(other.address),
 		  protocol(other.protocol),
+		  description(other.description),
 		  pid(other.pid),
 		  concurrency(other.concurrency),
+		  acceptHttpRequests(other.acceptHttpRequests),
 		  totalConnections(other.totalConnections),
 		  totalIdleConnections(other.totalIdleConnections),
 		  sessions(other.sessions)
@@ -144,11 +153,12 @@ public:
 		totalConnections = other.totalConnections;
 		totalIdleConnections = other.totalIdleConnections;
 		idleConnections = other.idleConnections;
-		name = other.name;
 		address = other.address;
 		protocol = other.protocol;
+		description = other.description;
 		pid = other.pid;
 		concurrency = other.concurrency;
+		acceptHttpRequests = other.acceptHttpRequests;
 		sessions = other.sessions;
 		return *this;
 	}
@@ -227,15 +237,15 @@ public:
 		/* Different sockets within a Process may have different
 		 * 'concurrency' values. We want:
 		 * - the socket with the smallest busyness to be be picked for routing.
-		 * - to give sockets with concurrency == 0 more priority (in general)
+		 * - to give sockets with concurrency == 0 or -1 more priority (in general)
 		 *   over sockets with concurrency > 0.
 		 * Therefore, in case of sockets with concurrency > 0, we describe our
 		 * busyness as a percentage of 'concurrency', with the percentage value
 		 * in [0..INT_MAX] instead of [0..1]. That way, the busyness value
 		 * of sockets with concurrency > 0 is usually higher than that of sockets
-		 * with concurrency == 0.
+		 * with concurrency == 0 or -1.
 		 */
-		if (concurrency == 0) {
+		if (concurrency <= 0) {
 			return sessions;
 		} else {
 			return (int) (((long long) sessions * INT_MAX) / (double) concurrency);
@@ -247,38 +257,29 @@ public:
 	}
 
 	void recreateStrings(psg_pool_t *newPool) {
-		recreateString(newPool, name);
 		recreateString(newPool, address);
 		recreateString(newPool, protocol);
+		recreateString(newPool, description);
 	}
 };
 
 class SocketList: public SmallVector<Socket, 1> {
 public:
-	void add(pid_t pid, const StaticString &name, const StaticString &address,
-		const StaticString &protocol, int concurrency)
+	void add(pid_t pid, const StaticString &address, const StaticString &protocol,
+		const StaticString &description, int concurrency, bool acceptHttpRequests)
 	{
-		push_back(Socket(pid, name, address, protocol, concurrency));
+		push_back(Socket(pid, address, protocol, description, concurrency,
+			acceptHttpRequests));
 	}
 
-	const Socket *findSocketWithName(const StaticString &name) const {
+	const Socket *findFirstSocketWithProtocol(const StaticString &protocol) const {
 		const_iterator it, end = this->end();
 		for (it = begin(); it != end; it++) {
-			if (it->name == name) {
+			if (it->protocol == protocol) {
 				return &(*it);
 			}
 		}
 		return NULL;
-	}
-
-	bool hasSessionSockets() const {
-		const_iterator it;
-		for (it = begin(); it != end(); it++) {
-			if (it->protocol == "session" || it->protocol == "http_session") {
-				return true;
-			}
-		}
-		return false;
 	}
 };
 

@@ -41,15 +41,22 @@ module TestHelper
 
       if app_root
         @app_root = app_root
+        @full_app_root = File.expand_path(app_root)
+        remove_dir_tree(@full_app_root)
+        FileUtils.mkdir_p(@full_app_root)
       else
         identifier = name.gsub('/', '-')
-        @app_root = "tmp.#{identifier}.#{object_id}"
+        @app_root = Dir.mktmpdir(identifier, '/tmp')
+        @full_app_root = @app_root
+        # The tmp dir may have the sticky bit, resulting
+        # in subdirectories to be automatically owned by
+        # the root group. That will mess up various
+        # permission tests, so we chown explicitly here.
+        File.chown(Process.uid, Process.gid, @app_root)
       end
-      @full_app_root = File.expand_path(@app_root)
-      remove_dir_tree(@full_app_root)
-      FileUtils.mkdir_p(@full_app_root)
       copy_stub_contents
       system("chmod", "-R", "a+rw", @full_app_root)
+      system("chmod", "a+x", @full_app_root)
     end
 
     def reset
@@ -78,7 +85,7 @@ module TestHelper
     end
 
     def full_app_root
-      return File.expand_path(@app_root)
+      File.expand_path(@app_root)
     end
 
     def public_file(name)
@@ -125,6 +132,17 @@ module TestHelper
   class NodejsStub < Stub
     def startup_file
       return "#{@full_app_root}/app.js"
+    end
+
+    def copy_stub_contents
+      super
+      if !ENV['PASSENGER_TEST_NODE_MODULES_DIR'].to_s.empty?
+        FileUtils.ln_s(ENV['PASSENGER_TEST_NODE_MODULES_DIR'],
+          "#{@full_app_root}/node_modules")
+      elsif PhusionPassenger.build_system_dir
+        FileUtils.ln_s("#{PhusionPassenger.build_system_dir}/node_modules",
+          "#{@full_app_root}/node_modules")
+      end
     end
   end
 

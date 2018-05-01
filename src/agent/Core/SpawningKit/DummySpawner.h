@@ -26,8 +26,14 @@
 #ifndef _PASSENGER_SPAWNING_KIT_DUMMY_SPAWNER_H_
 #define _PASSENGER_SPAWNING_KIT_DUMMY_SPAWNER_H_
 
-#include <Core/SpawningKit/Spawner.h>
+#include <boost/shared_ptr.hpp>
 #include <boost/atomic.hpp>
+#include <vector>
+
+#include <StaticString.h>
+#include <Utils/StrIntUtils.h>
+#include <Core/SpawningKit/Spawner.h>
+#include <Core/SpawningKit/Exceptions.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -41,38 +47,71 @@ class DummySpawner: public Spawner {
 private:
 	boost::atomic<unsigned int> count;
 
+	void setConfigFromAppPoolOptions(Config *config, Json::Value &extraArgs,
+		const AppPoolOptions &options)
+	{
+		Spawner::setConfigFromAppPoolOptions(config, extraArgs, options);
+		config->spawnMethod = P_STATIC_STRING("dummy");
+	}
+
 public:
 	unsigned int cleanCount;
 
-	DummySpawner(const ConfigPtr &_config)
-		: Spawner(_config),
+	DummySpawner(Context *context)
+		: Spawner(context),
 		  count(1),
 		  cleanCount(0)
 		{ }
 
-	virtual Result spawn(const Options &options) {
+	virtual Result spawn(const AppPoolOptions &options) {
 		TRACE_POINT();
 		possiblyRaiseInternalError(options);
 
-		syscalls::usleep(config->spawnTime);
+		if (context->debugSupport != NULL) {
+			syscalls::usleep(context->debugSupport->dummySpawnDelay);
+		}
 
-		SocketPair adminSocket = createUnixSocketPair(__FILE__, __LINE__);
+		Config config;
+		Json::Value extraArgs;
+		setConfigFromAppPoolOptions(&config, extraArgs, options);
+
 		unsigned int number = count.fetch_add(1, boost::memory_order_relaxed);
 		Result result;
-		Json::Value socket;
+		Result::Socket socket;
 
-		socket["name"] = "main";
-		socket["address"] = "tcp://127.0.0.1:1234";
-		socket["protocol"] = "session";
-		socket["concurrency"] = config->concurrency;
+		socket.address = "tcp://127.0.0.1:1234";
+		socket.protocol = "session";
+		socket.concurrency = 1;
+		socket.acceptHttpRequests = true;
+		if (context->debugSupport != NULL) {
+			socket.concurrency = context->debugSupport->dummyConcurrency;
+		}
 
-		result["type"] = "dummy";
-		result["pid"] = number;
-		result["gupid"] = "gupid-" + toString(number);
-		result["spawner_creation_time"] = (Json::UInt64) SystemTime::getUsec();
-		result["spawn_start_time"] = (Json::UInt64) SystemTime::getUsec();
-		result["sockets"].append(socket);
-		result.adminSocket = adminSocket.second;
+		result.initialize(*context, &config);
+		result.pid = number;
+		result.dummy = true;
+		result.gupid = "gupid-" + toString(number);
+		result.spawnEndTime = result.spawnStartTime;
+		result.spawnEndTimeMonotonic = result.spawnStartTimeMonotonic;
+		result.sockets.push_back(socket);
+
+		vector<StaticString> internalFieldErrors;
+		vector<StaticString> appSuppliedFieldErrors;
+		if (!result.validate(internalFieldErrors, appSuppliedFieldErrors)) {
+			Journey journey(SPAWN_DIRECTLY, !config.genericApp && config.startsUsingWrapper);
+			journey.setStepErrored(SPAWNING_KIT_HANDSHAKE_PERFORM, true);
+			SpawnException e(INTERNAL_ERROR, journey, &config);
+			e.setSummary("Error spawning the web application:"
+				" a bug in " SHORT_PROGRAM_NAME " caused the"
+				" spawn result to be invalid: "
+				+ toString(internalFieldErrors)
+				+ ", " + toString(appSuppliedFieldErrors));
+			e.setProblemDescriptionHTML(
+				"Bug: the spawn result is invalid: "
+				+ toString(internalFieldErrors)
+				+ ", " + toString(appSuppliedFieldErrors));
+			throw e.finalize();
+		}
 
 		return result;
 	}

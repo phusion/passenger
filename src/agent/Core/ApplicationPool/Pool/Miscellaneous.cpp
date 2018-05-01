@@ -224,12 +224,6 @@ Pool::isSpawning(bool lock) const {
 	return false;
 }
 
-void
-Pool::setAgentConfig(const Json::Value &agentConfig) {
-	LockGuard l(syncher);
-	this->agentConfig = agentConfig;
-}
-
 bool
 Pool::authorizeByApiKey(const ApiKey &key, bool lock) const {
 	return key.isSuper() || findGroupByApiKey(key.toStaticString(), lock) != NULL;

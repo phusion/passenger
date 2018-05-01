@@ -1,4 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
+require 'tmpdir'
 require 'socket'
 require 'fileutils'
 require 'net/http'
@@ -16,23 +17,38 @@ require 'integration_tests/shared/example_webapp_tests'
 # TODO: test custom page caching directory
 
 describe "Apache 2 module" do
+  PORT = ENV.fetch('TEST_PORT_BASE', '64506').to_i
+
   before :all do
     check_hosts_configuration
-    @passenger_temp_dir = "/tmp/passenger-test.#{$$}"
-    Dir.mkdir(@passenger_temp_dir)
+
+    @passenger_temp_dir = Dir.mktmpdir('psg-test-', '/tmp')
     FileUtils.chmod_R(0777, @passenger_temp_dir)
     ENV['TMPDIR'] = @passenger_temp_dir
     ENV['PASSENGER_INSTANCE_REGISTRY_DIR'] = @passenger_temp_dir
+
+    if File.directory?(PhusionPassenger.install_spec)
+      @log_dir = "#{PhusionPassenger.install_spec}/buildout/testlogs"
+    else
+      @log_dir = "#{@passenger_temp_dir}/testlogs"
+    end
+    @log_file = "#{@log_dir}/apache2.log"
+    FileUtils.mkdir_p(@log_dir)
   end
 
   after :all do
-    @apache2.stop if @apache2
-    FileUtils.chmod_R(0777, @passenger_temp_dir)
-    FileUtils.rm_rf(@passenger_temp_dir)
+    begin
+      @apache2.stop if @apache2
+      FileUtils.cp(Dir["#{@passenger_temp_dir}/passenger-error-*.html"],
+        "#{@log_dir}/")
+    ensure
+      FileUtils.chmod_R(0777, @passenger_temp_dir)
+      FileUtils.rm_rf(@passenger_temp_dir)
+    end
   end
 
   before :each do
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       # Make sure that all Apache log output is prepended by the test description
       # so that we know which messages are associated with which tests.
       f.puts "\n#### #{Time.now}: #{example.full_description}"
@@ -44,7 +60,7 @@ describe "Apache 2 module" do
     log "End of test"
     if example.exception
       puts "\t---------------- Begin logs -------------------"
-      File.open("test.log", "rb") do |f|
+      File.open(@log_file, 'rb') do |f|
         f.seek(@test_log_pos)
         puts f.read.split("\n").map{ |line| "\t#{line}" }.join("\n")
       end
@@ -54,8 +70,8 @@ describe "Apache 2 module" do
   end
 
   def create_apache2_controller
-    @apache2 = Apache2Controller.new
-    @apache2.set(:passenger_temp_dir => @passenger_temp_dir)
+    @apache2 = Apache2Controller.new(:port => PORT)
+    @apache2.set(:passenger_temp_dir => @passenger_temp_dir, :log_file => @log_file)
     if Process.uid == 0
       @apache2.set(
         :www_user => CONFIG['normal_user_1'],
@@ -65,7 +81,7 @@ describe "Apache 2 module" do
   end
 
   def log(message)
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       f.puts "[#{Time.now}] Spec: #{message}"
     end
   end
@@ -474,9 +490,7 @@ describe "Apache 2 module" do
   describe "error handling" do
     before :all do
       create_apache2_controller
-      FileUtils.rm_rf('tmp.webdir')
-      FileUtils.mkdir_p('tmp.webdir')
-      @webdir = File.expand_path('tmp.webdir')
+      @webdir = Dir.mktmpdir('webdir')
       @apache2.set_vhost('1.passenger.test', @webdir) do |vhost|
         vhost << "PassengerBaseURI /app-that-crashes-during-startup/public"
       end
@@ -490,14 +504,14 @@ describe "Apache 2 module" do
     end
 
     after :all do
-      FileUtils.rm_rf('tmp.webdir')
+      FileUtils.rm_rf(@webdir)
       @stub.destroy
       @apache2.stop if @apache2
     end
 
     before :each do
       @server = "http://1.passenger.test:#{@apache2.port}"
-      @error_page_signature = /<div id="content">/
+      @error_page_signature = /window\.spec = /
       @stub.reset
     end
 

@@ -1,12 +1,10 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>We're sorry, but something went wrong: {{TITLE}}</title>
-    <style type="text/css">
-      {{CSS|raw}}
-    </style>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="generator" content="Phusion Passenger">
+    <style type="text/css">{{CSS|raw}}</style>
   </head>
   <body>
     <header>
@@ -20,13 +18,11 @@
       <a id="show_operator_info" href="#" onclick="showOperatorInfo()">Technical details for the administrator of this website</a>
       <div id="operator_info">
         <div class="left">
-          <h3>Error:</h3>
-          <span class="error">{{TITLE}}</span>
           <h3>Error ID:</h3>
           <span class="error">{{ERROR_ID}}</span>
           <h3>Details:</h3>
           <p>Web application could not be started by the {{PROGRAM_NAME}} application server.</p>
-          <p class="bold">Please read <a href="https://www.phusionpassenger.com/library/admin/log_file/" class="plain">the Passenger log file</a> (search for the Error ID) to find the details of the error.</p>
+          <p class="bold">Please read <a href="https://www.phusionpassenger.com/library/admin/log_file/" class="plain">the {{SHORT_PROGRAM_NAME}} log file</a> (search for the Error ID) to find the details of the error.</p>
           <p>You can also get a detailed report to appear directly on this page, but for security reasons it is only provided if {{PROGRAM_NAME}} is run with <i>environment</i> set to <i>development</i> and/or with the <i>friendly error pages</i> option set to <i>on</i>.</p>
           <p>For more information about configuring environment and friendly error pages, see:</p>
           <ul>
@@ -44,7 +40,7 @@
        text. Thank you.
        -->
       <div class="column">
-        This website is powered by <b>Passenger</b>&reg;, a rock-solid, feature-rich web application server that integrates with Apache and Nginx built by <b>Phusion</b>&reg;.
+        This website is powered by <a href="{{PROGRAM_WEBSITE}}"><b>{{PROGRAM_NAME}}</b></a>&reg;, a rock-solid, feature-rich web application server that integrates with Apache and Nginx, built by <b>{{PROGRAM_AUTHOR}}</b>&reg;.
       </div>
     </footer>
     <script>

@@ -104,8 +104,9 @@ module PhusionPassenger
       @server_sockets[:main] = {
         :address     => @main_socket_address,
         :socket      => @main_socket,
-        :protocol    => @force_http_session ? :http_session : :session,
-        :concurrency => @concurrency
+        :protocol    => @force_http_session ? :http : :session,
+        :concurrency => @concurrency,
+        :accept_http_requests => true
       }
 
       @http_socket_address, @http_socket = create_tcp_socket

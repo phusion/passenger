@@ -9,22 +9,22 @@ using namespace std;
 
 namespace tut {
 	struct Core_ApplicationPool_ProcessTest {
+		SpawningKit::Context::Schema skContextSchema;
+		SpawningKit::Context skContext;
 		Context context;
 		BasicGroupInfo groupInfo;
-		Json::Value sockets;
-		SocketPair adminSocket;
-		Pipe errorPipe;
+		vector<SpawningKit::Result::Socket> sockets;
+		Pipe stdinFd, stdoutAndErrFd;
 		FileDescriptor server1, server2, server3;
-		SpawningKit::OutputHandler gatherOutput;
-		string gatheredOutput;
-		boost::mutex gatheredOutputSyncher;
 
-		Core_ApplicationPool_ProcessTest() {
-			SpawningKit::ConfigPtr spawningKitConfig = boost::make_shared<SpawningKit::Config>();
-			spawningKitConfig->resourceLocator = resourceLocator;
-			spawningKitConfig->finalize();
+		Core_ApplicationPool_ProcessTest()
+			: skContext(skContextSchema)
+		{
+			skContext.resourceLocator = resourceLocator;
+			skContext.integrationMode = "standalone";
+			skContext.finalize();
 
-			context.setSpawningKitFactory(boost::make_shared<SpawningKit::Factory>(spawningKitConfig));
+			context.spawningKitFactory = boost::make_shared<SpawningKit::Factory>(&skContext);
 			context.finalize();
 
 			groupInfo.context = &context;
@@ -33,38 +33,36 @@ namespace tut {
 
 			struct sockaddr_in addr;
 			socklen_t len = sizeof(addr);
-			Json::Value socket;
+			SpawningKit::Result::Socket socket;
 
 			server1.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server1, (struct sockaddr *) &addr, &len);
-			socket["name"] = "main1";
-			socket["address"] = "tcp://127.0.0.1:" + toString(addr.sin_port);
-			socket["protocol"] = "session";
-			socket["concurrency"] = 3;
-			sockets.append(socket);
+			socket.address = "tcp://127.0.0.1:" + toString(addr.sin_port);
+			socket.protocol = "session";
+			socket.concurrency = 3;
+			socket.acceptHttpRequests = true;
+			sockets.push_back(socket);
 
 			server2.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server2, (struct sockaddr *) &addr, &len);
-			socket = Json::Value();
-			socket["name"] = "main2";
-			socket["address"] = "tcp://127.0.0.1:" + toString(addr.sin_port);
-			socket["protocol"] = "session";
-			socket["concurrency"] = 3;
-			sockets.append(socket);
+			socket = SpawningKit::Result::Socket();
+			socket.address = "tcp://127.0.0.1:" + toString(addr.sin_port);
+			socket.protocol = "session";
+			socket.concurrency = 3;
+			socket.acceptHttpRequests = true;
+			sockets.push_back(socket);
 
 			server3.assign(createTcpServer("127.0.0.1", 0, 0, __FILE__, __LINE__), NULL, 0);
 			getsockname(server3, (struct sockaddr *) &addr, &len);
-			socket = Json::Value();
-			socket["name"] = "main3";
-			socket["address"] = "tcp://127.0.0.1:" + toString(addr.sin_port);
-			socket["protocol"] = "session";
-			socket["concurrency"] = 3;
-			sockets.append(socket);
+			socket = SpawningKit::Result::Socket();
+			socket.address = "tcp://127.0.0.1:" + toString(addr.sin_port);
+			socket.protocol = "session";
+			socket.concurrency = 3;
+			socket.acceptHttpRequests = true;
+			sockets.push_back(socket);
 
-			adminSocket = createUnixSocketPair(__FILE__, __LINE__);
-			errorPipe = createPipe(__FILE__, __LINE__);
-
-			gatherOutput = boost::bind(&Core_ApplicationPool_ProcessTest::_gatherOutput, this, _1, _2);
+			stdinFd = createPipe(__FILE__, __LINE__);
+			stdoutAndErrFd = createPipe(__FILE__, __LINE__);
 
 			Json::Value config;
 			vector<ConfigKit::Error> errors;
@@ -92,25 +90,33 @@ namespace tut {
 			}
 		}
 
-		void _gatherOutput(const char *data, unsigned int size) {
-			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
-			gatheredOutput.append(data, size);
-		}
-
-		ProcessPtr createProcess() {
+		ProcessPtr createProcess(const Json::Value &extraArgs = Json::Value()) {
 			SpawningKit::Result result;
+			Json::Value args = extraArgs;
+			vector<StaticString> internalFieldErrors;
+			vector<StaticString> appSuppliedFieldErrors;
 
-			result["type"] = "dummy";
-			result["pid"] = 123;
-			result["gupid"] = "123";
-			result["sockets"] = sockets;
-			result["spawner_creation_time"] = 0;
-			result["spawn_start_time"] = 0;
-			result.adminSocket = adminSocket[0];
-			result.errorPipe = errorPipe[0];
+			result.pid = 123;
+			result.gupid = "123";
+			result.spawnStartTime = 1;
+			result.spawnEndTime = 1;
+			result.spawnStartTimeMonotonic = 1;
+			result.spawnEndTimeMonotonic = 1;
+			result.sockets = sockets;
+			result.stdinFd = stdinFd[1];
+			result.stdoutAndErrFd = stdoutAndErrFd[0];
 
-			ProcessPtr process(context.getProcessObjectPool().construct(
-				&groupInfo, result), false);
+			if (!result.validate(internalFieldErrors, appSuppliedFieldErrors)) {
+				P_BUG("Cannot create dummy process:\n"
+					<< toString(internalFieldErrors)
+					<< "\n" << toString(appSuppliedFieldErrors));
+			}
+
+			args["type"] = "dummy";
+			args["spawner_creation_time"] = 0;
+
+			ProcessPtr process(context.processObjectPool.construct(
+				&groupInfo, result, args), false);
 			process->shutdownNotRequired();
 			return process;
 		}
@@ -146,14 +152,14 @@ namespace tut {
 		SessionPtr session1 = process->newSession();
 		SessionPtr session2 = process->newSession();
 		SessionPtr session3 = process->newSession();
-		ensure(session1->getSocket()->name != session2->getSocket()->name);
-		ensure(session1->getSocket()->name != session3->getSocket()->name);
-		ensure(session2->getSocket()->name != session3->getSocket()->name);
+		ensure(session1->getSocket()->address != session2->getSocket()->address);
+		ensure(session1->getSocket()->address != session3->getSocket()->address);
+		ensure(session2->getSocket()->address != session3->getSocket()->address);
 
 		// The next 2 newSession() commands check out sockets with sessions == 1.
 		SessionPtr session4 = process->newSession();
 		SessionPtr session5 = process->newSession();
-		ensure(session4->getSocket()->name != session5->getSocket()->name);
+		ensure(session4->getSocket()->address != session5->getSocket()->address);
 
 		// There should now be 1 process with 1 session
 		// and 2 processes with 2 sessions.
@@ -194,33 +200,35 @@ namespace tut {
 	}
 
 	TEST_METHOD(5) {
-		set_test_name("It forwards all adminSocket and errorPipe output, even after the "
+		set_test_name("It forwards all stdout and stderr output, even after the "
 			"Process object has been destroyed");
-		ProcessPtr process = createProcess();
-		LoggingKit::setLevel(LoggingKit::WARN);
-		context.getSpawningKitConfig()->outputHandler = gatherOutput;
 
-		writeExact(adminSocket[1], "adminSocket 1\n");
-		writeExact(errorPipe[1], "errorPipe 1\n");
+		TempDir temp("tmp.log");
+		Json::Value extraArgs;
+		extraArgs["log_file"] = "tmp.log/file";
+		fclose(fopen("tmp.log/file", "w"));
+
+		ProcessPtr process = createProcess(extraArgs);
+		LoggingKit::setLevel(LoggingKit::WARN);
+
+		writeExact(stdoutAndErrFd[1], "stdout and err 1\n");
+		writeExact(stdoutAndErrFd[1], "stdout and err 2\n");
 
 		EVENTUALLY(2,
-			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
-			result = gatheredOutput.find("adminSocket 1\n") != string::npos
-				&& gatheredOutput.find("errorPipe 1\n") != string::npos;
+			string contents = readAll("tmp.log/file");
+			result = contents.find("stdout and err 1\n") != string::npos
+				&& contents.find("stdout and err 2\n") != string::npos;
 		);
 
-		{
-			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
-			gatheredOutput.clear();
-		}
+		fclose(fopen("tmp.log/file", "w"));
 		process.reset();
 
-		writeExact(adminSocket[1], "adminSocket 2\n");
-		writeExact(errorPipe[1], "errorPipe 2\n");
+		writeExact(stdoutAndErrFd[1], "stdout and err 3\n");
+		writeExact(stdoutAndErrFd[1], "stdout and err 4\n");
 		EVENTUALLY(2,
-			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
-			result = gatheredOutput.find("adminSocket 2\n") != string::npos
-				&& gatheredOutput.find("errorPipe 2\n") != string::npos;
+			string contents = readAll("tmp.log/file");
+			result = contents.find("stdout and err 3\n") != string::npos
+				&& contents.find("stdout and err 4\n") != string::npos;
 		);
 	}
 }

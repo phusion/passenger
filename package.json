@@ -1,16 +1,26 @@
 {
-  "__comment__": [
-    "Indicate Passenger dependencies on Node modules here, and use it to regenerate npm-shrinkwrap.json via 'npm shrinkwrap'."
-  ],
   "name": "passenger",
   "version": "0.0.0",
   "description": "A fast and robust web server and application server for Ruby, Python and Node.js",
   "main": "index.js",
   "devDependencies": {
+    "babel-core": "^6.25.0",
+    "babel-loader": "^7.0.0",
+    "babel-preset-env": "^1.5.2",
+    "babel-preset-react": "^6.24.1",
+    "body-parser": "^1.18.2",
+    "css-loader": "^0.28.4",
+    "express": "^4.16.3",
+    "extract-text-webpack-plugin": "^2.1.2",
+    "jquery": "^3.2.1",
+    "mocha": "^1.15.1",
+    "multer": "^1.3.0",
+    "preact": "^8.1.0",
     "should": "^2.0.1",
     "sinon": "^1.7.3",
-    "express": "^3.4.8",
-    "mocha": "^1.15.1"
+    "style-loader": "^0.18.2",
+    "uglifyjs-webpack-plugin": "^0.4.3",
+    "webpack": "^2.6.0"
   },
   "scripts": {
     "test": "rake test:node"

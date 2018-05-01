@@ -432,7 +432,9 @@ realLogAppOutput(const HashedStaticString &groupName, int targetFd,
 }
 
 void
-logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile) {
+logAppOutput(const HashedStaticString &groupName, pid_t pid, const StaticString &channelName,
+	const char *message, unsigned int size, const StaticString &appLogFile)
+{
 	int targetFd;
 	bool saveLog = false;
 
@@ -457,7 +459,7 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channel
 		}
 	}
 	char pidStr[sizeof("4294967295")];
-	unsigned int pidStrLen, channelNameLen, totalLen;
+	unsigned int pidStrLen, totalLen;
 
 	try {
 		pidStrLen = integerToOtherBase<pid_t, 10>(pid, pidStr, sizeof(pidStr));
@@ -467,21 +469,20 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channel
 		pidStrLen = 1;
 	}
 
-	channelNameLen = strlen(channelName);
-	totalLen = (sizeof("App X Y: \n") - 2) + pidStrLen + channelNameLen + size;
+	totalLen = (sizeof("App X Y: \n") - 2) + pidStrLen + channelName.size() + size;
 	if (totalLen < 1024) {
 		char buf[1024];
 		realLogAppOutput(groupName, targetFd,
 			buf, sizeof(buf),
 			pidStr, pidStrLen,
-			channelName, channelNameLen,
+			channelName.data(), channelName.size(),
 			message, size, fd, saveLog);
 	} else {
 		DynamicBuffer buf(totalLen);
 		realLogAppOutput(groupName, targetFd,
 			buf.data, totalLen,
 			pidStr, pidStrLen,
-			channelName, channelNameLen,
+			channelName.data(), channelName.size(),
 			message, size, fd, saveLog);
 	}
 	if(fd > -1){close(fd);}

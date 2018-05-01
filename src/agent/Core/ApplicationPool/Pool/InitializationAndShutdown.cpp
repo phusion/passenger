@@ -38,15 +38,10 @@ using namespace std;
 using namespace boost;
 
 
-Pool::Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
-	const Json::Value &agentConfig)
-	: abortLongRunningConnectionsCallback(NULL)
+Pool::Pool(Context *_context)
+	: context(_context),
+	  abortLongRunningConnectionsCallback(NULL)
 {
-	context.setSpawningKitFactory(spawningKitFactory);
-	context.finalize();
-
-	this->agentConfig = agentConfig;
-
 	try {
 		systemMetricsCollector.collect(systemMetrics);
 	} catch (const RuntimeException &e) {

@@ -117,6 +117,7 @@ vm.runInThisContext = function() {
 	return orig_func.apply(this, arguments);
 };
 
+
 var LineReader = require('phusion_passenger/line_reader').LineReader;
 
 var instrumentModulePaths = [ 'phusion_passenger/log_express', 'phusion_passenger/log_mongodb'];
@@ -125,44 +126,42 @@ var instrumentedModules = [];
 module.isApplicationLoader = true; // https://groups.google.com/forum/#!topic/compoundjs/4txxkNtROQg
 global.PhusionPassenger = exports.PhusionPassenger = new EventEmitter();
 var stdinReader = new LineReader(process.stdin);
-beginHandshake();
-readInitializationHeader();
+
+recordJourneyStepEnd('SUBPROCESS_EXEC_WRAPPER', 'STEP_PERFORMED');
+recordJourneyStepBegin('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_IN_PROGRESS');
+var options = readStartupArguments();
+setupEnvironment(options);
 
 
-function beginHandshake() {
-	process.stdout.write("!> I have control 1.0\n");
-}
-
-function readInitializationHeader() {
-	stdinReader.readLine(function(line) {
-		if (line != "You have control 1.0\n") {
-			console.error('Invalid initialization header');
-			process.exit(1);
-		} else {
-			readOptions();
-		}
-	});
-}
-
-function readOptions() {
-	var options = {};
-
-	function readNextOption() {
-		stdinReader.readLine(function(line) {
-			if (line == "\n") {
-				setupEnvironment(options);
-			} else if (line == "") {
-				console.error("End of stream encountered while reading initialization options");
-				process.exit(1);
-			} else {
-				var matches = line.replace(/\n/, '').match(/(.*?) *: *(.*)/);
-				options[matches[1]] = matches[2];
-				readNextOption();
-			}
-		});
+function tryWriteFile(path, contents) {
+	try {
+		fs.writeFileSync(path, contents);
+	} catch (e) {
+		console.error('Warning: unable to write to ' + path + ': ' + e.message);
 	}
+}
 
-	readNextOption();
+function recordJourneyStepBegin(step, state) {
+	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR'];
+	var stepDir = workDir + '/response/steps/' + step.toLowerCase();
+	tryWriteFile(stepDir + '/state', 'STEP_IN_PROGRESS');
+	tryWriteFile(stepDir + '/begin_time', Date.now() / 1000);
+}
+
+function recordJourneyStepEnd(step, state) {
+	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR'];
+	var stepDir = workDir + '/response/steps/' + step.toLowerCase();
+	tryWriteFile(stepDir + '/state', 'STEP_IN_PROGRESS');
+	if (!fs.existsSync(stepDir + '/begin_time') && !fs.existsSync(stepDir + '/begin_time_monotonic')) {
+		tryWriteFile(stepDir + '/begin_time', Date.now() / 1000);
+	}
+	tryWriteFile(stepDir + '/end_time', Date.now() / 1000);
+}
+
+function readStartupArguments() {
+	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR'];
+	var doc = fs.readFileSync(workDir + '/args.json');
+	return JSON.parse(doc);
 }
 
 function passengerToWinstonLogLevel(passengerLogLevel) {
@@ -210,6 +209,8 @@ function setupEnvironment(options) {
 	process.stdin.on('end', shutdown);
 	process.stdin.resume();
 
+	recordJourneyStepEnd('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED');
+	recordJourneyStepBegin('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_IN_PROGRESS');
 	loadApplication();
 }
 
@@ -315,6 +316,9 @@ function installServer() {
 		PhusionPassenger._appInstalled = true;
 		PhusionPassenger._server = server;
 
+		recordJourneyStepEnd('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_PERFORMED');
+		recordJourneyStepBegin('SUBPROCESS_LISTEN', 'STEP_IN_PROGRESS');
+
 		// Ensure that req.connection.remoteAddress and remotePort return something
 		// instead of undefined. Apps like Etherpad expect it.
 		// See https://github.com/phusion/passenger/issues/1224
@@ -355,11 +359,26 @@ function listenAndMaybeInstall(port) {
 }
 
 function finalizeStartup() {
-	process.stdout.write("!> Ready\n");
-	process.stdout.write("!> socket: main;unix:" +
-		PhusionPassenger._server.address() +
-		";http_session;0\n");
-	process.stdout.write("!> \n");
+	recordJourneyStepEnd('SUBPROCESS_LISTEN', 'STEP_PERFORMED');
+
+	var workDir = process.env['PASSENGER_SPAWN_WORK_DIR'];
+
+	fs.writeFileSync(workDir + '/response/properties.json', JSON.stringify({
+		sockets: [
+			{
+				name: 'main',
+				address: 'unix:' + PhusionPassenger.options.socket_path,
+				protocol: 'http',
+				concurrency: 0,
+				accept_http_requests: true
+			}
+		]
+	}));
+
+	// fs.writeFileSync() does not work on FIFO files
+	var stream = fs.createWriteStream(workDir + '/response/finish');
+	stream.write('1');
+	stream.close();
 }
 
 function shutdown() {

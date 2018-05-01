@@ -110,8 +110,8 @@ private:
 
 	void destroySelf() const {
 		this->~Session();
-		LockGuard l(context->getMmSyncher());
-		context->getSessionObjectPool().free(const_cast<Session *>(this));
+		LockGuard l(context->memoryManagementSyncher);
+		context->sessionObjectPool.free(const_cast<Session *>(this));
 	}
 
 public:

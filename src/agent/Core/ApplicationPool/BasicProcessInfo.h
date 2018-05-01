@@ -35,6 +35,7 @@
 #include <Exceptions.h>
 #include <Utils/JsonUtils.h>
 #include <Core/ApplicationPool/BasicGroupInfo.h>
+#include <Core/SpawningKit/Result.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -104,6 +105,18 @@ public:
 		assert(gupid.size() <= GUPID_MAX_SIZE);
 		memcpy(this->gupid, gupid.data(), gupid.size());
 		gupidSize = gupid.size();
+	}
+
+	BasicProcessInfo(Process *_process, const BasicGroupInfo *_groupInfo,
+		const SpawningKit::Result &skResult)
+		: process(_process),
+		  groupInfo(_groupInfo),
+		  pid(skResult.pid)
+		  // See above comment about the 'stickySessionId' field
+	{
+		assert(skResult.gupid.size() <= GUPID_MAX_SIZE);
+		memcpy(gupid, skResult.gupid.data(), skResult.gupid.size());
+		gupidSize = skResult.gupid.size();
 	}
 };
 

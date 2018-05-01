@@ -34,6 +34,7 @@
 #include <boost/foreach.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/backtrace.hpp>
+#include <string>
 #include <vector>
 
 #include <sys/types.h>
@@ -43,7 +44,6 @@
 #include <LoggingKit/LoggingKit.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
-#include <Core/SpawningKit/Config.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -54,15 +54,15 @@ using namespace boost;
 /** A PipeWatcher lives until the file descriptor is closed. */
 class PipeWatcher: public boost::enable_shared_from_this<PipeWatcher> {
 private:
-	ConfigPtr config;
 	FileDescriptor fd;
-	const char *name;
+	StaticString name;
+	string appGroupName;
+	string appLogFile;
 	pid_t pid;
 	bool started;
+	string logFile;
 	boost::mutex startSyncher;
 	boost::condition_variable startCond;
-	const HashedStaticString appGroupName;
-	const StaticString appLogFile;
 
 	static void threadMain(boost::shared_ptr<PipeWatcher> self) {
 		TRACE_POINT();
@@ -75,6 +75,16 @@ private:
 			boost::unique_lock<boost::mutex> lock(startSyncher);
 			while (!started) {
 				startCond.wait(lock);
+			}
+		}
+
+		UPDATE_TRACE_POINT();
+		FILE *f = NULL;
+		if (!logFile.empty()) {
+			f = fopen(logFile.c_str(), "a");
+			if (f == NULL) {
+				P_ERROR("Cannot open log file " << logFile);
+				return;
 			}
 		}
 
@@ -99,7 +109,7 @@ private:
 				}
 			} else if (ret == 1 && buf[0] == '\n') {
 				UPDATE_TRACE_POINT();
-				LoggingKit::logAppOutput(appGroupName, pid, name, "", 0, appLogFile);
+				printOrLogAppOutput(f, StaticString());
 			} else {
 				UPDATE_TRACE_POINT();
 				vector<StaticString> lines;
@@ -109,28 +119,41 @@ private:
 				}
 				split(StaticString(buf, ret2), '\n', lines);
 				foreach (const StaticString line, lines) {
-					LoggingKit::logAppOutput(appGroupName, pid, name, line.data(), line.size(), appLogFile);
+					printOrLogAppOutput(f, line);
 				}
 			}
+		}
 
-			if (config->outputHandler) {
-				config->outputHandler(buf, ret);
-			}
+		if (f != NULL) {
+			fclose(f);
+		}
+	}
+
+	void printOrLogAppOutput(FILE *f, const StaticString &line) {
+		if (f == NULL) {
+			LoggingKit::logAppOutput(appGroupName, pid, name, line.data(), line.size(), appLogFile);
+		} else {
+			fwrite(line.data(), 1, line.size(), f);
+			fwrite("\n", 1, 2, f);
+			fflush(f);
 		}
 	}
 
 public:
-	PipeWatcher(const ConfigPtr &_config, const FileDescriptor &_fd,
-				const char *_name, pid_t _pid,
-				const HashedStaticString &_appGroupName, const StaticString &_appLogFile)
-		: config(_config),
-		  fd(_fd),
+	PipeWatcher(const FileDescriptor &_fd, const StaticString &_name,
+		const string &_appGroupName, const string &_appLogFile,
+		pid_t _pid)
+		: fd(_fd),
 		  name(_name),
-		  pid(_pid),
-		  started(false),
 		  appGroupName(_appGroupName),
-		  appLogFile(_appLogFile)
+		  appLogFile(_appLogFile),
+		  pid(_pid),
+		  started(false)
 		{ }
+
+	void setLogFile(const string &path) {
+		logFile = path;
+	}
 
 	void initialize() {
 		oxt::thread(boost::bind(threadMain, shared_from_this()),

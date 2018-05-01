@@ -1,5 +1,6 @@
 #include <TestSupport.h>
 #include <jsoncpp/json.h>
+#include <Core/ApplicationPool/Options.h>
 #include <Core/SpawningKit/SmartSpawner.h>
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
@@ -16,18 +17,16 @@ using namespace Passenger::SpawningKit;
 
 namespace tut {
 	struct Core_SpawningKit_SmartSpawnerTest {
-		ConfigPtr config;
-		OutputHandler gatherOutput;
-		string gatheredOutput;
-		boost::mutex gatheredOutputSyncher;
+		SpawningKit::Context::Schema schema;
+		SpawningKit::Context context;
 		SpawningKit::Result result;
 
-		Core_SpawningKit_SmartSpawnerTest() {
-			config = boost::make_shared<Config>();
-			config->resourceLocator = resourceLocator;
-			config->finalize();
-
-			gatherOutput = boost::bind(&Core_SpawningKit_SmartSpawnerTest::_gatherOutput, this, _1, _2);
+		Core_SpawningKit_SmartSpawnerTest()
+			: context(schema)
+		{
+			context.resourceLocator = resourceLocator;
+			context.integrationMode = "standalone";
+			context.finalize();
 
 			Json::Value config;
 			vector<ConfigKit::Error> errors;
@@ -58,7 +57,7 @@ namespace tut {
 			unlink("stub/wsgi/passenger_wsgi.pyc");
 		}
 
-		boost::shared_ptr<SmartSpawner> createSpawner(const Options &options, bool exitImmediately = false) {
+		boost::shared_ptr<SmartSpawner> createSpawner(const SpawningKit::AppPoolOptions &options, bool exitImmediately = false) {
 			char buf[PATH_MAX + 1];
 			getcwd(buf, PATH_MAX);
 
@@ -69,20 +68,15 @@ namespace tut {
 				command.push_back("exit-immediately");
 			}
 
-			return boost::make_shared<SmartSpawner>(command,
-				options, config);
+			return boost::make_shared<SmartSpawner>(&context, command,
+				options);
 		}
 
-		Options createOptions() {
-			Options options;
+		SpawningKit::AppPoolOptions createOptions() {
+			SpawningKit::AppPoolOptions options;
 			options.spawnMethod = "smart";
 			options.loadShellEnvvars = false;
 			return options;
-		}
-
-		void _gatherOutput(const char *data, unsigned int size) {
-			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
-			gatheredOutput.append(data, size);
 		}
 	};
 
@@ -93,9 +87,9 @@ namespace tut {
 	TEST_METHOD(80) {
 		set_test_name("If the preloader has crashed then SmartSpawner will "
 			"restart it and try again");
-		Options options = createOptions();
+		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\t" "start.rb";
+		options.startCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
 		LoggingKit::setLevel(LoggingKit::CRIT);
@@ -112,9 +106,9 @@ namespace tut {
 	TEST_METHOD(81) {
 		set_test_name("If the preloader still crashes after the restart then "
 			"SmartSpawner will throw an exception");
-		Options options = createOptions();
+		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\t" "start.rb";
+		options.startCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		LoggingKit::setLevel(LoggingKit::CRIT);
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
@@ -127,41 +121,42 @@ namespace tut {
 	}
 
 	TEST_METHOD(82) {
-		set_test_name("If the preloader didn't start within the timeout "
-			"then it's killed and an exception is thrown, with "
-			"whatever stderr output as error page");
-		Options options = createOptions();
+		set_test_name("If the preloader didn't start within the timeout"
+			" then it's killed and an exception is thrown, which"
+			" contains whatever it printed to stdout and stderr");
+
+		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\t" "start.rb";
+		options.startCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		options.startTimeout = 100;
 
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
-		preloaderCommand.push_back("echo hello world >&2; sleep 60");
-		SmartSpawner spawner(preloaderCommand, options, config);
+		preloaderCommand.push_back("echo hello world; sleep 60");
+		SmartSpawner spawner(&context, preloaderCommand, options);
 		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		try {
 			spawner.spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
-			ensure_equals(e.getErrorKind(),
-				SpawnException::PRELOADER_STARTUP_TIMEOUT);
-			if (e.getErrorPage().find("hello world\n") == string::npos) {
+			ensure_equals(e.getErrorCategory(), SpawningKit::TIMEOUT_ERROR);
+			if (e.getStdoutAndErrData().find("hello world\n") == string::npos) {
 				// This might be caused by the machine being too slow.
 				// Try again with a higher timeout.
 				options.startTimeout = 10000;
-				SmartSpawner spawner2(preloaderCommand, options, config);
+
+				SmartSpawner spawner2(&context, preloaderCommand, options);
 				try {
 					spawner2.spawn(options);
 					fail("SpawnException expected");
 				} catch (const SpawnException &e2) {
-					ensure_equals(e2.getErrorKind(),
-						SpawnException::PRELOADER_STARTUP_TIMEOUT);
-					if (e2.getErrorPage().find("hello world\n") == string::npos) {
-						fail(("Unexpected error page:\n" + e2.getErrorPage()).c_str());
+					ensure_equals(e2.getErrorCategory(), SpawningKit::TIMEOUT_ERROR);
+					if (e2.getStdoutAndErrData().find("hello world\n") == string::npos) {
+						fail(("Unexpected stdout/stderr output:\n" +
+							e2.getStdoutAndErrData()).c_str());
 					}
 				}
 			}
@@ -169,87 +164,56 @@ namespace tut {
 	}
 
 	TEST_METHOD(83) {
-		set_test_name("If the preloader crashed during startup without returning "
-			"a proper error response, then its stderr output is used "
-			"as error response instead");
-		Options options = createOptions();
+		set_test_name("If the preloader crashed during startup,"
+			" then the resulting exception contains the stdout"
+			" and stderr output");
+
+		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\t" "start.rb";
+		options.startCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
-		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(preloaderCommand, options, config);
+		preloaderCommand.push_back("echo hello world; exit 1");
+		SmartSpawner spawner(&context, preloaderCommand, options);
 		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		try {
 			spawner.spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
-			ensure_equals(e.getErrorKind(),
-				SpawnException::PRELOADER_STARTUP_ERROR);
-			ensure(e.getErrorPage().find("hello world\n") != string::npos);
+			ensure_equals(e.getErrorCategory(), SpawningKit::INTERNAL_ERROR);
+			ensure(e.getStdoutAndErrData().find("hello world\n") != string::npos);
 		}
 	}
 
 	TEST_METHOD(84) {
-		set_test_name("If the preloader encountered an error, then the resulting SpawnException "
-			"takes note of the process's environment variables");
+		set_test_name("If the preloader encountered an error,"
+			" then the resulting exception"
+			" takes note of the process's environment variables");
+
 		string envvars = modp::b64_encode("PASSENGER_FOO\0foo\0",
 			sizeof("PASSENGER_FOO\0foo\0") - 1);
-		Options options = createOptions();
+		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\t" "start.rb";
+		options.startCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		options.environmentVariables = envvars;
 
 		vector<string> preloaderCommand;
 		preloaderCommand.push_back("bash");
 		preloaderCommand.push_back("-c");
-		preloaderCommand.push_back("echo hello world >&2");
-		SmartSpawner spawner(preloaderCommand, options, config);
+		preloaderCommand.push_back("echo hello world >&2; exit 1");
+		SmartSpawner spawner(&context, preloaderCommand, options);
 		LoggingKit::setLevel(LoggingKit::CRIT);
 
 		try {
 			spawner.spawn(options);
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
-			ensure(containsSubstring(e["envvars"], "PASSENGER_FOO=foo\n"));
+			ensure(containsSubstring(e.getSubprocessEnvvars(), "PASSENGER_FOO=foo\n"));
 		}
-	}
-
-	TEST_METHOD(85) {
-		set_test_name("The spawned process can still write to its stderr "
-			"after the SmartSpawner has been destroyed");
-		DeleteFileEventually d("tmp.output");
-		config->outputHandler = gatherOutput;
-		Options options = createOptions();
-		options.appRoot = "stub/rack";
-		options.appType = "rack";
-
-		{
-			vector<string> preloaderCommand;
-			preloaderCommand.push_back("ruby");
-			preloaderCommand.push_back(resourceLocator->getHelperScriptsDir() +
-				"/rack-preloader.rb");
-			SmartSpawner spawner(preloaderCommand, options, config);
-			result = spawner.spawn(options);
-		}
-
-		const char header[] =
-			"REQUEST_METHOD\0GET\0"
-			"PATH_INFO\0/print_stderr\0";
-
-		FileDescriptor fd(connectToServer(result["sockets"][0]["address"].asCString(),
-			__FILE__, __LINE__), NULL, 0);
-		writeScalarMessage(fd, header, sizeof(header) - 1);
-		shutdown(fd, SHUT_WR);
-		readAll(fd);
-		EVENTUALLY(2,
-			boost::lock_guard<boost::mutex> l(gatheredOutputSyncher);
-			result = gatheredOutput.find("hello world!\n") != string::npos;
-		);
 	}
 }

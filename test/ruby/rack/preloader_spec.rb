@@ -13,12 +13,12 @@ describe "Rack preloader" do
 
   def start(options = {})
     @preloader = Preloader.new(["ruby", "#{PhusionPassenger.helper_scripts_dir}/rack-preloader.rb"], @stub.app_root)
-    result = @preloader.start(options)
-    if result[:status] == "Ready"
-      @loader = @preloader.spawn(options)
-      return @loader.start(options)
+    begin
+      @preloader.start(options)
+    rescue SpawnError => e
+      @process = e
     else
-      return result
+      @process = @preloader.spawn(options)
     end
   end
 
@@ -37,11 +37,11 @@ describe "Rack preloader" do
         f.puts "end of startup file\n"
       end
     })
-    result = start
-    result[:status].should == "Ready"
-    File.read("#{@stub.app_root}/history.txt").should ==
-      "end of startup file\n" +
-      "worker_process_started: forked=true\n"
+    start
+    expect(@process).to be_an_instance_of(AppProcess)
+    expect(File.read("#{@stub.app_root}/history.txt")).to eq(
+      "end of startup file\n" \
+      "worker_process_started: forked=true\n")
   end
 end
 

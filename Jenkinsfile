@@ -56,14 +56,24 @@ pipeline {
               setupTest(params.RUBY_LINUX, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                sh './dev/ci/run-tests-with-docker ruby'
+                try {
+                  sh './dev/ci/run-tests-with-docker ruby'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/RUBY_LINUX'
+                  archiveArtifacts artifacts: 'buildout/RUBY_LINUX/**'
+                }
               }
             },
             'Ruby unit tests on macOS': {
               setupTest(params.RUBY_MACOS, 'macos', MACOS_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host ruby'
-                sh './dev/ci/run-tests-natively ruby'
+                try {
+                  sh './dev/ci/run-tests-natively ruby'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/RUBY_MACOS'
+                  archiveArtifacts artifacts: 'buildout/RUBY_MACOS/**'
+                }
               }
             },
 
@@ -86,21 +96,36 @@ pipeline {
               setupTest(params.CXX_LINUX, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                sh './dev/ci/run-tests-with-docker cxx'
+                try {
+                  sh './dev/ci/run-tests-with-docker cxx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/CXX_LINUX'
+                  archiveArtifacts artifacts: 'buildout/CXX_LINUX/**'
+                }
               }
             },
             'C++ unit tests on Linux, as root': {
               setupTest(params.CXX_LINUX_ROOT, 'linux', LINUX_ENV + ['SUDO=1']) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                sh './dev/ci/run-tests-with-docker cxx'
+                try {
+                  sh './dev/ci/run-tests-with-docker cxx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/CXX_LINUX_ROOT'
+                  archiveArtifacts artifacts: 'buildout/CXX_LINUX_ROOT/**'
+                }
               }
             },
             'C++ unit tests on macOS': {
               setupTest(params.CXX_MACOS, 'macos', MACOS_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host cxx'
-                sh './dev/ci/run-tests-natively cxx'
+                try {
+                  sh './dev/ci/run-tests-natively cxx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/CXX_MACOS'
+                  archiveArtifacts artifacts: 'buildout/CXX_MACOS/**'
+                }
               }
             },
 
@@ -108,14 +133,24 @@ pipeline {
               setupTest(params.APACHE2_LINUX, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                sh './dev/ci/run-tests-with-docker apache2'
+                try {
+                  sh './dev/ci/run-tests-with-docker apache2'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/APACHE2_LINUX'
+                  archiveArtifacts artifacts: 'buildout/APACHE2_LINUX/**'
+                }
               }
             },
             'Apache integration tests on macOS': {
               setupTest(params.APACHE2_MACOS, 'macos', MACOS_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host apache2'
-                sh './dev/ci/run-tests-natively apache2'
+                try {
+                  sh './dev/ci/run-tests-natively apache2'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/APACHE2_MACOS'
+                  archiveArtifacts artifacts: 'buildout/APACHE2_MACOS/**'
+                }
               }
             },
 
@@ -123,14 +158,24 @@ pipeline {
               setupTest(params.NGINX_LINUX, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                sh './dev/ci/run-tests-with-docker nginx'
+                try {
+                  sh './dev/ci/run-tests-with-docker nginx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_LINUX'
+                  archiveArtifacts artifacts: 'buildout/NGINX_LINUX/**'
+                }
               }
             },
             'Nginx integration tests on macOS': {
               setupTest(params.NGINX_MACOS, 'macos', MACOS_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host nginx'
-                sh './dev/ci/run-tests-natively nginx'
+                try {
+                  sh './dev/ci/run-tests-natively nginx'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_MACOS'
+                  archiveArtifacts artifacts: 'buildout/NGINX_MACOS/**'
+                }
               }
             },
 
@@ -138,14 +183,24 @@ pipeline {
               setupTest(params.NGINX_DYNAMIC_LINUX, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                sh './dev/ci/run-tests-with-docker nginx-dynamic'
+                try {
+                  sh './dev/ci/run-tests-with-docker nginx-dynamic'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_LINUX'
+                  archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_LINUX/**'
+                }
               }
             },
             'Nginx dynamic module compatibility test on macOS': {
               setupTest(params.NGINX_DYNAMIC_MACOS, 'macos', MACOS_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host nginx-dynamic'
-                sh './dev/ci/run-tests-natively nginx-dynamic'
+                try {
+                  sh './dev/ci/run-tests-natively nginx-dynamic'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/NGINX_DYNAMIC_MACOS'
+                  archiveArtifacts artifacts: 'buildout/NGINX_DYNAMIC_MACOS/**'
+                }
               }
             },
 
@@ -153,14 +208,24 @@ pipeline {
               setupTest(params.STANDALONE_LINUX, 'linux', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
-                sh './dev/ci/run-tests-with-docker standalone'
+                try {
+                  sh './dev/ci/run-tests-with-docker standalone'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/STANDALONE_LINUX'
+                  archiveArtifacts artifacts: 'buildout/STANDALONE_LINUX/**'
+                }
               }
             },
             'Passenger Standalone integration tests on macOS': {
               setupTest(params.STANDALONE_MACOS, 'macos', MACOS_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host standalone'
-                sh './dev/ci/run-tests-natively standalone'
+                try {
+                  sh './dev/ci/run-tests-natively standalone'
+                } finally {
+                  sh 'mv buildout/testlogs buildout/STANDALONE_MACOS'
+                  archiveArtifacts artifacts: 'buildout/STANDALONE_MACOS/**'
+                }
               }
             },
 

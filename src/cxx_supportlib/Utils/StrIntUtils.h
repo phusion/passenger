@@ -231,6 +231,7 @@ toString(T something) {
 string toString(const vector<string> &vec);
 string toString(const vector<StaticString> &vec);
 
+string doubleToString(double value);
 string pointerToIntString(void *pointer);
 
 /**

@@ -24,7 +24,7 @@
 #  THE SOFTWARE.
 
 import sys, os, re, imp, threading, signal, traceback, socket, select, struct, logging, errno
-import tempfile
+import tempfile, json, time
 
 options = {}
 
@@ -32,27 +32,41 @@ def abort(message):
 	sys.stderr.write(message + "\n")
 	sys.exit(1)
 
-def readline():
-	result = sys.stdin.readline()
-	if result == "":
-		raise EOFError
-	else:
-		return result
+def try_write_file(path, contents):
+	try:
+		with open(path, 'w') as f:
+			f.write(contents)
+	except IOError as e:
+		logging.warn('Warning: unable to write to ' + path + ': ' + e.message)
 
-def handshake_and_read_startup_request():
+def initialize_logging():
+	logging.basicConfig(
+		level = logging.WARNING,
+		format = "[ pid=%(process)d, time=%(asctime)s ]: %(message)s")
+	if hasattr(logging, 'captureWarnings'):
+		logging.captureWarnings(True)
+
+def read_startup_arguments():
 	global options
 
-	print("!> I have control 1.0")
-	if readline() != "You have control 1.0\n":
-		abort("Invalid initialization header")
-	
-	line = readline()
-	while line != "\n":
-		result = re.split(': *', line.strip(), 2)
-		name = result[0]
-		value = result[1]
-		options[name] = value
-		line = readline()
+	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	path = work_dir + '/args.json'
+	with open(path, 'r') as f:
+		options = json.load(f)
+
+def record_journey_step_begin(step, state):
+	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	step_dir = work_dir + '/response/steps/' + step.lower()
+	try_write_file(step_dir + '/state', state)
+	try_write_file(step_dir + '/begin_time', str(time.time()))
+
+def record_journey_step_end(step, state):
+	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	step_dir = work_dir + '/response/steps/' + step.lower()
+	try_write_file(step_dir + '/state', state)
+	if not os.path.exists(step_dir + '/begin_time') and not os.path.exists(step_dir + '/begin_time_monotonic'):
+		try_write_file(step_dir + '/begin_time', str(time.time()))
+	try_write_file(step_dir + '/end_time', str(time.time()))
 
 def load_app():
 	global options
@@ -63,7 +77,7 @@ def load_app():
 
 def create_server_socket():
 	global options
-	
+
 	UNIX_PATH_MAX = int(options.get('UNIX_PATH_MAX', 100))
 	if 'socket_dir' in options:
 		socket_dir = options['socket_dir']
@@ -115,8 +129,27 @@ def install_signal_handlers():
 	signal.signal(signal.SIGABRT, debug_and_exit)
 
 def advertise_sockets(socket_filename):
-	print("!> socket: main;unix:%s;session;1" % socket_filename)
-	print("!> ")
+	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	path = work_dir + '/response/properties.json'
+	doc = {
+		'sockets': [
+			{
+				'name': 'main',
+				'address': 'unix:' + socket_filename,
+				'protocol': 'session',
+				'concurrency': 1,
+				'accept_http_requests': True
+			}
+		]
+	}
+	with open(path, 'w') as f:
+		json.dump(doc, f)
+
+def advertise_readiness():
+	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	path = work_dir + '/response/finish'
+	with open(path, 'w') as f:
+		f.write('1')
 
 if sys.version_info[0] >= 3:
 	def reraise_exception(exc_info):
@@ -146,7 +179,7 @@ class RequestHandler:
 		self.server = server_socket
 		self.owner_pipe = owner_pipe
 		self.app = app
-	
+
 	def main_loop(self):
 		done = False
 		try:
@@ -193,7 +226,7 @@ class RequestHandler:
 			return self.server.accept()
 		else:
 			return (None, None)
-	
+
 	def parse_request(self, client):
 		buf = b''
 		while len(buf) < 4:
@@ -202,14 +235,14 @@ class RequestHandler:
 				return (None, None)
 			buf += tmp
 		header_size = struct.unpack('>I', buf)[0]
-		
+
 		buf = b''
 		while len(buf) < header_size:
 			tmp = client.recv(header_size - len(buf))
 			if len(tmp) == 0:
 				return (None, None)
 			buf += tmp
-		
+
 		headers = buf.split(b"\0")
 		headers.pop() # Remove trailing "\0"
 		env = {}
@@ -219,7 +252,7 @@ class RequestHandler:
 			i += 2
 
 		return (env, client)
-	
+
 	if hasattr(socket, '_fileobject'):
 		def wrap_input_socket(self, sock):
 			return socket._fileobject(sock, 'rb', 512)
@@ -271,7 +304,7 @@ class RequestHandler:
 				e = sys.exc_info()[1]
 				setattr(e, 'passenger', True)
 				raise e
-		
+
 		def start_response(status, response_headers, exc_info = None):
 			if exc_info:
 				try:
@@ -283,10 +316,10 @@ class RequestHandler:
 					exc_info = None
 			elif headers_set:
 				raise AssertionError("Headers already set!")
-			
+
 			headers_set[:] = [status, response_headers]
 			return write
-		
+
 		# Django's django.template.base module goes through all WSGI
 		# environment values, and calls each value that is a callable.
 		# No idea why, but we work around that with the `do_it` parameter.
@@ -313,24 +346,48 @@ class RequestHandler:
 			if hasattr(result, 'close'):
 				result.close()
 		return False
-	
+
 	def process_ping(self, env, input_stream, output_stream):
 		output_stream.sendall(b"pong")
 
 
 if __name__ == "__main__":
-	logging.basicConfig(
-		level = logging.WARNING,
-		format = "[ pid=%(process)d, time=%(asctime)s ]: %(message)s")
-	if hasattr(logging, 'captureWarnings'):
-		logging.captureWarnings(True)
-	handshake_and_read_startup_request()
-	app_module = load_app()
-	socket_filename, server_socket = create_server_socket()
-	install_signal_handlers()
-	handler = RequestHandler(server_socket, sys.stdin, app_module.application)
-	print("!> Ready")
-	advertise_sockets(socket_filename)
+	initialize_logging()
+	record_journey_step_end('SUBPROCESS_EXEC_WRAPPER', 'STEP_PERFORMED')
+	record_journey_step_begin('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_IN_PROGRESS')
+	try:
+		read_startup_arguments()
+	except Exception:
+		record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_ERRORED')
+		raise
+	else:
+		record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED')
+
+
+	record_journey_step_begin('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_IN_PROGRESS')
+	try:
+		app_module = load_app()
+	except Exception:
+		record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_ERRORED')
+		raise
+	else:
+		record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_PERFORMED')
+
+
+	record_journey_step_begin('SUBPROCESS_LISTEN', 'STEP_IN_PROGRESS')
+	try:
+		socket_filename, server_socket = create_server_socket()
+		install_signal_handlers()
+		handler = RequestHandler(server_socket, sys.stdin, app_module.application)
+		advertise_sockets(socket_filename)
+	except Exception:
+		record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_ERRORED')
+		raise
+	else:
+		record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_PERFORMED')
+
+
+	advertise_readiness()
 	handler.main_loop()
 	try:
 		os.remove(socket_filename)

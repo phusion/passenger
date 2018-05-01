@@ -28,6 +28,7 @@
 
 #include <oxt/macros.hpp>
 #include <LoggingKit/Forward.h>
+#include <StaticString.h>
 #include <Utils/FastStringStream.h>
 #include <DataStructures/HashedStaticString.h>
 
@@ -198,7 +199,8 @@ namespace LoggingKit {
  * @param message The message that was received.
  * @param appLogFile an app specific file to log to.
  */
-void logAppOutput(const HashedStaticString &groupName, pid_t pid, const char *channelName, const char *message, unsigned int size, const StaticString &appLogFile);
+void logAppOutput(const HashedStaticString &groupName, pid_t pid, const StaticString &channelName,
+	const char *message, unsigned int size, const StaticString &appLogFile);
 
 } // namespace LoggingKit
 } // namespace Passenger

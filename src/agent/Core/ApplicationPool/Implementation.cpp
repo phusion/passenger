@@ -45,8 +45,6 @@
 #include <Utils/JsonUtils.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/ApplicationPool/Group.h>
-#include <Core/ApplicationPool/Process.cpp>
-#include <Core/ApplicationPool/ErrorRenderer.h>
 #include <Core/ApplicationPool/Pool/InitializationAndShutdown.cpp>
 #include <Core/ApplicationPool/Pool/AnalyticsCollection.cpp>
 #include <Core/ApplicationPool/Pool/GarbageCollection.cpp>
@@ -65,6 +63,8 @@
 #include <Core/ApplicationPool/Group/InternalUtils.cpp>
 #include <Core/ApplicationPool/Group/StateInspection.cpp>
 #include <Core/ApplicationPool/Group/Verification.cpp>
+#include <Core/ApplicationPool/Process.cpp>
+#include <Core/SpawningKit/ErrorRenderer.h>
 
 namespace Passenger {
 namespace ApplicationPool2 {
@@ -95,7 +95,7 @@ copyException(const tracable_exception &e) {
 
 	TRY_COPY_EXCEPTION(RequestQueueFullException);
 	TRY_COPY_EXCEPTION(GetAbortedException);
-	TRY_COPY_EXCEPTION(SpawnException);
+	TRY_COPY_EXCEPTION(SpawningKit::SpawnException);
 
 	TRY_COPY_EXCEPTION(InvalidModeStringException);
 	TRY_COPY_EXCEPTION(ArgumentException);
@@ -135,7 +135,7 @@ rethrowException(const ExceptionPtr &e) {
 
 	TRY_RETHROW_EXCEPTION(ConfigurationException);
 
-	TRY_RETHROW_EXCEPTION(SpawnException);
+	TRY_RETHROW_EXCEPTION(SpawningKit::SpawnException);
 	TRY_RETHROW_EXCEPTION(RequestQueueFullException);
 	TRY_RETHROW_EXCEPTION(GetAbortedException);
 
@@ -165,31 +165,27 @@ rethrowException(const ExceptionPtr &e) {
 	throw tracable_exception(*e);
 }
 
-void processAndLogNewSpawnException(SpawnException &e, const Options &options,
-	const SpawningKit::ConfigPtr &config)
+void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Options &options,
+	const Context *context)
 {
 	TRACE_POINT();
-	ErrorRenderer renderer(*config->resourceLocator);
-	string appMessage = e.getErrorPage();
+	SpawningKit::ErrorRenderer renderer(*context->getSpawningKitContext());
 	string errorId;
 	char filename[PATH_MAX];
 	stringstream stream;
+	string errorPage;
 
 	UPDATE_TRACE_POINT();
-	if (appMessage.empty()) {
-		appMessage = "none";
-	}
 	if (errorId.empty()) {
-		errorId = config->randomGenerator->generateHexString(4);
+		errorId = context->getRandomGenerator()->generateHexString(4);
 	}
-	e.set("error_id", errorId);
+	e.setId(errorId);
 
 	try {
 		int fd = -1;
-		string errorPage;
 
 		UPDATE_TRACE_POINT();
-		errorPage = renderer.renderWithDetails(appMessage, options, &e);
+		errorPage = renderer.renderWithDetails(e);
 
 		#if (defined(__linux__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 11))) || defined(__APPLE__) || defined(__FreeBSD__)
 			snprintf(filename, PATH_MAX, "%s/passenger-error-XXXXXX.html",
@@ -222,21 +218,20 @@ void processAndLogNewSpawnException(SpawnException &e, const Options &options,
 	if (filename[0] != '\0') {
 		stream << "  Error details saved to: " << filename << "\n";
 	}
-	stream << "  Message from application: " << appMessage << "\n";
 	P_ERROR(stream.str());
 
-	ScopedLock l(config->agentConfigSyncher);
-	if (!config->agentConfig.isNull()) {
+	ScopedLock l(context->agentConfigSyncher);
+	if (!context->agentConfig.isNull()) {
 		HookScriptOptions hOptions;
 		hOptions.name = "spawn_failed";
-		hOptions.spec = config->agentConfig.get("hook_spawn_failed", Json::Value()).asString();
-		hOptions.agentConfig = config->agentConfig;
+		hOptions.spec = context->agentConfig.get("hook_spawn_failed", Json::Value()).asString();
+		hOptions.agentConfig = context->agentConfig;
 		l.unlock();
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_ROOT", options.appRoot));
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_GROUP_NAME", options.getAppGroupName()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_MESSAGE", e.what()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_ID", errorId));
-		hOptions.environment.push_back(make_pair("PASSENGER_APP_ERROR_MESSAGE", appMessage));
+		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_PAGE", errorPage));
 		oxt::thread(boost::bind(runHookScripts, hOptions),
 			"Hook: spawn_failed", 256 * 1024);
 	}

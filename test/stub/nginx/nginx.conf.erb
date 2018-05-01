@@ -3,7 +3,7 @@ worker_processes  2;
     include <%= @passenger_dynamic_module_conf_file %>;
 <% end %>
 
-error_log <%= @nginx_root %>/../test.log;
+error_log '<%= @log_file %>';
 pid       <%= @nginx_root %>/nginx.pid;
 
 # Makes integration tests work when run in a CentOS container, with Node.js

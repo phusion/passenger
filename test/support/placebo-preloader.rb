@@ -6,60 +6,69 @@ DIR = File.expand_path(File.dirname(__FILE__))
 require File.expand_path("#{DIR}/../../src/ruby_supportlib/phusion_passenger")
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'native_support'
+PhusionPassenger.require_passenger_lib 'utils/json'
 require 'socket'
 
 STDOUT.sync = true
 STDERR.sync = true
-puts "!> I have control 1.0"
-abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
 
-options = {}
-while (line = STDIN.readline) != "\n"
-  name, value = line.strip.split(/: */, 2)
-  options[name] = value
-end
+work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
 
 socket_filename = "/tmp/placebo-preloader.sock.#{Process.pid}"
 server = UNIXServer.new(socket_filename)
-puts "!> Ready"
-puts "!> socket: unix:#{socket_filename}"
-puts "!> "
+File.open("#{work_dir}/response/properties.json", 'w') do |f|
+  f.write(PhusionPassenger::Utils::JSON.generate(
+    :sockets => [
+      {
+        :address => "unix:#{socket_filename}",
+        :protocol => 'preloader',
+        :concurrency => 1
+      }
+    ]
+  ))
+end
+File.open("#{work_dir}/response/finish", 'w') do |f|
+  f.write('1')
+end
 
-def process_client_command(server, client, command)
-  if command == "spawn\n"
-    options = {}
-    while (line = client.readline) != "\n"
-      name, value = line.strip.split(/: */, 2)
-      options[name] = value
-    end
+def process_client_command(server, client, data)
+  doc = PhusionPassenger::Utils::JSON.parse(data)
+  if doc['command'] == 'spawn'
+    work_dir = doc['work_dir']
+    options = PhusionPassenger::Utils::JSON.parse(File.read("#{work_dir}/args.json"))
 
-    command = options["start_command"].split("\t")
-    process_title = options["process_title"]
-    process_title = command[0] if !process_title || process_title.empty?
-    command[0] = [command[0], process_title]
+    pid = fork
+    if pid.nil?
+      STDIN.reopen("#{work_dir}/stdin", 'r')
+      STDOUT.reopen("#{work_dir}/stdout_and_err", 'w')
+      STDERR.reopen(STDERR)
+      STDOUT.sync = STDERR.sync = true
+      server.close
+      client.close
 
-    pid = fork do
-      begin
-        STDIN.reopen(client)
-        STDOUT.reopen(client)
-        STDOUT.sync = true
-        server.close
-        client.close
-        puts "OK"
-        puts Process.pid
-        exec(*command)
-      rescue Exception => e
-        STDERR.puts "*** ERROR: #{e}\n#{e.backtrace.join("\n")}"
-      ensure
-        STDERR.flush
-        exit!(1)
+      ENV['PASSENGER_SPAWN_WORK_DIR'] = work_dir
+      exec(options['start_command'])
+    else
+      client.write(PhusionPassenger::Utils::JSON.generate(
+        :result => 'ok',
+        :pid => pid
+      ))
+      if defined?(NativeSupport)
+        NativeSupport.detach_process(pid)
+      else
+        Process.detach(pid)
       end
     end
-    Process.detach(pid)
-  elsif command == "pid\n"
-    client.write("#{Process.pid}\n")
+  elsif doc['command'] == 'pid'
+    client.write(PhusionPassenger::Utils::JSON.generate(
+      :result => 'ok',
+      :pid => Process.pid
+    ))
   else
-    client.write("unknown request\n")
+    client.write(PhusionPassenger::Utils::JSON.generate(
+      :result => 'error',
+      :message => "Unknown command #{doc.inspect}"
+    ))
   end
 end
 

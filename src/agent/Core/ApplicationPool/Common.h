@@ -38,6 +38,7 @@
 #include <DataStructures/StringKeyTable.h>
 #include <Utils/VariantMap.h>
 #include <Core/ApplicationPool/Options.h>
+#include <Core/ApplicationPool/Context.h>
 #include <Core/SpawningKit/Config.h>
 
 namespace tut {
@@ -204,8 +205,8 @@ struct Ticket {
 
 ExceptionPtr copyException(const tracable_exception &e);
 void rethrowException(const ExceptionPtr &e);
-void processAndLogNewSpawnException(SpawnException &e, const Options &options,
-	const SpawningKit::ConfigPtr &config);
+void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Options &options,
+	const Context *context);
 void recreateString(psg_pool_t *pool, StaticString &str);
 
 } // namespace ApplicationPool2

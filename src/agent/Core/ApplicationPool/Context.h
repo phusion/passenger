@@ -26,10 +26,11 @@
 #ifndef _PASSENGER_APPLICATION_POOL2_CONTEXT_H_
 #define _PASSENGER_APPLICATION_POOL2_CONTEXT_H_
 
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/pool/object_pool.hpp>
 #include <Exceptions.h>
-#include <Utils/ClassUtils.h>
+#include <Utils/VariantMap.h>
 #include <Core/SpawningKit/Factory.h>
 
 namespace Passenger {
@@ -52,30 +53,29 @@ class Process;
  * If it does, then all operations on any of the fields in that group requires
  * grabbing the mutex unless documented otherwise.
  */
-class Context {
-private:
-	/****** Memory management objects *****/
-
-	P_RO_PROPERTY_REF(private, boost::mutex, MmSyncher);
-	P_RO_PROPERTY_REF(private, object_pool<Session>, SessionObjectPool);
-	P_RO_PROPERTY_REF(private, object_pool<Process>, ProcessObjectPool);
-
-
-	/****** Configuration objects ******/
-
-	P_PROPERTY_CONST_REF(private, SpawningKit::FactoryPtr, SpawningKitFactory);
-
-
+struct Context {
 public:
-	/****** Initialization ******/
+	/****** Working objects ******/
+
+	boost::mutex memoryManagementSyncher;
+	boost::object_pool<Session> sessionObjectPool;
+	boost::object_pool<Process> processObjectPool;
+	mutable boost::mutex agentConfigSyncher;
+
+
+	/****** Dependencies ******/
+
+	SpawningKit::FactoryPtr spawningKitFactory;
+	Json::Value agentConfig;
+
 
 	Context()
-		: mSessionObjectPool(64, 1024),
-		  mProcessObjectPool(4, 64)
+		: sessionObjectPool(64, 1024),
+		  processObjectPool(4, 64)
 		{ }
 
 	void finalize() {
-		if (mSpawningKitFactory == NULL) {
+		if (spawningKitFactory == NULL) {
 			throw RuntimeException("spawningKitFactory must be set");
 		}
 	}
@@ -83,10 +83,20 @@ public:
 
 	/****** Configuration objects ******/
 
-	const SpawningKit::ConfigPtr &getSpawningKitConfig() const {
-		return mSpawningKitFactory->getConfig();
+	SpawningKit::Context *getSpawningKitContext() const {
+		return spawningKitFactory->getContext();
+	}
+
+	ResourceLocator *getResourceLocator() const {
+		return getSpawningKitContext()->resourceLocator;
+	}
+
+	const RandomGeneratorPtr &getRandomGenerator() const {
+		return getSpawningKitContext()->randomGenerator;
 	}
 };
+
+typedef boost::shared_ptr<Context> ContextPtr;
 
 
 } // namespace ApplicationPool2

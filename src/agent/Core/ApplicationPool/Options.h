@@ -616,13 +616,17 @@ public:
 
 	string getStartCommand(const ResourceLocator &resourceLocator) const {
 		if (appType == P_STATIC_STRING("rack")) {
-			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/rack-loader.rb";
+			return escapeShell(ruby) + " "
+				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/rack-loader.rb");
 		} else if (appType == P_STATIC_STRING("wsgi")) {
-			return python + "\t" + resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py";
+			return escapeShell(python) + " "
+				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py");
 		} else if (appType == P_STATIC_STRING("node")) {
-			return nodejs + "\t" + resourceLocator.getHelperScriptsDir() + "/node-loader.js";
+			return escapeShell(nodejs) + " "
+				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/node-loader.js");
 		} else if (appType == P_STATIC_STRING("meteor")) {
-			return ruby + "\t" + resourceLocator.getHelperScriptsDir() + "/meteor-loader.rb";
+			return escapeShell(ruby) + " "
+				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/meteor-loader.rb");
 		} else {
 			return startCommand;
 		}

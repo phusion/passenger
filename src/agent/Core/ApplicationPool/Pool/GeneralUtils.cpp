@@ -80,12 +80,14 @@ bool
 Pool::runHookScripts(const char *name,
 	const boost::function<void (HookScriptOptions &)> &setup) const
 {
-	if (!agentConfig.isNull()) {
+	ScopedLock l(context->agentConfigSyncher);
+	if (!context->agentConfig.isNull()) {
 		string hookName = string("hook_") + name;
-		string spec = agentConfig.get(hookName, Json::Value()).asString();
+		string spec = context->agentConfig.get(hookName, Json::Value()).asString();
 		if (!spec.empty()) {
 			HookScriptOptions options;
-			options.agentConfig = agentConfig;
+			options.agentConfig = context->agentConfig;
+			l.unlock();
 			options.name = name;
 			options.spec = spec;
 			setup(options);
@@ -219,17 +221,17 @@ Pool::syncGetCallback(const AbstractSessionPtr &session, const ExceptionPtr &e,
 
 Context *
 Pool::getContext() {
-	return &context;
+	return context;
 }
 
-const SpawningKit::ConfigPtr &
-Pool::getSpawningKitConfig() const {
-	return context.getSpawningKitConfig();
+SpawningKit::Context *
+Pool::getSpawningKitContext() const {
+	return context->getSpawningKitContext();
 }
 
 const RandomGeneratorPtr &
 Pool::getRandomGenerator() const {
-	return getSpawningKitConfig()->randomGenerator;
+	return context->getRandomGenerator();
 }
 
 

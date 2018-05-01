@@ -33,20 +33,25 @@ namespace ApplicationPool2 {
 using namespace std;
 using namespace boost;
 
-SpawningKit::PipeWatcherPtr Process::makePipeWatcher(const SpawningKit::ConfigPtr &config, FileDescriptor socket, const char *channel, pid_t pid, const BasicGroupInfo *groupInfo) {
-	StaticString appLogFile;
-	HashedStaticString appGroupName;
-	if (groupInfo->group != NULL) {
-		appLogFile = groupInfo->group->options.appLogFile;
-		appGroupName = groupInfo->group->options.getAppGroupName();
+
+string
+Process::getAppGroupName(const BasicGroupInfo *info) const {
+	if (info->group != NULL) {
+		return info->group->options.getAppGroupName().toString();
+	} else {
+		return string();
 	}
-	SpawningKit::PipeWatcherPtr watcher = boost::make_shared<SpawningKit::PipeWatcher>(
-		config, socket, channel, pid, appGroupName, appLogFile
-	);
-	watcher->initialize();
-	watcher->start();
-	return watcher;
 }
+
+string
+Process::getAppLogFile(const BasicGroupInfo *info) const {
+	if (info->group != NULL) {
+		return info->group->options.appLogFile.toString();
+	} else {
+		return string();
+	}
+}
+
 
 } // namespace ApplicationPool2
 } // namespace Passenger

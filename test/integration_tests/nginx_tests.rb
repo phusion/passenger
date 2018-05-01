@@ -1,5 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + "/spec_helper")
 require 'support/nginx_controller'
+require 'fileutils'
+require 'tmpdir'
 
 WEB_SERVER_DECHUNKS_REQUESTS = true
 
@@ -13,19 +15,35 @@ describe "Phusion Passenger for Nginx" do
     end
 
     check_hosts_configuration
-    FileUtils.mkdir_p("tmp.nginx")
+
+    @nginx_root = Dir.mktmpdir('psg-test-', '/tmp')
+    ENV['TMPDIR'] = @nginx_root
+    ENV['PASSENGER_INSTANCE_REGISTRY_DIR'] = @nginx_root
+
+    if File.directory?(PhusionPassenger.install_spec)
+      @log_dir = "#{PhusionPassenger.install_spec}/buildout/testlogs"
+    else
+      @log_dir = "#{@nginx_root}/testlogs"
+    end
+    @log_file = "#{@log_dir}/nginx.log"
+    FileUtils.mkdir_p(@log_dir)
   end
 
   after :all do
     begin
-      @nginx.stop if @nginx
+      begin
+        @nginx.stop if @nginx
+      ensure
+        FileUtils.cp(Dir["#{@nginx_root}/passenger-error-*.html"],
+          "#{@log_dir}/")
+      end
     ensure
-      FileUtils.rm_rf("tmp.nginx")
+      FileUtils.rm_rf(@nginx_root)
     end
   end
 
   before :each do
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       # Make sure that all Nginx log output is prepended by the test description
       # so that we know which messages are associated with which tests.
       f.puts "\n#### #{Time.now}: #{example.full_description}"
@@ -37,7 +55,7 @@ describe "Phusion Passenger for Nginx" do
     log "End of test"
     if example.exception
       puts "\t---------------- Begin logs -------------------"
-      File.open("test.log", "rb") do |f|
+      File.open(@log_file, 'rb') do |f|
         f.seek(@test_log_pos)
         puts f.read.split("\n").map{ |line| "\t#{line}" }.join("\n")
       end
@@ -47,7 +65,7 @@ describe "Phusion Passenger for Nginx" do
   end
 
   def create_nginx_controller(options = {})
-    @nginx = NginxController.new("tmp.nginx")
+    @nginx = NginxController.new(@nginx_root, @log_file)
     if Process.uid == 0
       @nginx.set(
         :www_user => CONFIG['normal_user_1'],
@@ -62,7 +80,7 @@ describe "Phusion Passenger for Nginx" do
   end
 
   def log(message)
-    File.open("test.log", "a") do |f|
+    File.open(@log_file, 'a') do |f|
       f.puts "[#{Time.now}] Spec: #{message}"
     end
   end
@@ -296,7 +314,7 @@ describe "Phusion Passenger for Nginx" do
 
     before :each do
       @stub.reset
-      @error_page_signature = /<div id="content">/
+      @error_page_signature = /window\.spec =/
       File.touch("#{@stub.app_root}/tmp/restart.txt", 1 + rand(100000))
     end
 

@@ -111,7 +111,7 @@ DocumentRoot "<%= @server_root %>"
 	LockFile  <%= @server_root %>/httpd.lock
 <% end %>
 PidFile   <%= @server_root %>/httpd.pid
-ErrorLog  <%= @server_root %>/../test.log
+ErrorLog  <%= @log_file %>
 CustomLog <%= @server_root %>/access.log combined
 
 <% if !vhosts.empty? && PlatformInfo.httpd_version < '2.4.0' %>

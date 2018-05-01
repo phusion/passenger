@@ -210,7 +210,7 @@ public:
 	unsigned long long maxIdleTime;
 	bool selfchecking;
 
-	Context context;
+	Context *context;
 
 	/**
 	 * Code can register background threads in one of these dynamic thread groups
@@ -271,8 +271,6 @@ public:
 	 *       getWaitlist is empty.
 	 */
 	vector<GetWaiter> getWaitlist;
-
-	Json::Value agentConfig;
 
 // Actually private, but marked public so that unit tests can access the fields.
 public:
@@ -436,8 +434,7 @@ public:
 
 	/****** Initialization and shutdown ******/
 
-	Pool(const SpawningKit::FactoryPtr &spawningKitFactory,
-		const Json::Value &agentConfig = Json::Value());
+	Pool(Context *context);
 	~Pool();
 	void initialize();
 	void initDebugging();
@@ -448,7 +445,7 @@ public:
 	/****** General utilities ******/
 
 	Context *getContext();
-	const SpawningKit::ConfigPtr &getSpawningKitConfig() const;
+	SpawningKit::Context *getSpawningKitContext() const;
 	const RandomGeneratorPtr &getRandomGenerator() const;
 
 
@@ -498,7 +495,6 @@ public:
 	void setMax(unsigned int max);
 	void setMaxIdleTime(unsigned long long value);
 	void enableSelfChecking(bool enabled);
-	void setAgentConfig(const Json::Value &agentConfig);
 	bool isSpawning(bool lock = true) const;
 	bool authorizeByApiKey(const ApiKey &key, bool lock = true) const;
 	bool authorizeByUid(uid_t uid, bool lock = true) const;

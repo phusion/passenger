@@ -28,6 +28,7 @@
 
 #include <sys/types.h>
 #include <pwd.h>
+#include <grp.h>
 #include <unistd.h>
 #include <string>
 #include <algorithm>
@@ -36,8 +37,8 @@
 #include <oxt/system_calls.hpp>
 #include <Exceptions.h>
 #include <Utils.h>
+#include <Core/SpawningKit/Context.h>
 #include <FileTools/PathManip.h>
-#include <Core/SpawningKit/Options.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -51,19 +52,15 @@ struct UserSwitchingInfo {
 	bool enabled;
 	string username;
 	string groupname;
-	string home;
-	string shell;
 	uid_t uid;
 	gid_t gid;
-	int ngroups;
-	boost::shared_array<gid_t> gidset;
 
 	struct passwd lveUserPwd, *lveUserPwdComplete;
 	boost::shared_array<char> lveUserPwdStrBuf;
 };
 
 inline UserSwitchingInfo
-prepareUserSwitching(const Options &options) {
+prepareUserSwitching(const AppPoolOptions &options) {
 	TRACE_POINT();
 	UserSwitchingInfo info;
 
@@ -90,11 +87,8 @@ prepareUserSwitching(const Options &options) {
 		info.enabled = false;
 		info.username = userInfo->pw_name;
 		info.groupname = getGroupName(userInfo->pw_gid);
-		info.home = userInfo->pw_dir;
-		info.shell = userInfo->pw_shell;
 		info.uid = geteuid();
 		info.gid = getegid();
-		info.ngroups = 0;
 		return info;
 	}
 
@@ -233,35 +227,11 @@ prepareUserSwitching(const Options &options) {
 	}
 
 	UPDATE_TRACE_POINT();
-	#ifdef __APPLE__
-		int groups[1024];
-		info.ngroups = sizeof(groups) / sizeof(int);
-	#else
-		gid_t groups[1024];
-		info.ngroups = sizeof(groups) / sizeof(gid_t);
-	#endif
 	info.enabled = true;
 	info.username = userInfo->pw_name;
 	info.groupname = getGroupName(groupId);
-	info.home = userInfo->pw_dir;
-	info.shell = userInfo->pw_shell;
 	info.uid = userInfo->pw_uid;
 	info.gid = groupId;
-	#if !defined(HAVE_GETGROUPLIST) && (defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__))
-		#define HAVE_GETGROUPLIST
-	#endif
-	#ifdef HAVE_GETGROUPLIST
-		ret = getgrouplist(userInfo->pw_name, groupId,
-			groups, &info.ngroups);
-		if (ret == -1) {
-			int e = errno;
-			throw SystemException("getgrouplist() failed", e);
-		}
-		info.gidset = boost::shared_array<gid_t>(new gid_t[info.ngroups]);
-		for (int i = 0; i < info.ngroups; i++) {
-			info.gidset[i] = groups[i];
-		}
-	#endif
 
 	return info;
 }

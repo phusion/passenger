@@ -108,7 +108,7 @@ Pool::inspectProcessList(const InspectOptions &options, stringstream &result,
 		}
 
 		const Socket *socket;
-		if (options.verbose && (socket = process->getSockets().findSocketWithName("http")) != NULL) {
+		if (options.verbose && (socket = process->getSockets().findFirstSocketWithProtocol("http")) != NULL) {
 			result << "    URL     : http://" << replaceString(socket->address, "tcp://", "") << endl;
 			result << "    Password: " << group->getApiKey().toStaticString() << endl;
 		}

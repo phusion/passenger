@@ -12,8 +12,10 @@ if ! "$@"; then
 	echo "-----------------------------"
 	echo
 	echo "*** An error occurred ***"
+
 	if [[ "$DEBUG_CONSOLE" == 1 ]]; then
-		echo "DEBUG_CONSOLE set to 1, so launching a debugging console..."
+		echo
+		echo "*** DEBUG_CONSOLE set to 1, so launching a debugging console..."
 		echo
 		# shellcheck source=../lib/set-container-envvars.sh
 		set +e

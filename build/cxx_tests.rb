@@ -37,6 +37,17 @@ TEST_CXX_OBJECTS = {
     "test/cxx/Core/ApplicationPool/ProcessTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ApplicationPool/PoolTest.o" =>
     "test/cxx/Core/ApplicationPool/PoolTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/ConfigTest.o" =>
+    "test/cxx/Core/SpawningKit/ConfigTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/JourneyTest.o" =>
+    "test/cxx/Core/SpawningKit/JourneyTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/HandshakePrepareTest.o" =>
+    "test/cxx/Core/SpawningKit/HandshakePrepareTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/HandshakePerformTest.o" =>
+    "test/cxx/Core/SpawningKit/HandshakePerformTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/UserSwitchingRulesTest.o" =>
+    "test/cxx/Core/SpawningKit/UserSwitchingRulesTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/DirectSpawnerTest.o" =>
     "test/cxx/Core/SpawningKit/DirectSpawnerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/SpawningKit/SmartSpawnerTest.o" =>
@@ -48,6 +59,9 @@ TEST_CXX_OBJECTS = {
       "test/cxx/Core/SecurityUpdateCheckerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ControllerTest.o" =>
     "test/cxx/Core/ControllerTest.cpp",
+
+  "#{TEST_OUTPUT_DIR}cxx/SpawnEnvSetupperTest.o" =>
+    "test/cxx/SpawnEnvSetupperTest.cpp",
 
   "#{TEST_OUTPUT_DIR}cxx/ServerKit/ChannelTest.o" =>
     "test/cxx/ServerKit/ChannelTest.cpp",
@@ -218,16 +232,40 @@ task 'test:cxx' => dependencies do
     elsif boolean_option('LLDB')
       abort "You cannot set both REPEAT=1 and LLDB=1."
     end
-    sh "cd test && while #{command}; do echo -------------------------------------------; done"
+    command = "cd test && while #{command}; do echo -------------------------------------------; done"
   elsif boolean_option('REPEAT_FOREVER')
     if boolean_option('GDB')
       abort "You cannot set both REPEAT_FOREVER=1 and GDB=1."
     elsif boolean_option('LLDB')
       abort "You cannot set both REPEAT_FOREVER=1 and LLDB=1."
     end
-    sh "cd test && while true; do #{command}; echo -------------------------------------------; done"
+    command = "cd test && while true; do #{command}; echo -------------------------------------------; done"
   else
-    sh "cd test && exec #{command}"
+    command = "cd test && exec #{command}"
+  end
+
+  begin
+    sh(command)
+  ensure
+    error_pages = Dir['/tmp/passenger-error-*.html']
+    if error_pages.any?
+      puts
+      puts "---------------------------------"
+      puts "Saving log files:"
+      FileUtils.mkdir_p("#{OUTPUT_DIR}testlogs", :verbose => true)
+      if boolean_option('SUDO')
+        sh "sudo cp /tmp/passenger-error-*.html #{OUTPUT_DIR}testlogs/"
+        sh "sudo chown $(whoami): #{OUTPUT_DIR}testlogs/passenger-error-*.html"
+      else
+        error_pages.each do |path|
+          if File.readable?(path)
+            FileUtils.cp(path, "#{OUTPUT_DIR}testlogs/", :verbose => true)
+          else
+            puts "Skip copying #{path}: file not readable"
+          end
+        end
+      end
+    end
   end
 end
 
