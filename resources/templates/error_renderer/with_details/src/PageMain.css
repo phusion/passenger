@@ -60,6 +60,21 @@ h1, h2, h3 {
   margin-top: 2em;
 }
 
+footer {
+    font-size: 14px;
+    color: #7F7F7F;
+    border-top: 1px solid #E3E3E3;
+    margin-top: 50px;
+    padding: 40px 0px;
+}
+
+footer div {
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
 pre {
   color: #526379;
   border: none;

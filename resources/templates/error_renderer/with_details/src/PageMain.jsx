@@ -68,6 +68,9 @@ class PageMain extends Component {
             </Tab>
           </Tabs>
         </div>
+        <footer>
+            <div>This website is powered by <a href="https://www.phusionpassenger.com"><b>Phusion Passenger</b></a>&reg;, the smart application server built by <b>Phusion</b>&reg;.</div>
+        </footer>
       </div>
     );
   }

@@ -40,7 +40,7 @@
        text. Thank you.
        -->
       <div class="column">
-        This website is powered by <a href="{{PROGRAM_WEBSITE}}"><b>{{PROGRAM_NAME}}</b></a>&reg;, a rock-solid, feature-rich web application server that integrates with Apache and Nginx, built by <b>{{PROGRAM_AUTHOR}}</b>&reg;.
+        This website is powered by <a href="{{PROGRAM_WEBSITE}}"><b>{{PROGRAM_NAME}}</b></a>&reg;, the smart application server built by <b>{{PROGRAM_AUTHOR}}</b>&reg;.
       </div>
     </footer>
     <script>
