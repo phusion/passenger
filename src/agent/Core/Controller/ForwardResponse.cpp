@@ -65,13 +65,6 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 	AppResponse *resp = &req->appResponse;
 
 	switch (resp->httpState) {
-	case AppResponse::ONEHUNDREDANDTHREE_EARLY_HINTS:
-		UPDATE_TRACE_POINT();
-		SKC_TRACE(client, 2, "Application sent 103 Early Hints status");
-		onAppResponse103EarlyHints(client, req);
-		// Not yet done parsing.
-		return Channel::Result(buffer.size(), false);
-
 	case AppResponse::PARSING_HEADERS:
 		if (buffer.size() > 0) {
 			// Data
@@ -97,9 +90,14 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 
 			switch (resp->httpState) {
 			case AppResponse::COMPLETE:
+				if(resp->statusCode != 103){
 				req->appSource.stop();
 				onAppResponseBegin(client, req);
 				return Channel::Result(ret, false);
+				} else {
+					onAppResponse103EarlyHints(client, req);
+					return Channel::Result(buffer.size(), false);
+				}
 			case AppResponse::PARSING_BODY_WITH_LENGTH:
 				SKC_TRACE(client, 2, "Expecting an app response body with fixed length");
 				onAppResponseBegin(client, req);
@@ -125,7 +123,7 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 				return Channel::Result(ret, false);
 			case AppResponse::ONEHUNDREDANDTHREE_EARLY_HINTS:
 				SKC_TRACE(client, 2, "Application sent 103 Early Hints status");
-				onAppResponse103EarlyHints(client, req);
+				req->appResponse.httpState = AppResponse::PARSING_HEADERS;
 				return Channel::Result(ret, false);
 			case AppResponse::ERROR:
 				SKC_ERROR(client, "Error parsing application response header: " <<
@@ -464,12 +462,26 @@ Controller::onAppResponse100Continue(Client *client, Request *req) {
 void
 Controller::onAppResponse103EarlyHints(Client *client, Request *req) {
 	TRACE_POINT();
+	ssize_t bytesWritten;
+
 	UPDATE_TRACE_POINT();
-	const unsigned int BUFSIZE = 32;
-	char *buf = (char *) psg_pnalloc(req->pool, BUFSIZE);
-	int size = snprintf(buf, BUFSIZE, "HTTP/%d.%d 103 Early Hints\r\n",
-		(int) req->httpMajor, (int) req->httpMinor);
-	writeResponse(client, buf, size);
+	if (!sendResponseHeaderWithWritev(client, req, bytesWritten)) {
+		UPDATE_TRACE_POINT();
+		if (bytesWritten >= 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
+			sendResponseHeaderWithBuffering(client, req, bytesWritten);
+		} else {
+			int e = errno;
+			P_ASSERT_EQ(bytesWritten, -1);
+			disconnectWithClientSocketWriteError(&client, e);
+		}
+	}
+	if (!req->ended()) {
+		UPDATE_TRACE_POINT();
+		deinitializeAppResponse(client, req);
+		reinitializeAppResponse(client, req);
+		// Allow sending more response headers.
+		req->responseBegun = false;
+	}
 }
 
 /**
@@ -563,6 +575,7 @@ Controller::constructHeaderBuffersForResponse(Request *req, struct iovec *buffer
 		INC_BUFFER_ITER(i);
 		dataSize += len;
 
+	if (resp->statusCode != 103) {
 		PUSH_STATIC_BUFFER("\r\nStatus: ");
 		if (buffers != NULL) {
 			BEGIN_PUSH_NEXT_BUFFER();
@@ -572,6 +585,7 @@ Controller::constructHeaderBuffersForResponse(Request *req, struct iovec *buffer
 		INC_BUFFER_ITER(i);
 		dataSize += len;
 
+	} // not sure if I need to include the below CRLF
 		PUSH_STATIC_BUFFER("\r\n");
 	} else {
 		if (buffers != NULL) {
@@ -652,6 +666,7 @@ Controller::constructHeaderBuffersForResponse(Request *req, struct iovec *buffer
 		it.next();
 	}
 
+	if (resp->statusCode != 103) {
 	// Add Date header. https://code.google.com/p/phusion-passenger/issues/detail?id=485
 	if (resp->date == NULL) {
 		unsigned int size;
@@ -801,6 +816,10 @@ Controller::constructHeaderBuffersForResponse(Request *req, struct iovec *buffer
 		#else
 			PUSH_STATIC_BUFFER("X-Powered-By: " PROGRAM_NAME "\r\n\r\n");
 		#endif
+	}
+
+	} else {
+		PUSH_STATIC_BUFFER("\r\n\r\n");
 	}
 
 	nbuffers = i;
