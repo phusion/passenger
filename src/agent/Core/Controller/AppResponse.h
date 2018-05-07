@@ -67,8 +67,6 @@ public:
 		UPGRADED,
 		/** A 100-Continue status line has been encountered. */
 		ONEHUNDRED_CONTINUE,
-		/** A 103 Early Hints status line has been encountered. */
-		ONEHUNDREDANDTHREE_EARLY_HINTS,
 		/** An error occurred. */
 		ERROR
 	};
@@ -170,8 +168,6 @@ public:
 			return "UPGRADED";
 		case ONEHUNDRED_CONTINUE:
 			return "ONEHUNDRED_CONTINUE";
-		case ONEHUNDREDANDTHREE_EARLY_HINTS:
-			return "ONEHUNDREDANDTHREE_EARLY_HINTS";
 		case ERROR:
 			return "ERROR";
 		default:

@@ -154,8 +154,6 @@ private:
 		if (parser->status_code == 100) {
 			self->set100ContinueHttpState(MessageType());
 			http_parser_pause(parser, 1);
-		} else if (parser->status_code == 103) {
-			self->set103EarlyHintsHttpState(MessageType());
 		}
 		return 0;
 	}
@@ -166,14 +164,6 @@ private:
 
 	void set100ContinueHttpState(const HttpParseResponse &tag) {
 		message->httpState = Message::ONEHUNDRED_CONTINUE;
-	}
-
-	void set103EarlyHintsHttpState(const HttpParseRequest &tag) {
-		P_BUG("Should never be called");
-	}
-
-	void set103EarlyHintsHttpState(const HttpParseResponse &tag) {
-		message->httpState = Message::ONEHUNDREDANDTHREE_EARLY_HINTS;
 	}
 
 	static int onHeaderField(http_parser *parser, const char *data, size_t len) {

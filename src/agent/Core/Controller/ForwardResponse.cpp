@@ -121,10 +121,6 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 				SKC_TRACE(client, 2, "Application sent 100-Continue status");
 				onAppResponse100Continue(client, req);
 				return Channel::Result(ret, false);
-			case AppResponse::ONEHUNDREDANDTHREE_EARLY_HINTS:
-				SKC_TRACE(client, 2, "Application sent 103 Early Hints status");
-				req->appResponse.httpState = AppResponse::PARSING_HEADERS;
-				return Channel::Result(ret, false);
 			case AppResponse::ERROR:
 				SKC_ERROR(client, "Error parsing application response header: " <<
 					ServerKit::getErrorDesc(resp->aux.parseError));
