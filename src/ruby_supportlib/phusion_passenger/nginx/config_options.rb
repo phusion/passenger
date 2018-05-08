@@ -701,6 +701,13 @@ NGINX_CONFIGURATION_OPTIONS = [
     :function => 'passenger_enterprise_only',
     :field    => nil
   },
+  {
+    :name     => 'passenger_app_log_file',
+    :scope    => :application,
+    :type     => :string,
+    :function => 'passenger_enterprise_only',
+    :dynamic_default => 'passenger_log_file'
+  },
 
 
   ###### Aliases and backwards compatibility options ######

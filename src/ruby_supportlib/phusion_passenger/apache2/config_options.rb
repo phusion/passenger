@@ -620,6 +620,13 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :field     => nil,
     :desc      => 'The maximum number of seconds that a request may remain in the queue before it is dropped.'
   },
+  {
+    :name      => 'PassengerAppLogFile',
+    :type      => :string,
+    :dynamic_default => 'PassengerLogFile',
+    :function  => 'cmd_passenger_enterprise_only',
+    :desc      => 'Application log file path.'
+  },
 
 
   ##### Aliases and backwards compatibility options #####
