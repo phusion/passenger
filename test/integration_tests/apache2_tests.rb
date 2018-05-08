@@ -595,7 +595,7 @@ describe "Apache 2 module" do
       instance = get_newest_instance
 
       # Wait until the server has processed the session close event.
-      sleep 0.1
+      sleep 1
 
       request = Net::HTTP::Get.new("/pool.xml")
       request.basic_auth("ro_admin", instance.read_only_admin_password)
