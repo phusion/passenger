@@ -6,6 +6,7 @@ Release 5.3.0 (not yet released)
  * Vastly improves spawning error page: quick overview of where the problem is, and the option to drill down in extensive troubleshooting information.
  * Fuse Panel support: fixes a crash that occurs when you shut down Passenger right after it fails to connect to Fuse Panel.
  * [Nginx] Updates the preferred Nginx version to 1.14.0 (from 1.12.2).
+ * [Enterprise] Fix licensing proxy warning to refer to licensing_proxy_url instead of licensing_proxy.
 
 
 Release 5.2.3
