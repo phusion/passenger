@@ -61,6 +61,7 @@ typedef struct {
     ngx_uint_t start_timeout;
     ngx_flag_t sticky_sessions;
     ngx_str_t app_group_name;
+    ngx_str_t app_log_file;
     ngx_str_t app_rights;
     ngx_str_t app_root;
     ngx_str_t app_type;
@@ -81,6 +82,7 @@ typedef struct {
     ngx_str_t abort_websockets_on_process_shutdown_source_file;
     ngx_str_t app_file_descriptor_ulimit_source_file;
     ngx_str_t app_group_name_source_file;
+    ngx_str_t app_log_file_source_file;
     ngx_str_t app_rights_source_file;
     ngx_str_t app_root_source_file;
     ngx_str_t app_type_source_file;
@@ -129,6 +131,7 @@ typedef struct {
     ngx_uint_t abort_websockets_on_process_shutdown_source_line;
     ngx_uint_t app_file_descriptor_ulimit_source_line;
     ngx_uint_t app_group_name_source_line;
+    ngx_uint_t app_log_file_source_line;
     ngx_uint_t app_rights_source_line;
     ngx_uint_t app_root_source_line;
     ngx_uint_t app_type_source_line;
@@ -177,6 +180,7 @@ typedef struct {
     ngx_int_t abort_websockets_on_process_shutdown_explicitly_set;
     ngx_int_t app_file_descriptor_ulimit_explicitly_set;
     ngx_int_t app_group_name_explicitly_set;
+    ngx_int_t app_log_file_explicitly_set;
     ngx_int_t app_rights_explicitly_set;
     ngx_int_t app_root_explicitly_set;
     ngx_int_t app_type_explicitly_set;
