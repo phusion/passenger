@@ -15,21 +15,17 @@ class GetHelpView extends Component {
           authors &mdash; are also ready to help you whenever we can.
         </p>
         <div className="row">
-          <div className="col-sm-6">
-            <h2>Community support forums</h2>
+          <div className="col-sm-4">
+            <h2>Community support</h2>
             <p>
-              Post a message to either to Stack Overflow or our Google Group.
-              Support on these forums is provided by the community on a
+              Post a message to Stack Overflow. Support is provided by the community on a
               best-effort basis, so sometimes a bit of patience will help.
             </p>
             <p>
               <a href="https://stackoverflow.com/questions/tagged/passenger" className="btn btn-primary">Submit to Stack Overflow</a>
             </p>
-            <p>
-              <a href="http://groups.google.com/group/phusion-passenger" className="btn btn-primary">Submit to Google Group</a>
-            </p>
           </div>
-          <div className="col-sm-6">
+          <div className="col-sm-4">
             <h2>Enterprise support</h2>
             <p>
               If you are a
@@ -50,6 +46,18 @@ class GetHelpView extends Component {
               <a href="https://www.phusionpassenger.com/customers/help_support" className="btn btn-primary">
                 Submit Enterprise support ticket
               </a>
+            </p>
+          </div>
+          <div className="col-sm-4">
+            <h2>Bug report</h2>
+            <p>
+              Do you suspect this error is a bug? Please send us a bug report.
+            </p>
+            <p>
+              <em>Please attach this error page</em> so that we can help you better.
+            </p>
+            <p>
+              <a href="http://github.com/phusion/passenger/issues" className="btn btn-primary">Submit bug report to Github</a>
             </p>
           </div>
         </div>
