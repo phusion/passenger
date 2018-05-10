@@ -703,6 +703,8 @@ setGivenEnvVars(const Json::Value &args) {
 
 static bool
 shouldLoadShellEnvvars(const Json::Value &args, const string &shell) {
+	// Note: `shell` could be empty:
+	// https://github.com/phusion/passenger/issues/2078
 	if (args["load_shell_envvars"].asBool()) {
 		string shellName = extractBaseName(shell);
 		bool result = shellName == "bash" || shellName == "zsh" || shellName == "ksh";
@@ -753,7 +755,8 @@ execNextCommand(const Context &context, const string &shell)
 	// https://code.google.com/p/phusion-passenger/issues/detail?id=855
 
 	if (context.mode == BEFORE_MODE) {
-		assert(!shell.empty());
+		// Note: `shell` could be empty:
+		// https://github.com/phusion/passenger/issues/2078
 		if (shouldLoadShellEnvvars(context.args, shell)) {
 			nextJourneyStep = SpawningKit::SUBPROCESS_OS_SHELL;
 			commandArgs.push_back(shell.c_str());

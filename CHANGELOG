@@ -1,6 +1,7 @@
 Release 5.3.1 (Not yet released)
 -------------
- * 
+
+ * Fixes a crash that occurs if the user that an application should run under, does not have a shell configured. Closes GH-2078.
 
 
 Release 5.3.0
