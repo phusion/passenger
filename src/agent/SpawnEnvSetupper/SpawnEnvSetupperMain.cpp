@@ -448,6 +448,9 @@ switchGroup(const Context &context, uid_t uid, const struct passwd *userInfo, gi
 			if (ngroups <= NGROUPS_MAX) {
 				setgroupsCalled = true;
 				gidset.reset(new gid_t[ngroups]);
+				for (int i = 0; i < ngroups; i++) {
+					gidset[i] = groups[i];
+				}
 				if (setgroups(ngroups, gidset.get()) == -1) {
 					int e = errno;
 					recordJourneyStepEnd(context, context.step,
