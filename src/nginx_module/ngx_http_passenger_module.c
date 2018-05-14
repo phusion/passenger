@@ -283,7 +283,7 @@ open_log_file_for_after_forking(AfterForkData *data, PsgJsonValue *log_target) {
 }
 
 static ngx_int_t
-create_file(ngx_cycle_t *cycle, const u_char *filename, const u_char *contents, size_t len) {
+create_file(ngx_cycle_t *cycle, const u_char *filename, const u_char *contents, size_t len, uid_t uid, gid_t gid) {
     FILE  *f;
     int    ret;
     size_t total_written = 0, written;
@@ -296,6 +296,9 @@ create_file(ngx_cycle_t *cycle, const u_char *filename, const u_char *contents, 
          */
         do {
             ret = fchmod(fileno(f), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        } while (ret == -1 && errno == EINTR);
+        do {
+            ret = fchown(fileno(f), uid, gid);
         } while (ret == -1 && errno == EINTR);
         do {
             written = fwrite(contents + total_written, 1,
@@ -447,13 +450,10 @@ start_watchdog(ngx_cycle_t *cycle) {
                         "%s/web_server_info/control_process.pid",
                         psg_watchdog_launcher_get_instance_dir(psg_watchdog_launcher, NULL));
     *last = (u_char) '\0';
-    if (create_file(cycle, filename, (const u_char *) "", 0) != NGX_OK) {
+    if (create_file(cycle, filename, (const u_char *) "", 0, (uid_t) core_conf->user, (gid_t) -1) != NGX_OK) {
         result = NGX_ERROR;
         goto cleanup;
     }
-    do {
-        ret = chown((const char *) filename, (uid_t) core_conf->user, (gid_t) -1);
-    } while (ret == -1 && errno == EINTR);
     if (ret == -1) {
         result = NGX_ERROR;
         goto cleanup;
