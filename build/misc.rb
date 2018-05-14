@@ -123,6 +123,8 @@ end
 desc "Update CONTRIBUTORS file"
 task :contributors do
   entries = `git log --format='%aN' | sort -u`.split("\n")
+
+  # Phusion employees
   entries.delete "Hongli Lai"
   entries.delete "Hongli Lai (Phusion"
   entries.delete "Ninh Bui"
@@ -132,13 +134,23 @@ task :contributors do
   entries.push "Tinco Andringa (Phusion)"
   entries.delete "Goffert van Gool"
   entries.push "Goffert van Gool (Phusion)"
+  entries.delete "OnixGH"
+  entries.delete "onix"
+  entries.delete "Camden Narzt"
+  entries.push "Camden Narzt (Phusion)"
+  entries.delete "FloorD"
+  entries.delete "Floor Drees"
+  entries.push "Floor Drees (Phusion)"
+  entries.delete "Luuk Hafkamp"
+  entries.push "Luuk Hafkamp (Phusion)"
+
+  # Non-employee contributors
+  entries.push "Ruslan Ermilov (NGINX Inc)"
   entries.delete "Gokulnath"
   entries.push "Gokulnath Manakkattil"
   entries.push "Sean Wilkinson"
   entries.push "Yichun Zhang"
-  entries.delete "OnixGH"
-  entries.delete "onix"
-  entries.push "Ruslan Ermilov (NGINX Inc)"
+
   File.open("CONTRIBUTORS", "w") do |f|
     f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.join("\n"))
   end
