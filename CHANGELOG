@@ -1,8 +1,8 @@
 Release 5.3.1 (Not yet released)
 -------------
 
- * Fixes a crash that occurs if the user that an application should run under, does not have a shell configured. Closes GH-2078.
- * Fixes setting supplementary group IDs during user switching. Closes GH-2077.
+ * Fixes a regression from 5.3.0: a crash that occurs if the user that an application should run under, does not have a shell configured. Closes GH-2078.
+ * Fixes a regression from 5.3.0: setting supplementary group IDs during user switching. Closes GH-2077.
 
 
 Release 5.3.0
