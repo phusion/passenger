@@ -1,4 +1,4 @@
-Release 5.3.1 (Not yet released)
+Release 5.3.1
 -------------
 
  * Fixes a regression from 5.3.0: a crash that occurs if the user that an application should run under, does not have a shell configured. Closes GH-2078.
