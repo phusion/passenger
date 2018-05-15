@@ -1,7 +1,7 @@
 Release 5.3.2 (Not yet released)
 -------------
 
- * 
+ * [Enterprise] Fixes PassengerMaxInstances (Apache integration) not being respected (regression from config refactor in 5.2.0). 
 
 
 Release 5.3.1
