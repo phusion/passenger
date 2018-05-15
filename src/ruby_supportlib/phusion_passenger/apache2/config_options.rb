@@ -263,7 +263,6 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :context   => :global,
     :min_value => 0,
     :default   => 0,
-    :header    => 'PASSENGER_MAX_PROCESSES',
     :desc      => 'The maximum number of simultaneously alive application instances a single application may occupy.'
   },
   {

@@ -300,8 +300,8 @@ NGINX_CONFIGURATION_OPTIONS = [
     :scope    => :global,
     :context  => [:main],
     :type     => :uinteger,
+    :header   => nil,
     :default  => 0,
-    :header   => 'PASSENGER_MAX_PROCESSES',
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {

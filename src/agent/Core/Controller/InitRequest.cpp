@@ -358,7 +358,6 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.user, "!~PASSENGER_USER");
 	fillPoolOption(req, options.group, "!~PASSENGER_GROUP");
 	fillPoolOption(req, options.minProcesses, "!~PASSENGER_MIN_PROCESSES");
-	fillPoolOption(req, options.maxProcesses, "!~PASSENGER_MAX_PROCESSES");
 	fillPoolOption(req, options.spawnMethod, "!~PASSENGER_SPAWN_METHOD");
 	fillPoolOption(req, options.startCommand, "!~PASSENGER_START_COMMAND");
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");
