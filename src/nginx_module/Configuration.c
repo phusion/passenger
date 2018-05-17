@@ -1021,7 +1021,8 @@ passenger_postprocess_config(ngx_conf_t *cf)
         if (dump_file != NULL) {
             dump_content = psg_json_value_to_styled_string(
                 passenger_main_conf.manifest);
-            fwrite(dump_content, 1, strlen(dump_content), dump_file);
+            ssize_t ret = fwrite(dump_content, 1, strlen(dump_content), dump_file);
+            (void) ret; // Ignore compilation warning.
             fclose(dump_file);
             free(dump_content);
         } else {
