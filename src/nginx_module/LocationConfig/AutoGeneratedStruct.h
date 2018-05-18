@@ -40,7 +40,6 @@
 
 typedef struct {
     ngx_flag_t abort_websockets_on_process_shutdown;
-    ngx_uint_t app_file_descriptor_ulimit;
     ngx_array_t *base_uris;
     ngx_flag_t debugger;
     ngx_flag_t enabled;
@@ -51,7 +50,6 @@ typedef struct {
     ngx_uint_t headers_hash_max_size;
     ngx_array_t *headers_source;
     ngx_flag_t load_shell_envvars;
-    ngx_uint_t max_instances_per_app;
     ngx_int_t max_preloader_idle_time;
     ngx_uint_t max_request_queue_size;
     ngx_uint_t max_requests;
@@ -80,7 +78,6 @@ typedef struct {
     ngx_str_t vary_turbocache_by_cookie;
 
     ngx_str_t abort_websockets_on_process_shutdown_source_file;
-    ngx_str_t app_file_descriptor_ulimit_source_file;
     ngx_str_t app_group_name_source_file;
     ngx_str_t app_log_file_source_file;
     ngx_str_t app_rights_source_file;
@@ -99,7 +96,6 @@ typedef struct {
     ngx_str_t headers_hash_max_size_source_file;
     ngx_str_t headers_source_source_file;
     ngx_str_t load_shell_envvars_source_file;
-    ngx_str_t max_instances_per_app_source_file;
     ngx_str_t max_preloader_idle_time_source_file;
     ngx_str_t max_request_queue_size_source_file;
     ngx_str_t max_requests_source_file;
@@ -129,7 +125,6 @@ typedef struct {
     ngx_str_t vary_turbocache_by_cookie_source_file;
 
     ngx_uint_t abort_websockets_on_process_shutdown_source_line;
-    ngx_uint_t app_file_descriptor_ulimit_source_line;
     ngx_uint_t app_group_name_source_line;
     ngx_uint_t app_log_file_source_line;
     ngx_uint_t app_rights_source_line;
@@ -148,7 +143,6 @@ typedef struct {
     ngx_uint_t headers_hash_max_size_source_line;
     ngx_uint_t headers_source_source_line;
     ngx_uint_t load_shell_envvars_source_line;
-    ngx_uint_t max_instances_per_app_source_line;
     ngx_uint_t max_preloader_idle_time_source_line;
     ngx_uint_t max_request_queue_size_source_line;
     ngx_uint_t max_requests_source_line;
@@ -178,7 +172,6 @@ typedef struct {
     ngx_uint_t vary_turbocache_by_cookie_source_line;
 
     ngx_int_t abort_websockets_on_process_shutdown_explicitly_set;
-    ngx_int_t app_file_descriptor_ulimit_explicitly_set;
     ngx_int_t app_group_name_explicitly_set;
     ngx_int_t app_log_file_explicitly_set;
     ngx_int_t app_rights_explicitly_set;
@@ -197,7 +190,6 @@ typedef struct {
     ngx_int_t headers_hash_max_size_explicitly_set;
     ngx_int_t headers_source_explicitly_set;
     ngx_int_t load_shell_envvars_explicitly_set;
-    ngx_int_t max_instances_per_app_explicitly_set;
     ngx_int_t max_preloader_idle_time_explicitly_set;
     ngx_int_t max_request_queue_size_explicitly_set;
     ngx_int_t max_requests_explicitly_set;

@@ -40,10 +40,12 @@
 
 typedef struct {
     ngx_flag_t abort_on_startup_error;
+    ngx_uint_t app_file_descriptor_ulimit;
     ngx_uint_t core_file_descriptor_ulimit;
     ngx_array_t *ctl;
     ngx_flag_t disable_security_update_check;
     ngx_uint_t log_level;
+    ngx_uint_t max_instances_per_app;
     ngx_uint_t max_pool_size;
     ngx_uint_t pool_idle_time;
     ngx_array_t *prestart_uris;
@@ -72,6 +74,7 @@ typedef struct {
     ngx_str_t admin_panel_password_source_file;
     ngx_str_t admin_panel_url_source_file;
     ngx_str_t admin_panel_username_source_file;
+    ngx_str_t app_file_descriptor_ulimit_source_file;
     ngx_str_t core_file_descriptor_ulimit_source_file;
     ngx_str_t ctl_source_file;
     ngx_str_t data_buffer_dir_source_file;
@@ -83,6 +86,7 @@ typedef struct {
     ngx_str_t instance_registry_dir_source_file;
     ngx_str_t log_file_source_file;
     ngx_str_t log_level_source_file;
+    ngx_str_t max_instances_per_app_source_file;
     ngx_str_t max_pool_size_source_file;
     ngx_str_t pool_idle_time_source_file;
     ngx_str_t prestart_uris_source_file;
@@ -100,6 +104,7 @@ typedef struct {
     ngx_uint_t admin_panel_password_source_line;
     ngx_uint_t admin_panel_url_source_line;
     ngx_uint_t admin_panel_username_source_line;
+    ngx_uint_t app_file_descriptor_ulimit_source_line;
     ngx_uint_t core_file_descriptor_ulimit_source_line;
     ngx_uint_t ctl_source_line;
     ngx_uint_t data_buffer_dir_source_line;
@@ -111,6 +116,7 @@ typedef struct {
     ngx_uint_t instance_registry_dir_source_line;
     ngx_uint_t log_file_source_line;
     ngx_uint_t log_level_source_line;
+    ngx_uint_t max_instances_per_app_source_line;
     ngx_uint_t max_pool_size_source_line;
     ngx_uint_t pool_idle_time_source_line;
     ngx_uint_t prestart_uris_source_line;
@@ -128,6 +134,7 @@ typedef struct {
     ngx_int_t admin_panel_password_explicitly_set;
     ngx_int_t admin_panel_url_explicitly_set;
     ngx_int_t admin_panel_username_explicitly_set;
+    ngx_int_t app_file_descriptor_ulimit_explicitly_set;
     ngx_int_t core_file_descriptor_ulimit_explicitly_set;
     ngx_int_t ctl_explicitly_set;
     ngx_int_t data_buffer_dir_explicitly_set;
@@ -139,6 +146,7 @@ typedef struct {
     ngx_int_t instance_registry_dir_explicitly_set;
     ngx_int_t log_file_explicitly_set;
     ngx_int_t log_level_explicitly_set;
+    ngx_int_t max_instances_per_app_explicitly_set;
     ngx_int_t max_pool_size_explicitly_set;
     ngx_int_t pool_idle_time_explicitly_set;
     ngx_int_t prestart_uris_explicitly_set;

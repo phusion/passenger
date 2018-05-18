@@ -292,7 +292,8 @@ NGINX_CONFIGURATION_OPTIONS = [
     :name     => 'passenger_app_file_descriptor_ulimit',
     :scope    => :global,
     :type     => :uinteger,
-    :dynamic_default => 'passenger_core_file_descriptor_ulimit'
+    :dynamic_default => 'passenger_core_file_descriptor_ulimit',
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_max_instances_per_app',
@@ -300,7 +301,8 @@ NGINX_CONFIGURATION_OPTIONS = [
     :context  => [:main],
     :type     => :uinteger,
     :default  => 0,
-    :header   => 'PASSENGER_MAX_PROCESSES'
+    :header   => 'PASSENGER_MAX_PROCESSES',
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
     :name     => 'passenger_admin_panel_url',
