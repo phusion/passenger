@@ -371,6 +371,12 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.fileDescriptorUlimit, "!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	fillPoolOption(req, options.lveMinUid, "!~PASSENGER_LVE_MIN_UID");
+
+	// maxProcesses is configured per-application by the (Enterprise) maxInstances option (and thus passed
+	// via request headers). In OSS the max processes can also be configured, but on a global level
+	// (i.e. the same for all apps) using the maxInstancesPerApp option. As an easy implementation shortcut
+	// we apply maxInstancesPerApp to options.maxProcesses (which can be overridden by Enterprise).
+	options.maxProcesses = mainConfig.maxInstancesPerApp;
 	/******************/
 
 	boost::shared_ptr<Options> optionsCopy = boost::make_shared<Options>(options);

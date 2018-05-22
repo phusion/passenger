@@ -107,6 +107,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   default_user                                        string             -          default("nobody")
  *   graceful_exit                                       boolean            -          default(true)
  *   integration_mode                                    string             -          default("standalone"),read_only
+ *   max_instances_per_app                               unsigned integer   -          read_only
  *   min_spare_clients                                   unsigned integer   -          default(0)
  *   multi_app                                           boolean            -          default(true),read_only
  *   request_freelist_limit                              unsigned integer   -          default(1024)
@@ -126,6 +127,8 @@ class ControllerSchema: public ServerKit::HttpServerSchema {
 private:
 	void initialize() {
 		using namespace ConfigKit;
+
+		add("max_instances_per_app", UINT_TYPE, OPTIONAL | READ_ONLY);
 
 		add("thread_number", UINT_TYPE, REQUIRED | READ_ONLY);
 		add("multi_app", BOOL_TYPE, OPTIONAL | READ_ONLY, true);
@@ -307,6 +310,7 @@ public:
 	unsigned int responseBufferHighWatermark;
 	StaticString integrationMode;
 	StaticString serverLogName;
+	unsigned int maxInstancesPerApp;
 	ControllerBenchmarkMode benchmarkMode: 3;
 	bool singleAppMode: 1;
 	bool userSwitching: 1;
@@ -324,6 +328,7 @@ public:
 		  responseBufferHighWatermark(config["response_buffer_high_watermark"].asUInt()),
 		  integrationMode(psg_pstrdup(pool, config["integration_mode"].asString())),
 		  serverLogName(createServerLogName()),
+		  maxInstancesPerApp(config["max_instances_per_app"].asUInt()),
 		  benchmarkMode(parseControllerBenchmarkMode(config["benchmark_mode"].asString())),
 		  singleAppMode(!config["multi_app"].asBool()),
 		  userSwitching(config["user_switching"].asBool()),

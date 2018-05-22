@@ -1,6 +1,7 @@
 Release 5.3.2 (Not yet released)
 -------------
 
+ * Fixes PassengerMaxInstancesPerApp (Apache integration) not being respected (regression from config refactor in 5.2.0). Closes GH-2059.
  * [Enterprise] Fixes PassengerMaxInstances (Apache integration) not being respected (regression from config refactor in 5.2.0). 
 
 

@@ -1326,6 +1326,7 @@ public:
 		config["show_version_in_header"] = serverConfig.showVersionInHeader;
 		config["max_pool_size"] = serverConfig.maxPoolSize;
 		config["pool_idle_time"] = serverConfig.poolIdleTime;
+		config["max_instances_per_app"] = serverConfig.maxInstancesPerApp;
 		config["response_buffer_high_watermark"] = serverConfig.responseBufferHighWatermark;
 		config["stat_throttle_rate"] = serverConfig.statThrottleRate;
 		config["turbocaching"] = serverConfig.turbocaching;

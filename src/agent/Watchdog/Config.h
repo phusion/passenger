@@ -132,6 +132,7 @@ using namespace std;
  *   integration_mode                                                         string             -          default("standalone")
  *   log_level                                                                string             -          default("notice")
  *   log_target                                                               any                -          default({"stderr": true})
+ *   max_instances_per_app                                                    unsigned integer   -          read_only
  *   max_pool_size                                                            unsigned integer   -          default(6)
  *   multi_app                                                                boolean            -          default(false),read_only
  *   passenger_root                                                           string             required   read_only

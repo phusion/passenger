@@ -267,6 +267,10 @@
          "read_only" : true,
          "type" : "string"
       },
+      "max_instances_per_app" : {
+         "read_only" : true,
+         "type" : "unsigned integer"
+      },
       "min_spare_clients" : {
          "default_value" : 0,
          "has_default_value" : "static",
@@ -723,6 +727,10 @@
          },
          "has_default_value" : "static",
          "type" : "any"
+      },
+      "max_instances_per_app" : {
+         "read_only" : true,
+         "type" : "unsigned integer"
       },
       "max_pool_size" : {
          "default_value" : 6,
@@ -1440,6 +1448,10 @@
          },
          "has_default_value" : "static",
          "type" : "any"
+      },
+      "max_instances_per_app" : {
+         "read_only" : true,
+         "type" : "unsigned integer"
       },
       "max_pool_size" : {
          "default_value" : 6,

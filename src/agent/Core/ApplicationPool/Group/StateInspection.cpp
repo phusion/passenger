@@ -70,6 +70,8 @@ Group::processLowerLimitsSatisfied() const {
  */
 bool
 Group::processUpperLimitsReached() const {
+	// check maxInstances limit as set by Enterprise (OSS maxInstancesPerApp piggybacks on this,
+	// see InitRequest.cpp)
 	return options.maxProcesses != 0 && capacityUsed() >= options.maxProcesses;
 }
 
