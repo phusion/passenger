@@ -266,10 +266,14 @@ private:
 		TRACE_POINT();
 		P_DEBUG("[App spawn arg] " << args.toStyledString());
 
+		// The workDir is a new random dir. the files that we create here
+		// should not exist, so if any exist then have createFile()
+		// throw an error because it could be a bug or an attack.
+
 		createFile(session.workDir->getPath() + "/args.json",
 			args.toStyledString(), 0600,
 			session.uid, session.gid,
-			true, __FILE__, __LINE__);
+			false, __FILE__, __LINE__);
 
 		const string dir = session.workDir->getPath() + "/args";
 		makeDirTree(dir, "u=rwx,g=,o=",
@@ -289,14 +293,14 @@ private:
 			case Json::booleanValue:
 				createFile(dir + "/" + it.name(),
 					jsonValueToString(*it),
-					0644, session.uid, session.gid,
-					true, __FILE__, __LINE__);
+					0600, session.uid, session.gid,
+					false, __FILE__, __LINE__);
 				break;
 			default:
 				createFile(dir + "/" + it.name() + ".json",
 					jsonValueToString(*it),
-					0644, session.uid, session.gid,
-					true, __FILE__, __LINE__);
+					0600, session.uid, session.gid,
+					false, __FILE__, __LINE__);
 				break;
 			}
 		}
