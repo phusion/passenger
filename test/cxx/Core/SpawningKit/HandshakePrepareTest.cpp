@@ -40,7 +40,7 @@ namespace tut {
 
 		void initAndExec(JourneyType type, const Json::Value &extraArgs = Json::Value()) {
 			init(type);
-			HandshakePrepare(*session, extraArgs).execute();
+			HandshakePrepare(*session, extraArgs).execute().finalize();
 		}
 	};
 
@@ -174,7 +174,7 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		HandshakePrepare preparation(*session);
 		preparation.debugSupport = &debugSupport;
-		preparation.execute();
+		preparation.execute().finalize();
 
 		ensure("(1)", session->timeoutUsec <= 910000);
 		ensure("(2)", session->timeoutUsec >= 100000);
@@ -195,7 +195,7 @@ namespace tut {
 		preparation.debugSupport = &debugSupport;
 
 		try {
-			preparation.execute();
+			preparation.execute().finalize();
 			fail("SpawnException expected");
 		} catch (const SpawnException &) {
 			ensure_equals(session->journey.getFirstFailedStep(), SPAWNING_KIT_PREPARATION);

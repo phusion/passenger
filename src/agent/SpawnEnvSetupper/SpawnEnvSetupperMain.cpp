@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2012-2017 Phusion Holding B.V.
+ *  Copyright (c) 2012-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -65,6 +65,7 @@
 #include <Utils.h>
 #include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
+#include <Core/SpawningKit/Handshake/WorkDir.h>
 #include <Core/SpawningKit/Exceptions.h>
 
 using namespace std;
@@ -359,7 +360,7 @@ lookupUserGroup(const Context &context, uid_t *uid, struct passwd **userInfo,
 	}
 }
 
-void
+static void
 chownNewWorkDirFiles(const Context &context, uid_t uid, gid_t gid) {
 	chown((context.workDir + "/response/steps/subprocess_before_first_exec/state").c_str(),
 		uid, gid);
@@ -375,6 +376,11 @@ chownNewWorkDirFiles(const Context &context, uid_t uid, gid_t gid) {
 		uid, gid);
 	chown((context.workDir + "/envdump/ulimits").c_str(),
 		uid, gid);
+}
+
+static void
+finalizeWorkDir(const Context &context, uid_t uid, gid_t gid) {
+	SpawningKit::HandshakeWorkDir::finalize(context.workDir, uid, gid);
 }
 
 static void
@@ -873,6 +879,8 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 				lookupUserGroup(context, &uid, &userInfo, &gid);
 				shell = userInfo->pw_shell;
 			} else {
+				uid = geteuid();
+				gid = getegid();
 				shell = lookupCurrentUserShell();
 			}
 			if (setUlimits(context.args)) {
@@ -880,6 +888,7 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 			}
 			if (shouldTrySwitchUser) {
 				chownNewWorkDirFiles(context, uid, gid);
+				finalizeWorkDir(context, uid, gid);
 
 				enterLveJail(context, userInfo);
 				switchGroup(context, uid, userInfo, gid);
@@ -888,6 +897,8 @@ spawnEnvSetupperMain(int argc, char *argv[]) {
 				switchUser(context, uid, userInfo);
 				dumpEnvvars(context.workDir);
 				dumpUserInfo(context.workDir);
+			} else {
+				finalizeWorkDir(context, uid, gid);
 			}
 		} else if (executedThroughShell(context)) {
 			recordJourneyStepEnd(context, SpawningKit::SUBPROCESS_OS_SHELL,

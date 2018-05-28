@@ -1251,8 +1251,10 @@ public:
 
 		try {
 			UPDATE_TRACE_POINT();
-			HandshakePrepare(session, extraArgs).execute();
+			HandshakePrepare prepare(session, extraArgs);
+			prepare.execute();
 			createStdChannelFifos(session);
+			prepare.finalize();
 			session.journey.setStepPerformed(SPAWNING_KIT_PREPARATION, true);
 
 			UPDATE_TRACE_POINT();

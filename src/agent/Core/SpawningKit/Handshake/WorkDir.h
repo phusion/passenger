@@ -54,7 +54,7 @@ private:
 	string path;
 
 public:
-	HandshakeWorkDir(uid_t uid, gid_t gid) {
+	HandshakeWorkDir() {
 		char buf[PATH_MAX + 1];
 		char *pos = buf;
 		const char *end = buf + PATH_MAX;
@@ -70,9 +70,6 @@ public:
 				"in the format of '" + StaticString(buf) + "'", e);
 		} else {
 			path = result;
-			boost::this_thread::disable_interruption di;
-			boost::this_thread::disable_syscall_interruption dsi;
-			syscalls::chown(result, uid, gid);
 		}
 	}
 
@@ -86,10 +83,29 @@ public:
 		return path;
 	}
 
+	void finalize(uid_t uid, gid_t gid) {
+		finalize(path, uid, gid);
+	}
+
 	string dontRemoveOnDestruction() {
 		string result = path;
 		path.clear();
 		return result;
+	}
+
+	static void finalize(const string &path, uid_t uid, gid_t gid) {
+		// We do not chown() the work dir until:
+		//
+		//  - HandshakePrepare is done populating the work dir,
+		//  - SpawnEnvSetupperMain is done reading from and modifying the work dir
+		//
+		// This way, the application user cannot perform symlink attacks
+		// inside the work dir until we are done (at which point the
+		// follow-up code will only perform read/write operations after
+		// dropping root privileges).
+		boost::this_thread::disable_interruption di;
+		boost::this_thread::disable_syscall_interruption dsi;
+		syscalls::chown(path.c_str(), uid, gid);
 	}
 };
 

@@ -62,7 +62,7 @@ namespace tut {
 			session = boost::make_shared<HandshakeSession>(context, config, type);
 
 			session->journey.setStepInProgress(SPAWNING_KIT_PREPARATION);
-			HandshakePrepare(*session).execute();
+			HandshakePrepare(*session).execute().finalize();
 
 			session->journey.setStepInProgress(SPAWNING_KIT_HANDSHAKE_PERFORM);
 			session->journey.setStepInProgress(SUBPROCESS_BEFORE_FIRST_EXEC);

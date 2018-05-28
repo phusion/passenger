@@ -143,7 +143,7 @@ private:
 
 	void createWorkDir() {
 		TRACE_POINT();
-		session.workDir.reset(new HandshakeWorkDir(session.uid, session.gid));
+		session.workDir.reset(new HandshakeWorkDir());
 
 		session.envDumpDir = session.workDir->getPath() + "/envdump";
 		makeDirTree(session.envDumpDir,
@@ -537,7 +537,7 @@ public:
 		assert(_session.config != NULL);
 	}
 
-	void execute() {
+	HandshakePrepare &execute() {
 		TRACE_POINT();
 
 		// We do not set SPAWNING_KIT_PREPARATION to the IN_PROGRESS or
@@ -576,6 +576,12 @@ public:
 			session.journey.setStepErrored(SPAWNING_KIT_PREPARATION);
 			throw SpawnException(e, session.journey, config).finalize();
 		}
+
+		return *this;
+	}
+
+	void finalize() {
+		session.workDir->finalize(session.uid, session.gid);
 	}
 };
 
