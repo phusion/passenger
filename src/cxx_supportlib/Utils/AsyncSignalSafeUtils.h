@@ -159,12 +159,24 @@ limitedStrerror(int e, const char *defaultResult = "Unknown error") {
 		return "Permission denied";
 	case EFAULT:
 		return "Bad address";
+	case EINVAL:
+		return "Invalid argument";
 	case EIO:
 		return "Input/output error";
+	case EISDIR:
+		return "Is a directory";
+	#ifdef ELIBBAD
+		case ELIBBAD:
+			return "Accessing a corrupted shared library";
+	#endif
 	case ELOOP:
 		return "Too many levels of symbolic links";
+	case EMFILE:
+		return "Too many open files";
 	case ENAMETOOLONG:
 		return "File name too long";
+	case ENFILE:
+		return "Too many open files in system";
 	case ENOENT:
 		return "No such file or directory";
 	case ENOEXEC:
@@ -173,6 +185,8 @@ limitedStrerror(int e, const char *defaultResult = "Unknown error") {
 		return "Cannot allocate memory";
 	case ENOTDIR:
 		return "Not a directory";
+	case EPERM:
+		return "Operation not permitted";
 	case ETXTBSY:
 		return "Text file busy";
 	default:
