@@ -39,7 +39,6 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <signal.h>
-#include <cstdio>
 #include <cstring>
 #include <cassert>
 
@@ -56,6 +55,7 @@
 #include <Utils/JsonUtils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/ProcessMetricsCollector.h>
+#include <Utils/AsyncSignalSafeUtils.h>
 #include <LveLoggingDecorator.h>
 #include <Core/SpawningKit/Spawner.h>
 #include <Core/SpawningKit/Exceptions.h>
@@ -357,8 +357,11 @@ private:
 
 		pid_t pid = syscalls::fork();
 		if (pid == 0) {
-			purgeStdio(stdout);
-			purgeStdio(stderr);
+			int e;
+			char buf[1024];
+			const char *end = buf + sizeof(buf);
+			namespace ASSU = AsyncSignalSafeUtils;
+
 			resetSignalHandlersAndMask();
 			disableMallocDebugging();
 			int stdinCopy = dup2(stdinChannel.first, 3);
@@ -367,6 +370,7 @@ private:
 			dup2(stdoutAndErrCopy, 1);
 			dup2(stdoutAndErrCopy, 2);
 			closeAllFileDescriptors(2, true);
+
 			execlp(agentFilename.c_str(),
 				agentFilename.c_str(),
 				"spawn-env-setupper",
@@ -374,10 +378,16 @@ private:
 				"--before",
 				NULL);
 
-			int e = errno;
-			fprintf(stderr, "Cannot execute \"%s\": %s (errno=%d)\n",
-				agentFilename.c_str(), strerror(e), e);
-			fflush(stderr);
+			char *pos = buf;
+			e = errno;
+			pos = ASSU::appendData(pos, end, "Cannot execute \"");
+			pos = ASSU::appendData(pos, end, agentFilename.data(), agentFilename.size());
+			pos = ASSU::appendData(pos, end, "\": ");
+			pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+			pos = ASSU::appendData(pos, end, " (errno=");
+			pos = ASSU::appendInteger<int, 10>(pos, end, e);
+			pos = ASSU::appendData(pos, end, ")\n");
+			ASSU::printError(buf, pos - buf);
 			_exit(1);
 
 		} else if (pid == -1) {
