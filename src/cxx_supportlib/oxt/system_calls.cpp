@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010-2017 Phusion Holding B.V.
+ * Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -167,6 +167,30 @@ syscalls::open(const char *path, int oflag, mode_t mode) {
 		true,
 		ret = -1,
 		ret = ::open(path, oflag, mode)
+	);
+	return ret;
+}
+
+int
+syscalls::openat(int dirfd, const char *path, int oflag) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		true,
+		ret = -1,
+		ret = ::openat(dirfd, path, oflag)
+	);
+	return ret;
+}
+
+int
+syscalls::openat(int dirfd, const char *path, int oflag, mode_t mode) {
+	int ret;
+	CHECK_INTERRUPTION(
+		ret == -1,
+		true,
+		ret = -1,
+		ret = ::openat(dirfd, path, oflag, mode)
 	);
 	return ret;
 }

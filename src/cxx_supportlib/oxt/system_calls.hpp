@@ -2,7 +2,7 @@
  * OXT - OS eXtensions for boosT
  * Provides important functionality necessary for writing robust server software.
  *
- * Copyright (c) 2010-2017 Phusion Holding B.V.
+ * Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -136,6 +136,8 @@ namespace oxt {
 
 		int open(const char *path, int oflag);
 		int open(const char *path, int oflag, mode_t mode);
+		int openat(int dirfd, const char *path, int oflag);
+		int openat(int dirfd, const char *path, int oflag, mode_t mode);
 		ssize_t read(int fd, void *buf, size_t count);
 		ssize_t write(int fd, const void *buf, size_t count);
 		ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
