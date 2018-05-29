@@ -201,6 +201,9 @@ switchGroup(uid_t uid, const struct passwd *userInfo, gid_t gid) {
 			if (ngroups <= NGROUPS_MAX) {
 				setgroupsCalled = true;
 				gidset.reset(new gid_t[ngroups]);
+				for (int i = 0; i < ngroups; i++) {
+					gidset[i] = groups[i];
+				}
 				if (setgroups(ngroups, gidset.get()) == -1) {
 					int e = errno;
 					fprintf(stderr, "ERROR: setgroups(%d, ...) failed: %s (errno=%d)\n",
