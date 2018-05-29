@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2017 Phusion Holding B.V.
+ *  Copyright (c) 2017-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -49,7 +49,6 @@
 #include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/IOUtils.h>
 
 namespace Passenger {
 
@@ -497,7 +496,7 @@ private:
 		if (config["password_file"].isNull()) {
 			password = config["password"].asString();
 		} else {
-			password = strip(readAll(config["password_file"].asString()));
+			password = strip(unsafeReadFile(config["password_file"].asString()));
 		}
 		string data = modp::b64_encode(username + ":" + password);
 		conn->append_header("Authorization", "Basic " + data);

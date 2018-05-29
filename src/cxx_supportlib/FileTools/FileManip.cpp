@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -34,6 +34,7 @@
 
 #include <cstdio>
 #include <cerrno>
+#include <limits>
 
 #include <FileTools/FileManip.h>
 #include <FileDescriptor.h>
@@ -44,6 +45,7 @@
 #include <Utils.h> // parseModeString
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/IOUtils.h>
+#include <Utils/ScopeGuard.h>
 
 namespace Passenger {
 
@@ -178,6 +180,36 @@ createFile(const string &filename, const StaticString &contents, mode_t permissi
 			throw FileSystemException("Cannot create file " + filename,
 				e, filename);
 		}
+	}
+}
+
+string
+unsafeReadFile(const string &path) {
+	int fd = open(path.c_str(), O_RDONLY);
+	if (fd != -1) {
+		FdGuard guard(fd, __FILE__, __LINE__);
+		return readAll(fd, std::numeric_limits<size_t>::max()).first;
+	} else {
+		int e = errno;
+		throw FileSystemException("Cannot open '" + path + "' for reading",
+			e, path);
+	}
+}
+
+pair<string, bool>
+safeReadFile(int dirfd, const string &basename, size_t maxSize) {
+	if (basename.find('/') != string::npos) {
+		throw ArgumentException("basename may not contain slashes");
+	}
+
+	int fd = openat(dirfd, basename.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK);
+	if (fd != -1) {
+		FdGuard guard(fd, __FILE__, __LINE__);
+		return readAll(fd, maxSize);
+	} else {
+		int e = errno;
+		throw FileSystemException("Cannot open '" + basename + "' for reading",
+			e, basename);
 	}
 }
 

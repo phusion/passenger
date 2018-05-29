@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -34,8 +34,8 @@
 
 #include <Constants.h>
 #include <StaticString.h>
+#include <FileTools/FileManip.h>
 #include <Utils/Template.h>
-#include <Utils/IOUtils.h>
 #include <Core/SpawningKit/Context.h>
 #include <Core/SpawningKit/Exceptions.h>
 
@@ -61,8 +61,8 @@ public:
 		string htmlFile = templatesDir + "/with_details/src/index.html.template";
 		string cssFile = templatesDir + "/with_details/dist/styles.css";
 		string jsFile = templatesDir + "/with_details/dist/bundle.js";
-		string cssContent = readAll(cssFile);
-		string jsContent = readAll(jsFile);
+		string cssContent = unsafeReadFile(cssFile);
+		string jsContent = unsafeReadFile(jsFile);
 
 		Json::Value spec;
 		spec["program_name"] = PROGRAM_NAME;
@@ -85,7 +85,7 @@ public:
 		params.set("TITLE", "Web application could not be started");
 		params.set("SPEC", specContent);
 
-		return Template::apply(readAll(htmlFile), params);
+		return Template::apply(unsafeReadFile(htmlFile), params);
 	}
 
 	string renderWithoutDetails(const SpawningKit::SpawnException &e) const {
@@ -93,8 +93,8 @@ public:
 		string htmlFile = templatesDir + "/without_details/src/index.html.template";
 		string cssFile = templatesDir + "/without_details/dist/styles.css";
 		string jsFile = templatesDir + "/without_details/dist/bundle.js";
-		string cssContent = readAll(cssFile);
-		string jsContent = readAll(jsFile);
+		string cssContent = unsafeReadFile(cssFile);
+		string jsContent = unsafeReadFile(jsFile);
 
 		params.set("CSS", cssContent);
 		params.set("JS", jsContent);
@@ -106,7 +106,7 @@ public:
 		params.set("PROGRAM_WEBSITE", PROGRAM_WEBSITE);
 		params.set("PROGRAM_AUTHOR", PROGRAM_AUTHOR);
 
-		return Template::apply(readAll(htmlFile), params);
+		return Template::apply(unsafeReadFile(htmlFile), params);
 	}
 };
 

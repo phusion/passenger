@@ -49,8 +49,8 @@
 #include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
 #include <ProcessManagement/Utils.h>
+#include <FileTools/FileManip.h>
 #include <Utils/SystemTime.h>
-#include <Utils/IOUtils.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/JsonUtils.h>
 #include <Utils/ScopeGuard.h>
@@ -1158,7 +1158,7 @@ private:
 		while ((ent = readdir(dir)) != NULL) {
 			if (ent->d_name[0] != '.') {
 				result.insert(ent->d_name, strip(
-					Passenger::readAll(path + "/" + ent->d_name)),
+					unsafeReadFile(path + "/" + ent->d_name)),
 					true);
 			}
 		}

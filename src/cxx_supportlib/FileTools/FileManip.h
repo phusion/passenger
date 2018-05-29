@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <cstddef>
 #include <string>
+#include <utility>
 #include <StaticString.h>
 
 namespace boost {
@@ -130,6 +131,62 @@ void createFile(const string &filename, const StaticString &contents,
 	uid_t owner = USER_NOT_GIVEN, gid_t group = GROUP_NOT_GIVEN,
 	bool overwrite = true,
 	const char *callerFile = NULL, unsigned int callerLine = 0);
+
+/**
+ * Read all data from the given file until EOF.
+ * This function is "unsafe" in the sense that it lacks the security
+ * checks implemented by `safeReadFile()`. Read the docs for that function
+ * for more information.
+ *
+ * @throws SystemException
+ */
+string unsafeReadFile(const string &path);
+
+/**
+ * Read all data from the given file until EOF.
+ *
+ *  - `dirfd` is a file descriptor of the directory that contains the file
+ *    you want read from.
+ *  - `basename` is the basename of the file you want to read from. `basename`
+ *    may thus not contain slashes.
+ *  - `maxSize` is the maximum number of bytes you want to read.
+ *
+ * Returns a pair `(contents, eof)`.
+ *
+ *  - `contents` is the read file contents, which is at most `maxSize` bytes.
+ *  - `eof` indicates whether the entire file has been read. If false, then it
+ *    means the amount of data is larger than `maxSize`.
+ *
+ * This function is "safe" in following sense:
+ *
+ *  - It mitigates symbolic link attacks. `open(path)` may not be safe for
+ *    processes running as root, because if a user controls any parts of the
+ *    path then the user can swap one of the parent directories, or the file
+ *    itself, with a symlink. This causes us to read an arbitrary file.
+ *
+ *    This function mitigates this attack by requiring a `dirfd` and by opening
+ *    the file with O_NOFOLLOW. The caller must ensure that `dirfd` is created
+ *    at a time when it knows that no user controls any parts of the path to
+ *    that directory.
+ *
+ *    However, this mitigation does mean that safeReadFile() *cannot be used to
+ *    read from a symlink*!
+ *
+ *  - It mitigates DoS attacks through non-regular files which may block the
+ *    reader, like FIFOs or block devices. For example if the path refers to a
+ *    FIFO which a user created, and the user never opens the FIFO on the other
+ *    side, then the open can block indefinitely.
+ *
+ *    This function mitigates this attack by opening the file with O_NONBLOCK.
+ *
+ *  - It mitigates DoS attacks by creating a very large file. Since we slurp
+ *    the entire file into memory, it is a good idea if we impose a limit
+ *    on how much data we read.
+ *
+ * @throws ArgumentException
+ * @throws SystemException
+ */
+pair<string, bool> safeReadFile(int dirfd, const string &basename, size_t maxSize);
 
 /**
  * Create the directory at the given path, creating intermediate directories

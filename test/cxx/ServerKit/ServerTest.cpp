@@ -410,7 +410,7 @@ namespace tut {
 		FileDescriptor fd(connectToServer1());
 		writeExact(fd, "hello", 5);
 		syscalls::shutdown(fd, SHUT_WR);
-		ensure_equals(readAll(fd), "hello");
+		ensure_equals(readAll(fd, 1024).first, "hello");
 	}
 
 	TEST_METHOD(27) {

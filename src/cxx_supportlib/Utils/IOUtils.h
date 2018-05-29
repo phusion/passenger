@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <string>
+#include <utility>
 #include <vector>
 #include <oxt/macros.hpp>
 #include <StaticString.h>
@@ -642,18 +643,18 @@ void readPeerCredentials(int sock, uid_t *uid, gid_t *gid);
 #endif
 
 /**
- * Read all data from the given file until EOF.
+ * Read all data from the given file descriptor until EOF, or until `maxSize`
+ * is reached.
+ *
+ * Returns a pair `(contents, eof)`.
+ *
+ *  - `contents` is the read file contents, which is at most `maxSize` bytes.
+ *  - `eof` indicates whether the entire file has been read. If false, then it
+ *    means the amount of data is larger than `maxSize`.
  *
  * @throws SystemException
  */
-string readAll(const string &filename);
-
-/**
- * Read all data from the given file descriptor until EOF.
- *
- * @throws SystemException
- */
-string readAll(int fd);
+pair<string, bool> readAll(int fd, size_t maxSize);
 
 } // namespace Passenger
 

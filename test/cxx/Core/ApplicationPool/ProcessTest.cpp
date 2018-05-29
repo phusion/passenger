@@ -1,7 +1,7 @@
 #include <TestSupport.h>
 #include <Core/ApplicationPool/Process.h>
 #include <LoggingKit/Context.h>
-#include <Utils/IOUtils.h>
+#include <FileTools/FileManip.h>
 
 using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
@@ -215,7 +215,7 @@ namespace tut {
 		writeExact(stdoutAndErrFd[1], "stdout and err 2\n");
 
 		EVENTUALLY(2,
-			string contents = readAll("tmp.log/file");
+			string contents = unsafeReadFile("tmp.log/file");
 			result = contents.find("stdout and err 1\n") != string::npos
 				&& contents.find("stdout and err 2\n") != string::npos;
 		);
@@ -226,7 +226,7 @@ namespace tut {
 		writeExact(stdoutAndErrFd[1], "stdout and err 3\n");
 		writeExact(stdoutAndErrFd[1], "stdout and err 4\n");
 		EVENTUALLY(2,
-			string contents = readAll("tmp.log/file");
+			string contents = unsafeReadFile("tmp.log/file");
 			result = contents.find("stdout and err 3\n") != string::npos
 				&& contents.find("stdout and err 4\n") != string::npos;
 		);

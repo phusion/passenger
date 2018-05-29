@@ -45,8 +45,8 @@
 #ifdef __linux__
 	#include <sys/sysinfo.h>
 	#include <Exceptions.h>
+	#include <FileTools/FileManip.h>
 	#include <Utils/StringScanning.h>
-	#include <Utils/IOUtils.h>
 #endif
 #ifdef __APPLE__
 	#include <mach/mach.h>
@@ -912,7 +912,7 @@ private:
 			string contents;
 			bool hasContents = false;
 			try {
-				contents = readAll("/proc/meminfo");
+				contents = unsafeReadFile("/proc/meminfo");
 				hasContents = true;
 			} catch (const SystemException &) {
 			}
@@ -987,7 +987,7 @@ private:
 			string contents;
 			bool hasContents = false;
 			try {
-				contents = readAll("/proc/stat");
+				contents = unsafeReadFile("/proc/stat");
 				hasContents = true;
 			} catch (const SystemException &) {
 			}
@@ -1066,7 +1066,7 @@ private:
 			string contents;
 			bool hasContents = false;
 			try {
-				contents = readAll("/proc/vmstat");
+				contents = unsafeReadFile("/proc/vmstat");
 				hasContents = true;
 			} catch (const SystemException &) {
 			}

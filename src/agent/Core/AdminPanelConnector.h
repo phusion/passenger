@@ -35,6 +35,7 @@
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,7 @@
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/Controller.h>
 #include <ProcessManagement/Ruby.h>
+#include <FileTools/FileManip.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
@@ -486,7 +488,8 @@ private:
 						_exit(1);
 					} else {
 						pipe.second.close();
-						string out = readAll(pipe.first);
+						string out = readAll(pipe.first,
+							std::numeric_limits<size_t>::max()).first;
 						LoggingKit::context->saveMonitoredFileLog(key, f.c_str(), f.size(),
 							out.data(), out.size());
 						pipe.first.close();
@@ -572,7 +575,7 @@ private:
 		Json::Value doc;
 		Json::Reader reader;
 
-		if (!reader.parse(readAll(instanceDir + "/properties.json"), doc)) {
+		if (!reader.parse(unsafeReadFile(instanceDir + "/properties.json"), doc)) {
 			throw RuntimeException("Cannot parse " + instanceDir + "/properties.json: "
 				+ reader.getFormattedErrorMessages());
 		}

@@ -83,6 +83,6 @@ namespace tut {
 		FileDescriptor fd(connectToServer(result.sockets[0].address,
 			__FILE__, __LINE__), NULL, 0);
 		writeExact(fd, "ping\n");
-		ensure_equals(readAll(fd), "pong\n");
+		ensure_equals(readAll(fd, 1024).first, "pong\n");
 	}
 }

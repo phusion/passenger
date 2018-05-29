@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <Core/SpawningKit/Handshake/Prepare.h>
 #include <unistd.h>
+#include <FileTools/FileManip.h>
 #include <Utils.h>
 
 using namespace Passenger;
@@ -157,7 +158,7 @@ namespace tut {
 
 		ensure(fileExists(session->workDir->getPath() + "/args.json"));
 		ensure(fileExists(session->workDir->getPath() + "/args/app_root"));
-		ensure_equals(readAll(session->workDir->getPath() + "/args/app_root"), config.appRoot);
+		ensure_equals(unsafeReadFile(session->workDir->getPath() + "/args/app_root"), config.appRoot);
 	}
 
 	struct Test16DebugSupport: public HandshakePrepare::DebugSupport {

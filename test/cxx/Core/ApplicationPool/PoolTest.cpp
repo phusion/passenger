@@ -3,7 +3,6 @@
 #include <Core/ApplicationPool/Pool.h>
 #include <LoggingKit/Context.h>
 #include <FileTools/FileManip.h>
-#include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <MessageReadersWriters.h>
 #include <map>
@@ -189,7 +188,8 @@ namespace tut {
 				"REQUEST_METHOD", "GET",
 				NULL);
 			shutdown(currentSession->fd(), SHUT_WR);
-			string body = stripHeaders(readAll(currentSession->fd()));
+			string body = stripHeaders(readAll(currentSession->fd(),
+				1024 * 1024).first);
 			ProcessPtr process = currentSession->getProcess()->shared_from_this();
 			currentSession.reset();
 			EVENTUALLY(5,
@@ -1835,8 +1835,8 @@ namespace tut {
 			result = fileExists("tmp.wsgi/spawned.txt");
 		);
 		usleep(20000);
-		writeFile("tmp.wsgi/passenger_wsgi.py", readAll("stub/wsgi/passenger_wsgi.py"));
-		pid_t pid = (pid_t) stringToLL(readAll("tmp.wsgi/spawned.txt"));
+		writeFile("tmp.wsgi/passenger_wsgi.py", unsafeReadFile("stub/wsgi/passenger_wsgi.py"));
+		pid_t pid = (pid_t) stringToLL(unsafeReadFile("tmp.wsgi/spawned.txt"));
 		kill(pid, SIGTERM);
 		EVENTUALLY(5,
 			result = number == 4;

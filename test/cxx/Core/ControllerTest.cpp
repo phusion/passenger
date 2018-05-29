@@ -1,4 +1,5 @@
 #include <TestSupport.h>
+#include <limits>
 #include <Constants.h>
 #include <Utils/IOUtils.h>
 #include <Utils/BufferedIO.h>
@@ -201,7 +202,7 @@ namespace tut {
 			setNonBlocking(testSession.peerFd());
 
 			try {
-				readAll(testSession.peerFd());
+				readAll(testSession.peerFd(), std::numeric_limits<size_t>::max());
 				drained = true;
 			} catch (const SystemException &e2) {
 				e = e2;

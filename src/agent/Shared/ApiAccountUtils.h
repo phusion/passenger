@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2015-2017 Phusion Holding B.V.
+ *  Copyright (c) 2015-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -262,7 +262,7 @@ struct ApiAccount {
 		if (doc.isMember("password")) {
 			password = doc["password"].asString();
 		} else {
-			password = strip(readAll(doc["password_file"].asString()));
+			password = strip(unsafeReadFile(doc["password_file"].asString()));
 		}
 		readonly = doc["level"].asString() == "readonly";
 	}

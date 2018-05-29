@@ -8,7 +8,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <cassert>
-#include <Utils/IOUtils.h>
+#include <FileTools/FileManip.h>
 #include <Utils/ScopeGuard.h>
 #include <jsoncpp/json.h>
 
@@ -79,7 +79,7 @@ writeUntilFull(int fd) {
 
 void
 replaceStringInFile(const char *filename, const string &toFind, const string &replaceWith) {
-	string content = readAll(filename);
+	string content = unsafeReadFile(filename);
 	FILE *f = fopen(filename, "w");
 	if (f == NULL) {
 		int e = errno;
@@ -101,17 +101,7 @@ containsSubstring(const StaticString &str, const StaticString &substr) {
 
 void
 writeFile(const string &filename, const string &contents) {
-	FILE *f = fopen(filename.c_str(), "w");
-	if (f == NULL) {
-		int e = errno;
-		string message = "Cannot open file '";
-		message.append(filename);
-		message.append("' for writing");
-		throw FileSystemException(message, e, filename);
-	} else {
-		StdioGuard guard(f, __FILE__, __LINE__);
-		fwrite(contents.data(), 1, contents.size(), f);
-	}
+	createFile(filename, contents);
 }
 
 void

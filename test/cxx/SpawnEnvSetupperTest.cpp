@@ -1,5 +1,6 @@
 #include <TestSupport.h>
 #include <Core/SpawningKit/Handshake/Prepare.h>
+#include <FileTools/FileManip.h>
 
 using namespace std;
 using namespace Passenger;
@@ -71,7 +72,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_before_first_exec/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_before_first_exec/state"),
 			"STEP_PERFORMED");
 	}
 
@@ -82,7 +84,8 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
-		string envvars = readAll(session->workDir->getPath() + "/envdump/envvars");
+		string envvars = unsafeReadFile(session->workDir->getPath()
+			+ "/envdump/envvars");
 		ensure(containsSubstring(envvars, "PATH="));
 	}
 
@@ -93,7 +96,8 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
-		string envvars = readAll(session->workDir->getPath() + "/envdump/user_info");
+		string envvars = unsafeReadFile(session->workDir->getPath()
+			+ "/envdump/user_info");
 		ensure(containsSubstring(envvars, "uid="));
 	}
 
@@ -104,7 +108,8 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
-		string envvars = readAll(session->workDir->getPath() + "/envdump/ulimits");
+		string envvars = unsafeReadFile(session->workDir->getPath()
+			+ "/envdump/ulimits");
 		ensure(containsSubstring(envvars, "open files")
 			|| containsSubstring(envvars, "nofiles"));
 	}
@@ -116,7 +121,8 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
-		string envvars = readAll(session->workDir->getPath() + "/envdump/envvars");
+		string envvars = unsafeReadFile(session->workDir->getPath()
+			+ "/envdump/envvars");
 		ensure(containsSubstring(envvars, "PASSENGER_APP_ENV="));
 	}
 
@@ -145,7 +151,7 @@ namespace tut {
 
 		Json::Value doc;
 		ensure("Load environment JSON dump",
-			Json::Reader().parse(readAll("tmp.wsgi/env.json"), doc));
+			Json::Reader().parse(unsafeReadFile("tmp.wsgi/env.json"), doc));
 		ensure_equals(doc["MY_VAR"].asString(), "value");
 	}
 
@@ -167,8 +173,8 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
-		ensure_equals(strip(readAll("tmp.wsgi/user.txt")), user);
-		ensure_equals(strip(readAll("tmp.wsgi/group.txt")), group);
+		ensure_equals(strip(unsafeReadFile("tmp.wsgi/user.txt")), user);
+		ensure_equals(strip(unsafeReadFile("tmp.wsgi/group.txt")), group);
 	}
 
 	TEST_METHOD(13) {
@@ -188,7 +194,7 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
-		ensure_equals(strip(readAll("tmp.wsgi/openfiles.txt")), "128");
+		ensure_equals(strip(unsafeReadFile("tmp.wsgi/openfiles.txt")), "128");
 	}
 
 
@@ -203,10 +209,12 @@ namespace tut {
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_spawn_env_setupper_before_shell/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_spawn_env_setupper_before_shell/state"),
 			"STEP_PERFORMED");
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_spawn_env_setupper_after_shell/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_spawn_env_setupper_after_shell/state"),
 			"STEP_PERFORMED");
 	}
 
@@ -226,7 +234,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_os_shell/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_os_shell/state"),
 			"STEP_PERFORMED");
 	}
 
@@ -239,7 +248,8 @@ namespace tut {
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
-		ensure(!fileExists(session->workDir->getPath() + "/response/steps/subprocess_os_shell"));
+		ensure(!fileExists(session->workDir->getPath()
+			+ "/response/steps/subprocess_os_shell"));
 	}
 
 	TEST_METHOD(23) {
@@ -253,7 +263,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_exec_wrapper/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_exec_wrapper/state"),
 			"STEP_IN_PROGRESS");
 	}
 
@@ -270,7 +281,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_exec_wrapper/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_exec_wrapper/state"),
 			"STEP_ERRORED");
 	}
 
@@ -285,7 +297,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper succeeds", execute("--before"));
 
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_app_load_or_exec/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_app_load_or_exec/state"),
 			"STEP_IN_PROGRESS");
 	}
 
@@ -302,7 +315,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
 		ensure_equals(
-			readAll(session->workDir->getPath() + "/response/steps/subprocess_app_load_or_exec/state"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/steps/subprocess_app_load_or_exec/state"),
 			"STEP_ERRORED");
 	}
 
@@ -334,7 +348,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
 		ensure(containsSubstring(
-			readAll(session->workDir->getPath() + "/response/error/summary"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/error/summary"),
 			"Directory '" + cwd + "/tmp.check/a' is inaccessible"));
 
 		#if 0
@@ -394,7 +409,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
 		ensure(containsSubstring(
-			readAll(session->workDir->getPath() + "/response/error/summary"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/error/summary"),
 			"Directory '" + cwd + "/tmp.check/a/b/c' is inaccessible"));
 	}
 
@@ -423,7 +439,8 @@ namespace tut {
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
 		ensure(containsSubstring(
-			readAll(session->workDir->getPath() + "/response/error/summary"),
+			unsafeReadFile(session->workDir->getPath()
+				+ "/response/error/summary"),
 			"Directory '" + cwd + "/tmp.check/a/b/c' is inaccessible"));
 	}
 }

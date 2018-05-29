@@ -15,7 +15,7 @@
 		FileDescriptor fd(connectToServer(result.sockets[0].address,
 			__FILE__, __LINE__), NULL, 0);
 		writeExact(fd, "ping\n");
-		ensure_equals(readAll(fd), "pong\n");
+		ensure_equals(readAll(fd, 1024).first, "pong\n");
 	}
 
 	TEST_METHOD(2) {
@@ -63,5 +63,5 @@
 		FileDescriptor fd(connectToServer(result.sockets[0].address,
 			__FILE__, __LINE__), NULL, 0);
 		writeExact(fd, "pid\n");
-		ensure_equals(readAll(fd), toString(result.pid) + "\n");
+		ensure_equals(readAll(fd, 1024).first, toString(result.pid) + "\n");
 	}

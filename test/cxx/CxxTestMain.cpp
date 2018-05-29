@@ -19,7 +19,6 @@
 #include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/SystemTime.h>
-#include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <jsoncpp/json.h>
 
@@ -155,7 +154,7 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 static void
 loadConfigFile() {
 	Json::Reader reader;
-	if (!reader.parse(readAll("config.json"), testConfig)) {
+	if (!reader.parse(unsafeReadFile("config.json"), testConfig)) {
 		fprintf(stderr, "Cannot parse config.json: %s\n",
 			reader.getFormattedErrorMessages().c_str());
 		exit(1);

@@ -63,7 +63,6 @@
 #include <FileTools/FileManip.h>
 #include <FileTools/PathManip.h>
 #include <Utils.h>
-#include <Utils/IOUtils.h>
 #include <Utils/StrIntUtils.h>
 #include <Core/SpawningKit/Handshake/WorkDir.h>
 #include <Core/SpawningKit/Exceptions.h>
@@ -101,7 +100,7 @@ static Json::Value
 readArgsJson(const string &workDir) {
 	Json::Reader reader;
 	Json::Value result;
-	string contents = readAll(workDir + "/args.json");
+	string contents = unsafeReadFile(workDir + "/args.json");
 	if (reader.parse(contents, result)) {
 		return result;
 	} else {

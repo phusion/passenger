@@ -5,6 +5,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
+#include <limits>
 #include <BackgroundEventLoop.h>
 #include <ServerKit/HttpServer.h>
 #include <LoggingKit/LoggingKit.h>
@@ -502,7 +503,7 @@ namespace tut {
 			"GET / HTTP/1.1\r\n"
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024 * 1024).first;
 		ensure_equals(response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -530,7 +531,7 @@ namespace tut {
 		sendRequest(
 			"o\r\n\r\n");
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -557,7 +558,7 @@ namespace tut {
 
 		sendRequest("\r\n");
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -598,7 +599,7 @@ namespace tut {
 
 		sendRequest("\r\n");
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -619,7 +620,7 @@ namespace tut {
 			"ath_test HTTP/1.1\r\n"
 			"Connection: close\r\n\r\n");
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure(containsSubstring(response, "Contiguous: 1"));
 	}
 
@@ -642,7 +643,7 @@ namespace tut {
 		connectToServer();
 		sendRequestAndWait("GET / HTT");
 		syscalls::shutdown(fd, SHUT_WR);
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response, "");
 	}
 
@@ -651,7 +652,7 @@ namespace tut {
 
 		connectToServer();
 		sendRequest("whatever");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure(containsSubstring(response,
 			"HTTP/1.0 400 Bad Request\r\n"
 			"Status: 400 Bad Request\r\n"
@@ -674,7 +675,7 @@ namespace tut {
 			"GET / HTTP/1.2\r\n"
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure(containsSubstring(response,
 			"HTTP/1.1 505 HTTP Version Not Supported\r\n"
 			"Status: 505 HTTP Version Not Supported\r\n"
@@ -696,7 +697,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Content-Length: 3\r\n"
 			"Transfer-Encoding: chunked\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure(containsSubstring(response,
 			"HTTP/1.1 400 Bad Request\r\n"
 			"Status: 400 Bad Request\r\n"
@@ -720,7 +721,7 @@ namespace tut {
 			"GET /body_test HTTP/1.1\r\n"
 			"Connection: close\r\n"
 			"Content-Length: 0\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response, "Body required"));
 	}
@@ -734,7 +735,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Content-Length: 2\r\n\r\n"
 			"ok");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "2 bytes: ok"));
 	}
@@ -753,7 +754,7 @@ namespace tut {
 		ensure(!hasResponseData());
 		sendRequest("!!!");
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "7 bytes: hmok!!!"));
 	}
@@ -775,7 +776,7 @@ namespace tut {
 		);
 
 		startAcceptingBody();
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "7 bytes: hmok!!!"));
 	}
@@ -797,7 +798,7 @@ namespace tut {
 		);
 
 		startAcceptingBody();
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response, "Request body error: Unexpected end-of-stream"));
 	}
@@ -817,7 +818,7 @@ namespace tut {
 		sendRequestAndWait("!");
 		syscalls::shutdown(fd, SHUT_WR);
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response,
 			"Request body error: Unexpected end-of-stream\n"
@@ -833,7 +834,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Content-Length: 2\r\n\r\n"
 			"hmok");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "2 bytes: hm"));
 		ensure("(3)", !containsSubstring(response, "ok"));
@@ -858,7 +859,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Transfer-Encoding: chunked\r\n\r\n"
 			"0\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "0 bytes: "));
 	}
@@ -874,7 +875,7 @@ namespace tut {
 			"2\r\n"
 			"ok\r\n"
 			"0\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "2 bytes: ok"));
 	}
@@ -906,7 +907,7 @@ namespace tut {
 		ensure(!hasResponseData());
 		sendRequest("\r\n\r\n");
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "7 bytes: hmok!!!"));
 	}
@@ -923,7 +924,7 @@ namespace tut {
 		ensure(!hasResponseData());
 		syscalls::shutdown(fd, SHUT_WR);
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response,
 			"Request body error: Unexpected end-of-stream\n"
@@ -950,7 +951,7 @@ namespace tut {
 		);
 
 		startAcceptingBody();
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "3 bytes: abc"));
 	}
@@ -967,7 +968,7 @@ namespace tut {
 			"hm\r\n"
 			"0\r\n\r\n"
 			"ok");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "2 bytes: hm"));
 		ensure("(3)", !containsSubstring(response, "ok"));
@@ -994,7 +995,7 @@ namespace tut {
 		ensure(!hasResponseData());
 		syscalls::shutdown(fd, SHUT_WR);
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response,
 			"Request body error: Unexpected end-of-stream\n"
@@ -1010,7 +1011,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Transfer-Encoding: chunked\r\n\r\n"
 			"!");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response, "0 bytes: "));
 		ensure("(3)", !containsSubstring(response, "!"));
@@ -1025,7 +1026,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Transfer-Encoding: chunked\r\n\r\n"
 			"2\r\nok!");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response, "2 bytes: ok"));
 		ensure("(3)", !containsSubstring(response, "!"));
@@ -1043,7 +1044,7 @@ namespace tut {
 			"Connection: upgrade\r\n"
 			"Upgrade: raw\r\n\r\n");
 		syscalls::shutdown(fd, SHUT_WR);
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "0 bytes: "));
 	}
@@ -1058,7 +1059,7 @@ namespace tut {
 			"Upgrade: raw\r\n\r\n"
 			"ok");
 		syscalls::shutdown(fd, SHUT_WR);
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "2 bytes: ok"));
 	}
@@ -1078,7 +1079,7 @@ namespace tut {
 		sendRequest("!!!");
 		syscalls::shutdown(fd, SHUT_WR);
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "7 bytes: hmok!!!"));
 	}
@@ -1101,7 +1102,7 @@ namespace tut {
 		);
 
 		startAcceptingBody();
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "7 bytes: hmok!!!"));
 	}
@@ -1123,7 +1124,7 @@ namespace tut {
 		);
 
 		startAcceptingBody();
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 		ensure("(2)", containsSubstring(response, "0 bytes: "));
 	}
@@ -1137,7 +1138,7 @@ namespace tut {
 			"GET /body_test HTTP/1.1\r\n"
 			"Connection: upgrade\r\n"
 			"Upgrade: raw\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response, "Connection upgrading not allowed for this request"));
 	}
@@ -1151,7 +1152,7 @@ namespace tut {
 			"Connection: upgrade\r\n"
 			"Upgrade: raw\r\n"
 			"Content-Length: 3\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 400 Bad Request\r\n"));
 		ensure("(2)", containsSubstring(response,
 			"Connection upgrading is only allowed for requests without request body"));
@@ -1165,7 +1166,7 @@ namespace tut {
 			"HEAD /body_test HTTP/1.1\r\n"
 			"Connection: upgrade\r\n"
 			"Upgrade: raw\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 400 Bad Request\r\n"));
 	}
 
@@ -1183,7 +1184,7 @@ namespace tut {
 			"!~: x\r\n"
 			"!~Secure: secret\r\n"
 			"\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -1207,7 +1208,7 @@ namespace tut {
 			"!~Secure: secret\r\n"
 			"Foo: bar\r\n"
 			"\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.0 400 Bad Request\r\n"));
 		ensure("(2)", containsSubstring(response,
 			"A normal header was encountered after the security password header"));
@@ -1223,7 +1224,7 @@ namespace tut {
 			"Host: foo\r\n"
 			"!~Secure: secret\r\n"
 			"\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.0 400 Bad Request\r\n"));
 		ensure("(2)", containsSubstring(response,
 			"A secure header was provided, but no security password was provided"));
@@ -1240,7 +1241,7 @@ namespace tut {
 			"Host: foo\r\n"
 			"!~: anything\r\n"
 			"\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 	}
 
@@ -1260,7 +1261,7 @@ namespace tut {
 			"Host: foo\r\n"
 			"!~: wrong\r\n"
 			"\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.0 400 Bad Request\r\n"));
 		ensure("(2)", containsSubstring(response,
 			"Security password mismatch"));
@@ -1283,7 +1284,7 @@ namespace tut {
 			"!~: secret\r\n"
 			"!~Foo: bar\r\n"
 			"\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 	}
 
@@ -1299,7 +1300,7 @@ namespace tut {
 			"GET / HTTP/1.1\r\n"
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
-		readAll(fd); // Does not block
+		readAll(fd, std::numeric_limits<size_t>::max()); // Does not block
 	}
 
 	TEST_METHOD(61) {
@@ -1315,7 +1316,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -1343,7 +1344,7 @@ namespace tut {
 			"Connection: close\r\n"
 			"Host: foo\r\n"
 			"Size: 1000000\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024 * 1024).first;
 		string body = stripHeaders(response);
 		ensure(startsWith(response, "HTTP/1.1 200 OK\r\n"));
 		ensure_equals(body.size(), 1000000u);
@@ -1366,7 +1367,7 @@ namespace tut {
 			result = getTotalRequestsBegun() > 1;
 		);
 
-		string data = readAll(fd);
+		string data = readAll(fd, 1024 * 1024).first;
 		string response2 =
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -1401,7 +1402,7 @@ namespace tut {
 		previouslyBytesConsumed = getTotalBytesConsumed();
 
 		writeExact(fd, "abcd");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024 * 1024).first;
 		string body = stripHeaders(response);
 		ensure(startsWith(response, "HTTP/1.1 200 OK\r\n"));
 		ensure_equals(body.size(), 1000000u);
@@ -1434,7 +1435,7 @@ namespace tut {
 			"GET /foo HTTP/1.1\r\n"
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024 * 1024).first;
 		string body = stripHeaders(response);
 		ensure(startsWith(response, "HTTP/1.1 200 OK\r\n"));
 		ensure_equals(body.size(), 1000000u);
@@ -1542,7 +1543,7 @@ namespace tut {
 		sendRequest("ab\n"
 			"GET / HTTP/1.1\r\n"
 			"Connection: close\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "Connection: close"));
 		ensure("(2)", !containsSubstring(response, "Connection: keep-alive"));
 		ensure("(3)", !containsSubstring(response, "hello /"));
@@ -1561,7 +1562,7 @@ namespace tut {
 		);
 
 		sendRequest("\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "Connection: close"));
 		ensure("(2)", !containsSubstring(response, "Connection: keep-alive"));
 		ensure("(3)", containsSubstring(response, "hello /"));
@@ -1583,7 +1584,7 @@ namespace tut {
 		);
 
 		sendRequest("\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "503 Service Unavailable"));
 		ensure("(2)", containsSubstring(response, "Connection: close"));
 		ensure("(3)", !containsSubstring(response, "Connection: keep-alive"));
@@ -1603,7 +1604,7 @@ namespace tut {
 		);
 
 		sendRequest("ab");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "Connection: close"));
 		ensure("(2)", !containsSubstring(response, "Connection: keep-alive"));
 		ensure("(3)", containsSubstring(response, "2 bytes: ab"));
@@ -1624,7 +1625,7 @@ namespace tut {
 			result = hasResponseData();
 		);
 
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response, "");
 	}
 
@@ -1639,7 +1640,7 @@ namespace tut {
 			"GET / HTTP/1.0\r\n"
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response,
 			"HTTP/1.0 200 OK\r\n"
 			"Status: 200 OK\r\n"
@@ -1719,7 +1720,7 @@ namespace tut {
 			"HEAD / HTTP/1.1\r\n"
 			"Connection: close\r\n"
 			"Host: foo\r\n\r\n");
-		string response = readAll(fd);
+		string response = readAll(fd, 1024).first;
 		ensure_equals(response,
 			"HTTP/1.1 200 OK\r\n"
 			"Status: 200 OK\r\n"

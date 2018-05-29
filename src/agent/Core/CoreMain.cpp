@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -89,7 +89,6 @@
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/Timer.h>
-#include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
 #include <Utils/VariantMap.h>
 #include <Core/OptionParser.h>
@@ -239,7 +238,7 @@ initializePrivilegedWorkingObjects() {
 	if (password.isString()) {
 		wo->controllerSecureHeadersPassword = password.asString();
 	} else if (password.isObject()) {
-		wo->controllerSecureHeadersPassword = strip(readAll(password["path"].asString()));
+		wo->controllerSecureHeadersPassword = strip(unsafeReadFile(password["path"].asString()));
 	}
 }
 

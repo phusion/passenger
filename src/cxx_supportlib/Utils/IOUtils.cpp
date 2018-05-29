@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -1354,32 +1354,23 @@ safelyClose(int fd, bool ignoreErrors) {
 	}
 }
 
-string
-readAll(const string &filename) {
-	FILE *f = fopen(filename.c_str(), "rb");
-	if (f != NULL) {
-		StdioGuard guard(f, NULL, 0);
-		return readAll(fileno(f));
-	} else {
-		int e = errno;
-		throw FileSystemException("Cannot open '" + filename + "' for reading",
-			e, filename);
-	}
-}
-
-string
-readAll(int fd) {
+pair<string, bool>
+readAll(int fd, size_t maxSize) {
 	string result;
 	char buf[1024 * 32];
 	ssize_t ret;
-	while (true) {
+	bool eofReached = false;
+
+	while (result.size() < maxSize) {
 		do {
 			ret = read(fd, buf, sizeof(buf));
 		} while (ret == -1 && errno == EINTR);
 		if (ret == 0) {
+			eofReached = true;
 			break;
 		} else if (ret == -1) {
 			if (errno == ECONNRESET) {
+				eofReached = true;
 				break;
 			} else {
 				int e = errno;
@@ -1389,7 +1380,8 @@ readAll(int fd) {
 			result.append(buf, ret);
 		}
 	}
-	return result;
+
+	return make_pair(result, eofReached);
 }
 
 

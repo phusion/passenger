@@ -48,6 +48,7 @@
 #include <Constants.h>
 #include <Exceptions.h>
 #include <FileDescriptor.h>
+#include <FileTools/FileManip.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/SystemTime.h>
@@ -377,13 +378,13 @@ private:
 		vector<string> errors;
 
 		// We already checked whether properties.json exists before invoking
-		// this method, so if readAll() fails then we can't be sure that
+		// this method, so if unsafeReadFile() fails then we can't be sure that
 		// it's an application problem. This is why we want the SystemException
 		// to propagate to higher layers so that there it can be turned into
 		// a generic filesystem-related or IO-related SpawnException, as opposed
 		// to one about this problem specifically.
 
-		if (!reader.parse(readAll(path), doc)) {
+		if (!reader.parse(unsafeReadFile(path), doc)) {
 			errors.push_back("Error parsing " + path + ": " +
 				reader.getFormattedErrorMessages());
 			throwSpawnExceptionBecauseOfResultValidationErrors(vector<string>(),
@@ -922,7 +923,7 @@ private:
 	ErrorCategory inferErrorCategoryFromResponseDir(ErrorCategory defaultValue) const {
 		TRACE_POINT();
 		if (fileExists(session.responseDir + "/error/category")) {
-			string value = strip(readAll(session.responseDir + "/error/category"));
+			string value = strip(unsafeReadFile(session.responseDir + "/error/category"));
 			ErrorCategory category = stringToErrorCategory(value);
 
 			if (category == UNKNOWN_ERROR_CATEGORY) {
@@ -1058,7 +1059,7 @@ private:
 	{
 		TRACE_POINT_WITH_DATA(journeyStepToString(step).data());
 		string summary;
-		string value = strip(readAll(stepDir + "/state"));
+		string value = strip(unsafeReadFile(stepDir + "/state"));
 		JourneyStepState state = stringToJourneyStepState(value);
 		const Config *config = session.config;
 
@@ -1274,13 +1275,13 @@ private:
 
 		UPDATE_TRACE_POINT();
 		if (fileExists(stepDir + "/begin_time_monotonic")) {
-			value = readAll(stepDir + "/begin_time_monotonic");
+			value = unsafeReadFile(stepDir + "/begin_time_monotonic");
 			MonotonicTimeUsec beginTimeMonotonic = atof(value.c_str()) * 1000000;
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": monotonic begin time is \"" << cEscapeString(value) << "\"");
 			session.journey.setStepBeginTime(step, beginTimeMonotonic);
 		} else if (fileExists(stepDir + "/begin_time")) {
-			value = readAll(stepDir + "/begin_time");
+			value = unsafeReadFile(stepDir + "/begin_time");
 			unsigned long long beginTime = atof(value.c_str()) * 1000000;
 			MonotonicTimeUsec beginTimeMonotonic = usecTimestampToMonoTime(beginTime);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
@@ -1294,13 +1295,13 @@ private:
 
 		UPDATE_TRACE_POINT();
 		if (fileExists(stepDir + "/end_time_monotonic")) {
-			value = readAll(stepDir + "/end_time_monotonic");
+			value = unsafeReadFile(stepDir + "/end_time_monotonic");
 			MonotonicTimeUsec endTimeMonotonic = atof(value.c_str()) * 1000000;
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": monotonic end time is \"" << cEscapeString(value) << "\"");
 			session.journey.setStepEndTime(step, endTimeMonotonic);
 		} else if (fileExists(stepDir + "/end_time")) {
-			value = readAll(stepDir + "/end_time");
+			value = unsafeReadFile(stepDir + "/end_time");
 			unsigned long long endTime = atof(value.c_str()) * 1000000;
 			MonotonicTimeUsec endTimeMonotonic = usecTimestampToMonoTime(endTime);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
@@ -1333,27 +1334,27 @@ private:
 		const string &envDumpDir = session.envDumpDir;
 
 		if (fileExists(responseDir + "/error/summary")) {
-			e.setSummary(strip(readAll(responseDir + "/error/summary")));
+			e.setSummary(strip(unsafeReadFile(responseDir + "/error/summary")));
 		}
 
 		if (e.getAdvancedProblemDetails().empty()
 		 && fileExists(responseDir + "/error/advanced_problem_details"))
 		{
-			e.setAdvancedProblemDetails(strip(readAll(responseDir
+			e.setAdvancedProblemDetails(strip(unsafeReadFile(responseDir
 				+ "/error/advanced_problem_details")));
 		}
 
 		if (fileExists(responseDir + "/error/problem_description.html")) {
-			e.setProblemDescriptionHTML(readAll(responseDir + "/error/problem_description.html"));
+			e.setProblemDescriptionHTML(unsafeReadFile(responseDir + "/error/problem_description.html"));
 		} else if (fileExists(responseDir + "/error/problem_description.txt")) {
-			e.setProblemDescriptionHTML(escapeHTML(strip(readAll(
+			e.setProblemDescriptionHTML(escapeHTML(strip(unsafeReadFile(
 				responseDir + "/error/problem_description.txt"))));
 		}
 
 		if (fileExists(responseDir + "/error/solution_description.html")) {
-			e.setSolutionDescriptionHTML(readAll(responseDir + "/error/solution_description.html"));
+			e.setSolutionDescriptionHTML(unsafeReadFile(responseDir + "/error/solution_description.html"));
 		} else if (fileExists(responseDir + "/error/solution_description.txt")) {
-			e.setSolutionDescriptionHTML(escapeHTML(strip(readAll(
+			e.setSolutionDescriptionHTML(escapeHTML(strip(unsafeReadFile(
 				responseDir + "/error/solution_description.txt"))));
 		}
 
@@ -1387,7 +1388,7 @@ private:
 		while ((ent = readdir(dir)) != NULL) {
 			if (ent->d_name[0] != '.') {
 				e.setAnnotation(ent->d_name, strip(
-					Passenger::readAll(path + "/" + ent->d_name)));
+					unsafeReadFile(path + "/" + ent->d_name)));
 			}
 		}
 	}
@@ -1632,13 +1633,13 @@ public:
 		string &envvars, string &userInfo, string &ulimits)
 	{
 		if (fileExists(envDumpDir + "/envvars")) {
-			envvars = readAll(envDumpDir + "/envvars");
+			envvars = unsafeReadFile(envDumpDir + "/envvars");
 		}
 		if (fileExists(envDumpDir + "/user_info")) {
-			userInfo = readAll(envDumpDir + "/user_info");
+			userInfo = unsafeReadFile(envDumpDir + "/user_info");
 		}
 		if (fileExists(envDumpDir + "/ulimits")) {
-			ulimits = readAll(envDumpDir + "/ulimits");
+			ulimits = unsafeReadFile(envDumpDir + "/ulimits");
 		}
 	}
 };
