@@ -240,7 +240,7 @@ makeDirTree(const string &path, const StaticString &mode, uid_t owner, gid_t gro
 				group = (gid_t) -1; // Don't let chown change file group.
 			}
 			do {
-				ret = chown(current.c_str(), owner, group);
+				ret = lchown(current.c_str(), owner, group);
 			} while (ret == -1 && errno == EINTR);
 			if (ret == -1) {
 				char message[1024];
