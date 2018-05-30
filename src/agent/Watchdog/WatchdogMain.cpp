@@ -71,6 +71,7 @@
 #include <Constants.h>
 #include <InstanceDirectory.h>
 #include <FileDescriptor.h>
+#include <FileTools/PathSecurityCheck.h>
 #include <RandomGenerator.h>
 #include <BackgroundEventLoop.h>
 #include <LoggingKit/LoggingKit.h>
@@ -978,6 +979,39 @@ lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 }
 
 static void
+warnIfInstanceDirVulnerable(const string &root) {
+	TRACE_POINT();
+
+	if (geteuid() != 0) {
+		return; // Passenger is not root, so no escalation.
+	}
+
+	vector<string> errors, checkErrors;
+	if (isPathProbablySecureForRootUse(root, errors, checkErrors)) {
+		if (!checkErrors.empty()) {
+			string message = "WARNING: unable to perform privilege escalation vulnerability detection:\n";
+			foreach (string line, checkErrors) {
+				message.append("\n - " + line);
+			}
+			P_WARN(message);
+		}
+	} else {
+		string message = "WARNING: potential privilege escalation vulnerability detected. " \
+			PROGRAM_NAME " is running as root, and part(s) of the " SHORT_PROGRAM_NAME
+			" instance directory (" + root + ") can be changed by non-root user(s):\n";
+		foreach (string line, errors) {
+			message.append("\n - " + line);
+		}
+		foreach (string line, checkErrors) {
+			message.append("\n - " + line);
+		}
+		message.append("\n\nPlease either fix up the permissions for the insecure paths, or use" \
+					   " a different location for the instance dir that can only be modified by root.");
+		P_WARN(message);
+	}
+}
+
+static void
 initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &instanceDirToucher,
 	uid_t uidBeforeLoweringPrivilege)
 {
@@ -1005,6 +1039,10 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 	if (watchdogConfig->get("integration_mode").asString() == "standalone") {
 		instanceOptions.properties["standalone_engine"] = watchdogConfig->get("standalone_engine").asString();
 	}
+
+	// check if path is safe
+	warnIfInstanceDirVulnerable(watchdogConfig->get("instance_registry_dir").asString());
+
 	wo->instanceDir = boost::make_shared<InstanceDirectory>(instanceOptions,
 		watchdogConfig->get("instance_registry_dir").asString());
 	wo->extraConfigToPassToSubAgents["instance_dir"] = wo->instanceDir->getPath();
