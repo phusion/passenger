@@ -840,16 +840,56 @@ private:
 	{
 		TRACE_POINT();
 		pid_t spawnedPid = doc["pid"].asInt();
-		ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, spawnedPid));
 
-		UPDATE_TRACE_POINT();
-		waitForStdChannelFifosToBeOpenedByPeer(stdChannelsAsyncOpenState,
-			session, spawnedPid);
-
-		UPDATE_TRACE_POINT();
 		// How do we know the preloader actually forked a process
 		// instead of reporting the PID of a random other existing process?
-		// For security reasons we perform a UID check.
+		// For security reasons we perform a bunch of sanity checks,
+		// including checking the PID's UID.
+
+		if (spawnedPid < 1) {
+			UPDATE_TRACE_POINT();
+			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
+
+			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
+			addPreloaderEnvDumps(e);
+			e.setSummary("The the preloader said it spawned a process with PID "
+				+ toString(spawnedPid) + ", which is not allowed.");
+			e.setSubprocessPid(spawnedPid);
+			e.setStdoutAndErrData(getBackgroundIOCapturerData(
+				stdChannelsAsyncOpenState->stdoutAndErrCapturer));
+			e.setProblemDescriptionHTML(
+				"<h2>Application process has unexpected PID</h2>"
+				"<p>The " PROGRAM_NAME " application server tried"
+				" to start the web application by communicating with a"
+				" helper process that we call a \"preloader\". However,"
+				" the preloader reported that it started a process with"
+				" a PID of " + toString(spawnedPid) + ", which is not"
+				" allowed.</p>");
+			if (!session.config->genericApp && session.config->startsUsingWrapper
+				&& session.config->wrapperSuppliedByThirdParty)
+			{
+				e.setSolutionDescriptionHTML(
+					"<h2>Please report this bug</h2>"
+					"<p class=\"sole-solution\">"
+					"This is probably a bug in the preloader process. The preloader "
+					"wrapper program is not written by the " PROGRAM_NAME " authors, "
+					"but by a third party. Please report this bug to the author of "
+					"the preloader wrapper program."
+					"</p>");
+			} else {
+				e.setSolutionDescriptionHTML(
+					"<h2>Please report this bug</h2>"
+					"<p class=\"sole-solution\">"
+					"This is probably a bug in the preloader process. The preloader "
+					"is an internal tool part of " PROGRAM_NAME ". Please "
+					"<a href=\"" SUPPORT_URL "\">"
+					"report this bug</a>."
+					"</p>");
+			}
+			throw e.finalize();
+		}
+
+		UPDATE_TRACE_POINT();
 		uid_t spawnedUid = getProcessUid(session, spawnedPid,
 			stdChannelsAsyncOpenState->stdoutAndErrCapturer);
 		if (spawnedUid != session.uid) {
@@ -896,6 +936,11 @@ private:
 			}
 			throw e.finalize();
 		}
+
+		UPDATE_TRACE_POINT();
+		ScopeGuard guard(boost::bind(nonInterruptableKillAndWaitpid, spawnedPid));
+		waitForStdChannelFifosToBeOpenedByPeer(stdChannelsAsyncOpenState,
+			session, spawnedPid);
 
 		UPDATE_TRACE_POINT();
 		string alreadyReadStdoutAndErrData;
