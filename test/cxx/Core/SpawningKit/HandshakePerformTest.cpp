@@ -541,6 +541,7 @@ namespace tut {
 
 		try {
 			execute();
+			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getSummary(), "The web application aborted with an error during startup.");
 		}
@@ -561,6 +562,7 @@ namespace tut {
 
 		try {
 			execute();
+			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getSummary(), "the summary");
 			ensure_equals(e.getProblemDescriptionHTML(), "the problem description");
@@ -603,6 +605,7 @@ namespace tut {
 
 		try {
 			execute();
+			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getStdoutAndErrData(), "oh no");
 		}
@@ -619,6 +622,7 @@ namespace tut {
 
 		try {
 			execute();
+			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(e.getSubprocessEnvvars(), "the env dump");
 		}
