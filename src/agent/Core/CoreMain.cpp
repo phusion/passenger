@@ -38,6 +38,7 @@
 
 #include <boost/config.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/foreach.hpp>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -86,6 +87,7 @@
 #include <ResourceLocator.h>
 #include <BackgroundEventLoop.cpp>
 #include <FileTools/FileManip.h>
+#include <FileTools/PathSecurityCheck.h>
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/Timer.h>
@@ -884,50 +886,6 @@ prestartWebApps() {
 	);
 }
 
-/**
- * See warnIfPassengerRootVulnerable()
- */
-static void
-warnIfPathVulnerable(const char *path, string &warnings) {
-	struct stat pathStat;
-
-	if (stat(path, &pathStat) == -1) {
-		P_DEBUG("Vulnerability check skipped: stat error on " << path << " (errno: " << errno << ")");
-		return; // fatal: we need that stat for both checks below
-	}
-
-	// Non-root ownership
-	struct passwd pathOwner;
-	struct passwd *pwdResult;
-
-	boost::shared_array<char> strings;
-	long stringsBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
-	strings.reset(new char[stringsBufSize]);
-	errno = 0;
-	if (getpwuid_r(pathStat.st_uid, &pathOwner, strings.get(), stringsBufSize, &pwdResult) == -1) {
-		P_DEBUG("Vulnerability check (owner) skipped: getpwuid_r error on " << path << " (owner UID: " <<
-				pathStat.st_uid << ", errno: " << errno << ")");
-	} else if (pwdResult == NULL) {
-		P_DEBUG("Vulnerability check (owner) skipped: getpwuid_r empty on " << path << " (owner UID: " <<
-				pathStat.st_uid << ", errno: " << errno << ")");
-	} else if (pathOwner.pw_uid != 0) {
-		warnings.append("\nThe path \"");
-		warnings.append(path);
-		warnings.append("\" can be modified by user \"");
-		warnings.append(pathOwner.pw_name);
-		warnings.append("\" (or applications running as that user)."
-			" Change the owner of the path to root, or avoid running " SHORT_PROGRAM_NAME " as root.");
-	}
-
-	// World writeable access rights
-	if ((pathStat.st_mode & S_IWOTH) != 0) {
-		warnings.append("\nThe path \"");
-		warnings.append(path);
-		warnings.append("\" is writeable by any user (or application)."
-			" Limit write access on the path to only the root user/group.");
-	}
-}
-
 /*
  * Emit a warning (log) if the Passenger root dir (and/or its parents) can be modified by non-root users
  * while Passenger was run as root (because non-root users can then tamper with something running as root).
@@ -947,19 +905,28 @@ warnIfPassengerRootVulnerable() {
 	}
 
 	string root = workingObjects->resourceLocator.getInstallSpec();
-	string checkPath = absolutizePath(root);
-	// Check the Passenger root and all dirs above it for ownership and world-writeability
-	string warnings;
-	while (!checkPath.empty() && checkPath != "/") {
-		warnIfPathVulnerable(checkPath.c_str(), warnings);
-
-		checkPath = extractDirName(checkPath);
-	}
-	if (!warnings.empty()) {
-		P_WARN("WARNING: potential privilege escalation vulnerability. "
-			PROGRAM_NAME " is running as root, and part(s) of the "
-			SHORT_PROGRAM_NAME " root path (" << root
-			<< ") can be changed by non-root user(s):" << warnings);
+	vector<string> errors, checkErrors;
+	if (isPathProbablySecureForRootUse(root, errors, checkErrors)) {
+		if (!checkErrors.empty()) {
+			string message = "WARNING: unable to perform privilege escalation vulnerability detection:\n";
+			foreach (string line, checkErrors) {
+				message.append("\n - " + line);
+			}
+			P_WARN(message);
+		}
+	} else {
+		string message = "WARNING: potential privilege escalation vulnerability detected. " \
+			PROGRAM_NAME " is running as root, and part(s) of the " SHORT_PROGRAM_NAME
+			" root path (" + root + ") can be changed by non-root user(s):\n";
+		foreach (string line, errors) {
+			message.append("\n - " + line);
+		}
+		foreach (string line, checkErrors) {
+			message.append("\n - " + line);
+		}
+		message.append("\n\nPlease either fix up the permissions for the insecure paths, or install "
+			SHORT_PROGRAM_NAME " in a different location that can only be modified by root.");
+		P_WARN(message);
 	}
 }
 

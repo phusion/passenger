@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -94,6 +94,8 @@ TEST_CXX_OBJECTS = {
     "test/cxx/DataStructures/LStringTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DataStructures/StringKeyTableTest.o" =>
     "test/cxx/DataStructures/StringKeyTableTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/FileTools/PathSecurityCheckTest.o" =>
+    "test/cxx/FileTools/PathSecurityCheckTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/MessageReadersWritersTest.o" =>
     "test/cxx/MessageReadersWritersTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/StaticStringTest.o" =>

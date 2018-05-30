@@ -280,6 +280,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'FileTools/FileManip.o',
     :source   => 'FileTools/FileManip.cpp',
     :category => :base
+  define_component 'FileTools/PathSecurityCheck.o',
+    :source   => 'FileTools/PathSecurityCheck.cpp',
+    :category => :base
   define_component 'ProcessManagement/Spawn.o',
     :source   => 'ProcessManagement/Spawn.cpp',
     :category => :base

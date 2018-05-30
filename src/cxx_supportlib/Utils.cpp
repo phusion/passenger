@@ -187,8 +187,36 @@ getProcessUsername(bool fallback) {
 }
 
 string
+getUserName(uid_t uid) {
+	struct passwd pwd, *result;
+	int ret;
+	long bufSize;
+	shared_array<char> strings;
+
+	// _SC_GETPW_R_SIZE_MAX is not a maximum:
+	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
+	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
+	strings.reset(new char[bufSize]);
+
+	result = (struct passwd *) NULL;
+	do {
+		ret = getpwuid_r(uid, &pwd, strings.get(), bufSize, &result);
+	} while (ret == EAGAIN);
+	if (ret != 0) {
+		result = (struct passwd *) NULL;
+	}
+
+	if (result == (struct passwd *) NULL || result->pw_name == NULL || result->pw_name[0] == '\0') {
+		return toString(uid);
+	} else {
+		return result->pw_name;
+	}
+}
+
+string
 getGroupName(gid_t gid) {
-	struct group grp, *groupEntry;
+	struct group grp, *result;
+	int ret;
 	long bufSize;
 	shared_array<char> strings;
 
@@ -197,15 +225,18 @@ getGroupName(gid_t gid) {
 	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
 	strings.reset(new char[bufSize]);
 
-	groupEntry = (struct group *) NULL;
-	if (getgrgid_r(gid, &grp, strings.get(), bufSize, &groupEntry) != 0) {
-		groupEntry = (struct group *) NULL;
+	result = (struct group *) NULL;
+	do {
+		ret = getgrgid_r(gid, &grp, strings.get(), bufSize, &result);
+	} while (ret == EAGAIN);
+	if (ret != 0) {
+		result = (struct group *) NULL;
 	}
 
-	if (groupEntry == (struct group *) NULL) {
+	if (result == (struct group *) NULL || result->gr_name == NULL || result->gr_name[0] == '\0') {
 		return toString(gid);
 	} else {
-		return groupEntry->gr_name;
+		return result->gr_name;
 	}
 }
 

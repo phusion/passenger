@@ -101,6 +101,12 @@ string escapeShell(const StaticString &input);
 string getProcessUsername(bool fallback = true);
 
 /**
+ * Returns either the user name for the given UID, or (if the user name
+ * couldn't be looked up) a string representation of the given UID.
+ */
+string getUserName(uid_t uid);
+
+/**
  * Returns either the group name for the given GID, or (if the group name
  * couldn't be looked up) a string representation of the given GID.
  */
