@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -321,18 +321,22 @@ monoTimeToJson(MonotonicTimeUsec t, MonotonicTimeUsec monoNow, unsigned long lon
 	}
 
 	time_t wallClockTime = (time_t) (wallClockTimeUsec / 1000000ull);
-	char timeStr[32];
+	char timeStr[32], *ctimeResult;
 	size_t len;
-	ctime_r(&wallClockTime, timeStr);
-	len = strlen(timeStr);
-	if (len > 0) {
-		// Get rid of trailing newline
-		timeStr[len - 1] = '\0';
+	ctimeResult = ctime_r(&wallClockTime, timeStr);
+	if (ctimeResult != NULL) {
+		len = strlen(timeStr);
+		if (len > 0) {
+			// Get rid of trailing newline
+			timeStr[len - 1] = '\0';
+		}
 	}
 
 	Json::Value doc;
 	doc["timestamp"] = wallClockTimeUsec / 1000000.0;
-	doc["local"] = timeStr;
+	if (ctimeResult != NULL) {
+		doc["local"] = timeStr;
+	}
 	if (t > monoNow) {
 		doc["relative_timestamp"] = (t - monoNow) / 1000000.0;
 		doc["relative"] = distanceOfTimeInWords(t / 1000000ull, monoNow / 1000000ull) + " from now";
