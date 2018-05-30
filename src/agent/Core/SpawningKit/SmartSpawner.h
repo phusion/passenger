@@ -39,6 +39,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <unistd.h>
 #include <cstring>
 #include <cassert>
 
@@ -177,6 +178,8 @@ private:
 	}
 
 	struct StdChannelsAsyncOpenState {
+		const int workDirFd;
+
 		oxt::thread *stdinOpenThread;
 		FileDescriptor stdinFd;
 		int stdinOpenErrno;
@@ -187,8 +190,9 @@ private:
 
 		BackgroundIOCapturerPtr stdoutAndErrCapturer;
 
-		StdChannelsAsyncOpenState()
-			: stdinOpenThread(NULL),
+		StdChannelsAsyncOpenState(int _workDirFd)
+			: workDirFd(_workDirFd),
+			  stdinOpenThread(NULL),
 			  stdoutAndErrOpenThread(NULL)
 			{ }
 
@@ -211,7 +215,8 @@ private:
 	StdChannelsAsyncOpenStatePtr openStdChannelsFifosAsynchronously(
 		HandshakeSession &session)
 	{
-		StdChannelsAsyncOpenStatePtr state = boost::make_shared<StdChannelsAsyncOpenState>();
+		StdChannelsAsyncOpenStatePtr state = boost::make_shared<StdChannelsAsyncOpenState>(
+			session.workDirFd);
 		state->stdinOpenThread = new oxt::thread(boost::bind(
 			openStdinChannel, state, session.workDir->getPath()),
 			"FIFO opener: " + session.workDir->getPath() + "/stdin", 1024 * 128);
@@ -282,7 +287,7 @@ private:
 	static void openStdinChannel(StdChannelsAsyncOpenStatePtr state,
 		const string &workDir)
 	{
-		int fd = syscalls::open((workDir + "/stdin").c_str(), O_WRONLY | O_APPEND);
+		int fd = syscalls::openat(state->workDirFd, "stdin", O_WRONLY | O_APPEND | O_NOFOLLOW);
 		int e = errno;
 		state->stdinFd.assign(fd, __FILE__, __LINE__);
 		state->stdinOpenErrno = e;
@@ -291,7 +296,7 @@ private:
 	static void openStdoutAndErrChannel(StdChannelsAsyncOpenStatePtr state,
 		const string &workDir)
 	{
-		int fd = syscalls::open((workDir + "/stdout_and_err").c_str(), O_RDONLY);
+		int fd = syscalls::openat(state->workDirFd, "stdout_and_err", O_RDONLY | O_NOFOLLOW);
 		int e = errno;
 		state->stdoutAndErrFd.assign(fd, __FILE__, __LINE__);
 		state->stdoutAndErrOpenErrno = e;
@@ -429,7 +434,7 @@ private:
 			// - bottom of stopPreloader()
 			// - addPreloaderEnvDumps()
 			HandshakePerform::loadBasicInfoFromEnvDumpDir(session.envDumpDir,
-				envvars, userInfo, ulimits);
+				session.envDumpDirFd, envvars, userInfo, ulimits);
 			string socketAddress = findPreloaderCommandSocketAddress(session);
 
 			{
@@ -441,7 +446,7 @@ private:
 				this->preloaderUserInfo = userInfo;
 				this->preloaderUlimits = ulimits;
 				this->preloaderAnnotations = loadAnnotationsFromEnvDumpDir(
-					session.envDumpDir);
+					session.envDumpDir, session.envDumpAnnotationsDirFd);
 			}
 
 			PipeWatcherPtr watcher = boost::make_shared<PipeWatcher>(
@@ -1145,7 +1150,9 @@ private:
 		return string();
 	}
 
-	static StringKeyTable<string> loadAnnotationsFromEnvDumpDir(const string &envDumpDir) {
+	static StringKeyTable<string> loadAnnotationsFromEnvDumpDir(const string &envDumpDir,
+		int envDumpAnnotationsDirFd)
+	{
 		string path = envDumpDir + "/annotations";
 		DIR *dir = opendir(path.c_str());
 		if (dir == NULL) {
@@ -1157,9 +1164,8 @@ private:
 		struct dirent *ent;
 		while ((ent = readdir(dir)) != NULL) {
 			if (ent->d_name[0] != '.') {
-				result.insert(ent->d_name, strip(
-					unsafeReadFile(path + "/" + ent->d_name)),
-					true);
+				result.insert(ent->d_name, strip(safeReadFile(envDumpAnnotationsDirFd,
+					ent->d_name, SPAWNINGKIT_MAX_SUBPROCESS_ENVDUMP_SIZE).first), true);
 			}
 		}
 

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2016-2017 Phusion Holding B.V.
+ *  Copyright (c) 2016-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -147,7 +147,8 @@ private:
 		TRACE_POINT();
 		try {
 			string path = session.responseDir + "/finish";
-			int fd = syscalls::open(path.c_str(), O_RDONLY);
+			int fd = syscalls::openat(session.responseDirFd, "finish",
+				O_RDONLY | O_NOFOLLOW);
 			if (fd == -1) {
 				int e = errno;
 				throw FileSystemException("Error opening FIFO " + path,
@@ -378,13 +379,21 @@ private:
 		vector<string> errors;
 
 		// We already checked whether properties.json exists before invoking
-		// this method, so if unsafeReadFile() fails then we can't be sure that
+		// this method, so if safeReadFile() fails then we can't be sure that
 		// it's an application problem. This is why we want the SystemException
 		// to propagate to higher layers so that there it can be turned into
 		// a generic filesystem-related or IO-related SpawnException, as opposed
 		// to one about this problem specifically.
 
-		if (!reader.parse(unsafeReadFile(path), doc)) {
+		pair<string, bool> jsonContent = safeReadFile(session.responseDirFd, "properties.json",
+			SPAWNINGKIT_MAX_PROPERTIES_JSON_SIZE);
+		if (!jsonContent.second) {
+			errors.push_back("Error parsing " + path + ": file bigger than "
+				+ toString(SPAWNINGKIT_MAX_PROPERTIES_JSON_SIZE) + " bytes");
+			throwSpawnExceptionBecauseOfResultValidationErrors(vector<string>(),
+				errors);
+		}
+		if (!reader.parse(jsonContent.first, doc)) {
 			errors.push_back("Error parsing " + path + ": " +
 				reader.getFormattedErrorMessages());
 			throwSpawnExceptionBecauseOfResultValidationErrors(vector<string>(),
@@ -923,7 +932,8 @@ private:
 	ErrorCategory inferErrorCategoryFromResponseDir(ErrorCategory defaultValue) const {
 		TRACE_POINT();
 		if (fileExists(session.responseDir + "/error/category")) {
-			string value = strip(unsafeReadFile(session.responseDir + "/error/category"));
+			string value = strip(safeReadFile(session.responseErrorDirFd,
+				"category", SPAWNINGKIT_MAX_ERROR_CATEGORY_SIZE).first);
 			ErrorCategory category = stringToErrorCategory(value);
 
 			if (category == UNKNOWN_ERROR_CATEGORY) {
@@ -1048,18 +1058,24 @@ private:
 				continue;
 			}
 
+			map<JourneyStep, int>::const_iterator it = session.stepDirFds.find(step);
+			if (it == session.stepDirFds.end()) {
+				P_BUG("No fd opened for step " << stepString);
+			}
+
 			loadJourneyStateFromResponseDirForSpecificStep(
-				session, pid, stdoutAndErrCapturer, step, stepDir);
+				session, pid, stdoutAndErrCapturer, step, stepDir, it->second);
 		}
 	}
 
 	static void loadJourneyStateFromResponseDirForSpecificStep(HandshakeSession &session,
 		pid_t pid, const BackgroundIOCapturerPtr &stdoutAndErrCapturer,
-		JourneyStep step, const string &stepDir)
+		JourneyStep step, const string &stepDir, int stepDirFd)
 	{
 		TRACE_POINT_WITH_DATA(journeyStepToString(step).data());
 		string summary;
-		string value = strip(unsafeReadFile(stepDir + "/state"));
+		string value = strip(safeReadFile(stepDirFd, "state",
+			SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first);
 		JourneyStepState state = stringToJourneyStepState(value);
 		const Config *config = session.config;
 
@@ -1275,13 +1291,15 @@ private:
 
 		UPDATE_TRACE_POINT();
 		if (fileExists(stepDir + "/begin_time_monotonic")) {
-			value = unsafeReadFile(stepDir + "/begin_time_monotonic");
+			value = safeReadFile(stepDirFd, "begin_time_monotonic",
+				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
 			MonotonicTimeUsec beginTimeMonotonic = atof(value.c_str()) * 1000000;
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": monotonic begin time is \"" << cEscapeString(value) << "\"");
 			session.journey.setStepBeginTime(step, beginTimeMonotonic);
 		} else if (fileExists(stepDir + "/begin_time")) {
-			value = unsafeReadFile(stepDir + "/begin_time");
+			value = safeReadFile(stepDirFd, "begin_time",
+				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
 			unsigned long long beginTime = atof(value.c_str()) * 1000000;
 			MonotonicTimeUsec beginTimeMonotonic = usecTimestampToMonoTime(beginTime);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
@@ -1295,13 +1313,15 @@ private:
 
 		UPDATE_TRACE_POINT();
 		if (fileExists(stepDir + "/end_time_monotonic")) {
-			value = unsafeReadFile(stepDir + "/end_time_monotonic");
+			value = safeReadFile(stepDirFd, "end_time_monotonic",
+				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
 			MonotonicTimeUsec endTimeMonotonic = atof(value.c_str()) * 1000000;
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": monotonic end time is \"" << cEscapeString(value) << "\"");
 			session.journey.setStepEndTime(step, endTimeMonotonic);
 		} else if (fileExists(stepDir + "/end_time")) {
-			value = unsafeReadFile(stepDir + "/end_time");
+			value = safeReadFile(stepDirFd, "end_time",
+				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
 			unsigned long long endTime = atof(value.c_str()) * 1000000;
 			MonotonicTimeUsec endTimeMonotonic = usecTimestampToMonoTime(endTime);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
@@ -1334,32 +1354,36 @@ private:
 		const string &envDumpDir = session.envDumpDir;
 
 		if (fileExists(responseDir + "/error/summary")) {
-			e.setSummary(strip(unsafeReadFile(responseDir + "/error/summary")));
+			e.setSummary(strip(safeReadFile(session.responseErrorDirFd, "summary",
+				SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE).first));
 		}
 
 		if (e.getAdvancedProblemDetails().empty()
 		 && fileExists(responseDir + "/error/advanced_problem_details"))
 		{
-			e.setAdvancedProblemDetails(strip(unsafeReadFile(responseDir
-				+ "/error/advanced_problem_details")));
+			e.setAdvancedProblemDetails(strip(safeReadFile(session.responseErrorDirFd,
+				"advanced_problem_details", SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE).first));
 		}
 
 		if (fileExists(responseDir + "/error/problem_description.html")) {
-			e.setProblemDescriptionHTML(unsafeReadFile(responseDir + "/error/problem_description.html"));
+			e.setProblemDescriptionHTML(safeReadFile(session.responseErrorDirFd,
+				"problem_description.html", SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE).first);
 		} else if (fileExists(responseDir + "/error/problem_description.txt")) {
-			e.setProblemDescriptionHTML(escapeHTML(strip(unsafeReadFile(
-				responseDir + "/error/problem_description.txt"))));
+			e.setProblemDescriptionHTML(escapeHTML(strip(safeReadFile(session.responseErrorDirFd,
+				"problem_description.txt", SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE).first)));
 		}
 
 		if (fileExists(responseDir + "/error/solution_description.html")) {
-			e.setSolutionDescriptionHTML(unsafeReadFile(responseDir + "/error/solution_description.html"));
+			e.setSolutionDescriptionHTML(safeReadFile(session.responseErrorDirFd,
+				"solution_description.html", SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE).first);
 		} else if (fileExists(responseDir + "/error/solution_description.txt")) {
-			e.setSolutionDescriptionHTML(escapeHTML(strip(unsafeReadFile(
-				responseDir + "/error/solution_description.txt"))));
+			e.setSolutionDescriptionHTML(escapeHTML(strip(safeReadFile(session.responseErrorDirFd,
+				"solution_description.txt", SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE).first)));
 		}
 
 		string envvars, userInfo, ulimits;
-		loadBasicInfoFromEnvDumpDir(envDumpDir, envvars, userInfo, ulimits);
+		loadBasicInfoFromEnvDumpDir(envDumpDir, session.envDumpDirFd, envvars,
+			userInfo, ulimits);
 		e.setSubprocessEnvvars(envvars);
 		e.setSubprocessUserInfo(userInfo);
 		e.setSubprocessUlimits(ulimits);
@@ -1388,7 +1412,9 @@ private:
 		while ((ent = readdir(dir)) != NULL) {
 			if (ent->d_name[0] != '.') {
 				e.setAnnotation(ent->d_name, strip(
-					unsafeReadFile(path + "/" + ent->d_name)));
+					safeReadFile(session.envDumpAnnotationsDirFd,
+						ent->d_name, SPAWNINGKIT_MAX_SUBPROCESS_ENVDUMP_SIZE).first
+				));
 			}
 		}
 	}
@@ -1630,16 +1656,19 @@ public:
 	}
 
 	static void loadBasicInfoFromEnvDumpDir(const string &envDumpDir,
-		string &envvars, string &userInfo, string &ulimits)
+		int envDumpDirFd, string &envvars, string &userInfo, string &ulimits)
 	{
 		if (fileExists(envDumpDir + "/envvars")) {
-			envvars = unsafeReadFile(envDumpDir + "/envvars");
+			envvars = safeReadFile(envDumpDirFd, "envvars",
+				SPAWNINGKIT_MAX_SUBPROCESS_ENVDUMP_SIZE).first;
 		}
 		if (fileExists(envDumpDir + "/user_info")) {
-			userInfo = unsafeReadFile(envDumpDir + "/user_info");
+			userInfo = safeReadFile(envDumpDirFd, "user_info",
+				SPAWNINGKIT_MAX_SUBPROCESS_ENVDUMP_SIZE).first;
 		}
 		if (fileExists(envDumpDir + "/ulimits")) {
-			ulimits = unsafeReadFile(envDumpDir + "/ulimits");
+			ulimits = safeReadFile(envDumpDirFd, "ulimits",
+				SPAWNINGKIT_MAX_SUBPROCESS_ENVDUMP_SIZE).first;
 		}
 	}
 };

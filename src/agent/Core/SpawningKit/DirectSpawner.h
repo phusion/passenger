@@ -41,6 +41,7 @@
 
 #include <limits.h>  // for PTHREAD_STACK_MIN
 #include <pthread.h>
+#include <unistd.h>
 #include <adhoc_lve.h>
 
 namespace Passenger {

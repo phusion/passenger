@@ -76,6 +76,11 @@ module PhusionPassenger
     MESSAGE_SERVER_MAX_USERNAME_SIZE = 100
     MESSAGE_SERVER_MAX_PASSWORD_SIZE = 100
     POOL_HELPER_THREAD_STACK_SIZE = 1024 * 256
+    SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE = 1024 * 128
+    SPAWNINGKIT_MAX_SUBPROCESS_ENVDUMP_SIZE = 1024 * 128
+    SPAWNINGKIT_MAX_PROPERTIES_JSON_SIZE = 1024 * 32
+    SPAWNINGKIT_MAX_ERROR_CATEGORY_SIZE = 32
+    SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE = 32
     # Small mbuf sizes avoid memory overhead (up to 1 blocksize per request), but
     # also introduce context switching and smaller transfer writes. The size is picked
     # to balance this out.

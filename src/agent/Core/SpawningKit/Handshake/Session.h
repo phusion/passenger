@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2016-2017 Phusion Holding B.V.
+ *  Copyright (c) 2016-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,6 +28,7 @@
 
 #include <boost/scoped_ptr.hpp>
 #include <string>
+#include <map>
 
 #include <Utils.h>
 #include <Core/SpawningKit/Context.h>
@@ -50,6 +51,12 @@ struct HandshakeSession {
 	boost::scoped_ptr<HandshakeWorkDir> workDir;
 	string responseDir;
 	string envDumpDir;
+	int workDirFd;
+	int responseDirFd;
+	int responseErrorDirFd;
+	int envDumpDirFd;
+	int envDumpAnnotationsDirFd;
+	map<JourneyStep, int> stepDirFds;
 	Journey journey;
 	Result result;
 
@@ -69,6 +76,11 @@ struct HandshakeSession {
 	HandshakeSession(Context &_context, Config &_config, JourneyType journeyType)
 		: context(&_context),
 		  config(&_config),
+		  workDirFd(-1),
+		  responseDirFd(-1),
+		  responseErrorDirFd(-1),
+		  envDumpDirFd(-1),
+		  envDumpAnnotationsDirFd(-1),
 		  journey(journeyType, !_config.genericApp && _config.startsUsingWrapper),
 		  uid(USER_NOT_GIVEN),
 		  gid(GROUP_NOT_GIVEN),
@@ -77,6 +89,27 @@ struct HandshakeSession {
 		{ }
 
 	~HandshakeSession() {
+		if (workDirFd != -1) {
+			safelyClose(workDirFd, true);
+		}
+		if (responseDirFd != -1) {
+			safelyClose(responseDirFd, true);
+		}
+		if (responseErrorDirFd != -1) {
+			safelyClose(responseErrorDirFd, true);
+		}
+		if (envDumpDirFd != -1) {
+			safelyClose(envDumpDirFd, true);
+		}
+		if (envDumpAnnotationsDirFd != -1) {
+			safelyClose(envDumpAnnotationsDirFd, true);
+		}
+
+		map<JourneyStep, int>::iterator it, end = stepDirFds.end();
+		for (it = stepDirFds.begin(); it != end; it++) {
+			safelyClose(it->second);
+		}
+
 		if (config->debugWorkDir && workDir != NULL) {
 			string path = workDir->dontRemoveOnDestruction();
 			P_NOTICE("Work directory " << path << " preserved for debugging");

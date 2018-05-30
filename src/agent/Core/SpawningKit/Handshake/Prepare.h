@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2016-2017 Phusion Holding B.V.
+ *  Copyright (c) 2016-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -33,6 +33,7 @@
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
+#include <utility>
 #include <cerrno>
 #include <cstddef>
 #include <cassert>
@@ -214,6 +215,43 @@ private:
 				"Cannot change ownership for FIFO file " + path,
 				e, path);
 		}
+	}
+
+	// Open various workdir subdirectories because we'll use these file descriptors later in
+	// safeReadFile() calls.
+	void openWorkDirSubdirFds() {
+		session.workDirFd = openDirFd(session.workDir->getPath());
+		session.responseDirFd = openDirFd(session.responseDir);
+		session.responseErrorDirFd = openDirFd(session.responseDir + "/error");
+		session.envDumpDirFd = openDirFd(session.envDumpDir);
+		session.envDumpAnnotationsDirFd = openDirFd(session.envDumpDir + "/annotations");
+		openJourneyStepDirFds(getFirstSubprocessJourneyStep(),
+			getLastSubprocessJourneyStep());
+		openJourneyStepDirFds(getFirstPreloaderJourneyStep(),
+			JourneyStep((int) getLastPreloaderJourneyStep() + 1));
+	}
+
+	void openJourneyStepDirFds(JourneyStep firstStep, JourneyStep lastStep) {
+		JourneyStep step;
+
+		for (step = firstStep; step < lastStep; step = JourneyStep((int) step + 1)) {
+			if (!session.journey.hasStep(step)) {
+				continue;
+			}
+
+			string stepString = journeyStepToStringLowerCase(step);
+			string stepDir = session.responseDir + "/steps/" + stepString;
+			session.stepDirFds.insert(make_pair(step, openDirFd(stepDir)));
+		}
+	}
+
+	int openDirFd(const string &path) {
+		int fd = open(path.c_str(), O_RDONLY);
+		if (fd == -1) {
+			int e = errno;
+			throw FileSystemException("Cannot open " + path, e, path);
+		}
+		return fd;
 	}
 
 	void initializeResult() {
@@ -549,6 +587,7 @@ public:
 
 			resolveUserAndGroup();
 			createWorkDir();
+			openWorkDirSubdirFds();
 			initializeResult();
 
 			UPDATE_TRACE_POINT();

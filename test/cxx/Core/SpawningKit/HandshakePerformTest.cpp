@@ -329,6 +329,28 @@ namespace tut {
 		ensure_equals(session->journey.getStepInfo(SUBPROCESS_LISTEN).state, STEP_PERFORMED);
 	}
 
+	TEST_METHOD(20) {
+		// Limited test of whether the code mitigates symlink attacks.
+		set_test_name("It does not read from symlinks");
+
+		init(SPAWN_DIRECTLY);
+
+		createFile(session->responseDir + "/properties-real.json",
+			createGoodPropertiesJson().toStyledString());
+		symlink("properties-real.json",
+			(session->responseDir + "/properties.json").c_str());
+		TempThread thr(boost::bind(&Core_SpawningKit_HandshakePerformTest::signalFinish,
+			this));
+
+		try {
+			execute();
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			ensure(containsSubstring(e.getSummary(),
+				"Cannot open 'properties.json'"));
+		}
+	}
+
 
 	/***** Success response handling *****/
 
