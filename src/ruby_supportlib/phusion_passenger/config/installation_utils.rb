@@ -1,7 +1,7 @@
 # encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2017 Phusion Holding B.V.
+#  Copyright (c) 2014-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -227,7 +227,7 @@ module PhusionPassenger
 
       # When creating PhusionPassenger.support_binaries_dir, preserve the
       # parent directory's UID and GID. This way, running `passenger-config compile-agent`
-      # with sudo privileged, even though Phusion Passenger isn't installed as root,
+      # with sudo privilege, even though Phusion Passenger isn't installed as root,
       # won't mess up permissions.
       def mkdir_p_preserve_parent_owner(path)
         Pathname.new(path).descend do |subpath|
@@ -235,7 +235,7 @@ module PhusionPassenger
             stat = subpath.parent.stat
             Dir.mkdir(subpath.to_s)
             if Process.euid == 0
-              File.chown(stat.uid, stat.gid, subpath.to_s)
+              File.lchown(stat.uid, stat.gid, subpath.to_s)
             end
           end
         end

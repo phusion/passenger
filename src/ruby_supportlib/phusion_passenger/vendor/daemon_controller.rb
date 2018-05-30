@@ -648,8 +648,8 @@ private
   def run_command_while_capturing_output(command)
     # Create tempfile for storing the command's output.
     tempfile = Tempfile.new('daemon-output')
+    tempfile.chmod(0666)
     tempfile_path = tempfile.path
-    File.chmod(0666, tempfile_path)
     tempfile.close
 
     if self.class.fork_supported? || self.class.spawn_supported?
