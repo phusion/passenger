@@ -116,7 +116,7 @@ private:
 	template<Granularity granularityNs>
 	static MonotonicTimeUsec _getMonotonicUsec() {
 		if (OXT_UNLIKELY(SystemTimeData::hasForcedUsecValue)) {
-			return SystemTimeData::hasForcedValue;
+			return SystemTimeData::forcedUsecValue;
 		}
 
 		#if BOOST_OS_MACOS
