@@ -49,6 +49,7 @@
 #include <Exceptions.h>
 #include <FileDescriptor.h>
 #include <FileTools/FileManip.h>
+#include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/SystemTime.h>
@@ -437,40 +438,44 @@ private:
 			if (socketsRequired) {
 				errors.push_back("'sockets' must be specified");
 			}
-		} else if (!doc["sockets"].isArray()) {
+			return;
+		}
+		if (!doc["sockets"].isArray()) {
 			errors.push_back("'sockets' must be an array");
-		} else {
-			if (socketsRequired && doc["sockets"].empty()) {
-				errors.push_back("'sockets' must be non-empty");
-				return;
+			return;
+		}
+		if (socketsRequired && doc["sockets"].empty()) {
+			errors.push_back("'sockets' must be non-empty");
+			return;
+		}
+
+		Json::Value::const_iterator it, end = doc["sockets"].end();
+		for (it = doc["sockets"].begin(); it != end; it++) {
+			const Json::Value &socketDoc = *it;
+
+			if (!socketDoc.isObject()) {
+				errors.push_back("'sockets[" + toString(it.index())
+					+ "]' must be an object");
+				continue;
 			}
 
-			Json::Value::const_iterator it, end = doc["sockets"].end();
-			for (it = doc["sockets"].begin(); it != end; it++) {
-				const Json::Value &socketDoc = *it;
-
-				if (!socketDoc.isObject()) {
-					errors.push_back("'sockets[" + toString(it.index())
-						+ "]' must be an object");
-					continue;
-				}
-
-				validateResultPropertiesFileSocketField(socketDoc,
-					"address", Json::stringValue, it.index(),
-					true, true, errors);
-				validateResultPropertiesFileSocketField(socketDoc,
-					"protocol", Json::stringValue, it.index(),
-					true, true, errors);
-				validateResultPropertiesFileSocketField(socketDoc,
-					"description", Json::stringValue, it.index(),
-					false, true, errors);
-				validateResultPropertiesFileSocketField(socketDoc,
-					"concurrency", Json::intValue, it.index(),
-					true, false, errors);
-				validateResultPropertiesFileSocketField(socketDoc,
-					"accept_http_requests", Json::booleanValue, it.index(),
-					false, false, errors);
-			}
+			validateResultPropertiesFileSocketField(socketDoc,
+				"address", Json::stringValue, it.index(),
+				true, true, errors);
+			validateResultPropertiesFileSocketField(socketDoc,
+				"protocol", Json::stringValue, it.index(),
+				true, true, errors);
+			validateResultPropertiesFileSocketField(socketDoc,
+				"description", Json::stringValue, it.index(),
+				false, true, errors);
+			validateResultPropertiesFileSocketField(socketDoc,
+				"concurrency", Json::intValue, it.index(),
+				true, false, errors);
+			validateResultPropertiesFileSocketField(socketDoc,
+				"accept_http_requests", Json::booleanValue, it.index(),
+				false, false, errors);
+			validateResultPropertiesFileSocketAddress(socketDoc,
+				it.index(), errors);
 		}
 	}
 
@@ -504,6 +509,89 @@ private:
 		} else if (requireNonEmpty && doc[key].asString().empty()) {
 			errors.push_back("'sockets[" + toString(index)
 				+ "]." + key + "' must be non-empty");
+		}
+	}
+
+	void validateResultPropertiesFileSocketAddress(const Json::Value &doc,
+		unsigned int index, vector<string> &errors) const
+	{
+		if (!doc["address"].isString()
+		 || getSocketAddressType(doc["address"].asString()) != SAT_UNIX)
+		{
+			return;
+		}
+
+		string filename = parseUnixSocketAddress(doc["address"].asString());
+
+		if (filename.empty()) {
+			errors.push_back("'sockets[" + toString(index)
+				+ "].address' contains an empty Unix domain socket filename");
+			return;
+		}
+
+		if (filename[0] != '/') {
+			errors.push_back("'sockets[" + toString(index)
+				+ "].address' when referring to a Unix domain socket, must be"
+				" an absolute path (given path: " + filename + ")");
+			return;
+		}
+
+		// If any of the parent directories is writable by a normal user
+		// (Joe) that is not the app's user (Jane), then Joe can swap that
+		// directory with something else, with contents controlled by Joe.
+		// That way, Joe can cause Passenger to connect to (and forward
+		// Jane's traffic to) a process that does not actually belong to
+		// Jane.
+		//
+		// To mitigate this risk, we insist that the socket be placed in a
+		// directory that we know is safe (instanceDir + "/apps.s").
+		// We don't rely on isPathProbablySecureForRootUse() because that
+		// function cannot be 100% sure that it is correct.
+
+		// instanceDir is only empty in tests
+		if (!session.context->instanceDir.empty()) {
+			StaticString actualDir = extractDirNameStatic(filename);
+			string expectedDir = session.context->instanceDir + "/apps.s";
+			if (actualDir != expectedDir) {
+				errors.push_back("'sockets[" + toString(index)
+					+ "].address', when referring to a Unix domain socket,"
+					" must be an absolute path to a file in '"
+					+ expectedDir + "' (given path: " + filename + ")");
+				return;
+			}
+		}
+
+		struct stat s;
+		int ret;
+		do {
+			ret = lstat(filename.c_str(), &s);
+		} while (ret == -1 && errno == EAGAIN);
+
+		if (ret == -1) {
+			int e = errno;
+			if (e == EEXIST) {
+				errors.push_back("'sockets[" + toString(index)
+					+ "].address' refers to a non-existant Unix domain"
+					" socket file (given path: " + filename + ")");
+				return;
+			} else {
+				throw FileSystemException("Cannot stat " + filename,
+					e, filename);
+			}
+		}
+
+		// We only check the UID, not the GID, because the socket
+		// may be automatically made with a different GID than
+		// the creating process's due to the setgid bit being set
+		// the directory that contains the socket. Furthermore,
+		// on macOS it seems that all directories behave as if
+		// they have the setgid bit set.
+
+		if (s.st_uid != session.uid) {
+			errors.push_back("'sockets[" + toString(index)
+				+ "].address', when referring to a Unix domain socket file,"
+				" must be owned by user " + getUserName(session.uid)
+				+ " (actual owner: " + getUserName(s.st_uid) + ")");
 		}
 	}
 

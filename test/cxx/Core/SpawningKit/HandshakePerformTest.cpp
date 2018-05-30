@@ -29,7 +29,6 @@ namespace tut {
 		{
 			context.resourceLocator = resourceLocator;
 			context.integrationMode = "standalone";
-			context.finalize();
 
 			config.appGroupName = "appgroup";
 			config.appRoot = "/tmp/myapp";
@@ -59,6 +58,9 @@ namespace tut {
 		void init(JourneyType type) {
 			vector<StaticString> errors;
 			ensure("Config is valid", config.validate(errors));
+
+			context.finalize();
+
 			session = boost::make_shared<HandshakeSession>(context, config, type);
 
 			session->journey.setStepInProgress(SPAWNING_KIT_PREPARATION);
@@ -548,6 +550,56 @@ namespace tut {
 		} catch (const SpawnException &e) {
 			ensure(containsSubstring(e.getSummary(),
 				"sockets are not supplied"));
+		}
+	}
+
+	TEST_METHOD(39) {
+		set_test_name("It raises an error if properties.json specifies a Unix domain socket"
+			" that is not located in the apps.s subdir of the instance directory");
+
+		TempDir tmpDir("tmp.instance");
+
+		context.instanceDir = absolutizePath("tmp.instance");
+		init(SPAWN_DIRECTLY);
+		Json::Value doc = createGoodPropertiesJson();
+		doc["sockets"][0]["address"] = "unix:/foo";
+		createFile(session->responseDir + "/properties.json", doc.toStyledString());
+		TempThread thr(boost::bind(&Core_SpawningKit_HandshakePerformTest::signalFinish, this));
+
+		try {
+			execute();
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			ensure(containsSubstring(e.getSummary(),
+				"must be an absolute path to a file in"));
+		}
+	}
+
+	TEST_METHOD(40) {
+		set_test_name("It raises an error if properties.json specifies a Unix domain socket"
+			" that is not owned by the app");
+
+		if (geteuid() != 0) {
+			return;
+		}
+
+		TempDir tmpDir("tmp.instance");
+		mkdir("tmp.instance/apps.s", 0700);
+		string socketPath = absolutizePath("tmp.instance/apps.s/foo.sock");
+
+		init(SPAWN_DIRECTLY);
+		Json::Value doc = createGoodPropertiesJson();
+		doc["sockets"][0]["address"] = "unix:" + socketPath;
+		createFile(session->responseDir + "/properties.json", doc.toStyledString());
+		safelyClose(createUnixServer(socketPath));
+		chown(socketPath.c_str(), 1, 1);
+		TempThread thr(boost::bind(&Core_SpawningKit_HandshakePerformTest::signalFinish, this));
+
+		try {
+			execute();
+			fail("SpawnException expected");
+		} catch (const SpawnException &e) {
+			ensure("(1)", containsSubstring(e.getSummary(), "must be owned by user"));
 		}
 	}
 
