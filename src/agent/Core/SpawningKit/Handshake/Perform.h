@@ -651,6 +651,7 @@ private:
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
 			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
+			loadBasicInfoFromEnvDumpDir(e);
 			loadAnnotationsFromEnvDumpDir(e);
 
 			if (config->wrapperSuppliedByThirdParty) {
@@ -712,6 +713,7 @@ private:
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
 			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
+			loadBasicInfoFromEnvDumpDir(e);
 			loadAnnotationsFromEnvDumpDir(e);
 
 			e.setSummary("Error spawning the web application: the application"
@@ -758,6 +760,7 @@ private:
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
 			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
+			loadBasicInfoFromEnvDumpDir(e);
 			loadAnnotationsFromEnvDumpDir(e);
 
 			if (config->wrapperSuppliedByThirdParty) {
@@ -829,6 +832,7 @@ private:
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
 			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
+			loadBasicInfoFromEnvDumpDir(e);
 			loadAnnotationsFromEnvDumpDir(e);
 
 			e.setSummary("Error spawning the web application: the application"
@@ -871,6 +875,8 @@ private:
 			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			e.setAdvancedProblemDetails(toString(internalFieldErrors));
+			loadBasicInfoFromEnvDumpDir(e);
+			loadAnnotationsFromEnvDumpDir(e);
 
 			e.setSummary("Error spawning the web application:"
 				" a bug in " SHORT_PROGRAM_NAME " caused the"
@@ -906,6 +912,7 @@ private:
 			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
 			e.setAdvancedProblemDetails(toString(appSuppliedFieldErrors));
+			loadBasicInfoFromEnvDumpDir(e);
 			loadAnnotationsFromEnvDumpDir(e);
 
 			if (config->wrapperSuppliedByThirdParty) {
@@ -981,6 +988,7 @@ private:
 			e.setAdvancedProblemDetails(toString(appSuppliedFieldErrors));
 			e.setSubprocessPid(pid);
 			e.setStdoutAndErrData(getStdoutErrData());
+			loadBasicInfoFromEnvDumpDir(e);
 			loadAnnotationsFromEnvDumpDir(e);
 
 			message = "<p>The " PROGRAM_NAME " application server tried"
@@ -1028,6 +1036,7 @@ private:
 				SpawnException e(INTERNAL_ERROR, session.journey, config);
 				e.setStdoutAndErrData(getStdoutErrData());
 				e.setSubprocessPid(pid);
+				loadBasicInfoFromEnvDumpDir(e);
 				loadAnnotationsFromEnvDumpDir(e);
 
 				if (!config->genericApp && config->startsUsingWrapper) {
@@ -1200,6 +1209,7 @@ private:
 				SpawnException e(INTERNAL_ERROR, session.journey, config);
 				e.setStdoutAndErrData(getStdoutErrData(stdoutAndErrCapturer));
 				e.setSubprocessPid(pid);
+				loadBasicInfoFromEnvDumpDir(e, session);
 				loadAnnotationsFromEnvDumpDir(e, session);
 
 				if (!config->genericApp && config->startsUsingWrapper) {
@@ -1292,6 +1302,7 @@ private:
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
 			e.setStdoutAndErrData(getStdoutErrData(stdoutAndErrCapturer));
 			e.setSubprocessPid(pid);
+			loadBasicInfoFromEnvDumpDir(e, session);
 			loadAnnotationsFromEnvDumpDir(e, session);
 
 			if (!config->genericApp && config->startsUsingWrapper) {
@@ -1439,7 +1450,6 @@ private:
 	void loadSubprocessErrorMessagesAndEnvDump(SpawnException &e) const {
 		TRACE_POINT();
 		const string &responseDir = session.responseDir;
-		const string &envDumpDir = session.envDumpDir;
 
 		if (fileExists(responseDir + "/error/summary")) {
 			e.setSummary(strip(safeReadFile(session.responseErrorDirFd, "summary",
@@ -1469,14 +1479,22 @@ private:
 				"solution_description.txt", SPAWNINGKIT_MAX_SUBPROCESS_ERROR_MESSAGE_SIZE).first)));
 		}
 
+		loadBasicInfoFromEnvDumpDir(e);
+		loadAnnotationsFromEnvDumpDir(e);
+	}
+
+	void loadBasicInfoFromEnvDumpDir(SpawnException &e) const {
+		loadBasicInfoFromEnvDumpDir(e, session);
+	}
+
+	static void loadBasicInfoFromEnvDumpDir(SpawnException &e, HandshakeSession &session) {
 		string envvars, userInfo, ulimits;
-		loadBasicInfoFromEnvDumpDir(envDumpDir, session.envDumpDirFd, envvars,
-			userInfo, ulimits);
+
+		loadBasicInfoFromEnvDumpDir(session.envDumpDir, session.envDumpDirFd,
+			envvars, userInfo, ulimits);
 		e.setSubprocessEnvvars(envvars);
 		e.setSubprocessUserInfo(userInfo);
 		e.setSubprocessUlimits(ulimits);
-
-		loadAnnotationsFromEnvDumpDir(e);
 	}
 
 	static void doClosedir(DIR *dir) {
