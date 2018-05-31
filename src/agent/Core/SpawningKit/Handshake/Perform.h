@@ -916,7 +916,17 @@ private:
 		} else if (!config->genericApp && config->startsUsingWrapper) {
 			UPDATE_TRACE_POINT();
 			loadJourneyStateFromResponseDir();
-			session.journey.setStepErrored(SUBPROCESS_WRAPPER_PREPARATION, true);
+			switch (session.journey.getType()) {
+			case SPAWN_DIRECTLY:
+			case START_PRELOADER:
+				session.journey.setStepErrored(SUBPROCESS_WRAPPER_PREPARATION, true);
+				break;
+			case SPAWN_THROUGH_PRELOADER:
+				session.journey.setStepErrored(SUBPROCESS_PREPARE_AFTER_FORKING_FROM_PRELOADER, true);
+				break;
+			default:
+				P_BUG("Unknown journey type " << (int) session.journey.getType());
+			}
 
 			SpawnException e(INTERNAL_ERROR, session.journey, config);
 			e.setSubprocessPid(pid);
