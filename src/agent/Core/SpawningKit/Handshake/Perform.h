@@ -373,6 +373,7 @@ private:
 	}
 
 	void loadResultPropertiesFromResponseDir(bool socketsRequired) {
+		TRACE_POINT();
 		Result &result = session.result;
 		string path = session.responseDir + "/properties.json";
 		Json::Reader reader;
@@ -386,6 +387,7 @@ private:
 		// a generic filesystem-related or IO-related SpawnException, as opposed
 		// to one about this problem specifically.
 
+		UPDATE_TRACE_POINT();
 		pair<string, bool> jsonContent = safeReadFile(session.responseDirFd, "properties.json",
 			SPAWNINGKIT_MAX_PROPERTIES_JSON_SIZE);
 		if (!jsonContent.second) {
@@ -401,6 +403,7 @@ private:
 				errors);
 		}
 
+		UPDATE_TRACE_POINT();
 		validateResultPropertiesFile(doc, socketsRequired, errors);
 		if (!errors.empty()) {
 			errors.insert(errors.begin(), "The following errors were detected in "
@@ -413,6 +416,7 @@ private:
 			return;
 		}
 
+		UPDATE_TRACE_POINT();
 		Json::Value::iterator it, end = doc["sockets"].end();
 		for (it = doc["sockets"].begin(); it != end; it++) {
 			const Json::Value &socketDoc = *it;
@@ -434,6 +438,7 @@ private:
 	void validateResultPropertiesFile(const Json::Value &doc, bool socketsRequired,
 		vector<string> &errors) const
 	{
+		TRACE_POINT();
 		if (!doc.isMember("sockets")) {
 			if (socketsRequired) {
 				errors.push_back("'sockets' must be specified");
@@ -449,6 +454,7 @@ private:
 			return;
 		}
 
+		UPDATE_TRACE_POINT();
 		Json::Value::const_iterator it, end = doc["sockets"].end();
 		for (it = doc["sockets"].begin(); it != end; it++) {
 			const Json::Value &socketDoc = *it;
@@ -515,6 +521,7 @@ private:
 	void validateResultPropertiesFileSocketAddress(const Json::Value &doc,
 		unsigned int index, vector<string> &errors) const
 	{
+		TRACE_POINT();
 		if (!doc["address"].isString()
 		 || getSocketAddressType(doc["address"].asString()) != SAT_UNIX)
 		{
@@ -548,6 +555,7 @@ private:
 		// We don't rely on isPathProbablySecureForRootUse() because that
 		// function cannot be 100% sure that it is correct.
 
+		UPDATE_TRACE_POINT();
 		// instanceDir is only empty in tests
 		if (!session.context->instanceDir.empty()) {
 			StaticString actualDir = extractDirNameStatic(filename);
@@ -561,6 +569,7 @@ private:
 			}
 		}
 
+		UPDATE_TRACE_POINT();
 		struct stat s;
 		int ret;
 		do {
@@ -587,6 +596,7 @@ private:
 		// on macOS it seems that all directories behave as if
 		// they have the setgid bit set.
 
+		UPDATE_TRACE_POINT();
 		if (s.st_uid != session.uid) {
 			errors.push_back("'sockets[" + toString(index)
 				+ "].address', when referring to a Unix domain socket file,"
