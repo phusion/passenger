@@ -4,7 +4,7 @@
 
 At the time of writing (25 Feb 2017), ConfigKit was just introduced, so these practices and patterns aren't yet used everywhere, but the long-term plan is to adopt these practices/patterns throughout the entire codebase.
 
-<!-- MarkdownTOC depth=3 autolink="true" bracket="round" -->
+<!-- MarkdownTOC levels="1,2,3,4" autolink="true" bracket="round" -->
 
 - [The "component" pattern](#the-component-pattern)
     - [Components are composable](#components-are-composable)

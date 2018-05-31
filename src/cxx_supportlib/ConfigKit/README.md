@@ -4,7 +4,7 @@ ConfigKit is a configuration management system that lets you define configuratio
 
 **Table of contents:**
 
-<!-- MarkdownTOC depth=3 autolink="true" bracket="round" -->
+<!-- MarkdownTOC levels="1,2,3,4" autolink="true" bracket="round" -->
 
 - [Motivations](#motivations)
   - [Configuration flow from high-level to low-level with a minimum of repeated code](#configuration-flow-from-high-level-to-low-level-with-a-minimum-of-repeated-code)
