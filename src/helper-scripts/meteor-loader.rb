@@ -31,35 +31,92 @@ require 'logger'
 module PhusionPassenger
   module App
     def self.options
+      @@options ||= {}
       return @@options
     end
 
-    def self.exit_code_for_exception(e)
-      if e.is_a?(SystemExit)
-        return e.status
-      else
-        return 1
+    def self.try_write_file(path, contents)
+      begin
+        File.open(path, 'wb') do |f|
+          f.write(contents)
+        end
+      rescue SystemCallError => e
+        STDERR.puts "Warning: unable to write to #{path}: #{e}"
       end
     end
 
-    def self.handshake_and_read_startup_request
-      STDOUT.sync = true
-      STDERR.sync = true
-      puts "!> I have control 1.0"
-      abort "Invalid initialization header" if STDIN.readline != "You have control 1.0\n"
+    def self.record_journey_step_begin(step, state, work_dir = nil)
+      dir = work_dir || ENV['PASSENGER_SPAWN_WORK_DIR']
+      step_dir = "#{dir}/response/steps/#{step.downcase}"
+      try_write_file("#{step_dir}/state", state)
+      try_write_file("#{step_dir}/begin_time", Time.now.to_f)
+    end
 
-      @@options = {}
-      while (line = STDIN.readline) != "\n"
-        name, value = line.strip.split(/: */, 2)
-        @@options[name] = value
+    def self.record_journey_step_end(step, state, work_dir = nil)
+      dir = work_dir || ENV['PASSENGER_SPAWN_WORK_DIR']
+      step_dir = "#{dir}/response/steps/#{step.downcase}"
+      try_write_file("#{step_dir}/state", state)
+      if !File.exist?("#{step_dir}/begin_time") && !File.exist?("#{step_dir}/begin_time_monotonic")
+        try_write_file("#{step_dir}/begin_time", Time.now.to_f)
       end
+      try_write_file("#{step_dir}/end_time", Time.now.to_f)
+    end
+
+    def self.init_logging
+      logger = Logger.new(STDOUT)
+      logger.level = Logger::WARN
+      logger.formatter = proc do |severity, datetime, progname, msg|
+        "[ pid=#{Process.pid}, time=#{datetime} ]: #{msg.message}"
+      end
+    end
+
+    def self.read_startup_arguments
+	    work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+        @@options = File.open("#{work_dir}/args.json", 'rb') do |f|
+          Utils::JSON.parse(f.read)
+        end
+    end
+
+    def self.advertise_port(port)
+      work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+	    path = work_dir + '/response/properties.json'
+	    doc = {
+		    'sockets': [{
+				             'name': 'main',
+				             'address': "tcp://127.0.0.1:#{port}",
+				             'protocol': 'http',
+				             'concurrency': 0,
+				             'accept_http_requests': true
+			              }]
+	    }
+	    File.write(path, Utils::JSON.generate(doc))
+    end
+
+    def self.advertise_readiness
+	    work_dir = ENV['PASSENGER_SPAWN_WORK_DIR']
+	    path = work_dir + '/response/finish'
+	    File.write(path, '1')
     end
 
     def self.init_passenger
-      require "#{options["ruby_libdir"]}/phusion_passenger"
-      PhusionPassenger.locate_directories(options["passenger_root"])
-      PhusionPassenger.require_passenger_lib 'message_channel'
-      PhusionPassenger.require_passenger_lib 'utils/tmpio'
+      STDOUT.sync = true
+      STDERR.sync = true
+
+      work_dir = ENV['PASSENGER_SPAWN_WORK_DIR'].to_s
+      if work_dir.empty?
+        abort "This program may only be invoked from Passenger (error: $PASSENGER_SPAWN_WORK_DIR not set)."
+      end
+
+      ruby_libdir = File.read("#{work_dir}/args/ruby_libdir").strip
+      passenger_root = File.read("#{work_dir}/args/passenger_root").strip
+      require "#{ruby_libdir}/phusion_passenger"
+      PhusionPassenger.locate_directories(passenger_root)
+
+      PhusionPassenger.require_passenger_lib 'loader_shared_helpers'
+      PhusionPassenger.require_passenger_lib 'preloader_shared_helpers'
+      PhusionPassenger.require_passenger_lib 'utils/json'
+      require 'socket'
+
     end
 
     def self.ping_port(port)
@@ -111,15 +168,15 @@ module PhusionPassenger
         # Meteor its own process group, and sending signals to the
         # entire process group.
         Process.setpgrp
-        
+
         if options["environment"] == "production"
-          puts("Warning: meteor running in simulated production mode (--production). For real production use, bundle your app.")
+          logger.warn("Warning: meteor running in simulated production mode (--production). For real production use, bundle your app.")
         end
-        
+
         if options["meteor_app_settings"]
           PhusionPassenger.require_passenger_lib 'utils/shellwords'
           app_settings_file = Shellwords.escape(options["meteor_app_settings"])
-          puts("Using application settings from file #{app_settings_file}")
+          logger.info("Using application settings from file #{app_settings_file}")
           exec("meteor run -p #{port} --settings #{app_settings_file} #{production}")
         else
           exec("meteor run -p #{port} #{production}")
@@ -142,17 +199,47 @@ module PhusionPassenger
     ################## Main code ##################
 
 
-    handshake_and_read_startup_request
     init_passenger
+    init_logging
+
+    record_journey_step_end('SUBPROCESS_EXEC_WRAPPER', 'STEP_PERFORMED')
+
+    record_journey_step_begin('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_IN_PROGRESS')
     begin
-      pid, port = load_app
+		  read_startup_arguments
+    rescue Exception
+		  record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_ERRORED')
+		  raise
+	  else
+		  record_journey_step_end('SUBPROCESS_WRAPPER_PREPARATION', 'STEP_PERFORMED')
+    end
+
+    record_journey_step_begin('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_IN_PROGRESS')
+    begin
+		  pid, port = load_app
+	  rescue Exception
+		  record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_ERRORED')
+		  raise
+	  else
+		  record_journey_step_end('SUBPROCESS_APP_LOAD_OR_EXEC', 'STEP_PERFORMED')
+    end
+
+    record_journey_step_begin('SUBPROCESS_LISTEN', 'STEP_IN_PROGRESS')
+	  begin
       while !ping_port(port)
         sleep 0.01
       end
-      puts "!> Ready"
-      puts "!> socket: main;tcp://127.0.0.1:#{port};http_session;0"
-      puts "!> "
-      wait_for_exit_message
+	  rescue Exception
+		  record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_ERRORED')
+		  raise
+	  else
+		  record_journey_step_end('SUBPROCESS_LISTEN', 'STEP_PERFORMED')
+    end
+
+    advertise_port(port)
+    advertise_readiness
+    begin
+	    wait_for_exit_message
     ensure
       if pid
         Process.kill('INT', -pid) rescue nil
