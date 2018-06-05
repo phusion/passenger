@@ -3,7 +3,8 @@ Release 5.3.2 (Not yet released)
 
  * Fixes the meteor loader (non-bundled mode). Closes GH-2082.
  * Fixes PassengerMaxInstancesPerApp (Apache integration) not being respected (regression from config refactor in 5.2.0). Closes GH-2059.
- * [Enterprise] Fixes PassengerMaxInstances (Apache integration) not being respected (regression from config refactor in 5.2.0). 
+ * [Enterprise] Fixes PassengerMaxInstances (Apache integration) not being respected (regression from config refactor in 5.2.0).
+ * [Enterprise] Fixes passenger-irb being unable to connect to an app process (regression from 5.3.0). Closes GH-2087.
 
 
 Release 5.3.1
