@@ -1,13 +1,17 @@
 Release 5.3.2 (Not yet released)
 -------------
 
- * Fixes Meteor support in non-bundled mode (regression from 5.3.0). Closes GH-2082.
+This release contains many security updates. Users are advised to upgrade as soon as possible. See our blog for more information on the vulnerabilities.
+
+ * [Nginx] Fixes CVE-2018-12029, a local privilege escalation vulnerability in the Nginx module that occurs when `passenger_instance_registry_dir` is configured to a directory with insufficiently strict permissions.
+ * Fixes CVE-2018-12026, 12027, and 12028. These are local denial of service, local information disclosure and local privilege escalation vulnerabilities that could be exploited by malicious applications or malicious users on the system.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
     - OpenSSL (Linux only): 1.0.2o (was: 1.0.2k; on macOS it was already 1.0.2o)
     - GeoIP: 1.6.12 (was: 1.6.11)
     - libcurl: 7.60.0 (was: 7.56.1)
-
+ * Fixes Meteor support in non-bundled mode (regression from 5.3.0). Closes GH-2082.
+ * Fixes the fact that the error page (which is shown when an app fails to spawn) sometimes contains unsufficient analysis details about the app.
  * [Apache] Fixes PassengerMaxInstancesPerApp not being respected (regression from config refactor in 5.2.0). Closes GH-2059.
  * [Enterprise, Apache] Fixes PassengerMaxInstances not being respected (regression from config refactor in 5.2.0).
  * [Enterprise] Fixes passenger-irb being unable to connect to an app process (regression from 5.3.0). Closes GH-2087.
