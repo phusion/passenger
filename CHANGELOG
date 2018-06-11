@@ -2,6 +2,12 @@ Release 5.3.2 (Not yet released)
 -------------
 
  * Fixes Meteor support in non-bundled mode (regression from 5.3.0). Closes GH-2082.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - OpenSSL (Linux only): 1.0.2o (was: 1.0.2k; on macOS it was already 1.0.2o)
+    - GeoIP: 1.6.12 (was: 1.6.11)
+    - libcurl: 7.60.0 (was: 7.56.1)
+
  * [Apache] Fixes PassengerMaxInstancesPerApp not being respected (regression from config refactor in 5.2.0). Closes GH-2059.
  * [Enterprise, Apache] Fixes PassengerMaxInstances not being respected (regression from config refactor in 5.2.0).
  * [Enterprise] Fixes passenger-irb being unable to connect to an app process (regression from 5.3.0). Closes GH-2087.
