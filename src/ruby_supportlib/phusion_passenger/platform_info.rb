@@ -283,7 +283,7 @@ module PhusionPassenger
       filename = "#{dir}/#{basename}"
       begin
         File.open(filename, 'w') do |f|
-          f.chmod(0700, filename)
+          f.chmod(0700)
           f.puts("#!/bin/sh")
         end
         if system(filename)
