@@ -1,7 +1,8 @@
 Release 5.3.3 (Not Yet Released)
 -------------
 
-
+ * [Apache, Nginx] Fixes the passenger-install-*-module scripts. (Regression in 5.3.2) Closes GH-2093.
+ * [Nginx] Fixed nginx module building on CentOS 6. Closes GH-2081.
 
 
 Release 5.3.2
