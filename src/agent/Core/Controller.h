@@ -350,6 +350,7 @@ protected:
 		const MemoryKit::mbuf &buffer, int errcode);
 	virtual void onNextRequestEarlyReadError(Client *client, Request *req, int errcode);
 	virtual bool shouldDisconnectClientOnShutdown(Client *client);
+	virtual bool shouldAutoDechunkBody(Client *client, Request *req);
 	virtual bool supportsUpgrade(Client *client, Request *req);
 
 

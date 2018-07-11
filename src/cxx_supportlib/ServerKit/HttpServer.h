@@ -458,8 +458,8 @@ private:
 		}
 	}
 
-	Channel::Result processClientDataWhenParsingChunkedBody(Client *client, Request *req,
-		const MemoryKit::mbuf &buffer, int errcode)
+	Channel::Result processClientDataWhenParsingChunkedBody(
+		Client *client, Request *req, const MemoryKit::mbuf &buffer, int errcode)
 	{
 		if (buffer.size() > 0) {
 			// Data
@@ -480,31 +480,39 @@ private:
 			switch (event.type) {
 			case HttpChunkedEvent::NONE:
 				assert(!event.end);
+				if (!shouldAutoDechunkBody(client, req)) {
+					req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, event.consumed));
+				}
 				return Channel::Result(event.consumed, false);
 			case HttpChunkedEvent::DATA:
 				assert(!event.end);
-				req->bodyChannel.feed(event.data);
-				if (!req->ended()) {
-					if (req->bodyChannel.acceptingInput()) {
-						return Channel::Result(event.consumed, false);
-					} else if (req->bodyChannel.mayAcceptInputLater()) {
-						client->input.stop();
-						req->bodyChannel.consumedCallback = onRequestBodyChannelConsumed;
-						return Channel::Result(event.consumed, false);
-					} else {
-						return Channel::Result(event.consumed, false);
-					}
+				if (shouldAutoDechunkBody(client, req)) {
+					req->bodyChannel.feed(event.data);
 				} else {
-					return Channel::Result(event.consumed, false);
+					req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, event.consumed));
 				}
+				return Channel::Result(event.consumed, false);
 			case HttpChunkedEvent::END:
 				assert(event.end);
 				req->detectingNextRequestEarlyReadError = true;
 				req->aux.bodyInfo.endChunkReached = true;
-				req->bodyChannel.feed(MemoryKit::mbuf());
+				if (shouldAutoDechunkBody(client, req)) {
+					req->bodyChannel.feed(MemoryKit::mbuf());
+				} else {
+					req->bodyChannel.feed(MemoryKit::mbuf(buffer, 0, event.consumed));
+					if (!req->ended()) {
+						if (req->bodyChannel.acceptingInput()) {
+							req->bodyChannel.feed(MemoryKit::mbuf());
+						} else if (req->bodyChannel.mayAcceptInputLater()) {
+							client->input.stop();
+							req->bodyChannel.consumedCallback = onRequestBodyChannelConsumed;
+						}
+					}
+				}
 				return Channel::Result(event.consumed, false);
 			case HttpChunkedEvent::ERROR:
 				assert(event.end);
+				P_ASSERT_EQ(event.consumed, 0);
 				client->input.stop();
 				req->wantKeepAlive = false;
 				req->bodyChannel.feedError(event.errcode);
@@ -901,6 +909,10 @@ protected:
 		} else {
 			return LoggingKit::WARN;
 		}
+	}
+
+	virtual bool shouldAutoDechunkBody(Client *client, Request *req) {
+		return true;
 	}
 
 	virtual void reinitializeClient(Client *client, int fd) {

@@ -241,8 +241,13 @@ namespace tut {
 			return allowUpgrades;
 		}
 
+		virtual bool shouldAutoDechunkBody(MyClient *client, MyRequest *req) {
+			return enableAutoDechunkBody;
+		}
+
 	public:
 		bool allowUpgrades;
+		bool enableAutoDechunkBody;
 
 		vector<MyRequest *> requestsWaitingToStartAcceptingBody;
 		unsigned int bodyBytesRead;
@@ -253,6 +258,7 @@ namespace tut {
 			const Json::Value &initialConfig = Json::Value())
 			: ParentClass(context, schema, initialConfig),
 			  allowUpgrades(true),
+			  enableAutoDechunkBody(true),
 			  bodyBytesRead(0),
 			  halfCloseDetected(0),
 			  clientDataErrors(0)
@@ -848,7 +854,7 @@ namespace tut {
 	}
 
 
-	/***** Chunked body handling *****/
+	/***** Chunked body handling: auto-dechunking on *****/
 
 	TEST_METHOD(30) {
 		set_test_name("Empty body");
@@ -973,13 +979,13 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "2 bytes: hm"));
 		ensure("(3)", !containsSubstring(response, "ok"));
 		EVENTUALLY(5,
-			result = getTotalBytesConsumed() == strlen(
+			result = getTotalBytesConsumed() == P_STATIC_STRING(
 				"GET /body_test HTTP/1.1\r\n"
 				"Connection: close\r\n"
 				"Transfer-Encoding: chunked\r\n\r\n"
 				"2\r\n"
 				"hm\r\n"
-				"0\r\n\r\n");
+				"0\r\n\r\n").size();
 		);
 	}
 
@@ -1029,6 +1035,201 @@ namespace tut {
 		string response = readAll(fd, 1024).first;
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
 		ensure("(2)", containsSubstring(response, "2 bytes: ok"));
+		ensure("(3)", !containsSubstring(response, "!"));
+	}
+
+
+	/***** Chunked body handling: auto-dechunking off *****/
+
+	TEST_METHOD(40) {
+		set_test_name("Empty body");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"0\r\n\r\n");
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
+		ensure("(2)", containsSubstring(response, "5 bytes: 0\r\n\r\n"));
+	}
+
+	TEST_METHOD(41) {
+		set_test_name("Non-empty body in one part");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"2\r\n"
+			"ok\r\n"
+			"0\r\n\r\n");
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
+		ensure("(2)", containsSubstring(response, "12 bytes: 2\r\nok\r\n0\r\n\r\n"));
+	}
+
+	TEST_METHOD(42) {
+		set_test_name("Non-empty body in multiple parts");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequestAndWait(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"2\r\n"
+			"h");
+		ensure(!hasResponseData());
+		sendRequestAndWait("m\r");
+		ensure(!hasResponseData());
+		sendRequestAndWait("\n2\r");
+		ensure(!hasResponseData());
+		sendRequestAndWait("\no");
+		ensure(!hasResponseData());
+		sendRequestAndWait("k");
+		ensure(!hasResponseData());
+		sendRequestAndWait("\r\n3\r\n");
+		ensure(!hasResponseData());
+		sendRequestAndWait("!");
+		ensure(!hasResponseData());
+		sendRequestAndWait("!!\r\n0");
+		ensure(!hasResponseData());
+		sendRequest("\r\n\r\n");
+
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
+		ensure("(2)", containsSubstring(response,
+			"27 bytes: 2\r\nhm\r\n2\r\nok\r\n3\r\n!!!\r\n0\r\n\r\n"));
+	}
+
+	TEST_METHOD(43) {
+		set_test_name("Premature body termination");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequestAndWait(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"7\r\nhmok!");
+		ensure(!hasResponseData());
+		syscalls::shutdown(fd, SHUT_WR);
+
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
+		ensure("(2)", containsSubstring(response,
+			"Request body error: Unexpected end-of-stream\n"
+			"8 bytes: 7\r\nhmok!"));
+	}
+
+	TEST_METHOD(44) {
+		set_test_name("req->bodyChannel is stopped before request body data is received");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_stop_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"3\r\n"
+			"abc\r\n"
+			"0\r\n"
+			"\r\n");
+		EVENTUALLY(5,
+			result = getNumRequestsWaitingToStartAcceptingBody() == 1;
+		);
+		SHOULD_NEVER_HAPPEN(100,
+			result = hasResponseData();
+		);
+
+		startAcceptingBody();
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
+		ensure("(2)", containsSubstring(response, "13 bytes: 3\r\nabc\r\n0\r\n\r\n"));
+	}
+
+	TEST_METHOD(45) {
+		set_test_name("Trailing data after body");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"2\r\n"
+			"hm\r\n"
+			"0\r\n\r\n"
+			"ok");
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
+		ensure("(2)", containsSubstring(response, "12 bytes: 2\r\nhm\r\n0\r\n\r\n"));
+		ensure("(3)", !containsSubstring(response, "ok"));
+		EVENTUALLY(5,
+			result = getTotalBytesConsumed() == P_STATIC_STRING(
+				"GET /body_test HTTP/1.1\r\n"
+				"Connection: close\r\n"
+				"Transfer-Encoding: chunked\r\n\r\n"
+				"2\r\n"
+				"hm\r\n"
+				"0\r\n\r\n").size();
+		);
+	}
+
+	TEST_METHOD(46) {
+		set_test_name("Unterminated final chunk");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequestAndWait(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"7\r\nhmok!!!\r\n0\r\n\r");
+		ensure(!hasResponseData());
+		syscalls::shutdown(fd, SHUT_WR);
+
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
+		ensure("(2)", containsSubstring(response,
+			"Request body error: Unexpected end-of-stream\n"
+			"16 bytes: 7\r\nhmok!!!\r\n0\r\n\r"));
+	}
+
+	TEST_METHOD(47) {
+		set_test_name("Invalid chunk header");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"!");
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
+		ensure("(2)", containsSubstring(response, "0 bytes: "));
+		ensure("(3)", !containsSubstring(response, "!"));
+	}
+
+	TEST_METHOD(48) {
+		set_test_name("Invalid chunk footer");
+
+		server->enableAutoDechunkBody = false;
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			"2\r\nok!");
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
+		ensure("(2)", containsSubstring(response, "5 bytes: 2\r\nok"));
 		ensure("(3)", !containsSubstring(response, "!"));
 	}
 

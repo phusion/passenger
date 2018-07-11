@@ -46,7 +46,7 @@ module PhusionPassenger
       OOBW           = 'OOBW'.freeze
       PASSENGER_CONNECT_PASSWORD  = 'PASSENGER_CONNECT_PASSWORD'.freeze
       CONTENT_LENGTH = 'CONTENT_LENGTH'.freeze
-      TRANSFER_ENCODING = 'TRANSFER_ENCODING'.freeze
+      HTTP_TRANSFER_ENCODING = 'HTTP_TRANSFER_ENCODING'.freeze
 
       MAX_HEADER_SIZE = 128 * 1024
 
@@ -304,7 +304,7 @@ module PhusionPassenger
     # end
 
       def prepare_request(connection, headers)
-        transfer_encoding = headers[TRANSFER_ENCODING]
+        transfer_encoding = headers[HTTP_TRANSFER_ENCODING]
         content_length = headers[CONTENT_LENGTH]
         @can_keepalive = @keepalive_enabled &&
           !transfer_encoding &&

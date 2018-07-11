@@ -167,6 +167,17 @@ namespace tut {
 			*state = controller->serverState;
 		}
 
+		Json::Value inspectStateAsJson() {
+			Json::Value result;
+			bg.safe->runSync(boost::bind(&Core_ControllerTest::_inspectStateAsJson,
+				this, &result));
+			return result;
+		}
+
+		void _inspectStateAsJson(Json::Value *result) {
+			*result = controller->inspectStateAsJson();
+		}
+
 		unsigned long long getTotalBytesConsumed() {
 			unsigned long long result;
 			bg.safe->runSync(boost::bind(&Core_ControllerTest::_getTotalBytesConsumed,
@@ -188,6 +199,14 @@ namespace tut {
 				*peerRequestHeader = readHeader(testSession.getPeerBufferedIO());
 			}
 			return *peerRequestHeader;
+		}
+
+		string readPeerBody() {
+			if (testSession.getProtocol() == "session") {
+				return readAll(testSession.peerFd(), std::numeric_limits<size_t>::max()).first;
+			} else {
+				return testSession.getPeerBufferedIO().readAll();
+			}
 		}
 
 		void sendPeerResponse(const StaticString &data) {
@@ -310,6 +329,215 @@ namespace tut {
 		readPeerRequestHeader();
 		ensure(containsSubstring(peerRequestHeader,
 			"GET /hello?foo=bar HTTP/1.1\r\n"));
+	}
+
+
+	/***** Passing request body to the app *****/
+
+	TEST_METHOD(10) {
+		set_test_name("When body buffering on, Content-Length given:"
+			" it sets Content-Length in the forwarded request,"
+			" and forwards the raw data");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"POST /hello HTTP/1.1\r\n"
+			"!~: \r\n"
+			"!~FLAGS: B\r\n"
+			"!~: \r\n"
+			"Host: localhost\r\n"
+			"Content-Length: 5\r\n"
+			"Connection: close\r\n"
+			"\r\n"
+			"hello");
+		waitUntilSessionInitiated();
+
+		Json::Value state = inspectStateAsJson();
+		Json::Value reqState = state["active_clients"]["1-1"]["current_request"];
+		ensure("Body buffering is on", reqState.isMember("body_bytes_buffered"));
+
+		ensure(containsSubstring(readPeerRequestHeader(),
+			P_STATIC_STRING("CONTENT_LENGTH\0005\000")));
+		ensure_equals(readPeerBody(), "hello");
+	}
+
+	TEST_METHOD(11) {
+		set_test_name("When body buffering on, Transfer-Encoding given:"
+			" it sets Content-Length and removes Transfer-Encoding in the forwarded request,"
+			" and forwards the chunked data");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"POST /hello HTTP/1.1\r\n"
+			"!~: \r\n"
+			"!~FLAGS: B\r\n"
+			"!~: \r\n"
+			"Host: localhost\r\n"
+			"Transfer-Encoding: chunked\r\n"
+			"Connection: close\r\n"
+			"\r\n"
+			"5\r\n"
+			"hello\r\n"
+			"0\r\n\r\n");
+		waitUntilSessionInitiated();
+
+		Json::Value state = inspectStateAsJson();
+		Json::Value reqState = state["active_clients"]["1-1"]["current_request"];
+		ensure("Body buffering is on", reqState.isMember("body_bytes_buffered"));
+
+		string header = readPeerRequestHeader();
+		ensure(containsSubstring(header,
+			P_STATIC_STRING("CONTENT_LENGTH\0005\000")));
+		ensure(!containsSubstring(header,
+			P_STATIC_STRING("TRANSFER_ENCODING")));
+		ensure_equals(readPeerBody(), "hello");
+	}
+
+	TEST_METHOD(12) {
+		set_test_name("When body buffering on, Connection is upgrade:"
+			" it refuses to buffer the request body,"
+			" and forwards the raw data");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"POST /hello HTTP/1.1\r\n"
+			"!~: \r\n"
+			"!~FLAGS: B\r\n"
+			"!~: \r\n"
+			"Host: localhost\r\n"
+			"Connection: upgrade\r\n"
+			"Upgrade: text\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		Json::Value state = inspectStateAsJson();
+		Json::Value reqState = state["active_clients"]["1-1"]["current_request"];
+		ensure("Body buffering is off", !reqState.isMember("body_bytes_buffered"));
+
+		string header = readPeerRequestHeader();
+		ensure(!containsSubstring(header,
+			P_STATIC_STRING("CONTENT_LENGTH")));
+
+		char buf[15];
+		unsigned int size;
+
+		writeExact(clientConnection, "ab");
+		size = readExact(testSession.peerFd(), buf, 2);
+		ensure_equals(size, 2u);
+		ensure_equals(StaticString(buf, 2), "ab");
+
+		writeExact(clientConnection, "cde");
+		size = readExact(testSession.peerFd(), buf, 3);
+		ensure_equals(size, 3u);
+		ensure_equals(StaticString(buf, 3), "cde");
+	}
+
+	TEST_METHOD(13) {
+		set_test_name("When body buffering off, Content-Length given:"
+			" it sets Content-Length in the forwarded request,"
+			" and forwards the raw data");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"POST /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Content-Length: 5\r\n"
+			"Connection: close\r\n"
+			"\r\n"
+			"hello");
+		waitUntilSessionInitiated();
+
+		Json::Value state = inspectStateAsJson();
+		Json::Value reqState = state["active_clients"]["1-1"]["current_request"];
+		ensure("Body buffering is off", !reqState.isMember("body_bytes_buffered"));
+
+		ensure(containsSubstring(readPeerRequestHeader(),
+			P_STATIC_STRING("CONTENT_LENGTH\0005\000")));
+		ensure_equals(readPeerBody(), "hello");
+	}
+
+	TEST_METHOD(14) {
+		set_test_name("When body buffering off, Transfer-Encoding given:"
+			" it forwards the chunked data");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"POST /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Transfer-Encoding: chunked\r\n"
+			"Connection: close\r\n"
+			"\r\n"
+			"5\r\n"
+			"hello\r\n"
+			"0\r\n\r\n");
+		waitUntilSessionInitiated();
+
+		Json::Value state = inspectStateAsJson();
+		Json::Value reqState = state["active_clients"]["1-1"]["current_request"];
+		ensure("Body buffering is off", !reqState.isMember("body_bytes_buffered"));
+
+		string header = readPeerRequestHeader();
+		ensure(!containsSubstring(header,
+			P_STATIC_STRING("CONTENT_LENGTH")));
+		ensure(containsSubstring(header,
+			P_STATIC_STRING("HTTP_TRANSFER_ENCODING\000chunked\000")));
+		ensure_equals(readPeerBody(),
+			"5\r\n"
+			"hello\r\n"
+			"0\r\n\r\n");
+	}
+
+	TEST_METHOD(15) {
+		set_test_name("When body buffering off, Connection is upgrade:"
+			" it forwards the raw data");
+
+		init();
+		useTestSessionObject();
+
+		connectToServer();
+		sendRequest(
+			"POST /hello HTTP/1.1\r\n"
+			"Host: localhost\r\n"
+			"Connection: upgrade\r\n"
+			"Upgrade: text\r\n"
+			"\r\n");
+		waitUntilSessionInitiated();
+
+		Json::Value state = inspectStateAsJson();
+		Json::Value reqState = state["active_clients"]["1-1"]["current_request"];
+		ensure("Body buffering is off", !reqState.isMember("body_bytes_buffered"));
+
+		string header = readPeerRequestHeader();
+		ensure(!containsSubstring(header,
+			P_STATIC_STRING("CONTENT_LENGTH")));
+
+		char buf[15];
+		unsigned int size;
+
+		writeExact(clientConnection, "ab");
+		size = readExact(testSession.peerFd(), buf, 2);
+		ensure_equals(size, 2u);
+		ensure_equals(StaticString(buf, 2), "ab");
+
+		writeExact(clientConnection, "cde");
+		size = readExact(testSession.peerFd(), buf, 3);
+		ensure_equals(size, 3u);
+		ensure_equals(StaticString(buf, 3), "cde");
 	}
 
 

@@ -390,7 +390,7 @@ describe RequestHandler do
       send_binary_request(client,
         "REQUEST_METHOD" => "GET",
         "PATH_INFO" => "/",
-        "TRANSFER_ENCODING" => "chunked")
+        "HTTP_TRANSFER_ENCODING" => "chunked")
       client.write(
         "3\r\n" +
         "abc\r\n" +
@@ -846,7 +846,7 @@ describe RequestHandler do
             "X-Accel-Redirect: /foo\r\n" \
             "Connection: close\r\n\r\n" \
             "ok",
-            
+
             "HTTP/1.1 200 Whatever\r\n" \
             "X-Accel-Redirect: /foo\r\n" \
             "Content-Length: 2\r\n" \

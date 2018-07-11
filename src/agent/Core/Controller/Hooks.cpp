@@ -274,6 +274,17 @@ Controller::shouldDisconnectClientOnShutdown(Client *client) {
 }
 
 bool
+Controller::shouldAutoDechunkBody(Client *client, Request *req) {
+	// When buffering the body, we'll want to buffer the dechunked data,
+	// (and when passing the request to the app we'll also add Content-Length
+	// and remove Transfer-Encoding) so turn auto-dechunking on in that case.
+	//
+	// Otherwise we'll want to disable auto-dechunking because we'll
+	// pass the raw chunked body to the app.
+	return req->requestBodyBuffering;
+}
+
+bool
 Controller::supportsUpgrade(Client *client, Request *req) {
 	return true;
 }

@@ -72,7 +72,7 @@ module Utils
 # "rack.input" of the Rack environment.
 class TeeInput
   CONTENT_LENGTH = "CONTENT_LENGTH".freeze
-  TRANSFER_ENCODING = "TRANSFER_ENCODING".freeze
+  HTTP_TRANSFER_ENCODING = "HTTP_TRANSFER_ENCODING".freeze
   CHUNKED = "chunked".freeze
 
   # The maximum size (in +bytes+) to buffer in memory before
@@ -96,7 +96,7 @@ class TeeInput
   def initialize(socket, env)
     if @len = env[CONTENT_LENGTH]
       @len = @len.to_i
-    elsif env[TRANSFER_ENCODING] != CHUNKED
+    elsif env[HTTP_TRANSFER_ENCODING] != CHUNKED
       @len = 0
     end
     @socket = socket
@@ -174,9 +174,9 @@ class TeeInput
       consume!
       @tmp.pos = pos
     end
-    @tmp.seek(*args) 
+    @tmp.seek(*args)
   end
-  
+
   def rewind
     return 0 if 0 == @tmp.size
     consume! if !socket_drained?

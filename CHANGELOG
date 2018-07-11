@@ -3,6 +3,7 @@ Release 5.3.4 (Not yet released)
 
  * Fixes a crash during startup on FreeBSD 11.2 and recent OpenBSD versions due to C++11 compatibility issues in the code. Closes GH-2097.
  * Updates Boost to version 1.67.0.
+ * [Apache] Fixes the handling of HTTP requests with chunked bodies in combination with `PassengerBufferUploads off`. Closes GH-2102.
 
 
 Release 5.3.3
