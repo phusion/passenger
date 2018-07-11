@@ -49,11 +49,11 @@ class allocator<void, Version, AllocationDisableMask>
    typedef const int &                          const_reference;
    typedef std::size_t                          size_type;
    typedef std::ptrdiff_t                       difference_type;
-   typedef boost::container::container_detail::
+   typedef boost::container::dtl::
       version_type<self_t, Version>             version;
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   typedef boost::container::container_detail::
+   typedef boost::container::dtl::
          basic_multiallocation_chain<void*>        multiallocation_chain;
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
@@ -133,14 +133,14 @@ class allocator
    typedef std::size_t                          size_type;
    typedef std::ptrdiff_t                       difference_type;
 
-   typedef boost::container::container_detail::
+   typedef boost::container::dtl::
       version_type<self_t, Version>                version;
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   typedef boost::container::container_detail::
+   typedef boost::container::dtl::
          basic_multiallocation_chain<void*>        void_multiallocation_chain;
 
-   typedef boost::container::container_detail::
+   typedef boost::container::dtl::
       transform_multiallocation_chain
          <void_multiallocation_chain, T>           multiallocation_chain;
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED

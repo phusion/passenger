@@ -25,7 +25,7 @@ struct parse_match_result
 {
   parse_match_result() :
     match_depth(0),
-    current_match(-1)// -1 is match_not-found value
+    current_match(PARSE_ERROR)
   {}
   typedef std::basic_string<charT> string_type;
   string_type remaining() const
@@ -33,7 +33,7 @@ struct parse_match_result
     if (match_depth == cache.size()) {
       return string_type();
     }
-    if (current_match == -1) {
+    if (current_match == PARSE_ERROR) {
       return cache;
     }
     //some of the cache was used return the rest
@@ -56,7 +56,7 @@ struct parse_match_result
   string_type cache;
   unsigned short match_depth;
   short current_match;
-  enum PARSE_STATE { PARSE_ERROR= -1 };
+  enum PARSE_STATE { PARSE_ERROR = -1 };
 };
 
   //for debug -- really only char streams...
@@ -99,7 +99,8 @@ struct string_parse_tree
    * (Sun=0, Mon=1, ...) were a starting_point of one starts the
    * numbering at one (Jan=1, Feb=2, ...). The default is zero,
    * negative vaules are not allowed */
-  string_parse_tree(collection_type names, unsigned int starting_point=0)
+  string_parse_tree(collection_type names, unsigned int starting_point=0) :
+    m_value(parse_match_result_type::PARSE_ERROR)
   {
     // iterate thru all the elements and build the tree
     unsigned short index = 0;
@@ -113,7 +114,7 @@ struct string_parse_tree
   }
 
 
-  string_parse_tree(short value = -1) :
+  string_parse_tree(short value = parse_match_result_type::PARSE_ERROR) :
     m_value(value)
   {}
   ptree_coll m_next_chars;

@@ -32,6 +32,7 @@ namespace executors
     ~scheduled_thread_pool()
     {
       this->close();
+      _workers.interrupt_all();
       _workers.join_all();
     }
 

@@ -3,7 +3,7 @@
 // ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2005 Voipster / Indrek dot Juhani at voipster dot com
-// Copyright (c) 2005-2017 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2005-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -18,17 +18,13 @@
 
 #include <boost/asio/detail/config.hpp>
 
-#if !defined(BOOST_ASIO_ENABLE_OLD_SSL)
-# include <boost/asio/detail/throw_error.hpp>
-#endif // !defined(BOOST_ASIO_ENABLE_OLD_SSL)
+#include <boost/asio/detail/throw_error.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
 namespace boost {
 namespace asio {
 namespace ssl {
-
-#if !defined(BOOST_ASIO_ENABLE_OLD_SSL)
 
 template <typename VerifyCallback>
 void context::set_verify_callback(VerifyCallback callback)
@@ -39,11 +35,12 @@ void context::set_verify_callback(VerifyCallback callback)
 }
 
 template <typename VerifyCallback>
-boost::system::error_code context::set_verify_callback(
+BOOST_ASIO_SYNC_OP_VOID context::set_verify_callback(
     VerifyCallback callback, boost::system::error_code& ec)
 {
-  return do_set_verify_callback(
+  do_set_verify_callback(
       new detail::verify_callback<VerifyCallback>(callback), ec);
+  BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
 template <typename PasswordCallback>
@@ -55,14 +52,13 @@ void context::set_password_callback(PasswordCallback callback)
 }
 
 template <typename PasswordCallback>
-boost::system::error_code context::set_password_callback(
+BOOST_ASIO_SYNC_OP_VOID context::set_password_callback(
     PasswordCallback callback, boost::system::error_code& ec)
 {
-  return do_set_password_callback(
+  do_set_password_callback(
       new detail::password_callback<PasswordCallback>(callback), ec);
+  BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
-
-#endif // !defined(BOOST_ASIO_ENABLE_OLD_SSL)
 
 } // namespace ssl
 } // namespace asio

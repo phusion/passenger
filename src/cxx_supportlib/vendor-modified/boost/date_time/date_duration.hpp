@@ -52,6 +52,10 @@ namespace date_time {
     {
         return days_;
     }
+    special_values as_special() const
+    {
+        return days_.as_special();
+    }
     bool is_special()const
     {
         return days_.is_special();

@@ -18,7 +18,7 @@
 
 #include <boost/intrusive/link_mode.hpp>
 #include <boost/intrusive/detail/parent_from_member.hpp>
-#include <boost/intrusive/detail/to_raw_pointer.hpp> 
+#include <boost/move/detail/to_raw_pointer.hpp> 
 #include <boost/intrusive/pointer_traits.hpp>
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
@@ -66,13 +66,13 @@ struct member_value_traits
    BOOST_INTRUSIVE_FORCEINLINE static pointer to_value_ptr(const node_ptr &n)
    {
       return pointer_traits<pointer>::pointer_to(*detail::parent_from_member<value_type, node>
-         (boost::intrusive::detail::to_raw_pointer(n), PtrToMember));
+         (boost::movelib::to_raw_pointer(n), PtrToMember));
    }
 
    BOOST_INTRUSIVE_FORCEINLINE static const_pointer to_value_ptr(const const_node_ptr &n)
    {
       return pointer_traits<const_pointer>::pointer_to(*detail::parent_from_member<value_type, node>
-         (boost::intrusive::detail::to_raw_pointer(n), PtrToMember));
+         (boost::movelib::to_raw_pointer(n), PtrToMember));
 
    }
 };

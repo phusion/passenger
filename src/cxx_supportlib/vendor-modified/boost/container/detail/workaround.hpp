@@ -43,12 +43,6 @@
 #  endif
 #endif
 
-#if !defined(BOOST_FALLTHOUGH)
-   #define BOOST_CONTAINER_FALLTHOUGH
-#else
-   #define BOOST_CONTAINER_FALLTHOUGH BOOST_FALLTHOUGH;
-#endif
-
 #if defined(BOOST_MSVC) && (_MSC_VER < 1400)
    #define BOOST_CONTAINER_TEMPLATED_CONVERSION_OPERATOR_BROKEN
 #endif

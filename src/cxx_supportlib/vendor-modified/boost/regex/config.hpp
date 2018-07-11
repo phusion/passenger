@@ -163,7 +163,7 @@
 #  define BOOST_REGEX_NO_LIB
 #endif
 
-#if defined(__GNUC__) && (defined(_WIN32) || defined(__CYGWIN__))
+#if defined(__GNUC__) && !defined(_MSC_VER) && (defined(_WIN32) || defined(__CYGWIN__))
 /* gcc on win32 has problems if you include <windows.h>
    (sporadically generates bad code). */
 #  define BOOST_REGEX_NO_W32

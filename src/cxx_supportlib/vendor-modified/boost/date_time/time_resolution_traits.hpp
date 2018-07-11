@@ -9,7 +9,7 @@
  * $Date$
  */
 
-
+#include <ctime>
 #include <boost/cstdint.hpp>
 #include <boost/date_time/time_defs.hpp>
 #include <boost/date_time/int_adapter.hpp>
@@ -60,6 +60,29 @@ namespace date_time {
     static bool is_adapted() { return true;}
   };
 
+  //
+  // Note about var_type, which is used to define the variable that
+  // stores hours, minutes, and seconds values:
+  //
+  // In Boost 1.65.1 and earlier var_type was boost::int32_t which suffers
+  // the year 2038 problem.  Binary serialization of posix_time uses
+  // 32-bit values, and uses serialization version 0.
+  //
+  // In Boost 1.66.0 the var_type changed to std::time_t, however
+  // binary serialization was not properly versioned, so on platforms
+  // where std::time_t is 32-bits, it remains compatible, however on
+  // platforms where std::time_t is 64-bits, binary serialization ingest
+  // will be incompatible with previous versions.  Furthermore, binary
+  // serialized output from 1.66.0 will not be compatible with future
+  // versions.  Yes, it's a mess.  Static assertions were not present
+  // in the serialization code to protect against this possibility.
+  //
+  // In Boost 1.67.0 the var_type was changed to boost::int64_t, 
+  // ensuring the output size is 64 bits, and the serialization version
+  // was bumped.  Static assertions were added as well, protecting
+  // future changes in this area.
+  //
+
   template<typename frac_sec_type,
            time_resolutions res,
 #if (defined(BOOST_MSVC) && (_MSC_VER < 1300))
@@ -68,7 +91,7 @@ namespace date_time {
            typename frac_sec_type::int_type resolution_adjust,
 #endif
            unsigned short frac_digits,
-           typename var_type = boost::int32_t >
+           typename var_type = boost::int64_t >     // see note above
   class time_resolution_traits {
   public:
     typedef typename frac_sec_type::int_type fractional_seconds_type;
@@ -120,14 +143,14 @@ namespace date_time {
         minutes = absolute_value(minutes);
         seconds = absolute_value(seconds);
         fs = absolute_value(fs);
-        return (((((fractional_seconds_type(hours)*3600)
-                   + (fractional_seconds_type(minutes)*60)
-                   + seconds)*res_adjust()) + fs) * -1);
+        return static_cast<tick_type>(((((fractional_seconds_type(hours)*3600)
+                                       + (fractional_seconds_type(minutes)*60)
+                                       + seconds)*res_adjust()) + fs) * -1);
       }
 
-      return (((fractional_seconds_type(hours)*3600)
-               + (fractional_seconds_type(minutes)*60)
-               + seconds)*res_adjust()) + fs;
+      return static_cast<tick_type>((((fractional_seconds_type(hours)*3600)
+                                    + (fractional_seconds_type(minutes)*60)
+                                    + seconds)*res_adjust()) + fs);
     }
 
   };

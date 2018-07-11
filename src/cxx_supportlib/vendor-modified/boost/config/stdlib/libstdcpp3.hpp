@@ -78,6 +78,7 @@
 #  include <unistd.h>
 #endif
 
+#ifndef __VXWORKS__ // VxWorks uses Dinkum, not GNU STL with GCC 
 #if defined(__GLIBCXX__) || (defined(__GLIBCPP__) && __GLIBCPP__>=20020514) // GCC >= 3.1.0
 #  define BOOST_STD_EXTENSION_NAMESPACE __gnu_cxx
 #  define BOOST_HAS_SLIST
@@ -90,6 +91,7 @@
 #   define BOOST_HASH_SET_HEADER <backward/hash_set>
 #   define BOOST_HASH_MAP_HEADER <backward/hash_map>
 # endif
+#endif
 #endif
 
 //
@@ -141,6 +143,37 @@
 #  define BOOST_LIBSTDCXX_VERSION 40400
 #elif __has_include(<array>)
 #  define BOOST_LIBSTDCXX_VERSION 40300
+#endif
+
+#if (BOOST_LIBSTDCXX_VERSION < 50100)
+// libstdc++ does not define this function as it's deprecated in C++11, but clang still looks for it,
+// defining it here is a terrible cludge, but should get things working:
+extern "C" char *gets (char *__s);
+#endif
+//
+// clang is unable to parse some GCC headers, add those workarounds here:
+//
+#if BOOST_LIBSTDCXX_VERSION < 50000
+#  define BOOST_NO_CXX11_HDR_REGEX
+#endif
+//
+// GCC 4.7.x has no __cxa_thread_atexit which
+// thread_local objects require for cleanup:
+//
+#if BOOST_LIBSTDCXX_VERSION < 40800
+#  define BOOST_NO_CXX11_THREAD_LOCAL
+#endif
+//
+// Early clang versions can handle <chrono>, not exactly sure which versions
+// but certainly up to clang-3.8 and gcc-4.6:
+//
+#if (__clang_major__ < 5)
+#  if BOOST_LIBSTDCXX_VERSION < 40800
+#     define BOOST_NO_CXX11_HDR_FUTURE
+#     define BOOST_NO_CXX11_HDR_MUTEX
+#     define BOOST_NO_CXX11_HDR_CONDITION_VARIABLE
+#     define BOOST_NO_CXX11_HDR_CHRONO
+#  endif
 #endif
 
 //
@@ -216,6 +249,7 @@
 #if (BOOST_LIBSTDCXX_VERSION < 40600) || !defined(BOOST_LIBSTDCXX11)
 #  define BOOST_NO_CXX11_HDR_TYPEINDEX
 #  define BOOST_NO_CXX11_ADDRESSOF
+#  define BOOST_NO_CXX17_ITERATOR_TRAITS
 #endif
 
 //  C++0x features in GCC 4.7.0 and later
@@ -225,6 +259,7 @@
 // so 4.7.0 is the first truly conforming one.
 #  define BOOST_NO_CXX11_HDR_CHRONO
 #  define BOOST_NO_CXX11_ALLOCATOR
+#  define BOOST_NO_CXX11_POINTER_TRAITS
 #endif
 //  C++0x features in GCC 4.8.0 and later
 //

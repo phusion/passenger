@@ -2,7 +2,7 @@
 // ssl/stream.hpp
 // ~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2017 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,36 +17,26 @@
 
 #include <boost/asio/detail/config.hpp>
 
-#if defined(BOOST_ASIO_ENABLE_OLD_SSL)
-# include <boost/asio/ssl/old/stream.hpp>
-#else // defined(BOOST_ASIO_ENABLE_OLD_SSL)
-# include <boost/asio/async_result.hpp>
-# include <boost/asio/detail/buffer_sequence_adapter.hpp>
-# include <boost/asio/detail/handler_type_requirements.hpp>
-# include <boost/asio/detail/noncopyable.hpp>
-# include <boost/asio/detail/type_traits.hpp>
-# include <boost/asio/ssl/context.hpp>
-# include <boost/asio/ssl/detail/buffered_handshake_op.hpp>
-# include <boost/asio/ssl/detail/handshake_op.hpp>
-# include <boost/asio/ssl/detail/io.hpp>
-# include <boost/asio/ssl/detail/read_op.hpp>
-# include <boost/asio/ssl/detail/shutdown_op.hpp>
-# include <boost/asio/ssl/detail/stream_core.hpp>
-# include <boost/asio/ssl/detail/write_op.hpp>
-# include <boost/asio/ssl/stream_base.hpp>
-#endif // defined(BOOST_ASIO_ENABLE_OLD_SSL)
+#include <boost/asio/async_result.hpp>
+#include <boost/asio/detail/buffer_sequence_adapter.hpp>
+#include <boost/asio/detail/handler_type_requirements.hpp>
+#include <boost/asio/detail/noncopyable.hpp>
+#include <boost/asio/detail/type_traits.hpp>
+#include <boost/asio/ssl/context.hpp>
+#include <boost/asio/ssl/detail/buffered_handshake_op.hpp>
+#include <boost/asio/ssl/detail/handshake_op.hpp>
+#include <boost/asio/ssl/detail/io.hpp>
+#include <boost/asio/ssl/detail/read_op.hpp>
+#include <boost/asio/ssl/detail/shutdown_op.hpp>
+#include <boost/asio/ssl/detail/stream_core.hpp>
+#include <boost/asio/ssl/detail/write_op.hpp>
+#include <boost/asio/ssl/stream_base.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
 namespace boost {
 namespace asio {
 namespace ssl {
-
-#if defined(BOOST_ASIO_ENABLE_OLD_SSL)
-
-using boost::asio::ssl::old::stream;
-
-#else // defined(BOOST_ASIO_ENABLE_OLD_SSL)
 
 /// Provides stream-oriented functionality using SSL.
 /**
@@ -62,9 +52,9 @@ using boost::asio::ssl::old::stream;
  * @par Example
  * To use the SSL stream template with an ip::tcp::socket, you would write:
  * @code
- * boost::asio::io_service io_service;
+ * boost::asio::io_context io_context;
  * boost::asio::ssl::context ctx(boost::asio::ssl::context::sslv23);
- * boost::asio::ssl::stream<asio:ip::tcp::socket> sock(io_service, ctx);
+ * boost::asio::ssl::stream<asio:ip::tcp::socket> sock(io_context, ctx);
  * @endcode
  *
  * @par Concepts:
@@ -85,15 +75,16 @@ public:
     SSL* ssl;
   };
 
-  /// (Deprecated: Use native_handle_type.) The underlying implementation type.
-  typedef impl_struct* impl_type;
-
   /// The type of the next layer.
   typedef typename remove_reference<Stream>::type next_layer_type;
 
   /// The type of the lowest layer.
   typedef typename next_layer_type::lowest_layer_type lowest_layer_type;
 
+  /// The type of the executor associated with the object.
+  typedef typename lowest_layer_type::executor_type executor_type;
+
+#if defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
   /// Construct a stream.
   /**
    * This constructor creates a stream and initialises the underlying stream
@@ -104,30 +95,58 @@ public:
    * @param ctx The SSL context to be used for the stream.
    */
   template <typename Arg>
+  stream(Arg&& arg, context& ctx)
+    : next_layer_(BOOST_ASIO_MOVE_CAST(Arg)(arg)),
+      core_(ctx.native_handle(),
+          next_layer_.lowest_layer().get_executor().context())
+  {
+  }
+#else // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
+  template <typename Arg>
   stream(Arg& arg, context& ctx)
     : next_layer_(arg),
-      core_(ctx.native_handle(), next_layer_.lowest_layer().get_io_service())
+      core_(ctx.native_handle(),
+          next_layer_.lowest_layer().get_executor().context())
   {
-    backwards_compatible_impl_.ssl = core_.engine_.native_handle();
   }
+#endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
 
   /// Destructor.
+  /**
+   * @note A @c stream object must not be destroyed while there are pending
+   * asynchronous operations associated with it.
+   */
   ~stream()
   {
   }
 
-  /// Get the io_service associated with the object.
+  /// Get the executor associated with the object.
   /**
-   * This function may be used to obtain the io_service object that the stream
+   * This function may be used to obtain the executor object that the stream
    * uses to dispatch handlers for asynchronous operations.
    *
-   * @return A reference to the io_service object that stream will use to
-   * dispatch handlers. Ownership is not transferred to the caller.
+   * @return A copy of the executor that stream will use to dispatch handlers.
    */
-  boost::asio::io_service& get_io_service()
+  executor_type get_executor() BOOST_ASIO_NOEXCEPT
+  {
+    return next_layer_.lowest_layer().get_executor();
+  }
+
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
+  /// (Deprecated: Use get_executor().) Get the io_context associated with the
+  /// object.
+  boost::asio::io_context& get_io_context()
+  {
+    return next_layer_.lowest_layer().get_io_context();
+  }
+
+  /// (Deprecated: Use get_executor().) Get the io_context associated with the
+  /// object.
+  boost::asio::io_context& get_io_service()
   {
     return next_layer_.lowest_layer().get_io_service();
   }
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
   /// Get the underlying implementation in the native type.
   /**
@@ -140,7 +159,7 @@ public:
    * suitable for passing to functions such as @c SSL_get_verify_result and
    * @c SSL_get_peer_certificate:
    * @code
-   * boost::asio::ssl::stream<asio:ip::tcp::socket> sock(io_service, ctx);
+   * boost::asio::ssl::stream<asio:ip::tcp::socket> sock(io_context, ctx);
    *
    * // ... establish connection and perform handshake ...
    *
@@ -156,18 +175,6 @@ public:
   native_handle_type native_handle()
   {
     return core_.engine_.native_handle();
-  }
-
-  /// (Deprecated: Use native_handle().) Get the underlying implementation in
-  /// the native type.
-  /**
-   * This function may be used to obtain the underlying implementation of the
-   * context. This is intended to allow access to stream functionality that is
-   * not otherwise provided.
-   */
-  impl_type impl()
-  {
-    return &backwards_compatible_impl_;
   }
 
   /// Get a reference to the next layer.
@@ -253,10 +260,11 @@ public:
    *
    * @note Calls @c SSL_set_verify.
    */
-  boost::system::error_code set_verify_mode(
+  BOOST_ASIO_SYNC_OP_VOID set_verify_mode(
       verify_mode v, boost::system::error_code& ec)
   {
-    return core_.engine_.set_verify_mode(v, ec);
+    core_.engine_.set_verify_mode(v, ec);
+    BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   /// Set the peer verification depth.
@@ -290,10 +298,11 @@ public:
    *
    * @note Calls @c SSL_set_verify_depth.
    */
-  boost::system::error_code set_verify_depth(
+  BOOST_ASIO_SYNC_OP_VOID set_verify_depth(
       int depth, boost::system::error_code& ec)
   {
-    return core_.engine_.set_verify_depth(depth, ec);
+    core_.engine_.set_verify_depth(depth, ec);
+    BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   /// Set the callback used to verify peer certificates.
@@ -341,11 +350,12 @@ public:
    * @note Calls @c SSL_set_verify.
    */
   template <typename VerifyCallback>
-  boost::system::error_code set_verify_callback(VerifyCallback callback,
+  BOOST_ASIO_SYNC_OP_VOID set_verify_callback(VerifyCallback callback,
       boost::system::error_code& ec)
   {
-    return core_.engine_.set_verify_callback(
+    core_.engine_.set_verify_callback(
         new detail::verify_callback<VerifyCallback>(callback), ec);
+    BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   /// Perform SSL handshaking.
@@ -375,11 +385,11 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    */
-  boost::system::error_code handshake(handshake_type type,
+  BOOST_ASIO_SYNC_OP_VOID handshake(handshake_type type,
       boost::system::error_code& ec)
   {
     detail::io(next_layer_, core_, detail::handshake_op(type), ec);
-    return ec;
+    BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   /// Perform SSL handshaking.
@@ -415,12 +425,12 @@ public:
    * @param ec Set to indicate what error occurred, if any.
    */
   template <typename ConstBufferSequence>
-  boost::system::error_code handshake(handshake_type type,
+  BOOST_ASIO_SYNC_OP_VOID handshake(handshake_type type,
       const ConstBufferSequence& buffers, boost::system::error_code& ec)
   {
     detail::io(next_layer_, core_,
         detail::buffered_handshake_op<ConstBufferSequence>(type, buffers), ec);
-    return ec;
+    BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   /// Start an asynchronous SSL handshake.
@@ -448,12 +458,11 @@ public:
     // not meet the documented type requirements for a HandshakeHandler.
     BOOST_ASIO_HANDSHAKE_HANDLER_CHECK(HandshakeHandler, handler) type_check;
 
-    boost::asio::detail::async_result_init<
-      HandshakeHandler, void (boost::system::error_code)> init(
-        BOOST_ASIO_MOVE_CAST(HandshakeHandler)(handler));
+    boost::asio::async_completion<HandshakeHandler,
+      void (boost::system::error_code)> init(handler);
 
     detail::async_io(next_layer_, core_,
-        detail::handshake_op(type), init.handler);
+        detail::handshake_op(type), init.completion_handler);
 
     return init.result.get();
   }
@@ -490,13 +499,12 @@ public:
     BOOST_ASIO_BUFFERED_HANDSHAKE_HANDLER_CHECK(
         BufferedHandshakeHandler, handler) type_check;
 
-    boost::asio::detail::async_result_init<BufferedHandshakeHandler,
-      void (boost::system::error_code, std::size_t)> init(
-        BOOST_ASIO_MOVE_CAST(BufferedHandshakeHandler)(handler));
+    boost::asio::async_completion<BufferedHandshakeHandler,
+      void (boost::system::error_code, std::size_t)> init(handler);
 
     detail::async_io(next_layer_, core_,
         detail::buffered_handshake_op<ConstBufferSequence>(type, buffers),
-        init.handler);
+        init.completion_handler);
 
     return init.result.get();
   }
@@ -522,10 +530,10 @@ public:
    *
    * @param ec Set to indicate what error occurred, if any.
    */
-  boost::system::error_code shutdown(boost::system::error_code& ec)
+  BOOST_ASIO_SYNC_OP_VOID shutdown(boost::system::error_code& ec)
   {
     detail::io(next_layer_, core_, detail::shutdown_op(), ec);
-    return ec;
+    BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   /// Asynchronously shut down SSL on the stream.
@@ -549,11 +557,11 @@ public:
     // not meet the documented type requirements for a ShutdownHandler.
     BOOST_ASIO_SHUTDOWN_HANDLER_CHECK(ShutdownHandler, handler) type_check;
 
-    boost::asio::detail::async_result_init<
-      ShutdownHandler, void (boost::system::error_code)> init(
-        BOOST_ASIO_MOVE_CAST(ShutdownHandler)(handler));
+    boost::asio::async_completion<ShutdownHandler,
+      void (boost::system::error_code)> init(handler);
 
-    detail::async_io(next_layer_, core_, detail::shutdown_op(), init.handler);
+    detail::async_io(next_layer_, core_, detail::shutdown_op(),
+        init.completion_handler);
 
     return init.result.get();
   }
@@ -639,12 +647,12 @@ public:
     // not meet the documented type requirements for a WriteHandler.
     BOOST_ASIO_WRITE_HANDLER_CHECK(WriteHandler, handler) type_check;
 
-    boost::asio::detail::async_result_init<
-      WriteHandler, void (boost::system::error_code, std::size_t)> init(
-        BOOST_ASIO_MOVE_CAST(WriteHandler)(handler));
+    boost::asio::async_completion<WriteHandler,
+      void (boost::system::error_code, std::size_t)> init(handler);
 
     detail::async_io(next_layer_, core_,
-        detail::write_op<ConstBufferSequence>(buffers), init.handler);
+        detail::write_op<ConstBufferSequence>(buffers),
+        init.completion_handler);
 
     return init.result.get();
   }
@@ -731,12 +739,12 @@ public:
     // not meet the documented type requirements for a ReadHandler.
     BOOST_ASIO_READ_HANDLER_CHECK(ReadHandler, handler) type_check;
 
-    boost::asio::detail::async_result_init<
-      ReadHandler, void (boost::system::error_code, std::size_t)> init(
-        BOOST_ASIO_MOVE_CAST(ReadHandler)(handler));
+    boost::asio::async_completion<ReadHandler,
+      void (boost::system::error_code, std::size_t)> init(handler);
 
     detail::async_io(next_layer_, core_,
-        detail::read_op<MutableBufferSequence>(buffers), init.handler);
+        detail::read_op<MutableBufferSequence>(buffers),
+        init.completion_handler);
 
     return init.result.get();
   }
@@ -744,10 +752,7 @@ public:
 private:
   Stream next_layer_;
   detail::stream_core core_;
-  impl_struct backwards_compatible_impl_;
 };
-
-#endif // defined(BOOST_ASIO_ENABLE_OLD_SSL)
 
 } // namespace ssl
 } // namespace asio

@@ -438,9 +438,14 @@ namespace boost {
                 functor_manager_operation_type op, mpl::false_)
         {
           typedef functor_wrapper<Functor,Allocator> functor_wrapper_type;
+#if defined(BOOST_NO_CXX11_ALLOCATOR)
           typedef typename Allocator::template rebind<functor_wrapper_type>::other
             wrapper_allocator_type;
           typedef typename wrapper_allocator_type::pointer wrapper_allocator_pointer_type;
+#else
+          using wrapper_allocator_type = typename std::allocator_traits<Allocator>::template rebind_alloc<functor_wrapper_type>;
+          using wrapper_allocator_pointer_type = typename std::allocator_traits<wrapper_allocator_type>::pointer;
+#endif
 
           if (op == clone_functor_tag) {
             // Clone the functor
@@ -450,7 +455,11 @@ namespace boost {
               static_cast<const functor_wrapper_type*>(in_buffer.members.obj_ptr);
             wrapper_allocator_type wrapper_allocator(static_cast<Allocator const &>(*f));
             wrapper_allocator_pointer_type copy = wrapper_allocator.allocate(1);
+#if defined(BOOST_NO_CXX11_ALLOCATOR)
             wrapper_allocator.construct(copy, *f);
+#else
+            std::allocator_traits<wrapper_allocator_type>::construct(wrapper_allocator, copy, *f);
+#endif
 
             // Get back to the original pointer type
             functor_wrapper_type* new_f = static_cast<functor_wrapper_type*>(copy);
@@ -463,7 +472,11 @@ namespace boost {
             functor_wrapper_type* victim =
               static_cast<functor_wrapper_type*>(in_buffer.members.obj_ptr);
             wrapper_allocator_type wrapper_allocator(static_cast<Allocator const &>(*victim));
+#if defined(BOOST_NO_CXX11_ALLOCATOR)
             wrapper_allocator.destroy(victim);
+#else
+            std::allocator_traits<wrapper_allocator_type>::destroy(wrapper_allocator, victim);
+#endif
             wrapper_allocator.deallocate(victim,1);
             out_buffer.members.obj_ptr = 0;
           } else if (op == check_functor_type_tag) {
@@ -689,6 +702,10 @@ public: // should be protected, but GCC 2.95.3 will fail to allow access
   mutable detail::function::function_buffer functor;
 };
 
+#if defined(BOOST_CLANG)
+#   pragma clang diagnostic push
+#   pragma clang diagnostic ignored "-Wweak-vtables"
+#endif
 /**
  * The bad_function_call exception class is thrown when a boost::function
  * object is invoked
@@ -698,6 +715,9 @@ class bad_function_call : public std::runtime_error
 public:
   bad_function_call() : std::runtime_error("call to empty boost::function") {}
 };
+#if defined(BOOST_CLANG)
+#   pragma clang diagnostic pop
+#endif
 
 #ifndef BOOST_NO_SFINAE
 inline bool operator==(const function_base& f,

@@ -55,6 +55,7 @@ struct atomic_flag
 
     BOOST_FORCEINLINE void clear(memory_order order = memory_order_seq_cst) volatile BOOST_NOEXCEPT
     {
+        BOOST_ASSERT(order != memory_order_consume);
         BOOST_ASSERT(order != memory_order_acquire);
         BOOST_ASSERT(order != memory_order_acq_rel);
         operations::clear(m_storage.value, order);

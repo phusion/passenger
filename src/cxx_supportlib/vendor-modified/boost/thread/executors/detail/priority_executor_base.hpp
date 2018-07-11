@@ -57,10 +57,16 @@ namespace detail
       {
         for(;;)
         {
-          work task;
-          queue_op_status st = _workq.wait_pull(task);
-          if (st == queue_op_status::closed) return;
-          task();
+          try {
+            work task;
+            queue_op_status st = _workq.wait_pull(task);
+            if (st == queue_op_status::closed) return;
+            task();
+          }
+          catch (boost::thread_interrupted&)
+          {
+            return;
+          }
         }
       }
       catch (...)

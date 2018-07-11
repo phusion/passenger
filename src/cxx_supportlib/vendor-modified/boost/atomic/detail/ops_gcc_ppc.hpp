@@ -16,10 +16,12 @@
 #ifndef BOOST_ATOMIC_DETAIL_OPS_GCC_PPC_HPP_INCLUDED_
 #define BOOST_ATOMIC_DETAIL_OPS_GCC_PPC_HPP_INCLUDED_
 
+#include <cstddef>
 #include <boost/memory_order.hpp>
 #include <boost/atomic/detail/config.hpp>
 #include <boost/atomic/detail/storage_type.hpp>
 #include <boost/atomic/detail/operations_fwd.hpp>
+#include <boost/atomic/detail/ops_gcc_ppc_common.hpp>
 #include <boost/atomic/capabilities.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
@@ -57,7 +59,9 @@ namespace detail {
     cycles, while "sync" hast a cost of about 50 clock cycles, the small
     penalty to atomic loads more than compensates for this.
 
-    Byte- and halfword-sized atomic values are realized by encoding the
+    Byte- and halfword-sized atomic values are implemented in two ways.
+    When 8 and 16-bit instructions are available (in Power8 and later),
+    they are used. Otherwise operations are realized by encoding the
     value to be represented into a word, performing sign/zero extension
     as appropriate. This means that after add/sub operations the value
     needs fixing up to accurately preserve the wrap-around semantic of
@@ -75,45 +79,15 @@ namespace detail {
     to pose a problem.
 */
 
-// A note about memory_order_consume. Technically, this architecture allows to avoid
-// unnecessary memory barrier after consume load since it supports data dependency ordering.
-// However, some compiler optimizations may break a seemingly valid code relying on data
-// dependency tracking by injecting bogus branches to aid out of order execution.
-// This may happen not only in Boost.Atomic code but also in user's code, which we have no
-// control of. See this thread: http://lists.boost.org/Archives/boost/2014/06/213890.php.
-// For this reason we promote memory_order_consume to memory_order_acquire.
-
-struct gcc_ppc_operations_base
-{
-    static BOOST_CONSTEXPR_OR_CONST bool is_always_lock_free = true;
-
-    static BOOST_FORCEINLINE void fence_before(memory_order order) BOOST_NOEXCEPT
-    {
-#if defined(__powerpc64__) || defined(__PPC64__)
-        if (order == memory_order_seq_cst)
-            __asm__ __volatile__ ("sync" ::: "memory");
-        else if ((order & memory_order_release) != 0)
-            __asm__ __volatile__ ("lwsync" ::: "memory");
-#else
-        if ((order & memory_order_release) != 0)
-            __asm__ __volatile__ ("sync" ::: "memory");
-#endif
-    }
-
-    static BOOST_FORCEINLINE void fence_after(memory_order order) BOOST_NOEXCEPT
-    {
-        if ((order & (memory_order_consume | memory_order_acquire)) != 0)
-            __asm__ __volatile__ ("isync" ::: "memory");
-    }
-};
-
-
 template< bool Signed >
 struct operations< 4u, Signed > :
     public gcc_ppc_operations_base
 {
-    typedef typename make_storage_type< 4u, Signed >::type storage_type;
-    typedef typename make_storage_type< 4u, Signed >::aligned aligned_storage_type;
+    typedef typename make_storage_type< 4u >::type storage_type;
+    typedef typename make_storage_type< 4u >::aligned aligned_storage_type;
+
+    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_size = 4u;
+    static BOOST_CONSTEXPR_OR_CONST bool is_signed = Signed;
 
     static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
@@ -131,7 +105,7 @@ struct operations< 4u, Signed > :
         storage_type v;
         if (order == memory_order_seq_cst)
             __asm__ __volatile__ ("sync" ::: "memory");
-        if ((order & (memory_order_consume | memory_order_acquire)) != 0)
+        if ((static_cast< unsigned int >(order) & (static_cast< unsigned int >(memory_order_consume) | static_cast< unsigned int >(memory_order_acquire))) != 0u)
         {
             __asm__ __volatile__
             (
@@ -229,7 +203,7 @@ struct operations< 4u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -238,7 +212,7 @@ struct operations< 4u, Signed > :
             "add %1,%0,%3\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -248,7 +222,7 @@ struct operations< 4u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -257,7 +231,7 @@ struct operations< 4u, Signed > :
             "sub %1,%0,%3\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -267,7 +241,7 @@ struct operations< 4u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -276,7 +250,7 @@ struct operations< 4u, Signed > :
             "and %1,%0,%3\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -286,7 +260,7 @@ struct operations< 4u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -295,7 +269,7 @@ struct operations< 4u, Signed > :
             "or %1,%0,%3\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -305,7 +279,7 @@ struct operations< 4u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -314,7 +288,7 @@ struct operations< 4u, Signed > :
             "xor %1,%0,%3\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -331,13 +305,239 @@ struct operations< 4u, Signed > :
     {
         store(storage, 0, order);
     }
+};
 
-    static BOOST_FORCEINLINE bool is_lock_free(storage_type const volatile&) BOOST_NOEXCEPT
+#if defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LBARX_STBCX)
+
+template< bool Signed >
+struct operations< 1u, Signed > :
+    public gcc_ppc_operations_base
+{
+    typedef typename make_storage_type< 1u >::type storage_type;
+    typedef typename make_storage_type< 1u >::aligned aligned_storage_type;
+
+    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_size = 1u;
+    static BOOST_CONSTEXPR_OR_CONST bool is_signed = Signed;
+
+    static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        return true;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "stb %1, %0\n\t"
+            : "+m" (storage)
+            : "r" (v)
+        );
+    }
+
+    static BOOST_FORCEINLINE storage_type load(storage_type const volatile& storage, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type v;
+        if (order == memory_order_seq_cst)
+            __asm__ __volatile__ ("sync" ::: "memory");
+        if ((static_cast< unsigned int >(order) & (static_cast< unsigned int >(memory_order_consume) | static_cast< unsigned int >(memory_order_acquire))) != 0u)
+        {
+            __asm__ __volatile__
+            (
+                "lbz %0, %1\n\t"
+                "cmpw %0, %0\n\t"
+                "bne- 1f\n\t"
+                "1:\n\t"
+                "isync\n\t"
+                : "=&r" (v)
+                : "m" (storage)
+                : "cr0", "memory"
+            );
+        }
+        else
+        {
+            __asm__ __volatile__
+            (
+                "lbz %0, %1\n\t"
+                : "=&r" (v)
+                : "m" (storage)
+            );
+        }
+        return v;
+    }
+
+    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lbarx %0,%y1\n\t"
+            "stbcx. %2,%y1\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "+Z" (storage)
+            : "b" (v)
+            : "cr0"
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE bool compare_exchange_weak(
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+    {
+        int success;
+        fence_before(success_order);
+        __asm__ __volatile__
+        (
+            "li %1, 0\n\t"
+            "lbarx %0,%y2\n\t"
+            "cmpw %0, %3\n\t"
+            "bne- 1f\n\t"
+            "stbcx. %4,%y2\n\t"
+            "bne- 1f\n\t"
+            "li %1, 1\n\t"
+            "1:\n\t"
+            : "=&b" (expected), "=&b" (success), "+Z" (storage)
+            : "b" (expected), "b" (desired)
+            : "cr0"
+        );
+        if (success)
+            fence_after(success_order);
+        else
+            fence_after(failure_order);
+        return !!success;
+    }
+
+    static BOOST_FORCEINLINE bool compare_exchange_strong(
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+    {
+        int success;
+        fence_before(success_order);
+        __asm__ __volatile__
+        (
+            "li %1, 0\n\t"
+            "0: lbarx %0,%y2\n\t"
+            "cmpw %0, %3\n\t"
+            "bne- 1f\n\t"
+            "stbcx. %4,%y2\n\t"
+            "bne- 0b\n\t"
+            "li %1, 1\n\t"
+            "1:\n\t"
+            : "=&b" (expected), "=&b" (success), "+Z" (storage)
+            : "b" (expected), "b" (desired)
+            : "cr0"
+        );
+        if (success)
+            fence_after(success_order);
+        else
+            fence_after(failure_order);
+        return !!success;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lbarx %0,%y2\n\t"
+            "add %1,%0,%3\n\t"
+            "stbcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lbarx %0,%y2\n\t"
+            "sub %1,%0,%3\n\t"
+            "stbcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lbarx %0,%y2\n\t"
+            "and %1,%0,%3\n\t"
+            "stbcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lbarx %0,%y2\n\t"
+            "or %1,%0,%3\n\t"
+            "stbcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lbarx %0,%y2\n\t"
+            "xor %1,%0,%3\n\t"
+            "stbcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE bool test_and_set(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    {
+        return !!exchange(storage, (storage_type)1, order);
+    }
+
+    static BOOST_FORCEINLINE void clear(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    {
+        store(storage, 0, order);
     }
 };
 
+#else // defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LBARX_STBCX)
 
 template< >
 struct operations< 1u, false > :
@@ -348,7 +548,7 @@ struct operations< 1u, false > :
 
     static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -358,7 +558,7 @@ struct operations< 1u, false > :
             "rlwinm %1, %1, 0, 0xff\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -368,7 +568,7 @@ struct operations< 1u, false > :
 
     static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -378,7 +578,7 @@ struct operations< 1u, false > :
             "rlwinm %1, %1, 0, 0xff\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -396,7 +596,7 @@ struct operations< 1u, true > :
 
     static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -406,7 +606,7 @@ struct operations< 1u, true > :
             "extsb %1, %1\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -416,7 +616,7 @@ struct operations< 1u, true > :
 
     static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -426,7 +626,7 @@ struct operations< 1u, true > :
             "extsb %1, %1\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -435,6 +635,239 @@ struct operations< 1u, true > :
     }
 };
 
+#endif // defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LBARX_STBCX)
+
+#if defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LHARX_STHCX)
+
+template< bool Signed >
+struct operations< 2u, Signed > :
+    public gcc_ppc_operations_base
+{
+    typedef typename make_storage_type< 2u >::type storage_type;
+    typedef typename make_storage_type< 2u >::aligned aligned_storage_type;
+
+    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_size = 2u;
+    static BOOST_CONSTEXPR_OR_CONST bool is_signed = Signed;
+
+    static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "sth %1, %0\n\t"
+            : "+m" (storage)
+            : "r" (v)
+        );
+    }
+
+    static BOOST_FORCEINLINE storage_type load(storage_type const volatile& storage, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type v;
+        if (order == memory_order_seq_cst)
+            __asm__ __volatile__ ("sync" ::: "memory");
+        if ((static_cast< unsigned int >(order) & (static_cast< unsigned int >(memory_order_consume) | static_cast< unsigned int >(memory_order_acquire))) != 0u)
+        {
+            __asm__ __volatile__
+            (
+                "lhz %0, %1\n\t"
+                "cmpw %0, %0\n\t"
+                "bne- 1f\n\t"
+                "1:\n\t"
+                "isync\n\t"
+                : "=&r" (v)
+                : "m" (storage)
+                : "cr0", "memory"
+            );
+        }
+        else
+        {
+            __asm__ __volatile__
+            (
+                "lhz %0, %1\n\t"
+                : "=&r" (v)
+                : "m" (storage)
+            );
+        }
+        return v;
+    }
+
+    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lharx %0,%y1\n\t"
+            "sthcx. %2,%y1\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "+Z" (storage)
+            : "b" (v)
+            : "cr0"
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE bool compare_exchange_weak(
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+    {
+        int success;
+        fence_before(success_order);
+        __asm__ __volatile__
+        (
+            "li %1, 0\n\t"
+            "lharx %0,%y2\n\t"
+            "cmpw %0, %3\n\t"
+            "bne- 1f\n\t"
+            "sthcx. %4,%y2\n\t"
+            "bne- 1f\n\t"
+            "li %1, 1\n\t"
+            "1:\n\t"
+            : "=&b" (expected), "=&b" (success), "+Z" (storage)
+            : "b" (expected), "b" (desired)
+            : "cr0"
+        );
+        if (success)
+            fence_after(success_order);
+        else
+            fence_after(failure_order);
+        return !!success;
+    }
+
+    static BOOST_FORCEINLINE bool compare_exchange_strong(
+        storage_type volatile& storage, storage_type& expected, storage_type desired, memory_order success_order, memory_order failure_order) BOOST_NOEXCEPT
+    {
+        int success;
+        fence_before(success_order);
+        __asm__ __volatile__
+        (
+            "li %1, 0\n\t"
+            "0: lharx %0,%y2\n\t"
+            "cmpw %0, %3\n\t"
+            "bne- 1f\n\t"
+            "sthcx. %4,%y2\n\t"
+            "bne- 0b\n\t"
+            "li %1, 1\n\t"
+            "1:\n\t"
+            : "=&b" (expected), "=&b" (success), "+Z" (storage)
+            : "b" (expected), "b" (desired)
+            : "cr0"
+        );
+        if (success)
+            fence_after(success_order);
+        else
+            fence_after(failure_order);
+        return !!success;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lharx %0,%y2\n\t"
+            "add %1,%0,%3\n\t"
+            "sthcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lharx %0,%y2\n\t"
+            "sub %1,%0,%3\n\t"
+            "sthcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lharx %0,%y2\n\t"
+            "and %1,%0,%3\n\t"
+            "sthcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lharx %0,%y2\n\t"
+            "or %1,%0,%3\n\t"
+            "sthcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE storage_type fetch_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    {
+        storage_type original, result;
+        fence_before(order);
+        __asm__ __volatile__
+        (
+            "1:\n\t"
+            "lharx %0,%y2\n\t"
+            "xor %1,%0,%3\n\t"
+            "sthcx. %1,%y2\n\t"
+            "bne- 1b\n\t"
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
+            : "b" (v)
+            : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
+        );
+        fence_after(order);
+        return original;
+    }
+
+    static BOOST_FORCEINLINE bool test_and_set(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    {
+        return !!exchange(storage, (storage_type)1, order);
+    }
+
+    static BOOST_FORCEINLINE void clear(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
+    {
+        store(storage, 0, order);
+    }
+};
+
+#else // defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LHARX_STHCX)
 
 template< >
 struct operations< 2u, false > :
@@ -445,7 +878,7 @@ struct operations< 2u, false > :
 
     static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -455,7 +888,7 @@ struct operations< 2u, false > :
             "rlwinm %1, %1, 0, 0xffff\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -465,7 +898,7 @@ struct operations< 2u, false > :
 
     static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -475,7 +908,7 @@ struct operations< 2u, false > :
             "rlwinm %1, %1, 0, 0xffff\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -493,7 +926,7 @@ struct operations< 2u, true > :
 
     static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -503,7 +936,7 @@ struct operations< 2u, true > :
             "extsh %1, %1\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -513,7 +946,7 @@ struct operations< 2u, true > :
 
     static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -523,7 +956,7 @@ struct operations< 2u, true > :
             "extsh %1, %1\n\t"
             "stwcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -532,15 +965,19 @@ struct operations< 2u, true > :
     }
 };
 
+#endif // defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LHARX_STHCX)
 
-#if defined(__powerpc64__) || defined(__PPC64__)
+#if defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LDARX_STDCX)
 
 template< bool Signed >
 struct operations< 8u, Signed > :
     public gcc_ppc_operations_base
 {
-    typedef typename make_storage_type< 8u, Signed >::type storage_type;
-    typedef typename make_storage_type< 8u, Signed >::aligned aligned_storage_type;
+    typedef typename make_storage_type< 8u >::type storage_type;
+    typedef typename make_storage_type< 8u >::aligned aligned_storage_type;
+
+    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_size = 8u;
+    static BOOST_CONSTEXPR_OR_CONST bool is_signed = Signed;
 
     static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
@@ -558,7 +995,7 @@ struct operations< 8u, Signed > :
         storage_type v;
         if (order == memory_order_seq_cst)
             __asm__ __volatile__ ("sync" ::: "memory");
-        if ((order & (memory_order_consume | memory_order_acquire)) != 0)
+        if ((static_cast< unsigned int >(order) & (static_cast< unsigned int >(memory_order_consume) | static_cast< unsigned int >(memory_order_acquire))) != 0u)
         {
             __asm__ __volatile__
             (
@@ -656,7 +1093,7 @@ struct operations< 8u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_add(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -665,7 +1102,7 @@ struct operations< 8u, Signed > :
             "add %1,%0,%3\n\t"
             "stdcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -675,7 +1112,7 @@ struct operations< 8u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_sub(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -684,7 +1121,7 @@ struct operations< 8u, Signed > :
             "sub %1,%0,%3\n\t"
             "stdcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -694,7 +1131,7 @@ struct operations< 8u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_and(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -703,7 +1140,7 @@ struct operations< 8u, Signed > :
             "and %1,%0,%3\n\t"
             "stdcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -713,7 +1150,7 @@ struct operations< 8u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_or(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -722,7 +1159,7 @@ struct operations< 8u, Signed > :
             "or %1,%0,%3\n\t"
             "stdcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -732,7 +1169,7 @@ struct operations< 8u, Signed > :
 
     static BOOST_FORCEINLINE storage_type fetch_xor(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
-        storage_type original, tmp;
+        storage_type original, result;
         fence_before(order);
         __asm__ __volatile__
         (
@@ -741,7 +1178,7 @@ struct operations< 8u, Signed > :
             "xor %1,%0,%3\n\t"
             "stdcx. %1,%y2\n\t"
             "bne- 1b\n\t"
-            : "=&b" (original), "=&b" (tmp), "+Z" (storage)
+            : "=&b" (original), "=&b" (result), "+Z" (storage)
             : "b" (v)
             : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC
         );
@@ -758,32 +1195,23 @@ struct operations< 8u, Signed > :
     {
         store(storage, 0, order);
     }
-
-    static BOOST_FORCEINLINE bool is_lock_free(storage_type const volatile&) BOOST_NOEXCEPT
-    {
-        return true;
-    }
 };
 
-#endif // defined(__powerpc64__) || defined(__PPC64__)
+#endif // defined(BOOST_ATOMIC_DETAIL_PPC_HAS_LDARX_STDCX)
 
 
 BOOST_FORCEINLINE void thread_fence(memory_order order) BOOST_NOEXCEPT
 {
-    switch (order)
+    if (order != memory_order_relaxed)
     {
-    case memory_order_consume:
-    case memory_order_acquire:
-    case memory_order_release:
-    case memory_order_acq_rel:
 #if defined(__powerpc64__) || defined(__PPC64__)
-        __asm__ __volatile__ ("lwsync" ::: "memory");
-        break;
-#endif
-    case memory_order_seq_cst:
+        if (order != memory_order_seq_cst)
+            __asm__ __volatile__ ("lwsync" ::: "memory");
+        else
+            __asm__ __volatile__ ("sync" ::: "memory");
+#else
         __asm__ __volatile__ ("sync" ::: "memory");
-        break;
-    default:;
+#endif
     }
 }
 

@@ -35,15 +35,61 @@
 
 #include <boost/intrusive/detail/minimal_pair_header.hpp>      //pair
 #include <boost/move/utility_core.hpp>
-#include<boost/move/detail/fwd_macros.hpp>
+#include <boost/move/detail/fwd_macros.hpp>
 
 namespace boost {
 namespace tuples {
 
 struct null_type;
 
+template <
+  class T0, class T1, class T2,
+  class T3, class T4, class T5,
+  class T6, class T7, class T8,
+  class T9>
+class tuple;
+
 }  //namespace tuples {
 }  //namespace boost {
+
+namespace boost {
+namespace container {
+namespace pair_impl {
+
+template <class TupleClass>
+struct is_boost_tuple
+{
+   static const bool value = false;
+};
+
+template <
+  class T0, class T1, class T2,
+  class T3, class T4, class T5,
+  class T6, class T7, class T8,
+  class T9>
+struct is_boost_tuple< boost::tuples::tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> >
+{
+   static const bool value = true;
+};
+
+template<class Tuple>
+struct disable_if_boost_tuple
+   : boost::container::dtl::disable_if< is_boost_tuple<Tuple> >
+{};
+
+template<class T>
+struct is_tuple_null
+{
+   static const bool value = false;
+};
+
+template<>
+struct is_tuple_null<boost::tuples::null_type>
+{
+   static const bool value = true;
+};
+
+}}}
 
 #if defined(BOOST_MSVC) && (_CPPLIB_VER == 520)
 //MSVC 2010 tuple marker
@@ -87,7 +133,7 @@ static piecewise_construct_t piecewise_construct = BOOST_CONTAINER_DOC1ST(unspec
 
 ///@cond
 
-namespace container_detail {
+namespace dtl {
 
 struct piecewise_construct_use
 {
@@ -236,7 +282,12 @@ struct pair
             BOOST_MOVE_I_IF(BOOST_MOVE_OR(N,M)) BOOST_MOVE_CLASS##N BOOST_MOVE_I_IF(BOOST_MOVE_AND(N,M)) BOOST_MOVE_CLASSQ##M > \
    pair( piecewise_construct_t\
        , BoostTuple<BOOST_MOVE_TARG##N  BOOST_MOVE_I##N BOOST_MOVE_REPEAT(BOOST_MOVE_SUB(10,N),::boost::tuples::null_type)> p\
-       , BoostTuple<BOOST_MOVE_TARGQ##M BOOST_MOVE_I##M BOOST_MOVE_REPEAT(BOOST_MOVE_SUB(10,M),::boost::tuples::null_type)> q)\
+       , BoostTuple<BOOST_MOVE_TARGQ##M BOOST_MOVE_I##M BOOST_MOVE_REPEAT(BOOST_MOVE_SUB(10,M),::boost::tuples::null_type)> q\
+       , typename dtl::enable_if_c\
+         < pair_impl::is_boost_tuple< BoostTuple<BOOST_MOVE_TARG##N  BOOST_MOVE_I##N BOOST_MOVE_REPEAT(BOOST_MOVE_SUB(10,N),::boost::tuples::null_type)> >::value &&\
+           !(pair_impl::is_tuple_null<BOOST_MOVE_LAST_TARG##N>::value || pair_impl::is_tuple_null<BOOST_MOVE_LAST_TARGQ##M>::value) \
+         >::type* = 0\
+       )\
       : first(BOOST_MOVE_TMPL_GET##N), second(BOOST_MOVE_TMPL_GETQ##M)\
    { (void)p; (void)q; }\
    //
@@ -254,7 +305,8 @@ struct pair
       {  (void) t1; (void)t2; }
 
       public:
-      template<template<class ...> class Tuple, class... Args1, class... Args2>
+      template< template<class ...> class Tuple, class... Args1, class... Args2
+              , class = typename pair_impl::disable_if_boost_tuple< Tuple<Args1...> >::type>
       pair(piecewise_construct_t, Tuple<Args1...> t1, Tuple<Args2...> t2)
          : pair(t1, t2, typename build_number_seq<sizeof...(Args1)>::type(), typename build_number_seq<sizeof...(Args2)>::type())
       {}
@@ -270,7 +322,8 @@ struct pair
       {  (void)t; return T(::boost::forward<Args>(get<Indexes>(t))...);  }
 
       public:
-      template<template<class ...> class Tuple, class... Args1, class... Args2>
+      template< template<class ...> class Tuple, class... Args1, class... Args2
+              , class = typename pair_impl::disable_if_boost_tuple< Tuple<Args1...> >::type>
       pair(piecewise_construct_t, Tuple<Args1...> t1, Tuple<Args2...> t2)
          : first  (build_from_args<first_type> (::boost::move(t1)))
          , second (build_from_args<second_type>(::boost::move(t2)))
@@ -328,10 +381,10 @@ struct pair
    }
 
    template <class D, class S>
-   typename ::boost::container::container_detail::disable_if_or
+   typename ::boost::container::dtl::disable_if_or
       < pair &
-      , ::boost::container::container_detail::is_same<T1, D>
-      , ::boost::container::container_detail::is_same<T2, S>
+      , ::boost::container::dtl::is_same<T1, D>
+      , ::boost::container::dtl::is_same<T2, S>
       >::type
       operator=(const pair<D, S>&p)
    {
@@ -341,10 +394,10 @@ struct pair
    }
 
    template <class D, class S>
-   typename ::boost::container::container_detail::disable_if_or
+   typename ::boost::container::dtl::disable_if_or
       < pair &
-      , ::boost::container::container_detail::is_same<T1, D>
-      , ::boost::container::container_detail::is_same<T2, S>
+      , ::boost::container::dtl::is_same<T1, D>
+      , ::boost::container::dtl::is_same<T2, S>
       >::type
       operator=(BOOST_RV_REF_BEG pair<D, S> BOOST_RV_REF_END p)
    {
@@ -425,13 +478,13 @@ template <class T1, class T2>
 inline void swap(pair<T1, T2>& x, pair<T1, T2>& y)
 {  x.swap(y);  }
 
-}  //namespace container_detail {
+}  //namespace dtl {
 }  //namespace container {
 
 #ifdef BOOST_NO_CXX11_RVALUE_REFERENCES
 
 template<class T1, class T2>
-struct has_move_emulation_enabled< ::boost::container::container_detail::pair<T1, T2> >
+struct has_move_emulation_enabled< ::boost::container::dtl::pair<T1, T2> >
 {
    static const bool value = true;
 };
@@ -444,7 +497,7 @@ template<class T>
 struct is_class_or_union;
 
 template <class T1, class T2>
-struct is_class_or_union< ::boost::container::container_detail::pair<T1, T2> >
+struct is_class_or_union< ::boost::container::dtl::pair<T1, T2> >
 //This specialization is needed to avoid instantiation of pair in
 //is_class, and allow recursive maps.
 {
@@ -463,7 +516,7 @@ template<class T>
 struct is_union;
 
 template <class T1, class T2>
-struct is_union< ::boost::container::container_detail::pair<T1, T2> >
+struct is_union< ::boost::container::dtl::pair<T1, T2> >
 //This specialization is needed to avoid instantiation of pair in
 //is_class, and allow recursive maps.
 {
@@ -482,7 +535,7 @@ template<class T>
 struct is_class;
 
 template <class T1, class T2>
-struct is_class< ::boost::container::container_detail::pair<T1, T2> >
+struct is_class< ::boost::container::dtl::pair<T1, T2> >
 //This specialization is needed to avoid instantiation of pair in
 //is_class, and allow recursive maps.
 {

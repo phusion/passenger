@@ -2,7 +2,7 @@
 // ssl/detail/io.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2017 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,11 +17,9 @@
 
 #include <boost/asio/detail/config.hpp>
 
-#if !defined(BOOST_ASIO_ENABLE_OLD_SSL)
-# include <boost/asio/ssl/detail/engine.hpp>
-# include <boost/asio/ssl/detail/stream_core.hpp>
-# include <boost/asio/write.hpp>
-#endif // !defined(BOOST_ASIO_ENABLE_OLD_SSL)
+#include <boost/asio/ssl/detail/engine.hpp>
+#include <boost/asio/ssl/detail/stream_core.hpp>
+#include <boost/asio/write.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
@@ -29,8 +27,6 @@ namespace boost {
 namespace asio {
 namespace ssl {
 namespace detail {
-
-#if !defined(BOOST_ASIO_ENABLE_OLD_SSL)
 
 template <typename Stream, typename Operation>
 std::size_t io(Stream& next_layer, stream_core& core,
@@ -43,7 +39,7 @@ std::size_t io(Stream& next_layer, stream_core& core,
 
     // If the input buffer is empty then we need to read some more data from
     // the underlying transport.
-    if (boost::asio::buffer_size(core.input_) == 0)
+    if (core.input_.size() == 0)
       core.input_ = boost::asio::buffer(core.input_buffer_,
           next_layer.read_some(core.input_buffer_, ec));
 
@@ -119,7 +115,7 @@ public:
   io_op(io_op&& other)
     : next_layer_(other.next_layer_),
       core_(other.core_),
-      op_(other.op_),
+      op_(BOOST_ASIO_MOVE_CAST(Operation)(other.op_)),
       start_(other.start_),
       want_(other.want_),
       ec_(other.ec_),
@@ -143,7 +139,7 @@ public:
 
           // If the input buffer already has data in it we can pass it to the
           // engine and then retry the operation immediately.
-          if (boost::asio::buffer_size(core_.input_) != 0)
+          if (core_.input_.size() != 0)
           {
             core_.input_ = core_.engine_.put_input(core_.input_);
             continue;
@@ -153,7 +149,7 @@ public:
           // cannot allow more than one read operation at a time on the
           // underlying transport. The pending_read_ timer's expiry is set to
           // pos_infin if a read is in progress, and neg_infin otherwise.
-          if (core_.pending_read_.expires_at() == core_.neg_infin())
+          if (core_.expiry(core_.pending_read_) == core_.neg_infin())
           {
             // Prevent other read operations from being started.
             core_.pending_read_.expires_at(core_.pos_infin());
@@ -180,7 +176,7 @@ public:
           // cannot allow more than one write operation at a time on the
           // underlying transport. The pending_write_ timer's expiry is set to
           // pos_infin if a write is in progress, and neg_infin otherwise.
-          if (core_.pending_write_.expires_at() == core_.neg_infin())
+          if (core_.expiry(core_.pending_write_) == core_.neg_infin())
           {
             // Prevent other write operations from being started.
             core_.pending_write_.expires_at(core_.pos_infin());
@@ -206,7 +202,7 @@ public:
           // have to keep in mind that this function might be being called from
           // the async operation's initiating function. In this case we're not
           // allowed to call the handler directly. Instead, issue a zero-sized
-          // read so the handler runs "as-if" posted using io_service::post().
+          // read so the handler runs "as-if" posted using io_context::post().
           if (start)
           {
             next_layer_.async_read_some(
@@ -288,7 +284,7 @@ public:
   Handler handler_;
 };
 
-template <typename Stream, typename Operation,  typename Handler>
+template <typename Stream, typename Operation, typename Handler>
 inline void* asio_handler_allocate(std::size_t size,
     io_op<Stream, Operation, Handler>* this_handler)
 {
@@ -339,10 +335,37 @@ inline void async_io(Stream& next_layer, stream_core& core,
       boost::system::error_code(), 0, 1);
 }
 
-#endif // !defined(BOOST_ASIO_ENABLE_OLD_SSL)
-
 } // namespace detail
 } // namespace ssl
+
+template <typename Stream, typename Operation,
+    typename Handler, typename Allocator>
+struct associated_allocator<
+    ssl::detail::io_op<Stream, Operation, Handler>, Allocator>
+{
+  typedef typename associated_allocator<Handler, Allocator>::type type;
+
+  static type get(const ssl::detail::io_op<Stream, Operation, Handler>& h,
+      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+  {
+    return associated_allocator<Handler, Allocator>::get(h.handler_, a);
+  }
+};
+
+template <typename Stream, typename Operation,
+    typename Handler, typename Executor>
+struct associated_executor<
+    ssl::detail::io_op<Stream, Operation, Handler>, Executor>
+{
+  typedef typename associated_executor<Handler, Executor>::type type;
+
+  static type get(const ssl::detail::io_op<Stream, Operation, Handler>& h,
+      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+  {
+    return associated_executor<Handler, Executor>::get(h.handler_, ex);
+  }
+};
+
 } // namespace asio
 } // namespace boost
 

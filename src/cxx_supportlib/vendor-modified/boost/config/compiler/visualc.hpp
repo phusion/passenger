@@ -107,7 +107,7 @@
 //
 // TR1 features:
 //
-#if _MSC_VER >= 1700
+#if (_MSC_VER >= 1700) && defined(_HAS_CXX17) && (_HAS_CXX17 > 0)
 // # define BOOST_HAS_TR1_HASH			// don't know if this is true yet.
 // # define BOOST_HAS_TR1_TYPE_TRAITS	// don't know if this is true yet.
 # define BOOST_HAS_TR1_UNORDERED_MAP
@@ -167,6 +167,7 @@
 //
 #if (_MSC_FULL_VER < 190023026)
 #  define BOOST_NO_CXX11_NOEXCEPT
+#  define BOOST_NO_CXX11_DEFAULTED_MOVES
 #  define BOOST_NO_CXX11_REF_QUALIFIERS
 #  define BOOST_NO_CXX11_USER_DEFINED_LITERALS
 #  define BOOST_NO_CXX11_ALIGNAS
@@ -194,7 +195,12 @@
 //
 #if (_MSC_VER < 1910)
 #  define BOOST_NO_CXX14_AGGREGATE_NSDMI
-#  define BOOST_NO_CXX14_CONSTEXPR
+#endif
+
+// C++17 features supported by VC++ 14.1 (Visual Studio 2017) Update 3
+//
+#if (_MSC_VER < 1911) || (_MSVC_LANG < 201703)
+#  define BOOST_NO_CXX17_STRUCTURED_BINDINGS
 #endif
 
 // MSVC including version 14 has not yet completely
@@ -212,12 +218,29 @@
 // https://connect.microsoft.com/VisualStudio/feedback/details/1582233/c-subobjects-still-not-value-initialized-correctly
 // See also: http://www.boost.org/libs/utility/value_init.htm#compiler_issues
 // (Niels Dekker, LKEB, May 2010)
+// Still present in VC15.5, Dec 2017.
 #define BOOST_NO_COMPLETE_VALUE_INITIALIZATION
 //
 // C++ 11:
 //
-#define BOOST_NO_TWO_PHASE_NAME_LOOKUP
+// This is supported with /permissive- for 15.5 onwards, unfortunately we appear to have no way to tell
+// if this is in effect or not, in any case nothing in Boost is currently using this, so we'll just go
+// on defining it for now:
+//
+#  define BOOST_NO_TWO_PHASE_NAME_LOOKUP
+
+#if (_MSC_VER < 1912) || (_MSVC_LANG < 201402)
+// Supported from msvc-15.5 onwards:
 #define BOOST_NO_CXX11_SFINAE_EXPR
+#endif
+// C++ 14:
+// Still gives internal compiler error for msvc-15.5:
+#  define BOOST_NO_CXX14_CONSTEXPR
+// C++ 17:
+#if (_MSC_VER < 1912) || (_MSVC_LANG < 201703)
+#define BOOST_NO_CXX17_INLINE_VARIABLES
+#define BOOST_NO_CXX17_FOLD_EXPRESSIONS
+#endif
 
 //
 // Things that don't work in clr mode:
@@ -284,7 +307,7 @@
 #      endif
 #   endif
 # else
-#   if _MSC_VER < 1310
+#   if _MSC_VER < 1200
       // Note: Versions up to 7.0 aren't supported.
 #     define BOOST_COMPILER_VERSION 5.0
 #   elif _MSC_VER < 1300
@@ -315,12 +338,17 @@
 #  define BOOST_COMPILER "Microsoft Visual C++ version " BOOST_STRINGIZE(BOOST_COMPILER_VERSION)
 #endif
 
+#include <boost/config/pragma_message.hpp>
+
 //
-// last known and checked version is 19.10.25017 (VC++ 2017):
-#if (_MSC_VER > 1910)
+// last known and checked version is 19.12.25830.2 (VC++ 2017.3):
+#if (_MSC_VER > 1912)
 #  if defined(BOOST_ASSERT_CONFIG)
-#     error "Unknown compiler version - please run the configure tests and report the results"
-#  else
-#     pragma message("Unknown compiler version - please run the configure tests and report the results")
+#     error "Boost.Config is older than your current compiler version."
+#  elif !defined(BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE)
+      //
+      // Disabled as of March 2018 - the pace of VS releases is hard to keep up with
+      // and in any case, we have relatively few defect macros defined now.
+      // BOOST_PRAGMA_MESSAGE("Info: Boost.Config is older than your compiler version - probably nothing bad will happen - but you may wish to look for an updated Boost version. Define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE to suppress this message.")
 #  endif
 #endif

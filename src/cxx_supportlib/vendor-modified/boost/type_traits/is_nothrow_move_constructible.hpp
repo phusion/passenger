@@ -16,18 +16,23 @@
 #include <boost/type_traits/intrinsics.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 #include <boost/detail/workaround.hpp>
+#include <boost/type_traits/is_complete.hpp>
+#include <boost/static_assert.hpp>
 
 #ifdef BOOST_IS_NOTHROW_MOVE_CONSTRUCT
 
 namespace boost {
 
 template <class T>
-struct is_nothrow_move_constructible : public integral_constant<bool, BOOST_IS_NOTHROW_MOVE_CONSTRUCT(T)>{};
+struct is_nothrow_move_constructible : public integral_constant<bool, BOOST_IS_NOTHROW_MOVE_CONSTRUCT(T)>
+{
+   BOOST_STATIC_ASSERT_MSG(boost::is_complete<T>::value, "Arguments to is_nothrow_move_constructible must be complete types");
+};
 
 template <class T> struct is_nothrow_move_constructible<volatile T> : public ::boost::false_type {};
 template <class T> struct is_nothrow_move_constructible<const volatile T> : public ::boost::false_type{};
 
-#elif !defined(BOOST_NO_CXX11_NOEXCEPT) && !defined(BOOST_NO_SFINAE_EXPR) && !BOOST_WORKAROUND(BOOST_GCC_VERSION, < 40800)
+#elif !defined(BOOST_NO_CXX11_NOEXCEPT) && !defined(BOOST_NO_SFINAE_EXPR) && !BOOST_WORKAROUND(BOOST_GCC_VERSION, < 40700)
 
 #include <boost/type_traits/declval.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -47,7 +52,10 @@ struct false_or_cpp11_noexcept_move_constructible <
 }
 
 template <class T> struct is_nothrow_move_constructible
-   : public integral_constant<bool, ::boost::detail::false_or_cpp11_noexcept_move_constructible<T>::value>{};
+   : public integral_constant<bool, ::boost::detail::false_or_cpp11_noexcept_move_constructible<T>::value>
+{
+   BOOST_STATIC_ASSERT_MSG(boost::is_complete<T>::value, "Arguments to is_nothrow_move_constructible must be complete types");
+};
 
 template <class T> struct is_nothrow_move_constructible<volatile T> : public ::boost::false_type {};
 template <class T> struct is_nothrow_move_constructible<const volatile T> : public ::boost::false_type{};
@@ -66,7 +74,9 @@ template <class T>
 struct is_nothrow_move_constructible
    : public integral_constant<bool,
    (::boost::has_trivial_move_constructor<T>::value || ::boost::has_nothrow_copy<T>::value) && !::boost::is_array<T>::value>
-{};
+{
+   BOOST_STATIC_ASSERT_MSG(boost::is_complete<T>::value, "Arguments to is_nothrow_move_constructible must be complete types");
+};
 
 #endif
 

@@ -30,7 +30,7 @@
 
 namespace boost {
 namespace container {
-namespace container_detail {
+namespace dtl {
 
 using boost::move_detail::integral_constant;
 using boost::move_detail::true_type;
@@ -76,7 +76,7 @@ struct select1st
    {  return const_cast<type&>(x.first);   }
 };
 
-}  //namespace container_detail {
+}  //namespace dtl {
 }  //namespace container {
 }  //namespace boost {
 

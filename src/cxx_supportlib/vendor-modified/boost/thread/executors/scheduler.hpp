@@ -16,6 +16,11 @@
 
 #include <boost/config/abi_prefix.hpp>
 
+#if defined(BOOST_MSVC)
+# pragma warning(push)
+# pragma warning(disable: 4355) // 'this' : used in base member initializer list
+#endif
+
 namespace boost
 {
   namespace executors
@@ -231,6 +236,7 @@ namespace boost
       ~scheduler()
       {
         this->close();
+        thr.interrupt();
         thr.join();
       }
       template <class Ex>
@@ -265,6 +271,10 @@ namespace boost
   using executors::at_executor;
   using executors::scheduler;
 }
+
+#if defined(BOOST_MSVC)
+# pragma warning(pop)
+#endif
 
 #include <boost/config/abi_suffix.hpp>
 

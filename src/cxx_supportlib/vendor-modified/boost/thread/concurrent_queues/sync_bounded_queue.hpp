@@ -127,7 +127,7 @@ namespace concurrent
     inline size_type size(lock_guard<mutex>& lk) const BOOST_NOEXCEPT
     {
       if (full(lk)) return capacity(lk);
-      return ((out_+capacity(lk)-in_) % capacity(lk));
+      return ((in_+capacity(lk)-out_) % capacity(lk));
     }
 
     inline void throw_if_closed(unique_lock<mutex>&);
@@ -484,7 +484,9 @@ namespace concurrent
   queue_op_status sync_bounded_queue<ValueType>::wait_pull_front(ValueType& elem, unique_lock<mutex>& lk)
   {
       if (empty(lk) && closed(lk)) {return queue_op_status::closed;}
-      wait_until_not_empty(lk);
+      bool is_closed = false;
+      wait_until_not_empty(lk, is_closed);
+      if (is_closed) {return queue_op_status::closed;}
       pull_front(elem, lk);
       return queue_op_status::success;
   }

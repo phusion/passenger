@@ -13,7 +13,7 @@
 #include <boost/config.hpp>
 #endif
 #include <boost/version.hpp>
-#include <boost/detail/workaround.hpp>
+#include <boost/config/workaround.hpp>
 
 //
 // whenever we have a conversion function with ellipses
@@ -66,6 +66,17 @@
 //
 #define BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION(x)
 #define BOOST_TT_BROKEN_COMPILER_SPEC(x)
+
+//
+// Can we implement "accurate" binary operator detection:
+//
+#if !defined(BOOST_NO_SFINAE_EXPR) && !defined(BOOST_NO_CXX11_DECLTYPE) && !BOOST_WORKAROUND(BOOST_MSVC, < 1900) && !BOOST_WORKAROUND(BOOST_GCC, < 40900)
+#  define BOOST_TT_HAS_ACCURATE_BINARY_OPERATOR_DETECTION
+#endif
+
+#if defined(__clang__) && (__clang_major__ == 3) && (__clang_minor__ < 2) && defined(BOOST_TT_HAS_ACCURATE_BINARY_OPERATOR_DETECTION)
+#undef BOOST_TT_HAS_ACCURATE_BINARY_OPERATOR_DETECTION
+#endif
 
 #endif // BOOST_TT_CONFIG_HPP_INCLUDED
 

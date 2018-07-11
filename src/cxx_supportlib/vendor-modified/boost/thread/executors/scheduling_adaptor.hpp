@@ -10,27 +10,33 @@
 
 #include <boost/thread/executors/detail/scheduled_executor_base.hpp>
 
+#if defined(BOOST_MSVC)
+# pragma warning(push)
+# pragma warning(disable: 4355) // 'this' : used in base member initializer list
+#endif
+
 namespace boost
 {
 namespace executors
 {
 
   template <typename Executor>
-  class scheduling_adpator : public detail::scheduled_executor_base<>
+  class scheduling_adaptor : public detail::scheduled_executor_base<>
   {
   private:
     Executor& _exec;
     thread _scheduler;
   public:
 
-    scheduling_adpator(Executor& ex)
+    scheduling_adaptor(Executor& ex)
       : super(),
         _exec(ex),
         _scheduler(&super::loop, this) {}
 
-    ~scheduling_adpator()
+    ~scheduling_adaptor()
     {
       this->close();
+      _scheduler.interrupt();
       _scheduler.join();
     }
 
@@ -45,7 +51,12 @@ namespace executors
 
 } //end executors
 
-  using executors::scheduling_adpator;
+  using executors::scheduling_adaptor;
 
 } //end boost
+
+#if defined(BOOST_MSVC)
+# pragma warning(pop)
+#endif
+
 #endif

@@ -92,7 +92,7 @@ struct integer_alias_table {
         return _alias_table == other._alias_table &&
             _average == other._average && _excess == other._excess;
     }
-    static WeightType normalize(WeightType val, WeightType average)
+    static WeightType normalize(WeightType val, WeightType /* average */)
     {
         return val;
     }
@@ -183,7 +183,7 @@ struct real_alias_table {
     {
         return true;
     }
-    static WeightType try_get_sum(const std::vector<WeightType>& weights)
+    static WeightType try_get_sum(const std::vector<WeightType>& /* weights */)
     {
         return static_cast<WeightType>(1);
     }

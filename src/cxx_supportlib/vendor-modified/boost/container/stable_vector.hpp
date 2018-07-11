@@ -44,7 +44,7 @@
 #include <boost/container/detail/iterator.hpp>
 #include <boost/container/detail/iterators.hpp>
 #include <boost/container/detail/placement_new.hpp>
-#include <boost/container/detail/to_raw_pointer.hpp>
+#include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/container/detail/type_traits.hpp>
 // intrusive
 #include <boost/intrusive/pointer_traits.hpp>
@@ -245,7 +245,7 @@ class stable_vector_iterator
    typedef std::random_access_iterator_tag                                          iterator_category;
    typedef typename non_const_ptr_traits::element_type                              value_type;
    typedef typename non_const_ptr_traits::difference_type                           difference_type;
-   typedef typename ::boost::container::container_detail::if_c
+   typedef typename ::boost::container::dtl::if_c
       < IsConst
       , typename non_const_ptr_traits::template
          rebind_pointer<const value_type>::type
@@ -464,14 +464,14 @@ class stable_vector
    typedef typename node_ptr_traits::reference        node_reference;
    typedef typename const_node_ptr_traits::reference  const_node_reference;
 
-   typedef ::boost::container::container_detail::integral_constant
-      <unsigned, boost::container::container_detail::
+   typedef ::boost::container::dtl::integral_constant
+      <unsigned, boost::container::dtl::
       version<Allocator>::value>                              alloc_version;
    typedef typename allocator_traits_type::
       template portable_rebind_alloc
          <node_type>::type                            node_allocator_type;
 
-   typedef ::boost::container::container_detail::
+   typedef ::boost::container::dtl::
       allocator_version_traits<node_allocator_type>                    allocator_version_traits_t;
    typedef typename allocator_version_traits_t::multiallocation_chain  multiallocation_chain;
 
@@ -540,7 +540,7 @@ class stable_vector
    //! <b>Throws</b>: If allocator_type's default constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   stable_vector() BOOST_NOEXCEPT_IF(container_detail::is_nothrow_default_constructible<Allocator>::value)
+   stable_vector() BOOST_NOEXCEPT_IF(dtl::is_nothrow_default_constructible<Allocator>::value)
       : internal_data(), index()
    {
       STABLE_VECTOR_CHECK_INVARIANT;
@@ -765,14 +765,14 @@ class stable_vector
       if (&x != this){
          node_allocator_type &this_alloc     = this->priv_node_alloc();
          const node_allocator_type &x_alloc  = x.priv_node_alloc();
-         container_detail::bool_<allocator_traits_type::
+         dtl::bool_<allocator_traits_type::
             propagate_on_container_copy_assignment::value> flag;
          if(flag && this_alloc != x_alloc){
             this->clear();
             this->shrink_to_fit();
          }
-         container_detail::assign_alloc(this->priv_node_alloc(), x.priv_node_alloc(), flag);
-         container_detail::assign_alloc(this->index.get_stored_allocator(), x.index.get_stored_allocator(), flag);
+         dtl::assign_alloc(this->priv_node_alloc(), x.priv_node_alloc(), flag);
+         dtl::assign_alloc(this->index.get_stored_allocator(), x.index.get_stored_allocator(), flag);
          this->assign(x.begin(), x.end());
       }
       return *this;
@@ -799,7 +799,7 @@ class stable_vector
       node_allocator_type &x_alloc    = x.priv_node_alloc();
       const bool propagate_alloc = allocator_traits_type::
             propagate_on_container_move_assignment::value;
-      container_detail::bool_<propagate_alloc> flag;
+      dtl::bool_<propagate_alloc> flag;
       const bool allocators_equal = this_alloc == x_alloc; (void)allocators_equal;
       //Resources can be transferred if both allocators are
       //going to be equal after this function (either propagated or already equal)
@@ -808,7 +808,7 @@ class stable_vector
          //Destroy objects but retain memory in case x reuses it in the future
          this->clear();
          //Move allocator if needed
-         container_detail::move_alloc(this_alloc, x_alloc, flag);
+         dtl::move_alloc(this_alloc, x_alloc, flag);
          //Take resources
          this->index.swap(x.index);
          this->priv_swap_members(x);
@@ -852,7 +852,7 @@ class stable_vector
    //! <b>Complexity</b>: Linear to n.
    template<typename InputIterator>
    #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
-   typename container_detail::disable_if_convertible<InputIterator, size_type>::type
+   typename dtl::disable_if_convertible<InputIterator, size_type>::type
    #else
    void
    #endif
@@ -1537,10 +1537,10 @@ class stable_vector
          #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
          //Put this as argument instead of the return type as old GCC's like 3.4
          //detect this and the next disable_if_or as overloads
-         ,  typename container_detail::disable_if_or
+         ,  typename dtl::disable_if_or
                < void
-               , container_detail::is_convertible<InputIterator, size_type>
-               , container_detail::is_not_input_iterator<InputIterator>
+               , dtl::is_convertible<InputIterator, size_type>
+               , dtl::is_not_input_iterator<InputIterator>
                >::type* = 0
          #endif
          )
@@ -1556,10 +1556,10 @@ class stable_vector
 
    #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
    template <class FwdIt>
-   typename container_detail::disable_if_or
+   typename dtl::disable_if_or
       < iterator
-      , container_detail::is_convertible<FwdIt, size_type>
-      , container_detail::is_input_iterator<FwdIt>
+      , dtl::is_convertible<FwdIt, size_type>
+      , dtl::is_input_iterator<FwdIt>
       >::type
       insert(const_iterator p, FwdIt first, FwdIt last)
    {
@@ -1672,8 +1672,8 @@ class stable_vector
                    allocator_traits_type::is_always_equal::value ||
                    this->get_stored_allocator() == x.get_stored_allocator());
       STABLE_VECTOR_CHECK_INVARIANT;
-      container_detail::bool_<allocator_traits_type::propagate_on_container_swap::value> flag;
-      container_detail::swap_alloc(this->priv_node_alloc(), x.priv_node_alloc(), flag);
+      dtl::bool_<allocator_traits_type::propagate_on_container_swap::value> flag;
+      dtl::swap_alloc(this->priv_node_alloc(), x.priv_node_alloc(), flag);
       //vector's allocator is swapped here
       this->index.swap(x.index);
       this->priv_swap_members(x);
@@ -1956,7 +1956,7 @@ class stable_vector
    void priv_destroy_node(const node_type &n)
    {
       allocator_traits<node_allocator_type>::
-         destroy(this->priv_node_alloc(), container_detail::addressof(n.value));
+         destroy(this->priv_node_alloc(), dtl::addressof(n.value));
       static_cast<const node_base_type*>(&n)->~node_base_type();
    }
 
@@ -1972,10 +1972,10 @@ class stable_vector
       //This can throw
       boost::container::construct_in_place
          ( this->priv_node_alloc()
-         , container_detail::addressof(p->value)
+         , dtl::addressof(p->value)
          , it);
       //This does not throw
-      ::new(static_cast<node_base_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t())
+      ::new(static_cast<node_base_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t())
          node_base_type(index_traits_type::ptr_to_node_base_ptr(*up_index));
    }
 
@@ -1985,10 +1985,10 @@ class stable_vector
       //This can throw
       boost::container::allocator_traits<node_allocator_type>::construct
          ( this->priv_node_alloc()
-         , container_detail::addressof(p->value)
+         , dtl::addressof(p->value)
          , ::boost::forward<ValueConvertible>(value_convertible));
       //This does not throw
-      ::new(static_cast<node_base_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t()) node_base_type;
+      ::new(static_cast<node_base_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t()) node_base_type;
    }
 
    void priv_swap_members(stable_vector &x)

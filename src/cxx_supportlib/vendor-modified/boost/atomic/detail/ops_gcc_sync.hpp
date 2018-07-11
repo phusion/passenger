@@ -16,6 +16,7 @@
 #ifndef BOOST_ATOMIC_DETAIL_OPS_GCC_SYNC_HPP_INCLUDED_
 #define BOOST_ATOMIC_DETAIL_OPS_GCC_SYNC_HPP_INCLUDED_
 
+#include <cstddef>
 #include <boost/memory_order.hpp>
 #include <boost/atomic/detail/config.hpp>
 #include <boost/atomic/detail/storage_type.hpp>
@@ -33,11 +34,12 @@ namespace detail {
 
 struct gcc_sync_operations_base
 {
+    static BOOST_CONSTEXPR_OR_CONST bool full_cas_based = false;
     static BOOST_CONSTEXPR_OR_CONST bool is_always_lock_free = true;
 
     static BOOST_FORCEINLINE void fence_before_store(memory_order order) BOOST_NOEXCEPT
     {
-        if ((order & memory_order_release) != 0)
+        if ((static_cast< unsigned int >(order) & static_cast< unsigned int >(memory_order_release)) != 0u)
             __sync_synchronize();
     }
 
@@ -49,16 +51,20 @@ struct gcc_sync_operations_base
 
     static BOOST_FORCEINLINE void fence_after_load(memory_order order) BOOST_NOEXCEPT
     {
-        if ((order & (memory_order_acquire | memory_order_consume)) != 0)
+        if ((static_cast< unsigned int >(order) & (static_cast< unsigned int >(memory_order_acquire) | static_cast< unsigned int >(memory_order_consume))) != 0u)
             __sync_synchronize();
     }
 };
 
-template< typename T >
+template< std::size_t Size, bool Signed >
 struct gcc_sync_operations :
     public gcc_sync_operations_base
 {
-    typedef T storage_type;
+    typedef typename make_storage_type< Size >::type storage_type;
+    typedef typename make_storage_type< Size >::aligned aligned_storage_type;
+
+    static BOOST_CONSTEXPR_OR_CONST std::size_t storage_size = Size;
+    static BOOST_CONSTEXPR_OR_CONST bool is_signed = Signed;
 
     static BOOST_FORCEINLINE void store(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
     {
@@ -89,7 +95,7 @@ struct gcc_sync_operations :
         // GCC docs mention that not all architectures may support full exchange semantics for this intrinsic. However, GCC's implementation of
         // std::atomic<> uses this intrinsic unconditionally. We do so as well. In case if some architectures actually don't support this, we can always
         // add a check here and fall back to a CAS loop.
-        if ((order & memory_order_release) != 0)
+        if ((static_cast< unsigned int >(order) & static_cast< unsigned int >(memory_order_release)) != 0u)
             __sync_synchronize();
         return __sync_lock_test_and_set(&storage, v);
     }
@@ -134,7 +140,7 @@ struct gcc_sync_operations :
 
     static BOOST_FORCEINLINE bool test_and_set(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
     {
-        if ((order & memory_order_release) != 0)
+        if ((static_cast< unsigned int >(order) & static_cast< unsigned int >(memory_order_release)) != 0u)
             __sync_synchronize();
         return !!__sync_lock_test_and_set(&storage, 1);
     }
@@ -145,39 +151,23 @@ struct gcc_sync_operations :
         if (order == memory_order_seq_cst)
             __sync_synchronize();
     }
-
-    static BOOST_FORCEINLINE bool is_lock_free(storage_type const volatile&) BOOST_NOEXCEPT
-    {
-        return true;
-    }
 };
 
 #if BOOST_ATOMIC_INT8_LOCK_FREE > 0
 template< bool Signed >
 struct operations< 1u, Signed > :
 #if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1)
-    public gcc_sync_operations< typename make_storage_type< 1u, Signed >::type >
+    public gcc_sync_operations< 1u, Signed >
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2)
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 2u, Signed >::type >, 1u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 2u, Signed >, 1u, Signed >
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 4u, Signed >::type >, 1u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 4u, Signed >, 1u, Signed >
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 8u, Signed >::type >, 1u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 8u, Signed >, 1u, Signed >
 #else
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 16u, Signed >::type >, 1u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 16u, Signed >, 1u, Signed >
 #endif
 {
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1)
-    typedef typename make_storage_type< 1u, Signed >::aligned aligned_storage_type;
-#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2)
-    typedef typename make_storage_type< 2u, Signed >::aligned aligned_storage_type;
-#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
-    typedef typename make_storage_type< 4u, Signed >::aligned aligned_storage_type;
-#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    typedef typename make_storage_type< 8u, Signed >::aligned aligned_storage_type;
-#else
-    typedef typename make_storage_type< 16u, Signed >::aligned aligned_storage_type;
-#endif
 };
 #endif
 
@@ -185,24 +175,15 @@ struct operations< 1u, Signed > :
 template< bool Signed >
 struct operations< 2u, Signed > :
 #if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2)
-    public gcc_sync_operations< typename make_storage_type< 2u, Signed >::type >
+    public gcc_sync_operations< 2u, Signed >
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 4u, Signed >::type >, 2u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 4u, Signed >, 2u, Signed >
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 8u, Signed >::type >, 2u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 8u, Signed >, 2u, Signed >
 #else
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 16u, Signed >::type >, 2u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 16u, Signed >, 2u, Signed >
 #endif
 {
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2)
-    typedef typename make_storage_type< 2u, Signed >::aligned aligned_storage_type;
-#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
-    typedef typename make_storage_type< 4u, Signed >::aligned aligned_storage_type;
-#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    typedef typename make_storage_type< 8u, Signed >::aligned aligned_storage_type;
-#else
-    typedef typename make_storage_type< 16u, Signed >::aligned aligned_storage_type;
-#endif
 };
 #endif
 
@@ -210,20 +191,13 @@ struct operations< 2u, Signed > :
 template< bool Signed >
 struct operations< 4u, Signed > :
 #if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
-    public gcc_sync_operations< typename make_storage_type< 4u, Signed >::type >
+    public gcc_sync_operations< 4u, Signed >
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 8u, Signed >::type >, 4u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 8u, Signed >, 4u, Signed >
 #else
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 16u, Signed >::type >, 4u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 16u, Signed >, 4u, Signed >
 #endif
 {
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
-    typedef typename make_storage_type< 4u, Signed >::aligned aligned_storage_type;
-#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    typedef typename make_storage_type< 8u, Signed >::aligned aligned_storage_type;
-#else
-    typedef typename make_storage_type< 16u, Signed >::aligned aligned_storage_type;
-#endif
 };
 #endif
 
@@ -231,25 +205,19 @@ struct operations< 4u, Signed > :
 template< bool Signed >
 struct operations< 8u, Signed > :
 #if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    public gcc_sync_operations< typename make_storage_type< 8u, Signed >::type >
+    public gcc_sync_operations< 8u, Signed >
 #else
-    public extending_cas_based_operations< gcc_sync_operations< typename make_storage_type< 16u, Signed >::type >, 8u, Signed >
+    public extending_cas_based_operations< gcc_sync_operations< 16u, Signed >, 8u, Signed >
 #endif
 {
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-    typedef typename make_storage_type< 8u, Signed >::aligned aligned_storage_type;
-#else
-    typedef typename make_storage_type< 16u, Signed >::aligned aligned_storage_type;
-#endif
 };
 #endif
 
 #if BOOST_ATOMIC_INT128_LOCK_FREE > 0
 template< bool Signed >
 struct operations< 16u, Signed > :
-    public gcc_sync_operations< typename make_storage_type< 16u, Signed >::type >
+    public gcc_sync_operations< 16u, Signed >
 {
-    typedef typename make_storage_type< 16u, Signed >::aligned aligned_storage_type;
 };
 #endif
 

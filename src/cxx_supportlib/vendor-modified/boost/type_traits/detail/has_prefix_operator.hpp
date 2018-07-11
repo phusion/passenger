@@ -31,9 +31,12 @@
 #   pragma GCC system_header
 #elif defined(BOOST_MSVC)
 #   pragma warning ( push )
-#   pragma warning ( disable : 4146 4804 4913 4244)
+#   pragma warning ( disable : 4146 4804 4913 4244 4800)
 #   if BOOST_WORKAROUND(BOOST_MSVC_FULL_VER, >= 140050000)
 #       pragma warning ( disable : 6334)
+#   endif
+#   if BOOST_WORKAROUND(_MSC_VER, >= 1913)
+#       pragma warning ( disable : 4834)
 #   endif
 #endif
 

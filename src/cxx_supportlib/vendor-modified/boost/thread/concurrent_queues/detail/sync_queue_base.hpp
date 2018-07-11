@@ -3,7 +3,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Vicente J. Botet Escriba 2013-2014. Distributed under the Boost
+// (C) Copyright Vicente J. Botet Escriba 2013-2017. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,15 +11,15 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
+#include <boost/bind.hpp>
+
 #include <boost/thread/detail/config.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/detail/move.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/concurrent_queues/queue_op_status.hpp>
 
-#include <boost/chrono/duration.hpp>
 #include <boost/chrono/time_point.hpp>
-#include <boost/chrono/system_clocks.hpp>
 #include <boost/throw_exception.hpp>
 
 #include <boost/config/abi_prefix.hpp>
@@ -39,10 +39,6 @@ namespace detail
     typedef Queue underlying_queue_type;
     typedef typename Queue::size_type size_type;
     typedef queue_op_status op_status;
-
-    typedef typename chrono::steady_clock clock;
-    typedef typename clock::duration duration;
-    typedef typename clock::time_point time_point;
 
     // Constructors/Assignment/Destructors
     BOOST_THREAD_NO_COPYABLE(sync_queue_base)
@@ -90,9 +86,13 @@ namespace detail
     inline void throw_if_closed(unique_lock<mutex>&);
     inline void throw_if_closed(lock_guard<mutex>&);
 
-    inline void wait_until_not_empty(unique_lock<mutex>& lk);
+    inline bool not_empty_or_closed(unique_lock<mutex>& ) const;
+
     inline bool wait_until_not_empty_or_closed(unique_lock<mutex>& lk);
-    inline queue_op_status wait_until_not_empty_until(unique_lock<mutex>& lk, time_point const&);
+    template <class WClock, class Duration>
+    queue_op_status wait_until_not_empty_or_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp);
+    template <class WClock, class Duration>
+    queue_op_status wait_until_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp);
 
     inline void notify_not_empty_if_needed(unique_lock<mutex>& )
     {
@@ -181,38 +181,38 @@ namespace detail
   }
 
   template <class ValueType, class Queue>
-  void sync_queue_base<ValueType, Queue>::wait_until_not_empty(unique_lock<mutex>& lk)
+  bool sync_queue_base<ValueType, Queue>::not_empty_or_closed(unique_lock<mutex>& ) const
   {
-    for (;;)
-    {
-      if (! empty(lk)) break;
-      throw_if_closed(lk);
-      not_empty_.wait(lk);
-    }
+    return ! data_.empty() || closed_;
   }
+
   template <class ValueType, class Queue>
   bool sync_queue_base<ValueType, Queue>::wait_until_not_empty_or_closed(unique_lock<mutex>& lk)
   {
-    for (;;)
-    {
-      if (! empty(lk)) break;
-      if (closed(lk)) return true;
-      not_empty_.wait(lk);
-    }
-     return false;
+    not_empty_.wait(lk, boost::bind(&sync_queue_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk)));
+    if (! empty(lk)) return false; // success
+    return true; // closed
   }
 
   template <class ValueType, class Queue>
-  queue_op_status sync_queue_base<ValueType, Queue>::wait_until_not_empty_until(unique_lock<mutex>& lk, time_point const&tp)
+  template <class WClock, class Duration>
+  queue_op_status sync_queue_base<ValueType, Queue>::wait_until_not_empty_or_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp)
   {
-    for (;;)
-    {
-      if (! empty(lk)) return queue_op_status::success;
-      throw_if_closed(lk);
-      if (not_empty_.wait_until(lk, tp) == cv_status::timeout ) return queue_op_status::timeout;
-    }
+    if (! not_empty_.wait_until(lk, tp, boost::bind(&sync_queue_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk))))
+      return queue_op_status::timeout;
+    if (! empty(lk)) return queue_op_status::success;
+    return queue_op_status::closed;
   }
 
+  template <class ValueType, class Queue>
+  template <class WClock, class Duration>
+  queue_op_status sync_queue_base<ValueType, Queue>::wait_until_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp)
+  {
+    bool (sync_queue_base<ValueType, Queue>::*closed_function_ptr)(unique_lock<mutex>&) const = &sync_queue_base<ValueType, Queue>::closed;
+    if (! not_empty_.wait_until(lk, tp, boost::bind(closed_function_ptr, boost::ref(*this), boost::ref(lk))))
+      return queue_op_status::timeout;
+    return queue_op_status::closed;
+  }
 
 } // detail
 } // concurrent

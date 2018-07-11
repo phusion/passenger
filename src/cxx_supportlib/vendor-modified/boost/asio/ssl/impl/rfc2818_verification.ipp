@@ -2,7 +2,7 @@
 // ssl/impl/rfc2818_verification.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2017 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,21 +17,17 @@
 
 #include <boost/asio/detail/config.hpp>
 
-#if !defined(BOOST_ASIO_ENABLE_OLD_SSL)
-# include <cctype>
-# include <cstring>
-# include <boost/asio/ip/address.hpp>
-# include <boost/asio/ssl/rfc2818_verification.hpp>
-# include <boost/asio/ssl/detail/openssl_types.hpp>
-#endif // !defined(BOOST_ASIO_ENABLE_OLD_SSL)
+#include <cctype>
+#include <cstring>
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio/ssl/rfc2818_verification.hpp>
+#include <boost/asio/ssl/detail/openssl_types.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
 namespace boost {
 namespace asio {
 namespace ssl {
-
-#if !defined(BOOST_ASIO_ENABLE_OLD_SSL)
 
 bool rfc2818_verification::operator()(
     bool preverified, verify_context& ctx) const
@@ -50,7 +46,7 @@ bool rfc2818_verification::operator()(
   // Try converting the host name to an address. If it is an address then we
   // need to look for an IP address in the certificate rather than a host name.
   boost::system::error_code ec;
-  ip::address address = ip::address::from_string(host_, ec);
+  ip::address address = ip::make_address(host_, ec);
   bool is_address = !ec;
 
   X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
@@ -156,8 +152,6 @@ bool rfc2818_verification::match_pattern(const char* pattern,
 
   return p == p_end && !*h;
 }
-
-#endif // !defined(BOOST_ASIO_ENABLE_OLD_SSL)
 
 } // namespace ssl
 } // namespace asio

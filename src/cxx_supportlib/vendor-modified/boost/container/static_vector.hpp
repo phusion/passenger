@@ -33,7 +33,7 @@ namespace boost { namespace container {
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
-namespace container_detail {
+namespace dtl {
 
 template<class T, std::size_t N>
 class static_storage_allocator
@@ -51,17 +51,17 @@ class static_storage_allocator
    {  return *this;  }
 
    BOOST_CONTAINER_FORCEINLINE T* internal_storage() const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return const_cast<T*>(static_cast<const T*>(static_cast<const void*>(&storage)));  }
+   {  return const_cast<T*>(static_cast<const T*>(static_cast<const void*>(storage.data)));  }
 
    BOOST_CONTAINER_FORCEINLINE T* internal_storage() BOOST_NOEXCEPT_OR_NOTHROW
-   {  return static_cast<T*>(static_cast<void*>(&storage));  }
+   {  return static_cast<T*>(static_cast<void*>(storage.data));  }
 
    static const std::size_t internal_capacity = N;
 
    std::size_t max_size() const
    {  return N;   }
 
-   typedef boost::container::container_detail::version_type<static_storage_allocator, 0>   version;
+   typedef boost::container::dtl::version_type<static_storage_allocator, 0>   version;
 
    BOOST_CONTAINER_FORCEINLINE friend bool operator==(const static_storage_allocator &, const static_storage_allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return false;  }
@@ -73,7 +73,7 @@ class static_storage_allocator
    typename aligned_storage<sizeof(T)*N, alignment_of<T>::value>::type storage;
 };
 
-}  //namespace container_detail {
+}  //namespace dtl {
 
 #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
@@ -103,16 +103,18 @@ class static_storage_allocator
 //!@tparam Capacity The maximum number of elements static_vector can store, fixed at compile time.
 template <typename Value, std::size_t Capacity>
 class static_vector
-    : public vector<Value, container_detail::static_storage_allocator<Value, Capacity> >
+    : public vector<Value, dtl::static_storage_allocator<Value, Capacity> >
 {
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   typedef vector<Value, container_detail::static_storage_allocator<Value, Capacity> > base_t;
+   typedef vector<Value, dtl::static_storage_allocator<Value, Capacity> > base_t;
 
    BOOST_COPYABLE_AND_MOVABLE(static_vector)
 
    template<class U, std::size_t OtherCapacity>
    friend class static_vector;
 
+   public:
+   typedef dtl::static_storage_allocator<Value, Capacity> allocator_type;
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
 public:
@@ -252,6 +254,19 @@ public:
         : base_t(other)
     {}
 
+    BOOST_CONTAINER_FORCEINLINE static_vector(static_vector const& other, const allocator_type &)
+       : base_t(other)
+    {}
+
+    BOOST_CONTAINER_FORCEINLINE static_vector(BOOST_RV_REF(static_vector) other,  const allocator_type &)
+       BOOST_NOEXCEPT_IF(boost::container::dtl::is_nothrow_move_constructible<value_type>::value)
+       : base_t(BOOST_MOVE_BASE(base_t, other))
+    {}
+
+    BOOST_CONTAINER_FORCEINLINE explicit static_vector(const allocator_type &)
+       : base_t()
+    {}
+
     //! @pre <tt>other.size() <= capacity()</tt>.
     //!
     //! @brief Constructs a copy of other static_vector.
@@ -279,7 +294,7 @@ public:
     //! @par Complexity
     //!   Linear O(N).
     BOOST_CONTAINER_FORCEINLINE static_vector(BOOST_RV_REF(static_vector) other)
-      BOOST_NOEXCEPT_IF(boost::container::container_detail::is_nothrow_move_constructible<value_type>::value)
+      BOOST_NOEXCEPT_IF(boost::container::dtl::is_nothrow_move_constructible<value_type>::value)
         : base_t(BOOST_MOVE_BASE(base_t, other))
     {}
 
@@ -1213,7 +1228,7 @@ inline void swap(static_vector<V, C1> & x, static_vector<V, C2> & y);
 
 template<typename V, std::size_t C1, std::size_t C2>
 inline void swap(static_vector<V, C1> & x, static_vector<V, C2> & y
-      , typename container_detail::enable_if_c< C1 != C2>::type * = 0)
+      , typename dtl::enable_if_c< C1 != C2>::type * = 0)
 {
    x.swap(y);
 }

@@ -44,10 +44,10 @@ namespace boost
         const char * what_arg )
           : std::runtime_error(what_arg), m_error_code(ev,ecat) {}
 
-      virtual ~system_error() throw() {}
+      virtual ~system_error() BOOST_NOEXCEPT_OR_NOTHROW {}
 
-      const error_code &  code() const throw() { return m_error_code; }
-      const char *        what() const throw();
+      const error_code &  code() const BOOST_NOEXCEPT_OR_NOTHROW { return m_error_code; }
+      const char *        what() const BOOST_NOEXCEPT_OR_NOTHROW;
 
     private:
       error_code           m_error_code;
@@ -56,7 +56,7 @@ namespace boost
 
     //  implementation  ------------------------------------------------------//
 
-    inline const char * system_error::what() const throw()
+    inline const char * system_error::what() const BOOST_NOEXCEPT_OR_NOTHROW
     // see http://www.boost.org/more/error_handling.html for lazy build rationale
     {
       if ( m_what.empty() )

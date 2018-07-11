@@ -25,13 +25,11 @@ namespace pmr {
 #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
 
 template <class Key
-         ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare = std::less<Key> >
 using flat_set = boost::container::flat_set<Key, Compare, polymorphic_allocator<Key> >;
 
 template <class Key
-         ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare = std::less<Key> >
 using flat_multiset = boost::container::flat_multiset<Key, Compare, polymorphic_allocator<Key> >;
 
 #endif
@@ -39,8 +37,7 @@ using flat_multiset = boost::container::flat_multiset<Key, Compare, polymorphic_
 //! A portable metafunction to obtain a flat_set
 //! that uses a polymorphic allocator
 template <class Key
-         ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare = std::less<Key> >
 struct flat_set_of
 {
    typedef boost::container::flat_set<Key, Compare, polymorphic_allocator<Key> > type;
@@ -49,8 +46,7 @@ struct flat_set_of
 //! A portable metafunction to obtain a flat_multiset
 //! that uses a polymorphic allocator
 template <class Key
-         ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare = std::less<Key> >
 struct flat_multiset_of
 {
    typedef boost::container::flat_multiset<Key, Compare, polymorphic_allocator<Key> > type;

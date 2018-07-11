@@ -31,6 +31,7 @@
 #include <boost/move/detail/destruct_n.hpp>
 #include <boost/move/algo/detail/basic_op.hpp>
 #include <boost/move/detail/placement_new.hpp>
+#include <boost/move/detail/iterator_to_raw_pointer.hpp>
 
 namespace boost {  namespace movelib{
 
@@ -91,30 +92,30 @@ void insertion_sort(BirdirectionalIterator first, BirdirectionalIterator last, C
    }
 }
 
-template <class Compare, class BirdirectionalIterator>
+template <class Compare, class BirdirectionalIterator, class BirdirectionalRawIterator>
 void insertion_sort_uninitialized_copy
    (BirdirectionalIterator first1, BirdirectionalIterator const last1
-   , typename iterator_traits<BirdirectionalIterator>::value_type* const first2
+   , BirdirectionalRawIterator const first2
    , Compare comp)
 {
    typedef typename iterator_traits<BirdirectionalIterator>::value_type value_type;
    if (first1 != last1){
-      value_type* last2 = first2;
-      ::new(last2, boost_move_new_t()) value_type(move(*first1));
-      destruct_n<value_type> d(first2);
+      BirdirectionalRawIterator last2 = first2;
+      ::new((iterator_to_raw_pointer)(last2), boost_move_new_t()) value_type(::boost::move(*first1));
+      destruct_n<value_type, BirdirectionalRawIterator> d(first2);
       d.incr();
       for (++last2; ++first1 != last1; ++last2){
-         value_type* j2 = last2;
-         value_type* k2 = j2;
+         BirdirectionalRawIterator j2 = last2;
+         BirdirectionalRawIterator k2 = j2;
          if (comp(*first1, *--k2)){
-            ::new(j2, boost_move_new_t()) value_type(move(*k2));
+            ::new((iterator_to_raw_pointer)(j2), boost_move_new_t()) value_type(::boost::move(*k2));
             d.incr();
             for (--j2; k2 != first2 && comp(*first1, *--k2); --j2)
-               *j2 = move(*k2);
-            *j2 = move(*first1);
+               *j2 = ::boost::move(*k2);
+            *j2 = ::boost::move(*first1);
          }
          else{
-            ::new(j2, boost_move_new_t()) value_type(move(*first1));
+            ::new((iterator_to_raw_pointer)(j2), boost_move_new_t()) value_type(::boost::move(*first1));
             d.incr();
          }
       }

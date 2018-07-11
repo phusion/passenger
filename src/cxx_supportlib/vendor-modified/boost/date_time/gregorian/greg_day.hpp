@@ -42,9 +42,9 @@ namespace gregorian {
   */
   class BOOST_SYMBOL_VISIBLE greg_day : public greg_day_rep {
   public:
-    greg_day(unsigned short day_of_month) : greg_day_rep(day_of_month) {}
-    unsigned short as_number() const {return value_;}
-    operator unsigned short()  const {return value_;}
+    greg_day(value_type day_of_month) : greg_day_rep(day_of_month) {}
+    value_type as_number() const {return value_;}
+    operator value_type()  const {return value_;}
   private:
     
   };

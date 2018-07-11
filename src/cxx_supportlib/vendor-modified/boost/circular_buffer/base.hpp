@@ -666,7 +666,7 @@ public:
                         break;
                     }
                     if (is_uninitialized(dest)) {
-                        boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*dest), boost::move_if_noexcept(*src));
+                        boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(dest), boost::move_if_noexcept(*src));
                         ++constructed;
                     } else {
                         value_type tmp = boost::move_if_noexcept(*src); 
@@ -1422,7 +1422,7 @@ private:
             increment(m_last);
             m_first = m_last;
         } else {
-            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*m_last), static_cast<ValT>(item));
+            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(m_last), static_cast<ValT>(item));
             increment(m_last);
             ++m_size;
         }        
@@ -1439,7 +1439,7 @@ private:
                 m_last = m_first;
             } else {
                 decrement(m_first);
-                boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*m_first), static_cast<ValT>(item));
+                boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(m_first), static_cast<ValT>(item));
                 ++m_size;
             }
         } BOOST_CATCH(...) {
@@ -2414,7 +2414,7 @@ private:
     */
     void construct_or_replace(bool construct, pointer pos, param_value_type item) {
         if (construct)
-            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*pos), item);
+            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(pos), item);
         else
             replace(pos, item);
     }
@@ -2426,14 +2426,14 @@ private:
     */
     void construct_or_replace(bool construct, pointer pos, rvalue_type item) {
         if (construct)
-            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*pos), boost::move(item));
+            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(pos), boost::move(item));
         else
             replace(pos, boost::move(item));
     }
 
     //! Destroy an item.
     void destroy_item(pointer p) {
-        boost::container::allocator_traits<Alloc>::destroy(m_alloc, boost::addressof(*p));
+        boost::container::allocator_traits<Alloc>::destroy(m_alloc, boost::to_address(p));
 #if BOOST_CB_ENABLE_DEBUG
         invalidate_iterators(iterator(this, p));
         cb_details::do_fill_uninitialized_memory(p, sizeof(value_type));
@@ -2566,7 +2566,7 @@ private:
         if (buffer_capacity == 0)
             return;
         while (first != last && !full()) {
-            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*m_last), *first++);
+            boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(m_last), *first++);
             increment(m_last);
             ++m_size;
         }
@@ -2831,7 +2831,7 @@ private:
             pointer p = m_last;
             BOOST_TRY {
                 for (; ii < construct; ++ii, increment(p))
-                    boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*p), *wrapper());
+                    boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(p), *wrapper());
                 for (;ii < n; ++ii, increment(p))
                     replace(p, *wrapper());
             } BOOST_CATCH(...) {
@@ -2925,7 +2925,7 @@ private:
                 for (;ii > construct; --ii, increment(p))
                     replace(p, *wrapper());
                 for (; ii > 0; --ii, increment(p))
-                    boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::addressof(*p), *wrapper());
+                    boost::container::allocator_traits<Alloc>::construct(m_alloc, boost::to_address(p), *wrapper());
             } BOOST_CATCH(...) {
                 size_type constructed = ii < construct ? construct - ii : 0;
                 m_last = add(m_last, constructed);

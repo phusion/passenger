@@ -97,7 +97,7 @@ public:
                 & mask);
             r3 = r3 ^ (r3 >> 27);
             r3 = (r3 * 1566083941u) & mask;
-            value_type r4 = static_cast<value_type>(r3 - k%m);
+            value_type r4 = static_cast<value_type>(r3 - k%n);
             *(first + (k+p)%n) ^= r3;
             *(first + (k+q)%n) ^= r4;
             *(first + k%n) = r4;

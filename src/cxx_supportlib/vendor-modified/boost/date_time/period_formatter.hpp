@@ -114,17 +114,18 @@ namespace boost { namespace date_time {
     {
       m_range_option = option;
     }
-    void delimiter_strings(const string_type& ,
-                           const string_type& ,
-                           const string_type& ,
-                           const string_type& )
-    {
-      m_period_separator;
-      m_period_start_delimeter;
-      m_open_range_end_delimeter;
-      m_closed_range_end_delimeter;
-    }
 
+    //! Change the delimiter strings
+    void delimiter_strings(const string_type& separator,
+                           const string_type& start_delim,
+                           const string_type& open_end_delim,
+                           const string_type& closed_end_delim)
+    {
+        m_period_separator = separator;
+        m_period_start_delimeter = start_delim;
+        m_open_range_end_delimeter = open_end_delim;
+        m_closed_range_end_delimeter = closed_end_delim;
+    }
 
     //! Generic code to output a period -- no matter the period type.
     /*! This generic code will output any period using a facet to

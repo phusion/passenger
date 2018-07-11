@@ -26,12 +26,12 @@ namespace pmr {
 
 template <class Key
          ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Options = void >
 using set = boost::container::set<Key, Compare, polymorphic_allocator<Key>, Options>;
 
 template <class Key
          ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Options = void >
 using multiset = boost::container::multiset<Key, Compare, polymorphic_allocator<Key>, Options>;
 
 #endif
@@ -40,7 +40,7 @@ using multiset = boost::container::multiset<Key, Compare, polymorphic_allocator<
 //! that uses a polymorphic allocator
 template <class Key
          ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Options = void >
 struct set_of
 {
    typedef boost::container::set<Key, Compare, polymorphic_allocator<Key>, Options> type;
@@ -50,7 +50,7 @@ struct set_of
 //! that uses a polymorphic allocator
 template <class Key
          ,class Compare = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Options = void >
 struct multiset_of
 {
    typedef boost::container::multiset<Key, Compare, polymorphic_allocator<Key>, Options> type;

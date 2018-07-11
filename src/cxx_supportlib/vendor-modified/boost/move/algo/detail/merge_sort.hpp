@@ -79,9 +79,9 @@ void merge_sort_copy( RandIt first, RandIt last
    }
 }
 
-template<class RandIt, class Compare>
+template<class RandIt, class RandItRaw, class Compare>
 void merge_sort_uninitialized_copy( RandIt first, RandIt last
-                                 , typename iterator_traits<RandIt>::value_type* uninitialized
+                                 , RandItRaw uninitialized
                                  , Compare comp)
 {
    typedef typename iterator_traits<RandIt>::size_type  size_type;
@@ -94,7 +94,7 @@ void merge_sort_uninitialized_copy( RandIt first, RandIt last
    else{
       size_type const half = count/2;
       merge_sort_uninitialized_copy(first + half, last, uninitialized + half, comp);
-      destruct_n<value_type> d(uninitialized+half);
+      destruct_n<value_type, RandItRaw> d(uninitialized+half);
       d.incr(count-half);
       merge_sort_copy(first, first + half, first + half, comp);
       uninitialized_merge_with_right_placed
@@ -105,9 +105,9 @@ void merge_sort_uninitialized_copy( RandIt first, RandIt last
    }
 }
 
-template<class RandIt, class Compare>
+template<class RandIt, class RandItRaw, class Compare>
 void merge_sort( RandIt first, RandIt last, Compare comp
-               , typename iterator_traits<RandIt>::value_type* uninitialized)
+               , RandItRaw uninitialized)
 {
    typedef typename iterator_traits<RandIt>::size_type  size_type;
    typedef typename iterator_traits<RandIt>::value_type value_type;
@@ -123,7 +123,7 @@ void merge_sort( RandIt first, RandIt last, Compare comp
       RandIt const rest_it = first + rest;
 
       merge_sort_uninitialized_copy(half_it, last, uninitialized, comp);
-      destruct_n<value_type> d(uninitialized);
+      destruct_n<value_type, RandItRaw> d(uninitialized);
       d.incr(rest);
       merge_sort_copy(first, half_it, rest_it, comp);
       merge_with_right_placed

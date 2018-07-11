@@ -41,11 +41,11 @@ namespace gregorian {
   class BOOST_DATE_TIME_DECL greg_weekday : public greg_weekday_rep {
   public:
     typedef boost::date_time::weekdays weekday_enum;
-    greg_weekday(unsigned short day_of_week_num) :
+    greg_weekday(value_type day_of_week_num) :
       greg_weekday_rep(day_of_week_num)
     {}
 
-    unsigned short as_number() const {return value_;}
+    value_type as_number() const {return value_;}
     const char* as_short_string() const;
     const char* as_long_string()  const;
 #ifndef BOOST_NO_STD_WSTRING

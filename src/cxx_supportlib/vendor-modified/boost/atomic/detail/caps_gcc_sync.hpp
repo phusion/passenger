@@ -17,17 +17,16 @@
 #define BOOST_ATOMIC_DETAIL_CAPS_GCC_SYNC_HPP_INCLUDED_
 
 #include <boost/atomic/detail/config.hpp>
+#if defined(__i386__) || defined(__x86_64__)
+#include <boost/atomic/detail/hwcaps_gcc_x86.hpp>
+#elif defined(__arm__)
+#include <boost/atomic/detail/hwcaps_gcc_arm.hpp>
+#elif defined(__POWERPC__) || defined(__PPC__)
+#include <boost/atomic/detail/hwcaps_gcc_ppc.hpp>
+#endif
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
-#endif
-
-#if defined(__i386__) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-#define BOOST_ATOMIC_DETAIL_X86_HAS_CMPXCHG8B 1
-#endif
-
-#if defined(__x86_64__) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16)
-#define BOOST_ATOMIC_DETAIL_X86_HAS_CMPXCHG16B 1
 #endif
 
 #if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1)\

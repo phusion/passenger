@@ -10,7 +10,6 @@
 // See http://www.boost.org/libs/thread for documentation.
 //
 //////////////////////////////////////////////////////////////////////////////
-#include <iostream>
 
 #include <boost/thread/detail/config.hpp>
 #include <boost/thread/concurrent_queues/detail/sync_queue_base.hpp>
@@ -51,7 +50,6 @@ namespace concurrent
     inline ~sync_queue();
 
     // Modifiers
-
     inline void push(const value_type& x);
     inline queue_op_status try_push(const value_type& x);
     inline queue_op_status nonblocking_push(const value_type& x);
@@ -151,19 +149,9 @@ namespace concurrent
   template <class ValueType, class Container>
   queue_op_status sync_queue<ValueType, Container>::wait_pull(ValueType& elem, unique_lock<mutex>& lk)
   {
-    //std::cout << __FILE__ << "[" << __LINE__ << "]" << std::endl;
-    if (super::empty(lk))
-    {
-      //std::cout << __FILE__ << "[" << __LINE__ << "]" << std::endl;
-      if (super::closed(lk)) return queue_op_status::closed;
-    }
-    //std::cout << __FILE__ << "[" << __LINE__ << "]" << std::endl;
-    bool has_been_closed = super::wait_until_not_empty_or_closed(lk);
-    //std::cout << __FILE__ << "[" << __LINE__ << "]" << std::endl;
+    const bool has_been_closed = super::wait_until_not_empty_or_closed(lk);
     if (has_been_closed) return queue_op_status::closed;
-    //std::cout << __FILE__ << "[" << __LINE__ << "]" << std::endl;
     pull(elem, lk);
-    //std::cout << __FILE__ << "[" << __LINE__ << "]" << std::endl;
     return queue_op_status::success;
   }
 
@@ -196,7 +184,8 @@ namespace concurrent
   void sync_queue<ValueType, Container>::pull(ValueType& elem)
   {
       unique_lock<mutex> lk(super::mtx_);
-      super::wait_until_not_empty(lk);
+      const bool has_been_closed = super::wait_until_not_empty_or_closed(lk);
+      if (has_been_closed) super::throw_if_closed(lk);
       pull(elem, lk);
   }
 
@@ -205,7 +194,8 @@ namespace concurrent
   ValueType sync_queue<ValueType, Container>::pull()
   {
       unique_lock<mutex> lk(super::mtx_);
-      super::wait_until_not_empty(lk);
+      const bool has_been_closed = super::wait_until_not_empty_or_closed(lk);
+      if (has_been_closed) super::throw_if_closed(lk);
       return pull(lk);
   }
 

@@ -33,6 +33,7 @@
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/node_alloc_holder.hpp>
 #include <boost/container/detail/version_type.hpp>
+#include <boost/container/detail/value_functors.hpp>
 // move
 #include <boost/move/utility_core.hpp>
 #include <boost/move/iterator.hpp>
@@ -57,13 +58,13 @@ namespace boost {
 namespace container {
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-namespace container_detail {
+namespace dtl {
 
 template<class VoidPointer>
 struct list_hook
 {
-   typedef typename container_detail::bi::make_list_base_hook
-      <container_detail::bi::void_pointer<VoidPointer>, container_detail::bi::link_mode<container_detail::bi::normal_link> >::type type;
+   typedef typename dtl::bi::make_list_base_hook
+      <dtl::bi::void_pointer<VoidPointer>, dtl::bi::link_mode<dtl::bi::normal_link> >::type type;
 };
 
 template <class T, class VoidPointer>
@@ -100,19 +101,19 @@ struct intrusive_list_type
       <typename allocator_traits_type::pointer>::template
          rebind_pointer<void>::type
             void_pointer;
-   typedef typename container_detail::list_node
+   typedef typename dtl::list_node
          <value_type, void_pointer>             node_type;
-   typedef typename container_detail::bi::make_list
+   typedef typename dtl::bi::make_list
       < node_type
-      , container_detail::bi::base_hook<typename list_hook<void_pointer>::type>
-      , container_detail::bi::constant_time_size<true>
-      , container_detail::bi::size_type
+      , dtl::bi::base_hook<typename list_hook<void_pointer>::type>
+      , dtl::bi::constant_time_size<true>
+      , dtl::bi::size_type
          <typename allocator_traits_type::size_type>
       >::type                                   container_type;
    typedef container_type                       type ;
 };
 
-}  //namespace container_detail {
+}  //namespace dtl {
 #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
 //! A list is a doubly linked list. That is, it is a Sequence that supports both
@@ -134,26 +135,26 @@ template <class T, class Allocator = new_allocator<T> >
 template <class T, class Allocator>
 #endif
 class list
-   : protected container_detail::node_alloc_holder
-      <Allocator, typename container_detail::intrusive_list_type<Allocator>::type>
+   : protected dtl::node_alloc_holder
+      <Allocator, typename dtl::intrusive_list_type<Allocator>::type>
 {
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    typedef typename
-      container_detail::intrusive_list_type<Allocator>::type Icont;
-   typedef container_detail::node_alloc_holder<Allocator, Icont>  AllocHolder;
+      dtl::intrusive_list_type<Allocator>::type Icont;
+   typedef dtl::node_alloc_holder<Allocator, Icont>  AllocHolder;
    typedef typename AllocHolder::NodePtr                          NodePtr;
    typedef typename AllocHolder::NodeAlloc                        NodeAlloc;
    typedef typename AllocHolder::ValAlloc                         ValAlloc;
    typedef typename AllocHolder::Node                             Node;
-   typedef container_detail::allocator_destroyer<NodeAlloc>       Destroyer;
+   typedef dtl::allocator_destroyer<NodeAlloc>       Destroyer;
    typedef typename AllocHolder::alloc_version                    alloc_version;
    typedef boost::container::allocator_traits<Allocator>          allocator_traits_type;
    typedef boost::container::equal_to_value<Allocator>            equal_to_value_type;
 
    BOOST_COPYABLE_AND_MOVABLE(list)
 
-   typedef container_detail::iterator_from_iiterator<typename Icont::iterator, false>  iterator_impl;
-   typedef container_detail::iterator_from_iiterator<typename Icont::iterator, true>   const_iterator_impl;
+   typedef dtl::iterator_from_iiterator<typename Icont::iterator, false>  iterator_impl;
+   typedef dtl::iterator_from_iiterator<typename Icont::iterator, true>   const_iterator_impl;
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
    public:
@@ -188,7 +189,7 @@ class list
    //! <b>Throws</b>: If allocator_type's default constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   list() BOOST_NOEXCEPT_IF(container_detail::is_nothrow_default_constructible<Allocator>::value)
+   list() BOOST_NOEXCEPT_IF(dtl::is_nothrow_default_constructible<Allocator>::value)
       : AllocHolder()
    {}
 
@@ -331,7 +332,7 @@ class list
       if (&x != this){
          NodeAlloc &this_alloc     = this->node_alloc();
          const NodeAlloc &x_alloc  = x.node_alloc();
-         container_detail::bool_<allocator_traits_type::
+         dtl::bool_<allocator_traits_type::
             propagate_on_container_copy_assignment::value> flag;
          if(flag && this_alloc != x_alloc){
             this->clear();
@@ -417,7 +418,7 @@ class list
    template <class InpIt>
    void assign(InpIt first, InpIt last
       #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
-      , typename container_detail::disable_if_convertible<InpIt, size_type>::type * = 0
+      , typename dtl::disable_if_convertible<InpIt, size_type>::type * = 0
       #endif
       )
    {
@@ -866,10 +867,10 @@ class list
    template <class InpIt>
    iterator insert(const_iterator p, InpIt first, InpIt last
       #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
-      , typename container_detail::enable_if_c
-         < !container_detail::is_convertible<InpIt, size_type>::value
-            && (container_detail::is_input_iterator<InpIt>::value
-                || container_detail::is_same<alloc_version, version_1>::value
+      , typename dtl::enable_if_c
+         < !dtl::is_convertible<InpIt, size_type>::value
+            && (dtl::is_input_iterator<InpIt>::value
+                || dtl::is_same<alloc_version, version_1>::value
                )
          >::type * = 0
       #endif
@@ -891,10 +892,10 @@ class list
    #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
    template <class FwdIt>
    iterator insert(const_iterator position, FwdIt first, FwdIt last
-      , typename container_detail::enable_if_c
-         < !container_detail::is_convertible<FwdIt, size_type>::value
-            && !(container_detail::is_input_iterator<FwdIt>::value
-                || container_detail::is_same<alloc_version, version_1>::value
+      , typename dtl::enable_if_c
+         < !dtl::is_convertible<FwdIt, size_type>::value
+            && !(dtl::is_input_iterator<FwdIt>::value
+                || dtl::is_same<alloc_version, version_1>::value
                )
          >::type * = 0
       )
@@ -1204,7 +1205,7 @@ class list
    //! <b>Note</b>: The relative order of elements that are not removed is unchanged,
    //!   and iterators to elements that are not removed remain valid.
    void unique()
-   {  this->unique(value_equal());  }
+   {  this->unique(value_equal_t());  }
 
    //! <b>Effects</b>: Removes adjacent duplicate elements or adjacent
    //!   elements that satisfy some binary predicate from the list.
@@ -1234,7 +1235,7 @@ class list
    //! <b>Complexity</b>: This function is linear time: it performs at most
    //!   size() + x.size() - 1 comparisons.
    void merge(list &x)
-   {  this->merge(x, value_less());  }
+   {  this->merge(x, value_less_t());  }
 
    //! <b>Requires</b>: The lists x and *this must be distinct.
    //!
@@ -1300,7 +1301,7 @@ class list
    //! <b>Complexity</b>: The number of comparisons is approximately N log N, where N
    //!   is the list's size.
    void sort()
-   {  this->sort(value_less());  }
+   {  this->sort(value_less_t());  }
 
    //! <b>Effects</b>: This function sorts the list *this according to std::less<value_type>.
    //!   The sort is stable, that is, the relative order of equivalent elements is preserved.
@@ -1457,18 +1458,8 @@ class list
       }
    };
 
-   //Functors for member algorithm defaults
-   struct value_less
-   {
-      bool operator()(const value_type &a, const value_type &b) const
-         {  return a < b;  }
-   };
-
-   struct value_equal
-   {
-      bool operator()(const value_type &a, const value_type &b) const
-         {  return a == b;  }
-   };
+   typedef value_less<value_type>   value_less_t;
+   typedef value_equal<value_type>  value_equal_t;
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
 };

@@ -21,6 +21,7 @@
 #include <boost/date_time/time_zone_names.hpp>
 #include <boost/date_time/time_zone_base.hpp>
 #include <boost/date_time/time_parsing.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace boost {
   namespace date_time {
@@ -170,8 +171,9 @@ namespace boost {
       /*! May throw bad_field_count exceptions */
       void load_from_stream(std::istream &in)
       {
-        std::string  buff;
+        std::string buff;
         while( std::getline(in, buff)) {
+          boost::trim_right(buff);
           parse_string(buff);
         }
       }

@@ -26,14 +26,12 @@ namespace pmr {
 
 template <class Key
          ,class T
-         ,class Compare  = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare  = std::less<Key > >
 using flat_map = boost::container::flat_map<Key, T, Compare, polymorphic_allocator<std::pair<Key, T> > >;
 
 template <class Key
          ,class T
-         ,class Compare  = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare  = std::less<Key> >
 using flat_multimap = boost::container::flat_multimap<Key, T, Compare, polymorphic_allocator<std::pair<Key, T> > >;
 
 #endif
@@ -42,8 +40,7 @@ using flat_multimap = boost::container::flat_multimap<Key, T, Compare, polymorph
 //! that uses a polymorphic allocator
 template <class Key
          ,class T
-         ,class Compare  = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare  = std::less<Key> >
 struct flat_map_of
 {
    typedef boost::container::flat_map<Key, T, Compare, polymorphic_allocator<std::pair<Key, T> > > type;
@@ -53,8 +50,7 @@ struct flat_map_of
 //! that uses a polymorphic allocator
 template <class Key
          ,class T
-         ,class Compare  = std::less<Key>
-         ,class Options = tree_assoc_defaults >
+         ,class Compare  = std::less<Key> >
 struct flat_multimap_of
 {
    typedef boost::container::flat_multimap<Key, T, Compare, polymorphic_allocator<std::pair<Key, T> > > type;

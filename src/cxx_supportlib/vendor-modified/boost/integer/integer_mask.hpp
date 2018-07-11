@@ -57,19 +57,27 @@ struct high_bit_mask_t
 //  Makes masks for the lowest N bits
 //  (Specializations are needed when N fills up a type.)
 
+#ifdef BOOST_MSVC
+#pragma warning(push)
+#pragma warning(disable:4310)  // cast truncates constant value
+#endif
+
 template < std::size_t Bits >
 struct low_bits_mask_t
 {
     typedef typename uint_t<Bits>::least  least;
     typedef typename uint_t<Bits>::fast   fast;
 
-    BOOST_STATIC_CONSTANT( least, sig_bits = (~( ~(least( 0u )) << Bits )) );
+    BOOST_STATIC_CONSTANT( least, sig_bits = least(~(least(~(least( 0u ))) << Bits )) );
     BOOST_STATIC_CONSTANT( fast, sig_bits_fast = fast(sig_bits) );
 
     BOOST_STATIC_CONSTANT( std::size_t, bit_count = Bits );
 
 };  // boost::low_bits_mask_t
 
+#ifdef BOOST_MSVC
+#pragma warning(pop)
+#endif
 
 #define BOOST_LOW_BITS_MASK_SPECIALIZE( Type )                                  \
   template <  >  struct low_bits_mask_t< std::numeric_limits<Type>::digits >  { \

@@ -43,8 +43,8 @@ namespace BOOST_REGEX_DETAIL_NS{
 template <class charT>
 struct digraph : public std::pair<charT, charT>
 {
-   digraph() : std::pair<charT, charT>(0, 0){}
-   digraph(charT c1) : std::pair<charT, charT>(c1, 0){}
+   digraph() : std::pair<charT, charT>(charT(0), charT(0)){}
+   digraph(charT c1) : std::pair<charT, charT>(c1, charT(0)){}
    digraph(charT c1, charT c2) : std::pair<charT, charT>(c1, c2)
    {}
    digraph(const digraph<charT>& d) : std::pair<charT, charT>(d.first, d.second){}

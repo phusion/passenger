@@ -490,14 +490,10 @@ class hyperexponential_distribution
                 rates.clear();
             }
 
-            bool fail = false;
-
             // Adjust vector sizes (if needed)
             if (param.probs_.size() != param.rates_.size()
                 || param.probs_.size() == 0)
             {
-                fail = true;
-
                 const std::size_t np = param.probs_.size();
                 const std::size_t nr = param.rates_.size();
 
@@ -520,13 +516,6 @@ class hyperexponential_distribution
             // NOTE: this cannot be done earlier since the probability vector
             //       can be changed due to size conformance
             hyperexp_detail::normalize(param.probs_);
-
-            // Set the error state in the underlying stream in case of invalid input
-            if (fail)
-            {
-                // This throws an exception if ios_base::exception(failbit) is enabled
-                is.setstate(std::ios_base::failbit);
-            }
 
             //post: vector size conformance
             assert(param.probs_.size() == param.rates_.size());

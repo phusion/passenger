@@ -28,9 +28,9 @@
 #define PPI <boost/preprocessor/enum_params.hpp>
 #include PPI
 #undef PPI
-#define <boost/preprocessor/comma_if.hpp>
+#define PPI <boost/preprocessor/comma_if.hpp>
 #include PPI
-#undef
+#undef PPI
 #endif
 
 namespace boost {

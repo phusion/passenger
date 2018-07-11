@@ -2,7 +2,7 @@
 // impl/src.hpp
 // ~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2017 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,9 +20,13 @@
 #endif
 
 #include <boost/asio/impl/error.ipp>
+#include <boost/asio/impl/execution_context.ipp>
+#include <boost/asio/impl/executor.ipp>
 #include <boost/asio/impl/handler_alloc_hook.ipp>
-#include <boost/asio/impl/io_service.ipp>
+#include <boost/asio/impl/io_context.ipp>
 #include <boost/asio/impl/serial_port_base.ipp>
+#include <boost/asio/impl/system_context.ipp>
+#include <boost/asio/impl/thread_pool.ipp>
 #include <boost/asio/detail/impl/buffer_sequence_adapter.ipp>
 #include <boost/asio/detail/impl/descriptor_ops.ipp>
 #include <boost/asio/detail/impl/dev_poll_reactor.ipp>
@@ -30,6 +34,7 @@
 #include <boost/asio/detail/impl/eventfd_select_interrupter.ipp>
 #include <boost/asio/detail/impl/handler_tracking.ipp>
 #include <boost/asio/detail/impl/kqueue_reactor.ipp>
+#include <boost/asio/detail/impl/null_event.ipp>
 #include <boost/asio/detail/impl/pipe_select_interrupter.ipp>
 #include <boost/asio/detail/impl/posix_event.ipp>
 #include <boost/asio/detail/impl/posix_mutex.ipp>
@@ -39,18 +44,19 @@
 #include <boost/asio/detail/impl/reactive_serial_port_service.ipp>
 #include <boost/asio/detail/impl/reactive_socket_service_base.ipp>
 #include <boost/asio/detail/impl/resolver_service_base.ipp>
+#include <boost/asio/detail/impl/scheduler.ipp>
 #include <boost/asio/detail/impl/select_reactor.ipp>
 #include <boost/asio/detail/impl/service_registry.ipp>
 #include <boost/asio/detail/impl/signal_set_service.ipp>
 #include <boost/asio/detail/impl/socket_ops.ipp>
 #include <boost/asio/detail/impl/socket_select_interrupter.ipp>
+#include <boost/asio/detail/impl/strand_executor_service.ipp>
 #include <boost/asio/detail/impl/strand_service.ipp>
-#include <boost/asio/detail/impl/task_io_service.ipp>
 #include <boost/asio/detail/impl/throw_error.ipp>
 #include <boost/asio/detail/impl/timer_queue_ptime.ipp>
 #include <boost/asio/detail/impl/timer_queue_set.ipp>
 #include <boost/asio/detail/impl/win_iocp_handle_service.ipp>
-#include <boost/asio/detail/impl/win_iocp_io_service.ipp>
+#include <boost/asio/detail/impl/win_iocp_io_context.ipp>
 #include <boost/asio/detail/impl/win_iocp_serial_port_service.ipp>
 #include <boost/asio/detail/impl/win_iocp_socket_service_base.ipp>
 #include <boost/asio/detail/impl/win_event.ipp>
@@ -67,6 +73,8 @@
 #include <boost/asio/ip/impl/address_v4.ipp>
 #include <boost/asio/ip/impl/address_v6.ipp>
 #include <boost/asio/ip/impl/host_name.ipp>
+#include <boost/asio/ip/impl/network_v4.ipp>
+#include <boost/asio/ip/impl/network_v6.ipp>
 #include <boost/asio/ip/detail/impl/endpoint.ipp>
 #include <boost/asio/local/detail/impl/endpoint.ipp>
 

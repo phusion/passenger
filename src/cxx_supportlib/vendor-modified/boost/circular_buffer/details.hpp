@@ -1,7 +1,7 @@
 // Helper classes and functions for the circular buffer.
 
 // Copyright (c) 2003-2008 Jan Gaspar
-// Copyright (c) 2014 Glen Fernandes   // C++11 allocator model support.
+// Copyright (c) 2014 Glen Joseph Fernandes   // C++11 allocator model support.
 
 // Use, modification, and distribution is subject to the Boost Software
 // License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -16,6 +16,7 @@
 
 #include <boost/throw_exception.hpp>
 #include <boost/container/allocator_traits.hpp>
+#include <boost/core/pointer_traits.hpp>
 #include <boost/move/move.hpp>
 #include <boost/type_traits/is_nothrow_move_constructible.hpp>
 #include <boost/utility/addressof.hpp>
@@ -435,10 +436,10 @@ inline ForwardIterator uninitialized_copy(InputIterator first, InputIterator las
     ForwardIterator next = dest;
     BOOST_TRY {
         for (; first != last; ++first, ++dest)
-            boost::container::allocator_traits<Alloc>::construct(a, boost::addressof(*dest), *first);
+            boost::container::allocator_traits<Alloc>::construct(a, boost::to_address(dest), *first);
     } BOOST_CATCH(...) {
         for (; next != dest; ++next)
-            boost::container::allocator_traits<Alloc>::destroy(a, boost::addressof(*next));
+            boost::container::allocator_traits<Alloc>::destroy(a, boost::to_address(next));
         BOOST_RETHROW
     }
     BOOST_CATCH_END
@@ -449,7 +450,7 @@ template<class InputIterator, class ForwardIterator, class Alloc>
 ForwardIterator uninitialized_move_if_noexcept_impl(InputIterator first, InputIterator last, ForwardIterator dest, Alloc& a,
     true_type) {
     for (; first != last; ++first, ++dest)
-        boost::container::allocator_traits<Alloc>::construct(a, boost::addressof(*dest), boost::move(*first));
+        boost::container::allocator_traits<Alloc>::construct(a, boost::to_address(dest), boost::move(*first));
     return dest;
 }
 
@@ -478,10 +479,10 @@ inline void uninitialized_fill_n_with_alloc(ForwardIterator first, Diff n, const
     ForwardIterator next = first;
     BOOST_TRY {
         for (; n > 0; ++first, --n)
-            boost::container::allocator_traits<Alloc>::construct(alloc, boost::addressof(*first), item);
+            boost::container::allocator_traits<Alloc>::construct(alloc, boost::to_address(first), item);
     } BOOST_CATCH(...) {
         for (; next != first; ++next)
-            boost::container::allocator_traits<Alloc>::destroy(alloc, boost::addressof(*next));
+            boost::container::allocator_traits<Alloc>::destroy(alloc, boost::to_address(next));
         BOOST_RETHROW
     }
     BOOST_CATCH_END

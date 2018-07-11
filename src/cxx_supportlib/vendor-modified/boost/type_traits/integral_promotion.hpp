@@ -175,6 +175,12 @@ public:
    typedef typename boost::type_traits::detail::integral_promotion<T, tag_type::value>::type type;
 };
 
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+
+   template <class T> using integral_promotion_t = typename integral_promotion<T>::type;
+
+#endif
+
 }
 
 #endif // #ifndef FILE_boost_type_traits_integral_promotion_hpp_INCLUDED

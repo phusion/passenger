@@ -61,11 +61,11 @@ namespace gregorian {
     greg_month(month_enum theMonth) : 
       greg_month_rep(static_cast<greg_month_rep::value_type>(theMonth)) {}
     //! Construct from a short value
-    greg_month(unsigned short theMonth) : greg_month_rep(theMonth) {}
+    greg_month(value_type theMonth) : greg_month_rep(theMonth) {}
     //! Convert the value back to a short
-    operator unsigned short()  const {return value_;}
+    operator value_type()  const {return value_;}
     //! Returns month as number from 1 to 12
-    unsigned short as_number() const {return value_;}
+    value_type as_number() const {return value_;}
     month_enum as_enum() const {return static_cast<month_enum>(value_);}
     const char* as_short_string() const;
     const char* as_long_string()  const;

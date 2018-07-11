@@ -612,7 +612,7 @@ class emplace_iterator
 template<class ...Args>
 struct emplace_functor
 {
-   typedef typename container_detail::build_number_seq<sizeof...(Args)>::type index_tuple_t;
+   typedef typename dtl::build_number_seq<sizeof...(Args)>::type index_tuple_t;
 
    emplace_functor(BOOST_FWD_REF(Args)... args)
       : args_(args...)
@@ -628,21 +628,21 @@ struct emplace_functor
 
    private:
    template<class Allocator, class T, std::size_t ...IdxPack>
-   BOOST_CONTAINER_FORCEINLINE void inplace_impl(Allocator &a, T* ptr, const container_detail::index_tuple<IdxPack...>&)
+   BOOST_CONTAINER_FORCEINLINE void inplace_impl(Allocator &a, T* ptr, const dtl::index_tuple<IdxPack...>&)
    {
       allocator_traits<Allocator>::construct
-         (a, ptr, ::boost::forward<Args>(container_detail::get<IdxPack>(args_))...);
+         (a, ptr, ::boost::forward<Args>(dtl::get<IdxPack>(args_))...);
    }
 
    template<class DestIt, std::size_t ...IdxPack>
-   BOOST_CONTAINER_FORCEINLINE void inplace_impl(DestIt dest, const container_detail::index_tuple<IdxPack...>&)
+   BOOST_CONTAINER_FORCEINLINE void inplace_impl(DestIt dest, const dtl::index_tuple<IdxPack...>&)
    {
       typedef typename boost::container::iterator_traits<DestIt>::value_type value_type;
-      value_type && tmp= value_type(::boost::forward<Args>(container_detail::get<IdxPack>(args_))...);
+      value_type && tmp= value_type(::boost::forward<Args>(dtl::get<IdxPack>(args_))...);
       *dest = ::boost::move(tmp);
    }
 
-   container_detail::tuple<Args&...> args_;
+   dtl::tuple<Args&...> args_;
 };
 
 template<class ...Args>
@@ -672,7 +672,7 @@ struct emplace_functor##N\
    void operator()(DestIt dest)\
    {\
       typedef typename boost::container::iterator_traits<DestIt>::value_type value_type;\
-      BOOST_MOVE_IF(N, value_type tmp(BOOST_MOVE_MFWD##N), container_detail::value_init<value_type> tmp) ;\
+      BOOST_MOVE_IF(N, value_type tmp(BOOST_MOVE_MFWD##N), dtl::value_init<value_type> tmp) ;\
       *dest = ::boost::move(const_cast<value_type &>(BOOST_MOVE_IF(N, tmp, tmp.get())));\
    }\
    \
@@ -692,7 +692,7 @@ BOOST_MOVE_ITERATE_0TO9(BOOST_MOVE_ITERATOR_EMPLACE_FUNCTOR_CODE)
 
 #endif
 
-namespace container_detail {
+namespace dtl {
 
 template<class T>
 struct has_iterator_category
@@ -863,7 +863,7 @@ class iterator_from_iiterator
    IIterator m_iit;
 };
 
-}  //namespace container_detail {
+}  //namespace dtl {
 
 using ::boost::intrusive::reverse_iterator;
 

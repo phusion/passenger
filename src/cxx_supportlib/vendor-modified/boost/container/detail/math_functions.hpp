@@ -32,7 +32,7 @@
 
 namespace boost {
 namespace container {
-namespace container_detail {
+namespace dtl {
 
 // Greatest common divisor and least common multiple
 
@@ -114,7 +114,7 @@ inline std::size_t floor_log2 (std::size_t x)
    return log2;
 }
 
-} // namespace container_detail
+} // namespace dtl
 } // namespace container
 } // namespace boost
 

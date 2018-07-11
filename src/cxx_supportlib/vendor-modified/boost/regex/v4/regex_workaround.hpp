@@ -19,7 +19,7 @@
 #ifndef BOOST_REGEX_WORKAROUND_HPP
 #define BOOST_REGEX_WORKAROUND_HPP
 
-
+#include <boost/config.hpp>
 #include <new>
 #include <cstring>
 #include <cstdlib>

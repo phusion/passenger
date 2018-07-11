@@ -11,9 +11,10 @@
 
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/date_time/gregorian/greg_serialize.hpp"
+#include "boost/numeric/conversion/cast.hpp"
 #include "boost/serialization/split_free.hpp"
 #include "boost/serialization/nvp.hpp"
-
+#include "boost/serialization/version.hpp"
 
 // macros to split serialize functions into save & load functions
 // NOTE: these macros define template functions in the boost::serialization namespace.
@@ -21,6 +22,14 @@
 BOOST_SERIALIZATION_SPLIT_FREE(boost::posix_time::ptime)
 BOOST_SERIALIZATION_SPLIT_FREE(boost::posix_time::time_duration)
 BOOST_SERIALIZATION_SPLIT_FREE(boost::posix_time::time_period)
+
+// Define versions for serialization compatibility
+// alows the unit tests to make an older version to check compatibility
+#ifndef BOOST_DATE_TIME_POSIX_TIME_DURATION_VERSION
+#define BOOST_DATE_TIME_POSIX_TIME_DURATION_VERSION 1
+#endif
+
+BOOST_CLASS_VERSION(boost::posix_time::time_duration, BOOST_DATE_TIME_POSIX_TIME_DURATION_VERSION)
 
 namespace boost {
 namespace serialization {
@@ -33,10 +42,23 @@ namespace serialization {
  * types are hour_type, min_type, sec_type, and fractional_seconds_type
  * as defined in the time_duration class
  */
+template<class TimeResTraitsSize, class Archive>
+void save_td(Archive& ar, const posix_time::time_duration& td)
+{
+    TimeResTraitsSize h = boost::numeric_cast<TimeResTraitsSize>(td.hours());
+    TimeResTraitsSize m = boost::numeric_cast<TimeResTraitsSize>(td.minutes());
+    TimeResTraitsSize s = boost::numeric_cast<TimeResTraitsSize>(td.seconds());
+    posix_time::time_duration::fractional_seconds_type fs = td.fractional_seconds();
+    ar & make_nvp("time_duration_hours", h);
+    ar & make_nvp("time_duration_minutes", m);
+    ar & make_nvp("time_duration_seconds", s);
+    ar & make_nvp("time_duration_fractional_seconds", fs);
+}
+
 template<class Archive>
 void save(Archive & ar, 
           const posix_time::time_duration& td, 
-          unsigned int /*version*/)
+          unsigned int version)
 {
   // serialize a bool so we know how to read this back in later
   bool is_special = td.is_special();
@@ -46,14 +68,13 @@ void save(Archive & ar,
     ar & make_nvp("sv_time_duration", s);
   }
   else {
-    posix_time::time_duration::hour_type h = td.hours();
-    posix_time::time_duration::min_type m = td.minutes();
-    posix_time::time_duration::sec_type s = td.seconds();
-    posix_time::time_duration::fractional_seconds_type fs = td.fractional_seconds();
-    ar & make_nvp("time_duration_hours", h);
-    ar & make_nvp("time_duration_minutes", m);
-    ar & make_nvp("time_duration_seconds", s);
-    ar & make_nvp("time_duration_fractional_seconds", fs);
+    // Write support for earlier versions allows for upgrade compatibility testing
+    // See load comments for version information
+    if (version == 0) {
+        save_td<int32_t>(ar, td);
+    } else {
+        save_td<int64_t>(ar, td);
+    }
   }
 }
 
@@ -62,10 +83,24 @@ void save(Archive & ar,
  * types are hour_type, min_type, sec_type, and fractional_seconds_type
  * as defined in the time_duration class
  */
+template<class TimeResTraitsSize, class Archive>
+void load_td(Archive& ar, posix_time::time_duration& td)
+{
+    TimeResTraitsSize h(0);
+    TimeResTraitsSize m(0);
+    TimeResTraitsSize s(0);
+    posix_time::time_duration::fractional_seconds_type fs(0);
+    ar & make_nvp("time_duration_hours", h);
+    ar & make_nvp("time_duration_minutes", m);
+    ar & make_nvp("time_duration_seconds", s);
+    ar & make_nvp("time_duration_fractional_seconds", fs);
+    td = posix_time::time_duration(h, m, s, fs);
+}
+
 template<class Archive>
 void load(Archive & ar, 
           posix_time::time_duration & td, 
-          unsigned int /*version*/)
+          unsigned int version)
 {
   bool is_special = false;
   ar & make_nvp("is_special", is_special);
@@ -76,15 +111,25 @@ void load(Archive & ar,
     td = posix_time::time_duration(sv);
   }
   else {
-    posix_time::time_duration::hour_type h(0);
-    posix_time::time_duration::min_type m(0);
-    posix_time::time_duration::sec_type s(0);
-    posix_time::time_duration::fractional_seconds_type fs(0);
-    ar & make_nvp("time_duration_hours", h);
-    ar & make_nvp("time_duration_minutes", m);
-    ar & make_nvp("time_duration_seconds", s);
-    ar & make_nvp("time_duration_fractional_seconds", fs);
-    td = posix_time::time_duration(h,m,s,fs);
+    // Version "0"   (Boost 1.65.1 or earlier, which used int32_t for day/hour/minute/second and
+    //                therefore suffered from the year 2038 issue.)
+    // Version "0.5" (Boost 1.66.0 changed to std::time_t but did not increase the version;
+    //                it was missed in the original change, all code reviews, and there were no
+    //                static assertions to protect the code; further std::time_t can be 32-bit
+    //                or 64-bit so it reduced portability.  This makes 1.66.0 hard to handle...)
+    // Version "1"   (Boost 1.67.0 or later uses int64_t and is properly versioned)
+
+    // If the size of any of these items changes, a new version is needed.
+    BOOST_STATIC_ASSERT(sizeof(posix_time::time_duration::hour_type) == sizeof(boost::int64_t));
+    BOOST_STATIC_ASSERT(sizeof(posix_time::time_duration::min_type) == sizeof(boost::int64_t));
+    BOOST_STATIC_ASSERT(sizeof(posix_time::time_duration::sec_type) == sizeof(boost::int64_t));
+    BOOST_STATIC_ASSERT(sizeof(posix_time::time_duration::fractional_seconds_type) == sizeof(boost::int64_t));
+
+    if (version == 0) {
+        load_td<int32_t>(ar, td);
+    } else {
+        load_td<int64_t>(ar, td);
+    }
   }
 }
 
