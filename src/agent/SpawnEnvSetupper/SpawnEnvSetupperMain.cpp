@@ -321,11 +321,18 @@ lookupUserGroup(const Context &context, uid_t *uid, struct passwd **userInfo,
 				SpawningKit::STEP_ERRORED);
 			recordErrorCategory(context.workDir,
 				SpawningKit::OPERATING_SYSTEM_ERROR);
-			recordAndPrintErrorSummary(context.workDir,
-				"Cannot lookup up system user database entry for user '"
-				+ args["user"].asString() + "': " + strerror(e)
-				+ " (errno=" + toString(e) + ")",
-				true);
+			if (e == 0) {
+				recordAndPrintErrorSummary(context.workDir,
+					"Cannot lookup system user database entry for user '"
+					+ args["user"].asString() + "': entry not found",
+					true);
+			} else {
+				recordAndPrintErrorSummary(context.workDir,
+					"Cannot lookup system user database entry for user '"
+					+ args["user"].asString() + "': " + strerror(e)
+					+ " (errno=" + toString(e) + ")",
+					true);
+			}
 			exit(1);
 		}
 	} else {
@@ -347,11 +354,18 @@ lookupUserGroup(const Context &context, uid_t *uid, struct passwd **userInfo,
 				SpawningKit::STEP_ERRORED);
 			recordErrorCategory(context.workDir,
 				SpawningKit::OPERATING_SYSTEM_ERROR);
-			recordAndPrintErrorSummary(context.workDir,
-				"Cannot lookup up system group database entry for group '"
-				+ args["group"].asString() + "': " + strerror(e)
-				+ " (errno=" + toString(e) + ")",
-				true);
+			if (e == 0) {
+				recordAndPrintErrorSummary(context.workDir,
+					"Cannot lookup up system group database entry for group '"
+					+ args["group"].asString() + "': entry not found",
+					true);
+			} else {
+				recordAndPrintErrorSummary(context.workDir,
+					"Cannot lookup up system group database entry for group '"
+					+ args["group"].asString() + "': " + strerror(e)
+					+ " (errno=" + toString(e) + ")",
+					true);
+			}
 			exit(1);
 		}
 	} else {
