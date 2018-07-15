@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2012-2017 Phusion Holding B.V.
+ *  Copyright (c) 2012-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -133,8 +133,10 @@ private:
 		if (f == NULL) {
 			LoggingKit::logAppOutput(appGroupName, pid, name, line.data(), line.size(), appLogFile);
 		} else {
-			fwrite(line.data(), 1, line.size(), f);
-			fwrite("\n", 1, 2, f);
+			size_t ret = fwrite(line.data(), 1, line.size(), f);
+			(void) ret; // Avoid compiler warning
+			ret = fwrite("\n", 1, 2, f);
+			(void) ret; // Avoid compiler warning
 			fflush(f);
 		}
 	}

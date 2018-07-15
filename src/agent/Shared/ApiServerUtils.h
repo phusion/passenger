@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2015-2017 Phusion Holding B.V.
+ *  Copyright (c) 2015-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -460,7 +460,7 @@ apiServerMakeInternalHttpRequestThreadMain(ApiServerInternalHttpRequest<Server, 
 			}
 		}
 
-		if (req.bodyProcessor != NULL) {
+		if (req.bodyProcessor) {
 			req.bodyProcessor(req, resp, io);
 		} else {
 			resp.body = io.readAll(&req.timeout);

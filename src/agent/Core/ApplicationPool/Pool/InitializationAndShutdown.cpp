@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -95,7 +95,7 @@ Pool::prepareForShutdown() {
 	ScopedLock lock(syncher);
 	assert(lifeStatus == ALIVE);
 	lifeStatus = PREPARED_FOR_SHUTDOWN;
-	if (abortLongRunningConnectionsCallback != NULL) {
+	if (abortLongRunningConnectionsCallback) {
 		vector<ProcessPtr> processes = getProcesses(false);
 		foreach (ProcessPtr process, processes) {
 			// Ensure that the process is not immediately respawned.

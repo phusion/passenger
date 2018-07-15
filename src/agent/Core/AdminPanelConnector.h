@@ -642,7 +642,7 @@ public:
 		if (appPool == NULL) {
 			throw RuntimeException("appPool must be non-NULL");
 		}
-		if (configGetter == NULL) {
+		if (configGetter.empty()) {
 			throw RuntimeException("configGetter must be non-NULL");
 		}
 		server.initialize();

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -53,7 +53,6 @@ using namespace std;
 
 
 class HandshakePrepare;
-typedef boost::function<void (const char *data, unsigned int size)> OutputHandler;
 typedef Passenger::ApplicationPool2::Options AppPoolOptions;
 
 

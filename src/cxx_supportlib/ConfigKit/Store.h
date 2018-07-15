@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2017 Phusion Holding B.V.
+ *  Copyright (c) 2017-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -207,7 +207,7 @@ private:
 		StringKeyTable<Entry>::ConstIterator it(entries);
 		while (*it != NULL) {
 			const Entry &entry = it.getValue();
-			if (entry.schemaEntry->inspectFilter == NULL) {
+			if (entry.schemaEntry->inspectFilter.empty()) {
 				it.next();
 				continue;
 			}

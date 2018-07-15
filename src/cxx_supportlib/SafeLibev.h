@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -224,7 +224,7 @@ public:
 	}
 
 	void run(const Callback &callback) {
-		assert(callback != NULL);
+		assert(callback);
 		if (onEventLoopThread()) {
 			callback();
 		} else {
@@ -233,7 +233,7 @@ public:
 	}
 
 	void runSync(const Callback &callback) {
-		assert(callback != NULL);
+		assert(callback);
 		boost::unique_lock<boost::mutex> l(syncher);
 		bool done = false;
 		commands.push_back(Command(nextCommandId,
@@ -248,13 +248,13 @@ public:
 
 	/** Run a callback after a certain timeout. */
 	void runAfter(unsigned int timeout, const Callback &callback) {
-		assert(callback != NULL);
+		assert(callback);
 		ev_once(loop, -1, 0, timeout / 1000.0, timeoutHandler, new Callback(callback));
 	}
 
 	/** Thread-safe version of runAfter(). */
 	void runAfterTS(unsigned int timeout, const Callback &callback) {
-		assert(callback != NULL);
+		assert(callback);
 		if (onEventLoopThread()) {
 			runAfter(timeout, callback);
 		} else {
@@ -263,7 +263,7 @@ public:
 	}
 
 	unsigned int runLater(const Callback &callback) {
-		assert(callback != NULL);
+		assert(callback);
 		unsigned int result;
 		{
 			boost::unique_lock<boost::mutex> l(syncher);
