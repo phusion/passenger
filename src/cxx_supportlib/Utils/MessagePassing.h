@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2012-2017 Phusion Holding B.V.
+ *  Copyright (c) 2012-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -34,9 +34,9 @@
 #include <boost/thread.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <oxt/macros.hpp>
+#include <jsoncpp/json.h>
 #include <Exceptions.h>
 #include <Utils/SystemTime.h>
-#include <Utils/VariantMap.h>
 
 #include <list>
 
@@ -71,7 +71,7 @@ inline void _sendToMessageBox(const MessageBoxPtr &messageBox, const MessagePtr 
 
 struct Message {
 	string name;
-	VariantMap args;
+	Json::Value args;
 	boost::weak_ptr<MessageBox> from;
 	void *data;
 	void (*freeData)(void *p);

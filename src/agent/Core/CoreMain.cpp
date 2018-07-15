@@ -81,7 +81,6 @@
 #include <ConfigKit/SubComponentUtils.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
-#include <ConfigKit/VariantMapUtils.h>
 #include <MessageReadersWriters.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
@@ -92,7 +91,6 @@
 #include <Utils.h>
 #include <Utils/Timer.h>
 #include <Utils/MessageIO.h>
-#include <Utils/VariantMap.h>
 #include <Core/OptionParser.h>
 #include <Core/Controller.h>
 #include <Core/ApiServer.h>
