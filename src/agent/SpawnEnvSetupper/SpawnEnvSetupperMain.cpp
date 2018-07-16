@@ -62,6 +62,7 @@
 #include <ProcessManagement/Spawn.h>
 #include <FileTools/FileManip.h>
 #include <FileTools/PathManip.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Core/SpawningKit/Handshake/WorkDir.h>
@@ -607,8 +608,8 @@ setCurrentWorkingDirectory(const Context &context) {
 			recordProblemDescriptionHTML(context.workDir,
 				"<p>"
 				"The " PROGRAM_NAME " application server tried to start the"
-				" web application as user '" + escapeHTML(getProcessUsername())
-				+ "' and group '" + escapeHTML(getGroupName(getgid()))
+				" web application as user '" + escapeHTML(lookupSystemUsernameByUid(getuid()))
+				+ "' and group '" + escapeHTML(lookupSystemGroupnameByGid(getgid()))
 				+ "'. During this process, " SHORT_PROGRAM_NAME
 				" must be able to access its application root directory '"
 				+ escapeHTML(appRoot) + "'. However, the parent directory '"
@@ -619,8 +620,8 @@ setCurrentWorkingDirectory(const Context &context) {
 				"<p class=\"sole-solution\">"
 				"Please fix the permissions of the directory '" + escapeHTML(appRoot)
 				+ "' in such a way that the directory is accessible by user '"
-				+ escapeHTML(getProcessUsername()) + "' and group '"
-				+ escapeHTML(getGroupName(getgid())) + "'."
+				+ escapeHTML(lookupSystemUsernameByUid(getuid())) + "' and group '"
+				+ escapeHTML(lookupSystemGroupnameByGid(getgid())) + "'."
 				"</p>");
 			exit(1);
 		} else if (ret == -1) {
@@ -651,16 +652,16 @@ setCurrentWorkingDirectory(const Context &context) {
 		if (e == EPERM || e == EACCES) {
 			recordProblemDescriptionHTML(context.workDir,
 				"<p>The " PROGRAM_NAME " application server tried to start the"
-				" web application as user " + escapeHTML(getProcessUsername())
-				+ " and group " + escapeHTML(getGroupName(getgid()))
+				" web application as user " + escapeHTML(lookupSystemUsernameByUid(getuid()))
+				+ " and group " + escapeHTML(lookupSystemGroupnameByGid(getgid()))
 				+ ", with a working directory of "
 				+ escapeHTML(appRoot) + ". However, it encountered a filesystem"
 				" permission error while doing this.</p>");
 		} else {
 			recordProblemDescriptionHTML(context.workDir,
 				"<p>The " PROGRAM_NAME " application server tried to start the"
-				" web application as user " + escapeHTML(getProcessUsername())
-				+ " and group " + escapeHTML(getGroupName(getgid()))
+				" web application as user " + escapeHTML(lookupSystemUsernameByUid(getuid()))
+				+ " and group " + escapeHTML(lookupSystemGroupnameByGid(getgid()))
 				+ ", with a working directory of "
 				+ escapeHTML(appRoot) + ". However, it encountered a filesystem"
 				" error while doing this.</p>");

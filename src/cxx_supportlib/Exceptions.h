@@ -61,7 +61,6 @@ void pp_error_destroy(PP_Error *error);
 
 #include <oxt/tracable_exception.hpp>
 #include <string>
-#include <map>
 #include <exception>
 #include <sstream>
 #include <cstring>

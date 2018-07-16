@@ -2,6 +2,7 @@
 #include <Core/SpawningKit/Handshake/Prepare.h>
 #include <Core/SpawningKit/Handshake/Perform.h>
 #include <LoggingKit/Context.h>
+#include <SystemTools/UserDatabase.h>
 #include <boost/bind.hpp>
 #include <cstdio>
 #include <Utils/IOUtils.h>
@@ -36,8 +37,8 @@ namespace tut {
 			config.startupFile = "/tmp/myapp/app.py";
 			config.appType = "wsgi";
 			config.spawnMethod = "direct";
-			config.user = getProcessUsername();
-			config.group = getGroupName(getgid());
+			config.user = lookupSystemUsernameByUid(getuid());
+			config.group = lookupSystemGroupnameByGid(getgid());
 			config.internStrings();
 		}
 

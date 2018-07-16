@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -42,8 +42,6 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <dirent.h>
-#include <pwd.h>
-#include <grp.h>
 #include <limits.h>
 #include <unistd.h>
 #include <string.h>
@@ -155,116 +153,6 @@ escapeShell(const StaticString &value) {
 	}
 
 	return result;
-}
-
-string
-getProcessUsername(bool fallback) {
-	struct passwd pwd, *result;
-	long bufSize;
-	shared_array<char> strings;
-
-	// _SC_GETPW_R_SIZE_MAX is not a maximum:
-	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
-	strings.reset(new char[bufSize]);
-
-	result = (struct passwd *) NULL;
-	if (getpwuid_r(getuid(), &pwd, strings.get(), bufSize, &result) != 0) {
-		result = (struct passwd *) NULL;
-	}
-
-	if (result == (struct passwd *) NULL || result->pw_name == NULL || result->pw_name[0] == '\0') {
-		if (fallback) {
-			snprintf(strings.get(), bufSize, "UID %lld", (long long) getuid());
-			strings.get()[bufSize - 1] = '\0';
-			return strings.get();
-		} else {
-			return string();
-		}
-	} else {
-		return result->pw_name;
-	}
-}
-
-string
-getUserName(uid_t uid) {
-	struct passwd pwd, *result;
-	int ret;
-	long bufSize;
-	shared_array<char> strings;
-
-	// _SC_GETPW_R_SIZE_MAX is not a maximum:
-	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
-	strings.reset(new char[bufSize]);
-
-	result = (struct passwd *) NULL;
-	do {
-		ret = getpwuid_r(uid, &pwd, strings.get(), bufSize, &result);
-	} while (ret == EAGAIN);
-	if (ret != 0) {
-		result = (struct passwd *) NULL;
-	}
-
-	if (result == (struct passwd *) NULL || result->pw_name == NULL || result->pw_name[0] == '\0') {
-		return toString(uid);
-	} else {
-		return result->pw_name;
-	}
-}
-
-string
-getGroupName(gid_t gid) {
-	struct group grp, *result;
-	int ret;
-	long bufSize;
-	shared_array<char> strings;
-
-	// _SC_GETGR_R_SIZE_MAX is not a maximum:
-	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
-	strings.reset(new char[bufSize]);
-
-	result = (struct group *) NULL;
-	do {
-		ret = getgrgid_r(gid, &grp, strings.get(), bufSize, &result);
-	} while (ret == EAGAIN);
-	if (ret != 0) {
-		result = (struct group *) NULL;
-	}
-
-	if (result == (struct group *) NULL || result->gr_name == NULL || result->gr_name[0] == '\0') {
-		return toString(gid);
-	} else {
-		return result->gr_name;
-	}
-}
-
-gid_t
-lookupGid(const string &groupName) {
-	struct group grp, *groupEntry;
-	long bufSize;
-	shared_array<char> strings;
-
-	// _SC_GETGR_R_SIZE_MAX is not a maximum:
-	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-	bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
-	strings.reset(new char[bufSize]);
-
-	groupEntry = (struct group *) NULL;
-	if (getgrnam_r(groupName.c_str(), &grp, strings.get(), bufSize, &groupEntry) != 0) {
-		groupEntry = (struct group *) NULL;
-	}
-
-	if (groupEntry == (struct group *) NULL) {
-		if (looksLikePositiveNumber(groupName)) {
-			return atoi(groupName);
-		} else {
-			return (gid_t) -1;
-		}
-	} else {
-		return groupEntry->gr_gid;
-	}
 }
 
 mode_t

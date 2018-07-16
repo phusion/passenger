@@ -9,6 +9,7 @@
 #include <grp.h>
 #include <cassert>
 #include <FileTools/FileManip.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils/ScopeGuard.h>
 #include <jsoncpp/json.h>
 
@@ -21,13 +22,16 @@ Json::Value testConfig;
 void
 createInstanceDir(InstanceDirectoryPtr &instanceDir) {
 	InstanceDirectory::CreationOptions options;
-	struct passwd *pwUser;
+	OsUser osUser;
 
-	pwUser = getpwnam("nobody");
+	if (!lookupSystemUserByName("nobody", osUser)) {
+		throw RuntimeException("OS user account 'nobody' does not exist");
+	}
+
 	options.prefix = "passenger-test";
 	options.userSwitching = geteuid() == 0;
-	options.defaultUid = pwUser->pw_uid;
-	options.defaultGid = pwUser->pw_gid;
+	options.defaultUid = osUser.pwd.pw_uid;
+	options.defaultGid = osUser.pwd.pw_gid;
 	instanceDir = boost::make_shared<InstanceDirectory>(options);
 }
 
@@ -147,19 +151,19 @@ listDir(const string &path) {
 
 string
 getPrimaryGroupName(const string &username) {
-	struct passwd *user;
-	struct group  *group;
+	OsUser osUser;
 
-	user = getpwnam(username.c_str());
-	if (user == NULL) {
-		throw RuntimeException(string("User '") + username + "' does not exist.");
+	if (lookupSystemUserByName(username, osUser)) {
+		OsGroup osGroup;
+		if (lookupSystemGroupByGid(osUser.pwd.pw_gid, osGroup)) {
+			return osGroup.grp.gr_name;
+		} else {
+			throw RuntimeException("OS group account with GID "
+				+ toString(osUser.pwd.pw_gid) + " does not exist");
+		}
+	} else {
+		throw RuntimeException("OS user account " + username + " does not exist");
 	}
-	group = getgrgid(user->pw_gid);
-	if (group == NULL) {
-		throw RuntimeException(string("Primary group for user '") + username + "' does not exist.");
-	}
-
-	return group->gr_name;
 }
 
 

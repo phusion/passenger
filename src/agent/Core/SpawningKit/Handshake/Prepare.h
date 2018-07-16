@@ -55,6 +55,7 @@
 #include <Exceptions.h>
 #include <FileTools/FileManip.h>
 #include <FileTools/PathManip.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils/SystemTime.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
@@ -90,55 +91,33 @@ private:
 		TRACE_POINT();
 		string username = config->user.toString(); // null terminate string
 		string groupname = config->group.toString(); // null terminate string
-		struct passwd pwd, *userInfo;
-		struct group grp, *groupInfo;
-		long pwdBufSize, grpBufSize;
-		boost::scoped_array<char> pwdBuf, grpBuf;
-		int ret;
+		OsUser osUser;
+		OsGroup osGroup;
 
-		// _SC_GETPW_R_SIZE_MAX/_SC_GETGR_R_SIZE_MAX are not maximums:
-		// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-		pwdBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
-		pwdBuf.reset(new char[pwdBufSize]);
-		grpBufSize = std::max<long>(1024 * 128, sysconf(_SC_GETGR_R_SIZE_MAX));
-		grpBuf.reset(new char[grpBufSize]);
-
-		ret = getpwnam_r(username.c_str(), &pwd, pwdBuf.get(), pwdBufSize,
-			&userInfo);
-		if (ret != 0) {
+		if (lookupSystemUserByName(username, osUser)) {
+			session.uid = osUser.pwd.pw_uid;
+			session.shell = osUser.pwd.pw_shell;
+			session.homedir = osUser.pwd.pw_dir;
+		} else {
 			if (looksLikePositiveNumber(username)) {
-				P_WARN("Error looking up system user database entry for user '"
-					<< username << "'. Will assume that this is a UID. Error message: "
-					<< strerror(ret) << " (errno=" << ret << ")");
+				P_WARN("OS user account '" << username << "' does not exist."
+					" Will assume that this is a UID.");
 				session.uid = (uid_t) atoi(username);
 			} else {
-				throw SystemException("Cannot lookup up system user database entry"
-					" for user '" + username + "'", ret);
+				throw RuntimeException("OS user account '" + username + "' does not exist");
 			}
-		} else if (userInfo == NULL) {
-			throw RuntimeException("The operating system user '" + username + "' does not exist");
-		} else {
-			session.uid = userInfo->pw_uid;
-			session.shell = userInfo->pw_shell;
-			session.homedir = userInfo->pw_dir;
 		}
 
-		ret = getgrnam_r(groupname.c_str(), &grp, grpBuf.get(), grpBufSize,
-			&groupInfo);
-		if (ret != 0) {
+		if (lookupSystemGroupByName(groupname, osGroup)) {
+			session.gid = osGroup.grp.gr_gid;
+		} else {
 			if (looksLikePositiveNumber(groupname)) {
-				P_WARN("Error looking up system group database entry for group '"
-					<< groupname << "'. Will assume that this is a GID. Error message: "
-					<< strerror(ret) << " (errno=" << ret << ")");
+				P_WARN("OS group account '" << groupname << "' does not exist."
+					" Will assume that this is a GID.");
 				session.gid = (gid_t) atoi(groupname);
 			} else {
-				throw SystemException("Cannot lookup up system group database entry"
-					" for group '" + groupname + "'", ret);
+				throw RuntimeException("OS group account '" + groupname + "' does not exist");
 			}
-		} else if (groupInfo == NULL) {
-			throw RuntimeException("The operating system group '" + groupname + "' does not exist");
-		} else {
-			session.gid = groupInfo->gr_gid;
 		}
 	}
 

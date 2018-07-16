@@ -2,6 +2,7 @@
 #include <Core/SpawningKit/Handshake/Prepare.h>
 #include <unistd.h>
 #include <FileTools/FileManip.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils.h>
 
 using namespace Passenger;
@@ -27,8 +28,8 @@ namespace tut {
 			config.startupFile = "/tmp/myapp/app.py";
 			config.appType = "wsgi";
 			config.spawnMethod = "direct";
-			config.user = getProcessUsername();
-			config.group = getGroupName(getgid());
+			config.user = lookupSystemUsernameByUid(getuid());
+			config.group = lookupSystemGroupnameByGid(getgid());
 			config.internStrings();
 		}
 

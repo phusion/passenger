@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -36,6 +36,7 @@
 #include <Constants.h>
 #include <Exceptions.h>
 #include <FileTools/FileManip.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils.h>
 #include <Utils/IniFile.h>
 
@@ -136,26 +137,7 @@ public:
 	}
 
 	string getUserSupportBinariesDir() const {
-		struct passwd pwd, *user;
-		long bufSize;
-		shared_array<char> strings;
-
-		// _SC_GETPW_R_SIZE_MAX is not a maximum:
-		// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
-		bufSize = std::max<long>(1024 * 128, sysconf(_SC_GETPW_R_SIZE_MAX));
-		strings.reset(new char[bufSize]);
-
-		user = (struct passwd *) NULL;
-		if (getpwuid_r(getuid(), &pwd, strings.get(), bufSize, &user) != 0) {
-			user = (struct passwd *) NULL;
-		}
-
-		if (user == (struct passwd *) NULL) {
-			int e = errno;
-			throw SystemException("Cannot lookup system user database", e);
-		}
-
-		string result(user->pw_dir);
+		string result(getHomeDir());
 		result.append("/");
 		result.append(USER_NAMESPACE_DIRNAME);
 		result.append("/support-binaries/");

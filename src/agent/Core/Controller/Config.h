@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2017 Phusion Holding B.V.
+ *  Copyright (c) 2017-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -38,6 +38,7 @@
 #include <ConfigKit/SchemaUtils.h>
 #include <MemoryKit/palloc.h>
 #include <ServerKit/HttpServer.h>
+#include <SystemTools/UserDatabase.h>
 #include <AppTypes.h>
 #include <Constants.h>
 #include <Exceptions.h>
@@ -179,13 +180,13 @@ private:
 	}
 
 	static Json::Value inferDefaultValueForDefaultGroup(const ConfigKit::Store &config) {
-		struct passwd *userEntry = getpwnam(config["default_user"].asCString());
-		if (userEntry == NULL) {
+		OsUser osUser;
+		if (!lookupSystemUserByName(config["default_user"].asString(), osUser)) {
 			throw ConfigurationException(
 				"The user that PassengerDefaultUser refers to, '" +
 				config["default_user"].asString() + "', does not exist.");
 		}
-		return getGroupName(userEntry->pw_gid);
+		return lookupSystemGroupnameByGid(osUser.pwd.pw_gid, P_STATIC_STRING("%d"));
 	}
 
 	static void validate(const ConfigKit::Store &config,

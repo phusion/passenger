@@ -1,6 +1,7 @@
 #include <TestSupport.h>
 #include <Core/ApplicationPool/Options.h>
 #include <Core/SpawningKit/UserSwitchingRules.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils.h>
 
 using namespace Passenger;
@@ -31,17 +32,24 @@ namespace tut {
 	#define RUN_USER_SWITCHING_TEST() \
 		result = prepareUserSwitching(options)
 
-	static string userNameForUid(uid_t uid) {
-		return getpwuid(uid)->pw_name;
-	}
-
 	static uid_t uidFor(const string &userName) {
-		return getpwnam(userName.c_str())->pw_uid;
+		OsUser osUser;
+
+		if (lookupSystemUserByName(userName, osUser)) {
+			return osUser.pwd.pw_uid;
+		} else {
+			throw RuntimeException("OS user account " + userName + " does not exist");
+		}
 	}
 
-	static string primaryGroupFor(const string &userName) {
-		gid_t gid = getpwnam(userName.c_str())->pw_gid;
-		return getgrgid(gid)->gr_name;
+	static gid_t gidFor(const string &groupName) {
+		OsGroup osGroup;
+
+		if (lookupSystemGroupByName(groupName, osGroup)) {
+			return osGroup.grp.gr_gid;
+		} else {
+			throw RuntimeException("OS group account " + groupName + " does not exist");
+		}
 	}
 
 	DEFINE_TEST_GROUP(Core_SpawningKit_UserSwitchingRulesTest);
@@ -57,7 +65,7 @@ namespace tut {
 					options.user = "root";
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["default_user"]);
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["default_user"]);
 			}
 
 			TEST_METHOD(2) {
@@ -69,20 +77,20 @@ namespace tut {
 					options.group = testConfig["normal_group_1"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(3) {
 				set_test_name("If user is set and user is root,"
 					" and 'group' is set to the root group,"
 					" then it changes group to defaultGroup");
-				string rootGroup = getGroupName(0);
+				string rootGroup = lookupSystemGroupnameByGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.user = "root";
 					options.group = rootGroup;
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["default_group"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["default_group"].asString());
 			}
 
 			// and 'group' is set to '!STARTUP_FILE!'"
@@ -96,9 +104,9 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+					ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 				}
 
 				TEST_METHOD(5) {
@@ -112,12 +120,12 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_2"].asString()));
+						gidFor(testConfig["normal_group_2"].asString()));
 					chown("tmp.wsgi/passenger_wsgi.py.real",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid), testConfig["normal_group_2"].asString());
+					ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_2"].asString());
 				}
 
 			TEST_METHOD(6) {
@@ -128,8 +136,8 @@ namespace tut {
 					options.user = "root";
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid),
-					primaryGroupFor(testConfig["default_user"].asString()));
+				ensure_equals(lookupSystemGroupnameByGid(result.gid),
+					getPrimaryGroupName(testConfig["default_user"].asString()));
 			}
 
 		// and 'user' is not 'root'
@@ -140,7 +148,7 @@ namespace tut {
 					options.user = testConfig["normal_user_1"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["normal_user_1"].asString());
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["normal_user_1"].asString());
 			}
 
 			TEST_METHOD(11) {
@@ -152,7 +160,7 @@ namespace tut {
 					options.group = testConfig["normal_group_1"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(12) {
@@ -164,33 +172,33 @@ namespace tut {
 					options.group = testConfig["normal_group_1"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["normal_user_1"].asString());
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["normal_user_1"].asString());
 			}
 
 			TEST_METHOD(13) {
 				set_test_name("If user is set and user is not root,"
 					" and 'group' is set to the root group,"
 					" then it changes group to defaultGroup");
-				string rootGroup = getGroupName(0);
+				string rootGroup = lookupSystemGroupnameByGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.user = testConfig["normal_user_1"].asCString();
 					options.group = rootGroup;
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["default_group"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["default_group"].asString());
 			}
 
 			TEST_METHOD(14) {
 				set_test_name("If user is set and user is not root,"
 					" and 'group' is set to the root group,"
 					" then it changes the user to the given username");
-				string rootGroup = getGroupName(0);
+				string rootGroup = lookupSystemGroupnameByGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.user = testConfig["normal_user_1"].asCString();
 					options.group = rootGroup;
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["normal_user_1"].asString());
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["normal_user_1"].asString());
 			}
 
 			// and 'group' is set to '!STARTUP_FILE!'
@@ -204,9 +212,9 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid),
+					ensure_equals(lookupSystemGroupnameByGid(result.gid),
 						testConfig["normal_group_1"].asString());
 				}
 
@@ -221,12 +229,12 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_2"].asString()));
+						gidFor(testConfig["normal_group_2"].asString()));
 					chown("tmp.wsgi/passenger_wsgi.py.real",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid),
+					ensure_equals(lookupSystemGroupnameByGid(result.gid),
 						testConfig["normal_group_2"].asString());
 				}
 
@@ -238,8 +246,8 @@ namespace tut {
 					options.user = testConfig["normal_user_1"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid),
-					primaryGroupFor(testConfig["normal_user_1"].asString()));
+				ensure_equals(lookupSystemGroupnameByGid(result.gid),
+					getPrimaryGroupName(testConfig["normal_user_1"].asString()));
 			}
 
 		// and the given username does not exist
@@ -252,7 +260,7 @@ namespace tut {
 					options.user = testConfig["nonexistant_user"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["default_user"].asString());
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["default_user"].asString());
 			}
 
 			TEST_METHOD(21) {
@@ -266,7 +274,7 @@ namespace tut {
 					options.group = testConfig["normal_group_1"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(22) {
@@ -274,13 +282,13 @@ namespace tut {
 					" and 'group' is set to the root group,"
 					" then it changes group to defaultGroup");
 
-				string rootGroup = getGroupName(0);
+				string rootGroup = lookupSystemGroupnameByGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.user = testConfig["nonexistant_user"].asCString();
 					options.group = rootGroup;
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["default_group"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["default_group"].asString());
 			}
 
 			// and 'group' is set to '!STARTUP_FILE!'
@@ -295,9 +303,9 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+					ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 				}
 
 				TEST_METHOD(24) {
@@ -312,12 +320,12 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_2"].asString()));
+						gidFor(testConfig["normal_group_2"].asString()));
 					chown("tmp.wsgi/passenger_wsgi.py.real",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid), testConfig["normal_group_2"].asString());
+					ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_2"].asString());
 				}
 
 			TEST_METHOD(25) {
@@ -329,8 +337,8 @@ namespace tut {
 					options.user = testConfig["nonexistant_user"].asCString();
 				);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid),
-					primaryGroupFor(testConfig["default_user"].asString()));
+				ensure_equals(lookupSystemGroupnameByGid(result.gid),
+					getPrimaryGroupName(testConfig["default_user"].asString()));
 			}
 
 	// If 'user' is not set
@@ -347,7 +355,7 @@ namespace tut {
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["normal_user_1"].asString());
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["normal_user_1"].asString());
 			}
 
 			TEST_METHOD(31) {
@@ -366,7 +374,7 @@ namespace tut {
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["normal_user_2"].asString());
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["normal_user_2"].asString());
 			}
 
 			TEST_METHOD(32) {
@@ -381,7 +389,7 @@ namespace tut {
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(33) {
@@ -389,7 +397,7 @@ namespace tut {
 					" and the startup file's owner exists,"
 					" and 'group' is set to the root group,"
 					" then it changes group to defaultGroup");
-				string rootGroup = getGroupName(0);
+				string rootGroup = lookupSystemGroupnameByGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.group = rootGroup;
 				);
@@ -397,7 +405,7 @@ namespace tut {
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["default_group"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["default_group"].asString());
 			}
 
 			// and 'group' is set to '!STARTUP_FILE!'
@@ -411,9 +419,9 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+					ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 				}
 
 				TEST_METHOD(35) {
@@ -428,12 +436,12 @@ namespace tut {
 					);
 					lchown("tmp.wsgi/passenger_wsgi.py",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_2"].asString()));
+						gidFor(testConfig["normal_group_2"].asString()));
 					chown("tmp.wsgi/passenger_wsgi.py.real",
 						(uid_t) -1,
-						lookupGid(testConfig["normal_group_1"].asString()));
+						gidFor(testConfig["normal_group_1"].asString()));
 					RUN_USER_SWITCHING_TEST();
-					ensure_equals(getGroupName(result.gid), testConfig["normal_group_2"].asString());
+					ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_2"].asString());
 				}
 
 			TEST_METHOD(36) {
@@ -448,8 +456,8 @@ namespace tut {
 					uidFor(testConfig["normal_user_1"].asString()),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid),
-					primaryGroupFor(testConfig["normal_user_1"].asString()));
+				ensure_equals(lookupSystemGroupnameByGid(result.gid),
+					getPrimaryGroupName(testConfig["normal_user_1"].asString()));
 			}
 
 		// and the startup file's owner doesn't exist
@@ -464,7 +472,7 @@ namespace tut {
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(userNameForUid(result.uid), testConfig["default_user"].asString());
+				ensure_equals(lookupSystemUsernameByUid(result.uid), testConfig["default_user"].asString());
 			}
 
 			TEST_METHOD(41) {
@@ -479,7 +487,7 @@ namespace tut {
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 			}
 
 			TEST_METHOD(42) {
@@ -487,7 +495,7 @@ namespace tut {
 					" and the startup file's owner doesn't exist,"
 					" and 'group' is set to the root group,"
 					" then it changes group to defaultGroup");
-				string rootGroup = getGroupName(0);
+				string rootGroup = lookupSystemGroupnameByGid(0);
 				SETUP_USER_SWITCHING_TEST(
 					options.group = rootGroup;
 				);
@@ -495,7 +503,7 @@ namespace tut {
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), testConfig["default_group"].asString());
+				ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["default_group"].asString());
 			}
 
 			// and 'group' is set to '!STARTUP_FILE!'
@@ -513,7 +521,7 @@ namespace tut {
 							(uid_t) testConfig["nonexistant_uid"].asInt64(),
 							(gid_t) testConfig["nonexistant_gid"].asInt64());
 						RUN_USER_SWITCHING_TEST();
-						ensure_equals(getGroupName(result.gid), testConfig["default_group"].asString());
+						ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["default_group"].asString());
 					}
 
 				// and the startup file's group exists
@@ -528,9 +536,9 @@ namespace tut {
 						);
 						lchown("tmp.wsgi/passenger_wsgi.py",
 							(uid_t) testConfig["nonexistant_uid"].asInt64(),
-							lookupGid(testConfig["normal_group_1"].asString()));
+							gidFor(testConfig["normal_group_1"].asString()));
 						RUN_USER_SWITCHING_TEST();
-						ensure_equals(getGroupName(result.gid), testConfig["normal_group_1"].asString());
+						ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_1"].asString());
 					}
 
 					TEST_METHOD(45) {
@@ -546,12 +554,12 @@ namespace tut {
 						);
 						lchown("tmp.wsgi/passenger_wsgi.py",
 							(uid_t) testConfig["nonexistant_uid"].asInt64(),
-							lookupGid(testConfig["normal_group_2"].asString()));
+							gidFor(testConfig["normal_group_2"].asString()));
 						chown("tmp.wsgi/passenger_wsgi.py.real",
 							(uid_t) -1,
-							lookupGid(testConfig["normal_group_1"].asString()));
+							gidFor(testConfig["normal_group_1"].asString()));
 						RUN_USER_SWITCHING_TEST();
-						ensure_equals(getGroupName(result.gid), testConfig["normal_group_2"].asString());
+						ensure_equals(lookupSystemGroupnameByGid(result.gid), testConfig["normal_group_2"].asString());
 					}
 
 			TEST_METHOD(46) {
@@ -567,7 +575,8 @@ namespace tut {
 					(uid_t) testConfig["nonexistant_uid"].asInt64(),
 					(gid_t) -1);
 				RUN_USER_SWITCHING_TEST();
-				ensure_equals(getGroupName(result.gid), primaryGroupFor(testConfig["default_user"].asString()));
+				ensure_equals(lookupSystemGroupnameByGid(result.gid),
+					getPrimaryGroupName(testConfig["default_user"].asString()));
 			}
 
 	TEST_METHOD(50) {
@@ -589,7 +598,7 @@ namespace tut {
 	TEST_METHOD(51) {
 		set_test_name("It raises an error if it tries to lower to 'default_group',"
 			" but that group doesn't exist");
-		string rootGroup = getGroupName(0);
+		string rootGroup = lookupSystemGroupnameByGid(0);
 		SETUP_USER_SWITCHING_TEST(
 			options.user = testConfig["normal_user_1"].asCString();
 			options.group = rootGroup;

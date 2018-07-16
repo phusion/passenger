@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -72,6 +72,7 @@
 #include <InstanceDirectory.h>
 #include <FileDescriptor.h>
 #include <FileTools/PathSecurityCheck.h>
+#include <SystemTools/UserDatabase.h>
 #include <RandomGenerator.h>
 #include <BackgroundEventLoop.h>
 #include <LoggingKit/LoggingKit.h>
@@ -915,15 +916,14 @@ lowerPrivilege() {
 	string userName = watchdogConfig->get("user").asString();
 
 	if (geteuid() == 0 && !userName.empty()) {
-		struct passwd *pwUser = getpwnam(userName.c_str());
-
-		if (pwUser == NULL) {
-			throw RuntimeException("Cannot lookup user information for user " +
-				userName);
+		OsUser osUser;
+		if (!lookupSystemUserByName(userName, osUser)) {
+			throw NonExistentUserException("Operating system user '" + userName
+				+ "' does not exist");
 		}
 
-		gid_t gid = pwUser->pw_gid;
-		string groupName = getGroupName(pwUser->pw_gid);
+		gid_t gid = osUser.pwd.pw_gid;
+		string groupName = lookupSystemGroupnameByGid(gid);
 
 		if (initgroups(userName.c_str(), gid) != 0) {
 			int e = errno;
@@ -937,11 +937,11 @@ lowerPrivilege() {
 				"to that of user '" + userName + "' and group '" + groupName +
 				"': cannot set group ID to " + toString(gid), e);
 		}
-		if (setuid(pwUser->pw_uid) != 0) {
+		if (setuid(osUser.pwd.pw_uid) != 0) {
 			int e = errno;
 			throw SystemException("Unable to lower " SHORT_PROGRAM_NAME " watchdog's privilege "
 				"to that of user '" + userName + "' and group '" + groupName +
-				"': cannot set user ID to " + toString(pwUser->pw_uid), e);
+				"': cannot set user ID to " + toString(osUser.pwd.pw_uid), e);
 		}
 		#ifdef __linux__
 			// When we change the uid, /proc/self/pid contents don't change owner,
@@ -952,8 +952,8 @@ lowerPrivilege() {
 			// http://man7.org/linux/man-pages/man5/proc.5.html (search for "dumpable")
 			prctl(PR_SET_DUMPABLE, 1);
 		#endif
-		setenv("USER", pwUser->pw_name, 1);
-		setenv("HOME", pwUser->pw_dir, 1);
+		setenv("USER", osUser.pwd.pw_name, 1);
+		setenv("HOME", osUser.pwd.pw_dir, 1);
 		setenv("UID", toString(gid).c_str(), 1);
 	}
 }
@@ -962,20 +962,20 @@ static void
 lookupDefaultUidGid(uid_t &uid, gid_t &gid) {
 	const string defaultUser = watchdogConfig->get("default_user").asString();
 	const string defaultGroup = watchdogConfig->get("default_group").asString();
-	struct passwd *userEntry;
 
-	userEntry = getpwnam(defaultUser.c_str());
-	if (userEntry == NULL) {
+	OsUser osUser;
+	if (!lookupSystemUserByName(defaultUser, osUser)) {
 		throw NonExistentUserException("Default user '" + defaultUser +
-			"' does not exist.");
+			"' does not exist");
 	}
-	uid = userEntry->pw_uid;
+	uid = osUser.pwd.pw_uid;
 
-	gid = lookupGid(defaultGroup);
-	if (gid == (gid_t) -1) {
+	OsGroup osGroup;
+	if (!lookupSystemGroupByName(defaultGroup, osGroup)) {
 		throw NonExistentGroupException("Default group '" + defaultGroup +
-			"' does not exist.");
+			"' does not exist");
 	}
+	gid = osGroup.grp.gr_gid;
 }
 
 static void

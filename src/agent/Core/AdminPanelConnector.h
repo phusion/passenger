@@ -47,6 +47,7 @@
 #include <Core/Controller.h>
 #include <ProcessManagement/Ruby.h>
 #include <FileTools/FileManip.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
@@ -436,7 +437,8 @@ private:
 				files = Json::nullValue;
 			}
 			if (!files.isNull()) {
-				struct passwd *pwUser = getpwuid(ids.first);
+				string usernameOrUid = lookupSystemUsernameByUid(ids.first,
+					P_STATIC_STRING("%d"));
 
 				foreach (Json::Value file, files) {
 					string f = file.asString();
@@ -449,7 +451,7 @@ private:
 					execArgs.push_back("exec-helper");
 					if (geteuid() == 0) {
 						execArgs.push_back("--user");
-						execArgs.push_back(pwUser->pw_name);
+						execArgs.push_back(usernameOrUid.c_str());
 					}
 					execArgs.push_back("tail");
 					execArgs.push_back("-n");

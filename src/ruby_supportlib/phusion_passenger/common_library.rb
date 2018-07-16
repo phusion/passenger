@@ -289,6 +289,9 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'ProcessManagement/Utils.o',
     :source   => 'ProcessManagement/Utils.cpp',
     :category => :base
+  define_component 'SystemTools/UserDatabase.o',
+    :source   => 'SystemTools/UserDatabase.cpp',
+    :category => :base
   define_component 'Utils/SystemTime.o',
     :source   => 'Utils/SystemTime.cpp',
     :category => :base

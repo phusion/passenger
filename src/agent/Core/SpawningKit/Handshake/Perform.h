@@ -600,8 +600,8 @@ private:
 		if (s.st_uid != session.uid) {
 			errors.push_back("'sockets[" + toString(index)
 				+ "].address', when referring to a Unix domain socket file,"
-				" must be owned by user " + getUserName(session.uid)
-				+ " (actual owner: " + getUserName(s.st_uid) + ")");
+				" must be owned by user " + lookupSystemUsernameByUid(session.uid)
+				+ " (actual owner: " + lookupSystemUsernameByUid(s.st_uid) + ")");
 		}
 	}
 

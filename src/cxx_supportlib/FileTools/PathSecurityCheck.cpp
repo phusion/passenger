@@ -31,6 +31,7 @@
 
 #include <FileTools/PathSecurityCheck.h>
 #include <FileTools/PathManip.h>
+#include <SystemTools/UserDatabase.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
 
@@ -57,7 +58,7 @@ isSinglePathProbablySecureForRootUse(const string &path,
 
 	if (s.st_uid != 0) {
 		errors.push_back(path + " is not secure: it can be modified by user "
-			+ getUserName(s.st_uid));
+			+ lookupSystemUsernameByUid(s.st_uid));
 		return false;
 	}
 
@@ -67,7 +68,7 @@ isSinglePathProbablySecureForRootUse(const string &path,
 
 	if (s.st_mode & S_IWGRP) {
 		errors.push_back(path + " is not secure: it can be modified by group "
-			+ getGroupName(s.st_gid));
+			+ lookupSystemGroupnameByGid(s.st_gid));
 		return false;
 	}
 

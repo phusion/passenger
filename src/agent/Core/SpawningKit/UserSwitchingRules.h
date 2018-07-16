@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -39,6 +39,7 @@
 #include <Utils.h>
 #include <Core/SpawningKit/Context.h>
 #include <FileTools/PathManip.h>
+#include <SystemTools/UserDatabase.h>
 
 namespace Passenger {
 namespace SpawningKit {
@@ -80,13 +81,13 @@ prepareUserSwitching(const AppPoolOptions &options) {
 		 || userInfo == (struct passwd *) NULL)
 		{
 			throw RuntimeException("Cannot get user database entry for user " +
-				getProcessUsername() + "; it looks like your system's " +
+				lookupSystemUsernameByUid(geteuid()) + "; it looks like your system's " +
 				"user database is broken, please fix it.");
 		}
 
 		info.enabled = false;
 		info.username = userInfo->pw_name;
-		info.groupname = getGroupName(userInfo->pw_gid);
+		info.groupname = lookupSystemGroupnameByGid(userInfo->pw_gid, P_STATIC_STRING("%d"));
 		info.uid = geteuid();
 		info.gid = getegid();
 		return info;
@@ -215,7 +216,14 @@ prepareUserSwitching(const AppPoolOptions &options) {
 		groupId = userInfo->pw_gid;
 	}
 	if (groupId == 0 || groupId == (gid_t) -1) {
-		groupId = lookupGid(defaultGroup);
+		OsGroup osGroup;
+		if (lookupSystemGroupByName(defaultGroup, osGroup)) {
+			groupId = osGroup.grp.gr_gid;
+		} else if (looksLikePositiveNumber(defaultGroup)) {
+			groupId = atoi(defaultGroup);
+		} else {
+			groupId = -1;
+		}
 	}
 
 	UPDATE_TRACE_POINT();
@@ -229,7 +237,7 @@ prepareUserSwitching(const AppPoolOptions &options) {
 	UPDATE_TRACE_POINT();
 	info.enabled = true;
 	info.username = userInfo->pw_name;
-	info.groupname = getGroupName(groupId);
+	info.groupname = lookupSystemGroupnameByGid(groupId, P_STATIC_STRING("%d"));
 	info.uid = userInfo->pw_uid;
 	info.gid = groupId;
 

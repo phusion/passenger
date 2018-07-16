@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -91,34 +91,6 @@ string escapeForXml(const StaticString &input);
  * @throws std::bad_alloc Something went wrong.
  */
 string escapeShell(const StaticString &input);
-
-/**
- * Returns the username of the user that the current process is running as.
- * If the user has no associated username, then the behavior depends on the
- * `fallback` argument. When true, "UID xxxx" is returned, where xxxx is the
- * current UID. When false, the empty string is returned.
- */
-string getProcessUsername(bool fallback = true);
-
-/**
- * Returns either the user name for the given UID, or (if the user name
- * couldn't be looked up) a string representation of the given UID.
- */
-string getUserName(uid_t uid);
-
-/**
- * Returns either the group name for the given GID, or (if the group name
- * couldn't be looked up) a string representation of the given GID.
- */
-string getGroupName(gid_t gid);
-
-/**
- * Given a `groupName` which is either the name of a group, or a string
- * containing the GID of a group, looks up the GID as a gid_t.
- *
- * Returns `(gid_t) -1` if the lookup fails.
- */
-gid_t lookupGid(const string &groupName);
 
 /**
  * Converts a mode string into a mode_t value.
