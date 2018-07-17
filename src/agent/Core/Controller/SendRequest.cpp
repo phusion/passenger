@@ -167,7 +167,7 @@ Controller::sendHeaderToAppWithSessionProtocol(Client *client, Request *req) {
 		deltaMonotonic = boost::to_string(-diff);
 	}
 
-	unsigned int bufferSize = determineHeaderSizeForSessionProtocol(req,
+	unsigned int bufferSize = determineMaxHeaderSizeForSessionProtocol(req,
 		state, deltaMonotonic);
 	MemoryKit::mbuf_pool &mbuf_pool = getContext()->mbuf_pool;
 	const unsigned int MBUF_MAX_SIZE = mbuf_pool_data_size(&mbuf_pool);
@@ -317,7 +317,7 @@ httpHeaderToScgiUpperCase(unsigned char *data, unsigned int size) {
 }
 
 unsigned int
-Controller::determineHeaderSizeForSessionProtocol(Request *req,
+Controller::determineMaxHeaderSizeForSessionProtocol(Request *req,
 	SessionProtocolWorkingState &state, string delta_monotonic)
 {
 	unsigned int dataSize = sizeof(boost::uint32_t);
@@ -563,7 +563,7 @@ Controller::constructHeaderForSessionProtocol(Request *req, char * restrict buff
 
 	ServerKit::HeaderTable::Iterator it(req->headers);
 	while (*it != NULL) {
-		// This header-skipping is not accounted for in determineHeaderSizeForSessionProtocol(), but
+		// This header-skipping is not accounted for in determineMaxHeaderSizeForSessionProtocol(), but
 		// since we are only reducing the size it just wastes some mem bytes.
 		if ((
 				(it->header->hash == HTTP_CONTENT_LENGTH.hash()

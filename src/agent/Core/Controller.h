@@ -224,7 +224,7 @@ private:
 	void sendHeaderToApp(Client *client, Request *req);
 	void sendHeaderToAppWithSessionProtocol(Client *client, Request *req);
 	static void sendBodyToAppWhenAppSinkIdle(Channel *_channel, unsigned int size);
-	unsigned int determineHeaderSizeForSessionProtocol(Request *req,
+	unsigned int determineMaxHeaderSizeForSessionProtocol(Request *req,
 		SessionProtocolWorkingState &state, string delta_monotonic);
 	bool constructHeaderForSessionProtocol(Request *req, char * restrict buffer,
 		unsigned int &size, const SessionProtocolWorkingState &state, string delta_monotonic);
