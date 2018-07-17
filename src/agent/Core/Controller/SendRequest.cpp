@@ -569,9 +569,9 @@ Controller::constructHeaderForSessionProtocol(Request *req, char * restrict buff
 				(it->header->hash == HTTP_CONTENT_LENGTH.hash()
 						|| it->header->hash == HTTP_CONTENT_TYPE.hash()
 						|| it->header->hash == HTTP_CONNECTION.hash()
-				) && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-type"))
-						|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("content-length"))
-						|| psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
+				) && (psg_lstr_cmp(&it->header->key, HTTP_CONTENT_TYPE)
+						|| psg_lstr_cmp(&it->header->key, HTTP_CONTENT_LENGTH)
+						|| psg_lstr_cmp(&it->header->key, HTTP_CONNECTION)
 				)
 			) || containsNonAlphaNumDash(it->header->key)
 		   )
@@ -756,7 +756,7 @@ Controller::constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *bu
 	while (*it != NULL) {
 		if ((it->header->hash == HTTP_CONNECTION.hash()
 		  || it->header->hash == ServerKit::HTTP_SET_COOKIE.hash())
-		 && (psg_lstr_cmp(&it->header->key, P_STATIC_STRING("connection"))
+		 && (psg_lstr_cmp(&it->header->key, HTTP_CONNECTION)
 		  || psg_lstr_cmp(&it->header->key, ServerKit::HTTP_SET_COOKIE)))
 		{
 			it.next();
