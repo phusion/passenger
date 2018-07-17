@@ -268,7 +268,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(Core_ControllerTest);
+	DEFINE_TEST_GROUP_WITH_LIMIT(Core_ControllerTest, 80);
 
 
 	/***** Passing request information to the app *****/
@@ -315,7 +315,7 @@ namespace tut {
 
 	/***** Application response body handling *****/
 
-	TEST_METHOD(10) {
+	TEST_METHOD(20) {
 		set_test_name("Fixed response body");
 
 		init();
@@ -342,7 +342,7 @@ namespace tut {
 		ensure_equals(body, "hello");
 	}
 
-	TEST_METHOD(11) {
+	TEST_METHOD(21) {
 		set_test_name("Response body until EOF");
 
 		init();
@@ -368,7 +368,7 @@ namespace tut {
 		ensure_equals(body, "hello");
 	}
 
-	TEST_METHOD(12) {
+	TEST_METHOD(22) {
 		set_test_name("Chunked response body");
 
 		init();
@@ -400,7 +400,7 @@ namespace tut {
 			"0\r\n\r\n");
 	}
 
-	TEST_METHOD(13) {
+	TEST_METHOD(23) {
 		set_test_name("Upgraded response body");
 
 		init();
@@ -430,7 +430,7 @@ namespace tut {
 
 	/***** Application connection keep-alive *****/
 
-	TEST_METHOD(20) {
+	TEST_METHOD(30) {
 		set_test_name("Perform keep-alive on application responses that allow it");
 
 		init();
@@ -456,7 +456,7 @@ namespace tut {
 		ensure("(2)", testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(21) {
+	TEST_METHOD(31) {
 		set_test_name("Don't perform keep-alive on application responses that don't allow it");
 
 		init();
@@ -483,7 +483,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(22) {
+	TEST_METHOD(32) {
 		set_test_name("Don't perform keep-alive if an error occurred");
 
 		init();
@@ -509,7 +509,7 @@ namespace tut {
 
 	/***** Passing half-close events to the app *****/
 
-	TEST_METHOD(30) {
+	TEST_METHOD(40) {
 		set_test_name("Session protocol: on requests without body, it passes"
 			" a half-close write event to the app on the next request's"
 			" early read error and does not keep-alive the"
@@ -539,7 +539,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(31) {
+	TEST_METHOD(41) {
 		set_test_name("Session protocol: on requests with fixed body, it passes"
 			" a half-close write event to the app upon reaching the end"
 			" of the request body and does not keep-alive the"
@@ -570,7 +570,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(32) {
+	TEST_METHOD(42) {
 		set_test_name("Session protocol: on requests with chunked body, it passes"
 			" a half-close write event to the app upon reaching the end"
 			" of the request body and does not keep-alive the"
@@ -601,7 +601,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(33) {
+	TEST_METHOD(43) {
 		set_test_name("Session protocol: on upgraded requests, it passes"
 			" a half-close write event to the app upon reaching the end"
 			" of the request body and does not keep-alive the"
@@ -634,7 +634,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(34) {
+	TEST_METHOD(44) {
 		set_test_name("HTTP protocol: on requests without body, it passes"
 			" a half-close write event to the app on the next request's"
 			" early read error and does not keep-alive the application connection");
@@ -664,7 +664,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(35) {
+	TEST_METHOD(45) {
 		set_test_name("HTTP protocol: on requests with fixed body, it passes"
 			" a half-close write event to the app on the next request's"
 			" early read error and does not keep-alive the application connection");
@@ -697,7 +697,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(36) {
+	TEST_METHOD(46) {
 		set_test_name("HTTP protocol: on requests with chunked body, it passes"
 			" a half-close write event to the app on the next request's early read error"
 			" and does not keep-alive the application connection");
@@ -730,7 +730,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(37) {
+	TEST_METHOD(47) {
 		set_test_name("HTTP protocol: on upgraded requests, it passes"
 			" a half-close write event to the app upon reaching the end"
 			" of the request body and does not keep-alive the"
@@ -764,7 +764,7 @@ namespace tut {
 		ensure("(2)", !testSession.wantsKeepAlive());
 	}
 
-	TEST_METHOD(38) {
+	TEST_METHOD(48) {
 		set_test_name("Session protocol: if the client prematurely"
 			" closes their outbound connection to us, and the"
 			" application decides not to finish the response (close),"
@@ -791,7 +791,7 @@ namespace tut {
 		ensure(containsSubstring(header, "HTTP/1.1 502"));
 	}
 
-	TEST_METHOD(39) {
+	TEST_METHOD(49) {
 		set_test_name("HTTP protocol: if the client prematurely"
 			" closes their outbound connection to us, and the"
 			" application decides not to finish the response (close),"
@@ -819,7 +819,7 @@ namespace tut {
 		ensure(containsSubstring(header, "HTTP/1.1 502"));
 	}
 
-	TEST_METHOD(40) {
+	TEST_METHOD(55) {
 		set_test_name("Session protocol: if application decides not to "
 			" finish the response (close), and the client is still there "
 			" we should send a 502 (which should log warn)");
@@ -846,7 +846,7 @@ namespace tut {
 		ensure(containsSubstring(header, "HTTP/1.1 502"));
 	}
 
-	TEST_METHOD(41) {
+	TEST_METHOD(56) {
 		set_test_name("HTTP protocol: if application decides not to "
 			" finish the response (close), and the client is still there "
 			" we should send a 502 (which should log warn)");
