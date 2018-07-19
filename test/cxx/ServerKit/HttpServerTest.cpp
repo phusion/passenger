@@ -1527,7 +1527,7 @@ namespace tut {
 	}
 
 
-	/***** Miscellaneous *****/
+	/***** Shutdown *****/
 
 	TEST_METHOD(80) {
 		set_test_name("Upon shutting down the server, no requests will be "
