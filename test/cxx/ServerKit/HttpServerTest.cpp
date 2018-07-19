@@ -490,7 +490,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_HttpServerTest, 100);
+	DEFINE_TEST_GROUP_WITH_LIMIT(ServerKit_HttpServerTest, 120);
 
 
 	/***** Valid HTTP header parsing *****/
@@ -1035,7 +1035,7 @@ namespace tut {
 
 	/***** Upgrade handling *****/
 
-	TEST_METHOD(40) {
+	TEST_METHOD(50) {
 		set_test_name("Empty body");
 
 		connectToServer();
@@ -1049,7 +1049,7 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "0 bytes: "));
 	}
 
-	TEST_METHOD(41) {
+	TEST_METHOD(51) {
 		set_test_name("Non-empty data in one part");
 
 		connectToServer();
@@ -1064,7 +1064,7 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "2 bytes: ok"));
 	}
 
-	TEST_METHOD(42) {
+	TEST_METHOD(52) {
 		set_test_name("Non-empty body in multiple parts");
 
 		connectToServer();
@@ -1084,7 +1084,7 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "7 bytes: hmok!!!"));
 	}
 
-	TEST_METHOD(43) {
+	TEST_METHOD(53) {
 		set_test_name("req->bodyChannel is stopped before request body data is received");
 
 		connectToServer();
@@ -1107,7 +1107,7 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "7 bytes: hmok!!!"));
 	}
 
-	TEST_METHOD(44) {
+	TEST_METHOD(54) {
 		set_test_name("req->bodyChannel is stopped before request body EOF is encountered");
 
 		connectToServer();
@@ -1129,7 +1129,7 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "0 bytes: "));
 	}
 
-	TEST_METHOD(45) {
+	TEST_METHOD(55) {
 		set_test_name("It rejects the upgrade if supportsUpgrade() returns false");
 
 		server->allowUpgrades = false;
@@ -1143,7 +1143,7 @@ namespace tut {
 		ensure("(2)", containsSubstring(response, "Connection upgrading not allowed for this request"));
 	}
 
-	TEST_METHOD(46) {
+	TEST_METHOD(56) {
 		set_test_name("It rejects the upgrade if the request contains a request body");
 
 		connectToServer();
@@ -1158,7 +1158,7 @@ namespace tut {
 			"Connection upgrading is only allowed for requests without request body"));
 	}
 
-	TEST_METHOD(47) {
+	TEST_METHOD(57) {
 		set_test_name("It rejects the upgrade if the request is HEAD");
 
 		connectToServer();
@@ -1173,7 +1173,7 @@ namespace tut {
 
 	/***** Secure headers handling *****/
 
-	TEST_METHOD(50) {
+	TEST_METHOD(60) {
 		set_test_name("It stores secure headers in req->secureHeaders");
 
 		connectToServer();
@@ -1196,7 +1196,7 @@ namespace tut {
 			"Secure: secret");
 	}
 
-	TEST_METHOD(51) {
+	TEST_METHOD(61) {
 		set_test_name("It rejects normal headers while in secure mode");
 
 		connectToServer();
@@ -1214,7 +1214,7 @@ namespace tut {
 			"A normal header was encountered after the security password header"));
 	}
 
-	TEST_METHOD(52) {
+	TEST_METHOD(62) {
 		set_test_name("It rejects secure headers while in normal mode");
 
 		connectToServer();
@@ -1230,7 +1230,7 @@ namespace tut {
 			"A secure header was provided, but no security password was provided"));
 	}
 
-	TEST_METHOD(53) {
+	TEST_METHOD(63) {
 		set_test_name("If no secure mode password is given in the context, "
 			"switching to secure mode is always possible");
 
@@ -1245,7 +1245,7 @@ namespace tut {
 		ensure("(1)", containsSubstring(response, "HTTP/1.1 200 OK\r\n"));
 	}
 
-	TEST_METHOD(54) {
+	TEST_METHOD(64) {
 		set_test_name("If a secure mode password is given in the context, "
 			"it rejects requests that specify the wrong secure mode password");
 
@@ -1267,7 +1267,7 @@ namespace tut {
 			"Security password mismatch"));
 	}
 
-	TEST_METHOD(55) {
+	TEST_METHOD(65) {
 		set_test_name("If a secure mode password is given in the context, "
 			"it accepts requests that specify the correct secure mode password");
 
@@ -1291,7 +1291,7 @@ namespace tut {
 
 	/***** Request ending *****/
 
-	TEST_METHOD(60) {
+	TEST_METHOD(70) {
 		set_test_name("If all output data is flushed, and keep-alive is not possible, "
 			"it disconnects the client immediately");
 
@@ -1303,7 +1303,7 @@ namespace tut {
 		readAll(fd, std::numeric_limits<size_t>::max()); // Does not block
 	}
 
-	TEST_METHOD(61) {
+	TEST_METHOD(71) {
 		set_test_name("If all output data is flushed, and keep-alive is possible, "
 			"it handles the next request immediately");
 
@@ -1334,7 +1334,7 @@ namespace tut {
 			"hello /foo");
 	}
 
-	TEST_METHOD(62) {
+	TEST_METHOD(72) {
 		set_test_name("If there is unflushed output data, and keep-alive is not possible, "
 			"it disconnects the client after all output data is flushed");
 
@@ -1350,7 +1350,7 @@ namespace tut {
 		ensure_equals(body.size(), 1000000u);
 	}
 
-	TEST_METHOD(63) {
+	TEST_METHOD(73) {
 		set_test_name("If there is unflushed output data, and keep-alive is possible, "
 			"it handles the next request after all output data is flushed");
 
@@ -1383,7 +1383,7 @@ namespace tut {
 		ensure_equals(body.substr(1000000), response2);
 	}
 
-	TEST_METHOD(64) {
+	TEST_METHOD(74) {
 		set_test_name("If a request with body is ended but output is being flushed, "
 			"then any received request body data will be discard");
 
@@ -1412,7 +1412,7 @@ namespace tut {
 		ensure_equals(getBodyBytesRead(), 0u);
 	}
 
-	TEST_METHOD(65) {
+	TEST_METHOD(75) {
 		set_test_name("If a request with body is ended but output is being flushed, "
 			"then it won't attempt to keep-alive the connection after the output is flushed");
 
@@ -1452,7 +1452,7 @@ namespace tut {
 
 	/***** Early half-close detection *****/
 
-	TEST_METHOD(70) {
+	TEST_METHOD(80) {
 		set_test_name("Detection of half-close after non-empty body fully received");
 
 		connectToServer();
@@ -1467,7 +1467,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(71) {
+	TEST_METHOD(81) {
 		set_test_name("Detection of half-close when body is empty");
 
 		connectToServer();
@@ -1480,7 +1480,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(72) {
+	TEST_METHOD(82) {
 		set_test_name("Detection of half-close after body fully received");
 
 		connectToServer();
@@ -1497,7 +1497,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(73) {
+	TEST_METHOD(83) {
 		set_test_name("Normal data is not detected as early half close");
 
 		connectToServer();
@@ -1510,7 +1510,7 @@ namespace tut {
 		);
 	}
 
-	TEST_METHOD(74) {
+	TEST_METHOD(84) {
 		set_test_name("Request body socket errors that occur after the body"
 			" is fully received are processed at the next request");
 
@@ -1529,7 +1529,7 @@ namespace tut {
 
 	/***** Shutdown *****/
 
-	TEST_METHOD(80) {
+	TEST_METHOD(90) {
 		set_test_name("Upon shutting down the server, no requests will be "
 			"eligible for keep-alive");
 
@@ -1549,7 +1549,7 @@ namespace tut {
 		ensure("(3)", !containsSubstring(response, "hello /"));
 	}
 
-	TEST_METHOD(81) {
+	TEST_METHOD(91) {
 		set_test_name("Upon shutting down the server, requests for which the "
 			"headers are being parsed are not disconnected");
 
@@ -1568,7 +1568,7 @@ namespace tut {
 		ensure("(3)", containsSubstring(response, "hello /"));
 	}
 
-	TEST_METHOD(82) {
+	TEST_METHOD(92) {
 		set_test_name("Upon shutting down the server, requests for which the "
 			"headers are being parsed are disconnected when they've been "
 			"identified as upgraded requests");
@@ -1590,7 +1590,7 @@ namespace tut {
 		ensure("(3)", !containsSubstring(response, "Connection: keep-alive"));
 	}
 
-	TEST_METHOD(83) {
+	TEST_METHOD(93) {
 		set_test_name("Upon shutting down the server, normal requests which "
 			"are being processed are not disconnected");
 
@@ -1610,7 +1610,7 @@ namespace tut {
 		ensure("(3)", containsSubstring(response, "2 bytes: ab"));
 	}
 
-	TEST_METHOD(84) {
+	TEST_METHOD(94) {
 		set_test_name("Upon shutting down the server, upgraded requests which "
 			"are being processed are disconnected");
 
@@ -1632,7 +1632,7 @@ namespace tut {
 
 	/***** Miscellaneous *****/
 
-	TEST_METHOD(90) {
+	TEST_METHOD(100) {
 		set_test_name("It responds with the same HTTP version as the request");
 
 		connectToServer();
@@ -1651,7 +1651,7 @@ namespace tut {
 			"hello /");
 	}
 
-	TEST_METHOD(91) {
+	TEST_METHOD(101) {
 		set_test_name("For requests without body, keep-alive is possible");
 
 		connectToServer();
@@ -1663,7 +1663,7 @@ namespace tut {
 		ensure(containsSubstring(header, "Connection: keep-alive"));
 	}
 
-	TEST_METHOD(92) {
+	TEST_METHOD(102) {
 		set_test_name("If the request body is fully read, keep-alive is possible");
 
 		connectToServer();
@@ -1677,7 +1677,7 @@ namespace tut {
 		ensure(containsSubstring(header, "Connection: keep-alive"));
 	}
 
-	TEST_METHOD(93) {
+	TEST_METHOD(103) {
 		set_test_name("If the request body is not fully read, keep-alive is not possible");
 
 		connectToServer();
@@ -1690,7 +1690,7 @@ namespace tut {
 		ensure(containsSubstring(header, "Connection: close"));
 	}
 
-	TEST_METHOD(94) {
+	TEST_METHOD(104) {
 		set_test_name("It defaults to not using keep-alive for HTTP <= 1.0 requests");
 
 		connectToServer();
@@ -1701,7 +1701,7 @@ namespace tut {
 		ensure(containsSubstring(header, "Connection: close"));
 	}
 
-	TEST_METHOD(95) {
+	TEST_METHOD(105) {
 		set_test_name("It defaults to using keep-alive for HTTP >= 1.1 requests");
 
 		connectToServer();
@@ -1712,7 +1712,7 @@ namespace tut {
 		ensure(containsSubstring(header, "Connection: keep-alive"));
 	}
 
-	TEST_METHOD(96) {
+	TEST_METHOD(106) {
 		set_test_name("writeSimpleResponse() doesn't output the body for HEAD requests");
 
 		connectToServer();
@@ -1730,7 +1730,7 @@ namespace tut {
 			"Content-Length: 7\r\n\r\n");
 	}
 
-	TEST_METHOD(97) {
+	TEST_METHOD(107) {
 		set_test_name("Client socket write error handling");
 
 		LoggingKit::setLevel(LoggingKit::CRIT);
