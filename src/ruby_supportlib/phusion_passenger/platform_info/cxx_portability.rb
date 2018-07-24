@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -157,6 +157,12 @@ module PhusionPassenger
         if cxx_supports_wno_unused_local_typedefs_flag?
           # Avoids some compilaton warnings with Boost on Ubuntu 14.04.
           flags << "-Wno-unused-local-typedefs"
+        end
+
+        if cxx_supports_wno_format_nonliteral_flag?
+          # SystemTools/UserDatabase.cpp uses snprintf() with a non-literal
+          # format string.
+          flags << '-Wno-format-nonliteral'
         end
 
         # There are too many implementations of of the hash map!

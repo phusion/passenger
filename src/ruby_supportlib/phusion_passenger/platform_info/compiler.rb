@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -401,6 +401,13 @@ module PhusionPassenger
         :cxx, '', '-Wno-unused-local-typedefs')
     end
     memoize :cxx_supports_wno_unused_local_typedefs_flag?, true
+
+    def self.cxx_supports_wno_format_nonliteral_flag?
+      return try_compile_with_warning_flag(
+        "Checking for C++ compiler '-Wno-format-nonliteral' support",
+        :cxx, '', '-Wno-format-nonliteral')
+    end
+    memoize :cxx_supports_wno_format_nonliteral_flag?, true
 
     def self.cxx_supports_fno_limit_debug_info_flag?
       try_compile_with_warning_flag(
