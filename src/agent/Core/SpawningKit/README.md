@@ -6,7 +6,7 @@ Spawning an application process is complex, involving many steps and with many f
 
 Here is how SpawningKit is used. The caller supplies various parameters such as where the application is located, what language it's written in, what environment variables to apply, etc. SpawningKit then spawns the application process, checks whether the application spawned properly or whether it encountered an error, and then either returns an object that describes the resulting process or throws an exception that describes the failure.
 
-Reliability and visibility are core features in SpawningKit. When SpawningKit returns, you know for sure whether the process started correctly or not. If the application did not start correctly, then the resulting exception describes the failure in a detailed enough manner that allows users to pinpoint the source of the problem. SpawningKit also enforces timeouts everywhere so that stuck processes are handled as well.
+Reliability and visibility are core features of SpawningKit. When SpawningKit returns, you know for sure whether the process started correctly or not. If the application did not start correctly, then the resulting exception describes the failure in a detailed enough manner that allows users to pinpoint the source of the problem. SpawningKit also enforces timeouts everywhere so that stuck processes are handled as well.
 
 **Table of contents**:
 
@@ -17,6 +17,13 @@ Reliability and visibility are core features in SpawningKit. When SpawningKit re
    - The start command
    - Summary with examples
  * API and implementation highlights
+   - Context
+   - Spawners (high-level API)
+   - HandshakePrepare and HandshakePerform (low-level API)
+   - Configuration object
+   - Exception object
+   - Journey
+   - ErrorRenderer
  * Overview of the spawning journey
    - When spawning a process without a preloader
    - When starting a preloader
@@ -42,19 +49,39 @@ Reliability and visibility are core features in SpawningKit. When SpawningKit re
 
 ### Generic vs SpawningKit-enabled applications
 
+    All applications
+     |
+     +-- Generic applications
+     |   (without explicit SpawningKit support; `genericApp = true`)
+     |
+     +-- SpawningKit-enabled applications
+         (with explicit SpawningKit support; `genericApp = false`)
+           |
+           +-- Applications with SpawningKit support automatically injected
+           |   through a "wrapper"; no manual modifications
+           |   (`startsUsingWrapper = true`)
+           |
+           +-- Applications manually modified with SpawningKit support
+               (`startsUsingWrapper = false`)
+
 SpawningKit can be used to spawn any web application, both those with and without explicit SpawningKit support.
 
+> A generic application corresponds to setting the SpawningKit config `genericApp = true`.
+
 When SpawningKit is used to spawn a generic application (without explicit SpawningKit support), the only requirement is that the application can be instructed to start and to listen on a specific TCP port on localhost. The user needs to specify a command string that tells SpawningKit how that is to be done. SpawningKit then looks for a free port that the application may use and executes the application using the supplied command string, telling it to listen on that specific port. (This approach is inspired by Heroku's Procfile system.) SpawningKit waits until the application is up by pinging the port. If the application fails (e.g. by terminating early or by not responding to pings in time) then SpawningKit will abort, reporting the application's stdout and stderr output.
+
+> A SpawningKit-enabled application corresponds to setting the SpawningKit config `genericApp = false`.
 
 Applications can also be modified with explicit SpawningKit support. Such applications can improve performance by telling SpawningKit that it wishes to listen on a Unix domain socket instead of a TCP socket; and they can provide more feedback about any spawning failures, such as with HTML-formatted error messages or by providing more information about where internally in the application or web framework the failure occurred.
 
 ### Wrappers
 
-In general, it is better if an application has explicit SpawningKit support, because then it is able to provide a nicer experience and better performance. But having to modify the application's code is a major hurdle.
+As we said, apps with explicit SpawningKit support is preferred (nicer experience, better performance). There are two ways to add SpawningKit support to an app:
 
-Luckily, it is not always necessary to modify the application. Wrappers are small programs that aid in loading applications written in specific languages -- in particular interpreted languages because they allow modifying application behavior without requiring code modifications. When a wrapper is used, SpawningKit executes the wrapper, not the actual application. The wrapper loads the application and modifies its behavior in such a way that SpawningKit support is added (e.g. ability to report HTML-formatted errors), without requiring modifications to the application code.
+ 1. By manually modifying the application's code to add SpawningKit support.
+ 2. By automatically injecting SpawningKit support into the app, without any manual code modifications.
 
-Wrappers are only applicable to apps without explicit SpawningKit support.
+Option 2 is the most desirable, and is available to apps written in interpreted languages. This works by executing the application through a *wrapper* instead of directly. The wrapper, which is typically written in the same language as the app, loads the application and injects SpawningKit support.
 
 Passenger comes with a few wrappers for specific languages, but SpawningKit itself is more generic and requires the caller to specify which wrapper to use (if at all).
 
@@ -86,15 +113,7 @@ Using the preforking technique through SpawningKit requires either application c
 
 ### The start command
 
-Regardless of whether SpawningKit is used to spawn an application with or without explicit SpawningKit support, and regardless of whether a wrapper is used and whether the application/wrapper can function as a preloader, SpawningKit asks the caller to supply a "start command" that tells it how to execute the wrapper or the application. SpawningKit then uses the handshaking procedure (see: "Overview of the spawning journey") to communicate with the wrapper/application whether it should start in preloader mode or not.
-
-### Summary with examples
-
-To help you better understand the concepts, the following summarizes some of the above concepts and how they map to supportable languages.
-
-SpawningKit-enabled wrappers are included in Passenger for these languages: Ruby, Python, Node.js, Meteor, and Perl.
-
-Any existing app that accepts http requests can be used by writing a wrapper, and any new app can be written with SpawningKit compatibility to avoid the need for a wrapper.
+Regardless of whether SpawningKit is used to spawn an application directly with or without explicit SpawningKit support, and regardless of whether a wrapper is used and whether the application/wrapper can function as a preloader, SpawningKit asks the caller to supply a "start command" that tells it how to execute the wrapper or the application. SpawningKit then uses the handshaking procedure (see: "Overview of the spawning journey") to communicate with the wrapper/application whether it should start in preloader mode or not.
 
 
 ## API and implementation highlights
@@ -114,7 +133,7 @@ context.integrationMode = "standalone";
 context.finalize();
 ~~~
 
-### Spawners
+### Spawners (high-level API)
 
 Use Spawners to spawn application processes. There are two main types of Spawners:
 
@@ -144,15 +163,13 @@ P_WARN("Application process spawned, PID is " << result.pid);
 
 There is also a DummySpawner class, which is only used during unit tests.
 
-### HandshakePrepare and HandshakePerform
+### HandshakePrepare and HandshakePerform (low-level API)
 
 Inside SmartSpawner and DirectSpawner, HandshakePrepare and HandshakePerform are used to perform a lot of the heavy lifting. See "Overview of the spawning journey" -- HandshakePrepare and HandshakePerform are responsible for most of the stuff described there.
 
 In fact, DirectSpawner is just a thin wrapper around HandshakePrepare and HandshakePerform. It first runs HandshakePrepare, then forks a subprocess that executes SpawnEnvSetupper, and then (in the parent process) runs HandshakePerform.
 
 SmartSpawner is a bit bigger because it needs to implement the whole preloading mechanism (see section "Preloaders"), but it still uses HandshakePrepare and HandshakePerform to spawn the preloader, and to negotiate with the subprocess created by the preloader.
-
-Here are some simplified interaction diagrams.
 
 ### Configuration object
 
