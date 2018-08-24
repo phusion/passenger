@@ -132,7 +132,7 @@ private:
 public:
 	/****** Dependencies ******/
 
-	ResourceLocator *resourceLocator;
+	const ResourceLocator *resourceLocator;
 	RandomGeneratorPtr randomGenerator;
 	string integrationMode;
 	string instanceDir;

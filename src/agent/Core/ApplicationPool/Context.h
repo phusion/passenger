@@ -86,7 +86,7 @@ public:
 		return spawningKitFactory->getContext();
 	}
 
-	ResourceLocator *getResourceLocator() const {
+	const ResourceLocator *getResourceLocator() const {
 		return getSpawningKitContext()->resourceLocator;
 	}
 

@@ -170,7 +170,7 @@ public:
 		return buildSystemDir;
 	}
 
-	string findSupportBinary(const string &name) {
+	string findSupportBinary(const string &name) const {
 		string path = getSupportBinariesDir() + "/" + name;
 		bool found;
 		try {
