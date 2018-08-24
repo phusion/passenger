@@ -1,0 +1,255 @@
+/*
+ *  Phusion Passenger - https://www.phusionpassenger.com/
+ *  Copyright (c) 2018 Phusion Holding B.V.
+ *
+ *  "Passenger", "Phusion Passenger" and "Union Station" are registered
+ *  trademarks of Phusion Holding B.V.
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+#ifndef _PASSENGER_APP_DEFINITIONS_ENTRY_H_
+#define _PASSENGER_APP_DEFINITIONS_ENTRY_H_
+
+#include <boost/shared_array.hpp>
+#include <boost/container/vector.hpp>
+
+#include <Constants.h>
+#include <StaticString.h>
+#include <DataStructures/StringKeyTable.h>
+
+namespace Passenger {
+namespace AppDefinitions {
+
+
+// - begin hinted parseable class -
+class Entry {
+private:
+	boost::shared_array<char> storage;
+
+public:
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString key;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString location;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString type;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString startupFile;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString startCommand;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString appEnv;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString baseURI;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString logFile;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString user;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString group;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString ruby;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString python;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString nodejs;
+
+	/**
+	 * @hinted_parseable
+	 * @require_non_empty
+	 */
+	StaticString meteorAppSettings;
+
+	/**
+	 * @hinted_parseable
+	 * @require_non_empty
+	 */
+	StaticString spawnMethod;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString restartDir;
+
+	/**
+	 * @hinted_parseable
+	 */
+	StaticString stickySessionsCookieName;
+
+
+	/**
+	 * @hinted_parseable
+	 */
+	StringKeyTable<StaticString> environmentVariables;
+
+	/**
+	 * @hinted_parseable
+	 */
+	boost::container::vector<StaticString> monitorLogFiles;
+
+
+	/**
+	 * @hinted_parseable
+	 */
+	bool abortWebsocketsOnProcessShutdown: 1;
+
+	/**
+	 * @hinted_parseable
+	 */
+	bool friendlyErrorPages: 1;
+
+	/**
+	 * @hinted_parseable
+	 */
+	bool loadShellEnvvars: 1;
+
+	/**
+	 * @hinted_parseable
+	 */
+	bool stickySessions: 1;
+
+
+	/**
+	 * @hinted_parseable
+	 */
+	int logLevel;
+
+	/**
+	 * In milliseconds.
+	 *
+	 * @hinted_parseable
+	 */
+	int startTimeout;
+
+	/**
+	 * @hinted_parseable
+	 */
+	int forceMaxConcurrentRequestsPerProcess;
+
+	/**
+	 * @hinted_parseable
+	 */
+	unsigned int fileDescriptorUlimit;
+
+	/**
+	 * @hinted_parseable
+	 */
+	unsigned int lveMinUid;
+
+	/**
+	 * @hinted_parseable
+	 */
+	unsigned int minInstances;
+
+	/**
+	 * In seconds.
+	 *
+	 * @hinted_parseable
+	 */
+	unsigned int maxPreloaderIdleTime;
+
+	/**
+	 * @hinted_parseable
+	 */
+	unsigned int maxRequestQueueSize;
+
+	/**
+	 * @hinted_parseable
+	 */
+	unsigned int maxRequests;
+
+	/**************/
+	/**************/
+
+	AppDefinition()
+		: appEnv(P_STATIC_STRING(DEFAULT_APP_ENV)),
+		  baseURI(P_STATIC_STRING("/")),
+		  ruby(P_STATIC_STRING(DEFAULT_RUBY)),
+		  python(P_STATIC_STRING(DEFAULT_PYTHON)),
+		  nodejs(P_STATIC_STRING(DEFAULT_NODEJS)),
+		  spawnMethod(P_STATIC_STRING(DEFAULT_SPAWN_METHOD)),
+		  restartDir(P_STATIC_STRING("tmp")),
+		  stickySessionsCookieName(P_STATIC_STRING(DEFAULT_STICKY_SESSIONS_COOKIE_NAME)),
+		  abortWebsocketsOnProcessShutdown(true),
+		  friendlyErrorPages(false),
+		  loadShellEnvvars(false),
+		  stickySessions(false),
+		  logLevel(DEFAULT_LOG_LEVEL),
+		  startTimeout(DEFAULT_START_TIMEOUT),
+		  forceMaxConcurrentRequestsPerProcess(-1),
+		  fileDescriptorUlimit(0),
+		  lveMinUid(DEFAULT_LVE_MIN_UID),
+		  minInstances(1),
+		  maxPreloaderIdleTime(DEFAULT_MAX_PRELOADER_IDLE_TIME),
+		  maxRequestQueueSize(DEFAULT_MAX_REQUEST_QUEUE_SIZE),
+		  maxRequests(0)
+		  /************/
+		  /************/
+		{ }
+
+	void internStrings();
+};
+// - end hinted parseable class -
+
+
+#include <AppDefinitions/Entry/AutoGeneratedCode.h>
+
+
+} // namespace AppDefinitions
+} // namespace Passenger
+
+#endif /* _PASSENGER_APP_DEFINITIONS_ENTRY_H_ */
