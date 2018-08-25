@@ -423,8 +423,9 @@ describe "Phusion Passenger for Nginx" do
 
     it "invokes oobw when requested by the app process" do
       pid = get("/oobw")
-      sleep 0.5 # wait for oobw callback to be invoked
-      File.exists?("#{@stub.app_root}/oob_work.#{pid}").should == true
+      eventually do
+        File.exists?("#{@stub.app_root}/oob_work.#{pid}")
+      end
     end
 
     it "does not block client while invoking oob work" do
