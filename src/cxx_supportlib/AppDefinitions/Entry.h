@@ -37,6 +37,11 @@ namespace Passenger {
 namespace AppDefinitions {
 
 
+// The following hints are available:
+// @require_non_empty
+// @default
+// @configkit_key_name
+//
 // - begin hinted parseable class -
 class Entry {
 private:
@@ -45,16 +50,19 @@ private:
 public:
 	/**
 	 * @hinted_parseable
+	 * @require_non_empty
 	 */
 	StaticString key;
 
 	/**
 	 * @hinted_parseable
+	 * @require_non_empty
 	 */
 	StaticString location;
 
 	/**
 	 * @hinted_parseable
+	 * @require_non_empty
 	 */
 	StaticString type;
 
@@ -65,16 +73,20 @@ public:
 
 	/**
 	 * @hinted_parseable
+	 * @require_non_empty
 	 */
 	StaticString startCommand;
 
 	/**
 	 * @hinted_parseable
+	 * @default DEFAULT_APP_ENV
 	 */
 	StaticString appEnv;
 
 	/**
 	 * @hinted_parseable
+	 * @configkit_key_name base_uri
+	 * @default "/"
 	 */
 	StaticString baseURI;
 
@@ -96,40 +108,31 @@ public:
 	/**
 	 * @hinted_parseable
 	 */
-	StaticString ruby;
-
-	/**
-	 * @hinted_parseable
-	 */
-	StaticString python;
-
-	/**
-	 * @hinted_parseable
-	 */
-	StaticString nodejs;
-
-	/**
-	 * @hinted_parseable
-	 * @require_non_empty
-	 */
 	StaticString meteorAppSettings;
 
 	/**
 	 * @hinted_parseable
-	 * @require_non_empty
+	 * @default DEFAULT_SPAWN_METHOD
 	 */
 	StaticString spawnMethod;
 
 	/**
 	 * @hinted_parseable
+	 * @default "tmp"
 	 */
 	StaticString restartDir;
 
 	/**
 	 * @hinted_parseable
+	 * @default DEFAULT_STICKY_SESSIONS_COOKIE_NAME
 	 */
 	StaticString stickySessionsCookieName;
 
+
+	/**
+	 * @hinted_parseable
+	 */
+	StringKeyTable<StaticString> languageRuntimes;
 
 	/**
 	 * @hinted_parseable
@@ -144,27 +147,32 @@ public:
 
 	/**
 	 * @hinted_parseable
+	 * @default true
 	 */
 	bool abortWebsocketsOnProcessShutdown: 1;
 
 	/**
 	 * @hinted_parseable
+	 * @default false
 	 */
 	bool friendlyErrorPages: 1;
 
 	/**
 	 * @hinted_parseable
+	 * @default false
 	 */
 	bool loadShellEnvvars: 1;
 
 	/**
 	 * @hinted_parseable
+	 * @default false
 	 */
 	bool stickySessions: 1;
 
 
 	/**
 	 * @hinted_parseable
+	 * @default DEFAULT_LOG_LEVEL
 	 */
 	int logLevel;
 
@@ -172,26 +180,31 @@ public:
 	 * In milliseconds.
 	 *
 	 * @hinted_parseable
+	 * @default DEFAULT_TIMEOUT
 	 */
 	int startTimeout;
 
 	/**
 	 * @hinted_parseable
+	 * @default -1
 	 */
 	int forceMaxConcurrentRequestsPerProcess;
 
 	/**
 	 * @hinted_parseable
+	 * @default 0
 	 */
 	unsigned int fileDescriptorUlimit;
 
 	/**
 	 * @hinted_parseable
+	 * @default DEFAULT_LVE_MIN_UID
 	 */
 	unsigned int lveMinUid;
 
 	/**
 	 * @hinted_parseable
+	 * @default 1
 	 */
 	unsigned int minInstances;
 
@@ -199,47 +212,26 @@ public:
 	 * In seconds.
 	 *
 	 * @hinted_parseable
+	 * @default DEFAULT_MAX_PRELOADER_IDLE_TIME
 	 */
 	unsigned int maxPreloaderIdleTime;
 
 	/**
 	 * @hinted_parseable
+	 * @default DEFAULT_MAX_REQUEST_QUEUE_SIZE
 	 */
 	unsigned int maxRequestQueueSize;
 
 	/**
 	 * @hinted_parseable
+	 * @default 0
 	 */
 	unsigned int maxRequests;
 
 	/**************/
 	/**************/
 
-	AppDefinition()
-		: appEnv(P_STATIC_STRING(DEFAULT_APP_ENV)),
-		  baseURI(P_STATIC_STRING("/")),
-		  ruby(P_STATIC_STRING(DEFAULT_RUBY)),
-		  python(P_STATIC_STRING(DEFAULT_PYTHON)),
-		  nodejs(P_STATIC_STRING(DEFAULT_NODEJS)),
-		  spawnMethod(P_STATIC_STRING(DEFAULT_SPAWN_METHOD)),
-		  restartDir(P_STATIC_STRING("tmp")),
-		  stickySessionsCookieName(P_STATIC_STRING(DEFAULT_STICKY_SESSIONS_COOKIE_NAME)),
-		  abortWebsocketsOnProcessShutdown(true),
-		  friendlyErrorPages(false),
-		  loadShellEnvvars(false),
-		  stickySessions(false),
-		  logLevel(DEFAULT_LOG_LEVEL),
-		  startTimeout(DEFAULT_START_TIMEOUT),
-		  forceMaxConcurrentRequestsPerProcess(-1),
-		  fileDescriptorUlimit(0),
-		  lveMinUid(DEFAULT_LVE_MIN_UID),
-		  minInstances(1),
-		  maxPreloaderIdleTime(DEFAULT_MAX_PRELOADER_IDLE_TIME),
-		  maxRequestQueueSize(DEFAULT_MAX_REQUEST_QUEUE_SIZE),
-		  maxRequests(0)
-		  /************/
-		  /************/
-		{ }
+	Entry();
 
 	void internStrings();
 };

@@ -25,7 +25,7 @@
 require 'build/support/vendor/cxx_hinted_parser/lib/cxx_hinted_parser'
 
 def main
-  fields = parse_config_class_fields
+  fields = parse_entry_class_fields
   comment copyright_header_for(__FILE__), 1
   separator
 
@@ -41,6 +41,10 @@ def main
 
   separator
 
+
+  initializers = constructor_initializers(fields)
+  constructor 'inline Passenger::AppDefinitions::Entry::Entry()', initializers do
+  end
 
   function 'inline void Passenger::AppDefinitions::Entry::internStrings()' do
     add_code %Q{
@@ -172,10 +176,23 @@ def main
   end
 end
 
-def parse_config_class_fields
-  config_h = File.dirname(__FILE__) + '/../Entry.h'
-  parser = CxxHintedParser::Parser.load_file(config_h).parse
+def parse_entry_class_fields
+  entry_h = File.dirname(__FILE__) + '/../Entry.h'
+  parser = CxxHintedParser::Parser.load_file(entry_h).parse
   parser.structs['Entry']
+end
+
+def constructor_initializers(fields)
+  result = {}
+  fields.each do |field|
+    if expr = field.metadata[:default]
+      if field.type == 'StaticString'
+        expr = "P_STATIC_STRING(#{expr})"
+      end
+      result[field.name] = expr
+    end
+  end
+  result
 end
 
 main
