@@ -60,18 +60,22 @@ public:
 		Flags flags;
 		ValueGetter defaultValueGetter;
 		ValueFilter inspectFilter;
+		// Can only be non-NULL when type == ARRAY_TYPE or OBJECT_TYPE.
+		const Schema *nestedSchema;
 
 		Entry()
 			: type(UNKNOWN_TYPE),
-			  flags(OPTIONAL)
+			  flags(OPTIONAL),
+			  nestedSchema(NULL)
 			{ }
 
 		Entry(Type _type, Flags _flags, const ValueGetter &_defaultValueGetter,
-			const ValueFilter &_inspectFilter)
+			const ValueFilter &_inspectFilter, const Schema *_nestedSchema = NULL)
 			: type(_type),
 			  flags(_flags),
 			  defaultValueGetter(_defaultValueGetter),
-			  inspectFilter(_inspectFilter)
+			  inspectFilter(_inspectFilter),
+			  nestedSchema(_nestedSchema)
 			{ }
 
 		bool tryTypecastValue(const Json::Value &val, Json::Value &result) const {
@@ -117,24 +121,33 @@ public:
 					return false;
 				}
 			case ARRAY_TYPE:
-				if (val.isConvertibleTo(Json::arrayValue)) {
-					result = val;
-					return true;
+			case OBJECT_TYPE: {
+				Json::ValueType targetType;
+				if (type == ARRAY_TYPE) {
+					targetType = Json::arrayValue;
+				} else {
+					targetType = Json::objectValue;
+				}
+				if (val.isConvertibleTo(targetType)) {
+					if (nestedSchema != NULL) {
+						return tryTypecastArrayOrObjectValueWithNestedSchema(val,
+							result, "user_value");
+					} else {
+						result = val;
+						return true;
+					}
 				} else {
 					return false;
 				}
-			case OBJECT_TYPE:
-				if (val.isConvertibleTo(Json::objectValue)) {
-					result = val;
-					return true;
-				} else {
-					return false;
-				}
+			}
 			default:
 				result = val;
 				return true;
 			}
 		}
+
+		bool tryTypecastArrayOrObjectValueWithNestedSchema(const Json::Value &val,
+			Json::Value &result, const char *userOrEffectiveValue) const;
 
 		Json::Value inspect() const {
 			Json::Value result(Json::objectValue);
@@ -160,6 +173,9 @@ public:
 					doc["has_default_value"] = "static";
 					doc["default_value"] = Schema::getStaticDefaultValue(*this);
 				}
+			}
+			if (nestedSchema != NULL) {
+				doc["nested_schema"] = nestedSchema->inspect();
 			}
 		}
 	};
@@ -208,6 +224,11 @@ private:
 
 	static Json::Value getStaticDefaultValue(const Schema::Entry &entry);
 
+	static bool validateNestedSchemaArrayValue(const HashedStaticString &key,
+		const Entry &entry, const Json::Value &value, vector<Error> &errors);
+	static bool validateNestedSchemaObjectValue(const HashedStaticString &key,
+		const Entry &entry, const Json::Value &value, vector<Error> &errors);
+
 public:
 	Schema()
 		: finalized(false)
@@ -235,6 +256,20 @@ public:
 				ValueFilter());
 			return EntryBuilder(entries.insert(key, entry)->value);
 		}
+	}
+
+	/**
+	 * Register a new schema entry whose value corresponds to a nested schema.
+	 */
+	EntryBuilder add(const HashedStaticString &key, Type type,
+		const Schema &nestedSchema, unsigned int flags)
+	{
+		assert(!finalized);
+		assert(nestedSchema.finalized);
+		assert(type == ARRAY_TYPE || type == OBJECT_TYPE);
+		Entry entry(type, (Flags) flags, ValueGetter(), ValueFilter(),
+			&nestedSchema);
+		return EntryBuilder(entries.insert(key, entry)->value);
 	}
 
 	/**
@@ -407,7 +442,12 @@ public:
 			}
 		case ARRAY_TYPE:
 			if (value.isConvertibleTo(Json::arrayValue)) {
-				return true;
+				if (entry->nestedSchema == NULL) {
+					return true;
+				} else {
+					return validateNestedSchemaArrayValue(key, *entry,
+						value, errors);
+				}
 			} else {
 				errors.push_back(Error("'{{" + key + "}}' must be an array"));
 				return false;
@@ -428,7 +468,12 @@ public:
 			}
 		case OBJECT_TYPE:
 			if (value.isObject()) {
-				return true;
+				if (entry->nestedSchema == NULL) {
+					return true;
+				} else {
+					return validateNestedSchemaObjectValue(key, *entry,
+						value, errors);
+				}
 			} else {
 				errors.push_back(Error("'{{" + key + "}}' must be a JSON object"));
 				return false;

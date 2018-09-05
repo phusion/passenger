@@ -94,8 +94,16 @@ private:
 		Json::Value getEffectiveValue(const Store &store) const {
 			if (userValue.isNull()) {
 				return getDefaultValue(store);
-			} else {
+			} else if (schemaEntry->nestedSchema == NULL) {
 				return userValue;
+			} else {
+				// The user value may contain nulls that should
+				// be populated with the default value from the
+				// corresponding nested schema.
+				Json::Value result;
+				schemaEntry->tryTypecastArrayOrObjectValueWithNestedSchema(
+					userValue, result, "effective_value");
+				return result;
 			}
 		}
 	};
@@ -105,12 +113,20 @@ private:
 	bool updatedOnce;
 
 	static Json::Value getEffectiveValue(const Json::Value &userValue,
-		const Json::Value &defaultValue)
+		const Json::Value &defaultValue, const Schema::Entry &schemaEntry)
 	{
 		if (userValue.isNull()) {
 			return defaultValue;
-		} else {
+		} else if (schemaEntry.nestedSchema == NULL) {
 			return userValue;
+		} else {
+			// The user value may contain nulls that should
+			// be populated with the default value from the
+			// corresponding nested schema.
+			Json::Value result;
+			schemaEntry.tryTypecastArrayOrObjectValueWithNestedSchema(
+				userValue, result, "effective_value");
+			return result;
 		}
 	}
 
@@ -425,7 +441,8 @@ public:
 			const Json::Value &effectiveValue =
 				subdoc["effective_value"] =
 					getEffectiveValue(subdoc["user_value"],
-						subdoc["default_value"]);
+						subdoc["default_value"],
+						*entry.schemaEntry);
 			schema->validateValue(it.getKey(), effectiveValue, tmpErrors);
 
 			result[it.getKey()] = subdoc;
@@ -585,6 +602,39 @@ public:
 };
 
 
+inline bool
+Schema::Entry::tryTypecastArrayOrObjectValueWithNestedSchema(const Json::Value &val,
+	Json::Value &result, const char *userOrEffectiveValue) const
+{
+	assert(type == ARRAY_TYPE || type == OBJECT_TYPE);
+	assert(nestedSchema != NULL);
+	assert(!val.isNull());
+	assert(val.isConvertibleTo(Json::arrayValue)
+		|| val.isConvertibleTo(Json::objectValue));
+
+	bool ok = true;
+	result = val;
+
+	Json::Value::iterator it, end = result.end();
+	for (it = result.begin(); it != end; it++) {
+		Json::Value &userSubdoc = *it;
+		if (!userSubdoc.isConvertibleTo(Json::objectValue)) {
+			ok = false;
+			continue;
+		}
+
+		vector<Error> errors;
+		Json::Value preview = Store(*nestedSchema).previewUpdate(
+			userSubdoc, errors);
+		Json::Value::const_iterator p_it, p_end = preview.end();
+		for (p_it = preview.begin(); p_it != p_end; p_it++) {
+			const Json::Value &previewSubdoc = *p_it;
+			userSubdoc[p_it.name()] = previewSubdoc[userOrEffectiveValue];
+		}
+	}
+	return ok;
+}
+
 inline Json::Value
 Schema::getValueFromSubSchema(
 	const Store &store,
@@ -646,6 +696,80 @@ inline Json::Value
 Schema::getStaticDefaultValue(const Schema::Entry &entry) {
 	Store::Entry storeEntry(entry);
 	return Store::maybeFilterSecret(storeEntry, storeEntry.getDefaultValue(Store()));
+}
+
+inline bool
+Schema::validateNestedSchemaArrayValue(const HashedStaticString &key,
+	const Schema::Entry &entry, const Json::Value &value, vector<Error> &errors)
+{
+	bool warnedAboutNonObjectValue = false;
+	bool result = true;
+
+	Json::Value::const_iterator it, end = value.end();
+	for (it = value.begin(); it != end; it++) {
+		if (!it->isConvertibleTo(Json::objectValue)) {
+			if (!warnedAboutNonObjectValue) {
+				warnedAboutNonObjectValue = true;
+				result = false;
+				errors.push_back(Error(
+					"'{{" + key + "}}' may only contain JSON objects"));
+			}
+			continue;
+		}
+
+		Store store(*entry.nestedSchema);
+		vector<Error> nestedSchemaErrors;
+		if (store.update(*it, nestedSchemaErrors)) {
+			continue;
+		}
+
+		vector<Error>::const_iterator e_it, e_end = nestedSchemaErrors.end();
+		for (e_it = nestedSchemaErrors.begin(); e_it != e_end; e_it++) {
+			errors.push_back(Error("'{{" + key + "}}' element "
+				+ Passenger::toString(it.index() + 1) + " is invalid: "
+				+ e_it->getMessage()));
+		}
+		result = false;
+	}
+
+	return result;
+}
+
+inline bool
+Schema::validateNestedSchemaObjectValue(const HashedStaticString &key,
+	const Schema::Entry &entry, const Json::Value &value, vector<Error> &errors)
+{
+	bool warnedAboutNonObjectValue = false;
+	bool result = true;
+
+	Json::Value::const_iterator it, end = value.end();
+	for (it = value.begin(); it != end; it++) {
+		if (!it->isConvertibleTo(Json::objectValue)) {
+			if (!warnedAboutNonObjectValue) {
+				warnedAboutNonObjectValue = true;
+				result = false;
+				errors.push_back(Error(
+					"'{{" + key + "}}' may only contain JSON objects"));
+			}
+			continue;
+		}
+
+		Store store(*entry.nestedSchema);
+		vector<Error> nestedSchemaErrors;
+		if (store.update(*it, nestedSchemaErrors)) {
+			continue;
+		}
+
+		vector<Error>::const_iterator e_it, e_end = nestedSchemaErrors.end();
+		for (e_it = nestedSchemaErrors.begin(); e_it != e_end; e_it++) {
+			errors.push_back(Error("'{{" + key + "}}' key '"
+				+ it.name() + "' is invalid: "
+				+ e_it->getMessage()));
+		}
+		result = false;
+	}
+
+	return result;
 }
 
 

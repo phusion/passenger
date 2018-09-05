@@ -20,6 +20,7 @@ ConfigKit is a configuration management system that lets you define configuratio
     - [Flags](#flags)
   - [Defining default values](#defining-default-values)
   - [Defining custom validators](#defining-custom-validators)
+  - [Nested schemas](#nested-schemas)
   - [Inspecting the schema](#inspecting-the-schema)
 - [Using the store](#using-the-store)
   - [Putting data in the store](#putting-data-in-the-store)
@@ -171,9 +172,9 @@ The following types are available:
  * `UINT_TYPE` -- an unsigned integer.
  * `FLOAT_TYPE` -- a floating point number.
  * `BOOL_TYPE` -- a boolean.
- * `ARRAY_TYPE` -- an generic array. May contain any values.
+ * `ARRAY_TYPE` -- usually a generic array (which may contain any values). But with a special `add()` invocation this can indicate an array of [nested ConfigKit schemas](#nested-schemas).
  * `STRING_ARRAY_TYPE` -- an array of strings.
- * `OBJECT_TYPE` -- a generic JSON object. May contain any values.
+ * `OBJECT_TYPE` -- usually a generic JSON object (which may contain any values). But with a special `add()` invocation this can indicate a map of [nested ConfigKit schemas](#nested-schemas).
  * `ANY_TYPE` -- any JSON value.
 
 #### Flags
@@ -227,6 +228,81 @@ Miscellaneous notes about custom validators:
  - They are always run, even if the normal type validation fails. For example if the caller tries to set the "foo" key to an array value (which is incompatible with the string type), then `myValidator` will still be called.
  - All registered validators are called. A validator cannot prevent other validators from running.
 
+### Nested schemas
+
+> **Warning:** do not confuse nested schemas with **subschemas**. The latter is a mechanism for composing multiple schemas together, not a way to define the type of a field.
+
+It is possible to define a config field that is an array of objects, or a string map of objects, that should conform to a certain schema. We call such a schema a **nested schema**. For example:
+
+~~~c++
+ConfigKit::Schema personSchema;
+personSchema.add("name", STRING_TYPE, REQUIRED);
+personSchema.add("age", INT_TYPE, OPTIONAL);
+personSchema.finalize();
+
+ConfigKit::Schema mainSchema;
+mainSchema.add("people", ARRAY_TYPE, personSchema, REQUIRED);
+mainSchema.add("frobnicate", BOOL_TYPE, OPTIONAL, false);
+mainSchema.finalize();
+~~~
+
+A field with a nested schema is defined by calling `add(<field name>, ARRAY_TYPE or OBJECT_TYPE, <nested schema object>, <flags>)`.
+
+The above example mainSchema says the following format is valid:
+
+~~~javascript
+{
+  "people": [
+    {
+      "name": "John",
+      "age": 12 // optional
+    },
+    {
+      "name": "Jane"
+    },
+    // ...
+  }
+  ],
+  "frobinate": boolean-value
+}
+~~~
+
+Nested schema fields simply accept corresponding JSON values, like this:
+
+~~~c++
+Json::Value initialValue;
+initialValue["people"][0]["name"] = "John";
+initialValue["people"][0]["age"] = 12;
+initialValue["people"][1]["name"] = "Jane";
+ConfigKit::Store store(mainSchema, initialValue);
+~~~
+
+Note that it is not possible to define a nested schema field with a default value. This is because the default values are taken from the nested schema. For example, take this code which inserts an empty object into the "people" array:
+
+~~~c++
+ConfigKit::Schema personSchema;
+personSchema.add("name", STRING_TYPE, OPTIONAL, "anonymous");
+personSchema.finalize();
+
+ConfigKit::Schema mainSchema;
+mainSchema.add("people", ARRAY_TYPE, personSchema, REQUIRED);
+mainSchema.finalize();
+
+Json::Value initialValue;
+initialValue["people"][0] = Json::objectValue;
+ConfigKit::Store store(mainSchema, initialValue);
+~~~
+
+Because personSchema defines a default value of "anonymous" on its "name" field, the above code would result in the following effective values:
+
+~~~json
+{
+  "people": [
+    { "name": "anonymous" }
+  ]
+}
+~~~
+
 ### Inspecting the schema
 
 You can inspect the schema using the `inspect()` method. It returns a Json::Value in the following format:
@@ -248,6 +324,17 @@ You can inspect the schema using the `inspect()` method. It returns a Json::Valu
   "password": {
     "type": "string",
     "secret": true
+  },
+  "people": {
+    "type": "array",
+    "nested_schema": {
+      "name": {
+        "type": "string"
+      },
+      "age": {
+        "type": "integer"
+      }
+    }
   }
 }
 ~~~
@@ -258,6 +345,7 @@ Description of the members:
  - `required`: whether this key is required.
  - `has_default_value`: "static" if a static a default value is defined, "dynamic" if a dynamic default value is defined.
  - `default_value`: the static default value. This field is absent when there is no default value, or if the default value is dynamic.
+ - `nested_schema`: if this field has a [nested schema](#nested-schemas), then a description of that nested schema is stored here.
 
 ## Using the store
 
