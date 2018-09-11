@@ -40,6 +40,7 @@ namespace tut {
 		BackgroundEventLoop bg;
 		ServerKit::Schema skSchema;
 		ServerKit::Context context;
+		WrapperRegistry::Registry wrapperRegistry;
 		Core::ControllerSchema schema;
 		Core::ControllerSingleAppModeSchema singleAppModeSchema;
 		MyController *controller;
@@ -58,6 +59,7 @@ namespace tut {
 		Core_ControllerTest()
 			: bg(false, true),
 			  context(skSchema),
+			  singleAppModeSchema(&wrapperRegistry),
 			  skContext(skContextSchema)
 		{
 			config["thread_number"] = 1;
@@ -71,6 +73,7 @@ namespace tut {
 			singleAppModeConfig["startup_file"] = "none";
 
 			LoggingKit::setLevel(LoggingKit::WARN);
+			wrapperRegistry.finalize();
 			controller = NULL;
 			serverSocket = createUnixServer("tmp.server");
 
@@ -79,6 +82,7 @@ namespace tut {
 			context.initialize();
 
 			skContext.resourceLocator = resourceLocator;
+			skContext.wrapperRegistry = &wrapperRegistry;
 			skContext.integrationMode = "standalone";
 			skContext.finalize();
 
@@ -122,6 +126,7 @@ namespace tut {
 			controller = new MyController(&context, schema, config,
 				singleAppModeSchema, singleAppModeConfig);
 			controller->resourceLocator = resourceLocator;
+			controller->wrapperRegistry = &wrapperRegistry;
 			controller->appPool = appPool;
 			controller->initialize();
 			controller->listen(serverSocket);

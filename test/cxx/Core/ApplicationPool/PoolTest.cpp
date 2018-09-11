@@ -16,6 +16,7 @@ using namespace Passenger::ApplicationPool2;
 
 namespace tut {
 	struct Core_ApplicationPool_PoolTest {
+		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema skContextSchema;
 		SpawningKit::Context::DebugSupport skDebugSupport;
 		SpawningKit::Context skContext;
@@ -36,7 +37,9 @@ namespace tut {
 			: skContext(skContextSchema)
 		{
 			retainSessions = false;
+			wrapperRegistry.finalize();
 			skContext.resourceLocator = resourceLocator;
+			skContext.wrapperRegistry = &wrapperRegistry;
 			skContext.integrationMode = "standalone";
 			skContext.debugSupport = &skDebugSupport;
 			skContext.finalize();
@@ -109,7 +112,7 @@ namespace tut {
 			Options options;
 			options.spawnMethod = "dummy";
 			options.appRoot = "stub/rack";
-			options.startCommand = "ruby\t" "start.rb";
+			options.startCommand = "ruby start.rb";
 			options.startupFile  = "start.rb";
 			options.loadShellEnvvars = false;
 			options.user = testConfig["normal_user_1"].asCString();

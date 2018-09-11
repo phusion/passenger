@@ -9,6 +9,7 @@ using namespace Passenger::SpawningKit;
 
 namespace tut {
 	struct SpawnEnvSetupperTest {
+		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema schema;
 		SpawningKit::Context context;
 		SpawningKit::Config config;
@@ -17,7 +18,9 @@ namespace tut {
 		SpawnEnvSetupperTest()
 			: context(schema)
 		{
+			wrapperRegistry.finalize();
 			context.resourceLocator = resourceLocator;
+			context.wrapperRegistry = &wrapperRegistry;
 			context.integrationMode = "standalone";
 			context.finalize();
 

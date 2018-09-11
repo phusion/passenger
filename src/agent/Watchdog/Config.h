@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -253,9 +253,13 @@ private:
 	}
 
 public:
-	struct {
+	struct CoreSubschemaContainer {
 		Core::Schema schema;
 		ConfigKit::TableTranslator translator;
+
+		CoreSubschemaContainer(const WrapperRegistry::Registry *wrapperRegistry)
+			: schema(wrapperRegistry)
+			{ }
 	} core;
 	struct {
 		ApiServer::Schema schema;
@@ -266,7 +270,9 @@ public:
 		ConfigKit::PrefixTranslator translator;
 	} apiServerKit;
 
-	Schema() {
+	Schema(const WrapperRegistry::Registry *wrapperRegistry = NULL)
+		: core(wrapperRegistry)
+	{
 		using namespace ConfigKit;
 
 		// Add subschema: core

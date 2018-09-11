@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -30,7 +30,7 @@
 #include <vector>
 #include <utility>
 #include <boost/shared_array.hpp>
-#include <AppTypes.h>
+#include <WrapperRegistry/Registry.h>
 #include <DataStructures/HashedStaticString.h>
 #include <Constants.h>
 #include <ResourceLocator.h>
@@ -545,16 +545,16 @@ public:
 	 * the `elements` argument.
 	 */
 	void toVector(vector<string> &vec, const ResourceLocator &resourceLocator,
-		int fields = ALL_OPTIONS) const
+		const WrapperRegistry::Registry &wrapperRegistry, int fields = ALL_OPTIONS) const
 	{
 		if (fields & SPAWN_OPTIONS) {
 			appendKeyValue (vec, "app_root",           appRoot);
 			appendKeyValue (vec, "app_group_name",     getAppGroupName());
 			appendKeyValue (vec, "app_type",           appType);
 			appendKeyValue (vec, "app_log_file",       appLogFile);
-			appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator));
-			appendKeyValue (vec, "startup_file",       absolutizePath(getStartupFile(), absolutizePath(appRoot)));
-			appendKeyValue (vec, "process_title",      getProcessTitle());
+			appendKeyValue (vec, "start_command",      getStartCommand(resourceLocator, wrapperRegistry));
+			appendKeyValue (vec, "startup_file",       absolutizePath(getStartupFile(wrapperRegistry), absolutizePath(appRoot)));
+			appendKeyValue (vec, "process_title",      getProcessTitle(wrapperRegistry));
 			appendKeyValue2(vec, "log_level",          logLevel);
 			appendKeyValue3(vec, "start_timeout",      startTimeout);
 			appendKeyValue (vec, "environment",        environment);
@@ -589,12 +589,12 @@ public:
 
 	template<typename Stream>
 	void toXml(Stream &stream, const ResourceLocator &resourceLocator,
-		int fields = ALL_OPTIONS) const
+		const WrapperRegistry::Registry &wrapperRegistry, int fields = ALL_OPTIONS) const
 	{
 		vector<string> args;
 		unsigned int i;
 
-		toVector(args, resourceLocator, fields);
+		toVector(args, resourceLocator, wrapperRegistry, fields);
 		for (i = 0; i < args.size(); i += 2) {
 			stream << "<" << args[i] << ">";
 			stream << escapeForXml(args[i + 1]);
@@ -614,43 +614,47 @@ public:
 		}
 	}
 
-	string getStartCommand(const ResourceLocator &resourceLocator) const {
-		if (appType == P_STATIC_STRING("rack")) {
-			return escapeShell(ruby) + " "
-				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/rack-loader.rb");
-		} else if (appType == P_STATIC_STRING("wsgi")) {
-			return escapeShell(python) + " "
-				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/wsgi-loader.py");
-		} else if (appType == P_STATIC_STRING("node")) {
-			return escapeShell(nodejs) + " "
-				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/node-loader.js");
-		} else if (appType == P_STATIC_STRING("meteor")) {
-			return escapeShell(ruby) + " "
-				+ escapeShell(resourceLocator.getHelperScriptsDir() + "/meteor-loader.rb");
+	string getStartCommand(const ResourceLocator &resourceLocator,
+		const WrapperRegistry::Registry &wrapperRegistry) const
+	{
+		const WrapperRegistry::Entry &entry = wrapperRegistry.lookup(appType);
+
+		string interpreter;
+		if (entry.language == P_STATIC_STRING("ruby")) {
+			interpreter = escapeShell(ruby);
+		} else if (entry.language == P_STATIC_STRING("python")) {
+			interpreter = escapeShell(python);
+		} else if (entry.language == P_STATIC_STRING("nodejs")) {
+			interpreter = escapeShell(nodejs);
+		} else if (entry.language == P_STATIC_STRING("meteor")) {
+			interpreter = escapeShell(ruby);
 		} else {
 			return startCommand;
 		}
+
+		return interpreter + " " + escapeShell(resourceLocator.getHelperScriptsDir()
+			+ "/" + entry.path);
 	}
 
-	StaticString getStartupFile() const {
+	StaticString getStartupFile(const WrapperRegistry::Registry &wrapperRegistry) const {
 		if (startupFile.empty()) {
-			const char *result = getAppTypeStartupFile(getAppType(appType));
-			if (result == NULL) {
-				return P_STATIC_STRING("");
+			const WrapperRegistry::Entry &entry = wrapperRegistry.lookup(appType);
+			if (entry.isNull() || entry.defaultStartupFiles.empty()) {
+				return StaticString();
 			} else {
-				return result;
+				return entry.defaultStartupFiles[0];
 			}
 		} else {
 			return startupFile;
 		}
 	}
 
-	StaticString getProcessTitle() const {
-		const char *result = getAppTypeProcessTitle(getAppType(appType));
-		if (result == NULL) {
-			return processTitle;
+	StaticString getProcessTitle(const WrapperRegistry::Registry &registry) const {
+		const WrapperRegistry::Entry &entry = registry.lookup(appType);
+		if (entry.isNull()) {
+			return entry.processTitle;
 		} else {
-			return result;
+			return StaticString();
 		}
 	}
 

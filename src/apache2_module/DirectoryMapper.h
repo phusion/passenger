@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -33,7 +33,7 @@
 #include <oxt/backtrace.hpp>
 #include <boost/thread.hpp>
 
-#include <AppTypes.h>
+#include <AppTypeDetector/Detector.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
 
@@ -72,6 +72,7 @@ public:
  */
 class DirectoryMapper {
 private:
+	const WrapperRegistry::Registry &registry;
 	DirConfig *config;
 	request_rec *r;
 	CachedFileStat *cstat;
@@ -80,8 +81,8 @@ private:
 	string publicDir;
 	string appRoot;
 	unsigned int throttleRate;
-	PassengerAppType appType: 7;
-	bool autoDetectionDone: 1;
+	AppTypeDetector::Detector::Result detectorResult;
+	bool autoDetectionDone;
 
 	const char *findBaseURI() const {
 		set<string>::const_iterator it, end = config->getBaseURIs().end();
@@ -146,30 +147,28 @@ private:
 		}
 
 		UPDATE_TRACE_POINT();
-		AppTypeDetector detector(cstat, cstatMutex, throttleRate);
-		PassengerAppType appType;
+		AppTypeDetector::Detector detector(registry, cstat,
+			cstatMutex, throttleRate);
+		AppTypeDetector::Detector::Result detectorResult;
 		string appRoot;
 		if (config->getAppType().empty()) {
 			if (config->getAppRoot().empty()) {
-				appType = detector.checkDocumentRoot(publicDir,
+				detectorResult = detector.checkDocumentRoot(publicDir,
 					baseURI != NULL,
 					&appRoot);
 			} else {
 				appRoot = config->getAppRoot();
-				appType = detector.checkAppRoot(appRoot);
+				detectorResult = detector.checkAppRoot(appRoot);
 			}
-		} else {
-			if (config->getAppRoot().empty()) {
-				appType = PAT_NONE;
-			} else {
-				appRoot = config->getAppRoot().toString();
-				appType = getAppType(config->getAppType());
-			}
+		} else if (!config->getAppRoot().empty()) {
+			appRoot = config->getAppRoot().toString();
+			detectorResult.wrapperRegistryEntry = &registry.lookup(
+				config->getAppType());
 		}
 
 		this->appRoot = appRoot;
 		this->baseURI = baseURI;
-		this->appType = appType;
+		this->detectorResult = detectorResult;
 		autoDetectionDone = true;
 	}
 
@@ -184,14 +183,17 @@ public:
 	 * @warning Do not use this object after the destruction of <tt>r</tt>,
 	 *          <tt>config</tt> or <tt>cstat</tt>.
 	 */
-	DirectoryMapper(request_rec *r, DirConfig *config, CachedFileStat *cstat,
-	                boost::mutex *cstatMutex, unsigned int throttleRate) {
+	DirectoryMapper(request_rec *r, DirConfig *config,
+		const WrapperRegistry::Registry &_registry,
+		CachedFileStat *cstat, boost::mutex *cstatMutex,
+		unsigned int throttleRate)
+		: registry(_registry)
+	{
 		this->r = r;
 		this->config = config;
 		this->cstat = cstat;
 		this->cstatMutex = cstatMutex;
 		this->throttleRate = throttleRate;
-		appType = PAT_NONE;
 		baseURI = NULL;
 		autoDetectionDone = false;
 	}
@@ -243,30 +245,16 @@ public:
 	}
 
 	/**
-	 * Returns the application type that's associated with the HTTP request.
+	 * Returns the application detector result associated with the HTTP request.
 	 *
 	 * @throws FileSystemException An error occured while examening the filesystem.
 	 * @throws DocumentRootDeterminationError Unable to query the location of the document root.
 	 * @throws TimeRetrievalException
 	 * @throws boost::thread_interrupted
 	 */
-	PassengerAppType getApplicationType() {
+	AppTypeDetector::Detector::Result getDetectorResult() {
 		autoDetect();
-		return appType;
-	}
-
-	/**
-	 * Returns the application type (as a string) that's associated
-	 * with the HTTP request.
-	 *
-	 * @throws FileSystemException An error occured while examening the filesystem.
-	 * @throws DocumentRootDeterminationError Unable to query the location of the document root.
-	 * @throws TimeRetrievalException
-	 * @throws boost::thread_interrupted
-	 */
-	const char *getApplicationTypeName() {
-		autoDetect();
-		return getAppTypeName(appType);
+		return detectorResult;
 	}
 };
 

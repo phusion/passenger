@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -24,6 +24,7 @@
  *  THE SOFTWARE.
  */
 #include <Core/Controller.h>
+#include <AppTypeDetector/Detector.h>
 
 /*************************************************************************
  *
@@ -336,13 +337,13 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 
 	const LString *appType = secureHeaders.lookup("!~PASSENGER_APP_TYPE");
 	if (appType == NULL || appType->size == 0) {
-		AppTypeDetector detector;
-		PassengerAppType type = detector.checkAppRoot(options.appRoot);
-		if (type == PAT_NONE || type == PAT_ERROR) {
+		AppTypeDetector::Detector detector(*wrapperRegistry);
+		AppTypeDetector::Detector::Result result = detector.checkAppRoot(options.appRoot);
+		if (result.isNull()) {
 			disconnectWithError(&client, "client did not send a recognized !~PASSENGER_APP_TYPE header");
 			return;
 		}
-		options.appType = getAppTypeName(type);
+		options.appType = result.wrapperRegistryEntry->language;
 	} else {
 		fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
 	}

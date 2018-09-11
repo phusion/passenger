@@ -165,6 +165,7 @@ namespace Watchdog {
 
 using namespace Passenger::Watchdog;
 
+static WrapperRegistry::Registry *watchdogWrapperRegistry;
 static Schema *watchdogSchema;
 static ConfigKit::Store *watchdogConfig;
 static WorkingObjects *workingObjects;
@@ -800,7 +801,9 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	string oldOomScore = setOomScoreNeverKill();
 #endif
 
-	watchdogSchema = new Schema();
+	watchdogWrapperRegistry = new WrapperRegistry::Registry();
+	watchdogWrapperRegistry->finalize();
+	watchdogSchema = new Schema(watchdogWrapperRegistry);
 	watchdogConfig = new ConfigKit::Store(*watchdogSchema);
 	initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " watchdog",
 		*watchdogConfig, watchdogSchema->core.schema.loggingKit.translator,

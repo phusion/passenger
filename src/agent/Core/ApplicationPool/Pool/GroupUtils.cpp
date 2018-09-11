@@ -52,7 +52,8 @@ Pool::getGroupRunUidAndGids(const StaticString &appGroupName) {
 	if (!groups.lookup(appGroupName.c_str(), &group)) {
 		throw RuntimeException("Could not find group: " + appGroupName);
 	} else {
-		SpawningKit::UserSwitchingInfo info = SpawningKit::prepareUserSwitching((*group)->options);
+		SpawningKit::UserSwitchingInfo info = SpawningKit::prepareUserSwitching((*group)->options,
+			*context->getWrapperRegistry());
 		return pair<uid_t, gid_t>(info.uid,info.gid);
 	}
 }

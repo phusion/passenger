@@ -35,6 +35,7 @@
 #include <boost/shared_array.hpp>
 #include <oxt/backtrace.hpp>
 #include <oxt/system_calls.hpp>
+#include <WrapperRegistry/Registry.h>
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Core/SpawningKit/Context.h>
@@ -61,7 +62,9 @@ struct UserSwitchingInfo {
 };
 
 inline UserSwitchingInfo
-prepareUserSwitching(const AppPoolOptions &options) {
+prepareUserSwitching(const AppPoolOptions &options,
+	const WrapperRegistry::Registry &wrapperRegistry)
+{
 	TRACE_POINT();
 	UserSwitchingInfo info;
 
@@ -95,7 +98,7 @@ prepareUserSwitching(const AppPoolOptions &options) {
 
 	UPDATE_TRACE_POINT();
 	string defaultGroup;
-	string startupFile = absolutizePath(options.getStartupFile(),
+	string startupFile = absolutizePath(options.getStartupFile(wrapperRegistry),
 		absolutizePath(options.appRoot));
 	struct passwd &pwd = info.lveUserPwd;
 	boost::shared_array<char> &pwdBuf = info.lveUserPwdStrBuf;

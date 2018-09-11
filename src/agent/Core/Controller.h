@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -71,6 +71,7 @@
 #include <MemoryKit/palloc.h>
 #include <DataStructures/LString.h>
 #include <DataStructures/StringKeyTable.h>
+#include <WrapperRegistry/Registry.h>
 #include <StaticString.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
@@ -365,6 +366,7 @@ public:
 
 	// Dependencies
 	ResourceLocator *resourceLocator;
+	WrapperRegistry::Registry *wrapperRegistry;
 	PoolPtr appPool;
 
 

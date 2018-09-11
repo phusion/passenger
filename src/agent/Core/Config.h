@@ -41,6 +41,7 @@
 #include <ConfigKit/PrefixTranslator.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/HttpServer.h>
+#include <WrapperRegistry/Registry.h>
 #include <Core/Controller/Config.h>
 #include <Core/SecurityUpdateChecker.h>
 #include <Core/ApiServer.h>
@@ -241,7 +242,9 @@ private:
 		}
 	}
 
-	static void validateSingleAppMode(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
+	static void validateSingleAppMode(const ConfigKit::Store &config,
+		const WrapperRegistry::Registry *wrapperRegistry, vector<ConfigKit::Error> &errors)
+	{
 		typedef ConfigKit::Error Error;
 
 		if (config["multi_app"].asBool()) {
@@ -251,7 +254,8 @@ private:
 		// single_app_mode_app_type and single_app_mode_startup_file are
 		// autodetected in initializeSingleAppMode()
 
-		ControllerSingleAppModeSchema::validateAppType("single_app_mode_app_type", config, errors);
+		ControllerSingleAppModeSchema::validateAppType("single_app_mode_app_type",
+			wrapperRegistry, config, errors);
 	}
 
 	static void validateControllerSecureHeadersPassword(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
@@ -348,9 +352,13 @@ public:
 		ControllerSchema schema;
 		ConfigKit::TableTranslator translator;
 	} controller;
-	struct {
+	struct ControllerSingleAppModeSubschemaContainer {
 		ControllerSingleAppModeSchema schema;
 		ConfigKit::PrefixTranslator translator;
+
+		ControllerSingleAppModeSubschemaContainer(const WrapperRegistry::Registry *registry)
+			: schema(registry)
+			{ }
 	} controllerSingleAppMode;
 	struct {
 		ServerKit::Schema schema;
@@ -373,7 +381,9 @@ public:
 		ConfigKit::TableTranslator translator;
 	} adminPanelConnector;
 
-	Schema() {
+	Schema(const WrapperRegistry::Registry *wrapperRegistry = NULL)
+		: controllerSingleAppMode(wrapperRegistry)
+	{
 		using namespace ConfigKit;
 
 		// Add subschema: loggingKit
@@ -453,7 +463,8 @@ public:
 		add("file_descriptor_ulimit", UINT_TYPE, OPTIONAL | READ_ONLY, 0);
 
 		addValidator(validateMultiAppMode);
-		addValidator(validateSingleAppMode);
+		addValidator(boost::bind(validateSingleAppMode, boost::placeholders::_1,
+			wrapperRegistry, boost::placeholders::_2));
 		addValidator(validateControllerSecureHeadersPassword);
 		addValidator(validateApplicationPool);
 		addValidator(validateController);

@@ -99,6 +99,11 @@ Group::getResourceLocator() const {
 	return *getPool()->getSpawningKitContext()->resourceLocator;
 }
 
+const WrapperRegistry::Registry &
+Group::getWrapperRegistry() const {
+	return *getPool()->getSpawningKitContext()->wrapperRegistry;
+}
+
 
 } // namespace ApplicationPool2
 } // namespace Passenger

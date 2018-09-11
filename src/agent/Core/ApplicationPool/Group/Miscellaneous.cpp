@@ -53,7 +53,8 @@ Group::cleanupSpawner(boost::container::vector<Callback> &postLockActions) {
 
 bool
 Group::authorizeByUid(uid_t uid) const {
-	return uid == 0 || SpawningKit::prepareUserSwitching(options).uid == uid;
+	return uid == 0 || SpawningKit::prepareUserSwitching(options,
+		getWrapperRegistry()).uid == uid;
 }
 
 bool

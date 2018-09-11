@@ -79,7 +79,8 @@ protected:
 	void setConfigFromAppPoolOptions(Config *config, Json::Value &extraArgs,
 		const AppPoolOptions &options)
 	{
-		string startCommand = options.getStartCommand(*context->resourceLocator);
+		string startCommand = options.getStartCommand(*context->resourceLocator,
+			*context->wrapperRegistry);
 		string envvarsData;
 		try {
 			envvarsData = modp::b64_decode(options.environmentVariables.data(),
@@ -99,7 +100,7 @@ protected:
 		config->findFreePort = false;
 		config->loadShellEnvvars = options.loadShellEnvvars;
 		config->startCommand = startCommand;
-		config->startupFile = options.getStartupFile();
+		config->startupFile = options.getStartupFile(*context->wrapperRegistry);
 		config->appType = options.appType;
 		config->appEnv = options.environment;
 		config->baseURI = options.baseURI;
@@ -112,7 +113,8 @@ protected:
 		config->fileDescriptorUlimit = options.fileDescriptorUlimit;
 		config->startTimeoutMsec = options.startTimeout;
 
-		UserSwitchingInfo info = prepareUserSwitching(options);
+		UserSwitchingInfo info = prepareUserSwitching(options,
+			*context->wrapperRegistry);
 		config->user = info.username;
 		config->group = info.groupname;
 

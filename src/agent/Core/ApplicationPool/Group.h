@@ -46,6 +46,7 @@
 #include <cassert>
 #include <SmallVector.h>
 #include <MemoryKit/palloc.h>
+#include <WrapperRegistry/Registry.h>
 #include <Hooks.h>
 #include <Utils.h>
 #include <Core/ApplicationPool/Common.h>
@@ -438,6 +439,7 @@ public:
 	Context *getContext() const;
 	psg_pool_t *getPallocPool() const;
 	const ResourceLocator &getResourceLocator() const;
+	const WrapperRegistry::Registry &getWrapperRegistry() const;
 
 	/****** Session management ******/
 

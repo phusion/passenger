@@ -90,6 +90,10 @@ public:
 		return getSpawningKitContext()->resourceLocator;
 	}
 
+	const WrapperRegistry::Registry *getWrapperRegistry() const {
+		return getSpawningKitContext()->wrapperRegistry;
+	}
+
 	const RandomGeneratorPtr &getRandomGenerator() const {
 		return getSpawningKitContext()->randomGenerator;
 	}

@@ -17,6 +17,7 @@ using namespace Passenger::SpawningKit;
 
 namespace tut {
 	struct Core_SpawningKit_SmartSpawnerTest {
+		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema schema;
 		SpawningKit::Context context;
 		SpawningKit::Result result;
@@ -24,7 +25,9 @@ namespace tut {
 		Core_SpawningKit_SmartSpawnerTest()
 			: context(schema)
 		{
+			wrapperRegistry.finalize();
 			context.resourceLocator = resourceLocator;
+			context.wrapperRegistry = &wrapperRegistry;
 			context.integrationMode = "standalone";
 			context.finalize();
 

@@ -9,6 +9,7 @@ using namespace std;
 
 namespace tut {
 	struct Core_ApplicationPool_ProcessTest {
+		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema skContextSchema;
 		SpawningKit::Context skContext;
 		Context context;
@@ -20,7 +21,9 @@ namespace tut {
 		Core_ApplicationPool_ProcessTest()
 			: skContext(skContextSchema)
 		{
+			wrapperRegistry.finalize();
 			skContext.resourceLocator = resourceLocator;
+			skContext.wrapperRegistry = &wrapperRegistry;
 			skContext.integrationMode = "standalone";
 			skContext.finalize();
 

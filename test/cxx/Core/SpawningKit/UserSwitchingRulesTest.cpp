@@ -9,10 +9,12 @@ using namespace Passenger::SpawningKit;
 
 namespace tut {
 	struct Core_SpawningKit_UserSwitchingRulesTest {
+		WrapperRegistry::Registry wrapperRegistry;
 		AppPoolOptions options;
 		UserSwitchingInfo result;
 
 		Core_SpawningKit_UserSwitchingRulesTest() {
+			wrapperRegistry.finalize();
 			options.spawnMethod = "direct";
 			options.loadShellEnvvars = false;
 			options.appRoot = "tmp.wsgi";
@@ -30,7 +32,7 @@ namespace tut {
 		code
 
 	#define RUN_USER_SWITCHING_TEST() \
-		result = prepareUserSwitching(options)
+		result = prepareUserSwitching(options, wrapperRegistry)
 
 	static uid_t uidFor(const string &userName) {
 		OsUser osUser;

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -162,14 +162,15 @@ Group::inspectXml(std::ostream &stream, bool includeSecrets) const {
 		P_BUG("Unknown 'lifeStatus' state " << lifeStatus);
 	}
 
-	SpawningKit::UserSwitchingInfo usInfo(SpawningKit::prepareUserSwitching(options));
+	SpawningKit::UserSwitchingInfo usInfo(SpawningKit::prepareUserSwitching(options,
+		getWrapperRegistry()));
 	stream << "<user>" << escapeForXml(usInfo.username) << "</user>";
 	stream << "<uid>" << usInfo.uid << "</uid>";
 	stream << "<group>" << escapeForXml(usInfo.groupname) << "</group>";
 	stream << "<gid>" << usInfo.gid << "</gid>";
 
 	stream << "<options>";
-	options.toXml(stream, getResourceLocator());
+	options.toXml(stream, getResourceLocator(), getWrapperRegistry());
 	stream << "</options>";
 
 	stream << "<processes>";
@@ -201,22 +202,14 @@ Group::inspectXml(std::ostream &stream, bool includeSecrets) const {
 void
 Group::inspectPropertiesInAdminPanelFormat(Json::Value &result) const {
 	result["path"] = absolutizePath(options.appRoot);
-	result["startup_file"] = absolutizePath(options.getStartupFile(), absolutizePath(options.appRoot));
-	result["start_command"] = options.getStartCommand(getResourceLocator());
+	result["startup_file"] = absolutizePath(options.getStartupFile(getWrapperRegistry()),
+		absolutizePath(options.appRoot));
+	result["start_command"] = options.getStartCommand(getResourceLocator(),
+		getWrapperRegistry());
+	result["type"] = getWrapperRegistry().lookup(options.appType).language.toString();
 
-	if (options.appType == "rack") {
-		result["type"] = "ruby";
-	} else if (options.appType == "wsgi") {
-		result["type"] = "python";
-	} else if (options.appType == "node") {
-		result["type"] = "nodejs";
-	} else if (options.appType == "meteor") {
-		result["type"] = "meteor";
-	} else {
-		result["type"] = "generic";
-	}
-
-	SpawningKit::UserSwitchingInfo usInfo(SpawningKit::prepareUserSwitching(options));
+	SpawningKit::UserSwitchingInfo usInfo(SpawningKit::prepareUserSwitching(options,
+		getWrapperRegistry()));
 	result["user"]["username"] = usInfo.username;
 	result["user"]["uid"] = (Json::Int) usInfo.uid;
 	result["group"]["groupname"] = usInfo.groupname;

@@ -81,6 +81,7 @@
 #include <ConfigKit/SubComponentUtils.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
+#include <AppTypeDetector/Detector.h>
 #include <MessageReadersWriters.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
@@ -211,6 +212,7 @@ namespace Core {
 
 using namespace Passenger::Core;
 
+static WrapperRegistry::Registry *coreWrapperRegistry;
 static Schema *coreSchema;
 static ConfigKit::Store *coreConfig;
 static WorkingObjects *workingObjects;
@@ -257,9 +259,9 @@ initializeSingleAppMode() {
 
 	if (coreConfig->get("single_app_mode_app_type").isNull()) {
 		P_DEBUG("Autodetecting application type...");
-		AppTypeDetector detector(NULL, 0);
-		PassengerAppType appTypeEnum = detector.checkAppRoot(appRoot);
-		if (appTypeEnum == PAT_NONE || appTypeEnum == PAT_ERROR) {
+		AppTypeDetector::Detector detector(*coreWrapperRegistry, NULL, 0);
+		AppTypeDetector::Detector::Result result = detector.checkAppRoot(appRoot);
+		if (result.isNull()) {
 			fprintf(stderr, "ERROR: unable to autodetect what kind of application "
 				"lives in %s. Please specify information about the app using "
 				"--app-type and --startup-file, or specify a correct location to "
@@ -269,13 +271,18 @@ initializeSingleAppMode() {
 			exit(1);
 		}
 
-		appType = getAppTypeName(appTypeEnum);
+		appType = result.wrapperRegistryEntry->language;
 	} else {
 		appType = coreConfig->get("single_app_mode_app_type").asString();
 	}
 
 	if (coreConfig->get("single_app_mode_startup_file").isNull()) {
-		startupFile = appRoot + "/" + getAppTypeStartupFile(getAppType(appType));
+		const WrapperRegistry::Entry &entry = coreWrapperRegistry->lookup(appType);
+		if (entry.defaultStartupFiles.empty()) {
+			startupFile = appRoot + "/";
+		} else {
+			startupFile = appRoot + "/" + entry.defaultStartupFiles[0];
+		}
 	} else {
 		startupFile = coreConfig->get("single_app_mode_startup_file").asString();
 	}
@@ -653,6 +660,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawningKitContext = boost::make_shared<SpawningKit::Context>(
 		wo->spawningKitContextSchema);
 	wo->spawningKitContext->resourceLocator = &wo->resourceLocator;
+	wo->spawningKitContext->wrapperRegistry = coreWrapperRegistry;
 	wo->spawningKitContext->randomGenerator = wo->randomGenerator;
 	wo->spawningKitContext->integrationMode = coreConfig->get("integration_mode").asString();
 	wo->spawningKitContext->instanceDir = coreConfig->get("instance_dir").asString();
@@ -713,6 +721,7 @@ initializeNonPrivilegedWorkingObjects() {
 			&wo->singleAppModeConfig,
 			coreSchema->controllerSingleAppMode.translator);
 		two.controller->resourceLocator = &wo->resourceLocator;
+		two.controller->wrapperRegistry = coreWrapperRegistry;
 		two.controller->appPool = wo->appPool;
 		two.controller->shutdownFinishCallback = controllerShutdownFinished;
 		two.controller->initialize();
@@ -1277,7 +1286,9 @@ int
 coreMain(int argc, char *argv[]) {
 	int ret;
 
-	coreSchema = new Schema();
+	coreWrapperRegistry = new WrapperRegistry::Registry();
+	coreWrapperRegistry->finalize();
+	coreSchema = new Schema(coreWrapperRegistry);
 	coreConfig = new ConfigKit::Store(*coreSchema);
 	initializeAgent(argc, &argv, SHORT_PROGRAM_NAME " core",
 		*coreConfig, coreSchema->loggingKit.translator,
@@ -1289,5 +1300,6 @@ coreMain(int argc, char *argv[]) {
 
 	ret = runCore();
 	shutdownAgent(coreSchema, coreConfig);
+	delete coreWrapperRegistry;
 	return ret;
 }

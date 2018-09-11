@@ -602,7 +602,7 @@ private:
 					" scripts.</p>");
 				break;
 			case SUBPROCESS_APP_LOAD_OR_EXEC:
-				if (config.appType == "node") {
+				if (config.appType == "nodejs") {
 					message.append(
 						"<h3>Check whether the application calls <code>http.Server.listen()</code></h3>"
 						"<p>" SHORT_PROGRAM_NAME " requires that the application calls"

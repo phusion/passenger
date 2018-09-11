@@ -221,7 +221,7 @@ public:
 	StaticString processTitle;
 
 	/**
-	 * An application type name, e.g. "rack" or "node". The only use for this
+	 * An application type name, e.g. "ruby" or "nodejs". The only use for this
 	 * in SpawningKit is to better format error messages.
 	 *
 	 * @hinted_parseable

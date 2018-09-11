@@ -36,6 +36,7 @@
 #include <ResourceLocator.h>
 #include <RandomGenerator.h>
 #include <Exceptions.h>
+#include <WrapperRegistry/Registry.h>
 #include <Utils/JsonUtils.h>
 #include <ConfigKit/Store.h>
 
@@ -133,6 +134,7 @@ public:
 	/****** Dependencies ******/
 
 	const ResourceLocator *resourceLocator;
+	const WrapperRegistry::Registry *wrapperRegistry;
 	RandomGeneratorPtr randomGenerator;
 	string integrationMode;
 	string instanceDir;
@@ -147,6 +149,7 @@ public:
 		  nextPort(0),
 
 		  resourceLocator(NULL),
+		  wrapperRegistry(NULL),
 		  debugSupport(NULL)
 	{
 		vector<ConfigKit::Error> errors;
@@ -184,6 +187,9 @@ public:
 		TRACE_POINT();
 		if (resourceLocator == NULL) {
 			throw RuntimeException("ResourceLocator not initialized");
+		}
+		if (wrapperRegistry == NULL) {
+			throw RuntimeException("WrapperRegistry not initialized");
 		}
 		if (randomGenerator == NULL) {
 			randomGenerator = boost::make_shared<RandomGenerator>();

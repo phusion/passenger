@@ -39,7 +39,7 @@
 #include <MemoryKit/palloc.h>
 #include <ServerKit/HttpServer.h>
 #include <SystemTools/UserDatabase.h>
-#include <AppTypes.h>
+#include <WrapperRegistry/Registry.h>
 #include <Constants.h>
 #include <Exceptions.h>
 #include <StaticString.h>
@@ -230,7 +230,7 @@ public:
  * END
  */
 struct ControllerSingleAppModeSchema: public ConfigKit::Schema {
-	ControllerSingleAppModeSchema() {
+	ControllerSingleAppModeSchema(const WrapperRegistry::Registry *wrapperRegistry = NULL) {
 		using namespace ConfigKit;
 
 		addWithDynamicDefault("app_root", STRING_TYPE, OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE,
@@ -238,7 +238,7 @@ struct ControllerSingleAppModeSchema: public ConfigKit::Schema {
 		add("app_type", STRING_TYPE, REQUIRED | READ_ONLY);
 		add("startup_file", STRING_TYPE, REQUIRED | READ_ONLY);
 
-		addValidator(boost::bind(validateAppType, "app_type",
+		addValidator(boost::bind(validateAppType, "app_type", wrapperRegistry,
 			boost::placeholders::_1, boost::placeholders::_2));
 		addNormalizer(normalizeAppRoot);
 		addNormalizer(normalizeStartupFile);
@@ -258,21 +258,24 @@ struct ControllerSingleAppModeSchema: public ConfigKit::Schema {
 	}
 
 	static void validateAppType(const string &appTypeKey,
+		const WrapperRegistry::Registry *wrapperRegistry,
 		const ConfigKit::Store &config, vector<ConfigKit::Error> &errors)
 	{
 		typedef ConfigKit::Error Error;
 
-		if (!config[appTypeKey].isNull()) {
-			PassengerAppType appType = getAppType(config[appTypeKey].asString());
-			if (appType == PAT_NONE || appType == PAT_ERROR) {
+		if (!config[appTypeKey].isNull() && wrapperRegistry != NULL) {
+			const WrapperRegistry::Entry &entry =
+				wrapperRegistry->lookup(config[appTypeKey].asString());
+			if (entry.isNull()) {
 				string message = "'{{" + appTypeKey + "}}' is set to '"
 					+ config[appTypeKey].asString() + "', which is not a"
 					" valid application type. Supported app types are:";
-				const AppTypeDefinition *definition = &appTypeDefinitions[0];
-				while (definition->type != PAT_NONE) {
+				WrapperRegistry::Registry::ConstIterator it(
+					wrapperRegistry->getIterator());
+				while (*it != NULL) {
 					message.append(1, ' ');
-					message.append(definition->name);
-					definition++;
+					message.append(it.getValue().language);
+					it.next();
 				}
 				errors.push_back(Error(message));
 			}

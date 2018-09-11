@@ -30,7 +30,7 @@
 
 #include <ngx_core.h>
 #include <ngx_http.h>
-#include "cxx_supportlib/AppTypes.h"
+#include "cxx_supportlib/AppTypeDetector/CBindings.h"
 
 
 typedef struct {
@@ -46,8 +46,8 @@ typedef struct {
     /** The application's base URI. Points to an empty string if none. */
     ngx_str_t   base_uri;
 
-    /** The application's type. */
-    PassengerAppType app_type;
+    /** Detected information about the app. */
+    PsgAppTypeDetectorResult *detector_result;
 } passenger_context_t;
 
 

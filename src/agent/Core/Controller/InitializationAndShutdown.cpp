@@ -94,6 +94,9 @@ Controller::initialize() {
 	if (resourceLocator == NULL) {
 		throw RuntimeException("ResourceLocator not initialized");
 	}
+	if (wrapperRegistry == NULL) {
+		throw RuntimeException("WrapperRegistry not initialized");
+	}
 	if (appPool == NULL) {
 		throw RuntimeException("AppPool not initialized");
 	}

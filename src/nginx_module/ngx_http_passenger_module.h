@@ -31,7 +31,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include "cxx_supportlib/WatchdogLauncher.h"
-#include "cxx_supportlib/AppTypes.h"
+#include "cxx_supportlib/AppTypeDetector/CBindings.h"
 #include "cxx_supportlib/Utils/CachedFileStat.h"
 
 /**
@@ -55,7 +55,9 @@ extern ngx_str_t                pp_placeholder_upstream_address;
 /** A CachedFileStat object used for caching stat() calls. */
 extern PP_CachedFileStat        *pp_stat_cache;
 
-extern PP_AppTypeDetector       *pp_app_type_detector;
+extern PsgWrapperRegistry       *psg_wrapper_registry;
+
+extern PsgAppTypeDetector       *psg_app_type_detector;
 
 extern PsgWatchdogLauncher      *psg_watchdog_launcher;
 

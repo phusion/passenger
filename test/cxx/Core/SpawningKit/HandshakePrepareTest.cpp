@@ -10,6 +10,7 @@ using namespace Passenger::SpawningKit;
 
 namespace tut {
 	struct Core_SpawningKit_HandshakePrepareTest {
+		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema schema;
 		SpawningKit::Context context;
 		SpawningKit::Config config;
@@ -18,7 +19,9 @@ namespace tut {
 		Core_SpawningKit_HandshakePrepareTest()
 			: context(schema)
 		{
+			wrapperRegistry.finalize();
 			context.resourceLocator = resourceLocator;
+			context.wrapperRegistry = &wrapperRegistry;
 			context.integrationMode = "standalone";
 			context.finalize();
 

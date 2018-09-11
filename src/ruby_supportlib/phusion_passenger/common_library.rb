@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2012-2017 Phusion Holding B.V.
+#  Copyright (c) 2012-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -350,8 +350,11 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'DataStructures/LString.o',
     :source   => 'DataStructures/LString.cpp',
     :category => :other
-  define_component 'AppTypes.o',
-    :source   => 'AppTypes.cpp',
+  define_component 'AppTypeDetector/CBindings.o',
+    :source   => 'AppTypeDetector/CBindings.cpp',
+    :category => :other
+  define_component 'WrapperRegistry/CBindings.o',
+    :source   => 'WrapperRegistry/CBindings.cpp',
     :category => :other
 
   define_component 'vendor-modified/modp_b64.o',
@@ -380,6 +383,6 @@ end
 
 # A subset of the objects are linked to the Nginx binary. This defines
 # what those objects are.
-NGINX_LIBS_SELECTOR = [:base, 'WatchdogLauncher.o', 'AppTypes.o',
-  'Utils/CachedFileStat.o', 'JsonTools/CBindings.o',
+NGINX_LIBS_SELECTOR = [:base, 'WatchdogLauncher.o', 'AppTypeDetector/CBindings.o',
+  'WrapperRegistry/CBindings.o', 'Utils/CachedFileStat.o', 'JsonTools/CBindings.o',
   'FileTools/PathManipCBindings.o']
