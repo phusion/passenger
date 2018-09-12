@@ -253,7 +253,7 @@ public:
 	}
 
 	bool isTotallyBusy() const {
-		return concurrency != 0 && sessions >= concurrency;
+		return concurrency > 0 && sessions >= concurrency;
 	}
 
 	void recreateStrings(psg_pool_t *newPool) {
