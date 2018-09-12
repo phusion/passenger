@@ -190,11 +190,12 @@ task :compile_app => dependencies do
         *CXX_SUPPORTLIB_INCLUDE_PATHS
       ],
       :flags => [
+        OPTIMIZE ? "-O" : nil,
         "-DSTANDALONE",
         libev_cflags,
         libuv_cflags,
         websocketpp_cflags
-      ]
+      ].compact
     )
     create_cxx_executable(exe,
       object,
