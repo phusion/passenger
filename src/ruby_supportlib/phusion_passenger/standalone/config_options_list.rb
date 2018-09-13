@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2015-2017 Phusion Holding B.V.
+#  Copyright (c) 2015-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -241,6 +241,16 @@ module PhusionPassenger
         :type      => :path,
         :type_desc => 'FILENAME',
         :desc      => 'Force given startup file to be used'
+      },
+      {
+        :name      => :app_start_command,
+        :type_desc => 'COMMAND',
+        :desc      => 'Force the app to be started through this command'
+      },
+      {
+        :name      => :app_support_kuria_protocol,
+        :type      => :boolean,
+        :desc      => 'Force the app to be recognized as a Kuria app',
       },
       {
         :name      => :spawn_method,

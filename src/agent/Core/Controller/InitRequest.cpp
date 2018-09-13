@@ -337,13 +337,18 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 
 	const LString *appType = secureHeaders.lookup("!~PASSENGER_APP_TYPE");
 	if (appType == NULL || appType->size == 0) {
-		AppTypeDetector::Detector detector(*wrapperRegistry);
-		AppTypeDetector::Detector::Result result = detector.checkAppRoot(options.appRoot);
-		if (result.isNull()) {
-			disconnectWithError(&client, "client did not send a recognized !~PASSENGER_APP_TYPE header");
-			return;
+		const LString *appStartCommand = secureHeaders.lookup("!~PASSENGER_APP_START_COMMAND");
+		if (appStartCommand == NULL || appStartCommand->size == 0) {
+			AppTypeDetector::Detector detector(*wrapperRegistry);
+			AppTypeDetector::Detector::Result result = detector.checkAppRoot(options.appRoot);
+			if (result.isNull()) {
+				disconnectWithError(&client, "client did not send a recognized !~PASSENGER_APP_TYPE header");
+				return;
+			}
+			options.appType = result.wrapperRegistryEntry->language;
+		} else {
+			fillPoolOption(req, options.appStartCommand, "!~PASSENGER_APP_START_COMMAND");
 		}
-		options.appType = result.wrapperRegistryEntry->language;
 	} else {
 		fillPoolOption(req, options.appType, "!~PASSENGER_APP_TYPE");
 	}
@@ -360,7 +365,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.group, "!~PASSENGER_GROUP");
 	fillPoolOption(req, options.minProcesses, "!~PASSENGER_MIN_PROCESSES");
 	fillPoolOption(req, options.spawnMethod, "!~PASSENGER_SPAWN_METHOD");
-	fillPoolOption(req, options.startCommand, "!~PASSENGER_START_COMMAND");
+	fillPoolOption(req, options.appStartCommand, "!~PASSENGER_APP_START_COMMAND");
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");
 	fillPoolOption(req, options.maxPreloaderIdleTime, "!~PASSENGER_MAX_PRELOADER_IDLE_TIME");
 	fillPoolOption(req, options.maxRequestQueueSize, "!~PASSENGER_MAX_REQUEST_QUEUE_SIZE");

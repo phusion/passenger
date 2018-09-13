@@ -223,9 +223,10 @@ public:
  * (do not edit: following text is automatically generated
  * by 'rake configkit_schemas_inline_comments')
  *
- *   app_root       string   -          default,read_only
- *   app_type       string   required   read_only
- *   startup_file   string   required   read_only
+ *   app_root            string   -   default,read_only
+ *   app_start_command   string   -   read_only
+ *   app_type            string   -   read_only
+ *   startup_file        string   -   read_only
  *
  * END
  */
@@ -235,9 +236,11 @@ struct ControllerSingleAppModeSchema: public ConfigKit::Schema {
 
 		addWithDynamicDefault("app_root", STRING_TYPE, OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE,
 			getDefaultAppRoot);
-		add("app_type", STRING_TYPE, REQUIRED | READ_ONLY);
-		add("startup_file", STRING_TYPE, REQUIRED | READ_ONLY);
+		add("app_type", STRING_TYPE, OPTIONAL | READ_ONLY);
+		add("startup_file", STRING_TYPE, OPTIONAL | READ_ONLY);
+		add("app_start_command", STRING_TYPE, OPTIONAL | READ_ONLY);
 
+		addValidator(validateAppTypeOrAppStartCommandSet);
 		addValidator(boost::bind(validateAppType, "app_type", wrapperRegistry,
 			boost::placeholders::_1, boost::placeholders::_2));
 		addNormalizer(normalizeAppRoot);
@@ -255,6 +258,21 @@ struct ControllerSingleAppModeSchema: public ConfigKit::Schema {
 		}
 		string result = path;
 		return result;
+	}
+
+	static void validateAppTypeOrAppStartCommandSet(const ConfigKit::Store &config,
+		vector<ConfigKit::Error> &errors)
+	{
+		typedef ConfigKit::Error Error;
+
+		if (config["app_type"].isNull() && config["app_start_command"].isNull()) {
+			errors.push_back(Error(
+				"Either '{{app_type}}' or '{{app_start_command}}' must be set"));
+		}
+		if (!config["app_type"].isNull() && config["startup_file"].isNull()) {
+			errors.push_back(Error(
+				"If '{{app_type}}' is set, then '{{startup_file}}' must also be set"));
+		}
 	}
 
 	static void validateAppType(const string &appTypeKey,
@@ -290,7 +308,10 @@ struct ControllerSingleAppModeSchema: public ConfigKit::Schema {
 
 	static Json::Value normalizeStartupFile(const Json::Value &effectiveValues) {
 		Json::Value updates;
-		updates["startup_file"] = absolutizePath(effectiveValues["startup_file"].asString());
+		if (effectiveValues.isMember("startup_file")) {
+			updates["startup_file"] = absolutizePath(
+				effectiveValues["startup_file"].asString());
+		}
 		return updates;
 	}
 };

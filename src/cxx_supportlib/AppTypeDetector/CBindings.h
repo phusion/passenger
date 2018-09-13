@@ -46,6 +46,8 @@ const PsgWrapperRegistryEntry *psg_app_type_detector_result_get_wrapper_registry
 	const PsgAppTypeDetectorResult *result);
 void psg_app_type_detector_result_set_wrapper_registry_entry(PsgAppTypeDetectorResult *result,
 	const PsgWrapperRegistryEntry *entry);
+const char *psg_app_type_detector_result_get_app_start_command(const PsgAppTypeDetectorResult *result,
+	size_t *len);
 
 
 typedef void PsgAppTypeDetector;

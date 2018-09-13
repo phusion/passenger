@@ -601,6 +601,9 @@ public:
 		if (inputPipe != -1) {
 			inputPipe.close();
 		}
+		if (type == SpawningKit::Result::GENERIC) {
+			syscalls::kill(getPid(), SIGTERM);
+		}
 	}
 
 	bool shutdownTimeoutExpired() const {

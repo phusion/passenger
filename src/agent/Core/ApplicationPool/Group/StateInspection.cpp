@@ -233,7 +233,7 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 
 	result["type"] = NON_EMPTY_SVAL(options.appType);
 	result["startup_file"] = NON_EMPTY_SVAL(options.startupFile);
-	result["start_command"] = NON_EMPTY_SVAL(replaceAll(options.startCommand,
+	result["start_command"] = NON_EMPTY_SVAL(replaceAll(options.appStartCommand,
 		P_STATIC_STRING("\t"), P_STATIC_STRING(" ")));
 	result["ruby"] = SVAL(options.ruby, DEFAULT_RUBY);
 	result["python"] = SVAL(options.python, DEFAULT_PYTHON);

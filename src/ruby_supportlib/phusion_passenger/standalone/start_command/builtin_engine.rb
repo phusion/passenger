@@ -139,6 +139,7 @@ module PhusionPassenger
           add_param(command, :environment, "--environment")
           add_param(command, :app_type, "--app-type")
           add_param(command, :startup_file, "--startup-file")
+          add_param(command, :app_start_command, "--app-start-command")
           add_param(command, :spawn_method, "--spawn-method")
           add_param(command, :restart_dir, "--restart-dir")
           if @options.has_key?(:friendly_error_pages)

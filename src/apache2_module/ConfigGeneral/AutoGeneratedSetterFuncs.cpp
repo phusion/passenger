@@ -204,6 +204,21 @@ cmd_passenger_app_root(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_app_start_command(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	if (err != NULL) {
+		return err;
+	}
+
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mAppStartCommandSourceFile = cmd->directive->filename;
+	config->mAppStartCommandSourceLine = cmd->directive->line_num;
+	config->mAppStartCommandExplicitlySet = true;
+	config->mAppStartCommand = arg;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_app_type(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
 	if (err != NULL) {

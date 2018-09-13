@@ -38,6 +38,7 @@
 #include <string>
 
 #include <Exceptions.h>
+#include <AppLocalConfigFileUtils.h>
 #include <WrapperRegistry/Registry.h>
 #include <FileTools/PathManip.h>
 #include <FileTools/FileManip.h>
@@ -55,13 +56,14 @@ class Detector {
 public:
 	struct Result {
 		const WrapperRegistry::Entry *wrapperRegistryEntry;
+		string appStartCommand;
 
 		Result()
 			: wrapperRegistryEntry(NULL)
 			{ }
 
 		bool isNull() const {
-			return wrapperRegistryEntry == NULL;
+			return wrapperRegistryEntry == NULL && appStartCommand.empty();
 		}
 	};
 
@@ -175,6 +177,13 @@ public:
 	const Result checkAppRoot(const StaticString &appRoot) {
 		char buf[PATH_MAX + 32];
 		const char *end = buf + sizeof(buf) - 1;
+
+		AppLocalConfig appLocalConfig = parseAppLocalConfigFile(appRoot);
+		if (!appLocalConfig.appStartCommand.empty()) {
+			Result result;
+			result.appStartCommand = appLocalConfig.appStartCommand;
+			return result;
+		}
 
 		WrapperRegistry::Registry::ConstIterator it(registry.getIterator());
 		while (*it != NULL) {

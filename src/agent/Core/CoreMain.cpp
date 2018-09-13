@@ -258,53 +258,83 @@ initializeSingleAppMode() {
 	}
 
 	WorkingObjects *wo = workingObjects;
-	string appType, startupFile;
+	string appType, startupFile, appStartCommand;
 	string appRoot = coreConfig->get("single_app_mode_app_root").asString();
 
-	if (coreConfig->get("single_app_mode_app_type").isNull()) {
-		P_DEBUG("Autodetecting application type...");
-		AppTypeDetector::Detector detector(*coreWrapperRegistry, NULL, 0);
-		AppTypeDetector::Detector::Result result = detector.checkAppRoot(appRoot);
-		if (result.isNull()) {
-			fprintf(stderr, "ERROR: unable to autodetect what kind of application "
-				"lives in %s. Please specify information about the app using "
-				"--app-type and --startup-file, or specify a correct location to "
-				"the application you want to serve.\n"
-				"Type '" SHORT_PROGRAM_NAME " core --help' for more information.\n",
-				appRoot.c_str());
-			exit(1);
-		}
-
-		appType = result.wrapperRegistryEntry->language;
-	} else {
-		appType = coreConfig->get("single_app_mode_app_type").asString();
-	}
-
-	if (coreConfig->get("single_app_mode_startup_file").isNull()) {
-		const WrapperRegistry::Entry &entry = coreWrapperRegistry->lookup(appType);
-		if (entry.defaultStartupFiles.empty()) {
-			startupFile = appRoot + "/";
-		} else {
-			startupFile = appRoot + "/" + entry.defaultStartupFiles[0];
-		}
-	} else {
-		startupFile = coreConfig->get("single_app_mode_startup_file").asString();
-	}
-	if (!fileExists(startupFile)) {
-		fprintf(stderr, "ERROR: unable to find expected startup file %s."
-			" Please specify its correct path with --startup-file.\n",
-			startupFile.c_str());
+	if (!coreConfig->get("single_app_mode_app_type").isNull()
+	 && !coreConfig->get("single_app_mode_app_start_command").isNull())
+	{
+		fprintf(stderr, "ERROR: it is not allowed for both --app-type and"
+			" --app-start-command to be set.\n");
 		exit(1);
 	}
 
+	if (!coreConfig->get("single_app_mode_app_start_command").isNull()) {
+		// The config specified that this is a generic app or a Kuria app.
+		appStartCommand = coreConfig->get("single_app_mode_app_start_command").asString();
+	} else if (coreConfig->get("single_app_mode_app_type").isNull()) {
+		// Autodetect whether this is generic app, Kuria app or auto-supported app.
+		P_DEBUG("Autodetecting application type...");
+		AppTypeDetector::Detector detector(*coreWrapperRegistry, NULL, 0);
+		AppTypeDetector::Detector::Result detectorResult = detector.checkAppRoot(appRoot);
+
+		if (!detectorResult.appStartCommand.empty()) {
+			// This is a generic or Kuria app.
+			appStartCommand = detectorResult.appStartCommand;
+		} else {
+			// This is an auto-supported app.
+			if (coreConfig->get("single_app_mode_app_type").isNull()) {
+				if (detectorResult.isNull()) {
+					fprintf(stderr, "ERROR: unable to autodetect what kind of application "
+						"lives in %s. Please specify information about the app using "
+						"--app-type, --startup-file and --app-start-command, or specify a "
+						"correct location to the application you want to serve.\n"
+						"Type '" SHORT_PROGRAM_NAME " core --help' for more information.\n",
+						appRoot.c_str());
+					exit(1);
+				}
+				appType = detectorResult.wrapperRegistryEntry->language;
+			} else {
+				appType = coreConfig->get("single_app_mode_app_type").asString();
+			}
+		}
+	} else {
+		// This is an auto-supported app.
+		appType = coreConfig->get("single_app_mode_app_type").asString();
+	}
+
+	if (!appType.empty()) {
+		if (coreConfig->get("single_app_mode_startup_file").isNull()) {
+			const WrapperRegistry::Entry &entry = coreWrapperRegistry->lookup(appType);
+			if (entry.defaultStartupFiles.empty()) {
+				startupFile = appRoot + "/";
+			} else {
+				startupFile = appRoot + "/" + entry.defaultStartupFiles[0];
+			}
+		} else {
+			startupFile = coreConfig->get("single_app_mode_startup_file").asString();
+		}
+		if (!fileExists(startupFile)) {
+			fprintf(stderr, "ERROR: unable to find expected startup file %s."
+				" Please specify its correct path with --startup-file.\n",
+				startupFile.c_str());
+			exit(1);
+		}
+	}
+
 	wo->singleAppModeConfig["app_root"] = appRoot;
-	wo->singleAppModeConfig["app_type"] = appType;
-	wo->singleAppModeConfig["startup_file"] = startupFile;
 
 	P_NOTICE(SHORT_PROGRAM_NAME " core running in single-application mode.");
-	P_NOTICE("Serving app     : " << appRoot);
-	P_NOTICE("App type        : " << appType);
-	P_NOTICE("App startup file: " << startupFile);
+	P_NOTICE("Serving app      : " << appRoot);
+	if (!appType.empty()) {
+		P_NOTICE("App type         : " << appType);
+		P_NOTICE("App startup file : " << startupFile);
+		wo->singleAppModeConfig["app_type"] = appType;
+		wo->singleAppModeConfig["startup_file"] = startupFile;
+	} else {
+		P_NOTICE("App start command: " << appStartCommand);
+		wo->singleAppModeConfig["app_start_command"] = appStartCommand;
+	}
 }
 
 static void

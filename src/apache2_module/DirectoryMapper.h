@@ -151,7 +151,13 @@ private:
 			cstatMutex, throttleRate);
 		AppTypeDetector::Detector::Result detectorResult;
 		string appRoot;
-		if (config->getAppType().empty()) {
+		// If `AppStartCommand` is set, then it means the config specified that it is
+		// either a generic app or a Kuria app.
+		if (!config->getAppStartCommand().empty()) {
+			appRoot = config->getAppRoot();
+		} else if (config->getAppType().empty()) {
+			// If neither `AppStartCommand` nor `AppType` are set, then
+			// autodetect what kind of app this is.
 			if (config->getAppRoot().empty()) {
 				detectorResult = detector.checkDocumentRoot(publicDir,
 					baseURI != NULL,
@@ -161,6 +167,9 @@ private:
 				detectorResult = detector.checkAppRoot(appRoot);
 			}
 		} else if (!config->getAppRoot().empty()) {
+			// If `AppStartCommand` is not set but `AppType` is (as well as
+			// the required `AppRoot`), then verify whether the given
+			// `AppType` value is supported and resolve aliases.
 			appRoot = config->getAppRoot().toString();
 			detectorResult.wrapperRegistryEntry = &registry.lookup(
 				config->getAppType());

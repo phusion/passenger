@@ -74,6 +74,17 @@ psg_app_type_detector_result_set_wrapper_registry_entry(PsgAppTypeDetectorResult
 	cxxResult->wrapperRegistryEntry = static_cast<const WrapperRegistry::Entry *>(entry);
 }
 
+const char *
+psg_app_type_detector_result_get_app_start_command(const PsgAppTypeDetectorResult *result,
+	size_t *len)
+{
+	const Detector::Result *cxxResult = static_cast<const Detector::Result *>(result);
+	if (len != NULL) {
+		*len = cxxResult->appStartCommand.size();
+	}
+	return cxxResult->appStartCommand.data();
+}
+
 
 PsgAppTypeDetector *
 psg_app_type_detector_new(const PsgWrapperRegistry *registry,

@@ -62,7 +62,8 @@ namespace tut {
 
 		SpawningKit::AppPoolOptions createOptions() {
 			SpawningKit::AppPoolOptions options;
-			options.spawnMethod = "direct-through-start-command";
+			options.appType     = "directly-through-start-command";
+			options.spawnMethod = "direct";
 			options.loadShellEnvvars = false;
 			return options;
 		}
@@ -77,7 +78,7 @@ namespace tut {
 		// https://code.google.com/p/phusion-passenger/issues/detail?id=842#c19
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb --execself";
+		options.appStartCommand = "ruby start.rb --execself";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);

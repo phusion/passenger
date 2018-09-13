@@ -486,6 +486,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :dynamic_default => 'Autodetected'
   },
   {
+    :name     => 'passenger_app_start_command',
+    :scope    => :application,
+    :type     => :string,
+    :header   => nil
+  },
+  {
     :name     => 'passenger_restart_dir',
     :scope    => :application,
     :type     => :string,

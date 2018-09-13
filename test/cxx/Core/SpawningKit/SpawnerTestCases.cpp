@@ -6,7 +6,7 @@
 		set_test_name("Basic spawning test");
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb";
+		options.appStartCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
@@ -22,7 +22,7 @@
 		set_test_name("It enforces the given start timeout");
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub";
-		options.startCommand = "sleep 60";
+		options.appStartCommand = "sleep 60";
 		options.startupFile  = ".";
 		options.startTimeout = 100;
 
@@ -59,7 +59,7 @@
 		set_test_name("The reported PID is correct");
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb";
+		options.appStartCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);

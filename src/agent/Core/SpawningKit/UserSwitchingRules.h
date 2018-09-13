@@ -98,8 +98,8 @@ prepareUserSwitching(const AppPoolOptions &options,
 
 	UPDATE_TRACE_POINT();
 	string defaultGroup;
-	string startupFile = absolutizePath(options.getStartupFile(wrapperRegistry),
-		absolutizePath(options.appRoot));
+	// This is the file that determines what user we lower privilege to.
+	string referenceFile;
 	struct passwd &pwd = info.lveUserPwd;
 	boost::shared_array<char> &pwdBuf = info.lveUserPwdStrBuf;
 	struct passwd *userInfo;
@@ -108,6 +108,13 @@ prepareUserSwitching(const AppPoolOptions &options,
 	long pwdBufSize, grpBufSize;
 	boost::shared_array<char> grpBuf;
 	int ret;
+
+	if (options.appType.empty()) {
+		referenceFile = absolutizePath(options.appRoot);
+	} else {
+		referenceFile = absolutizePath(options.getStartupFile(wrapperRegistry),
+			absolutizePath(options.appRoot));
+	}
 
 	// _SC_GETPW_R_SIZE_MAX/_SC_GETGR_R_SIZE_MAX are not maximums:
 	// http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
@@ -158,9 +165,9 @@ prepareUserSwitching(const AppPoolOptions &options,
 		}
 	} else {
 		struct stat buf;
-		if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
+		if (syscalls::lstat(referenceFile.c_str(), &buf) == -1) {
 			int e = errno;
-			throw SystemException("Cannot lstat(\"" + startupFile +
+			throw SystemException("Cannot lstat(\"" + referenceFile +
 				"\")", e);
 		}
 		ret = getpwuid_r(buf.st_uid, &pwd, pwdBuf.get(),
@@ -187,10 +194,10 @@ prepareUserSwitching(const AppPoolOptions &options,
 		if (options.group == "!STARTUP_FILE!") {
 			struct stat buf;
 
-			if (syscalls::lstat(startupFile.c_str(), &buf) == -1) {
+			if (syscalls::lstat(referenceFile.c_str(), &buf) == -1) {
 				int e = errno;
 				throw SystemException("Cannot lstat(\"" +
-					startupFile + "\")", e);
+					referenceFile + "\")", e);
 			}
 
 			ret = getgrgid_r(buf.st_gid, &grp, grpBuf.get(), grpBufSize,

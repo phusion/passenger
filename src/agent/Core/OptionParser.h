@@ -109,6 +109,9 @@ coreUsage() {
 	printf("                            (single-app mode only)\n");
 	printf("      --startup-file PATH   The path of the app's startup file, relative to\n");
 	printf("                            the app root directory (single-app mode only)\n");
+	printf("      --app-start-command COMMAND\n");
+	printf("                            The command string with which to start the app\n");
+	printf("                            (single-app mode only)\n");
 	printf("      --spawn-method NAME   Spawn method to use. Can either be 'smart' or\n");
 	printf("                            'direct'. Default: %s\n", DEFAULT_SPAWN_METHOD);
 	printf("      --load-shell-envvars  Load shell startup files before loading application\n");
@@ -316,6 +319,9 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--startup-file")) {
 		updates["single_app_mode_startup_file"] = argv[i + 1];
+		i += 2;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--app-start-command")) {
+		updates["single_app_mode_app_start_command"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--spawn-method")) {
 		updates["default_spawn_method"] = argv[i + 1];

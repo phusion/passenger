@@ -85,7 +85,7 @@ private:
 		result.push_back(&options.appGroupName);
 		result.push_back(&options.appLogFile);
 		result.push_back(&options.appType);
-		result.push_back(&options.startCommand);
+		result.push_back(&options.appStartCommand);
 		result.push_back(&options.startupFile);
 		result.push_back(&options.processTitle);
 
@@ -181,15 +181,15 @@ public:
 	/** The application's type, used for determining the command to invoke to
 	 * spawn an application process as well as determining the startup file's
 	 * filename. It can be one of the app type names in AppType.cpp, or the
-	 * empty string (default). In case of the latter, 'startCommand' and
+	 * empty string (default). In case of the latter, 'appStartCommand' and
 	 * 'startupFile' (which MUST be set) will dictate the startup command
 	 * and the startup file's filename. */
 	StaticString appType;
 
-	/** The command for spawning the application process. This is a list of
-	 * arguments, separated by '\t', e.g. "ruby\tfoo.rb". Only used
-	 * during spawning and only if appType.empty(). */
-	StaticString startCommand;
+	/** The shell command string for spawning the application process.
+	 * Only used during spawning and only if appType.empty().
+	 */
+	StaticString appStartCommand;
 
 	/** Filename of the application's startup file. Only actually used for
 	 * determining user switching info. Only used during spawning. */
@@ -629,7 +629,7 @@ public:
 		} else if (entry.language == P_STATIC_STRING("meteor")) {
 			interpreter = escapeShell(ruby);
 		} else {
-			return startCommand;
+			return appStartCommand;
 		}
 
 		return interpreter + " " + escapeShell(resourceLocator.getHelperScriptsDir()

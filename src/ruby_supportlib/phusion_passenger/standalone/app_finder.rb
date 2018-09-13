@@ -150,6 +150,7 @@ module PhusionPassenger
         options = options.dup
         ConfigUtils.load_local_config_file!(dir, options)
         options[:app_type] ||
+        options[:app_start_command] ||
           STARTUP_FILES.any? do |file|
             File.exist?("#{dir}/#{file}")
           end

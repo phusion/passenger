@@ -338,14 +338,16 @@
          "read_only" : true,
          "type" : "string"
       },
+      "app_start_command" : {
+         "read_only" : true,
+         "type" : "string"
+      },
       "app_type" : {
          "read_only" : true,
-         "required" : true,
          "type" : "string"
       },
       "startup_file" : {
          "read_only" : true,
-         "required" : true,
          "type" : "string"
       }
    },
@@ -810,6 +812,10 @@
       },
       "single_app_mode_app_root" : {
          "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_app_start_command" : {
          "read_only" : true,
          "type" : "string"
       },
@@ -1641,6 +1647,10 @@
       },
       "single_app_mode_app_root" : {
          "has_default_value" : "dynamic",
+         "read_only" : true,
+         "type" : "string"
+      },
+      "single_app_mode_app_start_command" : {
          "read_only" : true,
          "type" : "string"
       },

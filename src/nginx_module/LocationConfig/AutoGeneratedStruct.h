@@ -62,6 +62,7 @@ typedef struct {
     ngx_str_t app_log_file;
     ngx_str_t app_rights;
     ngx_str_t app_root;
+    ngx_str_t app_start_command;
     ngx_str_t app_type;
     ngx_str_t document_root;
     ngx_str_t environment;
@@ -82,6 +83,7 @@ typedef struct {
     ngx_str_t app_log_file_source_file;
     ngx_str_t app_rights_source_file;
     ngx_str_t app_root_source_file;
+    ngx_str_t app_start_command_source_file;
     ngx_str_t app_type_source_file;
     ngx_str_t base_uris_source_file;
     ngx_str_t debugger_source_file;
@@ -129,6 +131,7 @@ typedef struct {
     ngx_uint_t app_log_file_source_line;
     ngx_uint_t app_rights_source_line;
     ngx_uint_t app_root_source_line;
+    ngx_uint_t app_start_command_source_line;
     ngx_uint_t app_type_source_line;
     ngx_uint_t base_uris_source_line;
     ngx_uint_t debugger_source_line;
@@ -176,6 +179,7 @@ typedef struct {
     ngx_int_t app_log_file_explicitly_set;
     ngx_int_t app_rights_explicitly_set;
     ngx_int_t app_root_explicitly_set;
+    ngx_int_t app_start_command_explicitly_set;
     ngx_int_t app_type_explicitly_set;
     ngx_int_t base_uris_explicitly_set;
     ngx_int_t debugger_explicitly_set;

@@ -112,11 +112,13 @@ Controller::initialize() {
 		string environment = config["default_environment"].asString();
 		string appType = singleAppModeConfig->get("app_type").asString();
 		string startupFile = singleAppModeConfig->get("startup_file").asString();
+		string appStartCommand = singleAppModeConfig->get("app_start_command").asString();
 
 		options->appRoot = appRoot;
 		options->environment = environment;
 		options->appType = appType;
 		options->startupFile = startupFile;
+		options->appStartCommand = appStartCommand;
 		*options = options->copyAndPersist();
 		poolOptionsCache.insert(options->getAppGroupName(), options);
 	}

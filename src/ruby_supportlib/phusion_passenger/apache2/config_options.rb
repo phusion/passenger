@@ -355,6 +355,12 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :header    => nil
   },
   {
+    :name      => 'PassengerAppStartCommand',
+    :type      => :string,
+    :desc      => 'Command string for starting the application.',
+    :header    => nil
+  },
+  {
     :name      => 'PassengerStartupFile',
     :type      => :string,
     :dynamic_default => 'Autodetected',

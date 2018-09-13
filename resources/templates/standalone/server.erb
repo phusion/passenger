@@ -41,6 +41,7 @@ passenger_enabled on;
 <%= nginx_option(app, :spawn_method) %>
 <%= nginx_option(app, :app_type) %>
 <%= nginx_option(app, :startup_file) %>
+<%= nginx_option(app, :app_start_command) %>
 <%= nginx_option(app, :start_timeout) %>
 <%= nginx_option(app, :min_instances) %>
 <%= nginx_option(app, :max_request_queue_size) %>

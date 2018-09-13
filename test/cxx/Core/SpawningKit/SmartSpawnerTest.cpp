@@ -77,7 +77,8 @@ namespace tut {
 
 		SpawningKit::AppPoolOptions createOptions() {
 			SpawningKit::AppPoolOptions options;
-			options.spawnMethod = "directly-through-start-command";
+			options.appType     = "directly-through-start-command";
+			options.spawnMethod = "smart";
 			options.loadShellEnvvars = false;
 			return options;
 		}
@@ -92,7 +93,7 @@ namespace tut {
 			"restart it and try again");
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb";
+		options.appStartCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
 
@@ -117,7 +118,7 @@ namespace tut {
 			"SmartSpawner will throw an exception");
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb";
+		options.appStartCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 
 		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
@@ -142,7 +143,7 @@ namespace tut {
 
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb";
+		options.appStartCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		options.startTimeout = 100;
 
@@ -190,7 +191,7 @@ namespace tut {
 
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb";
+		options.appStartCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 
 		vector<string> preloaderCommand;
@@ -223,7 +224,7 @@ namespace tut {
 			sizeof("PASSENGER_FOO\0foo\0") - 1);
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby start.rb";
+		options.appStartCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		options.environmentVariables = envvars;
 

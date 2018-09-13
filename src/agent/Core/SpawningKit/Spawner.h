@@ -31,6 +31,7 @@
 
 #include <modp_b64.h>
 
+#include <AppLocalConfigFileUtils.h>
 #include <LoggingKit/Logging.h>
 #include <SystemTools/SystemTime.h>
 #include <Core/SpawningKit/Context.h>
@@ -79,8 +80,7 @@ protected:
 	void setConfigFromAppPoolOptions(Config *config, Json::Value &extraArgs,
 		const AppPoolOptions &options)
 	{
-		string startCommand = options.getStartCommand(*context->resourceLocator,
-			*context->wrapperRegistry);
+		TRACE_POINT();
 		string envvarsData;
 		try {
 			envvarsData = modp::b64_decode(options.environmentVariables.data(),
@@ -91,15 +91,30 @@ protected:
 			envvarsData.clear();
 		}
 
+		AppLocalConfig appLocalConfig = parseAppLocalConfigFile(options.appRoot);
+		string startCommand;
+
+		if (appLocalConfig.appSupportsKuriaProtocol) {
+			config->genericApp = false;
+			config->startsUsingWrapper = false;
+			config->startCommand = options.appStartCommand;
+		} else if (options.appType.empty()) {
+			config->genericApp = true;
+			config->startCommand = options.appStartCommand;
+		} else {
+			startCommand = options.getStartCommand(*context->resourceLocator,
+				*context->wrapperRegistry);
+			config->genericApp = false;
+			config->startsUsingWrapper = true;
+			config->startCommand = startCommand;
+		}
+
 		config->appGroupName = options.getAppGroupName();
 		config->appRoot = options.appRoot;
 		config->logLevel = options.logLevel;
-		config->genericApp = false;
-		config->startsUsingWrapper = true;
 		config->wrapperSuppliedByThirdParty = false;
 		config->findFreePort = false;
 		config->loadShellEnvvars = options.loadShellEnvvars;
-		config->startCommand = startCommand;
 		config->startupFile = options.getStartupFile(*context->wrapperRegistry);
 		config->appType = options.appType;
 		config->appEnv = options.environment;
