@@ -20,7 +20,9 @@
         "chrono": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "*.ipp": "cpp",
+        "__tuple": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Default",
     "C_Cpp.intelliSenseEngineFallback": "Enabled"
