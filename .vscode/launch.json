@@ -26,6 +26,27 @@
                 }
             },
             {
+                "name": "(lldb) Launch Nginx",
+                "type": "cppdbg",
+                "request": "launch",
+                // This debugging target requires that you symlink your actual Nginx binary
+                // to PASSENGER_ROOT/buildout/nginx.
+                "program": "${workspaceFolder}/buildout/nginx",
+                "args": ['-g', 'master off; daemon off;'],
+                "stopAtEntry": true,
+                "cwd": "${workspaceFolder}/buildout",
+                "environment": [],
+                "externalConsole": true,
+                "MIMode": "lldb",
+                "osx": {
+                    "MIMode": "lldb",
+                    "setupCommands": [
+                        { "text": "settings set target.x86-disassembly-flavor intel" },
+                        { "text": "b malloc_error_break" }
+                    ]
+                }
+            },
+            {
                 "name": "(lldb) Attach to PassengerAgent",
                 "type": "cppdbg",
                 "request": "attach",
