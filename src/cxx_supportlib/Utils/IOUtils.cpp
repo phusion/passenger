@@ -1363,7 +1363,8 @@ readAll(int fd, size_t maxSize) {
 
 	while (result.size() < maxSize) {
 		do {
-			ret = read(fd, buf, sizeof(buf));
+			ret = read(fd, buf, std::min<size_t>(sizeof(buf),
+				maxSize - result.size()));
 		} while (ret == -1 && errno == EINTR);
 		if (ret == 0) {
 			eofReached = true;
