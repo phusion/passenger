@@ -193,7 +193,7 @@ private:
 		args.push_back("system-properties");
 
 		int status = 0;
-		string output;
+		SubprocessOutput output;
 		try {
 			runInternalRubyTool(*resourceLocator, ruby, args, &status, &output);
 		} catch (const std::exception &e) {
@@ -206,7 +206,7 @@ private:
 
 		server.getIoService().post(boost::bind(
 			&AdminPanelConnector::onGetServerPropertiesDone, this,
-			conn, doc, output, status, string()
+			conn, doc, output.data, status, string()
 		));
 	}
 

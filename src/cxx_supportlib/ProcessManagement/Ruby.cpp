@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2017 Phusion Holding B.V.
+ *  Copyright (c) 2017-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -42,7 +42,7 @@ using namespace std;
 void
 runInternalRubyTool(const ResourceLocator &resourceLocator,
 	const string &ruby, const vector<string> &args, int *status,
-	string *output)
+	SubprocessOutput *output, size_t maxOutputSize)
 {
 	string locationConfigFileEnv = "PASSENGER_LOCATION_CONFIGURATION_FILE="
 		+ resourceLocator.getInstallSpec();
@@ -95,7 +95,7 @@ runInternalRubyTool(const ResourceLocator &resourceLocator,
 	if (output == NULL) {
 		runCommand(command, info);
 	} else {
-		runCommandAndCaptureOutput(command, info, *output);
+		runCommandAndCaptureOutput(command, info, *output, maxOutputSize);
 	}
 	if (status != NULL) {
 		*status = info.status;

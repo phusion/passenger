@@ -321,18 +321,21 @@ public:
 			NULL
 		};
 
-		string psOutput = this->psOutput;
-		if (psOutput.empty()) {
+		SubprocessOutput psOutput;
+		psOutput.data = this->psOutput;
+		if (psOutput.data.empty()) {
 			SubprocessInfo info;
-			runCommandAndCaptureOutput(command, info, psOutput, true, afterFork);
-			if (psOutput.empty()) {
+			runCommandAndCaptureOutput(command, info, psOutput,
+				1024 * 1024, true, afterFork);
+			if (psOutput.data.empty()) {
 				throw RuntimeException("The 'ps' command failed");
 			}
 		}
 		pidsArg.resize(0);
 		fmtArg.resize(0);
-		ProcessMetricMap result = parsePsOutput<Collection, ConstIterator>(psOutput, pids);
-		psOutput.resize(0);
+		ProcessMetricMap result = parsePsOutput<Collection, ConstIterator>(
+			psOutput.data, pids);
+		psOutput.data.resize(0);
 		if (canMeasureRealMemory) {
 			ProcessMetricMap::iterator it;
 			for (it = result.begin(); it != result.end(); it++) {

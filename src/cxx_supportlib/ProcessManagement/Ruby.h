@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,6 +28,7 @@
 
 #include <string>
 #include <vector>
+#include <limits>
 #include <cstddef>
 
 namespace Passenger {
@@ -35,6 +36,7 @@ namespace Passenger {
 using namespace std;
 
 class ResourceLocator;
+struct SubprocessOutput;
 
 
 /**
@@ -48,12 +50,15 @@ class ResourceLocator;
  *               When unable to waitpid() the child process because of an ECHILD
  *               or ESRCH, this will be set to -1.
  * @param output The output of the child process will be stored here, if non-NULL.
+ * @param maxOutputSize The maximum number of output bytes to read. Only applicable if
+ *                      `output` is non-NULL.
  * @throws RuntimeException
  * @throws SystemException
  */
 void runInternalRubyTool(const ResourceLocator &resourceLocator,
 	const string &ruby, const vector<string> &args,
-	int *status = NULL, string *output = NULL);
+	int *status = NULL, SubprocessOutput *output = NULL,
+	size_t maxOutputSize = std::numeric_limits<size_t>::max());
 
 
 } // namespace Passenger

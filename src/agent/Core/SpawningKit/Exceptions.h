@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -29,6 +29,7 @@
 #include <oxt/tracable_exception.hpp>
 #include <string>
 #include <stdexcept>
+#include <limits>
 
 #include <Constants.h>
 #include <Exceptions.h>
@@ -736,12 +737,13 @@ private:
 		const char *command[] = { "/bin/sh", "-c", "ulimit -a", NULL };
 		try {
 			SubprocessInfo info;
-			string result;
-			runCommandAndCaptureOutput(command, info, result);
-			if (result.empty()) {
-				result.assign("Error: command 'ulimit -a' failed");
+			SubprocessOutput output;
+			runCommandAndCaptureOutput(command, info, output,
+				std::numeric_limits<size_t>::max());
+			if (output.data.empty()) {
+				output.data.assign("Error: command 'ulimit -a' failed");
 			}
-			return result;
+			return output.data;
 		} catch (const SystemException &e) {
 			return P_STATIC_STRING("Error: command 'ulimit -a' failed: ") + e.what();
 		}
@@ -751,12 +753,13 @@ private:
 		const char *command[] = { "id", "-a", NULL };
 		try {
 			SubprocessInfo info;
-			string result;
-			runCommandAndCaptureOutput(command, info, result);
-			if (result.empty()) {
-				result.assign("Error: command 'id -a' failed");
+			SubprocessOutput output;
+			runCommandAndCaptureOutput(command, info, output,
+				std::numeric_limits<size_t>::max());
+			if (output.data.empty()) {
+				output.data.assign("Error: command 'id -a' failed");
 			}
-			return result;
+			return output.data;
 		} catch (const SystemException &e) {
 			return P_STATIC_STRING("Error: command 'id -a' failed: ") + e.what();
 		}

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -64,6 +64,24 @@ struct SubprocessInfo {
 	SubprocessInfo()
 		: pid(-1),
 		  status(-1)
+		{ }
+};
+
+struct SubprocessOutput {
+	/**
+	 * The read subprocess output data.
+	 */
+	string data;
+
+	/**
+	 * Whether the entire file has been read. If false, then it
+	 * means there is more data than specified through the `maxSize`
+	 * parameter.
+	 */
+	bool eof;
+
+	SubprocessOutput()
+		: eof(false)
 		{ }
 };
 
@@ -132,6 +150,7 @@ void runCommand(const char **command, SubprocessInfo &info,
  *
  * @param command The argument array to pass to execvp(). Must be null-terminated.
  * @param info
+ * @param maxSize The maximum number of output bytes to read.
  * @param killSubprocessOnInterruption Whether to automatically kill the subprocess
  *   when this function is interrupted.
  * @param afterFork A function object to be called right after forking.
@@ -140,7 +159,7 @@ void runCommand(const char **command, SubprocessInfo &info,
  * @throws boost::thread_interrupted
  */
 void runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
-	string &output, bool killSubprocessOnInterruption = true,
+	SubprocessOutput &output, size_t maxSize, bool killSubprocessOnInterruption = true,
 	const boost::function<void ()> &afterFork = boost::function<void ()>(),
 	const boost::function<void (const char **command, int errcode)> &onExecFail = printExecError);
 

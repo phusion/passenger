@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -33,6 +33,7 @@
 #include <boost/thread.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
+#include <algorithm>
 #include <cerrno>
 
 #include <ProcessManagement/Spawn.h>
@@ -110,7 +111,7 @@ runCommand(const char **command, SubprocessInfo &info, bool wait, bool killSubpr
 
 void
 runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
-	string &output, bool killSubprocessOnInterruption,
+	SubprocessOutput &output, size_t maxSize, bool killSubprocessOnInterruption,
 	const boost::function<void ()> &afterFork,
 	const boost::function<void (const char **command, int errcode)> &onExecFail)
 {
@@ -140,15 +141,17 @@ runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 		e = errno;
 		throw SystemException("Cannot fork() a new process", e);
 	} else {
-		bool done = false;
+		size_t totalRead = 0;
 
+		output.eof = false;
 		p[1].close();
-		while (!done) {
+		while (totalRead < maxSize) {
 			char buf[1024 * 4];
 			ssize_t ret;
 
 			try {
-				ret = syscalls::read(p[0], buf, sizeof(buf));
+				ret = syscalls::read(p[0], buf,
+					std::min<size_t>(sizeof(buf), maxSize - totalRead));
 			} catch (const boost::thread_interrupted &) {
 				if (killSubprocessOnInterruption) {
 					boost::this_thread::disable_syscall_interruption dsi;
@@ -166,9 +169,13 @@ runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 				}
 				throw SystemException(string("Cannot read output from the '") +
 					command[0] + "' command", e);
+			} else if (ret == 0) {
+				output.eof = true;
+				break;
+			} else {
+				totalRead += ret;
+				output.data.append(buf, ret);
 			}
-			done = ret == 0;
-			output.append(buf, ret);
 		}
 		p[0].close();
 
