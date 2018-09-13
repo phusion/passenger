@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/src/agent",
+                "${workspaceFolder}/src/cxx_supportlib",
+                "${workspaceFolder}/src/cxx_supportlib/vendor-copy",
+                "${workspaceFolder}/src/cxx_supportlib/vendor-copy/websocketpp",
+                "${workspaceFolder}/src/cxx_supportlib/vendor-copy/libuv/include",
+                "${workspaceFolder}/src/cxx_supportlib/vendor-modified",
+                "${workspaceFolder}/src/cxx_supportlib/vendor-modified/libev",
+                "${workspaceFolder}/test/cxx"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/System/Library/Frameworks",
+                "/Library/Frameworks"
+            ],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}
