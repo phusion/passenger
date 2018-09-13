@@ -4,13 +4,14 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "taskName": "Build agent",
+            "label": "Build agent",
             "type": "shell",
             "command": "drake",
             "args": [
                 "-j3",
                 "nginx"
             ],
+            "problemMatcher": "$gcc",
             "group": {
                 "kind": "build",
                 "isDefault": true
