@@ -36,7 +36,8 @@ typedef tut::groupnames::const_iterator groupnames_iterator;
 static tut::groupnames allGroups;
 
 /** Whether the user wants to run all test groups, or only the specified test groups. */
-static enum { RUN_ALL_GROUPS, RUN_SPECIFIED_GROUPS } runMode = RUN_ALL_GROUPS;
+enum RunMode { RUN_ALL_GROUPS, RUN_SPECIFIED_GROUPS };
+static RunMode runMode = RUN_ALL_GROUPS;
 
 /** The test groups and test numbers that the user wants to run.
  * Only meaningful if runMode == RUN_SPECIFIED_GROUPS.
