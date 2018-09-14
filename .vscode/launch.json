@@ -32,7 +32,7 @@
                 // This debugging target requires that you symlink your actual Nginx binary
                 // to PASSENGER_ROOT/buildout/nginx.
                 "program": "${workspaceFolder}/buildout/nginx",
-                "args": ['-g', 'master off; daemon off;'],
+                "args": ["-g", "master off; daemon off;"],
                 "stopAtEntry": true,
                 "cwd": "${workspaceFolder}/buildout",
                 "environment": [],
