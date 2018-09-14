@@ -9,10 +9,34 @@
                 "args": [],
                 // Pass -g here if you want to run a specific test, for example:
                 // "args": ["-g", "ConfigKit_NestedSchemaTest:10"],
+                "preLaunchTask": "Build CxxTestMain",
                 "stopAtEntry": true,
                 "cwd": "${workspaceFolder}/test",
                 "environment": [],
-                "externalConsole": true,
+                "logging": {
+                    "moduleLoad": false
+                },
+                "MIMode": "lldb",
+                "osx": {
+                    "MIMode": "lldb",
+                    "setupCommands": [
+                        { "text": "settings set target.x86-disassembly-flavor intel" },
+                        { "text": "b malloc_error_break" },
+                        { "text": "b Passenger::breakpoint" },
+                        { "text": "process handle -n false -p true -s false SIGPIPE" },
+                        { "text": "process handle -n false -p true -s false SIGUSR1" }
+                    ]
+                }
+            },
+            {
+                "name": "(lldb) Attach to CxxTestMain",
+                "type": "cppdbg",
+                "request": "attach",
+                "program": "${workspaceFolder}/buildout/test/cxx/main",
+                "processId": "${command:pickProcess}",
+                "logging": {
+                    "moduleLoad": false
+                },
                 "MIMode": "lldb",
                 "osx": {
                     "MIMode": "lldb",
@@ -36,7 +60,6 @@
                 "stopAtEntry": true,
                 "cwd": "${workspaceFolder}/buildout",
                 "environment": [],
-                "externalConsole": true,
                 "MIMode": "lldb",
                 "osx": {
                     "MIMode": "lldb",

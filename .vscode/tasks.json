@@ -16,6 +16,17 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "Build CxxTestMain",
+            "type": "shell",
+            "command": "drake",
+            "args": [
+                "-j3",
+                "buildout/test/cxx/main"
+            ],
+            "problemMatcher": "$gcc",
+            "group": "build"
         }
     ]
 }
