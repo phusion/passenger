@@ -278,14 +278,18 @@ public:
 			return nullEntry;
 		}
 
-		const Entry *result = &nullEntry;
+		const Entry *result;
 		HashedStaticString aliasTarget = aliases.lookupCopy(name);
 		if (aliasTarget.empty()) {
 			entries.lookup(name, &result);
 		} else {
 			entries.lookup(aliasTarget, &result);
 		}
-		return *result;
+		if (result != NULL) {
+			return *result;
+		} else {
+			return nullEntry;
+		}
 	}
 
 	const Entry &getNullEntry() const {
