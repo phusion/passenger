@@ -8,7 +8,7 @@
                 "program": "${workspaceFolder}/buildout/test/cxx/main",
                 "args": [],
                 // Pass -g here if you want to run a specific test, for example:
-                "args": ["-g", "Core_SpawningKit_SmartSpawnerTest:1"],
+                //"args": ["-g", "Core_SpawningKit_SmartSpawnerTest:1"],
                 "preLaunchTask": "Build CxxTestMain",
                 "stopAtEntry": true,
                 "cwd": "${workspaceFolder}/test",
