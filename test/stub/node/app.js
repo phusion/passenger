@@ -130,4 +130,4 @@ router.route('/raw_upload_to_file').all(function(req, res) {
 });
 
 app.use(process.env.PASSENGER_BASE_URI || '/', router);
-app.listen(3000);
+app.listen(process.env.PORT || 3000);

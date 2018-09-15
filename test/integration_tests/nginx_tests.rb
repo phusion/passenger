@@ -272,6 +272,37 @@ describe "Phusion Passenger for Nginx" do
     end
   end
 
+  describe "a generic app running on the root URI" do
+    before :all do
+      create_nginx_controller
+      @server = "http://1.passenger.test:#{@nginx.port}"
+      @stub = NodejsStub.new('node')
+      rename_entrypoint_file
+      @nginx.add_server do |server|
+        server[:server_name] = "1.passenger.test"
+        server[:root]        = "#{@stub.full_app_root}/public"
+        server[:passenger_app_start_command] = "'node boot.js'"
+      end
+      @nginx.start
+    end
+
+    after :all do
+      @stub.destroy
+      @nginx.stop if @nginx
+    end
+
+    before :each do
+      @stub.reset
+      rename_entrypoint_file
+    end
+
+    def rename_entrypoint_file
+      FileUtils.mv("#{@stub.app_root}/app.js", "#{@stub.app_root}/boot.js")
+    end
+
+    it_should_behave_like "an example web app"
+  end
+
   describe "various features" do
     before :all do
       create_nginx_controller

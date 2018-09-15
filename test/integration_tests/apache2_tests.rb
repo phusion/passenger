@@ -257,6 +257,36 @@ describe "Apache 2 module" do
     end
   end
 
+  describe "a generic app running on the root URI" do
+    before :all do
+      create_apache2_controller
+      @server = "http://1.passenger.test:#{@apache2.port}"
+      @stub = NodejsStub.new('node')
+      rename_entrypoint_file
+      @apache2 << "PassengerMaxPoolSize 1"
+      @apache2.set_vhost("1.passenger.test", "#{@stub.full_app_root}/public") do |vhost|
+        vhost << "PassengerAppStartCommand 'node boot.js'"
+      end
+      @apache2.start
+    end
+
+    after :all do
+      @stub.destroy
+      @apache2.stop if @apache2
+    end
+
+    before :each do
+      @stub.reset
+      rename_entrypoint_file
+    end
+
+    def rename_entrypoint_file
+      FileUtils.mv("#{@stub.app_root}/app.js", "#{@stub.app_root}/boot.js")
+    end
+
+    it_should_behave_like "an example web app"
+  end
+
   describe "compatibility with other modules" do
     before :all do
       create_apache2_controller
