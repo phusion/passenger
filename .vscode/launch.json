@@ -25,8 +25,8 @@
                         { "text": "settings set target.x86-disassembly-flavor intel" },
                         { "text": "b malloc_error_break" },
                         { "text": "b Passenger::breakpoint" },
-                        { "text": "process handle -n false -p true -s false SIGPIPE" },
-                        { "text": "process handle -n false -p true -s false SIGUSR1" }
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
                     ]
                 }
             },
@@ -46,8 +46,8 @@
                         { "text": "settings set target.x86-disassembly-flavor intel" },
                         { "text": "b malloc_error_break" },
                         { "text": "b Passenger::breakpoint" },
-                        { "text": "process handle -n false -p true -s false SIGPIPE" },
-                        { "text": "process handle -n false -p true -s false SIGUSR1" }
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
                     ]
                 }
             },
@@ -83,8 +83,8 @@
                         { "text": "settings set target.x86-disassembly-flavor intel" },
                         { "text": "b malloc_error_break" },
                         { "text": "b Passenger::breakpoint" },
-                        { "text": "process handle -n false -p true -s false SIGPIPE" },
-                        { "text": "process handle -n false -p true -s false SIGUSR1" }
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
                     ]
                 },
                 "linux": {
