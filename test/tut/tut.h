@@ -370,10 +370,26 @@ struct callback
     }
 
     /**
+     * Called when a test started (which may turn out not to exist).
+     * @param n Test number.
+     */
+    virtual void test_started(int /*n*/)
+    {
+    }
+
+    /**
      * Called when a test finished.
      * @param tr Test results.
      */
     virtual void test_completed(const test_result& /*tr*/)
+    {
+    }
+
+    /**
+     * Called when a test turns out not to exist.
+     * @param n Test number.
+     */
+    virtual void test_nonexistant(int /*n*/)
     {
     }
 
@@ -1113,6 +1129,7 @@ private:
     {
         std::string current_test_name;
         int number = ti->first; // In a variable so we can easily inspect with gdb.
+        runner.get().get_callback().test_started(number);
         try
         {
             if (run_test_seh_(ti->second,obj, current_test_name) == false)
@@ -1122,6 +1139,7 @@ private:
         }
         catch (const no_such_test&)
         {
+            runner.get().get_callback().test_nonexistant(number);
             throw;
         }
         catch (const warning& ex)

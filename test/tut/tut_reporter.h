@@ -31,6 +31,7 @@
 #define TUT_REPORTER
 
 #include "tut.h"
+#include <unistd.h>
 
 /**
  * Template Unit Tests Framework for C++.
@@ -38,50 +39,73 @@
  *
  * @author Vladimir Dyuzhev, Vladimir.Dyuzhev@gmail.com
  */
-namespace
+
+namespace tut
 {
 
-std::ostream& operator<<(std::ostream& os, const tut::test_result& tr)
+inline const char* green(bool is_tty)
+{
+    if (is_tty) {
+        return "\e[0;32m";
+    } else {
+        return "";
+    }
+}
+
+inline const char* red(bool is_tty)
+{
+    if (is_tty) {
+        return "\e[0;31m";
+    } else {
+        return "";
+    }
+}
+
+inline const char* reset(bool is_tty)
+{
+    if (is_tty) {
+        return "\e[0m";
+    } else {
+        return "";
+    }
+}
+
+inline std::ostream& printTestResult(std::ostream& os, const tut::test_result& tr, bool is_tty)
 {
     switch(tr.result)
     {
     case tut::test_result::ok:
-        os << '.';
+        os << green(is_tty) << " ✔" << reset(is_tty);
         break;
     case tut::test_result::fail:
-        os << '[' << tr.test << "=F]";
+        os << red(is_tty) << " ✗" << reset(is_tty);
         break;
     case tut::test_result::ex_ctor:
-        os << '[' << tr.test << "=C]";
+        os << red(is_tty) << " ✗ (constructor failed)" << reset(is_tty);
         break;
     case tut::test_result::ex:
-        os << '[' << tr.test << "=X]";
+        os << red(is_tty) << " ✗ (exception)" << reset(is_tty);
         break;
     case tut::test_result::warn:
-        os << '[' << tr.test << "=W]";
+        os << red(is_tty) << " 😮" << reset(is_tty);
         break;
     case tut::test_result::term:
-        os << '[' << tr.test << "=T]";
+        os << red(is_tty) << " ✗ (abnormal)" << reset(is_tty);
         break;
     }
 
     return os;
 }
 
-} // end of namespace
-
-namespace tut
-{
-
 /**
  * Default TUT callback handler.
  */
 class reporter : public tut::callback
 {
-    std::string current_group;
     typedef std::vector<tut::test_result> not_passed_list;
     not_passed_list not_passed;
     std::ostream& os;
+    bool is_tty;
 
 public:
 
@@ -108,15 +132,19 @@ public:
         init();
     }
 
+    virtual void group_started(const std::string& name)
+    {
+        os << std::endl << name << ":" << std::endl;
+    }
+
+    virtual void test_started(int n)
+    {
+        os << "  " << n << "..." << std::flush;
+    }
+
     void test_completed(const tut::test_result& tr)
     {
-        if (tr.group != current_group)
-        {
-            os << std::endl << tr.group << ": " << std::flush;
-            current_group = tr.group;
-        }
-
-        os << tr << std::flush;
+        printTestResult(os, tr, is_tty) << std::endl;
         if (tr.result == tut::test_result::ok)
         {
             ok_count++;
@@ -145,6 +173,15 @@ public:
         if (tr.result != tut::test_result::ok)
         {
             not_passed.push_back(tr);
+        }
+    }
+
+    virtual void test_nonexistant(int n)
+    {
+        if (is_tty) {
+            os << "\r          \r" << std::flush;
+        } else {
+            os << " skipped" << std::endl;
         }
     }
 
@@ -248,6 +285,7 @@ private:
         terminations_count = 0;
         warnings_count = 0;
         not_passed.clear();
+        is_tty = isatty(1);
     }
 };
 

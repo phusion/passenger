@@ -190,7 +190,12 @@ main(int argc, char *argv[]) {
 	if (runMode == RUN_ALL_GROUPS) {
 		tut::runner.get().run_tests();
 	} else {
-		tut::runner.get().run_tests(groupsToRun);
+		try {
+			tut::runner.get().run_tests(groupsToRun);
+		} catch (const tut::no_such_test &) {
+			fprintf(stderr, "ERROR: test not found.\n");
+			all_ok = false;
+		}
 	}
 	all_ok = reporter.all_ok();
 
