@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -225,7 +225,7 @@ module PhusionPassenger
     end
 
     # Name of the user under which we are executing, or the id as fallback
-    # N.B. loader_shared_helpers.rb has the same method 
+    # N.B. loader_shared_helpers.rb has the same method
     def current_user_name_or_id
       require 'etc' if !defined?(Etc)
       begin
@@ -271,7 +271,11 @@ module PhusionPassenger
     end
 
     def real_download(site, name, output_dir, logger, options)
-      url = "#{site[:url]}/#{VERSION_STRING}/#{name}"
+      if site[:url].include?('{{VERSION}}')
+        url = site[:url].gsub('{{VERSION}}', VERSION_STRING) + "/#{name}"
+      else
+        url = "#{site[:url]}/#{VERSION_STRING}/#{name}"
+      end
       filename = "#{output_dir}/#{name}"
       real_options = options.merge(
         :cacert => site[:cacert],

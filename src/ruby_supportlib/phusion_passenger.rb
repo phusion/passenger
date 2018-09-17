@@ -219,6 +219,7 @@ module PhusionPassenger
 
   def self.binaries_sites
     [
+      { :url => "https://github.com/phusion/passenger/releases/download/release-{{VERSION}}".freeze },
       { :url => "https://oss-binaries.phusionpassenger.com/binaries/passenger/by_release".freeze },
       { :url => "https://s3.amazonaws.com/phusion-passenger/binaries/passenger/by_release".freeze }
     ]

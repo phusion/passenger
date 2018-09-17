@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -95,7 +95,11 @@ def download(name, options = {})
 end
 
 def really_download(site, name, logger, options)
-  url = "#{site[:url]}/#{PhusionPassenger::VERSION_STRING}/#{name}"
+  if site[:url].include?('{{VERSION}}')
+    url = site[:url].gsub('{{VERSION}}', PhusionPassenger::VERSION_STRING) + "/#{name}"
+  else
+    url = "#{site[:url]}/#{PhusionPassenger::VERSION_STRING}/#{name}"
+  end
   puts "Attempting to download #{url} into #{Dir.pwd}"
   File.unlink("#{name}.tmp") rescue nil
 

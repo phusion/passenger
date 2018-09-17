@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2017 Phusion Holding B.V.
+#  Copyright (c) 2014-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -256,7 +256,11 @@ module PhusionPassenger
       end
 
       def real_download_support_file(site, name, output)
-        url = "#{site[:url]}/#{VERSION_STRING}/#{name}"
+        if site[:url].include?('{{VERSION}}')
+          url = site[:url].gsub('{{VERSION}}', VERSION_STRING) + "/#{name}"
+        else
+          url = "#{site[:url]}/#{VERSION_STRING}/#{name}"
+        end
         options = {
           :cacert => site[:cacert],
           :logger => @logger,
