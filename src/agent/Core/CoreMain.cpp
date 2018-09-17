@@ -558,39 +558,62 @@ printInfoInThread() {
 }
 
 static void
-dumpDiagnosticsOnCrash(void *userData) {
+dumpOxtBacktracesOnCrash(void *userData) {
+	cerr << oxt::thread::all_backtraces();
+	cerr.flush();
+}
+
+static void
+dumpControllerStatesOnCrash(void *userData) {
 	WorkingObjects *wo = workingObjects;
 	unsigned int i;
 
-	cerr << "### Backtraces\n";
-	cerr << oxt::thread::all_backtraces();
-	cerr.flush();
-
 	for (i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
-		cerr << "### Request handler state (thread " << (i + 1) << ")\n";
+		cerr << "####### Controller state (thread " << (i + 1) << ") #######\n";
 		cerr << two->controller->inspectStateAsJson();
-		cerr << "\n";
+		cerr << "\n\n";
 		cerr.flush();
 	}
+}
+
+static void
+dumpControllerConfigsOnCrash(void *userData) {
+	WorkingObjects *wo = workingObjects;
+	unsigned int i;
 
 	for (i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
-		cerr << "### Request handler config (thread " << (i + 1) << ")\n";
+		cerr << "####### Controller config (thread " << (i + 1) << ") #######\n";
 		cerr << two->controller->inspectConfig();
-		cerr << "\n";
+		cerr << "\n\n";
 		cerr.flush();
 	}
+}
 
-	cerr << "### Pool state (simple)\n";
+static void
+dumpPoolStateOnCrash(void *userData) {
+	WorkingObjects *wo = workingObjects;
+
+	cerr << "####### Pool state (simple) #######\n";
 	// Do not lock, the crash may occur within the pool.
 	Pool::InspectOptions options(Pool::InspectOptions::makeAuthorized());
 	options.verbose = true;
 	cerr << wo->appPool->inspect(options, false);
-	cerr << "\n";
+	cerr << "\n\n";
 	cerr.flush();
 
-	cerr << "### mbuf stats\n\n";
+	cerr << "####### Pool state (XML) #######\n";
+	Pool::ToXmlOptions options2(Pool::ToXmlOptions::makeAuthorized());
+	options2.secrets = true;
+	cerr << wo->appPool->toXml(options2, false);
+	cerr << "\n\n";
+	cerr.flush();
+}
+
+static void
+dumpMbufStatsOnCrash(void *userData) {
+	WorkingObjects *wo = workingObjects;
 	cerr << "nfree_mbuf_blockq  : " <<
 		wo->threadWorkingObjects[0].serverKitContext->mbuf_pool.nfree_mbuf_blockq << "\n";
 	cerr << "nactive_mbuf_blockq: " <<
@@ -598,13 +621,6 @@ dumpDiagnosticsOnCrash(void *userData) {
 	cerr << "mbuf_block_chunk_size: " <<
 		wo->threadWorkingObjects[0].serverKitContext->mbuf_pool.mbuf_block_chunk_size << "\n";
 	cerr << "\n";
-	cerr.flush();
-
-	cerr << "### Pool state (XML)\n";
-	Pool::ToXmlOptions options2(Pool::ToXmlOptions::makeAuthorized());
-	options2.secrets = true;
-	cerr << wo->appPool->toXml(options2, false);
-	cerr << "\n\n";
 	cerr.flush();
 }
 
@@ -978,6 +994,50 @@ reportInitializationInfo() {
 }
 
 static void
+initializeAbortHandlerCustomerDiagnostics() {
+	if (!Agent::Fundamentals::abortHandlerInstalled()) {
+		return;
+	}
+
+	Agent::Fundamentals::AbortHandlerConfig::DiagnosticsDumper *diagnosticsDumpers
+		= &Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumpers[0];
+
+	diagnosticsDumpers[0].name = "OXT backtraces";
+	diagnosticsDumpers[0].logFileName = "backtrace_oxt.log";
+	diagnosticsDumpers[0].func = dumpOxtBacktracesOnCrash;
+
+	diagnosticsDumpers[1].name = "controller states";
+	diagnosticsDumpers[1].logFileName = "controller_states.log";
+	diagnosticsDumpers[1].func = dumpControllerStatesOnCrash;
+
+	diagnosticsDumpers[2].name = "controller configs";
+	diagnosticsDumpers[2].logFileName = "controller_configs.log";
+	diagnosticsDumpers[2].func = dumpControllerConfigsOnCrash;
+
+	diagnosticsDumpers[3].name = "pool state";
+	diagnosticsDumpers[3].logFileName = "pool.log";
+	diagnosticsDumpers[3].func = dumpPoolStateOnCrash;
+
+	diagnosticsDumpers[4].name = "mbuf statistics";
+	diagnosticsDumpers[4].logFileName = "mbufs.log";
+	diagnosticsDumpers[4].func = dumpMbufStatsOnCrash;
+
+	Agent::Fundamentals::abortHandlerConfigChanged();
+}
+
+static void
+uninstallAbortHandlerCustomDiagnostics() {
+	if (!Agent::Fundamentals::abortHandlerInstalled()) {
+		return;
+	}
+
+	for (unsigned int i = 0; i < Agent::Fundamentals::AbortHandlerConfig::MAX_DIAGNOSTICS_DUMPERS; i++) {
+		Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumpers[i].func = NULL;
+	}
+	Agent::Fundamentals::abortHandlerConfigChanged();
+}
+
+static void
 mainLoop() {
 	TRACE_POINT();
 	WorkingObjects *wo = workingObjects;
@@ -986,9 +1046,6 @@ mainLoop() {
 		bool cpuAffine = coreConfig->get("controller_cpu_affine").asBool()
 			&& maxCpus <= CPU_SETSIZE;
 	#endif
-
-	Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = dumpDiagnosticsOnCrash;
-	Agent::Fundamentals::abortHandlerConfigChanged();
 
 	for (unsigned int i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
@@ -1094,8 +1151,7 @@ waitForExitEvent() {
 	TRACE_POINT();
 	if (syscalls::select(largestFd + 1, &fds, NULL, NULL, NULL) == -1) {
 		int e = errno;
-		Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = NULL;
-		Agent::Fundamentals::abortHandlerConfigChanged();
+		uninstallAbortHandlerCustomDiagnostics();
 		throw SystemException("select() failed", e);
 	}
 
@@ -1142,8 +1198,7 @@ waitForExitEvent() {
 			&fds, NULL, NULL, NULL) == -1)
 		{
 			int e = errno;
-			Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = NULL;
-			Agent::Fundamentals::abortHandlerConfigChanged();
+			uninstallAbortHandlerCustomDiagnostics();
 			throw SystemException("select() failed", e);
 		}
 
@@ -1159,8 +1214,7 @@ cleanup() {
 	P_DEBUG("Shutting down " SHORT_PROGRAM_NAME " core...");
 	wo->appPool->destroy();
 
-	Agent::Fundamentals::context->abortHandlerConfig.diagnosticsDumper = dumpDiagnosticsOnCrash;
-	Agent::Fundamentals::abortHandlerConfigChanged();
+	uninstallAbortHandlerCustomDiagnostics();
 
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
 		ThreadWorkingObjects *two = &wo->threadWorkingObjects[i];
@@ -1225,6 +1279,7 @@ runCore() {
 		UPDATE_TRACE_POINT();
 		warnIfPassengerRootVulnerable();
 		reportInitializationInfo();
+		initializeAbortHandlerCustomerDiagnostics();
 		mainLoop();
 
 		UPDATE_TRACE_POINT();

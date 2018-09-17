@@ -36,7 +36,23 @@ namespace Fundamentals {
 
 
 struct AbortHandlerConfig {
-	typedef void (*DiagnosticsDumper)(void *userData);
+	static const unsigned int MAX_DIAGNOSTICS_DUMPERS = 5;
+	typedef void (*DiagnosticsDumperFunc)(void *userData);
+
+	struct DiagnosticsDumper {
+		const char *name;
+		const char *logFileName;
+		DiagnosticsDumperFunc func;
+		void *userData;
+
+		DiagnosticsDumper()
+			: name(0),
+			  logFileName(0),
+			  func(0),
+			  userData(0)
+			{ }
+	};
+
 
 	char *ruby;
 	char **origArgv;
@@ -45,8 +61,7 @@ struct AbortHandlerConfig {
 	bool beep;
 	bool stopProcess;
 	ResourceLocator *resourceLocator;
-	DiagnosticsDumper diagnosticsDumper;
-	void *diagnosticsDumperUserData;
+	DiagnosticsDumper diagnosticsDumpers[MAX_DIAGNOSTICS_DUMPERS];
 };
 
 void installAbortHandler(const AbortHandlerConfig *config);

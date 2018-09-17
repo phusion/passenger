@@ -59,6 +59,7 @@
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
 #include <ResourceLocator.h>
+#include <RandomGenerator.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
 #include <Utils/AsyncSignalSafeUtils.h>
@@ -70,6 +71,9 @@ namespace Fundamentals {
 using namespace std;
 namespace ASSU = AsyncSignalSafeUtils;
 
+#define RANDOM_TOKEN_SIZE 6
+#define MAX_RANDOM_TOKENS 256
+
 
 struct AbortHandlerContext {
 	const AbortHandlerConfig *config;
@@ -79,6 +83,12 @@ struct AbortHandlerContext {
 	char *crashWatchCommand;
 	char *backtraceSanitizerCommand;
 	bool backtraceSanitizerPassProgramInfo;
+
+	/**
+	 * A string of RANDOM_TOKEN_SIZE * MAX_RANDOM_SIZES bytes.
+	 * Used by createCrashLogDir() to find a unique directory name.
+	 */
+	char *randomTokens;
 
 	int emergencyPipe1[2];
 	int emergencyPipe2[2];
@@ -92,8 +102,12 @@ struct AbortHandlerWorkingState {
 	pid_t pid;
 	int signo;
 	siginfo_t *info;
+
 	char messagePrefix[32];
 	char messageBuf[1024];
+
+	char crashLogDir[256];
+	int crashLogDirFd;
 };
 
 typedef void (*Callback)(AbortHandlerWorkingState &state, void *userData);
@@ -114,6 +128,34 @@ static const char hex_chars[] = "0123456789abcdef";
 static void
 write_nowarn(int fd, const void *buf, size_t n) {
 	ASSU::writeNoWarn(fd, buf, n);
+}
+
+static void
+printCrashLogFileCreated(AbortHandlerWorkingState &state, const char *fname) {
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
+	char *pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, "Dumping to ");
+	pos = ASSU::appendData(pos, end, state.crashLogDir);
+	pos = ASSU::appendData(pos, end, "/");
+	pos = ASSU::appendData(pos, end, fname);
+	pos = ASSU::appendData(pos, end, "\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+}
+
+static void
+printCrashLogFileCreationError(AbortHandlerWorkingState &state, const char *fname, int e) {
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
+	char *pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, "Error creating ");
+	pos = ASSU::appendData(pos, end, state.crashLogDir);
+	pos = ASSU::appendData(pos, end, "/");
+	pos = ASSU::appendData(pos, end, fname);
+	pos = ASSU::appendData(pos, end, ": ");
+	pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+	pos = ASSU::appendData(pos, end, " (errno=");
+	pos = ASSU::appendInteger<int, 10>(pos, end, e);
+	pos = ASSU::appendData(pos, end, ")\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 }
 
 static char *
@@ -290,7 +332,60 @@ runInSubprocessWithTimeLimit(AbortHandlerWorkingState &state, Callback callback,
 }
 
 static void
+dumpUlimits(AbortHandlerWorkingState &state) {
+	const char *end = state.messageBuf + sizeof(state.messageBuf);
+	char *pos = state.messageBuf;
+	pos = ASSU::appendData(pos, end, state.messagePrefix);
+	pos = ASSU::appendData(pos, end, " ] Dumping ulimits...\n");
+	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
+	int fd = -1;
+	if (state.crashLogDirFd != -1) {
+		fd = openat(state.crashLogDirFd, "ulimits.log", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		if (fd != -1) {
+			printCrashLogFileCreated(state, "ulimits.log");
+		} else {
+			printCrashLogFileCreationError(state, "ulimits.log", errno);
+		}
+	}
+
+	pid_t pid = asyncFork();
+	int status;
+	if (pid == 0) {
+		if (fd != -1) {
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+		}
+		closeAllFileDescriptors(2, true);
+		execlp("ulimit", "ulimit", "-a", (const char * const) 0);
+		// On Linux 'ulimit' is a shell builtin, not a command.
+		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (const char * const) 0);
+		_exit(1);
+	} else if (pid == -1) {
+		ASSU::printError("ERROR: Could not fork a process to dump the ulimit!\n");
+	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
+		ASSU::printError("ERROR: Could not run 'ulimit -a'!\n");
+	}
+
+	if (fd != -1) {
+		close(fd);
+	}
+}
+
+static void
 dumpFileDescriptorInfoWithLsof(AbortHandlerWorkingState &state, void *userData) {
+	if (state.crashLogDirFd != -1) {
+		int fd = openat(state.crashLogDirFd, "fds.log", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		if (fd != -1) {
+			printCrashLogFileCreated(state, "fds.log");
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+			close(fd);
+		} else {
+			printCrashLogFileCreationError(state, "fds.log", errno);
+		}
+	}
+
 	char *pos = state.messageBuf;
 	const char *end = state.messageBuf + sizeof(state.messageBuf) - 1;
 	pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
@@ -306,15 +401,38 @@ dumpFileDescriptorInfoWithLsof(AbortHandlerWorkingState &state, void *userData) 
 }
 
 static void
-dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state) {
+dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state, const char *path) {
 	pid_t pid;
+	int fd = -1;
 	int status;
+
+	if (state.crashLogDirFd != -1) {
+		fd = openat(state.crashLogDirFd, "fds.log", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		if (fd != -1) {
+			printCrashLogFileCreated(state, "fds.log");
+		} else {
+			printCrashLogFileCreationError(state, "fds.log", errno);
+		}
+	}
 
 	pid = asyncFork();
 	if (pid == 0) {
+		if (fd != -1) {
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+		}
+
+		const char *end = state.messageBuf + sizeof(state.messageBuf);
+		char *pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, "Running: ls -lv ");
+		pos = ASSU::appendData(pos, end, path);
+		pos = ASSU::appendData(pos, end, "\n");
+		pos = ASSU::appendData(pos, end, "--------------------------\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+
 		closeAllFileDescriptors(2, true);
 		// The '-v' is for natural sorting on Linux. On BSD -v means something else but it's harmless.
-		execlp("ls", "ls", "-lv", state.messageBuf, (const char * const) 0);
+		execlp("ls", "ls", "-lv", path, (const char * const) 0);
 
 		const char *command[] = { "ls", NULL };
 		printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
@@ -323,6 +441,10 @@ dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state) {
 		ASSU::printError("ERROR: Could not fork a process to dump file descriptor information!\n");
 	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
 		ASSU::printError("ERROR: Could not run 'ls' to dump file descriptor information!\n");
+	}
+
+	if (fd != -1) {
+		close(fd);
 	}
 }
 
@@ -342,41 +464,58 @@ dumpFileDescriptorInfo(AbortHandlerWorkingState &state) {
 	status = runInSubprocessWithTimeLimit(state, dumpFileDescriptorInfoWithLsof, NULL, 4000);
 
 	if (status != 0) {
+		char path[256];
 		ASSU::printError("Falling back to another mechanism for dumping file descriptors.\n");
 
-		pos = messageBuf;
+		pos = path;
+		end = path + sizeof(path) - 1;
 		pos = ASSU::appendData(pos, end, "/proc/");
 		pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
 		pos = ASSU::appendData(pos, end, "/fd");
 		*pos = '\0';
-		if (stat(messageBuf, &buf) == 0) {
-			dumpFileDescriptorInfoWithLs(state);
-		} else {
-			pos = messageBuf;
-			pos = ASSU::appendData(pos, end, "/dev/fd");
-			*pos = '\0';
-			if (stat(messageBuf, &buf) == 0) {
-				dumpFileDescriptorInfoWithLs(state);
-			} else {
-				pos = messageBuf;
-				pos = ASSU::appendData(pos, end, "ERROR: No other file descriptor dumping mechanism on current platform detected.\n");
-				write_nowarn(STDERR_FILENO, messageBuf, pos - messageBuf);
-			}
+		if (stat(path, &buf) == 0) {
+			dumpFileDescriptorInfoWithLs(state, path);
+			return;
 		}
+
+		pos = path;
+		pos = ASSU::appendData(pos, end, "/dev/fd");
+		*pos = '\0';
+		if (stat(path, &buf) == 0) {
+			dumpFileDescriptorInfoWithLs(state, path);
+			return;
+		}
+
+		pos = messageBuf;
+		pos = ASSU::appendData(pos, end, "ERROR: No other file descriptor dumping mechanism on current platform detected.\n");
+		write_nowarn(STDERR_FILENO, messageBuf, pos - messageBuf);
 	}
 }
 
 static void
 dumpWithCrashWatch(AbortHandlerWorkingState &state) {
-	char *pos;
-	const char *end = state.messageBuf + sizeof(state.messageBuf) - 1;
+	int fd = -1;
 
-	pos = state.messageBuf;
+	if (state.crashLogDirFd != -1) {
+		fd = openat(state.crashLogDirFd, "backtrace.log", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		if (fd != -1) {
+			printCrashLogFileCreated(state, "backtrace.log");
+		} else {
+			printCrashLogFileCreationError(state, "backtrace.log", errno);
+		}
+	}
+
+	char *pos = state.messageBuf;
+	const char *end = state.messageBuf + sizeof(state.messageBuf) - 1;
 	pos = ASSU::appendInteger<pid_t, 10>(pos, end, state.pid);
 	*pos = '\0';
 
 	pid_t child = asyncFork();
 	if (child == 0) {
+		if (fd != -1) {
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+		}
 		closeAllFileDescriptors(2, true);
 		execlp(ctx->config->ruby, ctx->config->ruby, ctx->crashWatchCommand,
 			ctx->rubyLibDir, ctx->installSpec, "--dump",
@@ -399,6 +538,10 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 
 	} else {
 		waitpid(child, NULL, 0);
+	}
+
+	if (fd != -1) {
+		close(fd);
 	}
 }
 
@@ -508,7 +651,22 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 
 static void
 runCustomDiagnosticsDumper(AbortHandlerWorkingState &state, void *userData) {
-	ctx->config->diagnosticsDumper(ctx->config->diagnosticsDumperUserData);
+	unsigned int i = static_cast<unsigned int>(reinterpret_cast<boost::uintptr_t>(userData));
+	const AbortHandlerConfig::DiagnosticsDumper &dumper = ctx->config->diagnosticsDumpers[i];
+
+	if (state.crashLogDirFd != -1) {
+		int fd = openat(state.crashLogDirFd, dumper.logFileName, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		if (fd != -1) {
+			printCrashLogFileCreated(state, dumper.logFileName);
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+			close(fd);
+		} else {
+			printCrashLogFileCreationError(state, dumper.logFileName, errno);
+		}
+	}
+
+	dumper.func(dumper.userData);
 }
 
 // This function is performed in a child process.
@@ -521,7 +679,7 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 
 	pos = state.messageBuf;
 	pos = ASSU::appendData(pos, end, state.messagePrefix);
-	pos = ASSU::appendData(pos, end, " ] Date, uname and ulimits:\n");
+	pos = ASSU::appendData(pos, end, " ] Date and uname:\n");
 	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	// Dump human-readable time string and string.
@@ -546,20 +704,6 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 		ASSU::printError("ERROR: Could not fork a process to dump the uname!\n");
 	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
 		ASSU::printError("ERROR: Could not run 'uname -mprsv'!\n");
-	}
-
-	// Dump ulimit.
-	pid = asyncFork();
-	if (pid == 0) {
-		closeAllFileDescriptors(2, true);
-		execlp("ulimit", "ulimit", "-a", (const char * const) 0);
-		// On Linux 'ulimit' is a shell builtin, not a command.
-		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (const char * const) 0);
-		_exit(1);
-	} else if (pid == -1) {
-		ASSU::printError("ERROR: Could not fork a process to dump the ulimit!\n");
-	} else if (waitpid(pid, &status, 0) != pid || status != 0) {
-		ASSU::printError("ERROR: Could not run 'ulimit -a'!\n");
 	}
 
 	pos = state.messageBuf;
@@ -604,13 +748,24 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 
 	ASSU::printError("--------------------------------------\n");
 
-	if (ctx->config->diagnosticsDumper != NULL) {
+	dumpUlimits(state);
+
+	ASSU::printError("--------------------------------------\n");
+
+	for (unsigned int i = 0; i < AbortHandlerConfig::MAX_DIAGNOSTICS_DUMPERS; i++) {
+		const AbortHandlerConfig::DiagnosticsDumper &diagnosticsDumper = ctx->config->diagnosticsDumpers[i];
+		if (diagnosticsDumper.func == NULL) {
+			continue;
+		}
+
 		pos = state.messageBuf;
 		pos = ASSU::appendData(pos, end, state.messagePrefix);
-		pos = ASSU::appendData(pos, end, " ] Dumping additional diagnostical information...\n");
+		pos = ASSU::appendData(pos, end, " ] Dumping ");
+		pos = ASSU::appendData(pos, end, diagnosticsDumper.name);
+		pos = ASSU::appendData(pos, end, "...\n");
 		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
-		ASSU::printError("--------------------------------------\n");
-		runInSubprocessWithTimeLimit(state, runCustomDiagnosticsDumper, NULL, 2000);
+		runInSubprocessWithTimeLimit(state, runCustomDiagnosticsDumper,
+			reinterpret_cast<void *>(static_cast<boost::uintptr_t>(i)), 2000);
 		ASSU::printError("--------------------------------------\n");
 	}
 
@@ -630,46 +785,109 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 	} else {
 		write_nowarn(STDERR_FILENO, "\n", 1);
 	}
+
+	if (state.crashLogDir[0] != '\0') {
+		ASSU::printError("--------------------------------------\n");
+		pos = state.messageBuf;
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] **************** LOOK HERE FOR CRASH DETAILS *****************\n\n");
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] Crash log dumped to this directory:\n");
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] ");
+		pos = ASSU::appendData(pos, end, state.crashLogDir);
+		pos = ASSU::appendData(pos, end, "\n\n");
+		pos = ASSU::appendData(pos, end, state.messagePrefix);
+		pos = ASSU::appendData(pos, end, " ] **************** LOOK ABOVE FOR CRASH DETAILS ****************\n");
+		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+	}
 }
 
 static bool
-createCrashLogFile(char *filename, size_t bufSize, time_t t) {
-	char *pos = filename;
-	const char *end = filename + bufSize - 1;
-	pos = ASSU::appendData(pos, end, "/var/tmp/passenger-crash-log.");
-	pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
-	*pos = '\0';
+createCrashLogDir(AbortHandlerWorkingState &state, time_t t) {
+	char *suffixBegin = state.crashLogDir;
+	const char *end = state.crashLogDir + sizeof(state.crashLogDir) - 1;
+	suffixBegin = ASSU::appendData(suffixBegin, end, "/var/tmp/passenger-crash-log.");
+	suffixBegin = ASSU::appendInteger<time_t, 10>(suffixBegin, end, t);
+	suffixBegin = ASSU::appendData(suffixBegin, end, ".");
 
-	int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-	if (fd == -1) {
-		pos = filename;
-		pos = ASSU::appendData(pos, end, ctx->tmpDir);
-		pos = ASSU::appendData(pos, end, "/passenger-crash-log.");
-		pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
+	// Try a bunch of times to find and create a unique path.
+	for (unsigned int i = 0; i < MAX_RANDOM_TOKENS; i++) {
+		char *pos = suffixBegin;
+		pos = ASSU::appendData(pos, end, ctx->randomTokens + RANDOM_TOKEN_SIZE * i,
+			RANDOM_TOKEN_SIZE);
 		*pos = '\0';
-		fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-	}
-	if (fd == -1) {
-		*filename = '\0';
-		return false;
-	} else {
-		close(fd);
+
+		int ret;
+		do {
+			ret = mkdir(state.crashLogDir, 0700);
+		} while (ret == -1 && errno == EINTR);
+		if (ret == -1) {
+			if (errno == EEXIST) {
+				// Directory exists; try again.
+				continue;
+			} else {
+				int e = errno;
+				end = state.messageBuf + sizeof(state.messageBuf);
+				pos = state.messageBuf;
+				pos = ASSU::appendData(pos, end, state.messagePrefix);
+				pos = ASSU::appendData(pos, end, " ] Error creating directory ");
+				pos = ASSU::appendData(pos, end, state.crashLogDir);
+				pos = ASSU::appendData(pos, end, " for storing crash log: ");
+				pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+				pos = ASSU::appendData(pos, end, " (errno=");
+				pos = ASSU::appendInteger<int, 10>(pos, end, e);
+				pos = ASSU::appendData(pos, end, ")\n");
+				write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+				state.crashLogDir[0] = '\0';
+				return false;
+			}
+		}
+
+		do {
+			state.crashLogDirFd = open(state.crashLogDir, O_RDONLY);
+		} while (state.crashLogDirFd == -1 && errno == EINTR);
+		if (state.crashLogDirFd == -1) {
+			int e = errno;
+			end = state.messageBuf + sizeof(state.messageBuf);
+			pos = state.messageBuf;
+			pos = ASSU::appendData(pos, end, state.messagePrefix);
+			pos = ASSU::appendData(pos, end, " ] Error opening created directory ");
+			pos = ASSU::appendData(pos, end, state.crashLogDir);
+			pos = ASSU::appendData(pos, end, " for storing crash log: ");
+			pos = ASSU::appendData(pos, end, ASSU::limitedStrerror(e));
+			pos = ASSU::appendData(pos, end, " (errno=");
+			pos = ASSU::appendInteger<int, 10>(pos, end, e);
+			pos = ASSU::appendData(pos, end, ")\n");
+			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
+			state.crashLogDir[0] = '\0';
+			return false;
+		}
+
 		return true;
 	}
+
+	state.crashLogDir[0] = '\0';
+	return false;
 }
 
-static void
-forkAndRedirectToTee(char *filename) {
-	pid_t pid;
+static bool
+forkAndRedirectToTeeAndMainLogFile(const char *crashLogDir) {
 	int p[2];
-
 	if (pipe(p) == -1) {
-		// Signal error condition.
-		*filename = '\0';
-		return;
+		return false;
 	}
 
-	pid = asyncFork();
+	char filename[300];
+	char *pos = filename;
+	const char *end = filename + sizeof(filename) - 1;
+
+	pos = ASSU::appendData(pos, end, crashLogDir);
+	pos = ASSU::appendData(pos, end, "/");
+	pos = ASSU::appendData(pos, end, "main.log");
+	*pos = '\0';
+
+	pid_t pid = asyncFork();
 	if (pid == 0) {
 		close(p[1]);
 		dup2(p[0], STDIN_FILENO);
@@ -680,13 +898,15 @@ forkAndRedirectToTee(char *filename) {
 		execlp("/usr/bin/cat", "cat", (const char * const) 0);
 		ASSU::printError("ERROR: cannot execute 'tee' or 'cat'; crash log will be lost!\n");
 		_exit(1);
+		return false;
 	} else if (pid == -1) {
 		ASSU::printError("ERROR: cannot fork a process for executing 'tee'\n");
-		*filename = '\0';
+		return false;
 	} else {
 		close(p[0]);
 		dup2(p[1], STDOUT_FILENO);
 		dup2(p[1], STDERR_FILENO);
+		return true;
 	}
 }
 
@@ -717,7 +937,6 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 	state.info = info;
 	pid_t child;
 	time_t t = time(NULL);
-	char crashLogFile[256];
 
 	ctx->callCount++;
 	if (ctx->callCount > 1) {
@@ -756,13 +975,6 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 
 	closeEmergencyPipes();
 
-	/* We want to dump the entire crash log to both stderr and a log file.
-	 * We use 'tee' for this.
-	 */
-	if (createCrashLogFile(crashLogFile, sizeof(crashLogFile), t)) {
-		forkAndRedirectToTee(crashLogFile);
-	}
-
 	{
 		const char *end = state.messagePrefix + sizeof(state.messagePrefix);
 		char *pos = state.messagePrefix;
@@ -771,8 +983,19 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 		*pos = '\0';
 	}
 
+	/* We want to dump the entire crash log to both stderr and a log file.
+	 * We use 'tee' for this.
+	 */
+	state.crashLogDir[0] = '\0';
+	state.crashLogDirFd = -1;
+	if (createCrashLogDir(state, t)) {
+		forkAndRedirectToTeeAndMainLogFile(state.crashLogDir);
+	}
+
 	const char *end = state.messageBuf + sizeof(state.messageBuf);
 	char *pos = state.messageBuf;
+	// Print a \n just in case we're aborting in the middle of a non-terminated line.
+	pos = ASSU::appendData(pos, end, "\n");
 	pos = ASSU::appendData(pos, end, state.messagePrefix);
 	pos = ASSU::appendData(pos, end, ", timestamp=");
 	pos = ASSU::appendInteger<time_t, 10>(pos, end, t);
@@ -786,14 +1009,14 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
 	pos = state.messageBuf;
-	if (*crashLogFile != '\0') {
+	if (state.crashLogDir[0] != '\0') {
 		pos = ASSU::appendData(pos, end, state.messagePrefix);
-		pos = ASSU::appendData(pos, end, " ] Crash log dumped to ");
-		pos = ASSU::appendData(pos, end, crashLogFile);
-		pos = ASSU::appendData(pos, end, "\n");
+		pos = ASSU::appendData(pos, end, " ] Crash log files will be dumped to ");
+		pos = ASSU::appendData(pos, end, state.crashLogDir);
+		pos = ASSU::appendData(pos, end, " <--- ******* LOOK HERE FOR DETAILS!!! *******\n");
 	} else {
 		pos = ASSU::appendData(pos, end, state.messagePrefix);
-		pos = ASSU::appendData(pos, end, " ] Could not create crash log file, so dumping to stderr only.\n");
+		pos = ASSU::appendData(pos, end, " ] Could not create crash log directory, so dumping to stderr only.\n");
 	}
 	write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
 
@@ -869,7 +1092,7 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 			int e = errno;
 			pos = state.messageBuf;
 			pos = ASSU::appendData(pos, end, state.messagePrefix);
-			pos = ASSU::appendData(pos, end, "] Could fork a child process for dumping diagnostics: fork() failed with errno=");
+			pos = ASSU::appendData(pos, end, "] Could not fork a child process for dumping diagnostics: fork() failed with errno=");
 			pos = ASSU::appendInteger<int, 10>(pos, end, e);
 			pos = ASSU::appendData(pos, end, "\n");
 			write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
@@ -884,7 +1107,7 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 		int e = errno;
 		pos = state.messageBuf;
 		pos = ASSU::appendData(pos, end, state.messagePrefix);
-		pos = ASSU::appendData(pos, end, " ] Could fork a child process for dumping diagnostics: fork() failed with errno=");
+		pos = ASSU::appendData(pos, end, " ] Could not fork a child process for dumping diagnostics: fork() failed with errno=");
 		pos = ASSU::appendInteger<int, 10>(pos, end, e);
 		pos = ASSU::appendData(pos, end, "\n");
 		write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
@@ -905,6 +1128,8 @@ installAbortHandler(const AbortHandlerConfig *config) {
 
 	ctx->config = config;
 	ctx->backtraceSanitizerPassProgramInfo = true;
+	ctx->randomTokens = strdup(RandomGenerator().generateAsciiString(
+		MAX_RANDOM_TOKENS * RANDOM_TOKEN_SIZE).c_str());
 	ctx->emergencyPipe1[0] = -1;
 	ctx->emergencyPipe1[1] = -1;
 	ctx->emergencyPipe2[0] = -1;
@@ -1038,6 +1263,7 @@ shutdownAbortHandler() {
 	free(ctx->tmpDir);
 	free(ctx->crashWatchCommand);
 	free(ctx->backtraceSanitizerCommand);
+	free(ctx->randomTokens);
 	free(ctx->alternativeStack);
 	closeEmergencyPipes();
 	delete ctx;
