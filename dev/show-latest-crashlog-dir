@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+# Finds the latest Passenger crash log directory and prints its path.
+# This tool is meant to make it easy to analyze local Passenger crash
+# logs during debugging sessions. Instead of searching for the crash
+# log directory path in the output and then copy-pasting that to the
+# terminal, one can simply invoke one shell command:
+#
+#   less $(./dev/show-latest-crashlog-dir)/backtrace.log
+#
+# This will open the latest crash log's backtrace.log in 'less'.
+
+def parse_path(path)
+  File.basename(path).split('.')[1].to_i
+end
+
+def main
+  dirs = Dir["/var/tmp/passenger-crash-log.*.*"].sort do |a, b|
+    parse_path(a) <=> parse_path(b)
+  end
+  if dirs.empty?
+    abort "No /var/tmp/passenger-crash-log.* directories found."
+  else
+    puts dirs.last
+  end
+end
+
+main
