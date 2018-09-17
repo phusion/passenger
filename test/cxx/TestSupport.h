@@ -117,14 +117,6 @@ void createInstanceDir(InstanceDirectoryPtr &instanceDir);
 void writeUntilFull(int fd);
 
 /**
- * Look for 'toFind' inside the given file, replace it with 'replaceWith' and write
- * the result back to the file. Only the first occurence of 'toFind' is replaced.
- *
- * @throws FileSystemException
- */
-void replaceStringInFile(const char *filename, const string &toFind, const string &replaceWith);
-
-/**
  * Returns whether 'str' contains the given substring.
  */
 bool containsSubstring(const StaticString &str, const StaticString &substr);
@@ -145,11 +137,6 @@ void writeFile(const string &filename, const string &contents);
  * @throws FileSystemException
  */
 void touchFile(const char *filename, time_t timestamp = (time_t) - 1);
-
-/**
- * Returns all filenames in the given directory.
- */
-vector<string> listDir(const string &path);
 
 /**
  * Returns the name of the primary group of the given user.

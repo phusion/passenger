@@ -81,23 +81,6 @@ writeUntilFull(int fd) {
 	fcntl(fd, F_SETFL, flags);
 }
 
-void
-replaceStringInFile(const char *filename, const string &toFind, const string &replaceWith) {
-	string content = unsafeReadFile(filename);
-	FILE *f = fopen(filename, "w");
-	if (f == NULL) {
-		int e = errno;
-		string message = "Cannot open file '";
-		message.append(filename);
-		message.append("' for writing");
-		throw FileSystemException(message, e, filename);
-	} else {
-		StdioGuard guard(f, __FILE__, __LINE__);
-		content = replaceString(content, toFind, replaceWith);
-		fwrite(content.data(), 1, content.size(), f);
-	}
-}
-
 bool
 containsSubstring(const StaticString &str, const StaticString &substr) {
 	return str.find(substr) != string::npos;
@@ -127,26 +110,6 @@ touchFile(const char *filename, time_t timestamp) {
 		times.modtime = timestamp;
 		utime(filename, &times);
 	}
-}
-
-vector<string>
-listDir(const string &path) {
-	vector<string> result;
-	DIR *d = opendir(path.c_str());
-	struct dirent *ent;
-
-	if (d == NULL) {
-		int e = errno;
-		throw FileSystemException("Cannot open directory " + path,
-			e, path);
-	}
-	while ((ent = readdir(d)) != NULL) {
-		if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) {
-			continue;
-		}
-		result.push_back(ent->d_name);
-	}
-	return result;
 }
 
 string
