@@ -4,7 +4,7 @@
 using namespace Passenger;
 
 namespace tut {
-	struct VariantMapTest {
+	struct VariantMapTest: public TestBase {
 		VariantMap map;
 	};
 

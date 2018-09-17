@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <FileTools/FileManip.h>
 #include <FileTools/PathSecurityCheck.h>
 #include <unistd.h>
@@ -7,7 +7,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct FileTools_PathSecurityCheckTest {
+	struct FileTools_PathSecurityCheckTest: public TestBase {
 		string tmpPath;
 		TempDir tmpDir;
 		vector<string> errors, checkErrors;

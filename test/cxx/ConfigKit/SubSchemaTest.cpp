@@ -7,7 +7,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct ConfigKit_SubSchemaTest {
+	struct ConfigKit_SubSchemaTest: public TestBase {
 		ConfigKit::Schema schema;
 		ConfigKit::Schema subschema;
 		ConfigKit::TableTranslator translator;

@@ -6,7 +6,7 @@ using namespace Passenger::ServerKit;
 using namespace std;
 
 namespace tut {
-	struct ServerKit_CookieUtilsTest {
+	struct ServerKit_CookieUtilsTest: public TestBase {
 		psg_pool_t *pool;
 		LString name;
 		LString value;

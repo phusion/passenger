@@ -5,7 +5,7 @@ using namespace Passenger;
 using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct Core_SpawningKit_JourneyTest {
+	struct Core_SpawningKit_JourneyTest: public TestBase {
 	};
 
 	DEFINE_TEST_GROUP(Core_SpawningKit_JourneyTest);

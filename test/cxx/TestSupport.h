@@ -184,6 +184,14 @@ public:
 
 
 /**
+ * All test classes must derive from this base class.
+ */
+class TestBase {
+public:
+	TestBase();
+};
+
+/**
  * Creates a temporary copy of the given directory. This copy is deleted
  * upon object destruction.
  */

@@ -16,7 +16,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct UtilsTest {
+	struct UtilsTest: public TestBase {
 		vector<string> output;
 		string cwd;
 		string oldPath;

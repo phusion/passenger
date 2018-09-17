@@ -6,7 +6,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct Utils_IOUtilsTest {
+	struct Utils_IOUtilsTest: public TestBase {
 	};
 
 	DEFINE_TEST_GROUP(Utils_IOUtilsTest);

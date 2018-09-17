@@ -85,16 +85,12 @@ namespace tut {
 
 	};
 
-	struct Core_SecurityUpdateCheckerTest {
+	struct Core_SecurityUpdateCheckerTest: public TestBase {
 		SecurityUpdateChecker::Schema schema;
 		boost::shared_ptr<TestChecker> checker;
 
 		Core_SecurityUpdateCheckerTest() {
 			LoggingKit::setLevel(LoggingKit::CRIT);
-		}
-
-		~Core_SecurityUpdateCheckerTest() {
-			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void init() {

@@ -7,7 +7,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct ConfigKit_StoreTest {
+	struct ConfigKit_StoreTest: public TestBase {
 		ConfigKit::Schema schema;
 		ConfigKit::Store *config;
 		Json::Value doc;

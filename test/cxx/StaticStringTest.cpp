@@ -5,7 +5,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct StaticStringTest {
+	struct StaticStringTest: public TestBase {
 	};
 
 	DEFINE_TEST_GROUP(StaticStringTest);

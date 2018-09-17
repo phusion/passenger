@@ -1,14 +1,14 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <ProcessManagement/Spawn.h>
-#include "Utils/FileChangeChecker.h"
-#include "Utils/SystemTime.h"
+#include <Utils/FileChangeChecker.h>
+#include <Utils/SystemTime.h>
 #include <unistd.h>
 
 using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct FileChangeCheckerTest {
+	struct FileChangeCheckerTest: public TestBase {
 		FileChangeCheckerTest() {
 		}
 

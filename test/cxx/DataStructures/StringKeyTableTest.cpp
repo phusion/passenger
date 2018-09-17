@@ -6,7 +6,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct DataStructures_StringKeyTableTest {
+	struct DataStructures_StringKeyTableTest: public TestBase {
 		StringKeyTable<string> table;
 		string *value;
 

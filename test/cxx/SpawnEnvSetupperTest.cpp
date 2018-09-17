@@ -8,7 +8,7 @@ using namespace Passenger;
 using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct SpawnEnvSetupperTest {
+	struct SpawnEnvSetupperTest: public TestBase {
 		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema schema;
 		SpawningKit::Context context;
@@ -33,10 +33,6 @@ namespace tut {
 			config.user = lookupSystemUsernameByUid(getuid());
 			config.group = lookupSystemGroupnameByGid(getgid());
 			config.internStrings();
-		}
-
-		~SpawnEnvSetupperTest() {
-			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void init(JourneyType type, const Json::Value &extraArgs = Json::Value()) {

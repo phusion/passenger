@@ -15,7 +15,7 @@ using namespace Passenger;
 using namespace Passenger::ApplicationPool2;
 
 namespace tut {
-	struct Core_ApplicationPool_PoolTest {
+	struct Core_ApplicationPool_PoolTest: public TestBase {
 		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema skContextSchema;
 		SpawningKit::Context::DebugSupport skDebugSupport;

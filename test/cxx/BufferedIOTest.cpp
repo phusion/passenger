@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <Utils/BufferedIO.h>
 #include <Utils/Timer.h>
 #include <Utils/IOUtils.h>
@@ -8,7 +8,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct BufferedIOTest {
+	struct BufferedIOTest: public TestBase {
 		FileDescriptor reader, writer;
 		BufferedIO io;
 

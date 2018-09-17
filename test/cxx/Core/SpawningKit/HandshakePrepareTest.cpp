@@ -9,7 +9,7 @@ using namespace Passenger;
 using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct Core_SpawningKit_HandshakePrepareTest {
+	struct Core_SpawningKit_HandshakePrepareTest: public TestBase {
 		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema schema;
 		SpawningKit::Context context;

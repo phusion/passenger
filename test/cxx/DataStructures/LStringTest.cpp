@@ -6,7 +6,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct DataStructures_LStringTest {
+	struct DataStructures_LStringTest: public TestBase {
 		LString str, str2;
 		psg_pool_t *pool;
 

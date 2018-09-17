@@ -1,11 +1,11 @@
-#include "TestSupport.h"
-#include "FileDescriptor.h"
+#include <TestSupport.h>
+#include <FileDescriptor.h>
 #include <cerrno>
 
 using namespace Passenger;
 
 namespace tut {
-	struct FileDescriptorTest {
+	struct FileDescriptorTest: public TestBase {
 		int pipes[2];
 
 		FileDescriptorTest() {

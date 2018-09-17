@@ -6,7 +6,7 @@ using namespace Passenger::ApplicationPool2;
 using namespace std;
 
 namespace tut {
-	struct Core_ApplicationPool_OptionsTest {
+	struct Core_ApplicationPool_OptionsTest: public TestBase {
 	};
 
 	DEFINE_TEST_GROUP(Core_ApplicationPool_OptionsTest);

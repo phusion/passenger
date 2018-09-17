@@ -18,7 +18,7 @@ using namespace std;
 using namespace oxt;
 
 namespace tut {
-	struct ServerKit_ServerTest {
+	struct ServerKit_ServerTest: public TestBase {
 		typedef ClientRef<Server<Client>, Client> ClientRefType;
 
 		BackgroundEventLoop bg;
@@ -57,7 +57,6 @@ namespace tut {
 			safelyClose(serverSocket2);
 			unlink("tmp.server1");
 			unlink("tmp.server2");
-			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 			bg.stop();
 		}
 

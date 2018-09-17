@@ -5,7 +5,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct StrIntUtilsTest {
+	struct StrIntUtilsTest: public TestBase {
 	};
 
 	void testTruncate(const char* str, const char *tokens, int maxBetweenTokens, const char* expected) {

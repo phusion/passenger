@@ -8,7 +8,7 @@ using namespace Passenger;
 using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct Core_SpawningKit_ConfigTest {
+	struct Core_SpawningKit_ConfigTest: public TestBase {
 		SpawningKit::Config config;
 	};
 

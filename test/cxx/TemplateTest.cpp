@@ -5,7 +5,7 @@
 using namespace Passenger;
 
 namespace tut {
-	struct TemplateTest {
+	struct TemplateTest: public TestBase {
 		string apply(const char *templateContent, ...) {
 			va_list ap;
 			const char *arg;
@@ -20,9 +20,9 @@ namespace tut {
 			return result;
 		}
 	};
-	
+
 	DEFINE_TEST_GROUP(TemplateTest);
-	
+
 	TEST_METHOD(1) {
 		// Test 1 substitution.
 		string result = apply("hello {{name}}",

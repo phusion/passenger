@@ -14,7 +14,7 @@ using namespace std;
 namespace tut {
 	typedef ResponseCache<Request> ResponseCacheType;
 
-	struct Core_ResponseCacheTest {
+	struct Core_ResponseCacheTest: public TestBase {
 		ResponseCacheType responseCache;
 		Request req;
 		Core::ControllerSchema schema;

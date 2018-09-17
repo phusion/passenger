@@ -7,7 +7,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct MessagePassingTest {
+	struct MessagePassingTest: public TestBase {
 		MessageBoxPtr box;
 
 		MessagePassingTest() {

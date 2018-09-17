@@ -5,7 +5,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct ConfigKit_ErrorTest {
+	struct ConfigKit_ErrorTest: public TestBase {
 	};
 
 	DEFINE_TEST_GROUP(ConfigKit_ErrorTest);

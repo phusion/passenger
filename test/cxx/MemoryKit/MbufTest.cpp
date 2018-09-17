@@ -8,7 +8,7 @@ using namespace Passenger::MemoryKit;
 using namespace std;
 
 namespace tut {
-	struct MemoryKit_MbufTest {
+	struct MemoryKit_MbufTest: public TestBase {
 		struct mbuf_pool pool;
 
 		MemoryKit_MbufTest() {

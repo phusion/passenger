@@ -8,7 +8,7 @@ using namespace Passenger;
 using namespace Passenger::SpawningKit;
 
 namespace tut {
-	struct Core_SpawningKit_UserSwitchingRulesTest {
+	struct Core_SpawningKit_UserSwitchingRulesTest: public TestBase {
 		WrapperRegistry::Registry wrapperRegistry;
 		AppPoolOptions options;
 		UserSwitchingInfo result;

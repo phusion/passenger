@@ -5,7 +5,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct SystemTimeTest {
+	struct SystemTimeTest: public TestBase {
 		~SystemTimeTest() {
 			SystemTime::release();
 		}

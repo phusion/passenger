@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <Utils/IOUtils.h>
 #include <Utils/SystemTime.h>
 #include <oxt/system_calls.hpp>
@@ -34,7 +34,7 @@ namespace tut {
 		return writevResult;
 	}
 
-	struct IOUtilsTest {
+	struct IOUtilsTest: public TestBase {
 		string restBuffer;
 
 		IOUtilsTest() {

@@ -7,7 +7,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct ConfigKit_TranslationTest {
+	struct ConfigKit_TranslationTest: public TestBase {
 	};
 
 	DEFINE_TEST_GROUP(ConfigKit_TranslationTest);

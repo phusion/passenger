@@ -278,7 +278,7 @@ namespace tut {
 		}
 	};
 
-	struct ServerKit_HttpServerTest {
+	struct ServerKit_HttpServerTest: public TestBase {
 		typedef ClientRef<MyServer, MyClient> ClientRefType;
 
 		BackgroundEventLoop bg;
@@ -319,7 +319,6 @@ namespace tut {
 				this));
 			safelyClose(serverSocket);
 			unlink("tmp.server");
-			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 			bg.stop();
 		}
 

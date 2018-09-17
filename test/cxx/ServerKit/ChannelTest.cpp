@@ -13,7 +13,7 @@ using namespace std;
 namespace tut {
 	#define CONSUME_FULLY -2
 
-	struct ServerKit_ChannelTest: public ServerKit::Hooks {
+	struct ServerKit_ChannelTest: public TestBase, public ServerKit::Hooks {
 		BackgroundEventLoop bg;
 		ServerKit::Schema skSchema;
 		ServerKit::Context context;
@@ -52,7 +52,6 @@ namespace tut {
 			bg.safe->runSync(boost::bind(&ServerKit_ChannelTest::deinitializeChannel,
 				this));
 			bg.stop();
-			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 		}
 
 		void deinitializeChannel() {

@@ -6,7 +6,7 @@ using namespace Passenger::ServerKit;
 using namespace std;
 
 namespace tut {
-	struct ServerKit_HeaderTableTest {
+	struct ServerKit_HeaderTableTest: public TestBase {
 		psg_pool_t *pool;
 		HeaderTable table;
 

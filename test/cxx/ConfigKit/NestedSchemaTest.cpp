@@ -6,7 +6,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct ConfigKit_NestedSchemaTest {
+	struct ConfigKit_NestedSchemaTest: public TestBase {
 		ConfigKit::Schema schema;
 		ConfigKit::Schema nestedSchema;
 		Json::Value doc;

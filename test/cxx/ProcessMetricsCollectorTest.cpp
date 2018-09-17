@@ -1,8 +1,8 @@
+#include <TestSupport.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <cstdio>
 #include <cerrno>
-#include <TestSupport.h>
 #include <ProcessManagement/Spawn.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/ProcessMetricsCollector.h>
@@ -10,7 +10,7 @@
 using namespace Passenger;
 
 namespace tut {
-	struct ProcessMetricsCollectorTest {
+	struct ProcessMetricsCollectorTest: public TestBase {
 		ProcessMetricsCollector collector;
 		pid_t child;
 

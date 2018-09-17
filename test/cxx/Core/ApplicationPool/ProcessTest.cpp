@@ -8,7 +8,7 @@ using namespace Passenger::ApplicationPool2;
 using namespace std;
 
 namespace tut {
-	struct Core_ApplicationPool_ProcessTest {
+	struct Core_ApplicationPool_ProcessTest: public TestBase {
 		WrapperRegistry::Registry wrapperRegistry;
 		SpawningKit::Context::Schema skContextSchema;
 		SpawningKit::Context skContext;

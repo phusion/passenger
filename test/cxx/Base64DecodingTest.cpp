@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <modp_b64.h>
 
 using namespace Passenger;
@@ -6,10 +6,7 @@ using namespace modp;
 using namespace std;
 
 namespace tut {
-	struct Base64DecodingTest {
-		Base64DecodingTest() {
-		}
-
+	struct Base64DecodingTest: public TestBase {
 		string decode(const char* base64string){
 			return b64_decode(base64string);
 		}

@@ -1,4 +1,4 @@
-#include "TestSupport.h"
+#include <TestSupport.h>
 #include <cstring>
 #include <Utils/DateParsing.h>
 
@@ -6,7 +6,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct DateParsingTest {
+	struct DateParsingTest: public TestBase {
 		struct tm tm;
 		int zone;
 

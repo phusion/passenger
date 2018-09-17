@@ -13,7 +13,7 @@ using namespace Passenger;
 using namespace Passenger::Core;
 
 namespace tut {
-	struct Core_ControllerTest {
+	struct Core_ControllerTest: public TestBase {
 		class MyController: public Core::Controller {
 		protected:
 			virtual void asyncGetFromApplicationPool(Request *req,
@@ -108,7 +108,6 @@ namespace tut {
 			}
 			safelyClose(serverSocket);
 			unlink("tmp.server");
-			LoggingKit::setLevel(LoggingKit::Level(DEFAULT_LOG_LEVEL));
 			bg.stop();
 		}
 

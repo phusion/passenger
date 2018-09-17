@@ -8,7 +8,7 @@ using namespace std;
 using namespace boost;
 
 namespace tut {
-	struct MessageIOTest {
+	struct MessageIOTest: public TestBase {
 		Pipe pipes;
 
 		MessageIOTest() {

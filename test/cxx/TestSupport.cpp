@@ -130,4 +130,12 @@ getPrimaryGroupName(const string &username) {
 }
 
 
+// Shared test setup code.
+TestBase::TestBase() {
+	if (LoggingKit::getLevel() != (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+		LoggingKit::setLevel((LoggingKit::Level) DEFAULT_LOG_LEVEL);
+	}
+}
+
+
 } // namespace TestSupport

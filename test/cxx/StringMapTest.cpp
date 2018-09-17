@@ -7,7 +7,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct StringMapTest {
+	struct StringMapTest: public TestBase {
 	};
 
 	DEFINE_TEST_GROUP(StringMapTest);

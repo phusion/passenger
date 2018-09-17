@@ -8,7 +8,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct MemoryKit_PallocTest {
+	struct MemoryKit_PallocTest: public TestBase {
 		psg_pool_t *pool;
 
 		MemoryKit_PallocTest()

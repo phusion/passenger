@@ -5,7 +5,7 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct ConfigKit_SchemaTest {
+	struct ConfigKit_SchemaTest: public TestBase {
 		ConfigKit::Schema schema;
 		vector<ConfigKit::Error> errors;
 	};
