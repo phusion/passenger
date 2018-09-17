@@ -1245,7 +1245,12 @@ namespace tut {
 		vector<ProcessPtr> processes = pool->getProcesses();
 		ensure_equals("(1)", processes.size(), 1u);
 
-		LoggingKit::setLevel(LoggingKit::ERROR);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::ERROR);
+		}
+
 		DisableResult result = pool->disableProcess(processes[0]->getGupid());
 		ensure_equals("(2)", result, DR_ERROR);
 		ensure_equals("(3)", pool->getProcessCount(), 1u);
@@ -1328,7 +1333,11 @@ namespace tut {
 			result = code1 != -1 || code2 != -1;
 		);
 
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 		debug->messages->send("Fail spawn loop iteration 3");
 		EVENTUALLY(5,
 			result = code1 == DR_ERROR;
@@ -1579,7 +1588,11 @@ namespace tut {
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
 
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 		pool->asyncGet(options, callback);
 		EVENTUALLY(5,
 			result = number == 1;
@@ -1618,7 +1631,11 @@ namespace tut {
 			"	sys.stderr.write('Something went wrong!')\n"
 			"	exit(1)\n");
 
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 		pool->asyncGet(options, callback);
 		EVENTUALLY(10,
 			result = number == 1;
@@ -1828,7 +1845,11 @@ namespace tut {
 			"exit(1)\n");
 
 		retainSessions = true;
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
 		pool->asyncGet(options, callback);
@@ -1873,8 +1894,12 @@ namespace tut {
 			"import sys\n"
 			"sys.stderr.write('Something went wrong!')\n"
 			"exit(1)\n");
-		try {
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
 			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+		try {
 			currentSession = pool->get(options, &ticket);
 			fail("SpawnException expected");
 		} catch (const SpawningKit::SpawnException &) {

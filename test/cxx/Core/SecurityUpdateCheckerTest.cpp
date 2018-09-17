@@ -90,7 +90,11 @@ namespace tut {
 		boost::shared_ptr<TestChecker> checker;
 
 		Core_SecurityUpdateCheckerTest() {
-			LoggingKit::setLevel(LoggingKit::CRIT);
+			if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+				// If the user did not customize the test's log level,
+				// then we'll want to tone down the noise.
+				LoggingKit::setLevel(LoggingKit::CRIT);
+			}
 		}
 
 		void init() {

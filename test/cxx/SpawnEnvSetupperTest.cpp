@@ -342,8 +342,13 @@ namespace tut {
 		char buffer[PATH_MAX];
 		string cwd = getcwd(buffer, sizeof(buffer));
 
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+
 		config.appRoot = "tmp.check/a/b/c/d";
-		LoggingKit::setLevel(LoggingKit::CRIT);
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
@@ -403,8 +408,13 @@ namespace tut {
 		char buffer[PATH_MAX];
 		string cwd = getcwd(buffer, sizeof(buffer));
 
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+
 		config.appRoot = "tmp.check/a/b/c/d";
-		LoggingKit::setLevel(LoggingKit::CRIT);
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 
@@ -433,8 +443,13 @@ namespace tut {
 		char buffer[PATH_MAX];
 		string cwd = getcwd(buffer, sizeof(buffer));
 
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+
 		config.appRoot = "tmp.check/a/b/c/d";
-		LoggingKit::setLevel(LoggingKit::CRIT);
 		init(SPAWN_DIRECTLY);
 		ensure("SpawnEnvSetupper fails", !execute("--before", true));
 

@@ -212,7 +212,11 @@ namespace tut {
 		fclose(fopen("tmp.log/file", "w"));
 
 		ProcessPtr process = createProcess(extraArgs);
-		LoggingKit::setLevel(LoggingKit::WARN);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::WARN);
+		}
 
 		writeExact(stdoutAndErrFd[1], "stdout and err 1\n");
 		writeExact(stdoutAndErrFd[1], "stdout and err 2\n");

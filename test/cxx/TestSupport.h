@@ -99,6 +99,7 @@ using namespace oxt;
 	} while (false)
 
 
+extern LoggingKit::Level defaultLogLevel;
 extern ResourceLocator *resourceLocator;
 extern Json::Value testConfig;
 

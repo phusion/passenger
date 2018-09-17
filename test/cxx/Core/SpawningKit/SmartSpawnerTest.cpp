@@ -95,7 +95,13 @@ namespace tut {
 		options.startCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options);
-		LoggingKit::setLevel(LoggingKit::CRIT);
+
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+
 		spawner->spawn(options);
 
 		kill(spawner->getPreloaderPid(), SIGTERM);
@@ -113,7 +119,13 @@ namespace tut {
 		options.appRoot      = "stub/rack";
 		options.startCommand = "ruby start.rb";
 		options.startupFile  = "start.rb";
-		LoggingKit::setLevel(LoggingKit::CRIT);
+
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+
 		boost::shared_ptr<SmartSpawner> spawner = createSpawner(options, true);
 		try {
 			spawner->spawn(options);
@@ -139,7 +151,12 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world; sleep 60");
 		SmartSpawner spawner(&context, preloaderCommand, options);
-		LoggingKit::setLevel(LoggingKit::CRIT);
+
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 
 		try {
 			spawner.spawn(options);
@@ -181,7 +198,12 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world; exit 1");
 		SmartSpawner spawner(&context, preloaderCommand, options);
-		LoggingKit::setLevel(LoggingKit::CRIT);
+
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 
 		try {
 			spawner.spawn(options);
@@ -210,7 +232,12 @@ namespace tut {
 		preloaderCommand.push_back("-c");
 		preloaderCommand.push_back("echo hello world >&2; exit 1");
 		SmartSpawner spawner(&context, preloaderCommand, options);
-		LoggingKit::setLevel(LoggingKit::CRIT);
+
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 
 		try {
 			spawner.spawn(options);

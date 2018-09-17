@@ -294,7 +294,12 @@ namespace tut {
 			: bg(false, true),
 			  context(skSchema)
 		{
-			LoggingKit::setLevel(LoggingKit::WARN);
+			if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+				// If the user did not customize the test's log level,
+				// then we'll want to tone down the noise.
+				LoggingKit::setLevel(LoggingKit::WARN);
+			}
+
 			context.libev = bg.safe;
 			context.libuv = bg.libuv_loop;
 			context.initialize();
@@ -1814,7 +1819,12 @@ namespace tut {
 		set_test_name("Upon shutting down the server, upgraded requests which "
 			"are being processed are disconnected");
 
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+
 		connectToServer();
 		sendRequestAndWait(
 			"GET /body_test HTTP/1.1\r\n"
@@ -1933,7 +1943,12 @@ namespace tut {
 	TEST_METHOD(107) {
 		set_test_name("Client socket write error handling");
 
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
+
 		connectToServer();
 		sendRequest(
 			"GET /large_response HTTP/1.1\r\n"

@@ -68,6 +68,8 @@ usage(int exitCode) {
 	for (groupnames_iterator it = allGroups.begin(); it != allGroups.end(); it++) {
 		printf("                    %s\n", it->c_str());
 	}
+	printf("  -l LEVEL        Log level to use (default: %s). Available levels:\n", DEFAULT_LOG_LEVEL_NAME);
+	printf("                  crit,error,warn,notice,info,debug,debug2,debug3\n");
 	printf("\n");
 	printf("  -h              Print this usage information.\n");
 	exit(exitCode);
@@ -138,6 +140,14 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 				groupsToRun[groupName] = testNumbers;
 				i++;
 			}
+		} else if (strcmp(argv[i], "-l") == 0) {
+			if (argv[i + 1] == NULL) {
+				fprintf(stderr, "*** ERROR: A -l option must be followed by a log level name.\n");
+				exit(1);
+			}
+
+			TestSupport::defaultLogLevel = LoggingKit::parseLevel(argv[i + 1]);
+			i++;
 		} else {
 			fprintf(stderr, "*** ERROR: Unknown option: %s\n", argv[i]);
 			fprintf(stderr, "Please pass -h for a list of valid options.\n");

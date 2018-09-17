@@ -214,6 +214,11 @@ desc "Run unit tests for the C++ components"
 task 'test:cxx' => dependencies do
   args = ENV['GROUPS'].to_s.split(";").map{ |name| "-g #{name}" }
 
+  if level = string_option('LOG_LEVEL')
+    args << '-l'
+    args << level
+  end
+
   command = "#{File.expand_path(TEST_CXX_TARGET)} #{args.join(' ')}".strip
   if boolean_option('GDB')
     command = "gdb --args #{command}"

@@ -72,7 +72,12 @@ namespace tut {
 			singleAppModeConfig["app_type"] = "rack";
 			singleAppModeConfig["startup_file"] = "none";
 
-			LoggingKit::setLevel(LoggingKit::WARN);
+			if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+				// If the user did not customize the test's log level,
+				// then we'll want to tone down the noise.
+				LoggingKit::setLevel(LoggingKit::WARN);
+			}
+
 			wrapperRegistry.finalize();
 			controller = NULL;
 			serverSocket = createUnixServer("tmp.server");
@@ -730,7 +735,11 @@ namespace tut {
 		waitUntilSessionInitiated();
 
 		readPeerRequestHeader();
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 		sendPeerResponse("invalid response");
 
 		waitUntilSessionClosed();
@@ -1069,9 +1078,11 @@ namespace tut {
 
 		ensureNeverDrainPeerConnection();
 
-		// We expect logging but hide it to stay in line with not logging from
-		// tests unless something is wrong.
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 		close(testSession.peerFd());
 
 		string header = readResponseHeader();
@@ -1097,9 +1108,11 @@ namespace tut {
 
 		ensureNeverDrainPeerConnection();
 
-		// We expect logging but hide it to stay in line with not logging from
-		// tests unless something is wrong.
-		LoggingKit::setLevel(LoggingKit::CRIT);
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 		close(testSession.peerFd());
 
 		string header = readResponseHeader();

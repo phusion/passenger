@@ -25,7 +25,12 @@
 		options.startCommand = "sleep 60";
 		options.startupFile  = ".";
 		options.startTimeout = 100;
-		LoggingKit::setLevel(LoggingKit::CRIT);
+
+		if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+			// If the user did not customize the test's log level,
+			// then we'll want to tone down the noise.
+			LoggingKit::setLevel(LoggingKit::CRIT);
+		}
 
 		EVENTUALLY(5,
 			SpawnerPtr spawner = createSpawner(options);

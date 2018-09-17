@@ -15,6 +15,7 @@
 
 namespace TestSupport {
 
+LoggingKit::Level defaultLogLevel = (LoggingKit::Level) DEFAULT_LOG_LEVEL;
 ResourceLocator *resourceLocator = NULL;
 Json::Value testConfig;
 
@@ -132,8 +133,8 @@ getPrimaryGroupName(const string &username) {
 
 // Shared test setup code.
 TestBase::TestBase() {
-	if (LoggingKit::getLevel() != (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
-		LoggingKit::setLevel((LoggingKit::Level) DEFAULT_LOG_LEVEL);
+	if (LoggingKit::getLevel() != defaultLogLevel) {
+		LoggingKit::setLevel(defaultLogLevel);
 	}
 }
 

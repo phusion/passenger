@@ -33,7 +33,11 @@ namespace tut {
 			: bg(false, true),
 			  context(skSchema)
 		{
-			LoggingKit::setLevel(LoggingKit::CRIT);
+			if (defaultLogLevel == (LoggingKit::Level) DEFAULT_LOG_LEVEL) {
+				// If the user did not customize the test's log level,
+				// then we'll want to tone down the noise.
+				LoggingKit::setLevel(LoggingKit::CRIT);
+			}
 			context.libev = bg.safe;
 			context.libuv = bg.libuv_loop;
 			context.initialize();
