@@ -80,9 +80,13 @@ public:
 
 	explicit
 	HttpRequestRef(BOOST_RV_REF(HttpRequestRef) ref)
-		: request(ref.request)
+		: request(ref.request),
+		  file(ref.file),
+		  line(ref.line)
 	{
 		ref.request = NULL;
+		ref.file = NULL;
+		ref.line = 0;
 	}
 
 	~HttpRequestRef() {
@@ -96,7 +100,7 @@ public:
 	}
 
 	HttpRequestRef &operator=(BOOST_COPY_ASSIGN_REF(HttpRequestRef) ref) {
-		if (request == ref.request) {
+		if (this != &ref) {
 			Request *oldRequest = request;
 			const char *oldFile = file;
 			unsigned int oldLine = line;
@@ -114,11 +118,17 @@ public:
 	}
 
 	HttpRequestRef &operator=(BOOST_RV_REF(HttpRequestRef) ref) {
-		Request *oldRequest = request;
-		request = ref.request;
-		ref.request = NULL;
-		if (oldRequest != NULL) {
-			getServer(oldRequest)->_unrefRequest(oldRequest, file, line);
+		if (this != &ref) {
+			Request *oldRequest = request;
+			request = ref.request;
+			file = ref.file;
+			line = ref.line;
+			ref.request = NULL;
+			ref.file = NULL;
+			ref.line = 0;
+			if (oldRequest != NULL) {
+				getServer(oldRequest)->_unrefRequest(oldRequest, file, line);
+			}
 		}
 		return *this;
 	}

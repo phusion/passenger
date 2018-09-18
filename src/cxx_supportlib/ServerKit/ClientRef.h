@@ -80,9 +80,13 @@ public:
 
 	explicit
 	ClientRef(BOOST_RV_REF(ClientRef) ref)
-		: client(ref.client)
+		: client(ref.client),
+		  file(ref.file),
+		  line(ref.line)
 	{
 		ref.client = NULL;
+		ref.file = NULL;
+		ref.line = 0;
 	}
 
 	~ClientRef() {
@@ -96,7 +100,7 @@ public:
 	}
 
 	ClientRef &operator=(BOOST_COPY_ASSIGN_REF(ClientRef) ref) {
-		if (client == ref.client) {
+		if (this != &ref) {
 			Client *oldClient = client;
 			const char *oldFile = file;
 			unsigned int oldLine = line;
@@ -114,11 +118,17 @@ public:
 	}
 
 	ClientRef &operator=(BOOST_RV_REF(ClientRef) ref) {
-		Client *oldClient = client;
-		client = ref.client;
-		ref.client = NULL;
-		if (oldClient != NULL) {
-			getServer(oldClient)->_unrefClient(oldClient, file, line);
+		if (this != &ref) {
+			Client *oldClient = client;
+			client = ref.client;
+			file = ref.file;
+			line = ref.line;
+			ref.client = NULL;
+			ref.file = NULL;
+			ref.line = 0;
+			if (oldClient != NULL) {
+				getServer(oldClient)->_unrefClient(oldClient, file, line);
+			}
 		}
 		return *this;
 	}
