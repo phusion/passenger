@@ -1,4 +1,4 @@
-Release 5.3.5 (Not yet released)
+Release 5.3.5
 -------------
 
  * Improves usability of crash reports. Crash reports are no longer dumped in one big chunk to stderr. Instead, they are now dumped into multiple files, making it easy to inspect relevant reports.
