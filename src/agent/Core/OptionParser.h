@@ -94,7 +94,12 @@ coreUsage() {
 	printf("                            Disable the periodic check and notice about\n");
 	printf("                            important security updates\n");
 	printf("      --security-update-check-proxy PROXY\n");
-	printf("                            Use http/SOCKS proxy for the security update check:\n");
+	printf("                            Use HTTP/SOCKS proxy for the security update check:\n");
+	printf("                            scheme://user:password@proxy_host:proxy_port\n");
+	printf("      --disable-anonymous-telemetry\n");
+	printf("                            Disable anonymous telemetry collection\n");
+	printf("      --anonymous-telemetry-proxy PROXY\n");
+	printf("                            Use HTTP/SOCKS proxy for anonymous telemetry sending:\n");
 	printf("                            scheme://user:password@proxy_host:proxy_port\n");
 	printf("\n");
 	printf("Application serving options (optional):\n");
@@ -281,6 +286,12 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 		i++;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--security-update-check-proxy")) {
 		updates["security_update_checker_proxy_url"] = argv[i + 1];
+		i += 2;
+	} else if (p.isFlag(argv[i], '\0', "--disable-anonymous-telemetry")) {
+		updates["telemetry_collector_disabled"] = true;
+		i++;
+	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--anonymous-telemetry-proxy")) {
+		updates["telemetry_collector_proxy_url"] = argv[i + 1];
 		i += 2;
 	} else if (p.isValueFlag(argc, i, argv[i], '\0', "--max-pool-size")) {
 		updates["max_pool_size"] = atoi(argv[i + 1]);

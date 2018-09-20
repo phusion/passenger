@@ -99,6 +99,7 @@
 #include <Core/ConfigChange.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/SecurityUpdateChecker.h>
+#include <Core/TelemetryCollector.h>
 #include <Core/AdminPanelConnector.h>
 
 using namespace boost;
@@ -166,6 +167,7 @@ namespace Core {
 		oxt::thread *prestarterThread;
 
 		SecurityUpdateChecker *securityUpdateChecker;
+		TelemetryCollector *telemetryCollector;
 		AdminPanelConnector *adminPanelConnector;
 		oxt::thread *adminPanelConnectorThread;
 
@@ -176,6 +178,7 @@ namespace Core {
 			  shutdownCounter(0),
 			  prestarterThread(NULL),
 			  securityUpdateChecker(NULL),
+			  telemetryCollector(NULL),
 			  adminPanelConnector(NULL),
 			  adminPanelConnectorThread(NULL)
 			  /*******************/
@@ -191,6 +194,7 @@ namespace Core {
 			delete adminPanelConnectorThread;
 			delete adminPanelConnector;
 			delete securityUpdateChecker;
+			delete telemetryCollector;
 
 			/*******************/
 			/*******************/
@@ -847,6 +851,26 @@ initializeSecurityUpdateChecker() {
 }
 
 static void
+initializeTelemetryCollector() {
+	TRACE_POINT();
+	WorkingObjects &wo = *workingObjects;
+
+	Json::Value config = coreConfig->inspectEffectiveValues();
+	TelemetryCollector *collector = new TelemetryCollector(
+		coreSchema->telemetryCollector.schema,
+		coreConfig->inspectEffectiveValues(),
+		coreSchema->telemetryCollector.translator);
+	wo.telemetryCollector = collector;
+	for (unsigned int i = 0; i < wo.threadWorkingObjects.size(); i++) {
+		ThreadWorkingObjects *two = &wo.threadWorkingObjects[i];
+		collector->controllers.push_back(two->controller);
+	}
+	collector->initialize();
+	collector->start();
+	wo.shutdownCounter.fetch_add(1, boost::memory_order_relaxed);
+}
+
+static void
 runAdminPanelConnector(AdminPanelConnector *connector) {
 	connector->run();
 	P_DEBUG("Admin panel connector shutdown finished");
@@ -1130,6 +1154,21 @@ apiServerShutdownFinished(Core::ApiServer::ApiServer *server) {
 	serverShutdownFinished();
 }
 
+static void
+telemetryCollectorAsyncShutdownThreadMain() {
+	WorkingObjects *wo = workingObjects;
+	wo->telemetryCollector->stop();
+	wo->telemetryCollector->runOneCycle(true);
+	serverShutdownFinished();
+}
+
+static void
+asyncShutdownTelemetryCollector() {
+	oxt::thread(telemetryCollectorAsyncShutdownThreadMain,
+		"Telemetry collector shutdown",
+		512 * 1024);
+}
+
 /* Wait until the watchdog closes the feedback fd (meaning it
  * was killed) or until we receive an exit message.
  */
@@ -1186,6 +1225,9 @@ waitForExitEvent() {
 		}
 		if (wo->apiWorkingObjects.apiServer != NULL) {
 			wo->apiWorkingObjects.bgloop->safe->runLater(shutdownApiServer);
+		}
+		if (wo->telemetryCollector != NULL) {
+			asyncShutdownTelemetryCollector();
 		}
 		if (wo->adminPanelConnector != NULL) {
 			wo->adminPanelConnector->asyncShutdown();
@@ -1273,6 +1315,7 @@ runCore() {
 		initializeCurl();
 		initializeNonPrivilegedWorkingObjects();
 		initializeSecurityUpdateChecker();
+		initializeTelemetryCollector();
 		initializeAdminPanelConnector();
 		prestartWebApps();
 

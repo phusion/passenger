@@ -522,7 +522,17 @@ module PhusionPassenger
       {
         :name      => :security_update_check_proxy,
         :type_desc => 'NAME',
-        :desc      => "Use http/SOCKS proxy for the security update check"
+        :desc      => "Use HTTP/SOCKS proxy for the security update check"
+      },
+      {
+        :name      => :disable_anonymous_telemetry,
+        :type      => :boolean,
+        :desc      => "Disable anonymous telemetry collection"
+      },
+      {
+        :name      => :anonymous_telemetry_proxy,
+        :type_desc => 'NAME',
+        :desc      => "Use HTTP/SOCKS proxy for anonymous telemetry collection"
       },
       {
         :name      => :engine,

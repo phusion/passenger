@@ -826,6 +826,57 @@
          "has_default_value" : "static",
          "type" : "unsigned integer"
       },
+      "telemetry_collector_ca_certificate_path" : {
+         "type" : "string"
+      },
+      "telemetry_collector_debug_curl" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "telemetry_collector_disabled" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "telemetry_collector_final_run_timeout" : {
+         "default_value" : 5,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_first_interval" : {
+         "default_value" : 7200,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_interval" : {
+         "default_value" : 21600,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_interval_jitter" : {
+         "default_value" : 7200,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_proxy_url" : {
+         "type" : "string"
+      },
+      "telemetry_collector_timeout" : {
+         "default_value" : 180,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_url" : {
+         "default_value" : "https://anontelemetry.phusionpassenger.com/v1/collect.json",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "telemetry_collector_verify_server" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "turbocaching" : {
          "default_value" : true,
          "has_default_value" : "static",
@@ -1555,6 +1606,57 @@
          "default_value" : 10,
          "has_default_value" : "static",
          "type" : "unsigned integer"
+      },
+      "telemetry_collector_ca_certificate_path" : {
+         "type" : "string"
+      },
+      "telemetry_collector_debug_curl" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "telemetry_collector_disabled" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "telemetry_collector_final_run_timeout" : {
+         "default_value" : 5,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_first_interval" : {
+         "default_value" : 7200,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_interval" : {
+         "default_value" : 21600,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_interval_jitter" : {
+         "default_value" : 7200,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_proxy_url" : {
+         "type" : "string"
+      },
+      "telemetry_collector_timeout" : {
+         "default_value" : 180,
+         "has_default_value" : "static",
+         "type" : "unsigned integer"
+      },
+      "telemetry_collector_url" : {
+         "default_value" : "https://anontelemetry.phusionpassenger.com/v1/collect.json",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
+      "telemetry_collector_verify_server" : {
+         "default_value" : true,
+         "has_default_value" : "static",
+         "type" : "boolean"
       },
       "turbocaching" : {
          "default_value" : true,

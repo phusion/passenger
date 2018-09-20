@@ -126,6 +126,21 @@ cmd_passenger_analytics_log_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_anonymous_telemetry_proxy(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.anonymousTelemetryProxySourceFile = cmd->directive->filename;
+	serverConfig.anonymousTelemetryProxySourceLine = cmd->directive->line_num;
+	serverConfig.anonymousTelemetryProxyExplicitlySet = true;
+	serverConfig.anonymousTelemetryProxy = arg;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_app_env(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
 	if (err != NULL) {
@@ -268,6 +283,21 @@ cmd_passenger_default_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 	serverConfig.defaultUserSourceLine = cmd->directive->line_num;
 	serverConfig.defaultUserExplicitlySet = true;
 	serverConfig.defaultUser = arg;
+	return NULL;
+}
+
+static const char *
+cmd_passenger_disable_anonymous_telemetry(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.disableAnonymousTelemetrySourceFile = cmd->directive->filename;
+	serverConfig.disableAnonymousTelemetrySourceLine = cmd->directive->line_num;
+	serverConfig.disableAnonymousTelemetryExplicitlySet = true;
+	serverConfig.disableAnonymousTelemetry = arg != NULL;
 	return NULL;
 }
 

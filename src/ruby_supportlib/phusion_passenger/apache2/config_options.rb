@@ -229,6 +229,19 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => "Use specified HTTP/SOCKS proxy for the #{PROGRAM_NAME} security update check."
   },
   {
+    :name      => 'PassengerDisableAnonymousTelemetry',
+    :type      => :flag,
+    :context   => :global,
+    :default   => false,
+    :desc      => "Whether to disable #{PROGRAM_NAME} anonymous telemetry."
+  },
+  {
+    :name      => 'PassengerAnonymousTelemetryProxy',
+    :type      => :string,
+    :context   => :global,
+    :desc      => "Use specified HTTP/SOCKS proxy for #{PROGRAM_NAME} anonymous telemetry collection."
+  },
+  {
     :name      => 'PassengerStatThrottleRate',
     :type      => :integer,
     :context   => :global,

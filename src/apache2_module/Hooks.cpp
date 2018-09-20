@@ -1325,6 +1325,8 @@ public:
 		config["instance_registry_dir"] = nonEmptyString(serverConfig.instanceRegistryDir);
 		config["security_update_checker_disabled"] = serverConfig.disableSecurityUpdateCheck;
 		config["security_update_checker_proxy_url"] = nonEmptyString(serverConfig.securityUpdateCheckProxy);
+		config["telemetry_collector_disabled"] = serverConfig.disableAnonymousTelemetry;
+		config["telemetry_collector_proxy_url"] = nonEmptyString(serverConfig.anonymousTelemetryProxy);
 		config["user_switching"] = serverConfig.userSwitching;
 		config["default_user"] = serverConfig.defaultUser.toString();
 		config["default_group"] = serverConfig.defaultGroup.toString();

@@ -201,6 +201,21 @@ NGINX_CONFIGURATION_OPTIONS = [
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
+    :name     => 'passenger_disable_anonymous_telemetry',
+    :scope    => :global,
+    :type     => :flag,
+    :default  => false,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
+    :name     => 'passenger_anonymous_telemetry_proxy',
+    :scope    => :global,
+    :type     => :string,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
     :name     => 'passenger_pre_start',
     :scope    => :global,
     :type     => :string_array,

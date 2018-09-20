@@ -1,6 +1,6 @@
 # encoding: utf-8
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2014-2017 Phusion Holding B.V.
+#  Copyright (c) 2014-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -180,6 +180,8 @@ module PhusionPassenger
           add_param(command, :app_file_descriptor_ulimit, "--app-file-descriptor-ulimit")
           add_flag_param(command, :disable_security_update_check, "--disable-security-update-check")
           add_param(command, :security_update_check_proxy, "--security-update-check-proxy")
+          add_flag_param(command, :disable_anonymous_telemetry, "--disable-anonymous-telemetry")
+          add_param(command, :anonymous_telemetry_proxy, "--anonymous-telemetry-proxy")
 
           command << " #{Shellwords.escape(@apps[0][:root])}"
 

@@ -155,6 +155,17 @@ using namespace std;
  *   standalone_engine                                                        string             -          default
  *   startup_report_file                                                      string             -          -
  *   stat_throttle_rate                                                       unsigned integer   -          default(10)
+ *   telemetry_collector_ca_certificate_path                                  string             -          -
+ *   telemetry_collector_debug_curl                                           boolean            -          default(false)
+ *   telemetry_collector_disabled                                             boolean            -          default(false)
+ *   telemetry_collector_final_run_timeout                                    unsigned integer   -          default(5)
+ *   telemetry_collector_first_interval                                       unsigned integer   -          default(7200)
+ *   telemetry_collector_interval                                             unsigned integer   -          default(21600)
+ *   telemetry_collector_interval_jitter                                      unsigned integer   -          default(7200)
+ *   telemetry_collector_proxy_url                                            string             -          -
+ *   telemetry_collector_timeout                                              unsigned integer   -          default(180)
+ *   telemetry_collector_url                                                  string             -          default("https://anontelemetry.phusionpassenger.com/v1/collect.json")
+ *   telemetry_collector_verify_server                                        boolean            -          default(true)
  *   turbocaching                                                             boolean            -          default(true),read_only
  *   user                                                                     string             -          default,read_only
  *   user_switching                                                           boolean            -          default(true)

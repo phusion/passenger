@@ -56,7 +56,9 @@ TEST_CXX_OBJECTS = {
   "#{TEST_OUTPUT_DIR}cxx/Core/ResponseCacheTest.o" =>
     "test/cxx/Core/ResponseCacheTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/SecurityUpdateCheckerTest.o" =>
-      "test/cxx/Core/SecurityUpdateCheckerTest.cpp",
+    "test/cxx/Core/SecurityUpdateCheckerTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/Core/TelemetryCollectorTest.o" =>
+    "test/cxx/Core/TelemetryCollectorTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Core/ControllerTest.o" =>
     "test/cxx/Core/ControllerTest.cpp",
 

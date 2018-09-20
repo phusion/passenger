@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -49,6 +49,7 @@ struct ConfigChangeRequest {
 	boost::scoped_ptr<ConfigKit::Store> config;
 	LoggingKit::ConfigChangeRequest forLoggingKit;
 	SecurityUpdateChecker::ConfigChangeRequest forSecurityUpdateChecker;
+	TelemetryCollector::ConfigChangeRequest forTelemetryCollector;
 	vector<ServerKit::ConfigChangeRequest *> forControllerServerKit;
 	vector<Controller::ConfigChangeRequest *> forController;
 	ServerKit::ConfigChangeRequest forApiServerKit;
@@ -188,6 +189,11 @@ asyncPrepareConfigChange(const Json::Value &updates, ConfigChangeRequest *req,
 		coreSchema->securityUpdateChecker.translator,
 		req->config->inspectEffectiveValues(),
 		req->errors, req->forSecurityUpdateChecker);
+	ConfigKit::prepareConfigChangeForSubComponent(
+		*workingObjects->telemetryCollector,
+		coreSchema->telemetryCollector.translator,
+		req->config->inspectEffectiveValues(),
+		req->errors, req->forTelemetryCollector);
 
 	req->forControllerServerKit.resize(wo->threadWorkingObjects.size(), NULL);
 	req->forController.resize(wo->threadWorkingObjects.size(), NULL);
@@ -287,6 +293,8 @@ asyncCommitConfigChange(ConfigChangeRequest *req, const CommitConfigChangeCallba
 	LoggingKit::context->commitConfigChange(req->forLoggingKit);
 	workingObjects->securityUpdateChecker->commitConfigChange(
 		req->forSecurityUpdateChecker);
+	workingObjects->telemetryCollector->commitConfigChange(
+		req->forTelemetryCollector);
 
 	wo->appPool->setMax(coreConfig->get("max_pool_size").asInt());
 	wo->appPool->setMaxIdleTime(coreConfig->get("pool_idle_time").asInt() * 1000000ULL);
