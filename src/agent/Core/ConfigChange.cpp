@@ -189,11 +189,13 @@ asyncPrepareConfigChange(const Json::Value &updates, ConfigChangeRequest *req,
 		coreSchema->securityUpdateChecker.translator,
 		req->config->inspectEffectiveValues(),
 		req->errors, req->forSecurityUpdateChecker);
-	ConfigKit::prepareConfigChangeForSubComponent(
-		*workingObjects->telemetryCollector,
-		coreSchema->telemetryCollector.translator,
-		req->config->inspectEffectiveValues(),
-		req->errors, req->forTelemetryCollector);
+	if (workingObjects->telemetryCollector != NULL) {
+		ConfigKit::prepareConfigChangeForSubComponent(
+			*workingObjects->telemetryCollector,
+			coreSchema->telemetryCollector.translator,
+			req->config->inspectEffectiveValues(),
+			req->errors, req->forTelemetryCollector);
+	}
 
 	req->forControllerServerKit.resize(wo->threadWorkingObjects.size(), NULL);
 	req->forController.resize(wo->threadWorkingObjects.size(), NULL);
@@ -293,8 +295,10 @@ asyncCommitConfigChange(ConfigChangeRequest *req, const CommitConfigChangeCallba
 	LoggingKit::context->commitConfigChange(req->forLoggingKit);
 	workingObjects->securityUpdateChecker->commitConfigChange(
 		req->forSecurityUpdateChecker);
-	workingObjects->telemetryCollector->commitConfigChange(
-		req->forTelemetryCollector);
+	if (workingObjects->telemetryCollector != NULL) {
+		workingObjects->telemetryCollector->commitConfigChange(
+			req->forTelemetryCollector);
+	}
 
 	wo->appPool->setMax(coreConfig->get("max_pool_size").asInt());
 	wo->appPool->setMaxIdleTime(coreConfig->get("pool_idle_time").asInt() * 1000000ULL);
