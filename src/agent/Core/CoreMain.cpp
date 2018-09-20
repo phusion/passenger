@@ -1158,7 +1158,6 @@ static void
 telemetryCollectorAsyncShutdownThreadMain() {
 	WorkingObjects *wo = workingObjects;
 	wo->telemetryCollector->stop();
-	wo->telemetryCollector->runOneCycle(true);
 	serverShutdownFinished();
 }
 
@@ -1264,6 +1263,11 @@ cleanup() {
 	}
 	if (wo->apiWorkingObjects.apiServer != NULL) {
 		wo->apiWorkingObjects.bgloop->stop();
+	}
+	if (wo->telemetryCollector != NULL
+	&& !coreConfig->get("telemetry_collector_disabled").asBool())
+	{
+		wo->telemetryCollector->runOneCycle(true);
 	}
 	wo->appPool.reset();
 	for (unsigned i = 0; i < wo->threadWorkingObjects.size(); i++) {
