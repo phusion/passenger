@@ -1,6 +1,7 @@
 Release 5.3.5
 -------------
 
+ * Fixes Ubuntu 18.04 package installation problems due to Nginx version mismatch. Closes GH-2122.
  * Improves usability of crash reports. Crash reports are no longer dumped in one big chunk to stderr. Instead, they are now dumped into multiple files, making it easy to inspect relevant reports.
  * Fixes some crashes that only occur with log level 7.
  * Downloads binaries from the newly-introduced Github mirror. This improves the reliability of binary downloads.
