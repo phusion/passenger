@@ -5,6 +5,10 @@ Release 5.3.5
  * Improves usability of crash reports. Crash reports are no longer dumped in one big chunk to stderr. Instead, they are now dumped into multiple files, making it easy to inspect relevant reports.
  * Fixes some crashes that only occur with log level 7.
  * Downloads binaries from the newly-introduced Github mirror. This improves the reliability of binary downloads.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - OpenSSL: 1.0.2p (was: 1.0.2o)
+    - libcurl: 7.61.1 (was: 7.60.0)
 
 
 Release 5.3.4
