@@ -19,6 +19,7 @@ Regardless of if you’re running Passenger open source or you’re one of our e
 - [Website](https://www.phusionpassenger.com/)
 - [Fuse Panel](https://www.phusionpassenger.com/fuse-panel)
 - [Documentation &amp; Support](https://www.phusionpassenger.com/support)
+- [Consultancy](https://www.phusion.nl/consultancy)
 - [Twitter](https://twitter.com/phusion_nl)
 - [Blog](http://blog.phusion.nl/)
 
