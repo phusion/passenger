@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -299,6 +299,7 @@ public:
 	 * to the given log file.
 	 *
 	 * @hinted_parseable
+	 * @non_confidential
 	 * @pass_during_handshake
 	 */
 	StaticString logFile;

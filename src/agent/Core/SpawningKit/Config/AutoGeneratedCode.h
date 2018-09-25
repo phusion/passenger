@@ -344,7 +344,7 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 	doc["user"] = user.toString();
 	doc["group"] = group.toString();
 	doc["environment_variables"] = "<SECRET>";
-	doc["log_file"] = "<SECRET>";
+	doc["log_file"] = logFile.toString();
 	if (!config.apiKey.empty()) {
 		doc["api_key"] = "<SECRET>";
 	}
