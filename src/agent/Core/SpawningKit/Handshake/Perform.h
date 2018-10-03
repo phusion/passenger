@@ -297,6 +297,7 @@ private:
 		result.stdoutAndErrFd = stdoutAndErrFd;
 		result.spawnEndTime = SystemTime::getUsec();
 		result.spawnEndTimeMonotonic = SystemTime::getMonotonicUsec();
+		setResultType(result);
 
 		if (socketIsNowPingable) {
 			assert(config->genericApp || config->findFreePort);
@@ -1672,6 +1673,16 @@ private:
 		}
 
 		return result;
+	}
+
+	void setResultType(Result &result) const {
+		if (config->genericApp) {
+			result.type = Result::GENERIC;
+		} else if (config->startsUsingWrapper) {
+			result.type = Result::AUTO_SUPPORTED;
+		} else {
+			result.type = Result::KURIA;
+		}
 	}
 
 public:

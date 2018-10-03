@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -156,12 +156,7 @@ private:
 	 */
 	unsigned long long spawnEndTime;
 
-	/**
-	 * If true, then indicates that this Process does not refer to a real OS
-	 * process. The sockets in the socket list are fake and need not be deleted,
-	 * the admin socket need not be closed, etc.
-	 */
-	bool dummy;
+	SpawningKit::Result::Type type;
 
 	/**
 	 * Whether it is required that triggerShutdown() and cleanup() must be called
@@ -458,7 +453,7 @@ public:
 		  spawnerCreationTime(getJsonUint64Field(args, "spawner_creation_time")),
 		  spawnStartTime(getJsonUint64Field(args, "spawn_start_time")),
 		  spawnEndTime(SystemTime::getUsec()),
-		  dummy(args["type"] == "dummy"),
+		  type(args["type"] == "dummy" ? SpawningKit::Result::DUMMY : SpawningKit::Result::UNKNOWN),
 		  requiresShutdown(false),
 		  refcount(1),
 		  index(-1),
@@ -483,7 +478,7 @@ public:
 		  spawnerCreationTime(getJsonUint64Field(args, "spawner_creation_time")),
 		  spawnStartTime(skResult.spawnStartTime),
 		  spawnEndTime(skResult.spawnEndTime),
-		  dummy(skResult.dummy),
+		  type(skResult.type),
 		  requiresShutdown(false),
 		  refcount(1),
 		  index(-1),
@@ -620,7 +615,7 @@ public:
 		assert(canCleanup());
 
 		P_TRACE(2, "Cleaning up process " << inspect());
-		if (!dummy) {
+		if (type != SpawningKit::Result::DUMMY) {
 			SocketList::iterator it, end = sockets.end();
 			for (it = sockets.begin(); it != end; it++) {
 				if (getSocketAddressType(it->address) == SAT_UNIX) {
@@ -676,7 +671,7 @@ public:
 	}
 
 	bool isDummy() const {
-		return dummy;
+		return type == SpawningKit::Result::DUMMY;
 	}
 
 
@@ -720,7 +715,7 @@ public:
 	 * same PID.
 	 */
 	bool osProcessExists() const {
-		if (!dummy && m_osProcessExists) {
+		if (type != SpawningKit::Result::DUMMY && m_osProcessExists) {
 			if (syscalls::kill(getPid(), 0) == 0) {
 				/* On some environments, e.g. Heroku, the init process does
 				 * not properly reap adopted zombie processes, which can interfere

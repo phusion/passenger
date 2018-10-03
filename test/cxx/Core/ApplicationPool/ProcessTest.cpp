@@ -101,6 +101,7 @@ namespace tut {
 
 			result.pid = 123;
 			result.gupid = "123";
+			result.type = SpawningKit::Result::DUMMY;
 			result.spawnStartTime = 1;
 			result.spawnEndTime = 1;
 			result.spawnStartTimeMonotonic = 1;
@@ -115,7 +116,6 @@ namespace tut {
 					<< "\n" << toString(appSuppliedFieldErrors));
 			}
 
-			args["type"] = "dummy";
 			args["spawner_creation_time"] = 0;
 
 			ProcessPtr process(context.processObjectPool.construct(
