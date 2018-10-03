@@ -62,22 +62,22 @@ namespace tut {
 
 		SpawningKit::AppPoolOptions createOptions() {
 			SpawningKit::AppPoolOptions options;
-			options.spawnMethod = "direct";
+			options.spawnMethod = "direct-through-start-command";
 			options.loadShellEnvvars = false;
 			return options;
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(Core_SpawningKit_DirectSpawnerTest, 90);
+	DEFINE_TEST_GROUP(Core_SpawningKit_DirectSpawnerTest);
 
 	#include "SpawnerTestCases.cpp"
 
-	TEST_METHOD(82) {
+	TEST_METHOD(10) {
 		set_test_name("Test that everything works correctly if the app re-execs() itself");
 		// https://code.google.com/p/phusion-passenger/issues/detail?id=842#c19
 		SpawningKit::AppPoolOptions options = createOptions();
 		options.appRoot      = "stub/rack";
-		options.startCommand = "ruby\t" "start.rb\t" "--execself";
+		options.startCommand = "ruby start.rb --execself";
 		options.startupFile  = "start.rb";
 		SpawnerPtr spawner = createSpawner(options);
 		result = spawner->spawn(options);
