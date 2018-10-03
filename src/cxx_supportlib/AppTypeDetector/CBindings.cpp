@@ -92,7 +92,7 @@ psg_app_type_detector_new(const PsgWrapperRegistry *registry,
 {
 	const Registry *cxxRegistry = static_cast<const Registry *>(registry);
 	try {
-		Detector *detector = new Detector(*cxxRegistry, NULL, NULL, throttleRate);
+		Detector *detector = new Detector(*cxxRegistry, NULL, NULL, throttleRate, NULL);
 		return static_cast<PsgAppTypeDetector *>(detector);
 	} catch (const std::bad_alloc &) {
 		return NULL;

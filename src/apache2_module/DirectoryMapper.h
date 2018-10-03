@@ -77,6 +77,7 @@ private:
 	request_rec *r;
 	CachedFileStat *cstat;
 	boost::mutex *cstatMutex;
+	boost::mutex *configMutex;
 	const char *baseURI;
 	string publicDir;
 	string appRoot;
@@ -148,7 +149,7 @@ private:
 
 		UPDATE_TRACE_POINT();
 		AppTypeDetector::Detector detector(registry, cstat,
-			cstatMutex, throttleRate);
+			cstatMutex, throttleRate, configMutex);
 		AppTypeDetector::Detector::Result detectorResult;
 		string appRoot;
 		// If `AppStartCommand` is set, then it means the config specified that it is
@@ -195,13 +196,14 @@ public:
 	DirectoryMapper(request_rec *r, DirConfig *config,
 		const WrapperRegistry::Registry &_registry,
 		CachedFileStat *cstat, boost::mutex *cstatMutex,
-		unsigned int throttleRate)
+		unsigned int throttleRate, boost::mutex *configMutex)
 		: registry(_registry)
 	{
 		this->r = r;
 		this->config = config;
 		this->cstat = cstat;
 		this->cstatMutex = cstatMutex;
+		this->configMutex = configMutex;
 		this->throttleRate = throttleRate;
 		baseURI = NULL;
 		autoDetectionDone = false;

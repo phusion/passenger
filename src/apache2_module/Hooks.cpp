@@ -237,6 +237,7 @@ private:
 	CachedFileStat cstat;
 	WatchdogLauncher watchdogLauncher;
 	boost::mutex cstatMutex;
+	boost::mutex configMutex;
 
 	static Json::Value strsetToJson(const set<string> &input) {
 		Json::Value result(Json::arrayValue);
@@ -446,7 +447,7 @@ private:
 		TRACE_POINT();
 
 		DirectoryMapper mapper(r, config, wrapperRegistry, &cstat,
-			&cstatMutex, serverConfig.statThrottleRate);
+		    &cstatMutex, serverConfig.statThrottleRate, &configMutex);
 		try {
 			if (config->getAppStartCommand().empty()
 			 && mapper.getDetectorResult().isNull())

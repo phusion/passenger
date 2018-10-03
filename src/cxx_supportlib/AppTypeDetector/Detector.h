@@ -42,15 +42,18 @@
 #include <WrapperRegistry/Registry.h>
 #include <FileTools/PathManip.h>
 #include <FileTools/FileManip.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <DataStructures/StringKeyTable.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
-#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace AppTypeDetector {
 
 using namespace std;
 
+typedef AppLocalConfig* AppLocalConfigPtr;
+typedef StringKeyTable<AppLocalConfig> AppLocalConfigMap;
 
 class Detector {
 public:
@@ -73,6 +76,9 @@ private:
 	boost::mutex *cstatMutex;
 	unsigned int throttleRate;
 	bool ownsCstat;
+	AppLocalConfigMap appLocalConfigCache;
+	boost::mutex *configMutex;
+	StringKeyTable<time_t> appRootCheckTimes;
 
 	bool check(char *buf, const char *end, const StaticString &appRoot,
 		const StaticString &name)
@@ -90,15 +96,33 @@ private:
 			cstat, cstatMutex, throttleRate) != FT_NONEXISTANT;
 	}
 
+	AppLocalConfigPtr getAppLocalConfigFromCache(const StaticString &appRoot) {
+		boost::unique_lock<boost::mutex> l;
+		time_t currentTime = SystemTime::get();
+		if (configMutex != NULL) {
+			l = boost::unique_lock<boost::mutex>(*configMutex);
+		}
+		if (!appLocalConfigCache.contains(appRoot)
+			|| currentTime >= (appRootCheckTimes.lookupCopy(appRoot) + throttleRate)) {
+			AppLocalConfig config = parseAppLocalConfigFile(appRoot);
+			appLocalConfigCache.insert(appRoot, config);
+			appRootCheckTimes.insert(appRoot, currentTime);
+		}
+		AppLocalConfigPtr appLocalConfig;
+		appLocalConfigCache.lookup(appRoot, &appLocalConfig);
+		return appLocalConfig;
+	}
+
 public:
 	Detector(const WrapperRegistry::Registry &_registry,
 		CachedFileStat *_cstat = NULL, boost::mutex *_cstatMutex = NULL,
-		unsigned int _throttleRate = 1)
+		unsigned int _throttleRate = 1, boost::mutex *_configMutex = NULL)
 		: registry(_registry),
 		  cstat(_cstat),
 		  cstatMutex(_cstatMutex),
 		  throttleRate(_throttleRate),
-		  ownsCstat(false)
+		  ownsCstat(false),
+		  configMutex(_configMutex)
 	{
 		assert(_registry.isFinalized());
 		if (_cstat == NULL) {
@@ -178,10 +202,11 @@ public:
 		char buf[PATH_MAX + 32];
 		const char *end = buf + sizeof(buf) - 1;
 
-		AppLocalConfig appLocalConfig = parseAppLocalConfigFile(appRoot);
-		if (!appLocalConfig.appStartCommand.empty()) {
+		AppLocalConfigPtr appLocalConfig = getAppLocalConfigFromCache(appRoot);
+
+		if (!appLocalConfig->appStartCommand.empty()) {
 			Result result;
-			result.appStartCommand = appLocalConfig.appStartCommand;
+			result.appStartCommand = appLocalConfig->appStartCommand;
 			return result;
 		}
 

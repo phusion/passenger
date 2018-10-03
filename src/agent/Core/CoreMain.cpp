@@ -275,7 +275,7 @@ initializeSingleAppMode() {
 	} else if (coreConfig->get("single_app_mode_app_type").isNull()) {
 		// Autodetect whether this is generic app, Kuria app or auto-supported app.
 		P_DEBUG("Autodetecting application type...");
-		AppTypeDetector::Detector detector(*coreWrapperRegistry, NULL, 0);
+		AppTypeDetector::Detector detector(*coreWrapperRegistry);
 		AppTypeDetector::Detector::Result detectorResult = detector.checkAppRoot(appRoot);
 
 		if (!detectorResult.appStartCommand.empty()) {
