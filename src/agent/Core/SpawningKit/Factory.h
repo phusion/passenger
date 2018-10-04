@@ -48,7 +48,7 @@ private:
 	SpawnerPtr tryCreateSmartSpawner(const AppPoolOptions &options) {
 		string dir = context->resourceLocator->getHelperScriptsDir();
 		vector<string> preloaderCommand;
-		if (options.appType == "rack") {
+		if (options.appType == "ruby" || options.appType == "rack") {
 			preloaderCommand.push_back(options.ruby);
 			preloaderCommand.push_back(dir + "/rack-preloader.rb");
 		} else {
