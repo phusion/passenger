@@ -9964,8 +9964,6 @@ CXX_DEPENDENCY_MAP =
   [],
  "src/cxx_supportlib/Utils/MemZeroGuard.h"=>
   [],
- "src/cxx_supportlib/Utils/MemoryBarrier.h"=>
-  [],
  "src/cxx_supportlib/Utils/MessageIO.h"=>
   ["src/cxx_supportlib/DataStructures/HashedStaticString.h",
    "src/cxx_supportlib/Exceptions.h",
