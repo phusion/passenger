@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2017 Phusion Holding B.V.
+ *  Copyright (c) 2017-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -37,7 +37,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <LoggingKit/Forward.h>
 #include <LoggingKit/Config.h>
-#include <Utils/SystemTime.h>
+#include <SystemTools/SystemTime.h>
 #include <DataStructures/StringKeyTable.h>
 
 namespace Passenger {

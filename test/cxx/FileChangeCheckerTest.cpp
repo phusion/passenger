@@ -1,7 +1,7 @@
 #include <TestSupport.h>
 #include <ProcessManagement/Spawn.h>
 #include <Utils/FileChangeChecker.h>
-#include <Utils/SystemTime.h>
+#include <SystemTools/SystemTime.h>
 #include <unistd.h>
 
 using namespace Passenger;

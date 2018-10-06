@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -52,13 +52,13 @@
 #include <ConfigKit/ConfigKit.h>
 #include <Exceptions.h>
 #include <Hooks.h>
+#include <SystemTools/SystemMetricsCollector.h>
+#include <SystemTools/ProcessMetricsCollector.h>
+#include <SystemTools/SystemTime.h>
 #include <Utils/Lock.h>
 #include <Utils/AnsiColorConstants.h>
-#include <Utils/SystemTime.h>
 #include <Utils/MessagePassing.h>
 #include <Utils/VariantMap.h>
-#include <Utils/ProcessMetricsCollector.h>
-#include <Utils/SystemMetricsCollector.h>
 #include <Core/ApplicationPool/Common.h>
 #include <Core/ApplicationPool/Context.h>
 #include <Core/ApplicationPool/Process.h>

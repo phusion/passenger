@@ -1,7 +1,7 @@
 #include <TestSupport.h>
 #include <Utils/IOUtils.h>
 #include <Utils/MessageIO.h>
-#include <Utils/SystemTime.h>
+#include <SystemTools/SystemTime.h>
 
 using namespace Passenger;
 using namespace std;

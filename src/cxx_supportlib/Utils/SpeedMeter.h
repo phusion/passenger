@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -30,7 +30,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <limits>
-#include <Utils/SystemTime.h>
+#include <SystemTools/SystemTime.h>
 
 namespace Passenger {
 

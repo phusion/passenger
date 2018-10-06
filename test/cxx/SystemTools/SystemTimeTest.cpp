@@ -1,17 +1,17 @@
 #include <TestSupport.h>
-#include <Utils/SystemTime.h>
+#include <SystemTools/SystemTime.h>
 
 using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct SystemTimeTest: public TestBase {
-		~SystemTimeTest() {
+	struct SystemTools_SystemTimeTest: public TestBase {
+		~SystemTools_SystemTimeTest() {
 			SystemTime::release();
 		}
 	};
 
-	DEFINE_TEST_GROUP(SystemTimeTest);
+	DEFINE_TEST_GROUP(SystemTools_SystemTimeTest);
 
 	TEST_METHOD(1) {
 		time_t begin = SystemTime::get();

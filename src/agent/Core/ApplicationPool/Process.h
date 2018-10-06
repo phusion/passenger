@@ -43,10 +43,10 @@
 #include <Constants.h>
 #include <FileDescriptor.h>
 #include <LoggingKit/LoggingKit.h>
-#include <Utils/SystemTime.h>
+#include <SystemTools/ProcessMetricsCollector.h>
+#include <SystemTools/SystemTime.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/Lock.h>
-#include <Utils/ProcessMetricsCollector.h>
 #include <Core/ApplicationPool/Common.h>
 #include <Core/ApplicationPool/Socket.h>
 #include <Core/ApplicationPool/Session.h>

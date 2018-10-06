@@ -24,7 +24,7 @@
  *  THE SOFTWARE.
  */
 
-#include <Utils/SystemTime.h>
+#include <SystemTools/SystemTime.h>
 
 namespace Passenger {
 	namespace SystemTimeData {

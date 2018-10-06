@@ -4,21 +4,21 @@
 #include <cstdio>
 #include <cerrno>
 #include <ProcessManagement/Spawn.h>
+#include <SystemTools/ProcessMetricsCollector.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/ProcessMetricsCollector.h>
 
 using namespace Passenger;
 
 namespace tut {
-	struct ProcessMetricsCollectorTest: public TestBase {
+	struct SystemTools_ProcessMetricsCollectorTest: public TestBase {
 		ProcessMetricsCollector collector;
 		pid_t child;
 
-		ProcessMetricsCollectorTest() {
+		SystemTools_ProcessMetricsCollectorTest() {
 			child = -1;
 		}
 
-		~ProcessMetricsCollectorTest() {
+		~SystemTools_ProcessMetricsCollectorTest() {
 			if (child != -1) {
 				kill(child, SIGKILL);
 				waitpid(child, NULL, 0);
@@ -38,7 +38,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(ProcessMetricsCollectorTest);
+	DEFINE_TEST_GROUP(SystemTools_ProcessMetricsCollectorTest);
 
 	TEST_METHOD(1) {
 		// It collects the metrics for the given PIDs.

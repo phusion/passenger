@@ -12,7 +12,7 @@ The most important parts are:
 ## Minor parts
 
  * SpawnEnvSetupper is a tool used internally by `Core/SpawningKit/` to spawn application processes. See the README in that directory for more information.
- * SystemMetrics is a tool that shows system metrics such as CPU and memory usage. The main functionality is implemented in src/cxxUtils/SystemMetricsCollector.h. This tool is mainly useful for developing and debugging SystemMetricsCollector.h.
+ * SystemMetrics is a tool that shows system metrics such as CPU and memory usage. The main functionality is implemented in src/cxx/SystemTools/SystemMetricsCollector.h. This tool is mainly useful for developing and debugging SystemMetricsCollector.h.
  * TempDirToucher is a tool used internally by Passenger Standalone to keep a temporary directory's timestamp up-to-date so that it doesn't get removed by /tmp cleaner daemons.
 
 ## Shared code

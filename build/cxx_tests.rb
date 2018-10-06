@@ -108,8 +108,10 @@ TEST_CXX_OBJECTS = {
     "test/cxx/FileChangeCheckerTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileDescriptorTest.o" =>
     "test/cxx/FileDescriptorTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/SystemTimeTest.o" =>
-    "test/cxx/SystemTimeTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/SystemTools/ProcessMetricsCollectorTest.o" =>
+    "test/cxx/SystemTools/ProcessMetricsCollectorTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/SystemTools/SystemTimeTest.o" =>
+    "test/cxx/SystemTools/SystemTimeTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/CachedFileStatTest.o" =>
     "test/cxx/CachedFileStatTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/BufferedIOTest.o" =>
@@ -122,8 +124,6 @@ TEST_CXX_OBJECTS = {
     "test/cxx/VariantMapTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/StringMapTest.o" =>
     "test/cxx/StringMapTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/ProcessMetricsCollectorTest.o" =>
-    "test/cxx/ProcessMetricsCollectorTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DateParsingTest.o" =>
     "test/cxx/DateParsingTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/UtilsTest.o" =>

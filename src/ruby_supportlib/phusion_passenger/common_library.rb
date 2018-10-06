@@ -293,7 +293,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'SystemTools/UserDatabase.cpp',
     :category => :base
   define_component 'Utils/SystemTime.o',
-    :source   => 'Utils/SystemTime.cpp',
+    :source   => 'SystemTools/SystemTime.cpp',
     :category => :base
   define_component 'Utils/StrIntUtils.o',
     :source   => 'Utils/StrIntUtils.cpp',

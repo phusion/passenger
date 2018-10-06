@@ -70,7 +70,7 @@
 #include <Utils/ScopeGuard.h>
 #include <Utils/StrIntUtils.h>
 #include <Utils/IOUtils.h>
-#include <Utils/SystemTime.h>
+#include <SystemTools/SystemTime.h>
 
 namespace Passenger {
 namespace ServerKit {

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -28,9 +28,10 @@
 #include <unistd.h>
 #include <cstdio>
 #include <cstring>
+
+#include <SystemTools/SystemMetricsCollector.h>
 #include <Utils.h>
 #include <Utils/StrIntUtils.h>
-#include <Utils/SystemMetricsCollector.h>
 
 using namespace std;
 using namespace Passenger;
