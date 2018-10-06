@@ -33,7 +33,7 @@
 #include <Watchdog/ApiServer.h>
 #include <Shared/ApiAccountUtils.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace Watchdog {

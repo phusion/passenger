@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -25,7 +25,7 @@
  */
 
 #include <Shared/Fundamentals/Utils.h>
-#include <Utils/MessageIO.h>
+#include <IOTools/MessageIO.h>
 
 class CoreWatcher: public AgentWatcher {
 protected:

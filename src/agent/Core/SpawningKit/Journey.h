@@ -37,8 +37,8 @@
 #include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/JsonUtils.h>
-#include <Utils/StrIntUtils.h>
+#include <JsonTools/JsonUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace SpawningKit {

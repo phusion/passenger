@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_IO_UTILS_H_
-#define _PASSENGER_IO_UTILS_H_
+#ifndef _PASSENGER_IOTOOLS_IO_UTILS_H_
+#define _PASSENGER_IOTOOLS_IO_UTILS_H_
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -658,4 +658,4 @@ pair<string, bool> readAll(int fd, size_t maxSize);
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_IO_UTILS_H_ */
+#endif /* _PASSENGER_IOTOOLS_IO_UTILS_H_ */

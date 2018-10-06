@@ -9,7 +9,7 @@
 #include <ServerKit/ClientRef.h>
 #include <LoggingKit/LoggingKit.h>
 #include <FileDescriptor.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 
 using namespace Passenger;
 using namespace Passenger::ServerKit;

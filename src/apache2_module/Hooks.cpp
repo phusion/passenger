@@ -64,8 +64,8 @@
 #include <FileTools/FileManip.h>
 #include <FileTools/FileManip.h>
 #include <Utils.h>
-#include <Utils/IOUtils.h>
-#include <Utils/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <SystemTools/SystemTime.h>
 #include <Utils/HttpConstants.h>
 #include <Utils/ReleaseableScopedPointer.h>

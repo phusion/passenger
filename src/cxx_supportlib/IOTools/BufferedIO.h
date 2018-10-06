@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_BUFFERED_IO_H_
-#define _PASSENGER_BUFFERED_IO_H_
+#ifndef _PASSENGER_IOTOOLS_BUFFERED_IO_H_
+#define _PASSENGER_IOTOOLS_BUFFERED_IO_H_
 
 #include <string>
 #include <utility>
@@ -38,7 +38,7 @@
 #include <FileDescriptor.h>
 #include <Exceptions.h>
 #include <StaticString.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 
 namespace Passenger {
 
@@ -249,4 +249,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_BUFFERED_IO_H_ */
+#endif /* _PASSENGER_IOTOOLS_BUFFERED_IO_H_ */

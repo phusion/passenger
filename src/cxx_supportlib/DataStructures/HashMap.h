@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -24,30 +24,37 @@
  *  THE SOFTWARE.
  */
 
-// Implementation is in its own file so that we can enable compiler optimizations for these functions only.
+#ifndef _PASSENGER_DATA_STRUCTURES_HASH_MAP_H_
+#define _PASSENGER_DATA_STRUCTURES_HASH_MAP_H_
 
-#include <Utils/Hasher.h>
+/*
+ * There are too many ways to include hash_map/unordered_map!
+ * This header autodetects the correct method.
+ */
+#if defined(HAS_UNORDERED_MAP)
+	#include <unordered_map>
+	#define HashMap std::unordered_map
+#elif defined(HAS_TR1_UNORDERED_MAP)
+	#include <tr1/unordered_map>
+	#define HashMap std::tr1::unordered_map
+#elif defined(HASH_NAMESPACE) && defined(HASH_MAP_HEADER)
+	#ifndef _GLIBCXX_PERMIT_BACKWARD_HASH
+		// Prevent deprecation warning on newer libstdc++ systems.
+		// The warning suggests using unordered_map, but that is only
+		// available when C++11 features are explicitly enabled.
+		#define _GLIBCXX_PERMIT_BACKWARD_HASH
+	#endif
+	#include HASH_MAP_HEADER
+	#define HashMap HASH_NAMESPACE::hash_map
+#elif defined(__GNUC__)
+	#include <ext/hash_map>
+	#define HashMap __gnu_cxx::hash_map
+#elif defined(_MSC_VER)
+	#include <hash_map>
+	#define HashMap stdext::hash_map
+#else
+	#include <boost/unordered_map.hpp>
+	#define HashMap boost::unordered_map
+#endif
 
-namespace Passenger {
-
-void
-JenkinsHash::update(const char *data, unsigned int size) {
-	const char *end = data + size;
-
-	while (data < end) {
-		hash += *data;
-		hash += (hash << 10);
-		hash ^= (hash >> 6);
-		data++;
-	}
-}
-
-boost::uint32_t
-JenkinsHash::finalize() {
-	hash += (hash << 3);
-	hash ^= (hash >> 11);
-	hash += (hash << 15);
-	return hash;
-}
-
-} // namespace Passenger
+#endif /* _PASSENGER_DATA_STRUCTURES_HASH_MAP_H_ */

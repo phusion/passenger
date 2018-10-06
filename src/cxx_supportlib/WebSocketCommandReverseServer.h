@@ -49,7 +49,7 @@
 #include <FileTools/PathManip.h>
 #include <FileTools/FileManip.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 

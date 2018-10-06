@@ -295,22 +295,22 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
   define_component 'Utils/SystemTime.o',
     :source   => 'SystemTools/SystemTime.cpp',
     :category => :base
-  define_component 'Utils/StrIntUtils.o',
-    :source   => 'Utils/StrIntUtils.cpp',
+  define_component 'StrIntTools/StrIntUtils.o',
+    :source   => 'StrIntTools/StrIntUtils.cpp',
     :category => :base,
     :optimize => :very_heavy
-  define_component 'Utils/StrIntUtilsNoStrictAliasing.o',
-    :source   => 'Utils/StrIntUtilsNoStrictAliasing.cpp',
+  define_component 'StrIntTools/StrIntUtilsNoStrictAliasing.o',
+    :source   => 'StrIntTools/StrIntUtilsNoStrictAliasing.cpp',
     :category => :base,
     # Compiling with -O3 causes segfaults on RHEL 6
     :optimize => :heavy,
     :strict_aliasing => false
-  define_component 'Utils/IOUtils.o',
-    :source   => 'Utils/IOUtils.cpp',
+  define_component 'IOTools/IOUtils.o',
+    :source   => 'IOTools/IOUtils.cpp',
     :optimize => :light,
     :category => :base
-  define_component 'Utils/Hasher.o',
-    :source   => 'Utils/Hasher.cpp',
+  define_component 'Algorithms/Hasher.o',
+    :source   => 'Algorithms/Hasher.cpp',
     :category => :base,
     :optimize => :very_heavy
   define_component 'Utils.o',
@@ -321,8 +321,8 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :category => :base,
     :optimize => true
 
-  define_component 'Crypto.o',
-    :source   => 'Crypto.cpp',
+  define_component 'SecurityKit/Crypto.o',
+    :source   => 'SecurityKit/Crypto.cpp',
     :category => :other,
     :cflags   => PhusionPassenger::PlatformInfo.crypto_extra_cflags
   define_component 'Utils/CachedFileStat.o',

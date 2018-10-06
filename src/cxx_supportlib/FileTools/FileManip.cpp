@@ -44,7 +44,7 @@
 #include <ProcessManagement/Utils.h>
 #include <Utils.h> // parseModeString
 #include <Utils/CachedFileStat.hpp>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 #include <Utils/ScopeGuard.h>
 
 namespace Passenger {

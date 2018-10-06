@@ -98,10 +98,12 @@ TEST_CXX_OBJECTS = {
     "test/cxx/DataStructures/LStringTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DataStructures/StringKeyTableTest.o" =>
     "test/cxx/DataStructures/StringKeyTableTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/DataStructures/StringMapTest.o" =>
+    "test/cxx/DataStructures/StringMapTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileTools/PathSecurityCheckTest.o" =>
     "test/cxx/FileTools/PathSecurityCheckTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/MessageReadersWritersTest.o" =>
-    "test/cxx/MessageReadersWritersTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/IOTools/MessageSerializationTest.o" =>
+    "test/cxx/IOTools/MessageSerializationTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/StaticStringTest.o" =>
     "test/cxx/StaticStringTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/FileChangeCheckerTest.o" =>
@@ -114,28 +116,24 @@ TEST_CXX_OBJECTS = {
     "test/cxx/SystemTools/SystemTimeTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/CachedFileStatTest.o" =>
     "test/cxx/CachedFileStatTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/BufferedIOTest.o" =>
-    "test/cxx/BufferedIOTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/MessageIOTest.o" =>
-    "test/cxx/MessageIOTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/IOTools/BufferedIOTest.o" =>
+    "test/cxx/IOTools/BufferedIOTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/IOTools/IOUtilsTest.o" =>
+    "test/cxx/IOTools/IOUtilsTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/IOTools/MessageIOTest.o" =>
+    "test/cxx/IOTools/MessageIOTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/MessagePassingTest.o" =>
     "test/cxx/MessagePassingTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/VariantMapTest.o" =>
     "test/cxx/VariantMapTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/StringMapTest.o" =>
-    "test/cxx/StringMapTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/DateParsingTest.o" =>
     "test/cxx/DateParsingTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/UtilsTest.o" =>
     "test/cxx/UtilsTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/Utils/IOUtilsTest.o" =>
-    "test/cxx/Utils/IOUtilsTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/Utils/StrIntUtilsTest.o" =>
-    "test/cxx/Utils/StrIntUtilsTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/IOUtilsTest.o" =>
-    "test/cxx/IOUtilsTest.cpp",
-  "#{TEST_OUTPUT_DIR}cxx/TemplateTest.o" =>
-    "test/cxx/TemplateTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/StrIntTools/StrIntUtilsTest.o" =>
+    "test/cxx/StrIntTools/StrIntUtilsTest.cpp",
+  "#{TEST_OUTPUT_DIR}cxx/StrIntTools/TemplateTest.o" =>
+    "test/cxx/StrIntTools/TemplateTest.cpp",
   "#{TEST_OUTPUT_DIR}cxx/Base64DecodingTest.o" =>
     "test/cxx/Base64DecodingTest.cpp"
 }

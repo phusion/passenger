@@ -19,7 +19,7 @@
 #include <FileTools/PathManip.h>
 #include <Utils.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <jsoncpp/json.h>
 
 using namespace std;

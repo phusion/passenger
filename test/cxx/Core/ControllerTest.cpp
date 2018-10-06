@@ -1,9 +1,9 @@
 #include <TestSupport.h>
 #include <limits>
 #include <Constants.h>
-#include <Utils/IOUtils.h>
-#include <Utils/BufferedIO.h>
-#include <Utils/MessageIO.h>
+#include <IOTools/IOUtils.h>
+#include <IOTools/BufferedIO.h>
+#include <IOTools/MessageIO.h>
 #include <Core/ApplicationPool/TestSession.h>
 #include <Core/Controller.h>
 

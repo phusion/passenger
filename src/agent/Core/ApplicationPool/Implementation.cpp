@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -37,12 +37,12 @@
 #include <oxt/backtrace.hpp>
 #include <Exceptions.h>
 #include <Hooks.h>
-#include <MessageReadersWriters.h>
+#include <IOTools/MessageSerialization.h>
 #include <Utils.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/MessageIO.h>
-#include <Utils/JsonUtils.h>
+#include <IOTools/MessageIO.h>
+#include <JsonTools/JsonUtils.h>
 #include <Core/ApplicationPool/Pool.h>
 #include <Core/ApplicationPool/Group.h>
 #include <Core/ApplicationPool/Pool/InitializationAndShutdown.cpp>

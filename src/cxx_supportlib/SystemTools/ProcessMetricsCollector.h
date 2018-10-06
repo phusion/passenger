@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_PROCESS_METRICS_COLLECTOR_H_
-#define _PASSENGER_PROCESS_METRICS_COLLECTOR_H_
+#ifndef _PASSENGER_SYSTEM_TOOLS_PROCESS_METRICS_COLLECTOR_H_
+#define _PASSENGER_SYSTEM_TOOLS_PROCESS_METRICS_COLLECTOR_H_
 
 #include <boost/cstdint.hpp>
 #include <boost/thread.hpp>
@@ -63,8 +63,8 @@
 #include <ProcessManagement/Spawn.h>
 #include <FileTools/FileManip.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/IOUtils.h>
-#include <Utils/StringScanning.h>
+#include <IOTools/IOUtils.h>
+#include <StrIntTools/StringScanning.h>
 
 namespace Passenger {
 
@@ -505,4 +505,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_PROCESS_METRICS_COLLECTOR_H_ */
+#endif /* _PASSENGER_SYSTEM_TOOLS_PROCESS_METRICS_COLLECTOR_H_ */

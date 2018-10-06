@@ -38,7 +38,7 @@
 #include <StaticString.h>
 #include <FileTools/PathManip.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace ApiAccountUtils { // Avoid conflict with classes of the same name in ApiServerUtils.h, until we've migrated everything

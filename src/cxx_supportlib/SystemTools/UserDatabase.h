@@ -50,7 +50,7 @@
 #include <boost/core/noncopyable.hpp>
 
 #include <StaticString.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 
 namespace Passenger {

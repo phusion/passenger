@@ -42,7 +42,7 @@
 #include <FileDescriptor.h>
 #include <StaticString.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace SpawningKit {

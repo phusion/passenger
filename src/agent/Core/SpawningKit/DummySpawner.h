@@ -31,7 +31,7 @@
 #include <vector>
 
 #include <StaticString.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Core/SpawningKit/Spawner.h>
 #include <Core/SpawningKit/Exceptions.h>
 

@@ -50,7 +50,7 @@
 #include <Shared/ApiAccountUtils.h>
 #include <Constants.h>
 #include <Utils.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 
 namespace Passenger {
 namespace Core {

@@ -43,7 +43,7 @@
 #include <FileTools/FileManip.h>
 #include <Utils.h>
 #include <Utils/CachedFileStat.hpp>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace AppTypeDetector {

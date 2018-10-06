@@ -46,7 +46,7 @@
 	#include <sys/sysinfo.h>
 	#include <Exceptions.h>
 	#include <FileTools/FileManip.h>
-	#include <Utils/StringScanning.h>
+	#include <StrIntTools/StringScanning.h>
 #endif
 #ifdef __APPLE__
 	#include <mach/mach.h>
@@ -65,7 +65,7 @@
 #include <Constants.h>
 #include <StaticString.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <SystemTools/SystemTime.h>
 #include <Utils/AnsiColorConstants.h>
 #include <Utils/SpeedMeter.h>

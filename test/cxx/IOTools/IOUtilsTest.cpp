@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 #include <SystemTools/SystemTime.h>
 #include <oxt/system_calls.hpp>
 #include <boost/bind.hpp>
@@ -34,10 +34,10 @@ namespace tut {
 		return writevResult;
 	}
 
-	struct IOUtilsTest: public TestBase {
+	struct IOTools_IOUtilsTest: public TestBase {
 		string restBuffer;
 
-		IOUtilsTest() {
+		IOTools_IOUtilsTest() {
 			writevResult = 0;
 			writevErrno = 0;
 			writevCalled = 0;
@@ -45,7 +45,7 @@ namespace tut {
 			setWritevFunction(writev_mock);
 		}
 
-		~IOUtilsTest() {
+		~IOTools_IOUtilsTest() {
 			setWritevFunction(NULL);
 		}
 
@@ -118,7 +118,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP_WITH_LIMIT(IOUtilsTest, 100);
+	DEFINE_TEST_GROUP_WITH_LIMIT(IOTools_IOUtilsTest, 100);
 
 	/***** Test gatheredWrite() with empty input rest buffer *****/
 
@@ -892,5 +892,29 @@ namespace tut {
 				elapsed >= 29000 && elapsed <= 95000);
 			ensure(timeout <= 2000);
 		}
+	}
+
+
+	/***** Test readAll() *****/
+
+	TEST_METHOD(85) {
+		set_test_name("readAll() with unlimited maxSize");
+		Pipe p = createPipe(__FILE__, __LINE__);
+		writeExact(p[1], "hello world");
+		p[1].close();
+		pair<string, bool> result = readAll(p[0],
+			std::numeric_limits<size_t>::max());
+		ensure_equals(result.first, "hello world");
+		ensure(result.second);
+	}
+
+	TEST_METHOD(86) {
+		set_test_name("readAll() with size smaller than actual data");
+		Pipe p = createPipe(__FILE__, __LINE__);
+		writeExact(p[1], "hello world");
+		p[1].close();
+		pair<string, bool> result = readAll(p[0], 5);
+		ensure_equals(result.first, "hello");
+		ensure(!result.second);
 	}
 }

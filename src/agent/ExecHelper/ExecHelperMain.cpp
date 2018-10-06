@@ -40,7 +40,7 @@
 #include <Constants.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils/OptionParsing.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace ExecHelper {

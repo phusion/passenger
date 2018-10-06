@@ -72,9 +72,9 @@
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
 #include <Utils.h>
-#include <Utils/IOUtils.h>
-#include <Utils/BufferedIO.h>
-#include <Utils/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
+#include <IOTools/BufferedIO.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Utils/VariantMap.h>
 #include <Shared/ApplicationPoolApiKey.h>
 

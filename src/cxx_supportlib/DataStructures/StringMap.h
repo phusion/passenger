@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,15 +23,15 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_STRING_MAP_H_
-#define _PASSENGER_STRING_MAP_H_
+#ifndef _PASSENGER_DATA_STRUCTURES_STRING_MAP_H_
+#define _PASSENGER_DATA_STRUCTURES_STRING_MAP_H_
 
 #include <string>
 #include <map>
 #include <utility>
 
 #include <StaticString.h>
-#include <Utils/HashMap.h>
+#include <DataStructures/HashMap.h>
 
 namespace Passenger {
 
@@ -54,106 +54,106 @@ private:
 		string key;
 		pair<StaticString, T> thePair;
 	};
-	
+
 	typedef HashMap<StaticString, Entry, StaticString::Hash> InternalMap;
 	typedef typename InternalMap::iterator InternalIterator;
 	typedef typename InternalMap::const_iterator InternalConstIterator;
 	typedef typename InternalMap::value_type ValueType;
 	InternalMap store;
-	
+
 public:
 	class const_iterator {
 	private:
 		InternalConstIterator it;
-		
+
 	public:
 		const_iterator() { }
-		
+
 		const_iterator(const InternalConstIterator &_it)
 			: it(_it)
 			{ }
-		
+
 		const_iterator &operator=(const const_iterator &value) {
 			it = value.it;
 			return *this;
 		}
-		
+
 		const_iterator &operator++() {
 			it++;
 			return *this;
 		}
-		
+
 		const_iterator operator++(int) {
 			const_iterator copy(*this);
 			operator++();
 			return copy;
 		}
-		
+
 		bool operator==(const const_iterator &other) {
 			return it == other.it;
 		}
-		
+
 		bool operator!=(const const_iterator &other) {
 			return it != other.it;
 		}
-		
+
 		const pair<const StaticString, const T> &operator*() {
 			return (pair<const StaticString, const T> &) it->second.thePair;
 		}
-		
+
 		const pair<const StaticString, const T> *operator->() {
 			return &(**this);
 		}
 	};
-	
+
 	class iterator {
 	private:
 		InternalIterator it;
-		
+
 	public:
 		iterator() { }
-		
+
 		iterator(const InternalIterator &_it)
 			: it(_it)
 			{ }
-		
+
 		iterator &operator=(const iterator &value) {
 			it = value.it;
 			return *this;
 		}
-		
+
 		iterator &operator++() {
 			it++;
 			return *this;
 		}
-		
+
 		iterator operator++(int) {
 			iterator copy(*this);
 			operator++();
 			return copy;
 		}
-		
+
 		bool operator==(const iterator &other) {
 			return it == other.it;
 		}
-		
+
 		bool operator!=(const iterator &other) {
 			return it != other.it;
 		}
-		
+
 		pair<StaticString, T> &operator*() {
 			return it->second.thePair;
 		}
-		
+
 		pair<StaticString, T> *operator->() {
 			return &(**this);
 		}
-		
+
 		operator const_iterator() const {
 			return const_iterator(it);
 		}
 	};
-	
+
 	T get(const StaticString &key) const {
 		InternalConstIterator it = store.find(key);
 		if (it == store.end()) {
@@ -175,7 +175,7 @@ public:
 	bool has(const StaticString &key) const {
 		return store.find(key) != store.end();
 	}
-	
+
 	bool set(const StaticString &key, const T &value) {
 		pair<InternalIterator, bool> result = store.insert(make_pair(key, Entry()));
 		if (result.second) {
@@ -196,31 +196,31 @@ public:
 			return false;
 		}
 	}
-	
+
 	bool remove(const StaticString &key) {
 		return store.erase(key) > 0;
 	}
-	
+
 	unsigned int size() const {
 		return store.size();
 	}
-	
+
 	bool empty() const {
 		return store.empty();
 	}
-	
+
 	iterator begin() {
 		return iterator(store.begin());
 	}
-	
+
 	const_iterator begin() const {
 		return const_iterator(store.begin());
 	}
-	
+
 	iterator end() {
 		return iterator(store.end());
 	}
-	
+
 	const_iterator end() const {
 		return const_iterator(store.end());
 	}
@@ -229,4 +229,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_STRING_MAP_H_ */
+#endif /* _PASSENGER_DATA_STRUCTURES_STRING_MAP_H_ */

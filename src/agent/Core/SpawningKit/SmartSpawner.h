@@ -53,8 +53,8 @@
 #include <SystemTools/ProcessMetricsCollector.h>
 #include <SystemTools/SystemTime.h>
 #include <FileTools/FileManip.h>
-#include <Utils/BufferedIO.h>
-#include <Utils/JsonUtils.h>
+#include <IOTools/BufferedIO.h>
+#include <JsonTools/JsonUtils.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/AsyncSignalSafeUtils.h>
 #include <LveLoggingDecorator.h>

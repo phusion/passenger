@@ -46,7 +46,7 @@
 #include <LoggingKit/LoggingKit.h>
 #include <ConfigKit/ConfigKit.h>
 #include <Utils/Curl.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace Core {

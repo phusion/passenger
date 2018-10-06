@@ -30,7 +30,7 @@
 #include <jsoncpp/json.h>
 #include <cstring>
 #include <ctime>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <SystemTools/SystemTime.h>
 
 namespace Passenger {

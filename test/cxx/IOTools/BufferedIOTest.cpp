@@ -1,14 +1,14 @@
 #include <TestSupport.h>
-#include <Utils/BufferedIO.h>
+#include <IOTools/BufferedIO.h>
 #include <Utils/Timer.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 #include <algorithm>
 
 using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct BufferedIOTest: public TestBase {
+	struct IOTools_BufferedIOTest: public TestBase {
 		FileDescriptor reader, writer;
 		BufferedIO io;
 
@@ -18,15 +18,15 @@ namespace tut {
 		BufferedIO::AcceptFunction a_eof;
 		BufferedIO::AcceptFunction a_twoBytesRead;
 
-		BufferedIOTest() {
+		IOTools_BufferedIOTest() {
 			Pipe p = createPipe(__FILE__, __LINE__);
 			reader = p.first;
 			writer = p.second;
 			io = BufferedIO(reader);
 			counter = 0;
 			memset(buf, 0, sizeof(buf));
-			a_eof = boost::bind(&BufferedIOTest::eof, this, _1, _2);
-			a_twoBytesRead = boost::bind(&BufferedIOTest::twoBytesRead, this, _1, _2);
+			a_eof = boost::bind(&IOTools_BufferedIOTest::eof, this, _1, _2);
+			a_twoBytesRead = boost::bind(&IOTools_BufferedIOTest::twoBytesRead, this, _1, _2);
 		}
 
 		void write(const StaticString &data) {
@@ -60,7 +60,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(BufferedIOTest);
+	DEFINE_TEST_GROUP(IOTools_BufferedIOTest);
 
 	/***** Test readUntil() *****/
 

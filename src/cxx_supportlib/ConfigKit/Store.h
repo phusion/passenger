@@ -46,7 +46,7 @@
 #include <LoggingKit/Assert.h>
 #include <Exceptions.h>
 #include <DataStructures/StringKeyTable.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace ConfigKit {

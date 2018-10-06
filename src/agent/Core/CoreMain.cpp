@@ -82,7 +82,7 @@
 #include <ServerKit/Server.h>
 #include <ServerKit/AcceptLoadBalancer.h>
 #include <AppTypeDetector/Detector.h>
-#include <MessageReadersWriters.h>
+#include <IOTools/MessageSerialization.h>
 #include <FileDescriptor.h>
 #include <ResourceLocator.h>
 #include <BackgroundEventLoop.cpp>
@@ -91,7 +91,7 @@
 #include <Exceptions.h>
 #include <Utils.h>
 #include <Utils/Timer.h>
-#include <Utils/MessageIO.h>
+#include <IOTools/MessageIO.h>
 #include <Core/OptionParser.h>
 #include <Core/Controller.h>
 #include <Core/ApiServer.h>

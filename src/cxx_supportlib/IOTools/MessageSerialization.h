@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_MESSAGE_READERS_WRITERS_H_
-#define _PASSENGER_MESSAGE_READERS_WRITERS_H_
+#ifndef _PASSENGER_IOTOOLS_MESSAGE_SERIALIZATION_H_
+#define _PASSENGER_IOTOOLS_MESSAGE_SERIALIZATION_H_
 
 #include <boost/cstdint.hpp>
 #include <oxt/macros.hpp>
@@ -36,7 +36,7 @@
 #include <arpa/inet.h>
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <Utils/MemZeroGuard.h>
+#include <SecurityKit/MemZeroGuard.h>
 
 /**
  * This file provides a bunch of classes for reading and writing messages in the
@@ -544,4 +544,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_MESSAGE_READERS_WRITERS_H_ */
+#endif /* _PASSENGER_IOTOOLS_MESSAGE_SERIALIZATION_H_ */

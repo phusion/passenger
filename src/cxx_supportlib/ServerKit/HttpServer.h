@@ -45,9 +45,9 @@
 #include <Algorithms/MovingAverage.h>
 #include <Integrations/LibevJsonUtils.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Utils/HttpConstants.h>
-#include <Utils/Hasher.h>
+#include <Algorithms/Hasher.h>
 #include <SystemTools/SystemTime.h>
 
 namespace Passenger {

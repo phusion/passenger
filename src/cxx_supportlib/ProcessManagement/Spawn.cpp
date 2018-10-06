@@ -40,7 +40,7 @@
 #include <ProcessManagement/Utils.h>
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 
 namespace Passenger {
 

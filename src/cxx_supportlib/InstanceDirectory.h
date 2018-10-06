@@ -44,8 +44,8 @@
 #include <RandomGenerator.h>
 #include <FileTools/FileManip.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
-#include <Utils/IOUtils.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
 #include <SystemTools/SystemTime.h>
 #include <jsoncpp/json.h>
 

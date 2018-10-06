@@ -37,7 +37,7 @@
 #include <RandomGenerator.h>
 #include <Exceptions.h>
 #include <WrapperRegistry/Registry.h>
-#include <Utils/JsonUtils.h>
+#include <JsonTools/JsonUtils.h>
 #include <ConfigKit/Store.h>
 
 namespace Passenger {

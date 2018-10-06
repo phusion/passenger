@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2013-2017 Phusion Holding B.V.
+ *  Copyright (c) 2013-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,14 +23,14 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_STRING_SCANNING_H_
-#define _PASSENGER_STRING_SCANNING_H_
+#ifndef _PASSENGER_STR_INT_TOOLS_STRING_SCANNING_H_
+#define _PASSENGER_STR_INT_TOOLS_STRING_SCANNING_H_
 
 #include <cstring>
 #include <cstdlib>
 #include <string>
 #include <StaticString.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 
 /**
@@ -269,4 +269,4 @@ readNextSentence(const char **data, char terminator) {
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_STRING_SCANNING_H_ */
+#endif /* _PASSENGER_STR_INT_TOOLS_TEMPLATE_H_ */

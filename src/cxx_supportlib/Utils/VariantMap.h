@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -36,8 +36,8 @@
 #include <jsoncpp/json.h>
 #include <modp_b64.h>
 #include <Exceptions.h>
-#include <Utils/StrIntUtils.h>
-#include <Utils/MessageIO.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <IOTools/MessageIO.h>
 
 namespace Passenger {
 

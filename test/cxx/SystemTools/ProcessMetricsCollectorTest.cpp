@@ -5,7 +5,7 @@
 #include <cerrno>
 #include <ProcessManagement/Spawn.h>
 #include <SystemTools/ProcessMetricsCollector.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 using namespace Passenger;
 

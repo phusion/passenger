@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -36,7 +36,7 @@
 #include <Constants.h>
 #include <LoggingKit/LoggingKit.h>
 #include <LveLoggingDecorator.h>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 #include <Utils/AsyncSignalSafeUtils.h>
 
 #include <limits.h>  // for PTHREAD_STACK_MIN

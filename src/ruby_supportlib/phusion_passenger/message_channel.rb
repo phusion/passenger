@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -26,7 +26,7 @@
 module PhusionPassenger
 
   # This class allows reading and writing structured messages over
-  # I/O channels. This is the Ruby implementation of src/cxx_supportlib/Utils/MessageIO.h;
+  # I/O channels. This is the Ruby implementation of src/cxx_supportlib/IOTools/MessageIO.h;
   # see that file for more information.
   class MessageChannel
     HEADER_SIZE = 2                  # :nodoc:

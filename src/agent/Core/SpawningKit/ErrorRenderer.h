@@ -35,7 +35,7 @@
 #include <Constants.h>
 #include <StaticString.h>
 #include <FileTools/FileManip.h>
-#include <Utils/Template.h>
+#include <StrIntTools/Template.h>
 #include <Core/SpawningKit/Context.h>
 #include <Core/SpawningKit/Exceptions.h>
 

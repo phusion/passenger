@@ -5,7 +5,7 @@
 #include <SystemTools/UserDatabase.h>
 #include <boost/bind.hpp>
 #include <cstdio>
-#include <Utils/IOUtils.h>
+#include <IOTools/IOUtils.h>
 
 using namespace std;
 using namespace Passenger;

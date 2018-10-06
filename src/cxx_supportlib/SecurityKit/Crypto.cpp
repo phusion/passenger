@@ -24,12 +24,12 @@
  *  THE SOFTWARE.
  */
 
-#include <Crypto.h>
+#include <SecurityKit/Crypto.h>
 #include <modp_b64.h>
 #include <LoggingKit/LoggingKit.h>
 #include <string>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 #if BOOST_OS_MACOS
 #else

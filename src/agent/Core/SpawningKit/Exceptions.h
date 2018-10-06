@@ -37,7 +37,7 @@
 #include <DataStructures/StringKeyTable.h>
 #include <ProcessManagement/Spawn.h>
 #include <SystemTools/SystemMetricsCollector.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Core/SpawningKit/Config.h>
 #include <Core/SpawningKit/Journey.h>
 

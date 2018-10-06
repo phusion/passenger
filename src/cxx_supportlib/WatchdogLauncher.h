@@ -86,8 +86,8 @@ void        psg_watchdog_launcher_free(PsgWatchdogLauncher *launcher);
 #include <LoggingKit/Context.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
-#include <Utils/IOUtils.h>
-#include <Utils/MessageIO.h>
+#include <IOTools/IOUtils.h>
+#include <IOTools/MessageIO.h>
 #include <Utils/Timer.h>
 #include <Utils/ScopeGuard.h>
 #include <Utils/ClassUtils.h>

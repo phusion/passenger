@@ -3,8 +3,8 @@
 #include <Core/ApplicationPool/Pool.h>
 #include <LoggingKit/Context.h>
 #include <FileTools/FileManip.h>
-#include <Utils/StrIntUtils.h>
-#include <MessageReadersWriters.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <IOTools/MessageSerialization.h>
 #include <map>
 #include <vector>
 #include <cerrno>

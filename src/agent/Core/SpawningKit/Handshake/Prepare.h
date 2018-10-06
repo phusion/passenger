@@ -58,8 +58,8 @@
 #include <SystemTools/UserDatabase.h>
 #include <SystemTools/SystemTime.h>
 #include <Utils/Timer.h>
-#include <Utils/IOUtils.h>
-#include <Utils/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Core/SpawningKit/Context.h>
 #include <Core/SpawningKit/Config.h>
 #include <Core/SpawningKit/Journey.h>

@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,14 +23,14 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_HASHED_STATIC_STRING_H_
-#define _PASSENGER_HASHED_STATIC_STRING_H_
+#ifndef _PASSENGER_DATA_STRUCTURES_HASHED_STATIC_STRING_H_
+#define _PASSENGER_DATA_STRUCTURES_HASHED_STATIC_STRING_H_
 
 #include <boost/cstdint.hpp>
 #include <oxt/macros.hpp>
 #include <string>
 #include <StaticString.h>
-#include <Utils/Hasher.h>
+#include <Algorithms/Hasher.h>
 
 namespace Passenger {
 
@@ -101,4 +101,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_HASHED_STATIC_STRING_H_ */
+#endif /* _PASSENGER_DATA_STRUCTURES_HASHED_STATIC_STRING_H_ */

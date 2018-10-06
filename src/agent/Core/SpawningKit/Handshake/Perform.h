@@ -53,7 +53,7 @@
 #include <Utils.h>
 #include <Utils/ScopeGuard.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Core/SpawningKit/Config.h>
 #include <Core/SpawningKit/Exceptions.h>
 #include <Core/SpawningKit/Handshake/BackgroundIOCapturer.h>

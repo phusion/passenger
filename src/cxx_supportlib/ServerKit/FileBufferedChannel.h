@@ -46,7 +46,7 @@
 #include <ServerKit/Config.h>
 #include <ServerKit/Errors.h>
 #include <ServerKit/Channel.h>
-#include <Utils/JsonUtils.h>
+#include <JsonTools/JsonUtils.h>
 
 namespace Passenger {
 namespace ServerKit {

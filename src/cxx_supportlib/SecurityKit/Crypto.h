@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_CRYPTO_H_
-#define _PASSENGER_CRYPTO_H_
+#ifndef _PASSENGER_SECURITY_KIT_CRYPTO_H_
+#define _PASSENGER_SECURITY_KIT_CRYPTO_H_
 
 #include <boost/function.hpp>
 #include <boost/thread.hpp>
@@ -152,4 +152,4 @@ public:
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_CRYPTO_H_ */
+#endif /* _PASSENGER_SECURITYKIT_CRYPTO_H_ */

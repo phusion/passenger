@@ -56,7 +56,7 @@
 #include <ConfigKit/ConfigKit.h>
 #include <FileTools/PathManip.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <SystemTools/SystemTime.h>
 
 namespace Passenger {

@@ -1,11 +1,11 @@
 #include <TestSupport.h>
-#include <Utils/Template.h>
+#include <StrIntTools/Template.h>
 #include <cstdarg>
 
 using namespace Passenger;
 
 namespace tut {
-	struct TemplateTest: public TestBase {
+	struct StrIntTools_TemplateTest: public TestBase {
 		string apply(const char *templateContent, ...) {
 			va_list ap;
 			const char *arg;
@@ -21,7 +21,7 @@ namespace tut {
 		}
 	};
 
-	DEFINE_TEST_GROUP(TemplateTest);
+	DEFINE_TEST_GROUP(StrIntTools_TemplateTest);
 
 	TEST_METHOD(1) {
 		// Test 1 substitution.

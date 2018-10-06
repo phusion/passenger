@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_MESSAGE_IO_H_
-#define _PASSENGER_MESSAGE_IO_H_
+#ifndef _PASSENGER_IOTOOLS_MESSAGE_IO_H_
+#define _PASSENGER_IOTOOLS_MESSAGE_IO_H_
 
 /**
  * This file contains functions for reading and writing structured messages over
@@ -90,10 +90,10 @@
 
 #include <StaticString.h>
 #include <Exceptions.h>
-#include <Utils/MemZeroGuard.h>
+#include <SecurityKit/MemZeroGuard.h>
 #include <Utils/ScopeGuard.h>
-#include <Utils/IOUtils.h>
-#include <Utils/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 
 namespace Passenger {
@@ -664,4 +664,4 @@ writeFileDescriptorWithNegotiation(int fd, int fdToPass, unsigned long long *tim
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_MESSAGE_IO_H_ */
+#endif /* _PASSENGER_IOTOOLS_MESSAGE_IO_H_ */

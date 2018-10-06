@@ -37,7 +37,7 @@
 #include <ServerKit/Hooks.h>
 #include <MemoryKit/mbuf.h>
 #include <LoggingKit/LoggingKit.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 namespace ServerKit {

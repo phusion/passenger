@@ -3,7 +3,7 @@
 #include <ServerKit/Channel.h>
 #include <Constants.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 using namespace Passenger;
 using namespace Passenger::ServerKit;

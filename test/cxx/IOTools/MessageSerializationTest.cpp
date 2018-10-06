@@ -1,15 +1,15 @@
 #include <TestSupport.h>
-#include <MessageReadersWriters.h>
 #include <cstdlib>
+#include <IOTools/MessageSerialization.h>
 
 using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct MessageReadersWritersTest: public TestBase {
+	struct IOTools_MessageSerializationTest: public TestBase {
 	};
 
-	DEFINE_TEST_GROUP(MessageReadersWritersTest);
+	DEFINE_TEST_GROUP(IOTools_MessageSerializationTest);
 
 	/****** Test Uint16Message ******/
 

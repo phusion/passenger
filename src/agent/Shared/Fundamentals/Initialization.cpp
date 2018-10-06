@@ -50,8 +50,8 @@
 #include <ResourceLocator.h>
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
-#include <Utils/StrIntUtils.h>
-#include <Utils/MessageIO.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <IOTools/MessageIO.h>
 #include <SystemTools/SystemTime.h>
 
 

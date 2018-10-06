@@ -57,8 +57,8 @@
 #include <ProcessManagement/Spawn.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
-#include <Utils/IOUtils.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
 
 #ifndef HOST_NAME_MAX
 	#if defined(_POSIX_HOST_NAME_MAX)

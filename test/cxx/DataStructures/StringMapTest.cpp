@@ -1,5 +1,5 @@
 #include <TestSupport.h>
-#include <Utils/StringMap.h>
+#include <DataStructures/StringMap.h>
 #include <string>
 #include <map>
 
@@ -7,10 +7,10 @@ using namespace Passenger;
 using namespace std;
 
 namespace tut {
-	struct StringMapTest: public TestBase {
+	struct DataStructures_StringMapTest: public TestBase {
 	};
 
-	DEFINE_TEST_GROUP(StringMapTest);
+	DEFINE_TEST_GROUP(DataStructures_StringMapTest);
 
 	TEST_METHOD(1) {
 		// get()ing a nonexistant key returns the default value.

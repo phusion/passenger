@@ -34,7 +34,7 @@
 #include <algorithm>
 #include <Exceptions.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 

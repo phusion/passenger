@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -27,7 +27,7 @@
 #define _PASSENGER_SERVER_KIT_HTTP_HEADER_PARSER_STATE_H_
 
 #include <DataStructures/LString.h>
-#include <Utils/Hasher.h>
+#include <Algorithms/Hasher.h>
 
 namespace Passenger {
 namespace ServerKit {

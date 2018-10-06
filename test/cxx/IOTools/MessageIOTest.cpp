@@ -1,6 +1,6 @@
 #include <TestSupport.h>
-#include <Utils/IOUtils.h>
-#include <Utils/MessageIO.h>
+#include <IOTools/IOUtils.h>
+#include <IOTools/MessageIO.h>
 #include <SystemTools/SystemTime.h>
 
 using namespace Passenger;
@@ -8,15 +8,15 @@ using namespace std;
 using namespace boost;
 
 namespace tut {
-	struct MessageIOTest: public TestBase {
+	struct IOTools_MessageIOTest: public TestBase {
 		Pipe pipes;
 
-		MessageIOTest() {
+		IOTools_MessageIOTest() {
 			pipes = createPipe(__FILE__, __LINE__);
 		}
 	};
 
-	DEFINE_TEST_GROUP(MessageIOTest);
+	DEFINE_TEST_GROUP(IOTools_MessageIOTest);
 
 	/***** Test readUint16() and writeUint16() *****/
 

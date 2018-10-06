@@ -62,7 +62,7 @@
 #include <cctype>
 
 #include <LoggingKit/LoggingKit.h>
-#include <MessageReadersWriters.h>
+#include <IOTools/MessageSerialization.h>
 #include <Constants.h>
 #include <ConfigKit/ConfigKit.h>
 #include <ServerKit/Errors.h>
@@ -74,9 +74,9 @@
 #include <WrapperRegistry/Registry.h>
 #include <StaticString.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
-#include <Utils/IOUtils.h>
-#include <Utils/JsonUtils.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
+#include <JsonTools/JsonUtils.h>
 #include <Utils/HttpConstants.h>
 #include <Utils/Timer.h>
 #include <Core/Controller/Config.h>

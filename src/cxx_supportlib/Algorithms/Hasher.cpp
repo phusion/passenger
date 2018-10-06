@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,37 +23,31 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_HASHER_H_
-#define _PASSENGER_HASHER_H_
 
-#include <boost/cstdint.hpp>
+// Implementation is in its own file so that we can enable compiler optimizations for these functions only.
+
+#include <Algorithms/Hasher.h>
 
 namespace Passenger {
 
+void
+JenkinsHash::update(const char *data, unsigned int size) {
+	const char *end = data + size;
 
-// TODO: use SpookyHash on x86_64
-// TODO: use streaming murmurhash implementation: https://github.com/c9/murmur3
-
-struct JenkinsHash {
-	static const boost::uint32_t EMPTY_STRING_HASH = 0;
-
-	boost::uint32_t hash;
-
-	JenkinsHash()
-		: hash(0)
-		{ }
-
-	void update(const char *data, unsigned int size);
-	boost::uint32_t finalize();
-
-	void reset() {
-		hash = 0;
+	while (data < end) {
+		hash += *data;
+		hash += (hash << 10);
+		hash ^= (hash >> 6);
+		data++;
 	}
-};
+}
 
-typedef JenkinsHash Hasher;
-
+boost::uint32_t
+JenkinsHash::finalize() {
+	hash += (hash << 3);
+	hash ^= (hash >> 11);
+	hash += (hash << 15);
+	return hash;
+}
 
 } // namespace Passenger
-
-#endif /* _PASSENGER_HASHER_H_ */

@@ -11,8 +11,8 @@
 #include <LoggingKit/LoggingKit.h>
 #include <FileDescriptor.h>
 #include <Utils.h>
-#include <Utils/IOUtils.h>
-#include <Utils/BufferedIO.h>
+#include <IOTools/IOUtils.h>
+#include <IOTools/BufferedIO.h>
 
 using namespace Passenger;
 using namespace Passenger::ServerKit;

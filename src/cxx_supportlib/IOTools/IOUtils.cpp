@@ -68,8 +68,8 @@
 #include <Exceptions.h>
 #include <Constants.h>
 #include <Utils/Timer.h>
-#include <Utils/IOUtils.h>
-#include <Utils/StrIntUtils.h>
+#include <IOTools/IOUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Utils/ScopeGuard.h>
 
 namespace Passenger {

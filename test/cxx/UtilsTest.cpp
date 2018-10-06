@@ -1,7 +1,7 @@
 #include <TestSupport.h>
 #include <Utils.h>
-#include <Utils/StrIntUtils.h>
-#include <Utils/MemZeroGuard.h>
+#include <StrIntTools/StrIntUtils.h>
+#include <SecurityKit/MemZeroGuard.h>
 #include <FileTools/PathManip.h>
 #include <FileTools/FileManip.h>
 #include <ProcessManagement/Spawn.h>

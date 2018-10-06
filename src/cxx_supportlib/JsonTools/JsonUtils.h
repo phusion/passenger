@@ -23,8 +23,8 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_UTILS_JSON_UTILS_H_
-#define _PASSENGER_UTILS_JSON_UTILS_H_
+#ifndef _PASSENGER_JSON_TOOLS_JSON_UTILS_H_
+#define _PASSENGER_JSON_TOOLS_JSON_UTILS_H_
 
 #include <string>
 #include <cstdio>
@@ -34,7 +34,7 @@
 #include <boost/cstdint.hpp>
 #include <StaticString.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Utils/VariantMap.h>
 
 namespace Passenger {
@@ -467,4 +467,4 @@ byteSizeAndCountToJson(size_t size, unsigned int count) {
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_UTILS_JSON_UTILS_H_ */
+#endif /* _PASSENGER_JSON_TOOLS_JSON_UTILS_H_ */

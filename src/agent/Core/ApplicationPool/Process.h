@@ -45,7 +45,7 @@
 #include <LoggingKit/LoggingKit.h>
 #include <SystemTools/ProcessMetricsCollector.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 #include <Utils/Lock.h>
 #include <Core/ApplicationPool/Common.h>
 #include <Core/ApplicationPool/Socket.h>

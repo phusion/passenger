@@ -40,7 +40,7 @@
 
 #include <StaticString.h>
 #include <SystemTools/SystemTime.h>
-#include <Utils/StringMap.h>
+#include <DataStructures/StringMap.h>
 
 namespace Passenger {
 

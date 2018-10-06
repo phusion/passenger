@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2014-2017 Phusion Holding B.V.
+ *  Copyright (c) 2014-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -23,15 +23,15 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-#ifndef _PASSENGER_UTILS_DATE_PARSING_H_
-#define _PASSENGER_UTILS_DATE_PARSING_H_
+#ifndef _PASSENGER_STRINTTOOLS_DATE_PARSING_H_
+#define _PASSENGER_STRINTTOOLS_DATE_PARSING_H_
 
 #include <algorithm>
 #include <time.h>
 #include <cassert>
 #include <cstring>
 #include <StaticString.h>
-#include <Utils/StrIntUtils.h>
+#include <StrIntTools/StrIntUtils.h>
 
 namespace Passenger {
 
@@ -404,4 +404,4 @@ parseImfFixdate_zone(const char **pos, const char *end, int &zone) {
 
 } // namespace Passenger
 
-#endif /* _PASSENGER_UTILS_DATE_PARSING_H_ */
+#endif /* _PASSENGER_STRINTTOOLS_DATE_PARSING_H_ */

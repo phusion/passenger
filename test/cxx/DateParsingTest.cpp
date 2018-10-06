@@ -1,6 +1,6 @@
 #include <TestSupport.h>
 #include <cstring>
-#include <Utils/DateParsing.h>
+#include <StrIntTools/DateParsing.h>
 
 using namespace Passenger;
 using namespace std;
