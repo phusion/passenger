@@ -16,7 +16,6 @@ autom4te.cache
 *.mode1v3
 *.mode2v3
 /Passenger.sublime-workspace
-xcuserdata
 /config.rb
 /buildout
 build/cache
