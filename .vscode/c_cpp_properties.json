@@ -11,7 +11,20 @@
                 "${workspaceFolder}/src/cxx_supportlib/vendor-copy/libuv/include",
                 "${workspaceFolder}/src/cxx_supportlib/vendor-modified",
                 "${workspaceFolder}/src/cxx_supportlib/vendor-modified/libev",
-                "${workspaceFolder}/test/cxx"
+                "${workspaceFolder}/test/cxx",
+
+                "${workspaceFolder}/external/nginx/objs",
+                "${workspaceFolder}/external/nginx/src/core",
+                "${workspaceFolder}/external/nginx/src/os/unix",
+                "${workspaceFolder}/external/nginx/src/event",
+                "${workspaceFolder}/external/nginx/src/http",
+                "${workspaceFolder}/external/nginx/src/http/v2",
+                "${workspaceFolder}/external/nginx/src/http/modules",
+                "${workspaceFolder}/external/apache2/include",
+                "${workspaceFolder}/external/apache2/os/unix",
+                "${workspaceFolder}/external/apache2/srclib/apr/include",
+                "${workspaceFolder}/external/apache2/srclib/apr-util/include",
+                "${workspaceFolder}/external/openssl/include"
             ],
             "defines": [],
             "macFrameworkPath": [

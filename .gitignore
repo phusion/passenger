@@ -35,4 +35,5 @@ autom4te.cache
 /test/stub/zsfa/foo
 /pkg
 /node_modules
+/external
 /play

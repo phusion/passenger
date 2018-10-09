@@ -55,13 +55,14 @@
                 "name": "(lldb) Launch Nginx",
                 "type": "cppdbg",
                 "request": "launch",
-                // This debugging target requires that you symlink your actual Nginx binary
-                // to PASSENGER_ROOT/buildout/nginx.
-                "program": "${workspaceFolder}/buildout/nginx",
+                "program": "${workspaceFolder}/external/nginx/objs/nginx",
                 "args": ["-g", "master off; daemon off;"],
                 "stopAtEntry": true,
                 "cwd": "${workspaceFolder}/buildout",
                 "environment": [],
+                "logging": {
+                    "moduleLoad": false
+                },
                 "MIMode": "lldb",
                 "osx": {
                     "MIMode": "lldb",
@@ -77,6 +78,9 @@
                 "request": "attach",
                 "program": "${workspaceRoot}/buildout/support-binaries/PassengerAgent",
                 "processId": "${command:pickProcess}",
+                "logging": {
+                    "moduleLoad": false
+                },
                 "osx": {
                     "MIMode": "lldb",
                     "setupCommands": [
