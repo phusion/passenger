@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -29,6 +29,16 @@ require 'phusion_passenger/apache2/config_options'
 
 def main
   comment copyright_header_for(__FILE__), 1
+
+  separator
+
+  add_code %Q{
+    #ifdef INTELLISENSE
+      // These includes do nothing, but keep IntelliSense happy.
+      #include <ap_config.h>
+      #include "../Config.h"
+    #endif
+  }
 
   separator
 

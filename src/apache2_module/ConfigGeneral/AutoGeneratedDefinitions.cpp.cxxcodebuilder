@@ -1,5 +1,5 @@
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -48,23 +48,45 @@ def main
 
   separator
 
-  APACHE2_CONFIGURATION_OPTIONS.each do |option|
-    option = resolve_possible_alias(option)
-    format =
-      "%s(%s,\n" \
-      "\t(%s) %s,\n" \
-      "\tNULL,\n" \
-      "\t%s,\n" \
-      "\t%s),\n"
-    code = sprintf(format,
-      macro_for(option),
-      name_for(option),
-      function_type_for(option),
-      function_for(option),
-      definition_context_for(option),
-      description_for(option))
-    add_code(code)
+  add_code %Q[
+    #ifdef INTELLISENSE
+      // This include does nothing, but keeps IntelliSense happy.
+      #include <http_config.h>
+    #endif
+
+    namespace Passenger {
+    namespace Apache2Module {
+
+    extern "C" const command_rec passenger_commands[] = {
+  ]
+
+  indent do
+    APACHE2_CONFIGURATION_OPTIONS.each do |option|
+      option = resolve_possible_alias(option)
+      format =
+        "%s(%s,\n" \
+        "\t(%s) %s,\n" \
+        "\tNULL,\n" \
+        "\t%s,\n" \
+        "\t%s),\n"
+      code = sprintf(format,
+        macro_for(option),
+        name_for(option),
+        function_type_for(option),
+        function_for(option),
+        definition_context_for(option),
+        description_for(option))
+      add_code(code)
+    end
   end
+
+  add_code %Q[
+      { NULL }
+    };
+
+    } // namespace Apache2Module
+    } // namespace Passenger
+  ]
 end
 
 def resolve_possible_alias(option)
