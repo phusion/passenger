@@ -50,9 +50,10 @@
 #include <apr_strings.h>
 // In Apache < 2.4, this macro was necessary for core_dir_config and other structs
 #define CORE_PRIVATE
-#include <http_core.h>
+#include <httpd.h>
 #include <http_config.h>
 #include <http_log.h>
+#include <http_core.h>
 
 #include "Config.h"
 #include "ConfigGeneral/SetterFuncs.h"
