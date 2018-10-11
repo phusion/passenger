@@ -164,7 +164,7 @@ private:
 			dup2(stdinCopy, 0);
 			dup2(stdoutAndErrCopy, 1);
 			dup2(stdoutAndErrCopy, 2);
-			closeAllFileDescriptors(2, true);
+			closeAllFileDescriptors(2);
 
 			execlp(agentFilename.c_str(),
 				agentFilename.c_str(),

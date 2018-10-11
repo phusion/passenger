@@ -69,14 +69,14 @@ runCommand(const char **command, SubprocessInfo &info, bool wait, bool killSubpr
 	int e, waitStatus;
 	pid_t waitRet;
 
-	info.pid = asyncFork();
+	info.pid = syscalls::fork();
 	if (info.pid == 0) {
 		resetSignalHandlersAndMask();
 		disableMallocDebugging();
 		if (afterFork) {
 			afterFork();
 		}
-		closeAllFileDescriptors(2, true);
+		closeAllFileDescriptors(2);
 		execvp(command[0], (char * const *) command);
 		if (onExecFail) {
 			onExecFail(command, errno);
@@ -121,7 +121,7 @@ runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 
 	p = createPipe(__FILE__, __LINE__);
 
-	info.pid = asyncFork();
+	info.pid = syscalls::fork();
 	if (info.pid == 0) {
 		dup2(p[1], 1);
 		close(p[0]);
@@ -131,7 +131,7 @@ runCommandAndCaptureOutput(const char **command, SubprocessInfo &info,
 		if (afterFork) {
 			afterFork();
 		}
-		closeAllFileDescriptors(2, true);
+		closeAllFileDescriptors(2);
 		execvp(command[0], (char * const *) command);
 		if (onExecFail) {
 			onExecFail(command, errno);

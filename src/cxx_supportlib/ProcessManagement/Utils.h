@@ -58,6 +58,16 @@ using namespace std;
  * to grab a lock which was already locked. This means that on macOS
  * we pretty much can never use regular fork() at all in a multithreaded
  * environment.
+ *
+ * As of 2018 May 16 with macOS 10.13 High Sierra, it was confirmed that the
+ * use of asyncFork() can lead to the following messages to be printed
+ * if the child process allocates memory:
+ *
+ *   malloc: *** mach_vm_map(size=1048576) failed (error code=268435459)
+ *   malloc: *** error: can't allocate region securely
+ *   malloc: *** set a breakpoint in malloc_error_break to debug
+ *
+ * See https://github.com/phusion/passenger/issues/1193#issuecomment-389503928
  */
 pid_t asyncFork();
 

@@ -370,7 +370,7 @@ public:
 				afterFork();
 			}
 
-			closeAllFileDescriptors(FEEDBACK_FD, true);
+			closeAllFileDescriptors(FEEDBACK_FD);
 
 			execl(agentFilename.c_str(), AGENT_EXE, "watchdog",
 				// Some extra space to allow the child process to change its process title.
