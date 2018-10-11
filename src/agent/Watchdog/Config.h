@@ -296,6 +296,7 @@ public:
 		core.translator.finalize();
 		addSubSchema(core.schema, core.translator);
 		erase("instance_dir");
+		erase("oom_score");
 		erase("watchdog_fd_passing_password");
 		/***********/
 		/***********/

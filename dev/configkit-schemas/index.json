@@ -743,6 +743,10 @@
          "read_only" : true,
          "type" : "boolean"
       },
+      "oom_score" : {
+         "read_only" : true,
+         "type" : "string"
+      },
       "passenger_root" : {
          "read_only" : true,
          "required" : true,

@@ -145,6 +145,7 @@ using namespace std;
  *   max_instances_per_app                                           unsigned integer   -          read_only
  *   max_pool_size                                                   unsigned integer   -          default(6)
  *   multi_app                                                       boolean            -          default(false),read_only
+ *   oom_score                                                       string             -          read_only
  *   passenger_root                                                  string             required   read_only
  *   pid_file                                                        string             -          read_only
  *   pool_idle_time                                                  unsigned integer   -          default(300)
@@ -470,6 +471,7 @@ public:
 		add("config_manifest", OBJECT_TYPE, OPTIONAL | READ_ONLY);
 		add("pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
 		add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);
+		add("oom_score", STRING_TYPE, OPTIONAL | READ_ONLY);
 		addWithDynamicDefault("controller_threads", UINT_TYPE, OPTIONAL | READ_ONLY, getDefaultThreads);
 		add("max_pool_size", UINT_TYPE, OPTIONAL, DEFAULT_MAX_POOL_SIZE);
 		add("pool_idle_time", UINT_TYPE, OPTIONAL, Json::UInt(DEFAULT_POOL_IDLE_TIME));

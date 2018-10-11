@@ -2,6 +2,7 @@ Release 5.3.6 (Not yet released)
 -------------
 
  * Fixes smart spawning. A regression in 5.3.5 (due to a refactoring) made it so that Passenger only used the direct spawning method. This issue was mostly noticeable in the form of increased process spawning times between 5.3.4 and 5.3.5.
+ * Fixes Passenger Core and application processes staying on the Watchdog's OOM score (unkillable). Closes GH-2105.
 
 
 Release 5.3.5
