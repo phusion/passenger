@@ -73,6 +73,7 @@
 #include <FileDescriptor.h>
 #include <FileTools/PathSecurityCheck.h>
 #include <SystemTools/UserDatabase.h>
+#include <SystemTools/ContainerHelpers.h>
 #include <RandomGenerator.h>
 #include <BackgroundEventLoop.h>
 #include <LoggingKit/LoggingKit.h>
@@ -181,7 +182,7 @@ static void cleanup(const WorkingObjectsPtr &wo);
 
 #if !BOOST_OS_MACOS
 static FILE *
-openOomAdjFileGetType(const char *mode, OomFileType &type) {
+openOomAdjFileGetType(const char *mode, OomFileType &type, string &path) {
 	FILE *f = fopen("/proc/self/oom_score_adj", mode);
 	if (f == NULL) {
 		f = fopen("/proc/self/oom_adj", mode);
@@ -189,21 +190,13 @@ openOomAdjFileGetType(const char *mode, OomFileType &type) {
 			return NULL;
 		} else {
 			type = OOM_ADJ;
+			path = "/proc/self/oom_adj";
 			return f;
 		}
 	} else {
 		type = OOM_SCORE_ADJ;
+		path = "/proc/self/oom_score_adj";
 		return f;
-	}
-}
-
-static FILE *
-openOomAdjFileForcedType(const char *mode, OomFileType &type) {
-	if (type == OOM_SCORE_ADJ) {
-		return fopen("/proc/self/oom_score_adj", mode);
-	} else {
-		assert(type == OOM_ADJ);
-		return fopen("/proc/self/oom_adj", mode);
 	}
 }
 
@@ -214,10 +207,16 @@ static string
 setOomScoreNeverKill() {
 	string oldScore;
 	FILE *f;
+	string path;
 	OomFileType type;
+	int e;
 
-	f = openOomAdjFileGetType("r", type);
+	f = openOomAdjFileGetType("r", type, path);
 	if (f == NULL) {
+		e = errno;
+		P_ERROR("Error adjusting Watchdog's OOM score: error opening both"
+			" /proc/self/oom_score_adj and /proc/self/oom_adj for reading: " <<
+			strerror(e) << " (errno=" << e << ")");
 		return "";
 	}
 	// mark if this is a legacy score so we won't try to write it as OOM_SCORE_ADJ
@@ -231,6 +230,7 @@ setOomScoreNeverKill() {
 		if (bytesRead == 0 && feof(f)) {
 			break;
 		} else if (bytesRead == 0 && ferror(f)) {
+			P_ERROR("Error adjusting Watchdog's OOM score: error reading " << path);
 			fclose(f);
 			return "";
 		} else {
@@ -239,8 +239,11 @@ setOomScoreNeverKill() {
 	}
 	fclose(f);
 
-	f = openOomAdjFileForcedType("w", type);
+	f = fopen(path.c_str(), "w");
 	if (f == NULL) {
+		P_ERROR("Error adjusting Watchdog's OOM score: error opening "
+			<< path << " for writing: " << strerror(e) << " (errno="
+			<< e << ")");
 		return "";
 	}
 	if (type == OOM_SCORE_ADJ) {
@@ -249,7 +252,24 @@ setOomScoreNeverKill() {
 		assert(type == OOM_ADJ);
 		fprintf(f, "-17\n");
 	}
-	fclose(f);
+
+	e = fflush(f);
+	if (e != 0) {
+		e = errno;
+		if (autoDetectInContainer()) {
+			P_ERROR("Running in container, so couldn't adjust Watchdog's"
+				" OOM score through " << path);
+		} else {
+			P_ERROR("Error adjusting Watchdog's OOM score: error writing to "
+				<< path << ": " << strerror(e) << " (errno=" << e << ")");
+		}
+	}
+	e = fclose(f);
+	if (e == EOF) {
+		e = errno;
+		P_ERROR("Error adjusting Watchdog's OOM score: error closing "
+			<< path << ": " << strerror(e) << " (errno=" << e << ")");
+	}
 
 	return oldScore;
 }
