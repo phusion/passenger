@@ -37,8 +37,14 @@ def main
     #ifdef INTELLISENSE
       // These includes do nothing, but keep IntelliSense happy.
       #include <ap_config.h>
+      #include <http_config.h>
       #include <http_log.h>
       #include "../Config.h"
+
+      #ifdef APLOG_USE_MODULE
+        extern "C" module AP_MODULE_DECLARE_DATA passenger_module;
+        APLOG_USE_MODULE(passenger);
+      #endif
     #endif
 
     namespace Passenger {
