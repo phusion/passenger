@@ -83,6 +83,7 @@ module PhusionPassenger
     # Files that should be excluded from the gem or tarball. Overrides GLOB.
     EXCLUDE_GLOB = [
       '**/.DS_Store',
+      '**/*.gch',
       '.gitignore',
       '.gitattributes',
       '.gitmodules',
