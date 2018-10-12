@@ -246,6 +246,7 @@ setOomScoreNeverKill() {
 
 	f = fopen(path.c_str(), "w");
 	if (f == NULL) {
+		e = errno;
 		P_ERROR("Error adjusting Watchdog's OOM score: error opening "
 			<< path << " for writing: " << strerror(e) << " (errno="
 			<< e << ")");
