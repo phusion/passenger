@@ -227,7 +227,7 @@ setOomScoreNeverKill() {
 
 	if (geteuid() != 0) {
 		WatchdogOomAdjustResult::Message msg;
-		msg.level = LoggingKit::ERROR;
+		msg.level = LoggingKit::DEBUG;
 		msg.text = "Not adjusting Watchdog's OOM score because not running with root privileges";
 		result.messages.push_back(msg);
 		return result;
