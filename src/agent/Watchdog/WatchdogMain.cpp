@@ -181,6 +181,20 @@ static void cleanup(const WorkingObjectsPtr &wo);
 /***** Functions *****/
 
 #if !BOOST_OS_MACOS
+
+struct WatchdogOomAdjustResult {
+	struct Message {
+		LoggingKit::Level level;
+		string text;
+	};
+
+	string oldScore;
+	// LoggingKit has not been initialized yet when setOomScoreNeverKill()
+	// is called, so we store the messages here and print them after
+	// LoggingKit initialization.
+	vector<Message> messages;
+};
+
 static FILE *
 openOomAdjFileGetType(const char *mode, OomFileType &type, string &path) {
 	FILE *f = fopen("/proc/self/oom_score_adj", mode);
@@ -203,17 +217,20 @@ openOomAdjFileGetType(const char *mode, OomFileType &type, string &path) {
 /**
  * Set the current process's OOM score to "never kill".
  */
-static string
+static WatchdogOomAdjustResult
 setOomScoreNeverKill() {
-	string oldScore;
+	WatchdogOomAdjustResult result;
 	FILE *f;
 	string path;
 	OomFileType type;
 	int e;
 
 	if (geteuid() != 0) {
-		P_DEBUG("Not adjusting Watchdog's OOM score because not running with root privileges");
-		return "";
+		WatchdogOomAdjustResult::Message msg;
+		msg.level = LoggingKit::ERROR;
+		msg.text = "Not adjusting Watchdog's OOM score because not running with root privileges";
+		result.messages.push_back(msg);
+		return result;
 	}
 
 	f = openOomAdjFileGetType("r", type, path);
@@ -222,11 +239,11 @@ setOomScoreNeverKill() {
 		P_ERROR("Error adjusting Watchdog's OOM score: error opening both"
 			" /proc/self/oom_score_adj and /proc/self/oom_adj for reading: " <<
 			strerror(e) << " (errno=" << e << ")");
-		return "";
+		return result;
 	}
 	// mark if this is a legacy score so we won't try to write it as OOM_SCORE_ADJ
 	if (type == OOM_ADJ) {
-		oldScore.append("l");
+		result.oldScore.append("l");
 	}
 	char buf[1024];
 	size_t bytesRead;
@@ -237,9 +254,10 @@ setOomScoreNeverKill() {
 		} else if (bytesRead == 0 && ferror(f)) {
 			P_ERROR("Error adjusting Watchdog's OOM score: error reading " << path);
 			fclose(f);
-			return "";
+			result.oldScore.clear();
+			return result;
 		} else {
-			oldScore.append(buf, bytesRead);
+			result.oldScore.append(buf, bytesRead);
 		}
 	}
 	fclose(f);
@@ -247,10 +265,14 @@ setOomScoreNeverKill() {
 	f = fopen(path.c_str(), "w");
 	if (f == NULL) {
 		e = errno;
-		P_ERROR("Error adjusting Watchdog's OOM score: error opening "
-			<< path << " for writing: " << strerror(e) << " (errno="
-			<< e << ")");
-		return "";
+		WatchdogOomAdjustResult::Message msg;
+		msg.level = LoggingKit::ERROR;
+		msg.text = "Error adjusting Watchdog's OOM score: error opening "
+			+ path + " for writing: " + strerror(e) + " (errno="
+			+ toString(e) + ")";
+		result.messages.push_back(msg);
+		result.oldScore.clear();
+		return result;
 	}
 	if (type == OOM_SCORE_ADJ) {
 		fprintf(f, "-1000\n");
@@ -262,23 +284,40 @@ setOomScoreNeverKill() {
 	e = fflush(f);
 	if (e != 0) {
 		e = errno;
+		WatchdogOomAdjustResult::Message msg;
 		if (autoDetectInContainer()) {
-			P_ERROR("Running in container, so couldn't adjust Watchdog's"
-				" OOM score through " << path);
+			msg.level = LoggingKit::INFO;
+			msg.text = "Running in container, so couldn't adjust Watchdog's"
+				" OOM score through " + path;
 		} else {
-			P_ERROR("Error adjusting Watchdog's OOM score: error writing to "
-				<< path << ": " << strerror(e) << " (errno=" << e << ")");
+			msg.level = LoggingKit::ERROR;
+			msg.text = "Error adjusting Watchdog's OOM score: error writing to "
+				+ path + ": " + strerror(e) + " (errno=" + toString(e) + ")";
 		}
+		result.messages.push_back(msg);
 	}
 	e = fclose(f);
 	if (e == EOF) {
 		e = errno;
-		P_ERROR("Error adjusting Watchdog's OOM score: error closing "
-			<< path << ": " << strerror(e) << " (errno=" << e << ")");
+		WatchdogOomAdjustResult::Message msg;
+		msg.level = LoggingKit::ERROR;
+		msg.text = "Error adjusting Watchdog's OOM score: error closing "
+			+ path + ": " + strerror(e) + " (errno=" + toString(e) + ")";
+		result.messages.push_back(msg);
 	}
 
-	return oldScore;
+	return result;
 }
+
+static void
+printOomAdjustResultMessages(const WatchdogOomAdjustResult &result) {
+	vector<WatchdogOomAdjustResult::Message>::const_iterator it;
+
+	for (it = result.messages.begin(); it != result.messages.end(); it++) {
+		P_LOG(LoggingKit::context, it->level, it->text);
+	}
+}
+
 #endif
 
 static void
@@ -824,7 +863,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	 * so we need to restore it after each fork().
 	 */
 #if !BOOST_OS_MACOS
-	string oldOomScore = setOomScoreNeverKill();
+	WatchdogOomAdjustResult oomAdjustResult = setOomScoreNeverKill();
 #endif
 
 	watchdogWrapperRegistry = new WrapperRegistry::Registry();
@@ -841,7 +880,8 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	wo = boost::make_shared<WorkingObjects>();
 	workingObjects = wo.get();
 #if !BOOST_OS_MACOS
-	wo->extraConfigToPassToSubAgents["oom_score"] = oldOomScore;
+	printOomAdjustResultMessages(oomAdjustResult);
+	wo->extraConfigToPassToSubAgents["oom_score"] = oomAdjustResult.oldOomScore;
 #endif
 }
 
