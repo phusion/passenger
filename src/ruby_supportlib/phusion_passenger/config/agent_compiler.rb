@@ -1,7 +1,7 @@
 #  encoding: utf-8
 #
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -133,9 +133,9 @@ module PhusionPassenger
         puts "<banner>Compiling #{PROGRAM_NAME} agent...</banner>"
         progress_bar = ProgressBar.new
         e_working_dir = Shellwords.escape(@working_dir)
-        args = "#{e_working_dir}/support-binaries/#{AGENT_EXE}" +
-          " CACHING=false" +
-          " OUTPUT_DIR=#{e_working_dir} "
+        args = "#{e_working_dir}/support-binaries/#{AGENT_EXE}" \
+          " CACHING=false" \
+          " OUTPUT_DIR=#{e_working_dir} " \
           " OPTIMIZE=#{!!@optimize}"
         begin
           progress_bar.set(0)
