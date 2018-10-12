@@ -211,6 +211,11 @@ setOomScoreNeverKill() {
 	OomFileType type;
 	int e;
 
+	if (geteuid() != 0) {
+		P_DEBUG("Not adjusting Watchdog's OOM score because not running with root privileges");
+		return "";
+	}
+
 	f = openOomAdjFileGetType("r", type, path);
 	if (f == NULL) {
 		e = errno;
