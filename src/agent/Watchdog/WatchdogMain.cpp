@@ -314,7 +314,7 @@ printOomAdjustResultMessages(const WatchdogOomAdjustResult &result) {
 	vector<WatchdogOomAdjustResult::Message>::const_iterator it;
 
 	for (it = result.messages.begin(); it != result.messages.end(); it++) {
-		P_LOG(LoggingKit::context, it->level, it->text);
+		P_LOG(LoggingKit::context, it->level, __FILE__, __LINE__, it->text);
 	}
 }
 
@@ -881,7 +881,7 @@ initializeBareEssentials(int argc, char *argv[], WorkingObjectsPtr &wo) {
 	workingObjects = wo.get();
 #if !BOOST_OS_MACOS
 	printOomAdjustResultMessages(oomAdjustResult);
-	wo->extraConfigToPassToSubAgents["oom_score"] = oomAdjustResult.oldOomScore;
+	wo->extraConfigToPassToSubAgents["oom_score"] = oomAdjustResult.oldScore;
 #endif
 }
 
