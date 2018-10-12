@@ -75,6 +75,7 @@ let(:agent_ldflags) do
   if PlatformInfo.os_name_simple == 'macosx'
     # Enable dead symbol elimination on OS X.
     result << '-Wl,-dead_strip'
+
     if PlatformInfo.os_version >= '10.13'
       result << PlatformInfo.openssl_extra_ldflags
       result << '-lcrypto'

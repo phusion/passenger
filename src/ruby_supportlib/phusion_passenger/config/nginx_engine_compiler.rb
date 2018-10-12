@@ -251,7 +251,7 @@ module PhusionPassenger
           if @nginx_tarball
             new_screen
             puts "You specified --nginx-tarball, but the file could not be extracted. " +
-              "Please check the path and format (tar.gz), and ensure Passenger can write to " + 
+              "Please check the path and format (tar.gz), and ensure Passenger can write to " +
               PlatformInfo.tmpexedir + "."
             puts
           else
