@@ -1,5 +1,12 @@
 {
+    "files.exclude": {
+        ".externalToolBuilders": true,
+        ".settings": true,
+        ".cproject": true,
+        ".project": true
+    },
     "search.exclude": {
+        "buildout": true,
         "play": true,
         "node_modules": true
     },
