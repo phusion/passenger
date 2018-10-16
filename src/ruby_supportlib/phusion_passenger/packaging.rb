@@ -80,16 +80,39 @@ module PhusionPassenger
     ]
 
     # Files that should be excluded from the gem or tarball. Overrides GLOB.
+    #
+    # This is not merely an exclusion list on top of GLOB! All files that you
+    # do not want to include in the package must be explicitly specified here!
+    # Otherwise source_packaging_test.rb will complain.
     EXCLUDE_GLOB = [
       '**/.DS_Store',
       '**/*.gch',
       '**/.editorconfig',
+      '.externalToolBuilders/**/*',
+      '.github/**/*',
+      '.settings/**/*',
+      '.vscode/**/*',
+      '.cproject',
+      '.gitattributes',
+      '.gitignore',
+      '.gitmodules',
+      '.project',
+      'CODE_OF_CONDUCT.md',
+      'Gemfile',
+      'Gemfile.lock',
+      'Jenkinsfile',
+      'Passenger.sublime-project',
+      'Vagrantfile',
+      'yarn.lock',
       'build/support/vendor/*/.*',
       'build/support/vendor/*/spec/**/*',
+      'dev/*/**/*',
+      'packaging/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/.*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/hacking/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/spec/**/*',
-      'src/cxx_supportlib/vendor-copy/*/.*'
+      'src/cxx_supportlib/vendor-copy/*/.*',
+      'test/**/*'
     ]
 
     def self.files

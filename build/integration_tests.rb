@@ -136,5 +136,9 @@ end
 
 desc "Run source packaging tests"
 task 'test:source_packaging' do
-  sh 'bundle exec rspec -f s -c test/integration_tests/source_packaging_test.rb'
+  command = 'bundle exec rspec -f s -c test/integration_tests/source_packaging_test.rb'
+  if grep = string_option('E')
+    command << " -e #{shesc grep}"
+  end
+  sh(command)
 end
