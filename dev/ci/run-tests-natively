@@ -17,7 +17,11 @@ if [[ "$OS" != macos ]]; then
 	exit 1
 fi
 
-security unlock-keychain -p `cat ~/.password` ~/Library/Keychains/login.keychain
+if [[ -e ~/.password ]]; then
+	# If possible, unlock the keychain in order to prevent password prompts.
+	echo "+ Unlocking keychain"
+	run security unlock-keychain -p "$(cat ~/.password)" ~/Library/Keychains/login.keychain
+fi
 
 export CI_COMMAND="./dev/ci/run-tests-natively $*"
 exec "$PASSENGER_ROOT/dev/ci/scripts/debug-console-wrapper.sh" \
