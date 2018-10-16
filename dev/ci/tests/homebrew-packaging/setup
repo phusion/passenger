@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+retry_run 3 rvm-exec system rake test:install_deps DEVDEPS_DEFAULT=no BASE_DEPS=yes
+retry_run 3 rake test:install_deps BASE_DEPS=yes

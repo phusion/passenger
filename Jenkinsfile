@@ -44,6 +44,7 @@ pipeline {
     booleanParam(name: 'STANDALONE_MACOS', defaultValue: true, description: 'Passenger Standalone integration tests on macOS')
     booleanParam(name: 'RUBY_LINUX', defaultValue: true, description: 'Ruby unit tests on Linux')
     booleanParam(name: 'RUBY_MACOS', defaultValue: true, description: 'Ruby unit tests on macOS')
+    booleanParam(name: 'HOMEBREW_PACKAGING', defaultValue: true, description: 'Homebrew packaging unit tests')
     booleanParam(name: 'SOURCE_PACKAGING', defaultValue: true, description: 'Source packaging unit tests')
   }
 
@@ -229,6 +230,13 @@ pipeline {
               }
             },
 
+            'Homebrew packaging unit tests': {
+              setupTest(params.HOMEBREW_PACKAGING, 'macos', MACOS_ENV) {
+                checkout scm
+                sh './dev/ci/setup-host homebrew-packaging'
+                sh './dev/ci/run-tests-natively homebrew-packaging'
+              }
+            },
             'Source packaging unit tests': {
               setupTest(params.SOURCE_PACKAGING, 'linux', LINUX_ENV) {
                 checkout scm

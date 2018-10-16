@@ -56,11 +56,9 @@ module PhusionPassenger
     # A list of globs which match all files that should be packaged
     # in the Phusion Passenger gem or tarball.
     GLOB = [
-      '.editorconfig',
       'configure',
       'Rakefile',
       'README.md',
-      'CODE_OF_CONDUCT.md',
       'CONTRIBUTORS',
       'CONTRIBUTING.md',
       'LICENSE',
@@ -74,7 +72,8 @@ module PhusionPassenger
       'doc/**/*',
       'images/*',
       'man/*',
-      'dev/**/*',
+      # Only inlcude the top-level scripts, required by e.g. the Homebrew packaging.
+      'dev/*',
       'src/**/*',
       'resources/**/*',
       'resources/templates/error_renderer/.editorconfig'
@@ -84,34 +83,13 @@ module PhusionPassenger
     EXCLUDE_GLOB = [
       '**/.DS_Store',
       '**/*.gch',
-      '.gitignore',
-      '.gitattributes',
-      '.gitmodules',
-      '.github/*',
-      '.settings/*',
-      '.externalToolBuilders/*',
-      '.vscode/*',
-      '.cproject',
-      '.project',
-      'Gemfile',
-      'Gemfile.lock',
-      'yarn.lock',
-      'Vagrantfile',
-      'Jenkinsfile',
-      'Passenger.sublime-project',
+      '**/.editorconfig',
       'build/support/vendor/*/.*',
       'build/support/vendor/*/spec/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/.*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/hacking/**/*',
       'src/ruby_supportlib/phusion_passenger/vendor/*/spec/**/*',
-      'src/cxx_supportlib/vendor-copy/*/.*',
-      'packaging/**/*',
-      'test/**/*'
-    ]
-
-    # Files and directories that should be excluded from the Homebrew installation.
-    HOMEBREW_EXCLUDE = [
-      "package.json", "npm-shrinkwrap.json"
+      'src/cxx_supportlib/vendor-copy/*/.*'
     ]
 
     def self.files

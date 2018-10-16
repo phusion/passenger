@@ -13,3 +13,6 @@
 [submodule "build/support/vendor/cxx_hinted_parser"]
 	path = build/support/vendor/cxx_hinted_parser
 	url = https://github.com/phusion/cxx_hinted_parser.git
+[submodule "packaging/homebrew"]
+	path = packaging/homebrew
+	url = https://github.com/phusion/passenger_homebrew_automation.git

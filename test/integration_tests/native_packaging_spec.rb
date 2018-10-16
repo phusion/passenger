@@ -46,6 +46,7 @@ $LOAD_PATH.unshift("#{source_root}/src/ruby_supportlib")
 require 'phusion_passenger'
 PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'constants'
+PhusionPassenger.require_passenger_lib 'platform_info/operating_system'
 PhusionPassenger.require_passenger_lib 'config/validate_install_command'
 require 'tmpdir'
 require 'fileutils'
@@ -123,7 +124,11 @@ when "homebrew"
   APACHE2_MODULE_PATH = "#{root}/buildout/apache2/mod_passenger.so"
   SUPPORTS_COMPILING_APACHE_MODULE = true
 
-  APXS2 = "/usr/sbin/apxs"
+  if PhusionPassenger::PlatformInfo.os_version >= '10.13'
+    APXS2 = nil
+  else
+    APXS2 = "/usr/sbin/apxs"
+  end
   APACHE2 = "/usr/sbin/httpd"
   APACHE2CTL = "/usr/sbin/apachectl"
   APACHE_CONFIG_FILE = "/private/etc/apache2/httpd.conf"
@@ -256,7 +261,11 @@ describe "A natively packaged Phusion Passenger" do
       output = capture_output("passenger-config --detect-apache2")
       output.gsub!(/.*Final autodetection results\n/m, '')
       output.scan(/\* Found Apache .*\!/).size.should == 1
-      output.should include("apxs2          : #{APXS2}\n")
+      if APXS2
+        output.should include("apxs2          : #{APXS2}\n")
+      else
+        output.should include("apxs2          : N/A\n")
+      end
       output.should include("Main executable: #{APACHE2}\n")
       output.should include("Control command: #{APACHE2CTL}\n")
       output.should include("Config file    : #{APACHE_CONFIG_FILE}\n")

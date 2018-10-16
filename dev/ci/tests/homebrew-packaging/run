@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -e
+
+run rm -rf pkg
+run bundle exec drake package:set_official package:tarball
+
+if [[ -e passenger.gemspec ]]; then
+	FORMULA_BASENAME=passenger.rb
+	echo
+	header2 "Checking whether OSS formula is up-to-date"
+	run ./packaging/homebrew/verify-oss-formula-uptodate \
+		-c "$CACHE_DIR/homebrew-core.git" \
+		-r upstream
+else
+	FORMULA_BASENAME=passenger-enterprise.rb
+fi
+
+echo
+header2 "Modifying formula"
+run ./packaging/homebrew/modify-formula \
+	--passenger-dir . \
+	--tarball pkg/*.tar.gz \
+	--output "pkg/$FORMULA_BASENAME"
+
+echo
+header2 "Testing formula"
+run ./packaging/homebrew/test-formula \
+	-p . \
+	-f "pkg/$FORMULA_BASENAME" \
+	-t pkg/*.tar.gz
