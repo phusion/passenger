@@ -827,7 +827,7 @@ merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf, passenger_loc_conf_t *
                 return NGX_ERROR;
             }
 
-            copy->code = (ngx_http_script_code_pt)
+            copy->code = (ngx_http_script_code_pt) (void *)
                                                  ngx_http_script_copy_len_code;
             copy->len = src[i].key.len + sizeof(": ") - 1
                         + src[i].value.len + sizeof(CRLF) - 1;
@@ -862,7 +862,7 @@ merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf, passenger_loc_conf_t *
                 return NGX_ERROR;
             }
 
-            copy->code = (ngx_http_script_code_pt)
+            copy->code = (ngx_http_script_code_pt) (void *)
                                                  ngx_http_script_copy_len_code;
             copy->len = src[i].key.len + sizeof(": ") - 1;
 
@@ -903,7 +903,7 @@ merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf, passenger_loc_conf_t *
                 return NGX_ERROR;
             }
 
-            copy->code = (ngx_http_script_code_pt)
+            copy->code = (ngx_http_script_code_pt) (void *)
                                                  ngx_http_script_copy_len_code;
             copy->len = sizeof(CRLF) - 1;
 
