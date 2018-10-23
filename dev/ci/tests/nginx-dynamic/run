@@ -16,5 +16,5 @@ run curl -sSLO https://www.nginx.org/download/nginx-$TEST_DYNAMIC_WITH_NGINX_VER
 run tar -xzf nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION.tar.gz
 echo "+ Entering nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION"
 cd "nginx-$TEST_DYNAMIC_WITH_NGINX_VERSION"
-run ./configure --with-cc='ccache cc' --add-dynamic-module="$NGINX_ADDON_DIR"
+run ./configure --with-cc='ccache cc' --with-cc-opt='-Wno-error' --add-dynamic-module="$NGINX_ADDON_DIR"
 run make "-j$COMPILE_CONCURRENCY"
