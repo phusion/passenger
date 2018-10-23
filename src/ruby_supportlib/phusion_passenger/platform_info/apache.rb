@@ -577,6 +577,23 @@ module PhusionPassenger
     end
     memoize :apache2_sbindir
 
+    def self.apache2_modulesdir(options = {})
+      apxs2 = options.fetch(:apxs2, self.apxs2)
+      if apxs2.nil?
+        # macOS >= 10.13 High Sierra no longer ships apxs2, so we'll use
+        # a hardcoded default.
+        if os_name_simple == 'macosx' && os_version >= '10.13' \
+          && httpd(:apxs2 => apxs2) == '/usr/sbin/httpd'
+          '/usr/libexec/apache2'
+        else
+          nil
+        end
+      else
+        `#{apxs2} -q LIBEXECDIR`.strip
+      end
+    end
+    memoize :apache2_modulesdir
+
 
     ################ Compiler and linker flags ################
 

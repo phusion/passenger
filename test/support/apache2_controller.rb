@@ -241,7 +241,7 @@ private
   end
 
   def modules_dir
-    @@modules_dir ||= `#{PlatformInfo.apxs2} -q LIBEXECDIR`.strip
+    PlatformInfo.apache2_modulesdir
   end
 
   def builtin_modules
