@@ -824,8 +824,8 @@ module PhusionPassenger
             # /Library/Developer/CommandLineTools.
             xcode_prefix = `/usr/bin/xcode-select -p`.strip
             ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1 " \
-             "-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/apache2",
-              '-lapr-1']
+             "-I#{xcode_prefix}/SDKs/MacOSX.sdk/usr/include/apr-1",
+             '-lapr-1']
           else
             ['-I/usr/include/apr-1', '-lapr-1']
           end
@@ -873,8 +873,9 @@ module PhusionPassenger
             # On macOS >= 10.13 High Sierra /usr/include no longer
             # exists.
             xcode_prefix = `/usr/bin/xcode-select -p`.strip
-            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1",
-              '-laprutil-1']
+            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1" \
+             "-I#{xcode_prefix}/SDKs/MacOSX.sdk/usr/include/apr-1",
+             '-laprutil-1']
           else
             ['-I/usr/include/apr-1', '-laprutil-1']
           end

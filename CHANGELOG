@@ -5,6 +5,7 @@ Release 5.3.6 (Not yet released)
  * Fixes Passenger Core and application processes staying on the Watchdog's OOM score (unkillable). Closes GH-2105.
  * Fixes "mach_vm_map failed" warnings on macOS >= High Sierra. These warnings were harmless, but annoying. Closes GH-2101.
  * Fixes `passenger-config compile-agent` compilation with optimizations. The optimization flags were not properly passed to the compiler.
+ * Improves detection of the system Apache's include headers on macOS High Sierra and later.
 
 
 Release 5.3.5
