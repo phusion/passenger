@@ -7,6 +7,7 @@ Release 5.3.6 (Not yet released)
  * Fixes `passenger-config compile-agent` compilation with optimizations. The optimization flags were not properly passed to the compiler.
  * Improves detection of the system Apache's include headers on macOS High Sierra and later.
  * Fixes RVM gemset detection on RVM 1.29.
+ * No longer supplies precompiled Ruby extensions for Ruby 1.9.3 and 2.0.0. When running Ruby 1.9.3 and 2.0.0, Passenger will attempt to compile from source instead.
 
 
 Release 5.3.5
