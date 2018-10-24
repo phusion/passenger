@@ -142,7 +142,7 @@ desc 'Build the agent'
 task :agent => AGENT_TARGET
 
 task 'common:clean' do
-  sh "rm -rf #{AGENT_OUTPUT_DIR}"
+  sh('rm', '-rf', AGENT_TARGET, *AGENT_OBJECTS.keys)
 end
 
 def create_agent_auto_generated_source_task(source, dependencies)
