@@ -6,6 +6,7 @@ Release 5.3.6 (Not yet released)
  * Fixes "mach_vm_map failed" warnings on macOS >= High Sierra. These warnings were harmless, but annoying. Closes GH-2101.
  * Fixes `passenger-config compile-agent` compilation with optimizations. The optimization flags were not properly passed to the compiler.
  * Improves detection of the system Apache's include headers on macOS High Sierra and later.
+ * Fixes RVM gemset detection on RVM 1.29.
 
 
 Release 5.3.5

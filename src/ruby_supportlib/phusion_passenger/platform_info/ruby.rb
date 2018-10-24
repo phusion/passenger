@@ -1,6 +1,6 @@
 # encoding: binary
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2010-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2018 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -47,6 +47,22 @@ module PhusionPassenger
       gem_path = nil if gem_path.empty?
     end
     GEM_PATH = gem_path
+
+    # 'bundle exec' modifies $GEM_HOME and $GEM_PATH so let's
+    # store the values that we had before Bundler's modifications.
+    gem_home = ENV['BUNDLER_ORIG_GEM_HOME']
+    if gem_home
+      gem_home = gem_home.strip.freeze
+      gem_home = nil if gem_home.empty?
+    end
+    BUNDLER_ORIG_GEM_HOME = gem_home
+
+    gem_path = ENV['BUNDLER_ORIG_GEM_PATH']
+    if gem_path
+      gem_path = gem_path.strip.freeze
+      gem_path = nil if gem_path.empty?
+    end
+    BUNDLER_ORIG_GEM_PATH = gem_path
 
     if defined?(::RUBY_ENGINE)
       RUBY_ENGINE = ::RUBY_ENGINE
@@ -257,12 +273,6 @@ module PhusionPassenger
     # Returns nil otherwise.
     def self.rvm_ruby_string
       if in_rvm?
-        # RVM used to export the necessary information through
-        # environment variables, but doesn't always do that anymore
-        # in the latest versions in order to fight env var pollution.
-        # Scanning $LOAD_PATH seems to be the only way to obtain
-        # the information.
-
         # Getting the RVM name of the Ruby interpreter ("ruby-1.9.2")
         # isn't so hard, we can extract it from the #ruby_executable
         # string. Getting the gemset name is a bit harder, so let's
@@ -273,16 +283,26 @@ module PhusionPassenger
         #   /Users/hongli/.rvm/gems/ruby-1.9.3-p392
         # But also:
         #   /home/bitnami/.rvm/gems/ruby-1.9.3-p385-perf@njist325/ruby/1.9.1
-        if GEM_HOME && GEM_HOME =~ %r{rvm/gems/(.+)}
-          return $1.sub(/\/.*/, '')
+        #
+        # Caveat when we're executed through 'bundle exec':
+        # if `bundle install` was run with `--path=`, then `bundle exec`
+        # will modify $GEM_HOME to the --path directory. That's
+        # why we need to parse the version of $GEM_HOME *before*
+        # `bundle exec` had modified it.
+        [GEM_HOME, BUNDLER_ORIG_GEM_HOME].each do |gem_home|
+          if gem_home && gem_home =~ %r{rvm/gems/(.+)}
+            return $1.sub(/\/.*/, '')
+          end
         end
 
         # User might have explicitly set GEM_HOME to a custom directory,
         # or might have nuked $GEM_HOME. Extract info from $GEM_PATH.
-        if GEM_PATH
-          GEM_PATH.split(':').each do |gem_path|
-            if gem_path =~ %r{rvm/gems/(.+)}
-              return $1.sub(/\/.*/, '')
+        [GEM_PATH, BUNDLER_ORIG_GEM_PATH].each do |gem_path|
+          if gem_path
+            gem_path.split(':').each do |gem_path_part|
+              if gem_path_part =~ %r{rvm/gems/(.+)}
+                return $1.sub(/\/.*/, '')
+              end
             end
           end
         end
