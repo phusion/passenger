@@ -13,6 +13,7 @@ export CCACHE_COMPRESS=1
 export CCACHE_COMPRESSLEVEL=3
 export CCACHE_BASEDIR="$PASSENGER_ROOT"
 export CCACHE_SLOPPINESS=time_macros
+# shellcheck disable=SC2155
 export CCACHE_LOGFILE="$(pwd)/buildout/testlogs/ccache.log"
 # We want Bundler invocations to be explicit. For example,
 # when running 'rake test:install_deps', we do not want

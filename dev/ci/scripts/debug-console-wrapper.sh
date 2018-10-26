@@ -4,7 +4,7 @@ set -eo pipefail
 SELFDIR=$(dirname "$0")
 SELFDIR=$(cd "$SELFDIR" && pwd)
 PASSENGER_ROOT=$(cd "$SELFDIR/../../.." && pwd)
-# shellcheck source=lib/functions.sh
+# shellcheck source=../lib/functions.sh
 source "$SELFDIR/../lib/functions.sh"
 
 if ! "$@"; then
@@ -17,8 +17,8 @@ if ! "$@"; then
 		echo
 		echo "*** DEBUG_CONSOLE set to 1, so launching a debugging console..."
 		echo
-		# shellcheck source=../lib/set-container-envvars.sh
 		set +e
+		# shellcheck source=../lib/set-container-envvars.sh
 		source "$PASSENGER_ROOT/dev/ci/lib/set-container-envvars.sh"
 		header2 "Launching bash"
 		bash -l
