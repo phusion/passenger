@@ -1,24 +1,41 @@
 #!/usr/bin/env bash
 set -e
 
-run rm -rf pkg
-run bundle exec drake package:set_official package:tarball
+## Begin debugging flags
+
+SKIP_TARBALL_CREATION=false
+SKIP_OSS_UPDATE_CHECK=false
+TEST_FORMULA_ARGS=()
+
+## End debugging flags
+
+if ! $SKIP_TARBALL_CREATION; then
+	run rm -rf pkg
+	run bundle exec drake package:set_official package:tarball
+fi
 
 if [[ -e passenger.gemspec ]]; then
-	FORMULA_BASENAME=passenger.rb
-	echo
-	header2 "Checking whether OSS formula is up-to-date"
-	run ./packaging/homebrew/verify-oss-formula-uptodate \
-		-c "$CACHE_DIR/homebrew-core.git" \
-		-r upstream
+	FORMULA_FILENAME=packaging/homebrew/Formula/passenger.rb
+	NGINX_FORMULA_ARGS=()
+
+	if ! $SKIP_OSS_UPDATE_CHECK; then
+		echo
+		header2 "Checking whether OSS formula is up-to-date"
+		run ./packaging/homebrew/verify-oss-formula-uptodate \
+			-c "$CACHE_DIR/homebrew-core.git" \
+			-r upstream
+	fi
 else
-	FORMULA_BASENAME=passenger-enterprise.rb
+	FORMULA_FILENAME=packaging/homebrew-enterprise/Formula/passenger-enterprise.rb
+	NGINX_FORMULA_ARGS=(-g packaging/homebrew-enterprise/Formula/nginx-passenger-enterprise.rb)
 fi
+FORMULA_BASENAME=$(basename "$FORMULA_FILENAME")
 
 echo
 header2 "Modifying formula"
 run ./packaging/homebrew/modify-formula \
 	--passenger-dir . \
+	--formula "$FORMULA_FILENAME" \
 	--tarball pkg/*.tar.gz \
 	--output "pkg/$FORMULA_BASENAME"
 
@@ -27,4 +44,6 @@ header2 "Testing formula"
 run ./packaging/homebrew/test-formula \
 	-p . \
 	-f "pkg/$FORMULA_BASENAME" \
-	-t pkg/*.tar.gz
+	-t pkg/*.tar.gz \
+	"${NGINX_FORMULA_ARGS[@]}" \
+	"${TEST_FORMULA_ARGS[@]}"
