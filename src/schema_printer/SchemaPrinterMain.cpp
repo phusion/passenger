@@ -46,6 +46,7 @@
 #include <Core/Config.h>
 #include <Core/Controller/Config.h>
 #include <Core/SecurityUpdateChecker.h>
+#include <Core/TelemetryCollector.h>
 #include <Watchdog/ApiServer.h>
 #include <Watchdog/Config.h>
 #include <LoggingKit/Config.h>
@@ -63,6 +64,7 @@ main(int argc, char *argv[]) {
 	doc["Passenger::Core::ControllerSchema"] = Passenger::Core::ControllerSchema().inspect();
 	doc["Passenger::Core::ControllerSingleAppModeSchema"] = Passenger::Core::ControllerSingleAppModeSchema().inspect();
 	doc["Passenger::Core::Schema"] = Passenger::Core::Schema().inspect();
+	doc["Passenger::Core::TelemetryCollector::Schema"] = Passenger::Core::TelemetryCollector::Schema().inspect();
 	doc["Passenger::LoggingKit::Schema"] = Passenger::LoggingKit::Schema().inspect();
 	doc["Passenger::SecurityUpdateChecker::Schema"] = Passenger::SecurityUpdateChecker::Schema().inspect();
 	doc["Passenger::ServerKit::BaseServerSchema"] = Passenger::ServerKit::BaseServerSchema().inspect();

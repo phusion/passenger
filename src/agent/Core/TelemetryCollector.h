@@ -57,15 +57,21 @@ using namespace std;
 class TelemetryCollector {
 public:
 	/*
-	 * BEGIN ConfigKit schema: Passenger::TelemetryCollector::Schema
+	 * BEGIN ConfigKit schema: Passenger::Core::TelemetryCollector::Schema
 	 * (do not edit: following text is automatically generated
 	 * by 'rake configkit_schemas_inline_comments')
 	 *
-	 * (unknown: Passenger::TelemetryCollector::Schema not in dev/configkit-schemas/index.json
-	 *  Please run:
-	 *    touch src/schema_printer/SchemaPrinterMain.cpp.cxxcodebuilder
-	 *    rake configkit_schemas_inline_comments
-	 * )
+	 *   ca_certificate_path   string             -   -
+	 *   debug_curl            boolean            -   default(false)
+	 *   disabled              boolean            -   default(false)
+	 *   final_run_timeout     unsigned integer   -   default(5)
+	 *   first_interval        unsigned integer   -   default(7200)
+	 *   interval              unsigned integer   -   default(21600)
+	 *   interval_jitter       unsigned integer   -   default(7200)
+	 *   proxy_url             string             -   -
+	 *   timeout               unsigned integer   -   default(180)
+	 *   url                   string             -   default("https://anontelemetry.phusionpassenger.com/v1/collect.json")
+	 *   verify_server         boolean            -   default(true)
 	 *
 	 * END
 	 */
