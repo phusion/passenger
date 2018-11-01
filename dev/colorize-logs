@@ -1,0 +1,174 @@
+#!/usr/bin/env ruby
+# This is a tool for reading big Passenger log files, which can be hard
+# to parse because they contain so much information. This tool colorizes
+# the logs based on log level (error, warning, notice, debug, etc.) and
+# type (LoggingKit vs app output), hopefully making it easier to read.
+#
+# Use it like this:
+#
+#   ./dev/colorize-logs /path-to-logfile
+#
+# Or even like this:
+#
+#   tail -f /path-to-logfile | ./dev/colorize-logs
+
+RED = "\e[31m"
+YELLOW = "\e[33m"
+WHITE = "\e[37m"
+BRIGHTWHITE = "\e[37;1m"
+ORANGE = "\e[38;5;208m"
+GREEN34 = "\e[38;5;34m"
+GREEN48 = "\e[38;5;48m"
+UNDERLINE = "\e[4m"
+BOLD = "\e[1m"
+RESET = "\e[0m"
+
+TERMINATION_SIGNALS = [
+  Signal.list['INT'],
+  Signal.list['TERM'],
+  Signal.list['HUP']
+]
+
+def main
+  STDOUT.sync = true
+  STDERR.sync = true
+
+  if ARGV[0]
+    input = File.open(ARGV[0], 'r:utf-8')
+  else
+    input = STDIN
+  end
+
+  if STDOUT.tty?
+    # Pipe our output to 'less'. We *must* replace the current
+    # process with 'less' (and move ourselves into the background),
+    # instead of having 'less' run as a child process. This is
+    # in order to properly handle signals sent to the entire
+    # process group, such as when the user presses Ctrl-C.
+    #
+    # The problem with running 'less' as a child process is as follows:
+    #
+    # Imagine you're running the following pipeline in
+    # bash:
+    #
+    #   tail -n 1000 -f nginx-error.log | ./dev/colorize-logs | less
+    #
+    # No problem here when we press Ctrl-C. Ctrl-C sends SIGINT to
+    # the entire process group, so to all three processes. 'tail' and
+    # 'colorize-logs' exit, while 'less' ignores the signal and keeps
+    # running until you press 'q'.
+    # 
+    # Now consider the following pipeline:
+    #
+    #  tail -n 1000 -f nginx-error.log | ./dev/colorize-logs
+    #
+    # Same thing, but colorize-logs spawns 'less'. Bash does not know
+    # about it: it only waits for 'tail' and 'colorize-logs', not 'less'.
+    # When you press Ctrl-C now, bash tries to take back control of the
+    # terminal as soon as 'tail' and 'colorize-logs' exit. So although
+    # 'less' ignores SIGINT, the fact that bash tries to take control
+    # of the terminal breaks it.
+    #
+    # To avoid this scenario from happening, we inverse the process
+    # hierarchy. We replace 'colorize-logs' with 'less' (through the use
+    # of #exec) so that it's as if bash waits for 'tail' and 'less'.
+
+    a, b = IO.pipe
+
+    fork do
+      begin
+        a.close
+        STDOUT.reopen(b)
+        process_input(input)
+      rescue SignalException => e
+        if TERMINATION_SIGNALS.include?(e.signo)
+          # Stop upon receiving any of these signals.
+          exit 1
+        else
+          raise e
+        end
+      rescue Errno::EPIPE
+        # Stop when 'less' exits.
+      rescue Exception => e
+        STDERR.puts "#{e} (#{e.class})\n#{e.backtrace.join("\n")}"
+      end
+    end
+
+    STDIN.reopen(a)
+    b.close
+    exec('less', '-R')
+  else
+    process_input(input)
+  end
+end
+
+def process_input(input)
+  last_message_color = nil
+  while !input.eof?
+    line, last_message_color = colorize(input.readline.chomp, last_message_color)
+    puts line
+  end
+end
+
+def colorize(line, last_message_color)
+  if line=~ /^\[ .+? \]: /
+    colorize_loggingkit_line(line)
+  elsif line =~ /^App [0-9]+ output: /
+    colorize_app_output_line(line)
+  else
+    ["#{last_message_color}#{line}#{RESET}", last_message_color]
+  end
+end
+
+def colorize_loggingkit_line(line)
+  case line
+  when /^\[ [CE]/
+    prefix_color  = "\e[38;5;88m"
+    message_color = RED
+  when /^\[ W/
+    prefix_color  = "\e[38;5;136m"
+    message_color = YELLOW
+  when /^\[ N/
+    prefix_color  = "\e[38;5;250m"
+    message_color = BRIGHTWHITE
+  when /^\[ I/
+    prefix_color  = "\e[38;5;246m"
+    message_color = "\e[38;5;255m"
+  when /^\[ D /
+    prefix_color  = "\e[38;5;169m"
+    message_color = "\e[38;5;213m"
+  when /^\[ D2/
+    prefix_color  = "\e[38;5;96m"
+    message_color = "\e[38;5;132m"
+  when /^\[ D3/
+    prefix_color  = "\e[38;5;74m"
+    message_color = "\e[38;5;117m"
+  else
+    prefix_color  = "\e[38;5;245m"
+    message_color = RESET
+  end
+
+  message_start_index = line.index(' ]: ') + 3
+  prefix = line[0 .. message_start_index - 1]
+  message = line[message_start_index + 1 .. -1]
+
+  if message =~ /^\[.+?\]/
+    offset = Regexp.last_match.offset(0)
+    subprefix = message[0 .. offset.last - 1]
+    submessage = message[offset.last + 1 .. -1]
+
+    ["#{prefix_color}#{prefix}#{RESET} #{UNDERLINE}#{message_color}#{subprefix}#{RESET} #{message_color}#{submessage}#{RESET}", message_color]
+  else
+    ["#{prefix_color}#{prefix}#{RESET} #{message_color}#{message}#{RESET}", message_color]
+  end
+end
+
+def colorize_app_output_line(line)
+  message_start_index  = line.index(' output: ') + 8
+  prefix = line[0 .. message_start_index - 1]
+  message = line[message_start_index .. -1]
+
+  ["#{GREEN34}#{prefix}#{RESET}#{GREEN48}#{message}#{RESET}", WHITE]
+end
+
+main
