@@ -1,16 +1,5 @@
 #!/usr/bin/env ruby
-# This is a tool for reading big Passenger log files, which can be hard
-# to parse because they contain so much information. This tool colorizes
-# the logs based on log level (error, warning, notice, debug, etc.) and
-# type (LoggingKit vs app output), hopefully making it easier to read.
-#
-# Use it like this:
-#
-#   ./dev/colorize-logs /path-to-logfile
-#
-# Or even like this:
-#
-#   tail -f /path-to-logfile | ./dev/colorize-logs
+require 'optparse'
 
 RED = "\e[31m"
 YELLOW = "\e[33m"
@@ -33,13 +22,9 @@ def main
   STDOUT.sync = true
   STDERR.sync = true
 
-  if ARGV[0]
-    input = File.open(ARGV[0], 'r:utf-8')
-  else
-    input = STDIN
-  end
+  options = parse_options(ARGV)
 
-  if STDOUT.tty?
+  if should_use_pager?(options)
     # Pipe our output to 'less'. We *must* replace the current
     # process with 'less' (and move ourselves into the background),
     # instead of having 'less' run as a child process. This is
@@ -57,7 +42,7 @@ def main
     # the entire process group, so to all three processes. 'tail' and
     # 'colorize-logs' exit, while 'less' ignores the signal and keeps
     # running until you press 'q'.
-    # 
+    #
     # Now consider the following pipeline:
     #
     #  tail -n 1000 -f nginx-error.log | ./dev/colorize-logs
@@ -79,7 +64,12 @@ def main
       begin
         a.close
         STDOUT.reopen(b)
-        process_input(input)
+        input = open_input(options)
+        begin
+          process_input(input)
+        ensure
+          kill_input_program(input)
+        end
       rescue SignalException => e
         if TERMINATION_SIGNALS.include?(e.signo)
           # Stop upon receiving any of these signals.
@@ -98,8 +88,116 @@ def main
     b.close
     exec('less', '-R')
   else
-    process_input(input)
+    input = open_input(options)
+    begin
+      process_input(input)
+    rescue SignalException => e
+      if TERMINATION_SIGNALS.include?(e.signo)
+        # Stop upon receiving any of these signals.
+        exit 1
+      else
+        raise e
+      end
+    rescue Errno::EPIPE
+      # Ignore error when unable to write to piped program.
+    ensure
+      kill_input_program(input)
+    end
   end
+end
+
+def parse_options(argv)
+  options = {}
+
+  parser = OptionParser.new do |opts|
+    opts.banner =
+      "Usage 1: ./dev/colorize-logs [options] <filename>\n" \
+      "Usage 2: some command | ./dev/colorize-logs [options]"
+
+    opts.separator ''
+    opts.separator 'This is a tool for reading big Passenger log files,' \
+      ' which can be hard to parse because they contain so much information.' \
+      ' This tool colorizes the logs based on log level (error, warning,' \
+      ' notice, debug, etc.) and type (LoggingKit vs app output), hopefully' \
+      ' making it easier to read.'
+    opts.separator ''
+    opts.separator 'You can have it read a file (usage 1), or you can pipe' \
+      ' data into it (usage 2).'
+    opts.separator ''
+    opts.separator "Output will automatically be displayed in 'less' if:" \
+      " (1) running in a terminal, (2) a filename is given, and (3) -f is NOT given."
+    opts.separator ''
+    opts.separator 'Options:'
+
+    opts.on('-f', '--follow', "Follow given file (like 'tail -f'). Only applicable when given a filename") do
+      options[:follow] = true
+    end
+    opts.on('-h', '--help', 'Display this help message') do
+      options[:help] = true
+    end
+  end
+
+  begin
+    parser.parse!(argv)
+  rescue OptionParser::ParseError => e
+    STDERR.puts e
+    STDERR.puts
+    STDERR.puts "Please see '--help' for valid options."
+    exit 1
+  end
+
+  if options[:help]
+    puts parser
+    exit
+  end
+
+  if argv.size > 1
+    STDERR.puts 'ERROR: too many filenames given.'
+    STDERR.puts
+    STDERR.puts "Please see '--help' for usage."
+    exit 1
+  end
+
+  if argv.size == 1 && argv[0] != '-'
+    options[:filename] = argv[0]
+  end
+
+  if options[:follow] && !options[:filename]
+    STDERR.puts 'ERROR: --follow can only be used when given a filename.'
+    STDERR.puts
+    STDERR.puts "Please see '--help' for usage."
+    exit 1
+  end
+
+  options
+end
+
+def open_input(options)
+  if options[:filename]
+    if options[:follow]
+      IO.popen(['tail', '-n', '0', '-f', options[:filename]], 'r:utf-8')
+    else
+      File.open(options[:filename], 'r:utf-8')
+    end
+  else
+    STDIN
+  end
+end
+
+def kill_input_program(input)
+  if input.pid
+    begin
+      Process.kill('TERM', input.pid)
+    rescue Errno::ESRCH
+      # Ignore error
+    rescue SystemCallError => e
+      STDERR.puts "WARNING: unable to kill 'tail -f' (PID #{input.pid}): #{e}"
+    end
+  end
+end
+
+def should_use_pager?(options)
+  STDOUT.tty? && options[:filename] && !options[:follow]
 end
 
 def process_input(input)

@@ -11,6 +11,11 @@ indent_style=space
 indent_size=2
 trim_trailing_whitespace = true
 
+[dev/*]
+indent_style=space
+indent_size=2
+trim_trailing_whitespace = true
+
 [doc/*.txt]
 indent_style=tab
 indent_size=4
