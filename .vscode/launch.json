@@ -52,11 +52,16 @@
                 }
             },
             {
+                // When using this debug target, make sure that your Nginx config
+                // file sets these options:
+                //
+                //   master_process off;
+                //   daemon off;
                 "name": "(lldb) Launch Nginx",
                 "type": "cppdbg",
                 "request": "launch",
                 "program": "${workspaceFolder}/external/nginx/objs/nginx",
-                "args": ["-g", "master off; daemon off;"],
+                "preLaunchTask": "Build Nginx",
                 "stopAtEntry": true,
                 "cwd": "${workspaceFolder}/buildout",
                 "environment": [],
