@@ -106,6 +106,34 @@
                         { "text": "handle SIGPIPE noprint pass" }
                     ]
                 }
+            },
+            {
+                "name": "(lldb) Attach to Nginx",
+                "type": "cppdbg",
+                "request": "attach",
+                "program": "${workspaceRoot}/external/nginx/objs/nginx",
+                "processId": "${command:pickProcess}",
+                "logging": {
+                    "moduleLoad": false
+                },
+                "osx": {
+                    "MIMode": "lldb",
+                    "setupCommands": [
+                        { "text": "settings set target.x86-disassembly-flavor intel" },
+                        { "text": "b malloc_error_break" },
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGPIPE'" },
+                        { "text": "target stop-hook add --one-liner 'process handle -n false -p true -s false SIGUSR1'" }
+                    ]
+                },
+                "linux": {
+                    "MIMode": "gdb",
+                    "setupCommands": [
+                        { "text": "set print thread-events off" },
+                        { "text": "set disassembly-flavor intel" },
+                        { "text": "handle SIGUSR1 noprint pass" },
+                        { "text": "handle SIGPIPE noprint pass" }
+                    ]
+                }
             }
         ]
     }
