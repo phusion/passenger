@@ -329,10 +329,8 @@ private:
 			SKC_TRACE(client, 3, "Parsing " << buffer.size() <<
 				" bytes of HTTP header: \"" << cEscapeString(StaticString(
 					buffer.start, buffer.size())) << "\"");
-			{
-				ret = createRequestHeaderParser(this->getContext(), req).
-					feed(buffer);
-			}
+			ret = createRequestHeaderParser(this->getContext(), req).
+				feed(buffer);
 			if (req->httpState == Request::PARSING_HEADERS) {
 				// Not yet done parsing.
 				return Channel::Result(buffer.size(), false);
@@ -417,6 +415,9 @@ private:
 			assert(maxRemaining > 0);
 			remaining = std::min<boost::uint64_t>(buffer.size(), maxRemaining);
 			req->bodyAlreadyRead += remaining;
+			SKC_TRACE(client, 3, "Event comes with " << buffer.size() <<
+				" bytes of fixed-length HTTP request body: \"" << cEscapeString(StaticString(
+					buffer.start, buffer.size())) << "\"");
 			SKC_TRACE(client, 3, "Request body: " <<
 				req->bodyAlreadyRead << " of " <<
 				req->aux.bodyInfo.contentLength << " bytes already read");
@@ -474,6 +475,9 @@ private:
 				}
 			}
 
+			SKC_TRACE(client, 3, "Event comes with " << buffer.size() <<
+				" bytes of chunked HTTP request body: \"" << cEscapeString(StaticString(
+					buffer.start, buffer.size())) << "\"");
 			HttpChunkedEvent event(createChunkedBodyParser(req).feed(buffer));
 			req->bodyAlreadyRead += event.consumed;
 
@@ -552,6 +556,9 @@ private:
 				}
 			}
 
+			SKC_TRACE(client, 3, "Event comes with " << buffer.size() <<
+				" bytes of upgraded HTTP request body: \"" << cEscapeString(StaticString(
+					buffer.start, buffer.size())) << "\"");
 			req->bodyAlreadyRead += buffer.size();
 			req->bodyChannel.feed(buffer);
 			if (!req->ended()) {
