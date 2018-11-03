@@ -1042,6 +1042,23 @@ namespace tut {
 		ensure("(3)", !containsSubstring(response, "!"));
 	}
 
+	TEST_METHOD(39) {
+		set_test_name("Chunk larger than MAX_CHUNK_SIZE bytes");
+
+		connectToServer();
+		sendRequest(
+			"GET /body_test HTTP/1.1\r\n"
+			"Connection: close\r\n"
+			"Transfer-Encoding: chunked\r\n\r\n"
+			+ toString(ServerKit::HttpChunkedBodyParserState::MAX_CHUNK_SIZE + 1) + "\r\n");
+		string response = readAll(fd, 1024).first;
+		ensure("(1)", containsSubstring(response, "HTTP/1.1 422 Unprocessable Entity\r\n"));
+		ensure("(2)", containsSubstring(response,
+			P_STATIC_STRING("Request body error: ")
+			+ ServerKit::getErrorDesc(ServerKit::CHUNK_SIZE_TOO_LARGE)
+			+ "\n"));
+	}
+
 
 	/***** Chunked body handling: auto-dechunking off *****/
 

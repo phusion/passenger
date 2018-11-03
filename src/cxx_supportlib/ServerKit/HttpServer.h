@@ -512,7 +512,6 @@ private:
 				return Channel::Result(event.consumed, false);
 			case HttpChunkedEvent::ERROR:
 				assert(event.end);
-				P_ASSERT_EQ(event.consumed, 0);
 				client->input.stop();
 				req->wantKeepAlive = false;
 				req->bodyChannel.feedError(event.errcode);
