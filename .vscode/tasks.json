@@ -27,6 +27,18 @@
             ],
             "problemMatcher": "$gcc",
             "group": "build"
+        },
+        {
+            "label": "Build Nginx",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "-j3",
+                "-C",
+                "external/nginx"
+            ],
+            "problemMatcher": "$gcc",
+            "group": "build"
         }
     ]
 }
