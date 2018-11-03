@@ -353,6 +353,15 @@ typedef struct {
     ngx_str_t     remote_port;
 } buffer_construction_state;
 
+/* prepare_request_buffer_construction() and construct_request_buffer() are
+ * used to create an HTTP request header buffer to be sent to the Core Controller.
+ *
+ * construct_request_buffer() is actually called twice: the first time in "no-op" mode to
+ * calculate how many bytes it must allocate, and the second time to actually create the
+ * buffer. For efficiency reasons, as much preparation work as possible is split into
+ * the prepare_request_buffer_construction() function so that the two construct_request_buffer()
+ * calls don't have to perform that work twice.
+ */
 static ngx_int_t
 prepare_request_buffer_construction(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
     passenger_context_t *context, buffer_construction_state *state)
@@ -365,6 +374,7 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_loc_conf_t 
 #endif
     const PsgWrapperRegistryEntry *wrapper_registry_entry;
 
+    /* Construct HTTP method string, including trailing space. */
     switch (r->method) {
     case NGX_HTTP_GET:
         SET_NGX_STR(&state->method, "GET ");
@@ -514,6 +524,7 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_loc_conf_t 
     return NGX_OK;
 }
 
+/* See comment for prepare_request_buffer_construction() */
 static ngx_uint_t
 construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
     passenger_context_t *context, buffer_construction_state *state, ngx_buf_t *b)
