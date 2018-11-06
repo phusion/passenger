@@ -7752,6 +7752,7 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/StrIntTools/DateParsing.h",
    "src/cxx_supportlib/StrIntTools/StrIntUtils.h",
    "src/cxx_supportlib/StrIntTools/StringScanning.h",
+   "src/cxx_supportlib/SystemTools/ContainerHelpers.h",
    "src/cxx_supportlib/SystemTools/ProcessMetricsCollector.h",
    "src/cxx_supportlib/SystemTools/SystemMetricsCollector.h",
    "src/cxx_supportlib/SystemTools/SystemTime.h",
@@ -9939,6 +9940,10 @@ CXX_DEPENDENCY_MAP =
    "src/cxx_supportlib/DataStructures/StringMap.h",
    "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/StrIntTools/StrIntUtils.h",
+   "src/cxx_supportlib/oxt/macros.hpp"],
+ "src/cxx_supportlib/SystemTools/ContainerHelpers.h"=>
+  ["src/cxx_supportlib/FileTools/FileManip.h",
+   "src/cxx_supportlib/StaticString.h",
    "src/cxx_supportlib/oxt/macros.hpp"],
  "src/cxx_supportlib/SystemTools/ProcessMetricsCollector.h"=>
   ["src/cxx_supportlib/Algorithms/Hasher.h",
