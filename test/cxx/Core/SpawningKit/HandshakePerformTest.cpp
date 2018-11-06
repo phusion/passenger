@@ -223,7 +223,7 @@ namespace tut {
 			fail("SpawnException expected");
 		} catch (const SpawnException &e) {
 			ensure_equals(StaticString(e.what()),
-				"A timeout error occurred while spawning an application process.");
+				"A timeout occurred while spawning an application process.");
 		}
 	}
 
