@@ -433,7 +433,7 @@ private:
 			pair<uid_t, gid_t> ids;
 			try {
 				ids = appPool->getGroupRunUidAndGids(key);
-			} catch (RuntimeException e) {
+			} catch (const RuntimeException &) {
 				files = Json::nullValue;
 			}
 			if (!files.isNull()) {
