@@ -122,6 +122,7 @@ private:
 				message = "A timeout occurred while spawning an application process";
 				break;
 			}
+			break;
 		default:
 			string categoryPhraseWithIndefiniteArticle =
 				getErrorCategoryPhraseWithIndefiniteArticle(
@@ -138,6 +139,7 @@ private:
 						+ " occurred while starting a preloader process";
 					break;
 				}
+				break;
 			default:
 				switch (journey.getFirstFailedStep()) {
 				case SPAWNING_KIT_PREPARATION:
@@ -173,7 +175,9 @@ private:
 						+ " occurred while spawning an application process";
 					break;
 				}
+				break;
 			}
+			break;
 		}
 
 		if (advancedProblemDetails.empty()) {

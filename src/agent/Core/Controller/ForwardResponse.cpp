@@ -278,6 +278,7 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 			endRequestWithAppSocketReadError(&client, &req, errcode);
 			return Channel::Result(0, true);
 		}
+		break; // Never reached, shut up compiler warning.
 
 	case AppResponse::PARSING_BODY_UNTIL_EOF:
 	case AppResponse::UPGRADED:
@@ -305,11 +306,14 @@ Controller::onAppSourceData(Client *client, Request *req, const MemoryKit::mbuf 
 			endRequestWithAppSocketReadError(&client, &req, errcode);
 			return Channel::Result(0, false);
 		}
+		break; // Never reached, shut up compiler warning.
 
 	default:
 		P_BUG("Invalid request HTTP state " << (int) resp->httpState);
 		return Channel::Result(0, false);
 	}
+
+	return Channel::Result(0, false); // Never reached, shut up compiler warning.
 }
 
 void

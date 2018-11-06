@@ -135,13 +135,13 @@ convertLowerCase(const unsigned char * restrict data,
 		i = imax * 8;
 		output = (unsigned char *) d;
 		switch (leftover) {
-		case 7: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 6: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 5: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 4: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 3: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 2: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 1: *output++ = (unsigned char) gsToLowerMap[ustr[i]];
+		case 7: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 6: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 5: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 4: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 3: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 2: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 1: *output++ = (unsigned char) gsToLowerMap[ustr[i]]; /* Falls through. */
 		case 0: break;
 		}
 	#elif defined(__x86__)
@@ -167,9 +167,9 @@ convertLowerCase(const unsigned char * restrict data,
 		i = imax * 4;
 		output = (unsigned char *) d;
 		switch (leftover) {
-		case 3: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 2: *output++ = (unsigned char) gsToLowerMap[ustr[i++]];
-		case 1: *output++ = (unsigned char) gsToLowerMap[ustr[i]];
+		case 3: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 2: *output++ = (unsigned char) gsToLowerMap[ustr[i++]]; /* Falls through. */
+		case 1: *output++ = (unsigned char) gsToLowerMap[ustr[i]]; /* Falls through. */
 		case 0: break;
 		}
 	#else

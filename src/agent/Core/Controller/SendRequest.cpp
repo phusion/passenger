@@ -305,13 +305,13 @@ httpHeaderToScgiUpperCase(unsigned char *data, unsigned int size) {
 
 	i = imax * 8;
 	switch (leftover) {
-	case 7: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 6: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 5: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 4: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 3: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 2: *data++ = (unsigned char) toUpperMap[buf[i++]];
-	case 1: *data++ = (unsigned char) toUpperMap[buf[i]];
+	case 7: *data++ = (unsigned char) toUpperMap[buf[i++]]; /* Falls through. */
+	case 6: *data++ = (unsigned char) toUpperMap[buf[i++]]; /* Falls through. */
+	case 5: *data++ = (unsigned char) toUpperMap[buf[i++]]; /* Falls through. */
+	case 4: *data++ = (unsigned char) toUpperMap[buf[i++]]; /* Falls through. */
+	case 3: *data++ = (unsigned char) toUpperMap[buf[i++]]; /* Falls through. */
+	case 2: *data++ = (unsigned char) toUpperMap[buf[i++]]; /* Falls through. */
+	case 1: *data++ = (unsigned char) toUpperMap[buf[i]]; /* Falls through. */
 	case 0: break;
 	}
 }
