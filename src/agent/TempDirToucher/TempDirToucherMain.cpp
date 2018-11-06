@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2013-2017 Phusion Holding B.V.
+ *  Copyright (c) 2013-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -361,7 +361,7 @@ touchDir(const char *dir) {
 		}
 		execlp("/bin/sh", "/bin/sh", "-c",
 			"find \"$1\" | xargs touch", "/bin/sh", ".",
-			(const char * const) 0);
+			(char *) 0);
 		e = errno;
 		fprintf(stderr, ERROR_PREFIX ": cannot execute /bin/sh: %s (errno %d)\n",
 			strerror(e), e);
@@ -432,7 +432,7 @@ performCleanup(const char *dir) {
 		close(terminationPipe[1]);
 		execlp("/bin/sh", "/bin/sh", "-c",
 			"rm -rf \"$1\"", "/bin/sh", dir,
-			(const char * const) 0);
+			(char *) 0);
 		e = errno;
 		fprintf(stderr, ERROR_PREFIX ": cannot execute /bin/sh: %s (errno %d)\n",
 			strerror(e), e);

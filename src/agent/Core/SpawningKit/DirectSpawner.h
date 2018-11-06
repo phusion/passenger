@@ -171,7 +171,7 @@ private:
 				"spawn-env-setupper",
 				session.workDir->getPath().c_str(),
 				"--before",
-				NULL);
+				(char *) 0);
 
 			char *pos = buf;
 			e = errno;

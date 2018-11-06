@@ -357,9 +357,9 @@ dumpUlimits(AbortHandlerWorkingState &state) {
 			dup2(fd, STDERR_FILENO);
 		}
 		closeAllFileDescriptors(2, true);
-		execlp("ulimit", "ulimit", "-a", (const char * const) 0);
+		execlp("ulimit", "ulimit", "-a", (char *) 0);
 		// On Linux 'ulimit' is a shell builtin, not a command.
-		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (const char * const) 0);
+		execlp("/bin/sh", "/bin/sh", "-c", "ulimit -a", (char *) 0);
 		_exit(1);
 	} else if (pid == -1) {
 		ASSU::printError("ERROR: Could not fork a process to dump the ulimit!\n");
@@ -393,7 +393,7 @@ dumpFileDescriptorInfoWithLsof(AbortHandlerWorkingState &state, void *userData) 
 
 	closeAllFileDescriptors(2, true);
 
-	execlp("lsof", "lsof", "-p", state.messageBuf, "-nP", (const char * const) 0);
+	execlp("lsof", "lsof", "-p", state.messageBuf, "-nP", (char *) 0);
 
 	const char *command[] = { "lsof", NULL };
 	printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
@@ -432,7 +432,7 @@ dumpFileDescriptorInfoWithLs(AbortHandlerWorkingState &state, const char *path) 
 
 		closeAllFileDescriptors(2, true);
 		// The '-v' is for natural sorting on Linux. On BSD -v means something else but it's harmless.
-		execlp("ls", "ls", "-lv", path, (const char * const) 0);
+		execlp("ls", "ls", "-lv", path, (char *) 0);
 
 		const char *command[] = { "ls", NULL };
 		printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
@@ -520,7 +520,7 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 		execlp(ctx->config->ruby, ctx->config->ruby, ctx->crashWatchCommand,
 			ctx->rubyLibDir, ctx->installSpec, "--dump",
 			state.messageBuf, // PID string
-			(char * const) 0);
+			(char *) 0);
 
 		const char *command[] = { "crash-watch", NULL };
 		printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
@@ -598,16 +598,16 @@ dumpWithCrashWatch(AbortHandlerWorkingState &state) {
 				}
 				*pos = '\0';
 				pos++;
-				execlp("/bin/sh", "/bin/sh", "-c", command, (const char * const) 0);
+				execlp("/bin/sh", "/bin/sh", "-c", command, (char *) 0);
 
 				pos = state.messageBuf;
 				pos = ASSU::appendData(pos, end, "ERROR: cannot execute '");
 				pos = ASSU::appendData(pos, end, ctx->backtraceSanitizerCommand);
 				pos = ASSU::appendData(pos, end, "' for sanitizing the backtrace, trying 'cat'...\n");
 				write_nowarn(STDERR_FILENO, state.messageBuf, pos - state.messageBuf);
-				execlp("cat", "cat", (const char * const) 0);
-				execlp("/bin/cat", "cat", (const char * const) 0);
-				execlp("/usr/bin/cat", "cat", (const char * const) 0);
+				execlp("cat", "cat", (char *) 0);
+				execlp("/bin/cat", "cat", (char *) 0);
+				execlp("/usr/bin/cat", "cat", (char *) 0);
 
 				const char *commandArray[] = { "cat", NULL };
 				printExecError2(commandArray, errno, state.messageBuf, sizeof(state.messageBuf));
@@ -686,7 +686,7 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 	pid = asyncFork();
 	if (pid == 0) {
 		closeAllFileDescriptors(2, true);
-		execlp("date", "date", (const char * const) 0);
+		execlp("date", "date", (char *) 0);
 		_exit(1);
 	} else if (pid == -1) {
 		ASSU::printError("ERROR: Could not fork a process to dump the time!\n");
@@ -698,7 +698,7 @@ dumpDiagnostics(AbortHandlerWorkingState &state) {
 	pid = asyncFork();
 	if (pid == 0) {
 		closeAllFileDescriptors(2, true);
-		execlp("uname", "uname", "-mprsv", (const char * const) 0);
+		execlp("uname", "uname", "-mprsv", (char *) 0);
 		_exit(1);
 	} else if (pid == -1) {
 		ASSU::printError("ERROR: Could not fork a process to dump the uname!\n");
@@ -891,11 +891,11 @@ forkAndRedirectToTeeAndMainLogFile(const char *crashLogDir) {
 	if (pid == 0) {
 		close(p[1]);
 		dup2(p[0], STDIN_FILENO);
-		execlp("tee", "tee", filename, (const char * const) 0);
-		execlp("/usr/bin/tee", "tee", filename, (const char * const) 0);
-		execlp("cat", "cat", (const char * const) 0);
-		execlp("/bin/cat", "cat", (const char * const) 0);
-		execlp("/usr/bin/cat", "cat", (const char * const) 0);
+		execlp("tee", "tee", filename, (char *) 0);
+		execlp("/usr/bin/tee", "tee", filename, (char *) 0);
+		execlp("cat", "cat", (char *) 0);
+		execlp("/bin/cat", "cat", (char *) 0);
+		execlp("/usr/bin/cat", "cat", (char *) 0);
 		ASSU::printError("ERROR: cannot execute 'tee' or 'cat'; crash log will be lost!\n");
 		_exit(1);
 		return false;
@@ -1031,11 +1031,11 @@ abortHandler(int signo, siginfo_t *info, void *_unused) {
 			closeAllFileDescriptors(2, true);
 			#ifdef __APPLE__
 				const char *command[] = { "osascript", NULL };
-				execlp("osascript", "osascript", "-e", "beep 2", (const char * const) 0);
+				execlp("osascript", "osascript", "-e", "beep 2", (char *) 0);
 				printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
 			#else
 				const char *command[] = { "beep", NULL };
-				execlp("beep", "beep", (const char * const) 0);
+				execlp("beep", "beep", (char *) 0);
 				printExecError2(command, errno, state.messageBuf, sizeof(state.messageBuf));
 			#endif
 			_exit(1);
