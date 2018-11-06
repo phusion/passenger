@@ -559,7 +559,6 @@ initializeAgent(int argc, char **argv[], const char *processName,
 	const char *seedStr;
 
 	context = new Context();
-	memset(context, 0, sizeof(Context));
 
 	seedStr = getEnvString("PASSENGER_RANDOM_SEED");
 	if (seedStr == NULL) {

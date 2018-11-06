@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2010-2017 Phusion Holding B.V.
+ *  Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -25,6 +25,8 @@
  */
 #ifndef _PASSENGER_AGENT_FUNDAMENTALS_ABORT_HANDLER_H_
 #define _PASSENGER_AGENT_FUNDAMENTALS_ABORT_HANDLER_H_
+
+#include <cstddef>
 
 namespace Passenger {
 	class ResourceLocator;
@@ -62,6 +64,16 @@ struct AbortHandlerConfig {
 	bool stopProcess;
 	ResourceLocator *resourceLocator;
 	DiagnosticsDumper diagnosticsDumpers[MAX_DIAGNOSTICS_DUMPERS];
+
+	AbortHandlerConfig()
+		: ruby(NULL),
+		  origArgv(NULL),
+		  randomSeed(0),
+		  dumpWithCrashWatch(false),
+		  beep(false),
+		  stopProcess(false),
+		  resourceLocator(NULL)
+		{ }
 };
 
 void installAbortHandler(const AbortHandlerConfig *config);
