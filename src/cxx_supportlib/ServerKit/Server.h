@@ -54,7 +54,6 @@
 #include <pthread.h>
 #include <cstdio>
 #include <jsoncpp/json.h>
-#include <SmallVector.h>
 
 #include <LoggingKit/LoggingKit.h>
 #include <SafeLibev.h>

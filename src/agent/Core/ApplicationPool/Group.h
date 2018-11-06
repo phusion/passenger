@@ -1,6 +1,6 @@
 /*
  *  Phusion Passenger - https://www.phusionpassenger.com/
- *  Copyright (c) 2011-2017 Phusion Holding B.V.
+ *  Copyright (c) 2011-2018 Phusion Holding B.V.
  *
  *  "Passenger", "Phusion Passenger" and "Union Station" are registered
  *  trademarks of Phusion Holding B.V.
@@ -36,6 +36,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/container/vector.hpp>
+#include <boost/container/small_vector.hpp>
 #include <boost/atomic.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/thread.hpp>
@@ -44,7 +45,6 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <cassert>
-#include <SmallVector.h>
 #include <MemoryKit/palloc.h>
 #include <WrapperRegistry/Registry.h>
 #include <Hooks.h>

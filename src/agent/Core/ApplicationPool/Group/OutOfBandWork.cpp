@@ -228,7 +228,7 @@ Group::spawnThreadOOBWRequest(GroupPtr self, ProcessPtr process) {
 		// This is copied from Core::Controller when it is sending data using the
 		// "session" protocol.
 		char sizeField[sizeof(boost::uint32_t)];
-		SmallVector<StaticString, 10> data;
+		boost::container::small_vector<StaticString, 10> data;
 
 		data.push_back(StaticString(sizeField, sizeof(boost::uint32_t)));
 		data.push_back(P_STATIC_STRING_WITH_NULL("REQUEST_METHOD"));

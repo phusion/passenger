@@ -31,9 +31,9 @@
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include <boost/container/small_vector.hpp>
 #include <climits>
 #include <cassert>
-#include <SmallVector.h>
 #include <LoggingKit/LoggingKit.h>
 #include <StaticString.h>
 #include <MemoryKit/palloc.h>
@@ -263,7 +263,7 @@ public:
 	}
 };
 
-class SocketList: public SmallVector<Socket, 1> {
+class SocketList: public boost::container::small_vector<Socket, 1> {
 public:
 	void add(pid_t pid, const StaticString &address, const StaticString &protocol,
 		const StaticString &description, int concurrency, bool acceptHttpRequests)

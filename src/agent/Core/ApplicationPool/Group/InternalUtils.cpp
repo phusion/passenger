@@ -295,7 +295,7 @@ Group::assignSessionsToGetWaitersQuickly(Lock &lock) {
 		return;
 	}
 
-	SmallVector<GetAction, 8> actions;
+	boost::container::small_vector<GetAction, 8> actions;
 	unsigned int i = 0;
 	bool done = false;
 
@@ -320,7 +320,7 @@ Group::assignSessionsToGetWaitersQuickly(Lock &lock) {
 
 	verifyInvariants();
 	lock.unlock();
-	SmallVector<GetAction, 50>::const_iterator it, end = actions.end();
+	boost::container::small_vector<GetAction, 50>::const_iterator it, end = actions.end();
 	for (it = actions.begin(); it != end; it++) {
 		it->callback(it->session, ExceptionPtr());
 	}
