@@ -2,6 +2,7 @@ Release 5.3.7 (Not yet released)
 -------------
 
  * Changes minimum supported macOS version to 10.11 El Capitan.
+ * Removes packages for Ubuntu 17.10 Artful.
 
 
 Release 5.3.6
