@@ -2,6 +2,8 @@ Release 5.3.7 (Not yet released)
 -------------
 
  * Fixes package installation issues on Ubuntu 18.04. These issues were caused by an update released by Ubuntu on the nginx-common package. Closes GH-2122, GH-2140.
+ * Fixes compilation problems and warnings with GCC 8.2. Tested on Alpine Linux edge 2018-11-05. Closes GH-2139.
+ * Fixes compatibility with libcurl 7.62.0. Contributed by Po-Chuan Hsieh (@sunpoet).
  * Changes minimum supported macOS version to 10.11 El Capitan.
  * Removes packages for Ubuntu 17.10 Artful.
 
