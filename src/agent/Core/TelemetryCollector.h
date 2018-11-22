@@ -288,6 +288,7 @@ private:
 			lastTelemetryData.timestamp);
 		doc["end_time"] = (Json::UInt64) monoTimeToRealTime(
 			tmData.timestamp);
+		doc["version"] = PASSENGER_VERSION;
 		#ifdef PASSENGER_IS_ENTERPRISE
 			doc["edition"] = "enterprise";
 		#else
