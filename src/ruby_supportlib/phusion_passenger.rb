@@ -31,15 +31,16 @@ module PhusionPassenger
 
   PACKAGE_NAME = 'passenger'
   # Run 'rake src/cxx_supportlib/Constants.h configkit_schemas_inline_comments' after changing this number.
-  VERSION_STRING = '5.3.7'
+  VERSION_STRING = '6.0.0'
 
-  PREFERRED_NGINX_VERSION = '1.14.0'
-  NGINX_SHA256_CHECKSUM = '5d15becbf69aba1fe33f8d416d97edd95ea8919ea9ac519eff9bafebb6022cb5'
+  # Tip: find the SHA-256 with ./dev/nginx_version_sha2 <VERSION>
+  PREFERRED_NGINX_VERSION = '1.15.6'
+  NGINX_SHA256_CHECKSUM = 'a3d8c67c2035808c7c0d475fffe263db8c353b11521aa7ade468b780ed826cc6'
 
   # Packaging may be locked to an older version due to the specific module configuration being
   # incompatible with the version we prefer (latest stable).
-  PACKAGING_PREFERRED_NGINX_VERSION = '1.14.0'
-  PACKAGING_NGINX_SHA256_CHECKSUM = '5d15becbf69aba1fe33f8d416d97edd95ea8919ea9ac519eff9bafebb6022cb5'
+  PACKAGING_PREFERRED_NGINX_VERSION = '1.15.6'
+  PACKAGING_NGINX_SHA256_CHECKSUM = 'a3d8c67c2035808c7c0d475fffe263db8c353b11521aa7ade468b780ed826cc6'
 
   # sha256sum of the .tar.gz
   PREFERRED_PCRE_VERSION  = '8.42'
