@@ -615,6 +615,14 @@
     NULL
 },
 {
+    ngx_string("passenger_request_buffering"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
+    passenger_conf_set_request_buffering,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    offsetof(passenger_loc_conf_t, upstream_config.request_buffering),
+    NULL
+},
+{
     ngx_string("passenger_intercept_errors"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_FLAG,
     passenger_conf_set_intercept_errors,

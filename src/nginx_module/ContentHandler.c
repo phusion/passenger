@@ -331,6 +331,179 @@ header_is_transfer_encoding(ngx_str_t *key)
         ngx_strncasecmp(key->data + 1, (u_char *) "ransfer-encodin", sizeof("ransfer-encodin") - 1) == 0;
 }
 
+/* Given an ngx_chain_t head and tail position, appends a new chain element at the end,
+ * updates the head (if necessary) and returns the new element.
+ *
+ *  - The element is allocated from a freelist.
+ *  - Ensures that the element contains a buffer of at least `size` bytes.
+ *  - Sets the given tag on the buffer in the chain element.
+ *
+ * On error, returns NULL without modifying the given chain.
+ */
+static ngx_chain_t *
+append_ngx_chain_element(ngx_pool_t *p, ngx_chain_t **head,
+    ngx_chain_t *tail, ngx_chain_t **freelist, ngx_buf_tag_t tag, size_t size)
+{
+    ngx_chain_t *elem;
+    ngx_buf_t *buf;
+
+    elem = ngx_chain_get_free_buf(p, freelist);
+    if (elem == NULL) {
+        return NULL;
+    }
+
+    buf = elem->buf;
+    buf->tag = tag;
+
+    if (size > 0 && (buf->pos == NULL || buf->last == NULL
+        || (size_t) ngx_buf_size(buf) < size))
+    {
+        ngx_memzero(buf, sizeof(ngx_buf_t));
+
+        buf->start = ngx_palloc(p, size);
+        if (buf->start == NULL) {
+            return NULL;
+        }
+
+        /*
+         * set by ngx_memzero():
+         *
+         *     b->file_pos = 0;
+         *     b->file_last = 0;
+         *     b->file = NULL;
+         *     b->shadow = NULL;
+         *     b->tag = 0;
+         *     and flags
+         */
+
+        buf->pos = buf->start;
+        buf->last = buf->start;
+        buf->end = buf->last + size;
+        buf->temporary = 1;
+    }
+
+    if (*head == NULL) {
+        *head = elem;
+    } else {
+        tail->next = elem;
+    }
+    return elem;
+}
+
+/* Given a chain of buffers containing client body data,
+ * this filter wraps all that data into chunked encoding
+ * headers and footers.
+ */
+static ngx_int_t
+body_rechunk_output_filter(void *data, ngx_chain_t *input)
+{
+    ngx_http_request_t *r = data;
+    ngx_chain_t *output_head = NULL, *output_tail = NULL;
+    ngx_int_t body_eof_reached = 0;
+    ngx_int_t rc;
+    passenger_context_t *ctx;
+
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                   PROGRAM_NAME " rechunk output filter");
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
+
+    if (input == NULL) {
+        goto out;
+    }
+
+    if (!ctx->header_sent) {
+        /* The first buffer contains the request header, so pass it unmodified. */
+        ctx->header_sent = 1;
+
+        while (input != NULL) {
+            output_tail = append_ngx_chain_element(r->pool,
+                &output_head, output_tail, &ctx->free,
+                (ngx_buf_tag_t) &body_rechunk_output_filter,
+                0);
+            if (output_tail == NULL) {
+                return NGX_ERROR;
+            }
+
+            ngx_memcpy(output_tail->buf, input->buf, sizeof(ngx_buf_t));
+
+            body_eof_reached = input->buf->last_buf;
+            input = input->next;
+        }
+    } else {
+        while (input != NULL) {
+            /* Append chunked encoding size header */
+            output_tail = append_ngx_chain_element(r->pool,
+                &output_head, output_tail, &ctx->free,
+                (ngx_buf_tag_t) &body_rechunk_output_filter,
+                32);
+            if (output_tail == NULL) {
+                return NGX_ERROR;
+            }
+
+            output_tail->buf->last = ngx_sprintf(output_tail->buf->last, "%xO\r\n",
+                ngx_buf_size(input->buf));
+
+
+            /* Append chunked encoding payload */
+            output_tail = append_ngx_chain_element(r->pool,
+                &output_head, output_tail, &ctx->free,
+                (ngx_buf_tag_t) &body_rechunk_output_filter,
+                0);
+            if (output_tail == NULL) {
+                return NGX_ERROR;
+            }
+
+            ngx_memcpy(output_tail->buf, input->buf, sizeof(ngx_buf_t));
+
+
+            /* Append chunked encoding footer */
+            output_tail = append_ngx_chain_element(r->pool,
+                &output_head, output_tail, &ctx->free,
+                (ngx_buf_tag_t) &body_rechunk_output_filter,
+                2);
+            if (output_tail == NULL) {
+                return NGX_ERROR;
+            }
+
+            output_tail->buf->last = ngx_copy(output_tail->buf->last, "\r\n", 2);
+
+
+            body_eof_reached = input->buf->last_buf;
+            input = input->next;
+        }
+    }
+
+    if (body_eof_reached) {
+        /* Append final termination chunk. */
+        output_tail = append_ngx_chain_element(r->pool,
+                &output_head, output_tail, &ctx->free,
+                (ngx_buf_tag_t) &body_rechunk_output_filter,
+                5);
+        if (output_tail == NULL) {
+            return NGX_ERROR;
+        }
+
+        output_tail->buf->last = ngx_copy(output_tail->buf->last,
+            "0\r\n\r\n", 5);
+    }
+
+out:
+
+    rc = ngx_chain_writer(&r->upstream->writer, output_head);
+
+    /*
+     * The previous ngx_chain_writer() call consumed some buffers.
+     * Find such consumped (empty) buffers in the output buffer list,
+     * and either free them or add them to the freelist depending on
+     * whether the buffer's tag matches ours.
+     */
+    ngx_chain_update_chains(r->pool, &ctx->free, &ctx->busy, &output_head,
+        (ngx_buf_tag_t) &body_rechunk_output_filter);
+
+    return rc;
+}
+
 #define SET_NGX_STR(str, the_data) \
     do { \
         (str)->data = (u_char *) the_data; \
@@ -348,7 +521,7 @@ typedef struct {
     ngx_str_t     app_type;
     ngx_str_t     app_start_command;
     ngx_str_t     escaped_uri;
-    ngx_str_t     content_length;
+    ngx_str_t     content_length; /* Only used if !r->request_body_no_buffering */
     ngx_str_t     core_password;
     ngx_str_t     remote_port;
 } buffer_construction_state;
@@ -475,7 +648,7 @@ prepare_request_buffer_construction(ngx_http_request_t *r, passenger_loc_conf_t 
             NGX_ESCAPE_URI);
     }
 
-    if (r->headers_in.chunked) {
+    if (r->headers_in.chunked && !r->request_body_no_buffering) {
         /* If the request body is chunked, then Nginx sets r->headers_in.content_length_n
          * but does not set r->headers_in.headers, so we add this header ourselves.
          */
@@ -584,7 +757,7 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
 
         if (ngx_hash_find(&slcf->headers_set_hash, header[i].hash,
                           header[i].lowcase_key, header[i].key.len)
-         || header_is_transfer_encoding(&header[i].key))
+         || (!r->request_body_no_buffering && header_is_transfer_encoding(&header[i].key)))
         {
             continue;
         }
@@ -598,7 +771,7 @@ construct_request_buffer(ngx_http_request_t *r, passenger_loc_conf_t *slcf,
         total_size += header[i].key.len + header[i].value.len + 4;
     }
 
-    if (r->headers_in.chunked) {
+    if (r->headers_in.chunked && !r->request_body_no_buffering) {
         PUSH_STATIC_STR("Content-Length: ");
         if (b != NULL) {
             b->last = ngx_copy(b->last, state->content_length.data,
@@ -865,20 +1038,45 @@ create_request(ngx_http_request_t *r)
     if (b == NULL) {
         return NGX_ERROR;
     }
+    construct_request_buffer(r, slcf, context, &state, b);
+
     cl = ngx_alloc_chain_link(r->pool);
     if (cl == NULL) {
         return NGX_ERROR;
     }
     cl->buf = b;
 
-    construct_request_buffer(r, slcf, context, &state, b);
 
-    /* Pass request body */
+    /* Pass already received request body buffers. Make sure they come
+     * after the request header buffer we just constructed.
+     */
 
     body = r->upstream->request_bufs;
     r->upstream->request_bufs = cl;
 
     while (body) {
+        if (r->headers_in.chunked && r->request_body_no_buffering) {
+            /* If Transfer-Encoding is chunked, then Nginx dechunks the body.
+             * If at the same time request body buffering is disabled, then
+             * we pass the Transfer-Encoding header to the Passenger Core,
+             * and thus we also need to ensure we rechunk the body.
+             */
+            b = ngx_create_temp_buf(r->pool, 32);
+            if (b == NULL) {
+                return NGX_ERROR;
+            }
+
+            b->last = ngx_sprintf(b->last, "%xO\r\n",
+                ngx_buf_size(body->buf));
+            cl->next = ngx_alloc_chain_link(r->pool);
+            if (cl->next == NULL) {
+                return NGX_ERROR;
+            }
+
+            cl = cl->next;
+            cl->buf = b;
+        }
+
         b = ngx_alloc_buf(r->pool);
         if (b == NULL) {
             return NGX_ERROR;
@@ -890,14 +1088,40 @@ create_request(ngx_http_request_t *r)
         if (cl->next == NULL) {
             return NGX_ERROR;
         }
-
         cl = cl->next;
         cl->buf = b;
 
         body = body->next;
+
+        if (r->headers_in.chunked && r->request_body_no_buffering) {
+            b = ngx_create_temp_buf(r->pool, 2);
+            if (b == NULL) {
+                return NGX_ERROR;
+            }
+
+            b->last = ngx_copy(b->last, "\r\n", 2);
+            cl->next = ngx_alloc_chain_link(r->pool);
+            if (cl->next == NULL) {
+                return NGX_ERROR;
+            }
+
+            cl = cl->next;
+            cl->buf = b;
+        }
     }
+
     b->flush = 1;
     cl->next = NULL;
+
+    /* Again, if Transfer-Encoding is chunked, then Nginx dechunks the body.
+     * Here we install an output filter to make sure that the request body parts
+     * that will be received in the future, will also be rechunked when passed
+     * to the Passenger Core.
+     */
+    if (r->headers_in.chunked && r->request_body_no_buffering) {
+        r->upstream->output.output_filter = body_rechunk_output_filter;
+        r->upstream->output.filter_ctx = r;
+    }
 
     return NGX_OK;
 }
@@ -1598,6 +1822,8 @@ passenger_content_handler(ngx_http_request_t *r)
 
     u->pipe->input_filter = ngx_event_pipe_copy_input_filter;
     u->pipe->input_ctx = r;
+
+    r->request_body_no_buffering = !slcf->upstream_config.request_buffering;
 
     rc = ngx_http_read_client_request_body(r, ngx_http_upstream_init);
 

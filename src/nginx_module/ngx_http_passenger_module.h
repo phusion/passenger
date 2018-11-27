@@ -1,7 +1,7 @@
 /*
  * Copyright (C) Igor Sysoev
  * Copyright (C) 2007 Manlio Perillo (manlio.perillo@gmail.com)
- * Copyright (c) 2010-2017 Phusion Holding B.V.
+ * Copyright (c) 2010-2018 Phusion Holding B.V.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,11 @@
     (1000000 * PASSENGER_NGINX_MAJOR_VERSION + \
      1000   * PASSENGER_NGINX_MINOR_VERSION + \
      PASSENGER_NGINX_MICRO_VERSION)
+
+/* https://trac.nginx.org/nginx/ticket/1618 */
+#if NGINX_VERSION_NUM >= 1015003
+    #define NGINX_NO_SEND_REQUEST_BODY_INFINITE_LOOP_BUG
+#endif
 
 extern ngx_module_t ngx_http_passenger_module;
 

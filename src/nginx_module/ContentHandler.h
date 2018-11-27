@@ -40,6 +40,11 @@ typedef struct {
     u_char     *status_start;
     u_char     *status_end;
 
+    /* body_rechunk_output_filter state. */
+    ngx_chain_t *free;
+    ngx_chain_t *busy;
+    unsigned header_sent: 1;
+
     /** The application's 'public' directory. */
     ngx_str_t   public_dir;
 

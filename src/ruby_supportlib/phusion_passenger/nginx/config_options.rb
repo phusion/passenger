@@ -626,6 +626,14 @@ NGINX_CONFIGURATION_OPTIONS = [
     :auto_generate_nginx_tracking_code => false
   },
   {
+    :name     => 'passenger_request_buffering',
+    :scope    => :location,
+    :type     => :flag,
+    :default  => true,
+    :field    => 'upstream_config.request_buffering',
+    :function => 'passenger_conf_set_request_buffering'
+  },
+  {
     :name     => 'passenger_intercept_errors',
     :scope    => :location,
     :type     => :flag,

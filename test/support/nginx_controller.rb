@@ -64,6 +64,10 @@ class NginxController
     @servers << server
   end
 
+  def version
+    @version ||= `#{CONFIG['nginx']} -v 2>&1`.sub(/.*\//, '').strip
+  end
+
 private
   class Server
     attr_accessor :values

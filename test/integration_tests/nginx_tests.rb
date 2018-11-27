@@ -335,6 +335,14 @@ describe "Phusion Passenger for Nginx" do
         server[:passenger_load_shell_envvars] = "off"
         server[:passenger_max_requests] = 3
       end
+      if @nginx.version >= '1.15.3'
+        @nginx.add_server do |server|
+          server[:server_name] = "4.passenger.test"
+          server[:passenger_app_group_name] = "quaternary"
+          server[:root]        = "#{@stub.full_app_root}/public"
+          server[:passenger_request_buffering] = "off"
+        end
+      end
       @nginx.start
     end
 
@@ -411,6 +419,49 @@ describe "Phusion Passenger for Nginx" do
       response.class.should == Net::HTTPGatewayTimeOut
     end
 
+    it "supports disabling request buffering" do
+      if @nginx.version >= '1.15.3'
+        @server = "http://4.passenger.test:#{@nginx.port}"
+
+        # Start process
+        get("/pid")
+
+        @uri = URI.parse(@server)
+        socket = TCPSocket.new(@uri.host, @uri.port)
+        begin
+          socket.write("POST /raw_upload_to_file HTTP/1.1\r\n")
+          socket.write("Host: #{@uri.host}:#{@uri.port}\r\n")
+          socket.write("Transfer-Encoding: chunked\r\n")
+          socket.write("Content-Type: text/plain\r\n")
+          socket.write("Connection: close\r\n")
+          socket.write("X-Output: output.txt\r\n")
+          socket.write("\r\n")
+
+          output_file = @stub.full_app_root + "/output.txt"
+
+          eventually do
+            File.exist?(output_file)
+          end
+
+          socket.write("5\r\n12345\r\n")
+          eventually do
+            File.read(output_file) == "5\r\n12345\r\n"
+          end
+
+          socket.write("5\r\n67890\r\n")
+          eventually do
+            File.read(output_file) == "5\r\n12345\r\n5\r\n67890\r\n"
+          end
+
+          socket.write("0\r\n\r\n")
+          eventually do
+            File.read(output_file) == "5\r\n12345\r\n5\r\n67890\r\n0\r\n\r\n"
+          end
+        ensure
+          socket.close
+        end
+      end
+    end
   end
 
   describe "oob work" do
