@@ -882,7 +882,6 @@ initializeSecurityUpdateChecker() {
 
 static void
 initializeTelemetryCollector() {
-	return; // disable for now
 	TRACE_POINT();
 	WorkingObjects &wo = *workingObjects;
 
