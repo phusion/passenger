@@ -3,7 +3,7 @@ Release 6.0.0
 
  * Introduces support for *all* programming languages. Yes that's right... Java, Elixir, Go — Passenger now supports them all! This effort is called "generic language support".
  * Bumps the preferred Nginx version to 1.15.6.
- * [Nginx] Introduces a new option "passenger_request_buffering on|off", to allow disabling request body buffering. This is only supported in Nginx >= 1.15.3.
+ * [Nginx] Introduces a new option "passenger_request_buffering on|off", to allow disabling request body buffering. This is only supported in Nginx >= 1.15.3. Closes GH-2121.
 
 
 
