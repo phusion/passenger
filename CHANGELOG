@@ -2,10 +2,9 @@ Release 6.0.0
 -------------
 
  * Introduces support for *all* programming languages. Yes that's right... Java, Elixir, Go — Passenger now supports them all! This effort is called "generic language support".
- * Bumps the preferred Nginx version to 1.15.6.
+ * Bumps the preferred Nginx version to 1.15.7.
  * Introduces anonymous usage telemetry, which helps us improve Passenger. Please read the docs on what data is collected and how to disable this.
  * [Nginx] Introduces a new option "passenger_request_buffering on|off", to allow disabling request body buffering. This is only supported in Nginx >= 1.15.3. Closes GH-2121.
-
 
 
 Release 5.3.7
