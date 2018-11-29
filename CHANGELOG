@@ -5,6 +5,11 @@ Release 6.0.0
  * Bumps the preferred Nginx version to 1.15.7.
  * Introduces anonymous usage telemetry, which helps us improve Passenger. Please read the docs on what data is collected and how to disable this.
  * [Nginx] Introduces a new option "passenger_request_buffering on|off", to allow disabling request body buffering. This is only supported in Nginx >= 1.15.3. Closes GH-2121.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - OpenSSL: 1.0.2q (was: 1.0.2p)
+    - libcurl: 7.62.0 (was: 7.61.1)
+    - Ruby: 2.3.8 (was: 2.3.7)
 
 
 Release 5.3.7
