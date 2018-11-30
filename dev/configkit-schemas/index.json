@@ -293,7 +293,7 @@
          "type" : "unsigned integer"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/5.3.7",
+         "default_value" : "Phusion_Passenger/6.0.1",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -801,7 +801,7 @@
          "type" : "string"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/5.3.7",
+         "default_value" : "Phusion_Passenger/6.0.1",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -1631,7 +1631,7 @@
          "type" : "string"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/5.3.7",
+         "default_value" : "Phusion_Passenger/6.0.1",
          "has_default_value" : "static",
          "type" : "string"
       },
