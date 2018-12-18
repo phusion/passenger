@@ -2,6 +2,7 @@ Release 6.0.1 (Not yet released)
 -------------
 
  * Skips trying to set oom score in LXC container environments. Closes GH-2143.
+ * Fixes an issue during the GLS startup handshake where ephemeral ports could be exhausted. Closes GH-2144.
 
 
 Release 6.0.0

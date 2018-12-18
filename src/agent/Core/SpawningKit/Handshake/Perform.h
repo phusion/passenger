@@ -202,6 +202,7 @@ private:
 				socketIsNowPingable = true;
 				finishState = FINISH_SUCCESS;
 				wakeupEventLoop();
+				break;
 			} else {
 				syscalls::usleep(50000);
 			}
