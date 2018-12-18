@@ -1,6 +1,8 @@
 Release 6.0.1 (Not yet released)
 -------------
 
+ * Skips trying to set oom score in LXC container environments. Closes GH-2143.
+
 
 Release 6.0.0
 -------------
