@@ -82,6 +82,14 @@ module PhusionPassenger
         end
       end
 
+      # :watchdog_pid: expected Integer.
+      #
+      # return: the matching instance, if found; nil otherwise.
+      #
+      def find_by_watchdog_pid(pid, options = {})
+        return list(options).detect { |instance| instance.watchdog_pid == pid }
+      end
+
     private
       def default_paths
         if result = string_env("PASSENGER_INSTANCE_REGISTRY_DIR")

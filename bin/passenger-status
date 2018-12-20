@@ -55,6 +55,8 @@ DEFAULT_OPTIONS = { :show => 'pool', :color => STDOUT.tty? }.freeze
 def command_show_status(argv, options)
   if argv.empty?
     instance = find_sole_instance
+  elsif options[:pid_identifier]
+    instance = find_instance_by_watchdog_pid(argv[0].to_i)
   else
     instance = find_instance_by_name_prefix(argv[0])
   end
@@ -97,6 +99,16 @@ def find_instance_by_name_prefix(name)
     return instance
   else
     abort "ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running with the name '#{name}'."
+  end
+end
+
+def find_instance_by_watchdog_pid(pid)
+  instance = InstanceRegistry.new.find_by_watchdog_pid(pid)
+
+  if instance
+    return instance
+  else
+    abort "ERROR: there doesn't seem to be a #{PROGRAM_NAME} instance running with the pid #{pid}."
   end
 end
 
@@ -291,6 +303,9 @@ def create_option_parser(options)
     end
     opts.on("--force-colors", "Display colors even if stdout is not a TTY") do
       options[:color] = true
+    end
+    opts.on("--pid-identifier", "Identify instance by [Watchdog] PID, rather than name.") do
+      options[:pid_identifier] = true
     end
     opts.on("--verbose", "-v", "Show verbose information.") do
       options[:verbose] = true
