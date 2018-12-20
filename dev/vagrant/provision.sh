@@ -48,7 +48,7 @@ apt-get install -y build-essential git bash-completion ccache wget \
 ### Install basic gems
 
 if [[ ! -e /usr/local/bin/rake ]]; then
-	gem install rake --no-rdoc --no-ri
+	gem install rake --no-rdoc --no-ri --version="=12.2.1"
 fi
 if [[ ! -e /usr/local/bin/drake ]]; then
 	gem install drake --no-rdoc --no-ri
