@@ -3,6 +3,16 @@ Release 6.0.1 (Not yet released)
 
  * Skips trying to set oom score in LXC container environments. Closes GH-2143.
  * Fixes an issue during the GLS startup handshake where ephemeral ports could be exhausted. Closes GH-2144.
+ * Updated Ruby versions used in precompiled binaries (used for e.g. gem installs) to include 2.5.3, and 2.4.5 (removed: 2.4.4).
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - Curl: 7.62.0 -> 7.63.0
+    - Git: 2.19.2 -> 2.20.1
+    - Gnupg: 2.2.11 -> 2.2.12
+    - libassuan: 2.5.1 -> 2.5.2
+    - libgpg_error: 1.32 -> 1.33
+    - Ruby: 2.4.4 -> 2.4.5, + 2.5.3
+    - RubyGems: 2.7.6 -> 3.0.0
 
 
 Release 6.0.0
