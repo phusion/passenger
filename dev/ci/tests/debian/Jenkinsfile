@@ -40,6 +40,7 @@ pipeline {
     booleanParam(name: 'trusty', defaultValue: true, description: 'Test Ubuntu 14.04 packages')
     booleanParam(name: 'xenial', defaultValue: true, description: 'Test Ubuntu 16.04 packages')
     booleanParam(name: 'bionic', defaultValue: true, description: 'Test Ubuntu 18.04 packages')
+    booleanParam(name: 'cosmic', defaultValue: true, description: 'Test Ubuntu 18.10 packages')
 
     booleanParam(name: 'jessie', defaultValue: true, description: 'Test Debian 8 packages')
     booleanParam(name: 'stretch', defaultValue: true, description: 'Test Debian 9 packages')
