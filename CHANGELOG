@@ -4,6 +4,7 @@ Release 6.0.1 (Not yet released)
  * Skips trying to set oom score in LXC container environments. Closes GH-2143.
  * Fixes an issue during the GLS startup handshake where ephemeral ports could be exhausted. Closes GH-2144.
  * Updated Ruby versions used in precompiled binaries (used for e.g. gem installs) to include 2.5.3, and 2.4.5 (removed: 2.4.4).
+ * Bumps the preferred Nginx version to 1.15.8.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
     - Curl: 7.62.0 -> 7.63.0
