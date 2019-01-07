@@ -113,7 +113,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   multi_app                                           boolean            -          default(true),read_only
  *   request_freelist_limit                              unsigned integer   -          default(1024)
  *   response_buffer_high_watermark                      unsigned integer   -          default(134217728)
- *   server_software                                     string             -          default("Phusion_Passenger/6.0.1")
+ *   server_software                                     string             -          default("Phusion_Passenger/6.0.2")
  *   show_version_in_header                              boolean            -          default(true)
  *   start_reading_after_accept                          boolean            -          default(true)
  *   stat_throttle_rate                                  unsigned integer   -          default(10)
