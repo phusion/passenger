@@ -1,7 +1,7 @@
 Release 6.0.2 (Not released yet)
 -------------
 
- * 
+ * Allow compilation to work when Apple messed up their system ruby headers.
 
 
 Release 6.0.1
