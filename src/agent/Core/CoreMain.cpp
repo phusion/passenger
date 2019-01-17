@@ -912,7 +912,7 @@ initializeAdminPanelConnector() {
 	TRACE_POINT();
 	WorkingObjects &wo = *workingObjects;
 
-	if (coreConfig->get("admin_panel_url").isNull()) {
+	if (coreConfig->get("admin_panel_url").empty()) {
 		return;
 	}
 
