@@ -20,11 +20,18 @@ if ! grep -q passenger.test /etc/hosts; then
 fi
 
 
+### Preset dpkg
+
+# None of the packages to install require interaction, but a couple still expect an available
+# stdin. With this, they'll know it isn't.
+export DEBIAN_FRONTEND=noninteractive
+
+
 ### Update keys/certificates
 
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 7F438280EF8D349F # Puppet
 
-apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --reinstall ca-certificates
+apt-get update && apt-get install --reinstall ca-certificates
 
 
 ### Update bashrc and bash profile
