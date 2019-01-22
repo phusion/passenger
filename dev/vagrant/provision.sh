@@ -20,6 +20,13 @@ if ! grep -q passenger.test /etc/hosts; then
 fi
 
 
+### Update keys/certificates
+
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 7F438280EF8D349F # Puppet
+
+apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --reinstall ca-certificates
+
+
 ### Update bashrc and bash profile
 
 if ! grep -q bashrc.mine /etc/bash.bashrc; then
