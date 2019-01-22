@@ -54,7 +54,7 @@ if [[ ! -e /usr/local/bin/drake ]]; then
 	gem install drake --no-rdoc --no-ri
 fi
 if [[ ! -e /usr/local/bin/bundler ]]; then
-	gem install bundler --no-rdoc --no-ri
+	gem install bundler --no-rdoc --no-ri --version="=1.15.4"
 fi
 
 
