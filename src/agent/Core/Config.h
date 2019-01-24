@@ -491,6 +491,11 @@ public:
 		add("controller_cpu_affine", BOOL_TYPE, OPTIONAL | READ_ONLY, false);
 		add("file_descriptor_ulimit", UINT_TYPE, OPTIONAL | READ_ONLY, 0);
 
+		add("hook_attached_process", STRING_TYPE, OPTIONAL | READ_ONLY);
+		add("hook_detached_process", STRING_TYPE, OPTIONAL | READ_ONLY);
+		add("hook_spawn_failed", STRING_TYPE, OPTIONAL | READ_ONLY);
+		add("hook_queue_full_error", STRING_TYPE, OPTIONAL | READ_ONLY);
+
 		addValidator(validateMultiAppMode);
 		addValidator(boost::bind(validateSingleAppMode, boost::placeholders::_1,
 			wrapperRegistry, boost::placeholders::_2));
