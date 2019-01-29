@@ -155,6 +155,14 @@ NGINX_CONFIGURATION_OPTIONS = [
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
+    :name     => 'passenger_disable_log_prefix',
+    :scope    => :global,
+    :type     => :flag,
+    :default  => false,
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
     :name     => 'passenger_file_descriptor_log_file',
     :scope    => :global,
     :type     => :string,

@@ -558,6 +558,11 @@ module PhusionPassenger
         :desc      => "Log level to use. Default: #{DEFAULT_LOG_LEVEL}"
       },
       {
+        :name      => :disable_log_prefix,
+        :type      => :boolean,
+        :desc      => "Disable prefixing log statements with PID and channel."
+      },
+      {
         :name      => :admin_panel_url,
         :type      => :string,
         :desc      => 'Connect to an admin panel at the given connector URL'

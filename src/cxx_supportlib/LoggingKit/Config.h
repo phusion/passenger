@@ -55,6 +55,7 @@ using namespace std;
  *   level                        string    -   default("notice")
  *   redirect_stderr              boolean   -   default(true)
  *   target                       any       -   default({"stderr": true})
+ *   disable_log_prefix           boolean   -   default(false)
  *
  * END
  */
@@ -84,6 +85,7 @@ struct ConfigRealization {
 	TargetType fileDescriptorLogTargetType;
 	int targetFd;
 	bool saveLog;
+	bool disableLogPrefix;
 	int fileDescriptorLogTargetFd;
 	FdClosePolicy targetFdClosePolicy;
 	FdClosePolicy fileDescriptorLogTargetFdClosePolicy;
