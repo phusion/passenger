@@ -267,6 +267,11 @@ module PhusionPassenger
             headers["SERVER_NAME"]     = "127.0.0.1"
             headers["SERVER_PORT"]     = connection.addr[1].to_s
             headers["SERVER_PROTOCOL"] = protocol
+            headers["REMOTE_PORT"],
+            headers["REMOTE_ADDR"]     = connection.to_io.is_a?(TCPSocket) ?
+                                           connection.to_io.peeraddr(:numeric)[1..2] :
+                                           [nil, '127.0.0.1']
+
           else
             header, value = line.split(/\s*:\s*/, 2)
             header.upcase!            # "Foo-Bar" => "FOO-BAR"
