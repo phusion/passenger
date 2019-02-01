@@ -43,33 +43,34 @@ _linuxAutoDetectInContainer() {
 		return (file.length() > 0);
 	}
 
-	if (fileExists("/proc/1/environ")) {
-		string file = unsafeReadFile("/proc/1/environ");
-		if (file.size() > 0) {
-			vector<string> v;
-			split(file,'\0', v);
-			for(vector<string>::iterator it = v.begin(); it != v.end(); ++it) {
-				if (startsWith(*it, "container=")) {
+	if (getuid() == 0) {
+		if (fileExists("/proc/1/environ")) {
+			string file = unsafeReadFile("/proc/1/environ");
+			if (file.size() > 0) {
+				vector<string> v;
+				split(file,'\0', v);
+				for(vector<string>::iterator it = v.begin(); it != v.end(); ++it) {
+					if (startsWith(*it, "container=")) {
+						return true;
+					}
+				}
+			}
+		}
+
+		if (fileExists("/proc/1/sched")) {
+			string file = unsafeReadFile("/proc/1/sched");
+			if (file.length() >= 0) {
+				const char t = file[0];
+				if (t == '\0') {
+					return false;
+				}
+
+				if (!startsWith(file, "(1,")) {
 					return true;
 				}
 			}
 		}
 	}
-
-	if (fileExists("/proc/1/sched")) {
-		string file = unsafeReadFile("/proc/1/sched");
-		if (file.length() >= 0) {
-			const char t = file[0];
-			if (t == '\0') {
-				return false;
-			}
-
-			if (!startsWith(file, "(1,")) {
-				return true;
-			}
-		}
-	}
-
 	return false;
 }
 
