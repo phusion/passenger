@@ -2,6 +2,7 @@ Release 6.0.2 (Not released yet)
 -------------
 
  * Allow compilation to work when Apple messed up their system ruby headers.
+ * Only try to read pid 1's /proc files as root, in container detection. Closes GH-2168.
 
 
 Release 6.0.1
