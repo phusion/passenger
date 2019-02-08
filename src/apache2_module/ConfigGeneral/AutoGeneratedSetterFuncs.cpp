@@ -335,6 +335,21 @@ cmd_passenger_disable_anonymous_telemetry(cmd_parms *cmd, void *pcfg, const char
 }
 
 static const char *
+cmd_passenger_disable_log_prefix(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
+	if (err != NULL) {
+		ap_log_perror(APLOG_MARK, APLOG_STARTUP, 0, cmd->temp_pool,
+			"WARNING: %s", err);
+	}
+
+	serverConfig.disableLogPrefixSourceFile = cmd->directive->filename;
+	serverConfig.disableLogPrefixSourceLine = cmd->directive->line_num;
+	serverConfig.disableLogPrefixExplicitlySet = true;
+	serverConfig.disableLogPrefix = arg != NULL;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_disable_security_update_check(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {

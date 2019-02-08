@@ -138,6 +138,13 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => "The #{PROGRAM_NAME} log file."
   },
   {
+    :name      => 'PassengerDisableLogPrefix',
+    :type      => :flag,
+    :context   => :global,
+    :default   => false,
+    :desc      => "Disable prefixing log statements with PID and channel."
+  },
+  {
     :name      => 'PassengerSocketBacklog',
     :type      => :integer,
     :context   => :global,

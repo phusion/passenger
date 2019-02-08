@@ -409,16 +409,18 @@ realLogAppOutput(const HashedStaticString &groupName, int targetFd,
 	const char *pidStr, unsigned int pidStrLen,
 	const char *channelName, unsigned int channelNameLen,
 	const char *message, unsigned int messageLen, int appLogFile,
-	bool saveLog)
+	bool saveLog, bool prefixLogs)
 {
 	char *pos = buf;
 	char *end = buf + bufSize;
 
-	pos = appendData(pos, end, "App ");
-	pos = appendData(pos, end, pidStr, pidStrLen);
-	pos = appendData(pos, end, " ");
-	pos = appendData(pos, end, channelName, channelNameLen);
-	pos = appendData(pos, end, ": ");
+	if (prefixLogs) {
+		pos = appendData(pos, end, "App ");
+		pos = appendData(pos, end, pidStr, pidStrLen);
+		pos = appendData(pos, end, " ");
+		pos = appendData(pos, end, channelName, channelNameLen);
+		pos = appendData(pos, end, ": ");
+	}
 	pos = appendData(pos, end, message, messageLen);
 	pos = appendData(pos, end, "\n");
 
@@ -437,6 +439,7 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const StaticString 
 {
 	int targetFd;
 	bool saveLog = false;
+	bool prefixLogs = true;
 
 	if (OXT_LIKELY(context != NULL)) {
 		const ConfigRealization *configRealization = context->getConfigRealization();
@@ -446,6 +449,7 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const StaticString 
 
 		targetFd = configRealization->targetFd;
 		saveLog = configRealization->saveLog;
+		prefixLogs = !configRealization->disableLogPrefix;
 	} else {
 		targetFd = STDERR_FILENO;
 	}
@@ -476,14 +480,14 @@ logAppOutput(const HashedStaticString &groupName, pid_t pid, const StaticString 
 			buf, sizeof(buf),
 			pidStr, pidStrLen,
 			channelName.data(), channelName.size(),
-			message, size, fd, saveLog);
+			message, size, fd, saveLog, prefixLogs);
 	} else {
 		DynamicBuffer buf(totalLen);
 		realLogAppOutput(groupName, targetFd,
 			buf.data, totalLen,
 			pidStr, pidStrLen,
 			channelName.data(), channelName.size(),
-			message, size, fd, saveLog);
+			message, size, fd, saveLog, prefixLogs);
 	}
 	if(fd > -1){close(fd);}
 }
@@ -778,6 +782,7 @@ Schema::Schema() {
 	add("redirect_stderr", BOOL_TYPE, OPTIONAL, true);
 	add("app_output_log_level", STRING_TYPE, OPTIONAL, DEFAULT_APP_OUTPUT_LOG_LEVEL_NAME);
 	add("buffer_logs", BOOL_TYPE, OPTIONAL, false);
+	add("disable_log_prefix", BOOL_TYPE, OPTIONAL, false);
 
 	addValidator(boost::bind(validateLogLevel, "level",
 		boost::placeholders::_1, boost::placeholders::_2));
@@ -798,7 +803,8 @@ ConfigRealization::ConfigRealization(const ConfigKit::Store &store)
 	: level(parseLevel(store["level"].asString())),
 	  appOutputLogLevel(parseLevel(store["app_output_log_level"].asString())),
 	  saveLog(store["buffer_logs"].asBool()),
-	  finalized(false)
+	  finalized(false),
+	  disableLogPrefix(store["disable_log_prefix"].asBool())
 {
 	if (store["target"].isMember("stderr")) {
 		targetType = STDERR_TARGET;

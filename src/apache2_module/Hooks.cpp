@@ -1354,6 +1354,7 @@ public:
 		config["admin_panel_auth_type"] = nonEmptyString(serverConfig.adminPanelAuthType);
 		config["admin_panel_username"] = nonEmptyString(serverConfig.adminPanelUsername);
 		config["admin_panel_password"] = nonEmptyString(serverConfig.adminPanelPassword);
+		config["disable_log_prefix"] = serverConfig.disableLogPrefix;
 
 		if (!serverConfig.logFile.empty()) {
 			config["log_target"] = serverConfig.logFile.toString();

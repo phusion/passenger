@@ -111,6 +111,7 @@ module PhusionPassenger
           add_param(command, :instance_registry_dir, "--instance-registry-dir")
           add_param(command, :data_buffer_dir, "--data-buffer-dir")
           add_param(command, :log_level, "--log-level")
+          add_flag_param(command, :disable_log_prefix, "--disable-log-prefix")
           @options[:ctls].each do |ctl|
             command << " --ctl #{Shellwords.escape ctl}"
           end

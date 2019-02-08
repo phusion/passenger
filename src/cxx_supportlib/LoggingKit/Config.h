@@ -88,6 +88,7 @@ struct ConfigRealization {
 	FdClosePolicy targetFdClosePolicy;
 	FdClosePolicy fileDescriptorLogTargetFdClosePolicy;
 	bool finalized;
+	bool disableLogPrefix;
 
 	ConfigRealization(const ConfigKit::Store &store);
 	~ConfigRealization();
