@@ -191,6 +191,12 @@ class TeeInput
     self # Rack does not specify what the return value is here
   end
 
+  # Rack repeatedly introduces bugs that rely on this method existing
+  # https://github.com/rack/rack/pull/1201
+  def eof?
+    socket_drained?
+  end
+
 private
 
   def socket_drained?

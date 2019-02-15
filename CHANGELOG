@@ -4,6 +4,8 @@ Release 6.0.2 (Not released yet)
  * Allow compilation to work when Apple messed up their system ruby headers.
  * Only try to read pid 1's /proc files as root, in container detection. Closes GH-2168.
  * Add an option to disable prefixing application logs with "App PID stdout": `PassengerDisableLogPrefix` (Apache) / `passenger_disable_log_prefix` (Nginx). Closes GH-1915
+ * Made Passenger more resiliant to Rack bugs. Closes GH-2150.
+
 
 Release 6.0.1
 -------------
