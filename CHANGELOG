@@ -7,6 +7,7 @@ Release 6.0.2 (Not released yet)
  * Add support for identifying the Passenger instance by PID. Closes GH-2146. Contributed by Saverio Miroddi (@saveriomiroddi).
  * [Ruby] Made Passenger more resiliant to Rack bugs. Closes GH-2150.
  * [Nginx] Do not touch Nginx's proxy_temp_path var in Passenger's nginx modules. Closes GH-2075. Contributed by Roman Berestnikov-Sivolov (@ROMB).
+ * Updated Ruby versions used in precompiled binaries (used for e.g. gem installs) to include 2.6.1.
 
 
 Release 6.0.1
