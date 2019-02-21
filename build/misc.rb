@@ -143,6 +143,8 @@ task :contributors do
   entries.push "Floor Drees (Phusion)"
   entries.delete "Luuk Hafkamp"
   entries.push "Luuk Hafkamp (Phusion)"
+  entries.delete "Luuk Hendriks"
+  entries.push "Luuk Hendriks (Phusion)"
 
   # Non-employee contributors
   entries.push "Ruslan Ermilov (NGINX Inc)"
@@ -152,7 +154,7 @@ task :contributors do
   entries.push "Yichun Zhang"
 
   File.open("CONTRIBUTORS", "w") do |f|
-    f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.join("\n"))
+    f.puts(entries.sort{ |a, b| a.downcase <=> b.downcase }.uniq.join("\n"))
   end
   puts "Updated CONTRIBUTORS"
 end
