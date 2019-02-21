@@ -1,4 +1,4 @@
-Release 6.0.2 (Not released yet)
+Release 6.0.2
 -------------
 
  * Allow compilation to work when Apple messed up their system ruby headers.
@@ -8,6 +8,15 @@ Release 6.0.2 (Not released yet)
  * [Ruby] Made Passenger more resiliant to Rack bugs. Closes GH-2150.
  * [Nginx] Do not touch Nginx's proxy_temp_path var in Passenger's nginx modules. Closes GH-2075. Contributed by Roman Berestnikov-Sivolov (@ROMB).
  * Updated Ruby versions used in precompiled binaries (used for e.g. gem installs) to include 2.6.1.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - Curl: 7.64.0 (was: 7.63.0)
+    - Ruby: 2.6.1 (was: 2.6.0)
+    - RubyGems 3.0.2 (was: 3.0.1)
+    - ccache 3.6 (was: 3.5)
+    - GnuPG 2.2.13 (was: 2.2.12)
+    - libassuan 2.5.3 (was: 2.5.2)
+    - libgpg_error 1.35 (was: 1.33)
 
 
 Release 6.0.1
