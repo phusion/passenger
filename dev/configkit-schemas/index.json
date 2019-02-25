@@ -293,7 +293,7 @@
          "type" : "unsigned integer"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/6.0.2",
+         "default_value" : "Phusion_Passenger/6.0.3",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -695,6 +695,11 @@
          "has_default_value" : "static",
          "type" : "string"
       },
+      "disable_log_prefix" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "file_descriptor_log_target" : {
          "type" : "any"
       },
@@ -801,7 +806,7 @@
          "type" : "string"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/6.0.2",
+         "default_value" : "Phusion_Passenger/6.0.3",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -974,6 +979,11 @@
          "type" : "string"
       },
       "buffer_logs" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
+      "disable_log_prefix" : {
          "default_value" : false,
          "has_default_value" : "static",
          "type" : "boolean"
@@ -1521,6 +1531,11 @@
          "has_default_value" : "static",
          "type" : "string"
       },
+      "disable_log_prefix" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "file_descriptor_log_target" : {
          "type" : "any"
       },
@@ -1631,7 +1646,7 @@
          "type" : "string"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/6.0.2",
+         "default_value" : "Phusion_Passenger/6.0.3",
          "has_default_value" : "static",
          "type" : "string"
       },

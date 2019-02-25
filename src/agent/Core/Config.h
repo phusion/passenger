@@ -135,6 +135,7 @@ using namespace std;
  *   default_sticky_sessions                                         boolean            -          default(false)
  *   default_sticky_sessions_cookie_name                             string             -          default("_passenger_route")
  *   default_user                                                    string             -          default("nobody")
+ *   disable_log_prefix                                              boolean            -          default(false)
  *   file_descriptor_log_target                                      any                -          -
  *   file_descriptor_ulimit                                          unsigned integer   -          default(0),read_only
  *   graceful_exit                                                   boolean            -          default(true)
@@ -157,7 +158,7 @@ using namespace std;
  *   security_update_checker_interval                                unsigned integer   -          default(86400)
  *   security_update_checker_proxy_url                               string             -          -
  *   security_update_checker_url                                     string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
- *   server_software                                                 string             -          default("Phusion_Passenger/6.0.2")
+ *   server_software                                                 string             -          default("Phusion_Passenger/6.0.3")
  *   show_version_in_header                                          boolean            -          default(true)
  *   single_app_mode_app_root                                        string             -          default,read_only
  *   single_app_mode_app_start_command                               string             -          read_only

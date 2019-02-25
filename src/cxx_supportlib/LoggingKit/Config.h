@@ -51,6 +51,7 @@ using namespace std;
  *
  *   app_output_log_level         string    -   default("notice")
  *   buffer_logs                  boolean   -   default(false)
+ *   disable_log_prefix           boolean   -   default(false)
  *   file_descriptor_log_target   any       -   -
  *   level                        string    -   default("notice")
  *   redirect_stderr              boolean   -   default(true)
