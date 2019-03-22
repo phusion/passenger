@@ -11,6 +11,7 @@ Release 6.0.3 (Not yet released)
     - OpenSSL 1.0.2r (was 1.0.2q)
     - RubyGems 3.0.3 (was 3.0.2)
     - Ruby 2.5.3 -> 2.5.5 & 2.6.1 -> 2.6.2
+    - libgpg_error 1.36 (was 1.35)
 
 
 Release 6.0.2
