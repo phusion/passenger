@@ -1,6 +1,7 @@
 Release 6.0.3 (Not yet released)
 -------------
 
+ * Improves container detection and fixes a compilation warning in GCC 8+. Closes GH-2186.
  * Allowed externally specifying an app instance to send a request to. Contributed by Mark R. James (@mrj).
  * Fixed an incompatibility with sending requests to specific app instances, when using the rails web-console gem. Contributed by Mark R. James (@mrj).
  * Fixed a regression (introduced in 5.1.9) where some hooks were not called. Closes GH-2103. Contributed by Mark R. James (@mrj).

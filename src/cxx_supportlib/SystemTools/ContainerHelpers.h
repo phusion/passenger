@@ -59,7 +59,7 @@ _linuxAutoDetectInContainer() {
 
 		if (fileExists("/proc/1/sched")) {
 			string file = unsafeReadFile("/proc/1/sched");
-			if (file.length() >= 0) {
+			if (file.length() > 0) {
 				const char t = file[0];
 				if (t == '\0') {
 					return false;
