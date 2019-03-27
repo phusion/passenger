@@ -14,10 +14,9 @@
 #define BOOST_OPTIONAL_DETAIL_OLD_OPTIONAL_IMPLEMENTATION_AJK_28JAN2015_HPP
 
 #include <boost/detail/reference_content.hpp>
-#include <boost/mpl/bool.hpp>
-#include <boost/mpl/if.hpp>
-#include <boost/mpl/not.hpp>
 #include <boost/type_traits/is_reference.hpp>
+#include <boost/type_traits/integral_constant.hpp>
+#include <boost/type_traits/conditional.hpp>
 
 namespace boost {
 
@@ -96,13 +95,13 @@ class optional_base : public optional_tag
 
     typedef T value_type ;
 
-    typedef mpl::true_  is_reference_tag ;
-    typedef mpl::false_ is_not_reference_tag ;
+    typedef true_type  is_reference_tag ;
+    typedef false_type is_not_reference_tag ;
 
     typedef BOOST_DEDUCED_TYPENAME is_reference<T>::type is_reference_predicate ;
 
   public:
-    typedef BOOST_DEDUCED_TYPENAME mpl::if_<is_reference_predicate,types_when_ref,types_when_not_ref>::type types ;
+    typedef BOOST_DEDUCED_TYPENAME conditional<is_reference_predicate::value,types_when_ref,types_when_not_ref>::type types ;
 
   protected:
     typedef BOOST_DEDUCED_TYPENAME types::reference_type       reference_type ;
@@ -333,7 +332,7 @@ class optional_base : public optional_tag
 
   public :
 
-    // **DEPPRECATED** Destroys the current value, if any, leaving this UNINITIALIZED
+    // Destroys the current value, if any, leaving this UNINITIALIZED
     // No-throw (assuming T::~T() doesn't)
     void reset() BOOST_NOEXCEPT { destroy(); }
 
@@ -422,7 +421,7 @@ class optional_base : public optional_tag
     template<class Expr>
     void construct ( Expr&& factory, in_place_factory_base const* )
      {
-       BOOST_STATIC_ASSERT ( ::boost::mpl::not_<is_reference_predicate>::value ) ;
+       BOOST_STATIC_ASSERT ( !is_reference_predicate::value ) ;
        boost_optional_detail::construct<value_type>(factory, m_storage.address());
        m_initialized = true ;
      }
@@ -431,7 +430,7 @@ class optional_base : public optional_tag
     template<class Expr>
     void construct ( Expr&& factory, typed_in_place_factory_base const* )
      {
-       BOOST_STATIC_ASSERT ( ::boost::mpl::not_<is_reference_predicate>::value ) ;
+       BOOST_STATIC_ASSERT ( !is_reference_predicate::value ) ;
        factory.apply(m_storage.address()) ;
        m_initialized = true ;
      }
@@ -456,7 +455,7 @@ class optional_base : public optional_tag
     template<class Expr>
     void construct ( Expr const& factory, in_place_factory_base const* )
      {
-       BOOST_STATIC_ASSERT ( ::boost::mpl::not_<is_reference_predicate>::value ) ;
+       BOOST_STATIC_ASSERT ( !is_reference_predicate::value ) ;
        boost_optional_detail::construct<value_type>(factory, m_storage.address());
        m_initialized = true ;
      }
@@ -465,7 +464,7 @@ class optional_base : public optional_tag
     template<class Expr>
     void construct ( Expr const& factory, typed_in_place_factory_base const* )
      {
-       BOOST_STATIC_ASSERT ( ::boost::mpl::not_<is_reference_predicate>::value ) ;
+       BOOST_STATIC_ASSERT ( !is_reference_predicate::value ) ;
        factory.apply(m_storage.address()) ;
        m_initialized = true ;
      }

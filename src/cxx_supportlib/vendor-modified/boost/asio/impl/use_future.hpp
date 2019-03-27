@@ -16,7 +16,6 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
-#include <future>
 #include <tuple>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/memory.hpp>

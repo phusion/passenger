@@ -594,7 +594,7 @@ namespace boost
 #endif
 
 #if defined BOOST_THREAD_USES_DATETIME
-        inline BOOST_SYMBOL_VISIBLE void sleep(xtime const& abs_time)
+        inline BOOST_SYMBOL_VISIBLE void sleep(::boost::xtime const& abs_time)
         {
             sleep(system_time(abs_time));
         }
@@ -811,6 +811,7 @@ namespace boost
         };
 
         void BOOST_THREAD_DECL add_thread_exit_function(thread_exit_function_base*);
+//#ifndef BOOST_NO_EXCEPTIONS
         struct shared_state_base;
 #if defined(BOOST_THREAD_PLATFORM_WIN32)
         inline void make_ready_at_thread_exit(shared_ptr<shared_state_base> as)
@@ -824,6 +825,7 @@ namespace boost
 #else
         void BOOST_THREAD_DECL make_ready_at_thread_exit(shared_ptr<shared_state_base> as);
 #endif
+//#endif
     }
 
     namespace this_thread

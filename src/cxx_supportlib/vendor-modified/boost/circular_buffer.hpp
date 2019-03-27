@@ -16,7 +16,7 @@
 #endif
 
 #include <boost/circular_buffer_fwd.hpp>
-#include <boost/detail/workaround.hpp>
+#include <boost/config/workaround.hpp>
 #include <boost/static_assert.hpp>
 
 // BOOST_CB_ENABLE_DEBUG: Debug support control.
@@ -36,10 +36,10 @@
 #if BOOST_WORKAROUND(__BORLANDC__, <= 0x0550) || BOOST_WORKAROUND(__MWERKS__, <= 0x2407)
     #define BOOST_CB_IS_CONVERTIBLE(Iterator, Type) ((void)0)
 #else
-    #include <boost/detail/iterator.hpp>
+    #include <iterator>
     #include <boost/type_traits/is_convertible.hpp>
     #define BOOST_CB_IS_CONVERTIBLE(Iterator, Type) \
-        BOOST_STATIC_ASSERT((is_convertible<typename detail::iterator_traits<Iterator>::value_type, Type>::value))
+        BOOST_STATIC_ASSERT((is_convertible<typename std::iterator_traits<Iterator>::value_type, Type>::value))
 #endif
 
 // BOOST_CB_ASSERT_TEMPLATED_ITERATOR_CONSTRUCTORS:

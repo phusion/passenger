@@ -65,7 +65,7 @@ struct derivation_value_traits
 
    static const_pointer to_value_ptr(const const_node_ptr &n)
    {
-      return pointer_traits<pointer>::pointer_to(static_cast<const_reference>(*n));
+      return pointer_traits<const_pointer>::pointer_to(static_cast<const_reference>(*n));
    }
 };
 

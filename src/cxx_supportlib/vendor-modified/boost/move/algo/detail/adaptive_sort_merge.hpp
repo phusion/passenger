@@ -868,7 +868,7 @@ void initialize_keys( RandIt first, RandIt last
    typedef typename iterator_traits<RandIt>::value_type value_type;
    std::size_t count = std::size_t(last - first);
    for(std::size_t i = 0; i != count; ++i){
-      *first = value_type(i);
+      *first = static_cast<value_type>(i);
       ++first;
    }
 }

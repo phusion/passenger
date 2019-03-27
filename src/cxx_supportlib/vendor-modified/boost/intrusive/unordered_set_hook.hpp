@@ -85,13 +85,13 @@ struct unordered_node_traits
    static node_ptr get_next(const const_node_ptr & n)
    {  return pointer_traits<node_ptr>::static_cast_from(n->next_);  }
 
-   static void set_next(const node_ptr & n, const node_ptr & next)
+   static void set_next(node_ptr n, node_ptr next)
    {  n->next_ = next;  }
 
    static node_ptr get_prev_in_group(const const_node_ptr & n)
    {  return n->prev_in_group_;  }
 
-   static void set_prev_in_group(const node_ptr & n, const node_ptr & prev)
+   static void set_prev_in_group(node_ptr n, node_ptr prev)
    {  n->prev_in_group_ = prev;  }
 
    static std::size_t get_hash(const const_node_ptr & n)
@@ -111,7 +111,7 @@ struct unordered_group_adapter
    static node_ptr get_next(const const_node_ptr & n)
    {  return NodeTraits::get_prev_in_group(n);  }
 
-   static void set_next(const node_ptr & n, const node_ptr & next)
+   static void set_next(node_ptr n, node_ptr next)
    {  NodeTraits::set_prev_in_group(n, next);   }
 };
 

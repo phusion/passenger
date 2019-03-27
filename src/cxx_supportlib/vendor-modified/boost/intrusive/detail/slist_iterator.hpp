@@ -68,7 +68,7 @@ class slist_iterator
       :  members_(other.pointed_node(), other.get_value_traits())
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE const node_ptr &pointed_node() const
+   BOOST_INTRUSIVE_FORCEINLINE node_ptr pointed_node() const
    { return members_.nodeptr_; }
 
    BOOST_INTRUSIVE_FORCEINLINE slist_iterator &operator=(const node_ptr &node)

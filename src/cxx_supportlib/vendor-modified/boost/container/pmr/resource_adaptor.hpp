@@ -172,7 +172,7 @@ class resource_adaptor
    {}
 
    explicit resource_adaptor(BOOST_RV_REF(Allocator) a2)
-      : base_t(BOOST_MOVE_BASE(base_t, a2))
+      : base_t(::boost::move(a2))
    {}
 
    resource_adaptor& operator=(BOOST_COPY_ASSIGN_REF(resource_adaptor) other)

@@ -71,6 +71,7 @@ ESSENTIALS = [
   "boost/foreach.hpp",
   "boost/none*",
   "boost/system/detail/error_code.ipp",
+  "boost/system/config.hpp",
   "boost/detail/reference_content.hpp",
   "boost/algorithm/string"
 ]

@@ -78,6 +78,15 @@
 #undef BOOST_TT_HAS_ACCURATE_BINARY_OPERATOR_DETECTION
 #endif
 
+//
+// Can we implement accurate is_function/is_member_function_pointer (post C++03)?
+//
+#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !BOOST_WORKAROUND(BOOST_GCC, < 40900)\
+      && !BOOST_WORKAROUND(BOOST_MSVC, < 1900) && !BOOST_WORKAROUND(__clang_major__, <= 4)
+#  define BOOST_TT_HAS_ASCCURATE_IS_FUNCTION
+#endif
+
+
 #endif // BOOST_TT_CONFIG_HPP_INCLUDED
 
 

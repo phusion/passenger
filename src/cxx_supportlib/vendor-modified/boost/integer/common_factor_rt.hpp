@@ -223,7 +223,7 @@ namespace boost {
       template <> struct gcd_traits<unsigned char> : public gcd_traits_defaults<unsigned char> 
       { BOOST_FORCEINLINE static unsigned make_odd(unsigned char& val)BOOST_NOEXCEPT{ unsigned result = gcd_traits<unsigned long>::find_lsb(val); val >>= result; return result; } };
       template <> struct gcd_traits<signed char> : public gcd_traits_defaults<signed char> 
-      { BOOST_FORCEINLINE static signed make_odd(signed char& val)BOOST_NOEXCEPT{ signed result = gcd_traits<unsigned long>::find_lsb(val); val >>= result; return result; } };
+      { BOOST_FORCEINLINE static unsigned make_odd(signed char& val)BOOST_NOEXCEPT{ unsigned result = gcd_traits<unsigned long>::find_lsb(val); val >>= result; return result; } };
       template <> struct gcd_traits<char> : public gcd_traits_defaults<char> 
       { BOOST_FORCEINLINE static unsigned make_odd(char& val)BOOST_NOEXCEPT{ unsigned result = gcd_traits<unsigned long>::find_lsb(val); val >>= result; return result; } };
 #ifndef BOOST_NO_INTRINSIC_WCHAR_T
@@ -310,7 +310,7 @@ namespace boost {
       };
       template <> struct gcd_traits<signed char> : public gcd_traits_defaults<signed char>
       {
-         BOOST_FORCEINLINE static BOOST_CXX14_CONSTEXPR signed make_odd(signed char& val)BOOST_NOEXCEPT { signed result = gcd_traits<unsigned>::find_lsb(val); val >>= result; return result; }
+         BOOST_FORCEINLINE static BOOST_CXX14_CONSTEXPR unsigned make_odd(signed char& val)BOOST_NOEXCEPT { unsigned result = gcd_traits<unsigned>::find_lsb(val); val >>= result; return result; }
       };
       template <> struct gcd_traits<char> : public gcd_traits_defaults<char>
       {
@@ -373,8 +373,8 @@ namespace boost {
         if (n == SteinDomain(0))
             return m;
         // m > 0 && n > 0
-        int d_m = gcd_traits<SteinDomain>::make_odd(m);
-        int d_n = gcd_traits<SteinDomain>::make_odd(n);
+        unsigned d_m = gcd_traits<SteinDomain>::make_odd(m);
+        unsigned d_n = gcd_traits<SteinDomain>::make_odd(n);
         // odd(m) && odd(n)
         while (m != n)
         {

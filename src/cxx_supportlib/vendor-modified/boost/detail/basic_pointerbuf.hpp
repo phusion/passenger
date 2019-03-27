@@ -39,7 +39,7 @@ protected:
    typedef typename base_type::off_type off_type;
 
 public:
-   basic_pointerbuf() : base_type() { setbuf(0, 0); }
+   basic_pointerbuf() : base_type() { this_type::setbuf(0, 0); }
    const charT* getnext() { return this->gptr(); }
 
 #ifndef BOOST_NO_USING_TEMPLATE

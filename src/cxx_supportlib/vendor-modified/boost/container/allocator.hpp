@@ -284,7 +284,7 @@ class allocator
    //!This function is available only with Version == 2
    void allocate_many(size_type elem_size, std::size_t n_elements, multiallocation_chain &chain)
    {
-      BOOST_STATIC_ASSERT(( Version > 1 ));/*
+      BOOST_STATIC_ASSERT(( Version > 1 ));
       dlmalloc_memchain ch;
       BOOST_CONTAINER_MEMCHAIN_INIT(&ch);
       if(!dlmalloc_multialloc_nodes(n_elements, elem_size*sizeof(T), DL_MULTIALLOC_DEFAULT_CONTIGUOUS, &ch)){
@@ -293,10 +293,11 @@ class allocator
       chain.incorporate_after(chain.before_begin()
                              ,(T*)BOOST_CONTAINER_MEMCHAIN_FIRSTMEM(&ch)
                              ,(T*)BOOST_CONTAINER_MEMCHAIN_LASTMEM(&ch)
-                             ,BOOST_CONTAINER_MEMCHAIN_SIZE(&ch) );*/
+                             ,BOOST_CONTAINER_MEMCHAIN_SIZE(&ch) );
+/*
       if(!dlmalloc_multialloc_nodes(n_elements, elem_size*sizeof(T), DL_MULTIALLOC_DEFAULT_CONTIGUOUS, reinterpret_cast<dlmalloc_memchain *>(&chain))){
          boost::container::throw_bad_alloc();
-      }
+      }*/
    }
 
    //!Allocates n_elements elements, each one of size elem_sizes[i]

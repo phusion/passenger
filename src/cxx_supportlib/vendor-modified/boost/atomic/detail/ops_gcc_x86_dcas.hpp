@@ -158,11 +158,13 @@ struct gcc_dcas_x86
         }
         else
         {
-#if defined(__clang__)
-            // Clang cannot allocate eax:edx register pairs but it has sync intrinsics
-            value = __sync_val_compare_and_swap(&storage, (storage_type)0, (storage_type)0);
-#elif defined(BOOST_ATOMIC_DETAIL_X86_NO_ASM_AX_DX_PAIRS)
+            // Note that despite const qualification cmpxchg8b below may issue a store to the storage. The storage value
+            // will not change, but this prevents the storage to reside in read-only memory.
+
+#if defined(BOOST_ATOMIC_DETAIL_X86_NO_ASM_AX_DX_PAIRS)
+
             uint32_t value_bits[2];
+
             // We don't care for comparison result here; the previous value will be stored into value anyway.
             // Also we don't care for ebx and ecx values, they just have to be equal to eax and edx before cmpxchg8b.
             __asm__ __volatile__
@@ -175,7 +177,9 @@ struct gcc_dcas_x86
                 : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC_COMMA "memory"
             );
             BOOST_ATOMIC_DETAIL_MEMCPY(&value, value_bits, sizeof(value));
+
 #else // defined(BOOST_ATOMIC_DETAIL_X86_NO_ASM_AX_DX_PAIRS)
+
             // We don't care for comparison result here; the previous value will be stored into value anyway.
             // Also we don't care for ebx and ecx values, they just have to be equal to eax and edx before cmpxchg8b.
             __asm__ __volatile__
@@ -187,6 +191,7 @@ struct gcc_dcas_x86
                 : [storage] "m" (storage)
                 : BOOST_ATOMIC_DETAIL_ASM_CLOBBER_CC_COMMA "memory"
             );
+
 #endif // defined(BOOST_ATOMIC_DETAIL_X86_NO_ASM_AX_DX_PAIRS)
         }
 
@@ -266,7 +271,7 @@ struct gcc_dcas_x86
         return compare_exchange_strong(storage, expected, desired, success_order, failure_order);
     }
 
-    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order order) BOOST_NOEXCEPT
+    static BOOST_FORCEINLINE storage_type exchange(storage_type volatile& storage, storage_type v, memory_order) BOOST_NOEXCEPT
     {
 #if defined(BOOST_ATOMIC_DETAIL_X86_ASM_PRESERVE_EBX)
 #if defined(BOOST_ATOMIC_DETAIL_X86_NO_ASM_AX_DX_PAIRS)
@@ -401,15 +406,11 @@ struct gcc_dcas_x86_64
 
     static BOOST_FORCEINLINE storage_type load(storage_type const volatile& storage, memory_order) BOOST_NOEXCEPT
     {
-#if defined(__clang__)
+        // Note that despite const qualification cmpxchg16b below may issue a store to the storage. The storage value
+        // will not change, but this prevents the storage to reside in read-only memory.
 
-        // Clang cannot allocate rax:rdx register pairs but it has sync intrinsics
-        storage_type value = storage_type();
-        return __sync_val_compare_and_swap(&storage, value, value);
+#if defined(BOOST_ATOMIC_DETAIL_X86_NO_ASM_AX_DX_PAIRS)
 
-#elif defined(BOOST_ATOMIC_DETAIL_X86_NO_ASM_AX_DX_PAIRS)
-
-        // Some compilers can't allocate rax:rdx register pair either and also don't support 128-bit __sync_val_compare_and_swap
         uint64_t value_bits[2];
 
         // We don't care for comparison result here; the previous value will be stored into value anyway.

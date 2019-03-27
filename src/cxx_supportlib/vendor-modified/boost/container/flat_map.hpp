@@ -319,6 +319,21 @@ class flat_map
       : m_flat_tree(ordered_range, first, last, comp, dtl::force<const impl_allocator_type>(a))
    {}
 
+   //! <b>Effects</b>: Constructs an empty flat_map using the specified allocator and
+   //! inserts elements from the ordered range [first ,last). This function
+   //! is more efficient than the normal range creation for ordered ranges.
+   //!
+   //! <b>Requires</b>: [first ,last) must be ordered according to the predicate.
+   //!
+   //! <b>Complexity</b>: Linear in N.
+   //!
+   //! <b>Note</b>: Non-standard extension.
+   template <class InputIterator>
+   BOOST_CONTAINER_FORCEINLINE
+      flat_map(ordered_unique_range_t, InputIterator first, InputIterator last, const allocator_type& a)
+      : m_flat_tree(ordered_range, first, last, Compare(), a)
+   {}
+
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
    //! <b>Effects</b>: Constructs an empty flat_map and
    //! inserts elements from the range [il.begin() ,il.end()).
@@ -1302,11 +1317,61 @@ class flat_map
    BOOST_CONTAINER_FORCEINLINE const_iterator find(const key_type& x) const
       { return dtl::force_copy<const_iterator>(m_flat_tree.find(x)); }
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to an element with the key
+   //!   equivalent to x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE iterator find(const K& x)
+      { return dtl::force_copy<iterator>(m_flat_tree.find(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: A const_iterator pointing to an element with the key
+   //!   equivalent to x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE const_iterator find(const K& x) const
+      { return dtl::force_copy<const_iterator>(m_flat_tree.find(x)); }
+
    //! <b>Returns</b>: The number of elements with key equivalent to x.
    //!
    //! <b>Complexity</b>: log(size())+count(k)
    BOOST_CONTAINER_FORCEINLINE size_type count(const key_type& x) const
       {  return static_cast<size_type>(m_flat_tree.find(x) != m_flat_tree.end());  }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: The number of elements with key equivalent to x.
+   //!
+   //! <b>Complexity</b>: log(size())+count(k)
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE size_type count(const K& x) const
+      {  return static_cast<size_type>(m_flat_tree.find(x) != m_flat_tree.end());  }
+
+   //! <b>Returns</b>: Returns true if there is an element with key
+   //!   equivalent to key in the container, otherwise false.
+   //!
+   //! <b>Complexity</b>: log(size()).
+   bool contains(const key_type& x) const
+      {  return m_flat_tree.find(x) != m_flat_tree.end();  }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: Returns true if there is an element with key
+   //!   equivalent to key in the container, otherwise false.
+   //!
+   //! <b>Complexity</b>: log(size()).
+   template<typename K>
+   bool contains(const K& x) const
+      {  return m_flat_tree.find(x) != m_flat_tree.end();  }
 
    //! <b>Returns</b>: An iterator pointing to the first element with key not less
    //!   than k, or a.end() if such an element is not found.
@@ -1320,6 +1385,28 @@ class flat_map
    //!
    //! <b>Complexity</b>: Logarithmic.
    BOOST_CONTAINER_FORCEINLINE const_iterator lower_bound(const key_type& x) const
+      {  return dtl::force_copy<const_iterator>(m_flat_tree.lower_bound(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than k, or a.end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE iterator lower_bound(const K& x)
+      {  return dtl::force_copy<iterator>(m_flat_tree.lower_bound(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: A const iterator pointing to the first element with key not
+   //!   less than k, or a.end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE const_iterator lower_bound(const K& x) const
       {  return dtl::force_copy<const_iterator>(m_flat_tree.lower_bound(x)); }
 
    //! <b>Returns</b>: An iterator pointing to the first element with key not less
@@ -1336,6 +1423,28 @@ class flat_map
    BOOST_CONTAINER_FORCEINLINE const_iterator upper_bound(const key_type& x) const
       {  return dtl::force_copy<const_iterator>(m_flat_tree.upper_bound(x)); }
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE iterator upper_bound(const K& x)
+      {  return dtl::force_copy<iterator>(m_flat_tree.upper_bound(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: A const iterator pointing to the first element with key not
+   //!   less than x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE const_iterator upper_bound(const K& x) const
+      {  return dtl::force_copy<const_iterator>(m_flat_tree.upper_bound(x)); }
+
    //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
    //!
    //! <b>Complexity</b>: Logarithmic.
@@ -1346,6 +1455,26 @@ class flat_map
    //!
    //! <b>Complexity</b>: Logarithmic.
    BOOST_CONTAINER_FORCEINLINE std::pair<const_iterator, const_iterator> equal_range(const key_type& x) const
+      {  return dtl::force_copy<std::pair<const_iterator,const_iterator> >(m_flat_tree.lower_bound_range(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE std::pair<iterator,iterator> equal_range(const K& x)
+      {  return dtl::force_copy<std::pair<iterator,iterator> >(m_flat_tree.lower_bound_range(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE std::pair<const_iterator, const_iterator> equal_range(const K& x) const
       {  return dtl::force_copy<std::pair<const_iterator,const_iterator> >(m_flat_tree.lower_bound_range(x)); }
 
    //! <b>Effects</b>: Extracts the internal sequence container.
@@ -1448,6 +1577,70 @@ class flat_map
    }
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InputIterator>
+flat_map(InputIterator, InputIterator) ->
+   flat_map< it_based_non_const_first_type_t<InputIterator>
+           , it_based_second_type_t<InputIterator>>;
+
+template < typename InputIterator, typename AllocatorOrCompare>
+    flat_map(InputIterator, InputIterator, AllocatorOrCompare const&) ->
+    flat_map< it_based_non_const_first_type_t<InputIterator>
+            , it_based_second_type_t<InputIterator>
+            , typename dtl::if_c< // Compare
+                dtl::is_allocator<AllocatorOrCompare>::value
+                , std::less<it_based_non_const_first_type_t<InputIterator>>
+                , AllocatorOrCompare
+            >::type
+            , typename dtl::if_c< // Allocator
+                dtl::is_allocator<AllocatorOrCompare>::value
+                , AllocatorOrCompare
+                , new_allocator<std::pair<it_based_non_const_first_type_t<InputIterator>, it_based_second_type_t<InputIterator>>>
+                >::type
+            >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_map(InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_map< it_based_non_const_first_type_t<InputIterator>
+           , it_based_second_type_t<InputIterator>
+           , Compare
+           , Allocator>;
+
+template <typename InputIterator>
+flat_map(ordered_unique_range_t, InputIterator, InputIterator) ->
+   flat_map< it_based_non_const_first_type_t<InputIterator>
+           , it_based_second_type_t<InputIterator>>;
+
+template < typename InputIterator, typename AllocatorOrCompare>
+flat_map(ordered_unique_range_t, InputIterator, InputIterator, AllocatorOrCompare const&) ->
+   flat_map< it_based_non_const_first_type_t<InputIterator>
+           , it_based_second_type_t<InputIterator>
+           , typename dtl::if_c<   // Compare
+               dtl::is_allocator<AllocatorOrCompare>::value
+               , std::less<it_based_non_const_first_type_t<InputIterator>>
+               , AllocatorOrCompare
+               >::type
+           , typename dtl::if_c<   // Allocator
+               dtl::is_allocator<AllocatorOrCompare>::value
+               , AllocatorOrCompare
+               , new_allocator<std::pair<it_based_non_const_first_type_t<InputIterator>, it_based_second_type_t<InputIterator>>>
+               >::type
+           >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_map(ordered_unique_range_t, InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_map< it_based_non_const_first_type_t<InputIterator>
+           , it_based_second_type_t<InputIterator>
+           , Compare
+           , Allocator>;
+
+#endif
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
@@ -1708,6 +1901,21 @@ class flat_multimap
    BOOST_CONTAINER_FORCEINLINE
    flat_multimap(ordered_range_t, InputIterator first, InputIterator last, const Compare& comp, const allocator_type& a)
       : m_flat_tree(ordered_range, first, last, comp, a)
+   {}
+
+   //! <b>Effects</b>: Constructs an empty flat_multimap using the specified comparison object and
+   //! inserts elements from the ordered range [first ,last). This function
+   //! is more efficient than the normal range creation for ordered ranges.
+   //!
+   //! <b>Requires</b>: [first ,last) must be ordered according to the predicate.
+   //!
+   //! <b>Complexity</b>: Linear in N.
+   //!
+   //! <b>Note</b>: Non-standard extension.
+   template <class InputIterator>
+   BOOST_CONTAINER_FORCEINLINE
+      flat_multimap(ordered_range_t, InputIterator first, InputIterator last, const allocator_type &a)
+      : m_flat_tree(ordered_range, first, last, Compare(), a)
    {}
 
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
@@ -2443,11 +2651,61 @@ class flat_multimap
    BOOST_CONTAINER_FORCEINLINE const_iterator find(const key_type& x) const
       { return dtl::force_copy<const_iterator>(m_flat_tree.find(x)); }
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to an element with the key
+   //!   equivalent to x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE iterator find(const K& x)
+      { return dtl::force_copy<iterator>(m_flat_tree.find(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An const_iterator pointing to an element with the key
+   //!   equivalent to x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE const_iterator find(const K& x) const
+      { return dtl::force_copy<const_iterator>(m_flat_tree.find(x)); }
+
    //! <b>Returns</b>: The number of elements with key equivalent to x.
    //!
    //! <b>Complexity</b>: log(size())+count(k)
    BOOST_CONTAINER_FORCEINLINE size_type count(const key_type& x) const
       { return m_flat_tree.count(x); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: The number of elements with key equivalent to x.
+   //!
+   //! <b>Complexity</b>: log(size())+count(k)
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE size_type count(const K& x) const
+      { return m_flat_tree.count(x); }
+
+   //! <b>Returns</b>: Returns true if there is an element with key
+   //!   equivalent to key in the container, otherwise false.
+   //!
+   //! <b>Complexity</b>: log(size()).
+   bool contains(const key_type& x) const
+      {  return m_flat_tree.find(x) != m_flat_tree.end();  }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: Returns true if there is an element with key
+   //!   equivalent to key in the container, otherwise false.
+   //!
+   //! <b>Complexity</b>: log(size()).
+   template<typename K>
+   bool contains(const K& x) const
+      {  return m_flat_tree.find(x) != m_flat_tree.end();  }
 
    //! <b>Returns</b>: An iterator pointing to the first element with key not less
    //!   than k, or a.end() if such an element is not found.
@@ -2456,12 +2714,34 @@ class flat_multimap
    BOOST_CONTAINER_FORCEINLINE iterator lower_bound(const key_type& x)
       {  return dtl::force_copy<iterator>(m_flat_tree.lower_bound(x)); }
 
-   //! <b>Returns</b>: A const iterator pointing to the first element with key
-   //!   not less than k, or a.end() if such an element is not found.
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than k, or a.end() if such an element is not found.
    //!
    //! <b>Complexity</b>: Logarithmic
    BOOST_CONTAINER_FORCEINLINE const_iterator lower_bound(const key_type& x) const
-      {  return dtl::force_copy<const_iterator>(m_flat_tree.lower_bound(x));  }
+      {  return dtl::force_copy<const_iterator>(m_flat_tree.lower_bound(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than k, or a.end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE iterator lower_bound(const K& x)
+      {  return dtl::force_copy<iterator>(m_flat_tree.lower_bound(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than k, or a.end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE const_iterator lower_bound(const K& x) const
+      {  return dtl::force_copy<const_iterator>(m_flat_tree.lower_bound(x)); }
 
    //! <b>Returns</b>: An iterator pointing to the first element with key not less
    //!   than x, or end() if such an element is not found.
@@ -2477,6 +2757,28 @@ class flat_multimap
    BOOST_CONTAINER_FORCEINLINE const_iterator upper_bound(const key_type& x) const
       {  return dtl::force_copy<const_iterator>(m_flat_tree.upper_bound(x)); }
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE iterator upper_bound(const K& x)
+      {return dtl::force_copy<iterator>(m_flat_tree.upper_bound(x)); }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: A const iterator pointing to the first element with key
+   //!   not less than x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE const_iterator upper_bound(const K& x) const
+      {  return dtl::force_copy<const_iterator>(m_flat_tree.upper_bound(x)); }
+
    //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
    //!
    //! <b>Complexity</b>: Logarithmic
@@ -2487,6 +2789,26 @@ class flat_multimap
    //!
    //! <b>Complexity</b>: Logarithmic
    BOOST_CONTAINER_FORCEINLINE std::pair<const_iterator, const_iterator> equal_range(const key_type& x) const
+      {  return dtl::force_copy<std::pair<const_iterator,const_iterator> >(m_flat_tree.equal_range(x));   }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE std::pair<iterator,iterator> equal_range(const K& x)
+      {  return dtl::force_copy<std::pair<iterator,iterator> >(m_flat_tree.equal_range(x));   }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<class K>
+   BOOST_CONTAINER_FORCEINLINE std::pair<const_iterator, const_iterator> equal_range(const K& x) const
       {  return dtl::force_copy<std::pair<const_iterator,const_iterator> >(m_flat_tree.equal_range(x));   }
 
    //! <b>Effects</b>: Extracts the internal sequence container.
@@ -2563,6 +2885,70 @@ class flat_multimap
    BOOST_CONTAINER_FORCEINLINE friend void swap(flat_multimap& x, flat_multimap& y)
    {  x.swap(y);  }
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InputIterator>
+flat_multimap(InputIterator, InputIterator) ->
+   flat_multimap< it_based_non_const_first_type_t<InputIterator>
+                , it_based_second_type_t<InputIterator>>;
+
+template < typename InputIterator, typename AllocatorOrCompare>
+flat_multimap(InputIterator, InputIterator, AllocatorOrCompare const&) ->
+   flat_multimap< it_based_non_const_first_type_t<InputIterator>
+                , it_based_second_type_t<InputIterator>
+                , typename dtl::if_c<   // Compare
+                    dtl::is_allocator<AllocatorOrCompare>::value
+                    , std::less<it_based_non_const_first_type_t<InputIterator>>
+                    , AllocatorOrCompare
+                    >::type
+                , typename dtl::if_c<   // Allocator
+                    dtl::is_allocator<AllocatorOrCompare>::value
+                    , AllocatorOrCompare
+                    , new_allocator<std::pair<it_based_non_const_first_type_t<InputIterator>, it_based_second_type_t<InputIterator>>>
+                    >::type
+                >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_multimap(InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_multimap< it_based_non_const_first_type_t<InputIterator>
+                , it_based_second_type_t<InputIterator>
+                , Compare
+                , Allocator>;
+
+template <typename InputIterator>
+flat_multimap(ordered_range_t, InputIterator, InputIterator) ->
+   flat_multimap< it_based_non_const_first_type_t<InputIterator>
+                , it_based_second_type_t<InputIterator>>;
+
+template < typename InputIterator, typename AllocatorOrCompare>
+flat_multimap(ordered_range_t, InputIterator, InputIterator, AllocatorOrCompare const&) ->
+   flat_multimap< it_based_non_const_first_type_t<InputIterator>
+                , it_based_second_type_t<InputIterator>
+                , typename dtl::if_c<   // Compare
+                    dtl::is_allocator<AllocatorOrCompare>::value
+                    , std::less<it_based_non_const_first_type_t<InputIterator>>
+                    , AllocatorOrCompare
+                    >::type
+                , typename dtl::if_c<   // Allocator
+                    dtl::is_allocator<AllocatorOrCompare>::value
+                    , AllocatorOrCompare
+                    , new_allocator<std::pair<it_based_non_const_first_type_t<InputIterator>, it_based_second_type_t<InputIterator>>>
+                    >::type
+                >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_multimap(ordered_range_t, InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_multimap< it_based_non_const_first_type_t<InputIterator>
+                , it_based_second_type_t<InputIterator>
+                , Compare
+                , Allocator>;
+
+#endif
 
 }}
 

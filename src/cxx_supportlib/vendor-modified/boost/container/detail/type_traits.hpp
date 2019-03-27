@@ -61,6 +61,8 @@ using ::boost::move_detail::is_nothrow_swappable;
 using ::boost::move_detail::alignment_of;
 using ::boost::move_detail::aligned_storage;
 using ::boost::move_detail::nat;
+using ::boost::move_detail::nat2;
+using ::boost::move_detail::nat3;
 using ::boost::move_detail::max_align_t;
 
 }  //namespace dtl {

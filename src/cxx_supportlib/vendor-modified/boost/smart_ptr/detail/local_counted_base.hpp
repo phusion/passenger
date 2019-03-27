@@ -27,7 +27,7 @@ namespace boost
 namespace detail
 {
 
-class local_counted_base
+class BOOST_SYMBOL_VISIBLE local_counted_base
 {
 private:
 
@@ -89,7 +89,7 @@ public:
     }
 };
 
-class local_counted_impl: public local_counted_base
+class BOOST_SYMBOL_VISIBLE local_counted_impl: public local_counted_base
 {
 private:
 
@@ -124,7 +124,7 @@ public:
     }
 };
 
-class local_counted_impl_em: public local_counted_base
+class BOOST_SYMBOL_VISIBLE local_counted_impl_em: public local_counted_base
 {
 public:
 

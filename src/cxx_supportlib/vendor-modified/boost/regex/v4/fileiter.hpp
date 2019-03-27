@@ -195,9 +195,6 @@ public:
 };
 
 class BOOST_REGEX_DECL mapfile_iterator
-#if !defined(BOOST_NO_STD_ITERATOR) || defined(BOOST_MSVC_STD_ITERATOR)
-: public std::iterator<std::random_access_iterator_tag, char>
-#endif
 {
    typedef mapfile::pointer internal_pointer;
    internal_pointer* node;

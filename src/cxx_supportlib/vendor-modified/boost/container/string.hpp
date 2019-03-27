@@ -98,27 +98,25 @@ class basic_string_base
 
    basic_string_base()
       : members_()
-   {  init(); }
+   {}
 
    explicit basic_string_base(const allocator_type& a)
       : members_(a)
-   {  init(); }
+   {}
 
    explicit basic_string_base(BOOST_RV_REF(allocator_type) a)
       :  members_(boost::move(a))
-   {  this->init();  }
+   {}
 
    basic_string_base(const allocator_type& a, size_type n)
       : members_(a)
    {
-      this->init();
       this->allocate_initial_block(n);
    }
 
    explicit basic_string_base(size_type n)
       : members_()
    {
-      this->init();
       this->allocate_initial_block(n);
    }
 
@@ -140,6 +138,11 @@ class basic_string_base
       pointer        start;
 
       long_t()
+         : is_short(0)
+      {}
+
+      long_t(size_type len, size_type stor, pointer ptr)
+         : is_short(0), length(len), storage(stor), start(ptr)
       {}
 
       long_t(const long_t &other)
@@ -190,35 +193,49 @@ class basic_string_base
       value_type     data[UnalignedFinalInternalBufferChars];
    };
 
-   union repr_t
+   union repr_t_size_t
    {
       long_raw_t  r;
       short_t     s;
+   };
 
-      const short_t &short_repr() const
-      {  return s;  }
-
-      const long_t &long_repr() const
-      {  return *static_cast<const long_t*>(static_cast<const void*>(r.data));  }
-
-      short_t &short_repr()
-      {  return s;  }
-
-      long_t &long_repr()
-      {  return *static_cast<long_t*>(static_cast<void*>(&r));  }
+   union repr_t
+   {
+      long_raw_t  r_aligner;
+      short_t     s_aligner;
+      unsigned char data[sizeof(repr_t_size_t)];
    };
 
    struct members_holder
       :  public Allocator
    {
+      void init()
+      {
+         short_t &s = *::new(this->m_repr.data) short_t;
+         s.h.is_short = 1;
+         s.h.length = 0;
+      }
+
       members_holder()
          : Allocator()
-      {}
+      { this->init(); }
 
       template<class AllocatorConvertible>
       explicit members_holder(BOOST_FWD_REF(AllocatorConvertible) a)
          :  Allocator(boost::forward<AllocatorConvertible>(a))
-      {}
+      { this->init(); }
+
+      const short_t *pshort_repr() const
+      {  return reinterpret_cast<const short_t*>(m_repr.data);  }
+
+      const long_t *plong_repr() const
+      {  return reinterpret_cast<const long_t*>(m_repr.data);  }
+
+      short_t *pshort_repr()
+      {  return reinterpret_cast<short_t*>(m_repr.data);  }
+
+      long_t *plong_repr()
+      {  return reinterpret_cast<long_t*>(m_repr.data);  }
 
       repr_t m_repr;
    } members_;
@@ -246,32 +263,51 @@ class basic_string_base
       return hdr.is_short != 0;
    }
 
-   void is_short(bool yes)
+   short_t *construct_short()
    {
-      const bool was_short = this->is_short();
-      if(yes && !was_short){
-         allocator_traits_type::destroy
-            ( this->alloc()
-            , static_cast<long_t*>(static_cast<void*>(&this->members_.m_repr.r))
-            );
-         this->members_.m_repr.s.h.is_short = true;
-      }
-      else if(!yes && was_short){
-         allocator_traits_type::construct
-            ( this->alloc()
-            , static_cast<long_t*>(static_cast<void*>(&this->members_.m_repr.r))
-            );
-         this->members_.m_repr.s.h.is_short = false;
-      }
+      short_t *ps = ::new(this->members_.m_repr.data) short_t;
+      ps->h.is_short = 1;
+      return ps;
    }
 
-   private:
-   void init()
+   void destroy_short()
    {
-      this->members_.m_repr.s.h.is_short = 1;
-      this->members_.m_repr.s.h.length   = 0;
+      BOOST_ASSERT(this->is_short());
+      this->members_.pshort_repr()->~short_t();
    }
 
+   short_t *assure_short()
+   {
+      if (!this->is_short()){
+         this->destroy_long();
+         return construct_short();
+      }
+      return this->members_.pshort_repr();
+   }
+
+   long_t *construct_long()
+   {
+      long_t *pl = ::new(this->members_.m_repr.data) long_t;
+      //is_short flag is written in the constructor
+      return pl;
+   }
+
+   void destroy_long()
+   {
+      BOOST_ASSERT(!this->is_short());
+      this->members_.plong_repr()->~long_t();
+   }
+
+   long_t *assure_long()
+   {
+      if (this->is_short()){
+         this->destroy_short();
+         return this->construct_long();
+      }
+      return this->members_.plong_repr();
+   }
+
+  
    protected:
 
    typedef dtl::integral_constant<unsigned,
@@ -334,7 +370,8 @@ class basic_string_base
             size_type new_cap = this->next_capacity(n);
             pointer reuse = 0;
             pointer p = this->allocation_command(allocate_new, n, new_cap, reuse);
-            this->is_short(false);
+            BOOST_ASSERT(this->is_short());
+            this->construct_long();
             this->priv_long_addr(p);
             this->priv_long_size(0);
             this->priv_storage(new_cap);
@@ -356,10 +393,16 @@ class basic_string_base
    { return this->priv_storage() - 1; }
 
    pointer priv_short_addr() const
-   {  return pointer_traits::pointer_to(const_cast<value_type&>(this->members_.m_repr.short_repr().data[0]));  }
+   {  return pointer_traits::pointer_to(const_cast<value_type&>(this->members_.pshort_repr()->data[0]));  }
+
+   //GCC seems a bit confused about uninitialized accesses
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40700)
+   #pragma GCC diagnostic push
+   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+   #endif
 
    pointer priv_long_addr() const
-   {  return this->members_.m_repr.long_repr().start;  }
+   {  return this->members_.plong_repr()->start;  }
 
    pointer priv_addr() const
    {
@@ -378,7 +421,7 @@ class basic_string_base
    }
 
    void priv_long_addr(pointer addr)
-   {  this->members_.m_repr.long_repr().start = addr;  }
+   {  this->members_.plong_repr()->start = addr;  }
 
    size_type priv_storage() const
    {  return this->is_short() ? priv_short_storage() : priv_long_storage();  }
@@ -387,7 +430,7 @@ class basic_string_base
    {  return InternalBufferChars;  }
 
    size_type priv_long_storage() const
-   {  return this->members_.m_repr.long_repr().storage;  }
+   {  return this->members_.plong_repr()->storage;  }
 
    void priv_storage(size_type storage)
    {
@@ -397,17 +440,17 @@ class basic_string_base
 
    void priv_long_storage(size_type storage)
    {
-      this->members_.m_repr.long_repr().storage = storage;
+      this->members_.plong_repr()->storage = storage;
    }
 
    size_type priv_size() const
    {  return this->is_short() ? this->priv_short_size() : this->priv_long_size();  }
 
    size_type priv_short_size() const
-   {  return this->members_.m_repr.short_repr().h.length;  }
+   {  return this->members_.pshort_repr()->h.length;  }
 
    size_type priv_long_size() const
-   {  return this->members_.m_repr.long_repr().length;  }
+   {  return this->members_.plong_repr()->length;  }
 
    void priv_size(size_type sz)
    {
@@ -418,14 +461,14 @@ class basic_string_base
    }
 
    void priv_short_size(size_type sz)
-   {
-      this->members_.m_repr.s.h.length = (unsigned char)sz;
-   }
+   {  this->members_.pshort_repr()->h.length = (unsigned char)sz; }
 
    void priv_long_size(size_type sz)
-   {
-      this->members_.m_repr.long_repr().length = sz;
-   }
+   {  this->members_.plong_repr()->length = sz;  }
+
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40700)
+   #pragma GCC diagnostic pop
+   #endif
 
    void swap_data(basic_string_base& other)
    {
@@ -436,23 +479,23 @@ class basic_string_base
             other.members_.m_repr = tmp;
          }
          else{
-            short_t short_backup(this->members_.m_repr.short_repr());
-            this->members_.m_repr.short_repr().~short_t();
-            ::new(&this->members_.m_repr.long_repr()) long_t(other.members_.m_repr.long_repr());
-            other.members_.m_repr.long_repr().~long_t();
-            ::new(&other.members_.m_repr.short_repr()) short_t(short_backup);
+            short_t short_backup(*this->members_.pshort_repr());
+            this->members_.pshort_repr()->~short_t();
+            ::new(this->members_.plong_repr()) long_t(*other.members_.plong_repr());
+            other.members_.plong_repr()->~long_t();
+            ::new(other.members_.pshort_repr()) short_t(short_backup);
          }
       }
       else{
          if(other.is_short()){
-            short_t short_backup(other.members_.m_repr.short_repr());
-            other.members_.m_repr.short_repr().~short_t();
-            ::new(&other.members_.m_repr.long_repr()) long_t(this->members_.m_repr.long_repr());
-            this->members_.m_repr.long_repr().~long_t();
-            ::new(&this->members_.m_repr.short_repr()) short_t(short_backup);
+            short_t short_backup(*other.members_.pshort_repr());
+            other.members_.pshort_repr()->~short_t();
+            ::new(other.members_.plong_repr()) long_t(*this->members_.plong_repr());
+            this->members_.plong_repr()->~long_t();
+            ::new(this->members_.pshort_repr()) short_t(short_backup);
          }
          else{
-            boost::adl_move_swap(this->members_.m_repr.long_repr(), other.members_.m_repr.long_repr());
+            boost::adl_move_swap(*this->members_.plong_repr(), *other.members_.plong_repr());
          }
       }
    }
@@ -830,7 +873,7 @@ class basic_string
          if(flag && this_alloc != x_alloc){
             if(!this->is_short()){
                this->deallocate_block();
-               this->is_short(true);
+               this->assure_short();
                Traits::assign(*this->priv_addr(), CharT(0));
                this->priv_short_size(0);
             }
@@ -853,7 +896,7 @@ class basic_string
       BOOST_NOEXCEPT_IF(allocator_traits_type::propagate_on_container_move_assignment::value
                                   || allocator_traits_type::is_always_equal::value)
    {
-      //for move constructor, no aliasing (&x != this) is assummed.
+      //for move constructor, no aliasing (&x != this) is assumed.
       BOOST_ASSERT(this != &x);
       allocator_type &this_alloc = this->alloc();
       allocator_type &x_alloc    = x.alloc();
@@ -1159,7 +1202,9 @@ class basic_string
             Traits::copy( boost::movelib::to_raw_pointer(this->priv_short_addr())
                         , boost::movelib::to_raw_pointer(long_addr)
                         , long_size+1);
-            this->is_short(true);
+            BOOST_ASSERT(!this->is_short());
+            this->destroy_long();
+            this->construct_short();
             this->alloc().deallocate(long_addr, long_storage);
          }
          else{
@@ -1763,7 +1808,7 @@ class basic_string
                this->priv_construct_null(new_start + new_length);
 
                this->deallocate_block();
-               this->is_short(false);
+               this->assure_long();
                this->priv_long_addr(new_start);
                this->priv_long_size(new_length);
                this->priv_long_storage(new_cap);
@@ -1782,7 +1827,7 @@ class basic_string
                //Now initialize the new data
                priv_uninitialized_copy(first, last, new_start + before);
                this->priv_construct_null(new_start + (old_size + n));
-               this->is_short(false);
+               this->assure_long();
                this->priv_long_addr(new_start);
                this->priv_long_size(old_size + n);
                this->priv_long_storage(new_cap);
@@ -2790,7 +2835,7 @@ class basic_string
             this->priv_construct_null(new_start + new_length);
          }
          this->deallocate_block();
-         this->is_short(false);
+         this->assure_long();
          this->priv_long_addr(new_start);
          this->priv_long_size(new_length);
          this->priv_storage(new_cap);
@@ -2932,6 +2977,18 @@ class basic_string
 
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InputIterator>
+basic_string(InputIterator, InputIterator) ->
+   basic_string<typename iterator_traits<InputIterator>::value_type>;
+
+template <typename InputIterator, typename Allocator>
+basic_string(InputIterator, InputIterator, Allocator const&) ->
+   basic_string<typename iterator_traits<InputIterator>::value_type, Allocator>;
+
+#endif
 
 #ifdef BOOST_CONTAINER_DOXYGEN_INVOKED
 

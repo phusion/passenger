@@ -78,7 +78,7 @@ class tuple<Head, Tail...>
 
 
 template<typename... Values>
-tuple<Values&&...> forward_as_tuple(Values&&... values)
+tuple<Values&&...> forward_as_tuple_impl(Values&&... values)
 { return tuple<Values&&...>(::boost::forward<Values>(values)...); }
 
 template<int I, typename Tuple>

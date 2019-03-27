@@ -1023,6 +1023,19 @@ namespace std{ using ::type_info; }
 #  define BOOST_NO_CXX11_FIXED_LENGTH_VARIADIC_TEMPLATE_EXPANSION_PACKS
 #endif
 
+// This is a catch all case for obsolete compilers / std libs:
+#if !defined(__has_include)
+#  define BOOST_NO_CXX17_HDR_OPTIONAL
+#  define BOOST_NO_CXX17_HDR_STRING_VIEW
+#else
+#if !__has_include(<optional>)
+#  define BOOST_NO_CXX17_HDR_OPTIONAL
+#endif
+#if !__has_include(<string_view>)
+#  define BOOST_NO_CXX17_HDR_STRING_VIEW
+#endif
+#endif
+
 //
 // Finish off with checks for macros that are depricated / no longer supported,
 // if any of these are set then it's very likely that much of Boost will no

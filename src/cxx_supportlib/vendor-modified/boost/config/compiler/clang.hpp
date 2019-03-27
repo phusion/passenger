@@ -104,9 +104,9 @@
 #  define BOOST_SYMBOL_IMPORT __attribute__((__dllimport__))
 #else
 #  define BOOST_SYMBOL_EXPORT __attribute__((__visibility__("default")))
+#  define BOOST_SYMBOL_VISIBLE __attribute__((__visibility__("default")))
 #  define BOOST_SYMBOL_IMPORT
 #endif
-#define BOOST_SYMBOL_VISIBLE __attribute__((__visibility__("default")))
 
 //
 // The BOOST_FALLTHROUGH macro can be used to annotate implicit fall-through
@@ -292,6 +292,10 @@
 
 #if !defined(__cpp_structured_bindings) || (__cpp_structured_bindings < 201606)
 #  define BOOST_NO_CXX17_STRUCTURED_BINDINGS
+#endif
+
+#if !defined(__cpp_if_constexpr) || (__cpp_if_constexpr < 201606)
+#  define BOOST_NO_CXX17_IF_CONSTEXPR
 #endif
 
 // Clang 3.9+ in c++1z

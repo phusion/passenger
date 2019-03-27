@@ -93,7 +93,8 @@ struct allocator_version_traits<Allocator, 1>
    {
       size_type n = holder.size();
       typename multiallocation_chain::iterator it = holder.begin();
-      while(n--){
+      while(n){
+         --n;
          pointer p = boost::intrusive::pointer_traits<pointer>::pointer_to(*it);
          ++it;
          a.deallocate(p, 1);

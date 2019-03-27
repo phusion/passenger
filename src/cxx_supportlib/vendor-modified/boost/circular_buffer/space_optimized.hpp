@@ -16,7 +16,7 @@
 #endif
 
 #include <boost/type_traits/is_same.hpp>
-#include <boost/detail/workaround.hpp>
+#include <boost/config/workaround.hpp>
 
 namespace boost {
 
@@ -509,7 +509,7 @@ public:
         first, last, alloc)
     , m_capacity_ctrl(capacity_ctrl) {
         reduce_capacity(
-            is_same< BOOST_DEDUCED_TYPENAME iterator_category<InputIterator>::type, std::input_iterator_tag >());
+            is_same< BOOST_DEDUCED_TYPENAME std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag >());
     }
 
 #if defined(BOOST_CB_NEVER_DEFINED)
@@ -579,7 +579,7 @@ public:
     */
     circular_buffer_space_optimized<T, Alloc>& operator = (circular_buffer_space_optimized<T, Alloc>&& cb) BOOST_NOEXCEPT {
         cb.swap(*this); // now `this` holds `cb`
-        circular_buffer<T, Alloc>(get_allocator()) // temprary that holds initial `cb` allocator
+        circular_buffer<T, Alloc>(get_allocator()) // temporary that holds initial `cb` allocator
             .swap(cb); // makes `cb` empty
         return *this;
     }
@@ -1605,10 +1605,10 @@ private:
         const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
 #if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
-        return init_capacity(capacity_ctrl, first, last, iterator_category<Iterator>::type());
+        return init_capacity(capacity_ctrl, first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         return init_capacity(
-            capacity_ctrl, first, last, BOOST_DEDUCED_TYPENAME iterator_category<Iterator>::type());
+            capacity_ctrl, first, last, BOOST_DEDUCED_TYPENAME std::iterator_traits<Iterator>::iterator_category());
 #endif
     }
 

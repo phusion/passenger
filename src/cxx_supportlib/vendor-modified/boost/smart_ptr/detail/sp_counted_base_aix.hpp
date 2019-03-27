@@ -21,6 +21,7 @@
 //
 
 #include <boost/detail/sp_typeinfo.hpp>
+#include <boost/config.hpp>
 #include <builtins.h>
 #include <sys/atomic_op.h>
 
@@ -63,7 +64,7 @@ inline int32_t atomic_conditional_increment( int32_t * pw )
     }
 }
 
-class sp_counted_base
+class BOOST_SYMBOL_VISIBLE sp_counted_base
 {
 private:
 

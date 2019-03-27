@@ -86,6 +86,15 @@ public:
     /// TLS version 1.2 server.
     tlsv12_server,
 
+    /// Generic TLS version 1.3.
+    tlsv13,
+
+    /// TLS version 1.3 client.
+    tlsv13_client,
+
+    /// TLS version 1.3 server.
+    tlsv13_server,
+
     /// Generic TLS.
     tls,
 
@@ -121,6 +130,9 @@ public:
   /// Disable TLS v1.2.
   static const long no_tlsv1_2 = implementation_defined;
 
+  /// Disable TLS v1.3.
+  static const long no_tlsv1_3 = implementation_defined;
+
   /// Disable compression. Compression is disabled by default.
   static const long no_compression = implementation_defined;
 #else
@@ -139,6 +151,11 @@ public:
 # else // defined(SSL_OP_NO_TLSv1_2)
   BOOST_ASIO_STATIC_CONSTANT(long, no_tlsv1_2 = 0x08000000L);
 # endif // defined(SSL_OP_NO_TLSv1_2)
+# if defined(SSL_OP_NO_TLSv1_3)
+  BOOST_ASIO_STATIC_CONSTANT(long, no_tlsv1_3 = SSL_OP_NO_TLSv1_3);
+# else // defined(SSL_OP_NO_TLSv1_3)
+  BOOST_ASIO_STATIC_CONSTANT(long, no_tlsv1_3 = 0x20000000L);
+# endif // defined(SSL_OP_NO_TLSv1_3)
 # if defined(SSL_OP_NO_COMPRESSION)
   BOOST_ASIO_STATIC_CONSTANT(long, no_compression = SSL_OP_NO_COMPRESSION);
 # else // defined(SSL_OP_NO_COMPRESSION)

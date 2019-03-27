@@ -59,7 +59,8 @@ struct is_endpoint_sequence
 /**
  * @defgroup connect boost::asio::connect
  *
- * @brief Establishes a socket connection by trying each endpoint in a sequence.
+ * @brief The @c connect function is a composed operation that establishes a
+ * socket connection by trying each endpoint in a sequence.
  */
 /*@{*/
 
@@ -132,8 +133,8 @@ typename Protocol::endpoint connect(
         EndpointSequence>::value>::type* = 0);
 
 #if !defined(BOOST_ASIO_NO_DEPRECATED)
-/// (Deprecated.) Establishes a socket connection by trying each endpoint in a
-/// sequence.
+/// (Deprecated: Use range overload.) Establishes a socket connection by trying
+/// each endpoint in a sequence.
 /**
  * This function attempts to connect a socket to one of a sequence of
  * endpoints. It does this by repeated calls to the socket's @c connect member
@@ -160,8 +161,8 @@ template <typename Protocol BOOST_ASIO_SVC_TPARAM, typename Iterator>
 Iterator connect(basic_socket<Protocol BOOST_ASIO_SVC_TARG>& s, Iterator begin,
     typename enable_if<!is_endpoint_sequence<Iterator>::value>::type* = 0);
 
-/// (Deprecated.) Establishes a socket connection by trying each endpoint in a
-/// sequence.
+/// (Deprecated: Use range overload.) Establishes a socket connection by trying
+/// each endpoint in a sequence.
 /**
  * This function attempts to connect a socket to one of a sequence of
  * endpoints. It does this by repeated calls to the socket's @c connect member
@@ -387,8 +388,8 @@ typename Protocol::endpoint connect(
         EndpointSequence>::value>::type* = 0);
 
 #if !defined(BOOST_ASIO_NO_DEPRECATED)
-/// (Deprecated.) Establishes a socket connection by trying each endpoint in a
-/// sequence.
+/// (Deprecated: Use range overload.) Establishes a socket connection by trying
+/// each endpoint in a sequence.
 /**
  * This function attempts to connect a socket to one of a sequence of
  * endpoints. It does this by repeated calls to the socket's @c connect member
@@ -428,8 +429,8 @@ Iterator connect(basic_socket<Protocol BOOST_ASIO_SVC_TARG>& s,
     Iterator begin, ConnectCondition connect_condition,
     typename enable_if<!is_endpoint_sequence<Iterator>::value>::type* = 0);
 
-/// (Deprecated.) Establishes a socket connection by trying each endpoint in a
-/// sequence.
+/// (Deprecated: Use range overload.) Establishes a socket connection by trying
+/// each endpoint in a sequence.
 /**
  * This function attempts to connect a socket to one of a sequence of
  * endpoints. It does this by repeated calls to the socket's @c connect member
@@ -603,8 +604,8 @@ Iterator connect(basic_socket<Protocol BOOST_ASIO_SVC_TARG>& s,
 /**
  * @defgroup async_connect boost::asio::async_connect
  *
- * @brief Asynchronously establishes a socket connection by trying each
- * endpoint in a sequence.
+ * @brief The @c async_connect function is a composed asynchronous operation
+ * that establishes a socket connection by trying each endpoint in a sequence.
  */
 /*@{*/
 
@@ -680,8 +681,8 @@ async_connect(basic_socket<Protocol BOOST_ASIO_SVC_TARG>& s,
         EndpointSequence>::value>::type* = 0);
 
 #if !defined(BOOST_ASIO_NO_DEPRECATED)
-/// (Deprecated.) Asynchronously establishes a socket connection by trying each
-/// endpoint in a sequence.
+/// (Deprecated: Use range overload.) Asynchronously establishes a socket
+/// connection by trying each endpoint in a sequence.
 /**
  * This function attempts to connect a socket to one of a sequence of
  * endpoints. It does this by repeated calls to the socket's @c async_connect
@@ -887,8 +888,8 @@ async_connect(basic_socket<Protocol BOOST_ASIO_SVC_TARG>& s,
         EndpointSequence>::value>::type* = 0);
 
 #if !defined(BOOST_ASIO_NO_DEPRECATED)
-/// (Deprecated.) Asynchronously establishes a socket connection by trying each
-/// endpoint in a sequence.
+/// (Deprecated: Use range overload.) Asynchronously establishes a socket
+/// connection by trying each endpoint in a sequence.
 /**
  * This function attempts to connect a socket to one of a sequence of
  * endpoints. It does this by repeated calls to the socket's @c async_connect

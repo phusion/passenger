@@ -30,6 +30,9 @@
 #  if (BOOST_GCC >= 40600)
 #     pragma GCC diagnostic push
 #     pragma GCC diagnostic ignored "-Wuninitialized"
+#     if (BOOST_GCC >= 40700)
+#        pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#     endif
 #  endif
 #endif
 

@@ -105,17 +105,17 @@ namespace boost
 #ifdef BOOST_THREAD_HAS_PTHREAD_MUTEXATTR_SETTYPE
         void lock()
         {
-            BOOST_VERIFY(!pthread_mutex_lock(&m));
+            BOOST_VERIFY(!posix::pthread_mutex_lock(&m));
         }
 
         void unlock()
         {
-            BOOST_VERIFY(!pthread_mutex_unlock(&m));
+            BOOST_VERIFY(!posix::pthread_mutex_unlock(&m));
         }
 
         bool try_lock() BOOST_NOEXCEPT
         {
-            int const res=pthread_mutex_trylock(&m);
+            int const res=posix::pthread_mutex_trylock(&m);
             BOOST_ASSERT(!res || res==EBUSY);
             return !res;
         }
@@ -270,17 +270,17 @@ namespace boost
 #ifdef BOOST_USE_PTHREAD_RECURSIVE_TIMEDLOCK
         void lock()
         {
-            BOOST_VERIFY(!pthread_mutex_lock(&m));
+            BOOST_VERIFY(!posix::pthread_mutex_lock(&m));
         }
 
         void unlock()
         {
-            BOOST_VERIFY(!pthread_mutex_unlock(&m));
+            BOOST_VERIFY(!posix::pthread_mutex_unlock(&m));
         }
 
         bool try_lock()
         {
-            int const res=pthread_mutex_trylock(&m);
+            int const res=posix::pthread_mutex_trylock(&m);
             BOOST_ASSERT(!res || res==EBUSY);
             return !res;
         }

@@ -292,9 +292,18 @@ bool adaptive_sort_combine_all_blocks
 
       //Combine to form l_merged*2 segments
       if(n_keys){
-         adaptive_sort_combine_blocks
-            ( keys, comp, !use_internal_buf || is_merge_left ? first : first-l_block
-            , l_data, l_merged, l_block, use_internal_buf, common_xbuf, xbuf, comp, is_merge_left);
+         size_type upper_n_keys_this_iter = 2*l_merged/l_block;
+         if(upper_n_keys_this_iter > 256){
+            adaptive_sort_combine_blocks
+               ( keys, comp, !use_internal_buf || is_merge_left ? first : first-l_block
+               , l_data, l_merged, l_block, use_internal_buf, common_xbuf, xbuf, comp, is_merge_left);
+         }
+         else{
+            unsigned char uint_keys[256];
+            adaptive_sort_combine_blocks
+               ( uint_keys, less(), !use_internal_buf || is_merge_left ? first : first-l_block
+               , l_data, l_merged, l_block, use_internal_buf, common_xbuf, xbuf, comp, is_merge_left);
+            }
       }
       else{
          size_type *const uint_keys = xbuf.template aligned_trailing<size_type>();

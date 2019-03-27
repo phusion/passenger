@@ -64,7 +64,7 @@ template<class D> D * get_local_deleter( local_sp_deleter<D> * p );
 
 //
 
-template<class X> class sp_counted_impl_p: public sp_counted_base
+template<class X> class BOOST_SYMBOL_VISIBLE sp_counted_impl_p: public sp_counted_base
 {
 private:
 
@@ -143,7 +143,7 @@ public:
 # pragma option push -Vx-
 #endif
 
-template<class P, class D> class sp_counted_impl_pd: public sp_counted_base
+template<class P, class D> class BOOST_SYMBOL_VISIBLE sp_counted_impl_pd: public sp_counted_base
 {
 private:
 
@@ -216,7 +216,7 @@ public:
 #endif
 };
 
-template<class P, class D, class A> class sp_counted_impl_pda: public sp_counted_base
+template<class P, class D, class A> class BOOST_SYMBOL_VISIBLE sp_counted_impl_pda: public sp_counted_base
 {
 private:
 

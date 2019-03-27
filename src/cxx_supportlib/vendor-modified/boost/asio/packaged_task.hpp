@@ -16,11 +16,11 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
+#include <boost/asio/detail/future.hpp>
 
-#if defined(BOOST_ASIO_HAS_STD_FUTURE) \
+#if defined(BOOST_ASIO_HAS_STD_FUTURE_CLASS) \
   || defined(GENERATING_DOCUMENTATION)
 
-#include <future>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/detail/variadic_templates.hpp>
@@ -122,7 +122,7 @@ private:
 
 #include <boost/asio/detail/pop_options.hpp>
 
-#endif // defined(BOOST_ASIO_HAS_STD_FUTURE)
+#endif // defined(BOOST_ASIO_HAS_STD_FUTURE_CLASS)
        //   || defined(GENERATING_DOCUMENTATION)
 
 #endif // BOOST_ASIO_PACKAGED_TASK_HPP

@@ -60,17 +60,23 @@ namespace detail
 {
 
 #if !defined( BOOST_USE_WINDOWS_H ) && !BOOST_PLAT_WINDOWS_RUNTIME
-#if !BOOST_COMP_CLANG || !defined __MINGW32__
-  extern "C" void __stdcall Sleep( unsigned long ms );
+
+#if defined(__clang__) && defined(__x86_64__)
+// clang x64 warns that __stdcall is ignored
+# define BOOST_SP_STDCALL
 #else
-#include <_mingw.h>
-#if !defined __MINGW64_VERSION_MAJOR
-  extern "C" void __stdcall Sleep( unsigned long ms );
+# define BOOST_SP_STDCALL __stdcall
+#endif
+
+#if defined(__LP64__) // Cygwin 64
+  extern "C" __declspec(dllimport) void BOOST_SP_STDCALL Sleep( unsigned int ms );
 #else
-  extern "C" __declspec(dllimport) void __stdcall Sleep( unsigned long ms );
+  extern "C" __declspec(dllimport) void BOOST_SP_STDCALL Sleep( unsigned long ms );
 #endif
-#endif
-#endif
+
+#undef BOOST_SP_STDCALL
+
+#endif // !defined( BOOST_USE_WINDOWS_H ) && !BOOST_PLAT_WINDOWS_RUNTIME
 
 inline void yield( unsigned k )
 {

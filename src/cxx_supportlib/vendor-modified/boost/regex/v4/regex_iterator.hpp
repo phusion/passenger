@@ -85,14 +85,6 @@ template <class BidirectionalIterator,
           class charT = BOOST_DEDUCED_TYPENAME BOOST_REGEX_DETAIL_NS::regex_iterator_traits<BidirectionalIterator>::value_type,
           class traits = regex_traits<charT> >
 class regex_iterator 
-#ifndef BOOST_NO_STD_ITERATOR
-   : public std::iterator<
-         std::forward_iterator_tag, 
-         match_results<BidirectionalIterator>,
-         typename BOOST_REGEX_DETAIL_NS::regex_iterator_traits<BidirectionalIterator>::difference_type,
-         const match_results<BidirectionalIterator>*,
-         const match_results<BidirectionalIterator>& >         
-#endif
 {
 private:
    typedef regex_iterator_implementation<BidirectionalIterator, charT, traits> impl;

@@ -181,6 +181,7 @@ namespace boost {
             }
 
         size_type find(basic_string_ref s) const {
+            if (s.empty()) return 0;
             const_iterator iter = std::search ( this->cbegin (), this->cend (),
                                                 s.cbegin (), s.cend (), traits::eq );
             return iter == this->cend () ? npos : std::distance ( this->cbegin (), iter );
@@ -193,6 +194,7 @@ namespace boost {
             }
 
         size_type rfind(basic_string_ref s) const {
+            if (s.empty()) return 0;
             const_reverse_iterator iter = std::search ( this->crbegin (), this->crend (),
                                                 s.crbegin (), s.crend (), traits::eq );
             return iter == this->crend () ? npos : (std::distance(iter, this->crend()) - s.size());

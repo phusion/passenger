@@ -71,25 +71,61 @@ struct slist_hook
       <dtl::bi::void_pointer<VoidPointer>, dtl::bi::link_mode<dtl::bi::normal_link> >::type type;
 };
 
+
 template <class T, class VoidPointer>
 struct slist_node
    :  public slist_hook<VoidPointer>::type
 {
-   private:
-   slist_node();
-
    public:
    typedef T value_type;
+   typedef T internal_type;
    typedef typename slist_hook<VoidPointer>::type hook_type;
 
-   T m_data;
+   typedef typename aligned_storage<sizeof(T), alignment_of<T>::value>::type storage_t;
+   storage_t m_storage;
 
-   T &get_data()
-   {  return this->m_data;   }
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600) && (BOOST_GCC < 80000)
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+      #define BOOST_CONTAINER_DISABLE_ALIASING_WARNING
+   #  endif
 
-   const T &get_data() const
-   {  return this->m_data;   }
+   BOOST_CONTAINER_FORCEINLINE T &get_data()
+   {  return *reinterpret_cast<T*>(this->m_storage.data);   }
+
+   BOOST_CONTAINER_FORCEINLINE const T &get_data() const
+   {  return *reinterpret_cast<const T*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE T *get_data_ptr()
+   {  return reinterpret_cast<T*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE const T *get_data_ptr() const
+   {  return reinterpret_cast<T*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE internal_type &get_real_data()
+   {  return *reinterpret_cast<internal_type*>(this->m_storage.data);   }
+
+   BOOST_CONTAINER_FORCEINLINE const internal_type &get_real_data() const
+   {  return *reinterpret_cast<const internal_type*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE internal_type *get_real_data_ptr()
+   {  return reinterpret_cast<internal_type*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE const internal_type *get_real_data_ptr() const
+   {  return reinterpret_cast<internal_type*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE ~slist_node()
+   {  reinterpret_cast<T*>(this->m_storage.data)->~T();  }
+
+   #if defined(BOOST_CONTAINER_DISABLE_ALIASING_WARNING)
+      #pragma GCC diagnostic pop
+      #undef BOOST_CONTAINER_DISABLE_ALIASING_WARNING
+   #  endif
+
+   BOOST_CONTAINER_FORCEINLINE void destroy_header()
+   {  static_cast<hook_type*>(this)->~hook_type();  }
 };
+
 
 template <class T, class VoidPointer>
 struct iiterator_node_value_type< slist_node<T,VoidPointer> > {
@@ -1631,6 +1667,18 @@ class slist
 
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InpIt>
+slist(InpIt, InpIt) ->
+   slist<typename iterator_traits<InpIt>::value_type>;
+
+template <typename InpIt, typename Allocator>
+slist(InpIt, InpIt, Allocator const&) ->
+   slist<typename iterator_traits<InpIt>::value_type, Allocator>;
+
+#endif
 
 }}
 

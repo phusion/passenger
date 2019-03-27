@@ -20,6 +20,7 @@
 //  Thanks to Michael van der Westhuizen
 
 #include <boost/detail/sp_typeinfo.hpp>
+#include <boost/config.hpp>
 #include <inttypes.h> // int32_t
 
 namespace boost
@@ -87,7 +88,7 @@ inline int32_t atomic_conditional_increment( int32_t * pw )
     }    
 }
 
-class sp_counted_base
+class BOOST_SYMBOL_VISIBLE sp_counted_base
 {
 private:
 
