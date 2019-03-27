@@ -1995,7 +1995,7 @@ class slist_impl
    {  x.swap(y);  }
 
    private:
-   void priv_splice_after(const node_ptr & prev_pos_n, slist_impl &x, const node_ptr & before_f_n, const node_ptr & before_l_n)
+   void priv_splice_after(node_ptr prev_pos_n, slist_impl &x, node_ptr before_f_n, node_ptr before_l_n)
    {
       if (cache_last && (before_f_n != before_l_n)){
          if(prev_pos_n == this->get_last_node()){
@@ -2008,7 +2008,7 @@ class slist_impl
       node_algorithms::transfer_after(prev_pos_n, before_f_n, before_l_n);
    }
 
-   void priv_incorporate_after(const node_ptr & prev_pos_n, const node_ptr & first_n, const node_ptr & before_l_n)
+   void priv_incorporate_after(node_ptr prev_pos_n, node_ptr first_n, node_ptr before_l_n)
    {
       if(cache_last){
          if(prev_pos_n == this->get_last_node()){
@@ -2108,11 +2108,11 @@ class slist_impl
    }
 
    //circular version
-   static void priv_swap_lists(const node_ptr & this_node, const node_ptr & other_node, detail::bool_<false>)
+   static void priv_swap_lists(node_ptr this_node, node_ptr other_node, detail::bool_<false>)
    {  node_algorithms::swap_nodes(this_node, other_node); }
 
    //linear version
-   static void priv_swap_lists(const node_ptr & this_node, const node_ptr & other_node, detail::bool_<true>)
+   static void priv_swap_lists(node_ptr this_node, node_ptr other_node, detail::bool_<true>)
    {  node_algorithms::swap_trailing_nodes(this_node, other_node); }
 
    static slist_impl &priv_container_from_end_iterator(const const_iterator &end_iterator)

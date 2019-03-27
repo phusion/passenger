@@ -96,7 +96,7 @@ class static_storage_allocator
 //! Insertion beyond the capacity result in throwing std::bad_alloc() if exceptions are enabled or
 //! calling throw_bad_alloc() if not enabled.
 //!
-//! std::out_of_range is thrown if out of bound access is performed in <code>at()</code> if exceptions are
+//! std::out_of_range is thrown if out of bounds access is performed in <code>at()</code> if exceptions are
 //! enabled, throw_out_of_range() if not enabled.
 //!
 //!@tparam Value    The type of element that will be stored.
@@ -372,6 +372,7 @@ public:
     //! @par Complexity
     //!   Linear O(N).
     BOOST_CONTAINER_FORCEINLINE static_vector & operator=(BOOST_RV_REF(static_vector) other)
+       BOOST_NOEXCEPT_IF(boost::container::dtl::is_nothrow_move_assignable<value_type>::value)
     {
         return static_cast<static_vector&>(base_t::operator=(BOOST_MOVE_BASE(base_t, other)));
     }

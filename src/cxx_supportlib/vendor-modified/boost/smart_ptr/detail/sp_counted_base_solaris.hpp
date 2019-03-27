@@ -21,6 +21,7 @@
 //
 
 #include <boost/detail/sp_typeinfo.hpp>
+#include <boost/config.hpp>
 #include <atomic.h>
 
 namespace boost
@@ -29,7 +30,7 @@ namespace boost
 namespace detail
 {
 
-class sp_counted_base
+class BOOST_SYMBOL_VISIBLE sp_counted_base
 {
 private:
 

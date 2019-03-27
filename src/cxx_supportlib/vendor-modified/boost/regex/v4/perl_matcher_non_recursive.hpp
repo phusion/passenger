@@ -34,7 +34,10 @@
 #endif
 #ifdef BOOST_MSVC
 #  pragma warning(push)
-#  pragma warning(disable: 4800 4706)
+#  pragma warning(disable: 4706)
+#if BOOST_MSVC < 1910
+#pragma warning(disable:4800)
+#endif
 #endif
 
 namespace boost{
@@ -1797,7 +1800,7 @@ bool perl_matcher<BidiIterator, Allocator, traits>::unwind_recursion_pop(bool r)
    // Backtracking out of a recursion, we must pop state off the recursion
    // stack unconditionally to ensure matched pushes and pops:
    saved_state* pmp = static_cast<saved_state*>(m_backup_state);
-   if (!r)
+   if (!r && !recursion_stack.empty())
    {
       *m_presult = recursion_stack.back().results;
       position = recursion_stack.back().location_of_start;
@@ -1834,6 +1837,7 @@ bool perl_matcher<BidiIterator, Allocator, traits>::unwind_commit(bool b)
       // If we stop because we just unwound an assertion, put the
       // commit state back on the stack again:
       //
+      m_unwound_lookahead = false;
       saved_state* pmp = m_backup_state;
       --pmp;
       if(pmp < m_stack_base)

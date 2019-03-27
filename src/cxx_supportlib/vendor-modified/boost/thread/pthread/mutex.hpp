@@ -39,53 +39,8 @@
 
 namespace boost
 {
-  namespace posix {
-#ifdef BOOST_THREAD_HAS_EINTR_BUG
-    BOOST_FORCEINLINE int pthread_mutex_destroy(pthread_mutex_t* m)
-    {
-      int ret;
-      do
-      {
-          ret = ::pthread_mutex_destroy(m);
-      } while (ret == EINTR);
-      return ret;
-    }
-    BOOST_FORCEINLINE int pthread_mutex_lock(pthread_mutex_t* m)
-    {
-      int ret;
-      do
-      {
-          ret = ::pthread_mutex_lock(m);
-      } while (ret == EINTR);
-      return ret;
-    }
-    BOOST_FORCEINLINE int pthread_mutex_unlock(pthread_mutex_t* m)
-    {
-      int ret;
-      do
-      {
-          ret = ::pthread_mutex_unlock(m);
-      } while (ret == EINTR);
-      return ret;
-    }
-#else
-    BOOST_FORCEINLINE int pthread_mutex_destroy(pthread_mutex_t* m)
-    {
-      return ::pthread_mutex_destroy(m);
-    }
-    BOOST_FORCEINLINE int pthread_mutex_lock(pthread_mutex_t* m)
-    {
-      return ::pthread_mutex_lock(m);
-    }
-    BOOST_FORCEINLINE int pthread_mutex_unlock(pthread_mutex_t* m)
-    {
-      return ::pthread_mutex_unlock(m);
-    }
 
-#endif
-
-  }
-    class mutex
+    class BOOST_THREAD_CAPABILITY("mutex") mutex
     {
     private:
         pthread_mutex_t m;
@@ -107,7 +62,7 @@ namespace boost
           BOOST_ASSERT(!res);
         }
 
-        void lock()
+        void lock() BOOST_THREAD_ACQUIRE()
         {
             int res = posix::pthread_mutex_lock(&m);
             if (res)
@@ -116,7 +71,7 @@ namespace boost
             }
         }
 
-        void unlock()
+        void unlock() BOOST_THREAD_RELEASE()
         {
             int res = posix::pthread_mutex_unlock(&m);
             (void)res;
@@ -127,12 +82,12 @@ namespace boost
 //            }
         }
 
-        bool try_lock()
+        bool try_lock() BOOST_THREAD_TRY_ACQUIRE(true)
         {
             int res;
             do
             {
-                res = pthread_mutex_trylock(&m);
+                res = posix::pthread_mutex_trylock(&m);
             } while (res == EINTR);
             if (res==EBUSY)
             {
@@ -251,7 +206,7 @@ namespace boost
           int res;
           do
           {
-              res = pthread_mutex_trylock(&m);
+              res = posix::pthread_mutex_trylock(&m);
           } while (res == EINTR);
           if (res==EBUSY)
           {
@@ -277,7 +232,7 @@ namespace boost
             boost::pthread::pthread_mutex_scoped_lock const local_lock(&m);
             while(is_locked)
             {
-                BOOST_VERIFY(!pthread_cond_wait(&cond,&m));
+                BOOST_VERIFY(!posix::pthread_cond_wait(&cond,&m));
             }
             is_locked=true;
         }
@@ -286,7 +241,7 @@ namespace boost
         {
             boost::pthread::pthread_mutex_scoped_lock const local_lock(&m);
             is_locked=false;
-            BOOST_VERIFY(!pthread_cond_signal(&cond));
+            BOOST_VERIFY(!posix::pthread_cond_signal(&cond));
         }
 
         bool try_lock()

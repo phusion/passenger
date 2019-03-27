@@ -23,6 +23,7 @@
 
 #include <boost/intrusive/detail/iterator.hpp>
 #include <boost/move/utility_core.hpp>
+#include <boost/container/detail/mpl.hpp>
 
 namespace boost {
 namespace container {
@@ -63,6 +64,21 @@ class back_emplacer
    back_emplacer& operator++(int){ return *this; }
 };
 
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template<class InputIterator>
+using it_based_non_const_first_type_t = typename dtl::remove_const<typename iterator_traits<InputIterator>::value_type::first_type>::type;
+
+template<class InputIterator>
+using it_based_const_first_type_t = const typename dtl::remove_const<typename iterator_traits<InputIterator>::value_type::first_type>::type;
+
+template<class InputIterator>
+using it_based_second_type_t = typename iterator_traits<InputIterator>::value_type::second_type;
+
+template<class InputIterator>
+using it_based_value_type_t = typename iterator_traits<InputIterator>::value_type;
+
+#endif
 
 }  //namespace container {
 }  //namespace boost {

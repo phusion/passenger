@@ -122,42 +122,42 @@ class vec_iterator
 
    //Pointer like operators
    BOOST_CONTAINER_FORCEINLINE reference operator*()   const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return *m_ptr;  }
+   {  BOOST_ASSERT(!!m_ptr);  return *m_ptr;  }
 
    BOOST_CONTAINER_FORCEINLINE pointer operator->()  const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return ::boost::intrusive::pointer_traits<pointer>::pointer_to(this->operator*());  }
+   {  return m_ptr;  }
 
    BOOST_CONTAINER_FORCEINLINE reference operator[](difference_type off) const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return m_ptr[off];   }
+   {  BOOST_ASSERT(!!m_ptr);  return m_ptr[off];  }
 
    //Increment / Decrement
    BOOST_CONTAINER_FORCEINLINE vec_iterator& operator++() BOOST_NOEXCEPT_OR_NOTHROW
-   { ++m_ptr;  return *this; }
+   {  BOOST_ASSERT(!!m_ptr); ++m_ptr;  return *this; }
 
    BOOST_CONTAINER_FORCEINLINE vec_iterator operator++(int) BOOST_NOEXCEPT_OR_NOTHROW
-   {  return vec_iterator(m_ptr++); }
+   {  BOOST_ASSERT(!!m_ptr); return vec_iterator(m_ptr++); }
 
    BOOST_CONTAINER_FORCEINLINE vec_iterator& operator--() BOOST_NOEXCEPT_OR_NOTHROW
-   {  --m_ptr; return *this;  }
+   {  BOOST_ASSERT(!!m_ptr); --m_ptr; return *this;  }
 
    BOOST_CONTAINER_FORCEINLINE vec_iterator operator--(int) BOOST_NOEXCEPT_OR_NOTHROW
-   {  return vec_iterator(m_ptr--); }
+   {  BOOST_ASSERT(!!m_ptr); return vec_iterator(m_ptr--); }
 
    //Arithmetic
    BOOST_CONTAINER_FORCEINLINE vec_iterator& operator+=(difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
-   {  m_ptr += off; return *this;   }
+   {  BOOST_ASSERT(m_ptr || !off); m_ptr += off; return *this;   }
 
    BOOST_CONTAINER_FORCEINLINE vec_iterator& operator-=(difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
-   {  m_ptr -= off; return *this;   }
+   {  BOOST_ASSERT(m_ptr || !off); m_ptr -= off; return *this;   }
 
    BOOST_CONTAINER_FORCEINLINE friend vec_iterator operator+(const vec_iterator &x, difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
-   {  return vec_iterator(x.m_ptr+off);  }
+   {  BOOST_ASSERT(x.m_ptr || !off); return vec_iterator(x.m_ptr+off);  }
 
    BOOST_CONTAINER_FORCEINLINE friend vec_iterator operator+(difference_type off, vec_iterator right) BOOST_NOEXCEPT_OR_NOTHROW
-   {  right.m_ptr += off;  return right; }
+   {  BOOST_ASSERT(right.m_ptr || !off); right.m_ptr += off;  return right; }
 
    BOOST_CONTAINER_FORCEINLINE friend vec_iterator operator-(vec_iterator left, difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
-   {  left.m_ptr -= off;  return left; }
+   {  BOOST_ASSERT(left.m_ptr || !off); left.m_ptr -= off;  return left; }
 
    BOOST_CONTAINER_FORCEINLINE friend difference_type operator-(const vec_iterator &left, const vec_iterator& right) BOOST_NOEXCEPT_OR_NOTHROW
    {  return left.m_ptr - right.m_ptr;   }
@@ -931,6 +931,12 @@ class vector
    //!   throws or T's constructor taking a dereferenced InIt throws.
    //!
    //! <b>Complexity</b>: Linear to the range [first, last).
+//    template <class InIt>
+//    vector(InIt first, InIt last
+//           BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I typename dtl::disable_if_c
+//                                  < dtl::is_convertible<InIt BOOST_MOVE_I size_type>::value
+//                                  BOOST_MOVE_I dtl::nat >::type * = 0)
+//           ) -> vector<typename iterator_traits<InIt>::value_type, new_allocator<typename iterator_traits<InIt>::value_type>>;
    template <class InIt>
    vector(InIt first, InIt last
       BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I typename dtl::disable_if_c
@@ -947,6 +953,12 @@ class vector
    //!   throws or T's constructor taking a dereferenced InIt throws.
    //!
    //! <b>Complexity</b>: Linear to the range [first, last).
+//    template <class InIt>
+//    vector(InIt first, InIt last, const allocator_type& a
+//           BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I typename dtl::disable_if_c
+//                                  < dtl::is_convertible<InIt BOOST_MOVE_I size_type>::value
+//                                  BOOST_MOVE_I dtl::nat >::type * = 0)
+//           ) -> vector<typename iterator_traits<InIt>::value_type, new_allocator<typename iterator_traits<InIt>::value_type>>;
    template <class InIt>
    vector(InIt first, InIt last, const allocator_type& a
       BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I typename dtl::disable_if_c
@@ -1119,7 +1131,6 @@ class vector
       BOOST_NOEXCEPT_IF(allocator_traits_type::propagate_on_container_move_assignment::value
                         || allocator_traits_type::is_always_equal::value)
    {
-      BOOST_ASSERT(&x != this);
       this->priv_move_assign(boost::move(x));
       return *this;
    }
@@ -1180,6 +1191,7 @@ class vector
    //! <b>Complexity</b>: Linear to n.
    template <class InIt>
    void assign(InIt first, InIt last
+      //Input iterators or version 0 allocator
       BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I typename dtl::disable_if_or
          < void
          BOOST_MOVE_I dtl::is_convertible<InIt BOOST_MOVE_I size_type>
@@ -1229,6 +1241,7 @@ class vector
    //! <b>Complexity</b>: Linear to n.
    template <class FwdIt>
    void assign(FwdIt first, FwdIt last
+      //Forward iterators and version > 0 allocator
       BOOST_CONTAINER_DOCIGN(BOOST_MOVE_I typename dtl::disable_if_or
          < void
          BOOST_MOVE_I dtl::is_same<alloc_version BOOST_MOVE_I version_0>
@@ -1268,21 +1281,9 @@ class vector
             //Forward expansion, use assignment + back deletion/construction that comes later
          }
       }
-      //Overwrite all elements we can from [first, last)
-      iterator cur = this->begin();
-      const iterator end_it = this->end();
-      for ( ; first != last && cur != end_it; ++cur, ++first){
-         *cur = *first;
-      }
 
-      if (first == last){
-         //There are no more elements in the sequence, erase remaining
-         this->priv_destroy_last_n(this->size() - input_sz);
-      }
-      else{
-         //Uninitialized construct at end the remaining range
-         this->priv_uninitialized_construct_at_end(first, last);
-      }
+      boost::container::copy_assign_range_alloc_n(this->m_holder.alloc(), first, input_sz, this->priv_raw_begin(), this->size());
+      this->m_holder.m_size = input_sz;
    }
 
    //! <b>Effects</b>: Assigns the n copies of val to *this.
@@ -1350,7 +1351,11 @@ class vector
    //!
    //! <b>Complexity</b>: Constant.
    BOOST_CONTAINER_FORCEINLINE iterator end() BOOST_NOEXCEPT_OR_NOTHROW
-   { return iterator(this->m_holder.start() + this->m_holder.m_size); }
+   {
+      pointer   const bg = this->m_holder.start();
+      size_type const sz = this->m_holder.m_size;
+      return iterator(BOOST_LIKELY(sz) ? bg + sz : bg);  //Avoid UB on null-pointer arithmetic
+   }
 
    //! <b>Effects</b>: Returns a const_iterator to the end of the vector.
    //!
@@ -1410,7 +1415,12 @@ class vector
    //!
    //! <b>Complexity</b>: Constant.
    BOOST_CONTAINER_FORCEINLINE const_iterator cend() const BOOST_NOEXCEPT_OR_NOTHROW
-   { return const_iterator(this->m_holder.start() + this->m_holder.m_size); }
+   {
+      pointer   const bg = this->m_holder.start();
+      size_type const sz = this->m_holder.m_size;
+      return const_iterator(BOOST_LIKELY(sz) ? bg + sz : bg);  //Avoid UB on null-pointer arithmetic
+   }
+   //{ return const_iterator(this->m_holder.start() + this->m_holder.m_size); }
 
    //! <b>Effects</b>: Returns a const_reverse_iterator pointing to the beginning
    //! of the reversed vector.
@@ -2035,9 +2045,10 @@ class vector
    //!   plus linear to the elements between pos and the last element.
    iterator erase(const_iterator first, const_iterator last)
    {
-      BOOST_ASSERT(first == last ||
-         (first < last && this->priv_in_range(first) && this->priv_in_range_or_end(last)));
       if (first != last){
+         BOOST_ASSERT(this->priv_in_range(first));
+         BOOST_ASSERT(this->priv_in_range_or_end(last));
+         BOOST_ASSERT(first < last);
          T* const old_end_ptr = this->priv_raw_end();
          T* const first_ptr = boost::movelib::to_raw_pointer(vector_iterator_get_ptr(first));
          T* const last_ptr  = boost::movelib::to_raw_pointer(vector_iterator_get_ptr(last));
@@ -2180,7 +2191,7 @@ class vector
          this->priv_merge_in_new_buffer(first, n, comp, alloc_version());
       }
       else{
-         iterator pos(this->insert(this->cend(), first, last));
+         this->insert(this->cend(), first, last);
          T *const raw_beg = this->priv_raw_begin();
          T *const raw_end = this->priv_raw_end();
          T *const raw_pos = raw_beg + s;
@@ -2195,11 +2206,11 @@ class vector
    template<class InputIt, class Compare>
    BOOST_CONTAINER_FORCEINLINE void merge_unique(InputIt first, InputIt last, Compare comp)
    {
-      size_type const s = this->size();
+      size_type const old_size = this->size();
       this->priv_set_difference_back(first, last, comp);
       T *const raw_beg = this->priv_raw_begin();
       T *const raw_end = this->priv_raw_end();
-      T *raw_pos = raw_beg + s;
+      T *raw_pos = raw_beg + old_size;
       boost::movelib::adaptive_merge(raw_beg, raw_pos, raw_end, comp, raw_end, this->capacity() - this->size());
    }
 
@@ -2276,14 +2287,14 @@ class vector
 
          if (comp(*first1, *first2)) {
             this->emplace_back(*first1);
-            //Reallocation happened, update range
             T * const raw_begin = this->priv_raw_begin();
-            if(old_first2 != raw_begin){
+            if(old_first2 != raw_begin)
+            {
+               //Reallocation happened, update range
                first2 = raw_begin + (first2 - old_first2);
-               last2  = first2 + (last2 - old_first2);
+               last2  = raw_begin + (last2 - old_first2);
                old_first2 = raw_begin;
             }
-
             ++first1;
          }
          else {
@@ -2394,26 +2405,21 @@ class vector
          , dtl::is_different<OtherAllocator, allocator_type>
          >::type * = 0)
    {
-      //for move assignment, no aliasing (&x != this) is assummed.
-      BOOST_ASSERT(this != &x);
+      //for move assignment, no aliasing (&x != this) is assumed.
+      //x.size() == 0 is allowed for buggy std libraries.
+      BOOST_ASSERT(this != &x || x.size() == 0);
       allocator_type &this_alloc = this->m_holder.alloc();
       allocator_type &x_alloc    = x.m_holder.alloc();
       const bool propagate_alloc = allocator_traits_type::propagate_on_container_move_assignment::value;
 
       const bool is_propagable_from_x = is_propagable_from(x_alloc, x.m_holder.start(), this_alloc, propagate_alloc);
-      const bool is_propagable_from_t = is_propagable_from(this_alloc, m_holder.start(), x_alloc,   propagate_alloc);
-      const bool are_both_propagable  = is_propagable_from_x && is_propagable_from_t;
 
       //Resources can be transferred if both allocators are
       //going to be equal after this function (either propagated or already equal)
-      if(are_both_propagable){
-         //Destroy objects but retain memory in case x reuses it in the future
+      if(is_propagable_from_x){
          this->clear();
-         this->m_holder.swap_resources(x.m_holder);
-      }
-      else if(is_propagable_from_x){
-         this->clear();
-         this->m_holder.deallocate(this->m_holder.m_start, this->m_holder.m_capacity);
+         if(BOOST_LIKELY(!!this->m_holder.m_start))
+            this->m_holder.deallocate(this->m_holder.m_start, this->m_holder.m_capacity);
          this->m_holder.steal_resources(x.m_holder);
       }
       //Else do a one by one move
@@ -2477,6 +2483,9 @@ class vector
          this->m_holder.swap_resources(x.m_holder);
       }
       else{
+         if (BOOST_UNLIKELY(&x == this))
+            return;
+
          //Else swap element by element...
          bool const t_smaller = this->size() < x.size();
          vector &sml = t_smaller ? *this : x;
@@ -2652,7 +2661,8 @@ class vector
       if(cp){
          const size_type sz = this->size();
          if(!sz){
-            this->m_holder.deallocate(this->m_holder.m_start, cp);
+            if(BOOST_LIKELY(!!this->m_holder.m_start))
+               this->m_holder.deallocate(this->m_holder.m_start, cp);
             this->m_holder.m_start     = pointer();
             this->m_holder.m_capacity  = 0;
          }
@@ -2678,7 +2688,8 @@ class vector
       if(cp){
          const size_type sz = this->size();
          if(!sz){
-            this->m_holder.deallocate(this->m_holder.m_start, cp);
+            if(BOOST_LIKELY(!!this->m_holder.m_start))
+               this->m_holder.deallocate(this->m_holder.m_start, cp);
             this->m_holder.m_start     = pointer();
             this->m_holder.m_capacity  = 0;
          }
@@ -3351,6 +3362,19 @@ class vector
    #endif
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InputIterator>
+vector(InputIterator, InputIterator) ->
+   vector<typename iterator_traits<InputIterator>::value_type>;
+
+template <typename InputIterator, typename Allocator>
+vector(InputIterator, InputIterator, Allocator const&) ->
+   vector<typename iterator_traits<InputIterator>::value_type, Allocator>;
+
+#endif
+
 
 }} //namespace boost::container
 

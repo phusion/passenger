@@ -16,6 +16,7 @@
 //  http://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/detail/sp_typeinfo.hpp>
+#include <boost/config.hpp>
 #include <atomic>
 #include <cstdint>
 
@@ -57,7 +58,7 @@ inline std::int_least32_t atomic_conditional_increment( std::atomic_int_least32_
     }    
 }
 
-class sp_counted_base
+class BOOST_SYMBOL_VISIBLE sp_counted_base
 {
 private:
 

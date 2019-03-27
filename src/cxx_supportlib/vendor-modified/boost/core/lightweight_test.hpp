@@ -14,16 +14,19 @@
 //  Copyright (2) Beman Dawes 2010, 2011
 //  Copyright (3) Ion Gaztanaga 2013
 //
+//  Copyright 2018 Glen Joseph Fernandes
+//  (glenjofe@gmail.com)
+//
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
 //  http://www.boost.org/LICENSE_1_0.txt
 //
 
 #include <boost/core/no_exceptions_support.hpp>
-#include <boost/assert.hpp>
 #include <boost/current_function.hpp>
 #include <iostream>
 #include <iterator>
+#include <cstdlib>
 #include <cstring>
 #include <cstddef>
 
@@ -39,29 +42,45 @@ namespace boost
 namespace detail
 {
 
-struct report_errors_reminder
-{
-    bool called_report_errors_function;
-
-    report_errors_reminder() : called_report_errors_function(false) {}
-
-    ~report_errors_reminder()
-    {
-        BOOST_ASSERT(called_report_errors_function);  // verify report_errors() was called  
+class test_result {
+public:
+    test_result()
+        : report_(false)
+        , errors_(0) {
+#if defined(_MSC_VER) && (_MSC_VER > 1310)
+        ::_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
     }
+
+    ~test_result() {
+        if (!report_) {
+            BOOST_LIGHTWEIGHT_TEST_OSTREAM << "main() should return report_errors()" << std::endl;
+            std::abort();
+        }
+    }
+
+    int& errors() {
+        return errors_;
+    }
+
+    void done() {
+        report_ = true;
+    }
+
+private:
+    bool report_;
+    int errors_;
 };
 
-inline report_errors_reminder& report_errors_remind()
+inline test_result& test_results()
 {
-    static report_errors_reminder r;
-    return r;
+    static test_result instance;
+    return instance;
 }
 
-inline int & test_errors()
+inline int& test_errors()
 {
-    static int x = 0;
-    report_errors_remind();
-    return x;
+    return test_results().errors();
 }
 
 inline void test_failed_impl(char const * expr, char const * file, int line, char const * function)
@@ -69,7 +88,7 @@ inline void test_failed_impl(char const * expr, char const * file, int line, cha
     BOOST_LIGHTWEIGHT_TEST_OSTREAM
       << file << "(" << line << "): test '" << expr << "' failed in function '"
       << function << "'" << std::endl;
-    ++test_errors();
+    ++test_results().errors();
 }
 
 inline void error_impl(char const * msg, char const * file, int line, char const * function)
@@ -77,7 +96,7 @@ inline void error_impl(char const * msg, char const * file, int line, char const
     BOOST_LIGHTWEIGHT_TEST_OSTREAM
       << file << "(" << line << "): " << msg << " in function '"
       << function << "'" << std::endl;
-    ++test_errors();
+    ++test_results().errors();
 }
 
 inline void throw_failed_impl(char const * excep, char const * file, int line, char const * function)
@@ -85,7 +104,7 @@ inline void throw_failed_impl(char const * excep, char const * file, int line, c
    BOOST_LIGHTWEIGHT_TEST_OSTREAM
     << file << "(" << line << "): Exception '" << excep << "' not thrown in function '"
     << function << "'" << std::endl;
-   ++test_errors();
+   ++test_results().errors();
 }
 
 // In the comparisons below, it is possible that T and U are signed and unsigned integer types, which generates warnings in some compilers.
@@ -118,105 +137,58 @@ template<class T> inline const void* test_output_impl(T volatile* v) { return co
 inline const void* test_output_impl(std::nullptr_t) { return nullptr; }
 #endif
 
-template<class T, class U> inline void test_eq_impl( char const * expr1, char const * expr2,
-  char const * file, int line, char const * function, T const & t, U const & u )
-{
-    if( t == u )
-    {
-        report_errors_remind();
-    }
-    else
-    {
-        BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " == " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << test_output_impl(t) << "' != '" << test_output_impl(u) << "'" << std::endl;
-        ++test_errors();
-    }
-}
+struct lw_test_eq {
+    template <typename T, typename U>
+    bool operator()(const T& t, const U& u) const { return t == u; }
+    static const char* op() { return "=="; }
+};
 
-template<class T, class U> inline void test_ne_impl( char const * expr1, char const * expr2,
-  char const * file, int line, char const * function, T const & t, U const & u )
-{
-    if( t != u )
-    {
-        report_errors_remind();
-    }
-    else
-    {
-        BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " != " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << test_output_impl(t) << "' == '" << test_output_impl(u) << "'" << std::endl;
-        ++test_errors();
-    }
-}
+struct lw_test_ne {
+    template <typename T, typename U>
+    bool operator()(const T& t, const U& u) const { return t != u; }
+    static const char* op() { return "!="; }
+};
 
-template<class T, class U> inline void test_lt_impl( char const * expr1, char const * expr2,
-  char const * file, int line, char const * function, T const & t, U const & u )
-{
-    if( t < u )
-    {
-        report_errors_remind();
-    }
-    else
-    {
-        BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " < " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << test_output_impl(t) << "' >= '" << test_output_impl(u) << "'" << std::endl;
-        ++test_errors();
-    }
-}
+struct lw_test_lt {
+    template <typename T, typename U>
+    bool operator()(const T& t, const U& u) const { return t < u; }
+    static const char* op() { return "<"; }
+};
 
-template<class T, class U> inline void test_le_impl( char const * expr1, char const * expr2,
-  char const * file, int line, char const * function, T const & t, U const & u )
-{
-    if( t <= u )
-    {
-        report_errors_remind();
-    }
-    else
-    {
-        BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " <= " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << test_output_impl(t) << "' > '" << test_output_impl(u) << "'" << std::endl;
-        ++test_errors();
-    }
-}
+struct lw_test_le {
+    template <typename T, typename U>
+    bool operator()(const T& t, const U& u) const { return t <= u; }
+    static const char* op() { return "<="; }
+};
 
-template<class T, class U> inline void test_gt_impl( char const * expr1, char const * expr2,
-  char const * file, int line, char const * function, T const & t, U const & u )
-{
-    if( t > u )
-    {
-        report_errors_remind();
-    }
-    else
-    {
-        BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " > " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << test_output_impl(t) << "' <= '" << test_output_impl(u) << "'" << std::endl;
-        ++test_errors();
-    }
-}
+struct lw_test_gt {
+    template <typename T, typename U>
+    bool operator()(const T& t, const U& u) const { return t > u; }
+    static const char* op() { return ">"; }
+};
 
-template<class T, class U> inline void test_ge_impl( char const * expr1, char const * expr2,
-  char const * file, int line, char const * function, T const & t, U const & u )
+struct lw_test_ge {
+    template <typename T, typename U>
+    bool operator()(const T& t, const U& u) const { return t >= u; }
+    static const char* op() { return ">="; }
+};
+
+template<class BinaryPredicate, class T, class U>
+inline void test_with_impl(BinaryPredicate pred, char const * expr1, char const * expr2,
+                           char const * file, int line, char const * function,
+                           T const & t, U const & u)
 {
-    if( t >= u )
+    if( pred(t, u) )
     {
-        report_errors_remind();
+        test_results();
     }
     else
     {
         BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " >= " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << test_output_impl(t) << "' < '" << test_output_impl(u) << "'" << std::endl;
-        ++test_errors();
+            << file << "(" << line << "): test '" << expr1 << " " << pred.op() << " " << expr2
+            << "' ('" << test_output_impl(t) << "' " << pred.op() << " '" << test_output_impl(u)
+            << "') failed in function '" << function << "'" << std::endl;
+        ++test_results().errors();
     }
 }
 
@@ -225,15 +197,14 @@ inline void test_cstr_eq_impl( char const * expr1, char const * expr2,
 {
     if( std::strcmp(t, u) == 0 )
     {
-        report_errors_remind();
+        test_results();
     }
     else
     {
         BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " == " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << t << "' != '" << u << "'" << std::endl;
-        ++test_errors();
+            << file << "(" << line << "): test '" << expr1 << " == " << expr2 << "' ('" << t
+            << "' == '" << u << "') failed in function '" << function << "'" << std::endl;
+        ++test_results().errors();
     }
 }
 
@@ -242,15 +213,14 @@ inline void test_cstr_ne_impl( char const * expr1, char const * expr2,
 {
     if( std::strcmp(t, u) != 0 )
     {
-        report_errors_remind();
+        test_results();
     }
     else
     {
         BOOST_LIGHTWEIGHT_TEST_OSTREAM
-            << file << "(" << line << "): test '" << expr1 << " == " << expr2
-            << "' failed in function '" << function << "': "
-            << "'" << t << "' == '" << u << "'" << std::endl;
-        ++test_errors();
+            << file << "(" << line << "): test '" << expr1 << " != " << expr2 << "' ('" << t
+            << "' != '" << u << "') failed in function '" << function << "'" << std::endl;
+        ++test_results().errors();
     }
 }
 
@@ -313,12 +283,12 @@ void test_all_eq_impl(FormattedOutputFunction& output,
 
     if (error_count == 0)
     {
-        boost::detail::report_errors_remind();
+        test_results();
     }
     else
     {
         output << std::endl;
-        ++boost::detail::test_errors();
+        ++test_results().errors();
     }
 }
 
@@ -382,12 +352,12 @@ void test_all_with_impl(FormattedOutputFunction& output,
 
     if (error_count == 0)
     {
-        report_errors_remind();
+        test_results();
     }
     else
     {
         output << std::endl;
-        ++test_errors();
+        ++test_results().errors();
     }
 }
 
@@ -405,10 +375,10 @@ void test_all_with_impl(FormattedOutputFunction& output,
 
 inline int report_errors()
 {
-    boost::detail::report_errors_remind().called_report_errors_function = true;
+    boost::detail::test_result& result = boost::detail::test_results();
+    result.done();
 
-    int errors = boost::detail::test_errors();
-
+    int errors = result.errors();
     if( errors == 0 )
     {
         BOOST_LIGHTWEIGHT_TEST_OSTREAM
@@ -425,18 +395,18 @@ inline int report_errors()
 
 } // namespace boost
 
-#define BOOST_TEST(expr) ((expr)? (void)0: ::boost::detail::test_failed_impl(#expr, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION))
+#define BOOST_TEST(expr) ((expr)? (void)::boost::detail::test_results(): ::boost::detail::test_failed_impl(#expr, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION))
 #define BOOST_TEST_NOT(expr) BOOST_TEST(!(expr))
 
 #define BOOST_ERROR(msg) ( ::boost::detail::error_impl(msg, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION) )
 
-#define BOOST_TEST_EQ(expr1,expr2) ( ::boost::detail::test_eq_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
-#define BOOST_TEST_NE(expr1,expr2) ( ::boost::detail::test_ne_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
+#define BOOST_TEST_EQ(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_eq(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
+#define BOOST_TEST_NE(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_ne(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
 
-#define BOOST_TEST_LT(expr1,expr2) ( ::boost::detail::test_lt_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
-#define BOOST_TEST_LE(expr1,expr2) ( ::boost::detail::test_le_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
-#define BOOST_TEST_GT(expr1,expr2) ( ::boost::detail::test_gt_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
-#define BOOST_TEST_GE(expr1,expr2) ( ::boost::detail::test_ge_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
+#define BOOST_TEST_LT(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_lt(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
+#define BOOST_TEST_LE(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_le(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
+#define BOOST_TEST_GT(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_gt(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
+#define BOOST_TEST_GE(expr1,expr2) ( ::boost::detail::test_with_impl(::boost::detail::lw_test_ge(), #expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
 
 #define BOOST_TEST_CSTR_EQ(expr1,expr2) ( ::boost::detail::test_cstr_eq_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
 #define BOOST_TEST_CSTR_NE(expr1,expr2) ( ::boost::detail::test_cstr_ne_impl(#expr1, #expr2, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION, expr1, expr2) )
@@ -452,6 +422,7 @@ inline int report_errors()
          (#EXCEP, __FILE__, __LINE__, BOOST_CURRENT_FUNCTION); \
       }                                                        \
       catch(EXCEP const&) {                                    \
+         ::boost::detail::test_results();                      \
       }                                                        \
       catch(...) {                                             \
          ::boost::detail::throw_failed_impl                    \

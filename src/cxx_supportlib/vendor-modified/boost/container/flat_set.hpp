@@ -257,6 +257,22 @@ class flat_set
       : tree_t(ordered_unique_range, first, last, comp, a)
    {}
 
+   //! <b>Effects</b>: Constructs an empty container using the specified allocator and
+   //! inserts elements from the ordered unique range [first ,last). This function
+   //! is more efficient than the normal range creation for ordered ranges.
+   //!
+   //! <b>Requires</b>: [first ,last) must be ordered according to the predicate and must be
+   //! unique values.
+   //!
+   //! <b>Complexity</b>: Linear in N.
+   //!
+   //! <b>Note</b>: Non-standard extension.
+   template <class InputIterator>
+   BOOST_CONTAINER_FORCEINLINE
+      flat_set(ordered_unique_range_t, InputIterator first, InputIterator last, const allocator_type& a)
+      : tree_t(ordered_unique_range, first, last, Compare(), a)
+   {}
+
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
    //! <b>Effects</b>: Constructs an empty container and
    //! inserts elements from the range [il.begin(), il.end()).
@@ -823,6 +839,26 @@ class flat_set
    //! <b>Complexity</b>: Logarithmic.
    const_iterator find(const key_type& x) const;
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to an element with the key
+   //!   equivalent to x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<typename K>
+   iterator find(const K& x);
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: A const_iterator pointing to an element with the key
+   //!   equivalent to x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic.
+   template<typename K>
+   const_iterator find(const K& x) const;
+
    //! <b>Requires</b>: size() >= n.
    //!
    //! <b>Effects</b>: Returns an iterator to the nth element
@@ -881,7 +917,34 @@ class flat_set
    BOOST_CONTAINER_FORCEINLINE size_type count(const key_type& x) const
    {  return static_cast<size_type>(this->tree_t::find(x) != this->tree_t::cend());  }
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: The number of elements with key equivalent to x.
+   //!
+   //! <b>Complexity</b>: log(size())+count(k)
+   template<typename K>
+   BOOST_CONTAINER_FORCEINLINE size_type count(const K& x) const
+   {  return static_cast<size_type>(this->tree_t::find(x) != this->tree_t::cend());  }
+
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+   //! <b>Returns</b>: Returns true if there is an element with key
+   //!   equivalent to key in the container, otherwise false.
+   //!
+   //! <b>Complexity</b>: log(size()).
+   bool contains(const key_type& x) const;
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: Returns true if there is an element with key
+   //!   equivalent to key in the container, otherwise false.
+   //!
+   //! <b>Complexity</b>: log(size()).
+   template<typename K>
+   bool contains(const K& x) const;
+
    //! <b>Returns</b>: An iterator pointing to the first element with key not less
    //!   than k, or a.end() if such an element is not found.
    //!
@@ -893,6 +956,26 @@ class flat_set
    //!
    //! <b>Complexity</b>: Logarithmic
    const_iterator lower_bound(const key_type& x) const;
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than k, or a.end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<typename K>
+   iterator lower_bound(const K& x);
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: A const iterator pointing to the first element with key not
+   //!   less than k, or a.end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<typename K>
+   const_iterator lower_bound(const K& x) const;
 
    //! <b>Returns</b>: An iterator pointing to the first element with key not less
    //!   than x, or end() if such an element is not found.
@@ -906,6 +989,26 @@ class flat_set
    //! <b>Complexity</b>: Logarithmic
    const_iterator upper_bound(const key_type& x) const;
 
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: An iterator pointing to the first element with key not less
+   //!   than x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<typename K>
+   iterator upper_bound(const K& x);
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Returns</b>: A const iterator pointing to the first element with key not
+   //!   less than x, or end() if such an element is not found.
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<typename K>
+   const_iterator upper_bound(const K& x) const;
+
    #endif   //   #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
    //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
@@ -918,6 +1021,26 @@ class flat_set
    //!
    //! <b>Complexity</b>: Logarithmic
    BOOST_CONTAINER_FORCEINLINE std::pair<iterator,iterator> equal_range(const key_type& x)
+   {  return this->tree_t::lower_bound_range(x);  }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<typename K>
+   std::pair<iterator,iterator> equal_range(const K& x)
+   {  return this->tree_t::lower_bound_range(x);  }
+
+   //! <b>Requires</b>: This overload is available only if
+   //! key_compare::is_transparent exists.
+   //!
+   //! <b>Effects</b>: Equivalent to std::make_pair(this->lower_bound(k), this->upper_bound(k)).
+   //!
+   //! <b>Complexity</b>: Logarithmic
+   template<typename K>
+   std::pair<const_iterator,const_iterator> equal_range(const K& x) const
    {  return this->tree_t::lower_bound_range(x);  }
 
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
@@ -1000,6 +1123,65 @@ class flat_set
    {  return this->tree_t::insert_unique(p, ::boost::forward<KeyType>(x)); }
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InputIterator>
+flat_set(InputIterator, InputIterator) ->
+   flat_set< it_based_value_type_t<InputIterator> >;
+
+template < typename InputIterator, typename AllocatorOrCompare>
+    flat_set(InputIterator, InputIterator, AllocatorOrCompare const&) ->
+    flat_set< it_based_value_type_t<InputIterator>
+            , typename dtl::if_c< // Compare
+                dtl::is_allocator<AllocatorOrCompare>::value
+                , std::less<it_based_value_type_t<InputIterator>>
+                , AllocatorOrCompare
+            >::type
+            , typename dtl::if_c< // Allocator
+                dtl::is_allocator<AllocatorOrCompare>::value
+                , AllocatorOrCompare
+                , new_allocator<it_based_value_type_t<InputIterator>>
+                >::type
+            >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_set(InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_set< it_based_value_type_t<InputIterator>
+           , Compare
+           , Allocator>;
+
+template <typename InputIterator>
+flat_set(ordered_unique_range_t, InputIterator, InputIterator) ->
+   flat_set< it_based_value_type_t<InputIterator>>;
+
+
+template < typename InputIterator, typename AllocatorOrCompare>
+    flat_set(ordered_unique_range_t, InputIterator, InputIterator, AllocatorOrCompare const&) ->
+    flat_set< it_based_value_type_t<InputIterator>
+            , typename dtl::if_c< // Compare
+                dtl::is_allocator<AllocatorOrCompare>::value
+                , std::less<it_based_value_type_t<InputIterator>>
+                , AllocatorOrCompare
+            >::type
+            , typename dtl::if_c< // Allocator
+                dtl::is_allocator<AllocatorOrCompare>::value
+                , AllocatorOrCompare
+                , new_allocator<it_based_value_type_t<InputIterator>>
+                >::type
+            >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_set(ordered_unique_range_t, InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_set< it_based_value_type_t<InputIterator>
+           , Compare
+           , Allocator>;
+
+#endif
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
@@ -1175,6 +1357,20 @@ class flat_multiset
    template <class InputIterator>
    BOOST_CONTAINER_FORCEINLINE flat_multiset(ordered_range_t, InputIterator first, InputIterator last, const Compare& comp, const allocator_type& a)
       : tree_t(ordered_range, first, last, comp, a)
+   {}
+
+   //! <b>Effects</b>: Constructs an empty flat_multiset using the specified allocator and
+   //! inserts elements from the ordered range [first ,last ). This function
+   //! is more efficient than the normal range creation for ordered ranges.
+   //!
+   //! <b>Requires</b>: [first ,last) must be ordered according to the predicate.
+   //!
+   //! <b>Complexity</b>: Linear in N.
+   //!
+   //! <b>Note</b>: Non-standard extension.
+   template <class InputIterator>
+   BOOST_CONTAINER_FORCEINLINE flat_multiset(ordered_range_t, InputIterator first, InputIterator last, const allocator_type &a)
+      : tree_t(ordered_range, first, last, Compare(), a)
    {}
 
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
@@ -1559,6 +1755,13 @@ class flat_multiset
    //! @copydoc ::boost::container::flat_set::count(const key_type& ) const
    size_type count(const key_type& x) const;
 
+   //! @copydoc ::boost::container::flat_set::contains(const key_type& ) const
+   bool contains(const key_type& x) const;
+
+   //! @copydoc ::boost::container::flat_set::contains(const K& ) const
+   template<typename K>
+   bool contains(const K& x) const;
+
    //! @copydoc ::boost::container::flat_set::lower_bound(const key_type& )
    iterator lower_bound(const key_type& x);
 
@@ -1654,6 +1857,65 @@ class flat_multiset
    {  return this->tree_t::insert_equal(p, ::boost::forward<KeyType>(x)); }
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InputIterator>
+flat_multiset(InputIterator, InputIterator) ->
+   flat_multiset< it_based_value_type_t<InputIterator> >;
+
+
+template < typename InputIterator, typename AllocatorOrCompare>
+flat_multiset(InputIterator, InputIterator, AllocatorOrCompare const&) ->
+    flat_multiset < it_based_value_type_t<InputIterator>
+                  , typename dtl::if_c< // Compare
+                      dtl::is_allocator<AllocatorOrCompare>::value
+                      , std::less<it_based_value_type_t<InputIterator>>
+                      , AllocatorOrCompare
+                  >::type
+                  , typename dtl::if_c< // Allocator
+                      dtl::is_allocator<AllocatorOrCompare>::value
+                      , AllocatorOrCompare
+                      , new_allocator<it_based_value_type_t<InputIterator>>
+                      >::type
+                  >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_multiset(InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_multiset< it_based_value_type_t<InputIterator>
+           , Compare
+           , Allocator>;
+
+template <typename InputIterator>
+flat_multiset(ordered_range_t, InputIterator, InputIterator) ->
+   flat_multiset< it_based_value_type_t<InputIterator>>;
+
+template < typename InputIterator, typename AllocatorOrCompare>
+flat_multiset(ordered_range_t, InputIterator, InputIterator, AllocatorOrCompare const&) ->
+    flat_multiset < it_based_value_type_t<InputIterator>
+                  , typename dtl::if_c< // Compare
+                      dtl::is_allocator<AllocatorOrCompare>::value
+                      , std::less<it_based_value_type_t<InputIterator>>
+                      , AllocatorOrCompare
+                  >::type
+                  , typename dtl::if_c< // Allocator
+                      dtl::is_allocator<AllocatorOrCompare>::value
+                      , AllocatorOrCompare
+                      , new_allocator<it_based_value_type_t<InputIterator>>
+                      >::type
+                  >;
+
+template < typename InputIterator, typename Compare, typename Allocator
+         , typename = dtl::require_nonallocator_t<Compare>
+         , typename = dtl::require_allocator_t<Allocator>>
+flat_multiset(ordered_range_t, InputIterator, InputIterator, Compare const&, Allocator const&) ->
+   flat_multiset< it_based_value_type_t<InputIterator>
+           , Compare
+           , Allocator>;
+
+#endif
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 

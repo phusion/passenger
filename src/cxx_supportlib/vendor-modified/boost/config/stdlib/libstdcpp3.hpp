@@ -294,13 +294,13 @@ extern "C" char *gets (char *__s);
 #endif
 
 //
-//  C++17 features in GCC 6.1 and later
+//  C++17 features in GCC 7.1 and later
 //
-#if (BOOST_LIBSTDCXX_VERSION < 60100) || (__cplusplus <= 201402L)
-#  define BOOST_NO_CXX17_STD_INVOKE
-#endif
 #if (BOOST_LIBSTDCXX_VERSION < 70100) || (__cplusplus <= 201402L)
+#  define BOOST_NO_CXX17_STD_INVOKE
 #  define BOOST_NO_CXX17_STD_APPLY
+#  define BOOST_NO_CXX17_HDR_OPTIONAL
+#  define BOOST_NO_CXX17_HDR_STRING_VIEW
 #endif
 
 #if defined(__has_include)

@@ -9,9 +9,11 @@
 #ifndef BOOST_TT_IS_COMPLETE_HPP_INCLUDED
 #define BOOST_TT_IS_COMPLETE_HPP_INCLUDED
 
+#include <boost/type_traits/declval.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 #include <boost/type_traits/remove_reference.hpp>
 #include <boost/type_traits/is_function.hpp>
+#include <boost/type_traits/detail/yes_no_type.hpp>
 #include <boost/config/workaround.hpp>
 
 /*
@@ -58,7 +60,7 @@ namespace boost {
       template <class T>
       struct is_complete_imp
       {
-         template <class U, class = decltype(sizeof(std::declval< U >())) >
+         template <class U, class = decltype(sizeof(boost::declval< U >())) >
          static type_traits::yes_type check(U*);
 
          template <class U>

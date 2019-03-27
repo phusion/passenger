@@ -1085,6 +1085,27 @@ namespace boost
                                        const unsigned number_of_bernoullis_b2n,
                                        OutputIterator out_it);
 
+   // Lambert W:
+   template <class T, class Policy>
+   typename boost::math::tools::promote_args<T>::type lambert_w0(T z, const Policy& pol);
+   template <class T>
+   typename boost::math::tools::promote_args<T>::type lambert_w0(T z);
+   template <class T, class Policy>
+   typename boost::math::tools::promote_args<T>::type lambert_wm1(T z, const Policy& pol);
+   template <class T>
+   typename boost::math::tools::promote_args<T>::type lambert_wm1(T z);
+   template <class T, class Policy>
+   typename boost::math::tools::promote_args<T>::type lambert_w0_prime(T z, const Policy& pol);
+   template <class T>
+   typename boost::math::tools::promote_args<T>::type lambert_w0_prime(T z);
+   template <class T, class Policy>
+   typename boost::math::tools::promote_args<T>::type lambert_wm1_prime(T z, const Policy& pol);
+   template <class T>
+   typename boost::math::tools::promote_args<T>::type lambert_wm1_prime(T z);
+
+
+
+
     } // namespace math
 } // namespace boost
 
@@ -1643,6 +1664,12 @@ template <class OutputIterator, class T>\
    OutputIterator tangent_t2n(int start_index, unsigned number_of_bernoullis_b2n, OutputIterator out_it)\
    { return boost::math::tangent_t2n<T>(start_index, number_of_bernoullis_b2n, out_it, Policy()); }\
    \
+   template <class T> inline typename boost::math::tools::promote_args<T>::type lambert_w0(T z) { return boost::math::lambert_w0(z, Policy()); }\
+   template <class T> inline typename boost::math::tools::promote_args<T>::type lambert_wm1(T z) { return boost::math::lambert_w0(z, Policy()); }\
+   template <class T> inline typename boost::math::tools::promote_args<T>::type lambert_w0_prime(T z) { return boost::math::lambert_w0(z, Policy()); }\
+   template <class T> inline typename boost::math::tools::promote_args<T>::type lambert_wm1_prime(T z) { return boost::math::lambert_w0(z, Policy()); }\
+   \
+
 
 
 

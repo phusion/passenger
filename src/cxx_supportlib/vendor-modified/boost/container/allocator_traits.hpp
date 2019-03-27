@@ -151,7 +151,7 @@ struct allocator_traits
       //! Allocator::void_pointer if such a type exists ; otherwise, pointer_traits<pointer>::rebind<void>.
       //!
       typedef see_documentation void_pointer;
-      //! Allocator::const_void_pointer if such a type exists ; otherwis e, pointer_traits<pointer>::rebind<const
+      //! Allocator::const_void_pointer if such a type exists ; otherwise, pointer_traits<pointer>::rebind<const
       //!
       typedef see_documentation const_void_pointer;
       //! Allocator::difference_type if such a type exists ; otherwise, pointer_traits<pointer>::difference_type.

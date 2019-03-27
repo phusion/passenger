@@ -16,7 +16,7 @@
 #include <boost/type_traits/has_nothrow_assign.hpp>
 #include <boost/type_traits/is_array.hpp>
 #include <boost/type_traits/is_reference.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/enable_if.hpp>
 #include <boost/type_traits/declval.hpp>
 #include <boost/type_traits/is_complete.hpp>
 #include <boost/static_assert.hpp>
@@ -48,7 +48,7 @@ struct false_or_cpp11_noexcept_move_assignable: public ::boost::false_type {};
 template <class T>
 struct false_or_cpp11_noexcept_move_assignable <
         T,
-        typename ::boost::enable_if_c<sizeof(T) && BOOST_NOEXCEPT_EXPR(::boost::declval<T&>() = ::boost::declval<T>())>::type
+        typename ::boost::enable_if_<sizeof(T) && BOOST_NOEXCEPT_EXPR(::boost::declval<T&>() = ::boost::declval<T>())>::type
     > : public ::boost::integral_constant<bool, BOOST_NOEXCEPT_EXPR(::boost::declval<T&>() = ::boost::declval<T>())>
 {};
 

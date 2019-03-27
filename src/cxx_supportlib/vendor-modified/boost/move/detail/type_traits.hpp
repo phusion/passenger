@@ -973,7 +973,7 @@ struct aligned_struct;
 template<std::size_t Len>\
 struct BOOST_ALIGNMENT(A) aligned_struct<Len, A>\
 {\
-   char data[Len];\
+   unsigned char data[Len];\
 };\
 //
 
@@ -1000,7 +1000,7 @@ template<std::size_t Len, std::size_t Align>
 union aligned_struct_wrapper
 {
    aligned_struct<Len, Align> aligner;
-   char data[sizeof(aligned_struct<Len, Align>)];
+   unsigned char data[sizeof(aligned_struct<Len, Align>)];
 };
 
 template<std::size_t Len, std::size_t Align>
@@ -1015,7 +1015,7 @@ template<class T, std::size_t Len>
 union aligned_union
 {   
    T aligner;
-   char data[Len];
+   unsigned char data[Len];
 };
 
 template<std::size_t Len, std::size_t Align, class T, bool Ok>

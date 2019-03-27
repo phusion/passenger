@@ -283,7 +283,7 @@ namespace date_time {
     // The argument (ss) must be an integral type
     template <typename T>
     explicit subsecond_duration(T const& ss,
-                                typename boost::enable_if<boost::is_integral<T>, void>::type* = 0) :
+                                typename boost::enable_if<boost::is_integral<T>, void>::type* = BOOST_DATE_TIME_NULLPTR) :
       base_duration(impl_type(traits_type::ticks_per_second >= frac_of_second ? ss * adjustment_ratio : ss / adjustment_ratio))
     {
     }

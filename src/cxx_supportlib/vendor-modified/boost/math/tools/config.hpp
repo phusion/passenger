@@ -209,7 +209,7 @@
 // constexpr support, early GCC implementations can't cope so disable
 // constexpr for them:
 //
-#if !defined(__clang) && defined(__GNUC__)
+#if !defined(__clang__) && defined(__GNUC__)
 #if (__GNUC__ * 100 + __GNUC_MINOR__) < 490
 #  define BOOST_MATH_DISABLE_CONSTEXPR
 #endif

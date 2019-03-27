@@ -1,6 +1,6 @@
 // Copyright Kevlin Henney, 2000-2005.
 // Copyright Alexander Nasonov, 2006-2010.
-// Copyright Antony Polukhin, 2011-2016.
+// Copyright Antony Polukhin, 2011-2018.
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -33,7 +33,7 @@
 #include <cstring>
 #include <cstdio>
 #include <boost/limits.hpp>
-#include <boost/mpl/if.hpp>
+#include <boost/type_traits/conditional.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/detail/workaround.hpp>
@@ -137,13 +137,13 @@ namespace boost {
                 , std::size_t CharacterBufferSize
                 >
         class lexical_istream_limited_src: boost::noncopyable {
-            typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_c<
+            typedef BOOST_DEDUCED_TYPENAME boost::conditional<
                 RequiresStringbuffer,
                 BOOST_DEDUCED_TYPENAME out_stream_helper_trait<CharT, Traits>::out_stream_t,
                 do_not_construct_out_stream_t
             >::type deduced_out_stream_t;
 
-            typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_c<
+            typedef BOOST_DEDUCED_TYPENAME boost::conditional<
                 RequiresStringbuffer,
                 BOOST_DEDUCED_TYPENAME out_stream_helper_trait<CharT, Traits>::stringbuffer_t,
                 do_not_construct_out_buffer_t

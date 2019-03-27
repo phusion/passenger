@@ -33,7 +33,8 @@ namespace asio {
 /**
  * @defgroup write_at boost::asio::write_at
  *
- * @brief Write a certain amount of data at a specified offset before returning.
+ * @brief The @c write_at function is a composed operation that writes a
+ * certain amount of data at a specified offset before returning.
  */
 /*@{*/
 
@@ -393,8 +394,9 @@ std::size_t write_at(SyncRandomAccessWriteDevice& d, uint64_t offset,
 /**
  * @defgroup async_write_at boost::asio::async_write_at
  *
- * @brief Start an asynchronous operation to write a certain amount of data at
- * the specified offset.
+ * @brief The @c async_write_at function is a composed asynchronous operation
+ * that writes a certain amount of data at the specified offset before
+ * completion.
  */
 /*@{*/
 

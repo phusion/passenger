@@ -20,6 +20,7 @@
 #include <boost/container/detail/auto_link.hpp>
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/container/detail/pool_resource.hpp>
+#include <boost/container/detail/thread_mutex.hpp>
 
 #include <cstddef>
 
@@ -60,8 +61,8 @@ namespace pmr {
 class BOOST_CONTAINER_DECL synchronized_pool_resource
    : public memory_resource
 {
-   pool_resource m_pool_resource;
-   void *m_opaque_sync;
+   dtl::thread_mutex m_mut;
+   pool_resource     m_pool_resource;
 
    public:
 

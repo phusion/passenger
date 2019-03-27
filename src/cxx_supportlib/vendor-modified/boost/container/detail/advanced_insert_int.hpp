@@ -125,8 +125,16 @@ struct insert_value_initialized_n_proxy
    void uninitialized_copy_n_and_update(Allocator &a, Iterator p, size_type n) const
    {  boost::container::uninitialized_value_init_alloc_n(a, n, p);  }
 
-   void copy_n_and_update(Allocator &, Iterator, size_type) const
-   {  BOOST_ASSERT(false); }
+   void copy_n_and_update(Allocator &a, Iterator p, size_type n) const
+   {
+      for (; 0 < n; --n, ++p){
+         typename aligned_storage<sizeof(value_type), alignment_of<value_type>::value>::type v;
+         value_type *vp = reinterpret_cast<value_type *>(v.data);
+         alloc_traits::construct(a, vp);
+         value_destructor<Allocator> on_exit(a, *vp); (void)on_exit;
+         *p = ::boost::move(*vp);
+      }
+   }
 };
 
 template<class Allocator, class Iterator>
@@ -139,8 +147,18 @@ struct insert_default_initialized_n_proxy
    void uninitialized_copy_n_and_update(Allocator &a, Iterator p, size_type n) const
    {  boost::container::uninitialized_default_init_alloc_n(a, n, p);  }
 
-   void copy_n_and_update(Allocator &, Iterator, size_type) const
-   {  BOOST_ASSERT(false); }
+   void copy_n_and_update(Allocator &a, Iterator p, size_type n) const
+   {
+      if(!is_pod<value_type>::value){
+         for (; 0 < n; --n, ++p){
+            typename aligned_storage<sizeof(value_type), alignment_of<value_type>::value>::type v;
+            value_type *vp = reinterpret_cast<value_type *>(v.data);
+            alloc_traits::construct(a, vp, default_init);
+            value_destructor<Allocator> on_exit(a, *vp); (void)on_exit;
+            *p = ::boost::move(*vp);
+         }
+      }
+   }
 };
 
 template<class Allocator, class Iterator>
@@ -271,7 +289,7 @@ struct insert_emplace_proxy
    {
       BOOST_ASSERT(n ==1); (void)n;
       typename aligned_storage<sizeof(value_type), alignment_of<value_type>::value>::type v;
-      value_type *vp = static_cast<value_type *>(static_cast<void *>(v.data));
+      value_type *vp = reinterpret_cast<value_type *>(v.data);
       alloc_traits::construct(a, vp,
          ::boost::forward<Args>(get<IdxPack>(this->args_))...);
       BOOST_TRY{
@@ -382,7 +400,7 @@ struct insert_emplace_proxy_arg##N\
       BOOST_ASSERT(n == 1); (void)n;\
       typename aligned_storage<sizeof(value_type), alignment_of<value_type>::value>::type v;\
       BOOST_ASSERT((((size_type)(&v)) % alignment_of<value_type>::value) == 0);\
-      value_type *vp = static_cast<value_type *>(static_cast<void *>(v.data));\
+      value_type *vp = reinterpret_cast<value_type *>(v.data);\
       alloc_traits::construct(a, vp BOOST_MOVE_I##N BOOST_MOVE_MFWD##N);\
       BOOST_TRY{\
          *p = ::boost::move(*vp);\

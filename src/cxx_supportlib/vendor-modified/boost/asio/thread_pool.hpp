@@ -33,7 +33,7 @@ namespace asio {
  *
  * @par Submitting tasks to the pool
  *
- * To submit functions to the io_context, use the @ref boost::asio::dispatch,
+ * To submit functions to the thread_pool, use the @ref boost::asio::dispatch,
  * @ref boost::asio::post or @ref boost::asio::defer free functions.
  *
  * For example:

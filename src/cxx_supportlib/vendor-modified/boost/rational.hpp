@@ -157,7 +157,7 @@ public:
        rational_detail::is_compatible_integer<T, IntType>::value
     >::type const* = 0) : num(n), den(1) {}
     template <class T, class U>
-    rational(const T& n, const U& d, typename enable_if_c<
+    BOOST_CXX14_CONSTEXPR rational(const T& n, const U& d, typename enable_if_c<
        rational_detail::is_compatible_integer<T, IntType>::value && rational_detail::is_compatible_integer<U, IntType>::value
     >::type const* = 0) : num(n), den(d) {
        normalize();
@@ -180,13 +180,13 @@ public:
 
     // Add assignment from IntType
     template <class T>
-    typename enable_if_c<
+    BOOST_CXX14_CONSTEXPR typename enable_if_c<
        rational_detail::is_compatible_integer<T, IntType>::value, rational &
     >::type operator=(const T& n) { return assign(static_cast<IntType>(n), static_cast<IntType>(1)); }
 
     // Assign in place
     template <class T, class U>
-    typename enable_if_c<
+    BOOST_CXX14_CONSTEXPR typename enable_if_c<
        rational_detail::is_compatible_integer<T, IntType>::value && rational_detail::is_compatible_integer<U, IntType>::value, rational &
     >::type assign(const T& n, const U& d)
     {
@@ -201,7 +201,7 @@ public:
     // if the conversion results in loss of precision or undefined behaviour.
     //
     template <class T>
-    rational(const T& n, typename enable_if_c<
+    BOOST_CXX14_CONSTEXPR rational(const T& n, typename enable_if_c<
        std::numeric_limits<T>::is_specialized && std::numeric_limits<T>::is_integer
        && !rational_detail::is_compatible_integer<T, IntType>::value
        && (std::numeric_limits<T>::radix == std::numeric_limits<IntType>::radix)
@@ -211,7 +211,7 @@ public:
        assign(n, static_cast<T>(1));
     }
     template <class T, class U>
-    rational(const T& n, const U& d, typename enable_if_c<
+    BOOST_CXX14_CONSTEXPR rational(const T& n, const U& d, typename enable_if_c<
        (!rational_detail::is_compatible_integer<T, IntType>::value
        || !rational_detail::is_compatible_integer<U, IntType>::value)
        && std::numeric_limits<T>::is_specialized && std::numeric_limits<T>::is_integer
@@ -225,7 +225,7 @@ public:
        assign(n, d);
     }
     template <class T>
-    typename enable_if_c<
+    BOOST_CXX14_CONSTEXPR typename enable_if_c<
        std::numeric_limits<T>::is_specialized && std::numeric_limits<T>::is_integer
        && !rational_detail::is_compatible_integer<T, IntType>::value
        && (std::numeric_limits<T>::radix == std::numeric_limits<IntType>::radix)
@@ -234,7 +234,7 @@ public:
     >::type operator=(const T& n) { return assign(n, static_cast<T>(1)); }
 
     template <class T, class U>
-    typename enable_if_c<
+    BOOST_CXX14_CONSTEXPR typename enable_if_c<
        (!rational_detail::is_compatible_integer<T, IntType>::value
           || !rational_detail::is_compatible_integer<U, IntType>::value)
        && std::numeric_limits<T>::is_specialized && std::numeric_limits<T>::is_integer
@@ -258,25 +258,25 @@ public:
     const IntType& denominator() const { return den; }
 
     // Arithmetic assignment operators
-    rational& operator+= (const rational& r);
-    rational& operator-= (const rational& r);
-    rational& operator*= (const rational& r);
-    rational& operator/= (const rational& r);
+    BOOST_CXX14_CONSTEXPR rational& operator+= (const rational& r);
+    BOOST_CXX14_CONSTEXPR rational& operator-= (const rational& r);
+    BOOST_CXX14_CONSTEXPR rational& operator*= (const rational& r);
+    BOOST_CXX14_CONSTEXPR rational& operator/= (const rational& r);
 
     template <class T>
-    typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator+= (const T& i)
+    BOOST_CXX14_CONSTEXPR typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator+= (const T& i)
     {
        num += i * den;
        return *this;
     }
     template <class T>
-    typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator-= (const T& i)
+    BOOST_CXX14_CONSTEXPR typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator-= (const T& i)
     {
        num -= i * den;
        return *this;
     }
     template <class T>
-    typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator*= (const T& i)
+    BOOST_CXX14_CONSTEXPR typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator*= (const T& i)
     {
        // Avoid overflow and preserve normalization
        IntType gcd = integer::gcd(static_cast<IntType>(i), den);
@@ -285,7 +285,7 @@ public:
        return *this;
     }
     template <class T>
-    typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator/= (const T& i)
+    BOOST_CXX14_CONSTEXPR typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, rational&>::type operator/= (const T& i)
     {
        // Avoid repeated construction
        IntType const zero(0);
@@ -307,16 +307,16 @@ public:
     }
 
     // Increment and decrement
-    const rational& operator++() { num += den; return *this; }
-    const rational& operator--() { num -= den; return *this; }
+    BOOST_CXX14_CONSTEXPR const rational& operator++() { num += den; return *this; }
+    BOOST_CXX14_CONSTEXPR const rational& operator--() { num -= den; return *this; }
 
-    rational operator++(int)
+    BOOST_CXX14_CONSTEXPR rational operator++(int)
     {
        rational t(*this);
        ++(*this);
        return t;
     }
-    rational operator--(int)
+    BOOST_CXX14_CONSTEXPR rational operator--(int)
     {
        rational t(*this);
        --(*this);
@@ -344,13 +344,13 @@ public:
 #endif
 
     // Comparison operators
-    bool operator< (const rational& r) const;
-    bool operator> (const rational& r) const { return r < *this; }
+    BOOST_CXX14_CONSTEXPR bool operator< (const rational& r) const;
+    BOOST_CXX14_CONSTEXPR bool operator> (const rational& r) const { return r < *this; }
     BOOST_CONSTEXPR
     bool operator== (const rational& r) const;
 
     template <class T>
-    typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, bool>::type operator< (const T& i) const
+    BOOST_CXX14_CONSTEXPR typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, bool>::type operator< (const T& i) const
     {
        // Avoid repeated construction
        int_type const  zero(0);
@@ -367,7 +367,7 @@ public:
        return q < i;
     }
     template <class T>
-    typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, bool>::type operator>(const T& i) const
+    BOOST_CXX14_CONSTEXPR typename boost::enable_if_c<rational_detail::is_compatible_integer<T, IntType>::value, bool>::type operator>(const T& i) const
     {
        return operator==(i) ? false : !operator<(i);
     }
@@ -397,8 +397,8 @@ private:
     // times. normalized form is defined as gcd(num,den) == 1 and den > 0.
     // In particular, note that the implementation of abs() below relies
     // on den always being positive.
-    bool test_invariant() const;
-    void normalize();
+    BOOST_CXX14_CONSTEXPR bool test_invariant() const;
+    BOOST_CXX14_CONSTEXPR void normalize();
 
     static BOOST_CONSTEXPR
     bool is_normalized( param_type n, param_type d, int_type const &zero =
@@ -480,6 +480,7 @@ inline rational<IntType> operator+ (const rational<IntType>& r)
 }
 
 template <typename IntType>
+BOOST_CXX14_CONSTEXPR
 inline rational<IntType> operator- (const rational<IntType>& r)
 {
     return rational<IntType>(static_cast<IntType>(-r.numerator()), r.denominator());
@@ -487,7 +488,7 @@ inline rational<IntType> operator- (const rational<IntType>& r)
 
 // Arithmetic assignment operators
 template <typename IntType>
-rational<IntType>& rational<IntType>::operator+= (const rational<IntType>& r)
+BOOST_CXX14_CONSTEXPR rational<IntType>& rational<IntType>::operator+= (const rational<IntType>& r)
 {
     // This calculation avoids overflow, and minimises the number of expensive
     // calculations. Thanks to Nickolay Mladenov for this algorithm.
@@ -522,7 +523,7 @@ rational<IntType>& rational<IntType>::operator+= (const rational<IntType>& r)
 }
 
 template <typename IntType>
-rational<IntType>& rational<IntType>::operator-= (const rational<IntType>& r)
+BOOST_CXX14_CONSTEXPR rational<IntType>& rational<IntType>::operator-= (const rational<IntType>& r)
 {
     // Protect against self-modification
     IntType r_num = r.num;
@@ -541,7 +542,7 @@ rational<IntType>& rational<IntType>::operator-= (const rational<IntType>& r)
 }
 
 template <typename IntType>
-rational<IntType>& rational<IntType>::operator*= (const rational<IntType>& r)
+BOOST_CXX14_CONSTEXPR rational<IntType>& rational<IntType>::operator*= (const rational<IntType>& r)
 {
     // Protect against self-modification
     IntType r_num = r.num;
@@ -556,7 +557,7 @@ rational<IntType>& rational<IntType>::operator*= (const rational<IntType>& r)
 }
 
 template <typename IntType>
-rational<IntType>& rational<IntType>::operator/= (const rational<IntType>& r)
+BOOST_CXX14_CONSTEXPR rational<IntType>& rational<IntType>::operator/= (const rational<IntType>& r)
 {
     // Protect against self-modification
     IntType r_num = r.num;
@@ -601,6 +602,7 @@ rational<IntType>& rational<IntType>::operator/= (const rational<IntType>& r)
 // Cases (1) and (2) are folded into the one function.
 //
 template <class IntType, class Arg>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value || is_same<rational<IntType>, Arg>::value, rational<IntType> >::type
    operator + (const rational<IntType>& a, const Arg& b)
@@ -609,6 +611,7 @@ inline typename boost::enable_if_c <
       return t += b;
 }
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, rational<IntType> >::type
    operator + (const Arg& b, const rational<IntType>& a)
@@ -618,6 +621,7 @@ inline typename boost::enable_if_c <
 }
 
 template <class IntType, class Arg>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value || is_same<rational<IntType>, Arg>::value, rational<IntType> >::type
    operator - (const rational<IntType>& a, const Arg& b)
@@ -626,6 +630,7 @@ inline typename boost::enable_if_c <
       return t -= b;
 }
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, rational<IntType> >::type
    operator - (const Arg& b, const rational<IntType>& a)
@@ -635,6 +640,7 @@ inline typename boost::enable_if_c <
 }
 
 template <class IntType, class Arg>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value || is_same<rational<IntType>, Arg>::value, rational<IntType> >::type
    operator * (const rational<IntType>& a, const Arg& b)
@@ -643,6 +649,7 @@ inline typename boost::enable_if_c <
       return t *= b;
 }
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, rational<IntType> >::type
    operator * (const Arg& b, const rational<IntType>& a)
@@ -652,6 +659,7 @@ inline typename boost::enable_if_c <
 }
 
 template <class IntType, class Arg>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value || is_same<rational<IntType>, Arg>::value, rational<IntType> >::type
    operator / (const rational<IntType>& a, const Arg& b)
@@ -660,6 +668,7 @@ inline typename boost::enable_if_c <
       return t /= b;
 }
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, rational<IntType> >::type
    operator / (const Arg& b, const rational<IntType>& a)
@@ -669,6 +678,7 @@ inline typename boost::enable_if_c <
 }
 
 template <class IntType, class Arg>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value || is_same<rational<IntType>, Arg>::value, bool>::type
    operator <= (const rational<IntType>& a, const Arg& b)
@@ -676,6 +686,7 @@ inline typename boost::enable_if_c <
       return !(a > b);
 }
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, bool>::type
    operator <= (const Arg& b, const rational<IntType>& a)
@@ -684,6 +695,7 @@ inline typename boost::enable_if_c <
 }
 
 template <class IntType, class Arg>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value || is_same<rational<IntType>, Arg>::value, bool>::type
    operator >= (const rational<IntType>& a, const Arg& b)
@@ -691,6 +703,7 @@ inline typename boost::enable_if_c <
       return !(a < b);
 }
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, bool>::type
    operator >= (const Arg& b, const rational<IntType>& a)
@@ -699,6 +712,7 @@ inline typename boost::enable_if_c <
 }
 
 template <class IntType, class Arg>
+BOOST_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value || is_same<rational<IntType>, Arg>::value, bool>::type
    operator != (const rational<IntType>& a, const Arg& b)
@@ -706,6 +720,7 @@ inline typename boost::enable_if_c <
       return !(a == b);
 }
 template <class Arg, class IntType>
+BOOST_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, bool>::type
    operator != (const Arg& b, const rational<IntType>& a)
@@ -714,6 +729,7 @@ inline typename boost::enable_if_c <
 }
 
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, bool>::type
    operator < (const Arg& b, const rational<IntType>& a)
@@ -721,6 +737,7 @@ inline typename boost::enable_if_c <
       return a > b;
 }
 template <class Arg, class IntType>
+BOOST_CXX14_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, bool>::type
    operator > (const Arg& b, const rational<IntType>& a)
@@ -728,6 +745,7 @@ inline typename boost::enable_if_c <
       return a < b;
 }
 template <class Arg, class IntType>
+BOOST_CONSTEXPR
 inline typename boost::enable_if_c <
    rational_detail::is_compatible_integer<Arg, IntType>::value, bool>::type
    operator == (const Arg& b, const rational<IntType>& a)
@@ -737,6 +755,7 @@ inline typename boost::enable_if_c <
 
 // Comparison operators
 template <typename IntType>
+BOOST_CXX14_CONSTEXPR
 bool rational<IntType>::operator< (const rational<IntType>& r) const
 {
     // Avoid repeated construction
@@ -829,6 +848,7 @@ inline bool rational<IntType>::operator== (const rational<IntType>& r) const
 
 // Invariant check
 template <typename IntType>
+BOOST_CXX14_CONSTEXPR
 inline bool rational<IntType>::test_invariant() const
 {
     return ( this->den > int_type(0) ) && ( integer::gcd(this->num, this->den) ==
@@ -837,7 +857,7 @@ inline bool rational<IntType>::test_invariant() const
 
 // Normalisation
 template <typename IntType>
-void rational<IntType>::normalize()
+BOOST_CXX14_CONSTEXPR void rational<IntType>::normalize()
 {
     // Avoid repeated construction
     IntType zero(0);
@@ -856,18 +876,15 @@ void rational<IntType>::normalize()
     num /= g;
     den /= g;
 
+    if (den < -(std::numeric_limits<IntType>::max)()) {
+        BOOST_THROW_EXCEPTION(bad_rational("bad rational: non-zero singular denominator"));
+    }
+
     // Ensure that the denominator is positive
     if (den < zero) {
         num = -num;
         den = -den;
     }
-
-    // ...But acknowledge that the previous step doesn't always work.
-    // (Nominally, this should be done before the mutating steps, but this
-    // member function is only called during the constructor, so we never have
-    // to worry about zombie objects.)
-    if (den < zero)
-       BOOST_THROW_EXCEPTION(bad_rational("bad rational: non-zero singular denominator"));
 
     BOOST_ASSERT( this->test_invariant() );
 }
@@ -960,6 +977,7 @@ inline T rational_cast(const rational<IntType>& src)
 // difficulties involved (Koenig lookup required, there may not *be* an abs()
 // defined, etc etc).
 template <typename IntType>
+BOOST_CXX14_CONSTEXPR
 inline rational<IntType> abs(const rational<IntType>& r)
 {
     return r.numerator() >= IntType(0)? r: -r;

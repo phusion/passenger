@@ -87,11 +87,10 @@
 #endif
 
 // C++17 features
-#if (_LIBCPP_VERSION < 3700) || (__cplusplus <= 201402L)
-#  define BOOST_NO_CXX17_STD_INVOKE
-#endif
 #if (_LIBCPP_VERSION < 4000) || (__cplusplus <= 201402L)
 #  define BOOST_NO_CXX17_STD_APPLY
+#  define BOOST_NO_CXX17_HDR_OPTIONAL
+#  define BOOST_NO_CXX17_HDR_STRING_VIEW
 #endif
 #if (_LIBCPP_VERSION > 4000) && (__cplusplus > 201402L) && !defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 #  define BOOST_NO_AUTO_PTR
@@ -104,6 +103,7 @@
 #endif
 
 #define BOOST_NO_CXX17_ITERATOR_TRAITS
+#define BOOST_NO_CXX17_STD_INVOKE      // Invoke support is incomplete (no invoke_result)
 
 #if (_LIBCPP_VERSION <= 1101) && !defined(BOOST_NO_CXX11_THREAD_LOCAL)
 // This is a bit of a sledgehammer, because really it's just libc++abi that has no
@@ -113,10 +113,16 @@
 #  define BOOST_NO_CXX11_THREAD_LOCAL
 #endif
 
-#if defined(__linux__) && !defined(BOOST_NO_CXX11_THREAD_LOCAL)
+#if defined(__linux__) && (_LIBCPP_VERSION < 6000) && !defined(BOOST_NO_CXX11_THREAD_LOCAL)
 // After libc++-dev is installed on Trusty, clang++-libc++ almost works,
 // except uses of `thread_local` fail with undefined reference to
 // `__cxa_thread_atexit`.
+//
+// clang's libc++abi provides an implementation by deferring to the glibc
+// implementation, which may or may not be available (it is not on Trusty).
+// clang 4's libc++abi will provide an implementation if one is not in glibc
+// though, so thread local support should work with clang 4 and above as long
+// as libc++abi is linked in.
 #  define BOOST_NO_CXX11_THREAD_LOCAL
 #endif
 
@@ -127,6 +133,10 @@
 #  define BOOST_NO_CXX14_HDR_SHARED_MUTEX
 #endif
 #elif __cplusplus < 201402
+#  define BOOST_NO_CXX14_HDR_SHARED_MUTEX
+#endif
+
+#if !defined(BOOST_NO_CXX14_HDR_SHARED_MUTEX) && (_LIBCPP_VERSION < 5000)
 #  define BOOST_NO_CXX14_HDR_SHARED_MUTEX
 #endif
 

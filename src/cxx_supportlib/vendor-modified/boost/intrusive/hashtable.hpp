@@ -375,7 +375,7 @@ struct group_functions
    typedef circular_slist_algorithms<node_traits>                 node_algorithms;
 
    static slist_node_ptr get_bucket_before_begin
-      (const slist_node_ptr &bucket_beg, const slist_node_ptr &bucket_end, const node_ptr &p)
+      (slist_node_ptr bucket_beg, slist_node_ptr bucket_end, node_ptr p)
    {
       //First find the last node of p's group.
       //This requires checking the first node of the next group or
@@ -406,7 +406,7 @@ struct group_functions
       return possible_end;
    }
 
-   static node_ptr get_prev_to_first_in_group(const slist_node_ptr &bucket_node, const node_ptr &first_in_group)
+   static node_ptr get_prev_to_first_in_group(slist_node_ptr bucket_node, node_ptr first_in_group)
    {
       node_ptr nb = detail::dcast_bucket_ptr<node>(bucket_node);
       node_ptr n;
@@ -416,7 +416,7 @@ struct group_functions
       return nb;
    }
 
-   static void erase_from_group(const slist_node_ptr &end_ptr, const node_ptr &to_erase_ptr, detail::true_)
+   static void erase_from_group(slist_node_ptr end_ptr, node_ptr to_erase_ptr, detail::true_)
    {
       node_ptr const nxt_ptr(node_traits::get_next(to_erase_ptr));
       //Check if the next node is in the group (not end node) and reverse linked to
@@ -429,7 +429,7 @@ struct group_functions
    BOOST_INTRUSIVE_FORCEINLINE static void erase_from_group(const slist_node_ptr&, const node_ptr&, detail::false_)
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE static node_ptr get_last_in_group(const node_ptr &first_in_group, detail::true_)
+   BOOST_INTRUSIVE_FORCEINLINE static node_ptr get_last_in_group(node_ptr first_in_group, detail::true_)
    {  return group_traits::get_next(first_in_group);  }
 
    BOOST_INTRUSIVE_FORCEINLINE static node_ptr get_last_in_group(node_ptr n, detail::false_)
@@ -449,10 +449,10 @@ struct group_functions
       return node_traits::get_next(group_traits::get_next(ptr));
    }
 
-   BOOST_INTRUSIVE_FORCEINLINE static node_ptr get_first_in_group(const node_ptr &n, detail::false_)
+   BOOST_INTRUSIVE_FORCEINLINE static node_ptr get_first_in_group(node_ptr n, detail::false_)
    {  return n;  }
 
-   BOOST_INTRUSIVE_FORCEINLINE static void insert_in_group(const node_ptr &first_in_group, const node_ptr &n, true_)
+   BOOST_INTRUSIVE_FORCEINLINE static void insert_in_group(node_ptr first_in_group, node_ptr n, true_)
    {  group_algorithms::link_after(first_in_group, n);  }
 
    static void insert_in_group(const node_ptr&, const node_ptr&, false_)
@@ -672,8 +672,8 @@ struct bucket_plus_vtraits
    typedef detail::bucket_impl<slist_impl>               bucket_type;
    typedef detail::group_functions<node_traits>          group_functions_t;
    typedef typename slist_impl::node_algorithms          node_algorithms;
-   typedef typename slist_impl::node_ptr                 slist_node_ptr;
-   typedef typename node_traits::node_ptr                node_ptr;
+   typedef typename slist_impl::node_ptr                slist_node_ptr;
+   typedef typename node_traits::node_ptr               node_ptr;
    typedef typename node_traits::node                    node;
    typedef typename value_traits::value_type             value_type;
    typedef typename value_traits::pointer                pointer;
@@ -1383,15 +1383,15 @@ struct hashdata_internal
       <const_pointer>::reference                            const_reference;
    typedef typename value_traits::node_traits               node_traits;
    typedef typename node_traits::node                       node;
-   typedef typename node_traits::node_ptr                   node_ptr;
-   typedef typename node_traits::const_node_ptr             const_node_ptr;
+   typedef typename node_traits::node_ptr                  node_ptr;
+   typedef typename node_traits::const_node_ptr          const_node_ptr;
    typedef detail::node_functions<node_traits>              node_functions_t;
    typedef typename detail::get_slist_impl
       <typename detail::reduced_slist_node_traits
          <typename value_traits::node_traits>::type
       >::type                                               slist_impl;
    typedef typename slist_impl::node_algorithms             node_algorithms;
-   typedef typename slist_impl::node_ptr                    slist_node_ptr;
+   typedef typename slist_impl::node_ptr                   slist_node_ptr;
 
    typedef hash_key_types_base
       < typename ValueTraits::value_type
@@ -1740,7 +1740,7 @@ class hashtable_impl
    //See documentation for more explanations
    BOOST_STATIC_ASSERT((!compare_hash || store_hash));
 
-   typedef typename slist_impl::node_ptr                             slist_node_ptr;
+   typedef typename slist_impl::node_ptr                            slist_node_ptr;
    typedef typename pointer_traits
       <slist_node_ptr>::template rebind_pointer
          < void >::type                                              void_pointer;

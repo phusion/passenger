@@ -114,12 +114,14 @@ struct node_base
    typedef typename void_ptr_traits::
       template rebind_pointer
          <node_base>::type                      node_base_ptr;
+
+   public:
    typedef typename void_ptr_traits::
       template rebind_pointer
          <node_base_ptr>::type                  node_base_ptr_ptr;
 
    public:
-   node_base(const node_base_ptr_ptr &n)
+   explicit node_base(const node_base_ptr_ptr &n)
       : up(n)
    {}
 
@@ -130,6 +132,7 @@ struct node_base
    node_base_ptr_ptr up;
 };
 
+
 template<typename Pointer>
 struct node
    : public node_base
@@ -137,11 +140,52 @@ struct node
          rebind_pointer<void>::type
       >
 {
-   private:
-   node();
-
    public:
-   typename ::boost::intrusive::pointer_traits<Pointer>::element_type value;
+   typedef typename ::boost::intrusive::pointer_traits<Pointer>::element_type T;
+   typedef node_base
+      <typename ::boost::intrusive::pointer_traits<Pointer>::template
+         rebind_pointer<void>::type
+      > hook_type;
+
+   typedef typename boost::container::dtl::aligned_storage
+      <sizeof(T), boost::container::dtl::alignment_of<T>::value>::type storage_t;
+   storage_t m_storage;
+
+   BOOST_CONTAINER_FORCEINLINE explicit node(const typename hook_type::node_base_ptr_ptr &n)
+      : hook_type(n)
+   {}
+
+   BOOST_CONTAINER_FORCEINLINE node()
+   {}
+
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600) && (BOOST_GCC < 80000)
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+      #define BOOST_CONTAINER_DISABLE_ALIASING_WARNING
+   #  endif
+
+   BOOST_CONTAINER_FORCEINLINE T &get_data()
+   {  return *reinterpret_cast<T*>(this->m_storage.data);   }
+
+   BOOST_CONTAINER_FORCEINLINE const T &get_data() const
+   {  return *reinterpret_cast<const T*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE T *get_data_ptr()
+   {  return reinterpret_cast<T*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE const T *get_data_ptr() const
+   {  return reinterpret_cast<T*>(this->m_storage.data);  }
+
+   BOOST_CONTAINER_FORCEINLINE ~node()
+   {  reinterpret_cast<T*>(this->m_storage.data)->~T();  }
+
+   #if defined(BOOST_CONTAINER_DISABLE_ALIASING_WARNING)
+      #pragma GCC diagnostic pop
+      #undef BOOST_CONTAINER_DISABLE_ALIASING_WARNING
+   #  endif
+
+   BOOST_CONTAINER_FORCEINLINE void destroy_header()
+   {  static_cast<hook_type*>(this)->~hook_type();  }
 };
 
 template<class VoidPtr, class VoidAllocator>
@@ -290,7 +334,7 @@ class stable_vector_iterator
    public:
    //Pointer like operators
    reference operator*()  const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return  node_pointer()->value;  }
+   {  return  node_pointer()->get_data();  }
 
    pointer   operator->() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return ptr_traits::pointer_to(this->operator*());  }
@@ -317,7 +361,7 @@ class stable_vector_iterator
    {  stable_vector_iterator tmp(*this);  --*this; return stable_vector_iterator(tmp);  }
 
    reference operator[](difference_type off) const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return node_ptr_traits::static_cast_from(this->m_pn->up[off])->value;  }
+   {  return node_ptr_traits::static_cast_from(this->m_pn->up[off])->get_data();  }
 
    stable_vector_iterator& operator+=(difference_type off) BOOST_NOEXCEPT_OR_NOTHROW
    {
@@ -793,7 +837,7 @@ class stable_vector
       BOOST_NOEXCEPT_IF(allocator_traits_type::propagate_on_container_move_assignment::value
                                   || allocator_traits_type::is_always_equal::value)
    {
-      //for move constructor, no aliasing (&x != this) is assummed.
+      //for move constructor, no aliasing (&x != this) is assumed.
       BOOST_ASSERT(this != &x);
       node_allocator_type &this_alloc = this->priv_node_alloc();
       node_allocator_type &x_alloc    = x.priv_node_alloc();
@@ -1198,7 +1242,7 @@ class stable_vector
    reference front() BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
-      return static_cast<node_reference>(*this->index.front()).value;
+      return static_cast<node_reference>(*this->index.front()).get_data();
    }
 
    //! <b>Requires</b>: !empty()
@@ -1212,7 +1256,7 @@ class stable_vector
    const_reference front() const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
-      return static_cast<const_node_reference>(*this->index.front()).value;
+      return static_cast<const_node_reference>(*this->index.front()).get_data();
    }
 
    //! <b>Requires</b>: !empty()
@@ -1226,7 +1270,7 @@ class stable_vector
    reference back() BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
-      return static_cast<node_reference>(*this->index[this->size()-1u]).value;
+      return static_cast<node_reference>(*this->index[this->size()-1u]).get_data();
    }
 
    //! <b>Requires</b>: !empty()
@@ -1240,7 +1284,7 @@ class stable_vector
    const_reference back() const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(!this->empty());
-      return static_cast<const_node_reference>(*this->index[this->size()-1u]).value;
+      return static_cast<const_node_reference>(*this->index[this->size()-1u]).get_data();
    }
 
    //! <b>Requires</b>: size() > n.
@@ -1254,7 +1298,7 @@ class stable_vector
    reference operator[](size_type n) BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->size() > n);
-      return static_cast<node_reference>(*this->index[n]).value;
+      return static_cast<node_reference>(*this->index[n]).get_data();
    }
 
    //! <b>Requires</b>: size() > n.
@@ -1268,7 +1312,7 @@ class stable_vector
    const_reference operator[](size_type n) const BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_ASSERT(this->size() > n);
-      return static_cast<const_node_reference>(*this->index[n]).value;
+      return static_cast<const_node_reference>(*this->index[n]).get_data();
    }
 
    //! <b>Requires</b>: size() >= n.
@@ -1956,8 +2000,7 @@ class stable_vector
    void priv_destroy_node(const node_type &n)
    {
       allocator_traits<node_allocator_type>::
-         destroy(this->priv_node_alloc(), dtl::addressof(n.value));
-      static_cast<const node_base_type*>(&n)->~node_base_type();
+         destroy(this->priv_node_alloc(), &n);
    }
 
    void priv_delete_node(const node_ptr &n)
@@ -1969,26 +2012,40 @@ class stable_vector
    template<class Iterator>
    void priv_build_node_from_it(const node_ptr &p, const index_iterator &up_index, const Iterator &it)
    {
-      //This can throw
-      boost::container::construct_in_place
-         ( this->priv_node_alloc()
-         , dtl::addressof(p->value)
-         , it);
-      //This does not throw
-      ::new(static_cast<node_base_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t())
-         node_base_type(index_traits_type::ptr_to_node_base_ptr(*up_index));
+      node_type *praw = ::new(boost::movelib::iterator_to_raw_pointer(p), boost_container_new_t())
+         node_type(index_traits_type::ptr_to_node_base_ptr(*up_index));
+      BOOST_TRY{
+         //This can throw
+         boost::container::construct_in_place
+            ( this->priv_node_alloc()
+            , praw->get_data_ptr()
+            , it);
+      }
+      BOOST_CATCH(...) {
+         praw->destroy_header();
+         this->priv_node_alloc().deallocate(p, 1);
+         BOOST_RETHROW
+      }
+      BOOST_CATCH_END
    }
 
    template<class ValueConvertible>
    void priv_build_node_from_convertible(const node_ptr &p, BOOST_FWD_REF(ValueConvertible) value_convertible)
    {
-      //This can throw
-      boost::container::allocator_traits<node_allocator_type>::construct
-         ( this->priv_node_alloc()
-         , dtl::addressof(p->value)
-         , ::boost::forward<ValueConvertible>(value_convertible));
-      //This does not throw
-      ::new(static_cast<node_base_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t()) node_base_type;
+      node_type *praw = ::new(boost::movelib::iterator_to_raw_pointer(p), boost_container_new_t()) node_type;
+      BOOST_TRY{
+         //This can throw
+         boost::container::allocator_traits<node_allocator_type>::construct
+            ( this->priv_node_alloc()
+            , p->get_data_ptr()
+            , ::boost::forward<ValueConvertible>(value_convertible));
+      }
+      BOOST_CATCH(...) {
+         praw->destroy_header();
+         this->priv_node_alloc().deallocate(p, 1);
+         BOOST_RETHROW
+      }
+      BOOST_CATCH_END
    }
 
    void priv_swap_members(stable_vector &x)
@@ -2084,6 +2141,18 @@ class stable_vector
    index_type                           index;
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
+
+#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
+
+template <typename InputIterator>
+stable_vector(InputIterator, InputIterator) ->
+   stable_vector<typename iterator_traits<InputIterator>::value_type>;
+
+template <typename InputIterator, typename Allocator>
+stable_vector(InputIterator, InputIterator, Allocator const&) ->
+   stable_vector<typename iterator_traits<InputIterator>::value_type, Allocator>;
+
+#endif
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 

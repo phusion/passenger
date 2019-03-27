@@ -28,6 +28,9 @@ BOOST_AUTO_LINK_NOMANGLE: Specifies that we should link to BOOST_LIB_NAME.lib,
 BOOST_AUTO_LINK_TAGGED:   Specifies that we link to libraries built with the --layout=tagged option.
                           This is essentially the same as the default name-mangled version, but without
                           the compiler name and version, or the Boost version.  Just the build options.
+BOOST_AUTO_LINK_SYSTEM:   Specifies that we link to libraries built with the --layout=system option.
+                          This is essentially the same as the non-name-mangled version, but with
+                          the prefix to differentiate static and dll builds
 
 These macros will be undef'ed at the end of the header, further this header
 has no include guards - so be sure to include it only once from your library!
@@ -405,6 +408,11 @@ BOOST_LIB_VERSION:    The Boost version, in the form x_y, for Boost version x.y.
 #  pragma comment(lib, BOOST_LIB_PREFIX BOOST_STRINGIZE(BOOST_LIB_NAME) BOOST_LIB_THREAD_OPT BOOST_LIB_RT_OPT ".lib")
 #  ifdef BOOST_LIB_DIAGNOSTIC
 #     pragma message ("Linking to lib file: " BOOST_LIB_PREFIX BOOST_STRINGIZE(BOOST_LIB_NAME) BOOST_LIB_THREAD_OPT BOOST_LIB_RT_OPT ".lib")
+#  endif
+#elif defined(BOOST_AUTO_LINK_SYSTEM)
+#  pragma comment(lib, BOOST_LIB_PREFIX BOOST_STRINGIZE(BOOST_LIB_NAME) ".lib")
+#  ifdef BOOST_LIB_DIAGNOSTIC
+#     pragma message ("Linking to lib file: " BOOST_LIB_PREFIX BOOST_STRINGIZE(BOOST_LIB_NAME) ".lib")
 #  endif
 #elif defined(BOOST_AUTO_LINK_NOMANGLE)
 #  pragma comment(lib, BOOST_STRINGIZE(BOOST_LIB_NAME) ".lib")

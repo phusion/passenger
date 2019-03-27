@@ -137,6 +137,30 @@ inline void adaptive_merge_final_merge( RandIt first
    BOOST_MOVE_ADAPTIVE_SORT_PRINT_L1("   A fin mrg: ", len);
 }
 
+template<class SizeType>
+inline static SizeType adaptive_merge_n_keys_without_external_keys(SizeType l_block, SizeType len1, SizeType len2, SizeType l_intbuf)
+{
+   typedef SizeType size_type;
+   //This is the minimum number of keys to implement the ideal algorithm
+   size_type n_keys = len1/l_block+len2/l_block;
+   const size_type second_half_blocks = len2/l_block;
+   const size_type first_half_aux = len1-l_intbuf;
+   while(n_keys >= ((first_half_aux-n_keys)/l_block + second_half_blocks)){
+      --n_keys;
+   }
+   ++n_keys;
+   return n_keys;
+}
+
+template<class SizeType>
+inline static SizeType adaptive_merge_n_keys_with_external_keys(SizeType l_block, SizeType len1, SizeType len2, SizeType l_intbuf)
+{
+   typedef SizeType size_type;
+   //This is the minimum number of keys to implement the ideal algorithm
+   size_type n_keys = (len1-l_intbuf)/l_block + len2/l_block;
+   return n_keys;
+}
+
 template<class SizeType, class Xbuf>
 inline SizeType adaptive_merge_n_keys_intbuf(SizeType &rl_block, SizeType len1, SizeType len2, Xbuf & xbuf, SizeType &l_intbuf_inout)
 {
@@ -149,14 +173,13 @@ inline SizeType adaptive_merge_n_keys_intbuf(SizeType &rl_block, SizeType len1, 
    }
 
    //This is the minimum number of keys to implement the ideal algorithm
-   size_type n_keys = len1/l_block+len2/l_block;
-   while(n_keys >= ((len1-l_intbuf-n_keys)/l_block + len2/l_block)){
-      --n_keys;
-   }
-   ++n_keys;
+   size_type n_keys = adaptive_merge_n_keys_without_external_keys(l_block, len1, len2, l_intbuf);
    BOOST_ASSERT(n_keys >= ((len1-l_intbuf-n_keys)/l_block + len2/l_block));
 
-   if(xbuf.template supports_aligned_trailing<size_type>(l_block, n_keys)){
+   if(xbuf.template supports_aligned_trailing<size_type>
+      ( l_block
+      , adaptive_merge_n_keys_with_external_keys(l_block, len1, len2, l_intbuf)))
+   {
       n_keys = 0u;
    }
    l_intbuf_inout = l_intbuf;

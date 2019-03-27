@@ -31,7 +31,7 @@ template< class T > inline void test_trait_impl( char const * trait, void (*)( T
 {
     if( T::value == expected )
     {
-        report_errors_remind();
+        test_results();
     }
     else
     {
@@ -42,7 +42,7 @@ template< class T > inline void test_trait_impl( char const * trait, void (*)( T
             << "' (should have been " << ( expected? "true": "false" ) << ")"
             << std::endl;
 
-        ++test_errors();
+        ++test_results().errors();
     }
 }
 

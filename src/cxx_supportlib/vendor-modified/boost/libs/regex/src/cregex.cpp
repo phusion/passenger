@@ -491,8 +491,8 @@ std::size_t RegEx::Position(int i)const
    {
    case BOOST_REGEX_DETAIL_NS::RegExData::type_pc:
       return pdata->m[i].matched ? pdata->m[i].first - pdata->pbase : RegEx::npos;
-#ifndef BOOST_REGEX_NO_FILEITER
    case BOOST_REGEX_DETAIL_NS::RegExData::type_pf:
+#ifndef BOOST_REGEX_NO_FILEITER
       return pdata->fm[i].matched ? pdata->fm[i].first - pdata->fbase : RegEx::npos;
 #endif
    case BOOST_REGEX_DETAIL_NS::RegExData::type_copy:
@@ -518,8 +518,8 @@ std::size_t RegEx::Length(int i)const
    {
    case BOOST_REGEX_DETAIL_NS::RegExData::type_pc:
       return pdata->m[i].matched ? pdata->m[i].second - pdata->m[i].first : RegEx::npos;
-#ifndef BOOST_REGEX_NO_FILEITER
    case BOOST_REGEX_DETAIL_NS::RegExData::type_pf:
+#ifndef BOOST_REGEX_NO_FILEITER
       return pdata->fm[i].matched ? pdata->fm[i].second - pdata->fm[i].first : RegEx::npos;
 #endif
    case BOOST_REGEX_DETAIL_NS::RegExData::type_copy:
@@ -539,10 +539,10 @@ bool RegEx::Matched(int i)const
    {
    case BOOST_REGEX_DETAIL_NS::RegExData::type_pc:
       return pdata->m[i].matched;
-#ifndef BOOST_REGEX_NO_FILEITER
    case BOOST_REGEX_DETAIL_NS::RegExData::type_pf:
+#ifndef BOOST_REGEX_NO_FILEITER
       return pdata->fm[i].matched;
-#endif      
+#endif
    case BOOST_REGEX_DETAIL_NS::RegExData::type_copy:
       {
       std::map<int, std::string, std::less<int> >::iterator pos = pdata->strings.find(i);

@@ -26,6 +26,7 @@
 //
 
 #include <boost/detail/sp_typeinfo.hpp>
+#include <boost/config.hpp>
 
 namespace boost
 {
@@ -79,7 +80,7 @@ inline int atomic_conditional_increment( int * pw )
     }
 }
 
-class sp_counted_base
+class BOOST_SYMBOL_VISIBLE sp_counted_base
 {
 private:
 

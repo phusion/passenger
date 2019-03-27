@@ -246,6 +246,10 @@
 #  define BOOST_NO_CXX17_STRUCTURED_BINDINGS
 #endif
 
+#if !defined(__cpp_if_constexpr) || (__cpp_if_constexpr < 201606)
+#  define BOOST_NO_CXX17_IF_CONSTEXPR
+#endif
+
 // Clang 3.9+ in c++1z
 #if !__has_cpp_attribute(fallthrough) || __cplusplus < 201406L
 #  define BOOST_NO_CXX17_INLINE_VARIABLES
