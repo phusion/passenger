@@ -43,7 +43,7 @@ _linuxAutoDetectInContainer() {
 		return (file.length() > 0);
 	}
 
-	if (getuid() == 0) {
+	if (geteuid() == 0) {
 		if (fileExists("/proc/1/environ")) {
 			string file = unsafeReadFile("/proc/1/environ");
 			if (file.size() > 0) {
