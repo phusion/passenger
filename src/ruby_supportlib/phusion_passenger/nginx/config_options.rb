@@ -655,6 +655,13 @@ NGINX_CONFIGURATION_OPTIONS = [
     :default  => 503
   },
   {
+    :name     => 'passenger_buffer_upload',
+    :type     => :flag,
+    :scope    => :location,
+    :default  => false,
+    :header   => nil
+  },
+  {
     :name     => 'passenger_sticky_sessions',
     :scope    => :location,
     :type     => :flag,

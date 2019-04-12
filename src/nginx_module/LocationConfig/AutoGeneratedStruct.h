@@ -41,6 +41,7 @@
 typedef struct {
     ngx_flag_t abort_websockets_on_process_shutdown;
     ngx_array_t *base_uris;
+    ngx_flag_t buffer_upload;
     ngx_flag_t debugger;
     ngx_flag_t enabled;
     ngx_array_t *env_vars;
@@ -86,6 +87,7 @@ typedef struct {
     ngx_str_t app_start_command_source_file;
     ngx_str_t app_type_source_file;
     ngx_str_t base_uris_source_file;
+    ngx_str_t buffer_upload_source_file;
     ngx_str_t debugger_source_file;
     ngx_str_t document_root_source_file;
     ngx_str_t enabled_source_file;
@@ -135,6 +137,7 @@ typedef struct {
     ngx_uint_t app_start_command_source_line;
     ngx_uint_t app_type_source_line;
     ngx_uint_t base_uris_source_line;
+    ngx_uint_t buffer_upload_source_line;
     ngx_uint_t debugger_source_line;
     ngx_uint_t document_root_source_line;
     ngx_uint_t enabled_source_line;
@@ -184,6 +187,7 @@ typedef struct {
     ngx_int_t app_start_command_explicitly_set;
     ngx_int_t app_type_explicitly_set;
     ngx_int_t base_uris_explicitly_set;
+    ngx_int_t buffer_upload_explicitly_set;
     ngx_int_t debugger_explicitly_set;
     ngx_int_t document_root_explicitly_set;
     ngx_int_t enabled_explicitly_set;
