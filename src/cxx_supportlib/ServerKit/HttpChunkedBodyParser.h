@@ -112,7 +112,7 @@ private:
 	static int parseHexDigit(char ch) {
 		if (ch >= 'A' && ch <= 'F') {
 			return 10 + ch - 'A';
-		} else if (ch >= 'a' && ch <= 'z') {
+		} else if (ch >= 'a' && ch <= 'f') {
 			return 10 + ch - 'a';
 		} else {
 			return ch - '0';
