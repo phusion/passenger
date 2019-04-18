@@ -654,6 +654,9 @@ usage() {
 	printf("      --instance-registry-dir  Directory to register instance into.\n");
 	printf("                               Default: %s\n", getSystemTempDir());
 	printf("\n");
+	printf("      --spawn-dir              Directory for spawn handshakes.\n");
+	printf("                               Default: %s\n", getSystemTempDir());
+	printf("\n");
 	printf("      --no-user-switching     Disables user switching support [A]\n");
 	printf("      --default-user NAME     Default user to start apps as, when user\n");
 	printf("                              switching is enabled. Default: " DEFAULT_WEB_APP_USER "\n");
@@ -773,6 +776,9 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 			i += 2;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--instance-registry-dir")) {
 			updates["instance_registry_dir"] = argv[i + 1];
+			i += 2;
+		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--spawn-dir")) {
+			updates["spawn_dir"] = argv[i + 1];
 			i += 2;
 		} else if (p.isFlag(argv[i], '\0', "--no-user-switching")) {
 			updates["user_switching"] = false;
@@ -1111,6 +1117,7 @@ initializeWorkingObjects(const WorkingObjectsPtr &wo, InstanceDirToucherPtr &ins
 
 	// check if path is safe
 	warnIfInstanceDirVulnerable(watchdogConfig->get("instance_registry_dir").asString());
+	warnIfInstanceDirVulnerable(watchdogConfig->get("spawn_dir").asString());
 
 	wo->instanceDir = boost::make_shared<InstanceDirectory>(instanceOptions,
 		watchdogConfig->get("instance_registry_dir").asString());

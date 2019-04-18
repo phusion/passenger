@@ -123,7 +123,7 @@ private:
 
 	void createWorkDir() {
 		TRACE_POINT();
-		session.workDir.reset(new HandshakeWorkDir());
+		session.workDir.reset(new HandshakeWorkDir(context->spawnDir));
 
 		session.envDumpDir = session.workDir->getPath() + "/envdump";
 		makeDirTree(session.envDumpDir,

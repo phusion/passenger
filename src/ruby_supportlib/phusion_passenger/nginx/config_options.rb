@@ -240,6 +240,14 @@ NGINX_CONFIGURATION_OPTIONS = [
     :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
   },
   {
+    :name     => 'passenger_spawn_dir',
+    :scope    => :global,
+    :type     => :string,
+    :dynamic_default => 'Either $TMPDIR or /tmp',
+    :context  => [:main],
+    :struct   => 'NGX_HTTP_MAIN_CONF_OFFSET'
+  },
+  {
     :name     => 'passenger_turbocaching',
     :scope    => :global,
     :type     => :flag,

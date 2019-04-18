@@ -223,6 +223,13 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => "The directory to register the #{PROGRAM_NAME} instance to."
   },
   {
+    :name      => 'PassengerSpawnDir',
+    :type      => :string,
+    :context   => :global,
+    :dynamic_default => 'Either $TMPDIR or /tmp',
+    :desc      => "The directory for #{PROGRAM_NAME} used during child spawning."
+  },
+  {
     :name      => 'PassengerDisableSecurityUpdateCheck',
     :type      => :flag,
     :context   => :global,

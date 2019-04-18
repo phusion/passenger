@@ -54,12 +54,15 @@ private:
 	string path;
 
 public:
-	HandshakeWorkDir() {
+	HandshakeWorkDir(const std::string& spawn_dir) {
 		char buf[PATH_MAX + 1];
 		char *pos = buf;
 		const char *end = buf + PATH_MAX;
 
-		pos = appendData(pos, end, getSystemTempDir());
+		if (spawn_dir.empty())
+			throw RuntimeException("spawn_dir is not set");
+		pos = appendData(pos, end, spawn_dir.c_str());
+
 		pos = appendData(pos, end, "/passenger.spawn.XXXXXXXXXX");
 		*pos = '\0';
 

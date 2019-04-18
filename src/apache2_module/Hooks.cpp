@@ -1334,6 +1334,7 @@ public:
 		config["controller_socket_backlog"] = serverConfig.socketBacklog;
 		config["controller_file_buffered_channel_buffer_dir"] = nonEmptyString(serverConfig.dataBufferDir);
 		config["instance_registry_dir"] = nonEmptyString(serverConfig.instanceRegistryDir);
+		config["spawn_dir"] = nonEmptyString(serverConfig.spawnDir);
 		config["security_update_checker_disabled"] = serverConfig.disableSecurityUpdateCheck;
 		config["security_update_checker_proxy_url"] = nonEmptyString(serverConfig.securityUpdateCheckProxy);
 		config["telemetry_collector_disabled"] = serverConfig.disableAnonymousTelemetry;
