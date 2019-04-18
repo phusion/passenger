@@ -71,6 +71,7 @@ typedef struct {
     ngx_str_t log_file;
     ngx_str_t root_dir;
     ngx_str_t security_update_check_proxy;
+    ngx_str_t spawn_dir;
 
     ngx_str_t abort_on_startup_error_source_file;
     ngx_str_t admin_panel_auth_type_source_file;
@@ -101,6 +102,7 @@ typedef struct {
     ngx_str_t security_update_check_proxy_source_file;
     ngx_str_t show_version_in_header_source_file;
     ngx_str_t socket_backlog_source_file;
+    ngx_str_t spawn_dir_source_file;
     ngx_str_t stat_throttle_rate_source_file;
     ngx_str_t turbocaching_source_file;
     ngx_str_t user_switching_source_file;
@@ -134,6 +136,7 @@ typedef struct {
     ngx_uint_t security_update_check_proxy_source_line;
     ngx_uint_t show_version_in_header_source_line;
     ngx_uint_t socket_backlog_source_line;
+    ngx_uint_t spawn_dir_source_line;
     ngx_uint_t stat_throttle_rate_source_line;
     ngx_uint_t turbocaching_source_line;
     ngx_uint_t user_switching_source_line;
@@ -167,6 +170,7 @@ typedef struct {
     ngx_int_t security_update_check_proxy_explicitly_set;
     ngx_int_t show_version_in_header_explicitly_set;
     ngx_int_t socket_backlog_explicitly_set;
+    ngx_int_t spawn_dir_explicitly_set;
     ngx_int_t stat_throttle_rate_explicitly_set;
     ngx_int_t turbocaching_explicitly_set;
     ngx_int_t user_switching_explicitly_set;
