@@ -6,5 +6,5 @@ group :base do
   gem 'rake'
   gem 'drake'
   gem 'json', '1.8.5'
-  gem 'rack'
+  gem 'rack', '< 2.0'
 end
