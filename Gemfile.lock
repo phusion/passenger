@@ -8,7 +8,7 @@ GEM
     json (1.8.5)
     mime-types (1.25)
     rack (1.6.11)
-    rake (12.3.2)
+    rake (12.2.1)
     rspec (2.14.1)
       rspec-core (~> 2.14.0)
       rspec-expectations (~> 2.14.0)
@@ -26,7 +26,7 @@ DEPENDENCIES
   json (= 1.8.5)
   mime-types (= 1.25)
   rack (< 2.0)
-  rake
+  rake (< 12.3)
   rspec (= 2.14.1)
 
 BUNDLED WITH
