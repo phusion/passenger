@@ -476,6 +476,7 @@ public:
 		overrideWithDynamicDefault("default_server_port", UINT_TYPE, OPTIONAL, getDefaultServerPort);
 
 		add("passenger_root", STRING_TYPE, REQUIRED | READ_ONLY);
+		add("spawn_dir", STRING_TYPE, REQUIRED | READ_ONLY);
 		add("config_manifest", OBJECT_TYPE, OPTIONAL | READ_ONLY);
 		add("pid_file", STRING_TYPE, OPTIONAL | READ_ONLY);
 		add("web_server_version", STRING_TYPE, OPTIONAL | READ_ONLY);

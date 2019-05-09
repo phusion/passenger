@@ -832,6 +832,11 @@
          "read_only" : true,
          "type" : "string"
       },
+      "spawn_dir" : {
+         "read_only" : true,
+         "type" : "string",
+         "required": true
+      },
       "standalone_engine" : {
          "has_default_value" : "dynamic",
          "type" : "string"

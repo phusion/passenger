@@ -247,6 +247,10 @@ private:
 		return getSystemTempDir();
 	}
 
+	static Json::Value getDefaultSpawnDir(const ConfigKit::Store &store) {
+		return getSystemTempDir();
+	}
+
 	static void validateAddresses(const ConfigKit::Store &config, vector<ConfigKit::Error> &errors) {
 		typedef ConfigKit::Error Error;
 
@@ -259,6 +263,7 @@ private:
 	static Json::Value normalizePaths(const Json::Value &effectiveValues) {
 		Json::Value updates;
 		updates["instance_registry_dir"] = absolutizePath(effectiveValues["instance_registry_dir"].asString());
+		updates["spawn_dir"] = absolutizePath(effectiveValues["spawn_dir"].asString());
 		if (!effectiveValues["watchdog_pid_file"].isNull()) {
 			updates["watchdog_pid_file"] = absolutizePath(effectiveValues["watchdog_pid_file"].asString());
 		}
@@ -335,6 +340,8 @@ public:
 			OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE, getDefaultUser);
 		addWithDynamicDefault("instance_registry_dir", STRING_TYPE,
 			OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE, getDefaultInstanceRegistryDir);
+		addWithDynamicDefault("spawn_dir", STRING_TYPE,
+			OPTIONAL | READ_ONLY | CACHE_DEFAULT_VALUE, getDefaultSpawnDir);
 
 		add("hook_before_watchdog_initialization", STRING_TYPE, OPTIONAL);
 		add("hook_after_watchdog_initialization", STRING_TYPE, OPTIONAL);

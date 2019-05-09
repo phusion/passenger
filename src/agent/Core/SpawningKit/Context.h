@@ -138,6 +138,7 @@ public:
 	RandomGeneratorPtr randomGenerator;
 	string integrationMode;
 	string instanceDir;
+	string spawnDir;
 	DebugSupport *debugSupport;
 	//UnionStation::ContextPtr unionStationContext;
 

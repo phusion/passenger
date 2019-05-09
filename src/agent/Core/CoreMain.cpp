@@ -714,6 +714,7 @@ initializeNonPrivilegedWorkingObjects() {
 	wo->spawningKitContext->randomGenerator = wo->randomGenerator;
 	wo->spawningKitContext->integrationMode = coreConfig->get("integration_mode").asString();
 	wo->spawningKitContext->instanceDir = coreConfig->get("instance_dir").asString();
+	wo->spawningKitContext->spawnDir = coreConfig->get("spawn_dir").asString();
 	if (!wo->spawningKitContext->instanceDir.empty()) {
 		wo->spawningKitContext->instanceDir = absolutizePath(
 			wo->spawningKitContext->instanceDir);
