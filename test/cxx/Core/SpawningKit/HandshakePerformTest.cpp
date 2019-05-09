@@ -33,6 +33,7 @@ namespace tut {
 			context.resourceLocator = resourceLocator;
 			context.wrapperRegistry = &wrapperRegistry;
 			context.integrationMode = "standalone";
+			context.spawnDir = getSystemTempDir();
 
 			config.appGroupName = "appgroup";
 			config.appRoot = "/tmp/myapp";

@@ -42,6 +42,7 @@ namespace tut {
 			skContext.wrapperRegistry = &wrapperRegistry;
 			skContext.integrationMode = "standalone";
 			skContext.debugSupport = &skDebugSupport;
+			skContext.spawnDir = getSystemTempDir();
 			skContext.finalize();
 			context.spawningKitFactory = boost::make_shared<SpawningKit::Factory>(&skContext);
 			context.finalize();
