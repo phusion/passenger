@@ -714,6 +714,22 @@
          "has_default_value" : "static",
          "type" : "boolean"
       },
+      "hook_attached_process" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "hook_detached_process" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "hook_queue_full_error" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "hook_spawn_failed" : {
+         "read_only" : true,
+         "type" : "string"
+      },
       "instance_dir" : {
          "read_only" : true,
          "type" : "string"
@@ -834,8 +850,8 @@
       },
       "spawn_dir" : {
          "read_only" : true,
-         "type" : "string",
-         "required": true
+         "required" : true,
+         "type" : "string"
       },
       "standalone_engine" : {
          "has_default_value" : "dynamic",
@@ -1555,10 +1571,26 @@
       "hook_after_watchdog_shutdown" : {
          "type" : "string"
       },
+      "hook_attached_process" : {
+         "read_only" : true,
+         "type" : "string"
+      },
       "hook_before_watchdog_initialization" : {
          "type" : "string"
       },
       "hook_before_watchdog_shutdown" : {
+         "type" : "string"
+      },
+      "hook_detached_process" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "hook_queue_full_error" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "hook_spawn_failed" : {
+         "read_only" : true,
          "type" : "string"
       },
       "instance_registry_dir" : {
@@ -1679,6 +1711,11 @@
          "type" : "string"
       },
       "single_app_mode_startup_file" : {
+         "read_only" : true,
+         "type" : "string"
+      },
+      "spawn_dir" : {
+         "has_default_value" : "dynamic",
          "read_only" : true,
          "type" : "string"
       },

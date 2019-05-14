@@ -139,6 +139,10 @@ using namespace std;
  *   file_descriptor_log_target                                      any                -          -
  *   file_descriptor_ulimit                                          unsigned integer   -          default(0),read_only
  *   graceful_exit                                                   boolean            -          default(true)
+ *   hook_attached_process                                           string             -          read_only
+ *   hook_detached_process                                           string             -          read_only
+ *   hook_queue_full_error                                           string             -          read_only
+ *   hook_spawn_failed                                               string             -          read_only
  *   instance_dir                                                    string             -          read_only
  *   integration_mode                                                string             -          default("standalone")
  *   log_level                                                       string             -          default("notice")
@@ -164,6 +168,7 @@ using namespace std;
  *   single_app_mode_app_start_command                               string             -          read_only
  *   single_app_mode_app_type                                        string             -          read_only
  *   single_app_mode_startup_file                                    string             -          read_only
+ *   spawn_dir                                                       string             required   read_only
  *   standalone_engine                                               string             -          default
  *   stat_throttle_rate                                              unsigned integer   -          default(10)
  *   telemetry_collector_ca_certificate_path                         string             -          -

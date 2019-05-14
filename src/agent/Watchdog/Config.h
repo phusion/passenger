@@ -127,8 +127,12 @@ using namespace std;
  *   graceful_exit                                                            boolean            -          default(true)
  *   hook_after_watchdog_initialization                                       string             -          -
  *   hook_after_watchdog_shutdown                                             string             -          -
+ *   hook_attached_process                                                    string             -          read_only
  *   hook_before_watchdog_initialization                                      string             -          -
  *   hook_before_watchdog_shutdown                                            string             -          -
+ *   hook_detached_process                                                    string             -          read_only
+ *   hook_queue_full_error                                                    string             -          read_only
+ *   hook_spawn_failed                                                        string             -          read_only
  *   instance_registry_dir                                                    string             -          default,read_only
  *   integration_mode                                                         string             -          default("standalone")
  *   log_level                                                                string             -          default("notice")
@@ -154,6 +158,7 @@ using namespace std;
  *   single_app_mode_app_start_command                                        string             -          read_only
  *   single_app_mode_app_type                                                 string             -          read_only
  *   single_app_mode_startup_file                                             string             -          read_only
+ *   spawn_dir                                                                string             -          default,read_only
  *   standalone_engine                                                        string             -          default
  *   startup_report_file                                                      string             -          -
  *   stat_throttle_rate                                                       unsigned integer   -          default(10)
