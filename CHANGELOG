@@ -16,11 +16,14 @@ Release 6.0.3 (Not yet released)
  * [Nginx] Adds an option `passenger_buffer_upload` to allow buffering uploaded data in Passenger before forwarding it to the app. As a workaround for apps that cannot handle chunked data.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
+    - PCRE 8.43 (was 8.42)
+    - Curl 7.64.1 (was 7.64.0)
     - Git 2.21.0 (was 2.20.1)
     - OpenSSL 1.0.2r (was 1.0.2q)
     - RubyGems 3.0.3 (was 3.0.2)
-    - GnuPG 2.2.14 (was: 2.2.13)
+    - GnuPG 2.2.15 (was: 2.2.13)
     - libgpg_error 1.36 (was 1.35)
+    - libiconv 1.16 (was 1.15)
     - Ruby:
       - 2.4.5 -> 2.4.6
       - 2.5.3 -> 2.5.5
