@@ -61,6 +61,10 @@ static ngx_str_t headers_to_hide[] = {
 
 passenger_main_conf_t passenger_main_conf;
 
+static ngx_path_init_t  ngx_http_proxy_temp_path = {
+    ngx_string(NGX_HTTP_PROXY_TEMP_PATH), { 1, 2, 0 }
+};
+
 
 static ngx_int_t merge_headers(ngx_conf_t *cf, passenger_loc_conf_t *conf,
     passenger_loc_conf_t *prev);
@@ -572,6 +576,11 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->upstream_config.next_upstream = NGX_CONF_BITMASK_SET
                                        |NGX_HTTP_UPSTREAM_FT_OFF;
     }
+
+    ngx_conf_merge_path_value(cf,
+                              &conf->upstream_config.temp_path,
+                              prev->upstream_config.temp_path,
+                              &ngx_http_proxy_temp_path);
 
 #if (NGX_HTTP_CACHE)
 
