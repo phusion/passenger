@@ -80,6 +80,13 @@ Controller::disconnectLongRunningConnections(const StaticString &gupid) {
 				}
 				refClient(client, __FILE__, __LINE__);
 				clients.push_back(client);
+			} else {
+				P_INFO("didn't shutdown");
+				P_INFO("req->httpState: " << req->httpState << " >= Request::COMPLETE: " <<  Request::COMPLETE);
+				P_INFO("req->upgraded: " << req->upgraded());
+				P_INFO("req->options.abortWebsocketsOnProcessShutdown: " << req->options.abortWebsocketsOnProcessShutdown);
+				P_INFO("req->session: " << req->session << " != NULL");
+				P_INFO("req->session->getGupid: " << req->session->getGupid() << " == gupid:" << gupid);
 			}
 		}
 	}
