@@ -1019,60 +1019,14 @@ private:
 		const BackgroundIOCapturerPtr &stdoutAndErrCapturer)
 	{
 		TRACE_POINT();
+		struct stat statbuf;
+		// An alternative is to read Uid from /proc/PID/status similar to State in isZombie()
+		const string filename = "/proc/" + toString(pid);
 		uid_t uid = (uid_t) -1;
+		if (lstat(filename.c_str(), &statbuf) >= 0)
+			uid = statbuf.st_uid;
 
-		try {
-			vector<pid_t> pids;
-			pids.push_back(pid);
-			ProcessMetricMap result = ProcessMetricsCollector().collect(pids);
-			uid = result[pid].uid;
-		} catch (const ParseException &) {
-			HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
-			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
-
-			SpawnException e(INTERNAL_ERROR, session.journey, session.config);
-			addPreloaderEnvDumps(e);
-			e.setSummary("Unable to query the UID of spawned application process "
-				+ toString(pid) + ": error parsing 'ps' output");
-			e.setSubprocessPid(pid);
-			e.setProblemDescriptionHTML(
-				"<h2>Unable to use 'ps' to query PID " + toString(pid) + "</h2>"
-				"<p>The " PROGRAM_NAME " application server tried"
-				" to start the web application. As part of the starting"
-				" procedure, " SHORT_PROGRAM_NAME " also tried to query"
-				" the system user ID of the web application process"
-				" using the operating system's \"ps\" tool. However,"
-				" this tool returned output that " SHORT_PROGRAM_NAME
-				" could not understand.</p>");
-			e.setSolutionDescriptionHTML(
-				createSolutionDescriptionForProcessMetricsCollectionError());
-			throw e.finalize();
-		} catch (const SystemException &originalException) {
-			HandshakePerform::loadJourneyStateFromResponseDir(session, pid, stdoutAndErrCapturer);
-			session.journey.setStepErrored(SPAWNING_KIT_PROCESS_RESPONSE_FROM_PRELOADER);
-
-			SpawnException e(OPERATING_SYSTEM_ERROR, session.journey, session.config);
-			addPreloaderEnvDumps(e);
-			e.setSummary("Unable to query the UID of spawned application process "
-				+ toString(pid) + "; error capturing 'ps' output: "
-				+ originalException.what());
-			e.setSubprocessPid(pid);
-			e.setProblemDescriptionHTML(
-				"<h2>Error capturing 'ps' output for PID " + toString(pid) + "</h2>"
-				"<p>The " PROGRAM_NAME " application server tried"
-				" to start the web application. As part of the starting"
-				" procedure, " SHORT_PROGRAM_NAME " also tried to query"
-				" the system user ID of the web application process."
-				" This is done by using the operating system's \"ps\""
-				" tool and by querying operating system APIs and special"
-				" files. However, an error was encountered while doing"
-				" one of those things.</p>"
-				"<p>The error returned by the operating system is as follows:</p>"
-				"<pre>" + escapeHTML(originalException.what()) + "</pre>");
-			e.setSolutionDescriptionHTML(
-				createSolutionDescriptionForProcessMetricsCollectionError());
-			throw e.finalize();
-		}
+		const int saved_errno = errno;
 
 		UPDATE_TRACE_POINT();
 		if (uid == (uid_t) -1) {
@@ -1082,19 +1036,19 @@ private:
 
 				SpawnException e(INTERNAL_ERROR, session.journey, session.config);
 				addPreloaderEnvDumps(e);
-				e.setSummary("Unable to query the UID of spawned application process "
-					+ toString(pid) + ": 'ps' did not report information"
-					" about this process");
+				e.setSummary("Unable to query the UID of spawned application process:"
+					" stat(\"" + filename + "\") error " + toString(saved_errno) + ": "
+					+ strerror(saved_errno));
 				e.setSubprocessPid(pid);
 				e.setProblemDescriptionHTML(
-					"<h2>'ps' did not return any information about PID " + toString(pid) + "</h2>"
+					"<h2>Unable to query the UID of spawned process with PID " + toString(pid) + " from /proc</h2>"
 					"<p>The " PROGRAM_NAME " application server tried"
 					" to start the web application. As part of the starting"
 					" procedure, " SHORT_PROGRAM_NAME " also tried to query"
 					" the system user ID of the web application process"
-					" using the operating system's \"ps\" tool. However,"
-					" this tool did not return any information about"
-					" the web application process.</p>");
+					" using stat(\"" + filename + "\") system call. However,"
+					" it reported error " + toString(saved_errno)
+					+ " \"" + strerror(saved_errno) + "\"</p>");
 				e.setSolutionDescriptionHTML(
 					createSolutionDescriptionForProcessMetricsCollectionError());
 				throw e.finalize();
