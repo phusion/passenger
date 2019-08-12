@@ -295,6 +295,10 @@ private:
 	bool reconnectAfterReply;
 	bool shuttingDown;
 
+	unsigned int secondsToMilis(double seconds) {
+		return (unsigned int) (seconds * 1000.0);
+	}
+
 	/**
 	 * It could happen that a certain method or handler is invoked
 	 * for a connection that has already been closed. For example,
@@ -528,7 +532,7 @@ private:
 				}
 			}
 
-			conn->set_proxy_timeout(config["proxy_timeout"].asDouble() * 1000, ec);
+			conn->set_proxy_timeout(secondsToMilis(config["proxy_timeout"].asDouble()), ec);
 			if (ec) {
 				P_ERROR(getLogPrefix()
 					<< "Error setting proxy timeout to "
@@ -538,9 +542,9 @@ private:
 			}
 		}
 
-		conn->set_open_handshake_timeout(config["connect_timeout"].asDouble() * 1000);
-		conn->set_pong_timeout(config["ping_timeout"].asDouble() * 1000);
-		conn->set_close_handshake_timeout(config["close_timeout"].asDouble() * 1000);
+		conn->set_open_handshake_timeout(secondsToMilis(config["connect_timeout"].asDouble()));
+		conn->set_pong_timeout(secondsToMilis(config["ping_timeout"].asDouble()));
+		conn->set_close_handshake_timeout(secondsToMilis(config["close_timeout"].asDouble()));
 
 		return true;
 	}
@@ -566,7 +570,7 @@ private:
 	void scheduleReconnect() {
 		P_NOTICE(getLogPrefix() << "Reestablishing connection in " <<
 			config["reconnect_timeout"].asDouble() << " seconds");
-		restartTimer(config["reconnect_timeout"].asDouble() * 1000);
+		restartTimer(secondsToMilis(config["reconnect_timeout"].asDouble()));
 	}
 
 	void closeConnection(websocketpp::close::status::value code,
@@ -626,7 +630,7 @@ private:
 		buffer.clear();
 		P_DEBUG(getLogPrefix() << "Scheduling next ping in " <<
 			config["ping_interval"].asDouble() << " seconds");
-		restartTimer(config["ping_interval"].asDouble() * 1000);
+		restartTimer(secondsToMilis(config["ping_interval"].asDouble()));
 	}
 
 	void onConnectFailed(ConnectionWeakPtr wconn) {
@@ -741,7 +745,7 @@ private:
 
 		P_DEBUG(getLogPrefix() << "Pong received. Scheduling next ping in " <<
 			config["ping_interval"].asDouble() << " seconds");
-		restartTimer(config["ping_interval"].asDouble() * 1000);
+		restartTimer(secondsToMilis(config["ping_interval"].asDouble()));
 	}
 
 	void onMessage(ConnectionWeakPtr wconn, MessagePtr msg) {
