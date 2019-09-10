@@ -15,6 +15,7 @@ Release 6.0.3 (Not yet released)
  * Fixed an incompatibility with sending requests to specific app instances, when using the rails web-console gem. Contributed by Mark R. James (@mrj).
  * Fixed a regression (introduced in 5.1.9) where some hooks were not called. Closes GH-2103. Contributed by Mark R. James (@mrj).
  * Fixes compilation with clang 8 (latest macOS update) by updating vendored boost library from 1.67 to 1.69.
+ * Reverts a regression intruduced in 6.0.2 where Passenger would crash if it had to use the disk backed response cache. Closes GH-2189.
  * [Nginx] Adds an option `passenger_buffer_upload` to allow buffering uploaded data in Passenger before forwarding it to the app. As a workaround for apps that cannot handle chunked data.
  * [Enterprise] When using deferred port binding, no longer binds port if all apps do not start up.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
