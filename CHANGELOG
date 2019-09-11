@@ -6,7 +6,7 @@ Release 6.0.3 (Not yet released)
     - Apache: `PassengerSpawnDir`
     - Nginx: `passenger_spawn_dir`
 
- * [Nginx] Bumps the preferred Nginx version to 1.17.0 (previously 1.15.8).
+ * [Nginx] Bumps the preferred Nginx version to 1.17.3 (previously 1.15.8).
  * [Nginx] The preferred PCRE version is now 8.43 (previously 8.42).
  * Adds Ubuntu 19.04 "Disco" packages, and removes Ubuntu 18.10 "Cosmic" and Ubuntu 14.04 "Trusty" packages.
  * Changes minimum supported macOS version to 10.12 Sierra.
