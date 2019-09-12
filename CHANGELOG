@@ -1,4 +1,4 @@
-Release 6.0.3 (Not yet released)
+Release 6.0.3
 -------------
 
  * Add and option to specify the spawn dir during startup, which is specifically useful for CageFS users. Contributed by @plmnikulin. Closes GH-2145.
