@@ -43,6 +43,7 @@ pipeline {
 
     booleanParam(name: 'jessie', defaultValue: true, description: 'Test Debian 8 packages')
     booleanParam(name: 'stretch', defaultValue: true, description: 'Test Debian 9 packages')
+    booleanParam(name: 'buster', defaultValue: true, description: 'Test Debian 10 packages')
   }
 
   stages {
