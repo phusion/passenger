@@ -7,5 +7,4 @@ group :base do
   gem 'drake'
   gem 'json', '1.8.5'
   gem 'rack', '< 2.0'
-  gem 'did_you_mean'
 end
