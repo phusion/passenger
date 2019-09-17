@@ -23,7 +23,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  did_you_mean (= 1.2.1)
+  did_you_mean
   drake
   json (= 1.8.5)
   mime-types (= 1.25)
