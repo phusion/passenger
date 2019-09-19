@@ -55,7 +55,7 @@ Pool::garbageCollect(PoolPtr self) {
 		self->garbageCollectionCond.timed_wait(lock,
 			posix_time::seconds(5));
 	}
-	while (!this_thread::interruption_requested()) {
+	while (!boost::this_thread::interruption_requested()) {
 		try {
 			UPDATE_TRACE_POINT();
 			unsigned long long sleepTime = self->realGarbageCollect();

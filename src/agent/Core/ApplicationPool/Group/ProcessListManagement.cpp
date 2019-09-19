@@ -305,7 +305,7 @@ Group::detachedProcessesCheckerMain(GroupPtr self) {
 	while (true) {
 		assert(detachedProcessesCheckerActive);
 
-		if (getLifeStatus() == SHUT_DOWN || this_thread::interruption_requested()) {
+		if (getLifeStatus() == SHUT_DOWN || boost::this_thread::interruption_requested()) {
 			UPDATE_TRACE_POINT();
 			P_DEBUG("Stopping detached processes checker");
 			detachedProcessesCheckerActive = false;
