@@ -557,6 +557,14 @@ NGINX_CONFIGURATION_OPTIONS = [
     :header   => nil
   },
   {
+    :name     => 'passenger_temp_path',
+    :scope    => :location,
+    :type     => :string,
+    :function => 'ngx_conf_set_path_slot',
+    :field    => 'upstream_config.temp_path',
+    :auto_generate_nginx_tracking_code => false
+  },
+  {
     :name     => 'passenger_ignore_headers',
     :scope    => :location,
     :take     => 'NGX_CONF_1MORE',

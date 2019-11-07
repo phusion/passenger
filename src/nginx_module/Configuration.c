@@ -577,10 +577,14 @@ passenger_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
                                        |NGX_HTTP_UPSTREAM_FT_OFF;
     }
 
-    ngx_conf_merge_path_value(cf,
+    if (ngx_conf_merge_path_value(cf,
                               &conf->upstream_config.temp_path,
                               prev->upstream_config.temp_path,
-                              &ngx_http_proxy_temp_path);
+                              &ngx_http_proxy_temp_path)
+        != NGX_OK)
+    {
+        return NGX_CONF_ERROR;
+    }
 
 #if (NGX_HTTP_CACHE)
 

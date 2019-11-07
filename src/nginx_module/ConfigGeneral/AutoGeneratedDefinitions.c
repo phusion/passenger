@@ -543,6 +543,14 @@
     NULL
 },
 {
+    ngx_string("passenger_temp_path"),
+    NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_TAKE1,
+    ngx_conf_set_path_slot,
+    NGX_HTTP_LOC_CONF_OFFSET,
+    offsetof(passenger_loc_conf_t, upstream_config.temp_path),
+    NULL
+},
+{
     ngx_string("passenger_ignore_headers"),
     NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_HTTP_LIF_CONF | NGX_CONF_1MORE,
     ngx_conf_set_bitmask_slot,
