@@ -1824,8 +1824,6 @@ passenger_content_handler(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    //u->pipe->temp_file->path = u->conf->temp_path;
-
     u->pipe->input_filter = ngx_event_pipe_copy_input_filter;
     u->pipe->input_ctx = r;
 
