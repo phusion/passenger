@@ -107,6 +107,7 @@ class PrespawnLocation
   def head_request
     socket.write("HEAD #{request_path} HTTP/1.1\r\n")
     socket.write("Host: #{request_host}\r\n")
+    socket.write("User-Agent: Passenger Prespawn Script\r\n")
     socket.write("Authorization: Basic " + base64(@uri.userinfo) + "\r\n") if @uri.userinfo
     socket.write("Connection: close\r\n")
     socket.write("\r\n")
