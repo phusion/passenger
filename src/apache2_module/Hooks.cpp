@@ -1020,6 +1020,10 @@ private:
 			env = (apr_table_entry_t*) env_arr->elts;
 
 			for (i = 0; i < env_arr->nelts; ++i) {
+				if ((strcmp(env[i].key, "SCRIPT_NAME") == 0)
+				 || (strcmp(env[i].key, "PATH_INFO")   == 0)) {
+					continue;
+				}
 				envvarsData.append(env[i].key);
 				envvarsData.append("\0", 1);
 				if (env[i].val != NULL) {
