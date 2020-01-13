@@ -153,6 +153,7 @@ Controller::initializePoolOptions(Client *client, Request *req, RequestAnalysis 
 
 			if (options != NULL) {
 				req->options = **options;
+				fillPoolOption(req, req->options.baseURI, "!~SCRIPT_NAME");
 			} else {
 				createNewPoolOptions(client, req, hAppGroupName);
 			}
