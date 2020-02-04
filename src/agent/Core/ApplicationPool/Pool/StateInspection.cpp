@@ -202,7 +202,7 @@ Pool::toXml(const ToXmlOptions &options, bool lock) const {
 		throw SecurityException("Operation unauthorized");
 	}
 
-	result << "<?xml version=\"1.0\" encoding=\"iso8859-1\" ?>\n";
+	result << "<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\n";
 	result << "<info version=\"3\">";
 
 	result << "<passenger_version>" << PASSENGER_VERSION << "</passenger_version>";
