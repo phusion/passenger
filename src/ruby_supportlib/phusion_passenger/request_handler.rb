@@ -310,9 +310,7 @@ module PhusionPassenger
     end
 
     def create_tcp_socket
-      # We use "0.0.0.0" as address in order to force
-      # TCPv4 instead of TCPv6.
-      socket = TCPServer.new('0.0.0.0', 0)
+      socket = TCPServer.new(bind_address, 0)
       socket.listen(BACKLOG_SIZE)
       socket.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
       socket.binmode
@@ -320,6 +318,12 @@ module PhusionPassenger
       socket.close_on_exec!
       socket_address = "tcp://127.0.0.1:#{socket.addr[1]}"
       return [socket_address, socket]
+    end
+
+    def bind_address
+      # We use "0.0.0.0" as default address in order to force
+      # TCPv4 instead of TCPv6.
+      ENV['BIND_ADDRESS'] || '0.0.0.0'
     end
 
     # Reset signal handlers to their default handler, and install some
