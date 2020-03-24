@@ -109,7 +109,12 @@ module PhusionPassenger
         :accept_http_requests => true
       }
 
-      @http_socket_address, @http_socket = create_tcp_socket
+      if should_use_unix_sockets?
+        @http_socket_address, @http_socket = create_unix_socket_on_filesystem(options)
+      else
+        @http_socket_address, @http_socket = create_tcp_socket
+      end
+
       @server_sockets[:http] = {
         :address     => @http_socket_address,
         :socket      => @http_socket,
