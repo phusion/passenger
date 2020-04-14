@@ -415,9 +415,11 @@ doSleep(int sec) {
 
 static void
 maybeDeletePidFile() {
+	up_privilege();
 	if (pidFile != NULL) {
 		unlink(pidFile);
 	}
+	down_privilege();
 }
 
 static void
