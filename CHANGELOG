@@ -1,11 +1,38 @@
 Release 6.0.5 (Not yet released)
 -------------------------------
 
- * Adds Ubuntu 19.10 "Eoan" packages, and removes Ubuntu 19.04 "Disco" packages.
+ * Adds Ubuntu 20.04 "Focal" packages, and removes Ubuntu 19.04 "Disco" packages.
+ * Adds RHEL / CentOS 8 packages.
+ * [Nginx] Converts CentOS 7 packages to provide a dynamic module instead of a full Nginx install.
  * Fixes the encoding name for xml output from the `passenger-status --show=xml` command. Closes GH-2248.
  * Adds the 'etc' gem as an explicit dependency. Closes GH-2124.
  * Adds a user agent to the passenger pre-spawn script. Closes GH-1534.
- * Add an option to set the path used for the disk backed response cache. Re-Closes GH-2075.
+ * Fixes a compilation issue on FreeBSD. Closes GH-2240.
+ * [Nginx] Adds a config option `passenger_temp_path` to set the path used for the disk backed response cache. Re-Closes GH-2075.
+ * [Apache] Protects the path info and script name passed to the app from modifications done by mod_security. Closes GH-2198.
+ * Ensures baseuri is set per request, even if config is loaded from cache. Closes GH-2117.
+ * Make temp dir toucher cleanup code more resilient to permissions issues.
+ * [Nginx] Bumps the preferred Nginx version to 1.18.0 (previously 1.17.3).
+ * [Nginx] The preferred PCRE version is now 8.44 (previously 8.43).
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - ccache 3.7.9 (was 3.7.3)
+    - Curl 7.69.1 (was 7.66.0)
+    - Git 2.26.2 (was 2.23.0)
+    - GnuPG 2.2.20 (was 2.2.17)
+    - libgpg_error 1.37 (was 1.36)
+    - OpenSSL 1.0.2u (was 1.0.2t)
+    - PCRE 8.44 (was 8.43)
+    - s3cmd 2.1.0 (was 2.0.2)
+    - RubyGems 3.0.8 (was 3.0.6)
+    - Rubies:
+      - 2.4.6 -> 2.4.10
+      - 2.5.5 -> 2.5.8
+      - 2.6.3 -> 2.6.6
+      + 2.7.1
+
+
+
 
 Release 6.0.4
 -------------
