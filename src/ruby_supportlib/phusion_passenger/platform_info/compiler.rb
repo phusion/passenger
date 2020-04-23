@@ -279,7 +279,7 @@ module PhusionPassenger
           "-c '#{filename}' -o '#{filename}.o'",
           flags)
         result = run_compiler(description, command, filename, source, true)
-        result = result && result[:result] && result[:output] !~ /unknown warning option/i
+        result = result && result[:result] && result[:output] !~ /unknown warning option|unrecognized command line option/i
       end
       return false if !result
 
