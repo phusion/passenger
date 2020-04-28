@@ -166,7 +166,7 @@ module PhusionPassenger
         # Fix up incompliant body objects. Ensure that the body object
         # can respond to #each.
         output_body = should_output_body?(status, is_head_request)
-        if body.is_a?(String)
+        if body.is_a?(String) || body.nil? || output_body
           body = [body]
         elsif body.nil?
           body = []
@@ -219,7 +219,7 @@ module PhusionPassenger
               @can_keepalive = false
             else
               body_size = 0
-              body.to_a.each { |part| body_size += bytesize(part) }
+              Array(body).each { |part| body_size += bytesize(part) }
               if body_size != content_length
                 raise "Response body size doesn't match Content-Length header: #{body_size} vs #{content_length}"
               end
@@ -249,7 +249,7 @@ module PhusionPassenger
           if body.is_a?(Array)
             message_length_type = :content_length
             content_length = 0
-            body.to_a.each { |part| content_length += bytesize(part.to_s) }
+            Array(body).each { |part| content_length += bytesize(part.to_s) }
 
             headers_output << CONTENT_LENGTH_HEADER_AND_SEPARATOR
             headers_output << content_length.to_s
@@ -279,18 +279,18 @@ module PhusionPassenger
               connection.writev2(headers_output, body)
             else
               connection.writev(headers_output)
-              body.to_a.each do |part|
+              Array(body).each do |part|
                 connection.write(part.to_s)
               end
             end
           when :chunked_by_app
             connection.writev(headers_output)
-            body.to_a.each do |part|
+            Array(body).each do |part|
               connection.write(part.to_s)
             end
           when :needs_chunking
             connection.writev(headers_output)
-            body.to_a.each do |part|
+            Array(body).each do |part|
               size = bytesize(part.to_s)
               if size != 0
                 connection.writev(chunk_data(part.to_s, size))
