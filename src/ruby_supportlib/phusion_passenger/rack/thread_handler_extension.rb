@@ -166,7 +166,7 @@ module PhusionPassenger
         # Fix up incompliant body objects. Ensure that the body object
         # can respond to #each.
         output_body = should_output_body?(status, is_head_request)
-        if body.is_a?(String) || body.nil? || output_body
+        if body.is_a?(String)
           body = [body]
         elsif body.nil?
           body = []
