@@ -10,6 +10,7 @@ Release 6.0.5 (Not yet released)
  * Adds a user agent to the passenger pre-spawn script. Closes GH-1534.
  * Fixes a compilation issue on FreeBSD. Closes GH-2240.
  * Fixes an issue where rack bodies may not be processed correctly.
+ * Improves the database reconnection speed in forked processes. closes GH-2253.
  * [Nginx] Adds a config option `passenger_temp_path` to set the path used for the disk backed response cache. Re-Closes GH-2075.
  * [Apache] Protects the path info and script name passed to the app from modifications done by mod_security. Closes GH-2198.
  * Ensures baseuri is set per request, even if config is loaded from cache. Closes GH-2117.
