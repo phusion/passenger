@@ -24,6 +24,10 @@
 
 PhusionPassenger.require_passenger_lib 'utils'   # So that we can know whether #writev is supported.
 
+# https://www.ruby-lang.org/en/news/2019/12/12/separation-of-positional-and-keyword-arguments-in-ruby-3-0/
+def ruby2_keywords(*)
+end if RUBY_VERSION < "2.7"
+
 module PhusionPassenger
   module Utils
 
@@ -117,7 +121,7 @@ module PhusionPassenger
         raise annotate(e)
       end
 
-      def write_nonblock(string, *args)
+      ruby2_keywords def write_nonblock(string, *args)
         @socket.write_nonblock(string, *args)
       rescue => e
         raise annotate(e)
@@ -141,25 +145,25 @@ module PhusionPassenger
         raise annotate(e)
       end if IO.method_defined?(:writev3)
 
-      def send(*args)
+      ruby2_keywords def send(*args)
         @socket.send(*args)
       rescue => e
         raise annotate(e)
       end
 
-      def sendmsg(*args)
+      ruby2_keywords def sendmsg(*args)
         @socket.sendmsg(*args)
       rescue => e
         raise annotate(e)
       end
 
-      def sendmsg_nonblock(*args)
+      ruby2_keywords def sendmsg_nonblock(*args)
         @socket.sendmsg_nonblock(*args)
       rescue => e
         raise annotate(e)
       end
 
-      def puts(*args)
+      ruby2_keywords def puts(*args)
         @socket.puts(*args)
       rescue => e
         raise annotate(e)
@@ -172,7 +176,7 @@ module PhusionPassenger
         raise annotate(e)
       end
 
-      def read(*args)
+      ruby2_keywords def read(*args)
         if @simulate_eof
           length, buffer = args
           if buffer
@@ -191,14 +195,14 @@ module PhusionPassenger
         raise annotate(e)
       end
 
-      def read_nonblock(*args)
+      ruby2_keywords def read_nonblock(*args)
         raise EOFError, "end of file reached" if @simulate_eof
         @socket.read_nonblock(*args)
       rescue => e
         raise annotate(e)
       end
 
-      def readpartial(*args)
+      ruby2_keywords def readpartial(*args)
         raise EOFError, "end of file reached" if @simulate_eof
         @socket.readpartial(*args)
       rescue => e
@@ -212,21 +216,21 @@ module PhusionPassenger
         raise annotate(e)
       end
 
-      def recv(*args)
+      ruby2_keywords def recv(*args)
         raise EOFError, "end of file reached" if @simulate_eof
         @socket.recv(*args)
       rescue => e
         raise annotate(e)
       end
 
-      def recvfrom(*args)
+      ruby2_keywords def recvfrom(*args)
         raise EOFError, "end of file reached" if @simulate_eof
         @socket.recvfrom(*args)
       rescue => e
         raise annotate(e)
       end
 
-      def recvfrom_nonblock(*args)
+      ruby2_keywords def recvfrom_nonblock(*args)
         raise EOFError, "end of file reached" if @simulate_eof
         @socket.recvfrom_nonblock(*args)
       rescue => e
