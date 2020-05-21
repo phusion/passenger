@@ -15,6 +15,7 @@ Release 6.0.5 (Not yet released)
  * Make temp dir toucher cleanup code more resilient to permissions issues.
  * [Nginx] Bumps the preferred Nginx version to 1.18.0 (previously 1.17.3).
  * [Nginx] The preferred PCRE version is now 8.44 (previously 8.43).
+ * Removed deprecated rubyforge gemspec property. Contributed by @olleolleolle.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
     - ccache 3.7.9 (was 3.7.3)
