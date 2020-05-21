@@ -10,7 +10,6 @@ Gem::Specification.new do |s|
   s.summary = "A fast and robust web server and application server for Ruby, Python and Node.js"
   s.name = PhusionPassenger::PACKAGE_NAME
   s.version = PhusionPassenger::VERSION_STRING
-  s.rubyforge_project = "passenger"
   s.author = "Phusion - http://www.phusion.nl/"
   s.email = "software-signing@phusion.nl"
   s.require_paths = ["src/ruby_supportlib"]
