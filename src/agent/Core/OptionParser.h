@@ -173,6 +173,9 @@ coreUsage() {
 	printf("      --sticky-sessions-cookie-name NAME\n");
 	printf("                            Cookie name to use for sticky sessions.\n");
 	printf("                            Default: " DEFAULT_STICKY_SESSIONS_COOKIE_NAME "\n");
+	printf("      --sticky-sessions-cookie-attributes 'NAME1=VALUE1; NAME2'\n");
+	printf("                            The attributes to use for the sticky session cookie.\n");
+	printf("                            Default: " DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES "\n");
 	printf("      --vary-turbocache-by-cookie NAME\n");
 	printf("                            Vary the turbocache by the cookie of the given name\n");
 	printf("      --disable-turbocaching\n");

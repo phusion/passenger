@@ -203,6 +203,7 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.loadShellEnvvars = requestConfig->defaultLoadShellEnvvars;
 	options.statThrottleRate = mainConfig.statThrottleRate;
 	options.maxRequests = requestConfig->defaultMaxRequests;
+	options.stickySessionsCookieAttributes = requestConfig->defaultStickySessionsCookieAttributes;
 
 	/******************************/
 }
@@ -378,6 +379,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.fileDescriptorUlimit, "!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	fillPoolOption(req, options.lveMinUid, "!~PASSENGER_LVE_MIN_UID");
+	fillPoolOption(req, options.stickySessionsCookieAttributes, "!~PASSENGER_STICKY_SESSIONS_COOKIE_ATTRIBUTES");
 
 	// maxProcesses is configured per-application by the (Enterprise) maxInstances option (and thus passed
 	// via request headers). In OSS the max processes can also be configured, but on a global level

@@ -115,6 +115,8 @@ private:
 		result.push_back(&options.hostName);
 		result.push_back(&options.uri);
 
+		result.push_back(&options.stickySessionsCookieAttributes);
+
 		return result;
 	}
 
@@ -353,6 +355,12 @@ public:
 	 */
 	bool abortWebsocketsOnProcessShutdown;
 
+	/**
+	 * The attributes to use for the sticky session cookie.
+	 * Values should validate against the regex: ([\w]+(=[\w]+)?; )*
+	 */
+	StaticString stickySessionsCookieAttributes;
+
 	/*-----------------*/
 
 
@@ -453,6 +461,7 @@ public:
 		  maxOutOfBandWorkInstances(1),
 		  maxRequestQueueSize(DEFAULT_MAX_REQUEST_QUEUE_SIZE),
 		  abortWebsocketsOnProcessShutdown(true),
+		  stickySessionsCookieAttributes(DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES, sizeof(DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES) - 1),
 
 		  stickySessionId(0),
 		  statThrottleRate(DEFAULT_STAT_THROTTLE_RATE),
@@ -582,6 +591,7 @@ public:
 			appendKeyValue3(vec, "max_processes",       maxProcesses);
 			appendKeyValue2(vec, "max_preloader_idle_time", maxPreloaderIdleTime);
 			appendKeyValue3(vec, "max_out_of_band_work_instances", maxOutOfBandWorkInstances);
+			appendKeyValue (vec, "sticky_sessions_cookie_attributes", stickySessionsCookieAttributes);
 		}
 
 		/*********************************/

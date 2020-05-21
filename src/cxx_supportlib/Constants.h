@@ -68,6 +68,7 @@
 #define DEFAULT_SPAWN_METHOD "smart"
 #define DEFAULT_START_TIMEOUT 90000
 #define DEFAULT_STAT_THROTTLE_RATE 10
+#define DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES "SameSite=Lax; Secure;"
 #define DEFAULT_STICKY_SESSIONS_COOKIE_NAME "_passenger_route"
 #define DEFAULT_WEB_APP_USER "nobody"
 #define ENTERPRISE_URL "https://www.phusionpassenger.com/enterprise"

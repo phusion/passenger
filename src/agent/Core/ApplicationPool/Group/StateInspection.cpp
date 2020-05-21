@@ -260,6 +260,7 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 	result["abort_websockets_on_process_shutdown"] = VAL(options.abortWebsocketsOnProcessShutdown);
 	result["force_max_concurrent_requests_per_process"] = VAL(options.forceMaxConcurrentRequestsPerProcess, -1);
 	result["restart_dir"] = NON_EMPTY_SVAL(options.restartDir);
+	result["sticky_sessions_cookie_attributes"] = SVAL(options.stickySessionsCookieAttributes, DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES);
 
 	if (!options.environmentVariables.empty()) {
 		DynamicBuffer envvarsData(options.environmentVariables.size() * 3 / 4);

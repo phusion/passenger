@@ -175,6 +175,7 @@ module PhusionPassenger
           add_flag_param(command, :sticky_sessions, "--sticky-sessions")
           add_param(command, :vary_turbocache_by_cookie, "--vary-turbocache-by-cookie")
           add_param(command, :sticky_sessions_cookie_name, "--sticky-sessions-cookie-name")
+          add_param(command, :sticky_sessions_cookie_attributes, "--sticky-sessions-cookie-attributes")
           add_param(command, :ruby, "--ruby")
           add_param(command, :python, "--python")
           add_param(command, :nodejs, "--nodejs")

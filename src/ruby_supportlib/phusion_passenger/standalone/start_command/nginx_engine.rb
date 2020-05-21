@@ -286,7 +286,7 @@ module PhusionPassenger
           if fix_existing_indenting
             # Remove extraneous indenting by 'if' blocks
             # and collapse multiple empty newlines
-            result.gsub!(/;[\n ]+/, ";\n")
+            result.gsub!(/;[\n ]+$/, ";\n")
           end
 
           # Set indenting

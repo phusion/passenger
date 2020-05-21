@@ -154,6 +154,7 @@ private:
 		add("default_server_port", UINT_TYPE, REQUIRED);
 		add("default_sticky_sessions", BOOL_TYPE, OPTIONAL, false);
 		add("default_sticky_sessions_cookie_name", STRING_TYPE, OPTIONAL, DEFAULT_STICKY_SESSIONS_COOKIE_NAME);
+		add("default_sticky_sessions_cookie_attributes", STRING_TYPE, OPTIONAL, DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES);
 		add("server_software", STRING_TYPE, OPTIONAL, SERVER_TOKEN_NAME "/" PASSENGER_VERSION);
 		add("vary_turbocache_by_cookie", STRING_TYPE, OPTIONAL);
 
@@ -419,6 +420,7 @@ public:
 	StaticString defaultServerPort;
 	StaticString serverSoftware;
 	StaticString defaultStickySessionsCookieName;
+	StaticString defaultStickySessionsCookieAttributes;
 	StaticString defaultVaryTurbocacheByCookie;
 
 	StaticString defaultFriendlyErrorPages;
@@ -451,6 +453,7 @@ public:
 		  defaultServerPort(psg_pstrdup(pool, config["default_server_port"].asString())),
 		  serverSoftware(psg_pstrdup(pool, config["server_software"].asString())),
 		  defaultStickySessionsCookieName(psg_pstrdup(pool, config["default_sticky_sessions_cookie_name"].asString())),
+		  defaultStickySessionsCookieAttributes(psg_pstrdup(pool, config["default_sticky_sessions_cookie_attributes"].asString())),
 		  defaultVaryTurbocacheByCookie(psg_pstrdup(pool, config["vary_turbocache_by_cookie"].asString())),
 
 		  defaultFriendlyErrorPages(psg_pstrdup(pool, config["default_friendly_error_pages"].asString())),

@@ -48,6 +48,7 @@ passenger_enabled on;
 <%= nginx_option(app, :restart_dir) %>
 <%= nginx_option(app, :sticky_sessions) %>
 <%= nginx_option(app, :sticky_sessions_cookie_name) %>
+<%= nginx_option(app, :sticky_sessions_cookie_attributes) %>
 <%= nginx_option(app, :vary_turbocache_by_cookie) %>
 <%= nginx_option(app, :meteor_app_settings) %>
 <%= nginx_option(app, :load_shell_envvars) %>

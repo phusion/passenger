@@ -437,6 +437,12 @@ module PhusionPassenger
                       "Default: #{DEFAULT_STICKY_SESSIONS_COOKIE_NAME}"
       },
       {
+        :name      => :sticky_sessions_cookie_attributes,
+        :type_desc => "'NAME1=VALUE1; NAME2'",
+        :desc      => "The attributes to use for the sticky session cookie.\n" \
+                      "Default: #{DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES}"
+      },
+      {
         :name      => :vary_turbocache_by_cookie,
         :type_desc => 'NAME',
         :desc      => "Vary the turbocache by the cookie of the\n" \

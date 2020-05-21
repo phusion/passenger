@@ -548,6 +548,15 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => 'The cookie name to use for sticky sessions.'
   },
   {
+    :name      => 'PassengerStickySessionsCookieAttributes',
+    :type      => :string,
+    :context   => :location,
+    :htaccess_context => ['OR_ALL'],
+    :default   => DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES,
+    :default_expr => 'DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES',
+    :desc      => 'The attributes to use for the sticky session cookie.'
+  },
+  {
     :name      => 'PassengerBufferResponse',
     :type      => :flag,
     :context   => :location,

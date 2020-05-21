@@ -690,6 +690,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :default  => DEFAULT_STICKY_SESSIONS_COOKIE_NAME
   },
   {
+    :name     => 'passenger_sticky_sessions_cookie_attributes',
+    :scope    => :location,
+    :type     => :string,
+    :default  => DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES
+  },
+  {
     :name     => 'passenger_vary_turbocache_by_cookie',
     :scope    => :location,
     :type     => :string

@@ -768,6 +768,19 @@ Controller::constructHeaderBuffersForResponse(Request *req, struct iovec *buffer
 		dataSize += baseURI.size();
 		INC_BUFFER_ITER(i);
 
+
+		StaticString stickyAttributes = req->options.stickySessionsCookieAttributes;
+		if (stickyAttributes.size() > 0) {
+			PUSH_STATIC_BUFFER("; ");
+			if (buffers != NULL) {
+				BEGIN_PUSH_NEXT_BUFFER();
+				buffers[i].iov_base = (void *) stickyAttributes.data();
+				buffers[i].iov_len  = stickyAttributes.size();
+			}
+			dataSize += stickyAttributes.size();
+			INC_BUFFER_ITER(i);
+		}
+
 		PUSH_STATIC_BUFFER("\r\n");
 	}
 
