@@ -25,6 +25,16 @@
 
 PhusionPassenger.require_passenger_lib 'utils/tee_input'
 
+if defined?(::Rack::BodyProxy) && !::Rack::BodyProxy.new("").respond_to?(:each)
+  module ::Rack
+    class BodyProxy
+      def each
+        @body.each { |body| yield body }
+      end
+    end
+  end
+end
+
 module PhusionPassenger
   module Rack
 
@@ -166,8 +176,8 @@ module PhusionPassenger
         # Fix up incompliant body objects. Ensure that the body object
         # can respond to #each.
         output_body = should_output_body?(status, is_head_request)
-        if body.is_a?(String) || (defined?(::Rack) && body.is_a?(::Rack::BodyProxy))
-          body = Array(body)
+        if body.is_a?(String)
+          body = [body]
         elsif body.nil?
           body = []
         elsif output_body && body.is_a?(Array)
