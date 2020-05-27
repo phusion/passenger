@@ -1,5 +1,5 @@
-Release 6.0.5 (Not yet released)
--------------------------------
+Release 6.0.5
+-------------
 
  * [Enterprise] Fixed a regression (introduced in 5.0.0) where Flying Passenger could not update the Passenger configuration. Closes GH-1554.
  * Adds Ubuntu 20.04 "Focal" packages, and removes Ubuntu 19.04 "Disco" packages.
