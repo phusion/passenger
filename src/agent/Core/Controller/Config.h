@@ -104,6 +104,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   default_server_port                                 unsigned integer   required   -
  *   default_spawn_method                                string             -          default("smart")
  *   default_sticky_sessions                             boolean            -          default(false)
+ *   default_sticky_sessions_cookie_attributes           string             -          default("SameSite=Lax; Secure;")
  *   default_sticky_sessions_cookie_name                 string             -          default("_passenger_route")
  *   default_user                                        string             -          default("nobody")
  *   graceful_exit                                       boolean            -          default(true)
@@ -113,7 +114,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   multi_app                                           boolean            -          default(true),read_only
  *   request_freelist_limit                              unsigned integer   -          default(1024)
  *   response_buffer_high_watermark                      unsigned integer   -          default(134217728)
- *   server_software                                     string             -          default("Phusion_Passenger/6.0.5")
+ *   server_software                                     string             -          default("Phusion_Passenger/6.0.6")
  *   show_version_in_header                              boolean            -          default(true)
  *   start_reading_after_accept                          boolean            -          default(true)
  *   stat_throttle_rate                                  unsigned integer   -          default(10)

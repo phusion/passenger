@@ -120,6 +120,7 @@ using namespace std;
  *   default_server_port                                                      unsigned integer   -          default
  *   default_spawn_method                                                     string             -          default("smart")
  *   default_sticky_sessions                                                  boolean            -          default(false)
+ *   default_sticky_sessions_cookie_attributes                                string             -          default("SameSite=Lax; Secure;")
  *   default_sticky_sessions_cookie_name                                      string             -          default("_passenger_route")
  *   default_user                                                             string             -          default("nobody")
  *   disable_log_prefix                                                       boolean            -          default(false)
@@ -151,7 +152,7 @@ using namespace std;
  *   security_update_checker_interval                                         unsigned integer   -          default(86400)
  *   security_update_checker_proxy_url                                        string             -          -
  *   security_update_checker_url                                              string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
- *   server_software                                                          string             -          default("Phusion_Passenger/6.0.5")
+ *   server_software                                                          string             -          default("Phusion_Passenger/6.0.6")
  *   setsid                                                                   boolean            -          default(false)
  *   show_version_in_header                                                   boolean            -          default(true)
  *   single_app_mode_app_root                                                 string             -          default,read_only
