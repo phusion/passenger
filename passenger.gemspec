@@ -13,6 +13,15 @@ Gem::Specification.new do |s|
   s.author = "Phusion - http://www.phusion.nl/"
   s.email = "software-signing@phusion.nl"
   s.require_paths = ["src/ruby_supportlib"]
+  s.metadata = {
+    "bug_tracker_uri"   => "https://github.com/phusion/passenger/issues",
+    "changelog_uri"     => "https://github.com/phusion/passenger/blob/stable-#{PhusionPassenger::VERSION_STRING}/CHANGELOG",
+    "documentation_uri" => "https://www.phusionpassenger.com/docs/",
+    "homepage_uri"      => "https://www.phusionpassenger.com/",
+    "source_code_uri"   => "https://github.com/phusion/passenger",
+    "mailing_list_uri"  => "https://www.phusionpassenger.com/contact",
+    "wiki_uri"          => "https://github.com/phusion/passenger/wiki"
+  }
   s.add_dependency 'rake', '>= 0.8.1'
   s.add_dependency 'rack'
   s.add_dependency 'etc'
