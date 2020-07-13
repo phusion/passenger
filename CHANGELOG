@@ -1,6 +1,8 @@
 Release 6.0.6 (Not yet released)
 -------------------------------
  * Update gemspec with up to date metadata.
+ * Reverts the addition of the 'etc' gem to the Passenger gemspec, because it broke on normal ruby installs. Closes GH-2283.
+ * Builds Ubuntu focal Nginx dynamic module package against Nginx 1.18.0. Closes GH-2291.
 
 
 Release 6.0.5
