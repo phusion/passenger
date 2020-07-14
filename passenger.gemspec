@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["src/ruby_supportlib"]
   s.metadata = {
     "bug_tracker_uri"   => "https://github.com/phusion/passenger/issues",
-    "changelog_uri"     => "https://github.com/phusion/passenger/blob/stable-#{PhusionPassenger::VERSION_STRING}/CHANGELOG",
+    "changelog_uri"     => "https://github.com/phusion/passenger/blob/stable-#{PhusionPassenger::VERSION_STRING.split('.').slice(0,2).join('.')}/CHANGELOG",
     "documentation_uri" => "https://www.phusionpassenger.com/docs/",
     "homepage_uri"      => "https://www.phusionpassenger.com/",
     "source_code_uri"   => "https://github.com/phusion/passenger",
