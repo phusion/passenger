@@ -3,7 +3,16 @@ Release 6.0.6 (Not yet released)
  * Update gemspec with up to date metadata.
  * Reverts the addition of the 'etc' gem to the Passenger gemspec, because it broke on normal ruby installs. Closes GH-2283.
  * Builds Ubuntu focal Nginx dynamic module package against Nginx 1.18.0. Closes GH-2291.
+ * No longer providing prebuilt Ruby 2.1 or 2.2 binaries, they have been EOL for years and rubygems lo longer supports them.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
+    - ccache 3.7.10 (was 3.7.9)
+    - Curl 7.71.1 (was 7.69.1)
+    - Git 2.27.0 (was 2.26.2)
+    - GnuPG 2.2.21 (was 2.2.20)
+    - libgpg_error 1.38 (was 1.37)
+    - libgcrypt 1.8.6 (was 1.8.5)
+    - RubyGems 3.1.4 (was 3.0.8)
 
 Release 6.0.5
 -------------
