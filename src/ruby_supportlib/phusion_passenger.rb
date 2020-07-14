@@ -31,7 +31,7 @@ module PhusionPassenger
 
   PACKAGE_NAME = 'passenger'
   # Run 'rake src/cxx_supportlib/Constants.h configkit_schemas_inline_comments' after changing this number.
-  VERSION_STRING = '6.0.6'
+  VERSION_STRING = '6.0.7'
 
   # Tip: find the SHA-256 with ./dev/nginx_version_sha2 <VERSION>
   PREFERRED_NGINX_VERSION = '1.18.0'
@@ -258,7 +258,7 @@ module PhusionPassenger
   end
 
 
-private
+  private
   def self.infer_install_spec
     filename = ENV['PASSENGER_LOCATION_CONFIGURATION_FILE']
     return filename if filename && !filename.empty?
