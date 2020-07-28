@@ -1,6 +1,6 @@
 Release 6.0.7 (Not yet released)
 -------------------------------
- * 
+ * Addresses regression introduced in 6.0.5 when attempting to establish database connection after fork and activerecord is not configured in the expected way. Closes GH-2281.
 
 
 Release 6.0.6

@@ -317,7 +317,11 @@ module PhusionPassenger
         elsif ActiveRecord::Base.respond_to?(:clear_active_connections!)
           ActiveRecord::Base.clear_active_connections!
         end
-        ActiveRecord::Base.establish_connection
+        begin
+          ActiveRecord::Base.establish_connection
+        rescue
+          DebugLogging.debug('ActiveRecord is not configured, start it yourself')
+        end
       end
 
       # Fire off events.
