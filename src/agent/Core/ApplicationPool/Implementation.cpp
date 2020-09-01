@@ -231,7 +231,6 @@ void processAndLogNewSpawnException(SpawningKit::SpawnException &e, const Option
 		hOptions.environment.push_back(make_pair("PASSENGER_APP_GROUP_NAME", options.getAppGroupName()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_MESSAGE", e.what()));
 		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_ID", errorId));
-		hOptions.environment.push_back(make_pair("PASSENGER_ERROR_PAGE", errorPage));
 		oxt::thread(boost::bind(runHookScripts, hOptions),
 			"Hook: spawn_failed", 256 * 1024);
 	}

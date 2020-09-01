@@ -80,6 +80,7 @@ namespace {
 				key.append(1, toupper(*data));
 				data++;
 			}
+			if (key == "PASSENGER_CONFIG_MANIFEST") continue;
 			switch (it->type()) {
 			case Json::nullValue:
 			case Json::stringValue:
