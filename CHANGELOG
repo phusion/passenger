@@ -2,6 +2,8 @@ Release 6.0.7 (Not yet released)
 -------------------------------
  * Addresses regression introduced in 6.0.5 when attempting to establish database connection after fork and activerecord is not configured in the expected way. Closes GH-2281.
  * Addresses regression introduced in 5.1.5 where hook scripts would fail to run. As a result the PASSENGER_ERROR_PAGE and PASSENGER_CONFIG_MANIFEST env vars have been removed from the passenger hook script environment.
+ * Match static rails assets on 8-digit content hash. Contributed by @mattozinga.
+ * Allow skipping the Apache/Nginx sections of the `passenger-memory-stats` output, through the `--no-apache` and `--no-nginx` commandline options. Closes GH-2306. Contributed by Saverio Miroddi (@saveriomiroddi).
 
 
 Release 6.0.6
