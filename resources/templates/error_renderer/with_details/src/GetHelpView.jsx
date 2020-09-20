@@ -30,7 +30,7 @@ class GetHelpView extends Component {
             <p>
               If you are a
               {' '}
-              <a href="https://www.phusionpassenger.com/enterprise">Passenger Enterprise</a>
+              <a href="https://www.phusionpassenger.com/features#premium-features">Passenger Enterprise</a>
               {' '}
               customer, then you are eligible for
               basic priority support.

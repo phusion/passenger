@@ -71,7 +71,7 @@
 #define DEFAULT_STICKY_SESSIONS_COOKIE_ATTRIBUTES "SameSite=Lax; Secure;"
 #define DEFAULT_STICKY_SESSIONS_COOKIE_NAME "_passenger_route"
 #define DEFAULT_WEB_APP_USER "nobody"
-#define ENTERPRISE_URL "https://www.phusionpassenger.com/enterprise"
+#define ENTERPRISE_URL "https://www.phusionpassenger.com/features#premium-features"
 #define FEEDBACK_FD 3
 #define FLYING_PASSENGER_NAME "Flying Passenger"
 #define GLOBAL_NAMESPACE_DIRNAME "passenger"
