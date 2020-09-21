@@ -4,6 +4,7 @@ Release 6.0.7 (Not yet released)
  * Addresses regression introduced in 5.1.5 where hook scripts would fail to run. As a result the PASSENGER_ERROR_PAGE and PASSENGER_CONFIG_MANIFEST env vars have been removed from the passenger hook script environment.
  * Match static rails assets on 8-digit content hash. Contributed by @mattozinga.
  * Allow skipping the Apache/Nginx sections of the `passenger-memory-stats` output, through the `--no-apache` and `--no-nginx` commandline options. Closes GH-2306. Contributed by Saverio Miroddi (@saveriomiroddi).
+ * Fixes an issue where `passenger-memory-stats` would throw an error if a process went away while it was running. Closes GH-2305.
 
 
 Release 6.0.6
@@ -21,6 +22,7 @@ Release 6.0.6
     - libgpg_error 1.38 (was 1.37)
     - libgcrypt 1.8.6 (was 1.8.5)
     - RubyGems 3.1.4 (was 3.0.8)
+
 
 Release 6.0.5
 -------------

@@ -294,7 +294,7 @@ module PhusionPassenger
         else
           return total
         end
-      rescue Errno::EACCES, Errno::ENOENT
+      rescue Errno::EACCES, Errno::ENOENT, Errno::ESRCH
         return nil
       end
 
