@@ -38,6 +38,7 @@ PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'admin_tools/memory_stats'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
+require 'optparse'
 
 include PhusionPassenger
 
@@ -107,27 +108,78 @@ class Table
   end
 end
 
+# Parses the specific commandline options.
+#
+# Modeled after `passenger-status` logic, with minor tweaks.
+#
+class CommandLineOptionsParser
+  def parse
+    options = {}
+    parser = create_option_parser(options)
+
+    begin
+      parser.parse!
+      options
+    rescue OptionParser::ParseError => e
+      STDERR.puts e
+      STDERR.puts
+      STDERR.puts "Please see '--help' for valid options."
+
+      exit 1
+    end
+  end
+
+  private
+
+  def create_option_parser(options)
+    OptionParser.new do |opts|
+      opts.banner = "Usage: #{File.basename(__FILE__)} [-h|--help] [--no-apache] [--no-nginx]"
+
+      opts.separator ""
+      opts.separator "Tool for inspecting the application server and Phusion Passenger's memory statistics."
+      opts.separator ""
+
+      opts.separator "Options:"
+
+      opts.on("--no-apache", "Do not display the Apache statistics.") do
+        options[:no_apache] = true
+      end
+      opts.on("--no-nginx", "Do not display the Nginx statistics.") do
+        options[:no_nginx] = true
+      end
+    end
+  end
+end
+
 class App
   def initialize
     @stats = AdminTools::MemoryStats.new
     @colors = Utils::AnsiColors.new
   end
 
-  def start
+  def start(options = {})
+    print_apache_stats = !options.fetch(:no_apache, false)
+    print_nginx_stats = !options.fetch(:no_nginx, false)
+
     puts "Version: #{PhusionPassenger::VERSION_STRING}"
     puts "Date   : #{Time.now}"
-    if @stats.apache_processes
-      print_process_list("Apache processes", @stats.apache_processes)
-    else
-      puts "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}------------- Apache processes -------------#{@colors.reset}\n"
-      STDERR.puts "*** WARNING: The Apache executable cannot be found."
-      STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
-        "executable's filename, or set the HTTPD environment variable " <<
-        "to your 'httpd' or 'apache2' executable's filename."
+
+    if print_apache_stats
+      if @stats.apache_processes
+        print_process_list("Apache processes", @stats.apache_processes)
+      else
+        puts "#{@colors.blue_bg}#{@colors.bold}#{@colors.yellow}------------- Apache processes -------------#{@colors.reset}\n"
+        STDERR.puts "*** WARNING: The Apache executable cannot be found."
+        STDERR.puts "Please set the APXS2 environment variable to your 'apxs2' " <<
+          "executable's filename, or set the HTTPD environment variable " <<
+          "to your 'httpd' or 'apache2' executable's filename."
+      end
     end
 
-    puts
-    print_process_list("Nginx processes", @stats.nginx_processes)
+    if print_nginx_stats
+      puts
+      print_process_list("Nginx processes", @stats.nginx_processes)
+    end
 
     puts
     print_process_list("Passenger processes", @stats.passenger_processes, :show_ppid => false)
@@ -175,4 +227,5 @@ private
   end
 end
 
-App.new.start
+options = CommandLineOptionsParser.new.parse
+App.new.start(options)
