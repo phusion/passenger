@@ -311,16 +311,22 @@ module PhusionPassenger
       # re-establish ActiveRecord database connections. This prevents
       # child processes from concurrently accessing the same
       # database connection handles.
-      if forked && defined?(ActiveRecord::Base)
-        if ActiveRecord::Base.respond_to?(:clear_all_connections!)
-          ActiveRecord::Base.clear_all_connections!
-        elsif ActiveRecord::Base.respond_to?(:clear_active_connections!)
-          ActiveRecord::Base.clear_active_connections!
+      if forked
+        if defined?(ActiveRecord::Base)
+          if ActiveRecord::Base.respond_to?(:clear_all_connections!)
+            ActiveRecord::Base.clear_all_connections!
+          elsif ActiveRecord::Base.respond_to?(:clear_active_connections!)
+            ActiveRecord::Base.clear_active_connections!
+          end
+          begin
+            ActiveRecord::Base.establish_connection
+          rescue
+            DebugLogging.debug('ActiveRecord is not configured, start it yourself')
+          end
         end
-        begin
-          ActiveRecord::Base.establish_connection
-        rescue
-          DebugLogging.debug('ActiveRecord is not configured, start it yourself')
+
+        if defined?(Sequel)
+          Sequel::DATABASES.each(&:disconnect)
         end
       end
 
