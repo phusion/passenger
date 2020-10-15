@@ -7,6 +7,7 @@ Release 6.0.7 (Not yet released)
  * Fixes an issue where `passenger-memory-stats` would throw an error if a process went away while it was running. Closes GH-2305.
  * Fixes a formatting issue with apr-1 include flags on macOS.
  * Fixes a warning about BOOST_*_ENDIAN macros being deprecated by migrating to new suggested macros.
+ * Fixes an occasional issue with the node loader where the startup handshake would fail to record progress.
 
 
 Release 6.0.6

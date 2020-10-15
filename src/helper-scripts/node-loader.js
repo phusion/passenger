@@ -135,7 +135,7 @@ setupEnvironment(options);
 
 function tryWriteFile(path, contents) {
 	try {
-		fs.writeFileSync(path, contents);
+		fs.writeFileSync(path, contents.toString());
 	} catch (e) {
 		console.error('Warning: unable to write to ' + path + ': ' + e.message);
 	}
