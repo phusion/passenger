@@ -231,7 +231,7 @@ module PhusionPassenger
             abort "The '#{option_name}' feature is only available in #{PROGRAM_NAME} " +
               "Enterprise. You are currently running the open source #{PROGRAM_NAME}. " +
               "Please learn more about and/or buy #{PROGRAM_NAME} Enterprise at " +
-              "https://www.phusionpassenger.com/enterprise"
+              "https://www.phusionpassenger.com/features#premium-features"
           end
         end
 
@@ -240,7 +240,7 @@ module PhusionPassenger
             abort "The '#{option_name}' feature is only available in #{PROGRAM_NAME} " +
               "Enterprise. You are currently running the open source #{PROGRAM_NAME}. " +
               "Please learn more about and/or buy #{PROGRAM_NAME} Enterprise at " +
-              "https://www.phusionpassenger.com/enterprise"
+              "https://www.phusionpassenger.com/features#premium-features"
           end
         end
 

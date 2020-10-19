@@ -183,7 +183,7 @@ static const char *
 cmd_passenger_enterprise_only(cmd_parms *cmd, void *pcfg, const char *arg) {
 	return "this feature is only available in Phusion Passenger Enterprise. "
 		"You are currently running the open source Phusion Passenger Enterprise. "
-		"Please learn more about and/or buy Phusion Passenger Enterprise at https://www.phusionpassenger.com/enterprise";
+		"Please learn more about and/or buy Phusion Passenger Enterprise at https://www.phusionpassenger.com/features#premium-features";
 }
 
 static const char *

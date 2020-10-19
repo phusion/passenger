@@ -116,7 +116,7 @@ module PhusionPassenger
     PROGRAM_WEBSITE     = "https://www.phusionpassenger.com"
     PROGRAM_AUTHOR      = "Phusion"
     SUPPORT_URL         = "https://www.phusionpassenger.com/support"
-    ENTERPRISE_URL      = "https://www.phusionpassenger.com/enterprise"
+    ENTERPRISE_URL      = "https://www.phusionpassenger.com/features#premium-features"
     GLOBAL_NAMESPACE_DIRNAME            = PhusionPassenger::GLOBAL_NAMESPACE_DIRNAME_
     # Subdirectory under $HOME to use for storing stuff.
     USER_NAMESPACE_DIRNAME              = PhusionPassenger::USER_NAMESPACE_DIRNAME_
