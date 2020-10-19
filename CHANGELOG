@@ -12,6 +12,14 @@ Release 6.0.7 (Not yet released)
   - Standalone: direct_instance_request_address
   - Nginx:      passenger_direct_instance_request_address
   - Apache:     PassengerDirectInstanceRequestAddress
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - ccache: 4.0 (was: 3.7.10)
+    - curl: 7.73.0 (was: 7.71.1)
+    - git: 2.29.0 (was: 2.27.0)
+    - gnupg: 2.2.23 (was: 2.2.21)
+    - libgpg_error: 1.39 (was: 1.38)
+    - ruby: 2.7.2 (was: 2.7.1)
 
 
 Release 6.0.6
