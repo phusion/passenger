@@ -11,10 +11,6 @@
 	typedef uint32_t modp_uint32_t;
 #endif
 
-#ifndef MODP_B64_DONT_INCLUDE_BOOST_ENDIANNESS_HEADERS
-	#include <boost/detail/endian.hpp>
-#endif
-
 /**
  * you can control if we use padding by commenting out this
  * next line.  However, I highly recommend you use padding and not
