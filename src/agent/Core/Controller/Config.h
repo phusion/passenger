@@ -87,6 +87,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   client_freelist_limit                               unsigned integer   -          default(0)
  *   default_abort_websockets_on_process_shutdown        boolean            -          default(true)
  *   default_app_file_descriptor_ulimit                  unsigned integer   -          -
+ *   default_bind_address                                string             -          default("127.0.0.1")
  *   default_environment                                 string             -          default("production")
  *   default_force_max_concurrent_requests_per_process   integer            -          default(-1)
  *   default_friendly_error_pages                        string             -          default("auto")
@@ -162,6 +163,7 @@ private:
 		add("default_friendly_error_pages", STRING_TYPE, OPTIONAL, "auto");
 		add("default_environment", STRING_TYPE, OPTIONAL, DEFAULT_APP_ENV);
 		add("default_spawn_method", STRING_TYPE, OPTIONAL, DEFAULT_SPAWN_METHOD);
+		add("default_bind_address", STRING_TYPE, OPTIONAL, DEFAULT_BIND_ADDRESS);
 		add("default_load_shell_envvars", BOOL_TYPE, OPTIONAL, false);
 		add("default_meteor_app_settings", STRING_TYPE, OPTIONAL);
 		add("default_app_file_descriptor_ulimit", UINT_TYPE, OPTIONAL);
@@ -427,6 +429,7 @@ public:
 	StaticString defaultFriendlyErrorPages;
 	StaticString defaultEnvironment;
 	StaticString defaultSpawnMethod;
+	StaticString defaultBindAddress;
 	StaticString defaultMeteorAppSettings;
 	unsigned int defaultAppFileDescriptorUlimit;
 	unsigned int defaultMinInstances;
@@ -460,6 +463,7 @@ public:
 		  defaultFriendlyErrorPages(psg_pstrdup(pool, config["default_friendly_error_pages"].asString())),
 		  defaultEnvironment(psg_pstrdup(pool, config["default_environment"].asString())),
 		  defaultSpawnMethod(psg_pstrdup(pool, config["default_spawn_method"].asString())),
+		  defaultBindAddress(psg_pstrdup(pool, config["default_bind_address"].asString())),
 		  defaultMeteorAppSettings(psg_pstrdup(pool, config["default_meteor_app_settings"].asString())),
 		  defaultAppFileDescriptorUlimit(config["default_app_file_descriptor_ulimit"].asUInt()),
 		  defaultMinInstances(config["default_min_instances"].asUInt()),

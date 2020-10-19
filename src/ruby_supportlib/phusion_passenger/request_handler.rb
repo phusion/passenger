@@ -99,7 +99,7 @@ module PhusionPassenger
       if should_use_unix_sockets?
         @main_socket_address, @main_socket = create_unix_socket_on_filesystem(options)
       else
-        @main_socket_address, @main_socket = create_tcp_socket
+        @main_socket_address, @main_socket = create_tcp_socket(options)
       end
       @server_sockets[:main] = {
         :address     => @main_socket_address,
@@ -109,7 +109,7 @@ module PhusionPassenger
         :accept_http_requests => true
       }
 
-      @http_socket_address, @http_socket = create_tcp_socket
+      @http_socket_address, @http_socket = create_tcp_socket(options)
       @server_sockets[:http] = {
         :address     => @http_socket_address,
         :socket      => @http_socket,
@@ -309,16 +309,17 @@ module PhusionPassenger
       end
     end
 
-    def create_tcp_socket
-      # We use "0.0.0.0" as address in order to force
+    def create_tcp_socket(options)
+      # We default to "127.0.0.1" as address in order to force
       # TCPv4 instead of TCPv6.
-      socket = TCPServer.new('0.0.0.0', 0)
+      bind_address = options.fetch('bind_address', '127.0.0.1')
+      socket = TCPServer.new(bind_address, 0)
       socket.listen(BACKLOG_SIZE)
       socket.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
       socket.binmode
       socket.sync = true
       socket.close_on_exec!
-      socket_address = "tcp://127.0.0.1:#{socket.addr[1]}"
+      socket_address = "tcp://#{bind_address}:#{socket.addr[1]}"
       return [socket_address, socket]
     end
 

@@ -51,6 +51,7 @@ Passenger::SpawningKit::Config::internStrings() {
 	totalSize += appType.size() + 1;
 	totalSize += appEnv.size() + 1;
 	totalSize += spawnMethod.size() + 1;
+	totalSize += bindAddress.size() + 1;
 	totalSize += baseURI.size() + 1;
 	totalSize += user.size() + 1;
 	totalSize += group.size() + 1;
@@ -89,6 +90,8 @@ Passenger::SpawningKit::Config::internStrings() {
 	pos = appendData(pos, end, appEnv);
 	pos = appendData(pos, end, "\0", 1);
 	pos = appendData(pos, end, spawnMethod);
+	pos = appendData(pos, end, "\0", 1);
+	pos = appendData(pos, end, bindAddress);
 	pos = appendData(pos, end, "\0", 1);
 	pos = appendData(pos, end, baseURI);
 	pos = appendData(pos, end, "\0", 1);
@@ -145,6 +148,10 @@ Passenger::SpawningKit::Config::internStrings() {
 
 	tmpSize = spawnMethod.size();
 	spawnMethod = StaticString(pos, tmpSize);
+	pos += tmpSize + 1;
+
+	tmpSize = bindAddress.size();
+	bindAddress = StaticString(pos, tmpSize);
 	pos += tmpSize + 1;
 
 	tmpSize = baseURI.size();
@@ -221,6 +228,10 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 		ok = false;
 		errors.push_back(P_STATIC_STRING("spawn_method may not be empty"));
 	}
+	if (OXT_UNLIKELY(bindAddress.empty())) {
+		ok = false;
+		errors.push_back(P_STATIC_STRING("bind_address may not be empty"));
+	}
 	if (OXT_UNLIKELY(baseURI.empty())) {
 		ok = false;
 		errors.push_back(P_STATIC_STRING("base_uri may not be empty"));
@@ -287,6 +298,7 @@ Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 	doc["app_type"] = appType.toString();
 	doc["app_env"] = appEnv.toString();
 	doc["spawn_method"] = spawnMethod.toString();
+	doc["bind_address"] = bindAddress.toString();
 	doc["base_uri"] = baseURI.toString();
 	doc["user"] = user.toString();
 	doc["group"] = group.toString();
@@ -340,6 +352,7 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 	doc["app_type"] = appType.toString();
 	doc["app_env"] = appEnv.toString();
 	doc["spawn_method"] = spawnMethod.toString();
+	doc["bind_address"] = bindAddress.toString();
 	doc["base_uri"] = baseURI.toString();
 	doc["user"] = user.toString();
 	doc["group"] = group.toString();

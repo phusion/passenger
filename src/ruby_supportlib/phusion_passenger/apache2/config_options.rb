@@ -445,6 +445,12 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :function  => 'cmd_passenger_spawn_method'
   },
   {
+    :name      => 'PassengerDirectInstanceRequestAddress',
+    :type      => :string,
+    :default   => '127.0.0.1',
+    :desc      => 'The address that Passenger binds to in order to allow sending HTTP requests to individual application processes.'
+  },
+  {
     :name      => 'PassengerFriendlyErrorPages',
     :type      => :flag,
     :dynamic_default => 'On if PassengerAppEnv is development, off otherwise',

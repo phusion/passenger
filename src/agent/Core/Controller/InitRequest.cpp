@@ -200,6 +200,7 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.forceMaxConcurrentRequestsPerProcess = requestConfig->defaultForceMaxConcurrentRequestsPerProcess;
 	options.environment = requestConfig->defaultEnvironment;
 	options.spawnMethod = requestConfig->defaultSpawnMethod;
+	options.bindAddress = requestConfig->defaultBindAddress;
 	options.loadShellEnvvars = requestConfig->defaultLoadShellEnvvars;
 	options.statThrottleRate = mainConfig.statThrottleRate;
 	options.maxRequests = requestConfig->defaultMaxRequests;
@@ -367,6 +368,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.group, "!~PASSENGER_GROUP");
 	fillPoolOption(req, options.minProcesses, "!~PASSENGER_MIN_PROCESSES");
 	fillPoolOption(req, options.spawnMethod, "!~PASSENGER_SPAWN_METHOD");
+	fillPoolOption(req, options.bindAddress, "!~PASSENGER_DIRECT_INSTANCE_REQUEST_ADDRESS");
 	fillPoolOption(req, options.appStartCommand, "!~PASSENGER_APP_START_COMMAND");
 	fillPoolOptionSecToMsec(req, options.startTimeout, "!~PASSENGER_START_TIMEOUT");
 	fillPoolOption(req, options.maxPreloaderIdleTime, "!~PASSENGER_MAX_PRELOADER_IDLE_TIME");

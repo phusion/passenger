@@ -8,6 +8,10 @@ Release 6.0.7 (Not yet released)
  * Fixes a formatting issue with apr-1 include flags on macOS.
  * Fixes a warning about BOOST_*_ENDIAN macros being deprecated by migrating to new suggested macros.
  * Fixes an occasional issue with the node loader where the startup handshake would fail to record progress.
+ * Adds an option for specifying the address to bind ruby apps to, for sending requests directly to specific app instances:
+  - Standalone: direct_instance_request_address
+  - Nginx:      passenger_direct_instance_request_address
+  - Apache:     PassengerDirectInstanceRequestAddress
 
 
 Release 6.0.6

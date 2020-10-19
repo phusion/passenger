@@ -252,6 +252,17 @@ public:
 	StaticString spawnMethod;
 
 	/**
+	 * The address that Passenger binds to in order to allow sending HTTP
+	 * requests to individual application processes.
+	 *
+	 * @hinted_parseable
+	 * @require_non_empty
+	 * @pass_during_handshake
+	 * @non_confidential
+	 */
+	StaticString bindAddress;
+
+	/**
 	 * The base URI on which the app runs. If the app is running on the
 	 * root URI, then this value must be "/".
 	 *

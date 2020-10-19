@@ -320,6 +320,21 @@ cmd_passenger_default_user(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_direct_instance_request_address(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	if (err != NULL) {
+		return err;
+	}
+
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mDirectInstanceRequestAddressSourceFile = cmd->directive->filename;
+	config->mDirectInstanceRequestAddressSourceLine = cmd->directive->line_num;
+	config->mDirectInstanceRequestAddressExplicitlySet = true;
+	config->mDirectInstanceRequestAddress = arg;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_disable_anonymous_telemetry(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, GLOBAL_ONLY);
 	if (err != NULL) {

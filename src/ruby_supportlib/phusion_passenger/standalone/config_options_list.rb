@@ -259,6 +259,13 @@ module PhusionPassenger
         :desc      => 'The spawn method to use. Default: see docs'
       },
       {
+        :name      => :direct_instance_request_address,
+        :type      => :hostname,
+        :type_desc => 'HOST',
+        :default   => '127.0.0.1',
+        :desc      => "The address that Passenger binds to in order to allow sending HTTP requests to individual application processes.\nDefault: %DEFAULT%"
+      },
+      {
         :name      => :static_files_dir,
         :type      => :path,
         :desc      => "Specify the static files dir (Nginx engine\n" \

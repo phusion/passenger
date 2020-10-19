@@ -477,6 +477,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :type     => :string
   },
   {
+    :name     => 'passenger_direct_instance_request_address',
+    :scope    => :application,
+    :default  => '127.0.0.1',
+    :type     => :string
+  },
+  {
     :name     => 'passenger_load_shell_envvars',
     :scope    => :application,
     :type     => :flag,

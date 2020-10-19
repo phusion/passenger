@@ -166,6 +166,11 @@
       "default_app_file_descriptor_ulimit" : {
          "type" : "unsigned integer"
       },
+      "default_bind_address" : {
+         "default_value" : "127.0.0.1",
+         "has_default_value" : "static",
+         "type" : "string"
+      },
       "default_environment" : {
          "default_value" : "production",
          "has_default_value" : "static",
@@ -609,6 +614,11 @@
       },
       "default_app_file_descriptor_ulimit" : {
          "type" : "unsigned integer"
+      },
+      "default_bind_address" : {
+         "default_value" : "127.0.0.1",
+         "has_default_value" : "static",
+         "type" : "string"
       },
       "default_environment" : {
          "default_value" : "production",
@@ -1471,6 +1481,11 @@
       },
       "default_app_file_descriptor_ulimit" : {
          "type" : "unsigned integer"
+      },
+      "default_bind_address" : {
+         "default_value" : "127.0.0.1",
+         "has_default_value" : "static",
+         "type" : "string"
       },
       "default_environment" : {
          "default_value" : "production",

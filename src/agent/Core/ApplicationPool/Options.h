@@ -92,6 +92,7 @@ private:
 		result.push_back(&options.environment);
 		result.push_back(&options.baseURI);
 		result.push_back(&options.spawnMethod);
+		result.push_back(&options.bindAddress);
 
 		result.push_back(&options.user);
 		result.push_back(&options.group);
@@ -229,6 +230,12 @@ public:
 	 * Spawning method, either "smart" or "direct".
 	 */
 	StaticString spawnMethod;
+
+	/**
+	 * The address that Passenger binds to in order to allow sending HTTP
+	 * requests to individual application processes.
+	 */
+	StaticString bindAddress;
 
 	/** See overview. */
 	StaticString user;
@@ -442,6 +449,7 @@ public:
 		  environment(DEFAULT_APP_ENV, sizeof(DEFAULT_APP_ENV) - 1),
 		  baseURI("/", 1),
 		  spawnMethod(DEFAULT_SPAWN_METHOD, sizeof(DEFAULT_SPAWN_METHOD) - 1),
+		  bindAddress(DEFAULT_BIND_ADDRESS, sizeof(DEFAULT_BIND_ADDRESS) - 1),
 		  defaultUser(PASSENGER_DEFAULT_USER, sizeof(PASSENGER_DEFAULT_USER) - 1),
 		  lveMinUid(DEFAULT_LVE_MIN_UID),
 		  integrationMode(DEFAULT_INTEGRATION_MODE, sizeof(DEFAULT_INTEGRATION_MODE) - 1),
@@ -569,6 +577,7 @@ public:
 			appendKeyValue (vec, "environment",        environment);
 			appendKeyValue (vec, "base_uri",           baseURI);
 			appendKeyValue (vec, "spawn_method",       spawnMethod);
+			appendKeyValue (vec, "bind_address",       bindAddress);
 			appendKeyValue (vec, "user",               user);
 			appendKeyValue (vec, "group",              group);
 			appendKeyValue (vec, "default_user",       defaultUser);

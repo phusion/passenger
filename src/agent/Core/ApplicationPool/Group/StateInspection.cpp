@@ -243,6 +243,7 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 	result["max_processes"] = VAL(options.maxProcesses, 0u);
 	result["environment"] = SVAL(options.environment); // TODO: default value depends on integration mode
 	result["spawn_method"] = SVAL(options.spawnMethod, DEFAULT_SPAWN_METHOD);
+	result["bind_address"] = SVAL(options.bindAddress, DEFAULT_BIND_ADDRESS);
 	result["start_timeout"] = VAL(options.startTimeout / 1000.0, DEFAULT_START_TIMEOUT / 1000.0);
 	result["max_preloader_idle_time"] = VAL((Json::UInt) options.maxPreloaderIdleTime,
 		(Json::UInt) DEFAULT_MAX_PRELOADER_IDLE_TIME);

@@ -116,6 +116,7 @@ using namespace std;
  *   controller_threads                                              unsigned integer   -          default,read_only
  *   default_abort_websockets_on_process_shutdown                    boolean            -          default(true)
  *   default_app_file_descriptor_ulimit                              unsigned integer   -          -
+ *   default_bind_address                                            string             -          default("127.0.0.1")
  *   default_environment                                             string             -          default("production")
  *   default_force_max_concurrent_requests_per_process               integer            -          default(-1)
  *   default_friendly_error_pages                                    string             -          default("auto")

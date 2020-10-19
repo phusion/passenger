@@ -134,6 +134,7 @@ protected:
 		config->group = info.groupname;
 
 		extraArgs["spawn_method"] = options.spawnMethod.toString();
+		config->bindAddress = options.bindAddress;
 
 		/******************/
 		/******************/
