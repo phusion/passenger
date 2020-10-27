@@ -58,6 +58,7 @@ module PhusionPassenger
     DEFAULT_WEB_APP_USER = "nobody"
     DEFAULT_APP_ENV = "production"
     DEFAULT_SPAWN_METHOD = "smart"
+    DEFAULT_BIND_ADDRESS = "127.0.0.1"
     # Apache's unixd.h also defines DEFAULT_USER, so we avoid naming clash here.
     PASSENGER_DEFAULT_USER = "nobody"
     DEFAULT_CONCURRENCY_MODEL = "process"

@@ -66,7 +66,7 @@ namespace tut {
 
 		static void writeDataSlowly(int fd, unsigned int bytesToWrite, unsigned int bytesPerSec) {
 			try {
-				for (unsigned i = 0; i < bytesToWrite && !this_thread::interruption_requested(); i++) {
+				for (unsigned i = 0; i < bytesToWrite && !boost::this_thread::interruption_requested(); i++) {
 					syscalls::write(fd, "x", 1);
 					syscalls::usleep(1000000 / bytesPerSec);
 				}
@@ -92,7 +92,7 @@ namespace tut {
 					(bytesToRead * 1000000.0 / bytesPerSec);
 				int alreadyRead = 0;
 
-				while (alreadyRead < bytesToRead && !this_thread::interruption_requested()) {
+				while (alreadyRead < bytesToRead && !boost::this_thread::interruption_requested()) {
 					unsigned long long elapsed = SystemTime::getUsec();
 					double progress = (elapsed - start) / (double) (deadline - start);
 					int shouldHaveRead = progress * bytesToRead;

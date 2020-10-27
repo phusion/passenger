@@ -32,6 +32,7 @@ namespace tut {
 			config.startupFile = "/tmp/myapp/app.py";
 			config.appType = "wsgi";
 			config.spawnMethod = "direct";
+			config.bindAddress = "127.0.0.1";
 			config.user = lookupSystemUsernameByUid(getuid());
 			config.group = lookupSystemGroupnameByGid(getgid());
 			config.internStrings();

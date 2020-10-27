@@ -447,7 +447,7 @@ APACHE2_CONFIGURATION_OPTIONS = [
   {
     :name      => 'PassengerDirectInstanceRequestAddress',
     :type      => :string,
-    :default   => '127.0.0.1',
+    :default   => DEFAULT_BIND_ADDRESS,
     :desc      => 'The address that Passenger binds to in order to allow sending HTTP requests to individual application processes.'
   },
   {

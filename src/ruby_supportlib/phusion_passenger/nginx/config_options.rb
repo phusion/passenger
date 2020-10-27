@@ -479,7 +479,7 @@ NGINX_CONFIGURATION_OPTIONS = [
   {
     :name     => 'passenger_direct_instance_request_address',
     :scope    => :application,
-    :default  => '127.0.0.1',
+    :default  => DEFAULT_BIND_ADDRESS,
     :type     => :string
   },
   {
