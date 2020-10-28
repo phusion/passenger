@@ -305,7 +305,7 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     # Compiling with -O3 causes segfaults on RHEL 6
     :optimize => :heavy,
     # Compiling with SSE2 causes segfaults on Amazon Linux 2
-    :cflags => ' -mno-sse2',
+    :cflags => RbConfig::CONFIG['host_cpu'] == 'x86_64' ? ' -mno-sse2' : '',
     :strict_aliasing => false
   define_component 'IOTools/IOUtils.o',
     :source   => 'IOTools/IOUtils.cpp',
