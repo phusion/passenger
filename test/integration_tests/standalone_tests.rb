@@ -184,8 +184,7 @@ describe "Passenger Standalone" do
         end
 
         it "starts a server which serves the application" do
-          `echo "I'm in:" $(pwd) >&2`
-          FileUtils.mkdir_p 'buildout/testlogs'
+          FileUtils.mkdir_p '../buildout/testlogs'
           output = capture_output("passenger start --runtime-check-only")
           output.should include(AGENT_BINARY_DOWNLOAD_MESSAGE)
           output.should include(NGINX_BINARY_INSTALL_MESSAGE)
@@ -212,8 +211,7 @@ describe "Passenger Standalone" do
         end
 
         it "starts a server which serves the application" do
-          `echo "I'm in:" $(pwd) >&2`
-          FileUtils.mkdir_p 'buildout/testlogs'
+          FileUtils.mkdir_p '../buildout/testlogs'
           output = capture_output("passenger start --runtime-check-only")
           output.should include(AGENT_BINARY_DOWNLOAD_MESSAGE)
           output.should include(NGINX_BINARY_INSTALL_MESSAGE)
