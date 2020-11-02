@@ -223,6 +223,7 @@ pipeline {
                 try {
                   sh './dev/ci/run-tests-natively standalone'
                 } finally {
+                  sh 'pwd'
                   sh 'mv buildout/testlogs buildout/STANDALONE_MACOS'
                   archiveArtifacts artifacts: 'buildout/STANDALONE_MACOS/**'
                 }
