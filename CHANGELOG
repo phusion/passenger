@@ -1,3 +1,8 @@
+Release 6.0.8 (Not yet released)
+-------------
+ * 
+
+
 Release 6.0.7
 -------------
  * Addresses regression introduced in 6.0.5 when attempting to establish database connection after fork and activerecord is not configured in the expected way. Closes GH-2281.
@@ -23,6 +28,7 @@ Release 6.0.7
     - libassuan 2.5.4 (was: 2.5.3)
     - libgcrypt 1.8.7 (was 1.8.6)
     - OpenSSL 1.1.1h (was 1.0.2u)
+
 
 Release 6.0.6
 -------------
