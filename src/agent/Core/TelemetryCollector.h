@@ -34,7 +34,7 @@
 #include <cassert>
 
 #include <boost/cstdint.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/backtrace.hpp>
 

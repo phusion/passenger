@@ -1,5 +1,5 @@
 #include "../tut/tut.h"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
 #include <unistd.h>

@@ -1,6 +1,6 @@
 #include <TestSupport.h>
 #include <boost/foreach.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>

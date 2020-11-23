@@ -28,7 +28,7 @@
 
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
 #include <string>
 #include <vector>

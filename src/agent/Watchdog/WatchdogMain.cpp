@@ -29,7 +29,7 @@
 #include <oxt/thread.hpp>
 #include <oxt/system_calls.hpp>
 #include <boost/function.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/foreach.hpp>
 #include <boost/enable_shared_from_this.hpp>

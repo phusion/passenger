@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_CONFIG_KIT_SCHEMA_H_
 #define _PASSENGER_CONFIG_KIT_SCHEMA_H_
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/container/vector.hpp>
 #include <string>
 #include <cassert>

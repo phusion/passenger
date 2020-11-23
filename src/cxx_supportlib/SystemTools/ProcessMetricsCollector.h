@@ -28,7 +28,7 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/thread.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <oxt/system_calls.hpp>
 #include <string>
 #include <vector>

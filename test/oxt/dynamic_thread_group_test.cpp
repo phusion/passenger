@@ -1,6 +1,6 @@
 #include "../tut/tut.h"
 #include "counter.hpp"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <oxt/dynamic_thread_group.hpp>
 #include <oxt/system_calls.hpp>

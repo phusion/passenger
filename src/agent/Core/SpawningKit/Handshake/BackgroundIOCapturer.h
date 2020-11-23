@@ -27,7 +27,7 @@
 #define _PASSENGER_SPAWNING_KIT_BACKGROUND_IO_CAPTURER_H_
 
 #include <boost/thread.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/foreach.hpp>
 #include <oxt/backtrace.hpp>

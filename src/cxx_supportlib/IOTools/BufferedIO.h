@@ -30,7 +30,7 @@
 #include <utility>
 #include <algorithm>
 #include <boost/function.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <oxt/system_calls.hpp>
 #include <oxt/macros.hpp>
 #include <sys/types.h>

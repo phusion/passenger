@@ -2,7 +2,7 @@
 #include <IOTools/IOUtils.h>
 #include <SystemTools/SystemTime.h>
 #include <oxt/system_calls.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <sys/types.h>
 #include <cerrno>
 #include <string>

@@ -308,7 +308,7 @@ Pool::disableProcess(const StaticString &gupid) {
 		// Must be a boost::shared_ptr to be interruption-safe.
 		boost::shared_ptr<DisableWaitTicket> ticket = boost::make_shared<DisableWaitTicket>();
 		DisableResult result = group->disable(process,
-			boost::bind(syncDisableProcessCallback, _1, _2, ticket));
+			boost::bind(syncDisableProcessCallback, boost::placeholders::_1, boost::placeholders::_2, ticket));
 		group->verifyInvariants();
 		group->verifyExpensiveInvariants();
 		if (result == DR_DEFERRED) {

@@ -441,9 +441,6 @@ private:
 			return;
 		}
 
-		using websocketpp::lib::placeholders::_1;
-		using websocketpp::lib::placeholders::_2;
-
 		if (config["auth_type"].asString() == "basic") {
 			try {
 				addBasicAuthHeader(conn);
@@ -462,12 +459,12 @@ private:
 		conn->set_socket_init_handler(websocketpp::lib::bind(
 			&WebSocketCommandReverseServer::onSocketInit,
 			this,
-			_1,
-			_2));
+			websocketpp::lib::placeholders::_1,
+			websocketpp::lib::placeholders::_2));
 		conn->set_open_handler(websocketpp::lib::bind(
 			&WebSocketCommandReverseServer::onConnected,
 			this,
-			_1));
+			websocketpp::lib::placeholders::_1));
 		conn->set_fail_handler(websocketpp::lib::bind(
 			&WebSocketCommandReverseServer::onConnectFailed,
 			this,
@@ -479,18 +476,18 @@ private:
 		conn->set_pong_timeout_handler(websocketpp::lib::bind(
 			&WebSocketCommandReverseServer::onPongTimeout,
 			this,
-			_1,
-			_2));
+			websocketpp::lib::placeholders::_1,
+			websocketpp::lib::placeholders::_2));
 		conn->set_pong_handler(websocketpp::lib::bind(
 			&WebSocketCommandReverseServer::onPong,
 			this,
-			_1,
-			_2));
+			websocketpp::lib::placeholders::_1,
+			websocketpp::lib::placeholders::_2));
 		conn->set_message_handler(websocketpp::lib::bind(
 			&WebSocketCommandReverseServer::onMessage,
 			this,
-			_1,
-			_2));
+			websocketpp::lib::placeholders::_1,
+			websocketpp::lib::placeholders::_2));
 
 		endpoint.connect(conn);
 	}

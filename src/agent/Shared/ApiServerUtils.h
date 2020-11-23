@@ -50,7 +50,7 @@
  */
 
 #include <boost/foreach.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/regex.hpp>
 #include <oxt/macros.hpp>
 #include <oxt/backtrace.hpp>

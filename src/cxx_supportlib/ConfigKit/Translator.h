@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_CONFIG_KIT_TRANSLATOR_H_
 #define _PASSENGER_CONFIG_KIT_TRANSLATOR_H_
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <string>
 #include <vector>
 #include <ConfigKit/Common.h>

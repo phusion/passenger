@@ -138,7 +138,7 @@ Group::initiateOobw(const ProcessPtr &process) {
 		P_DEBUG("Disabling process " << process->inspect() << " in preparation for OOBW");
 		DisableResult result = disable(process,
 			boost::bind(&Group::lockAndMaybeInitiateOobw, this,
-				_1, _2, shared_from_this()));
+				boost::placeholders::_1, boost::placeholders::_2, shared_from_this()));
 		switch (result) {
 		case DR_SUCCESS:
 			// Continue code flow.

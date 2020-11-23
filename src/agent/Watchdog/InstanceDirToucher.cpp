@@ -24,7 +24,7 @@
  *  THE SOFTWARE.
  */
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <Shared/Fundamentals/Utils.h>
 #include <Utils/AsyncSignalSafeUtils.h>
 

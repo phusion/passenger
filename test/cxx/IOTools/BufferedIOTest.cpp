@@ -25,8 +25,8 @@ namespace tut {
 			io = BufferedIO(reader);
 			counter = 0;
 			memset(buf, 0, sizeof(buf));
-			a_eof = boost::bind(&IOTools_BufferedIOTest::eof, this, _1, _2);
-			a_twoBytesRead = boost::bind(&IOTools_BufferedIOTest::twoBytesRead, this, _1, _2);
+			a_eof = boost::bind(&IOTools_BufferedIOTest::eof, this, boost::placeholders::_1, boost::placeholders::_2);
+			a_twoBytesRead = boost::bind(&IOTools_BufferedIOTest::twoBytesRead, this, boost::placeholders::_1, boost::placeholders::_2);
 		}
 
 		void write(const StaticString &data) {

@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/foreach.hpp>
 
 #include <LoggingKit/LoggingKit.h>

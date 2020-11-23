@@ -30,7 +30,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread.hpp>
 #include <boost/function.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/foreach.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/backtrace.hpp>

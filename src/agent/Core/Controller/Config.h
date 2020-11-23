@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_CORE_CONTROLLER_CONFIG_H_
 #define _PASSENGER_CORE_CONTROLLER_CONFIG_H_
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <string.h>

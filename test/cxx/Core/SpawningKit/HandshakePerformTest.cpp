@@ -3,7 +3,7 @@
 #include <Core/SpawningKit/Handshake/Perform.h>
 #include <LoggingKit/Context.h>
 #include <SystemTools/UserDatabase.h>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <cstdio>
 #include <IOTools/IOUtils.h>
 

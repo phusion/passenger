@@ -115,13 +115,13 @@ Group::prepareHookScriptOptions(HookScriptOptions &hsOptions, const char *name) 
 void
 Group::runAttachHooks(const ProcessPtr process) const {
 	getPool()->runHookScripts("attached_process",
-		boost::bind(&Group::setupAttachOrDetachHook, this, process, _1));
+		boost::bind(&Group::setupAttachOrDetachHook, this, process, boost::placeholders::_1));
 }
 
 void
 Group::runDetachHooks(const ProcessPtr process) const {
 	getPool()->runHookScripts("detached_process",
-		boost::bind(&Group::setupAttachOrDetachHook, this, process, _1));
+		boost::bind(&Group::setupAttachOrDetachHook, this, process, boost::placeholders::_1));
 }
 
 void

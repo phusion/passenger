@@ -83,7 +83,7 @@
 #include <cstdarg>
 
 #include <boost/cstdint.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/scoped_array.hpp>
 
 #include <oxt/macros.hpp>

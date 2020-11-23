@@ -26,7 +26,7 @@
 #define _OXT_THREAD_HPP_
 
 #include <boost/thread.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "macros.hpp"

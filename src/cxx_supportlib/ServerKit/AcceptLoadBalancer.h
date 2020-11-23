@@ -26,7 +26,7 @@
 #ifndef _PASSENGER_SERVER_KIT_ACCEPT_LOAD_BALANCER_H_
 #define _PASSENGER_SERVER_KIT_ACCEPT_LOAD_BALANCER_H_
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/cstdint.hpp>
 #include <oxt/thread.hpp>
 #include <oxt/macros.hpp>

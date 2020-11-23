@@ -26,7 +26,7 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cassert>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <oxt/thread.hpp>

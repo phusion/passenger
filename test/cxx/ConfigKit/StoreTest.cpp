@@ -1,6 +1,6 @@
 #include <TestSupport.h>
 #include <ConfigKit/Store.h>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <algorithm>
 
 using namespace Passenger;
