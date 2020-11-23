@@ -22,6 +22,11 @@
 # undef BOOST_SYSTEM_HAS_SYSTEM_ERROR
 #endif
 
+#if defined(BOOST_NO_CXX11_HDR_MUTEX)
+// Required for thread-safe map manipulation
+# undef BOOST_SYSTEM_HAS_SYSTEM_ERROR
+#endif
+
 // BOOST_SYSTEM_NOEXCEPT
 // Retained for backward compatibility
 
@@ -41,17 +46,6 @@
 # define BOOST_SYSTEM_CONSTEXPR constexpr
 #else
 # define BOOST_SYSTEM_CONSTEXPR
-#endif
-
-// BOOST_SYSTEM_REQUIRE_CONST_INIT
-
-#define BOOST_SYSTEM_REQUIRE_CONST_INIT
-
-#if defined(__has_cpp_attribute)
-#if __has_cpp_attribute(clang::require_constant_initialization)
-# undef BOOST_SYSTEM_REQUIRE_CONST_INIT
-# define BOOST_SYSTEM_REQUIRE_CONST_INIT [[clang::require_constant_initialization]]
-#endif
 #endif
 
 #endif // BOOST_SYSTEM_DETAIL_CONFIG_HPP_INCLUDED

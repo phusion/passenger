@@ -101,24 +101,24 @@ private:
 
 public:
 
-    explicit local_counted_impl( shared_count const& pn ): pn_( pn )
+    explicit local_counted_impl( shared_count const& pn ) BOOST_SP_NOEXCEPT: pn_( pn )
     {
     }
 
 #if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
 
-    explicit local_counted_impl( shared_count && pn ): pn_( std::move(pn) )
+    explicit local_counted_impl( shared_count && pn ) BOOST_SP_NOEXCEPT: pn_( std::move(pn) )
     {
     }
 
 #endif
 
-    virtual void local_cb_destroy() BOOST_SP_NOEXCEPT
+    void local_cb_destroy() BOOST_SP_NOEXCEPT BOOST_OVERRIDE
     {
         delete this;
     }
 
-    virtual boost::detail::shared_count local_cb_get_shared_count() const BOOST_SP_NOEXCEPT
+    boost::detail::shared_count local_cb_get_shared_count() const BOOST_SP_NOEXCEPT BOOST_OVERRIDE
     {
         return pn_;
     }
@@ -130,12 +130,12 @@ public:
 
     shared_count pn_;
 
-    virtual void local_cb_destroy() BOOST_SP_NOEXCEPT
+    void local_cb_destroy() BOOST_SP_NOEXCEPT BOOST_OVERRIDE
     {
         shared_count().swap( pn_ );
     }
 
-    virtual boost::detail::shared_count local_cb_get_shared_count() const BOOST_SP_NOEXCEPT
+    boost::detail::shared_count local_cb_get_shared_count() const BOOST_SP_NOEXCEPT BOOST_OVERRIDE
     {
         return pn_;
     }

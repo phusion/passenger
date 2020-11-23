@@ -5,7 +5,7 @@
 //
 // 2013/10 Vicente J. Botet Escriba
 //   Creation.
-
+#if 0
 #ifndef BOOST_CSBL_QUEUE_HPP
 #define BOOST_CSBL_QUEUE_HPP
 
@@ -43,3 +43,4 @@ namespace boost
   }
 }
 #endif // header
+#endif

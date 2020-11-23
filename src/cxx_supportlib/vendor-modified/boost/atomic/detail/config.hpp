@@ -4,7 +4,7 @@
  * http://www.boost.org/LICENSE_1_0.txt)
  *
  * Copyright (c) 2012 Hartmut Kaiser
- * Copyright (c) 2014 Andrey Semashev
+ * Copyright (c) 2014-2018, 2020 Andrey Semashev
  */
 /*!
  * \file   atomic/detail/config.hpp
@@ -54,6 +54,27 @@
 #endif
 #endif // defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)
 
+#if defined(BOOST_NO_CXX11_ALIGNAS) ||\
+    (defined(BOOST_GCC) && (BOOST_GCC+0) < 40900) ||\
+    (defined(BOOST_MSVC) && (BOOST_MSVC+0) < 1910 && defined(_M_IX86))
+// gcc prior to 4.9 doesn't support alignas with a constant expression as an argument.
+// MSVC 14.0 does support alignas, but in 32-bit mode emits "error C2719: formal parameter with requested alignment of N won't be aligned" for N > 4,
+// when aligned types are used in function arguments, even though the std::max_align_t type has alignment of 8.
+#define BOOST_ATOMIC_DETAIL_NO_CXX11_ALIGNAS
+#endif
+
+#if defined(BOOST_NO_CXX11_CONSTEXPR) || (defined(BOOST_GCC) && (BOOST_GCC+0) < 40800)
+// This macro indicates that the compiler doesn't support constexpr constructors that initialize one member
+// of an anonymous union member of the class.
+#define BOOST_ATOMIC_DETAIL_NO_CXX11_CONSTEXPR_UNION_INIT
+#endif
+
+#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX11_CONSTEXPR_UNION_INIT)
+#define BOOST_ATOMIC_DETAIL_CONSTEXPR_UNION_INIT BOOST_CONSTEXPR
+#else
+#define BOOST_ATOMIC_DETAIL_CONSTEXPR_UNION_INIT
+#endif
+
 // Enable pointer/reference casts between storage and value when possible.
 // Note: Despite that MSVC does not employ strict aliasing rules for optimizations
 // and does not require an explicit markup for types that may alias, we still don't
@@ -68,6 +89,19 @@
 // The compiler supports output values in flag registers.
 // See: https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html, Section 6.44.3.
 #define BOOST_ATOMIC_DETAIL_ASM_HAS_FLAG_OUTPUTS
+#endif
+
+#if defined(BOOST_INTEL) || (defined(BOOST_GCC) && (BOOST_GCC+0) < 40700) ||\
+    (defined(BOOST_CLANG) && !defined(__apple_build_version__) && ((__clang_major__+0) * 100 + (__clang_minor__+0)) < 302) ||\
+    (defined(__clang__) && defined(__apple_build_version__) && ((__clang_major__+0) * 100 + (__clang_minor__+0)) < 402)
+// Intel compiler (at least 18.0 update 1) breaks if noexcept specification is used in defaulted function declarations:
+// error: the default constructor of "boost::atomics::atomic<T>" cannot be referenced -- it is a deleted function
+// GCC 4.6 doesn't seem to support that either. Clang 3.1 deduces wrong noexcept for the defaulted function and fails as well.
+#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_DECL
+#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_IMPL BOOST_NOEXCEPT
+#else
+#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_DECL BOOST_NOEXCEPT
+#define BOOST_ATOMIC_DETAIL_DEF_NOEXCEPT_IMPL
 #endif
 
 #if defined(__has_builtin)
@@ -130,21 +164,11 @@
 #define BOOST_ATOMIC_DETAIL_DEPRECATED(msg)
 #endif
 
-// In Boost.Atomic 1.67 we changed (op)_and_test methods to return true when the result is non-zero. This would be more consistent
-// with the other names used in Boost.Atomic and the C++ standard library. Since the methods were announced as experimental and
-// the previous behavior was released only in Boost 1.66, it was decided to change the result without changing the method names.
-// By defining BOOST_ATOMIC_HIGHLIGHT_OP_AND_TEST the user has a way to highlight all uses of the affected functions so
-// that it is easier to find and update the affected code (which is typically adding or removing negation of the result). This
-// highlighting functionality is a temporary measure to help users upgrade from Boost 1.66 to newer Boost versions. It will
-// be removed eventually.
-//
-// More info at:
-// https://github.com/boostorg/atomic/issues/11
-// http://boost.2283326.n4.nabble.com/atomic-op-and-test-naming-tc4701445.html
-#if defined(BOOST_ATOMIC_HIGHLIGHT_OP_AND_TEST)
-#define BOOST_ATOMIC_DETAIL_HIGHLIGHT_OP_AND_TEST BOOST_ATOMIC_DETAIL_DEPRECATED("Boost.Atomic 1.67 has changed (op)_and_test result to the opposite. The functions now return true when the result is non-zero. Please, verify your use of the operation and undefine BOOST_ATOMIC_HIGHLIGHT_OP_AND_TEST.")
+// In Boost.Atomic 1.73 we deprecated atomic<>::storage() accessor in favor of atomic<>::value(). In future releases storage() will be removed.
+#if !defined(BOOST_ATOMIC_SILENCE_STORAGE_DEPRECATION)
+#define BOOST_ATOMIC_DETAIL_STORAGE_DEPRECATED BOOST_ATOMIC_DETAIL_DEPRECATED("Boost.Atomic 1.73 has deprecated atomic<>::storage() in favor of atomic<>::value() and atomic<>::storage_type in favor of atomic<>::value_type. You can define BOOST_ATOMIC_SILENCE_STORAGE_DEPRECATION to disable this warning.")
 #else
-#define BOOST_ATOMIC_DETAIL_HIGHLIGHT_OP_AND_TEST
+#define BOOST_ATOMIC_DETAIL_STORAGE_DEPRECATED
 #endif
 
 #endif // BOOST_ATOMIC_DETAIL_CONFIG_HPP_INCLUDED_

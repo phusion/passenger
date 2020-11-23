@@ -396,16 +396,12 @@ namespace boost {
                functor_manager_operation_type op)
         {
           typedef typename get_function_tag<functor_type>::type tag_type;
-          switch (op) {
-          case get_functor_type_tag:
+          if (op == get_functor_type_tag) {
             out_buffer.members.type.type = &boost::typeindex::type_id<functor_type>().type_info();
             out_buffer.members.type.const_qualified = false;
             out_buffer.members.type.volatile_qualified = false;
-            return;
-
-          default:
+          } else {
             manager(in_buffer, out_buffer, op, tag_type());
-            return;
           }
         }
       };
@@ -510,16 +506,12 @@ namespace boost {
                functor_manager_operation_type op)
         {
           typedef typename get_function_tag<functor_type>::type tag_type;
-          switch (op) {
-          case get_functor_type_tag:
+          if (op == get_functor_type_tag) {
             out_buffer.members.type.type = &boost::typeindex::type_id<functor_type>().type_info();
             out_buffer.members.type.const_qualified = false;
             out_buffer.members.type.volatile_qualified = false;
-            return;
-
-          default:
+          } else {
             manager(in_buffer, out_buffer, op, tag_type());
-            return;
           }
         }
       };

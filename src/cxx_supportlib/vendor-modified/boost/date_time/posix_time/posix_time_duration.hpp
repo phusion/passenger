@@ -1,7 +1,7 @@
 #ifndef POSIX_TIME_DURATION_HPP___
 #define POSIX_TIME_DURATION_HPP___
 
-/* Copyright (c) 2002,2003 CrystalClear Software, Inc.
+/* Copyright (c) 2002,2003, 2020 CrystalClear Software, Inc.
  * Use, modification and distribution is subject to the 
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
@@ -26,7 +26,7 @@ namespace posix_time {
   {
   public:
       template <typename T>
-      explicit hours(T const& h,
+      BOOST_CXX14_CONSTEXPR explicit hours(T const& h,
           typename boost::enable_if<boost::is_integral<T>, void>::type* = BOOST_DATE_TIME_NULLPTR) :
       time_duration(numeric_cast<hour_type>(h), 0, 0)
     {}
@@ -40,7 +40,7 @@ namespace posix_time {
   {
   public:
       template <typename T>
-      explicit minutes(T const& m,
+      BOOST_CXX14_CONSTEXPR explicit minutes(T const& m,
           typename boost::enable_if<boost::is_integral<T>, void>::type* = BOOST_DATE_TIME_NULLPTR) :
       time_duration(0, numeric_cast<min_type>(m),0)
     {}
@@ -54,7 +54,7 @@ namespace posix_time {
   {
   public:
       template <typename T>
-      explicit seconds(T const& s,
+      BOOST_CXX14_CONSTEXPR explicit seconds(T const& s,
           typename boost::enable_if<boost::is_integral<T>, void>::type* = BOOST_DATE_TIME_NULLPTR) :
       time_duration(0,0, numeric_cast<sec_type>(s))
     {}

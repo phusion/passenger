@@ -48,6 +48,13 @@ struct is_container
          has_member_function_callable_with_empty<const Container>::value;
 };
 
+template <>
+struct is_container<void>
+{
+   static const bool value = false;
+};
+
+
 }  //namespace dtl {
 }  //namespace container {
 }  //namespace boost {

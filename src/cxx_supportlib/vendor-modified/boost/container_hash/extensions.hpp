@@ -22,7 +22,6 @@
 #include <boost/detail/container_fwd.hpp>
 #include <boost/core/enable_if.hpp>
 #include <boost/static_assert.hpp>
-#include <vector>
 
 #if !defined(BOOST_NO_CXX11_HDR_ARRAY)
 #   include <array>
@@ -69,56 +68,6 @@ namespace boost
         boost::hash_combine(seed, v.first);
         boost::hash_combine(seed, v.second);
         return seed;
-    }
-
-    inline std::size_t hash_range(
-        std::vector<bool>::iterator first,
-        std::vector<bool>::iterator last)
-    {
-        std::size_t seed = 0;
-
-        for(; first != last; ++first)
-        {
-            hash_combine<bool>(seed, *first);
-        }
-
-        return seed;
-    }
-
-    inline std::size_t hash_range(
-        std::vector<bool>::const_iterator first,
-        std::vector<bool>::const_iterator last)
-    {
-        std::size_t seed = 0;
-
-        for(; first != last; ++first)
-        {
-            hash_combine<bool>(seed, *first);
-        }
-
-        return seed;
-    }
-
-    inline void hash_range(
-        std::size_t& seed,
-        std::vector<bool>::iterator first,
-        std::vector<bool>::iterator last)
-    {
-        for(; first != last; ++first)
-        {
-            hash_combine<bool>(seed, *first);
-        }
-    }
-
-    inline void hash_range(
-        std::size_t& seed,
-        std::vector<bool>::const_iterator first,
-        std::vector<bool>::const_iterator last)
-    {
-        for(; first != last; ++first)
-        {
-            hash_combine<bool>(seed, *first);
-        }
     }
 
     template <class T, class A>

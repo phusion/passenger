@@ -158,7 +158,7 @@ public:
 #endif
 #include <climits>
 #include <boost/system/system_error.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 namespace boost {
   namespace thread_v2 {

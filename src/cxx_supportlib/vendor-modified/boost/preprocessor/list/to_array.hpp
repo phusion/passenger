@@ -28,13 +28,13 @@
 #
 # if BOOST_PP_VARIADICS && BOOST_PP_VARIADICS_MSVC && (_MSC_VER <= 1400)
 # define BOOST_PP_LIST_TO_ARRAY(list) \
-	BOOST_PP_IIF \
-		( \
-		BOOST_PP_LIST_IS_NIL(list), \
-		BOOST_PP_LIST_TO_ARRAY_VC8ORLESS_EMPTY, \
-		BOOST_PP_LIST_TO_ARRAY_VC8ORLESS_DO \
-		) \
-	(list) \
+    BOOST_PP_IIF \
+        ( \
+        BOOST_PP_LIST_IS_NIL(list), \
+        BOOST_PP_LIST_TO_ARRAY_VC8ORLESS_EMPTY, \
+        BOOST_PP_LIST_TO_ARRAY_VC8ORLESS_DO \
+        ) \
+    (list) \
 /**/
 # define BOOST_PP_LIST_TO_ARRAY_VC8ORLESS_EMPTY(list) (0,())
 # define BOOST_PP_LIST_TO_ARRAY_VC8ORLESS_DO(list) BOOST_PP_LIST_TO_ARRAY_I(BOOST_PP_WHILE, list)
@@ -46,7 +46,7 @@
 #    define BOOST_PP_LIST_TO_ARRAY_I(w, list) \
         BOOST_PP_LIST_TO_ARRAY_II(((BOOST_PP_TUPLE_REM_CTOR( \
             3, \
-	        w(BOOST_PP_LIST_TO_ARRAY_P, BOOST_PP_LIST_TO_ARRAY_O, (list, 1, (~))) \
+            w(BOOST_PP_LIST_TO_ARRAY_P, BOOST_PP_LIST_TO_ARRAY_O, (list, 1, (~))) \
         )))) \
         /**/
 #    define BOOST_PP_LIST_TO_ARRAY_II(p) BOOST_PP_LIST_TO_ARRAY_II_B(p)
@@ -56,7 +56,7 @@
 #    define BOOST_PP_LIST_TO_ARRAY_I(w, list) \
         BOOST_PP_LIST_TO_ARRAY_II(BOOST_PP_TUPLE_REM_CTOR( \
             3, \
-	        w(BOOST_PP_LIST_TO_ARRAY_P, BOOST_PP_LIST_TO_ARRAY_O, (list, 1, (~))) \
+            w(BOOST_PP_LIST_TO_ARRAY_P, BOOST_PP_LIST_TO_ARRAY_O, (list, 1, (~))) \
         )) \
         /**/
 #    define BOOST_PP_LIST_TO_ARRAY_II(im) BOOST_PP_LIST_TO_ARRAY_III(im)
@@ -138,13 +138,13 @@
 #
 # if BOOST_PP_VARIADICS && BOOST_PP_VARIADICS_MSVC && (_MSC_VER <= 1400)
 # define BOOST_PP_LIST_TO_ARRAY_D(d, list) \
-	BOOST_PP_IIF \
-		( \
-		BOOST_PP_LIST_IS_NIL(list), \
-		BOOST_PP_LIST_TO_ARRAY_D_VC8ORLESS_EMPTY, \
-		BOOST_PP_LIST_TO_ARRAY_D_VC8ORLESS_DO \
-		) \
-	(d, list) \
+    BOOST_PP_IIF \
+        ( \
+        BOOST_PP_LIST_IS_NIL(list), \
+        BOOST_PP_LIST_TO_ARRAY_D_VC8ORLESS_EMPTY, \
+        BOOST_PP_LIST_TO_ARRAY_D_VC8ORLESS_DO \
+        ) \
+    (d, list) \
 /**/
 # define BOOST_PP_LIST_TO_ARRAY_D_VC8ORLESS_EMPTY(d, list) (0,())
 # define BOOST_PP_LIST_TO_ARRAY_D_VC8ORLESS_DO(d, list) BOOST_PP_LIST_TO_ARRAY_I(BOOST_PP_WHILE_ ## d, list)

@@ -12,39 +12,16 @@
 //  like (GCC 2.96) . Do not even think of getting this to work, 
 //  a miserable failure will  be guaranteed!
 //
-//  Equally, this file has been tested for RTPs (Real Time Processes)
-//  only, not for DKMs (Downloadable Kernel Modules). These two types
-//  of executables differ largely in the available functionality of
-//  the C-library, STL, and so on. A DKM uses a C89 library with no
-//  wide character support and no guarantee of ANSI C. The same Dinkum 
+//  VxWorks supports C++ linkage in the kernel with
+//  DKMs (Downloadable Kernel Modules). But, until recently 
+//  the kernel used a C89 library with no
+//  wide character support and no guarantee of ANSI C. 
+//  Regardless of the C library the same Dinkum 
 //  STL library is used in both contexts. 
 //
 //  Similarly the Dinkum abridged STL that supports the loosely specified 
 //  embedded C++ standard has not been tested and is unlikely to work 
 //  on anything but the simplest library.
-// ====================================================================
-// 
-//  Additional Configuration
-//  -------------------------------------------------------------------
-//
-//  Because of the ordering of include files and other issues the following 
-//  additional definitions worked better outside this file.
-//
-//  When building the log library add the following to the b2 invocation
-//     define=BOOST_LOG_WITHOUT_IPC
-//  and 
-//     -DBOOST_LOG_WITHOUT_DEFAULT_FACTORIES
-//  to your compile options.
-//
-//  When building the test library add 
-//     -DBOOST_TEST_LIMITED_SIGNAL_DETAILS
-//  to your compile options
-//
-//  When building containers library add
-//     -DHAVE_MORECORE=0
-//  to your c compile options so dlmalloc heap library is compiled 
-//  without brk() calls
-//
 // ====================================================================
 //
 // Some important information regarding the usage of POSIX semaphores:
@@ -112,30 +89,20 @@
 // --------------------------------
 #define BOOST_PLATFORM "vxWorks"
 
-// Special behaviour for DKMs:
-#ifdef _WRS_KERNEL
-  // DKMs do not have the <cwchar>-header,
-  // but apparently they do have an intrinsic wchar_t meanwhile!
-#  define BOOST_NO_CWCHAR
-
-  // Lots of wide-functions and -headers are unavailable for DKMs as well:
-#  define BOOST_NO_CWCTYPE
-#  define BOOST_NO_SWPRINTF
-#  define BOOST_NO_STD_WSTRING
-#  define BOOST_NO_STD_WSTREAMBUF
-#endif
 
 // Generally available headers:
 #define BOOST_HAS_UNISTD_H
 #define BOOST_HAS_STDINT_H
 #define BOOST_HAS_DIRENT_H
-#define BOOST_HAS_SLIST
+//#define BOOST_HAS_SLIST
 
 // vxWorks does not have installed an iconv-library by default,
 // so unfortunately no Unicode support from scratch is available!
 // Thus, instead it is suggested to switch to ICU, as this seems
 // to be the most complete and portable option...
-#define BOOST_LOCALE_WITH_ICU
+#ifndef BOOST_LOCALE_WITH_ICU
+   #define BOOST_LOCALE_WITH_ICU
+#endif
 
 // Generally available functionality:
 #define BOOST_HAS_THREADS
@@ -170,16 +137,18 @@
 #  ifndef _POSIX_THREADS
 #    define _POSIX_THREADS 1
 #  endif
+// no sysconf( _SC_PAGESIZE) in kernel
+#  define BOOST_THREAD_USES_GETPAGESIZE
 #endif
 
 #if (_WRS_VXWORKS_MAJOR < 7) 
 // vxWorks-around: <time.h> #defines CLOCKS_PER_SEC as sysClkRateGet() but
 //                 miserably fails to #include the required <sysLib.h> to make
 //                 sysClkRateGet() available! So we manually include it here.
-#ifdef __RTP__
-#  include <time.h>
-#  include <sysLib.h>
-#endif
+#  ifdef __RTP__
+#    include <time.h>
+#    include <sysLib.h>
+#  endif
 
 // vxWorks-around: In <stdint.h> the macros INT32_C(), UINT32_C(), INT64_C() and
 //                 UINT64_C() are defined erroneously, yielding not a signed/
@@ -188,29 +157,46 @@
 //                 when trying to define several constants which do not fit into a
 //                 long type! We correct them here by redefining.
 
-#include <cstdint>
+#  include <cstdint>
+
+// Special behaviour for DKMs:
 
 // Some macro-magic to do the job
-#define VX_JOIN(X, Y)     VX_DO_JOIN(X, Y)
-#define VX_DO_JOIN(X, Y)  VX_DO_JOIN2(X, Y)
-#define VX_DO_JOIN2(X, Y) X##Y
+#  define VX_JOIN(X, Y)     VX_DO_JOIN(X, Y)
+#  define VX_DO_JOIN(X, Y)  VX_DO_JOIN2(X, Y)
+#  define VX_DO_JOIN2(X, Y) X##Y
 
 // Correctly setup the macros
-#undef  INT32_C
-#undef  UINT32_C
-#undef  INT64_C
-#undef  UINT64_C
-#define INT32_C(x)  VX_JOIN(x, L)
-#define UINT32_C(x) VX_JOIN(x, UL)
-#define INT64_C(x)  VX_JOIN(x, LL)
-#define UINT64_C(x) VX_JOIN(x, ULL)
+#  undef  INT32_C
+#  undef  UINT32_C
+#  undef  INT64_C
+#  undef  UINT64_C
+#  define INT32_C(x)  VX_JOIN(x, L)
+#  define UINT32_C(x) VX_JOIN(x, UL)
+#  define INT64_C(x)  VX_JOIN(x, LL)
+#  define UINT64_C(x) VX_JOIN(x, ULL)
 
 // #include Libraries required for the following function adaption
-#include <sys/time.h>
+#  include <sys/time.h>
 #endif  // _WRS_VXWORKS_MAJOR < 7
 
 #include <ioLib.h>
 #include <tickLib.h>
+
+#if defined(_WRS_KERNEL) && (_CPPLIB_VER < 700)
+  // recent kernels use Dinkum clib v7.00+
+  // with widechar but older kernels
+  // do not have the <cwchar>-header,
+  // but apparently they do have an intrinsic wchar_t meanwhile!
+#  define BOOST_NO_CWCHAR
+
+  // Lots of wide-functions and -headers are unavailable for DKMs as well:
+#  define BOOST_NO_CWCTYPE
+#  define BOOST_NO_SWPRINTF
+#  define BOOST_NO_STD_WSTRING
+#  define BOOST_NO_STD_WSTREAMBUF
+#endif
+
 
 // Use C-linkage for the following helper functions
 #ifdef __cplusplus
@@ -253,9 +239,9 @@ inline int truncate(const char *p, off_t l){
 }
 
 #ifdef __GNUC__
-#define ___unused __attribute__((unused))
+#  define ___unused __attribute__((unused))
 #else
-#define ___unused
+#  define ___unused
 #endif
 
 // Fake symlink handling by dummy functions:
@@ -291,7 +277,7 @@ inline int gettimeofday(struct timeval *tv, void * /*tzv*/) {
  * to avoid conflict with MPL operator times
  */
 #if (_WRS_VXWORKS_MAJOR < 7) 
-#ifdef __cplusplus
+#  ifdef __cplusplus
 
 // vxWorks provides neither struct tms nor function times()!
 // We implement an empty dummy-function, simply setting the user
@@ -327,25 +313,25 @@ struct tms{
 namespace std {
     using ::times;
 }
-#endif // __cplusplus
+#  endif // __cplusplus
 #endif // _WRS_VXWORKS_MAJOR < 7
 
 
 #ifdef __cplusplus
-extern "C" void 	bzero	    (void *, size_t);    // FD_ZERO uses bzero() but doesn't include strings.h
+extern "C" void   bzero     (void *, size_t);    // FD_ZERO uses bzero() but doesn't include strings.h
 
 // Put the selfmade functions into the std-namespace, just in case
 namespace std {
-# ifdef __RTP__
+#  ifdef __RTP__
     using ::getrlimit;
     using ::setrlimit;
-# endif
+#  endif
   using ::truncate;
   using ::symlink;
   using ::readlink;
-#if (_WRS_VXWORKS_MAJOR < 7)  
+#  if (_WRS_VXWORKS_MAJOR < 7)  
     using ::gettimeofday;
-#endif  
+#  endif  
 }
 #endif // __cplusplus
 
@@ -355,10 +341,12 @@ namespace std {
 
 // Include signal.h which might contain a typo to be corrected here
 #include <signal.h>
+
 #if (_WRS_VXWORKS_MAJOR < 7)
-#define getpagesize()    sysconf(_SC_PAGESIZE)         // getpagesize is deprecated anyway!
+#  define getpagesize()    sysconf(_SC_PAGESIZE)         // getpagesize is deprecated anyway!
 inline int lstat(p, b) { return stat(p, b); }  // lstat() == stat(), as vxWorks has no symlinks!
 #endif
+
 #ifndef S_ISSOCK
 #  define S_ISSOCK(mode) ((mode & S_IFMT) == S_IFSOCK) // Is file a socket?
 #endif
@@ -379,7 +367,7 @@ typedef int              locale_t;                     // locale_t is a POSIX-ex
 // vxWorks 7 adds C++11 support 
 // however it is optional, and does not match exactly the support determined
 // by examining the Dinkum STL version and GCC version (or ICC and DCC) 
-#ifndef _WRS_CONFIG_LANG_LIB_CPLUS_CPLUS_USER_2011
+#if !( defined( _WRS_CONFIG_LANG_LIB_CPLUS_CPLUS_USER_2011) || defined(_WRS_CONFIG_LIBCPLUS_STD))
 #  define BOOST_NO_CXX11_ADDRESSOF      // C11 addressof operator on memory location
 #  define BOOST_NO_CXX11_ALLOCATOR
 #  define BOOST_NO_CXX11_ATOMIC_SMART_PTR
@@ -408,9 +396,9 @@ typedef int              locale_t;                     // locale_t is a POSIX-ex
 #  define BOOST_NO_CXX11_HDR_UNORDERED_MAP
 #  define BOOST_NO_CXX11_HDR_UNORDERED_SET 
 #else
-#ifndef  BOOST_SYSTEM_NO_DEPRECATED
-#  define BOOST_SYSTEM_NO_DEPRECATED  // workaround link error in spirit
-#endif
+#  ifndef  BOOST_SYSTEM_NO_DEPRECATED
+#    define BOOST_SYSTEM_NO_DEPRECATED  // workaround link error in spirit
+#  endif
 #endif
 
 
@@ -418,6 +406,8 @@ typedef int              locale_t;                     // locale_t is a POSIX-ex
 #undef NONE
 // restrict is an iostreams class
 #undef restrict
+// affects some typeof tests
+#undef V7
 
 // use fake poll() from Unix layer in ASIO to get full functionality 
 // most libraries will use select() but this define allows 'iostream' functionality
@@ -429,5 +419,4 @@ typedef int              locale_t;                     // locale_t is a POSIX-ex
 #else 
 #  define BOOST_ASIO_DISABLE_SERIAL_PORT
 #endif
-
 

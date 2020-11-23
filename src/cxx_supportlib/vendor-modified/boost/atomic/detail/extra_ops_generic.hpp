@@ -17,19 +17,13 @@
 #include <cstddef>
 #include <boost/memory_order.hpp>
 #include <boost/atomic/detail/config.hpp>
-#include <boost/atomic/detail/storage_type.hpp>
-#include <boost/atomic/detail/integral_extend.hpp>
+#include <boost/atomic/detail/storage_traits.hpp>
+#include <boost/atomic/detail/integral_conversions.hpp>
 #include <boost/atomic/detail/extra_operations_fwd.hpp>
-#include <boost/atomic/capabilities.hpp>
+#include <boost/atomic/detail/header.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
-#endif
-
-#if defined(BOOST_MSVC)
-#pragma warning(push)
-// unary minus operator applied to unsigned type, result still unsigned
-#pragma warning(disable: 4146)
 #endif
 
 namespace boost {
@@ -38,12 +32,12 @@ namespace detail {
 
 //! Generic implementation of extra operations
 template< typename Base, std::size_t Size, bool Signed, bool = Base::full_cas_based >
-struct generic_extra_operations :
+struct extra_operations_generic :
     public Base
 {
     typedef Base base_type;
     typedef typename base_type::storage_type storage_type;
-    typedef typename make_storage_type< Size >::type emulated_storage_type;
+    typedef typename storage_traits< Size >::type emulated_storage_type;
 
     static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
     {
@@ -195,12 +189,12 @@ struct generic_extra_operations :
 
 //! Specialization for cases when the platform only natively supports CAS
 template< typename Base, std::size_t Size, bool Signed >
-struct generic_extra_operations< Base, Size, Signed, true > :
+struct extra_operations_generic< Base, Size, Signed, true > :
     public Base
 {
     typedef Base base_type;
     typedef typename base_type::storage_type storage_type;
-    typedef typename make_storage_type< Size >::type emulated_storage_type;
+    typedef typename storage_traits< Size >::type emulated_storage_type;
 
     static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
     {
@@ -387,7 +381,7 @@ struct generic_extra_operations< Base, Size, Signed, true > :
 // Default extra_operations template definition will be used unless specialized for a specific platform
 template< typename Base, std::size_t Size, bool Signed >
 struct extra_operations< Base, Size, Signed, true > :
-    public generic_extra_operations< Base, Size, Signed >
+    public extra_operations_generic< Base, Size, Signed >
 {
 };
 
@@ -395,8 +389,6 @@ struct extra_operations< Base, Size, Signed, true > :
 } // namespace atomics
 } // namespace boost
 
-#if defined(BOOST_MSVC)
-#pragma warning(pop)
-#endif
+#include <boost/atomic/detail/footer.hpp>
 
 #endif // BOOST_ATOMIC_DETAIL_EXTRA_OPS_GENERIC_HPP_INCLUDED_

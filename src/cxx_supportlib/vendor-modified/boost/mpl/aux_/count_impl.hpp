@@ -26,7 +26,7 @@ namespace boost { namespace mpl {
 template< typename Tag > struct count_impl
 {
     template< typename Sequence, typename T > struct apply
-#if BOOST_WORKAROUND(__BORLANDC__,BOOST_TESTED_AT(0x561))
+#if BOOST_WORKAROUND(BOOST_BORLANDC,BOOST_TESTED_AT(0x561))
     {
         typedef typename count_if< Sequence,same_as<T> >::type type;
         BOOST_STATIC_CONSTANT(int, value = BOOST_MPL_AUX_VALUE_WKND(type)::value);

@@ -96,7 +96,7 @@ namespace detail {
       static const bool value = sizeof(test<From, To>(0)) == 1;
    };
 
-#elif defined(__BORLANDC__) && (__BORLANDC__ < 0x560)
+#elif defined(BOOST_BORLANDC) && (BOOST_BORLANDC < 0x560)
 //
 // special version for Borland compilers
 // this version breaks when used for some
@@ -120,7 +120,7 @@ struct is_convertible_impl
 #pragma option pop
 };
 
-#elif defined(__GNUC__) || defined(__BORLANDC__) && (__BORLANDC__ < 0x600)
+#elif defined(__GNUC__) || defined(BOOST_BORLANDC) && (BOOST_BORLANDC < 0x600)
 // special version for gcc compiler + recent Borland versions
 // note that this does not pass UDT's through (...)
 
@@ -358,7 +358,7 @@ struct is_convertible_impl
        value = ( ::boost::detail::is_convertible_basic_impl<From,To>::value && ! ::boost::is_array<To>::value && ! ::boost::is_function<To>::value) 
     };
 };
-#elif !defined(__BORLANDC__) || __BORLANDC__ > 0x551
+#elif !defined(BOOST_BORLANDC) || BOOST_BORLANDC > 0x551
 template <typename From, typename To>
 struct is_convertible_impl
 {

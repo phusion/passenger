@@ -34,7 +34,7 @@ namespace boost{
 
    }
 
-   template <class T> struct is_destructible : public integral_constant<bool, sizeof(detail::is_destructible_imp::test<T>(0)) == sizeof(boost::type_traits::yes_type)>
+   template <class T> struct is_destructible : public integral_constant<bool, sizeof(boost::detail::is_destructible_imp::test<T>(0)) == sizeof(boost::type_traits::yes_type)>
    {
       BOOST_STATIC_ASSERT_MSG(boost::is_complete<T>::value, "Arguments to is_destructible must be complete types");
    };

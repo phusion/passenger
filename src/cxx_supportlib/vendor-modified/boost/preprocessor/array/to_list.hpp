@@ -22,13 +22,13 @@
 # /* BOOST_PP_ARRAY_TO_LIST */
 #
 #    define BOOST_PP_ARRAY_TO_LIST(array) \
-		BOOST_PP_IF \
-			( \
-			BOOST_PP_ARRAY_SIZE(array), \
-			BOOST_PP_ARRAY_TO_LIST_DO, \
-			BOOST_PP_ARRAY_TO_LIST_EMPTY \
-			) \
-		(array) \
+        BOOST_PP_IF \
+            ( \
+            BOOST_PP_ARRAY_SIZE(array), \
+            BOOST_PP_ARRAY_TO_LIST_DO, \
+            BOOST_PP_ARRAY_TO_LIST_EMPTY \
+            ) \
+        (array) \
 /**/
 #
 #    define BOOST_PP_ARRAY_TO_LIST_EMPTY(array) BOOST_PP_NIL

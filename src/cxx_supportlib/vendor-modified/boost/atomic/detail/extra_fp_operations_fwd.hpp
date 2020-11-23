@@ -16,6 +16,7 @@
 
 #include <cstddef>
 #include <boost/atomic/detail/config.hpp>
+#include <boost/atomic/detail/header.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
@@ -25,11 +26,13 @@ namespace boost {
 namespace atomics {
 namespace detail {
 
-template< typename Base, typename Value, std::size_t Size, bool = Base::is_always_lock_free >
+template< typename Base, typename Value = typename Base::value_type, std::size_t Size = sizeof(typename Base::storage_type), bool = Base::is_always_lock_free >
 struct extra_fp_operations;
 
 } // namespace detail
 } // namespace atomics
 } // namespace boost
+
+#include <boost/atomic/detail/footer.hpp>
 
 #endif // BOOST_ATOMIC_DETAIL_EXTRA_FP_OPERATIONS_FWD_HPP_INCLUDED_

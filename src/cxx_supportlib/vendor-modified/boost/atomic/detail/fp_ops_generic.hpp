@@ -18,8 +18,9 @@
 #include <boost/memory_order.hpp>
 #include <boost/atomic/detail/config.hpp>
 #include <boost/atomic/detail/bitwise_fp_cast.hpp>
-#include <boost/atomic/detail/storage_type.hpp>
+#include <boost/atomic/detail/storage_traits.hpp>
 #include <boost/atomic/detail/fp_operations_fwd.hpp>
+#include <boost/atomic/detail/header.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
@@ -31,7 +32,7 @@ namespace detail {
 
 //! Generic implementation of floating point operations
 template< typename Base, typename Value, std::size_t Size >
-struct generic_fp_operations :
+struct fp_operations_generic :
     public Base
 {
     typedef Base base_type;
@@ -72,12 +73,14 @@ struct generic_fp_operations :
 // Default fp_operations template definition will be used unless specialized for a specific platform
 template< typename Base, typename Value, std::size_t Size >
 struct fp_operations< Base, Value, Size, true > :
-    public generic_fp_operations< Base, Value, Size >
+    public fp_operations_generic< Base, Value, Size >
 {
 };
 
 } // namespace detail
 } // namespace atomics
 } // namespace boost
+
+#include <boost/atomic/detail/footer.hpp>
 
 #endif // BOOST_ATOMIC_DETAIL_FP_OPS_GENERIC_HPP_INCLUDED_

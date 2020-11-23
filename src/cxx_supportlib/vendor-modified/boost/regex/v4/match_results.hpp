@@ -95,7 +95,7 @@ public:
    // See https://svn.boost.org/trac/boost/ticket/3632.
    //
    match_results(const match_results& m)
-      : m_subs(m.m_subs), m_named_subs(m.m_named_subs), m_last_closed_paren(m.m_last_closed_paren), m_is_singular(m.m_is_singular) 
+      : m_subs(m.m_subs), m_base(), m_null(), m_named_subs(m.m_named_subs), m_last_closed_paren(m.m_last_closed_paren), m_is_singular(m.m_is_singular)
    {
       if(!m_is_singular)
       {

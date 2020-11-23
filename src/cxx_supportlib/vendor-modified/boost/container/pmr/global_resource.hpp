@@ -18,16 +18,13 @@
 #include <boost/container/detail/config_begin.hpp>
 #include <boost/container/detail/workaround.hpp>
 #include <boost/container/detail/auto_link.hpp>
+#include <boost/container/container_fwd.hpp>
 
 #include <cstddef>
 
 namespace boost {
 namespace container {
 namespace pmr {
-
-/// @cond
-class memory_resource;
-/// @endcond
 
 //! <b>Returns</b>: A pointer to a static-duration object of a type derived from
 //!   memory_resource that can serve as a resource for allocating memory using

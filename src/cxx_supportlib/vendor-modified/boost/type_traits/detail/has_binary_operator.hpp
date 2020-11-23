@@ -47,25 +47,25 @@ namespace boost
 
       struct dont_care;
 
-      template <class T, class U, class Ret, class = boost::void_t<>>
+      template <class T, class U, class Ret, class = void>
       struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _ret_imp) : public boost::false_type {};
 
       template <class T, class U, class Ret>
-      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _ret_imp)<T, U, Ret, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>())> >
+      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _ret_imp)<T, U, Ret, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>())>::type>
          : public boost::integral_constant<bool, ::boost::is_convertible<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>()), Ret>::value> {};
 
-      template <class T, class U, class = boost::void_t<> >
+      template <class T, class U, class = void >
       struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _void_imp) : public boost::false_type {};
 
       template <class T, class U>
-      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _void_imp)<T, U, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>())> >
+      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _void_imp)<T, U, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>())>::type>
          : public boost::integral_constant<bool, ::boost::is_void<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>())>::value> {};
 
-      template <class T, class U, class = boost::void_t<>>
+      template <class T, class U, class = void>
       struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _dc_imp) : public boost::false_type {};
 
       template <class T, class U>
-      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _dc_imp)<T, U, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>())> >
+      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _dc_imp)<T, U, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP std::declval<typename add_reference<U>::type>())>::type>
          : public boost::true_type {};
 
    }

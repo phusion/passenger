@@ -177,8 +177,7 @@ inline F memmove(I f, I l, F r) BOOST_NOEXCEPT_OR_NOTHROW
    value_type *const dest_raw = boost::movelib::iterator_to_raw_pointer(r);
    const value_type *const beg_raw = boost::movelib::iterator_to_raw_pointer(f);
    const value_type *const end_raw = boost::movelib::iterator_to_raw_pointer(l);
-   if(BOOST_LIKELY(beg_raw != end_raw)){
-      BOOST_ASSERT(beg_raw != 0);
+   if(BOOST_LIKELY(beg_raw != end_raw && dest_raw && beg_raw)){
       const typename boost::container::iterator_traits<I>::difference_type n = end_raw - beg_raw;
       std::memmove(dest_raw, beg_raw, sizeof(value_type)*n);
       boost::container::iterator_advance(r, n);
@@ -522,9 +521,9 @@ inline typename dtl::disable_if_memtransfer_copy_constructible<I, F, I>::type
 {
    F back = r;
    BOOST_TRY{
-      while (n--) {
+      while (n) {
          boost::container::construct_in_place(a, boost::movelib::iterator_to_raw_pointer(r), f);
-         ++f; ++r;
+         ++f; ++r; --n;
       }
    }
    BOOST_CATCH(...){
@@ -588,8 +587,10 @@ inline typename dtl::enable_if_memzero_initializable<F, F>::type
    uninitialized_value_init_alloc_n(Allocator &, typename boost::container::allocator_traits<Allocator>::size_type n, F r)
 {
    typedef typename boost::container::iterator_traits<F>::value_type value_type;
-   std::memset((void*)boost::movelib::iterator_to_raw_pointer(r), 0, sizeof(value_type)*n);
-   boost::container::iterator_advance(r, n);
+   if (BOOST_LIKELY(n)){
+      std::memset((void*)boost::movelib::iterator_to_raw_pointer(r), 0, sizeof(value_type)*n);
+      boost::container::iterator_advance(r, n);
+   }
    return r;
 }
 
@@ -893,8 +894,10 @@ inline typename dtl::enable_if_memtransfer_copy_assignable<I, F, F>::type
 {
    typedef typename boost::container::iterator_traits<I>::value_type value_type;
    const typename boost::container::iterator_traits<I>::difference_type n = boost::container::iterator_distance(f, l);
-   r -= n;
-   std::memmove((boost::movelib::iterator_to_raw_pointer)(r), (boost::movelib::iterator_to_raw_pointer)(f), sizeof(value_type)*n);
+   if (BOOST_LIKELY(n)){
+      r -= n;
+      std::memmove((boost::movelib::iterator_to_raw_pointer)(r), (boost::movelib::iterator_to_raw_pointer)(f), sizeof(value_type)*n);
+   }
    return r;
 }
 

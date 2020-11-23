@@ -564,7 +564,7 @@ class bstree_algorithms : public bstree_algorithms_base<NodeTraits>
       NodeTraits::set_parent(node, node_ptr());
       NodeTraits::set_left(node, node_ptr());
       NodeTraits::set_right(node, node_ptr());
-   };
+   }
 
    //! <b>Effects</b>: Returns true if node is in the same state as if called init(node)
    //!
@@ -576,7 +576,7 @@ class bstree_algorithms : public bstree_algorithms_base<NodeTraits>
       return !NodeTraits::get_parent(node) &&
              !NodeTraits::get_left(node)   &&
              !NodeTraits::get_right(node)  ;
-   };
+   }
 
    //! <b>Requires</b>: node must not be part of any tree.
    //!

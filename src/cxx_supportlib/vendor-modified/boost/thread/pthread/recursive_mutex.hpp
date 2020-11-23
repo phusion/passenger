@@ -71,7 +71,7 @@ namespace boost
                 boost::throw_exception(thread_resource_error(set_attr_res, "boost:: recursive_mutex constructor failed in pthread_mutexattr_settype"));
             }
 
-            int const res=pthread_mutex_init(&m,&attr);
+            int const res=posix::pthread_mutex_init(&m,&attr);
             if(res)
             {
                 BOOST_VERIFY(!pthread_mutexattr_destroy(&attr));
@@ -79,16 +79,16 @@ namespace boost
             }
             BOOST_VERIFY(!pthread_mutexattr_destroy(&attr));
 #else
-            int const res=pthread_mutex_init(&m,NULL);
+            int const res=posix::pthread_mutex_init(&m);
             if(res)
             {
                 boost::throw_exception(thread_resource_error(res, "boost:: recursive_mutex constructor failed in pthread_mutex_init"));
             }
-            int const res2=pthread::cond_init(cond);
+            int const res2=posix::pthread_cond_init(&cond);
             if(res2)
             {
-                BOOST_VERIFY(!pthread_mutex_destroy(&m));
-                boost::throw_exception(thread_resource_error(res2, "boost:: recursive_mutex constructor failed in pthread::cond_init"));
+                BOOST_VERIFY(!posix::pthread_mutex_destroy(&m));
+                boost::throw_exception(thread_resource_error(res2, "boost:: recursive_mutex constructor failed in pthread_cond_init"));
             }
             is_locked=false;
             count=0;
@@ -96,9 +96,9 @@ namespace boost
         }
         ~recursive_mutex()
         {
-            BOOST_VERIFY(!pthread_mutex_destroy(&m));
+            BOOST_VERIFY(!posix::pthread_mutex_destroy(&m));
 #ifndef BOOST_THREAD_HAS_PTHREAD_MUTEXATTR_SETTYPE
-            BOOST_VERIFY(!pthread_cond_destroy(&cond));
+            BOOST_VERIFY(!posix::pthread_cond_destroy(&cond));
 #endif
         }
 
@@ -138,7 +138,7 @@ namespace boost
 
             while(is_locked)
             {
-                BOOST_VERIFY(!pthread_cond_wait(&cond,&m));
+                BOOST_VERIFY(!posix::pthread_cond_wait(&cond,&m));
             }
             is_locked=true;
             ++count;
@@ -152,7 +152,7 @@ namespace boost
             {
                 is_locked=false;
             }
-            BOOST_VERIFY(!pthread_cond_signal(&cond));
+            BOOST_VERIFY(!posix::pthread_cond_signal(&cond));
         }
 
         bool try_lock()
@@ -206,7 +206,7 @@ namespace boost
                 boost::throw_exception(thread_resource_error(set_attr_res, "boost:: recursive_timed_mutex constructor failed in pthread_mutexattr_settype"));
             }
 
-            int const res=pthread_mutex_init(&m,&attr);
+            int const res=posix::pthread_mutex_init(&m,&attr);
             if(res)
             {
                 BOOST_VERIFY(!pthread_mutexattr_destroy(&attr));
@@ -214,16 +214,16 @@ namespace boost
             }
             BOOST_VERIFY(!pthread_mutexattr_destroy(&attr));
 #else
-            int const res=pthread_mutex_init(&m,NULL);
+            int const res=posix::pthread_mutex_init(&m);
             if(res)
             {
                 boost::throw_exception(thread_resource_error(res, "boost:: recursive_timed_mutex constructor failed in pthread_mutex_init"));
             }
-            int const res2=pthread::cond_init(cond);
+            int const res2=posix::pthread_cond_init(&cond);
             if(res2)
             {
-                BOOST_VERIFY(!pthread_mutex_destroy(&m));
-                boost::throw_exception(thread_resource_error(res2, "boost:: recursive_timed_mutex constructor failed in pthread::cond_init"));
+                BOOST_VERIFY(!posix::pthread_mutex_destroy(&m));
+                boost::throw_exception(thread_resource_error(res2, "boost:: recursive_timed_mutex constructor failed in pthread_cond_init"));
             }
             is_locked=false;
             count=0;
@@ -231,9 +231,9 @@ namespace boost
         }
         ~recursive_timed_mutex()
         {
-            BOOST_VERIFY(!pthread_mutex_destroy(&m));
+            BOOST_VERIFY(!posix::pthread_mutex_destroy(&m));
 #ifndef BOOST_USE_PTHREAD_RECURSIVE_TIMEDLOCK
-            BOOST_VERIFY(!pthread_cond_destroy(&cond));
+            BOOST_VERIFY(!posix::pthread_cond_destroy(&cond));
 #endif
         }
 
@@ -306,7 +306,7 @@ namespace boost
 
             while(is_locked)
             {
-                BOOST_VERIFY(!pthread_cond_wait(&cond,&m));
+                BOOST_VERIFY(!posix::pthread_cond_wait(&cond,&m));
             }
             is_locked=true;
             ++count;
@@ -320,7 +320,7 @@ namespace boost
             {
                 is_locked=false;
             }
-            BOOST_VERIFY(!pthread_cond_signal(&cond));
+            BOOST_VERIFY(!posix::pthread_cond_signal(&cond));
         }
 
         bool try_lock() BOOST_NOEXCEPT
@@ -347,7 +347,7 @@ namespace boost
             }
             while(is_locked)
             {
-                int const cond_res=pthread_cond_timedwait(&cond,&m,&timeout.getTs());
+                int const cond_res=posix::pthread_cond_timedwait(&cond,&m,&timeout.getTs());
                 if(cond_res==ETIMEDOUT)
                 {
                     break;

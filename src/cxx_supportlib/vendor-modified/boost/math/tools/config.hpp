@@ -11,7 +11,7 @@
 #endif
 
 #include <boost/config.hpp>
-#include <boost/predef.h>
+#include <boost/predef/architecture/x86.h>
 #include <boost/cstdint.hpp> // for boost::uintmax_t
 #include <boost/detail/workaround.hpp>
 #include <boost/type_traits/is_integral.hpp>
@@ -46,7 +46,7 @@
 #endif
 #ifdef __IBMCPP__
 //
-// For reasons I don't unserstand, the tests with IMB's compiler all
+// For reasons I don't understand, the tests with IMB's compiler all
 // pass at long double precision, but fail with real_concept, those tests
 // are disabled for now.  (JM 2012).
 #  define BOOST_MATH_NO_REAL_CONCEPT_TESTS
@@ -184,10 +184,20 @@
 //
 #ifdef BOOST_MSVC
 #  define BOOST_MATH_POLY_METHOD 2
+#if BOOST_MSVC <= 1900
 #  define BOOST_MATH_RATIONAL_METHOD 1
+#else
+#  define BOOST_MATH_RATIONAL_METHOD 2
+#endif
+#if BOOST_MSVC > 1900
+#  define BOOST_MATH_INT_TABLE_TYPE(RT, IT) RT
+#  define BOOST_MATH_INT_VALUE_SUFFIX(RV, SUF) RV##.0L
+#endif
+
 #elif defined(BOOST_INTEL)
 #  define BOOST_MATH_POLY_METHOD 2
 #  define BOOST_MATH_RATIONAL_METHOD 1
+
 #elif defined(__GNUC__)
 #if __GNUC__ < 4
 #  define BOOST_MATH_POLY_METHOD 3
@@ -196,8 +206,18 @@
 #  define BOOST_MATH_INT_VALUE_SUFFIX(RV, SUF) RV##.0L
 #else
 #  define BOOST_MATH_POLY_METHOD 3
-#  define BOOST_MATH_RATIONAL_METHOD 1
+#  define BOOST_MATH_RATIONAL_METHOD 3
 #endif
+
+#elif defined(__clang__)
+
+#if __clang__ > 6
+#  define BOOST_MATH_POLY_METHOD 3
+#  define BOOST_MATH_RATIONAL_METHOD 3
+#  define BOOST_MATH_INT_TABLE_TYPE(RT, IT) RT
+#  define BOOST_MATH_INT_VALUE_SUFFIX(RV, SUF) RV##.0L
+#endif
+
 #endif
 
 #if defined(BOOST_NO_LONG_LONG) && !defined(BOOST_MATH_INT_TABLE_TYPE)

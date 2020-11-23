@@ -2,7 +2,7 @@
 // ssl/detail/write_op.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2018 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -31,6 +31,11 @@ template <typename ConstBufferSequence>
 class write_op
 {
 public:
+  static BOOST_ASIO_CONSTEXPR const char* tracking_name()
+  {
+    return "ssl::stream<>::async_write_some";
+  }
+
   write_op(const ConstBufferSequence& buffers)
     : buffers_(buffers)
   {
@@ -40,9 +45,13 @@ public:
       boost::system::error_code& ec,
       std::size_t& bytes_transferred) const
   {
+    unsigned char storage[
+      boost::asio::detail::buffer_sequence_adapter<boost::asio::const_buffer,
+        ConstBufferSequence>::linearisation_storage_size];
+
     boost::asio::const_buffer buffer =
       boost::asio::detail::buffer_sequence_adapter<boost::asio::const_buffer,
-        ConstBufferSequence>::first(buffers_);
+        ConstBufferSequence>::linearise(buffers_, boost::asio::buffer(storage));
 
     return eng.write(buffer, ec, bytes_transferred);
   }

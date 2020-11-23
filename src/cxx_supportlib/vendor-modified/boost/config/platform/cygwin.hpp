@@ -42,8 +42,11 @@
 #   define BOOST_HAS_STDINT_H
 #endif
 
+#include <cygwin/version.h>
+#if (CYGWIN_VERSION_API_MAJOR == 0 && CYGWIN_VERSION_API_MINOR < 231)
 /// Cygwin has no fenv.h
 #define BOOST_NO_FENV_H
+#endif
 
 // Cygwin has it's own <pthread.h> which breaks <shared_mutex> unless the correct compiler flags are used:
 #ifndef BOOST_NO_CXX14_HDR_SHARED_MUTEX

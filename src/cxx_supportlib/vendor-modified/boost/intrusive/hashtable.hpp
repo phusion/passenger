@@ -292,7 +292,7 @@ struct unordered_bucket_impl
    typedef typename
       get_slist_impl_from_supposed_value_traits
          <SupposedValueTraits>::type            slist_impl;
-   typedef detail::bucket_impl<slist_impl>      implementation_defined;
+   typedef bucket_impl<slist_impl>              implementation_defined;
    typedef implementation_defined               type;
 };
 
@@ -569,7 +569,7 @@ struct unordered_default_bucket_traits
    typedef typename detail::
       get_slist_impl_from_supposed_value_traits
          <supposed_value_traits>::type          slist_impl;
-   typedef detail::bucket_traits_impl
+   typedef bucket_traits_impl
       <slist_impl>                              implementation_defined;
    typedef implementation_defined               type;
 };
@@ -604,10 +604,10 @@ struct downcast_node_to_value_t
    :  public detail::node_to_value<ValueTraits, IsConst>
 {
    typedef detail::node_to_value<ValueTraits, IsConst>  base_t;
-   typedef typename base_t::result_type                     result_type;
+   typedef typename base_t::result_type                 result_type;
    typedef ValueTraits                                  value_traits;
-   typedef typename detail::get_slist_impl
-      <typename detail::reduced_slist_node_traits
+   typedef typename get_slist_impl
+      <typename reduced_slist_node_traits
          <typename value_traits::node_traits>::type
       >::type                                               slist_impl;
    typedef typename detail::add_const_if_c
@@ -669,7 +669,7 @@ struct bucket_plus_vtraits
    typedef typename value_traits::node_traits            node_traits;
    typedef unordered_group_adapter<node_traits>          group_traits;
    typedef typename slist_impl::iterator                 siterator;
-   typedef detail::bucket_impl<slist_impl>               bucket_type;
+   typedef bucket_impl<slist_impl>               bucket_type;
    typedef detail::group_functions<node_traits>          group_functions_t;
    typedef typename slist_impl::node_algorithms          node_algorithms;
    typedef typename slist_impl::node_ptr                slist_node_ptr;
@@ -1135,7 +1135,7 @@ struct bucket_hash_equal_t
    typedef BucketTraits                         bucket_traits;
    typedef typename bucket_plus_vtraits_t::slist_impl       slist_impl;
    typedef typename slist_impl::iterator                    siterator;
-   typedef detail::bucket_impl<slist_impl>                  bucket_type;
+   typedef bucket_impl<slist_impl>                  bucket_type;
    typedef typename detail::unordered_bucket_ptr_impl<value_traits>::type bucket_ptr;
 
    template<class BucketTraitsType>
@@ -1386,8 +1386,8 @@ struct hashdata_internal
    typedef typename node_traits::node_ptr                  node_ptr;
    typedef typename node_traits::const_node_ptr          const_node_ptr;
    typedef detail::node_functions<node_traits>              node_functions_t;
-   typedef typename detail::get_slist_impl
-      <typename detail::reduced_slist_node_traits
+   typedef typename get_slist_impl
+      <typename reduced_slist_node_traits
          <typename value_traits::node_traits>::type
       >::type                                               slist_impl;
    typedef typename slist_impl::node_algorithms             node_algorithms;
@@ -1697,7 +1697,7 @@ class hashtable_impl
    typedef SizeType                                                  size_type;
    typedef typename internal_type::key_equal                         key_equal;
    typedef typename internal_type::hasher                            hasher;
-   typedef detail::bucket_impl<slist_impl>                           bucket_type;
+   typedef bucket_impl<slist_impl>                           bucket_type;
    typedef typename internal_type::bucket_ptr                        bucket_ptr;
    typedef typename slist_impl::iterator                             siterator;
    typedef typename slist_impl::const_iterator                       const_siterator;
@@ -3515,14 +3515,10 @@ class hashtable_impl
 };
 
 /// @cond
-#if !defined(BOOST_INTRUSIVE_VARIADIC_TEMPLATES)
 template < class T
          , bool UniqueKeys
          , class PackedOptions
          >
-#else
-template <class T, bool UniqueKeys, class ...Options>
-#endif
 struct make_bucket_traits
 {
    //Real value traits must be calculated from options
@@ -3532,8 +3528,8 @@ struct make_bucket_traits
    typedef typename PackedOptions::bucket_traits            specified_bucket_traits;
 
    //Real bucket traits must be calculated from options and calculated value_traits
-   typedef typename detail::get_slist_impl
-      <typename detail::reduced_slist_node_traits
+   typedef typename get_slist_impl
+      <typename reduced_slist_node_traits
          <typename value_traits::node_traits>::type
       >::type                                            slist_impl;
 
@@ -3542,7 +3538,7 @@ struct make_bucket_traits
                      < specified_bucket_traits
                      , default_bucket_traits
                      >::value
-                  , detail::bucket_traits_impl<slist_impl>
+                  , bucket_traits_impl<slist_impl>
                   , specified_bucket_traits
                   >::type                                type;
 };

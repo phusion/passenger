@@ -77,7 +77,7 @@ namespace container {
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
-template<class Allocator>
+template<class T, class VoidAllocator, class Options>
 class small_vector_allocator;
 
 namespace allocator_traits_detail {
@@ -99,8 +99,8 @@ template<class T>
 struct is_std_allocator< std::allocator<T> >
 {  static const bool value = true; };
 
-template<class T>
-struct is_std_allocator< small_vector_allocator< std::allocator<T> > >
+template<class T, class Options>
+struct is_std_allocator< small_vector_allocator<T, std::allocator<T>, Options > >
 {  static const bool value = true; };
 
 template<class Allocator>
@@ -468,6 +468,22 @@ struct allocator_traits
 
    #endif   //#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 };
+
+#if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+template<class T, class AllocatorOrVoid>
+struct real_allocator
+{
+   typedef AllocatorOrVoid type;
+};
+
+template<class T>
+struct real_allocator<T, void>
+{
+   typedef new_allocator<T> type;
+};
+
+#endif   //#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
 }  //namespace container {
 }  //namespace boost {

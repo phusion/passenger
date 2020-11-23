@@ -26,17 +26,17 @@
 # /* BOOST_PP_TUPLE_REMOVE */
 #
 # define BOOST_PP_TUPLE_REMOVE(tuple, i) \
-	BOOST_PP_IIF \
-		( \
-		BOOST_PP_GREATER(BOOST_PP_TUPLE_SIZE(tuple),1), \
-		BOOST_PP_TUPLE_REMOVE_EXEC, \
-		BOOST_PP_TUPLE_REMOVE_RETURN \
-		) \
-	(tuple, i) \
+    BOOST_PP_IIF \
+        ( \
+        BOOST_PP_GREATER(BOOST_PP_TUPLE_SIZE(tuple),1), \
+        BOOST_PP_TUPLE_REMOVE_EXEC, \
+        BOOST_PP_TUPLE_REMOVE_RETURN \
+        ) \
+    (tuple, i) \
 /**/
 #
 # define BOOST_PP_TUPLE_REMOVE_EXEC(tuple, i) \
-	BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_REMOVE(BOOST_PP_TUPLE_TO_ARRAY(tuple), i)) \
+    BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_REMOVE(BOOST_PP_TUPLE_TO_ARRAY(tuple), i)) \
 /**/
 #
 # define BOOST_PP_TUPLE_REMOVE_RETURN(tuple, i) tuple
@@ -44,17 +44,17 @@
 # /* BOOST_PP_TUPLE_REMOVE_D */
 #
 # define BOOST_PP_TUPLE_REMOVE_D(d, tuple, i) \
-	BOOST_PP_IIF \
-		( \
-		BOOST_PP_GREATER_D(d, BOOST_PP_TUPLE_SIZE(tuple), 1), \
-		BOOST_PP_TUPLE_REMOVE_D_EXEC, \
-		BOOST_PP_TUPLE_REMOVE_D_RETURN \
-		) \
-	(d, tuple, i) \
+    BOOST_PP_IIF \
+        ( \
+        BOOST_PP_GREATER_D(d, BOOST_PP_TUPLE_SIZE(tuple), 1), \
+        BOOST_PP_TUPLE_REMOVE_D_EXEC, \
+        BOOST_PP_TUPLE_REMOVE_D_RETURN \
+        ) \
+    (d, tuple, i) \
 /**/
 #
 # define BOOST_PP_TUPLE_REMOVE_D_EXEC(d, tuple, i) \
-	BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_REMOVE_D(d, BOOST_PP_TUPLE_TO_ARRAY(tuple), i)) \
+    BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_REMOVE_D(d, BOOST_PP_TUPLE_TO_ARRAY(tuple), i)) \
 /**/
 #
 # define BOOST_PP_TUPLE_REMOVE_D_RETURN(d, tuple, i) tuple

@@ -196,11 +196,11 @@ typedef struct boost_cont_memchain_impl
 
 /*!Indicates the all elements allocated by boost_cont_multialloc_nodes or boost_cont_multialloc_arrays
    must be contiguous.*/
-#define DL_MULTIALLOC_ALL_CONTIGUOUS        ((size_t)(-1))
+#define BOOST_CONTAINER_DL_MULTIALLOC_ALL_CONTIGUOUS        ((size_t)(-1))
 
 /*!Indicates the number of contiguous elements allocated by boost_cont_multialloc_nodes or boost_cont_multialloc_arrays
    should be selected by those functions.*/
-#define DL_MULTIALLOC_DEFAULT_CONTIGUOUS    ((size_t)(0))
+#define BOOST_CONTAINER_DL_MULTIALLOC_DEFAULT_CONTIGUOUS    ((size_t)(0))
 
 typedef struct boost_cont_malloc_stats_impl
 {
@@ -225,8 +225,8 @@ enum
    BOOST_CONTAINER_EXPAND_OR_NEW         = BOOST_CONTAINER_ALLOCATE_NEW | BOOST_CONTAINER_EXPAND_BOTH
 };
 
-//#define BOOST_CONTAINERDLMALLOC__FOOTERS
-#ifndef BOOST_CONTAINERDLMALLOC__FOOTERS
+//#define BOOST_CONTAINER_DLMALLOC_FOOTERS
+#ifndef BOOST_CONTAINER_DLMALLOC_FOOTERS
 enum {   BOOST_CONTAINER_ALLOCATION_PAYLOAD = sizeof(size_t)   };
 #else
 enum {   BOOST_CONTAINER_ALLOCATION_PAYLOAD = sizeof(size_t)*2   };

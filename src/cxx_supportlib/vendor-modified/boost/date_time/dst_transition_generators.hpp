@@ -7,7 +7,7 @@
 #ifndef DATE_TIME_DATE_DST_TRANSITION_DAY_GEN_HPP__
 #define DATE_TIME_DATE_DST_TRANSITION_DAY_GEN_HPP__
 
-
+#include <string>
 
 namespace boost {
 namespace date_time {
@@ -29,7 +29,7 @@ namespace date_time {
     //! Canonical form for a class that provides day rule calculation
     /*! This class is used to generate specific sets of dst rules
      *  
-     *@param spec Provides a specifiction of the function object types used
+     *@tparam spec Provides a specifiction of the function object types used
      *            to generate start and end days of daylight savings as well
      *            as the date type.
      */

@@ -10,13 +10,19 @@
 #define BOOST_THREAD_SERIAL_EXECUTOR_CONT_HPP
 
 #include <boost/thread/detail/config.hpp>
+#if defined BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION && defined BOOST_THREAD_PROVIDES_EXECUTORS && defined BOOST_THREAD_USES_MOVE
+
+#include <exception> // std::terminate
+#include <boost/throw_exception.hpp>
 #include <boost/thread/detail/delete.hpp>
 #include <boost/thread/detail/move.hpp>
 #include <boost/thread/concurrent_queues/sync_queue.hpp>
 #include <boost/thread/executors/work.hpp>
 #include <boost/thread/executors/generic_executor_ref.hpp>
+#include <boost/thread/mutex.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/scoped_thread.hpp>
+#include <boost/thread/lock_guard.hpp>
 
 #include <boost/config/abi_prefix.hpp>
 
@@ -32,7 +38,7 @@ namespace executors
   private:
 
     generic_executor_ref ex_;
-    future<void> fut_; // protected by mtx_
+    BOOST_THREAD_FUTURE<void> fut_; // protected by mtx_
     bool closed_; // protected by mtx_
     mutex mtx_;
 
@@ -44,7 +50,7 @@ namespace executors
       };
       continuation(BOOST_THREAD_RV_REF(work) tsk)
       : task(boost::move(tsk)) {}
-      void operator()(future<void> f)
+      void operator()(BOOST_THREAD_FUTURE<void> f)
       {
         try {
           task();
@@ -167,4 +173,5 @@ using executors::serial_executor_cont;
 
 #include <boost/config/abi_suffix.hpp>
 
+#endif
 #endif

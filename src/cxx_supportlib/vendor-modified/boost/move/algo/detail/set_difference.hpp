@@ -174,7 +174,7 @@ ForwardOutputIt1 inplace_set_unique_difference
          ++first2;
       }
       else if (comp(*first1, *first2)){
-         //skip any adjacent equivalent elementin range 1
+         //skip any adjacent equivalent element in range 1
          ForwardOutputIt1 result = first1;
          if (++first1 != last1 && !comp(*result, *first1)) {
             //Some elements from range 1 must be skipped, no longer an inplace operation

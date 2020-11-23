@@ -481,16 +481,17 @@ class treap_algorithms
    //!
    //!   "commit_data" remains valid for a subsequent "insert_unique_commit" only
    //!   if no more objects are inserted or erased from the set.
-   template<class KeyType, class KeyNodePtrCompare, class KeyNodePtrPrioCompare>
+   template<class KeyType, class KeyNodePtrCompare, class PrioType, class PrioNodePtrPrioCompare>
    static std::pair<node_ptr, bool> insert_unique_check
-      (const_node_ptr header,  const KeyType &key
-      ,KeyNodePtrCompare comp, KeyNodePtrPrioCompare pcomp
-      ,insert_commit_data &commit_data)
+      ( const_node_ptr header
+      , const KeyType &key, KeyNodePtrCompare comp
+      , const PrioType &prio, PrioNodePtrPrioCompare pcomp
+      , insert_commit_data &commit_data)
    {
       std::pair<node_ptr, bool> ret =
          bstree_algo::insert_unique_check(header, key, comp, commit_data);
       if(ret.second)
-         rebalance_after_insertion_check(header, commit_data.node, key, pcomp, commit_data.rotations);
+         rebalance_after_insertion_check(header, commit_data.node, prio, pcomp, commit_data.rotations);
       return ret;
    }
 
@@ -533,15 +534,17 @@ class treap_algorithms
    //!
    //!   "commit_data" remains valid for a subsequent "insert_unique_commit" only
    //!   if no more objects are inserted or erased from the set.
-   template<class KeyType, class KeyNodePtrCompare, class KeyNodePtrPrioCompare>
+   template<class KeyType, class KeyNodePtrCompare, class PrioType, class PrioNodePtrPrioCompare>
    static std::pair<node_ptr, bool> insert_unique_check
-      (const_node_ptr header, node_ptr hint, const KeyType &key
-      ,KeyNodePtrCompare comp, KeyNodePtrPrioCompare pcomp, insert_commit_data &commit_data)
+      ( const_node_ptr header, node_ptr hint
+      , const KeyType &key, KeyNodePtrCompare comp
+      , const PrioType &prio, PrioNodePtrPrioCompare pcomp
+      , insert_commit_data &commit_data)
    {
       std::pair<node_ptr, bool> ret =
          bstree_algo::insert_unique_check(header, hint, key, comp, commit_data);
       if(ret.second)
-         rebalance_after_insertion_check(header, commit_data.node, key, pcomp, commit_data.rotations);
+         rebalance_after_insertion_check(header, commit_data.node, prio, pcomp, commit_data.rotations);
       return ret;
    }
 
@@ -570,12 +573,12 @@ class treap_algorithms
    }
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::transfer_unique
-   template<class NodePtrCompare, class KeyNodePtrPrioCompare>
+   template<class NodePtrCompare, class PrioNodePtrPrioCompare>
    static bool transfer_unique
-      (node_ptr header1, NodePtrCompare comp, KeyNodePtrPrioCompare pcomp, node_ptr header2, node_ptr z)
+      (node_ptr header1, NodePtrCompare comp, PrioNodePtrPrioCompare pcomp, node_ptr header2, node_ptr z)
    {
       insert_commit_data commit_data;
-      bool const transferable = insert_unique_check(header1, z, comp, pcomp, commit_data).second;
+      bool const transferable = insert_unique_check(header1, z, comp, z, pcomp, commit_data).second;
       if(transferable){
          erase(header2, z, pcomp);
          insert_unique_commit(header1, z, commit_data);         
@@ -584,9 +587,9 @@ class treap_algorithms
    }
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::transfer_equal
-   template<class NodePtrCompare, class KeyNodePtrPrioCompare>
+   template<class NodePtrCompare, class PrioNodePtrPrioCompare>
    static void transfer_equal
-      (node_ptr header1, NodePtrCompare comp, KeyNodePtrPrioCompare pcomp, node_ptr header2, node_ptr z)
+      (node_ptr header1, NodePtrCompare comp, PrioNodePtrPrioCompare pcomp, node_ptr header2, node_ptr z)
    {
       insert_commit_data commit_data;
       bstree_algo::insert_equal_upper_bound_check(header1, z, comp, commit_data);

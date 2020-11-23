@@ -8,12 +8,15 @@
  * $Date$
  */
 
+#include <string>
 #include <locale>
 #include <iostream>
 #include <iterator> // i/ostreambuf_iterator
 #include <boost/io/ios_state.hpp>
+#include <boost/date_time/special_defs.hpp>
 #include <boost/date_time/time_facet.hpp>
 #include <boost/date_time/string_convert.hpp>
+#include <boost/date_time/local_time/local_time_types.hpp>
 #include <boost/date_time/local_time/local_date_time.hpp>
 #include <boost/date_time/local_time/posix_time_zone.hpp>
 #include <boost/date_time/local_time/conversion.hpp> // to_tm will be needed in the facets

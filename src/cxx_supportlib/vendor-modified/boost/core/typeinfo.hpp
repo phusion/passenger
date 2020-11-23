@@ -47,7 +47,7 @@ public:
 
     bool operator==( typeinfo const& rhs ) const
     {
-#if ( defined(_WIN32) || defined(__CYGWIN__) ) && defined(__GNUC__) && !defined(BOOST_DISABLE_CURRENT_FUNCTION)
+#if ( defined(_WIN32) || defined(__CYGWIN__) ) && ( defined(__GNUC__) || defined(__clang__) ) && !defined(BOOST_DISABLE_CURRENT_FUNCTION)
 
         return lib_id_ == rhs.lib_id_? this == &rhs: std::strcmp( name_, rhs.name_ ) == 0;
 
@@ -65,7 +65,7 @@ public:
 
     bool before( typeinfo const& rhs ) const
     {
-#if ( defined(_WIN32) || defined(__CYGWIN__) ) && defined(__GNUC__) && !defined(BOOST_DISABLE_CURRENT_FUNCTION)
+#if ( defined(_WIN32) || defined(__CYGWIN__) ) && ( defined(__GNUC__) || defined(__clang__) ) && !defined(BOOST_DISABLE_CURRENT_FUNCTION)
 
         return lib_id_ == rhs.lib_id_? std::less< typeinfo const* >()( this, &rhs ): std::strcmp( name_, rhs.name_ ) < 0;
 

@@ -27,6 +27,7 @@
 #include <boost/intrusive/circular_list_algorithms.hpp>
 #include <boost/move/detail/type_traits.hpp>
 #include <boost/assert.hpp>
+#include <boost/container/detail/placement_new.hpp>
 
 #include <cstddef>
 
@@ -100,7 +101,7 @@ class block_list_base
       if((size_t(-1) - header_size) < size)
          throw_bad_alloc();
       void *p = mr.allocate(size+header_size);
-      block_list_header &mb  = *::new((void*)p) DerivedFromBlockListHeader;
+      block_list_header &mb  = *::new((void*)p, boost_container_new_t()) DerivedFromBlockListHeader;
       mb.size = size+header_size;
       list_algo::link_after(&m_list, &mb);
       return (char *)p + header_size;

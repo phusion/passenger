@@ -69,11 +69,11 @@ struct select1st
    typedef FirstType type;
 
    template<class T>
-   const type& operator()(const T& x) const
+   BOOST_CONTAINER_FORCEINLINE const type& operator()(const T& x) const
    {  return x.first;   }
 
    template<class T>
-   type& operator()(T& x)
+   BOOST_CONTAINER_FORCEINLINE type& operator()(T& x)
    {  return const_cast<type&>(x.first);   }
 };
 

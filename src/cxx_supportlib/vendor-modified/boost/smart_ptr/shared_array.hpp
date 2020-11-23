@@ -25,7 +25,7 @@
 #include <boost/smart_ptr/detail/shared_count.hpp>
 #include <boost/smart_ptr/detail/sp_nullptr_t.hpp>
 #include <boost/smart_ptr/detail/sp_noexcept.hpp>
-#include <boost/detail/workaround.hpp>
+#include <boost/config/workaround.hpp>
 
 #include <cstddef>            // for std::ptrdiff_t
 #include <algorithm>          // for std::swap
@@ -225,7 +225,7 @@ public:
         pn.swap(other.pn);
     }
 
-    void * _internal_get_deleter( boost::detail::sp_typeinfo const & ti ) const BOOST_SP_NOEXCEPT
+    void * _internal_get_deleter( boost::detail::sp_typeinfo_ const & ti ) const BOOST_SP_NOEXCEPT
     {
         return pn.get_deleter( ti );
     }
@@ -285,7 +285,7 @@ template<class T> void swap(shared_array<T> & a, shared_array<T> & b) BOOST_SP_N
 
 template< class D, class T > D * get_deleter( shared_array<T> const & p ) BOOST_SP_NOEXCEPT
 {
-    return static_cast< D * >( p._internal_get_deleter( BOOST_SP_TYPEID(D) ) );
+    return static_cast< D * >( p._internal_get_deleter( BOOST_SP_TYPEID_(D) ) );
 }
 
 } // namespace boost

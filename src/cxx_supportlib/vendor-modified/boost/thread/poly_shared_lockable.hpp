@@ -33,19 +33,21 @@ namespace boost
     template <typename Clock, typename Duration>
     bool try_lock_shared_until(chrono::time_point<Clock, Duration> const & abs_time)
     {
-      return try_lock_shared_until(time_point_cast<Clock::time_point>(abs_time));
+      return try_lock_shared_until(chrono::time_point_cast<Clock::time_point>(abs_time));
     }
 
     virtual bool try_lock_shared_for(chrono::nanoseconds const & relative_time)=0;
     template <typename Rep, typename Period>
     bool try_lock_shared_for(chrono::duration<Rep, Period> const & rel_time)
     {
-      return try_lock_shared_for(duration_cast<Clock::duration>(rel_time));
+      return try_lock_shared_for(chrono::duration_cast<chrono::nanoseconds>(rel_time));
     }
 
   };
-
   //]
+
+  // A proper name for shared_poly_lockable, consistent with naming scheme of other polymorphic wrappers
+  typedef shared_poly_lockable poly_shared_lockable;
 
   //[upgrade_poly_lockable
   class upgrade_poly_lockable: public shared_poly_lockable
@@ -62,14 +64,14 @@ namespace boost
     template <typename Clock, typename Duration>
     bool try_lock_upgrade_until(chrono::time_point<Clock, Duration> const & abs_time)
     {
-      return try_lock_upgrade_until(time_point_cast<Clock::time_point>(abs_time));
+      return try_lock_upgrade_until(chrono::time_point_cast<Clock::time_point>(abs_time));
     }
 
     virtual bool try_lock_upgrade_for(chrono::nanoseconds const & relative_time)=0;
     template <typename Rep, typename Period>
     bool try_lock_upgrade_for(chrono::duration<Rep, Period> const & rel_time)
     {
-      return try_lock_upgrade_for(duration_cast<Clock::duration>(rel_time));
+      return try_lock_upgrade_for(chrono::duration_cast<chrono::nanoseconds>(rel_time));
     }
 
     virtual bool try_unlock_shared_and_lock() = 0;
@@ -79,14 +81,14 @@ namespace boost
     template <typename Clock, typename Duration>
     bool try_unlock_shared_and_lock_until(chrono::time_point<Clock, Duration> const & abs_time)
     {
-      return try_unlock_shared_and_lock_until(time_point_cast<Clock::time_point>(abs_time));
+      return try_unlock_shared_and_lock_until(chrono::time_point_cast<Clock::time_point>(abs_time));
     }
 
     virtual bool try_unlock_shared_and_lock_for(chrono::nanoseconds const & relative_time)=0;
     template <typename Rep, typename Period>
     bool try_unlock_shared_and_lock_for(chrono::duration<Rep, Period> const & rel_time)
     {
-      return try_unlock_shared_and_lock_for(duration_cast<Clock::duration>(rel_time));
+      return try_unlock_shared_and_lock_for(chrono::duration_cast<chrono::nanoseconds>(rel_time));
     }
 
     virtual void unlock_and_lock_shared() = 0;
@@ -97,14 +99,14 @@ namespace boost
     template <typename Clock, typename Duration>
     bool try_unlock_shared_and_lock_upgrade_until(chrono::time_point<Clock, Duration> const & abs_time)
     {
-      return try_unlock_shared_and_lock_upgrade_until(time_point_cast<Clock::time_point>(abs_time));
+      return try_unlock_shared_and_lock_upgrade_until(chrono::time_point_cast<Clock::time_point>(abs_time));
     }
 
     virtual bool try_unlock_shared_and_lock_upgrade_for(chrono::nanoseconds const & relative_time)=0;
     template <typename Rep, typename Period>
     bool try_unlock_shared_and_lock_upgrade_for(chrono::duration<Rep, Period> const & rel_time)
     {
-      return try_unlock_shared_and_lock_upgrade_for(duration_cast<Clock::duration>(rel_time));
+      return try_unlock_shared_and_lock_upgrade_for(chrono::duration_cast<chrono::nanoseconds>(rel_time));
     }
 
     virtual void unlock_and_lock_upgrade() = 0;
@@ -116,20 +118,22 @@ namespace boost
     template <typename Clock, typename Duration>
     bool try_unlock_upgrade_and_lock_until(chrono::time_point<Clock, Duration> const & abs_time)
     {
-      return try_unlock_upgrade_and_lock_until(time_point_cast<Clock::time_point>(abs_time));
+      return try_unlock_upgrade_and_lock_until(chrono::time_point_cast<Clock::time_point>(abs_time));
     }
 
     virtual bool try_unlock_upgrade_and_lock_for(chrono::nanoseconds const & relative_time)=0;
     template <typename Rep, typename Period>
     bool try_unlock_upgrade_and_lock_for(chrono::duration<Rep, Period> const & rel_time)
     {
-      return try_unlock_upgrade_and_lock_for(duration_cast<Clock::duration>(rel_time));
+      return try_unlock_upgrade_and_lock_for(chrono::duration_cast<chrono::nanoseconds>(rel_time));
     }
 
     virtual void unlock_upgrade_and_lock_shared() = 0;
 
   };
-//]
+  //]
 
+  // A proper name for upgrade_poly_lockable, consistent with naming scheme of other polymorphic wrappers
+  typedef upgrade_poly_lockable poly_upgrade_lockable;
 }
 #endif

@@ -1,6 +1,7 @@
 /*
    Copyright (c) Marshall Clow 2012-2015.
    Copyright (c) Beman Dawes 2015
+   Copyright (c) Glen Joseph Fernandes 2019 (glenjofe@gmail.com)
 
    Distributed under the Boost Software License, Version 1.0. (See accompanying
    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -19,6 +20,7 @@
 
 #include <boost/config.hpp>
 #include <boost/detail/workaround.hpp>
+#include <boost/io/ostream_put.hpp>
 #include <boost/utility/string_view_fwd.hpp>
 #include <boost/throw_exception.hpp>
 #include <boost/container_hash/hash_fwd.hpp>
@@ -184,7 +186,7 @@ namespace boost {
             if (pos > size())
                 BOOST_THROW_EXCEPTION(std::out_of_range("string_view::copy" ));
             size_type rlen = (std::min)(n, len_ - pos);
-    		traits_type::copy(s, data() + pos, rlen);
+            traits_type::copy(s, data() + pos, rlen);
             return rlen;
             }
 
@@ -571,53 +573,12 @@ namespace boost {
         return basic_string_view<charT, traits>(x) >= y;
         }
 
-    namespace detail {
-
-        template<class charT, class traits>
-        inline void sv_insert_fill_chars(std::basic_ostream<charT, traits>& os, std::size_t n) {
-            enum { chunk_size = 8 };
-            charT fill_chars[chunk_size];
-            std::fill_n(fill_chars, static_cast< std::size_t >(chunk_size), os.fill());
-            for (; n >= chunk_size && os.good(); n -= chunk_size)
-                os.write(fill_chars, static_cast< std::size_t >(chunk_size));
-            if (n > 0 && os.good())
-                os.write(fill_chars, n);
-            }
-
-        template<class charT, class traits>
-        void sv_insert_aligned(std::basic_ostream<charT, traits>& os, const basic_string_view<charT,traits>& str) {
-            const std::size_t size = str.size();
-            const std::size_t alignment_size = static_cast< std::size_t >(os.width()) - size;
-            const bool align_left = (os.flags() & std::basic_ostream<charT, traits>::adjustfield) == std::basic_ostream<charT, traits>::left;
-            if (!align_left) {
-                detail::sv_insert_fill_chars(os, alignment_size);
-                if (os.good())
-                    os.write(str.data(), size);
-                }
-            else {
-                os.write(str.data(), size);
-                if (os.good())
-                    detail::sv_insert_fill_chars(os, alignment_size);
-                }
-            }
-
-        } // namespace detail
-
     // Inserter
     template<class charT, class traits>
     inline std::basic_ostream<charT, traits>&
     operator<<(std::basic_ostream<charT, traits>& os,
       const basic_string_view<charT,traits>& str) {
-        if (os.good()) {
-            const std::size_t size = str.size();
-            const std::size_t w = static_cast< std::size_t >(os.width());
-            if (w <= size)
-                os.write(str.data(), size);
-            else
-                detail::sv_insert_aligned(os, str);
-            os.width(0);
-            }
-        return os;
+        return boost::io::ostream_put(os, str.data(), str.size());
         }
 
 #if 0

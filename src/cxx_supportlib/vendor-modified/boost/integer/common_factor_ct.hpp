@@ -30,7 +30,7 @@ namespace detail
         BOOST_STATIC_CONSTANT( static_gcd_type, new_value1 = Value2 );
         BOOST_STATIC_CONSTANT( static_gcd_type, new_value2 = Value1 % Value2 );
 
-        #ifndef __BORLANDC__
+        #ifndef BOOST_BORLANDC
         #define BOOST_DETAIL_GCD_HELPER_VAL(Value) static_cast<static_gcd_type>(Value)
         #else
         typedef static_gcd_helper_t  self_type;

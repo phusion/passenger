@@ -174,14 +174,14 @@ namespace concurrent
   {
     super::throw_if_closed(lk);
     super::data_.push(elem);
-    super::notify_not_empty_if_needed(lk);
+    super::notify_elem_added(lk);
   }
   template <class T, class Container,class Cmp>
   void sync_priority_queue<T,Container,Cmp>::push(lock_guard<mutex>& lk, const T& elem)
   {
     super::throw_if_closed(lk);
     super::data_.push(elem);
-    super::notify_not_empty_if_needed(lk);
+    super::notify_elem_added(lk);
   }
   template <class T, class Container,class Cmp>
   void sync_priority_queue<T,Container,Cmp>::push(const T& elem)
@@ -196,14 +196,14 @@ namespace concurrent
   {
     super::throw_if_closed(lk);
     super::data_.push(boost::move(elem));
-    super::notify_not_empty_if_needed(lk);
+    super::notify_elem_added(lk);
   }
   template <class T, class Container,class Cmp>
   void sync_priority_queue<T,Container,Cmp>::push(lock_guard<mutex>& lk, BOOST_THREAD_RV_REF(T) elem)
   {
     super::throw_if_closed(lk);
     super::data_.push(boost::move(elem));
-    super::notify_not_empty_if_needed(lk);
+    super::notify_elem_added(lk);
   }
   template <class T, class Container,class Cmp>
   void sync_priority_queue<T,Container,Cmp>::push(BOOST_THREAD_RV_REF(T) elem)

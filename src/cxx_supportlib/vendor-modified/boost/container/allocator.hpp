@@ -180,7 +180,7 @@ class allocator
    pointer allocate(size_type count, const void * hint= 0)
    {
       (void)hint;
-      if(count > this->max_size())
+      if(count > size_type(-1)/(2u*sizeof(T)))
          boost::container::throw_bad_alloc();
       void *ret = dlmalloc_malloc(count*sizeof(T));
       if(!ret)
@@ -190,17 +190,17 @@ class allocator
 
    //!Deallocates previously allocated memory.
    //!Never throws
-   void deallocate(pointer ptr, size_type) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void deallocate(pointer ptr, size_type) BOOST_NOEXCEPT_OR_NOTHROW
    {  dlmalloc_free(ptr);  }
 
    //!Returns the maximum number of elements that could be allocated.
    //!Never throws
-   size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return size_type(-1)/sizeof(T);   }
+   BOOST_CONTAINER_FORCEINLINE size_type max_size() const BOOST_NOEXCEPT_OR_NOTHROW
+   {  return size_type(-1)/(2u*sizeof(T));   }
 
    //!Swaps two allocators, does nothing
    //!because this allocator is stateless
-   friend void swap(self_t &, self_t &) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE friend void swap(self_t &, self_t &) BOOST_NOEXCEPT_OR_NOTHROW
    {}
 
    //!An allocator always compares to true, as memory allocated with one
@@ -210,7 +210,7 @@ class allocator
 
    //!An allocator always compares to false, as memory allocated with one
    //!instance can be deallocated by another instance
-   friend bool operator!=(const allocator &, const allocator &) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE friend bool operator!=(const allocator &, const allocator &) BOOST_NOEXCEPT_OR_NOTHROW
    {  return false;   }
 
    //!An advanced function that offers in-place expansion shrink to fit and new allocation
@@ -246,7 +246,7 @@ class allocator
    //!must be deallocated only with deallocate_one().
    //!Throws bad_alloc if there is no enough memory
    //!This function is available only with Version == 2
-   pointer allocate_one()
+   BOOST_CONTAINER_FORCEINLINE pointer allocate_one()
    {
       BOOST_STATIC_ASSERT(( Version > 1 ));
       return this->allocate(1);
@@ -255,7 +255,7 @@ class allocator
    //!Allocates many elements of size == 1.
    //!Elements must be individually deallocated with deallocate_one()
    //!This function is available only with Version == 2
-   void allocate_individual(std::size_t num_elements, multiallocation_chain &chain)
+   BOOST_CONTAINER_FORCEINLINE void allocate_individual(std::size_t num_elements, multiallocation_chain &chain)
    {
       BOOST_STATIC_ASSERT(( Version > 1 ));
       this->allocate_many(1, num_elements, chain);
@@ -273,7 +273,7 @@ class allocator
 
    //!Deallocates memory allocated with allocate_one() or allocate_individual().
    //!This function is available only with Version == 2
-   void deallocate_individual(multiallocation_chain &chain) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_FORCEINLINE void deallocate_individual(multiallocation_chain &chain) BOOST_NOEXCEPT_OR_NOTHROW
    {
       BOOST_STATIC_ASSERT(( Version > 1 ));
       return this->deallocate_many(chain);
@@ -287,7 +287,7 @@ class allocator
       BOOST_STATIC_ASSERT(( Version > 1 ));
       dlmalloc_memchain ch;
       BOOST_CONTAINER_MEMCHAIN_INIT(&ch);
-      if(!dlmalloc_multialloc_nodes(n_elements, elem_size*sizeof(T), DL_MULTIALLOC_DEFAULT_CONTIGUOUS, &ch)){
+      if(!dlmalloc_multialloc_nodes(n_elements, elem_size*sizeof(T), BOOST_CONTAINER_DL_MULTIALLOC_DEFAULT_CONTIGUOUS, &ch)){
          boost::container::throw_bad_alloc();
       }
       chain.incorporate_after(chain.before_begin()
@@ -295,7 +295,7 @@ class allocator
                              ,(T*)BOOST_CONTAINER_MEMCHAIN_LASTMEM(&ch)
                              ,BOOST_CONTAINER_MEMCHAIN_SIZE(&ch) );
 /*
-      if(!dlmalloc_multialloc_nodes(n_elements, elem_size*sizeof(T), DL_MULTIALLOC_DEFAULT_CONTIGUOUS, reinterpret_cast<dlmalloc_memchain *>(&chain))){
+      if(!dlmalloc_multialloc_nodes(n_elements, elem_size*sizeof(T), BOOST_CONTAINER_DL_MULTIALLOC_DEFAULT_CONTIGUOUS, reinterpret_cast<dlmalloc_memchain *>(&chain))){
          boost::container::throw_bad_alloc();
       }*/
    }
@@ -308,7 +308,7 @@ class allocator
       BOOST_STATIC_ASSERT(( Version > 1 ));
       dlmalloc_memchain ch;
       BOOST_CONTAINER_MEMCHAIN_INIT(&ch);
-      if(!dlmalloc_multialloc_arrays(n_elements, elem_sizes, sizeof(T), DL_MULTIALLOC_DEFAULT_CONTIGUOUS, &ch)){
+      if(!dlmalloc_multialloc_arrays(n_elements, elem_sizes, sizeof(T), BOOST_CONTAINER_DL_MULTIALLOC_DEFAULT_CONTIGUOUS, &ch)){
          boost::container::throw_bad_alloc();
       }
       chain.incorporate_after(chain.before_begin()
@@ -316,7 +316,7 @@ class allocator
                              ,(T*)BOOST_CONTAINER_MEMCHAIN_LASTMEM(&ch)
                              ,BOOST_CONTAINER_MEMCHAIN_SIZE(&ch) );
       /*
-      if(!dlmalloc_multialloc_arrays(n_elements, elem_sizes, sizeof(T), DL_MULTIALLOC_DEFAULT_CONTIGUOUS, reinterpret_cast<dlmalloc_memchain *>(&chain))){
+      if(!dlmalloc_multialloc_arrays(n_elements, elem_sizes, sizeof(T), BOOST_CONTAINER_DL_MULTIALLOC_DEFAULT_CONTIGUOUS, reinterpret_cast<dlmalloc_memchain *>(&chain))){
          boost::container::throw_bad_alloc();
       }*/
    }

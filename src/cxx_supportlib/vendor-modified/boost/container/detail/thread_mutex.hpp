@@ -104,7 +104,7 @@ namespace container {
 namespace dtl {
 
 #ifdef BOOST_PLAT_WINDOWS_UWP
-extern "C" __declspec(dllimport) void __stdcall InitializeCriticalSectionEx(::_RTL_CRITICAL_SECTION *, unsigned long, unsigned long);
+extern "C" __declspec(dllimport) int __stdcall InitializeCriticalSectionEx(::_RTL_CRITICAL_SECTION *, unsigned long, unsigned long);
 #else
 extern "C" __declspec(dllimport) void __stdcall InitializeCriticalSection(::_RTL_CRITICAL_SECTION *);
 #endif
@@ -142,25 +142,25 @@ class thread_mutex
    thread_mutex()
    {
       #ifdef BOOST_PLAT_WINDOWS_UWP
-      InitializeCriticalSectionEx(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect), 4000, 0);
+      (InitializeCriticalSectionEx)(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect), 4000, 0);
       #else
-      InitializeCriticalSection(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
+      (InitializeCriticalSection)(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
       #endif
    }
 
    void lock()
    {
-      EnterCriticalSection(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
+      (EnterCriticalSection)(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
    }
 
    void unlock()
    {
-      LeaveCriticalSection(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
+      (LeaveCriticalSection)(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
    }
 
    ~thread_mutex()
    {
-      DeleteCriticalSection(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
+      (DeleteCriticalSection)(reinterpret_cast< ::_RTL_CRITICAL_SECTION* >(&m_crit_sect));
    }
   
    private:

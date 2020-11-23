@@ -116,7 +116,7 @@ private:
 /**
  @cond
 */
-#if defined( __BORLANDC__ ) && BOOST_WORKAROUND( __BORLANDC__, BOOST_TESTED_AT(0x581) )
+#if defined( BOOST_BORLANDC ) && BOOST_WORKAROUND( BOOST_BORLANDC, BOOST_TESTED_AT(0x581) )
 #  define BOOST_REF_CONST
 #else
 #  define BOOST_REF_CONST const

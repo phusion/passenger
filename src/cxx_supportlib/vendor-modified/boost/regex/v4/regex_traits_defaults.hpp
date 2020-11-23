@@ -141,7 +141,7 @@ inline bool is_separator<char>(char c)
 BOOST_REGEX_DECL std::string BOOST_REGEX_CALL lookup_default_collate_name(const std::string& name);
 
 //
-// get the state_id of a character clasification, the individual
+// get the state_id of a character classification, the individual
 // traits classes then transform that state_id into a bitmask:
 //
 template <class charT>
@@ -208,8 +208,8 @@ int get_default_class_id(const charT* p1, const charT* p2)
       {data+63, data+67,}, // word
       {data+67, data+73,}, // xdigit
    };
-   static const character_pointer_range<charT>* ranges_begin = ranges;
-   static const character_pointer_range<charT>* ranges_end = ranges + (sizeof(ranges)/sizeof(ranges[0]));
+   const character_pointer_range<charT>* ranges_begin = ranges;
+   const character_pointer_range<charT>* ranges_end = ranges + (sizeof(ranges)/sizeof(ranges[0]));
 
    character_pointer_range<charT> t = { p1, p2, };
    const character_pointer_range<charT>* p = std::lower_bound(ranges_begin, ranges_end, t);

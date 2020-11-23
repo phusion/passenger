@@ -898,11 +898,20 @@ namespace boost {
     {
       if (!f.empty()) {
         this->vtable = f.vtable;
-        if (this->has_trivial_copy_and_destroy())
+        if (this->has_trivial_copy_and_destroy()) {
           // Don't operate on storage directly since union type doesn't relax
           // strict aliasing rules, despite of having member char type.
+#         if defined(BOOST_GCC) && (BOOST_GCC >= 40700)
+#           pragma GCC diagnostic push
+            // This warning is technically correct, but we don't want to pay the price for initializing
+            // just to silence a warning: https://github.com/boostorg/function/issues/27
+#           pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#         endif
           std::memcpy(this->functor.data, f.functor.data, sizeof(boost::detail::function::function_buffer));
-        else
+#         if defined(BOOST_GCC) && (BOOST_GCC >= 40700)
+#           pragma GCC diagnostic pop
+#         endif
+        } else
           get_vtable()->base.manager(f.functor, this->functor,
                                      boost::detail::function::clone_functor_tag);
       }
@@ -987,11 +996,20 @@ namespace boost {
       BOOST_TRY {
         if (!f.empty()) {
           this->vtable = f.vtable;
-          if (this->has_trivial_copy_and_destroy())
+          if (this->has_trivial_copy_and_destroy()) {
             // Don't operate on storage directly since union type doesn't relax
             // strict aliasing rules, despite of having member char type.
+#           if defined(BOOST_GCC) && (BOOST_GCC >= 40700)
+#             pragma GCC diagnostic push
+              // This warning is technically correct, but we don't want to pay the price for initializing
+              // just to silence a warning: https://github.com/boostorg/function/issues/27
+#             pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#           endif
             std::memcpy(this->functor.data, f.functor.data, sizeof(this->functor.data));
-          else
+#           if defined(BOOST_GCC) && (BOOST_GCC >= 40700)
+#             pragma GCC diagnostic pop
+#           endif
+          } else
             get_vtable()->base.manager(f.functor, this->functor,
                                      boost::detail::function::move_functor_tag);
           f.vtable = 0;

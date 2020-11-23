@@ -26,17 +26,17 @@
 # /* BOOST_PP_TUPLE_POP_BACK */
 #
 # define BOOST_PP_TUPLE_POP_BACK(tuple) \
-	BOOST_PP_IIF \
-		( \
-		BOOST_PP_GREATER(BOOST_PP_TUPLE_SIZE(tuple),1), \
-		BOOST_PP_TUPLE_POP_BACK_EXEC, \
-		BOOST_PP_TUPLE_POP_BACK_RETURN \
-		) \
-	(tuple) \
+    BOOST_PP_IIF \
+        ( \
+        BOOST_PP_GREATER(BOOST_PP_TUPLE_SIZE(tuple),1), \
+        BOOST_PP_TUPLE_POP_BACK_EXEC, \
+        BOOST_PP_TUPLE_POP_BACK_RETURN \
+        ) \
+    (tuple) \
 /**/
 #
 # define BOOST_PP_TUPLE_POP_BACK_EXEC(tuple) \
-	BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_POP_BACK(BOOST_PP_TUPLE_TO_ARRAY(tuple))) \
+    BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_POP_BACK(BOOST_PP_TUPLE_TO_ARRAY(tuple))) \
 /**/
 #
 # define BOOST_PP_TUPLE_POP_BACK_RETURN(tuple) tuple
@@ -44,17 +44,17 @@
 # /* BOOST_PP_TUPLE_POP_BACK_Z */
 #
 # define BOOST_PP_TUPLE_POP_BACK_Z(z, tuple) \
-	BOOST_PP_IIF \
-		( \
-		BOOST_PP_GREATER(BOOST_PP_TUPLE_SIZE(tuple),1), \
-		BOOST_PP_TUPLE_POP_BACK_Z_EXEC, \
-		BOOST_PP_TUPLE_POP_BACK_Z_RETURN \
-		) \
-	(z, tuple) \
+    BOOST_PP_IIF \
+        ( \
+        BOOST_PP_GREATER(BOOST_PP_TUPLE_SIZE(tuple),1), \
+        BOOST_PP_TUPLE_POP_BACK_Z_EXEC, \
+        BOOST_PP_TUPLE_POP_BACK_Z_RETURN \
+        ) \
+    (z, tuple) \
 /**/
 #
 # define BOOST_PP_TUPLE_POP_BACK_Z_EXEC(z, tuple) \
-	BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_POP_BACK_Z(z, BOOST_PP_TUPLE_TO_ARRAY(tuple))) \
+    BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_POP_BACK_Z(z, BOOST_PP_TUPLE_TO_ARRAY(tuple))) \
 /**/
 #
 # define BOOST_PP_TUPLE_POP_BACK_Z_RETURN(z, tuple) tuple

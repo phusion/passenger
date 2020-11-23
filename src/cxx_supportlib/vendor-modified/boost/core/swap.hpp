@@ -23,9 +23,12 @@
 
 #include <boost/core/enable_if.hpp>
 #include <boost/config.hpp>
-#include <utility> //for std::swap (C++11)
-#include <algorithm> //for std::swap (C++98)
-#include <cstddef> //for std::size_t
+#if __cplusplus >= 201103L || defined(BOOST_DINKUMWARE_STDLIB)
+#include <utility> // for std::swap (C++11)
+#else
+#include <algorithm> // for std::swap (C++98)
+#endif
+#include <cstddef> // for std::size_t
 
 namespace boost_swap_impl
 {

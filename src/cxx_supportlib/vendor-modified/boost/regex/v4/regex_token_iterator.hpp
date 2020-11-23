@@ -21,7 +21,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/detail/workaround.hpp>
-#if (BOOST_WORKAROUND(__BORLANDC__, >= 0x560) && BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x570)))\
+#if (BOOST_WORKAROUND(BOOST_BORLANDC, >= 0x560) && BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x570)))\
       || BOOST_WORKAROUND(__MWERKS__, BOOST_TESTED_AT(0x3003))
 //
 // Borland C++ Builder 6, and Visual C++ 6,
@@ -67,16 +67,16 @@ class regex_token_iterator_implementation
 
 public:
    regex_token_iterator_implementation(const regex_type* p, BidirectionalIterator last, int sub, match_flag_type f)
-      : end(last), re(*p), flags(f){ subs.push_back(sub); }
+      : end(last), re(*p), flags(f), N(0){ subs.push_back(sub); }
    regex_token_iterator_implementation(const regex_type* p, BidirectionalIterator last, const std::vector<int>& v, match_flag_type f)
-      : end(last), re(*p), flags(f), subs(v){}
+      : end(last), re(*p), flags(f), N(0), subs(v){}
 #if !BOOST_WORKAROUND(__HP_aCC, < 60700)
-#if (BOOST_WORKAROUND(__BORLANDC__, >= 0x560) && BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x570)))\
+#if (BOOST_WORKAROUND(BOOST_BORLANDC, >= 0x560) && BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x570)))\
       || BOOST_WORKAROUND(__MWERKS__, BOOST_TESTED_AT(0x3003)) \
       || BOOST_WORKAROUND(__HP_aCC, < 60700)
    template <class T>
    regex_token_iterator_implementation(const regex_type* p, BidirectionalIterator last, const T& submatches, match_flag_type f)
-      : end(last), re(*p), flags(f)
+      : end(last), re(*p), flags(f), N(0)
    {
       // assert that T really is an array:
       BOOST_STATIC_ASSERT(::boost::is_array<T>::value);
@@ -89,7 +89,7 @@ public:
 #else
    template <std::size_t CN>
    regex_token_iterator_implementation(const regex_type* p, BidirectionalIterator last, const int (&submatches)[CN], match_flag_type f)
-      : end(last), re(*p), flags(f)
+      : end(last), re(*p), flags(f), N(0)
    {
       for(std::size_t i = 0; i < CN; ++i)
       {
@@ -196,7 +196,7 @@ public:
          pdata.reset();
    }
 #if !BOOST_WORKAROUND(__HP_aCC, < 60700)
-#if (BOOST_WORKAROUND(__BORLANDC__, >= 0x560) && BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x570)))\
+#if (BOOST_WORKAROUND(BOOST_BORLANDC, >= 0x560) && BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x570)))\
       || BOOST_WORKAROUND(__MWERKS__, BOOST_TESTED_AT(0x3003)) \
       || BOOST_WORKAROUND(__HP_aCC, < 60700)
    template <class T>

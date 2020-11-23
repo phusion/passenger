@@ -41,7 +41,7 @@ namespace boost{
 // what follows is compiler specific:
 //
 
-#if  defined(__BORLANDC__) && (__BORLANDC__ < 0x600)
+#if  defined(BOOST_BORLANDC) && (BOOST_BORLANDC < 0x600)
 
 #ifdef BOOST_HAS_ABI_HEADERS
 #  include BOOST_ABI_PREFIX

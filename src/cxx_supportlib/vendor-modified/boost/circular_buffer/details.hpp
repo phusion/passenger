@@ -17,7 +17,7 @@
 #endif
 
 #include <boost/throw_exception.hpp>
-#include <boost/circular_buffer/allocators.hpp>
+#include <boost/core/allocator_access.hpp>
 #include <boost/core/pointer_traits.hpp>
 #include <boost/move/move.hpp>
 #include <boost/type_traits/is_nothrow_move_constructible.hpp>
@@ -36,7 +36,7 @@ namespace boost {
 
 namespace cb_details {
 
-template <class Traits> struct nonconst_traits;
+template <class Alloc> struct nonconst_traits;
 
 template<class ForwardIterator, class Diff, class T, class Alloc>
 void uninitialized_fill_n_with_alloc(
@@ -52,34 +52,34 @@ ForwardIterator uninitialized_move_if_noexcept(InputIterator first, InputIterato
     \struct const_traits
     \brief Defines the data types for a const iterator.
 */
-template <class Traits>
+template <class Alloc>
 struct const_traits {
     // Basic types
-    typedef typename Traits::value_type value_type;
-    typedef typename Traits::const_pointer pointer;
+    typedef typename Alloc::value_type value_type;
+    typedef typename boost::allocator_const_pointer<Alloc>::type pointer;
     typedef const value_type& reference;
-    typedef typename Traits::size_type size_type;
-    typedef typename Traits::difference_type difference_type;
+    typedef typename boost::allocator_size_type<Alloc>::type size_type;
+    typedef typename boost::allocator_difference_type<Alloc>::type difference_type;
 
     // Non-const traits
-    typedef nonconst_traits<Traits> nonconst_self;
+    typedef nonconst_traits<Alloc> nonconst_self;
 };
 
 /*!
     \struct nonconst_traits
     \brief Defines the data types for a non-const iterator.
 */
-template <class Traits>
+template <class Alloc>
 struct nonconst_traits {
     // Basic types
-    typedef typename Traits::value_type value_type;
-    typedef typename Traits::pointer pointer;
+    typedef typename Alloc::value_type value_type;
+    typedef typename boost::allocator_pointer<Alloc>::type pointer;
     typedef value_type& reference;
-    typedef typename Traits::size_type size_type;
-    typedef typename Traits::difference_type difference_type;
+    typedef typename boost::allocator_size_type<Alloc>::type size_type;
+    typedef typename boost::allocator_difference_type<Alloc>::type difference_type;
 
     // Non-const traits
-    typedef nonconst_traits<Traits> nonconst_self;
+    typedef nonconst_traits<Alloc> nonconst_self;
 };
 
 /*!
@@ -114,7 +114,7 @@ private:
 */
 template <class Value, class Alloc>
 struct assign_n {
-    typedef typename allocator_traits<Alloc>::size_type size_type;
+    typedef typename boost::allocator_size_type<Alloc>::type size_type;
     size_type m_n;
     Value m_item;
     Alloc& m_alloc;
@@ -424,10 +424,10 @@ inline ForwardIterator uninitialized_copy(InputIterator first, InputIterator las
     ForwardIterator next = dest;
     BOOST_TRY {
         for (; first != last; ++first, ++dest)
-            allocator_traits<Alloc>::construct(a, boost::to_address(dest), *first);
+            boost::allocator_construct(a, boost::to_address(dest), *first);
     } BOOST_CATCH(...) {
         for (; next != dest; ++next)
-            allocator_traits<Alloc>::destroy(a, boost::to_address(next));
+            boost::allocator_destroy(a, boost::to_address(next));
         BOOST_RETHROW
     }
     BOOST_CATCH_END
@@ -438,7 +438,7 @@ template<class InputIterator, class ForwardIterator, class Alloc>
 ForwardIterator uninitialized_move_if_noexcept_impl(InputIterator first, InputIterator last, ForwardIterator dest, Alloc& a,
     true_type) {
     for (; first != last; ++first, ++dest)
-        allocator_traits<Alloc>::construct(a, boost::to_address(dest), boost::move(*first));
+        boost::allocator_construct(a, boost::to_address(dest), boost::move(*first));
     return dest;
 }
 
@@ -454,7 +454,7 @@ ForwardIterator uninitialized_move_if_noexcept_impl(InputIterator first, InputIt
 */
 template<class InputIterator, class ForwardIterator, class Alloc>
 ForwardIterator uninitialized_move_if_noexcept(InputIterator first, InputIterator last, ForwardIterator dest, Alloc& a) {
-    typedef typename boost::is_nothrow_move_constructible<typename allocator_traits<Alloc>::value_type>::type tag_t;
+    typedef typename boost::is_nothrow_move_constructible<typename Alloc::value_type>::type tag_t;
     return uninitialized_move_if_noexcept_impl(first, last, dest, a, tag_t());
 }
 
@@ -467,10 +467,10 @@ inline void uninitialized_fill_n_with_alloc(ForwardIterator first, Diff n, const
     ForwardIterator next = first;
     BOOST_TRY {
         for (; n > 0; ++first, --n)
-            allocator_traits<Alloc>::construct(alloc, boost::to_address(first), item);
+            boost::allocator_construct(alloc, boost::to_address(first), item);
     } BOOST_CATCH(...) {
         for (; next != first; ++next)
-            allocator_traits<Alloc>::destroy(alloc, boost::to_address(next));
+            boost::allocator_destroy(alloc, boost::to_address(next));
         BOOST_RETHROW
     }
     BOOST_CATCH_END

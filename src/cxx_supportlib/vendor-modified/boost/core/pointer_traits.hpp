@@ -13,6 +13,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include <memory>
 #else
 #include <boost/core/addressof.hpp>
+#include <cstddef>
 #endif
 
 namespace boost {

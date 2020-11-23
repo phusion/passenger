@@ -245,7 +245,6 @@ namespace boost {
       //! parses rule specs for transition day rules
       rule_type* parse_rules(const string_type& sr, const string_type& er) const
       {
-        using namespace gregorian;
         // start and end rule are of the same type, 
         // both are included here for readability
         typedef typename rule_type::start_rule start_rule;

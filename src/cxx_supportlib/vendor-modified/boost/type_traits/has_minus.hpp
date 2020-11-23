@@ -52,25 +52,25 @@ namespace boost
 
       struct dont_care;
 
-      template <class T, class U, class Ret, class = boost::void_t<>>
+      template <class T, class U, class Ret, class = void>
       struct has_minus_ret_imp : public boost::false_type {};
 
       template <class T, class U, class Ret>
-      struct has_minus_ret_imp<T, U, Ret, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>())> >
+      struct has_minus_ret_imp<T, U, Ret, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>())>::type>
          : public boost::integral_constant<bool, ::boost::is_convertible<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>()), Ret>::value> {};
 
-      template <class T, class U, class = boost::void_t<> >
+      template <class T, class U, class = void >
       struct has_minus_void_imp : public boost::false_type {};
 
       template <class T, class U>
-      struct has_minus_void_imp<T, U, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>())> >
+      struct has_minus_void_imp<T, U, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>())>::type>
          : public boost::integral_constant<bool, ::boost::is_void<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>())>::value> {};
 
-      template <class T, class U, class = boost::void_t<>>
+      template <class T, class U, class = void>
       struct has_minus_dc_imp : public boost::false_type {};
 
       template <class T, class U>
-      struct has_minus_dc_imp<T, U, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>())> >
+      struct has_minus_dc_imp<T, U, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() - std::declval<typename add_reference<U>::type>())>::type>
          : public boost::true_type {};
 
       template <class T, class U, class Ret>

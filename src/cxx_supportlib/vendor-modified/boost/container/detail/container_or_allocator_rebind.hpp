@@ -34,7 +34,11 @@ struct container_or_allocator_rebind_impl
 template<class AllocatorOrContainer, class ToType>
 struct container_or_allocator_rebind_impl<AllocatorOrContainer, ToType, false>
    : allocator_traits<AllocatorOrContainer>::template portable_rebind_alloc<ToType>
+{};
 
+template<class ToType>
+struct container_or_allocator_rebind_impl<void, ToType, false>
+   : real_allocator<ToType, void>
 {};
 
 template<class AllocatorOrContainer, class ToType>

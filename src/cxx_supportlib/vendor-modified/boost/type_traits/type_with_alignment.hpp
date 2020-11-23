@@ -25,7 +25,7 @@
 #endif
 
 namespace boost {
-#ifndef __BORLANDC__
+#ifndef BOOST_BORLANDC
    namespace detail{
 
       union max_align
@@ -227,7 +227,7 @@ namespace detail {
 typedef ::boost::tt_align_ns::a16 max_align;
 
 }
-//#if ! BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x610))
+//#if ! BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x610))
 template <> struct is_pod< ::boost::tt_align_ns::a2> : public true_type{};
 template <> struct is_pod< ::boost::tt_align_ns::a4> : public true_type{};
 template <> struct is_pod< ::boost::tt_align_ns::a8> : public true_type{};

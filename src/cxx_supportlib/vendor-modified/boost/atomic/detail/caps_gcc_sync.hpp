@@ -17,13 +17,6 @@
 #define BOOST_ATOMIC_DETAIL_CAPS_GCC_SYNC_HPP_INCLUDED_
 
 #include <boost/atomic/detail/config.hpp>
-#if defined(__i386__) || defined(__x86_64__)
-#include <boost/atomic/detail/hwcaps_gcc_x86.hpp>
-#elif defined(__arm__)
-#include <boost/atomic/detail/hwcaps_gcc_arm.hpp>
-#elif defined(__POWERPC__) || defined(__PPC__)
-#include <boost/atomic/detail/hwcaps_gcc_ppc.hpp>
-#endif
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once

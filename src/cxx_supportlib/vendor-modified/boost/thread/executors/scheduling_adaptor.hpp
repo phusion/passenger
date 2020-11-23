@@ -8,6 +8,8 @@
 #ifndef BOOST_THREAD_EXECUTORS_SCHEDULING_ADAPTOR_HPP
 #define BOOST_THREAD_EXECUTORS_SCHEDULING_ADAPTOR_HPP
 
+#include <boost/thread/detail/config.hpp>
+#if defined BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION && defined BOOST_THREAD_PROVIDES_EXECUTORS && defined BOOST_THREAD_USES_MOVE
 #include <boost/thread/executors/detail/scheduled_executor_base.hpp>
 
 #if defined(BOOST_MSVC)
@@ -59,4 +61,5 @@ namespace executors
 # pragma warning(pop)
 #endif
 
+#endif
 #endif

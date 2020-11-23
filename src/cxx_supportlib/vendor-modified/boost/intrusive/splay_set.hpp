@@ -546,46 +546,46 @@ class splay_set
    //Assert if passed value traits are compatible with the type
    BOOST_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
 
-   splay_set()
+   BOOST_INTRUSIVE_FORCEINLINE splay_set()
       :  Base()
    {}
 
-   explicit splay_set( const key_compare &cmp, const value_traits &v_traits = value_traits())
+   BOOST_INTRUSIVE_FORCEINLINE explicit splay_set( const key_compare &cmp, const value_traits &v_traits = value_traits())
       :  Base(cmp, v_traits)
    {}
 
    template<class Iterator>
-   splay_set( Iterator b, Iterator e
+   BOOST_INTRUSIVE_FORCEINLINE splay_set( Iterator b, Iterator e
       , const key_compare &cmp = key_compare()
       , const value_traits &v_traits = value_traits())
       :  Base(b, e, cmp, v_traits)
    {}
 
-   splay_set(BOOST_RV_REF(splay_set) x)
+   BOOST_INTRUSIVE_FORCEINLINE splay_set(BOOST_RV_REF(splay_set) x)
       :  Base(::boost::move(static_cast<Base&>(x)))
    {}
 
-   splay_set& operator=(BOOST_RV_REF(splay_set) x)
+   BOOST_INTRUSIVE_FORCEINLINE splay_set& operator=(BOOST_RV_REF(splay_set) x)
    {  return static_cast<splay_set &>(this->Base::operator=(::boost::move(static_cast<Base&>(x))));  }
 
    template <class Cloner, class Disposer>
-   void clone_from(const splay_set &src, Cloner cloner, Disposer disposer)
+   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const splay_set &src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   void clone_from(BOOST_RV_REF(splay_set) src, Cloner cloner, Disposer disposer)
+   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(splay_set) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
-   static splay_set &container_from_end_iterator(iterator end_iterator)
+   BOOST_INTRUSIVE_FORCEINLINE static splay_set &container_from_end_iterator(iterator end_iterator)
    {  return static_cast<splay_set &>(Base::container_from_end_iterator(end_iterator));   }
 
-   static const splay_set &container_from_end_iterator(const_iterator end_iterator)
+   BOOST_INTRUSIVE_FORCEINLINE static const splay_set &container_from_end_iterator(const_iterator end_iterator)
    {  return static_cast<const splay_set &>(Base::container_from_end_iterator(end_iterator));   }
 
-   static splay_set &container_from_iterator(iterator it)
+   BOOST_INTRUSIVE_FORCEINLINE static splay_set &container_from_iterator(iterator it)
    {  return static_cast<splay_set &>(Base::container_from_iterator(it));   }
 
-   static const splay_set &container_from_iterator(const_iterator it)
+   BOOST_INTRUSIVE_FORCEINLINE static const splay_set &container_from_iterator(const_iterator it)
    {  return static_cast<const splay_set &>(Base::container_from_iterator(it));   }
 };
 
@@ -1057,46 +1057,46 @@ class splay_multiset
    //Assert if passed value traits are compatible with the type
    BOOST_STATIC_ASSERT((detail::is_same<typename value_traits::value_type, T>::value));
 
-   splay_multiset()
+   BOOST_INTRUSIVE_FORCEINLINE splay_multiset()
       :  Base()
    {}
 
-   explicit splay_multiset( const key_compare &cmp, const value_traits &v_traits = value_traits())
+   BOOST_INTRUSIVE_FORCEINLINE explicit splay_multiset( const key_compare &cmp, const value_traits &v_traits = value_traits())
       :  Base(cmp, v_traits)
    {}
 
    template<class Iterator>
-   splay_multiset( Iterator b, Iterator e
+   BOOST_INTRUSIVE_FORCEINLINE splay_multiset( Iterator b, Iterator e
            , const key_compare &cmp = key_compare()
            , const value_traits &v_traits = value_traits())
       :  Base(b, e, cmp, v_traits)
    {}
 
-   splay_multiset(BOOST_RV_REF(splay_multiset) x)
+   BOOST_INTRUSIVE_FORCEINLINE splay_multiset(BOOST_RV_REF(splay_multiset) x)
       :  Base(::boost::move(static_cast<Base&>(x)))
    {}
 
-   splay_multiset& operator=(BOOST_RV_REF(splay_multiset) x)
+   BOOST_INTRUSIVE_FORCEINLINE splay_multiset& operator=(BOOST_RV_REF(splay_multiset) x)
    {  return static_cast<splay_multiset &>(this->Base::operator=(::boost::move(static_cast<Base&>(x))));  }
 
    template <class Cloner, class Disposer>
-   void clone_from(const splay_multiset &src, Cloner cloner, Disposer disposer)
+   BOOST_INTRUSIVE_FORCEINLINE void clone_from(const splay_multiset &src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(src, cloner, disposer);  }
 
    template <class Cloner, class Disposer>
-   void clone_from(BOOST_RV_REF(splay_multiset) src, Cloner cloner, Disposer disposer)
+   BOOST_INTRUSIVE_FORCEINLINE void clone_from(BOOST_RV_REF(splay_multiset) src, Cloner cloner, Disposer disposer)
    {  Base::clone_from(BOOST_MOVE_BASE(Base, src), cloner, disposer);  }
 
-   static splay_multiset &container_from_end_iterator(iterator end_iterator)
+   BOOST_INTRUSIVE_FORCEINLINE static splay_multiset &container_from_end_iterator(iterator end_iterator)
    {  return static_cast<splay_multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
-   static const splay_multiset &container_from_end_iterator(const_iterator end_iterator)
+   BOOST_INTRUSIVE_FORCEINLINE static const splay_multiset &container_from_end_iterator(const_iterator end_iterator)
    {  return static_cast<const splay_multiset &>(Base::container_from_end_iterator(end_iterator));   }
 
-   static splay_multiset &container_from_iterator(iterator it)
+   BOOST_INTRUSIVE_FORCEINLINE static splay_multiset &container_from_iterator(iterator it)
    {  return static_cast<splay_multiset &>(Base::container_from_iterator(it));   }
 
-   static const splay_multiset &container_from_iterator(const_iterator it)
+   BOOST_INTRUSIVE_FORCEINLINE static const splay_multiset &container_from_iterator(const_iterator it)
    {  return static_cast<const splay_multiset &>(Base::container_from_iterator(it));   }
 };
 

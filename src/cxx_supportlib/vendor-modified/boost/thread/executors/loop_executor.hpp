@@ -12,6 +12,9 @@
 #define BOOST_THREAD_EXECUTORS_LOOP_EXECUTOR_HPP
 
 #include <boost/thread/detail/config.hpp>
+
+#if defined BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION && defined BOOST_THREAD_PROVIDES_EXECUTORS && defined BOOST_THREAD_USES_MOVE
+
 #include <boost/thread/detail/delete.hpp>
 #include <boost/thread/detail/move.hpp>
 #include <boost/thread/concurrent_queues/sync_queue.hpp>
@@ -205,5 +208,6 @@ using executors::loop_executor;
 }
 
 #include <boost/config/abi_suffix.hpp>
+#endif
 
 #endif

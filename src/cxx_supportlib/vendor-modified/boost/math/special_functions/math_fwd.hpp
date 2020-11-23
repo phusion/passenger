@@ -639,9 +639,9 @@ namespace boost
 
    namespace detail{
 
-      typedef mpl::int_<0> bessel_no_int_tag;      // No integer optimisation possible.
-      typedef mpl::int_<1> bessel_maybe_int_tag;   // Maybe integer optimisation.
-      typedef mpl::int_<2> bessel_int_tag;         // Definite integer optimistaion.
+      typedef boost::integral_constant<int, 0> bessel_no_int_tag;      // No integer optimisation possible.
+      typedef boost::integral_constant<int, 1> bessel_maybe_int_tag;   // Maybe integer optimisation.
+      typedef boost::integral_constant<int, 2> bessel_int_tag;         // Definite integer optimisation.
 
       template <class T1, class T2, class Policy>
       struct bessel_traits
@@ -656,8 +656,8 @@ namespace boost
 
          typedef typename mpl::if_<
             mpl::or_<
-               mpl::less_equal<precision_type, mpl::int_<0> >,
-               mpl::greater<precision_type, mpl::int_<64> > >,
+               mpl::less_equal<precision_type, boost::integral_constant<int, 0> >,
+               mpl::greater<precision_type, boost::integral_constant<int, 64> > >,
             bessel_no_int_tag,
             typename mpl::if_<
                is_integral<T1>,
@@ -667,8 +667,8 @@ namespace boost
          >::type optimisation_tag;
          typedef typename mpl::if_<
             mpl::or_<
-               mpl::less_equal<precision_type, mpl::int_<0> >,
-               mpl::greater<precision_type, mpl::int_<113> > >,
+               mpl::less_equal<precision_type, boost::integral_constant<int, 0> >,
+               mpl::greater<precision_type, boost::integral_constant<int, 113> > >,
             bessel_no_int_tag,
             typename mpl::if_<
                is_integral<T1>,
@@ -1103,7 +1103,18 @@ namespace boost
    template <class T>
    typename boost::math::tools::promote_args<T>::type lambert_wm1_prime(T z);
 
+   // Hypergeometrics:
+   template <class T1, class T2> typename tools::promote_args<T1, T2>::type hypergeometric_1F0(T1 a, T2 z);
+   template <class T1, class T2, class Policy> typename tools::promote_args<T1, T2>::type hypergeometric_1F0(T1 a, T2 z, const Policy&);
 
+   template <class T1, class T2> typename tools::promote_args<T1, T2>::type hypergeometric_0F1(T1 b, T2 z);
+   template <class T1, class T2, class Policy> typename tools::promote_args<T1, T2>::type hypergeometric_0F1(T1 b, T2 z, const Policy&);
+
+   template <class T1, class T2, class T3> typename tools::promote_args<T1, T2, T3>::type hypergeometric_2F0(T1 a1, T2 a2, T3 z);
+   template <class T1, class T2, class T3, class Policy> typename tools::promote_args<T1, T2, T3>::type hypergeometric_2F0(T1 a1, T2 a2, T3 z, const Policy&);
+
+   template <class T1, class T2, class T3> typename tools::promote_args<T1, T2, T3>::type hypergeometric_1F1(T1 a, T2 b, T3 z);
+   template <class T1, class T2, class T3, class Policy> typename tools::promote_args<T1, T2, T3>::type hypergeometric_1F1(T1 a, T2 b, T3 z, const Policy&);
 
 
     } // namespace math
@@ -1125,9 +1136,20 @@ namespace boost
 #define BOOST_MATH_DETAIL_LL_FUNC(Policy)
 #endif
 
+#if !defined(BOOST_NO_CXX11_DECLTYPE) && !defined(BOOST_NO_CXX11_AUTO_DECLARATIONS) && !defined(BOOST_NO_CXX11_HDR_ARRAY)
+#  define BOOST_MATH_DETAIL_11_FUNC(Policy)\
+   template <class T, class U, class V>\
+   inline typename boost::math::tools::promote_args<T, U>::type hypergeometric_1F1(const T& a, const U& b, const V& z)\
+   { return boost::math::hypergeometric_1F1(a, b, z, Policy()); }\
+
+#else
+#  define BOOST_MATH_DETAIL_11_FUNC(Policy)
+#endif
+
 #define BOOST_MATH_DECLARE_SPECIAL_FUNCTIONS(Policy)\
    \
    BOOST_MATH_DETAIL_LL_FUNC(Policy)\
+   BOOST_MATH_DETAIL_11_FUNC(Policy)\
    \
    template <class RT1, class RT2>\
    inline typename boost::math::tools::promote_args<RT1, RT2>::type \
@@ -1668,6 +1690,18 @@ template <class OutputIterator, class T>\
    template <class T> inline typename boost::math::tools::promote_args<T>::type lambert_wm1(T z) { return boost::math::lambert_w0(z, Policy()); }\
    template <class T> inline typename boost::math::tools::promote_args<T>::type lambert_w0_prime(T z) { return boost::math::lambert_w0(z, Policy()); }\
    template <class T> inline typename boost::math::tools::promote_args<T>::type lambert_wm1_prime(T z) { return boost::math::lambert_w0(z, Policy()); }\
+   \
+   template <class T, class U>\
+   inline typename boost::math::tools::promote_args<T, U>::type hypergeometric_1F0(const T& a, const U& z)\
+   { return boost::math::hypergeometric_1F0(a, z, Policy()); }\
+   \
+   template <class T, class U>\
+   inline typename boost::math::tools::promote_args<T, U>::type hypergeometric_0F1(const T& a, const U& z)\
+   { return boost::math::hypergeometric_0F1(a, z, Policy()); }\
+   \
+   template <class T, class U, class V>\
+   inline typename boost::math::tools::promote_args<T, U>::type hypergeometric_2F0(const T& a1, const U& a2, const V& z)\
+   { return boost::math::hypergeometric_2F0(a1, a2, z, Policy()); }\
    \
 
 

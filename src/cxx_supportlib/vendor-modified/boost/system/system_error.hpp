@@ -47,7 +47,7 @@ namespace boost
       virtual ~system_error() BOOST_NOEXCEPT_OR_NOTHROW {}
 
       error_code code() const BOOST_NOEXCEPT { return m_error_code; }
-      const char * what() const BOOST_NOEXCEPT_OR_NOTHROW;
+      const char * what() const BOOST_NOEXCEPT_OR_NOTHROW BOOST_OVERRIDE;
 
     private:
       error_code           m_error_code;

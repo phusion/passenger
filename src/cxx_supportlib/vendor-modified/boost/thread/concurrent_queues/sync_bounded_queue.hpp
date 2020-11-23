@@ -655,7 +655,7 @@ namespace concurrent
   queue_op_status sync_bounded_queue<ValueType>::wait_push_back(BOOST_THREAD_RV_REF(ValueType) elem)
   {
       unique_lock<mutex> lk(mtx_);
-      return try_push_back(boost::move(elem), lk);
+      return wait_push_back(boost::move(elem), lk);
   }
 
 

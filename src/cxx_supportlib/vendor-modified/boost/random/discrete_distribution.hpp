@@ -571,8 +571,12 @@ private:
     template<class Iter>
     void init(Iter first, Iter last, std::forward_iterator_tag)
     {
+        size_t input_size = std::distance(first, last);
         std::vector<std::pair<WeightType, IntType> > below_average;
         std::vector<std::pair<WeightType, IntType> > above_average;
+        below_average.reserve(input_size);
+        above_average.reserve(input_size);
+        
         WeightType weight_average = _impl.init_average(first, last);
         WeightType normalized_average = _impl.get_weight(0);
         std::size_t i = 0;

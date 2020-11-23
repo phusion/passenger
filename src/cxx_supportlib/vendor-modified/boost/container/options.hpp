@@ -24,6 +24,7 @@
 #include <boost/container/detail/config_begin.hpp>
 #include <boost/container/container_fwd.hpp>
 #include <boost/intrusive/pack_options.hpp>
+#include <boost/static_assert.hpp>
 
 namespace boost {
 namespace container {
@@ -101,6 +102,65 @@ using tree_assoc_options_t = typename boost::container::tree_assoc_options<Optio
 
 #endif
 
+
+////////////////////////////////////////////////////////////////
+//
+//
+//       OPTIONS FOR ASSOCIATIVE HASH-BASED CONTAINERS
+//
+//
+////////////////////////////////////////////////////////////////
+
+#if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+template<bool StoreHash>
+struct hash_opt
+{
+   static const bool store_hash = StoreHash;
+};
+
+typedef hash_opt<false> hash_assoc_defaults;
+
+#endif   //!defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+//!This option setter specifies if node size is optimized
+//!storing rebalancing data masked into pointers for ordered associative containers
+BOOST_INTRUSIVE_OPTION_CONSTANT(store_hash, bool, Enabled, store_hash)
+
+//! Helper metafunction to combine options into a single type to be used
+//! by \c boost::container::hash_set, \c boost::container::hash_multiset
+//! \c boost::container::hash_map and \c boost::container::hash_multimap.
+//! Supported options are: \c boost::container::store_hash
+#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED) || defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+template<class ...Options>
+#else
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
+#endif
+struct hash_assoc_options
+{
+   /// @cond
+   typedef typename ::boost::intrusive::pack_options
+      < hash_assoc_defaults,
+      #if !defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+      O1, O2, O3, O4
+      #else
+      Options...
+      #endif
+      >::type packed_options;
+   typedef hash_opt<packed_options::store_hash> implementation_defined;
+   /// @endcond
+   typedef implementation_defined type;
+};
+
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+
+//! Helper alias metafunction to combine options into a single type to be used
+//! by hash-based associative containers
+template<class ...Options>
+using hash_assoc_options_t = typename boost::container::hash_assoc_options<Options...>::type;
+
+#endif
+
 ////////////////////////////////////////////////////////////////
 //
 //
@@ -108,6 +168,22 @@ using tree_assoc_options_t = typename boost::container::tree_assoc_options<Optio
 //
 //
 ////////////////////////////////////////////////////////////////
+
+#if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+template<class T, class Default>
+struct default_if_void
+{
+   typedef T type;
+};
+
+template<class Default>
+struct default_if_void<void, Default>
+{
+   typedef Default type;
+};
+
+#endif
 
 #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
@@ -177,7 +253,7 @@ BOOST_INTRUSIVE_OPTION_TYPE(growth_factor, GrowthFactor, GrowthFactor, growth_fa
 //!This option specifies the unsigned integer type that a user wants the container
 //!to use to hold size-related information inside a container (e.g. current size, current capacity).
 //!
-//!\tparam StoredSizeType A unsigned integer type. It shall be smaller than than the size
+//!\tparam StoredSizeType An unsigned integer type. It shall be smaller than than the size
 //! of the size_type deduced from `allocator_traits<A>::size_type` or the same type.
 //!
 //!If the maximum capacity() to be used is limited, a user can try to use 8-bit, 16-bit 
@@ -185,7 +261,7 @@ BOOST_INTRUSIVE_OPTION_TYPE(growth_factor, GrowthFactor, GrowthFactor, growth_fa
 //!memory can be saved for empty vectors. This could potentially performance benefits due to better
 //!cache usage.
 //!
-//!Note that alignment requirements can disallow theoritical space savings. Example:
+//!Note that alignment requirements can disallow theoretical space savings. Example:
 //!\c vector holds a pointer and two size types (for size and capacity), in a 32 bit machine
 //!a 8 bit size type (total size: 4 byte pointer + 2 x 1 byte sizes = 6 bytes) 
 //!will not save space when comparing two 16-bit size types because usually
@@ -236,6 +312,206 @@ using vector_options_t = typename boost::container::vector_options<Options...>::
 
 #endif
 
+////////////////////////////////////////////////////////////////
+//
+//
+//          OPTIONS FOR SMALL-VECTOR CONTAINER
+//
+//
+////////////////////////////////////////////////////////////////
+
+//! This option specifies the desired alignment for the value_type stored
+//! in the container.
+//! A value zero represents the natural alignment.
+//!
+//!\tparam Alignment An unsigned integer value. Must be power of two.
+BOOST_INTRUSIVE_OPTION_CONSTANT(inplace_alignment, std::size_t, Alignment, inplace_alignment)
+
+#if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+template<class GrowthType, std::size_t InplaceAlignment>
+struct small_vector_opt
+{
+   typedef GrowthType      growth_factor_type;
+   static const std::size_t inplace_alignment = InplaceAlignment;
+};
+
+typedef small_vector_opt<void, 0u> small_vector_null_opt;
+
+#endif    //!defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+//! Helper metafunction to combine options into a single type to be used
+//! by \c boost::container::small_vector.
+//! Supported options are: \c boost::container::growth_factor and \c boost::container::inplace_alignment
+#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED) || defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+template<class ...Options>
+#else
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
+#endif
+struct small_vector_options
+{
+   /// @cond
+   typedef typename ::boost::intrusive::pack_options
+      < small_vector_null_opt,
+      #if !defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+      O1, O2, O3, O4
+      #else
+      Options...
+      #endif
+      >::type packed_options;
+   typedef small_vector_opt< typename packed_options::growth_factor_type
+                           , packed_options::inplace_alignment> implementation_defined;
+   /// @endcond
+   typedef implementation_defined type;
+};
+
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+
+//! Helper alias metafunction to combine options into a single type to be used
+//! by \c boost::container::small_vector.
+//! Supported options are: \c boost::container::growth_factor and \c boost::container::stored_size
+template<class ...Options>
+using small_vector_options_t = typename boost::container::small_vector_options<Options...>::type;
+
+#endif
+
+
+////////////////////////////////////////////////////////////////
+//
+//
+//          OPTIONS FOR STATIC-VECTOR CONTAINER
+//
+//
+////////////////////////////////////////////////////////////////
+
+//!This option specifies if the container will throw if in
+//!the static capacity is not sufficient to hold the required
+//!values. If false is specified, insufficient capacity will
+//!lead to BOOST_ASSERT, and if this assertion returns, to undefined behaviour,
+//!which potentially can lead to better static_vector performance.
+//!The default value is true.
+//!
+//!\tparam ThrowOnExhaustion A boolean value. True if throw is required.
+BOOST_INTRUSIVE_OPTION_CONSTANT(throw_on_overflow, bool, ThrowOnOverflow, throw_on_overflow)
+
+#if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+template<bool ThrowOnOverflow, std::size_t InplaceAlignment>
+struct static_vector_opt
+{
+   static const bool throw_on_overflow = ThrowOnOverflow;
+   static const std::size_t inplace_alignment = InplaceAlignment;
+};
+
+typedef static_vector_opt<true, 0u> static_vector_null_opt;
+
+#endif    //!defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+//! Helper metafunction to combine options into a single type to be used
+//! by \c boost::container::static_vector.
+//! Supported options are: \c boost::container::throw_on_overflow and \c boost::container::inplace_alignment
+#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED) || defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+template<class ...Options>
+#else
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
+#endif
+struct static_vector_options
+{
+   /// @cond
+   typedef typename ::boost::intrusive::pack_options
+      < static_vector_null_opt,
+      #if !defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+      O1, O2, O3, O4
+      #else
+      Options...
+      #endif
+      >::type packed_options;
+   typedef static_vector_opt< packed_options::throw_on_overflow
+                            , packed_options::inplace_alignment> implementation_defined;
+   /// @endcond
+   typedef implementation_defined type;
+};
+
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+
+//! Helper alias metafunction to combine options into a single type to be used
+//! by \c boost::container::static_vector.
+//! Supported options are: \c boost::container::growth_factor and \c boost::container::stored_size
+template<class ...Options>
+using static_vector_options_t = typename boost::container::static_vector_options<Options...>::type;
+
+#endif
+
+
+////////////////////////////////////////////////////////////////
+//
+//
+//          OPTIONS FOR DEQUE-BASED CONTAINERS
+//
+//
+////////////////////////////////////////////////////////////////
+
+#if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+template<std::size_t BlockBytes, std::size_t BlockSize>
+struct deque_opt
+{
+   static const std::size_t block_bytes = BlockBytes;
+   static const std::size_t block_size  = BlockSize;
+   BOOST_STATIC_ASSERT_MSG(!(block_bytes && block_size), "block_bytes and block_size can't be specified at the same time");
+};
+
+typedef deque_opt<0u, 0u> deque_null_opt;
+
+#endif
+
+//! Helper metafunction to combine options into a single type to be used
+//! by \c boost::container::deque.
+//! Supported options are: \c boost::container::block_bytes
+#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED) || defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+template<class ...Options>
+#else
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
+#endif
+struct deque_options
+{
+   /// @cond
+   typedef typename ::boost::intrusive::pack_options
+      < deque_null_opt,
+      #if !defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+      O1, O2, O3, O4
+      #else
+      Options...
+      #endif
+      >::type packed_options;
+   typedef deque_opt< packed_options::block_bytes, packed_options::block_size > implementation_defined;
+   /// @endcond
+   typedef implementation_defined type;
+};
+
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+
+//! Helper alias metafunction to combine options into a single type to be used
+//! by \c boost::container::deque.
+//! Supported options are: \c boost::container::block_bytes
+template<class ...Options>
+using deque_options_t = typename boost::container::deque_options<Options...>::type;
+
+#endif
+
+//!This option specifies the maximum size of a block in bytes: this delimites the number of contiguous elements
+//!that will be allocated by deque as min(1u, BlockBytes/sizeof(value_type))
+//!A value zero represents the default value.
+//!
+//!\tparam BlockBytes An unsigned integer value.
+BOOST_INTRUSIVE_OPTION_CONSTANT(block_bytes, std::size_t, BlockBytes, block_bytes)
+
+//!This option specifies the size of a block, delimites the number of contiguous elements
+//!that will be allocated by deque as BlockSize.
+//!A value zero represents the default value.
+//!
+//!\tparam BlockBytes An unsigned integer value.
+BOOST_INTRUSIVE_OPTION_CONSTANT(block_size, std::size_t, BlockSize, block_size)
 
 }  //namespace container {
 }  //namespace boost {

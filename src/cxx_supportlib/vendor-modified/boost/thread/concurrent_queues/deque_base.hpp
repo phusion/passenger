@@ -140,7 +140,7 @@ namespace detail
   template <class T, class ST,
 #if ! defined  BOOST_NO_CXX11_RVALUE_REFERENCES
 #if defined __GNUC__ && ! defined __clang__
-#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 5) || !defined(__GXX_EXPERIMENTAL_CXX0X__)
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7) || !defined(__GXX_EXPERIMENTAL_CXX0X__)
           bool Copyable = is_copy_constructible<T>::value,
           bool Movable = true
 #else

@@ -18,104 +18,28 @@
 #include <boost/memory_order.hpp>
 #include <boost/atomic/detail/config.hpp>
 #include <boost/atomic/detail/interlocked.hpp>
-#include <boost/atomic/detail/storage_type.hpp>
+#include <boost/atomic/detail/storage_traits.hpp>
 #include <boost/atomic/detail/extra_operations_fwd.hpp>
 #include <boost/atomic/detail/extra_ops_generic.hpp>
-#include <boost/atomic/capabilities.hpp>
+#include <boost/atomic/detail/header.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
-#endif
-
-#if defined(BOOST_MSVC)
-#pragma warning(push)
-// frame pointer register 'ebx' modified by inline assembly code
-#pragma warning(disable: 4731)
 #endif
 
 namespace boost {
 namespace atomics {
 namespace detail {
 
-#if defined(_M_IX86) || (defined(BOOST_ATOMIC_INTERLOCKED_BTS) && defined(BOOST_ATOMIC_INTERLOCKED_BTR))
-
-template< typename Base, std::size_t Size, bool Signed >
-struct msvc_x86_extra_operations_common :
-    public generic_extra_operations< Base, Size, Signed >
-{
-    typedef generic_extra_operations< Base, Size, Signed > base_type;
-    typedef typename base_type::storage_type storage_type;
-
-#if defined(BOOST_ATOMIC_INTERLOCKED_BTS)
-    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order) BOOST_NOEXCEPT
-    {
-        return !!BOOST_ATOMIC_INTERLOCKED_BTS(&storage, bit_number);
-    }
-#else
-    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
-    {
-        base_type::fence_before(order);
-        bool result;
-        __asm
-        {
-            mov edx, storage
-            mov eax, bit_number
-            lock bts [edx], eax
-            setc result
-        };
-        base_type::fence_after(order);
-        return result;
-    }
-#endif
-
-#if defined(BOOST_ATOMIC_INTERLOCKED_BTR)
-    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order) BOOST_NOEXCEPT
-    {
-        return !!BOOST_ATOMIC_INTERLOCKED_BTR(&storage, bit_number);
-    }
-#else
-    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
-    {
-        base_type::fence_before(order);
-        bool result;
-        __asm
-        {
-            mov edx, storage
-            mov eax, bit_number
-            lock btr [edx], eax
-            setc result
-        };
-        base_type::fence_after(order);
-        return result;
-    }
-#endif
-
 #if defined(_M_IX86)
-    static BOOST_FORCEINLINE bool bit_test_and_complement(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
-    {
-        base_type::fence_before(order);
-        bool result;
-        __asm
-        {
-            mov edx, storage
-            mov eax, bit_number
-            lock btc [edx], eax
-            setc result
-        };
-        base_type::fence_after(order);
-        return result;
-    }
-#endif
-};
 
 template< typename Base, bool Signed >
 struct extra_operations< Base, 1u, Signed, true > :
-    public msvc_x86_extra_operations_common< Base, 1u, Signed >
+    public extra_operations_generic< Base, 1u, Signed >
 {
-    typedef msvc_x86_extra_operations_common< Base, 1u, Signed > base_type;
+    typedef extra_operations_generic< Base, 1u, Signed > base_type;
     typedef typename base_type::storage_type storage_type;
 
-#if defined(_M_IX86)
     static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
     {
         base_type::fence_before(order);
@@ -491,17 +415,15 @@ struct extra_operations< Base, 1u, Signed, true > :
         base_type::fence_after(order);
         return result;
     }
-#endif // defined(_M_IX86)
 };
 
 template< typename Base, bool Signed >
 struct extra_operations< Base, 2u, Signed, true > :
-    public msvc_x86_extra_operations_common< Base, 2u, Signed >
+    public extra_operations_generic< Base, 2u, Signed >
 {
-    typedef msvc_x86_extra_operations_common< Base, 2u, Signed > base_type;
+    typedef extra_operations_generic< Base, 2u, Signed > base_type;
     typedef typename base_type::storage_type storage_type;
 
-#if defined(_M_IX86)
     static BOOST_FORCEINLINE storage_type fetch_negate(storage_type volatile& storage, memory_order order) BOOST_NOEXCEPT
     {
         base_type::fence_before(order);
@@ -877,14 +799,62 @@ struct extra_operations< Base, 2u, Signed, true > :
         base_type::fence_after(order);
         return result;
     }
-#endif // defined(_M_IX86)
+
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    {
+        base_type::fence_before(order);
+        bool result;
+        __asm
+        {
+            mov edx, storage
+            mov eax, bit_number
+            lock bts word ptr [edx], ax
+            setc result
+        };
+        base_type::fence_after(order);
+        return result;
+    }
+
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    {
+        base_type::fence_before(order);
+        bool result;
+        __asm
+        {
+            mov edx, storage
+            mov eax, bit_number
+            lock btr word ptr [edx], ax
+            setc result
+        };
+        base_type::fence_after(order);
+        return result;
+    }
+
+    static BOOST_FORCEINLINE bool bit_test_and_complement(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    {
+        base_type::fence_before(order);
+        bool result;
+        __asm
+        {
+            mov edx, storage
+            mov eax, bit_number
+            lock btc word ptr [edx], ax
+            setc result
+        };
+        base_type::fence_after(order);
+        return result;
+    }
 };
+
+#endif // defined(_M_IX86)
+
+#if defined(_M_IX86) || (defined(BOOST_ATOMIC_INTERLOCKED_BTS) && defined(BOOST_ATOMIC_INTERLOCKED_BTR))
 
 template< typename Base, bool Signed >
 struct extra_operations< Base, 4u, Signed, true > :
-    public msvc_x86_extra_operations_common< Base, 4u, Signed >
+    public extra_operations_generic< Base, 4u, Signed >
 {
-    typedef msvc_x86_extra_operations_common< Base, 4u, Signed > base_type;
+    typedef extra_operations_generic< Base, 4u, Signed > base_type;
     typedef typename base_type::storage_type storage_type;
 
 #if defined(_M_IX86)
@@ -1263,7 +1233,66 @@ struct extra_operations< Base, 4u, Signed, true > :
         base_type::fence_after(order);
         return result;
     }
+
+    static BOOST_FORCEINLINE bool bit_test_and_complement(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    {
+        base_type::fence_before(order);
+        bool result;
+        __asm
+        {
+            mov edx, storage
+            mov eax, bit_number
+            lock btc dword ptr [edx], eax
+            setc result
+        };
+        base_type::fence_after(order);
+        return result;
+    }
 #endif // defined(_M_IX86)
+
+#if defined(BOOST_ATOMIC_INTERLOCKED_BTS)
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order) BOOST_NOEXCEPT
+    {
+        return !!BOOST_ATOMIC_INTERLOCKED_BTS(&storage, bit_number);
+    }
+#elif defined(_M_IX86)
+    static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    {
+        base_type::fence_before(order);
+        bool result;
+        __asm
+        {
+            mov edx, storage
+            mov eax, bit_number
+            lock bts dword ptr [edx], eax
+            setc result
+        };
+        base_type::fence_after(order);
+        return result;
+    }
+#endif
+
+#if defined(BOOST_ATOMIC_INTERLOCKED_BTR)
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order) BOOST_NOEXCEPT
+    {
+        return !!BOOST_ATOMIC_INTERLOCKED_BTR(&storage, bit_number);
+    }
+#elif defined(_M_IX86)
+    static BOOST_FORCEINLINE bool bit_test_and_reset(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
+    {
+        base_type::fence_before(order);
+        bool result;
+        __asm
+        {
+            mov edx, storage
+            mov eax, bit_number
+            lock btr dword ptr [edx], eax
+            setc result
+        };
+        base_type::fence_after(order);
+        return result;
+    }
+#endif
 };
 
 #endif // defined(_M_IX86) || (defined(BOOST_ATOMIC_INTERLOCKED_BTS) && defined(BOOST_ATOMIC_INTERLOCKED_BTR))
@@ -1272,9 +1301,9 @@ struct extra_operations< Base, 4u, Signed, true > :
 
 template< typename Base, bool Signed >
 struct extra_operations< Base, 8u, Signed, true > :
-    public generic_extra_operations< Base, 8u, Signed >
+    public extra_operations_generic< Base, 8u, Signed >
 {
-    typedef generic_extra_operations< Base, 8u, Signed > base_type;
+    typedef extra_operations_generic< Base, 8u, Signed > base_type;
     typedef typename base_type::storage_type storage_type;
 
     static BOOST_FORCEINLINE bool bit_test_and_set(storage_type volatile& storage, unsigned int bit_number, memory_order order) BOOST_NOEXCEPT
@@ -1294,8 +1323,6 @@ struct extra_operations< Base, 8u, Signed, true > :
 } // namespace atomics
 } // namespace boost
 
-#if defined(BOOST_MSVC)
-#pragma warning(pop)
-#endif
+#include <boost/atomic/detail/footer.hpp>
 
 #endif // BOOST_ATOMIC_DETAIL_EXTRA_OPS_MSVC_X86_HPP_INCLUDED_

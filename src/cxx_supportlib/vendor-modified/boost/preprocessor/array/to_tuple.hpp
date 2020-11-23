@@ -20,13 +20,13 @@
 # /* BOOST_PP_ARRAY_TO_TUPLE */
 #
 #    define BOOST_PP_ARRAY_TO_TUPLE(array) \
-		BOOST_PP_IF \
-			( \
-			BOOST_PP_ARRAY_SIZE(array), \
-			BOOST_PP_ARRAY_DATA, \
-			BOOST_PP_ARRAY_TO_TUPLE_EMPTY \
-			) \
-		(array) \
+        BOOST_PP_IF \
+            ( \
+            BOOST_PP_ARRAY_SIZE(array), \
+            BOOST_PP_ARRAY_DATA, \
+            BOOST_PP_ARRAY_TO_TUPLE_EMPTY \
+            ) \
+        (array) \
 /**/
 #    define BOOST_PP_ARRAY_TO_TUPLE_EMPTY(array)
 #

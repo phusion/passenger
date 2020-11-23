@@ -11,17 +11,9 @@
 
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/date_time/gregorian/greg_serialize.hpp"
+#include "boost/core/nvp.hpp"
 #include "boost/numeric/conversion/cast.hpp"
-#include "boost/serialization/split_free.hpp"
-#include "boost/serialization/nvp.hpp"
-#include "boost/serialization/version.hpp"
-
-// macros to split serialize functions into save & load functions
-// NOTE: these macros define template functions in the boost::serialization namespace.
-// They must be expanded *outside* of any namespace
-BOOST_SERIALIZATION_SPLIT_FREE(boost::posix_time::ptime)
-BOOST_SERIALIZATION_SPLIT_FREE(boost::posix_time::time_duration)
-BOOST_SERIALIZATION_SPLIT_FREE(boost::posix_time::time_period)
+#include "boost/type_traits/integral_constant.hpp"
 
 // Define versions for serialization compatibility
 // alows the unit tests to make an older version to check compatibility
@@ -29,11 +21,35 @@ BOOST_SERIALIZATION_SPLIT_FREE(boost::posix_time::time_period)
 #define BOOST_DATE_TIME_POSIX_TIME_DURATION_VERSION 1
 #endif
 
-BOOST_CLASS_VERSION(boost::posix_time::time_duration, BOOST_DATE_TIME_POSIX_TIME_DURATION_VERSION)
-
 namespace boost {
 namespace serialization {
 
+template<typename T>
+struct version;
+
+template<>
+struct version<boost::posix_time::time_duration>
+  : integral_constant<int, BOOST_DATE_TIME_POSIX_TIME_DURATION_VERSION>
+{
+};
+
+// A macro to split serialize functions into save & load functions.
+// It is here to avoid dependency on Boost.Serialization just for the
+// BOOST_SERIALIZATION_SPLIT_FREE macro
+#define BOOST_DATE_TIME_SPLIT_FREE(T)                                         \
+template<class Archive>                                                       \
+inline void serialize(Archive & ar,                                           \
+                      T & t,                                                  \
+                      const unsigned int file_version)                        \
+{                                                                             \
+  split_free(ar, t, file_version);                                            \
+}
+
+BOOST_DATE_TIME_SPLIT_FREE(boost::posix_time::ptime)
+BOOST_DATE_TIME_SPLIT_FREE(boost::posix_time::time_duration)
+BOOST_DATE_TIME_SPLIT_FREE(boost::posix_time::time_period)
+
+#undef BOOST_DATE_TIME_SPLIT_FREE
 
 /*** time_duration ***/
 

@@ -7,6 +7,7 @@
 
 #include <boost/config.hpp>
 #include <boost/typeof/constant.hpp>
+#include <cstddef> // for std::size_t
 
 namespace boost { namespace type_of {
 

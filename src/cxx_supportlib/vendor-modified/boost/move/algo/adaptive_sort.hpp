@@ -148,7 +148,7 @@ typename iterator_traits<RandIt>::size_type
    }
    xbuf.clear();
    //2*l_build_buf or total already merged
-   return min_value(elements_in_blocks, 2*l_build_buf);
+   return min_value<size_type>(elements_in_blocks, 2*l_build_buf);
 }
 
 template<class RandItKeys, class KeyCompare, class RandIt, class Compare, class XBuf>
@@ -180,19 +180,19 @@ void adaptive_sort_combine_blocks
    size_type const max_i = n_reg_combined + (l_irreg_combined != 0);
 
    if(merge_left || !use_buf) {
-      for( size_type combined_i = 0; combined_i != max_i; ++combined_i, combined_first += l_reg_combined) {
+      for( size_type combined_i = 0; combined_i != max_i; ) {
          //Now merge blocks
          bool const is_last = combined_i==n_reg_combined;
          size_type const l_cur_combined = is_last ? l_irreg_combined : l_reg_combined;
 
-         range_xbuf<RandIt, move_op> rbuf( (use_buf && xbuf_used) ? (combined_first-l_block) : combined_first, combined_first);
+         range_xbuf<RandIt, size_type, move_op> rbuf( (use_buf && xbuf_used) ? (combined_first-l_block) : combined_first, combined_first);
          size_type n_block_a, n_block_b, l_irreg1, l_irreg2;
          combine_params( keys, key_comp, l_cur_combined
                         , l_prev_merged, l_block, rbuf
                         , n_block_a, n_block_b, l_irreg1, l_irreg2);   //Outputs
          BOOST_MOVE_ADAPTIVE_SORT_PRINT_L2("   A combpar:            ", len + l_block);
-         BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(is_sorted(combined_first, combined_first + n_block_a*l_block+l_irreg1, comp));
-            BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(is_sorted(combined_first + n_block_a*l_block+l_irreg1, combined_first + n_block_a*l_block+l_irreg1+n_block_b*l_block+l_irreg2, comp));
+         BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(boost::movelib::is_sorted(combined_first, combined_first + n_block_a*l_block+l_irreg1, comp));
+            BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(boost::movelib::is_sorted(combined_first + n_block_a*l_block+l_irreg1, combined_first + n_block_a*l_block+l_irreg1+n_block_b*l_block+l_irreg2, comp));
          if(!use_buf){
             merge_blocks_bufferless
                (keys, key_comp, combined_first, l_block, 0u, n_block_a, n_block_b, l_irreg2, comp);
@@ -202,26 +202,32 @@ void adaptive_sort_combine_blocks
                (keys, key_comp, combined_first, l_block, 0u, n_block_a, n_block_b, l_irreg2, comp, xbuf_used);
          }
          BOOST_MOVE_ADAPTIVE_SORT_PRINT_L2("   After merge_blocks_L: ", len + l_block);
+         ++combined_i;
+         if(combined_i != max_i)
+            combined_first += l_reg_combined;
       }
    }
    else{
       combined_first += l_reg_combined*(max_i-1);
-      for( size_type combined_i = max_i; combined_i--; combined_first -= l_reg_combined) {
+      for( size_type combined_i = max_i; combined_i; ) {
+         --combined_i;
          bool const is_last = combined_i==n_reg_combined;
          size_type const l_cur_combined = is_last ? l_irreg_combined : l_reg_combined;
 
          RandIt const combined_last(combined_first+l_cur_combined);
-         range_xbuf<RandIt, move_op> rbuf(combined_last, xbuf_used ? (combined_last+l_block) : combined_last);
+         range_xbuf<RandIt, size_type, move_op> rbuf(combined_last, xbuf_used ? (combined_last+l_block) : combined_last);
          size_type n_block_a, n_block_b, l_irreg1, l_irreg2;
          combine_params( keys, key_comp, l_cur_combined
                         , l_prev_merged, l_block, rbuf
                         , n_block_a, n_block_b, l_irreg1, l_irreg2);  //Outputs
          BOOST_MOVE_ADAPTIVE_SORT_PRINT_L2("   A combpar:            ", len + l_block);
-         BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(is_sorted(combined_first, combined_first + n_block_a*l_block+l_irreg1, comp));
-         BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(is_sorted(combined_first + n_block_a*l_block+l_irreg1, combined_first + n_block_a*l_block+l_irreg1+n_block_b*l_block+l_irreg2, comp));
+         BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(boost::movelib::is_sorted(combined_first, combined_first + n_block_a*l_block+l_irreg1, comp));
+         BOOST_MOVE_ADAPTIVE_SORT_INVARIANT(boost::movelib::is_sorted(combined_first + n_block_a*l_block+l_irreg1, combined_first + n_block_a*l_block+l_irreg1+n_block_b*l_block+l_irreg2, comp));
          merge_blocks_right
             (keys, key_comp, combined_first, l_block, n_block_a, n_block_b, l_irreg2, comp, xbuf_used);
          BOOST_MOVE_ADAPTIVE_SORT_PRINT_L2("   After merge_blocks_R: ", len + l_block);
+         if(combined_i)
+            combined_first -= l_reg_combined;
       }
    }
 }
@@ -263,7 +269,7 @@ bool adaptive_sort_combine_all_blocks
       //    Implies l_block == n_keys/2 && use_internal_buf == true
       //Otherwise, just give up and and use all keys to merge using rotations (use_internal_buf = false)
       bool use_internal_buf = false;
-      size_type const l_block = lblock_for_combine(l_intbuf, n_keys, 2*l_merged, use_internal_buf);
+      size_type const l_block = lblock_for_combine(l_intbuf, n_keys, size_type(2*l_merged), use_internal_buf);
       BOOST_ASSERT(!l_intbuf || (l_block == l_intbuf));
       BOOST_ASSERT(n == 0 || (!use_internal_buf || prev_use_internal_buf) );
       BOOST_ASSERT(n == 0 || (!use_internal_buf || l_prev_block == l_block) );
@@ -607,12 +613,12 @@ void adaptive_sort_impl
 template<class RandIt, class RandRawIt, class Compare>
 void adaptive_sort( RandIt first, RandIt last, Compare comp
                , RandRawIt uninitialized
-               , std::size_t uninitialized_len)
+               , typename iterator_traits<RandIt>::size_type uninitialized_len)
 {
    typedef typename iterator_traits<RandIt>::size_type  size_type;
    typedef typename iterator_traits<RandIt>::value_type value_type;
 
-   ::boost::movelib::detail_adaptive::adaptive_xbuf<value_type, RandRawIt> xbuf(uninitialized, uninitialized_len);
+   ::boost::movelib::adaptive_xbuf<value_type, RandRawIt, size_type> xbuf(uninitialized, uninitialized_len);
    ::boost::movelib::detail_adaptive::adaptive_sort_impl(first, size_type(last - first), comp, xbuf);
 }
 

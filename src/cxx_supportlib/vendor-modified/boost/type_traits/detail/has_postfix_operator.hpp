@@ -25,25 +25,25 @@ namespace boost
 
       struct dont_care;
 
-      template <class T, class Ret, class = boost::void_t<>>
+      template <class T, class Ret, class = void>
       struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _ret_imp) : public boost::false_type {};
 
       template <class T, class Ret>
-      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _ret_imp)<T, Ret, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP) > >
+      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _ret_imp)<T, Ret, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP) >::type>
          : public boost::integral_constant<bool, ::boost::is_convertible<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP), Ret>::value> {};
 
-      template <class T, class = boost::void_t<> >
+      template <class T, class = void >
       struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _void_imp) : public boost::false_type {};
 
       template <class T>
-      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _void_imp)<T, boost::void_t<decltype(std::declval<typename add_reference<T>::type>()BOOST_TT_TRAIT_OP)> >
+      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _void_imp)<T, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>()BOOST_TT_TRAIT_OP)>::type>
          : public boost::integral_constant<bool, ::boost::is_void<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP)>::value> {};
 
-      template <class T, class = boost::void_t<>>
+      template <class T, class = void>
       struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _dc_imp) : public boost::false_type {};
 
       template <class T>
-      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _dc_imp)<T, boost::void_t<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP)> >
+      struct BOOST_JOIN(BOOST_TT_TRAIT_NAME, _dc_imp)<T, typename boost::make_void<decltype(std::declval<typename add_reference<T>::type>() BOOST_TT_TRAIT_OP)>::type>
          : public boost::true_type {};
 
    }

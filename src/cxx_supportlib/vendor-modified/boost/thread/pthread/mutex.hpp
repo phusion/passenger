@@ -33,10 +33,6 @@
 
 #include <boost/config/abi_prefix.hpp>
 
-#ifndef BOOST_THREAD_HAS_NO_EINTR_BUG
-#define BOOST_THREAD_HAS_EINTR_BUG
-#endif
-
 namespace boost
 {
 
@@ -49,7 +45,7 @@ namespace boost
 
         mutex()
         {
-            int const res=pthread_mutex_init(&m,NULL);
+            int const res=posix::pthread_mutex_init(&m);
             if(res)
             {
                 boost::throw_exception(thread_resource_error(res, "boost:: mutex constructor failed in pthread_mutex_init"));
@@ -57,9 +53,7 @@ namespace boost
         }
         ~mutex()
         {
-          int const res = posix::pthread_mutex_destroy(&m);
-          boost::ignore_unused(res);
-          BOOST_ASSERT(!res);
+          BOOST_VERIFY(!posix::pthread_mutex_destroy(&m));
         }
 
         void lock() BOOST_THREAD_ACQUIRE()
@@ -73,22 +67,12 @@ namespace boost
 
         void unlock() BOOST_THREAD_RELEASE()
         {
-            int res = posix::pthread_mutex_unlock(&m);
-            (void)res;
-            BOOST_ASSERT(res == 0);
-//            if (res)
-//            {
-//                boost::throw_exception(lock_error(res,"boost: mutex unlock failed in pthread_mutex_unlock"));
-//            }
+            BOOST_VERIFY(!posix::pthread_mutex_unlock(&m));
         }
 
         bool try_lock() BOOST_THREAD_TRY_ACQUIRE(true)
         {
-            int res;
-            do
-            {
-                res = posix::pthread_mutex_trylock(&m);
-            } while (res == EINTR);
+            int res = posix::pthread_mutex_trylock(&m);
             if (res==EBUSY)
             {
                 return false;
@@ -124,17 +108,17 @@ namespace boost
         BOOST_THREAD_NO_COPYABLE(timed_mutex)
         timed_mutex()
         {
-            int const res=pthread_mutex_init(&m,NULL);
+            int const res=posix::pthread_mutex_init(&m);
             if(res)
             {
                 boost::throw_exception(thread_resource_error(res, "boost:: timed_mutex constructor failed in pthread_mutex_init"));
             }
 #ifndef BOOST_THREAD_USES_PTHREAD_TIMEDLOCK
-            int const res2=pthread::cond_init(cond);
+            int const res2=posix::pthread_cond_init(&cond);
             if(res2)
             {
                 BOOST_VERIFY(!posix::pthread_mutex_destroy(&m));
-                boost::throw_exception(thread_resource_error(res2, "boost:: timed_mutex constructor failed in pthread::cond_init"));
+                boost::throw_exception(thread_resource_error(res2, "boost:: timed_mutex constructor failed in pthread_cond_init"));
             }
             is_locked=false;
 #endif
@@ -143,7 +127,7 @@ namespace boost
         {
             BOOST_VERIFY(!posix::pthread_mutex_destroy(&m));
 #ifndef BOOST_THREAD_USES_PTHREAD_TIMEDLOCK
-            BOOST_VERIFY(!pthread_cond_destroy(&cond));
+            BOOST_VERIFY(!posix::pthread_cond_destroy(&cond));
 #endif
         }
 
@@ -192,22 +176,12 @@ namespace boost
 
         void unlock()
         {
-            int res = posix::pthread_mutex_unlock(&m);
-            (void)res;
-            BOOST_ASSERT(res == 0);
-//            if (res)
-//            {
-//                boost::throw_exception(lock_error(res,"boost: mutex unlock failed in pthread_mutex_unlock"));
-//            }
+            BOOST_VERIFY(!posix::pthread_mutex_unlock(&m));
         }
 
         bool try_lock()
         {
-          int res;
-          do
-          {
-              res = posix::pthread_mutex_trylock(&m);
-          } while (res == EINTR);
+          int res = posix::pthread_mutex_trylock(&m);
           if (res==EBUSY)
           {
               return false;
@@ -261,7 +235,7 @@ namespace boost
             boost::pthread::pthread_mutex_scoped_lock const local_lock(&m);
             while(is_locked)
             {
-                int const cond_res=pthread_cond_timedwait(&cond,&m,&timeout.getTs());
+                int const cond_res=posix::pthread_cond_timedwait(&cond,&m,&timeout.getTs());
                 if(cond_res==ETIMEDOUT)
                 {
                     break;

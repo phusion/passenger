@@ -121,9 +121,13 @@
 
 
 #if (__cplusplus >= 201703L)
-//CTAD supported
+   //CTAD supported
+   #ifdef __INTEL_COMPILER
+      //Intel compilers do not offer this feature yet
+      #define BOOST_CONTAINER_NO_CXX17_CTAD
+   #endif
 #else
-#define BOOST_CONTAINER_NO_CXX17_CTAD
+   #define BOOST_CONTAINER_NO_CXX17_CTAD
 #endif
 
 #endif   //#ifndef BOOST_CONTAINER_DETAIL_WORKAROUND_HPP

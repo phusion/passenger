@@ -22,8 +22,8 @@
 #endif
 
 #if defined(BOOST_THREAD_CHRONO_WINDOWS_API)
-#include <boost/detail/winapi/time.hpp>
-#include <boost/detail/winapi/timers.hpp>
+#include <boost/winapi/time.hpp>
+#include <boost/winapi/timers.hpp>
 #include <boost/thread/win32/thread_primitives.hpp>
 #elif defined(BOOST_THREAD_CHRONO_MAC_API)
 #include <sys/time.h> //for gettimeofday and timeval
@@ -293,8 +293,8 @@ inline FP init_steady_clock(kern_return_t & err)
       static real_platform_timepoint now()
       {
 #if defined(BOOST_THREAD_CHRONO_WINDOWS_API)
-        boost::detail::winapi::FILETIME_ ft;
-        boost::detail::winapi::GetSystemTimeAsFileTime(&ft);  // never fails
+        boost::winapi::FILETIME_ ft;
+        boost::winapi::GetSystemTimeAsFileTime(&ft);  // never fails
         boost::time_max_t ns = ((((static_cast<boost::time_max_t>(ft.dwHighDateTime) << 32) | ft.dwLowDateTime) - 116444736000000000LL) * 100LL);
         return real_platform_timepoint(ns);
 #elif defined(BOOST_THREAD_CHRONO_MAC_API)
@@ -401,8 +401,8 @@ inline FP init_steady_clock(kern_return_t & err)
       // Use QueryPerformanceCounter() to match the implementation in Boost
       // Chrono so that chrono::steady_clock::now() and this function share the
       // same epoch and so can be converted between each other.
-      boost::detail::winapi::LARGE_INTEGER_ freq;
-      if ( !boost::detail::winapi::QueryPerformanceFrequency( &freq ) )
+      boost::winapi::LARGE_INTEGER_ freq;
+      if ( !boost::winapi::QueryPerformanceFrequency( &freq ) )
       {
         BOOST_ASSERT(0 && "Boost::Thread - QueryPerformanceFrequency Internal Error");
         return mono_platform_timepoint(0);
@@ -413,9 +413,9 @@ inline FP init_steady_clock(kern_return_t & err)
         return mono_platform_timepoint(0);
       }
 
-      boost::detail::winapi::LARGE_INTEGER_ pcount;
+      boost::winapi::LARGE_INTEGER_ pcount;
       unsigned times=0;
-      while ( ! boost::detail::winapi::QueryPerformanceCounter( &pcount ) )
+      while ( ! boost::winapi::QueryPerformanceCounter( &pcount ) )
       {
         if ( ++times > 3 )
         {

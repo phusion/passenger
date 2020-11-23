@@ -10,6 +10,7 @@
 #ifndef BOOST_INTEGER_STATIC_MIN_MAX_HPP
 #define BOOST_INTEGER_STATIC_MIN_MAX_HPP
 
+#include <boost/config.hpp>
 #include <boost/integer_fwd.hpp>  // self include
 
 namespace boost

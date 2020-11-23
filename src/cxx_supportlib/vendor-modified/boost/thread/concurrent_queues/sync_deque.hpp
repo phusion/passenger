@@ -92,13 +92,13 @@ namespace concurrent
     inline void push_back(const value_type& elem, unique_lock<mutex>& lk)
     {
       super::data_.push_back(elem);
-      super::notify_not_empty_if_needed(lk);
+      super::notify_elem_added(lk);
     }
 
     inline void push_back(BOOST_THREAD_RV_REF(value_type) elem, unique_lock<mutex>& lk)
     {
       super::data_.push_back(boost::move(elem));
-      super::notify_not_empty_if_needed(lk);
+      super::notify_elem_added(lk);
     }
   };
 
@@ -122,7 +122,7 @@ namespace concurrent
 //      {
 //        data_.push(boost::move(*cur));;
 //      }
-//      notify_not_empty_if_needed(lk);
+//      notify_elem_added(lk);
 //    }
 //    catch (...)
 //    {

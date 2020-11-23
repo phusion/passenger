@@ -18,6 +18,9 @@
 #  pragma once
 #endif
 
+namespace boost {
+namespace container {
+
 //Functors for member algorithm defaults
 template<class ValueType>
 struct value_less
@@ -32,5 +35,8 @@ struct value_equal
    bool operator()(const ValueType &a, const ValueType &b) const
       {  return a == b;  }
 };
+
+}  //namespace container {
+}  //namespace boost {
 
 #endif   //BOOST_CONTAINER_DETAIL_VALUE_FUNCTORS_HPP

@@ -43,7 +43,7 @@ namespace date_time {
    *  name: Pacific Standard Time and the abbreviated name: PST.
    *  During daylight savings there are additional names:
    *  Pacific Daylight Time and PDT. 
-   *@parm CharT Allows class to support different character types
+   *@tparam CharT Allows class to support different character types
    */
   template<class CharT>
   class time_zone_names_base

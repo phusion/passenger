@@ -15,14 +15,44 @@
 #  pragma once 
 #endif
 
-#include <boost/config.hpp>
+#include <boost/container/detail/config_begin.hpp>
+#include <boost/container/detail/workaround.hpp>
+#include <boost/container/container_fwd.hpp>
+
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/container/allocator_traits.hpp>
 #include <boost/intrusive/detail/ebo_functor_holder.hpp>
 #include <boost/move/utility_core.hpp>
+#include <boost/move/detail/type_traits.hpp>
+#include <boost/container/detail/std_fwd.hpp>
+
+#include <cstring>
 
 namespace boost {
 namespace container {
+
+namespace pmr_dtl {
+
+template<class T>
+struct max_allocator_alignment
+{
+   static const std::size_t value = 1;
+};
+
+template<class T>
+struct max_allocator_alignment< ::boost::container::new_allocator<T> >
+{
+   static const std::size_t value = boost::move_detail::alignment_of<boost::move_detail::max_align_t>::value;
+};
+
+template<class T>
+struct max_allocator_alignment< std::allocator<T> >
+{
+   static const std::size_t value = boost::move_detail::alignment_of<boost::move_detail::max_align_t>::value;
+};
+
+}  //namespace pmr_dtl
+
 namespace pmr {
 
 //! An instance of resource_adaptor<Allocator> is an adaptor that wraps a memory_resource interface
@@ -57,7 +87,7 @@ class resource_adaptor_imp
    void static_assert_if_not_char_allocator() const
    {
       //This class can only be used with allocators type char
-      BOOST_STATIC_ASSERT((dtl::is_same<typename Allocator::value_type, char>::value));
+      BOOST_STATIC_ASSERT((boost::container::dtl::is_same<typename Allocator::value_type, char>::value));
    }
    #endif
 
@@ -114,15 +144,25 @@ class resource_adaptor_imp
    protected:
    //! <b>Returns</b>: Allocated memory obtained by calling m_alloc.allocate. The size and alignment
    //!   of the allocated memory shall meet the requirements for a class derived from memory_resource.
-   virtual void* do_allocate(size_t bytes, size_t alignment)
-   {  (void)alignment;  return this->ebo_alloc_t::get().allocate(bytes);  }
+   virtual void* do_allocate(std::size_t bytes, std::size_t alignment)
+   {
+      if (alignment <= priv_guaranteed_allocator_alignment())
+         return this->ebo_alloc_t::get().allocate(bytes);
+      else
+         return this->priv_aligned_alloc(bytes, alignment);
+   }
 
    //! <b>Requires</b>: p was previously allocated using A.allocate, where A == m_alloc, and not
    //!   subsequently deallocated. 
    //!
    //! <b>Effects</b>: Returns memory to the allocator using m_alloc.deallocate().
-   virtual void do_deallocate(void* p, size_t bytes, size_t alignment)
-   {  (void)alignment; this->ebo_alloc_t::get().deallocate((char*)p, bytes);   }
+   virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment)
+   {
+      if (alignment <= priv_guaranteed_allocator_alignment())
+         this->ebo_alloc_t::get().deallocate((char*)p, bytes);
+      else
+         this->priv_aligned_dealloc(p, bytes, alignment);
+   }
 
    //! Let p be dynamic_cast<const resource_adaptor_imp*>(&other).
    //!
@@ -131,6 +171,48 @@ class resource_adaptor_imp
    {
       const resource_adaptor_imp* p = dynamic_cast<const resource_adaptor_imp*>(&other);
       return p && p->ebo_alloc_t::get() == this->ebo_alloc_t::get();
+   }
+
+   private:
+   void * priv_aligned_alloc(std::size_t bytes, std::size_t alignment)
+   {
+      //Allocate space for requested bytes, plus alignment, plus bookeeping data
+      void *const p = this->ebo_alloc_t::get().allocate(bytes + priv_extra_bytes_for_overalignment(alignment));
+
+      if (0 != p) {
+         //Obtain the aligned address after the bookeeping data
+         void *const aligned_ptr = (void*)(((std::size_t)p + priv_extra_bytes_for_overalignment(alignment)) & ~(alignment - 1));
+
+         //Store bookeeping data. Use memcpy as the underlying memory might be unaligned for
+         //a pointer (e.g. 2 byte alignment in 32 bit, 4 byte alignment in 64 bit)
+         std::memcpy(priv_bookeeping_addr_from_aligned_ptr(aligned_ptr), &p, sizeof(p));
+         return aligned_ptr;
+      }
+      return 0;
+   }
+
+   void priv_aligned_dealloc(void *aligned_ptr, std::size_t bytes, std::size_t alignment)
+   {
+      //Obtain bookeeping data
+      void *p;
+      std::memcpy(&p, priv_bookeeping_addr_from_aligned_ptr(aligned_ptr), sizeof(p));
+      std::size_t s  = bytes + priv_extra_bytes_for_overalignment(alignment);
+      this->ebo_alloc_t::get().deallocate((char*)p, s);
+   }
+
+   static BOOST_CONTAINER_FORCEINLINE void *priv_bookeeping_addr_from_aligned_ptr(void *aligned_ptr)
+   {
+      return reinterpret_cast<void*>(reinterpret_cast<std::size_t>(aligned_ptr) - sizeof(void*));
+   }
+
+   BOOST_CONTAINER_FORCEINLINE static std::size_t priv_extra_bytes_for_overalignment(std::size_t alignment)
+   {
+      return alignment - 1 + sizeof(void*);
+   }
+
+   BOOST_CONTAINER_FORCEINLINE static std::size_t priv_guaranteed_allocator_alignment()
+   {
+      return pmr_dtl::max_allocator_alignment<Allocator>::value;
    }
 };
 
@@ -189,5 +271,7 @@ class resource_adaptor
 }  //namespace pmr {
 }  //namespace container {
 }  //namespace boost {
+
+#include <boost/container/detail/config_end.hpp>
 
 #endif   //BOOST_CONTAINER_PMR_RESOURCE_ADAPTOR_HPP

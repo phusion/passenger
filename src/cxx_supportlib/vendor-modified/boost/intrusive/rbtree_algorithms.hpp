@@ -273,7 +273,7 @@ class rbtree_algorithms
    #endif   //#ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::init_header(node_ptr)
-   static void init_header(node_ptr header)
+   BOOST_INTRUSIVE_FORCEINLINE static void init_header(node_ptr header)
    {
       bstree_algo::init_header(header);
       NodeTraits::set_color(header, NodeTraits::red());

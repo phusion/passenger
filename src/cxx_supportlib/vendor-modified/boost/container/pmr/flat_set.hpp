@@ -8,8 +8,8 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_CONTAINER_PMR_SET_HPP
-#define BOOST_CONTAINER_PMR_SET_HPP
+#ifndef BOOST_CONTAINER_PMR_FLAT_SET_HPP
+#define BOOST_CONTAINER_PMR_FLAT_SET_HPP
 
 #if defined (_MSC_VER)
 #  pragma once 
@@ -56,4 +56,4 @@ struct flat_multiset_of
 }  //namespace container {
 }  //namespace boost {
 
-#endif   //BOOST_CONTAINER_PMR_SET_HPP
+#endif   //BOOST_CONTAINER_PMR_FLAT_SET_HPP

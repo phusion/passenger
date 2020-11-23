@@ -11,7 +11,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #include <boost/thread/detail/config.hpp>
 #include <boost/thread/condition_variable.hpp>
@@ -63,7 +63,7 @@ namespace detail
 
   protected:
     mutable mutex mtx_;
-    condition_variable not_empty_;
+    condition_variable cond_;
     underlying_queue_type data_;
     bool closed_;
 
@@ -91,16 +91,14 @@ namespace detail
     inline bool wait_until_not_empty_or_closed(unique_lock<mutex>& lk);
     template <class WClock, class Duration>
     queue_op_status wait_until_not_empty_or_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp);
-    template <class WClock, class Duration>
-    queue_op_status wait_until_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp);
 
-    inline void notify_not_empty_if_needed(unique_lock<mutex>& )
+    inline void notify_elem_added(unique_lock<mutex>& )
     {
-      not_empty_.notify_one();
+      cond_.notify_all();
     }
-    inline void notify_not_empty_if_needed(lock_guard<mutex>& )
+    inline void notify_elem_added(lock_guard<mutex>& )
     {
-      not_empty_.notify_one();
+      cond_.notify_all();
     }
 
   };
@@ -124,7 +122,7 @@ namespace detail
       lock_guard<mutex> lk(mtx_);
       closed_ = true;
     }
-    not_empty_.notify_all();
+    cond_.notify_all();
   }
 
   template <class ValueType, class Queue>
@@ -189,7 +187,7 @@ namespace detail
   template <class ValueType, class Queue>
   bool sync_deque_base<ValueType, Queue>::wait_until_not_empty_or_closed(unique_lock<mutex>& lk)
   {
-    not_empty_.wait(lk, boost::bind(&sync_deque_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk)));
+    cond_.wait(lk, boost::bind(&sync_deque_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk)));
     if (! empty(lk)) return false; // success
     return true; // closed
   }
@@ -198,19 +196,9 @@ namespace detail
   template <class WClock, class Duration>
   queue_op_status sync_deque_base<ValueType, Queue>::wait_until_not_empty_or_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp)
   {
-    if (! not_empty_.wait_until(lk, tp, boost::bind(&sync_deque_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk))))
+    if (! cond_.wait_until(lk, tp, boost::bind(&sync_deque_base<ValueType, Queue>::not_empty_or_closed, boost::ref(*this), boost::ref(lk))))
       return queue_op_status::timeout;
     if (! empty(lk)) return queue_op_status::success;
-    return queue_op_status::closed;
-  }
-
-  template <class ValueType, class Queue>
-  template <class WClock, class Duration>
-  queue_op_status sync_deque_base<ValueType, Queue>::wait_until_closed_until(unique_lock<mutex>& lk, chrono::time_point<WClock,Duration> const&tp)
-  {
-    bool (sync_queue_base<ValueType, Queue>::*closed_function_ptr)(unique_lock<mutex>&) const = &sync_queue_base<ValueType, Queue>::closed;
-    if (! not_empty_.wait_until(lk, tp, boost::bind(closed_function_ptr, boost::ref(*this), boost::ref(lk))))
-      return queue_op_status::timeout;
     return queue_op_status::closed;
   }
 

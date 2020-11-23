@@ -17,7 +17,7 @@
 namespace boost
 {
 
-  //[shared_lockable_adapter
+  //[poly_shared_lockable_adapter
   template <typename Mutex, typename Base=poly_shared_lockable>
   class poly_shared_lockable_adapter: public poly_timed_lockable_adapter<Mutex, Base>
   {
@@ -54,9 +54,9 @@ namespace boost
 
   //]
 
-  //[upgrade_lockable_adapter
+  //[poly_upgrade_lockable_adapter
   template <typename Mutex, typename Base=poly_shared_lockable>
-  class upgrade_lockable_adapter: public shared_lockable_adapter<Mutex, Base>
+  class poly_upgrade_lockable_adapter: public poly_shared_lockable_adapter<Mutex, Base>
   {
   public:
     typedef Mutex mutex_type;
@@ -102,7 +102,6 @@ namespace boost
     {
       return this->mtx().try_unlock_shared_and_lock_until(abs_time);
     }
-    template <typename Rep, typename Period>
     bool try_unlock_shared_and_lock_for(chrono::nanoseconds const & rel_time)
     {
       return this->mtx().try_unlock_shared_and_lock_for(rel_time);

@@ -52,9 +52,9 @@
 // so we disable use of stdint.h when GLIBC does not define __GLIBC_HAVE_LONG_LONG.
 // See https://svn.boost.org/trac/boost/ticket/3548 and http://sources.redhat.com/bugzilla/show_bug.cgi?id=10990
 //
-#if defined(BOOST_HAS_STDINT_H)					\
-  && (!defined(__GLIBC__)					\
-      || defined(__GLIBC_HAVE_LONG_LONG)			\
+#if defined(BOOST_HAS_STDINT_H)            \
+  && (!defined(__GLIBC__)                  \
+      || defined(__GLIBC_HAVE_LONG_LONG)   \
       || (defined(__GLIBC__) && ((__GLIBC__ > 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ >= 17)))))
 
 // The following #include is an implementation artifact; not part of interface.
@@ -306,7 +306,7 @@ namespace boost
 //  64-bit types + intmax_t and uintmax_t  ----------------------------------//
 
 # if defined(BOOST_HAS_LONG_LONG) && \
-   !defined(BOOST_MSVC) && !defined(__BORLANDC__) && \
+   !defined(BOOST_MSVC) && !defined(BOOST_BORLANDC) && \
    (!defined(__GLIBCPP__) || defined(_GLIBCPP_USE_LONG_LONG)) && \
    (defined(ULLONG_MAX) || defined(ULONG_LONG_MAX) || defined(ULONGLONG_MAX))
 #    if defined(__hpux)
@@ -451,7 +451,7 @@ INT#_C macros if they're not already defined (John Maddock).
 #ifndef INT64_C
 #  define INT64_C(value)    value##i64
 #endif
-#  ifdef __BORLANDC__
+#  ifdef BOOST_BORLANDC
     // Borland bug: appending ui8 makes the type a signed char
 #   define UINT8_C(value)    static_cast<unsigned char>(value##u)
 #  else

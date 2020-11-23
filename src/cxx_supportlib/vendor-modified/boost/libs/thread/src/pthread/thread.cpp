@@ -17,6 +17,8 @@
 #include <boost/thread/once.hpp>
 #include <boost/thread/tss.hpp>
 #include <boost/thread/future.hpp>
+#include <boost/thread/pthread/pthread_helpers.hpp>
+#include <boost/thread/pthread/pthread_mutex_scoped_lock.hpp>
 
 #ifdef __GLIBC__
 #include <sys/sysinfo.h>
@@ -111,7 +113,7 @@ namespace boost
                                     = thread_info->tss_data.begin();
                                 if(current->second.func && (current->second.value!=0))
                                 {
-                                    (*current->second.func)(current->second.value);
+                                    (*current->second.caller)(current->second.func,current->second.value);
                                 }
                                 thread_info->tss_data.erase(current);
                             }
@@ -581,7 +583,7 @@ namespace boost
             if(local_thread_info->current_cond)
             {
                 boost::pthread::pthread_mutex_scoped_lock internal_lock(local_thread_info->cond_mutex);
-                BOOST_VERIFY(!pthread_cond_broadcast(local_thread_info->current_cond));
+                BOOST_VERIFY(!posix::pthread_cond_broadcast(local_thread_info->current_cond));
             }
         }
     }
@@ -726,11 +728,12 @@ namespace boost
         }
 
         void add_new_tss_node(void const* key,
-                              boost::shared_ptr<tss_cleanup_function> func,
+                              detail::tss_data_node::cleanup_caller_t caller,
+                              detail::tss_data_node::cleanup_func_t func,
                               void* tss_data)
         {
             detail::thread_data_base* const current_thread_data(get_or_make_current_thread_data());
-            current_thread_data->tss_data.insert(std::make_pair(key,tss_data_node(func,tss_data)));
+            current_thread_data->tss_data.insert(std::make_pair(key,tss_data_node(caller,func,tss_data)));
         }
 
         void erase_tss_node(void const* key)
@@ -743,17 +746,19 @@ namespace boost
         }
 
         void set_tss_data(void const* key,
-                          boost::shared_ptr<tss_cleanup_function> func,
+                          detail::tss_data_node::cleanup_caller_t caller,
+                          detail::tss_data_node::cleanup_func_t func,
                           void* tss_data,bool cleanup_existing)
         {
             if(tss_data_node* const current_node=find_tss_data(key))
             {
                 if(cleanup_existing && current_node->func && (current_node->value!=0))
                 {
-                    (*current_node->func)(current_node->value);
+                    (*current_node->caller)(current_node->func,current_node->value);
                 }
                 if(func || (tss_data!=0))
                 {
+                    current_node->caller=caller;
                     current_node->func=func;
                     current_node->value=tss_data;
                 }
@@ -764,7 +769,7 @@ namespace boost
             }
             else if(func || (tss_data!=0))
             {
-                add_new_tss_node(key,func,tss_data);
+                add_new_tss_node(key,caller,func,tss_data);
             }
         }
     }

@@ -22,13 +22,13 @@
 # /* BOOST_PP_ARRAY_TO_SEQ */
 #
 #    define BOOST_PP_ARRAY_TO_SEQ(array) \
-		BOOST_PP_IF \
-			( \
-			BOOST_PP_ARRAY_SIZE(array), \
-			BOOST_PP_ARRAY_TO_SEQ_DO, \
-			BOOST_PP_ARRAY_TO_SEQ_EMPTY \
-			) \
-		(array) \
+        BOOST_PP_IF \
+            ( \
+            BOOST_PP_ARRAY_SIZE(array), \
+            BOOST_PP_ARRAY_TO_SEQ_DO, \
+            BOOST_PP_ARRAY_TO_SEQ_EMPTY \
+            ) \
+        (array) \
 /**/
 #    define BOOST_PP_ARRAY_TO_SEQ_EMPTY(array)
 #

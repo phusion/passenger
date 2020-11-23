@@ -51,7 +51,7 @@ namespace boost{
    {
       BOOST_STATIC_ASSERT_MSG(::boost::is_complete<T>::value, "The target type must be complete in order to test for constructibility");
    };
-   template <class T, class Arg> struct is_constructible<T, Arg> : public integral_constant<bool, is_destructible<T>::value && sizeof(detail::is_constructible_imp::test1<T, Arg>(0)) == sizeof(boost::type_traits::yes_type)>
+   template <class T, class Arg> struct is_constructible<T, Arg> : public integral_constant<bool, is_destructible<T>::value && sizeof(boost::detail::is_constructible_imp::test1<T, Arg>(0)) == sizeof(boost::type_traits::yes_type)>
    {
       BOOST_STATIC_ASSERT_MSG(::boost::is_complete<T>::value, "The target type must be complete in order to test for constructibility");
    };

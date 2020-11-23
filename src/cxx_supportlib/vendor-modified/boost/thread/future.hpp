@@ -54,7 +54,7 @@ struct shared_state_base {
 #endif
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #ifdef BOOST_THREAD_USES_CHRONO
 #include <boost/chrono/system_clocks.hpp>
 #endif
@@ -118,6 +118,7 @@ namespace boost
     namespace executors {
         class executor;
     }
+    using executors::executor;
 #endif
     typedef shared_ptr<executor> executor_ptr_type;
 
