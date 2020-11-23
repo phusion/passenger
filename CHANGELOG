@@ -1,6 +1,6 @@
 Release 6.0.8 (Not yet released)
 -------------
- * 
+ * [Standalone] fix abort websockets on shutdown. Closes GH-2211.
 
 
 Release 6.0.7

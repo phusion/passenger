@@ -4,6 +4,10 @@ daemon on;
 error_log '<%= @options[:log_file] %>' <% if @options[:log_level] >= LVL_DEBUG %>info<% end %>;
 pid '<%= @options[:pid_file] %>';
 
+<% if @options[:abort_websockets_on_process_shutdown].nil? || @options[:abort_websockets_on_process_shutdown] %>
+worker_shutdown_timeout 10;
+<% end %>
+
 <% if Process.euid == 0 %>
     <% if @options[:user] %>
         <%# Run workers as the given user. The master process will always run as root and will be able to bind to any port. %>
