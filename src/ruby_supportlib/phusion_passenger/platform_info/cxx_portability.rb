@@ -203,6 +203,9 @@ module PhusionPassenger
         # http://groups.google.com/group/phusion-passenger/t/6b904a962ee28e5c
         # http://groups.google.com/group/phusion-passenger/browse_thread/thread/aad4bd9d8d200561
         flags << '-DBOOST_SP_USE_PTHREADS'
+      elsif linux_distro == :centos && os_version >= "8"
+        # _FORTIFY_SOURCE requires compiling with optimization (-O)
+        flags << '-O'
       end
 
       return flags.compact.map{ |str| str.strip }.join(" ").strip

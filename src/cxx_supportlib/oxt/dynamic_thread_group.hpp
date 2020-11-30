@@ -209,10 +209,12 @@ public:
 		vector<thread *> threads;
 		unsigned int i = 0;
 
+		P_TRACE(3,"interrupt_and_join_all(before resize) i: " << i << " nthreads: " << nthreads << " thread_handles.size: " << thread_handles.size() << " threads.size: " << threads.size());
 		// We make a copy so that the handles aren't destroyed prematurely.
 		threads.resize(nthreads);
 		thread_handles_copy = thread_handles;
 		for (it = thread_handles.begin(); it != thread_handles.end(); it++, i++) {
+			P_TRACE(3,"interrupt_and_join_all(iterating) i: " << i << " nthreads: " << nthreads << " thread_handles.size: " << thread_handles.size() << " threads.size: " << threads.size() << " it-thread_handles.begin() " << std::distance(it,thread_handles.begin()) << " thread_handles.end()-it " << std::distance(thread_handles.end(),it));
 			handle = *it;
 			handle->removed_from_list = true;
 			threads[i] = handle->thr;
