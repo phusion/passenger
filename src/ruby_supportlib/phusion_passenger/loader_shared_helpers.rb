@@ -305,6 +305,8 @@ module PhusionPassenger
 
       if options["process_title"] && !options["process_title"].empty?
         $0 = options["process_title"] + ": " + options["app_group_name"]
+      else
+        $0 = "Passenger App: " + options["app_group_name"]
       end
 
       # If we were forked from a preloader process then clear or

@@ -1,6 +1,8 @@
 Release 6.0.8 (Not yet released)
 -------------
+
  * [Standalone] fix abort websockets on shutdown. Closes GH-2211.
+ * Fixes application process titles. They are not properly set to something like "Passenger RubyApp: ..." instead of "Passenger AppPreloader: ... (forking)".
 
 
 Release 6.0.7

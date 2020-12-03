@@ -671,9 +671,9 @@ public:
 	StaticString getProcessTitle(const WrapperRegistry::Registry &registry) const {
 		const WrapperRegistry::Entry &entry = registry.lookup(appType);
 		if (entry.isNull()) {
-			return entry.processTitle;
-		} else {
 			return StaticString();
+		} else {
+			return entry.processTitle;
 		}
 	}
 

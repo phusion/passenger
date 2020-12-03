@@ -117,6 +117,7 @@ protected:
 		config->loadShellEnvvars = options.loadShellEnvvars;
 		config->startupFile = options.getStartupFile(*context->wrapperRegistry);
 		config->appType = options.appType;
+		config->processTitle = options.getProcessTitle(*context->wrapperRegistry);
 		config->appEnv = options.environment;
 		config->baseURI = options.baseURI;
 		config->environmentVariables = decodeEnvironmentVariables(
