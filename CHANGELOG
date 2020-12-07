@@ -1,8 +1,8 @@
 Release 6.0.8 (Not yet released)
 -------------
-
+ * [Apache] Fixes crash when restarting Apache on CentOS 8. Closes GH-2318.
  * [Standalone] fix abort websockets on shutdown. Closes GH-2211.
- * Fixes application process titles. They are not properly set to something like "Passenger RubyApp: ..." instead of "Passenger AppPreloader: ... (forking)".
+ * Fixes application process titles. They are now properly set to something like "Passenger RubyApp: ..." instead of "Passenger AppPreloader: ... (forking)".
 
 
 Release 6.0.7

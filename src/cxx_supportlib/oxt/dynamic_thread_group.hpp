@@ -223,7 +223,10 @@ public:
 		nthreads = 0;
 
 		l.unlock();
-		thread::interrupt_and_join_multiple(&threads[0], nthreads_copy, interruptSyscalls);
+		// threads can be empty, so don't access threads[0] unconditionally
+		if (!threads.empty()) {
+			thread::interrupt_and_join_multiple(&threads[0], nthreads_copy, interruptSyscalls);
+		}
 	}
 
 	void join_all() {
