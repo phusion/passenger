@@ -46,7 +46,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 
   # Define compilation targets for .cpp files in src/cxx_supportlib/vendor-modified/boost/src/pthread.
   boost_object_files = []
-  Dir['src/cxx_supportlib/vendor-modified/boost/libs/**/*.cpp'].each do |source_file|
+  Dir['src/cxx_supportlib/vendor-modified/boost/libs/**/*.cpp'].sort.each do |source_file|
     object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
     boost_output_dir  = "#{output_dir}/boost"
     object_file = "#{boost_output_dir}/#{object_name}"
@@ -64,7 +64,7 @@ def define_libboost_oxt_task(namespace, output_dir, extra_compiler_flags = nil)
 
   # Define compilation targets for .cpp files in src/cxx_supportlib/oxt.
   oxt_object_files = []
-  Dir['src/cxx_supportlib/oxt/*.cpp'].each do |source_file|
+  Dir['src/cxx_supportlib/oxt/*.cpp'].sort.each do |source_file|
     object_name = File.basename(source_file.sub(/\.cpp$/, '.o'))
     oxt_output_dir  = "#{output_dir}/oxt"
     object_file = "#{oxt_output_dir}/#{object_name}"
@@ -145,7 +145,7 @@ if USE_VENDORED_LIBEV
       "CC='#{cc_command}' CXX='#{cxx_command}' CFLAGS='#{cflags}' orig_CFLAGS=1"
   end
 
-  libev_sources = Dir["src/cxx_supportlib/vendor-modified/libev/{*.c,*.h}"]
+  libev_sources = Dir["src/cxx_supportlib/vendor-modified/libev/{*.c,*.h}"].sort
   file LIBEV_OUTPUT_DIR + ".libs/libev.a" => [LIBEV_OUTPUT_DIR + "Makefile"] + libev_sources do
     sh "rm -f #{LIBEV_OUTPUT_DIR}libev.la"
     sh "cd #{LIBEV_OUTPUT_DIR} && make libev.la V=1"
@@ -218,7 +218,7 @@ if USE_VENDORED_LIBUV
       "CC='#{cc_command}' CXX='#{cxx_command}' CFLAGS='#{cflags}'"
   end
 
-  libuv_sources = Dir["src/cxx_supportlib/vendor-copy/libuv/**/{*.c,*.h}"]
+  libuv_sources = Dir["src/cxx_supportlib/vendor-copy/libuv/**/{*.c,*.h}"].sort
   file LIBUV_OUTPUT_DIR + ".libs/libuv.a" => [LIBUV_OUTPUT_DIR + "Makefile"] + libuv_sources do
     sh "rm -f #{LIBUV_OUTPUT_DIR}/libuv.la"
     sh "cd #{LIBUV_OUTPUT_DIR} && make -j2 libuv.la V=1"
