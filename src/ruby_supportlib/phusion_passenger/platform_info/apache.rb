@@ -633,9 +633,7 @@ module PhusionPassenger
           # files. On Hongli's and Camden's systems it's inside the Xcode directory,
           # while on https://github.com/phusion/passenger/issues/1986 it's inside
           # /Library/Developer/CommandLineTools.
-          xcode_prefix = `/usr/bin/xcode-select -p`.strip
-          flags << "-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apache2"
-          flags << "-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/apache2"
+          flags << "-I#{`xcrun --show-sdk-path`.strip}/usr/include/apache2"
         end
       else
         apxs2_flags = `#{apxs2} -q CFLAGS`.strip << " -I" << `#{apxs2} -q INCLUDEDIR`.strip
