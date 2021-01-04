@@ -37,6 +37,9 @@ module PhusionPassenger
         elsif File.exist?("/usr/local/opt/openssl/include")
           # Use the one from Homebrew.
           "-I/usr/local/opt/openssl/include"
+        elsif File.exist?("/opt/homebrew/opt/openssl/include")
+          # Use the one from Homebrew on Apple Silicon
+          "-I/opt/homebrew/opt/openssl/include"
         else
           # Use the one from Macports.
           "-I/opt/local/include"
@@ -53,6 +56,8 @@ module PhusionPassenger
           ""
         elsif File.exist?("/usr/local/opt/openssl/include")
           "-L/usr/local/opt/openssl/lib"
+        elsif File.exist?("/opt/homebrew/opt/openssl/include")
+          "-L/opt/homebrew/opt/openssl/include"
         else
           "-L/opt/local/lib"
         end
