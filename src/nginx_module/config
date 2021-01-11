@@ -123,6 +123,8 @@ nginx_micro_version=`echo "$nginx_version" | cut -d . -f 3`
 have=PASSENGER_NGINX_MICRO_VERSION value="$nginx_micro_version"
 . auto/define
 
+have=NGX_HTTP_PASSENGER_TEMP_PATH value="\"passenger_temp\""
+. auto/define
 
 ngx_addon_name=ngx_http_passenger_module
 
