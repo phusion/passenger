@@ -96,7 +96,7 @@ Controller::endRequestWithAppSocketIncompleteResponse(Client **client, Request *
 			SKC_WARN(*client, "Sending 502 response: application did not send a complete response");
 		}
 		endRequestWithSimpleResponse(client, req,
-			"<h2>Incomplete response received from application</h2>", 502);
+			getFormattedMessage(*req, "Incomplete response received from application"), 502);
 	} else {
 		disconnectWithAppSocketIncompleteResponseError(client);
 	}
@@ -107,10 +107,37 @@ Controller::endRequestWithAppSocketReadError(Client **client, Request **req, int
 	Client *c = *client;
 	if (!(*req)->responseBegun) {
 		SKC_WARN(*client, "Sending 502 response: application socket read error");
-		endRequestWithSimpleResponse(client, req, "<h2>Application socket read error</h2>", 502);
+		endRequestWithSimpleResponse(client, req,
+			getFormattedMessage(*req, "Application socket read error"), 502);
 	} else {
 		disconnectWithAppSocketReadError(&c, e);
 	}
+}
+
+ServerKit::HeaderTable
+Controller::getHeadersWithContentType(Request *req)
+{
+	ServerKit::HeaderTable headers;
+	const LString *value = req->headers.lookup(P_STATIC_STRING("content-type"));
+	if (value != NULL) {
+		if (psg_lstr_cmp(value, P_STATIC_STRING("application/json"))) {
+			headers.insert(req->pool, "content-type", "application/json");
+		}
+		// Here we can extend setting `content-type` with more supported formats, ie: xml,...
+	}
+	return headers;
+}
+
+const StaticString
+Controller::getFormattedMessage(Request *req, const StaticString &body)
+{
+	const LString *value = req->headers.lookup(P_STATIC_STRING("content-type"));
+	if (value != NULL) {
+		if (psg_lstr_cmp(value, P_STATIC_STRING("application/json"))) {
+			return "{\"status\":\"error\", \"message\": \""+body+"\"}";
+		}
+	}
+	return "<h1>"+body+"</h1>";
 }
 
 /**
@@ -122,8 +149,7 @@ Controller::endRequestWithSimpleResponse(Client **c, Request **r,
 {
 	Client *client = *c;
 	Request *req = *r;
-	ServerKit::HeaderTable headers;
-
+	ServerKit::HeaderTable headers = getHeadersWithContentType(req);
 	headers.insert(req->pool, "cache-control", "no-cache, no-store, must-revalidate");
 	writeSimpleResponse(client, code, &headers, body);
 	endRequest(c, r);
@@ -134,9 +160,9 @@ Controller::endRequestAsBadGateway(Client **client, Request **req) {
 	if ((*req)->responseBegun) {
 		disconnectWithError(client, "bad gateway");
 	} else {
-		ServerKit::HeaderTable headers;
+		ServerKit::HeaderTable headers = getHeadersWithContentType(*req);
 		headers.insert((*req)->pool, "cache-control", "no-cache, no-store, must-revalidate");
-		writeSimpleResponse(*client, 502, &headers, "<h1>Bad Gateway</h1>");
+		writeSimpleResponse(*client, 502, &headers, getFormattedMessage(*req, "Bad Gateway"));
 		endRequest(client, req);
 	}
 }
