@@ -5,6 +5,7 @@ Release 6.0.8 (Not yet released)
  * Fixes application process titles. They are now properly set to something like "Passenger RubyApp: ..." instead of "Passenger AppPreloader: ... (forking)".
  * Upgrades Boost to 1.74.
  * Allow passenger-status to detect passenger instance registry dir when systemd PrivateTmp dir is in use.
+ * Reduce the likelihood of a crash when using systemd PrivateTmp dir with Apache.
 
 
 Release 6.0.7

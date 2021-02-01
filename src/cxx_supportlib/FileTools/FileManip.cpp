@@ -82,6 +82,13 @@ fileExists(const StaticString &filename, CachedFileStat *cstat, boost::mutex *cs
 	return getFileType(filename, cstat, cstatMutex, throttleRate) == FT_REGULAR;
 }
 
+bool
+dirExists(const StaticString &dirname, CachedFileStat *cstat, boost::mutex *cstatMutex,
+	unsigned int throttleRate)
+{
+	return getFileType(dirname, cstat, cstatMutex, throttleRate) == FT_DIRECTORY;
+}
+
 FileType
 getFileType(const StaticString &filename, CachedFileStat *cstat, boost::mutex *cstatMutex,
 	unsigned int throttleRate)
@@ -299,7 +306,9 @@ redirectStderrToDevNull() {
 
 void
 removeDirTree(const string &path) {
-	{
+	if (!dirExists(path)) {
+		return;
+	} else {
 		const char *command[] = {
 			"chmod",
 			"-R",

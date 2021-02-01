@@ -94,6 +94,22 @@ bool fileExists(const StaticString &filename, CachedFileStat *cstat = 0,
 	boost::mutex *cstatMutex = NULL, unsigned int throttleRate = 0);
 
 /**
+ * Check whether the specified directory exists.
+ *
+ * @param dirname The path to check.
+ * @param cstat A CachedFileStat object, if you want to use cached statting.
+ * @param cstatMutex A mutex for locking cstat while this function uses it.
+ *                   Makes this function thread-safe. May be NULL.
+ * @param throttleRate A throttle rate for cstat. Only applicable if cstat is not NULL.
+ * @return Whether the directory exists.
+ * @throws FileSystemException Unable to check because of a filesystem error.
+ * @throws TimeRetrievalException
+ * @throws boost::thread_interrupted
+ */
+bool dirExists(const StaticString &dirname, CachedFileStat *cstat = 0,
+	boost::mutex *cstatMutex = NULL, unsigned int throttleRate = 0);
+
+/**
 * Check whether 'filename' exists and what kind of file it is.
 *
 * @param filename The filename to check. It MUST be NULL-terminated.
