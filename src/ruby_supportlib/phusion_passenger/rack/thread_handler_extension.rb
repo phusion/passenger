@@ -106,6 +106,9 @@ module PhusionPassenger
           begin
             status, headers, body = @app.call(env)
           rescue => e
+            if e.is_a?(Errno::ENOBUFS)
+              raise e
+            end
             if !should_swallow_app_error?(e, socket_wrapper)
               # It's a good idea to catch application exceptions here because
               # otherwise maliciously crafted responses can crash the app,
@@ -155,6 +158,9 @@ module PhusionPassenger
             process_body(env, connection, socket_wrapper, status.to_i, is_head_request,
               headers, body)
           rescue => e
+            if e.is_a?(Errno::ENOBUFS)
+              raise e
+            end
             if !should_swallow_app_error?(e, socket_wrapper)
               print_exception("Rack response body object", e)
             end
@@ -324,6 +330,9 @@ module PhusionPassenger
         begin
           body.close if body && body.respond_to?(:close)
         rescue => e
+          if e.is_a?(Errno::ENOBUFS)
+            raise e
+          end
           if !should_swallow_app_error?(e, socket_wrapper)
             print_exception("Rack response body object's #close method", e)
           end
