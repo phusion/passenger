@@ -43,9 +43,9 @@
 
 #define MODP_B64_DONT_INCLUDE_BOOST_ENDIANNESS_HEADERS
 #if NGX_HAVE_LITTLE_ENDIAN
-    #define BOOST_ENDIAN_LITTLE_BYTE
+    #define BOOST_ENDIAN_LITTLE_BYTE 1
 #else
-    #define BOOST_ENDIAN_BIG_BYTE
+    #define BOOST_ENDIAN_BIG_BYTE 1
 #endif
 
 #include "ngx_http_passenger_module.h"
