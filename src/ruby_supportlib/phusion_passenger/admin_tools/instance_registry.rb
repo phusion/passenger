@@ -102,7 +102,10 @@ module PhusionPassenger
         #
         # The RPM packages configure Apache and Nginx to use /var/run/passenger-instreg
         # as the instance registry dir. See https://github.com/phusion/passenger/issues/1475
-        [string_env("TMPDIR"), "/tmp", "/var/run/passenger-instreg"].compact
+        #
+        # systemd's PrivateTmp feature works like an inverted OSX, apache gets its own
+        # TMPDIR and users use /tmp
+        [string_env("TMPDIR"), "/tmp", "/var/run/passenger-instreg",*Dir['/tmp/systemd-private-*-{httpd,nginx}.service-*/tmp']].compact
       end
 
       def string_env(name)

@@ -31,7 +31,7 @@ module PhusionPassenger
           return ENV[name]
         end
       end
-      return "/tmp"
+      return Dir['/tmp/systemd-private-*-{httpd,nginx}.service-*/tmp'].first || "/tmp"
     end
 
     def self.process_is_alive?(pid)

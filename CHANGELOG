@@ -4,6 +4,7 @@ Release 6.0.8 (Not yet released)
  * [Standalone] fix abort websockets on shutdown. Closes GH-2211.
  * Fixes application process titles. They are now properly set to something like "Passenger RubyApp: ..." instead of "Passenger AppPreloader: ... (forking)".
  * Upgrades Boost to 1.74.
+ * Allow passenger-status to detect passenger instance registry dir when systemd PrivateTmp dir is in use.
 
 
 Release 6.0.7
