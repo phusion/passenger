@@ -310,7 +310,7 @@ module PhusionPassenger
       end
 
       # If we were forked from a preloader process then clear or
-      # re-establish ActiveRecord database connections. This prevents
+      # re-establish ActiveRecord/Mongoid database connections. This prevents
       # child processes from concurrently accessing the same
       # database connection handles.
       if forked
@@ -324,6 +324,13 @@ module PhusionPassenger
             ActiveRecord::Base.establish_connection
           rescue
             DebugLogging.debug('ActiveRecord is not configured, start it yourself')
+          end
+        end
+
+        if defined?(Mongoid::Clients)
+          Mongoid::Clients.clients.each do |name, client|
+            client.close
+            client.reconnect
           end
         end
 
