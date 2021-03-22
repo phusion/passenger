@@ -6,6 +6,22 @@ Release 6.0.8 (Not yet released)
  * Upgrades Boost to 1.74.
  * Allow passenger-status to detect passenger instance registry dir when systemd PrivateTmp dir is in use.
  * Reduce the likelihood of a crash when using systemd PrivateTmp dir with Apache.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+    - ccache_version: 4.0 → 4.2
+    - cmake_version: 3.18.4 → 3.19.7
+    - curl_version: 7.73.0 → 7.75.0
+    - git_version: 2.29.1 → 2.31.0
+    - gnupg_version: 2.2.23 → 2.2.27
+    - libassuan_version: 2.5.4 → 2.5.5
+    - libgcrypt_version: 1.8.7 → 1.9.2
+    - libgpg_error_version: 1.39 → 1.42
+    - libksba_version: 1.4.0 → 1.5.0
+    - openssl_version: 1.1.1h → 1.1.1j
+    - pinentry_version: 1.1.0 → 1.1.1
+    - rubygems_version: 3.1.4 → 3.2.15
+    - zstd_version: 1.4.5 → 1.4.9
+    - ruby_versions + 3.0.0
 
 
 Release 6.0.7
