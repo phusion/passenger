@@ -235,7 +235,7 @@ module PhusionPassenger
           end
 
           FileUtils.mv("#{tmpdir}/#{AGENT_EXE}", "#{destdir}/#{AGENT_EXE}")
-          @logger.info "#{@colors.green}Agent binary successfully download and installed."
+          @logger.info "#{@colors.green}Agent binary successfully downloaded and installed."
         end
       end
 
