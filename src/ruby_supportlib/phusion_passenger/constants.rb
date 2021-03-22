@@ -110,7 +110,7 @@ module PhusionPassenger
 
     # Misc
     FEEDBACK_FD = 3
-    PROGRAM_NAME = "Phusion Passenger"
+    PROGRAM_NAME = "Phusion Passenger(R)"
     SHORT_PROGRAM_NAME = "Passenger"
     SERVER_TOKEN_NAME = "Phusion_Passenger"
     FLYING_PASSENGER_NAME = "Flying Passenger"

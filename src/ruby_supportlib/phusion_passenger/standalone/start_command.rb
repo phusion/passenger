@@ -355,7 +355,7 @@ module PhusionPassenger
       end
 
       def show_intro_message
-        puts "=============== Phusion Passenger Standalone web server started ==============="
+        puts "=============== #{PROGRAM_NAME} Standalone web server started ==============="
         puts "PID file: #{@options[:pid_file]}"
         puts "Log file: #{@options[:log_file]}"
         puts "Environment: #{@options[:environment]}"
