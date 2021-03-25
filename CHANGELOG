@@ -17,7 +17,7 @@ Release 6.0.8 (Not yet released)
     - libgcrypt_version: 1.8.7 → 1.9.2
     - libgpg_error_version: 1.39 → 1.42
     - libksba_version: 1.4.0 → 1.5.0
-    - openssl_version: 1.1.1h → 1.1.1j
+    - openssl_version: 1.1.1h → 1.1.1k
     - pinentry_version: 1.1.0 → 1.1.1
     - rubygems_version: 3.1.4 → 3.2.15
     - zstd_version: 1.4.5 → 1.4.9
