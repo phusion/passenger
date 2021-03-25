@@ -6,6 +6,7 @@ Release 6.0.8 (Not yet released)
  * Upgrades Boost to 1.74.
  * Allow passenger-status to detect passenger instance registry dir when systemd PrivateTmp dir is in use.
  * Reduce the likelihood of a crash when using systemd PrivateTmp dir with Apache.
+ * Removed CentOS 6 prebuilt binaries and packages. CentOS 6 is EOL as of Nov 2020.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
     - ccache_version: 4.0 → 4.2
