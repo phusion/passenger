@@ -3,4 +3,4 @@ set -e
 
 run ./bin/passenger-install-apache2-module --auto
 run rvmsudo ./bin/passenger-install-apache2-module --auto --no-compile
-run bundle exec drake "-j$COMPILE_CONCURRENCY" test:integration:apache2
+run bundle exec rake "-j$COMPILE_CONCURRENCY" test:integration:apache2

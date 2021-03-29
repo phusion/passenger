@@ -7,7 +7,7 @@ echo "+ Nginx addon dir: $NGINX_ADDON_DIR"
 echo
 
 header2 "Compliing Passenger"
-run drake "-j$COMPILE_CONCURRENCY" nginx:as_dynamic_module
+run rake "-j$COMPILE_CONCURRENCY" nginx:as_dynamic_module
 echo
 
 header2 "Downloading and compiling Nginx"

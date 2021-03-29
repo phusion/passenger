@@ -69,8 +69,8 @@ apt-get install -y build-essential git bash-completion ccache wget \
 if [[ ! -e /usr/local/bin/rake ]]; then
 	gem install rake --no-rdoc --no-ri --version="=12.2.1"
 fi
-if [[ ! -e /usr/local/bin/drake ]]; then
-	gem install drake --no-rdoc --no-ri
+if [[ ! -e /usr/local/bin/rake ]]; then
+	gem install rake --no-rdoc --no-ri
 fi
 if [[ ! -e /usr/local/bin/bundler ]]; then
 	gem install bundler --no-rdoc --no-ri --version="=1.15.4"

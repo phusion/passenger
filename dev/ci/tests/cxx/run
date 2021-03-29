@@ -2,8 +2,8 @@
 set -e
 
 header2 "Running C++ tests"
-run bundle exec drake "-j$COMPILE_CONCURRENCY" test:cxx
+run bundle exec rake "-j$COMPILE_CONCURRENCY" test:cxx
 echo
 
 header2 "Running OXT tests"
-run bundle exec drake "-j$COMPILE_CONCURRENCY" test:oxt
+run bundle exec rake "-j$COMPILE_CONCURRENCY" test:oxt

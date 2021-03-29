@@ -11,7 +11,7 @@ TEST_FORMULA_ARGS=()
 
 if ! $SKIP_TARBALL_CREATION; then
 	run rm -rf pkg
-	run bundle exec drake package:set_official package:tarball
+	run bundle exec rake package:set_official package:tarball
 fi
 
 if [[ -e passenger.gemspec ]]; then

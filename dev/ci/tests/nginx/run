@@ -2,4 +2,4 @@
 set -e
 
 run ./bin/passenger-install-nginx-module --auto --prefix=/tmp/nginx --auto-download
-run bundle exec drake "-j$COMPILE_CONCURRENCY" test:integration:nginx
+run bundle exec rake "-j$COMPILE_CONCURRENCY" test:integration:nginx
