@@ -40,7 +40,6 @@ pipeline {
   }
 
   parameters {
-    booleanParam(name: 'LINUX_X86', defaultValue: true, description: 'Linux x86 binaries')
     booleanParam(name: 'LINUX_X86_64', defaultValue: true, description: 'Linux x86_64 binaries')
     booleanParam(name: 'MACOS', defaultValue: true, description: 'macOS binaries')
   }
@@ -72,14 +71,6 @@ pipeline {
       steps {
         script {
           parallel(
-            'Linux x86': {
-              setupLinuxTest(params.LINUX_X86, 'x86') {
-                checkout scm
-                sh './dev/ci/tests/binaries/build-linux'
-                archiveArtifacts artifacts: 'output-linux-x86/**/*'
-                sh './dev/ci/tests/binaries/test-linux'
-              }
-            },
             'Linux x86_64': {
               setupLinuxTest(params.LINUX_X86_64, 'x86_64') {
                 checkout scm
