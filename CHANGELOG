@@ -1,4 +1,4 @@
-Release 6.0.8 (Not yet released)
+Release 6.0.8
 -------------
  * [Apache] Fixes crash when restarting Apache on CentOS 8. Closes GH-2318.
  * [Standalone] fix abort websockets on shutdown. Closes GH-2211.
@@ -6,7 +6,8 @@ Release 6.0.8 (Not yet released)
  * Upgrades Boost to 1.74.
  * Allow passenger-status to detect passenger instance registry dir when systemd PrivateTmp dir is in use.
  * Reduce the likelihood of a crash when using systemd PrivateTmp dir with Apache.
- * Removed CentOS 6 prebuilt binaries and packages. CentOS 6 is EOL as of Nov 2020.
+ * Removed CentOS 6, and Debian Jessie prebuilt binaries and packages. Both are EOL.
+ * No-longer build 32 bit prebuilt binaries, as HBB dropped support.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
     - ccache_version: 4.0 → 4.2
