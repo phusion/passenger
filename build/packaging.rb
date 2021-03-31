@@ -22,6 +22,8 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
+homebrew_contents = "Homebrew recently banned empty files, so enjoy wasting some disk space for them"
+
 def recursive_copy_files(files, destination_dir, preprocess = false, variables = {})
   if !STDOUT.tty?
     puts "Copying files..."
@@ -69,7 +71,7 @@ task 'package:gem' => PhusionPassenger::Packaging::PREGENERATED_FILES do
   end
   begin
     if release_file
-      File.open(release_file, "w").close
+      File.write(release_file, homebrew_contents)
     end
     sh("gem build #{PhusionPassenger::PACKAGE_NAME}.gemspec")
   ensure
@@ -87,7 +89,7 @@ task 'package:tarball' => PhusionPassenger::Packaging::PREGENERATED_FILES do
   sh "mkdir -p #{PKG_DIR}/#{basename}"
   recursive_copy_files(PhusionPassenger::Packaging.files, "#{PKG_DIR}/#{basename}")
   if ENV['OFFICIAL_RELEASE']
-    File.open("#{PKG_DIR}/#{basename}/resources/release.txt", "w").close
+    File.write("#{PKG_DIR}/#{basename}/resources/release.txt", homebrew_contents)
   end
   if PlatformInfo.os_name_simple == "macosx"
     sh "cd #{PKG_DIR}/#{basename} && find . -print0 | xargs -0 touch -t '201310270000'"
