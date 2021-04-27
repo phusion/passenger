@@ -40,7 +40,7 @@ pipeline {
     booleanParam(name: 'xenial', defaultValue: true, description: 'Test Ubuntu 16.04 packages')
     booleanParam(name: 'bionic', defaultValue: true, description: 'Test Ubuntu 18.04 packages')
     booleanParam(name: 'focal',  defaultValue: true, description: 'Test Ubuntu 20.04 packages')
-    booleanParam(name: 'groovy', defaultValue: true, description: 'Test Ubuntu 20.10 packages')
+    booleanParam(name: 'hirsute', defaultValue: true, description: 'Test Ubuntu 21.04 packages')
 
     booleanParam(name: 'stretch', defaultValue: true, description: 'Test Debian 9 packages')
     booleanParam(name: 'buster',  defaultValue: true, description: 'Test Debian 10 packages')
