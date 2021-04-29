@@ -2,7 +2,7 @@
  *  (C) Copyright Nick Thompson 2018.
  *  Use, modification and distribution are subject to the
  *  Boost Software License, Version 1.0. (See accompanying file
- *  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ *  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
  */
 #ifndef BOOST_INTEGER_MOD_INVERSE_HPP
 #define BOOST_INTEGER_MOD_INVERSE_HPP

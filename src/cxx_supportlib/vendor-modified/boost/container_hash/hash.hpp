@@ -442,7 +442,7 @@ namespace boost
         }
     }
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x551))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x551))
     template <class T>
     inline std::size_t hash_range(T* first, T* last)
     {

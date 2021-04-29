@@ -16,7 +16,7 @@
 #
 # /* BOOST_PP_VARIADIC_HAS_OPT */
 #
-# if BOOST_PP_VARIADICS && defined(__cplusplus) && __cplusplus > 201703L
+# if defined(__cplusplus) && __cplusplus > 201703L
 # include <boost/preprocessor/variadic/detail/has_opt.hpp>
 # define BOOST_PP_VARIADIC_HAS_OPT() \
   BOOST_PP_VARIADIC_HAS_OPT_ELEM2(BOOST_PP_VARIADIC_HAS_OPT_FUNCTION(?),) \

@@ -2,7 +2,7 @@
 // impl/buffered_write_stream.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -199,6 +199,7 @@ struct associated_allocator<
 template <typename WriteHandler, typename Executor>
 struct associated_executor<
     detail::buffered_flush_handler<WriteHandler>, Executor>
+  : detail::associated_executor_forwarding_base<WriteHandler, Executor>
 {
   typedef typename associated_executor<WriteHandler, Executor>::type type;
 
@@ -456,6 +457,7 @@ template <typename ConstBufferSequence,
 struct associated_executor<
     detail::buffered_write_some_handler<ConstBufferSequence, WriteHandler>,
     Executor>
+  : detail::associated_executor_forwarding_base<WriteHandler, Executor>
 {
   typedef typename associated_executor<WriteHandler, Executor>::type type;
 

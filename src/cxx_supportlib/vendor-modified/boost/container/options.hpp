@@ -215,6 +215,13 @@ class default_next_capacity;
 
 typedef vector_opt<void, void> vector_null_opt;
 
+template<class GrowthType, class StoredSizeType>
+struct devector_opt
+   : vector_opt<GrowthType, StoredSizeType>
+{};
+
+typedef devector_opt<void, void> devector_null_opt;
+
 #else    //!defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
 //!This growth factor argument specifies that the container should increase it's
@@ -442,6 +449,40 @@ using static_vector_options_t = typename boost::container::static_vector_options
 
 #endif
 
+//! Helper metafunction to combine options into a single type to be used
+//! by \c boost::container::devector.
+//! Supported options are: \c boost::container::growth_factor and \c boost::container::stored_size
+#if defined(BOOST_CONTAINER_DOXYGEN_INVOKED) || defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+template<class ...Options>
+#else
+template<class O1 = void, class O2 = void, class O3 = void, class O4 = void>
+#endif
+struct devector_options
+{
+   /// @cond
+   typedef typename ::boost::intrusive::pack_options
+      < devector_null_opt,
+      #if !defined(BOOST_CONTAINER_VARIADIC_TEMPLATES)
+      O1, O2, O3, O4
+      #else
+      Options...
+      #endif
+      >::type packed_options;
+   typedef devector_opt< typename packed_options::growth_factor_type
+                       , typename packed_options::stored_size_type> implementation_defined;
+   /// @endcond
+   typedef implementation_defined type;
+};
+
+#if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
+
+//! Helper alias metafunction to combine options into a single type to be used
+//! by \c boost::container::devector.
+//! Supported options are: \c boost::container::growth_factor and \c boost::container::stored_size
+template<class ...Options>
+using devector_options_t = typename boost::container::devector_options<Options...>::type;
+
+#endif
 
 ////////////////////////////////////////////////////////////////
 //

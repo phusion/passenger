@@ -28,10 +28,9 @@
 #include <boost/random/detail/signed_unsigned_tools.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/detail/workaround.hpp>
-#include <boost/mpl/bool.hpp>
 
 #ifdef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
-#include <boost/mpl/if.hpp>
+#include <boost/type_traits/conditional.hpp>
 #endif
 
 namespace boost {
@@ -237,7 +236,7 @@ private:
     
     // \cond show_private
     template<class Engine>
-    result_type generate(Engine& eng, boost::mpl::true_) const
+    result_type generate(Engine& eng, boost::true_type) const
     {
         // equivalent to (eng() - eng.min()) % (_max - _min + 1) + _min,
         // but guarantees no overflow.
@@ -245,7 +244,7 @@ private:
         typedef typename boost::random::traits::make_unsigned<base_result>::type base_unsigned;
         typedef typename boost::random::traits::make_unsigned_or_unbounded<result_type>::type range_type;
 #ifdef BOOST_NO_CXX11_EXPLICIT_CONVERSION_OPERATORS
-        typedef typename mpl::if_c<
+        typedef typename conditional<
            std::numeric_limits<range_type>::is_specialized && std::numeric_limits<base_unsigned>::is_specialized
            && (std::numeric_limits<range_type>::digits >= std::numeric_limits<base_unsigned>::digits),
            range_type, base_unsigned>::type mixed_range_type;
@@ -274,7 +273,7 @@ private:
     }
     
     template<class Engine>
-    result_type generate(Engine& eng, boost::mpl::false_) const
+    result_type generate(Engine& eng, boost::false_type) const
     {
         typedef typename Engine::result_type base_result;
         typedef typename boost::random::traits::make_unsigned<result_type>::type range_type;

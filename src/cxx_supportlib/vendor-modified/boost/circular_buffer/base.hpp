@@ -2519,7 +2519,7 @@ private:
     template <class Iterator>
     void initialize(Iterator first, Iterator last, const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x581))
         initialize(first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         initialize(first, last, BOOST_DEDUCED_TYPENAME std::iterator_traits<Iterator>::iterator_category());
@@ -2558,7 +2558,7 @@ private:
     template <class Iterator>
     void initialize(capacity_type buffer_capacity, Iterator first, Iterator last, const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x581))
         initialize(buffer_capacity, first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         initialize(buffer_capacity, first, last, BOOST_DEDUCED_TYPENAME std::iterator_traits<Iterator>::iterator_category());
@@ -2652,7 +2652,7 @@ private:
     template <class Iterator>
     void assign(Iterator first, Iterator last, const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x581))
         assign(first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         assign(first, last, BOOST_DEDUCED_TYPENAME std::iterator_traits<Iterator>::iterator_category());
@@ -2689,7 +2689,7 @@ private:
     template <class Iterator>
     void assign(capacity_type new_capacity, Iterator first, Iterator last, const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x581))
         assign(new_capacity, first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         assign(new_capacity, first, last, BOOST_DEDUCED_TYPENAME std::iterator_traits<Iterator>::iterator_category());
@@ -2798,7 +2798,7 @@ private:
     template <class Iterator>
     void insert(const iterator& pos, Iterator first, Iterator last, const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x581))
         insert(pos, first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         insert(pos, first, last, BOOST_DEDUCED_TYPENAME std::iterator_traits<Iterator>::iterator_category());
@@ -2889,7 +2889,7 @@ private:
     template <class Iterator>
     void rinsert(const iterator& pos, Iterator first, Iterator last, const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x581))
         rinsert(pos, first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         rinsert(pos, first, last, BOOST_DEDUCED_TYPENAME std::iterator_traits<Iterator>::iterator_category());

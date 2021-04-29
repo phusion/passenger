@@ -9,7 +9,7 @@
 #include <boost/parameter/config.hpp>
 
 #if !defined(BOOST_NO_SFINAE) && \
-    !BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x592))
+    !BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x592))
 
 #include <boost/parameter/aux_/pp_impl/match.hpp>
 #include <boost/preprocessor/repetition/enum_trailing_params.hpp>

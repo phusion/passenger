@@ -121,7 +121,7 @@ public:<br>
     using circular_buffer<T, Alloc>::max_size;
     using circular_buffer<T, Alloc>::empty;
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
     reference operator [] (size_type n) { return circular_buffer<T, Alloc>::operator[](n); }
     const_reference operator [] (size_type n) const { return circular_buffer<T, Alloc>::operator[](n); }
 #else
@@ -1598,7 +1598,7 @@ private:
     static size_type init_capacity(const capacity_type& capacity_ctrl, Iterator first, Iterator last,
         const false_type&) {
         BOOST_CB_IS_CONVERTIBLE(Iterator, value_type); // check for invalid iterator type
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x581))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x581))
         return init_capacity(capacity_ctrl, first, last, std::iterator_traits<Iterator>::iterator_category());
 #else
         return init_capacity(

@@ -1,5 +1,5 @@
 /*
-Copyright 2020 Glen Joseph Fernandes
+Copyright 2020-2021 Glen Joseph Fernandes
 (glenjofe@gmail.com)
 
 Distributed under the Boost Software License, Version 1.0.
@@ -11,11 +11,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include <boost/config.hpp>
 #if !defined(BOOST_NO_CXX11_ALLOCATOR)
 #include <boost/core/pointer_traits.hpp>
-#if !defined(BOOST_MSVC)
 #include <limits>
-#else
-#include <memory>
-#endif
 #include <type_traits>
 #endif
 #include <new>
@@ -23,21 +19,18 @@ Distributed under the Boost Software License, Version 1.0.
 #include <utility>
 #endif
 
-namespace boost {
-namespace detail {
-
-#if defined(BOOST_NO_CXX11_ALLOCATOR)
-struct alloc_false {
-    BOOST_STATIC_CONSTEXPR bool value = false;
-};
-#else
-template<class>
-struct alloc_void {
-    typedef void type;
-};
+#if defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH)
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+#endif
+#if defined(_STL_DISABLE_DEPRECATED_WARNING)
+_STL_DISABLE_DEPRECATED_WARNING
+#endif
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4996)
 #endif
 
-} /* detail */
+namespace boost {
 
 template<class A>
 struct allocator_value_type {
@@ -49,16 +42,20 @@ template<class A>
 struct allocator_pointer {
     typedef typename A::pointer type;
 };
-#elif defined(BOOST_MSVC)
-template<class A>
-struct allocator_pointer {
-    typedef typename std::allocator_traits<A>::pointer type;
-};
 #else
 template<class A, class = void>
 struct allocator_pointer {
     typedef typename A::value_type* type;
 };
+
+namespace detail {
+
+template<class>
+struct alloc_void {
+    typedef void type;
+};
+
+} /* detail */
 
 template<class A>
 struct allocator_pointer<A,
@@ -71,11 +68,6 @@ struct allocator_pointer<A,
 template<class A>
 struct allocator_const_pointer {
     typedef typename A::const_pointer type;
-};
-#elif defined(BOOST_MSVC)
-template<class A>
-struct allocator_const_pointer {
-    typedef typename std::allocator_traits<A>::const_pointer type;
 };
 #else
 template<class A, class = void>
@@ -137,11 +129,6 @@ template<class A>
 struct allocator_difference_type {
     typedef typename A::difference_type type;
 };
-#elif defined(BOOST_MSVC)
-template<class A>
-struct allocator_difference_type {
-    typedef typename std::allocator_traits<A>::difference_type type;
-};
 #else
 template<class A, class = void>
 struct allocator_difference_type {
@@ -161,11 +148,6 @@ template<class A>
 struct allocator_size_type {
     typedef typename A::size_type type;
 };
-#elif defined(BOOST_MSVC)
-template<class A>
-struct allocator_size_type {
-    typedef typename std::allocator_traits<A>::size_type type;
-};
 #else
 template<class A, class = void>
 struct allocator_size_type {
@@ -181,6 +163,14 @@ struct allocator_size_type<A,
 #endif
 
 #if defined(BOOST_NO_CXX11_ALLOCATOR)
+namespace detail {
+
+struct alloc_false {
+    BOOST_STATIC_CONSTEXPR bool value = false;
+};
+
+} /* detail */
+
 template<class A>
 struct allocator_propagate_on_container_copy_assignment {
     typedef detail::alloc_false type;
@@ -260,11 +250,6 @@ template<class A, class T>
 struct allocator_rebind {
     typedef typename A::template rebind<T>::other type;
 };
-#elif defined(BOOST_MSVC)
-template<class A, class T>
-struct allocator_rebind {
-    typedef typename std::allocator_traits<A>::template rebind_alloc<T> type;
-};
 #else
 namespace detail {
 
@@ -313,36 +298,31 @@ allocator_allocate(A& a, typename allocator_size_type<A>::type n,
 {
     return a.allocate(n, h);
 }
-#elif defined(BOOST_MSVC)
-template<class A>
-inline typename allocator_pointer<A>::type
-allocator_allocate(A& a, typename allocator_size_type<A>::type n,
-    typename allocator_const_void_pointer<A>::type h)
-{
-    return std::allocator_traits<A>::allocate(a, n, h);
-}
 #else
 namespace detail {
 
-template<class, class, class, class = void>
-struct alloc_has_allocate {
-    BOOST_STATIC_CONSTEXPR bool value = false;
-};
+struct alloc_none { };
 
-template<class A, class N, class H>
-struct alloc_has_allocate<A, N, H,
-    typename alloc_void<decltype(std::declval<A&>().allocate(std::declval<N>(),
-        std::declval<H>()))>::type> {
-    BOOST_STATIC_CONSTEXPR bool value = true;
+template<class A>
+class alloc_has_allocate {
+    template<class O>
+    static auto check(int) -> decltype(std::declval<O&>().allocate(
+        std::declval<typename allocator_size_type<A>::type>(),
+        std::declval<typename allocator_const_void_pointer<A>::type>()));
+
+    template<class>
+    static alloc_none check(long);
+
+public:
+    BOOST_STATIC_CONSTEXPR bool value =
+        !std::is_same<decltype(check<A>(0)), alloc_none>::value;
 };
 
 } /* detail */
 
 template<class A>
-inline typename std::enable_if<detail::alloc_has_allocate<A,
-    typename allocator_size_type<A>::type,
-        typename allocator_const_void_pointer<A>::type>::value,
-            typename allocator_pointer<A>::type>::type
+inline typename std::enable_if<detail::alloc_has_allocate<A>::value,
+    typename allocator_pointer<A>::type>::type
 allocator_allocate(A& a, typename allocator_size_type<A>::type n,
     typename allocator_const_void_pointer<A>::type h)
 {
@@ -350,10 +330,8 @@ allocator_allocate(A& a, typename allocator_size_type<A>::type n,
 }
 
 template<class A>
-inline typename std::enable_if<!detail::alloc_has_allocate<A,
-    typename allocator_size_type<A>::type,
-        typename allocator_const_void_pointer<A>::type>::value,
-            typename allocator_pointer<A>::type>::type
+inline typename std::enable_if<!detail::alloc_has_allocate<A>::value,
+    typename allocator_pointer<A>::type>::type
 allocator_allocate(A& a, typename allocator_size_type<A>::type n,
     typename allocator_const_void_pointer<A>::type)
 {
@@ -400,32 +378,28 @@ allocator_construct(A&, T* p, V& v)
     ::new((void*)p) T(v);
 }
 #endif
-#elif defined(BOOST_MSVC)
-template<class A, class T, class... Args>
-inline void
-allocator_construct(A& a, T* p, Args&&... args)
-{
-    std::allocator_traits<A>::construct(a, p, std::forward<Args>(args)...);
-}
 #else
 namespace detail {
 
-template<class, class, class, class...>
-struct alloc_has_construct {
-    BOOST_STATIC_CONSTEXPR bool value = false;
-};
-
 template<class A, class T, class... Args>
-struct alloc_has_construct<typename alloc_void<decltype(std::declval<A
-    &>().construct(std::declval<T*>(), std::declval<Args&&>()...))>::type,
-        A, T, Args...> {
-    BOOST_STATIC_CONSTEXPR bool value = true;
+class alloc_has_construct {
+    template<class O>
+    static auto check(int)
+    -> decltype(std::declval<O&>().construct(std::declval<T*>(),
+        std::declval<Args&&>()...));
+
+    template<class>
+    static alloc_none check(long);
+
+public:
+    BOOST_STATIC_CONSTEXPR bool value =
+        !std::is_same<decltype(check<A>(0)), alloc_none>::value;
 };
 
 } /* detail */
 
 template<class A, class T, class... Args>
-inline typename std::enable_if<detail::alloc_has_construct<void, A, T,
+inline typename std::enable_if<detail::alloc_has_construct<A, T,
     Args...>::value>::type
 allocator_construct(A& a, T* p, Args&&... args)
 {
@@ -433,7 +407,7 @@ allocator_construct(A& a, T* p, Args&&... args)
 }
 
 template<class A, class T, class... Args>
-inline typename std::enable_if<!detail::alloc_has_construct<void, A, T,
+inline typename std::enable_if<!detail::alloc_has_construct<A, T,
     Args...>::value>::type
 allocator_construct(A&, T* p, Args&&... args)
 {
@@ -449,26 +423,21 @@ allocator_destroy(A&, T* p)
     p->~T();
     (void)p;
 }
-#elif defined(BOOST_MSVC)
-template<class A, class T>
-inline void
-allocator_destroy(A& a, T* p)
-{
-    std::allocator_traits<A>::destroy(a, p);
-}
 #else
 namespace detail {
 
-template<class, class, class = void>
-struct alloc_has_destroy {
-    BOOST_STATIC_CONSTEXPR bool value = false;
-};
-
 template<class A, class T>
-struct alloc_has_destroy<A, T,
-    typename alloc_void<decltype(std::declval<A
-        &>().destroy(std::declval<T*>()))>::type> {
-    BOOST_STATIC_CONSTEXPR bool value = true;
+class alloc_has_destroy {
+    template<class O>
+    static auto check(int)
+    -> decltype(std::declval<O&>().destroy(std::declval<T*>()));
+
+    template<class>
+    static alloc_none check(long);
+
+public:
+    BOOST_STATIC_CONSTEXPR bool value =
+        !std::is_same<decltype(check<A>(0)), alloc_none>::value;
 };
 
 } /* detail */
@@ -496,26 +465,20 @@ allocator_max_size(const A& a)
 {
     return a.max_size();
 }
-#elif defined(BOOST_MSVC)
-template<class A>
-inline typename allocator_size_type<A>::type
-allocator_max_size(const A& a)
-{
-    return std::allocator_traits<A>::max_size(a);
-}
 #else
 namespace detail {
 
-template<class, class = void>
-struct alloc_has_max_size {
-    BOOST_STATIC_CONSTEXPR bool value = false;
-};
-
 template<class A>
-struct alloc_has_max_size<A,
-    typename alloc_void<decltype(std::declval<const
-        A&>().max_size())>::type> {
-    BOOST_STATIC_CONSTEXPR bool value = true;
+class alloc_has_max_size {
+    template<class O>
+    static auto check(int) -> decltype(std::declval<O&>().max_size());
+
+    template<class>
+    static alloc_none check(long);
+
+public:
+    BOOST_STATIC_CONSTEXPR bool value =
+        !std::is_same<decltype(check<A>(0)), alloc_none>::value;
 };
 
 } /* detail */
@@ -545,26 +508,21 @@ allocator_select_on_container_copy_construction(const A& a)
 {
     return a;
 }
-#elif defined(BOOST_MSVC)
-template<class A>
-inline A
-allocator_select_on_container_copy_construction(const A& a)
-{
-    return std::allocator_traits<A>::select_on_container_copy_construction(a);
-}
 #else
 namespace detail {
 
-template<class, class = void>
-struct alloc_has_soccc {
-    BOOST_STATIC_CONSTEXPR bool value = false;
-};
-
 template<class A>
-struct alloc_has_soccc<A,
-    typename alloc_void<decltype(std::declval<const
-        A&>().select_on_container_copy_construction())>::type> {
-    BOOST_STATIC_CONSTEXPR bool value = true;
+class alloc_has_soccc {
+    template<class O>
+    static auto check(int)
+    -> decltype(std::declval<O&>().select_on_container_copy_construction());
+
+    template<class>
+    static alloc_none check(long);
+
+public:
+    BOOST_STATIC_CONSTEXPR bool value =
+        !std::is_same<decltype(check<A>(0)), alloc_none>::value;
 };
 
 } /* detail */
@@ -629,5 +587,15 @@ using allocator_rebind_t = typename allocator_rebind<A, T>::type;
 #endif
 
 } /* boost */
+
+#if defined(_LIBCPP_SUPPRESS_DEPRECATED_POP)
+_LIBCPP_SUPPRESS_DEPRECATED_POP
+#endif
+#if defined(_STL_RESTORE_DEPRECATED_WARNING)
+_STL_RESTORE_DEPRECATED_WARNING
+#endif
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif

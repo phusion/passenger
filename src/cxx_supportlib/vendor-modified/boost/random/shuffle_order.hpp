@@ -173,10 +173,10 @@ public:
     { detail::generate_from_int(*this, first, last); }
 
     /** Returns the smallest value that the generator can produce. */
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return (base_type::min)(); }
     /** Returns the largest value that the generator can produce. */
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return (base_type::max)(); }
 
     /** Writes a @c shuffle_order_engine to a @c std::ostream. */

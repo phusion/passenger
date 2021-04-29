@@ -2,7 +2,7 @@
 // impl/buffered_read_stream.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -219,6 +219,7 @@ struct associated_allocator<
 template <typename ReadHandler, typename Executor>
 struct associated_executor<
     detail::buffered_fill_handler<ReadHandler>, Executor>
+  : detail::associated_executor_forwarding_base<ReadHandler, Executor>
 {
   typedef typename associated_executor<ReadHandler, Executor>::type type;
 
@@ -470,6 +471,7 @@ template <typename MutableBufferSequence,
 struct associated_executor<
     detail::buffered_read_some_handler<MutableBufferSequence, ReadHandler>,
     Executor>
+  : detail::associated_executor_forwarding_base<ReadHandler, Executor>
 {
   typedef typename associated_executor<ReadHandler, Executor>::type type;
 

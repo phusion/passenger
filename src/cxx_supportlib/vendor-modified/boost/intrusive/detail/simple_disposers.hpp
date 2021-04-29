@@ -13,6 +13,8 @@
 #ifndef BOOST_INTRUSIVE_DETAIL_SIMPLE_DISPOSERS_HPP
 #define BOOST_INTRUSIVE_DETAIL_SIMPLE_DISPOSERS_HPP
 
+#include <boost/intrusive/detail/workaround.hpp>
+
 #ifndef BOOST_CONFIG_HPP
 #  include <boost/config.hpp>
 #endif

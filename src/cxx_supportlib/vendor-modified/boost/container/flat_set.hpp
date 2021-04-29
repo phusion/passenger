@@ -667,7 +667,7 @@ class flat_set
    private:
    typedef std::pair<iterator, bool> insert_return_pair;
    public:
-   BOOST_MOVE_CONVERSION_AWARE_CATCH(insert, value_type, insert_return_pair, this->priv_insert)
+   BOOST_MOVE_CONVERSION_AWARE_CATCH(insert, value_type, insert_return_pair, this->tree_t::insert_unique)
    #endif
 
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
@@ -695,7 +695,7 @@ class flat_set
    //! <b>Note</b>: If an element is inserted it might invalidate elements.
    iterator insert(const_iterator p, value_type &&x);
    #else
-   BOOST_MOVE_CONVERSION_AWARE_CATCH_1ARG(insert, value_type, iterator, this->priv_insert, const_iterator, const_iterator)
+   BOOST_MOVE_CONVERSION_AWARE_CATCH_1ARG(insert, value_type, iterator, this->tree_t::insert_unique, const_iterator, const_iterator)
    #endif
 
    //! <b>Requires</b>: first, last are not iterators into *this.
@@ -1084,7 +1084,9 @@ class flat_set
    //! <b>Effects</b>: x.swap(y)
    //!
    //! <b>Complexity</b>: Constant.
-   friend void swap(flat_set& x, flat_set& y);
+   friend void swap(flat_set& x, flat_set& y)
+      BOOST_NOEXCEPT_IF(  allocator_traits_type::is_always_equal::value
+                                 && boost::container::dtl::is_nothrow_swappable<Compare>::value );
 
    //! <b>Effects</b>: Extracts the internal sequence container.
    //!
@@ -1117,17 +1119,6 @@ class flat_set
    //! <b>Throws</b>: If the move assignment throws
    BOOST_CONTAINER_FORCEINLINE void adopt_sequence(ordered_unique_range_t, BOOST_RV_REF(sequence_type) seq)
    {  this->tree_t::adopt_sequence_unique(ordered_unique_range_t(), boost::move(seq));  }
-
-   #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   private:
-   template<class KeyType>
-   BOOST_CONTAINER_FORCEINLINE std::pair<iterator, bool> priv_insert(BOOST_FWD_REF(KeyType) x)
-   {  return this->tree_t::insert_unique(::boost::forward<KeyType>(x));  }
-
-   template<class KeyType>
-   BOOST_CONTAINER_FORCEINLINE iterator priv_insert(const_iterator p, BOOST_FWD_REF(KeyType) x)
-   {  return this->tree_t::insert_unique(p, ::boost::forward<KeyType>(x)); }
-   #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
@@ -1617,7 +1608,7 @@ class flat_multiset
    //! <b>Note</b>: If an element is inserted it might invalidate elements.
    iterator insert(value_type &&x);
    #else
-   BOOST_MOVE_CONVERSION_AWARE_CATCH(insert, value_type, iterator, this->priv_insert)
+   BOOST_MOVE_CONVERSION_AWARE_CATCH(insert, value_type, iterator, this->tree_t::insert_equal)
    #endif
 
    #if defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
@@ -1645,7 +1636,7 @@ class flat_multiset
    //! <b>Note</b>: If an element is inserted it might invalidate elements.
    iterator insert(const_iterator p, value_type &&x);
    #else
-   BOOST_MOVE_CONVERSION_AWARE_CATCH_1ARG(insert, value_type, iterator, this->priv_insert, const_iterator, const_iterator)
+   BOOST_MOVE_CONVERSION_AWARE_CATCH_1ARG(insert, value_type, iterator, this->tree_t::insert_equal, const_iterator, const_iterator)
    #endif
 
    //! <b>Requires</b>: first, last are not iterators into *this.
@@ -1817,7 +1808,9 @@ class flat_multiset
    //! <b>Effects</b>: x.swap(y)
    //!
    //! <b>Complexity</b>: Constant.
-   friend void swap(flat_multiset& x, flat_multiset& y);
+   friend void swap(flat_multiset& x, flat_multiset& y)
+      BOOST_NOEXCEPT_IF(  allocator_traits_type::is_always_equal::value
+                                 && boost::container::dtl::is_nothrow_swappable<Compare>::value );
 
    //! <b>Effects</b>: Extracts the internal sequence container.
    //!
@@ -1849,17 +1842,6 @@ class flat_multiset
    //! <b>Throws</b>: If the move assignment throws
    BOOST_CONTAINER_FORCEINLINE void adopt_sequence(ordered_range_t, BOOST_RV_REF(sequence_type) seq)
    {  this->tree_t::adopt_sequence_equal(ordered_range_t(), boost::move(seq));  }
-
-   #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   private:
-   template <class KeyType>
-   BOOST_CONTAINER_FORCEINLINE iterator priv_insert(BOOST_FWD_REF(KeyType) x)
-   {  return this->tree_t::insert_equal(::boost::forward<KeyType>(x));  }
-
-   template <class KeyType>
-   BOOST_CONTAINER_FORCEINLINE iterator priv_insert(const_iterator p, BOOST_FWD_REF(KeyType) x)
-   {  return this->tree_t::insert_equal(p, ::boost::forward<KeyType>(x)); }
-   #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 };
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD

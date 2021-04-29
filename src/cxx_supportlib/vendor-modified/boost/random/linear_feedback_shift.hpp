@@ -52,9 +52,9 @@ public:
     BOOST_STATIC_CONSTANT(UIntType, default_seed = 341);
 
     /** Returns the smallest value that the generator can produce. */
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () { return 0; }
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () { return 0; }
     /** Returns the largest value that the generator can produce. */
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return wordmask(); }
 
     BOOST_STATIC_ASSERT(w > 0);
@@ -168,7 +168,7 @@ public:
 
 private:
     /// \cond show_private
-    static UIntType wordmask() { return boost::low_bits_mask_t<w>::sig_bits; }
+    static BOOST_CONSTEXPR UIntType wordmask() { return boost::low_bits_mask_t<w>::sig_bits; }
     /// \endcond
     UIntType value;
 };

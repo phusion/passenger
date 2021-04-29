@@ -2,7 +2,7 @@
 // co_spawn.hpp
 // ~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -106,10 +106,10 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(
 co_spawn(const Executor& ex, awaitable<T, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename enable_if<
+    typename constraint<
       (is_executor<Executor>::value || execution::is_executor<Executor>::value)
         && is_convertible<Executor, AwaitableExecutor>::value
-    >::type* = 0);
+    >::type = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -162,10 +162,10 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(
 co_spawn(const Executor& ex, awaitable<void, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename enable_if<
+    typename constraint<
       (is_executor<Executor>::value || execution::is_executor<Executor>::value)
         && is_convertible<Executor, AwaitableExecutor>::value
-    >::type* = 0);
+    >::type = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -228,11 +228,11 @@ co_spawn(ExecutionContext& ctx, awaitable<T, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename ExecutionContext::executor_type),
-    typename enable_if<
+    typename constraint<
       is_convertible<ExecutionContext&, execution_context&>::value
         && is_convertible<typename ExecutionContext::executor_type,
           AwaitableExecutor>::value
-    >::type* = 0);
+    >::type = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -287,11 +287,11 @@ co_spawn(ExecutionContext& ctx, awaitable<void, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename ExecutionContext::executor_type),
-    typename enable_if<
+    typename constraint<
       is_convertible<ExecutionContext&, execution_context&>::value
         && is_convertible<typename ExecutionContext::executor_type,
           AwaitableExecutor>::value
-    >::type* = 0);
+    >::type = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -372,9 +372,9 @@ BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken,
 co_spawn(const Executor& ex, F&& f,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename enable_if<
+    typename constraint<
       is_executor<Executor>::value || execution::is_executor<Executor>::value
-    >::type* = 0);
+    >::type = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -457,9 +457,9 @@ co_spawn(ExecutionContext& ctx, F&& f,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename ExecutionContext::executor_type),
-    typename enable_if<
+    typename constraint<
       is_convertible<ExecutionContext&, execution_context&>::value
-    >::type* = 0);
+    >::type = 0);
 
 } // namespace asio
 } // namespace boost

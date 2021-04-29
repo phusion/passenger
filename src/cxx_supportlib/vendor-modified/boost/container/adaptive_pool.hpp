@@ -132,6 +132,10 @@ class adaptive_pool
    adaptive_pool(const adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
    {}
 
+   //!Copy assignment from other adaptive_pool.
+   adaptive_pool & operator=(const adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
+   {  return *this;  }
+
    //!Copy constructor from related adaptive_pool.
    template<class T2>
    adaptive_pool
@@ -441,6 +445,10 @@ class private_adaptive_pool
    //!Copy constructor from other private_adaptive_pool.
    private_adaptive_pool(const private_adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
    {}
+
+   //!Copy assignment from other adaptive_pool.
+   private_adaptive_pool & operator=(const private_adaptive_pool &) BOOST_NOEXCEPT_OR_NOTHROW
+   {  return *this;  }
 
    //!Copy constructor from related private_adaptive_pool.
    template<class T2>

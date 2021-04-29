@@ -19,7 +19,7 @@
 #include <boost/intrusive/detail/common_slist_algorithms.hpp>
 #include <boost/intrusive/detail/algo_type.hpp>
 #include <cstddef>
-#include <boost/intrusive/detail/minimal_pair_header.hpp>   //std::pair
+#include <boost/intrusive/detail/twin.hpp>   //for node_pair
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
@@ -62,6 +62,12 @@ class linear_slist_algorithms
    typedef typename NodeTraits::node_ptr        node_ptr;
    typedef typename NodeTraits::const_node_ptr  const_node_ptr;
    typedef NodeTraits                           node_traits;
+   //A simple struct containing:
+   //
+   // typedef node_ptr type;
+   // node_ptr first;
+   // node_ptr second;
+   typedef twin<node_ptr>                  node_pair;
 
    #if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED)
 
@@ -222,9 +228,9 @@ class linear_slist_algorithms
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Linear to the number of elements plus the number moved positions.
-   static std::pair<node_ptr, node_ptr> move_first_n_backwards(node_ptr p, std::size_t n)
+   static node_pair move_first_n_backwards(node_ptr p, std::size_t n)
    {
-      std::pair<node_ptr, node_ptr> ret;
+      node_pair ret;
       //Null shift, or count() == 0 or 1, nothing to do
       if(!n || !p || !NodeTraits::get_next(p)){
          return ret;
@@ -277,9 +283,9 @@ class linear_slist_algorithms
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Linear to the number of elements plus the number moved positions.
-   static std::pair<node_ptr, node_ptr> move_first_n_forward(node_ptr p, std::size_t n)
+   static node_pair move_first_n_forward(node_ptr p, std::size_t n)
    {
-      std::pair<node_ptr, node_ptr> ret;
+      node_pair ret;
       //Null shift, or count() == 0 or 1, nothing to do
       if(!n || !p || !NodeTraits::get_next(p))
          return ret;

@@ -2,7 +2,7 @@
 // basic_seq_packet_socket.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -44,6 +44,12 @@ class basic_seq_packet_socket;
  * @par Thread Safety
  * @e Distinct @e objects: Safe.@n
  * @e Shared @e objects: Unsafe.
+ *
+ * Synchronous @c send, @c receive, and @c connect operations are thread safe
+ * with respect to each other, if the underlying operating system calls are
+ * also thread safe. This means that it is permitted to perform concurrent
+ * calls to these synchronous operations on a single socket object. Other
+ * synchronous operations, such as @c open or @c close, are not thread safe.
  */
 template <typename Protocol, typename Executor>
 class basic_seq_packet_socket
@@ -101,9 +107,9 @@ public:
    */
   template <typename ExecutionContext>
   explicit basic_seq_packet_socket(ExecutionContext& context,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
+      >::type = 0)
     : basic_socket<Protocol, Executor>(context)
   {
   }
@@ -144,9 +150,10 @@ public:
   template <typename ExecutionContext>
   basic_seq_packet_socket(ExecutionContext& context,
       const protocol_type& protocol,
-      typename enable_if<
-        is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
+      typename constraint<
+        is_convertible<ExecutionContext&, execution_context&>::value,
+        defaulted_constraint
+      >::type = defaulted_constraint())
     : basic_socket<Protocol, Executor>(context, protocol)
   {
   }
@@ -191,9 +198,9 @@ public:
   template <typename ExecutionContext>
   basic_seq_packet_socket(ExecutionContext& context,
       const endpoint_type& endpoint,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
+      >::type = 0)
     : basic_socket<Protocol, Executor>(context, endpoint)
   {
   }
@@ -236,9 +243,9 @@ public:
   template <typename ExecutionContext>
   basic_seq_packet_socket(ExecutionContext& context,
       const protocol_type& protocol, const native_handle_type& native_socket,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
+      >::type = 0)
     : basic_socket<Protocol, Executor>(context, protocol, native_socket)
   {
   }
@@ -294,10 +301,10 @@ public:
    */
   template <typename Protocol1, typename Executor1>
   basic_seq_packet_socket(basic_seq_packet_socket<Protocol1, Executor1>&& other,
-      typename enable_if<
+      typename constraint<
         is_convertible<Protocol1, Protocol>::value
           && is_convertible<Executor1, Executor>::value
-      >::type* = 0)
+      >::type = 0)
     : basic_socket<Protocol, Executor>(std::move(other))
   {
   }
@@ -316,7 +323,7 @@ public:
    * constructor.
    */
   template <typename Protocol1, typename Executor1>
-  typename enable_if<
+  typename constraint<
     is_convertible<Protocol1, Protocol>::value
       && is_convertible<Executor1, Executor>::value,
     basic_seq_packet_socket&

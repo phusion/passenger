@@ -48,4 +48,20 @@
 # define BOOST_SYSTEM_CONSTEXPR
 #endif
 
+// BOOST_SYSTEM_DEPRECATED
+
+#if defined(__clang__)
+# define BOOST_SYSTEM_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#elif defined(__GNUC__)
+# if __GNUC__ * 100 + __GNUC_MINOR__ >= 405
+#  define BOOST_SYSTEM_DEPRECATED(msg) __attribute__((deprecated(msg)))
+# else
+#  define BOOST_SYSTEM_DEPRECATED(msg) __attribute__((deprecated))
+# endif
+#elif defined(_MSC_VER)
+#  define BOOST_SYSTEM_DEPRECATED(msg) __declspec(deprecated(msg))
+#else
+# define BOOST_SYSTEM_DEPRECATED(msg)
+#endif
+
 #endif // BOOST_SYSTEM_DETAIL_CONFIG_HPP_INCLUDED

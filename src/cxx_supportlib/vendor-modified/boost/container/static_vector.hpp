@@ -1169,6 +1169,7 @@ public:
 #else
 
    BOOST_CONTAINER_FORCEINLINE friend void swap(static_vector &x, static_vector &y)
+       BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT(x.swap(y)))
    {
       x.swap(y);
    }
@@ -1275,13 +1276,15 @@ bool operator>= (static_vector<V, C1, O1> const& x, static_vector<V, C2, O2> con
 //! @par Complexity
 //!   Linear O(N).
 template<typename V, std::size_t C1, std::size_t C2, class O1, class O2>
-inline void swap(static_vector<V, C1, O1> & x, static_vector<V, C2, O2> & y);
+inline void swap(static_vector<V, C1, O1> & x, static_vector<V, C2, O2> & y)
+    BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT(x.swap(y)));
 
 #else
 
 template<typename V, std::size_t C1, std::size_t C2, class O1, class O2>
 inline void swap(static_vector<V, C1, O1> & x, static_vector<V, C2, O2> & y
       , typename dtl::enable_if_c< C1 != C2>::type * = 0)
+    BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT(x.swap(y)))
 {
    x.swap(y);
 }

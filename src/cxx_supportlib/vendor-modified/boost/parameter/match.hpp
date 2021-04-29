@@ -8,7 +8,7 @@
 
 #include <boost/parameter/config.hpp>
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 #include <boost/parameter/aux_/void.hpp>
 #include <boost/preprocessor/arithmetic/sub.hpp>
 #include <boost/preprocessor/facilities/intercept.hpp>

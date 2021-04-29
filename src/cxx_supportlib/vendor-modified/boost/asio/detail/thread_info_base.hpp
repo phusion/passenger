@@ -2,7 +2,7 @@
 // detail/thread_info_base.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -66,7 +66,13 @@ public:
   ~thread_info_base()
   {
     for (int i = 0; i < max_mem_index; ++i)
-      ::operator delete(reusable_memory_[i]);
+    {
+      // The following test for non-null pointers is technically redundant, but
+      // it is significantly faster when using a tight io_context::poll() loop
+      // in latency sensitive applications.
+      if (reusable_memory_[i])
+        ::operator delete(reusable_memory_[i]);
+    }
   }
 
   static void* allocate(thread_info_base* this_thread, std::size_t size)
@@ -140,6 +146,7 @@ public:
       pending_exception_ =
         std::make_exception_ptr<multiple_exceptions>(
             multiple_exceptions(pending_exception_));
+      break;
     default:
       break;
     }

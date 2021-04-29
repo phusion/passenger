@@ -2,7 +2,7 @@
 // impl/awaitable.hpp
 // ~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -78,7 +78,7 @@ public:
   {
     return boost::asio::detail::thread_info_base::allocate(
         boost::asio::detail::thread_info_base::awaitable_frame_tag(),
-        boost::asio::detail::thread_context::thread_call_stack::top(),
+        boost::asio::detail::thread_context::top_of_thread_call_stack(),
         size);
   }
 
@@ -86,7 +86,7 @@ public:
   {
     boost::asio::detail::thread_info_base::deallocate(
         boost::asio::detail::thread_info_base::awaitable_frame_tag(),
-        boost::asio::detail::thread_context::thread_call_stack::top(),
+        boost::asio::detail::thread_context::top_of_thread_call_stack(),
         pointer, size);
   }
 #endif // !defined(BOOST_ASIO_DISABLE_AWAITABLE_FRAME_RECYCLING)
@@ -112,7 +112,7 @@ public:
 
       void await_suspend(coroutine_handle<void>) noexcept
       {
-        this_->pop_frame();
+        this->this_->pop_frame();
       }
 
       void await_resume() const noexcept

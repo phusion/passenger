@@ -271,7 +271,7 @@
 //
 #if (BOOST_GCC_VERSION < 40900) || !defined(BOOST_GCC_CXX11)
 // Although alignas support is added in gcc 4.8, it does not accept
-// constant expressions as an argument until gcc 4.9.
+// dependent constant expressions as an argument until gcc 4.9.
 #  define BOOST_NO_CXX11_ALIGNAS
 #endif
 

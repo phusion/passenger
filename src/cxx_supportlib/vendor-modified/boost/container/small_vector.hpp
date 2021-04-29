@@ -653,7 +653,7 @@ class small_vector : public small_vector_base<T, Allocator, Options>
    {  this->move_construct_impl(other, other.get_stored_allocator());   }
 
    BOOST_CONTAINER_FORCEINLINE small_vector(BOOST_RV_REF(small_vector) other)
-      BOOST_NOEXCEPT_IF(boost::container::dtl::is_nothrow_move_assignable<value_type>::value)
+      BOOST_NOEXCEPT_IF(boost::container::dtl::is_nothrow_move_constructible<value_type>::value)
       : base_type(initial_capacity_t(), internal_capacity(), ::boost::move(other.get_stored_allocator()))
    {  this->move_construct_impl(other, other.get_stored_allocator());   }
 

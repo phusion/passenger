@@ -189,10 +189,10 @@ public:
     }
 
     /** Returns the smallest value that the generator can produce. */
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return 0; }
     /** Returns the largest value that the generator can produce. */
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return boost::low_bits_mask_t<w>::sig_bits; }
 
     /** Returns the next value of the generator. */
@@ -421,10 +421,10 @@ public:
     }
 
     /** Returns the smallest value that the generator can produce. */
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return result_type(0); }
     /** Returns the largest value that the generator can produce. */
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return result_type(1); }
 
     /** Returns the next value of the generator. */

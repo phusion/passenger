@@ -500,11 +500,11 @@ namespace boost { namespace mpl
     };
 
     #define M0(z, n, data)                                                                            \
-    template<BOOST_PP_ENUM_PARAMS(BOOST_MPL_STRING_MAX_PARAMS, int C), int J>                         \
-    struct string_iterator<mpl::string<BOOST_PP_ENUM_PARAMS(BOOST_MPL_STRING_MAX_PARAMS, C)>, n, J>   \
+    template<BOOST_PP_ENUM_PARAMS_Z(z, BOOST_MPL_STRING_MAX_PARAMS, int C), int J>                    \
+    struct string_iterator<mpl::string<BOOST_PP_ENUM_PARAMS_Z(z, BOOST_MPL_STRING_MAX_PARAMS, C)>, n, J> \
     {                                                                                                 \
         enum { eomc_ = (BOOST_MPL_MULTICHAR_LENGTH(BOOST_PP_CAT(C, n)) == J + 1) };                   \
-        typedef mpl::string<BOOST_PP_ENUM_PARAMS(BOOST_MPL_STRING_MAX_PARAMS, C)> string;             \
+        typedef mpl::string<BOOST_PP_ENUM_PARAMS_Z(z, BOOST_MPL_STRING_MAX_PARAMS, C)> string;        \
         typedef std::bidirectional_iterator_tag category;                                             \
         typedef                                                                                       \
             mpl::string_iterator<string, n + eomc_, eomc_ ? 0 : J + 1>                                \
@@ -514,11 +514,11 @@ namespace boost { namespace mpl
         prior;                                                                                        \
         typedef mpl::char_<BOOST_MPL_MULTICHAR_AT(BOOST_PP_CAT(C, n), J)> type;                       \
     };                                                                                                \
-    template<BOOST_PP_ENUM_PARAMS(BOOST_MPL_STRING_MAX_PARAMS, int C)>                                \
-    struct string_iterator<mpl::string<BOOST_PP_ENUM_PARAMS(BOOST_MPL_STRING_MAX_PARAMS, C)>, n, 0>   \
+    template<BOOST_PP_ENUM_PARAMS_Z(z, BOOST_MPL_STRING_MAX_PARAMS, int C)>                           \
+    struct string_iterator<mpl::string<BOOST_PP_ENUM_PARAMS_Z(z, BOOST_MPL_STRING_MAX_PARAMS, C)>, n, 0> \
     {                                                                                                 \
         enum { eomc_ = (BOOST_MPL_MULTICHAR_LENGTH(BOOST_PP_CAT(C, n)) == 1) };                       \
-        typedef mpl::string<BOOST_PP_ENUM_PARAMS(BOOST_MPL_STRING_MAX_PARAMS, C)> string;             \
+        typedef mpl::string<BOOST_PP_ENUM_PARAMS_Z(z, BOOST_MPL_STRING_MAX_PARAMS, C)> string;        \
         typedef std::bidirectional_iterator_tag category;                                             \
         typedef                                                                                       \
             mpl::string_iterator<string, n + eomc_, !eomc_>                                           \

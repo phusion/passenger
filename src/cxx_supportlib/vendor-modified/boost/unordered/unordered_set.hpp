@@ -536,7 +536,7 @@ namespace boost {
       void rehash(size_type);
       void reserve(size_type);
 
-#if !BOOST_WORKAROUND(__BORLANDC__, < 0x0582)
+#if !BOOST_WORKAROUND(BOOST_BORLANDC, < 0x0582)
       friend bool operator==
         <T, H, P, A>(unordered_set const&, unordered_set const&);
       friend bool operator!=
@@ -1083,7 +1083,7 @@ namespace boost {
       void rehash(size_type);
       void reserve(size_type);
 
-#if !BOOST_WORKAROUND(__BORLANDC__, < 0x0582)
+#if !BOOST_WORKAROUND(BOOST_BORLANDC, < 0x0582)
       friend bool operator==
         <T, H, P, A>(unordered_multiset const&, unordered_multiset const&);
       friend bool operator!=
@@ -1497,7 +1497,7 @@ namespace boost {
     inline bool operator==(
       unordered_set<T, H, P, A> const& m1, unordered_set<T, H, P, A> const& m2)
     {
-#if BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x0613))
+#if BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x0613))
       struct dummy
       {
         unordered_set<T, H, P, A> x;
@@ -1510,7 +1510,7 @@ namespace boost {
     inline bool operator!=(
       unordered_set<T, H, P, A> const& m1, unordered_set<T, H, P, A> const& m2)
     {
-#if BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x0613))
+#if BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x0613))
       struct dummy
       {
         unordered_set<T, H, P, A> x;
@@ -1524,7 +1524,7 @@ namespace boost {
       unordered_set<T, H, P, A>& m1, unordered_set<T, H, P, A>& m2)
       BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT_EXPR(m1.swap(m2)))
     {
-#if BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x0613))
+#if BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x0613))
       struct dummy
       {
         unordered_set<T, H, P, A> x;
@@ -1900,7 +1900,7 @@ namespace boost {
     inline bool operator==(unordered_multiset<T, H, P, A> const& m1,
       unordered_multiset<T, H, P, A> const& m2)
     {
-#if BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x0613))
+#if BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x0613))
       struct dummy
       {
         unordered_multiset<T, H, P, A> x;
@@ -1913,7 +1913,7 @@ namespace boost {
     inline bool operator!=(unordered_multiset<T, H, P, A> const& m1,
       unordered_multiset<T, H, P, A> const& m2)
     {
-#if BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x0613))
+#if BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x0613))
       struct dummy
       {
         unordered_multiset<T, H, P, A> x;
@@ -1927,7 +1927,7 @@ namespace boost {
       unordered_multiset<T, H, P, A>& m1, unordered_multiset<T, H, P, A>& m2)
       BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT_EXPR(m1.swap(m2)))
     {
-#if BOOST_WORKAROUND(__CODEGEARC__, BOOST_TESTED_AT(0x0613))
+#if BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x0613))
       struct dummy
       {
         unordered_multiset<T, H, P, A> x;

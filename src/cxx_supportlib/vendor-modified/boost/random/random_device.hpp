@@ -93,9 +93,9 @@ public:
     BOOST_STATIC_CONSTANT(bool, has_fixed_range = false);
 
     /** Returns the smallest value that the \random_device can produce. */
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () { return 0; }
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () { return 0; }
     /** Returns the largest value that the \random_device can produce. */
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION () { return ~0u; }
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION () { return ~0u; }
 
     /** Constructs a @c random_device, optionally using the default device. */
     BOOST_RANDOM_DECL random_device();

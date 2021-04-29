@@ -53,10 +53,9 @@ class polymorphic_allocator
    //! <b>Throws</b>: Nothing
    //!
    //! <b>Notes</b>: This constructor provides an implicit conversion from memory_resource*.
-   //!   Non-standard extension: if r is null m_resource is set to get_default_resource().
    polymorphic_allocator(memory_resource* r)
-      : m_resource(r ? r : ::boost::container::pmr::get_default_resource())
-   {}
+      : m_resource(r)
+   {  BOOST_ASSERT(r != 0);  }
 
    //! <b>Effects</b>: Sets m_resource to
    //!   other.resource().

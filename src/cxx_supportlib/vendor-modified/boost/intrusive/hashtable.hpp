@@ -35,7 +35,7 @@
 #include <boost/intrusive/detail/mpl.hpp>
 
 //boost
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
 #include <boost/intrusive/detail/assert.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/move/utility_core.hpp>

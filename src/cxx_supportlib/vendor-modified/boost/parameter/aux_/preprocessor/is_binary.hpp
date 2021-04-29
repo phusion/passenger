@@ -9,7 +9,7 @@
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 // From Paul Mensonides
 #include <boost/preprocessor/punctuation/comma.hpp>
 #include <boost/preprocessor/detail/split.hpp>

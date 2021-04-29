@@ -14,6 +14,7 @@
 
 #include <boost/move/detail/config_begin.hpp>
 #include <boost/move/algo/detail/adaptive_sort_merge.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 namespace boost {
 namespace movelib {
@@ -165,7 +166,7 @@ void adaptive_sort_combine_blocks
    , Compare comp
    , bool merge_left)
 {
-   (void)xbuf;
+   boost::ignore_unused(xbuf);
    typedef typename iterator_traits<RandIt>::size_type   size_type;
 
    size_type const l_reg_combined   = 2*l_prev_merged;
@@ -174,7 +175,7 @@ void adaptive_sort_combine_blocks
    size_type const n_reg_combined = len/l_reg_combined;
    RandIt combined_first = first;
 
-   (void)l_total_combined;
+   boost::ignore_unused(l_total_combined);
    BOOST_ASSERT(l_total_combined <= len);
 
    size_type const max_i = n_reg_combined + (l_irreg_combined != 0);

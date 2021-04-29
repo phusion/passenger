@@ -16,7 +16,7 @@ BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_string, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_string, 2)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_string, 3)
 
-#ifndef __BORLANDC__
+#ifndef BOOST_BORLANDC
 //Borland chokes on this "double definition" of string
 BOOST_TYPEOF_REGISTER_TYPE(std::string)
 #endif

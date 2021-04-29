@@ -86,9 +86,6 @@ boost
                 if( info_.end()!=i )
                     {
                     shared_ptr<error_info_base> const & p = i->second;
-#ifndef BOOST_NO_RTTI
-                    BOOST_ASSERT( *BOOST_EXCEPTION_DYNAMIC_TYPEID(*p).type_==*ti.type_ );
-#endif
                     return p;
                     }
                 return shared_ptr<error_info_base>();

@@ -76,8 +76,8 @@ namespace detail {
    inline std::size_t floor_log2 (std::size_t x)
    {
       unsigned long log2;
-      BOOST_INTRUSIVE_BSR_INTRINSIC( &log2, (unsigned long)x );
-      return log2;
+      BOOST_INTRUSIVE_BSR_INTRINSIC( &log2, x );
+      return static_cast<std::size_t>(log2);
    }
 
    #undef BOOST_INTRUSIVE_BSR_INTRINSIC

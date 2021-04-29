@@ -59,12 +59,12 @@ public:
     /**
      * Returns the smallest value that the generator can produce
      */
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return 1; }
     /**
      * Returns the largest value that the generator can produce
      */
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return MLCG1::modulus-1; }
 
     /**

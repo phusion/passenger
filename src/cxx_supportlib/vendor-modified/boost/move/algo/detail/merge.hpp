@@ -11,6 +11,7 @@
 #ifndef BOOST_MOVE_MERGE_HPP
 #define BOOST_MOVE_MERGE_HPP
 
+#include <boost/core/ignore_unused.hpp>
 #include <boost/move/algo/move.hpp>
 #include <boost/move/adl_move_swap.hpp>
 #include <boost/move/algo/detail/basic_op.hpp>
@@ -680,7 +681,7 @@ void op_merge_with_right_placed
       if (r_first == r_last) {
          InputOutIterator end = op(forward_t(), first, last, dest_first);
          BOOST_ASSERT(end == r_last);
-         (void)end;
+         boost::ignore_unused(end);
          return;
       }
       else if (comp(*r_first, *first)) {
@@ -717,7 +718,7 @@ void op_merge_with_left_placed
       if(first == last) {
          BidirOutIterator res = op(backward_t(), r_first, r_last, dest_last);
          BOOST_ASSERT(last == res);
-         (void)res;
+         boost::ignore_unused(res);
          return;
       }
       --r_last;
@@ -781,7 +782,7 @@ void uninitialized_merge_with_right_placed
          d.release();
          InputOutIterator end = ::boost::move(first, last, original_r_first);
          BOOST_ASSERT(end == r_last);
-         (void)end;
+         boost::ignore_unused(end);
          return;
       }
       else if (comp(*r_first, *first)) {
@@ -799,51 +800,6 @@ void uninitialized_merge_with_right_placed
    d.release();
    merge_with_right_placed(first, last, original_r_first, r_first, r_last, comp);
 }
-
-/*
-// [r_first, r_last) are already in the right part of the destination range.
-// [dest_first, r_first) is uninitialized memory
-template <class Compare, class BidirOutIterator, class BidirIterator>
-void uninitialized_merge_with_left_placed
-   ( BidirOutIterator dest_first, BidirOutIterator r_first, BidirOutIterator r_last
-   , BidirIterator first, BidirIterator last
-   , Compare comp)
-{
-   BOOST_ASSERT((last - first) == (r_last - r_first));
-   typedef typename iterator_traits<BidirOutIterator>::value_type value_type;
-   BidirOutIterator const original_r_last = r_last;
-
-   destruct_n<value_type> d(&*dest_last);
-
-   while ( first != last && dest_first != original_r_first ) {
-      if (r_first == r_last) {
-         for(; dest_first != original_r_first; ++dest_first, ++first){
-            ::new(&*dest_first) value_type(::boost::move(*first));
-            d.incr();
-         }
-         d.release();
-         BidirOutIterator end = ::boost::move(first, last, original_r_first);
-         BOOST_ASSERT(end == r_last);
-         (void)end;
-         return;
-      }
-      else if (comp(*r_first, *first)) {
-         ::new(&*dest_first) value_type(::boost::move(*r_first));
-         d.incr();
-         ++r_first;
-      }
-      else {
-         ::new(&*dest_first) value_type(::boost::move(*first));
-         d.incr();
-         ++first;
-      }
-      ++dest_first;
-   }
-   d.release();
-   merge_with_right_placed(first, last, original_r_first, r_first, r_last, comp);
-}
-*/
-
 
 /// This is a helper function for the merge routines.
 template<typename BidirectionalIterator1, typename BidirectionalIterator2>

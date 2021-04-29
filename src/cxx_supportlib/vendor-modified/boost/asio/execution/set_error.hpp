@@ -2,7 +2,7 @@
 // execution/set_error.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -85,7 +85,7 @@ enum overload_type
   ill_formed
 };
 
-template <typename R, typename E, typename = void>
+template <typename R, typename E, typename = void, typename = void>
 struct call_traits
 {
   BOOST_ASIO_STATIC_CONSTEXPR(overload_type, overload = ill_formed);
@@ -96,9 +96,7 @@ struct call_traits
 template <typename R, typename E>
 struct call_traits<R, void(E),
   typename enable_if<
-    (
-      set_error_member<R, E>::is_valid
-    )
+    set_error_member<R, E>::is_valid
   >::type> :
   set_error_member<R, E>
 {
@@ -108,11 +106,10 @@ struct call_traits<R, void(E),
 template <typename R, typename E>
 struct call_traits<R, void(E),
   typename enable_if<
-    (
-      !set_error_member<R, E>::is_valid
-      &&
-      set_error_free<R, E>::is_valid
-    )
+    !set_error_member<R, E>::is_valid
+  >::type,
+  typename enable_if<
+    set_error_free<R, E>::is_valid
   >::type> :
   set_error_free<R, E>
 {

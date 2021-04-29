@@ -37,13 +37,12 @@
 #include <boost/intrusive/detail/simple_disposers.hpp>
 #include <boost/intrusive/detail/size_holder.hpp>
 #include <boost/intrusive/detail/algorithm.hpp>
+#include <boost/intrusive/detail/value_functors.hpp>
 
 #include <boost/move/utility_core.hpp>
 #include <boost/static_assert.hpp>
 
-#include <boost/intrusive/detail/minimal_less_equal_header.hpp>//std::less
 #include <cstddef>   //std::size_t
-#include <boost/intrusive/detail/minimal_pair_header.hpp>   //std::pair
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
@@ -1431,7 +1430,7 @@ class slist_impl
    void splice(const_iterator pos, slist_impl &x, const_iterator f, const_iterator l, size_type n)
    {  return this->splice_after(this->previous(pos), x, x.previous(f), x.previous(l), n);  }
 
-   //! <b>Effects</b>: This function sorts the list *this according to std::less<value_type>.
+   //! <b>Effects</b>: This function sorts the list *this according to operator<.
    //!   The sort is stable, that is, the relative order of equivalent elements is preserved.
    //!
    //! <b>Throws</b>: If value_traits::node_traits::node
@@ -1501,14 +1500,14 @@ class slist_impl
    //!
    //! <b>Throws</b>: If value_traits::node_traits::node
    //!   constructor throws (this does not happen with predefined Boost.Intrusive hooks)
-   //!   or std::less<value_type> throws. Basic guarantee.
+   //!   or operator< throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: This function is linear time: it performs at most
    //!   size() + x.size() - 1 comparisons.
    //!
    //! <b>Note</b>: Iterators and references are not invalidated.
    void sort()
-   { this->sort(std::less<value_type>()); }
+   { this->sort(value_less<value_type>()); }
 
    //! <b>Requires</b>: p must be a comparison function that induces a strict weak
    //!   ordering and both *this and x must be sorted according to that ordering
@@ -1557,18 +1556,18 @@ class slist_impl
    }
 
    //! <b>Effects</b>: This function removes all of x's elements and inserts them
-   //!   in order into *this according to std::less<value_type>. The merge is stable;
+   //!   in order into *this according to operator<. The merge is stable;
    //!   that is, if an element from *this is equivalent to one from x, then the element
    //!   from *this will precede the one from x.
    //!
-   //! <b>Throws</b>: if std::less<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: if operator< throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: This function is linear time: it performs at most
    //!   size() + x.size() - 1 comparisons.
    //!
    //! <b>Note</b>: Iterators and references are not invalidated
    void merge(slist_impl& x)
-   {  this->merge(x, std::less<value_type>());  }
+   {  this->merge(x, value_less<value_type>());  }
 
    //! <b>Effects</b>: Reverses the order of elements in the list.
    //!
@@ -1588,7 +1587,7 @@ class slist_impl
    //! <b>Effects</b>: Removes all the elements that compare equal to value.
    //!   No destructors are called.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time. It performs exactly size() comparisons for equality.
    //!
@@ -1603,7 +1602,7 @@ class slist_impl
    //! <b>Effects</b>: Removes all the elements that compare equal to value.
    //!   Disposer::operator()(pointer) is called for every removed element.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time. It performs exactly size() comparisons for equality.
    //!
@@ -1671,14 +1670,14 @@ class slist_impl
    //! <b>Effects</b>: Removes adjacent duplicate elements or adjacent
    //!   elements that are equal from the list. No destructors are called.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time (size()-1) comparisons calls to pred()).
    //!
    //! <b>Note</b>: The relative order of elements that are not removed is unchanged,
    //!   and iterators to elements that are not removed remain valid.
    void unique()
-   {  this->unique_and_dispose(std::equal_to<value_type>(), detail::null_disposer());  }
+   {  this->unique_and_dispose(value_equal<value_type>(), detail::null_disposer());  }
 
    //! <b>Effects</b>: Removes adjacent duplicate elements or adjacent
    //!   elements that satisfy some binary predicate from the list.
@@ -1700,7 +1699,7 @@ class slist_impl
    //!   elements that satisfy some binary predicate from the list.
    //!   Disposer::operator()(pointer) is called for every removed element.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator== throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time (size()-1) comparisons equality comparisons.
    //!
@@ -1708,7 +1707,7 @@ class slist_impl
    //!   and iterators to elements that are not removed remain valid.
    template<class Disposer>
    void unique_and_dispose(Disposer disposer)
-   {  this->unique(std::equal_to<value_type>(), disposer);  }
+   {  this->unique(value_equal<value_type>(), disposer);  }
 
    //! <b>Requires</b>: Disposer::operator()(pointer) shouldn't throw.
    //!
@@ -1937,8 +1936,7 @@ class slist_impl
       BOOST_INTRUSIVE_INVARIANT_ASSERT(node_traits::get_next(header_ptr));
       if (node_traits::get_next(header_ptr) == header_ptr)
       {
-         if (constant_time_size)
-            BOOST_INTRUSIVE_INVARIANT_ASSERT(this->priv_size_traits().get_size() == 0);
+         BOOST_INTRUSIVE_INVARIANT_ASSERT(!constant_time_size || this->priv_size_traits().get_size() == 0);
          return;
       }
       size_t node_count = 0;
@@ -1956,15 +1954,13 @@ class slist_impl
          }
          if ((!linear && next_p == header_ptr) || (linear && !next_p))
          {
-            if (cache_last)
-               BOOST_INTRUSIVE_INVARIANT_ASSERT(get_last_node() == p);
+            BOOST_INTRUSIVE_INVARIANT_ASSERT(!cache_last || get_last_node() == p);
             break;
          }
          p = next_p;
          ++node_count;
       }
-      if (constant_time_size)
-         BOOST_INTRUSIVE_INVARIANT_ASSERT(this->priv_size_traits().get_size() == node_count);
+      BOOST_INTRUSIVE_INVARIANT_ASSERT(!constant_time_size || this->priv_size_traits().get_size() == node_count);
    }
 
 
@@ -2038,7 +2034,7 @@ class slist_impl
 
    void priv_shift_backwards(size_type n, detail::bool_<true>)
    {
-      std::pair<node_ptr, node_ptr> ret(
+      typename node_algorithms::node_pair ret(
          node_algorithms::move_first_n_forward
             (node_traits::get_next(this->get_root_node()), (std::size_t)n));
       if(ret.first){
@@ -2059,7 +2055,7 @@ class slist_impl
 
    void priv_shift_forward(size_type n, detail::bool_<true>)
    {
-      std::pair<node_ptr, node_ptr> ret(
+      typename node_algorithms::node_pair ret(
          node_algorithms::move_first_n_backwards
          (node_traits::get_next(this->get_root_node()), (std::size_t)n));
       if(ret.first){

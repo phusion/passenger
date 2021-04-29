@@ -11,12 +11,23 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include <boost/config.hpp>
+
 namespace boost
 {
 
 template<class R> struct apply
 {
     typedef R result_type;
+
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
+
+    template<class F, class... A> result_type operator()( F&& f, A&&... a ) const
+    {
+        return static_cast<F&&>( f )( static_cast<A&&>( a )... );
+    }
+
+#else
 
     template<class F> result_type operator()(F & f) const
     {
@@ -67,6 +78,8 @@ template<class R> struct apply
     {
         return f(a1, a2, a3, a4, a5, a6, a7, a8, a9);
     }
+
+#endif
 };
 
 } // namespace boost

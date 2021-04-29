@@ -13,9 +13,6 @@
 #define BOOST_PREPROCESSOR_REMOVE_PARENS_HPP
 
 #include <boost/preprocessor/config/config.hpp>
-
-#if BOOST_PP_VARIADICS
-
 #include <boost/preprocessor/control/iif.hpp>
 #include <boost/preprocessor/facilities/identity.hpp>
 #include <boost/preprocessor/punctuation/is_begin_parens.hpp>
@@ -35,5 +32,4 @@
   BOOST_PP_IDENTITY(BOOST_PP_TUPLE_ENUM(param)) \
 /**/
 
-#endif /* BOOST_PP_VARIADICS */
 #endif /* BOOST_PREPROCESSOR_REMOVE_PARENS_HPP */

@@ -2,7 +2,7 @@
 // async_result.hpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -313,7 +313,7 @@ struct async_result_has_initiate_memfn
     typename ::boost::asio::decay<ct>::type, sig>::completion_handler_type
 #endif
 
-#if defined(GENERATION_DOCUMENTATION)
+#if defined(GENERATING_DOCUMENTATION)
 # define BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ct, sig) \
   auto
 #elif defined(BOOST_ASIO_HAS_RETURN_TYPE_DEDUCTION)
@@ -324,7 +324,7 @@ struct async_result_has_initiate_memfn
   BOOST_ASIO_INITFN_RESULT_TYPE(ct, sig)
 #endif
 
-#if defined(GENERATION_DOCUMENTATION)
+#if defined(GENERATING_DOCUMENTATION)
 # define BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(ct, sig, expr) \
   void_or_deduced
 #elif defined(BOOST_ASIO_HAS_DECLTYPE)
@@ -350,7 +350,7 @@ void_or_deduced async_initiate(
 template <typename CompletionToken,
     BOOST_ASIO_COMPLETION_SIGNATURE Signature,
     typename Initiation, typename... Args>
-inline typename enable_if<
+inline typename constraint<
     detail::async_result_has_initiate_memfn<CompletionToken, Signature>::value,
     BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(CompletionToken, Signature,
       (async_result<typename decay<CompletionToken>::type,
@@ -370,7 +370,7 @@ async_initiate(BOOST_ASIO_MOVE_ARG(Initiation) initiation,
 template <typename CompletionToken,
     BOOST_ASIO_COMPLETION_SIGNATURE Signature,
     typename Initiation, typename... Args>
-inline typename enable_if<
+inline typename constraint<
     !detail::async_result_has_initiate_memfn<CompletionToken, Signature>::value,
     BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken, Signature)>::type
 async_initiate(BOOST_ASIO_MOVE_ARG(Initiation) initiation,
@@ -392,7 +392,7 @@ async_initiate(BOOST_ASIO_MOVE_ARG(Initiation) initiation,
 template <typename CompletionToken,
     BOOST_ASIO_COMPLETION_SIGNATURE Signature,
     typename Initiation>
-inline typename enable_if<
+inline typename constraint<
     detail::async_result_has_initiate_memfn<CompletionToken, Signature>::value,
     BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(CompletionToken, Signature,
       (async_result<typename decay<CompletionToken>::type,
@@ -409,7 +409,7 @@ async_initiate(BOOST_ASIO_MOVE_ARG(Initiation) initiation,
 template <typename CompletionToken,
     BOOST_ASIO_COMPLETION_SIGNATURE Signature,
     typename Initiation>
-inline typename enable_if<
+inline typename constraint<
     !detail::async_result_has_initiate_memfn<CompletionToken, Signature>::value,
     BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken, Signature)>::type
 async_initiate(BOOST_ASIO_MOVE_ARG(Initiation) initiation,
@@ -428,7 +428,7 @@ async_initiate(BOOST_ASIO_MOVE_ARG(Initiation) initiation,
   template <typename CompletionToken, \
       BOOST_ASIO_COMPLETION_SIGNATURE Signature, \
       typename Initiation, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
-  inline typename enable_if< \
+  inline typename constraint< \
       detail::async_result_has_initiate_memfn< \
         CompletionToken, Signature>::value, \
       BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(CompletionToken, Signature, \
@@ -449,7 +449,7 @@ async_initiate(BOOST_ASIO_MOVE_ARG(Initiation) initiation,
   template <typename CompletionToken, \
       BOOST_ASIO_COMPLETION_SIGNATURE Signature, \
       typename Initiation, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
-  inline typename enable_if< \
+  inline typename constraint< \
       !detail::async_result_has_initiate_memfn< \
         CompletionToken, Signature>::value, \
       BOOST_ASIO_INITFN_RESULT_TYPE(CompletionToken, Signature)>::type \

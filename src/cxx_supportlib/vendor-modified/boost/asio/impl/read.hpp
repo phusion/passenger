@@ -2,7 +2,7 @@
 // impl/read.hpp
 // ~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -58,7 +58,7 @@ namespace detail
       else
         break;
     }
-    return tmp.total_consumed();;
+    return tmp.total_consumed();
   }
 } // namespace detail
 
@@ -66,9 +66,9 @@ template <typename SyncReadStream, typename MutableBufferSequence,
     typename CompletionCondition>
 std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return detail::read_buffer_sequence(s, buffers,
       boost::asio::buffer_sequence_begin(buffers),
@@ -77,9 +77,9 @@ std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
 
 template <typename SyncReadStream, typename MutableBufferSequence>
 inline std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
-    typename enable_if<
+    typename constraint<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read(s, buffers, transfer_all(), ec);
@@ -90,9 +90,9 @@ inline std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
 template <typename SyncReadStream, typename MutableBufferSequence>
 inline std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
     boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return read(s, buffers, transfer_all(), ec);
 }
@@ -101,9 +101,9 @@ template <typename SyncReadStream, typename MutableBufferSequence,
     typename CompletionCondition>
 inline std::size_t read(SyncReadStream& s, const MutableBufferSequence& buffers,
     CompletionCondition completion_condition,
-    typename enable_if<
+    typename constraint<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read(s, buffers,
@@ -119,10 +119,12 @@ template <typename SyncReadStream, typename DynamicBuffer_v1,
 std::size_t read(SyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   typename decay<DynamicBuffer_v1>::type b(
       BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers));
@@ -151,10 +153,12 @@ std::size_t read(SyncReadStream& s,
 template <typename SyncReadStream, typename DynamicBuffer_v1>
 inline std::size_t read(SyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read(s,
@@ -167,10 +171,12 @@ template <typename SyncReadStream, typename DynamicBuffer_v1>
 inline std::size_t read(SyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   return read(s, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
       transfer_all(), ec);
@@ -181,10 +187,12 @@ template <typename SyncReadStream, typename DynamicBuffer_v1,
 inline std::size_t read(SyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     CompletionCondition completion_condition,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read(s,
@@ -240,9 +248,9 @@ template <typename SyncReadStream, typename DynamicBuffer_v2,
     typename CompletionCondition>
 std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   DynamicBuffer_v2& b = buffers;
 
@@ -272,9 +280,9 @@ std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
 
 template <typename SyncReadStream, typename DynamicBuffer_v2>
 inline std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read(s,
@@ -286,9 +294,9 @@ inline std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
 template <typename SyncReadStream, typename DynamicBuffer_v2>
 inline std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
     boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   return read(s, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
       transfer_all(), ec);
@@ -298,9 +306,9 @@ template <typename SyncReadStream, typename DynamicBuffer_v2,
     typename CompletionCondition>
 inline std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = read(s,
@@ -565,9 +573,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
 async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
     CompletionCondition completion_condition,
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -582,9 +590,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_mutable_buffer_sequence<MutableBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -845,10 +853,12 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
 async_read(AsyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   return async_read(s,
       BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
@@ -865,10 +875,12 @@ async_read(AsyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     CompletionCondition completion_condition,
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -1167,9 +1179,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   return async_read(s,
       BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
@@ -1185,9 +1197,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
 async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(

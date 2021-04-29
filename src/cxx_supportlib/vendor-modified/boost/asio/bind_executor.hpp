@@ -2,7 +2,7 @@
 // bind_executor.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -489,9 +489,9 @@ private:
 template <typename Executor, typename T>
 inline executor_binder<typename decay<T>::type, Executor>
 bind_executor(const Executor& ex, BOOST_ASIO_MOVE_ARG(T) t,
-    typename enable_if<
+    typename constraint<
       is_executor<Executor>::value || execution::is_executor<Executor>::value
-    >::type* = 0)
+    >::type = 0)
 {
   return executor_binder<typename decay<T>::type, Executor>(
       executor_arg_t(), ex, BOOST_ASIO_MOVE_CAST(T)(t));
@@ -502,8 +502,8 @@ template <typename ExecutionContext, typename T>
 inline executor_binder<typename decay<T>::type,
   typename ExecutionContext::executor_type>
 bind_executor(ExecutionContext& ctx, BOOST_ASIO_MOVE_ARG(T) t,
-    typename enable_if<is_convertible<
-      ExecutionContext&, execution_context&>::value>::type* = 0)
+    typename constraint<is_convertible<
+      ExecutionContext&, execution_context&>::value>::type = 0)
 {
   return executor_binder<typename decay<T>::type,
     typename ExecutionContext::executor_type>(

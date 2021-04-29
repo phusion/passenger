@@ -2,7 +2,7 @@
 // detail/impl/socket_ops.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -1388,9 +1388,9 @@ signed_size_type send(socket_type s, const buf* bufs, size_t count,
   msghdr msg = msghdr();
   msg.msg_iov = const_cast<buf*>(bufs);
   msg.msg_iovlen = static_cast<int>(count);
-#if defined(__linux__)
+#if defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   flags |= MSG_NOSIGNAL;
-#endif // defined(__linux__)
+#endif // defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   signed_size_type result = ::sendmsg(s, &msg, flags);
   get_last_error(ec, result < 0);
   return result;
@@ -1419,9 +1419,9 @@ signed_size_type send1(socket_type s, const void* data, size_t size,
   ec.assign(0, ec.category());
   return bytes_transferred;
 #else // defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
-#if defined(__linux__)
+#if defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   flags |= MSG_NOSIGNAL;
-#endif // defined(__linux__)
+#endif // defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   signed_size_type result = ::send(s,
       static_cast<const char*>(data), size, flags);
   get_last_error(ec, result < 0);
@@ -1617,9 +1617,9 @@ signed_size_type sendto(socket_type s, const buf* bufs, size_t count,
   msg.msg_namelen = static_cast<int>(addrlen);
   msg.msg_iov = const_cast<buf*>(bufs);
   msg.msg_iovlen = static_cast<int>(count);
-#if defined(__linux__)
+#if defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   flags |= MSG_NOSIGNAL;
-#endif // defined(__linux__)
+#endif // defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   signed_size_type result = ::sendmsg(s, &msg, flags);
   get_last_error(ec, result < 0);
   return result;
@@ -1657,9 +1657,9 @@ signed_size_type sendto1(socket_type s, const void* data, size_t size,
   ec.assign(0, ec.category());
   return bytes_transferred;
 #else // defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
-#if defined(__linux__)
+#if defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   flags |= MSG_NOSIGNAL;
-#endif // defined(__linux__)
+#endif // defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
   signed_size_type result = call_sendto(&msghdr::msg_namelen,
       s, data, size, flags, addr, addrlen);
   get_last_error(ec, result < 0);
@@ -1825,7 +1825,9 @@ socket_type socket(int af, int type, int protocol,
   return s;
 #elif defined(__MACH__) && defined(__APPLE__) || defined(__FreeBSD__)
   socket_type s = ::socket(af, type, protocol);
-  get_last_error(ec, s < 0);
+  get_last_error(ec, s == invalid_socket);
+  if (s == invalid_socket)
+    return s;
 
   int optval = 1;
   int result = ::setsockopt(s, SOL_SOCKET,
@@ -2544,7 +2546,7 @@ int inet_pton(int af, const char* src, void* dest,
     bytes[1] = static_cast<unsigned char>(b1);
     bytes[2] = static_cast<unsigned char>(b2);
     bytes[3] = static_cast<unsigned char>(b3);
-    ec.assign(), ec.category());
+    ec.assign(0, ec.category());
     return 1;
   }
   else if (af == BOOST_ASIO_OS_DEF(AF_INET6))

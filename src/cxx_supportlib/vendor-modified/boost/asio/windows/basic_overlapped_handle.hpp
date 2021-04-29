@@ -2,7 +2,7 @@
 // windows/basic_overlapped_handle.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -86,7 +86,7 @@ public:
    * overlapped handle.
    */
   explicit basic_overlapped_handle(const executor_type& ex)
-    : impl_(ex)
+    : impl_(0, ex)
   {
   }
 
@@ -100,11 +100,11 @@ public:
    */
   template <typename ExecutionContext>
   explicit basic_overlapped_handle(ExecutionContext& context,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value,
-        basic_overlapped_handle
-      >::type* = 0)
-    : impl_(context)
+        defaulted_constraint
+      >::type = defaulted_constraint())
+    : impl_(0, 0, context)
   {
   }
 
@@ -123,7 +123,7 @@ public:
    */
   basic_overlapped_handle(const executor_type& ex,
       const native_handle_type& native_handle)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     boost::system::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(), native_handle, ec);
@@ -146,10 +146,10 @@ public:
   template <typename ExecutionContext>
   basic_overlapped_handle(ExecutionContext& context,
       const native_handle_type& native_handle,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
     boost::system::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(), native_handle, ec);

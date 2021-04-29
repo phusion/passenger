@@ -49,7 +49,7 @@ namespace boost { namespace parameter { namespace aux {
 #else   // !defined(BOOST_PARAMETER_CAN_USE_MP11)
 #include <boost/type_traits/add_lvalue_reference.hpp>
 #include <boost/type_traits/remove_cv.hpp>
-#if !BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if !BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 #include <boost/type_traits/add_const.hpp>
 #endif
 #endif  // BOOST_PARAMETER_CAN_USE_MP11
@@ -64,7 +64,7 @@ namespace boost { namespace parameter { namespace aux {
             typename ::std::add_const<T>::type
 #else   // !defined(BOOST_PARAMETER_CAN_USE_MP11)
         typedef typename ::boost::add_lvalue_reference<
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
             T const
 #else
             typename ::boost::add_const<T>::type

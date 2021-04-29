@@ -49,7 +49,7 @@ struct fake_segment_manager
    static void deallocate_many(multiallocation_chain &chain)
    {
       std::size_t size = chain.size();
-      std::pair<void*, void*> ptrs = chain.extract_data();
+      multiallocation_chain::pointer_pair ptrs = chain.extract_data();
       dlmalloc_memchain dlchain;
       BOOST_CONTAINER_MEMCHAIN_INIT_FROM(&dlchain, ptrs.first, ptrs.second, size);
       dlmalloc_multidealloc(&dlchain);

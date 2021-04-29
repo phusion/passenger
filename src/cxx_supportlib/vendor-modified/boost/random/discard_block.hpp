@@ -136,13 +136,13 @@ public:
      * Returns the smallest value that the generator can produce.
      * This is the same as the minimum of the underlying generator.
      */
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return (base_type::min)(); }
     /**
      * Returns the largest value that the generator can produce.
      * This is the same as the maximum of the underlying generator.
      */
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION ()
     { return (base_type::max)(); }
 
 #ifndef BOOST_RANDOM_NO_STREAM_OPERATORS

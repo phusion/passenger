@@ -53,10 +53,8 @@ struct treap_node_extra_checker
                      const return_type& check_return_left, const return_type& check_return_right,
                      return_type& check_return)
    {
-      if (node_traits::get_left(p))
-         BOOST_INTRUSIVE_INVARIANT_ASSERT(!prio_comp_(node_traits::get_left(p), p));
-      if (node_traits::get_right(p))
-         BOOST_INTRUSIVE_INVARIANT_ASSERT(!prio_comp_(node_traits::get_right(p), p));
+      BOOST_INTRUSIVE_INVARIANT_ASSERT(!node_traits::get_left(p) || !prio_comp_(node_traits::get_left(p), p));
+      BOOST_INTRUSIVE_INVARIANT_ASSERT(!node_traits::get_right(p) || !prio_comp_(node_traits::get_right(p), p));
       base_checker_t::operator()(p, check_return_left, check_return_right, check_return);
    }
 

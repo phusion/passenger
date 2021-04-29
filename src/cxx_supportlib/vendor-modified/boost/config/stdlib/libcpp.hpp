@@ -104,8 +104,28 @@
 #  define BOOST_NO_CXX98_BINDERS
 #endif
 
-#define BOOST_NO_CXX17_ITERATOR_TRAITS
+#ifdef __has_include
+#if __has_include(<version>)
+
+#if !defined(__cpp_lib_execution) || (__cpp_lib_execution < 201603L)
+#  define BOOST_NO_CXX17_HDR_EXECUTION
+#endif
+#if !defined(__cpp_lib_invoke) || (__cpp_lib_invoke < 201411L)
+#define BOOST_NO_CXX17_STD_INVOKE
+#endif
+
+#else
 #define BOOST_NO_CXX17_STD_INVOKE      // Invoke support is incomplete (no invoke_result)
+#define BOOST_NO_CXX17_HDR_EXECUTION
+#endif
+#else
+#define BOOST_NO_CXX17_STD_INVOKE      // Invoke support is incomplete (no invoke_result)
+#define BOOST_NO_CXX17_HDR_EXECUTION
+#endif
+
+#if _LIBCPP_VERSION < 10000  // What's the correct version check here?
+#define BOOST_NO_CXX17_ITERATOR_TRAITS
+#endif
 
 #if (_LIBCPP_VERSION <= 1101) && !defined(BOOST_NO_CXX11_THREAD_LOCAL)
 // This is a bit of a sledgehammer, because really it's just libc++abi that has no

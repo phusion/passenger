@@ -16,13 +16,13 @@
 #
 # /* BOOST_PP_VARIADIC_IS_SINGLE_RETURN */
 #
-# if BOOST_PP_VARIADICS && BOOST_PP_VARIADICS_MSVC
+# if BOOST_PP_VARIADICS_MSVC
 # include <boost/preprocessor/control/iif.hpp>
 # include <boost/preprocessor/facilities/is_1.hpp>
 # include <boost/preprocessor/variadic/size.hpp>
 # define BOOST_PP_VARIADIC_IS_SINGLE_RETURN(sr,nsr,...) \
     BOOST_PP_IIF(BOOST_PP_IS_1(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)),sr,nsr) \
     /**/
-# endif /* BOOST_PP_VARIADICS && BOOST_PP_VARIADICS_MSVC */
+# endif /* BOOST_PP_VARIADICS_MSVC */
 #
 # endif /* BOOST_PREPROCESSOR_VARIADIC_DETAIL_IS_SINGLE_RETURN_HPP */

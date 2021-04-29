@@ -2,7 +2,7 @@
 // impl/connect.hpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -106,8 +106,8 @@ namespace detail
 template <typename Protocol, typename Executor, typename EndpointSequence>
 typename Protocol::endpoint connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints,
-    typename enable_if<is_endpoint_sequence<
-        EndpointSequence>::value>::type*)
+    typename constraint<is_endpoint_sequence<
+        EndpointSequence>::value>::type)
 {
   boost::system::error_code ec;
   typename Protocol::endpoint result = connect(s, endpoints, ec);
@@ -118,8 +118,8 @@ typename Protocol::endpoint connect(basic_socket<Protocol, Executor>& s,
 template <typename Protocol, typename Executor, typename EndpointSequence>
 typename Protocol::endpoint connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints, boost::system::error_code& ec,
-    typename enable_if<is_endpoint_sequence<
-        EndpointSequence>::value>::type*)
+    typename constraint<is_endpoint_sequence<
+        EndpointSequence>::value>::type)
 {
   return detail::deref_connect_result<Protocol>(
       connect(s, endpoints.begin(), endpoints.end(),
@@ -129,7 +129,7 @@ typename Protocol::endpoint connect(basic_socket<Protocol, Executor>& s,
 #if !defined(BOOST_ASIO_NO_DEPRECATED)
 template <typename Protocol, typename Executor, typename Iterator>
 Iterator connect(basic_socket<Protocol, Executor>& s, Iterator begin,
-    typename enable_if<!is_endpoint_sequence<Iterator>::value>::type*)
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type)
 {
   boost::system::error_code ec;
   Iterator result = connect(s, begin, ec);
@@ -140,7 +140,7 @@ Iterator connect(basic_socket<Protocol, Executor>& s, Iterator begin,
 template <typename Protocol, typename Executor, typename Iterator>
 inline Iterator connect(basic_socket<Protocol, Executor>& s,
     Iterator begin, boost::system::error_code& ec,
-    typename enable_if<!is_endpoint_sequence<Iterator>::value>::type*)
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type)
 {
   return connect(s, begin, Iterator(), detail::default_connect_condition(), ec);
 }
@@ -167,8 +167,8 @@ template <typename Protocol, typename Executor,
     typename EndpointSequence, typename ConnectCondition>
 typename Protocol::endpoint connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints, ConnectCondition connect_condition,
-    typename enable_if<is_endpoint_sequence<
-        EndpointSequence>::value>::type*)
+    typename constraint<is_endpoint_sequence<
+        EndpointSequence>::value>::type)
 {
   boost::system::error_code ec;
   typename Protocol::endpoint result = connect(
@@ -182,8 +182,8 @@ template <typename Protocol, typename Executor,
 typename Protocol::endpoint connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints, ConnectCondition connect_condition,
     boost::system::error_code& ec,
-    typename enable_if<is_endpoint_sequence<
-        EndpointSequence>::value>::type*)
+    typename constraint<is_endpoint_sequence<
+        EndpointSequence>::value>::type)
 {
   return detail::deref_connect_result<Protocol>(
       connect(s, endpoints.begin(), endpoints.end(),
@@ -195,7 +195,7 @@ template <typename Protocol, typename Executor,
     typename Iterator, typename ConnectCondition>
 Iterator connect(basic_socket<Protocol, Executor>& s,
     Iterator begin, ConnectCondition connect_condition,
-    typename enable_if<!is_endpoint_sequence<Iterator>::value>::type*)
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type)
 {
   boost::system::error_code ec;
   Iterator result = connect(s, begin, connect_condition, ec);
@@ -208,7 +208,7 @@ template <typename Protocol, typename Executor,
 inline Iterator connect(basic_socket<Protocol, Executor>& s,
     Iterator begin, ConnectCondition connect_condition,
     boost::system::error_code& ec,
-    typename enable_if<!is_endpoint_sequence<Iterator>::value>::type*)
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type)
 {
   return connect(s, begin, Iterator(), connect_condition, ec);
 }
@@ -817,8 +817,8 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(RangeConnectHandler,
 async_connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints,
     BOOST_ASIO_MOVE_ARG(RangeConnectHandler) handler,
-    typename enable_if<is_endpoint_sequence<
-        EndpointSequence>::value>::type*)
+    typename constraint<is_endpoint_sequence<
+        EndpointSequence>::value>::type)
 {
   return async_initiate<RangeConnectHandler,
     void (boost::system::error_code, typename Protocol::endpoint)>(
@@ -834,7 +834,7 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(IteratorConnectHandler,
     void (boost::system::error_code, Iterator))
 async_connect(basic_socket<Protocol, Executor>& s, Iterator begin,
     BOOST_ASIO_MOVE_ARG(IteratorConnectHandler) handler,
-    typename enable_if<!is_endpoint_sequence<Iterator>::value>::type*)
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type)
 {
   return async_initiate<IteratorConnectHandler,
     void (boost::system::error_code, Iterator)>(
@@ -866,8 +866,8 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(RangeConnectHandler,
 async_connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints, ConnectCondition connect_condition,
     BOOST_ASIO_MOVE_ARG(RangeConnectHandler) handler,
-    typename enable_if<is_endpoint_sequence<
-        EndpointSequence>::value>::type*)
+    typename constraint<is_endpoint_sequence<
+        EndpointSequence>::value>::type)
 {
   return async_initiate<RangeConnectHandler,
     void (boost::system::error_code, typename Protocol::endpoint)>(
@@ -885,7 +885,7 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(IteratorConnectHandler,
 async_connect(basic_socket<Protocol, Executor>& s, Iterator begin,
     ConnectCondition connect_condition,
     BOOST_ASIO_MOVE_ARG(IteratorConnectHandler) handler,
-    typename enable_if<!is_endpoint_sequence<Iterator>::value>::type*)
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type)
 {
   return async_initiate<IteratorConnectHandler,
     void (boost::system::error_code, Iterator)>(

@@ -17,8 +17,6 @@
 #
 # /* BOOST_PP_VARIADIC_TO_TUPLE */
 #
-# if BOOST_PP_VARIADICS
-#    define BOOST_PP_VARIADIC_TO_TUPLE(...) (__VA_ARGS__)
-# endif
+# define BOOST_PP_VARIADIC_TO_TUPLE(...) (__VA_ARGS__)
 #
 # endif

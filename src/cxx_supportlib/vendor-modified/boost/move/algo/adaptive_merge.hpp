@@ -98,16 +98,14 @@ inline void adaptive_merge_final_merge( RandIt first
                                       , typename iterator_traits<RandIt>::size_type len2
                                       , typename iterator_traits<RandIt>::size_type collected
                                       , typename iterator_traits<RandIt>::size_type l_intbuf
-                                      , typename iterator_traits<RandIt>::size_type l_block
-                                      , bool use_internal_buf
+                                      , typename iterator_traits<RandIt>::size_type //l_block
+                                      , bool //use_internal_buf
                                       , bool xbuf_used
                                       , Compare comp
                                       , XBuf & xbuf
                                       )
 {
    typedef typename iterator_traits<RandIt>::size_type size_type;
-   (void)l_block;
-   (void)use_internal_buf;
    size_type n_keys = collected-l_intbuf;
    size_type len = len1+len2;
    if (!xbuf_used || n_keys) {

@@ -16,6 +16,7 @@
 #
 # include <boost/preprocessor/config/config.hpp>
 # include <boost/preprocessor/control/if.hpp>
+# include <boost/preprocessor/facilities/overload.hpp>
 # include <boost/preprocessor/list/adt.hpp>
 # include <boost/preprocessor/list/to_tuple.hpp>
 # include <boost/preprocessor/repetition/for.hpp>
@@ -23,23 +24,41 @@
 # include <boost/preprocessor/tuple/to_list.hpp>
 # include <boost/preprocessor/tuple/rem.hpp>
 # include <boost/preprocessor/tuple/reverse.hpp>
+# if BOOST_PP_VARIADICS_MSVC
+# include <boost/preprocessor/cat.hpp>
+# include <boost/preprocessor/facilities/empty.hpp>
+# endif
 #
 # /* BOOST_PP_LIST_FOR_EACH_PRODUCT */
 #
+# define BOOST_PP_LIST_FOR_EACH_PRODUCT_OV_2(macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR, macro, size, BOOST_PP_TUPLE_TO_LIST(size, tuple))
+# define BOOST_PP_LIST_FOR_EACH_PRODUCT_OV_1(macro, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR, macro, BOOST_PP_TUPLE_SIZE(tuple), BOOST_PP_TUPLE_TO_LIST(tuple))
+#
 # if ~BOOST_PP_CONFIG_FLAGS() & BOOST_PP_CONFIG_EDG()
-#    define BOOST_PP_LIST_FOR_EACH_PRODUCT(macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR, macro, size, BOOST_PP_TUPLE_TO_LIST(size, tuple))
+#    if BOOST_PP_VARIADICS_MSVC
+#        define BOOST_PP_LIST_FOR_EACH_PRODUCT(macro, ...) BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_PP_LIST_FOR_EACH_PRODUCT_OV_,__VA_ARGS__)(macro,__VA_ARGS__),BOOST_PP_EMPTY())
+#    else
+#        define BOOST_PP_LIST_FOR_EACH_PRODUCT(macro, ...) BOOST_PP_OVERLOAD(BOOST_PP_LIST_FOR_EACH_PRODUCT_OV_,__VA_ARGS__)(macro,__VA_ARGS__)
+#    endif
 # else
-#    define BOOST_PP_LIST_FOR_EACH_PRODUCT(macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_Q(macro, size, tuple)
-#    define BOOST_PP_LIST_FOR_EACH_PRODUCT_Q(macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR, macro, size, BOOST_PP_TUPLE_TO_LIST(size, tuple))
+#    define BOOST_PP_LIST_FOR_EACH_PRODUCT(macro, ...) BOOST_PP_LIST_FOR_EACH_PRODUCT_Q(macro, __VA_ARGS__)
+#    define BOOST_PP_LIST_FOR_EACH_PRODUCT_Q(macro, ...) BOOST_PP_OVERLOAD(BOOST_PP_LIST_FOR_EACH_PRODUCT_OV_,__VA_ARGS__)(macro,__VA_ARGS__)
 # endif
 #
 # /* BOOST_PP_LIST_FOR_EACH_PRODUCT_R */
 #
+# define BOOST_PP_LIST_FOR_EACH_PRODUCT_R_OV_2(r, macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR ## r, macro, size, BOOST_PP_TUPLE_TO_LIST(size, tuple))
+# define BOOST_PP_LIST_FOR_EACH_PRODUCT_R_OV_1(r, macro, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR ## r, macro, BOOST_PP_TUPLE_SIZE(tuple), BOOST_PP_TUPLE_TO_LIST(tuple))
+#
 # if ~BOOST_PP_CONFIG_FLAGS() & BOOST_PP_CONFIG_EDG()
-#    define BOOST_PP_LIST_FOR_EACH_PRODUCT_R(r, macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR_ ## r, macro, size, BOOST_PP_TUPLE_TO_LIST(size, tuple))
+#    if BOOST_PP_VARIADICS_MSVC
+#        define BOOST_PP_LIST_FOR_EACH_PRODUCT_R(r, macro, ...) BOOST_PP_CAT(BOOST_PP_OVERLOAD(BOOST_PP_LIST_FOR_EACH_PRODUCT_R_OV_,__VA_ARGS__)(r, macro,__VA_ARGS__),BOOST_PP_EMPTY())
+#    else
+#        define BOOST_PP_LIST_FOR_EACH_PRODUCT_R(r, macro, ...) BOOST_PP_OVERLOAD(BOOST_PP_LIST_FOR_EACH_PRODUCT_R_OV_,__VA_ARGS__)(r, macro,__VA_ARGS__)
+#    endif
 # else
-#    define BOOST_PP_LIST_FOR_EACH_PRODUCT_R(r, macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_R_Q(r, macro, size, tuple)
-#    define BOOST_PP_LIST_FOR_EACH_PRODUCT_R_Q(r, macro, size, tuple) BOOST_PP_LIST_FOR_EACH_PRODUCT_E(BOOST_PP_FOR_ ## r, macro, size, BOOST_PP_TUPLE_TO_LIST(size, tuple))
+#    define BOOST_PP_LIST_FOR_EACH_PRODUCT_R(r, macro, ...) BOOST_PP_LIST_FOR_EACH_PRODUCT_R_Q(r, macro, __VA_ARGS__)
+#    define BOOST_PP_LIST_FOR_EACH_PRODUCT_R_Q(r, macro, ...) BOOST_PP_OVERLOAD(BOOST_PP_LIST_FOR_EACH_PRODUCT_R_OV_,__VA_ARGS__)(r, macro,__VA_ARGS__)
 # endif
 #
 # if ~BOOST_PP_CONFIG_FLAGS() & BOOST_PP_CONFIG_EDG()

@@ -39,7 +39,7 @@
 #include <boost/move/utility_core.hpp>
 #include <boost/static_assert.hpp>
 
-#include <boost/intrusive/detail/minimal_less_equal_header.hpp>//std::less
+#include <boost/intrusive/detail/value_functors.hpp>
 #include <cstddef>   //std::size_t, etc.
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
@@ -988,19 +988,19 @@ class list_impl
       }
    }
 
-   //! <b>Effects</b>: This function sorts the list *this according to std::less<value_type>.
+   //! <b>Effects</b>: This function sorts the list *this according to operator <.
    //!   The sort is stable, that is, the relative order of equivalent elements is preserved.
    //!
    //! <b>Throws</b>: If value_traits::node_traits::node
    //!   constructor throws (this does not happen with predefined Boost.Intrusive hooks)
-   //!   or std::less<value_type> throws. Basic guarantee.
+   //!   or operator < throws. Basic guarantee.
    //!
    //! <b>Notes</b>: Iterators and references are not invalidated.
    //!
    //! <b>Complexity</b>: The number of comparisons is approximately N log N, where N
    //!   is the list's size.
    void sort()
-   {  this->sort(std::less<value_type>());  }
+   {  this->sort(value_less<value_type>());  }
 
    //! <b>Requires</b>: p must be a comparison function that induces a strict weak ordering
    //!
@@ -1043,18 +1043,18 @@ class list_impl
    }
 
    //! <b>Effects</b>: This function removes all of x's elements and inserts them
-   //!   in order into *this according to std::less<value_type>. The merge is stable;
+   //!   in order into *this according to operator <. The merge is stable;
    //!   that is, if an element from *this is equivalent to one from x, then the element
    //!   from *this will precede the one from x.
    //!
-   //! <b>Throws</b>: If std::less<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator < throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: This function is linear time: it performs at most
    //!   size() + x.size() - 1 comparisons.
    //!
    //! <b>Note</b>: Iterators and references are not invalidated
    void merge(list_impl& x)
-   { this->merge(x, std::less<value_type>()); }
+   { this->merge(x, value_less<value_type>()); }
 
    //! <b>Requires</b>: p must be a comparison function that induces a strict weak
    //!   ordering and both *this and x must be sorted according to that ordering
@@ -1108,21 +1108,21 @@ class list_impl
    //! <b>Effects</b>: Removes all the elements that compare equal to value.
    //!   No destructors are called.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator == throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time. It performs exactly size() comparisons for equality.
    //!
    //! <b>Note</b>: The relative order of elements that are not removed is unchanged,
    //!   and iterators to elements that are not removed remain valid.
    void remove(const_reference value)
-   {  this->remove_if(detail::equal_to_value<const_reference>(value));  }
+   {  this->remove_if(value_equal<const_reference>(value));  }
 
    //! <b>Requires</b>: Disposer::operator()(pointer) shouldn't throw.
    //!
    //! <b>Effects</b>: Removes all the elements that compare equal to value.
    //!   Disposer::operator()(pointer) is called for every removed element.
    //!
-   //! <b>Throws</b>: If std::equal_to<value_type> throws. Basic guarantee.
+   //! <b>Throws</b>: If operator == throws. Basic guarantee.
    //!
    //! <b>Complexity</b>: Linear time. It performs exactly size() comparisons for equality.
    //!
@@ -1130,7 +1130,7 @@ class list_impl
    //!   and iterators to elements that are not removed remain valid.
    template<class Disposer>
    void remove_and_dispose(const_reference value, Disposer disposer)
-   {  this->remove_and_dispose_if(detail::equal_to_value<const_reference>(value), disposer);  }
+   {  this->remove_and_dispose_if(value_equal<const_reference>(value), disposer);  }
 
    //! <b>Effects</b>: Removes all the elements for which a specified
    //!   predicate is satisfied. No destructors are called.

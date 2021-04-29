@@ -472,7 +472,7 @@ namespace boost { namespace parameter { namespace aux {
     }
 }}} // namespace boost::parameter::aux
 
-#elif BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#elif BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 #define BOOST_PARAMETER_FUNCTION_CAST_T(value_t, predicate, args) value_t
 #define BOOST_PARAMETER_FUNCTION_CAST_B(value, predicate, args) value
 #else   // no perfect forwarding support and no Borland workarounds needed

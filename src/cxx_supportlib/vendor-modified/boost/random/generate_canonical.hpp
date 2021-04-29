@@ -19,7 +19,6 @@
 #include <boost/config/no_tr1/cmath.hpp>
 #include <boost/limits.hpp>
 #include <boost/type_traits/is_integral.hpp>
-#include <boost/mpl/bool.hpp>
 #include <boost/random/detail/signed_unsigned_tools.hpp>
 #include <boost/random/detail/generator_bits.hpp>
 
@@ -29,7 +28,7 @@ namespace random {
 namespace detail {
 
 template<class RealType, std::size_t bits, class URNG>
-RealType generate_canonical_impl(URNG& g, boost::mpl::true_ /*is_integral*/)
+RealType generate_canonical_impl(URNG& g, boost::true_type /*is_integral*/)
 {
     using std::pow;
     typedef typename URNG::result_type base_result;
@@ -49,7 +48,7 @@ RealType generate_canonical_impl(URNG& g, boost::mpl::true_ /*is_integral*/)
 }
 
 template<class RealType, std::size_t bits, class URNG>
-RealType generate_canonical_impl(URNG& g, boost::mpl::false_ /*is_integral*/)
+RealType generate_canonical_impl(URNG& g, boost::false_type /*is_integral*/)
 {
     using std::pow;
     using std::floor;

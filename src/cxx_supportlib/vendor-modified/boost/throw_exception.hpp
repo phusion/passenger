@@ -20,6 +20,7 @@
 //  http://www.boost.org/libs/throw_exception
 //
 
+#include <boost/exception/exception.hpp>
 #include <boost/assert/source_location.hpp>
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
@@ -32,48 +33,12 @@
 namespace boost
 {
 
-// All boost exceptions are required to derive from std::exception,
-// to ensure compatibility with BOOST_NO_EXCEPTIONS.
-
-inline void throw_exception_assert_compatibility( std::exception const & ) {}
-
-} // namespace boost
-
 #if defined( BOOST_NO_EXCEPTIONS )
-
-namespace boost
-{
 
 BOOST_NORETURN void throw_exception( std::exception const & e ); // user defined
 BOOST_NORETURN void throw_exception( std::exception const & e, boost::source_location const & loc ); // user defined
 
-} // namespace boost
-
-#elif defined( BOOST_EXCEPTION_DISABLE )
-
-namespace boost
-{
-
-template<class E> BOOST_NORETURN void throw_exception( E const & e )
-{
-    throw_exception_assert_compatibility( e );
-    throw e;
-}
-
-template<class E> BOOST_NORETURN void throw_exception( E const & e, boost::source_location const & )
-{
-    throw_exception_assert_compatibility( e );
-    throw e;
-}
-
-} // namespace boost
-
-#else // !defined( BOOST_NO_EXCEPTIONS ) && !defined( BOOST_EXCEPTION_DISABLE )
-
-#include <boost/exception/exception.hpp>
-
-namespace boost
-{
+#endif
 
 // boost::wrapexcept<E>
 
@@ -153,11 +118,42 @@ public:
 
     virtual void rethrow() const BOOST_OVERRIDE
     {
+#if defined( BOOST_NO_EXCEPTIONS )
+
+        boost::throw_exception( *this );
+
+#else
+
         throw *this;
+
+#endif
     }
 };
 
+// All boost exceptions are required to derive from std::exception,
+// to ensure compatibility with BOOST_NO_EXCEPTIONS.
+
+inline void throw_exception_assert_compatibility( std::exception const & ) {}
+
 // boost::throw_exception
+
+#if !defined( BOOST_NO_EXCEPTIONS )
+
+#if defined( BOOST_EXCEPTION_DISABLE )
+
+template<class E> BOOST_NORETURN void throw_exception( E const & e )
+{
+    throw_exception_assert_compatibility( e );
+    throw e;
+}
+
+template<class E> BOOST_NORETURN void throw_exception( E const & e, boost::source_location const & )
+{
+    throw_exception_assert_compatibility( e );
+    throw e;
+}
+
+#else // defined( BOOST_EXCEPTION_DISABLE )
 
 template<class E> BOOST_NORETURN void throw_exception( E const & e )
 {
@@ -171,9 +167,11 @@ template<class E> BOOST_NORETURN void throw_exception( E const & e, boost::sourc
     throw wrapexcept<E>( e, loc );
 }
 
-} // namespace boost
+#endif // defined( BOOST_EXCEPTION_DISABLE )
 
-#endif
+#endif // !defined( BOOST_NO_EXCEPTIONS )
+
+} // namespace boost
 
 // BOOST_THROW_EXCEPTION
 

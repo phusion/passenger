@@ -21,7 +21,6 @@
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
 #include <boost/cstdint.hpp>
-#include <boost/integer/static_log2.hpp>
 #include <boost/random/detail/config.hpp>
 #include <boost/random/detail/const_mod.hpp>
 #include <boost/random/detail/seed.hpp>
@@ -75,8 +74,8 @@ public:
     BOOST_STATIC_CONSTANT(result_type, modulus = p);
     BOOST_STATIC_CONSTANT(IntType, default_seed = 1);
 
-    static result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () { return b == 0 ? 1 : 0; }
-    static result_type max BOOST_PREVENT_MACRO_SUBSTITUTION () { return p-1; }
+    static BOOST_CONSTEXPR result_type min BOOST_PREVENT_MACRO_SUBSTITUTION () { return b == 0 ? 1 : 0; }
+    static BOOST_CONSTEXPR result_type max BOOST_PREVENT_MACRO_SUBSTITUTION () { return p-1; }
     
     /**
      * Constructs an @c inversive_congruential_engine, seeding it with

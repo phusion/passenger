@@ -2,7 +2,7 @@
 // impl/write.hpp
 // ~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -56,7 +56,7 @@ namespace detail
       else
         break;
     }
-    return tmp.total_consumed();;
+    return tmp.total_consumed();
   }
 } // namespace detail
 
@@ -64,9 +64,9 @@ template <typename SyncWriteStream, typename ConstBufferSequence,
     typename CompletionCondition>
 inline std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return detail::write_buffer_sequence(s, buffers,
       boost::asio::buffer_sequence_begin(buffers),
@@ -75,9 +75,9 @@ inline std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
 
 template <typename SyncWriteStream, typename ConstBufferSequence>
 inline std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
-    typename enable_if<
+    typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = write(s, buffers, transfer_all(), ec);
@@ -88,9 +88,9 @@ inline std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
 template <typename SyncWriteStream, typename ConstBufferSequence>
 inline std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
     boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return write(s, buffers, transfer_all(), ec);
 }
@@ -99,9 +99,9 @@ template <typename SyncWriteStream, typename ConstBufferSequence,
     typename CompletionCondition>
 inline std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition,
-    typename enable_if<
+    typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = write(s, buffers,
@@ -117,10 +117,12 @@ template <typename SyncWriteStream, typename DynamicBuffer_v1,
 std::size_t write(SyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   typename decay<DynamicBuffer_v1>::type b(
       BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers));
@@ -134,10 +136,12 @@ std::size_t write(SyncWriteStream& s,
 template <typename SyncWriteStream, typename DynamicBuffer_v1>
 inline std::size_t write(SyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = write(s,
@@ -151,10 +155,12 @@ template <typename SyncWriteStream, typename DynamicBuffer_v1>
 inline std::size_t write(SyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   return write(s, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
       transfer_all(), ec);
@@ -165,10 +171,12 @@ template <typename SyncWriteStream, typename DynamicBuffer_v1,
 inline std::size_t write(SyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     CompletionCondition completion_condition,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = write(s,
@@ -224,9 +232,9 @@ template <typename SyncWriteStream, typename DynamicBuffer_v2,
     typename CompletionCondition>
 std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition, boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   std::size_t bytes_transferred = write(s, buffers.data(0, buffers.size()),
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition), ec);
@@ -236,9 +244,9 @@ std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
 
 template <typename SyncWriteStream, typename DynamicBuffer_v2>
 inline std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = write(s,
@@ -251,9 +259,9 @@ inline std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
 template <typename SyncWriteStream, typename DynamicBuffer_v2>
 inline std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
     boost::system::error_code& ec,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   return write(s, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
       transfer_all(), ec);
@@ -263,9 +271,9 @@ template <typename SyncWriteStream, typename DynamicBuffer_v2,
     typename CompletionCondition>
 inline std::size_t write(SyncWriteStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   boost::system::error_code ec;
   std::size_t bytes_transferred = write(s,
@@ -530,9 +538,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
 async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return async_initiate<WriteHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -548,9 +556,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
-    >::type*)
+    >::type)
 {
   return async_initiate<WriteHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -781,10 +789,12 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
 async_write(AsyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   return async_write(s,
       BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
@@ -801,10 +811,12 @@ async_write(AsyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     CompletionCondition completion_condition,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v1<typename decay<DynamicBuffer_v1>::type>::value
-        && !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
-    >::type*)
+    >::type,
+    typename constraint<
+      !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
+    >::type)
 {
   return async_initiate<WriteHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -1069,9 +1081,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   return async_write(s,
       BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
@@ -1087,9 +1099,9 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
 async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-    typename enable_if<
+    typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
-    >::type*)
+    >::type)
 {
   return async_initiate<WriteHandler,
     void (boost::system::error_code, std::size_t)>(

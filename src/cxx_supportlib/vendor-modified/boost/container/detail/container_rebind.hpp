@@ -144,10 +144,10 @@ namespace dtl {
 
    //for small_vector,static_vector
 
-   template <typename V, std::size_t N, typename A, class U>
-   struct container_rebind<small_vector<V, N, A>, U>
+   template <typename V, std::size_t N, typename A, typename O, class U>
+   struct container_rebind<small_vector<V, N, A, O>, U>
    {
-      typedef small_vector<U, N, typename allocator_traits<typename real_allocator<V, A>::type>::template portable_rebind_alloc<U>::type> type;
+      typedef small_vector<U, N, typename allocator_traits<typename real_allocator<V, A>::type>::template portable_rebind_alloc<U>::type, O> type;
    };
 
    template <typename V, std::size_t N, typename O, class U>

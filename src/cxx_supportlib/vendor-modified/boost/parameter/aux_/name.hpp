@@ -34,7 +34,7 @@ namespace boost { namespace parameter { namespace aux {
 #include <boost/config/workaround.hpp>
 
 #if !defined(BOOST_NO_SFINAE) && \
-    !BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x592))
+    !BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x592))
 #include <boost/parameter/aux_/lambda_tag.hpp>
 #include <boost/mpl/lambda.hpp>
 #include <boost/mpl/bind.hpp>

@@ -119,11 +119,11 @@ public:
     for (std::size_t dim = 0; dim != dimension; ++dim)
     {
       const typename Nb2Table::value_type poly = Nb2Table::polynomial(dim);
-      if (poly > std::numeric_limits<value_type>::max()) {
+      if (poly > (std::numeric_limits<value_type>::max)()) {
         boost::throw_exception( std::range_error("niederreiter_base2: polynomial value outside the given value type range") );
       }
 
-      const unsigned degree = multiprecision::msb(poly); // integer log2(poly)
+      const unsigned degree = qrng_detail::msb(poly); // integer log2(poly)
       const unsigned space_required = degree * ((bit_count / degree) + 1); // ~ degree + bit_count
 
       v.resize(degree + bit_count - 1);

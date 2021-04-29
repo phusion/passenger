@@ -13,9 +13,6 @@
 # define BOOST_PREPROCESSOR_TUPLE_INSERT_HPP
 #
 # include <boost/preprocessor/config/config.hpp>
-#
-# if BOOST_PP_VARIADICS
-#
 # include <boost/preprocessor/array/insert.hpp>
 # include <boost/preprocessor/array/to_tuple.hpp>
 # include <boost/preprocessor/tuple/to_array.hpp>
@@ -31,7 +28,5 @@
 # define BOOST_PP_TUPLE_INSERT_D(d, tuple, i, elem) \
     BOOST_PP_ARRAY_TO_TUPLE(BOOST_PP_ARRAY_INSERT_D(d, BOOST_PP_TUPLE_TO_ARRAY(tuple), i, elem)) \
 /**/
-#
-# endif // BOOST_PP_VARIADICS
 #
 # endif // BOOST_PREPROCESSOR_TUPLE_INSERT_HPP

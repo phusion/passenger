@@ -30,6 +30,7 @@
 #include <boost/container/detail/iterator.hpp>
 #include <boost/move/detail/iterator_to_raw_pointer.hpp>
 #include <boost/container/detail/math_functions.hpp>
+#include <boost/container/detail/placement_new.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/container/detail/type_traits.hpp>
@@ -662,7 +663,7 @@ class private_adaptive_node_pool_impl_common
             this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment);
             throw_bad_alloc();
          }
-         block_info_t &c_info = *new(mem_address)block_info_t();
+         block_info_t &c_info = *new(mem_address, boost_container_new_t())block_info_t();
          mem_address += HdrSize;
          this->priv_fill_chain_remaining_to_block(chain, target_elem_in_chain, c_info, mem_address, real_num_node, real_node_size);
          const size_type free_nodes = c_info.free_nodes.size();
@@ -703,7 +704,7 @@ class private_adaptive_node_pool_impl_common
          }
          //First initialize header information on the last subblock
          char *hdr_addr = mem_address + real_block_alignment*(num_subblocks-1);
-         block_info_t &c_info = *new(hdr_addr)block_info_t();
+         block_info_t &c_info = *new(hdr_addr, boost_container_new_t())block_info_t();
          //Some structural checks
          BOOST_ASSERT(static_cast<void*>(&static_cast<hdr_offset_holder&>(c_info).hdr_offset) ==
                       static_cast<void*>(&c_info));   (void)c_info;
@@ -711,7 +712,7 @@ class private_adaptive_node_pool_impl_common
             ; subblock < maxsubblock
             ; ++subblock, mem_address += real_block_alignment){
             //Initialize header offset mark
-            new(mem_address) hdr_offset_holder(size_type(hdr_addr - mem_address));
+            new(mem_address, boost_container_new_t()) hdr_offset_holder(size_type(hdr_addr - mem_address));
             const size_type elements_per_subblock = (subblock != (maxsubblock - 1)) ? elements_per_subblock_mid : elements_per_subblock_end;
             this->priv_fill_chain_remaining_to_block
                (chain, target_elem_in_chain, c_info, mem_address + HdrOffsetSize, elements_per_subblock, real_node_size);

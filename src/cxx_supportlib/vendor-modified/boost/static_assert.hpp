@@ -36,7 +36,7 @@
 #     define BOOST_STATIC_ASSERT_MSG( B, Msg ) BOOST_STATIC_ASSERT( B )
 #endif
 
-#ifdef __BORLANDC__
+#ifdef BOOST_BORLANDC
 //
 // workaround for buggy integral-constant expression support:
 #define BOOST_BUGGY_INTEGRAL_CONSTANT_EXPRESSIONS

@@ -11,11 +11,14 @@
 
 #include <boost/random/detail/qrng_base.hpp>
 
-#include <boost/multiprecision/integer.hpp> // lsb
+#include <boost/core/bit.hpp> // lsb
+#include <boost/throw_exception.hpp>
+#include <stdexcept>
 
 #include <functional> // bit_xor
+#include <algorithm>
 
-#include <boost/mpl/if.hpp>
+#include <boost/type_traits/conditional.hpp>
 
 #include <boost/integer/integer_mask.hpp>
 
@@ -26,6 +29,26 @@ namespace boost {
 namespace random {
 
 namespace qrng_detail {
+
+template<class T> static int lsb( T x )
+{
+  if( x == 0 )
+  {
+    BOOST_THROW_EXCEPTION( std::range_error( "qrng_detail::lsb: argument is 0" ) );
+  }
+
+  return boost::core::countr_zero( x );
+}
+
+template<class T> static int msb( T x )
+{
+  if( x == 0 )
+  {
+    BOOST_THROW_EXCEPTION( std::range_error( "qrng_detail::msb: argument is 0" ) );
+  }
+
+  return std::numeric_limits<T>::digits - 1 - boost::core::countl_zero( x );
+}
 
 template<typename LatticeT>
 class gray_coded_qrng
@@ -70,7 +93,7 @@ private:
   // is narrower than the size_type, otherwise checks compile to nothing.
   BOOST_STATIC_ASSERT(LatticeT::bit_count <= std::numeric_limits<size_type>::digits);
 
-  typedef typename mpl::if_c<
+  typedef typename conditional<
       ((LatticeT::bit_count) < std::numeric_limits<size_type>::digits)
     , check_bit_range
     , check_nothing
@@ -111,7 +134,7 @@ public:
       // We don't want negative seeds.
       check_seed_sign(init);
 
-      size_type seq_code = boost::next(init);
+      size_type seq_code = init + 1;
       if (BOOST_UNLIKELY(!(init < seq_code)))
         boost::throw_exception( std::range_error("gray_coded_qrng: seed") );
 
@@ -132,6 +155,7 @@ public:
   }
 
 private:
+
   void compute_seq(size_type seq)
   {
     // Find the position of the least-significant zero in sequence count.
@@ -139,7 +163,7 @@ private:
     // the count is advanced.
     // Xor'ing with max() has the effect of flipping all the bits in seq,
     // except for the sign bit.
-    unsigned r = multiprecision::lsb(seq ^ (self_t::max)());
+    unsigned r = qrng_detail::lsb(static_cast<size_type>(seq ^ (self_t::max)()));
     check_bit_range_t::bit_pos(r);
     update_quasi(r);
   }

@@ -2,7 +2,7 @@
 // impl/redirect_error.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -358,6 +358,7 @@ struct async_result<redirect_error_t<CompletionToken>, Signature>
 
 template <typename Handler, typename Executor>
 struct associated_executor<detail::redirect_error_handler<Handler>, Executor>
+  : detail::associated_executor_forwarding_base<Handler, Executor>
 {
   typedef typename associated_executor<Handler, Executor>::type type;
 

@@ -27,7 +27,7 @@ namespace pmr {
 
 //! The memory_resource class is an abstract interface to an
 //! unbounded set of classes encapsulating memory resources.
-class BOOST_CONTAINER_DECL memory_resource
+class memory_resource
 {
    public:
    // For exposition only

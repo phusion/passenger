@@ -2,7 +2,7 @@
 // detail/config.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -401,7 +401,11 @@
 # if !defined(BOOST_ASIO_DISABLE_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS)
 #  if (__cplusplus >= 201103)
 #   define BOOST_ASIO_HAS_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS 1
-#  endif // (__cplusplus >= 201103)
+#  elif defined(BOOST_ASIO_MSVC)
+#   if (_MSC_VER >= 1900 && _MSVC_LANG >= 201103)
+#    define BOOST_ASIO_HAS_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS 1
+#   endif // (_MSC_VER >= 1900 && _MSVC_LANG >= 201103)
+#  endif // defined(BOOST_ASIO_MSVC)
 # endif // !defined(BOOST_ASIO_DISABLE_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS)
 #endif // !defined(BOOST_ASIO_HAS_DEFAULT_FUNCTION_TEMPLATE_ARGUMENTS)
 
@@ -429,13 +433,13 @@
 #    endif // __has_feature(__cxx_variable_templates__)
 #   endif // (__cplusplus >= 201402)
 #  endif // defined(__clang__)
-#  if defined(__GNUC__)
+#  if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #   if (__GNUC__ >= 6)
 #    if (__cplusplus >= 201402)
 #     define BOOST_ASIO_HAS_VARIABLE_TEMPLATES 1
 #    endif // (__cplusplus >= 201402)
 #   endif // (__GNUC__ >= 6)
-#  endif // defined(__GNUC__)
+#  endif // defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #  if defined(BOOST_ASIO_MSVC)
 #   if (_MSC_VER >= 1901)
 #    define BOOST_ASIO_HAS_VARIABLE_TEMPLATES 1
@@ -477,13 +481,13 @@
 #    define BOOST_ASIO_HAS_CONSTANT_EXPRESSION_SFINAE 1
 #   endif // (__cplusplus >= 201402)
 #  endif // defined(__clang__)
-#  if defined(__GNUC__)
+#  if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #   if (__GNUC__ >= 7)
 #    if (__cplusplus >= 201402)
 #     define BOOST_ASIO_HAS_CONSTANT_EXPRESSION_SFINAE 1
 #    endif // (__cplusplus >= 201402)
 #   endif // (__GNUC__ >= 7)
-#  endif // defined(__GNUC__)
+#  endif // defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #  if defined(BOOST_ASIO_MSVC)
 #   if (_MSC_VER >= 1901)
 #    define BOOST_ASIO_HAS_CONSTANT_EXPRESSION_SFINAE 1
@@ -495,11 +499,11 @@
 // Enable workarounds for lack of working expression SFINAE.
 #if !defined(BOOST_ASIO_HAS_WORKING_EXPRESSION_SFINAE)
 # if !defined(BOOST_ASIO_DISABLE_WORKING_EXPRESSION_SFINAE)
-#  if !defined(BOOST_ASIO_MSVC)
+#  if !defined(BOOST_ASIO_MSVC) && !defined(__INTEL_COMPILER)
 #   if (__cplusplus >= 201103)
 #    define BOOST_ASIO_HAS_WORKING_EXPRESSION_SFINAE 1
 #   endif // (__cplusplus >= 201103)
-#  endif // !defined(BOOST_ASIO_MSVC)
+#  endif // !defined(BOOST_ASIO_MSVC) && !defined(__INTEL_COMPILER)
 # endif // !defined(BOOST_ASIO_DISABLE_WORKING_EXPRESSION_SFINAE)
 #endif // !defined(BOOST_ASIO_HAS_WORKING_EXPRESSION_SFINAE)
 
@@ -1473,13 +1477,9 @@
 // UNIX domain sockets.
 #if !defined(BOOST_ASIO_HAS_LOCAL_SOCKETS)
 # if !defined(BOOST_ASIO_DISABLE_LOCAL_SOCKETS)
-#  if !defined(BOOST_ASIO_WINDOWS) \
-  && !defined(BOOST_ASIO_WINDOWS_RUNTIME) \
-  && !defined(__CYGWIN__)
+#  if !defined(BOOST_ASIO_WINDOWS_RUNTIME)
 #   define BOOST_ASIO_HAS_LOCAL_SOCKETS 1
-#  endif // !defined(BOOST_ASIO_WINDOWS)
-         //   && !defined(BOOST_ASIO_WINDOWS_RUNTIME)
-         //   && !defined(__CYGWIN__)
+#  endif // !defined(BOOST_ASIO_WINDOWS_RUNTIME)
 # endif // !defined(BOOST_ASIO_DISABLE_LOCAL_SOCKETS)
 #endif // !defined(BOOST_ASIO_HAS_LOCAL_SOCKETS)
 
@@ -1754,7 +1754,9 @@
 #if !defined(BOOST_ASIO_HAS_CO_AWAIT)
 # if !defined(BOOST_ASIO_DISABLE_CO_AWAIT)
 #  if defined(BOOST_ASIO_MSVC)
-#   if (_MSC_FULL_VER >= 190023506)
+#   if (_MSC_VER >= 1928) && (_MSVC_LANG >= 201705)
+#    define BOOST_ASIO_HAS_CO_AWAIT 1
+#   elif (_MSC_FULL_VER >= 190023506)
 #    if defined(_RESUMABLE_FUNCTIONS_SUPPORTED)
 #     define BOOST_ASIO_HAS_CO_AWAIT 1
 #    endif // defined(_RESUMABLE_FUNCTIONS_SUPPORTED)
@@ -1779,6 +1781,11 @@
 // Standard library support for coroutines.
 #if !defined(BOOST_ASIO_HAS_STD_COROUTINE)
 # if !defined(BOOST_ASIO_DISABLE_STD_COROUTINE)
+#  if defined(BOOST_ASIO_MSVC)
+#   if (_MSC_VER >= 1928) && (_MSVC_LANG >= 201705)
+#    define BOOST_ASIO_HAS_STD_COROUTINE 1
+#   endif // (_MSC_VER >= 1928) && (_MSVC_LANG >= 201705)
+#  endif // defined(BOOST_ASIO_MSVC)
 #  if defined(__GNUC__)
 #   if (__cplusplus >= 201709) && (__cpp_impl_coroutine >= 201902)
 #    if __has_include(<coroutine>)
@@ -1802,5 +1809,41 @@
 #if !defined(BOOST_ASIO_NODISCARD)
 # define BOOST_ASIO_NODISCARD
 #endif // !defined(BOOST_ASIO_NODISCARD)
+
+// Kernel support for MSG_NOSIGNAL.
+#if !defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
+# if defined(__linux__)
+#  define BOOST_ASIO_HAS_MSG_NOSIGNAL 1
+# elif defined(_POSIX_VERSION)
+#  if (_POSIX_VERSION >= 200809L)
+#   define BOOST_ASIO_HAS_MSG_NOSIGNAL 1
+#  endif // _POSIX_VERSION >= 200809L
+# endif // defined(_POSIX_VERSION)
+#endif // !defined(BOOST_ASIO_HAS_MSG_NOSIGNAL)
+
+// Standard library support for std::hash.
+#if !defined(BOOST_ASIO_HAS_STD_HASH)
+# if !defined(BOOST_ASIO_DISABLE_STD_HASH)
+#  if defined(__clang__)
+#   if defined(BOOST_ASIO_HAS_CLANG_LIBCXX)
+#    define BOOST_ASIO_HAS_STD_HASH 1
+#   elif (__cplusplus >= 201103)
+#    define BOOST_ASIO_HAS_STD_HASH 1
+#   endif // (__cplusplus >= 201103)
+#  endif // defined(__clang__)
+#  if defined(__GNUC__)
+#   if ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)) || (__GNUC__ > 4)
+#    if (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#     define BOOST_ASIO_HAS_STD_HASH 1
+#    endif // (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#   endif // ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 7)) || (__GNUC__ > 4)
+#  endif // defined(__GNUC__)
+#  if defined(BOOST_ASIO_MSVC)
+#   if (_MSC_VER >= 1700)
+#    define BOOST_ASIO_HAS_STD_HASH 1
+#   endif // (_MSC_VER >= 1700)
+#  endif // defined(BOOST_ASIO_MSVC)
+# endif // !defined(BOOST_ASIO_DISABLE_STD_HASH)
+#endif // !defined(BOOST_ASIO_HAS_STD_HASH)
 
 #endif // BOOST_ASIO_DETAIL_CONFIG_HPP

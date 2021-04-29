@@ -41,6 +41,7 @@
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/linear_feedback_shift.hpp>
 #include <boost/random/mersenne_twister.hpp>
+#include <boost/random/mixmax.hpp>
 #include <boost/random/ranlux.hpp>
 #include <boost/random/shuffle_order.hpp>
 #include <boost/random/shuffle_output.hpp>

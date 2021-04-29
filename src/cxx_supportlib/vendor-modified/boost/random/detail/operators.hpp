@@ -43,7 +43,7 @@
 
 #endif
 
-#if defined(__BORLANDC__)
+#if defined(BOOST_BORLANDC)
 
 #define BOOST_RANDOM_DETAIL_EQUALITY_OPERATOR(T, lhs, rhs)              \
     bool operator==(const T& rhs) const                                 \

@@ -34,7 +34,7 @@
 #include <boost/preprocessor/punctuation/comma_if.hpp>
 #include <boost/preprocessor/cat.hpp>
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 
 #include <boost/parameter/aux_/use_default.hpp>
 
@@ -47,7 +47,7 @@
     >
 /**/
 
-#else   // !BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
+#else   // !BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
 
 #include <boost/parameter/aux_/pp_impl/unwrap_predicate.hpp>
 

@@ -521,7 +521,8 @@ class slist
    //! <b>Throws</b>: If allocator's copy constructor throws.
    //!
    //! <b>Complexity</b>: Constant.
-   allocator_type get_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      allocator_type get_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return allocator_type(this->node_alloc()); }
 
    //! <b>Effects</b>: Returns a reference to the internal allocator.
@@ -531,7 +532,8 @@ class slist
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension.
-   stored_allocator_type &get_stored_allocator() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      stored_allocator_type &get_stored_allocator() BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->node_alloc(); }
 
    //! <b>Effects</b>: Returns a reference to the internal allocator.
@@ -541,7 +543,8 @@ class slist
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Non-standard extension.
-   const stored_allocator_type &get_stored_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const stored_allocator_type &get_stored_allocator() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->node_alloc(); }
 
    //////////////////////////////////////////////
@@ -557,7 +560,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   iterator before_begin() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      iterator before_begin() BOOST_NOEXCEPT_OR_NOTHROW
    {  return iterator(end());  }
 
    //! <b>Effects</b>: Returns a non-dereferenceable const_iterator
@@ -567,7 +571,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   const_iterator before_begin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_iterator before_begin() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->cbefore_begin();  }
 
    //! <b>Effects</b>: Returns an iterator to the first element contained in the list.
@@ -575,7 +580,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   iterator begin() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      iterator begin() BOOST_NOEXCEPT_OR_NOTHROW
    { return iterator(this->icont().begin()); }
 
    //! <b>Effects</b>: Returns a const_iterator to the first element contained in the list.
@@ -583,7 +589,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   const_iterator begin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_iterator begin() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->cbegin();   }
 
    //! <b>Effects</b>: Returns an iterator to the end of the list.
@@ -591,7 +598,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   iterator end() BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      iterator end() BOOST_NOEXCEPT_OR_NOTHROW
    { return iterator(this->icont().end()); }
 
    //! <b>Effects</b>: Returns a const_iterator to the end of the list.
@@ -599,7 +607,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   const_iterator end() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_iterator end() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->cend();   }
 
    //! <b>Effects</b>: Returns a non-dereferenceable const_iterator
@@ -609,7 +618,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   const_iterator cbefore_begin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_iterator cbefore_begin() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return const_iterator(end());  }
 
    //! <b>Effects</b>: Returns a const_iterator to the first element contained in the list.
@@ -617,7 +627,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   const_iterator cbegin() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_iterator cbegin() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return const_iterator(this->non_const_icont().begin());   }
 
    //! <b>Effects</b>: Returns a const_iterator to the end of the list.
@@ -625,7 +636,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   const_iterator cend() const BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_iterator cend() const BOOST_NOEXCEPT_OR_NOTHROW
    {  return const_iterator(this->non_const_icont().end());   }
 
    //! <b>Returns</b>: The iterator to the element before i in the sequence.
@@ -637,7 +649,8 @@ class slist
    //! <b>Complexity</b>: Linear to the number of elements before i.
    //!
    //! <b>Note</b>: Non-standard extension.
-   iterator previous(iterator p) BOOST_NOEXCEPT_OR_NOTHROW
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      iterator previous(iterator p) BOOST_NOEXCEPT_OR_NOTHROW
    {  return iterator(this->icont().previous(p.get())); }
 
    //! <b>Returns</b>: The const_iterator to the element before i in the sequence.
@@ -649,7 +662,8 @@ class slist
    //! <b>Complexity</b>: Linear to the number of elements before i.
    //!
    //! <b>Note</b>: Non-standard extension.
-   const_iterator previous(const_iterator p)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_iterator previous(const_iterator p)
    {  return const_iterator(this->icont().previous(p.get())); }
 
    //////////////////////////////////////////////
@@ -663,7 +677,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   bool empty() const
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      bool empty() const
    {  return !this->size();   }
 
    //! <b>Effects</b>: Returns the number of the elements contained in the list.
@@ -671,7 +686,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   size_type size() const
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      size_type size() const
    {  return this->icont().size(); }
 
    //! <b>Effects</b>: Returns the largest possible size of the list.
@@ -679,7 +695,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   size_type max_size() const
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      size_type max_size() const
    {  return AllocHolder::max_size();  }
 
    //! <b>Effects</b>: Inserts or erases elements at the end such that
@@ -725,7 +742,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   reference front()
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      reference front()
    {
       BOOST_ASSERT(!this->empty());
       return *this->begin();
@@ -739,7 +757,8 @@ class slist
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Constant.
-   const_reference front() const
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const_reference front() const
    {
       BOOST_ASSERT(!this->empty());
       return *this->begin();
@@ -1019,7 +1038,7 @@ class slist
    //! <b>Effects</b>: Transfers all the elements of list x to this list, after the
    //!   the element pointed by p. No destructors or copy constructors are called.
    //!
-   //! <b>Throws</b>: std::runtime_error if this' allocator and x's allocator
+   //! <b>Throws</b>: runtime_error if this' allocator and x's allocator
    //!   are not equal.
    //!
    //! <b>Complexity</b>: Linear to the elements in x.
@@ -1039,7 +1058,7 @@ class slist
    //! <b>Effects</b>: Transfers all the elements of list x to this list, after the
    //!   the element pointed by p. No destructors or copy constructors are called.
    //!
-   //! <b>Throws</b>: std::runtime_error if this' allocator and x's allocator
+   //! <b>Throws</b>: runtime_error if this' allocator and x's allocator
    //!   are not equal.
    //!
    //! <b>Complexity</b>: Linear to the elements in x.
@@ -1574,37 +1593,43 @@ class slist
    //! <b>Effects</b>: Returns true if x and y are unequal
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   friend bool operator!=(const slist& x, const slist& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      friend bool operator!=(const slist& x, const slist& y)
    {  return !(x == y); }
 
    //! <b>Effects</b>: Returns true if x is less than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   friend bool operator<(const slist& x, const slist& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      friend bool operator<(const slist& x, const slist& y)
    {  return ::boost::container::algo_lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());  }
 
    //! <b>Effects</b>: Returns true if x is greater than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   friend bool operator>(const slist& x, const slist& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      friend bool operator>(const slist& x, const slist& y)
    {  return y < x;  }
 
    //! <b>Effects</b>: Returns true if x is equal or less than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   friend bool operator<=(const slist& x, const slist& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      friend bool operator<=(const slist& x, const slist& y)
    {  return !(y < x);  }
 
    //! <b>Effects</b>: Returns true if x is equal or greater than y
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
-   friend bool operator>=(const slist& x, const slist& y)
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      friend bool operator>=(const slist& x, const slist& y)
    {  return !(x < y);  }
 
    //! <b>Effects</b>: x.swap(y)
    //!
    //! <b>Complexity</b>: Constant.
    friend void swap(slist& x, slist& y)
+       BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT(x.swap(y)))
    {  x.swap(y);  }
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED

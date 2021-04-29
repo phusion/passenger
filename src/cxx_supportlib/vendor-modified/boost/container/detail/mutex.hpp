@@ -53,7 +53,8 @@
    #endif
 
    #if defined(BOOST_WINDOWS)
-      #include <windows.h>
+      #include <boost/winapi/critical_section.hpp>
+      #include <boost/winapi/thread.hpp>
       #ifndef BOOST_MUTEX_HELPER
          #define BOOST_MUTEX_HELPER BOOST_MUTEX_HELPER_WIN32
       #endif
@@ -73,19 +74,7 @@
    //...
 #elif BOOST_MUTEX_HELPER == BOOST_MUTEX_HELPER_SPINLOCKS
    #if defined(_MSC_VER)
-      #ifndef _M_AMD64
-         /* These are already defined on AMD64 builds */
-         #ifdef __cplusplus
-            extern "C" {
-         #endif /* __cplusplus */
-            long __cdecl _InterlockedCompareExchange(long volatile *Dest, long Exchange, long Comp);
-            long __cdecl _InterlockedExchange(long volatile *Target, long Value);
-         #ifdef __cplusplus
-            }
-         #endif /* __cplusplus */
-      #endif /* _M_AMD64 */
-      #pragma intrinsic (_InterlockedCompareExchange)
-      #pragma intrinsic (_InterlockedExchange)
+      #include <boost/detail/interlocked.hpp>
       #define interlockedcompareexchange _InterlockedCompareExchange
       #define interlockedexchange        _InterlockedExchange
    #elif defined(WIN32) && defined(__GNUC__)
@@ -135,7 +124,7 @@
    #define SPINS_PER_YIELD       63
    #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
       #define SLEEP_EX_DURATION     50 /* delay for yield/sleep */
-      #define SPIN_LOCK_YIELD  SleepEx(SLEEP_EX_DURATION, FALSE)
+      #define SPIN_LOCK_YIELD  boost::winapi::SleepEx(SLEEP_EX_DURATION, 0)
    #elif defined (__SVR4) && defined (__sun) /* solaris */
       #include <thread.h>
       #define SPIN_LOCK_YIELD   thr_yield();

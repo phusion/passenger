@@ -2,7 +2,7 @@
 // impl/compose.hpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2020 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -501,7 +501,9 @@ namespace detail
   get_composed_io_executor(IoObject& io_object,
       typename enable_if<
         !is_executor<IoObject>::value
-          && !execution::is_executor<IoObject>::value
+      >::type* = 0,
+      typename enable_if<
+        !execution::is_executor<IoObject>::value
       >::type* = 0)
   {
     return io_object.get_executor();

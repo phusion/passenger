@@ -1062,8 +1062,7 @@ class bstree_impl
    iterator insert_equal(reference value)
    {
       node_ptr to_insert(this->get_value_traits().to_node_ptr(value));
-      if(safemode_or_autounlink)
-         BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(node_algorithms::unique(to_insert));
+      BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || node_algorithms::unique(to_insert));
       iterator ret(node_algorithms::insert_equal_upper_bound
          (this->header_ptr(), to_insert, this->key_node_comp(this->key_comp())), this->priv_value_traits_ptr());
       this->sz_traits().increment();
@@ -1087,8 +1086,7 @@ class bstree_impl
    iterator insert_equal(const_iterator hint, reference value)
    {
       node_ptr to_insert(this->get_value_traits().to_node_ptr(value));
-      if(safemode_or_autounlink)
-         BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(node_algorithms::unique(to_insert));
+      BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || node_algorithms::unique(to_insert));
       iterator ret(node_algorithms::insert_equal
          (this->header_ptr(), hint.pointed_node(), to_insert, this->key_node_comp(this->key_comp())), this->priv_value_traits_ptr());
       this->sz_traits().increment();
@@ -1317,8 +1315,7 @@ class bstree_impl
    iterator insert_unique_commit(reference value, const insert_commit_data &commit_data)
    {
       node_ptr to_insert(this->get_value_traits().to_node_ptr(value));
-      if(safemode_or_autounlink)
-         BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(node_algorithms::unique(to_insert));
+      BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || node_algorithms::unique(to_insert));
 
       #if !(defined(BOOST_DISABLE_ASSERTS) || ( defined(BOOST_ENABLE_ASSERT_DEBUG_HANDLER) && defined(NDEBUG) ))
       //Test insertion position is correct
@@ -1355,8 +1352,7 @@ class bstree_impl
    iterator insert_before(const_iterator pos, reference value)
    {
       node_ptr to_insert(this->get_value_traits().to_node_ptr(value));
-      if(safemode_or_autounlink)
-         BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(node_algorithms::unique(to_insert));
+      BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || node_algorithms::unique(to_insert));
       this->sz_traits().increment();
       return iterator(node_algorithms::insert_before
          (this->header_ptr(), pos.pointed_node(), to_insert), this->priv_value_traits_ptr());
@@ -1379,8 +1375,7 @@ class bstree_impl
    void push_back(reference value)
    {
       node_ptr to_insert(this->get_value_traits().to_node_ptr(value));
-      if(safemode_or_autounlink)
-         BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(node_algorithms::unique(to_insert));
+      BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || node_algorithms::unique(to_insert));
       this->sz_traits().increment();
       node_algorithms::push_back(this->header_ptr(), to_insert);
    }
@@ -1402,8 +1397,7 @@ class bstree_impl
    void push_front(reference value)
    {
       node_ptr to_insert(this->get_value_traits().to_node_ptr(value));
-      if(safemode_or_autounlink)
-         BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(node_algorithms::unique(to_insert));
+      BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || node_algorithms::unique(to_insert));
       this->sz_traits().increment();
       node_algorithms::push_front(this->header_ptr(), to_insert);
    }
@@ -1421,8 +1415,7 @@ class bstree_impl
       const_iterator ret(i);
       ++ret;
       node_ptr to_erase(i.pointed_node());
-      if(safemode_or_autounlink)
-         BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!node_algorithms::unique(to_erase));
+      BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || !node_algorithms::unique(to_erase));
       node_algorithms::erase(this->header_ptr(), to_erase);
       this->sz_traits().decrement();
       if(safemode_or_autounlink)
@@ -2061,8 +2054,7 @@ class bstree_impl
       typedef typename get_node_checker<AlgoType, ValueTraits, nodeptr_comp_t, ExtraChecker>::type node_checker_t;
       typename node_checker_t::return_type checker_return;
       node_algorithms::check(this->header_ptr(), node_checker_t(nodeptr_comp, extra_checker), checker_return);
-      if (constant_time_size)
-         BOOST_INTRUSIVE_INVARIANT_ASSERT(this->sz_traits().get_size() == checker_return.node_count);
+      BOOST_INTRUSIVE_INVARIANT_ASSERT(!constant_time_size || this->sz_traits().get_size() == checker_return.node_count);
    }
 
    //! <b>Effects</b>: Asserts the integrity of the container.

@@ -22,7 +22,7 @@
 
 #include <boost/throw_exception.hpp>
 
-#include <boost/mpl/bool.hpp>
+#include <boost/type_traits/integral_constant.hpp>
 
 #include <boost/random/detail/disable_warnings.hpp>
 
@@ -37,7 +37,7 @@ namespace qrng_detail {
 // If the seed is a signed integer type, then we need to
 // check that the value is positive:
 template <typename Integer>
-inline void check_seed_sign(const Integer& v, const mpl::true_)
+inline void check_seed_sign(const Integer& v, const boost::true_type)
 {
   if (v < 0)
   {
@@ -45,12 +45,12 @@ inline void check_seed_sign(const Integer& v, const mpl::true_)
   }
 }
 template <typename Integer>
-inline void check_seed_sign(const Integer&, const mpl::false_) {}
+inline void check_seed_sign(const Integer&, const boost::false_type) {}
 
 template <typename Integer>
 inline void check_seed_sign(const Integer& v)
 {
-  check_seed_sign(v, mpl::bool_<std::numeric_limits<Integer>::is_signed>());
+  check_seed_sign(v, integral_constant<bool, std::numeric_limits<Integer>::is_signed>());
 }
 
 
@@ -236,7 +236,7 @@ private:
   // and preserves the position of the element-to-read
   void discard_vector(boost::uintmax_t z)
   {
-    const boost::uintmax_t max_z = std::numeric_limits<size_type>::max() - seq_count;
+    const boost::uintmax_t max_z = (std::numeric_limits<size_type>::max)() - seq_count;
 
     // Don't allow seq_count + z overflows here
     if (max_z < z)
