@@ -992,7 +992,7 @@ cmd_passenger_user_switching(cmd_parms *cmd, void *pcfg, const char *arg) {
 
 static const char *
 cmd_rails_allow_mod_rewrite(cmd_parms *cmd, void *pcfg, const char *arg) {
-	fprintf(stderr, "WARNING: The 'RailsAllowModRewrite' option is obsolete: Phusion Passenger now fully supports mod_rewrite. Please remove this option from your configuration file.\n");
+	fprintf(stderr, "WARNING: The 'RailsAllowModRewrite' option is obsolete: Phusion Passenger(R) now fully supports mod_rewrite. Please remove this option from your configuration file.\n");
 	fflush(stderr);
 	return NULL;
 }
