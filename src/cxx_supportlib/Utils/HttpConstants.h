@@ -114,7 +114,7 @@ getStatusCodeAndReasonPhrase(int statusCode) {
 	case 417:
 		return "417 Expectation Failed";
 	case 418:
-		return "418 Not A Funny April Fools Joke";
+		return "418 I'm A Teapot";
 	case 420:
 		// https://dev.twitter.com/docs/error-codes-responses
 		return "420 Enhance Your Calm";
