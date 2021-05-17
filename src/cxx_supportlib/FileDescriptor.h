@@ -122,6 +122,14 @@ public:
 	FileDescriptor() { }
 
 	/**
+	 * Creates a new FileDescriptor instance that is equal
+	 * to the passed file descriptor.
+	 *
+	 * @post *this == *other
+	 */
+	FileDescriptor(const FileDescriptor &other) = default;
+
+	/**
 	 * Creates a new FileDescriptor instance with the given fd as a handle.
 	 *
 	 * @post *this == fd

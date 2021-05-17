@@ -135,6 +135,8 @@ public:
 		  len(b.len)
 		{ }
 
+	StaticString &operator=(const StaticString &other) = default;
+
 	StaticString(const string &s) {
 		content = s.data();
 		len = s.size();

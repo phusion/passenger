@@ -53,6 +53,8 @@ public:
 		rehash();
 	}
 
+	HashedStaticString& operator=(const HashedStaticString &other) = default;
+
 	HashedStaticString(const HashedStaticString &b)
 		: StaticString(b),
 		  m_hash(b.m_hash)

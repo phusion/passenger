@@ -102,6 +102,8 @@ public:
 		memcpy(value, other.data(), SIZE);
 	}
 
+	ApiKey& operator=(const ApiKey &other) = default;
+
 	ApiKey(const ApiKey &other) {
 		memcpy(value, other.value, SIZE);
 	}
