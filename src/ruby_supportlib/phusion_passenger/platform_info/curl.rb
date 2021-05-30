@@ -29,9 +29,6 @@ module PhusionPassenger
   module PlatformInfo
     def self.curl_flags
       result = `(curl-config --cflags) 2>/dev/null`.strip
-      if os_name_simple == "macosx"
-        result << ' -framework Foundation -framework SystemConfiguration'
-      end
       if result.empty?
         return nil
       else
@@ -47,6 +44,9 @@ module PhusionPassenger
 
     def self.curl_libs
       result = `(curl-config --libs) 2>/dev/null`.strip
+      if os_name_simple == "macosx"
+        result << ' -framework Foundation -framework SystemConfiguration'
+      end
       if result.empty?
         return nil
       else
