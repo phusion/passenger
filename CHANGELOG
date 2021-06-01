@@ -1,6 +1,6 @@
 Release 6.0.9 (Not yet released)
 -------------
- * Upgrades Boost to 1.76.
+ * Upgrades Boost to 1.76. Fixes a regression where some boost headers for comatibility with older distros were missing.
  * Make building on Apple Silcon using homebrew openssl work. Contributed by TheBerg.
  * Add Support for Ubuntu Hirsute.
  * Remove prebuilt packages for Ubuntu Groovy.
@@ -10,18 +10,15 @@ Release 6.0.9 (Not yet released)
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
     - ccache 4.2 → 4.3
-    - cmake 3.19.7 → 3.20.2
+    - cmake 3.19.7 → 3.20.3
     - curl 7.75.0 → 7.77.0
     - git 2.31.0 → 2.31.1
-    - gnupg 2.2.27 → system gnupg package
-    - libgcrypt 1.9.2 → system gnupg package
-    - libksba 1.5.0 → system gnupg package
-    - libassuan 2.5.5 → system gnupg package
-    - libgpgerror 1.42 → system gnupg package
-    - npth 1.6 → system gnupg package
-    - pinentry 1.1.1 → system gnupg package
+    - gnupg 2.2.27 → 2.3.1
+    - libgcrypt 1.9.2 → 1.9.3
+    - libksba 1.5.0 → 1.5.1
+    - ntbTLS added → 0.2.0
     - zlib 1.4.9 → 1.5.0
-    - rubygems 3.2.15 → 3.2.18
+    - rubygems 3.2.15 → 3.2.19
     - ruby:
       - 2.3.8 → removed
       - 2.5.8 → 2.5.9
