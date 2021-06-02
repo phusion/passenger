@@ -1,6 +1,6 @@
 Release 6.0.10 (Not yet released)
 -------------
- * 
+ * [Debian/Ubuntu] Fix a regression in `passenger_system_ruby` where Ruby 3 couldn't be found.
 
 
 Release 6.0.9
