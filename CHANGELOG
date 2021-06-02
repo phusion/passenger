@@ -1,4 +1,9 @@
-Release 6.0.9 (Not yet released)
+Release 6.0.10 (Not yet released)
+-------------
+ * 
+
+
+Release 6.0.9
 -------------
  * Upgrades Boost to 1.76. Fixes a regression where some boost headers for comatibility with older distros were missing.
  * Make building on Apple Silcon using homebrew openssl work. Contributed by TheBerg.
