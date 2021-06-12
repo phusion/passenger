@@ -112,26 +112,28 @@ module PhusionPassenger
       if os_name_simple == "macosx"
         # RUBY_PLATFORM gives us the kernel version, but we want
         # the OS X version.
-        os_version_string = `sw_vers -productVersion`.strip
         # sw_vers returns something like "10.6.2". We're only
         # interested in the first two digits (MAJOR.MINOR) since
         # tiny releases tend to be binary compatible with each
-        # other.
-        components = os_version_string.split(".")
-        os_version = "#{components[0]}.#{components[1]}"
-        os_runtime = os_version
-
-        os_arch = cpu_architectures[0]
-        if os_version >= "10.5" && os_arch =~ /^i.86$/
-          # On Snow Leopard, 'uname -m' returns i386 but
-          # we *know* that everything is x86_64 by default.
-          os_arch = "x86_64"
-        end
+        # other. After macOS 10.15 Apple switched to bumping major
+        # versions (like 11.0, 12.0) so we need to look at that.
+        # However, if the env var SYSTEM_VERSION_COMPAT=1 then
+        # macOS 11 reports as 10.16 (and so on), so we need to deal with that too.
+        major, minor, *rest = os_version.split(".").map(&:to_i)
+        os_version_string = if major >= 11
+                       major
+                     elsif minor >= 16
+                       # 10.16 -> 11
+                       # 10.17 -> 12
+                       minor - 5
+                     else
+                       "#{major}.#{minor}"
+                     end
+        os_runtime = os_version_string.to_s
       else
-        os_arch = cpu_architectures[0]
         os_runtime = nil
       end
-
+      os_arch = cpu_architectures[0]
       return [os_arch, os_name_simple, os_runtime].compact.join("-")
     end
     memoize :cxx_binary_compatibility_id

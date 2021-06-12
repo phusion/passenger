@@ -23,11 +23,18 @@
 #  THE SOFTWARE.
 
 require 'rbconfig'
+require 'rubygems'
 PhusionPassenger.require_passenger_lib 'platform_info'
 
 module PhusionPassenger
 
   module PlatformInfo
+    class VersionComparer < String
+      def <=>(other)
+        Gem::Version.new(self) <=> Gem::Version.new(other.to_s)
+      end
+    end
+
     # Returns the operating system's name in as simple a form as possible. For example,
     # Linux is always identified as "linux". OS X is always identified as "macosx" (despite
     # the actual os name being something like "darwin"). This is useful as a stable indicator
@@ -67,13 +74,13 @@ module PhusionPassenger
     def self.os_version
       case os_name_simple
       when 'macosx'
-        `/usr/bin/sw_vers -productVersion`.strip.split.last
+        VersionComparer.new(`/usr/bin/sw_vers -productVersion`.strip.split.last)
 
       when 'linux'
         # Parse LSB (applicable to e.g. Ubuntu)
         if read_file('/etc/lsb-release') =~ /DISTRIB_RELEASE=(.+)/
-          version = $1.gsub(/["']/, '')
-          return version if !version.empty?
+          version = $1.delete(%q['"])
+          return VersionComparer.new(version) if !version.empty?
         end
 
         # Parse CentOS/RedHat
@@ -81,11 +88,12 @@ module PhusionPassenger
         data = read_file('/etc/redhat-release') if data.empty?
         if !data.empty?
           data =~ /^(.+?) (Linux )?(release |version )?(.+?)( |$)/i
-          return $4 if $4
+          return VersionComparer.new($4) if $4
         end
 
+        # Parse Debian
         if File.exist?('/etc/debian_version')
-          return read_file('/etc/debian_version').strip
+          return VersionComparer.new(read_file('/etc/debian_version').strip)
         end
 
         nil
@@ -142,34 +150,31 @@ module PhusionPassenger
     # system are thus be x86_64. It is guaranteed that the OS can run x86_64
     # executables, but not x86 executables per se.
     #
-    # Another example: on MacOS X this function can return either
-    # ["x86_64", "x86"] or ["x86", "x86_64"]. The former result indicates
-    # OS X 10.6 (Snow Leopard) and beyond because starting from that version
-    # everything is 64-bit by default. The latter result indicates an OS X
-    # version older than 10.6.
+    # Another example: on MacOS X this function will return some subset of
+    # "x86_64", "x86", and "arm".
     def self.cpu_architectures
-      uname = uname_command
-      raise "The 'uname' command cannot be found" if !uname
       if os_name_simple == "macosx"
-        arch = `#{uname} -p`.strip
-        if arch == "i386"
-          # Macs have been x86 since around 2007. I think all of them come with
-          # a recent enough Intel CPU that supports both x86 and x86_64, and I
-          # think every OS X version has both the x86 and x86_64 runtime installed.
-          major, minor, *rest = `sw_vers -productVersion`.strip.split(".")
-          major = major.to_i
-          minor = minor.to_i
-          if major >= 10 || (major == 10 && minor >= 6)
-            # Since Snow Leopard x86_64 is the default.
-            ["x86_64", "x86"]
-          else
-            # Before Snow Leopard x86 was the default.
-            ["x86", "x86_64"]
-          end
+        # Macs were intel from around 2006 until 2022.
+        # All but the first 3 Intel Macs' CPUs supported both x86_64 and x86,
+        # and every OS X version from 10.4 to 10.14 had both x86 and x86_64 runtimes installed,
+        # from 10.15 on x86 was dropped, and from (11/10.16) on arm (aarch64) was added.
+        major, minor, *rest = os_vesion.split(".").map(&:to_i)
+        if major >= 11 || (major == 10 && minor >= 16)
+          # Since Big Sur aarch64 is supported.
+          ["x86_64", "arm"]
+        elsif minor == 15
+          # Since Catalina x86 is gone.
+          ["x86_64"]
+        elsif minor >= 6
+          # Since Snow Leopard x86_64 is the default on intel macs.
+          ["x86_64", "x86"]
         else
-          arch
+          # Before Snow Leopard x86 was the default.
+          ["x86", "x86_64"]
         end
       else
+        uname = uname_command
+        raise "The 'uname' command cannot be found" if !uname
         arch = `#{uname} -p`.strip
         # On some systems 'uname -p' returns something like
         # 'Intel(R) Pentium(R) M processor 1400MHz' or
