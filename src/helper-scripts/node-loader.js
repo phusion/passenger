@@ -30,6 +30,7 @@ var os = require('os');
 var fs = require('fs');
 var http = require('http');
 var util = require('util');
+var childProcess = require('child_process')
 
 var nodeClusterErrCount = 0;
 var meteorClusterErrCount = 0;
@@ -240,7 +241,7 @@ function configure(_options) {
 function loadApplication() {
 	var appRoot = PhusionPassenger.options.app_root || process.cwd();
 	var startupFile = PhusionPassenger.options.startup_file || (appRoot + '/' + 'app.js');
-	require(startupFile);
+	childProcess.fork(startupFile);
 }
 
 function extractCallback(args) {
