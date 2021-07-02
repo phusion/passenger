@@ -1,6 +1,7 @@
 Release 6.0.10 (Not yet released)
 -------------
  * [Debian/Ubuntu] Fix a regression in `passenger_system_ruby` where Ruby 3 couldn't be found.
+ * [Nginx] The preferred PCRE version is now 8.45 (previously 8.44).
 
 
 Release 6.0.9
