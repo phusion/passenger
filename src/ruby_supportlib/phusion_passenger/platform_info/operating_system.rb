@@ -158,7 +158,7 @@ module PhusionPassenger
         # All but the first 3 Intel Macs' CPUs supported both x86_64 and x86,
         # and every OS X version from 10.4 to 10.14 had both x86 and x86_64 runtimes installed,
         # from 10.15 on x86 was dropped, and from (11/10.16) on arm (aarch64) was added.
-        major, minor, *rest = os_vesion.split(".").map(&:to_i)
+        major, minor, *rest = os_version.split(".").map(&:to_i)
         if major >= 11 || (major == 10 && minor >= 16)
           # Since Big Sur aarch64 is supported.
           ["x86_64", "arm"]
