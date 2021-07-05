@@ -2,7 +2,13 @@ Release 6.0.10 (Not yet released)
 -------------
  * [Debian/Ubuntu] Fix a regression in `passenger_system_ruby` where Ruby 3 couldn't be found.
  * [Nginx] The preferred PCRE version is now 8.45 (previously 8.44).
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
+    - cmake 3.20.3 → 3.20.5
+    - git 2.31.1 → 2.32.0
+    - libksba 1.5.1 → 1.6.0
+    - rubygems 3.2.19 → 3.2.21
+    - pcre 8.44 → 8.45
 
 Release 6.0.9
 -------------
