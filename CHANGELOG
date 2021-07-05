@@ -1,6 +1,7 @@
 Release 6.0.10 (Not yet released)
 -------------
  * [Debian/Ubuntu] Fix a regression in `passenger_system_ruby` where Ruby 3 couldn't be found.
+ * [CentOS/RHEL] Bump rpm nginx dependency to match EPEL nginx (was 1.16.1 now 1.20.1). Closes GH-2364.
  * [Nginx] The preferred PCRE version is now 8.45 (previously 8.44).
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
