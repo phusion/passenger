@@ -32,6 +32,7 @@ PhusionPassenger.require_passenger_lib 'config/installation_utils'
 PhusionPassenger.require_passenger_lib 'platform_info'
 PhusionPassenger.require_passenger_lib 'platform_info/ruby'
 PhusionPassenger.require_passenger_lib 'platform_info/openssl'
+PhusionPassenger.require_passenger_lib 'platform_info/pcre'
 PhusionPassenger.require_passenger_lib 'platform_info/compiler'
 PhusionPassenger.require_passenger_lib 'utils/shellwords'
 PhusionPassenger.require_passenger_lib 'utils/progress_bar'
@@ -44,10 +45,10 @@ module PhusionPassenger
       include InstallationUtils
 
       def self.configure_script_options
-        extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags}".strip
+        extra_cflags = "-Wno-error #{PlatformInfo.openssl_extra_cflags} #{PlatformInfo.pcre_extra_cflags}".strip
         result = "--with-cc-opt=#{Shellwords.escape extra_cflags} "
 
-        extra_ldflags = PlatformInfo.openssl_extra_ldflags
+        extra_ldflags = "#{PlatformInfo.openssl_extra_ldflags} #{PlatformInfo.pcre_extra_ldflags}".strip
         if !extra_ldflags.empty?
           result << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
         end

@@ -115,7 +115,8 @@ define 'pcre-dev' do
   name "PCRE development headers"
   website "http://www.pcre.org/"
   define_checker do
-    check_for_header('pcre.h')
+    check_for_header('pcre.h', :c,
+      PlatformInfo.pcre_extra_cflags)
   end
 
   on :debian do
@@ -123,5 +124,8 @@ define 'pcre-dev' do
   end
   on :redhat do
     yum_install 'pcre-devel'
+  end
+  on :macosx do
+    brew_install "pcre"
   end
 end

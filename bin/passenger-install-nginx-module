@@ -575,6 +575,7 @@ private
             # Nginx checks for PCRE in multiple places...
             system("(gcc -I/usr/local/include -I/usr/include/pcre " <<
               "-I/usr/pkg/include -I/opt/local/include " <<
+              "-I/opt/homebrew/include " <<
               "-c passenger-check.c) >/dev/null 2>/dev/null")
           end
         ensure
