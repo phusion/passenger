@@ -1,4 +1,9 @@
-Release 6.0.10 (Not yet released)
+Release 6.0.11 (Not yet released)
+-------------
+ * 
+
+
+Release 6.0.10
 -------------
  * [Debian/Ubuntu] Fix a regression in `passenger_system_ruby` where Ruby 3 couldn't be found.
  * [CentOS/RHEL] Bump rpm nginx dependency to match EPEL nginx (was 1.16.1 now 1.20.1). Closes GH-2364.
@@ -10,6 +15,7 @@ Release 6.0.10 (Not yet released)
     - libksba 1.5.1 → 1.6.0
     - rubygems 3.2.19 → 3.2.21
     - pcre 8.44 → 8.45
+
 
 Release 6.0.9
 -------------
