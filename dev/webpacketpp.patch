@@ -1,0 +1,39 @@
+From b6d45a246a4461cd7eda420b471de50518cb42d8 Mon Sep 17 00:00:00 2001
+From: Camden Narzt <camden@phusion.nl>
+Date: Mon, 19 Jul 2021 12:31:15 -0600
+Subject: [PATCH] fix compilation on gcc older than 4.5
+
+---
+ .../websocketpp/websocketpp/common/functional.hpp        | 9 ++-------
+ 1 file changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/src/cxx_supportlib/vendor-copy/websocketpp/websocketpp/common/functional.hpp b/src/cxx_supportlib/vendor-copy/websocketpp/websocketpp/common/functional.hpp
+index d332dd15e..25ed93398 100644
+--- a/src/cxx_supportlib/vendor-copy/websocketpp/websocketpp/common/functional.hpp
++++ b/src/cxx_supportlib/vendor-copy/websocketpp/websocketpp/common/functional.hpp
+@@ -52,7 +52,7 @@
+ #ifdef _WEBSOCKETPP_CPP11_FUNCTIONAL_
+     #include <functional>
+ #else
+-    #include <boost/bind.hpp>
++    #include <boost/bind/bind.hpp>
+     #include <boost/function.hpp>
+     #include <boost/ref.hpp>
+ #endif
+@@ -83,12 +83,7 @@ namespace lib {
+     using boost::function;
+     using boost::bind;
+     using boost::ref;
+-    namespace placeholders {
+-        /// \todo this feels hacky, is there a better way?
+-        using ::_1;
+-        using ::_2;
+-        using ::_3;
+-    }
++    namespace placeholders = boost::placeholders;
+ 
+     // See above definition for more details on what this is and why it exists
+     #define _WEBSOCKETPP_REF(x) boost::ref(x)
+-- 
+2.30.1 (Apple Git-130)
+
