@@ -245,7 +245,7 @@ end
 
 ########## WebSocket++ ##########
 
-let(:websocketpp_cflags) { '-Isrc/cxx_supportlib/vendor-copy/websocketpp' }
+let(:websocketpp_cflags) { '-Isrc/cxx_supportlib/vendor-modified/websocketpp' }
 let(:websocketpp_libs) { nil }
 
 
