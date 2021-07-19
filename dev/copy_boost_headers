@@ -230,8 +230,25 @@ def start
   begin
     prepare
     copy_essential_files
-    copy_dependencies("-std=gnu++11")
-    copy_dependencies("")
+    [
+      "-std=c++98",
+      "-std=c++03",
+      "-std=gnu++98",
+      "-std=gnu++03",
+      "-std=c++11",
+      "-std=gnu++11",
+      "-std=c++14",
+      "-std=gnu++14",
+      "-std=c++17",
+      "-std=gnu++17",
+      "-std=c++20",
+      "-std=gnu++20",
+      "-std=c++0x",
+      "-std=gnu++0x",
+      ""
+    ].each do |flags|
+      copy_dependencies(flags)
+    end
   ensure
     cleanup
   end
