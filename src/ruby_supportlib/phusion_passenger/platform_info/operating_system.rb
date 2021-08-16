@@ -160,8 +160,14 @@ module PhusionPassenger
         # from 10.15 on x86 was dropped, and from (11/10.16) on arm (aarch64) was added.
         major, minor, *rest = os_version.split(".").map(&:to_i)
         if major >= 11 || (major == 10 && minor >= 16)
-          # Since Big Sur aarch64 is supported.
-          ["x86_64", "arm"]
+          # Since Big Sur aarch64 is supported, and default on m1 macs.
+          if `uname -m` =~ /arm64/
+            ["arm", "x86_64"]
+          elsif `sysctl -in sysctl.proc_translated` == "1"
+            ["arm", "x86_64"]
+          else
+            ["x86_64", "arm"]
+          end
         elsif minor == 15
           # Since Catalina x86 is gone.
           ["x86_64"]

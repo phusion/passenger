@@ -64,14 +64,16 @@ module PhusionPassenger
         if RUBY_PLATFORM =~ /universal/
           ruby_arch = "universal"
         else
-          # OS X <  10.8: something like:
+          # OS X often prints something like:
           #   "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable x86_64"
-          output = `file -L "#{ruby_executable}"`.strip
-          ruby_arch = output.sub(/.* /, '')
+          output = `file -L "#{ruby_executable}"`.lines.first.strip
+          ruby_arch = output.split.last
           if ruby_arch == "executable"
-            # OS X >= 10.8: something like:
+            # some OS X print something like:
             #   "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable"
-            if output =~ /Mach-O 64-bit/
+            if output =~ /arm64/
+              ruby_arch = "arm"
+            elsif output =~ /Mach-O 64-bit/
               ruby_arch = "x86_64"
             else
               raise "Cannot autodetect the Ruby interpreter's architecture"
