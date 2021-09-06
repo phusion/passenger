@@ -87,7 +87,7 @@ module PhusionPassenger
         data = read_file('/etc/centos-release')
         data = read_file('/etc/redhat-release') if data.empty?
         if !data.empty?
-          data =~ /^(.+?) (Linux )?(release |version )?(.+?)( |$)/i
+          data =~ /^(.+?) (Linux |Stream )?(release |version )?(.+?)( |$)/i
           return VersionComparer.new($4) if $4
         end
 
