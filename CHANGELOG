@@ -1,6 +1,10 @@
 Release 6.0.11 (Not yet released)
 -------------
  * Fix compilation on GCC 4.4, fixes a regression in 6.0.8 where Passenger would no longer compiler without a C++11 compiler.
+ * [CentOS] Fix version detection on CentOS Stream. Contributed by Taketo Takashima. Closes GH-2377.
+ * [MacOS] Additionally look for PCRE in the new location that Homebrew has split it's packages into.
+ * Fix compilation on GCC < 4.5.
+ * [Debian] Add Bullseye Debian packages.
 
 
 Release 6.0.10
