@@ -4,7 +4,6 @@ Release 6.0.11 (Not yet released)
  * [CentOS] Fix version detection on CentOS Stream. Contributed by Taketo Takashima. Closes GH-2377.
  * [MacOS] Additionally look for PCRE in the new location that Homebrew has split it's packages into.
  * Fix compilation on GCC < 4.5.
- * [Debian] Add Bullseye Debian packages.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
 
     - ccache: 4.3 → 4.4.1
