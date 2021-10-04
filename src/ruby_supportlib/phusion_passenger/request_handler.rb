@@ -279,7 +279,10 @@ module PhusionPassenger
       # is still bugged as of version 1.7.0. They can
       # cause unexplicable freezes when used in combination
       # with threading.
-      return !@force_http_session && ruby_engine != "jruby"
+      # It's also bugged in Windows Subsystem for Linux
+      # as of Windows 10, version 1803 (Fall Creators Update)
+      # You will get "Address In Use" errors even if the port is unused.
+      return !@force_http_session && ruby_engine != "jruby" && !PlatformInfo.windows_subsystem?
     end
 
     def create_unix_socket_on_filesystem(options)
