@@ -239,14 +239,6 @@ module PhusionPassenger
       return File.exists?("/proc/xen/capabilities") && cpu_architectures[0] == "x86"
     end
     memoize :requires_no_tls_direct_seg_refs?, true
-
-    # Returns true if the current os is running in Windows Subsystem for Linux
-    def self.windows_subsystem?
-      uname = uname_command
-      raise "The 'uname' command cannot be found" if !uname
-      `#{uname} -r`.include?("Microsoft")
-    end
-    memoize :windows_subsystem?, true
   end
 
 end # module PhusionPassenger
