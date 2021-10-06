@@ -86,52 +86,52 @@ class sgtree_algorithms
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
    //! @copydoc ::boost::intrusive::bstree_algorithms::get_header(const const_node_ptr&)
-   static node_ptr get_header(const_node_ptr n);
+   static node_ptr get_header(const_node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::begin_node
-   static node_ptr begin_node(const_node_ptr header);
+   static node_ptr begin_node(const_node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::end_node
-   static node_ptr end_node(const_node_ptr header);
+   static node_ptr end_node(const_node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::swap_tree
-   static void swap_tree(node_ptr header1, node_ptr header2);
+   static void swap_tree(node_ptr header1, node_ptr header2) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::swap_nodes(node_ptr,node_ptr)
-   static void swap_nodes(node_ptr node1, node_ptr node2);
+   static void swap_nodes(node_ptr node1, node_ptr node2) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::swap_nodes(node_ptr,node_ptr,node_ptr,node_ptr)
-   static void swap_nodes(node_ptr node1, node_ptr header1, node_ptr node2, node_ptr header2);
+   static void swap_nodes(node_ptr node1, node_ptr header1, node_ptr node2, node_ptr header2) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::replace_node(node_ptr,node_ptr)
-   static void replace_node(node_ptr node_to_be_replaced, node_ptr new_node);
+   static void replace_node(node_ptr node_to_be_replaced, node_ptr new_node) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::replace_node(node_ptr,node_ptr,node_ptr)
-   static void replace_node(node_ptr node_to_be_replaced, node_ptr header, node_ptr new_node);
+   static void replace_node(node_ptr node_to_be_replaced, node_ptr header, node_ptr new_node) BOOST_NOEXCEPT;
 
    //Unlink is not possible since tree metadata is needed to update the tree
-   //!static void unlink(node_ptr node);
+   //!static void unlink(node_ptr node) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::unlink_leftmost_without_rebalance
-   static node_ptr unlink_leftmost_without_rebalance(node_ptr header);
+   static node_ptr unlink_leftmost_without_rebalance(node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::unique(const const_node_ptr&)
-   static bool unique(const_node_ptr node);
+   static bool unique(const_node_ptr node) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::size(const const_node_ptr&)
-   static std::size_t size(const_node_ptr header);
+   static std::size_t size(const_node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::next_node(const node_ptr&)
-   static node_ptr next_node(node_ptr node);
+   static node_ptr next_node(node_ptr node) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::prev_node(const node_ptr&)
-   static node_ptr prev_node(node_ptr node);
+   static node_ptr prev_node(node_ptr node) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::init(node_ptr)
-   static void init(node_ptr node);
+   static void init(node_ptr node) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::init_header(node_ptr)
-   static void init_header(node_ptr header);
+   static void init_header(node_ptr header) BOOST_NOEXCEPT;
    #endif   //#ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::erase(node_ptr,node_ptr)
@@ -156,7 +156,7 @@ class sgtree_algorithms
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::clear_and_dispose(const node_ptr&,Disposer)
    template<class Disposer>
-   static void clear_and_dispose(node_ptr header, Disposer disposer);
+   static void clear_and_dispose(node_ptr header, Disposer disposer) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::lower_bound(const const_node_ptr&,const KeyType&,KeyNodePtrCompare)
    template<class KeyType, class KeyNodePtrCompare>
@@ -241,7 +241,7 @@ class sgtree_algorithms
    //! @copydoc ::boost::intrusive::bstree_algorithms::push_back(node_ptr,node_ptr)
    template<class H_Alpha>
    static void push_back(node_ptr header, node_ptr new_node
-         ,std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size)
+         ,std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size) BOOST_NOEXCEPT
    {
       std::size_t depth;
       bstree_algo::push_back(header, new_node, &depth);
@@ -251,7 +251,7 @@ class sgtree_algorithms
    //! @copydoc ::boost::intrusive::bstree_algorithms::push_front(node_ptr,node_ptr)
    template<class H_Alpha>
    static void push_front(node_ptr header, node_ptr new_node
-         ,std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size)
+         ,std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size) BOOST_NOEXCEPT
    {
       std::size_t depth;
       bstree_algo::push_front(header, new_node, &depth);
@@ -323,13 +323,13 @@ class sgtree_algorithms
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
    //! @copydoc ::boost::intrusive::bstree_algorithms::is_header
-   static bool is_header(const_node_ptr p);
+   static bool is_header(const_node_ptr p) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::is_header
-   static void rebalance(node_ptr header);
+   static void rebalance(node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::rebalance_subtree
-   static node_ptr rebalance_subtree(node_ptr old_root)
+   static node_ptr rebalance_subtree(node_ptr old_root) BOOST_NOEXCEPT
    #endif   //#ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
 
    /// @cond
@@ -348,7 +348,7 @@ class sgtree_algorithms
    template<class H_Alpha>
    static void insert_commit
       (node_ptr header, node_ptr new_value, const insert_commit_data &commit_data
-      ,std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size)
+      ,std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size) BOOST_NOEXCEPT
    {
       bstree_algo::insert_unique_commit(header, new_value, commit_data);
       rebalance_after_insertion(new_value, commit_data.depth, tree_size+1, h_alpha, max_tree_size);
@@ -357,7 +357,7 @@ class sgtree_algorithms
    template<class H_Alpha>
    static void rebalance_after_insertion
       (node_ptr x, std::size_t depth
-      , std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size)
+      , std::size_t tree_size, H_Alpha h_alpha, std::size_t &max_tree_size) BOOST_NOEXCEPT
    {
       if(tree_size > max_tree_size)
          max_tree_size = tree_size;

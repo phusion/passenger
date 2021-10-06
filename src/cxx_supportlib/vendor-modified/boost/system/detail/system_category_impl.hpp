@@ -12,9 +12,7 @@
 
 #include <boost/system/detail/system_category.hpp>
 #include <boost/system/detail/error_condition.hpp>
-#include <boost/system/detail/generic_category.hpp>
 #include <boost/system/api_config.hpp>
-#include <boost/config.hpp>
 
 #if !defined(BOOST_POSIX_API) && !defined(BOOST_WINDOWS_API)
 #  error BOOST_POSIX_API or BOOST_WINDOWS_API must be defined
@@ -37,7 +35,7 @@ inline boost::system::error_condition boost::system::detail::system_error_catego
     }
     else
     {
-        return error_condition( e2, generic_category() );
+        return error_condition( boost::system::detail::generic_value_tag( e2 ) );
     }
 }
 
@@ -54,18 +52,10 @@ inline char const * boost::system::detail::system_error_category::message( int e
 #else // #if defined(BOOST_WINDOWS_API)
 
 #include <boost/system/detail/generic_category_message.hpp>
-#include <boost/system/detail/is_generic_value.hpp>
 
 inline boost::system::error_condition boost::system::detail::system_error_category::default_error_condition( int ev ) const BOOST_NOEXCEPT
 {
-    if( is_generic_value( ev ) )
-    {
-        return error_condition( ev, generic_category() );
-    }
-    else
-    {
-        return error_condition( ev, *this );
-    }
+    return error_condition( boost::system::detail::generic_value_tag( ev ) );
 }
 
 inline std::string boost::system::detail::system_error_category::message( int ev ) const

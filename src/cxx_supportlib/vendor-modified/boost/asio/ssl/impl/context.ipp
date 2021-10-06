@@ -398,7 +398,8 @@ context::~context()
   if (handle_)
   {
 #if ((OPENSSL_VERSION_NUMBER >= 0x10100000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) \
+        || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -411,7 +412,8 @@ context::~context()
             cb_userdata);
       delete callback;
 #if ((OPENSSL_VERSION_NUMBER >= 0x10100000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) \
+        || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
       ::SSL_CTX_set_default_passwd_cb_userdata(handle_, 0);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
@@ -760,7 +762,8 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate_chain(
   if (bio.p)
   {
 #if ((OPENSSL_VERSION_NUMBER >= 0x10100000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) \
+        || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
     pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
@@ -789,7 +792,8 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate_chain(
     }
 
 #if ((OPENSSL_VERSION_NUMBER >= 0x10002000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) \
+        || LIBRESSL_VERSION_NUMBER >= 0x2090100fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
     ::SSL_CTX_clear_chain_certs(handle_);
 #else
@@ -868,7 +872,8 @@ BOOST_ASIO_SYNC_OP_VOID context::use_private_key(
   ::ERR_clear_error();
 
 #if ((OPENSSL_VERSION_NUMBER >= 0x10100000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) \
+        || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
     pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
@@ -937,7 +942,8 @@ BOOST_ASIO_SYNC_OP_VOID context::use_rsa_private_key(
   ::ERR_clear_error();
 
 #if ((OPENSSL_VERSION_NUMBER >= 0x10100000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) \
+        || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
     pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
     void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
@@ -1178,7 +1184,8 @@ BOOST_ASIO_SYNC_OP_VOID context::do_set_password_callback(
     detail::password_callback_base* callback, boost::system::error_code& ec)
 {
 #if ((OPENSSL_VERSION_NUMBER >= 0x10100000L) \
-      && !defined(LIBRESSL_VERSION_NUMBER)) \
+      && (!defined(LIBRESSL_VERSION_NUMBER) \
+        || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
   void* old_callback = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
   ::SSL_CTX_set_default_passwd_cb_userdata(handle_, callback);

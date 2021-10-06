@@ -123,7 +123,7 @@ struct pointer_traits
    //!
    //! <b>Note</b>: For non-conforming compilers only the existence of a member function called
    //!   <code>pointer_to</code> is checked.
-   BOOST_INTRUSIVE_FORCEINLINE static pointer pointer_to(reference r)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer pointer_to(reference r) BOOST_NOEXCEPT
    {
       //Non-standard extension, it does not require Ptr::pointer_to. If not present
       //tries to converts &r to pointer.
@@ -143,7 +143,7 @@ struct pointer_traits
    //! <b>Note</b>: For non-conforming compilers only the existence of a member function called
    //!   <code>static_cast_from</code> is checked.
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer static_cast_from(const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer static_cast_from(const UPtr &uptr) BOOST_NOEXCEPT
    {
       typedef const UPtr &RefArg;
       const bool value = boost::intrusive::detail::
@@ -164,7 +164,7 @@ struct pointer_traits
    //! <b>Note</b>: For non-conforming compilers only the existence of a member function called
    //!   <code>const_cast_from</code> is checked.
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer const_cast_from(const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer const_cast_from(const UPtr &uptr) BOOST_NOEXCEPT
    {
       typedef const UPtr &RefArg;
       const bool value = boost::intrusive::detail::
@@ -185,7 +185,7 @@ struct pointer_traits
    //! <b>Note</b>: For non-conforming compilers only the existence of a member function called
    //!   <code>dynamic_cast_from</code> is checked.
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer dynamic_cast_from(const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer dynamic_cast_from(const UPtr &uptr) BOOST_NOEXCEPT
    {
       typedef const UPtr &RefArg;
       const bool value = boost::intrusive::detail::
@@ -201,46 +201,46 @@ struct pointer_traits
    private:
    //priv_to_raw_pointer
    template <class T>
-   BOOST_INTRUSIVE_FORCEINLINE static T* to_raw_pointer(T* p)
+   BOOST_INTRUSIVE_FORCEINLINE static T* to_raw_pointer(T* p) BOOST_NOEXCEPT
    {  return p; }
 
    template <class Pointer>
    BOOST_INTRUSIVE_FORCEINLINE static typename pointer_traits<Pointer>::element_type*
-      to_raw_pointer(const Pointer &p)
+      to_raw_pointer(const Pointer &p) BOOST_NOEXCEPT
    {  return pointer_traits::to_raw_pointer(p.operator->());  }
 
    //priv_pointer_to
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_pointer_to(boost::intrusive::detail::true_, reference r)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_pointer_to(boost::intrusive::detail::true_, reference r) BOOST_NOEXCEPT
    { return Ptr::pointer_to(r); }
 
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_pointer_to(boost::intrusive::detail::false_, reference r)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_pointer_to(boost::intrusive::detail::false_, reference r) BOOST_NOEXCEPT
    { return pointer(boost::intrusive::detail::addressof(r)); }
 
    //priv_static_cast_from
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_static_cast_from(boost::intrusive::detail::true_, const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_static_cast_from(boost::intrusive::detail::true_, const UPtr &uptr) BOOST_NOEXCEPT
    { return Ptr::static_cast_from(uptr); }
 
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_static_cast_from(boost::intrusive::detail::false_, const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_static_cast_from(boost::intrusive::detail::false_, const UPtr &uptr) BOOST_NOEXCEPT
    {  return uptr ? pointer_to(*static_cast<element_type*>(to_raw_pointer(uptr))) : pointer();  }
 
    //priv_const_cast_from
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_const_cast_from(boost::intrusive::detail::true_, const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_const_cast_from(boost::intrusive::detail::true_, const UPtr &uptr) BOOST_NOEXCEPT
    { return Ptr::const_cast_from(uptr); }
 
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_const_cast_from(boost::intrusive::detail::false_, const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_const_cast_from(boost::intrusive::detail::false_, const UPtr &uptr) BOOST_NOEXCEPT
    {  return uptr ? pointer_to(const_cast<element_type&>(*uptr)) : pointer();  }
 
    //priv_dynamic_cast_from
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_dynamic_cast_from(boost::intrusive::detail::true_, const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_dynamic_cast_from(boost::intrusive::detail::true_, const UPtr &uptr) BOOST_NOEXCEPT
    { return Ptr::dynamic_cast_from(uptr); }
 
    template<class UPtr>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_dynamic_cast_from(boost::intrusive::detail::false_, const UPtr &uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer priv_dynamic_cast_from(boost::intrusive::detail::false_, const UPtr &uptr) BOOST_NOEXCEPT
    {  return uptr ? pointer_to(dynamic_cast<element_type&>(*uptr)) : pointer();  }
    ///@endcond
 };
@@ -288,25 +288,25 @@ struct pointer_traits<T*>
 
    //! <b>Returns</b>: addressof(r)
    //!
-   BOOST_INTRUSIVE_FORCEINLINE static pointer pointer_to(reference r)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer pointer_to(reference r) BOOST_NOEXCEPT
    { return boost::intrusive::detail::addressof(r); }
 
    //! <b>Returns</b>: static_cast<pointer>(uptr)
    //!
    template<class U>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer static_cast_from(U *uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer static_cast_from(U *uptr) BOOST_NOEXCEPT
    {  return static_cast<pointer>(uptr);  }
 
    //! <b>Returns</b>: const_cast<pointer>(uptr)
    //!
    template<class U>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer const_cast_from(U *uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer const_cast_from(U *uptr) BOOST_NOEXCEPT
    {  return const_cast<pointer>(uptr);  }
 
    //! <b>Returns</b>: dynamic_cast<pointer>(uptr)
    //!
    template<class U>
-   BOOST_INTRUSIVE_FORCEINLINE static pointer dynamic_cast_from(U *uptr)
+   BOOST_INTRUSIVE_FORCEINLINE static pointer dynamic_cast_from(U *uptr) BOOST_NOEXCEPT
    {  return dynamic_cast<pointer>(uptr);  }
 };
 

@@ -82,7 +82,17 @@ class vec_iterator
 {
    public:
    typedef std::random_access_iterator_tag                                          iterator_category;
+   typedef std::contiguous_iterator_tag                                             iterator_concept;
    typedef typename boost::intrusive::pointer_traits<Pointer>::element_type         value_type;
+
+   //Defining element_type to make libstdc++'s std::pointer_traits well-formed leads to ambiguity
+   //due to LWG3446. So we need to specialize std::pointer_traits. See 
+   //https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96416 for details. /Many thanks to Jonathan Wakely
+   //for explaning the issue.
+   #ifndef BOOST_GNU_STDLIB
+   //Define element_
+   typedef typename boost::intrusive::pointer_traits<Pointer>::element_type         element_type;
+   #endif
    typedef typename boost::intrusive::pointer_traits<Pointer>::difference_type      difference_type;
    typedef typename dtl::if_c
       < IsConst
@@ -3377,6 +3387,20 @@ struct has_trivial_destructor_after_move<boost::container::vector<T, Allocator, 
 };
 
 }
+
+//See comments on vec_iterator::element_type to know why is this needed
+#ifdef BOOST_GNU_STDLIB
+
+BOOST_MOVE_STD_NS_BEG
+
+template <class Pointer, bool IsConst>
+struct pointer_traits< boost::container::vec_iterator<Pointer, IsConst> >
+   : public boost::intrusive::pointer_traits< boost::container::vec_iterator<Pointer, IsConst> >
+{};
+
+BOOST_MOVE_STD_NS_END
+
+#endif   //BOOST_GNU_STDLIB
 
 #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 

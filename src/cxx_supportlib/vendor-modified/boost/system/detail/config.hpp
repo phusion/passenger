@@ -13,18 +13,8 @@
 
 // BOOST_SYSTEM_HAS_SYSTEM_ERROR
 
-#if !defined(BOOST_NO_CXX11_HDR_SYSTEM_ERROR)
+#if !defined(BOOST_NO_CXX11_HDR_SYSTEM_ERROR) && !defined(BOOST_NO_CXX11_HDR_ATOMIC)
 # define BOOST_SYSTEM_HAS_SYSTEM_ERROR
-#endif
-
-#if BOOST_WORKAROUND(BOOST_GCC, < 40600)
-// g++ 4.4's <map> is not good enough
-# undef BOOST_SYSTEM_HAS_SYSTEM_ERROR
-#endif
-
-#if defined(BOOST_NO_CXX11_HDR_MUTEX)
-// Required for thread-safe map manipulation
-# undef BOOST_SYSTEM_HAS_SYSTEM_ERROR
 #endif
 
 // BOOST_SYSTEM_NOEXCEPT
@@ -60,8 +50,16 @@
 # endif
 #elif defined(_MSC_VER)
 #  define BOOST_SYSTEM_DEPRECATED(msg) __declspec(deprecated(msg))
+#elif defined(__sun)
+#  define BOOST_SYSTEM_DEPRECATED(msg) __attribute__((deprecated(msg)))
 #else
 # define BOOST_SYSTEM_DEPRECATED(msg)
+#endif
+
+// BOOST_SYSTEM_CLANG_6
+
+#if defined(__clang__) && (__clang_major__ < 7 || (defined(__APPLE__) && __clang_major__ < 11))
+# define BOOST_SYSTEM_CLANG_6
 #endif
 
 #endif // BOOST_SYSTEM_DETAIL_CONFIG_HPP_INCLUDED

@@ -1269,7 +1269,7 @@ class devector
    /**
    * **Returns**: A reference to the `n`th element in the devector.
    *
-   * **Throws**: `std::out_of_range`, if `n >= size()`.
+   * **Throws**: `out_of_range`, if `n >= size()`.
    *
    * **Complexity**: Constant.
    */
@@ -1284,7 +1284,7 @@ class devector
    /**
    * **Returns**: A constant reference to the `n`th element in the devector.
    *
-   * **Throws**: `std::out_of_range`, if `n >= size()`.
+   * **Throws**: `out_of_range`, if `n >= size()`.
    *
    * **Complexity**: Constant.
    */

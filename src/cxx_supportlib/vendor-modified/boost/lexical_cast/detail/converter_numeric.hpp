@@ -98,7 +98,10 @@ inline bool noexcept_numeric_convert(const Source& arg, Target& result) BOOST_NO
     >::type converter_t;
 
     bool res = nothrow_overflow_handler()(converter_t::out_of_range(arg));
-    result = converter_t::low_level_convert(converter_t::nearbyint(arg, res));
+    if (res) {
+        result = converter_t::low_level_convert(converter_t::nearbyint(arg, res));
+    }
+
     return res;
 }
 

@@ -19,11 +19,19 @@
 
 #if defined(BOOST_ASIO_HAS_DEV_POLL)
 
+#include <boost/asio/detail/scheduler.hpp>
+
 #include <boost/asio/detail/push_options.hpp>
 
 namespace boost {
 namespace asio {
 namespace detail {
+
+inline void dev_poll_reactor::post_immediate_completion(
+    reactor_op* op, bool is_continuation)
+{
+  scheduler_.post_immediate_completion(op, is_continuation);
+}
 
 template <typename Time_Traits>
 void dev_poll_reactor::add_timer_queue(timer_queue<Time_Traits>& queue)

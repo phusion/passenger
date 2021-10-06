@@ -665,6 +665,16 @@ Iterator connect(basic_socket<Protocol, Executor>& s,
  * {
  *   // ...
  * } @endcode
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the socket's @c async_connect operation.
  */
 template <typename Protocol, typename Executor, typename EndpointSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
@@ -714,6 +724,16 @@ async_connect(basic_socket<Protocol, Executor>& s,
  * @note This overload assumes that a default constructed object of type @c
  * Iterator represents the end of the sequence. This is a valid assumption for
  * iterator types such as @c boost::asio::ip::tcp::resolver::iterator.
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the socket's @c async_connect operation.
  */
 template <typename Protocol, typename Executor, typename Iterator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
@@ -775,6 +795,16 @@ async_connect(basic_socket<Protocol, Executor>& s, Iterator begin,
  * {
  *   // ...
  * } @endcode
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the socket's @c async_connect operation.
  */
 template <typename Protocol, typename Executor, typename Iterator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
@@ -880,6 +910,16 @@ async_connect(basic_socket<Protocol, Executor>& s, Iterator begin, Iterator end,
  *     std::cout << "Connected to: " << endpoint << std::endl;
  *   }
  * } @endcode
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the socket's @c async_connect operation.
  */
 template <typename Protocol, typename Executor,
     typename EndpointSequence, typename ConnectCondition,
@@ -941,6 +981,16 @@ async_connect(basic_socket<Protocol, Executor>& s,
  * @note This overload assumes that a default constructed object of type @c
  * Iterator represents the end of the sequence. This is a valid assumption for
  * iterator types such as @c boost::asio::ip::tcp::resolver::iterator.
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the socket's @c async_connect operation.
  */
 template <typename Protocol, typename Executor,
     typename Iterator, typename ConnectCondition,
@@ -1053,6 +1103,16 @@ async_connect(basic_socket<Protocol, Executor>& s, Iterator begin,
  *     std::cout << "Connected to: " << i->endpoint() << std::endl;
  *   }
  * } @endcode
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the socket's @c async_connect operation.
  */
 template <typename Protocol, typename Executor,
     typename Iterator, typename ConnectCondition,

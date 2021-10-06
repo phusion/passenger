@@ -174,7 +174,7 @@ class allocator
    {}
 
    //!Allocates memory for an array of count elements.
-   //!Throws std::bad_alloc if there is no enough memory
+   //!Throws bad_alloc if there is no enough memory
    //!If Version is 2, this allocated memory can only be deallocated
    //!with deallocate() or (for Version == 2) deallocate_many()
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD pointer allocate(size_type count, const void * hint= 0)

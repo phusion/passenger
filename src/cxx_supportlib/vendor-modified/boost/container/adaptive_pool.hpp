@@ -153,7 +153,7 @@ class adaptive_pool
    {  return size_type(-1)/(2u*sizeof(T));   }
 
    //!Allocate memory for an array of count elements.
-   //!Throws std::bad_alloc if there is no enough memory
+   //!Throws bad_alloc if there is no enough memory
    pointer allocate(size_type count, const void * = 0)
    {
       if(BOOST_UNLIKELY(count > size_type(-1)/(2u*sizeof(T))))
@@ -467,7 +467,7 @@ class private_adaptive_pool
    {  return size_type(-1)/(2u*sizeof(T));   }
 
    //!Allocate memory for an array of count elements.
-   //!Throws std::bad_alloc if there is no enough memory
+   //!Throws bad_alloc if there is no enough memory
    pointer allocate(size_type count, const void * = 0)
    {
       if(BOOST_UNLIKELY(count > size_type(-1)/(2u*sizeof(T))))

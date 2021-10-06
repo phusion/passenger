@@ -1098,6 +1098,9 @@ bool basic_regex_parser<charT, traits>::parse_repeat(std::size_t low, std::size_
                   }
                   else
                      contin = false;
+                  break;
+               default:
+                  contin = false;
                }
             }
             else

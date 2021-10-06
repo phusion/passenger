@@ -101,7 +101,7 @@ struct bucket_traits_impl
    BOOST_INTRUSIVE_FORCEINLINE const bucket_ptr &bucket_begin() const
    {  return buckets_;  }
 
-   BOOST_INTRUSIVE_FORCEINLINE size_type  bucket_count() const
+   BOOST_INTRUSIVE_FORCEINLINE size_type  bucket_count() const BOOST_NOEXCEPT
    {  return buckets_len_;  }
 
    private:

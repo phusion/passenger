@@ -52,11 +52,11 @@ public:
       // The engine only generates an eof when the shutdown notification has
       // been received from the peer. This indicates that the shutdown has
       // completed successfully, and thus need not be passed on to the handler.
-      handler(boost::system::error_code());
+      BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler)(boost::system::error_code());
     }
     else
     {
-      handler(ec);
+      BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler)(ec);
     }
   }
 };

@@ -1,6 +1,6 @@
-//  This file was automatically generated on Wed Mar  3 12:23:02 2021
+//  This file was automatically generated on Sat Mar  6 19:55:50 2021
 //  by libs/config/tools/generate.cpp
-//  Copyright John Maddock 2002-4.
+//  Copyright John Maddock 2002-21.
 //  Use, modification and distribution are subject to the 
 //  Boost Software License, Version 1.0. (See accompanying file 
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,9 +20,6 @@
 #endif
 #ifdef BOOST_NO_CXX11_ALLOCATOR
 #  error "Your compiler appears not to be fully C++11 compliant.  Detected via defect macro BOOST_NO_CXX11_ALLOCATOR."
-#endif
-#ifdef BOOST_NO_CXX11_ATOMIC_SMART_PTR
-#  error "Your compiler appears not to be fully C++11 compliant.  Detected via defect macro BOOST_NO_CXX11_ATOMIC_SMART_PTR."
 #endif
 #ifdef BOOST_NO_CXX11_AUTO_DECLARATIONS
 #  error "Your compiler appears not to be fully C++11 compliant.  Detected via defect macro BOOST_NO_CXX11_AUTO_DECLARATIONS."

@@ -57,7 +57,7 @@ public:
       const boost::system::error_code& ec,
       const std::size_t& bytes_transferred) const
   {
-    handler(ec, bytes_transferred);
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler)(ec, bytes_transferred);
   }
 
 private:

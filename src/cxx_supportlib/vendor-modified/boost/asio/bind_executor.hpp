@@ -19,7 +19,7 @@
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/detail/variadic_templates.hpp>
 #include <boost/asio/associated_executor.hpp>
-#include <boost/asio/associated_allocator.hpp>
+#include <boost/asio/associator.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/execution/executor.hpp>
 #include <boost/asio/execution_context.hpp>
@@ -516,25 +516,203 @@ template <typename T, typename Executor>
 struct uses_executor<executor_binder<T, Executor>, Executor>
   : true_type {};
 
+namespace detail {
+
+template <typename TargetAsyncResult, typename Executor, typename = void>
+struct executor_binder_async_result_completion_handler_type
+{
+};
+
+template <typename TargetAsyncResult, typename Executor>
+struct executor_binder_async_result_completion_handler_type<
+  TargetAsyncResult, Executor,
+  typename void_type<
+    typename TargetAsyncResult::completion_handler_type
+  >::type>
+{
+  typedef executor_binder<
+    typename TargetAsyncResult::completion_handler_type, Executor>
+      completion_handler_type;
+};
+
+template <typename TargetAsyncResult, typename = void>
+struct executor_binder_async_result_return_type
+{
+};
+
+template <typename TargetAsyncResult>
+struct executor_binder_async_result_return_type<
+  TargetAsyncResult,
+  typename void_type<
+    typename TargetAsyncResult::return_type
+  >::type>
+{
+  typedef typename TargetAsyncResult::return_type return_type;
+};
+
+} // namespace detail
+
 template <typename T, typename Executor, typename Signature>
-class async_result<executor_binder<T, Executor>, Signature>
+class async_result<executor_binder<T, Executor>, Signature> :
+  public detail::executor_binder_async_result_completion_handler_type<
+    async_result<T, Signature>, Executor>,
+  public detail::executor_binder_async_result_return_type<
+    async_result<T, Signature> >
 {
 public:
-  typedef executor_binder<
-    typename async_result<T, Signature>::completion_handler_type, Executor>
-      completion_handler_type;
-
-  typedef typename async_result<T, Signature>::return_type return_type;
-
   explicit async_result(executor_binder<T, Executor>& b)
     : target_(b.get())
   {
   }
 
-  return_type get()
+  typename async_result<T, Signature>::return_type get()
   {
     return target_.get();
   }
+
+  template <typename Initiation>
+  struct init_wrapper
+  {
+    template <typename Init>
+    init_wrapper(const Executor& ex, BOOST_ASIO_MOVE_ARG(Init) init)
+      : ex_(ex),
+        initiation_(BOOST_ASIO_MOVE_CAST(Init)(init))
+    {
+    }
+
+#if defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
+
+    template <typename Handler, typename... Args>
+    void operator()(
+        BOOST_ASIO_MOVE_ARG(Handler) handler,
+        BOOST_ASIO_MOVE_ARG(Args)... args)
+    {
+      BOOST_ASIO_MOVE_CAST(Initiation)(initiation_)(
+          executor_binder<typename decay<Handler>::type, Executor>(
+            executor_arg_t(), ex_, BOOST_ASIO_MOVE_CAST(Handler)(handler)),
+          BOOST_ASIO_MOVE_CAST(Args)(args)...);
+    }
+
+    template <typename Handler, typename... Args>
+    void operator()(
+        BOOST_ASIO_MOVE_ARG(Handler) handler,
+        BOOST_ASIO_MOVE_ARG(Args)... args) const
+    {
+      initiation_(
+          executor_binder<typename decay<Handler>::type, Executor>(
+            executor_arg_t(), ex_, BOOST_ASIO_MOVE_CAST(Handler)(handler)),
+          BOOST_ASIO_MOVE_CAST(Args)(args)...);
+    }
+
+#else // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
+
+    template <typename Handler>
+    void operator()(
+        BOOST_ASIO_MOVE_ARG(Handler) handler)
+    {
+      BOOST_ASIO_MOVE_CAST(Initiation)(initiation_)(
+          executor_binder<typename decay<Handler>::type, Executor>(
+            executor_arg_t(), ex_, BOOST_ASIO_MOVE_CAST(Handler)(handler)));
+    }
+
+    template <typename Handler>
+    void operator()(
+        BOOST_ASIO_MOVE_ARG(Handler) handler) const
+    {
+      initiation_(
+          executor_binder<typename decay<Handler>::type, Executor>(
+            executor_arg_t(), ex_, BOOST_ASIO_MOVE_CAST(Handler)(handler)));
+    }
+
+#define BOOST_ASIO_PRIVATE_INIT_WRAPPER_DEF(n) \
+    template <typename Handler, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+    void operator()( \
+        BOOST_ASIO_MOVE_ARG(Handler) handler, \
+        BOOST_ASIO_VARIADIC_MOVE_PARAMS(n)) \
+    { \
+      BOOST_ASIO_MOVE_CAST(Initiation)(initiation_)( \
+          executor_binder<typename decay<Handler>::type, Executor>( \
+            executor_arg_t(), ex_, BOOST_ASIO_MOVE_CAST(Handler)(handler)), \
+          BOOST_ASIO_VARIADIC_MOVE_ARGS(n)); \
+    } \
+    \
+    template <typename Handler, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+    void operator()( \
+        BOOST_ASIO_MOVE_ARG(Handler) handler, \
+        BOOST_ASIO_VARIADIC_MOVE_PARAMS(n)) const \
+    { \
+      initiation_( \
+          executor_binder<typename decay<Handler>::type, Executor>( \
+            executor_arg_t(), ex_, BOOST_ASIO_MOVE_CAST(Handler)(handler)), \
+          BOOST_ASIO_VARIADIC_MOVE_ARGS(n)); \
+    } \
+    /**/
+    BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_INIT_WRAPPER_DEF)
+#undef BOOST_ASIO_PRIVATE_INIT_WRAPPER_DEF
+
+#endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
+
+    Executor ex_;
+    Initiation initiation_;
+  };
+
+#if defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
+
+  template <typename Initiation, typename RawCompletionToken, typename... Args>
+  static BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(T, Signature,
+    (async_result<T, Signature>::initiate(
+        declval<init_wrapper<typename decay<Initiation>::type> >(),
+        declval<T>(), declval<BOOST_ASIO_MOVE_ARG(Args)>()...)))
+  initiate(
+      BOOST_ASIO_MOVE_ARG(Initiation) initiation,
+      BOOST_ASIO_MOVE_ARG(RawCompletionToken) token,
+      BOOST_ASIO_MOVE_ARG(Args)... args)
+  {
+    return async_initiate<T, Signature>(
+        init_wrapper<typename decay<Initiation>::type>(
+          token.get_executor(), BOOST_ASIO_MOVE_CAST(Initiation)(initiation)),
+        token.get(), BOOST_ASIO_MOVE_CAST(Args)(args)...);
+  }
+
+#else // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
+
+  template <typename Initiation, typename RawCompletionToken>
+  static BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(T, Signature,
+    (async_result<T, Signature>::initiate(
+        declval<init_wrapper<typename decay<Initiation>::type> >(),
+        declval<T>())))
+  initiate(
+      BOOST_ASIO_MOVE_ARG(Initiation) initiation,
+      BOOST_ASIO_MOVE_ARG(RawCompletionToken) token)
+  {
+    return async_initiate<T, Signature>(
+        init_wrapper<typename decay<Initiation>::type>(
+          token.get_executor(), BOOST_ASIO_MOVE_CAST(Initiation)(initiation)),
+        token.get());
+  }
+
+#define BOOST_ASIO_PRIVATE_INITIATE_DEF(n) \
+  template <typename Initiation, typename RawCompletionToken, \
+      BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  static BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(T, Signature, \
+    (async_result<T, Signature>::initiate( \
+        declval<init_wrapper<typename decay<Initiation>::type> >(), \
+        declval<T>(), BOOST_ASIO_VARIADIC_MOVE_DECLVAL(n)))) \
+  initiate( \
+      BOOST_ASIO_MOVE_ARG(Initiation) initiation, \
+      BOOST_ASIO_MOVE_ARG(RawCompletionToken) token, \
+      BOOST_ASIO_VARIADIC_MOVE_PARAMS(n)) \
+  { \
+    return async_initiate<T, Signature>( \
+        init_wrapper<typename decay<Initiation>::type>( \
+          token.get_executor(), BOOST_ASIO_MOVE_CAST(Initiation)(initiation)), \
+        token.get(), BOOST_ASIO_VARIADIC_MOVE_ARGS(n)); \
+  } \
+  /**/
+  BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_INITIATE_DEF)
+#undef BOOST_ASIO_PRIVATE_INITIATE_DEF
+
+#endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
 private:
   async_result(const async_result&) BOOST_ASIO_DELETED;
@@ -543,15 +721,16 @@ private:
   async_result<T, Signature> target_;
 };
 
-template <typename T, typename Executor, typename Allocator>
-struct associated_allocator<executor_binder<T, Executor>, Allocator>
+template <template <typename, typename> class Associator,
+    typename T, typename Executor, typename DefaultCandidate>
+struct associator<Associator, executor_binder<T, Executor>, DefaultCandidate>
 {
-  typedef typename associated_allocator<T, Allocator>::type type;
+  typedef typename Associator<T, DefaultCandidate>::type type;
 
   static type get(const executor_binder<T, Executor>& b,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_allocator<T, Allocator>::get(b.get(), a);
+    return Associator<T, DefaultCandidate>::get(b.get(), c);
   }
 };
 

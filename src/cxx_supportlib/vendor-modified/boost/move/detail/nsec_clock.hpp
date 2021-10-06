@@ -98,7 +98,7 @@ inline boost::uint64_t nsec_clock() BOOST_NOEXCEPT
    mach_timebase_info_data_t info;
    mach_timebase_info(&info);
    return static_cast<boost::uint64_t>
-      (  static_cast<double>(count)*(static_cast<double>(info.numer) / info.denom);
+      ( static_cast<double>(count)*(static_cast<double>(info.numer) / info.denom) );
 }
 
 #elif defined(BOOST_MOVE_DETAIL_POSIX_API)

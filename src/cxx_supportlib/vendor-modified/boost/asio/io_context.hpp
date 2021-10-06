@@ -716,8 +716,8 @@ public:
 
 #if !defined(GENERATING_DOCUMENTATION)
 private:
-  friend struct asio_require_fn::impl;
-  friend struct asio_prefer_fn::impl;
+  friend struct boost_asio_require_fn::impl;
+  friend struct boost_asio_prefer_fn::impl;
 #endif // !defined(GENERATING_DOCUMENTATION)
 
   /// Obtain an executor with the @c blocking.possibly property.
@@ -861,7 +861,7 @@ private:
 
 #if !defined(GENERATING_DOCUMENTATION)
 private:
-  friend struct asio_query_fn::impl;
+  friend struct boost_asio_query_fn::impl;
   friend struct boost::asio::execution::detail::mapping_t<0>;
   friend struct boost::asio::execution::detail::outstanding_work_t<0>;
 #endif // !defined(GENERATING_DOCUMENTATION)
@@ -1022,7 +1022,7 @@ public:
 
 #if !defined(GENERATING_DOCUMENTATION)
 private:
-  friend struct asio_execution_execute_fn::impl;
+  friend struct boost_asio_execution_execute_fn::impl;
 #endif // !defined(GENERATING_DOCUMENTATION)
 
   /// Execution function.

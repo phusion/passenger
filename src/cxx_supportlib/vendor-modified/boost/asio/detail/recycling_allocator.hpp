@@ -50,7 +50,8 @@ public:
   T* allocate(std::size_t n)
   {
     void* p = thread_info_base::allocate(Purpose(),
-        thread_context::top_of_thread_call_stack(), sizeof(T) * n);
+        thread_context::top_of_thread_call_stack(),
+        sizeof(T) * n, BOOST_ASIO_ALIGNOF(T));
     return static_cast<T*>(p);
   }
 

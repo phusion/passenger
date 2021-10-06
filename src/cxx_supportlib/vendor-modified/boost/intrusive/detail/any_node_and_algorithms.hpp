@@ -252,7 +252,7 @@ class any_algorithms
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Nodes</b>: If node is inserted in a tree, this function corrupts the tree.
-   BOOST_INTRUSIVE_FORCEINLINE static void init(const node_ptr & node)
+   BOOST_INTRUSIVE_FORCEINLINE static void init(const node_ptr & node) BOOST_NOEXCEPT
    {  node->node_ptr_1 = node_ptr();   };
 
    //! <b>Effects</b>: Returns true if node is in the same state as if called init(node)
@@ -263,7 +263,7 @@ class any_algorithms
    BOOST_INTRUSIVE_FORCEINLINE static bool inited(const const_node_ptr & node)
    {  return !node->node_ptr_1;  };
 
-   BOOST_INTRUSIVE_FORCEINLINE static bool unique(const const_node_ptr & node)
+   BOOST_INTRUSIVE_FORCEINLINE static bool unique(const const_node_ptr & node) BOOST_NOEXCEPT
    {  return !node->node_ptr_1; }
 
    static void unlink(const node_ptr &)

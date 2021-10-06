@@ -1,9 +1,9 @@
-#ifndef BOOST_SYSTEM_DETAIL_TO_STD_CATEGORY_HPP_INCLUDED
-#define BOOST_SYSTEM_DETAIL_TO_STD_CATEGORY_HPP_INCLUDED
+#ifndef BOOST_SYSTEM_DETAIL_STD_CATEGORY_HPP_INCLUDED
+#define BOOST_SYSTEM_DETAIL_STD_CATEGORY_HPP_INCLUDED
 
 // Support for interoperability between Boost.System and <system_error>
 //
-// Copyright 2018 Peter Dimov
+// Copyright 2018, 2021 Peter Dimov
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -15,9 +15,6 @@
 #include <boost/system/detail/error_code.hpp>
 #include <boost/system/detail/generic_category.hpp>
 #include <system_error>
-#include <map>
-#include <memory>
-#include <mutex>
 
 //
 
@@ -73,54 +70,6 @@ public:
     bool equivalent( const std::error_code & code, int condition ) const BOOST_NOEXCEPT BOOST_OVERRIDE;
 };
 
-#if !defined(__SUNPRO_CC) // trailing __global is not supported
-inline std::error_category const & to_std_category( boost::system::error_category const & cat ) BOOST_SYMBOL_VISIBLE;
-#endif
-
-struct cat_ptr_less
-{
-    bool operator()( boost::system::error_category const * p1, boost::system::error_category const * p2 ) const BOOST_NOEXCEPT
-    {
-        return *p1 < *p2;
-    }
-};
-
-inline std::error_category const & to_std_category( boost::system::error_category const & cat )
-{
-    if( cat.id_ == boost::system::detail::system_category_id )
-    {
-        static const std_category system_instance( &cat, 0x1F4D7 );
-        return system_instance;
-    }
-    else if( cat.id_ == boost::system::detail::generic_category_id )
-    {
-        static const std_category generic_instance( &cat, 0x1F4D3 );
-        return generic_instance;
-    }
-    else
-    {
-        typedef std::map< boost::system::error_category const *, std::unique_ptr<std_category>, cat_ptr_less > map_type;
-
-        static map_type map_;
-        static std::mutex map_mx_;
-
-        std::lock_guard<std::mutex> guard( map_mx_ );
-
-        map_type::iterator i = map_.find( &cat );
-
-        if( i == map_.end() )
-        {
-            std::unique_ptr<std_category> p( new std_category( &cat, 0 ) );
-
-            std::pair<map_type::iterator, bool> r = map_.insert( map_type::value_type( &cat, std::move( p ) ) );
-
-            i = r.first;
-        }
-
-        return *i->second;
-    }
-}
-
 inline bool std_category::equivalent( int code, const std::error_condition & condition ) const BOOST_NOEXCEPT
 {
     if( condition.category() == *this )
@@ -170,6 +119,7 @@ inline bool std_category::equivalent( const std::error_code & code, int conditio
         boost::system::error_code bc( code.value(), *pc2->pc_ );
         return pc_->equivalent( bc, condition );
     }
+
 #endif
 
     else if( *pc_ == boost::system::generic_category() )
@@ -188,4 +138,4 @@ inline bool std_category::equivalent( const std::error_code & code, int conditio
 
 } // namespace boost
 
-#endif // #ifndef BOOST_SYSTEM_DETAIL_TO_STD_CATEGORY_HPP_INCLUDED
+#endif // #ifndef BOOST_SYSTEM_DETAIL_STD_CATEGORY_HPP_INCLUDED

@@ -34,6 +34,12 @@ using boost::function;
 #endif // defined(BOOST_ASIO_HAS_STD_FUNCTION)
 
 } // namespace detail
+
+#if defined(BOOST_ASIO_HAS_STD_REFERENCE_WRAPPER)
+using std::ref;
+using std::reference_wrapper;
+#endif // defined(BOOST_ASIO_HAS_STD_REFERENCE_WRAPPER)
+
 } // namespace asio
 } // namespace boost
 

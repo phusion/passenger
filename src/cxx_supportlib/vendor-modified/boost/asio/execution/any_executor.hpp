@@ -1307,8 +1307,8 @@ public:
 
   template <typename AnyExecutor1, typename AnyExecutor2>
   friend typename enable_if<
-    is_same<AnyExecutor1, any_executor>::value
-      || is_same<AnyExecutor2, any_executor>::value,
+    is_base_of<any_executor, AnyExecutor1>::value
+      || is_base_of<any_executor, AnyExecutor2>::value,
     bool
   >::type operator==(const AnyExecutor1& a,
       const AnyExecutor2& b) BOOST_ASIO_NOEXCEPT
@@ -1336,8 +1336,8 @@ public:
 
   template <typename AnyExecutor1, typename AnyExecutor2>
   friend typename enable_if<
-    is_same<AnyExecutor1, any_executor>::value
-      || is_same<AnyExecutor2, any_executor>::value,
+    is_base_of<any_executor, AnyExecutor1>::value
+      || is_base_of<any_executor, AnyExecutor2>::value,
     bool
   >::type operator!=(const AnyExecutor1& a,
       const AnyExecutor2& b) BOOST_ASIO_NOEXCEPT
@@ -1504,8 +1504,8 @@ public:
 
   template <typename AnyExecutor1, typename AnyExecutor2>
   friend typename enable_if<
-    is_same<AnyExecutor1, any_executor>::value
-      || is_same<AnyExecutor2, any_executor>::value,
+    is_base_of<any_executor, AnyExecutor1>::value
+      || is_base_of<any_executor, AnyExecutor2>::value,
     bool
   >::type operator==(const AnyExecutor1& a,
       const AnyExecutor2& b) BOOST_ASIO_NOEXCEPT
@@ -1533,8 +1533,8 @@ public:
 
   template <typename AnyExecutor1, typename AnyExecutor2>
   friend typename enable_if<
-    is_same<AnyExecutor1, any_executor>::value
-      || is_same<AnyExecutor2, any_executor>::value,
+    is_base_of<any_executor, AnyExecutor1>::value
+      || is_base_of<any_executor, AnyExecutor2>::value,
     bool
   >::type operator!=(const AnyExecutor1& a,
       const AnyExecutor2& b) BOOST_ASIO_NOEXCEPT
@@ -1919,8 +1919,8 @@ inline void swap(any_executor<SupportableProperties...>& a,
     \
     template <typename AnyExecutor1, typename AnyExecutor2> \
     friend typename enable_if< \
-      is_same<AnyExecutor1, any_executor>::value \
-        || is_same<AnyExecutor2, any_executor>::value, \
+      is_base_of<any_executor, AnyExecutor1>::value \
+        || is_base_of<any_executor, AnyExecutor2>::value, \
       bool \
     >::type operator==(const AnyExecutor1& a, \
         const AnyExecutor2& b) BOOST_ASIO_NOEXCEPT \
@@ -1948,8 +1948,8 @@ inline void swap(any_executor<SupportableProperties...>& a,
     \
     template <typename AnyExecutor1, typename AnyExecutor2> \
     friend typename enable_if< \
-      is_same<AnyExecutor1, any_executor>::value \
-        || is_same<AnyExecutor2, any_executor>::value, \
+      is_base_of<any_executor, AnyExecutor1>::value \
+        || is_base_of<any_executor, AnyExecutor2>::value, \
       bool \
     >::type operator!=(const AnyExecutor1& a, \
         const AnyExecutor2& b) BOOST_ASIO_NOEXCEPT \

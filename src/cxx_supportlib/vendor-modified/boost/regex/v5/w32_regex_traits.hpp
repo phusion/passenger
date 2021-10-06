@@ -29,8 +29,12 @@
 #include <boost/regex/v5/primary_transform.hpp>
 #include <boost/regex/v5/object_cache.hpp>
 
-#define VC_EXTRALEAN
-#define WIN32_LEAN_AND_MEAN
+#ifndef VC_EXTRALEAN
+#  define VC_EXTRALEAN
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 
 #if defined(_MSC_VER) && !defined(_WIN32_WCE) && !defined(UNDER_CE)

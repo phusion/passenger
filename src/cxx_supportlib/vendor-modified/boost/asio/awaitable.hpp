@@ -48,7 +48,7 @@ template <typename, typename> class awaitable_frame;
 
 /// The return type of a coroutine or asynchronous operation.
 template <typename T, typename Executor = any_io_executor>
-class awaitable
+class BOOST_ASIO_NODISCARD awaitable
 {
 public:
   /// The type of the awaited value.

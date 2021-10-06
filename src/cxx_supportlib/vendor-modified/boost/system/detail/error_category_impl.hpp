@@ -13,6 +13,7 @@
 #include <boost/system/detail/error_category.hpp>
 #include <boost/system/detail/error_condition.hpp>
 #include <boost/system/detail/error_code.hpp>
+#include <boost/system/detail/snprintf.hpp>
 #include <boost/config.hpp>
 #include <string>
 #include <cstring>
@@ -83,7 +84,8 @@ inline char const * error_category::message( int ev, char * buffer, std::size_t 
 #if !defined(BOOST_NO_EXCEPTIONS)
     catch( ... )
     {
-        return "Message text unavailable";
+        detail::snprintf( buffer, len, "No message text available for error %d", ev );
+        return buffer;
     }
 #endif
 }
@@ -96,11 +98,40 @@ inline char const * error_category::message( int ev, char * buffer, std::size_t 
 
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 
-#include <boost/system/detail/to_std_category.hpp>
+#include <boost/system/detail/std_category.hpp>
 
 inline boost::system::error_category::operator std::error_category const & () const
 {
-    return boost::system::detail::to_std_category( *this );
+    if( id_ == boost::system::detail::system_category_id )
+    {
+        static const boost::system::detail::std_category system_instance( this, 0x1F4D7 );
+        return system_instance;
+    }
+
+    if( id_ == boost::system::detail::generic_category_id )
+    {
+        static const boost::system::detail::std_category generic_instance( this, 0x1F4D3 );
+        return generic_instance;
+    }
+
+    boost::system::detail::std_category* p = ps_.load( std::memory_order_acquire );
+
+    if( p != 0 )
+    {
+        return *p;
+    }
+
+    boost::system::detail::std_category* q = new detail::std_category( this, 0 );
+
+    if( ps_.compare_exchange_strong( p, q, std::memory_order_release, std::memory_order_acquire ) )
+    {
+        return *q;
+    }
+    else
+    {
+        delete q;
+        return *p;
+    }
 }
 
 #endif // #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)

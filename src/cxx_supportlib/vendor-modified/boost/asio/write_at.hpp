@@ -455,6 +455,17 @@ std::size_t write_at(SyncRandomAccessWriteDevice& d, uint64_t offset,
  * See the @ref buffer documentation for information on writing multiple
  * buffers in one go, and how to use it with arrays, boost::array or
  * std::vector.
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the @c AsyncRandomAccessWriteDevice type's
+ * async_write_some_at operation.
  */
 template <typename AsyncRandomAccessWriteDevice, typename ConstBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
@@ -539,6 +550,17 @@ async_write_at(AsyncRandomAccessWriteDevice& d, uint64_t offset,
  * See the @ref buffer documentation for information on writing multiple
  * buffers in one go, and how to use it with arrays, boost::array or
  * std::vector.
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the @c AsyncRandomAccessWriteDevice type's
+ * async_write_some_at operation.
  */
 template <typename AsyncRandomAccessWriteDevice,
     typename ConstBufferSequence, typename CompletionCondition,
@@ -602,6 +624,17 @@ async_write_at(AsyncRandomAccessWriteDevice& d,
  * not, the handler will not be invoked from within this function. On
  * immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the @c AsyncRandomAccessWriteDevice type's
+ * async_write_some_at operation.
  */
 template <typename AsyncRandomAccessWriteDevice, typename Allocator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
@@ -674,6 +707,17 @@ async_write_at(AsyncRandomAccessWriteDevice& d,
  * not, the handler will not be invoked from within this function. On
  * immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Per-Operation Cancellation
+ * This asynchronous operation supports cancellation for the following
+ * boost::asio::cancellation_type values:
+ *
+ * @li @c cancellation_type::terminal
+ *
+ * @li @c cancellation_type::partial
+ *
+ * if they are also supported by the @c AsyncRandomAccessWriteDevice type's
+ * async_write_some_at operation.
  */
 template <typename AsyncRandomAccessWriteDevice,
     typename Allocator, typename CompletionCondition,
