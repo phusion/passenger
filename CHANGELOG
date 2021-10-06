@@ -2,7 +2,7 @@ Release 6.0.12 (Not yet released)
 -------------
  * [Debian] Fix compilation on 32 bit arm. Contributed by Antonio Terceiro.
  * Add formatted error messages to responses. Contributed by Mohammad Aboelnour.
- * Fixes for running under WSL 1. Contributed by Luke Pearce.
+ * Fixes for running under WSL 1. Contributed by Luke Pearce. Closes GH-2036.
 
 Release 6.0.11
 -------------
