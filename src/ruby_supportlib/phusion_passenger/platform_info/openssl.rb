@@ -57,7 +57,7 @@ module PhusionPassenger
         elsif File.exist?("/usr/local/opt/openssl/include")
           "-L/usr/local/opt/openssl/lib"
         elsif File.exist?("/opt/homebrew/opt/openssl/include")
-          "-L/opt/homebrew/opt/openssl/include"
+          "-L/opt/homebrew/opt/openssl/lib"
         else
           "-L/opt/local/lib"
         end
