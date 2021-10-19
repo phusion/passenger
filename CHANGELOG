@@ -4,6 +4,9 @@ Release 6.0.12 (Not yet released)
  * Add formatted error messages to responses. Contributed by Mohammad Aboelnour.
  * Fixes for running under WSL 1. Contributed by Luke Pearce. Closes GH-2036.
  * Upgrades Boost to 1.77. To go along with 32 bit arm fix.
+ * [MacOS] Fixes autodetection of openssl lib on apple silicon. Contributed by Taketo Takashima. Closes GH-2389.
+ * Reconnect to mongoid databases after fork, like we do for ActiveRecord. Contributed by Mohammad Aboelnour.
+ * [Ubuntu] add missing apache name in instance registry dir detection.
 
 
 Release 6.0.11
