@@ -104,8 +104,9 @@ module PhusionPassenger
         # as the instance registry dir. See https://github.com/phusion/passenger/issues/1475
         #
         # systemd's PrivateTmp feature works like an inverted OSX, apache gets its own
-        # TMPDIR and users use /tmp
-        [string_env("TMPDIR"), "/tmp", "/var/run/passenger-instreg",*Dir['/tmp/systemd-private-*-{httpd,nginx}.service-*/tmp']].compact
+        # TMPDIR and users use /tmp, however the path is often too long because socket paths can
+        # only be up to 108 characters long.
+        [string_env("TMPDIR"), "/tmp", "/var/run/passenger-instreg",*Dir['/tmp/systemd-private-*-{httpd,nginx,apache2}.service-*/tmp']].compact
       end
 
       def string_env(name)
