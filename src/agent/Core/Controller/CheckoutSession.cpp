@@ -242,19 +242,25 @@ Controller::reportSessionCheckoutError(Client *client, Request *req,
 	writeOtherExceptionErrorResponse(client, req, e);
 }
 
+int
+Controller::lookupCodeFromHeader(Request *req, const char* header, int statusCode)
+{
+	const LString *value = req->secureHeaders.lookup(header);
+	if (value != NULL && value->size > 0) {
+		value = psg_lstr_make_contiguous(value, req->pool);
+		statusCode = stringToInt(
+			StaticString(value->start->data, value->size));
+	}
+	return statusCode;
+}
+
 void
 Controller::writeRequestQueueFullExceptionErrorResponse(Client *client, Request *req,
 	const boost::shared_ptr<RequestQueueFullException> &e)
 {
 	TRACE_POINT();
-	const LString *value = req->secureHeaders.lookup(
-		"!~PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE");
-	int requestQueueOverflowStatusCode = 503;
-	if (value != NULL && value->size > 0) {
-		value = psg_lstr_make_contiguous(value, req->pool);
-		requestQueueOverflowStatusCode = stringToInt(
-			StaticString(value->start->data, value->size));
-	}
+
+	int requestQueueOverflowStatusCode = lookupCodeFromHeader(req, "!~PASSENGER_REQUEST_QUEUE_OVERFLOW_STATUS_CODE", 503);
 
 	SKC_WARN(client, "Returning HTTP " << requestQueueOverflowStatusCode <<
 		" due to: " << e->what());
@@ -271,15 +277,20 @@ Controller::writeSpawnExceptionErrorResponse(Client *client, Request *req,
 	const boost::shared_ptr<SpawningKit::SpawnException> &e)
 {
 	TRACE_POINT();
+	int spawnExceptionStatusCode = lookupCodeFromHeader(req, "!~PASSENGER_SPAWN_EXCEPTION_STATUS_CODE", 500);
 	SKC_ERROR(client, "Cannot checkout session because a spawning error occurred. " <<
 		"The identifier of the error is " << e->getId() << ". Please see earlier logs for " <<
 		"details about the error.");
-	endRequestWithErrorResponse(&client, &req, *e);
+	endRequestWithErrorResponse(&client, &req, *e, spawnExceptionStatusCode);
 }
 
 void
 Controller::writeOtherExceptionErrorResponse(Client *client, Request *req, const ExceptionPtr &e) {
 	TRACE_POINT();
+
+	// ATM "other" exceptions always return a spawn exception error message, so use the matching status code
+	int otherExceptionStatusCode = lookupCodeFromHeader(req, "!~PASSENGER_SPAWN_EXCEPTION_STATUS_CODE", 500);
+
 	string typeName;
 	const oxt::tracable_exception &eptr = *e;
 	#ifdef CXX_ABI_API_AVAILABLE
@@ -324,16 +335,16 @@ Controller::writeOtherExceptionErrorResponse(Client *client, Request *req, const
 		}
 		pos = appendData(pos, end, "</p>");
 
-		endRequestWithSimpleResponse(&client, &req, StaticString(buf, pos - buf), 500);
+		endRequestWithSimpleResponse(&client, &req, StaticString(buf, pos - buf), otherExceptionStatusCode);
 	} else {
 		endRequestWithSimpleResponse(&client, &req, "<h2>Internal server error</h2>"
-			"Application could not be started. Please try again later.", 500);
+			"Application could not be started. Please try again later.", otherExceptionStatusCode);
 	}
 }
 
 void
 Controller::endRequestWithErrorResponse(Client **c, Request **r,
-	const SpawningKit::SpawnException &e)
+	const SpawningKit::SpawnException &e, int statusCode)
 {
 	TRACE_POINT();
 	Client *client = *c;
@@ -359,7 +370,7 @@ Controller::endRequestWithErrorResponse(Client **c, Request **r,
 		}
 	}
 
-	endRequestWithSimpleResponse(c, r, psg_pstrdup(req->pool, data), 500);
+	endRequestWithSimpleResponse(c, r, psg_pstrdup(req->pool, data), statusCode);
 }
 
 bool

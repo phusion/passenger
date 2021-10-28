@@ -677,6 +677,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :default  => 503
   },
   {
+    :name     => 'passenger_spawn_exception_status_code',
+    :scope    => :location,
+    :type     => :integer,
+    :default  => 500
+  },
+  {
     :name     => 'passenger_buffer_upload',
     :type     => :flag,
     :scope    => :location,

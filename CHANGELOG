@@ -7,6 +7,7 @@ Release 6.0.12 (Not yet released)
  * [MacOS] Fixes autodetection of openssl lib on apple silicon. Contributed by Taketo Takashima. Closes GH-2389.
  * Reconnect to mongoid databases after fork, like we do for ActiveRecord. Contributed by Mohammad Aboelnour.
  * [Ubuntu] add missing apache name in instance registry dir detection.
+ * [Nginx] add new config option to choose the status code returned when application spawning fails. (passenger_spawn_exception_status_code).
 
 
 Release 6.0.11

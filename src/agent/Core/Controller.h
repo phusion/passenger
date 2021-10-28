@@ -207,6 +207,7 @@ private:
 	static void checkoutSessionLater(Request *req);
 	void reportSessionCheckoutError(Client *client, Request *req,
 		const ExceptionPtr &e);
+	int lookupCodeFromHeader(Request *req, const char* header, int statusCode);
 	void writeRequestQueueFullExceptionErrorResponse(Client *client,
 		Request *req, const boost::shared_ptr<RequestQueueFullException> &e);
 	void writeSpawnExceptionErrorResponse(Client *client, Request *req,
@@ -214,7 +215,7 @@ private:
 	void writeOtherExceptionErrorResponse(Client *client, Request *req,
 		const ExceptionPtr &e);
 	void endRequestWithErrorResponse(Client **c, Request **r,
-		const SpawningKit::SpawnException &e);
+		const SpawningKit::SpawnException &e, int statusCode);
 	bool friendlyErrorPagesEnabled(Request *req);
 
 
