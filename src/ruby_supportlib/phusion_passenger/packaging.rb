@@ -93,6 +93,7 @@ module PhusionPassenger
       '.settings/**/*',
       '.vscode/**/*',
       '.cproject',
+      'compile_commands.json',
       '.gitattributes',
       '.gitignore',
       '.gitmodules',
