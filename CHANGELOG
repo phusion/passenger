@@ -1,4 +1,9 @@
-Release 6.0.12 (Not yet released)
+Release 6.0.13 (Not yet released)
+-------------
+ * 
+
+
+Release 6.0.12
 -------------
  * [Debian] Fix compilation on 32 bit arm. Contributed by Antonio Terceiro.
  * [Debian] Add Bullseye Debian packages.
