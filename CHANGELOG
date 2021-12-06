@@ -1,6 +1,6 @@
 Release 6.0.13 (Not yet released)
 -------------
- * 
+ * Add WASM mime type, Closes GH-2398.
 
 
 Release 6.0.12
