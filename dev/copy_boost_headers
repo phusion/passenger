@@ -102,16 +102,31 @@ PROGRAM_SOURCE = %q{
   #include <boost/date_time/posix_time/posix_time.hpp>
   #include <boost/foreach.hpp>
   #include <boost/unordered_map.hpp>
-  #include <boost/cregex.hpp>
   #include <boost/regex.hpp>
   #include <boost/pool/object_pool.hpp>
   #include <boost/move/core.hpp>
   #include <boost/move/utility.hpp>
   #include <boost/atomic.hpp>
   #include <boost/typeof/typeof.hpp>
-  #include <boost/asio.hpp>
-  #include <boost/pointer_cast.hpp>
   #include <boost/circular_buffer.hpp>
+  #include <boost/config.hpp>
+  #include <boost/container/small_vector.hpp>
+  #include <boost/core/noncopyable.hpp>
+  #include <boost/cstdint.hpp>
+  #include <boost/current_function.hpp>
+  #include <boost/date_time/posix_time/posix_time_types.hpp>
+  #include <boost/move/move.hpp>
+  #include <boost/predef.h>
+  #include <boost/ref.hpp>
+  #include <boost/scoped_array.hpp>
+  #include <boost/scoped_ptr.hpp>
+  #include <boost/static_assert.hpp>
+  #include <boost/thread/mutex.hpp>
+  #include <boost/thread/tss.hpp>
+// Included despite not used in Passenger
+  #include <boost/cregex.hpp>
+  #include <boost/pointer_cast.hpp>
+  #include <boost/asio.hpp>
 }
 
 require 'fileutils'
@@ -192,16 +207,16 @@ def copy_dependencies(cflags)
     compiler_output = `c++ test.cpp -c -I. -I.. #{cflags} 2>&1`
     File.unlink('test.o') if File.exist?('test.o')
     missing_headers = compiler_output.
-      split("\n").
-      grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
-      map do |line|
-        if line =~ /error: (.*): No such file/
-          file = $1
-        elsif line =~ /fatal error: '(.*)' file not found/
-          file = $1
-        else
-          abort "Bug"
-        end
+                        split("\n").
+                        grep(/(error: .*: No such file|fatal error: '.*' file not found)/).
+                        map do |line|
+      if line =~ /error: (.*): No such file/
+        file = $1
+      elsif line =~ /fatal error: '(.*)' file not found/
+        file = $1
+      else
+        abort "Bug"
+      end
       if file =~ /^boost\//
         file
       else
