@@ -1,6 +1,7 @@
 Release 6.0.13 (Not yet released)
 -------------
  * Add WASM mime type, Closes GH-2398.
+ * Fix compilation on FreeBSD 13. Closes GH-2402.
 
 
 Release 6.0.12
