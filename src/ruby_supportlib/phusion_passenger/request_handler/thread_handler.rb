@@ -68,10 +68,10 @@ module PhusionPassenger
         @protocol          = Utils.require_option(options, :protocol)
         @app_group_name    = Utils.require_option(options, :app_group_name)
         Utils.install_options_as_ivars(self, options,
-          :app,
-          :connect_password,
-          :keepalive_enabled
-        )
+                                       :app,
+                                       :connect_password,
+                                       :keepalive_enabled
+                                      )
 
         @stats_mutex   = Mutex.new
         @interruptable = false
@@ -118,7 +118,7 @@ module PhusionPassenger
         @stats_mutex.synchronize { @interruptable = true }
       end
 
-    private
+      private
       # Returns true if the socket has been hijacked, false otherwise.
       def accept_and_process_next_request(socket_wrapper, channel, buffer)
         @stats_mutex.synchronize do
@@ -176,8 +176,8 @@ module PhusionPassenger
         raise
       rescue => e
         if socket_wrapper && socket_wrapper.source_of_exception?(e)
-          # EPIPE is harmless, it just means that the client closed the connection.
-          if !e.is_a?(Errno::EPIPE)
+          # EPIPE and ECONNRESET are harmless, it just means that the client closed the connection.
+          if !should_swallow_app_error?(e, socket_wrapper)
             print_exception("Passenger RequestHandler's client socket", e)
           end
         else
@@ -218,14 +218,14 @@ module PhusionPassenger
         headers = Utils::NativeSupportUtils.split_by_null_into_hash(headers_data)
         if @connect_password && headers[PASSENGER_CONNECT_PASSWORD] != @connect_password
           warn "*** Passenger RequestHandler warning: " <<
-            "someone tried to connect with an invalid connect password."
+               "someone tried to connect with an invalid connect password."
           return
         else
           return headers
         end
       rescue SecurityError => e
         warn("*** Passenger RequestHandler warning: " <<
-          "HTTP header size exceeded maximum.")
+             "HTTP header size exceeded maximum.")
         return
       end
 
@@ -241,7 +241,7 @@ module PhusionPassenger
         end
         if data.size >= MAX_HEADER_SIZE
           warn("*** Passenger RequestHandler warning: " <<
-            "HTTP header size exceeded maximum.")
+               "HTTP header size exceeded maximum.")
           return
         end
 
@@ -255,7 +255,7 @@ module PhusionPassenger
             protocol       = $3
             if request_method.nil?
               warn("*** Passenger RequestHandler warning: " <<
-                "Invalid HTTP request.")
+                   "Invalid HTTP request.")
               return
             end
             path_info, query_string    = request_uri.split("?", 2)
@@ -286,7 +286,7 @@ module PhusionPassenger
 
         if @connect_password && headers["HTTP_X_PASSENGER_CONNECT_PASSWORD"] != @connect_password
           warn "*** Passenger RequestHandler warning: " <<
-            "someone tried to connect with an invalid connect password."
+               "someone tried to connect with an invalid connect password."
           return
         else
           return headers
@@ -304,16 +304,16 @@ module PhusionPassenger
         connection.write("oobw done")
       end
 
-    # def process_request(env, connection, socket_wrapper, full_http_response)
-    #   raise NotImplementedError, "Override with your own implementation!"
-    # end
+      # def process_request(env, connection, socket_wrapper, full_http_response)
+      #   raise NotImplementedError, "Override with your own implementation!"
+      # end
 
       def prepare_request(connection, headers)
         transfer_encoding = headers[HTTP_TRANSFER_ENCODING]
         content_length = headers[CONTENT_LENGTH]
         @can_keepalive = @keepalive_enabled &&
-          !transfer_encoding &&
-          !content_length
+                         !transfer_encoding &&
+                         !content_length
         @keepalive_performed = false
 
         if !transfer_encoding && !content_length
@@ -342,7 +342,7 @@ module PhusionPassenger
       end
 
       def should_swallow_app_error?(e, socket_wrapper)
-        return socket_wrapper && socket_wrapper.source_of_exception?(e) && e.is_a?(Errno::EPIPE)
+        return socket_wrapper && socket_wrapper.source_of_exception?(e) && [Errno::EPIPE, Errno::ECONNRESET].any?{|er| e.is_a?(er)}
       end
     end
 
