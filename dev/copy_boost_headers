@@ -204,7 +204,7 @@ end
 def copy_dependencies(cflags)
   done = false
   while !done
-    compiler_output = `c++ test.cpp -c -I. -I.. #{cflags} 2>&1`
+    compiler_output = `c++ test.cpp -c -I. -I.. #{cflags.join(" ")} 2>&1`
     File.unlink('test.o') if File.exist?('test.o')
     missing_headers = compiler_output.
                         split("\n").
@@ -261,7 +261,7 @@ def start
       "-std=c++0x",
       "-std=gnu++0x",
       ""
-    ].each do |flags|
+    ].product(["-m32","-m64",""]).each do |flags|
       copy_dependencies(flags)
     end
   ensure
