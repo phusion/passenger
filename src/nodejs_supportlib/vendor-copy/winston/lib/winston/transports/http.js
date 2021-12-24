@@ -69,7 +69,9 @@ Http.prototype._request = function (options, callback) {
     res.resume();
   });
 
-  req.end(new Buffer(JSON.stringify(options), 'utf8'));
+  // Use Buffer.alloc and Buffer.from instead of new Buffer
+  // @see https://github.com/winstonjs/winston/pull/1281
+  req.end(Buffer.from(JSON.stringify(options), 'utf8'));
 };
 
 //
@@ -180,7 +182,7 @@ Http.prototype.query = function (options, callback) {
 //
 Http.prototype.stream = function (options) {
   options = options || {};
-  
+
   var self = this,
       stream = new Stream,
       req,

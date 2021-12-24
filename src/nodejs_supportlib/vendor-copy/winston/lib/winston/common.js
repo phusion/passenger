@@ -32,7 +32,10 @@ exports.setLevels = function (target, past, current, isDefault) {
   }
 
   target.levels = current || config.npm.levels;
-  if (target.padLevels) {
+  // Check if `padLevels` exists to suppress a warning about accessing
+  // a non-existing property on `exports`.
+  // @see https://github.com/winstonjs/winston/issues/1882
+  if (target.hasOwnProperty('padLevels') && target.padLevels) {
     target.levelLength = exports.longestElement(Object.keys(target.levels));
   }
 
@@ -80,17 +83,21 @@ exports.clone = function (obj) {
   //
   // We only need to clone reference types (Object)
   //
-  var copy = {};
+  //
 
   if (obj instanceof Error) {
     // With potential custom Error objects, this might not be exactly correct,
     // but probably close-enough for purposes of this lib.
-    copy = new Error(obj.message);
+    // always decycle objects before cloning
+    // @see https://github.com/winstonjs/winston/pull/977/files
+    var copy = { message: obj.message };
     Object.getOwnPropertyNames(obj).forEach(function (key) {
       copy[key] = obj[key];
     });
 
-    return copy;
+    // Decycle circular Error instances
+    // @see https://github.com/winstonjs/winston/pull/1307
+    return cycle.decycle(copy);
   }
   else if (!(obj instanceof Object)) {
     return obj;
@@ -99,18 +106,31 @@ exports.clone = function (obj) {
     return new Date(obj.getTime());
   }
 
+  return clone(cycle.decycle(obj));
+};
+function clone(obj) {
+  //
+  // We only need to clone reference types (Object)
+  //
+  // @see https://github.com/winstonjs/winston/pull/1042
+  var copy = Array.isArray(obj) ? [] : {};
+
   for (var i in obj) {
-    if (Array.isArray(obj[i])) {
-      copy[i] = obj[i].slice(0);
-    }
-    else if (obj[i] instanceof Buffer) {
+    if (obj.hasOwnProperty(i)) {
+      // fix: clone() cloning prototype's custom methods for 2.x
+      // @see https://github.com/winstonjs/winston/pull/1086
+      if (Array.isArray(obj[i])) {
         copy[i] = obj[i].slice(0);
-    }
-    else if (typeof obj[i] != 'function') {
-      copy[i] = obj[i] instanceof Object ? exports.clone(obj[i]) : obj[i];
-    }
-    else if (typeof obj[i] === 'function') {
-      copy[i] = obj[i];
+      }
+      else if (obj[i] instanceof Buffer) {
+        copy[i] = obj[i].slice(0);
+      }
+      else if (typeof obj[i] != 'function') {
+        copy[i] = obj[i] instanceof Object ? exports.clone(obj[i]) : obj[i];
+      }
+      else if (typeof obj[i] === 'function') {
+        copy[i] = obj[i];
+      }
     }
   }
 
@@ -139,8 +159,10 @@ exports.log = function (options) {
         : exports.timestamp,
       timestamp   = options.timestamp ? timestampFn() : null,
       showLevel   = options.showLevel === undefined ? true : options.showLevel,
-      meta        = options.meta !== null && options.meta !== undefined && !(options.meta instanceof Error)
-        ? exports.clone(cycle.decycle(options.meta))
+      // @see https://github.com/winstonjs/winston/pull/1307
+      // @see https://github.com/winstonjs/winston/pull/977
+      meta        = options.meta !== null && options.meta !== undefined
+        ? exports.clone(options.meta)
         : options.meta || null,
       output;
 
@@ -214,6 +236,21 @@ exports.log = function (options) {
   // Remark: this should really be a call to `util.format`.
   //
   if (typeof options.formatter == 'function') {
+    // Fix 'Maximum call stack size exceeded' error with custom formatter
+    // @see https://github.com/winstonjs/winston/issues/862
+    // @see https://github.com/winstonjs/winston/pull/868
+    // @see https://github.com/winstonjs/winston/pull/1042 [this is the fix]
+    options.meta = meta || options.meta;
+
+    // Don't swallow Error message/stack when using formatter
+    // @see https://github.com/winstonjs/winston/issues/1178
+
+    // @see https://github.com/winstonjs/winston/pull/1188
+    if (options.meta instanceof Error) {
+      // Force converting the Error to an plain object now so it
+      // will not be messed up by decycle() when cloning options
+      options.meta = exports.clone(options.meta);
+    }
     return String(options.formatter(exports.clone(options)));
   }
 
@@ -232,9 +269,7 @@ exports.log = function (options) {
     : options.message;
 
   if (meta !== null && meta !== undefined) {
-    if (meta && meta instanceof Error && meta.stack) {
-      meta = meta.stack;
-    }
+
 
     if (typeof meta !== 'object') {
       output += ' ' + meta;
@@ -246,7 +281,8 @@ exports.log = function (options) {
         output += ' ' + '\n' + util.inspect(meta, false, options.depth || null, options.colorize);
       } else if (
         options.humanReadableUnhandledException
-          && Object.keys(meta).length === 5
+          // @see https://github.com/winstonjs/winston/pull/1066
+          && Object.keys(meta).length >= 5
           && meta.hasOwnProperty('date')
           && meta.hasOwnProperty('process')
           && meta.hasOwnProperty('os')
@@ -260,7 +296,11 @@ exports.log = function (options) {
         delete meta.stack;
         delete meta.trace;
         output += ' ' + exports.serialize(meta);
-        output += '\n' + stack.join('\n');
+        // Only output the stack if there is one
+        // @see https://github.com/winstonjs/winston/pull/756
+        if (stack) {
+          output += '\n' + stack.join('\n');
+        }
       } else {
         output += ' ' + exports.serialize(meta);
       }
@@ -308,6 +348,15 @@ exports.timestamp = function () {
 // logging to non-JSON inputs.
 //
 exports.serialize = function (obj, key) {
+  // add support for es6 Symbol type.
+  // @see https://github.com/winstonjs/winston/issues/805
+  // symbols cannot be directly casted to strings
+  if (typeof key === 'symbol') {
+    key = key.toString()
+  }
+  if (typeof obj === 'symbol') {
+    obj = obj.toString()
+  }
   if (obj === null) {
     obj = 'null';
   }
@@ -365,7 +414,9 @@ exports.serialize = function (obj, key) {
 // `tail -f` a file. Options must include file.
 //
 exports.tailFile = function(options, callback) {
-  var buffer = new Buffer(64 * 1024)
+  //Use Buffer.alloc and Buffer.from instead of new Buffer
+  // @see https://github.com/winstonjs/winston/pull/1281
+  var buffer = Buffer(64 * 1024)
     , decode = new StringDecoder('utf8')
     , stream = new Stream
     , buff = ''
@@ -396,7 +447,9 @@ exports.tailFile = function(options, callback) {
 
     (function read() {
       if (stream.destroyed) {
-        fs.close(fd);
+        // Always pass a function to fs.close
+        //@see https://github.com/winstonjs/winston/pull/1227
+        fs.close(fd, nop);
         return;
       }
 
@@ -481,3 +534,6 @@ exports.stringArrayToSet = function (strArray, errMsg) {
     return set;
   }, Object.create(null));
 };
+
+// @see https://github.com/winstonjs/winston/pull/1227
+function nop () {}
