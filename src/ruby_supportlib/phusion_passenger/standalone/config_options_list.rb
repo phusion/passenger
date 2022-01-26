@@ -293,12 +293,18 @@ module PhusionPassenger
         :name      => :load_shell_envvars,
         :type      => :boolean,
         # The Standalone mode is primarily used for serving a single app (except
-        # when in mass deployment mode), so load_shell_envvars id disabled by
+        # when in mass deployment mode), so load_shell_envvars is disabled by
         # default. However, it's enabled by default in the Core, so we need to
         # explicitly set it to disabled here.
         :default   => false,
         :desc      => "Load shell startup files before loading\n" \
                       'application'
+      },
+      {
+        :name      => :preload_bundler,
+        :type      => :boolean,
+        :default   => false,
+        :desc      => "Tell Ruby to load the bundler gem before loading the application"
       },
       {
         :name      => :app_file_descriptor_ulimit,

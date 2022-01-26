@@ -202,6 +202,7 @@ Controller::fillPoolOptionsFromConfigCaches(Options &options,
 	options.spawnMethod = requestConfig->defaultSpawnMethod;
 	options.bindAddress = requestConfig->defaultBindAddress;
 	options.loadShellEnvvars = requestConfig->defaultLoadShellEnvvars;
+	options.preloadBundler = requestConfig->defaultPreloadBundler;
 	options.statThrottleRate = mainConfig.statThrottleRate;
 	options.maxRequests = requestConfig->defaultMaxRequests;
 	options.stickySessionsCookieAttributes = requestConfig->defaultStickySessionsCookieAttributes;
@@ -378,6 +379,7 @@ Controller::createNewPoolOptions(Client *client, Request *req,
 	fillPoolOption(req, options.restartDir, "!~PASSENGER_RESTART_DIR");
 	fillPoolOption(req, options.startupFile, "!~PASSENGER_STARTUP_FILE");
 	fillPoolOption(req, options.loadShellEnvvars, "!~PASSENGER_LOAD_SHELL_ENVVARS");
+	fillPoolOption(req, options.preloadBundler, "!~PASSENGER_PRELOAD_BUNDLER");
 	fillPoolOption(req, options.fileDescriptorUlimit, "!~PASSENGER_APP_FILE_DESCRIPTOR_ULIMIT");
 	fillPoolOption(req, options.raiseInternalError, "!~PASSENGER_RAISE_INTERNAL_ERROR");
 	fillPoolOption(req, options.lveMinUid, "!~PASSENGER_LVE_MIN_UID");

@@ -114,6 +114,7 @@ protected:
 		config->logLevel = options.logLevel;
 		config->wrapperSuppliedByThirdParty = false;
 		config->findFreePort = false;
+		config->preloadBundler = options.preloadBundler;
 		config->loadShellEnvvars = options.loadShellEnvvars;
 		config->startupFile = options.getStartupFile(*context->wrapperRegistry);
 		config->appType = options.appType;

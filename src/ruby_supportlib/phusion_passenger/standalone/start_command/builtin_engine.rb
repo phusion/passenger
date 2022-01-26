@@ -159,6 +159,7 @@ module PhusionPassenger
           end
           add_param(command, :force_max_concurrent_requests_per_process, "--force-max-concurrent-requests-per-process")
           add_flag_param(command, :load_shell_envvars, "--load-shell-envvars")
+          add_flag_param(command, :preload_bundler, "--preload-bundler")
           add_param(command, :max_pool_size, "--max-pool-size")
           add_param(command, :min_instances, "--min-instances")
           add_param(command, :pool_idle_time, "--pool-idle-time")

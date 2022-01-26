@@ -489,6 +489,12 @@ NGINX_CONFIGURATION_OPTIONS = [
     :default  => true
   },
   {
+    :name     => 'passenger_preload_bundler',
+    :scope    => :application,
+    :type     => :flag,
+    :default  => false
+  },
+  {
     :name     => 'passenger_max_request_queue_size',
     :scope    => :application,
     :type     => :uinteger,

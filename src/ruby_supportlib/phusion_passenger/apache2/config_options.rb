@@ -438,6 +438,12 @@ APACHE2_CONFIGURATION_OPTIONS = [
     :desc      => 'Whether to load environment variables from the shell before running the application.'
   },
   {
+    :name      => 'PassengerPreloadBundler',
+    :type      => :flag,
+    :default   => false,
+    :desc      => 'Whether to tell Ruby to load the bundler gem before running the application.'
+  },
+  {
     :name      => 'PassengerSpawnMethod',
     :type      => :string,
     :dynamic_default => "'smart' for Ruby apps, 'direct' for all other apps",

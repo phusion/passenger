@@ -258,6 +258,7 @@ Passenger::SpawningKit::Config::validate(vector<StaticString> &errors) const {
 	 * startsUsingWrapper
 	 * wrapperSuppliedByThirdParty
 	 * findFreePort
+	 * preloadBundler
 	 * loadShellEnvvars
 	 * debugWorkDir
 	 * processTitle
@@ -286,6 +287,9 @@ Passenger::SpawningKit::Config::getConfidentialFieldsToPassToApp() const {
 	}
 	if (!config.genericApp && config.startsUsingWrapper) {
 		doc["wrapper_supplied_by_third_party"] = wrapperSuppliedByThirdParty;
+	}
+	if (config.appType == "ruby") {
+		doc["preload_bundler"] = preloadBundler;
 	}
 	doc["load_shell_envvars"] = loadShellEnvvars;
 	doc["start_command"] = startCommand.toString();
@@ -340,6 +344,9 @@ Passenger::SpawningKit::Config::getNonConfidentialFieldsToPassToApp() const {
 	}
 	if (!config.genericApp && config.startsUsingWrapper) {
 		doc["wrapper_supplied_by_third_party"] = wrapperSuppliedByThirdParty;
+	}
+	if (config.appType == "ruby") {
+		doc["preload_bundler"] = preloadBundler;
 	}
 	doc["load_shell_envvars"] = loadShellEnvvars;
 	doc["start_command"] = startCommand.toString();

@@ -157,6 +157,18 @@ public:
 	bool findFreePort: 1;
 
 	/**
+	 * Whether Passenger should tell Ruby to preload bundler,
+	 * this is to help deal with multiple versions of gems
+	 * being installed, which is due to updates of default gems.
+	 *
+	 * @hinted_parseable
+	 * @pass_during_handshake
+	 * @only_meaningful_if config.appType == "ruby"
+	 * @non_confidential
+	 */
+	bool preloadBundler: 1;
+
+	/**
 	 * Whether to load environment variables set in shell startup
 	 * files (e.g. ~/.bashrc) during spawning.
 	 *
@@ -371,6 +383,7 @@ public:
 		  startsUsingWrapper(false),
 		  wrapperSuppliedByThirdParty(false),
 		  findFreePort(false),
+		  preloadBundler(false),
 		  loadShellEnvvars(false),
 		  debugWorkDir(false),
 		  appEnv(P_STATIC_STRING(DEFAULT_APP_ENV)),

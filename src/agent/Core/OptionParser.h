@@ -115,6 +115,7 @@ coreUsage() {
 	printf("      --spawn-method NAME   Spawn method to use. Can either be 'smart' or\n");
 	printf("                            'direct'. Default: %s\n", DEFAULT_SPAWN_METHOD);
 	printf("      --load-shell-envvars  Load shell startup files before loading application\n");
+	printf("      --preload-bundler     Tell Ruby to load bundler gem before loading application\n");
 	printf("      --concurrency-model   The concurrency model to use for the app, either\n");
 	printf("                            'process' or 'thread' (Enterprise only).\n");
 	printf("                            Default: " DEFAULT_CONCURRENCY_MODEL "\n");
@@ -331,6 +332,9 @@ parseCoreOption(int argc, const char *argv[], int &i, Json::Value &updates) {
 		i += 2;
 	} else if (p.isFlag(argv[i], '\0', "--load-shell-envvars")) {
 		updates["default_load_shell_envvars"] = true;
+		i++;
+	} else if (p.isFlag(argv[i], '\0', "--preload-bundler")) {
+		updates["default_preload_bundler"] = true;
 		i++;
 	} else if (p.isFlag(argv[i], '\0', "--multi-app")) {
 		updates["multi_app"] = true;

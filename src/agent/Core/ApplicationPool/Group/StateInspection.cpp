@@ -255,6 +255,7 @@ Group::inspectConfigInAdminPanelFormat(Json::Value &result) const {
 	result["user_switching"] = VAL(options.userSwitching); // TODO: default value depends on integration mode and euid
 	result["file_descriptor_ulimit"] = VAL(options.fileDescriptorUlimit, 0u);
 	result["load_shell_envvars"] = VAL(options.loadShellEnvvars); // TODO: default value depends on integration mode
+	result["preload_bundler"] = VAL(options.preloadBundler);
 	result["max_request_queue_size"] = VAL(options.maxRequestQueueSize,
 		(Json::UInt) DEFAULT_MAX_REQUEST_QUEUE_SIZE);
 	result["max_requests"] = VAL((Json::UInt) options.maxRequests, 0u);

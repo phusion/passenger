@@ -312,6 +312,10 @@ public:
 	 */
 	bool loadShellEnvvars;
 
+	/** Whether to tell Ruby to load bundler during spawning.
+	 */
+	bool preloadBundler;
+
 	bool userSwitching;
 
 	/**
@@ -460,6 +464,7 @@ public:
 		  forceMaxConcurrentRequestsPerProcess(-1),
 		  debugger(false),
 		  loadShellEnvvars(true),
+		  preloadBundler(false),
 		  userSwitching(true),
 		  raiseInternalError(false),
 

@@ -249,6 +249,10 @@ private:
 		args["integration_mode"] = context->integrationMode;
 		args["gupid"] = session.result.gupid;
 		args["UNIX_PATH_MAX"] = (Json::UInt64) sizeof(addr.sun_path) - 1;
+
+		if (config->preloadBundler) {
+			args["preload_bundler"] = config->preloadBundler;
+		}
 		if (config->genericApp || config->findFreePort) {
 			args["expected_start_port"] = session.expectedStartPort;
 		}

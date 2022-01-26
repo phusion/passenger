@@ -1333,6 +1333,7 @@ public:
 		config["server_software"] = webServerDesc;
 		config["multi_app"] = true;
 		config["default_load_shell_envvars"] = true;
+		config["default_preload_bundler"] = false;
 		config["config_manifest"] = serverConfig.manifest;
 		config["file_descriptor_log_target"] = nonEmptyString(serverConfig.fileDescriptorLogFile);
 		config["controller_socket_backlog"] = serverConfig.socketBacklog;

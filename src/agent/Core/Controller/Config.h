@@ -165,6 +165,7 @@ private:
 		add("default_spawn_method", STRING_TYPE, OPTIONAL, DEFAULT_SPAWN_METHOD);
 		add("default_bind_address", STRING_TYPE, OPTIONAL, DEFAULT_BIND_ADDRESS);
 		add("default_load_shell_envvars", BOOL_TYPE, OPTIONAL, false);
+		add("default_preload_bundler", BOOL_TYPE, OPTIONAL, false);
 		add("default_meteor_app_settings", STRING_TYPE, OPTIONAL);
 		add("default_app_file_descriptor_ulimit", UINT_TYPE, OPTIONAL);
 		add("default_min_instances", UINT_TYPE, OPTIONAL, 1);
@@ -440,6 +441,7 @@ public:
 	bool showVersionInHeader: 1;
 	bool defaultAbortWebsocketsOnProcessShutdown;
 	bool defaultLoadShellEnvvars;
+	bool defaultPreloadBundler;
 
 	/*******************/
 	/*******************/
@@ -473,7 +475,8 @@ public:
 		  defaultForceMaxConcurrentRequestsPerProcess(config["default_force_max_concurrent_requests_per_process"].asInt()),
 		  showVersionInHeader(config["show_version_in_header"].asBool()),
 		  defaultAbortWebsocketsOnProcessShutdown(config["default_abort_websockets_on_process_shutdown"].asBool()),
-		  defaultLoadShellEnvvars(config["default_load_shell_envvars"].asBool())
+		  defaultLoadShellEnvvars(config["default_load_shell_envvars"].asBool()),
+		  defaultPreloadBundler(config["default_preload_bundler"].asBool())
 
 		  /*******************/
 		{ }

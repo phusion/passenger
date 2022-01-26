@@ -730,6 +730,24 @@ cmd_passenger_pre_start(cmd_parms *cmd, void *pcfg, const char *arg) {
 }
 
 static const char *
+cmd_passenger_preload_bundler(cmd_parms *cmd, void *pcfg, const char *arg) {
+	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
+	if (err != NULL) {
+		return err;
+	}
+
+	DirConfig *config = (DirConfig *) pcfg;
+	config->mPreloadBundlerSourceFile = cmd->directive->filename;
+	config->mPreloadBundlerSourceLine = cmd->directive->line_num;
+	config->mPreloadBundlerExplicitlySet = true;
+	config->mPreloadBundler =
+		(arg != NULL) ?
+		ENABLED :
+		DISABLED;
+	return NULL;
+}
+
+static const char *
 cmd_passenger_python(cmd_parms *cmd, void *pcfg, const char *arg) {
 	const char *err = ap_check_cmd_context(cmd, NOT_IN_FILES);
 	if (err != NULL) {

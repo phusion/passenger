@@ -56,6 +56,7 @@ typedef struct {
     ngx_uint_t max_requests;
     ngx_uint_t min_instances;
     ngx_array_t *monitor_log_file;
+    ngx_flag_t preload_bundler;
     ngx_int_t request_queue_overflow_status_code;
     ngx_int_t spawn_exception_status_code;
     ngx_uint_t start_timeout;
@@ -111,6 +112,7 @@ typedef struct {
     ngx_str_t min_instances_source_file;
     ngx_str_t monitor_log_file_source_file;
     ngx_str_t nodejs_source_file;
+    ngx_str_t preload_bundler_source_file;
     ngx_str_t python_source_file;
     ngx_str_t request_queue_overflow_status_code_source_file;
     ngx_str_t restart_dir_source_file;
@@ -165,6 +167,7 @@ typedef struct {
     ngx_uint_t min_instances_source_line;
     ngx_uint_t monitor_log_file_source_line;
     ngx_uint_t nodejs_source_line;
+    ngx_uint_t preload_bundler_source_line;
     ngx_uint_t python_source_line;
     ngx_uint_t request_queue_overflow_status_code_source_line;
     ngx_uint_t restart_dir_source_line;
@@ -219,6 +222,7 @@ typedef struct {
     ngx_int_t min_instances_explicitly_set;
     ngx_int_t monitor_log_file_explicitly_set;
     ngx_int_t nodejs_explicitly_set;
+    ngx_int_t preload_bundler_explicitly_set;
     ngx_int_t python_explicitly_set;
     ngx_int_t request_queue_overflow_status_code_explicitly_set;
     ngx_int_t restart_dir_explicitly_set;

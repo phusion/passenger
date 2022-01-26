@@ -702,6 +702,10 @@ setDefaultEnvvars(const Json::Value &args) {
 		setenv("PORT", toString(args["expected_start_port"].asInt()).c_str(), 1);
 	}
 
+	if (args.isMember("preload_bundler") && args["preload_bundler"].asBool()) {
+		setenv("RUBYOPT", "-r bundler/setup", 1);
+	}
+
 	if (args["base_uri"].asString() != "/") {
 		setenv("RAILS_RELATIVE_URL_ROOT", args["base_uri"].asCString(), 1);
 		setenv("RACK_BASE_URI", args["base_uri"].asCString(), 1);
