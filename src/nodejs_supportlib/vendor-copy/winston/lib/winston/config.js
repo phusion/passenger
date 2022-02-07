@@ -8,6 +8,9 @@
 
 var colors = require('colors/safe');
 
+// Fix colors not appearing in non-tty environments
+colors.enabled = true;
+
 var config = exports,
     allColors = exports.allColors = {};
 
@@ -23,15 +26,18 @@ config.colorize = function (level, message) {
     for (var i = 0, l = allColors[level].length; i < l; ++i) {
       colorized = colors[allColors[level][i]](colorized);
     }
-  } else if (allColors[level].match(/\s/)) {
+  }
+  else if (allColors[level].match(/\s/)) {
     var colorArr = allColors[level].split(/\s+/);
     for (var i = 0; i < colorArr.length; ++i) {
       colorized = colors[colorArr[i]](colorized);
     }
     allColors[level] = colorArr;
-  } else {
+  }
+  else {
     colorized = colors[allColors[level]](colorized);
   }
+
   return colorized;
 };
 

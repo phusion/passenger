@@ -159,8 +159,11 @@ File.prototype.log = function (level, msg, meta, callback) {
     depth:       this.depth,
     formatter:   this.formatter,
     humanReadableUnhandledException: this.humanReadableUnhandledException
-  }) + this.eol;
+  });
 
+  if (typeof output === 'string') {
+    output += this.eol;
+  }
 
   if (!this.filename) {
     //
@@ -284,7 +287,8 @@ File.prototype.query = function (options, callback) {
   }
 
   function push(log) {
-    if (options.rows && results.length >= options.rows) {
+    if (options.rows && results.length >= options.rows
+        && options.order != 'desc') {
       if (stream.readable) {
         stream.destroy();
       }
@@ -299,6 +303,11 @@ File.prototype.query = function (options, callback) {
       log = obj;
     }
 
+    if (options.order === 'desc') {
+      if (results.length >= options.rows) {
+        results.shift();
+      }
+    }
     results.push(log);
   }
 
@@ -309,7 +318,8 @@ File.prototype.query = function (options, callback) {
 
     var time = new Date(log.timestamp);
     if ((options.from && time < options.from)
-        || (options.until && time > options.until)) {
+        || (options.until && time > options.until)
+        || (options.level && options.level !== log.level)) {
       return;
     }
 
@@ -521,7 +531,7 @@ File.prototype._createStream = function () {
 
         inp.pipe(gzip).pipe(out);
 
-        fs.unlink(String(self._archive));
+        fs.unlink(String(self._archive), function () {});
         self._archive = '';
       }
     }
@@ -668,7 +678,7 @@ File.prototype._lazyDrain = function () {
     this._draining = true;
 
     this._stream.once('drain', function () {
-      this._draining = false;
+      self._draining = false;
       self.emit('logged');
     });
   }

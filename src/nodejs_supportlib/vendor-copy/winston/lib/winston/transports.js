@@ -6,29 +6,31 @@
  *
  */
 
-var fs = require('fs'),
-    path = require('path'),
-    common = require('./common');
-
-var transports = exports;
-
-//
-// Setup all transports as lazy-loaded getters.
-//
-fs.readdirSync(path.join(__dirname, 'transports')).forEach(function (file) {
-  var transport = file.replace('.js', ''),
-      name  = common.capitalize(transport);
-
-  if (transport === 'transport') {
-    return;
+Object.defineProperty(exports, 'Console', {
+  configurable: true,
+  enumerable: true,
+  get: function () {
+    return require('./transports/console').Console;
   }
-  else if (~transport.indexOf('-')) {
-    name = transport.split('-').map(function (part) {
-      return common.capitalize(part);
-    }).join('');
+});
+Object.defineProperty(exports, 'File', {
+  configurable: true,
+  enumerable: true,
+  get: function () {
+    return require('./transports/file').File;
   }
-
-  transports.__defineGetter__(name, function () {
-    return require('./transports/' + transport)[name];
-  });
+});
+Object.defineProperty(exports, 'Http', {
+  configurable: true,
+  enumerable: true,
+  get: function () {
+    return require('./transports/http').Http;
+  }
+});
+Object.defineProperty(exports, 'Memory', {
+  configurable: true,
+  enumerable: true,
+  get: function () {
+    return require('./transports/memory').Memory;
+  }
 });

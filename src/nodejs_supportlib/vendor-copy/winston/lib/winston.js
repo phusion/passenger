@@ -9,9 +9,9 @@
 var winston = exports;
 
 //
-// Expose version using `pkginfo`
+// use require method for webpack bundle
 //
-require('pkginfo')(module, 'version');
+winston.version = require('../package.json').version
 
 //
 // Include transports defined by default by winston
@@ -63,7 +63,7 @@ var defaultLogger = new winston.Logger({
 });
 
 //
-// Pass through the target methods onto `winston.
+// Pass through the target methods onto `winston`.
 //
 var methods = [
   'log',
@@ -78,9 +78,9 @@ var methods = [
   'cli',
   'handleExceptions',
   'unhandleExceptions',
-  'addRewriter',
-  'addFilter'
+  'configure'
 ];
+winston.padLevels = false;
 common.setLevels(winston, null, defaultLogger.levels);
 methods.forEach(function (method) {
   winston[method] = function () {

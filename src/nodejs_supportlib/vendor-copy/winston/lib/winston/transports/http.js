@@ -21,6 +21,9 @@ var Http = exports.Http = function (options) {
   this.port = options.port;
   this.auth = options.auth;
   this.path = options.path || '';
+  this.agent = options.agent;
+  this.headers = options.headers || {};
+  this.headers['content-type'] = 'application/json';
 
   if (!this.port) {
     this.port = this.ssl ? 443 : 80;
@@ -56,20 +59,27 @@ Http.prototype._request = function (options, callback) {
     port: this.port,
     path: '/' + path.replace(/^\//, ''),
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: this.headers,
+    agent: this.agent,
     auth: (auth) ? auth.username + ':' + auth.password : ''
   });
 
   req.on('error', callback);
   req.on('response', function (res) {
+    var body = '';
+
+    res.on('data', function (chunk) {
+      body += chunk;
+    });
+
     res.on('end', function () {
-      callback(null, res);
+      callback(null, res, body);
     });
 
     res.resume();
   });
 
-  req.end(new Buffer(JSON.stringify(options), 'utf8'));
+  req.end(new Buffer.from(JSON.stringify(options), 'utf8'));
 };
 
 //
@@ -180,7 +190,7 @@ Http.prototype.query = function (options, callback) {
 //
 Http.prototype.stream = function (options) {
   options = options || {};
-  
+
   var self = this,
       stream = new Stream,
       req,

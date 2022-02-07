@@ -58,7 +58,7 @@ Container.prototype.get = Container.prototype.add = function (id, options) {
     }
 
     Object.keys(options).forEach(function (key) {
-      if (key === 'transports') {
+      if (key === 'transports' || key === 'filters' || key === 'rewriters') {
         return;
       }
 
@@ -73,6 +73,7 @@ Container.prototype.get = Container.prototype.add = function (id, options) {
       options.transports.push(new (winston.transports[name])(namedOptions));
     });
 
+    options.id = id;
     this.loggers[id] = new winston.Logger(options);
 
     this.loggers[id].on('close', function () {
