@@ -32,7 +32,7 @@ exports.setLevels = function (target, past, current, isDefault) {
   }
 
   target.levels = current || config.npm.levels;
-  if (target.padLevels) {
+  if (target.hasOwnProperty('padLevels') && target.padLevels) {
     target.levelLength = exports.longestElement(Object.keys(target.levels));
   }
 
