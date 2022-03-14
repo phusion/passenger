@@ -54,7 +54,8 @@ module PhusionPassenger
         return [:debian]
       elsif File.exist?("/etc/redhat-release")
         redhat_release = read_file("/etc/redhat-release")
-        if redhat_release =~ /CentOS/
+        if redhat_release =~ /CentOS|AlmaLinux|Rocky Linux/
+          # For now treat all non-RHEL enterprise linux distros the same
           return [:centos, :redhat]
         elsif redhat_release =~ /Fedora/
           return [:fedora, :redhat]
