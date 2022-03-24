@@ -2,6 +2,36 @@ Release 6.0.13 (Not yet released)
 -------------
  * Add WASM mime type, Closes GH-2398.
  * Fix compilation on FreeBSD 13. Closes GH-2402.
+ * [Ruby] Fixes app process crash when ECONNRESET received.
+ * Fix automated fetching of pcre source for installer scripts.
+ * Bump preferred nginx 1.20.1 → 1.20.2.
+ * [Ruby] Add option to preload bundler. Closes GH-2409.
+
+   - Apache: PassengerPreloadBundler
+   - Nginx: passenger_preload_bundler
+   - Standalone: --preload_bundler
+
+ * [Node] Suppresses the winston circular dependency warning.
+ * [RPMs] EL8 RPMs are now built on Rocky linux, and should be compatible with Alma, Rocky, CentOS, and RHEL.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+   - ccache 4.4.2 → 4.6
+   - cmake 3.21.4 → 3.22.3
+   - curl 7.79.1 → 7.82.0
+   - git 2.33.1 → 2.35.1
+   - gnupg 2.3.3 → 2.3.4
+   - libgpg_error 1.42 → 1.44
+   - ntbtls 0.2.0 → 0.3.0
+   - openssl 1.1.1l → 1.1.1n
+   - rubygems 3.2.30 → 3.3.9
+   - zstd 1.5.0 → 1.5.2
+   - ruby
+     - dropped 2.4.10
+     - dropped 2.5.9
+     - 2.6.8 → 2.6.9
+     - 2.7.4 → 2.7.5
+     - 3.0.2 → 3.0.3
+     - added 3.1.1
 
 
 Release 6.0.12
