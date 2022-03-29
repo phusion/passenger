@@ -99,6 +99,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   default_meteor_app_settings                         string             -          -
  *   default_min_instances                               unsigned integer   -          default(1)
  *   default_nodejs                                      string             -          default("node")
+ *   default_preload_bundler                             boolean            -          default(false)
  *   default_python                                      string             -          default("python")
  *   default_ruby                                        string             -          default("ruby")
  *   default_server_name                                 string             required   -
@@ -115,7 +116,7 @@ parseControllerBenchmarkMode(const StaticString &mode) {
  *   multi_app                                           boolean            -          default(true),read_only
  *   request_freelist_limit                              unsigned integer   -          default(1024)
  *   response_buffer_high_watermark                      unsigned integer   -          default(134217728)
- *   server_software                                     string             -          default("Phusion_Passenger/6.0.13")
+ *   server_software                                     string             -          default("Phusion_Passenger/6.0.14")
  *   show_version_in_header                              boolean            -          default(true)
  *   start_reading_after_accept                          boolean            -          default(true)
  *   stat_throttle_rate                                  unsigned integer   -          default(10)

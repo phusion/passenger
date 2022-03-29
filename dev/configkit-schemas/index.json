@@ -223,6 +223,11 @@
          "has_default_value" : "static",
          "type" : "string"
       },
+      "default_preload_bundler" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "default_python" : {
          "default_value" : "python",
          "has_default_value" : "static",
@@ -303,7 +308,7 @@
          "type" : "unsigned integer"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/6.0.13",
+         "default_value" : "Phusion_Passenger/6.0.14",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -672,6 +677,11 @@
          "has_default_value" : "static",
          "type" : "string"
       },
+      "default_preload_bundler" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "default_python" : {
          "default_value" : "python",
          "has_default_value" : "static",
@@ -842,7 +852,7 @@
          "type" : "string"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/6.0.13",
+         "default_value" : "Phusion_Passenger/6.0.14",
          "has_default_value" : "static",
          "type" : "string"
       },
@@ -1539,6 +1549,11 @@
          "has_default_value" : "static",
          "type" : "string"
       },
+      "default_preload_bundler" : {
+         "default_value" : false,
+         "has_default_value" : "static",
+         "type" : "boolean"
+      },
       "default_python" : {
          "default_value" : "python",
          "has_default_value" : "static",
@@ -1713,7 +1728,7 @@
          "type" : "string"
       },
       "server_software" : {
-         "default_value" : "Phusion_Passenger/6.0.13",
+         "default_value" : "Phusion_Passenger/6.0.14",
          "has_default_value" : "static",
          "type" : "string"
       },
