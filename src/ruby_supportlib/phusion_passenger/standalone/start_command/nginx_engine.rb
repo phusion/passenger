@@ -75,7 +75,7 @@ module PhusionPassenger
           #
           # Connect to the engine's server and wait until it disconnects the socket
           # because of timeout. Keep doing this until we can no longer connect.
-          while true
+          loop do
             if @options[:socket_file]
               socket = UNIXSocket.new(@options[:socket_file])
             else
@@ -110,14 +110,14 @@ module PhusionPassenger
           command = "#{Shellwords.escape @nginx_binary}" \
             " -c #{Shellwords.escape path}" \
             " -p #{Shellwords.escape @working_dir}" \
-            " -t"
+            ' -t'
           output = `#{command} 2>&1`
           if $? && $?.exitstatus != 0
             output.gsub!(path, file)
             output = PlatformInfo.send(:reindent, output, 4)
 
             message = "*** ERROR: the Nginx configuration that #{PROGRAM_NAME}" \
-              " Standalone generated internally contains problems. The error " \
+              ' Standalone generated internally contains problems. The error ' \
               "message returned by the Nginx engine is:\n\n" \
               "#{output}\n\n"
             debug_log_file = Utils::TmpIO.new('passenger-standalone',
@@ -130,16 +130,16 @@ module PhusionPassenger
               debug_log_file.close
             end
             if @options[:nginx_config_template] && file == 'nginx.conf'
-              message << "This probably means that you have a problem in your " \
+              message << 'This probably means that you have a problem in your ' \
                 "Nginx configuration template. Please fix your template.\n\n" \
                 "Tip: to debug your template, re-run #{SHORT_PROGRAM_NAME} " \
-                "Standalone with the `--debug-nginx-config` option. This " \
-                "allows you to see how the final Nginx config file looks like."
+                'Standalone with the `--debug-nginx-config` option. This ' \
+                'allows you to see how the final Nginx config file looks like.'
             else
-              message << "This probably means that you have found a bug in " \
+              message << 'This probably means that you have found a bug in ' \
                 "#{PROGRAM_NAME} Standalone. Please report this bug to our " \
                 "Github issue tracker: https://github.com/phusion/passenger/issues\n\n" \
-                "In the bug report, please include this error message, as " \
+                'In the bug report, please include this error message, as ' \
                 "well as the contents of the file #{debug_log_file.path}"
             end
 
@@ -155,13 +155,13 @@ module PhusionPassenger
           end
           return {
             :identifier    => 'Nginx',
-            :start_command => "#{Shellwords.escape @nginx_binary} " +
-              "-c #{Shellwords.escape nginx_config_path} " +
+            :start_command => "#{Shellwords.escape @nginx_binary} " \
+              "-c #{Shellwords.escape nginx_config_path} " \
               "-p #{Shellwords.escape @working_dir}",
-            :stop_command => "#{Shellwords.escape @nginx_binary} " +
-              "-c #{Shellwords.escape nginx_config_path} " +
-              "-p #{Shellwords.escape @working_dir} " +
-              "-s quit",
+            :stop_command => "#{Shellwords.escape @nginx_binary} " \
+              "-c #{Shellwords.escape nginx_config_path} " \
+              "-p #{Shellwords.escape @working_dir} " \
+              '-s quit',
             :ping_command  => ping_spec,
             :pid_file      => @options[:pid_file],
             :log_file      => @options[:log_file],
@@ -180,7 +180,7 @@ module PhusionPassenger
           File.open(path, 'w') do |f|
             f.chmod(0644)
             erb = ERB.new(File.read(nginx_config_template_filename), nil,
-              "-", next_eoutvar)
+              '-', next_eoutvar)
             erb.filename = nginx_config_template_filename
 
             # The template requires some helper methods which are defined in start_command.rb.
@@ -279,7 +279,7 @@ module PhusionPassenger
 
         def include_passenger_internal_template(name, indent = 0, fix_existing_indenting = true, the_binding = get_binding)
           path = "#{PhusionPassenger.resources_dir}/templates/standalone/#{name}"
-          erb = ERB.new(File.read(path), nil, "-", next_eoutvar)
+          erb = ERB.new(File.read(path), nil, "-", eoutvar: next_eoutvar)
           erb.filename = path
           result = erb.result(the_binding)
 
