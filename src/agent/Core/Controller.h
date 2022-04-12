@@ -315,7 +315,7 @@ private:
 	void endRequestWithAppSocketReadError(Client **client, Request **req,
 		int e);
 	ServerKit::HeaderTable getHeadersWithContentType(Request *req);
-	const StaticString getFormattedMessage(Request *req, const StaticString &body);
+	const string getFormattedMessage(Request *req, const StaticString &body);
 	void endRequestWithSimpleResponse(Client **c, Request **r,
 		const StaticString &body, int code = 200);
 	void endRequestAsBadGateway(Client **client, Request **req);

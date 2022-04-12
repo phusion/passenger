@@ -128,7 +128,7 @@ Controller::getHeadersWithContentType(Request *req)
 	return headers;
 }
 
-const StaticString
+const string
 Controller::getFormattedMessage(Request *req, const StaticString &body)
 {
 	const LString *value = req->headers.lookup(P_STATIC_STRING("content-type"));
