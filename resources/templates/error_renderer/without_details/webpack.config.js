@@ -1,8 +1,7 @@
 const path = require('path');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
-
-const extractCSS = new ExtractTextPlugin('styles.css');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const UglifyJSPlugin = require('terser-webpack-plugin');
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 
 module.exports = {
   entry: ['./src/index.js'],
@@ -17,26 +16,24 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['env', 'react']
+            presets: ['@babel/preset-env', '@babel/preset-react']
           }
         }
       },
       {
         test: /\.css$/,
-        use: extractCSS.extract({
-          use: {
-            loader: 'css-loader',
-            options: {
-              minimize: true
-            }
-          },
-          fallback: 'style-loader'
-        })
+        use: [MiniCssExtractPlugin.loader, "css-loader"]
       },
     ]
   },
   plugins: [
-    extractCSS,
+    new MiniCssExtractPlugin({filename:'styles.css'}),
     new UglifyJSPlugin()
-  ]
+  ],
+  optimization: {
+    minimizer: [
+      `...`,
+      new CssMinimizerPlugin(),
+    ],
+  }
 };
