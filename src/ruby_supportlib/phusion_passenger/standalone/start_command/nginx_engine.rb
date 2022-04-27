@@ -279,7 +279,13 @@ module PhusionPassenger
 
         def include_passenger_internal_template(name, indent = 0, fix_existing_indenting = true, the_binding = get_binding)
           path = "#{PhusionPassenger.resources_dir}/templates/standalone/#{name}"
-          erb = ERB.new(File.read(path), nil, "-", eoutvar: next_eoutvar)
+
+          if RUBY_VERSION >= '2.6'
+            erb = ERB.new(File.read(path), trim_mode: "-", eoutvar: next_eoutvar)
+          else
+            erb = ERB.new(File.read(path), nil, "-", next_eoutvar)
+          end
+
           erb.filename = path
           result = erb.result(the_binding)
 
