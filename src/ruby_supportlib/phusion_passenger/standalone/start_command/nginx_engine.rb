@@ -179,8 +179,13 @@ module PhusionPassenger
         def write_nginx_config_file(path)
           File.open(path, 'w') do |f|
             f.chmod(0644)
-            erb = ERB.new(File.read(nginx_config_template_filename), nil,
-              '-', next_eoutvar)
+
+            if RUBY_VERSION >= '2.6'
+              erb = ERB.new(File.read(nginx_config_template_filename), trim_mode: "-", eoutvar: next_eoutvar)
+            else
+              erb = ERB.new(File.read(nginx_config_template_filename), nil, '-', next_eoutvar)
+            end
+
             erb.filename = nginx_config_template_filename
 
             # The template requires some helper methods which are defined in start_command.rb.

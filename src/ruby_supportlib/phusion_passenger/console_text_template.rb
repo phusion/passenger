@@ -40,8 +40,13 @@ module PhusionPassenger
         data = input[:text]
       end
       @colors = options[:colors] || AnsiColors.new
-      @template = ERB.new(@colors.ansi_colorize(data),
-        nil, '-', '@buffer')
+
+      if RUBY_VERSION >= '2.6'
+        @template = ERB.new(@colors.ansi_colorize(data), trim_mode: '-', eoutvar: '@buffer')
+      else
+        @template = ERB.new(@colors.ansi_colorize(data), nil, '-', '@buffer')
+      end
+
       @template.filename = filename if filename
       options.each_pair do |name, value|
         self[name] = value
