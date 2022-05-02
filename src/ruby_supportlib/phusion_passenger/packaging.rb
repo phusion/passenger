@@ -104,7 +104,7 @@ module PhusionPassenger
       'Jenkinsfile',
       'Passenger.sublime-project',
       'Vagrantfile',
-      'yarn.lock',
+      'package-lock.json',
       'build/support/vendor/*/.*',
       'build/support/vendor/*/spec/**/*',
       'dev/*/**/*',

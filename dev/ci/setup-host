@@ -41,7 +41,7 @@ header2 "Creating cache directories"
 run mkdir -p "$CACHE_DIR"
 run mkdir -p "$CACHE_DIR/bundle"
 run mkdir -p "$CACHE_DIR/ccache"
-run mkdir -p "$CACHE_DIR/yarn"
+run mkdir -p "$CACHE_DIR/npm"
 echo
 
 # Directory must exist so that Jenkinsfile can run archiveArtefacts().

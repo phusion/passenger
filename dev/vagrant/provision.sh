@@ -52,15 +52,12 @@ chmod 440 /etc/sudoers.d/passenger
 
 ### Install native dependencies
 
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
-echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
-
-curl -sL https://deb.nodesource.com/setup_6.x | bash -
+curl -sL https://deb.nodesource.com/setup_lts.x | bash -
 
 apt-get update
 apt-get install -y build-essential git bash-completion ccache wget \
 	libxml2-dev libxslt1-dev libsqlite3-dev libcurl4-openssl-dev libpcre3-dev \
-	ruby ruby-dev nodejs yarn \
+	ruby ruby-dev nodejs npm \
 	apache2-mpm-worker apache2-threaded-dev
 
 

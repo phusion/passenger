@@ -7,7 +7,8 @@ export DEVDEPS_DEFAULT=no
 export DEPS_TARGET="$CACHE_DIR/bundle"
 export USE_CCACHE=true
 export COMPILE_CONCURRENCY=${COMPILE_CONCURRENCY:-2}
-export YARN_ARGS="--cache-folder='$CACHE_DIR/yarn'"
+export NPM_ARGS="--cache '$CACHE_DIR/npm'"
+export npm_config_cache="$CACHE_DIR/npm"
 export CCACHE_DIR="$CACHE_DIR/ccache"
 export CCACHE_COMPRESS=1
 export CCACHE_COMPRESSLEVEL=3
