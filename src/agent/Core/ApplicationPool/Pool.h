@@ -157,11 +157,19 @@ public:
 	};
 
 	struct ToJsonOptions: public AuthenticationOptions {
+		bool secrets;
 		bool hasApplicationIdsFilter;
 		StringKeyTable<bool> applicationIdsFilter;
 
 		ToJsonOptions()
-			: hasApplicationIdsFilter(false),
+			: secrets(false),
+			  hasApplicationIdsFilter(false),
+			  applicationIdsFilter(0, 0)
+			{ }
+
+		ToJsonOptions(const VariantMap &options)
+			: secrets(options.getBool("secrets", false, false)),
+			  hasApplicationIdsFilter(false),
 			  applicationIdsFilter(0, 0)
 			{ }
 

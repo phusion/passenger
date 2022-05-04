@@ -161,6 +161,8 @@ private:
 			processServerConnectionOperation(client, req);
 		} else if (path == P_STATIC_STRING("/pool.xml")) {
 			processPoolStatusXml(client, req);
+		} else if (path == P_STATIC_STRING("/pool.json")) {
+			processPoolStatusJson(client, req);
 		} else if (path == P_STATIC_STRING("/pool.txt")) {
 			processPoolStatusTxt(client, req);
 		} else if (path == P_STATIC_STRING("/pool/restart_app_group.json")) {
@@ -301,6 +303,39 @@ private:
 			headers.insert(req->pool, "Content-Type", "text/xml");
 			writeSimpleResponse(client, 200, &headers,
 				psg_pstrdup(req->pool, appPool->toXml(options)));
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		} else {
+			HeaderTable headers;
+			headers.insert(req->pool, "Cache-Control", "no-cache, no-store, must-revalidate");
+			headers.insert(req->pool, "WWW-Authenticate", "Basic realm=\"api\"");
+			if (clientOnUnixDomainSocket(client) && appPool->getGroupCount() == 0) {
+				// Allow admin tools that connected through the Unix domain socket
+				// to know that this authorization error is caused by the fact
+				// that the pool is empty.
+				headers.insert(req->pool, "Pool-Empty", "true");
+			}
+			writeSimpleResponse(client, 401, &headers, "Unauthorized");
+			if (!req->ended()) {
+				endRequest(&client, &req);
+			}
+		}
+	}
+
+	void processPoolStatusJson(Client *client, Request *req) {
+		Authorization auth(authorize(this, client, req));
+		if (auth.canReadPool) {
+			ApplicationPool2::Pool::ToJsonOptions options(
+				parseQueryString(req->getQueryString()));
+			options.uid = auth.uid;
+			options.apiKey = auth.apiKey;
+
+			HeaderTable headers;
+			headers.insert(req->pool, "Content-Type", "application/json");
+
+			writeSimpleResponse(client, 200, &headers,
+				psg_pstrdup(req->pool, stringifyJson(appPool->inspectConfigInAdminPanelFormat(options))));
 			if (!req->ended()) {
 				endRequest(&client, &req);
 			}
