@@ -41,6 +41,7 @@ PhusionPassenger.require_passenger_lib 'config/utils'
 PhusionPassenger.require_passenger_lib 'utils/ansi_colors'
 require 'optparse'
 require 'socket'
+require 'json'
 require 'net/http'
 
 include PhusionPassenger::SharedConstants
@@ -114,7 +115,7 @@ end
 
 def show_status(instance, options)
   # if the noshow override is not specified, the default is to show the header, unless show=xml
-  if options[:noheader] != true && options[:show] != 'xml'
+  if options[:noheader] != true && !['xml','json'].include?(options[:show])
     print_header(STDOUT, instance)
   end
 
@@ -184,6 +185,30 @@ def show_status(instance, options)
       else
         puts response.body
         STDERR.puts "*** Tip: if you install the 'xmllint' command then the XML output will be indented."
+      end
+    elsif response.code.to_i == 401
+      if response["pool-empty"] == "true"
+        puts "#{PROGRAM_NAME} is currently not serving any applications."
+      else
+        print_permission_error_message
+        exit 2
+      end
+    else
+      STDERR.puts "*** An error occured."
+      STDERR.puts "#{response.code}: #{response.body}"
+      exit 2
+    end
+
+  when 'json'
+    request = Net::HTTP::Get.new("/pool.json?secrets=#{options[:verbose]}")
+    try_performing_ro_admin_basic_auth(request, instance)
+    response = instance.http_request("agents.s/core_api", request)
+    if response.code.to_i / 100 == 2
+      indented = JSON.pretty_generate(JSON.parse(response.body))
+      if indented
+        puts indented
+      else
+        puts response.body
       end
     elsif response.code.to_i == 401
       if response["pool-empty"] == "true"
@@ -284,12 +309,12 @@ def create_option_parser(options)
     opts.separator ""
 
     opts.separator "Options:"
-    opts.on("--show=pool|server|backtraces|xml|union_station", String,
+    opts.on("--show=pool|server|backtraces|xml|json|union_station", String,
             "Whether to show the pool's contents,#{nl}" <<
             "the currently running requests,#{nl}" <<
             "the backtraces of all threads or an XML#{nl}" <<
-            "description of the pool.") do |what|
-      if what !~ /\A(pool|server|requests|backtraces|xml|union_station)\Z/
+            "or JSON description of the pool.") do |what|
+      if what !~ /\A(pool|server|requests|backtraces|xml|json|union_station)\Z/
         STDERR.puts "Invalid argument for --show."
         exit 1
       else
