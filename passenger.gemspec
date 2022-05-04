@@ -24,7 +24,6 @@ Gem::Specification.new do |s|
   }
   s.add_dependency 'rake', '>= 0.8.1'
   s.add_dependency 'rack'
-  s.add_dependency 'rexml' unless Gem::Specification::find_all_by_name('rexml').any?
   s.files = Dir[*PhusionPassenger::Packaging::GLOB] -
     Dir[*PhusionPassenger::Packaging::EXCLUDE_GLOB]
   s.executables = PhusionPassenger::Packaging::USER_EXECUTABLES +
