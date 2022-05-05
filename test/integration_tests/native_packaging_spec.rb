@@ -368,8 +368,14 @@ describe "A natively packaged Phusion Passenger" do
           Dir.mkdir("tmp")
           sh("passenger start --no-install-runtime -p 4000 -d >/dev/null")
           begin
-            open("http://127.0.0.1:4000/") do |f|
-              f.read.should == "ok"
+            if RUBY_VERSION >= '2.5'
+              URI.open("http://127.0.0.1:4000/") do |f|
+                f.read.should == "ok"
+              end
+            else
+              open("http://127.0.0.1:4000/") do |f|
+                f.read.should == "ok"
+              end
             end
           ensure
             sh("passenger stop -p 4000")
