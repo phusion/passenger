@@ -218,7 +218,7 @@ module PhusionPassenger
       def perform_restart
         restart_method = @options[:rolling_restart] ? "rolling" : "blocking"
         @groups.each do |group|
-          group_name = group.elements["name"].text
+          group_name = group[:name]
           puts "Restarting #{group_name}"
           request = Net::HTTP::Post.new("/pool/restart_app_group.json")
           try_performing_full_admin_basic_auth(request, @instance)
