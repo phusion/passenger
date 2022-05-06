@@ -147,9 +147,11 @@ public:
 
 	~SafeLibev() {
 		destroy();
+		#ifdef USE_VENDORED_LIBEV
 		P_LOG_FILE_DESCRIPTOR_CLOSE(ev_loop_get_pipe(loop, 0));
 		P_LOG_FILE_DESCRIPTOR_CLOSE(ev_loop_get_pipe(loop, 1));
 		P_LOG_FILE_DESCRIPTOR_CLOSE(ev_backend_fd(loop));
+		#endif
 		ev_loop_destroy(loop);
 	}
 
