@@ -631,7 +631,11 @@ describe "Apache 2 module" do
       request.basic_auth("ro_admin", instance.read_only_admin_password)
       response = instance.http_request("agents.s/core_api", request)
       if response.code.to_i / 100 == 2
-        groups = JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value.dig(:app_root,0,:value)}}
+        if RUBY_VERSION >= '2.3'
+          groups = JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value.dig(:app_root,0,:value)}}
+        else
+          groups = JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value[:app_root][0][:value]}}
+        end
       else
         raise response.body
       end

@@ -254,7 +254,11 @@ module PhusionPassenger
         try_performing_ro_admin_basic_auth(request, @instance)
         response = @instance.http_request("agents.s/core_api", request)
         if response.code.to_i / 100 == 2
-          JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value.dig(:app_root,0,:value)}}
+          if RUBY_VERSION >= '2.3'
+            JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value.dig(:app_root,0,:value)}}
+          else
+            JSON.parse(response.body, symbolize_names: true).to_a.map{|(key,value)| {name: key.to_s, app_root: value[:app_root][0][:value]}}
+          end
         elsif response.code.to_i == 401
           if response["pool-empty"] == "true"
             []
