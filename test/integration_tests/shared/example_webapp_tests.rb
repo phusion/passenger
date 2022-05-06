@@ -252,7 +252,7 @@ shared_examples_for "an example web app" do
         socket.flush
       end
       log "Reading front page"
-      Timeout.timeout(10) do
+      Timeout.timeout(15) do
         get('/').should == "front page"
       end
       sockets.each_with_index do |socket, i|
