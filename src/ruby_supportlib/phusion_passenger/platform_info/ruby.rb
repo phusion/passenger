@@ -309,10 +309,10 @@ module PhusionPassenger
 
         # That failed too. Try extracting info from from $LOAD_PATH.
         matching_path = $LOAD_PATH.find_all do |item|
-          item.include?("rvm/gems/")
+          item.include?("rvm/gems/") || item.include?("rvm/rubies/")
         end
         if matching_path && !matching_path.empty?
-          subpath = matching_path.to_s.gsub(/^.*rvm\/gems\//, '')
+          subpath = matching_path.to_s.gsub(/^.*rvm\/(gems|rubies)\//, '')
           result = subpath.split('/').first
           return result if result
         end
