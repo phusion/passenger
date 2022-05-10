@@ -1,5 +1,10 @@
-Release 6.0.14 (Not yet released)
+Release 6.0.15 (Not yet released)
 -------------
+ * 
+
+Release 6.0.14
+-------------
+ * Removes use of rexml in passenger restart command, because it was removed from Ruby 3. Closes GH-2415.
  * Adds Ubuntu 22.04 "Jammy" packages, and removes Ubuntu 21.10 "Impish" packages.
  * Fixes a use after free regression introduced in 6.0.12.
  * Fixed a warning about ERB.new argument deprecation in Ruby 3.1. Closes GH-2417.
