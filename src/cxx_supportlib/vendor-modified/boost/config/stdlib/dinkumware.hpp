@@ -176,7 +176,9 @@
 #endif
 
 // C++17 features
-#if !defined(_CPPLIB_VER) || (_CPPLIB_VER < 650) || !defined(BOOST_MSVC) || (BOOST_MSVC < 1910) || !defined(_HAS_CXX17) || (_HAS_CXX17 == 0)
+#if !defined(_CPPLIB_VER) || (_CPPLIB_VER < 650) \
+ || ((!defined(BOOST_MSVC) || (BOOST_MSVC < 1910))) && (!defined(__clang__) || !defined(_MSC_VER) || (_MSC_VER < 1929))\
+ || !defined(_HAS_CXX17) || (_HAS_CXX17 == 0)
 #  define BOOST_NO_CXX17_STD_APPLY
 #  define BOOST_NO_CXX17_ITERATOR_TRAITS
 #  define BOOST_NO_CXX17_HDR_STRING_VIEW
@@ -192,25 +194,10 @@
 #  define BOOST_NO_CXX17_STD_INVOKE
 #endif
 
-// C++20 features
+// C++20 features which aren't configured in suffix.hpp correctly:
 #if !defined(_MSVC_STL_UPDATE) || (_MSVC_STL_UPDATE < 202008L) || !defined(_HAS_CXX20) || (_HAS_CXX20 == 0)
-#  define BOOST_NO_CXX20_HDR_BARRIER
-#  define BOOST_NO_CXX20_HDR_BIT
-#  define BOOST_NO_CXX20_HDR_LATCH
-#  define BOOST_NO_CXX20_HDR_SPAN
-#  define BOOST_NO_CXX20_HDR_COMPARE
-#  define BOOST_NO_CXX20_HDR_NUMBERS
 #  define BOOST_NO_CXX20_HDR_CONCEPTS
-#  define BOOST_NO_CXX20_HDR_COROUTINE
-#  define BOOST_NO_CXX20_HDR_SEMAPHORE
 #endif
-// C++20 features not yet implemented:
-#  define BOOST_NO_CXX20_HDR_FORMAT
-#  define BOOST_NO_CXX20_HDR_SOURCE_LOCATION
-#  define BOOST_NO_CXX20_HDR_STOP_TOKEN
-#  define BOOST_NO_CXX20_HDR_SYNCSTREAM
-// Incomplete:
-#  define BOOST_NO_CXX20_HDR_RANGES
 
 #if !(!defined(_CPPLIB_VER) || (_CPPLIB_VER < 650) || !defined(BOOST_MSVC) || (BOOST_MSVC < 1912) || !defined(_HAS_CXX17) || (_HAS_CXX17 == 0))
 // Deprecated std::iterator:
@@ -232,7 +219,15 @@
 // Bug specific to VC14, 
 // See https://connect.microsoft.com/VisualStudio/feedback/details/1348277/link-error-when-using-std-codecvt-utf8-utf16-char16-t
 // and discussion here: http://blogs.msdn.com/b/vcblog/archive/2014/11/12/visual-studio-2015-preview-now-available.aspx?PageIndex=2
-#if defined(_CPPLIB_VER) && (_CPPLIB_VER == 650)
+#if defined(_CPPLIB_VER) && (_CPPLIB_VER == 650) && (!defined(_MSVC_STL_VERSION) || (_MSVC_STL_VERSION < 142))
+#  define BOOST_NO_CXX11_HDR_CODECVT
+#endif
+
+#if (_MSVC_LANG > 201700) && !defined(BOOST_NO_CXX11_HDR_CODECVT)
+//
+// <codecvt> is deprected as of C++17, and by default MSVC emits hard errors
+// if you try to use it, so mark it as unavailable:
+//
 #  define BOOST_NO_CXX11_HDR_CODECVT
 #endif
 

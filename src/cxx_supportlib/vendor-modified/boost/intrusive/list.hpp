@@ -548,7 +548,7 @@ class list_impl
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Note</b>: Does not affect the validity of iterators and references.
-   BOOST_INTRUSIVE_FORCEINLINE void swap(list_impl& other) BOOST_NOEXCEPT
+   void swap(list_impl& other) BOOST_NOEXCEPT
    {
       node_algorithms::swap_nodes(this->get_root_node(), other.get_root_node());
       this->priv_size_traits().swap(other.priv_size_traits());
@@ -638,7 +638,8 @@ class list_impl
    iterator erase(const_iterator b, const_iterator e, size_type n) BOOST_NOEXCEPT
    {
       BOOST_INTRUSIVE_INVARIANT_ASSERT(node_algorithms::distance(b.pointed_node(), e.pointed_node()) == n);
-      BOOST_IF_CONSTEXPR(safemode_or_autounlink || constant_time_size){
+      (void)n;
+      BOOST_IF_CONSTEXPR(safemode_or_autounlink){
          return this->erase_and_dispose(b, e, detail::null_disposer());
       }
       else{
@@ -1117,7 +1118,7 @@ class list_impl
    //! <b>Note</b>: The relative order of elements that are not removed is unchanged,
    //!   and iterators to elements that are not removed remain valid.
    void remove(const_reference value) BOOST_NOEXCEPT
-   {  this->remove_if(value_equal<const_reference>(value));  }
+   {  this->remove_if(detail::equal_to_value<const_reference>(value));  }
 
    //! <b>Requires</b>: Disposer::operator()(pointer) shouldn't throw.
    //!
@@ -1132,7 +1133,7 @@ class list_impl
    //!   and iterators to elements that are not removed remain valid.
    template<class Disposer>
    void remove_and_dispose(const_reference value, Disposer disposer) BOOST_NOEXCEPT
-   {  this->remove_and_dispose_if(value_equal<const_reference>(value), disposer);  }
+   {  this->remove_and_dispose_if(detail::equal_to_value<const_reference>(value), disposer);  }
 
    //! <b>Effects</b>: Removes all the elements for which a specified
    //!   predicate is satisfied. No destructors are called.
@@ -1362,7 +1363,7 @@ class list_impl
          BOOST_INTRUSIVE_INVARIANT_ASSERT(this->priv_size_traits().get_size() == node_count);
    }
 
-   BOOST_INTRUSIVE_FORCEINLINE friend bool operator==(const list_impl &x, const list_impl &y)
+   friend bool operator==(const list_impl &x, const list_impl &y)
    {
       if(constant_time_size && x.size() != y.size()){
          return false;

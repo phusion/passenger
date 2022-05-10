@@ -191,7 +191,7 @@ class slist_impl
    const_node_ptr get_last_node() const
    {  return this->get_last_node(detail::bool_<cache_last>());  }
 
-   void set_last_node(const node_ptr &n)
+   void set_last_node(node_ptr n)
    {  return this->set_last_node(n, detail::bool_<cache_last>());  }
 
    static node_ptr get_last_node(detail::bool_<false>)
@@ -201,7 +201,7 @@ class slist_impl
       return node_ptr();
    }
 
-   static void set_last_node(const node_ptr &, detail::bool_<false>)
+   static void set_last_node(node_ptr , detail::bool_<false>)
    {
       //This function shall not be used if cache_last is not true
       BOOST_INTRUSIVE_INVARIANT_ASSERT(cache_last);
@@ -213,7 +213,7 @@ class slist_impl
    const_node_ptr get_last_node(detail::bool_<true>) const
    {  return const_node_ptr(data_.root_plus_size_.last_);  }
 
-   void set_last_node(const node_ptr & n, detail::bool_<true>)
+   void set_last_node(node_ptr n, detail::bool_<true>)
    {  data_.root_plus_size_.last_ = n;  }
 
    void set_default_constructed_state()
@@ -281,7 +281,7 @@ class slist_impl
    //!   list. Iterators of this list and all the references are not invalidated.
    //!
    //! <b>Warning</b>: Experimental function, don't use it!
-   slist_impl( const node_ptr & f, const node_ptr & before_l
+   slist_impl( node_ptr f, node_ptr before_l
              , size_type n, const value_traits &v_traits = value_traits())
       :  data_(v_traits)
    {
@@ -960,6 +960,7 @@ class slist_impl
    iterator erase_after(const_iterator before_f, const_iterator l, size_type n) BOOST_NOEXCEPT
    {
       BOOST_INTRUSIVE_INVARIANT_ASSERT(node_algorithms::distance((++const_iterator(before_f)).pointed_node(), l.pointed_node()) == n);
+      (void)n;
       BOOST_IF_CONSTEXPR(safemode_or_autounlink){
          return this->erase_after(before_f, l);
       }
@@ -1342,6 +1343,7 @@ class slist_impl
    void splice_after(const_iterator prev_pos, slist_impl &x, const_iterator before_f, const_iterator before_l, size_type n) BOOST_NOEXCEPT
    {
       BOOST_INTRUSIVE_INVARIANT_ASSERT(node_algorithms::distance(before_f.pointed_node(), before_l.pointed_node()) == n);
+      (void)n;
       this->priv_splice_after
          (prev_pos.pointed_node(), x, before_f.pointed_node(), before_l.pointed_node());
       BOOST_IF_CONSTEXPR(constant_time_size){
@@ -1881,7 +1883,7 @@ class slist_impl
    //!   point to elements of this list. Iterators of this list and all the references are not invalidated.
    //!
    //! <b>Warning</b>: Experimental function, don't use it!
-   void incorporate_after(const_iterator prev_pos, const node_ptr & f, const node_ptr & before_l) BOOST_NOEXCEPT
+   void incorporate_after(const_iterator prev_pos, node_ptr f, node_ptr before_l) BOOST_NOEXCEPT
    {
       BOOST_IF_CONSTEXPR(constant_time_size)
          this->incorporate_after(prev_pos, f, before_l, node_algorithms::distance(f.pointed_node(), before_l.pointed_node())+1);
@@ -1905,7 +1907,7 @@ class slist_impl
    //!   point to elements of this list. Iterators of this list and all the references are not invalidated.
    //!
    //! <b>Warning</b>: Experimental function, don't use it!
-   void incorporate_after(const_iterator prev_pos, const node_ptr & f, const node_ptr & before_l, size_type n) BOOST_NOEXCEPT
+   void incorporate_after(const_iterator prev_pos, node_ptr f, node_ptr before_l, size_type n) BOOST_NOEXCEPT
    {
       if(n){
          BOOST_INTRUSIVE_INVARIANT_ASSERT(n > 0);
@@ -2208,7 +2210,7 @@ class slist
 
    struct incorporate_t{};
 
-   BOOST_INTRUSIVE_FORCEINLINE slist( const node_ptr & f, const node_ptr & before_l
+   BOOST_INTRUSIVE_FORCEINLINE slist( node_ptr f, node_ptr before_l
              , size_type n, const value_traits &v_traits = value_traits())
       :  Base(f, before_l, n, v_traits)
    {}

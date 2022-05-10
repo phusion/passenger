@@ -182,10 +182,15 @@ BOOST_LIB_SUFFIX:     Static/import libraries extension (".lib", ".a") for the c
      // vc14.1:
 #    define BOOST_LIB_TOOLSET "vc141"
 
-#  elif defined(BOOST_MSVC)
+#  elif defined(BOOST_MSVC) && (BOOST_MSVC < 1930)
 
      // vc14.2:
 #    define BOOST_LIB_TOOLSET "vc142"
+
+#  elif defined(BOOST_MSVC)
+
+     // vc14.3:
+#    define BOOST_LIB_TOOLSET "vc143"
 
 #  elif defined(BOOST_EMBTC_WINDOWS)
 

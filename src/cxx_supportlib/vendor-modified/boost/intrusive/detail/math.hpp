@@ -93,7 +93,7 @@ namespace detail {
    struct builtin_clz_dispatch< ::boost::ulong_long_type >
    {
       static ::boost::ulong_long_type call(::boost::ulong_long_type n)
-      {  return __builtin_clzll(n); }
+      {  return (::boost::ulong_long_type)__builtin_clzll(n); }
    };
    #endif
 
@@ -101,14 +101,14 @@ namespace detail {
    struct builtin_clz_dispatch<unsigned long>
    {
       static unsigned long call(unsigned long n)
-      {  return __builtin_clzl(n); }
+      {  return (unsigned long)__builtin_clzl(n); }
    };
 
    template<>
    struct builtin_clz_dispatch<unsigned int>
    {
       static unsigned int call(unsigned int n)
-      {  return __builtin_clz(n); }
+      {  return (unsigned int)__builtin_clz(n); }
    };
 
    inline std::size_t floor_log2(std::size_t n)

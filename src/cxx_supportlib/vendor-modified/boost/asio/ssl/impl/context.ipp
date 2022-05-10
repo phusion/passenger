@@ -3,7 +3,7 @@
 // ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2005 Voipster / Indrek dot Juhani at voipster dot com
-// Copyright (c) 2005-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2005-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -48,6 +48,7 @@ struct context::evp_pkey_cleanup
   ~evp_pkey_cleanup() { if (p) ::EVP_PKEY_free(p); }
 };
 
+#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
 struct context::rsa_cleanup
 {
   RSA* p;
@@ -59,6 +60,7 @@ struct context::dh_cleanup
   DH* p;
   ~dh_cleanup() { if (p) ::DH_free(p); }
 };
+#endif // (OPENSSL_VERSION_NUMBER < 0x30000000L)
 
 context::context(context::method m)
   : handle_(0)
@@ -358,9 +360,7 @@ context::context(context::method m)
 
   if (handle_ == 0)
   {
-    boost::system::error_code ec(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    boost::system::error_code ec = translate_error(::ERR_get_error());
     boost::asio::detail::throw_error(ec, "context");
   }
 
@@ -546,9 +546,7 @@ BOOST_ASIO_SYNC_OP_VOID context::load_verify_file(
 
   if (::SSL_CTX_load_verify_locations(handle_, filename.c_str(), 0) != 1)
   {
-    ec = boost::system::error_code(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    ec = translate_error(::ERR_get_error());
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
@@ -583,17 +581,13 @@ BOOST_ASIO_SYNC_OP_VOID context::add_certificate_authority(
               && ERR_GET_REASON(err) == PEM_R_NO_START_LINE)
             break;
 
-          ec = boost::system::error_code(
-              static_cast<int>(err),
-              boost::asio::error::get_ssl_category());
+          ec = translate_error(err);
           BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
         }
 
         if (::X509_STORE_add_cert(store, cert.p) != 1)
         {
-          ec = boost::system::error_code(
-              static_cast<int>(::ERR_get_error()),
-              boost::asio::error::get_ssl_category());
+          ec = translate_error(::ERR_get_error());
           BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
         }
       }
@@ -618,9 +612,7 @@ BOOST_ASIO_SYNC_OP_VOID context::set_default_verify_paths(
 
   if (::SSL_CTX_set_default_verify_paths(handle_) != 1)
   {
-    ec = boost::system::error_code(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    ec = translate_error(::ERR_get_error());
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
@@ -642,9 +634,7 @@ BOOST_ASIO_SYNC_OP_VOID context::add_verify_path(
 
   if (::SSL_CTX_load_verify_locations(handle_, 0, path.c_str()) != 1)
   {
-    ec = boost::system::error_code(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    ec = translate_error(::ERR_get_error());
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
@@ -698,9 +688,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate(
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
-  ec = boost::system::error_code(
-      static_cast<int>(::ERR_get_error()),
-      boost::asio::error::get_ssl_category());
+  ec = translate_error(::ERR_get_error());
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -736,9 +724,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate_file(
 
   if (::SSL_CTX_use_certificate_file(handle_, filename.c_str(), file_type) != 1)
   {
-    ec = boost::system::error_code(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    ec = translate_error(::ERR_get_error());
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
@@ -777,17 +763,14 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate_chain(
           cb_userdata) };
     if (!cert.p)
     {
-      ec = boost::system::error_code(ERR_R_PEM_LIB,
-          boost::asio::error::get_ssl_category());
+      ec = translate_error(ERR_R_PEM_LIB);
       BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
     }
 
     int result = ::SSL_CTX_use_certificate(handle_, cert.p);
     if (result == 0 || ::ERR_peek_error() != 0)
     {
-      ec = boost::system::error_code(
-          static_cast<int>(::ERR_get_error()),
-          boost::asio::error::get_ssl_category());
+      ec = translate_error(::ERR_get_error());
       BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
     }
 
@@ -810,9 +793,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate_chain(
     {
       if (!::SSL_CTX_add_extra_chain_cert(handle_, cacert))
       {
-        ec = boost::system::error_code(
-            static_cast<int>(::ERR_get_error()),
-            boost::asio::error::get_ssl_category());
+        ec = translate_error(::ERR_get_error());
         BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
@@ -827,9 +808,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate_chain(
     }
   }
 
-  ec = boost::system::error_code(
-      static_cast<int>(::ERR_get_error()),
-      boost::asio::error::get_ssl_category());
+  ec = translate_error(::ERR_get_error());
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -847,9 +826,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_certificate_chain_file(
 
   if (::SSL_CTX_use_certificate_chain_file(handle_, filename.c_str()) != 1)
   {
-    ec = boost::system::error_code(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    ec = translate_error(::ERR_get_error());
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
@@ -913,9 +890,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_private_key(
     }
   }
 
-  ec = boost::system::error_code(
-      static_cast<int>(::ERR_get_error()),
-      boost::asio::error::get_ssl_category());
+  ec = translate_error(::ERR_get_error());
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -945,16 +920,51 @@ BOOST_ASIO_SYNC_OP_VOID context::use_rsa_private_key(
       && (!defined(LIBRESSL_VERSION_NUMBER) \
         || LIBRESSL_VERSION_NUMBER >= 0x2070000fL)) \
     || defined(BOOST_ASIO_USE_WOLFSSL)
-    pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
-    void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
+  pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
+  void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
 #else // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
-    pem_password_cb* callback = handle_->default_passwd_callback;
-    void* cb_userdata = handle_->default_passwd_callback_userdata;
+  pem_password_cb* callback = handle_->default_passwd_callback;
+  void* cb_userdata = handle_->default_passwd_callback_userdata;
 #endif // (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 
   bio_cleanup bio = { make_buffer_bio(private_key) };
   if (bio.p)
   {
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+    evp_pkey_cleanup evp_private_key = { 0 };
+    switch (format)
+    {
+    case context_base::asn1:
+      evp_private_key.p = ::d2i_PrivateKey_bio(bio.p, 0);
+      break;
+    case context_base::pem:
+      evp_private_key.p = ::PEM_read_bio_PrivateKey(
+          bio.p, 0, callback,
+          cb_userdata);
+      break;
+    default:
+      {
+        ec = boost::asio::error::invalid_argument;
+        BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+      }
+    }
+
+    if (evp_private_key.p)
+    {
+      if (::EVP_PKEY_is_a(evp_private_key.p, "RSA") == 0)
+      {
+        ec = translate_error(
+            ERR_PACK(ERR_LIB_EVP, 0, EVP_R_EXPECTING_AN_RSA_KEY));
+        BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+      }
+
+      if (::SSL_CTX_use_PrivateKey(handle_, evp_private_key.p) == 1)
+      {
+        ec = boost::system::error_code();
+        BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+      }
+    }
+#else // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
     rsa_cleanup rsa_private_key = { 0 };
     switch (format)
     {
@@ -981,11 +991,10 @@ BOOST_ASIO_SYNC_OP_VOID context::use_rsa_private_key(
         BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
       }
     }
+#endif // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
   }
 
-  ec = boost::system::error_code(
-      static_cast<int>(::ERR_get_error()),
-      boost::asio::error::get_ssl_category());
+  ec = translate_error(::ERR_get_error());
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -1013,9 +1022,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_private_key_file(
 
   if (::SSL_CTX_use_PrivateKey_file(handle_, filename.c_str(), file_type) != 1)
   {
-    ec = boost::system::error_code(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    ec = translate_error(::ERR_get_error());
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
@@ -1035,6 +1042,53 @@ BOOST_ASIO_SYNC_OP_VOID context::use_rsa_private_key_file(
     const std::string& filename, context::file_format format,
     boost::system::error_code& ec)
 {
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+  ::ERR_clear_error();
+
+  pem_password_cb* callback = ::SSL_CTX_get_default_passwd_cb(handle_);
+  void* cb_userdata = ::SSL_CTX_get_default_passwd_cb_userdata(handle_);
+
+  bio_cleanup bio = { ::BIO_new_file(filename.c_str(), "r") };
+  if (bio.p)
+  {
+    evp_pkey_cleanup evp_private_key = { 0 };
+    switch (format)
+    {
+    case context_base::asn1:
+      evp_private_key.p = ::d2i_PrivateKey_bio(bio.p, 0);
+      break;
+    case context_base::pem:
+      evp_private_key.p = ::PEM_read_bio_PrivateKey(
+          bio.p, 0, callback,
+          cb_userdata);
+      break;
+    default:
+      {
+        ec = boost::asio::error::invalid_argument;
+        BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+      }
+    }
+
+    if (evp_private_key.p)
+    {
+      if (::EVP_PKEY_is_a(evp_private_key.p, "RSA") == 0)
+      {
+        ec = translate_error(
+            ERR_PACK(ERR_LIB_EVP, 0, EVP_R_EXPECTING_AN_RSA_KEY));
+        BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+      }
+
+      if (::SSL_CTX_use_PrivateKey(handle_, evp_private_key.p) == 1)
+      {
+        ec = boost::system::error_code();
+        BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+      }
+    }
+  }
+
+  ec = translate_error(::ERR_get_error());
+  BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+#else // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
   int file_type;
   switch (format)
   {
@@ -1056,14 +1110,13 @@ BOOST_ASIO_SYNC_OP_VOID context::use_rsa_private_key_file(
   if (::SSL_CTX_use_RSAPrivateKey_file(
         handle_, filename.c_str(), file_type) != 1)
   {
-    ec = boost::system::error_code(
-        static_cast<int>(::ERR_get_error()),
-        boost::asio::error::get_ssl_category());
+    ec = translate_error(::ERR_get_error());
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
   }
 
   ec = boost::system::error_code();
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+#endif // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
 }
 
 void context::use_tmp_dh(const const_buffer& dh)
@@ -1084,9 +1137,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_tmp_dh(
     return do_use_tmp_dh(bio.p, ec);
   }
 
-  ec = boost::system::error_code(
-      static_cast<int>(::ERR_get_error()),
-      boost::asio::error::get_ssl_category());
+  ec = translate_error(::ERR_get_error());
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -1108,9 +1159,7 @@ BOOST_ASIO_SYNC_OP_VOID context::use_tmp_dh_file(
     return do_use_tmp_dh(bio.p, ec);
   }
 
-  ec = boost::system::error_code(
-      static_cast<int>(::ERR_get_error()),
-      boost::asio::error::get_ssl_category());
+  ec = translate_error(::ERR_get_error());
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -1119,6 +1168,19 @@ BOOST_ASIO_SYNC_OP_VOID context::do_use_tmp_dh(
 {
   ::ERR_clear_error();
 
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+  EVP_PKEY* p = ::PEM_read_bio_Parameters(bio, 0);
+  if (p)
+  {
+    if (::SSL_CTX_set0_tmp_dh_pkey(handle_, p) == 1)
+    {
+      ec = boost::system::error_code();
+      BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+    }
+    else
+      ::EVP_PKEY_free(p);
+  }
+#else // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
   dh_cleanup dh = { ::PEM_read_bio_DHparams(bio, 0, 0, 0) };
   if (dh.p)
   {
@@ -1128,10 +1190,9 @@ BOOST_ASIO_SYNC_OP_VOID context::do_use_tmp_dh(
       BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
     }
   }
+#endif // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
 
-  ec = boost::system::error_code(
-      static_cast<int>(::ERR_get_error()),
-      boost::asio::error::get_ssl_category());
+  ec = translate_error(::ERR_get_error());
   BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
 }
 
@@ -1236,6 +1297,21 @@ BIO* context::make_buffer_bio(const const_buffer& b)
   return ::BIO_new_mem_buf(
       const_cast<void*>(b.data()),
       static_cast<int>(b.size()));
+}
+
+boost::system::error_code context::translate_error(long error)
+{
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+  if (ERR_SYSTEM_ERROR(error))
+  {
+    return boost::system::error_code(
+        static_cast<int>(ERR_GET_REASON(error)),
+        boost::asio::error::get_system_category());
+  }
+#endif // (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+
+  return boost::system::error_code(static_cast<int>(error),
+      boost::asio::error::get_ssl_category());
 }
 
 } // namespace ssl

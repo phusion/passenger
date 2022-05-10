@@ -58,12 +58,12 @@ struct derivation_value_traits
    BOOST_INTRUSIVE_FORCEINLINE static const_node_ptr to_node_ptr(const_reference value) BOOST_NOEXCEPT
    { return node_ptr(&value); }
 
-   BOOST_INTRUSIVE_FORCEINLINE static pointer to_value_ptr(const node_ptr &n) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_FORCEINLINE static pointer to_value_ptr(node_ptr n) BOOST_NOEXCEPT
    {
       return pointer_traits<pointer>::pointer_to(static_cast<reference>(*n));
    }
 
-   BOOST_INTRUSIVE_FORCEINLINE static const_pointer to_value_ptr(const const_node_ptr &n) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_FORCEINLINE static const_pointer to_value_ptr(const_node_ptr n) BOOST_NOEXCEPT
    {
       return pointer_traits<const_pointer>::pointer_to(static_cast<const_reference>(*n));
    }

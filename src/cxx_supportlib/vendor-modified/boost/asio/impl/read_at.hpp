@@ -2,7 +2,7 @@
 // impl/read_at.hpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -424,36 +424,36 @@ struct associator<Associator,
 template <typename AsyncRandomAccessReadDevice,
     typename MutableBufferSequence, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+      std::size_t)) ReadToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read_at(AsyncRandomAccessReadDevice& d,
     uint64_t offset, const MutableBufferSequence& buffers,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
+    BOOST_ASIO_MOVE_ARG(ReadToken) token)
 {
-  return async_initiate<ReadHandler,
+  return async_initiate<ReadToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_read_at_buffer_sequence<
         AsyncRandomAccessReadDevice>(d),
-      handler, offset, buffers,
+      token, offset, buffers,
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
 }
 
 template <typename AsyncRandomAccessReadDevice, typename MutableBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+      std::size_t)) ReadToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read_at(AsyncRandomAccessReadDevice& d,
     uint64_t offset, const MutableBufferSequence& buffers,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
+    BOOST_ASIO_MOVE_ARG(ReadToken) token)
 {
-  return async_initiate<ReadHandler,
+  return async_initiate<ReadToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_read_at_buffer_sequence<
         AsyncRandomAccessReadDevice>(d),
-      handler, offset, buffers, transfer_all());
+      token, offset, buffers, transfer_all());
 }
 
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
@@ -694,34 +694,34 @@ struct associator<Associator,
 template <typename AsyncRandomAccessReadDevice,
     typename Allocator, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+      std::size_t)) ReadToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read_at(AsyncRandomAccessReadDevice& d,
     uint64_t offset, boost::asio::basic_streambuf<Allocator>& b,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
+    BOOST_ASIO_MOVE_ARG(ReadToken) token)
 {
-  return async_initiate<ReadHandler,
+  return async_initiate<ReadToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_read_at_streambuf<AsyncRandomAccessReadDevice>(d),
-      handler, offset, &b,
+      token, offset, &b,
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
 }
 
 template <typename AsyncRandomAccessReadDevice, typename Allocator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+      std::size_t)) ReadToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read_at(AsyncRandomAccessReadDevice& d,
     uint64_t offset, boost::asio::basic_streambuf<Allocator>& b,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
+    BOOST_ASIO_MOVE_ARG(ReadToken) token)
 {
-  return async_initiate<ReadHandler,
+  return async_initiate<ReadToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_read_at_streambuf<AsyncRandomAccessReadDevice>(d),
-      handler, offset, &b, transfer_all());
+      token, offset, &b, transfer_all());
 }
 
 #endif // !defined(BOOST_ASIO_NO_IOSTREAM)

@@ -2,7 +2,7 @@
 // experimental/append.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -51,7 +51,7 @@ public:
 /// arguments should be passed additional values after the results of the
 /// operation.
 template <typename CompletionToken, typename... Values>
-inline BOOST_ASIO_CONSTEXPR append_t<
+BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONSTEXPR append_t<
   typename decay<CompletionToken>::type, typename decay<Values>::type...>
 append(BOOST_ASIO_MOVE_ARG(CompletionToken) completion_token,
     BOOST_ASIO_MOVE_ARG(Values)... values)

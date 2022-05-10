@@ -59,7 +59,7 @@ class BOOST_SYMBOL_VISIBLE exception
       : std_exception_t(), m_msg(msg)
    {}
 
-   virtual const char *what() const BOOST_NOEXCEPT_OR_NOTHROW
+   virtual const char *what() const BOOST_NOEXCEPT_OR_NOTHROW BOOST_OVERRIDE
    {  return m_msg ? m_msg : "unknown boost::container exception"; }
 
    private:

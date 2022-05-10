@@ -67,7 +67,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static void init(node_ptr this_node) BOOST_NOEXCEPT
+   static void init(node_ptr this_node) BOOST_NOEXCEPT
    {
       const node_ptr null_node = node_ptr();
       NodeTraits::set_next(this_node, null_node);
@@ -80,7 +80,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static bool inited(const const_node_ptr &this_node) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_FORCEINLINE static bool inited(const_node_ptr this_node) BOOST_NOEXCEPT
    {  return !NodeTraits::get_next(this_node); }
 
    //! <b>Effects</b>: Constructs an empty list, making this_node the only
@@ -91,7 +91,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static void init_header(node_ptr this_node) BOOST_NOEXCEPT
+   static void init_header(node_ptr this_node) BOOST_NOEXCEPT
    {
       NodeTraits::set_next(this_node, this_node);
       NodeTraits::set_previous(this_node, this_node);
@@ -105,7 +105,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static bool unique(const const_node_ptr &this_node) BOOST_NOEXCEPT
+   static bool unique(const_node_ptr this_node) BOOST_NOEXCEPT
    {
       node_ptr next = NodeTraits::get_next(this_node);
       return !next || next == this_node;
@@ -119,7 +119,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Linear
    //!
    //! <b>Throws</b>: Nothing.
-   static std::size_t count(const const_node_ptr &this_node) BOOST_NOEXCEPT
+   static std::size_t count(const_node_ptr this_node) BOOST_NOEXCEPT
    {
       std::size_t result = 0;
       const_node_ptr p = this_node;
@@ -137,7 +137,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static node_ptr unlink(node_ptr this_node) BOOST_NOEXCEPT
+   static node_ptr unlink(node_ptr this_node) BOOST_NOEXCEPT
    {
       node_ptr next(NodeTraits::get_next(this_node));
       node_ptr prev(NodeTraits::get_previous(this_node));
@@ -153,7 +153,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static void unlink(node_ptr b, node_ptr e) BOOST_NOEXCEPT
+   static void unlink(node_ptr b, node_ptr e) BOOST_NOEXCEPT
    {
       if (b != e) {
          node_ptr prevb(NodeTraits::get_previous(b));
@@ -169,7 +169,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static void link_before(node_ptr nxt_node, node_ptr this_node) BOOST_NOEXCEPT
+   static void link_before(node_ptr nxt_node, node_ptr this_node) BOOST_NOEXCEPT
    {
       node_ptr prev(NodeTraits::get_previous(nxt_node));
       NodeTraits::set_previous(this_node, prev);
@@ -188,7 +188,7 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Constant
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static void link_after(node_ptr prev_node, node_ptr this_node) BOOST_NOEXCEPT
+   static void link_after(node_ptr prev_node, node_ptr this_node) BOOST_NOEXCEPT
    {
       node_ptr next(NodeTraits::get_next(prev_node));
       NodeTraits::set_previous(this_node, prev_node);
@@ -358,12 +358,11 @@ class circular_list_algorithms
    //! <b>Complexity</b>: Linear
    //!
    //! <b>Throws</b>: Nothing.
-   static std::size_t distance(const const_node_ptr &f, const const_node_ptr &l) BOOST_NOEXCEPT
+   static std::size_t distance(const_node_ptr f, const_node_ptr l) BOOST_NOEXCEPT
    {
-      const_node_ptr i(f);
       std::size_t result = 0;
-      while(i != l){
-         i = NodeTraits::get_next(i);
+      while(f != l){
+         f = NodeTraits::get_next(f);
          ++result;
       }
       return result;
@@ -434,14 +433,14 @@ class circular_list_algorithms
    }
 
    private:
-   BOOST_INTRUSIVE_FORCEINLINE static void swap_prev(node_ptr this_node, node_ptr other_node) BOOST_NOEXCEPT
+   static void swap_prev(node_ptr this_node, node_ptr other_node) BOOST_NOEXCEPT
    {
       node_ptr temp(NodeTraits::get_previous(this_node));
       NodeTraits::set_previous(this_node, NodeTraits::get_previous(other_node));
       NodeTraits::set_previous(other_node, temp);
    }
 
-   BOOST_INTRUSIVE_FORCEINLINE static void swap_next(node_ptr this_node, node_ptr other_node) BOOST_NOEXCEPT
+   static void swap_next(node_ptr this_node, node_ptr other_node) BOOST_NOEXCEPT
    {
       node_ptr temp(NodeTraits::get_next(this_node));
       NodeTraits::set_next(this_node, NodeTraits::get_next(other_node));

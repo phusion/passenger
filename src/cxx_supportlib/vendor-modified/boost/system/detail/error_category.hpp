@@ -55,6 +55,9 @@ private:
     friend std::size_t hash_value( error_code const & ec );
     friend BOOST_SYSTEM_CONSTEXPR bool detail::failed_impl( int ev, error_category const & cat );
 
+    friend class error_code;
+    friend class error_condition;
+
 #if !defined(BOOST_NO_CXX11_DELETED_FUNCTIONS)
 public:
 
@@ -170,9 +173,9 @@ public:
 namespace detail
 {
 
-static const boost::ulong_long_type generic_category_id = ( boost::ulong_long_type( 0xB2AB117A ) << 32 ) + 0x257EDF0D;
-static const boost::ulong_long_type system_category_id = ( boost::ulong_long_type( 0x8FAFD21E ) << 32 ) + 0x25C5E09B;
-static const boost::ulong_long_type interop_category_id = ( boost::ulong_long_type( 0x943F2817 ) << 32 ) + 0xFD3A8FAF;
+static const boost::ulong_long_type generic_category_id = ( boost::ulong_long_type( 0xB2AB117A ) << 32 ) + 0x257EDFD0;
+static const boost::ulong_long_type system_category_id = generic_category_id + 1;
+static const boost::ulong_long_type interop_category_id = generic_category_id + 2;
 
 BOOST_SYSTEM_CONSTEXPR inline bool failed_impl( int ev, error_category const & cat )
 {

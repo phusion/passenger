@@ -2,7 +2,7 @@
 // read.hpp
 // ~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -712,9 +712,9 @@ std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The supplied buffers are full. That is, the bytes transferred is equal to
  * the sum of the buffer sizes.
@@ -734,24 +734,29 @@ std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
  * of the buffer sizes indicates the maximum number of bytes to read from the
  * stream. Although the buffers object may be copied as necessary, ownership of
  * the underlying memory blocks is retained by the caller, which must guarantee
- * that they remain valid until the handler is called.
+ * that they remain valid until the completion handler is called.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @par Example
  * To read into a single data buffer use the @ref buffer function as follows:
@@ -781,13 +786,13 @@ std::size_t read(SyncReadStream& s, DynamicBuffer_v2 buffers,
  */
 template <typename AsyncReadStream, typename MutableBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type),
     typename constraint<
@@ -798,9 +803,9 @@ async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The supplied buffers are full. That is, the bytes transferred is equal to
  * the sum of the buffer sizes.
@@ -814,7 +819,7 @@ async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
  * of the buffer sizes indicates the maximum number of bytes to read from the
  * stream. Although the buffers object may be copied as necessary, ownership of
  * the underlying memory blocks is retained by the caller, which must guarantee
- * that they remain valid until the handler is called.
+ * that they remain valid until the completion handler is called.
  *
  * @param completion_condition The function object to be called to determine
  * whether the read operation is complete. The signature of the function object
@@ -830,22 +835,27 @@ async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
  * return value indicates the maximum number of bytes to be read on the next
  * call to the stream's async_read_some function.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @par Example
  * To read into a single data buffer use the @ref buffer function as follows:
@@ -871,14 +881,14 @@ async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
 template <typename AsyncReadStream,
     typename MutableBufferSequence, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type),
     typename constraint<
@@ -891,9 +901,9 @@ async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The specified dynamic buffer sequence is full (that is, it has reached
  * maximum size).
@@ -912,24 +922,29 @@ async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
  * @param buffers The dynamic buffer sequence into which the data will be read.
  * Although the buffers object may be copied as necessary, ownership of the
  * underlying memory blocks is retained by the caller, which must guarantee
- * that they remain valid until the handler is called.
+ * that they remain valid until the completion handler is called.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @note This overload is equivalent to calling:
  * @code boost::asio::async_read(
@@ -950,14 +965,14 @@ async_read(AsyncReadStream& s, const MutableBufferSequence& buffers,
  */
 template <typename AsyncReadStream, typename DynamicBuffer_v1,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type),
     typename constraint<
@@ -971,9 +986,9 @@ async_read(AsyncReadStream& s,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The specified dynamic buffer sequence is full (that is, it has reached
  * maximum size).
@@ -992,7 +1007,7 @@ async_read(AsyncReadStream& s,
  * @param buffers The dynamic buffer sequence into which the data will be read.
  * Although the buffers object may be copied as necessary, ownership of the
  * underlying memory blocks is retained by the caller, which must guarantee
- * that they remain valid until the handler is called.
+ * that they remain valid until the completion handler is called.
  *
  * @param completion_condition The function object to be called to determine
  * whether the read operation is complete. The signature of the function object
@@ -1008,22 +1023,27 @@ async_read(AsyncReadStream& s,
  * return value indicates the maximum number of bytes to be read on the next
  * call to the stream's async_read_some function.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @par Per-Operation Cancellation
  * This asynchronous operation supports cancellation for the following
@@ -1039,15 +1059,15 @@ async_read(AsyncReadStream& s,
 template <typename AsyncReadStream,
     typename DynamicBuffer_v1, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type),
     typename constraint<
@@ -1064,9 +1084,9 @@ async_read(AsyncReadStream& s,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The supplied buffer is full (that is, it has reached maximum size).
  *
@@ -1083,24 +1103,29 @@ async_read(AsyncReadStream& s,
  *
  * @param b A basic_streambuf object into which the data will be read. Ownership
  * of the streambuf is retained by the caller, which must guarantee that it
- * remains valid until the handler is called.
+ * remains valid until the completion handler is called.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @note This overload is equivalent to calling:
  * @code boost::asio::async_read(
@@ -1121,13 +1146,13 @@ async_read(AsyncReadStream& s,
  */
 template <typename AsyncReadStream, typename Allocator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type));
 
@@ -1135,9 +1160,9 @@ async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The supplied buffer is full (that is, it has reached maximum size).
  *
@@ -1154,7 +1179,7 @@ async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
  *
  * @param b A basic_streambuf object into which the data will be read. Ownership
  * of the streambuf is retained by the caller, which must guarantee that it
- * remains valid until the handler is called.
+ * remains valid until the completion handler is called.
  *
  * @param completion_condition The function object to be called to determine
  * whether the read operation is complete. The signature of the function object
@@ -1170,22 +1195,27 @@ async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
  * return value indicates the maximum number of bytes to be read on the next
  * call to the stream's async_read_some function.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @par Per-Operation Cancellation
  * This asynchronous operation supports cancellation for the following
@@ -1201,14 +1231,14 @@ async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
 template <typename AsyncReadStream,
     typename Allocator, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type));
 
@@ -1220,9 +1250,9 @@ async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The specified dynamic buffer sequence is full (that is, it has reached
  * maximum size).
@@ -1241,24 +1271,29 @@ async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
  * @param buffers The dynamic buffer sequence into which the data will be read.
  * Although the buffers object may be copied as necessary, ownership of the
  * underlying memory blocks is retained by the caller, which must guarantee
- * that they remain valid until the handler is called.
+ * that they remain valid until the completion handler is called.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @note This overload is equivalent to calling:
  * @code boost::asio::async_read(
@@ -1279,13 +1314,13 @@ async_read(AsyncReadStream& s, basic_streambuf<Allocator>& b,
  */
 template <typename AsyncReadStream, typename DynamicBuffer_v2,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type),
     typename constraint<
@@ -1296,9 +1331,9 @@ async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
 /// stream.
 /**
  * This function is used to asynchronously read a certain number of bytes of
- * data from a stream. The function call always returns immediately. The
- * asynchronous operation will continue until one of the following conditions is
- * true:
+ * data from a stream. It is an initiating function for an @ref
+ * asynchronous_operation, and always returns immediately. The asynchronous
+ * operation will continue until one of the following conditions is true:
  *
  * @li The specified dynamic buffer sequence is full (that is, it has reached
  * maximum size).
@@ -1317,7 +1352,7 @@ async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
  * @param buffers The dynamic buffer sequence into which the data will be read.
  * Although the buffers object may be copied as necessary, ownership of the
  * underlying memory blocks is retained by the caller, which must guarantee
- * that they remain valid until the handler is called.
+ * that they remain valid until the completion handler is called.
  *
  * @param completion_condition The function object to be called to determine
  * whether the read operation is complete. The signature of the function object
@@ -1333,22 +1368,27 @@ async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
  * return value indicates the maximum number of bytes to be read on the next
  * call to the stream's async_read_some function.
  *
- * @param handler The handler to be called when the read operation completes.
- * Copies will be made of the handler as required. The function signature of the
- * handler must be:
+ * @param token The @ref completion_token that will be used to produce a
+ * completion handler, which will be called when the read completes.
+ * Potential completion tokens include @ref use_future, @ref use_awaitable,
+ * @ref yield_context, or a function object with the correct completion
+ * signature. The function signature of the completion handler must be:
  * @code void handler(
- *   const boost::system::error_code& error, // Result of operation.
+ *   // Result of operation.
+ *   const boost::system::error_code& error,
  *
- *   std::size_t bytes_transferred           // Number of bytes copied into the
- *                                           // buffers. If an error occurred,
- *                                           // this will be the  number of
- *                                           // bytes successfully transferred
- *                                           // prior to the error.
+ *   // Number of bytes copied into the buffers. If an error
+ *   // occurred, this will be the number of bytes successfully
+ *   // transferred prior to the error.
+ *   std::size_t bytes_transferred
  * ); @endcode
  * Regardless of whether the asynchronous operation completes immediately or
- * not, the handler will not be invoked from within this function. On
- * immediate completion, invocation of the handler will be performed in a
+ * not, the completion handler will not be invoked from within this function.
+ * On immediate completion, invocation of the handler will be performed in a
  * manner equivalent to using boost::asio::post().
+ *
+ * @par Completion Signature
+ * @code void(boost::system::error_code, std::size_t) @endcode
  *
  * @par Per-Operation Cancellation
  * This asynchronous operation supports cancellation for the following
@@ -1364,14 +1404,14 @@ async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
 template <typename AsyncReadStream,
     typename DynamicBuffer_v2, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) ReadHandler
+      std::size_t)) ReadToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename AsyncReadStream::executor_type)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
     void (boost::system::error_code, std::size_t))
 async_read(AsyncReadStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(ReadHandler) handler
+    BOOST_ASIO_MOVE_ARG(ReadToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename AsyncReadStream::executor_type),
     typename constraint<

@@ -2,7 +2,7 @@
 // experimental/parallel_group.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -128,7 +128,7 @@ public:
    * operations, it must return a boost::asio::cancellation_type value other
    * than <tt>boost::asio::cancellation_type::none</tt>.
    *
-   * @param token A completion token whose signature is comprised of
+   * @param token A @ref completion_token whose signature is comprised of
    * a @c std::array<std::size_t, N> indicating the completion order of the
    * operations, followed by all operations' completion handler arguments.
    *
@@ -201,7 +201,8 @@ private:
  * @endcode
  */
 template <typename... Ops>
-inline parallel_group<Ops...> make_parallel_group(Ops... ops)
+BOOST_ASIO_NODISCARD inline parallel_group<Ops...>
+make_parallel_group(Ops... ops)
 {
   return parallel_group<Ops...>(std::move(ops)...);
 }

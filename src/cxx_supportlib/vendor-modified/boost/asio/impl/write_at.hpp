@@ -2,7 +2,7 @@
 // impl/write_at.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -409,36 +409,36 @@ struct associator<Associator,
 template <typename AsyncRandomAccessWriteDevice,
     typename ConstBufferSequence, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_write_at_buffer_sequence<
         AsyncRandomAccessWriteDevice>(d),
-      handler, offset, buffers,
+      token, offset, buffers,
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
 }
 
 template <typename AsyncRandomAccessWriteDevice, typename ConstBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, const ConstBufferSequence& buffers,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_write_at_buffer_sequence<
         AsyncRandomAccessWriteDevice>(d),
-      handler, offset, buffers, transfer_all());
+      token, offset, buffers, transfer_all());
 }
 
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
@@ -603,36 +603,36 @@ struct associator<Associator,
 template <typename AsyncRandomAccessWriteDevice,
     typename Allocator, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, boost::asio::basic_streambuf<Allocator>& b,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_write_at_streambuf<
         AsyncRandomAccessWriteDevice>(d),
-      handler, offset, &b,
+      token, offset, &b,
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
 }
 
 template <typename AsyncRandomAccessWriteDevice, typename Allocator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-      std::size_t)) WriteHandler>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, boost::asio::basic_streambuf<Allocator>& b,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
       detail::initiate_async_write_at_streambuf<
         AsyncRandomAccessWriteDevice>(d),
-      handler, offset, &b, transfer_all());
+      token, offset, &b, transfer_all());
 }
 
 #endif // !defined(BOOST_ASIO_NO_IOSTREAM)

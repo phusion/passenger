@@ -215,8 +215,8 @@ class unordered_set_impl
    //! @copydoc ::boost::intrusive::hashtable::insert_unique_check(const KeyType&,KeyHasher,KeyEqual,insert_commit_data&)
    template<class KeyType, class KeyHasher, class KeyEqual>
    BOOST_INTRUSIVE_FORCEINLINE std::pair<iterator, bool> insert_check
-      (const KeyType &key, KeyHasher hasher, KeyEqual key_value_equal, insert_commit_data &commit_data)
-   {  return table_type::insert_unique_check(key, hasher, key_value_equal, commit_data); }
+      (const KeyType &key, KeyHasher hash_func, KeyEqual key_value_equal, insert_commit_data &commit_data)
+   {  return table_type::insert_unique_check(key, hash_func, key_value_equal, commit_data); }
 
    //! @copydoc ::boost::intrusive::hashtable::insert_unique_commit
    BOOST_INTRUSIVE_FORCEINLINE iterator insert_commit(reference value, const insert_commit_data &commit_data) BOOST_NOEXCEPT

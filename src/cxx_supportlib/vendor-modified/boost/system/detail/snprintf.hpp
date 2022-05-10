@@ -49,6 +49,9 @@ inline void snprintf( char * buffer, std::size_t len, char const * format, ... )
 
 #else
 
+#if defined(__GNUC__) && __GNUC__ >= 3
+__attribute__((__format__ (__printf__, 3, 4)))
+#endif
 inline void snprintf( char * buffer, std::size_t len, char const * format, ... )
 {
     va_list args;

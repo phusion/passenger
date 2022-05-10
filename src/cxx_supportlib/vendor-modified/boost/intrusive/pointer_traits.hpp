@@ -46,6 +46,7 @@ BOOST_INTRUSIVE_HAS_MEMBER_FUNC_CALLED_IGNORE_SIGNATURE(has_member_function_call
 
 BOOST_INTRUSIVE_INSTANTIATE_EVAL_DEFAULT_TYPE_TMPLT(element_type)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(difference_type)
+BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(size_type)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(reference)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(value_traits_ptr)
 
@@ -103,7 +104,13 @@ struct pointer_traits
          (boost::intrusive::detail::, Ptr, difference_type, std::ptrdiff_t)   difference_type;
 
       typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
-         (boost::intrusive::detail::, Ptr, reference, typename boost::intrusive::detail::unvoid_ref<element_type>::type)   reference;
+         ( boost::intrusive::detail::, Ptr, size_type
+         , typename boost::move_detail::
+               make_unsigned<difference_type>::type)                          size_type;
+
+      typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
+         ( boost::intrusive::detail::, Ptr, reference
+         , typename boost::intrusive::detail::unvoid_ref<element_type>::type) reference;
       //
       template <class U> struct rebind_pointer
       {
@@ -265,9 +272,10 @@ struct pointer_traits<Ptr&> : pointer_traits<Ptr> { };
 template <typename T>
 struct pointer_traits<T*>
 {
-   typedef T            element_type;
-   typedef T*           pointer;
-   typedef std::ptrdiff_t difference_type;
+   typedef T               element_type;
+   typedef T*              pointer;
+   typedef std::ptrdiff_t  difference_type;
+   typedef std::size_t     size_type;
 
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
       typedef T &          reference;

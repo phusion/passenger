@@ -2,7 +2,7 @@
 // detail/thread_info_base.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -238,7 +238,11 @@ public:
   }
 
 private:
+#if defined(BOOST_ASIO_HAS_IO_URING)
+  enum { chunk_size = 8 };
+#else // defined(BOOST_ASIO_HAS_IO_URING)
   enum { chunk_size = 4 };
+#endif // defined(BOOST_ASIO_HAS_IO_URING)
   void* reusable_memory_[max_mem_index];
 
 #if defined(BOOST_ASIO_HAS_STD_EXCEPTION_PTR) \

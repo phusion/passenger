@@ -69,9 +69,9 @@
 #define BOOST_ATOMIC_DETAIL_NO_CXX11_CONSTEXPR_UNION_INIT
 #endif
 
-#if !defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201703
+#if (defined(_MSC_VER) && (_MSC_VER < 1914 || _MSVC_LANG < 201703)) || (!defined(_MSC_VER) && (!defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201606))
 #define BOOST_ATOMIC_DETAIL_NO_CXX17_DEDUCTION_GUIDES
-#endif // !defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201703
+#endif
 
 #if !defined(BOOST_ATOMIC_DETAIL_NO_CXX11_CONSTEXPR_UNION_INIT)
 #define BOOST_ATOMIC_DETAIL_CONSTEXPR_UNION_INIT BOOST_CONSTEXPR
@@ -112,12 +112,30 @@
 #if __has_builtin(__builtin_constant_p)
 #define BOOST_ATOMIC_DETAIL_IS_CONSTANT(x) __builtin_constant_p(x)
 #endif
-#elif defined(__GNUC__)
+#if __has_builtin(__builtin_clear_padding)
+#define BOOST_ATOMIC_DETAIL_CLEAR_PADDING(x) __builtin_clear_padding(x)
+#elif __has_builtin(__builtin_zero_non_value_bits)
+#define BOOST_ATOMIC_DETAIL_CLEAR_PADDING(x) __builtin_zero_non_value_bits(x)
+#endif
+#endif
+
+#if !defined(BOOST_ATOMIC_DETAIL_IS_CONSTANT) && defined(__GNUC__)
 #define BOOST_ATOMIC_DETAIL_IS_CONSTANT(x) __builtin_constant_p(x)
 #endif
 
 #if !defined(BOOST_ATOMIC_DETAIL_IS_CONSTANT)
 #define BOOST_ATOMIC_DETAIL_IS_CONSTANT(x) false
+#endif
+
+#if !defined(BOOST_ATOMIC_DETAIL_CLEAR_PADDING) && defined(BOOST_MSVC) && BOOST_MSVC >= 1927
+// Note that as of MSVC 19.29 this intrinsic does not clear padding in unions:
+// https://developercommunity.visualstudio.com/t/__builtin_zero_non_value_bits-does-not-c/1551510
+#define BOOST_ATOMIC_DETAIL_CLEAR_PADDING(x) __builtin_zero_non_value_bits(x)
+#endif
+
+#if !defined(BOOST_ATOMIC_DETAIL_CLEAR_PADDING)
+#define BOOST_ATOMIC_NO_CLEAR_PADDING
+#define BOOST_ATOMIC_DETAIL_CLEAR_PADDING(x)
 #endif
 
 #if (defined(__BYTE_ORDER__) && defined(__FLOAT_WORD_ORDER__) && __BYTE_ORDER__ == __FLOAT_WORD_ORDER__) ||\

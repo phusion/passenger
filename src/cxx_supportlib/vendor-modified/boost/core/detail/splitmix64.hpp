@@ -34,14 +34,14 @@ public:
 
     boost::uint64_t operator()()
     {
-        x_ += 0x9e3779b97f4a7c15;
+        x_ += ( boost::uint64_t(0x9e3779b9u) << 32 ) + 0x7f4a7c15u;
 
         boost::uint64_t z = x_;
 
         z ^= z >> 30;
-        z *= 0xbf58476d1ce4e5b9;
+        z *= ( boost::uint64_t(0xbf58476du) << 32 ) + 0x1ce4e5b9u;
         z ^= z >> 27;
-        z *= 0x94d049bb133111eb;
+        z *= ( boost::uint64_t(0x94d049bbu) << 32 ) + 0x133111ebu;
         z ^= z >> 31;
 
         return z;

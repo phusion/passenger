@@ -202,8 +202,8 @@ struct bstbase3
    BOOST_INTRUSIVE_FORCEINLINE void rebalance() BOOST_NOEXCEPT
    {  node_algorithms::rebalance(this->header_ptr()); }
 
-   iterator rebalance_subtree(iterator root) BOOST_NOEXCEPT
-   {  return iterator(node_algorithms::rebalance_subtree(root.pointed_node()), this->priv_value_traits_ptr()); }
+   iterator rebalance_subtree(iterator r) BOOST_NOEXCEPT
+   {  return iterator(node_algorithms::rebalance_subtree(r.pointed_node()), this->priv_value_traits_ptr()); }
 
    static iterator s_iterator_to(reference value) BOOST_NOEXCEPT
    {
@@ -301,10 +301,10 @@ struct bstbase2
       : detail::ebo_functor_holder<value_compare>(value_compare(comp)), treeheader_t(vtraits)
    {}
 
-   const value_compare &comp() const
+   const value_compare &get_comp() const
    {  return this->get();  }
 
-   value_compare &comp()
+   value_compare &get_comp()
    {  return this->get();  }
 
    typedef BOOST_INTRUSIVE_IMPDEF(typename value_traits::pointer)                               pointer;
@@ -315,10 +315,10 @@ struct bstbase2
    typedef typename node_algorithms::insert_commit_data insert_commit_data;
 
    BOOST_INTRUSIVE_FORCEINLINE value_compare value_comp() const
-   {  return this->comp();   }
+   {  return this->get_comp();   }
 
    BOOST_INTRUSIVE_FORCEINLINE key_compare key_comp() const
-   {  return this->comp().key_comp();   }
+   {  return this->get_comp().key_comp();   }
 
    //lower_bound
    BOOST_INTRUSIVE_FORCEINLINE iterator lower_bound(const key_type &key)
@@ -400,8 +400,8 @@ struct bstbase2
    template<class KeyType, class KeyTypeKeyCompare>
    std::pair<iterator,iterator> equal_range(const KeyType &key, KeyTypeKeyCompare comp)
    {
-      std::pair<node_ptr, node_ptr> ret
-         (node_algorithms::equal_range(this->header_ptr(), key, this->key_node_comp(comp)));
+      std::pair<node_ptr, node_ptr> ret = 
+         node_algorithms::equal_range(this->header_ptr(), key, this->key_node_comp(comp));
       return std::pair<iterator, iterator>( iterator(ret.first, this->priv_value_traits_ptr())
                                           , iterator(ret.second, this->priv_value_traits_ptr()));
    }
@@ -414,8 +414,8 @@ struct bstbase2
    std::pair<const_iterator, const_iterator>
       equal_range(const KeyType &key, KeyTypeKeyCompare comp) const
    {
-      std::pair<node_ptr, node_ptr> ret
-         (node_algorithms::equal_range(this->header_ptr(), key, this->key_node_comp(comp)));
+      std::pair<node_ptr, node_ptr> ret =
+         node_algorithms::equal_range(this->header_ptr(), key, this->key_node_comp(comp));
       return std::pair<const_iterator, const_iterator>( const_iterator(ret.first, this->priv_value_traits_ptr())
                                                       , const_iterator(ret.second, this->priv_value_traits_ptr()));
    }
@@ -427,8 +427,8 @@ struct bstbase2
    template<class KeyType, class KeyTypeKeyCompare>
    std::pair<iterator,iterator> lower_bound_range(const KeyType &key, KeyTypeKeyCompare comp)
    {
-      std::pair<node_ptr, node_ptr> ret
-         (node_algorithms::lower_bound_range(this->header_ptr(), key, this->key_node_comp(comp)));
+      std::pair<node_ptr, node_ptr> ret =
+         node_algorithms::lower_bound_range(this->header_ptr(), key, this->key_node_comp(comp));
       return std::pair<iterator, iterator>( iterator(ret.first, this->priv_value_traits_ptr())
                                           , iterator(ret.second, this->priv_value_traits_ptr()));
    }
@@ -441,8 +441,8 @@ struct bstbase2
    std::pair<const_iterator, const_iterator>
       lower_bound_range(const KeyType &key, KeyTypeKeyCompare comp) const
    {
-      std::pair<node_ptr, node_ptr> ret
-         (node_algorithms::lower_bound_range(this->header_ptr(), key, this->key_node_comp(comp)));
+      std::pair<node_ptr, node_ptr> ret =
+         node_algorithms::lower_bound_range(this->header_ptr(), key, this->key_node_comp(comp));
       return std::pair<const_iterator, const_iterator>( const_iterator(ret.first, this->priv_value_traits_ptr())
                                                       , const_iterator(ret.second, this->priv_value_traits_ptr()));
    }
@@ -456,9 +456,9 @@ struct bstbase2
    std::pair<iterator,iterator> bounded_range
       (const KeyType &lower_key, const KeyType &upper_key, KeyTypeKeyCompare comp, bool left_closed, bool right_closed)
    {
-      std::pair<node_ptr, node_ptr> ret
-         (node_algorithms::bounded_range
-            (this->header_ptr(), lower_key, upper_key, this->key_node_comp(comp), left_closed, right_closed));
+      std::pair<node_ptr, node_ptr> ret =
+         node_algorithms::bounded_range
+            (this->header_ptr(), lower_key, upper_key, this->key_node_comp(comp), left_closed, right_closed);
       return std::pair<iterator, iterator>( iterator(ret.first, this->priv_value_traits_ptr())
                                           , iterator(ret.second, this->priv_value_traits_ptr()));
    }
@@ -471,9 +471,9 @@ struct bstbase2
    std::pair<const_iterator,const_iterator> bounded_range
       (const KeyType &lower_key, const KeyType &upper_key, KeyTypeKeyCompare comp, bool left_closed, bool right_closed) const
    {
-      std::pair<node_ptr, node_ptr> ret
-         (node_algorithms::bounded_range
-            (this->header_ptr(), lower_key, upper_key, this->key_node_comp(comp), left_closed, right_closed));
+      std::pair<node_ptr, node_ptr> ret =
+         node_algorithms::bounded_range
+            (this->header_ptr(), lower_key, upper_key, this->key_node_comp(comp), left_closed, right_closed);
       return std::pair<const_iterator, const_iterator>( const_iterator(ret.first, this->priv_value_traits_ptr())
                                                       , const_iterator(ret.second, this->priv_value_traits_ptr()));
    }
@@ -735,7 +735,7 @@ class bstree_impl
    //!   move constructor throws (this does not happen with predefined Boost.Intrusive hooks)
    //!   or the move constructor of the comparison objet throws.
    bstree_impl(BOOST_RV_REF(bstree_impl) x)
-      : data_type(::boost::move(x.comp()), ::boost::move(x.get_value_traits()))
+      : data_type(::boost::move(x.get_comp()), ::boost::move(x.get_value_traits()))
    {
       this->swap(x);
    }
@@ -975,7 +975,7 @@ class bstree_impl
    void swap(bstree_impl& other)
    {
       //This can throw
-      ::boost::adl_move_swap(this->comp(), other.comp());
+      ::boost::adl_move_swap(this->get_comp(), other.get_comp());
       //These can't throw
       node_algorithms::swap_tree(this->header_ptr(), node_ptr(other.header_ptr()));
       this->sz_traits().swap(other.sz_traits());
@@ -1008,7 +1008,7 @@ class bstree_impl
             ,detail::node_cloner <Cloner,    value_traits, AlgoType>(cloner,   &this->get_value_traits())
             ,detail::node_disposer<Disposer, value_traits, AlgoType>(disposer, &this->get_value_traits()));
          this->sz_traits().set_size(src.sz_traits().get_size());
-         this->comp() = src.comp();
+         this->get_comp() = src.get_comp();
          rollback.release();
       }
    }
@@ -1043,7 +1043,7 @@ class bstree_impl
             ,detail::node_cloner <Cloner,    value_traits, AlgoType, false>(cloner,   &this->get_value_traits())
             ,detail::node_disposer<Disposer, value_traits, AlgoType>(disposer, &this->get_value_traits()));
          this->sz_traits().set_size(src.sz_traits().get_size());
-         this->comp() = src.comp();
+         this->get_comp() = src.get_comp();
          rollback.release();
       }
    }
@@ -1325,8 +1325,8 @@ class bstree_impl
       }
       //Check if the insertion point is correct to detect wrong
       //uses insert_unique_check
-      BOOST_ASSERT(( p == this->end()   || !this->comp()(*p, value)   ));
-      BOOST_ASSERT(( p == this->begin() || !this->comp()(value, *--p) ));
+      BOOST_ASSERT(( p == this->end()   || !this->get_comp()(*p, value)   ));
+      BOOST_ASSERT(( p == this->begin() || !this->get_comp()(value, *--p) ));
       #endif
 
       node_algorithms::insert_unique_commit
@@ -1943,7 +1943,7 @@ class bstree_impl
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Complexity</b>: Linear to the elements in the subtree.
-   iterator rebalance_subtree(iterator root) BOOST_NOEXCEPT;
+   iterator rebalance_subtree(iterator r) BOOST_NOEXCEPT;
 
    #endif   //#if defined(BOOST_INTRUSIVE_DOXYGEN_INVOKED)
 

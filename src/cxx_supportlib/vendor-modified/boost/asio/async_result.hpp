@@ -2,7 +2,7 @@
 // async_result.hpp
 // ~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -310,6 +310,12 @@ struct are_simple_completion_signatures<Sig0, Sig1, Sig2>
         && is_simple_completion_signature<Sig1>::value
         && is_simple_completion_signature<Sig2>::value)>
 {
+};
+
+template <>
+struct simple_completion_signature<void>
+{
+  typedef void type;
 };
 
 template <typename R>

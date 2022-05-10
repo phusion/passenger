@@ -81,7 +81,7 @@ class node_allocator
    typedef std::ptrdiff_t                       difference_type;
 
    typedef boost::container::dtl::
-      version_type<self_t, Version>             version;
+      version_type<self_t, (unsigned int) Version>             version;
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    typedef boost::container::dtl::
