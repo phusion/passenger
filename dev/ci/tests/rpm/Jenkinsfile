@@ -25,6 +25,7 @@ pipeline {
   parameters {
     booleanParam(name: 'EL7', defaultValue: true, description: 'RHEL 7 tests')
     booleanParam(name: 'EL8', defaultValue: true, description: 'RHEL 8 tests')
+    booleanParam(name: 'EL9', defaultValue: true, description: 'RHEL 9 tests')
   }
 
   stages {
@@ -55,6 +56,12 @@ pipeline {
             },
             'el8 x86_64': {
               setupTest(params.EL8, 'el8', 'x86_64') {
+                checkout scm
+                sh './dev/ci/tests/rpm/run'
+              }
+            },
+            'el9 x86_64': {
+              setupTest(params.EL9, 'el9', 'x86_64') {
                 checkout scm
                 sh './dev/ci/tests/rpm/run'
               }
