@@ -686,6 +686,20 @@ setCurrentWorkingDirectory(const Context &context) {
 	setenv("PWD", appRoot.c_str(), 1);
 }
 
+string
+findRubyopt(const Json::Value &args) {
+	if (!args.isMember("environment_variables")) return "";
+	const Json::Value &envvars = args["environment_variables"];
+	Json::Value::const_iterator it, end = envvars.end();
+
+	for (it = envvars.begin(); it != end; it++) {
+		if (it.name() == "RUBYOPT") {
+			return it->asString();
+		}
+	}
+	return "";
+}
+
 static void
 setDefaultEnvvars(const Json::Value &args) {
 	setenv("PYTHONUNBUFFERED", "1", 1);
@@ -703,7 +717,8 @@ setDefaultEnvvars(const Json::Value &args) {
 	}
 
 	if (args.isMember("preload_bundler") && args["preload_bundler"].asBool()) {
-		setenv("RUBYOPT", "-r bundler/setup", 1);
+		string rubyopt = findRubyopt(args) + " -r bundler/setup";
+		setenv("RUBYOPT", rubyopt.c_str(), 1);
 	}
 
 	if (args["base_uri"].asString() != "/") {
@@ -724,7 +739,14 @@ setGivenEnvVars(const Json::Value &args) {
 
 	for (it = envvars.begin(); it != end; it++) {
 		string key = it.name();
-		setenv(key.c_str(), it->asCString(), 1);
+		string value = it->asString();
+		if(args.isMember("preload_bundler") &&
+		   args["preload_bundler"].asBool()){
+			if (key == "RUBYOPT") {
+				value += " -r bundler/setup";
+			}
+		}
+		setenv(key.c_str(), value.c_str(), 1);
 	}
 }
 
