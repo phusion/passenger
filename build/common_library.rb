@@ -110,7 +110,7 @@ if USE_VENDORED_LIBEV
     result = '-Isrc/cxx_supportlib/vendor-modified/libev'
     # Apple Clang 4.2 complains about ambiguous member templates in ev++.h.
     result << ' -Wno-ambiguous-member-template' if PlatformInfo.compiler_supports_wno_ambiguous_member_template?
-    result << '-DUSE_VENDORED_LIBEV'
+    result << ' -DUSE_VENDORED_LIBEV'
     result
   end
 
