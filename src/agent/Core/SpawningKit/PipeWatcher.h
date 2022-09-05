@@ -90,7 +90,8 @@ private:
 
 		UPDATE_TRACE_POINT();
 		while (!boost::this_thread::interruption_requested()) {
-			char buf[1024 * 8];
+			int log_line_length = (getenv("PASSENGER_MAX_LOG_LINE_LENGTH_BYTES") == null) ? 1024 * 8 : getenv("PASSENGER_MAX_LOG_LINE_LENGTH_BYTES")
+			char buf[log_line_length];
 			ssize_t ret;
 
 			UPDATE_TRACE_POINT();
