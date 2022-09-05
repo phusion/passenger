@@ -4,6 +4,7 @@ Release 6.0.15 (Not yet released)
  * Improve rvm gemset detection. Closes GH-2420.
  * Fix watchdog error on disable-log-prefix flag. Contributed by Paul Hanyzewski. Closes GH-2363.
  * Upgrades Boost to 1.79.
+ * Fixed compilation on some platforms by explicitely using the stl queue. Closes GH-2440.
 
 Release 6.0.14
 -------------

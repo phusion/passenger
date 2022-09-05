@@ -78,7 +78,7 @@ private:
 	mutable boost::mutex gcSyncher;
 	oxt::thread *gcThread;
 	boost::condition_variable gcShuttingDownCond, gcHasShutDownCond;
-	queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
+	std::queue< pair<ConfigRealization *, MonotonicTimeUsec> > oldConfigs;
 	bool shuttingDown;
 
 	struct TimestampedLog {
