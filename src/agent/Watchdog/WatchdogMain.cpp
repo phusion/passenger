@@ -671,7 +671,7 @@ usage() {
 	printf("      --no-delete-pid-file    Do not delete PID file on exit\n");
 	printf("      --log-file PATH         Log to the given file.\n");
 	printf("      --log-level LEVEL       Logging level. [A] Default: %d\n", DEFAULT_LOG_LEVEL);
-  printf("      --disable-log-prefix    Disables prefixing application logs with App PID stdout\n");
+	printf("      --disable-log-prefix    Disables prefixing application logs with App PID stdout\n");
 	printf("      --report-file PATH      Upon successful initialization, report instance\n");
 	printf("                              information to the given file, in JSON format\n");
 	printf("      --cleanup-pidfile PATH  Upon shutdown, kill the process specified by\n");
@@ -814,7 +814,7 @@ parseOptions(int argc, const char *argv[], ConfigKit::Store &config) {
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--log-file")) {
 			updates["log_target"] = argv[i + 1];
 			i += 2;
-    } else if (p.isFlag(argv[i], '\0', "--disable-log-prefix")) {
+		} else if (p.isFlag(argv[i], '\0', "--disable-log-prefix")) {
 			updates["disable_log_prefix"] = true;
 			i++;
 		} else if (p.isValueFlag(argc, i, argv[i], '\0', "--ctl")) {
