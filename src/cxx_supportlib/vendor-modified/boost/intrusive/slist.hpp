@@ -38,6 +38,7 @@
 #include <boost/intrusive/detail/size_holder.hpp>
 #include <boost/intrusive/detail/algorithm.hpp>
 #include <boost/intrusive/detail/value_functors.hpp>
+#include <boost/intrusive/detail/node_cloner_disposer.hpp>
 
 #include <boost/move/utility_core.hpp>
 #include <boost/static_assert.hpp>
@@ -171,49 +172,47 @@ class slist_impl
    //A list with cached last node is incompatible with auto-unlink hooks!
    BOOST_STATIC_ASSERT(!(cache_last && ((int)value_traits::link_mode == (int)auto_unlink)));
 
-   node_ptr get_end_node()
-   {  return node_ptr(linear ? node_ptr() : this->get_root_node());  }
+   BOOST_INTRUSIVE_FORCEINLINE node_ptr get_end_node()
+   {  return node_algorithms::end_node(this->get_root_node());  }
 
-   const_node_ptr get_end_node() const
-   {
-      return const_node_ptr
-         (linear ? const_node_ptr() : this->get_root_node());  }
+   BOOST_INTRUSIVE_FORCEINLINE const_node_ptr get_end_node() const
+   {  return node_algorithms::end_node(this->get_root_node());  }
 
-   node_ptr get_root_node()
+   BOOST_INTRUSIVE_FORCEINLINE node_ptr get_root_node()
    { return data_.root_plus_size_.header_holder_.get_node(); }
 
-   const_node_ptr get_root_node() const
+   BOOST_INTRUSIVE_FORCEINLINE const_node_ptr get_root_node() const
    { return data_.root_plus_size_.header_holder_.get_node(); }
 
-   node_ptr get_last_node()
+   BOOST_INTRUSIVE_FORCEINLINE node_ptr get_last_node()
    {  return this->get_last_node(detail::bool_<cache_last>());  }
 
-   const_node_ptr get_last_node() const
+   BOOST_INTRUSIVE_FORCEINLINE const_node_ptr get_last_node() const
    {  return this->get_last_node(detail::bool_<cache_last>());  }
 
-   void set_last_node(node_ptr n)
+   BOOST_INTRUSIVE_FORCEINLINE void set_last_node(node_ptr n)
    {  return this->set_last_node(n, detail::bool_<cache_last>());  }
 
-   static node_ptr get_last_node(detail::bool_<false>)
+   BOOST_INTRUSIVE_FORCEINLINE static node_ptr get_last_node(detail::bool_<false>)
    {
       //This function shall not be used if cache_last is not true
       BOOST_INTRUSIVE_INVARIANT_ASSERT(cache_last);
       return node_ptr();
    }
 
-   static void set_last_node(node_ptr , detail::bool_<false>)
+   BOOST_INTRUSIVE_FORCEINLINE static void set_last_node(node_ptr , detail::bool_<false>)
    {
       //This function shall not be used if cache_last is not true
       BOOST_INTRUSIVE_INVARIANT_ASSERT(cache_last);
    }
 
-   node_ptr get_last_node(detail::bool_<true>)
+   BOOST_INTRUSIVE_FORCEINLINE node_ptr get_last_node(detail::bool_<true>)
    {  return node_ptr(data_.root_plus_size_.last_);  }
 
-   const_node_ptr get_last_node(detail::bool_<true>) const
+   BOOST_INTRUSIVE_FORCEINLINE const_node_ptr get_last_node(detail::bool_<true>) const
    {  return const_node_ptr(data_.root_plus_size_.last_);  }
 
-   void set_last_node(node_ptr n, detail::bool_<true>)
+   BOOST_INTRUSIVE_FORCEINLINE void set_last_node(node_ptr n, detail::bool_<true>)
    {  data_.root_plus_size_.last_ = n;  }
 
    void set_default_constructed_state()
@@ -242,22 +241,22 @@ class slist_impl
       root_plus_size root_plus_size_;
    } data_;
 
-   size_traits &priv_size_traits()
+   BOOST_INTRUSIVE_FORCEINLINE size_traits &priv_size_traits()
    {  return data_.root_plus_size_;  }
 
-   const size_traits &priv_size_traits() const
+   BOOST_INTRUSIVE_FORCEINLINE const size_traits &priv_size_traits() const
    {  return data_.root_plus_size_;  }
 
-   const value_traits &priv_value_traits() const
+   BOOST_INTRUSIVE_FORCEINLINE const value_traits &priv_value_traits() const
    {  return data_;  }
 
-   value_traits &priv_value_traits()
+   BOOST_INTRUSIVE_FORCEINLINE value_traits &priv_value_traits()
    {  return data_;  }
 
    typedef typename boost::intrusive::value_traits_pointers
       <ValueTraits>::const_value_traits_ptr const_value_traits_ptr;
 
-   const_value_traits_ptr priv_value_traits_ptr() const
+   BOOST_INTRUSIVE_FORCEINLINE const_value_traits_ptr priv_value_traits_ptr() const
    {  return pointer_traits<const_value_traits_ptr>::pointer_to(this->priv_value_traits());  }
 
    /// @endcond
@@ -407,14 +406,10 @@ class slist_impl
    template <class Disposer>
    void clear_and_dispose(Disposer disposer) BOOST_NOEXCEPT
    {
-      const_iterator it(this->begin()), itend(this->end());
-      while(it != itend){
-         node_ptr to_erase(it.pointed_node());
-         ++it;
-         BOOST_IF_CONSTEXPR(safemode_or_autounlink)
-            node_algorithms::init(to_erase);
-         disposer(priv_value_traits().to_value_ptr(to_erase));
-      }
+      node_algorithms::detach_and_dispose
+         ( this->get_root_node()
+         , detail::node_disposer<Disposer, value_traits, CommonSListAlgorithms>
+               (disposer, &this->priv_value_traits()) );
       this->set_default_constructed_state();
    }
 
@@ -704,7 +699,7 @@ class slist_impl
    //!
    //! <b>Note</b>: Does not affect the validity of iterators and references.
    BOOST_INTRUSIVE_FORCEINLINE bool empty() const BOOST_NOEXCEPT
-   { return node_algorithms::unique(this->get_root_node()); }
+   {  return node_algorithms::is_empty(this->get_root_node()); }
 
    //! <b>Effects</b>: Swaps the elements of x and *this.
    //!
@@ -1946,7 +1941,7 @@ class slist_impl
       while (true)
       {
          const_node_ptr next_p = node_traits::get_next(p);
-         if (!linear)
+         BOOST_IF_CONSTEXPR(!linear)
          {
             BOOST_INTRUSIVE_INVARIANT_ASSERT(next_p);
          }

@@ -97,26 +97,66 @@ inline char const * error_category::message( int ev, char * buffer, std::size_t 
 
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 
-#include <boost/system/detail/std_category.hpp>
+#include <boost/system/detail/std_category_impl.hpp>
+#include <mutex>
+#include <new>
 
 namespace boost
 {
 namespace system
 {
 
-inline error_category::operator std::error_category const & () const
+namespace detail
+{
+
+template<class = void> struct stdcat_mx_holder
+{
+    static std::mutex mx_;
+};
+
+template<class T> std::mutex stdcat_mx_holder<T>::mx_;
+
+} // namespace detail
+
+inline void error_category::init_stdcat() const
+{
+    static_assert( sizeof( stdcat_ ) >= sizeof( boost::system::detail::std_category ), "sizeof(stdcat_) is not enough for std_category" );
+
+#if defined(BOOST_MSVC) && BOOST_MSVC < 1900
+    // no alignof
+#else
+
+    static_assert( alignof( decltype(stdcat_align_) ) >= alignof( boost::system::detail::std_category ), "alignof(stdcat_) is not enough for std_category" );
+
+#endif
+
+    std::lock_guard<std::mutex> lk( boost::system::detail::stdcat_mx_holder<>::mx_ );
+
+    if( sc_init_.load( std::memory_order_acquire ) == 0 )
+    {
+        ::new( static_cast<void*>( stdcat_ ) ) boost::system::detail::std_category( this, 0 );
+        sc_init_.store( 1, std::memory_order_release );
+    }
+}
+
+#if defined( BOOST_GCC ) && BOOST_GCC >= 40800 && BOOST_GCC < 70000
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
+inline BOOST_NOINLINE error_category::operator std::error_category const & () const
 {
     if( id_ == detail::generic_category_id )
     {
 // This condition must be the same as the one in error_condition.hpp
 #if defined(BOOST_SYSTEM_AVOID_STD_GENERIC_CATEGORY)
 
-    static const boost::system::detail::std_category generic_instance( this, 0x1F4D3 );
-    return generic_instance;
+        static const boost::system::detail::std_category generic_instance( this, 0x1F4D3 );
+        return generic_instance;
 
 #else
 
-    return std::generic_category();
+        return std::generic_category();
 
 #endif
     }
@@ -126,48 +166,27 @@ inline error_category::operator std::error_category const & () const
 // This condition must be the same as the one in error_code.hpp
 #if defined(BOOST_SYSTEM_AVOID_STD_SYSTEM_CATEGORY)
 
-    static const boost::system::detail::std_category system_instance( this, 0x1F4D7 );
-    return system_instance;
+        static const boost::system::detail::std_category system_instance( this, 0x1F4D7 );
+        return system_instance;
 
 #else
 
-    return std::system_category();
+        return std::system_category();
 
 #endif
     }
 
-    detail::std_category* p = ps_.load( std::memory_order_acquire );
-
-    if( p != 0 )
+    if( sc_init_.load( std::memory_order_acquire ) == 0 )
     {
-        return *p;
+        init_stdcat();
     }
 
-    // One `std_category` object is allocated for every
-    // user-defined `error_category` that is converted to
-    // `std::error_category`.
-    //
-    // This one-time allocation will show up on leak checkers.
-    // That's unavoidable. There is no way to deallocate the
-    // `std_category` object because first, `error_category`
-    // is a literal type (so it can't have a destructor) and
-    // second, `error_category` needs to be usable during program
-    // shutdown.
-    //
-    // https://github.com/boostorg/system/issues/78
-
-    detail::std_category* q = new detail::std_category( this, 0 );
-
-    if( ps_.compare_exchange_strong( p, q, std::memory_order_release, std::memory_order_acquire ) )
-    {
-        return *q;
-    }
-    else
-    {
-        delete q;
-        return *p;
-    }
+    return *static_cast<boost::system::detail::std_category const*>( static_cast<void const*>( stdcat_ ) );
 }
+
+#if defined( BOOST_GCC ) && BOOST_GCC >= 40800 && BOOST_GCC < 70000
+#pragma GCC diagnostic pop
+#endif
 
 } // namespace system
 } // namespace boost

@@ -1,6 +1,7 @@
 
 // Copyright (C) 2003-2004 Jeremy B. Maitin-Shepard.
 // Copyright (C) 2005-2011 Daniel James.
+// Copyright (C) 2022 Christian Mazakas
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -57,8 +58,6 @@ namespace boost {
       typedef boost::unordered::detail::map<A, K, T, H, P> types;
       typedef typename types::value_allocator_traits value_allocator_traits;
       typedef typename types::table table;
-      typedef typename table::node_pointer node_pointer;
-      typedef typename table::link_pointer link_pointer;
 
     public:
       typedef typename value_allocator_traits::pointer pointer;
@@ -97,7 +96,7 @@ namespace boost {
 
       unordered_map(unordered_map const&);
 
-#if defined(BOOST_UNORDERED_USE_MOVE) ||                                       \
+#if defined(BOOST_UNORDERED_USE_MOVE) ||                                        \
   !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
       unordered_map(BOOST_RV_REF(unordered_map) other)
         BOOST_NOEXCEPT_IF(table::nothrow_move_constructible)
@@ -188,9 +187,9 @@ namespace boost {
         return table_.node_alloc();
       }
 
-      // iterators
+//       // iterators
 
-      iterator begin() BOOST_NOEXCEPT { return iterator(table_.begin()); }
+      iterator begin() BOOST_NOEXCEPT { return table_.begin(); }
 
       const_iterator begin() const BOOST_NOEXCEPT
       {
@@ -445,7 +444,7 @@ namespace boost {
       insert_return_type insert(BOOST_RV_REF(node_type) np)
       {
         insert_return_type result;
-        table_.move_insert_node_type_unique(np, result);
+        table_.move_insert_node_type_unique((node_type&)np, result);
         return boost::move(result);
       }
 
@@ -728,8 +727,7 @@ namespace boost {
         size_type>::type
       erase(BOOST_FWD_REF(Key) k)
       {
-        return table_.erase_key_unique_impl(
-          this->key_eq(), boost::forward<Key>(k));
+        return table_.erase_key_unique_impl(boost::forward<Key>(k));
       }
 
       BOOST_UNORDERED_DEPRECATED("Use erase instead")
@@ -774,9 +772,7 @@ namespace boost {
         iterator>::type
       find(const Key& key)
       {
-        return iterator(table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq()));
+        return table_.find(key);
       }
 
       template <class Key>
@@ -784,9 +780,7 @@ namespace boost {
         const_iterator>::type
       find(const Key& key) const
       {
-        return const_iterator(table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq()));
+        return const_iterator(table_.find(key));
       }
 
       template <class CompatibleKey, class CompatibleHash,
@@ -801,9 +795,7 @@ namespace boost {
 
       bool contains(const key_type& k) const
       {
-        return 0 != table_.find_node_impl(
-                      table::policy::apply_hash(this->hash_function(), k), k,
-                      this->key_eq());
+        return table_.find(k) != this->end();
       }
 
       template <class Key>
@@ -811,9 +803,7 @@ namespace boost {
         bool>::type
       contains(const Key& k) const
       {
-        return 0 != table_.find_node_impl(
-                      table::policy::apply_hash(this->hash_function(), k), k,
-                      this->key_eq());
+        return table_.find(k) != this->end();
       }
 
       size_type count(const key_type&) const;
@@ -823,14 +813,7 @@ namespace boost {
         size_type>::type
       count(const Key& k) const
       {
-        std::size_t const key_hash =
-          table::policy::apply_hash(this->hash_function(), k);
-
-        P const& eq = this->key_eq();
-
-        node_pointer p = table_.find_node_impl(key_hash, k, eq);
-
-        return (p ? 1 : 0);
+        return (table_.find(k) != this->end() ? 1 : 0);
       }
 
       std::pair<iterator, iterator> equal_range(const key_type&);
@@ -842,12 +825,13 @@ namespace boost {
         std::pair<iterator, iterator> >::type
       equal_range(const Key& key)
       {
-        node_pointer p = table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq());
+        iterator first = table_.find(key);
+        iterator last = first;
+        if (last != this->end()) {
+          ++last;
+        }
 
-        return std::make_pair(
-          iterator(p), iterator(p ? table::next_node(p) : p));
+        return std::make_pair(first, last);
       }
 
       template <class Key>
@@ -855,12 +839,13 @@ namespace boost {
         std::pair<const_iterator, const_iterator> >::type
       equal_range(const Key& key) const
       {
-        node_pointer p = table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq());
+        iterator first = table_.find(key);
+        iterator last = first;
+        if (last != this->end()) {
+          ++last;
+        }
 
-        return std::make_pair(
-          const_iterator(p), const_iterator(p ? table::next_node(p) : p));
+        return std::make_pair(first, last);
       }
 
       mapped_type& operator[](const key_type&);
@@ -872,7 +857,7 @@ namespace boost {
 
       size_type bucket_count() const BOOST_NOEXCEPT
       {
-        return table_.bucket_count_;
+        return table_.bucket_count();
       }
 
       size_type max_bucket_count() const BOOST_NOEXCEPT
@@ -889,16 +874,15 @@ namespace boost {
 
       local_iterator begin(size_type n)
       {
-        return local_iterator(table_.begin(n), n, table_.bucket_count_);
+        return table_.begin(n);
       }
 
       const_local_iterator begin(size_type n) const
       {
-        return const_local_iterator(table_.begin(n), n, table_.bucket_count_);
+        return const_local_iterator(table_.begin(n));
       }
 
       local_iterator end(size_type) { return local_iterator(); }
-
       const_local_iterator end(size_type) const
       {
         return const_local_iterator();
@@ -906,7 +890,7 @@ namespace boost {
 
       const_local_iterator cbegin(size_type n) const
       {
-        return const_local_iterator(table_.begin(n), n, table_.bucket_count_);
+        return const_local_iterator(table_.begin(n));
       }
 
       const_local_iterator cend(size_type) const
@@ -1026,8 +1010,6 @@ namespace boost {
       typedef boost::unordered::detail::map<A, K, T, H, P> types;
       typedef typename types::value_allocator_traits value_allocator_traits;
       typedef typename types::table table;
-      typedef typename table::node_pointer node_pointer;
-      typedef typename table::link_pointer link_pointer;
 
     public:
       typedef typename value_allocator_traits::pointer pointer;
@@ -1394,7 +1376,7 @@ namespace boost {
 
       node_type extract(const key_type& k)
       {
-        return node_type(table_.extract_by_key(k), table_.node_alloc());
+        return node_type(table_.extract_by_key_impl(k), table_.node_alloc());
       }
 
       template <class Key>
@@ -1437,8 +1419,7 @@ namespace boost {
         size_type>::type
       erase(BOOST_FWD_REF(Key) k)
       {
-        return table_.erase_key_equiv_impl(
-          this->key_eq(), boost::forward<Key>(k));
+        return table_.erase_key_equiv_impl(boost::forward<Key>(k));
       }
 
       BOOST_UNORDERED_DEPRECATED("Use erase instead")
@@ -1483,9 +1464,7 @@ namespace boost {
         iterator>::type
       find(const Key& key)
       {
-        return iterator(table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq()));
+        return table_.find(key);
       }
 
       template <class Key>
@@ -1493,9 +1472,7 @@ namespace boost {
         const_iterator>::type
       find(const Key& key) const
       {
-        return const_iterator(table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq()));
+        return const_iterator(table_.find(key));
       }
 
       template <class CompatibleKey, class CompatibleHash,
@@ -1510,9 +1487,7 @@ namespace boost {
 
       bool contains(key_type const& k) const
       {
-        return 0 != table_.find_node_impl(
-                      table::policy::apply_hash(this->hash_function(), k), k,
-                      this->key_eq());
+        return table_.find(k) != this->end();
       }
 
       template <class Key>
@@ -1520,9 +1495,7 @@ namespace boost {
         bool>::type
       contains(const Key& k) const
       {
-        return 0 != table_.find_node_impl(
-                      table::policy::apply_hash(this->hash_function(), k), k,
-                      this->key_eq());
+        return table_.find(k) != this->end();
       }
 
       size_type count(const key_type&) const;
@@ -1532,11 +1505,7 @@ namespace boost {
         size_type>::type
       count(const Key& k) const
       {
-        node_pointer n = table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), k), k,
-          this->key_eq());
-
-        return n ? table_.group_count(n) : 0;
+        return table_.group_count(k);
       }
 
       std::pair<iterator, iterator> equal_range(const key_type&);
@@ -1548,12 +1517,8 @@ namespace boost {
         std::pair<iterator, iterator> >::type
       equal_range(const Key& key)
       {
-        node_pointer p = table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq());
-
-        return std::make_pair(
-          iterator(p), iterator(p ? table_.next_group(p) : p));
+        iterator p = table_.find(key);
+        return std::make_pair(p, table_.next_group(key, p));
       }
 
       template <class Key>
@@ -1561,19 +1526,16 @@ namespace boost {
         std::pair<const_iterator, const_iterator> >::type
       equal_range(const Key& key) const
       {
-        node_pointer p = table_.find_node_impl(
-          table::policy::apply_hash(this->hash_function(), key), key,
-          this->key_eq());
-
+        iterator p = table_.find(key);
         return std::make_pair(
-          const_iterator(p), const_iterator(p ? table_.next_group(p) : p));
+          const_iterator(p), const_iterator(table_.next_group(key, p)));
       }
 
       // bucket interface
 
       size_type bucket_count() const BOOST_NOEXCEPT
       {
-        return table_.bucket_count_;
+        return table_.bucket_count();
       }
 
       size_type max_bucket_count() const BOOST_NOEXCEPT
@@ -1590,12 +1552,12 @@ namespace boost {
 
       local_iterator begin(size_type n)
       {
-        return local_iterator(table_.begin(n), n, table_.bucket_count_);
+        return local_iterator(table_.begin(n));
       }
 
       const_local_iterator begin(size_type n) const
       {
-        return const_local_iterator(table_.begin(n), n, table_.bucket_count_);
+        return const_local_iterator(table_.begin(n));
       }
 
       local_iterator end(size_type) { return local_iterator(); }
@@ -1607,7 +1569,7 @@ namespace boost {
 
       const_local_iterator cbegin(size_type n) const
       {
-        return const_local_iterator(table_.begin(n), n, table_.bucket_count_);
+        return const_local_iterator(table_.begin(n));
       }
 
       const_local_iterator cend(size_type) const
@@ -1730,7 +1692,7 @@ namespace boost {
             unordered_map::value_allocator_traits::
               select_on_container_copy_construction(other.get_allocator()))
     {
-      if (other.table_.size_) {
+      if (other.size()) {
         table_.copy_buckets(
           other.table_, boost::unordered::detail::true_type());
       }
@@ -1894,29 +1856,21 @@ namespace boost {
     typename unordered_map<K, T, H, P, A>::iterator
     unordered_map<K, T, H, P, A>::erase(iterator position)
     {
-      node_pointer node = table::get_node(position);
-      BOOST_ASSERT(node);
-      node_pointer next = table::next_node(node);
-      table_.erase_nodes_unique(node, next);
-      return iterator(next);
+      return table_.erase_node(position);
     }
 
     template <class K, class T, class H, class P, class A>
     typename unordered_map<K, T, H, P, A>::iterator
     unordered_map<K, T, H, P, A>::erase(const_iterator position)
     {
-      node_pointer node = table::get_node(position);
-      BOOST_ASSERT(node);
-      node_pointer next = table::next_node(node);
-      table_.erase_nodes_unique(node, next);
-      return iterator(next);
+      return table_.erase_node(position);
     }
 
     template <class K, class T, class H, class P, class A>
     typename unordered_map<K, T, H, P, A>::size_type
     unordered_map<K, T, H, P, A>::erase(const key_type& k)
     {
-      return table_.erase_key_unique_impl(this->key_eq(), k);
+      return table_.erase_key_unique_impl(k);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -1924,11 +1878,7 @@ namespace boost {
     unordered_map<K, T, H, P, A>::erase(
       const_iterator first, const_iterator last)
     {
-      node_pointer last_node = table::get_node(last);
-      if (first == last)
-        return iterator(last_node);
-      table_.erase_nodes_unique(table::get_node(first), last_node);
-      return iterator(last_node);
+      return table_.erase_nodes_range(first, last);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -1998,14 +1948,14 @@ namespace boost {
     typename unordered_map<K, T, H, P, A>::iterator
     unordered_map<K, T, H, P, A>::find(const key_type& k)
     {
-      return iterator(table_.find_node(k));
+      return iterator(table_.find(k));
     }
 
     template <class K, class T, class H, class P, class A>
     typename unordered_map<K, T, H, P, A>::const_iterator
     unordered_map<K, T, H, P, A>::find(const key_type& k) const
     {
-      return const_iterator(table_.find_node(k));
+      return const_iterator(table_.find(k));
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2015,8 +1965,7 @@ namespace boost {
     unordered_map<K, T, H, P, A>::find(CompatibleKey const& k,
       CompatibleHash const& hash, CompatiblePredicate const& eq)
     {
-      return iterator(
-        table_.find_node_impl(table::policy::apply_hash(hash, k), k, eq));
+      return table_.transparent_find(k, hash, eq);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2026,8 +1975,7 @@ namespace boost {
     unordered_map<K, T, H, P, A>::find(CompatibleKey const& k,
       CompatibleHash const& hash, CompatiblePredicate const& eq) const
     {
-      return const_iterator(
-        table_.find_node_impl(table::policy::apply_hash(hash, k), k, eq));
+      return table_.transparent_find(k, hash, eq);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2042,8 +1990,12 @@ namespace boost {
       typename unordered_map<K, T, H, P, A>::iterator>
     unordered_map<K, T, H, P, A>::equal_range(const key_type& k)
     {
-      node_pointer n = table_.find_node(k);
-      return std::make_pair(iterator(n), iterator(n ? table::next_node(n) : n));
+      iterator first = table_.find(k);
+      iterator second = first;
+      if (second != this->end()) {
+        ++second;
+      }
+      return std::make_pair(first, second);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2051,9 +2003,12 @@ namespace boost {
       typename unordered_map<K, T, H, P, A>::const_iterator>
     unordered_map<K, T, H, P, A>::equal_range(const key_type& k) const
     {
-      node_pointer n = table_.find_node(k);
-      return std::make_pair(
-        const_iterator(n), const_iterator(n ? table::next_node(n) : n));
+      iterator first = table_.find(k);
+      iterator second = first;
+      if (second != this->end()) {
+        ++second;
+      }
+      return std::make_pair(const_iterator(first), const_iterator(second));
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2074,10 +2029,12 @@ namespace boost {
     typename unordered_map<K, T, H, P, A>::mapped_type&
     unordered_map<K, T, H, P, A>::at(const key_type& k)
     {
+      typedef typename table::node_pointer node_pointer;
+
       if (table_.size_) {
-        node_pointer n = table_.find_node(k);
-        if (n)
-          return n->value().second;
+        node_pointer p = table_.find_node(k);
+        if (p)
+          return p->value().second;
       }
 
       boost::throw_exception(
@@ -2088,10 +2045,12 @@ namespace boost {
     typename unordered_map<K, T, H, P, A>::mapped_type const&
     unordered_map<K, T, H, P, A>::at(const key_type& k) const
     {
+      typedef typename table::node_pointer node_pointer;
+
       if (table_.size_) {
-        node_pointer n = table_.find_node(k);
-        if (n)
-          return n->value().second;
+        node_pointer p = table_.find_node(k);
+        if (p)
+          return p->value().second;
       }
 
       boost::throw_exception(
@@ -2110,9 +2069,9 @@ namespace boost {
     template <class K, class T, class H, class P, class A>
     float unordered_map<K, T, H, P, A>::load_factor() const BOOST_NOEXCEPT
     {
-      BOOST_ASSERT(table_.bucket_count_ != 0);
+      BOOST_ASSERT(table_.bucket_count() != 0);
       return static_cast<float>(table_.size_) /
-             static_cast<float>(table_.bucket_count_);
+             static_cast<float>(table_.bucket_count());
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2130,8 +2089,7 @@ namespace boost {
     template <class K, class T, class H, class P, class A>
     void unordered_map<K, T, H, P, A>::reserve(size_type n)
     {
-      table_.rehash(static_cast<std::size_t>(
-        std::ceil(static_cast<double>(n) / table_.mlf_)));
+      table_.reserve(n);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2377,22 +2335,16 @@ namespace boost {
     typename unordered_multimap<K, T, H, P, A>::iterator
     unordered_multimap<K, T, H, P, A>::erase(iterator position)
     {
-      node_pointer node = table::get_node(position);
-      BOOST_ASSERT(node);
-      node_pointer next = table::next_node(node);
-      table_.erase_nodes_equiv(node, next);
-      return iterator(next);
+      BOOST_ASSERT(position != this->end());
+      return table_.erase_node(position);
     }
 
     template <class K, class T, class H, class P, class A>
     typename unordered_multimap<K, T, H, P, A>::iterator
     unordered_multimap<K, T, H, P, A>::erase(const_iterator position)
     {
-      node_pointer node = table::get_node(position);
-      BOOST_ASSERT(node);
-      node_pointer next = table::next_node(node);
-      table_.erase_nodes_equiv(node, next);
-      return iterator(next);
+      BOOST_ASSERT(position != this->end());
+      return table_.erase_node(position);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2407,11 +2359,7 @@ namespace boost {
     unordered_multimap<K, T, H, P, A>::erase(
       const_iterator first, const_iterator last)
     {
-      node_pointer last_node = table::get_node(last);
-      if (first == last)
-        return iterator(last_node);
-      table_.erase_nodes_equiv(table::get_node(first), last_node);
-      return iterator(last_node);
+      return table_.erase_nodes_range(first, last);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2489,14 +2437,14 @@ namespace boost {
     typename unordered_multimap<K, T, H, P, A>::iterator
     unordered_multimap<K, T, H, P, A>::find(const key_type& k)
     {
-      return iterator(table_.find_node(k));
+      return iterator(table_.find(k));
     }
 
     template <class K, class T, class H, class P, class A>
     typename unordered_multimap<K, T, H, P, A>::const_iterator
     unordered_multimap<K, T, H, P, A>::find(const key_type& k) const
     {
-      return const_iterator(table_.find_node(k));
+      return const_iterator(table_.find(k));
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2506,8 +2454,7 @@ namespace boost {
     unordered_multimap<K, T, H, P, A>::find(CompatibleKey const& k,
       CompatibleHash const& hash, CompatiblePredicate const& eq)
     {
-      return iterator(
-        table_.find_node_impl(table::policy::apply_hash(hash, k), k, eq));
+      return table_.transparent_find(k, hash, eq);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2525,8 +2472,7 @@ namespace boost {
     typename unordered_multimap<K, T, H, P, A>::size_type
     unordered_multimap<K, T, H, P, A>::count(const key_type& k) const
     {
-      node_pointer n = table_.find_node(k);
-      return n ? table_.group_count(n) : 0;
+      return table_.group_count(k);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2534,9 +2480,8 @@ namespace boost {
       typename unordered_multimap<K, T, H, P, A>::iterator>
     unordered_multimap<K, T, H, P, A>::equal_range(const key_type& k)
     {
-      node_pointer n = table_.find_node(k);
-      return std::make_pair(
-        iterator(n), iterator(n ? table_.next_group(n) : n));
+      iterator n = table_.find(k);
+      return std::make_pair(n, (n == end() ? n : table_.next_group(k, n)));
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2544,9 +2489,9 @@ namespace boost {
       typename unordered_multimap<K, T, H, P, A>::const_iterator>
     unordered_multimap<K, T, H, P, A>::equal_range(const key_type& k) const
     {
-      node_pointer n = table_.find_node(k);
-      return std::make_pair(
-        const_iterator(n), const_iterator(n ? table_.next_group(n) : n));
+      iterator n = table_.find(k);
+      return std::make_pair(const_iterator(n),
+        const_iterator(n == end() ? n : table_.next_group(k, n)));
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2561,9 +2506,9 @@ namespace boost {
     template <class K, class T, class H, class P, class A>
     float unordered_multimap<K, T, H, P, A>::load_factor() const BOOST_NOEXCEPT
     {
-      BOOST_ASSERT(table_.bucket_count_ != 0);
+      BOOST_ASSERT(table_.bucket_count() != 0);
       return static_cast<float>(table_.size_) /
-             static_cast<float>(table_.bucket_count_);
+             static_cast<float>(table_.bucket_count());
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2582,8 +2527,7 @@ namespace boost {
     template <class K, class T, class H, class P, class A>
     void unordered_multimap<K, T, H, P, A>::reserve(size_type n)
     {
-      table_.rehash(static_cast<std::size_t>(
-        std::ceil(static_cast<double>(n) / table_.mlf_)));
+      table_.reserve(n);
     }
 
     template <class K, class T, class H, class P, class A>
@@ -2643,16 +2587,14 @@ namespace boost {
       template <class K2, class T2, class H2, class P2, class A2>
       friend class boost::unordered::unordered_multimap;
 
-      typedef typename boost::unordered::detail::rebind_wrap<A,
-        std::pair<K const, T> >::type value_allocator;
-      typedef boost::unordered::detail::allocator_traits<value_allocator>
-        value_allocator_traits;
+      typedef typename boost::allocator_rebind<A, std::pair<K const, T> >::type
+        value_allocator;
+
       typedef N node;
-      typedef typename boost::unordered::detail::rebind_wrap<A, node>::type
-        node_allocator;
-      typedef boost::unordered::detail::allocator_traits<node_allocator>
-        node_allocator_traits;
-      typedef typename node_allocator_traits::pointer node_pointer;
+      typedef typename boost::allocator_rebind<A, node>::type node_allocator;
+
+      typedef
+        typename boost::allocator_pointer<node_allocator>::type node_pointer;
 
     public:
       typedef K key_type;
@@ -2681,8 +2623,8 @@ namespace boost {
       }
 
       node_handle_map(BOOST_RV_REF(node_handle_map) n) BOOST_NOEXCEPT
-        : ptr_(n.ptr_),
-          alloc_(boost::move(n.alloc_))
+          : ptr_(n.ptr_),
+            alloc_(boost::move(n.alloc_))
       {
         n.ptr_ = node_pointer();
       }
@@ -2690,8 +2632,8 @@ namespace boost {
       node_handle_map& operator=(BOOST_RV_REF(node_handle_map) n)
       {
         BOOST_ASSERT(!alloc_.has_value() ||
-                     value_allocator_traits::
-                       propagate_on_container_move_assignment::value ||
+                     boost::allocator_propagate_on_container_move_assignment<
+                       value_allocator>::type::value ||
                      (n.alloc_.has_value() && alloc_ == n.alloc_));
 
         if (ptr_) {
@@ -2702,8 +2644,8 @@ namespace boost {
         }
 
         if (!alloc_.has_value() ||
-            value_allocator_traits::propagate_on_container_move_assignment::
-              value) {
+            boost::allocator_propagate_on_container_move_assignment<
+              value_allocator>::type::value) {
           alloc_ = boost::move(n.alloc_);
         }
         ptr_ = n.ptr_;
@@ -2731,14 +2673,17 @@ namespace boost {
       }
 
       void swap(node_handle_map& n) BOOST_NOEXCEPT_IF(
-        value_allocator_traits::propagate_on_container_swap::value ||
-        value_allocator_traits::is_always_equal::value)
+        boost::allocator_propagate_on_container_swap<
+          value_allocator>::type::value ||
+        boost::allocator_is_always_equal<value_allocator>::type::value)
       {
-        BOOST_ASSERT(
-          !alloc_.has_value() || !n.alloc_.has_value() ||
-          value_allocator_traits::propagate_on_container_swap::value ||
-          alloc_ == n.alloc_);
-        if (value_allocator_traits::propagate_on_container_swap::value ||
+
+        BOOST_ASSERT(!alloc_.has_value() || !n.alloc_.has_value() ||
+                     boost::allocator_propagate_on_container_swap<
+                       value_allocator>::type::value ||
+                     alloc_ == n.alloc_);
+        if (boost::allocator_propagate_on_container_swap<
+              value_allocator>::type::value ||
             !alloc_.has_value() || !n.alloc_.has_value()) {
           boost::swap(alloc_, n.alloc_);
         }
@@ -2753,25 +2698,25 @@ namespace boost {
       x.swap(y);
     }
 
-    template <class N, class K, class T, class A> struct insert_return_type_map
+    template <class Iter, class NodeType> struct insert_return_type_map
     {
     private:
       BOOST_MOVABLE_BUT_NOT_COPYABLE(insert_return_type_map)
 
-      typedef typename boost::unordered::detail::rebind_wrap<A,
-        std::pair<K const, T> >::type value_allocator;
-      typedef N node_;
+      // typedef typename boost::allocator_rebind<A,
+      //   std::pair<K const, T> >::type value_allocator;
+      // typedef N node_;
 
     public:
+      Iter position;
       bool inserted;
-      boost::unordered::iterator_detail::iterator<node_> position;
-      boost::unordered::node_handle_map<N, K, T, A> node;
+      NodeType node;
 
-      insert_return_type_map() : inserted(false), position(), node() {}
+      insert_return_type_map() : position(), inserted(false), node() {}
 
       insert_return_type_map(BOOST_RV_REF(insert_return_type_map)
-          x) BOOST_NOEXCEPT : inserted(x.inserted),
-                              position(x.position),
+          x) BOOST_NOEXCEPT : position(x.position),
+                              inserted(x.inserted),
                               node(boost::move(x.node))
       {
       }
@@ -2785,9 +2730,9 @@ namespace boost {
       }
     };
 
-    template <class N, class K, class T, class A>
-    void swap(insert_return_type_map<N, K, T, A>& x,
-      insert_return_type_map<N, K, T, A>& y)
+    template <class Iter, class NodeType>
+    void swap(insert_return_type_map<Iter, NodeType>& x,
+      insert_return_type_map<Iter, NodeType>& y)
     {
       boost::swap(x.node, y.node);
       boost::swap(x.inserted, y.inserted);

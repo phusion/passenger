@@ -38,7 +38,11 @@
 namespace boost
 {
 
+// forward declaration of boost::basic_string_view from Utility
 template<class Ch, class Tr> class basic_string_view;
+
+// forward declaration of boost::hash_range from ContainerHash
+template<class It> std::size_t hash_range( It, It );
 
 namespace core
 {
@@ -376,10 +380,10 @@ public:
     {
     }
 
-    template<class End> BOOST_CXX14_CONSTEXPR basic_string_view( Ch const* begin, End end,
-        typename boost::enable_if<is_same<End, Ch const*> >::type* = 0 ) BOOST_NOEXCEPT: p_( begin ), n_( end - begin )
+    template<class End> BOOST_CXX14_CONSTEXPR basic_string_view( Ch const* first, End last,
+        typename boost::enable_if<is_same<End, Ch const*> >::type* = 0 ) BOOST_NOEXCEPT: p_( first ), n_( last - first )
     {
-        BOOST_ASSERT( end - begin >= 0 );
+        BOOST_ASSERT( last - first >= 0 );
     }
 
     template<class A> basic_string_view( std::basic_string<Ch, std::char_traits<Ch>, A> const& str ) BOOST_NOEXCEPT: p_( str.data() ), n_( str.size() )
@@ -1161,6 +1165,11 @@ public:
     }
 
 #endif
+
+    inline friend std::size_t hash_value( basic_string_view const& sv )
+    {
+        return boost::hash_range( sv.begin(), sv.end() );
+    }
 };
 
 // stream inserter

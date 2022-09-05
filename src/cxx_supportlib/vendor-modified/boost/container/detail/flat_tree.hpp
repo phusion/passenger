@@ -1396,15 +1396,15 @@ class flat_tree
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       container_type extract_sequence()
-   {
-      return boost::move(m_data.m_seq);
-   }
+   {  return boost::move(m_data.m_seq);   }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       container_type &get_sequence_ref()
-   {
-      return m_data.m_seq;
-   }
+   {  return m_data.m_seq; }
+
+   BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
+      const container_type &get_sequence_cref() const
+   {  return m_data.m_seq; }
 
    BOOST_CONTAINER_FORCEINLINE void adopt_sequence_equal(BOOST_RV_REF(container_type) seq)
    {

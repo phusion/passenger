@@ -64,7 +64,7 @@ class common_slist_algorithms
    BOOST_INTRUSIVE_FORCEINLINE static bool inited(const_node_ptr this_node) BOOST_NOEXCEPT
    {  return !NodeTraits::get_next(this_node); }
 
-   static void unlink_after(node_ptr prev_node) BOOST_NOEXCEPT
+   BOOST_INTRUSIVE_FORCEINLINE static void unlink_after(node_ptr prev_node) BOOST_NOEXCEPT
    {
       const_node_ptr this_node(NodeTraits::get_next(prev_node));
       NodeTraits::set_next(prev_node, NodeTraits::get_next(this_node));
@@ -176,6 +176,75 @@ class common_slist_algorithms
          ++result;
       }
       return result;
+   }
+
+   //! <b>Requires</b>: "disposer" must be an object function
+   //!   taking a node_ptr parameter and shouldn't throw.
+   //!
+   //! <b>Effects</b>: Calls
+   //!   <tt>void disposer::operator()(node_ptr)</tt> for every node of the list
+   //!    [p, e).
+   //!
+   //! <b>Returns</b>: The number of unlinked/disposed nodes
+   //!
+   //! <b>Complexity</b>: Linear to the number of element of the list.
+   //!
+   //! <b>Throws</b>: Nothing.
+   template<class Disposer>
+   static std::size_t unlink_after_and_dispose(node_ptr bb, node_ptr e, Disposer disposer) BOOST_NOEXCEPT
+   {
+      std::size_t n = 0u;
+      node_ptr i = node_traits::get_next(bb);
+      while (i != e) {
+         node_ptr to_erase(i);
+         i = node_traits::get_next(i);
+         disposer(to_erase);
+         ++n;
+      }
+      node_traits::set_next(bb, e);
+      return n;
+   }
+
+   //! <b>Requires</b>: "disposer" must be an object function
+   //!   taking a node_ptr parameter and shouldn't throw.
+   //!
+   //! <b>Effects</b>: Calls
+   //!   <tt>void disposer::operator()(node_ptr)</tt> for every node of the list
+   //!    after p (but not for p). Works for circular or linear lists
+   //!
+   //! <b>Complexity</b>: Linear to the number of element of the list.
+   //!
+   //! <b>Throws</b>: Nothing.
+   template<class Disposer>
+   BOOST_INTRUSIVE_FORCEINLINE static void unlink_after_and_dispose(node_ptr bb, Disposer disposer) BOOST_NOEXCEPT
+   {
+      node_ptr i = node_traits::get_next(bb);
+      node_traits::set_next(bb, node_traits::get_next(i));
+      disposer(i);
+   }
+
+   //! <b>Requires</b>: "disposer" must be an object function
+   //!   taking a node_ptr parameter and shouldn't throw.
+   //!
+   //! <b>Effects</b>: Unlinks all nodes reachable from p (but not p) and calls
+   //!   <tt>void disposer::operator()(node_ptr)</tt> for every node of the list
+   //!    where p is linked.
+   //!
+   //! <b>Complexity</b>: Linear to the number of element of the list.
+   //!
+   //! <b>Throws</b>: Nothing.
+   template<class Disposer>
+   static std::size_t detach_and_dispose(node_ptr p, Disposer disposer) BOOST_NOEXCEPT
+   {
+      std::size_t n = 0;
+      node_ptr i = node_traits::get_next(p);
+      while ( i != p || i != node_ptr() ) {
+         node_ptr to_erase(i);
+         i = node_traits::get_next(i);
+         disposer(to_erase);
+      }
+      node_traits::set_next(p, i);
+      return n;
    }
 };
 

@@ -31,6 +31,12 @@
 
 namespace boost {
 namespace asio {
+namespace detail {
+
+template <typename> class initiate_async_buffered_fill;
+template <typename> class initiate_async_buffered_read_some;
+
+} // namespace detail
 
 /// Adds buffering to the read-related operations of a stream.
 /**
@@ -145,11 +151,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) WriteHandler
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteHandler,
       void (boost::system::error_code, std::size_t))
   async_write_some(const ConstBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(WriteHandler) handler
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      declval<typename conditional<true, Stream&, WriteHandler>::type>()
+        .async_write_some(buffers,
+          BOOST_ASIO_MOVE_CAST(WriteHandler)(handler))))
   {
     return next_layer_.async_write_some(buffers,
         BOOST_ASIO_MOVE_CAST(WriteHandler)(handler));
@@ -172,11 +182,16 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) ReadHandler
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadHandler,
       void (boost::system::error_code, std::size_t))
   async_fill(
       BOOST_ASIO_MOVE_ARG(ReadHandler) handler
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type));
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<ReadHandler,
+        void (boost::system::error_code, std::size_t)>(
+          declval<detail::initiate_async_buffered_fill<Stream> >(),
+          handler, declval<detail::buffered_stream_storage*>())));
 
   /// Read some data from the stream. Returns the number of bytes read. Throws
   /// an exception on failure.
@@ -199,11 +214,16 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) ReadHandler
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadHandler,
       void (boost::system::error_code, std::size_t))
   async_read_some(const MutableBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(ReadHandler) handler
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type));
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<ReadHandler,
+        void (boost::system::error_code, std::size_t)>(
+          declval<detail::initiate_async_buffered_read_some<Stream> >(),
+          handler, declval<detail::buffered_stream_storage*>(), buffers)));
 
   /// Peek at the incoming data on the stream. Returns the number of bytes read.
   /// Throws an exception on failure.

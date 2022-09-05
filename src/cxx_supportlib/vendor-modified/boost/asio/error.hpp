@@ -225,6 +225,35 @@ enum misc_errors
   fd_set_failure
 };
 
+#if !defined(BOOST_ASIO_ERROR_LOCATION) \
+  && !defined(BOOST_ASIO_DISABLE_ERROR_LOCATION) \
+  && defined(BOOST_ASIO_HAS_BOOST_CONFIG) \
+  && (BOOST_VERSION >= 107900)
+
+# define BOOST_ASIO_ERROR_LOCATION(e) \
+  do { \
+    BOOST_STATIC_CONSTEXPR boost::source_location loc \
+      = BOOST_CURRENT_LOCATION; \
+    (e).assign((e), &loc); \
+  } while (false)
+
+#else // !defined(BOOST_ASIO_ERROR_LOCATION)
+      //   && !defined(BOOST_ASIO_DISABLE_ERROR_LOCATION)
+      //   && defined(BOOST_ASIO_HAS_BOOST_CONFIG)
+      //   && (BOOST_VERSION >= 107900)
+
+# define BOOST_ASIO_ERROR_LOCATION(e) (void)0
+
+#endif // !defined(BOOST_ASIO_ERROR_LOCATION)
+       //   && !defined(BOOST_ASIO_DISABLE_ERROR_LOCATION)
+       //   && defined(BOOST_ASIO_HAS_BOOST_CONFIG)
+       //   && (BOOST_VERSION >= 107900)
+
+inline void clear(boost::system::error_code& ec)
+{
+  ec = boost::system::error_code();
+}
+
 inline const boost::system::error_category& get_system_category()
 {
   return boost::system::system_category();

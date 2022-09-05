@@ -74,10 +74,10 @@ public:
     BOOST_DELETED_FUNCTION(ipc_atomic_ref& operator= (ipc_atomic_ref const&))
 };
 
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX17_DEDUCTION_GUIDES)
+#if !defined(BOOST_NO_CXX17_DEDUCTION_GUIDES)
 template< typename T >
 ipc_atomic_ref(T&) -> ipc_atomic_ref< T >;
-#endif // !defined(BOOST_ATOMIC_DETAIL_NO_CXX17_DEDUCTION_GUIDES)
+#endif // !defined(BOOST_NO_CXX17_DEDUCTION_GUIDES)
 
 //! IPC atomic reference factory function
 template< typename T >

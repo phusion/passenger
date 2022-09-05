@@ -54,7 +54,7 @@ namespace container {
 
 //This trait is used to type-pun std::pair because in C++03
 //compilers std::pair is useless for C++11 features
-template<class T, bool = dtl::is_pair<T>::value >
+template<class T, bool>
 struct node_internal_data_type
 {
    typedef T type;
@@ -68,13 +68,13 @@ struct node_internal_data_type< T, true>
                      type;
 };
 
-template <class T, class HookDefiner>
+template <class T, class HookDefiner, bool PairBased = false>
 struct base_node
    :  public HookDefiner::type
 {
    public:
    typedef T value_type;
-   typedef typename node_internal_data_type<T>::type internal_type;
+   typedef typename node_internal_data_type<T, PairBased && dtl::is_pair<T>::value>::type internal_type;
    typedef typename HookDefiner::type hook_type;
 
    typedef typename dtl::aligned_storage<sizeof(T), dtl::alignment_of<T>::value>::type storage_t;
@@ -138,7 +138,7 @@ struct base_node
    #  endif
 
    template<class Alloc>
-   void destructor(Alloc &a) BOOST_NOEXCEPT
+   BOOST_CONTAINER_FORCEINLINE void destructor(Alloc &a) BOOST_NOEXCEPT
    {
       allocator_traits<Alloc>::destroy
          (a, &this->get_real_data());
@@ -191,6 +191,8 @@ BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(key_compare)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(key_equal)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(hasher)
 BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(predicate_type)
+BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(bucket_traits)
+BOOST_INTRUSIVE_INSTANTIATE_DEFAULT_TYPE_TMPLT(bucket_type)
 
 template<class Allocator, class ICont>
 struct node_alloc_holder
@@ -201,13 +203,7 @@ struct node_alloc_holder
    //be of type node_compare<>. If not an associative container val_compare will be a "nat" type.
    typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
       ( boost::container::dtl::
-      , ICont, key_compare, dtl::nat)                 intrusive_val_compare;
-   //In that case obtain the value predicate from the node predicate via predicate_type
-   //if intrusive_val_compare is node_compare<>, nat otherwise
-   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
-      ( boost::container::dtl::
-      , intrusive_val_compare
-      , predicate_type, dtl::nat)                    val_compare;
+      , ICont, key_compare, dtl::nat)                 intrusive_key_compare;
 
    //If the intrusive container is a hash container, obtain the predicate, which will
    //be of type node_compare<>. If not an associative container val_equal will be a "nat" type.
@@ -216,9 +212,15 @@ struct node_alloc_holder
          , ICont, key_equal, dtl::nat2)              intrusive_val_equal;
    typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
    (boost::container::dtl::
-      , ICont, hasher, dtl::nat3)                     intrusive_val_hasher;
+      , ICont, hasher, dtl::nat3)                    intrusive_val_hasher;
+   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
+   (boost::container::dtl::
+      , ICont, bucket_traits, dtl::natN<0>)           intrusive_bucket_traits;
+   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
+   (boost::container::dtl::
+      , ICont, bucket_type, dtl::natN<1>)            intrusive_bucket_type;
    //In that case obtain the value predicate from the node predicate via predicate_type
-   //if intrusive_val_compare is node_compare<>, nat otherwise
+   //if intrusive_key_compare is node_compare<>, nat otherwise
    typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
    (boost::container::dtl::
       , intrusive_val_equal
@@ -256,34 +258,43 @@ struct node_alloc_holder
    public:
 
    //Constructors for sequence containers
-   node_alloc_holder()
+   BOOST_CONTAINER_FORCEINLINE node_alloc_holder()
+   {}
+
+   explicit node_alloc_holder(const intrusive_bucket_traits& bt)
+      : m_icont(bt)
    {}
 
    explicit node_alloc_holder(const ValAlloc &a)
       : NodeAlloc(a)
    {}
 
-   //Constructors for associative containers
-   node_alloc_holder(const val_compare &c, const ValAlloc &a)
-      : NodeAlloc(a), m_icont(typename ICont::key_compare(c))
+   node_alloc_holder(const intrusive_bucket_traits& bt, const ValAlloc& a)
+      : NodeAlloc(a)
+      , m_icont(bt)
    {}
 
-   node_alloc_holder(const val_hasher &hf, const val_equal &eql, const ValAlloc &a)
+   //Constructors for associative containers
+   node_alloc_holder(const intrusive_key_compare &c, const ValAlloc &a)
+      : NodeAlloc(a), m_icont(c)
+   {}
+
+   node_alloc_holder(const intrusive_bucket_traits & bt, const val_hasher &hf, const val_equal &eql, const ValAlloc &a)
       : NodeAlloc(a)
-      , m_icont(typename ICont::bucket_traits()
+      , m_icont(bt
          , typename ICont::hasher(hf)
          , typename ICont::key_equal(eql))
    {}
 
-   node_alloc_holder(const val_hasher &hf, const ValAlloc &a)
+   node_alloc_holder(const intrusive_bucket_traits& bt, const val_hasher &hf, const ValAlloc &a)
       : NodeAlloc(a)
-      , m_icont(typename ICont::bucket_traits()
+      , m_icont(bt
          , typename ICont::hasher(hf)
          , typename ICont::key_equal())
    {}
 
-   node_alloc_holder(const val_hasher &hf)
-      : m_icont(typename ICont::bucket_traits()
+   node_alloc_holder(const intrusive_bucket_traits& bt, const val_hasher &hf)
+      : m_icont(bt
          , typename ICont::hasher(hf)
          , typename ICont::key_equal())
    {}
@@ -292,20 +303,20 @@ struct node_alloc_holder
       : NodeAlloc(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()))
    {}
 
-   node_alloc_holder(const node_alloc_holder &x, const val_compare &c)
+   node_alloc_holder(const node_alloc_holder &x, const intrusive_key_compare &c)
       : NodeAlloc(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()))
-      , m_icont(typename ICont::key_compare(c))
+      , m_icont(c)
    {}
 
-   node_alloc_holder(const node_alloc_holder &x, const val_hasher &hf, const val_equal &eql)
+   node_alloc_holder(const node_alloc_holder &x, const intrusive_bucket_traits& bt, const val_hasher &hf, const val_equal &eql)
       : NodeAlloc(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()))
-      , m_icont( typename ICont::bucket_traits()
+      , m_icont( bt
                , typename ICont::hasher(hf)
                , typename ICont::key_equal(eql))
    {}
 
-   node_alloc_holder(const val_hasher &hf, const val_equal &eql)
-      : m_icont(typename ICont::bucket_traits()
+   node_alloc_holder(const val_hasher &hf, const intrusive_bucket_traits& bt, const val_equal &eql)
+      : m_icont(bt
          , typename ICont::hasher(hf)
          , typename ICont::key_equal(eql))
    {}
@@ -314,46 +325,46 @@ struct node_alloc_holder
       : NodeAlloc(boost::move(BOOST_MOVE_TO_LV(x).node_alloc()))
    {  this->icont().swap(x.icont());  }
 
-   explicit node_alloc_holder(const val_compare &c)
-      : m_icont(typename ICont::key_compare(c))
+   explicit node_alloc_holder(const intrusive_key_compare &c)
+      : m_icont(c)
    {}
 
    //helpers for move assignments
-   explicit node_alloc_holder(BOOST_RV_REF(node_alloc_holder) x, const val_compare &c)
-      : NodeAlloc(boost::move(BOOST_MOVE_TO_LV(x).node_alloc())), m_icont(typename ICont::key_compare(c))
+   explicit node_alloc_holder(BOOST_RV_REF(node_alloc_holder) x, const intrusive_key_compare &c)
+      : NodeAlloc(boost::move(BOOST_MOVE_TO_LV(x).node_alloc())), m_icont(c)
    {  this->icont().swap(x.icont());  }
 
-   explicit node_alloc_holder(BOOST_RV_REF(node_alloc_holder) x, const val_hasher &hf, const val_equal &eql)
+   explicit node_alloc_holder(BOOST_RV_REF(node_alloc_holder) x, const intrusive_bucket_traits& bt, const val_hasher &hf, const val_equal &eql)
       : NodeAlloc(boost::move(BOOST_MOVE_TO_LV(x).node_alloc()))
-      , m_icont( typename ICont::bucket_traits()
+      , m_icont( bt
                , typename ICont::hasher(hf)
                , typename ICont::key_equal(eql))
    {  this->icont().swap(BOOST_MOVE_TO_LV(x).icont());   }
 
-   void copy_assign_alloc(const node_alloc_holder &x)
+   BOOST_CONTAINER_FORCEINLINE void copy_assign_alloc(const node_alloc_holder &x)
    {
       dtl::bool_<allocator_traits_type::propagate_on_container_copy_assignment::value> flag;
       dtl::assign_alloc( static_cast<NodeAlloc &>(*this)
                        , static_cast<const NodeAlloc &>(x), flag);
    }
 
-   void move_assign_alloc( node_alloc_holder &x)
+   BOOST_CONTAINER_FORCEINLINE void move_assign_alloc( node_alloc_holder &x)
    {
       dtl::bool_<allocator_traits_type::propagate_on_container_move_assignment::value> flag;
       dtl::move_alloc( static_cast<NodeAlloc &>(*this)
                      , static_cast<NodeAlloc &>(x), flag);
    }
 
-   ~node_alloc_holder()
+   BOOST_CONTAINER_FORCEINLINE ~node_alloc_holder()
    {  this->clear(alloc_version()); }
 
-   size_type max_size() const
+   BOOST_CONTAINER_FORCEINLINE size_type max_size() const
    {  return allocator_traits_type::max_size(this->node_alloc());  }
 
-   NodePtr allocate_one()
+   BOOST_CONTAINER_FORCEINLINE NodePtr allocate_one()
    {  return AllocVersionTraits::allocate_one(this->node_alloc());   }
 
-   void deallocate_one(const NodePtr &p)
+   BOOST_CONTAINER_FORCEINLINE void deallocate_one(const NodePtr &p)
    {  AllocVersionTraits::deallocate_one(this->node_alloc(), p);  }
 
    #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
@@ -488,7 +499,7 @@ struct node_alloc_holder
       }
    }
 
-   void clear(version_1)
+   BOOST_CONTAINER_FORCEINLINE void clear(version_1)
    {  this->icont().clear_and_dispose(Destroyer(this->node_alloc()));   }
 
    void clear(version_2)
@@ -514,25 +525,25 @@ struct node_alloc_holder
       return ret_it;
    }
 
-   template<class Key, class Comparator>
-   size_type erase_key(const Key& k, const Comparator &comp, version_1)
-   {  return this->icont().erase_and_dispose(k, comp, Destroyer(this->node_alloc())); }
+   template<class Key>
+   BOOST_CONTAINER_FORCEINLINE size_type erase_key(const Key& k, version_1)
+   {  return this->icont().erase_and_dispose(k, Destroyer(this->node_alloc())); }
 
-   template<class Key, class Comparator>
-   size_type erase_key(const Key& k, const Comparator &comp, version_2)
+   template<class Key>
+   BOOST_CONTAINER_FORCEINLINE size_type erase_key(const Key& k, version_2)
    {
       allocator_multialloc_chain_node_deallocator<NodeAlloc> chain_holder(this->node_alloc());
-      return this->icont().erase_and_dispose(k, comp, chain_holder.get_chain_builder());
+      return this->icont().erase_and_dispose(k, chain_holder.get_chain_builder());
    }
 
    protected:
    struct cloner
    {
-      explicit cloner(node_alloc_holder &holder)
+      BOOST_CONTAINER_FORCEINLINE explicit cloner(node_alloc_holder &holder)
          :  m_holder(holder)
       {}
 
-      NodePtr operator()(const Node &other) const
+      BOOST_CONTAINER_FORCEINLINE NodePtr operator()(const Node &other) const
       {  return m_holder.create_node(other.get_real_data());  }
 
       node_alloc_holder &m_holder;
@@ -540,11 +551,11 @@ struct node_alloc_holder
 
    struct move_cloner
    {
-      move_cloner(node_alloc_holder &holder)
+      BOOST_CONTAINER_FORCEINLINE move_cloner(node_alloc_holder &holder)
          :  m_holder(holder)
       {}
 
-      NodePtr operator()(Node &other)
+      BOOST_CONTAINER_FORCEINLINE NodePtr operator()(Node &other)
       {  //Use get_real_data() instead of get_real_data to allow moving const key in [multi]map
          return m_holder.create_node(::boost::move(other.get_real_data()));
       }
@@ -552,26 +563,39 @@ struct node_alloc_holder
       node_alloc_holder &m_holder;
    };
 
-   ICont &non_const_icont() const
+   BOOST_CONTAINER_FORCEINLINE ICont &non_const_icont() const
    {  return const_cast<ICont&>(this->m_icont);   }
 
-   NodeAlloc &node_alloc()
+   BOOST_CONTAINER_FORCEINLINE NodeAlloc &node_alloc()
    {  return static_cast<NodeAlloc &>(*this);   }
 
-   const NodeAlloc &node_alloc() const
+   BOOST_CONTAINER_FORCEINLINE const NodeAlloc &node_alloc() const
    {  return static_cast<const NodeAlloc &>(*this);   }
 
    public:
-   ICont &icont()
+   BOOST_CONTAINER_FORCEINLINE ICont &icont()
    {  return this->m_icont;   }
 
-   const ICont &icont() const
+   BOOST_CONTAINER_FORCEINLINE const ICont &icont() const
    {  return this->m_icont;   }
 
-   private:
+   protected:
    //The intrusive container
    ICont m_icont;
 };
+
+template<class Node, class KeyOfValue>
+struct key_of_node : KeyOfValue
+{
+   typedef typename KeyOfValue::type type;
+
+   BOOST_CONTAINER_FORCEINLINE key_of_node()
+   {}
+
+   BOOST_CONTAINER_FORCEINLINE const type& operator()(const Node& x) const
+   {  return this->KeyOfValue::operator()(x.get_data());  }
+};
+
 
 }  //namespace dtl {
 }  //namespace container {

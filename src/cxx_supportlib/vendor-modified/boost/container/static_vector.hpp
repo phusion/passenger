@@ -137,8 +137,9 @@ struct get_static_vector_allocator
 //!possible.
 //!
 //!@par Error Handling
-//! Insertion beyond the capacity result in throwing bad_alloc() if exceptions are enabled or
-//! calling throw_bad_alloc() if not enabled.
+//! If `throw_on_overflow` option is true (default behaviour), insertion beyond the capacity result
+//! in throwing bad_alloc() if exceptions are enabled and or calling throw_bad_alloc() if not enabled.
+//! If `throw_on_overflow` option is false, insertion beyond capacity results in Undefined Behaviour.
 //!
 //! out_of_range is thrown if out of bounds access is performed in <code>at()</code> if exceptions are
 //! enabled, throw_out_of_range() if not enabled.

@@ -28,6 +28,10 @@ namespace asio {
 
 namespace detail
 {
+  struct default_connect_condition;
+  template <typename, typename> class initiate_async_range_connect;
+  template <typename, typename> class initiate_async_iterator_connect;
+
   char (&has_iterator_helper(...))[2];
 
   template <typename T>
@@ -686,14 +690,19 @@ template <typename Protocol, typename Executor, typename EndpointSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       typename Protocol::endpoint)) RangeConnectToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(RangeConnectToken,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(RangeConnectToken,
     void (boost::system::error_code, typename Protocol::endpoint))
 async_connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints,
     BOOST_ASIO_MOVE_ARG(RangeConnectToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
     typename constraint<is_endpoint_sequence<
-        EndpointSequence>::value>::type = 0);
+        EndpointSequence>::value>::type = 0)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<RangeConnectToken,
+      void (boost::system::error_code, typename Protocol::endpoint)>(
+        declval<detail::initiate_async_range_connect<Protocol, Executor> >(),
+        token, endpoints, declval<detail::default_connect_condition>())));
 
 #if !defined(BOOST_ASIO_NO_DEPRECATED)
 /// (Deprecated: Use range overload.) Asynchronously establishes a socket
@@ -751,12 +760,18 @@ template <typename Protocol, typename Executor, typename Iterator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       Iterator)) IteratorConnectToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(IteratorConnectToken,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(IteratorConnectToken,
     void (boost::system::error_code, Iterator))
 async_connect(basic_socket<Protocol, Executor>& s, Iterator begin,
     BOOST_ASIO_MOVE_ARG(IteratorConnectToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename constraint<!is_endpoint_sequence<Iterator>::value>::type = 0);
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type = 0)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<IteratorConnectToken,
+      void (boost::system::error_code, Iterator)>(
+        declval<detail::initiate_async_iterator_connect<Protocol, Executor> >(),
+        token, begin, Iterator(),
+        declval<detail::default_connect_condition>())));
 #endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 /// Asynchronously establishes a socket connection by trying each endpoint in a
@@ -828,11 +843,16 @@ template <typename Protocol, typename Executor, typename Iterator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       Iterator)) IteratorConnectToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(IteratorConnectToken,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(IteratorConnectToken,
     void (boost::system::error_code, Iterator))
 async_connect(basic_socket<Protocol, Executor>& s, Iterator begin, Iterator end,
     BOOST_ASIO_MOVE_ARG(IteratorConnectToken) token
-      BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor));
+      BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor))
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<IteratorConnectToken,
+      void (boost::system::error_code, Iterator)>(
+        declval<detail::initiate_async_iterator_connect<Protocol, Executor> >(),
+        token, begin, end, declval<detail::default_connect_condition>())));
 
 /// Asynchronously establishes a socket connection by trying each endpoint in a
 /// sequence.
@@ -950,14 +970,19 @@ template <typename Protocol, typename Executor,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       typename Protocol::endpoint)) RangeConnectToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(RangeConnectToken,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(RangeConnectToken,
     void (boost::system::error_code, typename Protocol::endpoint))
 async_connect(basic_socket<Protocol, Executor>& s,
     const EndpointSequence& endpoints, ConnectCondition connect_condition,
     BOOST_ASIO_MOVE_ARG(RangeConnectToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
     typename constraint<is_endpoint_sequence<
-        EndpointSequence>::value>::type = 0);
+        EndpointSequence>::value>::type = 0)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<RangeConnectToken,
+      void (boost::system::error_code, typename Protocol::endpoint)>(
+        declval<detail::initiate_async_range_connect<Protocol, Executor> >(),
+        token, endpoints, connect_condition)));
 
 #if !defined(BOOST_ASIO_NO_DEPRECATED)
 /// (Deprecated: Use range overload.) Asynchronously establishes a socket
@@ -1027,13 +1052,18 @@ template <typename Protocol, typename Executor,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       Iterator)) IteratorConnectToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(IteratorConnectToken,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(IteratorConnectToken,
     void (boost::system::error_code, Iterator))
 async_connect(basic_socket<Protocol, Executor>& s, Iterator begin,
     ConnectCondition connect_condition,
     BOOST_ASIO_MOVE_ARG(IteratorConnectToken) token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename constraint<!is_endpoint_sequence<Iterator>::value>::type = 0);
+    typename constraint<!is_endpoint_sequence<Iterator>::value>::type = 0)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<IteratorConnectToken,
+      void (boost::system::error_code, Iterator)>(
+        declval<detail::initiate_async_iterator_connect<Protocol, Executor> >(),
+        token, begin, Iterator(), connect_condition)));
 #endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 /// Asynchronously establishes a socket connection by trying each endpoint in a
@@ -1155,12 +1185,17 @@ template <typename Protocol, typename Executor,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       Iterator)) IteratorConnectToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(IteratorConnectToken,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(IteratorConnectToken,
     void (boost::system::error_code, Iterator))
 async_connect(basic_socket<Protocol, Executor>& s, Iterator begin,
     Iterator end, ConnectCondition connect_condition,
     BOOST_ASIO_MOVE_ARG(IteratorConnectToken) token
-      BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor));
+      BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor))
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<IteratorConnectToken,
+      void (boost::system::error_code, Iterator)>(
+        declval<detail::initiate_async_iterator_connect<Protocol, Executor> >(),
+        token, begin, end, connect_condition)));
 
 /*@}*/
 

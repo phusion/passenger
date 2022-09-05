@@ -97,7 +97,7 @@ class BOOST_SYMBOL_VISIBLE length_error
    {}
 };
 
-typedef out_of_range length_error_t;
+typedef length_error length_error_t;
 
 class BOOST_SYMBOL_VISIBLE logic_error
    : public exception

@@ -61,6 +61,10 @@ template <typename Executor>
 class basic_random_access_file
   : public basic_file<Executor>
 {
+private:
+  class initiate_async_write_some_at;
+  class initiate_async_read_some_at;
+
 public:
   /// The type of the executor associated with the object.
   typedef Executor executor_type;
@@ -458,12 +462,16 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) WriteToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
       void (boost::system::error_code, std::size_t))
   async_write_some_at(uint64_t offset,
       const ConstBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(WriteToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<WriteToken,
+        void (boost::system::error_code, std::size_t)>(
+          declval<initiate_async_write_some_at>(), token, offset, buffers)))
   {
     return async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
@@ -595,12 +603,16 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) ReadToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadToken,
       void (boost::system::error_code, std::size_t))
   async_read_some_at(uint64_t offset,
       const MutableBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(ReadToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<ReadToken,
+        void (boost::system::error_code, std::size_t)>(
+          declval<initiate_async_read_some_at>(), token, offset, buffers)))
   {
     return async_initiate<ReadToken,
       void (boost::system::error_code, std::size_t)>(

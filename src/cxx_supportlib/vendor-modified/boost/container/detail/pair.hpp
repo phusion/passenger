@@ -556,8 +556,7 @@ template<class A, class B>
 struct is_trivially_copy_assignable
    <boost::container::dtl::pair<A,B> >
 {
-   static const bool value = boost::move_detail::is_trivially_copy_assignable<A>::value &&
-                             boost::move_detail::is_trivially_copy_assignable<B>::value ;
+   static const bool value = false ;
 };
 
 template<class T>
@@ -567,8 +566,7 @@ template<class A, class B>
 struct is_trivially_move_assignable
    <boost::container::dtl::pair<A,B> >
 {
-   static const bool value = boost::move_detail::is_trivially_move_assignable<A>::value &&
-                             boost::move_detail::is_trivially_move_assignable<B>::value ;
+   static const bool value = false;
 };
 
 template<class T>
@@ -577,8 +575,7 @@ struct is_trivially_copy_assignable;
 template<class A, class B>
 struct is_trivially_copy_constructible<boost::container::dtl::pair<A,B> >
 {
-   static const bool value = boost::move_detail::is_trivially_copy_constructible<A>::value &&
-                             boost::move_detail::is_trivially_copy_constructible<B>::value ;
+   static const bool value = false;
 };
 
 template<class T>
@@ -587,8 +584,7 @@ struct is_trivially_move_assignable;
 template<class A, class B>
 struct is_trivially_move_constructible<boost::container::dtl::pair<A,B> >
 {
-   static const bool value = boost::move_detail::is_trivially_move_constructible<A>::value &&
-                             boost::move_detail::is_trivially_move_constructible<B>::value ;
+   static const bool value = false;
 };
 
 template<class T>

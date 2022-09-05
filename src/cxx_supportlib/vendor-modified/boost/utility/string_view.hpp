@@ -23,6 +23,7 @@
 #include <boost/io/ostream_put.hpp>
 #include <boost/utility/string_view_fwd.hpp>
 #include <boost/throw_exception.hpp>
+#include <boost/assert.hpp>
 
 #include <cstddef>
 #include <stdexcept>
@@ -122,13 +123,13 @@ namespace boost {
         // capacity
         BOOST_CONSTEXPR size_type size()     const BOOST_NOEXCEPT { return len_; }
         BOOST_CONSTEXPR size_type length()   const BOOST_NOEXCEPT { return len_; }
-        BOOST_CONSTEXPR size_type max_size() const BOOST_NOEXCEPT { return len_; }
+        BOOST_CONSTEXPR size_type max_size() const BOOST_NOEXCEPT { return ~static_cast<size_type>(0) / (sizeof(value_type) * 2u); }
         BOOST_CONSTEXPR bool empty()         const BOOST_NOEXCEPT { return len_ == 0; }
 
         // element access
         BOOST_CONSTEXPR const_reference operator[](size_type pos) const BOOST_NOEXCEPT { return ptr_[pos]; }
 
-        BOOST_CONSTEXPR const_reference at(size_t pos) const {
+        BOOST_CONSTEXPR const_reference at(size_type pos) const {
             return pos >= len_ ? BOOST_THROW_EXCEPTION(std::out_of_range("boost::string_view::at")), ptr_[0] : ptr_[pos];
             }
 
@@ -140,6 +141,8 @@ namespace boost {
         void clear() BOOST_NOEXCEPT { len_ = 0; }          // Boost extension
 
         BOOST_CXX14_CONSTEXPR void remove_prefix(size_type n) {
+            BOOST_ASSERT(n <= size());
+            // This check is deprecated and is left for backward compatibility. It will be removed in the future.
             if ( n > len_ )
                 n = len_;
             ptr_ += n;
@@ -147,6 +150,8 @@ namespace boost {
             }
 
         BOOST_CXX14_CONSTEXPR void remove_suffix(size_type n) {
+            BOOST_ASSERT(n <= size());
+            // This check is deprecated and is left for backward compatibility. It will be removed in the future.
             if ( n > len_ )
                 n = len_;
             len_ -= n;
@@ -189,6 +194,10 @@ namespace boost {
             return rlen;
             }
 
+        BOOST_CXX14_CONSTEXPR basic_string_view substr() const {
+            return basic_string_view(data(), size());
+            }
+
         BOOST_CXX14_CONSTEXPR basic_string_view substr(size_type pos, size_type n=npos) const {
             if ( pos > size())
                 BOOST_THROW_EXCEPTION( std::out_of_range ( "string_view::substr" ) );
@@ -201,7 +210,7 @@ namespace boost {
             }
 
         BOOST_CXX14_CONSTEXPR int compare(size_type pos1, size_type n1, basic_string_view x)
-          const BOOST_NOEXCEPT {
+          const {
             return substr(pos1, n1).compare(x);
             }
 
@@ -239,6 +248,18 @@ namespace boost {
         BOOST_CONSTEXPR bool ends_with(basic_string_view x) const BOOST_NOEXCEPT {    // Boost extension
             return len_ >= x.len_ &&
                traits::compare(ptr_ + len_ - x.len_, x.ptr_, x.len_) == 0;
+            }
+
+        BOOST_CXX14_CONSTEXPR bool contains(basic_string_view s) const BOOST_NOEXCEPT {
+            return find(s) != npos;
+            }
+
+        BOOST_CXX14_CONSTEXPR bool contains(charT c) const BOOST_NOEXCEPT {
+            return find(c) != npos;
+            }
+
+        BOOST_CXX14_CONSTEXPR bool contains(const charT* s) const BOOST_NOEXCEPT {
+            return find(s) != npos;
             }
 
         //  find

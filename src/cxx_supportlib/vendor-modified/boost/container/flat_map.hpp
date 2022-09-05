@@ -65,6 +65,10 @@ BOOST_CONTAINER_FORCEINLINE static D &force(S &s)
 {  return *move_detail::force_ptr<D*>(&s); }
 
 template<class D, class S>
+BOOST_CONTAINER_FORCEINLINE static const D &force(const S &s)
+{  return *move_detail::force_ptr<const D*>(&s); }
+
+template<class D, class S>
 BOOST_CONTAINER_FORCEINLINE static D force_copy(const S &s)
 {
    const D *const vp = move_detail::force_ptr<const D *>(&s);
@@ -104,7 +108,7 @@ BOOST_CONTAINER_FORCEINLINE static D force_copy(const S &s)
 //!   - The allocator to allocate <code>value_type</code>s (e.g. <i>allocator< std::pair<Key, T> > </i>).
 //!     (in this case <i>sequence_type</i> will be vector<value_type, AllocatorOrContainer>)
 //!   - The SequenceContainer to be used as the underlying <i>sequence_type</i>. It must be a vector-like
-//!     sequence container with random-access iterators..
+//!     sequence container with random-access iterators.
 #ifdef BOOST_CONTAINER_DOXYGEN_INVOKED
 template <class Key, class T, class Compare = std::less<Key>, class AllocatorOrContainer = new_allocator< std::pair< Key, T> > >
 #else
@@ -1569,6 +1573,14 @@ class flat_map
    BOOST_CONTAINER_FORCEINLINE void adopt_sequence(ordered_unique_range_t, BOOST_RV_REF(sequence_type) seq)
    {  this->m_flat_tree.adopt_sequence_unique(ordered_unique_range_t(), boost::move(dtl::force<impl_sequence_type>(seq)));  }
 
+   //! <b>Effects</b>: Returns a const view of the underlying sequence.
+   //!
+   //! <b>Complexity</b>: Constant
+   //!
+   //! <b>Throws</b>: Nothing
+   BOOST_CONTAINER_FORCEINLINE const sequence_type & sequence() const BOOST_NOEXCEPT
+   {  return dtl::force<sequence_type>(m_flat_tree.get_sequence_cref());  }
+
    //! <b>Effects</b>: Returns true if x and y are equal
    //!
    //! <b>Complexity</b>: Linear to the number of elements in the container.
@@ -2887,9 +2899,7 @@ class flat_multimap
    //! <b>Throws</b>: If secuence_type's move constructor throws 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       sequence_type extract_sequence()
-   {
-      return boost::move(dtl::force<sequence_type>(m_flat_tree.get_sequence_ref()));
-   }
+   {  return boost::move(dtl::force<sequence_type>(m_flat_tree.get_sequence_ref()));   }
 
    //! <b>Effects</b>: Discards the internally hold sequence container and adopts the
    //!   one passed externally using the move assignment.
@@ -2910,6 +2920,14 @@ class flat_multimap
    //! <b>Throws</b>: If the move assignment throws
    BOOST_CONTAINER_FORCEINLINE void adopt_sequence(ordered_range_t, BOOST_RV_REF(sequence_type) seq)
    {  this->m_flat_tree.adopt_sequence_equal(ordered_range_t(), boost::move(dtl::force<impl_sequence_type>(seq)));  }
+
+   //! <b>Effects</b>: Returns a const view of the underlying sequence.
+   //!
+   //! <b>Complexity</b>: Constant
+   //!
+   //! <b>Throws</b>: Nothing
+   BOOST_CONTAINER_FORCEINLINE const sequence_type & sequence() const BOOST_NOEXCEPT
+   {  return dtl::force<sequence_type>(m_flat_tree.get_sequence_cref());  }
 
    //! <b>Effects</b>: Returns true if x and y are equal
    //!

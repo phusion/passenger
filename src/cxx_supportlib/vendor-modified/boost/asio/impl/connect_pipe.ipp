@@ -122,7 +122,7 @@ void create_pipe(native_pipe_handle p[2], boost::system::error_code& ec)
   }
 #endif // _WIN32_WINNT >= 0x601
 
-  ec.assign(0, ec.category());
+  boost::asio::error::clear(ec);
 #else // defined(BOOST_ASIO_HAS_IOCP)
   int result = ::pipe(p);
   detail::descriptor_ops::get_last_error(ec, result != 0);

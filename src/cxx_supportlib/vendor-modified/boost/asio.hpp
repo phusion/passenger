@@ -17,6 +17,8 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include <boost/asio/append.hpp>
+#include <boost/asio/as_tuple.hpp>
 #include <boost/asio/associated_allocator.hpp>
 #include <boost/asio/associated_executor.hpp>
 #include <boost/asio/associated_cancellation_slot.hpp>
@@ -65,6 +67,7 @@
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/defer.hpp>
+#include <boost/asio/deferred.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/error.hpp>
@@ -138,6 +141,7 @@
 #include <boost/asio/ip/unicast.hpp>
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/asio/is_applicable_property.hpp>
+#include <boost/asio/is_contiguous_iterator.hpp>
 #include <boost/asio/is_executor.hpp>
 #include <boost/asio/is_read_buffered.hpp>
 #include <boost/asio/is_write_buffered.hpp>
@@ -155,6 +159,7 @@
 #include <boost/asio/posix/stream_descriptor.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/prefer.hpp>
+#include <boost/asio/prepend.hpp>
 #include <boost/asio/query.hpp>
 #include <boost/asio/random_access_file.hpp>
 #include <boost/asio/read.hpp>

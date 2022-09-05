@@ -883,7 +883,7 @@ class iterator_from_iiterator
    {  return l.m_iit == r.m_iit;   }
 
    BOOST_CONTAINER_FORCEINLINE friend bool operator!= (const iterator_from_iiterator& l, const iterator_from_iiterator& r) BOOST_NOEXCEPT_OR_NOTHROW
-   {  return !(l == r); }
+   {  return l.m_iit != r.m_iit;   }
 
    BOOST_CONTAINER_FORCEINLINE reference operator*()  const BOOST_NOEXCEPT_OR_NOTHROW
    {  return this->m_iit->get_data();  }

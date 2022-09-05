@@ -632,7 +632,7 @@ namespace std{ using ::type_info; }
        // nvcc doesn't always parse __noinline__,
        // see: https://svn.boost.org/trac/boost/ticket/9392
 #      define BOOST_NOINLINE __attribute__ ((noinline))
-#    elif defined(HIP_VERSION)
+#    elif defined(__HIP__)
        // See https://github.com/boostorg/config/issues/392
 #      define BOOST_NOINLINE __attribute__ ((noinline))
 #    else
@@ -1069,6 +1069,12 @@ namespace std{ using ::type_info; }
 
 #define BOOST_STATIC_CONSTEXPR  static BOOST_CONSTEXPR_OR_CONST
 
+#if !defined(BOOST_NO_CXX11_NULLPTR)
+# define BOOST_NULLPTR nullptr
+#else
+# define BOOST_NULLPTR 0
+#endif
+
 //
 // Set BOOST_HAS_STATIC_ASSERT when BOOST_NO_CXX11_STATIC_ASSERT is not defined
 //
@@ -1211,6 +1217,14 @@ namespace std{ using ::type_info; }
 #endif
 #else
 #  define BOOST_NO_CXX20_HDR_VERSION
+#endif
+
+#if defined(BOOST_MSVC)
+#if (BOOST_MSVC < 1914) || (_MSVC_LANG < 201703)
+#  define BOOST_NO_CXX17_DEDUCTION_GUIDES
+#endif
+#elif !defined(__cpp_deduction_guides) || (__cpp_deduction_guides < 201606)
+#  define BOOST_NO_CXX17_DEDUCTION_GUIDES
 #endif
 
 //

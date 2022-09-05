@@ -14,6 +14,7 @@
 #include <boost/thread/detail/move.hpp>
 #include <boost/thread/thread_functors.hpp>
 #include <boost/thread/thread_only.hpp>
+#include <boost/thread/detail/thread_interruption.hpp>
 
 #include <boost/config/abi_prefix.hpp>
 
@@ -85,6 +86,10 @@ namespace boost
      */
     ~strict_scoped_thread()
     {
+#if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+      // exceptions from a destructor call std::terminate
+      boost::this_thread::disable_interruption do_not_disturb;
+#endif
       CallableThread on_destructor;
 
       on_destructor(t_);
@@ -188,6 +193,10 @@ namespace boost
      */
     ~scoped_thread()
     {
+#if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+      // exceptions from a destructor call std::terminate
+      boost::this_thread::disable_interruption do_not_disturb;
+#endif
       CallableThread on_destructor;
 
       on_destructor(t_);

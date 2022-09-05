@@ -1,5 +1,6 @@
 
 // Copyright (C) 2008-2011 Daniel James.
+// Copyright (C) 2022 Christian Mazakas
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -57,7 +58,7 @@ namespace boost {
       unordered_multiset<K, H, P, A>& c, Predicate pred);
 
     template <class N, class T, class A> class node_handle_set;
-    template <class N, class T, class A> struct insert_return_type_set;
+    template <class Iter, class NodeType> struct insert_return_type_set;
   }
 
   using boost::unordered::unordered_set;

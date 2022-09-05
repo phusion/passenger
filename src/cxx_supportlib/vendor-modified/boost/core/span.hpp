@@ -347,14 +347,6 @@ public:
         return const_reverse_iterator(s_.p);
     }
 
-    friend constexpr iterator begin(span s) noexcept {
-        return s.begin();
-    }
-
-    friend constexpr iterator end(span s) noexcept {
-        return s.end();
-    }
-
 private:
     detail::span_store<T, E> s_;
 };

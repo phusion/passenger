@@ -223,10 +223,15 @@ template <typename Stream>
 template <
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadHandler,
     void (boost::system::error_code, std::size_t))
 buffered_read_stream<Stream>::async_fill(
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<ReadHandler,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_buffered_fill<Stream> >(),
+        handler, declval<detail::buffered_stream_storage*>())))
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -459,11 +464,16 @@ template <typename Stream>
 template <typename MutableBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) ReadHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadHandler,
     void (boost::system::error_code, std::size_t))
 buffered_read_stream<Stream>::async_read_some(
     const MutableBufferSequence& buffers,
     BOOST_ASIO_MOVE_ARG(ReadHandler) handler)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<ReadHandler,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_buffered_read_some<Stream> >(),
+        handler, declval<detail::buffered_stream_storage*>(), buffers)))
 {
   return async_initiate<ReadHandler,
     void (boost::system::error_code, std::size_t)>(

@@ -57,8 +57,8 @@ struct apply
 template< bool C_ >
 struct bool_ : integral_constant<bool, C_>
 {
-     operator bool() const { return C_; }
-   bool operator()() const { return C_; }
+   BOOST_MOVE_FORCEINLINE operator bool() const { return C_; }
+   BOOST_MOVE_FORCEINLINE bool operator()() const { return C_; }
 };
 
 typedef bool_<true>        true_;
@@ -70,6 +70,10 @@ typedef bool_<false>       false_;
 struct nat{};
 struct nat2{};
 struct nat3{};
+
+template <unsigned N>
+struct natN
+{};
 
 //////////////////////////////////////
 //          yes_type/no_type
@@ -221,7 +225,7 @@ struct identity
 {
    typedef T type;
    typedef typename add_const_lvalue_reference<T>::type reference;
-   reference operator()(reference t)
+   BOOST_MOVE_FORCEINLINE reference operator()(reference t) const
    {  return t;   }
 };
 

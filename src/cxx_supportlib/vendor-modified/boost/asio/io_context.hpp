@@ -201,6 +201,11 @@ private:
   friend class detail::win_iocp_overlapped_ptr;
 #endif
 
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
+  struct initiate_dispatch;
+  struct initiate_post;
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
+
 public:
   template <typename Allocator, uintptr_t Bits>
   class basic_executor_type;
@@ -557,8 +562,11 @@ public:
    * throws an exception.
    */
   template <typename LegacyCompletionHandler>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(LegacyCompletionHandler, void ())
-  dispatch(BOOST_ASIO_MOVE_ARG(LegacyCompletionHandler) handler);
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(LegacyCompletionHandler, void ())
+  dispatch(BOOST_ASIO_MOVE_ARG(LegacyCompletionHandler) handler)
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<LegacyCompletionHandler, void ()>(
+          declval<initiate_dispatch>(), handler, this)));
 
   /// (Deprecated: Use boost::asio::post().) Request the io_context to invoke
   /// the given handler and return immediately.
@@ -584,8 +592,11 @@ public:
    * throws an exception.
    */
   template <typename LegacyCompletionHandler>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(LegacyCompletionHandler, void ())
-  post(BOOST_ASIO_MOVE_ARG(LegacyCompletionHandler) handler);
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(LegacyCompletionHandler, void ())
+  post(BOOST_ASIO_MOVE_ARG(LegacyCompletionHandler) handler)
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<LegacyCompletionHandler, void ()>(
+          declval<initiate_post>(), handler, this)));
 
   /// (Deprecated: Use boost::asio::bind_executor().) Create a new handler that
   /// automatically dispatches the wrapped handler on the io_context.
@@ -621,11 +632,6 @@ public:
 private:
   io_context(const io_context&) BOOST_ASIO_DELETED;
   io_context& operator=(const io_context&) BOOST_ASIO_DELETED;
-
-#if !defined(BOOST_ASIO_NO_DEPRECATED)
-  struct initiate_dispatch;
-  struct initiate_post;
-#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
   // Helper function to add the implementation.
   BOOST_ASIO_DECL impl_type& add_impl(impl_type* impl);

@@ -49,6 +49,10 @@ template <typename Executor = any_io_executor>
 class basic_stream_descriptor
   : public basic_descriptor<Executor>
 {
+private:
+  class initiate_async_write_some;
+  class initiate_async_read_some;
+
 public:
   /// The type of the executor associated with the object.
   typedef Executor executor_type;
@@ -176,6 +180,50 @@ public:
     basic_descriptor<Executor>::operator=(std::move(other));
     return *this;
   }
+
+  /// Move-construct a basic_stream_descriptor from a descriptor of another
+  /// executor type.
+  /**
+   * This constructor moves a descriptor from one object to another.
+   *
+   * @param other The other basic_stream_descriptor object from which the move
+   * will occur.
+   *
+   * @note Following the move, the moved-from object is in the same state as if
+   * constructed using the @c basic_stream_descriptor(const executor_type&)
+   * constructor.
+   */
+  template <typename Executor1>
+  basic_stream_descriptor(basic_stream_descriptor<Executor1>&& other,
+      typename constraint<
+        is_convertible<Executor1, Executor>::value,
+        defaulted_constraint
+      >::type = defaulted_constraint())
+    : basic_descriptor<Executor>(std::move(other))
+  {
+  }
+
+  /// Move-assign a basic_stream_descriptor from a descriptor of another
+  /// executor type.
+  /**
+   * This assignment operator moves a descriptor from one object to another.
+   *
+   * @param other The other basic_stream_descriptor object from which the move
+   * will occur.
+   *
+   * @note Following the move, the moved-from object is in the same state as if
+   * constructed using the @c basic_stream_descriptor(const executor_type&)
+   * constructor.
+   */
+  template <typename Executor1>
+  typename constraint<
+    is_convertible<Executor1, Executor>::value,
+    basic_stream_descriptor&
+  >::type operator=(basic_stream_descriptor<Executor1> && other)
+  {
+    basic_descriptor<Executor>::operator=(std::move(other));
+    return *this;
+  }
 #endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
 
   /// Write some data to the descriptor.
@@ -294,11 +342,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) WriteToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
       void (boost::system::error_code, std::size_t))
   async_write_some(const ConstBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(WriteToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<WriteToken,
+        void (boost::system::error_code, std::size_t)>(
+          initiate_async_write_some(this), token, buffers)))
   {
     return async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
@@ -424,11 +476,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) ReadToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadToken,
       void (boost::system::error_code, std::size_t))
   async_read_some(const MutableBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(ReadToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<ReadToken,
+        void (boost::system::error_code, std::size_t)>(
+          declval<initiate_async_read_some>(), token, buffers)))
   {
     return async_initiate<ReadToken,
       void (boost::system::error_code, std::size_t)>(

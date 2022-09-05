@@ -21,6 +21,11 @@
 #include <boost/system/detail/append_int.hpp>
 #include <boost/system/detail/snprintf.hpp>
 #include <boost/system/detail/config.hpp>
+
+#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
+# include <boost/system/detail/std_category.hpp>
+#endif
+
 #include <boost/assert/source_location.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/config.hpp>
@@ -139,28 +144,35 @@ public:
         *this = make_error_code( e );
     }
 
-    template<class ErrorCodeEnum> error_code( ErrorCodeEnum e, source_location const * loc,
-        typename detail::enable_if<is_error_code_enum<ErrorCodeEnum>::value>::type* = 0 ) BOOST_NOEXCEPT:
+    error_code( error_code const& ec, source_location const * loc ) BOOST_NOEXCEPT:
         d1_(), lc_flags_( 0 )
     {
-        error_code e2 = make_error_code( e );
+        *this = ec;
 
-        if( e2.lc_flags_ == 0 || e2.lc_flags_ == 1 )
+        if( ec.lc_flags_ != 0 && ec.lc_flags_ != 1 )
         {
-            *this = e2;
-        }
-        else
-        {
-            *this = error_code( e2.d1_.val_, *e2.d1_.cat_, loc );
+            lc_flags_ = ( loc? reinterpret_cast<boost::uintptr_t>( loc ): 2 ) | ( ec.lc_flags_ & 1 );
         }
     }
 
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 
     error_code( std::error_code const& ec ) BOOST_NOEXCEPT:
-        lc_flags_( 1 )
+        d1_(), lc_flags_( 0 )
     {
-        ::new( d2_ ) std::error_code( ec );
+#ifndef BOOST_NO_RTTI
+
+        if( detail::std_category const* pc2 = dynamic_cast< detail::std_category const* >( &ec.category() ) )
+        {
+            *this = boost::system::error_code( ec.value(), pc2->original_category() );
+        }
+        else
+
+#endif
+        {
+            ::new( d2_ ) std::error_code( ec );
+            lc_flags_ = 1;
+        }
     }
 
 #endif
@@ -177,19 +189,17 @@ public:
         *this = error_code( val, cat, loc );
     }
 
+    void assign( error_code const& ec, source_location const * loc ) BOOST_NOEXCEPT
+    {
+        *this = error_code( ec, loc );
+    }
+
     template<typename ErrorCodeEnum>
         BOOST_SYSTEM_CONSTEXPR typename detail::enable_if<is_error_code_enum<ErrorCodeEnum>::value, error_code>::type &
         operator=( ErrorCodeEnum val ) BOOST_NOEXCEPT
     {
         *this = make_error_code( val );
         return *this;
-    }
-
-    template<typename ErrorCodeEnum>
-        typename detail::enable_if<is_error_code_enum<ErrorCodeEnum>::value, void>::type
-        assign( ErrorCodeEnum val, source_location const * loc ) BOOST_NOEXCEPT
-    {
-        *this = error_code( val, loc );
     }
 
     BOOST_SYSTEM_CONSTEXPR void clear() BOOST_NOEXCEPT

@@ -102,6 +102,7 @@ boost::system::error_code io_uring_descriptor_service::assign(
   if (is_open(impl))
   {
     ec = boost::asio::error::already_open;
+    BOOST_ASIO_ERROR_LOCATION(ec);
     return ec;
   }
 
@@ -138,6 +139,7 @@ boost::system::error_code io_uring_descriptor_service::close(
   //   http://lkml.org/lkml/2005/9/10/129
   construct(impl);
 
+  BOOST_ASIO_ERROR_LOCATION(ec);
   return ec;
 }
 
@@ -167,6 +169,7 @@ boost::system::error_code io_uring_descriptor_service::cancel(
   if (!is_open(impl))
   {
     ec = boost::asio::error::bad_descriptor;
+    BOOST_ASIO_ERROR_LOCATION(ec);
     return ec;
   }
 

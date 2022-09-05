@@ -23,7 +23,7 @@
 // contains. More details on these issues are at libs/utility/value_init.htm
 
 #include <boost/config.hpp> // For BOOST_NO_COMPLETE_VALUE_INITIALIZATION.
-#include <boost/swap.hpp>
+#include <boost/core/swap.hpp>
 #include <cstring>
 #include <cstddef>
 

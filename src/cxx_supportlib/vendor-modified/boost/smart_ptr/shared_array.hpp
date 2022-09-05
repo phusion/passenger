@@ -19,7 +19,7 @@
 #include <memory>             // TR1 cyclic inclusion fix
 
 #include <boost/assert.hpp>
-#include <boost/checked_delete.hpp>
+#include <boost/core/checked_delete.hpp>
 
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/smart_ptr/detail/shared_count.hpp>

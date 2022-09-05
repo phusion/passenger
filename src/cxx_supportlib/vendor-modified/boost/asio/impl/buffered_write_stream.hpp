@@ -203,10 +203,15 @@ template <typename Stream>
 template <
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteHandler,
     void (boost::system::error_code, std::size_t))
 buffered_write_stream<Stream>::async_flush(
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteHandler,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_buffered_flush<Stream> >(),
+        handler, declval<detail::buffered_stream_storage*>())))
 {
   return async_initiate<WriteHandler,
     void (boost::system::error_code, std::size_t)>(
@@ -445,11 +450,16 @@ template <typename Stream>
 template <typename ConstBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteHandler>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteHandler,
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteHandler,
     void (boost::system::error_code, std::size_t))
 buffered_write_stream<Stream>::async_write_some(
     const ConstBufferSequence& buffers,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteHandler,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_buffered_write_some<Stream> >(),
+        handler, declval<detail::buffered_stream_storage*>(), buffers)))
 {
   return async_initiate<WriteHandler,
     void (boost::system::error_code, std::size_t)>(

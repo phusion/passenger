@@ -305,6 +305,26 @@ template<> struct tn_holder<boost::ulong_long_type>
     }
 };
 
+#if defined(BOOST_HAS_INT128)
+
+template<> struct tn_holder<boost::int128_type>
+{
+    static std::string type_name( std::string const& suffix )
+    {
+        return "__int128" + suffix;
+    }
+};
+
+template<> struct tn_holder<boost::uint128_type>
+{
+    static std::string type_name( std::string const& suffix )
+    {
+        return "unsigned __int128" + suffix;
+    }
+};
+
+#endif
+
 template<> struct tn_holder<wchar_t>
 {
     static std::string type_name( std::string const& suffix )

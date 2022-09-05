@@ -57,7 +57,7 @@ inline void get_last_error(
 {
   if (!is_error_condition)
   {
-    ec.assign(0, ec.category());
+    boost::asio::error::clear(ec);
   }
   else
   {

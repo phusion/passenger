@@ -122,7 +122,7 @@ struct tree_internal_data_type< std::pair<T1, T2> >
 };
 
 template <class T, class VoidPointer, boost::container::tree_type_enum tree_type_value, bool OptimizeSize>
-struct iiterator_node_value_type< base_node<T, intrusive_tree_hook<VoidPointer, tree_type_value, OptimizeSize> > >
+struct iiterator_node_value_type< base_node<T, intrusive_tree_hook<VoidPointer, tree_type_value, OptimizeSize>, true > >
 {
   typedef T type;
 };
@@ -159,87 +159,95 @@ class push_back_functor
 
 namespace dtl {
 
-template< class NodeType, class NodeCompareType
-        , class SizeType,  class HookType
+template< class NodeType
+        , class KeyOfNode
+        , class KeyCompare
+        , class HookType
         , boost::container::tree_type_enum tree_type_value>
 struct intrusive_tree_dispatch;
 
-template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+template<class NodeType, class KeyOfNode, class KeyCompare, class HookType>
 struct intrusive_tree_dispatch
-   <NodeType, NodeCompareType, SizeType, HookType, boost::container::red_black_tree>
+   <NodeType, KeyOfNode, KeyCompare, HookType, boost::container::red_black_tree>
 {
    typedef typename dtl::bi::make_rbtree
       <NodeType
-      ,dtl::bi::compare<NodeCompareType>
+      ,dtl::bi::key_of_value<KeyOfNode>
+      ,dtl::bi::compare<KeyCompare>
       ,dtl::bi::base_hook<HookType>
       ,dtl::bi::constant_time_size<true>
-      ,dtl::bi::size_type<SizeType>
       >::type  type;
 };
 
-template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+template<class NodeType, class KeyOfNode, class KeyCompare, class HookType>
 struct intrusive_tree_dispatch
-   <NodeType, NodeCompareType, SizeType, HookType, boost::container::avl_tree>
+   <NodeType, KeyOfNode, KeyCompare, HookType, boost::container::avl_tree>
 {
    typedef typename dtl::bi::make_avltree
       <NodeType
-      ,dtl::bi::compare<NodeCompareType>
+      ,dtl::bi::key_of_value<KeyOfNode>
+      ,dtl::bi::compare<KeyCompare>
       ,dtl::bi::base_hook<HookType>
       ,dtl::bi::constant_time_size<true>
-      ,dtl::bi::size_type<SizeType>
       >::type  type;
 };
 
-template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+template<class NodeType, class KeyOfNode, class KeyCompare, class HookType>
 struct intrusive_tree_dispatch
-   <NodeType, NodeCompareType, SizeType, HookType, boost::container::scapegoat_tree>
+   <NodeType, KeyOfNode, KeyCompare, HookType, boost::container::scapegoat_tree>
 {
    typedef typename dtl::bi::make_sgtree
       <NodeType
-      ,dtl::bi::compare<NodeCompareType>
+      ,dtl::bi::key_of_value<KeyOfNode>
+      ,dtl::bi::compare<KeyCompare>
       ,dtl::bi::base_hook<HookType>
       ,dtl::bi::floating_point<true>
-      ,dtl::bi::size_type<SizeType>
       >::type  type;
 };
 
-template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+template<class NodeType, class KeyOfNode, class KeyCompare, class HookType>
 struct intrusive_tree_dispatch
-   <NodeType, NodeCompareType, SizeType, HookType, boost::container::splay_tree>
+   <NodeType, KeyOfNode, KeyCompare, HookType, boost::container::splay_tree>
 {
    typedef typename dtl::bi::make_splaytree
       <NodeType
-      ,dtl::bi::compare<NodeCompareType>
+      ,dtl::bi::key_of_value<KeyOfNode>
+      ,dtl::bi::compare<KeyCompare>
       ,dtl::bi::base_hook<HookType>
       ,dtl::bi::constant_time_size<true>
-      ,dtl::bi::size_type<SizeType>
       >::type  type;
 };
 
-template<class Allocator, class ValueCompare, boost::container::tree_type_enum tree_type_value, bool OptimizeSize>
+template < class Allocator
+         , class KeyOfValue
+         , class KeyCompare
+         , boost::container::tree_type_enum tree_type_value
+         , bool OptimizeSize>
 struct intrusive_tree_type
 {
    private:
    typedef typename boost::container::
-      allocator_traits<Allocator>::value_type              value_type;
+      allocator_traits<Allocator>::value_type               value_type;
    typedef typename boost::container::
-      allocator_traits<Allocator>::void_pointer            void_pointer;
-   typedef typename boost::container::
-      allocator_traits<Allocator>::size_type               size_type;
+      allocator_traits<Allocator>::void_pointer             void_pointer;
    typedef base_node<value_type, intrusive_tree_hook
-      <void_pointer, tree_type_value, OptimizeSize> >        node_t;
-   typedef value_to_node_compare
-      <node_t, ValueCompare>                                node_compare_type;
+      <void_pointer, tree_type_value, OptimizeSize>, true > node_t;
    //Deducing the hook type from node_t (e.g. node_t::hook_type) would
    //provoke an early instantiation of node_t that could ruin recursive
    //tree definitions, so retype the complete type to avoid any problem.
    typedef typename intrusive_tree_hook
       <void_pointer, tree_type_value
-      , OptimizeSize>::type                        hook_type;
+      , OptimizeSize>::type                                 hook_type;
+
+   typedef key_of_node
+      <node_t, KeyOfValue>                                  key_of_node_t;
+
    public:
    typedef typename intrusive_tree_dispatch
-      < node_t, node_compare_type
-      , size_type, hook_type
+      < node_t
+      , key_of_node_t
+      , KeyCompare
+      , hook_type
       , tree_type_value>::type                     type;
 };
 
@@ -327,57 +335,6 @@ class RecyclingCloner
    intrusive_container &m_icont;
 };
 
-
-template<class KeyCompare, class KeyOfValue>
-struct key_node_compare
-   :  public boost::intrusive::detail::ebo_functor_holder<KeyCompare>
-{
-   BOOST_CONTAINER_FORCEINLINE explicit key_node_compare(const KeyCompare &comp)
-      :  base_t(comp)
-   {}
-
-   typedef boost::intrusive::detail::ebo_functor_holder<KeyCompare> base_t;
-   typedef KeyCompare                  key_compare;
-   typedef KeyOfValue                  key_of_value;
-   typedef typename KeyOfValue::type   key_type;
-
-
-   template <class T, class VoidPointer, boost::container::tree_type_enum tree_type_value, bool OptimizeSize>
-   BOOST_CONTAINER_FORCEINLINE static const key_type &
-      key_from(const base_node<T, intrusive_tree_hook<VoidPointer, tree_type_value, OptimizeSize> > &n)
-   {
-      return key_of_value()(n.get_data());
-   }
-
-   template <class T>
-   BOOST_CONTAINER_FORCEINLINE static const T &
-      key_from(const T &t)
-   {
-      return t;
-   }
-
-   BOOST_CONTAINER_FORCEINLINE const key_compare &key_comp() const
-   {  return static_cast<const key_compare &>(*this);  }
-
-   BOOST_CONTAINER_FORCEINLINE key_compare &key_comp()
-   {  return static_cast<key_compare &>(*this);  }
-
-   BOOST_CONTAINER_FORCEINLINE bool operator()(const key_type &key1, const key_type &key2) const
-   {  return this->key_comp()(key1, key2);  }
-
-   template<class U>
-   BOOST_CONTAINER_FORCEINLINE bool operator()(const key_type &key1, const U &nonkey2) const
-   {  return this->key_comp()(key1, this->key_from(nonkey2));  }
-
-   template<class U>
-   BOOST_CONTAINER_FORCEINLINE bool operator()(const U &nonkey1, const key_type &key2) const
-   {  return this->key_comp()(this->key_from(nonkey1), key2);  }
-
-   template<class U, class V>
-   BOOST_CONTAINER_FORCEINLINE bool operator()(const U &nonkey1, const V &nonkey2) const
-   {  return this->key_comp()(this->key_from(nonkey1), this->key_from(nonkey2));  }
-};
-
 template<class Options>
 struct get_tree_opt
 {
@@ -391,40 +348,47 @@ struct get_tree_opt<void>
 };
 
 template<class, class KeyOfValue>
-struct real_key_of_value
+struct tree_key_of_value
 {
    typedef KeyOfValue type;
 };
 
 template<class T>
-struct real_key_of_value<T, void>
+struct tree_key_of_value<T, void>
 {
    typedef dtl::identity<T> type;
 };
 
 template<class T1, class T2>
-struct real_key_of_value<std::pair<T1, T2>, int>
+struct tree_key_of_value<std::pair<T1, T2>, int>
 {
    typedef dtl::select1st<T1> type;
 };
 
 template<class T1, class T2>
-struct real_key_of_value<boost::container::dtl::pair<T1, T2>, int>
+struct tree_key_of_value<boost::container::dtl::pair<T1, T2>, int>
 {
    typedef dtl::select1st<T1> type;
 };
+
+
+template <class T, class KeyOfValue, class Compare, class Allocator, class Options>
+struct make_intrusive_tree_type
+   : dtl::intrusive_tree_type
+         < typename real_allocator<T, Allocator>::type
+         , typename tree_key_of_value<T, KeyOfValue>::type
+         , Compare
+         , get_tree_opt<Options>::type::tree_type
+         , get_tree_opt<Options>::type::optimize_size
+         >
+{};
+
 
 template <class T, class KeyOfValue, class Compare, class Allocator, class Options>
 class tree
    : public dtl::node_alloc_holder
       < typename real_allocator<T, Allocator>::type
-      , typename dtl::intrusive_tree_type
-         < typename real_allocator<T, Allocator>::type
-         , tree_value_compare
-            <typename allocator_traits<typename real_allocator<T, Allocator>::type>::pointer, Compare, typename real_key_of_value<T, KeyOfValue>::type>
-         , get_tree_opt<Options>::type::tree_type
-         , get_tree_opt<Options>::type::optimize_size
-         >::type
+      , typename make_intrusive_tree_type<T, KeyOfValue, Compare, Allocator, Options>::type
       >
 {
    typedef tree < T, KeyOfValue
@@ -434,17 +398,14 @@ class tree
 
    private:
    typedef allocator_traits<allocator_type>                 allocator_traits_t;
-   typedef typename real_key_of_value<T, KeyOfValue>::type  key_of_value_t;
+   typedef typename tree_key_of_value<T, KeyOfValue>::type  key_of_value_t;
    typedef tree_value_compare
       < typename allocator_traits_t::pointer
       , Compare
       , key_of_value_t>                                     ValComp;
    typedef typename get_tree_opt<Options>::type             options_type;
-   typedef typename dtl::intrusive_tree_type
-         < allocator_type, ValComp
-         , options_type::tree_type
-         , options_type::optimize_size
-         >::type                                            Icont;
+   typedef typename make_intrusive_tree_type
+      <T, KeyOfValue, Compare, Allocator, Options>::type    Icont;
    typedef dtl::node_alloc_holder
       <allocator_type, Icont>                               AllocHolder;
    typedef typename AllocHolder::NodePtr                    NodePtr;
@@ -497,7 +458,7 @@ class tree
 
    private:
 
-   typedef key_node_compare<key_compare, key_of_value_t>  KeyNodeCompare;
+   typedef key_node_pred<key_compare, key_of_value_t, Node>  KeyNodeCompare;
 
    public:
 
@@ -771,11 +732,11 @@ class tree
    // accessors:
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       value_compare value_comp() const
-   {  return this->icont().value_comp().predicate(); }
+   {  return value_compare(this->key_comp()); }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       key_compare key_comp() const
-   {  return this->icont().value_comp().predicate().key_comp(); }
+   {  return this->icont().key_comp(); }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       allocator_type get_allocator() const
@@ -886,7 +847,7 @@ class tree
       (const key_type& key, insert_commit_data &data)
    {
       std::pair<iiterator, bool> ret =
-         this->icont().insert_unique_check(key, KeyNodeCompare(key_comp()), data);
+         this->icont().insert_unique_check(key, data);
       return std::pair<iterator, bool>(iterator(ret.first), ret.second);
    }
 
@@ -895,7 +856,7 @@ class tree
    {
       BOOST_ASSERT((priv_is_linked)(hint));
       std::pair<iiterator, bool> ret =
-         this->icont().insert_unique_check(hint.get(), key, KeyNodeCompare(key_comp()), data);
+         this->icont().insert_unique_check(hint.get(), key, data);
       return std::pair<iterator, bool>(iterator(ret.first), ret.second);
    }
 
@@ -1037,8 +998,8 @@ class tree
       insert_commit_data data;
       const key_type & k = key;  //Support emulated rvalue references
       std::pair<iiterator, bool> ret =
-         hint == const_iterator() ? this->icont().insert_unique_check(            k, KeyNodeCompare(key_comp()), data)
-                                  : this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);
+         hint == const_iterator() ? this->icont().insert_unique_check(            k, data)
+                                  : this->icont().insert_unique_check(hint.get(), k, data);
       if(ret.second){
          ret.first = this->icont().insert_unique_commit
             (*AllocHolder::create_node(try_emplace_t(), boost::forward<KeyType>(key), boost::forward<Args>(args)...), data);
@@ -1085,8 +1046,8 @@ class tree
       insert_commit_data data;\
       const key_type & k = key;\
       std::pair<iiterator, bool> ret =\
-         hint == const_iterator() ? this->icont().insert_unique_check(            k, KeyNodeCompare(key_comp()), data)\
-                                  : this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);\
+         hint == const_iterator() ? this->icont().insert_unique_check(            k, data)\
+                                  : this->icont().insert_unique_check(hint.get(), k, data);\
       if(ret.second){\
          ret.first = this->icont().insert_unique_commit\
             (*AllocHolder::create_node(try_emplace_t(), boost::forward<KeyType>(key) BOOST_MOVE_I##N BOOST_MOVE_FWD##N), data);\
@@ -1145,8 +1106,8 @@ class tree
       insert_commit_data data;
       const key_type & k = key;  //Support emulated rvalue references
       std::pair<iiterator, bool> ret =
-         hint == const_iterator() ? this->icont().insert_unique_check(k, KeyNodeCompare(key_comp()), data)
-                                  : this->icont().insert_unique_check(hint.get(), k, KeyNodeCompare(key_comp()), data);
+         hint == const_iterator() ? this->icont().insert_unique_check(k, data)
+                                  : this->icont().insert_unique_check(hint.get(), k, data);
       if(ret.second){
          ret.first = this->priv_insert_or_assign_commit(boost::forward<KeyType>(key), boost::forward<M>(obj), data);
       }
@@ -1163,7 +1124,7 @@ class tree
    }
 
    BOOST_CONTAINER_FORCEINLINE size_type erase(const key_type& k)
-   {  return AllocHolder::erase_key(k, KeyNodeCompare(key_comp()), alloc_version()); }
+   {  return AllocHolder::erase_key(k, alloc_version()); }
 
    size_type erase_unique(const key_type& k)
    {
@@ -1262,33 +1223,33 @@ class tree
    // so splay implementations can to their rebalancing when searching in non-const versions
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       iterator find(const key_type& k)
-   {  return iterator(this->icont().find(k, KeyNodeCompare(key_comp())));  }
+   {  return iterator(this->icont().find(k));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       const_iterator find(const key_type& k) const
-   {  return const_iterator(this->non_const_icont().find(k, KeyNodeCompare(key_comp())));  }
+   {  return const_iterator(this->non_const_icont().find(k));  }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          find(const K& k)
-   {  return iterator(this->icont().find(k, KeyNodeCompare(key_comp())));  }
+   {  return iterator(this->icont().find(k, KeyNodeCompare()));  }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          find(const K& k) const
-   {  return const_iterator(this->non_const_icont().find(k, KeyNodeCompare(key_comp())));  }
+   {  return const_iterator(this->non_const_icont().find(k, KeyNodeCompare()));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       size_type count(const key_type& k) const
-   {  return size_type(this->icont().count(k, KeyNodeCompare(key_comp()))); }
+   {  return size_type(this->icont().count(k)); }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       typename dtl::enable_if_transparent<key_compare, K, size_type>::type
          count(const K& k) const
-   {  return size_type(this->icont().count(k, KeyNodeCompare(key_comp()))); }
+   {  return size_type(this->icont().count(k, KeyNodeCompare())); }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       bool contains(const key_type& x) const
@@ -1302,49 +1263,48 @@ class tree
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       iterator lower_bound(const key_type& k)
-   {  return iterator(this->icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
+   {  return iterator(this->icont().lower_bound(k));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       const_iterator lower_bound(const key_type& k) const
-   {  return const_iterator(this->non_const_icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
+   {  return const_iterator(this->non_const_icont().lower_bound(k));  }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          lower_bound(const K& k)
-   {  return iterator(this->icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
+   {  return iterator(this->icont().lower_bound(k, KeyNodeCompare()));  }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          lower_bound(const K& k) const
-   {  return const_iterator(this->non_const_icont().lower_bound(k, KeyNodeCompare(key_comp())));  }
+   {  return const_iterator(this->non_const_icont().lower_bound(k, KeyNodeCompare()));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       iterator upper_bound(const key_type& k)
-   {  return iterator(this->icont().upper_bound(k, KeyNodeCompare(key_comp())));   }
+   {  return iterator(this->icont().upper_bound(k));   }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       const_iterator upper_bound(const key_type& k) const
-   {  return const_iterator(this->non_const_icont().upper_bound(k, KeyNodeCompare(key_comp())));  }
+   {  return const_iterator(this->non_const_icont().upper_bound(k));  }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       typename dtl::enable_if_transparent<key_compare, K, iterator>::type
          upper_bound(const K& k)
-   {  return iterator(this->icont().upper_bound(k, KeyNodeCompare(key_comp())));   }
+   {  return iterator(this->icont().upper_bound(k, KeyNodeCompare()));   }
 
    template <class K>
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       typename dtl::enable_if_transparent<key_compare, K, const_iterator>::type
          upper_bound(const K& k) const
-   {  return const_iterator(this->non_const_icont().upper_bound(k, KeyNodeCompare(key_comp())));  }
+   {  return const_iterator(this->non_const_icont().upper_bound(k, KeyNodeCompare()));  }
 
    BOOST_CONTAINER_ATTRIBUTE_NODISCARD BOOST_CONTAINER_FORCEINLINE
       std::pair<iterator,iterator> equal_range(const key_type& k)
    {
-      std::pair<iiterator, iiterator> ret =
-         this->icont().equal_range(k, KeyNodeCompare(key_comp()));
+      std::pair<iiterator, iiterator> ret = this->icont().equal_range(k);
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
@@ -1352,7 +1312,7 @@ class tree
       std::pair<const_iterator, const_iterator> equal_range(const key_type& k) const
    {
       std::pair<iiterator, iiterator> ret =
-         this->non_const_icont().equal_range(k, KeyNodeCompare(key_comp()));
+         this->non_const_icont().equal_range(k);
       return std::pair<const_iterator,const_iterator>
          (const_iterator(ret.first), const_iterator(ret.second));
    }
@@ -1363,7 +1323,7 @@ class tree
          equal_range(const K& k)
    {
       std::pair<iiterator, iiterator> ret =
-         this->icont().equal_range(k, KeyNodeCompare(key_comp()));
+         this->icont().equal_range(k, KeyNodeCompare());
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
@@ -1373,7 +1333,7 @@ class tree
          equal_range(const K& k) const
    {
       std::pair<iiterator, iiterator> ret =
-         this->non_const_icont().equal_range(k, KeyNodeCompare(key_comp()));
+         this->non_const_icont().equal_range(k, KeyNodeCompare());
       return std::pair<const_iterator,const_iterator>
          (const_iterator(ret.first), const_iterator(ret.second));
    }
@@ -1382,7 +1342,7 @@ class tree
       std::pair<iterator,iterator> lower_bound_range(const key_type& k)
    {
       std::pair<iiterator, iiterator> ret =
-         this->icont().lower_bound_range(k, KeyNodeCompare(key_comp()));
+         this->icont().lower_bound_range(k);
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
@@ -1390,7 +1350,7 @@ class tree
       std::pair<const_iterator, const_iterator> lower_bound_range(const key_type& k) const
    {
       std::pair<iiterator, iiterator> ret =
-         this->non_const_icont().lower_bound_range(k, KeyNodeCompare(key_comp()));
+         this->non_const_icont().lower_bound_range(k);
       return std::pair<const_iterator,const_iterator>
          (const_iterator(ret.first), const_iterator(ret.second));
    }
@@ -1401,7 +1361,7 @@ class tree
          lower_bound_range(const K& k)
    {
       std::pair<iiterator, iiterator> ret =
-         this->icont().lower_bound_range(k, KeyNodeCompare(key_comp()));
+         this->icont().lower_bound_range(k, KeyNodeCompare());
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
@@ -1411,7 +1371,7 @@ class tree
          lower_bound_range(const K& k) const
    {
       std::pair<iiterator, iiterator> ret =
-         this->non_const_icont().lower_bound_range(k, KeyNodeCompare(key_comp()));
+         this->non_const_icont().lower_bound_range(k, KeyNodeCompare());
       return std::pair<const_iterator,const_iterator>
          (const_iterator(ret.first), const_iterator(ret.second));
    }

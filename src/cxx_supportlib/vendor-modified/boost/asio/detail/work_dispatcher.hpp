@@ -79,10 +79,12 @@ public:
 
   void operator()()
   {
+    typename associated_allocator<Handler>::type alloc(
+        (get_associated_allocator)(handler_));
     execution::execute(
         boost::asio::prefer(executor_,
           execution::blocking.possibly,
-          execution::allocator((get_associated_allocator)(handler_))),
+          execution::allocator(alloc)),
         boost::asio::detail::bind_handler(
           BOOST_ASIO_MOVE_CAST(Handler)(handler_)));
   }

@@ -1122,6 +1122,14 @@ class flat_set
    //! <b>Throws</b>: If the move assignment throws
    BOOST_CONTAINER_FORCEINLINE void adopt_sequence(ordered_unique_range_t, BOOST_RV_REF(sequence_type) seq)
    {  this->tree_t::adopt_sequence_unique(ordered_unique_range_t(), boost::move(seq));  }
+
+   //! <b>Effects</b>: Returns a const view of the underlying sequence.
+   //!
+   //! <b>Complexity</b>: Constant
+   //!
+   //! <b>Throws</b>: Nothing
+   BOOST_CONTAINER_FORCEINLINE const sequence_type & sequence() const BOOST_NOEXCEPT
+   {  return this->get_sequence_cref();  }
 };
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD
@@ -1845,6 +1853,14 @@ class flat_multiset
    //! <b>Throws</b>: If the move assignment throws
    BOOST_CONTAINER_FORCEINLINE void adopt_sequence(ordered_range_t, BOOST_RV_REF(sequence_type) seq)
    {  this->tree_t::adopt_sequence_equal(ordered_range_t(), boost::move(seq));  }
+
+   //! <b>Effects</b>: Returns a const view of the underlying sequence.
+   //!
+   //! <b>Complexity</b>: Constant
+   //!
+   //! <b>Throws</b>: Nothing
+   BOOST_CONTAINER_FORCEINLINE const sequence_type & sequence() const BOOST_NOEXCEPT
+   {  return this->get_sequence_cref();  }
 };
 
 #ifndef BOOST_CONTAINER_NO_CXX17_CTAD

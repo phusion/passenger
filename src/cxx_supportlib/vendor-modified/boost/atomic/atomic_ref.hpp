@@ -74,10 +74,10 @@ public:
     BOOST_DELETED_FUNCTION(atomic_ref& operator= (atomic_ref const&))
 };
 
-#if !defined(BOOST_ATOMIC_DETAIL_NO_CXX17_DEDUCTION_GUIDES)
+#if !defined(BOOST_NO_CXX17_DEDUCTION_GUIDES)
 template< typename T >
 atomic_ref(T&) -> atomic_ref< T >;
-#endif // !defined(BOOST_ATOMIC_DETAIL_NO_CXX17_DEDUCTION_GUIDES)
+#endif // !defined(BOOST_NO_CXX17_DEDUCTION_GUIDES)
 
 //! Atomic reference factory function
 template< typename T >

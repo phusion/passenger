@@ -128,13 +128,13 @@ namespace boost {
         // capacity
         BOOST_CONSTEXPR size_type size()     const { return len_; }
         BOOST_CONSTEXPR size_type length()   const { return len_; }
-        BOOST_CONSTEXPR size_type max_size() const { return len_; }
+        BOOST_CONSTEXPR size_type max_size() const { return ~static_cast<size_type>(0) / (sizeof(value_type) * 2u); }
         BOOST_CONSTEXPR bool empty()         const { return len_ == 0; }
 
         // element access
         BOOST_CONSTEXPR const charT& operator[](size_type pos) const { return ptr_[pos]; }
 
-        const charT& at(size_t pos) const {
+        const charT& at(size_type pos) const {
             if ( pos >= len_ )
                 BOOST_THROW_EXCEPTION( std::out_of_range ( "boost::string_ref::at" ) );
             return ptr_[pos];
@@ -161,6 +161,10 @@ namespace boost {
 
 
         // basic_string_ref string operations
+        basic_string_ref substr() const {
+            return basic_string_ref(data(), size());
+            }
+
         basic_string_ref substr(size_type pos, size_type n=npos) const {
             if ( pos > size())
                 BOOST_THROW_EXCEPTION( std::out_of_range ( "string_ref::substr" ) );

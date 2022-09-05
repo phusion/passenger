@@ -127,10 +127,10 @@ class list_impl
                         ((int)value_traits::link_mode == (int)auto_unlink)
                       ));
 
-   node_ptr get_root_node()
+   BOOST_INTRUSIVE_FORCEINLINE node_ptr get_root_node()
    { return data_.root_plus_size_.m_header.get_node(); }
 
-   const_node_ptr get_root_node() const
+   BOOST_INTRUSIVE_FORCEINLINE const_node_ptr get_root_node() const
    { return data_.root_plus_size_.m_header.get_node(); }
 
    struct root_plus_size : public size_traits
@@ -141,7 +141,7 @@ class list_impl
    struct data_t : public value_traits
    {
       typedef typename list_impl::value_traits value_traits;
-      explicit data_t(const value_traits &val_traits)
+      BOOST_INTRUSIVE_FORCEINLINE explicit data_t(const value_traits &val_traits)
          :  value_traits(val_traits)
       {}
 

@@ -48,6 +48,11 @@ class std_category;
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #endif
 
+#if defined(BOOST_MSVC)
+#pragma warning(push)
+#pragma warning(disable: 4351) //  new behavior: elements of array will be default initialized
+#endif
+
 class BOOST_SYMBOL_VISIBLE error_category
 {
 private:
@@ -76,13 +81,21 @@ private:
 
     boost::ulong_long_type id_;
 
+    static std::size_t const stdcat_size_ = 4 * sizeof( void const* );
+
+    union
+    {
+        mutable unsigned char stdcat_[ stdcat_size_ ];
+        void const* stdcat_align_;
+    };
+
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 
-    mutable std::atomic< boost::system::detail::std_category* > ps_;
+    mutable std::atomic< unsigned > sc_init_;
 
 #else
 
-    boost::system::detail::std_category* ps_;
+    unsigned sc_init_;
 
 #endif
 
@@ -103,11 +116,11 @@ protected:
 
 #endif
 
-    BOOST_SYSTEM_CONSTEXPR error_category() BOOST_NOEXCEPT: id_( 0 ), ps_()
+    BOOST_SYSTEM_CONSTEXPR error_category() BOOST_NOEXCEPT: id_( 0 ), stdcat_(), sc_init_()
     {
     }
 
-    explicit BOOST_SYSTEM_CONSTEXPR error_category( boost::ulong_long_type id ) BOOST_NOEXCEPT: id_( id ), ps_()
+    explicit BOOST_SYSTEM_CONSTEXPR error_category( boost::ulong_long_type id ) BOOST_NOEXCEPT: id_( id ), stdcat_(), sc_init_()
     {
     }
 
@@ -158,13 +171,21 @@ public:
     }
 
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
+
+    void init_stdcat() const;
+
 # if defined(__SUNPRO_CC) // trailing __global is not supported
     operator std::error_category const & () const;
 # else
     operator std::error_category const & () const BOOST_SYMBOL_VISIBLE;
 # endif
+
 #endif
 };
+
+#if defined(BOOST_MSVC)
+#pragma warning(pop)
+#endif
 
 #if ( defined( BOOST_GCC ) && BOOST_GCC >= 40600 ) || defined( BOOST_CLANG )
 #pragma GCC diagnostic pop

@@ -65,6 +65,7 @@
 #include <boost/optional/detail/optional_config.hpp>
 #include <boost/optional/detail/optional_factory_support.hpp>
 #include <boost/optional/detail/optional_aligned_storage.hpp>
+#include <boost/optional/detail/optional_hash.hpp>
 
 namespace boost { namespace optional_detail {
 

@@ -17,7 +17,6 @@
 
 #include <boost/asio/associator.hpp>
 #include <boost/asio/buffer.hpp>
-#include <boost/asio/completion_condition.hpp>
 #include <boost/asio/detail/array_fwd.hpp>
 #include <boost/asio/detail/base_from_cancellation_state.hpp>
 #include <boost/asio/detail/base_from_completion_cond.hpp>
@@ -41,7 +40,7 @@ namespace detail
 {
   template <typename SyncWriteStream, typename ConstBufferSequence,
       typename ConstBufferIterator, typename CompletionCondition>
-  std::size_t write_buffer_sequence(SyncWriteStream& s,
+  std::size_t write(SyncWriteStream& s,
       const ConstBufferSequence& buffers, const ConstBufferIterator&,
       CompletionCondition completion_condition, boost::system::error_code& ec)
   {
@@ -68,7 +67,7 @@ inline std::size_t write(SyncWriteStream& s, const ConstBufferSequence& buffers,
       is_const_buffer_sequence<ConstBufferSequence>::value
     >::type)
 {
-  return detail::write_buffer_sequence(s, buffers,
+  return detail::write(s, buffers,
       boost::asio::buffer_sequence_begin(buffers),
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition), ec);
 }
@@ -453,7 +452,7 @@ namespace detail
   template <typename AsyncWriteStream, typename ConstBufferSequence,
       typename ConstBufferIterator, typename CompletionCondition,
       typename WriteHandler>
-  inline void start_write_buffer_sequence_op(AsyncWriteStream& stream,
+  inline void start_write_op(AsyncWriteStream& stream,
       const ConstBufferSequence& buffers, const ConstBufferIterator&,
       CompletionCondition& completion_condition, WriteHandler& handler)
   {
@@ -464,12 +463,12 @@ namespace detail
   }
 
   template <typename AsyncWriteStream>
-  class initiate_async_write_buffer_sequence
+  class initiate_async_write
   {
   public:
     typedef typename AsyncWriteStream::executor_type executor_type;
 
-    explicit initiate_async_write_buffer_sequence(AsyncWriteStream& stream)
+    explicit initiate_async_write(AsyncWriteStream& stream)
       : stream_(stream)
     {
     }
@@ -491,7 +490,7 @@ namespace detail
 
       non_const_lvalue<WriteHandler> handler2(handler);
       non_const_lvalue<CompletionCondition> completion_cond2(completion_cond);
-      start_write_buffer_sequence_op(stream_, buffers,
+      start_write_op(stream_, buffers,
           boost::asio::buffer_sequence_begin(buffers),
           completion_cond2.value, handler2.value);
     }
@@ -528,7 +527,7 @@ template <typename AsyncWriteStream,
     typename ConstBufferSequence, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition,
@@ -536,10 +535,16 @@ async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
     typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
     >::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write<AsyncWriteStream> >(),
+        token, buffers,
+        BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition))))
 {
   return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_write_buffer_sequence<AsyncWriteStream>(s),
+      detail::initiate_async_write<AsyncWriteStream>(s),
       token, buffers,
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
 }
@@ -547,17 +552,22 @@ async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
 template <typename AsyncWriteStream, typename ConstBufferSequence,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s, const ConstBufferSequence& buffers,
     BOOST_ASIO_MOVE_ARG(WriteToken) token,
     typename constraint<
       is_const_buffer_sequence<ConstBufferSequence>::value
     >::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write<AsyncWriteStream> >(),
+        token, buffers, transfer_all())))
 {
   return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_write_buffer_sequence<AsyncWriteStream>(s),
+      detail::initiate_async_write<AsyncWriteStream>(s),
       token, buffers, transfer_all());
 }
 
@@ -762,7 +772,7 @@ struct associator<Associator,
 template <typename AsyncWriteStream, typename DynamicBuffer_v1,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
@@ -773,17 +783,25 @@ async_write(AsyncWriteStream& s,
     typename constraint<
       !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
     >::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_dynbuf_v1<AsyncWriteStream> >(),
+        token, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+        transfer_all())))
 {
-  return async_write(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
-      transfer_all(), BOOST_ASIO_MOVE_CAST(WriteToken)(token));
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v1<AsyncWriteStream>(s),
+      token, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+      transfer_all());
 }
 
 template <typename AsyncWriteStream,
     typename DynamicBuffer_v1, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s,
     BOOST_ASIO_MOVE_ARG(DynamicBuffer_v1) buffers,
@@ -795,6 +813,12 @@ async_write(AsyncWriteStream& s,
     typename constraint<
       !is_dynamic_buffer_v2<typename decay<DynamicBuffer_v1>::type>::value
     >::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_dynbuf_v1<AsyncWriteStream> >(),
+        token, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v1)(buffers),
+        BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition))))
 {
   return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
@@ -809,11 +833,14 @@ async_write(AsyncWriteStream& s,
 template <typename AsyncWriteStream, typename Allocator,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s,
     boost::asio::basic_streambuf<Allocator>& b,
     BOOST_ASIO_MOVE_ARG(WriteToken) token)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_write(s, basic_streambuf_ref<Allocator>(b),
+        BOOST_ASIO_MOVE_CAST(WriteToken)(token))))
 {
   return async_write(s, basic_streambuf_ref<Allocator>(b),
       BOOST_ASIO_MOVE_CAST(WriteToken)(token));
@@ -823,12 +850,16 @@ template <typename AsyncWriteStream,
     typename Allocator, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s,
     boost::asio::basic_streambuf<Allocator>& b,
     CompletionCondition completion_condition,
     BOOST_ASIO_MOVE_ARG(WriteToken) token)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_write(s, basic_streambuf_ref<Allocator>(b),
+        BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition),
+        BOOST_ASIO_MOVE_CAST(WriteToken)(token))))
 {
   return async_write(s, basic_streambuf_ref<Allocator>(b),
       BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition),
@@ -1061,24 +1092,32 @@ struct associated_cancellation_slot<
 template <typename AsyncWriteStream, typename DynamicBuffer_v2,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
     BOOST_ASIO_MOVE_ARG(WriteToken) token,
     typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
     >::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_dynbuf_v2<AsyncWriteStream> >(),
+        token, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
+        transfer_all())))
 {
-  return async_write(s,
-      BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
-      transfer_all(), BOOST_ASIO_MOVE_CAST(WriteToken)(token));
+  return async_initiate<WriteToken,
+    void (boost::system::error_code, std::size_t)>(
+      detail::initiate_async_write_dynbuf_v2<AsyncWriteStream>(s),
+      token, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
+      transfer_all());
 }
 
 template <typename AsyncWriteStream,
     typename DynamicBuffer_v2, typename CompletionCondition,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
       std::size_t)) WriteToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
     CompletionCondition completion_condition,
@@ -1086,6 +1125,12 @@ async_write(AsyncWriteStream& s, DynamicBuffer_v2 buffers,
     typename constraint<
       is_dynamic_buffer_v2<DynamicBuffer_v2>::value
     >::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_dynbuf_v2<AsyncWriteStream> >(),
+        token, BOOST_ASIO_MOVE_CAST(DynamicBuffer_v2)(buffers),
+        BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition))))
 {
   return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(

@@ -77,14 +77,14 @@ struct get_vopt_from_svopt<void>
    typedef void type;
 };
 
-template <class T, class SecondaryAllocator, class Options>
+template <class T, class SecAlloc, class Options>
 struct vector_for_small_vector
 {
    typedef vector
       < T
       , small_vector_allocator
          < T 
-         , typename allocator_traits<typename real_allocator<T, SecondaryAllocator>::type>::template portable_rebind_alloc<void>::type
+         , typename allocator_traits<typename real_allocator<T, SecAlloc>::type>::template portable_rebind_alloc<void>::type
          , Options>
       , typename dtl::get_vopt_from_svopt<Options>::type
       > type;
@@ -118,15 +118,15 @@ struct vector_for_small_vector
 //! `boost::container::vector< T, small_vector_allocator<T, Allocator> >`
 //! and internal storage can be obtained downcasting that vector
 //! to `small_vector_base<T>`.
-template<class T, class VoidAllocator BOOST_CONTAINER_DOCONLY(= void), class Options BOOST_CONTAINER_DOCONLY(= void)>
+template<class T, class VoidAlloc BOOST_CONTAINER_DOCONLY(= void), class Options BOOST_CONTAINER_DOCONLY(= void)>
 class small_vector_allocator
-   : public allocator_traits<typename real_allocator<T, VoidAllocator>::type>::template portable_rebind_alloc<T>::type
+   : public allocator_traits<VoidAlloc>::template portable_rebind_alloc<T>::type
 {
    typedef unsigned int allocation_type;
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
    private:
 
-   typedef typename allocator_traits<typename real_allocator<T, VoidAllocator>::type>::template portable_rebind_alloc<T>::type allocator_type;
+   typedef typename allocator_traits<VoidAlloc>::template portable_rebind_alloc<T>::type allocator_type;
 
    BOOST_COPYABLE_AND_MOVABLE(small_vector_allocator)
 
@@ -282,63 +282,34 @@ class small_vector_allocator
    {  return !(l == r);   }
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   /*
-   //!An advanced function that offers in-place expansion shrink to fit and new allocation
-   //!capabilities. Memory allocated with this function can only be deallocated with deallocate()
-   //!or deallocate_many().
-   //!This function is available only with Version == 2
-   pointer allocation_command(allocation_type command,
-                         size_type limit_size,
-                         size_type &prefer_in_recvd_out_size,
-                         pointer &reuse)
-   {  return allocator_traits_type::allocation_command(command, limit_size, prefer_in_recvd_out_size, reuse);  }
-
-   //!Returns maximum the number of objects the previously allocated memory
-   //!pointed by p can hold.
-   //!Memory must not have been allocated with
-   //!allocate_one or allocate_individual.
-   //!This function is available only with Version == 2
-   size_type size(pointer p) const BOOST_NOEXCEPT_OR_NOTHROW
-   {  return allocator_traits_type::size(p);  }
-   */
    private:
-   /*
-   //!Allocates just one object. Memory allocated with this function
-   //!must be deallocated only with deallocate_one().
-   //!Throws bad_alloc if there is no enough memory
-   //!This function is available only with Version == 2
-   using allocator_type::allocate_one;
-   using allocator_type::allocate_individual;
-   using allocator_type::deallocate_one;
-   using allocator_type::deallocate_individual;
-   using allocator_type::allocate_many;
-   using allocator_type::deallocate_many;*/
 
-   typedef vector_alloc_holder< small_vector_allocator, size_type >  vector_alloc_holder_t;
-   typedef typename dtl::vector_for_small_vector<T, allocator_type, Options>::type vector_base;
    typedef small_vector_base<value_type, allocator_type, Options>    derived_type;
+   typedef typename dtl::vector_for_small_vector
+      <value_type, allocator_type, Options>::type                    vector_type;
 
    BOOST_CONTAINER_FORCEINLINE bool is_internal_storage(const_pointer p) const
    {  return this->internal_storage() == p;  }
 
-   BOOST_CONTAINER_FORCEINLINE
-   const_pointer internal_storage() const
-   {
-      const vector_alloc_holder_t &v_holder = static_cast<const vector_alloc_holder_t &>(*this);
-      const vector_base &v_base = *move_detail::force_ptr<const vector_base *>(&v_holder);
-      const derived_type &d_base = static_cast<const derived_type &>(v_base);
-      return d_base.internal_storage();
-   }
-
-   BOOST_CONTAINER_FORCEINLINE
-   pointer internal_storage()
-   {
-      vector_alloc_holder_t &v_holder = static_cast<vector_alloc_holder_t &>(*this);
-      vector_base &v_base = *move_detail::force_ptr<vector_base *>(&v_holder);
-      derived_type &d_base = static_cast<derived_type &>(v_base);
-      return d_base.internal_storage();
-   }
+   public:
+   BOOST_CONTAINER_FORCEINLINE const_pointer internal_storage() const BOOST_NOEXCEPT_OR_NOTHROW;
+   BOOST_CONTAINER_FORCEINLINE pointer       internal_storage()       BOOST_NOEXCEPT_OR_NOTHROW;
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
+};
+
+template<class T, std::size_t N, std::size_t Alignment>
+struct small_vector_storage
+{
+   typedef typename dtl::aligned_storage
+      <sizeof(T)*N, Alignment>::type storage_type;
+   storage_type m_storage;
+   static const std::size_t sms_size = sizeof(storage_type)/sizeof(T);
+};
+
+template<class T, std::size_t Alignment>
+struct small_vector_storage<T, 0u, Alignment>
+{
+   static const std::size_t sms_size = 0u;
 };
 
 //! This class consists of common code from all small_vector<T, N> types that don't depend on the
@@ -366,20 +337,20 @@ class small_vector_allocator
 //!
 //! All `boost::container:vector` member functions are inherited. See `vector` documentation for details.
 //!
-template <class T, class SecondaryAllocator, class Options>
+template <class T, class SecAlloc, class Options>
 class small_vector_base
-   : public dtl::vector_for_small_vector<T, SecondaryAllocator, Options>::type
+   : public dtl::vector_for_small_vector<T, SecAlloc, Options>::type
 {
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKEDVECTOR
    public:
    //Make it public as it will be inherited by small_vector and container
    //must have this public member
-   typedef typename real_allocator<T, SecondaryAllocator>::type                  secondary_allocator_t;
+   typedef typename real_allocator<T, SecAlloc>::type                  secondary_allocator_t;
    typedef typename allocator_traits<secondary_allocator_t>::
       template portable_rebind_alloc<void>::type                                 void_allocator_t;
    typedef typename dtl::get_small_vector_opt<Options>::type                     options_t;
    typedef typename dtl::vector_for_small_vector
-      <T, SecondaryAllocator, Options>::type                                     base_type;
+      <T, SecAlloc, Options>::type                                               base_type;
    typedef typename allocator_traits<secondary_allocator_t>::pointer             pointer;
    typedef typename allocator_traits<secondary_allocator_t>::const_pointer       const_pointer;
    typedef typename allocator_traits<secondary_allocator_t>::void_pointer        void_pointer;
@@ -393,33 +364,17 @@ class small_vector_base
 
    BOOST_CONTAINER_FORCEINLINE
    const_pointer internal_storage() const BOOST_NOEXCEPT_OR_NOTHROW
-   {
-      typedef typename boost::intrusive::pointer_traits<const_pointer>::template
-         rebind_pointer<const unsigned char>::type const_char_pointer;
-      const_void_pointer void_p = boost::intrusive::pointer_traits<const_char_pointer>::
-         pointer_to(*m_storage_start.data);
-      return boost::intrusive::pointer_traits<const_pointer>::static_cast_from(void_p);
-   }
+   {  return this->base_type::get_stored_allocator().internal_storage();   }
 
    BOOST_CONTAINER_FORCEINLINE
    pointer internal_storage() BOOST_NOEXCEPT_OR_NOTHROW
-   {
-      typedef typename boost::intrusive::pointer_traits<pointer>::template
-         rebind_pointer<unsigned char>::type char_pointer;
-      void_pointer void_p = boost::intrusive::pointer_traits<char_pointer>::
-         pointer_to(*m_storage_start.data);
-      return boost::intrusive::pointer_traits<pointer>::static_cast_from(void_p);
-   }
+   {  return this->base_type::get_stored_allocator().internal_storage();   }
 
+   private:
          base_type &as_base()       { return static_cast<base_type&>(*this); }
    const base_type &as_base() const { return static_cast<const base_type&>(*this); }
 
-   static const std::size_t final_alignment =
-      options_t::inplace_alignment ? options_t::inplace_alignment : dtl::alignment_of<T>::value;
    public:
-
-   typedef typename dtl::aligned_storage
-      <sizeof(T), final_alignment>::type storage_type;
 
    protected:
 
@@ -433,11 +388,6 @@ class small_vector_base
    {}
 
    //~small_vector_base(){}
-
-   private:
-   //The only member
-   storage_type m_storage_start;
-
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
    public:
@@ -471,64 +421,73 @@ class small_vector_base
 
 /////////////////////////////////////////////////////
 //
-//          small_vector_storage_calculator
-//
-/////////////////////////////////////////////////////
-template<std::size_t Needed, std::size_t Hdr, std::size_t SSize, bool NeedsZero = (0u == Needed || Needed <= Hdr)>
-struct small_vector_storage_calculator_helper
-{
-   static const std::size_t value = (Needed - Hdr - 1u)/SSize + 1u;
-};
-
-template<std::size_t Needed, std::size_t Hdr, std::size_t SSize>
-struct small_vector_storage_calculator_helper<Needed, Hdr, SSize, true>
-{
-   static const std::size_t value = 0u;
-};
-
-template<class Storage, class Allocator, class T, std::size_t N, class Options>
-struct small_vector_storage_calculator
-{
-   typedef small_vector_base<T, Allocator, Options> svh_type;
-   typedef typename real_allocator<T, Allocator>::type value_allocator_t;
-   typedef typename allocator_traits<value_allocator_t>::template portable_rebind_alloc<void>::type void_allocator_t;
-   typedef typename dtl::vector_for_small_vector<T, void_allocator_t, Options>::type  svhb_type;
-
-   static const std::size_t s_align = dtl::alignment_of<Storage>::value;
-   static const std::size_t s_size = sizeof(Storage);
-   static const std::size_t svh_sizeof = sizeof(svh_type);
-   static const std::size_t svhb_sizeof = sizeof(svhb_type);
-   static const std::size_t s_start = ((svhb_sizeof-1)/s_align+1)*s_align;
-   static const std::size_t header_bytes = svh_sizeof-s_start;
-   static const std::size_t needed_bytes = sizeof(T)*N;
-   static const std::size_t needed_extra_storages =
-      small_vector_storage_calculator_helper<needed_bytes, header_bytes, s_size>::value;
-};
-
-/////////////////////////////////////////////////////
-//
 //          small_vector_storage_definer
 //
 /////////////////////////////////////////////////////
-template<class Storage, std::size_t N>
-struct small_vector_storage
-{
-   Storage m_rest_of_storage[N];
-};
-
-template<class Storage>
-struct small_vector_storage<Storage, 0>
-{};
-
-template<class T, class Allocator, std::size_t N, class Options>
+template<class T, std::size_t N, class Options>
 struct small_vector_storage_definer
 {
-   typedef T value_type;
-   typedef typename small_vector_base<value_type, Allocator, Options>::storage_type storage_type;
-   static const std::size_t needed_extra_storages =
-      small_vector_storage_calculator<storage_type, Allocator, value_type, N, Options>::needed_extra_storages;
-   typedef small_vector_storage<storage_type, needed_extra_storages> type;
+   typedef typename dtl::get_small_vector_opt<Options>::type options_t;
+   static const std::size_t final_alignment =
+      options_t::inplace_alignment ? options_t::inplace_alignment : dtl::alignment_of<T>::value;
+   typedef small_vector_storage<T, N, final_alignment> type;
 };
+
+template <class T, class SecAlloc, class Options>
+struct small_vector_storage_strawman
+   : public small_vector_base<T, SecAlloc, Options>
+   , public small_vector_storage_definer<T, 1, Options>::type
+{
+   typedef typename small_vector_storage_definer<T, 1, Options>::type sm_storage_t;
+};
+
+//Internal storage hack
+template<class T, class VoidAlloc, class Options>
+BOOST_CONTAINER_FORCEINLINE typename small_vector_allocator<T, VoidAlloc, Options>::const_pointer
+   small_vector_allocator<T, VoidAlloc, Options>::internal_storage() const BOOST_NOEXCEPT_OR_NOTHROW
+{
+   typedef small_vector_storage_strawman<T, allocator_type, Options> strawman_t;
+   typedef typename strawman_t::sm_storage_t sm_storage_t;
+
+   //These warnings are false positives, as we know the alignment is correct
+   //and aligned storage is allowed to hold any type
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+   #pragma GCC diagnostic push
+   #pragma GCC diagnostic ignored "-Wcast-align"
+   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+   #endif
+   const vector_type& v = reinterpret_cast<const vector_type&>(*this);
+   BOOST_ASSERT((std::size_t(this) % dtl::alignment_of<strawman_t>::value) == 0);
+   const strawman_t &straw   = static_cast<const strawman_t&>(v);
+   const sm_storage_t& stor = static_cast<const sm_storage_t&>(straw);
+   return boost::intrusive::pointer_traits<const_pointer>::pointer_to(*((const T*)stor.m_storage.data));
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+   #pragma GCC diagnostic pop
+   #endif
+}
+
+template <class T, class VoidAlloc, class Options>
+BOOST_CONTAINER_FORCEINLINE typename small_vector_allocator<T, VoidAlloc, Options>::pointer
+   small_vector_allocator<T, VoidAlloc, Options>::internal_storage() BOOST_NOEXCEPT_OR_NOTHROW
+{
+   typedef small_vector_storage_strawman<T, allocator_type, Options> strawman_t;
+   typedef typename strawman_t::sm_storage_t sm_storage_t;
+
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+   #pragma GCC diagnostic push
+   #pragma GCC diagnostic ignored "-Wcast-align"
+   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+   #endif
+   vector_type& v = reinterpret_cast<vector_type&>(*this);
+   BOOST_ASSERT((std::size_t(this) % dtl::alignment_of<strawman_t>::value) == 0);
+   strawman_t &straw   = static_cast<strawman_t&>(v);
+   sm_storage_t& stor = static_cast<sm_storage_t&>(straw);
+   return boost::intrusive::pointer_traits<pointer>::pointer_to(*((T*)stor.m_storage.data));
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+   #pragma GCC diagnostic pop
+   #endif
+}
+
 
 #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
@@ -541,47 +500,40 @@ struct small_vector_storage_definer
 //!
 //! All `boost::container::vector` member functions are inherited. See `vector` documentation for details.
 //!
+//! Any change to the capacity of the vector, including decreasing its size such as with the shrink_to_fit method, will
+//! cause the vector to permanently switch to dynamically allocated storage.
+//!
 //! \tparam T The type of object that is stored in the small_vector
 //! \tparam N The number of preallocated elements stored inside small_vector. It shall be less than Allocator::max_size();
 //! \tparam Allocator The allocator used for memory management when the number of elements exceeds N. Use void
 //!   for the default allocator
-//! |tparam Options A type produced from \c boost::container::small_vector_options.
+//! \tparam Options A type produced from \c boost::container::small_vector_options.
 template <class T, std::size_t N, class Allocator BOOST_CONTAINER_DOCONLY(= void), class Options BOOST_CONTAINER_DOCONLY(= void) >
-class small_vector : public small_vector_base<T, Allocator, Options>
+class small_vector
+   : public small_vector_base<T, Allocator, Options>
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   , private small_vector_storage_definer<T, Allocator, N, Options>::type
+   , private small_vector_storage_definer<T, N, Options>::type
    #endif
 {
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
-   typedef small_vector_base<T, Allocator, Options>   base_type;
-   typedef typename small_vector_storage_definer
-      <T, Allocator, N, Options>::type                remaining_storage_holder;
 
    BOOST_COPYABLE_AND_MOVABLE(small_vector)
 
-   typedef allocator_traits<typename base_type::allocator_type> allocator_traits_type;
-
    public:
-   typedef small_vector_storage_calculator
-      < typename small_vector_base<T, Allocator, Options>::storage_type
-      , Allocator, T, N, Options> storage_test;
-
-   static const std::size_t needed_extra_storages =  storage_test::needed_extra_storages;
-   static const std::size_t needed_bytes =  storage_test::needed_bytes;
-   static const std::size_t header_bytes =  storage_test::header_bytes;
-   static const std::size_t s_start =  storage_test::s_start;
-
+   typedef small_vector_base<T, Allocator, Options>   base_type;
    typedef typename base_type::allocator_type   allocator_type;
    typedef typename base_type::size_type        size_type;
    typedef typename base_type::value_type       value_type;
 
    BOOST_CONTAINER_FORCEINLINE static std::size_t internal_capacity()
-   {  return (sizeof(small_vector) - storage_test::s_start)/sizeof(T);  }
+   {  return static_capacity;  }
+
+   typedef allocator_traits<typename base_type::allocator_type> allocator_traits_type;
 
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
    //! @brief The capacity/max size of the container
-   static const size_type static_capacity = N;
+   static const size_type static_capacity = small_vector_storage_definer<T, N, Options>::type::sms_size;
 
    public:
    BOOST_CONTAINER_FORCEINLINE small_vector()

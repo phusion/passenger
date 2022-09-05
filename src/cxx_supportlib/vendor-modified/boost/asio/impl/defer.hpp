@@ -218,8 +218,11 @@ private:
 } // namespace detail
 
 template <BOOST_ASIO_COMPLETION_TOKEN_FOR(void()) NullaryToken>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(NullaryToken, void()) defer(
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(NullaryToken, void()) defer(
     BOOST_ASIO_MOVE_ARG(NullaryToken) token)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<NullaryToken, void()>(
+        declval<detail::initiate_defer>(), token)))
 {
   return async_initiate<NullaryToken, void()>(
       detail::initiate_defer(), token);
@@ -227,11 +230,14 @@ BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(NullaryToken, void()) defer(
 
 template <typename Executor,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void()) NullaryToken>
-BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(NullaryToken, void()) defer(
+BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(NullaryToken, void()) defer(
     const Executor& ex, BOOST_ASIO_MOVE_ARG(NullaryToken) token,
     typename constraint<
       execution::is_executor<Executor>::value || is_executor<Executor>::value
     >::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<NullaryToken, void()>(
+        declval<detail::initiate_defer_with_executor<Executor> >(), token)))
 {
   return async_initiate<NullaryToken, void()>(
       detail::initiate_defer_with_executor<Executor>(ex), token);
@@ -239,10 +245,14 @@ BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(NullaryToken, void()) defer(
 
 template <typename ExecutionContext,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(void()) NullaryToken>
-inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(NullaryToken, void()) defer(
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(NullaryToken, void()) defer(
     ExecutionContext& ctx, BOOST_ASIO_MOVE_ARG(NullaryToken) token,
     typename constraint<is_convertible<
       ExecutionContext&, execution_context&>::value>::type)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<NullaryToken, void()>(
+        declval<detail::initiate_defer_with_executor<
+          typename ExecutionContext::executor_type> >(), token)))
 {
   return async_initiate<NullaryToken, void()>(
       detail::initiate_defer_with_executor<

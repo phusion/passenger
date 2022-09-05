@@ -85,7 +85,7 @@ struct node_disposer
    static const bool safemode_or_autounlink =
       is_safe_autounlink<value_traits::link_mode>::value;
 
-   node_disposer(F f, const ValueTraits *cont)
+   BOOST_INTRUSIVE_FORCEINLINE node_disposer(F f, const ValueTraits *cont)
       :  base_t(f), traits_(cont)
    {}
 

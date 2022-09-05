@@ -27,6 +27,7 @@
 #include <boost/asio/detail/string_view.hpp>
 #include <boost/asio/detail/throw_exception.hpp>
 #include <boost/asio/detail/type_traits.hpp>
+#include <boost/asio/is_contiguous_iterator.hpp>
 
 #if defined(BOOST_ASIO_MSVC) && (BOOST_ASIO_MSVC >= 1700)
 # if defined(_HAS_ITERATOR_DEBUGGING) && (_HAS_ITERATOR_DEBUGGING != 0)
@@ -1508,7 +1509,7 @@ BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONST_BUFFER buffer(
 #if defined(BOOST_ASIO_HAS_STRING_VIEW) \
   || defined(GENERATING_DOCUMENTATION)
 
-/// Create a new modifiable buffer that represents the given string_view.
+/// Create a new non-modifiable buffer that represents the given string_view.
 /**
  * @returns <tt>mutable_buffer(data.size() ? &data[0] : 0,
  * data.size() * sizeof(Elem))</tt>.
@@ -1552,6 +1553,167 @@ BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONST_BUFFER buffer(
 
 #endif // defined(BOOST_ASIO_HAS_STRING_VIEW)
        //  || defined(GENERATING_DOCUMENTATION)
+
+/// Create a new modifiable buffer from a contiguous container.
+/**
+ * @returns A mutable_buffer value equivalent to:
+ * @code mutable_buffer(
+ *     data.size() ? &data[0] : 0,
+ *     data.size() * sizeof(typename T::value_type)); @endcode
+ */
+template <typename T>
+BOOST_ASIO_NODISCARD inline BOOST_ASIO_MUTABLE_BUFFER buffer(
+    T& data,
+    typename constraint<
+      is_contiguous_iterator<typename T::iterator>::value,
+      defaulted_constraint
+    >::type = defaulted_constraint(),
+    typename constraint<
+      !is_const<
+        typename remove_reference<
+          typename std::iterator_traits<typename T::iterator>::reference
+        >::type
+      >::value,
+      defaulted_constraint
+    >::type = defaulted_constraint()) BOOST_ASIO_NOEXCEPT
+{
+  return BOOST_ASIO_MUTABLE_BUFFER(
+      data.size() ? detail::to_address(data.begin()) : 0,
+      data.size() * sizeof(typename T::value_type));
+}
+
+/// Create a new modifiable buffer from a contiguous container.
+/**
+ * @returns A mutable_buffer value equivalent to:
+ * @code mutable_buffer(
+ *     data.size() ? &data[0] : 0,
+ *     min(
+ *       data.size() * sizeof(typename T::value_type),
+ *       max_size_in_bytes)); @endcode
+ */
+template <typename T>
+BOOST_ASIO_NODISCARD inline BOOST_ASIO_MUTABLE_BUFFER buffer(
+    T& data, std::size_t max_size_in_bytes,
+    typename constraint<
+      is_contiguous_iterator<typename T::iterator>::value,
+      defaulted_constraint
+    >::type = defaulted_constraint(),
+    typename constraint<
+      !is_const<
+        typename remove_reference<
+          typename std::iterator_traits<typename T::iterator>::reference
+        >::type
+      >::value,
+      defaulted_constraint
+    >::type = defaulted_constraint()) BOOST_ASIO_NOEXCEPT
+{
+  return BOOST_ASIO_MUTABLE_BUFFER(
+      data.size() ? detail::to_address(data.begin()) : 0,
+      data.size() * sizeof(typename T::value_type) < max_size_in_bytes
+      ? data.size() * sizeof(typename T::value_type) : max_size_in_bytes);
+}
+
+/// Create a new non-modifiable buffer from a contiguous container.
+/**
+ * @returns A const_buffer value equivalent to:
+ * @code const_buffer(
+ *     data.size() ? &data[0] : 0,
+ *     data.size() * sizeof(typename T::value_type)); @endcode
+ */
+template <typename T>
+BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONST_BUFFER buffer(
+    T& data,
+    typename constraint<
+      is_contiguous_iterator<typename T::iterator>::value,
+      defaulted_constraint
+    >::type = defaulted_constraint(),
+    typename constraint<
+      is_const<
+        typename remove_reference<
+          typename std::iterator_traits<typename T::iterator>::reference
+        >::type
+      >::value,
+      defaulted_constraint
+    >::type = defaulted_constraint()) BOOST_ASIO_NOEXCEPT
+{
+  return BOOST_ASIO_CONST_BUFFER(
+      data.size() ? detail::to_address(data.begin()) : 0,
+      data.size() * sizeof(typename T::value_type));
+}
+
+/// Create a new non-modifiable buffer from a contiguous container.
+/**
+ * @returns A const_buffer value equivalent to:
+ * @code const_buffer(
+ *     data.size() ? &data[0] : 0,
+ *     min(
+ *       data.size() * sizeof(typename T::value_type),
+ *       max_size_in_bytes)); @endcode
+ */
+template <typename T>
+BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONST_BUFFER buffer(
+    T& data, std::size_t max_size_in_bytes,
+    typename constraint<
+      is_contiguous_iterator<typename T::iterator>::value,
+      defaulted_constraint
+    >::type = defaulted_constraint(),
+    typename constraint<
+      is_const<
+        typename remove_reference<
+          typename std::iterator_traits<typename T::iterator>::reference
+        >::type
+      >::value,
+      defaulted_constraint
+    >::type = defaulted_constraint()) BOOST_ASIO_NOEXCEPT
+{
+  return BOOST_ASIO_CONST_BUFFER(
+      data.size() ? detail::to_address(data.begin()) : 0,
+      data.size() * sizeof(typename T::value_type) < max_size_in_bytes
+      ? data.size() * sizeof(typename T::value_type) : max_size_in_bytes);
+}
+
+/// Create a new non-modifiable buffer from a contiguous container.
+/**
+ * @returns A const_buffer value equivalent to:
+ * @code const_buffer(
+ *     data.size() ? &data[0] : 0,
+ *     data.size() * sizeof(typename T::value_type)); @endcode
+ */
+template <typename T>
+BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONST_BUFFER buffer(
+    const T& data,
+    typename constraint<
+      is_contiguous_iterator<typename T::const_iterator>::value,
+      defaulted_constraint
+    >::type = defaulted_constraint()) BOOST_ASIO_NOEXCEPT
+{
+  return BOOST_ASIO_CONST_BUFFER(
+      data.size() ? detail::to_address(data.begin()) : 0,
+      data.size() * sizeof(typename T::value_type));
+}
+
+/// Create a new non-modifiable buffer from a contiguous container.
+/**
+ * @returns A const_buffer value equivalent to:
+ * @code const_buffer(
+ *     data.size() ? &data[0] : 0,
+ *     min(
+ *       data.size() * sizeof(typename T::value_type),
+ *       max_size_in_bytes)); @endcode
+ */
+template <typename T>
+BOOST_ASIO_NODISCARD inline BOOST_ASIO_CONST_BUFFER buffer(
+    const T& data, std::size_t max_size_in_bytes,
+    typename constraint<
+      is_contiguous_iterator<typename T::const_iterator>::value,
+      defaulted_constraint
+    >::type = defaulted_constraint()) BOOST_ASIO_NOEXCEPT
+{
+  return BOOST_ASIO_CONST_BUFFER(
+      data.size() ? detail::to_address(data.begin()) : 0,
+      data.size() * sizeof(typename T::value_type) < max_size_in_bytes
+      ? data.size() * sizeof(typename T::value_type) : max_size_in_bytes);
+}
 
 /*@}*/
 

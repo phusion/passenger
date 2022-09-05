@@ -171,15 +171,15 @@ int countl_zero( T x ) BOOST_NOEXCEPT
 {
     BOOST_STATIC_ASSERT( sizeof(T) == sizeof(boost::uint8_t) || sizeof(T) == sizeof(boost::uint16_t) || sizeof(T) == sizeof(boost::uint32_t) || sizeof(T) == sizeof(boost::uint64_t) );
 
-    if( sizeof(T) == sizeof(boost::uint8_t) )
+    BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint8_t) )
     {
         return boost::core::detail::countl_impl( static_cast<boost::uint8_t>( x ) );
     }
-    else if( sizeof(T) == sizeof(boost::uint16_t) )
+    else BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint16_t) )
     {
         return boost::core::detail::countl_impl( static_cast<boost::uint16_t>( x ) );
     }
-    else if( sizeof(T) == sizeof(boost::uint32_t) )
+    else BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint32_t) )
     {
         return boost::core::detail::countl_impl( static_cast<boost::uint32_t>( x ) );
     }
@@ -306,15 +306,15 @@ int countr_zero( T x ) BOOST_NOEXCEPT
 {
     BOOST_STATIC_ASSERT( sizeof(T) == sizeof(boost::uint8_t) || sizeof(T) == sizeof(boost::uint16_t) || sizeof(T) == sizeof(boost::uint32_t) || sizeof(T) == sizeof(boost::uint64_t) );
 
-    if( sizeof(T) == sizeof(boost::uint8_t) )
+    BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint8_t) )
     {
         return boost::core::detail::countr_impl( static_cast<boost::uint8_t>( x ) );
     }
-    else if( sizeof(T) == sizeof(boost::uint16_t) )
+    else BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint16_t) )
     {
         return boost::core::detail::countr_impl( static_cast<boost::uint16_t>( x ) );
     }
-    else if( sizeof(T) == sizeof(boost::uint32_t) )
+    else BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint32_t) )
     {
         return boost::core::detail::countr_impl( static_cast<boost::uint32_t>( x ) );
     }
@@ -410,7 +410,7 @@ BOOST_CXX14_CONSTEXPR int popcount( T x ) BOOST_NOEXCEPT
 {
     BOOST_STATIC_ASSERT( sizeof(T) <= sizeof(boost::uint64_t) );
 
-    if( sizeof(T) <= sizeof(boost::uint32_t) )
+    BOOST_IF_CONSTEXPR ( sizeof(T) <= sizeof(boost::uint32_t) )
     {
         return boost::core::detail::popcount_impl( static_cast<boost::uint32_t>( x ) );
     }
@@ -512,7 +512,7 @@ BOOST_CXX14_CONSTEXPR T bit_ceil( T x ) BOOST_NOEXCEPT
 {
     BOOST_STATIC_ASSERT( sizeof(T) <= sizeof(boost::uint64_t) );
 
-    if( sizeof(T) <= sizeof(boost::uint32_t) )
+    BOOST_IF_CONSTEXPR ( sizeof(T) <= sizeof(boost::uint32_t) )
     {
         return static_cast<T>( boost::core::detail::bit_ceil_impl( static_cast<boost::uint32_t>( x ) ) );
     }

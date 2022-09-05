@@ -153,6 +153,7 @@ public:
   {
     int result = ::tcsendbreak(descriptor_service_.native_handle(impl), 0);
     descriptor_ops::get_last_error(ec, result < 0);
+    BOOST_ASIO_ERROR_LOCATION(ec);
     return ec;
   }
 

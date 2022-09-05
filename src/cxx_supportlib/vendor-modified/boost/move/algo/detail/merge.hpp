@@ -18,6 +18,7 @@
 #include <boost/move/detail/iterator_traits.hpp>
 #include <boost/move/detail/destruct_n.hpp>
 #include <boost/move/algo/predicate.hpp>
+#include <boost/move/algo/detail/search.hpp>
 #include <boost/move/detail/iterator_to_raw_pointer.hpp>
 #include <boost/assert.hpp>
 #include <cstddef>
@@ -367,55 +368,6 @@ RandIt rotate_gcd(RandIt first, RandIt middle, RandIt last)
    }
    return ret;
 }
-
-template <class RandIt, class T, class Compare>
-RandIt lower_bound
-   (RandIt first, const RandIt last, const T& key, Compare comp)
-{
-   typedef typename iter_size<RandIt>::type size_type;
-   size_type len = size_type(last - first);
-   RandIt middle;
-
-   while (len) {
-      size_type step = size_type(len >> 1);
-      middle = first;
-      middle += step;
-
-      if (comp(*middle, key)) {
-         first = ++middle;
-         len = size_type(len - (step + 1));
-      }
-      else{
-         len = step;
-      }
-   }
-   return first;
-}
-
-template <class RandIt, class T, class Compare>
-RandIt upper_bound
-   (RandIt first, const RandIt last, const T& key, Compare comp)
-{
-   typedef typename iter_size<RandIt>::type size_type;
-   size_type len = size_type(last - first);
-   RandIt middle;
-
-   while (len) {
-      size_type step = size_type(len >> 1);
-      middle = first;
-      middle += step;
-
-      if (!comp(key, *middle)) {
-         first = ++middle;
-         len = size_type(len - (step + 1));
-      }
-      else{
-         len = step;
-      }
-   }
-   return first;
-}
-
 
 template<class RandIt, class Compare, class Op>
 void op_merge_left( RandIt buf_first

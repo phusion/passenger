@@ -66,6 +66,13 @@ class stream :
   public stream_base,
   private noncopyable
 {
+private:
+  class initiate_async_handshake;
+  class initiate_async_buffered_handshake;
+  class initiate_async_shutdown;
+  class initiate_async_write_some;
+  class initiate_async_read_some;
+
 public:
   /// The native handle type of the SSL stream.
   typedef SSL* native_handle_type;
@@ -512,11 +519,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code))
         HandshakeToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(HandshakeToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(HandshakeToken,
       void (boost::system::error_code))
   async_handshake(handshake_type type,
       BOOST_ASIO_MOVE_ARG(HandshakeToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<HandshakeToken,
+        void (boost::system::error_code)>(
+          declval<initiate_async_handshake>(), token, type)))
   {
     return async_initiate<HandshakeToken,
       void (boost::system::error_code)>(
@@ -569,11 +580,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) BufferedHandshakeToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(BufferedHandshakeToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(BufferedHandshakeToken,
       void (boost::system::error_code, std::size_t))
   async_handshake(handshake_type type, const ConstBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(BufferedHandshakeToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<BufferedHandshakeToken,
+        void (boost::system::error_code, std::size_t)>(
+          declval<initiate_async_buffered_handshake>(), token, type, buffers)))
   {
     return async_initiate<BufferedHandshakeToken,
       void (boost::system::error_code, std::size_t)>(
@@ -644,11 +659,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code))
         ShutdownToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ShutdownToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ShutdownToken,
       void (boost::system::error_code))
   async_shutdown(
       BOOST_ASIO_MOVE_ARG(ShutdownToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<ShutdownToken,
+        void (boost::system::error_code)>(
+          declval<initiate_async_shutdown>(), token)))
   {
     return async_initiate<ShutdownToken,
       void (boost::system::error_code)>(
@@ -752,11 +771,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) WriteToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(WriteToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
       void (boost::system::error_code, std::size_t))
   async_write_some(const ConstBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(WriteToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<WriteToken,
+        void (boost::system::error_code, std::size_t)>(
+          declval<initiate_async_write_some>(), token, buffers)))
   {
     return async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
@@ -860,11 +883,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) ReadToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ReadToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadToken,
       void (boost::system::error_code, std::size_t))
   async_read_some(const MutableBufferSequence& buffers,
       BOOST_ASIO_MOVE_ARG(ReadToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<ReadToken,
+        void (boost::system::error_code, std::size_t)>(
+          declval<initiate_async_read_some>(), token, buffers)))
   {
     return async_initiate<ReadToken,
       void (boost::system::error_code, std::size_t)>(

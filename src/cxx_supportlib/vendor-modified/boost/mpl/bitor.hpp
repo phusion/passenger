@@ -19,7 +19,7 @@
 // macros, see http://tinyurl.com/ycwdxco; 'defined(bitor)'
 // has to be checked in a separate condition, otherwise GCC complains 
 // about 'bitor' being an alternative token
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined(_MSC_VER)
 #ifndef __GCCXML__
 #if defined(bitor)
 #   pragma push_macro("bitor")

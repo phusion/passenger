@@ -97,6 +97,16 @@ class circular_list_algorithms
       NodeTraits::set_previous(this_node, this_node);
    }
 
+   //! <b>Effects</b>: Returns true if this_node_points to an empty list.
+   //! 
+   //! <b>Complexity</b>: Constant
+   //!
+   //! <b>Throws</b>: Nothing.
+   BOOST_INTRUSIVE_FORCEINLINE static bool is_empty(const_node_ptr this_node) BOOST_NOEXCEPT
+   {
+      return NodeTraits::get_next(this_node) == this_node;
+   }
+
    //! <b>Requires</b>: this_node must be in a circular list or be an empty circular list.
    //!
    //! <b>Effects</b>: Returns true is "this_node" is the only node of a circular list:

@@ -68,6 +68,9 @@ template <typename InternetProtocol, typename Executor>
 class basic_resolver
   : public resolver_base
 {
+private:
+  class initiate_async_resolve;
+
 public:
   /// The type of the executor associated with the object.
   typedef Executor executor_type;
@@ -677,11 +680,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         results_type)) ResolveToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ResolveToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const query& q,
       BOOST_ASIO_MOVE_ARG(ResolveToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token, q)))
   {
     return boost::asio::async_initiate<ResolveToken,
       void (boost::system::error_code, results_type)>(
@@ -740,12 +747,17 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         results_type)) ResolveToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ResolveToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(BOOST_ASIO_STRING_VIEW_PARAM host,
       BOOST_ASIO_STRING_VIEW_PARAM service,
       BOOST_ASIO_MOVE_ARG(ResolveToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     return async_resolve(host, service, resolver_base::flags(),
         BOOST_ASIO_MOVE_CAST(ResolveToken)(token));
@@ -808,13 +820,18 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         results_type)) ResolveToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ResolveToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(BOOST_ASIO_STRING_VIEW_PARAM host,
       BOOST_ASIO_STRING_VIEW_PARAM service,
       resolver_base::flags resolve_flags,
       BOOST_ASIO_MOVE_ARG(ResolveToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     basic_resolver_query<protocol_type> q(static_cast<std::string>(host),
         static_cast<std::string>(service), resolve_flags);
@@ -879,12 +896,17 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         results_type)) ResolveToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ResolveToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const protocol_type& protocol,
       BOOST_ASIO_STRING_VIEW_PARAM host, BOOST_ASIO_STRING_VIEW_PARAM service,
       BOOST_ASIO_MOVE_ARG(ResolveToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     return async_resolve(protocol, host, service, resolver_base::flags(),
         BOOST_ASIO_MOVE_CAST(ResolveToken)(token));
@@ -950,13 +972,18 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         results_type)) ResolveToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ResolveToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const protocol_type& protocol,
       BOOST_ASIO_STRING_VIEW_PARAM host, BOOST_ASIO_STRING_VIEW_PARAM service,
       resolver_base::flags resolve_flags,
       BOOST_ASIO_MOVE_ARG(ResolveToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     basic_resolver_query<protocol_type> q(
         protocol, static_cast<std::string>(host),
@@ -1043,11 +1070,15 @@ public:
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         results_type)) ResolveToken
           BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(ResolveToken,
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const endpoint_type& e,
       BOOST_ASIO_MOVE_ARG(ResolveToken) token
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token, e)))
   {
     return boost::asio::async_initiate<ResolveToken,
       void (boost::system::error_code, results_type)>(
