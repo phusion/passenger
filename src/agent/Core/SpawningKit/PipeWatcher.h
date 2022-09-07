@@ -90,7 +90,7 @@ private:
 
 		UPDATE_TRACE_POINT();
 		while (!boost::this_thread::interruption_requested()) {
-			char buf[1024 * 16];
+			char buf[1024 * 60];
 			ssize_t ret;
 
 			UPDATE_TRACE_POINT();
