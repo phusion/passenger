@@ -3,8 +3,26 @@ Release 6.0.15 (Not yet released)
  * Restore ability to build against upstream libev. Contributed by Antonio Terceiro. Closes GH-1544.
  * Improve rvm gemset detection. Closes GH-2420.
  * Fix watchdog error on disable-log-prefix flag. Contributed by Paul Hanyzewski. Closes GH-2363.
- * Upgrades Boost to 1.79.
+ * Upgrades Boost to 1.80.
  * Fixed compilation on some platforms by explicitely using the stl queue. Closes GH-2440.
+ * Raise an error in case rack gets an ENOBUFS error. Contributed by Mathieu Jobin.
+ * Fixes interaction between preload bundler option and setenv RUBYOPT option. Closes GH-2424.
+ * Add rpm packages for el9 (RHEL, Rocky, Alma). Closes GH-2431.
+ * Upgrade jsoncpp to 1.9.5.
+ * Improve Solaris support for 11.3 & 11.4.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+ - ccache: 4.6 → 4.6.3
+ - cmake: 3.23.1 → 3.24.2
+ - curl: 7.82.0 → 7.85.0
+ - git: 2.36.0 → 2.37.3
+ - gnupg: 2.3.5 → 2.3.7
+ - libiconv: 1.16 → 1.17
+ - libksba: 1.6.0 → 1.6.1
+ - openssl: 1.1.1n → 1.1.1q
+ - pinentry: 1.2.0 → 1.2.1
+ - rubygems: 3.3.12 → 3.3.22
+
 
 Release 6.0.14
 -------------
