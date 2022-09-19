@@ -1,4 +1,9 @@
-Release 6.0.15 (Not yet released)
+Release 6.0.16 (Not yet released)
+-------------
+ * 
+
+
+Release 6.0.15
 -------------
  * Restore ability to build against upstream libev. Contributed by Antonio Terceiro. Closes GH-1544.
  * Improve rvm gemset detection. Closes GH-2420.
