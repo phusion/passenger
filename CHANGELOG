@@ -1,6 +1,14 @@
 Release 6.0.16 (Not yet released)
 -------------
- * 
+ * [Ruby] Use core json gem when available, keep fallback for insanely old rubies.
+ * Downgrade jsoncpp to 1.8.1 from 1.9.5 to fix invalid json generation bug. Closes GH-2445.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+
+ - git 2.37.3 → 2.38.0
+ - libgpg_error 1.45 → 1.46
+ - libksba 1.6.1 → 1.6.2
+ - rubygems 3.3.22 → 3.3.23
+ - s3cmd 2.2.0 → 2.3.0
 
 
 Release 6.0.15
@@ -9,7 +17,7 @@ Release 6.0.15
  * Improve rvm gemset detection. Closes GH-2420.
  * Fix watchdog error on disable-log-prefix flag. Contributed by Paul Hanyzewski. Closes GH-2363.
  * Upgrades Boost to 1.80.
- * Fixed compilation on some platforms by explicitely using the stl queue. Closes GH-2440.
+ * Fixed compilation on some platforms by explicitly using the stl queue. Closes GH-2440.
  * Raise an error in case rack gets an ENOBUFS error. Contributed by Mathieu Jobin.
  * Fixes interaction between preload bundler option and setenv RUBYOPT option. Closes GH-2424.
  * Add rpm packages for el9 (RHEL, Rocky, Alma). Closes GH-2431.
