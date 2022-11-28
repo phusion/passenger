@@ -41,6 +41,7 @@ pipeline {
 
   parameters {
     booleanParam(name: 'LINUX_X86_64', defaultValue: true, description: 'Linux x86_64 binaries')
+    booleanParam(name: 'LINUX_ARM64', defaultValue: false, description: 'Linux arm64 binaries')
     booleanParam(name: 'MACOS', defaultValue: true, description: 'macOS binaries')
   }
 
@@ -76,6 +77,14 @@ pipeline {
                 checkout scm
                 sh './dev/ci/tests/binaries/build-linux'
                 archiveArtifacts artifacts: 'output-linux-x86_64/**/*'
+                sh './dev/ci/tests/binaries/test-linux'
+              }
+            },
+            'Linux arm64': {
+              setupLinuxTest(params.LINUX_ARM64, 'arm64') {
+                checkout scm
+                sh './dev/ci/tests/binaries/build-linux'
+                archiveArtifacts artifacts: 'output-linux-arm64/**/*'
                 sh './dev/ci/tests/binaries/test-linux'
               }
             },

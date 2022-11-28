@@ -687,11 +687,12 @@ module PhusionPassenger
         # Running 'file' on the Apache executable usually outputs something
         # like this:
         #
-        #   /usr/sbin/httpd: Mach-O universal binary with 4 architectures
+        #   /usr/sbin/httpd: Mach-O universal binary with 5 architectures
         #   /usr/sbin/httpd (for architecture ppc7400):     Mach-O executable ppc
         #   /usr/sbin/httpd (for architecture ppc64):       Mach-O 64-bit executable ppc64
         #   /usr/sbin/httpd (for architecture i386):        Mach-O executable i386
         #   /usr/sbin/httpd (for architecture x86_64):      Mach-O 64-bit executable x86_64
+        #   /usr/sbin/httpd (for architecture arm64e):	    Mach-O 64-bit executable arm64e
         #
         # But on some machines, it may output just:
         #
@@ -700,7 +701,7 @@ module PhusionPassenger
         # (http://code.google.com/p/phusion-passenger/issues/detail?id=236)
         output = `file "#{httpd}"`.strip
         if output =~ /Mach-O fat file/ && output !~ /for architecture/
-          architectures = ["i386", "ppc", "x86_64", "ppc64"]
+          architectures = ["i386", "ppc", "x86_64", "ppc64", "arm64e"]
         else
           architectures = []
           output.split("\n").grep(/for architecture/).each do |line|

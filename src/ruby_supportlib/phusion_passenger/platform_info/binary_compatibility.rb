@@ -72,7 +72,7 @@ module PhusionPassenger
             # some OS X print something like:
             #   "/opt/ruby-enterprise/bin/ruby: Mach-O 64-bit executable"
             if output =~ /arm64/
-              ruby_arch = "arm"
+              ruby_arch = "arm64"
             elsif output =~ /Mach-O 64-bit/
               ruby_arch = "x86_64"
             else
