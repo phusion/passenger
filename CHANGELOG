@@ -5,12 +5,21 @@ Release 6.0.16 (Not yet released)
  * [Ruby] Use core json gem when available, keep fallback for insanely old rubies.
  * Downgrade jsoncpp to 1.8.1 from 1.9.5 to fix invalid json generation bug. Closes GH-2445.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
-
- - git 2.37.3 → 2.38.0
- - libgpg_error 1.45 → 1.46
- - libksba 1.6.1 → 1.6.2
- - rubygems 3.3.22 → 3.3.23
- - s3cmd 2.2.0 → 2.3.0
+   - ccache: 4.6.3 → 4.7.4
+   - cmake: 3.24.2 → 3.25.1
+   - curl: 7.85.0 → 7.86.0
+   - git 2.37.3 → 2.38.1
+   - gnupg: 2.3.7 → 2.3.8
+   - libgpg_error 1.45 → 1.46
+   - libksba 1.6.1 → 1.6.2
+   - openssl: 1.1.1q → 1.1.1s
+   - rubygems 3.3.22 → 3.3.26
+   - s3cmd 2.2.0 → 2.3.0
+   - zlib: 1.2.12 → 1.2.13
+   - rubies:
+     - 2.7.6 → 2.7.7
+     - 3.0.4 → 3.0.5
+     - 3.1.2 → 3.1.3
 
 
 Release 6.0.15
