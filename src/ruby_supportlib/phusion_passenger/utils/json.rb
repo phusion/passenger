@@ -29,6 +29,7 @@ module PhusionPassenger
 module Utils
 begin
     require 'json'
+    JSON = ::JSON
 rescue LoadError
 require 'strscan'
 require 'forwardable'
