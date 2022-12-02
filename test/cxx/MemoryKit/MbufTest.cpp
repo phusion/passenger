@@ -166,10 +166,10 @@ namespace tut {
 		const char *orig_start = buffer.start;
 		const char *orig_end = buffer.end;
 
-		buffer = buffer;
-		ensure_equals("(1)", buffer.mbuf_block, orig_mbuf_block);
-		ensure_equals("(2)", buffer.start, orig_start);
-		ensure_equals("(3)", buffer.end, orig_end);
+		mbuf buffer2 = buffer;
+		ensure_equals("(1)", buffer2.mbuf_block, orig_mbuf_block);
+		ensure_equals("(2)", buffer2.start, orig_start);
+		ensure_equals("(3)", buffer2.end, orig_end);
 	}
 
 	TEST_METHOD(12) {
