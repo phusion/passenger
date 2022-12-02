@@ -25,14 +25,11 @@
 # gem being available, for example in 'passenger start' before the RuntimeInstaller
 # has run.
 
-module PhusionPassenger
-module Utils
-begin
-    require 'json'
-    JSON = ::JSON
-rescue LoadError
 require 'strscan'
 require 'forwardable'
+
+module PhusionPassenger
+module Utils
 
 # Usage:
 #
@@ -357,7 +354,6 @@ else
 end
 end
 
-end # core ruby shim attempt
 end # module Utils
 end # module PhusionPassenger
 
