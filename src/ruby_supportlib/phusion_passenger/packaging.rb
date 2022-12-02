@@ -88,6 +88,7 @@ module PhusionPassenger
       '**/.DS_Store',
       '**/*.gch',
       '**/.editorconfig',
+      '**/.clangd',
       '.externalToolBuilders/**/*',
       '.github/**/*',
       '.settings/**/*',
