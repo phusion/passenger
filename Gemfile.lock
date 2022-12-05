@@ -2,7 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     diff-lcs (1.5.0)
-    json (2.6.2)
+    json (2.5.1)
     mime-types (1.25)
     rack (1.6.13)
     rake (12.3.3)
@@ -19,7 +19,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  json (>= 2.3.0)
+  json (= 2.5.1)
   mime-types (= 1.25)
   rack (< 2.0)
   rake (< 13.0.0)

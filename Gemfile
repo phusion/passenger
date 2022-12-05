@@ -1,7 +1,7 @@
 source 'https://rubygems.org/'
 
 group :base do
-  gem 'json', '>= 2.3.0'
+  gem 'json', '= 2.5.1'
   gem 'mime-types', '1.25'
   gem 'rack', '< 2.0'
   gem 'rake', '< 13.0.0'
