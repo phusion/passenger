@@ -63,6 +63,8 @@ private:
 	string logFile;
 	boost::mutex startSyncher;
 	boost::condition_variable startCond;
+	size_t bufSize;
+	char *buf;
 
 	static void threadMain(boost::shared_ptr<PipeWatcher> self) {
 		TRACE_POINT();
@@ -90,11 +92,12 @@ private:
 
 		UPDATE_TRACE_POINT();
 		while (!boost::this_thread::interruption_requested()) {
-			char buf[1024 * 8];
 			ssize_t ret;
+			
+			buf[0] = '\0';
 
 			UPDATE_TRACE_POINT();
-			ret = syscalls::read(fd, buf, sizeof(buf));
+			ret = syscalls::read(fd, buf, bufSize);
 			if (ret == 0) {
 				break;
 			} else if (ret == -1) {
@@ -150,7 +153,9 @@ public:
 		  appGroupName(_appGroupName),
 		  appLogFile(_appLogFile),
 		  pid(_pid),
-		  started(false)
+		  started(false),
+		  bufSize(1024 * 8),
+		  buf(NULL)
 		{ }
 
 	void setLogFile(const string &path) {
@@ -158,6 +163,12 @@ public:
 	}
 
 	void initialize() {
+		const char *envMaxLogBytes = getenv("PASSENGER_MAX_LOG_LINE_LENGTH_BYTES");
+		if (envMaxLogBytes != NULL && *envMaxLogBytes != '\0') {
+			bufSize = atoi(envMaxLogBytes);
+		}
+		buf = new char[bufSize];
+
 		oxt::thread(boost::bind(threadMain, shared_from_this()),
 			"PipeWatcher: PID " + toString(pid) + " " + name + ", fd " + toString(fd),
 			POOL_HELPER_THREAD_STACK_SIZE);
