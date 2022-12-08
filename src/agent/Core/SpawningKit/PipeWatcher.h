@@ -159,9 +159,7 @@ public:
 		{ }
 
 	~PipeWatcher() {
-		if (buf != NULL) {
-			delete[] buf;
-		}
+		delete[] buf;
 	}
 
 	void setLogFile(const string &path) {
