@@ -158,6 +158,12 @@ public:
 		  buf(NULL)
 		{ }
 
+	~PipeWatcher() {
+		if (buf != NULL) {
+			delete[] buf;
+		}
+	}
+
 	void setLogFile(const string &path) {
 		logFile = path;
 	}
