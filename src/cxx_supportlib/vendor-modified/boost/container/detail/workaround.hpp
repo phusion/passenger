@@ -98,12 +98,11 @@
    #define BOOST_CONTAINER_FORCEINLINE inline
 #elif defined(BOOST_CONTAINER_FORCEINLINE_IS_BOOST_FORCELINE)
    #define BOOST_CONTAINER_FORCEINLINE BOOST_FORCEINLINE
-#elif defined(BOOST_MSVC) && (_MSC_VER < 1900 || defined(_DEBUG))
+#elif defined(BOOST_MSVC) && (_MSC_VER <= 1900 || defined(_DEBUG))
    //"__forceinline" and MSVC seems to have some bugs in old versions and in debug mode
    #define BOOST_CONTAINER_FORCEINLINE inline
-//#elif defined(__GNUC__) && ((__GNUC__ < 4) || (__GNUC__ == 4 && (__GNUC_MINOR__ < 5)))
-#elif defined(__GNUC__) && (__GNUC__ <= 5)
-   //Older GCCs have problems with forceinline
+#elif defined(BOOST_GCC) && ((__GNUC__ <= 5) || defined(__MINGW32__))
+   //Older GCCs and MinGw have problems with forceinline
    #define BOOST_CONTAINER_FORCEINLINE inline
 #else
    #define BOOST_CONTAINER_FORCEINLINE BOOST_FORCEINLINE

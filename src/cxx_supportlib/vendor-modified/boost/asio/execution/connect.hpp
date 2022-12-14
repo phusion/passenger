@@ -16,6 +16,9 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
+
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
+
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/execution/detail/as_invocable.hpp>
 #include <boost/asio/execution/detail/as_operation.hpp>
@@ -489,5 +492,7 @@ using connect_result_t = typename connect_result<S, R>::type;
 #endif // defined(GENERATING_DOCUMENTATION)
 
 #include <boost/asio/detail/pop_options.hpp>
+
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 #endif // BOOST_ASIO_EXECUTION_CONNECT_HPP

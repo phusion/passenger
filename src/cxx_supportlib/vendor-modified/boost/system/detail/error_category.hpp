@@ -48,7 +48,7 @@ class std_category;
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #endif
 
-#if defined(BOOST_MSVC)
+#if defined(BOOST_MSVC) && BOOST_MSVC < 1900
 #pragma warning(push)
 #pragma warning(disable: 4351) //  new behavior: elements of array will be default initialized
 #endif
@@ -183,7 +183,7 @@ public:
 #endif
 };
 
-#if defined(BOOST_MSVC)
+#if defined(BOOST_MSVC) && BOOST_MSVC < 1900
 #pragma warning(pop)
 #endif
 

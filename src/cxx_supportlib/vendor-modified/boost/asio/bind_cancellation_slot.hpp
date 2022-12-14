@@ -695,8 +695,17 @@ struct associator<Associator,
 {
   typedef typename Associator<T, DefaultCandidate>::type type;
 
-  static type get(const cancellation_slot_binder<T, CancellationSlot>& b,
-      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+  static type get(const cancellation_slot_binder<T, CancellationSlot>& b)
+    BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<T, DefaultCandidate>::get(b.get());
+  }
+
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX(type) get(
+      const cancellation_slot_binder<T, CancellationSlot>& b,
+      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
+      Associator<T, DefaultCandidate>::get(b.get(), c)))
   {
     return Associator<T, DefaultCandidate>::get(b.get(), c);
   }
@@ -709,8 +718,10 @@ struct associated_cancellation_slot<
 {
   typedef CancellationSlot type;
 
-  static type get(const cancellation_slot_binder<T, CancellationSlot>& b,
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX(type) get(
+      const cancellation_slot_binder<T, CancellationSlot>& b,
       const CancellationSlot1& = CancellationSlot1()) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((b.get_cancellation_slot()))
   {
     return b.get_cancellation_slot();
   }

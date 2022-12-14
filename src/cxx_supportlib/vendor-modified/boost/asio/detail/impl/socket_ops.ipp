@@ -2520,7 +2520,11 @@ const char* inet_ntop(int af, const void* src, char* dest, size_t length,
         && ((ipv6_address->s6_addr[1] & 0x0f) == 0x02));
     if ((!is_link_local && !is_multicast_link_local)
         || if_indextoname(static_cast<unsigned>(scope_id), if_name + 1) == 0)
+#if defined(BOOST_ASIO_HAS_SNPRINTF)
+      snprintf(if_name + 1, sizeof(if_name) - 1, "%lu", scope_id);
+#else // defined(BOOST_ASIO_HAS_SNPRINTF)
       sprintf(if_name + 1, "%lu", scope_id);
+#endif // defined(BOOST_ASIO_HAS_SNPRINTF)
     strcat(dest, if_name);
   }
   return result;
@@ -3628,7 +3632,9 @@ inline boost::system::error_code getnameinfo_emulation(
       {
         return ec = boost::asio::error::no_buffer_space;
       }
-#if defined(BOOST_ASIO_HAS_SECURE_RTL)
+#if defined(BOOST_ASIO_HAS_SNPRINTF)
+      snprintf(serv, servlen, "%u", ntohs(port));
+#elif defined(BOOST_ASIO_HAS_SECURE_RTL)
       sprintf_s(serv, servlen, "%u", ntohs(port));
 #else // defined(BOOST_ASIO_HAS_SECURE_RTL)
       sprintf(serv, "%u", ntohs(port));
@@ -3651,7 +3657,9 @@ inline boost::system::error_code getnameinfo_emulation(
         {
           return ec = boost::asio::error::no_buffer_space;
         }
-#if defined(BOOST_ASIO_HAS_SECURE_RTL)
+#if defined(BOOST_ASIO_HAS_SNPRINTF)
+        snprintf(serv, servlen, "%u", ntohs(port));
+#elif defined(BOOST_ASIO_HAS_SECURE_RTL)
         sprintf_s(serv, servlen, "%u", ntohs(port));
 #else // defined(BOOST_ASIO_HAS_SECURE_RTL)
         sprintf(serv, "%u", ntohs(port));

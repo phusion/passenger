@@ -213,11 +213,27 @@ BOOST_INTRUSIVE_FORCEINLINE typename iterator_enable_if_tag<InputIt, std::random
    it += n;
 }
 
+template<class InputIt, class Distance>
+BOOST_INTRUSIVE_FORCEINLINE typename iterator_enable_if_tag<InputIt, std::random_access_iterator_tag, InputIt>::type
+   make_iterator_advance(InputIt it, Distance n)
+{
+   (iterator_advance)(it, n);
+   return it;
+}
+
 template<class It>
 BOOST_INTRUSIVE_FORCEINLINE 
    void iterator_uadvance(It& it, typename iter_size<It>::type n)
 {
    (iterator_advance)(it, (typename iterator_traits<It>::difference_type)n);
+}
+
+template<class It>
+BOOST_INTRUSIVE_FORCEINLINE
+It make_iterator_uadvance(It it, typename iter_size<It>::type n)
+{
+   (iterator_uadvance)(it, n);
+   return it;
 }
 
 ////////////////////////////////////////

@@ -175,7 +175,8 @@ void swap_and_update_key
 {
    if(begin != with){
       ::boost::adl_move_swap_ranges(begin, end, with);
-      ::boost::adl_move_swap(*key_next, *key_range2);
+      if(key_next != key_range2)  //Avoid potential self-swapping
+         ::boost::adl_move_swap(*key_next, *key_range2);
       if(key_next == key_mid){
          key_mid = key_range2;
       }
@@ -217,7 +218,8 @@ RandIt2 buffer_and_update_key
       while(begin != end) {
          op(three_way_t(), begin++, with++, buffer++);
       }
-      ::boost::adl_move_swap(*key_next, *key_range2);
+      if (key_next != key_range2)   //Avoid potential self-swapping
+         ::boost::adl_move_swap(*key_next, *key_range2);
       if (key_next == key_mid) {
          key_mid = key_range2;
       }

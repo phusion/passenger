@@ -66,6 +66,12 @@ template <int I = 0>
 struct occupancy_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -79,7 +85,9 @@ struct occupancy_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = false);
@@ -173,6 +181,7 @@ template <typename T>
 struct is_applicable_property<T, execution::occupancy_t>
   : integral_constant<bool,
       execution::is_executor<T>::value
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
         || conditional<
             execution::is_executor<T>::value,
             false_type,
@@ -182,7 +191,9 @@ struct is_applicable_property<T, execution::occupancy_t>
             execution::is_executor<T>::value,
             false_type,
             execution::is_scheduler<T>
-          >::type::value>
+          >::type::value
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
+    >
 {
 };
 

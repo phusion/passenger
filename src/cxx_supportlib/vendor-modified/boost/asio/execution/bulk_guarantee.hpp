@@ -16,6 +16,9 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
+
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
+
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/execution/executor.hpp>
 #include <boost/asio/execution/scheduler.hpp>
@@ -197,6 +200,12 @@ template <int I = 0>
 struct bulk_guarantee_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -210,7 +219,9 @@ struct bulk_guarantee_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = false);
@@ -505,6 +516,12 @@ template <int I = 0>
 struct unsequenced_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -518,7 +535,9 @@ struct unsequenced_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = true);
@@ -633,6 +652,12 @@ template <int I = 0>
 struct sequenced_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -646,7 +671,9 @@ struct sequenced_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = true);
@@ -740,6 +767,12 @@ template <int I>
 struct parallel_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -753,7 +786,9 @@ struct parallel_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = true);
@@ -1213,5 +1248,7 @@ struct static_require<T, execution::bulk_guarantee_t::parallel_t,
 } // namespace boost
 
 #include <boost/asio/detail/pop_options.hpp>
+
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 #endif // BOOST_ASIO_EXECUTION_BULK_GUARANTEE_HPP

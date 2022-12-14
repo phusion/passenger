@@ -200,25 +200,25 @@ class splaytree_algorithms
    static void replace_node(node_ptr node_to_be_replaced, node_ptr header, node_ptr new_node) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::unlink(node_ptr)
-   static void unlink(node_ptr node) BOOST_NOEXCEPT;
+   static void unlink(node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::unlink_leftmost_without_rebalance
    static node_ptr unlink_leftmost_without_rebalance(node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::unique(const_node_ptr)
-   static bool unique(const_node_ptr node) BOOST_NOEXCEPT;
+   static bool unique(const_node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::size(const_node_ptr)
    static std::size_t size(const_node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::next_node(node_ptr)
-   static node_ptr next_node(node_ptr node) BOOST_NOEXCEPT;
+   static node_ptr next_node(node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::prev_node(node_ptr)
-   static node_ptr prev_node(node_ptr node) BOOST_NOEXCEPT;
+   static node_ptr prev_node(node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::init(node_ptr)
-   static void init(node_ptr node) BOOST_NOEXCEPT;
+   static void init(node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::init_header(node_ptr)
    static void init_header(node_ptr header) BOOST_NOEXCEPT;
@@ -521,8 +521,8 @@ class splaytree_algorithms
    #endif   //#ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
 
    // bottom-up splay, use data_ as parent for n    | complexity : logarithmic    | exception : nothrow
-   static void splay_up(node_ptr node, node_ptr header) BOOST_NOEXCEPT
-   {  priv_splay_up<true>(node, header); }
+   static void splay_up(node_ptr n, node_ptr header) BOOST_NOEXCEPT
+   {  priv_splay_up<true>(n, header); }
 
    // top-down splay | complexity : logarithmic    | exception : strong, note A
    template<class KeyType, class KeyNodePtrCompare>
@@ -535,12 +535,14 @@ class splaytree_algorithms
 
    // bottom-up splay, use data_ as parent for n    | complexity : logarithmic    | exception : nothrow
    template<bool SimpleSplay>
-   static void priv_splay_up(node_ptr node, node_ptr header) BOOST_NOEXCEPT
+   static void priv_splay_up(node_ptr n, node_ptr header) BOOST_NOEXCEPT
    {
       // If (node == header) do a splay for the right most node instead
       // this is to boost performance of equal_range/count on equivalent containers in the case
       // where there are many equal elements at the end
-      node_ptr n((node == header) ? NodeTraits::get_right(header) : node);
+      if(n == header)
+         n = NodeTraits::get_right(header);
+
       node_ptr t(header);
 
       if( n == t ) return;

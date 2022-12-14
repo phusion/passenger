@@ -29,6 +29,7 @@
 #include <boost/assert/source_location.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/config.hpp>
+#include <boost/config/workaround.hpp>
 #include <ostream>
 #include <new>
 #include <cstdio>
@@ -57,12 +58,14 @@ namespace system
 //  and error_code containing a pointer to an object of a type derived
 //  from error_category.
 
+bool operator==( const error_code & code, const error_condition & condition ) BOOST_NOEXCEPT;
 std::size_t hash_value( error_code const & ec );
 
 class error_code
 {
 private:
 
+    friend bool operator==( const error_code & code, const error_condition & condition ) BOOST_NOEXCEPT;
     friend std::size_t hash_value( error_code const & ec );
 
 private:
@@ -114,7 +117,10 @@ public:
 
     // constructors:
 
-    BOOST_SYSTEM_CONSTEXPR error_code() BOOST_NOEXCEPT:
+#if !BOOST_WORKAROUND(BOOST_GCC, < 40800)
+    BOOST_CONSTEXPR
+#endif
+    error_code() BOOST_NOEXCEPT:
         d1_(), lc_flags_( 0 )
     {
     }
@@ -434,48 +440,6 @@ public:
         return !( lhs == rhs );
     }
 
-    inline friend bool operator==( const error_code & code, const error_condition & condition ) BOOST_NOEXCEPT
-    {
-#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-        if( code.lc_flags_ == 1 )
-        {
-            return static_cast<std::error_code>( code ) == static_cast<std::error_condition>( condition );
-        }
-        else
-
-#endif
-        {
-            return code.category().equivalent( code.value(), condition ) || condition.category().equivalent( code, condition.value() );
-        }
-    }
-
-    inline friend bool operator==( const error_condition & condition, const error_code & code ) BOOST_NOEXCEPT
-    {
-#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
-
-        if( code.lc_flags_ == 1 )
-        {
-            return static_cast<std::error_code>( code ) == static_cast<std::error_condition>( condition );
-        }
-        else
-
-#endif
-        {
-            return code.category().equivalent( code.value(), condition ) || condition.category().equivalent( code, condition.value() );
-        }
-    }
-
-    inline friend bool operator!=( const error_code & lhs, const error_condition & rhs ) BOOST_NOEXCEPT
-    {
-        return !( lhs == rhs );
-    }
-
-    inline friend bool operator!=( const error_condition & lhs, const error_code & rhs ) BOOST_NOEXCEPT
-    {
-        return !( lhs == rhs );
-    }
-
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 
     inline friend bool operator==( std::error_code const & lhs, error_code const & rhs ) BOOST_NOEXCEPT
@@ -677,6 +641,37 @@ public:
         return r;
     }
 };
+
+inline bool operator==( const error_code & code, const error_condition & condition ) BOOST_NOEXCEPT
+{
+#if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
+
+    if( code.lc_flags_ == 1 )
+    {
+        return static_cast<std::error_code>( code ) == static_cast<std::error_condition>( condition );
+    }
+    else
+
+#endif
+    {
+        return code.category().equivalent( code.value(), condition ) || condition.category().equivalent( code, condition.value() );
+    }
+}
+
+inline bool operator==( const error_condition & condition, const error_code & code ) BOOST_NOEXCEPT
+{
+    return code == condition;
+}
+
+inline bool operator!=( const error_code & lhs, const error_condition & rhs ) BOOST_NOEXCEPT
+{
+    return !( lhs == rhs );
+}
+
+inline bool operator!=( const error_condition & lhs, const error_code & rhs ) BOOST_NOEXCEPT
+{
+    return !( lhs == rhs );
+}
 
 inline std::size_t hash_value( error_code const & ec )
 {

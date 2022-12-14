@@ -82,6 +82,40 @@ struct channel_traits
   };
 };
 
+template <typename R>
+struct channel_traits<R(boost::system::error_code)>
+{
+  template <typename... NewSignatures>
+  struct rebind
+  {
+    typedef channel_traits<NewSignatures...> other;
+  };
+
+  template <typename Element>
+  struct container
+  {
+    typedef std::deque<Element> type;
+  };
+
+  typedef R receive_cancelled_signature(boost::system::error_code);
+
+  template <typename F>
+  static void invoke_receive_cancelled(F f)
+  {
+    const boost::system::error_code e = error::channel_cancelled;
+    BOOST_ASIO_MOVE_OR_LVALUE(F)(f)(e);
+  }
+
+  typedef R receive_closed_signature(boost::system::error_code);
+
+  template <typename F>
+  static void invoke_receive_closed(F f)
+  {
+    const boost::system::error_code e = error::channel_closed;
+    BOOST_ASIO_MOVE_OR_LVALUE(F)(f)(e);
+  }
+};
+
 template <typename R, typename... Args, typename... Signatures>
 struct channel_traits<R(boost::system::error_code, Args...), Signatures...>
 {
@@ -113,6 +147,42 @@ struct channel_traits<R(boost::system::error_code, Args...), Signatures...>
   {
     const boost::system::error_code e = error::channel_closed;
     BOOST_ASIO_MOVE_OR_LVALUE(F)(f)(e, typename decay<Args>::type()...);
+  }
+};
+
+template <typename R>
+struct channel_traits<R(std::exception_ptr)>
+{
+  template <typename... NewSignatures>
+  struct rebind
+  {
+    typedef channel_traits<NewSignatures...> other;
+  };
+
+  template <typename Element>
+  struct container
+  {
+    typedef std::deque<Element> type;
+  };
+
+  typedef R receive_cancelled_signature(std::exception_ptr);
+
+  template <typename F>
+  static void invoke_receive_cancelled(F f)
+  {
+    const boost::system::error_code e = error::channel_cancelled;
+    BOOST_ASIO_MOVE_OR_LVALUE(F)(f)(
+        std::make_exception_ptr(boost::system::system_error(e)));
+  }
+
+  typedef R receive_closed_signature(std::exception_ptr);
+
+  template <typename F>
+  static void invoke_receive_closed(F f)
+  {
+    const boost::system::error_code e = error::channel_closed;
+    BOOST_ASIO_MOVE_OR_LVALUE(F)(f)(
+        std::make_exception_ptr(boost::system::system_error(e)));
   }
 };
 

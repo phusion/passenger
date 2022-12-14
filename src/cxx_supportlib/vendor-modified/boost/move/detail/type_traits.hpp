@@ -190,32 +190,36 @@
 #   endif
 
 //    BOOST_MOVE_HAS_TRIVIAL_MOVE_CONSTRUCTOR
-#   if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && BOOST_MOVE_HAS_TRAIT(is_constructible) && BOOST_MOVE_HAS_TRAIT(is_trivially_constructible)
+#   if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) 
+
+#   if BOOST_MOVE_HAS_TRAIT(is_constructible) && BOOST_MOVE_HAS_TRAIT(is_trivially_constructible)
 #     define BOOST_MOVE_HAS_TRIVIAL_MOVE_CONSTRUCTOR(T) (__is_constructible(T, T&&) && __is_trivially_constructible(T, T&&))
 #   elif BOOST_MOVE_HAS_TRAIT(has_trivial_move_constructor)
 #     define BOOST_MOVE_HAS_TRIVIAL_MOVE_CONSTRUCTOR(T) __has_trivial_move_constructor(T)
 #   endif
 
 //    BOOST_MOVE_HAS_TRIVIAL_MOVE_ASSIGN
-#   if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && BOOST_MOVE_HAS_TRAIT(is_assignable) && BOOST_MOVE_HAS_TRAIT(is_trivially_assignable)
+#   if BOOST_MOVE_HAS_TRAIT(is_assignable) && BOOST_MOVE_HAS_TRAIT(is_trivially_assignable)
 #     define BOOST_MOVE_HAS_TRIVIAL_MOVE_ASSIGN(T) (__is_assignable(T, T&&) && __is_trivially_assignable(T, T&&))
 #   elif BOOST_MOVE_HAS_TRAIT(has_trivial_move_assign)
 #     define BOOST_MOVE_HAS_TRIVIAL_MOVE_ASSIGN(T) __has_trivial_move_assign(T)
 #   endif
 
 //    BOOST_MOVE_HAS_NOTHROW_MOVE_CONSTRUCTOR
-#   if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && BOOST_MOVE_HAS_TRAIT(is_constructible) && BOOST_MOVE_HAS_TRAIT(is_nothrow_constructible)
+#   if BOOST_MOVE_HAS_TRAIT(is_constructible) && BOOST_MOVE_HAS_TRAIT(is_nothrow_constructible)
 #     define BOOST_MOVE_HAS_NOTHROW_MOVE_CONSTRUCTOR(T) (__is_constructible(T, T&&) && __is_nothrow_constructible(T, T&&))
 #   elif BOOST_MOVE_HAS_TRAIT(has_nothrow_move_constructor)
 #     define BOOST_MOVE_HAS_NOTHROW_MOVE_CONSTRUCTOR(T) __has_nothrow_move_constructor(T)
 #   endif
 
 //    BOOST_MOVE_HAS_NOTHROW_MOVE_ASSIGN
-#   if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && BOOST_MOVE_HAS_TRAIT(is_assignable) && BOOST_MOVE_HAS_TRAIT(is_nothrow_assignable)
+#   if BOOST_MOVE_HAS_TRAIT(is_assignable) && BOOST_MOVE_HAS_TRAIT(is_nothrow_assignable)
 #     define BOOST_MOVE_HAS_NOTHROW_MOVE_ASSIGN(T) (__is_assignable(T, T&&) && __is_nothrow_assignable(T, T&&))
 #   elif BOOST_MOVE_HAS_TRAIT(has_nothrow_move_assign)
 #     define BOOST_MOVE_HAS_NOTHROW_MOVE_ASSIGN(T) __has_nothrow_move_assign(T)
 #   endif
+
+#   endif   //BOOST_NO_CXX11_RVALUE_REFERENCES
 
 //    BOOST_MOVE_ALIGNMENT_OF
 #   define BOOST_MOVE_ALIGNMENT_OF(T) __alignof(T)

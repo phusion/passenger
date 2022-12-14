@@ -212,6 +212,11 @@ public:
   {
   }
 
+  execution_context& query(execution::context_t) const BOOST_ASIO_NOEXCEPT
+  {
+    return boost::asio::query(system_executor(), execution::context);
+  }
+
   static BOOST_ASIO_CONSTEXPR Blocking query(execution::blocking_t)
   {
     return Blocking();
@@ -232,9 +237,14 @@ public:
   template <typename F>
   void execute(BOOST_ASIO_MOVE_ARG(F) f) const
   {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost::asio::require(system_executor(), Blocking()).execute(
+        promise_invoker<T, F>(p_, BOOST_ASIO_MOVE_CAST(F)(f)));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
     execution::execute(
         boost::asio::require(system_executor(), Blocking()),
         promise_invoker<T, F>(p_, BOOST_ASIO_MOVE_CAST(F)(f)));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
 #if !defined(BOOST_ASIO_NO_TS_EXECUTORS)
@@ -989,6 +999,21 @@ struct query_static_constexpr_member<
 };
 
 #endif // !defined(BOOST_ASIO_HAS_DEDUCED_QUERY_STATIC_CONSTEXPR_TRAIT)
+
+#if !defined(BOOST_ASIO_HAS_DEDUCED_QUERY_MEMBER_TRAIT)
+
+template <typename T, typename Blocking>
+struct query_member<
+    boost::asio::detail::promise_executor<T, Blocking>,
+    execution::context_t
+  >
+{
+  BOOST_ASIO_STATIC_CONSTEXPR(bool, is_valid = true);
+  BOOST_ASIO_STATIC_CONSTEXPR(bool, is_noexcept = true);
+  typedef boost::asio::system_context& result_type;
+};
+
+#endif // !defined(BOOST_ASIO_HAS_DEDUCED_QUERY_MEMBER_TRAIT)
 
 #if !defined(BOOST_ASIO_HAS_DEDUCED_REQUIRE_MEMBER_TRAIT)
 

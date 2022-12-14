@@ -139,7 +139,9 @@
 //
 #ifdef __clang__
 
-#if __has_include(<source_location>)
+#if __has_include(<expected>)
+#  define BOOST_LIBSTDCXX_VERSION 120100
+#elif __has_include(<source_location>)
 #  define BOOST_LIBSTDCXX_VERSION 110100
 #elif __has_include(<compare>)
 #  define BOOST_LIBSTDCXX_VERSION 100100
@@ -457,7 +459,7 @@ extern "C" char *gets (char *__s);
 #  endif
 #endif
 
-#if (!defined(_GTHREAD_USE_MUTEX_TIMEDLOCK) || (_GTHREAD_USE_MUTEX_TIMEDLOCK == 0)) && !defined(BOOST_NO_CXX11_HDR_MUTEX)
+#if (!defined(_GTHREAD_USE_MUTEX_TIMEDLOCK) || (_GTHREAD_USE_MUTEX_TIMEDLOCK == 0)) && !defined(BOOST_NO_CXX11_HDR_MUTEX) && (__GNUC__ < 6)
 // Timed mutexes are not always available:
 #  define BOOST_NO_CXX11_HDR_MUTEX
 #endif

@@ -25,8 +25,8 @@ namespace date_time {
     return d;
   }
 
-  //!Return the iso week number for the date
-  /*!Implements the rules associated with the iso 8601 week number.
+  //!Return the ISO 8601 week number for the date
+  /*!Implements the rules associated with the ISO 8601 week number.
     Basically the rule is that Week 1 of the year is the week that contains
     January 4th or the week that contains the first Thursday in January.
     Reference for this algorithm is the Calendar FAQ by Claus Tondering, April 2000.

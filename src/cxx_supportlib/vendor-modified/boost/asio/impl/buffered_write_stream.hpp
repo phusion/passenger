@@ -189,9 +189,18 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<WriteHandler, DefaultCandidate>
 {
-  static typename Associator<WriteHandler, DefaultCandidate>::type get(
-      const detail::buffered_flush_handler<WriteHandler>& h,
-      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<WriteHandler, DefaultCandidate>::type
+  get(const detail::buffered_flush_handler<WriteHandler>& h) BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<WriteHandler, DefaultCandidate>::get(h.handler_);
+  }
+
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
+      typename Associator<WriteHandler, DefaultCandidate>::type)
+  get(const detail::buffered_flush_handler<WriteHandler>& h,
+      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
+      Associator<WriteHandler, DefaultCandidate>::get(h.handler_, c)))
   {
     return Associator<WriteHandler, DefaultCandidate>::get(h.handler_, c);
   }
@@ -435,10 +444,20 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<WriteHandler, DefaultCandidate>
 {
-  static typename Associator<WriteHandler, DefaultCandidate>::type get(
-      const detail::buffered_write_some_handler<
+  static typename Associator<WriteHandler, DefaultCandidate>::type
+  get(const detail::buffered_write_some_handler<
+        ConstBufferSequence, WriteHandler>& h) BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<WriteHandler, DefaultCandidate>::get(h.handler_);
+  }
+
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
+      typename Associator<WriteHandler, DefaultCandidate>::type)
+  get(const detail::buffered_write_some_handler<
         ConstBufferSequence, WriteHandler>& h,
-      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
+      Associator<WriteHandler, DefaultCandidate>::get(h.handler_, c)))
   {
     return Associator<WriteHandler, DefaultCandidate>::get(h.handler_, c);
   }

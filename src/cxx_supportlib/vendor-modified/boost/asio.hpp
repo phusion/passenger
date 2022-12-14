@@ -17,6 +17,9 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
+#include <boost/asio/any_completion_executor.hpp>
+#include <boost/asio/any_completion_handler.hpp>
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/append.hpp>
 #include <boost/asio/as_tuple.hpp>
 #include <boost/asio/associated_allocator.hpp>
@@ -64,6 +67,7 @@
 #include <boost/asio/compose.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/connect_pipe.hpp>
+#include <boost/asio/consign.hpp>
 #include <boost/asio/coroutine.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/defer.hpp>

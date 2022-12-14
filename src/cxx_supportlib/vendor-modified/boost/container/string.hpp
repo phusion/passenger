@@ -65,7 +65,6 @@
 #include <initializer_list>   //for std::initializer_list
 #endif
 
-
 namespace boost {
 namespace container {
 
@@ -131,6 +130,11 @@ class basic_string_base
 
    private:
 
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+   #pragma GCC diagnostic push
+   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+   #endif
+
    //This is the structure controlling a long string
    struct long_t
    {
@@ -163,6 +167,11 @@ class basic_string_base
          return *this;
       }
    };
+
+   #if defined(BOOST_GCC) && (BOOST_GCC >= 40600)
+   #pragma GCC diagnostic pop
+   #endif
+
 
    //This type is the first part of the structure controlling a short string
    //The "data" member stores
@@ -3579,6 +3588,7 @@ inline std::size_t hash_value(basic_string<Ch, std::char_traits<Ch>, Allocator> 
 }
 
 }}
+
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 

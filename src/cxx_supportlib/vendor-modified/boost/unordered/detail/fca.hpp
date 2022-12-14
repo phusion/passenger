@@ -494,11 +494,33 @@ namespace boost {
         group_pointer groups;
 
       public:
+        static std::size_t bucket_count_for(std::size_t num_buckets)
+        {
+          if (num_buckets == 0) {
+            return 0;
+          }
+          return size_policy::size(size_policy::size_index(num_buckets));
+        }
+
+        grouped_bucket_array()
+            : empty_value<node_allocator_type>(
+                empty_init_t(), node_allocator_type()),
+              size_index_(0), size_(0), buckets(), groups()
+        {
+        }
+
         grouped_bucket_array(size_type n, const Allocator& al)
             : empty_value<node_allocator_type>(empty_init_t(), al),
-              size_index_(size_policy::size_index(n)),
-              size_(size_policy::size(size_index_)), buckets(), groups()
+              size_index_(0),
+              size_(0), buckets(), groups()
         {
+          if (n == 0) {
+            return;
+          }
+
+          size_index_ = size_policy::size_index(n);
+          size_ = size_policy::size(size_index_);
+
           bucket_allocator_type bucket_alloc = this->get_bucket_allocator();
           group_allocator_type group_alloc = this->get_group_allocator();
 
@@ -646,7 +668,7 @@ namespace boost {
 
         size_type bucket_count() const { return size_; }
 
-        iterator begin() const { return ++at(size_); }
+        iterator begin() const { return size_ == 0 ? end() : ++at(size_); }
 
         iterator end() const
         {
@@ -660,6 +682,10 @@ namespace boost {
 
         local_iterator begin(size_type n) const
         {
+          if (size_ == 0) {
+            return this->end(n);
+          }
+
           return local_iterator(
             (buckets + static_cast<difference_type>(n))->next);
         }
@@ -670,12 +696,16 @@ namespace boost {
 
         iterator at(size_type n) const
         {
-          std::size_t const N = group::N;
+          if (size_ > 0) {
+            std::size_t const N = group::N;
 
-          iterator pbg(buckets + static_cast<difference_type>(n),
-            groups + static_cast<difference_type>(n / N));
+            iterator pbg(buckets + static_cast<difference_type>(n),
+              groups + static_cast<difference_type>(n / N));
 
-          return pbg;
+            return pbg;
+          } else {
+            return this->end();
+          }
         }
 
         span<Bucket> raw()

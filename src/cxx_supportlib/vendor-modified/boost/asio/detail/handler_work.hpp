@@ -37,6 +37,7 @@ class io_context;
 
 #if !defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
+class any_completion_executor;
 class any_io_executor;
 
 #endif // !defined(BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
@@ -95,11 +96,16 @@ public:
   template <typename Function, typename Handler>
   void dispatch(Function& function, Handler& handler)
   {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost::asio::prefer(executor_,
+        execution::allocator((get_associated_allocator)(handler))
+      ).execute(BOOST_ASIO_MOVE_CAST(Function)(function));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
     execution::execute(
         boost::asio::prefer(executor_,
-          execution::blocking.possibly,
           execution::allocator((get_associated_allocator)(handler))),
         BOOST_ASIO_MOVE_CAST(Function)(function));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
 private:
@@ -361,9 +367,11 @@ public:
   template <typename Function, typename Handler>
   void dispatch(Function& function, Handler&)
   {
-    execution::execute(
-        boost::asio::prefer(executor_, execution::blocking.possibly),
-        BOOST_ASIO_MOVE_CAST(Function)(function));
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    executor_.execute(BOOST_ASIO_MOVE_CAST(Function)(function));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
+    execution::execute(executor_, BOOST_ASIO_MOVE_CAST(Function)(function));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
 private:
@@ -378,10 +386,8 @@ class handler_work_base<
     Executor, CandidateExecutor,
     IoContext, PolymorphicExecutor,
     typename enable_if<
-      is_same<
-        Executor,
-        any_io_executor
-      >::value
+      is_same<Executor, any_completion_executor>::value
+        || is_same<Executor, any_io_executor>::value
     >::type>
 {
 public:
@@ -436,9 +442,11 @@ public:
   template <typename Function, typename Handler>
   void dispatch(Function& function, Handler&)
   {
-    execution::execute(
-        boost::asio::prefer(executor_, execution::blocking.possibly),
-        BOOST_ASIO_MOVE_CAST(Function)(function));
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    executor_.execute(BOOST_ASIO_MOVE_CAST(Function)(function));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
+    execution::execute(executor_, BOOST_ASIO_MOVE_CAST(Function)(function));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
 private:
