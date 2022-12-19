@@ -154,7 +154,7 @@ using namespace std;
  *   security_update_checker_interval                                         unsigned integer   -          default(86400)
  *   security_update_checker_proxy_url                                        string             -          -
  *   security_update_checker_url                                              string             -          default("https://securitycheck.phusionpassenger.com/v1/check.json")
- *   server_software                                                          string             -          default("Phusion_Passenger/6.0.16")
+ *   server_software                                                          string             -          default("Phusion_Passenger/6.0.17")
  *   setsid                                                                   boolean            -          default(false)
  *   show_version_in_header                                                   boolean            -          default(true)
  *   single_app_mode_app_root                                                 string             -          default,read_only
