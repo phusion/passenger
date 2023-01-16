@@ -4,6 +4,7 @@ Release 6.0.17 (Not yet released)
  * Upgrades Boost to 1.81.
  * Upgrades preferred Nginx to 1.22.1 from 1.20.2.
  * Changes minimum supported macOS version to 10.14 Mojave.
+ * Adds support for arm (aarch64) rpm packages.
 
 
 Release 6.0.16
