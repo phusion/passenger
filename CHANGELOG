@@ -1,10 +1,20 @@
 Release 6.0.17 (Not yet released)
 -------------
+ * [Enterprise] The `debug` gem is now supported for debugging on Ruby 3.1.
  * Removed use of deprecated 'File.exists?' method for Ruby 3.2.0.
  * Upgrades Boost to 1.81.
  * Upgrades preferred Nginx to 1.22.1 from 1.20.2.
  * Changes minimum supported macOS version to 10.14 Mojave.
  * Adds support for arm (aarch64) rpm packages.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - ccache: 4.6.3 → 4.7.4
+   - curl: 7.86.0 → 7.87.0
+   - git: 2.38.1 → 2.39.0
+   - gnupg: 2.3.8 → 2.4.0
+   - libksba: 1.6.2 → 1.6.3
+   - openssl: 1.1.1s → 3.0.7
+   - rubygems: 3.3.26 → 3.4.3
+   - rubies: added 3.2.0
 
 
 Release 6.0.16
