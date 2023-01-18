@@ -107,6 +107,14 @@
 #  define BOOST_NO_RTTI
 #endif
 
+// Deprecated symbol markup
+#if (_MSC_VER >= 1400)
+#define BOOST_DEPRECATED(msg) __declspec(deprecated(msg))
+#else
+// MSVC 7.1 only supports the attribute without a message
+#define BOOST_DEPRECATED(msg) __declspec(deprecated)
+#endif
+
 //
 // TR1 features:
 //

@@ -32,6 +32,7 @@
 #include <boost/type_traits/is_arithmetic.hpp>
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/is_float.hpp>
+#include <boost/type_traits/remove_volatile.hpp>
 
 #include <boost/numeric/conversion/cast.hpp>
 
@@ -155,14 +156,16 @@ struct lexical_cast_dynamic_num_ignoring_minus
 template <typename Target, typename Source>
 struct dynamic_num_converter_impl
 {
-    static inline bool try_convert(const Source &arg, Target& result) BOOST_NOEXCEPT {
+    typedef BOOST_DEDUCED_TYPENAME boost::remove_volatile<Source>::type source_type;
+
+    static inline bool try_convert(source_type arg, Target& result) BOOST_NOEXCEPT {
         typedef BOOST_DEDUCED_TYPENAME boost::conditional<
             boost::is_unsigned<Target>::value &&
-            (boost::is_signed<Source>::value || boost::is_float<Source>::value) &&
-            !(boost::is_same<Source, bool>::value) &&
+            (boost::is_signed<source_type>::value || boost::is_float<source_type>::value) &&
+            !(boost::is_same<source_type, bool>::value) &&
             !(boost::is_same<Target, bool>::value),
-            lexical_cast_dynamic_num_ignoring_minus<Target, Source>,
-            lexical_cast_dynamic_num_not_ignoring_minus<Target, Source>
+            lexical_cast_dynamic_num_ignoring_minus<Target, source_type>,
+            lexical_cast_dynamic_num_not_ignoring_minus<Target, source_type>
         >::type caster_type;
 
         return caster_type::try_convert(arg, result);

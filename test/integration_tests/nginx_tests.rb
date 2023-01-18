@@ -506,7 +506,7 @@ describe "Phusion Passenger for Nginx" do
     it "invokes oobw when requested by the app process" do
       pid = get("/oobw")
       eventually do
-        File.exists?("#{@stub.app_root}/oob_work.#{pid}")
+        File.exist?("#{@stub.app_root}/oob_work.#{pid}")
       end
     end
 

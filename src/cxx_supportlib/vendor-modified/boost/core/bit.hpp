@@ -92,6 +92,8 @@ BOOST_CONSTEXPR inline int countl_impl( boost::ulong_long_type x ) BOOST_NOEXCEP
 template<class T>
 BOOST_CONSTEXPR int countl_zero( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     return boost::core::detail::countl_impl( x );
 }
 
@@ -169,6 +171,8 @@ inline int countl_impl( boost::uint16_t x ) BOOST_NOEXCEPT
 template<class T>
 int countl_zero( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     BOOST_STATIC_ASSERT( sizeof(T) == sizeof(boost::uint8_t) || sizeof(T) == sizeof(boost::uint16_t) || sizeof(T) == sizeof(boost::uint32_t) || sizeof(T) == sizeof(boost::uint64_t) );
 
     BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint8_t) )
@@ -194,6 +198,8 @@ int countl_zero( T x ) BOOST_NOEXCEPT
 template<class T>
 BOOST_CONSTEXPR int countl_one( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     return boost::core::countl_zero( static_cast<T>( ~x ) );
 }
 
@@ -234,6 +240,8 @@ BOOST_CONSTEXPR inline int countr_impl( boost::ulong_long_type x ) BOOST_NOEXCEP
 template<class T>
 BOOST_CONSTEXPR int countr_zero( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     return boost::core::detail::countr_impl( x );
 }
 
@@ -304,6 +312,8 @@ inline int countr_impl( boost::uint16_t x ) BOOST_NOEXCEPT
 template<class T>
 int countr_zero( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     BOOST_STATIC_ASSERT( sizeof(T) == sizeof(boost::uint8_t) || sizeof(T) == sizeof(boost::uint16_t) || sizeof(T) == sizeof(boost::uint32_t) || sizeof(T) == sizeof(boost::uint64_t) );
 
     BOOST_IF_CONSTEXPR ( sizeof(T) == sizeof(boost::uint8_t) )
@@ -329,6 +339,8 @@ int countr_zero( T x ) BOOST_NOEXCEPT
 template<class T>
 BOOST_CONSTEXPR int countr_one( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     return boost::core::countr_zero( static_cast<T>( ~x ) );
 }
 
@@ -377,6 +389,8 @@ BOOST_CORE_POPCOUNT_CONSTEXPR inline int popcount_impl( boost::ulong_long_type x
 template<class T>
 BOOST_CONSTEXPR int popcount( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     return boost::core::detail::popcount_impl( x );
 }
 
@@ -408,6 +422,8 @@ BOOST_CXX14_CONSTEXPR inline int popcount_impl( boost::uint64_t x ) BOOST_NOEXCE
 template<class T>
 BOOST_CXX14_CONSTEXPR int popcount( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     BOOST_STATIC_ASSERT( sizeof(T) <= sizeof(boost::uint64_t) );
 
     BOOST_IF_CONSTEXPR ( sizeof(T) <= sizeof(boost::uint32_t) )
@@ -427,6 +443,8 @@ BOOST_CXX14_CONSTEXPR int popcount( T x ) BOOST_NOEXCEPT
 template<class T>
 BOOST_CXX14_CONSTEXPR T rotl( T x, int s ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     unsigned const mask = std::numeric_limits<T>::digits - 1;
     return x << (s & mask) | x >> ((-s) & mask);
 }
@@ -434,6 +452,8 @@ BOOST_CXX14_CONSTEXPR T rotl( T x, int s ) BOOST_NOEXCEPT
 template<class T>
 BOOST_CXX14_CONSTEXPR T rotr( T x, int s ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     unsigned const mask = std::numeric_limits<T>::digits - 1;
     return x >> (s & mask) | x << ((-s) & mask);
 }
@@ -443,21 +463,27 @@ BOOST_CXX14_CONSTEXPR T rotr( T x, int s ) BOOST_NOEXCEPT
 template<class T>
 BOOST_CONSTEXPR bool has_single_bit( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     return x != 0 && ( x & ( x - 1 ) ) == 0;
 }
 
-// bit_width should return int, https://cplusplus.github.io/LWG/issue3656
+// bit_width returns `int` now, https://cplusplus.github.io/LWG/issue3656
+// has been applied to C++20 as a DR
 
 template<class T>
-BOOST_CONSTEXPR T bit_width( T x ) BOOST_NOEXCEPT
+BOOST_CONSTEXPR int bit_width( T x ) BOOST_NOEXCEPT
 {
-    return static_cast<T>(
-        std::numeric_limits<T>::digits - boost::core::countl_zero( x ) );
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
+    return std::numeric_limits<T>::digits - boost::core::countl_zero( x );
 }
 
 template<class T>
 BOOST_CONSTEXPR T bit_floor( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     return x == 0? 0: T(1) << ( boost::core::bit_width( x ) - 1 );
 }
 
@@ -510,6 +536,8 @@ BOOST_CXX14_CONSTEXPR inline boost::uint64_t bit_ceil_impl( boost::uint64_t x ) 
 template<class T>
 BOOST_CXX14_CONSTEXPR T bit_ceil( T x ) BOOST_NOEXCEPT
 {
+    BOOST_STATIC_ASSERT( std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed );
+
     BOOST_STATIC_ASSERT( sizeof(T) <= sizeof(boost::uint64_t) );
 
     BOOST_IF_CONSTEXPR ( sizeof(T) <= sizeof(boost::uint32_t) )

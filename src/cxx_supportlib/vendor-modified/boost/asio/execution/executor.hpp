@@ -17,9 +17,13 @@
 
 #include <boost/asio/detail/config.hpp>
 #include <boost/asio/detail/type_traits.hpp>
-#include <boost/asio/execution/execute.hpp>
 #include <boost/asio/execution/invocable_archetype.hpp>
 #include <boost/asio/traits/equality_comparable.hpp>
+#include <boost/asio/traits/execute_member.hpp>
+
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
+# include <boost/asio/execution/execute.hpp>
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 #if defined(BOOST_ASIO_HAS_DEDUCED_EXECUTE_FREE_TRAIT) \
   && defined(BOOST_ASIO_HAS_DEDUCED_EXECUTE_MEMBER_TRAIT) \
@@ -45,9 +49,15 @@ struct is_executor_of_impl : false_type
 
 template <typename T, typename F>
 struct is_executor_of_impl<T, F,
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  typename enable_if<
+    traits::execute_member<typename add_const<T>::type, F>::is_valid
+  >::type,
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   typename enable_if<
     can_execute<typename add_const<T>::type, F>::value
   >::type,
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   typename void_type<
     typename result_of<typename decay<F>::type&()>::type
   >::type,

@@ -352,7 +352,7 @@ class allocator
    {
       std::size_t const preferred_size = prefer_in_recvd_out_size;
       dlmalloc_command_ret_t ret = {0 , 0};
-      if((limit_size > this->max_size()) | (preferred_size > this->max_size())){
+      if((limit_size > this->max_size()) || (preferred_size > this->max_size())){
          return pointer();
       }
       std::size_t l_size = limit_size*sizeof(T);

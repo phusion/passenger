@@ -2,6 +2,7 @@
 //
 // (C) Copyright Ion Gaztanaga  2006-2022
 // (C) Copyright 2022 Joaquin M Lopez Munoz.
+// (C) Copyright 2022 Christian Mazakas
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -84,11 +85,6 @@ namespace intrusive {
 
 /// @cond
 
-#if !defined(BOOST_NO_INT64_T)&&\
-    (defined(BOOST_HAS_INT128) || (defined(_MSC_VER) && defined(_WIN64)))
-#define BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT
-#endif
-
 //We only support LLP64(Win64) or LP64(most Unix) data models
 #ifdef _WIN64  //In 64 bit windows sizeof(size_t) == sizeof(unsigned long long)
 #  define BOOST_INTRUSIVE_SIZE_C(NUMBER) NUMBER##ULL
@@ -97,7 +93,6 @@ namespace intrusive {
 #  define BOOST_INTRUSIVE_SIZE_C(NUMBER) NUMBER##UL
 #  define BOOST_INTRUSIVE_64_BIT_SIZE_T (((((ULONG_MAX>>16)>>16)>>16)>>15) != 0)
 #endif
-
 
 template<int Dummy = 0>
 struct prime_list_holder
@@ -167,11 +162,11 @@ struct prime_list_holder
    {  return prime_list[std::ptrdiff_t(n)]; }
 
    template<std::size_t SizeIndex>
-   BOOST_INTRUSIVE_FORCEINLINE static std::size_t modfunc(std::size_t hash) { return hash % prime_list[SizeIndex]; }
+   BOOST_INTRUSIVE_FORCEINLINE static std::size_t modfunc(std::size_t hash) { return hash % SizeIndex; }
 
    static std::size_t(*const positions[])(std::size_t);
 
-   #if defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
+   #if BOOST_INTRUSIVE_64_BIT_SIZE_T
    static const uint64_t inv_sizes32[];
    static const std::size_t inv_sizes32_size;
    #endif
@@ -185,17 +180,20 @@ struct prime_list_holder
    BOOST_INTRUSIVE_FORCEINLINE static std::size_t size(std::size_t size_index)
    {   return prime_list_holder<>::size_from_index(size_index);  }
 
-   #if defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
+   #if BOOST_INTRUSIVE_64_BIT_SIZE_T
    // https://github.com/lemire/fastmod
-
 
    BOOST_INTRUSIVE_FORCEINLINE static uint64_t mul128_u32(uint64_t lowbits, uint32_t d)
    {
       #if defined(_MSC_VER)
-      return __umulh(lowbits, d);
+         return __umulh(lowbits, d);
+      #elif defined(BOOST_HAS_INT128)
+         return static_cast<uint64_t>((uint128_type(lowbits) * d) >> 64);
       #else
-      __extension__ typedef unsigned __int128 ext_uint128_t;
-      return (ext_uint128_t(lowbits) * d) >> 64;
+         uint64_t r1 = (lowbits & UINT32_MAX) * d;
+         uint64_t r2 = (lowbits >> 32) * d;
+         r2 += r1 >> 32;
+         return r2 >> 32;
       #endif
    }
 
@@ -204,51 +202,67 @@ struct prime_list_holder
       uint64_t lowbits = M * a;
       return (uint32_t)(mul128_u32(lowbits, d));
    }
-   #endif // defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
+   #endif // BOOST_INTRUSIVE_64_BIT_SIZE_T
 
    BOOST_INTRUSIVE_FORCEINLINE static std::size_t position(std::size_t hash,std::size_t size_index)
    {
-      #if defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT) && BOOST_INTRUSIVE_64_BIT_SIZE_T
-         const std::size_t sizes_under_32bit = sizeof(inv_sizes32)/sizeof(inv_sizes32[0]);
+      #if BOOST_INTRUSIVE_64_BIT_SIZE_T
+         BOOST_CONSTEXPR_OR_CONST std::size_t sizes_under_32bit = sizeof(inv_sizes32)/sizeof(inv_sizes32[0]);
          if(BOOST_LIKELY(size_index < sizes_under_32bit)){
             return fastmod_u32( uint32_t(hash)+uint32_t(hash>>32)
                               , inv_sizes32[size_index]
                               , uint32_t(prime_list[size_index])  );
          }
          else{
-            return positions[size_index-sizes_under_32bit](hash);
+            return positions[size_index](hash);
          }
-      #elif defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
-         return fastmod_u32(hash, inv_sizes32[size_index], uint32_t(sizes[size_index]));
       #else
          return positions[size_index](hash);
-      #endif // defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
+      #endif // BOOST_INTRUSIVE_64_BIT_SIZE_T
   }
 };
 
 template<int Dummy>
 std::size_t(* const prime_list_holder<Dummy>::positions[])(std::size_t) =
 {
-   #if !defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
-   modfunc< 0>,modfunc< 1>,modfunc< 2>,modfunc< 3>,modfunc< 4>,
-   modfunc< 5>,modfunc< 6>,modfunc< 7>,modfunc< 8>,modfunc< 9>,
-   modfunc<10>,modfunc<11>,modfunc<12>,modfunc<13>,modfunc<14>,
-   modfunc<15>,modfunc<16>,modfunc<17>,modfunc<18>,modfunc<19>,
-   modfunc<20>,modfunc<21>,modfunc<22>,modfunc<23>,modfunc<24>,
-   modfunc<25>,modfunc<26>,modfunc<27>,modfunc<28>,modfunc<29>,
-   modfunc<30>,
-   #endif
-   # if BOOST_INTRUSIVE_64_BIT_SIZE_T
-               modfunc<31>,modfunc<32>,modfunc<33>,modfunc<34>,
-   modfunc<35>,modfunc<36>,modfunc<37>,modfunc<38>,modfunc<39>,
-   modfunc<40>,modfunc<41>,modfunc<42>,modfunc<43>,modfunc<44>,
-   modfunc<45>,modfunc<46>,modfunc<47>,modfunc<48>,modfunc<49>,
-   modfunc<50>,modfunc<51>,modfunc<52>,modfunc<53>,modfunc<54>,
-   modfunc<55>,modfunc<56>,modfunc<57>,modfunc<58>,modfunc<59>,
-   modfunc<60>,modfunc<61>,modfunc<62>,modfunc<63>
-   # else
-   modfunc<31>
-   # endif
+   modfunc<BOOST_INTRUSIVE_SIZE_C(3)>,                     modfunc<BOOST_INTRUSIVE_SIZE_C(7)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(11)>,                    modfunc<BOOST_INTRUSIVE_SIZE_C(17)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(29)>,                    modfunc<BOOST_INTRUSIVE_SIZE_C(53)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(97)>,                    modfunc<BOOST_INTRUSIVE_SIZE_C(193)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(389)>,                   modfunc<BOOST_INTRUSIVE_SIZE_C(769)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(1543)>,                  modfunc<BOOST_INTRUSIVE_SIZE_C(3079)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(6151)>,                  modfunc<BOOST_INTRUSIVE_SIZE_C(12289)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(24593)>,                 modfunc<BOOST_INTRUSIVE_SIZE_C(49157)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(98317)>,                 modfunc<BOOST_INTRUSIVE_SIZE_C(196613)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(393241)>,                modfunc<BOOST_INTRUSIVE_SIZE_C(786433)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(1572869)>,               modfunc<BOOST_INTRUSIVE_SIZE_C(3145739)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(6291469)>,               modfunc<BOOST_INTRUSIVE_SIZE_C(12582917)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(25165843)>,              modfunc<BOOST_INTRUSIVE_SIZE_C(50331653)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(100663319)>,             modfunc<BOOST_INTRUSIVE_SIZE_C(201326611)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(402653189)>,             modfunc<BOOST_INTRUSIVE_SIZE_C(805306457)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(1610612741)>,            //0-30 indexes
+#if BOOST_INTRUSIVE_64_BIT_SIZE_T
+   //Taken from Boost.MultiIndex code, thanks to Joaquin M. Lopez Munoz.
+   modfunc<BOOST_INTRUSIVE_SIZE_C(3221225473)>,            //<- 32 bit values stop here (index 31)
+   modfunc<BOOST_INTRUSIVE_SIZE_C(6442450939)>,            modfunc<BOOST_INTRUSIVE_SIZE_C(12884901893)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(25769803751)>,           modfunc<BOOST_INTRUSIVE_SIZE_C(51539607551)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(103079215111)>,          modfunc<BOOST_INTRUSIVE_SIZE_C(206158430209)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(412316860441)>,          modfunc<BOOST_INTRUSIVE_SIZE_C(824633720831)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(1649267441651)>,         modfunc<BOOST_INTRUSIVE_SIZE_C(3298534883309)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(6597069766657)>,         modfunc<BOOST_INTRUSIVE_SIZE_C(13194139533299)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(26388279066623)>,        modfunc<BOOST_INTRUSIVE_SIZE_C(52776558133303)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(105553116266489)>,       modfunc<BOOST_INTRUSIVE_SIZE_C(211106232532969)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(422212465066001)>,       modfunc<BOOST_INTRUSIVE_SIZE_C(844424930131963)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(1688849860263953)>,      modfunc<BOOST_INTRUSIVE_SIZE_C(3377699720527861)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(6755399441055731)>,      modfunc<BOOST_INTRUSIVE_SIZE_C(13510798882111483)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(27021597764222939)>,     modfunc<BOOST_INTRUSIVE_SIZE_C(54043195528445957)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(108086391056891903)>,    modfunc<BOOST_INTRUSIVE_SIZE_C(216172782113783843)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(432345564227567621)>,    modfunc<BOOST_INTRUSIVE_SIZE_C(864691128455135207)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(1729382256910270481)>,   modfunc<BOOST_INTRUSIVE_SIZE_C(3458764513820540933)>,
+   modfunc<BOOST_INTRUSIVE_SIZE_C(6917529027641081903)>,   modfunc<BOOST_INTRUSIVE_SIZE_C(9223372036854775783)> //(index 63)
+#else
+   modfunc<BOOST_INTRUSIVE_SIZE_C(2147483647)>             //<- 32 bit stops here (index 31) as ptrdiff_t is signed
+#endif
  };
 
 template<int Dummy>
@@ -298,7 +312,7 @@ const std::size_t prime_list_holder<Dummy>::prime_list_size
    = sizeof(prime_list) / sizeof(std::size_t);
 
 
-#if defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
+#if BOOST_INTRUSIVE_64_BIT_SIZE_T
 
 template<int Dummy>
 const uint64_t prime_list_holder<Dummy>::inv_sizes32[] = {
@@ -340,7 +354,7 @@ template<int Dummy>
 const std::size_t prime_list_holder<Dummy>::inv_sizes32_size
    = sizeof(inv_sizes32) / sizeof(uint64_t);
 
-#endif // defined(BOOST_INTRUSIVE_FCA_FASTMOD_SUPPORT)
+#endif // BOOST_INTRUSIVE_64_BIT_SIZE_T
 
 struct prime_fmod_size : prime_list_holder<>
 {
@@ -785,9 +799,9 @@ BOOST_INTRUSIVE_FORCEINLINE std::size_t hash_to_bucket_split(std::size_t hash_va
 }
 
 template<bool Power2Buckets, bool Incremental>  //fastmod_buckets
-BOOST_INTRUSIVE_FORCEINLINE std::size_t hash_to_bucket_split(std::size_t hash_value, std::size_t bucket_cnt, std::size_t split, detail::true_)
+BOOST_INTRUSIVE_FORCEINLINE std::size_t hash_to_bucket_split(std::size_t hash_value, std::size_t , std::size_t split, detail::true_)
 {
-   return prime_fmod_size::position(hash_value, split); (void)bucket_cnt;
+   return prime_fmod_size::position(hash_value, split);
 }
 
 //!This metafunction will obtain the type of a bucket
@@ -1473,6 +1487,10 @@ struct bucket_hash_t
       , bucket_plus_vtraits_t(BOOST_MOVE_BASE(bucket_plus_vtraits_t, other))
    {}
 
+   template<class K>
+   BOOST_INTRUSIVE_FORCEINLINE std::size_t priv_hash(const K &k) const
+   {  return this->base_t::operator()(k);  }
+
    BOOST_INTRUSIVE_FORCEINLINE const hasher &priv_hasher() const
    {  return this->base_t::get();  }
 
@@ -1747,8 +1765,17 @@ struct hashtable_size_wrapper
    typedef const size_traits & size_traits_const_t;
    typedef       size_traits & size_traits_t;
 
-   BOOST_INTRUSIVE_FORCEINLINE size_traits_const_t priv_size_traits() const
-   {  return size_traits_; }
+   BOOST_INTRUSIVE_FORCEINLINE SizeType get_hashtable_size_wrapper_size() const
+   {  return size_traits_.get_size(); }
+
+   BOOST_INTRUSIVE_FORCEINLINE void set_hashtable_size_wrapper_size(SizeType s)
+   {  size_traits_.set_size(s); }
+
+   BOOST_INTRUSIVE_FORCEINLINE void inc_hashtable_size_wrapper_size()
+   {  size_traits_.increment(); }
+
+   BOOST_INTRUSIVE_FORCEINLINE void dec_hashtable_size_wrapper_size()
+   {  size_traits_.decrement(); }
 
    BOOST_INTRUSIVE_FORCEINLINE size_traits_t priv_size_traits()
    {  return size_traits_; }
@@ -1780,7 +1807,19 @@ struct hashtable_size_wrapper<DeriveFrom, SizeType, false>
    typedef size_traits size_traits_const_t;
    typedef size_traits size_traits_t;
 
-   BOOST_INTRUSIVE_FORCEINLINE size_traits priv_size_traits() const
+   BOOST_INTRUSIVE_FORCEINLINE SizeType get_hashtable_size_wrapper_size() const
+   {  return 0u; }
+
+   BOOST_INTRUSIVE_FORCEINLINE void set_hashtable_size_wrapper_size(SizeType)
+   {}
+
+   BOOST_INTRUSIVE_FORCEINLINE void inc_hashtable_size_wrapper_size()
+   {}
+
+   BOOST_INTRUSIVE_FORCEINLINE void dec_hashtable_size_wrapper_size()
+   {}
+
+   BOOST_INTRUSIVE_FORCEINLINE size_traits priv_size_traits()
    {  return size_traits(); }
 };
 
@@ -1815,14 +1854,14 @@ struct hashdata_internal
    public:
    static const bool linear_buckets = 0 != (BoolFlags & hash_bool_flags::linear_buckets_pos);
    typedef typename get_hashtable_size_wrapper_bucket
-      <ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags>::type internal_type;
-
-   typedef typename internal_type::key_equal                key_equal;
-   typedef typename internal_type::hasher                   hasher;
+      <ValueTraits, VoidOrKeyOfValue, VoidOrKeyHash, VoidOrKeyEqual, BucketTraits, SizeType, BoolFlags>::type split_bucket_hash_equal_t;
+   
+   typedef typename split_bucket_hash_equal_t::key_equal                key_equal;
+   typedef typename split_bucket_hash_equal_t::hasher                   hasher;
    typedef bucket_plus_vtraits
       <ValueTraits, BucketTraits, linear_buckets>           bucket_plus_vtraits_t;
    typedef SizeType                                         size_type;
-   typedef typename internal_type::size_traits              split_traits;
+   typedef typename split_bucket_hash_equal_t::size_traits              split_traits;
    typedef typename bucket_plus_vtraits_t::bucket_ptr       bucket_ptr;
    typedef typename bucket_plus_vtraits_t::const_value_traits_ptr   const_value_traits_ptr;
    typedef typename bucket_plus_vtraits_t::siterator        siterator;
@@ -1866,23 +1905,20 @@ struct hashdata_internal
 
    hashdata_internal( const ValueTraits &val_traits, const bucket_traits &b_traits
                     , const hasher & h, const key_equal &e)
-      :  internal_type(val_traits, b_traits, h, e)
+      : split_bucket_hash_equal_t(val_traits, b_traits, h, e)
    {}
 
    BOOST_INTRUSIVE_FORCEINLINE hashdata_internal(BOOST_RV_REF(hashdata_internal) other)
-      : internal_type(BOOST_MOVE_BASE(internal_type, other))
+      : split_bucket_hash_equal_t(BOOST_MOVE_BASE(split_bucket_hash_equal_t, other))
    {}
 
-   BOOST_INTRUSIVE_FORCEINLINE typename internal_type::size_traits_t priv_split_traits()
-   {  return this->priv_size_traits();  }
-
-   BOOST_INTRUSIVE_FORCEINLINE typename internal_type::size_traits_const_t priv_split_traits() const
+   BOOST_INTRUSIVE_FORCEINLINE typename split_bucket_hash_equal_t::size_traits_t priv_split_traits()
    {  return this->priv_size_traits();  }
 
    ~hashdata_internal()
    {  this->priv_clear_buckets();  }
 
-   using internal_type::priv_clear_buckets;
+   using split_bucket_hash_equal_t::priv_clear_buckets;
 
    void priv_clear_buckets()
    {
@@ -1907,7 +1943,17 @@ struct hashdata_internal
 
    //public functions
    BOOST_INTRUSIVE_FORCEINLINE SizeType split_count() const BOOST_NOEXCEPT
-   {  return this->priv_split_traits().get_size();  }
+   {  return this->split_bucket_hash_equal_t::get_hashtable_size_wrapper_size();  }
+
+   BOOST_INTRUSIVE_FORCEINLINE void split_count(SizeType s) BOOST_NOEXCEPT
+   {  this->split_bucket_hash_equal_t::set_hashtable_size_wrapper_size(s);  }
+
+   //public functions
+   BOOST_INTRUSIVE_FORCEINLINE void inc_split_count() BOOST_NOEXCEPT
+   {  this->split_bucket_hash_equal_t::inc_hashtable_size_wrapper_size();  }
+
+   BOOST_INTRUSIVE_FORCEINLINE void dec_split_count() BOOST_NOEXCEPT
+   {  this->split_bucket_hash_equal_t::dec_hashtable_size_wrapper_size();  }
 
    BOOST_INTRUSIVE_FORCEINLINE static SizeType initial_split_from_bucket_count(SizeType bc) BOOST_NOEXCEPT
    {
@@ -1983,17 +2029,13 @@ struct hashdata_internal
    {  return (priv_hash_to_nbucket)(hash_value, fastmod_buckets_t());  }
 
    BOOST_INTRUSIVE_FORCEINLINE size_type priv_hash_to_nbucket(std::size_t hash_value, detail::true_) const  //fastmod_buckets_t
-   {
-      return static_cast<size_type>(hash_to_bucket_split<power_2_buckets, incremental>
-         (hash_value, this->priv_usable_bucket_count(), this->split_count(), detail::true_()));
-   }
+   {  return static_cast<size_type>(prime_fmod_size::position(hash_value, this->split_count()));  }
 
    BOOST_INTRUSIVE_FORCEINLINE size_type priv_hash_to_nbucket(std::size_t hash_value, detail::false_) const //!fastmod_buckets_t
    {
       return static_cast<size_type>(hash_to_bucket_split<power_2_buckets, incremental>
          (hash_value, this->priv_usable_bucket_count(), this->split_count(), detail::false_()));
    }
-
 
    BOOST_INTRUSIVE_FORCEINLINE iterator iterator_to(reference value, detail::false_) BOOST_NOEXCEPT
    {
@@ -2083,8 +2125,8 @@ struct hashdata_internal
          , this->priv_value_traits_ptr());
    }
 
-   using internal_type::end;
-   using internal_type::cend;
+   using split_bucket_hash_equal_t::end;
+   using split_bucket_hash_equal_t::cend;
 
    local_iterator end(size_type n) BOOST_NOEXCEPT
    {  return local_iterator(this->priv_bucket_lend(n), this->priv_value_traits_ptr());  }
@@ -2322,18 +2364,31 @@ class hashtable_impl
    public:
    typedef insert_commit_data_impl<store_hash> insert_commit_data;
 
+   private:
    void default_init_actions()
    {
       this->priv_set_sentinel_bucket();
       this->priv_init_buckets_and_cache();
-      this->priv_size_traits().set_size(size_type(0));
+      this->priv_size_count(size_type(0));
       size_type bucket_sz = this->bucket_count();
       BOOST_INTRUSIVE_INVARIANT_ASSERT(bucket_sz != 0);
       //Check power of two bucket array if the option is activated
       BOOST_INTRUSIVE_INVARIANT_ASSERT
          (!power_2_buckets || (0 == (bucket_sz & (bucket_sz - 1))));
-      this->priv_split_traits().set_size(this->initial_split_from_bucket_count(bucket_sz));
+      this->split_count(this->initial_split_from_bucket_count(bucket_sz));
    }
+
+   BOOST_INTRUSIVE_FORCEINLINE SizeType priv_size_count() const BOOST_NOEXCEPT
+   {  return this->internal_type::get_hashtable_size_wrapper_size(); }
+
+   BOOST_INTRUSIVE_FORCEINLINE void priv_size_count(SizeType s) BOOST_NOEXCEPT
+   {  this->internal_type::set_hashtable_size_wrapper_size(s); }
+
+   BOOST_INTRUSIVE_FORCEINLINE void priv_size_inc() BOOST_NOEXCEPT
+   {  this->internal_type::inc_hashtable_size_wrapper_size(); }
+
+   BOOST_INTRUSIVE_FORCEINLINE void priv_size_dec() BOOST_NOEXCEPT
+   {  this->internal_type::dec_hashtable_size_wrapper_size(); }
 
    public:
 
@@ -2403,10 +2458,10 @@ class hashtable_impl
    {
       this->priv_swap_cache(x);
       x.priv_init_cache();
-      this->priv_size_traits().set_size(x.priv_size_traits().get_size());
-      x.priv_size_traits().set_size(size_type(0));
-      this->priv_split_traits().set_size(x.split_count());
-      x.priv_split_traits().set_size(size_type(0));
+      this->priv_size_count(x.priv_size_count());
+      x.priv_size_count(size_type(0));
+      this->split_count(x.split_count());
+      x.split_count(size_type(0));
    }
 
    //! <b>Effects</b>: Equivalent to swap.
@@ -2524,7 +2579,7 @@ class hashtable_impl
    size_type size() const BOOST_NOEXCEPT
    {
       BOOST_IF_CONSTEXPR(constant_time_size)
-         return this->priv_size_traits().get_size();
+         return this->priv_size_count();
       else{
          std::size_t len = 0;
          std::size_t bucket_cnt = this->bucket_count();
@@ -2798,7 +2853,7 @@ class hashtable_impl
    //!   After a successful rehashing insert_commit_data remains valid.
    iterator insert_unique_commit(reference value, const insert_commit_data &commit_data) BOOST_NOEXCEPT
    {
-      this->priv_size_traits().increment();
+      this->priv_size_inc();
       node_ptr const n = this->priv_value_to_node_ptr(value);
       BOOST_INTRUSIVE_SAFE_HOOK_DEFAULT_ASSERT(!safemode_or_autounlink || slist_node_algorithms::unique(n));
       node_functions_t::store_hash(n, commit_data.get_hash(), store_hash_t());
@@ -2890,7 +2945,7 @@ class hashtable_impl
       //Get the bucket number and local iterator for both iterators
       const bucket_ptr bp = this->priv_get_bucket_ptr(i);
       this->priv_erase_node(*bp, i.slist_it(), this->make_node_disposer(disposer), optimize_multikey_t());
-      this->priv_size_traits().decrement();
+      this->priv_size_dec();
       this->priv_erasure_update_cache(bp);
    }
 
@@ -2931,7 +2986,7 @@ class hashtable_impl
          size_type const num_erased = (size_type)this->priv_erase_node_range
             ( before_first_local_it, first_bucket_num, last_local_it, last_bucket_num
             , this->make_node_disposer(disposer), optimize_multikey_t());
-         this->priv_size_traits().set_size(size_type(this->priv_size_traits().get_size()-num_erased));
+         this->priv_size_count(size_type(this->priv_size_count()-num_erased));
          this->priv_erasure_update_cache_range(first_bucket_num, last_bucket_num);
       }
    }
@@ -3001,7 +3056,7 @@ class hashtable_impl
                   (this->priv_value_from_siterator(it), h, key, equal_func, compare_hash_t()));
             slist_node_algorithms::unlink_after_and_dispose(prev.pointed_node(), it.pointed_node(), this->make_node_disposer(disposer));
          }
-         this->priv_size_traits().set_size(size_type(this->priv_size_traits().get_size()-cnt));
+         this->priv_size_count(size_type(this->priv_size_count()-cnt));
          this->priv_erasure_update_cache();
       }
 
@@ -3020,7 +3075,7 @@ class hashtable_impl
    void clear() BOOST_NOEXCEPT
    {
       this->priv_clear_buckets_and_cache();
-      this->priv_size_traits().set_size(size_type(0));
+      this->priv_size_count(size_type(0));
    }
 
    //! <b>Requires</b>: Disposer::operator()(pointer) shouldn't throw.
@@ -3045,7 +3100,7 @@ class hashtable_impl
             --num_buckets;
             slist_node_algorithms::detach_and_dispose(b->get_node_ptr(), d);
          }
-         this->priv_size_traits().set_size(size_type(0));
+         this->priv_size_count(size_type(0));
       }
       this->priv_init_cache();
    }
@@ -3339,7 +3394,7 @@ class hashtable_impl
    //!
    //! <b>Note</b>: the return value is in the range [0, this->bucket_count()).
    BOOST_INTRUSIVE_FORCEINLINE size_type bucket(const key_type& k) const
-   {  return this->bucket(k, this->priv_hasher());   }
+   {  return this->priv_hash_to_nbucket(this->priv_hash(k));   }
 
    //! <b>Requires</b>: "hash_func" must be a hash function that induces
    //!   the same hash values as the stored hasher. The difference is that
@@ -3520,7 +3575,7 @@ class hashtable_impl
          if((ret = split_idx < bucket_cnt)){
             const std::size_t bucket_to_rehash = split_idx - bucket_cnt/2u;
             bucket_type &old_bucket = this->priv_bucket(bucket_to_rehash);
-            this->priv_split_traits().increment();
+            this->inc_split_count();
 
             //Anti-exception stuff: if an exception is thrown while
             //moving elements from old_bucket to the target bucket, all moved
@@ -3553,7 +3608,7 @@ class hashtable_impl
          bucket_type &target_bucket = this->priv_bucket(target_bucket_num);
          bucket_type &source_bucket = this->priv_bucket(split_idx-1u);
          slist_node_algorithms::transfer_after(target_bucket.get_node_ptr(), source_bucket.get_node_ptr());
-         this->priv_split_traits().decrement();
+         this->dec_split_count();
          this->priv_insertion_update_cache(target_bucket_num);
       }
       return ret;
@@ -3763,8 +3818,8 @@ class hashtable_impl
       ArrayDisposer rollback2(old_buckets[0], nd, old_bucket_count);
 
       //Put size in a safe value for rollback exception
-      size_type const size_backup = this->priv_size_traits().get_size();
-      this->priv_size_traits().set_size(0);
+      size_type const size_backup = this->priv_size_count();
+      this->priv_size_count(0);
       //Put cache to safe position
       this->priv_init_cache();
       this->priv_unset_sentinel_bucket();
@@ -3826,8 +3881,8 @@ class hashtable_impl
          }
       }
 
-      this->priv_size_traits().set_size(size_backup);
-      this->priv_split_traits().set_size(split);
+      this->priv_size_count(size_backup);
+      this->split_count(split);
       if(&new_bucket_traits != &this->priv_bucket_traits())
          this->priv_bucket_traits() = new_bucket_traits;
       this->priv_set_sentinel_bucket();
@@ -3927,8 +3982,8 @@ class hashtable_impl
       this->priv_hasher() = src.priv_hasher();
       this->priv_equal()  = src.priv_equal();
       rollback.release();
-      this->priv_size_traits().set_size(src.priv_size_traits().get_size());
-      this->priv_split_traits().set_size(dst_bucket_count);
+      this->priv_size_count(src.priv_size_count());
+      this->split_count(dst_bucket_count);
       this->priv_set_cache_bucket_num(0u);
       this->priv_erasure_update_cache();
    }
@@ -3946,7 +4001,7 @@ class hashtable_impl
          , n, optimize_multikey_t());
       //Update cache and increment size if needed
       this->priv_insertion_update_cache(bucket_num);
-      this->priv_size_traits().increment();
+      this->priv_size_inc();
       slist_node_algorithms::link_after(prev.pointed_node(), n);
       return this->build_iterator(siterator(n), this->priv_bucket_ptr(bucket_num));
    }

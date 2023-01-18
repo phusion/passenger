@@ -547,10 +547,21 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<ReadHandler, DefaultCandidate>
 {
-  static typename Associator<ReadHandler, DefaultCandidate>::type get(
-      const detail::read_op<AsyncReadStream, MutableBufferSequence,
+  static typename Associator<ReadHandler, DefaultCandidate>::type
+  get(const detail::read_op<AsyncReadStream, MutableBufferSequence,
+        MutableBufferIterator, CompletionCondition, ReadHandler>& h)
+    BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
+  }
+
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
+      typename Associator<ReadHandler, DefaultCandidate>::type)
+  get(const detail::read_op<AsyncReadStream, MutableBufferSequence,
         MutableBufferIterator, CompletionCondition, ReadHandler>& h,
-      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
+      Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c)))
   {
     return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
@@ -835,10 +846,20 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<ReadHandler, DefaultCandidate>
 {
-  static typename Associator<ReadHandler, DefaultCandidate>::type get(
-      const detail::read_dynbuf_v1_op<AsyncReadStream,
+  static typename Associator<ReadHandler, DefaultCandidate>::type
+  get(const detail::read_dynbuf_v1_op<AsyncReadStream, DynamicBuffer_v1,
+        CompletionCondition, ReadHandler>& h) BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
+  }
+
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
+      typename Associator<ReadHandler, DefaultCandidate>::type)
+  get(const detail::read_dynbuf_v1_op<AsyncReadStream,
         DynamicBuffer_v1, CompletionCondition, ReadHandler>& h,
-      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
+      Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c)))
   {
     return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }
@@ -1178,10 +1199,20 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<ReadHandler, DefaultCandidate>
 {
-  static typename Associator<ReadHandler, DefaultCandidate>::type get(
-      const detail::read_dynbuf_v2_op<AsyncReadStream,
+  static typename Associator<ReadHandler, DefaultCandidate>::type
+  get(const detail::read_dynbuf_v2_op<AsyncReadStream, DynamicBuffer_v2,
+        CompletionCondition, ReadHandler>& h) BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<ReadHandler, DefaultCandidate>::get(h.handler_);
+  }
+
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
+      typename Associator<ReadHandler, DefaultCandidate>::type)
+  get(const detail::read_dynbuf_v2_op<AsyncReadStream,
         DynamicBuffer_v2, CompletionCondition, ReadHandler>& h,
-      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
+      Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c)))
   {
     return Associator<ReadHandler, DefaultCandidate>::get(h.handler_, c);
   }

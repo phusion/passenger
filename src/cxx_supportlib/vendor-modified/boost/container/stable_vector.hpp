@@ -57,6 +57,7 @@
 #include <boost/move/detail/force_ptr.hpp>
 // move/detail
 #include <boost/move/detail/move_helpers.hpp>
+#include <boost/move/detail/iterator_to_raw_pointer.hpp>
 // other
 #include <boost/assert.hpp>
 #include <boost/core/no_exceptions_support.hpp>

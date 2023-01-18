@@ -315,7 +315,7 @@ namespace local_time {
 
     //! Returns name of associated time zone or "Coordinated Universal Time".
     /*! Optional bool parameter will return time zone as an offset
-     * (ie "+07:00" extended iso format). Empty string is returned for
+     * (ie "+07:00" extended ISO 8601 format). Empty string is returned for
      * classes that do not use a time_zone */
     std::string zone_name(bool as_offset=false) const
     {
@@ -349,7 +349,7 @@ namespace local_time {
     }
     //! Returns abbreviation of associated time zone or "UTC".
     /*! Optional bool parameter will return time zone as an offset
-     * (ie "+0700" iso format). Empty string is returned for classes
+     * (ie "+0700" ISO 8601 format). Empty string is returned for classes
      * that do not use a time_zone */
     std::string zone_abbrev(bool as_offset=false) const
     {

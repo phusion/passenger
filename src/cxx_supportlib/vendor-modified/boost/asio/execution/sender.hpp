@@ -16,6 +16,9 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
+
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
+
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/execution/detail/as_invocable.hpp>
 #include <boost/asio/execution/detail/void_receiver.hpp>
@@ -309,5 +312,7 @@ BOOST_ASIO_CONCEPT typed_sender = is_typed_sender<T>::value;
 #include <boost/asio/detail/pop_options.hpp>
 
 #include <boost/asio/execution/connect.hpp>
+
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
 #endif // BOOST_ASIO_EXECUTION_SENDER_HPP

@@ -1006,20 +1006,7 @@ public:
       || static_cast<const Allocator&>(a) != static_cast<const Allocator&>(b);
   }
 
-#if !defined(GENERATING_DOCUMENTATION)
-private:
-  friend struct boost_asio_execution_execute_fn::impl;
-#endif // !defined(GENERATING_DOCUMENTATION)
-
   /// Execution function.
-  /**
-   * Do not call this function directly. It is intended for use with the
-   * execution::execute customisation point.
-   *
-   * For example:
-   * @code auto ex = my_io_context.get_executor();
-   * execution::execute(ex, my_function_object); @endcode
-   */
   template <typename Function>
   void execute(BOOST_ASIO_MOVE_ARG(Function) f) const;
 

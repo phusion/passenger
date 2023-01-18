@@ -12,8 +12,14 @@
 #include <boost/config/workaround.hpp>
 
 // BOOST_SYSTEM_HAS_SYSTEM_ERROR
+//
+// The macro BOOST_SYSTEM_DISABLE_THREADS can be defined on configurations
+// that provide <system_error> and <atomic>, but not <mutex>, such as the
+// single-threaded libstdc++.
+//
+// https://github.com/boostorg/system/issues/92
 
-#if !defined(BOOST_NO_CXX11_HDR_SYSTEM_ERROR) && !defined(BOOST_NO_CXX11_HDR_ATOMIC) && !defined(BOOST_NO_CXX11_HDR_MUTEX)
+#if !defined(BOOST_NO_CXX11_HDR_SYSTEM_ERROR) && !defined(BOOST_NO_CXX11_HDR_ATOMIC) && ( !defined(BOOST_NO_CXX11_HDR_MUTEX) || defined(BOOST_SYSTEM_DISABLE_THREADS) )
 # define BOOST_SYSTEM_HAS_SYSTEM_ERROR
 #endif
 

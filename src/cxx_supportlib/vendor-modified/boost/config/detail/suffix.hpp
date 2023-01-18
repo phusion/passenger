@@ -48,6 +48,22 @@
 #endif
 
 //
+// disable explicitly enforced visibility
+//
+#if defined(BOOST_DISABLE_EXPLICIT_SYMBOL_VISIBILITY)
+
+#undef BOOST_SYMBOL_EXPORT
+#define BOOST_SYMBOL_EXPORT
+
+#undef BOOST_SYMBOL_IMPORT
+#define BOOST_SYMBOL_IMPORT
+
+#undef BOOST_SYMBOL_VISIBLE
+#define BOOST_SYMBOL_VISIBLE
+
+#endif
+
+//
 // look for long long by looking for the appropriate macros in <limits.h>.
 // Note that we use limits.h rather than climits for maximal portability,
 // remember that since these just declare a bunch of macros, there should be
@@ -666,6 +682,23 @@ namespace std{ using ::type_info; }
 #if !defined(BOOST_NORETURN)
 #  define BOOST_NO_NORETURN
 #  define BOOST_NORETURN
+#endif
+
+// BOOST_DEPRECATED -------------------------------------------//
+// The macro can be used to mark deprecated symbols, such as functions, objects and types.
+// Any code that uses these symbols will produce warnings, possibly with a message specified
+// as an argument. The warnings can be suppressed by defining BOOST_ALLOW_DEPRECATED_SYMBOLS
+// or BOOST_ALLOW_DEPRECATED.
+#if !defined(BOOST_DEPRECATED) && __cplusplus >= 201402
+#define BOOST_DEPRECATED(msg) [[deprecated(msg)]]
+#endif
+
+#if defined(BOOST_ALLOW_DEPRECATED_SYMBOLS) || defined(BOOST_ALLOW_DEPRECATED)
+#undef BOOST_DEPRECATED
+#endif
+
+#if !defined(BOOST_DEPRECATED)
+#define BOOST_DEPRECATED(msg)
 #endif
 
 // Branch prediction hints

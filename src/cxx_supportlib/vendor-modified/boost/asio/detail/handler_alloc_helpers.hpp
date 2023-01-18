@@ -55,7 +55,7 @@ inline void* allocate(std::size_t s, Handler& h,
     std::size_t align = BOOST_ASIO_DEFAULT_ALIGN)
 {
 #if !defined(BOOST_ASIO_HAS_HANDLER_HOOKS)
-  return aligned_new(align, s);
+  return boost::asio::aligned_new(align, s);
 #elif defined(BOOST_ASIO_NO_DEPRECATED)
   // The asio_handler_allocate hook is no longer used to obtain memory.
   (void)&error_if_hooks_are_defined<Handler>;
@@ -65,7 +65,7 @@ inline void* allocate(std::size_t s, Handler& h,
       boost::asio::detail::thread_context::top_of_thread_call_stack(),
       s, align);
 # else // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
-  return aligned_new(align, s);
+  return boost::asio::aligned_new(align, s);
 # endif // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
 #else
   (void)align;
@@ -78,7 +78,7 @@ template <typename Handler>
 inline void deallocate(void* p, std::size_t s, Handler& h)
 {
 #if !defined(BOOST_ASIO_HAS_HANDLER_HOOKS)
-  aligned_delete(p);
+  boost::asio::aligned_delete(p);
 #elif defined(BOOST_ASIO_NO_DEPRECATED)
   // The asio_handler_allocate hook is no longer used to obtain memory.
   (void)&error_if_hooks_are_defined<Handler>;
@@ -88,7 +88,7 @@ inline void deallocate(void* p, std::size_t s, Handler& h)
       boost::asio::detail::thread_context::top_of_thread_call_stack(), p, s);
 #else // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
   (void)s;
-  aligned_delete(p);
+  boost::asio::aligned_delete(p);
 #endif // !defined(BOOST_ASIO_DISABLE_SMALL_BLOCK_RECYCLING)
 #else
   using boost::asio::asio_handler_deallocate;

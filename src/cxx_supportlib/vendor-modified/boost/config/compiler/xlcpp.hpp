@@ -270,6 +270,10 @@
 #  define BOOST_NO_CXX14_DIGIT_SEPARATORS
 #endif
 
+// Deprecated symbol markup
+#if __has_attribute(deprecated)
+#define BOOST_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#endif
 
 // Unused attribute:
 #if defined(__GNUC__) && (__GNUC__ >= 4)

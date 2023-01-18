@@ -625,7 +625,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    BOOST_CONTAINER_FORCEINLINE explicit deque(size_type n)
       : Base(n, allocator_type())
    {
-      dtl::insert_value_initialized_n_proxy<ValAllocator, iterator> proxy;
+      dtl::insert_value_initialized_n_proxy<ValAllocator> proxy;
       proxy.uninitialized_copy_n_and_update(this->alloc(), this->begin(), n);
       //deque_base will deallocate in case of exception...
    }
@@ -642,7 +642,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    BOOST_CONTAINER_FORCEINLINE deque(size_type n, default_init_t)
       : Base(n, allocator_type())
    {
-      dtl::insert_default_initialized_n_proxy<ValAllocator, iterator> proxy;
+      dtl::insert_default_initialized_n_proxy<ValAllocator> proxy;
       proxy.uninitialized_copy_n_and_update(this->alloc(), this->begin(), n);
       //deque_base will deallocate in case of exception...
    }
@@ -657,7 +657,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    BOOST_CONTAINER_FORCEINLINE explicit deque(size_type n, const allocator_type &a)
       : Base(n, a)
    {
-      dtl::insert_value_initialized_n_proxy<ValAllocator, iterator> proxy;
+      dtl::insert_value_initialized_n_proxy<ValAllocator> proxy;
       proxy.uninitialized_copy_n_and_update(this->alloc(), this->begin(), n);
       //deque_base will deallocate in case of exception...
    }
@@ -674,7 +674,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    BOOST_CONTAINER_FORCEINLINE deque(size_type n, default_init_t, const allocator_type &a)
       : Base(n, a)
    {
-      dtl::insert_default_initialized_n_proxy<ValAllocator, iterator> proxy;
+      dtl::insert_default_initialized_n_proxy<ValAllocator> proxy;
       proxy.uninitialized_copy_n_and_update(this->alloc(), this->begin(), n);
       //deque_base will deallocate in case of exception...
    }
@@ -1181,7 +1181,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          this->priv_erase_last_n(len - new_size);
       else{
          const size_type n = new_size - this->size();
-         dtl::insert_value_initialized_n_proxy<ValAllocator, iterator> proxy;
+         dtl::insert_value_initialized_n_proxy<ValAllocator> proxy;
          priv_insert_back_aux_impl(n, proxy);
       }
    }
@@ -1201,7 +1201,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          this->priv_erase_last_n(len - new_size);
       else{
          const size_type n = new_size - this->size();
-         dtl::insert_default_initialized_n_proxy<ValAllocator, iterator> proxy;
+         dtl::insert_default_initialized_n_proxy<ValAllocator> proxy;
          priv_insert_back_aux_impl(n, proxy);
       }
    }
@@ -1463,7 +1463,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          return r;
       }
       else{
-         typedef dtl::insert_nonmovable_emplace_proxy<ValAllocator, iterator, Args...> type;
+         typedef dtl::insert_nonmovable_emplace_proxy<ValAllocator, Args...> type;
          return *this->priv_insert_front_aux_impl(1, type(boost::forward<Args>(args)...));
       }
    }
@@ -1489,7 +1489,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          return r;
       }
       else{
-         typedef dtl::insert_nonmovable_emplace_proxy<ValAllocator, iterator, Args...> type;
+         typedef dtl::insert_nonmovable_emplace_proxy<ValAllocator, Args...> type;
          return *this->priv_insert_back_aux_impl(1, type(boost::forward<Args>(args)...));
       }
    }
@@ -1516,7 +1516,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          return (this->end()-1);
       }
       else{
-         typedef dtl::insert_emplace_proxy<ValAllocator, iterator, Args...> type;
+         typedef dtl::insert_emplace_proxy<ValAllocator, Args...> type;
          return this->priv_insert_aux_impl(p, 1, type(boost::forward<Args>(args)...));
       }
    }
@@ -1536,7 +1536,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
       }\
       else{\
          typedef dtl::insert_nonmovable_emplace_proxy##N\
-               <ValAllocator, iterator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
+               <ValAllocator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
          return *priv_insert_front_aux_impl(1, type(BOOST_MOVE_FWD##N));\
       }\
    }\
@@ -1553,7 +1553,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
       }\
       else{\
          typedef dtl::insert_nonmovable_emplace_proxy##N\
-               <ValAllocator, iterator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
+               <ValAllocator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
          return *priv_insert_back_aux_impl(1, type(BOOST_MOVE_FWD##N));\
       }\
    }\
@@ -1572,7 +1572,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
       }\
       else{\
          typedef dtl::insert_emplace_proxy_arg##N\
-               <ValAllocator, iterator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
+               <ValAllocator BOOST_MOVE_I##N BOOST_MOVE_TARG##N> type;\
          return this->priv_insert_aux_impl(p, 1, type(BOOST_MOVE_FWD##N));\
       }\
    }
@@ -1729,7 +1729,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
       )
    {
       BOOST_ASSERT(this->priv_in_range_or_end(p));
-      dtl::insert_range_proxy<ValAllocator, FwdIt, iterator> proxy(first);
+      dtl::insert_range_proxy<ValAllocator, FwdIt> proxy(first);
       return priv_insert_aux_impl(p, boost::container::iterator_udistance(first, last), proxy);
    }
    #endif

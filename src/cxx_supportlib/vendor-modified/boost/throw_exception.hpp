@@ -54,7 +54,7 @@ typedef char (&wrapexcept_s2)[ 2 ];
 template<class T> wrapexcept_s1 wrapexcept_is_convertible( T* );
 template<class T> wrapexcept_s2 wrapexcept_is_convertible( void* );
 
-template<class E, class B, std::size_t I = sizeof( wrapexcept_is_convertible<B>( static_cast< E* >( 0 ) ) ) > struct wrapexcept_add_base;
+template<class E, class B, std::size_t I = sizeof( wrapexcept_is_convertible<B>( static_cast< E* >( BOOST_NULLPTR ) ) ) > struct wrapexcept_add_base;
 
 template<class E, class B> struct wrapexcept_add_base<E, B, 1>
 {

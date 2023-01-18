@@ -340,10 +340,16 @@
 // Type aliasing hint. Supported since gcc 3.3.
 #define BOOST_MAY_ALIAS __attribute__((__may_alias__))
 
-//
-// __builtin_unreachable:
+// Unreachable code markup
 #if BOOST_GCC_VERSION >= 40500
 #define BOOST_UNREACHABLE_RETURN(x) __builtin_unreachable();
+#endif
+
+// Deprecated symbol markup
+#if BOOST_GCC_VERSION >= 40500
+#define BOOST_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#else
+#define BOOST_DEPRECATED(msg) __attribute__((deprecated))
 #endif
 
 #ifndef BOOST_COMPILER
@@ -359,7 +365,7 @@
 
 // versions check:
 // we don't know gcc prior to version 3.30:
-#if (BOOST_GCC_VERSION< 30300)
+#if (BOOST_GCC_VERSION < 30300)
 #  error "Compiler not configured - please reconfigure"
 #endif
 //

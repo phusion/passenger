@@ -50,7 +50,7 @@
 #include <boost/lexical_cast/detail/lcast_char_constants.hpp>
 #include <boost/type_traits/make_unsigned.hpp>
 #include <boost/type_traits/is_signed.hpp>
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 
 namespace boost
 {

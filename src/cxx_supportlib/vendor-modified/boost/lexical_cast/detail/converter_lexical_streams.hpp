@@ -76,7 +76,7 @@
 #include <boost/container/container_fwd.hpp>
 #include <boost/integer.hpp>
 #include <boost/detail/basic_pointerbuf.hpp>
-#include <boost/noncopyable.hpp>
+#include <boost/core/noncopyable.hpp>
 #ifndef BOOST_NO_CWCHAR
 #   include <cwchar>
 #endif

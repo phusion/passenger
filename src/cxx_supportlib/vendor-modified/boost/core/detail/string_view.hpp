@@ -403,6 +403,22 @@ public:
     {
     }
 
+#if !defined(BOOST_NO_CXX11_NULLPTR)
+# if !defined(BOOST_NO_CXX11_DELETED_FUNCTIONS)
+
+    basic_string_view( std::nullptr_t ) = delete;
+
+# else
+
+private:
+
+    basic_string_view( std::nullptr_t );
+
+public:
+
+# endif
+#endif
+
     // BOOST_CONSTEXPR basic_string_view& operator=( basic_string_view const& ) BOOST_NOEXCEPT & = default;
 
     // conversions

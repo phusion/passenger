@@ -55,8 +55,12 @@ struct as_operation
     try
     {
 #endif // !defined(BOOST_ASIO_NO_EXCEPTIONS)
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+      ex_.execute(
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
       execution::execute(
           BOOST_ASIO_MOVE_CAST(typename remove_cvref<Executor>::type)(ex_),
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
           as_invocable<typename remove_cvref<Receiver>::type,
               Executor>(receiver_
 #if !defined(BOOST_ASIO_HAS_MOVE)

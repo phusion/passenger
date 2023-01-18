@@ -353,7 +353,7 @@ struct vector_alloc_holder
       , m_size(static_cast<stored_size_type>(initial_size))
       , m_capacity()
    {
-      if (initial_size > size_type(-1)){
+      if (BOOST_UNLIKELY(initial_size > size_type(-1))){
          boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
       }
       else if(initial_size){
@@ -373,7 +373,7 @@ struct vector_alloc_holder
       , m_size(static_cast<stored_size_type>(initial_size))
       , m_capacity()
    {
-      if (initial_size > size_type(-1)){
+      if (BOOST_UNLIKELY(initial_size > size_type(-1))){
          boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
       }
       else if(initial_size){
@@ -437,11 +437,11 @@ struct vector_alloc_holder
       return this->priv_allocation_command(alloc_version(), command, limit_size, prefer_in_recvd_out_size, reuse);
    }
 
-   pointer allocate(size_type n)
+   BOOST_CONTAINER_FORCEINLINE pointer allocate(size_type n)
    {
       const size_type max_alloc = allocator_traits_type::max_size(this->alloc());
       const size_type max = max_alloc <= stored_size_type(-1) ? max_alloc : stored_size_type(-1);
-      if ( max < n )
+      if (BOOST_UNLIKELY(max < n) )
          boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
 
       return allocator_traits_type::allocate(this->alloc(), n);
@@ -544,7 +544,7 @@ struct vector_alloc_holder
       BOOST_ASSERT( (command & allocate_new));
       BOOST_ASSERT(!(command & nothrow_allocation));
       //First detect overflow on smaller stored_size_types
-      if (limit_size > stored_size_type(-1)){
+      if (BOOST_UNLIKELY(limit_size > stored_size_type(-1))){
          boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
       }
       (clamp_by_stored_size_type<size_type>)(prefer_in_recvd_out_size, stored_size_type());
@@ -559,7 +559,7 @@ struct vector_alloc_holder
                          pointer &reuse)
    {
       //First detect overflow on smaller stored_size_types
-      if (limit_size > stored_size_type(-1)){
+      if (BOOST_UNLIKELY(limit_size > stored_size_type(-1))){
          boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
       }
       (clamp_by_stored_size_type<size_type>)(prefer_in_recvd_out_size, stored_size_type());
@@ -724,6 +724,7 @@ struct vector_alloc_holder<Allocator, StoredSizeType, version_0>
 };
 
 struct growth_factor_60;
+struct growth_factor_100;
 
 template<class Options, class AllocatorSizeType>
 struct get_vector_opt
@@ -1296,7 +1297,7 @@ private:
       //For Fwd iterators the standard only requires EmplaceConstructible and assignable from *first
       //so we can't do any backwards allocation
       const it_size_type sz = boost::container::iterator_udistance(first, last);
-      if (sz > size_type(-1)){
+      if (BOOST_UNLIKELY(sz > size_type(-1))){
          boost::container::throw_length_error("vector::assign, FwdIt's max length reached");
       }
 
@@ -1819,7 +1820,7 @@ private:
          return *p;
       }
       else{
-         typedef dtl::insert_emplace_proxy<allocator_type, T*, Args...> proxy_t;
+         typedef dtl::insert_emplace_proxy<allocator_type, Args...> proxy_t;
          return *this->priv_insert_forward_range_no_capacity
             (p, 1, proxy_t(::boost::forward<Args>(args)...), alloc_version());
       }
@@ -1860,7 +1861,7 @@ private:
    {
       BOOST_ASSERT(this->priv_in_range_or_end(position));
       //Just call more general insert(pos, size, value) and return iterator
-      typedef dtl::insert_emplace_proxy<allocator_type, T*, Args...> proxy_t;
+      typedef dtl::insert_emplace_proxy<allocator_type, Args...> proxy_t;
       return this->priv_insert_forward_range( vector_iterator_get_ptr(position), 1
                                             , proxy_t(::boost::forward<Args>(args)...));
    }
@@ -1879,7 +1880,7 @@ private:
          return *p;\
       }\
       else{\
-         typedef dtl::insert_emplace_proxy_arg##N<allocator_type, T* BOOST_MOVE_I##N BOOST_MOVE_TARG##N> proxy_t;\
+         typedef dtl::insert_emplace_proxy_arg##N<allocator_type BOOST_MOVE_I##N BOOST_MOVE_TARG##N> proxy_t;\
          return *this->priv_insert_forward_range_no_capacity\
             ( p, 1, proxy_t(BOOST_MOVE_FWD##N), alloc_version());\
       }\
@@ -1901,7 +1902,7 @@ private:
    BOOST_CONTAINER_FORCEINLINE iterator emplace(const_iterator pos BOOST_MOVE_I##N BOOST_MOVE_UREF##N)\
    {\
       BOOST_ASSERT(this->priv_in_range_or_end(pos));\
-      typedef dtl::insert_emplace_proxy_arg##N<allocator_type, T* BOOST_MOVE_I##N BOOST_MOVE_TARG##N> proxy_t;\
+      typedef dtl::insert_emplace_proxy_arg##N<allocator_type BOOST_MOVE_I##N BOOST_MOVE_TARG##N> proxy_t;\
       return this->priv_insert_forward_range(vector_iterator_get_ptr(pos), 1, proxy_t(BOOST_MOVE_FWD##N));\
    }\
    //
@@ -1967,7 +1968,7 @@ private:
    BOOST_CONTAINER_FORCEINLINE iterator insert(const_iterator p, size_type n, const T& x)
    {
       BOOST_ASSERT(this->priv_in_range_or_end(p));
-      dtl::insert_n_copies_proxy<allocator_type, T*> proxy(x);
+      dtl::insert_n_copies_proxy<allocator_type> proxy(x);
       return this->priv_insert_forward_range(vector_iterator_get_ptr(p), n, proxy);
    }
 
@@ -2015,11 +2016,11 @@ private:
       typedef typename iter_size<FwdIt>::type it_size_type;
       BOOST_ASSERT(this->priv_in_range_or_end(pos));
       const it_size_type sz = boost::container::iterator_udistance(first, last);
-      if (sz > size_type(-1)){
+      if (BOOST_UNLIKELY(sz > size_type(-1))){
          boost::container::throw_length_error("vector::insert, FwdIt's max length reached");
       }
 
-      dtl::insert_range_proxy<allocator_type, FwdIt, T*> proxy(first);
+      dtl::insert_range_proxy<allocator_type, FwdIt> proxy(first);
       return this->priv_insert_forward_range(vector_iterator_get_ptr(pos), static_cast<size_type>(sz), proxy);
    }
    #endif
@@ -2047,7 +2048,7 @@ private:
       BOOST_ASSERT(dtl::is_input_iterator<InIt>::value ||
                    num == boost::container::iterator_udistance(first, last));
       (void)last;
-      dtl::insert_range_proxy<allocator_type, InIt, T*> proxy(first);
+      dtl::insert_range_proxy<allocator_type, InIt> proxy(first);
       return this->priv_insert_forward_range(vector_iterator_get_ptr(pos), num, proxy);
    }
    #endif
@@ -2591,9 +2592,9 @@ private:
    BOOST_CONTAINER_FORCEINLINE void priv_move_to_new_buffer(size_type, version_0)
    {  alloc_holder_t::on_capacity_overflow();  }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_range_proxy<allocator_type, boost::move_iterator<T*>, T*> priv_dummy_empty_proxy()
+   BOOST_CONTAINER_FORCEINLINE dtl::insert_range_proxy<allocator_type, boost::move_iterator<T*> > priv_dummy_empty_proxy()
    {
-      return dtl::insert_range_proxy<allocator_type, boost::move_iterator<T*>, T*>
+      return dtl::insert_range_proxy<allocator_type, boost::move_iterator<T*> >
          (::boost::make_move_iterator((T *)0));
    }
 
@@ -2688,14 +2689,14 @@ private:
    BOOST_CONTAINER_FORCEINLINE iterator priv_insert(const_iterator, ::boost::move_detail::nat)
    {  return iterator();  }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_n_copies_proxy<allocator_type, T*> priv_resize_proxy(const T &x)
-   {  return dtl::insert_n_copies_proxy<allocator_type, T*>(x);   }
+   BOOST_CONTAINER_FORCEINLINE dtl::insert_n_copies_proxy<allocator_type> priv_resize_proxy(const T &x)
+   {  return dtl::insert_n_copies_proxy<allocator_type>(x);   }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_default_initialized_n_proxy<allocator_type, T*> priv_resize_proxy(default_init_t)
-   {  return dtl::insert_default_initialized_n_proxy<allocator_type, T*>();  }
+   BOOST_CONTAINER_FORCEINLINE dtl::insert_default_initialized_n_proxy<allocator_type> priv_resize_proxy(default_init_t)
+   {  return dtl::insert_default_initialized_n_proxy<allocator_type>();  }
 
-   BOOST_CONTAINER_FORCEINLINE dtl::insert_value_initialized_n_proxy<allocator_type, T*> priv_resize_proxy(value_init_t)
-   {  return dtl::insert_value_initialized_n_proxy<allocator_type, T*>(); }
+   BOOST_CONTAINER_FORCEINLINE dtl::insert_value_initialized_n_proxy<allocator_type> priv_resize_proxy(value_init_t)
+   {  return dtl::insert_value_initialized_n_proxy<allocator_type>(); }
 
    BOOST_CONTAINER_FORCEINLINE void priv_shrink_to_fit(version_0) BOOST_NOEXCEPT_OR_NOTHROW
    {}
@@ -2986,7 +2987,8 @@ private:
    }
 
    template <class InsertionProxy>
-   BOOST_CONTAINER_FORCEINLINE void priv_insert_forward_range_expand_forward(T* const raw_pos, const size_type n, InsertionProxy insert_range_proxy, dtl::false_type)
+   BOOST_CONTAINER_FORCEINLINE void priv_insert_forward_range_expand_forward
+      (T* const raw_pos, const size_type n, InsertionProxy insert_range_proxy, dtl::false_type)
    {
       //There is enough memory
       boost::container::expand_forward_and_insert_alloc
@@ -3024,321 +3026,19 @@ private:
          (T* const new_start, const size_type new_capacity,
           T* const pos, const size_type n, InsertionProxy insert_range_proxy)
    {
-      //n can be zero to just expand capacity
-      //Backup old data
-      T* const old_start  = this->priv_raw_begin();
+      T* const old_start = this->priv_raw_begin();
       const size_type old_size = this->m_holder.m_size;
-      T* const old_finish = old_start + old_size;
-      allocator_type &a = this->m_holder.alloc();
+      allocator_type& a = this->m_holder.alloc();
 
       //Update the vector buffer information to a safe state
       this->m_holder.start(new_start);
       this->m_holder.capacity(new_capacity);
       this->m_holder.m_size = 0;
 
-      //We can have 8 possibilities:
-      const size_type elemsbefore = static_cast<size_type>(pos - old_start);
-      const size_type s_before    = static_cast<size_type>(old_start - new_start);
-      const size_type before_plus_new = size_type(elemsbefore + n);
+      expand_backward_forward_and_insert_alloc(old_start, old_size, new_start, pos, n, insert_range_proxy, a);
 
-      typedef typename value_traits::ArrayDestructor array_destructor_t;
-
-      //If anything goes wrong, this object will destroy
-      //all the old objects to fulfill previous vector state
-      array_destructor_t old_values_destroyer(old_start, a, old_size);
-      //Check if s_before is big enough to hold the beginning of old data + new data
-      if(s_before >= before_plus_new){
-         //Copy first old values before pos, after that the new objects
-         T *const new_elem_pos =
-            ::boost::container::uninitialized_move_alloc(a, old_start, pos, new_start);
-         this->m_holder.set_stored_size(elemsbefore);
-         insert_range_proxy.uninitialized_copy_n_and_update(a, new_elem_pos, n);
-         this->m_holder.set_stored_size(before_plus_new);
-         const size_type new_size = size_type(old_size + n);
-         //Check if s_before is so big that even copying the old data + new data
-         //there is a gap between the new data and the old data
-         if(s_before >= new_size){
-            //Old situation:
-            // _________________________________________________________
-            //|            raw_mem                | old_begin | old_end |
-            //| __________________________________|___________|_________|
-            //
-            //New situation:
-            // _________________________________________________________
-            //| old_begin |    new   | old_end |         raw_mem        |
-            //|___________|__________|_________|________________________|
-            //
-            //Now initialize the rest of memory with the last old values
-            if(before_plus_new != new_size){ //Special case to avoid operations in back insertion
-               ::boost::container::uninitialized_move_alloc(a, pos, old_finish, new_start + before_plus_new);
-               //All new elements correctly constructed, avoid new element destruction
-               this->m_holder.set_stored_size(new_size);
-            }
-            //Old values destroyed automatically with "old_values_destroyer"
-            //when "old_values_destroyer" goes out of scope unless the have trivial
-            //destructor after move.
-            BOOST_IF_CONSTEXPR(value_traits::trivial_dctr_after_move)
-               old_values_destroyer.release();
-         }
-         //s_before is so big that divides old_end
-         else{
-            //Old situation:
-            // __________________________________________________
-            //|            raw_mem         | old_begin | old_end |
-            //| ___________________________|___________|_________|
-            //
-            //New situation:
-            // __________________________________________________
-            //| old_begin |   new    | old_end |  raw_mem        |
-            //|___________|__________|_________|_________________|
-            //
-            //Now initialize the rest of memory with the last old values
-            //All new elements correctly constructed, avoid new element destruction
-            BOOST_IF_CONSTEXPR(!value_traits::trivial_dctr){
-               const size_type raw_gap = s_before - before_plus_new;
-               //Now initialize the rest of s_before memory with the
-               //first of elements after new values
-               ::boost::container::uninitialized_move_alloc_n(a, pos, raw_gap, new_start + before_plus_new);
-               //Now we have a contiguous buffer so program trailing element destruction
-               //and update size to the final size.
-               old_values_destroyer.shrink_forward(new_size-s_before);
-               this->m_holder.set_stored_size(new_size);
-               //Now move remaining last objects in the old buffer begin
-               T * const remaining_pos = pos + raw_gap;
-               if(remaining_pos != old_start){  //Make sure data has to be moved
-                  ::boost::container::move(remaining_pos, old_finish, old_start);
-               }
-               //Once moved, avoid calling the destructors if trivial after move
-               BOOST_IF_CONSTEXPR(value_traits::trivial_dctr_after_move){
-                  old_values_destroyer.release();
-               }
-            }
-            else{ //If trivial destructor, we can uninitialized copy + copy in a single uninitialized copy
-               ::boost::container::uninitialized_move_alloc_n
-                  (a, pos, static_cast<size_type>(old_finish - pos), new_start + before_plus_new);
-               this->m_holder.set_stored_size(new_size);
-               old_values_destroyer.release();
-            }
-         }
-      }
-      else{
-         //Check if we have to do the insertion in two phases
-         //since maybe s_before is not big enough and
-         //the buffer was expanded both sides
-         //
-         //Old situation:
-         // _________________________________________________
-         //| raw_mem | old_begin + old_end |  raw_mem        |
-         //|_________|_____________________|_________________|
-         //
-         //New situation with do_after:
-         // _________________________________________________
-         //|     old_begin + new + old_end     |  raw_mem    |
-         //|___________________________________|_____________|
-         //
-         //New without do_after:
-         // _________________________________________________
-         //| old_begin + new + old_end  |  raw_mem           |
-         //|____________________________|____________________|
-         //
-         const bool do_after = n > s_before;
-
-         //Now we can have two situations: the raw_mem of the
-         //beginning divides the old_begin, or the new elements:
-         if (s_before <= elemsbefore) {
-            //The raw memory divides the old_begin group:
-            //
-            //If we need two phase construction (do_after)
-            //new group is divided in new = new_beg + new_end groups
-            //In this phase only new_beg will be inserted
-            //
-            //Old situation:
-            // _________________________________________________
-            //| raw_mem | old_begin | old_end |  raw_mem        |
-            //|_________|___________|_________|_________________|
-            //
-            //New situation with do_after(1):
-            //This is not definitive situation, the second phase
-            //will include
-            // _________________________________________________
-            //| old_begin | new_beg | old_end |  raw_mem        |
-            //|___________|_________|_________|_________________|
-            //
-            //New situation without do_after:
-            // _________________________________________________
-            //| old_begin | new | old_end |  raw_mem            |
-            //|___________|_____|_________|_____________________|
-            //
-            //Copy the first part of old_begin to raw_mem
-            ::boost::container::uninitialized_move_alloc_n(a, old_start, s_before, new_start);
-            //The buffer is all constructed until old_end,
-            //so program trailing destruction and assign final size
-            //if !do_after, s_before+n otherwise.
-            size_type new_1st_range;
-            if(do_after){
-               new_1st_range = s_before;
-               //release destroyer and update size
-               old_values_destroyer.release();
-            }
-            else{
-               new_1st_range = n;
-               BOOST_IF_CONSTEXPR(value_traits::trivial_dctr_after_move){
-                  old_values_destroyer.release();
-               }
-               else{
-                  old_values_destroyer.shrink_forward(old_size - (s_before - n));
-               }
-            }
-            this->m_holder.set_stored_size(size_type(old_size + new_1st_range));
-            //Now copy the second part of old_begin overwriting itself
-            T *const next = ::boost::container::move(old_start + s_before, pos, old_start);
-            //Now copy the new_beg elements
-            insert_range_proxy.copy_n_and_update(a, next, new_1st_range);
-
-            //If there is no after work and the last old part needs to be moved to front, do it
-            if(!do_after && (n != s_before)){
-               //Now displace old_end elements
-               ::boost::container::move(pos, old_finish, next + new_1st_range);
-            }
-         }
-         else {
-            //If we have to expand both sides,
-            //we will play if the first new values so
-            //calculate the upper bound of new values
-
-            //The raw memory divides the new elements
-            //
-            //If we need two phase construction (do_after)
-            //new group is divided in new = new_beg + new_end groups
-            //In this phase only new_beg will be inserted
-            //
-            //Old situation:
-            // _______________________________________________________
-            //|   raw_mem     | old_begin | old_end |  raw_mem        |
-            //|_______________|___________|_________|_________________|
-            //
-            //New situation with do_after():
-            // ____________________________________________________
-            //| old_begin |    new_beg    | old_end |  raw_mem     |
-            //|___________|_______________|_________|______________|
-            //
-            //New situation without do_after:
-            // ______________________________________________________
-            //| old_begin | new | old_end |  raw_mem                 |
-            //|___________|_____|_________|__________________________|
-            //
-            //First copy whole old_begin and part of new to raw_mem
-            T * const new_pos = ::boost::container::uninitialized_move_alloc
-               (a, old_start, pos, new_start);
-            this->m_holder.set_stored_size(elemsbefore);
-            const size_type mid_n = size_type(s_before - elemsbefore);
-            insert_range_proxy.uninitialized_copy_n_and_update(a, new_pos, mid_n);
-            //The buffer is all constructed until old_end,
-            //release destroyer
-            this->m_holder.set_stored_size(size_type(old_size + s_before));
-            old_values_destroyer.release();
-
-            if(do_after){
-               //Copy new_beg part
-               insert_range_proxy.copy_n_and_update(a, old_start, elemsbefore);
-            }
-            else{
-               //Copy all new elements
-               const size_type rest_new = size_type(n - mid_n);
-               insert_range_proxy.copy_n_and_update(a, old_start, rest_new);
-
-               T* const move_start = old_start + rest_new;
-               //Displace old_end, but make sure data has to be moved
-               T* const move_end = move_start != pos ? ::boost::container::move(pos, old_finish, move_start)
-                                                     : old_finish;
-               (void)move_end;   //To avoid warnings of unused initialization for move_end in case
-                                 //trivial_dctr_after_move is true
-               //Destroy remaining moved elements from old_end except if they
-               //have trivial destructor after being moved
-               const size_type n_destroy = size_type(s_before - n);
-               BOOST_IF_CONSTEXPR(!value_traits::trivial_dctr_after_move){
-                  boost::container::destroy_alloc_n(a, move_end, n_destroy);
-               }
-               this->m_holder.dec_stored_size(n_destroy);
-            }
-         }
-
-         //This is only executed if two phase construction is needed
-         if(do_after){
-            //The raw memory divides the new elements
-            //
-            //Old situation:
-            // ______________________________________________________
-            //|   raw_mem    | old_begin |  old_end   |  raw_mem     |
-            //|______________|___________|____________|______________|
-            //
-            //New situation with do_after(1):
-            // _______________________________________________________
-            //| old_begin   +   new_beg  | new_end |old_end | raw_mem |
-            //|__________________________|_________|________|_________|
-            //
-            //New situation with do_after(2):
-            // ______________________________________________________
-            //| old_begin      +       new            | old_end |raw |
-            //|_______________________________________|_________|____|
-            //
-            const size_type n_after    = size_type(n - s_before);
-            const size_type elemsafter = size_type(old_size - elemsbefore);
-
-            //We can have two situations:
-            if (elemsafter >= n_after){
-               //The raw_mem from end will divide displaced old_end
-               //
-               //Old situation:
-               // ______________________________________________________
-               //|   raw_mem    | old_begin |  old_end   |  raw_mem     |
-               //|______________|___________|____________|______________|
-               //
-               //New situation with do_after(1):
-               // _______________________________________________________
-               //| old_begin   +   new_beg  | new_end |old_end | raw_mem |
-               //|__________________________|_________|________|_________|
-               //
-               //First copy the part of old_end raw_mem
-               T* finish_n = old_finish - n_after;
-               ::boost::container::uninitialized_move_alloc(a, finish_n, old_finish, old_finish);
-               this->m_holder.inc_stored_size(n_after);
-               //Displace the rest of old_end to the new position
-               boost::container::move_backward(pos, finish_n, old_finish);
-               //Now overwrite with new_end
-               //The new_end part is [first + (n - n_after), last)
-               insert_range_proxy.copy_n_and_update(a, pos, n_after);
-            }
-            else {
-               //The raw_mem from end will divide new_end part
-               //
-               //Old situation:
-               // _____________________________________________________________
-               //|   raw_mem    | old_begin |  old_end   |  raw_mem            |
-               //|______________|___________|____________|_____________________|
-               //
-               //New situation with do_after(2):
-               // _____________________________________________________________
-               //| old_begin   +   new_beg  |     new_end   |old_end | raw_mem |
-               //|__________________________|_______________|________|_________|
-
-               //First initialize data in raw memory
-               const size_type mid_last_dist = size_type(n_after - elemsafter);
-
-               //Copy to the old_end part to the uninitialized zone leaving a gap.
-               ::boost::container::uninitialized_move_alloc(a, pos, old_finish, old_finish + mid_last_dist);
-
-               array_destructor_t old_end_destroyer(old_finish + mid_last_dist, a, static_cast<size_type>(old_finish - pos));
-
-               //Copy the first part to the already constructed old_end zone
-               insert_range_proxy.copy_n_and_update(a, pos, elemsafter);
-               //Copy the rest to the uninitialized zone filling the gap
-               insert_range_proxy.uninitialized_copy_n_and_update(a, old_finish, mid_last_dist);
-               this->m_holder.inc_stored_size(n_after);
-               old_end_destroyer.release();
-            }
-         }
-      }
+      //Update the vector buffer information to a safe state
+      this->m_holder.m_size = stored_size_type(old_size + n);
    }
 
    void priv_throw_if_out_of_range(size_type n) const

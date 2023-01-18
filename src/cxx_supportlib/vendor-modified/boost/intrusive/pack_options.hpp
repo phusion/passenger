@@ -251,6 +251,8 @@ struct OPTION_NAME \
 template< TYPE VALUE> \
 struct OPTION_NAME \
 { \
+   static const TYPE value = VALUE; \
+ \
    template<class Base> \
    struct pack : Base \
    { \

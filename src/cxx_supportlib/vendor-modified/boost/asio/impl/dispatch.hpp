@@ -50,12 +50,16 @@ public:
     typename associated_allocator<handler_t>::type alloc(
         (get_associated_allocator)(handler));
 
-    execution::execute(
-        boost::asio::prefer(ex,
-          execution::blocking.possibly,
-          execution::allocator(alloc)),
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost::asio::prefer(ex, execution::allocator(alloc)).execute(
         boost::asio::detail::bind_handler(
           BOOST_ASIO_MOVE_CAST(CompletionHandler)(handler)));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
+    execution::execute(
+        boost::asio::prefer(ex, execution::allocator(alloc)),
+        boost::asio::detail::bind_handler(
+          BOOST_ASIO_MOVE_CAST(CompletionHandler)(handler)));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename CompletionHandler>
@@ -116,12 +120,16 @@ public:
     typename associated_allocator<handler_t>::type alloc(
         (get_associated_allocator)(handler));
 
-    execution::execute(
-        boost::asio::prefer(ex_,
-          execution::blocking.possibly,
-          execution::allocator(alloc)),
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost::asio::prefer(ex_, execution::allocator(alloc)).execute(
         boost::asio::detail::bind_handler(
           BOOST_ASIO_MOVE_CAST(CompletionHandler)(handler)));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
+    execution::execute(
+        boost::asio::prefer(ex_, execution::allocator(alloc)),
+        boost::asio::detail::bind_handler(
+          BOOST_ASIO_MOVE_CAST(CompletionHandler)(handler)));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename CompletionHandler>
@@ -147,12 +155,16 @@ public:
     typename associated_allocator<handler_t>::type alloc(
         (get_associated_allocator)(handler));
 
-    execution::execute(
-        boost::asio::prefer(ex_,
-          execution::blocking.possibly,
-          execution::allocator(alloc)),
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost::asio::prefer(ex_, execution::allocator(alloc)).execute(
         detail::work_dispatcher<handler_t, handler_ex_t>(
           BOOST_ASIO_MOVE_CAST(CompletionHandler)(handler), handler_ex));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
+    execution::execute(
+        boost::asio::prefer(ex_, execution::allocator(alloc)),
+        detail::work_dispatcher<handler_t, handler_ex_t>(
+          BOOST_ASIO_MOVE_CAST(CompletionHandler)(handler), handler_ex));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename CompletionHandler>

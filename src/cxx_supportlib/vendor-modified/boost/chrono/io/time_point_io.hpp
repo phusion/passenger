@@ -683,7 +683,7 @@ namespace boost
           {
             os.setstate(std::ios_base::failbit);
           }
-          BOOST_CATCH (std::ios_base::failure )
+          BOOST_CATCH (const std::ios_base::failure& )
           {
             flag = true;
           }
@@ -732,7 +732,7 @@ namespace boost
         {
           is.setstate(std::ios_base::failbit);
         }
-        BOOST_CATCH (std::ios_base::failure )
+        BOOST_CATCH (const std::ios_base::failure& )
         {
           flag = true;
         }

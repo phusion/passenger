@@ -242,13 +242,13 @@ class rbtree_algorithms
    }
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::unlink(node_ptr)
-   static void unlink(node_ptr node) BOOST_NOEXCEPT
+   static void unlink(node_ptr n) BOOST_NOEXCEPT
    {
-      node_ptr x = NodeTraits::get_parent(node);
+      node_ptr x = NodeTraits::get_parent(n);
       if(x){
          while(!is_header(x))
             x = NodeTraits::get_parent(x);
-         erase(x, node);
+         erase(x, n);
       }
    }
 
@@ -257,19 +257,19 @@ class rbtree_algorithms
    static node_ptr unlink_leftmost_without_rebalance(node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::unique(const_node_ptr)
-   static bool unique(const_node_ptr node) BOOST_NOEXCEPT;
+   static bool unique(const_node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::size(const_node_ptr)
    static std::size_t size(const_node_ptr header) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::next_node(const_node_ptr)
-   static node_ptr next_node(node_ptr node) BOOST_NOEXCEPT;
+   static node_ptr next_node(node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::prev_node(const_node_ptr)
-   static node_ptr prev_node(node_ptr node) BOOST_NOEXCEPT;
+   static node_ptr prev_node(node_ptr n) BOOST_NOEXCEPT;
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::init(node_ptr)
-   static void init(node_ptr node) BOOST_NOEXCEPT;
+   static void init(node_ptr n) BOOST_NOEXCEPT;
    #endif   //#ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
 
    //! @copydoc ::boost::intrusive::bstree_algorithms::init_header(node_ptr)

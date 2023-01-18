@@ -23,7 +23,7 @@
 
 #include <boost/config.hpp>
 #include <boost/ref.hpp>
-#include <boost/mem_fn.hpp>
+#include <boost/bind/mem_fn.hpp>
 #include <boost/type.hpp>
 #include <boost/is_placeholder.hpp>
 #include <boost/bind/arg.hpp>

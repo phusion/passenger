@@ -455,7 +455,7 @@ namespace chrono {
                             >
                         >
                     >
-                >::type* = 0
+                >::type* = BOOST_NULLPTR
             ) : rep_(r) { }
 #if  defined   BOOST_NO_CXX11_DEFAULTED_FUNCTIONS
         duration& operator=(const duration& rhs)
@@ -481,7 +481,7 @@ namespace chrono {
                             mpl::not_ < treat_as_floating_point<Rep2> >
                         >
                     >
-                >::type* = 0
+                >::type* = BOOST_NULLPTR
         )
             : rep_(chrono::detail::duration_cast<duration<Rep2, Period2>, duration>()(d).count()) {}
 

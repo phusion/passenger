@@ -243,7 +243,7 @@ class any_algorithms
    typedef typename node::const_node_ptr  const_node_ptr;
    typedef any_node_traits<VoidPointer>   node_traits;
 
-   //! <b>Requires</b>: node must not be part of any tree.
+   //! <b>Requires</b>: 'n' must not be part of any tree.
    //!
    //! <b>Effects</b>: After the function unique(node) == true.
    //!
@@ -252,19 +252,19 @@ class any_algorithms
    //! <b>Throws</b>: Nothing.
    //!
    //! <b>Nodes</b>: If node is inserted in a tree, this function corrupts the tree.
-   BOOST_INTRUSIVE_FORCEINLINE static void init(node_ptr node) BOOST_NOEXCEPT
-   {  node->node_ptr_1 = node_ptr();   };
+   BOOST_INTRUSIVE_FORCEINLINE static void init(node_ptr n) BOOST_NOEXCEPT
+   {  n->node_ptr_1 = node_ptr();   };
 
-   //! <b>Effects</b>: Returns true if node is in the same state as if called init(node)
+   //! <b>Effects</b>: Returns true if 'n' is in the same state as if called init(node)
    //!
    //! <b>Complexity</b>: Constant.
    //!
    //! <b>Throws</b>: Nothing.
-   BOOST_INTRUSIVE_FORCEINLINE static bool inited(const_node_ptr node)
-   {  return !node->node_ptr_1;  };
+   BOOST_INTRUSIVE_FORCEINLINE static bool inited(const_node_ptr n)
+   {  return !n->node_ptr_1;  };
 
-   BOOST_INTRUSIVE_FORCEINLINE static bool unique(const_node_ptr node) BOOST_NOEXCEPT
-   {  return !node->node_ptr_1; }
+   BOOST_INTRUSIVE_FORCEINLINE static bool unique(const_node_ptr n) BOOST_NOEXCEPT
+   {  return !n->node_ptr_1; }
 
    static void unlink(node_ptr)
    {

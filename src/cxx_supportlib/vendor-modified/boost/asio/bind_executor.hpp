@@ -743,8 +743,16 @@ struct associator<Associator, executor_binder<T, Executor>, DefaultCandidate>
 {
   typedef typename Associator<T, DefaultCandidate>::type type;
 
-  static type get(const executor_binder<T, Executor>& b,
-      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+  static type get(const executor_binder<T, Executor>& b) BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<T, DefaultCandidate>::get(b.get());
+  }
+
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX(type) get(
+      const executor_binder<T, Executor>& b,
+      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
+      Associator<T, DefaultCandidate>::get(b.get(), c)))
   {
     return Associator<T, DefaultCandidate>::get(b.get(), c);
   }
@@ -755,8 +763,10 @@ struct associated_executor<executor_binder<T, Executor>, Executor1>
 {
   typedef Executor type;
 
-  static type get(const executor_binder<T, Executor>& b,
+  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX(type) get(
+      const executor_binder<T, Executor>& b,
       const Executor1& = Executor1()) BOOST_ASIO_NOEXCEPT
+    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((b.get_executor()))
   {
     return b.get_executor();
   }

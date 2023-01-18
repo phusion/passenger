@@ -158,6 +158,12 @@ template <int I = 0>
 struct relationship_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -171,7 +177,9 @@ struct relationship_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = false);
@@ -408,6 +416,12 @@ template <int I = 0>
 struct fork_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -421,7 +435,9 @@ struct fork_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = true);
@@ -507,6 +523,12 @@ template <int I = 0>
 struct continuation_t
 {
 #if defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
+# if defined(BOOST_ASIO_NO_DEPRECATED)
+  template <typename T>
+  BOOST_ASIO_STATIC_CONSTEXPR(bool,
+    is_applicable_property_v = (
+      is_executor<T>::value));
+# else // defined(BOOST_ASIO_NO_DEPRECATED)
   template <typename T>
   BOOST_ASIO_STATIC_CONSTEXPR(bool,
     is_applicable_property_v = (
@@ -520,7 +542,9 @@ struct continuation_t
             is_executor<T>::value,
             false_type,
             is_scheduler<T>
-          >::type::value));
+          >::type::value
+      ));
+# endif // defined(BOOST_ASIO_NO_DEPRECATED)
 #endif // defined(BOOST_ASIO_HAS_VARIABLE_TEMPLATES)
 
   BOOST_ASIO_STATIC_CONSTEXPR(bool, is_requirable = true);
@@ -606,6 +630,7 @@ template <typename T>
 struct is_applicable_property<T, execution::relationship_t>
   : integral_constant<bool,
       execution::is_executor<T>::value
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
         || conditional<
             execution::is_executor<T>::value,
             false_type,
@@ -615,7 +640,9 @@ struct is_applicable_property<T, execution::relationship_t>
             execution::is_executor<T>::value,
             false_type,
             execution::is_scheduler<T>
-          >::type::value>
+          >::type::value
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
+    >
 {
 };
 
@@ -623,6 +650,7 @@ template <typename T>
 struct is_applicable_property<T, execution::relationship_t::fork_t>
   : integral_constant<bool,
       execution::is_executor<T>::value
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
         || conditional<
             execution::is_executor<T>::value,
             false_type,
@@ -632,7 +660,9 @@ struct is_applicable_property<T, execution::relationship_t::fork_t>
             execution::is_executor<T>::value,
             false_type,
             execution::is_scheduler<T>
-          >::type::value>
+          >::type::value
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
+    >
 {
 };
 
@@ -640,6 +670,7 @@ template <typename T>
 struct is_applicable_property<T, execution::relationship_t::continuation_t>
   : integral_constant<bool,
       execution::is_executor<T>::value
+#if !defined(BOOST_ASIO_NO_DEPRECATED)
         || conditional<
             execution::is_executor<T>::value,
             false_type,
@@ -649,7 +680,9 @@ struct is_applicable_property<T, execution::relationship_t::continuation_t>
             execution::is_executor<T>::value,
             false_type,
             execution::is_scheduler<T>
-          >::type::value>
+          >::type::value
+#endif // !defined(BOOST_ASIO_NO_DEPRECATED)
+    >
 {
 };
 

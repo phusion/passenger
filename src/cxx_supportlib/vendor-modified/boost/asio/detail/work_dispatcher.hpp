@@ -81,12 +81,16 @@ public:
   {
     typename associated_allocator<Handler>::type alloc(
         (get_associated_allocator)(handler_));
-    execution::execute(
-        boost::asio::prefer(executor_,
-          execution::blocking.possibly,
-          execution::allocator(alloc)),
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost::asio::prefer(executor_, execution::allocator(alloc)).execute(
         boost::asio::detail::bind_handler(
           BOOST_ASIO_MOVE_CAST(Handler)(handler_)));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
+    execution::execute(
+        boost::asio::prefer(executor_, execution::allocator(alloc)),
+        boost::asio::detail::bind_handler(
+          BOOST_ASIO_MOVE_CAST(Handler)(handler_)));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
 private:

@@ -46,6 +46,7 @@
 #include <boost/move/make_unique.hpp>
 #include <boost/move/iterator.hpp>
 #include <boost/move/adl_move_swap.hpp>
+#include <boost/move/detail/iterator_to_raw_pointer.hpp>
 #include <boost/move/detail/force_ptr.hpp>
 #include <boost/move/algo/adaptive_sort.hpp>
 #include <boost/move/algo/detail/pdqsort.hpp>

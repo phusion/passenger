@@ -41,8 +41,20 @@ any_io_executor::any_io_executor(const any_io_executor& e) BOOST_ASIO_NOEXCEPT
 {
 }
 
+any_io_executor::any_io_executor(std::nothrow_t,
+    const any_io_executor& e) BOOST_ASIO_NOEXCEPT
+  : base_type(static_cast<const base_type&>(e))
+{
+}
+
 #if defined(BOOST_ASIO_HAS_MOVE)
 any_io_executor::any_io_executor(any_io_executor&& e) BOOST_ASIO_NOEXCEPT
+  : base_type(static_cast<base_type&&>(e))
+{
+}
+
+any_io_executor::any_io_executor(std::nothrow_t,
+    any_io_executor&& e) BOOST_ASIO_NOEXCEPT
   : base_type(static_cast<base_type&&>(e))
 {
 }

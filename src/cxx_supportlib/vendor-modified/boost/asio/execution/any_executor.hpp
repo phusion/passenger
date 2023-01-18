@@ -19,6 +19,7 @@
 #include <new>
 #include <typeinfo>
 #include <boost/asio/detail/assert.hpp>
+#include <boost/asio/detail/atomic_count.hpp>
 #include <boost/asio/detail/cstddef.hpp>
 #include <boost/asio/detail/executor_function.hpp>
 #include <boost/asio/detail/memory.hpp>
@@ -65,9 +66,24 @@ public:
   template <class... OtherSupportableProperties>
     any_executor(any_executor<OtherSupportableProperties...> e);
 
+  /// Construct to point to the same target as another any_executor.
+  template <class... OtherSupportableProperties>
+    any_executor(std::nothrow_t,
+      any_executor<OtherSupportableProperties...> e) noexcept;
+
+  /// Construct to point to the same target as another any_executor.
+  any_executor(std::nothrow_t, const any_executor& e) noexcept;
+
+  /// Construct to point to the same target as another any_executor.
+  any_executor(std::nothrow_t, any_executor&& e) noexcept;
+
   /// Construct a polymorphic wrapper for the specified executor.
   template <typename Executor>
   any_executor(Executor e);
+
+  /// Construct a polymorphic wrapper for the specified executor.
+  template <typename Executor>
+  any_executor(std::nothrow_t, Executor e) noexcept;
 
   /// Assignment operator.
   any_executor& operator=(const any_executor& e) noexcept;
@@ -127,13 +143,6 @@ public:
 
   /// Execute the function on the target executor.
   /**
-   * Do not call this function directly. It is intended for use with the
-   * execution::execute customisation point.
-   *
-   * For example:
-   * @code execution::any_executor<> ex = ...;
-   * execution::execute(ex, my_function_object); @endcode
-   *
    * Throws boost::asio::bad_executor if the polymorphic wrapper has no target.
    */
   template <typename Function>
@@ -487,13 +496,103 @@ struct is_valid_target_executor<int, Props> : false_type
 {
 };
 
+class shared_target_executor
+{
+public:
+  template <typename E>
+  shared_target_executor(BOOST_ASIO_MOVE_ARG(E) e,
+      typename decay<E>::type*& target)
+  {
+    impl<typename decay<E>::type>* i =
+      new impl<typename decay<E>::type>(BOOST_ASIO_MOVE_CAST(E)(e));
+    target = &i->ex_;
+    impl_ = i;
+  }
+
+  template <typename E>
+  shared_target_executor(std::nothrow_t, BOOST_ASIO_MOVE_ARG(E) e,
+      typename decay<E>::type*& target) BOOST_ASIO_NOEXCEPT
+  {
+    impl<typename decay<E>::type>* i =
+      new (std::nothrow) impl<typename decay<E>::type>(
+        BOOST_ASIO_MOVE_CAST(E)(e));
+    target = i ? &i->ex_ : 0;
+    impl_ = i;
+  }
+
+  shared_target_executor(
+      const shared_target_executor& other) BOOST_ASIO_NOEXCEPT
+    : impl_(other.impl_)
+  {
+    if (impl_)
+      boost::asio::detail::ref_count_up(impl_->ref_count_);
+  }
+
+  shared_target_executor& operator=(
+      const shared_target_executor& other) BOOST_ASIO_NOEXCEPT
+  {
+    impl_ = other.impl_;
+    if (impl_)
+      boost::asio::detail::ref_count_up(impl_->ref_count_);
+    return *this;
+  }
+
+#if defined(BOOST_ASIO_HAS_MOVE)
+  shared_target_executor(
+      shared_target_executor&& other) BOOST_ASIO_NOEXCEPT
+    : impl_(other.impl_)
+  {
+    other.impl_ = 0;
+  }
+
+  shared_target_executor& operator=(
+      shared_target_executor&& other) BOOST_ASIO_NOEXCEPT
+  {
+    impl_ = other.impl_;
+    other.impl_ = 0;
+    return *this;
+  }
+#endif // defined(BOOST_ASIO_HAS_MOVE)
+
+  ~shared_target_executor()
+  {
+    if (impl_)
+      if (boost::asio::detail::ref_count_down(impl_->ref_count_))
+        delete impl_;
+  }
+
+  void* get() const BOOST_ASIO_NOEXCEPT
+  {
+    return impl_ ? impl_->get() : 0;
+  }
+
+private:
+  struct impl_base
+  {
+    impl_base() : ref_count_(1) {}
+    virtual ~impl_base() {}
+    virtual void* get() = 0;
+    boost::asio::detail::atomic_count ref_count_;
+  };
+
+  template <typename Executor>
+  struct impl : impl_base
+  {
+    impl(Executor ex) : ex_(BOOST_ASIO_MOVE_CAST(Executor)(ex)) {}
+    virtual void* get() { return &ex_; }
+    Executor ex_;
+  };
+
+  impl_base* impl_;
+};
+
 class any_executor_base
 {
 public:
   any_executor_base() BOOST_ASIO_NOEXCEPT
-    : object_fns_(object_fns_table<void>()),
+    : object_fns_(0),
       target_(0),
-      target_fns_(target_fns_table<void>())
+      target_fns_(0)
   {
   }
 
@@ -512,28 +611,74 @@ public:
   }
 
   template <BOOST_ASIO_EXECUTION_EXECUTOR Executor>
+  any_executor_base(std::nothrow_t, Executor ex, false_type) BOOST_ASIO_NOEXCEPT
+    : target_fns_(target_fns_table<Executor>(
+          any_executor_base::query_blocking(ex,
+            can_query<const Executor&, const execution::blocking_t&>())
+          == execution::blocking.always))
+  {
+    any_executor_base::construct_object(std::nothrow, ex,
+        integral_constant<bool,
+          sizeof(Executor) <= sizeof(object_type)
+            && alignment_of<Executor>::value <= alignment_of<object_type>::value
+        >());
+    if (target_ == 0)
+    {
+      object_fns_ = 0;
+      target_fns_ = 0;
+    }
+  }
+
+  template <BOOST_ASIO_EXECUTION_EXECUTOR Executor>
   any_executor_base(Executor other, true_type)
-    : object_fns_(object_fns_table<boost::asio::detail::shared_ptr<void> >()),
+    : object_fns_(object_fns_table<shared_target_executor>()),
       target_fns_(other.target_fns_)
   {
-    boost::asio::detail::shared_ptr<Executor> p =
-      boost::asio::detail::make_shared<Executor>(
-          BOOST_ASIO_MOVE_CAST(Executor)(other));
+    Executor* p = 0;
+    new (&object_) shared_target_executor(
+        BOOST_ASIO_MOVE_CAST(Executor)(other), p);
     target_ = p->template target<void>();
-    new (&object_) boost::asio::detail::shared_ptr<void>(
-        BOOST_ASIO_MOVE_CAST(boost::asio::detail::shared_ptr<Executor>)(p));
+  }
+
+  template <BOOST_ASIO_EXECUTION_EXECUTOR Executor>
+  any_executor_base(std::nothrow_t,
+      Executor other, true_type) BOOST_ASIO_NOEXCEPT
+    : object_fns_(object_fns_table<shared_target_executor>()),
+      target_fns_(other.target_fns_)
+  {
+    Executor* p = 0;
+    new (&object_) shared_target_executor(
+        std::nothrow, BOOST_ASIO_MOVE_CAST(Executor)(other), p);
+    if (p)
+      target_ = p->template target<void>();
+    else
+    {
+      target_ = 0;
+      object_fns_ = 0;
+      target_fns_ = 0;
+    }
   }
 
   any_executor_base(const any_executor_base& other) BOOST_ASIO_NOEXCEPT
-    : object_fns_(other.object_fns_),
-      target_fns_(other.target_fns_)
   {
-    object_fns_->copy(*this, other);
+    if (!!other)
+    {
+      object_fns_ = other.object_fns_;
+      target_fns_ = other.target_fns_;
+      object_fns_->copy(*this, other);
+    }
+    else
+    {
+      object_fns_ = 0;
+      target_ = 0;
+      target_fns_ = 0;
+    }
   }
 
   ~any_executor_base() BOOST_ASIO_NOEXCEPT
   {
-    object_fns_->destroy(*this);
+    if (!!*this)
+      object_fns_->destroy(*this);
   }
 
   any_executor_base& operator=(
@@ -541,33 +686,53 @@ public:
   {
     if (this != &other)
     {
-      object_fns_->destroy(*this);
-      object_fns_ = other.object_fns_;
-      target_fns_ = other.target_fns_;
-      object_fns_->copy(*this, other);
+      if (!!*this)
+        object_fns_->destroy(*this);
+      if (!!other)
+      {
+        object_fns_ = other.object_fns_;
+        target_fns_ = other.target_fns_;
+        object_fns_->copy(*this, other);
+      }
+      else
+      {
+        object_fns_ = 0;
+        target_ = 0;
+        target_fns_ = 0;
+      }
     }
     return *this;
   }
 
   any_executor_base& operator=(nullptr_t) BOOST_ASIO_NOEXCEPT
   {
-    object_fns_->destroy(*this);
+    if (target_)
+      object_fns_->destroy(*this);
     target_ = 0;
-    object_fns_ = object_fns_table<void>();
-    target_fns_ = target_fns_table<void>();
+    object_fns_ = 0;
+    target_fns_ = 0;
     return *this;
   }
 
 #if defined(BOOST_ASIO_HAS_MOVE)
 
   any_executor_base(any_executor_base&& other) BOOST_ASIO_NOEXCEPT
-    : object_fns_(other.object_fns_),
-      target_fns_(other.target_fns_)
   {
-    other.object_fns_ = object_fns_table<void>();
-    other.target_fns_ = target_fns_table<void>();
-    object_fns_->move(*this, other);
-    other.target_ = 0;
+    if (other.target_)
+    {
+      object_fns_ = other.object_fns_;
+      target_fns_ = other.target_fns_;
+      other.object_fns_ = 0;
+      other.target_fns_ = 0;
+      object_fns_->move(*this, other);
+      other.target_ = 0;
+    }
+    else
+    {
+      object_fns_ = 0;
+      target_ = 0;
+      target_fns_ = 0;
+    }
   }
 
   any_executor_base& operator=(
@@ -575,13 +740,23 @@ public:
   {
     if (this != &other)
     {
-      object_fns_->destroy(*this);
-      object_fns_ = other.object_fns_;
-      other.object_fns_ = object_fns_table<void>();
-      target_fns_ = other.target_fns_;
-      other.target_fns_ = target_fns_table<void>();
-      object_fns_->move(*this, other);
-      other.target_ = 0;
+      if (!!*this)
+        object_fns_->destroy(*this);
+      if (!!other)
+      {
+        object_fns_ = other.object_fns_;
+        target_fns_ = other.target_fns_;
+        other.object_fns_ = 0;
+        other.target_fns_ = 0;
+        object_fns_->move(*this, other);
+        other.target_ = 0;
+      }
+      else
+      {
+        object_fns_ = 0;
+        target_ = 0;
+        target_fns_ = 0;
+      }
     }
     return *this;
   }
@@ -601,38 +776,53 @@ public:
   template <typename F>
   void execute(BOOST_ASIO_MOVE_ARG(F) f) const
   {
-    if (target_fns_->blocking_execute != 0)
+    if (target_)
     {
-      boost::asio::detail::non_const_lvalue<F> f2(f);
-      target_fns_->blocking_execute(*this, function_view(f2.value));
+      if (target_fns_->blocking_execute != 0)
+      {
+        boost::asio::detail::non_const_lvalue<F> f2(f);
+        target_fns_->blocking_execute(*this, function_view(f2.value));
+      }
+      else
+      {
+        target_fns_->execute(*this,
+            function(BOOST_ASIO_MOVE_CAST(F)(f), std::allocator<void>()));
+      }
     }
     else
     {
-      target_fns_->execute(*this,
-          function(BOOST_ASIO_MOVE_CAST(F)(f), std::allocator<void>()));
+      bad_executor ex;
+      boost::asio::detail::throw_exception(ex);
     }
   }
 
   template <typename Executor>
   Executor* target()
   {
-    return static_cast<Executor*>(target_);
+    return target_ && (is_same<Executor, void>::value
+        || target_fns_->target_type() == target_type_ex<Executor>())
+      ? static_cast<Executor*>(target_) : 0;
   }
 
   template <typename Executor>
   const Executor* target() const
   {
-    return static_cast<Executor*>(target_);
+    return target_ && (is_same<Executor, void>::value
+        || target_fns_->target_type() == target_type_ex<Executor>())
+      ? static_cast<const Executor*>(target_) : 0;
   }
 
 #if !defined(BOOST_ASIO_NO_TYPEID)
   const std::type_info& target_type() const
+  {
+    return target_ ? target_fns_->target_type() : typeid(void);
+  }
 #else // !defined(BOOST_ASIO_NO_TYPEID)
   const void* target_type() const
-#endif // !defined(BOOST_ASIO_NO_TYPEID)
   {
-    return target_fns_->target_type();
+    return target_ ? target_fns_->target_type() : 0;
   }
+#endif // !defined(BOOST_ASIO_NO_TYPEID)
 
   struct unspecified_bool_type_t {};
   typedef void (*unspecified_bool_type)(unspecified_bool_type_t);
@@ -682,57 +872,22 @@ protected:
     const void* (*target)(const any_executor_base&);
   };
 
-  static void destroy_void(any_executor_base&)
-  {
-  }
-
-  static void copy_void(any_executor_base& ex1, const any_executor_base&)
-  {
-    ex1.target_ = 0;
-  }
-
-  static void move_void(any_executor_base& ex1, any_executor_base&)
-  {
-    ex1.target_ = 0;
-  }
-
-  static const void* target_void(const any_executor_base&)
-  {
-    return 0;
-  }
-
-  template <typename Obj>
-  static const object_fns* object_fns_table(
-      typename enable_if<
-        is_same<Obj, void>::value
-      >::type* = 0)
-  {
-    static const object_fns fns =
-    {
-      &any_executor_base::destroy_void,
-      &any_executor_base::copy_void,
-      &any_executor_base::move_void,
-      &any_executor_base::target_void
-    };
-    return &fns;
-  }
-
   static void destroy_shared(any_executor_base& ex)
   {
-    typedef boost::asio::detail::shared_ptr<void> type;
+    typedef shared_target_executor type;
     ex.object<type>().~type();
   }
 
   static void copy_shared(any_executor_base& ex1, const any_executor_base& ex2)
   {
-    typedef boost::asio::detail::shared_ptr<void> type;
+    typedef shared_target_executor type;
     new (&ex1.object_) type(ex2.object<type>());
     ex1.target_ = ex2.target_;
   }
 
   static void move_shared(any_executor_base& ex1, any_executor_base& ex2)
   {
-    typedef boost::asio::detail::shared_ptr<void> type;
+    typedef shared_target_executor type;
     new (&ex1.object_) type(BOOST_ASIO_MOVE_CAST(type)(ex2.object<type>()));
     ex1.target_ = ex2.target_;
     ex2.object<type>().~type();
@@ -740,14 +895,14 @@ protected:
 
   static const void* target_shared(const any_executor_base& ex)
   {
-    typedef boost::asio::detail::shared_ptr<void> type;
+    typedef shared_target_executor type;
     return ex.object<type>().get();
   }
 
   template <typename Obj>
   static const object_fns* object_fns_table(
       typename enable_if<
-        is_same<Obj, boost::asio::detail::shared_ptr<void> >::value
+        is_same<Obj, shared_target_executor>::value
       >::type* = 0)
   {
     static const object_fns fns =
@@ -791,7 +946,7 @@ protected:
   static const object_fns* object_fns_table(
       typename enable_if<
         !is_same<Obj, void>::value
-          && !is_same<Obj, boost::asio::detail::shared_ptr<void> >::value
+          && !is_same<Obj, shared_target_executor>::value
       >::type* = 0)
   {
     static const object_fns fns =
@@ -820,52 +975,6 @@ protected:
   };
 
 #if !defined(BOOST_ASIO_NO_TYPEID)
-  static const std::type_info& target_type_void()
-  {
-    return typeid(void);
-  }
-#else // !defined(BOOST_ASIO_NO_TYPEID)
-  static const void* target_type_void()
-  {
-    return 0;
-  }
-#endif // !defined(BOOST_ASIO_NO_TYPEID)
-
-  static bool equal_void(const any_executor_base&, const any_executor_base&)
-  {
-    return true;
-  }
-
-  static void execute_void(const any_executor_base&,
-      BOOST_ASIO_MOVE_ARG(function))
-  {
-    bad_executor ex;
-    boost::asio::detail::throw_exception(ex);
-  }
-
-  static void blocking_execute_void(const any_executor_base&, function_view)
-  {
-    bad_executor ex;
-    boost::asio::detail::throw_exception(ex);
-  }
-
-  template <typename Ex>
-  static const target_fns* target_fns_table(
-      typename enable_if<
-        is_same<Ex, void>::value
-      >::type* = 0)
-  {
-    static const target_fns fns =
-    {
-      &any_executor_base::target_type_void,
-      &any_executor_base::equal_void,
-      &any_executor_base::execute_void,
-      &any_executor_base::blocking_execute_void
-    };
-    return &fns;
-  }
-
-#if !defined(BOOST_ASIO_NO_TYPEID)
   template <typename Ex>
   static const std::type_info& target_type_ex()
   {
@@ -891,13 +1000,21 @@ protected:
   static void execute_ex(const any_executor_base& ex,
       BOOST_ASIO_MOVE_ARG(function) f)
   {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    ex.target<Ex>()->execute(BOOST_ASIO_MOVE_CAST(function)(f));
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
     execution::execute(*ex.target<Ex>(), BOOST_ASIO_MOVE_CAST(function)(f));
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename Ex>
   static void blocking_execute_ex(const any_executor_base& ex, function_view f)
   {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    ex.target<Ex>()->execute(f);
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
     execution::execute(*ex.target<Ex>(), f);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename Ex>
@@ -1155,13 +1272,30 @@ private:
   template <typename Executor>
   void construct_object(Executor& ex, false_type)
   {
-    object_fns_ = object_fns_table<boost::asio::detail::shared_ptr<void> >();
-    boost::asio::detail::shared_ptr<Executor> p =
-      boost::asio::detail::make_shared<Executor>(
-          BOOST_ASIO_MOVE_CAST(Executor)(ex));
-    target_ = p.get();
-    new (&object_) boost::asio::detail::shared_ptr<void>(
-        BOOST_ASIO_MOVE_CAST(boost::asio::detail::shared_ptr<Executor>)(p));
+    object_fns_ = object_fns_table<shared_target_executor>();
+    Executor* p = 0;
+    new (&object_) shared_target_executor(
+        BOOST_ASIO_MOVE_CAST(Executor)(ex), p);
+    target_ = p;
+  }
+
+  template <typename Executor>
+  void construct_object(std::nothrow_t,
+      Executor& ex, true_type) BOOST_ASIO_NOEXCEPT
+  {
+    object_fns_ = object_fns_table<Executor>();
+    target_ = new (&object_) Executor(BOOST_ASIO_MOVE_CAST(Executor)(ex));
+  }
+
+  template <typename Executor>
+  void construct_object(std::nothrow_t,
+      Executor& ex, false_type) BOOST_ASIO_NOEXCEPT
+  {
+    object_fns_ = object_fns_table<shared_target_executor>();
+    Executor* p = 0;
+    new (&object_) shared_target_executor(
+        std::nothrow, BOOST_ASIO_MOVE_CAST(Executor)(ex), p);
+    target_ = p;
   }
 
 /*private:*/public:
@@ -1228,10 +1362,33 @@ public:
   {
   }
 
+  template <typename Executor>
+  any_executor(std::nothrow_t, Executor ex,
+      typename enable_if<
+        conditional<
+          !is_same<Executor, any_executor>::value
+            && !is_base_of<detail::any_executor_base, Executor>::value,
+          is_executor<Executor>,
+          false_type
+        >::type::value
+      >::type* = 0) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(std::nothrow,
+        BOOST_ASIO_MOVE_CAST(Executor)(ex), false_type())
+  {
+  }
+
 #if defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
   template <typename... OtherSupportableProperties>
   any_executor(any_executor<OtherSupportableProperties...> other)
+    : detail::any_executor_base(
+        static_cast<const detail::any_executor_base&>(other))
+  {
+  }
+
+  template <typename... OtherSupportableProperties>
+  any_executor(std::nothrow_t,
+      any_executor<OtherSupportableProperties...> other) BOOST_ASIO_NOEXCEPT
     : detail::any_executor_base(
         static_cast<const detail::any_executor_base&>(other))
   {
@@ -1247,9 +1404,24 @@ public:
   {
   }
 
+  template <typename U0, typename U1, typename U2, typename U3,
+      typename U4, typename U5, typename U6, typename U7>
+  any_executor(std::nothrow_t,
+      any_executor<U0, U1, U2, U3, U4, U5, U6, U7> other) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(
+        static_cast<const detail::any_executor_base&>(other))
+  {
+  }
+
 #endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
   any_executor(const any_executor& other) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(
+        static_cast<const detail::any_executor_base&>(other))
+  {
+  }
+
+  any_executor(std::nothrow_t, const any_executor& other) BOOST_ASIO_NOEXCEPT
     : detail::any_executor_base(
         static_cast<const detail::any_executor_base&>(other))
   {
@@ -1274,6 +1446,13 @@ public:
 #if defined(BOOST_ASIO_HAS_MOVE)
 
   any_executor(any_executor&& other) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(
+        static_cast<any_executor_base&&>(
+          static_cast<any_executor_base&>(other)))
+  {
+  }
+
+  any_executor(std::nothrow_t, any_executor&& other) BOOST_ASIO_NOEXCEPT
     : detail::any_executor_base(
         static_cast<any_executor_base&&>(
           static_cast<any_executor_base&>(other)))
@@ -1414,6 +1593,25 @@ public:
   {
   }
 
+  template <typename Executor>
+  any_executor(std::nothrow_t, Executor ex,
+      typename enable_if<
+        conditional<
+          !is_same<Executor, any_executor>::value
+            && !is_base_of<detail::any_executor_base, Executor>::value,
+          detail::is_valid_target_executor<
+            Executor, void(SupportableProperties...)>,
+          false_type
+        >::type::value
+      >::type* = 0) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(std::nothrow,
+        BOOST_ASIO_MOVE_CAST(Executor)(ex), false_type()),
+      prop_fns_(prop_fns_table<Executor>())
+  {
+    if (this->template target<void>() == 0)
+      prop_fns_ = prop_fns_table<void>();
+  }
+
   template <typename... OtherSupportableProperties>
   any_executor(any_executor<OtherSupportableProperties...> other,
       typename enable_if<
@@ -1434,7 +1632,37 @@ public:
   {
   }
 
+  template <typename... OtherSupportableProperties>
+  any_executor(std::nothrow_t,
+      any_executor<OtherSupportableProperties...> other,
+      typename enable_if<
+        conditional<
+          !is_same<
+            any_executor<OtherSupportableProperties...>,
+            any_executor
+          >::value,
+          typename detail::supportable_properties<
+            0, void(SupportableProperties...)>::template is_valid_target<
+              any_executor<OtherSupportableProperties...> >,
+          false_type
+        >::type::value
+      >::type* = 0) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(std::nothrow, BOOST_ASIO_MOVE_CAST(
+          any_executor<OtherSupportableProperties...>)(other), true_type()),
+      prop_fns_(prop_fns_table<any_executor<OtherSupportableProperties...> >())
+  {
+    if (this->template target<void>() == 0)
+      prop_fns_ = prop_fns_table<void>();
+  }
+
   any_executor(const any_executor& other) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(
+        static_cast<const detail::any_executor_base&>(other)),
+      prop_fns_(other.prop_fns_)
+  {
+  }
+
+  any_executor(std::nothrow_t, const any_executor& other) BOOST_ASIO_NOEXCEPT
     : detail::any_executor_base(
         static_cast<const detail::any_executor_base&>(other)),
       prop_fns_(other.prop_fns_)
@@ -1462,6 +1690,15 @@ public:
 #if defined(BOOST_ASIO_HAS_MOVE)
 
   any_executor(any_executor&& other) BOOST_ASIO_NOEXCEPT
+    : detail::any_executor_base(
+        static_cast<any_executor_base&&>(
+          static_cast<any_executor_base&>(other))),
+      prop_fns_(other.prop_fns_)
+  {
+    other.prop_fns_ = prop_fns_table<void>();
+  }
+
+  any_executor(std::nothrow_t, any_executor&& other) BOOST_ASIO_NOEXCEPT
     : detail::any_executor_base(
         static_cast<any_executor_base&&>(
           static_cast<any_executor_base&>(other))),
@@ -1789,6 +2026,15 @@ inline void swap(any_executor<SupportableProperties...>& a,
     other.prop_fns_ = prop_fns_table<void>(); \
   } \
   \
+  any_executor(std::nothrow_t, any_executor&& other) BOOST_ASIO_NOEXCEPT \
+    : detail::any_executor_base( \
+        static_cast<any_executor_base&&>( \
+          static_cast<any_executor_base&>(other))), \
+      prop_fns_(other.prop_fns_) \
+  { \
+    other.prop_fns_ = prop_fns_table<void>(); \
+  } \
+  \
   any_executor& operator=(any_executor&& other) BOOST_ASIO_NOEXCEPT \
   { \
     if (this != &other) \
@@ -1846,6 +2092,25 @@ inline void swap(any_executor<SupportableProperties...>& a,
     { \
     } \
     \
+    template <BOOST_ASIO_EXECUTION_EXECUTOR Executor> \
+    any_executor(std::nothrow_t, Executor ex, \
+        typename enable_if< \
+          conditional< \
+            !is_same<Executor, any_executor>::value \
+              && !is_base_of<detail::any_executor_base, Executor>::value, \
+            detail::is_valid_target_executor< \
+              Executor, void(BOOST_ASIO_VARIADIC_TARGS(n))>, \
+            false_type \
+          >::type::value \
+        >::type* = 0) BOOST_ASIO_NOEXCEPT \
+      : detail::any_executor_base(std::nothrow, \
+          BOOST_ASIO_MOVE_CAST(Executor)(ex), false_type()), \
+        prop_fns_(prop_fns_table<Executor>()) \
+    { \
+      if (this->template target<void>() == 0) \
+        prop_fns_ = prop_fns_table<void>(); \
+    } \
+    \
     any_executor(const any_executor& other) BOOST_ASIO_NOEXCEPT \
       : detail::any_executor_base( \
           static_cast<const detail::any_executor_base&>(other)), \
@@ -1853,11 +2118,30 @@ inline void swap(any_executor<SupportableProperties...>& a,
     { \
     } \
     \
+    any_executor(std::nothrow_t, \
+        const any_executor& other) BOOST_ASIO_NOEXCEPT \
+      : detail::any_executor_base( \
+          static_cast<const detail::any_executor_base&>(other)), \
+        prop_fns_(other.prop_fns_) \
+    { \
+      if (this->template target<void>() == 0) \
+        prop_fns_ = prop_fns_table<void>(); \
+    } \
+    \
     any_executor(any_executor<> other) \
       : detail::any_executor_base(BOOST_ASIO_MOVE_CAST( \
             any_executor<>)(other), true_type()), \
         prop_fns_(prop_fns_table<any_executor<> >()) \
     { \
+    } \
+    \
+    any_executor(std::nothrow_t, any_executor<> other) BOOST_ASIO_NOEXCEPT \
+      : detail::any_executor_base(std::nothrow, \
+          BOOST_ASIO_MOVE_CAST(any_executor<>)(other), true_type()), \
+        prop_fns_(prop_fns_table<any_executor<> >()) \
+    { \
+      if (this->template target<void>() == 0) \
+        prop_fns_ = prop_fns_table<void>(); \
     } \
     \
     template <typename OtherAnyExecutor> \
@@ -1877,6 +2161,27 @@ inline void swap(any_executor<SupportableProperties...>& a,
             OtherAnyExecutor)(other), true_type()), \
         prop_fns_(prop_fns_table<OtherAnyExecutor>()) \
     { \
+    } \
+    \
+    template <typename OtherAnyExecutor> \
+    any_executor(std::nothrow_t, OtherAnyExecutor other, \
+        typename enable_if< \
+          conditional< \
+            !is_same<OtherAnyExecutor, any_executor>::value \
+              && is_base_of<detail::any_executor_base, \
+                OtherAnyExecutor>::value, \
+            typename detail::supportable_properties< \
+              0, void(BOOST_ASIO_VARIADIC_TARGS(n))>::template \
+                is_valid_target<OtherAnyExecutor>, \
+            false_type \
+          >::type::value \
+        >::type* = 0) BOOST_ASIO_NOEXCEPT \
+      : detail::any_executor_base(std::nothrow, \
+          BOOST_ASIO_MOVE_CAST(OtherAnyExecutor)(other), true_type()), \
+        prop_fns_(prop_fns_table<OtherAnyExecutor>()) \
+    { \
+      if (this->template target<void>() == 0) \
+        prop_fns_ = prop_fns_table<void>(); \
     } \
     \
     any_executor& operator=(const any_executor& other) BOOST_ASIO_NOEXCEPT \

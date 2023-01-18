@@ -56,37 +56,37 @@ public:
 #if !defined(BOOST_NO_CXX11_DEFAULTED_FUNCTIONS)
     empty_value() = default;
 #else
-    empty_value() { }
+    BOOST_CONSTEXPR empty_value() { }
 #endif
 
-    empty_value(boost::empty_init_t)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t)
         : value_() { }
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
     template<class U, class... Args>
-    empty_value(boost::empty_init_t, U&& value, Args&&... args)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, U&& value, Args&&... args)
         : value_(std::forward<U>(value), std::forward<Args>(args)...) { }
 #else
     template<class U>
-    empty_value(boost::empty_init_t, U&& value)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, U&& value)
         : value_(std::forward<U>(value)) { }
 #endif
 #else
     template<class U>
-    empty_value(boost::empty_init_t, const U& value)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, const U& value)
         : value_(value) { }
 
     template<class U>
-    empty_value(boost::empty_init_t, U& value)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, U& value)
         : value_(value) { }
 #endif
 
-    const T& get() const BOOST_NOEXCEPT {
+    BOOST_CONSTEXPR const T& get() const BOOST_NOEXCEPT {
         return value_;
     }
 
-    T& get() BOOST_NOEXCEPT {
+    BOOST_CXX14_CONSTEXPR T& get() BOOST_NOEXCEPT {
         return value_;
     }
 
@@ -104,37 +104,37 @@ public:
 #if !defined(BOOST_NO_CXX11_DEFAULTED_FUNCTIONS)
     empty_value() = default;
 #else
-    empty_value() { }
+    BOOST_CONSTEXPR empty_value() { }
 #endif
 
-    empty_value(boost::empty_init_t)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t)
         : T() { }
 
 #if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
     template<class U, class... Args>
-    empty_value(boost::empty_init_t, U&& value, Args&&... args)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, U&& value, Args&&... args)
         : T(std::forward<U>(value), std::forward<Args>(args)...) { }
 #else
     template<class U>
-    empty_value(boost::empty_init_t, U&& value)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, U&& value)
         : T(std::forward<U>(value)) { }
 #endif
 #else
     template<class U>
-    empty_value(boost::empty_init_t, const U& value)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, const U& value)
         : T(value) { }
 
     template<class U>
-    empty_value(boost::empty_init_t, U& value)
+    BOOST_CONSTEXPR empty_value(boost::empty_init_t, U& value)
         : T(value) { }
 #endif
 
-    const T& get() const BOOST_NOEXCEPT {
+    BOOST_CONSTEXPR const T& get() const BOOST_NOEXCEPT {
         return *this;
     }
 
-    T& get() BOOST_NOEXCEPT {
+    BOOST_CXX14_CONSTEXPR T& get() BOOST_NOEXCEPT {
         return *this;
     }
 };
