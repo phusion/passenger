@@ -62,11 +62,10 @@ task 'test:install_deps' do
   end
 
   if bundler_too_old?
-    content = File.read("Gemfile.lock")
-    content.delete!("BUNDLED WITH\n[^\n]+")
+    content = File.read("Gemfile.lock").lines.slice_before(/BUNDLED WITH/).first.join("")
     dir = Dir.mktmpdir
     File.write(File.join(dir, "Gemfile.lock"), content)
-    FileUtils.cp(Gemfile, File.join(dir, "Gemfile"))
+    FileUtils.cp("Gemfile", File.join(dir, "Gemfile"))
     bundle_args += " --gemfile=#{File.join(dir, "Gemfile")}"
   end
 
