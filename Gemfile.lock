@@ -25,5 +25,3 @@ DEPENDENCIES
   rake (< 13.0.0)
   rspec (= 2.14.1)
 
-BUNDLED WITH
-   2.2.0
