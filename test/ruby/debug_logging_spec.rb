@@ -29,21 +29,21 @@ describe DebugLogging do
       use_log_file!
       DebugLogging.log_level = LVL_INFO
       DebugLogging.debug("hello")
-      File.exist?(@log_file).should be_false
+      File.exist?(@log_file).should be_falsey
     end
 
     it "prints the message if log level is LVL_DEBUG" do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG
       DebugLogging.debug("hello")
-      File.exist?(@log_file).should be_true
+      File.exist?(@log_file).should be_truthy
     end
 
     it "prints the message if log level is greater than LVL_DEBUG" do
       use_log_file!
       DebugLogging.log_level = LVL_DEBUG2
       DebugLogging.debug("hello")
-      File.exist?(@log_file).should be_true
+      File.exist?(@log_file).should be_truthy
     end
 
     it "prints the location of the calling function" do
@@ -87,21 +87,21 @@ describe DebugLogging do
       use_log_file!
       DebugLogging.log_level = LVL_INFO + 1
       DebugLogging.trace(2, "hello")
-      File.exist?(@log_file).should be_false
+      File.exist?(@log_file).should be_falsey
     end
 
     specify "#trace(x, ...) prints the message if the log level equals LVL_INFO + 2" do
       use_log_file!
       DebugLogging.log_level = LVL_INFO + 2
       DebugLogging.trace(2, "hello")
-      File.exist?(@log_file).should be_true
+      File.exist?(@log_file).should be_truthy
     end
 
     specify "#trace(x, ...) prints the message if the log level is greater than LVL_INFO + 3" do
       use_log_file!
       DebugLogging.log_level = LVL_INFO + 3
       DebugLogging.trace(2, "hello")
-      File.exist?(@log_file).should be_true
+      File.exist?(@log_file).should be_truthy
     end
 
     specify "#trace prints the location of the calling function" do

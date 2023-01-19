@@ -317,10 +317,10 @@ describe "Passenger Standalone" do
       #       @output = capture_output("#{command} --runtime-check-only")
       #       @output.should include(NGINX_SOURCE_DOWNLOAD_MESSAGE)
       #       @output.should include(COMPILING_MESSAGE)
-      #       File.exist?("#{PhusionPassenger.build_system_dir}/buildout").should be_false
+      #       File.exist?("#{PhusionPassenger.build_system_dir}/buildout").should be_falsey
 
       #       test_serving_application("#{command} --no-compile-runtime")
-      #       File.exist?("#{PhusionPassenger.build_system_dir}/buildout").should be_false
+      #       File.exist?("#{PhusionPassenger.build_system_dir}/buildout").should be_falsey
       #     ensure
       #       FileUtils.rm_rf("#{PhusionPassenger.build_system_dir}/buildout")
       #       File.rename("#{PhusionPassenger.build_system_dir}/buildout.renamed",

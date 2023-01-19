@@ -58,7 +58,7 @@ describe Utils::FileSystemWatcher do
       result = test_block([@tmpdir, @tmpdir2]) do
         Dir.mkdir("#{@tmpdir}/foo")
       end
-      result.should be_true
+      result.should be_truthy
     end
 
     specify "a subdirectory has been removed in one of the watched directories" do
@@ -66,7 +66,7 @@ describe Utils::FileSystemWatcher do
       result = test_block([@tmpdir, @tmpdir2]) do
         Dir.rmdir("#{@tmpdir2}/foo")
       end
-      result.should be_true
+      result.should be_truthy
     end
 
     specify "a subdirectory has been renamed in one of the watched directories" do
@@ -74,14 +74,14 @@ describe Utils::FileSystemWatcher do
       result = test_block([@tmpdir, @tmpdir2]) do
         File.rename("#{@tmpdir}/foo", "#{@tmpdir3}/bar")
       end
-      result.should be_true
+      result.should be_truthy
     end
 
     specify "a file has been created in one of the watched directories" do
       result = test_block([@tmpdir, @tmpdir2]) do
         File.touch("#{@tmpdir}/foo")
       end
-      result.should be_true
+      result.should be_truthy
     end
 
     specify "a file has been removed in one of the watched directories" do
@@ -89,7 +89,7 @@ describe Utils::FileSystemWatcher do
       result = test_block([@tmpdir, @tmpdir2]) do
         File.unlink("#{@tmpdir2}/foo")
       end
-      result.should be_true
+      result.should be_truthy
     end
 
     specify "a file has been renamed in one of the watched directories" do
@@ -97,7 +97,7 @@ describe Utils::FileSystemWatcher do
       result = test_block([@tmpdir, @tmpdir2]) do
         File.rename("#{@tmpdir}/foo", "#{@tmpdir3}/bar")
       end
-      result.should be_true
+      result.should be_truthy
     end
 
     specify "a watched file has been written to" do
@@ -144,7 +144,7 @@ describe Utils::FileSystemWatcher do
     end
 
     specify "one of the watched files or directories could not be statted while constructing the object" do
-      test_block([@tmpdir, "#{@tmpdir}/foo"]).should be_false
+      test_block([@tmpdir, "#{@tmpdir}/foo"]).should be_falsey
 
       when_not_running_as_root do
         Dir.mkdir("#{@tmpdir}/foo")
@@ -152,8 +152,8 @@ describe Utils::FileSystemWatcher do
         Dir.mkdir("#{@tmpdir}/foo/dir")
         File.chmod(0000, "#{@tmpdir}/foo")
 
-        test_block([@tmpdir, "#{@tmpdir}/foo/file"]).should be_false
-        test_block([@tmpdir, "#{@tmpdir}/foo/dir"]).should be_false
+        test_block([@tmpdir, "#{@tmpdir}/foo/file"]).should be_falsey
+        test_block([@tmpdir, "#{@tmpdir}/foo/dir"]).should be_falsey
       end
     end
 
@@ -162,11 +162,11 @@ describe Utils::FileSystemWatcher do
       specify "one of the watched files or directories could not be opened while constructing the object" do
         File.touch("#{@tmpdir}/file")
         File.chmod(0000, "#{@tmpdir}/file")
-        test_block([@tmpdir, "#{@tmpdir}/file"]).should be_false
+        test_block([@tmpdir, "#{@tmpdir}/file"]).should be_falsey
 
         Dir.mkdir("#{@tmpdir}/dir")
         File.chmod(0000, "#{@tmpdir}/dir")
-        test_block([@tmpdir, "#{@tmpdir}/dir"]).should be_false
+        test_block([@tmpdir, "#{@tmpdir}/dir"]).should be_falsey
       end
     end
     end # if

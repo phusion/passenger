@@ -138,24 +138,24 @@ describe Utils::HostsFileParser do
     end
 
     it "returns true if the host name resolves to 127.0.0.1" do
-      @parser.resolves_to_localhost?("kotori").should be_true
+      @parser.resolves_to_localhost?("kotori").should be_truthy
     end
 
     it "returns true if the host name resolves to ::1" do
-      @parser.resolves_to_localhost?("ageha").should be_true
+      @parser.resolves_to_localhost?("ageha").should be_truthy
     end
 
     it "returns true if the host name resolves to 0.0.0.0" do
-      @parser.resolves_to_localhost?("mizusawa").should be_true
+      @parser.resolves_to_localhost?("mizusawa").should be_truthy
     end
 
     it "returns false if the host name resolves to something else" do
-      @parser.resolves_to_localhost?("sawako").should be_false
-      @parser.resolves_to_localhost?("kanako").should be_false
+      @parser.resolves_to_localhost?("sawako").should be_falsey
+      @parser.resolves_to_localhost?("kanako").should be_falsey
     end
 
     it "returns false if the host name does not resolve" do
-      @parser.resolves_to_localhost?("foo.com").should be_false
+      @parser.resolves_to_localhost?("foo.com").should be_falsey
     end
   end
 

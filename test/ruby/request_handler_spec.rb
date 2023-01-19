@@ -260,7 +260,7 @@ describe RequestHandler do
 
     @options["app"] = lambda do |env|
       lambda_called = true
-      env['rack.hijack?'].should be_true
+      env['rack.hijack?'].should be_truthy
       env['rack.hijack_io'].should be_nil
       env['rack.hijack'].call
       Thread.new do
@@ -298,7 +298,7 @@ describe RequestHandler do
 
     @options["app"] = lambda do |env|
       lambda_called = true
-      env['rack.hijack?'].should be_true
+      env['rack.hijack?'].should be_truthy
       env['rack.hijack_io'].should be_nil
       hijack_callback = lambda do |socket|
         hijack_callback_called = true
@@ -364,7 +364,7 @@ describe RequestHandler do
       client.close
     end
 
-    lambda_called.should be_true
+    lambda_called.should be_truthy
   end
 
   specify "requests with Transfer-Encoding chunked are assumed to have a request body" do
@@ -406,7 +406,7 @@ describe RequestHandler do
       client.close
     end
 
-    lambda_called.should be_true
+    lambda_called.should be_truthy
   end
 
   specify "requests with neither Content-Length nor Transfer-Encoding are assumed to have no request body" do
@@ -441,7 +441,7 @@ describe RequestHandler do
       client.close
     end
 
-    lambda_called.should be_true
+    lambda_called.should be_truthy
   end
 
   describe "on requests that are not supposed to have a body" do
@@ -478,7 +478,7 @@ describe RequestHandler do
         client.close
       end
 
-      lambda_called.should be_true
+      lambda_called.should be_truthy
     end
 
     it "allows reading from the client socket once the socket has been fully hijacked" do
@@ -510,7 +510,7 @@ describe RequestHandler do
         client.close
       end
 
-      lambda_called.should be_true
+      lambda_called.should be_truthy
     end
 
     it "allows reading from the client socket once the socket has been partially hijacked" do
@@ -548,7 +548,7 @@ describe RequestHandler do
         client.close
       end
 
-      lambda_called.should be_true
+      lambda_called.should be_truthy
     end
   end
 

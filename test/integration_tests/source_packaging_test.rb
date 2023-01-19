@@ -82,13 +82,13 @@ end
 
 shared_examples_for "a user-generated package" do
   it "isn't marked official" do
-    File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_false
+    File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_falsey
   end
 end
 
 shared_examples_for "an official package" do
   it "is marked official" do
-    File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_true
+    File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_truthy
   end
 end
 

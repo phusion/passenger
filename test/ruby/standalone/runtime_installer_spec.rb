@@ -103,7 +103,7 @@ describe RuntimeInstaller do
     @installer.should_receive(:download).
       and_return do |url, output, options|
         url.should == nginx_binary_url
-        options[:use_cache].should be_true
+        options[:use_cache].should be_truthy
         create_tarball(output) do
           create_dummy_nginx_binary
         end
@@ -117,7 +117,7 @@ describe RuntimeInstaller do
     @installer.should_not_receive(:compile_nginx)
     @installer.run
 
-    File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_true
+    File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_truthy
   end
 
   def test_building_nginx_binary
@@ -164,7 +164,7 @@ describe RuntimeInstaller do
       @installer.should_receive(:download).
         and_return do |url, output, options|
           url.should == "#{binaries_url_root}/#{version}/support-#{cxx_compat_id}.tar.gz"
-          options[:use_cache].should be_true
+          options[:use_cache].should be_truthy
           create_tarball(output) do
             create_dummy_support_binaries
           end
@@ -178,7 +178,7 @@ describe RuntimeInstaller do
       @installer.should_not_receive(:compile_nginx)
       @installer.run
 
-      File.exist?("#{@temp_dir}/support/support-binaries/#{AGENT_EXE}").should be_true
+      File.exist?("#{@temp_dir}/support/support-binaries/#{AGENT_EXE}").should be_truthy
     end
 
     it "downloads the Nginx binary from the Internet if :nginx is specified as target" do
@@ -205,7 +205,7 @@ describe RuntimeInstaller do
           else
             raise "Unexpected download URL: #{url}"
           end
-          options[:use_cache].should be_true
+          options[:use_cache].should be_truthy
           true
         end
 
@@ -216,8 +216,8 @@ describe RuntimeInstaller do
       @installer.should_not_receive(:compile_nginx)
       @installer.run
 
-      File.exist?("#{@temp_dir}/support/support-binaries/#{AGENT_EXE}").should be_true
-      File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_true
+      File.exist?("#{@temp_dir}/support/support-binaries/#{AGENT_EXE}").should be_truthy
+      File.exist?("#{@temp_dir}/nginx/PassengerWebHelper").should be_truthy
     end
 
     it "builds the support binaries if it cannot be downloaded" do
@@ -309,12 +309,12 @@ describe RuntimeInstaller do
       exactly(3).times.
       and_return do |url, output, options|
         if url == support_binaries_url
-          options[:use_cache].should be_true
+          options[:use_cache].should be_truthy
           create_tarball(output) do
             create_dummy_support_binaries
           end
         elsif url == nginx_binary_url
-          options[:use_cache].should be_true
+          options[:use_cache].should be_truthy
           create_tarball(output) do
             create_dummy_nginx_binary
           end

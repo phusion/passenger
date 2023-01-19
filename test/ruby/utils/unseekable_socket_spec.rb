@@ -38,14 +38,14 @@ describe Utils::UnseekableSocket do
   end
 
   it "annotates exceptions so that we can identify its source" do
-    @wrapper.source_of_exception?(MyException.new("foo")).should be_false
+    @wrapper.source_of_exception?(MyException.new("foo")).should be_falsey
 
     @socket.should_receive(:write).at_least(:once).and_raise(MyException.new("an error"))
     @wrapper2 = Utils::UnseekableSocket.wrap(@socket)
     e1 = catch_exception { @wrapper.write("hello") }
 
-    @wrapper.source_of_exception?(e1).should be_true
-    @wrapper2.source_of_exception?(e1).should be_true
+    @wrapper.source_of_exception?(e1).should be_truthy
+    @wrapper2.source_of_exception?(e1).should be_truthy
 
     @socket2 = MySocket.new
     @socket2.should_receive(:write).at_least(:once).and_raise(MyException.new("an error"))
@@ -53,13 +53,13 @@ describe Utils::UnseekableSocket do
     @wrapper2.wrap(@socket2)
     e2 = catch_exception { @wrapper.write("hello") }
 
-    @wrapper.source_of_exception?(e1).should be_false
-    @wrapper2.source_of_exception?(e1).should be_false
-    @wrapper.source_of_exception?(e2).should be_true
-    @wrapper2.source_of_exception?(e2).should be_true
+    @wrapper.source_of_exception?(e1).should be_falsey
+    @wrapper2.source_of_exception?(e1).should be_falsey
+    @wrapper.source_of_exception?(e2).should be_truthy
+    @wrapper2.source_of_exception?(e2).should be_truthy
 
-    Utils::UnseekableSocket.new.source_of_exception?(e1).should be_false
-    Utils::UnseekableSocket.new.source_of_exception?(e2).should be_false
+    Utils::UnseekableSocket.new.source_of_exception?(e1).should be_falsey
+    Utils::UnseekableSocket.new.source_of_exception?(e2).should be_falsey
   end
 end
 

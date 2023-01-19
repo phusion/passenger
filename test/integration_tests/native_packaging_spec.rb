@@ -183,7 +183,7 @@ describe "A natively packaged Phusion Passenger" do
     Dir.mktmpdir do |path|
       output = capture_output("passenger-install-nginx-module --auto --prefix=#{path} --auto-download 2>&1")
       output.should include("passenger_root #{LOCATIONS_INI};")
-      File.exist?("#{path}/sbin/nginx").should be_true
+      File.exist?("#{path}/sbin/nginx").should be_truthy
     end
   end
 
@@ -207,33 +207,33 @@ describe "A natively packaged Phusion Passenger" do
   end
 
   specify "the Nginx runtime library headers exist" do
-    File.directory?(INCLUDEDIR).should be_true
+    File.directory?(INCLUDEDIR).should be_truthy
     Dir["#{INCLUDEDIR}/cxx_supportlib/*.h"].should_not be_empty
   end
 
   specify "the Nginx addon directory exists" do
-    File.directory?(NGINX_ADDON_DIR).should be_true
+    File.directory?(NGINX_ADDON_DIR).should be_truthy
     File.file?("#{NGINX_ADDON_DIR}/ngx_http_passenger_module.c")
   end
 
   specify "the helper-scripts directory exists" do
-    File.directory?(HELPER_SCRIPTS_DIR).should be_true
-    File.file?("#{HELPER_SCRIPTS_DIR}/rack-loader.rb").should be_true
+    File.directory?(HELPER_SCRIPTS_DIR).should be_truthy
+    File.file?("#{HELPER_SCRIPTS_DIR}/rack-loader.rb").should be_truthy
   end
 
   specify "the Ruby extension source directory exists" do
-    File.directory?(RUBY_EXTENSION_SOURCE_DIR).should be_true
-    File.file?("#{RUBY_EXTENSION_SOURCE_DIR}/extconf.rb").should be_true
+    File.directory?(RUBY_EXTENSION_SOURCE_DIR).should be_truthy
+    File.file?("#{RUBY_EXTENSION_SOURCE_DIR}/extconf.rb").should be_truthy
   end
 
   specify "the support-binaries directory exists" do
-    File.directory?(SUPPORT_BINARIES_DIR).should be_true
-    File.file?("#{SUPPORT_BINARIES_DIR}/#{AGENT_EXE}").should be_true
-    File.executable?("#{SUPPORT_BINARIES_DIR}/#{AGENT_EXE}").should be_true
+    File.directory?(SUPPORT_BINARIES_DIR).should be_truthy
+    File.file?("#{SUPPORT_BINARIES_DIR}/#{AGENT_EXE}").should be_truthy
+    File.executable?("#{SUPPORT_BINARIES_DIR}/#{AGENT_EXE}").should be_truthy
   end
 
   specify "the Apache 2 module exists" do
-    File.file?(APACHE2_MODULE_PATH).should be_true
+    File.file?(APACHE2_MODULE_PATH).should be_truthy
   end
 
   describe "passenger-config" do
@@ -246,15 +246,15 @@ describe "A natively packaged Phusion Passenger" do
     end
 
     it "recognizes the runtime libraries as compiled" do
-      system("passenger-config --compiled").should be_true
+      system("passenger-config --compiled").should be_truthy
     end
 
     it "recognizes the install as custom packaged" do
-      system("passenger-config --custom-packaged").should be_true
+      system("passenger-config --custom-packaged").should be_truthy
     end
 
     it "recognizes the install as coming from an official package" do
-      system("passenger-config --installed-from-release-package").should be_true
+      system("passenger-config --installed-from-release-package").should be_truthy
     end
 
     it "recognizes the system's Apache" do
@@ -292,7 +292,7 @@ describe "A natively packaged Phusion Passenger" do
       libs = capture_output("passenger-config --nginx-libs").split(" ")
       libs.should_not be_empty
       libs.each do |lib|
-        File.file?(lib).should be_true
+        File.file?(lib).should be_truthy
       end
     end
 
