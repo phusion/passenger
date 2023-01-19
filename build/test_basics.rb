@@ -57,8 +57,17 @@ task 'test:install_deps' do
 
   npm_args = ENV['NPM_ARGS'].to_s
 
-  if !PlatformInfo.locate_ruby_tool('bundle') || bundler_too_old?
+  if !PlatformInfo.locate_ruby_tool('bundle')
     sh "#{gem_install} bundler"
+  end
+
+  if bundler_too_old?
+    content = File.read("Gemfile.lock")
+    content.delete!("BUNDLED WITH\n[^\n]+")
+    dir = Dir.mktmpdir
+    File.write(File.join(dir, "Gemfile.lock"), content)
+    FileUtils.cp(Gemfile, File.join(dir, "Gemfile"))
+    bundle_args += " --gemfile=#{File.join(dir, "Gemfile")}"
   end
 
   if install_base_deps
@@ -72,9 +81,12 @@ task 'test:install_deps' do
   end
 end
 
-
 def bundler_too_old?
   `bundle --version` =~ /version (.+)/
-  version = $1.split('.').map { |x| x.to_i }
-  version[0] < 1 || version[0] == 1 && version[1] < 10
+  found_version = $1.split('.').map { |x| x.to_i }
+  needed_version = `grep -A 1 -e 'BUNDLED WITH' Gemfile.lock`.lines.last.strip.split('.').map { |x| x.to_i }
+  needed_version.zip(found_version).reduce(false) do |a,e|
+    return a if (e.first < e.last)
+    a || (e.first > e.last)
+  end
 end
