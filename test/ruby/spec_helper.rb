@@ -103,6 +103,10 @@ RSpec.configure do |config|
     c.syntax = [:should, :expect]
   end
 
+  config.mock_with :rspec do |mocks|
+    mocks.yield_receiver_to_any_instance_implementation_blocks = false
+  end
+
   config.before(:each) do
     # Suppress warning messages.
     PhusionPassenger::DebugLogging.log_level = PhusionPassenger::LVL_CRIT

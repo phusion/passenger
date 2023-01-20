@@ -42,7 +42,7 @@ describe "Phusion Passenger for Nginx" do
     end
   end
 
-  before :each do
+  before :each do |example|
     File.open(@log_file, 'a') do |f|
       # Make sure that all Nginx log output is prepended by the test description
       # so that we know which messages are associated with which tests.
@@ -51,7 +51,7 @@ describe "Phusion Passenger for Nginx" do
     end
   end
 
-  after :each do
+  after :each do |example|
     log "End of test"
     if example.exception
       puts "\t---------------- Begin logs -------------------"
