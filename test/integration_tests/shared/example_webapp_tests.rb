@@ -1,7 +1,7 @@
 require 'socket'
 require 'fileutils'
 
-shared_examples_for "an example web app" do
+RSpec.shared_examples_for "an example web app" do
   it "responds to GET requests for static asset" do
     FileUtils.cp('stub/garbage1.dat', @stub.full_app_root + "/public/garbage1.dat")
     get('/garbage1.dat').should == @stub.public_file('garbage1.dat')

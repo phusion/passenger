@@ -47,7 +47,7 @@ def sh(*command)
   end
 end
 
-shared_examples_for "a proper package" do
+RSpec.shared_examples_for "a proper package" do
   it "includes all files in the git repository" do
     expected_files = `git ls-files`.split("\n")
     `git submodule status`.split("\n").each do |line|
@@ -80,13 +80,13 @@ shared_examples_for "a proper package" do
   end
 end
 
-shared_examples_for "a user-generated package" do
+RSpec.shared_examples_for "a user-generated package" do
   it "isn't marked official" do
     File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_falsey
   end
 end
 
-shared_examples_for "an official package" do
+RSpec.shared_examples_for "an official package" do
   it "is marked official" do
     File.exist?("#{@pkg_contents_dir}/resources/release.txt").should be_truthy
   end

@@ -1,6 +1,6 @@
 module PhusionPassenger
 
-shared_examples_for "a Ruby loader" do
+RSpec.shared_examples_for "a Ruby loader" do
   it "prints an error page if the startup file fails to load" do
     File.write(@stub.startup_file, %q{
       raise "oh no!"

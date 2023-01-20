@@ -445,7 +445,7 @@ module LoaderSpecHelper
   end
 end
 
-shared_examples_for 'a loader' do
+RSpec.shared_examples_for 'a loader' do
   it 'works' do
     start
     expect(@process).to be_an_instance_of(AppProcess)
