@@ -117,8 +117,8 @@ describe "A user-generated gem" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  it_behaves_like "a proper package"
-  it_behaves_like "a user-generated package"
+  include_examples "a proper package"
+  include_examples "a user-generated package"
 
   it "doesn't invoke the binaries downloader upon gem installation" do
     spec = YAML.load_file("#{@temp_dir}/metadata")
@@ -142,8 +142,8 @@ describe "A user-generated tarball" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  it_behaves_like "a proper package"
-  it_behaves_like "a user-generated package"
+  include_examples "a proper package"
+  include_examples "a user-generated package"
 end
 
 describe "An officially-generated gem" do
@@ -169,8 +169,8 @@ describe "An officially-generated gem" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  it_behaves_like "a proper package"
-  it_behaves_like "an official package"
+  include_examples "a proper package"
+  include_examples "an official package"
 
   it "invokes the binaries downloader upon gem installation" do
     spec = YAML.load_file("#{@temp_dir}/metadata")
@@ -194,6 +194,6 @@ describe "An officially-generated tarball" do
     FileUtils.remove_entry_secure(@temp_dir)
   end
 
-  it_behaves_like "a proper package"
-  it_behaves_like "an official package"
+  include_examples "a proper package"
+  include_examples "an official package"
 end

@@ -106,7 +106,7 @@ describe "Phusion Passenger for Nginx" do
       @stub.reset
     end
 
-    it_behaves_like "an example web app"
+    include_examples "an example web app"
   end
 
   describe "a Ruby app running in a sub-URI" do
@@ -139,7 +139,7 @@ describe "Phusion Passenger for Nginx" do
       @stub.reset
     end
 
-    it_behaves_like "an example web app"
+    include_examples "an example web app"
 
     it "does not interfere with the root website" do
       @server = "http://1.passenger.test:#{@nginx.port}"
@@ -168,7 +168,7 @@ describe "Phusion Passenger for Nginx" do
       @stub.reset
     end
 
-    it_behaves_like "an example web app"
+    include_examples "an example web app"
   end
 
   describe "a Python app running in a sub-URI" do
@@ -201,7 +201,7 @@ describe "Phusion Passenger for Nginx" do
       @stub.reset
     end
 
-    it_behaves_like "an example web app"
+    include_examples "an example web app"
 
     it "does not interfere with the root website" do
       @server = "http://1.passenger.test:#{@nginx.port}"
@@ -230,7 +230,7 @@ describe "Phusion Passenger for Nginx" do
       @stub.reset
     end
 
-    it_behaves_like "an example web app"
+    include_examples "an example web app"
   end
 
   describe "a Node.js app running in a sub-URI" do
@@ -264,7 +264,7 @@ describe "Phusion Passenger for Nginx" do
       @stub.reset
     end
 
-    it_behaves_like "an example web app"
+    include_examples "an example web app"
 
     it "does not interfere with the root website" do
       @server = "http://1.passenger.test:#{@nginx.port}"
@@ -300,7 +300,7 @@ describe "Phusion Passenger for Nginx" do
       FileUtils.mv("#{@stub.app_root}/app.js", "#{@stub.app_root}/boot.js")
     end
 
-    it_behaves_like "an example web app"
+    include_examples "an example web app"
   end
 
   describe "various features" do
