@@ -1100,7 +1100,7 @@ describe RequestHandler do
     end
 
     it "correctly parses HTTP requests without query string" do
-      @thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
+      @thread_handler.any_instance.should_receive(:process_request) do |headers, connection, full_http_response|
         headers["REQUEST_METHOD"].should == "POST"
         headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
         headers["HTTP_HOST"].should == "foo.com"
@@ -1126,7 +1126,7 @@ describe RequestHandler do
     end
 
     it "correctly parses HTTP requests with query string" do
-      @thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
+      @thread_handler.any_instance.should_receive(:process_request) do |headers, connection, full_http_response|
         headers["REQUEST_METHOD"].should == "POST"
         headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
         headers["HTTP_HOST"].should == "foo.com"
@@ -1152,7 +1152,7 @@ describe RequestHandler do
     end
 
     it "correct parses HTTP requests that come in arbitrary chunks" do
-      @thread_handler.any_instance.should_receive(:process_request).and_return do |headers, connection, full_http_response|
+      @thread_handler.any_instance.should_receive(:process_request) do |headers, connection, full_http_response|
         headers["REQUEST_METHOD"].should == "POST"
         headers["SERVER_PROTOCOL"].should == "HTTP/1.1"
         headers["HTTP_HOST"].should == "foo.com"

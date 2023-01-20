@@ -100,8 +100,7 @@ describe RuntimeInstaller do
         :nginx_dir => "#{@temp_dir}/nginx",
         :lib_dir => PhusionPassenger.lib_dir)
 
-    @installer.should_receive(:download).
-      and_return do |url, output, options|
+    @installer.should_receive(:download) do |url, output, options|
         url.should == nginx_binary_url
         options[:use_cache].should be_truthy
         create_tarball(output) do
@@ -125,7 +124,7 @@ describe RuntimeInstaller do
         :nginx_dir => "#{@temp_dir}/nginx",
         :lib_dir   => PhusionPassenger.lib_dir)
 
-    @installer.should_receive(:download).twice.and_return do |url, output|
+    @installer.should_receive(:download).twice do |url, output|
       if url == nginx_binary_url
         false
       elsif url == nginx_source_url
@@ -161,8 +160,7 @@ describe RuntimeInstaller do
       create_installer(:targets => [:support_binaries],
         :support_dir => "#{@temp_dir}/support")
 
-      @installer.should_receive(:download).
-        and_return do |url, output, options|
+      @installer.should_receive(:download) do |url, output, options|
           url.should == "#{binaries_url_root}/#{version}/support-#{cxx_compat_id}.tar.gz"
           options[:use_cache].should be_truthy
           create_tarball(output) do
@@ -192,8 +190,7 @@ describe RuntimeInstaller do
         :lib_dir => PhusionPassenger.lib_dir)
 
       @installer.should_receive(:download).
-        twice.
-        and_return do |url, output, options|
+        twice do |url, output, options|
           if url == support_binaries_url
             create_tarball(output) do
               create_dummy_support_binaries
@@ -230,8 +227,7 @@ describe RuntimeInstaller do
       built_files = nil
 
       @installer.should_receive(:run_rake_task!).with(
-        "nginx_without_native_support CACHING=false OUTPUT_DIR='#{@temp_dir}/support'").
-        and_return do
+        "nginx_without_native_support CACHING=false OUTPUT_DIR='#{@temp_dir}/support'") do
           FileUtils.mkdir_p("#{@temp_dir}/support-binaries")
           create_file("#{@temp_dir}/support-binaries/#{AGENT_EXE}")
 
@@ -306,8 +302,7 @@ describe RuntimeInstaller do
         :lib_dir => PhusionPassenger.lib_dir)
 
     @installer.should_receive(:download).
-      exactly(3).times.
-      and_return do |url, output, options|
+      exactly(3).times do |url, output, options|
         if url == support_binaries_url
           options[:use_cache].should be_truthy
           create_tarball(output) do
