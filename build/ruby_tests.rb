@@ -30,6 +30,6 @@ task 'test:ruby' => dependencies do
   if maybe_grep = string_option('E')
     maybe_grep = "-e #{shesc maybe_grep}"
   end
-  command = "rspec -c -f s --tty -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
+  command = "rspec -c -f d --tty -P 'dont-autoload-anything' #{maybe_grep} ruby/*_spec.rb ruby/*/*_spec.rb"
   sh "cd test && exec bundle exec #{command}"
 end
