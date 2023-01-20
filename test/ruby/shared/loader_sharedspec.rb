@@ -130,6 +130,11 @@ private
     Dir.mkdir("#{work_dir}/response/steps/subprocess_wrapper_preparation")
     Dir.mkdir("#{work_dir}/response/steps/subprocess_app_load_or_exec")
     Dir.mkdir("#{work_dir}/response/steps/subprocess_listen")
+    Dir.mkdir("#{work_dir}/response/steps/preloader_preparation")
+    Dir.mkdir("#{work_dir}/response/steps/preloader_fork_subprocess")
+    Dir.mkdir("#{work_dir}/response/steps/preloader_send_response")
+    Dir.mkdir("#{work_dir}/response/steps/preloader_finish")
+    Dir.mkdir("#{work_dir}/response/steps/subprocess_prepare_after_forking_from_preloader")
     if !system("mkfifo", "#{work_dir}/response/finish")
       raise "'mkfifo #{work_dir}/response/finish' failed"
     end
