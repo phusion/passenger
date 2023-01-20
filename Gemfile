@@ -6,6 +6,7 @@ group :base do
   gem 'rack', '< 2.0'
   gem 'rake', '< 13.0.0'
   gem 'rspec', '~> 3.0.0'
+  gem 'rspec-collection_matchers'
 end
 
 if ENV['USER'] == 'camdennarzt'
