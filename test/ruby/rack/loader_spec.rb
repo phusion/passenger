@@ -16,8 +16,8 @@ describe "Rack loader" do
     @process = @loader.spawn(options)
   end
 
-  it_should_behave_like "a loader"
-  it_should_behave_like "a Ruby loader"
+  it_behaves_like "a loader"
+  it_behaves_like "a Ruby loader"
 
   it "calls the starting_worker_process event with forked=false" do
     File.prepend(@stub.startup_file, %q{

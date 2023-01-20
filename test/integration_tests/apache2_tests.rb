@@ -105,7 +105,7 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
-    it_should_behave_like "an example web app"
+    it_behaves_like "an example web app"
   end
 
   describe "a Ruby app running in a sub-URI" do
@@ -135,7 +135,7 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
-    it_should_behave_like "an example web app"
+    it_behaves_like "an example web app"
 
     it "does not interfere with the root website" do
       @server = "http://1.passenger.test:#{@apache2.port}"
@@ -162,7 +162,7 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
-    it_should_behave_like "an example web app"
+    it_behaves_like "an example web app"
   end
 
   describe "a Python app running in a sub-URI" do
@@ -192,7 +192,7 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
-    it_should_behave_like "an example web app"
+    it_behaves_like "an example web app"
 
     it "does not interfere with the root website" do
       @server = "http://1.passenger.test:#{@apache2.port}"
@@ -219,7 +219,7 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
-    it_should_behave_like "an example web app"
+    it_behaves_like "an example web app"
   end
 
   describe "a Node.js app running in a sub-URI" do
@@ -249,7 +249,7 @@ describe "Apache 2 module" do
       @stub.reset
     end
 
-    it_should_behave_like "an example web app"
+    it_behaves_like "an example web app"
 
     it "does not interfere with the root website" do
       @server = "http://1.passenger.test:#{@apache2.port}"
@@ -284,7 +284,7 @@ describe "Apache 2 module" do
       FileUtils.mv("#{@stub.app_root}/app.js", "#{@stub.app_root}/boot.js")
     end
 
-    it_should_behave_like "an example web app"
+    it_behaves_like "an example web app"
   end
 
   describe "compatibility with other modules" do
