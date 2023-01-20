@@ -11,6 +11,7 @@ require 'fileutils'
 require 'resolv'
 require 'net/http'
 require 'uri'
+require 'rspec/collection_matchers'
 require 'support/multipart'
 PhusionPassenger.require_passenger_lib 'constants'
 PhusionPassenger.require_passenger_lib 'debug_logging'
@@ -388,4 +389,3 @@ File.class_eval do
     return File.read(filename)
   end if !respond_to?(:binread)
 end
-

@@ -42,7 +42,6 @@ PhusionPassenger.locate_directories
 PhusionPassenger.require_passenger_lib 'debug_logging'
 PhusionPassenger.require_passenger_lib 'utils'
 require 'support/test_helper'
-require 'rspec/collection_matchers'
 
 include TestHelper
 
