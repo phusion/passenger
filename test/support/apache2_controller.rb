@@ -92,6 +92,10 @@ class Apache2Controller
       File.unlink("#{@server_root}/httpd.pid") rescue nil
     end
 
+    if @codesigning_identity
+      system "codesign", "-s", @codesigning_identity, "--keychain", File.expand_path("~/Library/Keychains/login.keychain-db"), @mod_passenger
+    end
+
     if File.exist?(@server_root)
       FileUtils.rm_r(@server_root)
     end

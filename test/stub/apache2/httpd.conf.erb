@@ -61,7 +61,11 @@ Listen 127.0.0.1:<%= @port %>
 	<% end %>
 <% end %>
 
+<% if PhusionPassenger::PlatformInfo.os_name_simple == "macosx" && @codesigning_identity %>
+LoadModule passenger_module "<%= @mod_passenger %>" "<%= @codesigning_identity %>"
+<% else %>
 LoadModule passenger_module "<%= @mod_passenger %>"
+<% end %>
 
 PassengerRoot "<%= @passenger_root %>"
 PassengerDefaultRuby "<%= PlatformInfo.ruby_command %>"

@@ -72,6 +72,9 @@ describe "Apache 2 module" do
   def create_apache2_controller
     @apache2 = Apache2Controller.new(:port => PORT)
     @apache2.set(:passenger_temp_dir => @passenger_temp_dir, :log_file => @log_file)
+    if CONFIG.has_key?('codesigning_identity')
+      @apache2.set(codesigning_identity: CONFIG['codesigning_identity'])
+    end
     if Process.uid == 0
       @apache2.set(
         :www_user => CONFIG['normal_user_1'],
