@@ -1,11 +1,15 @@
-Release 6.0.17 (Not yet released)
+Release 6.0.18 (Not yet released)
+-------------
+ * Adds support for arm (aarch64) rpm packages.
+
+
+Release 6.0.17
 -------------
  * [Enterprise] The `debug` gem is now supported for debugging on Ruby 3.1.
  * Removed use of deprecated 'File.exists?' method for Ruby 3.2.0.
  * Upgrades Boost to 1.81.
  * Upgrades preferred Nginx to 1.22.1 from 1.20.2.
  * Changes minimum supported macOS version to 10.14 Mojave.
- * Adds support for arm (aarch64) rpm packages.
  * Adds support for a `PASSENGER_MAX_LOG_LINE_LENGTH_BYTES` environment variable. The default length remains at 8KB. Closes GH-2413.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
    - ccache: 4.6.3 → 4.7.4
