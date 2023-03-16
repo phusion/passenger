@@ -427,10 +427,12 @@ module PhusionPassenger
         require(name_or_filename)
         return defined?(PhusionPassenger::NativeSupport)
       rescue LoadError => e
-        if e.to_s =~ /dlopen/
+        s = e.to_s
+        s = s.encode("US-ASCII", :invalid => :replace) if s.respond_to?(:encode)
+        if s =~ /dlopen/
           # Print dlopen failures. We're not interested in any other
           # kinds of failures, such as file-not-found.
-          puts e.to_s.gsub(/^/, "     ")
+          puts s.gsub(/^/, "     ")
         end
         return false
       end
