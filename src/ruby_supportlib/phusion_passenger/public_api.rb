@@ -30,6 +30,7 @@ module PhusionPassenger
     @@event_credentials = []
     @@event_after_installing_signal_handlers = []
     @@event_oob_work = []
+    @@event_unhandled_exception_before_exit = []
     @@advertised_concurrency_level = nil
 
     def on_event(name, &block)
@@ -69,6 +70,8 @@ module PhusionPassenger
         @@event_after_installing_signal_handlers
       when :oob_work
         @@event_oob_work
+      when :unhandled_exception_before_exit
+        @@event_unhandled_exception_before_exit
       else
         raise ArgumentError, "Unknown event name '#{name}'"
       end
