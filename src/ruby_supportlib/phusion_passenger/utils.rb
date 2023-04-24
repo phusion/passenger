@@ -115,6 +115,7 @@ module PhusionPassenger
           raise
         rescue Exception => e
           print_exception(nil, e)
+          PhusionPassenger.call_event(:unhandled_exception_before_exit, e)
           exit(1)
         end
       end
