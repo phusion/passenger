@@ -366,7 +366,7 @@ describe "A natively packaged Phusion Passenger" do
           end
           Dir.mkdir("public")
           Dir.mkdir("tmp")
-          sh("passenger start --no-install-runtime -p 4000 -d >/dev/null")
+          sh("passenger start --no-install-runtime --port 4000 --daemonize >/dev/null")
           begin
             if RUBY_VERSION >= '2.5'
               URI.open("http://127.0.0.1:4000/") do |f|
