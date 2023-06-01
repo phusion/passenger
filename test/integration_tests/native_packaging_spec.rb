@@ -260,7 +260,7 @@ describe "A natively packaged Phusion Passenger" do
     it "recognizes the system's Apache" do
       output = capture_output("passenger-config --detect-apache2")
       output.gsub!(/.*Final autodetection results\n/m, '')
-      output.scan(/\* Found Apache .*\!/).size.should == 1
+      output.scan(/\* Found Apache .*\!/).size.should eq(1), "Output didn't contain 'Found Apache', was:\n\n#{output}\n\n"
       if APXS2
         output.should include("apxs2          : #{APXS2}\n")
       else
