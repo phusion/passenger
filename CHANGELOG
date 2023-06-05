@@ -6,6 +6,23 @@ Release 6.0.18 (Not yet released)
  * [RPM] Changes to building Nginx module packages for the latest supported Nginx module stream instead of the default.
  * [Ruby] Makes Passenger more resilient to invalid byte sequences when loading the Ruby native extension. Contributed by Drew Wells.
  * [Ruby] Add an `unhandled_exception_before_exit` event callback. Contributed by James Tomson.
+ * [Nginx] Upgrades preferred Nginx to 1.24.0 from 1.22.1.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - ccache: 4.6.3 -> 4.8.1
+   - cmake: 3.25.1 -> 3.26.4
+   - curl: 7.87.0 -> 8.1.2
+   - git: 2.39.0 -> 2.41.0
+   - gnupg: 2.4.0 -> 2.4.2
+   - libgcrypt: 1.10.1 -> 1.10.2
+   - libgpg_error: 1.46 -> 1.47
+   - openssl: 3.0.7 -> 3.1.1
+   - rubygems: 3.4.3 -> 3.4.13
+   - zstd: 1.5.2 -> 1.5.5
+   - rubies:
+     - 2.7.7 -> 2.7.8
+     - 3.0.5 -> 3.0.6
+     - 3.1.3 -> 3.1.4
+     - 3.2.0 -> 3.2.2
 
 
 Release 6.0.17
@@ -17,7 +34,6 @@ Release 6.0.17
  * Changes minimum supported macOS version to 10.14 Mojave.
  * Adds support for a `PASSENGER_MAX_LOG_LINE_LENGTH_BYTES` environment variable. The default length remains at 8KB. Closes GH-2413.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
-   - ccache: 4.6.3 → 4.7.4
    - curl: 7.86.0 → 7.87.0
    - git: 2.38.1 → 2.39.0
    - gnupg: 2.3.8 → 2.4.0
@@ -34,7 +50,6 @@ Release 6.0.16
  * Adds systemd private tmpdir workaround on Ubuntu/Debian. Closes GH-2397.
  * Downgrade jsoncpp to 1.8.1 from 1.9.5 to fix invalid json generation bug. Closes GH-2445.
  * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
-   - ccache: 4.6.3 → 4.7.4
    - cmake: 3.24.2 → 3.25.1
    - curl: 7.85.0 → 7.86.0
    - git 2.37.3 → 2.38.1
