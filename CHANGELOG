@@ -1,4 +1,8 @@
-Release 6.0.18 (Not yet released)
+Release 6.0.19 (Not yet released)
+-------------
+
+
+Release 6.0.18
 -------------
  * Adds support for arm (aarch64) rpm packages.
  * Adds Ubuntu 23.04 "Lunar" packages, removes Ubuntu 22.10 "Kinetic" packages.
