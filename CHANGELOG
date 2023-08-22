@@ -1,10 +1,10 @@
 Release 6.0.19 (Not yet released)
 -------------
+ * [ARM] Fixes a regression in Passenger 6.0.7 where strict-aliasing archs (notably: aarch64 aka ARM64) builds of Passenger were always building for big-endian archs. Closes GH-2451 and GH-2419.
 
 
 Release 6.0.18
 -------------
- * Adds support for arm (aarch64) rpm packages.
  * Adds Ubuntu 23.04 "Lunar" packages, removes Ubuntu 22.10 "Kinetic" packages.
  * Removes packages for Debian 9 "Stretch" (EOL June 2022).
  * [RPM] Changes to building Nginx module packages for the latest supported Nginx module stream instead of the default.
