@@ -24,56 +24,56 @@
 #  THE SOFTWARE.
 
 ESSENTIALS = [
-  "boost/detail/{limits,endian}.hpp",
-  "boost/config*",
-  "boost/mpl",
-  "boost/preprocessor/stringize.hpp",
-  "boost/smart_ptr/detail/sp_counted_*",
-  "boost/smart_ptr/detail/atomic_count*",
-  "boost/smart_ptr/detail/spinlock*",
-  "boost/atomic",
-  "boost/pool",
-  "boost/unordered*",
-  "boost/thread",
-  "boost/intrusive",
-  "boost/container",
-  "boost/predef",
-  "boost/move",
-  "boost/core",
-  "boost/bind",
-  "boost/function",
-  "boost/ratio*",
-  "boost/integer*",
-  "boost/chrono*",
-  "boost/random*",
+  "boost/*regex*",
+  "boost/algorithm/string",
   "boost/asio*",
-  "boost/optional.hpp",
+  "boost/atomic",
+  "boost/bind",
+  "boost/chrono*",
+  "boost/config*",
+  "boost/container",
+  "boost/core",
+  "boost/cstdint.hpp",
+  "boost/date_time",
+  "boost/date_time/date_formatting_limited.hpp",
+  "boost/date_time/gregorian/formatters_limited.hpp",
+  "boost/detail/fenv.hpp",
+  "boost/detail/reference_content.hpp",
+  "boost/foreach.hpp",
+  "boost/function",
+  "boost/integer*",
+  "boost/intrusive",
+  "boost/move",
+  "boost/mpl",
+  "boost/non_type.hpp",
+  "boost/none*",
   "boost/optional",
+  "boost/optional.hpp",
+  "boost/parameter",
+  "boost/pool",
+  "boost/predef",
+  "boost/predef/other/endian.h",
+  "boost/preprocessor",
+  "boost/preprocessor/stringize.hpp",
+  "boost/random*",
+  "boost/ratio*",
+  "boost/smart_ptr/detail/atomic_count*",
+  "boost/smart_ptr/detail/sp_counted_*",
+  "boost/smart_ptr/detail/spinlock*",
+  "boost/system/config.hpp",
+  "boost/system/detail/error_code.ipp",
+  "boost/thread",
+  "boost/type_traits",
+  "boost/type_traits/detail/*",
+  "boost/type_traits/make_signed.hpp",
+  "boost/typeof",
+  "boost/unordered*",
   "boost/utility",
-  "libs/thread/src",
-  "libs/system/src",
-  "libs/regex/src",
   "libs/chrono/src",
   "libs/random/src",
-  "boost/preprocessor",
-  "boost/parameter",
-  "boost/date_time/gregorian/formatters_limited.hpp",
-  "boost/date_time/date_formatting_limited.hpp",
-  "boost/type_traits/make_signed.hpp",
-  "boost/type_traits/detail/*",
-  "boost/typeof",
-  "boost/date_time",
-  "boost/type_traits",
-  "boost/cstdint.hpp",
-  "boost/*regex*",
-  "boost/non_type.hpp",
-  "boost/detail/fenv.hpp",
-  "boost/foreach.hpp",
-  "boost/none*",
-  "boost/system/detail/error_code.ipp",
-  "boost/system/config.hpp",
-  "boost/detail/reference_content.hpp",
-  "boost/algorithm/string"
+  "libs/regex/src",
+  "libs/system/src",
+  "libs/thread/src",
 ]
 EXCLUDE = [
   "libs/thread/src/win32/*",
@@ -87,43 +87,59 @@ EXCLUDE = [
   "boost/asio/detail/impl/win*"
 ]
 PROGRAM_SOURCE = %q{
-  #include <boost/shared_ptr.hpp>
-  #include <boost/shared_array.hpp>
-  #include <boost/weak_ptr.hpp>
-  #include <boost/make_shared.hpp>
-  #include <boost/enable_shared_from_this.hpp>
-  #include <boost/intrusive_ptr.hpp>
-  #include <boost/smart_ptr/intrusive_ref_counter.hpp>
-  #include <boost/thread.hpp>
-  #include <boost/noncopyable.hpp>
-  #include <boost/function.hpp>
-  #include <boost/bind/bind.hpp>
-  #include <boost/container/vector.hpp>
-  #include <boost/date_time/posix_time/posix_time.hpp>
-  #include <boost/foreach.hpp>
-  #include <boost/unordered_map.hpp>
-  #include <boost/regex.hpp>
-  #include <boost/pool/object_pool.hpp>
-  #include <boost/move/core.hpp>
-  #include <boost/move/utility.hpp>
+  #include <boost/aligned_storage.hpp>
+  #include <boost/asio.hpp>
+  #include <boost/asio/ssl.hpp>
+  #include <boost/asio/steady_timer.hpp>
   #include <boost/atomic.hpp>
-  #include <boost/typeof/typeof.hpp>
+  #include <boost/bind/bind.hpp>
+  #include <boost/chrono.hpp>
   #include <boost/circular_buffer.hpp>
   #include <boost/config.hpp>
   #include <boost/container/small_vector.hpp>
+  #include <boost/container/vector.hpp>
   #include <boost/core/noncopyable.hpp>
   #include <boost/cstdint.hpp>
   #include <boost/current_function.hpp>
+  #include <boost/date_time/posix_time/posix_time.hpp>
   #include <boost/date_time/posix_time/posix_time_types.hpp>
+  #include <boost/enable_shared_from_this.hpp>
+  #include <boost/foreach.hpp>
+  #include <boost/function.hpp>
+  #include <boost/intrusive_ptr.hpp>
+  #include <boost/make_shared.hpp>
+  #include <boost/move/core.hpp>
   #include <boost/move/move.hpp>
+  #include <boost/move/utility.hpp>
+  #include <boost/noncopyable.hpp>
+  #include <boost/nondet_random.hpp>
+  #include <boost/pointer_cast.hpp>
+  #include <boost/pool/object_pool.hpp>
   #include <boost/predef.h>
+  #include <boost/predef/other/endian.h>
+  #include <boost/random/random_device.hpp>
+  #include <boost/random/uniform_int_distribution.hpp>
   #include <boost/ref.hpp>
+  #include <boost/regex.hpp>
   #include <boost/scoped_array.hpp>
   #include <boost/scoped_ptr.hpp>
+  #include <boost/shared_array.hpp>
+  #include <boost/shared_ptr.hpp>
+  #include <boost/smart_ptr/intrusive_ref_counter.hpp>
   #include <boost/static_assert.hpp>
+  #include <boost/system/error_code.hpp>
+  #include <boost/system/system_error.hpp>
+  #include <boost/thread.hpp>
+  #include <boost/thread/condition_variable.hpp>
   #include <boost/thread/mutex.hpp>
+  #include <boost/thread/once.hpp>
   #include <boost/thread/tss.hpp>
+  #include <boost/typeof/typeof.hpp>
+  #include <boost/unordered_map.hpp>
+  #include <boost/version.hpp>
+  #include <boost/weak_ptr.hpp>
 // Included despite not used in Passenger
+  #include <boost/thread/thread_time.hpp>
   #include <boost/cregex.hpp>
   #include <boost/pointer_cast.hpp>
   #include <boost/asio.hpp>
