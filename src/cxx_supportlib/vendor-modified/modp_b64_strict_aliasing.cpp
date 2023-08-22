@@ -89,7 +89,7 @@ size_t modp_b64_decode(char* dest, const char* src, size_t len)
 	case 0:
 		x = d0[y[3]] | d1[y[2]] | d2[y[1]] | d3[y[0]];
 		if (x >= B64_BADCHAR)  return -1;
-#ifdef BOOST_ENDIAN_BIG_BYTE
+#if BOOST_ENDIAN_BIG_BYTE
 		*p++ = ((modp_uint8_t*)&x)[1];
 		*p++ = ((modp_uint8_t*)&x)[2];
 		*p   = ((modp_uint8_t*)&x)[3];
