@@ -44,6 +44,7 @@ pipeline {
 
     booleanParam(name: 'buster',  defaultValue: true, description: 'Test Debian 10 packages')
     booleanParam(name: 'bullseye',defaultValue: true, description: 'Test Debian 11 packages')
+    booleanParam(name: 'bookworm',defaultValue: true, description: 'Test Debian 12 packages')
   }
 
   stages {
