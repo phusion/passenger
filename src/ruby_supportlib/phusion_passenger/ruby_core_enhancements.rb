@@ -147,6 +147,11 @@ module Signal
     result.delete("KILL")
     result.delete("EXIT")
 
+    # Profilers such as ddtrace and stackprof use this signal, so removing the
+    # the handler causes the Ruby process to crash when profilers are operating.
+    # See https://github.com/phusion/passenger/issues/2489 for details.
+    result.delete("PROF")
+
     return result
   end
 end
