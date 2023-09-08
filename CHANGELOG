@@ -1,5 +1,6 @@
 Release 6.0.19 (Not yet released)
 -------------
+ * Fixed a memory allocation bug in the security update checker.
  * [Debian] Add Debian 12 Bookworm packages. Closes GH-2488.
  * [ARM] Fixes a regression in Passenger 6.0.7 where strict-aliasing archs (notably: aarch64 aka ARM64) builds of Passenger were always building for big-endian archs. Closes GH-2451 and GH-2419.
 

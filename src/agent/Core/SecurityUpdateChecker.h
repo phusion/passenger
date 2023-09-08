@@ -322,7 +322,7 @@ private:
 				error.append("url not found: " + sessionState.configRlz.url + " " POSSIBLE_MITM_RESOLUTION);
 				break;
 			case 403:
-				error.append("connection denied by server " POSSIBLE_MITM_RESOLUTION);
+				error.append("request forbidden by server " POSSIBLE_MITM_RESOLUTION);
 				break;
 			case 503:
 				error.append("server temporarily unavailable, try again later");
@@ -646,7 +646,7 @@ public:
 			string data64 = responseJson["data"].asString();
 
 			signatureChars = (char *)malloc(modp_b64_decode_len(signature64.length()));
-			dataChars = (char *)malloc(modp_b64_decode_len(data64.length()));
+			dataChars = (char *)malloc(modp_b64_decode_len(data64.length()) + 1);
 			if (signatureChars == NULL || dataChars == NULL) {
 				logUpdateFailResponse("out of memory", responseData);
 				break;
@@ -667,14 +667,14 @@ public:
 			int dataLen;
 			dataLen = modp_b64_decode(dataChars, data64.c_str(), data64.length());
 			if (dataLen <= 0) {
-				logUpdateFailResponse("corrupted data", responseData);
+				logUpdateFailResponse("corrupted data", data64.c_str());
 				break;
 			}
 			dataChars[dataLen] = '\0';
 
 			Json::Value responseDataJson;
 			if (!reader.parse(dataChars, responseDataJson, false)) {
-				logUpdateFailResponse("unparseable data", responseData);
+				logUpdateFailResponse("unparseable data", dataChars);
 				break;
 			}
 			P_DEBUG("data content (signature OK): " << responseDataJson.toStyledString());
