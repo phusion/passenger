@@ -2,7 +2,7 @@ JOB_NAME_AS_ID = null
 
 def setupLinuxTest(enablerFlag, architecture, block) {
   if (enablerFlag) {
-    node('linux') {
+    node('linux' && architecture) {
       withEnv([
         "OUTPUT_DIR=${env.WORKSPACE}/output-linux-${architecture}",
         "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME_AS_ID}/linux-${architecture}/executor-${env.EXECUTOR_NUMBER}",
