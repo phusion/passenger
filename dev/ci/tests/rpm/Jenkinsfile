@@ -1,6 +1,6 @@
 def setupTest(enablerFlag, distribution, architecture, block) {
   if (enablerFlag) {
-    node('linux') {
+    node("linux && ${architecture}") {
       withEnv([
         "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME}/${distribution}-${architecture}",
         "DISTRIBUTION=${distribution}",
@@ -62,6 +62,24 @@ pipeline {
             },
             'el9 x86_64': {
               setupTest(params.EL9, 'el9', 'x86_64') {
+                checkout scm
+                sh './dev/ci/tests/rpm/run'
+              }
+            },
+            'el7 aarch64': {
+              setupTest(params.EL7, 'el7', 'aarch64') {
+                checkout scm
+                sh './dev/ci/tests/rpm/run'
+              }
+            },
+            'el8 aarch64': {
+              setupTest(params.EL8, 'el8', 'aarch64') {
+                checkout scm
+                sh './dev/ci/tests/rpm/run'
+              }
+            },
+            'el9 aarch64': {
+              setupTest(params.EL9, 'el9', 'aarch64') {
                 checkout scm
                 sh './dev/ci/tests/rpm/run'
               }
