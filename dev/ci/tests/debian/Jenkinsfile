@@ -71,12 +71,12 @@ pipeline {
           def defaultDistros = getDefaultDistros()
           def i
           def parallelSteps = [:]
-          def archs =["amd64", "arm64"]
+          def archs = ['amd64', 'arm64']
           // We use a plain loop over .each because of this bug:
           // https://issues.jenkins-ci.org/browse/JENKINS-27421
-          for (j = 0; j < archs.length; j++) {
+          for (j = 0; j < archs.size(); j++) {
             def arch = archs[j]
-            for (i = 0; i < defaultDistros.length; i++) {
+            for (i = 0; i < defaultDistros.size(); i++) {
               def distro = defaultDistros[i]
               parallelSteps[distro] = {
                 testDebianPackages(distro, arch, params)
