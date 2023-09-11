@@ -8,13 +8,13 @@ def getDefaultDistros() {
     }
 }
 
-def testDebianPackages(distro, params) {
+def testDebianPackages(distro, arch, params) {
   if ((!distro in params) || params[distro]) {
-    node('linux') {
+    node("linux && ${arch}") {
       def env = [
-        "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME}/${distro}",
+        "CACHE_DIR=${env.JENKINS_HOME}/cache/${env.JOB_NAME}/${distro}-${arch}",
         "DISTRIBUTION=${distro}",
-        "ARCHITECTURE=amd64"
+        "ARCHITECTURE=${arch}"
       ]
       withEnv(env) {
         checkout scm
@@ -71,13 +71,16 @@ pipeline {
           def defaultDistros = getDefaultDistros()
           def i
           def parallelSteps = [:]
-
+          def archs =["amd64", "arm64"]
           // We use a plain loop over .each because of this bug:
           // https://issues.jenkins-ci.org/browse/JENKINS-27421
-          for (i = 0; i < defaultDistros.length; i++) {
-            def distro = defaultDistros[i]
-            parallelSteps[distro] = {
-              testDebianPackages(distro, params)
+          for (j = 0; j < archs.length; j++) {
+            def arch = archs[j]
+            for (i = 0; i < defaultDistros.length; i++) {
+              def distro = defaultDistros[i]
+              parallelSteps[distro] = {
+                testDebianPackages(distro, arch, params)
+              }
             }
           }
 
