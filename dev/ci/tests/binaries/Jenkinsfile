@@ -81,10 +81,10 @@ pipeline {
               }
             },
             'Linux arm64': {
-              setupLinuxTest(params.LINUX_ARM64, 'arm64') {
+              setupLinuxTest(params.LINUX_ARM64, 'aarch64') {
                 checkout scm
                 sh './dev/ci/tests/binaries/build-linux'
-                archiveArtifacts artifacts: 'output-linux-arm64/**/*'
+                archiveArtifacts artifacts: 'output-linux-aarch64/**/*'
                 sh './dev/ci/tests/binaries/test-linux'
               }
             },
