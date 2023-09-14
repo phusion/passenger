@@ -78,7 +78,7 @@ pipeline {
             def arch = archs[j]
             for (i = 0; i < defaultDistros.size(); i++) {
               def distro = defaultDistros[i]
-              parallelSteps[distro] = {
+              parallelSteps[distro+arch] = {
                 testDebianPackages(distro, arch, params)
               }
             }
