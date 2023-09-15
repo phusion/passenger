@@ -31,7 +31,7 @@ pipeline {
 
   options {
     buildDiscarder(logRotator(numToKeepStr: '10'))
-    timeout(time: 45, unit: 'MINUTES')
+    timeout(time: 90, unit: 'MINUTES')
     disableConcurrentBuilds()
     timestamps()
   }
@@ -77,7 +77,7 @@ pipeline {
             def arch = archs[j]
             for (i = 0; i < defaultDistros.size(); i++) {
               def distro = defaultDistros[i]
-              parallelSteps[distro+arch] = {
+              parallelSteps["${distro} ${arch}"] = {
                 testDebianPackages(distro, arch, params)
               }
             }
