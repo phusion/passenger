@@ -37,7 +37,6 @@ pipeline {
   }
 
   parameters {
-    booleanParam(name: 'bionic', defaultValue: true, description: 'Test Ubuntu 18.04 packages')
     booleanParam(name: 'focal',  defaultValue: true, description: 'Test Ubuntu 20.04 packages')
     booleanParam(name: 'jammy',  defaultValue: true, description: 'Test Ubuntu 22.04 packages')
     booleanParam(name: 'lunar',  defaultValue: true, description: 'Test Ubuntu 23.04 packages')
