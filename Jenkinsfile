@@ -53,7 +53,7 @@ pipeline {
         script {
           parallel(
             'Ruby unit tests on Linux': {
-              setupTest(params.RUBY_LINUX, 'linux', LINUX_ENV) {
+              setupTest(params.RUBY_LINUX, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 try {
@@ -78,7 +78,7 @@ pipeline {
             },
 
             'Node.js unit tests on Linux': {
-              setupTest(params.NODEJS_LINUX, 'linux', LINUX_ENV) {
+              setupTest(params.NODEJS_LINUX, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 sh './dev/ci/run-tests-with-docker nodejs'
@@ -93,7 +93,7 @@ pipeline {
             },
 
             'C++ unit tests on Linux, normal user': {
-              setupTest(params.CXX_LINUX, 'linux', LINUX_ENV) {
+              setupTest(params.CXX_LINUX, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 try {
@@ -105,7 +105,7 @@ pipeline {
               }
             },
             'C++ unit tests on Linux, as root': {
-              setupTest(params.CXX_LINUX_ROOT, 'linux', LINUX_ENV + ['SUDO=1']) {
+              setupTest(params.CXX_LINUX_ROOT, 'linux && amd64', LINUX_ENV + ['SUDO=1']) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 try {
@@ -130,7 +130,7 @@ pipeline {
             },
 
             'Apache integration tests on Linux': {
-              setupTest(params.APACHE2_LINUX, 'linux', LINUX_ENV) {
+              setupTest(params.APACHE2_LINUX, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 try {
@@ -155,7 +155,7 @@ pipeline {
             },
 
             'Nginx integration tests on Linux': {
-              setupTest(params.NGINX_LINUX, 'linux', LINUX_ENV) {
+              setupTest(params.NGINX_LINUX, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 try {
@@ -180,7 +180,7 @@ pipeline {
             },
 
             'Nginx dynamic module compatibility test on Linux': {
-              setupTest(params.NGINX_DYNAMIC_LINUX, 'linux', LINUX_ENV) {
+              setupTest(params.NGINX_DYNAMIC_LINUX, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 try {
@@ -205,7 +205,7 @@ pipeline {
             },
 
             'Passenger Standalone integration tests on Linux': {
-              setupTest(params.STANDALONE_LINUX, 'linux', LINUX_ENV) {
+              setupTest(params.STANDALONE_LINUX, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 try {
@@ -237,7 +237,7 @@ pipeline {
               }
             },
             'Source packaging unit tests': {
-              setupTest(params.SOURCE_PACKAGING, 'linux', LINUX_ENV) {
+              setupTest(params.SOURCE_PACKAGING, 'linux && amd64', LINUX_ENV) {
                 checkout scm
                 sh './dev/ci/setup-host'
                 sh './dev/ci/run-tests-with-docker source-packaging'
