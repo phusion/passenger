@@ -23,8 +23,9 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-import sys, os, re, imp, threading, signal, traceback, socket, select, struct, logging, errno
+import sys, os, re, threading, signal, traceback, socket, select, struct, logging, errno
 import tempfile, json, time
+from importlib import util
 
 options = {}
 
@@ -73,7 +74,10 @@ def load_app():
 
 	sys.path.insert(0, os.getcwd())
 	startup_file = options.get('startup_file', 'passenger_wsgi.py')
-	return imp.load_source('passenger_wsgi', startup_file)
+	spec = util.spec_from_file_location("passenger_wsgi", startup_file)
+	app_module = util.module_from_spec(spec)
+	spec.loader.exec_module(app_module)
+	return app_module
 
 def create_server_socket():
 	global options
