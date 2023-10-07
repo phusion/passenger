@@ -56,6 +56,17 @@ function retry_run()
 	done
 }
 
+
+function require_envvar()
+{
+        local name="$1"
+        local value="$2"
+        if [[ "$value" = "" ]]; then
+                echo "ERROR: the environment variable '$name' is required."
+                exit 1
+        fi
+}
+
 function autodetect_environment()
 {
 	echo "Environment autodetection results:"
@@ -72,6 +83,7 @@ function autodetect_environment()
                 if [ $OS = "linux" ]; then
 		    export CACHE_DIR="$JENKINS_HOME/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
                 else
+                    require_envvar WORKSPACE "$WORKSPACE"
 		    export CACHE_DIR="$WORKSPACE/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
                 fi
 	else
