@@ -23,7 +23,7 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-import sys, os, re, threading, signal, traceback, socket, select, struct, logging, errno
+import sys, os, threading, signal, traceback, socket, select, struct, logging, errno
 import tempfile, json, time
 from importlib import util
 
@@ -38,7 +38,7 @@ def try_write_file(path, contents):
 		with open(path, 'w') as f:
 			f.write(contents)
 	except IOError as e:
-		logging.warn('Warning: unable to write to ' + path + ': ' + e.message)
+		logging.warn('Warning: unable to write to ' + path + ': ' + e.args)
 
 def initialize_logging():
 	logging.basicConfig(
@@ -51,18 +51,21 @@ def read_startup_arguments():
 	global options
 
 	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	assert work_dir is not None
 	path = work_dir + '/args.json'
 	with open(path, 'r') as f:
 		options = json.load(f)
 
 def record_journey_step_begin(step, state):
 	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	assert work_dir is not None
 	step_dir = work_dir + '/response/steps/' + step.lower()
 	try_write_file(step_dir + '/state', state)
 	try_write_file(step_dir + '/begin_time', str(time.time()))
 
 def record_journey_step_end(step, state):
 	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	assert work_dir is not None
 	step_dir = work_dir + '/response/steps/' + step.lower()
 	try_write_file(step_dir + '/state', state)
 	if not os.path.exists(step_dir + '/begin_time') and not os.path.exists(step_dir + '/begin_time_monotonic'):
@@ -75,7 +78,9 @@ def load_app():
 	sys.path.insert(0, os.getcwd())
 	startup_file = options.get('startup_file', 'passenger_wsgi.py')
 	spec = util.spec_from_file_location("passenger_wsgi", startup_file)
+	assert spec is not None
 	app_module = util.module_from_spec(spec)
+	assert spec.loader is not None
 	spec.loader.exec_module(app_module)
 	return app_module
 
@@ -92,13 +97,8 @@ def create_server_socket():
 
 	i = 0
 	while i < 128:
-		s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-		socket_suffix = format(struct.unpack('Q', os.urandom(8))[0], 'x')
-		filename = socket_dir + '/' + socket_prefix + '.' + socket_suffix
-		filename = filename[0:UNIX_PATH_MAX]
 		try:
-			s.bind(filename)
-			break
+			return make_socket(socket_dir, socket_prefix, UNIX_PATH_MAX)
 		except socket.error as e:
 			if e.errno == errno.EADDRINUSE:
 				i += 1
@@ -107,6 +107,12 @@ def create_server_socket():
 			else:
 				raise e
 
+def make_socket(socket_dir, socket_prefix, UNIX_PATH_MAX):
+	s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+	socket_suffix = format(struct.unpack('Q', os.urandom(8))[0], 'x')
+	filename = socket_dir + '/' + socket_prefix + '.' + socket_suffix
+	filename = filename[0:UNIX_PATH_MAX]
+	s.bind(filename)
 	s.listen(1000)
 	return (filename, s)
 
@@ -134,6 +140,7 @@ def install_signal_handlers():
 
 def advertise_sockets(socket_filename):
 	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	assert work_dir is not None
 	path = work_dir + '/response/properties.json'
 	doc = {
 		'sockets': [
@@ -151,32 +158,22 @@ def advertise_sockets(socket_filename):
 
 def advertise_readiness():
 	work_dir = os.getenv('PASSENGER_SPAWN_WORK_DIR')
+	assert work_dir is not None
 	path = work_dir + '/response/finish'
 	with open(path, 'w') as f:
 		f.write('1')
 
-if sys.version_info[0] >= 3:
-	def reraise_exception(exc_info):
-		raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
+def reraise_exception(exc_info):
+       	raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
 
-	def bytes_to_str(b):
-		return b.decode('latin-1')
+def bytes_to_str(b):
+	return b.decode('latin-1')
 
-	def str_to_bytes(s):
-		if isinstance(s, bytes):
-			return s
-		else:
-			return s.encode('latin-1')
-else:
-	def reraise_exception(exc_info):
-		exec("raise exc_info[0], exc_info[1], exc_info[2]")
-
-	def bytes_to_str(b):
-		return b
-
-	def str_to_bytes(s):
+def str_to_bytes(s):
+	if isinstance(s, bytes):
 		return s
-
+	else:
+		return s.encode('latin-1')
 
 class RequestHandler:
 	def __init__(self, server_socket, owner_pipe, app):
@@ -198,13 +195,12 @@ class RequestHandler:
 						env, input_stream = self.parse_request(client)
 						if env:
 							if env['REQUEST_METHOD'] == 'ping':
-								self.process_ping(env, input_stream, client)
+								self.process_ping(client)
 							else:
 								socket_hijacked = self.process_request(env, input_stream, client)
 					except KeyboardInterrupt:
 						done = True
-					except IOError:
-						e = sys.exc_info()[1]
+					except IOError as e:
 						if not getattr(e, 'passenger', False) or e.errno != errno.EPIPE:
 							logging.exception("WSGI application raised an I/O exception!")
 					except Exception:
@@ -257,12 +253,8 @@ class RequestHandler:
 
 		return (env, client)
 
-	if hasattr(socket, '_fileobject'):
-		def wrap_input_socket(self, sock):
-			return socket._fileobject(sock, 'rb', 512)
-	else:
-		def wrap_input_socket(self, sock):
-			return socket.socket.makefile(sock, 'rb', 512)
+	def wrap_input_socket(self, sock):
+		return socket.socket.makefile(sock, 'rb', 512)
 
 	def process_request(self, env, input_stream, output_stream):
 		# The WSGI specification says that the input parameter object passed needs to
@@ -302,10 +294,9 @@ class RequestHandler:
 					output_stream.sendall(b'\r\n')
 				if not is_head:
 					output_stream.sendall(str_to_bytes(data))
-			except IOError:
+			except IOError as e:
 				# Mark this exception as coming from the Phusion Passenger
 				# socket and not some other socket.
-				e = sys.exc_info()[1]
 				setattr(e, 'passenger', True)
 				raise e
 
@@ -351,7 +342,7 @@ class RequestHandler:
 				result.close()
 		return False
 
-	def process_ping(self, env, input_stream, output_stream):
+	def process_ping(self, output_stream):
 		output_stream.sendall(b"pong")
 
 
@@ -380,7 +371,9 @@ if __name__ == "__main__":
 
 	record_journey_step_begin('SUBPROCESS_LISTEN', 'STEP_IN_PROGRESS')
 	try:
-		socket_filename, server_socket = create_server_socket()
+		tuple = create_server_socket()
+		assert tuple is not None
+		socket_filename, server_socket = tuple
 		install_signal_handlers()
 		handler = RequestHandler(server_socket, sys.stdin, app_module.application)
 		advertise_sockets(socket_filename)
