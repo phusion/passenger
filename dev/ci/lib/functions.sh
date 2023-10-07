@@ -59,21 +59,25 @@ function retry_run()
 function autodetect_environment()
 {
 	echo "Environment autodetection results:"
-	if [[ "$JENKINS_HOME" != "" ]]; then
-		echo "Running in Jenkins: yes"
-		export IN_JEKINS=true
-		export CACHE_DIR="$JENKINS_HOME/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
-	else
-		echo "Running in Jenkins: no"
-		export IN_JENKINS=false
-		export CACHE_DIR="$PASSENGER_ROOT/.ci_cache"
-	fi
 	if [[ -e /usr/bin/sw_vers ]]; then
 		echo "Operating system: macOS"
 		export OS=macos
 	else
 		echo "Operating system: Linux"
 		export OS=linux
+	fi
+	if [[ "$JENKINS_HOME" != "" ]]; then
+		echo "Running in Jenkins: yes"
+		export IN_JEKINS=true
+                if [ $OS = "linux" ]; then
+		    export CACHE_DIR="$JENKINS_HOME/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
+                else
+		    export CACHE_DIR="$WORKSPACE/cache/$JOB_NAME/executor-$EXECUTOR_NUMBER"
+                fi
+	else
+		echo "Running in Jenkins: no"
+		export IN_JENKINS=false
+		export CACHE_DIR="$PASSENGER_ROOT/.ci_cache"
 	fi
 	echo "Cache directory: $CACHE_DIR"
 }
