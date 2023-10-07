@@ -9,5 +9,6 @@
 "nonexistant_group": "xxxxxxxxxxxxxxxxxxx",
 "nonexistant_uid": 9999,
 "nonexistant_gid": 9999,
+"codesigning_identity": "_AUTHORITY_",
 "nginx": "/tmp/nginx/sbin/nginx"
 }

@@ -18,7 +18,7 @@ header2 "Creating test/config.json"
 if [[ "$OS" = linux ]]; then
 	run cp test/config.json.travis test/config.json
 else
-	sed -e "s/_USER_/$USER/" test/config.json.travis-osx > test/config.json
+	sed -e "s/_AUTHORITY_/DeveloperCI/" -e "s/_USER_/$USER/" test/config.json.travis-osx > test/config.json
 fi
 echo "+ Done."
 echo
