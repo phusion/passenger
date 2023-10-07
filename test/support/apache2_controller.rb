@@ -93,8 +93,11 @@ class Apache2Controller
     end
 
     if @codesigning_identity
-      if !system("codesign", "-s", @codesigning_identity, "--keychain", File.expand_path("~/Library/Keychains/login.keychain-db"), @mod_passenger)
-        raise "Could not sign Apache module at #{@mod_passenger} with authority #{@codesigning_identity}"
+      require 'open3'
+      Open3.capture3("codesign", "-s", @codesigning_identity, "--keychain", File.expand_path("~/Library/Keychains/login.keychain-db"), @mod_passenger) do |stdout, stderr, status|
+        if !status.success?
+          raise "Could not sign Apache module at #{@mod_passenger} with authority #{@codesigning_identity}: #{stderr}"
+        end
       end
     end
 
