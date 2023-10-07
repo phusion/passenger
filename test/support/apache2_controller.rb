@@ -93,7 +93,9 @@ class Apache2Controller
     end
 
     if @codesigning_identity
-      system "codesign", "-s", @codesigning_identity, "--keychain", File.expand_path("~/Library/Keychains/login.keychain-db"), @mod_passenger
+      if !system("codesign", "-s", @codesigning_identity, "--keychain", File.expand_path("~/Library/Keychains/login.keychain-db"), @mod_passenger)
+        raise "Could not sign Apache module at #{@mod_passenger} with authority #{@codesigning_identity}"
+      end
     end
 
     if File.exist?(@server_root)
