@@ -20,6 +20,7 @@ GEM
     rspec-mocks (3.0.4)
       rspec-support (~> 3.0.0)
     rspec-support (3.0.4)
+    webrick (1.8.1)
 
 PLATFORMS
   ruby
@@ -31,4 +32,5 @@ DEPENDENCIES
   rake (< 13.0.0)
   rspec (~> 3.0.0)
   rspec-collection_matchers
+  webrick (~> 1.8.1)
 

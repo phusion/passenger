@@ -7,6 +7,7 @@ group :base do
   gem 'rake', '< 13.0.0'
   gem 'rspec', '~> 3.0.0'
   gem 'rspec-collection_matchers'
+  gem 'webrick', '~> 1.8.1'
 end
 
 if ENV['USER'] == 'camdennarzt'
