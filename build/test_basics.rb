@@ -62,9 +62,13 @@ task 'test:install_deps' do
   end
 
   if install_base_deps
-    sh "bundle install #{bundle_args} --without="
+    if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.0.0')
+      sh "bundle install #{bundle_args} --without="
+    else
+      sh "bundle install #{bundle_args} --without future"
+    end
   else
-    sh "bundle install #{bundle_args} --without base"
+    sh "bundle install #{bundle_args} --without base future"
   end
 
   if boolean_option('NODE_MODULES', default)

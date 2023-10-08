@@ -7,6 +7,9 @@ group :base do
   gem 'rake', '< 13.0.0'
   gem 'rspec', '~> 3.0.0'
   gem 'rspec-collection_matchers'
+end
+
+group :future do
   gem 'webrick', '~> 1.8.1'
 end
 
