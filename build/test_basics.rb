@@ -62,7 +62,7 @@ task 'test:install_deps' do
   end
 
   if install_base_deps
-    if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.0.0')
+    if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.0.0') || RUBY_PLATFORM =~ /darwin/
       sh "bundle install #{bundle_args} --without="
     else
       sh "bundle install #{bundle_args} --without future"
