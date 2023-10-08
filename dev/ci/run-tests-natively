@@ -24,6 +24,9 @@ if [[ -e ~/.password ]]; then
 	run security unlock-keychain -p "$(cat ~/.password)" ~/Library/Keychains/login.keychain-db
 fi
 
+export HOMEBREW_NO_GITHUB_API="disable"
+export HOMEBREW_NO_INSTALL_FROM_API="disable"
+
 export CI_COMMAND="./dev/ci/run-tests-natively $*"
 exec "$PASSENGER_ROOT/dev/ci/scripts/debug-console-wrapper.sh" \
 	"$PASSENGER_ROOT/dev/ci/scripts/run-tests-natively-stage2.sh" "$@"
