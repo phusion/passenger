@@ -38,7 +38,7 @@ def try_write_file(path, contents):
 		with open(path, 'w') as f:
 			f.write(contents)
 	except IOError as e:
-		logging.warn('Warning: unable to write to ' + path + ': ' + e.args)
+		logging.warn('Warning: unable to write to ' + path + ': ' + e.strerror)
 
 def initialize_logging():
 	logging.basicConfig(
@@ -163,17 +163,27 @@ def advertise_readiness():
 	with open(path, 'w') as f:
 		f.write('1')
 
-def reraise_exception(exc_info):
-       	raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
+if sys.version_info[0] >= 3:
+	def reraise_exception(exc_info):
+		raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
 
-def bytes_to_str(b):
-	return b.decode('latin-1')
+	def bytes_to_str(b):
+		return b.decode('latin-1')
 
-def str_to_bytes(s):
-	if isinstance(s, bytes):
+	def str_to_bytes(s):
+		if isinstance(s, bytes):
+			return s
+		else:
+			return s.encode('latin-1')
+else:
+	def reraise_exception(exc_info):
+		exec("raise exc_info[0], exc_info[1], exc_info[2]")
+
+	def bytes_to_str(b):
+		return b
+
+	def str_to_bytes(s):
 		return s
-	else:
-		return s.encode('latin-1')
 
 class RequestHandler:
 	def __init__(self, server_socket, owner_pipe, app):
@@ -253,8 +263,12 @@ class RequestHandler:
 
 		return (env, client)
 
-	def wrap_input_socket(self, sock):
-		return socket.socket.makefile(sock, 'rb', 512)
+	if hasattr(socket, '_fileobject'):
+		def wrap_input_socket(self, sock):
+			return socket._fileobject(sock, 'rb', 512)
+	else:
+		def wrap_input_socket(self, sock):
+			return socket.socket.makefile(sock, 'rb', 512)
 
 	def process_request(self, env, input_stream, output_stream):
 		# The WSGI specification says that the input parameter object passed needs to
