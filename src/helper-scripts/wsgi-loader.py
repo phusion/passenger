@@ -25,7 +25,10 @@
 
 import sys, os, threading, signal, traceback, socket, select, struct, logging, errno
 import tempfile, json, time
-from importlib import util
+if sys.version_info[0] >= 3:
+	from importlib import util
+else:
+	import imp
 
 options = {}
 
@@ -77,12 +80,15 @@ def load_app():
 
 	sys.path.insert(0, os.getcwd())
 	startup_file = options.get('startup_file', 'passenger_wsgi.py')
-	spec = util.spec_from_file_location("passenger_wsgi", startup_file)
-	assert spec is not None
-	app_module = util.module_from_spec(spec)
-	assert spec.loader is not None
-	spec.loader.exec_module(app_module)
-	return app_module
+	if sys.version_info[0] >= 3:
+		spec = util.spec_from_file_location("passenger_wsgi", startup_file)
+		assert spec is not None
+		app_module = util.module_from_spec(spec)
+		assert spec.loader is not None
+		spec.loader.exec_module(app_module)
+		return app_module
+	else:
+		return imp.load_source('passenger_wsgi', startup_file)
 
 def create_server_socket():
 	global options
