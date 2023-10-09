@@ -1,5 +1,6 @@
 Release 6.0.19 (Not yet released)
 -------------
+ * [Ruby] Fix compatibility with Rack 3 header array. Closses GH-2503.
  * [Ruby] Preserve `SIGPROF` signal handlers. Contributed by Ivo Anjo. Closes GH-2489.
  * [Ubuntu] Removes packages for Ubuntu 18.04 "Bionic" (EOL June 2023).
  * Fixed a memory allocation bug in the security update checker.

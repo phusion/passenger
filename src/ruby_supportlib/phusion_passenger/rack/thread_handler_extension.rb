@@ -41,7 +41,7 @@ module PhusionPassenger
     module ThreadHandlerExtension
       # Constants which exist to relieve Ruby's garbage collector.
       RACK_VERSION       = "rack.version"        # :nodoc:
-      RACK_VERSION_VALUE = [1, 2]                # :nodoc:
+      RACK_VERSION_VALUE = [1, 3]                # :nodoc:
       RACK_INPUT         = "rack.input"          # :nodoc:
       RACK_ERRORS        = "rack.errors"         # :nodoc:
       RACK_MULTITHREAD   = "rack.multithread"    # :nodoc:
@@ -349,6 +349,8 @@ module PhusionPassenger
         headers.each do |key, values|
           if values.is_a?(String)
             values = values.split(NEWLINE)
+          elsif values.is_a?(Array)
+            # values already array
           elsif key == RACK_HIJACK
             # We do not check for this key name in every loop
             # iteration as an optimization.
