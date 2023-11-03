@@ -4,7 +4,10 @@ GEM
     diff-lcs (1.5.0)
     json (2.5.1)
     mime-types (1.25)
-    rack (1.6.13)
+    rack (3.0.8)
+    rackup (2.1.0)
+      rack (>= 3)
+      webrick (~> 1.8)
     rake (12.3.3)
     rspec (3.0.0)
       rspec-core (~> 3.0.0)
@@ -28,9 +31,12 @@ PLATFORMS
 DEPENDENCIES
   json (= 2.5.1)
   mime-types (= 1.25)
-  rack (< 2.0)
+  rack (>= 3)
+  rackup (>= 2.1)
   rake (< 13.0.0)
   rspec (~> 3.0.0)
   rspec-collection_matchers
   webrick (~> 1.8.1)
 
+BUNDLED WITH
+   2.4.21

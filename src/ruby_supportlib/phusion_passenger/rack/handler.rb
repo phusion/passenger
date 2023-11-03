@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 #  Phusion Passenger - https://www.phusionpassenger.com/
-#  Copyright (c) 2016-2017 Phusion Holding B.V.
+#  Copyright (c) 2010-2017 Phusion Holding B.V.
 #
 #  "Passenger", "Phusion Passenger" and "Union Station" are registered
 #  trademarks of Phusion Holding B.V.
@@ -24,54 +24,48 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #  THE SOFTWARE.
 
-## Magic comment: begin bootstrap ##
-libdir = File.expand_path('..', File.dirname(__FILE__))
-$LOAD_PATH.unshift(libdir)
-begin
-  require 'rubygems'
-  require 'rackup'
-rescue LoadError
-end
-require 'phusion_passenger'
-require_relative 'rack/handler'
-## Magic comment: end bootstrap ##
-
-PhusionPassenger.locate_directories
-
-require 'rbconfig'
-
-# Rackup was removed in Rack 3, it is now a separate gem
-if Object.const_defined? :Rackup
-  module Rackup
-    module Handler
-      module PhusionPassenger
-        class << self
-          include ::PhusionPassenger::Rack::Handler
-        end
-      end
-
-      def self.default(options = {})
-        ::Rackup::Handler::PhusionPassenger
-      end
-
-      register :passenger, PhusionPassenger
-    end
-  end
-elsif Object.const_defined?(:Rack) && Rack.release < '3'
+module PhusionPassenger
   module Rack
     module Handler
-      module PhusionPassenger
-        class << self
-          include ::PhusionPassenger::Rack::Handler
+      def run(_app, options = {})
+        return if system(ruby_executable, '-S', find_passenger_standalone, 'start', *build_args(options))
+
+        raise 'Error starting Passenger'
+      end
+
+      def environment
+        ENV['RAILS_ENV'] || 'development'
+      end
+
+      def to_s
+        'Passenger application server'
+      end
+
+      private
+
+      def build_args(options)
+        args = ['-e', environment]
+        args << '-p' << options[:Port].to_s if options[:Port]
+        args << '-a' << options[:Host].to_s if options[:Host]
+        args << '-R' << options[:config].to_s if options[:config]
+        args
+      end
+
+      def rb_config
+        if defined?(::RbConfig)
+          ::RbConfig::CONFIG
+        else
+          ::Config::CONFIG
         end
       end
 
-      def self.default(options = {})
-        ::Rack::Handler::PhusionPassenger
+      def ruby_executable
+        @ruby_executable ||= "#{rb_config['bindir']}/#{rb_config['RUBY_INSTALL_NAME']}#{rb_config['EXEEXT']}"
+      end
+
+      def find_passenger_standalone
+        ::File.join(::PhusionPassenger.bin_dir, 'passenger')
       end
     end
   end
-  ::Rack::Handler.register(:passenger, ::Rack::Handler::PhusionPassenger)
-else
-  raise 'Rack 3 must be used with the Rackup gem'
 end
