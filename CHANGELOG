@@ -1,10 +1,15 @@
-Release 6.0.19 (Not yet released)
+Release 6.0.20 (Not yet released)
+-------------
+ *
+
+
+Release 6.0.19
 -------------
  * [Ruby] Fix compatibility with Rack 3 header array. Closses GH-2503.
  * [Ruby] Preserve `SIGPROF` signal handlers. Contributed by Ivo Anjo. Closes GH-2489.
  * [Python] Replaces use of imp module with importlib in Python 3. Contributed by Rongxin Liu. Closes GH-2399 and GH-2501.
  * [Ubuntu] Removes packages for Ubuntu 18.04 "Bionic" (EOL June 2023).
- * [Ubuntu] Adds packages for Ubuntu 23.04 "mantic".
+ * [Ubuntu] Adds packages for Ubuntu 23.10 "mantic".
  * Fixed a memory allocation bug in the security update checker.
  * [Debian] Add Debian 12 Bookworm packages. Closes GH-2488.
  * [RPM] Published arm64/aarch64 rpms for EL8 & EL9 (RHEL, Rocky, Alma). Closes GH-2452.
