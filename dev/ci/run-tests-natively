@@ -20,8 +20,12 @@ fi
 if [[ -e ~/.password ]]; then
 	# If possible, unlock the keychain in order to prevent password prompts.
 	echo "+ Unlocking keychain"
-	run security unlock-keychain -p "$(cat ~/.password)" ~/Library/Keychains/login.keychain
-	run security unlock-keychain -p "$(cat ~/.password)" ~/Library/Keychains/login.keychain-db
+	if [[ -e ~/Library/Keychains/login.keychain ]]; then
+		run security unlock-keychain -p "$(cat ~/.password)" ~/Library/Keychains/login.keychain
+	fi
+	if [[ -e ~/Library/Keychains/login.keychain-db ]]; then
+		run security unlock-keychain -p "$(cat ~/.password)" ~/Library/Keychains/login.keychain-db
+	fi
 fi
 
 export HOMEBREW_NO_GITHUB_API="disable"
