@@ -30,7 +30,7 @@ fi
 
 if [[ "$OS" = macos ]]; then
 	# Ensure that Homebrew tools can be found
-	export PATH=$PATH:/usr/local/bin
+	export PATH=$PATH:/usr/local/bin:/opt/homebrew/bin
 else
 	export LC_CTYPE=C.UTF-8
 fi
