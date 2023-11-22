@@ -1348,7 +1348,7 @@ class list_impl
             BOOST_INTRUSIVE_INVARIANT_ASSERT(this->priv_size_traits().get_size() == 0);
          return;
       }
-      size_t node_count = 0;
+      size_t node_count = 0; (void)node_count;
       const_node_ptr p = header_ptr;
       while (true)
       {

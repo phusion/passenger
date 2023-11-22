@@ -22,9 +22,9 @@
 #endif
 
 #include <boost/intrusive/intrusive_fwd.hpp>
+#include <boost/intrusive/detail/workaround.hpp>
 #include <boost/intrusive/detail/assert.hpp>
 #include <boost/intrusive/detail/algo_type.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 #include <cstddef>
 
 namespace boost {
@@ -126,7 +126,7 @@ class common_slist_algorithms
             new_f = cur;
             bcur = cur;
             cur  = node_traits::get_next(cur);
-            BOOST_TRY{
+            BOOST_INTRUSIVE_TRY{
                //Main loop
                while(cur != end){
                   if(pred(cur)){ //Might throw
@@ -145,11 +145,11 @@ class common_slist_algorithms
                   }
                }
             }
-            BOOST_CATCH(...){
+            BOOST_INTRUSIVE_CATCH(...){
                node_traits::set_next(last_to_remove, new_f);
-               BOOST_RETHROW;
+               BOOST_INTRUSIVE_RETHROW;
             }
-            BOOST_CATCH_END
+            BOOST_INTRUSIVE_CATCH_END
             node_traits::set_next(last_to_remove, new_f);
             break;
          }

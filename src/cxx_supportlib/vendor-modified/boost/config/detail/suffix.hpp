@@ -1048,6 +1048,9 @@ namespace std{ using ::type_info; }
 #else
 #define BOOST_CXX14_CONSTEXPR constexpr
 #endif
+#if !defined(BOOST_NO_CXX17_STRUCTURED_BINDINGS) && defined(BOOST_NO_CXX11_HDR_TUPLE)
+#  define BOOST_NO_CXX17_STRUCTURED_BINDINGS
+#endif
 
 //
 // C++17 inline variables
@@ -1072,8 +1075,21 @@ namespace std{ using ::type_info; }
 // Unused variable/typedef workarounds:
 //
 #ifndef BOOST_ATTRIBUTE_UNUSED
+#  if defined(__has_attribute) && defined(__SUNPRO_CC) && (__SUNPRO_CC > 0x5130)
+#    if __has_attribute(maybe_unused)
+#       define BOOST_ATTRIBUTE_UNUSED [[maybe_unused]]
+#    endif
+#  elif defined(__has_cpp_attribute)
+#    if __has_cpp_attribute(maybe_unused)
+#      define BOOST_ATTRIBUTE_UNUSED [[maybe_unused]]
+#    endif
+#  endif
+#endif
+
+#ifndef BOOST_ATTRIBUTE_UNUSED
 #  define BOOST_ATTRIBUTE_UNUSED
 #endif
+
 //
 // [[nodiscard]]:
 //

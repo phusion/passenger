@@ -46,7 +46,6 @@
 #include <boost/intrusive/detail/minimal_less_equal_header.hpp>//less, equal
 // other
 #include <boost/static_assert.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 // std
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
 #include <initializer_list>

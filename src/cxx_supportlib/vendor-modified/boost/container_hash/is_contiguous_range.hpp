@@ -5,6 +5,7 @@
 #ifndef BOOST_HASH_IS_CONTIGUOUS_RANGE_HPP_INCLUDED
 #define BOOST_HASH_IS_CONTIGUOUS_RANGE_HPP_INCLUDED
 
+#include <boost/container_hash/detail/requires_cxx11.hpp>
 #include <boost/container_hash/is_range.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 #include <boost/config.hpp>

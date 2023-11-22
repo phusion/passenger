@@ -2,7 +2,7 @@
 // impl/awaitable.hpp
 // ~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2023 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -29,6 +29,12 @@
 #include <boost/asio/post.hpp>
 #include <boost/system/system_error.hpp>
 #include <boost/asio/this_coro.hpp>
+
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#  include <boost/asio/detail/source_location.hpp>
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
 
 #include <boost/asio/detail/push_options.hpp>
 
@@ -170,7 +176,13 @@ public:
 
   template <typename Op>
   auto await_transform(Op&& op,
-      typename constraint<is_async_operation<Op>::value>::type = 0)
+      typename constraint<is_async_operation<Op>::value>::type = 0
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+      , detail::source_location location = detail::source_location::current()
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+    )
   {
     if (attached_thread_->entry_point()->throw_if_cancelled_)
       if (!!attached_thread_->get_cancellation_state().cancelled())
@@ -178,7 +190,13 @@ public:
 
     return awaitable_async_op<typename completion_signature_of<Op>::type,
       typename decay<Op>::type, Executor>{
-        std::forward<Op>(op), this};
+        std::forward<Op>(op), this
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+        , location
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+      };
   }
 
   // This await transformation obtains the associated executor of the thread of
@@ -953,7 +971,7 @@ public:
 
   static T resume(result_type& result)
   {
-    if (*result)
+    if (*result.ex_)
     {
       std::exception_ptr ex = std::exchange(*result.ex_, nullptr);
       std::rethrow_exception(ex);
@@ -1068,7 +1086,7 @@ public:
 
   static std::tuple<Ts...> resume(result_type& result)
   {
-    if (*result)
+    if (*result.ex_)
     {
       std::exception_ptr ex = std::exchange(*result.ex_, nullptr);
       std::rethrow_exception(ex);
@@ -1086,10 +1104,21 @@ class awaitable_async_op
 public:
   typedef awaitable_async_op_handler<Signature, Executor> handler_type;
 
-  awaitable_async_op(Op&& o, awaitable_frame_base<Executor>* frame)
+  awaitable_async_op(Op&& o, awaitable_frame_base<Executor>* frame
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+      , const detail::source_location& location
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+    )
     : op_(std::forward<Op>(o)),
       frame_(frame),
       result_()
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+    , location_(location)
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
   {
   }
 
@@ -1104,6 +1133,12 @@ public:
         [](void* arg)
         {
           awaitable_async_op* self = static_cast<awaitable_async_op*>(arg);
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+          BOOST_ASIO_HANDLER_LOCATION((self->location_.file_name(),
+              self->location_.line(), self->location_.function_name()));
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
           std::forward<Op&&>(self->op_)(
               handler_type(self->frame_->detach_thread(), self->result_));
         }, this);
@@ -1118,6 +1153,11 @@ private:
   Op&& op_;
   awaitable_frame_base<Executor>* frame_;
   typename handler_type::result_type result_;
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+  detail::source_location location_;
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
 };
 
 } // namespace detail

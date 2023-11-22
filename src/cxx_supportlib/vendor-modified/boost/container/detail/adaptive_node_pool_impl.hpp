@@ -42,7 +42,6 @@
 #include <boost/intrusive/slist.hpp>
 // other
 #include <boost/assert.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 #include <cstddef>
 
 namespace boost {
@@ -760,7 +759,7 @@ class private_adaptive_node_pool_impl_common
                            , const size_type real_num_node, const size_type num_subblocks)
    {
       size_type i = 0;
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
          while(i != n){
             //If there are no free nodes we allocate all needed blocks
@@ -800,12 +799,12 @@ class private_adaptive_node_pool_impl_common
             i += num_elems;
          }
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          this->priv_deallocate_nodes(chain, max_free_blocks, real_num_node, num_subblocks, real_block_alignment);
          this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
       this->priv_invariants(real_num_node, num_subblocks, real_block_alignment);
    }
 

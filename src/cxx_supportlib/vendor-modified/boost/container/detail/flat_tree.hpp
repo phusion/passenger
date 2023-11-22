@@ -139,9 +139,11 @@ BOOST_CONTAINER_FORCEINLINE void flat_tree_container_inplace_merge //is_contiguo
    (SequenceContainer& dest, typename SequenceContainer::iterator it, Compare comp , dtl::true_)
 {
    typedef typename SequenceContainer::value_type  value_type;
-   value_type *const braw = boost::movelib::iterator_to_raw_pointer(dest.begin());
+   value_type *const braw = boost::movelib::to_raw_pointer(dest.data());
    value_type *const iraw = boost::movelib::iterator_to_raw_pointer(it);
-   value_type *const eraw = boost::movelib::iterator_to_raw_pointer(dest.end());
+   //Don't use iterator_to_raw_pointer for end as debug iterators can assert when
+   //"operator ->" is used with the end iterator
+   value_type *const eraw = braw + dest.size();
    boost::movelib::adaptive_merge
       (braw, iraw, eraw, comp, eraw, back_free_capacity<SequenceContainer>::get(dest));
 }
@@ -164,7 +166,11 @@ BOOST_CONTAINER_FORCEINLINE void flat_tree_container_inplace_sort_ending //is_co
 {
    typedef typename SequenceContainer::value_type  value_type;
    value_type *const iraw = boost::movelib::iterator_to_raw_pointer(it);
-   value_type *const eraw = boost::movelib::iterator_to_raw_pointer(dest.end());
+   //Don't use iterator_to_raw_pointer for end as debug iterators can assert when
+   //"operator ->" is used with the end iterator
+   value_type* const eraw = boost::movelib::to_raw_pointer(dest.data()) + dest.size();
+
+
    boost::movelib::adaptive_sort
       (iraw, eraw, comp, eraw, back_free_capacity<SequenceContainer>::get(dest));
 }
@@ -192,10 +198,12 @@ template<class SequenceContainer, class Iterator, class Compare>
 BOOST_CONTAINER_FORCEINLINE void flat_tree_merge_equal   //has_merge_unique == false
    (SequenceContainer& dest, Iterator first, Iterator last, Compare comp, dtl::false_)
 {
-   typedef typename SequenceContainer::iterator    iterator;
-   iterator const it = dest.insert( dest.end(), first, last );
-   dtl::bool_<is_contiguous_container<SequenceContainer>::value> contiguous_tag;
-   (flat_tree_container_inplace_merge)(dest, it, comp, contiguous_tag);
+   if(first != last) {
+      typedef typename SequenceContainer::iterator    iterator;
+      iterator const it = dest.insert( dest.end(), first, last );
+      dtl::bool_<is_contiguous_container<SequenceContainer>::value> contiguous_tag;
+      (flat_tree_container_inplace_merge)(dest, it, comp, contiguous_tag);
+   }
 }
 
 ///////////////////////////////////////
@@ -214,16 +222,18 @@ template<class SequenceContainer, class Iterator, class Compare>
 BOOST_CONTAINER_FORCEINLINE void flat_tree_merge_unique  //has_merge_unique == false
    (SequenceContainer& dest, Iterator first, Iterator last, Compare comp, dtl::false_)
 {
-   typedef typename SequenceContainer::iterator          iterator;
-   typedef typename SequenceContainer::size_type         size_type;
-   typedef typename SequenceContainer::difference_type   difference_type;
+   if (first != last) {
+      typedef typename SequenceContainer::iterator          iterator;
+      typedef typename SequenceContainer::size_type         size_type;
+      typedef typename SequenceContainer::difference_type   difference_type;
 
-   size_type const old_sz = dest.size();
-   iterator const first_new = dest.insert(dest.cend(), first, last );
-   iterator e = boost::movelib::inplace_set_unique_difference(first_new, dest.end(), dest.begin(), first_new, comp);
-   dest.erase(e, dest.end());
-   dtl::bool_<is_contiguous_container<SequenceContainer>::value> contiguous_tag;
-   (flat_tree_container_inplace_merge)(dest, dest.begin() + difference_type(old_sz), comp, contiguous_tag);
+      size_type const old_sz = dest.size();
+      iterator const first_new = dest.insert(dest.cend(), first, last );
+      iterator e = boost::movelib::inplace_set_unique_difference(first_new, dest.end(), dest.begin(), first_new, comp);
+      dest.erase(e, dest.end());
+      dtl::bool_<is_contiguous_container<SequenceContainer>::value> contiguous_tag;
+      (flat_tree_container_inplace_merge)(dest, dest.begin() + difference_type(old_sz), comp, contiguous_tag);
+   }
 }
 
 ///////////////////////////////////////
@@ -931,11 +941,13 @@ class flat_tree
    template <class InIt>
    void insert_equal(InIt first, InIt last)
    {
-      dtl::bool_<is_contiguous_container<container_type>::value> contiguous_tag;
-      container_type &seq = this->m_data.m_seq;
-      typename container_type::iterator const it = seq.insert(seq.cend(), first, last);
-      (flat_tree_container_inplace_sort_ending)(seq, it, this->priv_value_comp(), contiguous_tag);
-      (flat_tree_container_inplace_merge)      (seq, it, this->priv_value_comp(), contiguous_tag);
+      if (first != last) {
+         dtl::bool_<is_contiguous_container<container_type>::value> contiguous_tag;
+         container_type &seq = this->m_data.m_seq;
+         typename container_type::iterator const it = seq.insert(seq.cend(), first, last);
+         (flat_tree_container_inplace_sort_ending)(seq, it, this->priv_value_comp(), contiguous_tag);
+         (flat_tree_container_inplace_merge)      (seq, it, this->priv_value_comp(), contiguous_tag);
+      }
    }
 
    //Ordered
@@ -1129,8 +1141,8 @@ class flat_tree
 
    size_type erase_unique(const key_type& k)
    {
-      iterator i = this->find(k);
-      size_type ret = static_cast<size_type>(i != this->end());
+      const_iterator i = static_cast<const flat_tree &>(*this).find(k);
+      size_type ret = static_cast<size_type>(i != this->cend());
       if (ret)
          this->erase(i);
       return ret;

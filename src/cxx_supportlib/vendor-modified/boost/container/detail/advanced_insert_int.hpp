@@ -41,7 +41,6 @@
 #include <boost/move/detail/force_ptr.hpp>
 // other
 #include <boost/assert.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 
 namespace boost { namespace container { namespace dtl {
 
@@ -315,14 +314,14 @@ struct insert_emplace_proxy
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;
       alloc_traits::construct(a, move_detail::force_ptr<value_type *>(&v), ::boost::forward<Args>(get<IdxPack>(this->args_))...);
       value_type *vp = move_detail::force_ptr<value_type *>(&v);
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          *p = ::boost::move(*vp);
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          alloc_traits::destroy(a, vp);
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
       alloc_traits::destroy(a, vp);
    }
 };
@@ -438,14 +437,14 @@ struct insert_emplace_proxy_arg##N\
       typename dtl::aligned_storage<sizeof(value_type), dtl::alignment_of<value_type>::value>::type v;\
       alloc_traits::construct(a, move_detail::force_ptr<value_type *>(&v) BOOST_MOVE_I##N BOOST_MOVE_MFWD##N);\
       value_type *vp = move_detail::force_ptr<value_type *>(&v);\
-      BOOST_TRY{\
+      BOOST_CONTAINER_TRY{\
          *p = ::boost::move(*vp);\
       }\
-      BOOST_CATCH(...){\
+      BOOST_CONTAINER_CATCH(...){\
          alloc_traits::destroy(a, vp);\
-         BOOST_RETHROW\
+         BOOST_CONTAINER_RETHROW\
       }\
-      BOOST_CATCH_END\
+      BOOST_CONTAINER_CATCH_END\
       alloc_traits::destroy(a, vp);\
    }\
 };\

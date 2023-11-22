@@ -807,14 +807,14 @@ using allocator_rebind_t = typename allocator_rebind<A, T>::type;
 
 } /* boost */
 
-#if defined(_LIBCPP_SUPPRESS_DEPRECATED_POP)
-_LIBCPP_SUPPRESS_DEPRECATED_POP
+#if defined(_MSC_VER)
+#pragma warning(pop)
 #endif
 #if defined(_STL_RESTORE_DEPRECATED_WARNING)
 _STL_RESTORE_DEPRECATED_WARNING
 #endif
-#if defined(_MSC_VER)
-#pragma warning(pop)
+#if defined(_LIBCPP_SUPPRESS_DEPRECATED_POP)
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 #endif
 
 #endif

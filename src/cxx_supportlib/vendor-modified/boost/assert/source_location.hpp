@@ -161,7 +161,10 @@ template<class E, class T> std::basic_ostream<E, T> & operator<<( std::basic_ost
 
 # define BOOST_CURRENT_LOCATION ::boost::source_location(__FILE__, BOOST_CURRENT_LOCATION_IMPL_1(__LINE__), "")
 
-#elif defined(__cpp_lib_source_location) && __cpp_lib_source_location >= 201907L
+#elif defined(__cpp_lib_source_location) && __cpp_lib_source_location >= 201907L && !defined(__NVCC__)
+
+// Under nvcc, __builtin_source_location is not constexpr
+// https://github.com/boostorg/assert/issues/32
 
 # define BOOST_CURRENT_LOCATION ::boost::source_location(::std::source_location::current())
 

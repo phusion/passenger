@@ -50,7 +50,6 @@
 #include <boost/move/detail/move_helpers.hpp>
 // other
 #include <boost/assert.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 // std
 #include <cstddef>
 
@@ -434,16 +433,16 @@ class deque_base
          ptr_alloc_ptr nstart = this->members_.m_map + difference_type(this->members_.m_map_size - num_nodes) / 2;
          ptr_alloc_ptr nfinish = nstart + difference_type(num_nodes);
 
-         BOOST_TRY {
+         BOOST_CONTAINER_TRY {
             this->priv_create_nodes(nstart, nfinish);
          }
-         BOOST_CATCH(...){
+         BOOST_CONTAINER_CATCH(...){
             this->priv_deallocate_map(this->members_.m_map, this->members_.m_map_size);
             this->members_.m_map = 0;
             this->members_.m_map_size = 0;
-            BOOST_RETHROW
+            BOOST_CONTAINER_RETHROW
          }
-         BOOST_CATCH_END
+         BOOST_CONTAINER_CATCH_END
 
          this->members_.m_start.priv_set_node(nstart, get_block_size());
          this->members_.m_finish.priv_set_node(nfinish - 1, get_block_size());
@@ -455,15 +454,15 @@ class deque_base
    void priv_create_nodes(ptr_alloc_ptr nstart, ptr_alloc_ptr nfinish)
    {
       ptr_alloc_ptr cur = nstart;
-      BOOST_TRY {
+      BOOST_CONTAINER_TRY {
          for (; cur < nfinish; ++cur)
             *cur = this->priv_allocate_node();
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          this->priv_destroy_nodes(nstart, cur);
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    void priv_destroy_nodes(ptr_alloc_ptr nstart, ptr_alloc_ptr nfinish) BOOST_NOEXCEPT_OR_NOTHROW
@@ -2123,15 +2122,15 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
                const size_type raw_gap = n - elemsafter;
                ::boost::container::uninitialized_move_alloc
                   (this->alloc(), pos, old_finish, old_finish + difference_type(raw_gap));
-               BOOST_TRY{
+               BOOST_CONTAINER_TRY{
                   proxy.copy_n_and_update(this->alloc(), pos, elemsafter);
                   proxy.uninitialized_copy_n_and_update(this->alloc(), old_finish, raw_gap);
                }
-               BOOST_CATCH(...){
+               BOOST_CONTAINER_CATCH(...){
                   this->priv_destroy_range(old_finish, old_finish + difference_type(elemsafter));
-                  BOOST_RETHROW
+                  BOOST_CONTAINER_RETHROW
                }
-               BOOST_CATCH_END
+               BOOST_CONTAINER_CATCH_END
                this->members_.m_finish = new_finish;
             }
          }
@@ -2176,7 +2175,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
    void priv_fill_initialize(const value_type& value)
    {
       index_pointer cur = this->members_.m_start.m_node;
-      BOOST_TRY {
+      BOOST_CONTAINER_TRY {
          for ( ; cur < this->members_.m_finish.m_node; ++cur){
             boost::container::uninitialized_fill_alloc
                (this->alloc(), *cur, *cur + get_block_ssize(), value);
@@ -2184,26 +2183,26 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          boost::container::uninitialized_fill_alloc
             (this->alloc(), this->members_.m_finish.m_first, this->members_.m_finish.m_cur, value);
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          this->priv_destroy_range(this->members_.m_start, iterator(*cur, cur, get_block_size()));
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    template <class InIt>
    void priv_range_initialize(InIt first, InIt last, typename iterator_enable_if_tag<InIt, std::input_iterator_tag>::type* =0)
    {
       this->priv_initialize_map(0);
-      BOOST_TRY {
+      BOOST_CONTAINER_TRY {
          for ( ; first != last; ++first)
             this->emplace_back(*first);
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          this->clear();
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    template <class FwdIt>
@@ -2214,7 +2213,7 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
       this->priv_initialize_map(n);
 
       index_pointer cur_node = this->members_.m_start.m_node;
-      BOOST_TRY {
+      BOOST_CONTAINER_TRY {
          for (; cur_node < this->members_.m_finish.m_node; ++cur_node) {
             FwdIt mid = first;
             boost::container::iterator_uadvance(mid, get_block_size());
@@ -2223,11 +2222,11 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
          }
          ::boost::container::uninitialized_copy_alloc(this->alloc(), first, last, this->members_.m_finish.m_first);
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          this->priv_destroy_range(this->members_.m_start, iterator(*cur_node, cur_node, get_block_size()));
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    // Called only if this->members_.m_finish.m_cur == this->members_.m_finish.m_first.
@@ -2268,16 +2267,16 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
             this->priv_reallocate_map(new_nodes, true);
          }
          size_type i = 1;
-         BOOST_TRY {
+         BOOST_CONTAINER_TRY {
             for (; i <= new_nodes; ++i)
                *(this->members_.m_start.m_node - difference_type(i)) = this->priv_allocate_node();
          }
-         BOOST_CATCH(...) {
+         BOOST_CONTAINER_CATCH(...) {
             for (size_type j = 1; j < i; ++j)
                this->priv_deallocate_node(*(this->members_.m_start.m_node - difference_type(j)));
-            BOOST_RETHROW
+            BOOST_CONTAINER_RETHROW
          }
-         BOOST_CATCH_END
+         BOOST_CONTAINER_CATCH_END
       }
       return this->members_.m_start - difference_type(n);
    }
@@ -2293,16 +2292,16 @@ class deque : protected deque_base<typename real_allocator<T, Allocator>::type, 
             this->priv_reallocate_map(new_nodes, false);
          }
          size_type i = 1;
-         BOOST_TRY {
+         BOOST_CONTAINER_TRY {
             for (; i <= new_nodes; ++i)
                *(this->members_.m_finish.m_node + difference_type(i)) = this->priv_allocate_node();
          }
-         BOOST_CATCH(...) {
+         BOOST_CONTAINER_CATCH(...) {
             for (size_type j = 1; j < i; ++j)
                this->priv_deallocate_node(*(this->members_.m_finish.m_node + difference_type(j)));
-            BOOST_RETHROW
+            BOOST_CONTAINER_RETHROW
          }
-         BOOST_CATCH_END
+         BOOST_CONTAINER_CATCH_END
       }
       return this->members_.m_finish + difference_type(n);
    }

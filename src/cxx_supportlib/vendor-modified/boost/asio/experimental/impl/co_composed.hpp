@@ -2,7 +2,7 @@
 // experimental/impl/co_composed.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2023 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -34,6 +34,12 @@
 #else // defined(BOOST_ASIO_HAS_STD_COROUTINE)
 # include <experimental/coroutine>
 #endif // defined(BOOST_ASIO_HAS_STD_COROUTINE)
+
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#  include <boost/asio/detail/source_location.hpp>
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
 
 #include <boost/asio/detail/push_options.hpp>
 
@@ -839,14 +845,32 @@ public:
   }
 
   template <async_operation Op>
-  auto await_transform(Op&& op)
+  auto await_transform(Op&& op
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+      , boost::asio::detail::source_location location
+        = boost::asio::detail::source_location::current()
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+    )
   {
     class [[nodiscard]] awaitable
     {
     public:
-      awaitable(Op&& op, co_composed_promise& promise)
+      awaitable(Op&& op, co_composed_promise& promise
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+          , const boost::asio::detail::source_location& location
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+        )
         : op_(std::forward<Op>(op)),
           promise_(promise)
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+        , location_(location)
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
       {
       }
 
@@ -863,6 +887,14 @@ public:
           promise_.state_.on_suspend_->fn_ =
             [](void* p)
             {
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+              BOOST_ASIO_HANDLER_LOCATION((
+                  static_cast<awaitable*>(p)->location_.file_name(),
+                  static_cast<awaitable*>(p)->location_.line(),
+                  static_cast<awaitable*>(p)->location_.function_name()));
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
               std::forward<Op>(static_cast<awaitable*>(p)->op_)(
                   co_composed_handler<Executors, Handler,
                     Return, completion_signature_of_t<Op>>(
@@ -880,10 +912,21 @@ public:
     private:
       Op&& op_;
       co_composed_promise& promise_;
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+      boost::asio::detail::source_location location_;
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
     };
 
     state_.check_for_cancellation_on_transform();
-    return awaitable{std::forward<Op>(op), *this};
+    return awaitable{std::forward<Op>(op), *this
+#if defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+# if defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+        , location
+# endif // defined(BOOST_ASIO_HAS_SOURCE_LOCATION)
+#endif // defined(BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+      };
   }
 
   template <typename... Args>

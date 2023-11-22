@@ -2,7 +2,7 @@
 // detail/impl/signal_set_service.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2023 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -55,12 +55,16 @@ struct signal_state
 
   // A count of the number of objects that are registered for each signal.
   std::size_t registration_count_[max_signal_number];
+
+  // The flags used for each registered signal.
+  signal_set_base::flags_t flags_[max_signal_number];
 };
 
 signal_state* get_signal_state()
 {
   static signal_state state = {
-    BOOST_ASIO_STATIC_MUTEX_INIT, -1, -1, false, 0, { 0 } };
+    BOOST_ASIO_STATIC_MUTEX_INIT, -1, -1, false, 0,
+    { 0 }, { signal_set_base::flags_t() } };
   return &state;
 }
 
@@ -307,8 +311,8 @@ void signal_set_service::destroy(
 }
 
 boost::system::error_code signal_set_service::add(
-    signal_set_service::implementation_type& impl,
-    int signal_number, boost::system::error_code& ec)
+    signal_set_service::implementation_type& impl, int signal_number,
+    signal_set_base::flags_t f, boost::system::error_code& ec)
 {
   // Check that the signal number is valid.
   if (signal_number < 0 || signal_number >= max_signal_number)
@@ -316,6 +320,15 @@ boost::system::error_code signal_set_service::add(
     ec = boost::asio::error::invalid_argument;
     return ec;
   }
+
+  // Check that the specified flags are supported.
+#if !defined(BOOST_ASIO_HAS_SIGACTION)
+  if (f != signal_set_base::flags::dont_care)
+  {
+    ec = boost::asio::error::operation_not_supported;
+    return ec;
+  }
+#endif // !defined(BOOST_ASIO_HAS_SIGACTION)
 
   signal_state* state = get_signal_state();
   static_mutex::scoped_lock lock(state->mutex_);
@@ -344,6 +357,8 @@ boost::system::error_code signal_set_service::add(
       memset(&sa, 0, sizeof(sa));
       sa.sa_handler = boost_asio_signal_handler;
       sigfillset(&sa.sa_mask);
+      if (f != signal_set_base::flags::dont_care)
+        sa.sa_flags = static_cast<int>(f);
       if (::sigaction(signal_number, &sa, 0) == -1)
 # else // defined(BOOST_ASIO_HAS_SIGACTION)
       if (::signal(signal_number, boost_asio_signal_handler) == SIG_ERR)
@@ -358,7 +373,39 @@ boost::system::error_code signal_set_service::add(
         delete new_registration;
         return ec;
       }
+# if defined(BOOST_ASIO_HAS_SIGACTION)
+      state->flags_[signal_number] = f;
+# endif // defined(BOOST_ASIO_HAS_SIGACTION)
     }
+# if defined(BOOST_ASIO_HAS_SIGACTION)
+    // Otherwise check to see if the flags have changed.
+    else if (f != signal_set_base::flags::dont_care)
+    {
+      if (f != state->flags_[signal_number])
+      {
+        using namespace std; // For memset.
+        if (state->flags_[signal_number] != signal_set_base::flags::dont_care)
+        {
+          ec = boost::asio::error::invalid_argument;
+          delete new_registration;
+          return ec;
+        }
+        struct sigaction sa;
+        memset(&sa, 0, sizeof(sa));
+        sa.sa_handler = boost_asio_signal_handler;
+        sigfillset(&sa.sa_mask);
+        sa.sa_flags = static_cast<int>(f);
+        if (::sigaction(signal_number, &sa, 0) == -1)
+        {
+          ec = boost::system::error_code(errno,
+              boost::asio::error::get_system_category());
+          delete new_registration;
+          return ec;
+        }
+        state->flags_[signal_number] = f;
+      }
+    }
+# endif // defined(BOOST_ASIO_HAS_SIGACTION)
 #endif // defined(BOOST_ASIO_HAS_SIGNAL) || defined(BOOST_ASIO_HAS_SIGACTION)
 
     // Record the new registration in the set.
@@ -427,6 +474,9 @@ boost::system::error_code signal_set_service::remove(
 # endif // defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
         return ec;
       }
+# if defined(BOOST_ASIO_HAS_SIGACTION)
+      state->flags_[signal_number] = signal_set_base::flags_t();
+# endif // defined(BOOST_ASIO_HAS_SIGACTION)
     }
 #endif // defined(BOOST_ASIO_HAS_SIGNAL) || defined(BOOST_ASIO_HAS_SIGACTION)
 
@@ -481,6 +531,9 @@ boost::system::error_code signal_set_service::clear(
 # endif // defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
         return ec;
       }
+# if defined(BOOST_ASIO_HAS_SIGACTION)
+      state->flags_[reg->signal_number_] = signal_set_base::flags_t();
+# endif // defined(BOOST_ASIO_HAS_SIGACTION)
     }
 #endif // defined(BOOST_ASIO_HAS_SIGNAL) || defined(BOOST_ASIO_HAS_SIGACTION)
 

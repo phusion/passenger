@@ -86,9 +86,11 @@ template<class T, unsigned Bm> struct update_modifiers
     };
 };
 
+#ifndef __cpp_inline_variables
 template<class T, unsigned Bm> template<class D> constexpr decltype(D::pointer) update_modifiers<T, Bm>::fn<D>::pointer;
 template<class T, unsigned Bm> template<class D> constexpr decltype(D::name) update_modifiers<T, Bm>::fn<D>::name;
 template<class T, unsigned Bm> template<class D> constexpr unsigned update_modifiers<T, Bm>::fn<D>::modifiers;
+#endif
 
 template<class D> struct gather_virtual_bases_impl;
 template<class D> using gather_virtual_bases = typename gather_virtual_bases_impl<D>::type;

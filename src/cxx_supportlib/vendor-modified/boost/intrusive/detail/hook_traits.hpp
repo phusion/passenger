@@ -28,6 +28,7 @@
 #include <boost/intrusive/detail/mpl.hpp>
 #include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/intrusive/detail/node_holder.hpp>
+#include <boost/assert.hpp>
 
 namespace boost {
 namespace intrusive {

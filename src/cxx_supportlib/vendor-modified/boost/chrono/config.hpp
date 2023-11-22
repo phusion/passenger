@@ -12,6 +12,7 @@
 #ifndef BOOST_CHRONO_CONFIG_HPP
 #define BOOST_CHRONO_CONFIG_HPP
 
+#include <boost/chrono/detail/requires_cxx11.hpp>
 #include <boost/config.hpp>
 #include <boost/predef.h>
 

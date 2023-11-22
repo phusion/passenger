@@ -152,6 +152,39 @@
 //#define BOOST_CONTAINER_USE_STD_EXCEPTIONS
 
 
+namespace boost {
+namespace container {
 
+template <typename T1>
+BOOST_FORCEINLINE BOOST_CXX14_CONSTEXPR void ignore(T1 const&)
+{}
+
+}} //namespace boost::container {
+
+#if !(defined BOOST_NO_EXCEPTIONS)
+#    define BOOST_CONTAINER_TRY { try
+#    define BOOST_CONTAINER_CATCH(x) catch(x)
+#    define BOOST_CONTAINER_RETHROW throw;
+#    define BOOST_CONTAINER_CATCH_END }
+#else
+#    if !defined(BOOST_MSVC) || BOOST_MSVC >= 1900
+#        define BOOST_CONTAINER_TRY { if (true)
+#        define BOOST_CONTAINER_CATCH(x) else if (false)
+#    else
+// warning C4127: conditional expression is constant
+#        define BOOST_CONTAINER_TRY { \
+             __pragma(warning(push)) \
+             __pragma(warning(disable: 4127)) \
+             if (true) \
+             __pragma(warning(pop))
+#        define BOOST_CONTAINER_CATCH(x) else \
+             __pragma(warning(push)) \
+             __pragma(warning(disable: 4127)) \
+             if (false) \
+             __pragma(warning(pop))
+#    endif
+#    define BOOST_CONTAINER_RETHROW
+#    define BOOST_CONTAINER_CATCH_END }
+#endif
 
 #endif   //#ifndef BOOST_CONTAINER_DETAIL_WORKAROUND_HPP

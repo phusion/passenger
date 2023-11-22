@@ -30,8 +30,7 @@
 // move/detail
 #include <boost/move/detail/meta_utils.hpp>
 // other
-#include <boost/assert.hpp>
-#include <boost/static_assert.hpp>
+#include <cassert>
 // std
 #include <cstddef>
 
@@ -1238,7 +1237,7 @@ struct aligned_next;
 template<std::size_t Len, std::size_t Align, class T>
 struct aligned_next<Len, Align, T, true>
 {
-   BOOST_STATIC_ASSERT((alignment_of<T>::value == Align));
+   BOOST_MOVE_STATIC_ASSERT((alignment_of<T>::value == Align));
    typedef aligned_union<T, Len> type;
 };
 
@@ -1278,13 +1277,13 @@ template<std::size_t Len, std::size_t Align = alignment_of<max_align_t>::value>
 struct aligned_storage
 {
    //Sanity checks for input parameters
-   BOOST_STATIC_ASSERT(Align > 0);
+   BOOST_MOVE_STATIC_ASSERT(Align > 0);
 
    //Sanity checks for output type
    typedef typename aligned_storage_impl<Len ? Len : 1, Align>::type type;
    static const std::size_t value = alignment_of<type>::value;
-   BOOST_STATIC_ASSERT(value >= Align);
-   BOOST_STATIC_ASSERT((value % Align) == 0);
+   BOOST_MOVE_STATIC_ASSERT(value >= Align);
+   BOOST_MOVE_STATIC_ASSERT((value % Align) == 0);
 
    //Just in case someone instantiates aligned_storage
    //instead of aligned_storage::type (typical error).

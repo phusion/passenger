@@ -26,7 +26,7 @@
 /**/
 #else
 #define BOOST_PARAMETER_MATCH_DEFAULTS(ArgTypes)
-#endif 
+#endif
 
 #include <boost/parameter/aux_/preprocessor/seq_enum.hpp>
 

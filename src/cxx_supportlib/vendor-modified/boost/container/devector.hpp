@@ -15,11 +15,9 @@
 #include <boost/container/detail/config_begin.hpp>
 #include <boost/container/detail/workaround.hpp>
 
-//#include <algorithm>
 #include <cstring> // memcpy
 
 #include <boost/assert.hpp>
-#include <boost/type_traits/aligned_storage.hpp>
 
 #include <boost/container/detail/copy_move_algo.hpp>
 #include <boost/container/new_allocator.hpp> //new_allocator
@@ -49,8 +47,6 @@
 #include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/move/algo/detail/merge.hpp>
 #include <boost/move/detail/force_ptr.hpp>
-
-#include <boost/type_traits/is_nothrow_move_constructible.hpp>
 
 //std
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
@@ -350,17 +346,17 @@ class devector
       )
       : m_(allocator)
    {
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          while (first != last) {
             this->emplace_back(*first++);
          }
          BOOST_ASSERT(invariants_ok());
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          this->destroy_elements(m_.buffer + m_.front_idx, m_.buffer + m_.back_idx);
          this->deallocate_buffer();
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED

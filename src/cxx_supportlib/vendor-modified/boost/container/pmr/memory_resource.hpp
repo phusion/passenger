@@ -54,7 +54,7 @@ class memory_resource
    {  return this->do_deallocate(p, bytes, alignment);  }
 
    //! <b>Effects</b>: Equivalent to
-   //! `return return do_is_equal(other);`
+   //! `return do_is_equal(other);`
    bool is_equal(const memory_resource& other) const BOOST_NOEXCEPT
    {  return this->do_is_equal(other);  }
    

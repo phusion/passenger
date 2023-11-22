@@ -60,7 +60,6 @@
 #include <boost/move/detail/iterator_to_raw_pointer.hpp>
 // other
 #include <boost/assert.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 // std
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
 #include <initializer_list>
@@ -2091,38 +2090,38 @@ class stable_vector
    {
       node_type *praw = ::new(boost::movelib::iterator_to_raw_pointer(p), boost_container_new_t())
          node_type(index_traits_type::ptr_to_node_base_ptr(*up_index));
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          //This can throw
          boost::container::construct_in_place
             ( this->priv_node_alloc()
             , praw->get_data_ptr()
             , it);
       }
-      BOOST_CATCH(...) {
+      BOOST_CONTAINER_CATCH(...) {
          praw->destroy_header();
          this->priv_node_alloc().deallocate(p, 1);
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    template<class ValueConvertible>
    void priv_build_node_from_convertible(const node_ptr &p, BOOST_FWD_REF(ValueConvertible) value_convertible)
    {
       node_type *praw = ::new(boost::movelib::iterator_to_raw_pointer(p), boost_container_new_t()) node_type;
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          //This can throw
          boost::container::allocator_traits<node_allocator_type>::construct
             ( this->priv_node_alloc()
             , p->get_data_ptr()
             , ::boost::forward<ValueConvertible>(value_convertible));
       }
-      BOOST_CATCH(...) {
+      BOOST_CONTAINER_CATCH(...) {
          praw->destroy_header();
          this->priv_node_alloc().deallocate(p, 1);
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    void priv_swap_members(stable_vector &x)

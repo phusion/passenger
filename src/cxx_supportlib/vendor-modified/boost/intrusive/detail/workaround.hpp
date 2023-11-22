@@ -55,4 +55,30 @@
    #define BOOST_INTRUSIVE_FORCEINLINE BOOST_FORCEINLINE
 #endif
 
+#if !(defined BOOST_NO_EXCEPTIONS)
+#    define BOOST_INTRUSIVE_TRY { try
+#    define BOOST_INTRUSIVE_CATCH(x) catch(x)
+#    define BOOST_INTRUSIVE_RETHROW throw;
+#    define BOOST_INTRUSIVE_CATCH_END }
+#else
+#    if !defined(BOOST_MSVC) || BOOST_MSVC >= 1900
+#        define BOOST_INTRUSIVE_TRY { if (true)
+#        define BOOST_INTRUSIVE_CATCH(x) else if (false)
+#    else
+// warning C4127: conditional expression is constant
+#        define BOOST_INTRUSIVE_TRY { \
+             __pragma(warning(push)) \
+             __pragma(warning(disable: 4127)) \
+             if (true) \
+             __pragma(warning(pop))
+#        define BOOST_INTRUSIVE_CATCH(x) else \
+             __pragma(warning(push)) \
+             __pragma(warning(disable: 4127)) \
+             if (false) \
+             __pragma(warning(pop))
+#    endif
+#    define BOOST_INTRUSIVE_RETHROW
+#    define BOOST_INTRUSIVE_CATCH_END }
+#endif
+
 #endif   //#ifndef BOOST_INTRUSIVE_DETAIL_WORKAROUND_HPP

@@ -183,6 +183,7 @@
 #  define BOOST_NO_CXX11_REF_QUALIFIERS
 #  define BOOST_NO_CXX11_USER_DEFINED_LITERALS
 #  define BOOST_NO_CXX11_ALIGNAS
+#  define BOOST_NO_CXX11_ALIGNOF
 #  define BOOST_NO_CXX11_INLINE_NAMESPACES
 #  define BOOST_NO_CXX11_CHAR16_T
 #  define BOOST_NO_CXX11_CHAR32_T
@@ -270,7 +271,7 @@
 #ifndef BOOST_NO_CXX11_THREAD_LOCAL
 #  define BOOST_NO_CXX11_THREAD_LOCAL
 #endif
-#ifndef BOOST_NO_SFINAE_EXPR
+#if !defined(BOOST_NO_SFINAE_EXPR) && !defined(_MSVC_LANG)
 #  define BOOST_NO_SFINAE_EXPR
 #endif
 #ifndef BOOST_NO_CXX11_REF_QUALIFIERS
@@ -364,6 +365,8 @@
 #     define BOOST_COMPILER_VERSION 14.1
 #   elif _MSC_VER < 1930
 #     define BOOST_COMPILER_VERSION 14.2
+#   elif _MSC_VER < 1940
+#     define BOOST_COMPILER_VERSION 14.3
 #   else
 #     define BOOST_COMPILER_VERSION _MSC_VER
 #   endif
@@ -375,8 +378,8 @@
 #include <boost/config/pragma_message.hpp>
 
 //
-// last known and checked version is 19.20.27508 (VC++ 2019 RC3):
-#if (_MSC_VER > 1920)
+// last known and checked version is 19.3x (VS2022):
+#if (_MSC_VER >= 1940)
 #  if defined(BOOST_ASSERT_CONFIG)
 #     error "Boost.Config is older than your current compiler version."
 #  elif !defined(BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE)

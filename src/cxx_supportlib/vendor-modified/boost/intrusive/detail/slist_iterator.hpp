@@ -27,6 +27,7 @@
 #include <boost/intrusive/detail/std_fwd.hpp>
 #include <boost/intrusive/detail/iiterator.hpp>
 #include <boost/intrusive/detail/mpl.hpp>
+#include <boost/static_assert.hpp>
 
 namespace boost {
 namespace intrusive {

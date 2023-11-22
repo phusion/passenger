@@ -2,7 +2,7 @@
 // detail/impl/kqueue_reactor.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2023 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2005 Stefan Arentz (stefan at soze dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -191,14 +191,23 @@ void kqueue_reactor::move_descriptor(socket_type,
   source_descriptor_data = 0;
 }
 
+void kqueue_reactor::call_post_immediate_completion(
+    operation* op, bool is_continuation, const void* self)
+{
+  static_cast<const kqueue_reactor*>(self)->post_immediate_completion(
+      op, is_continuation);
+}
+
 void kqueue_reactor::start_op(int op_type, socket_type descriptor,
     kqueue_reactor::per_descriptor_data& descriptor_data, reactor_op* op,
-    bool is_continuation, bool allow_speculative)
+    bool is_continuation, bool allow_speculative,
+    void (*on_immediate)(operation*, bool, const void*),
+    const void* immediate_arg)
 {
   if (!descriptor_data)
   {
     op->ec_ = boost::asio::error::bad_descriptor;
-    post_immediate_completion(op, is_continuation);
+    on_immediate(op, is_continuation, immediate_arg);
     return;
   }
 
@@ -206,7 +215,7 @@ void kqueue_reactor::start_op(int op_type, socket_type descriptor,
 
   if (descriptor_data->shutdown_)
   {
-    post_immediate_completion(op, is_continuation);
+    on_immediate(op, is_continuation, immediate_arg);
     return;
   }
 
@@ -221,7 +230,7 @@ void kqueue_reactor::start_op(int op_type, socket_type descriptor,
       if (op->perform())
       {
         descriptor_lock.unlock();
-        scheduler_.post_immediate_completion(op, is_continuation);
+        on_immediate(op, is_continuation, immediate_arg);
         return;
       }
 
@@ -240,7 +249,7 @@ void kqueue_reactor::start_op(int op_type, socket_type descriptor,
         {
           op->ec_ = boost::system::error_code(errno,
               boost::asio::error::get_system_category());
-          scheduler_.post_immediate_completion(op, is_continuation);
+          on_immediate(op, is_continuation, immediate_arg);
           return;
         }
       }

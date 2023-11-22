@@ -10,7 +10,7 @@
 #include <boost/parameter/aux_/tagged_argument.hpp>
 #include <boost/parameter/config.hpp>
 
-namespace boost { namespace parameter { namespace aux { 
+namespace boost { namespace parameter { namespace aux {
 
     template <
         typename Keyword
@@ -34,7 +34,7 @@ namespace boost { namespace parameter { namespace aux {
 
 #include <boost/mpl/bool.hpp>
 
-namespace boost { namespace parameter { namespace aux { 
+namespace boost { namespace parameter { namespace aux {
 
     template <typename Keyword, typename ActualArg>
     struct tag_ref<Keyword,ActualArg,::boost::mpl::false_>

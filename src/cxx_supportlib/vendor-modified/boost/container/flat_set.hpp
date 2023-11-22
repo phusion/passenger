@@ -1097,7 +1097,7 @@ class flat_set
    //!
    //! <b>Postcondition</b>: this->empty()
    //!
-   //! <b>Throws</b>: If secuence_type's move constructor throws 
+   //! <b>Throws</b>: If sequence_type's move constructor throws 
    sequence_type extract_sequence();
 
    #endif   //#ifdef BOOST_CONTAINER_DOXYGEN_INVOKED

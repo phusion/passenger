@@ -12,6 +12,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include <boost/bind/detail/requires_cxx11.hpp>
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
 #include <utility>

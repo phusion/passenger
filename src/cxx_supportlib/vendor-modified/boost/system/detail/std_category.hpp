@@ -11,6 +11,7 @@
 // See library home page at http://www.boost.org/libs/system
 
 #include <boost/system/detail/error_category.hpp>
+#include <boost/config.hpp>
 #include <system_error>
 
 //
@@ -23,6 +24,8 @@ namespace system
 
 namespace detail
 {
+
+template<unsigned Id> struct id_wrapper {};
 
 class BOOST_SYMBOL_VISIBLE std_category: public std::error_category
 {
@@ -39,20 +42,22 @@ public:
 
 public:
 
-    explicit std_category( boost::system::error_category const * pc, unsigned id ): pc_( pc )
+    template<unsigned Id>
+    explicit std_category( boost::system::error_category const * pc, id_wrapper<Id> ): pc_( pc )
     {
-        if( id != 0 )
-        {
 #if defined(_MSC_VER) && defined(_CPPLIB_VER) && _MSC_VER >= 1900 && _MSC_VER < 2000
 
-            // Poking into the protected _Addr member of std::error_category
-            // is not a particularly good programming practice, but what can
-            // you do
+        // We used to assign to the protected _Addr member of std::error_category
+        // here when Id != 0, but this should never happen now because this code
+        // path is no longer used
 
-            _Addr = id;
+#if !defined(BOOST_NO_CXX11_STATIC_ASSERT)
+
+        static_assert( Id == 0, "This constructor should only be called with Id == 0 under MS STL 14.0+" );
 
 #endif
-        }
+
+#endif
     }
 
     const char * name() const BOOST_NOEXCEPT BOOST_OVERRIDE

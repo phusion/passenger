@@ -16,8 +16,8 @@
 
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
+#include <boost/intrusive/detail/workaround.hpp>
 #include <boost/intrusive/detail/algo_type.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 #include <cstddef>
 
 #if defined(BOOST_HAS_PRAGMA_ONCE)
@@ -405,7 +405,7 @@ class circular_list_algorithms
             new_f = cur;
             bcur = cur;
             cur  = node_traits::get_next(cur);
-            BOOST_TRY{
+            BOOST_INTRUSIVE_TRY{
                //Main loop
                while(cur != end){
                   if(pred(cur)){ //Might throw
@@ -426,12 +426,12 @@ class circular_list_algorithms
                   }
                }
             }
-            BOOST_CATCH(...){
+            BOOST_INTRUSIVE_CATCH(...){
                node_traits::set_next    (last_to_remove, new_f);
                node_traits::set_previous(new_f, last_to_remove);
-               BOOST_RETHROW;
+               BOOST_INTRUSIVE_RETHROW;
             }
-            BOOST_CATCH_END
+            BOOST_INTRUSIVE_CATCH_END
             node_traits::set_next(last_to_remove, new_f);
             node_traits::set_previous(new_f, last_to_remove);
             break;

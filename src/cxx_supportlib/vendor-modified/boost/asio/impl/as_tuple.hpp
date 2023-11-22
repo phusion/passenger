@@ -2,7 +2,7 @@
 // impl/as_tuple.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2023 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -176,10 +176,6 @@ struct async_result<as_tuple_t<CompletionToken>, Signatures...>
   : async_result<CompletionToken,
       typename detail::as_tuple_signature<Signatures>::type...>
 {
-  typedef async_result<CompletionToken,
-    typename detail::as_tuple_signature<Signatures>::type...>
-      base_async_result;
-
   template <typename Initiation>
   struct init_wrapper
   {
@@ -204,23 +200,94 @@ struct async_result<as_tuple_t<CompletionToken>, Signatures...>
   };
 
   template <typename Initiation, typename RawCompletionToken, typename... Args>
-  static BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(CompletionToken,
-      typename detail::as_tuple_signature<Signatures>::type...,
-      (base_async_result::initiate(
-        declval<init_wrapper<typename decay<Initiation>::type> >(),
-        declval<CompletionToken>(),
-        declval<BOOST_ASIO_MOVE_ARG(Args)>()...)))
+  static BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(CompletionToken,
+      typename detail::as_tuple_signature<Signatures>::type...)
   initiate(
       BOOST_ASIO_MOVE_ARG(Initiation) initiation,
       BOOST_ASIO_MOVE_ARG(RawCompletionToken) token,
       BOOST_ASIO_MOVE_ARG(Args)... args)
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<
+        typename conditional<
+          is_const<typename remove_reference<RawCompletionToken>::type>::value,
+            const CompletionToken, CompletionToken>::type,
+        typename detail::as_tuple_signature<Signatures>::type...>(
+          init_wrapper<typename decay<Initiation>::type>(
+            BOOST_ASIO_MOVE_CAST(Initiation)(initiation)),
+          token.token_, BOOST_ASIO_MOVE_CAST(Args)(args)...)))
   {
-    return base_async_result::initiate(
+    return async_initiate<
+      typename conditional<
+        is_const<typename remove_reference<RawCompletionToken>::type>::value,
+          const CompletionToken, CompletionToken>::type,
+      typename detail::as_tuple_signature<Signatures>::type...>(
         init_wrapper<typename decay<Initiation>::type>(
           BOOST_ASIO_MOVE_CAST(Initiation)(initiation)),
         token.token_, BOOST_ASIO_MOVE_CAST(Args)(args)...);
   }
 };
+
+#if defined(BOOST_ASIO_MSVC)
+
+// Workaround for MSVC internal compiler error.
+
+template <typename CompletionToken, typename Signature>
+struct async_result<as_tuple_t<CompletionToken>, Signature>
+  : async_result<CompletionToken,
+      typename detail::as_tuple_signature<Signature>::type>
+{
+  template <typename Initiation>
+  struct init_wrapper
+  {
+    init_wrapper(Initiation init)
+      : initiation_(BOOST_ASIO_MOVE_CAST(Initiation)(init))
+    {
+    }
+
+    template <typename Handler, typename... Args>
+    void operator()(
+        BOOST_ASIO_MOVE_ARG(Handler) handler,
+        BOOST_ASIO_MOVE_ARG(Args)... args)
+    {
+      BOOST_ASIO_MOVE_CAST(Initiation)(initiation_)(
+          detail::as_tuple_handler<
+            typename decay<Handler>::type>(
+              BOOST_ASIO_MOVE_CAST(Handler)(handler)),
+          BOOST_ASIO_MOVE_CAST(Args)(args)...);
+    }
+
+    Initiation initiation_;
+  };
+
+  template <typename Initiation, typename RawCompletionToken, typename... Args>
+  static BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(CompletionToken,
+      typename detail::as_tuple_signature<Signatures>::type...)
+  initiate(
+      BOOST_ASIO_MOVE_ARG(Initiation) initiation,
+      BOOST_ASIO_MOVE_ARG(RawCompletionToken) token,
+      BOOST_ASIO_MOVE_ARG(Args)... args)
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      async_initiate<
+        typename conditional<
+          is_const<typename remove_reference<RawCompletionToken>::type>::value,
+            const CompletionToken, CompletionToken>::type,
+        typename detail::as_tuple_signature<Signature>::type>(
+          init_wrapper<typename decay<Initiation>::type>(
+            BOOST_ASIO_MOVE_CAST(Initiation)(initiation)),
+          token.token_, BOOST_ASIO_MOVE_CAST(Args)(args)...)))
+  {
+    return async_initiate<
+      typename conditional<
+        is_const<typename remove_reference<RawCompletionToken>::type>::value,
+          const CompletionToken, CompletionToken>::type,
+      typename detail::as_tuple_signature<Signature>::type>(
+        init_wrapper<typename decay<Initiation>::type>(
+          BOOST_ASIO_MOVE_CAST(Initiation)(initiation)),
+        token.token_, BOOST_ASIO_MOVE_CAST(Args)(args)...);
+  }
+};
+
+#endif // defined(BOOST_ASIO_MSVC)
 
 template <template <typename, typename> class Associator,
     typename Handler, typename DefaultCandidate>

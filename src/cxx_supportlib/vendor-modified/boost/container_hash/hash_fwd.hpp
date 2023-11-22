@@ -18,6 +18,7 @@ template<class T> struct is_range;
 template<class T> struct is_contiguous_range;
 template<class T> struct is_unordered_range;
 template<class T> struct is_described_class;
+template<class T> struct is_tuple_like;
 
 } // namespace container_hash
 

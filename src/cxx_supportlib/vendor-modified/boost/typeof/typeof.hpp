@@ -13,6 +13,7 @@
 #   error both typeof emulation and native mode requested
 #endif
 
+#include <boost/typeof/detail/requires_cxx11.hpp>
 #include <boost/config.hpp>
 #include <boost/config/workaround.hpp>
 

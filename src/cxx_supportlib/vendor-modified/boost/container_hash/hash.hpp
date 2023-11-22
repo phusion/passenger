@@ -11,11 +11,12 @@
 #define BOOST_FUNCTIONAL_HASH_HASH_HPP
 
 #include <boost/container_hash/hash_fwd.hpp>
+#include <boost/container_hash/detail/requires_cxx11.hpp>
 #include <boost/container_hash/is_range.hpp>
 #include <boost/container_hash/is_contiguous_range.hpp>
 #include <boost/container_hash/is_unordered_range.hpp>
 #include <boost/container_hash/is_described_class.hpp>
-#include <boost/container_hash/detail/hash_tuple.hpp>
+#include <boost/container_hash/detail/hash_tuple_like.hpp>
 #include <boost/container_hash/detail/hash_mix.hpp>
 #include <boost/container_hash/detail/hash_range.hpp>
 #include <boost/type_traits/is_enum.hpp>
@@ -27,6 +28,7 @@
 #include <boost/type_traits/enable_if.hpp>
 #include <boost/type_traits/conjunction.hpp>
 #include <boost/type_traits/is_union.hpp>
+#include <boost/type_traits/is_same.hpp>
 #include <boost/describe/bases.hpp>
 #include <boost/describe/members.hpp>
 #include <boost/cstdint.hpp>
@@ -117,7 +119,7 @@ namespace boost
                 std::size_t seed = 0;
 
                 seed = static_cast<std::size_t>( v >> 32 ) + hash_detail::hash_mix( seed );
-                seed = static_cast<std::size_t>( v ) + hash_detail::hash_mix( seed );
+                seed = static_cast<std::size_t>( v  & 0xFFFFFFFF ) + hash_detail::hash_mix( seed );
 
                 return seed;
             }
@@ -492,6 +494,19 @@ namespace boost
         boost::hash_combine( seed, &v.category() );
 
         return seed;
+    }
+
+#endif
+
+    // std::nullptr_t
+
+#if !defined(BOOST_NO_CXX11_NULLPTR)
+
+    template <typename T>
+    typename boost::enable_if_<boost::is_same<T, std::nullptr_t>::value, std::size_t>::type
+        hash_value( T const& /*v*/ )
+    {
+        return boost::hash_value( static_cast<void*>( nullptr ) );
     }
 
 #endif

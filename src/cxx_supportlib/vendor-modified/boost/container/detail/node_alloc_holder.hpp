@@ -45,8 +45,6 @@
 #if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
 #include <boost/move/detail/fwd_macros.hpp>
 #endif
-// other
-#include <boost/core/no_exceptions_support.hpp>
 
 
 namespace boost {
@@ -417,26 +415,26 @@ struct node_alloc_holder
    NodePtr create_node_from_key(BOOST_FWD_REF(KeyConvertible) key)
    {
       NodePtr p = this->allocate_one();
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          ::new(boost::movelib::iterator_to_raw_pointer(p), boost_container_new_t()) Node;
          NodeAlloc &na = this->node_alloc();
          node_allocator_traits_type::construct
             (na, dtl::addressof(p->get_real_data().first), boost::forward<KeyConvertible>(key));
-         BOOST_TRY{
+         BOOST_CONTAINER_TRY{
             node_allocator_traits_type::construct(na, dtl::addressof(p->get_real_data().second));
          }
-         BOOST_CATCH(...){
+         BOOST_CONTAINER_CATCH(...){
             node_allocator_traits_type::destroy(na, dtl::addressof(p->get_real_data().first));
-            BOOST_RETHROW;
+            BOOST_CONTAINER_RETHROW;
          }
-         BOOST_CATCH_END
+         BOOST_CONTAINER_CATCH_END
       }
-      BOOST_CATCH(...) {
+      BOOST_CONTAINER_CATCH(...) {
          p->destroy_header();
          this->node_alloc().deallocate(p, 1);
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
       return (p);
    }
 
@@ -470,7 +468,7 @@ struct node_alloc_holder
          chain.clear();
 
          Node *p = 0;
-            BOOST_TRY{
+            BOOST_CONTAINER_TRY{
             Deallocator node_deallocator(NodePtr(), nalloc);
             dtl::scoped_node_destructor<NodeAlloc> sdestructor(nalloc, 0);
             while(n){
@@ -490,12 +488,12 @@ struct node_alloc_holder
             sdestructor.release();
             node_deallocator.release();
          }
-         BOOST_CATCH(...){
+         BOOST_CONTAINER_CATCH(...){
             chain.incorporate_after(chain.last(), &*itbeg, &*itlast, n);
             node_allocator_version_traits_type::deallocate_individual(this->node_alloc(), chain);
-            BOOST_RETHROW
+            BOOST_CONTAINER_RETHROW
          }
-         BOOST_CATCH_END
+         BOOST_CONTAINER_CATCH_END
       }
    }
 

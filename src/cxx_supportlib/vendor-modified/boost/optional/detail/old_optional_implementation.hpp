@@ -336,7 +336,7 @@ class optional_base : public optional_tag
     // No-throw (assuming T::~T() doesn't)
     void reset() BOOST_NOEXCEPT { destroy(); }
 
-    // **DEPPRECATED** Replaces the current value -if any- with 'val'
+    // **DEPRECATED** Replaces the current value -if any- with 'val'
     void reset ( argument_type val ) { assign(val); }
 
     // Returns a pointer to the value if this is initialized, otherwise,
@@ -542,7 +542,7 @@ class optional_base : public optional_tag
     //   Thus, the following overload is needed to properly handle the case when the 'lhs'
     //   is another optional.
     //
-    // For VC<=70 compilers this workaround dosen't work becasue the comnpiler issues and error
+    // For VC<=70 compilers this workaround doesn't work because the compiler issues and error
     // instead of choosing the wrong overload
     //
 #ifndef  BOOST_OPTIONAL_DETAIL_NO_RVALUE_REFERENCES
@@ -629,7 +629,7 @@ class optional_base : public optional_tag
 
     // If T is of reference type, trying to get a pointer to the held value must result in a compile-time error.
     // Decent compilers should disallow conversions from reference_content<T>* to T*, but just in case,
-    // the following olverloads are used to filter out the case and guarantee an error in case of T being a reference.
+    // the following overloads are used to filter out the case and guarantee an error in case of T being a reference.
     pointer_const_type cast_ptr( internal_type const* p, is_not_reference_tag ) const { return p ; }
     pointer_type       cast_ptr( internal_type *      p, is_not_reference_tag )       { return p ; }
     pointer_const_type cast_ptr( internal_type const* p, is_reference_tag     ) const { return &p->get() ; }

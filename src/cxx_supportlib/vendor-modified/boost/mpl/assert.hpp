@@ -297,7 +297,7 @@ BOOST_MPL_AUX_ASSERT_CONSTANT( \
       std::size_t \
     , BOOST_PP_CAT(mpl_assertion_in_line_,BOOST_MPL_AUX_PP_COUNTER()) = sizeof( \
           boost::mpl::assertion_failed<false>( \
-              boost::mpl::assert_arg( (void (*) pred)0, 1 ) \
+              boost::mpl::assert_arg( (void (*) pred)BOOST_NULLPTR, 1 ) \
             ) \
         ) \
     ) \
@@ -310,7 +310,7 @@ BOOST_MPL_AUX_ASSERT_CONSTANT( \
 enum { \
       BOOST_PP_CAT(mpl_assertion_in_line_,BOOST_MPL_AUX_PP_COUNTER()) = sizeof( \
           boost::mpl::assertion<false>::failed( \
-              boost::mpl::assert_not_arg( (void (*) pred)0, 1 ) \
+              boost::mpl::assert_not_arg( (void (*) pred)BOOST_NULLPTR, 1 ) \
             ) \
         ) \
 }\
@@ -321,7 +321,7 @@ BOOST_MPL_AUX_ASSERT_CONSTANT( \
       std::size_t \
     , BOOST_PP_CAT(mpl_assertion_in_line_,BOOST_MPL_AUX_PP_COUNTER()) = sizeof( \
           boost::mpl::assertion_failed<false>( \
-              boost::mpl::assert_not_arg( (void (*) pred)0, 1 ) \
+              boost::mpl::assert_not_arg( (void (*) pred)BOOST_NULLPTR, 1 ) \
             ) \
         ) \
    ) \

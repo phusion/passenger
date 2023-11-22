@@ -14,7 +14,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/core/enable_if.hpp>
-#include <boost/core/is_same.hpp>
+#include <boost/core/detail/is_same.hpp>
 #include <boost/assert.hpp>
 #include <boost/assert/source_location.hpp>
 #include <boost/throw_exception.hpp>
@@ -381,7 +381,7 @@ public:
     }
 
     template<class End> BOOST_CXX14_CONSTEXPR basic_string_view( Ch const* first, End last,
-        typename boost::enable_if<is_same<End, Ch const*> >::type* = 0 ) BOOST_NOEXCEPT: p_( first ), n_( last - first )
+        typename boost::enable_if<boost::core::detail::is_same<End, Ch const*> >::type* = 0 ) BOOST_NOEXCEPT: p_( first ), n_( last - first )
     {
         BOOST_ASSERT( last - first >= 0 );
     }
@@ -399,7 +399,7 @@ public:
 #endif
 
     template<class Ch2> basic_string_view( boost::basic_string_view<Ch2, std::char_traits<Ch2> > const& str,
-        typename boost::enable_if<is_same<Ch, Ch2> >::type* = 0 ) BOOST_NOEXCEPT: p_( str.data() ), n_( str.size() )
+        typename boost::enable_if<boost::core::detail::is_same<Ch, Ch2> >::type* = 0 ) BOOST_NOEXCEPT: p_( str.data() ), n_( str.size() )
     {
     }
 
@@ -430,7 +430,7 @@ public:
 
 #if !defined(BOOST_NO_CXX17_HDR_STRING_VIEW)
 
-    template<class Ch2, class En = typename boost::enable_if<is_same<Ch2, Ch> >::type>
+    template<class Ch2, class En = typename boost::enable_if<boost::core::detail::is_same<Ch2, Ch> >::type>
     operator std::basic_string_view<Ch2>() const BOOST_NOEXCEPT
     {
         return std::basic_string_view<Ch>( data(), size() );
@@ -439,7 +439,7 @@ public:
 #endif
 
     template<class Ch2> operator boost::basic_string_view<Ch2,
-        typename boost::enable_if<boost::core::is_same<Ch2, Ch>, std::char_traits<Ch> >::type> () const BOOST_NOEXCEPT
+        typename boost::enable_if<boost::core::detail::is_same<Ch2, Ch>, std::char_traits<Ch> >::type> () const BOOST_NOEXCEPT
     {
         return boost::basic_string_view< Ch, std::char_traits<Ch> >( data(), size() );
     }
@@ -605,7 +605,7 @@ public:
         if( cmp != 0 ) return cmp;
 
         if( size() == str.size() ) return 0;
-        
+
         return size() < str.size()? -1: +1;
     }
 

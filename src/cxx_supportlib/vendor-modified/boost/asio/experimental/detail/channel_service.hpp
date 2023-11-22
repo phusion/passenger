@@ -2,7 +2,7 @@
 // experimental/detail/channel_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2023 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -186,7 +186,6 @@ public:
   bool try_receive(implementation_type<Traits, Signatures...>& impl,
       BOOST_ASIO_MOVE_ARG(Handler) handler);
 
-  // Asynchronously send a new value into the channel.
   // Asynchronously receive a value from the channel.
   template <typename Traits, typename... Signatures,
       typename Handler, typename IoExecutor>
@@ -537,6 +536,7 @@ struct channel_service<Mutex>::implementation_type<
   implementation_type()
     : size_(0)
   {
+    first_.count_ = 0;
   }
 
   // Move from another buffer.
@@ -637,7 +637,7 @@ private:
   struct buffered_value
   {
     boost::system::error_code value_;
-    std::size_t count_ = 0;
+    std::size_t count_;
   };
 
   struct value_handler

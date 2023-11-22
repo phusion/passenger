@@ -19,7 +19,7 @@
 #include <boost/mp11/utility.hpp>
 #include <type_traits>
 
-namespace boost { namespace parameter { namespace aux { 
+namespace boost { namespace parameter { namespace aux {
 
     template <typename Keyword, typename Arg>
     struct tag_if_lvalue_reference
@@ -75,7 +75,7 @@ namespace boost { namespace parameter { namespace aux {
 #include <boost/type_traits/is_lvalue_reference.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
-namespace boost { namespace parameter { namespace aux { 
+namespace boost { namespace parameter { namespace aux {
 
     template <typename Keyword, typename ActualArg>
     struct tag
@@ -119,7 +119,7 @@ namespace boost { namespace parameter { namespace aux {
 
 #else   // !defined(BOOST_PARAMETER_HAS_PERFECT_FORWARDING)
 
-namespace boost { namespace parameter { namespace aux { 
+namespace boost { namespace parameter { namespace aux {
 
     template <
         typename Keyword
@@ -142,7 +142,7 @@ namespace boost { namespace parameter { namespace aux {
 #include <boost/mpl/bool.hpp>
 #include <boost/type_traits/remove_reference.hpp>
 
-namespace boost { namespace parameter { namespace aux { 
+namespace boost { namespace parameter { namespace aux {
 
     template <typename Keyword, typename Arg>
     struct tag<Keyword,Arg,::boost::mpl::false_>

@@ -66,7 +66,7 @@ void prevent_assignment_from_false_const_integral()
 {
 #ifndef BOOST_OPTIONAL_CONFIG_ALLOW_BINDING_TO_RVALUES
 #ifdef BOOST_OPTIONAL_CONFIG_NO_PROPER_ASSIGN_FROM_CONST_INT
-    // MSVC compiler without rvalue refernces: we need to disable the asignment from
+    // MSVC compiler without rvalue references: we need to disable the assignment from
     // const integral lvalue reference, as it may be an invalid temporary
     BOOST_STATIC_ASSERT_MSG(!is_const_integral<From>::value, 
                             "binding const lvalue references to integral types is disabled in this compiler");
@@ -130,7 +130,7 @@ public:
         explicit optional(const optional<U&>& rhs) BOOST_NOEXCEPT : ptr_(rhs.get_ptr()) {}
     optional(const optional& rhs) BOOST_NOEXCEPT : ptr_(rhs.get_ptr()) {}
     
-    // the following two implement a 'conditionally explicit' constructor: condition is a hack for buggy compilers with srewed conversion construction from const int
+    // the following two implement a 'conditionally explicit' constructor: condition is a hack for buggy compilers with screwed conversion construction from const int
     template <class U>
       explicit optional(U& rhs, BOOST_DEDUCED_TYPENAME boost::enable_if_c<detail::is_same_decayed<T, U>::value && detail::is_const_integral_bad_for_conversion<U>::value, bool>::type = true) BOOST_NOEXCEPT
       : ptr_(boost::addressof(rhs)) {}

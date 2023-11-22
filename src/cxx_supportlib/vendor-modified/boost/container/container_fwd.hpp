@@ -186,35 +186,6 @@ template <class Key
          ,class Allocator = void >
 class flat_multimap;
 
-//Experimental forward declarations, not implemented yet!
-template <class Key
-         ,class Hash //= hash<Key>,
-         ,class Pred = std::equal_to<Key>
-         ,class Compare  = std::less<Key>
-         ,class Allocator = void
-         ,class Options = void>
-class hash_set;
-
-template <class Key
-         ,class Compare  = std::less<Key>
-         ,class Allocator = void
-         ,class Options = void >
-class hash_multiset;
-
-template <class Key
-         ,class T
-         ,class Compare  = std::less<Key>
-         ,class Allocator = void
-         ,class Options = void >
-class hash_map;
-
-template <class Key
-         ,class T
-         ,class Compare  = std::less<Key>
-         ,class Allocator = void
-         ,class Options = void >
-class hash_multimap;
-
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
 
 //! Alias templates for small_flat_[multi]{set|map} using small_vector as container

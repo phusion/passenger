@@ -47,7 +47,7 @@ time2_demo contained this comment:
 #include <boost/chrono/detail/is_evenly_divisible_by.hpp>
 
 #include <boost/cstdint.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <boost/core/enable_if.hpp>
 #include <boost/detail/workaround.hpp>
 #include <boost/integer_traits.hpp>
 

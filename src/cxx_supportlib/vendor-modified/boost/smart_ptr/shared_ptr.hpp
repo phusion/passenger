@@ -14,6 +14,7 @@
 //  See http://www.boost.org/libs/smart_ptr/ for documentation.
 //
 
+#include <boost/smart_ptr/detail/requires_cxx11.hpp>
 #include <boost/smart_ptr/detail/shared_count.hpp>
 #include <boost/smart_ptr/detail/sp_convertible.hpp>
 #include <boost/smart_ptr/detail/sp_nullptr_t.hpp>

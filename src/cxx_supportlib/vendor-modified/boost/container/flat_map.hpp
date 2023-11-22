@@ -43,8 +43,6 @@
 // intrusive
 #include <boost/intrusive/detail/minimal_pair_header.hpp>      //pair
 #include <boost/intrusive/detail/minimal_less_equal_header.hpp>//less, equal
-//others
-#include <boost/core/no_exceptions_support.hpp>
 
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
 #include <initializer_list>

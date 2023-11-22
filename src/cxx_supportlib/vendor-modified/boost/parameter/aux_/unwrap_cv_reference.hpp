@@ -121,7 +121,7 @@ namespace boost { namespace parameter { namespace aux {
         typedef boost::mpl::bool_<
 #if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
             is_cv_reference_wrapper::
-#endif 
+#endif
         value> type;
     };
 

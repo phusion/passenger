@@ -328,6 +328,19 @@ void * simple_segregated_storage<SizeType>::try_malloc_n(
     void * & start, size_type n, const size_type partition_size)
 {
   void * iter = nextof(start);
+  if (n == 1)
+  {
+    void * next = nextof(iter);
+    if (next != static_cast<char *>(iter) + partition_size)
+    {
+      start = iter;
+      return 0;
+    }
+    else
+    {
+      return iter;
+    }
+  }
   while (--n != 0)
   {
     void * next = nextof(iter);

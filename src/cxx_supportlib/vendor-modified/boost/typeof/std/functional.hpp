@@ -5,8 +5,9 @@
 #ifndef BOOST_TYPEOF_STD_functional_hpp_INCLUDED
 #define BOOST_TYPEOF_STD_functional_hpp_INCLUDED
 
-#include <functional>
 #include <boost/typeof/typeof.hpp>
+#include <boost/config.hpp>
+#include <functional>
 
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
@@ -14,6 +15,7 @@
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::unary_function, 2)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::binary_function, 3)
 #endif//BOOST_NO_CXX98_FUNCTION_BASE
+
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::plus, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::minus, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::multiplies, 1)
@@ -29,8 +31,11 @@ BOOST_TYPEOF_REGISTER_TEMPLATE(std::less_equal, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::logical_and, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::logical_or, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::logical_not, 1)
+
+#if BOOST_CXX_VERSION < 202000L
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::unary_negate, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(std::binary_negate, 1)
+#endif
 
 #ifndef BOOST_NO_CXX98_BINDERS
 

@@ -11,8 +11,6 @@
 #ifndef BOOST_MOVE_MERGE_HPP
 #define BOOST_MOVE_MERGE_HPP
 
-#include <boost/core/ignore_unused.hpp>
-#include <boost/move/algo/move.hpp>
 #include <boost/move/adl_move_swap.hpp>
 #include <boost/move/algo/detail/basic_op.hpp>
 #include <boost/move/detail/iterator_traits.hpp>
@@ -20,7 +18,7 @@
 #include <boost/move/algo/predicate.hpp>
 #include <boost/move/algo/detail/search.hpp>
 #include <boost/move/detail/iterator_to_raw_pointer.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <cstddef>
 
 #if defined(BOOST_CLANG) || (defined(BOOST_GCC) && (BOOST_GCC >= 40600))
@@ -75,7 +73,7 @@ class adaptive_xbuf
    template<class RandIt>
    void push_back(RandIt first, size_type n)
    {
-      BOOST_ASSERT(m_capacity - m_size >= n);
+      assert(m_capacity - m_size >= n);
       boost::uninitialized_move(first, first+n, m_ptr+m_size);
       m_size += n;
    }
@@ -83,7 +81,7 @@ class adaptive_xbuf
    template<class RandIt>
    iterator add(RandIt it)
    {
-      BOOST_ASSERT(m_size < m_capacity);
+      assert(m_size < m_capacity);
       RandRawIt p_ret = m_ptr + m_size;
       ::new(&*p_ret) T(::boost::move(*it));
       ++m_size;
@@ -121,9 +119,9 @@ class adaptive_xbuf
 
    void initialize_until(size_type const sz, T &t)
    {
-      BOOST_ASSERT(m_size < m_capacity);
+      assert(m_size < m_capacity);
       if(m_size < sz){
-         BOOST_TRY
+         BOOST_MOVE_TRY
          {
             ::new((void*)&m_ptr[m_size]) T(::boost::move(t));
             ++m_size;
@@ -132,7 +130,7 @@ class adaptive_xbuf
             }
             t = ::boost::move(m_ptr[m_size-1]);
          }
-         BOOST_CATCH(...)
+         BOOST_MOVE_CATCH(...)
          {
             while(m_size)
             {
@@ -140,7 +138,7 @@ class adaptive_xbuf
                m_ptr[m_size].~T();
             }
          }
-         BOOST_CATCH_END
+         BOOST_MOVE_CATCH_END
       }
    }
 
@@ -234,7 +232,7 @@ class range_xbuf
    template<class RandIt>
    void move_assign(RandIt first, size_type n)
    {
-      BOOST_ASSERT(size_type(n) <= size_type(m_cap-m_first));
+      assert(size_type(n) <= size_type(m_cap-m_first));
       typedef typename iter_difference<RandIt>::type d_type;
       m_last = Op()(forward_t(), first, first+d_type(n), m_first);
    }
@@ -636,12 +634,12 @@ void op_merge_with_right_placed
    , InputOutIterator dest_first, InputOutIterator r_first, InputOutIterator r_last
    , Compare comp, Op op)
 {
-   BOOST_ASSERT((last - first) == (r_first - dest_first));
+   assert((last - first) == (r_first - dest_first));
    while ( first != last ) {
       if (r_first == r_last) {
          InputOutIterator end = op(forward_t(), first, last, dest_first);
-         BOOST_ASSERT(end == r_last);
-         boost::ignore_unused(end);
+         assert(end == r_last);
+         boost::movelib::ignore(end);
          return;
       }
       else if (comp(*r_first, *first)) {
@@ -673,12 +671,12 @@ void op_merge_with_left_placed
    , BidirIterator const r_first, BidirIterator r_last
    , Compare comp, Op op)
 {
-   BOOST_ASSERT((dest_last - last) == (r_last - r_first));
+   assert((dest_last - last) == (r_last - r_first));
    while( r_first != r_last ) {
       if(first == last) {
          BidirOutIterator res = op(backward_t(), r_first, r_last, dest_last);
-         BOOST_ASSERT(last == res);
-         boost::ignore_unused(res);
+         assert(last == res);
+         boost::movelib::ignore(res);
          return;
       }
       --r_last;
@@ -727,7 +725,7 @@ void uninitialized_merge_with_right_placed
    , InputOutIterator dest_first, InputOutIterator r_first, InputOutIterator r_last
    , Compare comp)
 {
-   BOOST_ASSERT((last - first) == (r_first - dest_first));
+   assert((last - first) == (r_first - dest_first));
    typedef typename iterator_traits<InputOutIterator>::value_type value_type;
    InputOutIterator const original_r_first = r_first;
 
@@ -741,8 +739,8 @@ void uninitialized_merge_with_right_placed
          }
          d.release();
          InputOutIterator end = ::boost::move(first, last, original_r_first);
-         BOOST_ASSERT(end == r_last);
-         boost::ignore_unused(end);
+         assert(end == r_last);
+         boost::movelib::ignore(end);
          return;
       }
       else if (comp(*r_first, *first)) {

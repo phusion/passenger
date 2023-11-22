@@ -9,7 +9,7 @@
 // You are welcome to contact the author at:
 //  akrzemi1@gmail.com
 
-// trivilally-copyable version of the storage
+// trivially-copyable version of the storage
 
 template<class T>
 class tc_optional_base : public optional_tag
@@ -142,7 +142,7 @@ class tc_optional_base : public optional_tag
     // No-throw (assuming T::~T() doesn't)
     void reset() BOOST_NOEXCEPT { destroy(); }
 
-    // **DEPPRECATED** Replaces the current value -if any- with 'val'
+    // **DEPRECATED** Replaces the current value -if any- with 'val'
     void reset ( argument_type val ) BOOST_NOEXCEPT { assign(val); }
 
     // Returns a pointer to the value if this is initialized, otherwise,
@@ -455,7 +455,7 @@ class tc_optional_base : public optional_tag
     //   Thus, the following overload is needed to properly handle the case when the 'lhs'
     //   is another optional.
     //
-    // For VC<=70 compilers this workaround dosen't work becasue the comnpiler issues and error
+    // For VC<=70 compilers this workaround doesn't work because the compiler issues and error
     // instead of choosing the wrong overload
     //
 #ifndef  BOOST_OPTIONAL_DETAIL_NO_RVALUE_REFERENCES

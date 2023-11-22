@@ -16,7 +16,7 @@
 #include <boost/move/algo/detail/basic_op.hpp>
 #include <boost/move/detail/iterator_traits.hpp>
 #include <boost/move/detail/destruct_n.hpp>
-#include <boost/assert.hpp>
+#include <cassert>
 
 namespace boost {
 namespace movelib {

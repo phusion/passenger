@@ -345,7 +345,7 @@ class small_vector_base
    public:
    //Make it public as it will be inherited by small_vector and container
    //must have this public member
-   typedef typename real_allocator<T, SecAlloc>::type                  secondary_allocator_t;
+   typedef typename real_allocator<T, SecAlloc>::type                            secondary_allocator_t;
    typedef typename allocator_traits<secondary_allocator_t>::
       template portable_rebind_alloc<void>::type                                 void_allocator_t;
    typedef typename dtl::get_small_vector_opt<Options>::type                     options_t;
@@ -387,6 +387,24 @@ class small_vector_base
       : base_type(initial_capacity_t(), this->internal_storage(), capacity, ::boost::forward<AllocFwd>(a))
    {}
 
+   BOOST_CONTAINER_FORCEINLINE explicit small_vector_base(maybe_initial_capacity_t, std::size_t initial_capacity, std::size_t initial_size)
+      : base_type( maybe_initial_capacity_t()
+                 , (initial_capacity >= initial_size) ? this->internal_storage() : pointer()
+                 , (initial_capacity >= initial_size) ? initial_capacity : initial_size
+                 )
+   {}
+
+   template<class AllocFwd>
+   BOOST_CONTAINER_FORCEINLINE explicit small_vector_base(maybe_initial_capacity_t, std::size_t initial_capacity, std::size_t initial_size, BOOST_FWD_REF(AllocFwd) a)
+      : base_type(maybe_initial_capacity_t()
+                 , (initial_capacity >= initial_size) ? this->internal_storage() : pointer()
+                 , (initial_capacity >= initial_size) ? initial_capacity : initial_size
+                 , ::boost::forward<AllocFwd>(a)
+      )
+   {}
+
+   using base_type::protected_set_size;
+
    //~small_vector_base(){}
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
@@ -408,9 +426,10 @@ class small_vector_base
          this->steal_resources(x);
       }
       else{
-         this->assign( boost::make_move_iterator(boost::movelib::iterator_to_raw_pointer(x.begin()))
-                     , boost::make_move_iterator(boost::movelib::iterator_to_raw_pointer(x.end  ()))
-                     );
+         const typename base_type::size_type sz = x.size();
+         ::boost::container::uninitialized_move_alloc_n_source
+            (this->base_type::get_stored_allocator(), x.begin(), sz, this->begin());
+         this->protected_set_size(sz);
          x.clear();
       }
    }
@@ -546,28 +565,28 @@ class small_vector
    {}
 
    BOOST_CONTAINER_FORCEINLINE explicit small_vector(size_type n)
-      : base_type(initial_capacity_t(), internal_capacity())
-   {  this->resize(n); }
+      : base_type(maybe_initial_capacity_t(), internal_capacity(), n)
+   {  this->protected_init_n(n, value_init); }
 
    BOOST_CONTAINER_FORCEINLINE small_vector(size_type n, const allocator_type &a)
-      : base_type(initial_capacity_t(), internal_capacity(), a)
-   {  this->resize(n); }
+      : base_type(maybe_initial_capacity_t(), internal_capacity(), n, a)
+   {  this->protected_init_n(n, value_init); }
 
    BOOST_CONTAINER_FORCEINLINE small_vector(size_type n, default_init_t)
-      : base_type(initial_capacity_t(), internal_capacity())
-   {  this->resize(n, default_init_t()); }
+      : base_type(maybe_initial_capacity_t(), internal_capacity(), n)
+   {  this->protected_init_n(n, default_init_t()); }
 
    BOOST_CONTAINER_FORCEINLINE small_vector(size_type n, default_init_t, const allocator_type &a)
-      : base_type(initial_capacity_t(), internal_capacity(), a)
-   {  this->resize(n, default_init_t()); }
+      : base_type(maybe_initial_capacity_t(), internal_capacity(), n, a)
+   {  this->protected_init_n(n, default_init_t()); }
 
    BOOST_CONTAINER_FORCEINLINE small_vector(size_type n, const value_type &v)
-      : base_type(initial_capacity_t(), internal_capacity())
-   {  this->resize(n, v); }
+      : base_type(maybe_initial_capacity_t(), internal_capacity(), n)
+   {  this->protected_init_n(n, v); }
 
    BOOST_CONTAINER_FORCEINLINE small_vector(size_type n, const value_type &v, const allocator_type &a)
-      : base_type(initial_capacity_t(), internal_capacity(), a)
-   {  this->resize(n, v); }
+      : base_type(maybe_initial_capacity_t(), internal_capacity(), n, a)
+   {  this->protected_init_n(n, v); }
 
    template <class InIt>
    BOOST_CONTAINER_FORCEINLINE small_vector(InIt first, InIt last

@@ -21,18 +21,19 @@
 //  See http://www.boost.org/libs/bind/bind.html for documentation.
 //
 
+#include <boost/bind/detail/requires_cxx11.hpp>
 #include <boost/config.hpp>
-#include <boost/ref.hpp>
 #include <boost/bind/mem_fn.hpp>
 #include <boost/type.hpp>
 #include <boost/is_placeholder.hpp>
 #include <boost/bind/arg.hpp>
 #include <boost/bind/detail/result_traits.hpp>
 #include <boost/bind/std_placeholders.hpp>
-#include <boost/detail/workaround.hpp>
+#include <boost/config/workaround.hpp>
 #include <boost/visit_each.hpp>
+#include <boost/core/ref.hpp>
 #include <boost/core/enable_if.hpp>
-#include <boost/core/is_same.hpp>
+#include <boost/bind/detail/is_same.hpp>
 
 #if !defined( BOOST_NO_CXX11_RVALUE_REFERENCES )
 #include <utility> // std::forward

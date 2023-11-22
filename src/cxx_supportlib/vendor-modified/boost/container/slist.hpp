@@ -48,8 +48,6 @@
 #endif
 #include <boost/move/detail/move_helpers.hpp>
 #include <boost/move/detail/force_ptr.hpp>
-// other
-#include <boost/core/no_exceptions_support.hpp>
 // std
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
 #include <initializer_list>

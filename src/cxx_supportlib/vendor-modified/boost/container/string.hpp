@@ -50,7 +50,6 @@
 #include <boost/move/traits.hpp>
 
 #include <boost/static_assert.hpp>
-#include <boost/core/no_exceptions_support.hpp>
 
 #include <iosfwd> 
 #include <istream>   //
@@ -64,6 +63,13 @@
 #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
 #include <initializer_list>   //for std::initializer_list
 #endif
+
+//GCC 12 has a regression for array-bounds warnings
+#if defined(BOOST_GCC) && (BOOST_GCC >= 120000) && (BOOST_GCC < 130000)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 
 namespace boost {
 namespace container {
@@ -2962,7 +2968,7 @@ class basic_string
       const size_type long_size    = this->priv_long_size();
       const size_type long_storage = this->priv_long_storage();
       //We can make this nothrow as chars are always NoThrowCopyables
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          pointer reuse = 0;
          real_cap = long_size+1;
          const pointer ret = this->allocation_command(allocate_new, long_size+1, real_cap, reuse);
@@ -2975,10 +2981,10 @@ class basic_string
          //And release old buffer
          this->alloc().deallocate(long_addr, long_storage);
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          return;
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    template<class AllocVersion>
@@ -3008,20 +3014,20 @@ class basic_string
       //Save initial position
       FwdIt init = first;
 
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          //Construct objects
          for (; count--; ++first){
             this->construct(first, val);
          }
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          //Call destructors
          for (; init != first; ++init){
             this->destroy(init);
          }
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
    }
 
    template<class InpIt, class FwdIt> inline
@@ -3031,20 +3037,20 @@ class basic_string
       FwdIt dest_init = dest;
       size_type constructed = 0;
 
-      BOOST_TRY{
+      BOOST_CONTAINER_TRY{
          //Try to build objects
          for (; first != last; ++dest, ++first, ++constructed){
             this->construct(dest, *first);
          }
       }
-      BOOST_CATCH(...){
+      BOOST_CONTAINER_CATCH(...){
          //Call destructors
          for (; constructed--; ++dest_init){
             this->destroy(dest_init);
          }
-         BOOST_RETHROW
+         BOOST_CONTAINER_RETHROW
       }
-      BOOST_CATCH_END
+      BOOST_CONTAINER_CATCH_END
       return (constructed);
    }
 
@@ -3588,6 +3594,11 @@ inline std::size_t hash_value(basic_string<Ch, std::char_traits<Ch>, Allocator> 
 }
 
 }}
+
+//GCC 12 has a regression for array-bounds warnings
+#if defined(BOOST_GCC) && (BOOST_GCC >= 120000) && (BOOST_GCC < 130000)
+#pragma GCC diagnostic pop
+#endif
 
 
 #ifndef BOOST_CONTAINER_DOXYGEN_INVOKED

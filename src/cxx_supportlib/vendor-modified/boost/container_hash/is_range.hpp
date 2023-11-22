@@ -5,6 +5,7 @@
 #ifndef BOOST_HASH_IS_RANGE_HPP_INCLUDED
 #define BOOST_HASH_IS_RANGE_HPP_INCLUDED
 
+#include <boost/container_hash/detail/requires_cxx11.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 #include <boost/type_traits/is_integral.hpp>
 #include <boost/type_traits/declval.hpp>

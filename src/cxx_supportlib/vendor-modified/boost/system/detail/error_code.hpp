@@ -403,7 +403,12 @@ public:
     {
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 
-        if( lhs.lc_flags_ == 1 && rhs.lc_flags_ == 1 )
+        bool s1 = lhs.lc_flags_ == 1;
+        bool s2 = rhs.lc_flags_ == 1;
+
+        if( s1 != s2 ) return false;
+
+        if( s1 && s2 )
         {
             std::error_code const& e1 = *reinterpret_cast<std::error_code const*>( lhs.d2_ );
             std::error_code const& e2 = *reinterpret_cast<std::error_code const*>( rhs.d2_ );
@@ -421,7 +426,13 @@ public:
     {
 #if defined(BOOST_SYSTEM_HAS_SYSTEM_ERROR)
 
-        if( lhs.lc_flags_ == 1 && rhs.lc_flags_ == 1 )
+        bool s1 = lhs.lc_flags_ == 1;
+        bool s2 = rhs.lc_flags_ == 1;
+
+        if( s1 < s2 ) return true;
+        if( s2 < s1 ) return false;
+
+        if( s1 && s2 )
         {
             std::error_code const& e1 = *reinterpret_cast<std::error_code const*>( lhs.d2_ );
             std::error_code const& e2 = *reinterpret_cast<std::error_code const*>( rhs.d2_ );

@@ -184,6 +184,10 @@
 #  define BOOST_NO_CXX11_ALIGNAS
 #endif
 
+#if !__has_feature(cxx_alignof)
+#  define BOOST_NO_CXX11_ALIGNOF
+#endif
+
 #if !__has_feature(cxx_trailing_return)
 #  define BOOST_NO_CXX11_TRAILING_RESULT_TYPES
 #endif

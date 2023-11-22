@@ -62,7 +62,6 @@
 #include <boost/move/algo/predicate.hpp>
 #include <boost/move/algo/detail/set_difference.hpp>
 // other
-#include <boost/core/no_exceptions_support.hpp>
 #include <boost/assert.hpp>
 #include <boost/cstdint.hpp>
 
@@ -258,8 +257,6 @@ struct vector_insert_ordered_cursor
    BiDirValueIt last_value_it;
 };
 
-struct initial_capacity_t{};
-
 template<class Pointer, bool IsConst>
 BOOST_CONTAINER_FORCEINLINE const Pointer &vector_iterator_get_ptr(const vec_iterator<Pointer, IsConst> &it) BOOST_NOEXCEPT_OR_NOTHROW
 {  return   it.get_ptr();  }
@@ -268,8 +265,12 @@ template<class Pointer, bool IsConst>
 BOOST_CONTAINER_FORCEINLINE Pointer &get_ptr(vec_iterator<Pointer, IsConst> &it) BOOST_NOEXCEPT_OR_NOTHROW
 {  return  it.get_ptr();  }
 
+struct initial_capacity_t {};
+
 struct vector_uninitialized_size_t {};
 static const vector_uninitialized_size_t vector_uninitialized_size = vector_uninitialized_size_t();
+
+struct maybe_initial_capacity_t {};
 
 template <class T>
 struct vector_value_traits_base
@@ -313,6 +314,43 @@ struct vector_alloc_holder
    typedef typename allocator_traits_type::size_type           size_type;
    typedef typename allocator_traits_type::value_type          value_type;
 
+
+   private:
+
+   template<class SizeType>
+   void do_initial_capacity(SizeType initial_capacity)
+   {
+      if (BOOST_UNLIKELY(initial_capacity > size_type(-1))) {
+         boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
+      }
+      else if (initial_capacity) {
+         pointer reuse = pointer();
+         size_type final_cap = static_cast<size_type>(initial_capacity);
+         m_start = this->allocation_command(allocate_new, final_cap, final_cap, reuse);
+         this->set_stored_capacity(final_cap);
+      }
+   }
+
+   template<class SizeType>
+   void do_maybe_initial_capacity(pointer p, SizeType initial_capacity)
+   {
+      if (BOOST_UNLIKELY(initial_capacity > size_type(-1))) {
+         boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
+      }
+      else if (p) {
+         m_start = p;
+      }
+      else {
+         BOOST_ASSERT(initial_capacity > 0);
+         pointer reuse = pointer();
+         size_type final_cap = static_cast<size_type>(initial_capacity);
+         m_start = this->allocation_command(allocate_new, final_cap, final_cap, reuse);
+         this->set_stored_capacity(final_cap);
+      }
+   }
+
+   public:
+
    BOOST_CONTAINER_FORCEINLINE
       static bool is_propagable_from(const allocator_type &from_alloc, pointer p, const allocator_type &to_alloc, bool const propagate_allocator)
    {
@@ -344,7 +382,7 @@ struct vector_alloc_holder
       : allocator_type(boost::forward<AllocConvertible>(a)), m_start(), m_size(), m_capacity()
    {}
 
-   //Constructor, does not throw
+
    template<class AllocConvertible, class SizeType>
    vector_alloc_holder(vector_uninitialized_size_t, BOOST_FWD_REF(AllocConvertible) a, SizeType initial_size)
       : allocator_type(boost::forward<AllocConvertible>(a))
@@ -352,19 +390,8 @@ struct vector_alloc_holder
       //Size is initialized here so vector should only call uninitialized_xxx after this
       , m_size(static_cast<stored_size_type>(initial_size))
       , m_capacity()
-   {
-      if (BOOST_UNLIKELY(initial_size > size_type(-1))){
-         boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
-      }
-      else if(initial_size){
-         pointer reuse = pointer();
-         size_type final_cap = static_cast<size_type>(initial_size);
-         m_start = this->allocation_command(allocate_new, final_cap, final_cap, reuse);
-         this->set_stored_capacity(final_cap);
-      }
-   }
+   {  this->do_initial_capacity(initial_size);  }
 
-   //Constructor, does not throw
    template<class SizeType>
    vector_alloc_holder(vector_uninitialized_size_t, SizeType initial_size)
       : allocator_type()
@@ -372,27 +399,7 @@ struct vector_alloc_holder
       //Size is initialized here so vector should only call uninitialized_xxx after this
       , m_size(static_cast<stored_size_type>(initial_size))
       , m_capacity()
-   {
-      if (BOOST_UNLIKELY(initial_size > size_type(-1))){
-         boost::container::throw_length_error("get_next_capacity, allocator's max size reached");
-      }
-      else if(initial_size){
-         pointer reuse = pointer();
-         size_type final_cap = initial_size;
-         m_start = this->allocation_command(allocate_new, final_cap, final_cap, reuse);
-         this->set_stored_capacity(final_cap);
-      }
-   }
-
-   vector_alloc_holder(BOOST_RV_REF(vector_alloc_holder) holder) BOOST_NOEXCEPT_OR_NOTHROW
-      : allocator_type(BOOST_MOVE_BASE(allocator_type, holder))
-      , m_start(holder.m_start)
-      , m_size(holder.m_size)
-      , m_capacity(holder.m_capacity)
-   {
-      holder.m_start = pointer();
-      holder.m_size = holder.m_capacity = 0;
-   }
+   {  this->do_initial_capacity(initial_size);  }
 
    vector_alloc_holder(initial_capacity_t, pointer p, size_type n)
       BOOST_NOEXCEPT_IF(dtl::is_nothrow_default_constructible<allocator_type>::value)
@@ -410,6 +417,34 @@ struct vector_alloc_holder
       , m_size()
       , m_capacity(n)
    {}
+
+   template<class AllocConvertible, class SizeType>
+   vector_alloc_holder(maybe_initial_capacity_t, pointer p, SizeType initial_capacity, BOOST_FWD_REF(AllocConvertible) a)
+      : allocator_type(boost::forward<AllocConvertible>(a))
+      //, m_start()
+      //Size is initialized here so vector should only call uninitialized_xxx after this
+      , m_size()
+      , m_capacity(static_cast<stored_size_type>(initial_capacity))
+   {  this->do_maybe_initial_capacity(p, initial_capacity);  }
+
+   template<class SizeType>
+   vector_alloc_holder(maybe_initial_capacity_t, pointer p, SizeType initial_capacity)
+      : allocator_type()
+      //, m_start()
+      //Size is initialized here so vector should only call uninitialized_xxx after this
+      , m_size()
+      , m_capacity(static_cast<stored_size_type>(initial_capacity))
+   {  this->do_maybe_initial_capacity(p, initial_capacity);  }
+
+   vector_alloc_holder(BOOST_RV_REF(vector_alloc_holder) holder) BOOST_NOEXCEPT_OR_NOTHROW
+      : allocator_type(BOOST_MOVE_BASE(allocator_type, holder))
+      , m_start(holder.m_start)
+      , m_size(holder.m_size)
+      , m_capacity(holder.m_capacity)
+   {
+      holder.m_start = pointer();
+      holder.m_size = holder.m_capacity = 0;
+   }
 
    BOOST_CONTAINER_FORCEINLINE ~vector_alloc_holder() BOOST_NOEXCEPT_OR_NOTHROW
    {
@@ -823,6 +858,9 @@ private:
    BOOST_CONTAINER_FORCEINLINE void steal_resources(vector &x)
    {  return this->m_holder.steal_resources(x.m_holder);   }
 
+   BOOST_CONTAINER_FORCEINLINE void protected_set_size(size_type n)
+   {  this->m_holder.m_size = static_cast<stored_size_type>(n);   }
+
    template<class AllocFwd>
    BOOST_CONTAINER_FORCEINLINE vector(initial_capacity_t, pointer initial_memory, size_type cap, BOOST_FWD_REF(AllocFwd) a)
       : m_holder(initial_capacity_t(), initial_memory, cap, ::boost::forward<AllocFwd>(a))
@@ -831,6 +869,32 @@ private:
    BOOST_CONTAINER_FORCEINLINE vector(initial_capacity_t, pointer initial_memory, size_type cap)
       : m_holder(initial_capacity_t(), initial_memory, cap)
    {}
+
+   template<class SizeType, class AllocFwd>
+   BOOST_CONTAINER_FORCEINLINE vector(maybe_initial_capacity_t, pointer p, SizeType initial_capacity, BOOST_FWD_REF(AllocFwd) a)
+      : m_holder(maybe_initial_capacity_t(), p, initial_capacity, ::boost::forward<AllocFwd>(a))
+   {
+      #ifdef BOOST_CONTAINER_VECTOR_ALLOC_STATS
+      this->num_alloc += size_type(p != pointer());
+      #endif
+   }
+
+   template<class SizeType>
+   BOOST_CONTAINER_FORCEINLINE vector(maybe_initial_capacity_t, pointer p, SizeType initial_capacity)
+      : m_holder(maybe_initial_capacity_t(), p, initial_capacity)
+   {
+      #ifdef BOOST_CONTAINER_VECTOR_ALLOC_STATS
+      this->num_alloc += size_type(p != pointer());
+      #endif
+   }
+
+   template <class U>
+   void protected_init_n(const size_type new_size, const U& u)
+   {
+      BOOST_ASSERT(this->empty());
+      this->priv_resize_proxy(u).uninitialized_copy_n_and_update(this->m_holder.alloc(), this->priv_raw_begin(), new_size);
+      this->m_holder.set_stored_size(new_size);
+   }
 
    #endif   //#ifndef BOOST_CONTAINER_DOXYGEN_INVOKED
 
