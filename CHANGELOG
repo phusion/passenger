@@ -1,6 +1,7 @@
 Release 6.0.20 (Not yet released)
 -------------
- *
+ * Upgrades Boost from 1.81 -> 1.83.
+ * Upgrades http-parser from 2.3.0 -> 2.9.4.
 
 
 Release 6.0.19
