@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-TEST_DYNAMIC_WITH_NGINX_VERSION=1.16.0
+ROOTDIR=$(dirname "$0")
+TEST_DYNAMIC_WITH_NGINX_VERSION=$(ruby -r $ROOTDIR/../../../../src/ruby_supportlib/phusion_passenger.rb -e 'puts PhusionPassenger::PREFERRED_NGINX_VERSION')
 NGINX_ADDON_DIR=$(./bin/passenger-config --nginx-addon-dir)
 echo "+ Nginx addon dir: $NGINX_ADDON_DIR"
 echo
