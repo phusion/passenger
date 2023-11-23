@@ -37,3 +37,4 @@ autom4te.cache
 /node_modules
 /external
 /play
+*.orig
