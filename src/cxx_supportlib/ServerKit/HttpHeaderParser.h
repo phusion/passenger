@@ -489,6 +489,9 @@ public:
 					goto default_error;
 				}
 				break;
+			case HPE_UNEXPECTED_CONTENT_LENGTH:
+				message->aux.parseError = REQUEST_CONTAINS_CONTENT_LENGTH_AND_TRANSFER_ENCODING;
+				break;
 			default:
 				default_error:
 				message->aux.parseError = HTTP_PARSER_ERRNO_BEGIN - HTTP_PARSER_ERRNO(&state->parser);

@@ -709,7 +709,7 @@ namespace tut {
 			"Transfer-Encoding: chunked\r\n\r\n");
 		string response = readAll(fd, 1024).first;
 		ensure(containsSubstring(response,
-			"HTTP/1.1 400 Bad Request\r\n"
+			"HTTP/1.0 400 Bad Request\r\n"
 			"Status: 400 Bad Request\r\n"
 			"Content-Type: text/html; charset=UTF-8\r\n"));
 		ensure(containsSubstring(response,
