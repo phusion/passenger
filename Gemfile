@@ -1,11 +1,15 @@
 source 'https://rubygems.org/'
+require 'rubygems/version.rb'
+
+# Make Bundler handle Ruby compat: https://github.com/rubygems/bundler-features/issues/120
+ruby RUBY_VERSION
 
 group :base do
-  gem 'json', '= 2.5.1'
-  gem 'mime-types', '1.25'
-  gem 'rack', '< 2.0'
-  gem 'rake', '< 13.0.0'
-  gem 'rspec', '~> 3.0.0'
+  gem 'json'
+  gem 'mime-types', '~> 3.5.1'
+  gem 'rack'
+  gem 'rake'
+  gem 'rspec', '~> 3.12.0'
   gem 'rspec-collection_matchers'
 end
 
