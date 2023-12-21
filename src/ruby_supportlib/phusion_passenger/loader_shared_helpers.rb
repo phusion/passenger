@@ -315,7 +315,9 @@ module PhusionPassenger
       # database connection handles.
       if forked
         if defined?(ActiveRecord::Base)
-          if ActiveRecord::Base.respond_to?(:clear_all_connections!)
+          if ActiveRecord::Base.respond_to?(:connection_handler) && !ActiveRecord::Base.connection_handler.nil? && ActiveRecord::Base.connection_handler.respond_to?(:clear_all_connections!)
+            ActiveRecord::Base.connection_handler.clear_all_connections!
+          elsif ActiveRecord::Base.respond_to?(:clear_all_connections!)
             ActiveRecord::Base.clear_all_connections!
           elsif ActiveRecord::Base.respond_to?(:clear_active_connections!)
             ActiveRecord::Base.clear_active_connections!
