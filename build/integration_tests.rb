@@ -105,8 +105,9 @@ task 'test:integration:native_packaging' do
     # The tests put /usr/bin and /usr/sbin first in PATH, causing /usr/bin/ruby to be used.
     # We should run the tests in /usr/bin/ruby too, so that native_support is compiled for
     # the same Ruby.
+    brew_prefix = `env -P /usr/local/bin:/opt/homebrew/bin brew --prefix`
     prefix = "env NATIVE_PACKAGING_METHOD=homebrew " +
-      "LOCATIONS_INI=/usr/local/Cellar/passenger/#{PhusionPassenger::VERSION_STRING}/libexec/src/ruby_supportlib/phusion_passenger/locations.ini"
+      "LOCATIONS_INI=#{brew_prefix}/Cellar/passenger/#{PhusionPassenger::VERSION_STRING}/libexec/src/ruby_supportlib/phusion_passenger/locations.ini"
     if PlatformInfo.in_rvm?
       prefix << " rvm-exec system /usr/bin/ruby -S"
     end

@@ -110,8 +110,9 @@ when "rpm"
   APACHE_ERROR_LOG = "/etc/httpd/logs/error_log"
 when "homebrew"
   # Ensure that the Homebrew-installed Phusion Passenger is the first in PATH.
-  ENV['PATH'] = "/usr/local/bin:#{ENV['PATH']}"
-  root = "/usr/local/Cellar/passenger/#{VERSION_STRING}/libexec"
+  brew_prefix = `env -P /usr/local/bin:/opt/homebrew/bin brew --prefix`
+  ENV['PATH'] = "#{brew_prefix}/bin:#{ENV['PATH']}"
+  root = "#{brew_prefix}/Cellar/passenger/#{VERSION_STRING}/libexec"
 
   BINDIR = "#{root}/bin"
   SBINDIR = BINDIR
