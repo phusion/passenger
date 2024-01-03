@@ -1,4 +1,5 @@
 import os, sys, time, cgi
+from typing import Any, List, Tuple
 
 def file_exist(filename):
 	try:
@@ -31,7 +32,7 @@ else:
 
 def application(env, start_response):
 	status = '200 OK'
-	body   = None
+	body: bytes = b""
 
 	method = env.get('REQUEST_METHOD')
 	if method == 'OOBW':
@@ -47,18 +48,18 @@ def application(env, start_response):
 	path = env['PATH_INFO']
 	if path == '/':
 		if file_exist("front_page.txt"):
-			with open("front_page.txt", "r") as f:
+			with open("front_page.txt", "rb") as f:
 				body = f.read()
 		else:
-			body = "front page"
+			body = b"front page"
 	elif path == '/parameters':
 		method = env['REQUEST_METHOD']
 		params = cgi.parse(env['wsgi.input'], env)
 		first  = params['first'][0]
 		second = params['second'][0]
-		body = "Method: %s\nFirst: %s\nSecond: %s\n" % (method, first, second)
+		body = b"Method: %s\nFirst: %s\nSecond: %s\n" % (method, first, second)
 	elif path == '/chunked':
-		def body():
+		def bodyfn():
 			yield str("7\r\nchunk1\n\r\n")
 			yield str("7\r\nchunk2\n\r\n")
 			yield str("7\r\nchunk3\n\r\n")
@@ -73,29 +74,29 @@ def application(env, start_response):
 				finally:
 					filename = env.get('HTTP_X_TAIL_STATUS_FILE')
 					if filename is not None:
-						f = open(filename, "w")
+						f = open(filename, "wb")
 						try:
 							f.write(str_to_bytes(str(status)))
 						finally:
 							f.close()
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
-		return body()
+		return bodyfn()
 	elif path == '/pid':
-		body = str(os.getpid())
+		body = str_to_bytes(str(os.getpid()))
 	elif path.startswith('/env'):
-		body = ''
+		body = b''
 		for pair in iteritems(env):
 			body += pair[0] + ' = ' + str(pair[1]) + "\n"
 	elif path == '/touch_file':
 		params = cgi.parse(env['wsgi.input'], env)
 		filename = params["file"][0]
 		open(filename, 'w').close()
-		body = "ok"
+		body = b"ok"
 	elif path == '/extra_header':
 		start_response(status, [('Content-Type', 'text/html'), ('X-Foo', 'Bar')])
 		return ["ok"]
 	elif path == '/cached':
-		body = "This is the uncached version of /cached"
+		body = b"This is the uncached version of /cached"
 	elif path == '/upload_with_params':
 		params = cgi.FieldStorage(fp = env['wsgi.input'], environ = env)
 		name1 = str_to_bytes(params["name1"].value)
@@ -118,13 +119,13 @@ def application(env, start_response):
 					time.sleep(sleep_time)
 		finally:
 			f.close()
-		body = 'ok'
+		body = b'ok'
 	elif path == '/custom_status':
 		status = env['HTTP_X_CUSTOM_STATUS']
-		body = 'ok'
+		body = b'ok'
 	elif path == '/stream':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 0.1))
-		def body():
+		def bodyfn():
 			i = 0
 			while True:
 				data = ' ' * 32 + str(i) + "\n"
@@ -134,11 +135,11 @@ def application(env, start_response):
 				time.sleep(sleep_time)
 				i += 1
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
-		return body()
+		return bodyfn()
 	elif path == '/chunked_stream':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 0.05))
 		count = float(env.get('HTTP_X_COUNT', 3))
-		def body():
+		def bodyfn():
 			i = 0
 			while i < count:
 				data = "Counter: " + str(i) + "\n"
@@ -150,18 +151,18 @@ def application(env, start_response):
 			yield("0\r\n\r\n")
 			time.sleep(2)
 		start_response(status, [('Content-Type', 'text/html'), ('Transfer-Encoding', 'chunked')])
-		return body()
+		return bodyfn()
 	elif path == '/sleep':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 5))
 		time.sleep(sleep_time)
 		status = 200
-		body = 'ok'
+		body = b'ok'
 	elif path == '/blob':
 		size = int(env.get('HTTP_X_SIZE', 1024 * 1024 * 10))
-		headers = [('Content-Type', 'text/plain')]
+		headers : List[Tuple[str, Any]] = [('Content-Type', 'text/plain')]
 		if env.get('HTTP_X_CONTENT_LENGTH') is not None:
 			headers.append(('Content-Length', size))
-		def body():
+		def bodyfn():
 			written = 0
 			while written < size:
 				data = 'x' * min(1024 * 8, size - written)
@@ -177,20 +178,20 @@ def application(env, start_response):
 				finally:
 					filename = env.get('HTTP_X_TAIL_STATUS_FILE')
 					if filename is not None:
-						f = open(filename, "w")
+						f = open(filename, "wb")
 						try:
 							f.write(str_to_bytes(str(status)))
 						finally:
 							f.close()
 		start_response(status, headers)
-		return body()
+		return bodyfn()
 	elif path == '/oobw':
 		start_response(status, [('Content-Type', 'text/plain'), ('X-Passenger-Request-OOB-Work', 'true')])
 		return [str(os.getpid())]
 	elif path == '/switch_protocol':
 		if env['HTTP_UPGRADE'] != 'raw' or env['HTTP_CONNECTION'].lower() != 'upgrade':
 			status = '500 Internal Server Error'
-			body = str('Invalid headers')
+			body = b'Invalid headers'
 			start_response(status, [('Content-Type', 'text/plain'), ('Content-Length', len(body))])
 			return [body]
 		socket = env['passenger.hijack'](True)
@@ -212,7 +213,7 @@ def application(env, start_response):
 			io.close()
 	else:
 		status = "404 Not Found"
-		body = "Unknown URI"
+		body = b"Unknown URI"
 
 	start_response(status, [('Content-Type', 'text/plain'), ('Content-Length', len(body))])
 	return [body]
