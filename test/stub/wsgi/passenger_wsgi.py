@@ -57,7 +57,7 @@ def application(env, start_response):
 		params = cgi.parse(env['wsgi.input'], env)
 		first  = params['first'][0]
 		second = params['second'][0]
-		body = b"Method: %s\nFirst: %s\nSecond: %s\n" % (method, first, second)
+		body = str_to_bytes("Method: %s\nFirst: %s\nSecond: %s\n" % (method, first, second))
 	elif path == '/chunked':
 		def bodyfn():
 			yield str("7\r\nchunk1\n\r\n")
@@ -99,10 +99,10 @@ def application(env, start_response):
 		body = b"This is the uncached version of /cached"
 	elif path == '/upload_with_params':
 		params = cgi.FieldStorage(fp = env['wsgi.input'], environ = env)
-		name1 = str_to_bytes(params["name1"].value)
-		name2 = str_to_bytes(params["name2"].value)
-		data  = str_to_bytes(params["data"].value)
-		body = b"name 1 = %s\nname 2 = %s\ndata = %s" % (name1, name2, data)
+		name1 = str(params["name1"].value)
+		name2 = str(params["name2"].value)
+		data  = str(params["data"].value)
+		body = str_to_bytes("name 1 = %s\nname 2 = %s\ndata = %s" % (name1, name2, data))
 	elif path == '/raw_upload_to_file':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 0))
 		f = open(env['HTTP_X_OUTPUT'], 'wb')
