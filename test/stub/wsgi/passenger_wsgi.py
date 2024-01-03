@@ -86,7 +86,7 @@ def application(env, start_response):
 	elif path.startswith('/env'):
 		body = b''
 		for pair in iteritems(env):
-			body += pair[0] + ' = ' + str(pair[1]) + "\n"
+			body += str_to_bytes(pair[0] + ' = ' + str(pair[1]) + "\n")
 	elif path == '/touch_file':
 		params = cgi.parse(env['wsgi.input'], env)
 		filename = params["file"][0]
@@ -102,10 +102,7 @@ def application(env, start_response):
 		name1 = str_to_bytes(params["name1"].value)
 		name2 = str_to_bytes(params["name2"].value)
 		data  = str_to_bytes(params["data"].value)
-		body = \
-			b"name 1 = " + name1 + b"\n" \
-			b"name 2 = " + name2 + b"\n" \
-			b"data = " + data
+		body = b"name 1 = %s\nname 2 = %s\ndata = %s" % (name1, name2, data)
 	elif path == '/raw_upload_to_file':
 		sleep_time = float(env.get('HTTP_X_SLEEP', 0))
 		f = open(env['HTTP_X_OUTPUT'], 'wb')
