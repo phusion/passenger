@@ -1,5 +1,4 @@
 import os, sys, time, cgi
-from typing import Any, List, Tuple
 
 def file_exist(filename):
 	try:
@@ -32,7 +31,7 @@ else:
 
 def application(env, start_response):
 	status = '200 OK'
-	body: bytes = b""
+	body = b""
 
 	method = env.get('REQUEST_METHOD')
 	if method == 'OOBW':
@@ -156,7 +155,7 @@ def application(env, start_response):
 		body = b'ok'
 	elif path == '/blob':
 		size = int(env.get('HTTP_X_SIZE', 1024 * 1024 * 10))
-		headers : List[Tuple[str, Any]] = [('Content-Type', 'text/plain')]
+		headers = [('Content-Type', 'text/plain')]
 		if env.get('HTTP_X_CONTENT_LENGTH') is not None:
 			headers.append(('Content-Length', size))
 		def bodyfn():
