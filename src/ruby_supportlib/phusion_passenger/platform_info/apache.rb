@@ -692,7 +692,7 @@ module PhusionPassenger
         #   /usr/sbin/httpd (for architecture ppc64):       Mach-O 64-bit executable ppc64
         #   /usr/sbin/httpd (for architecture i386):        Mach-O executable i386
         #   /usr/sbin/httpd (for architecture x86_64):      Mach-O 64-bit executable x86_64
-        #   /usr/sbin/httpd (for architecture arm64e):	    Mach-O 64-bit executable arm64e
+        #   /usr/sbin/httpd (for architecture arm64e):	    Mach-O 64-bit executable arm64
         #
         # But on some machines, it may output just:
         #
@@ -701,12 +701,14 @@ module PhusionPassenger
         # (http://code.google.com/p/phusion-passenger/issues/detail?id=236)
         output = `file "#{httpd}"`.strip
         if output =~ /Mach-O fat file/ && output !~ /for architecture/
-          architectures = ["i386", "ppc", "x86_64", "ppc64", "arm64e"]
+          architectures = ["i386", "ppc", "x86_64", "ppc64", "arm64"]
         else
           architectures = []
           output.split("\n").grep(/for architecture/).each do |line|
             line =~ /for architecture (.*?)\)/
-            architectures << $1
+            arch = $1
+            arch = "arm64" if arch.start_with?("arm64")
+            architectures << arch
           end
         end
         # The compiler may not support all architectures in the binary.
