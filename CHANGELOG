@@ -3,6 +3,22 @@ Release 6.0.20 (Not yet released)
  * Upgrades Boost from 1.81 -> 1.83.
  * Upgrades http-parser from 2.3.0 -> 2.9.4.
  * [Ubuntu] Adds packages for Ubuntu 23.10 "mantic".
+ * [Python] Address use of binary strings and file reads in python3.
+ * [Ruby] Address use of deprecated ActiveRecord method. Closes GH-2516.
+ * [ARM] fix arch for apache module on Arm Macs.
+ * Updated various library versions used in precompiled binaries (used for e.g. gem installs):
+   - cmake: 3.27.7 -> 3.28.1
+   - curl: 8.4.0 -> 8.5.0
+   - git: 2.42.0 -> 2.43.0
+   - libgcrypt: 1.10.2 -> 1.10.3
+   - libksba: 1.6.4 -> 1.6.5
+   - ntbtls: 0.3.1 -> 0.3.2
+   - openssl: 3.1.4 -> 3.2.0
+   - rubygems: 3.4.21 -> 3.5.4
+   - s3cmd: 2.3.0 -> 2.4.0
+   - rubies:
+     - 3.2.2 -> 3.2.3
+     - 3.3.0
 
 
 Release 6.0.19
