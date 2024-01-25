@@ -9,7 +9,7 @@
   // These users and groups MUST be able to access this 'test' directory,
   // otherwise the tests will fail.
 
-  //// Good values for OS X:
+  //// Good values for macOS:
   "normal_user_1": "_www",
   "normal_user_2": "daemon",
   // Must not be "nobody".
@@ -34,6 +34,11 @@
   "nonexistant_group": "xxxxxxxxxxxxxxxxxxx",
   "nonexistant_uid": 9999,
   "nonexistant_gid": 9999,
+
+  // On macOS, Apache requires that all modules be code signed.
+  // Create a certificate yourself (be sure to enable the "Code Signing" capability)
+  // and specify the certificate name here.
+  "codesigning_identity": "<NAME>",
 
   // If you want to run the Nginx integration tests, then set the following
   // config option to the full path of the Nginx binary. This Nginx binary *must*
