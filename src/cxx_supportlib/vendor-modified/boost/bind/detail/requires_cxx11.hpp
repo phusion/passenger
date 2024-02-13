@@ -15,7 +15,7 @@
     defined(BOOST_NO_CXX11_NOEXCEPT) || \
     defined(BOOST_NO_CXX11_HDR_FUNCTIONAL)
 
-BOOST_PRAGMA_MESSAGE("C++03 support was deprecated in Boost.Bind 1.82 and will be removed in Boost.Bind 1.84. Please open an issue in https://github.com/boostorg/bind if you want it retained.")
+BOOST_PRAGMA_MESSAGE("C++03 support was deprecated in Boost.Bind 1.82 and will be removed in Boost.Bind 1.85.")
 
 #endif
 

@@ -9,7 +9,7 @@
 #include <limits>
 #include <stdexcept>
 #include <boost/throw_exception.hpp>
-#include <boost/core/swap.hpp>
+#include <boost/core/invoke_swap.hpp>
 #include <boost/core/enable_if.hpp>
 
 namespace boost { namespace integer {
@@ -38,7 +38,7 @@ extended_euclidean(Z m, Z n)
     if (m < n)
     {
         swapped = true;
-        boost::swap(m, n);
+        boost::core::invoke_swap(m, n);
     }
     Z u0 = m;
     Z u1 = 1;

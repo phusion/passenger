@@ -5,18 +5,11 @@
 #ifndef BOOST_TYPEOF_STD_set_hpp_INCLUDED
 #define BOOST_TYPEOF_STD_set_hpp_INCLUDED
 
+// This header is no longer useful and is only retained for compatibility
+
 #include <set>
 #include <boost/typeof/typeof.hpp>
 #include <boost/typeof/std/memory.hpp>
 #include <boost/typeof/std/functional.hpp>
-
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::set, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::set, 2)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::set, 3)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::multiset, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::multiset, 2)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::multiset, 3)
 
 #endif//BOOST_TYPEOF_STD_set_hpp_INCLUDED

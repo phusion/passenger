@@ -18,6 +18,7 @@
 #include <boost/asio/detail/config.hpp>
 
 #include <boost/asio/async_result.hpp>
+#include <boost/asio/buffer.hpp>
 #include <boost/asio/detail/buffer_sequence_adapter.hpp>
 #include <boost/asio/detail/handler_type_requirements.hpp>
 #include <boost/asio/detail/non_const_lvalue.hpp>
@@ -84,7 +85,7 @@ public:
   };
 
   /// The type of the next layer.
-  typedef typename remove_reference<Stream>::type next_layer_type;
+  typedef remove_reference_t<Stream> next_layer_type;
 
   /// The type of the lowest layer.
   typedef typename next_layer_type::lowest_layer_type lowest_layer_type;
@@ -92,7 +93,6 @@ public:
   /// The type of the executor associated with the object.
   typedef typename lowest_layer_type::executor_type executor_type;
 
-#if defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
   /// Construct a stream.
   /**
    * This constructor creates a stream and initialises the underlying stream
@@ -104,7 +104,7 @@ public:
    */
   template <typename Arg>
   stream(Arg&& arg, context& ctx)
-    : next_layer_(BOOST_ASIO_MOVE_CAST(Arg)(arg)),
+    : next_layer_(static_cast<Arg&&>(arg)),
       core_(ctx.native_handle(), next_layer_.lowest_layer().get_executor())
   {
   }
@@ -121,27 +121,11 @@ public:
    */
   template <typename Arg>
   stream(Arg&& arg, native_handle_type handle)
-    : next_layer_(BOOST_ASIO_MOVE_CAST(Arg)(arg)),
+    : next_layer_(static_cast<Arg&&>(arg)),
       core_(handle, next_layer_.lowest_layer().get_executor())
   {
   }
-#else // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
-  template <typename Arg>
-  stream(Arg& arg, context& ctx)
-    : next_layer_(arg),
-      core_(ctx.native_handle(), next_layer_.lowest_layer().get_executor())
-  {
-  }
 
-  template <typename Arg>
-  stream(Arg& arg, native_handle_type handle)
-    : next_layer_(arg),
-      core_(handle, next_layer_.lowest_layer().get_executor())
-  {
-  }
-#endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
-
-#if defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
   /// Move-construct a stream from another.
   /**
    * @param other The other stream object from which the move will occur. Must
@@ -150,8 +134,8 @@ public:
    * operation is destruction, or use as the target of a move assignment.
    */
   stream(stream&& other)
-    : next_layer_(BOOST_ASIO_MOVE_CAST(Stream)(other.next_layer_)),
-      core_(BOOST_ASIO_MOVE_CAST(detail::stream_core)(other.core_))
+    : next_layer_(static_cast<Stream&&>(other.next_layer_)),
+      core_(static_cast<detail::stream_core&&>(other.core_))
   {
   }
 
@@ -166,12 +150,11 @@ public:
   {
     if (this != &other)
     {
-      next_layer_ = BOOST_ASIO_MOVE_CAST(Stream)(other.next_layer_);
-      core_ = BOOST_ASIO_MOVE_CAST(detail::stream_core)(other.core_);
+      next_layer_ = static_cast<Stream&&>(other.next_layer_);
+      core_ = static_cast<detail::stream_core&&>(other.core_);
     }
     return *this;
   }
-#endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
 
   /// Destructor.
   /**
@@ -189,7 +172,7 @@ public:
    *
    * @return A copy of the executor that stream will use to dispatch handlers.
    */
-  executor_type get_executor() BOOST_ASIO_NOEXCEPT
+  executor_type get_executor() noexcept
   {
     return next_layer_.lowest_layer().get_executor();
   }
@@ -517,17 +500,13 @@ public:
    */
   template <
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code))
-        HandshakeToken
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(HandshakeToken,
-      void (boost::system::error_code))
-  async_handshake(handshake_type type,
-      BOOST_ASIO_MOVE_ARG(HandshakeToken) token
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+        HandshakeToken = default_completion_token_t<executor_type>>
+  auto async_handshake(handshake_type type,
+      HandshakeToken&& token = default_completion_token_t<executor_type>())
+    -> decltype(
       async_initiate<HandshakeToken,
         void (boost::system::error_code)>(
-          declval<initiate_async_handshake>(), token, type)))
+          declval<initiate_async_handshake>(), token, type))
   {
     return async_initiate<HandshakeToken,
       void (boost::system::error_code)>(
@@ -579,16 +558,17 @@ public:
   template <typename ConstBufferSequence,
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
         std::size_t)) BufferedHandshakeToken
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(BufferedHandshakeToken,
-      void (boost::system::error_code, std::size_t))
-  async_handshake(handshake_type type, const ConstBufferSequence& buffers,
-      BOOST_ASIO_MOVE_ARG(BufferedHandshakeToken) token
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+          = default_completion_token_t<executor_type>>
+  auto async_handshake(handshake_type type, const ConstBufferSequence& buffers,
+      BufferedHandshakeToken&& token
+        = default_completion_token_t<executor_type>(),
+      constraint_t<
+        is_const_buffer_sequence<ConstBufferSequence>::value
+      > = 0)
+    -> decltype(
       async_initiate<BufferedHandshakeToken,
         void (boost::system::error_code, std::size_t)>(
-          declval<initiate_async_buffered_handshake>(), token, type, buffers)))
+          declval<initiate_async_buffered_handshake>(), token, type, buffers))
   {
     return async_initiate<BufferedHandshakeToken,
       void (boost::system::error_code, std::size_t)>(
@@ -658,16 +638,13 @@ public:
   template <
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code))
         ShutdownToken
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ShutdownToken,
-      void (boost::system::error_code))
-  async_shutdown(
-      BOOST_ASIO_MOVE_ARG(ShutdownToken) token
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+          = default_completion_token_t<executor_type>>
+  auto async_shutdown(
+      ShutdownToken&& token = default_completion_token_t<executor_type>())
+    -> decltype(
       async_initiate<ShutdownToken,
         void (boost::system::error_code)>(
-          declval<initiate_async_shutdown>(), token)))
+          declval<initiate_async_shutdown>(), token))
   {
     return async_initiate<ShutdownToken,
       void (boost::system::error_code)>(
@@ -769,17 +746,13 @@ public:
    */
   template <typename ConstBufferSequence,
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-        std::size_t)) WriteToken
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
-      void (boost::system::error_code, std::size_t))
-  async_write_some(const ConstBufferSequence& buffers,
-      BOOST_ASIO_MOVE_ARG(WriteToken) token
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+        std::size_t)) WriteToken = default_completion_token_t<executor_type>>
+  auto async_write_some(const ConstBufferSequence& buffers,
+      WriteToken&& token = default_completion_token_t<executor_type>())
+    -> decltype(
       async_initiate<WriteToken,
         void (boost::system::error_code, std::size_t)>(
-          declval<initiate_async_write_some>(), token, buffers)))
+          declval<initiate_async_write_some>(), token, buffers))
   {
     return async_initiate<WriteToken,
       void (boost::system::error_code, std::size_t)>(
@@ -881,17 +854,13 @@ public:
    */
   template <typename MutableBufferSequence,
       BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
-        std::size_t)) ReadToken
-          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
-  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ReadToken,
-      void (boost::system::error_code, std::size_t))
-  async_read_some(const MutableBufferSequence& buffers,
-      BOOST_ASIO_MOVE_ARG(ReadToken) token
-        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
-    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+        std::size_t)) ReadToken = default_completion_token_t<executor_type>>
+  auto async_read_some(const MutableBufferSequence& buffers,
+      ReadToken&& token = default_completion_token_t<executor_type>())
+    -> decltype(
       async_initiate<ReadToken,
         void (boost::system::error_code, std::size_t)>(
-          declval<initiate_async_read_some>(), token, buffers)))
+          declval<initiate_async_read_some>(), token, buffers))
   {
     return async_initiate<ReadToken,
       void (boost::system::error_code, std::size_t)>(
@@ -909,13 +878,13 @@ private:
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return self_->get_executor();
     }
 
     template <typename HandshakeHandler>
-    void operator()(BOOST_ASIO_MOVE_ARG(HandshakeHandler) handler,
+    void operator()(HandshakeHandler&& handler,
         handshake_type type) const
     {
       // If you get an error on the following line it means that your handler
@@ -941,13 +910,13 @@ private:
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return self_->get_executor();
     }
 
     template <typename BufferedHandshakeHandler, typename ConstBufferSequence>
-    void operator()(BOOST_ASIO_MOVE_ARG(BufferedHandshakeHandler) handler,
+    void operator()(BufferedHandshakeHandler&& handler,
         handshake_type type, const ConstBufferSequence& buffers) const
     {
       // If you get an error on the following line it means that your
@@ -977,13 +946,13 @@ private:
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return self_->get_executor();
     }
 
     template <typename ShutdownHandler>
-    void operator()(BOOST_ASIO_MOVE_ARG(ShutdownHandler) handler) const
+    void operator()(ShutdownHandler&& handler) const
     {
       // If you get an error on the following line it means that your handler
       // does not meet the documented type requirements for a ShutdownHandler.
@@ -1008,13 +977,13 @@ private:
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return self_->get_executor();
     }
 
     template <typename WriteHandler, typename ConstBufferSequence>
-    void operator()(BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
+    void operator()(WriteHandler&& handler,
         const ConstBufferSequence& buffers) const
     {
       // If you get an error on the following line it means that your handler
@@ -1040,13 +1009,13 @@ private:
     {
     }
 
-    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    executor_type get_executor() const noexcept
     {
       return self_->get_executor();
     }
 
     template <typename ReadHandler, typename MutableBufferSequence>
-    void operator()(BOOST_ASIO_MOVE_ARG(ReadHandler) handler,
+    void operator()(ReadHandler&& handler,
         const MutableBufferSequence& buffers) const
     {
       // If you get an error on the following line it means that your handler

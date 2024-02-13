@@ -17,21 +17,13 @@
 
 #include <boost/asio/detail/config.hpp>
 
-#if defined(BOOST_ASIO_HAS_STD_ARRAY)
-# include <array>
-#else // defined(BOOST_ASIO_HAS_STD_ARRAY)
-# include <boost/array.hpp>
-#endif // defined(BOOST_ASIO_HAS_STD_ARRAY)
+#include <array>
 
 namespace boost {
 namespace asio {
 namespace detail {
 
-#if defined(BOOST_ASIO_HAS_STD_ARRAY)
 using std::array;
-#else // defined(BOOST_ASIO_HAS_STD_ARRAY)
-using boost::array;
-#endif // defined(BOOST_ASIO_HAS_STD_ARRAY)
 
 } // namespace detail
 } // namespace asio

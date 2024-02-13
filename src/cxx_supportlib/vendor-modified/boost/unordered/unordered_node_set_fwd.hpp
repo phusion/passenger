@@ -11,7 +11,7 @@
 #pragma once
 #endif
 
-#include <boost/functional/hash_fwd.hpp>
+#include <boost/container_hash/hash_fwd.hpp>
 #include <functional>
 #include <memory>
 
@@ -39,10 +39,6 @@ namespace boost {
   } // namespace unordered
 
   using boost::unordered::unordered_node_set;
-
-  using boost::unordered::swap;
-  using boost::unordered::operator==;
-  using boost::unordered::operator!=;
 } // namespace boost
 
 #endif

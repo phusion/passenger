@@ -66,30 +66,29 @@ struct stream_core
     pending_write_.expires_at(neg_infin());
   }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
   stream_core(stream_core&& other)
-    : engine_(BOOST_ASIO_MOVE_CAST(engine)(other.engine_)),
+    : engine_(static_cast<engine&&>(other.engine_)),
 #if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
       pending_read_(
-         BOOST_ASIO_MOVE_CAST(boost::asio::deadline_timer)(
+         static_cast<boost::asio::deadline_timer&&>(
            other.pending_read_)),
       pending_write_(
-         BOOST_ASIO_MOVE_CAST(boost::asio::deadline_timer)(
+         static_cast<boost::asio::deadline_timer&&>(
            other.pending_write_)),
 #else // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
       pending_read_(
-         BOOST_ASIO_MOVE_CAST(boost::asio::steady_timer)(
+         static_cast<boost::asio::steady_timer&&>(
            other.pending_read_)),
       pending_write_(
-         BOOST_ASIO_MOVE_CAST(boost::asio::steady_timer)(
+         static_cast<boost::asio::steady_timer&&>(
            other.pending_write_)),
 #endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
       output_buffer_space_(
-          BOOST_ASIO_MOVE_CAST(std::vector<unsigned char>)(
+          static_cast<std::vector<unsigned char>&&>(
             other.output_buffer_space_)),
       output_buffer_(other.output_buffer_),
       input_buffer_space_(
-          BOOST_ASIO_MOVE_CAST(std::vector<unsigned char>)(
+          static_cast<std::vector<unsigned char>&&>(
             other.input_buffer_space_)),
       input_buffer_(other.input_buffer_),
       input_(other.input_)
@@ -98,39 +97,37 @@ struct stream_core
     other.input_buffer_ = boost::asio::mutable_buffer(0, 0);
     other.input_ = boost::asio::const_buffer(0, 0);
   }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
   ~stream_core()
   {
   }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
   stream_core& operator=(stream_core&& other)
   {
     if (this != &other)
     {
-      engine_ = BOOST_ASIO_MOVE_CAST(engine)(other.engine_);
+      engine_ = static_cast<engine&&>(other.engine_);
 #if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
       pending_read_ =
-        BOOST_ASIO_MOVE_CAST(boost::asio::deadline_timer)(
+        static_cast<boost::asio::deadline_timer&&>(
           other.pending_read_);
       pending_write_ =
-        BOOST_ASIO_MOVE_CAST(boost::asio::deadline_timer)(
+        static_cast<boost::asio::deadline_timer&&>(
           other.pending_write_);
 #else // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
       pending_read_ =
-        BOOST_ASIO_MOVE_CAST(boost::asio::steady_timer)(
+        static_cast<boost::asio::steady_timer&&>(
           other.pending_read_);
       pending_write_ =
-        BOOST_ASIO_MOVE_CAST(boost::asio::steady_timer)(
+        static_cast<boost::asio::steady_timer&&>(
           other.pending_write_);
 #endif // defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
       output_buffer_space_ =
-        BOOST_ASIO_MOVE_CAST(std::vector<unsigned char>)(
+        static_cast<std::vector<unsigned char>&&>(
           other.output_buffer_space_);
       output_buffer_ = other.output_buffer_;
       input_buffer_space_ =
-        BOOST_ASIO_MOVE_CAST(std::vector<unsigned char>)(
+        static_cast<std::vector<unsigned char>&&>(
           other.input_buffer_space_);
       input_buffer_ = other.input_buffer_;
       input_ = other.input_;
@@ -140,7 +137,6 @@ struct stream_core
     }
     return *this;
   }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
   // The SSL engine.
   engine engine_;

@@ -55,7 +55,7 @@ class packaged_handler;
  * completes with an error_code indicating failure, it is converted into a
  * system_error and passed back to the caller via the future.
  */
-template <typename Allocator = std::allocator<void> >
+template <typename Allocator = std::allocator<void>>
 class use_future_t
 {
 public:
@@ -64,7 +64,7 @@ public:
   typedef Allocator allocator_type;
 
   /// Construct using default-constructed allocator.
-  BOOST_ASIO_CONSTEXPR use_future_t()
+  constexpr use_future_t()
   {
   }
 
@@ -117,16 +117,16 @@ public:
 #if defined(GENERATING_DOCUMENTATION)
   unspecified
 #else // defined(GENERATING_DOCUMENTATION)
-  detail::packaged_token<typename decay<Function>::type, Allocator>
+  detail::packaged_token<decay_t<Function>, Allocator>
 #endif // defined(GENERATING_DOCUMENTATION)
-  operator()(BOOST_ASIO_MOVE_ARG(Function) f) const;
+  operator()(Function&& f) const;
 
 private:
   // Helper type to ensure that use_future can be constexpr default-constructed
   // even when std::allocator<void> can't be.
   struct std_allocator_void
   {
-    BOOST_ASIO_CONSTEXPR std_allocator_void()
+    constexpr std_allocator_void()
     {
     }
 
@@ -136,9 +136,9 @@ private:
     }
   };
 
-  typename conditional<
+  conditional_t<
     is_same<std::allocator<void>, Allocator>::value,
-    std_allocator_void, Allocator>::type allocator_;
+    std_allocator_void, Allocator> allocator_;
 };
 
 /// A @ref completion_token object that causes an asynchronous operation to
@@ -146,11 +146,7 @@ private:
 /**
  * See the documentation for boost::asio::use_future_t for a usage example.
  */
-#if defined(BOOST_ASIO_HAS_CONSTEXPR) || defined(GENERATING_DOCUMENTATION)
 constexpr use_future_t<> use_future;
-#elif defined(BOOST_ASIO_MSVC)
-__declspec(selectany) use_future_t<> use_future;
-#endif
 
 } // namespace asio
 } // namespace boost

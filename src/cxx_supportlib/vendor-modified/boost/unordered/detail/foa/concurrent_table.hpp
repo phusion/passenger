@@ -16,15 +16,22 @@
 #include <boost/config.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/core/no_exceptions_support.hpp>
+#include <boost/core/serialization.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/mp11/tuple.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/throw_exception.hpp>
+#include <boost/unordered/detail/archive_constructed.hpp>
+#include <boost/unordered/detail/bad_archive_exception.hpp>
 #include <boost/unordered/detail/foa/core.hpp>
+#include <boost/unordered/detail/foa/reentrancy_check.hpp>
 #include <boost/unordered/detail/foa/rw_spinlock.hpp>
 #include <boost/unordered/detail/foa/tuple_rotate_right.hpp>
+#include <boost/unordered/detail/serialization_version.hpp>
+#include <boost/unordered/detail/static_assert.hpp>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -82,7 +89,7 @@ private:
   static constexpr std::size_t element_offset=
     (sizeof(T)+cacheline_size-1)/cacheline_size*cacheline_size;
 
-  BOOST_STATIC_ASSERT(alignof(T)<=cacheline_size);
+  BOOST_UNORDERED_STATIC_ASSERT(alignof(T)<=cacheline_size);
 
   T* data(std::size_t pos)noexcept
   {
@@ -120,7 +127,7 @@ template<typename Mutex>
 class shared_lock
 {
 public:
-  shared_lock(Mutex& m_)noexcept:m{m_}{m.lock_shared();}
+  shared_lock(Mutex& m_)noexcept:m(m_){m.lock_shared();}
   ~shared_lock()noexcept{if(owns)m.unlock_shared();}
 
   /* not used but VS in pre-C++17 mode needs to see it for RVO */
@@ -142,7 +149,7 @@ template<typename Mutex>
 class lock_guard
 {
 public:
-  lock_guard(Mutex& m_)noexcept:m{m_}{m.lock();}
+  lock_guard(Mutex& m_)noexcept:m(m_){m.lock();}
   ~lock_guard()noexcept{m.unlock();}
 
   /* not used but VS in pre-C++17 mode needs to see it for RVO */
@@ -241,73 +248,105 @@ group_access* dummy_group_accesses()
 
 /* subclasses table_arrays to add an additional group_access array */
 
-template<typename Value,typename Group,typename SizePolicy>
-struct concurrent_table_arrays:table_arrays<Value,Group,SizePolicy>
+template<typename Value,typename Group,typename SizePolicy,typename Allocator>
+struct concurrent_table_arrays:table_arrays<Value,Group,SizePolicy,Allocator>
 {
-  using super=table_arrays<Value,Group,SizePolicy>;
+  using group_access_allocator_type=
+    typename boost::allocator_rebind<Allocator,group_access>::type;
+  using group_access_pointer=
+    typename boost::allocator_pointer<group_access_allocator_type>::type;
 
-  concurrent_table_arrays(const super& arrays,group_access *pga):
-    super{arrays},group_accesses{pga}{}
+  using super=table_arrays<Value,Group,SizePolicy,Allocator>;
 
-  template<typename Allocator>
-  static concurrent_table_arrays new_(Allocator& al,std::size_t n)
+  concurrent_table_arrays(const super& arrays,group_access_pointer pga):
+    super{arrays},group_accesses_{pga}{}
+
+  group_access* group_accesses()const noexcept{
+    return boost::to_address(group_accesses_);
+  }
+
+  static concurrent_table_arrays new_(
+    group_access_allocator_type al,std::size_t n)
   {
-    concurrent_table_arrays arrays{super::new_(al,n),nullptr};
-    if(!arrays.elements){
-      arrays.group_accesses=dummy_group_accesses<SizePolicy::min_size()>();
+    super x{super::new_(al,n)};
+    BOOST_TRY{
+      return new_group_access(al,x);
     }
-    else{
-      using access_alloc=
-        typename boost::allocator_rebind<Allocator,group_access>::type;
-      using access_traits=boost::allocator_traits<access_alloc>;
-
-      BOOST_TRY{
-        auto aal=access_alloc(al);
-        arrays.group_accesses=boost::to_address(
-          access_traits::allocate(aal,arrays.groups_size_mask+1));
-
-        for(std::size_t i=0;i<arrays.groups_size_mask+1;++i){
-          ::new (arrays.group_accesses+i) group_access();
-        }
-      }
-      BOOST_CATCH(...){
-        super::delete_(al,arrays);
-        BOOST_RETHROW
-      }
-      BOOST_CATCH_END
+    BOOST_CATCH(...){
+      super::delete_(al,x);
+      BOOST_RETHROW
     }
+    BOOST_CATCH_END
+  }
+
+  static void set_group_access(
+    group_access_allocator_type al,concurrent_table_arrays& arrays)
+  {
+    set_group_access(
+      al,arrays,std::is_same<group_access*,group_access_pointer>{});
+  }
+
+  static void set_group_access(
+    group_access_allocator_type al,
+    concurrent_table_arrays& arrays,
+    std::false_type /* fancy pointers */)
+  {
+    arrays.group_accesses_=
+        boost::allocator_allocate(al,arrays.groups_size_mask+1);
+
+      for(std::size_t i=0;i<arrays.groups_size_mask+1;++i){
+        ::new (arrays.group_accesses()+i) group_access();
+      }
+  }
+
+  static void set_group_access(
+    group_access_allocator_type al,
+    concurrent_table_arrays& arrays,
+    std::true_type /* optimize when elements() is null */)
+  {
+    if(!arrays.elements()){
+      arrays.group_accesses_=
+        dummy_group_accesses<SizePolicy::min_size()>();
+    } else {
+      set_group_access(al,arrays,std::false_type{});
+    }
+  }
+
+  static concurrent_table_arrays new_group_access(
+    group_access_allocator_type al,const super& x)
+  {
+    concurrent_table_arrays arrays{x,nullptr};
+    set_group_access(al,arrays);
     return arrays;
   }
 
-  template<typename Allocator>
-  static void delete_(Allocator& al,concurrent_table_arrays& arrays)noexcept
+  static void delete_(
+    group_access_allocator_type al,concurrent_table_arrays& arrays)noexcept
   {
-    if(arrays.elements){
-      using access_alloc=
-        typename boost::allocator_rebind<Allocator,group_access>::type;
-      using access_traits=boost::allocator_traits<access_alloc>;
-      using pointer=typename access_traits::pointer;
-      using pointer_traits=boost::pointer_traits<pointer>;
-
-      auto aal=access_alloc(al);
-      access_traits::deallocate(
-        aal,pointer_traits::pointer_to(*arrays.group_accesses),
-        arrays.groups_size_mask+1);
-    }
+    delete_group_access(al,arrays);
     super::delete_(al,arrays);
   }
 
-  group_access *group_accesses;
+  static void delete_group_access(
+    group_access_allocator_type al,concurrent_table_arrays& arrays)noexcept
+  {
+    if(arrays.elements()){
+      boost::allocator_deallocate(
+        al,arrays.group_accesses_,arrays.groups_size_mask+1);
+    }
+  }
+
+  group_access_pointer group_accesses_;
 };
 
 struct atomic_size_control
 {
   static constexpr auto atomic_size_t_size=sizeof(std::atomic<std::size_t>);
-  BOOST_STATIC_ASSERT(atomic_size_t_size<cacheline_size);
+  BOOST_UNORDERED_STATIC_ASSERT(atomic_size_t_size<cacheline_size);
 
   atomic_size_control(std::size_t ml_,std::size_t size_):
     pad0_{},ml{ml_},pad1_{},size{size_}{}
-  atomic_size_control(atomic_size_control& x):
+  atomic_size_control(const atomic_size_control& x):
     pad0_{},ml{x.ml.load()},pad1_{},size{x.size.load()}{}
 
   /* padding to avoid false sharing internally and with sorrounding data */
@@ -335,9 +374,7 @@ inline void swap(atomic_size_control& x,atomic_size_control& y)
 }
 
 /* foa::concurrent_table serves as the foundation for end-user concurrent
- * hash containers. The TypePolicy parameter can specify flat/node-based
- * map-like and set-like containers, though currently we're only providing
- * boost::concurrent_flat_map.
+ * hash containers.
  * 
  * The exposed interface (completed by the wrapping containers) is not that
  * of a regular container (in fact, it does not model Container as understood
@@ -359,7 +396,7 @@ inline void swap(atomic_size_control& x,atomic_size_control& y)
  *   - Parallel versions of [c]visit_all(f) and erase_if(f) are provided based
  *     on C++17 stdlib parallel algorithms.
  * 
- * Consult boost::unordered_flat_map docs for the full API reference.
+ * Consult boost::concurrent_flat_(map|set) docs for the full API reference.
  * Heterogeneous lookup is suported by default, that is, without checking for
  * any ::is_transparent typedefs --this checking is done by the wrapping
  * containers.
@@ -387,9 +424,12 @@ inline void swap(atomic_size_control& x,atomic_size_control& y)
  *       reduced hash value is set) and the insertion counter is atomically
  *       incremented: if no other thread has incremented the counter during the
  *       whole operation (which is checked by comparing with c0), then we're
- *       good to go and complete the insertion, otherwise we roll back and start
- *       over.
+ *       good to go and complete the insertion, otherwise we roll back and
+ *       start over.
  */
+
+template<typename,typename,typename,typename>
+class table; /* concurrent/non-concurrent interop */
 
 template <typename TypePolicy,typename Hash,typename Pred,typename Allocator>
 using concurrent_table_core_impl=table_core<
@@ -412,10 +452,10 @@ class concurrent_table:
   using group_type=typename super::group_type;
   using super::N;
   using prober=typename super::prober;
-
-  template<
-    typename TypePolicy2,typename Hash2,typename Pred2,typename Allocator2>
-  friend class concurrent_table;
+  using arrays_type=typename super::arrays_type;
+  using size_ctrl_type=typename super::size_ctrl_type;
+  using compatible_nonconcurrent_table=table<TypePolicy,Hash,Pred,Allocator>;
+  friend compatible_nonconcurrent_table;
 
 public:
   using key_type=typename super::key_type;
@@ -426,6 +466,7 @@ public:
   using key_equal=typename super::key_equal;
   using allocator_type=typename super::allocator_type;
   using size_type=typename super::size_type;
+  static constexpr std::size_t bulk_visit_size=16;
 
 private:
   template<typename Value,typename T>
@@ -450,6 +491,30 @@ public:
     concurrent_table(x,al_,x.exclusive_access()){}
   concurrent_table(concurrent_table&& x,const Allocator& al_):
     concurrent_table(std::move(x),al_,x.exclusive_access()){}
+
+  template<typename ArraysType>
+  concurrent_table(
+    compatible_nonconcurrent_table&& x,
+    arrays_holder<ArraysType,Allocator>&& ah):
+    super{
+      std::move(x.h()),std::move(x.pred()),std::move(x.al()),
+      [&x]{return arrays_type::new_group_access(
+        x.al(),typename arrays_type::super{
+          x.arrays.groups_size_index,x.arrays.groups_size_mask,
+          to_pointer<typename arrays_type::group_type_pointer>(
+            reinterpret_cast<group_type*>(x.arrays.groups())),
+          x.arrays.elements_});},
+      size_ctrl_type{x.size_ctrl.ml,x.size_ctrl.size}}
+  {
+    x.arrays=ah.release();
+    x.size_ctrl.ml=x.initial_max_load();
+    x.size_ctrl.size=0;
+  }
+
+  concurrent_table(compatible_nonconcurrent_table&& x):
+    concurrent_table(std::move(x),x.make_empty_arrays())
+  {}
+
   ~concurrent_table()=default;
 
   concurrent_table& operator=(const concurrent_table& x)
@@ -459,7 +524,8 @@ public:
     return *this;
   }
 
-  concurrent_table& operator=(concurrent_table&& x)
+  concurrent_table& operator=(concurrent_table&& x)noexcept(
+    noexcept(std::declval<super&>() = std::declval<super&&>()))
   {
     auto lck=exclusive_access(*this,x);
     super::operator=(std::move(x));
@@ -500,6 +566,27 @@ public:
     return visit(x,std::forward<F>(f));
   }
 
+  template<typename FwdIterator,typename F>
+  BOOST_FORCEINLINE
+  std::size_t visit(FwdIterator first,FwdIterator last,F&& f)
+  {
+    return bulk_visit_impl(group_exclusive{},first,last,std::forward<F>(f));
+  }
+
+  template<typename FwdIterator,typename F>
+  BOOST_FORCEINLINE
+  std::size_t visit(FwdIterator first,FwdIterator last,F&& f)const
+  {
+    return bulk_visit_impl(group_shared{},first,last,std::forward<F>(f));
+  }
+
+  template<typename FwdIterator,typename F>
+  BOOST_FORCEINLINE
+  std::size_t cvisit(FwdIterator first,FwdIterator last,F&& f)const
+  {
+    return visit(first,last,std::forward<F>(f));
+  }
+
   template<typename F> std::size_t visit_all(F&& f)
   {
     return visit_all_impl(group_exclusive{},std::forward<F>(f));
@@ -536,6 +623,46 @@ public:
   void cvisit_all(ExecutionPolicy&& policy,F&& f)const
   {
     visit_all(std::forward<ExecutionPolicy>(policy),std::forward<F>(f));
+  }
+#endif
+
+  template<typename F> bool visit_while(F&& f)
+  {
+    return visit_while_impl(group_exclusive{},std::forward<F>(f));
+  }
+
+  template<typename F> bool visit_while(F&& f)const
+  {
+    return visit_while_impl(group_shared{},std::forward<F>(f));
+  }
+
+  template<typename F> bool cvisit_while(F&& f)const
+  {
+    return visit_while(std::forward<F>(f));
+  }
+
+#if defined(BOOST_UNORDERED_PARALLEL_ALGORITHMS)
+  template<typename ExecutionPolicy,typename F>
+  bool visit_while(ExecutionPolicy&& policy,F&& f)
+  {
+    return visit_while_impl(
+      group_exclusive{},
+      std::forward<ExecutionPolicy>(policy),std::forward<F>(f));
+  }
+
+  template<typename ExecutionPolicy,typename F>
+  bool visit_while(ExecutionPolicy&& policy,F&& f)const
+  {
+    return visit_while_impl(
+      group_shared{},
+      std::forward<ExecutionPolicy>(policy),std::forward<F>(f));
+  }
+
+  template<typename ExecutionPolicy,typename F>
+  bool cvisit_while(ExecutionPolicy&& policy,F&& f)const
+  {
+    return visit_while(
+      std::forward<ExecutionPolicy>(policy),std::forward<F>(f));
   }
 #endif
 
@@ -835,11 +962,14 @@ public:
   }
 
 private:
+  template<typename,typename,typename,typename> friend class concurrent_table;
+
   using mutex_type=rw_spinlock;
   using multimutex_type=multimutex<mutex_type,128>; // TODO: adapt 128 to the machine
-  using shared_lock_guard=shared_lock<mutex_type>;
-  using exclusive_lock_guard=lock_guard<multimutex_type>;
-  using exclusive_bilock_guard=scoped_bilock<multimutex_type>;
+  using shared_lock_guard=reentrancy_checked<shared_lock<mutex_type>>;
+  using exclusive_lock_guard=reentrancy_checked<lock_guard<multimutex_type>>;
+  using exclusive_bilock_guard=
+    reentrancy_bichecked<scoped_bilock<multimutex_type>>;
   using group_shared_lock_guard=typename group_access::shared_lock_guard;
   using group_exclusive_lock_guard=typename group_access::exclusive_lock_guard;
   using group_insert_counter_type=typename group_access::insert_counter_type;
@@ -859,18 +989,18 @@ private:
   {
     thread_local auto id=(++thread_counter)%mutexes.size();
 
-    return shared_lock_guard{mutexes[id]};
+    return shared_lock_guard{this,mutexes[id]};
   }
 
   inline exclusive_lock_guard exclusive_access()const
   {
-    return exclusive_lock_guard{mutexes};
+    return exclusive_lock_guard{this,mutexes};
   }
 
   static inline exclusive_bilock_guard exclusive_access(
     const concurrent_table& x,const concurrent_table& y)
   {
-    return {x.mutexes,y.mutexes};
+    return {&x,&y,x.mutexes,y.mutexes};
   }
 
   template<typename Hash2,typename Pred2>
@@ -878,7 +1008,7 @@ private:
     const concurrent_table& x,
     const concurrent_table<TypePolicy,Hash2,Pred2,Allocator>& y)
   {
-    return {x.mutexes,y.mutexes};
+    return {&x,&y,x.mutexes,y.mutexes};
   }
 
   /* Tag-dispatched shared/exclusive group access */
@@ -888,18 +1018,18 @@ private:
 
   inline group_shared_lock_guard access(group_shared,std::size_t pos)const
   {
-    return this->arrays.group_accesses[pos].shared_access();
+    return this->arrays.group_accesses()[pos].shared_access();
   }
 
   inline group_exclusive_lock_guard access(
     group_exclusive,std::size_t pos)const
   {
-    return this->arrays.group_accesses[pos].exclusive_access();
+    return this->arrays.group_accesses()[pos].exclusive_access();
   }
 
   inline group_insert_counter_type& insert_counter(std::size_t pos)const
   {
-    return this->arrays.group_accesses[pos].insert_counter();
+    return this->arrays.group_accesses()[pos].insert_counter();
   }
 
   /* Const casts value_type& according to the level of group access for
@@ -922,7 +1052,7 @@ private:
     erase_on_exit(
       concurrent_table& x_,
       group_type* pg_,unsigned int pos_,element_type* p_):
-      x{x_},pg{pg_},pos{pos_},p{p_}{}
+      x(x_),pg(pg_),pos(pos_),p(p_){}
     ~erase_on_exit(){if(!rollback_)x.super::erase(pg,pos,p);}
 
     void rollback(){rollback_=true;}
@@ -942,6 +1072,26 @@ private:
     auto hash=this->hash_for(x);
     return unprotected_visit(
       access_mode,x,this->position_for(hash),hash,std::forward<F>(f));
+  }
+
+  template<typename GroupAccessMode,typename FwdIterator,typename F>
+  BOOST_FORCEINLINE
+  std::size_t bulk_visit_impl(
+    GroupAccessMode access_mode,FwdIterator first,FwdIterator last,F&& f)const
+  {
+    auto        lck=shared_access();
+    std::size_t res=0;
+    auto        n=static_cast<std::size_t>(std::distance(first,last));
+    while(n){
+      auto m=n<2*bulk_visit_size?n:bulk_visit_size;
+      res+=unprotected_bulk_visit(access_mode,first,m,std::forward<F>(f));
+      n-=m;
+      std::advance(
+        first,
+        static_cast<
+          typename std::iterator_traits<FwdIterator>::difference_type>(m));
+    }
+    return res;
   }
 
   template<typename GroupAccessMode,typename F>
@@ -966,6 +1116,29 @@ private:
       access_mode,std::forward<ExecutionPolicy>(policy),
       [&](element_type* p){
         f(cast_for(access_mode,type_policy::value_from(*p)));
+      });
+  }
+#endif
+
+  template<typename GroupAccessMode,typename F>
+  bool visit_while_impl(GroupAccessMode access_mode,F&& f)const
+  {
+    auto lck=shared_access();
+    return for_all_elements_while(access_mode,[&](element_type* p){
+      return f(cast_for(access_mode,type_policy::value_from(*p)));
+    });
+  }
+
+#if defined(BOOST_UNORDERED_PARALLEL_ALGORITHMS)
+  template<typename GroupAccessMode,typename ExecutionPolicy,typename F>
+  bool visit_while_impl(
+    GroupAccessMode access_mode,ExecutionPolicy&& policy,F&& f)const
+  {
+    auto lck=shared_access();
+    return for_all_elements_while(
+      access_mode,std::forward<ExecutionPolicy>(policy),
+      [&](element_type* p){
+        return f(cast_for(access_mode,type_policy::value_from(*p)));
       });
   }
 #endif
@@ -995,10 +1168,10 @@ private:
     prober pb(pos0);
     do{
       auto pos=pb.get();
-      auto pg=this->arrays.groups+pos;
+      auto pg=this->arrays.groups()+pos;
       auto mask=pg->match(hash);
       if(mask){
-        auto p=this->arrays.elements+pos*N;
+        auto p=this->arrays.elements()+pos*N;
         BOOST_UNORDERED_PREFETCH_ELEMENTS(p,N);
         auto lck=access(access_mode,pos);
         do{
@@ -1017,6 +1190,77 @@ private:
     }
     while(BOOST_LIKELY(pb.next(this->arrays.groups_size_mask)));
     return 0;
+  }
+
+ template<typename GroupAccessMode,typename FwdIterator,typename F>
+  BOOST_FORCEINLINE std::size_t unprotected_bulk_visit(
+    GroupAccessMode access_mode,FwdIterator first,std::size_t m,F&& f)const
+  {
+    BOOST_ASSERT(m<2*bulk_visit_size);
+
+    std::size_t res=0,
+                hashes[2*bulk_visit_size-1],
+                positions[2*bulk_visit_size-1];
+    int         masks[2*bulk_visit_size-1];
+    auto        it=first;
+
+    for(auto i=m;i--;++it){
+      auto hash=hashes[i]=this->hash_for(*it);
+      auto pos=positions[i]=this->position_for(hash);
+      BOOST_UNORDERED_PREFETCH(this->arrays.groups()+pos);
+    }
+
+    for(auto i=m;i--;){
+      auto hash=hashes[i];
+      auto pos=positions[i];
+      auto mask=masks[i]=(this->arrays.groups()+pos)->match(hash);
+      if(mask){
+        BOOST_UNORDERED_PREFETCH(this->arrays.group_accesses()+pos);
+        BOOST_UNORDERED_PREFETCH(
+          this->arrays.elements()+pos*N+unchecked_countr_zero(mask));
+      }
+    }
+
+    it=first;
+    for(auto i=m;i--;++it){
+      auto          pos=positions[i];
+      prober        pb(pos);
+      auto          pg=this->arrays.groups()+pos;
+      auto          mask=masks[i];
+      element_type *p;
+      if(!mask)goto post_mask;
+      p=this->arrays.elements()+pos*N;
+      for(;;){
+        {
+          auto lck=access(access_mode,pos);
+          do{
+            auto n=unchecked_countr_zero(mask);
+            if(BOOST_LIKELY(
+              pg->is_occupied(n)&&
+              bool(this->pred()(*it,this->key_from(p[n]))))){
+              f(cast_for(access_mode,type_policy::value_from(p[n])));
+              ++res;
+              goto next_key;
+            }
+            mask&=mask-1;
+          }while(mask);
+        }
+      post_mask:
+        do{
+          if(BOOST_LIKELY(pg->is_not_overflowed(hashes[i]))||
+             BOOST_UNLIKELY(!pb.next(this->arrays.groups_size_mask))){
+            goto next_key;
+          }
+          pos=pb.get();
+          pg=this->arrays.groups()+pos;
+          mask=pg->match(hashes[i]);
+        }while(!mask);
+        p=this->arrays.elements()+pos*N;
+        BOOST_UNORDERED_PREFETCH_ELEMENTS(p,N);
+      }
+      next_key:;
+    }
+    return res;
   }
 
 #if defined(BOOST_MSVC)
@@ -1153,7 +1397,7 @@ private:
 
   struct reserve_size
   {
-    reserve_size(concurrent_table& x_):x{x_}
+    reserve_size(concurrent_table& x_):x(x_)
     {
       size_=++x.size_ctrl.size;
     }
@@ -1211,7 +1455,7 @@ private:
       if(BOOST_LIKELY(rsize.succeeded())){
         for(prober pb(pos0);;pb.next(this->arrays.groups_size_mask)){
           auto pos=pb.get();
-          auto pg=this->arrays.groups+pos;
+          auto pg=this->arrays.groups()+pos;
           auto lck=access(group_exclusive{},pos);
           auto mask=pg->match_available();
           if(BOOST_LIKELY(mask!=0)){
@@ -1221,7 +1465,7 @@ private:
               /* other thread inserted from pos0, need to start over */
               goto startover;
             }
-            auto p=this->arrays.elements+pos*N+n;
+            auto p=this->arrays.elements()+pos*N+n;
             this->construct_element(p,std::forward<Args>(args)...);
             rslot.commit();
             rsize.commit();
@@ -1254,18 +1498,37 @@ private:
   auto for_all_elements(GroupAccessMode access_mode,F f)const
     ->decltype(f(nullptr,0,nullptr),void())
   {
-    auto p=this->arrays.elements;
-    if(!p)return;
-    for(auto pg=this->arrays.groups,last=pg+this->arrays.groups_size_mask+1;
-        pg!=last;++pg,p+=N){
-      auto lck=access(access_mode,(std::size_t)(pg-this->arrays.groups));
-      auto mask=this->match_really_occupied(pg,last);
-      while(mask){
-        auto n=unchecked_countr_zero(mask);
-        f(pg,n,p+n);
-        mask&=mask-1;
+    for_all_elements_while(
+      access_mode,[&](group_type* pg,unsigned int n,element_type* p)
+        {f(pg,n,p);return true;});
+  }
+
+  template<typename GroupAccessMode,typename F>
+  auto for_all_elements_while(GroupAccessMode access_mode,F f)const
+    ->decltype(f(nullptr),bool())
+  {
+    return for_all_elements_while(
+      access_mode,[&](group_type*,unsigned int,element_type* p){return f(p);});
+  }
+
+  template<typename GroupAccessMode,typename F>
+  auto for_all_elements_while(GroupAccessMode access_mode,F f)const
+    ->decltype(f(nullptr,0,nullptr),bool())
+  {
+    auto p=this->arrays.elements();
+    if(p){
+      for(auto pg=this->arrays.groups(),last=pg+this->arrays.groups_size_mask+1;
+          pg!=last;++pg,p+=N){
+        auto lck=access(access_mode,(std::size_t)(pg-this->arrays.groups()));
+        auto mask=this->match_really_occupied(pg,last);
+        while(mask){
+          auto n=unchecked_countr_zero(mask);
+          if(!f(pg,n,p+n))return false;
+          mask&=mask-1;
+        }
       }
     }
+    return true;
   }
 
 #if defined(BOOST_UNORDERED_PARALLEL_ALGORITHMS)
@@ -1284,15 +1547,15 @@ private:
     GroupAccessMode access_mode,ExecutionPolicy&& policy,F f)const
     ->decltype(f(nullptr,0,nullptr),void())
   {
-    if(!this->arrays.elements)return;
-    auto first=this->arrays.groups,
+    if(!this->arrays.elements())return;
+    auto first=this->arrays.groups(),
          last=first+this->arrays.groups_size_mask+1;
     std::for_each(std::forward<ExecutionPolicy>(policy),first,last,
       [&,this](group_type& g){
-        std::size_t pos=static_cast<std::size_t>(&g-first);
-        auto        p=this->arrays.elements+pos*N;
-        auto        lck=access(access_mode,pos);
-        auto        mask=this->match_really_occupied(&g,last);
+        auto pos=static_cast<std::size_t>(&g-first);
+        auto p=this->arrays.elements()+pos*N;
+        auto lck=access(access_mode,pos);
+        auto mask=this->match_really_occupied(&g,last);
         while(mask){
           auto n=unchecked_countr_zero(mask);
           f(&g,n,p+n);
@@ -1301,7 +1564,163 @@ private:
       }
     );
   }
+
+  template<typename GroupAccessMode,typename ExecutionPolicy,typename F>
+  bool for_all_elements_while(
+    GroupAccessMode access_mode,ExecutionPolicy&& policy,F f)const
+  {
+    if(!this->arrays.elements())return true;
+    auto first=this->arrays.groups(),
+         last=first+this->arrays.groups_size_mask+1;
+    return std::all_of(std::forward<ExecutionPolicy>(policy),first,last,
+      [&,this](group_type& g){
+        auto pos=static_cast<std::size_t>(&g-first);
+        auto p=this->arrays.elements()+pos*N;
+        auto lck=access(access_mode,pos);
+        auto mask=this->match_really_occupied(&g,last);
+        while(mask){
+          auto n=unchecked_countr_zero(mask);
+          if(!f(p+n))return false;
+          mask&=mask-1;
+        }
+        return true;
+      }
+    );
+  }
 #endif
+
+  friend class boost::serialization::access;
+
+  template<typename Archive>
+  void serialize(Archive& ar,unsigned int version)
+  {
+    core::split_member(ar,*this,version);
+  }
+
+  template<typename Archive>
+  void save(Archive& ar,unsigned int version)const
+  {
+    save(
+      ar,version,
+      std::integral_constant<bool,std::is_same<key_type,value_type>::value>{});
+  }
+
+  template<typename Archive>
+  void save(Archive& ar,unsigned int,std::true_type /* set */)const
+  {
+    auto                                    lck=exclusive_access();
+    const std::size_t                       s=super::size();
+    const serialization_version<value_type> value_version;
+
+    ar<<core::make_nvp("count",s);
+    ar<<core::make_nvp("value_version",value_version);
+
+    super::for_all_elements([&,this](element_type* p){
+      auto& x=type_policy::value_from(*p);
+      core::save_construct_data_adl(ar,std::addressof(x),value_version);
+      ar<<serialization::make_nvp("item",x);
+    });
+  }
+
+  template<typename Archive>
+  void save(Archive& ar,unsigned int,std::false_type /* map */)const
+  {
+    using raw_key_type=typename std::remove_const<key_type>::type;
+    using raw_mapped_type=typename std::remove_const<
+      typename TypePolicy::mapped_type>::type;
+
+    auto                                         lck=exclusive_access();
+    const std::size_t                            s=super::size();
+    const serialization_version<raw_key_type>    key_version;
+    const serialization_version<raw_mapped_type> mapped_version;
+
+    ar<<core::make_nvp("count",s);
+    ar<<core::make_nvp("key_version",key_version);
+    ar<<core::make_nvp("mapped_version",mapped_version);
+
+    super::for_all_elements([&,this](element_type* p){
+      /* To remain lib-independent from Boost.Serialization and not rely on
+       * the user having included the serialization code for std::pair
+       * (boost/serialization/utility.hpp), we serialize the key and the
+       * mapped value separately.
+       */
+
+      auto& x=type_policy::value_from(*p);
+      core::save_construct_data_adl(
+        ar,std::addressof(x.first),key_version);
+      ar<<serialization::make_nvp("key",x.first);
+      core::save_construct_data_adl(
+        ar,std::addressof(x.second),mapped_version);
+      ar<<serialization::make_nvp("mapped",x.second);
+    });
+  }
+
+  template<typename Archive>
+  void load(Archive& ar,unsigned int version)
+  {
+    load(
+      ar,version,
+      std::integral_constant<bool,std::is_same<key_type,value_type>::value>{});
+  }
+
+  template<typename Archive>
+  void load(Archive& ar,unsigned int,std::true_type /* set */)
+  {
+    auto                              lck=exclusive_access();
+    std::size_t                       s;
+    serialization_version<value_type> value_version;
+
+    ar>>core::make_nvp("count",s);
+    ar>>core::make_nvp("value_version",value_version);
+
+    super::clear();
+    super::reserve(s);
+
+    for(std::size_t n=0;n<s;++n){
+      archive_constructed<value_type> value("item",ar,value_version);
+      auto&                           x=value.get();
+      auto                            hash=this->hash_for(x);
+      auto                            pos0=this->position_for(hash);
+
+      if(this->find(x,pos0,hash))throw_exception(bad_archive_exception());
+      auto loc=this->unchecked_emplace_at(pos0,hash,std::move(x));
+      ar.reset_object_address(std::addressof(*loc.p),std::addressof(x));
+    }
+  }
+
+  template<typename Archive>
+  void load(Archive& ar,unsigned int,std::false_type /* map */)
+  {
+    using raw_key_type=typename std::remove_const<key_type>::type;
+    using raw_mapped_type=typename std::remove_const<
+      typename TypePolicy::mapped_type>::type;
+
+    auto                                   lck=exclusive_access();
+    std::size_t                            s;
+    serialization_version<raw_key_type>    key_version;
+    serialization_version<raw_mapped_type> mapped_version;
+
+    ar>>core::make_nvp("count",s);
+    ar>>core::make_nvp("key_version",key_version);
+    ar>>core::make_nvp("mapped_version",mapped_version);
+
+    super::clear();
+    super::reserve(s);
+
+    for(std::size_t n=0;n<s;++n){
+      archive_constructed<raw_key_type>    key("key",ar,key_version);
+      archive_constructed<raw_mapped_type> mapped("mapped",ar,mapped_version);
+      auto&                                k=key.get();
+      auto&                                m=mapped.get();
+      auto                                 hash=this->hash_for(k);
+      auto                                 pos0=this->position_for(hash);
+
+      if(this->find(k,pos0,hash))throw_exception(bad_archive_exception());
+      auto loc=this->unchecked_emplace_at(pos0,hash,std::move(k),std::move(m));
+      ar.reset_object_address(std::addressof(loc.p->first),std::addressof(k));
+      ar.reset_object_address(std::addressof(loc.p->second),std::addressof(m));
+    }
+  }
 
   static std::atomic<std::size_t> thread_counter;
   mutable multimutex_type         mutexes;

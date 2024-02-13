@@ -31,7 +31,7 @@ template <typename MutableBufferSequence>
 class read_op
 {
 public:
-  static BOOST_ASIO_CONSTEXPR const char* tracking_name()
+  static constexpr const char* tracking_name()
   {
     return "ssl::stream<>::async_read_some";
   }
@@ -57,7 +57,7 @@ public:
       const boost::system::error_code& ec,
       const std::size_t& bytes_transferred) const
   {
-    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler)(ec, bytes_transferred);
+    static_cast<Handler&&>(handler)(ec, bytes_transferred);
   }
 
 private:

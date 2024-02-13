@@ -27,8 +27,6 @@ class array;
 // Standard library components can't be forward declared, so we'll have to
 // include the array header. Fortunately, it's fairly lightweight and doesn't
 // add significantly to the compile time.
-#if defined(BOOST_ASIO_HAS_STD_ARRAY)
-# include <array>
-#endif // defined(BOOST_ASIO_HAS_STD_ARRAY)
+#include <array>
 
 #endif // BOOST_ASIO_DETAIL_ARRAY_FWD_HPP

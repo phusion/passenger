@@ -1,0 +1,32 @@
+From 57f5e4522b869d118e0c883db11ceb97ac790820 Mon Sep 17 00:00:00 2001
+From: Camden Narzt <camden@phusion.nl>
+Date: Tue, 13 Feb 2024 14:31:34 -0700
+Subject: [PATCH] drop windows headers from asio
+
+---
+ src/cxx_supportlib/vendor-modified/boost/asio.hpp | 9 ---------
+ 1 file changed, 9 deletions(-)
+
+diff --git src/cxx_supportlib/vendor-modified/boost/asio.hpp src/cxx_supportlib/vendor-modified/boost/asio.hpp
+index 7b889de4a..b32ead6ae 100644
+--- src/cxx_supportlib/vendor-modified/boost/asio.hpp
++++ src/cxx_supportlib/vendor-modified/boost/asio.hpp
+@@ -182,15 +182,6 @@
+ #include <boost/asio/uses_executor.hpp>
+ #include <boost/asio/version.hpp>
+ #include <boost/asio/wait_traits.hpp>
+-#include <boost/asio/windows/basic_object_handle.hpp>
+-#include <boost/asio/windows/basic_overlapped_handle.hpp>
+-#include <boost/asio/windows/basic_random_access_handle.hpp>
+-#include <boost/asio/windows/basic_stream_handle.hpp>
+-#include <boost/asio/windows/object_handle.hpp>
+-#include <boost/asio/windows/overlapped_handle.hpp>
+-#include <boost/asio/windows/overlapped_ptr.hpp>
+-#include <boost/asio/windows/random_access_handle.hpp>
+-#include <boost/asio/windows/stream_handle.hpp>
+ #include <boost/asio/writable_pipe.hpp>
+ #include <boost/asio/write.hpp>
+ #include <boost/asio/write_at.hpp>
+-- 
+2.39.3 (Apple Git-145)
+

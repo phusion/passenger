@@ -5,11 +5,9 @@
 #ifndef BOOST_TYPEOF_STD_complex_hpp_INCLUDED
 #define BOOST_TYPEOF_STD_complex_hpp_INCLUDED
 
+// This header is no longer useful and is only retained for compatibility
+
 #include <complex>
 #include <boost/typeof/typeof.hpp>
-
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::complex, 1)
 
 #endif//BOOST_TYPEOF_STD_complex_hpp_INCLUDED

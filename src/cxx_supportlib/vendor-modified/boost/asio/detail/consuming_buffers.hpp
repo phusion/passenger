@@ -36,20 +36,16 @@ struct prepared_buffers_max
 };
 
 template <typename Elem, std::size_t N>
-struct prepared_buffers_max<boost::array<Elem, N> >
+struct prepared_buffers_max<boost::array<Elem, N>>
 {
   enum { value = N };
 };
-
-#if defined(BOOST_ASIO_HAS_STD_ARRAY)
 
 template <typename Elem, std::size_t N>
-struct prepared_buffers_max<std::array<Elem, N> >
+struct prepared_buffers_max<std::array<Elem, N>>
 {
   enum { value = N };
 };
-
-#endif // defined(BOOST_ASIO_HAS_STD_ARRAY)
 
 // A buffer sequence used to represent a subsequence of the buffers.
 template <typename Buffer, std::size_t MaxBuffers>
@@ -357,8 +353,6 @@ private:
   std::size_t total_consumed_;
 };
 
-#if defined(BOOST_ASIO_HAS_STD_ARRAY)
-
 template <typename Buffer, typename Elem>
 class consuming_buffers<Buffer, std::array<Elem, 2>,
     typename std::array<Elem, 2>::const_iterator>
@@ -408,8 +402,6 @@ private:
   std::array<Elem, 2> buffers_;
   std::size_t total_consumed_;
 };
-
-#endif // defined(BOOST_ASIO_HAS_STD_ARRAY)
 
 // Specialisation for null_buffers to ensure that the null_buffers type is
 // always passed through to the underlying read or write operation.

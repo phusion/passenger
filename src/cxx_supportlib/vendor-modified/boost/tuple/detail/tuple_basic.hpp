@@ -36,10 +36,10 @@
 #include <utility> // needed for the assignment from pair to tuple
 #include <cstddef> // for std::size_t
 
+#include <boost/core/invoke_swap.hpp>
 #include <boost/type_traits/cv_traits.hpp>
 #include <boost/type_traits/function_traits.hpp>
 #include <boost/type_traits/integral_constant.hpp>
-#include <boost/utility/swap.hpp>
 
 #include <boost/detail/workaround.hpp> // needed for BOOST_WORKAROUND
 
@@ -964,11 +964,11 @@ void swap(tuple<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>& lhs,
 inline void swap(null_type&, null_type&) {}
 template<class HH>
 inline void swap(cons<HH, null_type>& lhs, cons<HH, null_type>& rhs) {
-  ::boost::swap(lhs.head, rhs.head);
+  ::boost::core::invoke_swap(lhs.head, rhs.head);
 }
 template<class HH, class TT>
 inline void swap(cons<HH, TT>& lhs, cons<HH, TT>& rhs) {
-  ::boost::swap(lhs.head, rhs.head);
+  ::boost::core::invoke_swap(lhs.head, rhs.head);
   ::boost::tuples::swap(lhs.tail, rhs.tail);
 }
 template <class T0, class T1, class T2, class T3, class T4,

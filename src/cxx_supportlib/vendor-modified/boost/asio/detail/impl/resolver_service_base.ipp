@@ -106,14 +106,14 @@ void resolver_service_base::destroy(
 void resolver_service_base::move_construct(implementation_type& impl,
     implementation_type& other_impl)
 {
-  impl = BOOST_ASIO_MOVE_CAST(implementation_type)(other_impl);
+  impl = static_cast<implementation_type&&>(other_impl);
 }
 
 void resolver_service_base::move_assign(implementation_type& impl,
     resolver_service_base&, implementation_type& other_impl)
 {
   destroy(impl);
-  impl = BOOST_ASIO_MOVE_CAST(implementation_type)(other_impl);
+  impl = static_cast<implementation_type&&>(other_impl);
 }
 
 void resolver_service_base::cancel(

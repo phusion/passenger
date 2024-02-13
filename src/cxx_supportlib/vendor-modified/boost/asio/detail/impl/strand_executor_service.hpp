@@ -16,7 +16,6 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/fenced_block.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
 #include <boost/asio/detail/recycling_allocator.hpp>
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/defer.hpp>
@@ -35,8 +34,8 @@ class strand_executor_service::allocator_binder
 public:
   typedef Allocator allocator_type;
 
-  allocator_binder(BOOST_ASIO_MOVE_ARG(F) f, const Allocator& a)
-    : f_(BOOST_ASIO_MOVE_CAST(F)(f)),
+  allocator_binder(F&& f, const Allocator& a)
+    : f_(static_cast<F&&>(f)),
       allocator_(a)
   {
   }
@@ -47,15 +46,13 @@ public:
   {
   }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
   allocator_binder(allocator_binder&& other)
-    : f_(BOOST_ASIO_MOVE_CAST(F)(other.f_)),
-      allocator_(BOOST_ASIO_MOVE_CAST(allocator_type)(other.allocator_))
+    : f_(static_cast<F&&>(other.f_)),
+      allocator_(static_cast<allocator_type&&>(other.allocator_))
   {
   }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
-  allocator_type get_allocator() const BOOST_ASIO_NOEXCEPT
+  allocator_type get_allocator() const noexcept
   {
     return allocator_;
   }
@@ -72,9 +69,9 @@ private:
 
 template <typename Executor>
 class strand_executor_service::invoker<Executor,
-    typename enable_if<
+    enable_if_t<
       execution::is_executor<Executor>::value
-    >::type>
+    >>
 {
 public:
   invoker(const implementation_type& impl, Executor& ex)
@@ -89,13 +86,11 @@ public:
   {
   }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
   invoker(invoker&& other)
-    : impl_(BOOST_ASIO_MOVE_CAST(implementation_type)(other.impl_)),
-      executor_(BOOST_ASIO_MOVE_CAST(executor_type)(other.executor_))
+    : impl_(static_cast<implementation_type&&>(other.impl_)),
+      executor_(static_cast<executor_type&&>(other.executor_))
   {
   }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
   struct on_invoker_exit
   {
@@ -107,22 +102,12 @@ public:
       {
         recycling_allocator<void> allocator;
         executor_type ex = this_->executor_;
-#if defined(BOOST_ASIO_NO_DEPRECATED)
         boost::asio::prefer(
             boost::asio::require(
-              BOOST_ASIO_MOVE_CAST(executor_type)(ex),
+              static_cast<executor_type&&>(ex),
               execution::blocking.never),
             execution::allocator(allocator)
-          ).execute(BOOST_ASIO_MOVE_CAST(invoker)(*this_));
-#else // defined(BOOST_ASIO_NO_DEPRECATED)
-        execution::execute(
-            boost::asio::prefer(
-              boost::asio::require(
-                BOOST_ASIO_MOVE_CAST(executor_type)(ex),
-                execution::blocking.never),
-              execution::allocator(allocator)),
-            BOOST_ASIO_MOVE_CAST(invoker)(*this_));
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
+          ).execute(static_cast<invoker&&>(*this_));
       }
     }
   };
@@ -137,12 +122,12 @@ public:
   }
 
 private:
-  typedef typename decay<
-      typename prefer_result<
+  typedef decay_t<
+      prefer_result_t<
         Executor,
         execution::outstanding_work_t::tracked_t
-      >::type
-    >::type executor_type;
+      >
+    > executor_type;
 
   implementation_type impl_;
   executor_type executor_;
@@ -152,9 +137,9 @@ private:
 
 template <typename Executor>
 class strand_executor_service::invoker<Executor,
-    typename enable_if<
+    enable_if_t<
       !execution::is_executor<Executor>::value
-    >::type>
+    >>
 {
 public:
   invoker(const implementation_type& impl, Executor& ex)
@@ -169,13 +154,11 @@ public:
   {
   }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
   invoker(invoker&& other)
-    : impl_(BOOST_ASIO_MOVE_CAST(implementation_type)(other.impl_)),
-      work_(BOOST_ASIO_MOVE_CAST(executor_work_guard<Executor>)(other.work_))
+    : impl_(static_cast<implementation_type&&>(other.impl_)),
+      work_(static_cast<executor_work_guard<Executor>&&>(other.work_))
   {
   }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
   struct on_invoker_exit
   {
@@ -187,7 +170,7 @@ public:
       {
         Executor ex(this_->work_.get_executor());
         recycling_allocator<void> allocator;
-        ex.post(BOOST_ASIO_MOVE_CAST(invoker)(*this_), allocator);
+        ex.post(static_cast<invoker&&>(*this_), allocator);
       }
     }
   };
@@ -210,33 +193,33 @@ private:
 
 template <typename Executor, typename Function>
 inline void strand_executor_service::execute(const implementation_type& impl,
-    Executor& ex, BOOST_ASIO_MOVE_ARG(Function) function,
-    typename enable_if<
-      can_query<Executor, execution::allocator_t<void> >::value
-    >::type*)
+    Executor& ex, Function&& function,
+    enable_if_t<
+      can_query<Executor, execution::allocator_t<void>>::value
+    >*)
 {
   return strand_executor_service::do_execute(impl, ex,
-      BOOST_ASIO_MOVE_CAST(Function)(function),
+      static_cast<Function&&>(function),
       boost::asio::query(ex, execution::allocator));
 }
 
 template <typename Executor, typename Function>
 inline void strand_executor_service::execute(const implementation_type& impl,
-    Executor& ex, BOOST_ASIO_MOVE_ARG(Function) function,
-    typename enable_if<
-      !can_query<Executor, execution::allocator_t<void> >::value
-    >::type*)
+    Executor& ex, Function&& function,
+    enable_if_t<
+      !can_query<Executor, execution::allocator_t<void>>::value
+    >*)
 {
   return strand_executor_service::do_execute(impl, ex,
-      BOOST_ASIO_MOVE_CAST(Function)(function),
+      static_cast<Function&&>(function),
       std::allocator<void>());
 }
 
 template <typename Executor, typename Function, typename Allocator>
 void strand_executor_service::do_execute(const implementation_type& impl,
-    Executor& ex, BOOST_ASIO_MOVE_ARG(Function) function, const Allocator& a)
+    Executor& ex, Function&& function, const Allocator& a)
 {
-  typedef typename decay<Function>::type function_type;
+  typedef decay_t<Function> function_type;
 
   // If the executor is not never-blocking, and we are already in the strand,
   // then the function can run immediately.
@@ -244,17 +227,17 @@ void strand_executor_service::do_execute(const implementation_type& impl,
       && running_in_this_thread(impl))
   {
     // Make a local, non-const copy of the function.
-    function_type tmp(BOOST_ASIO_MOVE_CAST(Function)(function));
+    function_type tmp(static_cast<Function&&>(function));
 
     fenced_block b(fenced_block::full);
-    boost_asio_handler_invoke_helpers::invoke(tmp, tmp);
+    static_cast<function_type&&>(tmp)();
     return;
   }
 
   // Allocate and construct an operation to wrap the function.
   typedef executor_op<function_type, Allocator> op;
   typename op::ptr p = { detail::addressof(a), op::ptr::allocate(a), 0 };
-  p.p = new (p.v) op(BOOST_ASIO_MOVE_CAST(Function)(function), a);
+  p.p = new (p.v) op(static_cast<Function&&>(function), a);
 
   BOOST_ASIO_HANDLER_CREATION((impl->service_->context(), *p.p,
         "strand_executor", impl.get(), 0, "execute"));
@@ -264,35 +247,31 @@ void strand_executor_service::do_execute(const implementation_type& impl,
   p.v = p.p = 0;
   if (first)
   {
-#if defined(BOOST_ASIO_NO_DEPRECATED)
     ex.execute(invoker<Executor>(impl, ex));
-#else // defined(BOOST_ASIO_NO_DEPRECATED)
-    execution::execute(ex, invoker<Executor>(impl, ex));
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 }
 
 template <typename Executor, typename Function, typename Allocator>
 void strand_executor_service::dispatch(const implementation_type& impl,
-    Executor& ex, BOOST_ASIO_MOVE_ARG(Function) function, const Allocator& a)
+    Executor& ex, Function&& function, const Allocator& a)
 {
-  typedef typename decay<Function>::type function_type;
+  typedef decay_t<Function> function_type;
 
   // If we are already in the strand then the function can run immediately.
   if (running_in_this_thread(impl))
   {
     // Make a local, non-const copy of the function.
-    function_type tmp(BOOST_ASIO_MOVE_CAST(Function)(function));
+    function_type tmp(static_cast<Function&&>(function));
 
     fenced_block b(fenced_block::full);
-    boost_asio_handler_invoke_helpers::invoke(tmp, tmp);
+    static_cast<function_type&&>(tmp)();
     return;
   }
 
   // Allocate and construct an operation to wrap the function.
   typedef executor_op<function_type, Allocator> op;
   typename op::ptr p = { detail::addressof(a), op::ptr::allocate(a), 0 };
-  p.p = new (p.v) op(BOOST_ASIO_MOVE_CAST(Function)(function), a);
+  p.p = new (p.v) op(static_cast<Function&&>(function), a);
 
   BOOST_ASIO_HANDLER_CREATION((impl->service_->context(), *p.p,
         "strand_executor", impl.get(), 0, "dispatch"));
@@ -311,14 +290,14 @@ void strand_executor_service::dispatch(const implementation_type& impl,
 // Request invocation of the given function and return immediately.
 template <typename Executor, typename Function, typename Allocator>
 void strand_executor_service::post(const implementation_type& impl,
-    Executor& ex, BOOST_ASIO_MOVE_ARG(Function) function, const Allocator& a)
+    Executor& ex, Function&& function, const Allocator& a)
 {
-  typedef typename decay<Function>::type function_type;
+  typedef decay_t<Function> function_type;
 
   // Allocate and construct an operation to wrap the function.
   typedef executor_op<function_type, Allocator> op;
   typename op::ptr p = { detail::addressof(a), op::ptr::allocate(a), 0 };
-  p.p = new (p.v) op(BOOST_ASIO_MOVE_CAST(Function)(function), a);
+  p.p = new (p.v) op(static_cast<Function&&>(function), a);
 
   BOOST_ASIO_HANDLER_CREATION((impl->service_->context(), *p.p,
         "strand_executor", impl.get(), 0, "post"));
@@ -337,14 +316,14 @@ void strand_executor_service::post(const implementation_type& impl,
 // Request invocation of the given function and return immediately.
 template <typename Executor, typename Function, typename Allocator>
 void strand_executor_service::defer(const implementation_type& impl,
-    Executor& ex, BOOST_ASIO_MOVE_ARG(Function) function, const Allocator& a)
+    Executor& ex, Function&& function, const Allocator& a)
 {
-  typedef typename decay<Function>::type function_type;
+  typedef decay_t<Function> function_type;
 
   // Allocate and construct an operation to wrap the function.
   typedef executor_op<function_type, Allocator> op;
   typename op::ptr p = { detail::addressof(a), op::ptr::allocate(a), 0 };
-  p.p = new (p.v) op(BOOST_ASIO_MOVE_CAST(Function)(function), a);
+  p.p = new (p.v) op(static_cast<Function&&>(function), a);
 
   BOOST_ASIO_HANDLER_CREATION((impl->service_->context(), *p.p,
         "strand_executor", impl.get(), 0, "defer"));

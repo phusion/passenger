@@ -123,7 +123,7 @@ namespace experimental {
  *                     boost::asio::buffer(data, n), boost::asio::deferred);
  *               }
  *             }
- *             catch (const std::system_error& e)
+ *             catch (const boost::system::system_error& e)
  *             {
  *               co_return {e.code()};
  *             }

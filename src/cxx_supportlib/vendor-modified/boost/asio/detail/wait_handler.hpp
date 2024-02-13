@@ -37,7 +37,7 @@ public:
 
   wait_handler(Handler& h, const IoExecutor& io_ex)
     : wait_op(&wait_handler::do_complete),
-      handler_(BOOST_ASIO_MOVE_CAST(Handler)(h)),
+      handler_(static_cast<Handler&&>(h)),
       work_(handler_, io_ex)
   {
   }
@@ -54,7 +54,7 @@ public:
 
     // Take ownership of the operation's outstanding work.
     handler_work<Handler, IoExecutor> w(
-        BOOST_ASIO_MOVE_CAST2(handler_work<Handler, IoExecutor>)(
+        static_cast<handler_work<Handler, IoExecutor>&&>(
           h->work_));
 
     // Make a copy of the handler so that the memory can be deallocated before

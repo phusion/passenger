@@ -30,9 +30,9 @@ template <typename Payload, typename Handler>
 class channel_handler
 {
 public:
-  channel_handler(BOOST_ASIO_MOVE_ARG(Payload) p, Handler& h)
-    : payload_(BOOST_ASIO_MOVE_CAST(Payload)(p)),
-      handler_(BOOST_ASIO_MOVE_CAST(Handler)(h))
+  channel_handler(Payload&& p, Handler& h)
+    : payload_(static_cast<Payload&&>(p)),
+      handler_(static_cast<Handler&&>(h))
   {
   }
 
@@ -56,19 +56,16 @@ struct associator<Associator,
     DefaultCandidate>
   : Associator<Handler, DefaultCandidate>
 {
-  static typename Associator<Handler, DefaultCandidate>::type
-  get(const experimental::detail::channel_handler<Payload, Handler>& h)
-    BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const experimental::detail::channel_handler<Payload, Handler>& h) noexcept
   {
     return Associator<Handler, DefaultCandidate>::get(h.handler_);
   }
 
-  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
-      typename Associator<Handler, DefaultCandidate>::type)
-  get(const experimental::detail::channel_handler<Payload, Handler>& h,
-      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
-    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
-      Associator<Handler, DefaultCandidate>::get(h.handler_, c)))
+  static auto get(
+      const experimental::detail::channel_handler<Payload, Handler>& h,
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<Handler, DefaultCandidate>::get(h.handler_, c))
   {
     return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }

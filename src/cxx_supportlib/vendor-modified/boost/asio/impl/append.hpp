@@ -16,15 +16,11 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
-
 #include <boost/asio/associator.hpp>
 #include <boost/asio/async_result.hpp>
-#include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
 #include <boost/asio/detail/type_traits.hpp>
 #include <boost/asio/detail/utility.hpp>
-#include <boost/asio/detail/variadic_templates.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
 
@@ -40,58 +36,32 @@ public:
   typedef void result_type;
 
   template <typename H>
-  append_handler(BOOST_ASIO_MOVE_ARG(H) handler, std::tuple<Values...> values)
-    : handler_(BOOST_ASIO_MOVE_CAST(H)(handler)),
-      values_(BOOST_ASIO_MOVE_CAST(std::tuple<Values...>)(values))
+  append_handler(H&& handler, std::tuple<Values...> values)
+    : handler_(static_cast<H&&>(handler)),
+      values_(static_cast<std::tuple<Values...>&&>(values))
   {
   }
 
   template <typename... Args>
-  void operator()(BOOST_ASIO_MOVE_ARG(Args)... args)
+  void operator()(Args&&... args)
   {
     this->invoke(
         index_sequence_for<Values...>{},
-        BOOST_ASIO_MOVE_CAST(Args)(args)...);
+        static_cast<Args&&>(args)...);
   }
 
   template <std::size_t... I, typename... Args>
-  void invoke(index_sequence<I...>, BOOST_ASIO_MOVE_ARG(Args)... args)
+  void invoke(index_sequence<I...>, Args&&... args)
   {
-    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
-        BOOST_ASIO_MOVE_CAST(Args)(args)...,
-        BOOST_ASIO_MOVE_CAST(Values)(std::get<I>(values_))...);
+    static_cast<Handler&&>(handler_)(
+        static_cast<Args&&>(args)...,
+        static_cast<Values&&>(std::get<I>(values_))...);
   }
 
 //private:
   Handler handler_;
   std::tuple<Values...> values_;
 };
-
-template <typename Handler>
-inline asio_handler_allocate_is_deprecated
-asio_handler_allocate(std::size_t size,
-    append_handler<Handler>* this_handler)
-{
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
-  return asio_handler_allocate_is_no_longer_used();
-#else // defined(BOOST_ASIO_NO_DEPRECATED)
-  return boost_asio_handler_alloc_helpers::allocate(
-      size, this_handler->handler_);
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-}
-
-template <typename Handler>
-inline asio_handler_deallocate_is_deprecated
-asio_handler_deallocate(void* pointer, std::size_t size,
-    append_handler<Handler>* this_handler)
-{
-  boost_asio_handler_alloc_helpers::deallocate(
-      pointer, size, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-  return asio_handler_deallocate_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-}
 
 template <typename Handler>
 inline bool asio_handler_is_continuation(
@@ -101,37 +71,13 @@ inline bool asio_handler_is_continuation(
       this_handler->handler_);
 }
 
-template <typename Function, typename Handler>
-inline asio_handler_invoke_is_deprecated
-asio_handler_invoke(Function& function,
-    append_handler<Handler>* this_handler)
-{
-  boost_asio_handler_invoke_helpers::invoke(
-      function, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-  return asio_handler_invoke_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-}
-
-template <typename Function, typename Handler>
-inline asio_handler_invoke_is_deprecated
-asio_handler_invoke(const Function& function,
-    append_handler<Handler>* this_handler)
-{
-  boost_asio_handler_invoke_helpers::invoke(
-      function, this_handler->handler_);
-#if defined(BOOST_ASIO_NO_DEPRECATED)
-  return asio_handler_invoke_is_no_longer_used();
-#endif // defined(BOOST_ASIO_NO_DEPRECATED)
-}
-
 template <typename Signature, typename... Values>
 struct append_signature;
 
 template <typename R, typename... Args, typename... Values>
 struct append_signature<R(Args...), Values...>
 {
-  typedef R type(typename decay<Args>::type..., Values...);
+  typedef R type(decay_t<Args>..., Values...);
 };
 
 } // namespace detail
@@ -139,8 +85,7 @@ struct append_signature<R(Args...), Values...>
 #if !defined(GENERATING_DOCUMENTATION)
 
 template <typename CompletionToken, typename... Values, typename Signature>
-struct async_result<
-    append_t<CompletionToken, Values...>, Signature>
+struct async_result<append_t<CompletionToken, Values...>, Signature>
   : async_result<CompletionToken,
       typename detail::append_signature<
         Signature, Values...>::type>
@@ -152,45 +97,40 @@ struct async_result<
   struct init_wrapper
   {
     init_wrapper(Initiation init)
-      : initiation_(BOOST_ASIO_MOVE_CAST(Initiation)(init))
+      : initiation_(static_cast<Initiation&&>(init))
     {
     }
 
     template <typename Handler, typename... Args>
-    void operator()(
-        BOOST_ASIO_MOVE_ARG(Handler) handler,
-        std::tuple<Values...> values,
-        BOOST_ASIO_MOVE_ARG(Args)... args)
+    void operator()(Handler&& handler,
+        std::tuple<Values...> values, Args&&... args)
     {
-      BOOST_ASIO_MOVE_CAST(Initiation)(initiation_)(
-          detail::append_handler<
-            typename decay<Handler>::type, Values...>(
-              BOOST_ASIO_MOVE_CAST(Handler)(handler),
-              BOOST_ASIO_MOVE_CAST(std::tuple<Values...>)(values)),
-          BOOST_ASIO_MOVE_CAST(Args)(args)...);
+      static_cast<Initiation&&>(initiation_)(
+          detail::append_handler<decay_t<Handler>, Values...>(
+            static_cast<Handler&&>(handler),
+            static_cast<std::tuple<Values...>&&>(values)),
+          static_cast<Args&&>(args)...);
     }
 
     Initiation initiation_;
   };
 
   template <typename Initiation, typename RawCompletionToken, typename... Args>
-  static BOOST_ASIO_INITFN_DEDUCED_RESULT_TYPE(CompletionToken, signature,
-      (async_initiate<CompletionToken, signature>(
-        declval<init_wrapper<typename decay<Initiation>::type> >(),
-        declval<CompletionToken&>(),
-        declval<std::tuple<Values...> >(),
-        declval<BOOST_ASIO_MOVE_ARG(Args)>()...)))
-  initiate(
-      BOOST_ASIO_MOVE_ARG(Initiation) initiation,
-      BOOST_ASIO_MOVE_ARG(RawCompletionToken) token,
-      BOOST_ASIO_MOVE_ARG(Args)... args)
+  static auto initiate(Initiation&& initiation,
+      RawCompletionToken&& token, Args&&... args)
+    -> decltype(
+      async_initiate<CompletionToken, signature>(
+        declval<init_wrapper<decay_t<Initiation>>>(),
+        token.token_,
+        static_cast<std::tuple<Values...>&&>(token.values_),
+        static_cast<Args&&>(args)...))
   {
     return async_initiate<CompletionToken, signature>(
-        init_wrapper<typename decay<Initiation>::type>(
-          BOOST_ASIO_MOVE_CAST(Initiation)(initiation)),
+        init_wrapper<decay_t<Initiation>>(
+          static_cast<Initiation&&>(initiation)),
         token.token_,
-        BOOST_ASIO_MOVE_CAST(std::tuple<Values...>)(token.values_),
-        BOOST_ASIO_MOVE_CAST(Args)(args)...);
+        static_cast<std::tuple<Values...>&&>(token.values_),
+        static_cast<Args&&>(args)...);
   }
 };
 
@@ -200,18 +140,15 @@ struct associator<Associator,
     detail::append_handler<Handler, Values...>, DefaultCandidate>
   : Associator<Handler, DefaultCandidate>
 {
-  static typename Associator<Handler, DefaultCandidate>::type
-  get(const detail::append_handler<Handler, Values...>& h) BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::append_handler<Handler, Values...>& h) noexcept
   {
     return Associator<Handler, DefaultCandidate>::get(h.handler_);
   }
 
-  static BOOST_ASIO_AUTO_RETURN_TYPE_PREFIX2(
-      typename Associator<Handler, DefaultCandidate>::type)
-  get(const detail::append_handler<Handler, Values...>& h,
-      const DefaultCandidate& c) BOOST_ASIO_NOEXCEPT
-    BOOST_ASIO_AUTO_RETURN_TYPE_SUFFIX((
-      Associator<Handler, DefaultCandidate>::get(h.handler_, c)))
+  static auto get(const detail::append_handler<Handler, Values...>& h,
+      const DefaultCandidate& c) noexcept
+    -> decltype(Associator<Handler, DefaultCandidate>::get(h.handler_, c))
   {
     return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }

@@ -26,57 +26,53 @@
 namespace boost {
 namespace asio {
 
-any_completion_executor::any_completion_executor() BOOST_ASIO_NOEXCEPT
+any_completion_executor::any_completion_executor() noexcept
   : base_type()
 {
 }
 
-any_completion_executor::any_completion_executor(nullptr_t) BOOST_ASIO_NOEXCEPT
+any_completion_executor::any_completion_executor(nullptr_t) noexcept
   : base_type(nullptr_t())
 {
 }
 
 any_completion_executor::any_completion_executor(
-    const any_completion_executor& e) BOOST_ASIO_NOEXCEPT
+    const any_completion_executor& e) noexcept
   : base_type(static_cast<const base_type&>(e))
 {
 }
 
 any_completion_executor::any_completion_executor(std::nothrow_t,
-    const any_completion_executor& e) BOOST_ASIO_NOEXCEPT
+    const any_completion_executor& e) noexcept
   : base_type(static_cast<const base_type&>(e))
 {
 }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
 any_completion_executor::any_completion_executor(
-    any_completion_executor&& e) BOOST_ASIO_NOEXCEPT
+    any_completion_executor&& e) noexcept
   : base_type(static_cast<base_type&&>(e))
 {
 }
 
 any_completion_executor::any_completion_executor(std::nothrow_t,
-    any_completion_executor&& e) BOOST_ASIO_NOEXCEPT
+    any_completion_executor&& e) noexcept
   : base_type(static_cast<base_type&&>(e))
 {
 }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
 any_completion_executor& any_completion_executor::operator=(
-    const any_completion_executor& e) BOOST_ASIO_NOEXCEPT
+    const any_completion_executor& e) noexcept
 {
   base_type::operator=(static_cast<const base_type&>(e));
   return *this;
 }
 
-#if defined(BOOST_ASIO_HAS_MOVE)
 any_completion_executor& any_completion_executor::operator=(
-    any_completion_executor&& e) BOOST_ASIO_NOEXCEPT
+    any_completion_executor&& e) noexcept
 {
   base_type::operator=(static_cast<base_type&&>(e));
   return *this;
 }
-#endif // defined(BOOST_ASIO_HAS_MOVE)
 
 any_completion_executor& any_completion_executor::operator=(nullptr_t)
 {
@@ -89,7 +85,7 @@ any_completion_executor::~any_completion_executor()
 }
 
 void any_completion_executor::swap(
-    any_completion_executor& other) BOOST_ASIO_NOEXCEPT
+    any_completion_executor& other) noexcept
 {
   static_cast<base_type&>(*this).swap(static_cast<base_type&>(other));
 }

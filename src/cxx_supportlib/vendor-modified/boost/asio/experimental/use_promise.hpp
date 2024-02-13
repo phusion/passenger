@@ -34,7 +34,7 @@ struct use_promise_t
   typedef Allocator allocator_type;
 
   /// Construct using default-constructed allocator.
-  BOOST_ASIO_CONSTEXPR use_promise_t()
+  constexpr use_promise_t()
   {
   }
 
@@ -45,7 +45,7 @@ struct use_promise_t
   }
 
   /// Obtain allocator.
-  allocator_type get_allocator() const BOOST_ASIO_NOEXCEPT
+  allocator_type get_allocator() const noexcept
   {
     return allocator_;
   }
@@ -59,7 +59,7 @@ struct use_promise_t
     typedef use_promise_t<Allocator> default_completion_token_type;
 
     /// Construct the adapted executor from the inner executor type.
-    executor_with_default(const InnerExecutor& ex) BOOST_ASIO_NOEXCEPT
+    executor_with_default(const InnerExecutor& ex) noexcept
       : InnerExecutor(ex)
     {
     }
@@ -68,9 +68,9 @@ struct use_promise_t
     /// that to construct the adapted executor.
     template <typename OtherExecutor>
     executor_with_default(const OtherExecutor& ex,
-        typename constraint<
+        constraint_t<
           is_convertible<OtherExecutor, InnerExecutor>::value
-        >::type = 0) BOOST_ASIO_NOEXCEPT
+        > = 0) noexcept
       : InnerExecutor(ex)
     {
     }
@@ -79,14 +79,14 @@ struct use_promise_t
   /// Function helper to adapt an I/O object to use @c use_promise_t as its
   /// default completion token type.
   template <typename T>
-  static typename decay<T>::type::template rebind_executor<
-      executor_with_default<typename decay<T>::type::executor_type>
+  static typename decay_t<T>::template rebind_executor<
+      executor_with_default<typename decay_t<T>::executor_type>
     >::other
-  as_default_on(BOOST_ASIO_MOVE_ARG(T) object)
+  as_default_on(T&& object)
   {
-    return typename decay<T>::type::template rebind_executor<
-        executor_with_default<typename decay<T>::type::executor_type>
-      >::other(BOOST_ASIO_MOVE_CAST(T)(object));
+    return typename decay_t<T>::template rebind_executor<
+        executor_with_default<typename decay_t<T>::executor_type>
+      >::other(static_cast<T&&>(object));
   }
 
   /// Specify an alternate allocator.

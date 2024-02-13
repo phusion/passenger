@@ -30,7 +30,7 @@ class base_from_completion_cond
 protected:
   explicit base_from_completion_cond(CompletionCondition& completion_condition)
     : completion_condition_(
-        BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition))
+        static_cast<CompletionCondition&&>(completion_condition))
   {
   }
 

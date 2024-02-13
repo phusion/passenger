@@ -14,17 +14,6 @@
 // 20.8.1 class template unique_ptr:
 // default_delete
 
-#if defined BOOST_NO_CXX11_SMART_PTR
-#include <boost/move/unique_ptr.hpp>
-
-namespace boost
-{
-  namespace csbl
-  {
-    using ::boost::movelib::default_delete;
-  }
-}
-#else
 namespace boost
 {
   namespace csbl
@@ -32,10 +21,5 @@ namespace boost
     using ::std::default_delete;
   }
 }
-#endif // defined  BOOST_NO_CXX11_SMART_PTR
 
-namespace boost
-{
-  using ::boost::csbl::default_delete;
-}
 #endif // header

@@ -12,7 +12,7 @@
 #pragma once
 #endif
 
-#include <boost/functional/hash_fwd.hpp>
+#include <boost/container_hash/hash_fwd.hpp>
 #include <functional>
 #include <memory>
 
@@ -29,9 +29,8 @@ namespace boost {
     inline bool operator!=(
       unordered_set<T, H, P, A> const&, unordered_set<T, H, P, A> const&);
     template <class T, class H, class P, class A>
-    inline void swap(
-      unordered_set<T, H, P, A>& m1, unordered_set<T, H, P, A>& m2)
-      BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT_EXPR(m1.swap(m2)));
+    inline void swap(unordered_set<T, H, P, A>& m1,
+      unordered_set<T, H, P, A>& m2) noexcept(noexcept(m1.swap(m2)));
 
     template <class K, class H, class P, class A, class Predicate>
     typename unordered_set<K, H, P, A>::size_type erase_if(
@@ -48,9 +47,8 @@ namespace boost {
     inline bool operator!=(unordered_multiset<T, H, P, A> const&,
       unordered_multiset<T, H, P, A> const&);
     template <class T, class H, class P, class A>
-    inline void swap(
-      unordered_multiset<T, H, P, A>& m1, unordered_multiset<T, H, P, A>& m2)
-      BOOST_NOEXCEPT_IF(BOOST_NOEXCEPT_EXPR(m1.swap(m2)));
+    inline void swap(unordered_multiset<T, H, P, A>& m1,
+      unordered_multiset<T, H, P, A>& m2) noexcept(noexcept(m1.swap(m2)));
 
     template <class K, class H, class P, class A, class Predicate>
     typename unordered_multiset<K, H, P, A>::size_type erase_if(
@@ -58,13 +56,10 @@ namespace boost {
 
     template <class N, class T, class A> class node_handle_set;
     template <class Iter, class NodeType> struct insert_return_type_set;
-  }
+  } // namespace unordered
 
-  using boost::unordered::unordered_set;
   using boost::unordered::unordered_multiset;
-  using boost::unordered::swap;
-  using boost::unordered::operator==;
-  using boost::unordered::operator!=;
-}
+  using boost::unordered::unordered_set;
+} // namespace boost
 
 #endif

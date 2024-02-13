@@ -68,7 +68,7 @@ void system_context::stop()
   scheduler_.stop();
 }
 
-bool system_context::stopped() const BOOST_ASIO_NOEXCEPT
+bool system_context::stopped() const noexcept
 {
   return scheduler_.stopped();
 }

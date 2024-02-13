@@ -114,10 +114,10 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(
 co_spawn(const Executor& ex, awaitable<T, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename constraint<
+    constraint_t<
       (is_executor<Executor>::value || execution::is_executor<Executor>::value)
         && is_convertible<Executor, AwaitableExecutor>::value
-    >::type = 0);
+    > = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -178,10 +178,10 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(
 co_spawn(const Executor& ex, awaitable<void, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename constraint<
+    constraint_t<
       (is_executor<Executor>::value || execution::is_executor<Executor>::value)
         && is_convertible<Executor, AwaitableExecutor>::value
-    >::type = 0);
+    > = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -252,11 +252,11 @@ co_spawn(ExecutionContext& ctx, awaitable<T, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename ExecutionContext::executor_type),
-    typename constraint<
+    constraint_t<
       is_convertible<ExecutionContext&, execution_context&>::value
         && is_convertible<typename ExecutionContext::executor_type,
           AwaitableExecutor>::value
-    >::type = 0);
+    > = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -319,11 +319,11 @@ co_spawn(ExecutionContext& ctx, awaitable<void, AwaitableExecutor> a,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename ExecutionContext::executor_type),
-    typename constraint<
+    constraint_t<
       is_convertible<ExecutionContext&, execution_context&>::value
         && is_convertible<typename ExecutionContext::executor_type,
           AwaitableExecutor>::value
-    >::type = 0);
+    > = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -407,16 +407,16 @@ co_spawn(ExecutionContext& ctx, awaitable<void, AwaitableExecutor> a,
  */
 template <typename Executor, typename F,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(typename detail::awaitable_signature<
-      typename result_of<F()>::type>::type) CompletionToken
+      result_of_t<F()>>::type) CompletionToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(Executor)>
 BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken,
-    typename detail::awaitable_signature<typename result_of<F()>::type>::type)
+    typename detail::awaitable_signature<result_of_t<F()>>::type)
 co_spawn(const Executor& ex, F&& f,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(Executor),
-    typename constraint<
+    constraint_t<
       is_executor<Executor>::value || execution::is_executor<Executor>::value
-    >::type = 0);
+    > = 0);
 
 /// Spawn a new coroutined-based thread of execution.
 /**
@@ -500,18 +500,18 @@ co_spawn(const Executor& ex, F&& f,
  */
 template <typename ExecutionContext, typename F,
     BOOST_ASIO_COMPLETION_TOKEN_FOR(typename detail::awaitable_signature<
-      typename result_of<F()>::type>::type) CompletionToken
+      result_of_t<F()>>::type) CompletionToken
         BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(
           typename ExecutionContext::executor_type)>
 BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(CompletionToken,
-    typename detail::awaitable_signature<typename result_of<F()>::type>::type)
+    typename detail::awaitable_signature<result_of_t<F()>>::type)
 co_spawn(ExecutionContext& ctx, F&& f,
     CompletionToken&& token
       BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(
         typename ExecutionContext::executor_type),
-    typename constraint<
+    constraint_t<
       is_convertible<ExecutionContext&, execution_context&>::value
-    >::type = 0);
+    > = 0);
 
 } // namespace asio
 } // namespace boost

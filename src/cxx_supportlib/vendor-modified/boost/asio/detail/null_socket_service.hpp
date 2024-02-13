@@ -34,7 +34,7 @@ namespace detail {
 
 template <typename Protocol>
 class null_socket_service :
-  public execution_context_service_base<null_socket_service<Protocol> >
+  public execution_context_service_base<null_socket_service<Protocol>>
 {
 public:
   // The protocol type.
@@ -53,7 +53,7 @@ public:
 
   // Constructor.
   null_socket_service(execution_context& context)
-    : execution_context_service_base<null_socket_service<Protocol> >(context)
+    : execution_context_service_base<null_socket_service<Protocol>>(context)
   {
   }
 

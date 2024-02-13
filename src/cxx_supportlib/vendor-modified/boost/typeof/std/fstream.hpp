@@ -5,23 +5,10 @@
 #ifndef BOOST_TYPEOF_STD_fstream_hpp_INCLUDED
 #define BOOST_TYPEOF_STD_fstream_hpp_INCLUDED
 
+// This header is no longer useful and is only retained for compatibility
+
 #include <fstream>
 #include <boost/typeof/typeof.hpp>
 #include <boost/typeof/std/string.hpp>
-
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_filebuf, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_filebuf, 2)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_ifstream, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_ifstream, 2)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_ofstream, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_ofstream, 2)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_fstream, 1)
-BOOST_TYPEOF_REGISTER_TEMPLATE(std::basic_fstream, 2)
-BOOST_TYPEOF_REGISTER_TYPE(std::filebuf)
-BOOST_TYPEOF_REGISTER_TYPE(std::ifstream)
-BOOST_TYPEOF_REGISTER_TYPE(std::ofstream)
-BOOST_TYPEOF_REGISTER_TYPE(std::fstream)
 
 #endif//BOOST_TYPEOF_STD_fstream_hpp_INCLUDED

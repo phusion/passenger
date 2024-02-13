@@ -30,7 +30,7 @@ template <typename T>
 struct is_contiguous_iterator :
 #if defined(BOOST_ASIO_HAS_STD_CONCEPTS) \
   || defined(GENERATING_DOCUMENTATION)
-  integral_constant<bool, std::contiguous_iterator<T> >
+  integral_constant<bool, std::contiguous_iterator<T>>
 #else // defined(BOOST_ASIO_HAS_STD_CONCEPTS)
       //   || defined(GENERATING_DOCUMENTATION)
   is_pointer<T>
