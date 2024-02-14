@@ -101,11 +101,8 @@ enum OomFileType {
 	OOM_SCORE_ADJ
 };
 
-#define REQUEST_SOCKET_PASSWORD_SIZE     64
-
 class InstanceDirToucher;
 class AgentWatcher;
-
 
 /***** Working objects *****/
 
