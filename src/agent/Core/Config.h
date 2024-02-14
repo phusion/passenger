@@ -272,8 +272,6 @@ private:
 	static void validateSingleAppMode(const ConfigKit::Store &config,
 		const WrapperRegistry::Registry *wrapperRegistry, vector<ConfigKit::Error> &errors)
 	{
-		typedef ConfigKit::Error Error;
-
 		if (config["multi_app"].asBool()) {
 			return;
 		}
