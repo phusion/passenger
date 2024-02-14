@@ -437,8 +437,7 @@ private:
 				files = Json::nullValue;
 			}
 			if (!files.isNull()) {
-				string usernameOrUid = lookupSystemUsernameByUid(ids.first,
-					P_STATIC_STRING("%d"));
+				string usernameOrUid = lookupSystemUsernameByUid(ids.first, true);
 
 				foreach (Json::Value file, files) {
 					string f = file.asString();

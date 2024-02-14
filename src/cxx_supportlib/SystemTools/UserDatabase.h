@@ -117,24 +117,20 @@ bool lookupSystemGroupByGid(gid_t gid, OsGroup &result);
 /**
  * Returns the username of the OS user account with the given UID. If no such
  * account exists or if that account has no name, then returns a string that
- * is printf-style formatted according to `fallbackFormat`.
+ * is printf-style formatted one of two ways, depending on `fallback`.
  *
- * `fallbackFormat` may contain at most one directive, which must be %d.
- * If it contains more than one directive then bad things may happen.
+ * if `fallback` is true the "%d" format string is used, otherwise "UID %d" is used.
  */
-string lookupSystemUsernameByUid(uid_t uid,
-	const StaticString &fallbackFormat = P_STATIC_STRING("UID %d"));
+string lookupSystemUsernameByUid(uid_t uid,	bool fallback=false);
 
 /**
  * Returns the group name of the OS group account with the given GID. If no such
  * account exists or if that account has no name, then returns a string that
- * is printf-style formatted according to `fallbackFormat`.
+ * is printf-style formatted one of two ways, depending on `fallback`.
  *
- * `fallbackFormat` may contain at most one directive, which must be %d.
- * If it contains more than one directive then bad things may happen.
+ * if `fallback` is true the "%d" format string is used, otherwise "GID %d" is used.
  */
-string lookupSystemGroupnameByGid(gid_t gid,
-	const StaticString &fallbackFormat = P_STATIC_STRING("GID %d"));
+string lookupSystemGroupnameByGid(gid_t gid, bool fallback=false);
 
 /**
  * Returns the home directory of the current user. This queries $HOME,
