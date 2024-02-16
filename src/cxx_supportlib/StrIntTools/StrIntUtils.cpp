@@ -647,7 +647,7 @@ escapeHTML(const StaticString &input) {
 			try {
 				utf8::advance(current, 1, end);
 				result.append(prev, current - prev);
-			} catch (const utf8::invalid_utf8 &e) {
+			} catch (const utf8::invalid_utf8&) {
 				result.append("?"); // Oops, not UTF-8 after all, don't parse it.
 				current++;
 			}

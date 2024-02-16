@@ -175,7 +175,7 @@ public:
 		bool found;
 		try {
 			found = fileExists(path);
-		} catch (const SystemException &e) {
+		} catch (const SystemException&) {
 			found = false;
 		}
 		if (found) {
