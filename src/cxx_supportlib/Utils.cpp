@@ -123,7 +123,7 @@ escapeShell(const StaticString &value) {
 	const char *end = value.data() + value.size();
 	string result;
 
-	result.reserve(value.size() * 1.5);
+	result.reserve((value.size() * 3) / 2);
 
 	while (pos < end) {
 		char ch = *pos;

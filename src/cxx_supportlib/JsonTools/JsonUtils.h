@@ -435,9 +435,9 @@ inline Json::Value
 byteSpeedToJson(double speed, const string &per) {
 	Json::Value doc;
 	if (speed >= 0) {
-		doc = byteSizeToJson(speed);
+		doc = byteSizeToJson(llround(speed));
 	} else {
-		doc = signedByteSizeToJson(speed);
+		doc = signedByteSizeToJson(llround(speed));
 	}
 	doc["per"] = per;
 	return doc;
@@ -449,9 +449,9 @@ byteSpeedToJson(double speed, double nullValue, const string &per) {
 	if (speed == nullValue) {
 		doc["bytes"] = Json::Value(Json::nullValue);
 	} else if (speed >= 0) {
-		doc = byteSizeToJson(speed);
+		doc = byteSizeToJson(llround(speed));
 	} else {
-		doc = signedByteSizeToJson(speed);
+		doc = signedByteSizeToJson(llround(speed));
 	}
 	doc["per"] = per;
 	return doc;

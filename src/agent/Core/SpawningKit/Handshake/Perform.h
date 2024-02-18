@@ -1414,14 +1414,14 @@ private:
 		if (fileExists(stepDir + "/begin_time_monotonic")) {
 			value = safeReadFile(stepDirFd, "begin_time_monotonic",
 				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
-			MonotonicTimeUsec beginTimeMonotonic = atof(value.c_str()) * 1000000;
+			MonotonicTimeUsec beginTimeMonotonic = llround(atof(value.c_str()) * 1000000);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": monotonic begin time is \"" << cEscapeString(value) << "\"");
 			session.journey.setStepBeginTime(step, beginTimeMonotonic);
 		} else if (fileExists(stepDir + "/begin_time")) {
 			value = safeReadFile(stepDirFd, "begin_time",
 				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
-			unsigned long long beginTime = atof(value.c_str()) * 1000000;
+			unsigned long long beginTime = llround(atof(value.c_str()) * 1000000);
 			MonotonicTimeUsec beginTimeMonotonic = usecTimestampToMonoTime(beginTime);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": begin time is \"" << cEscapeString(value) << "\", monotonic conversion is "
@@ -1436,14 +1436,14 @@ private:
 		if (fileExists(stepDir + "/end_time_monotonic")) {
 			value = safeReadFile(stepDirFd, "end_time_monotonic",
 				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
-			MonotonicTimeUsec endTimeMonotonic = atof(value.c_str()) * 1000000;
+			MonotonicTimeUsec endTimeMonotonic = llround(atof(value.c_str()) * 1000000);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": monotonic end time is \"" << cEscapeString(value) << "\"");
 			session.journey.setStepEndTime(step, endTimeMonotonic);
 		} else if (fileExists(stepDir + "/end_time")) {
 			value = safeReadFile(stepDirFd, "end_time",
 				SPAWNINGKIT_MAX_JOURNEY_STEP_FILE_SIZE).first;
-			unsigned long long endTime = atof(value.c_str()) * 1000000;
+			unsigned long long endTime = llround(atof(value.c_str()) * 1000000);
 			MonotonicTimeUsec endTimeMonotonic = usecTimestampToMonoTime(endTime);
 			P_DEBUG("[App " << pid << " journey] Step " << journeyStepToString(step)
 				<< ": end time is \"" << cEscapeString(value) << "\", monotonic conversion is "
