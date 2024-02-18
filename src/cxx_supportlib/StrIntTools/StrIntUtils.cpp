@@ -614,7 +614,7 @@ cEscapeString(const StaticString &input) {
 			case '\r':
 				result.append("\\r");
 				break;
-			case '\e':
+			case '\033':// '\e' aka escape
 				result.append("\\e");
 				break;
 			default:
