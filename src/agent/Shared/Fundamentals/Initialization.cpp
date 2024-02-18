@@ -588,7 +588,7 @@ initializeAgent(int argc, char **argv[], const char *processName,
 			context->feedbackFdAvailable = true;
 			readConfigFromFd(FEEDBACK_FD, config);
 		} else if (optionParser != NULL) {
-			optionParser(argc, (const char **) *argv, config);
+			optionParser(argc, const_cast<const char **>(*argv), config);
 		} else {
 			readConfigFromJsonPassedToArgs(argc, argv, argStartIndex, config);
 		}

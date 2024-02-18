@@ -471,7 +471,7 @@ private:
 						pipe.second.close();
 						closeAllFileDescriptors(2);
 
-						execvp(execArgs[0], (char * const *) &execArgs[0]);
+						execvp(execArgs[0], const_cast<char * const *>(&execArgs[0]));
 
 						int e = errno;
 						char buf[256];

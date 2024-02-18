@@ -90,7 +90,6 @@ private:
 	void logFreeErrorExtended(const StaticString &prefix, CFErrorRef &additional);
 	CFDictionaryRef createQueryDict(const char *label);
 	SecAccessRef createAccess(const char *cLabel);
-	OSStatus lookupKeychainItem(const char *label, SecIdentityRef *oIdentity);
 	OSStatus copyIdentityFromPKCS12File(const char *cPath, const char *cPassword, const char *cLabel);
 	CFDataRef genIV(size_t iv_size);
 	bool getKeyBytes(SecKeyRef cryptokey, void **target, size_t &len);
@@ -110,13 +109,6 @@ public:
 	bool generateAndAppendNonce(string &nonce);
 
 #if BOOST_OS_MACOS
-#if PRE_HIGH_SIERRA
-	/**
-	 * sets the permissions on the certificate so that curl doesn't prompt
-	 */
-	bool preAuthKey(const char *path, const char *passwd, const char *cLabel);
-	void killKey(const char *cLabel);
-#endif
 	bool generateRandomChars(unsigned char *rndChars, int rndLen);
 #endif
 

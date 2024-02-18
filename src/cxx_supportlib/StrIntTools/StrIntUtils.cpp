@@ -348,7 +348,7 @@ hexatriToULL(const StaticString &str) {
 string
 toHex(const StaticString &data) {
 	string result(data.size() * 2, '\0');
-	toHex(data, (char *) result.data());
+	toHex(data, const_cast<char *>(result.data()));
 	return result;
 }
 

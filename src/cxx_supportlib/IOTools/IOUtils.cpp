@@ -915,7 +915,7 @@ staticStringArrayToIoVec(const StaticString ary[], size_t count, struct iovec *v
 			 * platforms it's still defined as non-const char *
 			 * :-(
 			 */
-			vec[vecCount].iov_base = (char *) ary[i].data();
+			vec[vecCount].iov_base = const_cast<char *>(ary[i].data());
 			vec[vecCount].iov_len  = ary[i].size();
 			total += ary[i].size();
 			vecCount++;
@@ -1026,7 +1026,7 @@ realGatheredWrite(int fd, const StaticString *data, unsigned int dataCount, stri
 			return totalSize;
 		}
 	} else {
-		iov[0].iov_base = (char *) restBuffer.data();
+		iov[0].iov_base = const_cast<char *>(restBuffer.data());
 		iov[0].iov_len  = restBuffer.size();
 		totalSize = staticStringArrayToIoVec(data, dataCount, iov + 1, iovCount);
 		totalSize += restBuffer.size();

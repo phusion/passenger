@@ -266,7 +266,7 @@ execHelperMain(int argc, char *argv[]) {
 	}
 
 	Options options;
-	if (!parseOptions(argc, (const char **) argv, options)) {
+	if (!parseOptions(argc, const_cast<const char **>(argv), options)) {
 		fprintf(stderr, "Error parsing arguments.\n");
 		usage();
 		exit(1);
@@ -289,7 +289,7 @@ execHelperMain(int argc, char *argv[]) {
 		(char * const *) &argv[options.programArgStart]);
 	int e = errno;
 	fprintf(stderr, "ERROR: unable to execute %s: %s (errno=%d)\n",
-		describeCommand(argc, (const char **) argv, options).c_str(),
+		describeCommand(argc, const_cast<const char **>(argv), options).c_str(),
 		strerror(e),
 		e);
 	return 1;

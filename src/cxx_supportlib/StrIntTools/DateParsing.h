@@ -125,7 +125,7 @@ skipImfFixdate_comment(const char **pos, const char *end) {
 	assert(**pos == '(');
 	(*pos)++;
 
-	char *result = (char *) std::memchr(*pos, ')', end - *pos);
+	const char *result = static_cast<const char*>(std::memchr(*pos, ')', end - *pos));
 	if (result == NULL) {
 		return false;
 	} else {
