@@ -108,7 +108,6 @@ struct mbuf_pool {
 #define MBUF_BLOCK_MAGIC      0xdeadbeef
 #define MBUF_BLOCK_MIN_SIZE   512
 #define MBUF_BLOCK_MAX_SIZE   16777216
-#define MBUF_BLOCK_SIZE       16384
 #define MBUF_BLOCK_HSIZE      sizeof(struct mbuf_block)
 
 #define MBUF_BLOCK_EMPTY(mbuf_block) ((mbuf_block)->pos  == (mbuf_block)->last)

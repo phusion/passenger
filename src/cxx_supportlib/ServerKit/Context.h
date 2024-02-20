@@ -83,6 +83,12 @@ public:
 		}
 
 		mbuf_pool.mbuf_block_chunk_size = configStore["mbuf_block_chunk_size"].asUInt();
+		if ((mbuf_pool.mbuf_block_chunk_size - sizeof(struct MemoryKit::mbuf_block)) % alignof(struct MemoryKit::mbuf_block) != 0) {
+			throw RuntimeException("mbuf_block_chunk_size(" +
+								   toString(mbuf_pool.mbuf_block_chunk_size) +
+								   ") - " + toString(sizeof(struct MemoryKit::mbuf_block)) +
+								   " must be a multiple of " + toString(alignof(struct MemoryKit::mbuf_block)));
+		}
 		MemoryKit::mbuf_pool_init(&mbuf_pool);
 	}
 

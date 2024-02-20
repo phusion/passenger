@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <oxt/macros.hpp>
@@ -110,7 +111,9 @@ _mbuf_block_init(struct mbuf_pool *pool, char *buf, size_t block_offset)
 	 *                                    \
 	 *                                    block
 	 */
-	mbuf_block = (struct mbuf_block *)(buf + block_offset);
+	uintptr_t ptr = reinterpret_cast<uintptr_t>(buf + block_offset);
+	assert(ptr % alignof(struct mbuf_block) == 0);
+	mbuf_block = reinterpret_cast<struct mbuf_block*>(ptr);
 	mbuf_block->magic = MBUF_BLOCK_MAGIC;
 	mbuf_block->pool  = pool;
 	mbuf_block->offset = 0;
@@ -138,7 +141,7 @@ _mbuf_block_get(struct mbuf_pool *pool)
 		return mbuf_block;
 	}
 
-	buf = (char *) malloc(pool->mbuf_block_chunk_size);
+	buf = (char *) aligned_alloc(alignof(struct mbuf_block), pool->mbuf_block_chunk_size);
 	if (OXT_UNLIKELY(buf == NULL)) {
 		return NULL;
 	}
@@ -180,7 +183,10 @@ mbuf_block_new_standalone(struct mbuf_pool *pool, size_t size)
 	char *buf;
 
 	block_offset = std::max<size_t>(size, mbuf_pool_data_size(pool));
-	buf = (char *) malloc(MBUF_BLOCK_HSIZE + block_offset);
+	if (OXT_UNLIKELY(block_offset % alignof(struct mbuf_block) != 0)) {
+		return NULL;
+	}
+	buf = (char *) aligned_alloc(alignof(struct mbuf_block), MBUF_BLOCK_HSIZE + block_offset);
 	if (OXT_UNLIKELY(buf == NULL)) {
 		return NULL;
 	}
@@ -279,7 +285,9 @@ mbuf_pool_init(struct mbuf_pool *pool)
 		TAILQ_INIT(&pool->active_mbuf_blockq);
 	#endif
 
-	pool->mbuf_block_offset = pool->mbuf_block_chunk_size - MBUF_BLOCK_HSIZE;
+	size_t block_offset = pool->mbuf_block_chunk_size - MBUF_BLOCK_HSIZE;
+	assert((block_offset % alignof(struct mbuf_block)) == 0);
+	pool->mbuf_block_offset = block_offset;
 }
 
 void
