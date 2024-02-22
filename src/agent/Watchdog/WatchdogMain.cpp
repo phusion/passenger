@@ -24,6 +24,7 @@
  *  THE SOFTWARE.
  */
 // Include ev++.h early to avoid macro clash on EV_ERROR.
+#include "FileTools/PathManip.h"
 #include <ev++.h>
 
 #include <oxt/thread.hpp>
@@ -77,6 +78,7 @@
 #include <RandomGenerator.h>
 #include <BackgroundEventLoop.h>
 #include <LoggingKit/LoggingKit.h>
+#include <MainFunctions.h>
 #include <Exceptions.h>
 #include <StaticString.h>
 #include <Hooks.h>
@@ -406,18 +408,12 @@ waitForStarterProcessOrWatchers(const WorkingObjectsPtr &wo, vector<AgentWatcher
 	}
 }
 
-string
-relative(string filename){
-	string dir = filename.substr(filename.find_last_of('/')+1);
-	return dir;
-}
-
 static vector<pid_t>
 readCleanupPids(const WorkingObjectsPtr &wo) {
 	vector<pid_t> result;
 
 	foreach (string filename, wo->cleanupPidfiles) {
-		FILE *f = fopen(relative(filename).c_str(), "r");
+		FILE *f = fopen(extractBaseName(filename).c_str(), "r");
 		if (f != NULL) {
 			char buf[33];
 			size_t ret;
@@ -428,10 +424,10 @@ readCleanupPids(const WorkingObjectsPtr &wo) {
 				buf[ret] = '\0';
 				result.push_back(atoi(buf));
 			} else {
-				P_WARN("Cannot read cleanup PID file " << relative(filename).c_str() << " (" << filename << ")");
+				P_WARN("Cannot read cleanup PID file " << extractBaseName(filename).c_str() << " (" << filename << ")");
 			}
 		} else {
-			P_WARN("Cannot open cleanup PID file " << relative(filename).c_str() << " (" << filename << ")");
+			P_WARN("Cannot open cleanup PID file " << extractBaseName(filename).c_str() << " (" << filename << ")");
 		}
 	}
 

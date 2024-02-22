@@ -30,6 +30,12 @@
 #include <limits.h>
 #include <libgen.h>
 
+#ifdef __has_include
+#if __has_include(<filesystem>)
+#include <filesystem>
+#endif
+#endif
+
 #include <vector>
 #include <cerrno>
 #include <cstring>
@@ -230,12 +236,15 @@ extractDirNameStatic(const StaticString &path) {
 
 string
 extractBaseName(const StaticString &path) {
+#if defined(_LIBCPP_FILESYSTEM) && _LIBCPP_STD_VER > 14
+    return filesystem::path(path).filename();
+#else
 	DynamicBuffer pathNt(path.size() + 1);
 	memcpy(pathNt.data, path.data(), path.size());
 	pathNt.data[path.size()] = '\0';
 	string result = basename(pathNt.data);
 	return result;
+#endif
 }
-
 
 } // namespace Passenger

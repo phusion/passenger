@@ -38,6 +38,7 @@
 #include <boost/scoped_array.hpp>
 
 #include <Constants.h>
+#include <MainFunctions.h>
 #include <ProcessManagement/Utils.h>
 #include <Utils/OptionParsing.h>
 #include <StrIntTools/StrIntUtils.h>
@@ -250,8 +251,15 @@ switchUser(uid_t uid, const struct passwd *userInfo) {
 	}
 }
 
+} // namespace ExecHelper
+} // namespace Passenger
+
 int
 execHelperMain(int argc, char *argv[]) {
+
+	using namespace Passenger;
+	using namespace Passenger::ExecHelper;
+
 	if (argc < 3) {
 		usage();
 		exit(1);
@@ -285,14 +293,4 @@ execHelperMain(int argc, char *argv[]) {
 		strerror(e),
 		e);
 	return 1;
-}
-
-
-} // namespace ExecHelper
-} // namespace Passenger
-
-
-int
-execHelperMain(int argc, char *argv[]) {
-	return Passenger::ExecHelper::execHelperMain(argc, argv);
 }

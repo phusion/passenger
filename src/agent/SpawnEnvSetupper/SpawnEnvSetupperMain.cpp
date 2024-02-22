@@ -59,6 +59,7 @@
 
 #include <LoggingKit/LoggingKit.h>
 #include <LoggingKit/Context.h>
+#include <MainFunctions.h>
 #include <ProcessManagement/Spawn.h>
 #include <FileTools/FileManip.h>
 #include <FileTools/PathManip.h>
@@ -684,7 +685,7 @@ setCurrentWorkingDirectory(const Context &context) {
 	setenv("PWD", appRoot.c_str(), 1);
 }
 
-string
+static string
 findRubyopt(const Json::Value &args) {
 	if (!args.isMember("environment_variables")) return "";
 	const Json::Value &envvars = args["environment_variables"];

@@ -120,6 +120,7 @@ size_t mbuf_pool_data_size(struct mbuf_pool *pool);
 unsigned int mbuf_pool_compact(struct mbuf_pool *pool);
 
 struct mbuf_block *mbuf_block_get(struct mbuf_pool *pool);
+struct mbuf_block *mbuf_block_new_standalone(struct mbuf_pool *pool, size_t size);
 void mbuf_block_put(struct mbuf_block *mbuf_block);
 
 void mbuf_block_ref(struct mbuf_block *mbuf_block);

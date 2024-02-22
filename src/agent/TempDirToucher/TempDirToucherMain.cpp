@@ -40,7 +40,9 @@
 #include <limits.h>
 #include <errno.h>
 #include <string.h>
+
 #include <Constants.h>
+#include <MainFunctions.h>
 
 #define ERROR_PREFIX "*** TempDirToucher error"
 
@@ -461,7 +463,7 @@ performCleanup(const char *dir) {
 	}
 }
 
-void
+static void
 maybeWaitForNginxToExit() {
 	// If a PID was specified, wait for kill to tell us it's gone.
 	if (nginxPid == 0) {
