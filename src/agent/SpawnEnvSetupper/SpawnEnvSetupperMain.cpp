@@ -108,8 +108,6 @@ readArgsJson(const string &workDir) {
 		P_CRITICAL("Cannot parse " << workDir << "/args.json: "
 			<< reader.getFormattedErrorMessages());
 		exit(1);
-		// Never reached
-		return Json::Value();
 	}
 }
 

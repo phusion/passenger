@@ -530,7 +530,6 @@ connectToUnixServer(const StaticString &filename, const char *file,
 		}
 	}
 	abort();   // Never reached.
-	return -1; // Shut up compiler warning.
 }
 
 void
@@ -782,9 +781,6 @@ pingTcpServer(const StaticString &host, unsigned int port, unsigned long long *t
 			#else
 				throw e;
 			#endif
-
-			// Never reached, shut up compiler warning.
-			return false;
 		} else {
 			throw e;
 		}

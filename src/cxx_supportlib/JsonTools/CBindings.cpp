@@ -73,7 +73,6 @@ psg_json_value_new_with_type(PsgJsonValueType type) {
 	default:
 		fprintf(stderr, "BUG: Unrecognized PsgJsonValueType %d\n", (int) type);
 		abort();
-		break;
 	}
 	return new Json::Value(realType);
 }
@@ -164,7 +163,6 @@ psg_json_value_type(const PsgJsonValue *doc) {
 	default:
 		fprintf(stderr, "BUG: Unrecognized Json::ValueType %d\n", (int) cxxdoc.type());
 		abort();
-		return PSG_JSON_VALUE_TYPE_NULL;
 	}
 }
 
