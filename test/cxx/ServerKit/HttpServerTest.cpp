@@ -771,6 +771,31 @@ namespace tut {
 			"invalid character in header"));
 	}
 
+	TEST_METHOD(18) {
+		set_test_name("Request Smuggling type: 3");
+
+		connectToServer();
+		sendRequest(
+					"POST / HTTP/1.1\r\n"
+					"Host: whatever\r\n"
+					"Transfer-Encoding: ,chunked\r\n"
+					"\r\n"
+					"0\r\n"
+					"\r\n"
+					);
+		string response = readAll(fd, 1024).first;
+		ensure(containsSubstring(response,
+			"HTTP/1.0 400 Bad Request\r\n"
+			"Status: 400 Bad Request\r\n"
+			"Content-Type: text/html; charset=UTF-8\r\n"));
+		ensure(containsSubstring(response,
+			"Connection: close\r\n"
+			"Content-Length: 27\r\n"
+			"cache-control: no-cache, no-store, must-revalidate\r\n"
+			"\r\n"
+			"invalid character in header"));
+	}
+
 	/***** Fixed body handling *****/
 
 	TEST_METHOD(20) {
