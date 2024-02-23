@@ -25,7 +25,7 @@
 
 import sys, os, threading, signal, traceback, socket, select, struct, logging, errno
 import tempfile, json, time
-if sys.version_info[0] >= 3:
+if sys.version_info[0] >= 3 and sys.version_info[1] >= 5:
 	from importlib import util
 else:
 	import imp
@@ -80,7 +80,7 @@ def load_app():
 
 	sys.path.insert(0, os.getcwd())
 	startup_file = options.get('startup_file', 'passenger_wsgi.py')
-	if sys.version_info[0] >= 3:
+	if sys.version_info[0] >= 3 and sys.version_info[1] >= 5:
 		spec = util.spec_from_file_location("passenger_wsgi", startup_file)
 		assert spec is not None
 		app_module = util.module_from_spec(spec)
