@@ -58,8 +58,8 @@ createSchema() {
 
 static void
 usage(int exitCode) {
-	printf("Usage: ./Apache2ModuleTests [options]\n");
-	printf("Runs the unit tests for the Apache 2 module.\n\n");
+	printf("Usage: ./CxxTestMain [options]\n");
+	printf("Runs the cxx unit tests.\n\n");
 	printf("Options:\n");
 	printf("  -g GROUP_NAME   Instead of running all unit tests, only run the test group\n");
 	printf("                  named GROUP_NAME. You can specify -g multiple times, which\n");
