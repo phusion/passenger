@@ -31,7 +31,7 @@
 #include <cassert>
 #include <cstring>
 #include <DataStructures/HashedStaticString.h>
-#include <ServerKit/http_parser.h>
+#include <ServerKit/url_parser.h>
 #include <ServerKit/CookieUtils.h>
 #include <StaticString.h>
 #include <StrIntTools/DateParsing.h>
@@ -344,6 +344,7 @@ private:
 		if (psg_lstr_first_byte(value) != '/') {
 			// Maybe it is a full URL. Parse the host name.
 			struct http_parser_url url;
+			http_parser_url_init(&url);
 			int ret = http_parser_parse_url(value->start->data, value->size,
 				0, &url);
 			if (ret != 0) {
