@@ -27,7 +27,8 @@
 #define _PASSENGER_SERVER_KIT_ERRORS_H_
 
 #include <cstring>
-#include <ServerKit/http_parser.h>
+#include <ServerKit/llhttp.h>
+#include <ServerKit/llerrors.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -94,7 +95,7 @@ getErrorDesc(int errcode) {
 		return "The client connection is closed before the request is done processing";
 	default:
 		if (errcode <= HTTP_PARSER_ERRNO_BEGIN) {
-			return http_errno_description((enum http_errno)
+			return llhttp_get_error_description((llhttp_errno_t)
 				(-errcode + HTTP_PARSER_ERRNO_BEGIN));
 		} else {
 			return std::strerror(errcode);

@@ -341,8 +341,16 @@ COMMON_LIBRARY = CommonLibraryBuilder.new do
     :source   => 'MemoryKit/palloc.cpp',
     :category => :other,
     :optimize => true
-  define_component 'ServerKit/http_parser.o',
-    :source   => 'ServerKit/http_parser.cpp',
+  define_component 'ServerKit/llhttp.o',
+    :source   => 'ServerKit/llhttp.c',
+    :category => :other,
+    :optimize => :very_heavy
+  define_component 'ServerKit/http.o',
+    :source   => 'ServerKit/http.c',
+    :category => :other,
+    :optimize => :very_heavy
+  define_component 'ServerKit/api.o',
+    :source   => 'ServerKit/api.c',
     :category => :other,
     :optimize => :very_heavy
   define_component 'ServerKit/Implementation.o',

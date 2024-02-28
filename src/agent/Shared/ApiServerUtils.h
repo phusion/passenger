@@ -67,6 +67,7 @@
 #include <Exceptions.h>
 #include <DataStructures/LString.h>
 #include <DataStructures/StringKeyTable.h>
+#include <ServerKit/llhttp.h>
 #include <ServerKit/Server.h>
 #include <ServerKit/HeaderTable.h>
 #include <LoggingKit/LoggingKit.h>
@@ -285,7 +286,7 @@ struct ApiServerInternalHttpRequest {
 	Request *req;
 
 	string address;
-	http_method method;
+	llhttp_method_t method;
 	string uri;
 	StringKeyTable<string> headers;
 	boost::function<void (ApiServerInternalHttpResponse<Server, Client, Request>)> callback;
@@ -375,7 +376,7 @@ apiServerMakeInternalHttpRequestThreadMain(ApiServerInternalHttpRequest<Server, 
 		BufferedIO io(conn);
 
 		string header;
-		header.append(http_method_str(req.method));
+		header.append(llhttp_method_name(req.method));
 		header.append(" ", 1);
 		header.append(req.uri);
 		header.append(" HTTP/1.1\r\n");

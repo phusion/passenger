@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cstring>
 #include <MemoryKit/mbuf.h>
+#include <ServerKit/llhttp.h>
 #include <ServerKit/Context.h>
 #include <ServerKit/HttpRequest.h>
 #include <ServerKit/HttpHeaderParserState.h>
@@ -61,7 +62,7 @@ private:
 	Message *message;
 	psg_pool_t *pool;
 	const MemoryKit::mbuf *currentBuffer;
-	http_method	requestMethod;
+	llhttp_method_t	requestMethod;
 
 	bool validateHeader(const HttpParseRequest &tag, const Header *header) {
 		if (!state->secureMode) {
@@ -118,20 +119,35 @@ private:
 		}
 	}
 
-	static size_t http_parser_execute_and_handle_pause(http_parser *parser,
-		const http_parser_settings *settings, const char *data, size_t len,
-		bool &paused)
+	static size_t http_parser_execute_and_handle_pause(llhttp_t *parser,
+		const char *data, size_t len, bool &paused)
 	{
-		size_t ret = http_parser_execute(parser, settings, data, len);
-		paused = len > 0 && ret != len && HTTP_PARSER_ERRNO(parser) == HPE_PAUSED;
-		if (paused) {
-			http_parser_pause(parser, 0);
-			http_parser_execute(parser, settings, data + len - 1, 1);
+		llhttp_errno_t rc = llhttp_get_errno(parser);
+		switch (rc) {
+		case HPE_PAUSED_UPGRADE:
+			llhttp_resume_after_upgrade(parser);
+			goto happy_path;
+		case HPE_PAUSED:
+			llhttp_resume(parser);
+			goto happy_path;
+		case HPE_OK:
+		happy_path:
+			switch (llhttp_execute(parser, data, len)) {
+			case HPE_PAUSED_H2_UPGRADE:
+			case HPE_PAUSED_UPGRADE:
+			case HPE_PAUSED:
+				paused = true;
+				return (llhttp_get_error_pos(parser) - data);
+			case HPE_OK:
+				return len;
+			}
+			// no default, fallthrough to error handling instead
+        default:
+			return (llhttp_get_error_pos(parser) - data);
 		}
-		return ret;
 	}
 
-	static int _onURL(http_parser *parser, const char *data, size_t len) {
+	static int _onURL(llhttp_t *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 		return self->onURL(MessageType(), data, len);
 	}
@@ -149,11 +165,11 @@ private:
 		return 0;
 	}
 
-	static int onStatus(http_parser *parser, const char *data, size_t len) {
+	static int onStatus(llhttp_t *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
-		if (parser->status_code == 100) {
+		if (llhttp_get_status_code(parser) == 100) {
 			self->set100ContinueHttpState(MessageType());
-			http_parser_pause(parser, 1);
+			return HPE_PAUSED;// llhttp_pause(parser); is illegal in a callback
 		}
 		return 0;
 	}
@@ -166,7 +182,7 @@ private:
 		message->httpState = Message::ONEHUNDRED_CONTINUE;
 	}
 
-	static int onHeaderField(http_parser *parser, const char *data, size_t len) {
+	static int onHeaderField(llhttp_t *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
 		if (self->state->state == HttpHeaderParserState::PARSING_NOT_STARTED
@@ -181,7 +197,7 @@ private:
 			{
 				// Validate previous header and insert into table.
 				if (!self->validateHeader(MessageType(), self->state->currentHeader)) {
-					return 1;
+					return HPE_USER;
 				}
 				self->insertCurrentHeader();
 			}
@@ -217,7 +233,7 @@ private:
 		return 0;
 	}
 
-	static int onHeaderValue(http_parser *parser, const char *data, size_t len) {
+	static int onHeaderValue(llhttp_t *parser, const char *data, size_t len) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
 		if (self->state->state == HttpHeaderParserState::PARSING_FIRST_HEADER_FIELD
@@ -240,7 +256,7 @@ private:
 		return 0;
 	}
 
-	static int onHeadersComplete(http_parser *parser) {
+	static int onHeadersComplete(llhttp_t *parser) {
 		HttpHeaderParser *self = static_cast<HttpHeaderParser *>(parser->data);
 
 		if (self->state->state == HttpHeaderParserState::PARSING_HEADER_VALUE
@@ -248,10 +264,7 @@ private:
 		{
 			// Validate previous header and insert into table.
 			if (!self->validateHeader(MessageType(), self->state->currentHeader)) {
-				// There's a bug in http_parser: even if we return 1 here, it doesn't
-				// set the error flag correctly. We fix that here.
-				self->state->parser.http_errno = HPE_CB_headers_complete;
-				return 1;
+				return -1;// Error
 			}
 			self->insertCurrentHeader();
 		}
@@ -259,8 +272,13 @@ private:
 		self->state->currentHeader = NULL;
 		self->message->httpState = Message::PARSED_HEADERS;
 		self->indexQueryString(MessageType());
-		http_parser_pause(parser, 1);
-		return 0;
+        if (parser->upgrade) {
+            return 2;//Assume absence of body and make llhttp_execute() return HPE_PAUSED_UPGRADE.
+        } else {
+			return HPE_PAUSED;//using llhttp_pause(parser); is illegal in a callback
+		}
+ 		//return 1; Assume that request/response has no body, and proceed to parsing the next message.
+		//return 0; Proceed normally.
 	}
 
 	OXT_FORCE_INLINE
@@ -286,12 +304,28 @@ private:
 
 	OXT_FORCE_INLINE
 	void initializeParser(const HttpParseRequest &tag) {
-		http_parser_init(&state->parser, HTTP_REQUEST);
+		llhttp_settings_t &settings = state->parser_settings;
+		llhttp_settings_init(&settings);
+		settings.on_url = _onURL;
+		settings.on_status = onStatus;
+		settings.on_header_field = onHeaderField;
+		settings.on_header_value = onHeaderValue;
+		settings.on_headers_complete = onHeadersComplete;
+
+		llhttp_init(&state->parser, HTTP_REQUEST, &state->parser_settings);
 	}
 
 	OXT_FORCE_INLINE
 	void initializeParser(const HttpParseResponse &tag) {
-		http_parser_init(&state->parser, HTTP_RESPONSE);
+		llhttp_settings_t &settings = state->parser_settings;
+		llhttp_settings_init(&settings);
+		settings.on_url = _onURL;
+		settings.on_status = onStatus;
+		settings.on_header_field = onHeaderField;
+		settings.on_header_value = onHeaderValue;
+		settings.on_headers_complete = onHeadersComplete;
+
+		llhttp_init(&state->parser, HTTP_RESPONSE, &state->parser_settings);
 	}
 
 	OXT_FORCE_INLINE
@@ -318,8 +352,8 @@ private:
 			contentLength = 0;
 		}
 
-		message->method = (http_method) state->parser.method;
-		httpVersion = state->parser.http_major * 1000 + state->parser.http_minor * 10;
+		message->method = static_cast<llhttp_method_t>(llhttp_get_method(&state->parser));
+		httpVersion = llhttp_get_http_major(&state->parser) * 1000 + llhttp_get_http_minor(&state->parser) * 10;
 
 		if (httpVersion > 1010) {
 			// Maximum supported HTTP version is 1.1
@@ -334,7 +368,7 @@ private:
 		} else if (contentLength > 0 || isChunked) {
 			// There is a request body.
 			message->aux.bodyInfo.contentLength = contentLength;
-			if (state->parser.upgrade) {
+			if (llhttp_get_upgrade(&state->parser)) {
 				message->httpState      = Message::ERROR;
 				message->aux.parseError = UPGRADE_NOT_ALLOWED_WHEN_REQUEST_BODY_EXISTS;
 			} else if (isChunked) {
@@ -346,7 +380,7 @@ private:
 			}
 		} else {
 			// There is no request body.
-			if (!state->parser.upgrade) {
+			if (!llhttp_get_upgrade(&state->parser)) {
 				message->httpState = Message::COMPLETE;
 				P_ASSERT_EQ(message->bodyType, Message::RBT_NO_BODY);
 			} else if (message->method != HTTP_HEAD) {
@@ -357,17 +391,18 @@ private:
 				message->httpState      = Message::ERROR;
 				message->aux.parseError = UPGRADE_NOT_ALLOWED_FOR_HEAD_REQUESTS;
 			}
+			llhttp_finish(&state->parser);
 		}
 	}
 
 	void processParseResult(const HttpParseResponse &tag) {
 		TRACE_POINT();
-		const unsigned int status = state->parser.status_code;
+		const unsigned int status = llhttp_get_status_code(&state->parser);
 		const boost::uint64_t contentLength = state->parser.content_length;
 
-		message->statusCode = state->parser.status_code;
+		message->statusCode = status;
 
-		if (state->parser.upgrade) {
+		if (llhttp_get_upgrade(&state->parser)) {
 			message->httpState = Message::UPGRADED;
 			message->bodyType  = Message::RBT_UPGRADE;
 			message->wantKeepAlive = false;
@@ -392,6 +427,7 @@ private:
 			message->headers.erase(HTTP_CONTENT_LENGTH);
 			message->headers.erase(HTTP_TRANSFER_ENCODING);
 			message->wantKeepAlive = false;
+			llhttp_finish(&state->parser);
 		} else if (requestMethod == HTTP_HEAD
 		 || status / 100 == 1  // status 1xx
 		 || status == 204
@@ -399,25 +435,29 @@ private:
 		{
 			if (status != 100) {
 				message->httpState = Message::COMPLETE;
+				llhttp_finish(&state->parser);
 			} else {
 				message->httpState = Message::ONEHUNDRED_CONTINUE;
 			}
 			message->bodyType = Message::RBT_NO_BODY;
 		} else if (state->parser.flags & F_CHUNKED) {
-			if (contentLength == std::numeric_limits<boost::uint64_t>::max()) {
-				message->httpState = Message::PARSING_CHUNKED_BODY;
-				message->bodyType  = Message::RBT_CHUNKED;
-			} else {
+			if (state->parser.flags & F_CONTENT_LENGTH) {
 				message->httpState      = Message::ERROR;
 				message->aux.parseError = RESPONSE_CONTAINS_CONTENT_LENGTH_AND_TRANSFER_ENCODING;
+			} else {
+				message->httpState = Message::PARSING_CHUNKED_BODY;
+				message->bodyType  = Message::RBT_CHUNKED;
 			}
-		} else if (contentLength == 0) {
-			message->httpState = Message::COMPLETE;
-			message->bodyType  = Message::RBT_NO_BODY;
-		} else if (contentLength != std::numeric_limits<boost::uint64_t>::max()) {
-			message->httpState = Message::PARSING_BODY_WITH_LENGTH;
-			message->bodyType  = Message::RBT_CONTENT_LENGTH;
-			message->aux.bodyInfo.contentLength = contentLength;
+		} else if (state->parser.flags & F_CONTENT_LENGTH) {
+			if (contentLength == 0) {
+				message->httpState = Message::COMPLETE;
+				message->bodyType  = Message::RBT_NO_BODY;
+				llhttp_finish(&state->parser);
+			} else {
+				message->httpState = Message::PARSING_BODY_WITH_LENGTH;
+				message->bodyType  = Message::RBT_CONTENT_LENGTH;
+				message->aux.bodyInfo.contentLength = contentLength;
+			}
 		} else {
 			message->httpState = Message::PARSING_BODY_UNTIL_EOF;
 			message->bodyType  = Message::RBT_UNTIL_EOF;
@@ -428,7 +468,7 @@ private:
 public:
 	HttpHeaderParser(Context *context, HttpHeaderParserState *_state,
 		Message *_message, psg_pool_t *_pool,
-		enum http_method _requestMethod = HTTP_GET)
+		llhttp_method_t _requestMethod = HTTP_GET)
 		: ctx(context),
 		  state(_state),
 		  message(_message),
@@ -447,31 +487,21 @@ public:
 		TRACE_POINT();
 		P_ASSERT_EQ(message->httpState, Message::PARSING_HEADERS);
 
-		http_parser_settings settings;
 		size_t ret;
 		bool paused;
-
-		settings.on_message_begin = NULL;
-		settings.on_url = _onURL;
-		settings.on_status = onStatus;
-		settings.on_header_field = onHeaderField;
-		settings.on_header_value = onHeaderValue;
-		settings.on_headers_complete = onHeadersComplete;
-		settings.on_body = NULL;
-		settings.on_message_complete = NULL;
 
 		state->parser.data = this;
 		currentBuffer = &buffer;
 		ret = http_parser_execute_and_handle_pause(&state->parser,
-			&settings, buffer.start, buffer.size(), paused);
+			buffer.start, buffer.size(), paused);
 		currentBuffer = NULL;
 
-		if (!state->parser.upgrade && ret != buffer.size() && !paused) {
+		if (!llhttp_get_upgrade(&state->parser) && ret != buffer.size() && !paused || !paused && llhttp_get_errno(&state->parser) != HPE_OK) {
 			UPDATE_TRACE_POINT();
 			message->httpState = Message::ERROR;
-			switch (HTTP_PARSER_ERRNO(&state->parser)) {
-			case HPE_CB_header_field:
-			case HPE_CB_headers_complete:
+			switch (llhttp_get_errno(&state->parser)) {
+			case HPE_CB_HEADER_FIELD_COMPLETE://?? does this match was HPE_CB_header_field in old one
+			case HPE_CB_HEADERS_COMPLETE:
 				switch (state->state) {
 				case HttpHeaderParserState::ERROR_SECURITY_PASSWORD_MISMATCH:
 					message->aux.parseError = SECURITY_PASSWORD_MISMATCH;
@@ -489,20 +519,20 @@ public:
 					goto default_error;
 				}
 				break;
+			case HPE_INVALID_TRANSFER_ENCODING:
 			case HPE_UNEXPECTED_CONTENT_LENGTH:
 				message->aux.parseError = REQUEST_CONTAINS_CONTENT_LENGTH_AND_TRANSFER_ENCODING;
 				break;
 			default:
 				default_error:
-				message->aux.parseError = HTTP_PARSER_ERRNO_BEGIN - HTTP_PARSER_ERRNO(&state->parser);
+				message->aux.parseError = HTTP_PARSER_ERRNO_BEGIN - llhttp_get_errno(&state->parser);
 				break;
 			}
 		} else if (messageHttpStateIndicatesCompletion(MessageType())) {
 			UPDATE_TRACE_POINT();
-			ret++;
-			message->httpMajor = state->parser.http_major;
-			message->httpMinor = state->parser.http_minor;
-			message->wantKeepAlive = http_should_keep_alive(&state->parser);
+			message->httpMajor = llhttp_get_http_major(&state->parser);
+			message->httpMinor = llhttp_get_http_minor(&state->parser);
+			message->wantKeepAlive = llhttp_should_keep_alive(&state->parser);
 			processParseResult(MessageType());
 		}
 

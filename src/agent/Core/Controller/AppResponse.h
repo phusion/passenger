@@ -30,7 +30,6 @@
 #include <boost/cstdint.hpp>
 #include <boost/atomic.hpp>
 #include <sys/uio.h>
-#include <ServerKit/http_parser.h>
 #include <ServerKit/Hooks.h>
 #include <ServerKit/Client.h>
 #include <ServerKit/HeaderTable.h>

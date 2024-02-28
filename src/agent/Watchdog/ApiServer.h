@@ -275,7 +275,7 @@ protected:
 	virtual void onRequestBegin(Client *client, Request *req) {
 		const StaticString path(req->path.start->data, req->path.size);
 
-		P_INFO("API request: " << http_method_str(req->method) <<
+		P_INFO("API request: " << llhttp_method_name(req->method) <<
 			" " << StaticString(req->path.start->data, req->path.size));
 
 		try {

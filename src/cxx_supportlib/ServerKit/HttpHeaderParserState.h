@@ -28,6 +28,8 @@
 
 #include <DataStructures/LString.h>
 #include <Algorithms/Hasher.h>
+#include <ServerKit/llhttp.h>
+#include <ServerKit/HeaderTable.h>
 
 namespace Passenger {
 namespace ServerKit {
@@ -49,7 +51,8 @@ struct HttpHeaderParserState {
 
 	State state;
 	bool secureMode;
-	http_parser parser;
+	llhttp_t parser;
+	llhttp_settings_t parser_settings;
 	Header *currentHeader;
 	Hasher hasher;
 };
