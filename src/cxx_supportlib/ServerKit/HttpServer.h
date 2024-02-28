@@ -376,7 +376,8 @@ private:
 			case Request::ERROR:
 				// Change state so that the response body will be written.
 				req->httpState = Request::COMPLETE;
-				if (req->aux.parseError == HTTP_VERSION_NOT_SUPPORTED) {
+				if ((req->aux.parseError == HTTP_VERSION_NOT_SUPPORTED) ||
+					(req->aux.parseError == HTTP_PARSER_ERRNO_BEGIN - HPE_INVALID_VERSION)) {
 					endWithErrorResponse(&client, &req, 505, "HTTP version not supported\n");
 				} else {
 					endAsBadRequest(&client, &req, getErrorDesc(req->aux.parseError));
@@ -1319,7 +1320,7 @@ public:
 			doc["response_begun"] = req->responseBegun;
 			doc["last_data_receive_time"] = evTimeToJson(req->lastDataReceiveTime, evNow, now);
 			doc["last_data_send_time"] = evTimeToJson(req->lastDataSendTime, evNow, now);
-			doc["method"] = http_method_str(req->method);
+			doc["method"] = llhttp_method_name(req->method);
 			if (req->httpState != Request::ERROR) {
 				if (req->bodyType == Request::RBT_CONTENT_LENGTH) {
 					doc["content_length"] = (Json::Value::UInt64)

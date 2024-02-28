@@ -332,7 +332,7 @@ Controller::determineMaxHeaderSizeForSessionProtocol(Request *req,
 		}
 	}
 	state.queryString = req->getQueryString();
-	state.methodStr   = StaticString(http_method_str(req->method));
+	state.methodStr   = StaticString(llhttp_method_name(req->method));
 	state.remoteAddr  = req->secureHeaders.lookup(REMOTE_ADDR);
 	state.remotePort  = req->secureHeaders.lookup(REMOTE_PORT);
 	state.remoteUser  = req->secureHeaders.lookup(REMOTE_USER);
@@ -700,7 +700,7 @@ Controller::constructHeaderBuffersForHttpProtocol(Request *req, struct iovec *bu
 	dataSize = 0;
 
 	if (!cache.cached) {
-		cache.methodStr  = http_method_str(req->method);
+		cache.methodStr  = llhttp_method_name(req->method);
 		cache.remoteAddr = req->secureHeaders.lookup(REMOTE_ADDR);
 		cache.setCookie  = req->headers.lookup(ServerKit::HTTP_SET_COOKIE);
 		cache.cached     = true;
