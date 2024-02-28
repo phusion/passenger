@@ -61,6 +61,15 @@ startsWith(const StaticString &str, const StaticString &substr) {
 	}
 }
 
+bool
+endsWith(const StaticString &str, const StaticString &substr) {
+	if (str.size() >= substr.size()) {
+		return strncmp(str.c_str() + str.size() - substr.size(), substr.c_str(), substr.size()) == 0;
+	} else {
+		return false;
+	}
+}
+
 template<typename OutputString>
 static void
 _split(const StaticString &str, char sep, vector<OutputString> &output) {

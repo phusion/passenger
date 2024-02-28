@@ -130,6 +130,11 @@ string fillInMiddle(unsigned int max, const string &prefix, const string &middle
 bool startsWith(const StaticString &str, const StaticString &substr);
 
 /**
+ * Checks whether <tt>str</tt> ends with <tt>substr</tt>.
+ */
+bool endsWith(const StaticString &str, const StaticString &substr);
+
+/**
  * Split the given string using the given separator. Excludes the
  * separator from the output.
  *
