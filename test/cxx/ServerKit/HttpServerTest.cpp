@@ -687,7 +687,7 @@ namespace tut {
 			"Host: foo\r\n\r\n");
 		string response = readAll(fd, 1024).first;
 		ensure(containsSubstring(response,
-			"HTTP/1.1 505 HTTP Version Not Supported\r\n"
+			"HTTP/1.0 505 HTTP Version Not Supported\r\n"
 			"Status: 505 HTTP Version Not Supported\r\n"
 			"Content-Type: text/html; charset=UTF-8\r\n"));
 		ensure(containsSubstring(response,
@@ -725,24 +725,25 @@ namespace tut {
 
 		connectToServer();
 		sendRequest(
-			"POST / HTTP/1.1\r\n"
-			"Host: whatever\r\n"
-			"Transfer-Encoding: ,chunked\r\n"
-			"Content-Length: 5\r\n"
-			"\r\n"
-			"0\r\n"
-			"\r\n");
+					"POST / HTTP/1.1\r\n"
+					"Host: whatever\r\n"
+					"Transfer-Encoding: ,chunked\r\n"
+					"Content-Length: 5\r\n"
+					"\r\n"
+					"0\r\n"
+					"\r\n");
 		string response = readAll(fd, 1024).first;
-		ensure(containsSubstring(response,
-			"HTTP/1.0 400 Bad Request\r\n"
-			"Status: 400 Bad Request\r\n"
-			"Content-Type: text/html; charset=UTF-8\r\n"));
-		ensure(containsSubstring(response,
-			"Connection: close\r\n"
-			"Content-Length: 79\r\n"
-			"cache-control: no-cache, no-store, must-revalidate\r\n"
-			"\r\n"
-			"Bad request (request may not contain both Content-Length and Transfer-Encoding)"));
+		ensure(startsWith(response,
+					  "HTTP/1.0 400 Bad Request\r\n"
+					  "Status: 400 Bad Request\r\n"
+					  "Content-Type: text/html; charset=UTF-8\r\n"));
+		ensure(endsWith(response,
+					  "Connection: close\r\n"
+					  "Content-Length: 42\r\n"
+					  "cache-control: no-cache, no-store, must-revalidate\r\n"
+					  "\r\n"
+					  "invalid character in content-length header"));
+		ensure_equals(response.size(),265u);
 	}
 
 	TEST_METHOD(17) {
@@ -750,25 +751,26 @@ namespace tut {
 
 		connectToServer();
 		sendRequest(
-			"POST / HTTP/1.1\r\n"
-			"Host: whatever\r\n"
-			"Transfer-\r\n"
-			"Encoding: chunked\r\n"
-			"Content-Length: 5\r\n"
-			"\r\n"
-			"0\r\n"
-			"\r\n");
+					"POST / HTTP/1.1\r\n"
+					"Host: whatever\r\n"
+					"Transfer-\r\n"
+					"Encoding: chunked\r\n"
+					"Content-Length: 5\r\n"
+					"\r\n"
+					"0\r\n"
+					"\r\n");
 		string response = readAll(fd, 1024).first;
-		ensure(containsSubstring(response,
-			"HTTP/1.0 400 Bad Request\r\n"
-			"Status: 400 Bad Request\r\n"
-			"Content-Type: text/html; charset=UTF-8\r\n"));
-		ensure(containsSubstring(response,
-			"Connection: close\r\n"
-			"Content-Length: 27\r\n"
-			"cache-control: no-cache, no-store, must-revalidate\r\n"
-			"\r\n"
-			"invalid character in header"));
+		ensure(startsWith(response,
+					  "HTTP/1.0 400 Bad Request\r\n"
+					  "Status: 400 Bad Request\r\n"
+					  "Content-Type: text/html; charset=UTF-8\r\n"));
+		ensure(endsWith(response,
+					  "Connection: close\r\n"
+					  "Content-Length: 27\r\n"
+					  "cache-control: no-cache, no-store, must-revalidate\r\n"
+					  "\r\n"
+					  "invalid character in header"));
+		ensure_equals(response.size(),250u);
 	}
 
 	TEST_METHOD(18) {
@@ -784,16 +786,15 @@ namespace tut {
 					"\r\n"
 					);
 		string response = readAll(fd, 1024).first;
-		ensure(containsSubstring(response,
-			"HTTP/1.0 400 Bad Request\r\n"
-			"Status: 400 Bad Request\r\n"
-			"Content-Type: text/html; charset=UTF-8\r\n"));
-		ensure(containsSubstring(response,
-			"Connection: close\r\n"
-			"Content-Length: 27\r\n"
-			"cache-control: no-cache, no-store, must-revalidate\r\n"
-			"\r\n"
-			"invalid character in header"));
+		ensure_equals(response,
+					  "HTTP/1.1 200 OK\r\n"
+					  "Status: 200 OK\r\n"
+					  "Content-Type: text/plain\r\n"
+					  "Date: Thu, 11 Sep 2014 12:54:09 GMT\r\n"
+					  "Connection: close\r\n"
+					  "Content-Length: 7\r\n"
+					  "\r\n"
+					  "hello /");
 	}
 
 	/***** Fixed body handling *****/
