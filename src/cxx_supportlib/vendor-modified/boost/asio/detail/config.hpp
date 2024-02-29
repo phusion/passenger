@@ -127,7 +127,29 @@
 # define BOOST_ASIO_HAS_USER_DEFINED_LITERALS 1
 # define BOOST_ASIO_HAS_ALIGNOF 1
 # define BOOST_ASIO_ALIGNOF(T) alignof(T)
-# define BOOST_ASIO_HAS_STD_ALIGN 1
+// Standard library support for std::align.
+#if !defined(BOOST_ASIO_HAS_STD_ALIGN)
+# if !defined(BOOST_ASIO_DISABLE_STD_ALIGN)
+#  if defined(__clang__)
+#   if defined(BOOST_ASIO_HAS_CLANG_LIBCXX)
+#    define BOOST_ASIO_HAS_STD_ALIGN 1
+#   elif (__cplusplus >= 201103)
+#    define BOOST_ASIO_HAS_STD_ALIGN 1
+#   endif // (__cplusplus >= 201103)
+#  elif defined(__GNUC__)
+#   if (__GNUC__ >= 6)
+#    if (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#     define BOOST_ASIO_HAS_STD_ALIGN 1
+#    endif // (__cplusplus >= 201103) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#   endif // (__GNUC__ >= 6)
+#  endif // defined(__GNUC__)
+#  if defined(BOOST_ASIO_MSVC)
+#   if (_MSC_VER >= 1700)
+#    define BOOST_ASIO_HAS_STD_ALIGN 1
+#   endif // (_MSC_VER >= 1700)
+#  endif // defined(BOOST_ASIO_MSVC)
+# endif // !defined(BOOST_ASIO_DISABLE_STD_ALIGN)
+#endif // !defined(BOOST_ASIO_HAS_STD_ALIGN)
 # define BOOST_ASIO_HAS_STD_SYSTEM_ERROR 1
 # define BOOST_ASIO_ERROR_CATEGORY_NOEXCEPT noexcept(true)
 # define BOOST_ASIO_HAS_STD_ARRAY 1
