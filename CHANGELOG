@@ -1,5 +1,6 @@
 Release 6.0.21 (Not yet released)
 -------------
+ * [Python] Fix version of Python when imp module is replaced with importlib. Contributed by Grigory Ponomarenko.
 
 
 Release 6.0.20
