@@ -673,7 +673,7 @@ module PhusionPassenger
         # macOS >= 10.12 Sierra no longer includes apr-config
         # so we'll use a hardcoded path here.
         if os_name_simple == 'macosx' && os_version >= '10.12' && httpd == '/usr/sbin/httpd'
-          apxs2_flags << ' -I/usr/include/apr-1'
+          apxs2_flags << " -I#{`xcrun --show-sdk-path`.strip}/usr/include/apr-1"
         end
 
         apxs2_flags.strip!
@@ -840,9 +840,7 @@ module PhusionPassenger
             # files. On Hongli's and Camden's systems it's inside the Xcode directory,
             # while on https://github.com/phusion/passenger/issues/1986 it's inside
             # /Library/Developer/CommandLineTools.
-            xcode_prefix = `/usr/bin/xcode-select -p`.strip
-            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1 " \
-             "-I#{xcode_prefix}/SDKs/MacOSX.sdk/usr/include/apr-1",
+            ["-I#{`xcrun --show-sdk-path`.strip}/usr/include/apr-1",
              '-lapr-1']
           else
             ['-I/usr/include/apr-1', '-lapr-1']
@@ -890,9 +888,7 @@ module PhusionPassenger
           if os_version >= '10.13'
             # On macOS >= 10.13 High Sierra /usr/include no longer
             # exists.
-            xcode_prefix = `/usr/bin/xcode-select -p`.strip
-            ["-I#{xcode_prefix}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/apr-1 " \
-             "-I#{xcode_prefix}/SDKs/MacOSX.sdk/usr/include/apr-1",
+            ["-I#{`xcrun --show-sdk-path`.strip}/usr/include/apr-1",
              '-laprutil-1']
           else
             ['-I/usr/include/apr-1', '-laprutil-1']
