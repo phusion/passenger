@@ -81,7 +81,7 @@ module PhusionPassenger
           'rake',
           'openssl-dev',
           'zlib-dev',
-          'pcre-dev'
+          'pcre2-dev'
         ].compact
         return [specs, ids]
       end

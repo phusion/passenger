@@ -248,7 +248,7 @@ find_manifest_loc_config_container(manifest_gen_ctx_t *ctx,
         json_location_matcher_type.data = (u_char *) psg_json_value_get_str(
             psg_json_value_get(location_matcher_doc, "type", -1),
             &json_location_matcher_type.len);
-        #if (NGX_PCRE)
+        #if (NGX_PCRE) || (NGX_PCRE2)
             if (clcf->regex != NULL) {
                 if (json_location_matcher_type.len != sizeof("regex") - 1
                     || ngx_memcmp(json_location_matcher_type.data, "regex", sizeof("regex") - 1) != 0)
@@ -319,7 +319,7 @@ create_manifest_loc_config_container(manifest_gen_ctx_t *ctx,
 
     psg_json_value_set_str(location_matcher_doc, "value",
         (const char *) clcf->name.data, clcf->name.len);
-    #if (NGX_PCRE)
+    #if (NGX_PCRE) || (NGX_PCRE2)
         if (clcf->regex != NULL) {
             psg_json_value_set_str(location_matcher_doc, "type",
                 "regex", -1);

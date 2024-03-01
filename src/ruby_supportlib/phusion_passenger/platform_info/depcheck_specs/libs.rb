@@ -111,21 +111,21 @@ define 'zlib-dev' do
   end
 end
 
-define 'pcre-dev' do
-  name "PCRE development headers"
+define 'pcre2-dev' do
+  name "PCRE2 development headers"
   website "http://www.pcre.org/"
   define_checker do
-    check_for_header('pcre.h', :c,
+    check_for_header('pcre2.h', :c,
       PlatformInfo.pcre_extra_cflags)
   end
 
   on :debian do
-    apt_get_install "libpcre3-dev"
+    apt_get_install "libpcre2-dev"
   end
   on :redhat do
-    yum_install 'pcre-devel'
+    yum_install 'pcre2-devel'
   end
   on :macosx do
-    brew_install "pcre"
+    brew_install "pcre2"
   end
 end
