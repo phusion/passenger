@@ -20,11 +20,11 @@
 
 ## Installation
 
-Please follow [the installation instructions on the website](https://www.phusionpassenger.com/library/install/).
+Please follow [the installation instructions on the website](https://www.phusionpassenger.com/docs/tutorials/what_is_passenger/).
 
 ### Installing the source directly from git
 
-If you mean to install the latest version of Passenger directly from this git repository, then you should run one of the following commands. Installing from the git repository is basically the same as the tarball installation method, as [described in the manual](https://www.phusionpassenger.com/library/install/), with one exception: you need to clone git submodules:
+If you mean to install the latest version of Passenger directly from this git repository, then you should run one of the following commands. Installing from the git repository is basically the same as the tarball installation method, as [described in the manual](https://www.phusionpassenger.com/docs/tutorials/installation/ruby/), with one exception: you need to clone git submodules:
 
     git submodule update --init --recursive
 
