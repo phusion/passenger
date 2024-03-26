@@ -29,18 +29,18 @@ module PhusionPassenger
 
   module PlatformInfo
     def self.pcre_extra_cflags
+      cflags = ""
       if PlatformInfo.os_name_simple == "macosx"
         brew_path = "#{`/usr/bin/env -P /usr/local/bin:/opt/homebrew/bin brew --prefix pcre2`}/include"
         if File.exist?(brew_path)
           # Use the one from Homebrew.
-          "-I#{brew_path}"
+          cflags = "-I#{brew_path}"
         else
           # Use the one from Macports.
-          "-I/opt/local/include"
+          cflags = "-I/opt/local/include"
         end
-      else
-        ""
       end
+      return "#{cflags} -DPCRE2_CODE_UNIT_WIDTH=8"
     end
     memoize :pcre_extra_cflags
 
