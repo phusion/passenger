@@ -555,7 +555,7 @@ private
     command << "--with-cc-opt=#{Shellwords.escape extra_cflags} "
     command << "--with-ld-opt=#{Shellwords.escape extra_ldflags} "
     if @pcre_source_dir
-      command << "--with-pcre2='#{@pcre_source_dir}' "
+      command << "--with-pcre='#{@pcre_source_dir}' "
     elsif !pcre_is_installed?
       command << "--without-http_rewrite_module "
     end
