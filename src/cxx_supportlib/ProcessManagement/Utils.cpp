@@ -52,7 +52,7 @@
 #include <ProcessManagement/Utils.h>
 #include <Utils/AsyncSignalSafeUtils.h>
 
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__sun)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__sun) || defined(__FreeBSD__)
 	// Introduced in Solaris 9. Let's hope nobody actually uses
 	// a version that doesn't support this.
 	#define HAS_CLOSEFROM
