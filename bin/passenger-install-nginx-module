@@ -269,7 +269,7 @@ private
     puts "<banner>PCRE (required by Nginx) not installed, downloading it...</banner>"
 
     url = "https://github.com/PhilipHazel/pcre2/releases/download/pcre2-#{PREFERRED_PCRE_VERSION}/pcre2-#{PREFERRED_PCRE_VERSION}.tar.gz"
-    dirname = "pcre-#{PREFERRED_PCRE_VERSION}"
+    dirname = "pcre2-#{PREFERRED_PCRE_VERSION}"
     tarball = "#{@working_dir}/pcre.tar.gz"
 
     if download(url, tarball, DOWNLOAD_OPTION)
