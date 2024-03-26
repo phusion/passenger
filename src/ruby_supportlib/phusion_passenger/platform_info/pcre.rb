@@ -30,7 +30,7 @@ module PhusionPassenger
   module PlatformInfo
     def self.pcre_extra_cflags
       if PlatformInfo.os_name_simple == "macosx"
-        brew_path = "#{`brew --prefix pcre2`}/include"
+        brew_path = "#{`/usr/bin/env -P /usr/local/bin:/opt/homebrew/bin brew --prefix pcre2`}/include"
         if File.exist?(brew_path)
           # Use the one from Homebrew.
           "-I#{brew_path}"
@@ -46,7 +46,7 @@ module PhusionPassenger
 
     def self.pcre_extra_ldflags
       if PlatformInfo.os_name_simple == "macosx"
-        brew_path = "#{`brew --prefix pcre2`}/lib"
+        brew_path = "#{`/usr/bin/env -P /usr/local/bin:/opt/homebrew/bin brew --prefix pcre2`}/lib"
         if File.exist?(brew_path)
           # Use the one from Homebrew.
           "-L#{brew_path}"
