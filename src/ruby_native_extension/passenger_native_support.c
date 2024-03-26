@@ -993,6 +993,7 @@ Init_passenger_native_support() {
 			fs_watcher_wait_for_change, 0);
 		rb_define_method(cFileSystemWatcher, "close",
 			fs_watcher_close, 0);
+		rb_undef_alloc_func(cFileSystemWatcher);
 	#endif
 
 	/* The maximum length of a Unix socket path, including terminating null. */
