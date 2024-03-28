@@ -56,7 +56,7 @@ curl -sL https://deb.nodesource.com/setup_lts.x | bash -
 
 apt-get update
 apt-get install -y build-essential git bash-completion ccache wget \
-	libxml2-dev libxslt1-dev libsqlite3-dev libcurl4-openssl-dev libpcre3-dev \
+	libxml2-dev libxslt1-dev libsqlite3-dev libcurl4-openssl-dev libpcre2-dev \
 	ruby ruby-dev nodejs npm \
 	apache2-mpm-worker apache2-threaded-dev
 
